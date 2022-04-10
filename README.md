@@ -34,3 +34,9 @@ bazel run //tools/format
 #### BUILD
 
 Formatting bazel `BUILD` and `.bzl` is done by [Buildifier](https://github.com/bazelbuild/buildtools/tree/master/buildifier).
+
+To run the formatter,
+
+```shell
+bazel run :buildifier
+```
