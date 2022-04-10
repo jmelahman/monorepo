@@ -1,0 +1,4 @@
+/.bazelrc
+/bazel-out
+/dist
+/node_modules

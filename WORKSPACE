@@ -1,7 +1,22 @@
 # Consider https://thundergolfer.com/bazel/python/2021/06/25/a-basic-python-bazel-toolchain/
-workspace(name = "monorepo")
+workspace(
+    name = "monorepo",
+    managed_directories = {"@npm": ["node_modules"]},
+)
 
+##############################################################################
+# Bazel
+##############################################################################
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "97e70364e9249702246c0e9444bccdc4b847bed1eb03c5a3ece4f83dfe6abc44",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
+    ],
+)
 
 ##############################################################################
 # Python
@@ -108,3 +123,58 @@ http_archive(
         version = buildtools_version,
     ),
 )
+
+##############################################################################
+# npm
+##############################################################################
+http_archive(
+    name = "build_bazel_rules_nodejs",
+    sha256 = "8f5f192ba02319254aaf2cdcca00ec12eaafeb979a80a1e946773c520ae0a2c9",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/3.7.0/rules_nodejs-3.7.0.tar.gz"],
+)
+
+load("@build_bazel_rules_nodejs//:index.bzl", "yarn_install")
+
+yarn_install(
+    name = "npm",
+    exports_directories_only = True,
+    package_json = "//game:package.json",
+    yarn_lock = "//game:yarn.lock",
+)
+
+##############################################################################
+# LaTeX
+##############################################################################
+BAZEL_LATEX_VERSION = "1.0"
+
+http_archive(
+    name = "bazel_latex",
+    sha256 = "f81604ec9318364c05a702798c5507c6e5257e851d58237d5f171eeca4d6e2db",
+    strip_prefix = "bazel-latex-{}".format(BAZEL_LATEX_VERSION),
+    url = "https://github.com/ProdriveTechnologies/bazel-latex/archive/v{}.tar.gz".format(
+        BAZEL_LATEX_VERSION
+    ),
+)
+
+load("@bazel_latex//:repositories.bzl", "latex_repositories")
+
+latex_repositories()
+
+##############################################################################
+# Pandoc
+##############################################################################
+BAZEL_PANDOC_VERSION = "51605c25d3ae69a5b325d9986ac7ce8c9741ffa9"
+
+http_archive(
+    name = "bazel_pandoc",
+    sha256 = "0fcfa6a461098c8b8b9ba2f2d236d7f7aed988953f303c22c8c9cf96eb0c651f",
+    strip_prefix = "bazel-pandoc-%s" % BAZEL_PANDOC_VERSION,
+    url = "https://github.com/ProdriveTechnologies/bazel-pandoc/archive/{}.tar.gz".format(
+        BAZEL_PANDOC_VERSION
+    ),
+)
+
+load("@bazel_pandoc//:repositories.bzl", "pandoc_repositories")
+
+pandoc_repositories()
+

@@ -136,3 +136,7 @@ dmypy.json
 .bazelversion
 # User-specific .bazelrc
 user.bazelrc
+
+# frontend
+/dist
+/node_modules
