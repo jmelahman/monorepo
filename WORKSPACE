@@ -152,7 +152,7 @@ http_archive(
     sha256 = "f81604ec9318364c05a702798c5507c6e5257e851d58237d5f171eeca4d6e2db",
     strip_prefix = "bazel-latex-{}".format(BAZEL_LATEX_VERSION),
     url = "https://github.com/ProdriveTechnologies/bazel-latex/archive/v{}.tar.gz".format(
-        BAZEL_LATEX_VERSION
+        BAZEL_LATEX_VERSION,
     ),
 )
 
@@ -170,11 +170,10 @@ http_archive(
     sha256 = "0fcfa6a461098c8b8b9ba2f2d236d7f7aed988953f303c22c8c9cf96eb0c651f",
     strip_prefix = "bazel-pandoc-%s" % BAZEL_PANDOC_VERSION,
     url = "https://github.com/ProdriveTechnologies/bazel-pandoc/archive/{}.tar.gz".format(
-        BAZEL_PANDOC_VERSION
+        BAZEL_PANDOC_VERSION,
     ),
 )
 
 load("@bazel_pandoc//:repositories.bzl", "pandoc_repositories")
 
 pandoc_repositories()
-
