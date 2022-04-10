@@ -3,20 +3,20 @@ import typing
 ItemType = str
 
 
-class Queue:
-    queue: typing.List[ItemType]
+class Stack:
+    stack: typing.List[ItemType]
 
     def __init__(self) -> None:
-        self.queue = []
+        self.stack = []
 
     def enqueue(self, item: ItemType) -> None:
-        self.queue.append(item)
+        self.stack.append(item)
 
     def empty(self) -> bool:
-        return bool(not self.queue)
+        return bool(not self.stack)
 
     def dequeue(self) -> typing.Optional[ItemType]:
-        if not self.queue:
+        if not self.stack:
             return None
-        item = self.queue.pop(0)
+        item = self.stack.pop()
         return item
