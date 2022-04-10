@@ -139,7 +139,7 @@ user.bazelrc
 
 # Frontend
 dist/
-node_modules/
+node_modules
 
 # Prerequisites
 *.d

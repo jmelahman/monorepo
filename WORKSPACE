@@ -1,7 +1,6 @@
 # Consider https://thundergolfer.com/bazel/python/2021/06/25/a-basic-python-bazel-toolchain/
 workspace(
     name = "monorepo",
-    managed_directories = {"@npm": ["node_modules"]},
 )
 
 ##############################################################################
@@ -141,30 +140,36 @@ http_archive(
 ##############################################################################
 # npm
 ##############################################################################
-rules_nodejs_version = "5.4.0"
-
-http_archive(
-    name = "build_bazel_rules_nodejs",
-    sha256 = "ac7eb554af28232dc43deaf7e7247d12b128a97ecb676c2e5d028c5d521b0433",
-    strip_prefix = "rules-nodejs-{version}".format(version = rules_nodejs_version),
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/{version}.tar.gz".format(
-        version = rules_nodejs_version,
-    ),
-)
-
-load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
-
-build_bazel_rules_nodejs_dependencies()
-
-load("@build_bazel_rules_nodejs//:index.bzl", "yarn_install")
-
-yarn_install(
-    name = "npm",
-    exports_directories_only = True,
-    package_json = "//game:package.json",
-    yarn_lock = "//game:yarn.lock",
-)
-
+#rules_nodejs_version = "5.4.0"
+#
+#http_archive(
+#    name = "build_bazel_rules_nodejs",
+#    sha256 = "ac7eb554af28232dc43deaf7e7247d12b128a97ecb676c2e5d028c5d521b0433",
+#    strip_prefix = "rules_nodejs-{version}".format(version = rules_nodejs_version),
+#    url = "https://github.com/bazelbuild/rules_nodejs/archive/{version}.tar.gz".format(
+#        version = rules_nodejs_version,
+#    ),
+#)
+#
+#load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
+#
+#build_bazel_rules_nodejs_dependencies()
+#
+## Fetch transitive Bazel dependencies of karma_web_test
+#http_archive(
+#    name = "io_bazel_rules_webtesting",
+#    sha256 = "e9abb7658b6a129740c0b3ef6f5a2370864e102a5ba5ffca2cea565829ed825a",
+#    urls = ["https://github.com/bazelbuild/rules_webtesting/releases/download/0.3.5/rules_webtesting.tar.gz"],
+#)
+#
+#load("@build_bazel_rules_nodejs//:index.bzl", "yarn_install")
+#
+#yarn_install(
+#    name = "npm",
+#    package_json = "//game:package.json",
+#    yarn_lock = "//game:yarn.lock",
+#)
+#
 ##############################################################################
 # LaTeX
 ##############################################################################
