@@ -115,7 +115,7 @@ __user_prompt_command() {
         PS1+="[${Gre}${EXIT}${RCol}]"
     fi
 
-    PS1+=" ${Blu}\w${RCol}${Gre}${GIT_BRANCH}${RCol} \D{%F %T}"
+    PS1+=" ${Blu}\w ${RCol}${Gre}${GIT_BRANCH}${RCol} \D{%F %T}"
 
     if [[ $EUID -eq 0 ]]; then
       PS1+="\n# "
