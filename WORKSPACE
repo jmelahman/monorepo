@@ -141,11 +141,20 @@ http_archive(
 ##############################################################################
 # npm
 ##############################################################################
+rules_nodejs_version = "5.4.0"
+
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "8f5f192ba02319254aaf2cdcca00ec12eaafeb979a80a1e946773c520ae0a2c9",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/3.7.0/rules_nodejs-3.7.0.tar.gz"],
+    sha256 = "ac7eb554af28232dc43deaf7e7247d12b128a97ecb676c2e5d028c5d521b0433",
+    strip_prefix = "rules-nodejs-{version}".format(version = rules_nodejs_version),
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/{version}.tar.gz".format(
+        version = rules_nodejs_version,
+    ),
 )
+
+load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
+
+build_bazel_rules_nodejs_dependencies()
 
 load("@build_bazel_rules_nodejs//:index.bzl", "yarn_install")
 
