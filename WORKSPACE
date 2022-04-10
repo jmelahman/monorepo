@@ -19,6 +19,54 @@ http_archive(
 )
 
 ##############################################################################
+# Buildtools
+##############################################################################
+buildtools_version = "5.0.1"
+
+# Buildtools transitively depends on io_bazel_rules_go.
+# https://github.com/bazelbuild/buildtools/blob/a9f46b2bb3de812fce9f5fe59b29e75d95750aed/WORKSPACE#L5-L18
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "2b1641428dff9018f9e85c0384f03ec6c10660d935b750e3fa1492a281a53b0f",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
+    ],
+)
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+
+go_rules_dependencies()
+
+go_register_toolchains(version = "1.17.2")
+
+# Buildtools transitively depends on com_google_protobuf.
+# https://github.com/bazelbuild/buildtools/blob/a9f46b2bb3de812fce9f5fe59b29e75d95750aed/WORKSPACE#L40-L51
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "9b4ee22c250fe31b16f1a24d61467e40780a3fbb9b91c3b65be2a376ed913a1a",
+    strip_prefix = "protobuf-3.13.0",
+    urls = [
+        "https://github.com/protocolbuffers/protobuf/archive/v3.13.0.tar.gz",
+    ],
+)
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
+
+http_archive(
+    name = "com_github_bazelbuild_buildtools",
+    sha256 = "7f43df3cca7bb4ea443b4159edd7a204c8d771890a69a50a190dc9543760ca21",
+    strip_prefix = "buildtools-{version}".format(
+        version = buildtools_version,
+    ),
+    url = "https://github.com/bazelbuild/buildtools/archive/{version}.tar.gz".format(
+        version = buildtools_version,
+    ),
+)
+
+##############################################################################
 # Python
 ##############################################################################
 PYTHON_INTERPRETER = "python3.10"
@@ -77,51 +125,17 @@ mypy_integration_deps(
 )
 
 ##############################################################################
-# Buildtools
+# gtest
 ##############################################################################
-buildtools_version = "5.0.1"
-
-# Buildtools transitively depends on io_bazel_rules_go.
-# https://github.com/bazelbuild/buildtools/blob/a9f46b2bb3de812fce9f5fe59b29e75d95750aed/WORKSPACE#L5-L18
-http_archive(
-    name = "io_bazel_rules_go",
-    sha256 = "2b1641428dff9018f9e85c0384f03ec6c10660d935b750e3fa1492a281a53b0f",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
-    ],
-)
-
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
-
-go_rules_dependencies()
-
-go_register_toolchains(version = "1.17.2")
-
-# Buildtools transitively depends on com_google_protobuf.
-# https://github.com/bazelbuild/buildtools/blob/a9f46b2bb3de812fce9f5fe59b29e75d95750aed/WORKSPACE#L40-L51
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "9b4ee22c250fe31b16f1a24d61467e40780a3fbb9b91c3b65be2a376ed913a1a",
-    strip_prefix = "protobuf-3.13.0",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.13.0.tar.gz",
-    ],
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
+gtest_version = "1.11.0"
 
 http_archive(
-    name = "com_github_bazelbuild_buildtools",
-    sha256 = "7f43df3cca7bb4ea443b4159edd7a204c8d771890a69a50a190dc9543760ca21",
-    strip_prefix = "buildtools-{version}".format(
-        version = buildtools_version,
-    ),
-    url = "https://github.com/bazelbuild/buildtools/archive/{version}.tar.gz".format(
-        version = buildtools_version,
-    ),
+  name = "com_google_googletest",
+  sha256 = "b4870bf121ff7795ba20d20bcdd8627b8e088f2d1dab299a031c1034eddc93d5",
+  url = "https://github.com/google/googletest/archive/release-{version}.tar.gz".format(
+      version = gtest_version
+  ),
+  strip_prefix = "googletest-release-{version}".format(version = gtest_version),
 )
 
 ##############################################################################
