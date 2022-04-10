@@ -1,0 +1,6 @@
+###############################################################################
+# After updating this file, run `bazel run //tools/deps:compile_requirements`
+###############################################################################
+
+mypy==0.942  # Keep in sync with tools/typing/mypy-requirements.txt
+black==22.3.0
