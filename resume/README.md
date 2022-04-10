@@ -1,5 +1,6 @@
 # Resume
 
+Source for compiling the resume that gets published to [https://jmelahman.github.io/resume/](https://jmelahman.github.io/resume/).
 
 ## Personal resume in markdown, LaTeX and Open Document formats.
 
