@@ -64,7 +64,7 @@ teardown() {
 
       [ "$status" = "1" ]
       shellmock_verify
-      shellmock_verify_times 4
+      shellmock_verify_times 3
     done
 }
 
@@ -94,6 +94,6 @@ teardown() {
 
       [ "$status" = "1" ]
       shellmock_verify
-      shellmock_verify_times 4
+      shellmock_verify_times 3
     done
 }
