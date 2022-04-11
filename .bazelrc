@@ -28,3 +28,4 @@ build:tsan --linkopt -fsanitize=thread
 
 # Test
 test --test_output=errors
+test --build_tests_only
