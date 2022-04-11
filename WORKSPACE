@@ -238,11 +238,15 @@ http_archive(
     ),
 )
 
-local_repository(
-    name = "bazel_shellmock_git",
-    path = "/home/jamison/code/bazel-shellmock",
-)
-
-load("@bazel_shellmock_git//:deps.bzl", "bazel_shellmock_dependencies")
+load("@bazel_shellmock//:deps.bzl", "bazel_shellmock_dependencies")
 
 bazel_shellmock_dependencies()
+
+#local_repository(
+#    name = "bazel_shellmock_git",
+#    path = "/home/jamison/code/bazel-shellmock",
+#)
+#
+#load("@bazel_shellmock_git//:deps.bzl", "bazel_shellmock_dependencies")
+#
+#bazel_shellmock_dependencies()
