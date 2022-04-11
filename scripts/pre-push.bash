@@ -41,6 +41,10 @@ function main() {
   if [ -s "$changed_py" ]; then
     bazel run //tools/format
   fi
+  if [ -s "$changed_py" ] \
+     [ -s "$changed_build" ]; then
+    return 1
+  fi
 }
 
 main "$@"
