@@ -2,45 +2,31 @@
 #
 # Copy this file to /path/to/repo/.git/hooks/pre-push
 
-set -euo pipefail
-
-function match() {
-  local pattern="$1"
-  local string="$2"
-  if [[ "${string}" =~ $pattern ]]; then
-    return 0
-  fi
-  return 1
-}
-
-function check_match() {
-   local pattern="$1"
-   local file="$2"
-   local outfile="$3"
-   if match "${pattern}" "${file}"; then
-     echo "true" > "${outfile}"
-   fi
- }
-
 function main() {
-  changed_build="$(mktemp)"
-  local -r changed_py="$(mktemp)"
-  trap "rm -rf $changed_build $changed_py" EXIT
+  set -euo pipefail
 
+  # Patterns from https://github.com/bazelbuild/buildtools/blob/master/buildifier/runner.bash.template#L20
+  # Non-relevant, non-globs are omitted because otheriwse git-diff complains.
+  local merge_base
+  local buildifier_patterns=(
+    '*.bzl'
+    '*.sky'
+    'BUILD'
+    '*.BUILD'
+    'BUILD.*.bazel'
+    'BUILD.*.oss'
+    'WORKSPACE'
+    'WORKSPACE.*.bazel'
+    'WORKSPACE.*.oss'
+  )
   git fetch origin master
-  while read file; do
-    (
-      check_match ".*(BUILD|BUILD\.bazel|\.bzl)" "${file}" "${changed_build}"
-      check_match ".*\.py" "${file}" "${changed_py}"
-    ) &
-  done < <(git diff --name-only $(git merge-base origin/master HEAD))
-  wait
+  merge_base="$(git merge-base origin/master HEAD)"
 
-  if [ -s "$changed_build" ]; then
-    bazel run //:buildifier
+  if ! git diff --quiet "${merge_base}" "${buildifier_patterns[@]}"; then
+    bazel run //:buildifier_check
   fi
-  if [ -s "$changed_py" ]; then
-    bazel run //tools/format
+  if ! git diff --quiet "${merge_base}" "*.py"; then
+    bazel run //tools/format -- --check
   fi
 }
 
