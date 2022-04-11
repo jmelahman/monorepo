@@ -205,3 +205,44 @@ http_archive(
 load("@bazel_pandoc//:repositories.bzl", "pandoc_repositories")
 
 pandoc_repositories()
+
+##############################################################################
+# Bats
+##############################################################################
+BAZEL_BATS_VERSION = "05902c66e7aba5bca0816109e9f34e2dbebe19f6"
+
+http_archive(
+    name = "bazel_bats",
+    sha256 = "0be1795d8052c54e1068b3b0a648d67de0b9bf43cd15fd7bef73b6460b73b78f",
+    strip_prefix = "bazel-bats-{version}".format(version = BAZEL_BATS_VERSION),
+    url = "https://github.com/filmil/bazel-bats/archive/{version}.tar.gz".format(
+        version = BAZEL_BATS_VERSION,
+    ),
+)
+
+load("@bazel_bats//:deps.bzl", "bazel_bats_dependencies")
+
+bazel_bats_dependencies()
+
+##############################################################################
+# Shellmock
+##############################################################################
+BAZEL_SHELLMOCK_VERSION = "6612562e9683366490c48c83a97df0ea490772b7"
+
+http_archive(
+    name = "bazel_shellmock",
+    sha256 = "f935f7c901e8a17c95d7367e4ed4645aad682e61ddd1c4b2cd82c2b74ec206a9",
+    strip_prefix = "bazel-shellmock-{version}".format(version = BAZEL_SHELLMOCK_VERSION),
+    url = "https://github.com/jmelahman/bazel-shellmock/archive/{version}.tar.gz".format(
+        version = BAZEL_SHELLMOCK_VERSION,
+    ),
+)
+
+local_repository(
+    name = "bazel_shellmock_git",
+    path = "/home/jamison/code/bazel-shellmock",
+)
+
+load("@bazel_shellmock_git//:deps.bzl", "bazel_shellmock_dependencies")
+
+bazel_shellmock_dependencies()
