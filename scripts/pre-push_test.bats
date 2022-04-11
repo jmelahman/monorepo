@@ -62,9 +62,9 @@ teardown() {
       #cat "${SHELLMOCK_CAPTURE_DEBUG}" "${CAPTURE_FILE}"
       #unset TEST_FUNCTION
 
-      [ "$status" = "1" ]
+      [ "$status" = "0" ]
       shellmock_verify
-      shellmock_verify_times 3
+      shellmock_verify_times 4
     done
 }
 
@@ -92,8 +92,8 @@ teardown() {
       #cat "${SHELLMOCK_CAPTURE_DEBUG}" "${CAPTURE_FILE}"
       #unset TEST_FUNCTION
 
-      [ "$status" = "1" ]
+      [ "$status" = "0" ]
       shellmock_verify
-      shellmock_verify_times 3
+      shellmock_verify_times 4
     done
 }
