@@ -27,6 +27,7 @@ function main() {
   local -r changed_py="$(mktemp)"
   trap "rm -rf $changed_build $changed_py" EXIT
 
+  git fetch origin master
   while read file; do
     (
       check_match ".*(BUILD|BUILD\.bazel|\.bzl)" "${file}" "${changed_build}"
@@ -41,7 +42,7 @@ function main() {
   if [ -s "$changed_py" ]; then
     bazel run //tools/format
   fi
-  if [ -s "$changed_py" ] \
+  if [ -s "$changed_py" ] || \
      [ -s "$changed_build" ]; then
     return 1
   fi

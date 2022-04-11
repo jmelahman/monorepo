@@ -26,6 +26,7 @@ teardown() {
       # See https://github.com/jmelahman/bats-shellmock/issues/1
       unset capture
 
+      shellmock_expect git --match "fetch origin master"
       shellmock_expect git --match "merge-base origin/master HEAD" --output "${merge_base}"
       shellmock_expect git --match "diff --name-only ${merge_base}" --output "${fixture}"
 
@@ -33,7 +34,7 @@ teardown() {
 
       [ "$status" = "0" ]
       shellmock_verify
-      shellmock_verify_times 2
+      shellmock_verify_times 3
     done
 }
 
@@ -48,6 +49,7 @@ teardown() {
       # See https://github.com/jmelahman/bats-shellmock/issues/1
       unset capture
 
+      shellmock_expect git --match "fetch origin master"
       shellmock_expect git --match "merge-base origin/master HEAD" --output "${merge_base}"
       shellmock_expect git --match "diff --name-only ${merge_base}" --output "${fixture}"
       shellmock_expect bazel --status 0 --match "run //:buildifier"
@@ -60,9 +62,9 @@ teardown() {
       #cat "${SHELLMOCK_CAPTURE_DEBUG}" "${CAPTURE_FILE}"
       #unset TEST_FUNCTION
 
-      [ "$status" = "0" ]
+      [ "$status" = "1" ]
       shellmock_verify
-      shellmock_verify_times 3
+      shellmock_verify_times 4
     done
 }
 
@@ -77,6 +79,7 @@ teardown() {
       # See https://github.com/jmelahman/bats-shellmock/issues/1
       unset capture
 
+      shellmock_expect git --match "fetch origin master"
       shellmock_expect git --match "merge-base origin/master HEAD" --output "${merge_base}"
       shellmock_expect git --match "diff --name-only ${merge_base}" --output "${fixture}"
       shellmock_expect bazel --status 0 --match "run //tools/format"
@@ -89,8 +92,8 @@ teardown() {
       #cat "${SHELLMOCK_CAPTURE_DEBUG}" "${CAPTURE_FILE}"
       #unset TEST_FUNCTION
 
-      [ "$status" = "0" ]
+      [ "$status" = "1" ]
       shellmock_verify
-      shellmock_verify_times 3
+      shellmock_verify_times 4
     done
 }
