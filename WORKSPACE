@@ -86,7 +86,7 @@ load("@rules_python//python:pip.bzl", "pip_install")
 pip_install(
     name = "pydeps",
     python_interpreter = PYTHON_INTERPRETER,
-    requirements = "//:third_pary/requirements.txt",
+    requirements = "//:third_party/requirements.txt",
 )
 
 ##############################################################################

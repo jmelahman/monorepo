@@ -12,7 +12,7 @@ Python dependencies are specified in `third_party/requirements.in` and compiled 
 To recompile `third_party/requirements.txt`, run,
 
 ```shell
-bazel run //third_pary:requirements.update
+bazel run //third_party:requirements.update
 ```
 
 #### Upgrading Dependencies
