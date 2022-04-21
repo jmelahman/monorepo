@@ -21,6 +21,7 @@ teardown() {
     local fixture='foo'
     local merge_base='b501e53b27bc4649d15dc0580766599a39554951'
 
+    shellmock_expect git --match 'lfs pre-push'
     shellmock_expect git --match 'fetch origin master'
     shellmock_expect git --match "merge-base origin/master HEAD" --output "${merge_base}"
     shellmock_expect git --match "diff --quiet ${merge_base} ${__BUILDIFIER_PATTERN}" --status 0
@@ -30,13 +31,14 @@ teardown() {
 
     [ "$status" = "0" ]
     shellmock_verify
-    shellmock_verify_times 4
+    shellmock_verify_times 5
 }
 
 @test "pre-push changed build" {
     local fixture='BUILD'
     local merge_base='b501e53b27bc4649d15dc0580766599a39554951'
 
+    shellmock_expect git --match 'lfs pre-push'
     shellmock_expect git --match 'fetch origin master'
     shellmock_expect git --match 'merge-base origin/master HEAD' --output "${merge_base}"
     shellmock_expect git --match "diff --quiet ${merge_base} ${__BUILDIFIER_PATTERN}" --status 1
@@ -47,13 +49,14 @@ teardown() {
 
     [ "$status" = "0" ]
     shellmock_verify
-    shellmock_verify_times 5
+    shellmock_verify_times 6
 }
 
 @test "pre-push changed py" {
     local fixture='snake.py'
     local merge_base="b501e53b27bc4649d15dc0580766599a39554951"
 
+    shellmock_expect git --match 'lfs pre-push'
     shellmock_expect git --match 'fetch origin master'
     shellmock_expect git --match 'merge-base origin/master HEAD' --output "${merge_base}"
     shellmock_expect git --match "diff --quiet ${merge_base} ${__BUILDIFIER_PATTERN}" --status 0
@@ -67,5 +70,5 @@ teardown() {
 
     [ "$status" = "0" ]
     shellmock_verify
-    shellmock_verify_times 5
+    shellmock_verify_times 6
 }

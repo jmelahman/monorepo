@@ -5,6 +5,9 @@
 function main() {
   set -euo pipefail
 
+  command -v git-lfs >/dev/null 2>&1 || { echo >&2 "\nThis repository is configured for Git LFS but 'git-lfs' was not found on your path. If you no longer wish to use Git LFS, remove this hook by deleting '.git/hooks/pre-push'.\n"; exit 2; }
+  git lfs pre-push "$@"
+
   # Patterns from https://github.com/bazelbuild/buildtools/blob/master/buildifier/runner.bash.template#L20
   # Non-relevant, non-globs are omitted because otheriwse git-diff complains.
   local merge_base
