@@ -1,6 +1,7 @@
 # Personal Monorepo
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+![CI Status](https://github.com/jmelahman/monorepo/actions/workflows/main.yml/badge.svg)
 
 ## Tooling
 
