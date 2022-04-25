@@ -3,6 +3,15 @@
 [![CI Status](https://github.com/jmelahman/monorepo/actions/workflows/main.yml/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/main.yml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
+## Projects
+
+### Snapify
+
+An executable to check if any packages installed with the host's package manager can be installed
+as a [snap](https://snapcraft.io/) package.
+
+See also, [github://jmelahman/python-snapify](https://github.com/jmelahman/python-snapify).
+
 ## Tooling
 
 ### Dependencies
