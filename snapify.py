@@ -86,7 +86,10 @@ class Pacman(PackageManager):
                     *removed_packages,
                 ],
             )
-        except (subprocess.CalledProcessError, KeyboardInterrupt):  # Allow user to decline removal gracefully.
+        except (
+            subprocess.CalledProcessError,
+            KeyboardInterrupt,
+        ):  # Allow user to decline removal gracefully.
             sys.exit(1)
         return removed_packages
 
