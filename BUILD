@@ -1,11 +1,10 @@
-load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
+load("@pydeps//:requirements.bzl", "requirement")
 
-buildifier(
-    name = "buildifier",
-)
-
-buildifier(
-    name = "buildifier_check",
-    diff_command = "diff -q",
-    mode = "diff",
+py_binary(
+    name = "snapify",
+    srcs = ["snapify.py"],
+    deps = [
+        requirement("requests"),
+        requirement("urllib3"),
+    ],
 )
