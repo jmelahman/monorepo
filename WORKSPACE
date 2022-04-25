@@ -103,6 +103,11 @@ http_archive(
     url = "https://github.com/thundergolfer/bazel-mypy-integration/archive/{version}.tar.gz".format(
         version = mypy_integration_version,
     ),
+    patch_args = ["-p1"],
+    patches = [
+        "@//:third_party/mypy_integration-stubs.patch",
+        "@//:third_party/mypy_integration-site_packages.patch",
+    ],
 )
 
 load(

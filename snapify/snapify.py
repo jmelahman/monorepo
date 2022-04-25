@@ -9,11 +9,8 @@ import shutil
 import sys
 import typing
 
-# TODO(jamison): Library stubs not installed for "requests" (or incompatible with Python 3.10)  [import]
-import requests  # type: ignore[import]
-
-# TODO(jamison): Cannot find implementation or library stub for module named "urllib3"  [import]
-import urllib3  # type: ignore[import]
+import requests
+import urllib3
 
 logging.basicConfig(
     format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")
@@ -94,8 +91,7 @@ class Pacman(PackageManager):
         return removed_packages
 
 
-# TODO(jamison): Base type HTTPConnection becomes "Any" due to an unfollowed import  [no-any-unimported]
-class SnapdConnection(urllib3.connection.HTTPConnection):  # type: ignore[no-any-unimported]
+class SnapdConnection(urllib3.connection.HTTPConnection):
     def __init__(self) -> None:
         super().__init__("localhost")
 
@@ -104,8 +100,7 @@ class SnapdConnection(urllib3.connection.HTTPConnection):  # type: ignore[no-any
         self.sock.connect("/run/snapd.socket")
 
 
-# TODO(jamison): Base type HTTPConnectionPool becomes "Any" due to an unfollowed import  [no-any-unimported]
-class SnapdConnectionPool(urllib3.connectionpool.HTTPConnectionPool):  # type: ignore[no-any-unimported]
+class SnapdConnectionPool(urllib3.connectionpool.HTTPConnectionPool):
     def __init__(self) -> None:
         super().__init__("localhost")
 
@@ -113,8 +108,7 @@ class SnapdConnectionPool(urllib3.connectionpool.HTTPConnectionPool):  # type: i
         return SnapdConnection()
 
 
-# TODO(jamison): Base type HTTPAdapter becomes "Any" due to an unfollowed import  [no-any-unimported]
-class SnapdAdapter(requests.adapters.HTTPAdapter):  # type: ignore[no-any-unimported]
+class SnapdAdapter(requests.adapters.HTTPAdapter):
     def get_connection(
         self,
         url: str,
