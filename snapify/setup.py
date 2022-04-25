@@ -1,14 +1,14 @@
 #!/usr/bin/env python3.10
 
 import pathlib
-import os
 from setuptools import setup
 
-README = os.path.join(os.path.dirname(__file__), "README.md")
+README = (pathlib.Path(__file__).parent / "README.md").read_text()
+VERSION = "0.1.1"
 
 setup(
     name="python-snapify",
-    version="0.1.0",
+    version=VERSION,
     description="Reversible package converter -- convert to and from snap packages",
     author="Jamison Lahman",
     author_email="jamison@lahman.dev",
@@ -17,7 +17,7 @@ setup(
     url="https://github.com/jmelahman/python-snapify",
     py_modules=["snapify"],
     keywords=["arch linux", "pacman", "snap", "snapd", "snapify"],
-    download_url="https://github.com/jmelahman/python-snapify/archive/refs/tags/v0.1.0.tar.gz",
+    download_url=f"https://github.com/jmelahman/python-snapify/archive/refs/tags/v{VERSION}.tar.gz",
     license="MIT",
     classifiers=[
         "Development Status :: 3 - Alpha",
