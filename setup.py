@@ -16,10 +16,10 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/jmelahman/python-snapify",
     py_modules=["snapify"],
-    keywords = ["arch linux", "pacman", "snap", "snapd", "snapify"],
-    download_url = "https://github.com/jmelahman/python-snapify/archive/refs/tags/v0.1.0.tar.gz",
-    license = "MIT",
-    classifiers = [
+    keywords=["arch linux", "pacman", "snap", "snapd", "snapify"],
+    download_url="https://github.com/jmelahman/python-snapify/archive/refs/tags/v0.1.0.tar.gz",
+    license="MIT",
+    classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",
         "Operating System :: Unix",
