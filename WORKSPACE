@@ -96,6 +96,11 @@ mypy_integration_version = "c1193a230e3151b89d2e9ed05b986da34075c280"  # HEAD
 
 http_archive(
     name = "mypy_integration",
+    patch_args = ["-p1"],
+    patches = [
+        "@//:third_party/mypy_integration-stubs.patch",
+        "@//:third_party/mypy_integration-site_packages.patch",
+    ],
     sha256 = "2014c4758da248f316b15c95f5e3be2978faacf137042de6586e0a8152b91946",
     strip_prefix = "bazel-mypy-integration-{version}".format(
         version = mypy_integration_version,
@@ -103,11 +108,6 @@ http_archive(
     url = "https://github.com/thundergolfer/bazel-mypy-integration/archive/{version}.tar.gz".format(
         version = mypy_integration_version,
     ),
-    patch_args = ["-p1"],
-    patches = [
-        "@//:third_party/mypy_integration-stubs.patch",
-        "@//:third_party/mypy_integration-site_packages.patch",
-    ],
 )
 
 load(
