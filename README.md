@@ -8,6 +8,13 @@
 An executable to check if any packages installed with the host's package manager can be installed
 as a [snap](https://snapcraft.io/) package.
 
+The project is tracked using a [git-subtree](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
+To push changes upstream,
+
+```shell
+git subtree push --prefix snapify git@github.com:jmelahman/python-snapify.git master
+```
+
 See also, [github://jmelahman/python-snapify](https://github.com/jmelahman/python-snapify).
 
 # Tooling
