@@ -11,10 +11,14 @@ import typing
 
 # TODO(jamison): Library stubs not installed for "requests" (or incompatible with Python 3.10)  [import]
 import requests  # type: ignore[import]
+
 # TODO(jamison): Cannot find implementation or library stub for module named "urllib3"  [import]
 import urllib3  # type: ignore[import]
 
-logging.basicConfig(format='%(levelname)s: %(message)s', level=os.environ.get("LOGLEVEL", "INFO"))
+logging.basicConfig(
+    format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")
+)
+
 
 class SupportedDistro(enum.Enum):
     ARCH = "arch"
@@ -26,6 +30,7 @@ class PackageManager(abc.ABC):
             executable = shutil.which(bin_name)
             assert isinstance(executable, str)
             return executable
+
         self.name = name
         self._bin = _get_executable(name)
         self._sudo = _get_executable("sudo")
@@ -43,7 +48,9 @@ class PackageManager(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def remove(self, packages: typing.List[str], purge: bool = False) -> typing.List[str]:
+    def remove(
+        self, packages: typing.List[str], purge: bool = False
+    ) -> typing.List[str]:
         raise NotImplementedError
 
 
@@ -60,11 +67,18 @@ class Pacman(PackageManager):
     def install(self, packages: typing.List[str]) -> None:
         raise NotImplementedError("TODO")
 
-    def remove(self, packages: typing.List[str], purge: bool = False) -> typing.List[str]:
-        removed_packages = subprocess.run(
-            [self._bin, "-Qqt", *packages],
-            stdout = subprocess.PIPE,
-        ).stdout.decode().strip().split("\n")
+    def remove(
+        self, packages: typing.List[str], purge: bool = False
+    ) -> typing.List[str]:
+        removed_packages = (
+            subprocess.run(
+                [self._bin, "-Qqt", *packages],
+                stdout=subprocess.PIPE,
+            )
+            .stdout.decode()
+            .strip()
+            .split("\n")
+        )
         if removed_packages == [""]:
             logging.info(
                 f"The following packages were unable to be snapified: {' '.join(packages)}"
@@ -73,7 +87,12 @@ class Pacman(PackageManager):
         logging.info(f"Removing the following packages: {' '.join(removed_packages)}")
         try:
             subprocess.check_call(
-                [self._sudo, self._bin, f"-Rs{'n' if purge else ''}", *removed_packages],
+                [
+                    self._sudo,
+                    self._bin,
+                    f"-Rs{'n' if purge else ''}",
+                    *removed_packages,
+                ],
             )
         except subprocess.CalledProcessError:  # Allow user to decline removal gracefully.
             sys.exit(1)
@@ -129,8 +148,8 @@ class Snapd(PackageManager):
         names_file = "/var/cache/snapd/names"
         if not os.path.exists(names_file):
             logging.info(
-              f"{names_file} does not exist."
-              "Checking for available snaps will be slower than usual."
+                f"{names_file} does not exist."
+                "Checking for available snaps will be slower than usual."
             )
             return []
         with open(names_file, "rb") as snap_names:
@@ -141,10 +160,12 @@ class Snapd(PackageManager):
             return False
         if self._available_packages:
             return package_name in self._available_packages
-        return not subprocess.run([self._bin, "info", package_name], stderr=subprocess.DEVNULL).returncode
+        return not subprocess.run(
+            [self._bin, "info", package_name], stderr=subprocess.DEVNULL
+        ).returncode
 
     def _get_confinement(self, package_name: str) -> SnapdConfinement:
-        response = self._session.get("http://snapd/v2/find", params = { "q": package_name })
+        response = self._session.get("http://snapd/v2/find", params={"q": package_name})
         for result in response.json()["result"]:
             if package_name != result["name"]:
                 continue
@@ -161,12 +182,17 @@ class Snapd(PackageManager):
         for group, items in confinement_groups.items():
             if group == SnapdConfinement.CLASSIC:
                 for item in items:
-                    subprocess.check_call([self._sudo, self._bin, "install", "--classic", item])
+                    subprocess.check_call(
+                        [self._sudo, self._bin, "install", "--classic", item]
+                    )
             else:
                 subprocess.check_call([self._sudo, self._bin, "install", *packages])
 
-    def remove(self, packages: typing.List[str], purge: bool = False) -> typing.List[str]:
+    def remove(
+        self, packages: typing.List[str], purge: bool = False
+    ) -> typing.List[str]:
         raise NotImplementedError("TODO")
+
 
 def check_supported_distro() -> SupportedDistro:
     os_id = None
@@ -179,23 +205,28 @@ def check_supported_distro() -> SupportedDistro:
         raise RuntimeError("Unable to determine host distro")
     return SupportedDistro(os_id)
 
+
 def get_host_package_manager(distro: SupportedDistro) -> PackageManager:
     if distro == SupportedDistro.ARCH:
         return Pacman()
     raise RuntimeError(f"Unable register host package manager for: {distro.value}")
+
 
 def main() -> None:
     distro = check_supported_distro()
     host_manager = get_host_package_manager(distro)
     snap = Snapd()
     host_packages = host_manager.get_installed_packages()
-    portable_packages = [package for package in host_packages if snap.has_available(package)]
+    portable_packages = [
+        package for package in host_packages if snap.has_available(package)
+    ]
     if not portable_packages:
         return
     removed_packages = host_manager.remove(portable_packages)
     if not removed_packages:
         return
     snap.install(removed_packages)
+
 
 if __name__ == "__main__":
     main()
