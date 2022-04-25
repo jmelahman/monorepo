@@ -7,3 +7,5 @@
 
 mypy==0.942  # Keep in sync with tools/typing/mypy-requirements.txt
 black==22.3.0
+requests==2.27.1
+urllib3==1.26.9
