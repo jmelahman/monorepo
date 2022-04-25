@@ -70,20 +70,15 @@ class Pacman(PackageManager):
     def remove(
         self, packages: typing.List[str], purge: bool = False
     ) -> typing.List[str]:
-        removed_packages = (
-            subprocess.run(
-                [self._bin, "-Qqt", *packages],
-                stdout=subprocess.PIPE,
-            )
-            .stdout.decode()
-            .strip()
-            .split("\n")
+        dependency_query = subprocess.run(
+            [self._bin, "-Qqt", *packages], stdout=subprocess.PIPE
         )
-        if removed_packages == [""]:
+        if dependency_query.returncode:
             logging.info(
                 f"The following packages were unable to be snapified: {' '.join(packages)}"
             )
             return []
+        removed_packages = dependency_query.stdout.decode().strip().split("\n")
         logging.info(f"Removing the following packages: {' '.join(removed_packages)}")
         try:
             subprocess.check_call(
