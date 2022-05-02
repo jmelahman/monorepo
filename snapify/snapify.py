@@ -89,14 +89,14 @@ class Pacman(PackageManager):
         removed_packages = dependency_query.stdout.decode().strip().split("\n")
         logging.info(f"Removing the following packages: {' '.join(removed_packages)}")
         try:
-            subprocess.check_call(
-                [
-                    self._sudo,
-                    self._bin,
-                    f"-Rs{'n' if purge else ''}",
-                    *removed_packages,
-                ],
-            )
+            remove_cmd = [
+                self._sudo,
+                self._bin,
+                f"-Rs{'n' if purge else ''}",
+            ]
+            if self._noninteractive:
+                remove_cmd.append("--noconfirm")
+            subprocess.check_call(remove_cmd + removed_packages)
         except (
             subprocess.CalledProcessError,
             KeyboardInterrupt,
