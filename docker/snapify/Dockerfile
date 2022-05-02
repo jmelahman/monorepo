@@ -19,4 +19,4 @@ RUN pacman -S --needed --noconfirm \
       tree \
       vlc
 
-RUN pip install python-snapify==0.2.0
+RUN pip install python-snapify==0.2.2
