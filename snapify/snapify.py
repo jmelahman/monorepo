@@ -82,7 +82,6 @@ class Pacman(PackageManager):
         if self._installed_packages == []:
             return self._installed_packages
         self._installed_packages = [
-        return self._installed_packages
             package
             for package in subprocess.check_output([self._bin, "-Qq"])
             .decode()
