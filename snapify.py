@@ -1,6 +1,8 @@
 #!/usr/bin/env python3.10
 import abc
+import argparse
 import enum
+import json
 import logging
 import os
 import socket
@@ -16,19 +18,24 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")
 )
 
+class SnapifyConfigError(Exception):
+    __module__ = "builtins"
+
 
 class SupportedDistro(enum.Enum):
     ARCH = "arch"
 
 
 class PackageManager(abc.ABC):
-    def __init__(self, name: str) -> None:
+    def __init__(self, noninteractive: bool, ignored_packages: typing.List[str], name: str) -> None:
         def _get_executable(bin_name: str) -> str:
             executable = shutil.which(bin_name)
             assert isinstance(executable, str)
             return executable
 
         self.name = name
+        self._not_available = ignored_packages
+        self._noninteractive = noninteractive
         self._bin = _get_executable(name)
         self._sudo = _get_executable("sudo")
 
@@ -52,11 +59,14 @@ class PackageManager(abc.ABC):
 
 
 class Pacman(PackageManager):
-    def __init__(self, name: str = "pacman") -> None:
-        super().__init__(name)
+    def __init__(self, noninteractive: bool, ignored_packages: typing.List[str], name: str = "pacman") -> None:
+        super().__init__(noninteractive, ignored_packages, name)
 
     def get_installed_packages(self) -> typing.List[str]:
-        return subprocess.check_output([self._bin, "-Qq"]).decode().strip().split("\n")
+        return [
+            package for package in subprocess.check_output([self._bin, "-Qq"]).decode().strip().split("\n")
+            if package not in self._not_available
+        ]
 
     def has_available(self, package_name: str) -> bool:
         raise NotImplementedError("TODO")
@@ -126,9 +136,9 @@ class SnapdConfinement(enum.Enum):
 
 
 class Snapd(PackageManager):
-    def __init__(self, name: str = "snap") -> None:
-        super().__init__(name)
-        self._never_available = ["snapd"]
+    def __init__(self, noninteractive: bool, ignored_packages: typing.List[str], name: str = "snap") -> None:
+        super().__init__(noninteractive, ignored_packages, name)
+        self._not_available = self._not_available + ["snapd"]
         self._available_packages = self.get_available_packages()
         self._session = requests.Session()
         self._session.mount("http://snapd/", SnapdAdapter())
@@ -148,7 +158,7 @@ class Snapd(PackageManager):
             return [package.decode().strip() for package in snap_names.readlines()]
 
     def has_available(self, package_name: str) -> bool:
-        if package_name in self._never_available:
+        if package_name in self._not_available:
             return False
         if self._available_packages:
             return package_name in self._available_packages
@@ -186,38 +196,83 @@ class Snapd(PackageManager):
         raise NotImplementedError("TODO")
 
 
-def check_supported_distro() -> SupportedDistro:
-    os_id = None
-    with open("/etc/os-release", "rb") as release:
-        for line in release.readlines():
-            if line.startswith(b"ID"):
-                os_id = line.split(b"=")[1].strip().decode()
-                break
-    if not os_id:
-        raise RuntimeError("Unable to determine host distro")
-    return SupportedDistro(os_id)
+class Snapifier:
+    def __init__(self, noninteractive: bool) -> None:
+        self._noninteractive = noninteractive
+        self._distro = self._check_supported_distro()
+        self._config = self._read_user_config()
+        self.manager = self.get_host_package_manager()
+        self.snap = Snapd(self._noninteractive, [])
+
+    @staticmethod
+    def _read_user_config() -> typing.Dict[SupportedDistro, typing.List[str]]:
+        config: typing.Dict[SupportedDistro, typing.List[str]] = {}
+        config_path = os.path.join(os.path.expanduser("~/.config/snapify"), "config")
+        if not os.path.exists(config_path):
+            return config
+        with open(config_path) as json_config:
+            raw_config = json.load(json_config)
+            for distro, ignorelist in raw_config.items():
+                if not any([distro == d.value for d in SupportedDistro]):
+                    raise SnapifyConfigError(
+                        "'{distro}' in Snapify config is not a supported distro: {supported}".format(
+                          distro = distro,
+                          supported = " ".join([d.value for d in SupportedDistro]),
+                        )
+                    )
+                if not isinstance(ignorelist, list):
+                    raise SnapifyConfigError(f"Ignore list for '{distro}' is not a list.")
+                for package in ignorelist:
+                    if not isinstance(package, str):
+                        raise SnapifyConfigError(f"Ignored package '{package}' for '{distro}' must be a string.")
+                config[SupportedDistro(distro)] = ignorelist
+        return config
+
+    @staticmethod
+    def _check_supported_distro() -> SupportedDistro:
+        os_id = None
+        with open("/etc/os-release", "rb") as release:
+            for line in release.readlines():
+                if line.startswith(b"ID"):
+                    os_id = line.split(b"=")[1].strip().decode()
+                    break
+        if not os_id:
+            raise RuntimeError("Unable to determine host distro")
+        return SupportedDistro(os_id)
 
 
-def get_host_package_manager(distro: SupportedDistro) -> PackageManager:
-    if distro == SupportedDistro.ARCH:
-        return Pacman()
-    raise RuntimeError(f"Unable register host package manager for: {distro.value}")
+    def _get_ignored_packages(self) -> typing.List[str]:
+        return self._config.get(self._distro, [])
+
+    def get_host_package_manager(self) -> PackageManager:
+        ignored_packages = self._get_ignored_packages()
+        if self._distro == SupportedDistro.ARCH:
+            return Pacman(self._noninteractive, ignored_packages)
+        raise RuntimeError(f"Unable register host package manager for: {self._distro.value}")
+
+
+    def get_installed_packages(self) -> typing.List[str]:
+        return self.manager.get_installed_packages()
+
+def get_parsed_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--noninteractive", action='store_true', default=False, help="run in noninteractive mode")
+    return parser.parse_args()
 
 
 def main() -> None:
-    distro = check_supported_distro()
-    host_manager = get_host_package_manager(distro)
-    snap = Snapd()
-    host_packages = host_manager.get_installed_packages()
+    args = get_parsed_args()
+    snapifier = Snapifier(args.noninteractive)
+    host_packages = snapifier.get_installed_packages()
     portable_packages = [
-        package for package in host_packages if snap.has_available(package)
+        package for package in host_packages if snapifier.snap.has_available(package)
     ]
     if not portable_packages:
         return
-    removed_packages = host_manager.remove(portable_packages)
+    removed_packages = snapifier.manager.remove(portable_packages)
     if not removed_packages:
         return
-    snap.install(removed_packages)
+    snapifier.snap.install(removed_packages)
 
 
 if __name__ == "__main__":
