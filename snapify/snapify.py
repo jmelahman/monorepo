@@ -151,8 +151,8 @@ class Snapd(PackageManager):
         names_file = "/var/cache/snapd/names"
         if not os.path.exists(names_file):
             logging.info(
-                f"{names_file} does not exist."
-                "Checking for available snaps will be slower than usual."
+                f"{names_file} does not exist. "
+                "Checking for available snaps will be slower than usual. "
             )
             return []
         with open(names_file, "rb") as snap_names:
