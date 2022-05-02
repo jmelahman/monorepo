@@ -18,6 +18,7 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")
 )
 
+
 class SnapifyConfigError(Exception):
     __module__ = "builtins"
 
@@ -28,7 +29,9 @@ class SupportedDistro(enum.Enum):
 
 
 class PackageManager(abc.ABC):
-    def __init__(self, noninteractive: bool, ignored_packages: typing.List[str], name: str) -> None:
+    def __init__(
+        self, noninteractive: bool, ignored_packages: typing.List[str], name: str
+    ) -> None:
         def _get_executable(bin_name: str) -> str:
             executable = shutil.which(bin_name)
             assert isinstance(executable, str)
@@ -60,12 +63,21 @@ class PackageManager(abc.ABC):
 
 
 class Pacman(PackageManager):
-    def __init__(self, noninteractive: bool, ignored_packages: typing.List[str], name: str = "pacman") -> None:
+    def __init__(
+        self,
+        noninteractive: bool,
+        ignored_packages: typing.List[str],
+        name: str = "pacman",
+    ) -> None:
         super().__init__(noninteractive, ignored_packages, name)
 
     def get_installed_packages(self) -> typing.List[str]:
         return [
-            package for package in subprocess.check_output([self._bin, "-Qq"]).decode().strip().split("\n")
+            package
+            for package in subprocess.check_output([self._bin, "-Qq"])
+            .decode()
+            .strip()
+            .split("\n")
             if package not in self._not_available
         ]
 
@@ -137,7 +149,12 @@ class SnapdConfinement(enum.Enum):
 
 
 class Snapd(PackageManager):
-    def __init__(self, noninteractive: bool, ignored_packages: typing.List[str], name: str = "snap") -> None:
+    def __init__(
+        self,
+        noninteractive: bool,
+        ignored_packages: typing.List[str],
+        name: str = "snap",
+    ) -> None:
         super().__init__(noninteractive, ignored_packages, name)
         self._not_available = self._not_available + ["snapd"]
         self._available_packages = self.get_available_packages()
@@ -217,15 +234,19 @@ class Snapifier:
                 if not any([distro == d.value for d in SupportedDistro]):
                     raise SnapifyConfigError(
                         "'{distro}' in Snapify config is not a supported distro: {supported}".format(
-                          distro = distro,
-                          supported = " ".join([d.value for d in SupportedDistro]),
+                            distro=distro,
+                            supported=" ".join([d.value for d in SupportedDistro]),
                         )
                     )
                 if not isinstance(ignorelist, list):
-                    raise SnapifyConfigError(f"Ignore list for '{distro}' is not a list.")
+                    raise SnapifyConfigError(
+                        f"Ignore list for '{distro}' is not a list."
+                    )
                 for package in ignorelist:
                     if not isinstance(package, str):
-                        raise SnapifyConfigError(f"Ignored package '{package}' for '{distro}' must be a string.")
+                        raise SnapifyConfigError(
+                            f"Ignored package '{package}' for '{distro}' must be a string."
+                        )
                 config[SupportedDistro(distro)] = ignorelist
         return config
 
@@ -241,7 +262,6 @@ class Snapifier:
             raise RuntimeError("Unable to determine host distro")
         return SupportedDistro(os_id)
 
-
     def _get_ignored_packages(self) -> typing.List[str]:
         return self._config.get(self._distro, [])
 
@@ -251,15 +271,22 @@ class Snapifier:
             return Pacman(self._noninteractive, ignored_packages)
         elif self._distro == SupportedDistro.MANJARO:
             return Pacman(self._noninteractive, ignored_packages)
-        raise RuntimeError(f"Unable register host package manager for: {self._distro.value}")
-
+        raise RuntimeError(
+            f"Unable register host package manager for: {self._distro.value}"
+        )
 
     def get_installed_packages(self) -> typing.List[str]:
         return self.manager.get_installed_packages()
 
+
 def get_parsed_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--noninteractive", action='store_true', default=False, help="run in noninteractive mode")
+    parser.add_argument(
+        "--noninteractive",
+        action="store_true",
+        default=False,
+        help="run in noninteractive mode",
+    )
     return parser.parse_args()
 
 
