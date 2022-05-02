@@ -48,7 +48,15 @@ class PackageManager(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def filter_removeable(self, packages: typing.List[str]) -> typing.List[str]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def has_available(self, package_name: str) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def has_installed(self, package_name: str) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -84,12 +92,13 @@ class Pacman(PackageManager):
     def has_available(self, package_name: str) -> bool:
         raise NotImplementedError("TODO")
 
+    def has_installed(self, package_name: str) -> bool:
+        return package_name in self._installed_packages
+
     def install(self, packages: typing.List[str]) -> None:
         raise NotImplementedError("TODO")
 
-    def remove(
-        self, packages: typing.List[str], purge: bool = False
-    ) -> typing.List[str]:
+    def filter_removeable(self, packages: typing.List[str]) -> typing.List[str]:
         dependency_query = subprocess.run(
             [self._bin, "-Qqt", *packages], stdout=subprocess.PIPE
         )
@@ -98,7 +107,11 @@ class Pacman(PackageManager):
                 f"The following packages were unable to be snapified: {' '.join(packages)}"
             )
             return []
-        removed_packages = dependency_query.stdout.decode().strip().split("\n")
+        return dependency_query.stdout.decode().strip().split("\n")
+
+    def remove(
+        self, packages: typing.List[str], purge: bool = False
+    ) -> typing.List[str]:
         logging.info(f"Removing the following packages: {' '.join(removed_packages)}")
         try:
             remove_cmd = [
@@ -158,17 +171,20 @@ class Snapd(PackageManager):
         super().__init__(noninteractive, ignored_packages, name)
         self._not_available = self._not_available + ["snapd"]
         self._available_packages = self.get_available_packages()
+        self._installed_packages = self.get_installed_packages()
         self._session = requests.Session()
         self._session.mount("http://snapd/", SnapdAdapter())
 
     def get_installed_packages(self) -> typing.List[str]:
-        raise NotImplementedError("TODO")
+        snap_list = subprocess.check_output([self._bin, "list"]).decode().split("\n")
+        snap_list.pop(0)  # Remove header
+        return [package.split(" ")[0] for package in snap_list]
 
     def get_available_packages(self) -> typing.List[str]:
         names_file = "/var/cache/snapd/names"
         if not os.path.exists(names_file):
             logging.info(
-                f"{names_file} does not exist. "
+                f"'{names_file}' does not exist. "
                 "Checking for available snaps will be slower than usual. "
             )
             return []
@@ -184,6 +200,9 @@ class Snapd(PackageManager):
             [self._bin, "info", package_name], stderr=subprocess.DEVNULL
         ).returncode
 
+    def has_installed(self, package_name: str) -> bool:
+        return package_name in self._installed_packages
+
     def _get_confinement(self, package_name: str) -> SnapdConfinement:
         response = self._session.get("http://snapd/v2/find", params={"q": package_name})
         for result in response.json()["result"]:
@@ -197,6 +216,8 @@ class Snapd(PackageManager):
             confinement: [] for confinement in SnapdConfinement
         }
         for package in packages:
+            if self.has_installed(package):
+                continue
             confinement = self._get_confinement(package)
             confinement_groups[confinement].append(package)
         for group, items in confinement_groups.items():
@@ -207,6 +228,9 @@ class Snapd(PackageManager):
                     )
             else:
                 subprocess.check_call([self._sudo, self._bin, "install", *packages])
+
+    def filter_removeable(self, packages: typing.List[str]) -> typing.List[str]:
+        return packages
 
     def remove(
         self, packages: typing.List[str], purge: bool = False
@@ -275,9 +299,6 @@ class Snapifier:
             f"Unable register host package manager for: {self._distro.value}"
         )
 
-    def get_installed_packages(self) -> typing.List[str]:
-        return self.manager.get_installed_packages()
-
 
 def get_parsed_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -293,16 +314,17 @@ def get_parsed_args() -> argparse.Namespace:
 def main() -> None:
     args = get_parsed_args()
     snapifier = Snapifier(args.noninteractive)
-    host_packages = snapifier.get_installed_packages()
+    host_packages = snapifier.manager.get_installed_packages()
     portable_packages = [
         package for package in host_packages if snapifier.snap.has_available(package)
     ]
     if not portable_packages:
         return
-    removed_packages = snapifier.manager.remove(portable_packages)
-    if not removed_packages:
+    removeable_packages = snapifier.manager.filter_removeable(portable_packages)
+    if not removeable_packages:
         return
-    snapifier.snap.install(removed_packages)
+    snapifier.snap.install(removeable_packages)
+    snapifier.manager.remove(removeable_packages)
 
 
 if __name__ == "__main__":
