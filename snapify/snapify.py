@@ -79,7 +79,7 @@ class Pacman(PackageManager):
         super().__init__(noninteractive, ignored_packages, name)
 
     def get_installed_packages(self) -> typing.List[str]:
-        if self._installed_packages == []:
+        if self._installed_packages != []:
             return self._installed_packages
         self._installed_packages = [
             package
@@ -89,6 +89,7 @@ class Pacman(PackageManager):
             .split("\n")
             if package not in self._not_available
         ]
+        return self._installed_packages
 
     def has_available(self, package_name: str) -> bool:
         raise NotImplementedError("TODO")
@@ -174,7 +175,7 @@ class Snapd(PackageManager):
         self._session.mount("http://snapd/", SnapdAdapter())
 
     def get_installed_packages(self) -> typing.List[str]:
-        if self._installed_packages == []:
+        if self._installed_packages != []:
             return self._installed_packages
         snap_list = subprocess.check_output([self._bin, "list"]).decode().split("\n")
         snap_list.pop(0)  # Remove header
