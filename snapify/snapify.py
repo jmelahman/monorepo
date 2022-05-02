@@ -79,9 +79,13 @@ class Pacman(PackageManager):
         super().__init__(noninteractive, ignored_packages, name)
 
     def get_installed_packages(self) -> typing.List[str]:
+<<<<<<< HEAD
         if self._installed_packages == []:
             return self._installed_packages
         self._installed_packages = [
+=======
+        return [
+>>>>>>> c42e8bdc56fc712eda037e86652a96a1ef157eae
             package
             for package in subprocess.check_output([self._bin, "-Qq"])
             .decode()
@@ -89,7 +93,10 @@ class Pacman(PackageManager):
             .split("\n")
             if package not in self._not_available
         ]
+<<<<<<< HEAD
         return self._installed_packages
+=======
+>>>>>>> c42e8bdc56fc712eda037e86652a96a1ef157eae
 
     def has_available(self, package_name: str) -> bool:
         raise NotImplementedError("TODO")
