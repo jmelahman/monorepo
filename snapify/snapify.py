@@ -24,6 +24,7 @@ class SnapifyConfigError(Exception):
 
 class SupportedDistro(enum.Enum):
     ARCH = "arch"
+    MANJARO = "manjaro"
 
 
 class PackageManager(abc.ABC):
@@ -247,6 +248,8 @@ class Snapifier:
     def get_host_package_manager(self) -> PackageManager:
         ignored_packages = self._get_ignored_packages()
         if self._distro == SupportedDistro.ARCH:
+            return Pacman(self._noninteractive, ignored_packages)
+        elif self._distro == SupportedDistro.MANJARO:
             return Pacman(self._noninteractive, ignored_packages)
         raise RuntimeError(f"Unable register host package manager for: {self._distro.value}")
 
