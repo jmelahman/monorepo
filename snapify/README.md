@@ -11,15 +11,3 @@ Snapify is available as a [pypi package](https://pypi.org/project/python-snapify
 ```shell
 pip install python-snapify
 ```
-
-## Build
-
-```shell
-python setup.py sdist
-```
-
-### Deploy
-
-```
-twine upload dist/*
-```
