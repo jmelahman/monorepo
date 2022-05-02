@@ -40,6 +40,7 @@ class PackageManager(abc.ABC):
         self.name = name
         self._not_available = ignored_packages
         self._noninteractive = noninteractive
+        self._installed_packages: typing.List[str] = []
         self._bin = _get_executable(name)
         self._sudo = _get_executable("sudo")
 
@@ -78,7 +79,9 @@ class Pacman(PackageManager):
         super().__init__(noninteractive, ignored_packages, name)
 
     def get_installed_packages(self) -> typing.List[str]:
-        return [
+        if self._installed_packages == []:
+            return self._installed_packages
+        self._installed_packages = [
             package
             for package in subprocess.check_output([self._bin, "-Qq"])
             .decode()
@@ -86,12 +89,13 @@ class Pacman(PackageManager):
             .split("\n")
             if package not in self._not_available
         ]
+        return self._installed_packages
 
     def has_available(self, package_name: str) -> bool:
         raise NotImplementedError("TODO")
 
     def has_installed(self, package_name: str) -> bool:
-        return package_name in self._installed_packages
+        return package_name in self.get_installed_packages()
 
     def install(self, packages: typing.List[str]) -> None:
         raise NotImplementedError("TODO")
@@ -171,9 +175,12 @@ class Snapd(PackageManager):
         self._session.mount("http://snapd/", SnapdAdapter())
 
     def get_installed_packages(self) -> typing.List[str]:
+        if self._installed_packages == []:
+            return self._installed_packages
         snap_list = subprocess.check_output([self._bin, "list"]).decode().split("\n")
         snap_list.pop(0)  # Remove header
-        return [package.split(" ")[0] for package in snap_list]
+        self._installed_packages = [package.split(" ")[0] for package in snap_list]
+        return self._installed_packages
 
     def get_available_packages(self) -> typing.List[str]:
         names_file = "/var/cache/snapd/names"
@@ -196,7 +203,7 @@ class Snapd(PackageManager):
         ).returncode
 
     def has_installed(self, package_name: str) -> bool:
-        return package_name in self._installed_packages
+        return package_name in self.get_installed_packages()
 
     def _get_confinement(self, package_name: str) -> SnapdConfinement:
         response = self._session.get("http://snapd/v2/find", params={"q": package_name})
