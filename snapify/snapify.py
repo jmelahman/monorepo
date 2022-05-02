@@ -64,9 +64,7 @@ class PackageManager(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def remove(
-        self, packages: typing.List[str], purge: bool = False
-    ) -> typing.List[str]:
+    def remove(self, packages: typing.List[str], purge: bool = False) -> None:
         raise NotImplementedError
 
 
@@ -109,10 +107,8 @@ class Pacman(PackageManager):
             return []
         return dependency_query.stdout.decode().strip().split("\n")
 
-    def remove(
-        self, packages: typing.List[str], purge: bool = False
-    ) -> typing.List[str]:
-        logging.info(f"Removing the following packages: {' '.join(removed_packages)}")
+    def remove(self, packages: typing.List[str], purge: bool = False) -> None:
+        logging.info(f"Removing the following packages: {' '.join(packages)}")
         try:
             remove_cmd = [
                 self._sudo,
@@ -121,13 +117,12 @@ class Pacman(PackageManager):
             ]
             if self._noninteractive:
                 remove_cmd.append("--noconfirm")
-            subprocess.check_call(remove_cmd + removed_packages)
+            subprocess.check_call(remove_cmd + packages)
         except (
             subprocess.CalledProcessError,
             KeyboardInterrupt,
         ):  # Allow user to decline removal gracefully.
             sys.exit(1)
-        return removed_packages
 
 
 class SnapdConnection(urllib3.connection.HTTPConnection):
@@ -232,9 +227,7 @@ class Snapd(PackageManager):
     def filter_removeable(self, packages: typing.List[str]) -> typing.List[str]:
         return packages
 
-    def remove(
-        self, packages: typing.List[str], purge: bool = False
-    ) -> typing.List[str]:
+    def remove(self, packages: typing.List[str], purge: bool = False) -> None:
         raise NotImplementedError("TODO")
 
 
