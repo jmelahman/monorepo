@@ -61,7 +61,10 @@ class SnapifyTest(unittest.TestCase):
     @mock.patch("snapify._get_executable")
     @mock.patch("os.path.exists")
     def test_snapifier_arch(
-        self, mock_path_exists: mock.MagicMock, mock_get_executable: mock.MagicMock, mock_installed_snaps: mock.MagicMock
+        self,
+        mock_path_exists: mock.MagicMock,
+        mock_get_executable: mock.MagicMock,
+        mock_installed_snaps: mock.MagicMock,
     ) -> None:
         mock_path_exists.side_effect = [
             True,  # ~/.config/snapify/config
@@ -77,7 +80,10 @@ class SnapifyTest(unittest.TestCase):
     @mock.patch("snapify._get_executable")
     @mock.patch("os.path.exists")
     def test_snapifier_manjaro(
-        self, mock_path_exists: mock.MagicMock, mock_get_executable: mock.MagicMock, mock_installed_snaps: mock.MagicMock
+        self,
+        mock_path_exists: mock.MagicMock,
+        mock_get_executable: mock.MagicMock,
+        mock_installed_snaps: mock.MagicMock,
     ) -> None:
         mock_path_exists.side_effect = [
             True,  # ~/.config/snapify/config

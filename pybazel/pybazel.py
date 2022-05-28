@@ -12,7 +12,9 @@ class BazelClient:
         self.workspace_path = workspace_path or os.environ["BUILD_WORKSPACE_DIRECTORY"]
         self._bazel_bin = "bazel"
 
-    def sync(self, sync_options: list[str], check: bool =True) -> subprocess.CompletedProcess:
+    def sync(
+        self, sync_options: list[str], check: bool = True
+    ) -> subprocess.CompletedProcess:
         cmd = [
             self._bazel_bin,
             *self.bazel_options,
