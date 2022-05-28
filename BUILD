@@ -9,11 +9,11 @@ buildifier(
 
 buildifier(
     name = "buildifier.check",
-    exclude_patterns = [
-        "./.git/*",
-    ],
     # TODO
     # lint_mode = "warn",
     diff_command = "diff -q",
+    exclude_patterns = [
+        "./.git/*",
+    ],
     mode = "diff",
 )
