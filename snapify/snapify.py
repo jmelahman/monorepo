@@ -20,6 +20,12 @@ logging.basicConfig(
 _NONINTERACTIVE_DEFAULT = False
 
 
+def _get_executable(bin_name: str) -> str:
+    executable = shutil.which(bin_name)
+    assert isinstance(executable, str)
+    return executable
+
+
 class SnapifyConfigError(Exception):
     __module__ = "builtins"
 
@@ -33,11 +39,6 @@ class PackageManager(abc.ABC):
     def __init__(
         self, noninteractive: bool, ignored_packages: typing.List[str], name: str
     ) -> None:
-        def _get_executable(bin_name: str) -> str:
-            executable = shutil.which(bin_name)
-            assert isinstance(executable, str)
-            return executable
-
         self.name = name
         self._not_available = ignored_packages
         self._noninteractive = noninteractive

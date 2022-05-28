@@ -12,6 +12,7 @@ py_binary(
 py_test(
     name = "snapify_test",
     srcs = ["snapify_test.py"],
+    data = glob(["testdata/*"]),
     deps = [
         ":snapify",
     ],
