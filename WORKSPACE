@@ -19,6 +19,10 @@ http_archive(
 
 http_archive(
     name = "buildifier_prebuilt",
+    patch_args = ["-p1"],
+    patches = [
+        "@//:third_party/buildifier-prebuilt-diff_command.patch",
+    ],
     sha256 = "0450069a99db3d414eff738dd8ad4c0969928af13dc8614adbd1c603a835caad",
     strip_prefix = "buildifier-prebuilt-0.4.0",
     urls = [

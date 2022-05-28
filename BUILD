@@ -14,5 +14,6 @@ buildifier(
     ],
     # TODO
     # lint_mode = "warn",
+    diff_command = "diff -q",
     mode = "diff",
 )
