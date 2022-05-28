@@ -9,11 +9,16 @@ py_binary(
     ],
 )
 
+py_library(
+    name = "snapify_testdata",
+    srcs = glob(["testdata/*.py"]),
+)
+
 py_test(
     name = "snapify_test",
     srcs = ["snapify_test.py"],
-    data = glob(["testdata/*"]),
     deps = [
         ":snapify",
+        ":snapify_testdata",
     ],
 )
