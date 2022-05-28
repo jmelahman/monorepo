@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, TYPE_CHECKING
+from typing import Any
 import unittest
 from unittest import mock
 
