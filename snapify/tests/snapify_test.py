@@ -5,13 +5,8 @@ from typing import Any, TYPE_CHECKING
 import unittest
 from unittest import mock
 
-# :'[
-if TYPE_CHECKING:
-    from snapify import snapify
-    from snapify.testdata import names, os_release, user_config
-else:
-    import snapify
-    from testdata import names, os_release, user_config
+from snapify import snapify
+from snapify.tests.testdata import names, os_release, user_config
 
 
 def _base_mock_open(filename: str, release: bytes) -> Any:
@@ -62,8 +57,8 @@ class SnapifyTest(unittest.TestCase):
             self.assertEqual(config, {snapify.SupportedDistro.ARCH: ["docker"]})
 
     @mock.patch("builtins.open", new=mock_open_arch)
-    @mock.patch("snapify.Snapd.get_installed_packages", return_value=[])
-    @mock.patch("snapify._get_executable")
+    @mock.patch("snapify.snapify.Snapd.get_installed_packages", return_value=[])
+    @mock.patch("snapify.snapify._get_executable")
     @mock.patch("os.path.exists")
     def test_snapifier_arch(
         self,
@@ -80,8 +75,8 @@ class SnapifyTest(unittest.TestCase):
         self.assertEqual(snapifier._config, {snapify.SupportedDistro.ARCH: ["docker"]})
 
     @mock.patch("builtins.open", new=mock_open_manjaro)
-    @mock.patch("snapify.Snapd.get_installed_packages", return_value=[])
-    @mock.patch("snapify._get_executable")
+    @mock.patch("snapify.snapify.Snapd.get_installed_packages", return_value=[])
+    @mock.patch("snapify.snapify._get_executable")
     @mock.patch("os.path.exists")
     def test_snapifier_manjaro(
         self,

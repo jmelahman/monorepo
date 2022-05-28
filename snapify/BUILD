@@ -7,18 +7,5 @@ py_binary(
         requirement("requests"),
         requirement("urllib3"),
     ],
-)
-
-py_library(
-    name = "snapify_testdata",
-    srcs = glob(["testdata/*.py"]),
-)
-
-py_test(
-    name = "snapify_test",
-    srcs = ["snapify_test.py"],
-    deps = [
-        ":snapify",
-        ":snapify_testdata",
-    ],
+    visibility = ["//snapify/tests:__subpackages__"],
 )
