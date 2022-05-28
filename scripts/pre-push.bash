@@ -26,7 +26,7 @@ function main() {
   merge_base="$(git merge-base origin/master HEAD)"
 
   if ! git diff --quiet "${merge_base}" "${buildifier_patterns[@]}"; then
-    bazel run //:buildifier_check
+    bazel run //:buildifier.check
   fi
   if ! git diff --quiet "${merge_base}" "*.py"; then
     bazel run //tools/format -- --check

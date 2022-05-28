@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           python-version: '3.10'
-      - run: bazel run //:buildifier_check
+      - run: bazel run //:buildifier.check
       - run: bazel run //tools/format -- --check
       - run: bazel build --config mypy //...
       - run: bazel test //...

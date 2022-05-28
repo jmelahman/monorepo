@@ -1,11 +1,18 @@
-load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
+load("@buildifier_prebuilt//:rules.bzl", "buildifier")
 
 buildifier(
     name = "buildifier",
+    exclude_patterns = [
+        "./.git/*",
+    ],
 )
 
 buildifier(
-    name = "buildifier_check",
-    diff_command = "diff -q",
+    name = "buildifier.check",
+    exclude_patterns = [
+        "./.git/*",
+    ],
+    # TODO
+    # lint_mode = "warn",
     mode = "diff",
 )

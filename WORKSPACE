@@ -17,53 +17,26 @@ http_archive(
     ],
 )
 
-##############################################################################
-# Buildtools
-##############################################################################
-buildtools_version = "5.0.1"
-
-# Buildtools transitively depends on io_bazel_rules_go.
-# https://github.com/bazelbuild/buildtools/blob/a9f46b2bb3de812fce9f5fe59b29e75d95750aed/WORKSPACE#L5-L18
 http_archive(
-    name = "io_bazel_rules_go",
-    sha256 = "2b1641428dff9018f9e85c0384f03ec6c10660d935b750e3fa1492a281a53b0f",
+    name = "buildifier_prebuilt",
+    sha256 = "0450069a99db3d414eff738dd8ad4c0969928af13dc8614adbd1c603a835caad",
+    strip_prefix = "buildifier-prebuilt-0.4.0",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
+        "http://github.com/keith/buildifier-prebuilt/archive/0.4.0.tar.gz",
     ],
 )
 
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@buildifier_prebuilt//:deps.bzl", "buildifier_prebuilt_deps")
 
-go_rules_dependencies()
+buildifier_prebuilt_deps()
 
-go_register_toolchains(version = "1.17.2")
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
-# Buildtools transitively depends on com_google_protobuf.
-# https://github.com/bazelbuild/buildtools/blob/a9f46b2bb3de812fce9f5fe59b29e75d95750aed/WORKSPACE#L40-L51
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "9b4ee22c250fe31b16f1a24d61467e40780a3fbb9b91c3b65be2a376ed913a1a",
-    strip_prefix = "protobuf-3.13.0",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.13.0.tar.gz",
-    ],
-)
+bazel_skylib_workspace()
 
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+load("@buildifier_prebuilt//:defs.bzl", "buildifier_prebuilt_register_toolchains")
 
-protobuf_deps()
-
-http_archive(
-    name = "com_github_bazelbuild_buildtools",
-    sha256 = "7f43df3cca7bb4ea443b4159edd7a204c8d771890a69a50a190dc9543760ca21",
-    strip_prefix = "buildtools-{version}".format(
-        version = buildtools_version,
-    ),
-    url = "https://github.com/bazelbuild/buildtools/archive/{version}.tar.gz".format(
-        version = buildtools_version,
-    ),
-)
+buildifier_prebuilt_register_toolchains()
 
 ##############################################################################
 # Python

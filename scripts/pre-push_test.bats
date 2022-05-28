@@ -43,7 +43,7 @@ teardown() {
     shellmock_expect git --match 'merge-base origin/master HEAD' --output "${merge_base}"
     shellmock_expect git --match "diff --quiet ${merge_base} ${__BUILDIFIER_PATTERN}" --status 1
     shellmock_expect git --match "diff --quiet ${merge_base} *.py" --status 0
-    shellmock_expect bazel --status 0 --match 'run //:buildifier_check'
+    shellmock_expect bazel --status 0 --match 'run //:buildifier.check'
 
     run "${BATS_TEST_DIRNAME}/pre-push.bash"
 
