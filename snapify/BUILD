@@ -8,3 +8,11 @@ py_binary(
         requirement("urllib3"),
     ],
 )
+
+py_test(
+    name = "snapify_test",
+    srcs = ["snapify_test.py"],
+    deps = [
+        ":snapify",
+    ],
+)

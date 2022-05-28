@@ -17,6 +17,7 @@ import urllib3
 logging.basicConfig(
     format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")
 )
+_NONINTERACTIVE_DEFAULT = False
 
 
 class SnapifyConfigError(Exception):
@@ -305,16 +306,16 @@ def get_parsed_args() -> argparse.Namespace:
     parser.add_argument(
         "--noninteractive",
         action="store_true",
-        default=False,
+        default=_NONINTERACTIVE_DEFAULT,
         help="run in noninteractive mode",
     )
     return parser.parse_args()
 
 
-def main() -> None:
-    args = get_parsed_args()
-    snapifier = Snapifier(args.noninteractive)
+def main(noninteractive: bool = _NONINTERACTIVE_DEFAULT) -> None:
+    snapifier = Snapifier(noninteractive)
     host_packages = snapifier.manager.get_installed_packages()
+    exit()
     portable_packages = [
         package for package in host_packages if snapifier.snap.has_available(package)
     ]
@@ -328,4 +329,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    args = get_parsed_args()
+    main(args.noninteractive)
