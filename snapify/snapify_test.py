@@ -13,6 +13,7 @@ else:
     import snapify
     from testdata import names, os_release, user_config
 
+
 def _base_mock_open(filename: str, release: bytes) -> Any:
     if filename == "/etc/os-release":
         content = release
