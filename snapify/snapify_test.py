@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, TYPE_CHECKING
 import unittest
 from unittest import mock
 
-from snapify import snapify
-from snapify.testdata import names, os_release, user_config
-
+# :'[
+if TYPE_CHECKING:
+    from snapify import snapify
+    from snapify.testdata import names, os_release, user_config
+else:
+    import snapify
+    from testdata import names, os_release, user_config
 
 def _base_mock_open(filename: str, release: bytes) -> Any:
     if filename == "/etc/os-release":
@@ -70,7 +74,6 @@ class SnapifyTest(unittest.TestCase):
             True,  # ~/.config/snapify/config
             True,  # /var/cache/snapd/names
         ]
-        mock_get_executable.side_effect = ["snap", "sudo"]
         snapifier = snapify.Snapifier(noninteractive=False)
         self.assertEqual(snapifier._distro, snapify.SupportedDistro.ARCH)
         self.assertEqual(snapifier._config, {snapify.SupportedDistro.ARCH: ["docker"]})
@@ -89,7 +92,6 @@ class SnapifyTest(unittest.TestCase):
             True,  # ~/.config/snapify/config
             True,  # /var/cache/snapd/names
         ]
-        mock_get_executable.side_effect = ["snap", "sudo"]
         snapifier = snapify.Snapifier(noninteractive=False)
         self.assertEqual(snapifier._distro, snapify.SupportedDistro.MANJARO)
         self.assertEqual(snapifier._config, {snapify.SupportedDistro.ARCH: ["docker"]})
