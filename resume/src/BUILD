@@ -1,5 +1,5 @@
-load("@bazel_pandoc//:pandoc.bzl", "pandoc")
 load("@//resume/src:stylesheet.bzl", "themed_stylesheet")
+load("@bazel_pandoc//:pandoc.bzl", "pandoc")
 
 themed_stylesheet(
     name = "dark_stylesheet",

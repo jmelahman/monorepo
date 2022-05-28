@@ -1,3 +1,5 @@
+"""Concatenate stylesheets"""
+
 _BASE_STYLESHEET = "//resume/src:base.css"
 
 def themed_stylesheet(name, src, **kwargs):
