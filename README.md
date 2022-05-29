@@ -17,6 +17,15 @@ git subtree push --prefix snapify git@github.com:jmelahman/python-snapify.git ma
 
 See also, [github://jmelahman/python-snapify](https://github.com/jmelahman/python-snapify).
 
+## Pybazel
+
+A python client for Bazel.
+To push changes upstream,
+
+```shell
+git subtree push --prefix snapify git@github.com:jmelahman/pybazel.git master
+```
+
 # Tooling
 
 ## Dependencies
