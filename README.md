@@ -20,11 +20,15 @@ See also, [github://jmelahman/python-snapify](https://github.com/jmelahman/pytho
 ## Pybazel
 
 A python client for Bazel.
+
+The project is tracked using a [git-subtree](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
 To push changes upstream,
 
 ```shell
-git subtree push --prefix snapify git@github.com:jmelahman/pybazel.git master
+git subtree push --prefix pybazel git@github.com:jmelahman/pybazel.git master
 ```
+
+See also, [github://jmelahman/python-snapify](https://github.com/jmelahman/pybazel).
 
 # Tooling
 
