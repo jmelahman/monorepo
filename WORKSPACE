@@ -45,26 +45,33 @@ buildifier_prebuilt_register_toolchains()
 ##############################################################################
 # Python
 ##############################################################################
-PYTHON_INTERPRETER = "python3.10"
-
-rules_python_version = "0.8.0"
+rules_python_version = "0.8.1"
 
 http_archive(
     name = "rules_python",
-    sha256 = "9fcf91dbcc31fde6d1edb15f117246d912c33c36f44cf681976bd886538deba6",
+    sha256 = "cdf6b84084aad8f10bf20b46b77cb48d83c319ebe6458a18e9d2cebf57807cdd",
     strip_prefix = "rules_python-{version}".format(version = rules_python_version),
     url = "https://github.com/bazelbuild/rules_python/archive/{version}.tar.gz".format(
         version = rules_python_version,
     ),
 )
 
-load("@rules_python//python:pip.bzl", "pip_install")
+load("@rules_python//python:repositories.bzl", "python_register_toolchains")
 
-pip_install(
+python_register_toolchains(name = "python3_10", python_version = "3.10")
+
+load("@python3_10//:defs.bzl", "interpreter")
+
+load("@rules_python//python:pip.bzl", "pip_parse")
+
+pip_parse(
     name = "pydeps",
-    python_interpreter = PYTHON_INTERPRETER,
-    requirements = "//:third_party/requirements.txt",
+    requirements_lock = "@//:third_party/requirements.txt",
+    python_interpreter_target = interpreter,
 )
+
+load("@pydeps//:requirements.bzl", "install_deps")
+install_deps()
 
 ##############################################################################
 # Mypy
@@ -102,7 +109,7 @@ load("@mypy_integration//repositories:deps.bzl", mypy_integration_deps = "deps")
 
 mypy_integration_deps(
     mypy_requirements_file = "//tools/typing:mypy-requirements.txt",
-    python_interpreter = PYTHON_INTERPRETER,
+    python_interpreter_target = interpreter,
 )
 
 ##############################################################################
