@@ -13,7 +13,7 @@ class BazelClient:
         self._bazel_bin = "bazel"
 
     def run(
-        self, target: str, run_options: list[str] | None = None, check = True
+        self, target: str, run_options: list[str] | None = None, check=True
     ) -> subproccess.CompletedProcess:
         run_options = run_options or []
         cmd = [
