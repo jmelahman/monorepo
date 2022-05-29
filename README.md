@@ -28,7 +28,7 @@ To push changes upstream,
 git subtree push --prefix pybazel git@github.com:jmelahman/pybazel.git master
 ```
 
-See also, [github://jmelahman/python-snapify](https://github.com/jmelahman/pybazel).
+See also, [github://jmelahman/pybazel](https://github.com/jmelahman/pybazel).
 
 # Tooling
 
