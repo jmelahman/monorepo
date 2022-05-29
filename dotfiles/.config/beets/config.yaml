@@ -1,7 +1,0 @@
-directory: ~/Music
-library: ~/Music/data/musiclibrary.db
-
-import:
-   move: yes
-
-plugins: fetchart lyrics mbsync metasync gmusic
