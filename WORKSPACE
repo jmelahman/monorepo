@@ -58,19 +58,22 @@ http_archive(
 
 load("@rules_python//python:repositories.bzl", "python_register_toolchains")
 
-python_register_toolchains(name = "python3_10", python_version = "3.10")
+python_register_toolchains(
+    name = "python3_10",
+    python_version = "3.10",
+)
 
 load("@python3_10//:defs.bzl", "interpreter")
-
 load("@rules_python//python:pip.bzl", "pip_parse")
 
 pip_parse(
     name = "pydeps",
-    requirements_lock = "@//:third_party/requirements.txt",
     python_interpreter_target = interpreter,
+    requirements_lock = "@//:third_party/requirements.txt",
 )
 
 load("@pydeps//:requirements.bzl", "install_deps")
+
 install_deps()
 
 ##############################################################################
