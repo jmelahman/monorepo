@@ -4,7 +4,7 @@ import unittest
 
 
 class FormatTest(unittest.TestCase):
-    def test_pass(self):
+    def test_pass(self) -> None:
         for env, value in os.environ.items():
             print(env, value)
 
