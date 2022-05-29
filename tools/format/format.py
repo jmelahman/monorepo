@@ -6,7 +6,7 @@ import sys
 
 def main() -> int:
     return subprocess.run(
-        ["python", "-m", "black", ".", *sys.argv],
+        [sys.executable, "-m", "black", ".", *sys.argv],
         cwd=os.getenv("BUILD_WORKSPACE_DIRECTORY", "."),
     ).returncode
 
