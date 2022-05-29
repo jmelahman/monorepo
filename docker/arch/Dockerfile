@@ -20,6 +20,7 @@ FROM archlinux:latest
 
 RUN pacman -Syyu --noconfirm
 RUN pacman -S --noconfirm \
+      bazel \
       git \
       python \
       wget
