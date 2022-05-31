@@ -3,6 +3,7 @@ import typing
 
 from . import utils
 
+
 class PackageManager(abc.ABC):
     def __init__(
         self, noninteractive: bool, ignored_packages: list[str], name: str
@@ -37,4 +38,3 @@ class PackageManager(abc.ABC):
     @abc.abstractmethod
     def remove(self, packages: list[str], purge: bool = False) -> None:
         raise NotImplementedError
-

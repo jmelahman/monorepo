@@ -4,6 +4,7 @@ import sys
 
 from .base import PackageManager
 
+
 class Pacman(PackageManager):
     def __init__(
         self,

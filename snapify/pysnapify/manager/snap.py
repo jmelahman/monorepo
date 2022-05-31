@@ -10,6 +10,7 @@ import urllib3
 
 from .base import PackageManager
 
+
 class SnapdConnection(urllib3.connection.HTTPConnection):
     def __init__(self) -> None:
         super().__init__("localhost")
@@ -93,7 +94,6 @@ class Snapd(PackageManager):
                 continue
             return SnapdConfinement(result["confinement"])
         raise RuntimeError(f"Unknown confinement for {package_name}")
-
 
     def install(self, packages: list[str], purge: bool = False) -> None:
         confinement_groups: dict[SnapdConfinement, list[str]] = {
