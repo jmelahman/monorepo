@@ -13,7 +13,6 @@ logging.basicConfig(
 def main(noninteractive: bool = NONINTERACTIVE_DEFAULT) -> None:
     snapifier = Snapifier(noninteractive)
     host_packages = snapifier.manager.get_installed_packages()
-    exit()
     portable_packages = [
         package for package in host_packages if snapifier.snap.has_available(package)
     ]
