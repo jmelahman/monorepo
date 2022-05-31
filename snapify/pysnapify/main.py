@@ -14,7 +14,7 @@ import typing
 import requests
 import urllib3
 
-from pysnapify.constants import SupportedDistro, SnapifyConfigError
+from .constants import SupportedDistro, SnapifyConfigError
 
 logging.basicConfig(
     format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")

@@ -10,6 +10,7 @@ py_test(
     srcs = ["snapify_test.py"],
     deps = [
         ":snapify_testdata",
-        "//snapify",
+        "//snapify/pysnapify:main",
+        "//snapify/pysnapify:constants",
     ],
 )
