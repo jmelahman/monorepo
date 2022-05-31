@@ -6,11 +6,11 @@ py_library(
 )
 
 py_test(
-    name = "snapify_test",
-    srcs = ["snapify_test.py"],
+    name = "snapifier_test",
+    srcs = ["snapifier_test.py"],
     deps = [
         ":snapify_testdata",
-        "//snapify/pysnapify:main",
         "//snapify/pysnapify:constants",
+        "//snapify/pysnapify:snapifier",
     ],
 )
