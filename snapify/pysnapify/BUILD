@@ -8,6 +8,7 @@ py_library(
     srcs = ["main.py"],
     deps = [
         ":constants",
+        "//snapify/pysnapify/manager:base",
         requirement("requests"),
         requirement("urllib3"),
     ],

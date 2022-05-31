@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import abc
 import argparse
 import enum
 import json
@@ -7,13 +6,13 @@ import logging
 import os
 import socket
 import subprocess
-import shutil
 import sys
 import typing
 
 import requests
 import urllib3
 
+from .manager.base import PackageManager
 from .constants import SupportedDistro, SnapifyConfigError
 
 logging.basicConfig(
@@ -22,59 +21,16 @@ logging.basicConfig(
 _NONINTERACTIVE_DEFAULT = False
 
 
-def _get_executable(bin_name: str) -> str:
-    executable = shutil.which(bin_name)
-    assert isinstance(executable, str)
-    return executable
-
-
-
-class PackageManager(abc.ABC):
-    def __init__(
-        self, noninteractive: bool, ignored_packages: typing.List[str], name: str
-    ) -> None:
-        self.name = name
-        self._not_available = ignored_packages
-        self._noninteractive = noninteractive
-        self._installed_packages: typing.List[str] = []
-        self._bin = _get_executable(name)
-        self._sudo = _get_executable("sudo")
-
-    @abc.abstractmethod
-    def get_installed_packages(self) -> typing.List[str]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def filter_removeable(self, packages: typing.List[str]) -> typing.List[str]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def has_available(self, package_name: str) -> bool:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def has_installed(self, package_name: str) -> bool:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def install(self, packages: typing.List[str]) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def remove(self, packages: typing.List[str], purge: bool = False) -> None:
-        raise NotImplementedError
-
-
 class Pacman(PackageManager):
     def __init__(
         self,
         noninteractive: bool,
-        ignored_packages: typing.List[str],
+        ignored_packages: list[str],
         name: str = "pacman",
     ) -> None:
         super().__init__(noninteractive, ignored_packages, name)
 
-    def get_installed_packages(self) -> typing.List[str]:
+    def get_installed_packages(self) -> list[str]:
         if self._installed_packages != []:
             return self._installed_packages
         self._installed_packages = [
@@ -93,10 +49,10 @@ class Pacman(PackageManager):
     def has_installed(self, package_name: str) -> bool:
         return package_name in self.get_installed_packages()
 
-    def install(self, packages: typing.List[str]) -> None:
+    def install(self, packages: list[str]) -> None:
         raise NotImplementedError("TODO")
 
-    def filter_removeable(self, packages: typing.List[str]) -> typing.List[str]:
+    def filter_removeable(self, packages: list[str]) -> list[str]:
         dependency_query = subprocess.run(
             [self._bin, "-Qqt", *packages], stdout=subprocess.PIPE
         )
@@ -107,7 +63,7 @@ class Pacman(PackageManager):
             return []
         return dependency_query.stdout.decode().strip().split("\n")
 
-    def remove(self, packages: typing.List[str], purge: bool = False) -> None:
+    def remove(self, packages: list[str], purge: bool = False) -> None:
         logging.info(f"Removing the following packages: {' '.join(packages)}")
         try:
             remove_cmd = [
@@ -146,7 +102,7 @@ class SnapdAdapter(requests.adapters.HTTPAdapter):
     def get_connection(
         self,
         url: str,
-        proxies: typing.Optional[typing.Dict[str, str]] = None,
+        proxies: typing.Optional[dict[str, str]] = None,
     ) -> SnapdConnectionPool:
         return SnapdConnectionPool()
 
@@ -160,7 +116,7 @@ class Snapd(PackageManager):
     def __init__(
         self,
         noninteractive: bool,
-        ignored_packages: typing.List[str],
+        ignored_packages: list[str],
         name: str = "snap",
     ) -> None:
         super().__init__(noninteractive, ignored_packages, name)
@@ -170,7 +126,7 @@ class Snapd(PackageManager):
         self._session = requests.Session()
         self._session.mount("http://snapd/", SnapdAdapter())
 
-    def get_installed_packages(self) -> typing.List[str]:
+    def get_installed_packages(self) -> list[str]:
         if self._installed_packages != []:
             return self._installed_packages
         snap_list = subprocess.check_output([self._bin, "list"]).decode().split("\n")
@@ -178,7 +134,7 @@ class Snapd(PackageManager):
         self._installed_packages = [package.split(" ")[0] for package in snap_list]
         return self._installed_packages
 
-    def get_available_packages(self) -> typing.List[str]:
+    def get_available_packages(self) -> list[str]:
         names_file = "/var/cache/snapd/names"
         if not os.path.exists(names_file):
             logging.info(
@@ -209,8 +165,8 @@ class Snapd(PackageManager):
             return SnapdConfinement(result["confinement"])
         raise RuntimeError(f"Unknown confinement for {package_name}")
 
-    def install(self, packages: typing.List[str], purge: bool = False) -> None:
-        confinement_groups: typing.Dict[SnapdConfinement, typing.List[str]] = {
+    def install(self, packages: list[str], purge: bool = False) -> None:
+        confinement_groups: dict[SnapdConfinement, list[str]] = {
             confinement: [] for confinement in SnapdConfinement
         }
         for package in packages:
@@ -227,10 +183,10 @@ class Snapd(PackageManager):
             else:
                 subprocess.check_call([self._sudo, self._bin, "install", *packages])
 
-    def filter_removeable(self, packages: typing.List[str]) -> typing.List[str]:
+    def filter_removeable(self, packages: list[str]) -> list[str]:
         return packages
 
-    def remove(self, packages: typing.List[str], purge: bool = False) -> None:
+    def remove(self, packages: list[str], purge: bool = False) -> None:
         raise NotImplementedError("TODO")
 
 
@@ -243,8 +199,8 @@ class Snapifier:
         self.snap = Snapd(self._noninteractive, [])
 
     @staticmethod
-    def _read_user_config() -> typing.Dict[SupportedDistro, typing.List[str]]:
-        config: typing.Dict[SupportedDistro, typing.List[str]] = {}
+    def _read_user_config() -> dict[SupportedDistro, list[str]]:
+        config: dict[SupportedDistro, list[str]] = {}
         config_path = os.path.join(os.path.expanduser("~/.config/snapify"), "config")
         if not os.path.exists(config_path):
             return config
@@ -282,7 +238,7 @@ class Snapifier:
             raise RuntimeError("Unable to determine host distro")
         return SupportedDistro(os_id)
 
-    def _get_ignored_packages(self) -> typing.List[str]:
+    def _get_ignored_packages(self) -> list[str]:
         return self._config.get(self._distro, [])
 
     def get_host_package_manager(self) -> PackageManager:

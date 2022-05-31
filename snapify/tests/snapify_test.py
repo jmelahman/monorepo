@@ -58,7 +58,7 @@ class SnapifyTest(unittest.TestCase):
 
     @mock.patch("builtins.open", new=mock_open_arch)
     @mock.patch("snapify.pysnapify.main.Snapd.get_installed_packages", return_value=[])
-    @mock.patch("snapify.pysnapify.main._get_executable")
+    @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     @mock.patch("os.path.exists")
     def test_snapifier_arch(
         self,
@@ -76,7 +76,7 @@ class SnapifyTest(unittest.TestCase):
 
     @mock.patch("builtins.open", new=mock_open_manjaro)
     @mock.patch("snapify.pysnapify.main.Snapd.get_installed_packages", return_value=[])
-    @mock.patch("snapify.pysnapify.main._get_executable")
+    @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     @mock.patch("os.path.exists")
     def test_snapifier_manjaro(
         self,
