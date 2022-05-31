@@ -11,5 +11,5 @@ docker run \
   -v "${_REPO_ROOT}":"${_REPO_ROOT}" \
   -w "${_REPO_ROOT}" \
   --name archdev \
-  lahmanja/arch:v1.1.0 \
+  lahmanja/arch:latest \
   /usr/bin/bash

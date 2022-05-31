@@ -18,12 +18,15 @@ RUN cd /opt/yay-git && \
 ### Main Stage ###
 FROM archlinux:latest
 
-RUN pacman -Syyu --noconfirm
-RUN pacman -S --noconfirm \
+RUN pacman -Syyu --noconfirm \
+      && \
+    pacman -S --noconfirm \
       bazel \
       git \
       python \
-      wget
+      wget \
+      && \
+    pacman -Scc --noconfirm
 
 RUN wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/master/files/docker/systemctl3.py \
       -O /usr/local/sbin/systemctl && \
