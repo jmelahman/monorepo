@@ -1127,6 +1127,7 @@ factory-serial-vault
 fades
 fail
 fairtris
+fake-snapify
 fakecam
 fakedns
 falixnodes

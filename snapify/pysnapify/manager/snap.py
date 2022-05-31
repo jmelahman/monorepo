@@ -59,14 +59,18 @@ class Snapd(PackageManager):
     def get_installed_packages(self) -> list[str]:
         if self._installed_packages != []:
             return self._installed_packages
-        snap_list = subprocess.check_output([self._bin, "list"]).decode().split("\n")
+        snap_list = subprocess.check_output([self._bin, "list"]).decode().rstrip().split("\n")
         snap_list.pop(0)  # Remove header
         self._installed_packages = [package.split(" ")[0] for package in snap_list]
         return self._installed_packages
 
+    @staticmethod
+    def _names_exists(names_file: str) -> bool:
+        return os.path.exists(names_file)
+
     def get_available_packages(self) -> list[str]:
         names_file = "/var/cache/snapd/names"
-        if not os.path.exists(names_file):
+        if not self._names_exists(names_file):
             logging.info(
                 f"'{names_file}' does not exist. "
                 "Checking for available snaps will be slower than usual. "

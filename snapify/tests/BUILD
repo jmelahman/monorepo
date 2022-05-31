@@ -14,3 +14,12 @@ py_test(
         "//snapify/pysnapify:snapifier",
     ],
 )
+
+py_test(
+    name = "snap_test",
+    srcs = ["snap_test.py"],
+    deps = [
+        ":snapify_testdata",
+        "//snapify/pysnapify/manager:snap",
+    ],
+)

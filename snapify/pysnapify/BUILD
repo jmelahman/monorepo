@@ -17,7 +17,7 @@ py_library(
     deps = [
         ":constants",
         ":errors",
-        "//snapify/pysnapify/manager:base",  # Build-only
+        "//snapify/pysnapify/manager:base",
         "//snapify/pysnapify/manager:pacman",
         "//snapify/pysnapify/manager:snap",
     ],
