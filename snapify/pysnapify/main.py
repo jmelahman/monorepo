@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env python3
 import abc
 import argparse
 import enum
@@ -14,6 +14,8 @@ import typing
 import requests
 import urllib3
 
+from pysnapify.constants import SupportedDistro, SnapifyConfigError
+
 logging.basicConfig(
     format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")
 )
@@ -25,14 +27,6 @@ def _get_executable(bin_name: str) -> str:
     assert isinstance(executable, str)
     return executable
 
-
-class SnapifyConfigError(Exception):
-    __module__ = "builtins"
-
-
-class SupportedDistro(enum.Enum):
-    ARCH = "arch"
-    MANJARO = "manjaro"
 
 
 class PackageManager(abc.ABC):

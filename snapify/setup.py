@@ -1,10 +1,10 @@
 #!/usr/bin/env python3.10
 
 import pathlib
-from setuptools import setup
+from setuptools import setup, find_packages
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
-VERSION = "0.2.3"
+VERSION = "0.3.0"
 
 setup(
     name="python-snapify",
@@ -15,7 +15,9 @@ setup(
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/jmelahman/python-snapify",
-    py_modules=["snapify"],
+    package_dir={"pysnapify": "pysnapify"},
+    packages=find_packages(),
+    scripts=["bin/snapify"],
     keywords=["arch linux", "pacman", "snap", "snapd", "snapify"],
     download_url=f"https://github.com/jmelahman/python-snapify/archive/refs/tags/v{VERSION}.tar.gz",
     license="MIT",
