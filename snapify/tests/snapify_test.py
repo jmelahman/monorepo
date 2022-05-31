@@ -57,7 +57,7 @@ class SnapifyTest(unittest.TestCase):
             self.assertEqual(config, {constants.SupportedDistro.ARCH: ["docker"]})
 
     @mock.patch("builtins.open", new=mock_open_arch)
-    @mock.patch("snapify.pysnapify.main.Snapd.get_installed_packages", return_value=[])
+    @mock.patch("snapify.pysnapify.manager.snap.Snapd.get_installed_packages", return_value=[])
     @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     @mock.patch("os.path.exists")
     def test_snapifier_arch(
@@ -71,11 +71,11 @@ class SnapifyTest(unittest.TestCase):
             True,  # /var/cache/snapd/names
         ]
         snapifier = main.Snapifier(noninteractive=False)
-        self.assertEqual(snapifier._distro, main.SupportedDistro.ARCH)
-        self.assertEqual(snapifier._config, {main.SupportedDistro.ARCH: ["docker"]})
+        self.assertEqual(snapifier._distro, constants.SupportedDistro.ARCH)
+        self.assertEqual(snapifier._config, {constants.SupportedDistro.ARCH: ["docker"]})
 
     @mock.patch("builtins.open", new=mock_open_manjaro)
-    @mock.patch("snapify.pysnapify.main.Snapd.get_installed_packages", return_value=[])
+    @mock.patch("snapify.pysnapify.manager.snap.Snapd.get_installed_packages", return_value=[])
     @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     @mock.patch("os.path.exists")
     def test_snapifier_manjaro(
@@ -89,8 +89,8 @@ class SnapifyTest(unittest.TestCase):
             True,  # /var/cache/snapd/names
         ]
         snapifier = main.Snapifier(noninteractive=False)
-        self.assertEqual(snapifier._distro, main.SupportedDistro.MANJARO)
-        self.assertEqual(snapifier._config, {main.SupportedDistro.ARCH: ["docker"]})
+        self.assertEqual(snapifier._distro, constants.SupportedDistro.MANJARO)
+        self.assertEqual(snapifier._config, {constants.SupportedDistro.ARCH: ["docker"]})
 
 
 if __name__ == "__main__":

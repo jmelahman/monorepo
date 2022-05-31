@@ -1,4 +1,3 @@
-load("@pydeps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_library")
 
 package(default_visibility = ["//snapify/tests:__subpackages__"])
@@ -8,13 +7,28 @@ py_library(
     srcs = ["main.py"],
     deps = [
         ":constants",
-        "//snapify/pysnapify/manager:base",
-        requirement("requests"),
-        requirement("urllib3"),
+        ":snapifier",
+    ],
+)
+
+py_library(
+    name = "snapifier",
+    srcs = ["snapifier.py"],
+    deps = [
+        ":constants",
+        ":errors",
+        "//snapify/pysnapify/manager:base",  # Build-only
+        "//snapify/pysnapify/manager:pacman",
+        "//snapify/pysnapify/manager:snap",
     ],
 )
 
 py_library(
     name = "constants",
     srcs = ["constants.py"],
+)
+
+py_library(
+    name = "errors",
+    srcs = ["errors.py"],
 )

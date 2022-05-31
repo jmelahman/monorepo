@@ -1,8 +1,6 @@
 import enum
 
-
-class SnapifyConfigError(Exception):
-    __module__ = "builtins"
+NONINTERACTIVE_DEFAULT = False
 
 
 class SupportedDistro(enum.Enum):

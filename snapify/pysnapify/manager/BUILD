@@ -13,6 +13,26 @@ py_library(
 )
 
 py_library(
+    name = "pacman",
+    srcs = ["pacman.py"],
+    visibility = ["//snapify/pysnapify:__subpackages__"],
+    deps = [
+        ":base",
+    ],
+)
+
+py_library(
+    name = "snap",
+    srcs = ["snap.py"],
+    visibility = ["//snapify/pysnapify:__subpackages__"],
+    deps = [
+        ":base",
+        requirement("requests"),
+        requirement("urllib3"),
+    ],
+)
+
+py_library(
     name = "utils",
     srcs = ["utils.py"],
 )
