@@ -30,3 +30,5 @@ RUN wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement
     chmod +x /usr/local/sbin/systemctl
 
 COPY --from=prebuild /opt/yay-git/pkg/yay-git/usr/bin/yay /usr/local/bin/yay
+
+RUN useradd jamison -m
