@@ -16,6 +16,14 @@ py_test(
 )
 
 py_test(
+    name = "pacman_test",
+    srcs = ["pacman_test.py"],
+    deps = [
+        "//snapify/pysnapify/manager:pacman",
+    ],
+)
+
+py_test(
     name = "snap_test",
     srcs = ["snap_test.py"],
     deps = [

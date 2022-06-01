@@ -7,7 +7,9 @@ docker run \
   -it \
   -e "USER=$(id -un)" \
   -u "$(id -u)" \
+  -v "${HOME}/.bashrc":"${HOME}/.bashrc" \
   -v "${HOME}/.cache":"${HOME}/.cache" \
+  -v "${HOME}/.gitconfig":"${HOME}/.gitconfig" \
   -v "${_REPO_ROOT}":"${_REPO_ROOT}" \
   -w "${_REPO_ROOT}" \
   --name archdev \

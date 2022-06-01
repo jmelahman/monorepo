@@ -21,7 +21,7 @@ class Pacman(PackageManager):
             package
             for package in subprocess.check_output([self._bin, "-Qq"])
             .decode()
-            .strip()
+            .rstrip()
             .split("\n")
             if package not in self._not_available
         ]
