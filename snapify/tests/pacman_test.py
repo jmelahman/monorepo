@@ -3,7 +3,6 @@ from unittest import mock
 
 from snapify.pysnapify.manager import pacman
 
-
 _FAKE_PACKAGES = b"""archlinux-keyring
 bash
 bazel
@@ -14,14 +13,17 @@ pacman
 pacman-mirrorlist
 python
 """
+_NEVER_AVAILABLE = "never-available"
 _PACMAN_BIN = "/usr/bin/pacman"
+_SUDO_BIN = "/usr/bin/sudo"
+
 
 class PacmanTest(unittest.TestCase):
     @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     def setUp(self, mock_get_executable) -> None:
         mock_get_executable.side_effect = [
             _PACMAN_BIN,
-            "/usr/bin/sudo",
+            _SUDO_BIN,
         ]
         self.pacman = pacman.Pacman(noninteractive = False, ignored_packages = [])
 
@@ -34,6 +36,9 @@ class PacmanTest(unittest.TestCase):
         self.pacman.get_installed_packages()
         mock_subprocess.assert_called_once()
 
+    def test_filter_removeable(self) -> None:
+        self.pacman.filter_removeable(["foo", "bar"])
+
     @mock.patch("subprocess.check_output", return_value=_FAKE_PACKAGES)
     def test_has_installed(self, mock_subprocess: mock.MagicMock) -> None:
         subtests = [
@@ -44,6 +49,55 @@ class PacmanTest(unittest.TestCase):
             with self.subTest(package=package):
                 self.assertEqual(self.pacman.has_installed(package), is_expected)
 
+    @mock.patch("snapify.pysnapify.manager.pacman.Pacman._run", return_value=0)
+    def test_has_available(self, mock_subprocess: mock.MagicMock) -> None:
+        package_available = self.pacman.has_available("fake-snapify")
+        self.assertTrue(package_available)
+        mock_subprocess.assert_called_once_with([_PACMAN_BIN, "-Qs", "^fake-snapify$"])
+
+    @mock.patch("subprocess.run")
+    def test_not_has_available(self, mock_subprocess: mock.MagicMock) -> None:
+        package_available = self.pacman.has_available("foobar")
+        self.assertFalse(package_available)
+        mock_subprocess.assert_called_once_with([_PACMAN_BIN, "-Qs", "^foobar$"])
+
+    def test_never_has_available(self) -> None:
+        self.pacman = pacman.Pacman(noninteractive = False, ignored_packages = [_NEVER_AVAILABLE])
+        package_available = self.pacman.has_available(_NEVER_AVAILABLE)
+        self.assertFalse(package_available)
+
+    @mock.patch("subprocess.check_call")
+    def test_install(self, mock_subprocess: mock.MagicMock) -> None:
+        self.pacman.install(["fake-snapify"])
+        mock_subprocess.assert_called_once_with([_SUDO_BIN, _PACMAN_BIN, "-S", "fake-snapify"])
+
+    @mock.patch("subprocess.check_call")
+    def test_install_noninteractive(self, mock_subprocess: mock.MagicMock) -> None:
+        self.pacman = pacman.Pacman(noninteractive = True, ignored_packages = [])
+        self.pacman.install(["fake-snapify"])
+        mock_subprocess.assert_called_once_with([_SUDO_BIN, _PACMAN_BIN, "-S", "--noconfirm", "fake-snapify"])
+
+    @mock.patch("subprocess.check_call")
+    def test_remove(self, mock_subprocess: mock.MagicMock) -> None:
+        self.pacman.remove(["fake-snapify"])
+        mock_subprocess.assert_called_once_with([_SUDO_BIN, _PACMAN_BIN, "-Rs", "fake-snapify"])
+
+    @mock.patch("subprocess.check_call")
+    def test_purge(self, mock_subprocess: mock.MagicMock) -> None:
+        self.pacman.remove(["fake-snapify"], purge = True)
+        mock_subprocess.assert_called_once_with([_SUDO_BIN, _PACMAN_BIN, "-Rsn", "fake-snapify"])
+
+    @mock.patch("subprocess.check_call")
+    def test_remove_noninteractive(self, mock_subprocess: mock.MagicMock) -> None:
+        self.pacman = pacman.Pacman(noninteractive = True, ignored_packages = [])
+        self.pacman.remove(["fake-snapify"])
+        mock_subprocess.assert_called_once_with([_SUDO_BIN, _PACMAN_BIN, "-Rs", "--noconfirm", "fake-snapify"])
+
+    @mock.patch("subprocess.check_call")
+    def test_purge_noninteractive(self, mock_subprocess: mock.MagicMock) -> None:
+        self.pacman = pacman.Pacman(noninteractive = True, ignored_packages = [])
+        self.pacman.remove(["fake-snapify"], purge = True)
+        mock_subprocess.assert_called_once_with([_SUDO_BIN, _PACMAN_BIN, "-Rsn", "--noconfirm", "fake-snapify"])
 
 if __name__ == "__main__":
     unittest.main()

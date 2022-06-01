@@ -27,20 +27,41 @@ class Pacman(PackageManager):
         ]
         return self._installed_packages
 
+    # TODO: Maybe remove in favor of proper mocking of subprocess.
+    @staticmethod
+    def _run(cmd: list[str], **kwargs) -> int:
+        return subprocess.run(cmd, **kwargs).returncode
+
     def has_available(self, package_name: str) -> bool:
-        raise NotImplementedError("TODO")
+        if package_name in self._not_available:
+            return False
+        # TODO: This may need compiled with 're'.
+        return not self._run([self._bin, "-Qs", f"^{package_name}$"])
 
     def has_installed(self, package_name: str) -> bool:
         return package_name in self.get_installed_packages()
 
     def install(self, packages: list[str]) -> None:
-        raise NotImplementedError("TODO")
+        try:
+            install_cmd = [
+                self._sudo,
+                self._bin,
+                f"-S",
+            ]
+            if self._noninteractive:
+                install_cmd.append("--noconfirm")
+            subprocess.check_call(install_cmd + packages)
+        except (
+            subprocess.CalledProcessError,
+            KeyboardInterrupt,
+        ):  # Allow user to decline gracefully.
+            sys.exit(1)
 
     def filter_removeable(self, packages: list[str]) -> list[str]:
-        dependency_query = subprocess.run(
+        dependency_query = self._run(
             [self._bin, "-Qqt", *packages], stdout=subprocess.PIPE
         )
-        if dependency_query.returncode:
+        if dependency_query:
             logging.info(
                 f"The following packages were unable to be snapified: {' '.join(packages)}"
             )
@@ -61,5 +82,5 @@ class Pacman(PackageManager):
         except (
             subprocess.CalledProcessError,
             KeyboardInterrupt,
-        ):  # Allow user to decline removal gracefully.
+        ):  # Allow user to decline gracefully.
             sys.exit(1)
