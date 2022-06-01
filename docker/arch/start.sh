@@ -9,6 +9,7 @@ docker run \
   -e "USER=$(id -un)" \
   -u "$(id -u)" \
   -v "${HOME}/.cache":"${HOME}/.cache" \
+  -v "${HOME}/.ssh":"${HOME}/.ssh" \
   -v "${_REPO_ROOT}/dotfiles/.bashrc":"${HOME}/.bashrc" \
   -v "${_REPO_ROOT}/dotfiles/.gitconfig":"${HOME}/.gitconfig" \
   -v "${_REPO_ROOT}/dotfiles/.vim":"${HOME}/.vim" \
