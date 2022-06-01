@@ -25,6 +25,7 @@ RUN pacman -Syyu --noconfirm \
       git \
       libxcrypt-compat \
       python \
+      vim \
       wget \
       && \
     pacman -Scc --noconfirm
