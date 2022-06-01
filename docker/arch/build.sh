@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPOSITORY="lahmanja/arch"
-VERSION="v1.1.0"
+VERSION="v1.1.2"
 PUSH="false"
 
 if [ "${1:-}" == "--push" ]; then

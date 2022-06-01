@@ -76,7 +76,7 @@ class SnapifyTest(unittest.TestCase):
 
         for mock_open, expected_distro in subtests:
             with self.subTest(expected_distro=expected_distro.value), mock.patch(
-                "builtins.open", side_effect = mock_open
+                "builtins.open", side_effect=mock_open
             ):
                 snapify = snapifier.Snapifier(noninteractive=False)
                 self.assertEqual(snapify._distro, expected_distro)

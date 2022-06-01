@@ -12,12 +12,15 @@ core20                             20220512                    1494   latest/sta
 """
 
 
-
 class SnapTest(unittest.TestCase):
     @mock.patch("subprocess.check_output", return_value=_SNAP_LIST)
-    @mock.patch("snapify.pysnapify.manager.snap.Snapd._names_exists", return_value=False)
-    def setUp(self, mock_names_exists: mock.MagicMock, mock_subprocess: mock.MagicMock) -> None:
-        self.snap = snap.Snapd(noninteractive = False, ignored_packages = [])
+    @mock.patch(
+        "snapify.pysnapify.manager.snap.Snapd._names_exists", return_value=False
+    )
+    def setUp(
+        self, mock_names_exists: mock.MagicMock, mock_subprocess: mock.MagicMock
+    ) -> None:
+        self.snap = snap.Snapd(noninteractive=False, ignored_packages=[])
 
     def test_get_installed(self) -> None:
         expected_packages = ["bare", "core", "core18", "core20"]
@@ -27,11 +30,9 @@ class SnapTest(unittest.TestCase):
     @mock.patch("snapify.pysnapify.manager.snap.Snapd._names_exists", return_value=True)
     def test_get_available(self, mock_names_exists: mock.MagicMock) -> None:
         available_packages = self.snap.get_available_packages()
-        with mock.patch(
-            "builtins.open", mock.mock_open(read_data=names.NAMES)
-        ):
+        with mock.patch("builtins.open", mock.mock_open(read_data=names.NAMES)):
             pass
-            #self.assertIn("fake-snapify", available_packages)
+            # self.assertIn("fake-snapify", available_packages)
 
 
 if __name__ == "__main__":

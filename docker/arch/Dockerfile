@@ -23,6 +23,7 @@ RUN pacman -Syyu --noconfirm \
     pacman -S --noconfirm \
       bazel \
       git \
+      libxcrypt-compat \
       python \
       wget \
       && \

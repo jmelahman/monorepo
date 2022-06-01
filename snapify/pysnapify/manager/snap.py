@@ -59,7 +59,9 @@ class Snapd(PackageManager):
     def get_installed_packages(self) -> list[str]:
         if self._installed_packages != []:
             return self._installed_packages
-        snap_list = subprocess.check_output([self._bin, "list"]).decode().rstrip().split("\n")
+        snap_list = (
+            subprocess.check_output([self._bin, "list"]).decode().rstrip().split("\n")
+        )
         snap_list.pop(0)  # Remove header
         self._installed_packages = [package.split(" ")[0] for package in snap_list]
         return self._installed_packages
