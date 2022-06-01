@@ -20,7 +20,7 @@ _SUDO_BIN = "/usr/bin/sudo"
 
 class PacmanTest(unittest.TestCase):
     @mock.patch("snapify.pysnapify.manager.utils.get_executable")
-    def setUp(self, mock_get_executable) -> None:
+    def setUp(self, mock_get_executable: mock.MagicMock) -> None:
         self._default_get_executable = [
             _PACMAN_BIN,
             _SUDO_BIN,

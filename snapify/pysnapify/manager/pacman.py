@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import sys
+from typing import Any
 
 from .base import PackageManager
 
@@ -29,7 +30,7 @@ class Pacman(PackageManager):
 
     # TODO: Maybe remove in favor of proper mocking of subprocess.
     @staticmethod
-    def _run(cmd: list[str], **kwargs) -> int:
+    def _run(cmd: list[str], **kwargs: Any) -> int:
         return subprocess.run(cmd, **kwargs).returncode
 
     def has_available(self, package_name: str) -> bool:
@@ -58,7 +59,7 @@ class Pacman(PackageManager):
             sys.exit(1)
 
     def filter_removeable(self, packages: list[str]) -> list[str]:
-        dependency_query = self._run(
+        dependency_query = subprocess.run(
             [self._bin, "-Qqt", *packages], stdout=subprocess.PIPE
         )
         if dependency_query:
