@@ -26,7 +26,7 @@ class PacmanTest(unittest.TestCase):
         self.pacman = pacman.Pacman(noninteractive = False, ignored_packages = [])
 
     @mock.patch("subprocess.check_output", return_value=_FAKE_PACKAGES)
-    def test_get_installed(self, mock_subprocess) -> None:
+    def test_get_installed(self, mock_subprocess: mock.MagicMock) -> None:
         installed_packages = self.pacman.get_installed_packages()
         self.assertIn("fake-snapify", installed_packages)
         mock_subprocess.assert_called_once_with([_PACMAN_BIN, "-Qq"])
@@ -35,7 +35,7 @@ class PacmanTest(unittest.TestCase):
         mock_subprocess.assert_called_once()
 
     @mock.patch("subprocess.check_output", return_value=_FAKE_PACKAGES)
-    def test_get_installed(self, mock_subprocess) -> None:
+    def test_has_installed(self, mock_subprocess: mock.MagicMock) -> None:
         subtests = [
             ("foo", False),
             ("fake-snapify", True),
