@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 _REPO_ROOT=$( cd -- "$( dirname -- $( realpath "${BASH_SOURCE[0]}" ) )/../.." &> /dev/null && pwd )
+_CONTAINER_NAME="archdev"
 
-trap 'docker stop archdev && docker rm archdev' EXIT
+trap "docker stop ${_CONTAINER_NAME} && docker rm ${_CONTAINER_NAME}" EXIT
 docker run \
   -it \
   -e "USER=$(id -un)" \
@@ -12,6 +13,6 @@ docker run \
   -v "${HOME}/.gitconfig":"${HOME}/.gitconfig" \
   -v "${_REPO_ROOT}":"${_REPO_ROOT}" \
   -w "${_REPO_ROOT}" \
-  --name archdev \
+  --name ${_CONTAINER_NAME} \
   lahmanja/arch:latest \
   /usr/bin/bash
