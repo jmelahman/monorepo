@@ -31,7 +31,7 @@ export CLICOLOR="Yes"
 export LSCOLOR=""
 
 # Customize Path
-export PATH=$HOME/bin:$PATH
+export PATH=$HOME/code/monorepo/bin:$HOME/bin:$HOME/.local/bin:$PATH
 
 # Provides desktop notification when long running commands complete
 # See also, https://askubuntu.com/a/617735
