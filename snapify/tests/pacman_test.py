@@ -37,7 +37,6 @@ class PacmanTest(unittest.TestCase):
         self.pacman.get_installed_packages()
         mock_subprocess.assert_called_once()
 
-
     @mock.patch("subprocess.run")
     def test_filter_removeable(self, mock_subprocess) -> None:
         # TODO: Make assertions.
