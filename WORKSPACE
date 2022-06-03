@@ -201,8 +201,6 @@ pandoc_repositories()
 ##############################################################################
 # Shellcheck
 ##############################################################################
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 http_archive(
     name = "com_github_aignas_rules_shellcheck",
     sha256 = "4e7cc56d344d0adfd20283f7ad8cb4fba822c0b15ce122665b00dd87a27a74b6",

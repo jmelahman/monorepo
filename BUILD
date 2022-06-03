@@ -21,6 +21,9 @@ buildifier(
 
 shellcheck_test(
     name = "shellcheck",
-    data = glob(["**/*.sh"], exclude=["bazel-*"]),
+    data = glob(
+        ["**/*.sh"],
+        exclude = ["bazel-*"],
+    ),
     tags = ["lint"],
 )
