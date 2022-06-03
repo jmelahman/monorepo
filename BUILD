@@ -23,6 +23,6 @@ shellcheck_test(
     name = "shellcheck",
     data = glob(
         ["**/*.sh"],
-        exclude = ["**/bazel-*"],
+        exclude = ["bazel-*/**/*"],
     ),
 )
