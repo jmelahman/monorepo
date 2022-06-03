@@ -38,7 +38,7 @@ class PacmanTest(unittest.TestCase):
         mock_subprocess.assert_called_once()
 
     @mock.patch("subprocess.run")
-    def test_filter_removeable(self, mock_subprocess) -> None:
+    def test_filter_removeable(self, mock_subprocess: mock.MagicMock) -> None:
         # TODO: Make assertions.
         self.pacman.filter_removeable(["foo", "bar"])
 
