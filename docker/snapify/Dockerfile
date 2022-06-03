@@ -2,13 +2,18 @@ FROM manjarolinux/base:latest
 
 ENV SNAPCRAFT_SETUP_CORE=1
 
-RUN pacman -Syyu --noconfirm
-RUN pacman -S --needed --noconfirm \
+RUN pacman -Syyu --noconfirm \
+      && \
+    pacman -S --needed --noconfirm \
       python-pip \
-      snapd
+      snapd \
+      && \
+    pacman -Scc --noconfirm
 
 # Pre-install packages to snapify
-RUN pacman -S --needed --noconfirm \
+RUN pacman -Syyu --noconfirm \
+      && \
+    pacman -S --needed --noconfirm \
       docker \
       firefox \
       htop \
@@ -17,6 +22,8 @@ RUN pacman -S --needed --noconfirm \
       nmap \
       ripgrep \
       tree \
-      vlc
+      vlc \
+      && \
+    pacman -Scc --noconfirm
 
 RUN pip install python-snapify==0.3.0
