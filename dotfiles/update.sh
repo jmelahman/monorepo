@@ -1,15 +1,6 @@
 #!/bin/bash
 
-REPO=$HOME/code/dotfiles
-REPO_CONFIG=$REPO/.config
-HOME_CONFIG=$HOME/.config
-
-BLACKLISTED=(
-  .config
-  update.sh
-)
-
-source $REPO/helpers.sh
+_CWD=$( cd -- "$( dirname -- "$( realpath "${BASH_SOURCE[0]}" )" )" &> /dev/null && pwd )
 
 function maybe_link_dir() {
   local DIR_PATH="$1"
@@ -43,8 +34,8 @@ function maybe_link_file() {
 }
 
 function maybe_link_item() {
-  ITEM=$1
-  echo $ITEM
+  local item="$1"
+  echo "$item"
 #  if [[ -f $ITEM ]]; then
 #    maybe_link_file "$ITEM" "$HOME/$BASENAME"
 #  else
@@ -53,19 +44,13 @@ function maybe_link_item() {
 }
 
 function main() {
-  pushd $HOME
-
-  for ITEM in $(find $REPO -maxdepth 1); do
-    BASENAME=$(basename $ITEM)i
-    maybe_link_item "$ITEM" "$HOME/$BASENAME"
-  done
-
-  for ITEM in $(find $REPO_CONFIG -maxdepth 1); do
-    BASENAME=$(basename $FILE)
-    maybe_link_item "$FILE" "$HOME_CONFIG/$BASENAME"
-  done
-
-  popd
+  while read -r filename; do
+    maybe_link_item "${filename}" "$HOME/$(basename "${filename}")"
+  done < <(find "${_CWD}" -maxdepth 1 -type f)
+  while read -r filename; do
+    maybe_link_item "${filename}" "$HOME/$(basename "${filename}")"
+  done < <(find "${_CWD}/.config" -maxdepth 1 -type f)
+  popd > /dev/null || exit 1
 }
 
 main

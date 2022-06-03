@@ -37,5 +37,3 @@ function run_tests() {
   echo "There were $failures failures"
   exit $failures
 }
-
-run_tests

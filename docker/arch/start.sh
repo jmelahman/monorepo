@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-_REPO_ROOT=$( cd -- "$( dirname -- $( realpath "${BASH_SOURCE[0]}" ) )/../.." &> /dev/null && pwd )
+_REPO_ROOT=$( cd -- "$( dirname -- "$( realpath "${BASH_SOURCE[0]}" )" )/../.." &> /dev/null && pwd )
 _CONTAINER_NAME="archdev"
 
-trap "docker stop ${_CONTAINER_NAME} && docker rm ${_CONTAINER_NAME}" EXIT
+trap 'docker stop ${_CONTAINER_NAME} && docker rm ${_CONTAINER_NAME}' EXIT
 docker run \
   -it \
   -e "USER=$(id -un)" \

@@ -10,7 +10,7 @@ PUSH="false"
 if [ "${1:-}" == "--push" ]; then
   PUSH="true"
 elif [ "${1:-}" == "--help" ]; then
-  echo "$(basename $0) usage: [--help] [--push]"
+  echo "$(basename "$0") usage: [--help] [--push]"
   exit 0
 fi
 
