@@ -2,6 +2,8 @@
 
 set -euo pipefail
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+REPOSITORY='lahmanja/snapify'
+VERSION='v1.0.0'
 
 PUSH="false"
 if [ "${1:-}" == "--push" ]; then
@@ -13,9 +15,8 @@ fi
 
 pushd "$SCRIPT_DIR" > /dev/null
 
-DOCKER_TAG='lahmanja/snapify:snapify-manjaro'
-docker build -t "${DOCKER_TAG}" .
+docker build -t "${REPOSITORY}:${VERSION}" -t "${REPOSITORY}:latest" .
 if [ "${PUSH}" == "true" ]; then
   docker login
-  docker push "${DOCKER_TAG}"
+  docker push ${REPOSITORY} --all-tags
 fi
