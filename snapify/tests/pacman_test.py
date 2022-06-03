@@ -14,8 +14,8 @@ pacman-mirrorlist
 python
 """
 _NEVER_AVAILABLE = "never-available"
-_PACMAN_BIN = "/usr/bin/pacman"
-_SUDO_BIN = "/usr/bin/sudo"
+_PACMAN_BIN = "/usr/bin/fake-pacman"
+_SUDO_BIN = "/usr/bin/fake-sudo"
 
 
 class PacmanTest(unittest.TestCase):
@@ -37,7 +37,10 @@ class PacmanTest(unittest.TestCase):
         self.pacman.get_installed_packages()
         mock_subprocess.assert_called_once()
 
-    def test_filter_removeable(self) -> None:
+
+    @mock.patch("subprocess.run")
+    def test_filter_removeable(self, mock_subprocess) -> None:
+        # TODO: Make assertions.
         self.pacman.filter_removeable(["foo", "bar"])
 
     @mock.patch("subprocess.check_output", return_value=_FAKE_PACKAGES)
