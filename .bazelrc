@@ -1,30 +1,55 @@
 # Build
-## Mypy Integration
-build:mypy --aspects @mypy_integration//:mypy.bzl%mypy_aspect
-build:mypy --output_groups=+mypy
-
 ## Sandboxing
 build --spawn_strategy=sandboxed
 build --worker_sandboxing
 
+## C++ Toolchain
+build --repo_env=CC=clang
+
+## Mypy Integration
+build:mypy --aspects @mypy_integration//:mypy.bzl%mypy_aspect
+build:mypy --output_groups=+mypy
+
+## Base sanitizer
+build:sanitizer -c dbg
+build:sanitizer --copt='-UNDEBUG'
+build:sanitizer --copt='-O3'
+build:sanitizer --copt='-fno-omit-frame-pointer'
+build:sanitizer --flaky_test_attempts=1
+build:sanitizer --strip=never
+
 ## Address sanitizer
-build:asan --strip=never
-build:asan --copt -fsanitize=address
-build:asan --copt -DADDRESS_SANITIZER
-build:asan --copt -O1
-build:asan --copt -g
-build:asan --copt -fno-omit-frame-pointer
-build:asan --linkopt -fsanitize=address
+build:asan --config=sanitizer
+build:asan --copt='-DADDRESS_SANITIZER'
+build:asan --copt='-fsanitize=address'
+build:asan --copt='-g'
+build:asan --linkopt='-fsanitize=address'
+build:asan --test_env=ASAN_OPTIONS=color=always
+
+## Memory sanitizer
+build:msan --config=sanitizer
+build:msan --config=libc++
+build:msan --copt='-fsanitize=memory'
+build:msan --copt='-fsanitize-memory-track-origins=2'
+build:msan --linkopt='-fsanitize=memory'
+build:msan --test_env=MSAN_OPTIONS=color=always
 
 ## Thread sanitizer
-build:tsan --strip=never
-build:tsan --copt -fsanitize=thread
-build:tsan --copt -DTHREAD_SANITIZER
-build:tsan --copt -DDYNAMIC_ANNOTATIONS_ENABLED=1
-build:tsan --copt -DDYNAMIC_ANNOTATIONS_EXTERNAL_IMPL=1
-build:tsan --copt -O1
-build:tsan --copt -fno-omit-frame-pointer
-build:tsan --linkopt -fsanitize=thread
+build:tsan --config=sanitizer
+build:tsan --copt='-fsanitize=thread'
+build:tsan --copt='-DTHREAD_SANITIZER'
+build:tsan --copt='-DDYNAMIC_ANNOTATIONS_ENABLED=1'
+build:tsan --copt='-DDYNAMIC_ANNOTATIONS_EXTERNAL_IMPL=1'
+build:tsan --linkopt='-fsanitize=thread'
+build:tsan --test_env=TSAN_OPTIONS=color=always
+
+## Undefined behavior sanitizer
+build:ubsan --config=sanitizer
+build:ubsan --copt='-fno-sanitize-recover=all'
+build:ubsan --copt='-fsanitize=undefined,nullability'
+build:ubsan --linkopt='-fsanitize=undefined,nullability,integer'
+build:ubsan --linkopt='-fsanitize-link-c++-runtime'
+build:ubsan --test_env=UBSAN_OPTIONS=color=always,print_stacktrace=1
 
 # Test
 test --test_output=errors
