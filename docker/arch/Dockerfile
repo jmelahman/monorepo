@@ -18,14 +18,17 @@ RUN cd /opt/yay-git && \
 ### Main Stage ###
 FROM archlinux:latest
 
+RUN useradd jamison -m
+
 RUN pacman -Syyu --noconfirm \
       && \
     pacman -S --noconfirm \
       bazel \
+      clang \
       git \
       libxcrypt-compat \
       python \
-      ssh \
+      openssh \
       vim \
       wget \
       && \
@@ -36,5 +39,3 @@ RUN wget https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement
     chmod +x /usr/local/sbin/systemctl
 
 COPY --from=prebuild /opt/yay-git/pkg/yay-git/usr/bin/yay /usr/local/bin/yay
-
-RUN useradd jamison -m
