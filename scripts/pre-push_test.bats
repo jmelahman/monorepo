@@ -3,6 +3,7 @@
 load "external/bats_shellmock/load.bash"
 
 __BUILDIFIER_PATTERN='*.bzl *.sky BUILD *.BUILD BUILD.*.bazel BUILD.*.oss WORKSPACE WORKSPACE.*.bazel WORKSPACE.*.oss'
+TEST_FUNCTION="pre-push no-op"
 
 setup() {
   skipIfNot "${BATS_TEST_DESCRIPTION:-}"
@@ -28,6 +29,10 @@ teardown() {
     shellmock_expect git --match "diff --quiet ${merge_base} *.py" --status 0
 
     run "${BATS_TEST_DIRNAME}/pre-push.bash"
+
+    # TODO: Fails with, "This repository is configured for Git LFS but 'git-lfs' was not found..."
+    shellmock_dump
+    cat scripts/shellmock-debug.out
 
     [ "$status" = "0" ]
     shellmock_verify
