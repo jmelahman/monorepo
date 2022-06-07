@@ -45,7 +45,17 @@ bazel run //third_party:requirements.update
 
 ### Upgrading Dependencies
 
-// TODO
+To upgrade all dependencies (dangerous),
+
+```shell
+bazel run //third_party:requirements.update -- --upgrade
+```
+
+To upgrade a single dependency (in this case, the `mypy` package),
+
+```shell
+bazel run //third_party:requirements.update -- --upgrade-package mypy
+```
 
 ## Formatting
 
