@@ -28,7 +28,6 @@ build:asan --test_env=ASAN_OPTIONS=color=always
 
 ## Memory sanitizer
 build:msan --config=sanitizer
-build:msan --config=libc++
 build:msan --copt='-fsanitize=memory'
 build:msan --copt='-fsanitize-memory-track-origins=2'
 build:msan --linkopt='-fsanitize=memory'
