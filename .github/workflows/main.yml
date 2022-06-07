@@ -29,6 +29,6 @@ jobs:
       - run: bazel test --config tsan //...
       - run: bazel test --config ubsan //...
       - run: >-
-        docker run --tmpfs /run --tmpfs /run/lock --tmpfs /tmp -v
-        /var/cache/snapd:/var/cache/snapd/ -v /run/snapd.socket:/run/snapd.socket
-        lahmanja/snapify:v1.0.1 snapify --noninteractive
+          docker run --tmpfs /run --tmpfs /run/lock --tmpfs /tmp -v
+          /var/cache/snapd:/var/cache/snapd/ -v /run/snapd.socket:/run/snapd.socket
+          lahmanja/snapify:v1.0.1 snapify --noninteractive
