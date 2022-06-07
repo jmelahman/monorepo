@@ -26,4 +26,4 @@ RUN pacman -Syyu --noconfirm \
       && \
     pacman -Scc --noconfirm
 
-RUN pip install python-snapify==0.3.0
+RUN pip install python-snapify==0.3.1

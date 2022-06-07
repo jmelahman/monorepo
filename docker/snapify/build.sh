@@ -3,7 +3,7 @@
 set -euo pipefail
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPOSITORY='lahmanja/snapify'
-VERSION='v1.0.0'
+VERSION='v1.0.1'
 
 PUSH="false"
 if [ "${1:-}" == "--push" ]; then
