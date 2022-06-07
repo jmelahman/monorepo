@@ -38,9 +38,23 @@ class PacmanTest(unittest.TestCase):
         mock_subprocess.assert_called_once()
 
     @mock.patch("subprocess.run")
+    def test_filter_removeable_no_removeable(
+        self, mock_subprocess: mock.MagicMock
+    ) -> None:
+        installed_packages = ["foo", "bar"]
+        mock_subprocess.return_value.returncode = 1
+        removeable = self.pacman.filter_removeable(installed_packages)
+        self.assertFalse(removeable)
+
+    @mock.patch("subprocess.run")
     def test_filter_removeable(self, mock_subprocess: mock.MagicMock) -> None:
-        # TODO: Make assertions.
-        self.pacman.filter_removeable(["foo", "bar"])
+        installed_packages = ["foo", "bar"]
+        mock_subprocess.return_value.stdout.decode.return_value = (
+            "\n".join(installed_packages) + "\n"
+        )
+        mock_subprocess.return_value.returncode = 0
+        removeable = self.pacman.filter_removeable(installed_packages)
+        self.assertEqual(removeable, installed_packages)
 
     @mock.patch("subprocess.check_output", return_value=_FAKE_PACKAGES)
     def test_has_installed(self, mock_subprocess: mock.MagicMock) -> None:
@@ -52,8 +66,9 @@ class PacmanTest(unittest.TestCase):
             with self.subTest(package=package):
                 self.assertEqual(self.pacman.has_installed(package), is_expected)
 
-    @mock.patch("snapify.pysnapify.manager.pacman.Pacman._run", return_value=0)
+    @mock.patch("subprocess.run")
     def test_has_available(self, mock_subprocess: mock.MagicMock) -> None:
+        mock_subprocess.return_value.returncode = 0
         package_available = self.pacman.has_available("fake-snapify")
         self.assertTrue(package_available)
         mock_subprocess.assert_called_once_with([_PACMAN_BIN, "-Qs", "^fake-snapify$"])

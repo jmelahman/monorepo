@@ -28,16 +28,11 @@ class Pacman(PackageManager):
         ]
         return self._installed_packages
 
-    # TODO: Maybe remove in favor of proper mocking of subprocess.
-    @staticmethod
-    def _run(cmd: list[str], **kwargs: Any) -> int:
-        return subprocess.run(cmd, **kwargs).returncode
-
     def has_available(self, package_name: str) -> bool:
         if package_name in self._not_available:
             return False
         # TODO: This may need compiled with 're'.
-        return not self._run([self._bin, "-Qs", f"^{package_name}$"])
+        return not subprocess.run([self._bin, "-Qs", f"^{package_name}$"]).returncode
 
     def has_installed(self, package_name: str) -> bool:
         return package_name in self.get_installed_packages()
@@ -59,10 +54,11 @@ class Pacman(PackageManager):
             sys.exit(1)
 
     def filter_removeable(self, packages: list[str]) -> list[str]:
+        # TODO: Might need to run each package individually and aggregate afterwards.
         dependency_query = subprocess.run(
             [self._bin, "-Qqt", *packages], stdout=subprocess.PIPE
         )
-        if dependency_query:
+        if dependency_query.returncode:
             logging.info(
                 f"The following packages were unable to be snapified: {' '.join(packages)}"
             )
