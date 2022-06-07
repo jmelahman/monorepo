@@ -4,7 +4,7 @@ import pathlib
 from setuptools import setup, find_packages
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 
 setup(
     name="python-snapify",
