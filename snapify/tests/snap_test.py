@@ -21,7 +21,10 @@ class SnapTest(unittest.TestCase):
         "snapify.pysnapify.manager.snap.Snapd._names_exists", return_value=False
     )
     def setUp(
-        self, mock_names_exists: mock.MagicMock, mock_get_executable: mock.MagicMock, mock_subprocess: mock.MagicMock
+        self,
+        mock_names_exists: mock.MagicMock,
+        mock_get_executable: mock.MagicMock,
+        mock_subprocess: mock.MagicMock,
     ) -> None:
         self._default_get_executable = [
             _PACMAN_BIN,
