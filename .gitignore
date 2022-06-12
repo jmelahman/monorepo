@@ -170,3 +170,9 @@ node_modules
 *.exe
 *.out
 *.app
+
+# Gatsby
+node_modules/
+.cache/
+public
+src/gatsby-types.d.ts
