@@ -14,7 +14,7 @@ jobs:
       - name: Install deps
         run: >-
           python -m pip install --upgrade pip &&
-          pip install twine==4.0.0
+          pip install twine==4.0.0 mypy==0.942 types-requests==2.27.20
       - name: Build
         run: python setup.py sdist
       - name: Upload

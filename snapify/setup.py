@@ -1,10 +1,34 @@
 #!/usr/bin/env python3.10
 
+import glob
+import os
 import pathlib
 from setuptools import setup, find_packages
 
+from mypyc.build import mypycify
+
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
-VERSION = "0.3.1"
+VERSION = "0.4.0"
+
+
+# Adopted from https://github.com/python/mypy/blob/master/setup.py
+def find_package_data(base, globs, root="python-snapify"):
+    """Find all interesting data files, for setup(package_data=)
+    Arguments:
+      root:  The directory to search in.
+      globs: A list of glob patterns to accept files.
+    """
+
+    rv_dirs = [root for root, _, _ in os.walk(base)]
+    rv = []
+    for rv_dir in rv_dirs:
+        files = []
+        for pat in globs:
+            files += glob.glob(os.path.join(rv_dir, pat))
+        if not files:
+            continue
+        rv.extend([os.path.relpath(f, root) for f in files])
+    return rv
 
 setup(
     name="python-snapify",
@@ -15,6 +39,10 @@ setup(
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/jmelahman/python-snapify",
+    py_modules=[],
+    ext_modules=mypycify([
+        os.path.join('pysnapify', x) for x in find_package_data('pysnapify', ['*.py'])
+    ]),
     package_dir={"pysnapify": "pysnapify"},
     packages=find_packages(),
     scripts=["bin/snapify"],
