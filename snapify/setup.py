@@ -30,6 +30,7 @@ def find_package_data(base, globs, root="python-snapify"):
         rv.extend([os.path.relpath(f, root) for f in files])
     return rv
 
+
 setup(
     name="python-snapify",
     version=VERSION,
@@ -40,9 +41,9 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/jmelahman/python-snapify",
     py_modules=[],
-    ext_modules=mypycify([
-        os.path.join('pysnapify', x) for x in find_package_data('pysnapify', ['*.py'])
-    ]),
+    ext_modules=mypycify(
+        [os.path.join("pysnapify", x) for x in find_package_data("pysnapify", ["*.py"])]
+    ),
     package_dir={"pysnapify": "pysnapify"},
     packages=find_packages(),
     scripts=["bin/snapify"],
