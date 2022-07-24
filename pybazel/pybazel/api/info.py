@@ -13,7 +13,7 @@ class InfoApiMixin(ApiProtocol):
         key: InfoKey | None = None,
         configuration_options: list[str] | None = None,
     ) -> str:
-        info_command = [self._which_bazel, "info"]
+        info_command = [self.which_bazel, "info"]
         info_command += [key.value] if key else []
         info_command += configuration_options or []
         return (

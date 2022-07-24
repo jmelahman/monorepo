@@ -9,3 +9,9 @@ Pybazel is available as a [pypi package](https://pypi.org/project/pybazel/).
 ```shell
 pip install pybazel
 ```
+
+## Usage
+
+```shell
+python -c 'import pybazel; pybazel.BazelClient().info()'
+```

@@ -98,6 +98,10 @@ tomli==2.0.1 \
     # via
     #   black
     #   mypy
+types-colorama==0.4.15 \
+    --hash=sha256:9cdc88dcde9e8ebafb2fdfaf5cee260452f93e5c57eb5d8b2a7f65b836d4e5d0 \
+    --hash=sha256:fd128b1e32f3fecec5f09df4366d21498ee86ea31fcf8b4e8f1ade6d0bbf9832
+    # via -r third_party/requirements.in
 types-requests==2.27.20 \
     --hash=sha256:63344573cde6c4efd44d867c0158d9fb7e6beb95721cbe9882f3f857ee8a5398 \
     --hash=sha256:68b8de86552116424ec23b77afc925e111afb6496d3821b183b7d151b3b834d4

@@ -11,3 +11,4 @@ requests==2.27.1
 types-requests==2.27.20
 urllib3==1.26.9
 colorama==0.4.5
+types-colorama==0.4.15

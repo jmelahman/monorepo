@@ -20,11 +20,19 @@ class APIClient(BuildApiMixin, InfoApiMixin):
         self.workspace = workspace  # type: ignore[assignment] # https://github.com/python/mypy/issues/3004
 
     @property
+    def bazel_options(self) -> list[str]:
+        return self._bazel_options
+
+    @bazel_options.setter
+    def bazel_options(self, value: list[str]) -> None:
+        self._bazel_options = value
+
+    @property
     def which_bazel(self) -> str:
         return self._which_bazel
 
     @which_bazel.setter
-    def which_bazel(self, value: str) -> str:
+    def which_bazel(self, value: str) -> None:
         self._which_bazel = value
 
     @property

@@ -6,6 +6,7 @@ from ..models.info import InfoKey
 
 
 class ApiProtocol(Protocol):
+    @property
     def bazel_options(self) -> list[str]:
         ...
 
