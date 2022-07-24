@@ -9,5 +9,6 @@ logging.basicConfig(
     level=os.environ.get("LOGLEVEL", "INFO"),
 )
 
+
 def getLogger(*args: Any, **kwargs: Any) -> logging.Logger:
     return logging.getLogger(*args, **kwargs)
