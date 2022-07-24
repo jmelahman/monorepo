@@ -8,8 +8,8 @@ py_binary(
     name = "client",
     srcs = ["client.py"],
     deps = [
-        "//pybazel/pybazel/utils:logging",
         "//pybazel/pybazel/api:client",
+        "//pybazel/pybazel/utils:logging",
     ],
 )
 
