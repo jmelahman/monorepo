@@ -6,8 +6,7 @@ from pybazel.tests.unit.fixtures import API_CLIENTS
 
 
 class InfoTest(unittest.TestCase):
-
-    @mock.patch('subprocess.check_output', return_value=b"fake: info")
+    @mock.patch("subprocess.check_output", return_value=b"fake: info")
     def test_info(self, mock_run: mock.MagicMock) -> None:
         for api in API_CLIENTS:
             api.info()

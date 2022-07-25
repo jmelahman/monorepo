@@ -13,7 +13,7 @@ _API_FIXTURES = [
 API_CLIENTS = [
     APIClient(
         bazel_options=bazel_options,
-        workspace=os.path.join(os.path.expanduser("~"), "code", "monorepo")
+        workspace=os.path.join(os.path.expanduser("~"), "code", "monorepo"),
     )
     for bazel_options, workspace in _API_FIXTURES
 ]
