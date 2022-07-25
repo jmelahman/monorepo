@@ -31,4 +31,4 @@ class InfoKey(enum.Enum):
     # https://docs.bazel.build/versions/main/user-manual.html#configuration-specific-data
     bazel_bin = "bazel-bin"
     bazel_testlogs = "bazel-testlogs"
-    bazel_genfiles = " bazel-genfiles"
+    bazel_genfiles = "bazel-genfiles"
