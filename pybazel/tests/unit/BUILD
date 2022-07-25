@@ -10,8 +10,8 @@ py_library(
 
 py_test(
     name = "info_test",
-    srcs = ["info_test.py"],
     size = "small",
+    srcs = ["info_test.py"],
     deps = [
         ":fixtures",
         "//pybazel/pybazel/models:info",

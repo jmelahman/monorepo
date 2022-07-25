@@ -4,8 +4,8 @@ py_library(
     name = "fixtures",
     srcs = ["fixtures.py"],
     tags = [
-        "manual",
         "integration",
+        "manual",
     ],
     deps = [
         "//pybazel/pybazel/api:client",
