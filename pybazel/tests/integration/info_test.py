@@ -1,19 +1,18 @@
 import sys
 import shutil
 import unittest
-from unittest import mock
 
 from pybazel.pybazel.models.info import InfoKey
-from pybazel.tests.integration.fixtures import api_clients, OUTPUT_BASE
+from pybazel.tests.integration.fixtures import API_CLIENTS, OUTPUT_BASE
 
 
 class InfoTest(unittest.TestCase):
     @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(OUTPUT_BASE)
+    def tearDownClass(cls) -> None:
+        shutil.rmtree(OUTPUT_BASE, ignore_errors=True)
 
     def test_info(self) -> None:
-        for api in api_clients:
+        for api in API_CLIENTS:
             api.info()
             for key in InfoKey:
                 api.info(key=key)
