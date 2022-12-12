@@ -36,13 +36,13 @@
 "		      on the fly spell checking in insert mode.
 "		    Guo-Peng Wen for several patches, improvements and code
 "		      cleaning.
-"		    Hari Krishna Dara who shows me how to map a key which 
+"		    Hari Krishna Dara who shows me how to map a key which
 "		      calls a function without leaving the insert mode.
-"		    Hugo Haas who suggests the automatic language guessing 
+"		    Hugo Haas who suggests the automatic language guessing
 "		      function, and provides me with a sample function.
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 "
-" Section: Documentation 
+" Section: Documentation
 "----------------------------
 "
 " Documentation should be available by ":help vimspell" command, once the
@@ -50,7 +50,7 @@
 "
 " You still can read the documentation at the end of this file. Locate it by
 " searching the "vimspell-contents" string (and set ft=help to have
-" appropriate syntaxic coloration). 
+" appropriate syntaxic coloration).
 "
 " Section: Plugin header {{{1
 " loaded_vimspell is set to 1 when the initialization begins, and 2 when it
@@ -93,7 +93,7 @@ let s:spell_aspell_mail_args  = "--mode=email"
 " 'there should probably be some encoding consideration here... ? )
 "
 let s:spell_francais_iskeyword  =  "@,48-57,_,192-255,39,½,æ,¼,Æ,-"
-let s:spell_russian_iskeyword = "@,48-57,_,192-255,^a-z,^A-Z" 
+let s:spell_russian_iskeyword = "@,48-57,_,192-255,^a-z,^A-Z"
 let s:spell_english_iskeyword = "@,48-57,_,192-255,^192-255"
 
 " The double quote is used in latex for umlauts (which are written like "a,
@@ -241,7 +241,7 @@ function! s:SpellProposeAlternatives()
   else
     echo "no alternatives"
   endif
-  if l:replaced && b:spell_auto_jump 
+  if l:replaced && b:spell_auto_jump
      call s:SpellNextError(1)
   endif
 endfunction
@@ -287,7 +287,7 @@ endfunction
 
 " Function: s:SpellNextError() {{{2
 " search next word with spelling error (way = 1 : next, way = 0 : previous)
-function! s:SpellNextError(way) 
+function! s:SpellNextError(way)
   let l:save_hls = &l:hlsearch
   setlocal nohlsearch
   " save position
@@ -298,20 +298,20 @@ function! s:SpellNextError(way)
   let l:first_found = 0
   let l:first_found_col = 0
   " use line and column info to prevent infinite loop
-  while(l:found 
-	\ && (l:found != l:first_found  || l:first_found_col != l:found_col) 
+  while(l:found
+	\ && (l:found != l:first_found  || l:first_found_col != l:found_col)
 	\ && l:HLName != "SpellErrors")
     if l:first_found == 0 && l:found != -1
       let l:first_found = l:found
       let l:first_found_col = l:found_col
     endif
-    if a:way 
+    if a:way
       let l:found = search('\<\(' . b:spellerrors. '\)\>')
     else
       let l:found = search('\<\(' . b:spellerrors. '\)\>', 'b')
     endif
     let l:found_col = col(".")
-    let l:HLName = 
+    let l:HLName =
       \ synIDattr(synIDtrans(synID(l:found, l:found_col, 1)), "name")
   endwhile
   if l:HLName != "SpellErrors"
@@ -382,10 +382,10 @@ function! s:SpellCaseAccept()
   endif
 
   syntax case match
-  syntax clear SpellCorrected 
+  syntax clear SpellCorrected
   execute "syntax match SpellCorrected \"\\<\\(".b:spellcorrected
 	\ . "\\)\\>\" transparent contains=NONE ".b:spell_syntax_options
-  if b:spell_auto_jump 
+  if b:spell_auto_jump
      call s:SpellNextError(1)
   endif
 endfunction
@@ -404,10 +404,10 @@ function! s:SpellAccept()
   endif
 
   syntax case ignore
-  syntax clear SpellCorrected 
+  syntax clear SpellCorrected
   execute "syntax match SpellCorrected \"\\<\\(".b:spellicorrected
 	\ . "\\)\\>\" transparent contains=NONE ".b:spell_syntax_options
-  if b:spell_auto_jump 
+  if b:spell_auto_jump
      call s:SpellNextError(1)
   endif
 endfunction
@@ -422,10 +422,10 @@ function! s:SpellIgnore()
     let  b:spellcorrected=escape(expand("<cword>"),"'\"")
   endif
   syntax case match
-  syntax clear SpellCorrected 
+  syntax clear SpellCorrected
   execute "syntax match SpellCorrected \"\\<\\(".b:spellcorrected
 	\ . "\\)\\>\" transparent contains=NONE ".b:spell_syntax_options
-  if b:spell_auto_jump 
+  if b:spell_auto_jump
      call s:SpellNextError(1)
   endif
 endfunction
@@ -454,8 +454,8 @@ endfunction
 " spell checker.
 function! s:SpellVerifyLanguage(language)
   if  b:spell_executable == "ispell" || b:spell_executable == "aspell"
-    let l:dirs = 
-	  \ system("echo word |". b:spell_executable . b:spell_verify_option 
+    let l:dirs =
+	  \ system("echo word |". b:spell_executable . b:spell_verify_option
 	    \." -d ". a:language . b:spell_verify_command )
     if v:shell_error != 0
       echo "Language '". a:language ."' not known from ". b:spell_executable ."."
@@ -488,7 +488,7 @@ function! s:SpellGuessLanguage()
   endif
 
   "TODO : allow the use of anonymous buffer (if expand("%") returns empty)
-  while matchstr(l:mlang,",") == "" 
+  while matchstr(l:mlang,",") == ""
 	\ && l:langnum <= s:SpellGetOption("spell_guess_max_languages",3)
     if (l:maxlines > 0)
       let l:errors=s:SpellSystem("head -" . l:maxlines . " "
@@ -496,7 +496,7 @@ function! s:SpellGuessLanguage()
 	  \. " | " . b:spell_executable . l:spell_options . b:spell_verify_option
 	  \." -d " . l:mlang . b:spell_verify_command)
     else
-      let l:errors=s:SpellSystem(b:spell_executable . l:spell_options 
+      let l:errors=s:SpellSystem(b:spell_executable . l:spell_options
 	    \. b:spell_verify_option . " -d " .  l:mlang . b:spell_verify_command
 	    \. " < " . escape(expand("%"),' \'))
     endif
@@ -576,7 +576,7 @@ function! s:SpellGetDicoList()
        " I have aspell 0.50.4.1 version. At this moment 05.01.2005 it's the
        " last one. At DOS/Windows C:\Aspell is the default install directory,
        " so we can try to get this one. :(
-    if !isdirectory(l:dirs) && s:os == "dos" 
+    if !isdirectory(l:dirs) && s:os == "dos"
       let l:dirs = "C:\\ASpell\\" . l:dirs
     endif
 
@@ -693,7 +693,7 @@ function! s:SpellTuneCommentSyntax(ft)
     if !exists("b:spell_syntax_options")
       let b:spell_syntax_options = "contained"
     endif
-    "but not for markup languages, where spelling errors must be also 
+    "but not for markup languages, where spelling errors must be also
     "highlighted outside of the Spell cluster.
     if stridx(s:SpellGetOption("spell_markup_ft",
 	  \ ",html,php,xhtml,dtml,tex,mail,text,help,Wikipedia,,"), ",".a:ft.",") > -1
@@ -759,7 +759,7 @@ function! s:SpellSetupBuffer()
       \"tex,mail,text,html,sgml,otl,cvs,none")
   let b:spell_guess_language_ft = s:SpellGetOption("spell_guess_language_ft",
       \"tex,mail,text,html")
-  if !exists("b:spell_auto_enable") 
+  if !exists("b:spell_auto_enable")
 	\ && ( (strlen(&filetype)
 		\ && (match(b:spell_auto_type,'\<'.&filetype.'\>') >= 0
 		  \ ||match(b:spell_auto_type, '\<all\>') >=0 )
@@ -956,7 +956,7 @@ function! s:SpellAddTriggerMapping(key)
     silent exec 'imap <buffer><silent> '.a:key.' ' .l:oldmap
 	  \. '<C-R>=<SID>SpellCheckLine("'.a:key.'")<CR>'
   else
-    silent exec 'inoremap <buffer><silent> <CR> ' 
+    silent exec 'inoremap <buffer><silent> <CR> '
 	  \. '<C-R>=<SID>SpellCheckLine("")<CR><CR>'
   end
 endfunction
@@ -1030,8 +1030,8 @@ function! s:SpellCheck()
   let b:spellicorrected="nonexisitingwordinthisdociumnt"
 
   if exists("b:spell_filter") && b:spell_filter != ""
-    let l:errors=s:SpellSystem('cat '. escape(l:filename,' \'). 
-	  \ "|".b:spell_filter_pipe 
+    let l:errors=s:SpellSystem('cat '. escape(l:filename,' \').
+	  \ "|".b:spell_filter_pipe
 	  \. b:spell_executable . b:spell_options .  b:spell_verify_option ." -d "
 	  \. b:spell_language . b:spell_verify_command)
   else
@@ -1130,7 +1130,7 @@ function! s:SpellCheckWindow()
   let b:save_mod = &modified
   " save portion of buffer we are interested in .
   if exists("b:spell_filter") && b:spell_filter != ""
-    silent execute  ":".wtop .",".wbottom."w !". b:spell_filter 
+    silent execute  ":".wtop .",".wbottom."w !". b:spell_filter
 	  \ .' > '.w:tempname
   else
     silent execute  ":".wtop .",".wbottom."w!".w:tempname
@@ -1200,13 +1200,13 @@ endfunction
 function! s:SpellCheckLine(char)
 
   if a:char != ""
-   let l:linepos = line(".") 
+   let l:linepos = line(".")
    let l:colpos = col(".")
    "echomsg 'exe :.s/\%'.l:colpos.'c./'. a:char . '/'
     silent! exe  ':.s/.\%' . l:colpos.'c/'. a:char . '/'
     if strpart(&encoding, 0, 1) == "u"
-      " ugly hack - l:colpos - 1 prevents incorrect cursor positioning when 
-      " <Space> is pressed within a line. This applies only to Unicode  
+      " ugly hack - l:colpos - 1 prevents incorrect cursor positioning when
+      " <Space> is pressed within a line. This applies only to Unicode
       " encodings.
       let l:colpos = l:colpos - 1
     end
@@ -1315,7 +1315,7 @@ function! s:SpellAutoEnable(guess)
   " Add <space> mapping if the auto spell is enabled and required in insert
   " mode (by mean of <space> mapping).
   " An existing mapping is responsible to insert a space, if it's there.
-  if s:SpellGetOption("spell_insert_mode",1) 
+  if s:SpellGetOption("spell_insert_mode",1)
 	\ && exists("b:spell_auto_enable") && b:spell_auto_enable
     call s:SpellAddTriggerMapping("<Space>")
     call s:SpellAddTriggerMapping("÷")
@@ -1595,12 +1595,12 @@ if s:enable_menu
   else
     let s:ml="\\"
   endif
-  let s:sq=substitute(s:SpellGetOption("spell_exit_map","<Leader>sq"), '<Leader>', s:ml, "") 
-  let s:sp=substitute(s:SpellGetOption("spell_previous_error_map","<Leader>sp"), '<Leader>', s:ml, "") 
-  let s:sn=substitute(s:SpellGetOption("spell_next_error_map","<Leader>sn"), '<Leader>', s:ml, "") 
-  let s:sa=substitute(s:SpellGetOption("spell_ignore_map","<Leader>sa"), '<Leader>', s:ml, "") 
-  let s:su=substitute(s:SpellGetOption("spell_accept_map","<Leader>su"), '<Leader>', s:ml, "") 
-  let s:si=substitute(s:SpellGetOption("spell_case_accept_map","<Leader>si"), '<Leader>', s:ml, "") 
+  let s:sq=substitute(s:SpellGetOption("spell_exit_map","<Leader>sq"), '<Leader>', s:ml, "")
+  let s:sp=substitute(s:SpellGetOption("spell_previous_error_map","<Leader>sp"), '<Leader>', s:ml, "")
+  let s:sn=substitute(s:SpellGetOption("spell_next_error_map","<Leader>sn"), '<Leader>', s:ml, "")
+  let s:sa=substitute(s:SpellGetOption("spell_ignore_map","<Leader>sa"), '<Leader>', s:ml, "")
+  let s:su=substitute(s:SpellGetOption("spell_accept_map","<Leader>su"), '<Leader>', s:ml, "")
+  let s:si=substitute(s:SpellGetOption("spell_case_accept_map","<Leader>si"), '<Leader>', s:ml, "")
 
   exe "amenu <silent> ".s:prio."10  ".s:menu
 	\ . "Spell.&Spell       <Plug>SpellCheck"
@@ -1701,7 +1701,7 @@ Spelling text with the plugin "Vimspell"
 
 
 ==============================================================================
-CONTENT                                                    *vimspell-contents* 
+CONTENT                                                    *vimspell-contents*
 
     Installation        : |vimspell-install|
     Vimspell intro      : |vimspell|
@@ -1770,7 +1770,7 @@ CONTENT                                                    *vimspell-contents*
    <Leader>sq   - return to normal syntax coloring and disable auto spell
 	  	  checking.
 
-   Note that those last mappings are only defined once the spelling was 
+   Note that those last mappings are only defined once the spelling was
    checked.
 
    See |vimspell-mappings-override| and |vimspell-options| to learn how to
@@ -1803,8 +1803,8 @@ CONTENT                                                    *vimspell-contents*
       aspell or ispell are supported).
 
     :SpellProposeAlternatives                      *:SpellProposeAlternatives*
-      Propose alternative for keyword under cursor. If more than 10 
-      alternatives exists, you can choose between the first 9 alternatives by 
+      Propose alternative for keyword under cursor. If more than 10
+      alternatives exists, you can choose between the first 9 alternatives by
       typing 1 to 9 follow by the 'return' key, or by typing 01 to 09.
 
     :SpellExit                                                    *:SpellExit*
@@ -1965,21 +1965,21 @@ CONTENT                                                    *vimspell-contents*
 
 
     spell_guess_language_ft                          *spell_guess_language_ft*
-      This variable, if set, defines a list of filetype for which vimspell try 
-      to automatically find which language is in use.  Set it to "all" if you 
-      want to use the guess heuristic for every filetype. You can use the 
-      token "none" if you want to use it for files which do not have a 
+      This variable, if set, defines a list of filetype for which vimspell try
+      to automatically find which language is in use.  Set it to "all" if you
+      want to use the guess heuristic for every filetype. You can use the
+      token "none" if you want to use it for files which do not have a
       filetype.
       Defaults to: >
 	  let spell_guess_language_ft = "tex,mail,text,html"
-<     Note: the "text" filetype is not defined by vim. Look at |new-filetype| 
+<     Note: the "text" filetype is not defined by vim. Look at |new-filetype|
       to see how you could yourself define a new filetype.
-      
-    
+
+
     spell_guess_max_languages                      *spell_guess_max_languages*
-      This variable if set, set up how many languages are checked against the 
-      current buffer when vimspell try to determines the language in use. At 
-      most 'spell_ispell_sgml_args' are checked, and the one which best 
+      This variable if set, set up how many languages are checked against the
+      current buffer when vimspell try to determines the language in use. At
+      most 'spell_ispell_sgml_args' are checked, and the one which best
       matches the current buffer is selected.
       Defaults to: >
 	  let spell_guess_max_languages = 3
@@ -2015,9 +2015,9 @@ CONTENT                                                    *vimspell-contents*
 <
 
     spell_auto_jump		                             *spell_auto_jump*
-      This variable, if set, make the cursor automatically jump to the next 
-      error after: 
-       - inserting a word in the user dictionary, 
+      This variable, if set, make the cursor automatically jump to the next
+      error after:
+       - inserting a word in the user dictionary,
        - accepting a word for the editing session,
        - accepting a suggestion from the alternative list.
       Defaults to: >
@@ -2026,7 +2026,7 @@ CONTENT                                                    *vimspell-contents*
 
     spell_markup_ft                                          *spell_markup_ft*
       This variable, if set, defines a list of filetype for which vimspell
-      highlights all errors, and not only those included in the @Spell cluster 
+      highlights all errors, and not only those included in the @Spell cluster
       (see |syn-cluster|).
       Defaults to: >
 	  let spell_markup_ft = ",html,php,xhtml,dtml,tex,mail,help,text,,"
@@ -2045,21 +2045,21 @@ CONTENT                                                    *vimspell-contents*
 
     spell_{language}_iskeyword                               *spell_iskeyword*
       Those variables if set define the characters which are part of a word
-      in the selected language. See |iskeyword| for more informations. 
+      in the selected language. See |iskeyword| for more informations.
       Note that the hereafter described variables (the filetype and language
       dependent ones) overrides, if exists, the spell_{language}_iskeyword
       variables.
       The following ones are defined: >
 	   let s:spell_francais_iskeyword  = "@,48-57,_,192-255,39,½,æ,¼,Æ,-"
-	   let s:spell_russian_iskeyword = "@,48-57,_,192-255,^a-z,^A-Z" 
+	   let s:spell_russian_iskeyword = "@,48-57,_,192-255,^a-z,^A-Z"
 	   let s:spell_english_iskeyword = "@,48-57,_,192-255,^192-255"
 <     which says for example that the quote, the hyphen and some other digraphs
       must be considered as being part of french words.
 
 
-    spell_{language}_{filetype}_iskeyword 
+    spell_{language}_{filetype}_iskeyword
       Those variable have exactly the same impact as the previous one, except
-      that they are filetype dependant. 
+      that they are filetype dependant.
       The following is defined: >
 	   let s:spell_german_tex_iskeyword  = "@,48-57,192-255,=,\,34"
 <     which says that the double quote (char 34) must be considered as being
@@ -2129,7 +2129,7 @@ CONTENT                                                    *vimspell-contents*
          let spell_root_menu   = '-'
          let spell_auto_type   = ''
          let spell_insert_mode = 0
-<  
+<
 
        If you use the automatic guess language feature, you can also limit the
        number of lines used for guessing (this feature need the external
@@ -2141,17 +2141,17 @@ CONTENT                                                    *vimspell-contents*
 	 let spell_guess_language_ft = ""
 <
 
-   The number of errors returned by vimspell doesn't match the number of 
+   The number of errors returned by vimspell doesn't match the number of
    keywords underlined !
-       
-       Yes. It is a known problem. When calling the SpellCheck function, 
-       [ai]spell is fed with the whole text, even if some parts are not 
-       concerned by error highlighting (for exemple, in shell scripts, only 
+
+       Yes. It is a known problem. When calling the SpellCheck function,
+       [ai]spell is fed with the whole text, even if some parts are not
+       concerned by error highlighting (for exemple, in shell scripts, only
        errors in strings and comments are highlighted).
 
    Aspell doesn't understand the "oe" ligature, in iso-8859-15 encoding.
 
-       Aspell does understant the ligature, but you must use the good 
+       Aspell does understant the ligature, but you must use the good
        dictionary. You can get one at : >
 	  http://geodisi.u-strasbg.fr/~daurat/latin9/
 <
@@ -2162,8 +2162,8 @@ CONTENT                                                    *vimspell-contents*
     vimspell. If someone has more information about them, I will welcome them.
 
     - BUG digraphs are not passed to aspell/ispell. Since iskeyword is set
-      globally, they are not underlined in red... 
-    - When not all errors are highlighted, SpellCheck() display an erroneous 
+      globally, they are not underlined in red...
+    - When not all errors are highlighted, SpellCheck() display an erroneous
       error count.
     - problem when opening file with a swap files. Messages are not visible.
       to be reproduced...
@@ -2182,7 +2182,7 @@ CONTENT                                                    *vimspell-contents*
       latex *with aspell*. Vim need kill -9. -- I'm not able to reproduced it
       with vimspell 1.65 (see also Fabio Stumbo bug below)...
     - BUG with aspell (aspell-0.33.7.1-7mdk) on HTML files where aspell seems
-      to loop infinitely (Fabio Stumbo <f.stumbo@unife.it>). 
+      to loop infinitely (Fabio Stumbo <f.stumbo@unife.it>).
     - autocommands are not called in insert mode : this is apparently a
       feature of VIM. There will perhaps be a hook which will allow this in
       vim 6.2, but Bram seems quite reluctant in implementing it (because
@@ -2211,4 +2211,4 @@ CONTENT                                                    *vimspell-contents*
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " v im:tw=78:ts=8:ft=help:norl:
 " vim600: set foldmethod=marker  tabstop=8 shiftwidth=2 softtabstop=2 smartindent smarttab  :
-"fileencoding=iso-8859-15 
+"fileencoding=iso-8859-15
