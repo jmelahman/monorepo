@@ -4,5 +4,6 @@ cc_library(
     name = "fibonacci",
     srcs = ["fibonacci.cc"],
     hdrs = ["fibonacci.h"],
+    tags = ["manual"],
     visibility = ["//physics:visibility"],
 )

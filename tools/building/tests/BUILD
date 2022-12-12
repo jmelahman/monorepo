@@ -9,6 +9,7 @@ py_test(
         "//tools/building/tests/examples:greeter_lib",
         "//tools/building/tests/examples:greeter_test",
     ],
+    tags = ["manual"],
     deps = [
         requirement("pybazel"),
     ],
