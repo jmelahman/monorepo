@@ -1,6 +1,13 @@
 version: '3'
 
 services:
+  status:
+    image: status:latest
+    restart: unless-stopped
+    ports:
+      - 5000:5000
+    volumes:
+      - /home/jamison/.ssh/:/root/.ssh/:ro
   nginx:
     image: nginx:latest
     restart: unless-stopped
