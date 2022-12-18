@@ -6,8 +6,9 @@ import logging
 import os
 import sqlite3
 import time
-import threading
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 from flask import Flask, render_template, current_app, redirect
 import matplotlib
 
@@ -15,13 +16,46 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import paramiko
 
+
 app = Flask(__name__)
+scheduler = BackgroundScheduler()
+
+
+def init_statuses_table() -> None:
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS statuses (
+                        id INTEGER PRIMARY KEY,
+                        datetime TIME NOT NULL,
+                        status BOOLEAN NOT NULL
+                    )"""
+    )
+    conn.close()
+
+
+def update_statuses():
+    with app.app_context():
+        current_app.logger.info("Updating SSH connectivity status")
+    ssh_status = check_ssh_connection()
+    current_time = datetime.datetime.now()
+    datetime_string = current_time.strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO statuses (datetime, status) VALUES (?, ?)",
+        (datetime_string, ssh_status),
+    )
+    conn.commit()
+    conn.close()
 
 
 def configure_logger(app: Flask) -> None:
     handler = app.logger.handlers[0]
 
-    handler.setLevel(logging.WARNING)
+    log_level = logging.WARNING
+    app.logger.setLevel(log_level)
+    handler.setLevel(log_level)
 
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -42,32 +76,6 @@ def check_ssh_connection() -> bool:
     return False
 
 
-def maybe_create_statuses_table(cursor) -> None:
-    cursor.execute(
-        """CREATE TABLE IF NOT EXISTS statuses (
-                        id INTEGER PRIMARY KEY,
-                        datetime TIME NOT NULL,
-                        status BOOLEAN NOT NULL
-                    )"""
-    )
-
-
-def update_statuses():
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-    maybe_create_statuses_table(cursor)
-    while True:
-        ssh_status = check_ssh_connection()
-        current_time = datetime.datetime.now()
-        datetime_string = current_time.strftime("%Y-%m-%d %H:%M:%S")
-        cursor.execute(
-            "INSERT INTO statuses (datetime, status) VALUES (?, ?)",
-            (datetime_string, ssh_status),
-        )
-        conn.commit()
-        time.sleep(60)
-
-
 def plot(data, buffer):
     datetime_values = [row[0] for row in reversed(data)]
     value_values = [row[1] for row in reversed(data)]
@@ -86,16 +94,19 @@ def plot(data, buffer):
     ax.set_xticks([datetime_values[0], datetime_values[-1]])
     ax.set_xticklabels([datetime_values[0], datetime_values[-1]])
     plt.savefig(buffer, format="png")
+    plt.close()
 
 
 @app.route("/")
 def status():
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
-    maybe_create_statuses_table(cursor)
-    cursor.execute(
-        "SELECT datetime, status FROM statuses ORDER BY datetime DESC LIMIT 1000"
-    )
+    try:
+        cursor.execute(
+            "SELECT datetime, status FROM statuses ORDER BY datetime DESC LIMIT 1000"
+        )
+    except sqlite3.OperationalError as e:
+        current_app.logger.warning(e)
     ssh_statuses = cursor.fetchall()
     conn.close()
 
@@ -108,6 +119,7 @@ def status():
         ssh_plot_uri = base64.b64encode(ssh_plot_data).decode("utf-8")
         latest_status = ssh_statuses[0][1]
     else:
+        current_app.logger.warning("Checking SSH Connectivity directly")
         latest_status = check_ssh_connection()
 
     return render_template(
@@ -122,8 +134,17 @@ def catch_all(path):
         return redirect("/")
 
 
+configure_logger(app)
+init_statuses_table()
+scheduler.add_job(
+    func=update_statuses,
+    trigger=IntervalTrigger(seconds=5),
+    id="update_statuses",
+    name="Call update_statuses every 5 seconds",
+    replace_existing=True,
+)
+scheduler.start()
+
+
 if __name__ == "__main__":
-    configure_logger(app)
-    thread = threading.Thread(target=update_statuses)
-    thread.start()
     app.run()

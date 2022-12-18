@@ -10,6 +10,7 @@ py_binary(
         "static/style/stylesheet.min.css",
     ],
     deps = [
+        requirement("apscheduler"),
         requirement("flask"),
         requirement("matplotlib"),
         requirement("paramiko"),
