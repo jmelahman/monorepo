@@ -8,6 +8,7 @@ services:
       - 5000:5000
     volumes:
       - /home/jamison/.ssh/:/root/.ssh/:ro
+      - ./status/database.db:/app/status/database.db
   nginx:
     image: nginx:latest
     restart: unless-stopped
