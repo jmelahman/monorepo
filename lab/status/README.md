@@ -1,6 +1,9 @@
 # Status
 
 A status page for the services running in the lab.
+An example is hosted at https://status.lahman.dev.
+
+<img src="demo.png" alt="drawing" width="500"/>
 
 ## Run
 
