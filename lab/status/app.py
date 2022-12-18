@@ -106,9 +106,12 @@ def status():
         buffer.seek(0)
         ssh_plot_data = buffer.getvalue()
         ssh_plot_uri = base64.b64encode(ssh_plot_data).decode("utf-8")
+        latest_status = ssh_statuses[0][1]
+    else:
+        latest_status = check_ssh_connection()
 
     return render_template(
-        "index.html", ssh_status=ssh_statuses[0][1], ssh_plot_uri=ssh_plot_uri
+        "index.html", ssh_status=latest_status, ssh_plot_uri=ssh_plot_uri
     )
 
 
