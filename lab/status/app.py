@@ -2,7 +2,7 @@
 import logging
 import os
 
-from flask import Flask, render_template, current_app
+from flask import Flask, render_template, current_app, redirect
 import paramiko
 
 app = Flask(__name__)
@@ -36,6 +36,13 @@ def check_ssh_connection() -> bool:
 def status():
     ssh_status = "online" if check_ssh_connection() else "offline"
     return render_template("index.html", ssh_status=ssh_status)
+
+
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def catch_all(path):
+    if path != "":
+        return redirect("/")
 
 
 if __name__ == "__main__":

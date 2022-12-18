@@ -6,6 +6,8 @@ py_binary(
     srcs = ["app.py"],
     data = [
         "templates/index.html",
+        "static/assets/favicon.ico",
+        "static/style/stylesheet.min.css",
     ],
     deps = [
         requirement("flask"),

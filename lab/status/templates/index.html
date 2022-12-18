@@ -1,4 +1,4 @@
-<!-- <!DOCTYPE html> -->
+<!DOCTYPE html>
 <html>
 <head>
     <title>Lab Status</title>
@@ -6,8 +6,12 @@
     <meta name="description" content="A simple status page">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Cache-Control" content="max-age=604800">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='assets/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/stylesheet.min.css') }}">
 </head>
 <body>
-    <p>SSH Status: {{ ssh_status }}!</p>
+    <main id="main">
+        <p>Status: {{ ssh_status }}</p>
+    </main>
 </body>
 </html>
