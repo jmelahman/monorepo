@@ -19,3 +19,8 @@ docker-compose run --rm certbot renew
 ## Add Domains
 
 Re-run the [Create](#create) command and select the Expand option.
+Then, restart the nginx server with,
+
+```shell
+docker-compose restart nginx
+```
