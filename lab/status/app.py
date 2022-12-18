@@ -84,7 +84,7 @@ def plot(data, buffer):
 
     # Create the plot
     fig, ax = plt.subplots()
-    ax.plot(datetime_values, value_values, color="blue")
+    ax.plot(datetime_values, value_values, color="cyan")
     fig.set_facecolor("none")
     ax.set_facecolor("none")
     ax.tick_params(color="white", labelcolor="white")
