@@ -10,7 +10,7 @@ import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from flask import Flask, render_template, current_app, redirect
+from flask import Flask, render_template, current_app, redirect, send_file
 import matplotlib
 
 matplotlib.use("Agg")
@@ -77,14 +77,11 @@ def check_ssh_connection() -> bool:
     return False
 
 
-def plot(data, buffer):
-    datetime_values = [row[0] for row in reversed(data)]
-    value_values = [row[1] for row in reversed(data)]
-    uptime_precent = statistics.mean(value_values) * 100
+def plot(x_values, y_values, uptime_precent, buffer):
 
     # Create the plot
     fig, ax = plt.subplots()
-    ax.plot(datetime_values, value_values, color="cyan")
+    ax.plot(x_values, y_values, color="cyan")
     fig.set_facecolor("none")
     ax.set_facecolor("none")
     ax.tick_params(color="white", labelcolor="white")
@@ -95,8 +92,8 @@ def plot(data, buffer):
     ax.set_yticks([0, 1])
     ax.set_yticklabels(["Offline", "Online"])
     ax.set_ylim(bottom=-1.0, top=2.0)
-    ax.set_xticks([datetime_values[0], datetime_values[-1]])
-    ax.set_xticklabels([datetime_values[0], datetime_values[-1]])
+    ax.set_xticks([x_values[0], x_values[-1]])
+    ax.set_xticklabels([x_values[0], x_values[-1]])
     plt.savefig(buffer, format="png")
     plt.close()
 
@@ -117,7 +114,10 @@ def status():
     ssh_plot_uri = None
     if ssh_statuses:
         buffer = io.BytesIO()
-        plot(ssh_statuses, buffer)
+        datetime_values = [row[0] for row in reversed(ssh_statuses)]
+        status_values = [row[1] for row in reversed(ssh_statuses)]
+        uptime_precent = statistics.mean(status_values) * 100
+        plot(datetime_values, status_values, uptime_precent, buffer)
         buffer.seek(0)
         ssh_plot_data = buffer.getvalue()
         ssh_plot_uri = base64.b64encode(ssh_plot_data).decode("utf-8")
@@ -127,14 +127,19 @@ def status():
         latest_status = check_ssh_connection()
 
     return render_template(
-        "index.html", ssh_status=latest_status, ssh_plot_uri=ssh_plot_uri
+        "index.html",
+        ssh_status=latest_status,
+        ssh_plot_uri=ssh_plot_uri,
+        uptime_precent=uptime_precent,
     )
 
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def catch_all(path):
-    if path != "":
+    if path == "robots.txt":
+        return send_file("robots.txt")
+    elif path != "":
         return redirect("/")
 
 

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>Lab Status</title>
     <meta charset="utf-8">
     <meta name="description" content="A simple status page">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Cache-Control" content="max-age=604800">
+    <meta name="theme-color" content="#00C6FF"/>
     <link rel="shortcut icon" href="{{ url_for('static', filename='assets/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style/stylesheet.min.css') }}">
 </head>
@@ -17,7 +18,7 @@
         <p>Status: offline</p>
         {% endif %}
         {% if ssh_plot_uri %}
-        <img src="data:image/png;base64,{{ ssh_plot_uri }}">
+        <img alt="Uptime percent: {{ uptime_precent }}" width="640" height="480" src="data:image/png;base64,{{ ssh_plot_uri }}">
         {% endif %}
     </main>
 </body>

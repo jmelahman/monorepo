@@ -26,6 +26,13 @@ main {
   height: auto;
 }
 
+img {
+  width: 100%;
+  height: auto;
+  max-width: 640px;
+  max-height: 480px;
+}
+
 @media screen and (max-width: 620px) {
   main {
     padding: 0.67em 2ch 0 2ch;

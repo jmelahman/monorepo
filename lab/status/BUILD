@@ -5,6 +5,7 @@ py_binary(
     name = "app",
     srcs = ["app.py"],
     data = [
+        "robots.txt",
         "templates/index.html",
         "static/assets/favicon.ico",
         "static/style/stylesheet.min.css",
