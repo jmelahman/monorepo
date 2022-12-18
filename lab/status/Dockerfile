@@ -18,4 +18,4 @@ EXPOSE 5000
 
 ENV PATH=/root/.local/bin:$PATH
 
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000", "-k", "gevent", "--worker-connections", "1000"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000", "--preload", "-k", "gevent", "--worker-connections", "1000"]
