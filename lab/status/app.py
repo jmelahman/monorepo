@@ -99,11 +99,13 @@ def status():
     ssh_statuses = cursor.fetchall()
     conn.close()
 
-    buffer = io.BytesIO()
-    plot(ssh_statuses, buffer)
-    buffer.seek(0)
-    ssh_plot_data = buffer.getvalue()
-    ssh_plot_uri = base64.b64encode(ssh_plot_data).decode("utf-8")
+    ssh_plot_uri = None
+    if ssh_statuses:
+        buffer = io.BytesIO()
+        plot(ssh_statuses, buffer)
+        buffer.seek(0)
+        ssh_plot_data = buffer.getvalue()
+        ssh_plot_uri = base64.b64encode(ssh_plot_data).decode("utf-8")
 
     return render_template(
         "index.html", ssh_status=ssh_statuses[0][1], ssh_plot_uri=ssh_plot_uri
