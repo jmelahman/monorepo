@@ -11,6 +11,7 @@ py_binary(
     ],
     deps = [
         requirement("flask"),
+        requirement("matplotlib"),
         requirement("paramiko"),
     ],
 )

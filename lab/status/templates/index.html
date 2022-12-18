@@ -11,7 +11,12 @@
 </head>
 <body>
     <main id="main">
-        <p>Status: {{ ssh_status }}</p>
+        {% if ssh_status %}
+        <p>Status: online</p>
+        {% else %}
+        <p>Status: offline</p>
+        {% endif %}
+        <img src="data:image/png;base64,{{ ssh_plot_uri }}">
     </main>
 </body>
 </html>

@@ -22,7 +22,6 @@ body {
 
 main {
   min-height: 100vh;
-  max-height: 100vh;
   padding: 0.67em 4ch 0 4ch;
   height: auto;
 }
