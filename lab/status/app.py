@@ -52,11 +52,8 @@ def update_statuses():
                         status BOOLEAN NOT NULL
                     )"""
     )
-    counter = 0
     while True:
         ssh_status = check_ssh_connection()
-        if counter % 10:
-            ssh_status = False
         current_time = datetime.datetime.now()
         datetime_string = current_time.strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute(
@@ -64,8 +61,7 @@ def update_statuses():
             (datetime_string, ssh_status),
         )
         conn.commit()
-        counter += 1
-        time.sleep(60)
+        time.sleep(5)
 
 
 def plot(data, buffer):
