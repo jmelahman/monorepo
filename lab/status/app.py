@@ -42,9 +42,7 @@ def check_ssh_connection() -> bool:
     return False
 
 
-def update_statuses():
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
+def maybe_create_statuses_table(cursor) -> None:
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS statuses (
                         id INTEGER PRIMARY KEY,
@@ -52,6 +50,12 @@ def update_statuses():
                         status BOOLEAN NOT NULL
                     )"""
     )
+
+
+def update_statuses():
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    maybe_create_statuses_table(cursor)
     while True:
         ssh_status = check_ssh_connection()
         current_time = datetime.datetime.now()
@@ -61,7 +65,7 @@ def update_statuses():
             (datetime_string, ssh_status),
         )
         conn.commit()
-        time.sleep(5)
+        time.sleep(60)
 
 
 def plot(data, buffer):
@@ -88,6 +92,7 @@ def plot(data, buffer):
 def status():
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
+    maybe_create_statuses_table(cursor)
     cursor.execute(
         "SELECT datetime, status FROM statuses ORDER BY datetime DESC LIMIT 1000"
     )
