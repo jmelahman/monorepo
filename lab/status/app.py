@@ -5,6 +5,7 @@ import io
 import logging
 import os
 import sqlite3
+import statistics
 import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -79,6 +80,7 @@ def check_ssh_connection() -> bool:
 def plot(data, buffer):
     datetime_values = [row[0] for row in reversed(data)]
     value_values = [row[1] for row in reversed(data)]
+    uptime_precent = statistics.mean(value_values) * 100
 
     # Create the plot
     fig, ax = plt.subplots()
@@ -89,8 +91,10 @@ def plot(data, buffer):
     for spine in ax.spines.values():
         spine.set_edgecolor("white")
     plt.xticks(color="white")
+    ax.text(x=0.0, y=1.7, s="% Uptime: {:.2f}".format(uptime_precent), color="white")
     ax.set_yticks([0, 1])
     ax.set_yticklabels(["Offline", "Online"])
+    ax.set_ylim(bottom=-1.0, top=2.0)
     ax.set_xticks([datetime_values[0], datetime_values[-1]])
     ax.set_xticklabels([datetime_values[0], datetime_values[-1]])
     plt.savefig(buffer, format="png")
