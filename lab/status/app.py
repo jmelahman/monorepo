@@ -71,6 +71,7 @@ def check_ssh_connection() -> bool:
     private_key = paramiko.RSAKey.from_private_key_file(private_key_path)
     try:
         client.connect("lahman.dev", port=23, username="jamison", pkey=private_key)
+        client.close()
         return True
     except Exception as e:
         current_app.logger.warning(f"SSH server is not running: {e}")
