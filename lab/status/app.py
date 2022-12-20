@@ -125,6 +125,7 @@ def status():
     else:
         current_app.logger.warning("Checking SSH Connectivity directly")
         latest_status = check_ssh_connection()
+        uptime_precent = latest_status
 
     return render_template(
         "index.html",
