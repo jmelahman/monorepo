@@ -105,7 +105,7 @@ def status():
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT datetime, status FROM statuses ORDER BY datetime DESC LIMIT 100"
+            "SELECT datetime, status FROM statuses ORDER BY datetime DESC LIMIT 720"
         )
     except sqlite3.OperationalError as e:
         current_app.logger.warning(e)
