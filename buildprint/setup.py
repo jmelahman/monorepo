@@ -9,7 +9,7 @@ VERSION = "0.0.1"
 setup(
     name="buildprint",
     version=VERSION,
-    description="Print build blueprints",
+    description="Print from a build blueprint",
     author="Jamison Lahman",
     author_email="jamison@lahman.dev",
     long_description=README,
