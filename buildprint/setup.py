@@ -4,7 +4,7 @@ import pathlib
 from setuptools import setup
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
-VERSION = "0.0.1"
+VERSION = "0.0.3"
 
 setup(
     name="buildprint",
