@@ -1,4 +1,3 @@
-#
 database.db
 
 # Byte-compiled / optimized / DLL files
@@ -17,6 +16,7 @@ dist/
 downloads/
 eggs/
 .eggs/
+lib/
 lib64/
 parts/
 sdist/
@@ -129,6 +129,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+<<<<<<< HEAD
 
 ### Bazel
 # Ignore all bazel-* symlinks. There is no full list since this can change
@@ -179,3 +180,5 @@ node_modules/
 .cache/
 public
 src/gatsby-types.d.ts
+=======
+>>>>>>> ea17db5 (Initial commit)
