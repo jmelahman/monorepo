@@ -6,9 +6,9 @@ py_binary(
     srcs = ["app.py"],
     data = [
         "robots.txt",
-        "templates/index.html",
         "static/assets/favicon.ico",
         "static/style/stylesheet.min.css",
+        "templates/index.html",
     ],
     deps = [
         requirement("apscheduler"),
