@@ -30,6 +30,19 @@ git subtree push --prefix pybazel git@github.com:jmelahman/pybazel.git master
 
 See also, [github://jmelahman/pybazel](https://github.com/jmelahman/pybazel).
 
+## Buildprint
+
+Provides a blueprint print a buildkite pipeline.
+
+The project is tracked using a [git-subtree](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
+To push changes upstream,
+
+```shell
+git subtree push --prefix buildprint git@github.com:jmelahman/buildprint.git master
+```
+
+See also, [github://jmelahman/buildprint](https://github.com/jmelahman/buildprint).
+
 # Tooling
 
 ## Dependencies
