@@ -74,7 +74,8 @@ def check_ssh_connection() -> bool:
         client.close()
         return True
     except Exception as e:
-        current_app.logger.warning(f"SSH server is not running: {e}")
+        with app.app_context():
+            current_app.logger.warning(f"SSH server is not running: {e}")
     return False
 
 
