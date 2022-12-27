@@ -5,15 +5,19 @@
 #    bazel run //third_party:requirements.update
 #
 
-mypy==0.942  # Keep in sync with tools/typing/mypy-requirements.txt
-black==22.3.0
-flask==2.2.2
-paramiko==2.12.0
-matplotlib==3.4.3
 apscheduler==3.9.1.post1
+black==22.3.0
+colorama==0.4.5
+flask==2.2.2
+matplotlib==3.4.3
+mypy==0.942  # Keep in sync with tools/typing/mypy-requirements.txt
+paramiko==2.12.0
+pybazel==0.1.0
 requests==2.27.1
+transformers==4.25.1
+types-colorama==0.4.15
 types-requests==2.27.20
 urllib3==1.26.9
-colorama==0.4.5
-types-colorama==0.4.15
-pybazel==0.1.0
+# Missing transitive deps
+# Tensorflow
+six==1.16.0
