@@ -138,6 +138,7 @@ user.bazelrc
 # Frontend
 dist/
 node_modules
+.yarn
 
 # Prerequisites
 *.d
