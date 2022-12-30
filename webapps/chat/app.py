@@ -4,15 +4,21 @@ import os
 
 # Ignore logging on tf import.
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb=500"
 
 from flask import Flask, render_template, redirect, send_file, request
+import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 app = Flask(__name__)
 
-model_name = "gpt2-xl"
-tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model_name = "gpt2-large"
+tokenizer = GPT2Tokenizer.from_pretrained(model_name, do_lower_case=False)
+# special_words_to_add={"additional_special_tokens": ["<python>", "<java>"]}
+# tokenizer.add_special_tokens(special_words_to_add)
 model = GPT2LMHeadModel.from_pretrained(model_name, pad_token_id=tokenizer.eos_token_id)
+model.to(device)
 
 
 def configure_logger(app: Flask) -> None:
@@ -29,17 +35,22 @@ def configure_logger(app: Flask) -> None:
 
 
 def generate_text(prompt):
-    encoded_prompt = tokenizer.encode(prompt, return_tensors="pt")
+    encoded_prompt = torch.tensor(tokenizer.encode(prompt, return_tensors="pt")).to(
+        device
+    )
     output = model.generate(
         encoded_prompt,
         max_length=1024,
-        temperature=0.2,
+        temperature=0.1,
         top_k=50,
         top_p=0.92,
         repetition_penalty=1.5,
         do_sample=True,
     )
     decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
+    import pprint
+
+    pprint.pprint(decoded_output)
     return decoded_output
 
 

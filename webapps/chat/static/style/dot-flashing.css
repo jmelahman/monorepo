@@ -4,6 +4,10 @@
  * Dot Flashing
  * ==============================================
  */
+#loading {
+  display: none;
+}
+
 .dot-flashing {
   position: relative;
   width: 10px;
