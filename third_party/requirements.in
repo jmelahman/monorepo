@@ -6,7 +6,7 @@
 #
 
 apscheduler==3.9.1.post1
-black==22.3.0
+black==22.12.0
 colorama==0.4.5
 flask==2.2.2
 matplotlib==3.4.3
