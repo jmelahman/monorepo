@@ -82,7 +82,6 @@ interface BuildingProps {
 }
 
 @inject('resources')
-@observer
 class Building extends React.PureComponent<BuildingProps> {
   handleClick = () => {
     const { resources } = this.props;
@@ -91,7 +90,6 @@ class Building extends React.PureComponent<BuildingProps> {
 
   render() {
     const { description, title, owned  } = this.props;
-
     return (
       <div className={`building ${owned ? 'owned' : 'unowned'}`}>
         <button onClick={this.handleClick} className="placeholder" title={description}></button>
