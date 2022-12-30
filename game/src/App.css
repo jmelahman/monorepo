@@ -1,0 +1,110 @@
+.App {
+  height: 100vh;
+}
+.castle {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.castle_layout {
+  height: 70%;
+  background-color: green;
+  display: flex;
+  flex-direction: column;
+}
+.building {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin: 8px;
+  background-color: azure;
+}
+.placeholder {
+  display: flex;
+  flex: 1;
+}
+.title {
+  justify-content: center;
+  display: flex;
+  background-color: indigo;
+}
+.dashboard {
+  background-color: orange;
+  display: flex;
+  flex: 1;
+}
+.dashboard_left {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  background-color: yellow;
+}
+.party {
+  display: flex;
+  flex: 1;
+}
+.hero {
+  display: flex;
+  flex: 1;
+}
+.hero:nth-child(1) {
+  background-color: rgba(0,0,255,0.2);
+}
+.hero:nth-child(2) {
+  background-color: rgba(0,255,0,0.2);
+}
+.hero:nth-child(3) {
+  background-color: rgba(255,0,0,0.2);
+}
+.dashboard_right {
+  width: 200px;
+  display: flex;
+}
+.resources {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background-color: black;
+  padding: 4px;
+}
+.resource {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin: 4px;
+}
+.resource_icon {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  justify-content: center;
+}
+.resource_count {
+  text-align: center;
+}
+.row {
+  display: flex;
+  flex: 1;
+}
+.Wood {
+  background-color: brown;
+}
+.Sulfar {
+  background-color: yellow;
+}
+.Crystal {
+  background-color: red;
+}
+.Mercury {
+  background-color: gray;
+}
+.Ore {
+  background-color: darkgray;
+}
+.Gems {
+  background-color: turquoise;
+}
+.Gold {
+  background-color: gold;
+}
