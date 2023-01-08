@@ -7,22 +7,33 @@
   display: flex;
   flex-direction: column;
 }
-.castle_layout {
+.castle__layout {
   height: 70%;
   background-color: green;
   display: flex;
   flex-direction: column;
 }
+.castle__layout .row {
+  max-height: 33%;
+  justify-content: space-around;
+}
 .building {
   display: flex;
   flex: 1;
   flex-direction: column;
-  margin: 8px;
+  margin: 8px 16px;
   background-color: azure;
+  max-width: 400px;
 }
 .placeholder {
+  overflow: hidden;
   display: flex;
   flex: 1;
+}
+.building__image {
+  display: inline-block;
+  width: 100%;
+  object-fit: cover;
 }
 .title {
   justify-content: center;
@@ -34,11 +45,15 @@
   display: flex;
   flex: 1;
 }
-.dashboard_left {
+.dashboard__left {
   display: flex;
   flex: 1;
   flex-direction: column;
   background-color: yellow;
+}
+.dashboard__right {
+  width: 200px;
+  display: flex;
 }
 .party {
   display: flex;
@@ -57,10 +72,6 @@
 .hero:nth-child(3) {
   background-color: rgba(255,0,0,0.2);
 }
-.dashboard_right {
-  width: 200px;
-  display: flex;
-}
 .resources {
   display: flex;
   flex-direction: column;
@@ -73,38 +84,37 @@
   flex: 1;
   flex-direction: column;
   margin: 4px;
+  align-items: center;
 }
-.resource_icon {
+.resource__icon {
   display: flex;
   flex: 1;
   align-items: flex-end;
   justify-content: center;
-}
-.resource_count {
-  text-align: center;
+  width: 48px;
 }
 .row {
   display: flex;
   flex: 1;
 }
-.Wood {
+.wood {
   background-color: brown;
 }
-.Sulfar {
+.sulfur {
   background-color: yellow;
 }
-.Crystal {
+.crystal {
   background-color: red;
 }
-.Mercury {
+.mercury {
   background-color: gray;
 }
-.Ore {
+.ore {
   background-color: darkgray;
 }
-.Gems {
+.gems {
   background-color: turquoise;
 }
-.Gold {
+.gold {
   background-color: gold;
 }

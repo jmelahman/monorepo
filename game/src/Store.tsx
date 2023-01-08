@@ -1,18 +1,18 @@
 import { observable } from "mobx";
 
 export enum Resource {
-    Wood = 'Wood',
-    Sulfar = 'Sulfar',
-    Crystal = 'Crystal',
-    Mercury = 'Mercury',
-    Ore = 'Ore',
-    Gems = 'Gems',
-    Gold = 'Gold',
+    Wood = 'wood',
+    Sulfur = 'sulfur',
+    Crystal = 'crystal',
+    Mercury = 'mercury',
+    Ore = 'ore',
+    Gems = 'gems',
+    Gold = 'gold',
 }
 
 export const resources = observable({
     [Resource.Wood]: 20,
-    [Resource.Sulfar]: 10,
+    [Resource.Sulfur]: 10,
     [Resource.Crystal]: 10,
     [Resource.Mercury]: 10,
     [Resource.Ore]: 20,
