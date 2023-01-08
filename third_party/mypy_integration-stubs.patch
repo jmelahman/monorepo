@@ -10,3 +10,4 @@ index c15c946..77692a4 100644
 +        requirement("types-colorama"),
      ],
  )
+
