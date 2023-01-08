@@ -59,6 +59,11 @@ setup(
         "Programming Language :: Python :: 3.10",
     ],
     requires=["mypy"],
-    install_requires=["pyyaml==6.0", "types-PyYAML==6.0.12.2"],
+    install_requires=[
+        "click==8.1.3",
+        "types-click==7.1.8",
+        "pyyaml==6.0",
+        "types-PyYAML==6.0.12.2",
+    ],
     entry_points={"console_scripts": [f"{NAME}={NAME}.__main__:main"]},
 )
