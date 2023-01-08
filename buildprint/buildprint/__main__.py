@@ -1,9 +1,9 @@
-from buildprint.version import version, version_info
+from buildprint.version import __version__, __version_info__
 
 
 def main() -> int:
-    print(version)
-    print(version_info)
+    print(__version__)
+    print(__version_info__)
     return 0
 
 
