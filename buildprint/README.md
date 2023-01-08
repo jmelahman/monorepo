@@ -20,14 +20,31 @@ Objectives:
 
 ## Contributing
 
-Build the package,
+### Run interpretively,
 
-```shell
-python setup.py bdist
+```
+./buildprint/__main__.py
 ```
 
-Install the package locally,
+### Install locally
+
+Install the package directly,
 
 ```shell
-pip install dist/buildprint*.tar.gz
+python setup.py install --user
 ```
+
+### Build and install locally
+
+```
+python setup.py sdist
+pip install dist/*.tar.gz
+```
+
+Or alternatively,
+
+```
+pip install -e .
+```
+
+Note, it's unclear if either of these cythonize the package.
