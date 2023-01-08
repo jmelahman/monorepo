@@ -2,8 +2,8 @@
 import logging
 import os
 
-from .snapifier import Snapifier
 from .constants import NONINTERACTIVE_DEFAULT
+from .snapifier import Snapifier
 
 logging.basicConfig(
     format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")

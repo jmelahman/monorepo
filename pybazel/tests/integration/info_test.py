@@ -1,5 +1,5 @@
-import sys
 import shutil
+import sys
 import unittest
 
 from pybazel.pybazel.models.info import InfoKey

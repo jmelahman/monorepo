@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.10
 
 import pathlib
+
 from setuptools import setup
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()

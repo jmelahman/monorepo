@@ -8,15 +8,14 @@ import sqlite3
 import statistics
 import time
 
+import matplotlib
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from flask import Flask, render_template, current_app, redirect, send_file
-import matplotlib
+from flask import Flask, current_app, redirect, render_template, send_file
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import paramiko
-
 
 app = Flask(__name__)
 scheduler = BackgroundScheduler()

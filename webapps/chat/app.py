@@ -6,9 +6,9 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb=500"
 
-from flask import Flask, render_template, redirect, send_file, request
 import torch
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
+from flask import Flask, redirect, render_template, request, send_file
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 app = Flask(__name__)
 

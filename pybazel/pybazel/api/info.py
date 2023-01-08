@@ -3,8 +3,8 @@ from __future__ import annotations
 import subprocess
 from typing import Protocol
 
-from .protocol import ApiProtocol
 from ..models.info import InfoKey
+from .protocol import ApiProtocol
 
 
 class InfoApiMixin(ApiProtocol):
