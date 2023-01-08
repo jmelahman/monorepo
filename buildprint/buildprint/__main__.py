@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 
+import click
+
 from buildprint._version import __version__, __version_info__
 
 
@@ -16,6 +18,7 @@ def get_parsed_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+@click.command()
 def main() -> int:
     args = get_parsed_args()
     if args.version:
