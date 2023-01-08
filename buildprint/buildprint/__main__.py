@@ -1,30 +1,27 @@
 #!/usr/bin/env python3
-import argparse
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import io
 
 import click
 
+from buildprint._main import run
 from buildprint._version import __version__, __version_info__
 
 
-def get_parsed_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-v",
-        "--version",
-        action="store_true",
-        default=False,
-        help="print version info",
-    )
-    return parser.parse_args()
-
-
+@click.version_option(__version__)
+@click.option(
+    "--blueprint",
+    type=click.File("rb"),
+    required=False,
+    help="specify the path to the blueprint",
+)
 @click.command()
-def main() -> int:
-    args = get_parsed_args()
-    if args.version:
-        print(__version__)
-    else:
-        print(__version_info__)
+def main(blueprint: io.BufferedReader) -> int:
+    run(blueprint)
     return 0
 
 

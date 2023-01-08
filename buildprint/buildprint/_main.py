@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import pathlib
+import io
 
 import yaml
 
 
-def run(blueprint: pathlib.Path) -> None:
-    print(blueprint)
+def run(blueprint: io.BufferedReader) -> None:
+    pipeline = yaml.safe_load(blueprint)
+    print(pipeline)

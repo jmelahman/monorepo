@@ -61,8 +61,9 @@ setup(
     requires=["mypy"],
     install_requires=[
         "click==8.1.3",
-        "types-click==7.1.8",
+        # "click-completion==0.5.2",
         "pyyaml==6.0",
+        "types-click==7.1.8",
         "types-PyYAML==6.0.12.2",
     ],
     entry_points={"console_scripts": [f"{NAME}={NAME}.__main__:main"]},
