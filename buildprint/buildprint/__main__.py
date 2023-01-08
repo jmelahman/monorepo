@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
-from buildprint.version import __version__, __version_info__
+from buildprint._version import __version__, __version_info__
 
 
 def get_parsed_args() -> argparse.Namespace:

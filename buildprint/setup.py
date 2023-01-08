@@ -7,7 +7,7 @@ import pathlib
 from mypyc.build import mypycify
 from setuptools import find_packages, setup
 
-from buildprint import version
+from buildprint import _version
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
 NAME = "buildprint"
@@ -34,7 +34,7 @@ def find_package_data(base, globs, root=NAME):
 
 setup(
     name=NAME,
-    version=version.__version__,
+    version=_version.__version__,
     description="Print from a build blueprint",
     author="Jamison Lahman",
     author_email="jamison@lahman.dev",
@@ -48,7 +48,7 @@ setup(
     keywords=["bazel", "bazelbuild", "buildtools", "tools"],
     package_dir={NAME: NAME},
     packages=find_packages(),
-    download_url=f"https://github.com/jmelahman/{NAME}/archive/refs/tags/v{version.__version__}.tar.gz",
+    download_url=f"https://github.com/jmelahman/{NAME}/archive/refs/tags/v{_version.__version__}.tar.gz",
     license="MIT",
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -58,6 +58,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.10",
     ],
-    install_requires=["mypy"],
+    requires=["mypy"],
+    install_requires=["pyyaml==6.0", "types-PyYAML==6.0.12.2"],
     entry_points={"console_scripts": [f"{NAME}={NAME}.__main__:main"]},
 )
