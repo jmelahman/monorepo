@@ -10,8 +10,8 @@ py_binary(
     srcs = [
         "__main__.py",
     ],
-    main = "__main__.py",
     imports = [".."],
+    main = "__main__.py",
     deps = [
         "//buildprint/buildprint:run",
         "//buildprint/buildprint:version",

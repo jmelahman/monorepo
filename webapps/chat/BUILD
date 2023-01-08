@@ -6,8 +6,8 @@ py_binary(
     srcs = ["app.py"],
     data = [
         "robots.txt",
-        "static/scripts/script.js",
         "static/assets/favicon.ico",
+        "static/scripts/script.js",
         "static/style/dot-flashing.css",
         "templates/index.html",
     ],
