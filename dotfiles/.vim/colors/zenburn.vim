@@ -469,4 +469,3 @@ if version >= 800
 endif
 
 " TODO check for more obscure syntax groups that they're ok
-
