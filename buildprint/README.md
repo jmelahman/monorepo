@@ -17,3 +17,17 @@ Objectives:
     - If it does, consider using worktrees to execute bazel-diff in
 - has a public schema that can be used for validation
   - proto-backed?
+
+## Contributing
+
+Build the package,
+
+```shell
+python setup.py bdist
+```
+
+Install the package locally,
+
+```shell
+pip install dist/buildprint*.tar.gz
+```

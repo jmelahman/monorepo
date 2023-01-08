@@ -1,0 +1,6 @@
+[build-system]
+requires = [
+    "mypy",
+    "setuptools",
+]
+build-backend = "setuptools.build_meta"
