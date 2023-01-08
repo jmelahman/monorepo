@@ -1,9 +1,27 @@
+#!/usr/bin/env python3
+import argparse
+
 from buildprint.version import __version__, __version_info__
 
 
+def get_parsed_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-v",
+        "--version",
+        action="store_true",
+        default=False,
+        help="print version info",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
-    print(__version__)
-    print(__version_info__)
+    args = get_parsed_args()
+    if args.version:
+        print(__version__)
+    else:
+        print(__version_info__)
     return 0
 
 
