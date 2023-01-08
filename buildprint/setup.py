@@ -34,7 +34,7 @@ def find_package_data(base, globs, root=NAME):
 
 setup(
     name=NAME,
-    version=version.version,
+    version=version.__version__,
     description="Print from a build blueprint",
     author="Jamison Lahman",
     author_email="jamison@lahman.dev",
@@ -48,7 +48,7 @@ setup(
     keywords=["bazel", "bazelbuild", "buildtools", "tools"],
     package_dir={NAME: NAME},
     packages=find_packages(),
-    download_url=f"https://github.com/jmelahman/{NAME}/archive/refs/tags/v{version.version}.tar.gz",
+    download_url=f"https://github.com/jmelahman/{NAME}/archive/refs/tags/v{version.__version__}.tar.gz",
     license="MIT",
     classifiers=[
         "Development Status :: 3 - Alpha",
