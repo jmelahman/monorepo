@@ -5,7 +5,7 @@ repos:
     -   id: trailing-whitespace
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v1.2.3
-    exclude: '^(*/mypy_integration-stubs.patch)$'
+    exclude_types: patch
     hooks:
     -   id: end-of-file-fixer
 -   repo: https://github.com/AppliedIntuition/black
