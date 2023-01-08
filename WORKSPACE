@@ -74,6 +74,25 @@ load("@pydeps//:requirements.bzl", "install_deps")
 
 install_deps()
 
+http_archive(
+    name = "com_github_ali5h_rules_pip",
+    strip_prefix = "rules_pip-3c70d698676fcc309c8ec24c996252beaa560efd",
+    sha256 = "338d51b44ebfda06b92b7e2bc5b384b807e1d344d96db35024432c66574e0532",
+    urls = ["https://github.com/ali5h/rules_pip/archive/3c70d698676fcc309c8ec24c996252beaa560efd.tar.gz"],
+)
+
+load("@com_github_ali5h_rules_pip//:defs.bzl", "pip_import")
+
+pip_import(
+   name = "pip_deps",
+   requirements = "//:third_party/requirements.txt",
+   python_interpreter="python3.10",
+   python_runtime=interpreter,
+)
+
+load("@pip_deps//:requirements.bzl", "pip_install")
+pip_install()
+
 ##############################################################################
 # Mypy
 ##############################################################################

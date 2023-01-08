@@ -1,0 +1,8 @@
+tasks:
+  - test_matrix:
+      universe:
+        - //...
+      filter_query: "kind(cc_*, {UNIVERSE})"
+      test_tag_filters: -noasan
+      flag_matrix:
+        - --config=asan

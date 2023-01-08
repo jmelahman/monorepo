@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 import click
 
-from buildprint._main import run
+from buildprint._run import run
 from buildprint._version import __version__, __version_info__
 
 
