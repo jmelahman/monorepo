@@ -82,6 +82,13 @@ To run the formatter,
 bazel run //tools/format
 ```
 
+or alternatively,
+
+```shell
+bazel build @pypi__310__black_22_12_0//:bin-black
+bazel-bin/external/pypi__310__black_22_12_0/bin-black .
+```
+
 ### BUILD
 
 Formatting bazel `BUILD` and `.bzl` is done by [Buildifier](https://github.com/bazelbuild/buildtools/tree/master/buildifier).

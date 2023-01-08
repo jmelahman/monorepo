@@ -4,8 +4,8 @@ import glob
 import os
 import pathlib
 
-from mypyc.build import mypycify
-from setuptools import find_packages, setup
+from mypyc.build import mypycify  # type: ignore[import]
+from setuptools import find_packages, setup  # type: ignore[import]
 
 from buildprint import _version
 
