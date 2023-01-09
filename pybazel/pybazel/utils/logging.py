@@ -2,10 +2,11 @@ import logging
 import os
 from typing import Any
 
-import colorama
+from colorama import Fore
+from colorama import Style
 
 logging.basicConfig(
-    format=f"{colorama.Fore.GREEN}%(levelname)s:{colorama.Style.RESET_ALL} %(message)s",
+    format=f"{Fore.GREEN}%(levelname)s:{Style.RESET_ALL} %(message)s",
     level=os.environ.get("LOGLEVEL", "INFO"),
 )
 
