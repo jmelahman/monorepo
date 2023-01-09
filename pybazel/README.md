@@ -13,5 +13,5 @@ pip install pybazel
 ## Usage
 
 ```shell
-python -c 'import pybazel; pybazel.BazelClient().info()'
+python -c 'import pybazel; print(pybazel.BazelClient().info())'
 ```

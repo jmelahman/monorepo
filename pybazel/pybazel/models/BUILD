@@ -8,3 +8,8 @@ py_library(
     name = "info",
     srcs = ["info.py"],
 )
+
+py_library(
+    name = "label",
+    srcs = ["label.py"],
+)

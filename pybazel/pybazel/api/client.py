@@ -7,11 +7,12 @@ from ..errors import PyBazelException
 from ..models.info import InfoKey
 from .build import BuildApiMixin
 from .info import InfoApiMixin
+from .query import QueryApiMixin
 
 log = logging.getLogger(__name__)
 
 
-class APIClient(BuildApiMixin, InfoApiMixin):
+class APIClient(BuildApiMixin, InfoApiMixin, QueryApiMixin):
     def __init__(
         self, bazel_options: list[str] | None = None, workspace: str | None = None
     ) -> None:

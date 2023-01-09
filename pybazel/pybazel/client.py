@@ -13,10 +13,5 @@ log = logging.getLogger(__name__)
 class BazelClient:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.api = APIClient(*args, **kwargs)
-
-    def info(self, *args: Any, **kwargs: Any) -> None:
-        """
-        An object for invoking the info command. See also,
-        https://docs.bazel.build/versions/main/command-line-reference.html#info-options
-        """
-        print(self.api.info(*args, **kwargs))
+        self.info = self.api.info
+        self.query = self.api.query

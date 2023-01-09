@@ -33,6 +33,14 @@ py_library(
 )
 
 py_library(
+    name = "query",
+    srcs = ["query.py"],
+    deps = [
+        ":protocol",
+    ],
+)
+
+py_library(
     name = "protocol",
     srcs = ["protocol.py"],
     deps = [
