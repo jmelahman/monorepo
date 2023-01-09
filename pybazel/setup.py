@@ -29,4 +29,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.10",
     ],
+    install_requires=["colorama==0.4.5"],
 )
