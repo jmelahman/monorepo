@@ -3,7 +3,8 @@ import sys
 import unittest
 
 from pybazel.pybazel.models.info import InfoKey
-from pybazel.tests.integration.fixtures import API_CLIENTS, OUTPUT_BASE
+from pybazel.tests.integration.fixtures import API_CLIENTS
+from pybazel.tests.integration.fixtures import OUTPUT_BASE
 
 
 class InfoTest(unittest.TestCase):

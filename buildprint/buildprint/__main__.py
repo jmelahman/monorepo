@@ -9,7 +9,8 @@ if TYPE_CHECKING:
 import click
 
 from ._run import run
-from ._version import __version__, __version_info__
+from ._version import __version__
+from ._version import __version_info__
 
 
 @click.version_option(__version__)

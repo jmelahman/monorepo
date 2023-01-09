@@ -5,7 +5,8 @@ import os
 import pathlib
 
 from mypyc.build import mypycify  # type: ignore[import]
-from setuptools import find_packages, setup  # type: ignore[import]
+from setuptools import find_packages  # type: ignore[import]
+from setuptools import setup
 
 from buildprint import _version
 

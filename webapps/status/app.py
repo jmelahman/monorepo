@@ -10,12 +10,14 @@ import sqlite3
 import statistics
 from typing import TYPE_CHECKING
 
-import matplotlib  # type: ignore[import]
-from apscheduler.schedulers.background import (  # type: ignore[import]
-    BackgroundScheduler,
-)
+from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[import]
 from apscheduler.triggers.interval import IntervalTrigger  # type: ignore[import]
-from flask import Flask, current_app, redirect, render_template, send_file
+from flask import current_app
+from flask import Flask
+from flask import redirect
+from flask import render_template
+from flask import send_file
+import matplotlib  # type: ignore[import]
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # type: ignore[import]

@@ -1,10 +1,13 @@
 import os
-import unittest
 from typing import Any
+import unittest
 from unittest import mock
 
-from snapify.pysnapify import constants, snapifier
-from snapify.tests.testdata import names, os_release, user_config
+from snapify.pysnapify import constants
+from snapify.pysnapify import snapifier
+from snapify.tests.testdata import names
+from snapify.tests.testdata import os_release
+from snapify.tests.testdata import user_config
 
 
 def _base_mock_open(filename: str, release: bytes) -> Any:

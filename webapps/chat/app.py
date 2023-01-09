@@ -9,9 +9,14 @@ from typing import TYPE_CHECKING
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb=500"
 
+from flask import Flask
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import send_file
 import torch
-from flask import Flask, redirect, render_template, request, send_file
-from transformers import GPT2LMHeadModel, GPT2Tokenizer  # type: ignore[import]
+from transformers import GPT2LMHeadModel  # type: ignore[import]
+from transformers import GPT2Tokenizer
 
 if TYPE_CHECKING:
     from flask.wrappers import Response as FlaskResponse
