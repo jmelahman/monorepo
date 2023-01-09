@@ -63,6 +63,6 @@ setup(
     ],
     install_requires=[
         "colorama==0.4.5",
-        "mypy==0.942",
+        "mypy==0.991",
     ],
 )
