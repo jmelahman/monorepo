@@ -52,7 +52,7 @@ setup(
     packages=find_packages(),
     download_url=f"https://github.com/jmelahman/{__title__}/archive/refs/tags/v{__version__}.tar.gz",
     license="MIT",
-    python_requires=">3.7",
+    python_requires=">3.10",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",
