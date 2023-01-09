@@ -5,8 +5,8 @@ import os
 import subprocess
 
 from ..errors import PyBazelException
-from ..models.info import InfoKey
-from ..models.label import Label
+from ..models.info import InfoKey  # type: ignore[import]
+from ..models.label import Label  # type: ignore[import]
 from .protocol import ApiProtocol
 
 log = logging.getLogger(__name__)
