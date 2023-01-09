@@ -1,5 +1,5 @@
 tasks:
-  - test_matrix:
+  - bazel_test_matrix:
       universe:
         - //...
       filter_query: "kind(cc_*, {UNIVERSE})"

@@ -23,6 +23,7 @@ py_library(
     name = "run",
     srcs = ["_run.py"],
     deps = [
+        requirement("pybazel"),
         requirement("pyyaml"),
     ],
 )

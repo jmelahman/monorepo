@@ -4,12 +4,13 @@ import pathlib
 
 from setuptools import setup
 
+from pybazel.version import version
+
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
-VERSION = "0.1.0"
 
 setup(
     name="pybazel",
-    version=VERSION,
+    version=version,
     description="A python client for Bazel",
     author="Jamison Lahman",
     author_email="jamison@lahman.dev",
@@ -18,7 +19,7 @@ setup(
     url="https://github.com/jmelahman/pybazel",
     py_modules=["pybazel"],
     keywords=["bazel", "bazelbuild", "buildtools", "tools"],
-    download_url=f"https://github.com/jmelahman/pybazel/archive/refs/tags/v{VERSION}.tar.gz",
+    download_url=f"https://github.com/jmelahman/pybazel/archive/refs/tags/v{version}.tar.gz",
     license="MIT",
     classifiers=[
         "Development Status :: 3 - Alpha",
