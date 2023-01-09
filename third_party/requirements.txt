@@ -722,6 +722,10 @@ types-paramiko==2.12.0.1 \
     --hash=sha256:43807361500feb5a87177ef4524f2f2caf8c3bb112666cd83f4acd84d9d0a179 \
     --hash=sha256:591c30cfd1ee75b755863d43eea54b68fb7c19cfaa2a10229ea55637f74d3da5
     # via -r third_party/requirements.in
+types-pyyaml==6.0.12.2 \
+    --hash=sha256:1e94e80aafee07a7e798addb2a320e32956a373f376655128ae20637adb2655b \
+    --hash=sha256:6840819871c92deebe6a2067fb800c11b8a063632eb4e3e755914e7ab3604e83
+    # via -r third_party/requirements.in
 types-requests==2.27.20 \
     --hash=sha256:63344573cde6c4efd44d867c0158d9fb7e6beb95721cbe9882f3f857ee8a5398 \
     --hash=sha256:68b8de86552116424ec23b77afc925e111afb6496d3821b183b7d151b3b834d4

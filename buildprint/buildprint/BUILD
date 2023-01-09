@@ -25,6 +25,7 @@ py_library(
     deps = [
         requirement("pybazel"),
         requirement("pyyaml"),
+        requirement("types-PyYAML"),
     ],
 )
 
