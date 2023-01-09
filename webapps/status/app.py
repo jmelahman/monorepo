@@ -1,4 +1,6 @@
 #!/usr/bin/env python3.8
+from __future__ import annotations
+
 import base64
 import datetime
 import io
@@ -6,16 +8,21 @@ import logging
 import os
 import sqlite3
 import statistics
-import time
+from typing import TYPE_CHECKING
 
-import matplotlib
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
+import matplotlib  # type: ignore[import]
+from apscheduler.schedulers.background import (  # type: ignore[import]
+    BackgroundScheduler,
+)
+from apscheduler.triggers.interval import IntervalTrigger  # type: ignore[import]
 from flask import Flask, current_app, redirect, render_template, send_file
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore[import]
 import paramiko
+
+if TYPE_CHECKING:
+    from werkzeug.wrappers import Response
 
 app = Flask(__name__)
 scheduler = BackgroundScheduler()
@@ -34,7 +41,7 @@ def init_statuses_table() -> None:
     conn.close()
 
 
-def update_statuses():
+def update_statuses() -> None:
     with app.app_context():
         current_app.logger.info("Updating SSH connectivity status")
     ssh_status = check_ssh_connection()
@@ -78,7 +85,9 @@ def check_ssh_connection() -> bool:
     return False
 
 
-def plot(x_values, y_values, uptime_precent, buffer):
+def plot(
+    x_values: list[str], y_values: list[str], uptime_precent: float, buffer: io.BytesIO
+) -> None:
 
     # Create the plot
     fig, ax = plt.subplots()
@@ -100,7 +109,7 @@ def plot(x_values, y_values, uptime_precent, buffer):
 
 
 @app.route("/")
-def status():
+def status() -> str:
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
     try:
@@ -138,11 +147,12 @@ def status():
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
-def catch_all(path):
+def catch_all(path: str) -> str | Response:
     if path == "robots.txt":
         return send_file("robots.txt")
     elif path != "":
         return redirect("/")
+    return status()
 
 
 configure_logger(app)

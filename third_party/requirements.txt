@@ -714,6 +714,14 @@ types-colorama==0.4.15 \
     --hash=sha256:9cdc88dcde9e8ebafb2fdfaf5cee260452f93e5c57eb5d8b2a7f65b836d4e5d0 \
     --hash=sha256:fd128b1e32f3fecec5f09df4366d21498ee86ea31fcf8b4e8f1ade6d0bbf9832
     # via -r third_party/requirements.in
+types-cryptography==3.3.23.2 \
+    --hash=sha256:09cc53f273dd4d8c29fa7ad11fefd9b734126d467960162397bc5e3e604dea75 \
+    --hash=sha256:b965d548f148f8e87f353ccf2b7bd92719fdf6c845ff7cedf2abb393a0643e4f
+    # via types-paramiko
+types-paramiko==2.12.0.1 \
+    --hash=sha256:43807361500feb5a87177ef4524f2f2caf8c3bb112666cd83f4acd84d9d0a179 \
+    --hash=sha256:591c30cfd1ee75b755863d43eea54b68fb7c19cfaa2a10229ea55637f74d3da5
+    # via -r third_party/requirements.in
 types-requests==2.27.20 \
     --hash=sha256:63344573cde6c4efd44d867c0158d9fb7e6beb95721cbe9882f3f857ee8a5398 \
     --hash=sha256:68b8de86552116424ec23b77afc925e111afb6496d3821b183b7d151b3b834d4
@@ -722,6 +730,10 @@ types-urllib3==1.26.15 \
     --hash=sha256:6011befa13f901fc934f59bb1fd6973be6f3acf4ebfce427593a27e7f492918f \
     --hash=sha256:c89283541ef92e344b7f59f83ea9b5a295b16366ceee3f25ecfc5593c79f794e
     # via types-requests
+types-werkzeug==1.0.9 \
+    --hash=sha256:194bd5715a13c598f05c63e8a739328657590943bce941e8a3619a6b5d4a54ec \
+    --hash=sha256:5cc269604c400133d452a40cee6397655f878fc460e03fde291b9e3a5eaa518c
+    # via -r third_party/requirements.in
 typing-extensions==4.2.0 \
     --hash=sha256:6657594ee297170d19f67d55c05852a874e7eb634f4f753dbd667855e07c1708 \
     --hash=sha256:f1c24655a0da0d1b67f07e17a5e6b2a105894e6824b92096378bb3668ef02376
@@ -745,7 +757,9 @@ urllib3==1.26.9 \
 werkzeug==2.2.2 \
     --hash=sha256:7ea2d48322cc7c0f8b3a215ed73eabd7b5d75d0b50e31ab006286ccff9e00b8f \
     --hash=sha256:f979ab81f58d7318e064e99c4506445d60135ac5cd2e177a2de0089bfd4c9bd5
-    # via flask
+    # via
+    #   -r third_party/requirements.in
+    #   flask
 
 # The following packages are considered to be unsafe in a requirements file:
 setuptools==65.6.3 \

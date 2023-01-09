@@ -13,4 +13,5 @@ _API_FIXTURES = [
 with mock.patch.object(APIClient, "info", return_value="/home/user/foo_workspace"):
     API_CLIENTS = []
     for bazel_options, workspace in _API_FIXTURES:
+        assert isinstance(bazel_options, list)
         API_CLIENTS.append(APIClient(bazel_options=bazel_options, workspace=workspace))

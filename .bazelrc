@@ -12,6 +12,7 @@ build --bes_backend=grpcs://remote.buildbuddy.io
 build --remote_cache=grpcs://remote.buildbuddy.io
 build --remote_timeout=3600
 build --experimental_remote_cache_compression
+build --experimental_remote_cache_async
 
 ## C++ Toolchain
 build --repo_env=CC=clang

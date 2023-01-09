@@ -4,7 +4,7 @@ import io
 
 import yaml
 
-import pybazel
+import pybazel  # type: ignore[import] # TODO
 
 
 def run(blueprint: io.BufferedReader) -> None:
@@ -13,5 +13,3 @@ def run(blueprint: io.BufferedReader) -> None:
     for task in loaded_blueprint["tasks"]:
         if not task.get("bazel_test_matrix"):
             continue
-        pybazel.query("")
-    print(pipeline)

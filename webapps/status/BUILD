@@ -1,4 +1,4 @@
-load("@pydeps//:requirements.bzl", "requirement")
+load("@pip_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_binary")
 
 py_binary(
@@ -13,7 +13,9 @@ py_binary(
     deps = [
         requirement("apscheduler"),
         requirement("flask"),
+        requirement("types-werkzeug"),
         requirement("matplotlib"),
         requirement("paramiko"),
+        requirement("types-paramiko"),
     ],
 )

@@ -1,4 +1,4 @@
-load("@pydeps//:requirements.bzl", "requirement")
+load("@pip_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_binary")
 
 py_binary(
@@ -14,6 +14,7 @@ py_binary(
     deps = [
         requirement("flask"),
         requirement("six"),
+        requirement("types-werkzeug"),
         requirement("transformers"),
     ],
 )
