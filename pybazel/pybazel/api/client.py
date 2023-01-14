@@ -18,7 +18,7 @@ class APIClient(ApiProtocol):
     ) -> None:
         self.bazel_options = bazel_options or []
         self.which_bazel = "bazel"
-        self.workspace = workspace  # type: ignore[assignment] # https://github.com/python/mypy/issues/3004
+        self.workspace = workspace or self._get_inferred_workspace()
 
     @property
     def bazel_options(self) -> list[str]:
@@ -41,21 +41,22 @@ class APIClient(ApiProtocol):
         return self._workspace
 
     @workspace.setter
-    def workspace(self, value: str | None) -> None:
-        if not value:
-            build_workspace = os.getenv("BUILD_WORKSPACE_DIRECTORY")
-            if build_workspace:
-                value = build_workspace
-            else:
-                # Infer the workspace from the current directory.
-                self._workspace = os.getcwd()
-                # Should this not invoke info() and instead parse the file tree?
-                # TODO: Once InfoKey is an enum.
-                # value = self.info(InfoKey.workspace)
-                value = self.info(InfoKey("workspace"))
-        if not value:
-            raise PyBazelException("Unable to infer workspace.")
+    def workspace(self, value: str) -> None:
         self._workspace = value
+
+    def _get_inferred_workspace(self) -> str:
+        build_workspace = os.getenv("BUILD_WORKSPACE_DIRECTORY", "")
+        if build_workspace:
+            workspace = build_workspace
+        else:
+            # Infer the workspace from the current directory.
+            self._workspace = os.getcwd()
+            # TODO: Once InfoKey is an enum.
+            # value = self.info(InfoKey.workspace)
+            workspace = self.info(InfoKey("workspace"))
+        if not workspace:
+            raise PyBazelException("Unable to infer workspace.")
+        return workspace
 
     # TODO: -> dict[InfoKey, str]
     def info(
