@@ -37,7 +37,7 @@ def find_package_data(base, globs, root=__title__):
 
 
 setup(
-    __title__=__title__,
+    name=__title__,
     version=__version__,
     description="A python client for Bazel",
     author="Jamison Lahman",
