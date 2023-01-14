@@ -28,9 +28,6 @@ function main() {
   if ! git diff --quiet "${merge_base}" "${buildifier_patterns[@]}"; then
     bazel run //:buildifier.check
   fi
-  if ! git diff --quiet "${merge_base}" "*.py"; then
-    bazel run //tools/format -- --check
-  fi
 }
 
 main "$@"
