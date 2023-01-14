@@ -14,9 +14,9 @@ jobs:
       - name: Install deps
         run: >-
           python -m pip install --upgrade pip &&
-          pip install twine==4.0.0 mypy==0.991 colorama==0.4.5 types-colorama==0.4.15.4
+          pip install twine==4.0.0
       - name: Build
-        run: python setup.py sdist
+        run: python -m build
       - name: Upload
         run: twine upload dist/*
         env:
