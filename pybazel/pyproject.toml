@@ -1,0 +1,8 @@
+[build-system]
+requires = [
+    "setuptools >= 40.6.2",
+    "mypy == 0.991",
+    "colorama == 0.4.5",
+    "types-colorama == 0.4.15.4",
+]
+build-backend = "setuptools.build_meta"

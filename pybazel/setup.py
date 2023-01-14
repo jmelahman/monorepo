@@ -3,16 +3,18 @@
 import glob
 import os
 import pathlib
+import sys
 
-from mypyc.build import mypycify  # type: ignore[import]
-from setuptools import find_packages  # type: ignore[import]
+from mypyc.build import mypycify
+from setuptools import find_packages
 from setuptools import setup
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
 from pybazel import __title__
 from pybazel import __version__
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
-__title__ = "pybazel"
 
 # Adopted from https://github.com/python/mypy/blob/master/setup.py
 def find_package_data(base, globs, root=__title__):
