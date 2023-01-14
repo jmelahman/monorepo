@@ -4,10 +4,10 @@ import logging
 import os
 import subprocess
 
-from ..errors import PyBazelException
-from ..models.info import InfoKey  # type: ignore[import]
-from ..models.label import Label  # type: ignore[import]
-from .protocol import ApiProtocol
+from pybazel.api.protocol import ApiProtocol
+from pybazel.errors import PyBazelException
+from pybazel.models.info import InfoKey
+from pybazel.models.label import Label
 
 log = logging.getLogger(__name__)
 
@@ -50,12 +50,14 @@ class APIClient(ApiProtocol):
                 # Infer the workspace from the current directory.
                 self._workspace = os.getcwd()
                 # Should this not invoke info() and instead parse the file tree?
-                value = self.info(InfoKey.workspace)
-                logging
+                # TODO: Once InfoKey is an enum.
+                # value = self.info(InfoKey.workspace)
+                value = self.info(InfoKey("workspace"))
         if not value:
             raise PyBazelException("Unable to infer workspace.")
         self._workspace = value
 
+    # TODO: -> dict[InfoKey, str]
     def info(
         self: ApiProtocol,
         key: InfoKey | None = None,
@@ -64,13 +66,14 @@ class APIClient(ApiProtocol):
         info_command = [self.which_bazel, *self.bazel_options, "info"]
         info_command += [key.value] if key else []
         info_command += configuration_options or []
-        return (
+        info = (
             subprocess.check_output(
                 info_command, cwd=self.workspace, stderr=subprocess.DEVNULL
             )
             .decode()
             .rstrip()
         )
+        return info
 
     def query(
         self,

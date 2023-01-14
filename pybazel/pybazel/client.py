@@ -4,8 +4,8 @@ import os
 import subprocess
 from typing import Any
 
-from .api.client import APIClient
-from .utils import logging
+from pybazel.api.client import APIClient
+from pybazel.utils import logging
 
 log = logging.getLogger(__name__)
 
