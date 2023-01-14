@@ -131,7 +131,9 @@ click==8.1.3 \
 colorama==0.4.5 \
     --hash=sha256:854bf444933e37f5824ae7bfc1e98d5bce2ebe4160d46b5edf346a89358e99da \
     --hash=sha256:e6c6b4334fc50988a639d9b98aa429a0b57da6e17b9a44f0451f930b6967b7a4
-    # via -r third_party/requirements.in
+    # via
+    #   -r third_party/requirements.in
+    #   pybazel
 cryptography==38.0.4 \
     --hash=sha256:0e70da4bdff7601b0ef48e6348339e490ebfb0cbe638e083c9c41fb49f00c8bd \
     --hash=sha256:10652dd7282de17990b88679cb82f832752c4e8237f0c714be518044269415db \
@@ -331,6 +333,7 @@ mypy-extensions==0.4.3 \
     --hash=sha256:090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d \
     --hash=sha256:2d82818f5bb3e369420cb3c4060a7970edba416647068eb4c5343488a6c604a8
     # via
+    #   -r third_party/requirements.in
     #   black
     #   mypy
 mypy==0.942 \
@@ -471,8 +474,8 @@ platformdirs==2.5.2 \
     --hash=sha256:027d8e83a2d7de06bbac4e5ef7e023c02b863d7ea5d079477e722bb41ab25788 \
     --hash=sha256:58c8abb07dcb441e6ee4b11d8df0ac856038f944ab98b7be6b27b2a3c7feef19
     # via black
-pybazel==0.1.0 \
-    --hash=sha256:f65ca90425622f7cb25a2971df8b88734dc8899fce6d121789ba9167409a8cd6
+pybazel==0.3.11 \
+    --hash=sha256:7782c02bcf783780d8e563d0ee2a635dc3e1da238095e055fec114e902e4907c
     # via -r third_party/requirements.in
 pycparser==2.21 \
     --hash=sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9 \

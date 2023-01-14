@@ -43,11 +43,11 @@ buildifier_prebuilt_register_toolchains()
 ##############################################################################
 # Python
 ##############################################################################
-rules_python_version = "0.8.1"
+rules_python_version = "0.16.2"
 
 http_archive(
     name = "rules_python",
-    sha256 = "cdf6b84084aad8f10bf20b46b77cb48d83c319ebe6458a18e9d2cebf57807cdd",
+    sha256 = "48a838a6e1983e4884b26812b2c748a35ad284fd339eb8e2a6f3adf95307fbcd",
     strip_prefix = "rules_python-{version}".format(version = rules_python_version),
     url = "https://github.com/bazelbuild/rules_python/archive/{version}.tar.gz".format(
         version = rules_python_version,
@@ -62,6 +62,17 @@ python_register_toolchains(
 )
 
 load("@python3_10//:defs.bzl", "interpreter")
+load("@rules_python//python:pip.bzl", "pip_parse")
+
+pip_parse(
+    name = "pydeps",
+    python_interpreter_target = interpreter,
+    requirements_lock = "@//:third_party/requirements.txt",
+)
+
+load("@pydeps//:requirements.bzl", "install_deps")
+
+install_deps()
 
 http_archive(
     name = "com_github_ali5h_rules_pip",
@@ -74,6 +85,9 @@ load("@com_github_ali5h_rules_pip//:defs.bzl", "pip_import")
 
 pip_import(
     name = "pip_deps",
+    # overrides = {
+    #     "@//pybazel/pybazel:client": "pybazel",
+    # },
     python_interpreter = "python3.10",
     python_runtime = interpreter,
     requirements = "//:third_party/requirements.txt",

@@ -13,9 +13,10 @@ werkzeug==2.2.2
 types-Werkzeug==1.0.9
 matplotlib==3.4.3
 mypy==0.942  # Keep in sync with tools/typing/mypy-requirements.txt
+mypy_extensions==0.4.3
 paramiko==2.12.0
 types-paramiko==2.12.0.1
-pybazel==0.1.0
+pybazel==0.3.11
 requests==2.27.1
 transformers==4.25.1
 types-colorama==0.4.15

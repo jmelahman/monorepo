@@ -8,17 +8,15 @@ if TYPE_CHECKING:
 
 import click
 
-from ._run import run
-from ._version import __version__
-from ._version import __version_info__
+from buildprint._run import run
+from buildprint._version import __version__
+from buildprint._version import __version_info__
 
 
 @click.version_option(__version__)
-@click.option(
-    "--blueprint",
+@click.argument(
+    "blueprint",
     type=click.File("rb"),
-    required=False,
-    help="specify the path to the blueprint",
 )
 @click.command()
 def main(blueprint: io.BufferedReader) -> int:

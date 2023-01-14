@@ -1,4 +1,5 @@
 load("@pip_deps//:requirements.bzl", "requirement")
+load("@pydeps//:requirements.bzl", requirement_pydep = "requirement")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 
 package(
@@ -23,7 +24,7 @@ py_library(
     name = "run",
     srcs = ["_run.py"],
     deps = [
-        requirement("pybazel"),
+        requirement_pydep("pybazel"),
         requirement("pyyaml"),
         requirement("types-PyYAML"),
     ],
