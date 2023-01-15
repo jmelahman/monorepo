@@ -2,7 +2,22 @@ tasks:
   - bazel_test_matrix:
       universe:
         - //...
-      filter_query: "kind(cc_*, {UNIVERSE})"
-      test_tag_filters: -noasan
-      flag_matrix:
-        - --config=asan
+      filter_query: "kind(cc_test, tests({UNIVERSE}))"
+      tag_filters:
+        - -noasan
+      config_matrix:
+        - asan
+        - tsan
+        - msan
+  - bazel_build_matrix:
+      universe:
+        - //...
+      options:
+        - --config=mypy
+  - bazel_build_matrix:
+      universe:
+        - //...
+      options:
+        - --config=mypy
+      tag_filters:
+        - manual

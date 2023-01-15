@@ -15,6 +15,7 @@ build --experimental_remote_cache_compression
 build --experimental_remote_cache_async
 
 ## C++ Toolchain
+build --repo_env=CC=gcc
 build:clang --repo_env=CC=clang
 
 ## Mypy Integration

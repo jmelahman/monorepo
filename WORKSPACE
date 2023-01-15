@@ -78,7 +78,7 @@ pip_import(
     #     "@//pybazel/pybazel:client": "pybazel",
     # },
     python_interpreter = "python3.10",
-    python_runtime = interpreter,
+    # python_runtime = interpreter,
     requirements = "//:third_party/requirements.txt",
 )
 
