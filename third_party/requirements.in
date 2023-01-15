@@ -23,6 +23,7 @@ types-colorama==0.4.15
 types-requests==2.27.20
 urllib3==1.26.9
 pyyaml==6.0
+pybuildkite==1.2.2
 types-pyyaml==6.0.12.2
 click==8.1.3
 # Missing transitive deps

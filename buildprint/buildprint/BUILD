@@ -26,6 +26,7 @@ py_library(
         requirement("pybazel"),
         requirement("pyyaml"),
         requirement("types-PyYAML"),
+        # "//buildprint/buildprint/platform:buildkite",
     ],
 )
 

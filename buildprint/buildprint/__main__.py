@@ -22,13 +22,18 @@ from buildprint._version import __version_info__
     default=_BUILDKITE,
     type=click.Choice([c for c in _SUPPORTED_PLATFORMS]),
 )
+@click.option(
+    "--dry-run",
+    help="Don't uploaded translated steps.",
+    is_flag=True,
+)
 @click.argument(
     "blueprint",
     type=click.File("rb"),
 )
 @click.command()
-def main(blueprint: io.BufferedReader, platform: str | None) -> None:
-    run(blueprint, platform)
+def main(blueprint: io.BufferedReader, dry_run: bool, platform: str | None) -> None:
+    run(blueprint, dry_run, platform)
 
 
 if __name__ == "__main__":
