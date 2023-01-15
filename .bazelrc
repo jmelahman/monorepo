@@ -15,7 +15,7 @@ build --experimental_remote_cache_compression
 build --experimental_remote_cache_async
 
 ## C++ Toolchain
-build --repo_env=CC=clang
+build:clang --repo_env=CC=clang
 
 ## Mypy Integration
 build:mypy --aspects @mypy_integration//:mypy.bzl%mypy_aspect
@@ -23,6 +23,7 @@ build:mypy --output_groups=+mypy
 
 ## Base sanitizer
 build:sanitizer -c dbg
+build:sanitizer --repo_env=CC=clang
 build:sanitizer --copt='-UNDEBUG'
 build:sanitizer --copt='-O3'
 build:sanitizer --copt='-fno-omit-frame-pointer'

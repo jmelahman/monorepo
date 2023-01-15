@@ -62,17 +62,6 @@ python_register_toolchains(
 )
 
 load("@python3_10//:defs.bzl", "interpreter")
-load("@rules_python//python:pip.bzl", "pip_parse")
-
-pip_parse(
-    name = "pydeps",
-    python_interpreter_target = interpreter,
-    requirements_lock = "@//:third_party/requirements.txt",
-)
-
-load("@pydeps//:requirements.bzl", "install_deps")
-
-install_deps()
 
 http_archive(
     name = "com_github_ali5h_rules_pip",
