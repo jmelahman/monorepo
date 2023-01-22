@@ -96,9 +96,9 @@ pip_import(
     requirements = "//:third_party/requirements.txt",
 )
 
-load("@pip_deps_internal//:requirements.bzl", "pip_install")
+load("@pip_deps_internal//:requirements.bzl", pip_install_internal = "pip_install")
 
-pip_install()
+pip_install_internal()
 
 ##############################################################################
 # Mypy
