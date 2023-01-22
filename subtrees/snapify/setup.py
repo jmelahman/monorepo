@@ -3,9 +3,10 @@
 import glob
 import os
 import pathlib
-from setuptools import setup, find_packages
 
 from mypyc.build import mypycify
+from setuptools import find_packages
+from setuptools import setup
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
 VERSION = "0.4.0"

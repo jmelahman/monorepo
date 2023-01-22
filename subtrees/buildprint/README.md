@@ -17,3 +17,34 @@ Objectives:
     - If it does, consider using worktrees to execute bazel-diff in
 - has a public schema that can be used for validation
   - proto-backed?
+
+## Contributing
+
+### Run interpretively,
+
+```
+./buildprint/__main__.py
+```
+
+### Install locally
+
+Install the package directly,
+
+```shell
+python setup.py install --user
+```
+
+### Build and install locally
+
+```
+python setup.py sdist
+pip install dist/*.tar.gz
+```
+
+Or alternatively,
+
+```
+pip install -e .
+```
+
+Note, it's unclear if either of these cythonize the package.

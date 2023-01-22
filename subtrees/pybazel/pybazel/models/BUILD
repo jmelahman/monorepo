@@ -1,8 +1,6 @@
 load("@rules_python//python:defs.bzl", "py_library")
 
-package(
-    default_visibility = ["//pybazel:visibility"],
-)
+package(default_visibility = ["//pybazel:__subpackages__"])
 
 py_library(
     name = "info",
