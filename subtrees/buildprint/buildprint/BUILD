@@ -1,10 +1,6 @@
 load("@pip_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 
-package(
-    default_visibility = ["//buildprint:__subpackages__"],
-)
-
 py_binary(
     name = "main",
     srcs = [
@@ -13,8 +9,8 @@ py_binary(
     imports = [".."],
     main = "__main__.py",
     deps = [
-        "//buildprint/buildprint:run",
-        "//buildprint/buildprint:version",
+        "//buildprint:run",
+        "//buildprint:version",
         requirement("click"),
     ],
 )
@@ -26,7 +22,7 @@ py_library(
         requirement("pybazel"),
         requirement("pyyaml"),
         requirement("types-PyYAML"),
-        # "//buildprint/buildprint/platform:buildkite",
+        # "//buildprint/platform:buildkite",
     ],
 )
 

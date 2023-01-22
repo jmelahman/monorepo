@@ -1,15 +1,13 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 
-package(
-    default_visibility = ["//pybazel:visibility"],
-)
+package(default_visibility = [":__subpackages__"])
 
 py_binary(
     name = "client",
     srcs = ["client.py"],
     deps = [
-        "//pybazel/pybazel/api:client",
-        "//pybazel/pybazel/utils:logging",
+        "//pybazel/api:client",
+        "//pybazel/utils:logging",
     ],
 )
 
