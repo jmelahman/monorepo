@@ -32,7 +32,6 @@ py_library(
     srcs = ["_version.py"],
 )
 
-
 py_library(
     name = "logging",
     srcs = ["_logging.py"],
