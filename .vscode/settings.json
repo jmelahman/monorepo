@@ -1,0 +1,61 @@
+{
+    "workbench.sideBar.location": "right",
+    "editor.inlineSuggest.enabled": true,
+    "editor.minimap.enabled": false,
+    "workbench.colorTheme": "Celestial",
+    "editor.renderLineHighlight": "all",
+    "editor.lineNumbers": "relative",
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": [
+                    "constant",
+                    "keyword",
+                    "meta",
+                    "source",
+                    "support.type.python",
+                ],
+                "settings": {
+                    "foreground": "#f32b2b"
+                }
+            },
+            {
+                "scope": "storage",
+                "settings": {
+                    "foreground": "#F92672"
+                }
+            },
+            {
+                "scope": [
+                    "string",
+                ],
+                "settings": {
+                    "foreground": "#E6DB74"
+                }
+            },
+            {
+                "scope": "comment",
+                "settings": {
+                    "foreground": "#75715E"
+                }
+            },
+            {
+                "scope": "function",
+                "settings": {
+                    "foreground": "#A6E22E"
+                }
+            },
+            {
+                "scope": [
+                    "variable",
+                    "keyword.control.import.python",
+                ],
+                "settings": {
+                    "foreground": "#66D9EF"
+                }
+            }
+        ]
+    },
+    "glassit-linux.opacity": 1,
+    "python.formatting.provider": "black"
+}

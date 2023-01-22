@@ -75,14 +75,28 @@ load("@com_github_ali5h_rules_pip//:defs.bzl", "pip_import")
 pip_import(
     name = "pip_deps",
     overrides = {
-        "@//pybazel:pkg": "pybazel",
+        # "@//pybazel:pkg": "pybazel",
     },
     python_interpreter = "python3.10",
-    # python_runtime = interpreter,
     requirements = "//:third_party/requirements.txt",
 )
 
 load("@pip_deps//:requirements.bzl", "pip_install")
+
+pip_install()
+
+# Altering overrides causes all packages to be rebuilt, so use a separate name
+# for internal imports, so most stay incrementally fetched.
+pip_import(
+    name = "pip_deps_internal",
+    overrides = {
+        "@//pybazel:pkg": "pybazel",
+    },
+    python_interpreter = "python3.10",
+    requirements = "//:third_party/requirements.txt",
+)
+
+load("@pip_deps_internal//:requirements.bzl", "pip_install")
 
 pip_install()
 
