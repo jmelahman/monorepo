@@ -1,9 +1,9 @@
-import os
 import json
+import os
 from typing import TYPE_CHECKING
 
-from .errors import SnapifyConfigError
 from .constants import SupportedDistro
+from .errors import SnapifyConfigError
 from .manager.base import PackageManager
 from .manager.pacman import Pacman
 from .manager.snap import Snapd

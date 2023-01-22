@@ -1,6 +1,6 @@
 load("@rules_python//python:defs.bzl", "py_library")
 
-package(default_visibility = ["//snapify/tests:__subpackages__"])
+package(default_visibility = [":__subpackages__"])
 
 py_library(
     name = "main",
@@ -17,9 +17,9 @@ py_library(
     deps = [
         ":constants",
         ":errors",
-        "//snapify/pysnapify/manager:base",
-        "//snapify/pysnapify/manager:pacman",
-        "//snapify/pysnapify/manager:snap",
+        "//pysnapify/manager:base",
+        "//pysnapify/manager:pacman",
+        "//pysnapify/manager:snap",
     ],
 )
 
