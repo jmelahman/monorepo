@@ -1,2 +1,0 @@
-class SnapifyConfigError(Exception):
-    pass
