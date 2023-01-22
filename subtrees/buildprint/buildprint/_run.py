@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent import futures
 import io
 import itertools
 import subprocess
@@ -8,12 +9,13 @@ from typing import Iterable, NamedTuple, TYPE_CHECKING
 
 import yaml
 
+from buildprint import _logging
 import pybazel
 
 if TYPE_CHECKING:
     from pybazel.models.label import Label
 
-# from buildprint.platform import buildkite
+logger = _logging.getLogger(__name__)
 
 # TODO: Convert to enum.
 _BUILDKITE = "buildkite"
@@ -97,12 +99,12 @@ class PipelineBuilder:
                     positive_adjusted_filters,
                     negative_adjusted_filters,
                 )
-                print()
             query_str = (
                 bazel_matrix["filter_query"].format(UNIVERSE=universe)
                 if bazel_matrix.get("filter_query")
                 else universe
             )
+
             if positive_adjusted_filters:
                 query_str += f" intersect attr(tags, '\\b({'|'.join(positive_adjusted_filters)})\\b', {universe})"
             if negative_adjusted_filters:
@@ -111,7 +113,7 @@ class PipelineBuilder:
             tasks.append(
                 BazelTask(
                     command=f"bazel {subcommand}",
-                    targets=" ".join([str(label) for label in targets]),
+                    targets=targets,
                     options=options_str,
                     config=f"--config={config}" if config else "",
                 )
@@ -131,13 +133,12 @@ class PipelineBuilder:
         raise ValueError(f"Unknown task: {task}")
 
     def upload_targets_artifact(self, targets: Iterable[Label]) -> str:
-        with tempfile.NamedTemporaryFile(suffix=".txt") as tmp:
-            tmp.write(targets.encode())
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+            tmp.write("\n".join([target.name for target in targets]).encode())
             tmp.seek(0)
             if self.dry_run:
-                print(f"Would have uploaded file: {tmp.name}")
-                print("Target file contained:")
-                print(tmp.read())
+                logger.info(f"Would have uploaded file: {tmp.name}")
+                logger.debug(f"Target file contained:\n{tmp.read()}")
             else:
                 subprocess.check_call(
                     ["buildkite-agent", "artifact", "upload", tmp.name]
@@ -169,7 +170,7 @@ class PipelineBuilder:
             ]
         }
         if self.dry_run:
-            print("Would have upload:")
+            logger.info("Would have upload:")
             print(yaml.dump(steps))
         else:
             subprocess.run(
@@ -190,7 +191,11 @@ def run(blueprint: io.BufferedReader, dry_run: bool, platform: str) -> None:
     loaded_blueprint = yaml.safe_load(blueprint)
     builder = PipelineBuilder(dry_run, platform)
 
-    for task in loaded_blueprint["tasks"]:
-        print(task)
-        generic_tasks = builder.generate_matrix(task)
-        builder.upload_steps(generic_tasks)
+    with futures.ThreadPoolExecutor(max_workers=10) as executor:
+        results = [
+            executor.submit(builder.generate_matrix, task)
+            for task in loaded_blueprint["tasks"]
+        ]
+    # Upload the results in order.
+    for future in results:
+        builder.upload_steps(future.result())

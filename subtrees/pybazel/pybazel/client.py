@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import subprocess
 from typing import Any
 
 from pybazel.api.client import APIClient
