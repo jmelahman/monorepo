@@ -1,17 +1,27 @@
 from __future__ import annotations
 
+import enum
 import logging
 import os
 import time
+from typing import Any
 
 from colorama import Fore
 from colorama import Style
 
 
+class LogLevel(enum.Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
+
+
 class ColorFormatter(logging.Formatter):
     def __init__(self, show_timestamps: bool, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
         self._show_timestamps = show_timestamps
+        super().__init__(*args, **kwargs)
 
     @property
     def show_timestamps(self) -> bool:
@@ -37,10 +47,12 @@ class ColorFormatter(logging.Formatter):
         return super().format(record)
 
 
-def getLogger(*args: Any, **kwargs: Any) -> logging.Logger:
+def getLogger(
+    name: str = "root", loglevel: LogLevel = LogLevel.INFO, *args: Any, **kwargs: Any
+) -> logging.Logger:
     show_timestamps = bool(kwargs.pop("timestamps", False))
-    logger = logging.getLogger(*args, **kwargs)
-    logger.setLevel(os.environ.get("LOGLEVEL", "INFO"))
+    logger = logging.getLogger(name, *args, **kwargs)
+    logger.setLevel(os.environ.get("LOGLEVEL", loglevel.value))
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(ColorFormatter(show_timestamps))

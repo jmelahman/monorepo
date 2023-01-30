@@ -2,6 +2,8 @@ load("@pip_deps//:requirements.bzl", "requirement")
 load("@pip_deps_internal//:requirements.bzl", requirement_internal = "requirement")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 
+package(default_visibility = [":__subpackages__"])
+
 py_binary(
     name = "main",
     srcs = [
