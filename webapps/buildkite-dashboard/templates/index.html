@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Buildkite Dashboard</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Buildkite dashboard">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="max-age=604800">
+  <meta name="theme-color" content="#00C6FF" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='assets/favicon.ico') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style/stylesheet.min.css') }}">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+  <main id="main">
+    <select id="queues" name="queues" method="GET" action="/">
+      {% for queue in queues %}
+      <option value="{{queue}}">{{queue}}</option>
+      {% endfor %}
+    </select>
+    <div id="agents-plot"></div>
+    <div id="jobs-plot"></div>
+    <script>
+      var agentsQueue = [];
+      var jobsQueue = [];
+      Plotly.newPlot('agents-plot', [{
+        agentsQueue,
+        type: 'line'
+      }]);
+      Plotly.newPlot('jobs-plot', [{
+        jobsQueue,
+        type: 'line'
+      }]);
+      setInterval(function () {
+        var xhr = new XMLHttpRequest();
+        var e = document.getElementById("queues");
+        var queue = e.options[e.selectedIndex].text
+        xhr.open('GET', '/data?queue=' + queue, true);
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            var splitData = xhr.responseText.split(',')
+            agentsQueue = splitData[0].split(" ").map(function (num) {
+              return parseInt(num);
+            });
+            jobsQueue = splitData[1].split(" ").map(function (num) {
+              return parseInt(num);
+            });
+            Plotly.update('agents-plot', { y: [agentsQueue] });
+            Plotly.update('jobs-plot', { y: [jobsQueue] });
+          }
+        };
+        xhr.send();
+      }, 1000);  // 1s
+    </script>
+  </main>
+</body>
+
+</html>

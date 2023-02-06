@@ -88,7 +88,7 @@ def check_ssh_connection() -> bool:
 
 
 def plot(
-    x_values: list[str], y_values: list[str], uptime_precent: float, buffer: io.BytesIO
+    x_values: list[str], y_values: list[str], uptime_percent: float, buffer: io.BytesIO
 ) -> None:
 
     # Create the plot
@@ -100,7 +100,7 @@ def plot(
     for spine in ax.spines.values():
         spine.set_edgecolor("white")
     plt.xticks(color="white")
-    ax.text(x=0.0, y=1.7, s="% Uptime: {:.2f}".format(uptime_precent), color="white")
+    ax.text(x=0.0, y=1.7, s="% Uptime: {:.2f}".format(uptime_percent), color="white")
     ax.set_yticks([0, 1])
     ax.set_yticklabels(["Offline", "Online"])
     ax.set_ylim(bottom=-1.0, top=2.0)
@@ -128,8 +128,8 @@ def status() -> str:
         buffer = io.BytesIO()
         datetime_values = [row[0] for row in reversed(ssh_statuses)]
         status_values = [row[1] for row in reversed(ssh_statuses)]
-        uptime_precent = statistics.mean(status_values) * 100
-        plot(datetime_values, status_values, uptime_precent, buffer)
+        uptime_percent = statistics.mean(status_values) * 100
+        plot(datetime_values, status_values, uptime_percent, buffer)
         buffer.seek(0)
         ssh_plot_data = buffer.getvalue()
         ssh_plot_uri = base64.b64encode(ssh_plot_data).decode("utf-8")
@@ -137,13 +137,13 @@ def status() -> str:
     else:
         current_app.logger.warning("Checking SSH Connectivity directly")
         latest_status = check_ssh_connection()
-        uptime_precent = latest_status
+        uptime_percent = latest_status
 
     return render_template(
         "index.html",
         ssh_status=latest_status,
         ssh_plot_uri=ssh_plot_uri,
-        uptime_precent=uptime_precent,
+        uptime_percent=uptime_percent,
     )
 
 
