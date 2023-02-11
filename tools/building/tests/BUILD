@@ -1,4 +1,4 @@
-load("@pip_deps//:requirements.bzl", "requirement")
+load("@pip_deps_internal//:requirements.bzl", requirement_internal = "requirement")
 load("@rules_python//python:defs.bzl", "py_test")
 
 py_test(
@@ -9,8 +9,7 @@ py_test(
         "//tools/building/tests/examples:greeter_lib",
         "//tools/building/tests/examples:greeter_test",
     ],
-    tags = ["manual"],
     deps = [
-        requirement("pybazel"),
+        requirement_internal("pybazel"),
     ],
 )

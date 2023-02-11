@@ -6,12 +6,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import io
 
+import click
+
 from buildprint._run import _BUILDKITE
 from buildprint._run import _SUPPORTED_PLATFORMS
 from buildprint._run import run
 from buildprint._version import __version__
 from buildprint._version import __version_info__
-import click
 
 
 @click.version_option(__version__)
@@ -31,7 +32,7 @@ import click
     type=click.File("rb"),
 )
 @click.command()
-def main(blueprint: io.BufferedReader, dry_run: bool, platform: str | None) -> None:
+def main(blueprint: io.BufferedReader, dry_run: bool, platform: str) -> None:
     run(blueprint, dry_run, platform)
 
 

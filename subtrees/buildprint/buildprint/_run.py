@@ -138,7 +138,7 @@ class PipelineBuilder:
             tmp.seek(0)
             if self.dry_run:
                 logger.info(f"Would have uploaded file: {tmp.name}")
-                logger.debug(f"Target file contained:\n{tmp.read()}")
+                logger.debug("Target file contained:\n{!r}".format(tmp.read()))
             else:
                 subprocess.check_call(
                     ["buildkite-agent", "artifact", "upload", tmp.name]

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import unittest
 
-import freezegun
+import freezegun  # type: ignore[import]
 
 from buildprint import _logging
 

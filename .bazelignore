@@ -1,1 +1,3 @@
-subtrees
+subtrees/buildprint/buildprint
+subtrees/pybazel/pybazel
+subtrees/pysnapify/pysnapify
