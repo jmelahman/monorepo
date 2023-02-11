@@ -1,5 +1,7 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 
+package(default_visibility = ["//tools/building/tests:__subpackages__"])
+
 py_library(
     name = "greeter_lib",
     srcs = ["greeter.py"],

@@ -2,10 +2,10 @@
 import io
 import os
 
-import tweepy
+import tweepy  # type: ignore[import]
 
 
-def write_tweets(tweets_file: io.TextIOWrapper, tweets: tweepy.Tweet) -> None:
+def write_tweets(tweets_file: io.TextIOWrapper, tweets: tweepy.Tweet) -> None:  # type: ignore[no-any-unimported]
     for tweet in tweets:
         if not tweet.text or tweet.text.startswith("@") or tweet.text.startswith("RT"):
             continue

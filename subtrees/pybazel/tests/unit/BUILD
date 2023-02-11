@@ -4,7 +4,7 @@ py_library(
     name = "fixtures",
     srcs = ["fixtures.py"],
     deps = [
-        "//pybazel/pybazel/api:client",
+        "//pybazel/pybazel:client",
     ],
 )
 

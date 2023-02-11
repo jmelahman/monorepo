@@ -74,9 +74,6 @@ load("@com_github_ali5h_rules_pip//:defs.bzl", "pip_import")
 
 pip_import(
     name = "pip_deps",
-    overrides = {
-        # "@//pybazel:pkg": "pybazel",
-    },
     python_interpreter = "python3.10",
     requirements = "//:third_party/requirements.txt",
 )

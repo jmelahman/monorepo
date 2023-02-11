@@ -20,8 +20,7 @@ py_library(
         "client.py",
     ],
     deps = [
-        "//pybazel/api:client",
-        "//pybazel/utils:logging",
+        "//pybazel/utils:logger",
     ],
 )
 

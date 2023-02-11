@@ -8,7 +8,7 @@ py_library(
         "manual",
     ],
     deps = [
-        "//pybazel/pybazel/api:client",
+        "//pybazel/pybazel:client",
     ],
 )
 

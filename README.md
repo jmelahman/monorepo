@@ -70,6 +70,70 @@ To upgrade a single dependency (in this case, the `mypy` package),
 bazel run //third_party:requirements.update -- --upgrade-package mypy
 ```
 
+## Linting
+
+### Mypy
+
+Mypy is a static-type checker and linter for python.
+There are three ways to run mypy:
+
+1. standalone mypy
+2. as a mypy daemon
+3. as a bazel asepct
+
+The preferred method is as a bazel aspect, but using a daemon or standalone might
+be more performant or convenient depending on the workflow.
+
+For either 1. or 2., you'll first have to install the build and runtime dependencies for the repo,
+
+```
+pip install -r tools/typing/mypy-requirements.txt
+pip install -r third_party/requirements.txt
+```
+
+If using the mypy daemon, you'll then need to start it with the correct config,
+
+```shell
+dmypy start --config-file=tools/typing/mypy.ini
+```
+
+Then either:
+
+```shell
+mypy --config-file=tools/typing/mypy.ini
+```
+
+_Tip: if you copy this `tools/typing/.mypy.ini` to `~/.mypy.ini`, you don't need to pass the flag in either case._
+
+or
+
+```shell
+dmypy check .
+```
+
+_Note: `dmypy check` must run from the toplevel of the repo unless you explicitly handle the status file._
+
+_Note: With mypy and dmypy, mypy will use the local packages (`monorepo/pybazel`) rather than those installed in the site-packages whereas the oppisite is true for the bazel aspect._
+
+To use the bazel aspect,
+
+```
+bazel build --config=mypy //...
+```
+
+_Tip: This also supports `ibazel`._
+
+#### Generating python stubs
+
+These packages are compiled with mypyc, so `.pyi` files are required for consumers to be able to reference the type hints.
+These files are generated automatically using `stubgen`.
+
+For example, to generate type stubs for the `pybazel` package, run,
+
+```shell
+stubgen pybazel --out subtrees/pybazel/
+```
+
 ## Formatting
 
 ### Python

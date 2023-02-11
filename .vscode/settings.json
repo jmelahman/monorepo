@@ -1,13 +1,21 @@
 {
-    "workbench.sideBar.location": "right",
     "editor.inlineSuggest.enabled": true,
     "editor.minimap.enabled": false,
-    "workbench.colorTheme": "Orbi Red",
     "editor.renderLineHighlight": "all",
     "editor.lineNumbers": "relative",
+    "python.formatting.provider": "black",
+    "vim.handleKeys": {
+        "<C-c>": false,
+		"<C-x>": false,
+		"<C-a>": false,
+		"<C-f>": false,
+		"<C-w>": false
+	},
+    "workbench.sideBar.location": "right",
+    "workbench.colorTheme": "Orbi Red",
     "editor.tokenColorCustomizations": {
         "textMateRules": [
-            { // Text font color.
+            {
                 "scope": [
                     "constant",
                     "constant.language",
@@ -322,6 +330,5 @@
                 }
             },
         ]
-    },
-    "python.formatting.provider": "black"
+    }
 }

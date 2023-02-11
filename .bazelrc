@@ -7,12 +7,13 @@ build --worker_sandboxing
 # build --bes_backend=grpc://192.168.1.2:1985
 # build --remote_cache=http://192.168.1.2:9001
 
-build --bes_results_url=https://app.buildbuddy.io/invocation/
-build --bes_backend=grpcs://remote.buildbuddy.io
-build --remote_cache=grpcs://remote.buildbuddy.io
-build --remote_timeout=3600
+#build --bes_results_url=https://app.buildbuddy.io/invocation/
+#build --bes_backend=grpcs://remote.buildbuddy.io
+#build --remote_cache=grpcs://remote.buildbuddy.io
+#build --remote_timeout=3600
 build --experimental_remote_cache_compression
 build --experimental_remote_cache_async
+build --experimental_remote_merkle_tree_cache
 
 ## C++ Toolchain
 build --repo_env=CC=gcc
