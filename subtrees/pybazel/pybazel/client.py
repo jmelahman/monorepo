@@ -80,7 +80,8 @@ class BazelClient:
     ) -> None:
         build_command = [self.which_bazel, *self.bazel_options, "build"]
         build_command += build_options or []
-        build_command += list(labels)
+        for label in labels:
+            build_command += str(label)
         print(build_command)
         subprocess.run(
             build_command,
@@ -90,7 +91,7 @@ class BazelClient:
 
     # TODO: -> dict[InfoKey, str]
     def info(
-        self: ApiProtocol,
+        self,
         key: InfoKey | None = None,
         configuration_options: list[str] | None = None,
     ) -> str:
