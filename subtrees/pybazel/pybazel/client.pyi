@@ -1,11 +1,7 @@
 from typing import Iterable, Sequence, Union
 
-from _typeshed import Incomplete as Incomplete
-
 from pybazel.models.info import InfoKey as InfoKey
 from pybazel.models.label import Label as Label
-
-log: Incomplete
 
 class BazelClient:
     def __init__(

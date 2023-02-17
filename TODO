@@ -1,0 +1,6 @@
+1. Verify if pybazel/*.pyi are actually required if it it was the previous implementation of the
+library.
+2. Move buildprint/tests to subtrees/buildprint/tests (or alternatively, exclude from the package
+setup).
+3. Improve finding the git worktree in integration tests.
+  a. Right now, pybazel/tests/fixtures.py assumes we're in ~/code/monorepo.
