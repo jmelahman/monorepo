@@ -1,4 +1,5 @@
 load("@bazel_bats//:rules.bzl", "bats_test")
+load("@rules_python//python:defs.bzl", "py_binary")
 
 sh_binary(
     name = "pre_push",
@@ -12,4 +13,9 @@ bats_test(
         ":pre_push",
         "@bats_shellmock//:shellmock",
     ],
+)
+
+py_binary(
+    name = "copy_playlist",
+    srcs = ["copy_playlist.py"],
 )

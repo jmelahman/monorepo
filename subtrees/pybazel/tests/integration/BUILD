@@ -8,7 +8,7 @@ py_library(
         "manual",
     ],
     deps = [
-        "//pybazel/pybazel:client",
+        "//pybazel:client",
     ],
 )
 
@@ -17,6 +17,6 @@ py_test(
     srcs = ["info_test.py"],
     deps = [
         ":fixtures",
-        "//pybazel/pybazel/models:info",
+        "//pybazel/models:info",
     ],
 )
