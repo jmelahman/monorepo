@@ -10,8 +10,8 @@ py_test(
     srcs = ["snapifier_test.py"],
     deps = [
         ":snapify_testdata",
-        "//snapify/pysnapify:constants",
-        "//snapify/pysnapify:snapifier",
+        "//pysnapify:constants",
+        "//pysnapify:snapifier",
     ],
 )
 
@@ -19,7 +19,7 @@ py_test(
     name = "pacman_test",
     srcs = ["pacman_test.py"],
     deps = [
-        "//snapify/pysnapify/manager:pacman",
+        "//pysnapify/manager:pacman",
     ],
 )
 
@@ -28,6 +28,6 @@ py_test(
     srcs = ["snap_test.py"],
     deps = [
         ":snapify_testdata",
-        "//snapify/pysnapify/manager:snap",
+        "//pysnapify/manager:snap",
     ],
 )

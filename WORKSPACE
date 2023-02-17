@@ -86,9 +86,9 @@ pip_install()
 # for internal imports, so most stay incrementally fetched.
 pip_import(
     name = "pip_deps_internal",
-    overrides = {
-        "@//pybazel:pkg": "pybazel",
-    },
+    # overrides = {
+    #     "@//pybazel:pkg": "pybazel",
+    # },
     python_interpreter = "python3.10",
     requirements = "//:third_party/requirements.txt",
 )

@@ -13,7 +13,7 @@ freezegun==1.2.2
 werkzeug==2.2.2
 types-Werkzeug==1.0.9
 matplotlib==3.4.3
-mypy==0.942  # Keep in sync with tools/typing/mypy-requirements.txt
+mypy==0.942
 mypy_extensions==0.4.3
 paramiko==2.12.0
 types-paramiko==2.12.0.1

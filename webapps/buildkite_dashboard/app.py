@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING, TypedDict
 from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[import]
 from apscheduler.triggers.interval import IntervalTrigger  # type: ignore[import]
 from flask import Flask
-from flask import request
 from flask import redirect
 from flask import render_template
+from flask import request
 from flask import send_file
 import requests
 
