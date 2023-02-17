@@ -12,7 +12,7 @@ The project is tracked using a [git-subtree](https://github.com/git/git/blob/mas
 To push changes upstream,
 
 ```shell
-git subtree push --prefix snapify git@github.com:jmelahman/python-snapify.git master
+git subtree push --prefix subtrees/snapify git@github.com:jmelahman/python-snapify.git master
 ```
 
 See also, [github://jmelahman/python-snapify](https://github.com/jmelahman/python-snapify).
@@ -25,7 +25,7 @@ The project is tracked using a [git-subtree](https://github.com/git/git/blob/mas
 To push changes upstream,
 
 ```shell
-git subtree push --prefix pybazel git@github.com:jmelahman/pybazel.git master
+git subtree push --prefix subtrees/pybazel git@github.com:jmelahman/pybazel.git master
 ```
 
 See also, [github://jmelahman/pybazel](https://github.com/jmelahman/pybazel).
@@ -38,7 +38,7 @@ The project is tracked using a [git-subtree](https://github.com/git/git/blob/mas
 To push changes upstream,
 
 ```shell
-git subtree push --prefix buildprint git@github.com:jmelahman/buildprint.git master
+git subtree push --prefix subtrees/buildprint git@github.com:jmelahman/buildprint.git master
 ```
 
 See also, [github://jmelahman/buildprint](https://github.com/jmelahman/buildprint).
