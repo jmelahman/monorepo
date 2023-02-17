@@ -9,3 +9,11 @@ py_test(
         requirement("freezegun"),
     ],
 )
+
+py_test(
+    name = "git_test",
+    srcs = ["git_test"],
+    deps = [
+        "//buildprint/client:git",
+    ],
+)
