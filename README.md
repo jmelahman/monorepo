@@ -94,7 +94,7 @@ pip install -r third_party/requirements.txt
 If using the mypy daemon, you'll then need to start it with the correct config,
 
 ```shell
-dmypy start --config-file=tools/typing/mypy.ini
+dmypy start -- --config-file=tools/typing/mypy.ini
 ```
 
 Then either:
@@ -113,7 +113,7 @@ dmypy check .
 
 _Note: `dmypy check` must run from the toplevel of the repo unless you explicitly handle the status file._
 
-_Note: With mypy and dmypy, mypy will use the local packages (`monorepo/pybazel`) rather than those installed in the site-packages whereas the oppisite is true for the bazel aspect._
+_Note: With `mypy` and `dmypy`, mypy will use the local packages (`monorepo/pybazel`) rather than those installed in the site-packages whereas the oppisite is true for the bazel aspect._
 
 To use the bazel aspect,
 
@@ -160,5 +160,11 @@ Formatting bazel `BUILD` and `.bzl` is done by [Buildifier](https://github.com/b
 To run the formatter,
 
 ```shell
-bazel run :buildifier
+bazel run //:buildifier
+```
+
+and verify with,
+
+```shell
+bazel run //:buildifier.check
 ```
