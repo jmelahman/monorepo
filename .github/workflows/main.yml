@@ -21,6 +21,7 @@ jobs:
           key: bazel
       - run: bazel run //:buildifier.check
       - run: bazel run //tools/format -- --check
+      - run: bazel build //...
       - name: Install deps
         run: >-
           python -m pip install --upgrade pip &&
