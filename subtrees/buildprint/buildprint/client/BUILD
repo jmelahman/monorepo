@@ -1,7 +1,10 @@
 load("@pip_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_library")
 
-package(default_visibility = ["//buildprint:__subpackages__"])
+package(default_visibility = [
+    "//buildprint:__subpackages__",
+    "//subtrees/buildprint/tests:__subpackages__",
+])
 
 py_library(
     name = "git",
