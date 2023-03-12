@@ -4,10 +4,11 @@ import glob
 import os
 import pathlib
 
-from buildprint import _version
 from mypyc.build import mypycify  # type: ignore[import]
 from setuptools import find_packages  # type: ignore[import]
 from setuptools import setup
+
+from buildprint import _version
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
 NAME = "buildprint"
@@ -63,6 +64,11 @@ setup(
         "click==8.1.3",
         # "click-completion==0.5.2",
         "pyyaml==6.0",
+    ],
+    setup_requires=[
+        "setuptools >= 40.6.2",
+        "wheel >= 0.30.0",
+        "mypy==1.0.0",
         "types-click==7.1.8",
         "types-PyYAML==6.0.12.2",
     ],

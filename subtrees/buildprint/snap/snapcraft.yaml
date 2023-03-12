@@ -1,0 +1,20 @@
+name: buildprint
+summary: Provides a blueprint print a buildkite pipeline.
+description: |
+    Provides a blueprint print a buildkite pipeline.
+version: git
+grade: stable
+confinement: devmode
+base: core20
+architectures:
+  - build-on: [amd64]
+
+apps:
+  buildprint:
+    command: bin/buildprint
+    plugs: [home, network, network-bind, removable-media]
+
+parts:
+  buildprint:
+    plugin: python
+    source: https://github.com/jmelahman/buildprint.git
