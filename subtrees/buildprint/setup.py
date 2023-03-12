@@ -64,7 +64,7 @@ setup(
         "colorama==0.4.5",
         "gitpython==3.1.31",
         "pyyaml==6.0",
-        "pybazel==0.4.0",
+        "pybazel==0.5.1",
     ],
     setup_requires=[
         "setuptools >= 40.6.2",
