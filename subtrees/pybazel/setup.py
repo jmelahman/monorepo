@@ -52,6 +52,7 @@ setup(
     keywords=["bazel", "bazelbuild", "buildtools", "tools"],
     package_dir={__title__: __title__},
     packages=find_packages(),
+    package_data={"pybazel": find_package_data(__title__, ["*.pyi"])},
     download_url=f"https://github.com/jmelahman/{__title__}/archive/refs/tags/v{__version__}.tar.gz",
     license="MIT",
     python_requires=">=3.7",
