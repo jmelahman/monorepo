@@ -18,3 +18,19 @@ parts:
   buildprint:
     plugin: python
     source: https://github.com/jmelahman/buildprint.git
+    requirements
+    python-packages:
+      # install_requires
+      - click==8.1.3,
+      - colorama==0.4.5,
+      - gitpython==3.1.31,
+      - pyyaml==6.0,
+      - pybazel==0.4.0,
+      # setup_requires
+      - pip
+      - setuptools
+      - wheel
+      - mypy==1.0.0
+      - types-colorama==0.4.15.4
+      - types-click==7.1.8
+      - types-PyYAML==6.0.12.2
