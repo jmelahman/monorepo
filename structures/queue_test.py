@@ -27,7 +27,7 @@ class QueueTest(unittest.TestCase):
 
     def test_dequeue_empty(self) -> None:
         q: queue.Queue = queue.Queue()
-        current = q.dequeue()
+        q.dequeue()
         self.assertTrue(q.empty())
 
     def test_fifo(self) -> None:

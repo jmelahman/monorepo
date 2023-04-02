@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pathlib
 import unittest
-from unittest import mock
 
 from buildprint.client import _git
 

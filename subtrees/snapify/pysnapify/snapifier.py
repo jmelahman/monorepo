@@ -1,6 +1,5 @@
 import json
 import os
-from typing import TYPE_CHECKING
 
 from .constants import SupportedDistro
 from .errors import SnapifyConfigError

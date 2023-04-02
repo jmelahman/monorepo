@@ -7,12 +7,9 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
-import glob
 import hashlib
 import os
 import shutil
-from typing import Iterable, NamedTuple
 
 MUSIC_DIR = (
     "/run/user/1000/gvfs/mtp:host=Xiaomi_Mi_MIX_2_1cd7acd5/Internal shared storage/"
