@@ -27,7 +27,7 @@ class StackTest(unittest.TestCase):
 
     def test_dequeue_empty(self) -> None:
         q: stack.Stack = stack.Stack()
-        current = q.dequeue()
+        q.dequeue()
         self.assertTrue(q.empty())
 
     def test_lifo(self) -> None:

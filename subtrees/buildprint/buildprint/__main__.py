@@ -12,7 +12,6 @@ from buildprint._run import _BUILDKITE
 from buildprint._run import _SUPPORTED_PLATFORMS
 from buildprint._run import run
 from buildprint._version import __version__
-from buildprint._version import __version_info__
 
 
 @click.version_option(__version__)

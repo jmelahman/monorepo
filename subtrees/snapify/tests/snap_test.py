@@ -41,7 +41,7 @@ class SnapTest(unittest.TestCase):
     @mock.patch("snapify.pysnapify.manager.snap.Snapd._names_exists", return_value=True)
     def test_get_available(self, mock_names_exists: mock.MagicMock) -> None:
         with mock.patch("builtins.open", mock.mock_open(read_data=names.NAMES)):
-            available_packages = self.snap.get_available_packages()
+            self.snap.get_available_packages()
             # self.assertIn("fake-snapify", available_packages)
 
 

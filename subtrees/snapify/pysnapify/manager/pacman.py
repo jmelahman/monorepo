@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import subprocess
 import sys
-from typing import Any
 
 from .base import PackageManager
 
@@ -44,7 +43,7 @@ class Pacman(PackageManager):
             install_cmd = [
                 self._sudo,
                 self._bin,
-                f"-S",
+                "-S",
             ]
             if self._noninteractive:
                 install_cmd.append("--noconfirm")

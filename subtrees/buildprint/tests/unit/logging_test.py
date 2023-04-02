@@ -25,7 +25,7 @@ class TestLogger(unittest.TestCase):
                     logger.log(numeric_loglevel, "LEVEL_" + level.value)
                     if numeric_level > numeric_loglevel:
                         continue
-                    with self.assertLogs(logger, level=level.value) as cm:
+                    with self.assertLogs(logger, level=level.value):
                         logger.log(numeric_loglevel, "LEVEL_" + level.value)
 
     @freezegun.freeze_time("2020-01-01 12:34:56")
@@ -37,7 +37,7 @@ class TestLogger(unittest.TestCase):
         """
         logger = _logging.getLogger("with_timestamps", timestamps=True)
         logger.info("info")
-        with self.assertLogs(logger, level="INFO") as cm:
+        with self.assertLogs(logger, level="INFO"):
             logger.info("info")
 
     def test_logger_getInstance(self) -> None:
