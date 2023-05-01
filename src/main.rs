@@ -8,8 +8,10 @@ use walkdir::WalkDir;
 
 fn is_valid_symlink<P: AsRef<std::path::Path>>(path: &P) -> Result<bool, Error> {
     if let Ok(target_path) = fs::read_link(path) {
-        if let Ok(_) = fs::metadata(&target_path) {
-            return Ok(true);
+        if target_path.is_absolute() {
+            if let Ok(_) = fs::metadata(&target_path) {
+                return Ok(true);
+            }
         }
         let dirname = path.as_ref().parent().unwrap_or(Path::new(""));
         if let Ok(_) = std::fs::metadata(PathBuf::from(dirname).join(target_path)) {
@@ -20,10 +22,10 @@ fn is_valid_symlink<P: AsRef<std::path::Path>>(path: &P) -> Result<bool, Error> 
     Ok(false)
 }
 
-fn lint<P: AsRef<std::path::Path>>(filepath: P) -> Result<bool, Error> {
-    if let Ok(metadata) = fs::symlink_metadata(&filepath) {
+fn lint<P: AsRef<std::path::Path>>(path: P) -> Result<bool, Error> {
+    if let Ok(metadata) = fs::symlink_metadata(&path) {
         if metadata.file_type().is_symlink() {
-            return is_valid_symlink(&filepath);
+            return is_valid_symlink(&path);
         }
     }
     Ok(true)
