@@ -1,10 +1,11 @@
 [package]
 name = "check-symlinks"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Jamison Lahman <jamison@lahman.dev>"]
 description = "Check for broken symlinks"
 readme = "README.md"
+license = "MIT"
 license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
