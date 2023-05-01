@@ -1,3 +1,4 @@
+use std::env;
 use std::fs;
 use std::io::Error;
 use std::path::{Path, PathBuf};
@@ -32,22 +33,34 @@ fn lint<P: AsRef<std::path::Path>>(path: P) -> Result<bool, Error> {
 }
 
 fn main() -> ExitCode {
+    let args: Vec<String> = env::args().skip(1).collect();
     let mut exit_code = 0;
     let pool = ThreadPool::new(num_cpus::get());
 
     let (tx, rx) = channel();
 
-    for entry in WalkDir::new(".")
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| !e.path().is_dir())
-    {
-        let path = entry.path().to_owned();
-        let tx = tx.clone();
-        pool.execute(move || {
-            let errors = lint(path);
-            tx.send(errors).expect("Could not send data!");
-        });
+    if !args.is_empty() {
+        for filename in args {
+            let path = Path::new(&filename).to_owned();
+            let tx = tx.clone();
+            pool.execute(move || {
+                let errors = lint(path);
+                tx.send(errors).expect("Could not send data!");
+            });
+        }
+    } else {
+        for entry in WalkDir::new(".")
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| !e.path().is_dir())
+        {
+            let path = entry.path().to_owned();
+            let tx = tx.clone();
+            pool.execute(move || {
+                let errors = lint(path);
+                tx.send(errors).expect("Could not send data!");
+            });
+        }
     }
     drop(tx);
     for t in rx.iter() {

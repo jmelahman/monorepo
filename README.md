@@ -10,9 +10,18 @@ cargo install check-symlinks
 
 ## Usage
 
-It currently only supports checking all files recursively from your current working directory,
+By default, checks all files recursively from the current working directory,
 
 ```shell
 $ check-symlinks
-"./testdata/broken_link" is not a valid symlink
+"./broken_link" is not a valid symlink
 ```
+
+File paths can also be passed,
+
+```shell
+$ check-symlinks broken_link doesnt_exist
+"./broken_link" is not a valid symlink
+```
+
+_NOTE: file arguments which don't exist are ignored._
