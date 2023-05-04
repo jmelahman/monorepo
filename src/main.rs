@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
-use walkdir::WalkDir;
+use ignore::WalkBuilder;
 
 fn is_valid_symlink<P: AsRef<std::path::Path>>(path: &P) -> Result<bool, Error> {
     if let Ok(target_path) = fs::read_link(path) {
@@ -49,7 +49,7 @@ fn main() -> ExitCode {
             });
         }
     } else {
-        for entry in WalkDir::new(".")
+        for entry in WalkBuilder::new("./").hidden(false).build()
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| !e.path().is_dir())

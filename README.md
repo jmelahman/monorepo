@@ -10,7 +10,7 @@ cargo install check-symlinks
 
 ## Usage
 
-By default, checks all files recursively from the current working directory,
+By default, checks all [unignored](https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore#ignore) files recursively from the current working directory,
 
 ```shell
 $ check-symlinks
