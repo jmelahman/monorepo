@@ -27,10 +27,10 @@ def normalize_path(path: str) -> str:
 
 # https://stackoverflow.com/a/44873382
 async def sha1sum(filename: str) -> str:
-    h = hashlib.sha1()
+    h = hashlib.sha1()  # noqa: S324
     b = bytearray(128 * 1024)
     mv = memoryview(b)
-    with open(filename, "rb", buffering=0) as f:
+    with open(filename, "rb", buffering=0) as f:  # noqa: ASYNC101
         while n := f.readinto(mv):
             h.update(mv[:n])
     return h.hexdigest()
@@ -39,14 +39,14 @@ async def sha1sum(filename: str) -> str:
 async def get_files_to_copy() -> dict[str, str]:
     print("Getting files to copy...")
     files_to_copy = {}
-    with open("/home/jamison/Documents/Artists.m3u") as f:
+    with open("/home/jamison/Documents/Artists.m3u") as f:  # noqa: ASYNC101
         for line in f:
             sline = line.strip()
             if sline.startswith("#"):
                 continue
             normalized_path = normalize_path(sline)
             files_to_copy[normalized_path] = await sha1sum(sline)
-    print("Found {} files to copy.".format(len(files_to_copy)))
+    print(f"Found {len(files_to_copy)} files to copy.")
     return files_to_copy
 
 

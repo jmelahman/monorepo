@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 NAMES = b"""0ad
 1os-checkout
 1password

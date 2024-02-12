@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-import io
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 import tweepy  # type: ignore[import]
+
+if TYPE_CHECKING:
+    import io
 
 
 def write_tweets(tweets_file: io.TextIOWrapper, tweets: tweepy.Tweet) -> None:  # type: ignore[no-any-unimported]
@@ -20,7 +25,8 @@ def main() -> None:
         write_tweets(my_tweets, tweets)
         while tweets.meta.get("next_token"):
             tweets = client.get_users_tweets(
-                user.data.id, pagination_token=tweets.meta["next_token"]
+                user.data.id,
+                pagination_token=tweets.meta["next_token"],
             )
             write_tweets(my_tweets, tweets.data)
 

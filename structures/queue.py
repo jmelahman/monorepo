@@ -1,10 +1,10 @@
-import typing
+from __future__ import annotations
 
 ItemType = str
 
 
 class Queue:
-    queue: typing.List[ItemType]
+    queue: list[ItemType]
 
     def __init__(self) -> None:
         self.queue = []
@@ -15,8 +15,7 @@ class Queue:
     def empty(self) -> bool:
         return bool(not self.queue)
 
-    def dequeue(self) -> typing.Optional[ItemType]:
+    def dequeue(self) -> ItemType | None:
         if not self.queue:
             return None
-        item = self.queue.pop(0)
-        return item
+        return self.queue.pop(0)

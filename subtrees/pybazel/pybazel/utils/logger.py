@@ -25,9 +25,7 @@ class ColorFormatter(logging.Formatter):
             color = Fore.CYAN
         elif record.levelno == logging.WARNING:
             color = Fore.MAGENTA
-        elif record.levelno == logging.ERROR:
-            color = Fore.RED
-        elif record.levelno == logging.CRITICAL:
+        elif record.levelno in (logging.ERROR, logging.CRITICAL):
             color = Fore.RED
         else:
             color = Fore.RESET
@@ -38,7 +36,7 @@ class ColorFormatter(logging.Formatter):
         return super().format(record)
 
 
-def getLogger(*args: Any, **kwargs: Any) -> logging.Logger:
+def getLogger(*args: Any, **kwargs: Any) -> logging.Logger:  # noqa: N802
     show_timestamps = bool(kwargs.pop("timestamps", False))
     logger = logging.getLogger(*args, **kwargs)
     logger.setLevel(os.environ.get("LOGLEVEL", "INFO"))

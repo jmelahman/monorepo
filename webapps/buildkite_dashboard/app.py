@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.8
 from __future__ import annotations
 
 import collections
@@ -6,7 +5,9 @@ import logging
 import os
 from typing import TYPE_CHECKING, TypedDict
 
-from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[import]
+from apscheduler.schedulers.background import (  # type: ignore[import]
+    BackgroundScheduler,
+)
 from apscheduler.triggers.interval import IntervalTrigger  # type: ignore[import]
 from flask import Flask
 from flask import redirect
@@ -28,10 +29,10 @@ _DATA_LIFESPAN = 3600  # seconds (60 min)
 _QUEUE_LEN = _DATA_LIFESPAN // _UPDATE_INTERVAL
 _TOTAL_QUEUE = "total"
 _JOBS_QUEUE: dict[str, collections.deque[float]] = {
-    _TOTAL_QUEUE: collections.deque(maxlen=_QUEUE_LEN)
+    _TOTAL_QUEUE: collections.deque(maxlen=_QUEUE_LEN),
 }
 _AGENTS_QUEUE: dict[str, collections.deque[float]] = {
-    _TOTAL_QUEUE: collections.deque(maxlen=_QUEUE_LEN)
+    _TOTAL_QUEUE: collections.deque(maxlen=_QUEUE_LEN),
 }
 
 
@@ -83,7 +84,7 @@ def _get_metrics_data() -> MetricsData:
         timeout=60,
     )
     resp.raise_for_status()
-    return MetricsData(resp.json())  # type: ignore # TODO
+    return MetricsData(resp.json())  # type: ignore[]
 
 
 def update() -> None:
@@ -134,7 +135,7 @@ def configure_logger(app: Flask) -> None:
     handler.setLevel(log_level)
 
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     handler.setFormatter(formatter)
 
@@ -142,7 +143,8 @@ def configure_logger(app: Flask) -> None:
 @app.route("/")
 def status() -> str:
     return render_template(
-        "index.html", queues=set(list(_AGENTS_QUEUE) + list(_JOBS_QUEUE))
+        "index.html",
+        queues=set(list(_AGENTS_QUEUE) + list(_JOBS_QUEUE)),
     )
 
 
@@ -161,7 +163,7 @@ def data() -> str:
 def catch_all(path: str) -> str | Response:
     if path == "robots.txt":
         return send_file("robots.txt")
-    elif path != "":
+    if path != "":
         return redirect("/")
     return status()
 
@@ -178,4 +180,4 @@ scheduler.start()
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)

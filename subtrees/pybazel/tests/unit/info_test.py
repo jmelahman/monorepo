@@ -9,7 +9,7 @@ from pybazel.tests.unit.fixtures import API_CLIENTS
 
 class InfoTest(unittest.TestCase):
     @mock.patch("subprocess.check_output", return_value=b"fake: info")
-    def test_info(self, mock_run: mock.MagicMock) -> None:
+    def test_info(self, mock_run: mock.MagicMock) -> None:  # noqa: ARG002
         for api in API_CLIENTS:
             api.info()
             api.info(configuration_options=["--bar"])

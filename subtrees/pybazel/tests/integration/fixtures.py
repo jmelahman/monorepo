@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import tempfile
 
@@ -7,7 +9,7 @@ OUTPUT_BASE = tempfile.mkdtemp()
 _DEFAULT_OPTIONS = ["--output_base", OUTPUT_BASE]
 
 _API_FIXTURES = [
-    (_DEFAULT_OPTIONS + [], "bazel"),
+    ([*_DEFAULT_OPTIONS], "bazel"),
 ]
 
 API_CLIENTS = [

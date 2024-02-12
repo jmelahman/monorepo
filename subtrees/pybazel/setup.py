@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+from __future__ import annotations
 
 import glob
 import os
@@ -16,14 +16,17 @@ from pybazel import __version__
 
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
 
+
 # Adopted from https://github.com/python/mypy/blob/master/setup.py
-def find_package_data(base, globs, root=__title__):
+def find_package_data(base: str, globs: list[str], root: str = __title__) -> list[str]:
     """Find all interesting data files, for setup(package_data=)
+
     Arguments:
+    ---------
       root:  The directory to search in.
       globs: A list of glob patterns to accept files.
-    """
 
+    """
     rv_dirs = [root for root, _, _ in os.walk(base)]
     rv = []
     for rv_dir in rv_dirs:
@@ -47,7 +50,7 @@ setup(
     url=f"https://github.com/jmelahman/{__title__}",
     py_modules=[],
     ext_modules=mypycify(
-        [os.path.join(__title__, x) for x in find_package_data(__title__, ["*.py"])]
+        [os.path.join(__title__, x) for x in find_package_data(__title__, ["*.py"])],
     ),
     keywords=["bazel", "bazelbuild", "buildtools", "tools"],
     package_dir={__title__: __title__},

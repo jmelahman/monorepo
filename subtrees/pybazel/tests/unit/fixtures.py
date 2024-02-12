@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from unittest import mock
 
 from pybazel.pybazel.client import BazelClient
@@ -15,5 +17,5 @@ with mock.patch.object(BazelClient, "info", return_value="/home/user/foo_workspa
     for bazel_options, workspace in _API_FIXTURES:
         assert isinstance(bazel_options, list)
         API_CLIENTS.append(
-            BazelClient(bazel_options=bazel_options, workspace=workspace)
+            BazelClient(bazel_options=bazel_options, workspace=workspace),
         )

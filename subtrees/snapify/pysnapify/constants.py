@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import enum
 
 NONINTERACTIVE_DEFAULT = False

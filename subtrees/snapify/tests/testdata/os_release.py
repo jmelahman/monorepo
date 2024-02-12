@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 ARCH = b"""NAME="Arch Linux"
 PRETTY_NAME="Arch Linux"
 ID=arch

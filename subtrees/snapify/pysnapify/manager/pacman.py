@@ -33,7 +33,7 @@ class Pacman(PackageManager):
         if package_name in self._not_available:
             return False
         # TODO: This may need compiled with 're'.
-        return not subprocess.run([self._bin, "-Qs", f"^{package_name}$"]).returncode
+        return not subprocess.run([self._bin, "-Qs", f"^{package_name}$"], check=False).returncode
 
     def has_installed(self, package_name: str) -> bool:
         return package_name in self.get_installed_packages()
@@ -57,17 +57,17 @@ class Pacman(PackageManager):
     def filter_removeable(self, packages: list[str]) -> list[str]:
         # TODO: Might need to run each package individually and aggregate afterwards.
         dependency_query = subprocess.run(
-            [self._bin, "-Qqt", *packages], stdout=subprocess.PIPE
+            [self._bin, "-Qqt", *packages], stdout=subprocess.PIPE, check=False,
         )
         if dependency_query.returncode:
             logging.info(
-                f"The following packages were unable to be snapified: {' '.join(packages)}"
+                f"The following packages were unable to be snapified: {' '.join(packages)}",  # noqa: G004
             )
             return []
         return dependency_query.stdout.decode().strip().split("\n")
 
-    def remove(self, packages: list[str], purge: bool = False) -> None:
-        logging.info(f"Removing the following packages: {' '.join(packages)}")
+    def remove(self, packages: list[str], purge: bool = False) -> None:  # noqa: FBT002
+        logging.info(f"Removing the following packages: {' '.join(packages)}")  # noqa: G004
         try:
             remove_cmd = [
                 self._sudo,

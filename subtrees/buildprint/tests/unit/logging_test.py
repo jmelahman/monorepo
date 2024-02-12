@@ -22,11 +22,11 @@ class TestLogger(unittest.TestCase):
                 self.assertEqual(logger.level, numeric_level)
                 for loglevel in _logging.LogLevel:
                     numeric_loglevel = logging.getLevelName(loglevel.value)
-                    logger.log(numeric_loglevel, "LEVEL_" + level.value)
+                    logger.log(numeric_loglevel, "LEVEL_" + level.value)  # noqa: G003
                     if numeric_level > numeric_loglevel:
                         continue
                     with self.assertLogs(logger, level=level.value):
-                        logger.log(numeric_loglevel, "LEVEL_" + level.value)
+                        logger.log(numeric_loglevel, "LEVEL_" + level.value)  # noqa: G003
 
     @freezegun.freeze_time("2020-01-01 12:34:56")
     def test_logger_timestamps(self) -> None:
@@ -40,8 +40,8 @@ class TestLogger(unittest.TestCase):
         with self.assertLogs(logger, level="INFO"):
             logger.info("info")
 
-    def test_logger_getInstance(self) -> None:
-        """getLogger should return the same logger instance if it already exists."""
+    def test_logger_getInstance(self) -> None:  # noqa: N802
+        """GetLogger should return the same logger instance if it already exists."""
         test_logger = _logging.getLogger("test_logger")
         test_logger_2 = _logging.getLogger("test_logger")
         self.assertEqual(test_logger, test_logger_2)

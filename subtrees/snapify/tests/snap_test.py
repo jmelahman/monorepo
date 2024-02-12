@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import unittest
 from unittest import mock
 
@@ -18,13 +20,14 @@ class SnapTest(unittest.TestCase):
     @mock.patch("subprocess.check_output", return_value=_SNAP_LIST)
     @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     @mock.patch(
-        "snapify.pysnapify.manager.snap.Snapd._names_exists", return_value=False
+        "snapify.pysnapify.manager.snap.Snapd._names_exists",
+        return_value=False,
     )
     def setUp(
         self,
-        mock_names_exists: mock.MagicMock,
+        _mock_names_exists: mock.MagicMock,
         mock_get_executable: mock.MagicMock,
-        mock_subprocess: mock.MagicMock,
+        _mock_subprocess: mock.MagicMock,
     ) -> None:
         self._default_get_executable = [
             _PACMAN_BIN,
@@ -39,7 +42,7 @@ class SnapTest(unittest.TestCase):
         self.assertEqual(expected_packages, installed_packages)
 
     @mock.patch("snapify.pysnapify.manager.snap.Snapd._names_exists", return_value=True)
-    def test_get_available(self, mock_names_exists: mock.MagicMock) -> None:
+    def test_get_available(self, _mock_names_exists: mock.MagicMock) -> None:
         with mock.patch("builtins.open", mock.mock_open(read_data=names.NAMES)):
             self.snap.get_available_packages()
             # self.assertIn("fake-snapify", available_packages)

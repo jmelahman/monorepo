@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import shutil
 import unittest
 
@@ -8,7 +10,7 @@ from pybazel.tests.integration.fixtures import OUTPUT_BASE
 
 class InfoTest(unittest.TestCase):
     @classmethod
-    def tearDownClass(cls) -> None:
+    def tearDownClass(cls: type[InfoTest]) -> None:
         shutil.rmtree(OUTPUT_BASE, ignore_errors=True)
 
     def test_info(self) -> None:

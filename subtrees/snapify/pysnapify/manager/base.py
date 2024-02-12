@@ -7,7 +7,7 @@ from . import utils
 
 class PackageManager(abc.ABC):
     def __init__(
-        self, noninteractive: bool, ignored_packages: list[str], name: str
+        self, noninteractive: bool, ignored_packages: list[str], name: str,
     ) -> None:
         self.name = name
         self._not_available = ignored_packages
@@ -37,5 +37,5 @@ class PackageManager(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def remove(self, packages: list[str], purge: bool = False) -> None:
+    def remove(self, packages: list[str], purge: bool = False) -> None:  # noqa: FBT002
         raise NotImplementedError
