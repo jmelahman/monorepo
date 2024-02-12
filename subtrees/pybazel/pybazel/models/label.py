@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class Label:
     def __init__(self, name: str) -> None:
         self._name = name

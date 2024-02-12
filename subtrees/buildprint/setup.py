@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+from __future__ import annotations
 
 import glob
 import os
@@ -13,14 +13,17 @@ from buildprint import _version
 README = (pathlib.Path(__file__).parent / "README.md").read_text()
 NAME = "buildprint"
 
+
 # Adopted from https://github.com/python/mypy/blob/master/setup.py
-def find_package_data(base, globs, root=NAME):
+def find_package_data(base: str, globs: list[str], root: str = NAME) -> list[str]:
     """Find all interesting data files, for setup(package_data=)
+
     Arguments:
+    ---------
       root:  The directory to search in.
       globs: A list of glob patterns to accept files.
-    """
 
+    """
     rv_dirs = [root for root, _, _ in os.walk(base)]
     rv = []
     for rv_dir in rv_dirs:
@@ -44,7 +47,7 @@ setup(
     url=f"https://github.com/jmelahman/{NAME}",
     py_modules=[],
     ext_modules=mypycify(
-        [os.path.join(NAME, x) for x in find_package_data(NAME, ["*.py"])]
+        [os.path.join(NAME, x) for x in find_package_data(NAME, ["*.py"])],
     ),
     keywords=["bazel", "bazelbuild", "buildtools", "tools"],
     package_dir={NAME: NAME},

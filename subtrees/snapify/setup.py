@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+from __future__ import annotations
 
 import glob
 import os
@@ -13,13 +13,19 @@ VERSION = "0.4.0"
 
 
 # Adopted from https://github.com/python/mypy/blob/master/setup.py
-def find_package_data(base, globs, root="python-snapify"):
+def find_package_data(
+    base: str,
+    globs: list[str],
+    root: str = "python-snapify",
+) -> list[str]:
     """Find all interesting data files, for setup(package_data=)
+
     Arguments:
+    ---------
       root:  The directory to search in.
       globs: A list of glob patterns to accept files.
-    """
 
+    """
     rv_dirs = [root for root, _, _ in os.walk(base)]
     rv = []
     for rv_dir in rv_dirs:
@@ -43,7 +49,10 @@ setup(
     url="https://github.com/jmelahman/python-snapify",
     py_modules=[],
     ext_modules=mypycify(
-        [os.path.join("pysnapify", x) for x in find_package_data("pysnapify", ["*.py"])]
+        [
+            os.path.join("pysnapify", x)
+            for x in find_package_data("pysnapify", ["*.py"])
+        ],
     ),
     package_dir={"pysnapify": "pysnapify"},
     packages=find_packages(),

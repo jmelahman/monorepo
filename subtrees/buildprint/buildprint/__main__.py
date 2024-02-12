@@ -19,7 +19,7 @@ from buildprint._version import __version__
     "--platform",
     help="CI platform.",
     default=_BUILDKITE,
-    type=click.Choice([c for c in _SUPPORTED_PLATFORMS]),
+    type=click.Choice(list(_SUPPORTED_PLATFORMS)),
 )
 @click.option(
     "--dry-run",

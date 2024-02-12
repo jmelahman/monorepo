@@ -4,7 +4,7 @@ import os
 import subprocess
 from typing import Iterable, Sequence
 
-from pybazel.errors import PyBazelException
+from pybazel.errors import PyBazelError
 from pybazel.models.info import InfoKey
 from pybazel.models.label import Label
 from pybazel.utils import logger
@@ -70,7 +70,8 @@ class BazelClient:
             # value = self.info(InfoKey.workspace)
             workspace = self.info(InfoKey("workspace"))
         if not workspace:
-            raise PyBazelException("Unable to infer workspace.")
+            msg = "Unable to infer workspace."
+            raise PyBazelError(msg)
         return workspace
 
     def build(
@@ -98,31 +99,32 @@ class BazelClient:
         info_command = [self.which_bazel, *self.bazel_options, "info"]
         info_command += [key.value] if key else []
         info_command += configuration_options or []
-        info = (
+        return (
             subprocess.check_output(
-                info_command, cwd=self.workspace, stderr=subprocess.DEVNULL
+                info_command,
+                cwd=self.workspace,
+                stderr=subprocess.DEVNULL,
             )
             .decode()
             .rstrip()
         )
-        return info
 
     def query(
         self,
         query_string: str,
         query_options: Sequence[str] | None = None,
     ) -> list[Label]:
-        labels: list[Label] = []
         query_command = [self.which_bazel, *self.bazel_options, "query"]
         query_command += query_options or []
         query_command += [query_string]
         output = (
             subprocess.check_output(
-                query_command, cwd=self.workspace, stderr=subprocess.DEVNULL
+                query_command,
+                cwd=self.workspace,
+                stderr=subprocess.DEVNULL,
             )
             .decode()
             .rstrip()
         )
-        for line in output.rsplit("\n"):
-            labels.append(Label(line))
-        return labels
+
+        return [Label(line) for line in output.rsplit("\n")]

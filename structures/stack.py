@@ -1,10 +1,10 @@
-import typing
+from __future__ import annotations
 
 ItemType = str
 
 
 class Stack:
-    stack: typing.List[ItemType]
+    stack: list[ItemType]
 
     def __init__(self) -> None:
         self.stack = []
@@ -15,8 +15,7 @@ class Stack:
     def empty(self) -> bool:
         return bool(not self.stack)
 
-    def dequeue(self) -> typing.Optional[ItemType]:
+    def dequeue(self) -> ItemType | None:
         if not self.stack:
             return None
-        item = self.stack.pop()
-        return item
+        return self.stack.pop()

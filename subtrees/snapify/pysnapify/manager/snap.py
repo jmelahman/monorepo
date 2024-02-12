@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import enum
 import logging
 import os
 import socket
 import subprocess
-from typing import Optional
 
 import requests
 import urllib3
@@ -31,8 +32,8 @@ class SnapdConnectionPool(urllib3.connectionpool.HTTPConnectionPool):
 class SnapdAdapter(requests.adapters.HTTPAdapter):
     def get_connection(
         self,
-        url: str,
-        proxies: Optional[dict[str, str]] = None,
+        url: str,  # noqa: ARG002
+        proxies: dict[str, str] | None = None,  # noqa: ARG002
     ) -> SnapdConnectionPool:
         return SnapdConnectionPool()
 
@@ -50,7 +51,7 @@ class Snapd(PackageManager):
         name: str = "snap",
     ) -> None:
         super().__init__(noninteractive, ignored_packages, name)
-        self._not_available = self._not_available + ["snapd"]
+        self._not_available = [*self._not_available, "snapd"]
         self._available_packages = self.get_available_packages()
         self._installed_packages = self.get_installed_packages()
         self._session = requests.Session()
@@ -74,8 +75,8 @@ class Snapd(PackageManager):
         names_file = "/var/cache/snapd/names"
         if not self._names_exists(names_file):
             logging.info(
-                f"'{names_file}' does not exist. "
-                "Checking for available snaps will be slower than usual. "
+                f"'{names_file}' does not exist. "  # noqa: G004
+                "Checking for available snaps will be slower than usual. ",
             )
             return []
         with open(names_file, "rb") as snap_names:
@@ -87,7 +88,9 @@ class Snapd(PackageManager):
         if self._available_packages:
             return package_name in self._available_packages
         return not subprocess.run(
-            [self._bin, "info", package_name], stderr=subprocess.DEVNULL
+            [self._bin, "info", package_name],
+            stderr=subprocess.DEVNULL,
+            check=False,
         ).returncode
 
     def has_installed(self, package_name: str) -> bool:
@@ -99,9 +102,9 @@ class Snapd(PackageManager):
             if package_name != result["name"]:
                 continue
             return SnapdConfinement(result["confinement"])
-        raise RuntimeError(f"Unknown confinement for {package_name}")
+        raise RuntimeError(f"Unknown confinement for {package_name}")  # noqa: EM102
 
-    def install(self, packages: list[str], purge: bool = False) -> None:
+    def install(self, packages: list[str]) -> None:
         confinement_groups: dict[SnapdConfinement, list[str]] = {
             confinement: [] for confinement in SnapdConfinement
         }
@@ -114,7 +117,7 @@ class Snapd(PackageManager):
             if group == SnapdConfinement.CLASSIC:
                 for item in items:
                     subprocess.check_call(
-                        [self._sudo, self._bin, "install", "--classic", item]
+                        [self._sudo, self._bin, "install", "--classic", item],
                     )
             else:
                 subprocess.check_call([self._sudo, self._bin, "install", *packages])
@@ -122,5 +125,6 @@ class Snapd(PackageManager):
     def filter_removeable(self, packages: list[str]) -> list[str]:
         return packages
 
-    def remove(self, packages: list[str], purge: bool = False) -> None:
-        raise NotImplementedError("TODO")
+    def remove(self, _packages: list[str], _purge: bool = False) -> None:  # noqa: FBT002
+        msg = "TODO"
+        raise NotImplementedError(msg)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.8
 from __future__ import annotations
 
 import logging
@@ -41,14 +40,14 @@ def configure_logger(app: Flask) -> None:
     handler.setLevel(log_level)
 
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     handler.setFormatter(formatter)
 
 
 def generate_text(prompt: str) -> str:
     encoded_prompt = torch.tensor(tokenizer.encode(prompt, return_tensors="pt")).to(
-        device
+        device,
     )
     output = model.generate(
         encoded_prompt,
@@ -83,7 +82,7 @@ def update() -> str:
 def catch_all(path: str) -> str | Response | FlaskResponse:
     if path == "robots.txt":
         return send_file("robots.txt")
-    elif path != "":
+    if path != "":
         return redirect("/")
     return status()
 

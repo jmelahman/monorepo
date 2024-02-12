@@ -11,7 +11,7 @@ _OUTPUT_BASE = tempfile.mkdtemp()
 
 class BuildTest(unittest.TestCase):
     @classmethod
-    def tearDownClass(cls) -> None:
+    def tearDownClass(cls: type[BuildTest]) -> None:
         shutil.rmtree(_OUTPUT_BASE)
 
     def setUp(self) -> None:

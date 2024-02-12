@@ -1,4 +1,4 @@
-from typing import Iterable, Sequence, Union
+from typing import Iterable, Sequence
 
 from pybazel.models.info import InfoKey as InfoKey
 from pybazel.models.label import Label as Label
@@ -6,9 +6,9 @@ from pybazel.models.label import Label as Label
 class BazelClient:
     def __init__(
         self,
-        bazel_options: Union[list[str], None] = ...,
-        workspace: Union[str, None] = ...,
-        output_base: Union[str, None] = ...,
+        bazel_options: list[str] | None = ...,
+        workspace: str | None = ...,
+        output_base: str | None = ...,
     ) -> None: ...
     @property
     def bazel_options(self) -> list[str]: ...
@@ -19,23 +19,23 @@ class BazelClient:
     @which_bazel.setter
     def which_bazel(self, value: str) -> None: ...
     @property
-    def output_base(self) -> Union[str, None]: ...
+    def output_base(self) -> str | None: ...
     @output_base.setter
-    def output_base(self, value: Union[str, None]) -> None: ...
+    def output_base(self, value: str | None) -> None: ...
     @property
     def workspace(self) -> str: ...
     @workspace.setter
     def workspace(self, value: str) -> None: ...
     def build(
         self,
-        labels: Iterable[Union[Label, str]],
-        build_options: Union[list[str], None] = ...,
+        labels: Iterable[Label | str],
+        build_options: list[str] | None = ...,
     ) -> None: ...
     def info(
         self,
-        key: Union[InfoKey, None] = ...,
-        configuration_options: Union[list[str], None] = ...,
+        key: InfoKey | None = ...,
+        configuration_options: list[str] | None = ...,
     ) -> str: ...
     def query(
-        self, query_string: str, query_options: Union[Sequence[str], None] = ...
+        self, query_string: str, query_options: Sequence[str] | None = ...,
     ) -> list[Label]: ...

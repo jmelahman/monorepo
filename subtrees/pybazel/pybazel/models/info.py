@@ -24,14 +24,19 @@ _KNOWN_KEYS = frozenset(
         "bazel-bin",
         "bazel-testlogs",
         "bazel-genfiles",
-    ]
+    ],
 )
+
+
+class UnknwownInfoKeyError(Exception):
+    def __init__(self, key: str) -> None:
+        super().__init__(f"Unknown info key: {key}")
 
 
 class InfoKey:
     def __init__(self, value: str) -> None:
         if value not in _KNOWN_KEYS:
-            raise ValueError(f"Unknown info key: {value}")
+            raise UnknwownInfoKeyError(value)
         self._value = value
 
     @property

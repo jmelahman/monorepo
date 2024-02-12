@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.8
 from __future__ import annotations
 
 import base64
@@ -10,16 +9,18 @@ import sqlite3
 import statistics
 from typing import TYPE_CHECKING
 
-from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[import]
+from apscheduler.schedulers.background import (
+    BackgroundScheduler,  # type: ignore[import]
+)
 from apscheduler.triggers.interval import IntervalTrigger  # type: ignore[import]
 from flask import current_app
 from flask import Flask
 from flask import redirect
 from flask import render_template
 from flask import send_file
-import matplotlib  # type: ignore[import]
+import matplotlib as mpl  # type: ignore[import]
 
-matplotlib.use("Agg")
+mpl.use("Agg")
 import matplotlib.pyplot as plt  # type: ignore[import]
 import paramiko
 
@@ -38,7 +39,7 @@ def init_statuses_table() -> None:
                         id INTEGER PRIMARY KEY,
                         datetime TIME NOT NULL,
                         status BOOLEAN NOT NULL
-                    )"""
+                    )""",
     )
     conn.close()
 
@@ -47,7 +48,7 @@ def update_statuses() -> None:
     with app.app_context():
         current_app.logger.info("Updating SSH connectivity status")
     ssh_status = check_ssh_connection()
-    current_time = datetime.datetime.now()
+    current_time = datetime.datetime.now(tz=datetime.timezone.utc)
     datetime_string = current_time.strftime("%Y-%m-%d %H:%M:%S")
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
@@ -67,30 +68,33 @@ def configure_logger(app: Flask) -> None:
     handler.setLevel(log_level)
 
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     handler.setFormatter(formatter)
 
 
 def check_ssh_connection() -> bool:
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # noqa: S507
     private_key_path = os.path.expanduser(os.path.join("~", ".ssh", "id_rsa"))
     private_key = paramiko.RSAKey.from_private_key_file(private_key_path)
     try:
         client.connect("lahman.dev", port=23, username="jamison", pkey=private_key)
+    except Exception as e:  # noqa: BLE001
+        with app.app_context():
+            current_app.logger.warning(f"SSH server is not running: {e}")  # noqa: G004
+    else:
         client.close()
         return True
-    except Exception as e:
-        with app.app_context():
-            current_app.logger.warning(f"SSH server is not running: {e}")
     return False
 
 
 def plot(
-    x_values: list[str], y_values: list[str], uptime_percent: float, buffer: io.BytesIO
+    x_values: list[str],
+    y_values: list[str],
+    uptime_percent: float,
+    buffer: io.BytesIO,
 ) -> None:
-
     # Create the plot
     fig, ax = plt.subplots()
     ax.plot(x_values, y_values, color="cyan")
@@ -100,7 +104,7 @@ def plot(
     for spine in ax.spines.values():
         spine.set_edgecolor("white")
     plt.xticks(color="white")
-    ax.text(x=0.0, y=1.7, s="% Uptime: {:.2f}".format(uptime_percent), color="white")
+    ax.text(x=0.0, y=1.7, s=f"% Uptime: {uptime_percent:.2f}", color="white")
     ax.set_yticks([0, 1])
     ax.set_yticklabels(["Offline", "Online"])
     ax.set_ylim(bottom=-1.0, top=2.0)
@@ -116,7 +120,7 @@ def status() -> str:
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT datetime, status FROM statuses ORDER BY datetime DESC LIMIT 720"
+            "SELECT datetime, status FROM statuses ORDER BY datetime DESC LIMIT 720",
         )
     except sqlite3.OperationalError as e:
         current_app.logger.warning(e)
@@ -152,7 +156,7 @@ def status() -> str:
 def catch_all(path: str) -> str | Response:
     if path == "robots.txt":
         return send_file("robots.txt")
-    elif path != "":
+    if path != "":
         return redirect("/")
     return status()
 

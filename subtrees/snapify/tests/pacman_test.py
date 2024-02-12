@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import unittest
 from unittest import mock
 
@@ -39,7 +41,8 @@ class PacmanTest(unittest.TestCase):
 
     @mock.patch("subprocess.run")
     def test_filter_removeable_no_removeable(
-        self, mock_subprocess: mock.MagicMock
+        self,
+        mock_subprocess: mock.MagicMock,
     ) -> None:
         installed_packages = ["foo", "bar"]
         mock_subprocess.return_value.returncode = 1
@@ -57,7 +60,7 @@ class PacmanTest(unittest.TestCase):
         self.assertEqual(removeable, installed_packages)
 
     @mock.patch("subprocess.check_output", return_value=_FAKE_PACKAGES)
-    def test_has_installed(self, mock_subprocess: mock.MagicMock) -> None:
+    def test_has_installed(self, _mock_subprocess: mock.MagicMock) -> None:
         subtests = [
             ("foo", False),
             ("fake-snapify", True),
@@ -83,7 +86,8 @@ class PacmanTest(unittest.TestCase):
     def test_never_has_available(self, mock_get_executable: mock.MagicMock) -> None:
         mock_get_executable.side_effect = self._default_get_executable
         self.pacman = pacman.Pacman(
-            noninteractive=False, ignored_packages=[_NEVER_AVAILABLE]
+            noninteractive=False,
+            ignored_packages=[_NEVER_AVAILABLE],
         )
         package_available = self.pacman.has_available(_NEVER_AVAILABLE)
         self.assertFalse(package_available)
@@ -92,57 +96,63 @@ class PacmanTest(unittest.TestCase):
     def test_install(self, mock_subprocess: mock.MagicMock) -> None:
         self.pacman.install(["fake-snapify"])
         mock_subprocess.assert_called_once_with(
-            [_SUDO_BIN, _PACMAN_BIN, "-S", "fake-snapify"]
+            [_SUDO_BIN, _PACMAN_BIN, "-S", "fake-snapify"],
         )
 
     @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     @mock.patch("subprocess.check_call")
     def test_install_noninteractive(
-        self, mock_subprocess: mock.MagicMock, mock_get_executable: mock.MagicMock
+        self,
+        mock_subprocess: mock.MagicMock,
+        mock_get_executable: mock.MagicMock,
     ) -> None:
         mock_get_executable.side_effect = self._default_get_executable
         self.pacman = pacman.Pacman(noninteractive=True, ignored_packages=[])
         self.pacman.install(["fake-snapify"])
         mock_subprocess.assert_called_once_with(
-            [_SUDO_BIN, _PACMAN_BIN, "-S", "--noconfirm", "fake-snapify"]
+            [_SUDO_BIN, _PACMAN_BIN, "-S", "--noconfirm", "fake-snapify"],
         )
 
     @mock.patch("subprocess.check_call")
     def test_remove(self, mock_subprocess: mock.MagicMock) -> None:
         self.pacman.remove(["fake-snapify"])
         mock_subprocess.assert_called_once_with(
-            [_SUDO_BIN, _PACMAN_BIN, "-Rs", "fake-snapify"]
+            [_SUDO_BIN, _PACMAN_BIN, "-Rs", "fake-snapify"],
         )
 
     @mock.patch("subprocess.check_call")
     def test_purge(self, mock_subprocess: mock.MagicMock) -> None:
         self.pacman.remove(["fake-snapify"], purge=True)
         mock_subprocess.assert_called_once_with(
-            [_SUDO_BIN, _PACMAN_BIN, "-Rsn", "fake-snapify"]
+            [_SUDO_BIN, _PACMAN_BIN, "-Rsn", "fake-snapify"],
         )
 
     @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     @mock.patch("subprocess.check_call")
     def test_remove_noninteractive(
-        self, mock_subprocess: mock.MagicMock, mock_get_executable: mock.MagicMock
+        self,
+        mock_subprocess: mock.MagicMock,
+        mock_get_executable: mock.MagicMock,
     ) -> None:
         mock_get_executable.side_effect = self._default_get_executable
         self.pacman = pacman.Pacman(noninteractive=True, ignored_packages=[])
         self.pacman.remove(["fake-snapify"])
         mock_subprocess.assert_called_once_with(
-            [_SUDO_BIN, _PACMAN_BIN, "-Rs", "--noconfirm", "fake-snapify"]
+            [_SUDO_BIN, _PACMAN_BIN, "-Rs", "--noconfirm", "fake-snapify"],
         )
 
     @mock.patch("snapify.pysnapify.manager.utils.get_executable")
     @mock.patch("subprocess.check_call")
     def test_purge_noninteractive(
-        self, mock_subprocess: mock.MagicMock, mock_get_executable: mock.MagicMock
+        self,
+        mock_subprocess: mock.MagicMock,
+        mock_get_executable: mock.MagicMock,
     ) -> None:
         mock_get_executable.side_effect = self._default_get_executable
         self.pacman = pacman.Pacman(noninteractive=True, ignored_packages=[])
         self.pacman.remove(["fake-snapify"], purge=True)
         mock_subprocess.assert_called_once_with(
-            [_SUDO_BIN, _PACMAN_BIN, "-Rsn", "--noconfirm", "fake-snapify"]
+            [_SUDO_BIN, _PACMAN_BIN, "-Rsn", "--noconfirm", "fake-snapify"],
         )
 
 

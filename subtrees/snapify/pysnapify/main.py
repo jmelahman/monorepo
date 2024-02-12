@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+from __future__ import annotations
+
 import logging
 import os
 
@@ -6,7 +7,8 @@ from .constants import NONINTERACTIVE_DEFAULT
 from .snapifier import Snapifier
 
 logging.basicConfig(
-    format="%(levelname)s: %(message)s", level=os.environ.get("LOGLEVEL", "INFO")
+    format="%(levelname)s: %(message)s",
+    level=os.environ.get("LOGLEVEL", "INFO"),
 )
 
 

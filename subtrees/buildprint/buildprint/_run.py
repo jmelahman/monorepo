@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from concurrent import futures
-import io
 import itertools
 import subprocess
 import tempfile
@@ -13,6 +12,8 @@ from buildprint import _logging
 import pybazel
 
 if TYPE_CHECKING:
+    import io
+
     from pybazel.models.label import Label
 
 logger = _logging.getLogger(__name__)
@@ -22,7 +23,7 @@ _BUILDKITE = "buildkite"
 _SUPPORTED_PLATFORMS = frozenset(
     [
         _BUILDKITE,
-    ]
+    ],
 )
 _BUILD = "build"
 _RUN = "run"
@@ -81,15 +82,16 @@ class PipelineBuilder:
         options_str = " ".join(bazel_matrix.get("options", []))
         bazel_matrix_key = "commands" if subcommand == _RUN else "universes"
         positive_filters, negative_filters = self._parse_tag_filters(
-            bazel_matrix.get("tag_filters", [])
+            bazel_matrix.get("tag_filters", []),
         )
         for universe, config in itertools.product(
-            bazel_matrix[bazel_matrix_key], bazel_matrix.get("configs", [""])
+            bazel_matrix[bazel_matrix_key],
+            bazel_matrix.get("configs", [""]),
         ):
             positive_adjusted_filters = positive_filters.copy()
             negative_adjusted_filters = negative_filters.copy()
             for adjustment in adjustments:
-                if not adjustment["config"] == config:
+                if adjustment["config"] != config:
                     continue
                 (
                     positive_adjusted_filters,
@@ -116,7 +118,7 @@ class PipelineBuilder:
                     targets=targets,
                     options=options_str,
                     config=f"--config={config}" if config else "",
-                )
+                ),
             )
         return tasks
 
@@ -130,18 +132,18 @@ class PipelineBuilder:
         bazel_run_matrix = task.get("bazel_run_matrix")
         if bazel_run_matrix:
             return self.generate_bazel_matrix(bazel_run_matrix, _RUN)
-        raise ValueError(f"Unknown task: {task}")
+        raise ValueError(f"Unknown task: {task}")  # noqa: EM102
 
     def upload_targets_artifact(self, targets: Iterable[Label]) -> str:
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
             tmp.write("\n".join([target.name for target in targets]).encode())
             tmp.seek(0)
             if self.dry_run:
-                logger.info(f"Would have uploaded file: {tmp.name}")
-                logger.debug("Target file contained:\n{!r}".format(tmp.read()))
+                logger.info(f"Would have uploaded file: {tmp.name}")  # noqa: G004
+                logger.debug(f"Target file contained:\n{tmp.read()!r}")  # noqa: G004
             else:
                 subprocess.check_call(
-                    ["buildkite-agent", "artifact", "upload", tmp.name]
+                    ["buildkite-agent", "artifact", "upload", tmp.name],
                 )
             return tmp.name.lstrip("/")
 
@@ -152,14 +154,13 @@ class PipelineBuilder:
                     f"{parsed_task.command} {parsed_task.options} {parsed_task.config} {parsed_task.targets}",
                 ],
             }
-        else:
-            artifact_name = self.upload_targets_artifact(parsed_task.targets)
-            return {
-                "commands": [
-                    f"buildkite-agent artifact download {artifact_name}",
-                    f"{parsed_task.command} {parsed_task.options} {parsed_task.config} --target_pattern_file {artifact_name}",
-                ],
-            }
+        artifact_name = self.upload_targets_artifact(parsed_task.targets)
+        return {
+            "commands": [
+                f"buildkite-agent artifact download {artifact_name}",
+                f"{parsed_task.command} {parsed_task.options} {parsed_task.config} --target_pattern_file {artifact_name}",
+            ],
+        }
 
     def upload_buildkite_step(self, step: BazelTask) -> None:
         if not step.targets:
@@ -167,7 +168,7 @@ class PipelineBuilder:
         steps = {
             "steps": [
                 self.translate_to_buildkite_step(step),
-            ]
+            ],
         }
         if self.dry_run:
             logger.info("Would have upload:")

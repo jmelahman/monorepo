@@ -1,8 +1,30 @@
-[tool.ruff]
-ignore = ["E402", "E501"]
+[tool.ruff.lint]
+ignore = [
+    "ANN101",
+    "ANN401",
+    "D",
+    "E402",
+    "E501",
+    "ERA001",
+    "FIX002",
+    "FBT001", # Boolean-typed positional argument in function definition
+    "INP001",
+    "PT",  # pytest-related errors
+    "PTH",
+    "S101",
+    "S603",
+    "S607",
+    "SLF001",
+    "T201",  # `print` found
+    "TD",
+    "TRY003",
+]
+select = ["ALL"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 # Google config: https://pycqa.github.io/isort/docs/configuration/profiles.html#google
 force-single-line=true
 force-sort-within-sections=true
 order-by-type=false
+single-line-exclusions = ["typing", "collections.abc"]
+required-imports = ["from __future__ import annotations"]
