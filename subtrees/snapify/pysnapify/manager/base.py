@@ -7,7 +7,10 @@ from . import utils
 
 class PackageManager(abc.ABC):
     def __init__(
-        self, noninteractive: bool, ignored_packages: list[str], name: str,
+        self,
+        noninteractive: bool,
+        ignored_packages: list[str],
+        name: str,
     ) -> None:
         self.name = name
         self._not_available = ignored_packages

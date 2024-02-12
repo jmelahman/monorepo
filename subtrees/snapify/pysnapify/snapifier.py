@@ -67,9 +67,7 @@ class Snapifier:
 
     def get_host_package_manager(self) -> PackageManager:
         ignored_packages = self._get_ignored_packages()
-        if (
-            self._distro in (SupportedDistro.ARCH, SupportedDistro.MANJARO)
-        ):
+        if self._distro in (SupportedDistro.ARCH, SupportedDistro.MANJARO):
             return Pacman(self._noninteractive, ignored_packages)
         raise RuntimeError(
             f"Unable register host package manager for: {self._distro.value}",  # noqa: EM102
