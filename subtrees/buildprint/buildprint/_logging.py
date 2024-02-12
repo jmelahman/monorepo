@@ -46,7 +46,10 @@ class ColorFormatter(logging.Formatter):
 
 
 def getLogger(  # noqa: N802
-    name: str = "root", loglevel: LogLevel = LogLevel.INFO, *args: Any, **kwargs: Any,
+    name: str = "root",
+    loglevel: LogLevel = LogLevel.INFO,
+    *args: Any,
+    **kwargs: Any,
 ) -> logging.Logger:
     show_timestamps = bool(kwargs.pop("timestamps", False))
     logger = logging.getLogger(name, *args, **kwargs)

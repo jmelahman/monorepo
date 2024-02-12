@@ -37,5 +37,7 @@ class BazelClient:
         configuration_options: list[str] | None = ...,
     ) -> str: ...
     def query(
-        self, query_string: str, query_options: Sequence[str] | None = ...,
+        self,
+        query_string: str,
+        query_options: Sequence[str] | None = ...,
     ) -> list[Label]: ...
