@@ -12,16 +12,13 @@ build --worker_sandboxing
 #build --remote_cache=grpcs://remote.buildbuddy.io
 #build --remote_timeout=3600
 build --experimental_remote_cache_compression
-build --experimental_remote_cache_async
+# NOTE: This is broken until bazel 7.
+# build --experimental_remote_cache_async
 build --experimental_remote_merkle_tree_cache
 
 ## C++ Toolchain
 build --repo_env=CC=gcc
 build:clang --repo_env=CC=clang
-
-## Mypy Integration
-build:mypy --aspects @mypy_integration//:mypy.bzl%mypy_aspect
-build:mypy --output_groups=+mypy
 
 ## Base sanitizer
 build:sanitizer -c dbg
