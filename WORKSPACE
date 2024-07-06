@@ -10,131 +10,101 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "97e70364e9249702246c0e9444bccdc4b847bed1eb03c5a3ece4f83dfe6abc44",
+    sha256 = "bc283cdfcd526a52c3201279cda4bc298652efa898b10b4db0837dc51652756f",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
     ],
 )
-
-BUILDIFIER_VERSION = "0.4.1"
-
-http_archive(
-    name = "buildifier_prebuilt",
-    sha256 = "c0c8a5e6caf9a99b037e77ed7a5f17615d50881d0d93de3e85c014705f7914fd",
-    strip_prefix = "buildifier-prebuilt-{}".format(BUILDIFIER_VERSION),
-    urls = [
-        "http://github.com/keith/buildifier-prebuilt/archive/{}.tar.gz".format(BUILDIFIER_VERSION),
-    ],
-)
-
-load("@buildifier_prebuilt//:deps.bzl", "buildifier_prebuilt_deps")
-
-buildifier_prebuilt_deps()
 
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
 bazel_skylib_workspace()
 
-load("@buildifier_prebuilt//:defs.bzl", "buildifier_prebuilt_register_toolchains")
-
-buildifier_prebuilt_register_toolchains()
+http_archive(
+    name = "rules_cc",
+    sha256 = "2037875b9a4456dce4a79d112a8ae885bbc4aad968e6587dca6e64f3a0900cdf",
+    strip_prefix = "rules_cc-0.0.9",
+    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.9/rules_cc-0.0.9.tar.gz"],
+)
 
 ##############################################################################
 # Python
 ##############################################################################
-rules_python_version = "0.16.2"
+rules_python_version = "0.34.0"
 
 http_archive(
     name = "rules_python",
-    sha256 = "48a838a6e1983e4884b26812b2c748a35ad284fd339eb8e2a6f3adf95307fbcd",
+    sha256 = "778aaeab3e6cfd56d681c89f5c10d7ad6bf8d2f1a72de9de55b23081b2d31618",
     strip_prefix = "rules_python-{version}".format(version = rules_python_version),
     url = "https://github.com/bazelbuild/rules_python/archive/{version}.tar.gz".format(
         version = rules_python_version,
     ),
 )
 
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
 load("@rules_python//python:repositories.bzl", "python_register_toolchains")
 
 python_register_toolchains(
-    name = "python3_10",
-    python_version = "3.10",
+    name = "python3_12",
+    python_version = "3.12",
 )
 
-load("@python3_10//:defs.bzl", "interpreter")
+load("@python3_12//:defs.bzl", "interpreter")
 
-http_archive(
-    name = "com_github_ali5h_rules_pip",
-    sha256 = "338d51b44ebfda06b92b7e2bc5b384b807e1d344d96db35024432c66574e0532",
-    strip_prefix = "rules_pip-3c70d698676fcc309c8ec24c996252beaa560efd",
-    urls = ["https://github.com/ali5h/rules_pip/archive/3c70d698676fcc309c8ec24c996252beaa560efd.tar.gz"],
-)
+load("@rules_python//python:pip.bzl", "pip_parse")
 
-load("@com_github_ali5h_rules_pip//:defs.bzl", "pip_import")
-
-pip_import(
+pip_parse(
     name = "pip_deps",
-    python_interpreter = "python3.10",
-    requirements = "//:third_party/requirements.txt",
+    python_interpreter_target = interpreter,
+    requirements_lock = "//third_party:requirements.txt",
 )
 
-load("@pip_deps//:requirements.bzl", "pip_install")
+load("@pip_deps//:requirements.bzl", "install_deps")
 
-pip_install()
-
-# Altering overrides causes all packages to be rebuilt, so use a separate name
-# for internal imports, so most stay incrementally fetched.
-pip_import(
-    name = "pip_deps_internal",
-    # overrides = {
-    #     "@//pybazel:pkg": "pybazel",
-    # },
-    python_interpreter = "python3.10",
-    requirements = "//:third_party/requirements.txt",
-)
-
-load("@pip_deps_internal//:requirements.bzl", pip_install_internal = "pip_install")
-
-pip_install_internal()
+install_deps()
 
 ##############################################################################
 # Mypy
 ##############################################################################
-mypy_integration_version = "c1193a230e3151b89d2e9ed05b986da34075c280"  # HEAD
-
-http_archive(
-    name = "mypy_integration",
-    patch_args = ["-p1"],
-    patches = [
-        "@//:third_party/mypy_integration-stubs.patch",
-        "@//:third_party/mypy_integration-site_packages.patch",
-    ],
-    sha256 = "2014c4758da248f316b15c95f5e3be2978faacf137042de6586e0a8152b91946",
-    strip_prefix = "bazel-mypy-integration-{version}".format(
-        version = mypy_integration_version,
-    ),
-    url = "https://github.com/thundergolfer/bazel-mypy-integration/archive/{version}.tar.gz".format(
-        version = mypy_integration_version,
-    ),
-)
-
-load(
-    "@mypy_integration//repositories:repositories.bzl",
-    mypy_integration_repositories = "repositories",
-)
-
-mypy_integration_repositories()
-
-load("@mypy_integration//:config.bzl", "mypy_configuration")
-
-mypy_configuration("//tools/typing:mypy.ini")
-
-load("@mypy_integration//repositories:deps.bzl", mypy_integration_deps = "deps")
-
-mypy_integration_deps(
-    mypy_requirements_file = "//tools/typing:mypy-requirements.txt",
-    python_interpreter_target = interpreter,
-)
+#mypy_integration_version = "c1193a230e3151b89d2e9ed05b986da34075c280"  # HEAD
+#
+#http_archive(
+#    name = "mypy_integration",
+#    patch_args = ["-p1"],
+#    patches = [
+#        "@//:third_party/mypy_integration-stubs.patch",
+#        "@//:third_party/mypy_integration-site_packages.patch",
+#    ],
+#    sha256 = "2014c4758da248f316b15c95f5e3be2978faacf137042de6586e0a8152b91946",
+#    strip_prefix = "bazel-mypy-integration-{version}".format(
+#        version = mypy_integration_version,
+#    ),
+#    url = "https://github.com/thundergolfer/bazel-mypy-integration/archive/{version}.tar.gz".format(
+#        version = mypy_integration_version,
+#    ),
+#)
+#
+#load(
+#    "@mypy_integration//repositories:repositories.bzl",
+#    mypy_integration_repositories = "repositories",
+#)
+#
+#mypy_integration_repositories()
+#
+#load("@mypy_integration//:config.bzl", "mypy_configuration")
+#
+#mypy_configuration("//tools/typing:mypy.ini")
+#
+#load("@mypy_integration//repositories:deps.bzl", mypy_integration_deps = "deps")
+#
+#mypy_integration_deps(
+#    mypy_requirements_file = "//tools/typing:mypy-requirements.txt",
+#    python_interpreter_target = interpreter,
+#)
 
 ##############################################################################
 # gtest
@@ -186,38 +156,38 @@ http_archive(
 ##############################################################################
 # LaTeX
 ##############################################################################
-BAZEL_LATEX_VERSION = "1.0"
-
-http_archive(
-    name = "bazel_latex",
-    sha256 = "f81604ec9318364c05a702798c5507c6e5257e851d58237d5f171eeca4d6e2db",
-    strip_prefix = "bazel-latex-{}".format(BAZEL_LATEX_VERSION),
-    url = "https://github.com/ProdriveTechnologies/bazel-latex/archive/v{}.tar.gz".format(
-        BAZEL_LATEX_VERSION,
-    ),
-)
-
-load("@bazel_latex//:repositories.bzl", "latex_repositories")
-
-latex_repositories()
+#BAZEL_LATEX_VERSION = "1.2.1"
+#
+#http_archive(
+#    name = "bazel_latex",
+#    sha256 = "82c99edaca50f938cb4881650737174eefedac844350b530942b874540400610",
+#    strip_prefix = "bazel-latex-{}".format(BAZEL_LATEX_VERSION),
+#    url = "https://github.com/ProdriveTechnologies/bazel-latex/archive/v{}.tar.gz".format(
+#        BAZEL_LATEX_VERSION,
+#    ),
+#)
+#
+#load("@bazel_latex//:repositories.bzl", "latex_repositories")
+#
+#latex_repositories()
 
 ##############################################################################
 # Pandoc
 ##############################################################################
-BAZEL_PANDOC_VERSION = "51605c25d3ae69a5b325d9986ac7ce8c9741ffa9"
-
-http_archive(
-    name = "bazel_pandoc",
-    sha256 = "0fcfa6a461098c8b8b9ba2f2d236d7f7aed988953f303c22c8c9cf96eb0c651f",
-    strip_prefix = "bazel-pandoc-%s" % BAZEL_PANDOC_VERSION,
-    url = "https://github.com/ProdriveTechnologies/bazel-pandoc/archive/{}.tar.gz".format(
-        BAZEL_PANDOC_VERSION,
-    ),
-)
-
-load("@bazel_pandoc//:repositories.bzl", "pandoc_repositories")
-
-pandoc_repositories()
+#BAZEL_PANDOC_VERSION = "51605c25d3ae69a5b325d9986ac7ce8c9741ffa9"
+#
+#http_archive(
+#    name = "bazel_pandoc",
+#    sha256 = "0fcfa6a461098c8b8b9ba2f2d236d7f7aed988953f303c22c8c9cf96eb0c651f",
+#    strip_prefix = "bazel-pandoc-%s" % BAZEL_PANDOC_VERSION,
+#    url = "https://github.com/ProdriveTechnologies/bazel-pandoc/archive/{}.tar.gz".format(
+#        BAZEL_PANDOC_VERSION,
+#    ),
+#)
+#
+#load("@bazel_pandoc//:repositories.bzl", "pandoc_repositories")
+#
+#pandoc_repositories()
 
 ##############################################################################
 # Shellcheck
@@ -295,3 +265,30 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(version = "1.19.1")
+
+
+##############################################################################
+# Buildifier
+##############################################################################
+BUILDIFIER_VERSION = "0.4.1"
+
+http_archive(
+    name = "buildifier_prebuilt",
+    sha256 = "c0c8a5e6caf9a99b037e77ed7a5f17615d50881d0d93de3e85c014705f7914fd",
+    strip_prefix = "buildifier-prebuilt-{}".format(BUILDIFIER_VERSION),
+    urls = [
+        "http://github.com/keith/buildifier-prebuilt/archive/{}.tar.gz".format(BUILDIFIER_VERSION),
+    ],
+)
+
+load("@buildifier_prebuilt//:deps.bzl", "buildifier_prebuilt_deps")
+
+buildifier_prebuilt_deps()
+
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+
+bazel_skylib_workspace()
+
+load("@buildifier_prebuilt//:defs.bzl", "buildifier_prebuilt_register_toolchains")
+
+buildifier_prebuilt_register_toolchains()
