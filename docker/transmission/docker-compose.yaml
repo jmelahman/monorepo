@@ -1,0 +1,45 @@
+services:
+  transmission:
+    image: ghcr.io/linuxserver/transmission:latest
+    container_name: transmission
+    restart: always
+    ports:
+      - "9091:9091"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - USER=${TRANSMISSION_USER}
+      - PASS=${TRANSMISSION_PASS}
+    volumes:
+      - ./config:/config
+      - ./downloads:/downloads
+    depends_on:
+      - openvpn
+    networks:
+      - vpn_network
+
+  openvpn:
+    image: haugene/transmission-openvpn:latest
+    container_name: openvpn
+    restart: always
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./openvpn/config:/etc/openvpn/custom
+      - ./transmission/downloads:/downloads
+    environment:
+      - OPENVPN_PROVIDER=PIA
+      - OPENVPN_CONFIG=us_california
+      - OPENVPN_USERNAME=${PIA_USERNAME}
+      - OPENVPN_PASSWORD=${PIA_PASSWORD}
+      - LOCAL_NETWORK=${LOCAL_NETWORK}
+    ports:
+      - "8888:8888"
+    networks:
+      - vpn_network
+
+networks:
+  vpn_network:
+    driver: bridge
+
