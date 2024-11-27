@@ -22,6 +22,9 @@ type ClockInCommand struct {
 type ClockOutCommand struct {
 }
 
+type InstallCompleteCommand struct {
+}
+
 type ReportCommand struct {
 }
 
@@ -176,36 +179,41 @@ func main() {
 	var opts Options
 	var clockIn ClockInCommand
 	var clockOut ClockOutCommand
+	var installComplete InstallCompleteCommand
 	var report ReportCommand
 	var status StatusCommand
 
 	parser := flags.NewParser(&opts, flags.Default)
 	parser.AddCommand("clock-in", "Clock in", "Clock in to a shift", &clockIn)
 	parser.AddCommand("clock-out", "Clock Out", "Clock out of a shift", &clockOut)
+	parser.AddCommand("install-completion", "Install Autocomplete", "Install shell autocompletion", &installComplete)
 	parser.AddCommand("report", "Report", "Print report", &report)
 	parser.AddCommand("status", "Status", "Print current shift", &status)
 
 	cmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
-			"--help":               predict.Nothing,
-			"--install-completion": predict.Nothing,
+			"--help": predict.Nothing,
 		},
 		Sub: map[string]*complete.Command{
-			"clock-in":  nil,
-			"clock-out": nil,
-			"report":    nil,
-			"status":    nil,
+			"clock-in":           nil,
+			"clock-out":          nil,
+			"install-completion": nil,
+			"report":             nil,
+			"status":             nil,
 		},
 	}
 	cmd.Complete("work")
 
-	if len(os.Args) == 1 {
+	if len(os.Args) == 0 {
 		parser.WriteHelp(os.Stderr)
 		os.Exit(2)
 	}
 
 	_, err := parser.Parse()
 	if err != nil {
+		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			os.Exit(0)
+		}
 		os.Exit(2)
 	}
 
@@ -220,6 +228,8 @@ func main() {
 		handleReport()
 	case "status":
 		handleStatus(status)
+	case "install-completion":
+		install.Install("work")
 	default:
 		parser.WriteHelp(os.Stderr)
 		os.Exit(2)
