@@ -100,7 +100,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "clock-out":
-		if returncode, err = client.HandleClockOut(); err != nil {
+		if returncode, err = client.HandleClockOut(dal); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "install-completion":
@@ -118,7 +118,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "task":
-		if returncode, err = client.HandleTask(args); err != nil {
+		if returncode, err = client.HandleTask(dal, args); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	default:

@@ -22,51 +22,28 @@ func HandleClockIn(dal *database.WorkDAL) (int, error) {
 	}
 
 	now := time.Now()
-	if latestShift.ID {
+	if latestShift.ID == 0 {
 		shift = models.Shift{ID: 1, Start: now, End: now.Add(8 * time.Hour)}
 	} else if time.Until(latestShift.End) < 0 {
 		shift = models.Shift{ID: latestShift.ID + 1, Start: now, End: now.Add(8 * time.Hour)}
 	} else {
 		return 0, nil
 	}
-	dal.CreateShift(shift)
+
+	err = dal.CreateShift(shift)
 	if err != nil {
 		return 1, err
 	}
 	return 0, nil
 }
 
-func HandleClockOut() (int, error) {
-	db, err := initializeDB()
+func HandleClockOut(dal *database.WorkDAL) (int, error) {
+	latestShift, err := dal.GetLatestShift()
 	if err != nil {
-		return 1, fmt.Errorf("failed to initialize database: %v", err)
+		return 1, err
 	}
-	defer db.Close()
-
-	rows, err := db.Query(`SELECT id, end FROM shift ORDER BY end DESC LIMIT 1`)
-	if err != nil {
-		return 1, fmt.Errorf("failed to query most recent shift: %v", err)
-	}
-	defer rows.Close()
-	if rows.Next() {
-		var (
-			id  int64
-			end string
-		)
-		if err = rows.Scan(&id, &end); err != nil {
-			return 1, fmt.Errorf("failed to scan shift: %v", err)
-		}
-		rows.Close()
-		endTime, err := time.Parse(time.UnixDate, end)
-		if err != nil {
-			return 1, fmt.Errorf("failed to parse end time: %v", err)
-		}
-		if time.Until(endTime) > 0 {
-			_, err := db.Exec(`UPDATE shift SET end=? WHERE id=?`, time.Now().Format(time.UnixDate), id)
-			if err != nil {
-				return 1, fmt.Errorf("failed to close out shift: %v", err)
-			}
-		}
+	if latestShift.ID != 0 && time.Until(latestShift.End) > 0 {
+		dal.EndShift(latestShift.ID)
 	}
 	return 0, nil
 }
@@ -76,17 +53,11 @@ func HandleList(dal *database.WorkDAL) (int, error) {
 	if err != nil {
 		return 1, err
 	}
+
 	fmt.Printf("id, description, start, end\n")
 	for _, t := range tasks {
 		fmt.Printf("%d %v %v %v\n", t.ID, t.Description, t.Start.Format(time.DateTime), t.End.Format(time.DateTime))
 	}
-	// var tasks []Task
-	// for rows.Next() {
-	// }
-	// if err = rows.Scan(&id, &end); err != nil {
-	// 	return 1, fmt.Errorf("failed to scan tasks: %v", err)
-	// }
-	// rows.Close()
 	return 0, nil
 }
 
@@ -139,7 +110,7 @@ func HandleStatus(quiet bool) (int, error) {
 	return 1, nil
 }
 
-func HandleTask(args []string) (int, error) {
+func HandleTask(dal *database.WorkDAL, args []string) (int, error) {
 	if len(args) > 1 {
 		return 2, fmt.Errorf("too many arguments")
 	}
@@ -148,7 +119,7 @@ func HandleTask(args []string) (int, error) {
 	//}
 	var description = args[0]
 
-	returncode, err := HandleClockIn()
+	returncode, err := HandleClockIn(dal)
 	if err != nil {
 		return returncode, err
 	}

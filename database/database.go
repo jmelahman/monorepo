@@ -11,20 +11,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type Database interface {
-	// // Task
-	// StartTask(shift models.Task) (int, error)
-	// GetLatestTask() (models.Task, error)
-	// EndTask(id models.Task.ID) error
-	ListTask() ([]models.Task, error)
-	// // Shift
-	// StartShift(shift models.Shift) (int, error)
-	CreateShift(models.Shift) error
-	GetLatestShift() (models.Shift, error)
-	// EndShift(id models.Shift.ID) error
-	ListShifts() ([]models.Shift, error)
-}
-
 type WorkDAL struct {
 	db *sql.DB
 }
@@ -106,8 +92,8 @@ func (dal *WorkDAL) ListTasks() ([]models.Task, error) {
 func (dal *WorkDAL) CreateShift(shift models.Shift) error {
 	_, err := dal.db.Exec(`INSERT INTO shift (id, start, end) VALUES (?, ?, ?)`,
 		shift.ID,
-		shift.Start,
-		shift.End,
+		shift.Start.Format(time.UnixDate),
+		shift.End.Format(time.UnixDate),
 	)
 	if err != nil {
 		return err
@@ -115,8 +101,16 @@ func (dal *WorkDAL) CreateShift(shift models.Shift) error {
 	return nil
 }
 
+func (dal *WorkDAL) EndShift(id int) error {
+	_, err := dal.db.Exec(`UPDATE shift SET end=? WHERE id=?`, time.Now().Format(time.UnixDate), id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (dal *WorkDAL) GetLatestShift() (models.Shift, error) {
-	var shift models.Shift
+	shift := models.Shift{}
 
 	rows, err := dal.db.Query(`SELECT id, start, end FROM shift ORDER BY end DESC LIMIT 1`)
 	if err != nil {
