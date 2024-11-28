@@ -1,4 +1,4 @@
-module lahman.dev/clock
+module github.com/jmelahman/work
 
 go 1.23.2
 
