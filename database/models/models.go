@@ -5,14 +5,14 @@ import (
 )
 
 type Shift struct {
-	id    int
-	start time.Time
-	end   time.Time
+	ID    int       `json:"id"`
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
 }
 
 type Task struct {
-	id          int
-	description string
-	start       time.Time
-	end         time.Time
+	ID          int       `json:"id"`
+	Description string    `json:"description"`
+	Start       time.Time `json:"start"`
+	End         time.Time `json:"end"`
 }

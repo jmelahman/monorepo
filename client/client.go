@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"fmt"
@@ -8,53 +8,11 @@ import (
 
 	"database/sql"
 
-	"database/models"
-	"github.com/jessevdk/go-flags"
-	"github.com/posener/complete/v2"
-	"github.com/posener/complete/v2/install"
-	"github.com/posener/complete/v2/predict"
+	"github.com/jmelahman/go-work/database"
 	_ "modernc.org/sqlite"
 )
 
-type Options struct {
-}
-
-type ClockInCommand struct {
-}
-
-type ClockOutCommand struct {
-}
-
-type InstallCompleteCommand struct {
-}
-
-type ListCommand struct {
-}
-
-type ReportCommand struct {
-}
-
-type StatusCommand struct {
-	Quiet bool `short:"q" long:"quiet" description:"Exit with status code"`
-}
-
-type TaskCommand struct {
-}
-
-type Shift struct {
-	id    int
-	start time.Time
-	end   time.Time
-}
-
-type Task struct {
-	id          int
-	description string
-	start       time.Time
-	end         time.Time
-}
-
-func handleClockIn() (int, error) {
+func HandleClockIn() (int, error) {
 	db, err := initializeDB()
 	if err != nil {
 		return 1, fmt.Errorf("failed to initialize database: %v", err)
@@ -103,7 +61,7 @@ func handleClockIn() (int, error) {
 	return 0, nil
 }
 
-func handleClockOut() (int, error) {
+func HandleClockOut() (int, error) {
 	db, err := initializeDB()
 	if err != nil {
 		return 1, fmt.Errorf("failed to initialize database: %v", err)
@@ -138,19 +96,15 @@ func handleClockOut() (int, error) {
 	return 0, nil
 }
 
-func handleList() (int, error) {
-	// db, err := initializeDB()
-	// if err != nil {
-	// 	return 1, fmt.Errorf("failed to initialize database: %v", err)
-	// }
-	// defer db.Close()
-
-	// rows, err = db.Query(`SELECT start, end FROM shift ORDER BY end DESC LIMIT 5`)
-	// if err != nil {
-	// 	return 1, fmt.Errorf("failed to query for shifts: %v", err)
-	// }
-	// defer rows.Close()
-
+func HandleList(dal *database.WorkDAL) (int, error) {
+	tasks, err := dal.ListTasks()
+	if err != nil {
+		return 1, err
+	}
+	fmt.Printf("id, description, start, end\n")
+	for _, t := range tasks {
+		fmt.Printf("%d %v %v %v\n", t.ID, t.Description, t.Start.Format(time.DateTime), t.End.Format(time.DateTime))
+	}
 	// var tasks []Task
 	// for rows.Next() {
 	// }
@@ -161,7 +115,7 @@ func handleList() (int, error) {
 	return 0, nil
 }
 
-func handleReport() (int, error) {
+func HandleReport() (int, error) {
 	db, err := initializeDB()
 	if err != nil {
 		return 1, fmt.Errorf("failed to initialize database: %v", err)
@@ -175,7 +129,7 @@ func handleReport() (int, error) {
 	return 1, fmt.Errorf("NOT IMPLEMENTED")
 }
 
-func handleStatus(status *StatusCommand) (int, error) {
+func HandleStatus(quiet bool) (int, error) {
 	db, err := initializeDB()
 	if err != nil {
 		panic(err)
@@ -197,29 +151,29 @@ func handleStatus(status *StatusCommand) (int, error) {
 			panic(err)
 		}
 		if time.Until(endTime) > 0 {
-			if status.Quiet != true {
+			if !quiet {
 				fmt.Printf("Hours left: %v\n", endTime.Format(time.TimeOnly))
 			}
 			return 0, nil
 		}
 	}
-	if status.Quiet != true {
+	if quiet != true {
 		fmt.Println("Not clocked in.")
 		return 0, nil
 	}
 	return 1, nil
 }
 
-func handleTask(args []string) (int, error) {
+func HandleTask(args []string) (int, error) {
 	if len(args) > 1 {
 		return 2, fmt.Errorf("too many arguments")
 	}
-	if len(args) == 0 {
-		return handleList()
-	}
+	//if len(args) == 0 {
+	//	return HandleList()
+	//}
 	var description = args[0]
 
-	returncode, err := handleClockIn()
+	returncode, err := HandleClockIn()
 	if err != nil {
 		return returncode, err
 	}
@@ -339,88 +293,4 @@ func initializeDB() (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
-}
-
-func main() {
-	var opts Options
-	var clockIn ClockInCommand
-	var clockOut ClockOutCommand
-	var installComplete InstallCompleteCommand
-	var list ListCommand
-	var report ReportCommand
-	var status StatusCommand
-	var task TaskCommand
-
-	parser := flags.NewParser(&opts, flags.Default)
-	parser.AddCommand("clock-in", "Clock in", "Clock in to a shift", &clockIn)
-	parser.AddCommand("clock-out", "Clock Out", "Clock out of a shift", &clockOut)
-	parser.AddCommand("install-completion", "Install Autocomplete", "Install shell autocompletion", &installComplete)
-	parser.AddCommand("list", "List Tasks", "List most recent tasks", &list)
-	parser.AddCommand("report", "Report", "Print report", &report)
-	parser.AddCommand("status", "Status", "Print current shift", &status)
-	parser.AddCommand("task", "Start Task", "Start a task", &task)
-
-	cmd := &complete.Command{
-		Flags: map[string]complete.Predictor{
-			"--help": predict.Nothing,
-		},
-		Sub: map[string]*complete.Command{
-			"clock-in":           nil,
-			"clock-out":          nil,
-			"install-completion": nil,
-			"report":             nil,
-			"status":             nil,
-			"task":               nil,
-		},
-	}
-	cmd.Complete("work")
-
-	if len(os.Args) == 0 {
-		parser.WriteHelp(os.Stderr)
-		os.Exit(2)
-	}
-
-	args, err := parser.Parse()
-	if err != nil {
-		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
-			os.Exit(0)
-		}
-		os.Exit(2)
-	}
-
-	command := os.Args[1]
-	var returncode int
-
-	switch command {
-	case "clock-in":
-		if returncode, err = handleClockIn(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-	case "clock-out":
-		if returncode, err = handleClockOut(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-	case "install-completion":
-		install.Install("work")
-	case "list":
-		if returncode, err = handleList(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-	case "report":
-		if returncode, err = handleReport(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-	case "status":
-		if returncode, err = handleStatus(&status); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-	case "task":
-		if returncode, err = handleTask(args); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-	default:
-		parser.WriteHelp(os.Stderr)
-		returncode = 2
-	}
-	os.Exit(returncode)
 }
