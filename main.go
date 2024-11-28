@@ -96,7 +96,7 @@ func main() {
 
 	switch command {
 	case "clock-in":
-		if returncode, err = client.HandleClockIn(); err != nil {
+		if returncode, err = client.HandleClockIn(dal); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "clock-out":

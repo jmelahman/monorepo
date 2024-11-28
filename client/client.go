@@ -9,54 +9,29 @@ import (
 	"database/sql"
 
 	"github.com/jmelahman/go-work/database"
+	"github.com/jmelahman/go-work/database/models"
 	_ "modernc.org/sqlite"
 )
 
-func HandleClockIn() (int, error) {
-	db, err := initializeDB()
-	if err != nil {
-		return 1, fmt.Errorf("failed to initialize database: %v", err)
-	}
-	defer db.Close()
+func HandleClockIn(dal *database.WorkDAL) (int, error) {
+	var shift models.Shift
 
-	rows, err := db.Query(`SELECT id, end FROM shift ORDER BY end DESC LIMIT 1`)
+	latestShift, err := dal.GetLatestShift()
 	if err != nil {
-		return 1, fmt.Errorf("failed to query most recent shift: %v", err)
+		return 1, err
 	}
-	if !rows.Next() {
-		rows.Close()
-		now := time.Now()
-		_, err := db.Exec(`INSERT INTO shift (id, start, end) VALUES (1, ?, ?)`,
-			now.Format(time.UnixDate),
-			now.Add(8*time.Hour).Format(time.UnixDate),
-		)
-		if err != nil {
-			return 1, fmt.Errorf("failed to start a new shift: %v", err)
-		}
+
+	now := time.Now()
+	if latestShift.ID {
+		shift = models.Shift{ID: 1, Start: now, End: now.Add(8 * time.Hour)}
+	} else if time.Until(latestShift.End) < 0 {
+		shift = models.Shift{ID: latestShift.ID + 1, Start: now, End: now.Add(8 * time.Hour)}
 	} else {
-		var (
-			id  int64
-			end string
-		)
-		if err = rows.Scan(&id, &end); err != nil {
-			return 1, fmt.Errorf("failed to scan shift: %v", err)
-		}
-		rows.Close()
-		now := time.Now()
-		endTime, err := time.Parse(time.UnixDate, end)
-		if err != nil {
-			return 1, fmt.Errorf("failed to parse time of shift: %v", err)
-		}
-		if time.Until(endTime) < 0 {
-			_, err := db.Exec(`INSERT INTO shift (id, start, end) VALUES (?, ?, ?)`,
-				id+1,
-				now.Format(time.UnixDate),
-				now.Add(8*time.Hour).Format(time.UnixDate),
-			)
-			if err != nil {
-				return 1, fmt.Errorf("failed to start a new shift: %v", err)
-			}
-		}
+		return 0, nil
+	}
+	dal.CreateShift(shift)
+	if err != nil {
+		return 1, err
 	}
 	return 0, nil
 }

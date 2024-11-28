@@ -19,7 +19,8 @@ type Database interface {
 	ListTask() ([]models.Task, error)
 	// // Shift
 	// StartShift(shift models.Shift) (int, error)
-	// GetLatestShift() (models.Shift, error)
+	CreateShift(models.Shift) error
+	GetLatestShift() (models.Shift, error)
 	// EndShift(id models.Shift.ID) error
 	ListShifts() ([]models.Shift, error)
 }
@@ -100,4 +101,48 @@ func (dal *WorkDAL) ListTasks() ([]models.Task, error) {
 		tasks = append(tasks, models.Task{ID: id, Description: description, Start: startTime, End: endTime})
 	}
 	return tasks, nil
+}
+
+func (dal *WorkDAL) CreateShift(shift models.Shift) error {
+	_, err := dal.db.Exec(`INSERT INTO shift (id, start, end) VALUES (?, ?, ?)`,
+		shift.ID,
+		shift.Start,
+		shift.End,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dal *WorkDAL) GetLatestShift() (models.Shift, error) {
+	var shift models.Shift
+
+	rows, err := dal.db.Query(`SELECT id, start, end FROM shift ORDER BY end DESC LIMIT 1`)
+	if err != nil {
+		return shift, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var (
+			id    int
+			start string
+			end   string
+		)
+		if err = rows.Scan(&id, &start, &end); err != nil {
+			return shift, err
+		}
+		startTime, err := time.Parse(time.UnixDate, start)
+		if err != nil {
+			return shift, fmt.Errorf("failed to parse start time: %v", err)
+		}
+		endTime, err := time.Parse(time.UnixDate, end)
+		if err != nil {
+			return shift, fmt.Errorf("failed to parse end time: %v", err)
+		}
+		return models.Shift{ID: id, Start: startTime, End: endTime}, nil
+
+	}
+	return shift, nil
 }
