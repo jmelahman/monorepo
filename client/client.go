@@ -6,8 +6,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/jmelahman/go-work/database"
-	"github.com/jmelahman/go-work/database/models"
+	"github.com/jmelahman/gwork/database"
+	"github.com/jmelahman/gwork/database/models"
 )
 
 func HandleClockIn(dal *database.WorkDAL) (int, error) {

@@ -28,7 +28,7 @@ class PostInstallCommand(install):
         install.run(self)
 
 setup(
-    name="go-work",
+    name="gwork",
     version="0.1.0",
     packages=[],
     include_package_data=True,

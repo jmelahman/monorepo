@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/jmelahman/go-work/client"
-	"github.com/jmelahman/go-work/database"
+	"github.com/jmelahman/gwork/client"
+	"github.com/jmelahman/gwork/database"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/install"
 	"github.com/posener/complete/v2/predict"
