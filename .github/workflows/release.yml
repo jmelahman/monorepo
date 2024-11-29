@@ -1,4 +1,4 @@
-name: CI
+name: Release
 
 on:
   push:
@@ -6,12 +6,35 @@ on:
       - "v*.*.*"
 
 jobs:
-  ci:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  pypi:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: actions/setup-go@v5
+        with:
+          go-version: stable
       - name: Install deps
         run: >-
           python -m pip install --upgrade pip &&
@@ -20,6 +43,3 @@ jobs:
         run: python -m build --wheel
       - name: Upload
         run: twine upload dist/*
-        env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
