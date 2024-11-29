@@ -1,6 +1,6 @@
-# gwork
+# work
 
-`gwork` is a stupid simple time tracker.
+`work` is a stupid simple time tracker.
 
 ## Install
 
@@ -9,5 +9,5 @@ pip install gwork
 ```
 
 ```
-go install github.com/jmelahman/gwork@latest
+go install github.com/jmelahman/work@latest
 ```

@@ -1,4 +1,4 @@
-module github.com/jmelahman/gwork
+module github.com/jmelahman/work
 
 go 1.23.2
 

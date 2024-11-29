@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jmelahman/gwork/database/models"
+	"github.com/jmelahman/work/database/models"
 	_ "modernc.org/sqlite"
 )
 
