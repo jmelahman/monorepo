@@ -29,7 +29,6 @@ class PostInstallCommand(install):
 
 setup(
     name="gwork",
-    version="0.1.0",
     packages=[],
     include_package_data=True,
     cmdclass={
@@ -44,5 +43,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    use_scm_version=True,
+    setup_requires=["setuptools>=42", "setuptools_scm"],
     python_requires=">=3.6",
 )
