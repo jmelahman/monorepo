@@ -110,15 +110,19 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "report":
-		if returncode, err = client.HandleReport(); err != nil {
+		if returncode, err = client.HandleReport(dal); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "status":
-		if returncode, err = client.HandleStatus(status.Quiet); err != nil {
+		if returncode, err = client.HandleStatus(dal, status.Quiet); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "task":
-		if returncode, err = client.HandleTask(dal, args); err != nil {
+		if len(args) != 1 {
+			fmt.Fprintln(os.Stderr, "Error: missing task name")
+			os.Exit(2)
+		}
+		if returncode, err = client.HandleTask(dal, args[0]); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	default:

@@ -58,8 +58,40 @@ func NewWorkDAL() (*WorkDAL, error) {
 	return dal, nil
 }
 
-func (dal *WorkDAL) ListTasks() ([]models.Task, error) {
-	rows, err := dal.db.Query(`SELECT id, description, start, end FROM task ORDER BY end DESC LIMIT 5`)
+func (dal *WorkDAL) CreateTask(task models.Task) error {
+	_, err := dal.db.Exec(`INSERT INTO task (id, description, start, end) VALUES (?, ?, ?, ?)`,
+		task.ID,
+		task.Description,
+		task.Start.Format(time.UnixDate),
+		task.End.Format(time.UnixDate),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dal *WorkDAL) EndTask(id int) error {
+	_, err := dal.db.Exec(`UPDATE task SET end=? WHERE id=?`, time.Now().Format(time.UnixDate), id)
+	if err != nil {
+		return fmt.Errorf("error closing previous task: %v", err)
+	}
+	return nil
+}
+
+func (dal *WorkDAL) GetLatestTask() (models.Task, error) {
+	tasks, err := dal.ListTasks(1)
+	if err != nil {
+		return models.Task{}, err
+	}
+	if len(tasks) == 0 {
+		return models.Task{}, nil
+	}
+	return tasks[0], nil
+}
+
+func (dal *WorkDAL) ListTasks(limit int) ([]models.Task, error) {
+	rows, err := dal.db.Query(`SELECT id, description, start, end FROM task ORDER BY end ASC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -110,33 +142,43 @@ func (dal *WorkDAL) EndShift(id int) error {
 }
 
 func (dal *WorkDAL) GetLatestShift() (models.Shift, error) {
-	shift := models.Shift{}
-
-	rows, err := dal.db.Query(`SELECT id, start, end FROM shift ORDER BY end DESC LIMIT 1`)
+	shifts, err := dal.ListShifts(1)
 	if err != nil {
-		return shift, err
+		return models.Shift{}, err
+	}
+	if len(shifts) == 0 {
+		return models.Shift{}, nil
+	}
+	return shifts[0], nil
+}
+
+func (dal *WorkDAL) ListShifts(limit int) ([]models.Shift, error) {
+	shifts := []models.Shift{}
+
+	rows, err := dal.db.Query(`SELECT id, start, end FROM shift ORDER BY end ASC LIMIT ?`, limit)
+	if err != nil {
+		return shifts, err
 	}
 	defer rows.Close()
 
-	if rows.Next() {
+	for rows.Next() {
 		var (
 			id    int
 			start string
 			end   string
 		)
 		if err = rows.Scan(&id, &start, &end); err != nil {
-			return shift, err
+			return shifts, err
 		}
 		startTime, err := time.Parse(time.UnixDate, start)
 		if err != nil {
-			return shift, fmt.Errorf("failed to parse start time: %v", err)
+			return shifts, fmt.Errorf("failed to parse start time: %v", err)
 		}
 		endTime, err := time.Parse(time.UnixDate, end)
 		if err != nil {
-			return shift, fmt.Errorf("failed to parse end time: %v", err)
+			return shifts, fmt.Errorf("failed to parse end time: %v", err)
 		}
-		return models.Shift{ID: id, Start: startTime, End: endTime}, nil
-
+		shifts = append(shifts, models.Shift{ID: id, Start: startTime, End: endTime})
 	}
-	return shift, nil
+	return shifts, nil
 }
