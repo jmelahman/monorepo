@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/jmelahman/go-work/client"
@@ -37,6 +38,9 @@ type StatusCommand struct {
 }
 
 type TaskCommand struct {
+	Positional struct {
+		Description []string `positional-arg-name:"description" description:"Description of the task"`
+	} `positional-args:"yes"`
 }
 
 func main() {
@@ -52,11 +56,11 @@ func main() {
 	parser := flags.NewParser(&opts, flags.Default)
 	parser.AddCommand("clock-in", "Clock in", "Clock in to a shift", &clockIn)
 	parser.AddCommand("clock-out", "Clock Out", "Clock out of a shift", &clockOut)
-	parser.AddCommand("install-completion", "Install Autocomplete", "Install shell autocompletion", &installComplete)
-	parser.AddCommand("list", "List Tasks", "List most recent tasks", &list)
-	parser.AddCommand("report", "Report", "Print report", &report)
-	parser.AddCommand("status", "Status", "Print current shift", &status)
-	parser.AddCommand("task", "Start Task", "Start a task", &task)
+	parser.AddCommand("install-completion", "Install autocomplete", "Install shell autocompletion", &installComplete)
+	parser.AddCommand("list", "List most recent tasks", "List most recent tasks", &list)
+	parser.AddCommand("report", "Generate a weekly report", "Generate a weekly report", &report)
+	parser.AddCommand("status", "Print current shift and task status", "Print current shift and task status", &status)
+	parser.AddCommand("task", "Start a new Task", "Start a new task", &task)
 
 	cmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
@@ -78,7 +82,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	args, err := parser.Parse()
+	_, err := parser.Parse()
 	if err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)
@@ -118,11 +122,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "task":
-		if len(args) != 1 {
-			fmt.Fprintln(os.Stderr, "Error: missing task name")
+		if task.Positional.Description == nil {
+			fmt.Println("Error: The 'task' argument is required.")
+			parser.WriteHelp(os.Stderr)
 			os.Exit(2)
 		}
-		if returncode, err = client.HandleTask(dal, args[0]); err != nil {
+		if returncode, err = client.HandleTask(dal, strings.Join(task.Positional.Description, " ")); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	default:
