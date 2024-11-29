@@ -2,6 +2,8 @@ package client
 
 import (
 	"fmt"
+	"os"
+	"text/tabwriter"
 	"time"
 
 	"github.com/jmelahman/go-work/database"
@@ -49,10 +51,13 @@ func HandleList(dal *database.WorkDAL) (int, error) {
 		return 1, err
 	}
 
-	fmt.Printf("id, description, start, end\n")
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 0, 8, 0, '\t', 0)
+	fmt.Fprintln(w, "description\tstart\tend")
 	for _, t := range tasks {
-		fmt.Printf("%d %v %v %v\n", t.ID, t.Description, t.Start.Format(time.DateTime), t.End.Format(time.DateTime))
+		fmt.Fprintf(w, "%v\t%v\t%v\n", t.Description, t.Start.Format(time.DateTime), t.End.Format(time.DateTime))
 	}
+	w.Flush()
 	return 0, nil
 }
 
