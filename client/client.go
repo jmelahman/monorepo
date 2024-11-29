@@ -6,7 +6,6 @@ import (
 
 	"github.com/jmelahman/go-work/database"
 	"github.com/jmelahman/go-work/database/models"
-	_ "modernc.org/sqlite"
 )
 
 func HandleClockIn(dal *database.WorkDAL) (int, error) {
@@ -20,8 +19,13 @@ func HandleClockIn(dal *database.WorkDAL) (int, error) {
 	}
 
 	now := time.Now()
-	shift := models.Shift{ID: latestShift.ID + 1, Start: now, End: now.Add(8 * time.Hour)}
-	err = dal.CreateShift(shift)
+	err = dal.CreateShift(
+		models.Shift{
+			ID:    latestShift.ID + 1,
+			Start: now,
+			End:   now.Add(8 * time.Hour),
+		},
+	)
 	if err != nil {
 		return 1, err
 	}
