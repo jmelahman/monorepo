@@ -14,10 +14,9 @@ $ work list
 08:19 - 08:29   Work    First task of the day   0h 10min
 
 $ work status
-Hours left:   6h 39min
 Current task: "Second task of the day"
 
-$ work clock-out
+$ work stop
 ```
 
 ## Usage
@@ -46,7 +45,7 @@ The previous task will end when a new task begins.
 Similarly, a task can be stopped explicitly with,
 
 ```shell
-work clock-out
+work stop
 ```
 
 `work status`, `work list`, and `work report` are available to analyze current and previous tasks.

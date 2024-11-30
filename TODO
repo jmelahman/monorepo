@@ -1,12 +1,7 @@
 Features:
-Improve `list` and `report` including task breakdown by classification.
-Maybe implement an `amend` subcommand.
+Improve `report` including task breakdown by classification.
+Maybe implement a `amend` subcommand.
 
 Bugs:
 Autocompleting flags is wonky.
 Improve error handling around database file.
-
-Tech debt:
-Delete the shifts table.
-Delete the clock-in subcommand.
-Rename clock-out to stop.

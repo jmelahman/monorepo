@@ -68,45 +68,6 @@ func TestEndTask(t *testing.T) {
 	assert.NotZero(t, latestTask.End)
 }
 
-func TestCreateShift(t *testing.T) {
-	dal := setupTestDB(t)
-
-	shift := models.Shift{
-		ID:    1,
-		Start: time.Now(),
-		End:   time.Now().Add(8 * time.Hour),
-	}
-
-	err := dal.CreateShift(shift)
-	assert.NoError(t, err)
-
-	shifts, err := dal.ListShifts(1, 0)
-	assert.NoError(t, err)
-	assert.Len(t, shifts, 1)
-	assert.Equal(t, 1, shifts[0].ID)
-}
-
-func TestEndShift(t *testing.T) {
-	dal := setupTestDB(t)
-
-	startTime := time.Now()
-	shift := models.Shift{
-		ID:    1,
-		Start: startTime,
-		End:   startTime.Add(8 * time.Hour),
-	}
-
-	err := dal.CreateShift(shift)
-	assert.NoError(t, err)
-
-	err = dal.EndShift(1)
-	assert.NoError(t, err)
-
-	latestShift, err := dal.GetLatestShift()
-	assert.NoError(t, err)
-	assert.NotZero(t, latestShift.End)
-}
-
 func TestListTasks(t *testing.T) {
 	dal := setupTestDB(t)
 
@@ -124,22 +85,4 @@ func TestListTasks(t *testing.T) {
 	tasks, err := dal.ListTasks(2, 0)
 	assert.NoError(t, err)
 	assert.Len(t, tasks, 2)
-}
-
-func TestListShifts(t *testing.T) {
-	dal := setupTestDB(t)
-
-	for i := 1; i <= 3; i++ {
-		shift := models.Shift{
-			ID:    i,
-			Start: time.Now(),
-			End:   time.Now().Add(time.Duration(i) * time.Hour),
-		}
-		err := dal.CreateShift(shift)
-		assert.NoError(t, err)
-	}
-
-	shifts, err := dal.ListShifts(2, 0)
-	assert.NoError(t, err)
-	assert.Len(t, shifts, 2)
 }

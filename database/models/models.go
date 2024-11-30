@@ -17,12 +17,6 @@ func (tc TaskClassification) String() string {
 	return [...]string{"Break", "Chore", "Toil", "Work"}[tc]
 }
 
-type Shift struct {
-	ID    int       `json:"id"`
-	Start time.Time `json:"start"`
-	End   time.Time `json:"end"`
-}
-
 type Task struct {
 	ID             int                `json:"id"`
 	Description    string             `json:"description"`

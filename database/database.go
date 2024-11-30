@@ -64,10 +64,6 @@ func NewWorkDAL(databasePath string) (*WorkDAL, error) {
 
 	dal := &WorkDAL{db: db}
 
-	_, err = dal.db.Exec(`CREATE TABLE IF NOT EXISTS shift (id INTEGER PRIMARY KEY, start TIME, end TIME)`)
-	if err != nil {
-		return nil, err
-	}
 	_, err = dal.db.Exec(`CREATE TABLE IF NOT EXISTS task (id INTEGER PRIMARY KEY, description TEXT, classification INT, start TIME, end TIME)`)
 	if err != nil {
 		return nil, err
@@ -164,81 +160,4 @@ func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
 		)
 	}
 	return tasks, nil
-}
-
-func (dal *WorkDAL) CreateShift(shift models.Shift) error {
-	_, err := dal.db.Exec(`INSERT INTO shift (id, start, end) VALUES (?, ?, ?)`,
-		shift.ID,
-		shift.Start.Format(time.UnixDate),
-		shift.End.Format(time.UnixDate),
-	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (dal *WorkDAL) EndShift(id int) error {
-	_, err := dal.db.Exec(`UPDATE shift SET end=? WHERE id=?`, time.Now().Format(time.UnixDate), id)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (dal *WorkDAL) GetLatestShift() (models.Shift, error) {
-	shifts, err := dal.ListShifts(1, 0)
-	if err != nil {
-		return models.Shift{}, err
-	}
-	if len(shifts) == 0 {
-		return models.Shift{}, nil
-	}
-	return shifts[0], nil
-}
-
-func (dal *WorkDAL) ListShifts(limit int, days int) ([]models.Shift, error) {
-	shifts := []models.Shift{}
-
-	query := `SELECT id, start, end FROM shift`
-	args := []interface{}{}
-
-	if days > 0 {
-		query += ` WHERE start > datetime('now', '-' || ? || ' days')`
-		args = append(args, days)
-	}
-
-	query += ` ORDER BY id DESC`
-
-	if limit > 0 {
-		query += ` LIMIT ?`
-		args = append(args, limit)
-	}
-
-	rows, err := dal.db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var (
-			id    int
-			start string
-			end   string
-		)
-		if err = rows.Scan(&id, &start, &end); err != nil {
-			return nil, err
-		}
-		startTime, err := time.Parse(time.UnixDate, start)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse start time: %v", err)
-		}
-		endTime, err := time.Parse(time.UnixDate, end)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse end time: %v", err)
-		}
-		shifts = append(shifts, models.Shift{ID: id, Start: startTime, End: endTime})
-	}
-	return shifts, nil
 }

@@ -20,12 +20,6 @@ type Options struct {
 	Database string `long:"database" description:"Specify a custom database"`
 }
 
-type ClockInCommand struct {
-}
-
-type ClockOutCommand struct {
-}
-
 type InstallCompleteCommand struct {
 }
 
@@ -40,6 +34,9 @@ type StatusCommand struct {
 	Quiet bool `short:"q" long:"quiet" description:"Exit with status code"`
 }
 
+type StopCommand struct {
+}
+
 type TaskCommand struct {
 	Break      bool `short:"b" long:"break" description:"Classify task as non-work"`
 	Chore      bool `short:"c" long:"chore" description:"Classify the task as a chore"`
@@ -51,53 +48,45 @@ type TaskCommand struct {
 
 func main() {
 	var opts Options
-	var clockIn ClockInCommand
-	var clockOut ClockOutCommand
 	var installComplete InstallCompleteCommand
 	var list ListCommand
 	var report ReportCommand
 	var status StatusCommand
+	var stop StopCommand
 	var task TaskCommand
 
 	parser := flags.NewParser(&opts, flags.Default)
-	parser.AddCommand("clock-in", "Clock in", "Clock in to a shift", &clockIn)
-	parser.AddCommand("clock-out", "Clock out", "Clock out of a shift", &clockOut)
 	parser.AddCommand("install-completion", "Install autocomplete", "Install shell autocompletion", &installComplete)
 	parser.AddCommand("list", "List most recent tasks", "List most recent tasks", &list)
 	parser.AddCommand("report", "Generate a weekly report", "Generate a weekly report", &report)
 	parser.AddCommand("status", "Print current shift and task status", "Print current shift and task status", &status)
+	parser.AddCommand("stop", "Stop any previous task", "Stop any previous task", &stop)
 	parser.AddCommand("task", "Start a new Task", "Start a new task", &task)
 
 	cmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
-			"-database": predict.Files("*.db"),
-			"-help":     predict.Nothing,
+			"--database": predict.Files("*.db"),
+			"--help":     predict.Nothing,
 		},
 		Sub: map[string]*complete.Command{
-			"clock-in":           nil,
-			"clock-out":          nil,
 			"install-completion": nil,
 			"list": {
 				Flags: map[string]complete.Predictor{
-					"d":     predict.Nothing,
-					"-days": predict.Nothing,
+					"--days": predict.Nothing,
 				},
 			},
 			"report": nil,
 			"status": {
 				Flags: map[string]complete.Predictor{
-					"q":      predict.Nothing,
-					"-quiet": predict.Nothing,
+					"--quiet": predict.Nothing,
 				},
 			},
+			"stop": nil,
 			"task": {
 				Flags: map[string]complete.Predictor{
-					"b":      predict.Nothing,
-					"-break": predict.Nothing,
-					"c":      predict.Nothing,
-					"-chore": predict.Nothing,
-					"t":      predict.Nothing,
-					"-toil":  predict.Nothing,
+					"--break": predict.Nothing,
+					"--chore": predict.Nothing,
+					"--toil":  predict.Nothing,
 				},
 			},
 		},
@@ -125,14 +114,6 @@ func main() {
 	}
 
 	switch parser.Command.Active.Name {
-	case "clock-in":
-		if returncode, err = client.HandleClockIn(dal); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-	case "clock-out":
-		if returncode, err = client.HandleClockOut(dal); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
 	case "install-completion":
 		install.Install("work")
 	case "list":
@@ -145,6 +126,10 @@ func main() {
 		}
 	case "status":
 		if returncode, err = client.HandleStatus(dal, status.Quiet); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
+	case "stop":
+		if returncode, err = client.HandleStop(dal); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "task":
