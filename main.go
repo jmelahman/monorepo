@@ -29,6 +29,7 @@ type InstallCompleteCommand struct {
 }
 
 type ListCommand struct {
+	Days int `short:"d" long:"days" description:"List task from the last N days" default:"1"`
 }
 
 type ReportCommand struct {
@@ -39,6 +40,7 @@ type StatusCommand struct {
 }
 
 type TaskCommand struct {
+	Break      bool `short:"b" long:"break" description:"Classify task as non-work"`
 	Positional struct {
 		Description []string `positional-arg-name:"description" description:"Description of the task"`
 	} `positional-args:"yes"`
@@ -111,7 +113,7 @@ func main() {
 	case "install-completion":
 		install.Install("work")
 	case "list":
-		if returncode, err = client.HandleList(dal); err != nil {
+		if returncode, err = client.HandleList(dal, list.Days); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "report":

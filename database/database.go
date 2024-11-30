@@ -97,7 +97,7 @@ func (dal *WorkDAL) EndTask(id int) error {
 }
 
 func (dal *WorkDAL) GetLatestTask() (models.Task, error) {
-	tasks, err := dal.ListTasks(1)
+	tasks, err := dal.ListTasks(1, 0)
 	if err != nil {
 		return models.Task{}, err
 	}
@@ -107,13 +107,30 @@ func (dal *WorkDAL) GetLatestTask() (models.Task, error) {
 	return tasks[0], nil
 }
 
-func (dal *WorkDAL) ListTasks(limit int) ([]models.Task, error) {
-	rows, err := dal.db.Query(`SELECT id, description, start, end FROM task ORDER BY end ASC LIMIT ?`, limit)
+func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
+	tasks := []models.Task{}
+
+	query := `SELECT id, description, start, end FROM task`
+	args := []interface{}{}
+
+	if days > 0 {
+		query += ` WHERE start > datetime('now', '-' || ? || ' days')`
+		args = append(args, days)
+	}
+
+	query += ` ORDER BY end DESC`
+
+	if limit > 0 {
+		query += ` LIMIT ?`
+		args = append(args, limit)
+	}
+
+	rows, err := dal.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var tasks []models.Task
+
 	for rows.Next() {
 		var (
 			id          int
@@ -132,6 +149,9 @@ func (dal *WorkDAL) ListTasks(limit int) ([]models.Task, error) {
 		endTime, err := time.Parse(time.UnixDate, end)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse end time: %v", err)
+		}
+		if endTime.IsZero() {
+			endTime = time.Now()
 		}
 		tasks = append(tasks, models.Task{ID: id, Description: description, Start: startTime, End: endTime})
 	}
@@ -159,7 +179,7 @@ func (dal *WorkDAL) EndShift(id int) error {
 }
 
 func (dal *WorkDAL) GetLatestShift() (models.Shift, error) {
-	shifts, err := dal.ListShifts(1)
+	shifts, err := dal.ListShifts(1, 0)
 	if err != nil {
 		return models.Shift{}, err
 	}
@@ -169,10 +189,25 @@ func (dal *WorkDAL) GetLatestShift() (models.Shift, error) {
 	return shifts[0], nil
 }
 
-func (dal *WorkDAL) ListShifts(limit int) ([]models.Shift, error) {
+func (dal *WorkDAL) ListShifts(limit int, days int) ([]models.Shift, error) {
 	shifts := []models.Shift{}
 
-	rows, err := dal.db.Query(`SELECT id, start, end FROM shift ORDER BY end ASC LIMIT ?`, limit)
+	query := `SELECT id, start, end FROM shift`
+	args := []interface{}{}
+
+	if days > 0 {
+		query += ` WHERE start > datetime('now', '-' || ? || ' days')`
+		args = append(args, days)
+	}
+
+	query += ` ORDER BY end DESC`
+
+	if limit > 0 {
+		query += ` LIMIT ?`
+		args = append(args, limit)
+	}
+
+	rows, err := dal.db.Query(query, args...)
 	if err != nil {
 		return shifts, err
 	}
@@ -194,6 +229,9 @@ func (dal *WorkDAL) ListShifts(limit int) ([]models.Shift, error) {
 		endTime, err := time.Parse(time.UnixDate, end)
 		if err != nil {
 			return shifts, fmt.Errorf("failed to parse end time: %v", err)
+		}
+		if endTime.IsZero() {
+			endTime = time.Now()
 		}
 		shifts = append(shifts, models.Shift{ID: id, Start: startTime, End: endTime})
 	}
