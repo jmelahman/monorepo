@@ -8,3 +8,4 @@ Improve error handling around database file.
 Tech debt:
 Delete the shifts table.
 Delete the clock-in subcommand.
+Rename clock-out to stop.

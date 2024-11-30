@@ -42,9 +42,8 @@ For example, to create a `Break` task,
 work task --break "Going for lunch"
 ```
 
-The previous task will end when a new task is started.
-
-To finish end a task,
+The previous task will end when a new task begins.
+Similarly, a task can be stopped explicitly with,
 
 ```shell
 work clock-out
