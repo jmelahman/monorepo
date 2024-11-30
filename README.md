@@ -6,7 +6,7 @@
 
 ## Install
 
-*pip:*
+**pip:**
 
 `work` is also available as a [pypi package](https://pypi.org/project/gwork/).
 
@@ -23,11 +23,11 @@ uvx --from gwork work
 The recommended way to use this package is with an `alias` using `uvx`,
 
 ```shell
-echo "alias work='uvx --from=gwork work'" > ~/.bashrc
+echo "alias work='uvx --from=gwork work'" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-*go:*
+**go:**
 
 You may also build from source,
 
