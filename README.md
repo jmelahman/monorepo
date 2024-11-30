@@ -2,6 +2,24 @@
 
 `work` is a stupid simple time tracker.
 
+A typical `work`-day might look like,
+
+```
+$ work task "First task of the day"
+
+$ work task "Second task of the day" --chore
+
+$ work list
+08:29 - 10:20   Chore   Second task of the day  2h 51min
+08:19 - 08:29   Work    First task of the day   0h 10min
+
+$ work status
+Hours left:   6h 39min
+Current task: "Second task of the day"
+
+$ work clock-out
+```
+
 ## Usage
 
 `work` tracks time in shifts and tasks.
