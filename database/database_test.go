@@ -40,7 +40,7 @@ func TestCreateTask(t *testing.T) {
 	err := dal.CreateTask(task)
 	assert.NoError(t, err)
 
-	tasks, err := dal.ListTasks(1)
+	tasks, err := dal.ListTasks(1, 0)
 	assert.NoError(t, err)
 	assert.Len(t, tasks, 1)
 	assert.Equal(t, "Test Task", tasks[0].Description)
@@ -80,7 +80,7 @@ func TestCreateShift(t *testing.T) {
 	err := dal.CreateShift(shift)
 	assert.NoError(t, err)
 
-	shifts, err := dal.ListShifts(1)
+	shifts, err := dal.ListShifts(1, 0)
 	assert.NoError(t, err)
 	assert.Len(t, shifts, 1)
 	assert.Equal(t, 1, shifts[0].ID)
@@ -121,7 +121,7 @@ func TestListTasks(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	tasks, err := dal.ListTasks(2)
+	tasks, err := dal.ListTasks(2, 0)
 	assert.NoError(t, err)
 	assert.Len(t, tasks, 2)
 }
@@ -139,7 +139,7 @@ func TestListShifts(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	shifts, err := dal.ListShifts(2)
+	shifts, err := dal.ListShifts(2, 0)
 	assert.NoError(t, err)
 	assert.Len(t, shifts, 2)
 }
