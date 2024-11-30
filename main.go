@@ -9,6 +9,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/jmelahman/work/client"
 	"github.com/jmelahman/work/database"
+	"github.com/jmelahman/work/logger"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/install"
 	"github.com/posener/complete/v2/predict"
@@ -16,6 +17,8 @@ import (
 )
 
 type Options struct {
+	Database string `long:"database" description:"Specify a custom database"`
+	Verbose  bool   `short:"v" long:"verbose" description:"Run in verbose mode"`
 }
 
 type ClockInCommand struct {
@@ -64,7 +67,8 @@ func main() {
 
 	cmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
-			"--help": predict.Nothing,
+			"--database": predict.Files("*.db"),
+			"--help":     predict.Nothing,
 		},
 		Sub: map[string]*complete.Command{
 			"clock-in":           nil,
@@ -90,15 +94,18 @@ func main() {
 		os.Exit(2)
 	}
 
-	command := os.Args[1]
 	var returncode int
 
-	dal, err := database.NewWorkDAL()
+	logger := logger.Init(opts.Verbose)
+	defer logger.Sync()
+	sugar := logger.Sugar()
+
+	dal, err := database.NewWorkDAL(opts.Database, sugar)
 	if err != nil {
 		log.Fatalf("Failed to initialize DAL: %v", err)
 	}
 
-	switch command {
+	switch parser.Command.Active.Name {
 	case "clock-in":
 		if returncode, err = client.HandleClockIn(dal); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)

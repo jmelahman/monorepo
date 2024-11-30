@@ -8,7 +8,7 @@
 
 **pip:**
 
-`work` is also available as a [pypi package](https://pypi.org/project/gwork/).
+`work` is available as a [pypi package](https://pypi.org/project/gwork/).
 
 ```shell
 pip install gwork
@@ -21,12 +21,22 @@ echo "alias work='uvx --from=gwork work'" >> ~/.bashrc
 source ~/.bashrc
 ```
 
+**docker:**
+
+`work` is available as a [docker image](https://hub.docker.com/r/lahmanja/work/tags).
+
+```
+docker run --name work --rm -v ./data:/data lahmanja/work:latest
+```
+
 **go:**
 
-You may also build from source,
+`work` can be installed by building from source,
 
 ```shell
 go install github.com/jmelahman/work@latest
 ```
 
-or download prebuilt packages from [Github Releases](https://github.com/jmelahman/work/releases).
+**github:**
+
+Prebuilt packages are available from [Github Releases](https://github.com/jmelahman/work/releases).

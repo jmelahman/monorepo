@@ -13,6 +13,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o work .
 # Main stage
 FROM gcr.io/distroless/static:nonroot
 
+WORKDIR /
+
 COPY --from=builder /app/work .
 
 ENTRYPOINT ["/work"]
+
+CMD ["--database=/data/database.db"]

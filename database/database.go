@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jmelahman/work/database/models"
+	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
 )
 
@@ -28,18 +29,36 @@ func getApplicationDataDir() (string, error) {
 	return filepath.Join(dataHome, "work"), nil
 }
 
-func NewWorkDAL() (*WorkDAL, error) {
-	dbDir, err := getApplicationDataDir()
+func makeFileAll(filePath string) error {
+	dir := filepath.Dir(filePath)
+
+	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = os.MkdirAll(dbDir, 0755)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	defer file.Close()
+
+	return nil
+}
+
+func NewWorkDAL(databasePath string, logger *zap.SugaredLogger) (*WorkDAL, error) {
+	if databasePath == "" {
+		dbDir, err := getApplicationDataDir()
+		if err != nil {
+			return nil, err
+		}
+
+		databasePath = filepath.Join(dbDir, "database.db")
 	}
 
-	databasePath := filepath.Join(dbDir, "database.db")
+	logger.Debugf("Initializing database: %s", databasePath)
+	makeFileAll(databasePath)
+
 	db, err := sql.Open("sqlite", databasePath)
 	if err != nil {
 		return nil, err
