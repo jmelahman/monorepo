@@ -40,7 +40,7 @@ For example, to create a `Break` task,
 work task --break "Going for lunch"
 ```
 
-`work status`, `work list`, and `work report` are available to reflect on previous shifts and
+`work status`, `work list`, and `work report` are available to analyze current and previous shifts and
 tasks.
 
 ### Autocomplete
