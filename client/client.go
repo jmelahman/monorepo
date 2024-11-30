@@ -90,8 +90,7 @@ func HandleReport(dal *database.WorkDAL) (int, error) {
 		}
 		fmt.Fprintf(
 			w,
-			"%d\t%s - %s\t%s\n",
-			s.ID,
+			"%s - %s\t%s\n",
 			s.Start.Format("01/02 15:04"),
 			end.Format("01/02 15:04"),
 			timeOnly(end.Sub(s.Start)),
