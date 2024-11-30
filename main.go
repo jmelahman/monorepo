@@ -9,7 +9,6 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/jmelahman/work/client"
 	"github.com/jmelahman/work/database"
-	"github.com/jmelahman/work/logger"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/install"
 	"github.com/posener/complete/v2/predict"
@@ -18,7 +17,6 @@ import (
 
 type Options struct {
 	Database string `long:"database" description:"Specify a custom database"`
-	Verbose  bool   `short:"v" long:"verbose" description:"Run in verbose mode"`
 }
 
 type ClockInCommand struct {
@@ -96,11 +94,7 @@ func main() {
 
 	var returncode int
 
-	logger := logger.Init(opts.Verbose)
-	defer logger.Sync()
-	sugar := logger.Sugar()
-
-	dal, err := database.NewWorkDAL(opts.Database, sugar)
+	dal, err := database.NewWorkDAL(opts.Database)
 	if err != nil {
 		log.Fatalf("Failed to initialize DAL: %v", err)
 	}
