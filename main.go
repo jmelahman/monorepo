@@ -70,16 +70,36 @@ func main() {
 
 	cmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
-			"--database": predict.Files("*.db"),
-			"--help":     predict.Nothing,
+			"-database": predict.Files("*.db"),
+			"-help":     predict.Nothing,
 		},
 		Sub: map[string]*complete.Command{
 			"clock-in":           nil,
 			"clock-out":          nil,
 			"install-completion": nil,
-			"report":             nil,
-			"status":             nil,
-			"task":               nil,
+			"list": {
+				Flags: map[string]complete.Predictor{
+					"d":     predict.Nothing,
+					"-days": predict.Nothing,
+				},
+			},
+			"report": nil,
+			"status": {
+				Flags: map[string]complete.Predictor{
+					"q":      predict.Nothing,
+					"-quiet": predict.Nothing,
+				},
+			},
+			"task": {
+				Flags: map[string]complete.Predictor{
+					"b":      predict.Nothing,
+					"-break": predict.Nothing,
+					"c":      predict.Nothing,
+					"-chore": predict.Nothing,
+					"t":      predict.Nothing,
+					"-toil":  predict.Nothing,
+				},
+			},
 		},
 	}
 	cmd.Complete("work")

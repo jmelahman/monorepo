@@ -4,6 +4,55 @@
 
 ## Usage
 
+`work` is based off shifts and tasks.
+A shift may contain many tasks and a task may span multiple shifts.
+
+To start and stop a shift,
+
+```shell
+work clock-in
+```
+
+```shell
+work clock-out
+```
+
+Shifts will begin automatically when starting a task and ending a shift will end tasks.
+
+To begin a task,
+
+```shell
+work task "Starting my first task"
+```
+
+Tasks have 1 of 4 possible classifications:
+
+- `Chore`
+- `Break`
+- `Toil`
+- `Work`
+
+The default is `Work` and the others are enabled by they respective flag.
+
+For example, to create a `Break` task,
+
+```shell
+work task --break "Going for lunch"
+```
+
+`work status`, `work list`, and `work report` are available to reflect on previous shifts and
+tasks.
+
+### Autocomplete
+
+`work` provides shell autocomplete out-of-the-box.
+To enable autocomplete,
+
+
+```shell
+work install-completion
+```
+
 ## Install
 
 **pip:**
@@ -12,13 +61,6 @@
 
 ```shell
 pip install gwork
-```
-
-The recommended way to use this package is with an [`alias`](https://www.gnu.org/software/bash/manual/html_node/Aliases.html) and [`uvx`](https://docs.astral.sh/uv/guides/tools/),
-
-```shell
-echo "alias work='uvx --from=gwork work'" >> ~/.bashrc
-source ~/.bashrc
 ```
 
 **go:**
