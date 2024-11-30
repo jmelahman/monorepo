@@ -61,7 +61,7 @@ func main() {
 
 	parser := flags.NewParser(&opts, flags.Default)
 	parser.AddCommand("clock-in", "Clock in", "Clock in to a shift", &clockIn)
-	parser.AddCommand("clock-out", "Clock Out", "Clock out of a shift", &clockOut)
+	parser.AddCommand("clock-out", "Clock out", "Clock out of a shift", &clockOut)
 	parser.AddCommand("install-completion", "Install autocomplete", "Install shell autocompletion", &installComplete)
 	parser.AddCommand("list", "List most recent tasks", "List most recent tasks", &list)
 	parser.AddCommand("report", "Generate a weekly report", "Generate a weekly report", &report)
