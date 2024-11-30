@@ -34,7 +34,7 @@ jobs:
         context: .
         push: true
         tags: |
-          lahmanja/work:${{ github.ref#refs/tags/ }}
+          lahmanja/work:${{ github.ref_name }}
           lahmanja/work:latest
     - name: Logout from DockerHub
       run: docker logout
