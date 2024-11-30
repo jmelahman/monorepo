@@ -68,7 +68,7 @@ func NewWorkDAL(databasePath string) (*WorkDAL, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = dal.db.Exec(`CREATE TABLE IF NOT EXISTS task (id INTEGER PRIMARY KEY, description TEXT, start TIME, end TIME)`)
+	_, err = dal.db.Exec(`CREATE TABLE IF NOT EXISTS task (id INTEGER PRIMARY KEY, description TEXT, classification INT, start TIME, end TIME)`)
 	if err != nil {
 		return nil, err
 	}
@@ -76,9 +76,10 @@ func NewWorkDAL(databasePath string) (*WorkDAL, error) {
 }
 
 func (dal *WorkDAL) CreateTask(task models.Task) error {
-	_, err := dal.db.Exec(`INSERT INTO task (id, description, start, end) VALUES (?, ?, ?, ?)`,
+	_, err := dal.db.Exec(`INSERT INTO task (id, description, classification, start, end) VALUES (?, ?, ?, ?, ?)`,
 		task.ID,
 		task.Description,
+		task.Classification,
 		task.Start.Format(time.UnixDate),
 		task.End.Format(time.UnixDate),
 	)
@@ -110,7 +111,7 @@ func (dal *WorkDAL) GetLatestTask() (models.Task, error) {
 func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
 	tasks := []models.Task{}
 
-	query := `SELECT id, description, start, end FROM task`
+	query := `SELECT id, description, classification, start, end FROM task`
 	args := []interface{}{}
 
 	if days > 0 {
@@ -118,7 +119,7 @@ func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
 		args = append(args, days)
 	}
 
-	query += ` ORDER BY end DESC`
+	query += ` ORDER BY id DESC`
 
 	if limit > 0 {
 		query += ` LIMIT ?`
@@ -133,12 +134,13 @@ func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
 
 	for rows.Next() {
 		var (
-			id          int
-			description string
-			start       string
-			end         string
+			id             int
+			description    string
+			classification models.TaskClassification
+			start          string
+			end            string
 		)
-		err := rows.Scan(&id, &description, &start, &end)
+		err := rows.Scan(&id, &description, &classification, &start, &end)
 		if err != nil {
 			return nil, err
 		}
@@ -150,10 +152,16 @@ func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse end time: %v", err)
 		}
-		if endTime.IsZero() {
-			endTime = time.Now()
-		}
-		tasks = append(tasks, models.Task{ID: id, Description: description, Start: startTime, End: endTime})
+		tasks = append(
+			tasks,
+			models.Task{
+				ID:             id,
+				Description:    description,
+				Classification: classification,
+				Start:          startTime,
+				End:            endTime,
+			},
+		)
 	}
 	return tasks, nil
 }
@@ -200,7 +208,7 @@ func (dal *WorkDAL) ListShifts(limit int, days int) ([]models.Shift, error) {
 		args = append(args, days)
 	}
 
-	query += ` ORDER BY end DESC`
+	query += ` ORDER BY id DESC`
 
 	if limit > 0 {
 		query += ` LIMIT ?`
@@ -209,7 +217,7 @@ func (dal *WorkDAL) ListShifts(limit int, days int) ([]models.Shift, error) {
 
 	rows, err := dal.db.Query(query, args...)
 	if err != nil {
-		return shifts, err
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -220,18 +228,15 @@ func (dal *WorkDAL) ListShifts(limit int, days int) ([]models.Shift, error) {
 			end   string
 		)
 		if err = rows.Scan(&id, &start, &end); err != nil {
-			return shifts, err
+			return nil, err
 		}
 		startTime, err := time.Parse(time.UnixDate, start)
 		if err != nil {
-			return shifts, fmt.Errorf("failed to parse start time: %v", err)
+			return nil, fmt.Errorf("failed to parse start time: %v", err)
 		}
 		endTime, err := time.Parse(time.UnixDate, end)
 		if err != nil {
-			return shifts, fmt.Errorf("failed to parse end time: %v", err)
-		}
-		if endTime.IsZero() {
-			endTime = time.Now()
+			return nil, fmt.Errorf("failed to parse end time: %v", err)
 		}
 		shifts = append(shifts, models.Shift{ID: id, Start: startTime, End: endTime})
 	}

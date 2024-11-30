@@ -16,15 +16,14 @@ func HandleClockIn(dal *database.WorkDAL) (int, error) {
 		return 1, err
 	}
 
-	if time.Until(latestShift.End) > 0 {
+	if latestShift.End.IsZero() && !latestShift.Start.IsZero() {
 		return 0, nil
 	}
 
-	now := time.Now()
 	err = dal.CreateShift(
 		models.Shift{
 			ID:    latestShift.ID + 1,
-			Start: now,
+			Start: time.Now(),
 			End:   time.Time{},
 		},
 	)
@@ -39,7 +38,7 @@ func HandleClockOut(dal *database.WorkDAL) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	if latestShift.ID != 0 && time.Until(latestShift.End) > 0 {
+	if latestShift.End.IsZero() {
 		dal.EndShift(latestShift.ID)
 	}
 	return 0, nil
@@ -54,13 +53,20 @@ func HandleList(dal *database.WorkDAL, limit int) (int, error) {
 	w := new(tabwriter.Writer)
 	w.Init(os.Stdout, 0, 8, 0, '\t', 0)
 	for _, t := range tasks {
+		var end time.Time
+		if t.End.IsZero() {
+			end = time.Now()
+		} else {
+			end = t.End
+		}
 		fmt.Fprintf(
 			w,
-			"%s - %s\t%s\t%s\n",
+			"%s - %s\t%s\t%s\t%s\n",
 			t.Start.Format("15:04"),
-			t.End.Format("15:04"),
+			end.Format("15:04"),
+			t.Classification,
 			t.Description,
-			timeOnly(t.End.Sub(t.Start)),
+			timeOnly(end.Sub(t.Start)),
 		)
 	}
 	w.Flush()
@@ -76,12 +82,19 @@ func HandleReport(dal *database.WorkDAL) (int, error) {
 	w := new(tabwriter.Writer)
 	w.Init(os.Stdout, 0, 8, 0, '\t', 0)
 	for _, s := range shifts {
+		var end time.Time
+		if s.End.IsZero() {
+			end = time.Now()
+		} else {
+			end = s.End
+		}
 		fmt.Fprintf(
 			w,
-			"%s\t%s\t%s\n",
+			"%d\t%s - %s\t%s\n",
+			s.ID,
 			s.Start.Format("01/02 15:04"),
-			s.End.Format("01/02 15:04"),
-			timeOnly(s.End.Sub(s.Start)),
+			end.Format("01/02 15:04"),
+			timeOnly(end.Sub(s.Start)),
 		)
 	}
 	w.Flush()
@@ -94,14 +107,13 @@ func HandleStatus(dal *database.WorkDAL, quiet bool) (int, error) {
 		panic(err)
 	}
 
-	expectedEnd := latestShift.Start.Add(8 * time.Hour)
-	remainingTime := expectedEnd.Sub(latestShift.End)
-	if latestShift.ID != 0 && remainingTime > 0 {
+	if latestShift.ID != 0 && latestShift.End.IsZero() {
 		if !quiet {
 			latestTask, err := dal.GetLatestTask()
 			if err != nil {
 				return 1, err
 			}
+			remainingTime := time.Until(latestShift.Start.Add(8 * time.Hour))
 			fmt.Printf("Hours left:   %s\n", timeOnly(remainingTime))
 			fmt.Printf("Current task: \"%s\"\n", latestTask.Description)
 		}
@@ -114,7 +126,11 @@ func HandleStatus(dal *database.WorkDAL, quiet bool) (int, error) {
 	return 1, nil
 }
 
-func HandleTask(dal *database.WorkDAL, description string) (int, error) {
+func HandleTask(
+	dal *database.WorkDAL,
+	classification models.TaskClassification,
+	description string,
+) (int, error) {
 	returncode, err := HandleClockIn(dal)
 	if err != nil {
 		return returncode, err
@@ -125,15 +141,16 @@ func HandleTask(dal *database.WorkDAL, description string) (int, error) {
 		return 1, err
 	}
 
-	if time.Until(latestTask.End) > 0 {
+	if latestTask.End.IsZero() {
 		dal.EndTask(latestTask.ID)
 	}
 	err = dal.CreateTask(
 		models.Task{
-			ID:          latestTask.ID + 1,
-			Description: description,
-			Start:       time.Now(),
-			End:         time.Time{},
+			ID:             latestTask.ID + 1,
+			Description:    description,
+			Classification: classification,
+			Start:          time.Now(),
+			End:            time.Time{},
 		})
 	if err != nil {
 		return 1, err

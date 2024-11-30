@@ -9,6 +9,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/jmelahman/work/client"
 	"github.com/jmelahman/work/database"
+	"github.com/jmelahman/work/database/models"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/install"
 	"github.com/posener/complete/v2/predict"
@@ -41,6 +42,8 @@ type StatusCommand struct {
 
 type TaskCommand struct {
 	Break      bool `short:"b" long:"break" description:"Classify task as non-work"`
+	Chore      bool `short:"c" long:"chore" description:"Classify the task as a chore"`
+	Toil       bool `short:"t" long:"toil" description:"Classify the task as toil"`
 	Positional struct {
 		Description []string `positional-arg-name:"description" description:"Description of the task"`
 	} `positional-args:"yes"`
@@ -130,7 +133,23 @@ func main() {
 			parser.WriteHelp(os.Stderr)
 			os.Exit(2)
 		}
-		if returncode, err = client.HandleTask(dal, strings.Join(task.Positional.Description, " ")); err != nil {
+		if (task.Toil && task.Break) || (task.Toil && task.Chore) || (task.Break && task.Toil) {
+			fmt.Println("Error: task should have at most one classification.")
+			os.Exit(2)
+		}
+		var taskClassification models.TaskClassification
+		if task.Break {
+			taskClassification = models.Break
+		} else if task.Chore {
+			taskClassification = models.Chore
+		} else if task.Toil {
+			taskClassification = models.Toil
+		} else {
+			taskClassification = models.Work
+		}
+		if returncode, err = client.HandleTask(
+			dal, taskClassification, strings.Join(task.Positional.Description, " "),
+		); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	default:
