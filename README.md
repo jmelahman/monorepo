@@ -21,14 +21,6 @@ echo "alias work='uvx --from=gwork work'" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-**docker:**
-
-`work` is available as a [docker image](https://hub.docker.com/r/lahmanja/work/tags).
-
-```
-docker run --name work --rm -v ./data:/data lahmanja/work:latest
-```
-
 **go:**
 
 `work` can be installed by building from source,
