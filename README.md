@@ -4,7 +4,7 @@
 
 ## Usage
 
-`work` is based off shifts and tasks.
+`work` tracks time in shifts and tasks.
 A shift may contain many tasks and a task may span multiple shifts.
 
 To start and stop a shift,
@@ -32,7 +32,7 @@ Tasks have 1 of 4 possible classifications:
 - `Toil`
 - `Work`
 
-The default is `Work` and the others are enabled by they respective flag.
+The default is `Work` and the others are enabled by their respective flag.
 
 For example, to create a `Break` task,
 
