@@ -4,7 +4,7 @@
 
 A typical `work`-day might look like,
 
-```
+```shell
 $ work task "First task of the day"
 
 $ work task "Second task of the day" --chore
@@ -22,21 +22,6 @@ $ work clock-out
 
 ## Usage
 
-`work` tracks time in shifts and tasks.
-A shift may contain many tasks and a task may span multiple shifts.
-
-To start and stop a shift,
-
-```shell
-work clock-in
-```
-
-```shell
-work clock-out
-```
-
-Shifts will begin automatically when starting a task and ending a shift will end tasks.
-
 To begin a task,
 
 ```shell
@@ -51,11 +36,18 @@ Tasks have 1 of 4 possible classifications:
 - `Work`
 
 The default is `Work` and the others are enabled by their respective flag.
-
 For example, to create a `Break` task,
 
 ```shell
 work task --break "Going for lunch"
+```
+
+The previous task will end when a new task is started.
+
+To finish end a task,
+
+```shell
+work clock-out
 ```
 
 `work status`, `work list`, and `work report` are available to analyze current and previous shifts and

@@ -1,0 +1,10 @@
+Features:
+Improve `list` and `report` including task breakdown by classification.
+
+Bugs:
+Autocompleting flags is wonky.
+Improve error handling around database file.
+
+Tech debt:
+Delete the shifts table.
+Delete the clock-in subcommand.
