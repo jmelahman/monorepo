@@ -49,8 +49,7 @@ Similarly, a task can be stopped explicitly with,
 work clock-out
 ```
 
-`work status`, `work list`, and `work report` are available to analyze current and previous shifts and
-tasks.
+`work status`, `work list`, and `work report` are available to analyze current and previous tasks.
 
 ### Autocomplete
 
