@@ -56,14 +56,20 @@ work stop
 
 `work status`, `work list`, and `work report` are available to analyze current and previous tasks.
 
-### Shutdown  service
+### Shutdown and Notification services
 
-Optionally, install a `systemd` user service which stops any running tasks on shutdown.
+Optionally, install [`systemd` user services](https://wiki.archlinux.org/title/Systemd/User) which notify you when you're not tracking any tasks and stop any running tasks on system shutdown.
 
-To install and enable the service,
+To install and enable the services,
 
 ```shell
 work install
+```
+
+They can be disabled with,
+
+```
+work uninstall
 ```
 
 ### Autocomplete

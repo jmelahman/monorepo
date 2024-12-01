@@ -50,6 +50,9 @@ type TaskCommand struct {
 	} `positional-args:"yes"`
 }
 
+type UninstallCommand struct {
+}
+
 func main() {
 	var opts Options
 	var installOpts InstallCommand
@@ -59,6 +62,7 @@ func main() {
 	var status StatusCommand
 	var stop StopCommand
 	var task TaskCommand
+	var uninstallOpts UninstallCommand
 
 	parser := flags.NewParser(&opts, flags.Default)
 	if _, err := parser.AddCommand("install", "Install reminders", "Install reminder notification services", &installOpts); err != nil {
@@ -80,6 +84,9 @@ func main() {
 		log.Fatal(err)
 	}
 	if _, err := parser.AddCommand("task", "Start a new Task", "Start a new task", &task); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := parser.AddCommand("uninstall", "Uninstall reminders", "Uninstall reminder notification services", &uninstallOpts); err != nil {
 		log.Fatal(err)
 	}
 
@@ -136,7 +143,8 @@ func main() {
 
 	switch parser.Command.Active.Name {
 	case "install":
-		if returncode, err = client.HandleInstall(); err != nil {
+		var uninstall = false
+		if returncode, err = client.HandleInstall(uninstall); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "install-completion":
@@ -183,6 +191,11 @@ func main() {
 		if returncode, err = client.HandleTask(
 			dal, taskClassification, strings.Join(task.Positional.Description, " "),
 		); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
+	case "uninstall":
+		var uninstall = true
+		if returncode, err = client.HandleInstall(uninstall); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	default:

@@ -13,23 +13,44 @@ import (
 	"github.com/jmelahman/work/database/models"
 )
 
-func enableNowUnitFiles(obj dbus.BusObject, serviceName string) error {
+func enableUnitFiles(obj dbus.BusObject, files []string) error {
 	var enableChanged bool
 	result := make([][]interface{}, 0)
-	err := obj.Call("org.freedesktop.systemd1.Manager.EnableUnitFiles", 0, []string{serviceName}, false, true).Store(&enableChanged, &result)
+	err := obj.Call("org.freedesktop.systemd1.Manager.EnableUnitFiles", 0, files, false, true).Store(&enableChanged, &result)
 	if err != nil {
-		return fmt.Errorf("Failed to enable service %s: %v", serviceName, err)
+		return fmt.Errorf("Failed to enable service %v: %v", files, err)
 	}
+	return nil
+}
 
+func startUnit(obj dbus.BusObject, serviceName string) error {
 	var jobPath dbus.ObjectPath
-	err = obj.Call("org.freedesktop.systemd1.Manager.StartUnit", 0, serviceName, "replace").Store(&jobPath)
+	err := obj.Call("org.freedesktop.systemd1.Manager.StartUnit", 0, serviceName, "replace").Store(&jobPath)
+	if err != nil {
+		return fmt.Errorf("Failed to start service %v: %v", serviceName, err)
+	}
+	return nil
+}
+
+func disableUnitFiles(obj dbus.BusObject, files []string) error {
+	result := make([][]interface{}, 0)
+	err := obj.Call("org.freedesktop.systemd1.Manager.DisableUnitFiles", 0, files, true).Store(&result)
+	if err != nil {
+		return fmt.Errorf("Failed to enable service %v: %v", files, err)
+	}
+	return nil
+}
+
+func stopUnit(obj dbus.BusObject, serviceName string) error {
+	var jobPath dbus.ObjectPath
+	err := obj.Call("org.freedesktop.systemd1.Manager.StopUnit", 0, serviceName, "replace").Store(&jobPath)
 	if err != nil {
 		return fmt.Errorf("Failed to start service %s: %v", serviceName, err)
 	}
 	return nil
 }
 
-func HandleInstall() (int, error) {
+func HandleInstall(uninstall bool) (int, error) {
 	var err error
 
 	stopServiceName := "work-stop.service"
@@ -43,6 +64,26 @@ func HandleInstall() (int, error) {
 	defer conn.Close()
 
 	obj := conn.Object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
+
+	if uninstall {
+		err := disableUnitFiles(obj, []string{stopServiceName})
+		if err != nil {
+			return 1, err
+		}
+		err = stopUnit(obj, stopServiceName)
+		if err != nil {
+			return 1, err
+		}
+		err = disableUnitFiles(obj, []string{notificationServiceName})
+		if err != nil {
+			return 1, err
+		}
+		err = stopUnit(obj, notificationServiceName)
+		if err != nil {
+			return 1, err
+		}
+		return 0, nil
+	}
 
 	executablePath, err := os.Executable()
 	if err != nil {
@@ -83,7 +124,12 @@ WantedBy=default.target
 		return 1, err
 	}
 
-	err = enableNowUnitFiles(obj, stopServiceName)
+	err = enableUnitFiles(obj, []string{stopServiceName})
+	if err != nil {
+		return 1, err
+	}
+
+	err = startUnit(obj, stopServiceName)
 	if err != nil {
 		return 1, err
 	}
@@ -119,7 +165,7 @@ WantedBy=timers.target
 		return 1, err
 	}
 
-	err = enableNowUnitFiles(obj, notificationServiceName)
+	err = enableUnitFiles(obj, []string{notificationServiceName})
 	if err != nil {
 		return 1, err
 	}
