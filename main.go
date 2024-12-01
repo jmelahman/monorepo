@@ -51,6 +51,7 @@ type TaskCommand struct {
 
 func main() {
 	var opts Options
+	var installOpts InstallCommand
 	var installComplete InstallCompleteCommand
 	var list ListCommand
 	var report ReportCommand
@@ -59,13 +60,27 @@ func main() {
 	var task TaskCommand
 
 	parser := flags.NewParser(&opts, flags.Default)
-	parser.AddCommand("install", "Install reminders", "Install reminder notification services", &installComplete)
-	parser.AddCommand("install-completion", "Install autocomplete", "Install shell autocompletion", &installComplete)
-	parser.AddCommand("list", "List most recent tasks", "List most recent tasks", &list)
-	parser.AddCommand("report", "Generate a weekly report", "Generate a weekly report", &report)
-	parser.AddCommand("status", "Print current shift and task status", "Print current shift and task status", &status)
-	parser.AddCommand("stop", "Stop any previous task", "Stop any previous task", &stop)
-	parser.AddCommand("task", "Start a new Task", "Start a new task", &task)
+	if _, err := parser.AddCommand("install", "Install reminders", "Install reminder notification services", &installOpts); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := parser.AddCommand("install-completion", "Install autocomplete", "Install shell autocompletion", &installComplete); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := parser.AddCommand("list", "List most recent tasks", "List most recent tasks", &list); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := parser.AddCommand("report", "Generate a weekly report", "Generate a weekly report", &report); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := parser.AddCommand("status", "Print current shift and task status", "Print current shift and task status", &status); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := parser.AddCommand("stop", "Stop any previous task", "Stop any previous task", &stop); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := parser.AddCommand("task", "Start a new Task", "Start a new task", &task); err != nil {
+		log.Fatal(err)
+	}
 
 	cmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
@@ -124,7 +139,10 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "install-completion":
-		install.Install("work")
+		if err := install.Install("work"); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			returncode = 1
+		}
 	case "list":
 		if returncode, err = client.HandleList(dal, list.Days); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)

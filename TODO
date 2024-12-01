@@ -7,3 +7,4 @@ Maybe implement a config file.
 Bugs:
 Autocompleting flags is wonky.
 Improve error handling around database file.
+Implement CI.

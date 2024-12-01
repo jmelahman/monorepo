@@ -55,7 +55,9 @@ func NewWorkDAL(databasePath string) (*WorkDAL, error) {
 		databasePath = filepath.Join(dbDir, "database.db")
 	}
 
-	makeFileAll(databasePath)
+	if err := makeFileAll(databasePath); err != nil {
+		return nil, err
+	}
 
 	db, err := sql.Open("sqlite", databasePath)
 	if err != nil {

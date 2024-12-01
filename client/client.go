@@ -174,7 +174,9 @@ func HandleTask(
 	}
 
 	if latestTask.End.IsZero() {
-		dal.EndTask(latestTask.ID)
+		if err := dal.EndTask(latestTask.ID); err != nil {
+			return 1, err
+		}
 	}
 	err = dal.CreateTask(
 		models.Task{
