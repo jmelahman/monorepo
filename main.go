@@ -29,7 +29,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:     "work",
 		Short:   "Work time tracking tool",
-		Version: fmt.Sprintf("%s\ncommit: %s", version, commit),
+		Version: fmt.Sprintf("%s\ncommit %s", version, commit),
 	}
 
 	rootCmd.PersistentFlags().StringVar(&databasePath, "database", "", "Specify a custom database")
