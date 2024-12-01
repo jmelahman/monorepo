@@ -1,5 +1,9 @@
 # work
 
+[![Deploy Status](https://github.com/jmelahman/work/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/work/actions)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/work.svg)](https://pkg.go.dev/github.com/jmelahman/work)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/work)](https://goreportcard.com/report/github.com/jmelahman/work)
+
 `work` is a stupid simple time tracker.
 
 A typical `work`-day might look like,
