@@ -245,7 +245,7 @@ func HandleStatus(dal *database.WorkDAL, quiet bool, notify bool) error {
 			}
 		}
 		if quiet {
-			return nil
+			os.Exit(1)
 		}
 		fmt.Println("No active tasks.")
 		return nil
