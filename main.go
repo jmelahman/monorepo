@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/jessevdk/go-flags"
@@ -18,6 +19,7 @@ import (
 
 type Options struct {
 	Database string `long:"database" description:"Specify a custom database"`
+	Version  bool   `long:"version" description:"Print version and exit"`
 }
 
 type InstallCommand struct {
@@ -52,6 +54,11 @@ type TaskCommand struct {
 
 type UninstallCommand struct {
 }
+
+var (
+	version = "dev"
+	commit  = "none"
+)
 
 func main() {
 	var opts Options
@@ -94,6 +101,7 @@ func main() {
 		Flags: map[string]complete.Predictor{
 			"--database": predict.Files("*.db"),
 			"--help":     predict.Nothing,
+			"--version":  predict.Nothing,
 		},
 		Sub: map[string]*complete.Command{
 			"install":            nil,
@@ -125,6 +133,11 @@ func main() {
 	if len(os.Args) == 0 {
 		parser.WriteHelp(os.Stderr)
 		os.Exit(2)
+	}
+
+	if slices.Contains(os.Args, "--version") {
+		fmt.Printf("version: %s\ncommit: %s\n", version, commit)
+		os.Exit(0)
 	}
 
 	_, err := parser.Parse()
