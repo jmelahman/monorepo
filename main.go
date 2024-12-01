@@ -66,7 +66,7 @@ func newListCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to initialize DAL: %v", err)
 			}
-			return client.HandleList(dal, days)
+			return client.NewTaskManager(dal).ListTasks(days)
 		},
 	}
 
@@ -84,7 +84,7 @@ func newReportCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to initialize DAL: %v", err)
 			}
-			return client.HandleReport(dal)
+			return client.NewReporter(dal).GenerateReport()
 		},
 	}
 }
@@ -99,7 +99,7 @@ func newStatusCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to initialize DAL: %v", err)
 			}
-			return client.HandleStatus(dal, quiet, notify)
+			return client.NewTaskManager(dal).GetStatus(quiet, notify)
 		},
 	}
 
@@ -118,7 +118,7 @@ func newStopCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to initialize DAL: %v", err)
 			}
-			return client.HandleStop(dal)
+			return client.NewTaskManager(dal).StopCurrentTask()
 		},
 	}
 }
@@ -150,7 +150,7 @@ func newTaskCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to initialize DAL: %v", err)
 			}
-			return client.HandleTask(dal, taskClassification, strings.Join(args, " "))
+			return client.NewTaskManager(dal).CreateTask(taskClassification, strings.Join(args, " "))
 		},
 	}
 
