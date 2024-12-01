@@ -20,6 +20,9 @@ type Options struct {
 	Database string `long:"database" description:"Specify a custom database"`
 }
 
+type InstallCommand struct {
+}
+
 type InstallCompleteCommand struct {
 }
 
@@ -56,6 +59,7 @@ func main() {
 	var task TaskCommand
 
 	parser := flags.NewParser(&opts, flags.Default)
+	parser.AddCommand("install", "Install reminders", "Install reminder notification services", &installComplete)
 	parser.AddCommand("install-completion", "Install autocomplete", "Install shell autocompletion", &installComplete)
 	parser.AddCommand("list", "List most recent tasks", "List most recent tasks", &list)
 	parser.AddCommand("report", "Generate a weekly report", "Generate a weekly report", &report)
@@ -69,6 +73,7 @@ func main() {
 			"--help":     predict.Nothing,
 		},
 		Sub: map[string]*complete.Command{
+			"install":            nil,
 			"install-completion": nil,
 			"list": {
 				Flags: map[string]complete.Predictor{
@@ -114,6 +119,10 @@ func main() {
 	}
 
 	switch parser.Command.Active.Name {
+	case "install":
+		if returncode, err = client.HandleInstall(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 	case "install-completion":
 		install.Install("work")
 	case "list":

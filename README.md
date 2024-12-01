@@ -50,6 +50,16 @@ work stop
 
 `work status`, `work list`, and `work report` are available to analyze current and previous tasks.
 
+### Shutdown  service
+
+Optionally, install a `systemd` user service which stops any running tasks on shutdown.
+
+To install and enable the service,
+
+```shell
+work install
+```
+
 ### Autocomplete
 
 `work` provides shell autocomplete out-of-the-box.

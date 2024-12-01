@@ -3,6 +3,8 @@ package client
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"text/tabwriter"
 	"time"
 
@@ -10,13 +12,62 @@ import (
 	"github.com/jmelahman/work/database/models"
 )
 
+func HandleInstall() (int, error) {
+	var err error
+
+	serviceName := "work-stop.service"
+	executablePath, err := os.Executable()
+	if err != nil {
+		return 1, err
+	}
+
+	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
+	if xdgConfigHome == "" {
+		xdgConfigHome, err = os.UserConfigDir()
+		if err != nil {
+			return 1, err
+		}
+	}
+	stopServiceName := filepath.Join(xdgConfigHome, "systemd", "user", serviceName)
+	err = os.MkdirAll(filepath.Dir(stopServiceName), 0755)
+	if err != nil {
+		return 1, err
+	}
+	serviceContent := `[Unit]
+Description=Stop tracking work on shutdown
+DefaultDependencies=no
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=` + executablePath + ` stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target
+`
+	err = os.WriteFile(stopServiceName, []byte(serviceContent), 0644)
+	if err != nil {
+		return 1, err
+	}
+
+	cmd := exec.Command("systemctl", "--user", "enable", "--now", serviceName)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		return 1, err
+	}
+	return 0, nil
+}
+
 func HandleStop(dal *database.WorkDAL) (int, error) {
 	latestTask, err := dal.GetLatestTask()
 	if err != nil {
 		return 1, err
 	}
 
-	if !latestTask.End.IsZero() {
+	if latestTask.End.IsZero() {
 		err := dal.EndTask(latestTask.ID)
 		if err != nil {
 			return 1, err

@@ -1,6 +1,8 @@
 Features:
 Improve `report` including task breakdown by classification.
 Maybe implement a `amend` subcommand.
+Notification service.
+Maybe implement a config file.
 
 Bugs:
 Autocompleting flags is wonky.
