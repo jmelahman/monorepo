@@ -143,13 +143,12 @@ func main() {
 	switch parser.Command.Active.Name {
 	case "install":
 		var uninstall = false
-		if returncode, err = client.HandleInstall(uninstall); err != nil {
+		if err = client.HandleInstall(uninstall); err != nil {
 			log.Fatalf("Error: %v\n", err)
 		}
 	case "install-completion":
 		if err := install.Install("work"); err != nil {
 			log.Fatalf("Error: %v\n", err)
-			returncode = 1
 		}
 	case "list":
 		if err = client.HandleList(dal, list.Days); err != nil {
