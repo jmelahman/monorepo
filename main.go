@@ -117,6 +117,7 @@ func main() {
 					"--toil":  predict.Nothing,
 				},
 			},
+			"uninstall": nil,
 		},
 	}
 	cmd.Complete("work")
