@@ -4,5 +4,4 @@ Maybe implement a `amend` subcommand.
 Maybe implement a config file.
 
 Bugs:
-Autocompleting flags is wonky.
 Improve error handling.

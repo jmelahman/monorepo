@@ -74,13 +74,16 @@ work uninstall
 
 ### Autocomplete
 
-`work` provides shell autocomplete out-of-the-box.
-To enable autocomplete,
-
+`work` provides autocomplete for `bash`, `fish`, `powershell` and `zsh` shells.
+For example, to enable autocomplete for the `bash` shell,
 
 ```shell
-work install-completion
+work completion bash | sudo tee /etc/bash_completion.d/work > /dev/null
 ```
+
+_Note: this does require the [bash-completion](https://github.com/scop/bash-completion/) package is installed._
+
+For more information, see `work completion <shell> --help` for your respective `<shell>`.
 
 ## Install
 
