@@ -14,7 +14,7 @@ import (
 	"github.com/jmelahman/work/database/models"
 )
 
-func HandleInstall(uninstall bool) (int, error) {
+func HandleInstall(uninstall bool) error {
 	var err error
 
 	stopServiceName := "work-stop.service"
@@ -23,7 +23,7 @@ func HandleInstall(uninstall bool) (int, error) {
 
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
-		return 1, fmt.Errorf("Failed to connect to session bus: %v", err)
+		return fmt.Errorf("Failed to connect to session bus: %v", err)
 	}
 	defer conn.Close()
 
@@ -32,40 +32,40 @@ func HandleInstall(uninstall bool) (int, error) {
 	if uninstall {
 		err := systemd.DisableUnitFiles(obj, []string{stopServiceName})
 		if err != nil {
-			return 1, err
+			return err
 		}
 		err = systemd.StopUnit(obj, stopServiceName)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		err = systemd.DisableUnitFiles(obj, []string{notificationServiceName})
 		if err != nil {
-			return 1, err
+			return err
 		}
 		err = systemd.StopUnit(obj, notificationServiceName)
 		if err != nil {
-			return 1, err
+			return err
 		}
-		return 0, nil
+		return nil
 	}
 
 	executablePath, err := os.Executable()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfigHome == "" {
 		xdgConfigHome, err = os.UserConfigDir()
 		if err != nil {
-			return 1, err
+			return err
 		}
 	}
 
 	systemdUserConfigDir := filepath.Join(xdgConfigHome, "systemd", "user")
 	err = os.MkdirAll(systemdUserConfigDir, 0755)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	// Shutdown service
@@ -85,17 +85,17 @@ WantedBy=default.target
 `
 	err = os.WriteFile(stopServicePath, []byte(stopServiceContent), 0644)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	err = systemd.EnableUnitFiles(obj, []string{stopServiceName})
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	err = systemd.StartUnit(obj, stopServiceName)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	// Notification service
@@ -109,7 +109,7 @@ ExecStart=` + executablePath + ` status --notify
 `
 	err = os.WriteFile(notificationServicePath, []byte(notificationServiceContent), 0644)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	notificationTimerPath := filepath.Join(systemdUserConfigDir, notificationTimerName)
@@ -126,36 +126,36 @@ WantedBy=timers.target
 `
 	err = os.WriteFile(notificationTimerPath, []byte(notificationTimerContent), 0644)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	err = systemd.EnableUnitFiles(obj, []string{notificationServiceName})
 	if err != nil {
-		return 1, err
+		return err
 	}
 
-	return 0, nil
+	return nil
 }
 
-func HandleStop(dal *database.WorkDAL) (int, error) {
+func HandleStop(dal *database.WorkDAL) error {
 	latestTask, err := dal.GetLatestTask()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	if latestTask.End.IsZero() {
 		err := dal.EndTask(latestTask.ID)
 		if err != nil {
-			return 1, err
+			return err
 		}
 	}
-	return 0, nil
+	return nil
 }
 
-func HandleList(dal *database.WorkDAL, limit int) (int, error) {
+func HandleList(dal *database.WorkDAL, limit int) error {
 	tasks, err := dal.ListTasks(0, 1)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	w := new(tabwriter.Writer)
@@ -178,13 +178,13 @@ func HandleList(dal *database.WorkDAL, limit int) (int, error) {
 		)
 	}
 	w.Flush()
-	return 0, nil
+	return nil
 }
 
-func HandleReport(dal *database.WorkDAL) (int, error) {
+func HandleReport(dal *database.WorkDAL) error {
 	tasks, err := dal.ListTasks(0, 5)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	durationsByDay := make(map[string]time.Duration)
@@ -212,27 +212,27 @@ func HandleReport(dal *database.WorkDAL) (int, error) {
 		)
 	}
 	w.Flush()
-	return 0, nil
+	return nil
 }
 
-func HandleStatus(dal *database.WorkDAL, quiet bool, notify bool) (int, error) {
+func HandleStatus(dal *database.WorkDAL, quiet bool, notify bool) error {
 	task, err := dal.GetLatestTask()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	if task.ID == 0 || !task.End.IsZero() {
 		if notify {
 			err := beeep.Notify("Work Reminder", "No active tasks.", "assets/information.png")
 			if err != nil {
-				return 1, err
+				return err
 			}
 		}
 		if quiet {
-			return 1, nil
+			return nil
 		}
 		fmt.Println("No active tasks.")
-		return 0, nil
+		return nil
 	}
 	if !quiet {
 		fmt.Printf(
@@ -242,22 +242,22 @@ func HandleStatus(dal *database.WorkDAL, quiet bool, notify bool) (int, error) {
 			timeOnly(time.Since(task.Start)),
 		)
 	}
-	return 0, nil
+	return nil
 }
 
 func HandleTask(
 	dal *database.WorkDAL,
 	classification models.TaskClassification,
 	description string,
-) (int, error) {
+) error {
 	latestTask, err := dal.GetLatestTask()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	if latestTask.End.IsZero() {
 		if err := dal.EndTask(latestTask.ID); err != nil {
-			return 1, err
+			return err
 		}
 	}
 	err = dal.CreateTask(
@@ -269,9 +269,9 @@ func HandleTask(
 			End:            time.Time{},
 		})
 	if err != nil {
-		return 1, err
+		return err
 	}
-	return 0, nil
+	return nil
 }
 
 func timeOnly(duration time.Duration) string {

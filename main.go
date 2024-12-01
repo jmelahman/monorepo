@@ -135,8 +135,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	var returncode int
-
 	dal, err := database.NewWorkDAL(opts.Database)
 	if err != nil {
 		log.Fatalf("Failed to initialize DAL: %v", err)
@@ -146,28 +144,28 @@ func main() {
 	case "install":
 		var uninstall = false
 		if returncode, err = client.HandleInstall(uninstall); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			log.Fatalf("Error: %v\n", err)
 		}
 	case "install-completion":
 		if err := install.Install("work"); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			log.Fatalf("Error: %v\n", err)
 			returncode = 1
 		}
 	case "list":
-		if returncode, err = client.HandleList(dal, list.Days); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if err = client.HandleList(dal, list.Days); err != nil {
+			log.Fatalf("Error: %v\n", err)
 		}
 	case "report":
-		if returncode, err = client.HandleReport(dal); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if err = client.HandleReport(dal); err != nil {
+			log.Fatalf("Error: %v\n", err)
 		}
 	case "status":
-		if returncode, err = client.HandleStatus(dal, status.Quiet, status.Notify); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if err = client.HandleStatus(dal, status.Quiet, status.Notify); err != nil {
+			log.Fatalf("Error: %v\n", err)
 		}
 	case "stop":
-		if returncode, err = client.HandleStop(dal); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if err = client.HandleStop(dal); err != nil {
+			log.Fatalf("Error: %v\n", err)
 		}
 	case "task":
 		if task.Positional.Description == nil {
@@ -189,19 +187,18 @@ func main() {
 		} else {
 			taskClassification = models.Work
 		}
-		if returncode, err = client.HandleTask(
+		if err = client.HandleTask(
 			dal, taskClassification, strings.Join(task.Positional.Description, " "),
 		); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			log.Fatalf("Error: %v\n", err)
 		}
 	case "uninstall":
 		var uninstall = true
-		if returncode, err = client.HandleInstall(uninstall); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if err = client.HandleInstall(uninstall); err != nil {
+			log.Fatalf("Error: %v\n", err)
 		}
 	default:
 		parser.WriteHelp(os.Stderr)
-		returncode = 2
+		os.Exit(2)
 	}
-	os.Exit(returncode)
 }
