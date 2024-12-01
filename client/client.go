@@ -142,10 +142,10 @@ func uninstallServices(obj dbus.BusObject) error {
 
 	for _, service := range services {
 		if err := systemd.DisableUnitFiles(obj, []string{service}); err != nil {
-			return fmt.Errorf("failed to disable %s: %v", service, err)
+			return err
 		}
 		if err := systemd.StopUnit(obj, service); err != nil {
-			return fmt.Errorf("failed to stop %s: %v", service, err)
+			return err
 		}
 	}
 	return nil
@@ -165,12 +165,15 @@ func installService(obj dbus.BusObject, configDir string, service systemd.Servic
 	}
 
 	if err := systemd.EnableUnitFiles(obj, []string{service.Name}); err != nil {
-		return fmt.Errorf("failed to enable service %s: %v", service.Name, err)
+		return err
 	}
 
 	if service.Start {
+		if err := systemd.ReloadDaemon(obj); err != nil {
+			return err
+		}
 		if err := systemd.StartUnit(obj, service.Name); err != nil {
-			return fmt.Errorf("failed to start service %s: %v", service.Name, err)
+			return err
 		}
 	}
 	return nil

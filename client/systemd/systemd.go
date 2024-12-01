@@ -14,6 +14,14 @@ type ServiceConfig struct {
 	TimerContent string
 }
 
+func ReloadDaemon(obj dbus.BusObject) error {
+	err := obj.Call("org.freedesktop.systemd1.Manager.Reload", 0).Store()
+	if err != nil {
+		return fmt.Errorf("Failed to reload daemon: %v", err)
+	}
+	return nil
+}
+
 func EnableUnitFiles(obj dbus.BusObject, files []string) error {
 	var enableChanged bool
 	result := make([][]interface{}, 0)
