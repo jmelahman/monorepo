@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/jmelahman/work/client"
-	"github.com/jmelahman/work/database"
-	"github.com/jmelahman/work/database/models"
 	"github.com/spf13/cobra"
 )
 
@@ -62,11 +60,7 @@ func newListCmd() *cobra.Command {
 		Short: "List most recent tasks",
 		Long:  "List most recent tasks",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dal, err := database.NewWorkDAL(databasePath)
-			if err != nil {
-				return fmt.Errorf("failed to initialize DAL: %v", err)
-			}
-			return client.NewTaskManager(dal).ListTasks(days)
+			return client.NewTaskManager(databasePath).ListTasks(days)
 		},
 	}
 
@@ -80,11 +74,7 @@ func newReportCmd() *cobra.Command {
 		Short: "Generate a weekly report",
 		Long:  "Generate a weekly report",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dal, err := database.NewWorkDAL(databasePath)
-			if err != nil {
-				return fmt.Errorf("failed to initialize DAL: %v", err)
-			}
-			return client.NewReporter(dal).GenerateReport()
+			return client.NewTaskManager(databasePath).GenerateReport()
 		},
 	}
 }
@@ -95,11 +85,7 @@ func newStatusCmd() *cobra.Command {
 		Short: "Print current shift and task status",
 		Long:  "Print current shift and task status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dal, err := database.NewWorkDAL(databasePath)
-			if err != nil {
-				return fmt.Errorf("failed to initialize DAL: %v", err)
-			}
-			return client.NewTaskManager(dal).GetStatus(quiet, notify)
+			return client.NewTaskManager(databasePath).GetStatus(quiet, notify)
 		},
 	}
 
@@ -114,11 +100,7 @@ func newStopCmd() *cobra.Command {
 		Short: "Stop any previous task",
 		Long:  "Stop any previous task",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dal, err := database.NewWorkDAL(databasePath)
-			if err != nil {
-				return fmt.Errorf("failed to initialize DAL: %v", err)
-			}
-			return client.NewTaskManager(dal).StopCurrentTask()
+			return client.NewTaskManager(databasePath).StopCurrentTask()
 		},
 	}
 }
@@ -133,24 +115,7 @@ func newTaskCmd() *cobra.Command {
 			if (toil && nonWork) || (toil && chore) || (nonWork && chore) {
 				return fmt.Errorf("task should have at most one classification")
 			}
-
-			var taskClassification models.TaskClassification
-			switch {
-			case nonWork:
-				taskClassification = models.Break
-			case chore:
-				taskClassification = models.Chore
-			case toil:
-				taskClassification = models.Toil
-			default:
-				taskClassification = models.Work
-			}
-
-			dal, err := database.NewWorkDAL(databasePath)
-			if err != nil {
-				return fmt.Errorf("failed to initialize DAL: %v", err)
-			}
-			return client.NewTaskManager(dal).CreateTask(taskClassification, strings.Join(args, " "))
+			return client.NewTaskManager(databasePath).CreateTask(chore, nonWork, toil, strings.Join(args, " "))
 		},
 	}
 

@@ -2,62 +2,39 @@ package client
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 	"time"
 
 	"github.com/gen2brain/beeep"
 	"github.com/godbus/dbus/v5"
+	"github.com/jmelahman/work/client/database"
+	"github.com/jmelahman/work/client/reporter"
 	"github.com/jmelahman/work/client/systemd"
-	"github.com/jmelahman/work/database"
-	"github.com/jmelahman/work/database/models"
+	"github.com/jmelahman/work/client/types"
 )
 
 // TaskManager handles operations related to task management
 type TaskManager struct {
-	dal *database.WorkDAL
+	dal      *database.WorkDAL
+	reporter *reporter.Reporter
 }
 
 // NewTaskManager creates a new TaskManager instance
-func NewTaskManager(dal *database.WorkDAL) *TaskManager {
-	return &TaskManager{dal: dal}
+func NewTaskManager(databasePath string) *TaskManager {
+	dal, err := database.NewWorkDAL(databasePath)
+	if err != nil {
+		log.Fatalf("failed to initialize DAL: %v", err)
+	}
+	return &TaskManager{dal: dal, reporter: reporter.NewReporter()}
 }
 
 // SystemdConfig holds systemd service configuration
 type SystemdConfig struct {
 	SystemdUserConfigDir string
-	StopService          ServiceConfig
-	NotificationService  ServiceConfig
-}
-
-// ServiceConfig holds individual service configuration
-type ServiceConfig struct {
-	Name         string
-	Content      string
-	TimerContent string
-}
-
-// DayStats holds statistics for a single day
-type DayStats struct {
-	Total            time.Duration
-	ByClassification map[models.TaskClassification]time.Duration
-}
-
-// Reporter handles report generation
-type Reporter struct {
-	writer *tabwriter.Writer
-	dal    *database.WorkDAL
-}
-
-// NewReporter creates a new Reporter instance
-func NewReporter(dal *database.WorkDAL) *Reporter {
-	w := new(tabwriter.Writer)
-	w.Init(os.Stdout, 5, 8, 1, '\t', 0)
-	return &Reporter{
-		writer: w,
-		dal:    dal,
-	}
+	StopService          systemd.ServiceConfig
+	NotificationService  systemd.ServiceConfig
 }
 
 func getSystemdConfig() (*SystemdConfig, error) {
@@ -76,7 +53,7 @@ func getSystemdConfig() (*SystemdConfig, error) {
 
 	systemdUserConfigDir := filepath.Join(xdgConfigHome, "systemd", "user")
 
-	stopService := ServiceConfig{
+	stopService := systemd.ServiceConfig{
 		Name: "work-stop.service",
 		Content: fmt.Sprintf(`[Unit]
 Description=Stop tracking work on shutdown
@@ -93,7 +70,7 @@ WantedBy=default.target
 `, execPath),
 	}
 
-	notificationService := ServiceConfig{
+	notificationService := systemd.ServiceConfig{
 		Name: "work-notification.service",
 		Content: fmt.Sprintf(`[Unit]
 Description=Alert when not tracking a work task
@@ -169,7 +146,7 @@ func uninstallServices(obj dbus.BusObject) error {
 	return nil
 }
 
-func installService(obj dbus.BusObject, configDir string, service ServiceConfig) error {
+func installService(obj dbus.BusObject, configDir string, service systemd.ServiceConfig) error {
 	servicePath := filepath.Join(configDir, service.Name)
 	if err := os.WriteFile(servicePath, []byte(service.Content), 0644); err != nil {
 		return fmt.Errorf("failed to write service file %s: %v", service.Name, err)
@@ -213,49 +190,12 @@ func (tm *TaskManager) ListTasks(limit int) error {
 		return fmt.Errorf("failed to list tasks: %v", err)
 	}
 
-	w := new(tabwriter.Writer)
-	w.Init(os.Stdout, 0, 8, 0, '\t', 0)
-	defer w.Flush()
-
-	for _, task := range tasks {
-		if err := tm.printTaskRow(w, task); err != nil {
-			return err
-		}
-	}
+	tm.reporter.PrintTaskRows(tasks)
 	return nil
 }
 
-func (tm *TaskManager) printTaskRow(w *tabwriter.Writer, task models.Task) error {
-	end := task.End
-	if end.IsZero() {
-		end = time.Now()
-	}
-
-	fmt.Fprintf(
-		w,
-		"%s - %s\t%s\t%s\t%s\n",
-		task.Start.Format("15:04"),
-		end.Format("15:04"),
-		task.Classification,
-		task.Description,
-		formatDuration(end.Sub(task.Start)),
-	)
-	return nil
-}
-
-func (r *Reporter) GenerateReport() error {
-	tasks, err := r.dal.ListTasks(0, 5)
-	if err != nil {
-		return fmt.Errorf("failed to list tasks: %v", err)
-	}
-
-	stats, weekTotal := r.calculateStats(tasks)
-	r.printReport(stats, weekTotal)
-	return nil
-}
-
-func (r *Reporter) calculateStats(tasks []models.Task) (map[string]DayStats, time.Duration) {
-	statsByDay := make(map[string]DayStats)
+func (tm *TaskManager) calculateStats(tasks []types.Task) (map[string]types.DayStats, time.Duration) {
+	statsByDay := make(map[string]types.DayStats)
 	var weekTotal time.Duration
 
 	for _, task := range tasks {
@@ -269,7 +209,7 @@ func (r *Reporter) calculateStats(tasks []models.Task) (map[string]DayStats, tim
 
 		stats := statsByDay[day]
 		if stats.ByClassification == nil {
-			stats.ByClassification = make(map[models.TaskClassification]time.Duration)
+			stats.ByClassification = make(map[types.TaskClassification]time.Duration)
 		}
 
 		stats.Total += duration
@@ -281,19 +221,15 @@ func (r *Reporter) calculateStats(tasks []models.Task) (map[string]DayStats, tim
 	return statsByDay, weekTotal
 }
 
-func (r *Reporter) printReport(stats map[string]DayStats, weekTotal time.Duration) {
-	defer r.writer.Flush()
-
-	for day, dayStats := range stats {
-		fmt.Fprintf(r.writer, "%s\t%v\t(Total)\n", day, formatDuration(dayStats.Total))
-
-		for classification, duration := range dayStats.ByClassification {
-			fmt.Fprintf(r.writer, "\t%v\t(%s)\n", formatDuration(duration), classification)
-		}
-		fmt.Fprintln(r.writer, "")
+func (tm *TaskManager) GenerateReport() error {
+	tasks, err := tm.dal.ListTasks(0, 5)
+	if err != nil {
+		return fmt.Errorf("failed to list tasks: %v", err)
 	}
 
-	fmt.Fprintf(r.writer, "\nWeek Total:\t%v\n", formatDuration(weekTotal))
+	stats, weekTotal := tm.calculateStats(tasks)
+	tm.reporter.PrintReport(stats, weekTotal)
+	return nil
 }
 
 func (tm *TaskManager) GetStatus(quiet bool, notify bool) error {
@@ -307,7 +243,12 @@ func (tm *TaskManager) GetStatus(quiet bool, notify bool) error {
 	}
 
 	if !quiet {
-		tm.printCurrentTask(task)
+		fmt.Printf(
+			"Current task: \"%s\"\nType: %s\nDuration: %s\n",
+			task.Description,
+			task.Classification,
+			tm.reporter.FormatDuration(time.Since(task.Start)),
+		)
 	}
 	return nil
 }
@@ -327,16 +268,19 @@ func (tm *TaskManager) handleNoActiveTasks(quiet bool, notify bool) error {
 	return nil
 }
 
-func (tm *TaskManager) printCurrentTask(task models.Task) {
-	fmt.Printf(
-		"Current task: \"%s\"\nType: %s\nDuration: %s\n",
-		task.Description,
-		task.Classification,
-		formatDuration(time.Since(task.Start)),
-	)
-}
+func (tm *TaskManager) CreateTask(chore bool, nonWork bool, toil bool, description string) error {
+	var classification types.TaskClassification
+	switch {
+	case nonWork:
+		classification = types.Break
+	case chore:
+		classification = types.Chore
+	case toil:
+		classification = types.Toil
+	default:
+		classification = types.Work
+	}
 
-func (tm *TaskManager) CreateTask(classification models.TaskClassification, description string) error {
 	latestTask, err := tm.dal.GetLatestTask()
 	if err != nil {
 		return fmt.Errorf("failed to get latest task: %v", err)
@@ -348,7 +292,7 @@ func (tm *TaskManager) CreateTask(classification models.TaskClassification, desc
 		}
 	}
 
-	newTask := models.Task{
+	newTask := types.Task{
 		ID:             latestTask.ID + 1,
 		Description:    description,
 		Classification: classification,
@@ -360,9 +304,4 @@ func (tm *TaskManager) CreateTask(classification models.TaskClassification, desc
 		return fmt.Errorf("failed to create task: %v", err)
 	}
 	return nil
-}
-
-// Helper function to format duration
-func formatDuration(duration time.Duration) string {
-	return fmt.Sprintf("%dh %dmin", int(duration.Hours()), int(duration.Minutes())%60)
 }

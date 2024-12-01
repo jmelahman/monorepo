@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jmelahman/work/database/models"
+	"github.com/jmelahman/work/database/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +30,7 @@ func TestNewWorkDAL(t *testing.T) {
 func TestCreateTask(t *testing.T) {
 	dal := setupTestDB(t)
 
-	task := models.Task{
+	task := types.Task{
 		ID:          1,
 		Description: "Test Task",
 		Start:       time.Now(),
@@ -50,7 +50,7 @@ func TestEndTask(t *testing.T) {
 	dal := setupTestDB(t)
 
 	startTime := time.Now()
-	task := models.Task{
+	task := types.Task{
 		ID:          1,
 		Description: "Task to End",
 		Start:       startTime,
@@ -72,7 +72,7 @@ func TestListTasks(t *testing.T) {
 	dal := setupTestDB(t)
 
 	for i := 1; i <= 3; i++ {
-		task := models.Task{
+		task := types.Task{
 			ID:          i,
 			Description: "Task " + string(rune(i)),
 			Start:       time.Now(),

@@ -6,6 +6,13 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
+// ServiceConfig holds individual service configuration
+type ServiceConfig struct {
+	Name         string
+	Content      string
+	TimerContent string
+}
+
 func EnableUnitFiles(obj dbus.BusObject, files []string) error {
 	var enableChanged bool
 	result := make([][]interface{}, 0)

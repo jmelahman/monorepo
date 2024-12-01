@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jmelahman/work/database/models"
+	"github.com/jmelahman/work/client/types"
 	_ "modernc.org/sqlite"
 )
 
@@ -73,7 +73,7 @@ func NewWorkDAL(databasePath string) (*WorkDAL, error) {
 	return dal, nil
 }
 
-func (dal *WorkDAL) CreateTask(task models.Task) error {
+func (dal *WorkDAL) CreateTask(task types.Task) error {
 	_, err := dal.db.Exec(`INSERT INTO task (id, description, classification, start, end) VALUES (?, ?, ?, ?, ?)`,
 		task.ID,
 		task.Description,
@@ -95,19 +95,19 @@ func (dal *WorkDAL) EndTask(id int) error {
 	return nil
 }
 
-func (dal *WorkDAL) GetLatestTask() (models.Task, error) {
+func (dal *WorkDAL) GetLatestTask() (types.Task, error) {
 	tasks, err := dal.ListTasks(1, 0)
 	if err != nil {
-		return models.Task{}, err
+		return types.Task{}, err
 	}
 	if len(tasks) == 0 {
-		return models.Task{}, nil
+		return types.Task{}, nil
 	}
 	return tasks[0], nil
 }
 
-func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
-	tasks := []models.Task{}
+func (dal *WorkDAL) ListTasks(limit int, days int) ([]types.Task, error) {
+	tasks := []types.Task{}
 
 	query := `SELECT id, description, classification, start, end FROM task`
 	args := []interface{}{}
@@ -134,7 +134,7 @@ func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
 		var (
 			id             int
 			description    string
-			classification models.TaskClassification
+			classification types.TaskClassification
 			start          string
 			end            string
 		)
@@ -152,7 +152,7 @@ func (dal *WorkDAL) ListTasks(limit int, days int) ([]models.Task, error) {
 		}
 		tasks = append(
 			tasks,
-			models.Task{
+			types.Task{
 				ID:             id,
 				Description:    description,
 				Classification: classification,

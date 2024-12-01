@@ -1,4 +1,4 @@
-package models
+package types
 
 import (
 	"time"
@@ -23,4 +23,10 @@ type Task struct {
 	Classification TaskClassification `json:"classification"`
 	Start          time.Time          `json:"start"`
 	End            time.Time          `json:"end"`
+}
+
+// DayStats holds statistics for a single day
+type DayStats struct {
+	Total            time.Duration
+	ByClassification map[TaskClassification]time.Duration
 }
