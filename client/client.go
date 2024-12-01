@@ -54,7 +54,8 @@ func getSystemdConfig() (*SystemdConfig, error) {
 	systemdUserConfigDir := filepath.Join(xdgConfigHome, "systemd", "user")
 
 	stopService := systemd.ServiceConfig{
-		Name: "work-stop.service",
+		Name:  "work-stop.service",
+		Start: true,
 		Content: fmt.Sprintf(`[Unit]
 Description=Stop tracking work on shutdown
 DefaultDependencies=no
@@ -71,13 +72,17 @@ WantedBy=default.target
 	}
 
 	notificationService := systemd.ServiceConfig{
-		Name: "work-notification.service",
+		Name:  "work-notification.service",
+		Start: false,
 		Content: fmt.Sprintf(`[Unit]
 Description=Alert when not tracking a work task
 
 [Service]
 Type=simple
 ExecStart=%s status --notify
+
+[Install]
+WantedBy=user.target
 `, execPath),
 		TimerContent: `[Unit]
 Description=Notify when not tracking tasks every 10 minutes
@@ -163,10 +168,11 @@ func installService(obj dbus.BusObject, configDir string, service systemd.Servic
 		return fmt.Errorf("failed to enable service %s: %v", service.Name, err)
 	}
 
-	if err := systemd.StartUnit(obj, service.Name); err != nil {
-		return fmt.Errorf("failed to start service %s: %v", service.Name, err)
+	if service.Start {
+		if err := systemd.StartUnit(obj, service.Name); err != nil {
+			return fmt.Errorf("failed to start service %s: %v", service.Name, err)
+		}
 	}
-
 	return nil
 }
 
