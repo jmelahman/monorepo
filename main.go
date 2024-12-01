@@ -34,7 +34,8 @@ type ReportCommand struct {
 }
 
 type StatusCommand struct {
-	Quiet bool `short:"q" long:"quiet" description:"Exit with status code"`
+	Notify bool `short:"n" long:"notify" description:"Send a notification if no active tasks"`
+	Quiet  bool `short:"q" long:"quiet" description:"Exit with status code"`
 }
 
 type StopCommand struct {
@@ -152,7 +153,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "status":
-		if returncode, err = client.HandleStatus(dal, status.Quiet); err != nil {
+		if returncode, err = client.HandleStatus(dal, status.Quiet, status.Notify); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 	case "stop":

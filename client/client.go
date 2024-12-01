@@ -3,19 +3,47 @@ package client
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/tabwriter"
 	"time"
 
+	"github.com/gen2brain/beeep"
+	"github.com/godbus/dbus/v5"
 	"github.com/jmelahman/work/database"
 	"github.com/jmelahman/work/database/models"
 )
 
+func enableNowUnitFiles(obj dbus.BusObject, serviceName string) error {
+	var enableChanged bool
+	result := make([][]interface{}, 0)
+	err := obj.Call("org.freedesktop.systemd1.Manager.EnableUnitFiles", 0, []string{serviceName}, false, true).Store(&enableChanged, &result)
+	if err != nil {
+		return fmt.Errorf("Failed to enable service %s: %v", serviceName, err)
+	}
+
+	var jobPath dbus.ObjectPath
+	err = obj.Call("org.freedesktop.systemd1.Manager.StartUnit", 0, serviceName, "replace").Store(&jobPath)
+	if err != nil {
+		return fmt.Errorf("Failed to start service %s: %v", serviceName, err)
+	}
+	return nil
+}
+
 func HandleInstall() (int, error) {
 	var err error
 
-	serviceName := "work-stop.service"
+	stopServiceName := "work-stop.service"
+	notificationServiceName := "work-notification.service"
+	notificationTimerName := "work-notification.timer"
+
+	conn, err := dbus.ConnectSessionBus()
+	if err != nil {
+		return 1, fmt.Errorf("Failed to connect to session bus: %v", err)
+	}
+	defer conn.Close()
+
+	obj := conn.Object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
+
 	executablePath, err := os.Executable()
 	if err != nil {
 		return 1, err
@@ -28,12 +56,16 @@ func HandleInstall() (int, error) {
 			return 1, err
 		}
 	}
-	stopServiceName := filepath.Join(xdgConfigHome, "systemd", "user", serviceName)
-	err = os.MkdirAll(filepath.Dir(stopServiceName), 0755)
+
+	systemdUserConfigDir := filepath.Join(xdgConfigHome, "systemd", "user")
+	err = os.MkdirAll(systemdUserConfigDir, 0755)
 	if err != nil {
 		return 1, err
 	}
-	serviceContent := `[Unit]
+
+	// Shutdown service
+	stopServicePath := filepath.Join(systemdUserConfigDir, stopServiceName)
+	stopServiceContent := `[Unit]
 Description=Stop tracking work on shutdown
 DefaultDependencies=no
 Before=shutdown.target
@@ -46,18 +78,52 @@ RemainAfterExit=yes
 [Install]
 WantedBy=default.target
 `
-	err = os.WriteFile(stopServiceName, []byte(serviceContent), 0644)
+	err = os.WriteFile(stopServicePath, []byte(stopServiceContent), 0644)
 	if err != nil {
 		return 1, err
 	}
 
-	cmd := exec.Command("systemctl", "--user", "enable", "--now", serviceName)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
+	err = enableNowUnitFiles(obj, stopServiceName)
 	if err != nil {
 		return 1, err
 	}
+
+	// Notification service
+	notificationServicePath := filepath.Join(systemdUserConfigDir, notificationServiceName)
+	notificationServiceContent := `[Unit]
+Description=Alert when not tracking a work task
+
+[Service]
+Type=simple
+ExecStart=` + executablePath + ` status --notify
+`
+	err = os.WriteFile(notificationServicePath, []byte(notificationServiceContent), 0644)
+	if err != nil {
+		return 1, err
+	}
+
+	notificationTimerPath := filepath.Join(systemdUserConfigDir, notificationTimerName)
+	notificationTimerContent := `[Unit]
+Description=Notify when not tracking tasksE every 10 minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+`
+	err = os.WriteFile(notificationTimerPath, []byte(notificationTimerContent), 0644)
+	if err != nil {
+		return 1, err
+	}
+
+	err = enableNowUnitFiles(obj, notificationServiceName)
+	if err != nil {
+		return 1, err
+	}
+
 	return 0, nil
 }
 
@@ -139,18 +205,24 @@ func HandleReport(dal *database.WorkDAL) (int, error) {
 	return 0, nil
 }
 
-func HandleStatus(dal *database.WorkDAL, quiet bool) (int, error) {
+func HandleStatus(dal *database.WorkDAL, quiet bool, notify bool) (int, error) {
 	task, err := dal.GetLatestTask()
 	if err != nil {
 		return 1, err
 	}
 
 	if task.ID == 0 || !task.End.IsZero() {
-		if !quiet {
-			fmt.Println("No task currently.")
-			return 0, nil
+		if notify {
+			err := beeep.Notify("Work Reminder", "No active tasks.", "assets/information.png")
+			if err != nil {
+				return 1, err
+			}
 		}
-		return 1, nil
+		if quiet {
+			return 1, nil
+		}
+		fmt.Println("No active tasks.")
+		return 0, nil
 	}
 	if !quiet {
 		fmt.Printf(
