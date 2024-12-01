@@ -21,8 +21,18 @@ $ work list
 
 $ work status
 Current task: "Second task of the day"
+Type: Chore
+Duration: 2h 51min
 
 $ work stop
+
+$ work report
+2024-12-01      3h 01min (Total)
+                2h 51min (Chore)
+                0h 10min (Work)
+
+
+Week Total:     3h 01min
 ```
 
 ## Usage
