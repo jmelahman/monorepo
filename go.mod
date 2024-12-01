@@ -3,12 +3,12 @@ module github.com/jmelahman/work
 go 1.23.2
 
 require (
+	github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/posener/complete/v2 v2.1.0
 	github.com/stretchr/testify v1.8.4
 	modernc.org/sqlite v1.34.1
-	github.com/godbus/dbus/v5 v5.1.0
-	github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
 )
 
 require (

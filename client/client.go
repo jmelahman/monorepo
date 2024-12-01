@@ -9,46 +9,10 @@ import (
 
 	"github.com/gen2brain/beeep"
 	"github.com/godbus/dbus/v5"
+	"github.com/jmelahman/work/client/systemd"
 	"github.com/jmelahman/work/database"
 	"github.com/jmelahman/work/database/models"
 )
-
-func enableUnitFiles(obj dbus.BusObject, files []string) error {
-	var enableChanged bool
-	result := make([][]interface{}, 0)
-	err := obj.Call("org.freedesktop.systemd1.Manager.EnableUnitFiles", 0, files, false, true).Store(&enableChanged, &result)
-	if err != nil {
-		return fmt.Errorf("Failed to enable service %v: %v", files, err)
-	}
-	return nil
-}
-
-func startUnit(obj dbus.BusObject, serviceName string) error {
-	var jobPath dbus.ObjectPath
-	err := obj.Call("org.freedesktop.systemd1.Manager.StartUnit", 0, serviceName, "replace").Store(&jobPath)
-	if err != nil {
-		return fmt.Errorf("Failed to start service %v: %v", serviceName, err)
-	}
-	return nil
-}
-
-func disableUnitFiles(obj dbus.BusObject, files []string) error {
-	result := make([][]interface{}, 0)
-	err := obj.Call("org.freedesktop.systemd1.Manager.DisableUnitFiles", 0, files, true).Store(&result)
-	if err != nil {
-		return fmt.Errorf("Failed to enable service %v: %v", files, err)
-	}
-	return nil
-}
-
-func stopUnit(obj dbus.BusObject, serviceName string) error {
-	var jobPath dbus.ObjectPath
-	err := obj.Call("org.freedesktop.systemd1.Manager.StopUnit", 0, serviceName, "replace").Store(&jobPath)
-	if err != nil {
-		return fmt.Errorf("Failed to start service %s: %v", serviceName, err)
-	}
-	return nil
-}
 
 func HandleInstall(uninstall bool) (int, error) {
 	var err error
@@ -66,19 +30,19 @@ func HandleInstall(uninstall bool) (int, error) {
 	obj := conn.Object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
 
 	if uninstall {
-		err := disableUnitFiles(obj, []string{stopServiceName})
+		err := systemd.DisableUnitFiles(obj, []string{stopServiceName})
 		if err != nil {
 			return 1, err
 		}
-		err = stopUnit(obj, stopServiceName)
+		err = systemd.StopUnit(obj, stopServiceName)
 		if err != nil {
 			return 1, err
 		}
-		err = disableUnitFiles(obj, []string{notificationServiceName})
+		err = systemd.DisableUnitFiles(obj, []string{notificationServiceName})
 		if err != nil {
 			return 1, err
 		}
-		err = stopUnit(obj, notificationServiceName)
+		err = systemd.StopUnit(obj, notificationServiceName)
 		if err != nil {
 			return 1, err
 		}
@@ -124,12 +88,12 @@ WantedBy=default.target
 		return 1, err
 	}
 
-	err = enableUnitFiles(obj, []string{stopServiceName})
+	err = systemd.EnableUnitFiles(obj, []string{stopServiceName})
 	if err != nil {
 		return 1, err
 	}
 
-	err = startUnit(obj, stopServiceName)
+	err = systemd.StartUnit(obj, stopServiceName)
 	if err != nil {
 		return 1, err
 	}
@@ -165,7 +129,7 @@ WantedBy=timers.target
 		return 1, err
 	}
 
-	err = enableUnitFiles(obj, []string{notificationServiceName})
+	err = systemd.EnableUnitFiles(obj, []string{notificationServiceName})
 	if err != nil {
 		return 1, err
 	}
