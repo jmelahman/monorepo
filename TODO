@@ -1,7 +1,0 @@
-Features:
-Improve `report` including task breakdown by classification.
-Maybe implement a `amend` subcommand.
-Maybe implement a config file.
-
-Bugs:
-Improve error handling.

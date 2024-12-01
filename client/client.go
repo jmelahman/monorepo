@@ -187,7 +187,12 @@ func HandleReport(dal *database.WorkDAL) error {
 		return err
 	}
 
-	durationsByDay := make(map[string]time.Duration)
+	type DayStats struct {
+		total            time.Duration
+		byClassification map[models.TaskClassification]time.Duration
+	}
+	statsByDay := make(map[string]DayStats)
+	var weekTotal time.Duration
 
 	for _, t := range tasks {
 		var end time.Time
@@ -198,19 +203,30 @@ func HandleReport(dal *database.WorkDAL) error {
 		}
 		duration := end.Sub(t.Start)
 		day := t.Start.Format("2006-01-02")
-		durationsByDay[day] += duration
+
+		stats := statsByDay[day]
+		if stats.byClassification == nil {
+			stats.byClassification = make(map[models.TaskClassification]time.Duration)
+		}
+
+		stats.total += duration
+		stats.byClassification[t.Classification] += duration
+		statsByDay[day] = stats
+		weekTotal += duration
 	}
 
 	w := new(tabwriter.Writer)
-	w.Init(os.Stdout, 0, 8, 0, '\t', 0)
-	for day, totalDuration := range durationsByDay {
-		fmt.Fprintf(
-			w,
-			"%s\t%v\n",
-			day,
-			timeOnly(totalDuration),
-		)
+	w.Init(os.Stdout, 5, 8, 1, '\t', 0)
+
+	for day, stats := range statsByDay {
+		fmt.Fprintf(w, "%s\t%v\t(Total)\n", day, timeOnly(stats.total))
+		for classification, duration := range stats.byClassification {
+			fmt.Fprintf(w, "\t%v\t(%s)\n", timeOnly(duration), classification)
+		}
+		fmt.Fprintln(w, "")
 	}
+
+	fmt.Fprintf(w, "\nWeek Total:\t%v\n", timeOnly(weekTotal))
 	w.Flush()
 	return nil
 }
