@@ -148,7 +148,11 @@ func HandleInstall(uninstall bool) error {
 }
 
 func uninstallServices(obj dbus.BusObject) error {
-	services := []string{"work-stop.service", "work-notification.service"}
+	services := []string{
+		"work-stop.service",
+		"work-notification.service",
+		"work-notification.timer",
+	}
 
 	for _, service := range services {
 		if err := systemd.DisableUnitFiles(obj, []string{service}); err != nil {
