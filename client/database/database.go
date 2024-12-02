@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/jmelahman/work/client/types"
-	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type WorkDAL struct {
@@ -59,7 +59,7 @@ func NewWorkDAL(databasePath string) (*WorkDAL, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite", databasePath)
+	db, err := sql.Open("sqlite3", databasePath)
 	if err != nil {
 		return nil, err
 	}
