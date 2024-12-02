@@ -8,10 +8,9 @@ import (
 
 // ServiceConfig holds individual service configuration
 type ServiceConfig struct {
-	Name         string
-	Start        bool
-	Content      string
-	TimerContent string
+	Name    string
+	Start   bool
+	Content string
 }
 
 func ReloadDaemon(obj dbus.BusObject) error {

@@ -35,6 +35,7 @@ type SystemdConfig struct {
 	SystemdUserConfigDir string
 	StopService          systemd.ServiceConfig
 	NotificationService  systemd.ServiceConfig
+	NotificationTimer    systemd.ServiceConfig
 }
 
 func getSystemdConfig() (*SystemdConfig, error) {
@@ -79,28 +80,33 @@ Description=Alert when not tracking a work task
 
 [Service]
 Type=simple
-ExecStart=%s status --notify
+ExecStart=%s status --notify > /dev/null
 
 [Install]
 WantedBy=user.target
 `, execPath),
-		TimerContent: `[Unit]
-Description=Notify when not tracking tasks every 10 minutes
+	}
+	notificationTimer := systemd.ServiceConfig{
+		Name:  "work-notification.timer",
+		Start: true,
+		Content: fmt.Sprintf(`[Unit]
+Description=Notify when not tracking tasks every 1 minutes
 
 [Timer]
-OnBootSec=10min
-OnUnitActiveSec=10min
+OnBootSec=1min
+OnUnitActiveSec=1min
 Persistent=true
 
 [Install]
 WantedBy=timers.target
-`,
+`),
 	}
 
 	return &SystemdConfig{
 		SystemdUserConfigDir: systemdUserConfigDir,
 		StopService:          stopService,
 		NotificationService:  notificationService,
+		NotificationTimer:    notificationTimer,
 	}, nil
 }
 
@@ -134,6 +140,10 @@ func HandleInstall(uninstall bool) error {
 		return err
 	}
 
+	if err := installService(obj, config.SystemdUserConfigDir, config.NotificationTimer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -156,12 +166,8 @@ func installService(obj dbus.BusObject, configDir string, service systemd.Servic
 	if err := os.WriteFile(servicePath, []byte(service.Content), 0644); err != nil {
 		return fmt.Errorf("failed to write service file %s: %v", service.Name, err)
 	}
-
-	if service.TimerContent != "" {
-		timerPath := filepath.Join(configDir, service.Name[:len(service.Name)-8]+".timer")
-		if err := os.WriteFile(timerPath, []byte(service.TimerContent), 0644); err != nil {
-			return fmt.Errorf("failed to write timer file: %v", err)
-		}
+	if err := systemd.ReloadDaemon(obj); err != nil {
+		return err
 	}
 
 	if err := systemd.EnableUnitFiles(obj, []string{service.Name}); err != nil {
@@ -169,9 +175,6 @@ func installService(obj dbus.BusObject, configDir string, service systemd.Servic
 	}
 
 	if service.Start {
-		if err := systemd.ReloadDaemon(obj); err != nil {
-			return err
-		}
 		if err := systemd.StartUnit(obj, service.Name); err != nil {
 			return err
 		}
