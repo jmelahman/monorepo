@@ -90,11 +90,11 @@ WantedBy=user.target
 		Name:  "work-notification.timer",
 		Start: true,
 		Content: fmt.Sprintf(`[Unit]
-Description=Notify when not tracking tasks every 1 minutes
+Description=Notify when not tracking tasks every 10 minutes
 
 [Timer]
-OnBootSec=1min
-OnUnitActiveSec=1min
+OnBootSec=10min
+OnUnitActiveSec=10min
 Persistent=true
 
 [Install]
