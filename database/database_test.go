@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jmelahman/work/client/types"
+	"github.com/jmelahman/work/database/types"
 	"github.com/stretchr/testify/assert"
 )
 

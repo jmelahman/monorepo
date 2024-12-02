@@ -9,10 +9,10 @@ import (
 
 	"github.com/gen2brain/beeep"
 	"github.com/godbus/dbus/v5"
-	"github.com/jmelahman/work/client/database"
 	"github.com/jmelahman/work/client/reporter"
 	"github.com/jmelahman/work/client/systemd"
-	"github.com/jmelahman/work/client/types"
+	"github.com/jmelahman/work/database"
+	"github.com/jmelahman/work/database/types"
 )
 
 // TaskManager handles operations related to task management

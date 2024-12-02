@@ -6,7 +6,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/jmelahman/work/client/types"
+	"github.com/jmelahman/work/database/types"
 )
 
 // Reporter handles report generation

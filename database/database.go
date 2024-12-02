@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jmelahman/work/client/types"
+	"github.com/jmelahman/work/database/types"
 	_ "github.com/mattn/go-sqlite3"
 )
 
