@@ -7,7 +7,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/spf13/cobra v1.3.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
