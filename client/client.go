@@ -155,10 +155,16 @@ func uninstallServices(obj dbus.BusObject) error {
 	}
 
 	for _, service := range services {
-		if err := systemd.DisableUnitFiles(obj, []string{service}); err != nil {
+		if err := systemd.ReloadDaemon(obj); err != nil {
 			return err
 		}
 		if err := systemd.StopUnit(obj, service); err != nil {
+			return err
+		}
+		if err := systemd.DisableUnitFiles(obj, []string{service}); err != nil {
+			return err
+		}
+		if err := systemd.ReloadDaemon(obj); err != nil {
 			return err
 		}
 	}
@@ -182,6 +188,10 @@ func installService(obj dbus.BusObject, configDir string, service systemd.Servic
 		if err := systemd.StartUnit(obj, service.Name); err != nil {
 			return err
 		}
+	}
+
+	if err := systemd.ReloadDaemon(obj); err != nil {
+		return err
 	}
 	return nil
 }

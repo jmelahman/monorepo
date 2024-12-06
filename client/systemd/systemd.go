@@ -42,7 +42,7 @@ func StartUnit(obj dbus.BusObject, serviceName string) error {
 
 func DisableUnitFiles(obj dbus.BusObject, files []string) error {
 	result := make([][]interface{}, 0)
-	err := obj.Call("org.freedesktop.systemd1.Manager.DisableUnitFiles", 0, files, true).Store(&result)
+	err := obj.Call("org.freedesktop.systemd1.Manager.DisableUnitFiles", 0, files, false).Store(&result)
 	if err != nil {
 		return fmt.Errorf("Failed to enable service %v: %v", files, err)
 	}
