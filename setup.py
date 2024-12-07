@@ -30,7 +30,7 @@ class PostInstallCommand(install):
         install.run(self)
 
 setup(
-    name="gwork",
+    name="work-bin",
     packages=[],
     include_package_data=True,
     cmdclass={
