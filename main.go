@@ -20,24 +20,69 @@ import (
 var (
 	version = "dev"
 
+	// TODO: Maybe add some from https://www.nps.gov/maps/stories/soundscapes-of-the-seashore.html
 	sounds = []Sound{
 		{
-			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-oldfaithful.htm
-			name:   "Old Faithful (Remixed)",
-			credit: "NPS/Jennifer Jerrett and Peter Comley",
-			url:    "https://www.nps.gov/av/imr/avElement/yell-00150325YellowstoneOldFaithfulGeyserEruption3Mix3Alt101.mp3",
+			name:   "Dawn Soundscape from Big Meadows",
+			credit: "J. Job",
+			url:    "https://www.nps.gov/av/imr/avElement/romo-DawnAmbientROMO6816BigMeadowsFinal1.mp3",
 		},
 		{
-			// https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm
-			name:   "Stream Soundscape from the Black Canyon Trail",
+			name:   "Dawn Soundscape from the Sun Valley Trial",
 			credit: "J. Job",
-			url:    "https://www.nps.gov/av/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
+			url:    "https://www.nps.gov/av/imr/avElement/romo-DawnAmbientROMO6916SunValleyTrailFinal1.mp3",
 		},
 		{
 			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
-			name:   "Soundscape - Lower Geyser Basin (Strong Wind)",
+			name:   "Lake",
+			credit: "NPS & MSU Acoustic Atlas/Jennifer Jerrett",
+			url:    "https://www.nps.gov/av/imr/avElement/yell-YELLLakeSoundscape20160914T03ms.mp3",
+		},
+		{
+			name:   "Lower Geyser Basin (Strong Wind)",
 			credit: "NPS/Peter Comley",
-			url:    "https://www.nps.gov/av/imr/avElement/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3",
+			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
+			url: "https://www.nps.gov/av/imr/avElement/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3",
+		},
+		{
+			name:   "Old Faithful (Remixed)",
+			credit: "NPS/Jennifer Jerrett and Peter Comley",
+			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-oldfaithful.htm
+			url: "https://www.nps.gov/av/imr/avElement/yell-00150325YellowstoneOldFaithfulGeyserEruption3Mix3Alt101.mp3",
+		},
+		{
+			name:   "Stream Soundscape from the Black Canyon Trail",
+			credit: "J. Job",
+			// https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm
+			url: "https://www.nps.gov/av/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
+		},
+		{
+			name:   "Thunder (and American Robin)",
+			credit: "NPS/Jennifer Jerrett",
+			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-thunder.htm
+			url: "https://www.nps.gov/av/imr/avElement/yell-Thunderandbirds140704.mp3",
+		},
+		{
+			name:   "Thunderstorm Soundscape from the Black Canyon Trail",
+			credit: "J. Job",
+			url:    "https://www.nps.gov/av/imr/avElement/romo-ThunderstormAmbientROMO52616BlackCanyonTrail1.mp3",
+		},
+		{
+			name:   "Wind Soundscape from Gem Lake",
+			credit: "J. Job",
+			url:    "https://www.nps.gov/av/imr/avElement/romo-WindAmbientGemLakeROMO52516Final1.mp3",
+		},
+		{
+			name:   "Wind on Peale Island",
+			credit: "NPS & MSU Acoustic Atlas/Jennifer Jerrett",
+			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
+			url: "https://www.nps.gov/av/imr/avElement/yell-YELLCabinSoundsWind20160912T032.mp3",
+		},
+		{
+			name:   "Woodstove",
+			credit: "NPS & MSU Acoustic Atlas",
+			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
+			url: "https://www.nps.gov/av/imr/avElement/yell-YELLPealeCabinWoodstove20160914T15ms.mp3",
 		},
 	}
 )
@@ -67,12 +112,11 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 	n, err := pr.Reader.Read(p)
 	pr.DownloadedSize += int64(n)
 
-	// TODO: Improve this UI.
 	if pr.TotalSize > 0 {
 		percent := float64(pr.DownloadedSize) / float64(pr.TotalSize) * 100
 		fmt.Printf("\rProgress: %.2f%%", percent)
 	} else {
-		fmt.Printf("\rDownloaded: %.0f MB", float64(pr.DownloadedSize)/(1024*1024))
+		fmt.Printf("\rDownloading... %.0f MB", float64(pr.DownloadedSize)/(1024*1024))
 	}
 
 	return n, err
@@ -150,7 +194,7 @@ func ListPicker(items []Sound) (int, error) {
 				styleToUse = selectedStyle
 			}
 
-			line := fmt.Sprintf("%d) %s", i, item.name)
+			line := fmt.Sprintf("%d) %s", i+1, item.name)
 			for x, ch := range line {
 				screen.SetContent(x, i, ch, nil, styleToUse)
 			}
@@ -275,8 +319,6 @@ func main() {
 				fmt.Printf("\r➤  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 			}
 		case 's': // Switch to the next sound
-			file.Close()
-			stream.Close()
 			keyboard.Close()
 
 			soundIndex, err := ListPicker(sounds)
@@ -285,6 +327,8 @@ func main() {
 			}
 			nowPlaying = sounds[soundIndex]
 
+			file.Close()
+			stream.Close()
 			ctrl, file, stream, err = playSound(dataDir, nowPlaying)
 			doubleLine = true
 			if err != nil {
