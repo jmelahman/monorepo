@@ -161,7 +161,10 @@ func main() {
 		log.Fatal("Error initializing speaker: ", err)
 	}
 
-	loopStream := beep.Loop(-1, stream)
+	loopStream, err := beep.Loop2(stream)
+	if err != nil {
+		log.Fatal("Error creating loop stream: ", err)
+	}
 
 	ctrl := &beep.Ctrl{Streamer: loopStream, Paused: false}
 	speaker.Play(ctrl)
