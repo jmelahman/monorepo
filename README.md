@@ -10,7 +10,7 @@ A lightweight, nature sounds audio player for the command-line.
 
 <p align="center">
   <picture align="center">
-    <source media="(prefers-color-scheme dark)" srcset="https://github.com/jmelahman/nature-sounds/blob/master/demo_dark.png">
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/jmelahman/nature-sounds/blob/master/demo_dark.png">
     <source media="(prefers-color-scheme: light)" srcset="https://github.com/jmelahman/nature-sounds/blob/master/demo_light.png">
     <img alt="Welcome to nature-sounds (v0.1.0). Press ? for a list of commands." src="https://github.com/jmelahman/nature-sounds/blob/master/demo_light.png">
   </picture>
