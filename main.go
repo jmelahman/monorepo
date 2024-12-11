@@ -16,7 +16,32 @@ import (
 	"github.com/gopxl/beep/v2/speaker"
 )
 
-type sound struct {
+var (
+	version = "dev"
+
+	sounds = []Sound{
+		{
+			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-oldfaithful.htm
+			name:   "Old Faithful (Remixed)",
+			credit: "NPS/Jennifer Jerrett and Peter Comley",
+			url:    "https://www.nps.gov/av/imr/avElement/yell-00150325YellowstoneOldFaithfulGeyserEruption3Mix3Alt101.mp3",
+		},
+		{
+			// https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm
+			name:   "Stream Soundscape from the Black Canyon Trail",
+			credit: "J. Job",
+			url:    "https://www.nps.gov/av/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
+		},
+		{
+			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
+			name:   "Soundscape - Lower Geyser Basin (Strong Wind)",
+			credit: "NPS/Peter Comley",
+			url:    "https://www.nps.gov/av/imr/avElement/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3",
+		},
+	}
+)
+
+type Sound struct {
 	name   string
 	credit string
 	url    string
@@ -46,7 +71,7 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 		percent := float64(pr.DownloadedSize) / float64(pr.TotalSize) * 100
 		fmt.Printf("\rProgress: %.2f%%", percent)
 	} else {
-		fmt.Printf("\rDownloaded: %d bytes", pr.DownloadedSize)
+		fmt.Printf("\rDownloaded: %.0f MB", float64(pr.DownloadedSize)/(1024*1024))
 	}
 
 	return n, err
@@ -71,7 +96,7 @@ func downloadFileWithProgress(url, filepath string) error {
 
 	contentLength, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 	if err != nil || contentLength <= 0 {
-		fmt.Println("Unable to determine file size; progress might not be accurate.")
+		// We don't always get the Content-Length ahead of time and thus is life.
 	}
 
 	progressReader := &ProgressReader{
@@ -88,29 +113,6 @@ func downloadFileWithProgress(url, filepath string) error {
 	return nil
 }
 
-var (
-	version = "dev"
-
-	OLD_FAITHFUL = sound{
-		// https://www.nps.gov/yell/learn/photosmultimedia/sounds-oldfaithful.htm
-		name:   "Old Faithful (Remixed)",
-		credit: "NPS/Jennifer Jerrett and Peter Comley",
-		url:    "https://www.nps.gov/av/imr/avElement/yell-00150325YellowstoneOldFaithfulGeyserEruption3Mix3Alt101.mp3",
-	}
-	BLACK_CANYON_TRAIL = sound{
-		// https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm
-		name:   "Stream Soundscape from the Black Canyon Trail",
-		credit: "J. Job",
-		url:    "https://www.nps.gov/av/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
-	}
-	LOWER_GEYSER_BASE = sound{
-		// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
-		name:   "Soundscape - Lower Geyser Basin (Strong Wind)",
-		credit: "NPS/Peter Comley",
-		url:    "https://www.nps.gov/av/imr/avElement/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3",
-	}
-)
-
 func getApplicationDataDir() (string, error) {
 	dataHome := os.Getenv("XDG_DATA_HOME")
 	if dataHome == "" {
@@ -122,6 +124,40 @@ func getApplicationDataDir() (string, error) {
 	}
 
 	return filepath.Join(dataHome, "nature-sounds"), nil
+}
+
+func playSound(dataDir string, sound Sound) (*beep.Ctrl, *os.File, beep.StreamSeekCloser, error) {
+	soundPath := filepath.Join(dataDir, filepath.Base(sound.url))
+	file, err := os.Open(soundPath)
+	if os.IsNotExist(err) {
+		err := downloadFileWithProgress(sound.url, soundPath)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("Error downloading sound: %v", err)
+		}
+		file, err = os.Open(soundPath)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("Error opening file: %v", err)
+		}
+	} else if err != nil {
+		return nil, nil, nil, fmt.Errorf("Error opening file: %v", err)
+	}
+
+	// TODO: Maybe log if this format differs from the BufferSize set globally.
+	stream, _, err := mp3.Decode(file)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("Error decoding file: %v", err)
+	}
+
+	loopStream, err := beep.Loop2(stream)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("Error creating loop stream: %v", err)
+	}
+
+	ctrl := &beep.Ctrl{Streamer: loopStream, Paused: false}
+	speaker.Play(ctrl)
+	fmt.Printf("\r➤ \"%s\" by \"%s\"\n", sound.name, sound.credit)
+
+	return ctrl, file, stream, nil
 }
 
 func main() {
@@ -136,47 +172,24 @@ func main() {
 		log.Fatal("Error creating XDG_DATA_HOME: ", err)
 	}
 
-	nowPlaying := LOWER_GEYSER_BASE
-	soundPath := filepath.Join(dataDir, filepath.Base(nowPlaying.url))
-
-	file, err := os.Open(soundPath)
-	if os.IsNotExist(err) {
-		err := downloadFileWithProgress(nowPlaying.url, soundPath)
-		if err != nil {
-			log.Fatal("Error downloading sound: ", err)
-		}
-		file, err = os.Open(soundPath)
-		if err != nil {
-			log.Fatal("Error opening file: ", err)
-		}
-	} else if err != nil {
-		log.Fatal("Error opening file: ", err)
-	}
-	defer file.Close()
-
-	stream, format, err := mp3.Decode(file)
-	if err != nil {
-		log.Fatal("Error decoding file: ", err)
-	}
-	defer stream.Close()
-
-	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+	sampleRate := beep.SampleRate(44100)
+	err = speaker.Init(sampleRate, sampleRate.N(time.Second/10))
 	if err != nil {
 		log.Fatal("Error initializing speaker: ", err)
 	}
 
-	loopStream, err := beep.Loop2(stream)
+	nowPlaying := sounds[0]
+	ctrl, file, stream, err := playSound(dataDir, nowPlaying)
 	if err != nil {
-		log.Fatal("Error creating loop stream: ", err)
+		file.Close()
+		stream.Close()
+		log.Fatal("Error playing sound: ", err)
 	}
-
-	ctrl := &beep.Ctrl{Streamer: loopStream, Paused: false}
-	speaker.Play(ctrl)
-	fmt.Printf("\r➤ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+	defer file.Close()
+	defer stream.Close()
 
 	if err := keyboard.Open(); err != nil {
-		fmt.Printf("Error opening keyboard: %v\n", err)
-		return
+		log.Fatal("Error opening keyboard: ", err)
 	}
 	defer keyboard.Close()
 
@@ -185,7 +198,9 @@ func main() {
 		if err != nil {
 			log.Fatal("Error reading key: ", err)
 		}
-		if char == 'p' {
+
+		switch char {
+		case 'p': // Pause/Resume
 			speaker.Lock()
 			ctrl.Paused = !ctrl.Paused
 			speaker.Unlock()
@@ -194,15 +209,44 @@ func main() {
 			} else {
 				fmt.Printf("\033[F\r➤ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 			}
-		} else if char == '?' {
-			// TODO: use tabwritter
-			fmt.Println("\tp  pause/resume playback")
-			fmt.Println("\tq  quit")
-		} else if char == 'q' || key == keyboard.KeyEsc || key == keyboard.KeyCtrlC {
+		case 's': // Switch to the next sound
 			file.Close()
 			stream.Close()
 			keyboard.Close()
-			break
+
+			// Move to the next sound
+			currentIndex := 0
+			for i, sound := range sounds {
+				if sound.name == nowPlaying.name {
+					currentIndex = i
+					break
+				}
+			}
+			nowPlaying = sounds[(currentIndex+1)%len(sounds)]
+
+			ctrl, file, stream, err = playSound(dataDir, nowPlaying)
+			if err != nil {
+				keyboard.Close()
+				file.Close()
+				log.Fatal("Error switching sound: ", err)
+			}
+			if err := keyboard.Open(); err != nil {
+				log.Fatal("Error opening keyboard: ", err)
+			}
+			defer keyboard.Close()
+
+		case '?': // Help
+			fmt.Println("\tp  pause/resume playback")
+			fmt.Println("\tq  quit")
+			fmt.Println("\ts  select new sound")
+
+		case 'q': // Quit
+			return
+
+		default:
+			if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC {
+				return
+			}
 		}
 	}
 }
