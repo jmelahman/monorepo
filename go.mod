@@ -8,7 +8,10 @@ require (
 )
 
 require (
-	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect
+	github.com/ebitengine/oto/v3 v3.3.1 // indirect
+	github.com/ebitengine/purego v0.8.1 // indirect
+	github.com/gopxl/beep/v2 v2.1.0 // indirect
+	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/hajimehoshi/oto v0.7.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8 // indirect
