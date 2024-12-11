@@ -17,8 +17,9 @@ import (
 )
 
 type sound struct {
-	name string
-	url  string
+	name   string
+	credit string
+	url    string
 }
 
 type readCloserWrapper struct {
@@ -92,18 +93,21 @@ var (
 
 	OLD_FAITHFUL = sound{
 		// https://www.nps.gov/yell/learn/photosmultimedia/sounds-oldfaithful.htm
-		name: "Old Faithful (Remixed)",
-		url:  "https://www.nps.gov/av/imr/avElement/yell-00150325YellowstoneOldFaithfulGeyserEruption3Mix3Alt101.mp3",
+		name:   "Old Faithful (Remixed)",
+		credit: "NPS/Jennifer Jerrett and Peter Comley",
+		url:    "https://www.nps.gov/av/imr/avElement/yell-00150325YellowstoneOldFaithfulGeyserEruption3Mix3Alt101.mp3",
 	}
 	BLACK_CANYON_TRAIL = sound{
 		// https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm
-		name: "Stream Soundscape from the Black Canyon Trail",
-		url:  "https://www.nps.gov/av/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
+		name:   "Stream Soundscape from the Black Canyon Trail",
+		credit: "J. Job",
+		url:    "https://www.nps.gov/av/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
 	}
 	LOWER_GEYSER_BASE = sound{
 		// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
-		name: "Soundscape - Lower Geyser Basin (Strong Wind)",
-		url:  "https://www.nps.gov/av/imr/avElement/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3",
+		name:   "Soundscape - Lower Geyser Basin (Strong Wind)",
+		credit: "NPS/Peter Comley",
+		url:    "https://www.nps.gov/av/imr/avElement/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3",
 	}
 )
 
@@ -168,7 +172,7 @@ func main() {
 
 	ctrl := &beep.Ctrl{Streamer: loopStream, Paused: false}
 	speaker.Play(ctrl)
-	fmt.Println("Playing:", nowPlaying.name)
+	fmt.Printf("\r➤ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 
 	if err := keyboard.Open(); err != nil {
 		fmt.Printf("Error opening keyboard: %v\n", err)
@@ -181,16 +185,19 @@ func main() {
 		if err != nil {
 			log.Fatal("Error reading key: ", err)
 		}
-
 		if char == 'p' {
 			speaker.Lock()
 			ctrl.Paused = !ctrl.Paused
 			speaker.Unlock()
-			if char == '?' {
-				// TODO: use tabwritter
-				fmt.Println("\t\tp\tpause/resume playback")
-				fmt.Println("\t\t1\tquit")
+			if ctrl.Paused {
+				fmt.Printf("\033[F\r⏸︎ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+			} else {
+				fmt.Printf("\033[F\r➤ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 			}
+		} else if char == '?' {
+			// TODO: use tabwritter
+			fmt.Println("\tp  pause/resume playback")
+			fmt.Println("\tq  quit")
 		} else if char == 'q' || key == keyboard.KeyEsc || key == keyboard.KeyCtrlC {
 			file.Close()
 			stream.Close()
