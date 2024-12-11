@@ -6,7 +6,7 @@
 [![PyPI](https://img.shields.io/pypi/v/nature-sounds.svg)]()
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/nature-sounds)](https://goreportcard.com/report/github.com/jmelahman/nature-sounds)
 
-A lightweight, nature sounds audio player for the command-line.
+A lightweight, nature sounds player for the command-line.
 
 <p align="center">
   <picture align="center">
