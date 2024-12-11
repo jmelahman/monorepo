@@ -68,15 +68,15 @@ var (
 			url:    "https://www.nps.gov/av/imr/avElement/romo-ThunderstormAmbientROMO52616BlackCanyonTrail1.mp3",
 		},
 		{
-			name:   "Wind Soundscape from Gem Lake",
-			credit: "J. Job",
-			url:    "https://www.nps.gov/av/imr/avElement/romo-WindAmbientGemLakeROMO52516Final1.mp3",
-		},
-		{
 			name:   "Wind on Peale Island",
 			credit: "NPS & MSU Acoustic Atlas/Jennifer Jerrett",
 			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
 			url: "https://www.nps.gov/av/imr/avElement/yell-YELLCabinSoundsWind20160912T032.mp3",
+		},
+		{
+			name:   "Wind Soundscape from Gem Lake",
+			credit: "J. Job",
+			url:    "https://www.nps.gov/av/imr/avElement/romo-WindAmbientGemLakeROMO52516Final1.mp3",
 		},
 		{
 			name:   "Woodstove",
@@ -114,7 +114,7 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 
 	if pr.TotalSize > 0 {
 		percent := float64(pr.DownloadedSize) / float64(pr.TotalSize) * 100
-		fmt.Printf("\rProgress: %.2f%%", percent)
+		fmt.Printf("\rProgress: %.0f%%", percent)
 	} else {
 		fmt.Printf("\rDownloading... %.0f MB", float64(pr.DownloadedSize)/(1024*1024))
 	}
@@ -169,6 +169,26 @@ func getApplicationDataDir() (string, error) {
 	}
 
 	return filepath.Join(dataHome, "nature-sounds"), nil
+}
+
+func saveNowPlaying(dataDir string, sound Sound) error {
+	nowPlayingFile := filepath.Join(dataDir, "now_playing")
+	return os.WriteFile(nowPlayingFile, []byte(sound.url), 0644)
+}
+
+func loadLastPlayed(dataDir string) Sound {
+	nowPlayingFile := filepath.Join(dataDir, "now_playing")
+	data, err := os.ReadFile(nowPlayingFile)
+	if err != nil {
+		return Sound{}
+	}
+	lastURL := string(data)
+	for _, sound := range sounds {
+		if sound.url == lastURL {
+			return sound
+		}
+	}
+	return Sound{}
 }
 
 func ListPicker(items []Sound) (int, error) {
@@ -279,7 +299,19 @@ func main() {
 		log.Fatal("Error initializing speaker: ", err)
 	}
 
-	nowPlaying := sounds[0]
+	nowPlaying := loadLastPlayed(dataDir)
+	if nowPlaying.name == "" {
+		soundIndex, err := ListPicker(sounds)
+		if err != nil {
+			log.Fatal("Error selecting next sound: ", err)
+		}
+		nowPlaying = sounds[soundIndex]
+		err = saveNowPlaying(dataDir, nowPlaying)
+		if err != nil {
+			// TODO: Warn on error.
+		}
+	}
+
 	ctrl, file, stream, err := playSound(dataDir, nowPlaying)
 	doubleLine := true
 	if err != nil {
@@ -326,6 +358,10 @@ func main() {
 				log.Fatal("Error selecting next sound: ", err)
 			}
 			nowPlaying = sounds[soundIndex]
+			err = saveNowPlaying(dataDir, nowPlaying)
+			if err != nil {
+				// TODO: Warn on error.
+			}
 
 			file.Close()
 			stream.Close()
