@@ -286,6 +286,7 @@ func main() {
 			nowPlaying = sounds[soundIndex]
 
 			ctrl, file, stream, err = playSound(dataDir, nowPlaying)
+			doubleLine = true
 			if err != nil {
 				keyboard.Close()
 				file.Close()
