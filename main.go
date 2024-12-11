@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/eiannone/keyboard"
+	"github.com/gdamore/tcell/v2"
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/mp3"
 	"github.com/gopxl/beep/v2/speaker"
@@ -126,6 +127,62 @@ func getApplicationDataDir() (string, error) {
 	return filepath.Join(dataHome, "nature-sounds"), nil
 }
 
+func ListPicker(items []Sound) (int, error) {
+	screen, err := tcell.NewScreen()
+	if err != nil {
+		return -1, err
+	}
+	defer screen.Fini()
+
+	if err := screen.Init(); err != nil {
+		return -1, err
+	}
+
+	style := tcell.StyleDefault
+	selectedStyle := tcell.StyleDefault.Bold(true)
+
+	selectedIndex := 0
+	draw := func() {
+		screen.Clear()
+		for i, item := range items {
+			styleToUse := style
+			if i == selectedIndex {
+				styleToUse = selectedStyle
+			}
+
+			line := fmt.Sprintf("%d) %s", i, item.name)
+			for x, ch := range line {
+				screen.SetContent(x, i, ch, nil, styleToUse)
+			}
+		}
+		screen.Show()
+	}
+
+	draw()
+	for {
+		event := screen.PollEvent()
+		switch ev := event.(type) {
+		case *tcell.EventKey:
+			switch ev.Key() {
+			case tcell.KeyEscape:
+				return -1, fmt.Errorf("selection canceled")
+			case tcell.KeyEnter:
+				return selectedIndex, nil
+			case tcell.KeyUp:
+				if selectedIndex > 0 {
+					selectedIndex--
+					draw()
+				}
+			case tcell.KeyDown:
+				if selectedIndex < len(items)-1 {
+					selectedIndex++
+					draw()
+				}
+			}
+		}
+	}
+}
+
 func playSound(dataDir string, sound Sound) (*beep.Ctrl, *os.File, beep.StreamSeekCloser, error) {
 	soundPath := filepath.Join(dataDir, filepath.Base(sound.url))
 	file, err := os.Open(soundPath)
@@ -180,6 +237,7 @@ func main() {
 
 	nowPlaying := sounds[0]
 	ctrl, file, stream, err := playSound(dataDir, nowPlaying)
+	doubleLine := true
 	if err != nil {
 		file.Close()
 		stream.Close()
@@ -205,24 +263,27 @@ func main() {
 			ctrl.Paused = !ctrl.Paused
 			speaker.Unlock()
 			if ctrl.Paused {
-				fmt.Printf("\033[F\r⏸︎  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+				if doubleLine {
+					fmt.Printf("\033[F")
+				}
+				fmt.Printf("\r⏸︎  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+				doubleLine = true
 			} else {
-				fmt.Printf("\033[F\r➤  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+				if doubleLine {
+					fmt.Printf("\033[F")
+				}
+				fmt.Printf("\r➤  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 			}
 		case 's': // Switch to the next sound
 			file.Close()
 			stream.Close()
 			keyboard.Close()
 
-			// Move to the next sound
-			currentIndex := 0
-			for i, sound := range sounds {
-				if sound.name == nowPlaying.name {
-					currentIndex = i
-					break
-				}
+			soundIndex, err := ListPicker(sounds)
+			if err != nil {
+				log.Fatal("Error selecting next sound: ", err)
 			}
-			nowPlaying = sounds[(currentIndex+1)%len(sounds)]
+			nowPlaying = sounds[soundIndex]
 
 			ctrl, file, stream, err = playSound(dataDir, nowPlaying)
 			if err != nil {
@@ -236,9 +297,11 @@ func main() {
 			defer keyboard.Close()
 
 		case '?': // Help
+			fmt.Println("Available commands:")
 			fmt.Println("\tp  pause/resume playback")
 			fmt.Println("\tq  quit")
 			fmt.Println("\ts  select new sound")
+			doubleLine = false
 
 		case 'q': // Quit
 			return
