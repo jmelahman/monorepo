@@ -155,7 +155,7 @@ func playSound(dataDir string, sound Sound) (*beep.Ctrl, *os.File, beep.StreamSe
 
 	ctrl := &beep.Ctrl{Streamer: loopStream, Paused: false}
 	speaker.Play(ctrl)
-	fmt.Printf("\r➤ \"%s\" by \"%s\"\n", sound.name, sound.credit)
+	fmt.Printf("\r➤  \"%s\" by \"%s\"\n", sound.name, sound.credit)
 
 	return ctrl, file, stream, nil
 }
@@ -205,9 +205,9 @@ func main() {
 			ctrl.Paused = !ctrl.Paused
 			speaker.Unlock()
 			if ctrl.Paused {
-				fmt.Printf("\033[F\r⏸︎ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+				fmt.Printf("\033[F\r⏸︎  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 			} else {
-				fmt.Printf("\033[F\r➤ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+				fmt.Printf("\033[F\r➤  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 			}
 		case 's': // Switch to the next sound
 			file.Close()
