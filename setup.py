@@ -36,7 +36,7 @@ setup(
         "build": BuildGoBinary,
         "install": PostInstallCommand,
     },
-    description="A stupid simple time tracker",
+    description="A nature sounds player for the command-line",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     classifiers=[
