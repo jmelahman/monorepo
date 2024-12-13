@@ -8,15 +8,13 @@
 
 A command-line client for the NYT Connections game.
 
-<---!
 <p align="center">
   <picture align="center">
     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/jmelahman/connections/blob/master/demo_dark.png">
     <source media="(prefers-color-scheme: light)" srcset="https://github.com/jmelahman/connections/blob/master/demo_light.png">
-    <img alt="Welcome to connections (v0.1.0). Press ? for a list of commands." src="https://github.com/jmelahman/connections/blob/master/demo_light.png">
+    <img alt="" src="https://github.com/jmelahman/connections/blob/master/demo_light.png">
   </picture>
 </p>
---->
 
 ## Install
 
