@@ -29,7 +29,7 @@ class PostInstallCommand(install):
         install.run(self)
 
 setup(
-    name="connections",
+    name="nyt-connections",
     packages=[],
     include_package_data=True,
     cmdclass={
