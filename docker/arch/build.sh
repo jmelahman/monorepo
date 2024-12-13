@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPOSITORY="lahmanja/arch"
-VERSION="v1.4.0"
+VERSION="v1.4.1"
 PUSH="false"
 
 if [ "${1:-}" == "--push" ]; then
@@ -16,7 +16,7 @@ fi
 
 pushd "$SCRIPT_DIR" > /dev/null
 
-docker build -t ${REPOSITORY}:latest -t ${REPOSITORY}:${VERSION} .
+DOCKER_BUILDKIT=1 docker build -t ${REPOSITORY}:latest -t ${REPOSITORY}:${VERSION} .
 if [ "${PUSH}" == "true" ]; then
   docker login
   docker push ${REPOSITORY} --all-tags

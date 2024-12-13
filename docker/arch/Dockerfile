@@ -1,5 +1,5 @@
 ### Prebuild Stage ###
-FROM archlinux:base-devel as prebuild
+FROM archlinux:base-devel AS prebuild
 
 RUN pacman -Sy --needed --noconfirm
 RUN pacman -S --needed --noconfirm git sudo
@@ -18,18 +18,14 @@ RUN cd /opt/yay-git && \
 ### Main Stage ###
 FROM archlinux:latest
 
-RUN useradd jamison -m
-
 RUN pacman -Syyu --noconfirm \
       && \
     pacman -S --noconfirm \
-      bazel \
       clang \
       git \
       libxcrypt-compat \
-      python \
+      neovim \
       openssh \
-      vim \
       wget \
       && \
     pacman -Scc --noconfirm
