@@ -12,8 +12,9 @@ class BuildGoBinary(build):
         if not os.path.exists("tag"):
             print("Building Go binary...")
             tag = os.getenv("GITHUB_REF_NAME", "dev")
+            commit = os.getenv("GITHUB_SHA", "none")
             subprocess.check_call(
-                ["go", "build",  f"-ldflags=-X main.version={tag} -s -w", "-o", "tag", "main.go"],
+                ["go", "build",  f"-ldflags=-X main.version={tag} -X main.commit={commit} -s -w", "-o", "tag", "main.go"],
                 env={"GOOS": "linux", "GOARCH": "amd64", **os.environ},
             )
         build.run(self)
