@@ -1,7 +1,7 @@
 # Tag Release
 
-[![Test status](https://github.com/jmelahman/tag/actions/tagflows/test.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
-[![Deploy Status](https://github.com/jmelahman/tag/actions/tagflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
+[![Test status](https://github.com/jmelahman/tag/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
+[![Deploy Status](https://github.com/jmelahman/tag/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/tag.svg)](https://pkg.go.dev/github.com/jmelahman/tag)
 [![PyPI](https://img.shields.io/pypi/v/release-tag.svg)]()
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/tag)](https://goreportcard.com/report/github.com/jmelahman/tag)
