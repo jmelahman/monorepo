@@ -203,7 +203,7 @@ func ListPicker(items []Sound) (int, error) {
 	}
 
 	style := tcell.StyleDefault
-	selectedStyle := tcell.StyleDefault.Bold(true)
+	selectedStyle := tcell.StyleDefault.Bold(true).Underline(true)
 
 	selectedIndex := 0
 	draw := func() {
