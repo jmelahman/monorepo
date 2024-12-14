@@ -8,6 +8,12 @@
 
 Automatically create [semantic version](https://semver.org/) git tags.
 
+```shell
+$ tag --push
+Next version: v1.0.1
+Tag v1.0.1 created and pushed to remote.
+```
+
 ## Install
 
 **pip:**
