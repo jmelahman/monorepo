@@ -37,7 +37,7 @@ setup(
         "build": BuildGoBinary,
         "install": PostInstallCommand,
     },
-    description="Automatically create [semantic version](https://semver.org/) git tags",
+    description="Automatically create semantic version git tags",
     author="Jamison Lahman",
     author_email="jamison@lahman.dev",
     url="https://github.com/jmelahman/tag",
