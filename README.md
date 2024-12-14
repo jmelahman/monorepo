@@ -3,7 +3,7 @@
 [![Test status](https://github.com/jmelahman/connections/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/connections/actions)
 [![Deploy Status](https://github.com/jmelahman/connections/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/connections.svg)](https://pkg.go.dev/github.com/jmelahman/connections)
-[![PyPI](https://img.shields.io/pypi/v/connections.svg)]()
+[![PyPI](https://img.shields.io/pypi/v/nyt-connections.svg)]()
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/connections)](https://goreportcard.com/report/github.com/jmelahman/connections)
 
 A command-line client for the NYT Connections game.
