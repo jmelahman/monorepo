@@ -37,6 +37,9 @@ setup(
         "install": PostInstallCommand,
     },
     description="Automatically create [semantic version](https://semver.org/) git tags",
+    author="Jamison Lahman",
+    author_email="jamison@lahman.dev",
+    url="https://github.com/jmelahman/tag",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     classifiers=[
