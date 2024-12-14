@@ -29,7 +29,7 @@ class PostInstallCommand(install):
         install.run(self)
 
 setup(
-    name="tag-release",
+    name="release-tag",
     packages=[],
     include_package_data=True,
     cmdclass={
