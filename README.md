@@ -1,7 +1,7 @@
 # Tag Release
 
-[![Test status](https://github.com/jmelahman/tag/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
-[![Deploy Status](https://github.com/jmelahman/tag/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
+[![Test status](https://github.com/jmelahman/tag/actions/tagflows/test.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
+[![Deploy Status](https://github.com/jmelahman/tag/actions/tagflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/tag.svg)](https://pkg.go.dev/github.com/jmelahman/tag)
 [![PyPI](https://img.shields.io/pypi/v/release-tag.svg)]()
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/tag)](https://goreportcard.com/report/github.com/jmelahman/tag)
@@ -13,6 +13,19 @@ $ tag --push
 Next version: v1.0.1
 Tag v1.0.1 created and pushed to remote.
 ```
+
+### Autocomplete
+
+`tag` provides autocomplete for `bash`, `fish`, `powershell` and `zsh` shells.
+For example, to enable autocomplete for the `bash` shell,
+
+```shell
+tag completion bash | sudo tee /etc/bash_completion.d/tag > /dev/null
+```
+
+_Note: bash completion requires the [bash-completion](https://github.com/scop/bash-completion/) package be installed._
+
+For more information, see `tag completion <shell> --help` for your respective `<shell>`.
 
 ## Install
 
