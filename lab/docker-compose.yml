@@ -9,6 +9,7 @@ services:
   #    - ./status/database.db:/app/database.db
   nginx:
     image: nginx:latest
+    container_name: nginx
     restart: unless-stopped
     ports:
       - 8000:80
@@ -25,6 +26,7 @@ services:
 
   buildbuddy:
     image: gcr.io/flame-public/buildbuddy-app-onprem:latest
+    container_name: buildbuddy
     restart: unless-stopped
     ports:
       - 1985:1985
@@ -35,6 +37,7 @@ services:
   registry:
     image: registry:2
     container_name: registry
+    restart: unless-stopped
     environment:
       REGISTRY_HTTP_HEADERS_X_CONTENT_TYPE_OPTIONS: nosniff
       REGISTRY_AUTH: htpasswd
