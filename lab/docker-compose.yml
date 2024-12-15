@@ -36,13 +36,15 @@ services:
     image: registry:2
     container_name: registry
     environment:
-      REGISTRY_HTTP_SECRET: <REDACTED>
-      REGISTRY_HTTP_ADDR: :5000
       REGISTRY_HTTP_HEADERS_X_CONTENT_TYPE_OPTIONS: nosniff
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
     ports:
       - 5000:5000
     volumes:
       - registry_data:/var/lib/registry
+      - ./auth:/auth
 
 volumes:
   registry_data:
