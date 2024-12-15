@@ -21,11 +21,13 @@ FROM archlinux:latest
 RUN pacman -Syyu --noconfirm \
       && \
     pacman -S --noconfirm \
+      bind \
       clang \
       git \
       git-lfs \
       libxcrypt-compat \
       neovim \
+      nmap \
       openssh \
       wget \
       && \
