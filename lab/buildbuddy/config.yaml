@@ -1,4 +1,0 @@
-ssl:
-  enable_ssl: true
-  cert_file: /home/jamison/code/monorepo/lab/certbot/conf/live/lahman.dev/cert.pem
-  key_file: /home/jamison/code/monorepo/lab/certbot/conf/live/lahman.dev/privkey.pem
