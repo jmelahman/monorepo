@@ -23,6 +23,7 @@ RUN pacman -Syyu --noconfirm \
     pacman -S --noconfirm \
       clang \
       git \
+      git-lfs \
       libxcrypt-compat \
       neovim \
       openssh \
