@@ -24,7 +24,7 @@ All rights are reserved by the respective owners.
 
 ## Install
 
-**AUR**
+**AUR:**
 
 `nature-sounds` is available from the [Arch User Repository](https://aur.archlinux.org/packages/nature-sounds).
 
