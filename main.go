@@ -342,7 +342,7 @@ func main() {
 				if doubleLine {
 					fmt.Printf("\033[F")
 				}
-				fmt.Printf("\r⏸︎  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+				fmt.Printf("\r❚❚ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 				doubleLine = true
 			} else {
 				if doubleLine {
