@@ -3,6 +3,7 @@
 [![Test status](https://github.com/jmelahman/nature-sounds/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions)
 [![Deploy Status](https://github.com/jmelahman/nature-sounds/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/nature-sounds.svg)](https://pkg.go.dev/github.com/jmelahman/nature-sounds)
+[![Arch User Repsoitory](https://img.shields.io/aur/version/nature-sounds)](https://aur.archlinux.org/packages/nature-sounds)
 [![PyPI](https://img.shields.io/pypi/v/nature-sounds.svg)]()
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/nature-sounds)](https://goreportcard.com/report/github.com/jmelahman/nature-sounds)
 
@@ -22,6 +23,14 @@ If you enjoy these sounds, consider [donating to the NPS](https://www.nps.gov/ge
 All rights are reserved by the respective owners.
 
 ## Install
+
+**AUR**
+
+`nature-sounds` is available from the [Arch User Repository](https://aur.archlinux.org/packages/nature-sounds).
+
+```shell
+yay -S nature-sounds
+```
 
 **pip:**
 
