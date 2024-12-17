@@ -4,12 +4,15 @@ on:
     branches:
       - master
   pull_request:
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
       - name: Dependencies
         uses: daaku/gh-action-apt-install@v4
         with:
