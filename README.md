@@ -3,6 +3,7 @@
 [![Test status](https://github.com/jmelahman/work/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/work/actions)
 [![Deploy Status](https://github.com/jmelahman/work/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/work/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/work.svg)](https://pkg.go.dev/github.com/jmelahman/work)
+[![Arch User Repsoitory](https://img.shields.io/aur/version/work)](https://aur.archlinux.org/packages/work)
 [![PyPI](https://img.shields.io/pypi/v/work-bin.svg)]()
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/work)](https://goreportcard.com/report/github.com/jmelahman/work)
 
@@ -97,6 +98,13 @@ For more information, see `work completion <shell> --help` for your respective `
 
 ## Install
 
+**AUR:**
+
+`work` is available from the [Arch User Repository](https://aur.archlinux.org/packages/work).
+
+```shell
+yay -S work
+```
 **pip:**
 
 `work` is available as a [pypi package](https://pypi.org/project/work-bin/).
