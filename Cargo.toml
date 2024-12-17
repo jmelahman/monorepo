@@ -1,6 +1,6 @@
 [package]
 name = "check-symlinks"
-version = "0.3.2"
+version = "0.4.0"
 edition = "2021"
 authors = ["Jamison Lahman <jamison@lahman.dev>"]
 description = "Check for broken symlinks"
@@ -13,4 +13,5 @@ exclude = ["testdata/"]
 [dependencies]
 ignore = "0.4.20"
 num_cpus = "1.15.0"
+rayon = "1.10.0"
 threadpool = "1.8.1"
