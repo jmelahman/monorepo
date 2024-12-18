@@ -115,34 +115,35 @@ func main() {
 
 	response, err := parseConnectionsJSON(connectionsData)
 
-	// Create a 4x4 grid layout to hold the buttons
 	grid := tview.NewGrid().
-		SetRows(3, 3, 3, 3).       // Button heights
-		SetColumns(15, 15, 15, 15) // Button widths
+		SetRows(3, 3, 3, 3).
+		SetColumns(15, 15, 15, 15)
 
-	// Create a 4x4 array of buttons and keep track of them
 	buttons := [4][4]*tview.Button{}
 	var focusedRow, focusedCol int
 
 	for row := 0; row < 4; row++ {
 		category := response.Categories[row]
 		for col := 0; col < 4; col++ {
-			label := cases.Title(language.English).String(category.Cards[col].Content)
+			card := category.Cards[col]
+			label := cases.Title(language.English).String(card.Content)
+			gRow := card.Position / 4
+			gCol := card.Position % 4
+
 			button := tview.NewButton(label).
 				SetSelectedFunc(func(r, c int) func() {
 					return func() {
-						fmt.Printf("Clicked: Button at [%d, %d]\n", r, c)
-						focusedCol = col
-						focusedRow = row
+						fmt.Printf("Clicked: %s\n", buttons[r][c].GetLabel())
+						focusedCol = r
+						focusedRow = c
 					}
-				}(row, col))
+				}(gRow, gCol))
 
-			buttons[row][col] = button
-			grid.AddItem(button, row, col, 1, 1, 0, 0, false)
+			buttons[gRow][gCol] = button
+			grid.AddItem(button, gRow, gCol, 1, 1, 0, 0, false)
 		}
 	}
 
-	// Custom navigation logic
 	grid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyUp:
