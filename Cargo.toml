@@ -1,6 +1,6 @@
 [package]
 name = "check-symlinks"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2021"
 authors = ["Jamison Lahman <jamison@lahman.dev>"]
 description = "Check for broken symlinks"

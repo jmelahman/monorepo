@@ -23,7 +23,7 @@ dependencies = [
 
 [[package]]
 name = "check-symlinks"
-version = "0.4.0"
+version = "0.4.2"
 dependencies = [
  "ignore",
  "num_cpus",
