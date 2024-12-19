@@ -9,9 +9,7 @@
 
 A command-line client for the NYT Connections game.
 
-<p align="center">
-  ![Demo](media/demo.gif)
-</p>
+![Demo](media/demo.gif)
 
 ## Install
 
