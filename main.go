@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -41,8 +44,9 @@ type Group struct {
 }
 
 type GameState struct {
-	selectedCards map[string]bool
-	categories    map[string]Group
+	selectedCards   map[string]bool
+	categories      map[string]Group
+	currentMatchRow int
 }
 
 func fetch(urlString string) ([]byte, error) {
@@ -148,14 +152,15 @@ func main() {
 		category := response.Categories[row]
 		for col := 0; col < 4; col++ {
 			card := category.Cards[col]
-			label := cases.Title(language.English).String(card.Content)
+			label := cases.Title(language.AmericanEnglish).String(card.Content)
+			title := cases.Title(language.AmericanEnglish).String(category.Title)
 			gRow := card.Position / 4
 			gCol := card.Position % 4
 			// Hacks enabled
 			gRow = row
 			gCol = col
 
-			gameState.categories[label] = Group{category.Title, row}
+			gameState.categories[label] = Group{title, row}
 
 			button := tview.NewButton(label).
 				SetSelectedFunc(func(r, c int) func() {
@@ -217,26 +222,43 @@ func main() {
 		}
 
 		if allSameCategory {
-			for cardContent := range gameState.selectedCards {
-				for i := 0; i < 4; i++ {
-					for j := 0; j < 4; j++ {
-						button := buttons[i][j]
-						if button.GetLabel() == cardContent {
-							button.SetDisabled(true)
-							switch categoryIndex {
-							case 0:
-								button.SetDisabledStyle(baseStyle.Background(tcell.ColorYellow))
-							case 1:
-								button.SetDisabledStyle(baseStyle.Background(tcell.ColorGreen))
-							case 2:
-								button.SetDisabledStyle(baseStyle.Background(tcell.ColorBlue))
-							case 3:
-								button.SetDisabledStyle(baseStyle.Background(tcell.ColorPurple))
-							}
+			buttonsToMove := []*tview.Button{}
+			for i := 0; i < 4; i++ {
+				for j := 0; j < 4; j++ {
+					button := buttons[i][j]
+					wasSelected := gameState.selectedCards[button.GetLabel()]
+					if i == gameState.currentMatchRow && !wasSelected {
+						buttonsToMove = append(buttonsToMove, button)
+						grid.RemoveItem(button)
+					}
+					if wasSelected {
+						grid.RemoveItem(button)
+						if len(buttonsToMove) > 0 {
+							grid.AddItem(buttonsToMove[0], i, j, 1, 1, 0, 0, false)
+							buttons[i][j] = buttonsToMove[0]
+							buttonsToMove = buttonsToMove[1:]
 						}
 					}
 				}
 			}
+			contents := fmt.Sprintf(
+				"%s: %s",
+				categoryTitle,
+				strings.Join(slices.Collect(maps.Keys(gameState.selectedCards)), ", "),
+			)
+			button := tview.NewButton(contents).SetDisabled(true)
+			switch categoryIndex {
+			case 0:
+				button.SetDisabledStyle(baseStyle.Background(tcell.ColorYellow))
+			case 1:
+				button.SetDisabledStyle(baseStyle.Background(tcell.ColorGreen))
+			case 2:
+				button.SetDisabledStyle(baseStyle.Background(tcell.ColorBlue))
+			case 3:
+				button.SetDisabledStyle(baseStyle.Background(tcell.ColorPurple))
+			}
+			grid.AddItem(button, gameState.currentMatchRow, 0, 1, 4, 0, 0, false)
+			gameState.currentMatchRow++
 			for cardContent := range gameState.selectedCards {
 				delete(gameState.selectedCards, cardContent)
 			}
@@ -267,7 +289,7 @@ func main() {
 	grid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch {
 		case event.Key() == tcell.KeyUp:
-			if focusedRow > 0 {
+			if focusedRow > gameState.currentMatchRow {
 				focusedRow--
 			}
 		case event.Key() == tcell.KeyDown:
