@@ -410,8 +410,11 @@ func main() {
 				deselectButton.SetActivatedStyle(activatedStyle)
 			}
 		} else {
-			buttons[focusedRow][focusedCol].SetActivatedStyle(activatedStyle)
-			app.SetFocus(buttons[focusedRow][focusedCol])
+			button := buttons[focusedRow][focusedCol]
+			if !gameState.selectedCards[button.GetLabel()] {
+				button.SetActivatedStyle(activatedStyle)
+			}
+			app.SetFocus(button)
 		}
 		return nil
 	})
