@@ -235,7 +235,7 @@ func main() {
 		var categoryTitle string
 		var categoryIndex int
 		first := true
-		allSameCategory := true
+		offBy := 0
 
 		for cardContent := range gameState.selectedCards {
 			if first {
@@ -244,12 +244,11 @@ func main() {
 				categoryIndex = category.Index
 				first = false
 			} else if gameState.categories[cardContent].Title != categoryTitle {
-				allSameCategory = false
-				break
+				offBy++
 			}
 		}
 
-		if allSameCategory {
+		if offBy == 0 {
 			contents := fmt.Sprintf(
 				"%s: %s",
 				categoryTitle,
@@ -291,6 +290,10 @@ func main() {
 			for cardContent := range gameState.selectedCards {
 				delete(gameState.selectedCards, cardContent)
 			}
+		} else if offBy == 1 {
+			submitButton.
+				SetStyle(baseStyle.Background(tcell.ColorYellow)).
+				SetActivatedStyle(baseStyle.Background(tcell.ColorYellow))
 		} else {
 			submitButton.
 				SetStyle(baseStyle.Background(tcell.ColorRed)).
