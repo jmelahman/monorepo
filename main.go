@@ -320,22 +320,26 @@ func main() {
 	grid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		submitButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 		switch {
-		case event.Key() == tcell.KeyUp:
+		case event.Key() == tcell.KeyRune && event.Rune() == 's':
+			handleSubmit()
+		case event.Key() == tcell.KeyRune && event.Rune() == 'd':
+			handleDeselect()
+		case event.Key() == tcell.KeyUp, event.Key() == tcell.KeyRune && event.Rune() == 'k':
 			if focusedRow > gameState.currentMatchRow {
 				focusedRow--
 			}
-		case event.Key() == tcell.KeyDown:
+		case event.Key() == tcell.KeyDown, event.Key() == tcell.KeyRune && event.Rune() == 'j':
 			if focusedRow < 4 {
 				focusedRow++
 			}
-		case event.Key() == tcell.KeyLeft:
+		case event.Key() == tcell.KeyLeft, event.Key() == tcell.KeyRune && event.Rune() == 'h':
 			if focusedCol > 0 {
 				if focusedRow == 4 && focusedCol == 2 {
 					focusedCol--
 				}
 				focusedCol--
 			}
-		case event.Key() == tcell.KeyRight:
+		case event.Key() == tcell.KeyRight, event.Key() == tcell.KeyRune && event.Rune() == 'l':
 			if focusedCol < 3 {
 				if focusedRow == 4 && focusedCol == 1 {
 					focusedCol++
