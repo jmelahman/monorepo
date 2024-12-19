@@ -142,7 +142,10 @@ func main() {
 	buttons := [4][4]*tview.Button{}
 	var focusedRow, focusedCol int
 
-	baseStyle := tcell.StyleDefault.Background(tcell.ColorDefault).Foreground(tcell.ColorBlack)
+	baseStyle := tcell.StyleDefault.
+		Background(tcell.ColorDefault).
+		Foreground(tcell.ColorBlack).
+		Bold(true)
 	defaultStyle := baseStyle.Foreground(tcell.ColorDefault)
 	selectedStyle := baseStyle.Background(tcell.ColorGray)
 	activatedStyle := baseStyle.Background(tcell.ColorSilver)
@@ -217,7 +220,24 @@ func main() {
 		index := 0
 		for i := gameState.currentMatchRow; i < 4; i++ {
 			for j := 0; j < 4; j++ {
-				button := flatButtons[index]
+				button := flatButtons[index].
+					SetSelectedFunc(func(r, c int) func() {
+						return func() {
+							submitButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
+							label := buttons[r][c].GetLabel()
+							if gameState.selectedCards[label] {
+								delete(gameState.selectedCards, label)
+								buttons[r][c].SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
+							} else if len(gameState.selectedCards) < 4 {
+								gameState.selectedCards[label] = true
+								buttons[r][c].SetStyle(selectedStyle).SetActivatedStyle(selectedStyle)
+							} else {
+								return
+							}
+							focusedRow = r
+							focusedCol = c
+						}
+					}(i, j))
 				index++
 				grid.RemoveItem(button)
 				grid.AddItem(button, i, j, 1, 1, 0, 0, false)
