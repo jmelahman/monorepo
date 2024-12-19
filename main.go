@@ -309,7 +309,7 @@ func main() {
 			for cardContent := range gameState.selectedCards {
 				delete(gameState.selectedCards, cardContent)
 			}
-		} else if offBy == 1 {
+		} else if offBy == 1 || offBy == 3 {
 			submitButton.
 				SetStyle(baseStyle.Background(tcell.ColorYellow)).
 				SetActivatedStyle(baseStyle.Background(tcell.ColorYellow))
