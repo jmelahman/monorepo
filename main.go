@@ -155,7 +155,6 @@ func main() {
 			gRow = row
 			gCol = col
 
-			// Map card content to its category
 			gameState.categories[label] = Group{category.Title, row}
 
 			button := tview.NewButton(label).
@@ -164,10 +163,10 @@ func main() {
 						label := buttons[r][c].GetLabel()
 						if gameState.selectedCards[label] {
 							delete(gameState.selectedCards, label)
-							buttons[r][c].SetStyle(defaultStyle)
+							buttons[r][c].SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 						} else if len(gameState.selectedCards) < 4 {
 							gameState.selectedCards[label] = true
-							buttons[r][c].SetStyle(selectedStyle)
+							buttons[r][c].SetStyle(selectedStyle).SetActivatedStyle(selectedActivatedStyle)
 						}
 						focusedCol = r
 						focusedRow = c
@@ -315,12 +314,13 @@ func main() {
 		}
 
 		if focusedRow == 4 {
-			if focusedCol == 0 {
+			switch focusedCol {
+			case 0:
 				app.SetFocus(shuffleButton)
-			} else if focusedCol == 3 {
-				app.SetFocus(deselectButton)
-			} else {
+			case 1, 2:
 				app.SetFocus(submitButton)
+			case 3:
+				app.SetFocus(deselectButton)
 			}
 		} else {
 			app.SetFocus(buttons[focusedRow][focusedCol])
