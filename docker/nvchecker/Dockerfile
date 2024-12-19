@@ -14,7 +14,7 @@ RUN pacman -Syyu --noconfirm \
     pacman -Scc --noconfirm
 
 RUN uv pip install --system --break-system-packages \
-      git+https://github.com/lilydjwg/nvchecker@372fce4445159ebd2cab8dab4f3e40e20a54ee9a \
+      git+https://github.com/lilydjwg/nvchecker@2722ccc7fef71fccf9f031d8299bc3c36736fdda \
       && \
     uv cache clean
 
