@@ -147,6 +147,8 @@ func main() {
 	activatedStyle := baseStyle.Background(tcell.ColorSilver)
 	selectedActivatedStyle := baseStyle.Background(tcell.ColorDarkGray)
 
+	var submitButton *tview.Button
+
 	for row := 0; row < 4; row++ {
 		category := response.Categories[row]
 		for col := 0; col < 4; col++ {
@@ -161,6 +163,7 @@ func main() {
 			button := tview.NewButton(label).
 				SetSelectedFunc(func(r, c int) func() {
 					return func() {
+						submitButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 						label := buttons[r][c].GetLabel()
 						if gameState.selectedCards[label] {
 							delete(gameState.selectedCards, label)
@@ -183,6 +186,7 @@ func main() {
 	}
 
 	handleDeselect := func() {
+		submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
 		for cardContent := range gameState.selectedCards {
 			delete(gameState.selectedCards, cardContent)
 		}
@@ -194,6 +198,7 @@ func main() {
 	}
 
 	handleShuffle := func() {
+		submitButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 		// TODO: Implement shuffle logic
 	}
 
@@ -262,7 +267,9 @@ func main() {
 				delete(gameState.selectedCards, cardContent)
 			}
 		} else {
-			fmt.Println("Incorrect!")
+			submitButton.
+				SetStyle(baseStyle.Background(tcell.ColorRed)).
+				SetActivatedStyle(baseStyle.Background(tcell.ColorRed))
 		}
 	}
 
@@ -271,7 +278,7 @@ func main() {
 		SetStyle(defaultStyle).
 		SetActivatedStyle(selectedStyle)
 
-	submitButton := tview.NewButton("Submit").
+	submitButton = tview.NewButton("Submit").
 		SetSelectedFunc(handleSubmit).
 		SetStyle(defaultStyle).
 		SetActivatedStyle(selectedStyle)
@@ -286,6 +293,7 @@ func main() {
 	grid.AddItem(deselectButton, 4, 3, 1, 1, 0, 0, false)
 
 	grid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		submitButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 		switch {
 		case event.Key() == tcell.KeyUp:
 			if focusedRow > gameState.currentMatchRow {
@@ -343,7 +351,9 @@ func main() {
 				shuffleButton.SetActivatedStyle(activatedStyle)
 			case 1, 2:
 				app.SetFocus(submitButton)
-				submitButton.SetActivatedStyle(activatedStyle)
+				if event.Key() != tcell.KeyEnter && !(event.Key() == tcell.KeyRune && event.Rune() == ' ') {
+					submitButton.SetActivatedStyle(activatedStyle)
+				}
 			case 3:
 				app.SetFocus(deselectButton)
 				deselectButton.SetActivatedStyle(activatedStyle)
