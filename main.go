@@ -137,7 +137,7 @@ func main() {
 
 	grid := tview.NewGrid().
 		SetRows(3, 3, 3, 3, 3). // Added extra row for submit button
-		SetColumns(15, 15, 15, 15)
+		SetColumns(20, 20, 20, 20)
 
 	buttons := [4][4]*tview.Button{}
 	var focusedRow, focusedCol int
