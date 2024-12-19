@@ -163,7 +163,7 @@ func main() {
 					return func() {
 						label := buttons[r][c].GetLabel()
 						if gameState.selectedCards[label] {
-							gameState.selectedCards[label] = false
+							delete(gameState.selectedCards, label)
 							buttons[r][c].SetStyle(defaultStyle)
 						} else if len(gameState.selectedCards) < 4 {
 							gameState.selectedCards[label] = true
@@ -301,7 +301,7 @@ func main() {
 			} else {
 				label := buttons[focusedRow][focusedCol].GetLabel()
 				if gameState.selectedCards[label] {
-					gameState.selectedCards[label] = false
+					delete(gameState.selectedCards, label)
 					buttons[focusedRow][focusedCol].
 						SetStyle(defaultStyle).
 						SetActivatedStyle(activatedStyle)
