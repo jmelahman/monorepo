@@ -171,8 +171,8 @@ func main() {
 						} else {
 							return
 						}
-						focusedCol = r
-						focusedRow = c
+						focusedRow = r
+						focusedCol = c
 					}
 				}(gRow, gCol))
 
@@ -269,17 +269,17 @@ func main() {
 	shuffleButton := tview.NewButton("Shuffle").
 		SetSelectedFunc(handleShuffle).
 		SetStyle(defaultStyle).
-		SetActivatedStyle(activatedStyle)
+		SetActivatedStyle(selectedStyle)
 
 	submitButton := tview.NewButton("Submit").
 		SetSelectedFunc(handleSubmit).
 		SetStyle(defaultStyle).
-		SetActivatedStyle(activatedStyle)
+		SetActivatedStyle(selectedStyle)
 
 	deselectButton := tview.NewButton("Deselect All").
 		SetSelectedFunc(handleDeselect).
 		SetStyle(defaultStyle).
-		SetActivatedStyle(activatedStyle)
+		SetActivatedStyle(selectedStyle)
 
 	grid.AddItem(shuffleButton, 4, 0, 1, 1, 0, 0, false)
 	grid.AddItem(submitButton, 4, 1, 1, 2, 0, 0, false)
@@ -340,10 +340,13 @@ func main() {
 			switch focusedCol {
 			case 0:
 				app.SetFocus(shuffleButton)
+				shuffleButton.SetActivatedStyle(activatedStyle)
 			case 1, 2:
 				app.SetFocus(submitButton)
+				submitButton.SetActivatedStyle(activatedStyle)
 			case 3:
 				app.SetFocus(deselectButton)
+				deselectButton.SetActivatedStyle(activatedStyle)
 			}
 		} else {
 			buttons[focusedRow][focusedCol].SetActivatedStyle(activatedStyle)
