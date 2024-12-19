@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"maps"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -199,7 +200,31 @@ func main() {
 
 	handleShuffle := func() {
 		submitButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
-		// TODO: Implement shuffle logic
+		// Flatten the buttons array for rows greater than currentMatchRow into a slice for shuffling
+		var flatButtons []*tview.Button
+		for i := gameState.currentMatchRow; i < 4; i++ {
+			for j := 0; j < 4; j++ {
+				flatButtons = append(flatButtons, buttons[i][j])
+			}
+		}
+
+		// Shuffle the flatButtons slice
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(flatButtons), func(i, j int) {
+			flatButtons[i], flatButtons[j] = flatButtons[j], flatButtons[i]
+		})
+
+		// Reassign the shuffled buttons back to the grid
+		index := 0
+		for i := gameState.currentMatchRow; i < 4; i++ {
+			for j := 0; j < 4; j++ {
+				button := flatButtons[index]
+				index++
+				grid.RemoveItem(button)
+				grid.AddItem(button, i, j, 1, 1, 0, 0, false)
+				buttons[i][j] = button
+			}
+		}
 	}
 
 	handleSubmit := func() {
