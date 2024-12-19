@@ -209,7 +209,6 @@ func main() {
 		}
 
 		// Shuffle the flatButtons slice
-		rand.Seed(time.Now().UnixNano())
 		rand.Shuffle(len(flatButtons), func(i, j int) {
 			flatButtons[i], flatButtons[j] = flatButtons[j], flatButtons[i]
 		})
