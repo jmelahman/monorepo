@@ -70,7 +70,6 @@ func fetch(urlString string) ([]byte, error) {
 
 func getConnectionsJSON(date time.Time) ([]byte, error) {
 	jsonFilename := fmt.Sprintf("%s.json", date.Format("2006-01-02"))
-	jsonFilename = "2024-12-17.json"
 
 	dataUrl, err := url.JoinPath("https://www.nytimes.com/svc/connections/v2/", jsonFilename)
 	if err != nil {
@@ -156,9 +155,6 @@ func main() {
 			title := cases.Title(language.AmericanEnglish).String(category.Title)
 			gRow := card.Position / 4
 			gCol := card.Position % 4
-			// Hacks enabled
-			gRow = row
-			gCol = col
 
 			gameState.categories[label] = Group{title, row}
 
@@ -168,17 +164,19 @@ func main() {
 						label := buttons[r][c].GetLabel()
 						if gameState.selectedCards[label] {
 							delete(gameState.selectedCards, label)
-							buttons[r][c].SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
+							buttons[r][c].SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
 						} else if len(gameState.selectedCards) < 4 {
 							gameState.selectedCards[label] = true
-							buttons[r][c].SetStyle(selectedStyle).SetActivatedStyle(selectedActivatedStyle)
+							buttons[r][c].SetStyle(selectedStyle).SetActivatedStyle(selectedStyle)
+						} else {
+							return
 						}
 						focusedCol = r
 						focusedRow = c
 					}
 				}(gRow, gCol))
 
-			button.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
+			button.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
 			buttons[gRow][gCol] = button
 			grid.AddItem(button, gRow, gCol, 1, 1, 0, 0, false)
 		}
@@ -222,25 +220,6 @@ func main() {
 		}
 
 		if allSameCategory {
-			buttonsToMove := []*tview.Button{}
-			for i := 0; i < 4; i++ {
-				for j := 0; j < 4; j++ {
-					button := buttons[i][j]
-					wasSelected := gameState.selectedCards[button.GetLabel()]
-					if i == gameState.currentMatchRow && !wasSelected {
-						buttonsToMove = append(buttonsToMove, button)
-						grid.RemoveItem(button)
-					}
-					if wasSelected {
-						grid.RemoveItem(button)
-						if len(buttonsToMove) > 0 {
-							grid.AddItem(buttonsToMove[0], i, j, 1, 1, 0, 0, false)
-							buttons[i][j] = buttonsToMove[0]
-							buttonsToMove = buttonsToMove[1:]
-						}
-					}
-				}
-			}
 			contents := fmt.Sprintf(
 				"%s: %s",
 				categoryTitle,
@@ -258,12 +237,32 @@ func main() {
 				button.SetDisabledStyle(baseStyle.Background(tcell.ColorPurple))
 			}
 			grid.AddItem(button, gameState.currentMatchRow, 0, 1, 4, 0, 0, false)
+
+			buttonsToMove := []*tview.Button{}
+			for i := 0; i < 4; i++ {
+				for j := 0; j < 4; j++ {
+					button := buttons[i][j]
+					wasSelected := gameState.selectedCards[button.GetLabel()]
+					if i == gameState.currentMatchRow && !wasSelected {
+						buttonsToMove = append(buttonsToMove, button)
+						grid.RemoveItem(button)
+					}
+					if wasSelected {
+						grid.RemoveItem(button)
+						if i != gameState.currentMatchRow && len(buttonsToMove) > 0 {
+							grid.AddItem(buttonsToMove[0], i, j, 1, 1, 0, 0, false)
+							buttons[i][j] = buttonsToMove[0]
+							buttonsToMove = buttonsToMove[1:]
+						}
+					}
+				}
+			}
 			gameState.currentMatchRow++
 			for cardContent := range gameState.selectedCards {
 				delete(gameState.selectedCards, cardContent)
 			}
 		} else {
-			fmt.Println("Incorrect! Not all cards belong to the same category")
+			fmt.Println("Incorrect!")
 		}
 	}
 
@@ -333,6 +332,8 @@ func main() {
 						SetActivatedStyle(selectedActivatedStyle)
 				}
 			}
+		default:
+			return nil
 		}
 
 		if focusedRow == 4 {
@@ -345,6 +346,7 @@ func main() {
 				app.SetFocus(deselectButton)
 			}
 		} else {
+			buttons[focusedRow][focusedCol].SetActivatedStyle(activatedStyle)
 			app.SetFocus(buttons[focusedRow][focusedCol])
 		}
 		return nil
