@@ -13,6 +13,7 @@ import (
 	"github.com/eiannone/keyboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/gopxl/beep/v2"
+	"github.com/gopxl/beep/v2/effects"
 	"github.com/gopxl/beep/v2/mp3"
 	"github.com/gopxl/beep/v2/speaker"
 )
@@ -247,38 +248,39 @@ func ListPicker(items []Sound) (int, error) {
 	}
 }
 
-func playSound(dataDir string, sound Sound) (*beep.Ctrl, *os.File, beep.StreamSeekCloser, error) {
+func playSound(dataDir string, sound Sound) (*beep.Ctrl, *os.File, beep.StreamSeekCloser, *effects.Volume, error) {
 	soundPath := filepath.Join(dataDir, filepath.Base(sound.url))
 	file, err := os.Open(soundPath)
 	if os.IsNotExist(err) {
 		err := downloadFileWithProgress(sound.url, soundPath)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("Error downloading sound: %v", err)
+			return nil, nil, nil, nil, fmt.Errorf("Error downloading sound: %v", err)
 		}
 		file, err = os.Open(soundPath)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("Error opening file: %v", err)
+			return nil, nil, nil, nil, fmt.Errorf("Error opening file: %v", err)
 		}
 	} else if err != nil {
-		return nil, nil, nil, fmt.Errorf("Error opening file: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("Error opening file: %v", err)
 	}
 
 	// TODO: Maybe log if this format differs from the BufferSize set globally.
 	stream, _, err := mp3.Decode(file)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("Error decoding file: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("Error decoding file: %v", err)
 	}
 
 	loopStream, err := beep.Loop2(stream)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("Error creating loop stream: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("Error creating loop stream: %v", err)
 	}
 
 	ctrl := &beep.Ctrl{Streamer: loopStream, Paused: false}
-	speaker.Play(ctrl)
+	volume := &effects.Volume{Streamer: ctrl, Base: 2, Volume: 0}
+	speaker.Play(volume)
 	fmt.Printf("\r➤  \"%s\" by \"%s\"\n", sound.name, sound.credit)
 
-	return ctrl, file, stream, nil
+	return ctrl, file, stream, volume, nil
 }
 
 func main() {
@@ -312,7 +314,7 @@ func main() {
 		}
 	}
 
-	ctrl, file, stream, err := playSound(dataDir, nowPlaying)
+	ctrl, file, stream, volume, err := playSound(dataDir, nowPlaying)
 	doubleLine := true
 	if err != nil {
 		file.Close()
@@ -350,6 +352,8 @@ func main() {
 				}
 				fmt.Printf("\r➤  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
 			}
+		case 'q': // Quit
+			return
 		case 's': // Switch to the next sound
 			keyboard.Close()
 
@@ -365,7 +369,7 @@ func main() {
 
 			file.Close()
 			stream.Close()
-			ctrl, file, stream, err = playSound(dataDir, nowPlaying)
+			ctrl, file, stream, volume, err = playSound(dataDir, nowPlaying)
 			doubleLine = true
 			if err != nil {
 				keyboard.Close()
@@ -382,10 +386,21 @@ func main() {
 			fmt.Println("\tp  pause/resume playback")
 			fmt.Println("\tq  quit")
 			fmt.Println("\ts  select new sound")
+			fmt.Println("\t(  volume down")
+			fmt.Println("\t)  volume up")
 			doubleLine = false
 
-		case 'q': // Quit
-			return
+		case ')': // Volume up
+			speaker.Lock()
+			volume.Volume += 0.1
+			speaker.Unlock()
+			fmt.Printf("Volume: %.1f\r", volume.Volume)
+
+		case '(': // Volume down
+			speaker.Lock()
+			volume.Volume -= 0.1
+			speaker.Unlock()
+			fmt.Printf("Volume: %.1f\r", volume.Volume)
 
 		default:
 			if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC {
