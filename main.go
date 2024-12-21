@@ -259,6 +259,7 @@ func playSound(dataDir string, sound Sound) (*beep.Ctrl, *os.File, beep.StreamSe
 	if os.IsNotExist(err) {
 		err := downloadFileWithProgress(sound.url, soundPath)
 		if err != nil {
+			os.Remove(soundPath)
 			return nil, nil, nil, nil, fmt.Errorf("Error downloading sound: %v", err)
 		}
 		file, err = os.Open(soundPath)
