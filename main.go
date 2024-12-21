@@ -153,6 +153,11 @@ func main() {
 
 	var shuffleButton, submitButton, deselectButton *tview.Button
 
+	setFocus := func(r, c int) {
+		focusedRow = r
+		focusedCol = c
+	}
+
 	findButton := func(r, c int) *tview.Button {
 		if r == 4 {
 			switch c {
@@ -169,7 +174,7 @@ func main() {
 
 	handleClick := func(r, c int) func() {
 		return func() {
-			// Reset the style of the previous button.
+			submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
 			previousButton := findButton(focusedRow, focusedCol).
 				SetStyle(defaultStyle).
 				SetActivatedStyle(defaultStyle)
@@ -187,12 +192,12 @@ func main() {
 			} else {
 				return
 			}
-			focusedRow = r
-			focusedCol = c
+			setFocus(r, c)
 		}
 	}
 
 	handleDeselect := func() {
+		setFocus(4, 3)
 		submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
 		deselectButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 		for cardContent := range gameState.selectedCards {
@@ -203,11 +208,10 @@ func main() {
 				buttons[i][j].SetStyle(defaultStyle)
 			}
 		}
-		focusedRow = 4
-		focusedCol = 3
 	}
 
 	handleShuffle := func() {
+		setFocus(4, 0)
 		submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
 		shuffleButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 		// Flatten the buttons array for rows greater than currentMatchRow into a slice for shuffling
@@ -234,13 +238,12 @@ func main() {
 				buttons[i][j] = button
 			}
 		}
-		focusedRow = 4
-		focusedCol = 0
 	}
 
 	handleSubmit := func() {
+		setFocus(4, 1)
 		if len(gameState.selectedCards) != 4 {
-			submitButton.SetStyle(defaultStyle).SetActivatedStyle(selectedActivatedStyle)
+			submitButton.SetStyle(selectedActivatedStyle).SetActivatedStyle(selectedActivatedStyle)
 			return
 		}
 
@@ -324,8 +327,6 @@ func main() {
 				SetActivatedStyle(baseStyle.Background(tcell.ColorRed))
 
 		}
-		focusedRow = 4
-		focusedCol = 1
 	}
 
 	for row := 0; row < 4; row++ {
@@ -382,14 +383,12 @@ func main() {
 			}
 			c := focusedCol
 			handleSubmit()
-			focusedRow = r
-			focusedCol = c
+			setFocus(r, c)
 		case event.Key() == tcell.KeyRune && event.Rune() == 'd':
 			r := focusedRow
 			c := focusedCol
 			handleDeselect()
-			focusedRow = r
-			focusedCol = c
+			setFocus(r, c)
 		case event.Key() == tcell.KeyUp, event.Key() == tcell.KeyRune && event.Rune() == 'k':
 			if focusedRow > gameState.currentMatchRow {
 				focusedRow--
