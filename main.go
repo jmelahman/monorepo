@@ -267,6 +267,9 @@ func playSound(dataDir string, sound Sound) (*beep.Ctrl, *os.File, beep.StreamSe
 	// TODO: Maybe log if this format differs from the BufferSize set globally.
 	stream, _, err := mp3.Decode(file)
 	if err != nil {
+		// If there was an error decoding, the file is likely corrupt (possibly empty) and should be
+		// removed.
+		os.Remove(file.Name())
 		return nil, nil, nil, nil, fmt.Errorf("Error decoding file: %v", err)
 	}
 
@@ -307,11 +310,8 @@ func main() {
 		if err != nil {
 			log.Fatal("Error selecting next sound: ", err)
 		}
+
 		nowPlaying = sounds[soundIndex]
-		err = saveNowPlaying(dataDir, nowPlaying)
-		if err != nil {
-			// TODO: Warn on error.
-		}
 	}
 
 	ctrl, file, stream, volume, err := playSound(dataDir, nowPlaying)
@@ -328,6 +328,11 @@ func main() {
 	}
 	defer file.Close()
 	defer stream.Close()
+
+	err = saveNowPlaying(dataDir, nowPlaying)
+	if err != nil {
+		// TODO: Warn on error.
+	}
 
 	if err := keyboard.Open(); err != nil {
 		log.Fatal("Error opening keyboard: ", err)
@@ -367,10 +372,6 @@ func main() {
 				log.Fatal("Error selecting next sound: ", err)
 			}
 			nowPlaying = sounds[soundIndex]
-			err = saveNowPlaying(dataDir, nowPlaying)
-			if err != nil {
-				// TODO: Warn on error.
-			}
 
 			file.Close()
 			stream.Close()
@@ -378,13 +379,23 @@ func main() {
 			doubleLine = true
 			if err != nil {
 				keyboard.Close()
-				file.Close()
+				if file != nil {
+					file.Close()
+				}
+				if stream != nil {
+					stream.Close()
+				}
 				log.Fatal("Error switching sound: ", err)
 			}
 			if err := keyboard.Open(); err != nil {
 				log.Fatal("Error opening keyboard: ", err)
 			}
 			defer keyboard.Close()
+
+			err = saveNowPlaying(dataDir, nowPlaying)
+			if err != nil {
+				// TODO: Warn on error.
+			}
 
 		case '?': // Help
 			fmt.Println("Available commands:")
