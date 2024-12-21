@@ -317,9 +317,14 @@ func main() {
 	ctrl, file, stream, volume, err := playSound(dataDir, nowPlaying)
 	doubleLine := true
 	if err != nil {
-		file.Close()
-		stream.Close()
-		log.Fatal("Error playing sound: ", err)
+		if file != nil {
+			file.Close()
+		}
+		if stream != nil {
+			stream.Close()
+		}
+		fmt.Printf("Error playing sound \"%s\": %v\n", nowPlaying.name, err)
+		os.Exit(1)
 	}
 	defer file.Close()
 	defer stream.Close()
