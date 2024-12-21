@@ -438,29 +438,17 @@ func main() {
 			return nil
 		}
 
+		button := findButton(focusedRow, focusedCol)
 		if focusedRow == 4 {
-			switch focusedCol {
-			case 0:
-				app.SetFocus(shuffleButton)
-				shuffleButton.SetActivatedStyle(activatedStyle)
-			case 1, 2:
-				app.SetFocus(submitButton)
-				if event.Key() != tcell.KeyEnter && event.Rune() != ' ' && event.Rune() != 's' {
-					submitButton.SetActivatedStyle(activatedStyle)
-				}
-			case 3:
-				app.SetFocus(deselectButton)
-				deselectButton.SetActivatedStyle(activatedStyle)
-			}
-		} else {
-			button := buttons[focusedRow][focusedCol]
-			if !gameState.selectedCards[button.GetLabel()] {
+			if event.Key() != tcell.KeyEnter && event.Rune() != ' ' && event.Rune() != 's' {
 				button.SetActivatedStyle(activatedStyle)
-			} else {
-				button.SetActivatedStyle(selectedActivatedStyle)
 			}
-			app.SetFocus(button)
+		} else if !gameState.selectedCards[button.GetLabel()] {
+			button.SetActivatedStyle(activatedStyle)
+		} else {
+			button.SetActivatedStyle(selectedActivatedStyle)
 		}
+		app.SetFocus(button)
 		return nil
 	})
 
