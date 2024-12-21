@@ -378,11 +378,11 @@ func main() {
 		switch {
 		case event.Key() == tcell.KeyRune && event.Rune() == 's':
 			r := focusedRow
-			if r == gameState.currentMatchRow {
-				r++
-			}
 			c := focusedCol
 			handleSubmit()
+			if r < gameState.currentMatchRow {
+				r++
+			}
 			setFocus(r, c)
 		case event.Key() == tcell.KeyRune && event.Rune() == 'd':
 			r := focusedRow
