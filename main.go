@@ -253,21 +253,27 @@ func main() {
 
 		var categoryTitle string
 		var categoryIndex int
-		first := true
-		offBy := 0
+		categoryMap := make(map[string](int))
+		const (
+			correct = iota
+			offByOne
+			incorrect
+		)
+		result := incorrect
 
 		for cardContent := range gameState.selectedCards {
-			if first {
-				category := gameState.categories[cardContent]
-				categoryTitle = category.Title
-				categoryIndex = category.Index
-				first = false
-			} else if gameState.categories[cardContent].Title != categoryTitle {
-				offBy++
+			categoryIndex = gameState.categories[cardContent].Index
+			categoryTitle = gameState.categories[cardContent].Title
+			categoryMap[categoryTitle]++
+			switch categoryMap[categoryTitle] {
+			case 3:
+				result = offByOne
+			case 4:
+				result = correct
 			}
 		}
 
-		if offBy == 0 {
+		if result == correct {
 			contents := fmt.Sprintf(
 				"%s: %s",
 				categoryTitle,
@@ -309,7 +315,7 @@ func main() {
 			for cardContent := range gameState.selectedCards {
 				delete(gameState.selectedCards, cardContent)
 			}
-		} else if offBy == 1 || offBy == 3 {
+		} else if result == offByOne {
 			submitButton.
 				SetStyle(baseStyle.Background(tcell.ColorYellow)).
 				SetActivatedStyle(baseStyle.Background(tcell.ColorYellow))
