@@ -177,6 +177,11 @@ func saveNowPlaying(dataDir string, sound Sound) error {
 	return os.WriteFile(nowPlayingFile, []byte(sound.url), 0644)
 }
 
+func removeNowPlaying(dataDir string) {
+	nowPlayingFile := filepath.Join(dataDir, "now_playing")
+	os.Remove(nowPlayingFile)
+}
+
 func loadLastPlayed(dataDir string) Sound {
 	nowPlayingFile := filepath.Join(dataDir, "now_playing")
 	data, err := os.ReadFile(nowPlayingFile)
@@ -317,13 +322,14 @@ func main() {
 	ctrl, file, stream, volume, err := playSound(dataDir, nowPlaying)
 	doubleLine := true
 	if err != nil {
+		fmt.Printf("Error playing sound \"%s\": %v\n", nowPlaying.name, err)
 		if file != nil {
 			file.Close()
 		}
 		if stream != nil {
 			stream.Close()
 		}
-		fmt.Printf("Error playing sound \"%s\": %v\n", nowPlaying.name, err)
+		removeNowPlaying(dataDir)
 		os.Exit(1)
 	}
 	defer file.Close()
@@ -371,31 +377,37 @@ func main() {
 			if err != nil {
 				log.Fatal("Error selecting next sound: ", err)
 			}
-			nowPlaying = sounds[soundIndex]
 
 			file.Close()
 			stream.Close()
-			ctrl, file, stream, volume, err = playSound(dataDir, nowPlaying)
+			ctrl, file, stream, volume, err = playSound(dataDir, sounds[soundIndex])
 			doubleLine = true
 			if err != nil {
-				keyboard.Close()
+				fmt.Printf("Error switching to sound \"%s\": %v\n", sounds[soundIndex].name, err)
 				if file != nil {
 					file.Close()
 				}
 				if stream != nil {
 					stream.Close()
 				}
-				log.Fatal("Error switching sound: ", err)
+
+				ctrl, file, stream, volume, err = playSound(dataDir, nowPlaying)
+				if err != nil {
+					removeNowPlaying(dataDir)
+					log.Fatal("Error playing previous sound: ", err)
+				}
+			} else {
+				err = saveNowPlaying(dataDir, nowPlaying)
+				if err != nil {
+					// TODO: Warn on error.
+				}
 			}
 			if err := keyboard.Open(); err != nil {
 				log.Fatal("Error opening keyboard: ", err)
 			}
+			defer file.Close()
+			defer stream.Close()
 			defer keyboard.Close()
-
-			err = saveNowPlaying(dataDir, nowPlaying)
-			if err != nil {
-				// TODO: Warn on error.
-			}
 
 		case '?': // Help
 			fmt.Println("Available commands:")
