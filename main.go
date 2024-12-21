@@ -398,11 +398,14 @@ func main() {
 					log.Fatal("Error playing previous sound: ", err)
 				}
 			} else {
-				err = saveNowPlaying(dataDir, nowPlaying)
-				if err != nil {
-					// TODO: Warn on error.
-				}
+				nowPlaying = sounds[soundIndex]
 			}
+
+			err = saveNowPlaying(dataDir, nowPlaying)
+			if err != nil {
+				// TODO: Warn on error.
+			}
+
 			if err := keyboard.Open(); err != nil {
 				log.Fatal("Error opening keyboard: ", err)
 			}
