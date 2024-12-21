@@ -169,6 +169,14 @@ func main() {
 					return func() {
 						submitButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 						label := buttons[r][c].GetLabel()
+						if focusedRow < 4 {
+							previousLabel := buttons[focusedRow][focusedCol].GetLabel()
+							if gameState.selectedCards[previousLabel] {
+								buttons[focusedRow][focusedCol].SetStyle(selectedStyle)
+							} else {
+								buttons[focusedRow][focusedCol].SetActivatedStyle(selectedStyle)
+							}
+						}
 						if gameState.selectedCards[label] {
 							delete(gameState.selectedCards, label)
 							buttons[r][c].SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
@@ -347,6 +355,15 @@ func main() {
 
 	grid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		submitButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
+		if focusedRow < 4 {
+			label := buttons[focusedRow][focusedCol].GetLabel()
+			if gameState.selectedCards[label] {
+				buttons[focusedRow][focusedCol].SetStyle(selectedStyle)
+			} else {
+				buttons[focusedRow][focusedCol].SetActivatedStyle(selectedStyle)
+			}
+		}
+
 		switch {
 		case event.Key() == tcell.KeyRune && event.Rune() == 's':
 			handleSubmit()
@@ -419,6 +436,8 @@ func main() {
 			button := buttons[focusedRow][focusedCol]
 			if !gameState.selectedCards[button.GetLabel()] {
 				button.SetActivatedStyle(activatedStyle)
+			} else {
+				button.SetActivatedStyle(selectedActivatedStyle)
 			}
 			app.SetFocus(button)
 		}
