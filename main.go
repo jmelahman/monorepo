@@ -319,6 +319,9 @@ func main() {
 					}
 				}
 			}
+			if focusedRow == gameState.currentMatchRow {
+				focusedRow++
+			}
 			gameState.currentMatchRow++
 			for cardContent := range gameState.selectedCards {
 				delete(gameState.selectedCards, cardContent)
