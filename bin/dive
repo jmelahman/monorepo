@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 docker run --rm -it \
   -v "${DOCKER_HOST:-/var/run/docker.sock}":/var/run/docker.sock \
-  -v  "$(pwd)":"$(pwd)" \
-  -w "$(pwd)" \
-  -v "$HOME/.dive.yaml":"$HOME/.dive.yaml" \
-  wagoodman/dive:latest build -t <some-tag> .
+  wagoodman/dive:latest \
+  "$@"
