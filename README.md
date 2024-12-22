@@ -1,4 +1,4 @@
-# NYT Connections CLI
+# NYT Connections TUI
 
 [![Test status](https://github.com/jmelahman/connections/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/connections/actions)
 [![Deploy Status](https://github.com/jmelahman/connections/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections/actions)
