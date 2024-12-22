@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
+DOCKER_SOCK="${DOCKER_HOST/unix:\/\/}"
 docker run --rm -it \
-  -v "${DOCKER_HOST:-/var/run/docker.sock}":/var/run/docker.sock \
+  -v "${DOCKER_SOCK:-/var/run/docker.sock}":"/var/run/docker.sock" \
   wagoodman/dive:latest \
   "$@"
