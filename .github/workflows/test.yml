@@ -23,4 +23,7 @@ jobs:
         run: go mod tidy
       - name: Run tests
         run: go test ./... -v
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
 
