@@ -7,7 +7,6 @@ RUN pacman -Syyu --noconfirm \
       && \
     pacman -S --noconfirm \
       git \
-      github-cli \
       pacman-contrib \
       python-uv \
       && \
