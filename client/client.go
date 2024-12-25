@@ -89,7 +89,7 @@ WantedBy=user.target
 	notificationTimer := systemd.ServiceConfig{
 		Name:  "work-notification.timer",
 		Start: true,
-		Content: fmt.Sprintf(`[Unit]
+		Content: `[Unit]
 Description=Notify when not tracking tasks every 10 minutes
 
 [Timer]
@@ -99,7 +99,7 @@ Persistent=true
 
 [Install]
 WantedBy=timers.target
-`),
+`,
 	}
 
 	return &SystemdConfig{
