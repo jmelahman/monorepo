@@ -134,6 +134,9 @@ func main() {
 	}
 
 	response, err := parseConnectionsJSON(connectionsData)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	grid := tview.NewGrid().
 		SetRows(3, 3, 3, 3, 3). // Added extra row for submit button
