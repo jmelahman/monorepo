@@ -94,15 +94,6 @@ type Sound struct {
 	url    string
 }
 
-type readCloserWrapper struct {
-	io.Reader
-	closer io.Closer
-}
-
-func (rc *readCloserWrapper) Close() error {
-	return rc.closer.Close()
-}
-
 type ProgressReader struct {
 	Reader         io.Reader
 	TotalSize      int64
@@ -140,10 +131,7 @@ func downloadFileWithProgress(url, filepath string) error {
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	contentLength, err := strconv.Atoi(resp.Header.Get("Content-Length"))
-	if err != nil || contentLength <= 0 {
-		// We don't always get the Content-Length ahead of time and thus is life.
-	}
+	contentLength, _ := strconv.Atoi(resp.Header.Get("Content-Length"))
 
 	progressReader := &ProgressReader{
 		Reader:         resp.Body,
@@ -336,10 +324,8 @@ func main() {
 	defer file.Close()
 	defer stream.Close()
 
-	err = saveNowPlaying(dataDir, nowPlaying)
-	if err != nil {
-		// TODO: Warn on error.
-	}
+	// TODO: Warn on error.
+	_ = saveNowPlaying(dataDir, nowPlaying)
 
 	if err := keyboard.Open(); err != nil {
 		log.Fatal("Error opening keyboard: ", err)
@@ -401,10 +387,8 @@ func main() {
 				nowPlaying = sounds[soundIndex]
 			}
 
-			err = saveNowPlaying(dataDir, nowPlaying)
-			if err != nil {
-				// TODO: Warn on error.
-			}
+			// TODO: Warn on error.
+			_ = saveNowPlaying(dataDir, nowPlaying)
 
 			if err := keyboard.Open(); err != nil {
 				log.Fatal("Error opening keyboard: ", err)
