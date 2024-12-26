@@ -96,6 +96,7 @@ func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool, suffix 
 		version.Patch++
 	} else if suffix != "" && version.PreRelease != suffix {
 		version.PreRelease = suffix
+		// BUG: This should find the largest PreReleaseNum for `suffix`.
 	} else {
 		version.PreReleaseNum++
 	}
