@@ -22,43 +22,18 @@ func GetLatestSemverTag() (string, error) {
 		return "v0.0.0", nil
 	}
 
-	// Regex to match semver with optional pre-release
-	re := regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d*)))?`)
-	
 	var latestTag string
-	var latestMajor, latestMinor, latestPatch int
-	var latestPreRelease string
-	var latestPreReleaseNum int
+	var latestVersion *semver.Version
 
 	for _, tag := range tagList {
-		matches := re.FindStringSubmatch(tag)
-		if matches == nil {
+		version, err := semver.ParseSemver(tag)
+		if err != nil {
 			continue
 		}
 
-		major, _ := strconv.Atoi(matches[1])
-		minor, _ := strconv.Atoi(matches[2])
-		patch, _ := strconv.Atoi(matches[3])
-		preRelease := matches[4]
-		preReleaseNum := 0
-		if matches[5] != "" {
-			preReleaseNum, _ = strconv.Atoi(matches[5])
-		}
-
-		// Compare versions
-		if major > latestMajor || 
-		   (major == latestMajor && minor > latestMinor) || 
-		   (major == latestMajor && minor == latestMinor && patch > latestPatch) ||
-		   (major == latestMajor && minor == latestMinor && patch == latestPatch && 
-		    (preRelease == "" || 
-		     (preRelease != "" && (latestPreRelease == "" || 
-		      (preRelease == latestPreRelease && preReleaseNum > latestPreReleaseNum))))) {
+		if latestVersion == nil || semver.CompareSemver(version, latestVersion) {
 			latestTag = tag
-			latestMajor = major
-			latestMinor = minor
-			latestPatch = patch
-			latestPreRelease = preRelease
-			latestPreReleaseNum = preReleaseNum
+			latestVersion = version
 		}
 	}
 
