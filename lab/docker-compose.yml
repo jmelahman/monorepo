@@ -49,7 +49,19 @@ services:
       - registry_data:/var/lib/registry
       - ./auth:/auth
 
+  proxpi:
+    image: epicwink/proxpi
+    container_name: proxpi
+    restart: unless-stopped
+    environment:
+      PROXPI_CACHE_DIR: /var/cache/proxpi
+    ports:
+      - 5001:5000
+    volumes:
+      - proxpi_data:/var/cache/proxpi
+
 volumes:
   registry_data:
   buildbuddy_data:
+  proxpi_data:
 
