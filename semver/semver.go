@@ -15,7 +15,7 @@ type Version struct {
 }
 
 func ParseSemver(tag string) (*Version, error) {
-	re := regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d*)))?`)
+	re := regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)?`)
 	matches := re.FindStringSubmatch(tag)
 	if matches == nil {
 		return nil, fmt.Errorf("invalid semver tag: %s", tag)
@@ -26,7 +26,7 @@ func ParseSemver(tag string) (*Version, error) {
 	patch, _ := strconv.Atoi(matches[3])
 	preRelease := matches[4]
 	preReleaseNum := 0
-	if matches[5] != "" {
+	if len(matches) > 5 && matches[5] != "" {
 		preReleaseNum, _ = strconv.Atoi(matches[5])
 	}
 
