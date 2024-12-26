@@ -125,13 +125,11 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	// Apply suffix if provided
 	if suffix != "" {
 		version.PreRelease = suffix
-		version.PreReleaseNum = 1
+		version.PreReleaseNum = 0  // Omit pre-release number by default
 	}
 
 	// Construct the version string
-	if version.PreRelease != "" && version.PreReleaseNum > 0 {
-		return fmt.Sprintf("v%d.%d.%d-%s.%d", version.Major, version.Minor, version.Patch, version.PreRelease, version.PreReleaseNum), nil
-	} else if version.PreRelease != "" {
+	if version.PreRelease != "" {
 		return fmt.Sprintf("v%d.%d.%d-%s", version.Major, version.Minor, version.Patch, version.PreRelease), nil
 	}
 	return fmt.Sprintf("v%d.%d.%d", version.Major, version.Minor, version.Patch), nil
