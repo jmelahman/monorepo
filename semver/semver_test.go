@@ -22,6 +22,12 @@ func TestCalculateNextVersion(t *testing.T) {
 			expectedTag: "v1.2.4",
 		},
 		{
+			name:        "Patch increment with incPatch",
+			currentTag:  "v1.2.3",
+			incPatch:    true,
+			expectedTag: "v1.2.4",
+		},
+		{
 			name:        "Minor increment",
 			currentTag:  "v1.2.3",
 			incMinor:    true,

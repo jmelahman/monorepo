@@ -7,7 +7,14 @@ import (
 )
 
 func GetLatestSemverTag() (string, error) {
-	cmd := exec.Command("git", "tag", "-l", "v[0-9].[0-9].[0-9]*", "--sort=-v:refname")
+	// This is slightly preferred over `git describe` as this better handles multiple tags on a
+	// given commit.
+	// This may also be extended in the future to exhaustively parse each tag and calculate the
+	// latest semver tag regardless of refname as at the moment they're assumed to be linear.
+	// Moreover, in the future this may accept a subset of tags to consider. For example,
+	//    $ tag --base-version v1.2
+	// which only searches `git tag -l v1.2.[0-9]*`
+	cmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*", "--sort=-v:refname")
 	output, err := cmd.Output()
 	if err != nil {
 		return "v0.0.0", nil
