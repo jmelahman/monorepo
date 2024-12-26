@@ -1,4 +1,4 @@
-package main
+package git
 
 import (
 	"os/exec"
@@ -42,7 +42,7 @@ func TestGetLatestSemverTag(t *testing.T) {
 			}
 
 			result, err := getLatestSemverTag()
-			
+
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {
@@ -72,9 +72,9 @@ func TestCreateAndPushTag(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:       "Tag push fails",
-			tag:        "v1.2.3",
-			pushError:  assert.AnError,
+			name:        "Tag push fails",
+			tag:         "v1.2.3",
+			pushError:   assert.AnError,
 			expectError: true,
 		},
 	}
@@ -87,24 +87,24 @@ func TestCreateAndPushTag(t *testing.T) {
 
 			exec.Command = func(name string, arg ...string) *exec.Cmd {
 				cmd := oldExecCommand(name, arg...)
-				
+
 				if name == "git" && arg[0] == "tag" {
 					if tc.createError != nil {
 						cmd.Run = func() error { return tc.createError }
 					}
 				}
-				
+
 				if name == "git" && arg[0] == "push" {
 					if tc.pushError != nil {
 						cmd.Run = func() error { return tc.pushError }
 					}
 				}
-				
+
 				return cmd
 			}
 
 			err := createAndPushTag(tc.tag)
-			
+
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {

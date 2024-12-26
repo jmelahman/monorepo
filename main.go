@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jmelahman/tag/completion/completion"
-	"github.com/jmelahman/tag/git/git"
-	"github.com/jmelahman/tag/semver/semver"
+	"github.com/jmelahman/tag/completion"
+	"github.com/jmelahman/tag/git"
+	"github.com/jmelahman/tag/semver"
 	"github.com/spf13/cobra"
 )
 

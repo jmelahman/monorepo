@@ -1,4 +1,4 @@
-package main
+package semver
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func calculateNextVersion(tag string, incMajor, incMinor bool) (string, error) {
+func CalculateNextVersion(tag string, incMajor, incMinor bool) (string, error) {
 	re := regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)`)
 	matches := re.FindStringSubmatch(tag)
 	if matches == nil {
