@@ -121,13 +121,14 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 
 	// Apply suffix if provided
 	if suffix != "" {
-		// When adding a new suffix, reset to the original patch version
+		// When adding a new suffix, preserve the original patch version
 		if version.PreRelease != suffix {
-			if version.PreReleaseNum > 0 {
-				version.Patch = version.Patch - 1
-			}
 			version.PreRelease = suffix
-			version.PreReleaseNum = 1
+			version.PreReleaseNum = version.PreRelease == "" ? 0 : 1
+			// Reset patch only if there was no pre-release before
+			if version.PreRelease == "" {
+				version.Patch = version.Patch
+			}
 		}
 	}
 
