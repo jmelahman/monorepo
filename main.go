@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"completion/completion"
-	"git/git"
+	"github.com/jmelahman/tag/completion/completion"
+	"github.com/jmelahman/tag/git/git"
+	"github.com/jmelahman/tag/semver/semver"
 	"github.com/spf13/cobra"
-	"semver/semver"
 )
 
 var (
