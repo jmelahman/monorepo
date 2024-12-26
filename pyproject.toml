@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nature-sounds"
 description = "A nature sounds player for the command-line"
+license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.6"
 classifiers = [
