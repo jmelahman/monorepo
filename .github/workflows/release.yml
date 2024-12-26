@@ -17,13 +17,11 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: stable
           cache: false
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
@@ -45,9 +43,9 @@ jobs:
         with:
           go-version: stable
           cache: false
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
-      - name: Build
-        run: uv build --wheel
-      - name: Upload
-        run: uv publish
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build --wheel
+      - run: uvx twine upload dist/*
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
