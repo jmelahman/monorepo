@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func getLatestSemverTag() (string, error) {
+func GetLatestSemverTag() (string, error) {
 	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0", "--match", "v[0-9].[0-9].[0-9]")
 	output, err := cmd.Output()
 	if err != nil {
@@ -15,7 +15,7 @@ func getLatestSemverTag() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-func createAndPushTag(tag string) error {
+func CreateAndPushTag(tag string) error {
 	cmd := exec.Command("git", "tag", tag)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create tag: %w", err)

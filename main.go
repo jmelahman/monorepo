@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"completion/completion"
+	"git/git"
 	"github.com/spf13/cobra"
+	"semver/semver"
 )
 
 var (
@@ -20,13 +23,13 @@ func main() {
 		Short:   "Calculate the next semantic version tag",
 		Version: fmt.Sprintf("%s\ncommit %s", version, commit),
 		Run: func(cmd *cobra.Command, args []string) {
-			latestTag, err := getLatestSemverTag()
+			latestTag, err := git.GetLatestSemverTag()
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			nextVersion, err := calculateNextVersion(latestTag, major, minor)
+			nextVersion, err := semver.CalculateNextVersion(latestTag, major, minor)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
@@ -35,7 +38,7 @@ func main() {
 			fmt.Printf("Next version: %s\n", nextVersion)
 
 			if push {
-				if err := createAndPushTag(nextVersion); err != nil {
+				if err := git.CreateAndPushTag(nextVersion); err != nil {
 					fmt.Printf("Error: %v\n", err)
 					os.Exit(1)
 				}
@@ -48,7 +51,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&minor, "minor", false, "increment the minor version")
 	rootCmd.Flags().BoolVar(&push, "push", false, "create and push the tag to remote")
 
-	rootCmd.AddCommand(addCompletionCmd(rootCmd))
+	rootCmd.AddCommand(completion.AddCompletionCmd(rootCmd))
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Printf("Error: %v\n", err)

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func addCompletionCmd(cmd *cobra.Command) *cobra.Command {
+func AddCompletionCmd(cmd *cobra.Command) *cobra.Command {
 	var completionCmd = &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate completion script",
