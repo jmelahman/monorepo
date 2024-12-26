@@ -72,20 +72,6 @@ func CompareSemver(v1, v2 *Version) bool {
 	return false
 }
 
-func findHighestPatchVersion(allTags []string, major, minor int) int {
-	highestPatch := -1
-	for _, tag := range allTags {
-		version, err := ParseSemver(tag)
-		if err != nil {
-			continue
-		}
-		if version.Major == major && version.Minor == minor && version.Patch > highestPatch {
-			highestPatch = version.Patch
-		}
-	}
-	return highestPatch
-}
-
 func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
 	// Parse the current version
 	version, err := ParseSemver(tag)
@@ -94,7 +80,18 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	}
 
 	// Find highest patch version for current major.minor
-	highestPatch := findHighestPatchVersion(allTags, version.Major, version.Minor)
+	highestPatch := -1
+	for _, existingTag := range allTags {
+		existingVersion, err := ParseSemver(existingTag)
+		if err != nil {
+			continue
+		}
+		if existingVersion.Major == version.Major && 
+		   existingVersion.Minor == version.Minor && 
+		   existingVersion.Patch > highestPatch {
+			highestPatch = existingVersion.Patch
+		}
+	}
 
 	// Increment version based on flags
 	if incMajor {

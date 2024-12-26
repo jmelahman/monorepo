@@ -22,26 +22,7 @@ func GetLatestSemverTag() (string, []string, error) {
 		return "v0.0.0", nil, nil
 	}
 
-	var latestTag string
-	var latestVersion *semver.Version
-
-	for _, tag := range tagList {
-		version, err := semver.ParseSemver(tag)
-		if err != nil {
-			continue
-		}
-
-		if latestVersion == nil || semver.CompareSemver(version, latestVersion) {
-			latestTag = tag
-			latestVersion = version
-		}
-	}
-
-	if latestTag == "" {
-		return "v0.0.0", nil, nil
-	}
-
-	return latestTag, tagList, nil
+	return tagList[0], tagList, nil
 }
 
 func CreateAndPushTag(tag string) error {
