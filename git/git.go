@@ -30,7 +30,7 @@ func CreateAndPushTag(tag string) error {
 }
 
 func FetchSemverTags() error {
-	cmd := exec.Command("git", "fetch", "--tags")
+	cmd := exec.Command("git", "fetch", "--prune", "origin", "refs/tags/v*:refs/tags/v*")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to fetch tags: %w", err)
 	}
