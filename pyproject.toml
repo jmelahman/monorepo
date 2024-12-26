@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "release-tag"
-description="Automatically create semantic version git tags",
+description = "Automatically create semantic version git tags"
 license = {file = "LICENSE"}
 authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
 readme = "README.md"
