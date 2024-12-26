@@ -37,6 +37,28 @@ func TestCalculateNextVersion(t *testing.T) {
 			currentTag:  "invalid-tag",
 			expectError: true,
 		},
+		{
+			name:        "Pre-release increment (rc)",
+			currentTag:  "v1.2.3-rc1",
+			expectedTag: "v1.2.3-rc2",
+		},
+		{
+			name:        "Pre-release increment with minor version",
+			currentTag:  "v1.2.3-rc1",
+			incMinor:    true,
+			expectedTag: "v1.3.0",
+		},
+		{
+			name:        "Pre-release increment with major version",
+			currentTag:  "v1.2.3-rc1",
+			incMajor:    true,
+			expectedTag: "v2.0.0",
+		},
+		{
+			name:        "Pre-release without number",
+			currentTag:  "v1.2.3-rc",
+			expectedTag: "v1.2.3-rc1",
+		},
 	}
 
 	for _, tc := range testCases {
