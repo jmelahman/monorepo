@@ -6,6 +6,101 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestParseSemver(t *testing.T) {
+	testCases := []struct {
+		name        string
+		tag         string
+		expectedVer *Version
+		expectError bool
+	}{
+		{
+			name: "Standard version",
+			tag:  "v1.2.3",
+			expectedVer: &Version{
+				Major: 1,
+				Minor: 2,
+				Patch: 3,
+			},
+		},
+		{
+			name: "Pre-release version",
+			tag:  "v1.2.3-rc.1",
+			expectedVer: &Version{
+				Major:         1,
+				Minor:         2,
+				Patch:         3,
+				PreRelease:    "rc",
+				PreReleaseNum: 1,
+			},
+		},
+		{
+			name:        "Invalid version",
+			tag:         "invalid-tag",
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			version, err := ParseSemver(tc.tag)
+
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedVer, version)
+			}
+		})
+	}
+}
+
+func TestCompareSemver(t *testing.T) {
+	testCases := []struct {
+		name     string
+		v1       *Version
+		v2       *Version
+		expected bool
+	}{
+		{
+			name: "v1 major version higher",
+			v1:   &Version{Major: 2, Minor: 0, Patch: 0},
+			v2:   &Version{Major: 1, Minor: 9, Patch: 9},
+			expected: true,
+		},
+		{
+			name: "v1 minor version higher",
+			v1:   &Version{Major: 1, Minor: 2, Patch: 0},
+			v2:   &Version{Major: 1, Minor: 1, Patch: 9},
+			expected: true,
+		},
+		{
+			name: "v1 patch version higher",
+			v1:   &Version{Major: 1, Minor: 1, Patch: 2},
+			v2:   &Version{Major: 1, Minor: 1, Patch: 1},
+			expected: true,
+		},
+		{
+			name: "v1 pre-release version higher",
+			v1:   &Version{Major: 1, Minor: 1, Patch: 1, PreRelease: "rc", PreReleaseNum: 2},
+			v2:   &Version{Major: 1, Minor: 1, Patch: 1, PreRelease: "rc", PreReleaseNum: 1},
+			expected: true,
+		},
+		{
+			name: "Identical versions",
+			v1:   &Version{Major: 1, Minor: 1, Patch: 1},
+			v2:   &Version{Major: 1, Minor: 1, Patch: 1},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := CompareSemver(tc.v1, tc.v2)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestCalculateNextVersion(t *testing.T) {
 	testCases := []struct {
 		name        string
