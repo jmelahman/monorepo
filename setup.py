@@ -28,4 +28,9 @@ class PostInstallCommand(install):
 
         install.run(self)
 
-setup()
+setup(
+    cmdclass={
+        "build": BuildGoBinary,
+        "install": PostInstallCommand,
+    },
+)

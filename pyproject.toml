@@ -5,8 +5,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nature-sounds"
 description = "A nature sounds player for the command-line"
-long-description = "file: README.md"
-long-description-content-type = "text/markdown"
 readme = "README.md"
 requires-python = ">=3.6"
 classifiers = [
@@ -15,10 +13,6 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dynamic = ["version"]
-
-[tool.setuptools.commands]
-build = "setup.BuildGoBinary"
-install = "setup.PostInstallCommand"
 
 [tool.setuptools_scm]
 
