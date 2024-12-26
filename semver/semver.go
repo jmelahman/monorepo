@@ -86,9 +86,9 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 		if err != nil {
 			continue
 		}
-		if existingVersion.Major == version.Major && 
-		   existingVersion.Minor == version.Minor && 
-		   existingVersion.Patch > highestPatch {
+		if existingVersion.Major == version.Major &&
+			existingVersion.Minor == version.Minor &&
+			existingVersion.Patch > highestPatch {
 			highestPatch = existingVersion.Patch
 		}
 	}
@@ -122,7 +122,7 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	// Apply suffix if provided
 	if suffix != "" {
 		version.PreRelease = suffix
-		version.PreReleaseNum = 0  // Omit pre-release number by default
+		version.PreReleaseNum = 0 // Omit pre-release number by default
 	}
 
 	// Construct the version string
