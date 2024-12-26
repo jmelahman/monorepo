@@ -55,13 +55,13 @@ func main() {
 				os.Exit(1)
 			}
 
-			latestTag, err := git.GetLatestSemverTag()
+			latestTag, allTags, err := git.GetLatestSemverTag()
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			nextVersion, err := semver.CalculateNextVersion(latestTag, major, minor, patch, suffix)
+			nextVersion, err := semver.CalculateNextVersion(latestTag, allTags, major, minor, patch, suffix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)

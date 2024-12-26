@@ -8,31 +8,27 @@ import (
 	"github.com/jmelahman/tag/semver"
 )
 
-func GetLatestSemverTag() (string, error) {
+func GetLatestSemverTag() (string, []string, error) {
 	// Fetch all tags matching semver pattern
 	cmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*", "--sort=-v:refname")
 	output, err := cmd.Output()
 	if err != nil {
-		return "v0.0.0", nil
+		return "v0.0.0", nil, nil
 	}
 
 	// Split tags and trim whitespace
 	tagList := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(tagList) == 0 {
-		return "v0.0.0", nil
+		return "v0.0.0", nil, nil
 	}
 
 	var latestTag string
 	var latestVersion *semver.Version
-	var nearestVersion *semver.Version
 
 	for _, tag := range tagList {
 		version, err := semver.ParseSemver(tag)
 		if err != nil {
 			continue
-		}
-		if nearestVersion == nil {
-			nearestVersion = version
 		}
 
 		if latestVersion == nil || semver.CompareSemver(version, latestVersion) {
@@ -42,10 +38,10 @@ func GetLatestSemverTag() (string, error) {
 	}
 
 	if latestTag == "" {
-		return "v0.0.0", nil
+		return "v0.0.0", nil, nil
 	}
 
-	return latestTag, nil
+	return latestTag, tagList, nil
 }
 
 func CreateAndPushTag(tag string) error {

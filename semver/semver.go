@@ -72,12 +72,29 @@ func CompareSemver(v1, v2 *Version) bool {
 	return false
 }
 
-func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
+func findHighestPatchVersion(allTags []string, major, minor int) int {
+	highestPatch := -1
+	for _, tag := range allTags {
+		version, err := ParseSemver(tag)
+		if err != nil {
+			continue
+		}
+		if version.Major == major && version.Minor == minor && version.Patch > highestPatch {
+			highestPatch = version.Patch
+		}
+	}
+	return highestPatch
+}
+
+func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
 	// Parse the current version
 	version, err := ParseSemver(tag)
 	if err != nil {
 		return "", err
 	}
+
+	// Find highest patch version for current major.minor
+	highestPatch := findHighestPatchVersion(allTags, version.Major, version.Minor)
 
 	// Increment version based on flags
 	if incMajor {
@@ -93,12 +110,14 @@ func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool, suffix 
 		version.Patch++
 		version.PreReleaseNum = 0
 	} else {
-		// If pre-release exists but has no number, increment patch
-		if version.PreReleaseNum == 0 {
+		// If there's a higher patch version, use that instead of incrementing pre-release
+		if highestPatch > version.Patch {
+			version.Patch = highestPatch
+			version.PreReleaseNum = 1
+		} else if version.PreReleaseNum == 0 {
 			version.Patch++
 			version.PreRelease = ""
 		} else {
-			// Increment pre-release number
 			version.PreReleaseNum++
 		}
 	}
