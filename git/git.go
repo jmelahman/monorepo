@@ -36,3 +36,12 @@ func FetchSemverTags() error {
 	}
 	return nil
 }
+
+func IsHEADAlreadyTagged() (bool, error) {
+	cmd := exec.Command("git", "tag", "--points-at", "HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to check tags for HEAD: %w", err)
+	}
+	return len(strings.TrimSpace(string(output))) > 0, nil
+}

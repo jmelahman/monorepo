@@ -28,6 +28,17 @@ func main() {
 				os.Exit(1)
 			}
 
+			// Check if HEAD is already tagged
+			alreadyTagged, err := git.IsHEADAlreadyTagged()
+			if err != nil {
+				fmt.Printf("Error checking tags: %v\n", err)
+				os.Exit(1)
+			}
+			if alreadyTagged {
+				fmt.Println("Error: Current HEAD is already tagged")
+				os.Exit(1)
+			}
+
 			latestTag, err := git.GetLatestSemverTag()
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
