@@ -51,5 +51,5 @@ jobs:
           cache: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
-      - run: uv build --wheel
+      - run: uv build
       - run: uv publish
