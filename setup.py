@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 
+from setuptools import setup
 from setuptools.command.build import build
 from setuptools.command.install import install
 
@@ -26,3 +27,5 @@ class PostInstallCommand(install):
         shutil.move(binary_source, binary_dest)
 
         install.run(self)
+
+setup()
