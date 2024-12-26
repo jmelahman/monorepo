@@ -57,7 +57,12 @@ func TestCalculateNextVersion(t *testing.T) {
 		{
 			name:        "Pre-release without number",
 			currentTag:  "v1.2.3-rc",
-			expectedTag: "v1.2.3-rc1",
+			expectedTag: "v1.2.4",
+		},
+		{
+			name:        "Pre-release with non-numeric suffix",
+			currentTag:  "v1.2.3-alpha",
+			expectedTag: "v1.2.4",
 		},
 	}
 

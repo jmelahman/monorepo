@@ -33,11 +33,18 @@ func CalculateNextVersion(tag string, incMajor, incMinor bool) (string, error) {
 		preReleaseNum = ""
 	} else {
 		if preRelease != "" {
+			// If pre-release exists but has no number, increment patch
 			if preReleaseNum == "" {
-				preReleaseNum = "1"
+				patch++
 			} else {
-				num, _ := strconv.Atoi(preReleaseNum)
-				preReleaseNum = strconv.Itoa(num + 1)
+				// Try to increment pre-release number
+				num, err := strconv.Atoi(preReleaseNum)
+				if err != nil {
+					// If not a valid number, increment patch
+					patch++
+				} else {
+					preReleaseNum = strconv.Itoa(num + 1)
+				}
 			}
 		} else {
 			patch++
