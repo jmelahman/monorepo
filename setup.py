@@ -45,7 +45,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    use_scm_version=True,
-    setup_requires=["setuptools>=42", "setuptools_scm"],
     python_requires=">=3.6",
 )
