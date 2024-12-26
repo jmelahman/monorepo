@@ -72,7 +72,7 @@ func CompareSemver(v1, v2 *Version) bool {
 	return false
 }
 
-func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
+func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
 	// Parse the current version
 	version, err := ParseSemver(tag)
 	if err != nil {
@@ -92,18 +92,12 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	} else if incPatch {
 		version.Patch++
 		version.PreReleaseNum = 0
-	} else if suffix == "" {
-		// I don't think this is correct. Will need to revisit.
-		// I think this is supposed to infer the suffix if version.PreRelease?
+	} else if suffix == "" && version.PreRelease == "" {
 		version.Patch++
-	} else if suffix != "" {
-		fmt.Println(tag)
-		if version.PreRelease != suffix {
-			fmt.Println(tag, version)
-			version.PreRelease = suffix
-		} else {
-			version.PreReleaseNum++
-		}
+	} else if suffix != "" && version.PreRelease != suffix {
+		version.PreRelease = suffix
+	} else {
+		version.PreReleaseNum++
 	}
 
 	// Construct the version string
