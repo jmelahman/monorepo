@@ -7,11 +7,11 @@ import (
 )
 
 type Version struct {
-	Major          int
-	Minor          int
-	Patch          int
-	PreRelease     string
-	PreReleaseNum  int
+	Major         int
+	Minor         int
+	Patch         int
+	PreRelease    string
+	PreReleaseNum int
 }
 
 func ParseSemver(tag string) (*Version, error) {
@@ -58,7 +58,7 @@ func CompareSemver(v1, v2 *Version) bool {
 	if v1.Patch < v2.Patch {
 		return false
 	}
-	
+
 	// Handle pre-release versions
 	if v1.PreRelease == "" && v2.PreRelease != "" {
 		return true
