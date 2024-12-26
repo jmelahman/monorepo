@@ -122,7 +122,10 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	// Apply suffix if provided
 	if suffix != "" {
 		version.PreRelease = suffix
-		version.PreReleaseNum = 1 // Always add pre-release number when suffix changes
+		// Only add pre-release number if there wasn't a pre-release before
+		if version.PreReleaseNum == 0 {
+			version.PreReleaseNum = 1
+		}
 	}
 
 	// Construct the version string
