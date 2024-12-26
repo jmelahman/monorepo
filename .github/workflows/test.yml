@@ -1,22 +1,26 @@
 name: Tests
+
 on:
   push:
     branches:
       - master
   pull_request:
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
         with:
           go-version: stable
           cache-dependency-path: go.sum
-      - name: Install dependencies
-        run: go mod tidy
-      - name: Run tests
-        run: go test ./... -v
+      - run: go mod tidy
+      - run: go test ./... -v
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
 
