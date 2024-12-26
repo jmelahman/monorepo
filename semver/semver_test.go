@@ -184,7 +184,7 @@ func TestCalculateNextVersion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			nextVersion, err := CalculateNextVersion(tc.currentTag, tc.incMajor, tc.incMinor, tc.incPatch, tc.suffix)
+			nextVersion, err := CalculateNextVersion(tc.currentTag, []string{}, tc.incMajor, tc.incMinor, tc.incPatch, tc.suffix)
 
 			if tc.expectError {
 				assert.Error(t, err)
