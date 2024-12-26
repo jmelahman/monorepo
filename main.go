@@ -16,7 +16,7 @@ var (
 )
 
 func main() {
-	var major, minor, push bool
+	var major, minor, patch, push bool
 
 	rootCmd := &cobra.Command{
 		Use:     "tag",
@@ -45,7 +45,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			nextVersion, err := semver.CalculateNextVersion(latestTag, major, minor, false)
+			nextVersion, err := semver.CalculateNextVersion(latestTag, major, minor, patch)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
@@ -65,6 +65,7 @@ func main() {
 
 	rootCmd.Flags().BoolVar(&major, "major", false, "increment the major version")
 	rootCmd.Flags().BoolVar(&minor, "minor", false, "increment the minor version")
+	rootCmd.Flags().BoolVar(&patch, "patch", false, "increment the patch version")
 	rootCmd.Flags().BoolVar(&push, "push", false, "create and push the tag to remote")
 
 	rootCmd.AddCommand(completion.AddCompletionCmd(rootCmd))
