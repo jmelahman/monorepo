@@ -3,9 +3,9 @@ package git
 import (
 	"fmt"
 	"os/exec"
-	"regexp"
-	"strconv"
 	"strings"
+
+	"github.com/jmelahman/tag/semver"
 )
 
 func GetLatestSemverTag() (string, error) {
