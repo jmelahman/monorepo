@@ -1,13 +1,17 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "nyt-connections"
 description = "A command-line client for the NYT Connections game"
 license = {file = "LICENSE"}
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
 readme = "README.md"
 requires-python = ">=3.6"
+keywords = [
+  "games", "connections", "new-york-times", "nyt", "nyt-connections"
+]
 classifiers = [
     "Programming Language :: Go",
     "License :: OSI Approved :: MIT License",
@@ -15,5 +19,15 @@ classifiers = [
 ]
 dynamic = ["version"]
 
-[tool.setuptools_scm]
 
+[project.urls]
+Repository = "https://github.com/jmelahman/connections"
+
+[tool.hatch.build]
+include = ["go.mod", "go.sum", "main.go"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.custom]
+binary_name = "connections"

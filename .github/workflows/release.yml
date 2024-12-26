@@ -44,8 +44,7 @@ jobs:
           go-version: stable
           cache: false
       - uses: astral-sh/setup-uv@v5
-      - run: uv build --wheel
-      - run: uvx twine upload dist/*
-        env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        with:
+          enable-cache: false
+      - run: uv build
+      - run: uv publish
