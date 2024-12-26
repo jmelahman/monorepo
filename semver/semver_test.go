@@ -24,6 +24,17 @@ func TestParseSemver(t *testing.T) {
 		},
 		{
 			name: "Pre-release version",
+			tag:  "v1.2.3-rc",
+			expectedVer: &Version{
+				Major:         1,
+				Minor:         2,
+				Patch:         3,
+				PreRelease:    "rc",
+				PreReleaseNum: 0,
+			},
+		},
+		{
+			name: "Pre-release version",
 			tag:  "v1.2.3-rc.1",
 			expectedVer: &Version{
 				Major:         1,
@@ -111,6 +122,7 @@ func TestCalculateNextVersion(t *testing.T) {
 		suffix      string
 		expectedTag string
 		expectError bool
+		allTags     []string
 	}{
 		{
 			name:        "Patch increment",
@@ -138,6 +150,7 @@ func TestCalculateNextVersion(t *testing.T) {
 		{
 			name:        "Pre-release increment with pre-release version",
 			currentTag:  "v1.2.3-rc.1",
+			suffix:      "rc",
 			expectedTag: "v1.2.3-rc.2",
 		},
 		{
@@ -172,7 +185,13 @@ func TestCalculateNextVersion(t *testing.T) {
 			name:        "Add suffix to version",
 			currentTag:  "v1.2.3",
 			suffix:      "beta",
-			expectedTag: "v1.2.3-beta.1",
+			expectedTag: "v1.2.3-beta",
+		},
+		{
+			name:        "Add suffix to pre-release version",
+			currentTag:  "v1.1.1-stuck",
+			suffix:      "stuck",
+			expectedTag: "v1.1.1-stuck.1",
 		},
 		{
 			name:        "Override existing pre-release with suffix",
@@ -184,7 +203,7 @@ func TestCalculateNextVersion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			nextVersion, err := CalculateNextVersion(tc.currentTag, []string{}, tc.incMajor, tc.incMinor, tc.incPatch, tc.suffix)
+			nextVersion, err := CalculateNextVersion(tc.currentTag, tc.allTags, tc.incMajor, tc.incMinor, tc.incPatch, tc.suffix)
 
 			if tc.expectError {
 				assert.Error(t, err)

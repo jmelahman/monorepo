@@ -79,20 +79,6 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 		return "", err
 	}
 
-	// Find highest patch version for current major.minor
-	highestPatch := -1
-	for _, existingTag := range allTags {
-		existingVersion, err := ParseSemver(existingTag)
-		if err != nil {
-			continue
-		}
-		if existingVersion.Major == version.Major &&
-			existingVersion.Minor == version.Minor &&
-			existingVersion.Patch > highestPatch {
-			highestPatch = existingVersion.Patch
-		}
-	}
-
 	// Increment version based on flags
 	if incMajor {
 		version.Major++
@@ -103,35 +89,20 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 		version.Minor++
 		version.Patch = 0
 		version.PreReleaseNum = 0
-	} else if incPatch || version.PreRelease == "" {
+	} else if incPatch {
 		version.Patch++
 		version.PreReleaseNum = 0
-	} else {
-		// If there's a higher patch version, use that instead of incrementing pre-release
-		if highestPatch > version.Patch {
-			version.Patch = highestPatch
-			version.PreReleaseNum = 1
-		} else if version.PreReleaseNum == 0 {
-			version.Patch++
-			version.PreRelease = ""
+	} else if suffix == "" {
+		// I don't think this is correct. Will need to revisit.
+		// I think this is supposed to infer the suffix if version.PreRelease?
+		version.Patch++
+	} else if suffix != "" {
+		fmt.Println(tag)
+		if version.PreRelease != suffix {
+			fmt.Println(tag, version)
+			version.PreRelease = suffix
 		} else {
 			version.PreReleaseNum++
-		}
-	}
-
-	// Apply suffix if provided
-	if suffix != "" {
-		// When adding a new suffix, preserve the original patch version
-		if version.PreRelease != suffix {
-			version.PreRelease = suffix
-			version.PreReleaseNum = 1
-			if version.PreRelease == "" {
-				version.PreReleaseNum = 0
-			}
-			// Reset patch only if there was no pre-release before
-			if version.PreRelease == "" {
-				version.Patch = version.Patch
-			}
 		}
 	}
 
