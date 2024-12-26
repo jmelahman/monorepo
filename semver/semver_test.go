@@ -12,6 +12,7 @@ func TestCalculateNextVersion(t *testing.T) {
 		currentTag  string
 		incMajor    bool
 		incMinor    bool
+		forcePatch  bool
 		expectedTag string
 		expectError bool
 	}{
@@ -59,11 +60,23 @@ func TestCalculateNextVersion(t *testing.T) {
 			currentTag:  "v1.2.3-rc",
 			expectedTag: "v1.2.4",
 		},
+		{
+			name:        "Force patch increment",
+			currentTag:  "v1.2.3-rc1",
+			forcePatch:  true,
+			expectedTag: "v1.2.4",
+		},
+		{
+			name:        "Force patch increment with pre-release",
+			currentTag:  "v1.2.3-rc",
+			forcePatch:  true,
+			expectedTag: "v1.2.4",
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			nextVersion, err := CalculateNextVersion(tc.currentTag, tc.incMajor, tc.incMinor)
+			nextVersion, err := CalculateNextVersion(tc.currentTag, tc.incMajor, tc.incMinor, tc.forcePatch)
 
 			if tc.expectError {
 				assert.Error(t, err)

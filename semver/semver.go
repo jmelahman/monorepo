@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func CalculateNextVersion(tag string, incMajor, incMinor bool) (string, error) {
+func CalculateNextVersion(tag string, incMajor, incMinor, forcePatch bool) (string, error) {
 	// Regex to match semver with optional pre-release
 	re := regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(\d*))?`)
 	matches := re.FindStringSubmatch(tag)
@@ -20,7 +20,9 @@ func CalculateNextVersion(tag string, incMajor, incMinor bool) (string, error) {
 	preRelease := matches[4]
 	preReleaseNum := matches[5]
 
-	if incMajor {
+	if forcePatch {
+		patch++
+	} else if incMajor {
 		major++
 		minor = 0
 		patch = 0
