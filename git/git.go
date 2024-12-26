@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/jmelahman/tag/semver"
 )
 
 func GetLatestSemverTag() (string, []string, error) {
@@ -17,7 +15,7 @@ func GetLatestSemverTag() (string, []string, error) {
 	}
 
 	latestTag := strings.TrimSpace(string(output))
-	
+
 	// Fetch all tags for additional context
 	tagsCmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*", "--sort=-v:refname")
 	tagsOutput, err := tagsCmd.Output()
@@ -26,7 +24,7 @@ func GetLatestSemverTag() (string, []string, error) {
 	}
 
 	tagList := strings.Split(strings.TrimSpace(string(tagsOutput)), "\n")
-	
+
 	return latestTag, tagList, nil
 }
 
