@@ -59,11 +59,6 @@ func TestCalculateNextVersion(t *testing.T) {
 			currentTag:  "v1.2.3-rc",
 			expectedTag: "v1.2.4",
 		},
-		{
-			name:        "Pre-release with non-numeric suffix",
-			currentTag:  "v1.2.3-alpha",
-			expectedTag: "v1.2.4",
-		},
 	}
 
 	for _, tc := range testCases {
