@@ -22,6 +22,20 @@ func main() {
 		Use:     "tag",
 		Short:   "Calculate the next semantic version tag",
 		Version: fmt.Sprintf("%s\ncommit %s", version, commit),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// Validate that only one version increment flag is set
+			incrementFlags := []bool{major, minor, patch}
+			var setFlags int
+			for _, flag := range incrementFlags {
+				if flag {
+					setFlags++
+				}
+			}
+			if setFlags > 1 {
+				return fmt.Errorf("only one version increment flag (--major, --minor, or --patch) can be used at a time")
+			}
+			return nil
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := git.FetchSemverTags(); err != nil {
 				fmt.Printf("Error fetching tags: %v\n", err)
