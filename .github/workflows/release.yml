@@ -49,7 +49,8 @@ jobs:
         with:
           go-version: stable
           cache: false
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
       - run: uv build
       - run: uv publish
