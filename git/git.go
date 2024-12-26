@@ -9,20 +9,25 @@ import (
 )
 
 func GetLatestSemverTag() (string, []string, error) {
-	// Fetch all tags matching semver pattern
-	cmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*", "--sort=-v:refname")
+	// Use git describe to get the most recent tag
+	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
 	output, err := cmd.Output()
 	if err != nil {
 		return "v0.0.0", nil, nil
 	}
 
-	// Split tags and trim whitespace
-	tagList := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(tagList) == 0 {
-		return "v0.0.0", nil, nil
+	latestTag := strings.TrimSpace(string(output))
+	
+	// Fetch all tags for additional context
+	tagsCmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*", "--sort=-v:refname")
+	tagsOutput, err := tagsCmd.Output()
+	if err != nil {
+		return latestTag, nil, nil
 	}
 
-	return tagList[0], tagList, nil
+	tagList := strings.Split(strings.TrimSpace(string(tagsOutput)), "\n")
+	
+	return latestTag, tagList, nil
 }
 
 func CreateAndPushTag(tag string) error {
