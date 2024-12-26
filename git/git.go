@@ -10,7 +10,7 @@ import (
 
 func GetLatestSemverTag() (string, error) {
 	// Fetch all tags matching semver pattern
-	cmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*")
+	cmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*", "--sort=-v:refname")
 	output, err := cmd.Output()
 	if err != nil {
 		return "v0.0.0", nil
@@ -24,11 +24,15 @@ func GetLatestSemverTag() (string, error) {
 
 	var latestTag string
 	var latestVersion *semver.Version
+	var nearestVersion *semver.Version
 
 	for _, tag := range tagList {
 		version, err := semver.ParseSemver(tag)
 		if err != nil {
 			continue
+		}
+		if nearestVersion == nil {
+			nearestVersion = version
 		}
 
 		if latestVersion == nil || semver.CompareSemver(version, latestVersion) {
