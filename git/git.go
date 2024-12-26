@@ -28,3 +28,11 @@ func CreateAndPushTag(tag string) error {
 
 	return nil
 }
+
+func FetchSemverTags() error {
+	cmd := exec.Command("git", "fetch", "--tags")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to fetch tags: %w", err)
+	}
+	return nil
+}

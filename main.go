@@ -23,13 +23,18 @@ func main() {
 		Short:   "Calculate the next semantic version tag",
 		Version: fmt.Sprintf("%s\ncommit %s", version, commit),
 		Run: func(cmd *cobra.Command, args []string) {
+			if err := git.FetchSemverTags(); err != nil {
+				fmt.Printf("Error fetching tags: %v\n", err)
+				os.Exit(1)
+			}
+
 			latestTag, err := git.GetLatestSemverTag()
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			nextVersion, err := semver.CalculateNextVersion(latestTag, major, minor)
+			nextVersion, err := semver.CalculateNextVersion(latestTag, major, minor, false)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
