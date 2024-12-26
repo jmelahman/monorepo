@@ -27,22 +27,3 @@ class PostInstallCommand(install):
         shutil.move(binary_source, binary_dest)
 
         install.run(self)
-
-setup(
-    name="nyt-connections",
-    packages=[],
-    include_package_data=True,
-    cmdclass={
-        "build": BuildGoBinary,
-        "install": PostInstallCommand,
-    },
-    description="A command-line client for the NYT Connections game",
-    long_description=open("README.md").read(),
-    long_description_content_type="text/markdown",
-    classifiers=[
-        "Programming Language :: Go",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
-    python_requires=">=3.6",
-)
