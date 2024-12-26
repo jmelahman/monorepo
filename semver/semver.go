@@ -84,16 +84,13 @@ func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool) (string
 		version.Major++
 		version.Minor = 0
 		version.Patch = 0
-		version.PreRelease = ""
 		version.PreReleaseNum = 0
 	} else if incMinor {
 		version.Minor++
 		version.Patch = 0
-		version.PreRelease = ""
 		version.PreReleaseNum = 0
 	} else if incPatch || version.PreRelease == "" {
 		version.Patch++
-		version.PreRelease = ""
 		version.PreReleaseNum = 0
 	} else {
 		// If pre-release exists but has no number, increment patch

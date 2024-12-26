@@ -62,33 +62,33 @@ func TestCompareSemver(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "v1 major version higher",
-			v1:   &Version{Major: 2, Minor: 0, Patch: 0},
-			v2:   &Version{Major: 1, Minor: 9, Patch: 9},
+			name:     "v1 major version higher",
+			v1:       &Version{Major: 2, Minor: 0, Patch: 0},
+			v2:       &Version{Major: 1, Minor: 9, Patch: 9},
 			expected: true,
 		},
 		{
-			name: "v1 minor version higher",
-			v1:   &Version{Major: 1, Minor: 2, Patch: 0},
-			v2:   &Version{Major: 1, Minor: 1, Patch: 9},
+			name:     "v1 minor version higher",
+			v1:       &Version{Major: 1, Minor: 2, Patch: 0},
+			v2:       &Version{Major: 1, Minor: 1, Patch: 9},
 			expected: true,
 		},
 		{
-			name: "v1 patch version higher",
-			v1:   &Version{Major: 1, Minor: 1, Patch: 2},
-			v2:   &Version{Major: 1, Minor: 1, Patch: 1},
+			name:     "v1 patch version higher",
+			v1:       &Version{Major: 1, Minor: 1, Patch: 2},
+			v2:       &Version{Major: 1, Minor: 1, Patch: 1},
 			expected: true,
 		},
 		{
-			name: "v1 pre-release version higher",
-			v1:   &Version{Major: 1, Minor: 1, Patch: 1, PreRelease: "rc", PreReleaseNum: 2},
-			v2:   &Version{Major: 1, Minor: 1, Patch: 1, PreRelease: "rc", PreReleaseNum: 1},
+			name:     "v1 pre-release version higher",
+			v1:       &Version{Major: 1, Minor: 1, Patch: 1, PreRelease: "rc", PreReleaseNum: 2},
+			v2:       &Version{Major: 1, Minor: 1, Patch: 1, PreRelease: "rc", PreReleaseNum: 1},
 			expected: true,
 		},
 		{
-			name: "Identical versions",
-			v1:   &Version{Major: 1, Minor: 1, Patch: 1},
-			v2:   &Version{Major: 1, Minor: 1, Patch: 1},
+			name:     "Identical versions",
+			v1:       &Version{Major: 1, Minor: 1, Patch: 1},
+			v2:       &Version{Major: 1, Minor: 1, Patch: 1},
 			expected: false,
 		},
 	}
