@@ -7,12 +7,16 @@ import (
 )
 
 func GetLatestSemverTag() (string, error) {
-	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0", "--match", "v[0-9].[0-9].[0-9]")
+	cmd := exec.Command("git", "tag", "-l", "v[0-9].[0-9].[0-9]*", "--sort=-v:refname")
 	output, err := cmd.Output()
 	if err != nil {
 		return "v0.0.0", nil
 	}
-	return strings.TrimSpace(string(output)), nil
+	tags := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(tags) == 0 {
+		return "v0.0.0", nil
+	}
+	return tags[0], nil
 }
 
 func CreateAndPushTag(tag string) error {
