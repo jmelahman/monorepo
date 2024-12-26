@@ -72,7 +72,7 @@ func CompareSemver(v1, v2 *Version) bool {
 	return false
 }
 
-func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool) (string, error) {
+func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
 	// Parse the current version
 	version, err := ParseSemver(tag)
 	if err != nil {
@@ -101,6 +101,12 @@ func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool) (string
 			// Increment pre-release number
 			version.PreReleaseNum++
 		}
+	}
+
+	// Apply suffix if provided
+	if suffix != "" {
+		version.PreRelease = suffix
+		version.PreReleaseNum = 1
 	}
 
 	// Construct the version string

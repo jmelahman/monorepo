@@ -108,6 +108,7 @@ func TestCalculateNextVersion(t *testing.T) {
 		incMajor    bool
 		incMinor    bool
 		incPatch    bool
+		suffix      string
 		expectedTag string
 		expectError bool
 	}{
@@ -167,11 +168,23 @@ func TestCalculateNextVersion(t *testing.T) {
 			currentTag:  "invalid-tag",
 			expectError: true,
 		},
+		{
+			name:        "Add suffix to version",
+			currentTag:  "v1.2.3",
+			suffix:      "beta",
+			expectedTag: "v1.2.3-beta.1",
+		},
+		{
+			name:        "Override existing pre-release with suffix",
+			currentTag:  "v1.2.3-rc.1",
+			suffix:      "beta",
+			expectedTag: "v1.2.3-beta.1",
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			nextVersion, err := CalculateNextVersion(tc.currentTag, tc.incMajor, tc.incMinor, tc.incPatch)
+			nextVersion, err := CalculateNextVersion(tc.currentTag, tc.incMajor, tc.incMinor, tc.incPatch, tc.suffix)
 
 			if tc.expectError {
 				assert.Error(t, err)
