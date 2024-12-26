@@ -12,7 +12,7 @@ func TestCalculateNextVersion(t *testing.T) {
 		currentTag  string
 		incMajor    bool
 		incMinor    bool
-		forcePatch  bool
+		incPatch    bool
 		expectedTag string
 		expectError bool
 	}{
@@ -34,26 +34,27 @@ func TestCalculateNextVersion(t *testing.T) {
 			expectedTag: "v2.0.0",
 		},
 		{
-			name:        "Invalid tag format",
-			currentTag:  "invalid-tag",
-			expectError: true,
+			name:        "Pre-release increment with pre-release version",
+			currentTag:  "v1.2.3-rc.1",
+			expectedTag: "v1.2.3-rc.2",
 		},
 		{
-			name:        "Pre-release increment (rc)",
-			currentTag:  "v1.2.3-rc1",
-			expectedTag: "v1.2.3-rc2",
+			name:        "Pre-release increment with patch version",
+			currentTag:  "v1.2.3-rc.1",
+			incPatch:    true,
+			expectedTag: "v1.2.4-rc",
 		},
 		{
 			name:        "Pre-release increment with minor version",
-			currentTag:  "v1.2.3-rc1",
+			currentTag:  "v1.2.3-rc.1",
 			incMinor:    true,
-			expectedTag: "v1.3.0",
+			expectedTag: "v1.3.0-rc",
 		},
 		{
 			name:        "Pre-release increment with major version",
-			currentTag:  "v1.2.3-rc1",
+			currentTag:  "v1.2.3-rc.1",
 			incMajor:    true,
-			expectedTag: "v2.0.0",
+			expectedTag: "v2.0.0-rc",
 		},
 		{
 			name:        "Pre-release without number",
@@ -61,22 +62,15 @@ func TestCalculateNextVersion(t *testing.T) {
 			expectedTag: "v1.2.4",
 		},
 		{
-			name:        "Force patch increment",
-			currentTag:  "v1.2.3-rc1",
-			forcePatch:  true,
-			expectedTag: "v1.2.4",
-		},
-		{
-			name:        "Force patch increment with pre-release",
-			currentTag:  "v1.2.3-rc",
-			forcePatch:  true,
-			expectedTag: "v1.2.4",
+			name:        "Invalid tag format",
+			currentTag:  "invalid-tag",
+			expectError: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			nextVersion, err := CalculateNextVersion(tc.currentTag, tc.incMajor, tc.incMinor, tc.forcePatch)
+			nextVersion, err := CalculateNextVersion(tc.currentTag, tc.incMajor, tc.incMinor, tc.incPatch)
 
 			if tc.expectError {
 				assert.Error(t, err)
