@@ -13,7 +13,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-metadata-version = "2.4"
 dynamic = ["version"]
 
 [tool.setuptools_scm]

@@ -59,4 +59,7 @@ jobs:
       - name: Build
         run: uv build --wheel
       - name: Upload
-        run: uv publish
+        run: uvx twine upload dist/*
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
