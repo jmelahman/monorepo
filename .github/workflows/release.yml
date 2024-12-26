@@ -13,22 +13,18 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Dependencies
-        uses: daaku/gh-action-apt-install@v4
+      - uses: daaku/gh-action-apt-install@v4
         with:
           packages: libasound2-dev
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: stable
           cache: false
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
@@ -46,8 +42,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Dependencies
-        uses: daaku/gh-action-apt-install@v4
+      - uses: daaku/gh-action-apt-install@v4
         with:
           packages: libasound2-dev
       - uses: actions/setup-go@v5
@@ -56,10 +51,5 @@ jobs:
           cache: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
-      - name: Build
-        run: uv build --wheel
-      - name: Upload
-        run: uvx twine upload dist/*
-        env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+      - run: uv build --wheel
+      - run: uv publish
