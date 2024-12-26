@@ -7,3 +7,10 @@ updates:
     open-pull-requests-limit: 3
     labels:
       - "dependabot:golang"
+  - package-ecosystem: "github-actions"
+    directory: /
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependabot:actions"
