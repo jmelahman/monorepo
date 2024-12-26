@@ -28,24 +28,24 @@ func GetLatestSemverTag() (string, error) {
 	//return latestTag, tagList, nil
 }
 
-func CreateAndPushTag(tag string) error {
+func CreateAndPushTag(tag string, remote string) error {
 	cmd := exec.Command("git", "tag", tag)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create tag: %w", err)
 	}
 
-	cmd = exec.Command("git", "push", "origin", tag)
+	cmd = exec.Command("git", "push", remote, tag)
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to push tag: %w", err)
+		return fmt.Errorf("failed to push tag to %s: %w", remote, err)
 	}
 
 	return nil
 }
 
-func FetchSemverTags() error {
-	cmd := exec.Command("git", "fetch", "--prune", "origin", "refs/tags/v*:refs/tags/v*")
+func FetchSemverTags(remote string) error {
+	cmd := exec.Command("git", "fetch", "--prune", remote, "refs/tags/v*:refs/tags/v*")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to fetch tags: %w", err)
+		return fmt.Errorf("failed to fetch tags from %s: %w", remote, err)
 	}
 	return nil
 }
