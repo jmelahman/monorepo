@@ -73,52 +73,44 @@ func CompareSemver(v1, v2 *Version) bool {
 }
 
 func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool) (string, error) {
-	// Regex to match semver with optional pre-release
-	re := regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d*)))?`)
-	matches := re.FindStringSubmatch(tag)
-	if matches == nil {
-		return "", fmt.Errorf("invalid semver tag: %s", tag)
+	// Parse the current version
+	version, err := ParseSemver(tag)
+	if err != nil {
+		return "", err
 	}
 
-	major, _ := strconv.Atoi(matches[1])
-	minor, _ := strconv.Atoi(matches[2])
-	patch, _ := strconv.Atoi(matches[3])
-	preRelease := matches[4]
-	preReleaseNum := matches[5]
-
+	// Increment version based on flags
 	if incMajor {
-		major++
-		minor = 0
-		patch = 0
-		preReleaseNum = ""
+		version.Major++
+		version.Minor = 0
+		version.Patch = 0
+		version.PreRelease = ""
+		version.PreReleaseNum = 0
 	} else if incMinor {
-		minor++
-		patch = 0
-		preReleaseNum = ""
-	} else if incPatch || preRelease == "" {
-		patch++
-		preReleaseNum = ""
+		version.Minor++
+		version.Patch = 0
+		version.PreRelease = ""
+		version.PreReleaseNum = 0
+	} else if incPatch || version.PreRelease == "" {
+		version.Patch++
+		version.PreRelease = ""
+		version.PreReleaseNum = 0
 	} else {
 		// If pre-release exists but has no number, increment patch
-		if preReleaseNum == "" {
-			patch++
+		if version.PreReleaseNum == 0 {
+			version.Patch++
+			version.PreRelease = ""
 		} else {
-			// Try to increment pre-release number
-			num, err := strconv.Atoi(preReleaseNum)
-			if err != nil {
-				// If not a valid number, increment patch
-				patch++
-			} else {
-				preReleaseNum = strconv.Itoa(num + 1)
-			}
+			// Increment pre-release number
+			version.PreReleaseNum++
 		}
 	}
 
 	// Construct the version string
-	if preRelease != "" && preReleaseNum != "" {
-		return fmt.Sprintf("v%d.%d.%d-%s.%s", major, minor, patch, preRelease, preReleaseNum), nil
-	} else if preRelease != "" {
-		return fmt.Sprintf("v%d.%d.%d-%s", major, minor, patch, preRelease), nil
+	if version.PreRelease != "" && version.PreReleaseNum > 0 {
+		return fmt.Sprintf("v%d.%d.%d-%s.%d", version.Major, version.Minor, version.Patch, version.PreRelease, version.PreReleaseNum), nil
+	} else if version.PreRelease != "" {
+		return fmt.Sprintf("v%d.%d.%d-%s", version.Major, version.Minor, version.Patch, version.PreRelease), nil
 	}
-	return fmt.Sprintf("v%d.%d.%d", major, minor, patch), nil
+	return fmt.Sprintf("v%d.%d.%d", version.Major, version.Minor, version.Patch), nil
 }
