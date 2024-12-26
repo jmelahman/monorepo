@@ -6,6 +6,7 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 class GoBinaryBuildHook(BuildHookInterface):
     def initialize(self, version, build_data):
+        build_data["pure_python"] = False
         binary_name = self.config["binary_name"]
 
         if not os.path.exists(binary_name):
@@ -15,4 +16,5 @@ class GoBinaryBuildHook(BuildHookInterface):
                 env={"GOOS": "linux", "GOARCH": "amd64", **os.environ},
             )
 
-        build_data["artifacts"].append(binary_name)
+        build_data["shared_scripts"] = {binary_name: binary_name}
+
