@@ -27,3 +27,6 @@ go.work.sum
 # python packaging
 dist/
 *.egg-info/
+
+# aider
+.aider*
