@@ -106,7 +106,9 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 				}
 			}
 		}
-		version.PreReleaseNum = largestPreReleaseNum + 1
+		if largestPreReleaseNum > 0 {
+			version.PreReleaseNum = largestPreReleaseNum + 1
+		}
 	} else {
 		version.PreReleaseNum++
 	}

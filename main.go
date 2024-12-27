@@ -60,7 +60,13 @@ func main() {
 				os.Exit(1)
 			}
 
-			nextVersion, err := semver.CalculateNextVersion(latestTag, major, minor, patch, suffix)
+			allTags, err := git.ListTags()
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			nextVersion, err := semver.CalculateNextVersion(latestTag, allTags, major, minor, patch, suffix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
