@@ -10,9 +10,7 @@ import (
 )
 
 func GetLatestSemverTag() (string, error) {
-	// Use git describe to get the most recent tag
 	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
-	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
 	if err != nil {
 		return "v0.0.0", nil
