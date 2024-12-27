@@ -74,7 +74,9 @@ func main() {
 				os.Exit(1)
 			}
 
-			nextVersion = fmt.Sprint(nextVersion, "+", metadata)
+			if metadata != "" {
+				nextVersion = fmt.Sprint(nextVersion, "+", metadata)
+			}
 
 			tagExists, err := git.TagExists(nextVersion)
 			if err != nil {
