@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/jmelahman/tag/completion"
 	"github.com/jmelahman/tag/git"
@@ -91,6 +93,21 @@ func main() {
 					os.Exit(1)
 				}
 				fmt.Printf("Tag %s created and pushed to %s.\n", nextVersion, remote)
+			} else {
+				reader := bufio.NewReader(os.Stdin)
+				fmt.Printf("Do you want to push the tag %s to %s? (y/N): ", nextVersion, remote)
+				response, _ := reader.ReadString('\n')
+				response = strings.TrimSpace(strings.ToLower(response))
+
+				if response == "y" || response == "yes" {
+					if err := git.CreateAndPushTag(nextVersion, remote); err != nil {
+						fmt.Printf("Error: %v\n", err)
+						os.Exit(1)
+					}
+					fmt.Printf("Tag %s created and pushed to %s.\n", nextVersion, remote)
+				} else {
+					fmt.Printf("Tag %s created locally but not pushed.\n", nextVersion)
+				}
 			}
 		},
 	}
