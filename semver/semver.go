@@ -72,7 +72,7 @@ func CompareSemver(v1, v2 *Version) bool {
 	return false
 }
 
-func CalculateNextVersion(tag string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
+func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
 	// Parse the current version
 	version, err := ParseSemver(tag)
 	if err != nil {
