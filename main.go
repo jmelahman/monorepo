@@ -101,6 +101,7 @@ func main() {
 					fmt.Printf("Error: %v\n", err)
 					os.Exit(1)
 				}
+				fmt.Printf("Tag '%s' created and pushed to %s.\n", nextVersion, remote)
 			}
 		},
 	}
