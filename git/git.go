@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/jmelahman/tag/semver"
 )
 
 func GetLatestSemverTag() (string, error) {
@@ -16,12 +18,55 @@ func GetLatestSemverTag() (string, error) {
 		return "v0.0.0", nil
 	}
 
-	return strings.TrimSpace(string(output)), nil
+	tagsAt, err := ListTagsAt(strings.TrimSpace(string(output)))
+	if err != nil {
+		return "v0.0.0", nil
+	}
+
+	var largestTag string
+	var largestVersion *semver.Version
+
+	for _, tag := range tagsAt {
+		if largestTag == "" {
+			largestTag = tag
+		}
+
+		version, err := semver.ParseSemver(tag)
+		if err != nil {
+			continue
+		}
+
+		if largestVersion == nil {
+			largestTag = tag
+			largestVersion = version
+			continue
+		}
+
+		if semver.CompareSemver(version, largestVersion) {
+			largestTag = tag
+			largestVersion = version
+		}
+	}
+
+	return largestTag, nil
 }
 
 // List all git tags
 func ListTags() ([]string, error) {
 	cmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*")
+	cmd.Stderr = os.Stderr
+	tagsOutput, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	tagList := strings.Split(strings.TrimSpace(string(tagsOutput)), "\n")
+
+	return tagList, nil
+}
+
+func ListTagsAt(ref string) ([]string, error) {
+	cmd := exec.Command("git", "tag", "--points-at", ref)
 	cmd.Stderr = os.Stderr
 	tagsOutput, err := cmd.Output()
 	if err != nil {
