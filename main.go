@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/jmelahman/tag/completion"
@@ -69,6 +70,17 @@ func main() {
 			nextVersion, err := semver.CalculateNextVersion(latestTag, allTags, major, minor, patch, suffix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			tagExists, err := git.TagExists(nextVersion)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			if tagExists {
+				fmt.Printf("Next tag '%s' already exists.\n", nextVersion)
 				os.Exit(1)
 			}
 

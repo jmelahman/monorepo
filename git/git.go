@@ -78,6 +78,17 @@ func ListTagsAt(ref string) ([]string, error) {
 	return tagList, nil
 }
 
+func TagExists(tag string) (bool, error) {
+	cmd := exec.Command("git", "show-ref", "--tags", "--quiet", tag)
+	if err := cmd.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func CreateAndPushTag(tag string, remote string) error {
 	cmd := exec.Command("git", "tag", tag)
 	cmd.Stderr = os.Stderr
