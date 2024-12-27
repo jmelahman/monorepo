@@ -45,6 +45,17 @@ func TestParseSemver(t *testing.T) {
 			},
 		},
 		{
+			name: "Build metadata version",
+			tag:  "v1.2.3+21AF26D3",
+			expectedVer: &Version{
+				Major:         1,
+				Minor:         2,
+				Patch:         3,
+				PreRelease:    "",
+				PreReleaseNum: 0,
+			},
+		},
+		{
 			name:        "Invalid version",
 			tag:         "invalid-tag",
 			expectError: true,

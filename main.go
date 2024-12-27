@@ -19,7 +19,7 @@ var (
 
 func main() {
 	var major, minor, patch, push bool
-	var suffix, remote string
+	var metadata, suffix, remote string
 
 	rootCmd := &cobra.Command{
 		Use:     "tag",
@@ -74,6 +74,8 @@ func main() {
 				os.Exit(1)
 			}
 
+			nextVersion = fmt.Sprint(nextVersion, "+", metadata)
+
 			tagExists, err := git.TagExists(nextVersion)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
@@ -111,6 +113,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&patch, "patch", false, "increment the patch version")
 	rootCmd.Flags().BoolVar(&push, "push", false, "create and push the tag to remote")
 	rootCmd.Flags().StringVar(&suffix, "suffix", "", "set the pre-release suffix (e.g., rc, alpha, beta)")
+	rootCmd.Flags().StringVar(&metadata, "metadata", "", "set the build metadata")
 	rootCmd.Flags().StringVar(&remote, "remote", "origin", "remote repository to push tag to")
 
 	rootCmd.AddCommand(completion.AddCompletionCmd(rootCmd))
