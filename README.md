@@ -9,7 +9,7 @@
 
 Automatically create [semantic version](https://semver.org/) git tags.
 
-```shell
+```text
 $ tag
 Push tag 'v1.0.1' to origin? (y/N): y
 Tag 'v1.0.1' created and pushed to origin.
