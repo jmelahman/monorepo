@@ -147,16 +147,37 @@ func TestCalculateNextVersion(t *testing.T) {
 			expectedTag: "v1.2.4",
 		},
 		{
+			name:        "Patch increment with suffix",
+			currentTag:  "v1.2.3",
+			incPatch:    true,
+			suffix:      "alpha",
+			expectedTag: "v1.2.4-alpha",
+		},
+		{
 			name:        "Minor increment",
 			currentTag:  "v1.2.3",
 			incMinor:    true,
 			expectedTag: "v1.3.0",
 		},
 		{
+			name:        "Minor increment with suffix",
+			currentTag:  "v1.2.3",
+			incMinor:    true,
+			suffix:      "alpha",
+			expectedTag: "v1.3.0-alpha",
+		},
+		{
 			name:        "Major increment",
 			currentTag:  "v1.2.3",
 			incMajor:    true,
 			expectedTag: "v2.0.0",
+		},
+		{
+			name:        "Major increment with suffix",
+			currentTag:  "v1.2.3",
+			incMajor:    true,
+			suffix:      "alpha",
+			expectedTag: "v2.0.0-alpha",
 		},
 		{
 			name:        "Pre-release increment with pre-release version",

@@ -95,7 +95,6 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	} else if suffix == "" && version.PreRelease == "" {
 		version.Patch++
 	} else if suffix != "" && version.PreRelease != suffix {
-		version.PreRelease = suffix
 		// Find the largest PreReleaseNum for the given suffix
 		largestPreReleaseNum := 0
 		for _, existingTag := range allTags {
@@ -111,6 +110,10 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 		}
 	} else {
 		version.PreReleaseNum++
+	}
+
+	if suffix != "" {
+		version.PreRelease = suffix
 	}
 
 	// Construct the version string
