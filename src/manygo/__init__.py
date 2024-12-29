@@ -17,11 +17,11 @@ def get_platform_tag(
     """
     Convert GOOS and GOARCH to a valid Python platform tag.
 
-    This function provides a mapping between Go's platform identifiers 
-    (operating system and architecture) and Python platform tags used 
+    This function provides a mapping between Go's platform identifiers
+    (operating system and architecture) and Python platform tags used
     in packaging and distribution.
 
-    Supported platforms are derived from the Go toolchain's supported 
+    Supported platforms are derived from the Go toolchain's supported
     platforms, which can be listed via `$ go tools dist list`.
 
     Args:
