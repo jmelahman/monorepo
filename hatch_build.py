@@ -27,9 +27,9 @@ class GoBinaryBuildHook(BuildHookInterface):
                 shutil.move(os.path.join(temp_dir, "go"), self.root)
 
         build_data["force_include"] = {
-            "go/bin/go": "go/bin/go",
             "go/go.env": "go/go.env",
             "go/VERSION": "go/VERSION",
+            "go/bin": "go/bin",
             "go/lib": "go/lib",
             "go/misc": "go/misc",
             "go/pkg": "go/pkg",
