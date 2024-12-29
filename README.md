@@ -1,1 +1,1 @@
-# golang-bin
+# Golang Binary

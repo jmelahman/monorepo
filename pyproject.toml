@@ -21,7 +21,7 @@ dynamic = ["version"]
 
 
 [project.urls]
-Repository = "https://github.com/jmelahman/golang-bin"
+Repository = "https://github.com/jmelahman/go-bin"
 
 [tool.hatch.version]
 source = "vcs"
