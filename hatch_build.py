@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import urllib.request
 import tarfile
@@ -10,8 +11,11 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 class GoBinaryBuildHook(BuildHookInterface):
     def initialize(self, version, build_data):
         build_data["pure_python"] = False
-        version = os.environ["GITHUB_REF_NAME"]
-        archive = "go{}.linux-amd64.tar.gz".format(version.lstrip("v"))
+        tag = os.environ["GITHUB_REF_NAME"]
+        match = re.search(r'v(\d+\.\d+\.\d+)\.\d+', tag)
+        assert match is not None
+        version = match.group(1)
+        archive = "go{}.linux-amd64.tar.gz".format(version)
 
         if not os.path.exists(archive):
             urllib.request.urlretrieve("https://storage.googleapis.com/golang/" + archive, archive)
