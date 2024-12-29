@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 # https://go.dev/doc/install/source#environment
 # See also, `$ go tools dist list`
@@ -84,13 +85,16 @@ DistList = frozenset([
     "windows/arm64",
 ])
 
-def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
+def get_platform_tag(
+    goos: Literal['aix', 'android', 'darwin', 'freebsd', 'ios', 'js', 'linux', 'netbsd', 'openbsd', 'plan9', 'solaris', 'windows'],
+    goarch: Literal['amd64', 'arm', 'arm64', 'mips', 'mips64', 'ppc64', 'riscv64', 's390x', 'wasm', '386']
+) -> str:
     """
     Convert GOOS and GOARCH to a valid Python platform tag.
 
     Args:
-        goos (GOOS): The operating system
-        goarch (GOARCH): The architecture
+        goos (str): The operating system
+        goarch (str): The architecture
 
     Returns:
         str: A Python platform tag
@@ -100,14 +104,14 @@ def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
     """
     # Mapping of special cases and conversions
     platform_map = {
-        (GOOS.DARWIN, GOARCH.AMD64): 'macosx_10_9_x86_64',
-        (GOOS.DARWIN, GOARCH.ARM64): 'macosx_11_0_arm64',
-        (GOOS.LINUX, GOARCH.AMD64): 'manylinux_2_17_x86_64',
-        (GOOS.LINUX, GOARCH.ARM64): 'manylinux_2_17_aarch64',
-        (GOOS.WINDOWS, GOARCH.AMD64): 'win_amd64',
-        (GOOS.WINDOWS, GOARCH.X86): 'win32',
-        (GOOS.LINUX, GOARCH.X86): 'linux_i686',
-        (GOOS.LINUX, GOARCH.ARM): 'linux_armv7l',
+        ('darwin', 'amd64'): 'macosx_10_9_x86_64',
+        ('darwin', 'arm64'): 'macosx_11_0_arm64',
+        ('linux', 'amd64'): 'manylinux_2_17_x86_64',
+        ('linux', 'arm64'): 'manylinux_2_17_aarch64',
+        ('windows', 'amd64'): 'win_amd64',
+        ('windows', '386'): 'win32',
+        ('linux', '386'): 'linux_i686',
+        ('linux', 'arm'): 'linux_armv7l',
     }
 
     # Check for direct mapping first
@@ -116,16 +120,16 @@ def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
 
     # Generic fallback conversion
     os_map = {
-        GOOS.LINUX: 'linux',
-        GOOS.WINDOWS: 'win',
-        GOOS.DARWIN: 'macosx',
+        'linux': 'linux',
+        'windows': 'win',
+        'darwin': 'macosx',
     }
 
     arch_map = {
-        GOARCH.AMD64: 'x86_64',
-        GOARCH.ARM64: 'aarch64',
-        GOARCH.X86: 'i686',
-        GOARCH.ARM: 'armv7l',
+        'amd64': 'x86_64',
+        'arm64': 'aarch64',
+        '386': 'i686',
+        'arm': 'armv7l',
     }
 
     # Try to construct a generic tag
@@ -133,4 +137,4 @@ def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
         return f'{os_map[goos]}_{arch_map[goarch]}'
 
     # If no mapping found, raise an error
-    raise ValueError(f'No platform tag for {goos.value}/{goarch.value}')
+    raise ValueError(f'No platform tag for {goos}/{goarch}')
