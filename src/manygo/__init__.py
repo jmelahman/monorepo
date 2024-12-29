@@ -2,24 +2,37 @@ from __future__ import annotations
 
 from typing import Literal
 
+# Supported Go operating systems
 # https://go.dev/doc/install/source#environment
 # See also, `$ go tools dist list`
+GOOS = Literal['aix', 'android', 'darwin', 'freebsd', 'ios', 'js', 'linux', 'netbsd', 'openbsd', 'plan9', 'solaris', 'windows']
+
+# Supported Go architectures
+GOARCH = Literal['amd64', 'arm', 'arm64', 'mips', 'mips64', 'ppc64', 'riscv64', 's390x', 'wasm', '386']
+
 def get_platform_tag(
-    goos: Literal['aix', 'android', 'darwin', 'freebsd', 'ios', 'js', 'linux', 'netbsd', 'openbsd', 'plan9', 'solaris', 'windows'],
-    goarch: Literal['amd64', 'arm', 'arm64', 'mips', 'mips64', 'ppc64', 'riscv64', 's390x', 'wasm', '386']
+    goos: GOOS,
+    goarch: GOARCH
 ) -> str:
     """
     Convert GOOS and GOARCH to a valid Python platform tag.
 
+    This function provides a mapping between Go's platform identifiers 
+    (operating system and architecture) and Python platform tags used 
+    in packaging and distribution.
+
+    Supported platforms are derived from the Go toolchain's supported 
+    platforms, which can be listed via `$ go tools dist list`.
+
     Args:
-        goos (str): The operating system
-        goarch (str): The architecture
+        goos (GOOS): The operating system identifier
+        goarch (GOARCH): The architecture identifier
 
     Returns:
-        str: A Python platform tag
+        str: A Python platform tag suitable for wheel or other packaging
 
     Raises:
-        ValueError: If the combination is not supported
+        ValueError: If no platform tag can be generated for the given combination
     """
     # Mapping of special cases and conversions
     platform_map = {
