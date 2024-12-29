@@ -10,8 +10,8 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 class GoBinaryBuildHook(BuildHookInterface):
     def initialize(self, version, build_data):
         build_data["pure_python"] = False
-        version = os.getenv("GITHUB_REF_NAME", "1.23.3")
-        archive = "go{}.linux-amd64.tar.gz".format(version)
+        version = os.environ["GITHUB_REF_NAME"]
+        archive = "go{}.linux-amd64.tar.gz".format(version.lstrip("v"))
 
         url = "https://storage.googleapis.com/golang/" + archive
         urllib.request.urlretrieve(url, archive)
