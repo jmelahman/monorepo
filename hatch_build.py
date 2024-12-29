@@ -14,20 +14,21 @@ class GoBinaryBuildHook(BuildHookInterface):
         archive = "go{}.linux-amd64.tar.gz".format(version.lstrip("v"))
 
         if not os.path.exists(archive):
-            url = "https://storage.googleapis.com/golang/" + archive
-            urllib.request.urlretrieve(url, archive)
+            urllib.request.urlretrieve("https://storage.googleapis.com/golang/" + archive, archive)
 
-        try:
-            os.remove("go")
-        except:
-            pass
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with tarfile.open(archive, "r:gz") as tar:
-                tar.extractall(path=temp_dir)
-            shutil.move(os.path.join(temp_dir, "go", "bin", "go"), self.root)
+        if not os.path.exists("go"):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                with tarfile.open(archive, "r:gz") as tar:
+                    tar.extractall(path=temp_dir)
+                shutil.move(os.path.join(temp_dir, "go"), self.root)
 
         build_data["force_include"] = {
-            "go": "go/bin/go",
+            "go/bin/go": "go/bin/go",
+            "go/go.env": "go/go.env",
+            "go/VERSION": "go/VERSION",
+            "go/lib": "go/lib",
+            "go/misc": "go/misc",
+            "go/pkg": "go/pkg",
+            "go/src": "go/src",
             "src/go/__init__.py": "go/__init__.py",
         }
