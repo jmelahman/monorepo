@@ -19,16 +19,13 @@ classifiers = [
 ]
 dynamic = ["version"]
 
+[project.scripts]
+go = "go:main"
 
 [project.urls]
 Repository = "https://github.com/jmelahman/go-bin"
 
 [tool.hatch.version]
 source = "vcs"
-
-[tool.hatch.build.targets.wheel]
-# Maybe this is a python init file.
-# Wouldn't be the end of the world.
-packages = ["pyproject.toml"]
 
 [tool.hatch.build.hooks.custom]
