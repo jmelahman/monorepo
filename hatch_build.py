@@ -13,8 +13,7 @@ class GoBinaryBuildHook(BuildHookInterface):
         version = os.getenv("GITHUB_REF_NAME", "1.23.3")
         archive = "go{}.linux-amd64.tar.gz".format(version)
 
-        # url = "https://storage.googleapis.com/golang/" + archive
-        url = "http://0.0.0.0:8000/" + archive
+        url = "https://storage.googleapis.com/golang/" + archive
         urllib.request.urlretrieve(url, archive)
 
         if os.path.exists("go"):
