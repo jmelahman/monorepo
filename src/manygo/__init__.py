@@ -83,3 +83,54 @@ DistList = frozenset([
     "windows/arm",
     "windows/arm64",
 ])
+
+def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
+    """
+    Convert GOOS and GOARCH to a valid Python platform tag.
+    
+    Args:
+        goos (GOOS): The operating system
+        goarch (GOARCH): The architecture
+    
+    Returns:
+        str: A Python platform tag
+    
+    Raises:
+        ValueError: If the combination is not supported
+    """
+    # Mapping of special cases and conversions
+    platform_map = {
+        (GOOS.DARWIN, GOARCH.AMD64): 'macosx_10_9_x86_64',
+        (GOOS.DARWIN, GOARCH.ARM64): 'macosx_11_0_arm64',
+        (GOOS.LINUX, GOARCH.AMD64): 'manylinux_2_17_x86_64',
+        (GOOS.LINUX, GOARCH.ARM64): 'manylinux_2_17_aarch64',
+        (GOOS.WINDOWS, GOARCH.AMD64): 'win_amd64',
+        (GOOS.WINDOWS, GOARCH.X86): 'win32',
+        (GOOS.LINUX, GOARCH.X86): 'linux_i686',
+        (GOOS.LINUX, GOARCH.ARM): 'linux_armv7l',
+    }
+    
+    # Check for direct mapping first
+    if (goos, goarch) in platform_map:
+        return platform_map[(goos, goarch)]
+    
+    # Generic fallback conversion
+    os_map = {
+        GOOS.LINUX: 'linux',
+        GOOS.WINDOWS: 'win',
+        GOOS.DARWIN: 'macosx',
+    }
+    
+    arch_map = {
+        GOARCH.AMD64: 'x86_64',
+        GOARCH.ARM64: 'aarch64',
+        GOARCH.X86: 'i686',
+        GOARCH.ARM: 'armv7l',
+    }
+    
+    # Try to construct a generic tag
+    if goos in os_map and goarch in arch_map:
+        return f'{os_map[goos]}_{arch_map[goarch]}'
+    
+    # If no mapping found, raise an error
+    raise ValueError(f'No platform tag for {goos.value}/{goarch.value}')
