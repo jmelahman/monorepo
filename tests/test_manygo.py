@@ -28,5 +28,22 @@ class TestManyGo(unittest.TestCase):
         assert get_platform_tag('linux', 'ppc64le') == 'manylinux_2_17_ppc64le'
         assert get_platform_tag('linux', 'ppc64') == 'manylinux_2_17_ppc64'
 
+    def test_get_platform_tag_unsupported_configurations(self) -> None:
+        # Unsupported OS
+        with self.assertRaises(ValueError):
+            get_platform_tag('freebsd', 'amd64')
+        
+        # Unsupported architecture for a supported OS
+        with self.assertRaises(ValueError):
+            get_platform_tag('darwin', 'ppc64')
+        
+        # Unsupported architecture for Linux
+        with self.assertRaises(ValueError):
+            get_platform_tag('linux', 'mips')
+        
+        # Unsupported combination
+        with self.assertRaises(ValueError):
+            get_platform_tag('windows', 's390x')
+
 if __name__ == "__main__":
     unittest.main()
