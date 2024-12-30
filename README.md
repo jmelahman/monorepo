@@ -1,52 +1,41 @@
-# Golang Binary Packaging
+# Prebuilt Go Runtime
 
 ## Overview
 
-This package provides a Hatch build hook for seamlessly integrating Golang binaries into Python projects. It automatically downloads and includes the appropriate Go runtime for different platforms during the build process.
+This package provides a prebuilt Go runtime for integrating Golang artifacts into Python projects.
 
 ## Features
 
 - Automatic Go runtime download for multiple platforms
 - Cross-platform support (Windows, Linux, macOS)
-- Configurable through environment variables
-- Integrates with Hatch build system
+- Declarative integration with python build systems
 
-## Installation
+### Using the `go` binary
 
-```bash
-pip install your-package-name
+One potential use case for `go-bin` is to facilitate managing the go binary.
+Rather than [managing multiple go installations](https://go.dev/doc/manage-install),
+utilize tools such as [uv](https://docs.astral.sh/uv/) to switch between environments.
+
+Without needing anything other than `uv`, building a golang binary becomes as simple as,
+
+```shell
+uvx --from=go-bin go build ./...
 ```
 
-## Usage
+### Using `go-bin` for packaging
 
-The package uses environment variables to configure the Go binary build:
+Whether you're building standalone go binaries or writing [c-extensions in golang](https://words.filippo.io/building-python-modules-with-go-1-5),
+this package allows a declarative and hermetic way to build golang source code.
 
-- `GOOS`: Target operating system (e.g., `linux`, `windows`, `darwin`)
-- `GOARCH`: Target architecture (e.g., `amd64`, `arm64`)
-
-### Example pyproject.toml Configuration
+Simply define a build dependency on `go-bin`,
 
 ```toml
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "go-bin~=1.23.4.*"]
 build-backend = "hatchling.build"
-
-[tool.hatch.build.hooks.golang]
-platforms = ["linux-x86_64", "windows-x86_64", "macos-x86_64"]
 ```
 
-## Development
+__It is recommended to use [compatible release versions (`~=`)](https://peps.python.org/pep-0440/#version-specifiers). Major, minor, and patch versions of `go-bin` will always correlate with Go versions while the latter digit is reserved for changes in packaging.__
 
-To build the package locally:
-
-```bash
-hatch build
-```
-
-## License
-
-See the LICENSE file for details.
-
-## Contributing
-
-Contributions are welcome! Please submit pull requests or open issues on the project's repository.
+then use it in your build scripts as if it were your system's version of `go`.
+For an example, see [`github.com/jmelahman/connections`](https://github.com/jmelahman/connections).
