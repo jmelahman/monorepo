@@ -2,15 +2,9 @@
 
 A Python library for generating platform-specific tags for Golang packages and binaries.
 
-## Overview
-
-`manygo` provides utilities to help with packaging and distributing Golang applications, with a focus on generating accurate Python platform tags for cross-platform compatibility.
-
 ## Features
 
 - Convert Golang platform identifiers (GOOS and GOARCH) to Python platform tags
-- Support for multiple architectures and operating systems
-- Helpful for creating wheel distributions and managing platform-specific builds
 
 ## Installation
 
