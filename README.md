@@ -31,11 +31,11 @@ Simply define a build dependency on `go-bin`,
 
 ```toml
 [build-system]
-requires = ["hatchling", "go-bin~=1.23.4.*"]
+requires = ["hatchling", "go-bin~=1.23.4"]
 build-backend = "hatchling.build"
 ```
 
-__It is recommended to use [compatible release versions (`~=`)](https://peps.python.org/pep-0440/#version-specifiers). Major, minor, and patch versions of `go-bin` will always correlate with Go versions while the latter digit is reserved for changes in packaging.__
+_It is recommended to use [compatible release versions (`~=`)](https://peps.python.org/pep-0440/#version-specifiers). Major, minor, and patch versions of `go-bin` will always correlate with Go versions while the latter digit is reserved for changes in packaging._
 
 then use it in your build scripts as if it were your system's version of `go`.
 For an example, see [`github.com/jmelahman/connections`](https://github.com/jmelahman/connections).
