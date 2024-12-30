@@ -20,7 +20,9 @@ def get_platform_tag(
     in packaging and distribution.
 
     Supported platforms are derived from the Go toolchain's supported
-    platforms, which can be listed via `$ go tools dist list`.
+    platforms, which can be listed via `$ go tools dist list`. See also,
+    https://go.dev/doc/install/source#environment. Python's platform tags
+    are described in https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/#platform-tag.
 
     Args:
         goos (GOOS): The operating system identifier
@@ -34,19 +36,32 @@ def get_platform_tag(
     """
     # Mapping of special cases and conversions
     platform_map = {
-        ('darwin', 'amd64'): 'macosx_10_9_x86_64',
+        ('darwin', 'amd64'): 'macosx_10_12_x86_64',
         ('darwin', 'arm64'): 'macosx_11_0_arm64',
-        ('linux', 'amd64'): 'manylinux_2_17_x86_64',
-        ('linux', 'arm64'): 'manylinux_2_17_aarch64',
-        ('windows', 'amd64'): 'win_amd64',
         ('windows', '386'): 'win32',
-        ('linux', '386'): 'linux_i686',
-        ('linux', 'arm'): 'linux_armv7l',
+        ('windows', 'arm64'): 'win_arm64',
     }
 
     # Check for direct mapping first
     if (goos, goarch) in platform_map:
         return platform_map[(goos, goarch)]
 
-    # No generic fallback, only return known mappings
-    return platform_map[(goos, goarch)]
+    # Generic fallback conversion
+    os_map = {
+        'linux': 'manylinux_2_17',
+        'windows': 'win',
+        'darwin': 'macosx',
+    }
+
+    arch_map = {
+        'amd64': 'x86_64',
+        'arm64': 'aarch64',
+        '386': 'i686',
+        'arm': 'armv7l',
+    }
+
+    # Try to construct a generic tag
+    if goos in os_map and goarch in arch_map:
+        return f'{os_map[goos]}_{arch_map[goarch]}'
+
+    raise ValueError(f'No platform tag for {goos}/{goarch}')
