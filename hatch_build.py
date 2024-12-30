@@ -18,7 +18,7 @@ class GoBinaryBuildHook(BuildHookInterface):
         if goos and goarch:
             build_data["tag"] = "py3-none-" + manygo.get_platform_tag(goos=goos, goarch=goarch)
         tag = os.environ["GITHUB_REF_NAME"]
-        match = re.search(r'v(\d+\.\d+\.\d+)\.\d+', tag)
+        match = re.search(r'v(\d+\.\d+\.\d+)(?:\.\d+)?', tag)
         assert match is not None
         version = match.group(1)
         if goos == "windows":
