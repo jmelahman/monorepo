@@ -6,7 +6,7 @@ from typing import Literal
 GOOS = Literal['darwin', 'linux', 'windows']
 
 # Supported Go architectures with known platform tags
-GOARCH = Literal['amd64', 'arm64', '386', 'arm']
+GOARCH = Literal['amd64', 'arm64', '386', 'arm', 's390x', 'ppc64le', 'ppc64']
 
 def get_platform_tag(
     goos: GOOS,
@@ -58,6 +58,9 @@ def get_platform_tag(
         'arm64': 'aarch64',
         '386': 'i686',
         'arm': 'armv7l',
+        's390x': 's390x',
+        'ppc64le': 'ppc64le',
+        'ppc64': 'ppc64',
     }
 
     # Try to construct a generic tag

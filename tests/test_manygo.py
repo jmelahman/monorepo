@@ -23,5 +23,10 @@ class TestManyGo(unittest.TestCase):
         assert get_platform_tag('windows', 'arm64') == 'win_arm64'
         assert get_platform_tag('windows', '386') == 'win32'
 
+    def test_get_platform_tag_other_architectures(self) -> None:
+        assert get_platform_tag('linux', 's390x') == 'manylinux_2_17_s390x'
+        assert get_platform_tag('linux', 'ppc64le') == 'manylinux_2_17_ppc64le'
+        assert get_platform_tag('linux', 'ppc64') == 'manylinux_2_17_ppc64'
+
 if __name__ == "__main__":
     unittest.main()
