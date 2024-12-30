@@ -15,10 +15,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: false
