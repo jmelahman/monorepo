@@ -10,6 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+    strategy:
+      matrix:
+        os-arch:
+          - { goos: "linux", goarch: "amd64" }
+          - { goos: "linux", goarch: "arm64" }
+          - { goos: "linux", goarch: "386" }
+          - { goos: "windows", goarch: "amd64" }
+          - { goos: "windows", goarch: "arm64" }
+          - { goos: "windows", goarch: "386" }
+          - { goos: "darwin", goarch: "amd64" }
+          - { goos: "darwin", goarch: "arm64" }
+          - { goos: "", goarch: "" }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,5 +34,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: false
-      - run: uv build --wheel
+      - run: |
+          GOOS="${{ matrix.os-arch.goos }}" \
+          GOARCH="${{ matrix.os-arch.goarch }}" \
+          uv build --wheel
       - run: uv publish

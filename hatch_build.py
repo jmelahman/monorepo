@@ -6,16 +6,21 @@ import tarfile
 import tempfile
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+import manygo
 
 
 class GoBinaryBuildHook(BuildHookInterface):
     def initialize(self, version, build_data):
         build_data["pure_python"] = False
+        goos = os.getenv("GOOS")
+        goarch = os.getenv("GOARCH")
+        if goos and goarch:
+            build_data["tag"] = "py3-none-" + manygo.get_platform_tag(goos=goos, goarch=goarch)
         tag = os.environ["GITHUB_REF_NAME"]
         match = re.search(r'v(\d+\.\d+\.\d+)\.\d+', tag)
         assert match is not None
         version = match.group(1)
-        archive = "go{}.linux-amd64.tar.gz".format(version)
+        archive = "go{}.{}-{}.tar.gz".format(version, goos, goarch)
 
         if not os.path.exists(archive):
             urllib.request.urlretrieve("https://storage.googleapis.com/golang/" + archive, archive)
