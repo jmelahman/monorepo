@@ -25,5 +25,8 @@ classifiers = [
 ]
 dynamic = ["version"]
 
+[project.urls]
+Repository = "https://github.com/jmelahman/manygo"
+
 [tool.hatch.version]
 source = "vcs"
