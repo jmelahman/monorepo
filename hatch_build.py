@@ -4,6 +4,7 @@ import shutil
 import urllib.request
 import tarfile
 import tempfile
+import zipfile
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 import manygo
@@ -20,15 +21,22 @@ class GoBinaryBuildHook(BuildHookInterface):
         match = re.search(r'v(\d+\.\d+\.\d+)\.\d+', tag)
         assert match is not None
         version = match.group(1)
-        archive = "go{}.{}-{}.tar.gz".format(version, goos, goarch)
+        if goos == "windows":
+            archive = "go{}.{}-{}.zip".format(version, goos, goarch)
+        else:
+            archive = "go{}.{}-{}.tar.gz".format(version, goos, goarch)
 
         if not os.path.exists(archive):
             urllib.request.urlretrieve("https://storage.googleapis.com/golang/" + archive, archive)
 
         if not os.path.exists("go"):
             with tempfile.TemporaryDirectory() as temp_dir:
-                with tarfile.open(archive, "r:gz") as tar:
-                    tar.extractall(path=temp_dir)
+                if goos == "windows":
+                    with zipfile.ZipFile(archive) as zip:
+                        zip.extractall(path=temp_dir)
+                else:
+                    with tarfile.open(archive, "r:gz") as tar:
+                        tar.extractall(path=temp_dir)
                 shutil.move(os.path.join(temp_dir, "go"), self.root)
 
         build_data["force_include"] = {
