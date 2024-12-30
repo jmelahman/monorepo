@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src import get_platform_tag
+from manygo import get_platform_tag
 
 
 class TestManyGo(unittest.TestCase):

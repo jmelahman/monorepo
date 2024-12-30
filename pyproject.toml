@@ -27,6 +27,3 @@ dynamic = ["version"]
 
 [tool.hatch.version]
 source = "vcs"
-
-[tool.hatch.build.sources]
-"src" = "manygo"
