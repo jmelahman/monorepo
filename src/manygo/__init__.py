@@ -40,6 +40,7 @@ def get_platform_tag(
         ('darwin', 'arm64'): 'macosx_11_0_arm64',
         ('windows', '386'): 'win32',
         ('windows', 'arm64'): 'win_arm64',
+        ('windows', 'amd64'): 'win_amd64',
     }
 
     # Check for direct mapping first
@@ -65,6 +66,8 @@ def get_platform_tag(
 
     # Try to construct a generic tag
     if goos in os_map and goarch in arch_map:
+        if goos == 'linux':
+            return f'manylinux_2_17_{arch_map[goarch]}'
         return f'{os_map[goos]}_{arch_map[goarch]}'
 
     raise ValueError(f'No platform tag for {goos}/{goarch}')
