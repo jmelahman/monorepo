@@ -22,5 +22,5 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: false
-      - run: uv build --wheel
+      - run: uv build
       - run: uv publish
