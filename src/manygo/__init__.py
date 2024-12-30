@@ -48,12 +48,6 @@ def get_platform_tag(
         return platform_map[(goos, goarch)]
 
     # Generic fallback conversion
-    os_map = {
-        'linux': 'manylinux_2_17',
-        'windows': 'win',
-        'darwin': 'macosx',
-    }
-
     arch_map = {
         'amd64': 'x86_64',
         'arm64': 'aarch64',
@@ -65,9 +59,7 @@ def get_platform_tag(
     }
 
     # Try to construct a generic tag
-    if goos in os_map and goarch in arch_map:
-        if goos == 'linux':
-            return f'manylinux_2_17_{arch_map[goarch]}'
-        return f'{os_map[goos]}_{arch_map[goarch]}'
+    if goos == 'linux' and goarch in arch_map:
+        return f'manylinux_2_17_{arch_map[goarch]}'
 
     raise ValueError(f'No platform tag for {goos}/{goarch}')

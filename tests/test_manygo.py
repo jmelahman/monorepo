@@ -32,15 +32,15 @@ class TestManyGo(unittest.TestCase):
         # Unsupported OS
         with self.assertRaises(ValueError):
             get_platform_tag('freebsd', 'amd64')
-        
+
         # Unsupported architecture for a supported OS
         with self.assertRaises(ValueError):
             get_platform_tag('darwin', 'ppc64')
-        
+
         # Unsupported architecture for Linux
         with self.assertRaises(ValueError):
             get_platform_tag('linux', 'mips')
-        
+
         # Unsupported combination
         with self.assertRaises(ValueError):
             get_platform_tag('windows', 's390x')
