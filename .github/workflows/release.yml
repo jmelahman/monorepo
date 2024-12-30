@@ -21,7 +21,6 @@ jobs:
           - { goos: "windows", goarch: "386" }
           - { goos: "darwin", goarch: "amd64" }
           - { goos: "darwin", goarch: "arm64" }
-          - { goos: "", goarch: "" }
     steps:
       - uses: actions/checkout@v4
         with:
