@@ -128,8 +128,8 @@ func FetchSemverTags(remote string) error {
 }
 
 func IsHEADAlreadyTagged(prefix string) (bool, error) {
-	// TODO: This should match the prefix.
-	cmd := exec.Command("git", "tag", "--points-at", "HEAD")
+	tagPattern := genTagPattern(prefix)
+	cmd := exec.Command("git", "tag", "--points-at", "HEAD", "--list", tagPattern)
 	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
 	if err != nil {
