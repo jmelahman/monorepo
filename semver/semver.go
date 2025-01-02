@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 type Version struct {
@@ -17,13 +16,13 @@ type Version struct {
 }
 
 func ParseSemver(tag string) (*Version, error) {
-	re := regexp.MustCompile(`(?:(.+)/)?v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)?`)
+	re := regexp.MustCompile(`(?:(.+/))?v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)?`)
 	matches := re.FindStringSubmatch(tag)
 	if matches == nil {
 		return nil, fmt.Errorf("invalid semver tag: %s", tag)
 	}
 
-	prefix := strings.TrimSuffix(matches[1], "/")
+	prefix := matches[1]
 	major, _ := strconv.Atoi(matches[2])
 	minor, _ := strconv.Atoi(matches[3])
 	patch, _ := strconv.Atoi(matches[4])

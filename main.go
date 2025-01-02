@@ -46,7 +46,7 @@ func main() {
 			}
 
 			// Check if HEAD is already tagged
-			alreadyTagged, err := git.IsHEADAlreadyTagged()
+			alreadyTagged, err := git.IsHEADAlreadyTagged(prefix)
 			if err != nil {
 				fmt.Printf("Error checking tags: %v\n", err)
 				os.Exit(1)

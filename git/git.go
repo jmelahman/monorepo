@@ -12,7 +12,7 @@ import (
 func genTagPattern(prefix string) string {
 	tagPattern := "v[0-9]*.[0-9]*.[0-9]*"
 	if prefix != "" {
-		tagPattern = fmt.Sprintf(prefix, "/", tagPattern)
+		tagPattern = fmt.Sprintf("%s/%s", prefix, tagPattern)
 	}
 	return tagPattern
 }
@@ -43,7 +43,7 @@ func GetLatestSemverTag(prefix string) (string, error) {
 			continue
 		}
 
-		if prefix != version.Prefix {
+		if fmt.Sprintf("%s/", prefix) != version.Prefix {
 			continue
 		}
 
@@ -127,7 +127,8 @@ func FetchSemverTags(remote string) error {
 	return nil
 }
 
-func IsHEADAlreadyTagged() (bool, error) {
+func IsHEADAlreadyTagged(prefix string) (bool, error) {
+	// TODO: This should match the prefix.
 	cmd := exec.Command("git", "tag", "--points-at", "HEAD")
 	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
