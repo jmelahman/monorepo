@@ -23,6 +23,16 @@ func TestParseSemver(t *testing.T) {
 			},
 		},
 		{
+			name: "Prefixed version",
+			tag:  "org/v1.2.3",
+			expectedVer: &Version{
+				Prefix: "org/",
+				Major:  1,
+				Minor:  2,
+				Patch:  3,
+			},
+		},
+		{
 			name: "Pre-release version",
 			tag:  "v1.2.3-rc",
 			expectedVer: &Version{
@@ -34,9 +44,10 @@ func TestParseSemver(t *testing.T) {
 			},
 		},
 		{
-			name: "Pre-release version",
-			tag:  "v1.2.3-rc.1",
+			name: "Prefixed pre-release version",
+			tag:  "org/v1.2.3-rc.1",
 			expectedVer: &Version{
+				Prefix:        "org/",
 				Major:         1,
 				Minor:         2,
 				Patch:         3,

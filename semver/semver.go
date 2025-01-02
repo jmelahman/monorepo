@@ -7,6 +7,7 @@ import (
 )
 
 type Version struct {
+	Prefix        string
 	Major         int
 	Minor         int
 	Patch         int
@@ -15,22 +16,24 @@ type Version struct {
 }
 
 func ParseSemver(tag string) (*Version, error) {
-	re := regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)?`)
+	re := regexp.MustCompile(`(?:(.+)/)?v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)?`)
 	matches := re.FindStringSubmatch(tag)
 	if matches == nil {
 		return nil, fmt.Errorf("invalid semver tag: %s", tag)
 	}
 
-	major, _ := strconv.Atoi(matches[1])
-	minor, _ := strconv.Atoi(matches[2])
-	patch, _ := strconv.Atoi(matches[3])
-	preRelease := matches[4]
+	prefix := matches[1]
+	major, _ := strconv.Atoi(matches[2])
+	minor, _ := strconv.Atoi(matches[3])
+	patch, _ := strconv.Atoi(matches[4])
+	preRelease := matches[5]
 	preReleaseNum := 0
-	if len(matches) > 5 && matches[5] != "" {
-		preReleaseNum, _ = strconv.Atoi(matches[5])
+	if len(matches) > 6 && matches[6] != "" {
+		preReleaseNum, _ = strconv.Atoi(matches[6])
 	}
 
 	return &Version{
+		Prefix:        prefix,
 		Major:         major,
 		Minor:         minor,
 		Patch:         patch,
@@ -117,11 +120,17 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	}
 
 	// Construct the version string
+	versionStr := fmt.Sprintf("v%d.%d.%d", version.Major, version.Minor, version.Patch)
+	
 	if version.PreRelease != "" {
 		if version.PreReleaseNum > 0 {
-			return fmt.Sprintf("v%d.%d.%d-%s.%d", version.Major, version.Minor, version.Patch, version.PreRelease, version.PreReleaseNum), nil
+			versionStr = fmt.Sprintf("%sv%d.%d.%d-%s.%d", version.Prefix, version.Major, version.Minor, version.Patch, version.PreRelease, version.PreReleaseNum)
+		} else {
+			versionStr = fmt.Sprintf("%sv%d.%d.%d-%s", version.Prefix, version.Major, version.Minor, version.Patch, version.PreRelease)
 		}
-		return fmt.Sprintf("v%d.%d.%d-%s", version.Major, version.Minor, version.Patch, version.PreRelease), nil
+	} else if version.Prefix != "" {
+		versionStr = fmt.Sprintf("%sv%d.%d.%d", version.Prefix, version.Major, version.Minor, version.Patch)
 	}
-	return fmt.Sprintf("v%d.%d.%d", version.Major, version.Minor, version.Patch), nil
+	
+	return versionStr, nil
 }
