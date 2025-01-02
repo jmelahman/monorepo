@@ -121,7 +121,7 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 
 	// Construct the version string
 	versionStr := fmt.Sprintf("v%d.%d.%d", version.Major, version.Minor, version.Patch)
-	
+
 	if version.PreRelease != "" {
 		if version.PreReleaseNum > 0 {
 			versionStr = fmt.Sprintf("%sv%d.%d.%d-%s.%d", version.Prefix, version.Major, version.Minor, version.Patch, version.PreRelease, version.PreReleaseNum)
@@ -131,6 +131,6 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	} else if version.Prefix != "" {
 		versionStr = fmt.Sprintf("%sv%d.%d.%d", version.Prefix, version.Major, version.Minor, version.Patch)
 	}
-	
+
 	return versionStr, nil
 }
