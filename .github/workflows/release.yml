@@ -66,5 +66,5 @@ jobs:
           GOOS="${{ matrix.os-arch.goos }}" \
           GOARCH="${{ matrix.os-arch.goarch }}" \
           CGO_ENABLED="1" \
-          uv build
+          uv build --wheel
       - run: uv publish
