@@ -91,7 +91,8 @@ func ListTagsAt(ref string) ([]string, error) {
 }
 
 func TagExists(tag string) (bool, error) {
-	cmd := exec.Command("git", "show-ref", "--tags", "--quiet", tag)
+	tagRef := fmt.Sprintf("refs/tags/%s", tag)
+	cmd := exec.Command("git", "show-ref", "--tags", "--quiet", tagRef)
 	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
 			return false, nil
