@@ -156,6 +156,10 @@ func main() {
 
 	var shuffleButton, submitButton, deselectButton *tview.Button
 
+	resetSubmitButton := func() {
+		submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle).SetLabel("Submit")
+	}
+
 	setFocus := func(r, c int) {
 		focusedRow = r
 		focusedCol = c
@@ -177,7 +181,7 @@ func main() {
 
 	handleClick := func(r, c int) func() {
 		return func() {
-			submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
+			resetSubmitButton()
 			previousButton := findButton(focusedRow, focusedCol).
 				SetStyle(defaultStyle).
 				SetActivatedStyle(defaultStyle)
@@ -201,7 +205,7 @@ func main() {
 
 	handleDeselect := func() {
 		setFocus(4, 3)
-		submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
+		resetSubmitButton()
 		deselectButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 		for cardContent := range gameState.selectedCards {
 			delete(gameState.selectedCards, cardContent)
@@ -215,7 +219,7 @@ func main() {
 
 	handleShuffle := func() {
 		setFocus(4, 0)
-		submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
+		resetSubmitButton()
 		shuffleButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
 		// Flatten the buttons array for rows greater than currentMatchRow into a slice for shuffling
 		var flatButtons []*tview.Button
@@ -323,7 +327,8 @@ func main() {
 		} else if result == offByOne {
 			submitButton.
 				SetStyle(baseStyle.Background(tcell.ColorYellow)).
-				SetActivatedStyle(baseStyle.Background(tcell.ColorYellow))
+				SetActivatedStyle(baseStyle.Background(tcell.ColorYellow)).
+				SetLabel("One away...")
 		} else {
 			submitButton.
 				SetStyle(baseStyle.Background(tcell.ColorRed)).
@@ -372,7 +377,7 @@ func main() {
 	grid.AddItem(deselectButton, 4, 3, 1, 1, 0, 0, false)
 
 	grid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
+		resetSubmitButton()
 		previousButton := findButton(focusedRow, focusedCol).SetActivatedStyle(defaultStyle)
 		if focusedRow < 4 && gameState.selectedCards[previousButton.GetLabel()] {
 			previousButton.SetStyle(selectedStyle)
