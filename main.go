@@ -147,7 +147,7 @@ func main() {
 
 	baseStyle := tcell.StyleDefault.
 		Background(tcell.ColorDefault).
-		Foreground(tcell.ColorBlack).
+		Foreground(tcell.ColorBlack.TrueColor()).
 		Bold(true)
 	defaultStyle := baseStyle.Foreground(tcell.ColorDefault)
 	selectedStyle := baseStyle.Background(tcell.ColorGray)
