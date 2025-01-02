@@ -19,7 +19,7 @@ var (
 
 func main() {
 	var major, minor, patch, push bool
-	var metadata, suffix, remote string
+	var metadata, prefix, suffix, remote string
 
 	rootCmd := &cobra.Command{
 		Use:     "tag",
@@ -56,13 +56,13 @@ func main() {
 				os.Exit(1)
 			}
 
-			latestTag, err := git.GetLatestSemverTag()
+			latestTag, err := git.GetLatestSemverTag(prefix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			allTags, err := git.ListTags()
+			allTags, err := git.ListTags(prefix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
@@ -114,6 +114,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&minor, "minor", false, "increment the minor version")
 	rootCmd.Flags().BoolVar(&patch, "patch", false, "increment the patch version")
 	rootCmd.Flags().BoolVar(&push, "push", false, "create and push the tag to remote")
+	rootCmd.Flags().StringVar(&prefix, "prefix", "", "set a prefix for the tag")
 	rootCmd.Flags().StringVar(&suffix, "suffix", "", "set the pre-release suffix (e.g., rc, alpha, beta)")
 	rootCmd.Flags().StringVar(&metadata, "metadata", "", "set the build metadata")
 	rootCmd.Flags().StringVar(&remote, "remote", "origin", "remote repository to push tag to")

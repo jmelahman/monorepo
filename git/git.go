@@ -9,8 +9,17 @@ import (
 	"github.com/jmelahman/tag/semver"
 )
 
-func GetLatestSemverTag() (string, error) {
-	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
+func genTagPattern(prefix string) string {
+	tagPattern := "v[0-9]*.[0-9]*.[0-9]*"
+	if prefix != "" {
+		tagPattern = fmt.Sprintf(prefix, "/", tagPattern)
+	}
+	return tagPattern
+}
+
+func GetLatestSemverTag(prefix string) (string, error) {
+	tagPattern := genTagPattern(prefix)
+	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0", "--match", tagPattern)
 	output, err := cmd.Output()
 	if err != nil {
 		return "v0.0.0", nil
@@ -34,6 +43,10 @@ func GetLatestSemverTag() (string, error) {
 			continue
 		}
 
+		if prefix != version.Prefix {
+			continue
+		}
+
 		if largestVersion == nil {
 			largestTag = tag
 			largestVersion = version
@@ -50,8 +63,9 @@ func GetLatestSemverTag() (string, error) {
 }
 
 // List all git tags
-func ListTags() ([]string, error) {
-	cmd := exec.Command("git", "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*")
+func ListTags(prefix string) ([]string, error) {
+	tagPattern := genTagPattern(prefix)
+	cmd := exec.Command("git", "tag", "-l", tagPattern)
 	cmd.Stderr = os.Stderr
 	tagsOutput, err := cmd.Output()
 	if err != nil {
