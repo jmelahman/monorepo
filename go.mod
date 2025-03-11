@@ -5,7 +5,7 @@ go 1.23.3
 require (
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/rivo/tview v0.0.0-20241103174730-c76f7879f592
-	golang.org/x/text v0.22.0
+	golang.org/x/text v0.23.0
 )
 
 require (
