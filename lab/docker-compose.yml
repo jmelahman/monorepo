@@ -78,7 +78,7 @@ services:
     environment:
       - GLANCES_OPT=-w
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro
       - /etc/os-release:/etc/os-release:ro
     pid: "host"
 
