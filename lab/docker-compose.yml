@@ -60,8 +60,18 @@ services:
     volumes:
       - proxpi_data:/var/cache/proxpi
 
+  ollama:
+    image: ollama/ollama
+    restart: unless-stopped
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
 volumes:
   registry_data:
   buildbuddy_data:
+  ollama_data:
   proxpi_data:
 
