@@ -20,7 +20,7 @@ docker compose restart nginx
 Finally, create the certs,
 
 ```shell
-docker-compose run --rm  certbot certonly --webroot --webroot-path /var/www/certbot/ -d lahman.dev,build.lahman.dev,www.lahman.dev
+docker compose run --rm  certbot certonly --webroot --webroot-path /var/www/certbot/ -d lahman.dev,registry.lahman.dev,www.lahman.dev
 ```
 
 _Note: If the first attempt fails, pass `--dry-run` to avoid being rate-limited._
@@ -28,7 +28,7 @@ _Note: If the first attempt fails, pass `--dry-run` to avoid being rate-limited.
 ## Renew
 
 ```shell
-docker-compose run --rm certbot renew
+docker compose run --rm certbot renew
 ```
 
 _Note: If the first attempt fails, pass `--dry-run` to avoid being rate-limited._
