@@ -16,13 +16,12 @@ import (
 	"github.com/gopxl/beep/v2/effects"
 	"github.com/gopxl/beep/v2/mp3"
 	"github.com/gopxl/beep/v2/speaker"
+	"nature-sounds/data"
 )
 
 var (
 	version = "dev"
-
-	// TODO: Maybe add some from https://www.nps.gov/maps/stories/soundscapes-of-the-seashore.html
-	Sounds = []Sound{
+	Sounds  = data.Sounds
 		{
 			name:   "Dawn Soundscape from Big Meadows",
 			credit: "J. Job",
@@ -88,11 +87,6 @@ var (
 	}
 )
 
-type Sound struct {
-	name   string
-	credit string
-	url    string
-}
 
 type ProgressReader struct {
 	Reader         io.Reader
@@ -170,7 +164,7 @@ func removeNowPlaying(dataDir string) {
 	os.Remove(nowPlayingFile)
 }
 
-func loadLastPlayed(dataDir string) Sound {
+func loadLastPlayed(dataDir string) data.Sound {
 	nowPlayingFile := filepath.Join(dataDir, "now_playing")
 	data, err := os.ReadFile(nowPlayingFile)
 	if err != nil {
@@ -185,7 +179,7 @@ func loadLastPlayed(dataDir string) Sound {
 	return Sound{}
 }
 
-func ListPicker(items []Sound) (int, error) {
+func ListPicker(items []data.Sound) (int, error) {
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		return -1, err
@@ -241,7 +235,7 @@ func ListPicker(items []Sound) (int, error) {
 	}
 }
 
-func playSound(dataDir string, sound Sound) (*beep.Ctrl, *os.File, beep.StreamSeekCloser, *effects.Volume, error) {
+func playSound(dataDir string, sound data.Sound) (*beep.Ctrl, *os.File, beep.StreamSeekCloser, *effects.Volume, error) {
 	soundPath := filepath.Join(dataDir, filepath.Base(sound.url))
 	file, err := os.Open(soundPath)
 	if os.IsNotExist(err) {
