@@ -90,14 +90,10 @@ func (p *Player) SetVolume(change float64) {
 }
 
 func (p *Player) Close() {
-	if p.file != nil {
-		if err := p.file.Close(); err != nil {
-			fmt.Printf("Error closing file: %v", err)
-		}
+	if p.stream == nil {
+		return
 	}
-	if p.stream != nil {
-		if err := p.stream.Close(); err != nil {
-			fmt.Printf("Error closing stream: %v", err)
-		}
+	if err := p.stream.Close(); err != nil {
+		fmt.Printf("Error closing stream: %v", err)
 	}
 }
