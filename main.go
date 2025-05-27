@@ -17,7 +17,9 @@ import (
 	"github.com/gopxl/beep/v2/mp3"
 	"github.com/gopxl/beep/v2/speaker"
 
+	"github.com/jmelahman/nature-sounds/download"
 	"github.com/jmelahman/nature-sounds/sounds"
+	"github.com/jmelahman/nature-sounds/storage"
 )
 
 var (
@@ -77,43 +79,6 @@ func downloadFileWithProgress(url, filepath string) error {
 	return nil
 }
 
-func getApplicationDataDir() (string, error) {
-	dataHome := os.Getenv("XDG_DATA_HOME")
-	if dataHome == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		dataHome = filepath.Join(home, ".local", "share")
-	}
-
-	return filepath.Join(dataHome, "nature-sounds"), nil
-}
-
-func saveNowPlaying(dataDir string, sound sounds.Sound) error {
-	nowPlayingFile := filepath.Join(dataDir, "now_playing")
-	return os.WriteFile(nowPlayingFile, []byte(sound.Url), 0644)
-}
-
-func removeNowPlaying(dataDir string) {
-	nowPlayingFile := filepath.Join(dataDir, "now_playing")
-	os.Remove(nowPlayingFile)
-}
-
-func loadLastPlayed(dataDir string) sounds.Sound {
-	nowPlayingFile := filepath.Join(dataDir, "now_playing")
-	data, err := os.ReadFile(nowPlayingFile)
-	if err != nil {
-		return sounds.Sound{}
-	}
-	lastURL := string(data)
-	for _, sound := range sounds.Sounds {
-		if sound.Url == lastURL {
-			return sound
-		}
-	}
-	return sounds.Sound{}
-}
 
 func ListPicker(items []sounds.Sound) (int, error) {
 	screen, err := tcell.NewScreen()
@@ -175,7 +140,7 @@ func playSound(dataDir string, sound sounds.Sound) (*beep.Ctrl, *os.File, beep.S
 	soundPath := filepath.Join(dataDir, filepath.Base(sound.Url))
 	file, err := os.Open(soundPath)
 	if os.IsNotExist(err) {
-		err := downloadFileWithProgress(sound.Url, soundPath)
+		err := download.FileWithProgress(sound.Url, soundPath)
 		if err != nil {
 			os.Remove(soundPath)
 			return nil, nil, nil, nil, fmt.Errorf("Error downloading sound: %v", err)
@@ -212,7 +177,7 @@ func playSound(dataDir string, sound sounds.Sound) (*beep.Ctrl, *os.File, beep.S
 
 func main() {
 	fmt.Printf("Welcome to nature-sounds (%v). Press ? for a list of commands.\n", version)
-	dataDir, err := getApplicationDataDir()
+	dataDir, err := storage.GetApplicationDataDir()
 	if err != nil {
 		log.Fatal("Error getting XDG_DATA_HOME: ", err)
 	}
@@ -228,7 +193,7 @@ func main() {
 		log.Fatal("Error initializing speaker: ", err)
 	}
 
-	nowPlaying := loadLastPlayed(dataDir)
+	nowPlaying := storage.LoadLastPlayed(dataDir, sounds.Sounds)
 	if nowPlaying.Name == "" {
 		soundIndex, err := ListPicker(sounds.Sounds)
 		if err != nil {
@@ -255,7 +220,7 @@ func main() {
 	defer stream.Close()
 
 	// TODO: Warn on error.
-	_ = saveNowPlaying(dataDir, nowPlaying)
+	_ = storage.SaveNowPlaying(dataDir, nowPlaying.Url)
 
 	if err := keyboard.Open(); err != nil {
 		log.Fatal("Error opening keyboard: ", err)
