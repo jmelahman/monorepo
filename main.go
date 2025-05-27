@@ -177,7 +177,7 @@ func loadLastPlayed(dataDir string) Sound {
 		return Sound{}
 	}
 	lastURL := string(data)
-	for _, sound := range sounds {
+	for _, sound := range Sounds {
 		if sound.url == lastURL {
 			return sound
 		}
@@ -300,12 +300,12 @@ func main() {
 
 	nowPlaying := loadLastPlayed(dataDir)
 	if nowPlaying.name == "" {
-		soundIndex, err := ListPicker(sounds)
+		soundIndex, err := ListPicker(Sounds)
 		if err != nil {
 			log.Fatal("Error selecting next sound: ", err)
 		}
 
-		nowPlaying = sounds[soundIndex]
+		nowPlaying = Sounds[soundIndex]
 	}
 
 	ctrl, file, stream, volume, err := playSound(dataDir, nowPlaying)
@@ -360,17 +360,17 @@ func main() {
 		case 's': // Switch to the next sound
 			keyboard.Close()
 
-			soundIndex, err := ListPicker(sounds)
+			soundIndex, err := ListPicker(Sounds)
 			if err != nil {
 				log.Fatal("Error selecting next sound: ", err)
 			}
 
 			file.Close()
 			stream.Close()
-			ctrl, file, stream, volume, err = playSound(dataDir, sounds[soundIndex])
+			ctrl, file, stream, volume, err = playSound(dataDir, Sounds[soundIndex])
 			doubleLine = true
 			if err != nil {
-				fmt.Printf("Error switching to sound \"%s\": %v\n", sounds[soundIndex].name, err)
+				fmt.Printf("Error switching to sound \"%s\": %v\n", Sounds[soundIndex].name, err)
 				if file != nil {
 					file.Close()
 				}
@@ -384,7 +384,7 @@ func main() {
 					log.Fatal("Error playing previous sound: ", err)
 				}
 			} else {
-				nowPlaying = sounds[soundIndex]
+				nowPlaying = Sounds[soundIndex]
 			}
 
 			// TODO: Warn on error.

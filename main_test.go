@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
@@ -13,7 +12,7 @@ func TestSoundURLsAreValid(t *testing.T) {
 		Timeout: 5 * time.Second,
 	}
 
-	for _, sound := range sounds {
+	for _, sound := range Sounds {
 		t.Run(sound.name, func(t *testing.T) {
 			// First validate URL format
 			_, err := url.ParseRequestURI(sound.url)
