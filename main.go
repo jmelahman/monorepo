@@ -55,7 +55,11 @@ func fetch(urlString string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch from URL: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -276,7 +280,8 @@ func main() {
 			}
 		}
 
-		if result == correct {
+		switch result {
+		case correct:
 			contents := fmt.Sprintf(
 				"%s: %s",
 				categoryTitle,
@@ -324,16 +329,15 @@ func main() {
 			submitButton.
 				SetStyle(baseStyle.Background(tcell.ColorGreen)).
 				SetActivatedStyle(baseStyle.Background(tcell.ColorGreen))
-		} else if result == offByOne {
+		case offByOne:
 			submitButton.
 				SetStyle(baseStyle.Background(tcell.ColorYellow)).
 				SetActivatedStyle(baseStyle.Background(tcell.ColorYellow)).
 				SetLabel("One away...")
-		} else {
+		default:
 			submitButton.
 				SetStyle(baseStyle.Background(tcell.ColorRed)).
 				SetActivatedStyle(baseStyle.Background(tcell.ColorRed))
-
 		}
 	}
 
@@ -421,11 +425,12 @@ func main() {
 			}
 		case event.Key() == tcell.KeyEnter, event.Key() == tcell.KeyRune && event.Rune() == ' ':
 			if focusedRow == 4 {
-				if focusedCol == 0 {
+				switch focusedCol {
+				case 0:
 					handleShuffle()
-				} else if focusedCol == 3 {
+				case 3:
 					handleDeselect()
-				} else {
+				default:
 					handleSubmit()
 				}
 			} else {
