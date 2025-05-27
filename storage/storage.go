@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -28,7 +29,7 @@ func SaveNowPlaying(dataDir string, soundURL string) error {
 func RemoveNowPlaying(dataDir string) {
 	nowPlayingFile := filepath.Join(dataDir, "now_playing")
 	if err := os.Remove(nowPlayingFile); err != nil {
-		log.Printf("Error removing now playing file: %v", err)
+		fmt.Printf("Error removing now playing file: %v", err)
 	}
 }
 

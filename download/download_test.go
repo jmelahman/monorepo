@@ -14,15 +14,6 @@ func TestFileWithProgress(t *testing.T) {
 		if _, err := w.Write([]byte("test data")); err != nil {
 			t.Errorf("Error writing test data: %v", err)
 		}
-	>>>>>>> REPTACE
-	```
-
-	2. Now let's fix the error handling in download/download.go:
-
-	download/download.go
-	```go
-	<<<<<<< SEARCH
-		defer out.Close()
 	}))
 	defer ts.Close()
 

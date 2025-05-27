@@ -33,7 +33,11 @@ func FileWithProgress(url, filepath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer out.Close()
+	defer func() {
+		if err := out.Close(); err != nil {
+			fmt.Printf("Error closing file: %v\n", err)
+		}
+	}()
 
 	resp, err := http.Get(url)
 	if err != nil {
