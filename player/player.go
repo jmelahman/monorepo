@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/effects"
@@ -22,6 +23,11 @@ type Player struct {
 
 func NewPlayer() *Player {
 	return &Player{}
+}
+
+func (p *Player) Init() error {
+	sampleRate := beep.SampleRate(44100)
+	return speaker.Init(sampleRate, sampleRate.N(time.Second/10))
 }
 
 func (p *Player) PlaySound(dataDir string, sound sounds.Sound) error {

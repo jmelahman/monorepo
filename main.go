@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/eiannone/keyboard"
-	"github.com/gopxl/beep/v2"
-	"github.com/gopxl/beep/v2/speaker"
 	"github.com/jmelahman/nature-sounds/picker"
 	"github.com/jmelahman/nature-sounds/player"
 	"github.com/jmelahman/nature-sounds/sounds"
@@ -31,12 +28,6 @@ func main() {
 		log.Fatal("Error creating application data directory: ", err)
 	}
 
-	sampleRate := beep.SampleRate(44100)
-	err = speaker.Init(sampleRate, sampleRate.N(time.Second/10))
-	if err != nil {
-		log.Fatal("Error initializing speaker: ", err)
-	}
-
 	nowPlaying := storage.LoadLastPlayed(dataDir, sounds.Sounds)
 	if nowPlaying.Name == "" {
 		soundIndex, err := picker.ListPicker(sounds.Sounds)
@@ -48,6 +39,12 @@ func main() {
 	}
 
 	player := player.NewPlayer()
+
+	err = player.Init()
+	if err != nil {
+		log.Fatal("Error initializing speaker: ", err)
+	}
+
 	err = player.PlaySound(dataDir, nowPlaying)
 	doubleLine := true
 	if err != nil {
