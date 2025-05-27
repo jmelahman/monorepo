@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
 ]
 dynamic = ["version"]
 
@@ -30,3 +31,6 @@ Repository = "https://github.com/jmelahman/manygo"
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.setuptools.package-data]
+manygo = ["py.typed", "*.pyi"]
