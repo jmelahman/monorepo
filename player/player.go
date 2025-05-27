@@ -5,11 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gopxl/beep"
-	"github.com/gopxl/beep/effects"
-	"github.com/gopxl/beep/mp3"
-	"github.com/gopxl/beep/speaker"
-	"github.com/jmelahman/nature-sound/sound"
+	"github.com/gopxl/beep/v2"
+	"github.com/gopxl/beep/v2/effects"
+	"github.com/gopxl/beep/v2/mp3"
+	"github.com/gopxl/beep/v2/speaker"
+	"github.com/jmelahman/nature-sounds/download"
+	"github.com/jmelahman/nature-sounds/sounds"
 )
 
 type Player struct {
@@ -23,11 +24,11 @@ func NewPlayer() *Player {
 	return &Player{}
 }
 
-func (p *Player) PlaySound(dataDir string, sound sound.Sound) error {
-	soundPath := filepath.Join(dataDir, filepath.Base(sound.URL))
+func (p *Player) PlaySound(dataDir string, sound sounds.Sound) error {
+	soundPath := filepath.Join(dataDir, filepath.Base(sound.Url))
 	file, err := os.Open(soundPath)
 	if os.IsNotExist(err) {
-		err := download.FileWithProgress(sound.URL, soundPath)
+		err := download.FileWithProgress(sound.Url, soundPath)
 		if err != nil {
 			os.Remove(soundPath)
 			return fmt.Errorf("error downloading sound: %v", err)
@@ -46,7 +47,7 @@ func (p *Player) PlaySound(dataDir string, sound sound.Sound) error {
 		return fmt.Errorf("error decoding file: %v", err)
 	}
 
-	loopStream, err := beep.Loop(stream)
+	loopStream, err := beep.Loop2(stream)
 	if err != nil {
 		return fmt.Errorf("error creating loop stream: %v", err)
 	}
@@ -67,10 +68,15 @@ func (p *Player) TogglePause() {
 	speaker.Unlock()
 }
 
+func (p *Player) IsPaused() bool {
+	return p.ctrl.Paused
+}
+
 func (p *Player) SetVolume(change float64) {
 	speaker.Lock()
 	p.volume.Volume += change
 	speaker.Unlock()
+	fmt.Printf("Volume: %.1f\r", p.volume.Volume)
 }
 
 func (p *Player) Close() {
