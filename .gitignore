@@ -30,3 +30,4 @@ dist/
 *.dist-info/
 __pycache__
 work
+.aider*
