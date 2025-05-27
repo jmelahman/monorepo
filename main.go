@@ -79,7 +79,6 @@ func downloadFileWithProgress(url, filepath string) error {
 	return nil
 }
 
-
 func ListPicker(items []sounds.Sound) (int, error) {
 	screen, err := tcell.NewScreen()
 	if err != nil {
@@ -213,7 +212,7 @@ func main() {
 		if stream != nil {
 			stream.Close()
 		}
-		removeNowPlaying(dataDir)
+		storage.RemoveNowPlaying(dataDir)
 		os.Exit(1)
 	}
 	defer file.Close()
@@ -275,7 +274,7 @@ func main() {
 
 				ctrl, file, stream, volume, err = playSound(dataDir, nowPlaying)
 				if err != nil {
-					removeNowPlaying(dataDir)
+					storage.RemoveNowPlaying(dataDir)
 					log.Fatal("Error playing previous sound: ", err)
 				}
 			} else {
@@ -283,7 +282,7 @@ func main() {
 			}
 
 			// TODO: Warn on error.
-			_ = saveNowPlaying(dataDir, nowPlaying)
+			_ = storage.SaveNowPlaying(dataDir, nowPlaying.Url)
 
 			if err := keyboard.Open(); err != nil {
 				log.Fatal("Error opening keyboard: ", err)

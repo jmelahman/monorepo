@@ -3,6 +3,8 @@ package storage
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/jmelahman/nature-sounds/sounds"
 )
 
 func GetApplicationDataDir() (string, error) {
@@ -28,11 +30,11 @@ func RemoveNowPlaying(dataDir string) {
 	os.Remove(nowPlayingFile)
 }
 
-func LoadLastPlayed(dataDir string, availableSounds []Sound) Sound {
+func LoadLastPlayed(dataDir string, availableSounds []sounds.Sound) sounds.Sound {
 	nowPlayingFile := filepath.Join(dataDir, "now_playing")
 	data, err := os.ReadFile(nowPlayingFile)
 	if err != nil {
-		return Sound{}
+		return sounds.Sound{}
 	}
 	lastURL := string(data)
 	for _, sound := range availableSounds {
@@ -40,5 +42,5 @@ func LoadLastPlayed(dataDir string, availableSounds []Sound) Sound {
 			return sound
 		}
 	}
-	return Sound{}
+	return sounds.Sound{}
 }
