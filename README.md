@@ -1,5 +1,8 @@
 # manygo
 
+[![Deploy Status](https://github.com/jmelahman/manygo/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/manygo/actions)
+[![PyPI](https://img.shields.io/pypi/v/manygo.svg)](https://pypi.org/project/manygo/)
+
 A Python library for generating platform-specific tags for Golang packages and binaries.
 
 ## Features
