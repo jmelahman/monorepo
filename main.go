@@ -16,77 +16,13 @@ import (
 	"github.com/gopxl/beep/v2/effects"
 	"github.com/gopxl/beep/v2/mp3"
 	"github.com/gopxl/beep/v2/speaker"
-	"nature-sounds/data"
+
+	"github.com/jmelahman/nature-sounds/sounds"
 )
 
 var (
 	version = "dev"
-	Sounds  = data.Sounds
-		{
-			name:   "Dawn Soundscape from Big Meadows",
-			credit: "J. Job",
-			url:    "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-DawnAmbientROMO6816BigMeadowsFinal1.mp3",
-		},
-		{
-			name:   "Dawn Soundscape from the Sun Valley Trial",
-			credit: "J. Job",
-			url:    "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-DawnAmbientROMO6916SunValleyTrailFinal1.mp3",
-		},
-		{
-			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
-			name:   "Lake",
-			credit: "NPS & MSU Acoustic Atlas/Jennifer Jerrett",
-			url:    "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLLakeSoundscape20160914T03ms.mp3",
-		},
-		{
-			name:   "Lower Geyser Basin (Strong Wind)",
-			credit: "NPS/Peter Comley",
-			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
-			url: "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3",
-		},
-		{
-			name:   "Old Faithful (Remixed)",
-			credit: "NPS/Jennifer Jerrett and Peter Comley",
-			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-oldfaithful.htm
-			url: "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-00150325YellowstoneOldFaithfulGeyserEruption3Mix3Alt101.mp3",
-		},
-		{
-			name:   "Stream Soundscape from the Black Canyon Trail",
-			credit: "J. Job",
-			// https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm
-			url: "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
-		},
-		{
-			name:   "Thunder (and American Robin)",
-			credit: "NPS/Jennifer Jerrett",
-			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-thunder.htm
-			url: "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-Thunderandbirds140704.mp3",
-		},
-		{
-			name:   "Thunderstorm Soundscape from the Black Canyon Trail",
-			credit: "J. Job",
-			url:    "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-ThunderstormAmbientROMO52616BlackCanyonTrail1.mp3",
-		},
-		{
-			name:   "Wind on Peale Island",
-			credit: "NPS & MSU Acoustic Atlas/Jennifer Jerrett",
-			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
-			url: "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLCabinSoundsWind20160912T032.mp3",
-		},
-		{
-			name:   "Wind Soundscape from Gem Lake",
-			credit: "J. Job",
-			url:    "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-WindAmbientGemLakeROMO52516Final1.mp3",
-		},
-		{
-			name:   "Woodstove",
-			credit: "NPS & MSU Acoustic Atlas",
-			// https://www.nps.gov/yell/learn/photosmultimedia/sounds-soundscapes.htm
-			url: "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLPealeCabinWoodstove20160914T15ms.mp3",
-		},
-	}
 )
-
 
 type ProgressReader struct {
 	Reader         io.Reader
@@ -154,9 +90,9 @@ func getApplicationDataDir() (string, error) {
 	return filepath.Join(dataHome, "nature-sounds"), nil
 }
 
-func saveNowPlaying(dataDir string, sound Sound) error {
+func saveNowPlaying(dataDir string, sound sounds.Sound) error {
 	nowPlayingFile := filepath.Join(dataDir, "now_playing")
-	return os.WriteFile(nowPlayingFile, []byte(sound.url), 0644)
+	return os.WriteFile(nowPlayingFile, []byte(sound.Url), 0644)
 }
 
 func removeNowPlaying(dataDir string) {
@@ -164,22 +100,22 @@ func removeNowPlaying(dataDir string) {
 	os.Remove(nowPlayingFile)
 }
 
-func loadLastPlayed(dataDir string) data.Sound {
+func loadLastPlayed(dataDir string) sounds.Sound {
 	nowPlayingFile := filepath.Join(dataDir, "now_playing")
 	data, err := os.ReadFile(nowPlayingFile)
 	if err != nil {
-		return Sound{}
+		return sounds.Sound{}
 	}
 	lastURL := string(data)
-	for _, sound := range Sounds {
-		if sound.url == lastURL {
+	for _, sound := range sounds.Sounds {
+		if sound.Url == lastURL {
 			return sound
 		}
 	}
-	return Sound{}
+	return sounds.Sound{}
 }
 
-func ListPicker(items []data.Sound) (int, error) {
+func ListPicker(items []sounds.Sound) (int, error) {
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		return -1, err
@@ -202,7 +138,7 @@ func ListPicker(items []data.Sound) (int, error) {
 				styleToUse = selectedStyle
 			}
 
-			line := fmt.Sprintf("%d) %s", i+1, item.name)
+			line := fmt.Sprintf("%d) %s", i+1, item.Name)
 			for x, ch := range line {
 				screen.SetContent(x, i, ch, nil, styleToUse)
 			}
@@ -235,11 +171,11 @@ func ListPicker(items []data.Sound) (int, error) {
 	}
 }
 
-func playSound(dataDir string, sound data.Sound) (*beep.Ctrl, *os.File, beep.StreamSeekCloser, *effects.Volume, error) {
-	soundPath := filepath.Join(dataDir, filepath.Base(sound.url))
+func playSound(dataDir string, sound sounds.Sound) (*beep.Ctrl, *os.File, beep.StreamSeekCloser, *effects.Volume, error) {
+	soundPath := filepath.Join(dataDir, filepath.Base(sound.Url))
 	file, err := os.Open(soundPath)
 	if os.IsNotExist(err) {
-		err := downloadFileWithProgress(sound.url, soundPath)
+		err := downloadFileWithProgress(sound.Url, soundPath)
 		if err != nil {
 			os.Remove(soundPath)
 			return nil, nil, nil, nil, fmt.Errorf("Error downloading sound: %v", err)
@@ -269,7 +205,7 @@ func playSound(dataDir string, sound data.Sound) (*beep.Ctrl, *os.File, beep.Str
 	ctrl := &beep.Ctrl{Streamer: loopStream, Paused: false}
 	volume := &effects.Volume{Streamer: ctrl, Base: 2, Volume: 0}
 	speaker.Play(volume)
-	fmt.Printf("\r➤  \"%s\" by \"%s\"\n", sound.name, sound.credit)
+	fmt.Printf("\r➤  \"%s\" by \"%s\"\n", sound.Name, sound.Credit)
 
 	return ctrl, file, stream, volume, nil
 }
@@ -293,19 +229,19 @@ func main() {
 	}
 
 	nowPlaying := loadLastPlayed(dataDir)
-	if nowPlaying.name == "" {
-		soundIndex, err := ListPicker(Sounds)
+	if nowPlaying.Name == "" {
+		soundIndex, err := ListPicker(sounds.Sounds)
 		if err != nil {
 			log.Fatal("Error selecting next sound: ", err)
 		}
 
-		nowPlaying = Sounds[soundIndex]
+		nowPlaying = sounds.Sounds[soundIndex]
 	}
 
 	ctrl, file, stream, volume, err := playSound(dataDir, nowPlaying)
 	doubleLine := true
 	if err != nil {
-		fmt.Printf("Error playing sound \"%s\": %v\n", nowPlaying.name, err)
+		fmt.Printf("Error playing sound \"%s\": %v\n", nowPlaying.Name, err)
 		if file != nil {
 			file.Close()
 		}
@@ -341,30 +277,30 @@ func main() {
 				if doubleLine {
 					fmt.Printf("\033[F")
 				}
-				fmt.Printf("\r❚❚ \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+				fmt.Printf("\r❚❚ \"%s\" by \"%s\"\n", nowPlaying.Name, nowPlaying.Credit)
 				doubleLine = true
 			} else {
 				if doubleLine {
 					fmt.Printf("\033[F")
 				}
-				fmt.Printf("\r➤  \"%s\" by \"%s\"\n", nowPlaying.name, nowPlaying.credit)
+				fmt.Printf("\r➤  \"%s\" by \"%s\"\n", nowPlaying.Name, nowPlaying.Credit)
 			}
 		case 'q': // Quit
 			return
 		case 's': // Switch to the next sound
 			keyboard.Close()
 
-			soundIndex, err := ListPicker(Sounds)
+			soundIndex, err := ListPicker(sounds.Sounds)
 			if err != nil {
 				log.Fatal("Error selecting next sound: ", err)
 			}
 
 			file.Close()
 			stream.Close()
-			ctrl, file, stream, volume, err = playSound(dataDir, Sounds[soundIndex])
+			ctrl, file, stream, volume, err = playSound(dataDir, sounds.Sounds[soundIndex])
 			doubleLine = true
 			if err != nil {
-				fmt.Printf("Error switching to sound \"%s\": %v\n", Sounds[soundIndex].name, err)
+				fmt.Printf("Error switching to sound \"%s\": %v\n", sounds.Sounds[soundIndex].Name, err)
 				if file != nil {
 					file.Close()
 				}
@@ -378,7 +314,7 @@ func main() {
 					log.Fatal("Error playing previous sound: ", err)
 				}
 			} else {
-				nowPlaying = Sounds[soundIndex]
+				nowPlaying = sounds.Sounds[soundIndex]
 			}
 
 			// TODO: Warn on error.

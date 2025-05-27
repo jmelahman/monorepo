@@ -1,4 +1,4 @@
-package main
+package sounds
 
 import (
 	"net/http"
@@ -13,24 +13,24 @@ func TestSoundURLsAreValid(t *testing.T) {
 	}
 
 	for _, sound := range Sounds {
-		t.Run(sound.name, func(t *testing.T) {
+		t.Run(sound.Name, func(t *testing.T) {
 			// First validate URL format
-			_, err := url.ParseRequestURI(sound.url)
+			_, err := url.ParseRequestURI(sound.Url)
 			if err != nil {
-				t.Errorf("Invalid URL format for %q: %v", sound.name, err)
+				t.Errorf("Invalid URL format for %q: %v", sound.Name, err)
 				return
 			}
 
 			// Check the URL is reachable
-			resp, err := client.Head(sound.url)
+			resp, err := client.Head(sound.Url)
 			if err != nil {
-				t.Errorf("Failed to HEAD %q: %v", sound.name, err)
+				t.Errorf("Failed to HEAD %q: %v", sound.Name, err)
 				return
 			}
 			defer resp.Body.Close()
 
 			if resp.StatusCode != http.StatusOK {
-				t.Errorf("Got non-200 status for %q: %d", sound.name, resp.StatusCode)
+				t.Errorf("Got non-200 status for %q: %d", sound.Name, resp.StatusCode)
 			}
 		})
 	}
