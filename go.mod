@@ -1,6 +1,6 @@
 module github.com/jmelahman/connections
 
-go 1.23.3
+go 1.24.3
 
 require (
 	github.com/gdamore/tcell/v2 v2.8.1
