@@ -22,7 +22,7 @@ var (
 	version = "dev"
 
 	// TODO: Maybe add some from https://www.nps.gov/maps/stories/soundscapes-of-the-seashore.html
-	sounds = []Sound{
+	Sounds = []Sound{
 		{
 			name:   "Dawn Soundscape from Big Meadows",
 			credit: "J. Job",
