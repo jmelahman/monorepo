@@ -61,7 +61,11 @@ func main() {
 	if err := keyboard.Open(); err != nil {
 		log.Fatal("Error opening keyboard: ", err)
 	}
-	defer keyboard.Close()
+	defer func() {
+		if err := keyboard.Close(); err != nil {
+			log.Printf("Error closing keyboard: %v", err)
+		}
+	}()
 
 	for {
 		char, key, err := keyboard.GetKey()
@@ -87,7 +91,9 @@ func main() {
 		case 'q': // Quit
 			return
 		case 's': // Switch to the next sound
-			keyboard.Close()
+			if err := keyboard.Close(); err != nil {
+				log.Printf("Error closing keyboard: %v", err)
+			}
 
 			soundIndex, err := picker.ListPicker(sounds.Sounds)
 			if err != nil {
@@ -116,7 +122,11 @@ func main() {
 				log.Fatal("Error opening keyboard: ", err)
 			}
 			defer player.Close()
-			defer keyboard.Close()
+			defer func() {
+				if err := keyboard.Close(); err != nil {
+					log.Printf("Error closing keyboard: %v", err)
+				}
+			}()
 
 		case '?': // Help
 			fmt.Println("Available commands:")

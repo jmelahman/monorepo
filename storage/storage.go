@@ -27,7 +27,9 @@ func SaveNowPlaying(dataDir string, soundURL string) error {
 
 func RemoveNowPlaying(dataDir string) {
 	nowPlayingFile := filepath.Join(dataDir, "now_playing")
-	os.Remove(nowPlayingFile)
+	if err := os.Remove(nowPlayingFile); err != nil {
+		log.Printf("Error removing now playing file: %v", err)
+	}
 }
 
 func LoadLastPlayed(dataDir string, availableSounds []sounds.Sound) sounds.Sound {

@@ -36,7 +36,9 @@ func (p *Player) PlaySound(dataDir string, sound sounds.Sound) error {
 	if os.IsNotExist(err) {
 		err := download.FileWithProgress(sound.Url, soundPath)
 		if err != nil {
-			os.Remove(soundPath)
+			if err := os.Remove(soundPath); err != nil {
+				return fmt.Errorf("error removing sound file: %v", err)
+			}
 			return fmt.Errorf("error downloading sound: %v", err)
 		}
 		file, err = os.Open(soundPath)
@@ -49,7 +51,9 @@ func (p *Player) PlaySound(dataDir string, sound sounds.Sound) error {
 
 	stream, _, err := mp3.Decode(file)
 	if err != nil {
-		os.Remove(file.Name())
+		if err := os.Remove(file.Name()); err != nil {
+			return fmt.Errorf("error removing file: %v", err)
+		}
 		return fmt.Errorf("error decoding file: %v", err)
 	}
 
@@ -87,9 +91,13 @@ func (p *Player) SetVolume(change float64) {
 
 func (p *Player) Close() {
 	if p.file != nil {
-		p.file.Close()
+		if err := p.file.Close(); err != nil {
+			log.Printf("Error closing file: %v", err)
+		}
 	}
 	if p.stream != nil {
-		p.stream.Close()
+		if err := p.stream.Close(); err != nil {
+			log.Printf("Error closing stream: %v", err)
+		}
 	}
 }

@@ -27,7 +27,11 @@ func TestSoundURLsAreValid(t *testing.T) {
 				t.Errorf("Failed to HEAD %q: %v", sound.Name, err)
 				return
 			}
-			defer resp.Body.Close()
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					t.Logf("Error closing response body: %v", err)
+				}
+			}()
 
 			if resp.StatusCode != http.StatusOK {
 				t.Errorf("Got non-200 status for %q: %d", sound.Name, resp.StatusCode)
