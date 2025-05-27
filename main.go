@@ -121,7 +121,6 @@ func main() {
 			if err := keyboard.Open(); err != nil {
 				log.Fatal("Error opening keyboard: ", err)
 			}
-			defer player.Close()
 			defer func() {
 				if err := keyboard.Close(); err != nil {
 					log.Printf("Error closing keyboard: %v", err)
