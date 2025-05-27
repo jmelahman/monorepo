@@ -29,3 +29,4 @@ dist/
 *.egg-info/
 __pycache__
 connections
+.aider*
