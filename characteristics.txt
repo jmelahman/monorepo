@@ -1,0 +1,271 @@
+# decode
+
+raw value: 6402210300001400190000
+
+[0]: 0x64
+[1]: 0x02    → Flags: 0x0264 = 0b0000001001100100
+[2]: 0x21
+[3]: 0x03    → Speed: 0x0321 = 801 → 8.01 km/h
+[4]: 0x00
+[5]: 0x00    → Avg Speed: 0 (not shown here, maybe flag off)
+[6]: 0x14
+[7]: 0x00    → Cadence: 0x0014 = 20 → 10.0 RPM
+[8]: 0x19
+[9]: 0x00    → Avg Cadence: 0x0019 = 25 → 12.5 RPM
+[10]: 0x00
+[11]: 0x00   → Distance or next field depending on flags
+
+# chatgpt
+
+✅ Breakdown of Your UUIDs
+🌐 Standard Bluetooth Characteristics
+
+UUID	Name	Use
+0x2A00	Device Name	Human-readable name of the device
+0x2A01	Appearance	Category (e.g., heart rate, cycling sensor)
+0x2A04	Peripheral Preferred Connection Params	Link timing suggestions
+0x2A05	Service Changed	Used with Indicate when GATT changes
+0x2A29	Manufacturer Name String	Text info about vendor
+0x2A24	Model Number String	Device model
+0x2A25	Serial Number String	Optional ID
+0x2A27	Hardware Revision String	Version info
+0x2A26	Firmware Revision String
+0x2A37	Heart Rate Measurement	Notify-based HR data
+0x2A38	Body Sensor Location	Chest, wrist, etc.
+0x2A63	Cycling Power Measurement	Power, cadence, torque
+0x2A65	Cycling Power Feature	Feature bitmap
+0x2A66	Cycling Power Sensor Location
+0x2A5B	CSC (Cycling Speed and Cadence) Measurement	Crank/speed/cadence sensor
+0x2A5D	CSC Feature	Flags for what’s supported
+0x2AA6	Central Address Resolution	Privacy-related
+0x2ACC to 0x2AD9	Fitness Machine / Trainer Services	Resistance control, trainer status, etc.
+0x2AD2	Training Status	e.g., active, paused
+
+🧪 Vendor-Specific or Unknown UUIDs
+
+UUID	Notes
+c4632b03-..., c4632b04, c4632b05	Custom characteristics (likely cadence, power, etc. from your trainer)
+6e400002 / 6e400003	Nordic UART Service (write / notify)
+8ec90003-...	Could be trainer-specific control
+00000002–00000004 (custom)	Unknown — likely proprietary control/data
+00002ada, 00002ad6, etc.	Fitness Machine Service (FTMS) data/control
+
+# bluetoothctl
+
+[Zwift Hub]> list-attributes
+Primary Service (Handle 0x004d)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service004d
+	00000001-19ca-4651-86e5-fa29dcdd09d1
+	Vendor specific
+Characteristic (Handle 0x0053)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service004d/char0053
+	00000004-19ca-4651-86e5-fa29dcdd09d1
+	Vendor specific
+Descriptor (Handle 0x0055)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service004d/char0053/desc0055
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Characteristic (Handle 0x0051)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service004d/char0051
+	00000003-19ca-4651-86e5-fa29dcdd09d1
+	Vendor specific
+Characteristic (Handle 0x004e)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service004d/char004e
+	00000002-19ca-4651-86e5-fa29dcdd09d1
+	Vendor specific
+Descriptor (Handle 0x0050)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service004d/char004e/desc0050
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Primary Service (Handle 0x0042)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0042
+	0000180a-0000-1000-8000-00805f9b34fb
+	Device Information
+Characteristic (Handle 0x004b)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0042/char004b
+	00002a26-0000-1000-8000-00805f9b34fb
+	Firmware Revision String
+Characteristic (Handle 0x0049)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0042/char0049
+	00002a27-0000-1000-8000-00805f9b34fb
+	Hardware Revision String
+Characteristic (Handle 0x0047)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0042/char0047
+	00002a25-0000-1000-8000-00805f9b34fb
+	Serial Number String
+Characteristic (Handle 0x0045)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0042/char0045
+	00002a24-0000-1000-8000-00805f9b34fb
+	Model Number String
+Characteristic (Handle 0x0043)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0042/char0043
+	00002a29-0000-1000-8000-00805f9b34fb
+	Manufacturer Name String
+Primary Service (Handle 0x003e)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service003e
+	0000fe59-0000-1000-8000-00805f9b34fb
+	Nordic Semiconductor ASA 
+Characteristic (Handle 0x003f)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service003e/char003f
+	8ec90003-f315-4f60-9fb8-838830daea50
+	Vendor specific
+Descriptor (Handle 0x0041)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service003e/char003f/desc0041
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Primary Service (Handle 0x0038)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0038
+	6e400001-b5a3-f393-e0a9-e50e24dcca9e
+	Nordic UART Service
+Characteristic (Handle 0x003b)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0038/char003b
+	6e400003-b5a3-f393-e0a9-e50e24dcca9e
+	Nordic UART RX
+Descriptor (Handle 0x003d)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0038/char003b/desc003d
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Characteristic (Handle 0x0039)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0038/char0039
+	6e400002-b5a3-f393-e0a9-e50e24dcca9e
+	Nordic UART TX
+Primary Service (Handle 0x0032)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0032
+	0000180d-0000-1000-8000-00805f9b34fb
+	Heart Rate
+Characteristic (Handle 0x0036)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0032/char0036
+	00002a38-0000-1000-8000-00805f9b34fb
+	Body Sensor Location
+Characteristic (Handle 0x0033)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0032/char0033
+	00002a37-0000-1000-8000-00805f9b34fb
+	Heart Rate Measurement
+Descriptor (Handle 0x0035)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0032/char0033/desc0035
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Primary Service (Handle 0x0029)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0029
+	c4630001-003f-4cec-8994-e489b04d857f
+	Vendor specific
+Characteristic (Handle 0x002f)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0029/char002f
+	c4632b04-003f-4cec-8994-e489b04d857f
+	Vendor specific
+Descriptor (Handle 0x0031)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0029/char002f/desc0031
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Characteristic (Handle 0x002c)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0029/char002c
+	c4632b05-003f-4cec-8994-e489b04d857f
+	Vendor specific
+Descriptor (Handle 0x002e)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0029/char002c/desc002e
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Characteristic (Handle 0x002a)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0029/char002a
+	c4632b03-003f-4cec-8994-e489b04d857f
+	Vendor specific
+Primary Service (Handle 0x0019)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019
+	00001826-0000-1000-8000-00805f9b34fb
+	Fitness Machine
+Characteristic (Handle 0x0026)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char0026
+	00002ad9-0000-1000-8000-00805f9b34fb
+	Fitness Machine Control Point
+Descriptor (Handle 0x0028)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char0026/desc0028
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Characteristic (Handle 0x0024)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char0024
+	00002ad8-0000-1000-8000-00805f9b34fb
+	Supported Power Range
+Characteristic (Handle 0x0022)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char0022
+	00002ad6-0000-1000-8000-00805f9b34fb
+	Supported Resistance Level Range
+Characteristic (Handle 0x001f)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char001f
+	00002ada-0000-1000-8000-00805f9b34fb
+	Fitness Machine Status
+Descriptor (Handle 0x0021)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char001f/desc0021
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Characteristic (Handle 0x001d)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char001d
+	00002acc-0000-1000-8000-00805f9b34fb
+	Fitness Machine Feature
+Characteristic (Handle 0x001a)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char001a
+	00002ad2-0000-1000-8000-00805f9b34fb
+	Indoor Bike Data
+Descriptor (Handle 0x001c)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0019/char001a/desc001c
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Primary Service (Handle 0x000e)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000e
+	00001818-0000-1000-8000-00805f9b34fb
+	Cycling Power
+Characteristic (Handle 0x0016)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000e/char0016
+	00002a66-0000-1000-8000-00805f9b34fb
+	Cycling Power Control Point
+Descriptor (Handle 0x0018)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000e/char0016/desc0018
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Characteristic (Handle 0x0014)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000e/char0014
+	00002a5d-0000-1000-8000-00805f9b34fb
+	Sensor Location
+Characteristic (Handle 0x0012)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000e/char0012
+	00002a65-0000-1000-8000-00805f9b34fb
+	Cycling Power Feature
+Characteristic (Handle 0x000f)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000e/char000f
+	00002a63-0000-1000-8000-00805f9b34fb
+	Cycling Power Measurement
+Descriptor (Handle 0x0011)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000e/char000f/desc0011
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Primary Service (Handle 0x000a)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000a
+	00001801-0000-1000-8000-00805f9b34fb
+	Generic Attribute Profile
+Characteristic (Handle 0x000b)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000a/char000b
+	00002a05-0000-1000-8000-00805f9b34fb
+	Service Changed
+Descriptor (Handle 0x000d)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service000a/char000b/desc000d
+	00002902-0000-1000-8000-00805f9b34fb
+	Client Characteristic Configuration
+Primary Service (Handle 0x0001)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0001
+	00001800-0000-1000-8000-00805f9b34fb
+	Generic Access Profile
+Characteristic (Handle 0x0008)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0001/char0008
+	00002aa6-0000-1000-8000-00805f9b34fb
+	Central Address Resolution
+Characteristic (Handle 0x0006)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0001/char0006
+	00002a04-0000-1000-8000-00805f9b34fb
+	Peripheral Preferred Connection Parameters
+Characteristic (Handle 0x0004)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0001/char0004
+	00002a01-0000-1000-8000-00805f9b34fb
+	Appearance
+Characteristic (Handle 0x0002)
+	/org/bluez/hci0/dev_C2_5E_9A_0B_60_6E/service0001/char0002
+	00002a00-0000-1000-8000-00805f9b34fb
+	Device Name
