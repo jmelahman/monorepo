@@ -5,20 +5,23 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jmelahman/cycle-cli/cps"
-	"github.com/jmelahman/cycle-cli/csc"
-	"github.com/jmelahman/cycle-cli/ftms"
+	"github.com/jmelahman/cycle-cli/ble/services/cps"
+	"github.com/jmelahman/cycle-cli/ble/services/csc"
+	"github.com/jmelahman/cycle-cli/ble/services/ftms"
 	"github.com/jmelahman/cycle-cli/utils"
 	log "github.com/sirupsen/logrus"
 	"tinygo.org/x/bluetooth"
 )
 
 type Telemetry struct {
-	Cadence     *uint16
-	Speed       *uint16
-	Power       uint16
-	Revolutions uint16
-	HR          uint8
+	HR            uint8
+	Cadence       uint16
+	Calories      uint16
+	prevEventTime uint16
+	prevRevs      uint32
+	Power         int16
+	Speed         float64
+	Distance      float64
 }
 
 type TelemetryHandler func(data Telemetry)
@@ -115,7 +118,10 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, handler Telemetr
 			data, err := ftms.ParseIndoorBikeData(buf)
 			utils.Must("parse indoor bike data", err)
 
-			log.Debug(data)
+			log.Debugf("Indoor Bike Data: %v", data)
+
+			// Magic 30. Possibly from 1/2 RPM * 60 Seconds?
+			state.Cadence = *data.InstantaneousCadence / 30
 
 			handler(state)
 		})
@@ -126,7 +132,7 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, handler Telemetr
 			data, err := csc.ParseCSCMeasurement(buf)
 			utils.Must("parse cycling speed and cadence", err)
 
-			log.Debug(data)
+			log.Debugf("CSC Data: %v", data)
 
 			handler(state)
 		})
@@ -165,7 +171,43 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, handler Telemetr
 			data, err := cps.ParseCyclingPowerMeasurement(buf)
 			utils.Must("parse cycling power measurement", err)
 
-			log.Debug(data)
+			log.Debugf("CPS Data: %v", data)
+
+			if state.prevRevs > 0 && state.prevEventTime > 0 {
+				var currRevs *uint32
+				var currEventTime *uint16
+				if data.WheelRevs != nil {
+					currRevs = data.WheelRevs
+				} else {
+					currRevs = &state.prevRevs
+				}
+				if data.WheelEventTime != nil {
+					currEventTime = data.WheelEventTime
+				} else {
+					currEventTime = &state.prevEventTime
+				}
+				log.Debugf("Revs: %v  Time: %v", currRevs, currEventTime)
+				deltaRevs := float64(*currRevs - state.prevRevs)
+				deltaTime := float64((*currEventTime-state.prevEventTime)&0xFFFF) / 1024.0
+
+				const wheelCircumference = 2.105 // in meters
+				if deltaTime > 0 {
+					speed := (deltaRevs * wheelCircumference) / deltaTime
+					state.Speed = speed * 3.6 // km/h
+					state.Distance = state.Distance + deltaRevs*wheelCircumference
+				} else {
+					state.Speed = 0
+				}
+			}
+
+			if data.WheelRevs != nil {
+				state.prevRevs = *data.WheelRevs
+			}
+			if data.WheelEventTime != nil {
+				state.prevEventTime = *data.WheelEventTime
+			}
+
+			state.Power = data.InstantaneousPower
 
 			handler(state)
 		})

@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	metricSystemName   = "metric"
+	imperialSystemName = "imperial"
+)
+
 var RootCmd = &cobra.Command{
 	Use:   "cycle",
 	Short: "Cycle trainer control",
@@ -20,6 +25,7 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.Flags().IntP("resistance", "r", 0, "Resistance level (0-100)")
 	RootCmd.Flags().BoolP("debug", "d", false, "Enable debug mode (default: true)")
+	RootCmd.Flags().StringP("unit", "u", "imperial", "Unit system (metric or imperial)")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -29,12 +35,28 @@ func run(cmd *cobra.Command, args []string) {
 	resistanceLevel, err := cmd.Flags().GetInt("resistance")
 	utils.Must("parse resistance", err)
 
+	unitSystem, err := cmd.Flags().GetString("unit")
+	if err != nil {
+		log.Fatalf("❌ Invalid unit system: %v", err)
+	}
+
+	var validUnitSystems = map[string]bool{
+		metricSystemName:   true,
+		imperialSystemName: true,
+	}
+
+	if _, exists := validUnitSystems[unitSystem]; !exists {
+		log.Fatalf("❌ Unsupported unit system: %s. Use %s or %s.", unitSystem, metricSystemName, imperialSystemName)
+	}
+
 	if debugMode {
 		log.SetLevel(log.DebugLevel)
 		fmt.Println("🐞 Debug mode enabled")
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
+
+	fmt.Printf("Using %s units\n", unitSystem)
 
 	fmt.Println("🔍 Scanning for trainer...")
 	device, err := ble.ConnectToTrainer()
@@ -58,7 +80,7 @@ func run(cmd *cobra.Command, args []string) {
 		} else {
 			minutes := totalSeconds / 60
 			seconds := totalSeconds % 60
-			fmt.Printf("Power: %4dW  Cadence: %3drpm  Duration: %02d:%02d\r", data.Power, data.Cadence, minutes, seconds)
+			fmt.Printf("Power: %4dW  Cadence: %3drpm  Duration: %02d:%02d\r\nSpeed: %.2f  Distance: %.2f\r", data.Power, data.Cadence, minutes, seconds, data.Speed, data.Distance)
 		}
 	})
 	if err != nil {
