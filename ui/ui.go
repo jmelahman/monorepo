@@ -71,13 +71,13 @@ func NewUI(unitSystem string) *UI {
 		SetRows(3, 3, 0, 3).
 		SetColumns(0, 0, 0).
 		SetBorders(false).
-		AddItem(powerBox, 0, 0, 1, 1, 0, 0, false).
-		AddItem(cadenceBox, 0, 1, 1, 1, 0, 0, false).
-		AddItem(speedBox, 0, 2, 1, 1, 0, 0, false).
-		AddItem(distanceBox, 1, 0, 1, 1, 0, 0, false).
-		AddItem(durationBox, 1, 1, 1, 1, 0, 0, false).
-		AddItem(resistanceBox, 1, 2, 1, 1, 0, 0, false).
-		AddItem(statusBox, 2, 0, 1, 3, 0, 0, false)
+		AddItem(speedBox, 0, 0, 1, 1, 0, 0, false).      // Speed
+		AddItem(distanceBox, 0, 1, 1, 1, 0, 0, false).   // Distance
+		AddItem(durationBox, 0, 2, 1, 1, 0, 0, false).   // Duration
+		AddItem(powerBox, 1, 0, 1, 1, 0, 0, false).      // Power
+		AddItem(cadenceBox, 1, 1, 1, 1, 0, 0, false).    // Cadence
+		AddItem(resistanceBox, 1, 2, 1, 1, 0, 0, false). // Resistance
+		AddItem(statusBox, 2, 0, 1, 3, 0, 0, false)      // Status
 
 	// Set up key handling
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
