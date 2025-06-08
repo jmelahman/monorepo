@@ -111,7 +111,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	state := ble.Telemetry{}
 
-	err = ble.SubscribeToMetrics(device, state, func(data ble.Telemetry) {
+	err = ble.SubscribeToMetrics(device, state, func(data ble.Telemetry) { // Still not adding unitSystem
 		if !headlessMode {
 			appUI.UpdateTelemetry(data)
 		} else {

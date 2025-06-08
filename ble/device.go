@@ -20,11 +20,19 @@ type Telemetry struct {
 	prevEventTime uint16
 	prevRevs      uint32
 	Power         int16
-	Speed         float64
-	Distance      float64
+	Speed         float64 // Speed in km/h or mph, depending on unitSystem
+	Distance      float64 // Distance in km or miles, depending on unitSystem
 }
 
 type TelemetryHandler func(data Telemetry)
+
+const (
+	wheelCircumferenceMeters = 2.105 // in meters
+	metersPerSecondToKmph    = 3.6
+	metersPerSecondToMph     = 2.23694 // 1 m/s * 3600 s/hr / 1609.34 m/mi
+	metersToKm               = 0.001
+	metersToMiles            = 0.000621371 // 1.0 / 1609.34
+)
 
 var adapter = bluetooth.DefaultAdapter
 
@@ -81,7 +89,7 @@ func ConnectToTrainer() (*bluetooth.Device, error) {
 	return &device, nil
 }
 
-func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, handler TelemetryHandler) error {
+func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, handler TelemetryHandler, unitSystem string) error {
 	services, err := dev.DiscoverServices(nil)
 	utils.Must("discover services", err)
 
@@ -188,15 +196,22 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, handler Telemetr
 				}
 				log.Debugf("Revs: %v  Time: %v", currRevs, currEventTime)
 				deltaRevs := float64(*currRevs - state.prevRevs)
-				deltaTime := float64((*currEventTime-state.prevEventTime)&0xFFFF) / 1024.0
+				deltaTime := float64((*currEventTime-state.prevEventTime)&0xFFFF) / 1024.0 // in seconds
 
-				const wheelCircumference = 2.105 // in meters
 				if deltaTime > 0 {
-					speed := (deltaRevs * wheelCircumference) / deltaTime
-					state.Speed = speed * 3.6 // km/h
-					state.Distance = state.Distance + deltaRevs*wheelCircumference
+					deltaDistanceMeters := deltaRevs * wheelCircumferenceMeters
+					speedMetersPerSecond := deltaDistanceMeters / deltaTime
+
+					if unitSystem == "imperial" {
+						state.Speed = speedMetersPerSecond * metersPerSecondToMph
+						state.Distance += deltaDistanceMeters * metersToMiles
+					} else { // metric
+						state.Speed = speedMetersPerSecond * metersPerSecondToKmph
+						state.Distance += deltaDistanceMeters * metersToKm
+					}
 				} else {
 					state.Speed = 0
+					// Distance does not change if time or revs do not change
 				}
 			}
 
