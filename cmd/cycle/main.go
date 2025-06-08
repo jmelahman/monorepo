@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/jmelahman/cycle-cli/ble"
 	"github.com/jmelahman/cycle-cli/ui"
 	"github.com/jmelahman/cycle-cli/utils"
