@@ -22,15 +22,17 @@ type UI struct {
 	statusBox     *tview.TextView
 	unitSystem    string
 	startTime     time.Time
+	ftp           int
 }
 
 // NewUI creates a new UI instance
-func NewUI(unitSystem string) *UI {
+func NewUI(unitSystem string, ftp int) *UI {
 	app := tview.NewApplication()
 
 	// Create text views for each metric
 	powerBox := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter)
+		SetTextAlign(tview.AlignCenter).
+		SetDynamicColors(true)
 	powerBox.SetBorder(true).
 		SetTitle(" Power ").
 		SetTitleColor(tcell.ColorYellow).
@@ -113,6 +115,7 @@ func NewUI(unitSystem string) *UI {
 		statusBox:     statusBox,
 		unitSystem:    unitSystem,
 		startTime:     time.Now(),
+		ftp:           ftp,
 	}
 }
 
@@ -135,7 +138,21 @@ func (ui *UI) UpdateStatus(format string, args ...interface{}) {
 func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 	ui.app.QueueUpdateDraw(func() {
 		// Update power
-		ui.powerBox.SetText(fmt.Sprintf("%d W", data.Power))
+		powerStr := ""
+		if ui.ftp > 0 {
+			color := "white" // Default color if exactly at FTP, or can be yellow
+			if data.Power < int16(ui.ftp) {
+				color = "green"
+			} else if data.Power == int16(ui.ftp) {
+				color = "yellow"
+			} else if data.Power > int16(ui.ftp) {
+				color = "red"
+			}
+			powerStr = fmt.Sprintf("[%s]%d[white] W", color, data.Power)
+		} else {
+			powerStr = fmt.Sprintf("%d W", data.Power)
+		}
+		ui.powerBox.SetText(powerStr)
 
 		// Update cadence
 		ui.cadenceBox.SetText(fmt.Sprintf("%d rpm", data.Cadence))

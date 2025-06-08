@@ -31,6 +31,7 @@ func init() {
 	RootCmd.Flags().BoolP("debug", "d", false, "Enable debug mode (default: true)")
 	RootCmd.Flags().StringP("unit", "u", "imperial", "Unit system (metric or imperial)")
 	RootCmd.Flags().BoolP("headless", "H", false, "Run in headless mode without UI")
+	RootCmd.Flags().IntP("ftp", "f", 0, "Functional Threshold Power (FTP) in watts")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -42,6 +43,9 @@ func run(cmd *cobra.Command, args []string) {
 
 	resistanceLevel, err := cmd.Flags().GetInt("resistance")
 	utils.Must("parse resistance", err)
+
+	ftp, err := cmd.Flags().GetInt("ftp")
+	utils.Must("parse ftp flag", err)
 
 	unitSystem, err := cmd.Flags().GetString("unit")
 	if err != nil {
@@ -71,7 +75,7 @@ func run(cmd *cobra.Command, args []string) {
 	var appUI *ui.UI
 	if !headlessMode {
 		// Create UI
-		appUI = ui.NewUI(unitSystem)
+		appUI = ui.NewUI(unitSystem, ftp)
 
 		// Start UI in a separate goroutine
 		go func() {
