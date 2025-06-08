@@ -30,41 +30,55 @@ func NewUI(unitSystem string) *UI {
 	
 	// Create text views for each metric
 	powerBox := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
-	powerBox.SetBorder(true).SetTitle(" Power ")
+		SetTextAlign(tview.AlignCenter)
+	powerBox.SetBorder(true).
+		SetTitle(" Power ").
+		SetTitleColor(tcell.ColorYellow).
+		SetBorderColor(tcell.ColorYellow)
 
 	cadenceBox := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
-	cadenceBox.SetBorder(true).SetTitle(" Cadence ")
+		SetTextAlign(tview.AlignCenter)
+	cadenceBox.SetBorder(true).
+		SetTitle(" Cadence ").
+		SetTitleColor(tcell.ColorGreen).
+		SetBorderColor(tcell.ColorGreen)
 
 	speedBox := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
-	speedBox.SetBorder(true).SetTitle(" Speed ")
+		SetTextAlign(tview.AlignCenter)
+	speedBox.SetBorder(true).
+		SetTitle(" Speed ").
+		SetTitleColor(tcell.ColorCyan).
+		SetBorderColor(tcell.ColorCyan)
 
 	distanceBox := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
-	distanceBox.SetBorder(true).SetTitle(" Distance ")
+		SetTextAlign(tview.AlignCenter)
+	distanceBox.SetBorder(true).
+		SetTitle(" Distance ").
+		SetTitleColor(tcell.ColorBlue).
+		SetBorderColor(tcell.ColorBlue)
 
 	durationBox := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
-	durationBox.SetBorder(true).SetTitle(" Duration ")
+		SetTextAlign(tview.AlignCenter)
+	durationBox.SetBorder(true).
+		SetTitle(" Duration ").
+		SetTitleColor(tcell.ColorRed).
+		SetBorderColor(tcell.ColorRed)
 
 	resistanceBox := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
-	resistanceBox.SetBorder(true).SetTitle(" Resistance ")
+		SetTextAlign(tview.AlignCenter)
+	resistanceBox.SetBorder(true).
+		SetTitle(" Resistance ").
+		SetTitleColor(tcell.ColorMagenta).
+		SetBorderColor(tcell.ColorMagenta)
 
 	statusBox := tview.NewTextView().
-		SetDynamicColors(true).
 		SetChangedFunc(func() {
 			app.Draw()
 		})
-	statusBox.SetBorder(true).SetTitle(" Status ")
+	statusBox.SetBorder(true).
+		SetTitle(" Status ").
+		SetTitleColor(tcell.ColorWhite).
+		SetBorderColor(tcell.ColorWhite)
 
 	// Create a grid layout
 	grid := tview.NewGrid().
@@ -121,10 +135,10 @@ func (ui *UI) UpdateStatus(format string, args ...interface{}) {
 func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 	ui.app.QueueUpdateDraw(func() {
 		// Update power
-		ui.powerBox.SetText(fmt.Sprintf("[yellow]%d[white] W", data.Power))
+		ui.powerBox.SetText(fmt.Sprintf("%d W", data.Power))
 
 		// Update cadence
-		ui.cadenceBox.SetText(fmt.Sprintf("[green]%d[white] rpm", data.Cadence))
+		ui.cadenceBox.SetText(fmt.Sprintf("%d rpm", data.Cadence))
 
 		// Update speed
 		speedUnit := "mph"
@@ -132,7 +146,7 @@ func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 		if ui.unitSystem == "metric" {
 			speedUnit = "km/h"
 		}
-		ui.speedBox.SetText(fmt.Sprintf("[cyan]%.1f[white] %s", speedValue, speedUnit))
+		ui.speedBox.SetText(fmt.Sprintf("%.1f %s", speedValue, speedUnit))
 
 		// Update distance
 		distanceUnit := "mi"
@@ -140,7 +154,7 @@ func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 		if ui.unitSystem == "metric" {
 			distanceUnit = "km"
 		}
-		ui.distanceBox.SetText(fmt.Sprintf("[blue]%.2f[white] %s", distanceValue, distanceUnit))
+		ui.distanceBox.SetText(fmt.Sprintf("%.2f %s", distanceValue, distanceUnit))
 
 		// Update duration
 		elapsed := time.Since(ui.startTime)
@@ -149,11 +163,11 @@ func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 			hours := totalSeconds / 3600
 			minutes := (totalSeconds % 3600) / 60
 			seconds := totalSeconds % 60
-			ui.durationBox.SetText(fmt.Sprintf("[red]%02d:%02d:%02d", hours, minutes, seconds))
+			ui.durationBox.SetText(fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds))
 		} else {
 			minutes := totalSeconds / 60
 			seconds := totalSeconds % 60
-			ui.durationBox.SetText(fmt.Sprintf("[red]%02d:%02d", minutes, seconds))
+			ui.durationBox.SetText(fmt.Sprintf("%02d:%02d", minutes, seconds))
 		}
 	})
 }
@@ -161,6 +175,6 @@ func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 // UpdateResistance updates the resistance display
 func (ui *UI) UpdateResistance(level uint8) {
 	ui.app.QueueUpdateDraw(func() {
-		ui.resistanceBox.SetText(fmt.Sprintf("[magenta]%d%%", level))
+		ui.resistanceBox.SetText(fmt.Sprintf("%d%%", level))
 	})
 }
