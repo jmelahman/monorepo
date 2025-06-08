@@ -110,20 +110,20 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 			return fmt.Errorf("discover characteristics: %w", err)
 		}
 		for _, char := range chars {
-			switch char.UUID().String() {
-			case "00002ad2-0000-1000-8000-00805f9b34fb":
+			switch char.UUID() {
+			case bluetooth.IndoorBikeDataUUID:
 				log.Debug("Registered: Indoor Bike Data")
 				bikeChar = &char
-			case "00002a5b-0000-1000-8000-00805f9b34fb":
+			case bluetooth.CSCMeasurementUUID:
 				log.Debug("Registered: Cycling Speed and Cadence (CSC) Measurement")
 				cscChar = &char
-			case "00002ada-0000-1000-8000-00805f9b34fb":
+			case bluetooth.FitnessMachineStatusUUID:
 				log.Debug("Registered: Fitness Machine Status")
 				fitnessChar = &char
-			case "00002a37-0000-1000-8000-00805f9b34fb":
+			case bluetooth.HeartRateMeasurementUUID:
 				log.Debug("Registered: Heart Rate Measurement")
 				hrChar = &char
-			case "00002a63-0000-1000-8000-00805f9b34fb":
+			case bluetooth.CyclingPowerMeasurementUUID:
 				log.Debug("Registered: Cycling Power Measurement")
 				powerChar = &char
 			}
