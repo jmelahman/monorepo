@@ -59,11 +59,16 @@ func run(cmd *cobra.Command, args []string) {
 	// Create UI
 	appUI := ui.NewUI(unitSystem)
 
+	// Create a channel to signal when UI exits
+	stop := make(chan struct{})
+
 	// Start UI in a separate goroutine
 	go func() {
 		if err := appUI.Start(); err != nil {
 			log.Fatalf("❌ UI error: %v", err)
 		}
+		// Signal that UI has exited
+		close(stop)
 	}()
 
 	appUI.UpdateStatus("🔍 Scanning for trainer...")
@@ -104,10 +109,8 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Keep the main goroutine alive
-	for {
-		time.Sleep(1 * time.Second)
-	}
+	// Wait for UI to exit
+	<-stop
 }
 
 func main() {
