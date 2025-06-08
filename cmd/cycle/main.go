@@ -3,11 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"bufio"
+	"fmt"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"golang.org/x/term"
 	"github.com/jmelahman/cycle-cli/ble"
 	"github.com/jmelahman/cycle-cli/ui"
 	"github.com/jmelahman/cycle-cli/utils"
@@ -25,6 +29,51 @@ var RootCmd = &cobra.Command{
 	Short: "Cycle trainer control",
 	Long:  `Cycle is a tool to control and monitor cycling trainers.`,
 	Run:   run,
+}
+
+// handleResistanceChange adjusts the resistance level and updates UI or logs accordingly.
+func handleResistanceChange(device *ble.Device, currentLevel *int, change int, appUI *ui.UI, headless bool) {
+	newLevel := *currentLevel + change
+	if newLevel < 0 {
+		newLevel = 0
+	}
+	if newLevel > 100 {
+		newLevel = 100
+	}
+
+	if newLevel != *currentLevel {
+		*currentLevel = newLevel
+		levelToSet := uint8(*currentLevel)
+
+		go func() {
+			statusMsg := fmt.Sprintf("Setting resistance to %d%%...", levelToSet)
+			if headless {
+				// Print on new lines to avoid clobbering telemetry output
+				fmt.Printf("\n%s\n", statusMsg)
+			} else if appUI != nil {
+				appUI.UpdateStatus(statusMsg)
+			}
+
+			if err := ble.SetResistance(device, levelToSet); err != nil {
+				errorMsg := fmt.Sprintf("❌ Failed to set resistance: %v", err)
+				if headless {
+					fmt.Printf("\n%s\n", errorMsg)
+					log.Errorf("Failed to set resistance: %v", err)
+				} else if appUI != nil {
+					appUI.UpdateStatus(errorMsg)
+					log.Errorf("Failed to set resistance: %v", err) // Also log for UI mode
+				}
+			} else {
+				successMsg := fmt.Sprintf("✅ Resistance set to %d%%", levelToSet)
+				if headless {
+					fmt.Printf("\n%s\n", successMsg)
+				} else if appUI != nil {
+					appUI.UpdateResistance(levelToSet)
+					appUI.UpdateStatus(successMsg)
+				}
+			}
+		}()
+	}
 }
 
 func init() {
@@ -123,48 +172,48 @@ func run(cmd *cobra.Command, args []string) {
 			if event.Key() == tcell.KeyRune {
 				switch event.Rune() {
 				case '(': // Decrease resistance
-					newLevel := currentResistanceLevel - 5
-					if newLevel < 0 {
-						newLevel = 0
-					}
-					if newLevel != currentResistanceLevel {
-						currentResistanceLevel = newLevel
-						go func(levelToSet uint8) {
-							appUI.UpdateStatus(fmt.Sprintf("Setting resistance to %d%%...", levelToSet))
-							if err := ble.SetResistance(device, levelToSet); err != nil {
-								appUI.UpdateStatus(fmt.Sprintf("❌ Failed to set resistance: %v", err))
-								log.Errorf("Failed to set resistance: %v", err)
-							} else {
-								appUI.UpdateResistance(levelToSet)
-								appUI.UpdateStatus(fmt.Sprintf("✅ Resistance set to %d%%", levelToSet))
-							}
-						}(uint8(currentResistanceLevel))
-					}
+					handleResistanceChange(device, &currentResistanceLevel, -5, appUI, false)
 				case ')': // Increase resistance
-					newLevel := currentResistanceLevel + 5
-					if newLevel > 100 {
-						newLevel = 100
-					}
-					if newLevel != currentResistanceLevel {
-						currentResistanceLevel = newLevel
-						go func(levelToSet uint8) {
-							appUI.UpdateStatus(fmt.Sprintf("Setting resistance to %d%%...", levelToSet))
-							if err := ble.SetResistance(device, levelToSet); err != nil {
-								appUI.UpdateStatus(fmt.Sprintf("❌ Failed to set resistance: %v", err))
-								log.Errorf("Failed to set resistance: %v", err)
-							} else {
-								appUI.UpdateResistance(levelToSet)
-								appUI.UpdateStatus(fmt.Sprintf("✅ Resistance set to %d%%", levelToSet))
-							}
-						}(uint8(currentResistanceLevel))
-					}
+					handleResistanceChange(device, &currentResistanceLevel, +5, appUI, false)
 				}
 			}
 			return event
 		})
 
-	} else {
+	} else { // Headless mode
 		log.Info("✅ Connected to trainer")
+		log.Info("Press '(' to decrease, ')' to increase resistance. Press 'q' or Ctrl+C to quit.")
+
+		var inputChan chan rune
+		var oldState *term.State
+		var errTerm error
+
+		// Attempt to set raw terminal mode for keyboard shortcuts
+		oldState, errTerm = term.MakeRaw(int(os.Stdin.Fd()))
+		if errTerm != nil {
+			log.Warnf("⚠️  Failed to set raw terminal mode, keyboard shortcuts ('(',')','q') may not work. Use Ctrl+C to exit. Error: %v", errTerm)
+		} else {
+			// Restore terminal state when done with headless mode or if function exits.
+			// This defer needs to be conditional on oldState being non-nil if we want to avoid panic on Restore.
+			// However, term.Restore handles nil oldState gracefully (it's a no-op).
+			// For clarity, one might wrap it: if oldState != nil { defer term.Restore(...) }
+			// But current `defer term.Restore` is fine.
+			defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+			inputChan = make(chan rune)
+			go func() {
+				defer close(inputChan) // Ensure channel is closed when goroutine exits
+				reader := bufio.NewReader(os.Stdin)
+				for {
+					char, _, readErr := reader.ReadRune()
+					if readErr != nil {
+						log.Debugf("Error reading rune: %v", readErr)
+						return // Exit goroutine, will close channel
+					}
+					inputChan <- char
+				}
+			}()
+		}
 	}
 
 	state := ble.Telemetry{}
@@ -230,13 +279,40 @@ func run(cmd *cobra.Command, args []string) {
 		// Wait for UI to exit
 		<-stop
 	} else {
-		// In headless mode, we need to keep the program running
-		// Set up a signal handler to catch Ctrl+C
+		// Headless mode main loop
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-		<-sigChan
-		fmt.Println("\n👋 Exiting...")
+	headlessLoop:
+		for {
+			select {
+			case <-sigChan:
+				fmt.Println("\n👋 Exiting via signal...")
+				break headlessLoop
+			case char, ok := <-inputChan: // This case is only effective if inputChan is not nil
+				if !ok { // Channel closed, reader goroutine exited
+					log.Debug("Input channel closed. Relying on Ctrl+C to exit.")
+					inputChan = nil // Prevent further selection on this case
+					continue
+				}
+
+				shouldExit := false
+				switch char {
+				case '(':
+					handleResistanceChange(device, &currentResistanceLevel, -5, nil, true)
+				case ')':
+					handleResistanceChange(device, &currentResistanceLevel, +5, nil, true)
+				case 'q', 3: // 'q' or Ctrl+C (ETX)
+					fmt.Println("\n👋 Exiting via 'q' or Ctrl+C...")
+					shouldExit = true
+				}
+				if shouldExit {
+					break headlessLoop
+				}
+			}
+		}
+		// Terminal state is restored by defer if it was set to raw.
+		fmt.Println("\n👋 Exiting headless mode...")
 	}
 }
 
