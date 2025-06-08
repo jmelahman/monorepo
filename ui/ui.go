@@ -27,7 +27,7 @@ type UI struct {
 // NewUI creates a new UI instance
 func NewUI(unitSystem string) *UI {
 	app := tview.NewApplication()
-	
+
 	// Create text views for each metric
 	powerBox := tview.NewTextView().
 		SetTextAlign(tview.AlignCenter)
@@ -47,8 +47,8 @@ func NewUI(unitSystem string) *UI {
 		SetTextAlign(tview.AlignCenter)
 	speedBox.SetBorder(true).
 		SetTitle(" Speed ").
-		SetTitleColor(tcell.ColorCyan).
-		SetBorderColor(tcell.ColorCyan)
+		SetTitleColor(tcell.ColorDarkCyan).
+		SetBorderColor(tcell.ColorDarkCyan)
 
 	distanceBox := tview.NewTextView().
 		SetTextAlign(tview.AlignCenter)
@@ -68,8 +68,8 @@ func NewUI(unitSystem string) *UI {
 		SetTextAlign(tview.AlignCenter)
 	resistanceBox.SetBorder(true).
 		SetTitle(" Resistance ").
-		SetTitleColor(tcell.ColorMagenta).
-		SetBorderColor(tcell.ColorMagenta)
+		SetTitleColor(tcell.ColorDarkMagenta).
+		SetBorderColor(tcell.ColorDarkMagenta)
 
 	statusBox := tview.NewTextView().
 		SetChangedFunc(func() {
