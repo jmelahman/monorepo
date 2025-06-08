@@ -66,6 +66,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	// Create a channel to signal when to stop
 	stop := make(chan struct{})
+	startTime := time.Now() // Initialize startTime here
 
 	var appUI *ui.UI
 	if !headlessMode {
@@ -120,9 +121,25 @@ func run(cmd *cobra.Command, args []string) {
 				speedUnit = "mph"
 				distanceUnit = "mi"
 			}
-			fmt.Printf("Power: %4dW, Cadence: %3drpm, Speed: %3.1f%s, Distance: %3.1f%s\r",
+
+			// Calculate duration
+			elapsed := time.Since(startTime)
+			totalSeconds := int(elapsed.Seconds())
+			var durationStr string
+			if totalSeconds >= 3600 {
+				hours := totalSeconds / 3600
+				minutes := (totalSeconds % 3600) / 60
+				seconds := totalSeconds % 60
+				durationStr = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+			} else {
+				minutes := totalSeconds / 60
+				seconds := totalSeconds % 60
+				durationStr = fmt.Sprintf("%02d:%02d", minutes, seconds)
+			}
+
+			fmt.Printf("Power: %4dW, Cadence: %3drpm, Speed: %5.1f%s, Distance: %5.1f%s, Duration: %s\r",
 				data.Power, data.Cadence, data.Speed, speedUnit,
-				data.Distance, distanceUnit)
+				data.Distance, distanceUnit, durationStr)
 		}
 	})
 	if err != nil {
