@@ -89,7 +89,7 @@ func ConnectToTrainer() (*bluetooth.Device, error) {
 	return &device, nil
 }
 
-func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, handler TelemetryHandler, unitSystem string) error {
+func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem string, handler TelemetryHandler) error {
 	services, err := dev.DiscoverServices(nil)
 	utils.Must("discover services", err)
 
