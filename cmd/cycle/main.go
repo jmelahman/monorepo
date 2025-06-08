@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/jmelahman/cycle-cli/ble"
+	"github.com/jmelahman/cycle-cli/ui"
 	"github.com/jmelahman/cycle-cli/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -51,49 +51,62 @@ func run(cmd *cobra.Command, args []string) {
 
 	if debugMode {
 		log.SetLevel(log.DebugLevel)
-		fmt.Println("🐞 Debug mode enabled")
+		log.Debug("Debug mode enabled")
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	fmt.Printf("Using %s units\n", unitSystem)
+	// Create UI
+	appUI := ui.NewUI(unitSystem)
 
-	fmt.Println("🔍 Scanning for trainer...")
+	// Start UI in a separate goroutine
+	go func() {
+		if err := appUI.Start(); err != nil {
+			log.Fatalf("❌ UI error: %v", err)
+		}
+	}()
+
+	appUI.UpdateStatus("🔍 Scanning for trainer...")
 	device, err := ble.ConnectToTrainer()
 	if err != nil {
+		appUI.UpdateStatus("❌ Connection failed: %v", err)
+		time.Sleep(2 * time.Second)
+		appUI.Stop()
 		log.Fatalf("❌ Connection failed: %v", err)
 	}
 	defer device.Disconnect()
 
+	appUI.UpdateStatus("✅ Connected to trainer")
+
+	// Update resistance display
+	if resistanceLevel != 0 {
+		appUI.UpdateResistance(uint8(resistanceLevel))
+	}
+
 	state := ble.Telemetry{}
-	startTime := time.Now()
 
 	err = ble.SubscribeToMetrics(device, state, func(data ble.Telemetry) {
-		elapsed := time.Since(startTime)
-		totalSeconds := int(elapsed.Seconds())
-
-		if totalSeconds >= 3600 {
-			hours := totalSeconds / 3600
-			minutes := (totalSeconds % 3600) / 60
-			seconds := totalSeconds % 60
-			fmt.Printf("Power: %4dW  Cadence: %3drpm  Duration: %02d:%02d:%02d\r", data.Power, data.Cadence, hours, minutes, seconds)
-		} else {
-			minutes := totalSeconds / 60
-			seconds := totalSeconds % 60
-			fmt.Printf("Power: %4dW  Cadence: %3drpm  Duration: %02d:%02d\r\nSpeed: %.2f  Distance: %.2f\r", data.Power, data.Cadence, minutes, seconds, data.Speed, data.Distance)
-		}
+		appUI.UpdateTelemetry(data)
 	})
 	if err != nil {
+		appUI.UpdateStatus("❌ Failed to subscribe: %v", err)
+		time.Sleep(2 * time.Second)
+		appUI.Stop()
 		log.Fatalf("❌ Failed to subscribe: %v", err)
 	}
 
 	if resistanceLevel != 0 {
 		err := ble.SetResistance(device, uint8(resistanceLevel))
-		utils.Must("set trainer resistance", err)
+		if err != nil {
+			appUI.UpdateStatus("❌ Failed to set resistance: %v", err)
+		} else {
+			appUI.UpdateStatus("✅ Resistance set to %d%%", resistanceLevel)
+		}
 	}
 
+	// Keep the main goroutine alive
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 
