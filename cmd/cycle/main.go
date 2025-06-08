@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -65,7 +66,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	// Create a channel to signal when to stop
 	stop := make(chan struct{})
-	
+
 	var appUI *ui.UI
 	if !headlessMode {
 		// Create UI
@@ -79,7 +80,7 @@ func run(cmd *cobra.Command, args []string) {
 			// Signal that UI has exited
 			close(stop)
 		}()
-		
+
 		appUI.UpdateStatus("🔍 Scanning for trainer...")
 	} else {
 		log.Info("Running in headless mode")
@@ -98,7 +99,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	if !headlessMode {
 		appUI.UpdateStatus("✅ Connected to trainer")
-		
+
 		// Update resistance display
 		if resistanceLevel != 0 {
 			appUI.UpdateResistance(uint8(resistanceLevel))
@@ -119,7 +120,7 @@ func run(cmd *cobra.Command, args []string) {
 				speedUnit = "mph"
 				distanceUnit = "mi"
 			}
-			log.Infof("Power: %dW, Cadence: %drpm, Speed: %.1f%s, Distance: %.1f%s", 
+			fmt.Printf("Power: %4dW, Cadence: %3drpm, Speed: %3.1f%s, Distance: %3.1f%s\r",
 				data.Power, data.Cadence, data.Speed, speedUnit,
 				data.Distance, distanceUnit)
 		}
@@ -158,7 +159,7 @@ func run(cmd *cobra.Command, args []string) {
 		// Set up a signal handler to catch Ctrl+C
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-		
+
 		log.Info("Press Ctrl+C to exit")
 		<-sigChan
 		log.Info("Exiting...")
