@@ -88,7 +88,7 @@ func run(cmd *cobra.Command, args []string) {
 
 		appUI.UpdateStatus("🔍 Scanning for trainer...")
 	} else {
-		log.Info("Running in headless mode")
+		log.Info("🎃 Running in headless mode")
 		log.Info("🔍 Scanning for trainer...")
 	}
 	device, err := ble.ConnectToTrainer()
