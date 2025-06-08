@@ -31,7 +31,7 @@ func init() {
 	RootCmd.Flags().BoolP("debug", "d", false, "Enable debug mode (default: true)")
 	RootCmd.Flags().StringP("unit", "u", "imperial", "Unit system (metric or imperial)")
 	RootCmd.Flags().BoolP("headless", "H", false, "Run in headless mode without UI")
-	RootCmd.Flags().IntP("ftp", "f", 0, "Functional Threshold Power (FTP) in watts")
+	RootCmd.Flags().IntP("ftp", "f", 230, "Functional Threshold Power (FTP) in watts")
 }
 
 func run(cmd *cobra.Command, args []string) {

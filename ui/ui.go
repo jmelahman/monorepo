@@ -130,7 +130,7 @@ func (ui *UI) Stop() {
 }
 
 // UpdateStatus updates the status message
-func (ui *UI) UpdateStatus(format string, args ...interface{}) {
+func (ui *UI) UpdateStatus(format string, args ...any) {
 	ui.statusBox.SetText(fmt.Sprintf(format, args...))
 }
 
@@ -144,7 +144,7 @@ func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 			color := "white" // Default color
 
 			if powerPercentage < 60 {
-				color = "grey" // Zone 1: Recovery
+				color = "white" // Zone 1: Recovery
 			} else if powerPercentage <= 75 {
 				color = "blue" // Zone 2: Endurance
 			} else if powerPercentage <= 89 {
