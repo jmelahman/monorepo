@@ -95,7 +95,7 @@ func ConnectToTrainer() (*bluetooth.Device, error) {
 	utils.Must("scan", adapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
 		name := result.LocalName()
 		if isTrainerName(name) {
-			fmt.Printf("✅ Found trainer: %s [%s]\n", name, result.Address.String())
+			log.Infof("✅ Found trainer: %s [%s]\n", name, result.Address.String())
 			trainerAddr = result.Address
 			adapter.StopScan()
 		}

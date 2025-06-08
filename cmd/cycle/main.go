@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"os"
 	"bufio"
 	"fmt"
 	"os"
@@ -11,12 +9,13 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"golang.org/x/term"
 	"github.com/jmelahman/cycle-cli/ble"
 	"github.com/jmelahman/cycle-cli/ui"
 	"github.com/jmelahman/cycle-cli/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
+	"tinygo.org/x/bluetooth"
 )
 
 const (
@@ -32,7 +31,7 @@ var RootCmd = &cobra.Command{
 }
 
 // handleResistanceChange adjusts the resistance level and updates UI or logs accordingly.
-func handleResistanceChange(device *ble.Device, currentLevel *int, change int, appUI *ui.UI, headless bool) {
+func handleResistanceChange(device *bluetooth.Device, currentLevel *int, change int, appUI *ui.UI, headless bool) {
 	newLevel := *currentLevel + change
 	if newLevel < 0 {
 		newLevel = 0
@@ -152,6 +151,7 @@ func run(cmd *cobra.Command, args []string) {
 	}
 	defer device.Disconnect()
 
+	var inputChan chan rune
 	currentResistanceLevel := resistanceLevel // Initialize with the flag value
 
 	if !headlessMode {
@@ -181,10 +181,6 @@ func run(cmd *cobra.Command, args []string) {
 		})
 
 	} else { // Headless mode
-		log.Info("✅ Connected to trainer")
-		log.Info("Press '(' to decrease, ')' to increase resistance. Press 'q' or Ctrl+C to quit.")
-
-		var inputChan chan rune
 		var oldState *term.State
 		var errTerm error
 
@@ -244,7 +240,7 @@ func run(cmd *cobra.Command, args []string) {
 				durationStr = fmt.Sprintf("%02d:%02d", minutes, seconds)
 			}
 
-			fmt.Printf("\rPower: %4dW, Cadence: %3drpm, Speed: %5.1f%s, Distance: %5.1f%s, Duration: %s",
+			fmt.Printf("Power: %4dW, Cadence: %3drpm, Speed: %5.1f%s, Distance: %5.1f%s, Duration: %s\r",
 				data.Power, data.Cadence, data.Speed, speedUnit,
 				data.Distance, distanceUnit, durationStr)
 		}
@@ -303,7 +299,6 @@ func run(cmd *cobra.Command, args []string) {
 				case ')':
 					handleResistanceChange(device, &currentResistanceLevel, +5, nil, true)
 				case 'q', 3: // 'q' or Ctrl+C (ETX)
-					fmt.Println("\n👋 Exiting via 'q' or Ctrl+C...")
 					shouldExit = true
 				}
 				if shouldExit {
@@ -312,7 +307,7 @@ func run(cmd *cobra.Command, args []string) {
 			}
 		}
 		// Terminal state is restored by defer if it was set to raw.
-		fmt.Println("\n👋 Exiting headless mode...")
+		fmt.Println("\n👋 Exiting...\r")
 	}
 }
 
