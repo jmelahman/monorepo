@@ -34,13 +34,24 @@ const (
 	metersToMiles            = 0.000621371 // 1.0 / 1609.34
 )
 
+var (
+	HeartRateUUID               = MustParseUUID("180D")
+	CyclingSpeedCadenceUUID     = MustParseUUID("1816")
+	CyclingPowerMeasurementUUID = MustParseUUID("2A63")
+	HeartRateMeasurementUUID    = MustParseUUID("2A37")
+	CSCMeasurementUUID          = MustParseUUID("2A5B")
+	FitnessMachineUUID          = MustParseUUID("2ADA")
+	IndoorBikeDataUUID          = MustParseUUID("2AD2")
+	FitnessControlPointUUID     = MustParseUUID("2AD9")
+)
+
 var adapter = bluetooth.DefaultAdapter
 
 // SetResistance sets the trainer's resistance level (0-100%)
 func SetResistance(dev *bluetooth.Device, level uint8) error {
 	log.Debugf("Setting resistance to %d%%", level)
 
-	services, err := dev.DiscoverServices([]bluetooth.UUID{bluetooth.FitnessMachineUUID})
+	services, err := dev.DiscoverServices([]bluetooth.UUID{FitnessMachineUUID})
 	if err != nil {
 		return fmt.Errorf("could not discover services: %w", err)
 	}
@@ -50,7 +61,7 @@ func SetResistance(dev *bluetooth.Device, level uint8) error {
 	}
 	srv := services[0]
 
-	chars, err := srv.DiscoverCharacteristics([]bluetooth.UUID{bluetooth.FitnessMachineControlPointUUID})
+	chars, err := srv.DiscoverCharacteristics([]bluetooth.UUID{FitnessControlPointUUID})
 	if err != nil {
 		return fmt.Errorf("could not discover characteristics: %w", err)
 	}
@@ -111,19 +122,19 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 		}
 		for _, char := range chars {
 			switch char.UUID() {
-			case bluetooth.IndoorBikeDataUUID:
+			case IndoorBikeDataUUID:
 				log.Debug("Registered: Indoor Bike Data")
 				bikeChar = &char
-			case bluetooth.CSCMeasurementUUID:
+			case CSCMeasurementUUID:
 				log.Debug("Registered: Cycling Speed and Cadence (CSC) Measurement")
 				cscChar = &char
-			case bluetooth.FitnessMachineStatusUUID:
+			case FitnessMachineUUID:
 				log.Debug("Registered: Fitness Machine Status")
 				fitnessChar = &char
-			case bluetooth.HeartRateMeasurementUUID:
+			case HeartRateMeasurementUUID:
 				log.Debug("Registered: Heart Rate Measurement")
 				hrChar = &char
-			case bluetooth.CyclingPowerMeasurementUUID:
+			case CyclingPowerMeasurementUUID:
 				log.Debug("Registered: Cycling Power Measurement")
 				powerChar = &char
 			}
@@ -252,4 +263,12 @@ func isTrainerName(name string) bool {
 		}
 	}
 	return false
+}
+
+func MustParseUUID(s string) bluetooth.UUID {
+	u, err := bluetooth.ParseUUID(fmt.Sprintf("0000%s-0000-1000-8000-00805f9b34fb", s))
+	if err != nil {
+		panic("invalid UUID: " + s)
+	}
+	return u
 }
