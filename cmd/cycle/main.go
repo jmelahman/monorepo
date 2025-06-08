@@ -137,7 +137,7 @@ func run(cmd *cobra.Command, args []string) {
 				durationStr = fmt.Sprintf("%02d:%02d", minutes, seconds)
 			}
 
-			fmt.Printf("Power: %4dW, Cadence: %3drpm, Speed: %5.1f%s, Distance: %5.1f%s, Duration: %s\r",
+			fmt.Printf("\rPower: %4dW, Cadence: %3drpm, Speed: %5.1f%s, Distance: %5.1f%s, Duration: %s",
 				data.Power, data.Cadence, data.Speed, speedUnit,
 				data.Distance, distanceUnit, durationStr)
 		}
@@ -177,9 +177,8 @@ func run(cmd *cobra.Command, args []string) {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-		log.Info("Press Ctrl+C to exit")
 		<-sigChan
-		log.Info("Exiting...")
+		fmt.Println("\n👋 Exiting...")
 	}
 }
 
