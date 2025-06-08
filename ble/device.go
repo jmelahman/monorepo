@@ -35,8 +35,6 @@ const (
 )
 
 var (
-	HeartRateUUID               = MustParseUUID("180D")
-	CyclingSpeedCadenceUUID     = MustParseUUID("1816")
 	CyclingPowerMeasurementUUID = MustParseUUID("2A63")
 	HeartRateMeasurementUUID    = MustParseUUID("2A37")
 	CSCMeasurementUUID          = MustParseUUID("2A5B")
