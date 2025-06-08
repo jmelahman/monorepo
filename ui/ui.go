@@ -140,13 +140,21 @@ func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 		// Update power
 		powerStr := ""
 		if ui.ftp > 0 {
-			color := "white" // Default color if exactly at FTP, or can be yellow
-			if data.Power < int16(ui.ftp) {
-				color = "green"
-			} else if data.Power == int16(ui.ftp) {
-				color = "yellow"
-			} else if data.Power > int16(ui.ftp) {
-				color = "red"
+			powerPercentage := float64(data.Power) / float64(ui.ftp) * 100.0
+			color := "white" // Default color
+
+			if powerPercentage < 60 {
+				color = "grey" // Zone 1: Recovery
+			} else if powerPercentage <= 75 {
+				color = "blue" // Zone 2: Endurance
+			} else if powerPercentage <= 89 {
+				color = "green" // Zone 3: Tempo
+			} else if powerPercentage <= 104 {
+				color = "yellow" // Zone 4: Threshold
+			} else if powerPercentage <= 118 {
+				color = "orange" // Zone 5: VO2 Max
+			} else {
+				color = "red" // Zone 6: Anaerobic
 			}
 			powerStr = fmt.Sprintf("[%s]%d[white] W", color, data.Power)
 		} else {
