@@ -113,11 +113,15 @@ func run(cmd *cobra.Command, args []string) {
 		if !headlessMode {
 			appUI.UpdateTelemetry(data)
 		} else {
+			speedUnit := "km/h"
+			distanceUnit := "km"
+			if unitSystem == imperialSystemName {
+				speedUnit = "mph"
+				distanceUnit = "mi"
+			}
 			log.Infof("Power: %dW, Cadence: %drpm, Speed: %.1f%s, Distance: %.1f%s", 
-				data.Power, data.Cadence, data.Speed, 
-				unitSystem == imperialSystemName ? "mph" : "km/h",
-				data.Distance, 
-				unitSystem == imperialSystemName ? "mi" : "km")
+				data.Power, data.Cadence, data.Speed, speedUnit,
+				data.Distance, distanceUnit)
 		}
 	})
 	if err != nil {
