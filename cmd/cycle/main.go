@@ -63,7 +63,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	if debugMode {
 		log.SetLevel(log.DebugLevel)
-		log.Debug("Debug mode enabled")
+		log.Debug("🐞 Debug mode enabled")
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
