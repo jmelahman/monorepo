@@ -95,14 +95,6 @@ func NewUI(unitSystem string, ftp int) *UI {
 		AddItem(resistanceBox, 1, 2, 1, 1, 0, 0, false). // Resistance
 		AddItem(statusBox, 2, 0, 1, 3, 0, 0, false)      // Status
 
-	// Set up key handling
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEscape || event.Rune() == 'q' {
-			app.Stop()
-		}
-		return event
-	})
-
 	return &UI{
 		app:           app,
 		grid:          grid,
@@ -127,6 +119,12 @@ func (ui *UI) Start() error {
 // Stop stops the UI
 func (ui *UI) Stop() {
 	ui.app.Stop()
+}
+
+// SetInputCapture sets a custom input capture function for the application.
+// This allows the main application logic to define keybindings.
+func (ui *UI) SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKey) {
+	ui.app.SetInputCapture(capture)
 }
 
 // UpdateStatus updates the status message

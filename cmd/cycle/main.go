@@ -102,13 +102,66 @@ func run(cmd *cobra.Command, args []string) {
 	}
 	defer device.Disconnect()
 
+	currentResistanceLevel := resistanceLevel // Initialize with the flag value
+
 	if !headlessMode {
 		appUI.UpdateStatus("✅ Connected to trainer")
 
-		// Update resistance display
-		if resistanceLevel != 0 {
-			appUI.UpdateResistance(uint8(resistanceLevel))
+		// Update resistance display initially if a value was provided
+		if currentResistanceLevel != 0 {
+			appUI.UpdateResistance(uint8(currentResistanceLevel))
 		}
+
+		// Set up key handling for UI
+		appUI.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			if event.Key() == tcell.KeyEscape || (event.Key() == tcell.KeyRune && event.Rune() == 'q') {
+				appUI.Stop()
+				return nil
+			}
+
+			if event.Key() == tcell.KeyRune {
+				switch event.Rune() {
+				case '(': // Decrease resistance
+					newLevel := currentResistanceLevel - 5
+					if newLevel < 0 {
+						newLevel = 0
+					}
+					if newLevel != currentResistanceLevel {
+						currentResistanceLevel = newLevel
+						go func(levelToSet uint8) {
+							appUI.UpdateStatus(fmt.Sprintf("Setting resistance to %d%%...", levelToSet))
+							if err := ble.SetResistance(device, levelToSet); err != nil {
+								appUI.UpdateStatus(fmt.Sprintf("❌ Failed to set resistance: %v", err))
+								log.Errorf("Failed to set resistance: %v", err)
+							} else {
+								appUI.UpdateResistance(levelToSet)
+								appUI.UpdateStatus(fmt.Sprintf("✅ Resistance set to %d%%", levelToSet))
+							}
+						}(uint8(currentResistanceLevel))
+					}
+				case ')': // Increase resistance
+					newLevel := currentResistanceLevel + 5
+					if newLevel > 100 {
+						newLevel = 100
+					}
+					if newLevel != currentResistanceLevel {
+						currentResistanceLevel = newLevel
+						go func(levelToSet uint8) {
+							appUI.UpdateStatus(fmt.Sprintf("Setting resistance to %d%%...", levelToSet))
+							if err := ble.SetResistance(device, levelToSet); err != nil {
+								appUI.UpdateStatus(fmt.Sprintf("❌ Failed to set resistance: %v", err))
+								log.Errorf("Failed to set resistance: %v", err)
+							} else {
+								appUI.UpdateResistance(levelToSet)
+								appUI.UpdateStatus(fmt.Sprintf("✅ Resistance set to %d%%", levelToSet))
+							}
+						}(uint8(currentResistanceLevel))
+					}
+				}
+			}
+			return event
+		})
+
 	} else {
 		log.Info("✅ Connected to trainer")
 	}
