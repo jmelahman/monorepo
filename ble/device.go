@@ -38,32 +38,6 @@ var adapter = bluetooth.DefaultAdapter
 
 // SetResistance sets the trainer's resistance level (0-100%)
 func SetResistance(dev *bluetooth.Device, level uint8) error {
-	services, err := dev.DiscoverServices([]bluetooth.UUID{
-		bluetooth.NewUUID([16]byte{0x18, 0x26, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB, 0x00, 0x00}), // FTMS Service
-	})
-	if err != nil {
-		return fmt.Errorf("discover services: %w", err)
-	}
-
-	for _, srv := range services {
-		chars, err := srv.DiscoverCharacteristics([]bluetooth.UUID{
-			bluetooth.NewUUID([16]byte{0xAD, 0xD2, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB, 0x00, 0x00}), // Resistance Level Char
-		})
-		if err != nil {
-			return fmt.Errorf("discover characteristics: %w", err)
-		}
-
-		for _, char := range chars {
-			data := make([]byte, 2)
-			binary.LittleEndian.PutUint16(data, uint16(level))
-			_, err := char.WriteWithoutResponse(data)
-			if err != nil {
-				return fmt.Errorf("write resistance: %w", err)
-			}
-			return nil
-		}
-	}
-	return fmt.Errorf("resistance control characteristic not found")
 }
 
 // ConnectToTrainer scans for a trainer device and connects to it.
