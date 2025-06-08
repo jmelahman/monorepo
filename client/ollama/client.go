@@ -9,7 +9,6 @@ import (
 
 	"github.com/jmelahman/agent/client/base"
 	"github.com/jmelahman/agent/utils"
-	"github.com/ollama/ollama"
 	ollamaapi "github.com/ollama/ollama/api"
 	log "github.com/sirupsen/logrus"
 )

@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/jmelahman/agent/client/base"
-	"github.com/jmelahman/agent/utils"
 	openrouter "github.com/revrost/go-openrouter"
 	log "github.com/sirupsen/logrus"
 )
@@ -69,8 +68,7 @@ func (c Client) RunInference(
 	input := make([]openrouter.ChatCompletionMessage, len(messages))
 	for i, m := range messages {
 		content, err := c.convertContent(m.Content[0])
-		utils.Must("convert message content", err)
-		log.Debugf("Current message: %s", content.Text)
+		log.Error("convert message content", err)
 		input[i] = openrouter.ChatCompletionMessage{
 			Role:    m.Role,
 			Content: content,
