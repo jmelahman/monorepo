@@ -38,6 +38,41 @@ var adapter = bluetooth.DefaultAdapter
 
 // SetResistance sets the trainer's resistance level (0-100%)
 func SetResistance(dev *bluetooth.Device, level uint8) error {
+	log.Debugf("Setting resistance to %d%%", level)
+
+	services, err := dev.DiscoverServices([]bluetooth.UUID{bluetooth.FitnessMachineUUID})
+	if err != nil {
+		return fmt.Errorf("could not discover services: %w", err)
+	}
+
+	if len(services) == 0 {
+		return fmt.Errorf("could not find Fitness Machine service")
+	}
+	srv := services[0]
+
+	chars, err := srv.DiscoverCharacteristics([]bluetooth.UUID{bluetooth.FitnessMachineControlPointUUID})
+	if err != nil {
+		return fmt.Errorf("could not discover characteristics: %w", err)
+	}
+
+	if len(chars) == 0 {
+		return fmt.Errorf("could not find Fitness Machine Control Point characteristic")
+	}
+	controlPointChar := chars[0]
+
+	// FTMS Opcode for "Set Target Resistance Level" is 0x07
+	// Resistance level is a uint8, where 0-100% is represented as 0-200 (0.5% resolution)
+	resistanceValue := level * 2
+	payload := []byte{0x07, resistanceValue}
+
+	log.Debugf("Writing to control point: Opcode 0x07, Value %d", resistanceValue)
+	_, err = controlPointChar.WriteWithoutResponse(payload)
+	if err != nil {
+		return fmt.Errorf("could not write resistance level: %w", err)
+	}
+
+	log.Infof("Resistance set to %d%%", level)
+	return nil
 }
 
 // ConnectToTrainer scans for a trainer device and connects to it.
