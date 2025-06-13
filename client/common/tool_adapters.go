@@ -20,10 +20,10 @@ func convertStringSliceToInterface(strs []string) []interface{} {
 
 // ToolFunctionProperty defines the expected structure for Ollama's tool function properties
 type ToolFunctionProperty struct {
-	Type        string                 `json:"type"`
-	Items       map[string]interface{} `json:"items,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Enum        []interface{}          `json:"enum,omitempty"`
+	Type        string `json:"type"`
+	Items       any    `json:"items,omitempty"`  // Changed from map[string]interface{}
+	Description string `json:"description"`      // Removed omitempty
+	Enum        []any  `json:"enum,omitempty"`   // Changed from []interface{}
 }
 
 // AdaptBaseToolToOllamaTool converts a base.ToolDefinition to an ollama.Tool.
