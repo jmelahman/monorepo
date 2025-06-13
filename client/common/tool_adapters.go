@@ -1,12 +1,10 @@
 package common
 
 import (
-	"fmt"
-
 	"github.com/jmelahman/agent/client/base"
-	"github.com/revrost/go-openrouter/jsonschema"
 	ollama "github.com/ollama/ollama/api"
 	openrouter "github.com/revrost/go-openrouter"
+	"github.com/revrost/go-openrouter/jsonschema"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,10 +15,10 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 	// Define the anonymous struct type that ollama.ToolFunction.Parameters expects.
 	// This structure is based on the ollama API's internal representation.
 	type OllamaToolParameters struct {
-		Type       string                                       `json:"type"`
-		Defs       any                                          `json:"$defs,omitempty"` // Not currently mapped from jsonschema.Definition
-		Items      any                                          `json:"items,omitempty"` // For schema of type array
-		Required   []string                                     `json:"required,omitempty"`
+		Type       string                                 `json:"type"`
+		Defs       any                                    `json:"$defs,omitempty"` // Not currently mapped from jsonschema.Definition
+		Items      any                                    `json:"items,omitempty"` // For schema of type array
+		Required   []string                               `json:"required,omitempty"`
 		Properties map[string]ollama.ToolFunctionProperty `json:"properties,omitempty"`
 	}
 
@@ -93,17 +91,16 @@ func AdaptBaseToolToOpenRouterTool(td base.ToolDefinition) (openrouter.Tool, err
 	// The jsonschema.Definition zero value might not directly translate to this,
 	// so ensure tools define a minimal schema if they have no params.
 	// For now, we pass it directly.
-	
+
 	// If InputSchema is effectively empty (zero struct), provide a default OpenRouter schema for no params.
 	var paramsSchema any = td.InputSchema
 	if td.InputSchema.Type == "" && len(td.InputSchema.Properties) == 0 && td.InputSchema.Items == nil && len(td.InputSchema.Enum) == 0 {
 		log.Debugf("Tool '%s' has an empty InputSchema, providing default empty object schema for OpenRouter.", td.Name)
 		paramsSchema = jsonschema.Definition{
-			Type: jsonschema.Object,
+			Type:       jsonschema.Object,
 			Properties: make(map[string]jsonschema.Definition),
 		}
 	}
-
 
 	f := openrouter.FunctionDefinition{
 		Name:        td.Name,
