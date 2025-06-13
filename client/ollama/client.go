@@ -12,63 +12,33 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Default Ollama host and model
 const (
-	defaultOllamaHost  = "http://localhost:11434"
-	defaultOllamaModel = "llama3:latest" // A model known to support tools; adjust if necessary
+	defaultOllamaModel = "qwen3:0.6b"
 )
 
 type Client struct {
-	ollamaClient *ollama.Client
-	Model        string
+	Client *ollama.Client
+	Model  string
 }
 
 // NewClient creates and configures a new Ollama client.
 // It uses OLLAMA_HOST and OLLAMA_MODEL environment variables if set,
 // otherwise defaults to localhost and a predefined model.
-func NewClient() *Client {
-	host := os.Getenv("OLLAMA_HOST")
-	if host == "" {
-		host = defaultOllamaHost
-	}
-
-	oclient, err := ollama.New(ollama.WithHost(host))
-	if err != nil {
-		return oclient, err
-	}
-
-	// Check if the Ollama server is responding
-	// Note: Version() is not a method on ollama.Client.
-	// A simple request like List or Heartbeat can be used.
-	// Let's use List as a simple connectivity check.
-	_, err = oclient.List(context.Background())
-	if err != nil {
-		log.Warnf("Ollama server at %s may not be responding or an error occurred: %v. Ensure Ollama is running and OLLAMA_HOST is set correctly.", host, err)
-		// Depending on desired behavior, could exit or allow to proceed and fail later.
-		// utils.Must will panic, so if we want to proceed, we should just log.
-		// For now, let's be strict as per utils.Must usage elsewhere.
-		utils.Must(fmt.Sprintf("connect to Ollama server at %s", host), err)
-	}
-	log.Infof("Successfully connected to Ollama at %s", host)
-
+func NewClient() (*Client, error) {
 	model := os.Getenv("OLLAMA_MODEL")
 	if model == "" {
 		model = defaultOllamaModel
 	}
 
-	// Optional: Check if the model exists locally.
-	_, err = oclient.Show(context.Background(), &ollama.ShowRequest{Name: model})
+	client, err := ollama.ClientFromEnvironment()
 	if err != nil {
-		log.Warnf("Model '%s' not found locally or Ollama error: %v. Ensure the model is pulled using 'ollama pull %s'.", model, err, model)
-		// Proceeding, assuming the model might be valid but not yet pulled, or an alias.
-	} else {
-		log.Infof("Using Ollama model: %s", model)
+		return &Client{}, err
 	}
 
 	return &Client{
-		ollamaClient: oclient,
-		Model:        model,
-	}
+		Client: client,
+		Model:  model,
+	}, nil
 }
 
 func (c *Client) GetModel() string {
@@ -153,7 +123,7 @@ func (c *Client) RunInference(
 		for _, tool := range tools {
 			apiTools = append(apiTools, ollama.Tool{
 				Type: "function",
-				Function: ollama.FunctionDefinition{
+				Function: ollama.ToolFunction{
 					Name:        tool.Name,
 					Description: tool.Description,
 					Parameters:  tool.InputSchema,
@@ -175,7 +145,7 @@ func (c *Client) RunInference(
 	}
 
 	var finalResponse ollama.ChatResponse
-	err := c.ollamaClient.Chat(ctx, &req, func(r ollama.ChatResponse) error {
+	err := c.Client.Chat(ctx, &req, func(r ollama.ChatResponse) error {
 		// For non-streaming, this callback is invoked once with the complete response.
 		finalResponse = r
 		return nil
@@ -207,7 +177,6 @@ func (c *Client) RunInference(
 				Input: tc.Function.Arguments, // json.RawMessage
 				Type:  "tool_use",
 			})
-			log.Debugf("Tool Call to Execute: Name: %s, Args: %s", tc.Function.Name, string(tc.Function.Arguments))
 		}
 	}
 	assistantMessage.Content = responseContentItems
