@@ -1,12 +1,22 @@
 package common
 
 import (
+	"encoding/json"
+
 	"github.com/jmelahman/agent/client/base"
 	ollama "github.com/ollama/ollama/api"
 	openrouter "github.com/revrost/go-openrouter"
 	"github.com/revrost/go-openrouter/jsonschema"
 	log "github.com/sirupsen/logrus"
 )
+
+// ToolFunctionProperty defines the expected structure for Ollama's tool function properties
+type ToolFunctionProperty struct {
+	Type        string                 `json:"type"`
+	Items       map[string]interface{} `json:"items,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Enum        []interface{}          `json:"enum,omitempty"`
+}
 
 // AdaptBaseToolToOllamaTool converts a base.ToolDefinition to an ollama.Tool.
 // It translates the jsonschema.Definition from base.ToolDefinition.InputSchema
@@ -19,7 +29,7 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 		Defs       any                             `json:"$defs,omitempty"` // Not currently mapped from jsonschema.Definition
 		Items      any                             `json:"items,omitempty"`  // For schema of type array
 		Required   []string                        `json:"required,omitempty"`
-		Properties map[string]ollama.ToolFunctionProperty `json:"properties,omitempty"`
+		Properties map[string]ToolFunctionProperty `json:"properties,omitempty"`
 	}
 
 	paramsForOllama := OllamaToolParameters{}
@@ -29,9 +39,9 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 
 	// If schemaDef is the zero value, treat as a tool with no parameters.
 	// Ollama expects type "object" and an empty properties map for this.
-	if schemaDef.Type == "" && len(schemaDef.Properties) == 0 && schemaDef.Items == nil {
+	if schemaDef.Type == "" && len(schemaDef.Properties) == 0 && schemaDef.Items == nil && len(schemaDef.Required) == 0 {
 		paramsForOllama.Type = "object"
-		paramsForOllama.Properties = make(map[string]ollama.ToolFunctionProperty)
+		paramsForOllama.Properties = make(map[string]ToolFunctionProperty)
 	} else {
 		paramsForOllama.Type = string(schemaDef.Type)
 		paramsForOllama.Required = schemaDef.Required
@@ -42,16 +52,18 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 			// This simplified conversion creates a map like {"type": "string"}.
 			// For complex item types, this part might need expansion.
 			itemDef := schemaDef.Items
-			paramsForOllama.Items = map[string]string{"type": string(itemDef.Type)}
+			paramsForOllama.Items = map[string]interface{}{
+				"type": string(itemDef.Type),
+			}
 			// If itemDef.Properties, itemDef.Enum etc. need to be mapped, add logic here.
 		}
 
 		if len(schemaDef.Properties) > 0 {
-			paramsForOllama.Properties = make(map[string]ollama.ToolFunctionProperty)
+			paramsForOllama.Properties = make(map[string]ToolFunctionProperty)
 			for name, propDef := range schemaDef.Properties {
 				// Convert jsonschema.DataType to string for Ollama
 				propType := string(propDef.Type)
-				ollamaProp := ollama.ToolFunctionProperty{
+				ollamaProp := ToolFunctionProperty{
 					Type:        propType,
 					Description: propDef.Description,
 					Enum:        propDef.Enum, // []interface{} to []any
@@ -61,15 +73,28 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 				if propDef.Type == jsonschema.Array && propDef.Items != nil {
 					itemSchema := propDef.Items
 					// Simplified item schema representation for property items.
-					ollamaProp.Items = map[string]string{"type": string(itemSchema.Type)}
+					ollamaProp.Items = map[string]interface{}{
+						"type": string(itemSchema.Type),
+					}
 					// If itemSchema.Properties, etc. for nested items need mapping, add here.
 				}
 				paramsForOllama.Properties[name] = ollamaProp
 			}
 		} else if paramsForOllama.Type == "object" {
 			// Ensure Properties is an empty map if type is object and no properties are defined.
-			paramsForOllama.Properties = make(map[string]ollama.ToolFunctionProperty)
+			paramsForOllama.Properties = make(map[string]ToolFunctionProperty)
 		}
+	}
+
+	// Marshal and unmarshal paramsForOllama to ensure it's a valid JSON structure
+	paramsJSON, err := json.Marshal(paramsForOllama)
+	if err != nil {
+		return ollama.Tool{}, err
+	}
+
+	var paramsInterface any
+	if err := json.Unmarshal(paramsJSON, &paramsInterface); err != nil {
+		return ollama.Tool{}, err
 	}
 
 	return ollama.Tool{
@@ -77,7 +102,7 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 		Function: ollama.ToolFunction{
 			Name:        td.Name,
 			Description: td.Description,
-			Parameters:  paramsForOllama,
+			Parameters:  paramsInterface,
 		},
 	}, nil
 }
