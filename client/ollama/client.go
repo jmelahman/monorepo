@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jmelahman/agent/client/base"
+	"github.com/jmelahman/agent/client/common" // Added import for common package
 	ollama "github.com/ollama/ollama/api"
 	log "github.com/sirupsen/logrus"
 )
@@ -129,29 +130,12 @@ func (c *Client) RunInference(
 	apiTools := []ollama.Tool{}
 	if len(tools) > 0 {
 		for _, tool := range tools {
-			// Assert tool.InputSchema to ollama.Parameters
-			parameters, ok := tool.InputSchema.(ollama.Parameters)
-			if !ok {
-				// If tool.InputSchema is nil and the tool expects no parameters,
-				// ollama.Parameters{} (zero value) might be acceptable.
-				// However, if it's non-nil but not ollama.Parameters, it's an issue.
-				if tool.InputSchema != nil {
-					log.Errorf("Tool '%s' has an InputSchema that is not of type ollama.Parameters. Actual type: %T. Skipping tool.", tool.Name, tool.InputSchema)
-					continue // Skip this tool
-				}
-				// If tool.InputSchema is nil, we pass an empty ollama.Parameters struct,
-				// assuming the tool takes no parameters.
-				parameters = ollama.Parameters{}
+			ollamaTool, err := common.AdaptBaseToolToOllamaTool(tool)
+			if err != nil {
+				log.Errorf("Failed to adapt tool '%s' for Ollama: %v. Skipping tool.", tool.Name, err)
+				continue
 			}
-
-			apiTools = append(apiTools, ollama.Tool{
-				Type: "function",
-				Function: ollama.ToolFunction{
-					Name:        tool.Name,
-					Description: tool.Description,
-					Parameters:  parameters,
-				},
-			})
+			apiTools = append(apiTools, ollamaTool)
 		}
 	}
 

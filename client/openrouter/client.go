@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jmelahman/agent/client/base"
+	"github.com/jmelahman/agent/client/common" // Added import for common package
 	openrouter "github.com/revrost/go-openrouter"
 	log "github.com/sirupsen/logrus"
 )
@@ -68,24 +69,21 @@ func (c Client) RunInference(
 	input := make([]openrouter.ChatCompletionMessage, len(messages))
 	for i, m := range messages {
 		content, err := c.convertContent(m.Content[0])
-		log.Error("convert message content", err)
+		log.Error("convert message content", err) // This log seems to always show nil error, consider removing or changing level if not an actual error.
 		input[i] = openrouter.ChatCompletionMessage{
 			Role:    m.Role,
 			Content: content,
 		}
 	}
+
 	openrouterTools := []openrouter.Tool{}
 	for _, tool := range tools {
-		f := openrouter.FunctionDefinition{
-			Name:        tool.Name,
-			Description: tool.Description,
-			Parameters:  tool.InputSchema,
+		orTool, err := common.AdaptBaseToolToOpenRouterTool(tool)
+		if err != nil {
+			log.Errorf("Failed to adapt tool '%s' for OpenRouter: %v. Skipping tool.", tool.Name, err)
+			continue
 		}
-		t := openrouter.Tool{
-			Type:     openrouter.ToolTypeFunction,
-			Function: &f,
-		}
-		openrouterTools = append(openrouterTools, t)
+		openrouterTools = append(openrouterTools, orTool)
 	}
 
 	resp, err := c.Client.CreateChatCompletion(
