@@ -10,7 +10,6 @@ import (
 	"github.com/jmelahman/agent/client/ollama"
 	"github.com/jmelahman/agent/client/openrouter"
 	"github.com/jmelahman/agent/tools"
-	"github.com/jmelahman/agent/utils"
 	log "github.com/sirupsen/logrus"
 )
 
