@@ -154,14 +154,18 @@ func main() {
 		Foreground(tcell.ColorBlack.TrueColor()).
 		Bold(true)
 	defaultStyle := baseStyle.Foreground(tcell.ColorDefault)
-	selectedStyle := baseStyle.Background(tcell.ColorGray)
-	activatedStyle := baseStyle.Background(tcell.ColorSilver)
-	selectedActivatedStyle := baseStyle.Background(tcell.ColorDarkGray)
+	selectedStyle := baseStyle.Foreground(tcell.ColorGray)
+	selectedActivatedStyle := baseStyle.Foreground(tcell.ColorLightGray)
 
 	var shuffleButton, submitButton, deselectButton *tview.Button
 
 	resetSubmitButton := func() {
-		submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle).SetLabel("Submit")
+		if len(gameState.selectedCards) != 4 {
+			submitButton.SetStyle(selectedActivatedStyle).SetActivatedStyle(selectedActivatedStyle)
+		} else {
+			submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
+		}
+		submitButton.SetLabel("Submit")
 	}
 
 	setFocus := func(r, c int) {
@@ -185,7 +189,6 @@ func main() {
 
 	handleClick := func(r, c int) func() {
 		return func() {
-			resetSubmitButton()
 			previousButton := findButton(focusedRow, focusedCol).
 				SetStyle(defaultStyle).
 				SetActivatedStyle(defaultStyle)
@@ -204,13 +207,13 @@ func main() {
 				return
 			}
 			setFocus(r, c)
+			resetSubmitButton()
 		}
 	}
 
 	handleDeselect := func() {
 		setFocus(4, 3)
-		resetSubmitButton()
-		deselectButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
+		deselectButton.SetActivatedStyle(selectedStyle)
 		for cardContent := range gameState.selectedCards {
 			delete(gameState.selectedCards, cardContent)
 		}
@@ -219,12 +222,12 @@ func main() {
 				buttons[i][j].SetStyle(defaultStyle)
 			}
 		}
+		resetSubmitButton()
 	}
 
 	handleShuffle := func() {
 		setFocus(4, 0)
-		resetSubmitButton()
-		shuffleButton.SetStyle(defaultStyle).SetActivatedStyle(activatedStyle)
+		shuffleButton.SetActivatedStyle(selectedStyle)
 		// Flatten the buttons array for rows greater than currentMatchRow into a slice for shuffling
 		var flatButtons []*tview.Button
 		for i := gameState.currentMatchRow; i < 4; i++ {
@@ -249,6 +252,7 @@ func main() {
 				buttons[i][j] = button
 			}
 		}
+		resetSubmitButton()
 	}
 
 	handleSubmit := func() {
@@ -356,6 +360,7 @@ func main() {
 				SetSelectedFunc(handleClick(gRow, gCol)).
 				SetStyle(defaultStyle).
 				SetActivatedStyle(defaultStyle)
+			button.SetBorder(true).SetBorderColor(tcell.ColorDarkGray)
 			buttons[gRow][gCol] = button
 			grid.AddItem(button, gRow, gCol, 1, 1, 0, 0, false)
 		}
@@ -364,30 +369,36 @@ func main() {
 	shuffleButton = tview.NewButton("Shuffle").
 		SetSelectedFunc(handleShuffle).
 		SetStyle(defaultStyle).
-		SetActivatedStyle(activatedStyle)
+		SetActivatedStyle(selectedStyle)
 
 	submitButton = tview.NewButton("Submit").
 		SetSelectedFunc(handleSubmit).
-		SetStyle(defaultStyle).
-		SetActivatedStyle(defaultStyle)
+		SetStyle(selectedActivatedStyle).
+		SetActivatedStyle(selectedActivatedStyle)
 
 	deselectButton = tview.NewButton("Deselect All").
 		SetSelectedFunc(handleDeselect).
 		SetStyle(defaultStyle).
-		SetActivatedStyle(activatedStyle)
+		SetActivatedStyle(selectedStyle)
 
 	grid.AddItem(shuffleButton, 4, 0, 1, 1, 0, 0, false)
 	grid.AddItem(submitButton, 4, 1, 1, 2, 0, 0, false)
 	grid.AddItem(deselectButton, 4, 3, 1, 1, 0, 0, false)
 
 	grid.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		resetSubmitButton()
 		previousButton := findButton(focusedRow, focusedCol).SetActivatedStyle(defaultStyle)
 		if focusedRow < 4 && gameState.selectedCards[previousButton.GetLabel()] {
 			previousButton.SetStyle(selectedStyle)
+		} else if focusedRow == 4 {
+			previousButton.SetStyle(defaultStyle)
 		}
 
 		switch {
+		case event.Key() == tcell.KeyRune && event.Rune() == 'a':
+			r := focusedRow
+			c := focusedCol
+			handleShuffle()
+			setFocus(r, c)
 		case event.Key() == tcell.KeyRune && event.Rune() == 's':
 			r := focusedRow
 			c := focusedCol
@@ -405,10 +416,12 @@ func main() {
 			if focusedRow > gameState.currentMatchRow {
 				focusedRow--
 			}
+			resetSubmitButton()
 		case event.Key() == tcell.KeyDown, event.Key() == tcell.KeyRune && event.Rune() == 'j':
 			if focusedRow < 4 {
 				focusedRow++
 			}
+			resetSubmitButton()
 		case event.Key() == tcell.KeyLeft, event.Key() == tcell.KeyRune && event.Rune() == 'h':
 			if focusedCol > 0 {
 				if focusedRow == 4 && focusedCol == 2 {
@@ -416,6 +429,7 @@ func main() {
 				}
 				focusedCol--
 			}
+			resetSubmitButton()
 		case event.Key() == tcell.KeyRight, event.Key() == tcell.KeyRune && event.Rune() == 'l':
 			if focusedCol < 3 {
 				if focusedRow == 4 && focusedCol == 1 {
@@ -423,6 +437,7 @@ func main() {
 				}
 				focusedCol++
 			}
+			resetSubmitButton()
 		case event.Key() == tcell.KeyEnter, event.Key() == tcell.KeyRune && event.Rune() == ' ':
 			if focusedRow == 4 {
 				switch focusedCol {
@@ -438,8 +453,7 @@ func main() {
 				if gameState.selectedCards[label] {
 					delete(gameState.selectedCards, label)
 					buttons[focusedRow][focusedCol].
-						SetStyle(defaultStyle).
-						SetActivatedStyle(activatedStyle)
+						SetStyle(defaultStyle)
 				} else if len(gameState.selectedCards) < 4 {
 					gameState.selectedCards[label] = true
 					buttons[focusedRow][focusedCol].
@@ -447,19 +461,17 @@ func main() {
 						SetActivatedStyle(selectedActivatedStyle)
 				}
 			}
+			resetSubmitButton()
 		default:
 			return nil
 		}
 
 		button := findButton(focusedRow, focusedCol)
-		if focusedRow == 4 {
-			if event.Key() != tcell.KeyEnter && event.Rune() != ' ' && event.Rune() != 's' {
-				button.SetActivatedStyle(activatedStyle)
-			}
-		} else if !gameState.selectedCards[button.GetLabel()] {
-			button.SetActivatedStyle(activatedStyle)
-		} else {
-			button.SetActivatedStyle(selectedActivatedStyle)
+		if focusedRow == 4 && (focusedCol == 0 || focusedCol == 3) {
+			button.SetActivatedStyle(selectedStyle)
+		}
+		if gameState.selectedCards[button.GetLabel()] {
+			button.SetActivatedStyle(selectedStyle)
 		}
 		app.SetFocus(button)
 		return nil
