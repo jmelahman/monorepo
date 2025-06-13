@@ -92,10 +92,18 @@ func (c *Client) RunInference(
 		for _, contentItem := range m.Content {
 			// Tool calls in history are expected to be on "assistant" messages.
 			if contentItem.Type == "tool_use" && m.Role == "assistant" {
+				var arguments map[string]interface{}
+				if err := json.Unmarshal(contentItem.Input, &arguments); err != nil {
+					log.Errorf("Failed to unmarshal tool call arguments from history for %s: %v", contentItem.Name, err)
+					// Decide on error handling: skip this tool_call, or return error from RunInference
+					// For now, let's log and continue, effectively skipping malformed arguments.
+					// Alternatively, to be stricter:
+					// return base.Message{}, fmt.Errorf("failed to unmarshal tool call arguments from history for tool %s: %w", contentItem.Name, err)
+				}
 				toolCalls = append(toolCalls, ollama.ToolCall{
 					Function: ollama.ToolCallFunction{
 						Name:      contentItem.Name,
-						Arguments: contentItem.Input, // json.RawMessage
+						Arguments: arguments,
 					},
 				})
 			} else if contentItem.Text != "" {
