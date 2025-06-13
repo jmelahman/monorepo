@@ -1,8 +1,6 @@
 package common
 
 import (
-	"encoding/json"
-
 	"github.com/jmelahman/agent/client/base"
 	ollama "github.com/ollama/ollama/api"
 	openrouter "github.com/revrost/go-openrouter"
@@ -21,9 +19,9 @@ func convertStringSliceToInterface(strs []string) []interface{} {
 // ToolFunctionProperty defines the expected structure for Ollama's tool function properties
 type ToolFunctionProperty struct {
 	Type        string `json:"type"`
-	Items       any    `json:"items,omitempty"`  // Changed from map[string]interface{}
-	Description string `json:"description"`      // Removed omitempty
-	Enum        []any  `json:"enum,omitempty"`   // Changed from []interface{}
+	Items       any    `json:"items,omitempty"` // Changed from map[string]interface{}
+	Description string `json:"description"`     // Removed omitempty
+	Enum        []any  `json:"enum,omitempty"`  // Changed from []interface{}
 }
 
 // AdaptBaseToolToOllamaTool converts a base.ToolDefinition to an ollama.Tool.
@@ -35,7 +33,7 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 	type OllamaToolParameters struct {
 		Type       string                          `json:"type"`
 		Defs       any                             `json:"$defs,omitempty"` // Not currently mapped from jsonschema.Definition
-		Items      any                             `json:"items,omitempty"`  // For schema of type array
+		Items      any                             `json:"items,omitempty"` // For schema of type array
 		Required   []string                        `json:"required,omitempty"`
 		Properties map[string]ToolFunctionProperty `json:"properties,omitempty"`
 	}
