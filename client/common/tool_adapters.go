@@ -10,6 +10,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func convertStringSliceToInterface(strs []string) []interface{} {
+	interfaces := make([]interface{}, len(strs))
+	for i, s := range strs {
+		interfaces[i] = s
+	}
+	return interfaces
+}
+
 // ToolFunctionProperty defines the expected structure for Ollama's tool function properties
 type ToolFunctionProperty struct {
 	Type        string                 `json:"type"`
@@ -66,7 +74,7 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 				ollamaProp := ToolFunctionProperty{
 					Type:        propType,
 					Description: propDef.Description,
-					Enum:        propDef.Enum, // []interface{} to []any
+					Enum:        convertStringSliceToInterface(propDef.Enum),
 				}
 
 				// Handle 'items' for array properties within Properties
