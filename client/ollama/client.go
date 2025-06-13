@@ -171,10 +171,17 @@ func (c *Client) RunInference(
 		log.Debugf("Ollama Response: %d tool_call(s) received.", len(finalResponse.Message.ToolCalls))
 		for _, tc := range finalResponse.Message.ToolCalls {
 			// Ollama's ToolCall does not have an ID.
+			// tc.Function.Arguments is map[string]interface{}, needs to be marshalled to json.RawMessage
+			argumentsJSON, err := json.Marshal(tc.Function.Arguments)
+			if err != nil {
+				log.Errorf("Failed to marshal tool call arguments for %s: %v", tc.Function.Name, err)
+				return base.Message{}, fmt.Errorf("failed to marshal tool call arguments for tool %s: %w", tc.Function.Name, err)
+			}
+
 			responseContentItems = append(responseContentItems, base.Content{
 				ID:    "", // Ollama does not provide an ID for tool calls.
 				Name:  tc.Function.Name,
-				Input: tc.Function.Arguments, // json.RawMessage
+				Input: argumentsJSON,
 				Type:  "tool_use",
 			})
 		}
