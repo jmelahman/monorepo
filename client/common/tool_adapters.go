@@ -94,14 +94,14 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 		}
 	}
 
-	// Marshal and unmarshal paramsForOllama to ensure it's a valid JSON structure
+	// Convert paramsForOllama to the expected parameters format
 	paramsJSON, err := json.Marshal(paramsForOllama)
 	if err != nil {
 		return ollama.Tool{}, err
 	}
 
-	var paramsInterface any
-	if err := json.Unmarshal(paramsJSON, &paramsInterface); err != nil {
+	var parameters map[string]interface{}
+	if err := json.Unmarshal(paramsJSON, &parameters); err != nil {
 		return ollama.Tool{}, err
 	}
 
@@ -110,7 +110,7 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 		Function: ollama.ToolFunction{
 			Name:        td.Name,
 			Description: td.Description,
-			Parameters:  paramsInterface,
+			Parameters:  parameters,
 		},
 	}, nil
 }
