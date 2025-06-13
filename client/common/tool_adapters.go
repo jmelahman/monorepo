@@ -94,23 +94,12 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 		}
 	}
 
-	// Convert paramsForOllama to the expected parameters format
-	paramsJSON, err := json.Marshal(paramsForOllama)
-	if err != nil {
-		return ollama.Tool{}, err
-	}
-
-	var parameters map[string]interface{}
-	if err := json.Unmarshal(paramsJSON, &parameters); err != nil {
-		return ollama.Tool{}, err
-	}
-
 	return ollama.Tool{
 		Type: "function",
 		Function: ollama.ToolFunction{
 			Name:        td.Name,
 			Description: td.Description,
-			Parameters:  parameters,
+			Parameters:  paramsForOllama,
 		},
 	}, nil
 }
