@@ -19,9 +19,9 @@ func convertStringSliceToInterface(strs []string) []interface{} {
 // ToolFunctionProperty defines the expected structure for Ollama's tool function properties
 type ToolFunctionProperty struct {
 	Type        string `json:"type"`
-	Items       any    `json:"items,omitempty"` // Changed from map[string]interface{}
-	Description string `json:"description"`     // Removed omitempty
-	Enum        []any  `json:"enum,omitempty"`  // Changed from []interface{}
+	Items       any    `json:"items,omitempty"`
+	Description string `json:"description"`
+	Enum        []any  `json:"enum,omitempty"`
 }
 
 // AdaptBaseToolToOllamaTool converts a base.ToolDefinition to an ollama.Tool.
@@ -31,11 +31,11 @@ func AdaptBaseToolToOllamaTool(td base.ToolDefinition) (ollama.Tool, error) {
 	// Define the anonymous struct type that ollama.ToolFunction.Parameters expects.
 	// This structure is based on the ollama API's internal representation.
 	type OllamaToolParameters struct {
-		Type       string                          `json:"type"`
-		Defs       any                             `json:"$defs,omitempty"` // Not currently mapped from jsonschema.Definition
-		Items      any                             `json:"items,omitempty"` // For schema of type array
-		Required   []string                        `json:"required,omitempty"`
-		Properties map[string]ToolFunctionProperty `json:"properties,omitempty"`
+		Type         string                          `json:"type"`
+		Defs         any                             `json:"$defs,omitempty"`
+		Items        any                             `json:"items,omitempty"`
+		Required     []string                        `json:"required,omitempty"`
+		Properties   map[string]ToolFunctionProperty `json:"properties,omitempty"`
 	}
 
 	paramsForOllama := OllamaToolParameters{}
