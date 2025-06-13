@@ -8,8 +8,7 @@ import (
 	"strings"
 
 	"github.com/jmelahman/agent/client/base"
-	"github.com/jmelahman/agent/utils"
-	ollamaapi "github.com/ollama/ollama/api"
+	ollama "github.com/ollama/ollama/api"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,7 +33,9 @@ func NewClient() *Client {
 	}
 
 	oclient, err := ollama.New(ollama.WithHost(host))
-	utils.Must(fmt.Sprintf("create Ollama client with host %s", host), err)
+	if err != nil {
+		return oclient, err
+	}
 
 	// Check if the Ollama server is responding
 	// Note: Version() is not a method on ollama.Client.
@@ -56,7 +57,7 @@ func NewClient() *Client {
 	}
 
 	// Optional: Check if the model exists locally.
-	_, err = oclient.Show(context.Background(), &ollamaapi.ShowRequest{Name: model})
+	_, err = oclient.Show(context.Background(), &ollama.ShowRequest{Name: model})
 	if err != nil {
 		log.Warnf("Model '%s' not found locally or Ollama error: %v. Ensure the model is pulled using 'ollama pull %s'.", model, err, model)
 		// Proceeding, assuming the model might be valid but not yet pulled, or an alias.
@@ -112,17 +113,17 @@ func (c *Client) RunInference(
 	messages []base.Message,
 	tools []base.ToolDefinition,
 ) (base.Message, error) {
-	apiMessages := make([]ollamaapi.Message, len(messages))
+	apiMessages := make([]ollama.Message, len(messages))
 	for i, m := range messages {
-		apiMsg := ollamaapi.Message{Role: m.Role}
-		var toolCalls []ollamaapi.ToolCall
+		apiMsg := ollama.Message{Role: m.Role}
+		var toolCalls []ollama.ToolCall
 		var textParts []string
 
 		for _, contentItem := range m.Content {
 			// Tool calls in history are expected to be on "assistant" messages.
 			if contentItem.Type == "tool_use" && m.Role == "assistant" {
-				toolCalls = append(toolCalls, ollamaapi.ToolCall{
-					Function: ollamaapi.ToolCallFunction{
+				toolCalls = append(toolCalls, ollama.ToolCall{
+					Function: ollama.ToolCallFunction{
 						Name:      contentItem.Name,
 						Arguments: contentItem.Input, // json.RawMessage
 					},
@@ -147,12 +148,12 @@ func (c *Client) RunInference(
 		log.Debugf("Ollama Input Message History [%d]: Role: %s, Content: '%s', ToolCalls: %d", i, apiMsg.Role, apiMsg.Content, len(apiMsg.ToolCalls))
 	}
 
-	apiTools := []ollamaapi.Tool{}
+	apiTools := []ollama.Tool{}
 	if len(tools) > 0 {
 		for _, tool := range tools {
-			apiTools = append(apiTools, ollamaapi.Tool{
+			apiTools = append(apiTools, ollama.Tool{
 				Type: "function",
-				Function: ollamaapi.FunctionDefinition{
+				Function: ollama.FunctionDefinition{
 					Name:        tool.Name,
 					Description: tool.Description,
 					Parameters:  tool.InputSchema,
@@ -161,19 +162,20 @@ func (c *Client) RunInference(
 		}
 	}
 
-	req := ollamaapi.ChatRequest{
+	stream := false
+	req := ollama.ChatRequest{
 		Model:    c.Model,
 		Messages: apiMessages,
-		Format:   "json", // Request JSON mode for better tool argument generation.
-		// Stream: false by default.
+		Stream:   &stream,
+		// Format:   "json", // Request JSON mode for better tool argument generation.
 	}
 	if len(apiTools) > 0 {
 		req.Tools = apiTools
 		log.Debugf("Requesting Ollama with %d tools.", len(apiTools))
 	}
 
-	var finalResponse ollamaapi.ChatResponse
-	err := c.ollamaClient.Chat(ctx, &req, func(r ollamaapi.ChatResponse) error {
+	var finalResponse ollama.ChatResponse
+	err := c.ollamaClient.Chat(ctx, &req, func(r ollama.ChatResponse) error {
 		// For non-streaming, this callback is invoked once with the complete response.
 		finalResponse = r
 		return nil
