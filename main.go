@@ -479,7 +479,13 @@ func main() {
 
 	app.SetFocus(buttons[0][0])
 
-	if err := app.SetRoot(grid, true).EnableMouse(true).Run(); err != nil {
+	// Create a flexbox to center the grid horizontally.
+	flex := tview.NewFlex().
+		AddItem(tview.NewBox(), 0, 1, false). // Left spacer.
+		AddItem(grid, 80, 0, true).           // The grid, fixed width of 80.
+		AddItem(tview.NewBox(), 0, 1, false)  // Right spacer.
+
+	if err := app.SetRoot(flex, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 }
