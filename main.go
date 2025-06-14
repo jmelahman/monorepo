@@ -482,8 +482,11 @@ func main() {
 	// Create a flexbox to center the grid horizontally.
 	flex := tview.NewFlex().
 		AddItem(tview.NewBox(), 0, 1, false). // Left spacer.
-		AddItem(grid, 80, 0, true).           // The grid, fixed width of 80.
-		AddItem(tview.NewBox(), 0, 1, false)  // Right spacer.
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+							AddItem(tview.NewBox(), 0, 1, false).               // Top spacer.
+							AddItem(grid, 0, 3, true).                          // The grid, fixed width of 80.
+							AddItem(tview.NewBox(), 0, 1, false), 80, 1, true). // Bottom spacer.
+		AddItem(tview.NewBox(), 0, 1, false) // Right spacer.
 
 	if err := app.SetRoot(flex, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
