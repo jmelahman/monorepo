@@ -165,7 +165,7 @@ func main() {
 		} else {
 			submitButton.SetStyle(defaultStyle).SetActivatedStyle(defaultStyle)
 		}
-		submitButton.SetLabel("Submit")
+		submitButton.SetLabel("Submit (s)")
 	}
 
 	setFocus := func(r, c int) {
@@ -366,17 +366,17 @@ func main() {
 		}
 	}
 
-	shuffleButton = tview.NewButton("Shuffle").
+	shuffleButton = tview.NewButton("Shuffle (a)").
 		SetSelectedFunc(handleShuffle).
 		SetStyle(defaultStyle).
 		SetActivatedStyle(selectedStyle)
 
-	submitButton = tview.NewButton("Submit").
+	submitButton = tview.NewButton("Submit (s)").
 		SetSelectedFunc(handleSubmit).
 		SetStyle(selectedActivatedStyle).
 		SetActivatedStyle(selectedActivatedStyle)
 
-	deselectButton = tview.NewButton("Deselect All").
+	deselectButton = tview.NewButton("Deselect All (d)").
 		SetSelectedFunc(handleDeselect).
 		SetStyle(defaultStyle).
 		SetActivatedStyle(selectedStyle)
