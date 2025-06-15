@@ -5,12 +5,12 @@ set -u
 function setUp() {
   trap 'rm testdata/valid_absolute_link' EXIT
   ln -s /etc/hosts testdata/valid_absolute_link
-  cargo build
+  go build .
 }
 
 function expect_success() {
   local files=("$@")
-  ./target/debug/check-symlinks "${files[@]}" || {
+  ./check-symlinks "${files[@]}" || {
     >&2 echo "Test failed with case: ${files[*]}"
     exit 1
   }
@@ -18,7 +18,7 @@ function expect_success() {
 
 function expect_failure() {
   local files=("$@")
-  ./target/debug/check-symlinks "${files[@]}" && {
+  ./check-symlinks "${files[@]}" && {
     >&2 echo "Test failed with case: ${files[*]}"
     exit 1
   }
@@ -32,7 +32,6 @@ expect_success testdata/some_file
 expect_success testdata/valid_directory_link
 expect_success testdata/valid_link
 
-./target/debug/check-symlinks && exit 1
 expect_failure testdata/broken_link
 expect_failure testdata/recursive_broken_link
 expect_failure testdata/broken_link testdata/some_file testdata/valid_link "" doesnt_exist

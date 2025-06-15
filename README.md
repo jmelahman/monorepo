@@ -2,7 +2,7 @@
 
 Check for broken symbolic links.
 
-`check-symlinks` is optmized for large codebases as well as small, incremental checks,
+`check-symlinks` is optimized for large codebases as well as small, incremental checks,
 
 <p align="center">
   <picture align="center">
@@ -30,9 +30,26 @@ and `check_symlinks.py` is from [https://github.com/pre-commit/pre-commit-hooks]
 
 ## Install
 
-```shell
-cargo install check-symlinks
+**AUR:**
 
+`check-symlinks` is available from the [Arch User Repository](https://aur.archlinux.org/packages/check-symlinks).
+
+```shell
+yay -S check-symlinks
+```
+
+**pip:**
+
+`check-symlinks` is available as a [pypi package](https://pypi.org/project/check-symlinks/).
+
+```shell
+pip install check-symlinks
+```
+
+**go:**
+
+```shell
+go install github.com/jmelahman/check-symlinks@latest
 ```
 
 ## Usage
