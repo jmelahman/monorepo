@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+docker run \
+  --rm \
+  -u "$(id -u):$(id -g)" \
+  -v "$PWD:/mnt" \
+  -w /mnt \
+  mvdan/shfmt:v3.11.0 \
+  "$@"

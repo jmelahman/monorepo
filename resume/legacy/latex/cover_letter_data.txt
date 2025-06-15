@@ -1,9 +1,0 @@
-In college, I earned a degree in applied physics with a focus on computational astrophysics and a minor in mathematics. I earned modest grades while working nearly 35 hours a week and graduating in 3 years.
-
-In the summer of 2016 while attending Ohio University, I was fortunate to perform undergraduate research in computational physics with Dr. Madappa Prakash of Ohio University. We used Fortran code to investigate general physics problems, closely following Steven Koonin's Computational Physics. Similarly, I made efforts to use computing envinorments such as GNU Octave (an open-source project similar to MATLAB) as well as ROOT, a data analysis framework using C++.
-
-Over the last year and a half while at Waymo, Google's self-driving car project, I have been working with the software quality team. Among many tasks, I have been: reviewing simulations of the autonamous vehicle, triaging software crashes and unit test failures, and creating dashboards and custom Apps Scripts using Google’s Dremel query engine and Javascript.
-
-Outside of work, I am highly interested in the open-source community. My hope is to one day be able to regularly contribute to community projects like AstroPy, DistroAstro, and other science-orientated, open-source projects. In the same spirit, I have made an effort to translate some of the things I’ve learned to share with others. One of my current projects is to turn part of my summer research from college into a full-fledged research report on GitHub. Giving people the opportunity to learn independently is something I hold with high regard.
-
-My ideal position would be doing computational physics, primarily with an astrophysical or geophysical focus. However, computer science, mathematics, and statistics are passions of mine and I am also interested in various software engineering and data analysis positions. My desired salary is flexible.

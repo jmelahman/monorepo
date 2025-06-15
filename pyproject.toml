@@ -1,25 +1,21 @@
+[tool.ruff]
+line-length = 100
+
 [tool.ruff.lint]
 ignore = [
-    "ANN101",
-    "ANN401",
-    "COM812",
-    "D",
-    "E402",
-    "E501",
-    "ERA001",
-    "FIX002",
-    "FBT001", # Boolean-typed positional argument in function definition
-    "INP001",
-    "ISC001",
-    "PT",  # pytest-related errors
-    "PTH",
-    "S101",
-    "S603",
-    "S607",
-    "SLF001",
-    "T201",  # `print` found
-    "TD",
-    "TRY003",
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in {name}
+    "COM812", # Trailing comma missing
+    "D",      # pydocstyle
+    "ERA001", # Found commented-out code
+    "FIX001", # Line contains FIXME, consider resolving the issue
+    "FIX002", # Line contains TODO, consider resolving the issue
+    "FIX004", # Line contains HACK, consider resolving the issue
+    "INP001", # File {filename} is part of an implicit namespace package. Add an __init__.py.
+    "PTH",    # flake8-use-pathlib
+    "S101",   # Use of assert detected
+    "S607",   # Starting a process with a partial executable path
+    "T201",   # `print` found
+    "TD",     # flake8-todos
 ]
 select = ["ALL"]
 
