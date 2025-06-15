@@ -1,12 +1,16 @@
 services:
-  #status:
-  #  image: status:latest
-  #  restart: unless-stopped
-  #  ports:
-  #    - 5000:5000
-  #  volumes:
-  #    - /home/jamison/.ssh/:/root/.ssh/:ro
-  #    - ./status/database.db:/app/database.db
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    ports:
+      - "13378:80"
+    volumes:
+      - ./config:/config
+      - ./metadata:/metadata
+      - ./audiobooks:/audiobooks
+      - ./podcasts:/podcasts
+    restart: unless-stopped
+
   nginx:
     image: nginx:latest
     container_name: nginx
