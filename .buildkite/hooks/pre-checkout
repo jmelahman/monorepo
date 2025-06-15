@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-if [ -d "$BUILDKITE_BUILD_CHECKOUT_PATH" ]; then
-  cd "$BUILDKITE_BUILD_CHECKOUT_PATH"
-  git config --local core.hooksPath /dev/null
-fi
