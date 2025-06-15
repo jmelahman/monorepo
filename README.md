@@ -1,6 +1,18 @@
 # Check Symlinks
 
+[![Test status](https://github.com/jmelahman/check-symlinks/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/check-symlinks/actions)
+[![Deploy Status](https://github.com/jmelahman/check-symlinks/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/check-symlinks/actions)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/check-symlinks.svg)](https://pkg.go.dev/github.com/jmelahman/check-symlinks)
+[![Arch User Repsoitory](https://img.shields.io/aur/version/check-symlinks)](https://aur.archlinux.org/packages/check-symlinks)
+[![PyPI](https://img.shields.io/pypi/v/check-symlinks.svg)](https://pypi.org/project/check-symlinks/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/check-symlinks)](https://goreportcard.com/report/github.com/jmelahman/check-symlinks)
+
 Check for broken symbolic links.
+
+```shell
+$ check-symlinks
+Broken symlink: some/path/broken_link
+```
 
 `check-symlinks` is optimized for large codebases as well as small, incremental checks,
 
@@ -51,21 +63,3 @@ pip install check-symlinks
 ```shell
 go install github.com/jmelahman/check-symlinks@latest
 ```
-
-## Usage
-
-By default, checks all [unignored](https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore#ignore) files recursively from the current working directory,
-
-```shell
-$ check-symlinks
-"./broken_link" is not a valid symlink
-```
-
-File paths can also be passed,
-
-```shell
-$ check-symlinks broken_link doesnt_exist
-"./broken_link" is not a valid symlink
-```
-
-_NOTE: file arguments which don't exist are ignored._

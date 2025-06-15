@@ -19,8 +19,7 @@ func main() {
 	done := make(chan struct{})
 
 	// Worker pool
-	numWorkers := 8
-	for i := 0; i < numWorkers; i++ {
+	for range 8 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -40,12 +39,16 @@ func main() {
 
 	// Walk directory
 	go func() {
-		filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err == nil {
 				paths <- path
 			}
 			return nil
 		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error walking directory: %v\n", err)
+			rc = 1
+		}
 		close(paths)
 	}()
 
