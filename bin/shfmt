@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
+ARGS=("$@")
+if [ ${#ARGS[@]} -eq 0 ]; then
+	ARGS=("--write" ".")
+fi
+
 docker run \
-  --rm \
-  -u "$(id -u):$(id -g)" \
-  -v "$PWD:/mnt" \
-  -w /mnt \
-  mvdan/shfmt:v3.11.0 \
-  "$@"
+	--rm \
+	-v "$PWD:/mnt" \
+	-w /mnt \
+	mvdan/shfmt:v3.11.0 \
+	"${ARGS[@]}"
