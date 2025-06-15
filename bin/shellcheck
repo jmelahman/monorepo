@@ -2,7 +2,7 @@
 
 shopt -s globstar
 docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 \
-  **/*.bash \
-  **/*.sh \
-  --severity=style \
-  --color=always
+	**/*.bash \
+	**/*.sh \
+	--severity=style \
+	--color=always

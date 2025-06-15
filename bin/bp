@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
-pushd "$PWD" > /dev/null || exit 1
+pushd "$PWD" >/dev/null || exit 1
 
 # Delete all local branches that are already merged into the currently checked out branch
 git branch --merged | egrep -v "^*master" | xargs --no-run-if-empty git branch -d
 
 while read -r branch; do
-  read -u 1 -p "Remove branch, $branch? (y,n) " -n 1 -r
-  echo    # Force new line
-  if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-      git branch -D "$branch"
-  fi
-done< <(git branch | egrep -v "^*master")
+	read -u 1 -p "Remove branch, $branch? (y,n) " -n 1 -r
+	echo # Force new line
+	if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+		git branch -D "$branch"
+	fi
+done < <(git branch | egrep -v "^*master")
 
-popd > /dev/null || exit 1
+popd >/dev/null || exit 1
