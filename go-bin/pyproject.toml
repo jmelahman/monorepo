@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs", "manygo"]
+build-backend = "hatchling.build"
+
+[project]
+name = "go-bin"
+description = "Prebuilt golang binary"
+license = {file = "LICENSE"}
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = [
+  "golang", "go", "packaging", "binary", "prebuilt"
+]
+classifiers = [
+    "Programming Language :: Go",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version"]
+
+[project.scripts]
+go = "go:main"
+
+[project.urls]
+Repository = "https://github.com/jmelahman/go-bin"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.custom]
