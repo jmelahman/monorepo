@@ -1,3 +1,14 @@
+[project]
+name = "monorepo"
+version = "0.0.0"
+authors = [
+  {name="Jamison Lahman", email="jamison@lahman.dev"}
+]
+requires-python = ">=3.13"
+dependencies = [
+    "tweepy>=4.15.0",
+]
+
 [tool.ruff]
 line-length = 100
 

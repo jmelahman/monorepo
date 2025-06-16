@@ -37,6 +37,7 @@ uvx ruff check
 ### Python
 
 ```shell
+uv sync
 uvx ty check
 ```
 
