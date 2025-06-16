@@ -5,8 +5,8 @@
 
 ## Subtrees
 
-Most projects are tracked as [git-subtree](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt)s.
-This allows them to be developed uniformly while leaving operational tasks delegated.
+Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
+This allows them to be developed uniformly while leaving operational tasks independent.
 
 # Tooling
 
