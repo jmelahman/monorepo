@@ -3,6 +3,8 @@ package base
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/revrost/go-openrouter/jsonschema"
 )
 
 type Content struct {
@@ -22,7 +24,8 @@ type Message struct {
 type ToolDefinition struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	InputSchema any    `json:"input_schema"`
+	// InputSchema is a standardized JSON schema definition for the tool's input.
+	InputSchema jsonschema.Definition `json:"input_schema"`
 	Function    func(input json.RawMessage) (string, error)
 }
 
