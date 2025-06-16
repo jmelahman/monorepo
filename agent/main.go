@@ -7,10 +7,9 @@ import (
 	"os"
 
 	"github.com/jmelahman/agent/client/base"
-	// "github.com/jmelahman/agent/client/ollama"
+	"github.com/jmelahman/agent/client/ollama"
 	"github.com/jmelahman/agent/client/openrouter"
 	"github.com/jmelahman/agent/tools"
-	"github.com/jmelahman/agent/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,8 +22,8 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	_ = openrouter.NewClient(os.Getenv("OPENROUTER_API_KEY"))
-	client := openrouter.NewClient(os.Getenv("OPENROUTER_API_KEY"))
-	// client := ollama.NewClient()
+	// client := openrouter.NewClient(os.Getenv("OPENROUTER_API_KEY"))
+	client := ollama.NewClient()
 
 	scanner := bufio.NewScanner(os.Stdin)
 	getUserMessage := func() (string, bool) {
@@ -39,7 +38,7 @@ func main() {
 	}
 	agent := NewAgent(client, getUserMessage, tools)
 	err := agent.Run(context.Background())
-	utils.Must("run agent", err)
+	must("run agent", err)
 }
 
 func NewAgent(
@@ -80,7 +79,7 @@ func (a *Agent) Run(ctx context.Context) error {
 
 		log.Debug("Running inference...")
 		message, err := a.client.RunInference(ctx, conversation, a.tools)
-		utils.Must("run inference", err)
+		must("run inference", err)
 		conversation = append(conversation, message)
 
 		log.Debug("Parsing messages...")
@@ -108,4 +107,10 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func must(action string, err error) {
+	if err != nil {
+		panic("failed to " + action + ": " + err.Error())
+	}
 }
