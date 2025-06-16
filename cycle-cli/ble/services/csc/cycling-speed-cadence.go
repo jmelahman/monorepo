@@ -23,7 +23,7 @@ func ParseCSCMeasurement(data []byte) (*CSCMeasurement, error) {
 	flags := data[0]
 	csc := &CSCMeasurement{Flags: flags}
 
-	if flags&0x01 != 0 {
+	if flags&(1<<0) != 0 {
 		if offset+6 > len(data) {
 			return nil, errors.New("wheel revolution data missing or incomplete")
 		}
@@ -33,8 +33,7 @@ func ParseCSCMeasurement(data []byte) (*CSCMeasurement, error) {
 		csc.WheelEventTime = &wheelTime
 		offset += 6
 	}
-
-	if flags&0x02 != 0 {
+	if flags&(1<<1) != 0 {
 		if offset+4 > len(data) {
 			return nil, errors.New("crank revolution data missing or incomplete")
 		}
