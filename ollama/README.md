@@ -1,6 +1,6 @@
 # Ollama
 
-Modelfiles for creating Ollama models.
+[Modelfiles](https://github.com/ollama/ollama/blob/main/docs/modelfile.md) for creating Ollama models.
 
 ## Create a Model
 
