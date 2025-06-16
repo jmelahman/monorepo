@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "tweepy",
+# ]
+# ///
 from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING
 
-import tweepy  # type: ignore[import]
+import tweepy
 
 if TYPE_CHECKING:
     import io
 
 
-def write_tweets(tweets_file: io.TextIOWrapper, tweets: tweepy.Tweet) -> None:  # type: ignore[no-any-unimported]
+def write_tweets(tweets_file: io.TextIOWrapper, tweets: tweepy.Tweet) -> None:
     for tweet in tweets:
         if not tweet.text or tweet.text.startswith("@") or tweet.text.startswith("RT"):
             continue
