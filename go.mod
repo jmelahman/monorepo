@@ -1,3 +1,3 @@
-module github.com/jmelahman/check-symlinks
+module github.com/jmelahman/git-orchard
 
-go 1.23.4
+go 1.24.3
