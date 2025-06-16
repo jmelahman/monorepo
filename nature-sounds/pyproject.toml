@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs", "go-bin~=1.24", "manygo"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nature-sounds"
+description = "A nature sounds player for the command-line"
+license = {file = "LICENSE"}
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = [
+  "nature-sounds", "white-noise", "sounds"
+]
+classifiers = [
+    "Programming Language :: Go",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version"]
+
+
+[project.urls]
+Repository = "https://github.com/jmelahman/nature-sounds"
+
+[tool.hatch.build]
+include = ["go.mod", "go.sum", "main.go"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.custom]
+binary_name = "nature-sounds"
