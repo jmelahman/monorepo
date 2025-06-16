@@ -3,15 +3,13 @@ from __future__ import annotations
 from typing import Literal
 
 # Supported Go operating systems with known platform tags
-GOOS = Literal['darwin', 'linux', 'windows']
+GOOS = Literal["darwin", "linux", "windows"]
 
 # Supported Go architectures with known platform tags
-GOARCH = Literal['amd64', 'arm64', '386', 'arm', 's390x', 'ppc64le', 'ppc64']
+GOARCH = Literal["amd64", "arm64", "386", "arm", "s390x", "ppc64le", "ppc64"]
 
-def get_platform_tag(
-    goos: GOOS,
-    goarch: GOARCH
-) -> str:
+
+def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
     """
     Convert GOOS and GOARCH to a valid Python platform tag.
 
@@ -36,11 +34,11 @@ def get_platform_tag(
     """
     # Mapping of special cases and conversions
     platform_map = {
-        ('darwin', 'amd64'): 'macosx_10_12_x86_64',
-        ('darwin', 'arm64'): 'macosx_11_0_arm64',
-        ('windows', '386'): 'win32',
-        ('windows', 'arm64'): 'win_arm64',
-        ('windows', 'amd64'): 'win_amd64',
+        ("darwin", "amd64"): "macosx_10_12_x86_64",
+        ("darwin", "arm64"): "macosx_11_0_arm64",
+        ("windows", "386"): "win32",
+        ("windows", "arm64"): "win_arm64",
+        ("windows", "amd64"): "win_amd64",
     }
 
     # Check for direct mapping first
@@ -49,17 +47,18 @@ def get_platform_tag(
 
     # Generic fallback conversion
     arch_map = {
-        'amd64': 'x86_64',
-        'arm64': 'aarch64',
-        '386': 'i686',
-        'arm': 'armv7l',
-        's390x': 's390x',
-        'ppc64le': 'ppc64le',
-        'ppc64': 'ppc64',
+        "amd64": "x86_64",
+        "arm64": "aarch64",
+        "386": "i686",
+        "arm": "armv7l",
+        "s390x": "s390x",
+        "ppc64le": "ppc64le",
+        "ppc64": "ppc64",
     }
 
     # Try to construct a generic tag
-    if goos == 'linux' and goarch in arch_map:
-        return f'manylinux_2_17_{arch_map[goarch]}'
+    if goos == "linux" and goarch in arch_map:
+        return f"manylinux_2_17_{arch_map[goarch]}"
 
-    raise ValueError(f'No platform tag for {goos}/{goarch}')
+    msg = f"No platform tag for {goos}/{goarch}"
+    raise ValueError(msg)
