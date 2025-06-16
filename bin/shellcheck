@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 
-shopt -s globstar
+ARGS=("$@")
+if [ ${#ARGS[@]} -eq 0 ]; then
+  shopt -s globstar nullglob
+  ARGS=(
+    **/*.bash
+    **/*.sh
+  )
+fi
+
 docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 \
-	**/*.bash \
-	**/*.sh \
 	--severity=style \
-	--color=always
+	--color=always \
+  "${ARGS[@]}"
