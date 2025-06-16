@@ -3,13 +3,12 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
-	"github.com/jmelahman/agent/client/base"
-	"github.com/jmelahman/agent/client/ollama"
-	"github.com/jmelahman/agent/client/openrouter"
 	"github.com/jmelahman/agent/tools"
+	ollama "github.com/ollama/ollama/api"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,9 +20,8 @@ var (
 func main() {
 	log.SetLevel(log.DebugLevel)
 
-	_ = openrouter.NewClient(os.Getenv("OPENROUTER_API_KEY"))
-	// client := openrouter.NewClient(os.Getenv("OPENROUTER_API_KEY"))
-	client := ollama.NewClient()
+	client, err := ollama.ClientFromEnvironment()
+	must("initialize ollama client", err)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	getUserMessage := func() (string, bool) {
@@ -33,36 +31,52 @@ func main() {
 		return scanner.Text(), true
 	}
 
-	tools := []base.ToolDefinition{
-		tools.ReadFileDefinition,
-	}
+	tools := []tools.ToolDefinition{tools.ReadFileDefintion}
 	agent := NewAgent(client, getUserMessage, tools)
-	err := agent.Run(context.Background())
-	must("run agent", err)
+	must("run agent", agent.Run(context.TODO()))
 }
 
-func NewAgent(
-	client base.Client,
-	getUserMessage func() (string, bool),
-	tools []base.ToolDefinition,
-) *Agent {
+func NewAgent(client *ollama.Client, getUserMessage func() (string, bool), tools []tools.ToolDefinition) *Agent {
 	return &Agent{
 		client:         client,
+		model:          "qwen3:0.6b",
 		getUserMessage: getUserMessage,
 		tools:          tools,
 	}
 }
 
 type Agent struct {
-	client         base.Client
+	client         *ollama.Client
+	model          string
 	getUserMessage func() (string, bool)
-	tools          []base.ToolDefinition
+	tools          []tools.ToolDefinition
 }
 
 func (a *Agent) Run(ctx context.Context) error {
-	conversation := []base.Message{}
+	conversation := []ollama.Message{}
 
-	fmt.Printf("Chat with an Agent (%s)\nModel: %s\n", version, a.client.GetModel())
+	fmt.Printf("Chat with an Agent (%s)\nModel: %s\n", version, a.model)
+
+	resp, err := a.client.List(ctx)
+	must("list models", err)
+	found := false
+	for _, m := range resp.Models {
+		if m.Model == a.model || m.Model == a.model+":latest" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		log.Warning("")
+		req := &ollama.PullRequest{Model: a.model}
+		progressFunc := func(resp ollama.ProgressResponse) error {
+			fmt.Printf("Progress: status=%v, total=%v, completed=%v\r", resp.Status, resp.Total, resp.Completed)
+			return nil
+		}
+		must("pull model", a.client.Pull(ctx, req, progressFunc))
+		// Clear progress.
+		fmt.Printf("                                                                               \r")
+	}
 
 	readUserInput := true
 	for {
@@ -73,40 +87,76 @@ func (a *Agent) Run(ctx context.Context) error {
 				break
 			}
 
-			userMessage := a.client.NewUserMessage(userInput)
+			userMessage := ollama.Message{Role: "user", Content: userInput}
 			conversation = append(conversation, userMessage)
 		}
+		readUserInput = true
 
 		log.Debug("Running inference...")
-		message, err := a.client.RunInference(ctx, conversation, a.tools)
+		message, err := a.runInference(ctx, conversation)
 		must("run inference", err)
-		conversation = append(conversation, message)
+		conversation = append(conversation, *message)
+
+		if message.Content != "" {
+			fmt.Printf("\u001b[92mAgent\u001b[0m: %s\n", message.Content)
+		}
 
 		log.Debug("Parsing messages...")
-		toolResults := []base.Content{}
-		for _, content := range message.Content {
-			switch content.Type {
-			case "text":
-				fmt.Printf("\u001b[92mAgent\u001b[0m: %s\n", content.Text)
-			case "tool_use":
-				result := a.client.ExecuteTool(
-					content.ID,
-					content.Name,
-					content.Input,
-					a.tools,
-				)
-				toolResults = append(toolResults, result)
-				conversation = append(conversation, a.client.NewToolMessage(result))
-			}
+		for _, tc := range message.ToolCalls {
+			result := a.executeTool(tc.Function.Name, json.RawMessage(tc.Function.Arguments.String()))
+			conversation = append(conversation, result)
+			readUserInput = false
 		}
-		if len(toolResults) == 0 {
-			readUserInput = true
-			continue
-		}
-		readUserInput = false
 	}
 
 	return nil
+}
+
+func (a *Agent) runInference(ctx context.Context, conversation []ollama.Message) (*ollama.Message, error) {
+	var tools []ollama.Tool
+	for _, t := range a.tools {
+		tools = append(tools, t.Tool)
+	}
+	stream := false
+	req := ollama.ChatRequest{
+		Model:    a.model,
+		Messages: conversation,
+		Stream:   &stream,
+		Tools:    tools,
+	}
+	var finalResponse ollama.ChatResponse
+	err := a.client.Chat(ctx, &req, func(r ollama.ChatResponse) error {
+		finalResponse = r
+		return nil
+	})
+
+	return &finalResponse.Message, err
+}
+
+func (a *Agent) executeTool(name string, input json.RawMessage) ollama.Message {
+	var toolDef tools.ToolDefinition
+	var found bool
+	for _, tool := range a.tools {
+		if tool.Tool.Function.Name == name {
+			toolDef = tool
+			found = true
+			break
+		}
+	}
+	if !found {
+		return newToolResult("tool not found")
+	}
+
+	fmt.Printf("\u001b[93mtool\u001b[0m: %s(%s)\n", name, input)
+	response, err := toolDef.Function(input)
+	if err != nil {
+		return newToolResult(err.Error())
+	}
+	return newToolResult(response)
+}
+
+func newToolResult(text string) ollama.Message {
+	return ollama.Message{Content: text, Role: "tool"}
 }
 
 func must(action string, err error) {
