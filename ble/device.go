@@ -14,14 +14,15 @@ import (
 )
 
 type Telemetry struct {
-	HR            uint8
-	Cadence       uint16
-	Calories      uint16
-	prevEventTime uint16
-	prevRevs      uint32
-	Power         int16
-	Speed         float64 // Speed in km/h or mph, depending on unitSystem
-	Distance      float64 // Distance in km or miles, depending on unitSystem
+	HR              uint8
+	resistanceValue int8
+	Cadence         uint16
+	Calories        uint16
+	prevEventTime   uint16
+	prevRevs        uint32
+	Power           int16
+	Speed           float64 // Speed in km/h or mph, depending on unitSystem
+	Distance        float64 // Distance in km or miles, depending on unitSystem
 }
 
 type TelemetryHandler func(data Telemetry)
@@ -46,40 +47,8 @@ var (
 var adapter = bluetooth.DefaultAdapter
 
 // SetResistance sets the trainer's resistance level (0-100%)
-func SetResistance(dev *bluetooth.Device, level uint8) error {
-	log.Debugf("Setting resistance to %d%%", level)
-
-	services, err := dev.DiscoverServices([]bluetooth.UUID{FitnessMachineUUID})
-	if err != nil {
-		return fmt.Errorf("could not discover services: %w", err)
-	}
-
-	if len(services) == 0 {
-		return fmt.Errorf("could not find Fitness Machine service")
-	}
-	srv := services[0]
-
-	chars, err := srv.DiscoverCharacteristics([]bluetooth.UUID{FitnessControlPointUUID})
-	if err != nil {
-		return fmt.Errorf("could not discover characteristics: %w", err)
-	}
-
-	if len(chars) == 0 {
-		return fmt.Errorf("could not find Fitness Machine Control Point characteristic")
-	}
-	controlPointChar := chars[0]
-
-	// FTMS Opcode for "Set Target Resistance Level" is 0x07
-	// Resistance level is a uint8, where 0-100% is represented as 0-200 (0.5% resolution)
-	resistanceValue := level * 2
-	payload := []byte{0x07, resistanceValue}
-
-	log.Debugf("Writing to control point: Opcode 0x07, Value %d", resistanceValue)
-	_, err = controlPointChar.WriteWithoutResponse(payload)
-	if err != nil {
-		return fmt.Errorf("could not write resistance level: %w", err)
-	}
-
+func SetResistance(state Telemetry, level int8) error {
+	state.resistanceValue = level * 2
 	log.Infof("Resistance set to %d%%", level)
 	return nil
 }
@@ -111,7 +80,7 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 	services, err := dev.DiscoverServices(nil)
 	utils.Must("discover services", err)
 
-	var powerChar, hrChar, bikeChar, cscChar, fitnessChar *bluetooth.DeviceCharacteristic
+	var powerChar, hrChar, bikeChar, cscChar, controlPointChar, fitnessChar *bluetooth.DeviceCharacteristic
 
 	for _, srv := range services {
 		chars, err := srv.DiscoverCharacteristics(nil)
@@ -120,6 +89,9 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 		}
 		for _, char := range chars {
 			switch char.UUID() {
+			case FitnessControlPointUUID:
+				log.Debug("Registered: Fitness Control Point")
+				controlPointChar = &char
 			case IndoorBikeDataUUID:
 				log.Debug("Registered: Indoor Bike Data")
 				bikeChar = &char
@@ -151,6 +123,21 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 
 			handler(state)
 		})
+	}
+
+	if controlPointChar != nil {
+		// FTMS Opcode for "Set Target Resistance Level" is 0x07
+		// Resistance level is a uint8, where 0-100% is represented as 0-200 (0.5% resolution)
+		//val := int16(state.resistanceValue * 10)
+		//data := []byte{0x05, 0x01} // 0x01: request handle
+		//data = append(data, byte(val), byte(val>>8))
+		payload := []byte{0x07, byte(state.resistanceValue)}
+
+		log.Debugf("Writing to control point: Opcode 0x07, Value %d", state.resistanceValue)
+		_, err = controlPointChar.WriteWithoutResponse(payload)
+		if err != nil {
+			return fmt.Errorf("could not write resistance level: %w", err)
+		}
 	}
 
 	if cscChar != nil {

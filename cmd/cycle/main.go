@@ -15,7 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
-	"tinygo.org/x/bluetooth"
 )
 
 const (
@@ -31,7 +30,7 @@ var RootCmd = &cobra.Command{
 }
 
 // handleResistanceChange adjusts the resistance level and updates UI or logs accordingly.
-func handleResistanceChange(device *bluetooth.Device, currentLevel *int, change int, appUI *ui.UI, headless bool) {
+func handleResistanceChange(state ble.Telemetry, currentLevel *int, change int, appUI *ui.UI, headless bool) {
 	newLevel := *currentLevel + change
 	if newLevel < 0 {
 		newLevel = 0
@@ -42,7 +41,7 @@ func handleResistanceChange(device *bluetooth.Device, currentLevel *int, change 
 
 	if newLevel != *currentLevel {
 		*currentLevel = newLevel
-		levelToSet := uint8(*currentLevel)
+		levelToSet := int8(*currentLevel)
 
 		go func() {
 			statusMsg := fmt.Sprintf("Setting resistance to %d%%...", levelToSet)
@@ -53,7 +52,7 @@ func handleResistanceChange(device *bluetooth.Device, currentLevel *int, change 
 				appUI.UpdateStatus(statusMsg)
 			}
 
-			if err := ble.SetResistance(device, levelToSet); err != nil {
+			if err := ble.SetResistance(state, levelToSet); err != nil {
 				errorMsg := fmt.Sprintf("❌ Failed to set resistance: %v", err)
 				if headless {
 					fmt.Printf("\n%s\n", errorMsg)
@@ -152,6 +151,7 @@ func run(cmd *cobra.Command, args []string) {
 	defer device.Disconnect()
 
 	var inputChan chan rune
+	state := ble.Telemetry{}
 	currentResistanceLevel := resistanceLevel // Initialize with the flag value
 
 	if !headlessMode {
@@ -159,7 +159,7 @@ func run(cmd *cobra.Command, args []string) {
 
 		// Update resistance display initially if a value was provided
 		if currentResistanceLevel != 0 {
-			appUI.UpdateResistance(uint8(currentResistanceLevel))
+			appUI.UpdateResistance(int8(currentResistanceLevel))
 		}
 
 		// Set up key handling for UI
@@ -172,9 +172,9 @@ func run(cmd *cobra.Command, args []string) {
 			if event.Key() == tcell.KeyRune {
 				switch event.Rune() {
 				case '(': // Decrease resistance
-					handleResistanceChange(device, &currentResistanceLevel, -5, appUI, false)
+					handleResistanceChange(state, &currentResistanceLevel, -5, appUI, false)
 				case ')': // Increase resistance
-					handleResistanceChange(device, &currentResistanceLevel, +5, appUI, false)
+					handleResistanceChange(state, &currentResistanceLevel, +5, appUI, false)
 				}
 			}
 			return event
@@ -211,8 +211,6 @@ func run(cmd *cobra.Command, args []string) {
 			}()
 		}
 	}
-
-	state := ble.Telemetry{}
 
 	err = ble.SubscribeToMetrics(device, state, unitSystem, func(data ble.Telemetry) {
 		if !headlessMode {
@@ -255,7 +253,7 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if resistanceLevel != 0 {
-		err := ble.SetResistance(device, uint8(resistanceLevel))
+		err := ble.SetResistance(state, int16(resistanceLevel))
 		if err != nil {
 			if !headlessMode {
 				appUI.UpdateStatus("❌ Failed to set resistance: %v", err)
@@ -295,9 +293,9 @@ func run(cmd *cobra.Command, args []string) {
 				shouldExit := false
 				switch char {
 				case '(':
-					handleResistanceChange(device, &currentResistanceLevel, -5, nil, true)
+					handleResistanceChange(state, &currentResistanceLevel, -5, nil, true)
 				case ')':
-					handleResistanceChange(device, &currentResistanceLevel, +5, nil, true)
+					handleResistanceChange(state, &currentResistanceLevel, +5, nil, true)
 				case 'q', 3: // 'q' or Ctrl+C (ETX)
 					shouldExit = true
 				}
