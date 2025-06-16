@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs", "go-bin~=1.24", "manygo"]
+build-backend = "hatchling.build"
+
+[project]
+name = "check-symlinks"
+description = "Check for broken symlinks"
+license = {file = "LICENSE"}
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = [
+  "ci", "continuous-integration", "linter", "symlinks", "tooling", "tools",
+]
+classifiers = [
+    "Programming Language :: Go",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version"]
+
+
+[project.urls]
+Repository = "https://github.com/jmelahman/check-symlinks"
+
+[tool.hatch.build]
+include = ["go.mod", "go.sum", "main.go"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.custom]
+binary_name = "check-symlinks"
