@@ -20,7 +20,6 @@
 # Go workspace file
 go.work
 go.work.sum
-main
 
 # env file
 .env
@@ -28,5 +27,7 @@ main
 # python packaging
 dist/
 *.egg-info/
+cycle*
+__pycache__
 
 .aider*

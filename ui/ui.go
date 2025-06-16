@@ -196,7 +196,7 @@ func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 }
 
 // UpdateResistance updates the resistance display
-func (ui *UI) UpdateResistance(level uint8) {
+func (ui *UI) UpdateResistance(level int8) {
 	ui.app.QueueUpdateDraw(func() {
 		ui.resistanceBox.SetText(fmt.Sprintf("%d%%", level))
 	})

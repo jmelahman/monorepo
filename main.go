@@ -253,7 +253,7 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if resistanceLevel != 0 {
-		err := ble.SetResistance(state, int16(resistanceLevel))
+		err := ble.SetResistance(state, int8(resistanceLevel))
 		if err != nil {
 			if !headlessMode {
 				appUI.UpdateStatus("❌ Failed to set resistance: %v", err)
