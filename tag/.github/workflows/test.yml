@@ -1,0 +1,26 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: go.sum
+      - run: go mod tidy
+      - run: go test ./... -v
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+
