@@ -1,0 +1,28 @@
+Subcommands:
+  git orchard list
+  git orchard status [branch]
+
+Include opinionated wrappers for git subtree? Such as --squash by default.
+
+`git orchard add --existing` adds subtrees that were added via `git subtree add` (via `git log`)
+
+---
+
+The `git orchard list` command will:
+
+1. **Identify all subtrees** in the current repository.
+___
+
+The `git orchard status` command will:
+
+1. **Identify all subtrees** in the current repository.
+2. **Determine the remote** each subtree is tracked from.
+3. **Check the status** of the branch (typically the main branch) for each remote.
+4. **Report** how many commits are behind or ahead of the current branch on the remote.
+
+
+Config design:
+
+[subtree "prefix/agent"]
+  remote = git@github.com/jmelahman/agent.git
+  branch = master # defaults to default branch
