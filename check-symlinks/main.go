@@ -4,13 +4,36 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
+
+	"github.com/spf13/cobra"
+)
+
+var (
+	includeHidden bool
+	rootPath      string
 )
 
 func main() {
-	root := "."
-	if len(os.Args) > 1 {
-		root = os.Args[1]
+	var rootCmd = &cobra.Command{
+		Use:   "check-symlinks [paths...]",
+		Short: "Check for broken symbolic links in a directory tree",
+		Run:   runCheckSymlinks,
+	}
+
+	rootCmd.Flags().BoolVar(&includeHidden, "hidden", false, "include hidden files and directories in the check")
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(2)
+	}
+}
+
+func runCheckSymlinks(cmd *cobra.Command, args []string) {
+	// Default to current directory if no args provided
+	if len(args) == 0 {
+		args = []string{"."}
 	}
 
 	var wg sync.WaitGroup
@@ -37,19 +60,31 @@ func main() {
 		}()
 	}
 
-	// Walk directory
+	// Process each path
 	go func() {
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-			if err == nil {
+		defer close(paths)
+		for _, rootPath := range args {
+			err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, err error) error {
+				if err != nil {
+					return nil
+				}
+
+				// Skip hidden files and directories unless --hidden flag is set
+				if !includeHidden && isHidden(path) {
+					if d.IsDir() {
+						return filepath.SkipDir
+					}
+					return nil
+				}
+
 				paths <- path
+				return nil
+			})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error walking directory %s: %v\n", rootPath, err)
+				rc = 127
 			}
-			return nil
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error walking directory: %v\n", err)
-			rc = 1
 		}
-		close(paths)
 	}()
 
 	go func() {
@@ -59,4 +94,11 @@ func main() {
 
 	<-done
 	os.Exit(rc)
+}
+
+// isHidden checks if a file or directory is hidden (starts with '.')
+// It checks only the base name, not the full path
+func isHidden(path string) bool {
+	base := filepath.Base(path)
+	return strings.HasPrefix(base, ".") && base != "." && base != ".."
 }
