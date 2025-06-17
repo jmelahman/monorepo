@@ -31,7 +31,11 @@ func main() {
 		return scanner.Text(), true
 	}
 
-	tools := []tools.ToolDefinition{tools.ReadFileDefintion}
+	tools := []tools.ToolDefinition{
+		tools.EditFileDefintion,
+		tools.ReadFileDefintion,
+		tools.ListFilesDefinition,
+	}
 	agent := NewAgent(client, getUserMessage, tools)
 	must("run agent", agent.Run(context.TODO()))
 }
@@ -39,7 +43,7 @@ func main() {
 func NewAgent(client *ollama.Client, getUserMessage func() (string, bool), tools []tools.ToolDefinition) *Agent {
 	return &Agent{
 		client:         client,
-		model:          "qwen3:0.6b",
+		model:          "mistral",
 		getUserMessage: getUserMessage,
 		tools:          tools,
 	}
@@ -67,7 +71,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 	}
 	if !found {
-		log.Warning("")
 		req := &ollama.PullRequest{Model: a.model}
 		progressFunc := func(resp ollama.ProgressResponse) error {
 			fmt.Printf("Progress: status=%v, total=%v, completed=%v\r", resp.Status, resp.Total, resp.Completed)
@@ -95,10 +98,10 @@ func (a *Agent) Run(ctx context.Context) error {
 		log.Debug("Running inference...")
 		message, err := a.runInference(ctx, conversation)
 		must("run inference", err)
-		conversation = append(conversation, *message)
 
 		if message.Content != "" {
 			fmt.Printf("\u001b[92mAgent\u001b[0m: %s\n", message.Content)
+			conversation = append(conversation, *message)
 		}
 
 		log.Debug("Parsing messages...")
