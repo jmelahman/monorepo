@@ -1,19 +1,56 @@
-# Docker Status
+[![CI Status](https://github.com/jmelahman/monorepo/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/test.yml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-This application provides a simple way to check the health status of Docker containers running on a host.
+# Projects
 
-## Features
+## Subtrees
 
-- Lists all running and stopped containers
-- Displays the health status of each container
-- Provides a REST API to query container health
+Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
+This allows them to be developed uniformly while leaving operational tasks independent.
 
-## Prerequisites
+# Tooling
 
-- Docker
-- Go 1.16 or later
+## Linting
 
-## Installation
+### Generic
 
-1. Clone the repository:
+Check for broken symlinks,
 
+```shell
+uvx check-symlinks
+```
+
+### Python
+
+```shell
+uvx ruff check
+```
+
+### Shell
+
+```shell
+./bin/shellcheck
+```
+
+## Type-checking
+
+### Python
+
+```shell
+uv sync
+uvx ty check
+```
+
+## Formatting
+
+### Python
+
+```shell
+uvx ruff format
+```
+
+### Shell
+
+```shell
+./bin/shfmt
+```
