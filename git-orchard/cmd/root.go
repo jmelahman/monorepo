@@ -46,7 +46,7 @@ func runRoot(opts *RootOptions, args []string) {
 	}
 
 	// Read subtree configurations from git config
-	reader := config.NewGitConfigReader(".")
+	reader := config.NewGitConfigReader("")
 	subtrees, orchardConfig, err := reader.ReadSubtreeConfigs()
 	if err != nil {
 		log.Errorf("Failed to read subtree configs: %v", err)

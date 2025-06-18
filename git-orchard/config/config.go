@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -31,8 +33,40 @@ type GitConfigReader struct {
 }
 
 // NewGitConfigReader creates a new GitConfigReader
+// If repoPath is empty, it will search for the git repository root starting from the current directory
 func NewGitConfigReader(repoPath string) *GitConfigReader {
+	if repoPath == "" {
+		if root, err := findGitRoot(); err == nil {
+			repoPath = root
+		} else {
+			repoPath = "."
+		}
+	}
 	return &GitConfigReader{repoPath: repoPath}
+}
+
+// findGitRoot searches for the git repository root starting from the current directory
+func findGitRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		gitDir := filepath.Join(dir, ".git")
+		if _, err := os.Stat(gitDir); err == nil {
+			return dir, nil
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached the root directory
+			break
+		}
+		dir = parent
+	}
+
+	return "", fmt.Errorf("not in a git repository")
 }
 
 // ReadSubtreeConfigs reads subtree configurations from git config
