@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"text/tabwriter"
 
 	"github.com/rivo/tview"
 )
@@ -33,8 +35,10 @@ func main() {
 		SetWordWrap(true)
 	textView.SetTitle("Status").SetBorder(true).SetBorderPadding(0, 0, 1, 1)
 
-	// Build the text content with colors
-	var content string
+	// Build the text content with colors using tabwriter
+	var buf bytes.Buffer
+	w := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
+	
 	for _, c := range containers {
 		// Determine status text and color
 		statusText := c.Status
@@ -60,10 +64,11 @@ func main() {
 			colorTag = "white"
 		}
 
-		content += fmt.Sprintf("%s -> [%s]%s[-]\n", c.Name, colorTag, statusText)
+		fmt.Fprintf(w, "%s\t[%s]%s[-]\n", c.Name, colorTag, statusText)
 	}
-
-	textView.SetText(content)
+	
+	w.Flush()
+	textView.SetText(buf.String())
 
 	if err := app.SetRoot(textView, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
