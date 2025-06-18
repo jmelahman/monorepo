@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -27,51 +27,45 @@ func main() {
 	}
 
 	app := tview.NewApplication()
-	table := tview.NewTable().SetBorders(true)
-	table.SetTitle("Status").SetBorder(true)
+	textView := tview.NewTextView().
+		SetDynamicColors(true).
+		SetRegions(true).
+		SetWordWrap(true)
+	textView.SetTitle("Status").SetBorder(true).SetBorderPadding(0, 0, 1, 1)
 
-	// Set headers
-	table.SetCell(0, 0, tview.NewTableCell("Container").SetTextColor(tview.Styles.PrimaryTextColor).SetAlign(tview.AlignCenter))
-	table.SetCell(0, 1, tview.NewTableCell("Status").SetTextColor(tview.Styles.PrimaryTextColor).SetAlign(tview.AlignCenter))
-
-	// Add container data
-	for i, c := range containers {
-		table.SetCell(i+1, 0, tview.NewTableCell(c.Name))
-		
+	// Build the text content with colors
+	var content string
+	for _, c := range containers {
 		// Determine status text and color
 		statusText := c.Status
 		if c.Status == "none" {
 			statusText = c.State
 		}
-		
-		var statusColor tcell.Color
-		switch c.Status {
+
+		var colorTag string
+		switch statusText {
 		case "healthy":
-			statusColor = tcell.ColorGreen
-		case "unhealthy":
-			statusColor = tcell.ColorRed
+			colorTag = "green"
+		case "running":
+			colorTag = "green"
 		case "starting":
-			statusColor = tcell.ColorYellow
-		case "none":
-			// Color based on state when health is none
-			switch c.State {
-			case "running":
-				statusColor = tcell.ColorGreen
-			case "exited":
-				statusColor = tcell.ColorRed
-			case "paused":
-				statusColor = tcell.ColorYellow
-			default:
-				statusColor = tcell.ColorWhite
-			}
+			colorTag = "yellow"
+		case "paused":
+			colorTag = "yellow"
+		case "unhealthy":
+			colorTag = "red"
+		case "exited":
+			colorTag = "red"
 		default:
-			statusColor = tcell.ColorWhite
+			colorTag = "white"
 		}
-		
-		table.SetCell(i+1, 1, tview.NewTableCell(statusText).SetTextColor(statusColor))
+
+		content += fmt.Sprintf("%s -> [%s]%s[-]\n", c.Name, colorTag, statusText)
 	}
 
-	if err := app.SetRoot(table, true).EnableMouse(true).Run(); err != nil {
+	textView.SetText(content)
+
+	if err := app.SetRoot(textView, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 }
