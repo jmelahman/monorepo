@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -29,6 +32,13 @@ type OrchardConfig struct {
 	Squash bool
 }
 
+// SubtreeHistoryInfo represents subtree information from git history
+type SubtreeHistoryInfo struct {
+	Prefix      string
+	LastCommit  string
+	LastMessage string
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "git-orchard [paths...]",
@@ -37,6 +47,21 @@ func main() {
 	}
 
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "run in debug mode")
+
+	// Add list subcommand
+	var useHistory bool
+	var listCmd = &cobra.Command{
+		Use:   "list",
+		Short: "List all configured subtrees",
+		Run: func(cmd *cobra.Command, args []string) {
+			if debug {
+				log.SetLevel(log.DebugLevel)
+			}
+			listSubtrees(useHistory)
+		},
+	}
+	listCmd.Flags().BoolVar(&useHistory, "use-history", false, "determine subtrees from git log history instead of config")
+	rootCmd.AddCommand(listCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -119,4 +144,112 @@ func readSubtreeConfigs() ([]SubtreeConfig, OrchardConfig, error) {
 	}
 
 	return subtrees, orchardConfig, nil
+}
+
+func listSubtrees(useHistory bool) {
+	if useHistory {
+		listSubtreesFromHistory()
+	} else {
+		listSubtreesFromConfig()
+	}
+}
+
+func listSubtreesFromConfig() {
+	subtrees, _, err := readSubtreeConfigs()
+	if err != nil {
+		log.Errorf("Failed to read subtree configs: %v", err)
+		return
+	}
+
+	if len(subtrees) == 0 {
+		fmt.Println("No subtrees configured.")
+		return
+	}
+
+	fmt.Printf("Found %d configured subtree(s):\n\n", len(subtrees))
+	for _, subtree := range subtrees {
+		fmt.Printf("Name: %s\n", subtree.Name)
+		fmt.Printf("  Repository: %s\n", subtree.Repository)
+		fmt.Printf("  Prefix: %s\n", subtree.Prefix)
+		if subtree.Branch != "" {
+			fmt.Printf("  Branch: %s\n", subtree.Branch)
+		}
+		fmt.Println()
+	}
+}
+
+func listSubtreesFromHistory() {
+	// Execute git log to find subtree merge commits
+	cmd := exec.Command("git", "log", "--grep=git-subtree-dir:", "--pretty=format:%H %s", "--all")
+	output, err := cmd.Output()
+	if err != nil {
+		log.Errorf("Failed to execute git log: %v", err)
+		return
+	}
+
+	if len(output) == 0 {
+		fmt.Println("No subtree merges found in git history.")
+		return
+	}
+
+	// Parse the output to extract subtree information
+	lines := strings.Split(string(output), "\n")
+	subtreeMap := make(map[string]SubtreeHistoryInfo)
+	
+	// Regex to match git-subtree-dir and git-subtree-mainline in commit messages
+	dirRegex := regexp.MustCompile(`git-subtree-dir:\s*(\S+)`)
+	mainlineRegex := regexp.MustCompile(`git-subtree-mainline:\s*(\S+)`)
+	
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		
+		commit := parts[0]
+		message := parts[1]
+		
+		// Extract subtree directory
+		dirMatches := dirRegex.FindStringSubmatch(message)
+		if len(dirMatches) < 2 {
+			continue
+		}
+		
+		prefix := dirMatches[1]
+		
+		// Check if this is a merge commit (has git-subtree-mainline)
+		isMainline := mainlineRegex.MatchString(message)
+		
+		if info, exists := subtreeMap[prefix]; exists {
+			// Update with more recent commit info if this is a mainline merge
+			if isMainline {
+				info.LastCommit = commit
+				info.LastMessage = message
+				subtreeMap[prefix] = info
+			}
+		} else {
+			subtreeMap[prefix] = SubtreeHistoryInfo{
+				Prefix:      prefix,
+				LastCommit:  commit,
+				LastMessage: message,
+			}
+		}
+	}
+
+	if len(subtreeMap) == 0 {
+		fmt.Println("No subtree merges found in git history.")
+		return
+	}
+
+	fmt.Printf("Found %d subtree(s) from git history:\n\n", len(subtreeMap))
+	for _, info := range subtreeMap {
+		fmt.Printf("Prefix: %s\n", info.Prefix)
+		fmt.Printf("  Last commit: %s\n", info.LastCommit)
+		fmt.Printf("  Last message: %s\n", info.LastMessage)
+		fmt.Println()
+	}
 }
