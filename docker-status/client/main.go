@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"text/tabwriter"
@@ -17,7 +18,10 @@ type ContainerHealth struct {
 }
 
 func main() {
-	resp, err := http.Get("http://localhost:9090")
+	url := flag.String("url", "http://localhost:9090", "URL to fetch container status from")
+	flag.Parse()
+
+	resp, err := http.Get(*url)
 	if err != nil {
 		panic(err)
 	}
