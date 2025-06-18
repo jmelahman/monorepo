@@ -28,6 +28,7 @@ func NewRootCommand() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			runRoot(opts, args)
 		},
+		Version: Version,
 	}
 
 	cmd.Flags().BoolVar(&opts.Debug, "debug", false, "run in debug mode")
