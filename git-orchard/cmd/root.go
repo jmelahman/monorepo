@@ -3,14 +3,15 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 
 	"github.com/jmelahman/git-orchard/config"
 )
 
 var (
-	Version = "dev"
+	Version string
+	Commit  string
 )
 
 // RootOptions holds options for the root command
@@ -28,7 +29,7 @@ func NewRootCommand() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			runRoot(opts, args)
 		},
-		Version: Version,
+		Version: fmt.Sprintf("%s\ncommit %s", Version, Commit),
 	}
 
 	cmd.Flags().BoolVar(&opts.Debug, "debug", false, "run in debug mode")
@@ -43,8 +44,6 @@ func runRoot(opts *RootOptions, args []string) {
 	if opts.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
-
-	fmt.Printf("Welcome to git-orchard (%v).\n", Version)
 
 	// Read subtree configurations from git config
 	reader := config.NewGitConfigReader(".")
