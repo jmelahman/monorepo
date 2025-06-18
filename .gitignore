@@ -174,4 +174,22 @@ node_modules/
 .cache/
 public
 src/gatsby-types.d.ts
+
+# Aider
 .aider*
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+go.work
+go.work.sum
+
+# env file
+.env
+
+# Common go artifact
+main
