@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
 type ContainerHealth struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
+	State  string `json:"state"`
 }
 
 func main() {
@@ -35,7 +37,38 @@ func main() {
 	// Add container data
 	for i, c := range containers {
 		table.SetCell(i+1, 0, tview.NewTableCell(c.Name))
-		table.SetCell(i+1, 1, tview.NewTableCell(c.Status))
+		
+		// Determine status text and color
+		statusText := c.Status
+		if c.Status == "none" {
+			statusText = c.State
+		}
+		
+		var statusColor tcell.Color
+		switch c.Status {
+		case "healthy":
+			statusColor = tcell.ColorGreen
+		case "unhealthy":
+			statusColor = tcell.ColorRed
+		case "starting":
+			statusColor = tcell.ColorYellow
+		case "none":
+			// Color based on state when health is none
+			switch c.State {
+			case "running":
+				statusColor = tcell.ColorGreen
+			case "exited":
+				statusColor = tcell.ColorRed
+			case "paused":
+				statusColor = tcell.ColorYellow
+			default:
+				statusColor = tcell.ColorWhite
+			}
+		default:
+			statusColor = tcell.ColorWhite
+		}
+		
+		table.SetCell(i+1, 1, tview.NewTableCell(statusText).SetTextColor(statusColor))
 	}
 
 	if err := app.SetRoot(table, true).EnableMouse(true).Run(); err != nil {
