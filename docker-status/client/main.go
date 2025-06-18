@@ -17,7 +17,7 @@ type ContainerHealth struct {
 }
 
 func main() {
-	resp, err := http.Get("http://health.home/health")
+	resp, err := http.Get("http://localhost:9090")
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +38,7 @@ func main() {
 	// Build the text content with colors using tabwriter
 	var buf bytes.Buffer
 	w := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
-	
+
 	for _, c := range containers {
 		// Determine status text and color
 		statusText := c.Status
@@ -47,9 +47,11 @@ func main() {
 		}
 
 		var colorTag string
+		var boldTag string
 		switch statusText {
 		case "healthy":
 			colorTag = "green"
+			boldTag = "::b"
 		case "running":
 			colorTag = "green"
 		case "starting":
@@ -58,15 +60,16 @@ func main() {
 			colorTag = "yellow"
 		case "unhealthy":
 			colorTag = "red"
+			boldTag = "::b"
 		case "exited":
 			colorTag = "red"
 		default:
 			colorTag = "white"
 		}
 
-		fmt.Fprintf(w, "%s\t[%s]%s[-]\n", c.Name, colorTag, statusText)
+		fmt.Fprintf(w, "%s\t[%s%s]%s[-]\n", c.Name, colorTag, boldTag, statusText)
 	}
-	
+
 	w.Flush()
 	textView.SetText(buf.String())
 
