@@ -113,9 +113,17 @@ func readSubtreeConfigs() ([]SubtreeConfig, OrchardConfig, error) {
 
 	// Parse the raw config to find subtree sections
 	for _, section := range cfg.Raw.Sections {
-		if section.Name == "subtree" {
+		if strings.HasPrefix(section.Name, "subtree") {
+			// Extract subsection name from section name like "subtree \"name\""
+			parts := strings.SplitN(section.Name, " ", 2)
+			var subsectionName string
+			if len(parts) > 1 {
+				// Remove quotes from subsection name
+				subsectionName = strings.Trim(parts[1], "\"")
+			}
+
 			subtree := SubtreeConfig{
-				Name: section.Subsection,
+				Name: subsectionName,
 			}
 
 			for _, option := range section.Options {
