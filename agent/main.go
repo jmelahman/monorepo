@@ -19,7 +19,8 @@ var (
 )
 
 var (
-	model string
+	model  string
+	debug bool
 )
 
 func main() {
@@ -31,6 +32,7 @@ func main() {
 	}
 
 	rootCmd.Flags().StringVarP(&model, "model", "m", "qwen3:0.6b", "Model to use for the agent")
+	rootCmd.Flags().BoolVarP(&debug, "debug", "d", false, "Enable debug logging")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -39,7 +41,11 @@ func main() {
 }
 
 func runAgent(cmd *cobra.Command, args []string) {
-	log.SetLevel(log.DebugLevel)
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 
 	client, err := ollama.ClientFromEnvironment()
 	must("initialize ollama client", err)
