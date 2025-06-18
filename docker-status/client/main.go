@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"sort"
 	"text/tabwriter"
 
 	"github.com/rivo/tview"
@@ -31,6 +32,11 @@ func main() {
 	if err := json.NewDecoder(resp.Body).Decode(&containers); err != nil {
 		panic(err)
 	}
+
+	// Sort containers alphabetically by name
+	sort.Slice(containers, func(i, j int) bool {
+		return containers[i].Name < containers[j].Name
+	})
 
 	app := tview.NewApplication()
 	textView := tview.NewTextView().
