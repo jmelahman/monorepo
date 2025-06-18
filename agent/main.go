@@ -19,7 +19,7 @@ var (
 )
 
 var (
-	model  string
+	model string
 	debug bool
 )
 
@@ -86,7 +86,11 @@ type Agent struct {
 func (a *Agent) Run(ctx context.Context) error {
 	conversation := []ollama.Message{}
 
-	fmt.Printf("Chat with an Agent (%s)\nModel: %s\n", version, a.model)
+	serverVersion, err := a.client.Version(ctx)
+	if err != nil {
+		log.Warnf("failed to get ollama server version: %v", err)
+	}
+	fmt.Printf("Chat with an Agent (%s)\nOllama Server Version: v%s\nModel: %s\n", version, serverVersion, a.model)
 
 	resp, err := a.client.List(ctx)
 	must("list models", err)
