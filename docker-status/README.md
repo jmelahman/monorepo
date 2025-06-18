@@ -2,6 +2,8 @@
 
 Docker Status is a simple application that checks the health of Docker containers and provides a JSON endpoint to retrieve their status.
 
+![An image of two terminals, one with the client displaying the statuses of containers running on the server.](screenshot.png)
+
 ## Getting Started
 
 Start the server via `docker` or `docker-compose`,
