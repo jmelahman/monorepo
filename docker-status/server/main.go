@@ -11,9 +11,9 @@ import (
 )
 
 type ContainerHealth struct {
-	Name    string `json:"name"`
-	Status  string `json:"status"`
-	Running bool   `json:"running"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	State  string `json:"state"`
 }
 
 func main() {
@@ -40,9 +40,9 @@ func main() {
 				status = info.State.Health.Status
 			}
 			healthStatuses = append(healthStatuses, ContainerHealth{
-				Name:    c.Names[0],
-				Status:  status,
-				Running: c.State == "running",
+				Name:   c.Names[0],
+				Status: status,
+				State:  c.State,
 			})
 		}
 
