@@ -40,6 +40,15 @@ services:
     volumes:
       - buildbuddy_data:/var/lib/buildbudy
 
+  docker-status:
+    image: lahmanja/docker-status:latest
+    container_name: docker-status
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+    volumes:
+      - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock
+
   n8n:
     image: n8nio/n8n
     restart: unless-stopped
