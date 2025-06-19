@@ -9,7 +9,7 @@ import (
 
 func setUp() {
 	// Create a valid absolute link
-	must(os.Remove("testdata/valid_absolute_link"))
+	_ = os.Remove("testdata/valid_absolute_link")
 	must(os.Symlink("/etc/hosts", "testdata/valid_absolute_link"))
 	// Build the check-symlinks binary
 	must(exec.Command("go", "build").Run())
@@ -32,7 +32,7 @@ func expectOutcome(t *testing.T, files []string, expectedCode int) {
 func TestMain(m *testing.M) {
 	setUp()
 	code := m.Run()
-	_ = os.Remove("testdata/valid_absolute_link")
+	must(os.Remove("testdata/valid_absolute_link"))
 	os.Exit(code)
 }
 
