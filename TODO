@@ -1,0 +1,74 @@
+# Monorepo
+
+pre-commit/push hooks
+ - maybe should write my own shell aliases, source them in custom hooks
+ - look into `just` or similar. I just want fast, convenient and diff-based.
+golang tooling
+fix golang linting
+python testing
+fix python lint noqa's
+create a golang application repo template
+
+How does building with go-bin work if 1.24.4 doesn't exist? Does it?
+
+## Agent
+
+More tools
+
+What workflows should it support?
+ - `agent commit`, `agent commit -a`
+ - `agent amend`
+ - Fix failing Github actions
+
+Openrouter integration?
+
+## Cycle-CLI
+
+1. Set resistance
+2. Workouts
+  a. Target cadence, power and
+  b. Hopefully won't need an interface for creating them
+  c. Import/Export
+4. Statistics
+  a. Cloud sync
+3. Simulated routes
+
+## Dashboard
+
+Widgets
+- docker-status
+- openrouter credits
+- twitter maybe?
+- email
+- google voice
+
+## Docker Status
+
+Modularize
+Basic auth?
+
+## git-orchard
+
+- git orchard init
+- git orchard status
+- git orchard push/pull -a
+- git orchard tag
+
+Init should be easy and tag is the most missing feature from `git subtree`.
+
+## go-bin
+
+nightly nvchecker->push tag
+- I'm not sure nvchecker will work since we want all versions, not just latest
+figure out how to handle pypi size long-term
+ - alerts? Maybe pypi provides these already
+
+## Resume
+
+Fix generating
+Update
+AI review
+
+## Tag
+
+Support tagging without a clone given a remote URL.
