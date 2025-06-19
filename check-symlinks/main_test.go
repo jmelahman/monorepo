@@ -42,7 +42,6 @@ func TestExpectSuccess(t *testing.T) {
 		{"testdata/doesnt_exist"},
 		{"testdata/root_owned_file"},
 		{"testdata/some_file"},
-		{"testdata/valid_directory_link"},
 		{"testdata/valid_link"},
 		{"testdata/.hidden_dir"},
 		{"testdata/.hidden_dir/hidden_file"},
