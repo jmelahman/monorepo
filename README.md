@@ -19,6 +19,11 @@ Check for broken symlinks,
 ```shell
 uvx check-symlinks
 ```
+### Golang
+
+```shell
+find . -name go.mod -execdir golangci-lint run ./... \;
+```
 
 ### Python
 
