@@ -72,25 +72,29 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 	go func() {
 		defer close(paths)
 		for _, rootPath := range args {
-			err := fastwalk.Walk(nil, rootPath, func(path string, d os.DirEntry, err error) error {
-				if err != nil {
-					return nil
-				}
-
-				// Skip hidden files and directories unless --hidden flag is set
-				if !includeHidden && isHidden(path) {
-					if d.IsDir() {
-						return filepath.SkipDir
+			if info, err := os.Stat(rootPath); os.IsNotExist(err) || !info.IsDir() {
+				paths <- rootPath
+			} else {
+				err := fastwalk.Walk(nil, rootPath, func(path string, d os.DirEntry, err error) error {
+					if err != nil {
+						return nil
 					}
-					return nil
-				}
 
-				paths <- path
-				return nil
-			})
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error walking directory %s: %v\n", rootPath, err)
-				rc = 127
+					// Skip hidden files and directories unless --hidden flag is set
+					if !includeHidden && isHidden(path) {
+						if d.IsDir() {
+							return filepath.SkipDir
+						}
+						return nil
+					}
+
+					paths <- path
+					return nil
+				})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error walking directory %s: %v\n", rootPath, err)
+					rc = 127
+				}
 			}
 		}
 	}()
