@@ -13,6 +13,11 @@ import (
 )
 
 var (
+	version = "dev"
+	commit  = "none"
+)
+
+var (
 	includeHidden bool
 	quiet         bool
 	rootPath      string
@@ -20,9 +25,10 @@ var (
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "check-symlinks [paths...]",
-		Short: "Check for broken symbolic links in a directory tree",
-		Run:   runCheckSymlinks,
+		Use:     "check-symlinks [paths...]",
+		Short:   "Check for broken symbolic links in a directory tree",
+		Run:     runCheckSymlinks,
+		Version: fmt.Sprintf("%s\ncommit %s", version, commit),
 	}
 
 	rootCmd.Flags().BoolVar(&includeHidden, "hidden", false, "include hidden files and directories in the check")
