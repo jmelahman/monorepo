@@ -32,7 +32,7 @@ func expectOutcome(t *testing.T, files []string, expectedCode int) {
 func TestMain(m *testing.M) {
 	setUp()
 	code := m.Run()
-	must(os.Remove("testdata/valid_absolute_link"))
+	_ = os.Remove("testdata/valid_absolute_link")
 	os.Exit(code)
 }
 
