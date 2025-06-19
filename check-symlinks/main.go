@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/charlievieth/fastwalk"
 	"github.com/spf13/cobra"
@@ -13,6 +14,7 @@ import (
 
 var (
 	includeHidden bool
+	quiet         bool
 	rootPath      string
 )
 
@@ -24,6 +26,7 @@ func main() {
 	}
 
 	rootCmd.Flags().BoolVar(&includeHidden, "hidden", false, "include hidden files and directories in the check")
+	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "run in quiet mode")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -38,6 +41,7 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 	}
 
 	var wg sync.WaitGroup
+	var filesChecked int64
 	rc := 0
 	paths := make(chan string, 100)
 	done := make(chan struct{})
@@ -48,13 +52,16 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 		go func() {
 			defer wg.Done()
 			for path := range paths {
+				atomic.AddInt64(&filesChecked, 1)
 				fi, err := os.Lstat(path)
 				if err != nil || fi.Mode()&os.ModeSymlink == 0 {
 					continue
 				}
 				_, err = os.Stat(path)
 				if os.IsNotExist(err) {
-					fmt.Println("Broken symlink:", path)
+					if !quiet {
+						fmt.Println("Broken symlink:", path)
+					}
 					rc = 1
 				}
 			}
@@ -94,6 +101,9 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 	}()
 
 	<-done
+	if !quiet {
+		fmt.Printf("Total files checked: %d\n", atomic.LoadInt64(&filesChecked))
+	}
 	os.Exit(rc)
 }
 
