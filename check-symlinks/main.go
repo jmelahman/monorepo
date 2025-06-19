@@ -65,7 +65,7 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 	go func() {
 		defer close(paths)
 		for _, rootPath := range args {
-			err := fastwalk.Walk(rootPath, func(path string, d os.DirEntry, err error) error {
+			err := fastwalk.Walk(nil, rootPath, func(path string, d os.DirEntry, err error) error {
 				if err != nil {
 					return nil
 				}
