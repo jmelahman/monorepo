@@ -19,8 +19,9 @@ var (
 )
 
 var (
-	model string
-	debug bool
+	model  string
+	debug  bool
+	stream bool
 )
 
 func main() {
@@ -31,8 +32,9 @@ func main() {
 		Run:     runAgent,
 	}
 
-	rootCmd.Flags().StringVarP(&model, "model", "m", "qwen3:0.6b", "Model to use for the agent")
-	rootCmd.Flags().BoolVarP(&debug, "debug", "d", false, "Enable debug logging")
+	rootCmd.Flags().StringVarP(&model, "model", "m", "qwen3:0.6b", "model to use for the agent")
+	rootCmd.Flags().BoolVarP(&debug, "debug", "d", false, "enable debug logging")
+	rootCmd.Flags().BoolVarP(&stream, "stream", "s", false, "stream output (disables tools)")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -130,10 +132,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		message, err := a.runInference(ctx, conversation)
 		must("run inference", err)
 
-		if message.Content != "" {
-			fmt.Printf("\u001b[92mAgent\u001b[0m: %s\n", message.Content)
-			conversation = append(conversation, *message)
-		}
+		conversation = append(conversation, *message)
 
 		log.Debug("Parsing messages...")
 		for _, tc := range message.ToolCalls {
@@ -151,7 +150,6 @@ func (a *Agent) runInference(ctx context.Context, conversation []ollama.Message)
 	for _, t := range a.tools {
 		tools = append(tools, t.Tool)
 	}
-	stream := false
 	req := ollama.ChatRequest{
 		Model:    a.model,
 		Messages: conversation,
@@ -159,10 +157,13 @@ func (a *Agent) runInference(ctx context.Context, conversation []ollama.Message)
 		Tools:    tools,
 	}
 	var finalResponse ollama.ChatResponse
+	fmt.Print("\u001b[92mAgent\u001b[0m: ")
 	err := a.client.Chat(ctx, &req, func(r ollama.ChatResponse) error {
+		fmt.Print(r.Message.Content)
 		finalResponse = r
 		return nil
 	})
+	fmt.Println()
 
 	return &finalResponse.Message, err
 }
