@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/charlievieth/fastwalk"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +65,7 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 	go func() {
 		defer close(paths)
 		for _, rootPath := range args {
-			err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, err error) error {
+			err := fastwalk.Walk(rootPath, func(path string, d os.DirEntry, err error) error {
 				if err != nil {
 					return nil
 				}
