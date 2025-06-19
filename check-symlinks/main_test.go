@@ -9,10 +9,10 @@ import (
 
 func setUp() {
 	// Create a valid absolute link
-	os.Remove("testdata/valid_absolute_link")
-	os.Symlink("/etc/hosts", "testdata/valid_absolute_link")
+	must(os.Remove("testdata/valid_absolute_link"))
+	must(os.Symlink("/etc/hosts", "testdata/valid_absolute_link"))
 	// Build the check-symlinks binary
-	exec.Command("go", "build").Run()
+	must(exec.Command("go", "build").Run())
 }
 
 func expectOutcome(t *testing.T, files []string, expectedCode int) {
@@ -32,7 +32,7 @@ func expectOutcome(t *testing.T, files []string, expectedCode int) {
 func TestMain(m *testing.M) {
 	setUp()
 	code := m.Run()
-	os.Remove("testdata/valid_absolute_link")
+	must(os.Remove("testdata/valid_absolute_link"))
 	os.Exit(code)
 }
 
@@ -80,5 +80,11 @@ func TestExpectError(t *testing.T) {
 		t.Run(strings.Join(tt, " "), func(t *testing.T) {
 			expectOutcome(t, tt, 2)
 		})
+	}
+}
+
+func must(err error) {
+	if err != nil {
+		panic(err)
 	}
 }

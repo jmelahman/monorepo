@@ -20,7 +20,6 @@ var (
 var (
 	includeHidden bool
 	quiet         bool
-	rootPath      string
 )
 
 func main() {
