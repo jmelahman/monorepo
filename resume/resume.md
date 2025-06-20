@@ -40,7 +40,7 @@ Values simplicity, reliability, and efficiency.
 | - Replaced file-based test selection with build dependency queries,                   |              |
 | reducing CI p50 time by 20 minutes and reducing total compute cost by 40%.            |              |
 | - Owned CI/CD infrastructure including on-prem and cloud (Azure, AWS EC2) servers,    |              |
-| test selection and orchestration, build health, and data pipelines.                   |              |                                                           |              |
+| test selection and orchestration, build health, and data pipelines.                   |              |
 +---------------------------------------------------------------------------------------+--------------+
 | **Software Quality Operations** *&mdash; Waymo LLC, Mountain View, CA*                | June 2017 -  |
 |                                                                                       | April 2019   |

@@ -25,8 +25,8 @@ docker run \
     -o index.html \
     --standalone \
     --embed-resources \
-    --css=base.css \
-    --css "$STYLE"
+    --css="styles/base.css" \
+    --css="styles/$STYLE"
 
 if [ "$PDF" == "true" ]; then
   uvx weasyprint index.html resume.pdf
