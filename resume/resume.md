@@ -26,7 +26,7 @@ Values simplicity, reliability, and efficiency.
 +---------------------------------------------------------------------------------------+--------------+
 | - Re-architected a monolithic application into microservices, owning shared services  |              |
 | (e.g., configuration, DB interfaces); reduced feature lead times by weeks and         |              |
-| reducing update time by hours.                                                        |              |
+| reduced deployment time by hours.                                                     |              |
 | - Introduced ephemeral, auto-scaling cloud infrastructure, cutting costs by 80%,      |              |
 | eliminating p99 wait times in CI, and supporting 10× operational growth over 3 years. |              |
 | - Led internal DevTools efforts (static typing, linting, formatting, code coverage),  |              |
