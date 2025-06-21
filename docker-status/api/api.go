@@ -9,12 +9,6 @@ import (
 	"text/tabwriter"
 )
 
-type ContainerHealth struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	State  string `json:"state"`
-}
-
 func GetContainerHealth(url *string) ([]ContainerHealth, error) {
 	resp, err := http.Get(*url)
 	if err != nil {

@@ -8,13 +8,8 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/jmelahman/docker-status/api"
 )
-
-type ContainerHealth struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	State  string `json:"state"`
-}
 
 func main() {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -29,7 +24,7 @@ func main() {
 			return
 		}
 
-		var healthStatuses []ContainerHealth
+		var healthStatuses []api.ContainerHealth
 		for _, c := range containers {
 			info, err := cli.ContainerInspect(context.Background(), c.ID)
 			if err != nil || info.State == nil {
@@ -39,7 +34,7 @@ func main() {
 			if info.State.Health != nil {
 				status = info.State.Health.Status
 			}
-			healthStatuses = append(healthStatuses, ContainerHealth{
+			healthStatuses = append(healthStatuses, api.ContainerHealth{
 				Name:   c.Names[0],
 				Status: status,
 				State:  c.State,
