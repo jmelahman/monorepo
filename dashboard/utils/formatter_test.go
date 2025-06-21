@@ -59,9 +59,9 @@ func TestFormatTwoColumns(t *testing.T) {
 			} else {
 				// Check that result contains all expected lines
 				expectedLines := map[string]bool{
-					"short    : value1": true,
+					"short:     value1": true,
 					"very_long: value2": true,
-					"medium   : value3": true,
+					"medium:    value3": true,
 				}
 
 				if tt.name == "different separator" {
