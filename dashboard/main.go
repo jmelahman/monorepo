@@ -10,7 +10,7 @@ import (
 func main() {
 	app := tview.NewApplication()
 
-	// Create the credits widget
+	// Create the widgets
 	creditsWidget := widgets.NewCreditsWidget()
 	dockerWidget := widgets.NewDockerWidget()
 
@@ -18,7 +18,7 @@ func main() {
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
 		AddItem(creditsWidget, 30, 1, false).
-		AddItem(dockerWidget, 31, 1, false).
+		AddItem(dockerWidget, 30, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	// Start auto-refresh goroutine
