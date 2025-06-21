@@ -13,7 +13,8 @@ import (
 
 type CreditsResponse struct {
 	Data struct {
-		Credits float64 `json:"credits"`
+		TotalCredits float64 `json:"total_credits"`
+		TotalUsage   float64 `json:"total_usage"`
 	} `json:"data"`
 }
 
@@ -41,7 +42,7 @@ func fetchCredits() (float64, error) {
 		return 0, fmt.Errorf("OPENROUTER_API_KEY environment variable not set")
 	}
 
-	req, err := http.NewRequest("GET", "https://openrouter.ai/api/v1/auth/key", nil)
+	req, err := http.NewRequest("GET", "https://openrouter.ai/api/v1/credits", nil)
 	if err != nil {
 		return 0, err
 	}
@@ -70,5 +71,5 @@ func fetchCredits() (float64, error) {
 		return 0, err
 	}
 
-	return creditsResp.Data.Credits, nil
+	return creditsResp.Data.TotalCredits - creditsResp.Data.TotalUsage, nil
 }
