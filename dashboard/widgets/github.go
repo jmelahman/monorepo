@@ -1,53 +1,65 @@
 package widgets
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/google/go-github/v57/github"
 	"github.com/jmelahman/monorepo/dashboard/config"
 	"github.com/rivo/tview"
+	"golang.org/x/oauth2"
 )
 
 type GitHubClient struct {
-	authToken string
-}
-
-type PullRequest struct {
-	Number int    `json:"number"`
-	Title  string `json:"title"`
-	State  string `json:"state"`
+	client *github.Client
 }
 
 func NewGitHubClient() (*GitHubClient, error) {
-	// Try to get auth token from gh CLI
-	cmd := exec.Command("gh", "auth", "token")
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get GitHub auth token from gh CLI: %v", err)
+	var token string
+	
+	// First try environment variable
+	token = os.Getenv("GITHUB_TOKEN")
+	
+	// If not found, try gh CLI
+	if token == "" {
+		cmd := exec.Command("gh", "auth", "token")
+		output, err := cmd.Output()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get GitHub auth token from gh CLI or GITHUB_TOKEN env var: %v", err)
+		}
+		token = strings.TrimSpace(string(output))
 	}
-
-	token := strings.TrimSpace(string(output))
+	
 	if token == "" {
 		return nil, fmt.Errorf("empty GitHub auth token")
 	}
 
-	return &GitHubClient{authToken: token}, nil
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	tc := oauth2.NewClient(context.Background(), ts)
+	client := github.NewClient(tc)
+
+	return &GitHubClient{client: client}, nil
 }
 
 func (c *GitHubClient) GetOpenPullRequests(repo string) (int, error) {
-	cmd := exec.Command("gh", "pr", "list", "--repo", repo, "--state", "open", "--json", "number,title,state")
-	output, err := cmd.Output()
+	parts := strings.Split(repo, "/")
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("invalid repository format: %s (expected owner/repo)", repo)
+	}
+	
+	owner, repoName := parts[0], parts[1]
+	
+	prs, _, err := c.client.PullRequests.List(context.Background(), owner, repoName, &github.PullRequestListOptions{
+		State: "open",
+	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to fetch pull requests for %s: %v", repo, err)
-	}
-
-	var prs []PullRequest
-	err = json.Unmarshal(output, &prs)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse pull requests JSON: %v", err)
 	}
 
 	return len(prs), nil
