@@ -13,6 +13,15 @@ func NewDockerWidget() *tview.TextView {
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
 
+	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("Docker Status")
+
+	// Initial load
+	RefreshDockerWidget(widget)
+
+	return widget
+}
+
+func RefreshDockerWidget(widget *tview.TextView) {
 	url := "http://health.home"
 	status, err := api.GetDockerStatus(&url)
 	if err != nil {
@@ -20,8 +29,4 @@ func NewDockerWidget() *tview.TextView {
 	} else {
 		widget.SetText(status)
 	}
-
-	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("Docker Status")
-
-	return widget
 }

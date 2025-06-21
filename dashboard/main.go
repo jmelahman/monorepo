@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/jmelahman/monorepo/dashboard/widgets"
 	"github.com/rivo/tview"
 )
@@ -18,6 +20,19 @@ func main() {
 		AddItem(creditsWidget, 30, 1, false).
 		AddItem(dockerWidget, 31, 1, false).
 		AddItem(nil, 0, 1, false)
+
+	// Start auto-refresh goroutine
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			app.QueueUpdateDraw(func() {
+				widgets.RefreshCreditsWidget(creditsWidget)
+				widgets.RefreshDockerWidget(dockerWidget)
+			})
+		}
+	}()
 
 	if err := app.SetRoot(flex, true).Run(); err != nil {
 		panic(err)

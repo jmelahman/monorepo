@@ -23,6 +23,15 @@ func NewCreditsWidget() *tview.TextView {
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
 
+	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("OpenRouter Credits")
+
+	// Initial load
+	RefreshCreditsWidget(widget)
+
+	return widget
+}
+
+func RefreshCreditsWidget(widget *tview.TextView) {
 	// Fetch and display credits
 	credits, err := fetchCredits()
 	if err != nil {
@@ -30,10 +39,6 @@ func NewCreditsWidget() *tview.TextView {
 	} else {
 		widget.SetText(fmt.Sprintf("$%.2f", credits))
 	}
-
-	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("OpenRouter Credits")
-
-	return widget
 }
 
 func fetchCredits() (float64, error) {
