@@ -22,7 +22,7 @@ func FormatTwoColumns(data map[string]string, separator string) string {
 	var lines []string
 	for key, value := range data {
 		padding := strings.Repeat(" ", maxWidth-len(key))
-		lines = append(lines, fmt.Sprintf("%s%s%s%s", key, padding, separator, value))
+		lines = append(lines, fmt.Sprintf("%s%s%s%s", key, separator, padding, value))
 	}
 
 	return strings.Join(lines, "\n")
@@ -46,7 +46,7 @@ func FormatTwoColumnsOrdered(keys []string, data map[string]string, separator st
 	for _, key := range keys {
 		if value, exists := data[key]; exists {
 			padding := strings.Repeat(" ", maxWidth-len(key))
-			lines = append(lines, fmt.Sprintf("%s%s%s%s", key, padding, separator, value))
+			lines = append(lines, fmt.Sprintf("%s%s%s%s", key, separator, padding, value))
 		}
 	}
 

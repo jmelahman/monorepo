@@ -23,7 +23,7 @@ func NewCreditsWidget() *tview.TextView {
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
 
-	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("OpenRouter Credits")
+	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("OpenRouter")
 
 	// Initial load
 	RefreshCreditsWidget(widget)
