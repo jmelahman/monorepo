@@ -16,9 +16,8 @@ func main() {
 
 	// Wrap the widget in a flex layout to center it
 	flex := tview.NewFlex().
-		AddItem(nil, 0, 1, false).
-		AddItem(creditsWidget, 30, 1, false).
 		AddItem(dockerWidget, 30, 1, false).
+		AddItem(creditsWidget, 20, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	// Start auto-refresh goroutine
@@ -28,8 +27,8 @@ func main() {
 
 		for range ticker.C {
 			app.QueueUpdateDraw(func() {
-				widgets.RefreshCreditsWidget(creditsWidget)
 				widgets.RefreshDockerWidget(dockerWidget)
+				widgets.RefreshCreditsWidget(creditsWidget)
 			})
 		}
 	}()
