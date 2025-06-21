@@ -3,9 +3,7 @@ package widgets
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
