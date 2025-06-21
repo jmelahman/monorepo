@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/google/go-github/v57/github"
 	"github.com/jmelahman/monorepo/dashboard/config"
+	"github.com/jmelahman/monorepo/dashboard/utils"
 	"github.com/rivo/tview"
 	"golang.org/x/oauth2"
 )
@@ -110,7 +112,18 @@ func RefreshGitHubPRWidget(widget *tview.TextView) {
 	if len(cfg.GitHub.Repositories) == 1 {
 		widget.SetText(fmt.Sprintf("%d open PRs", totalPRs))
 	} else {
-		details := strings.Join(repoDetails, "\n")
-		widget.SetText(fmt.Sprintf("Total: %d\n\n%s", totalPRs, details))
+		// Create data map for two-column formatting
+		data := make(map[string]string)
+		for _, repo := range cfg.GitHub.Repositories {
+			count, err := client.GetOpenPullRequests(repo)
+			if err != nil {
+				data[repo] = "Error"
+			} else {
+				data[repo] = strconv.Itoa(count)
+			}
+		}
+		
+		formatted := utils.FormatTwoColumnsOrdered(cfg.GitHub.Repositories, data, ": ")
+		widget.SetText(fmt.Sprintf("Total: %d\n\n%s", totalPRs, formatted))
 	}
 }
