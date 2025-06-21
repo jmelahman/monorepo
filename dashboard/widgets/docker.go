@@ -13,7 +13,7 @@ func NewDockerWidget() *tview.TextView {
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
 
-	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("Docker Status")
+	widget.SetBorder(true).SetBorderColor(tcell.ColorBlue).SetTitle("Docker Status")
 
 	// Initial load
 	RefreshDockerWidget(widget)

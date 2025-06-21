@@ -1,8 +1,8 @@
 {
   "github": {
     "repositories": [
-      "owner/repo1",
-      "owner/repo2"
+      "jmelahman/agent",
+      "jmelahman/PKGBUILDs"
     ]
   }
 }
