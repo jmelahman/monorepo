@@ -20,10 +20,10 @@ type GitHubClient struct {
 
 func NewGitHubClient() (*GitHubClient, error) {
 	var token string
-	
+
 	// First try environment variable
 	token = os.Getenv("GITHUB_TOKEN")
-	
+
 	// If not found, try gh CLI
 	if token == "" {
 		cmd := exec.Command("gh", "auth", "token")
@@ -33,7 +33,7 @@ func NewGitHubClient() (*GitHubClient, error) {
 		}
 		token = strings.TrimSpace(string(output))
 	}
-	
+
 	if token == "" {
 		return nil, fmt.Errorf("empty GitHub auth token")
 	}
@@ -52,9 +52,9 @@ func (c *GitHubClient) GetOpenPullRequests(repo string) (int, error) {
 	if len(parts) != 2 {
 		return 0, fmt.Errorf("invalid repository format: %s (expected owner/repo)", repo)
 	}
-	
+
 	owner, repoName := parts[0], parts[1]
-	
+
 	prs, _, err := c.client.PullRequests.List(context.Background(), owner, repoName, &github.PullRequestListOptions{
 		State: "open",
 	})
@@ -67,7 +67,6 @@ func (c *GitHubClient) GetOpenPullRequests(repo string) (int, error) {
 
 func NewGitHubPRWidget() *tview.TextView {
 	widget := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
 
 	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("GitHub PRs")
