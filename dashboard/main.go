@@ -13,7 +13,7 @@ func main() {
 	// Create the widgets
 	creditsWidget := widgets.NewCreditsWidget()
 	dockerWidget := widgets.NewDockerWidget()
-	// githubPRWidget := widgets.NewGitHubPRWidget()
+	githubPRWidget := widgets.NewGitHubPRWidget()
 	gitWidget := widgets.NewGitWidget()
 	workWidget := widgets.NewWorkWidget()
 
@@ -21,12 +21,12 @@ func main() {
 	flex := tview.NewFlex().
 		AddItem(dockerWidget, 30, 1, false).
 		AddItem(creditsWidget, 20, 1, false).
-		// AddItem(githubPRWidget, 0, 1, false).
+		AddItem(githubPRWidget, 0, 1, false).
 		AddItem(gitWidget, 0, 1, false).
 		AddItem(workWidget, 0, 1, false).
 		AddItem(nil, 0, 1, false)
 
-	// Start auto-refresh goroutine
+	// Start auto-refresh goroutine for most widgets (5 seconds)
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
@@ -35,9 +35,20 @@ func main() {
 			app.QueueUpdateDraw(func() {
 				widgets.RefreshDockerWidget(dockerWidget)
 				widgets.RefreshCreditsWidget(creditsWidget)
-				// widgets.RefreshGitHubPRWidget(githubPRWidget)
 				widgets.RefreshGitWidget(gitWidget)
 				widgets.RefreshWorkWidget(workWidget)
+			})
+		}
+	}()
+
+	// Start auto-refresh goroutine for GitHub PR widget (1 minute)
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			app.QueueUpdateDraw(func() {
+				widgets.RefreshGitHubPRWidget(githubPRWidget)
 			})
 		}
 	}()
