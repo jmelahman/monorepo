@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -110,6 +109,14 @@ func RefreshGitHubPRWidget(widget *tview.TextView) {
 
 	// Display results
 	if len(cfg.GitHub.Repositories) == 1 {
+		var color string
+		if totalPRs > 5 {
+			color = "red"
+		} else if totalPRs > 0 {
+			color = "yellow"
+		} else {
+			color = "green"
+		}
 		widget.SetText(fmt.Sprintf("%d open PRs", totalPRs))
 	} else {
 		// Create data map for two-column formatting
@@ -119,7 +126,15 @@ func RefreshGitHubPRWidget(widget *tview.TextView) {
 			if err != nil {
 				data[repo] = "Error"
 			} else {
-				data[repo] = strconv.Itoa(count)
+				var color string
+				if count > 5 {
+					color = "red"
+				} else if count > 0 {
+					color = "yellow"
+				} else {
+					color = "green"
+				}
+				data[repo] = fmt.Sprintf("[%s]%d", color, count)
 			}
 		}
 
