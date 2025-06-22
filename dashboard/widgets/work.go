@@ -2,19 +2,28 @@ package widgets
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/jmelahman/work/api"
 	"github.com/rivo/tview"
 )
 
+func NewWorkWidget() *tview.TextView {
+	widget := tview.NewTextView().
+		SetTextAlign(tview.AlignCenter).
+		SetDynamicColors(true)
+
+	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("Work")
+
+	// Initial load
+	RefreshWorkWidget(widget)
+
+	return widget
+}
+
 // RefreshWorkWidget updates the work widget with current task status
 func RefreshWorkWidget(widget *tview.TextView) {
-	// Get database path - use same logic as work client
-	databasePath := getWorkDatabasePath()
-	
-	workAPI, err := api.NewWorkAPI(databasePath)
+	workAPI, err := api.NewWorkAPI("")
 	if err != nil {
 		widget.SetText(fmt.Sprintf("[red]Error initializing work API: %v", err))
 		return
@@ -54,19 +63,4 @@ func RefreshWorkWidget(widget *tview.TextView) {
 	)
 
 	widget.SetText(text)
-}
-
-// getWorkDatabasePath returns the path to the work database
-// This mirrors the logic from work/database/database.go
-func getWorkDatabasePath() string {
-	dataHome := os.Getenv("XDG_DATA_HOME")
-	if dataHome == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return ""
-		}
-		dataHome = filepath.Join(home, ".local", "share")
-	}
-	
-	return filepath.Join(dataHome, "work", "database.db")
 }
