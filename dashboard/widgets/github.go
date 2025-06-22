@@ -127,6 +127,6 @@ func RefreshGitHubPRWidget(widget *tview.TextView) {
 		}
 
 		formatted := utils.FormatTwoColumnsOrdered(cfg.GitHub.Repositories, data, ": ")
-		widget.SetText(fmt.Sprintf("Total: %d\n\n%s", totalPRs, formatted))
+		widget.SetText(formatted)
 	}
 }
