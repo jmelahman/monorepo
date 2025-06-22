@@ -7,9 +7,14 @@ import (
 
 type Config struct {
 	GitHub GitHubConfig `json:"github"`
+	Git    GitConfig    `json:"git"`
 }
 
 type GitHubConfig struct {
+	Repositories []string `json:"repositories"`
+}
+
+type GitConfig struct {
 	Repositories []string `json:"repositories"`
 }
 
