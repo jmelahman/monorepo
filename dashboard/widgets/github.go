@@ -107,35 +107,22 @@ func RefreshGitHubPRWidget(widget *tview.TextView) {
 		repoDetails = append(repoDetails, fmt.Sprintf("%s: %d", repo, count))
 	}
 
-	// Display results
-	if len(cfg.GitHub.Repositories) == 1 {
-		var color string
-		if totalPRs > 5 {
-			color = "red"
-		} else if totalPRs > 0 {
-			color = "yellow"
+	// Create data map for two-column formatting
+	data := make(map[string]string)
+	for _, repo := range cfg.GitHub.Repositories {
+		count, err := client.GetOpenPullRequests(repo)
+		if err != nil {
+			data[repo] = "Error"
 		} else {
-			color = "green"
-		}
-		widget.SetText(fmt.Sprintf("%d open PRs", totalPRs))
-	} else {
-		// Create data map for two-column formatting
-		data := make(map[string]string)
-		for _, repo := range cfg.GitHub.Repositories {
-			count, err := client.GetOpenPullRequests(repo)
-			if err != nil {
-				data[repo] = "Error"
+			var color string
+			if count > 5 {
+				color = "red"
+			} else if count > 0 {
+				color = "yellow"
 			} else {
-				var color string
-				if count > 5 {
-					color = "red"
-				} else if count > 0 {
-					color = "yellow"
-				} else {
-					color = "green"
-				}
-				data[repo] = fmt.Sprintf("[%s]%d", color, count)
+				color = "green"
 			}
+			data[repo] = fmt.Sprintf("[%s]%d[-]", color, count)
 		}
 
 		formatted := utils.FormatTwoColumnsOrdered(cfg.GitHub.Repositories, data, ": ")
