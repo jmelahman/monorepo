@@ -14,12 +14,14 @@ func main() {
 	creditsWidget := widgets.NewCreditsWidget()
 	dockerWidget := widgets.NewDockerWidget()
 	githubPRWidget := widgets.NewGitHubPRWidget()
+	gitWidget := widgets.NewGitWidget()
 
 	// Wrap the widget in a flex layout to center it
 	flex := tview.NewFlex().
 		AddItem(dockerWidget, 30, 1, false).
 		AddItem(creditsWidget, 20, 1, false).
 		AddItem(githubPRWidget, 0, 1, false).
+		AddItem(gitWidget, 0, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	// Start auto-refresh goroutine
@@ -32,6 +34,7 @@ func main() {
 				widgets.RefreshDockerWidget(dockerWidget)
 				widgets.RefreshCreditsWidget(creditsWidget)
 				widgets.RefreshGitHubPRWidget(githubPRWidget)
+				widgets.RefreshGitWidget(gitWidget)
 			})
 		}
 	}()

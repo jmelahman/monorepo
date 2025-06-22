@@ -1,4 +1,9 @@
 {
+  "git": {
+    "repositories": [
+      "/home/jamison/code/monorepo"
+    ]
+  },
   "github": {
     "repositories": [
       "jmelahman/agent",
