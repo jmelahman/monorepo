@@ -37,7 +37,15 @@ func RefreshCreditsWidget(widget *tview.TextView) {
 	if err != nil {
 		widget.SetText(fmt.Sprintf("[red]Error: %v", err))
 	} else {
-		widget.SetText(fmt.Sprintf("$%.2f", credits))
+		var color string
+		if credits > 10 {
+			color = "green"
+		} else if credits > 1 {
+			color = "yellow"
+		} else {
+			color = "red"
+		}
+		widget.SetText(fmt.Sprintf("[%s]$%.2f", color, credits))
 	}
 }
 
