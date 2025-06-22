@@ -68,9 +68,10 @@ func (c *GitHubClient) GetOpenPullRequests(repo string) (int, error) {
 
 func NewGitHubPRWidget() *tview.TextView {
 	widget := tview.NewTextView().
+		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
 
-	widget.SetBorder(true).SetBorderColor(tcell.ColorGray).SetTitle("GitHub PRs")
+	widget.SetBorder(true).SetBorderColor(tcell.ColorDarkGray.TrueColor()).SetTitle("GitHub PRs")
 
 	// Initial load
 	RefreshGitHubPRWidget(widget)

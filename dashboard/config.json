@@ -2,7 +2,17 @@
   "github": {
     "repositories": [
       "jmelahman/agent",
-      "jmelahman/PKGBUILDs"
+      "jmelahman/check-symlinks",
+      "jmelahman/connections",
+      "jmelahman/cycle-cli",
+      "jmelahman/docker-status",
+      "jmelahman/git-orchard",
+      "jmelahman/go-bin",
+      "jmelahman/manygo",
+      "jmelahman/nature-sounds",
+      "jmelahman/tag",
+      "jmelahman/PKGBUILDs",
+      "jmelahman/work"
     ]
   }
 }
