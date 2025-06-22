@@ -20,8 +20,8 @@ func main() {
 	// Wrap the widget in a flex layout to center it
 	flex := tview.NewFlex().
 		AddItem(dockerWidget, 30, 1, false).
-		AddItem(creditsWidget, 20, 1, false).
-		AddItem(githubPRWidget, 0, 1, false).
+		AddItem(githubPRWidget, 35, 1, false).
+		AddItem(creditsWidget, 0, 1, false).
 		AddItem(gitWidget, 0, 1, false).
 		AddItem(workWidget, 0, 1, false).
 		AddItem(nil, 0, 1, false)
