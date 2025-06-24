@@ -1,9 +1,9 @@
 services:
   audiobookshelf:
-    image: ghcr.io/advplyr/audiobookshelf:latest
+    image: ghcr.io/advplyr/audiobookshelf
     container_name: audiobookshelf
-    ports:
-      - "13378:80"
+    expose:
+      - 80
     volumes:
       - ./config:/config
       - ./metadata:/metadata
@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:latest
+    image: nginx
     container_name: nginx
     restart: unless-stopped
     ports:
@@ -23,29 +23,49 @@ services:
       - ./certbot/www/:/var/www/certbot/:ro
       - ./certbot/conf/:/etc/nginx/ssl/:ro
 
+  nginx-home:
+    image: nginx
+    container_name: nginx-home
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx-home/:/etc/nginx/:ro
+    depends_on:
+      - audiobookshelf
+      - buildbuddy
+      - docker-status
+      - n8n
+      - pihole
+      - proxpi
+      - glances
+
   certbot:
-    image: certbot/certbot:latest
+    image: certbot/certbot
     container_name: certbot
     volumes:
       - ./certbot/www/:/var/www/certbot/:rw
       - ./certbot/conf/:/etc/letsencrypt/:rw
 
   buildbuddy:
-    image: gcr.io/flame-public/buildbuddy-app-onprem:latest
+    image: gcr.io/flame-public/buildbuddy-app-onprem
     container_name: buildbuddy
     restart: unless-stopped
+    expose:
+      - 1985
+      - 8080
     ports:
-      - 1985:1985
-      - 8080:8080
+      - "1985:1985"
     volumes:
       - buildbuddy_data:/var/lib/buildbudy
 
   docker-status:
-    image: lahmanja/docker-status:latest
+    image: lahmanja/docker-status
     container_name: docker-status
     restart: unless-stopped
-    ports:
-      - 9090:9090
+    expose:
+      - 9090
     volumes:
       - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock
 
@@ -61,21 +81,22 @@ services:
       N8N_SECURE_COOKIE: false
       N8N_TEMPLATES_ENABLED: false
       N8N_VERSION_NOTIFICATIONS_ENABLED: false
-    ports:
-      - "5678:5678"
+    expose:
+      - 5678
     volumes:
       - n8n_data:/home/node/.n8n
 
   pihole:
-    image: pihole/pihole:latest
+    image: pihole/pihole
     restart: unless-stopped
     container_name: pihole
+    expose:
+      - 80
     ports:
       - "53:53/tcp"
       - "53:53/udp"
-      - "8081:80/tcp"
     environment:
-      TZ: 'America/Los_Angeles'
+      TZ: 'US/Pacific'
       FTLCONF_dns_listeningMode: 'all'
     volumes:
       - './etc-pihole:/etc/pihole'
@@ -91,8 +112,8 @@ services:
       REGISTRY_AUTH: htpasswd
       REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
       REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-    ports:
-      - 5000:5000
+    expose:
+      - 5000
     volumes:
       - registry_data:/var/lib/registry
       - ./auth:/auth
@@ -103,8 +124,8 @@ services:
     restart: unless-stopped
     environment:
       PROXPI_CACHE_DIR: /var/cache/proxpi
-    ports:
-      - 5001:5000
+    expose:
+      - 5000
     volumes:
       - proxpi_data:/var/cache/proxpi
 
@@ -113,18 +134,18 @@ services:
     restart: unless-stopped
     container_name: ollama
     environment:
-      OLLAMA_CONTEXT_LENGTH: 8192
-    ports:
-      - "11434:11434"
+      OLLAMA_CONTEXT_LENGTH: 131072
+    expose:
+      - 11434
     volumes:
       - ollama_data:/root/.ollama
 
   glances:
-    image: nicolargo/glances:latest
+    image: nicolargo/glances
     container_name: glances
     restart: unless-stopped
-    ports:
-      - "61208:61208"
+    expose:
+      - 61208
     environment:
       - GLANCES_OPT=-w
     volumes:
@@ -138,4 +159,3 @@ volumes:
   n8n_data:
   ollama_data:
   proxpi_data:
-
