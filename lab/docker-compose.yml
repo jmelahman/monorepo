@@ -38,6 +38,7 @@ services:
       - docker-status
       - n8n
       - pihole
+      - ollama
       - proxpi
       - glances
 
@@ -130,15 +131,19 @@ services:
       - proxpi_data:/var/cache/proxpi
 
   ollama:
-    image: ollama/ollama
+    image: ollama/ollama:rocm
     restart: unless-stopped
     container_name: ollama
     environment:
       OLLAMA_CONTEXT_LENGTH: 131072
+      HSA_OVERRIDE_GFX_VERSION: 11.0.2
     expose:
       - 11434
     volumes:
       - ollama_data:/root/.ollama
+    devices:
+      - /dev/kfd
+      - /dev/dri
 
   glances:
     image: nicolargo/glances
