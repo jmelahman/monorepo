@@ -4,19 +4,40 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/eiannone/keyboard"
+	"github.com/jmelahman/nature-sounds/download"
 	"github.com/jmelahman/nature-sounds/picker"
 	"github.com/jmelahman/nature-sounds/player"
 	"github.com/jmelahman/nature-sounds/sounds"
 	"github.com/jmelahman/nature-sounds/storage"
+	"github.com/spf13/cobra"
 )
 
 var (
-	version = "dev"
+	version    = "dev"
+	downloadAll bool
 )
 
+var rootCmd = &cobra.Command{
+	Use:   "nature-sounds",
+	Short: "A nature sounds player",
+	Long:  "A command-line nature sounds player with interactive controls",
+	Run:   runNatureSounds,
+}
+
+func init() {
+	rootCmd.Flags().BoolVar(&downloadAll, "download-all", false, "Download all sounds before starting")
+}
+
 func main() {
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func runNatureSounds(cmd *cobra.Command, args []string) {
 	fmt.Printf("Welcome to nature-sounds (%v). Press ? for a list of commands.\n", version)
 	dataDir, err := storage.GetApplicationDataDir()
 	if err != nil || dataDir == "" {
@@ -26,6 +47,28 @@ func main() {
 	err = os.MkdirAll(dataDir, os.ModePerm)
 	if err != nil {
 		log.Fatal("Error creating application data directory: ", err)
+	}
+
+	// Download all sounds if flag is set
+	if downloadAll {
+		fmt.Println("Downloading all sounds...")
+		for i, sound := range sounds.Sounds {
+			soundPath := filepath.Join(dataDir, filepath.Base(sound.Url))
+			if _, err := os.Stat(soundPath); os.IsNotExist(err) {
+				fmt.Printf("Downloading %d/%d: %s\n", i+1, len(sounds.Sounds), sound.Name)
+				if err := download.FileWithProgress(sound.Url, soundPath); err != nil {
+					fmt.Printf("Error downloading %s: %v\n", sound.Name, err)
+					if err := os.Remove(soundPath); err != nil {
+						fmt.Printf("Error removing incomplete file: %v\n", err)
+					}
+				} else {
+					fmt.Println() // New line after progress
+				}
+			} else {
+				fmt.Printf("Already downloaded %d/%d: %s\n", i+1, len(sounds.Sounds), sound.Name)
+			}
+		}
+		fmt.Println("Download complete!")
 	}
 
 	nowPlaying := storage.LoadLastPlayed(dataDir, sounds.Sounds)
