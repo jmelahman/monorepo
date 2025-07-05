@@ -18,7 +18,7 @@ var (
 )
 
 func main() {
-	var major, minor, patch, push bool
+	var major, minor, patch, push, print bool
 	var metadata, prefix, suffix, remote string
 
 	rootCmd := &cobra.Command{
@@ -40,7 +40,7 @@ func main() {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := git.FetchSemverTags(remote); err != nil {
+			if err := git.FetchSemverTags(remote, prefix); err != nil {
 				fmt.Printf("Error fetching tags: %v\n", err)
 				os.Exit(1)
 			}
@@ -89,6 +89,11 @@ func main() {
 				os.Exit(1)
 			}
 
+			if print {
+				fmt.Println(nextVersion)
+				os.Exit(0)
+			}
+
 			if !push {
 				reader := bufio.NewReader(os.Stdin)
 				fmt.Printf("Push tag '%s' to %s? (y/N): ", nextVersion, remote)
@@ -114,6 +119,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&minor, "minor", false, "increment the minor version")
 	rootCmd.Flags().BoolVar(&patch, "patch", false, "increment the patch version")
 	rootCmd.Flags().BoolVar(&push, "push", false, "create and push the tag to remote")
+	rootCmd.Flags().BoolVar(&print, "print-only", false, "print the next tag and exit")
 	rootCmd.Flags().StringVar(&prefix, "prefix", "", "set a prefix for the tag")
 	rootCmd.Flags().StringVar(&suffix, "suffix", "", "set the pre-release suffix (e.g., rc, alpha, beta)")
 	rootCmd.Flags().StringVar(&metadata, "metadata", "", "set the build metadata")
