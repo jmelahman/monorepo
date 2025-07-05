@@ -22,12 +22,20 @@ func GetLatestSemverTag(prefix string) (string, error) {
 	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0", "--match", tagPattern)
 	output, err := cmd.Output()
 	if err != nil {
-		return "v0.0.0", nil
+		if prefix == "" {
+			return "v0.0.0", nil
+		} else {
+			return fmt.Sprintf("%s/v0.0.0", prefix), nil
+		}
 	}
 
 	tagsAt, err := ListTagsAt(strings.TrimSpace(string(output)))
 	if err != nil {
-		return "v0.0.0", nil
+		if prefix == "" {
+			return "v0.0.0", nil
+		} else {
+			return fmt.Sprintf("%s/v0.0.0", prefix), nil
+		}
 	}
 
 	var largestTag string
@@ -118,8 +126,12 @@ func CreateAndPushTag(tag string, remote string) error {
 	return nil
 }
 
-func FetchSemverTags(remote string) error {
-	cmd := exec.Command("git", "fetch", "--quiet", "--prune", remote, "refs/tags/v*:refs/tags/v*")
+func FetchSemverTags(remote string, prefix string) error {
+	tagPattern := "refs/tags/v*:refs/tags/v*"
+	if prefix != "" {
+		tagPattern = fmt.Sprintf("refs/tags/%s/%s:refs/tags/%s/%s", prefix, "v*", prefix, "v*")
+	}
+	cmd := exec.Command("git", "fetch", "--quiet", "--prune", remote, tagPattern)
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to fetch tags from %s: %w", remote, err)
