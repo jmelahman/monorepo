@@ -4,7 +4,7 @@
 [![Deploy Status](https://github.com/jmelahman/tag/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/tag.svg)](https://pkg.go.dev/github.com/jmelahman/tag)
 [![Arch User Repsoitory](https://img.shields.io/aur/version/release-tag)](https://aur.archlinux.org/packages/release-tag)
-[![PyPI](https://img.shields.io/pypi/v/release-tag.svg)]()
+[![PyPI](https://img.shields.io/pypi/v/release-tag.svg)](https://pypi.org/project/release-tag/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/tag)](https://goreportcard.com/report/github.com/jmelahman/tag)
 
 Automatically create [semantic version](https://semver.org/) git tags.
@@ -18,7 +18,7 @@ Tag 'v1.0.1' created and pushed to origin.
 ## Usage
 
 By default, `tag` will increment the smallest digit following [SemVer precedence](https://semver.org/#semantic-versioning-specification-semver).
-Incrementing a specific is achieved by passing the respective flag: `--major`, `--minor`, `--patch`.
+Incrementing a specific version is achieved by passing the respective flag: `--major`, `--minor`, `--patch`.
 
 Tags can be automatically pushed to a remote repository by passing `--push`.
 
