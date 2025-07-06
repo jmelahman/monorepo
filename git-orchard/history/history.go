@@ -2,7 +2,6 @@ package history
 
 import (
 	"os/exec"
-	"regexp"
 	"strings"
 )
 
@@ -29,7 +28,7 @@ func NewGitHistoryReader() *GitHistoryReader {
 // GetSubtreesFromHistory extracts subtree information from git log
 func (r *GitHistoryReader) GetSubtreesFromHistory() (map[string]SubtreeHistoryInfo, error) {
 	// Execute git log to find subtree merge commits
-	cmd := exec.Command("git", "log", "--grep=git-subtree-dir:", "--pretty=format:%H %s", "--all")
+	cmd := exec.Command("git", "log", "--grep=git-subtree-dir:", "--pretty=format:%B", "--all")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -44,9 +43,9 @@ func (r *GitHistoryReader) GetSubtreesFromHistory() (map[string]SubtreeHistoryIn
 	// Parse the output to extract subtree information
 	lines := strings.Split(string(output), "\n")
 
-	// Regex to match git-subtree-dir and git-subtree-mainline in commit messages
-	dirRegex := regexp.MustCompile(`git-subtree-dir:\s*(\S+)`)
-	mainlineRegex := regexp.MustCompile(`git-subtree-mainline:\s*(\S+)`)
+	prefix := ""
+	commit := ""
+	message := ""
 
 	for _, line := range lines {
 		if strings.TrimSpace(line) == "" {
@@ -58,23 +57,26 @@ func (r *GitHistoryReader) GetSubtreesFromHistory() (map[string]SubtreeHistoryIn
 			continue
 		}
 
-		commit := parts[0]
-		message := parts[1]
+		field := parts[0]
+		content := parts[1]
 
-		// Extract subtree directory
-		dirMatches := dirRegex.FindStringSubmatch(message)
-		if len(dirMatches) < 2 {
-			continue
+		if field == "git-subtree-dir:" {
+			prefix = content
+		} else if field == "git-subtree-mainline:" {
+			commit = content
+		} else if field == "git-subtree-split:" {
+			// Reset search
+			prefix = ""
+			commit = ""
+			message = ""
+		} else if message == "" {
+			message = line
 		}
 
-		prefix := dirMatches[1]
-
 		// Check if this is a merge commit (has git-subtree-mainline)
-		isMainline := mainlineRegex.MatchString(message)
-
 		if info, exists := subtreeMap[prefix]; exists {
 			// Update with more recent commit info if this is a mainline merge
-			if isMainline {
+			if commit != "" {
 				info.LastCommit = commit
 				info.LastMessage = message
 				subtreeMap[prefix] = info
