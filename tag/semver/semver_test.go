@@ -211,24 +211,22 @@ func TestCalculateNextVersion(t *testing.T) {
 			name:        "Pre-release increment with patch version",
 			currentTag:  "v1.2.3-rc.1",
 			incPatch:    true,
+			suffix:      "rc",
 			expectedTag: "v1.2.4-rc",
 		},
 		{
 			name:        "Pre-release increment with minor version",
 			currentTag:  "v1.2.3-rc.1",
 			incMinor:    true,
+			suffix:      "rc",
 			expectedTag: "v1.3.0-rc",
 		},
 		{
 			name:        "Pre-release increment with major version",
 			currentTag:  "v1.2.3-rc.1",
 			incMajor:    true,
+			suffix:      "rc",
 			expectedTag: "v2.0.0-rc",
-		},
-		{
-			name:        "Pre-release without number",
-			currentTag:  "v1.2.3-rc",
-			expectedTag: "v1.2.3-rc.1",
 		},
 		{
 			name:        "Add suffix to version",
@@ -254,6 +252,19 @@ func TestCalculateNextVersion(t *testing.T) {
 			suffix:      "beta",
 			allTags:     []string{"v1.2.3-rc.1", "v1.2.3-beta.2"},
 			expectedTag: "v1.2.3-beta.3",
+		},
+		{
+			name:        "Override existing pre-release with matching suffix",
+			currentTag:  "v1.2.3-rc.1",
+			suffix:      "rc",
+			allTags:     []string{"v1.2.3-rc.1", "v1.2.3-beta.2"},
+			expectedTag: "v1.2.3-rc.2",
+		},
+		{
+			name:        "Override existing without suffix",
+			currentTag:  "v1.2.3-rc.1",
+			allTags:     []string{"v1.2.3-rc.1", "v1.2.3-beta.2"},
+			expectedTag: "v1.2.4",
 		},
 	}
 
