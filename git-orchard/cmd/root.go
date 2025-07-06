@@ -35,6 +35,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.Debug, "debug", false, "run in debug mode")
 
 	// Add subcommands
+	cmd.AddCommand(NewInitCommand())
 	cmd.AddCommand(NewListCommand())
 
 	return cmd
