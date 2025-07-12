@@ -103,6 +103,7 @@ services:
       - './etc-pihole:/etc/pihole'
     cap_add:
       - SYS_NICE
+      - SYS_TIME
 
   registry:
     image: registry:2
