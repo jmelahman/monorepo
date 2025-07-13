@@ -6,10 +6,33 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 )
 
+func isMounted(path string) bool {
+	mounts, err := os.ReadFile("/proc/mounts")
+	if err != nil {
+		return false
+	}
+	
+	content := string(mounts)
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[1] == path {
+			return true
+		}
+	}
+	return false
+}
+
 func mountOverlay(containerRoot, mergedRoot string) error {
+	if isMounted(mergedRoot) {
+		fmt.Printf("[porter] Overlay already mounted at %s, skipping mount\n", mergedRoot)
+		return nil
+	}
+
 	lowerdir := "/"
 	upperdir := containerRoot
 	workdir := "/tmp/porter-work"
