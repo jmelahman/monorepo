@@ -1,6 +1,6 @@
 # Porter
 
-`porter` is a lightweight, userspace container runtime that runs OCI images directly atop the host filesystem.
+`runtainer` is a lightweight, userspace container runtime that runs OCI images directly atop the host filesystem.
 Instead of full isolation, it transparently overlays the container image filesystem over top the host.
 This enables running containerized apps with minimal overhead (fast) while preserving access to host resources where appropriate (reduce configuration complexity).
 

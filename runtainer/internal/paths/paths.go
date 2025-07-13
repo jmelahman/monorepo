@@ -7,13 +7,13 @@ import (
 
 func StateDir() string {
 	if dir := os.Getenv("XDG_STATE_HOME"); dir != "" {
-		return filepath.Join(dir, "porter")
+		return filepath.Join(dir, "runtainer")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		panic("cannot determine home dir")
 	}
-	return filepath.Join(home, ".local", "state", "porter")
+	return filepath.Join(home, ".local", "state", "runtainer")
 }
 
 func ImageDir() string {
