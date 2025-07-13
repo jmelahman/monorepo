@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/jmelahman/porter/internal/image"
+	"github.com/jmelahman/runtainer/internal/image"
 
 	"github.com/spf13/cobra"
 )

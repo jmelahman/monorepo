@@ -1,4 +1,4 @@
-module github.com/jmelahman/porter
+module github.com/jmelahman/runtainer
 
 go 1.24.4
 

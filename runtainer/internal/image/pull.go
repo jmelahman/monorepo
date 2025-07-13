@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/jmelahman/porter/internal/paths"
+	"github.com/jmelahman/runtainer/internal/paths"
 )
 
 func PullImage(ref string) (string, error) {

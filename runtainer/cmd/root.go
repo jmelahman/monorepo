@@ -5,7 +5,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "porter",
+	Use:   "runtainer",
 	Short: "Porter is a lightweight userspace container runtime",
 }
 

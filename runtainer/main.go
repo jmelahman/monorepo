@@ -1,6 +1,6 @@
 package main
 
-import "github.com/jmelahman/porter/cmd"
+import "github.com/jmelahman/runtainer/cmd"
 
 func main() {
 	cmd.Execute()

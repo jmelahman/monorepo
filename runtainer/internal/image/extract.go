@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jmelahman/porter/internal/paths"
+	"github.com/jmelahman/runtainer/internal/paths"
 )
 
 func ExtractImage(tarPath string) (string, error) {
