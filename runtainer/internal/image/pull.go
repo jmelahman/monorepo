@@ -31,6 +31,7 @@ func PullImage(ref string) (string, error) {
 	imageDir := filepath.Join(paths.ImageDir(), imageID)
 	rootfsDir := filepath.Join(paths.RootfsDir(), imageID)
 	if dirExists(imageDir) && dirExists(rootfsDir) {
+		fmt.Println("Found cached image")
 		return imageID, nil
 	}
 
