@@ -1,9 +1,31 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+shopt -s globstar
+
 SITE_URL="https://jamison.lahman.dev"
 OUTPUT_DIR="output"
 POSTS_DIR="posts"
+
+for md in **/*.md; do
+  if [ $md == "README.md" ]; then
+    continue
+  fi
+  pandoc \
+    "$md" \
+    -o "${md%.md}.html" \
+    --template=template.html
+done
+
+pandoc \
+  feed/index.html.body \
+  -o feed/index.html \
+  --template=template.html \
+  -f html \
+  --metadata=script=/scripts/feed.js
+
+# TODO
+exit
 
 mkdir -p "$OUTPUT_DIR/posts"
 
