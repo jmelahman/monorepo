@@ -45,7 +45,7 @@ function transformItems(items) {
                   <col style="width: 10%">
                 </colgroup>
                 <tr>
-                  <th>Blog</th>
+                  <th>Feed</th>
                   <th>Title</th>
                   <th>Date</th>
                 </tr>

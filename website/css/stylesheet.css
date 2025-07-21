@@ -160,10 +160,6 @@ tr {
   text-align: left;
 }
 
-tr:first-child {
-  border-bottom: 1px solid black;
-}
-
 tr:nth-child(2) td {
   padding-top: 8px;
 }
