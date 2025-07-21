@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+SITE_URL="https://jamison.lahman.dev"
+OUTPUT_DIR="output"
+POSTS_DIR="posts"
+
+mkdir -p "$OUTPUT_DIR/posts"
+
+# Start RSS feed
+RSS_PATH="$OUTPUT_DIR/rss.xml"
+echo '<?xml version="1.0"?>' > "$RSS_PATH"
+echo '<rss version="2.0"><channel>' >> "$RSS_PATH"
+echo "  <title>jmelahman's blog</title>" >> "$RSS_PATH"
+echo "  <link>$SITE_URL</link>" >> "$RSS_PATH"
+echo "  <description>My personal site</description>" >> "$RSS_PATH"
+echo "  <language>en-us</language>" >> "$RSS_PATH"
+echo "  <lastBuildDate>$(date -R)</lastBuildDate>" >> "$RSS_PATH"
+
+# Process each post
+for md in "$POSTS_DIR"/*.md; do
+    filename=$(basename "$md" .md)
+    html_out="$OUTPUT_DIR/posts/$filename.html"
+
+    # Extract metadata
+    title=$(sed -n 's/^title:[ ]*//p' "$md")
+    date=$(sed -n 's/^date:[ ]*//p' "$md")
+    pubDate=$(date -R -d "$date")
+
+    # Convert to HTML
+    pandoc "$md" -o "$html_out" --template=template.html --metadata title="$title"
+
+    # Append to RSS
+    echo "  <item>" >> "$RSS_PATH"
+    echo "    <title>$title</title>" >> "$RSS_PATH"
+    echo "    <link>$SITE_URL/posts/$filename.html</link>" >> "$RSS_PATH"
+    echo "    <guid>$SITE_URL/posts/$filename.html</guid>" >> "$RSS_PATH"
+    echo "    <pubDate>$pubDate</pubDate>" >> "$RSS_PATH"
+    echo "  </item>" >> "$RSS_PATH"
+done
+
+# Close RSS
+echo '</channel></rss>' >> "$RSS_PATH"
