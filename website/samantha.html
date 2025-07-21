@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Samantha A Filter</title>
+  <script defer src="third_party/face-api.js"></script>
+  <script defer src="scripts/face.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+    canvas {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+    }
+    h1 {
+      color: rgb(4,187,255);
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Samantha A Filter</h1>
+  <p>Start by uploading an image:</p>
+  <input type="file" id="imageUpload" accept="image/*">
+  <canvas id="canvas"></canvas>
+</body>
+</html>

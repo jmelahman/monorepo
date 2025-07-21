@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Projects | Jamison Lahman</title>
+  <base href="../../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Personal website">
+  <meta name="keywords" content="jamison,jamie,lahman">
+  <meta name="author" content="Jamison Lahman">
+  <link rel="stylesheet" href="./css/stylesheet.css">
+  <link rel="stylesheet" href="./css/vim.css">
+  <link rel="icon" type="image/x-icon" href="./images/jme.ico">
+</head>
+
+<body>
+  <header>
+    <nav class="container">
+      <div id="branding">
+        <a href="./home.html" title="Return to the home page"><img alt="Personal logo" src="./images/jme_hd_100.png"></a>
+      </div>
+      <div class="header-right">
+        <a href="./index.html" title="About">/usr</a>
+        <a href="./media/5.html" title="Gallery">/media</a>
+        <a class="active" href="./dev.html" title="Projects">/dev</a>
+      </div>
+    </nav>
+  </header>
+  <main class="container vignette">
+    <h1>Python for Everybody</h1>
+    <nav class="horizontal-menu">
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-3.html">Chapter 3</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-4.html">Chapter 4</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-5.html">Chapter 5</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-6.html">Chapter 6</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-7.html">Chapter 7</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-8.html">Chapter 8</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-9.html">Chapter 9</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-10.html">Chapter 10</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-11.html">Chapter 11</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-12.html">Chapter 12</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-13.html">Chapter 13</a>
+    </nav>
+    <h2 id="chapter3">Chapter 4</h2>
+    <nav class="horizontal-menu">
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-4.html#exercise4-1">Exercise 4.1</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-4.html#exercise4-2">Exercise 4.2</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-4.html#exercise4-6">Exercise 4.6</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-4.html#exercise4-7">Exercise 4.7</a>
+    </nav>
+    <h3 id="exercise4-1">Exercise 4.1</h3>
+    <pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exercise 4.1: Run the program on your system and see what numbers you get.</span>
+<span class="sd">Run the program more than once and see what numbers you get.</span>
+
+<span class="sd">Python for Everybody: Exploring Data Using Python 3</span>
+<span class="sd">by Charles R. Severance</span>
+
+<span class="sd">Solution by Jamison Lahman, May 28, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+  <span class="n">x</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Run 1:</span>
+<span class="sd">0.21764319507444463</span>
+<span class="sd">0.8329991443974214</span>
+<span class="sd">0.5701549669913151</span>
+<span class="sd">0.8637443412384684</span>
+<span class="sd">0.2047094119147722</span>
+<span class="sd">0.3202386315168375</span>
+<span class="sd">0.9782522613350779</span>
+<span class="sd">0.9220494004895224</span>
+<span class="sd">0.17966209998031546</span>
+<span class="sd">0.7983521239029091</span>
+
+<span class="sd">Run 2:</span>
+<span class="sd">0.47116913276761185</span>
+<span class="sd">0.49784628316541546</span>
+<span class="sd">0.7292518476972524</span>
+<span class="sd">0.2355420735182987</span>
+<span class="sd">0.16876377822830468</span>
+<span class="sd">0.6365600615263461</span>
+<span class="sd">0.1689585397335408</span>
+<span class="sd">0.41161696529382463</span>
+<span class="sd">0.9895980083921391</span>
+<span class="sd">0.23023688059069947</span>
+<span class="sd">&quot;&quot;&quot;</span>
+      </pre>
+    <hr>
+    <h3 id="exercise4-2">Exercise 4.2</h3>
+    <pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exercise 4.2: Move the last line of this program to the top, so the function</span>
+<span class="sd">call appears before the definitions. Run the program and see what error</span>
+<span class="sd">message you get.</span>
+
+<span class="sd">Code: http://www.py4e.com/code3/lyrics.py</span>
+
+<span class="sd">Python for Everybody: Exploring Data Using Python 3</span>
+<span class="sd">by Charles R. Severance</span>
+
+<span class="sd">Solution by Jamison Lahman, May 28, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">repeat_lyrics</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">repeat_lyrics</span><span class="p">():</span>
+  <span class="n">print_lyrics</span><span class="p">()</span>
+  <span class="n">print_lyrics</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">print_lyrics</span><span class="p">():</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;I&#39;m a lumberjack, and I&#39;m okay.&quot;</span><span class="p">)</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;I sleep all night and I work all day.&#39;</span><span class="p">)</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Error message:</span>
+<span class="sd">Traceback (most recent call last):</span>
+<span class="sd">  File &quot;/home/jamison/workspace/python-for-everybody/exercise4_2.py&quot;, line 14, in &lt;module&gt;</span>
+<span class="sd">    repeat_lyrics()</span>
+<span class="sd">NameError: name &#39;repeat_lyrics&#39; is not defined</span>
+<span class="sd">&quot;&quot;&quot;</span>
+    </pre>
+    <hr>
+    <h3 id="exercise4-6">Exercise 4.6</h3>
+    <pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exercise 4.6: Rewrite your pay computation with time-and-a-half for overtime</span>
+<span class="sd">and create a function called computepay which takes two paramteters (hours and</span>
+<span class="sd">rate).</span>
+
+<span class="sd">Enter Hours: 45</span>
+<span class="sd">Enter Rate: 10</span>
+<span class="sd">Pay: 475.0</span>
+
+<span class="sd">Python for Everybody: Exploring Data Using Python 3</span>
+<span class="sd">by Charles R. Severance</span>
+
+<span class="sd">Solution by Jamison Lahman, May 28, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">computepay</span><span class="p">(</span><span class="n">tmp_hours</span><span class="p">,</span> <span class="n">tmp_rate</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the amount to pay taking into account overtime</span>
+<span class="sd">    Inputs: tmp_hours -- the total hours worked</span>
+<span class="sd">            tmp_rate -- pay rate of the employee</span>
+<span class="sd">    Output: amount due to employee</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">tmp_hours</span> <span class="o">&lt;=</span> <span class="mf">40.0</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">tmp_rate</span> <span class="o">*</span> <span class="n">tmp_hours</span>                <span class="c1"># No overtime calculation</span>
+
+  <span class="c1"># Since the value is returned if hours &lt;= 40, we no longer need the</span>
+  <span class="c1"># else statement here.</span>
+  <span class="n">overtime</span> <span class="o">=</span> <span class="n">tmp_hours</span> <span class="o">-</span> <span class="mf">40.0</span>                <span class="c1"># How much overtime is left</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">tmp_rate</span> <span class="o">*</span> <span class="mf">40.0</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.5</span> <span class="o">*</span> <span class="n">tmp_rate</span> <span class="o">*</span> <span class="n">overtime</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">check_for_float</span><span class="p">(</span><span class="n">input1</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Checks if the type of &quot;input1&quot; is a float and returns the value if so.</span>
+<span class="sd">    Input:    input1 -- variable to check</span>
+<span class="sd">    Output: val -- value of float</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="k">try</span><span class="p">:</span>
+      <span class="n">val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">input1</span><span class="p">)</span>                <span class="c1"># Only allows input floats</span>
+      <span class="k">return</span> <span class="n">val</span>
+  <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+      <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error, please enter numeric input&#39;</span><span class="p">)</span>
+      <span class="n">quit</span><span class="p">()</span>
+
+
+<span class="n">input_hours</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter Hours: &#39;</span><span class="p">)</span>
+<span class="n">hours</span> <span class="o">=</span> <span class="n">check_for_float</span><span class="p">(</span><span class="n">input_hours</span><span class="p">)</span>
+
+<span class="n">input_rate</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter Rate: &#39;</span><span class="p">)</span>
+<span class="n">rate</span> <span class="o">=</span> <span class="n">check_for_float</span><span class="p">(</span><span class="n">input_rate</span><span class="p">)</span>
+
+<span class="n">pay</span> <span class="o">=</span> <span class="n">computepay</span><span class="p">(</span><span class="n">hours</span><span class="p">,</span> <span class="n">rate</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Pay: &#39;</span><span class="p">,</span> <span class="n">pay</span><span class="p">)</span>
+    </pre>
+    <hr>
+    <h3 id="exercise4-7">Exercise 4.7</h3>
+    <pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exercise 4.7: Rewrite the grade program from previous chapter using a function</span>
+<span class="sd">called computegrade that takes a score as its parameter and returns a grade as</span>
+<span class="sd">a string.</span>
+
+<span class="sd">Score    Grade</span>
+<span class="sd">&gt;= 0.9      A</span>
+<span class="sd">&gt;= 0.8      B</span>
+<span class="sd">&gt;= 0.7      C</span>
+<span class="sd">&gt;= 0.6      D</span>
+<span class="sd">&lt; 0.6      F</span>
+<span class="sd">~~~</span>
+
+<span class="sd">Enter score: 0.95</span>
+<span class="sd">A</span>
+
+<span class="sd">Enter score: perfect</span>
+<span class="sd">Bad score</span>
+
+<span class="sd">Enter score: 10.0</span>
+<span class="sd">Bad score</span>
+
+<span class="sd">Enter score: 0.75</span>
+<span class="sd">C</span>
+
+<span class="sd">Enter score: 0.5</span>
+<span class="sd">F</span>
+
+<span class="sd">Run the program repeatedly  to test the various, different values for input.</span>
+
+<span class="sd">Python for Everybody: Exploring Data Using Python 3</span>
+<span class="sd">by Charles R. Severance</span>
+
+<span class="sd">Solution by Jamison Lahman, May 28, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">computegrade</span><span class="p">(</span><span class="n">tmp_score</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes the final grade based on a 0.0 to 1.0 scale. If the score is</span>
+<span class="sd">    not between 0.0 and 1.0, returns &quot;Bad score.&quot;</span>
+<span class="sd">    Input:    score -- score (must be between 0.0 and 1.0)</span>
+<span class="sd">    Output:    returns a grade as a string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">tmp_score</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">tmp_score</span> <span class="o">&gt;=</span> <span class="mf">0.9</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;A&#39;</span>
+        <span class="k">if</span> <span class="n">tmp_score</span> <span class="o">&gt;=</span> <span class="mf">0.8</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;B&#39;</span>
+        <span class="k">if</span> <span class="n">tmp_score</span> <span class="o">&gt;=</span> <span class="mf">0.7</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;C&#39;</span>
+        <span class="k">if</span> <span class="n">tmp_score</span> <span class="o">&gt;=</span> <span class="mf">0.6</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;D&#39;</span>
+        <span class="k">return</span> <span class="s1">&#39;F&#39;</span>
+    <span class="c1"># Case &#39;score&#39; is not on the interval</span>
+    <span class="k">return</span> <span class="s1">&#39;Bad score&#39;</span>
+
+
+<span class="n">input_score</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter score: &#39;</span><span class="p">)</span>
+<span class="n">score</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">input_score</span><span class="p">)</span>             <span class="c1"># Only allows input floats</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Bad score&#39;</span><span class="p">)</span>
+    <span class="n">quit</span><span class="p">()</span>
+
+<span class="n">grade</span> <span class="o">=</span> <span class="n">computegrade</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">grade</span><span class="p">)</span>
+    </pre>
+    <hr>
+  </main>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Projects | Jamison Lahman</title>
+  <base href="../../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Personal website">
+  <meta name="keywords" content="jamison,jamie,lahman">
+  <meta name="author" content="Jamison Lahman">
+  <link rel="stylesheet" href="./css/stylesheet.css">
+  <link rel="stylesheet" href="./css/vim.css">
+  <link rel="icon" type="image/x-icon" href="./images/jme.ico">
+</head>
+
+<body>
+  <header>
+    <nav class="container">
+      <div id="branding">
+        <a href="./home.html" title="Return to the home page"><img alt="Personal logo" src="./images/jme_hd_100.png"></a>
+      </div>
+      <div class="header-right">
+        <a href="./index.html" title="About">/usr</a>
+        <a href="./media/5.html" title="Gallery">/media</a>
+        <a class="active" href="./dev.html" title="Projects">/dev</a>
+      </div>
+    </nav>
+  </header>
+  <main class="container vignette">
+    <h1>Python for Everybody</h1>
+    <nav class="horizontal-menu">
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-3.html">Chapter 3</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-4.html">Chapter 4</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-5.html">Chapter 5</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-6.html">Chapter 6</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-7.html">Chapter 7</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-8.html">Chapter 8</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-9.html">Chapter 9</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-10.html">Chapter 10</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-11.html">Chapter 11</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-12.html">Chapter 12</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-13.html">Chapter 13</a>
+    </nav>
+    <h2 id="chaptern">Chapter 13</h2>
+    <nav class="horizontal-menu">
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-13.html#exercise13-1">Exercise 13.1</a>
+    </nav>
+    <h3 id="exercise13-1">Exercise 13.1</h3>
+    <pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exercise 13.1: Change either the www.py4e.com/code3/geojson.py or</span>
+<span class="sd">www.py4e.com/code3/geoxml.py to print oout the two-character country code from</span>
+<span class="sd">the retrieved data. Add error checking so you program does not traceback if</span>
+<span class="sd">the country code is not there. Once you have it working, search for &quot;Atlantic</span>
+<span class="sd">Ocean&quot; and make sure it can handle locations that are not in any country.</span>
+
+<span class="sd">Python for Everybody: Exploring Data Using Python 3</span>
+<span class="sd">by Charles R. Severance</span>
+
+<span class="sd">Solution by Jamison Lahman, June 5, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">urllib.request</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
+<span class="kn">import</span> <span class="nn">urllib.error</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="c1"># Note that Google is increasingly requiring keys</span>
+<span class="c1"># for this API</span>
+<span class="n">serviceurl</span> <span class="o">=</span> <span class="s1">&#39;http://maps.googleapis.com/maps/api/geocode/json?&#39;</span>
+
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">address</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter location: &#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">address</span><span class="p">:</span>
+        <span class="k">break</span>
+
+    <span class="n">url</span> <span class="o">=</span> <span class="n">serviceurl</span> <span class="o">+</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">({</span><span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="n">address</span><span class="p">})</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Retrieving&#39;</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+    <span class="n">uh</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">uh</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Retrieved&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="s1">&#39;characters&#39;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">js</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">js</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">js</span> <span class="ow">or</span> <span class="s1">&#39;status&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">js</span> <span class="ow">or</span> <span class="n">js</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;OK&#39;</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;==== Failure To Retrieve ====&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">continue</span>
+
+    <span class="n">counter</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">js</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;address_components&quot;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+        <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">js</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;address_components&quot;</span><span class="p">][</span><span class="n">counter</span><span class="p">][</span><span class="s2">&quot;types&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;country&#39;</span><span class="p">,</span> <span class="s1">&#39;political&#39;</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">js</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;address_components&quot;</span><span class="p">][</span><span class="n">counter</span><span class="p">][</span><span class="s2">&quot;short_name&quot;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">continue</span>
+    </pre>
+    <hr>
+  </main>
+</body>
+</html>

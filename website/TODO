@@ -1,0 +1,42 @@
+## TODOs
+
+- RSS feed
+- markdown->html workflow
+- finish feed; merge feeds and sort chronologically
+
+## Redesign
+
+Emphasis on simplicity.
+Would like a clean look without feeling cold or stale.
+Maybe just light gray with crimson and a clean monospace font.
+
+Need to do some research. What blogs do I like and why?
+- https://stephango.com/about
+
+What pages do I want?
+- home/blog/about
+- unblog/feed
+
+## Tech
+
+1. git config
+2. git workflow
+3. home lab stuff
+4. AI setup
+5. Using Python to package Golang applications
+6. git subtrees and git-orchard
+7. cycle-cli and the quest to end subscription services
+8. The UNIX Philosophy Revitalization
+
+## Religion
+
+1. What does "God" mean?
+2. God === morality
+3. Historical perspectives and modern synthesis
+4. In defense of Spinoza
+
+## Philosophy
+
+1. Steel man modern stoicism
+2. Is Effective Altruism viable?
+3. Would Jesus be an effective altruist?
