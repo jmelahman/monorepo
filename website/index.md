@@ -3,6 +3,10 @@ title-prefix: Home
 ---
 # Jamison Lahman
 
+<div class="right-sidebar">
+ ![Psyduck is my favorite Pokémon.](/images/psyduck_son.jpg)
+</div>
+
 Below my are inferred interests by Twitter.
 Aside from the collection of politicians I've never heard of, it's fairly
 accurate.

@@ -41,8 +41,24 @@ header a:first-child {
   padding-left: 0px;
 }
 
-header .right {
+.right {
   float: right;
+}
+
+.right-sidebar {
+  float: right;
+  min-width: 180px;
+  text-align: center;
+  word-break: break-all;
+}
+
+.right-sidebar * {
+  margin-right: 0px;
+  margin-top: 0px;
+}
+
+.right-sidebar img {
+  width: 300px;
 }
 
 main {
