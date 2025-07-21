@@ -1,0 +1,55 @@
+<body>
+  <h1>Combined RSS Feed</h1>
+  <div id="feed">Loading...</div>
+
+  <script>
+    const feeds = [
+      'https://calv.info/atom.xml'
+    ];
+
+    async function fetchFeed(url) {
+      const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+      const text = await response.text();
+      const parser = new DOMParser();
+      return parser.parseFromString(text, "application/xml");
+    }
+
+    function parseItems(doc) {
+      const items = [...doc.querySelectorAll("item")].map(item => ({
+        title: item.querySelector("title")?.textContent || "No title",
+        link: item.querySelector("link")?.textContent,
+        date: new Date(item.querySelector("pubDate")?.textContent || 0)
+      }));
+      return items;
+    }
+
+    async function loadFeeds() {
+      const allItems = [];
+
+      for (const url of feeds) {
+        try {
+          const xml = await fetchFeed(url);
+          const items = parseItems(xml);
+          allItems.push(...items);
+        } catch (e) {
+          console.error(`Failed to load ${url}`, e);
+        }
+      }
+
+      allItems.sort((a, b) => b.date - a.date);
+      const feedEl = document.getElementById("feed");
+      feedEl.innerHTML = "";
+
+      for (const item of allItems) {
+        const el = document.createElement("article");
+        el.innerHTML = `
+          <h2><a href="${item.link}" target="_blank" rel="noopener">${item.title}</a></h2>
+          <time>${item.date.toLocaleString()}</time>
+        `;
+        feedEl.appendChild(el);
+      }
+    }
+
+    loadFeeds();
+  </script>
+</body>
