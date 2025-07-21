@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Projects | Jamison Lahman</title>
+  <base href="../../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Personal website">
+  <meta name="keywords" content="jamison,jamie,lahman">
+  <meta name="author" content="Jamison Lahman">
+  <link rel="stylesheet" href="./css/stylesheet.css">
+  <link rel="stylesheet" href="./css/vim.css">
+  <link rel="icon" type="image/x-icon" href="./images/jme.ico">
+</head>
+
+<body>
+  <header>
+    <nav class="container">
+      <div id="branding">
+        <a href="./home.html" title="Return to the home page"><img alt="Personal logo" src="./images/jme_hd_100.png"></a>
+      </div>
+      <div class="header-right">
+        <a href="./index.html" title="About">/usr</a>
+        <a href="./media/5.html" title="Gallery">/media</a>
+        <a class="active" href="./dev.html" title="Projects">/dev</a>
+      </div>
+    </nav>
+  </header>
+  <main class="container vignette">
+    <h1>Python for Everybody</h1>
+    <nav class="horizontal-menu">
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-3.html">Chapter 3</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-4.html">Chapter 4</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-5.html">Chapter 5</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-6.html">Chapter 6</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-7.html">Chapter 7</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-8.html">Chapter 8</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-9.html">Chapter 9</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-10.html">Chapter 10</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-11.html">Chapter 11</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-12.html">Chapter 12</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-13.html">Chapter 13</a>
+    </nav>
+    <h2 id="chapter9">Chapter 10</h2>
+    <nav class="horizontal-menu">
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-10.html#exercise10-1">Exercise 10.1</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-10.html#exercise10-2">Exercise 10.2</a>
+      <a class="anchor-button primary-border" href="./dev/python-for-everybody/chapter-10.html#exercise10-3">Exercise 10.3</a>
+    </nav>
+    <h3 id="exercise10-1">Exercise 10.1</h3>
+    <pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exercise  10.1: Revise a previous program as follows: Read and parse the &quot;From&quot;</span>
+<span class="sd">lines and pull out the addresses from the line. Count the number of messages</span>
+<span class="sd">from each person using a dictionary.</span>
+
+<span class="sd">After all the data has been read, print the person with the most commits by</span>
+<span class="sd">creating a list of (count, email) tuples from the dictionary. Then sort the</span>
+<span class="sd">list in the reverse order and print out the person who has the most commits.</span>
+
+<span class="sd">Sample line:</span>
+<span class="sd">From stephen.marquard@uct.ac.az Sat Jan 05 09:14:16 2008</span>
+
+<span class="sd">Enter a file name: mbox-short.txt</span>
+<span class="sd">cwen@iupui.edu 5</span>
+
+<span class="sd">Enter a file name: mbox.txt</span>
+<span class="sd">zqian@umich.edu 195</span>
+
+<span class="sd">Python for Everybody: Exploring Data Using Python 3</span>
+<span class="sd">by Charles R. Severance</span>
+
+<span class="sd">Solution by Jamison Lahman, June 1, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="n">dictionary_addresses</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>           <span class="c1"># Initialize variables</span>
+<span class="n">lst</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+<span class="n">fname</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter file name: &#39;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">fhand</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;File cannot be opened:&#39;</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+    <span class="n">quit</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fhand</span><span class="p">:</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">words</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;From&#39;</span><span class="p">:</span>
+        <span class="k">continue</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">words</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dictionary_addresses</span><span class="p">:</span>
+            <span class="n">dictionary_addresses</span><span class="p">[</span><span class="n">words</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>       <span class="c1"># First entry</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dictionary_addresses</span><span class="p">[</span><span class="n">words</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>      <span class="c1"># Additional counts</span>
+
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">dictionary_addresses</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+    <span class="n">lst</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">val</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>              <span class="c1"># Fills list with value, key of dict</span>
+
+<span class="n">lst</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>                  <span class="c1"># Sorts by highest value</span>
+
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">[:</span><span class="mi">1</span><span class="p">]:</span>                <span class="c1"># Only displays the largest value</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+    </pre>
+    <hr>
+    <h3 id="exercise10-2">Exercise 10.2</h3>
+    <pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exercise  10.2: This program counts the distribution of the hour of the day</span>
+<span class="sd">for each of the messages. You can pull the hour from the &quot;From&quot; line by finding</span>
+<span class="sd">the time string and then splitting that string into parts using the colon</span>
+<span class="sd">character. Once you have accumulated the counts for each hour, print out the</span>
+<span class="sd">counts, one per line, sorted by hour as shown below.</span>
+
+<span class="sd">Sample line: From stephen.marquard@uct.ac.az Sat Jan 05 09:14:16 2008</span>
+
+<span class="sd">Sample Execution:</span>
+
+<span class="sd">python timeofday.py</span>
+<span class="sd">Enter a file name: mbox-short.txt</span>
+<span class="sd">04 3</span>
+<span class="sd">06 1</span>
+<span class="sd">07 1</span>
+<span class="sd">09 2</span>
+<span class="sd">10 3</span>
+<span class="sd">11 6</span>
+<span class="sd">14 1</span>
+<span class="sd">15 2</span>
+<span class="sd">16 4</span>
+<span class="sd">17 2</span>
+<span class="sd">18 1</span>
+<span class="sd">19 1</span>
+
+<span class="sd">Python for Everybody: Exploring Data Using Python 3</span>
+<span class="sd">by Charles R. Severance</span>
+
+<span class="sd">Solution by Jamison Lahman, June 1, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="n">dictionary_hours</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>               <span class="c1"># Initialize variables</span>
+<span class="n">lst</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+<span class="n">fname</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter file name: &#39;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">fhand</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;File cannot be opened:&#39;</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+    <span class="n">quit</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fhand</span><span class="p">:</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">words</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;From&#39;</span><span class="p">:</span>
+        <span class="k">continue</span>
+
+    <span class="n">col_pos</span> <span class="o">=</span> <span class="n">words</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+    <span class="n">hour</span> <span class="o">=</span> <span class="n">words</span><span class="p">[</span><span class="mi">5</span><span class="p">][:</span><span class="n">col_pos</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">hour</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dictionary_hours</span><span class="p">:</span>
+        <span class="n">dictionary_hours</span><span class="p">[</span><span class="n">hour</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>      <span class="c1"># First entry</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dictionary_hours</span><span class="p">[</span><span class="n">hour</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>     <span class="c1"># Additional counts</span>
+
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">dictionary_hours</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+    <span class="n">lst</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>              <span class="c1"># Fills list with hour, count of dict</span>
+
+<span class="n">lst</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>                              <span class="c1"># Sorts by hour</span>
+
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+    </pre>
+    <hr>
+    <h3 id="exercise10-3">Exercise 10.3</h3>
+    <pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Exercise  10.3: Write a program that reads a file and prints the letters in</span>
+<span class="sd">decreasing order of frequency. Your program should convert all the input to</span>
+<span class="sd">lower case and only count the letters a-z. Your program should not count</span>
+<span class="sd">spaces, digits, puntuaction, or anything other than letters a-z. Find text</span>
+<span class="sd">samples from several different languages and see how letter frequency varies</span>
+<span class="sd">between languages. Compare your results with the tables at</span>
+<span class="sd">wikipedia.org/wiki/Letter_frequencies</span>
+
+<span class="sd">Python for Everybody: Exploring Data Using Python 3</span>
+<span class="sd">by Charles R. Severance</span>
+
+<span class="sd">Solution by Jamison Lahman, June 1, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">string</span>
+
+<span class="n">counts</span> <span class="o">=</span> <span class="mi">0</span>                          <span class="c1"># Initialize variables</span>
+<span class="n">dictionary_counts</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="n">relative_lst</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+<span class="n">fname</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter file name: &#39;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">fhand</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;File cannot be opened:&#39;</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+    <span class="n">exit</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fhand</span><span class="p">:</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">maketrans</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">string</span><span class="o">.</span><span class="n">digits</span><span class="p">))</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">maketrans</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">string</span><span class="o">.</span><span class="n">punctuation</span><span class="p">))</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="c1"># Removes numbers and punctuation then sets all letters to lower case</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">word</span><span class="p">:</span>
+            <span class="c1"># Count each letter for relative frequencies</span>
+            <span class="n">counts</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">letter</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dictionary_counts</span><span class="p">:</span>
+                <span class="n">dictionary_counts</span><span class="p">[</span><span class="n">letter</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dictionary_counts</span><span class="p">[</span><span class="n">letter</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">dictionary_counts</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+    <span class="n">relative_lst</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">val</span> <span class="o">/</span> <span class="n">counts</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>  <span class="c1"># Computes the relative frequency</span>
+
+<span class="n">relative_lst</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>         <span class="c1"># Sorts from highest rel freq</span>
+
+<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">relative_lst</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+    </pre>
+    <hr>
+  </main>
+</body>
+</html>
