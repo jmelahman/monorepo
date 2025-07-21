@@ -1,5 +1,6 @@
 ---
-title-prefix: Blog
+title-prefix: "Blog"
+nav_blog: true
 ---
 # Blog
 
