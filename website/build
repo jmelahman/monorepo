@@ -23,7 +23,8 @@ pandoc \
   --template=template.html \
   -f html \
   --metadata=script=/scripts/feed.js \
-  --metadata=title-prefix=Feed
+  --metadata=title-prefix=Feed \
+  --metadata=nav_feed=true
 
 # TODO
 exit

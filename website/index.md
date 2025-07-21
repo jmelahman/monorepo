@@ -1,5 +1,6 @@
 ---
-title-prefix: Home
+title-prefix: "About"
+nav_about: true
 ---
 # Jamison Lahman
 
