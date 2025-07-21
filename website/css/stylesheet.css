@@ -154,12 +154,8 @@ table {
   margin: 1em 0px;
 }
 
-table.resume-coursework-table {
-  float: right;
-}
-
-table.resume-coursework-table td {
-  width: 130px;
+.text-align-left {
+  text-align: left;
 }
 
 td {

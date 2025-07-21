@@ -20,6 +20,9 @@ $endif$
 $for(css)$
   <link rel="stylesheet" href="$css$" />
 $endfor$
+$if(script)$
+  <script src="$script$"></script>
+$endif$
 $for(header-includes)$
   $header-includes$
 $endfor$
