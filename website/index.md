@@ -3,3 +3,341 @@ title-prefix: Home
 ---
 # Jamison Lahman
 
+Below my are inferred interests by Twitter.
+Aside from the collection of politicians I've never heard of, it's fairly
+accurate.
+
+- 5G
+- 92.3 The Fan
+- AP
+- Abraham Lincoln
+- Action and adventure books
+- Adam Schiff
+- Advertising
+- Alex Jones
+- Alexandria Ocasio-Cortez
+- Amazon
+- Amy Klobuchar
+- Andrew McCabe
+- Andrew Yang
+- Android
+- Animated films
+- Animation
+- Anime
+- Anthony Jeselnik
+- Apple
+- Asha Rangappa
+- Astrology
+- Austin Carr
+- B2B
+- BBC
+- BBC News
+- BBC News at Ten
+- BLACKPINK
+- Bakari Sellers
+- Barack Obama
+- Baseball
+- Basketball
+- Basketball
+- Battlefield
+- Beauty
+- Bed and breakfasts
+- Ben Shapiro
+- Bernie Sanders
+- Bill Gates
+- Bill Kristol
+- Bill Mitchell
+- Bill Nye
+- Books
+- Books
+- Boris Johnson
+- Breakfast
+- Brett Kavanaugh
+- Business & finance
+- Business Leaders
+- Business news and general info
+- BuzzFeed
+- CBS
+- CNN
+- COVID-19
+- COVID-19: government and public officials
+- Carlo Ancelotti
+- Cartoon +
+- Celebrities
+- Celebrity
+- Charlie Kirk
+- Charlie Penguinz0
+- Chester Bennington
+- Chinese cuisine
+- Chris Hayes
+- Christopher Wray
+- Cleveland Browns
+- Cleveland Cavaliers
+- Click
+- Cloud computing
+- Cloud gaming
+- Coca-Cola
+- Coffee
+- Coffee
+- College life
+- Combat sports
+- Comedians
+- Comedy
+- Commentary
+- Computer programming
+- Cooking
+- Cuisines
+- Cybersecurity
+- DIY & Home
+- Daft Punk
+- Dan Bongino
+- Dance music
+- Dave Chappelle
+- Dave Weigel
+- David Brooks
+- David Corn
+- David Frum
+- Dell
+- Digital Ocean
+- Digital creators and channels
+- Discord
+- Dogs
+- Donald Trump
+- Donald Trump Jr.
+- Drink Experience
+- Economic Issues in the United States
+- Education
+- Education System in the United States
+- Education news and general info
+- Electronic music
+- Elizabeth Warren
+- Elon Musk
+- Entertainment
+- Epic Games
+- Eric Andre
+- Eric André
+- Eric Boehlert
+- Eric Swalwell
+- Experimental music
+- Facebook
+- Family and parenting
+- Fantasy sports
+- Fashion
+- Fast food
+- Fear The Sword
+- Federal Bureau of Investigation
+- Feminism
+- Financial news
+- Firefox
+- Food
+- Food
+- Food experience
+- Fox News
+- French Fries
+- Front-End Programming
+- Funny Accounts
+- Game developers and publishers
+- Game of Thrones
+- Games
+- Gaming
+- Gavin Newsom
+- Geography
+- George Conway
+- George W. Bush
+- GitHub
+- Glenn Greenwald
+- Global Economy
+- Google
+- Government
+- Government officials and agencies
+- Grimes
+- Hillary Clinton
+- Hip-hop & rap
+- Hobbies and interests
+- Hope Hicks
+- Ilhan Omar
+- Information security
+- Instagram
+- Jack Conklin
+- Jack Dorsey
+- James Clapper
+- James Comey
+- James Woods
+- Jared Kushner
+- Jeopardy!
+- Jim Jordan
+- Job Growth in the United States
+- Joe Biden
+- John Ratcliffe
+- John Roberts
+- Joni Ernst
+- Jordan
+- Journalists
+- Joy Reid
+- Justin Trudeau
+- K-pop
+- Kamala Harris
+- Kanye West
+- Kevin Stefanski
+- Kurt Cobain
+- Kyle Griffin
+- LEGO
+- La reine des neiges
+- Laura Ingraham
+- Laurence Tribe
+- Leadership
+- League of Legends
+- Lee Zeldin
+- Legalized Marijuana
+- Linux
+- Linux
+- Live: NBA Basketball
+- Live: The Masters PGA Tour Golf
+- Luka Doncic
+- MMA
+- MTV
+- Machine learning
+- Mark R. Levin
+- McDonald's
+- Michael Flynn
+- Michael Tracey
+- Mick Mulvaney
+- Microsoft
+- Microsoft Windows
+- Mike Pence
+- Milk
+- Minecraft
+- Mitch McConnell
+- Movies
+- Music
+- Music
+- NBA
+- NBA Basketball
+- NBA Basketball
+- NFL Football
+- Nails
+- Nancy Pelosi
+- Natasha Bertrand
+- Nate Silver
+- National parks
+- Neal Katyal
+- Neil deGrasse Tyson
+- Netflix
+- New Years Resolutions
+- News
+- News Outlets
+- Nicholas Kristof
+- Nick Kroll
+- Nike
+- Online education
+- Open source
+- Os Simpsons
+- Overwatch
+- Pasta
+- Paul Krugman
+- Paul Manafort
+- Pete Buttigieg
+- Peter Strzok
+- Pharma
+- Philip Rucker
+- Physics
+- Physics
+- Pixelated Boat
+- Pod Save America
+- Podcasts
+- Political Body
+- Political Issues
+- Political News
+- Political figures
+- Politics
+- Politics
+- Popular franchises
+- Potato
+- Preet Bharara
+- Rachel Maddow
+- Retail
+- Reuters
+- Richard Burr
+- Rick Wilson
+- Ro Khanna
+- Robert Mueller
+- Robert Reich
+- Roblox
+- Rock
+- Roger Stone
+- Ronna McDaniel
+- Rudy Giuliani
+- Ryan Fournier
+- Sahil Kapur
+- Sara A. Carter
+- Sarah Huckabee Sanders
+- Science
+- Science
+- Science
+- Science News
+- Science News
+- Science news
+- Sean Davis
+- Sexual Misconduct in the U.S.
+- Skateboarding
+- Soccer
+- Social Media
+- Space News
+- Space and astronomy
+- Space and astronomy
+- SpaceX
+- Sporting events
+- Sports
+- Sports Betting
+- Sports news
+- Star Wars
+- Stephen Miller
+- Stephen Punwasi
+- Steve Mnuchin
+- Steve Scalise
+- Street art
+- Supreme Court of the United States
+- T-Mobile
+- Tech news
+- Technology
+- Technology
+- Technology Brands
+- Ted Cruz
+- Ted Lieu
+- The Agenda
+- The Home Depot
+- The Legend of Zelda
+- The New York Times
+- The Simpsons
+- The Simpsons
+- The Washington Post
+- The White House
+- Travis Scott
+- Tucker Carlson
+- Tulsi Gabbard
+- Twitch
+- Twitter
+- US Central Intelligence Agency
+- US Politics
+- US national news
+- UX and Web Design
+- United States Congress
+- United States Foreign Policy
+- United States Postal Service
+- United States Senate
+- United States Tax Reform
+- Video game platforms and hardware
+- Video games
+- Visual arts
+- Vladimir Putin
+- Walmart
+- Walter Shaub
+- Watches
+- Water
+- Weather
+- Weather
+- Web Development
+- Web development
+- William Barr
+- Yahoo!
+- YouTube
