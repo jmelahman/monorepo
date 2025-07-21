@@ -22,7 +22,8 @@ pandoc \
   -o feed/index.html \
   --template=template.html \
   -f html \
-  --metadata=script=/scripts/feed.js
+  --metadata=script=/scripts/feed.js \
+  --metadata=title-prefix=Feed
 
 # TODO
 exit
