@@ -32,11 +32,10 @@ async function loadFeed(feed) {
 
 function transformItems(items) {
   const list = items.map(item => {
-    console
     return `<tr>
-      <th class="text-align-left"><span>${item.feed}</span></th>
-      <th class="text-align-left"><a href="${item.link}" target="_blank">${item.title}</a></th>
-      <th><span>${item.date.toISOString().slice(0, 10)}</span></th>
+      <td><span>${item.feed}</span></td>
+      <td><a href="${item.link}" target="_blank">${item.title}</a></td>
+      <td><span>${item.date.toISOString().slice(0, 10)}</span></td>
     </tr>`;
   }).join("");
   return `<table style="width: 100%">
@@ -45,6 +44,11 @@ function transformItems(items) {
                   <col style="width: 70%">
                   <col style="width: 10%">
                 </colgroup>
+                <tr>
+                  <th>Blog</th>
+                  <th>Title</th>
+                  <th>Date</th>
+                </tr>
                   ${list}
                 </table>`;
 }

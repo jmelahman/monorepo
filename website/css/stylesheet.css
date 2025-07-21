@@ -152,14 +152,27 @@ pre {
 
 table {
   margin: 1em 0px;
+  border-spacing: 0 6px;
+  border-collapse: collapse;
 }
 
-.text-align-left {
+tr {
   text-align: left;
 }
 
+tr:first-child {
+  border-bottom: 1px solid black;
+}
+
+tr:nth-child(2) td {
+  padding-top: 8px;
+}
+
 td {
+  text-align: left;
   vertical-align: top;
+  padding-bottom: 4px;
+  padding-top: 4px;
 }
 
 td.resume-date-cell {
