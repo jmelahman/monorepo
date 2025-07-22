@@ -18,15 +18,16 @@ done
 
 docker run \
   --rm \
-  -v "$(pwd)":/mnt \
+  -v "$(pwd)/..":/mnt \
   -w /mnt \
   pandoc/latex \
-    resume.md \
-    -o index.html \
+    resume/resume.md \
+    -o resume/index.html \
     --standalone \
     --embed-resources \
-    --css="styles/base.css" \
-    --css="styles/$STYLE"
+    --template=website/template.html \
+    --css="resume/styles/base.css" \
+    --css="resume/styles/$STYLE"
 
 if [ "$PDF" == "true" ]; then
   uvx weasyprint index.html resume.pdf
