@@ -41,7 +41,7 @@ function toMMDDYYYY(date) {
 function transformItems(items) {
   const list = items.map(item => {
     return `<tr>
-      <td><span>${toMMDDYYYY(item.date)}</span></td>
+      <td><span class="monospace">${toMMDDYYYY(item.date)}</span></td>
       <td><a href="${item.link}" target="_blank">${item.title}</a></td>
       <td><span style="white-space: nowrap">${item.feed}</span></td>
     </tr>`;
