@@ -8,6 +8,7 @@
   <meta name="keywords" content="jamison,jamie,lahman">
   <meta name="author" content="Jamison Lahman">
   <link rel="stylesheet" href="/css/stylesheet.minified.css">
+  <link rel="stylesheet" href="/css/kate.css">
   <link rel="icon" type="image/x-icon" href="/images/jme.ico">
   <title>Blog | Jamison Lahman</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,12 +53,13 @@ aliases</a>. Below are the aliases from my <a
 href="https://github.com/jmelahman/dotfiles/blob/master/.bashrc#L166-L170">shell
 rc</a> sorted by usage frequency,</p>
 <p>I wish I used aliases more.</p>
-<pre class="shell"><code>alias gs=&#39;git status&#39;
-alias gl=&quot;git log --graph --pretty=&#39;%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an&gt;%Creset&#39;&quot;
-alias gb=&#39;git for-each-ref --sort=-committerdate refs/heads/&#39;
-alias gr=&#39;git reset --soft HEAD~1 &amp;&amp; git commit --amend --no-edit&#39;
-alias gg=&#39;git log --graph --oneline --all --decorate&#39;
-alias gt=&#39;git log --no-walk --tags --pretty=&quot;%h %d %s&quot; --decorate=full&#39;</code></pre>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gs=<span class="st">&#39;git status&#39;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gl=<span class="st">&quot;git log --graph --pretty=&#39;%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an&gt;%Creset&#39;&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gb=<span class="st">&#39;git for-each-ref --sort=-committerdate refs/heads/&#39;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gr=<span class="st">&#39;git reset --soft HEAD~1 &amp;&amp; git commit --amend --no-edit&#39;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gg=<span class="st">&#39;git log --graph --oneline --all --decorate&#39;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gt=<span class="st">&#39;git log --no-walk --tags --pretty=&quot;%h %d %s&quot; --decorate=full&#39;</span></span></code></pre></div>
 <ul>
 <li><code>gs</code>: “git status”</li>
 </ul>
@@ -65,28 +67,29 @@ alias gt=&#39;git log --no-walk --tags --pretty=&quot;%h %d %s&quot; --decorate=
 <code>ls</code>.</p>
 <p>In addition to aliases, I have two shell functions that act like
 aliases,</p>
-<pre class="shell"><code>function ga() {
-  local message=&quot;$1&quot;
-  if [ -z &quot;$message&quot; ]; then
-    &gt;&amp;2 echo &quot;Commit message is required.&quot;
-    return 2
-  fi
-  git commit --amend -m &quot;${message}&quot;
-}
-
-function gsp() {
-  local subtree=&quot;${1:-}&quot;
-  local toplevel
-  toplevel=$(git rev-parse --show-toplevel)
-  if [ -z &quot;$subtree&quot; ]; then
-    &gt;&amp;2 echo &quot;Missing argument &#39;subtree&#39;.&quot;
-    echo &quot;Pick one of:&quot;
-    # https://stackoverflow.com/a/18339297
-    git log | grep git-subtree-dir | tr -d &#39; &#39; | cut -d &quot;:&quot; -f2 | sort | uniq | xargs -I {} bash -c &#39;if [ -d $(git rev-parse --show-toplevel)/{} ] ; then echo &quot;  {}&quot;; fi&#39;
-    return 2
-  fi
-  git -C &quot;$toplevel&quot; subtree push --prefix &quot;$subtree&quot; &quot;git@github.com:jmelahman/$(basename &quot;${subtree}&quot;).git&quot; master
-}</code></pre>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span><span class="fu"> ga()</span> <span class="kw">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">message</span><span class="op">=</span><span class="st">&quot;</span><span class="va">$1</span><span class="st">&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$message</span><span class="st">&quot;</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;&amp;</span><span class="dv">2</span> <span class="bu">echo</span> <span class="st">&quot;Commit message is required.&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">2</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">git</span> commit <span class="at">--amend</span> <span class="at">-m</span> <span class="st">&quot;</span><span class="va">${message}</span><span class="st">&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span><span class="fu"> gsp()</span> <span class="kw">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">subtree</span><span class="op">=</span><span class="st">&quot;</span><span class="va">${1</span><span class="op">:-</span><span class="va">}</span><span class="st">&quot;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">toplevel</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="va">toplevel</span><span class="op">=</span><span class="va">$(</span><span class="fu">git</span> rev-parse <span class="at">--show-toplevel</span><span class="va">)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$subtree</span><span class="st">&quot;</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;&amp;</span><span class="dv">2</span> <span class="bu">echo</span> <span class="st">&quot;Missing argument &#39;subtree&#39;.&quot;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">echo</span> <span class="st">&quot;Pick one of:&quot;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># https://stackoverflow.com/a/18339297</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">git</span> log <span class="kw">|</span> <span class="fu">grep</span> git-subtree-dir <span class="kw">|</span> <span class="fu">tr</span> <span class="at">-d</span> <span class="st">&#39; &#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-d</span> <span class="st">&quot;:&quot;</span> <span class="at">-f2</span> <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> <span class="kw">|</span> <span class="fu">xargs</span> <span class="at">-I</span> {} bash <span class="at">-c</span> <span class="st">&#39;if [ -d $(git rev-parse --show-toplevel)/{} ] ; then echo &quot;  {}&quot;; fi&#39;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">2</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">git</span> <span class="at">-C</span> <span class="st">&quot;</span><span class="va">$toplevel</span><span class="st">&quot;</span> subtree push <span class="at">--prefix</span> <span class="st">&quot;</span><span class="va">$subtree</span><span class="st">&quot;</span> <span class="st">&quot;git@github.com:jmelahman/</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">&quot;</span><span class="va">${subtree}</span><span class="st">&quot;</span><span class="va">)</span><span class="st">.git&quot;</span> master</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div>
 <ul>
 <li><code>ga</code>: “git amend”</li>
 </ul>
