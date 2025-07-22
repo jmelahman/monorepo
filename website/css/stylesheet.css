@@ -41,6 +41,10 @@ header a:first-child {
   padding-left: 0px;
 }
 
+header .right a:last-child {
+  padding-right: 0px;
+}
+
 .right {
   float: right;
 }
@@ -154,8 +158,7 @@ pre {
 
 table {
   margin: 1em 0px;
-  border-spacing: 0 6px;
-  border-collapse: collapse;
+  border-spacing: 10px 6px;
 }
 
 tr {

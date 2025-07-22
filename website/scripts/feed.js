@@ -30,24 +30,32 @@ async function loadFeed(feed) {
   }
 }
 
+function toMMDDYYYY(date) {
+  return [
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+    date.getFullYear()
+  ].join('/');
+}
+
 function transformItems(items) {
   const list = items.map(item => {
     return `<tr>
-      <td><span>${item.feed}</span></td>
+      <td><span>${toMMDDYYYY(item.date)}</span></td>
       <td><a href="${item.link}" target="_blank">${item.title}</a></td>
-      <td><span>${item.date.toISOString().slice(0, 10)}</span></td>
+      <td><span style="white-space: nowrap">${item.feed}</span></td>
     </tr>`;
   }).join("");
-  return `<table style="width: 100%">
+  return `<table>
                 <colgroup>
-                  <col style="width: 20%">
-                  <col style="width: 70%">
-                  <col style="width: 10%">
+                  <col>
+                  <col>
+                  <col>
                 </colgroup>
                 <tr>
-                  <th>Feed</th>
-                  <th>Title</th>
                   <th>Date</th>
+                  <th>Title</th>
+                  <th>Feed</th>
                 </tr>
                   ${list}
                 </table>`;
