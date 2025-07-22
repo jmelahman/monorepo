@@ -45,6 +45,10 @@ header .right a:last-child {
   padding-right: 0px;
 }
 
+code, .monospace {
+  font-family: 'JetBrains Mono', monospace;
+}
+
 .right {
   float: right;
 }
