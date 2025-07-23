@@ -1,6 +1,7 @@
 const feeds = [
   { title: "Thorsten Ball", url: "https://registerspill.thorstenball.com/feed" },
   { title: "Kyla Scanlon", url: "https://kyla.substack.com/feed" },
+  { title: "Sam Harris", url: "http://wakingup.libsyn.com/rss" },
 ];
 
 const proxy = 'https://corsproxy.io/?';
