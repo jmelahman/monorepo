@@ -1,6 +1,6 @@
 const feeds = [
-  { title: "Daring Fireball", url: "https://daringfireball.net/feeds/main" },
   { title: "Thorsten Ball", url: "https://registerspill.thorstenball.com/feed" },
+  { title: "Kyla Scanlon", url: "https://kyla.substack.com/feed" },
 ];
 
 const proxy = 'https://corsproxy.io/?';
