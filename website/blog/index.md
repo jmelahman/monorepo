@@ -12,7 +12,7 @@ nav_blog: true
     <th>Title</th>
   </tr>
   <tr>
-    <td class="monospace">07/22/2025</td>
+    <td class="date-col">07/22/2025</td>
     <td>[My Git Workflow (WIP)](1.html)</td>
   </tr>
 </table>
