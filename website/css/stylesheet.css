@@ -180,6 +180,10 @@ td {
   padding-top: 4px;
 }
 
+td.date-col {
+  width: 96px;
+}
+
 td.resume-date-cell {
   text-align: right;
   min-width: 100px;
