@@ -1,4 +1,4 @@
-package connections
+package game
 
 import (
 	"encoding/json"
@@ -123,7 +123,7 @@ func parseConnectionsJSON(data []byte) (Response, error) {
 	return response, nil
 }
 
-func RunGame() error {
+func Run() error {
 	app := tview.NewApplication()
 
 	gameState := GameState{

@@ -1,9 +1,9 @@
 package main
 
-import "github.com/jmelahman/connections"
+import "github.com/jmelahman/connections/game"
 
 func main() {
-	if err := connections.RunGame(); err != nil {
+	if err := game.Run(); err != nil {
 		panic(err)
 	}
 }
