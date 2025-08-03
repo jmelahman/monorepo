@@ -22,7 +22,7 @@ docker run \
   -w /mnt \
   pandoc/latex \
     resume/resume.md \
-    -o resume/index.html \
+    -o website/index.html \
     --standalone \
     --embed-resources \
     --template=website/template.html \
