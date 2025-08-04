@@ -123,7 +123,7 @@ func parseConnectionsJSON(data []byte) (Response, error) {
 	return response, nil
 }
 
-func Run() error {
+func Run(input io.Reader, output io.Writer, closer io.Closer) error {
 	app := tview.NewApplication()
 
 	gameState := GameState{
