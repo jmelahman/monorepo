@@ -6,10 +6,76 @@ const feeds = [
 ];
 
 const proxy = 'https://corsproxy.io/?';
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+// Initialize IndexedDB
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('FeedCache', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      const objectStore = db.createObjectStore('feeds', { keyPath: 'url' });
+      objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+    };
+  });
+}
+
+// Save feed data to IndexedDB
+async function saveFeedToCache(url, data) {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['feeds'], 'readwrite');
+    const objectStore = transaction.objectStore('feeds');
+    const request = objectStore.put({
+      url: url,
+      data: data,
+      timestamp: Date.now()
+    });
+    
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Load feed data from IndexedDB
+async function loadFeedFromCache(url) {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['feeds'], 'readonly');
+    const objectStore = transaction.objectStore('feeds');
+    const request = objectStore.get(url);
+    
+    request.onsuccess = () => {
+      const result = request.result;
+      if (result && (Date.now() - result.timestamp) < CACHE_DURATION) {
+        resolve(result.data);
+      } else {
+        resolve(null);
+      }
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
 
 async function fetchFeed(url) {
+  // Try to load from cache first
+  const cachedData = await loadFeedFromCache(url);
+  if (cachedData) {
+    const parser = new DOMParser();
+    return parser.parseFromString(cachedData, "application/xml");
+  }
+  
+  // If not in cache or expired, fetch from network
   const res = await fetch(proxy + encodeURIComponent(url));
   const xml = await res.text();
+  
+  // Save to cache
+  await saveFeedToCache(url, xml);
+  
   const parser = new DOMParser();
   return parser.parseFromString(xml, "application/xml");
 }
