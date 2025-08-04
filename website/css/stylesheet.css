@@ -7,6 +7,7 @@
 html {
   overflow-y: scroll;
   background-color: #fbfaef;
+  height: 100%;
 }
 
 body {
@@ -15,6 +16,7 @@ body {
   padding: 50px;
   margin: 0 auto;
   max-width: 80ch;
+  height: 100%;
   hyphens: auto;
   overflow-wrap: break-word;
   text-rendering: optimizeLegibility;
@@ -69,6 +71,16 @@ code, .monospace {
   width: 300px;
   border-radius: 8px;
   filter: drop-shadow(1px 1px 2px gray);
+}
+
+.loading {
+  width: 24px;
+  height: 24px;
+  margin: auto;
+}
+
+.spinner {
+  fill: #8c0000;
 }
 
 main {
@@ -236,6 +248,11 @@ footer {
 
 .full {
   overflow: hidden;
+}
+
+#content {
+  display: flex;
+  height: 100%;
 }
 
 .menu-content a {
