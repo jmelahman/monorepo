@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: navidrome
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: navidrome
+  template:
+    metadata:
+      labels:
+        app: navidrome
+    spec:
+      containers:
+        - name: navidrome
+          image: deluan/navidrome:latest
+          ports:
+            - containerPort: 4533
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: music
+              mountPath: /music
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: navidrome-config
+        - name: music
+          persistentVolumeClaim:
+            claimName: navidrome-music
+        - name: navidrome-config
+          configMap:
+            name: navidrome-config
+
