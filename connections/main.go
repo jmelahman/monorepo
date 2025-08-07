@@ -1,9 +1,14 @@
 package main
 
-import "github.com/jmelahman/connections/game"
+import (
+	"github.com/jmelahman/connections/game"
+
+	"github.com/rivo/tview"
+)
 
 func main() {
-	if err := game.Run(); err != nil {
+	app := tview.NewApplication()
+	if err := game.Run(app); err != nil {
 		panic(err)
 	}
 }

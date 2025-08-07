@@ -123,9 +123,13 @@ func parseConnectionsJSON(data []byte) (Response, error) {
 	return response, nil
 }
 
-func Run(input io.Reader, output io.Writer, closer io.Closer) error {
+func RunWithScreen(screen tcell.Screen) error {
 	app := tview.NewApplication()
+	app.SetScreen(screen)
+	return Run(app)
+}
 
+func Run(app *tview.Application) error {
 	gameState := GameState{
 		selectedCards: make(map[string]bool),
 		categories:    make(map[string]Group),
