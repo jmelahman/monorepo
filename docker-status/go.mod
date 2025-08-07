@@ -3,7 +3,7 @@ module github.com/jmelahman/docker-status
 go 1.24.4
 
 require (
-	github.com/docker/docker v28.2.2+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/rivo/tview v0.0.0-20250501113434-0c592cd31026
 )
 
