@@ -4,10 +4,7 @@ go 1.24.3
 
 require (
 	github.com/gliderlabs/ssh v0.3.8
-	github.com/jmelahman/connections v0.1.15
 )
-
-replace github.com/jmelahman/connections => ../connections
 
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
