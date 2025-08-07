@@ -1,0 +1,16 @@
+go 1.24.5
+
+use (
+	./agent
+	./check-symlinks
+	./connections
+	./cycle-cli
+	./dashboard
+	./docker-status
+	./git-orchard
+	./nature-sounds
+	./runtainer
+	./ssh
+	./tag
+	./work
+)
