@@ -192,7 +192,7 @@ td {
   padding-top: 4px;
 }
 
-td.date-col {
+.date-col {
   width: 96px;
 }
 
@@ -248,11 +248,6 @@ footer {
 
 .full {
   overflow: hidden;
-}
-
-#content {
-  display: flex;
-  height: 100%;
 }
 
 .menu-content a {

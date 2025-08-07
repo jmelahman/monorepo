@@ -12,10 +12,10 @@ const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('FeedCache', 1);
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
-    
+
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       const objectStore = db.createObjectStore('feeds', { keyPath: 'url' });
@@ -35,7 +35,7 @@ async function saveFeedToCache(url, data) {
       data: data,
       timestamp: Date.now()
     });
-    
+
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
   });
@@ -48,7 +48,7 @@ async function loadFeedFromCache(url) {
     const transaction = db.transaction(['feeds'], 'readonly');
     const objectStore = transaction.objectStore('feeds');
     const request = objectStore.get(url);
-    
+
     request.onsuccess = () => {
       const result = request.result;
       if (result && (Date.now() - result.timestamp) < CACHE_DURATION) {
@@ -68,14 +68,14 @@ async function fetchFeed(url) {
     const parser = new DOMParser();
     return parser.parseFromString(cachedData, "application/xml");
   }
-  
+
   // If not in cache or expired, fetch from network
   const res = await fetch(proxy + encodeURIComponent(url));
   const xml = await res.text();
-  
+
   // Save to cache
   await saveFeedToCache(url, xml);
-  
+
   const parser = new DOMParser();
   return parser.parseFromString(xml, "application/xml");
 }
@@ -109,7 +109,7 @@ function toMMDDYYYY(date) {
 function transformItems(items) {
   const list = items.map(item => {
     return `<tr>
-      <td><span class="date-col">${toMMDDYYYY(item.date)}</span></td>
+      <td class="date-col">${toMMDDYYYY(item.date)}</td>
       <td><a href="${item.link}" target="_blank">${item.title}</a></td>
       <td><span style="white-space: nowrap">${item.feed}</span></td>
     </tr>`;
@@ -121,7 +121,7 @@ function transformItems(items) {
                   <col>
                 </colgroup>
                 <tr>
-                  <th>Date</th>
+                  <th class="date-col">Date</th>
                   <th>Title</th>
                   <th>Feed</th>
                 </tr>
