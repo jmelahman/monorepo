@@ -8,8 +8,8 @@ require (
 )
 
 require (
-	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
-	github.com/docker/cli v28.2.2+incompatible // indirect
+	github.com/containerd/stargz-snapshotter/estargz v0.17.0 // indirect
+	github.com/docker/cli v28.3.3+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -19,7 +19,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.7 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	golang.org/x/sync v0.16.0 // indirect
