@@ -10,6 +10,7 @@ import (
 	"github.com/jmelahman/agent/tools"
 	ollama "github.com/ollama/ollama/api"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -17,7 +18,27 @@ var (
 	commit  = "none"
 )
 
+var (
+	model string
+)
+
 func main() {
+	var rootCmd = &cobra.Command{
+		Use:     "agent",
+		Short:   "Chat with an AI agent",
+		Version: version,
+		Run:     runAgent,
+	}
+
+	rootCmd.Flags().StringVarP(&model, "model", "m", "qwen3:0.6b", "Model to use for the agent")
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runAgent(cmd *cobra.Command, args []string) {
 	log.SetLevel(log.DebugLevel)
 
 	client, err := ollama.ClientFromEnvironment()
@@ -31,15 +52,19 @@ func main() {
 		return scanner.Text(), true
 	}
 
-	tools := []tools.ToolDefinition{tools.ReadFileDefintion}
-	agent := NewAgent(client, getUserMessage, tools)
+	tools := []tools.ToolDefinition{
+		tools.EditFileDefintion,
+		tools.ReadFileDefintion,
+		tools.ListFilesDefinition,
+	}
+	agent := NewAgent(client, getUserMessage, tools, model)
 	must("run agent", agent.Run(context.TODO()))
 }
 
-func NewAgent(client *ollama.Client, getUserMessage func() (string, bool), tools []tools.ToolDefinition) *Agent {
+func NewAgent(client *ollama.Client, getUserMessage func() (string, bool), tools []tools.ToolDefinition, model string) *Agent {
 	return &Agent{
 		client:         client,
-		model:          "qwen3:0.6b",
+		model:          model,
 		getUserMessage: getUserMessage,
 		tools:          tools,
 	}
@@ -55,7 +80,9 @@ type Agent struct {
 func (a *Agent) Run(ctx context.Context) error {
 	conversation := []ollama.Message{}
 
-	fmt.Printf("Chat with an Agent (%s)\nModel: %s\n", version, a.model)
+	serverVersion, err := a.client.Version(ctx)
+	must("get server version", err)
+	fmt.Printf("Chat with an Agent (%s)\nOllama Server Version: %s\nModel: %s\n", version, serverVersion, a.model)
 
 	resp, err := a.client.List(ctx)
 	must("list models", err)
@@ -67,7 +94,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 	}
 	if !found {
-		log.Warning("")
 		req := &ollama.PullRequest{Model: a.model}
 		progressFunc := func(resp ollama.ProgressResponse) error {
 			fmt.Printf("Progress: status=%v, total=%v, completed=%v\r", resp.Status, resp.Total, resp.Completed)
@@ -95,10 +121,10 @@ func (a *Agent) Run(ctx context.Context) error {
 		log.Debug("Running inference...")
 		message, err := a.runInference(ctx, conversation)
 		must("run inference", err)
-		conversation = append(conversation, *message)
 
 		if message.Content != "" {
 			fmt.Printf("\u001b[92mAgent\u001b[0m: %s\n", message.Content)
+			conversation = append(conversation, *message)
 		}
 
 		log.Debug("Parsing messages...")
