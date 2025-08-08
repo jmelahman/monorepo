@@ -2,8 +2,9 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
@@ -16,16 +17,19 @@ func main() {
 	ssh.Handle(func(s ssh.Session) {
 		screen, err := NewSessionScreen(s)
 		if err != nil {
-			fmt.Fprintln(s.Stderr(), "unable to create screen:", err)
-			return
+			panic(err)
 		}
 
 		game.RunWithScreen(screen)
 	})
 
 	log.Println("Starting SSH server on :2222")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
 	log.Fatal(ssh.ListenAndServe(":2222", nil,
-		ssh.HostKeyFile("/home/jamison/.ssh/id_rsa"),
+		ssh.HostKeyFile(filepath.Join(home, ".ssh", "id_rsa")),
 	))
 }
 
