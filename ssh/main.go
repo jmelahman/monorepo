@@ -20,7 +20,9 @@ func main() {
 			panic(err)
 		}
 
-		game.RunWithScreen(screen)
+		if err := game.RunWithScreen(screen); err != nil {
+			panic(err)
+		}
 	})
 
 	log.Println("Starting SSH server on :2222")
