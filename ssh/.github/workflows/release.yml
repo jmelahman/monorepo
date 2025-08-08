@@ -28,4 +28,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOFLAGS: "-ldflags='-s -w' -installsuffix=static"
+          GOFLAGS: -installsuffix=static
