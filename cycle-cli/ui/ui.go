@@ -139,7 +139,7 @@ func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 		powerStr := ""
 		if ui.ftp > 0 {
 			powerPercentage := float64(data.Power) / float64(ui.ftp) * 100.0
-			color := "white" // Default color
+			var color string
 
 			if powerPercentage < 60 {
 				color = "white" // Zone 1: Recovery
