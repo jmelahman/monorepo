@@ -1,7 +1,10 @@
 version: 2
+
 builds:
-    env:
+  - env:
       - CGO_ENABLED=0
-    install_suffix: static
+    gcflags:
+      - installsuffix=static
     ldflags:
       - -s -w
+
