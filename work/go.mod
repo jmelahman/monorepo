@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	github.com/gen2brain/beeep v0.11.1
 	github.com/godbus/dbus/v5 v5.1.0
-	github.com/mattn/go-sqlite3 v1.14.28
+	github.com/mattn/go-sqlite3 v1.14.30
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 )
@@ -23,7 +23,7 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sergeymakinen/go-bmp v1.0.0 // indirect
 	github.com/sergeymakinen/go-ico v1.0.0-beta.0 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.7 // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect

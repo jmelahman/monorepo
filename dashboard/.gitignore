@@ -27,8 +27,6 @@ go.work.sum
 # python packaging
 dist/
 *.egg-info/
-__pycache__/
-tag
-
-# aider
+__pycache__
+dashboard
 .aider*
