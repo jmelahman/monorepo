@@ -39,20 +39,16 @@ header a {
   font-weight: bold;
 }
 
-header a:first-child {
-  padding-left: 0px;
-}
-
-header .right a:last-child {
-  padding-right: 0px;
-}
-
-code, .monospace {
-  font-family: 'JetBrains Mono', monospace;
+nav > a:first-child {
+  padding-left: 0;
 }
 
 .right {
   float: right;
+}
+
+.right a:last-child {
+  padding-right: 0;
 }
 
 .right-sidebar {
@@ -97,8 +93,11 @@ main {
   height: auto;
 }
 
-button,
-.anchor-button {
+code, .monospace {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+button {
   font-family: inherit;
   cursor: pointer;
   padding: 8px;
@@ -116,30 +115,37 @@ button,
 }
 
 button:hover,
-button:focus
-a.anchor-button:hover,
-a.anchor-button:focus {
+button:focus {
   background-color: rgba(0, 0 , 16, .6);
   text-decoration: none;
 }
 
 /* Links */
-a:link, a:visited {
+a:link {
   color: #2c2c2c;
 }
 
+a:visited {
+  color: #8c0000;
+}
+
+.stateless a:visited {
+  color: #2c2c2c;
+}
+
+.stateless a:hover, stateless a:focus, .stateless a.active,
 a:hover, a:focus {
   color: #8c0000;
+}
+
+.stateless a:hover, stateless a:focus {
+  text-decoration: none;
 }
 
 a[disabled] {
   pointer-events: none;
   color: #bbbbbb;
   border-color: #bbbbbb;
-}
-
-a.active {
-  color: #8c0000;
 }
 
 h1 {
