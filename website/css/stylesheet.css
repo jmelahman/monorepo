@@ -138,10 +138,6 @@ a:hover, a:focus {
   color: #8c0000;
 }
 
-.stateless a:hover, stateless a:focus {
-  text-decoration: none;
-}
-
 a[disabled] {
   pointer-events: none;
   color: #bbbbbb;
