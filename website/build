@@ -21,7 +21,7 @@ pandoc \
   feed/index.html.body \
   -o feed/index.html \
   --template=template.html \
-  -f html \
+  --from markdown+raw_html \
   --metadata=script=/scripts/feed.js \
   --metadata=title-prefix=Feed \
   --metadata=nav_feed=true
