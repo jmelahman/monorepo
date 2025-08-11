@@ -26,6 +26,10 @@ pandoc \
   --metadata=title-prefix=Feed \
   --metadata=nav_feed=true
 
+docker run --rm -i node:alpine \
+  sh -c "npm install -g clean-css-cli > /dev/null && cleancss -o /dev/stdout" \
+  < css/stylesheet.css > css/stylesheet.min.css
+
 # TODO
 exit
 
