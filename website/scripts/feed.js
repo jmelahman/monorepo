@@ -2,7 +2,6 @@ const feeds = [
   { title: "Thorsten Ball", url: "https://registerspill.thorstenball.com/feed" },
   { title: "Kyla Scanlon", url: "https://kyla.substack.com/feed" },
   { title: "Sam Harris", url: "http://wakingup.libsyn.com/rss" },
-  { title: "Arch Linux", url: "https://archlinux.org/feeds/news" },
 ];
 
 const proxy = 'https://corsproxy.io/?';
@@ -132,7 +131,7 @@ function transformItems(items) {
 async function render(promiseItems) {
   const content = document.getElementById("content");
   const allItems = await promiseItems;
-  const sortedItems = allItems.flat().sort((a, b) => b.date - a.date);
+  const sortedItems = allItems.flat().sort((a, b) => b.date - a.date).slice(0, 50);
   content.innerHTML = transformItems(sortedItems);
 }
 

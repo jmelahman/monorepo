@@ -73,14 +73,21 @@ code, .monospace {
   filter: drop-shadow(1px 1px 2px gray);
 }
 
+#content {
+  height: 100%;
+}
+
 .loading {
-  width: 24px;
-  height: 24px;
-  margin: auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .spinner {
   fill: #8c0000;
+  width: 24px;
+  height: 24px;
 }
 
 main {
