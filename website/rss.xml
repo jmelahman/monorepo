@@ -4,7 +4,7 @@
   <link>https://jamison.lahman.dev</link>
   <description>My personal site</description>
   <language>en-us</language>
-  <lastBuildDate>Tue, 12 Aug 2025 16:39:22 -0700</lastBuildDate>
+  <lastBuildDate>Tue, 12 Aug 2025 16:45:08 -0700</lastBuildDate>
   <item>
     <title>My Git Workflow (Work-in-progress)</title>
     <link>https://jamison.lahman.dev/blog/1.html</link>
@@ -15,12 +15,6 @@
     <title>Using `uv` to package Golang applications</title>
     <link>https://jamison.lahman.dev/blog/2.html</link>
     <guid>https://jamison.lahman.dev/blog/2.html</guid>
-    <pubDate>Tue, 12 Aug 2025 00:00:00 -0700</pubDate>
-  </item>
-  <item>
-    <title></title>
-    <link>https://jamison.lahman.dev/blog/index.html</link>
-    <guid>https://jamison.lahman.dev/blog/index.html</guid>
     <pubDate>Tue, 12 Aug 2025 00:00:00 -0700</pubDate>
   </item>
 </channel></rss>
