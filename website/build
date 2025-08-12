@@ -44,7 +44,7 @@ echo "  <lastBuildDate>$(date -R)</lastBuildDate>" >> "$RSS_PATH"
 # Process each post
 for md in "$BLOG_DIR"/*.md; do
     filename=$(basename "$md" .md)
-    if [ "$filename" == "index.md" ]; then
+    if [ "$filename" == "index" ]; then
       continue
     fi
 
