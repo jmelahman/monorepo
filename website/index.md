@@ -5,7 +5,7 @@ nav_about: true
 # Jamison Lahman
 
 <div class="right-sidebar">
- ![Psyduck is my favorite Pokémon.](/images/psyduck_son.jpg)
+ ![Psyduck is my favorite Pokémon.](/images/psyduck_son.webp)
 </div>
 
 Below my are inferred interests by Twitter.
