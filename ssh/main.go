@@ -11,9 +11,32 @@ import (
 	"github.com/gdamore/tcell/v2/terminfo"
 	"github.com/gliderlabs/ssh"
 	"github.com/jmelahman/connections/game"
+	"github.com/spf13/cobra"
+)
+
+var (
+	port    string
+	keyFile string
 )
 
 func main() {
+	var rootCmd = &cobra.Command{
+		Use:   "ssh-game",
+		Short: "SSH game server",
+		Run: func(cmd *cobra.Command, args []string) {
+			serve()
+		},
+	}
+
+	rootCmd.Flags().StringVar(&port, "port", "2222", "Port to listen on")
+	rootCmd.Flags().StringVar(&keyFile, "key-file", "", "Path to SSH host key file")
+
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func serve() {
 	ssh.Handle(func(s ssh.Session) {
 		screen, err := NewSessionScreen(s)
 		if err != nil {
@@ -25,13 +48,20 @@ func main() {
 		}
 	})
 
-	log.Println("Starting SSH server on :2222")
-	home, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
+	log.Printf("Starting SSH server on :%s", port)
+
+	// Use provided key file or default to ~/.ssh/id_rsa
+	hostKeyFile := keyFile
+	if hostKeyFile == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			panic(err)
+		}
+		hostKeyFile = filepath.Join(home, ".ssh", "id_rsa")
 	}
-	log.Fatal(ssh.ListenAndServe(":2222", nil,
-		ssh.HostKeyFile(filepath.Join(home, ".ssh", "id_rsa")),
+
+	log.Fatal(ssh.ListenAndServe(":"+port, nil,
+		ssh.HostKeyFile(hostKeyFile),
 	))
 }
 
