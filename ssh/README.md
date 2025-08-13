@@ -7,6 +7,10 @@
 
 This serves the [NYT Connections TUI](https://github.com/jmelahman/connections) over SSH.
 
+```shell
+$ ssh connections.lahman.dev
+```
+
 ## Running
 
 In one terminal, start the server,
@@ -22,13 +26,13 @@ In a separate terminal,
 $ ssh -p 2222 localhost
 ```
 
-This assumes the server has an [SSH key](https://wiki.archlinux.org/title/SSH_keys) at [~/.ssh/id_rsa](https://github.com/jmelahman/connections-ssh/blob/12b9ba7d3ec6059a349d23ea85e7b948b16517a1/main.go#L32).
+By default, the server looks for an [SSH key](https://wiki.archlinux.org/title/SSH_keys) at [~/.ssh/id_rsa](https://github.com/jmelahman/connections-ssh/blob/12b9ba7d3ec6059a349d23ea85e7b948b16517a1/main.go#L32).
+This can be overridden with the `--key-file` flag.
 
-Moreover, if running on port `22` is desired, you'll like need elevated privileges (not recommended),
+Moreover, if running on port `22` is desired, you'll likely need elevated privileges (not recommended),
 
 ```shell
-$ go build .
-$ sudo ./connections-ssh
+$ sudo connections-ssh --port 22
 2025/08/07 22:55:16 Starting SSH server on :22
 ```
 
