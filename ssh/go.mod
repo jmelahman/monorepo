@@ -1,4 +1,4 @@
-module github.com/jmelahman/ssh
+module github.com/jmelahman/connections-ssh
 
 go 1.24.3
 
