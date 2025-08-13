@@ -398,6 +398,8 @@ func Run(app *tview.Application) error {
 		}
 
 		switch {
+		case event.Key() == tcell.KeyRune && event.Rune() == 'q':
+			app.Stop()
 		case event.Key() == tcell.KeyRune && event.Rune() == 'a':
 			r := focusedRow
 			c := focusedCol
