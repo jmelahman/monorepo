@@ -7,8 +7,8 @@ github.com/gdamore/tcell/v2 v2.8.1/go.mod h1:bj8ori1BG3OYMjmb3IklZVWfZUJ1UBQt9JX
 github.com/gliderlabs/ssh v0.3.8 h1:a4YXD1V7xMF9g5nTkdfnja3Sxy1PVDCj1Zg4Wb8vY6c=
 github.com/gliderlabs/ssh v0.3.8/go.mod h1:xYoytBv1sV0aL3CavoDuJIQNURXkkfPA/wxQ1pL1fAU=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/jmelahman/connections v0.1.16 h1:FQzryQhSjsN/T7UeZxKGx942gv/lfe8ilbaHLhfAUq0=
-github.com/jmelahman/connections v0.1.16/go.mod h1:XgWTJlRQawYOIyxWP1TaVLfcWNS7DPXo5rpR8PLcHg0=
+github.com/jmelahman/connections v0.1.17 h1:6CCN3e3NNnSSSnFl8DJdhjYIO0rfjPBWjF1LO+YBFvw=
+github.com/jmelahman/connections v0.1.17/go.mod h1:mTgdz687JXTa3HlSeIsejJrXjsv0WT1waXyOw4k1PXw=
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=
 github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mattn/go-runewidth v0.0.16 h1:E5ScNMtiwvlvB5paMFdw9p4kSQzbXFikJ5SQO6TULQc=
