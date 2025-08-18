@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v4
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: stable
           cache: false
-      - uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # ratchet:goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # ratchet:goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
@@ -48,7 +48,7 @@ jobs:
           # - { goos: "darwin", goarch: "arm64" }
           - {goos: "", goarch: ""}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v4
         with:
           persist-credentials: false
           fetch-depth: 0
