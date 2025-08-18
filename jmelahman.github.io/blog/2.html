@@ -36,46 +36,283 @@
   </nav>
 </header>
 <hr>
-<h1 id="using-uv-to-package-golang-applications">Using <code>uv</code>
-to package Golang applications</h1>
-<p>I love Golang and I love <code>uv</code>.</p>
-<p>Combining the two seems unlikely at a glance given the limited
+<h1 id="using-uv-to-package-go-applications">Using <code>uv</code> to
+package Go applications</h1>
+<p>I love Go and I love <a
+href="https://docs.astral.sh/uv/"><code>uv</code></a>.</p>
+<p>Combining the two may seem unlikely at a glance given the limited
 interop between Python and Go. Moreover, the Go ecosystem is rich with
-top-tier developer tools (a domain in which Go excels). To make matters
-worse, Go and Python have relatively divergent core beliefs as
-languages. In short, Python has core standards it upholds while allowing
-downstream developers completely the freedom to create the software they
-need within those standards. In contrast, Go’s core beliefs value
-simplicity and maintain quality by limiting the degrees of freedom for
-problems involving maintaining the language.</p>
+top-tier developer tools (a domain in which Go itself excels). To make
+matters worse, Go and Python have relatively divergent core beliefs as
+languages.</p>
+<p>In short, Python has core standards it upholds while allowing
+downstream developers complete freedom to create software they need
+within those boundaries. In contrast, Go’s core beliefs value simplicity
+and which allows the maintainers the ability to uphold quality by
+limiting the degrees of freedom for problems facing the ecosystem.</p>
 <p>For implementing business logic, Go’s approach is fantastic. Go is
 easy to learn, compile times are blazing, and feature deprecation in the
-language is a non-problem. There is usually one way to do a thing and
-you’re effectively guarenteed it will do it well. For packaging, on the
+language is a non-issue. There is usually one way to do a thing and
+you’re effectively guaranteed it will do it well. For packaging, on the
 other hand, I find this approach a bit limiting.</p>
-<p>Packaging is user-facing. Packaging effects how you solve a problem
-because the problem involves end-user behavior. Those considerations
-could be the difference between a user installing the application or
-not.</p>
-<h2 id="issues-with-go-packaging">Issues with Go packaging</h2>
-<p>To be fair, Go packaging is 95% complete and is really good at what
-it does do. I personally have an extremely low pain tolerance for
-software and an extra 100ms will bother me. Part of the issue is that I
-intentionally use low-end hardware because UX and accessibility matter a
-lot to me. For most use-cases, Go packaging is perfectly fine and
-requires minimal effort. For me, I am willing to trade a bit of effort
-for the optimal user experience; I enjoy these things. Also, this
-approach is compatible with Go’s packaging which can be preferred if
-desired.</p>
+<p>Fundamentally, packaging is user-facing. Packaging effects how you
+solve problems because the problem involves end-user input. Those
+considerations could be the difference between a user installing the
+application or not. Without installs, you’re guaranteed no users.</p>
+<h2 id="how-gos-default-packaging-works">How Go’s default packaging
+works</h2>
+<p>Installing Go packages behaves nearly identical to building locally
+in development. The user runs,</p>
+<pre class="shell"><code>go install github.com/octocat/application@v1.2.3</code></pre>
+<p>Go then fetches the source code from that repository at that version
+and builds it locally. One can’t help but appreciate the simplicity.</p>
+<p>This is similar to other, modern languages like Rust’s
+<code>cargo install</code> however Go goes a step further and only
+requires source code to be published (i.e. no <a
+href="https://crates.io/">crates.io</a> dependency). This reduces
+overhead for maintainers while allowing the ecosystem to be federated.
+Pretty solid overall.</p>
+<h3 id="issues-with-go-packaging">Issues with Go packaging</h3>
+<p>To be fair, Go packaging is 95% complete and it is really good at
+what it does do. I personally have an extremely low pain tolerance for
+software and an extra 100ms will bother me if I know it could have been
+avoided.. Part of the issue is that I intentionally use low-end hardware
+because UX and accessibility matters a lot to me. For most use-cases, Go
+packaging is perfectly fine and requires minimal maintenance on the end
+of the developers.</p>
+<p>For me, I am willing to trade a bit of effort for the optimal user
+experience; I enjoy these things. Also, this approach is
+mutually-exclusive with Go’s packaging which is still available to users
+if desired..</p>
 <p>The majority of my complaints are really just, “Go doesn’t have a
 canonical package repository.”</p>
 <ol type="1">
-<li><p>Installing Go packages requires installing Go</p></li>
-<li><p>Installing Go packages requires building them from
-source</p></li>
-<li><p>Installing Go packages requires specific versions of Go
-installed</p></li>
-<li><p>Managing Go packages lacks some reproducability features</p></li>
+<li>Installing Go packages requires installing Go</li>
+<li>Installing Go packages requires building them from source</li>
+<li>Installing Go packages requires specific versions of Go
+installed</li>
+<li>Managing Go packages lacks some reproducability features</li>
 </ol>
+<h2 id="goreleaser-filling-in-the-gaps">GoReleaser filling in the
+gaps</h2>
+<p>If Go’s default packaging is 95% complete, <a
+href="https://goreleaser.com/">GoReleaser</a> gets it to 99%. GoReleaser
+is an absolutely phenomenal tool and I wish I had more time to use it
+properly. For most, basic Go applications, deployments are a simple
+Github Action workflow,</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">goreleaser</span><span class="kw">:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runs-on</span><span class="kw">:</span><span class="at"> ubuntu-latest</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">environment</span><span class="kw">:</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> release</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">permissions</span><span class="kw">:</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">contents</span><span class="kw">:</span><span class="at"> write</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">steps</span><span class="kw">:</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8</span><span class="co"> # ratchet:actions/checkout@v4</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">persist-credentials</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">fetch-depth</span><span class="kw">:</span><span class="at"> </span><span class="dv">0</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5</span><span class="co"> # ratchet:actions/setup-go@v5</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">go-version</span><span class="kw">:</span><span class="at"> stable</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">cache</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a</span><span class="co"> # ratchet:goreleaser/goreleaser-action@v6</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">distribution</span><span class="kw">:</span><span class="at"> goreleaser</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;~&gt; v2&quot;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">args</span><span class="kw">:</span><span class="at"> release --clean</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">env</span><span class="kw">:</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">GITHUB_TOKEN</span><span class="kw">:</span><span class="at"> ${{ secrets.GITHUB_TOKEN }}</span></span></code></pre></div>
+<p><em>Most of the complexity here is for the sake of security and isn’t
+that interesting. It mostly just: 1. checkouts the code 2. installs Go
+3. publishes.</em></p>
+<p>This then updates the Github Releases with beautiful, compressed,
+prebuilt Go binaries for all major platforms. The building is in
+parallel, so sub-1 minute deployments are common.</p>
+<h3 id="issues-with-goreleaser">Issues with GoReleaser</h3>
+<p>There are only 3 minor issues with GoReleaser,</p>
+<ol type="1">
+<li>There isn’t a ubiquitous, CLI solution for downloading these
+artifacts from Github.</li>
+</ol>
+<ol type="a">
+<li>This does imply the platform detection is not automatic and
+therefore error-prone.</li>
+</ol>
+<ol start="2" type="1">
+<li>They’re tarballs, so installing requires un-archiving after
+downloading.</li>
+</ol>
+<h2 id="solving-the-last-mile-problem-of-go-packaging">Solving the last
+mile problem (of Go packaging)</h2>
+<p><code>uv</code> solves both of GoReleaser’s issues:</p>
+<ul>
+<li><code>uv</code> is now a ubiquitous tool for the most popular
+programming language.</li>
+<li><a
+href="https://realpython.com/python-wheels/#what-is-a-python-wheel">Python
+wheels</a> are glorified <code>.zip</code> files which <code>uv</code>
+happily un-archives.</li>
+</ul>
+<p>Also, <code>uv</code> itself is <a
+href="https://github.com/astral-sh/uv/blob/main/BENCHMARKS.md#warm-installation">really
+freaking fast</a>.</p>
+<h3 id="packaging-a-go-application-with-python-tools">Packaging a Go
+application with Python tools</h3>
+<p>Packaging with Python tools has 2 major parts:</p>
+<ul>
+<li><code>pyproject.toml</code>: defines the package configurations
+analogous to the <code>go.mod</code> file</li>
+<li><code>hatch_build.py</code>: a custom hook to handle Go building
+specifics</li>
+</ul>
+<p>There are a handful of build backends available. The common, legacy
+backend is <a href="https://pypi.org/project/setuptools/">setuptools</a>
+while <code>uv</code> also now has it’s <a
+href="https://docs.astral.sh/uv/concepts/build-backend/">own
+backend</a>. I personally use <a
+href="https://pypi.org/project/hatchling/">hatchling</a>. Hatchling is
+good and has plugins support of which I use to get the app version from
+source control.</p>
+<p>The setup is simple and straight-forward, most of which is setting
+appropriate metadata,</p>
+<p><code>pyproject.toml</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[build-system]</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">requires</span> <span class="op">=</span> <span class="op">[</span><span class="st">&quot;hatchling&quot;</span><span class="op">,</span> <span class="st">&quot;hatch-vcs&quot;</span><span class="op">,</span> <span class="st">&quot;go-bin~=1.24&quot;</span><span class="op">,</span> <span class="st">&quot;manygo&quot;</span><span class="op">]</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">build-backend</span> <span class="op">=</span> <span class="st">&quot;hatchling.build&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">[project]</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="dt">name</span> <span class="op">=</span> <span class="st">&quot;nature-sounds&quot;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="dt">description</span> <span class="op">=</span> <span class="st">&quot;A nature sounds player for the command-line&quot;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="dt">license</span> <span class="op">=</span> <span class="op">{</span><span class="dt">file</span><span class="op"> =</span> <span class="st">&quot;LICENSE&quot;</span><span class="op">}</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="dt">authors</span> <span class="op">=</span> <span class="op">[{ </span><span class="dt">name</span><span class="op"> =</span> <span class="st">&quot;Jamison Lahman&quot;</span><span class="op">, </span><span class="dt">email</span><span class="op"> =</span> <span class="st">&quot;jamison@lahman.dev&quot;</span><span class="op"> }]</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="dt">readme</span> <span class="op">=</span> <span class="st">&quot;README.md&quot;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="dt">requires-python</span> <span class="op">=</span> <span class="st">&quot;&gt;=3.6&quot;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="dt">keywords</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;nature-sounds&quot;</span><span class="op">,</span> <span class="st">&quot;white-noise&quot;</span><span class="op">,</span> <span class="st">&quot;sounds&quot;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="op">]</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="dt">classifiers</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Programming Language :: Go&quot;</span><span class="op">,</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;License :: OSI Approved :: MIT License&quot;</span><span class="op">,</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Operating System :: OS Independent&quot;</span><span class="op">,</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="op">]</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="dt">dynamic</span> <span class="op">=</span> <span class="op">[</span><span class="st">&quot;version&quot;</span><span class="op">]</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="kw">[project.urls]</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="dt">Repository</span> <span class="op">=</span> <span class="st">&quot;https://github.com/jmelahman/nature-sounds&quot;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="kw">[tool.hatch.build]</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="dt">include</span> <span class="op">=</span> <span class="op">[</span><span class="st">&quot;go.mod&quot;</span><span class="op">,</span> <span class="st">&quot;go.sum&quot;</span><span class="op">,</span> <span class="st">&quot;main.go&quot;</span><span class="op">]</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="kw">[tool.hatch.version]</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="dt">source</span> <span class="op">=</span> <span class="st">&quot;vcs&quot;</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="kw">[tool.hatch.build.hooks.custom]</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="dt">binary_name</span> <span class="op">=</span> <span class="st">&quot;nature-sounds&quot;</span></span></code></pre></div>
+<p>This does invoke a custom hatchling hook at build time which: 1.
+builds the Go app 2. moves it where it needs to be,</p>
+<p><code>hatch_build.py</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> __future__ <span class="im">import</span> annotations</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> hatchling.builders.hooks.plugin.interface <span class="im">import</span> BuildHookInterface</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> manygo</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> GoBinaryBuildHook(BuildHookInterface):</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> initialize(<span class="va">self</span>, version, build_data) <span class="op">-&gt;</span> <span class="va">None</span>:  <span class="co"># noqa: ANN001, ARG002</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        build_data[<span class="st">&quot;pure_python&quot;</span>] <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        goos <span class="op">=</span> os.getenv(<span class="st">&quot;GOOS&quot;</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        goarch <span class="op">=</span> os.getenv(<span class="st">&quot;GOARCH&quot;</span>)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> goos <span class="kw">and</span> goarch:</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            build_data[<span class="st">&quot;tag&quot;</span>] <span class="op">=</span> <span class="st">&quot;py3-none-&quot;</span> <span class="op">+</span> manygo.get_platform_tag(goos<span class="op">=</span>goos, goarch<span class="op">=</span>goarch)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        binary_name <span class="op">=</span> <span class="va">self</span>.config[<span class="st">&quot;binary_name&quot;</span>]</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        tag <span class="op">=</span> os.getenv(<span class="st">&quot;GITHUB_REF_NAME&quot;</span>, <span class="st">&quot;dev&quot;</span>)</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        commit <span class="op">=</span> os.getenv(<span class="st">&quot;GITHUB_SHA&quot;</span>, <span class="st">&quot;none&quot;</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> os.path.exists(binary_name):</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Building Go binary &#39;</span><span class="sc">{</span>binary_name<span class="sc">}</span><span class="ss">&#39;...&quot;</span>)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>            subprocess.check_call(  <span class="co"># noqa: S603</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>                [</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>                    <span class="st">&quot;go&quot;</span>,</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>                    <span class="st">&quot;build&quot;</span>,</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>                    <span class="ss">f&quot;-ldflags=-X main.version=</span><span class="sc">{</span>tag<span class="sc">}</span><span class="ss"> -X main.commit=</span><span class="sc">{</span>commit<span class="sc">}</span><span class="ss"> -s -w&quot;</span>,</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>                    <span class="st">&quot;-o&quot;</span>,</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>                    binary_name,</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>                ],</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        build_data[<span class="st">&quot;shared_scripts&quot;</span>] <span class="op">=</span> {binary_name: binary_name}</span></code></pre></div>
+<p>A big positive about this hook is that it’s completely application
+agnostic. All of my projects share the same hook implementation.</p>
+<p>Building is a matter of <code>uv build --wheel</code>. You could
+build a source distribution (sdist), but it doesn’t really make sense
+The output is a <code>.whl</code> file with the prebuilt Go application
+inside.</p>
+<h3
+id="manygo-and-the-power-if-small-python-libraries"><code>manygo</code>
+and the power if small, python libraries</h3>
+<p>Go and Python have similar semantics for platform compatibility. I
+wrote a very simple Python library to convert <a
+href="https://go.dev/doc/install/source#environment">Go’s</a> platform
+semantics to <a
+href="https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/#platform-tag">Python’s</a>
+called <a href="https://github.com/jmelahman/manygo">manygo</a> (a
+reference to Python’s <a
+href="https://github.com/pypa/manylinux">manylinux</a> wheels).</p>
+<p>Overall, it’s a single <code>__init__.py</code> file with 1 function,
+100% test coverage, and strong, exported types.</p>
+<p>It’s easy to think, “this is such a simple, uncommon library it’s not
+worth creating”, but it took about 1 hour in total and now I can safely
+share it between all of my projects without cumbersome symlinking or
+duplication hacks. It also serves as a template for future pure-python
+libraries.</p>
+<p>I recommend everyone make as many, small, modular libraries as they
+need.</p>
+<h3 id="optimizing-reproducability-and-go-bin">Optimizing
+reproducability and <code>go-bin</code></h3>
+<p>Initially, the <code>hatch_build.py</code> above invoke
+<code>go</code> from the command-line. This was typically the user’s
+global install. Moreover, builds would fail if the user did not have Go
+installed beforehand. Considering I was packaging with Python tools
+<em>because</em> I suspected users weren’t familiar with Go, I needed a
+way to provide <code>go</code> to users using Python machinery.</p>
+<p><a href="https://github.com/golang/go">github.com/golang/go</a>
+itself is a Go app, so I can build and publish it to PyPi using the
+aforementioned setup. This is precisely what I did with <a
+href="https://github.com/jmelahman/go-bin">go-bin</a>. Go maintainers
+graciously supply prebuilt artifacts anyways, so I just needed to ensure
+it ran properly from inside a wheel.</p>
+<p>Now, all a Go application needs to do to ensure <code>go</code> is
+available at build time is add a <code>build-system</code>
+dependency,</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[build-system]</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">requires</span> <span class="op">=</span> <span class="op">[</span><span class="st">&quot;go-bin~=1.24&quot;</span><span class="op">,</span> <span class="er">...</span><span class="op">]</span></span></code></pre></div>
+<p>This, in theory, has potential usages for building <a
+href="https://words.filippo.io/building-python-modules-with-go-1-5/">Go-based
+C-extensions</a> in Python applications. Given <a
+href="https://www.youtube.com/watch?v=xuv9A7CJF54">Go no longer supports
+multiple, c-shared libraries</a>, I’ve personally abandoned this train
+of thought, but may one day prove useful.</p>
+<p>If nothing else, I think it’s neat you can now run <code>go</code>
+directly with <code>uvx</code>,</p>
+<pre class="shell"><code>$ uvx --from=go-bin~=1.24 \
+  go version
+go version go1.24.5 linux/amd64</code></pre>
+<p>One issue I did run into is that <a
+href="https://docs.pypi.org/project-management/storage-limits/">PyPi
+limits individual packages to 100MB and projects to 10GB</a>. The Go
+binary is somewhere around 80MB + each version has about 10 variations
+for various platform support. I’ve had to resort to supporting only a
+handful of Go versions otherwise after about a handful of versions I
+will run out of repository space. :/ It makes sense from their
+perspective and I appreciate their platform regardless.</p>
 </body>
 </html>
