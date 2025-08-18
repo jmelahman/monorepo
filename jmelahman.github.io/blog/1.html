@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="description" content="Personal website">
+  <meta name="keywords" content="jamison,jamie,lahman">
+  <meta name="author" content="Jamison Lahman">
+  <link rel="stylesheet" href="/css/stylesheet.min.css">
+  <link rel="stylesheet" href="/css/kate.css">
+  <link rel="icon" type="image/png" href="/images/icon.png">
+  <meta name="dcterms.date" content="2025-07-22" />
+  <title>Blog | Jamison Lahman</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap">
+</head>
+<body>
+<header id="title-block-header">
+  <nav class="stateless">
+    <a href="/" class="" title="Return to the home page">About</a>
+    <a href="/resume" title="Jamison's Resume">Resume</a>
+    <a href="/blog" class="active" title="Personal blog">Blog</a>
+    <a href="/feed" class="" title="Reverse blog">Feed</a>
+    <div class="right">
+      <a alt="Email" title="Email" href="mailto:jamison@lahman.dev" title="Email"><i class="fas fa-envelope"></i></a>
+      <a alt="Twitter" title="Twitter" href="https://x.com/jmelahman" title="Twitter"><i class="fab fa-twitter"></i></a>
+      <a alt="Strava" title="Strava" href="https://www.strava.com/athletes/jamison_lahman"><i class="fab fa-strava"></i></a>
+      <a alt="GitHub" title="GitHub" href="https://github.com/jmelahman" title="GitHub"><i class="fab fa-github"></i></a>
+      <a alt="LinkedIn" title="LinkedIn" href="https://linkedin.com/in/jamison-lahman" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
+      <a alt="RSS" title="RSS" href="/rss"><i class="fas fa-rss"></i> RSS</a>
+    </div>
+  </nav>
+</header>
+<hr>
+<h1 id="my-git-workflow-work-in-progress">My Git Workflow
+(Work-in-progress)</h1>
+<p>I love git.</p>
+<p>A good git setup consists of the following:</p>
+<ul>
+<li>Aliases</li>
+<li>Configurations</li>
+<li>And a workflow that makes sense to you</li>
+</ul>
+<p>There is any</p>
+<h2 id="aliases">Aliases</h2>
+<p>I don’t use <a
+href="https://git-scm.com/book/en/v2/Git-Basics-Git-Aliases">git-alias</a>.
+I don’t have any issues with them, I just haven’t felt a need to prefer
+them over <a href="https://www.w3schools.com/bash/bash_alias.php">shell
+aliases</a>. Below are the aliases from my <a
+href="https://github.com/jmelahman/dotfiles/blob/master/.bashrc#L166-L170">shell
+rc</a> sorted by usage frequency,</p>
+<p>I wish I used aliases more.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gs=<span class="st">&#39;git status&#39;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gl=<span class="st">&quot;git log --graph --pretty=&#39;%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)&lt;%an&gt;%Creset&#39;&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gb=<span class="st">&#39;git for-each-ref --sort=-committerdate refs/heads/&#39;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gr=<span class="st">&#39;git reset --soft HEAD~1 &amp;&amp; git commit --amend --no-edit&#39;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gg=<span class="st">&#39;git log --graph --oneline --all --decorate&#39;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> gt=<span class="st">&#39;git log --no-walk --tags --pretty=&quot;%h %d %s&quot; --decorate=full&#39;</span></span></code></pre></div>
+<ul>
+<li><code>gs</code>: “git status”</li>
+</ul>
+<p>Pretty self-explanatory. I use this the way many people use
+<code>ls</code>.</p>
+<p>In addition to aliases, I have two shell functions that act like
+aliases,</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span><span class="fu"> ga()</span> <span class="kw">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">message</span><span class="op">=</span><span class="st">&quot;</span><span class="va">$1</span><span class="st">&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$message</span><span class="st">&quot;</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;&amp;</span><span class="dv">2</span> <span class="bu">echo</span> <span class="st">&quot;Commit message is required.&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">2</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">git</span> commit <span class="at">--amend</span> <span class="at">-m</span> <span class="st">&quot;</span><span class="va">${message}</span><span class="st">&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span><span class="fu"> gsp()</span> <span class="kw">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">subtree</span><span class="op">=</span><span class="st">&quot;</span><span class="va">${1</span><span class="op">:-</span><span class="va">}</span><span class="st">&quot;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">toplevel</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="va">toplevel</span><span class="op">=</span><span class="va">$(</span><span class="fu">git</span> rev-parse <span class="at">--show-toplevel</span><span class="va">)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$subtree</span><span class="st">&quot;</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;&amp;</span><span class="dv">2</span> <span class="bu">echo</span> <span class="st">&quot;Missing argument &#39;subtree&#39;.&quot;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">echo</span> <span class="st">&quot;Pick one of:&quot;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># https://stackoverflow.com/a/18339297</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">git</span> log <span class="kw">|</span> <span class="fu">grep</span> git-subtree-dir <span class="kw">|</span> <span class="fu">tr</span> <span class="at">-d</span> <span class="st">&#39; &#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-d</span> <span class="st">&quot;:&quot;</span> <span class="at">-f2</span> <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> <span class="kw">|</span> <span class="fu">xargs</span> <span class="at">-I</span> {} bash <span class="at">-c</span> <span class="st">&#39;if [ -d $(git rev-parse --show-toplevel)/{} ] ; then echo &quot;  {}&quot;; fi&#39;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">2</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">git</span> <span class="at">-C</span> <span class="st">&quot;</span><span class="va">$toplevel</span><span class="st">&quot;</span> subtree push <span class="at">--prefix</span> <span class="st">&quot;</span><span class="va">$subtree</span><span class="st">&quot;</span> <span class="st">&quot;git@github.com:jmelahman/</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">&quot;</span><span class="va">${subtree}</span><span class="st">&quot;</span><span class="va">)</span><span class="st">.git&quot;</span> master</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div>
+<ul>
+<li><code>ga</code>: “git amend”</li>
+</ul>
+<p>I use this to change the commit messages. Extremely useful alongside
+<code>gr</code>,</p>
+<pre class="shell"><code>git commit -am &quot;not useful message&quot;
+git commit -am &quot;another, not useful message&quot;
+gr
+ga &quot;squashed, meaningful commit message&quot;</code></pre>
+<p>For the most part, some commands have become muscle memory and those
+motions please me. For example, <code>git commit -am</code> appears in
+my history a lot and would be a good candidate for an alias.</p>
+<h2 id="configuration">Configuration</h2>
+<h2 id="the-end-to-end-workflow">The End-to-end Workflow</h2>
+</body>
+</html>
