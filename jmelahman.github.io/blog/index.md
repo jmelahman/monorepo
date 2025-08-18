@@ -13,7 +13,7 @@ nav_blog: true
   </tr>
   <tr>
     <td class="date-col">08/12/2025</td>
-    <td>[Using `uv` to package Golang applications (WIP)](2.html)</td>
+    <td>[Using `uv` to package Go applications](2.html)</td>
   </tr>
   <tr>
     <td class="date-col">07/22/2025</td>
