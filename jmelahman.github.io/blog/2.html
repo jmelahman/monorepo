@@ -7,6 +7,14 @@
   <meta name="description" content="Personal website">
   <meta name="keywords" content="jamison,jamie,lahman">
   <meta name="author" content="Jamison Lahman">
+  <meta property="og:title" content="Using <code>uv</code> to package Go
+applications" />
+  <meta property="og:image" content="https://jamison.lahman.dev/images/icon.png" />
+  <meta property="og:url" content="jamison.lahman.dev" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@jmelahman" />
+  <meta name="twitter:creator" content="@jmelahman" />
   <link rel="stylesheet" href="/css/stylesheet.min.css">
   <link rel="stylesheet" href="/css/kate.css">
   <link rel="icon" type="image/png" href="/images/icon.png">
@@ -130,14 +138,14 @@ that interesting. It mostly just: 1. checkouts the code 2. installs Go
 prebuilt Go binaries for all major platforms. The building is in
 parallel, so sub-1 minute deployments are common.</p>
 <h3 id="issues-with-goreleaser">Issues with GoReleaser</h3>
-<p>There are only 3 minor issues with GoReleaser,</p>
+<p>There are only 2, minor issues with GoReleaser,</p>
 <ol type="1">
 <li>There isn’t a ubiquitous, CLI solution for downloading these
 artifacts from Github.</li>
 </ol>
 <ol type="a">
-<li>This does imply the platform detection is not automatic and
-therefore error-prone.</li>
+<li>This implies the platform detection is not automatic and therefore
+error-prone.</li>
 </ol>
 <ol start="2" type="1">
 <li>They’re tarballs, so installing requires un-archiving after
@@ -159,7 +167,7 @@ href="https://github.com/astral-sh/uv/blob/main/BENCHMARKS.md#warm-installation"
 freaking fast</a>.</p>
 <h3 id="packaging-a-go-application-with-python-tools">Packaging a Go
 application with Python tools</h3>
-<p>Packaging with Python tools has 2 major parts:</p>
+<p>Packaging with Python tools has 2, major parts:</p>
 <ul>
 <li><code>pyproject.toml</code>: defines the package configurations
 analogous to the <code>go.mod</code> file</li>

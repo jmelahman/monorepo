@@ -3,8 +3,11 @@ set -eo pipefail
 
 shopt -s globstar
 
+DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 SITE_URL="https://jamison.lahman.dev"
 BLOG_DIR="blog"
+
+pushd "$DIR" > /dev/null || exit
 
 # Compile HTML
 for md in **/*.md; do
@@ -64,3 +67,5 @@ done
 
 # Close RSS
 echo '</channel></rss>' >> "$RSS_PATH"
+
+popd > /dev/null || exit
