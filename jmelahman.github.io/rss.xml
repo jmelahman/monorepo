@@ -4,7 +4,7 @@
   <link>https://jamison.lahman.dev</link>
   <description>My personal site</description>
   <language>en-us</language>
-  <lastBuildDate>Mon, 18 Aug 2025 06:11:01 -0700</lastBuildDate>
+  <lastBuildDate>Mon, 18 Aug 2025 06:32:29 -0700</lastBuildDate>
   <item>
     <title>My Git Workflow (Work-in-progress)</title>
     <link>https://jamison.lahman.dev/blog/1.html</link>
@@ -16,17 +16,5 @@
     <link>https://jamison.lahman.dev/blog/2.html</link>
     <guid>https://jamison.lahman.dev/blog/2.html</guid>
     <pubDate>Tue, 12 Aug 2025 00:00:00 -0700</pubDate>
-  </item>
-  <item>
-    <title>Serving NYT Connections TUI over SSH</title>
-    <link>https://jamison.lahman.dev/blog/3.html</link>
-    <guid>https://jamison.lahman.dev/blog/3.html</guid>
-    <pubDate>Mon, 18 Aug 2025 00:00:00 -0700</pubDate>
-  </item>
-  <item>
-    <title>My Values</title>
-    <link>https://jamison.lahman.dev/blog/4.html</link>
-    <guid>https://jamison.lahman.dev/blog/4.html</guid>
-    <pubDate>Tue, 22 Jul 2025 00:00:00 -0700</pubDate>
   </item>
 </channel></rss>

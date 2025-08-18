@@ -15,6 +15,7 @@ applications" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:site" content="@jmelahman" />
   <meta name="twitter:creator" content="@jmelahman" />
+  <meta name="twitter:image" content="https://jamison.lahman.dev/images/icon.png" />
   <link rel="stylesheet" href="/css/stylesheet.min.css">
   <link rel="stylesheet" href="/css/kate.css">
   <link rel="icon" type="image/png" href="/images/icon.png">
@@ -90,15 +91,15 @@ packaging is perfectly fine and requires minimal maintenance on the end
 of the developers.</p>
 <p>For me, I am willing to trade a bit of effort for the optimal user
 experience; I enjoy these things. Also, this approach is
-mutually-exclusive with Go’s packaging which is still available to users
-if desired..</p>
+mutually-exclusive to the default Go packaging which remains available
+to users if preferable.</p>
 <p>The majority of my complaints are really just, “Go doesn’t have a
-canonical package repository.”</p>
+canonical package repository”:</p>
 <ol type="1">
-<li>Installing Go packages requires installing Go</li>
-<li>Installing Go packages requires building them from source</li>
-<li>Installing Go packages requires specific versions of Go
+<li>Installing Go packages requires Go be installed</li>
+<li>Installing Go packages requires a specific version of Go be
 installed</li>
+<li>Installing Go packages requires building them from source</li>
 <li>Managing Go packages lacks some reproducability features</li>
 </ol>
 <h2 id="goreleaser-filling-in-the-gaps">GoReleaser filling in the
@@ -106,8 +107,9 @@ gaps</h2>
 <p>If Go’s default packaging is 95% complete, <a
 href="https://goreleaser.com/">GoReleaser</a> gets it to 99%. GoReleaser
 is an absolutely phenomenal tool and I wish I had more time to use it
-properly. For most, basic Go applications, deployments are a simple
-Github Action workflow,</p>
+properly. For most, basic Go applications, deployments are a simple <a
+href="https://github.com/goreleaser/goreleaser-action?tab=readme-ov-file#usage">Github
+Actions workflow</a>,</p>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">goreleaser</span><span class="kw">:</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runs-on</span><span class="kw">:</span><span class="at"> ubuntu-latest</span></span>
@@ -260,12 +262,12 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a hr
 <p>A big positive about this hook is that it’s completely application
 agnostic. All of my projects share the same hook implementation.</p>
 <p>Building is a matter of <code>uv build --wheel</code>. You could
-build a source distribution (sdist), but it doesn’t really make sense
+build a source distribution (sdist), but it doesn’t really make sense.
 The output is a <code>.whl</code> file with the prebuilt Go application
 inside.</p>
 <h3
-id="manygo-and-the-power-if-small-python-libraries"><code>manygo</code>
-and the power if small, python libraries</h3>
+id="manygo-and-the-power-of-small-python-libraries"><code>manygo</code>
+and the power of small, python libraries</h3>
 <p>Go and Python have similar semantics for platform compatibility. I
 wrote a very simple Python library to convert <a
 href="https://go.dev/doc/install/source#environment">Go’s</a> platform
@@ -285,14 +287,14 @@ libraries.</p>
 need.</p>
 <h3 id="optimizing-reproducability-and-go-bin">Optimizing
 reproducability and <code>go-bin</code></h3>
-<p>Initially, the <code>hatch_build.py</code> above invoke
+<p>Initially, the <code>hatch_build.py</code> above invoked
 <code>go</code> from the command-line. This was typically the user’s
 global install. Moreover, builds would fail if the user did not have Go
 installed beforehand. Considering I was packaging with Python tools
 <em>because</em> I suspected users weren’t familiar with Go, I needed a
 way to provide <code>go</code> to users using Python machinery.</p>
 <p><a href="https://github.com/golang/go">github.com/golang/go</a>
-itself is a Go app, so I can build and publish it to PyPi using the
+itself is a Go app, so I can build and publish it to PyPI using the
 aforementioned setup. This is precisely what I did with <a
 href="https://github.com/jmelahman/go-bin">go-bin</a>. Go maintainers
 graciously supply prebuilt artifacts anyways, so I just needed to ensure
@@ -311,11 +313,10 @@ multiple, c-shared libraries</a>, I’ve personally abandoned this train
 of thought, but may one day prove useful.</p>
 <p>If nothing else, I think it’s neat you can now run <code>go</code>
 directly with <code>uvx</code>,</p>
-<pre class="shell"><code>$ uvx --from=go-bin~=1.24 \
-  go version
+<pre class="shell"><code>$ uvx --from=go-bin go version
 go version go1.24.5 linux/amd64</code></pre>
 <p>One issue I did run into is that <a
-href="https://docs.pypi.org/project-management/storage-limits/">PyPi
+href="https://docs.pypi.org/project-management/storage-limits/">PyPI
 limits individual packages to 100MB and projects to 10GB</a>. The Go
 binary is somewhere around 80MB + each version has about 10 variations
 for various platform support. I’ve had to resort to supporting only a
