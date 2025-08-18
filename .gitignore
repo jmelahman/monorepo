@@ -187,5 +187,10 @@ src/gatsby-types.d.ts
 # env file
 .env
 
+# Terraform files
+.terraform
+*.tfstate
+*.tfvars
+
 # Common go artifact
 main
