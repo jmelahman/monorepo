@@ -10,16 +10,6 @@ resource "oci_core_security_list" "ssh" {
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "ssh-allow"
 
-  # egress_security_rules {
-  #   protocol         = 6
-  #   destination_type = "CIDR_BLOCK"
-  #   destination      = "0.0.0.0/0"
-  #   description      = "access to container registries via HTTPS"
-  #   tcp_options {
-  #     min = 443
-  #     max = 443
-  #   }
-  # }
   egress_security_rules {
     protocol    = "all"
     destination = "0.0.0.0/0"
@@ -67,11 +57,10 @@ data "oci_identity_availability_domains" "local_ads" {
 
 # --- Container Instance ---
 resource "oci_container_instances_container_instance" "container_instance" {
-  compartment_id           = var.compartment_ocid
-  availability_domain      = data.oci_identity_availability_domains.local_ads.availability_domains[0].name
-  display_name             = "tf-connections-ssh"
-  container_restart_policy = "ALWAYS"
-  shape                    = "CI.Standard.A1.Flex"
+  compartment_id      = var.compartment_ocid
+  availability_domain = data.oci_identity_availability_domains.local_ads.availability_domains[0].name
+  display_name        = "tf-connections-ssh"
+  shape               = "CI.Standard.A1.Flex"
 
   shape_config {
     ocpus         = 1
@@ -84,9 +73,9 @@ resource "oci_container_instances_container_instance" "container_instance" {
   }
 
   containers {
-    image_url    = "lahmanja/connections-ssh"
+    image_url    = "lahmanja/connections-ssh:v0.0.11"
     display_name = "connections-ssh"
-    command      = ["/connections-ssh", "--port", "22"]
+    command      = ["/connections-ssh", "--port", "22", "--key-file", "id_rsa", "--generate-key"]
 
     health_checks {
       health_check_type = "TCP"
