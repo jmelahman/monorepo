@@ -6,7 +6,11 @@
 ## Subtrees
 
 Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
-This allows them to be developed uniformly while leaving operational tasks independent.
+This allows them to be developed uniformly while leaving operational tasks, such as deployments, independent.
+
+By design, each projects's directory (referred to as the subtree's `<prefix>`) matches the upstream repository name.
+For example, `connections/`->[github.com/jmelahman/connections](https://github.com/jmelahman/connections).
+This is slightly more convenient to make shell functions since the `git-subtree` commands can be a bit cumbersome.
 
 # Tooling
 
