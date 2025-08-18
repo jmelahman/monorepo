@@ -3,6 +3,7 @@ const feeds = [
   { title: "Kyla Scanlon", url: "https://kyla.substack.com/feed" },
   { title: "Sam Harris", url: "https://wakingup.libsyn.com/rss" },
   { title: "Pragmatic Engineer", url: "https://newsletter.pragmaticengineer.com/feed" },
+  { title: "Evil Martians", url: "https://evilmartians.com/chronicles.atom" },
 ];
 
 const proxy = 'https://corsproxy.io/?';
