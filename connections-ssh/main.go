@@ -79,7 +79,7 @@ func serve() {
 	log.Fatal(ssh.ListenAndServe(":"+port, nil, ssh.HostKeyFile(hostKeyFile)))
 }
 
-func generatePrivateKey(keyPath string) error {
+func generatePrivateKey(keyPath string) (err error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return err
@@ -89,7 +89,9 @@ func generatePrivateKey(keyPath string) error {
 	if err != nil {
 		return err
 	}
-	defer privateKeyFile.Close()
+	defer func() {
+		err = errors.Join(err, privateKeyFile.Close())
+	}()
 
 	privateKeyPEM := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
