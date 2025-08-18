@@ -28,7 +28,7 @@ class Args(typing.NamedTuple):
     channel: str
 
 
-def send_message(driver: webdriver, message: str) -> None:
+def send_message(driver: webdriver.Firefox, message: str) -> None:
     chat_input = driver.find_element(By.CSS_SELECTOR, ".chat-wysiwyg-input__editor")
     chat_input.click()
     time.sleep(1)
@@ -38,12 +38,12 @@ def send_message(driver: webdriver, message: str) -> None:
     chat_input.send_keys(Keys.ENTER)
 
 
-def setup_driver() -> webdriver:
+def get_default_firefox_options() -> Options:
     options = Options()
-    options.binary_location = shutil.which("firefox")
+    options.binary_location = shutil.which("firefox")  # type: ignore[invalid-assignment]
     options.set_preference("dom.webnotifications.enabled", value=False)
     options.profile = FirefoxProfile(PROFILE_PATH)
-    return webdriver.Firefox(options)
+    return options
 
 
 def parse_args() -> Args:
@@ -62,9 +62,10 @@ def parse_args() -> Args:
 
 def main() -> int:
     args = parse_args()
-    driver = setup_driver()
-
+    options = get_default_firefox_options()
+    driver = webdriver.Firefox(options)
     atexit.register(driver.quit)
+
     driver.get(f"https://www.twitch.tv/{args.channel}")
 
     send_message(driver, args.message)
