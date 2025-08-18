@@ -22,8 +22,8 @@ var (
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "ssh-game",
-		Short: "SSH game server",
+		Use:   "connections-ssh",
+		Short: "Play NYT Connections over SSH",
 		Run: func(cmd *cobra.Command, args []string) {
 			serve()
 		},

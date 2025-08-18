@@ -11,7 +11,7 @@ This serves the [NYT Connections TUI](https://github.com/jmelahman/connections) 
 $ ssh connections.lahman.dev
 ```
 
-## Running
+## Running Locally
 
 In one terminal, start the server,
 
@@ -20,7 +20,7 @@ $ go run .
 2025/08/07 22:55:16 Starting SSH server on :2222
 ```
 
-In a separate terminal,
+In a separate terminal, connect to the server,
 
 ```shell
 $ ssh -p 2222 localhost
@@ -42,6 +42,16 @@ $ sudo connections-ssh --port 22
 
 ```shell
 go install github.com/jmelahman/connections-ssh@latest
+```
+
+**docker:**
+
+```shell
+docker run \
+  --rm \
+  -p 2222:2222 \
+  -v $HOME/.ssh:/.ssh \
+  lahmanja/connections-ssh:latest
 ```
 
 **github:**
