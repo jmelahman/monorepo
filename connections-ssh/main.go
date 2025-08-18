@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"log"
@@ -16,8 +20,9 @@ import (
 )
 
 var (
-	port    string
-	keyFile string
+	port        string
+	keyFile     string
+	generateKey bool
 )
 
 func main() {
@@ -31,6 +36,7 @@ func main() {
 
 	rootCmd.Flags().StringVar(&port, "port", "2222", "Port to listen on")
 	rootCmd.Flags().StringVar(&keyFile, "key-file", "", "Path to SSH host key file")
+	rootCmd.Flags().BoolVar(&generateKey, "generate-key", false, "Generate SSH key")
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
@@ -64,10 +70,35 @@ func serve() {
 		}
 		hostKeyFile = filepath.Join(home, ".ssh", "id_rsa")
 	}
+	if generateKey {
+		if err := generatePrivateKey(hostKeyFile); err != nil {
+			log.Fatal(err)
+		}
+	}
 
-	log.Fatal(ssh.ListenAndServe(":"+port, nil,
-		ssh.HostKeyFile(hostKeyFile),
-	))
+	log.Fatal(ssh.ListenAndServe(":"+port, nil, ssh.HostKeyFile(hostKeyFile)))
+}
+
+func generatePrivateKey(keyPath string) error {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	privateKeyFile, err := os.Create(keyPath)
+	if err != nil {
+		return err
+	}
+	defer privateKeyFile.Close()
+
+	privateKeyPEM := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	}
+	if err := pem.Encode(privateKeyFile, privateKeyPEM); err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewSessionScreen(s ssh.Session) (tcell.Screen, error) {

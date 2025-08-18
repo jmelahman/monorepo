@@ -4,13 +4,13 @@ use (
 	./agent
 	./check-symlinks
 	./connections
+	./connections-ssh
 	./cycle-cli
 	./dashboard
 	./docker-status
 	./git-orchard
 	./nature-sounds
 	./runtainer
-	./ssh
 	./tag
 	./work
 )
