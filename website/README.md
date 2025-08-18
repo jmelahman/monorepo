@@ -1,3 +1,0 @@
-# Website
-
-Personal website.
