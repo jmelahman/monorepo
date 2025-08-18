@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -40,11 +41,15 @@ func serve() {
 	ssh.Handle(func(s ssh.Session) {
 		screen, err := NewSessionScreen(s)
 		if err != nil {
-			panic(err)
+			_, err := fmt.Fprintln(s, "Error creating screen session. Have you disabled pseudo-terminals (pty)?")
+			if err != nil {
+				log.Printf("Error writing to client: %v", err)
+			}
+			return
 		}
 
 		if err := game.RunWithScreen(screen); err != nil {
-			panic(err)
+			log.Printf("Game error: %v", err)
 		}
 	})
 
@@ -55,7 +60,7 @@ func serve() {
 	if hostKeyFile == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		hostKeyFile = filepath.Join(home, ".ssh", "id_rsa")
 	}
