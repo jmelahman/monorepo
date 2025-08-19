@@ -1,10 +1,11 @@
 <?xml version="1.0"?>
-<rss version="2.0"><channel>
+<rss version="2.0">
+<channel>
   <title>jmelahman's blog</title>
   <link>https://jamison.lahman.dev</link>
   <description>My personal site</description>
   <language>en-us</language>
-  <lastBuildDate>Mon, 18 Aug 2025 06:42:38 -0700</lastBuildDate>
+  <lastBuildDate>Tue, 19 Aug 2025 02:03:09 -0700</lastBuildDate>
   <item>
     <title>My Git Workflow (Work-in-progress)</title>
     <link>https://jamison.lahman.dev/blog/1.html</link>
@@ -17,4 +18,5 @@
     <guid>https://jamison.lahman.dev/blog/2.html</guid>
     <pubDate>Tue, 12 Aug 2025 00:00:00 -0700</pubDate>
   </item>
-</channel></rss>
+</channel>
+</rss>

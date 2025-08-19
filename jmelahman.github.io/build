@@ -11,7 +11,7 @@ pushd "$DIR" >/dev/null || exit
 
 # Compile HTML
 for md in **/*.md; do
-	if [ $md == "README.md" ]; then
+	if [ "$md" == "README.md" ]; then
 		continue
 	fi
 	pandoc \
@@ -36,36 +36,40 @@ docker run --rm -i node:alpine \
 
 # Start RSS feed
 RSS_PATH="rss.xml"
-echo '<?xml version="1.0"?>' >"$RSS_PATH"
-echo '<rss version="2.0"><channel>' >>"$RSS_PATH"
-echo "  <title>jmelahman's blog</title>" >>"$RSS_PATH"
-echo "  <link>$SITE_URL</link>" >>"$RSS_PATH"
-echo "  <description>My personal site</description>" >>"$RSS_PATH"
-echo "  <language>en-us</language>" >>"$RSS_PATH"
-echo "  <lastBuildDate>$(date -R)</lastBuildDate>" >>"$RSS_PATH"
+{
+cat <<EOF
+<?xml version="1.0"?>
+<rss version="2.0">
+<channel>
+  <title>jmelahman's blog</title>
+  <link>$SITE_URL</link>
+  <description>My personal site</description>
+  <language>en-us</language>
+  <lastBuildDate>$(date -R)</lastBuildDate>
+EOF
 
-# Process each post
 for md in "$BLOG_DIR"/*.md; do
-	filename=$(basename "$md" .md)
-	if [ "$filename" == "index" ]; then
-		continue
-	fi
+    filename=$(basename "$md" .md)
+    [ "$filename" = "index" ] && continue
 
-	# Extract metadata
-	title=$(sed -n 's/^#\s[ ]*//p' "$md")
-	date=$(sed -n 's/^date:[ ]*//p' "$md")
-	pubDate=$(date -R -d "$date")
+    title=$(sed -n 's/^#\s[ ]*//p' "$md")
+    date=$(sed -n 's/^date:[ ]*//p' "$md")
+    pubDate=$(date -R -d "$date")
 
-	# Append to RSS
-	echo "  <item>" >>"$RSS_PATH"
-	echo "    <title>$title</title>" >>"$RSS_PATH"
-	echo "    <link>$SITE_URL/$BLOG_DIR/$filename.html</link>" >>"$RSS_PATH"
-	echo "    <guid>$SITE_URL/$BLOG_DIR/$filename.html</guid>" >>"$RSS_PATH"
-	echo "    <pubDate>$pubDate</pubDate>" >>"$RSS_PATH"
-	echo "  </item>" >>"$RSS_PATH"
+    cat <<EOF
+  <item>
+    <title>$title</title>
+    <link>$SITE_URL/$BLOG_DIR/$filename.html</link>
+    <guid>$SITE_URL/$BLOG_DIR/$filename.html</guid>
+    <pubDate>$pubDate</pubDate>
+  </item>
+EOF
 done
 
-# Close RSS
-echo '</channel></rss>' >>"$RSS_PATH"
+cat <<EOF
+</channel>
+</rss>
+EOF
+} >"$RSS_PATH"
 
 popd >/dev/null || exit
