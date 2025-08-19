@@ -96,7 +96,6 @@ func RefreshGitHubPRWidget(widget *tview.TextView) {
 
 	// Fetch PR counts for all repositories
 	var totalPRs int
-	var repoDetails []string
 
 	for _, repo := range cfg.GitHub.Repositories {
 		count, err := client.GetOpenPullRequests(repo)
@@ -105,7 +104,6 @@ func RefreshGitHubPRWidget(widget *tview.TextView) {
 			return
 		}
 		totalPRs += count
-		repoDetails = append(repoDetails, fmt.Sprintf("%s: %d", repo, count))
 	}
 
 	// Create data map for two-column formatting
