@@ -42,7 +42,11 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(healthStatuses)
+		err = json.NewEncoder(w).Encode(healthStatuses)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	})
 
 	log.Println("Listening on :9090...")

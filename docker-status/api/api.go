@@ -3,20 +3,23 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"text/tabwriter"
 )
 
-func GetContainerHealth(url *string) ([]ContainerHealth, error) {
+func GetContainerHealth(url *string) (containers []ContainerHealth, err error) {
 	resp, err := http.Get(*url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get status: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = errors.Join(err, resp.Body.Close())
+	}()
 
-	var containers []ContainerHealth
 	if err := json.NewDecoder(resp.Body).Decode(&containers); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
@@ -66,9 +69,13 @@ func GetDockerStatus(url *string) (string, error) {
 			colorTag = "white"
 		}
 
-		fmt.Fprintf(w, "%s\t[%s%s]%s[-]\n", c.Name, colorTag, boldTag, statusText)
+		if _, err := fmt.Fprintf(w, "%s\t[%s%s]%s[-]\n", c.Name, colorTag, boldTag, statusText); err != nil {
+			log.Println("Error formatting text: ", err)
+		}
 	}
 
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		log.Println("Error flushing tabwriter: ", err)
+	}
 	return buf.String(), nil
 }
