@@ -185,7 +185,11 @@ func loadPatternsFromFile(filename string) []string {
 	if err != nil {
 		return patterns
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Error("Error closing file: ", err)
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
