@@ -34,3 +34,6 @@ source = "vcs"
 
 [tool.setuptools.package-data]
 manygo = ["py.typed", "*.pyi"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
