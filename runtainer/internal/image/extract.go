@@ -21,20 +21,6 @@ func ExtractImage(tarPath string) (string, error) {
 		_ = file.Close()
 	}()
 
-	var tarReader *tar.Reader
-	if filepath.Ext(tarPath) == ".gz" {
-		gzr, err := gzip.NewReader(file)
-		if err != nil {
-			return "", err
-		}
-		defer func() {
-			_ = gzr.Close()
-		}()
-		tarReader = tar.NewReader(gzr)
-	} else {
-		tarReader = tar.NewReader(file)
-	}
-
 	// Hash image tarball contents to get a stable ID
 	h := sha256.New()
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
@@ -54,7 +40,7 @@ func ExtractImage(tarPath string) (string, error) {
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return "", err
 	}
-	
+
 	var extractReader *tar.Reader
 	if filepath.Ext(tarPath) == ".gz" {
 		gzr, err := gzip.NewReader(file)
