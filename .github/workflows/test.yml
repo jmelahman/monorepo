@@ -34,7 +34,7 @@ jobs:
           cache-dependency-path: go.sum
       - run: find . -name go.mod -execdir go mod tidy \;
       - run: go work sync
-      - run: git diff --exit-code go.work.sum */go.mod */go.sum
+      - run: git diff --exit-code go.work.sum **/go.mod **/go.sum
       # - run: find . -name go.mod -execdir go test ./... -v \;
       - uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # ratchet:golangci/golangci-lint-action@v8
         with:
