@@ -17,7 +17,9 @@ func ExtractImage(tarPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	var tarReader *tar.Reader
 	if filepath.Ext(tarPath) == ".gz" {
@@ -25,7 +27,9 @@ func ExtractImage(tarPath string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		defer gzr.Close()
+		defer func() {
+			_ = gzr.Close()
+		}()
 		tarReader = tar.NewReader(gzr)
 	} else {
 		tarReader = tar.NewReader(file)
@@ -50,16 +54,23 @@ func ExtractImage(tarPath string) (string, error) {
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return "", err
 	}
+	
+	var extractReader *tar.Reader
 	if filepath.Ext(tarPath) == ".gz" {
-		gzr, _ := gzip.NewReader(file)
-		defer gzr.Close()
-		tarReader = tar.NewReader(gzr)
+		gzr, err := gzip.NewReader(file)
+		if err != nil {
+			return "", err
+		}
+		defer func() {
+			_ = gzr.Close()
+		}()
+		extractReader = tar.NewReader(gzr)
 	} else {
-		tarReader = tar.NewReader(file)
+		extractReader = tar.NewReader(file)
 	}
 
 	for {
-		hdr, err := tarReader.Next()
+		hdr, err := extractReader.Next()
 		if err == io.EOF {
 			break
 		}
@@ -70,7 +81,9 @@ func ExtractImage(tarPath string) (string, error) {
 		target := filepath.Join(destDir, hdr.Name)
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			os.MkdirAll(target, 0755)
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return "", err
+			}
 		case tar.TypeReg:
 			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 				return "", err
@@ -79,11 +92,13 @@ func ExtractImage(tarPath string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			if _, err := io.Copy(out, tarReader); err != nil {
-				out.Close()
+			if _, err := io.Copy(out, extractReader); err != nil {
+				_ = out.Close()
 				return "", err
 			}
-			out.Close()
+			if err := out.Close(); err != nil {
+				return "", err
+			}
 		}
 	}
 

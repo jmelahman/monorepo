@@ -40,10 +40,12 @@ func untarInto(r io.Reader, target string) error {
 				return err
 			}
 			if _, err := io.Copy(f, tr); err != nil {
-				f.Close()
+				_ = f.Close()
 				return err
 			}
-			f.Close()
+			if err := f.Close(); err != nil {
+				return err
+			}
 		case tar.TypeSymlink:
 			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 				return err
