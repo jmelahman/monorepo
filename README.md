@@ -12,6 +12,12 @@ By design, each projects's directory (referred to as the subtree's `<prefix>`) m
 For example, `connections/` → [github.com/jmelahman/connections](https://github.com/jmelahman/connections).
 This is slightly more convenient to make shell functions since the `git-subtree` commands can be a bit cumbersome.
 
+Update all upstreams with this command,
+
+```shell
+for d in */; do gsp $d; done
+```
+
 # Tooling
 
 ## Upgrading
