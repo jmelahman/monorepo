@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,10 +29,10 @@ func getApplicationDataDir() (string, error) {
 	return filepath.Join(dataHome, "work"), nil
 }
 
-func makeFileAll(filePath string) error {
+func makeFileAll(filePath string) (err error) {
 	dir := filepath.Dir(filePath)
 
-	err := os.MkdirAll(dir, os.ModePerm)
+	err = os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -40,7 +41,9 @@ func makeFileAll(filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		err = errors.Join(err, file.Close())
+	}()
 
 	return nil
 }
@@ -106,9 +109,7 @@ func (dal *WorkDAL) GetLatestTask() (types.Task, error) {
 	return tasks[0], nil
 }
 
-func (dal *WorkDAL) ListTasks(limit int, days int) ([]types.Task, error) {
-	tasks := []types.Task{}
-
+func (dal *WorkDAL) ListTasks(limit int, days int) (tasks []types.Task, err error) {
 	query := `SELECT id, description, classification, start, end FROM task`
 	args := []interface{}{}
 
@@ -128,7 +129,9 @@ func (dal *WorkDAL) ListTasks(limit int, days int) ([]types.Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err = errors.Join(err, rows.Close())
+	}()
 
 	for rows.Next() {
 		var (
