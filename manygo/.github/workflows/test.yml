@@ -23,8 +23,6 @@ jobs:
       - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # ratchet:astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - name: Install deps
-        run: uv sync --locked --all-extras --dev
       - name: Run type-checking
         run: uvx ty check
       - name: Run tests
