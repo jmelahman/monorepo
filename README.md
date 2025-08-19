@@ -3,6 +3,31 @@
 
 # Projects
 
+## Finished Projects
+
+These projects are still in active development but may be considered "stable",
+
+- [check-symlinks](https://github.com/jmelahman/check-symlinks)
+- [connections](https://github.com/jmelahman/connections)
+- [connections-ssh](https://github.com/jmelahman/connections-ssh)
+- [docker-status](https://github.com/jmelahman/docker-status)
+- [go-bin](https://github.com/jmelahman/go-bin)
+- homelab
+- [jmelahman.github.io](https://github.com/jmelahman/jmelahman.github.io)
+- [manygo](https://github.com/jmelahman/manygo)
+- [nature-sounds](https://github.com/jmelahman/nature-sounds)
+- resume
+- [tag](https://github.com/jmelahman/tag)
+- [work](https://github.com/jmelahman/work)
+
+## Unfinished Projects
+
+- agent
+- cycle-cli
+- dashboard
+- git-orchard
+- runtainer
+
 ## Subtrees
 
 Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
