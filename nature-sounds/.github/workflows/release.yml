@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v5
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -48,7 +48,7 @@ jobs:
           # - { goos: "darwin", goarch: "arm64" }
           - {goos: "", goarch: ""}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v5
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -59,7 +59,7 @@ jobs:
         with:
           go-version: stable
           cache: false
-      - uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # ratchet:astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # ratchet:astral-sh/setup-uv@v6
         with:
           enable-cache: false
       - run: |
