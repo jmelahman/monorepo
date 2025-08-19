@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/charlievieth/fastwalk"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -20,18 +22,22 @@ var (
 
 var (
 	includeHidden bool
+	noIgnore      bool
 	quiet         bool
+	debug         bool
 )
 
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:     "check-symlinks [paths...]",
-		Short:   "Check for broken symbolic links in a directory tree",
+		Short:   "Check for broken symbolic links",
 		Run:     runCheckSymlinks,
 		Version: fmt.Sprintf("%s\ncommit %s", version, commit),
 	}
 
 	rootCmd.Flags().BoolVar(&includeHidden, "hidden", false, "include hidden files and directories in the check")
+	rootCmd.Flags().BoolVar(&noIgnore, "no-ignore", false, "don't use ignore files")
+	rootCmd.Flags().BoolVar(&debug, "debug", false, "run in debug mode")
 	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "run in quiet mode")
 
 	if err := rootCmd.Execute(); err != nil {
@@ -46,8 +52,22 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 		args = []string{"."}
 	}
 
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
+	topLevel, err := getTopLevel(".")
+	if err != nil {
+		log.Errorf("Failed to find toplevel directory: %v", err)
+	}
+
 	// Load ignore patterns
-	ignorePatterns := loadIgnorePatterns()
+	var ignorePatterns []string
+	if !noIgnore {
+		ignorePatterns = loadIgnorePatterns(topLevel)
+	}
 
 	var wg sync.WaitGroup
 	var filesChecked int64
@@ -56,7 +76,7 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 	done := make(chan struct{})
 
 	// Worker pool
-	for range 8 {
+	for range int64(runtime.NumCPU() - 1) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -98,7 +118,8 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 					}
 
 					// Check if path should be ignored
-					if shouldIgnorePath(path, ignorePatterns) {
+					if shouldIgnorePath(topLevel, path, ignorePatterns) {
+						log.Debug("Skipping: ", path)
 						if d.IsDir() {
 							return filepath.SkipDir
 						}
@@ -136,33 +157,36 @@ func isHidden(path string) bool {
 }
 
 // loadIgnorePatterns loads ignore patterns from .symlinkignore and .config/symlinkignore files
-func loadIgnorePatterns() []string {
+func loadIgnorePatterns(rootDir string) []string {
 	var patterns []string
-	
+
 	// Check for .symlinkignore in current directory
-	if patterns = loadPatternsFromFile(".symlinkignore"); len(patterns) > 0 {
-		return patterns
-	}
-	
-	// Check for .config/symlinkignore
-	configPath := filepath.Join(".config", "symlinkignore")
+	configPath := filepath.Join(rootDir, ".symlinkignore")
 	if patterns = loadPatternsFromFile(configPath); len(patterns) > 0 {
+		log.Debug("Found ignore file: ", configPath)
 		return patterns
 	}
-	
+
+	// Check for .config/symlinkignore
+	configPath = filepath.Join(rootDir, ".config", "symlinkignore")
+	if patterns = loadPatternsFromFile(configPath); len(patterns) > 0 {
+		log.Debug("Found ignore file: ", configPath)
+		return patterns
+	}
+
 	return patterns
 }
 
 // loadPatternsFromFile reads patterns from a file
 func loadPatternsFromFile(filename string) []string {
 	var patterns []string
-	
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return patterns
 	}
 	defer file.Close()
-	
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -171,30 +195,58 @@ func loadPatternsFromFile(filename string) []string {
 			patterns = append(patterns, line)
 		}
 	}
-	
+
 	return patterns
 }
 
 // shouldIgnorePath checks if a path matches any ignore pattern
-func shouldIgnorePath(path string, patterns []string) bool {
-	for _, pattern := range patterns {
-		matched, err := filepath.Match(pattern, filepath.Base(path))
-		if err != nil {
-			// If pattern is invalid, skip it
-			continue
-		}
-		if matched {
+func shouldIgnorePath(topLevel, path string, patterns []string) bool {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		absPath = path
+	}
+	rel, err := filepath.Rel(topLevel, absPath)
+	if err != nil {
+		rel = path
+	}
+	rel = filepath.ToSlash(rel)
+	base := filepath.Base(rel)
+
+	for _, p := range patterns {
+		p = strings.TrimSuffix(filepath.ToSlash(p), "/")
+		// Match prefix
+		if strings.HasPrefix(rel, p) {
 			return true
 		}
-		
-		// Also check if pattern matches the full path
-		matched, err = filepath.Match(pattern, path)
-		if err != nil {
-			continue
+		// Match directory
+		if strings.HasPrefix(rel, p+"/") {
+			return true
 		}
-		if matched {
+		// Match filename
+		if base == p {
 			return true
 		}
 	}
 	return false
+}
+
+func getTopLevel(start string) (string, error) {
+	dir, err := filepath.Abs(start)
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		gitPath := filepath.Join(dir, ".git")
+		info, err := os.Stat(gitPath)
+		if err == nil && info.IsDir() {
+			return dir, nil
+		}
+		// If we reach the root, stop
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("not a git repository")
+		}
+		dir = parent
+	}
 }
