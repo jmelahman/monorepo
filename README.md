@@ -53,6 +53,11 @@ for d in */; do gsp $d; done
 ```
 ratchet upgrade $(fd --hidden --type file --extension yml --full-path .github/workflows)
 ```
+### Golang
+
+```shell
+find . -name go.mod -execdir go get -u ./... \;
+```
 
 ## Linting
 
