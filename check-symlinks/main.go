@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,6 +45,9 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 	if len(args) == 0 {
 		args = []string{"."}
 	}
+
+	// Load ignore patterns
+	ignorePatterns := loadIgnorePatterns()
 
 	var wg sync.WaitGroup
 	var filesChecked int64
@@ -93,6 +97,14 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 						return nil
 					}
 
+					// Check if path should be ignored
+					if shouldIgnorePath(path, ignorePatterns) {
+						if d.IsDir() {
+							return filepath.SkipDir
+						}
+						return nil
+					}
+
 					paths <- path
 					return nil
 				})
@@ -121,4 +133,68 @@ func runCheckSymlinks(cmd *cobra.Command, args []string) {
 func isHidden(path string) bool {
 	base := filepath.Base(path)
 	return strings.HasPrefix(base, ".") && base != "." && base != ".."
+}
+
+// loadIgnorePatterns loads ignore patterns from .symlinkignore and .config/symlinkignore files
+func loadIgnorePatterns() []string {
+	var patterns []string
+	
+	// Check for .symlinkignore in current directory
+	if patterns = loadPatternsFromFile(".symlinkignore"); len(patterns) > 0 {
+		return patterns
+	}
+	
+	// Check for .config/symlinkignore
+	configPath := filepath.Join(".config", "symlinkignore")
+	if patterns = loadPatternsFromFile(configPath); len(patterns) > 0 {
+		return patterns
+	}
+	
+	return patterns
+}
+
+// loadPatternsFromFile reads patterns from a file
+func loadPatternsFromFile(filename string) []string {
+	var patterns []string
+	
+	file, err := os.Open(filename)
+	if err != nil {
+		return patterns
+	}
+	defer file.Close()
+	
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Skip empty lines and comments
+		if line != "" && !strings.HasPrefix(line, "#") {
+			patterns = append(patterns, line)
+		}
+	}
+	
+	return patterns
+}
+
+// shouldIgnorePath checks if a path matches any ignore pattern
+func shouldIgnorePath(path string, patterns []string) bool {
+	for _, pattern := range patterns {
+		matched, err := filepath.Match(pattern, filepath.Base(path))
+		if err != nil {
+			// If pattern is invalid, skip it
+			continue
+		}
+		if matched {
+			return true
+		}
+		
+		// Also check if pattern matches the full path
+		matched, err = filepath.Match(pattern, path)
+		if err != nil {
+			continue
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
