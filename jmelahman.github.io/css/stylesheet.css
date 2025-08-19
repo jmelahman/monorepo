@@ -15,6 +15,7 @@ body {
   color: #2c2c2c;
   padding: 50px;
   margin: 0 auto;
+  height: 100%;
   min-height: 100%;
   max-width: 80ch; /* This is ~70ch without border-box sizing */
   hyphens: auto;
