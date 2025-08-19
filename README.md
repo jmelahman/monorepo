@@ -14,6 +14,14 @@ This is slightly more convenient to make shell functions since the `git-subtree`
 
 # Tooling
 
+## Upgrading
+
+### Github Actions
+
+```
+ratchet upgrade $(fd --hidden --type file --extension yml --full-path .github/workflows)
+```
+
 ## Linting
 
 ### Generic
