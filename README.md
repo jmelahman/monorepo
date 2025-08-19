@@ -23,7 +23,6 @@ These projects are still in active development but may be considered "stable",
 
 ## Unfinished Projects
 
-- agent
 - cycle-cli
 - dashboard
 - git-orchard
