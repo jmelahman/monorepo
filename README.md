@@ -14,7 +14,7 @@ These projects are still in active development but may be considered "stable",
 - [go-bin](https://github.com/jmelahman/go-bin) [![Deploy Status](https://github.com/jmelahman/go-bin/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/go-bin/actions)
 - homelab
 - [jmelahman.github.io](https://github.com/jmelahman/jmelahman.github.io)
-- [manygo](https://github.com/jmelahman/manygo) [![Deploy Status](https://github.com/jmelahman/manygo/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/manygo/actions)
+- [manygo](https://github.com/jmelahman/manygo) [![Test status](https://github.com/jmelahman/manygo/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/manygo/actions) [![Deploy Status](https://github.com/jmelahman/manygo/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/manygo/actions)
 - [nature-sounds](https://github.com/jmelahman/nature-sounds) [![Test status](https://github.com/jmelahman/nature-sounds/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions) [![Deploy Status](https://github.com/jmelahman/nature-sounds/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions)
 - resume
 - [tag](https://github.com/jmelahman/tag) [![Test status](https://github.com/jmelahman/tag/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/tag/actions) [![Deploy Status](https://github.com/jmelahman/tag/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
