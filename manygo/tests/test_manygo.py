@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import sys
-
-print(sys.path)
-
 import pytest
 
 from manygo import get_platform_tag
