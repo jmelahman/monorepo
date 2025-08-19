@@ -2,6 +2,7 @@ package widgets
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -49,7 +50,7 @@ func RefreshCreditsWidget(widget *tview.TextView) {
 	}
 }
 
-func fetchCredits() (float64, error) {
+func fetchCredits() (credits float64, err error) {
 	apiKey := os.Getenv("OPENROUTER_API_KEY")
 	if apiKey == "" {
 		return 0, fmt.Errorf("OPENROUTER_API_KEY environment variable not set")
@@ -68,7 +69,9 @@ func fetchCredits() (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = errors.Join(err, resp.Body.Close())
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("API request failed with status: %d", resp.StatusCode)
