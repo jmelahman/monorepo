@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	github.com/gen2brain/beeep v0.11.1
 	github.com/godbus/dbus/v5 v5.1.0
-	github.com/mattn/go-sqlite3 v1.14.30
+	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 )
