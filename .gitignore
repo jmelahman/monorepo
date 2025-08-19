@@ -192,5 +192,14 @@ src/gatsby-types.d.ts
 *.tfstate
 *.tfvars
 
+# Homelab data
+homelab/audiobooks/
+homelab/auth/
+homelab/certbot/
+homelab/config/
+homelab/etc-pihole/
+homelab/metadata/
+homelab/podcasts/
+
 # Common go artifact
 main
