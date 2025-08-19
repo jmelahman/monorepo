@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions: {}
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1 # ratchet:astral-sh/ruff-action@v3
+        with:
+          args: "format --check --diff"
+      - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1 # ratchet:astral-sh/ruff-action@v3
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # ratchet:astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install deps
+        run: uv sync --locked --all-extras --dev
+      - name: Run type-checking
+        run: uvx ty check
+      - name: Run tests
+        run: uvx pytest
