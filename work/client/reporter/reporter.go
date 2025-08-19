@@ -2,6 +2,7 @@ package reporter
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"text/tabwriter"
 	"time"
@@ -24,7 +25,11 @@ func NewReporter() *Reporter {
 }
 
 func (r *Reporter) PrintTaskRows(tasks []types.Task) {
-	defer r.writer.Flush()
+	defer func() {
+		if err := r.writer.Flush(); err != nil {
+			log.Printf("Error flushing writer: %v", err)
+		}
+	}()
 
 	for _, task := range tasks {
 		end := task.End
@@ -32,7 +37,7 @@ func (r *Reporter) PrintTaskRows(tasks []types.Task) {
 			end = time.Now()
 		}
 
-		fmt.Fprintf(
+		if _, err := fmt.Fprintf(
 			r.writer,
 			"%s - %s\t%s\t%s\t%s\n",
 			task.Start.Format("15:04"),
@@ -40,23 +45,38 @@ func (r *Reporter) PrintTaskRows(tasks []types.Task) {
 			task.Classification,
 			task.Description,
 			r.FormatDuration(end.Sub(task.Start)),
-		)
+		); err != nil {
+			log.Printf("Error writing task row: %v", err)
+		}
 	}
 }
 
 func (r *Reporter) PrintReport(stats map[string]types.DayStats, weekTotal time.Duration) {
-	defer r.writer.Flush()
+	defer func() {
+		if err := r.writer.Flush(); err != nil {
+			log.Printf("Error flushing writer: %v", err)
+		}
+	}()
 
 	for day, dayStats := range stats {
-		fmt.Fprintf(r.writer, "%s\t%v\t(Total)\n", day, r.FormatDuration(dayStats.Total))
+		if _, err := fmt.Fprintf(r.writer, "%s\t%v\t(Total)\n", day, r.FormatDuration(dayStats.Total)); err != nil {
+			log.Printf("Error writing report line: %v", err)
+		}
 
 		for classification, duration := range dayStats.ByClassification {
-			fmt.Fprintf(r.writer, "\t%v\t(%s)\n", r.FormatDuration(duration), classification)
+			if _, err := fmt.Fprintf(r.writer, "\t%v\t(%s)\n", r.FormatDuration(duration), classification); err != nil {
+				log.Printf("Error writing classification line: %v", err)
+			}
 		}
-		fmt.Fprintln(r.writer, "")
+
+		if _, err := fmt.Fprintln(r.writer, ""); err != nil {
+			log.Printf("Error writing newline: %v", err)
+		}
 	}
 
-	fmt.Fprintf(r.writer, "\nWeek Total:\t%v\n", r.FormatDuration(weekTotal))
+	if _, err := fmt.Fprintf(r.writer, "\nWeek Total:\t%v\n", r.FormatDuration(weekTotal)); err != nil {
+		log.Printf("Error writing week total: %v", err)
+	}
 }
 
 func (r *Reporter) FormatDuration(duration time.Duration) string {
