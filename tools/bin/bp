@@ -8,7 +8,7 @@ git branch --merged | grep -Ev "master" | xargs --no-run-if-empty git branch -d
 while read -r branch; do
 	read -u 1 -p "Remove branch, $branch? (y,n) " -n 1 -r
 	echo # Force new line
-	if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+	if [[ $REPLY =~ ^[Yy]$ ]]; then
 		git branch -D "$branch"
 	fi
 done < <(git branch | grep -Ev "master")

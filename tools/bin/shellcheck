@@ -2,14 +2,14 @@
 
 ARGS=("$@")
 if [ ${#ARGS[@]} -eq 0 ]; then
-  shopt -s globstar nullglob
-  ARGS=(
-    **/*.bash
-    **/*.sh
-  )
+	shopt -s globstar nullglob
+	ARGS=(
+		**/*.bash
+		**/*.sh
+	)
 fi
 
 docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 \
 	--severity=style \
 	--color=always \
-  "${ARGS[@]}"
+	"${ARGS[@]}"

@@ -52,7 +52,7 @@ uvx ruff check
 ### Shell
 
 ```shell
-./bin/shellcheck
+./tools/bin/shellcheck
 ```
 
 ## Type-checking
@@ -75,5 +75,5 @@ uvx ruff format
 ### Shell
 
 ```shell
-./bin/shfmt
+./tools/bin/shfmt
 ```

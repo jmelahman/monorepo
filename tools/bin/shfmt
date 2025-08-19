@@ -8,5 +8,5 @@ docker run \
 	--rm \
 	-v "$PWD:/mnt" \
 	-w /mnt \
-	mvdan/shfmt:v3.11.0 \
+	mvdan/shfmt:v3.12.0 \
 	"${ARGS[@]}"

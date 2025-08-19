@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 docker run \
-  --rm \
-  -i \
-  -v "$(pwd)":/mnt \
-  -w /mnt \
-  pandoc/latex \
-  "$@"
+	--rm \
+	-i \
+	-v "$(pwd)":/mnt \
+	-w /mnt \
+	pandoc/latex \
+	"$@"
