@@ -7,65 +7,65 @@ DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 SITE_URL="https://jamison.lahman.dev"
 BLOG_DIR="blog"
 
-pushd "$DIR" > /dev/null || exit
+pushd "$DIR" >/dev/null || exit
 
 # Compile HTML
 for md in **/*.md; do
-  if [ $md == "README.md" ]; then
-    continue
-  fi
-  pandoc \
-    "$md" \
-    -o "${md%.md}.html" \
-    --template=template.html
+	if [ $md == "README.md" ]; then
+		continue
+	fi
+	pandoc \
+		"$md" \
+		-o "${md%.md}.html" \
+		--template=template.html
 done
 
 pandoc \
-  feed/index.html.body \
-  -o feed/index.html \
-  --template=template.html \
-  --from markdown+raw_html \
-  --metadata=script=/scripts/feed.js \
-  --metadata=title-prefix=Feed \
-  --metadata=nav_feed=true
+	feed/index.html.body \
+	-o feed/index.html \
+	--template=template.html \
+	--from markdown+raw_html \
+	--metadata=script=/scripts/feed.js \
+	--metadata=title-prefix=Feed \
+	--metadata=nav_feed=true
 
 # Minify CSS
 docker run --rm -i node:alpine \
-  sh -c "npm install -g clean-css-cli > /dev/null && cleancss -o /dev/stdout" \
-  < css/stylesheet.css > css/stylesheet.min.css
+	sh -c "npm install -g clean-css-cli > /dev/null && cleancss -o /dev/stdout" \
+	<css/stylesheet.css >css/stylesheet.min.css
 
 # Start RSS feed
 RSS_PATH="rss.xml"
-echo '<?xml version="1.0"?>' > "$RSS_PATH"
-echo '<rss version="2.0"><channel>' >> "$RSS_PATH"
-echo "  <title>jmelahman's blog</title>" >> "$RSS_PATH"
-echo "  <link>$SITE_URL</link>" >> "$RSS_PATH"
-echo "  <description>My personal site</description>" >> "$RSS_PATH"
-echo "  <language>en-us</language>" >> "$RSS_PATH"
-echo "  <lastBuildDate>$(date -R)</lastBuildDate>" >> "$RSS_PATH"
+echo '<?xml version="1.0"?>' >"$RSS_PATH"
+echo '<rss version="2.0"><channel>' >>"$RSS_PATH"
+echo "  <title>jmelahman's blog</title>" >>"$RSS_PATH"
+echo "  <link>$SITE_URL</link>" >>"$RSS_PATH"
+echo "  <description>My personal site</description>" >>"$RSS_PATH"
+echo "  <language>en-us</language>" >>"$RSS_PATH"
+echo "  <lastBuildDate>$(date -R)</lastBuildDate>" >>"$RSS_PATH"
 
 # Process each post
 for md in "$BLOG_DIR"/*.md; do
-    filename=$(basename "$md" .md)
-    if [ "$filename" == "index" ]; then
-      continue
-    fi
+	filename=$(basename "$md" .md)
+	if [ "$filename" == "index" ]; then
+		continue
+	fi
 
-    # Extract metadata
-    title=$(sed -n 's/^#\s[ ]*//p' "$md")
-    date=$(sed -n 's/^date:[ ]*//p' "$md")
-    pubDate=$(date -R -d "$date")
+	# Extract metadata
+	title=$(sed -n 's/^#\s[ ]*//p' "$md")
+	date=$(sed -n 's/^date:[ ]*//p' "$md")
+	pubDate=$(date -R -d "$date")
 
-    # Append to RSS
-    echo "  <item>" >> "$RSS_PATH"
-    echo "    <title>$title</title>" >> "$RSS_PATH"
-    echo "    <link>$SITE_URL/$BLOG_DIR/$filename.html</link>" >> "$RSS_PATH"
-    echo "    <guid>$SITE_URL/$BLOG_DIR/$filename.html</guid>" >> "$RSS_PATH"
-    echo "    <pubDate>$pubDate</pubDate>" >> "$RSS_PATH"
-    echo "  </item>" >> "$RSS_PATH"
+	# Append to RSS
+	echo "  <item>" >>"$RSS_PATH"
+	echo "    <title>$title</title>" >>"$RSS_PATH"
+	echo "    <link>$SITE_URL/$BLOG_DIR/$filename.html</link>" >>"$RSS_PATH"
+	echo "    <guid>$SITE_URL/$BLOG_DIR/$filename.html</guid>" >>"$RSS_PATH"
+	echo "    <pubDate>$pubDate</pubDate>" >>"$RSS_PATH"
+	echo "  </item>" >>"$RSS_PATH"
 done
 
 # Close RSS
-echo '</channel></rss>' >> "$RSS_PATH"
+echo '</channel></rss>' >>"$RSS_PATH"
 
-popd > /dev/null || exit
+popd >/dev/null || exit

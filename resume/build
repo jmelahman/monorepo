@@ -1,34 +1,33 @@
 #!/usr/bin/env bash
 
-
 PDF='false'
 STYLE='light.css'
 
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --dark)
-      STYLE='dark.css'
-      ;;
-    --pdf)
-      PDF='true'
-      ;;
-  esac
-  shift
+	case $1 in
+	--dark)
+		STYLE='dark.css'
+		;;
+	--pdf)
+		PDF='true'
+		;;
+	esac
+	shift
 done
 
 docker run \
-  --rm \
-  -v "$(pwd)/..":/mnt \
-  -w /mnt \
-  pandoc/latex \
-    resume/resume.md \
-    -o website/index.html \
-    --standalone \
-    --embed-resources \
-    --template=website/template.html \
-    --css="resume/styles/base.css" \
-    --css="resume/styles/$STYLE"
+	--rm \
+	-v "$(pwd)/..":/mnt \
+	-w /mnt \
+	pandoc/latex \
+	resume/resume.md \
+	-o website/index.html \
+	--standalone \
+	--embed-resources \
+	--template=website/template.html \
+	--css="resume/styles/base.css" \
+	--css="resume/styles/$STYLE"
 
 if [ "$PDF" == "true" ]; then
-  uvx weasyprint index.html resume.pdf
+	uvx weasyprint index.html resume.pdf
 fi
