@@ -142,13 +142,17 @@ func run(cmd *cobra.Command, args []string) {
 	device, err := ble.ConnectToTrainer()
 	if err != nil {
 		if !headlessMode {
-			appUI.UpdateStatus("❌ Connection failed: %v", err)
+			appUI.UpdateStatus(fmt.Sprintf("❌ Connection failed: %v", err))
 			time.Sleep(2 * time.Second)
 			appUI.Stop()
 		}
 		log.Fatalf("❌ Connection failed: %v", err)
 	}
-	defer device.Disconnect()
+	defer func() {
+		if err := device.Disconnect(); err != nil {
+			log.Errorf("Error disconnecting device: %v", err)
+		}
+	}()
 
 	var inputChan chan rune
 	state := ble.Telemetry{}
@@ -194,7 +198,11 @@ func run(cmd *cobra.Command, args []string) {
 			// However, term.Restore handles nil oldState gracefully (it's a no-op).
 			// For clarity, one might wrap it: if oldState != nil { defer term.Restore(...) }
 			// But current `defer term.Restore` is fine.
-			defer term.Restore(int(os.Stdin.Fd()), oldState)
+			defer func() {
+				if err := term.Restore(int(os.Stdin.Fd()), oldState); err != nil {
+					log.Error("Failed to restore terminal to previous state.")
+				}
+			}()
 
 			inputChan = make(chan rune)
 			go func() {
@@ -245,7 +253,7 @@ func run(cmd *cobra.Command, args []string) {
 	})
 	if err != nil {
 		if !headlessMode {
-			appUI.UpdateStatus("❌ Failed to subscribe: %v", err)
+			appUI.UpdateStatus(fmt.Sprintf("❌ Failed to subscribe: %v", err))
 			time.Sleep(2 * time.Second)
 			appUI.Stop()
 		}
@@ -256,13 +264,13 @@ func run(cmd *cobra.Command, args []string) {
 		err := ble.SetResistance(state, int8(resistanceLevel))
 		if err != nil {
 			if !headlessMode {
-				appUI.UpdateStatus("❌ Failed to set resistance: %v", err)
+				appUI.UpdateStatus(fmt.Sprintf("❌ Failed to set resistance: %v", err))
 			} else {
 				log.Errorf("❌ Failed to set resistance: %v", err)
 			}
 		} else {
 			if !headlessMode {
-				appUI.UpdateStatus("✅ Resistance set to %d%%", resistanceLevel)
+				appUI.UpdateStatus(fmt.Sprintf("✅ Resistance set to %d%%", resistanceLevel))
 			} else {
 				log.Infof("✅ Resistance set to %d%%", resistanceLevel)
 			}

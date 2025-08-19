@@ -128,8 +128,8 @@ func (ui *UI) SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKe
 }
 
 // UpdateStatus updates the status message
-func (ui *UI) UpdateStatus(format string, args ...any) {
-	ui.statusBox.SetText(fmt.Sprintf(format, args...))
+func (ui *UI) UpdateStatus(text string) {
+	ui.statusBox.SetText(text)
 }
 
 // UpdateTelemetry updates the UI with new telemetry data
