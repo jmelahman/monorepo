@@ -37,7 +37,7 @@ docker run --rm -i node:alpine \
 # Start RSS feed
 RSS_PATH="rss.xml"
 {
-cat <<EOF
+	cat <<EOF
 <?xml version="1.0"?>
 <rss version="2.0">
 <channel>
@@ -48,15 +48,15 @@ cat <<EOF
   <lastBuildDate>$(date -R)</lastBuildDate>
 EOF
 
-for md in "$BLOG_DIR"/*.md; do
-    filename=$(basename "$md" .md)
-    [ "$filename" = "index" ] && continue
+	for md in "$BLOG_DIR"/*.md; do
+		filename=$(basename "$md" .md)
+		[ "$filename" = "index" ] && continue
 
-    title=$(sed -n 's/^#\s[ ]*//p' "$md")
-    date=$(sed -n 's/^date:[ ]*//p' "$md")
-    pubDate=$(date -R -d "$date")
+		title=$(sed -n 's/^#\s[ ]*//p' "$md")
+		date=$(sed -n 's/^date:[ ]*//p' "$md")
+		pubDate=$(date -R -d "$date")
 
-    cat <<EOF
+		cat <<EOF
   <item>
     <title>$title</title>
     <link>$SITE_URL/$BLOG_DIR/$filename.html</link>
@@ -64,9 +64,9 @@ for md in "$BLOG_DIR"/*.md; do
     <pubDate>$pubDate</pubDate>
   </item>
 EOF
-done
+	done
 
-cat <<EOF
+	cat <<EOF
 </channel>
 </rss>
 EOF
