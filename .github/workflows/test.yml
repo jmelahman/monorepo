@@ -40,7 +40,7 @@ jobs:
       - id: set-modules
         run: echo "modules=$(go list -m -json | jq -s '.' | jq -c '[.[].Dir]')" >> $GITHUB_OUTPUT
 
-  golangci-lint:
+  golang:
     needs: detect-modules
     runs-on: ubuntu-latest
     strategy:
@@ -58,6 +58,8 @@ jobs:
       - run: go mod tidy
         working-directory: ${{ matrix.modules }}
       - run: git diff --exit-code go.mod go.sum
+        working-directory: ${{ matrix.modules }}
+      - run: go test ./...
         working-directory: ${{ matrix.modules }}
       - name: golangci-lint ${{ matrix.modules }}
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # ratchet:golangci/golangci-lint-action@v8

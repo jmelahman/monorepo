@@ -130,7 +130,7 @@ func TestFormatTwoColumnsOrdered(t *testing.T) {
 				"key2": "value2",
 			},
 			separator: ": ",
-			expected:  "key1: value1\nkey2: value2",
+			expected:  "key1:    value1\nkey2:    value2",
 		},
 		{
 			name: "extra keys in data",
