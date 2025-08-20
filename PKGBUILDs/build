@@ -2,18 +2,24 @@
 set -e
 
 DIR=$1
-[ -n "$DIR" ] || { >&2 echo "ERROR: Missing required argument"; exit 2; }
-[[ "$DIR" =~ ^[a-zA-Z0-9/_-]+$ ]] || { >&2 echo "ERROR: Invalid input"; exit 2; }
+[ -n "$DIR" ] || {
+	>&2 echo "ERROR: Missing required argument"
+	exit 2
+}
+[[ $DIR =~ ^[a-zA-Z0-9/_-]+$ ]] || {
+	>&2 echo "ERROR: Invalid input"
+	exit 2
+}
 
-if command -v makepkg > /dev/null; then
-  pushd "$DIR" || exit
-  # Don't install (-i) since we may not have root permissions and might hang.
-  yes | makepkg -sf
+if command -v makepkg >/dev/null; then
+	pushd "$DIR" || exit
+	# Don't install (-i) since we may not have root permissions and might hang.
+	yes | makepkg -sf
 else
-  docker run \
-    --rm \
-    -v "$PWD":"/mnt" \
-    -w /mnt \
-    lahmanja/archlinux:latest \
-    bash -c "pacman -Sy && chown builder -R ${DIR} && su builder -c 'cd ${DIR} && yes | makepkg -Csi' && chown root -R ${DIR}"
+	docker run \
+		--rm \
+		-v "$PWD":"/mnt" \
+		-w /mnt \
+		lahmanja/archlinux:latest \
+		bash -c "pacman -Sy && chown builder -R ${DIR} && su builder -c 'cd ${DIR} && yes | makepkg -Csi' && chown root -R ${DIR}"
 fi
