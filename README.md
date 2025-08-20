@@ -1,4 +1,5 @@
 [![CI Status](https://github.com/jmelahman/monorepo/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/test.yml)
+[![Dependabot Updates](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # Projects
