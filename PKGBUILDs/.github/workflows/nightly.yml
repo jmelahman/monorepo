@@ -1,0 +1,45 @@
+name: Nightly Updates
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  push:
+    branches:
+      - master
+
+jobs:
+  run-command:
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - run: |
+          for dir in **/; do
+            [[ "$dir" =~ ^[a-zA-Z0-9/_-]+$ ]] || { echo "Invalid input"; exit 1; }
+            MESSAGE=$(
+              docker run --rm -v "$PWD:/mnt" -w "/mnt" lahmanja/nvchecker:latest \
+                bash -c "chown packager -R \"$dir\" && su packager -c './pkgreleaser.py \"${dir///}\"' && chown $(id -u) -R \"$dir\""
+            )
+            if [ -n "$MESSAGE" ]; then
+              BRANCH="pkgreleaser/${dir}$(echo "$MESSAGE" | grep -oP '\b[0-9]+\.[0-9]+\.[0-9]+$')"
+              if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
+                continue
+              fi
+              git checkout -b "$BRANCH" origin/master
+              git commit -am "$MESSAGE"
+              git push -f -u origin "$BRANCH"
+              gh pr create --base master --head "$BRANCH" --fill
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

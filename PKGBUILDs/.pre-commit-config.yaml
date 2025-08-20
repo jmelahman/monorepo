@@ -1,0 +1,81 @@
+repos:
+  - repo: local
+    hooks:
+      - id: aligo
+        name: aligo
+        entry: ./build aligo
+        language: system
+        files: ^aligo/PKGBUILD$
+        pass_filenames: false
+      - id: buildifier
+        name: buildifier
+        entry: ./build buildifier
+        language: system
+        files: ^buildifier/PKGBUILD$
+        pass_filenames: false
+      - id: buildifier-bin
+        name: buildifier-bin
+        entry: ./build buildifier-bin
+        language: system
+        files: ^buildifier-bin/PKGBUILD$
+        pass_filenames: false
+      - id: buildozer
+        name: buildozer
+        entry: ./build buildozer
+        language: system
+        files: ^buildozer/PKGBUILD$
+        pass_filenames: false
+      - id: buildozer-bin
+        name: buildozer-bin
+        entry: ./build buildozer-bin
+        language: system
+        files: ^buildozer-bin/PKGBUILD$
+        pass_filenames: false
+      - id: check-symlinks
+        name: check-symlinks
+        entry: ./build check-symlinks
+        language: system
+        files: ^check-symlinks/PKGBUILD$
+        pass_filenames: false
+      - id: connections
+        name: connections
+        entry: ./build connections
+        language: system
+        files: ^connections/PKGBUILD$
+        pass_filenames: false
+      - id: ibazel-bin
+        name: ibazel-bin
+        entry: ./build ibazel-bin
+        language: system
+        files: ^ibazel-bin/PKGBUILD$
+        pass_filenames: false
+      - id: ibazel
+        name: ibazel
+        entry: ./build ibazel
+        language: system
+        files: ^ibazel/PKGBUILD$
+        pass_filenames: false
+      - id: nature-sounds
+        name: nature-sounds
+        entry: ./build nature-sounds
+        language: system
+        files: ^nature-sounds/PKGBUILD$
+        pass_filenames: false
+      - id: release-tag
+        name: release-tag
+        entry: ./build release-tag
+        language: system
+        files: ^release-tag/PKGBUILD$
+        pass_filenames: false
+      - id: ripsecrets
+        name: ripsecrets
+        entry: ./build ripsecrets
+        language: system
+        files: ^ripsecrets/PKGBUILD$
+        pass_filenames: false
+      - id: work
+        name: work
+        entry: ./build work
+        language: system
+        files: ^work/PKGBUILD$
+        pass_filenames: false

@@ -1,0 +1,33 @@
+name: Deploy to AUR
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  push-to-remote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
+      - name: Push to remote repository
+        run: |
+          for dir in **/; do
+            [[ "$dir" =~ ^[a-zA-Z0-9/_-]+$ ]] || { echo "Invalid input"; exit 1; }
+            PACKAGE="${dir///}"
+            git subtree push "--prefix=$PACKAGE" "ssh://aur@aur.archlinux.org/$PACKAGE.git" master
+          done

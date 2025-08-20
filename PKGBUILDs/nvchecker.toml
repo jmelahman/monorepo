@@ -1,0 +1,89 @@
+[aligo]
+source = "github"
+github = "essentialkaos/aligo"
+use_max_tag = true
+prefix = "v"
+
+[buildifier]
+source = "github"
+github = "bazelbuild/buildtools"
+use_max_tag = true
+prefix = "v"
+
+[buildifier-bin]
+source = "github"
+github = "bazelbuild/buildtools"
+use_max_tag = true
+prefix = "v"
+
+[buildozer]
+source = "github"
+github = "bazelbuild/buildtools"
+use_max_tag = true
+prefix = "v"
+
+[buildozer-bin]
+source = "github"
+github = "bazelbuild/buildtools"
+use_max_tag = true
+prefix = "v"
+
+[connections]
+source = "github"
+github = "jmelahman/connections"
+use_max_tag = true
+prefix = "v"
+
+[check-symlinks]
+source = "github"
+github = "jmelahman/check-symlinks"
+use_max_tag = true
+prefix = "v"
+
+[cycle-cli]
+source = "github"
+github = "jmelahman/cycle-cli"
+use_max_tag = true
+prefix = "v"
+
+[git-orchard]
+source = "github"
+github = "jmelahman/git-orchard"
+use_max_tag = true
+prefix = "v"
+
+[ibazel]
+source = "github"
+github = "bazelbuild/bazel-watcher"
+use_max_tag = true
+prefix = "v"
+
+[ibazel-bin]
+source = "github"
+github = "bazelbuild/bazel-watcher"
+use_max_tag = true
+prefix = "v"
+
+[nature-sounds]
+source = "github"
+github = "jmelahman/nature-sounds"
+use_max_tag = true
+prefix = "v"
+
+[ripsecrets]
+source = "github"
+github = "sirwart/ripsecrets"
+use_max_tag = true
+prefix = "v"
+
+[release-tag]
+source = "github"
+github = "jmelahman/tag"
+use_max_tag = true
+prefix = "v"
+
+[work]
+source = "github"
+github = "jmelahman/work"
+use_max_tag = true
+prefix = "v"
