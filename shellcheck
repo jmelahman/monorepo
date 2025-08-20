@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 \
+  --severity=style \
+  --color=always \
+  --shell=bash \
+  --exclude=SC2034,SC2154 \
+  **/PKGBUILD

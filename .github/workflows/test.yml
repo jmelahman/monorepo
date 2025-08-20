@@ -1,0 +1,54 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - "master"
+      - "pkgreleaser/*"
+  pull_request:
+
+jobs:
+  presubmit:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name != 'master' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+      - uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --files $(git diff origin/master HEAD --name-only | tr '\n' ' ')
+  postsubmit:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == 'master' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+      - uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --files $(git diff origin/master~1 HEAD --name-only | tr '\n' ' ')
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: ./shellcheck
+  namcap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: ./namcap
