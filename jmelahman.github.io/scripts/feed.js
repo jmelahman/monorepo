@@ -4,6 +4,7 @@ const feeds = [
   { title: "Sam Harris", url: "https://wakingup.libsyn.com/rss" },
   { title: "Pragmatic Engineer", url: "https://newsletter.pragmaticengineer.com/feed" },
   { title: "Evil Martians", url: "https://evilmartians.com/chronicles.atom" },
+  { title: "Matt Bruenig", url: "https://mattbruenig.com/feed" },
 ];
 
 const proxy = 'https://corsproxy.io/?';
