@@ -25,6 +25,7 @@ PROFILE_PATH = "/home/jamison/.mozilla/firefox/jamison.default"
 class Args(typing.NamedTuple):
     loop: bool
     kick: bool
+    headless: bool
     dry_run: bool
     period: int
     message: str
@@ -38,7 +39,7 @@ def send_message(
         By.CSS_SELECTOR, ".editor-input" if kick else ".chat-wysiwyg-input__editor"
     )
     chat_input.click()
-    time.sleep(1)
+    time.sleep(3)
     is_emoji = False
     for ch in message:
         if ch == ":" and is_emoji:
@@ -68,6 +69,7 @@ def parse_args() -> Args:
         "--period", type=int, default=60, help="Frequency at which to send messages"
     )
     parser.add_argument("--kick", action="store_true", help="Send message on kick")
+    parser.add_argument("--headless", action="store_true", help="Run in headless mode")
     parser.add_argument("--dry-run", action="store_true", help="Don't send the message")
     parser.add_argument("--noloop", action="store_true", help="Exit after sending message")
     args = parser.parse_args()
@@ -75,6 +77,7 @@ def parse_args() -> Args:
     return Args(
         loop=not args.noloop,
         kick=args.kick,
+        headless=args.headless,
         dry_run=args.dry_run,
         period=args.period,
         message=args.message,
@@ -85,6 +88,8 @@ def parse_args() -> Args:
 def main() -> int:
     args = parse_args()
     options = get_default_firefox_options()
+    if args.headless:
+        options.add_argument("--headless")
     driver = webdriver.Firefox(options)
     atexit.register(driver.quit)
 
