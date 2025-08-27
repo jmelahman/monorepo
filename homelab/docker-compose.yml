@@ -11,15 +11,15 @@ services:
       - ./podcasts:/podcasts
     restart: unless-stopped
 
-  nginx-home:
+  nginx:
     image: nginx
-    container_name: nginx-home
+    container_name: nginx
     restart: unless-stopped
     ports:
       - 80:80
       - 443:443
     volumes:
-      - ./nginx-home/:/etc/nginx/:ro
+      - ./nginx/:/etc/nginx/:ro
     depends_on:
       - audiobookshelf
       - buildbuddy
