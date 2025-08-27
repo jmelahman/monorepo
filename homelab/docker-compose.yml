@@ -11,18 +11,6 @@ services:
       - ./podcasts:/podcasts
     restart: unless-stopped
 
-  #nginx:
-  #  image: nginx
-  #  container_name: nginx
-  #  restart: unless-stopped
-  #  ports:
-  #    - 8000:80
-  #    - 4443:443
-  #  volumes:
-  #    - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  #    - ./certbot/www/:/var/www/certbot/:ro
-  #    - ./certbot/conf/:/etc/nginx/ssl/:ro
-
   nginx-home:
     image: nginx
     container_name: nginx-home
@@ -36,7 +24,6 @@ services:
       - audiobookshelf
       - buildbuddy
       - docker-status
-      - n8n
       - pihole
       - ollama
       - proxpi
@@ -69,23 +56,6 @@ services:
       - 9090
     volumes:
       - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock
-
-  n8n:
-    image: n8nio/n8n
-    restart: unless-stopped
-    container_name: n8n
-    environment:
-      EXTERNAL_FRONTEND_HOOKS_URLS: ""
-      N8N_DIAGNOSTICS_CONFIG_FRONTEND: ""
-      N8N_DIAGNOSTICS_CONFIG_BACKEND: ""
-      N8N_DIAGNOSTICS_ENABLED: false
-      N8N_SECURE_COOKIE: false
-      N8N_TEMPLATES_ENABLED: false
-      N8N_VERSION_NOTIFICATIONS_ENABLED: false
-    expose:
-      - 5678
-    volumes:
-      - n8n_data:/home/node/.n8n
 
   pihole:
     image: pihole/pihole
@@ -162,6 +132,5 @@ services:
 volumes:
   registry_data:
   buildbuddy_data:
-  n8n_data:
   ollama_data:
   proxpi_data:
