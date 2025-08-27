@@ -26,6 +26,7 @@ class Args(typing.NamedTuple):
     loop: bool
     kick: bool
     headless: bool
+    mute: bool
     dry_run: bool
     period: int
     message: str
@@ -39,7 +40,7 @@ def send_message(
         By.CSS_SELECTOR, ".editor-input" if kick else ".chat-wysiwyg-input__editor"
     )
     chat_input.click()
-    time.sleep(3)
+    time.sleep(4)
     is_emoji = False
     for ch in message:
         if ch == ":" and is_emoji:
@@ -70,6 +71,7 @@ def parse_args() -> Args:
     )
     parser.add_argument("--kick", action="store_true", help="Send message on kick")
     parser.add_argument("--headless", action="store_true", help="Run in headless mode")
+    parser.add_argument("--mute", action="store_true", help="Run in without audio")
     parser.add_argument("--dry-run", action="store_true", help="Don't send the message")
     parser.add_argument("--noloop", action="store_true", help="Exit after sending message")
     args = parser.parse_args()
@@ -78,6 +80,7 @@ def parse_args() -> Args:
         loop=not args.noloop,
         kick=args.kick,
         headless=args.headless,
+        mute=args.mute,
         dry_run=args.dry_run,
         period=args.period,
         message=args.message,
@@ -90,6 +93,8 @@ def main() -> int:
     options = get_default_firefox_options()
     if args.headless:
         options.add_argument("--headless")
+    if args.mute:
+        options.set_preference("media.volume_scale", "0.0")
     driver = webdriver.Firefox(options)
     atexit.register(driver.quit)
 
