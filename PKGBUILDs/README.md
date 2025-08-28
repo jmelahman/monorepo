@@ -16,6 +16,13 @@ Pull requests to update versions are generated at midnight (PST).
 git subtree add --prefix=$PACKAGE ssh://aur@aur.archlinux.org/$PACKAGE.git master
 ```
 
+Add the package to `nvchecker.toml` and `.pre-commit-config.yaml` for CI/CD.
+Verify the package will build in CI,
+
+```shell
+./build $PACKAGE
+```
+
 ## Running tests
 
 As recommended by the [Arch Wiki](https://wiki.archlinux.org/title/PKGBUILD), `namcap` and
