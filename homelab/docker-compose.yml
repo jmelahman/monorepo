@@ -26,6 +26,7 @@ services:
       - docker-status
       - pihole
       - proxpi
+      - pacoloco
       - glances
 
   certbot:
@@ -113,6 +114,18 @@ services:
     volumes:
       - proxpi_data:/var/cache/proxpi
 
+  pacoloco:
+    image: ghcr.io/anatol/pacoloco
+    container_name: pacoloco
+    restart: unless-stopped
+    environment:
+      - TZ=America/Los_Angeles
+    expose:
+      - 9129
+    volumes:
+      - pacoloco_data:/var/cache/pacoloco
+      - ./pacoloco/pacoloco.yaml:/etc/pacoloco.yaml
+
   glances:
     image: nicolargo/glances
     container_name: glances
@@ -131,3 +144,4 @@ volumes:
   buildbuddy_data:
   jellyfin_data:
   proxpi_data:
+  pacoloco_data:
