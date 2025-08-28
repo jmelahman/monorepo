@@ -1,0 +1,12 @@
+purge_files_after: 2592000  # 30 days
+download_timeout: 3600
+repos:
+  archlinux:
+    urls:
+      - http://mirrors.kernel.org/archlinux
+      - http://mirror.sfo12.us.leaseweb.net/archlinux
+      - http://arch.hu.fo/archlinux
+prefetch:
+  cron: 0 0 3 * * * *
+  ttl_unaccessed_in_days: 30
+  ttl_unupdated_in_days: 300
