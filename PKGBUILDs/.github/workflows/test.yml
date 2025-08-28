@@ -7,6 +7,8 @@ on:
       - "pkgreleaser/*"
   pull_request:
 
+permissions: {}
+
 jobs:
   presubmit:
     runs-on: ubuntu-latest
