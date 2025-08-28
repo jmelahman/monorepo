@@ -19,7 +19,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.options import Options
 
-PROFILE_PATH = "/home/jamison/.mozilla/firefox/jamison.default"
+PROFILE_PATH = "/home/jamison/.selenium/firefox/jamison.default"
 
 
 class Args(typing.NamedTuple):
@@ -40,7 +40,7 @@ def send_message(
         By.CSS_SELECTOR, ".editor-input" if kick else ".chat-wysiwyg-input__editor"
     )
     chat_input.click()
-    time.sleep(4)
+    time.sleep(2)
     is_emoji = False
     for ch in message:
         if ch == ":" and is_emoji:
