@@ -1,0 +1,30 @@
+services:
+  nginx:
+    image: nginx
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/:/etc/nginx/:ro
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:rocm
+    restart: unless-stopped
+    container_name: ollama
+    environment:
+      OLLAMA_CONTEXT_LENGTH: 131072
+      HSA_OVERRIDE_GFX_VERSION: 11.0.2
+    expose:
+      - 11434
+    volumes:
+      - ollama_data:/root/.ollama
+    devices:
+      - /dev/kfd
+      - /dev/dri
+
+volumes:
+  ollama_data:
