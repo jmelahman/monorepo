@@ -9,7 +9,6 @@
 *.log.*
 *.sig
 
-**/*
 !**/PKGBUILD
 !**/README.md
 !**/.SRCINFO
