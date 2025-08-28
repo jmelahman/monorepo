@@ -70,6 +70,11 @@ github = "jmelahman/nature-sounds"
 use_max_tag = true
 prefix = "v"
 
+[python-blessings]
+source = "github"
+github = "erikrose/blessings"
+use_max_tag = true
+
 [ripsecrets]
 source = "github"
 github = "sirwart/ripsecrets"

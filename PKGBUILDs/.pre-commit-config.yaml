@@ -61,6 +61,12 @@ repos:
         language: system
         files: ^nature-sounds/PKGBUILD$
         pass_filenames: false
+      - id: python-blessings
+        name: python-blessings
+        entry: ./build python-blessings
+        language: system
+        files: ^python-blessings/PKGBUILD$
+        pass_filenames: false
       - id: release-tag
         name: release-tag
         entry: ./build release-tag
