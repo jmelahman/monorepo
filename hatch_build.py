@@ -1,12 +1,15 @@
+from __future__ import annotations
+
 import os
 import subprocess
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+
 import manygo
 
 
 class GoBinaryBuildHook(BuildHookInterface):
-    def initialize(self, version, build_data):
+    def initialize(self, version, build_data) -> None:  # noqa: ANN001, ARG002
         build_data["pure_python"] = False
         goos = os.getenv("GOOS")
         goarch = os.getenv("GOARCH")
@@ -18,9 +21,14 @@ class GoBinaryBuildHook(BuildHookInterface):
 
         if not os.path.exists(binary_name):
             print(f"Building Go binary '{binary_name}'...")
-            subprocess.check_call(
-                ["go", "build",  f"-ldflags=-X main.version={tag} -X main.commit={commit} -s -w", "-o", binary_name],
+            subprocess.check_call(  # noqa: S603
+                [
+                    "go",
+                    "build",
+                    f"-ldflags=-X main.version={tag} -X main.commit={commit} -s -w",
+                    "-o",
+                    binary_name,
+                ],
             )
 
         build_data["shared_scripts"] = {binary_name: binary_name}
-

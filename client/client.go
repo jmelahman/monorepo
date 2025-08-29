@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -110,12 +111,14 @@ WantedBy=timers.target
 	}, nil
 }
 
-func HandleInstall(uninstall bool) error {
+func HandleInstall(uninstall bool) (err error) {
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		return fmt.Errorf("failed to connect to session bus: %v", err)
 	}
-	defer conn.Close()
+	defer func() {
+		err = errors.Join(err, conn.Close())
+	}()
 
 	obj := conn.Object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
 
