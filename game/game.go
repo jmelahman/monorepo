@@ -1,4 +1,4 @@
-package connections
+package game
 
 import (
 	"encoding/json"
@@ -123,9 +123,13 @@ func parseConnectionsJSON(data []byte) (Response, error) {
 	return response, nil
 }
 
-func RunGame() error {
+func RunWithScreen(screen tcell.Screen) error {
 	app := tview.NewApplication()
+	app.SetScreen(screen)
+	return Run(app)
+}
 
+func Run(app *tview.Application) error {
 	gameState := GameState{
 		selectedCards: make(map[string]bool),
 		categories:    make(map[string]Group),
@@ -394,6 +398,8 @@ func RunGame() error {
 		}
 
 		switch {
+		case event.Key() == tcell.KeyRune && event.Rune() == 'q':
+			app.Stop()
 		case event.Key() == tcell.KeyRune && event.Rune() == 'a':
 			r := focusedRow
 			c := focusedCol
