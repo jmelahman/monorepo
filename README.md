@@ -5,7 +5,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/connections-ssh.svg)](https://pkg.go.dev/github.com/jmelahman/connections-ssh)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/connections-ssh)](https://goreportcard.com/report/github.com/jmelahman/connections-ssh)
 
-This serves the [NYT Connections TUI](https://github.com/jmelahman/connections) over SSH.
+This serves the [NYT Connections TUI](https://github.com/jmelahman/connections) over SSH,
 
 ```shell
 $ ssh connections.lahman.dev
