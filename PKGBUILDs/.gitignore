@@ -1,4 +1,5 @@
 *.tar
+*.whl
 *.tar.*
 *.jar
 *.exe
