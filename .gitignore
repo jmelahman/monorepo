@@ -28,6 +28,7 @@ go.work.sum
 dist/
 *.egg-info/
 __pycache__/
+tag
 
 # aider
 .aider*

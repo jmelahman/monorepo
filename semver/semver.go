@@ -15,6 +15,22 @@ type Version struct {
 	PreReleaseNum int
 }
 
+func (v *Version) String() string {
+	versionStr := fmt.Sprintf("v%d.%d.%d", v.Major, v.Minor, v.Patch)
+
+	if v.Prefix != "" {
+		versionStr = v.Prefix + versionStr
+	}
+
+	if v.PreRelease != "" {
+		versionStr = fmt.Sprintf("%s-%s", versionStr, v.PreRelease)
+		if v.PreReleaseNum > 0 {
+			versionStr = fmt.Sprintf("%s.%d", versionStr, v.PreReleaseNum)
+		}
+	}
+	return versionStr
+}
+
 func ParseSemver(tag string) (*Version, error) {
 	re := regexp.MustCompile(`(?:(.+/))?v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)?`)
 	matches := re.FindStringSubmatch(tag)
@@ -95,9 +111,11 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 	} else if incPatch {
 		version.Patch++
 		version.PreReleaseNum = 0
-	} else if suffix == "" && version.PreRelease == "" {
+	} else if suffix == "" {
 		version.Patch++
-	} else if suffix != "" && version.PreRelease != suffix {
+		version.PreReleaseNum = 0
+	} else if version.PreRelease != suffix {
+		// TODO: This should probably only consider tags with HEAD as an ancestor.
 		// Find the largest PreReleaseNum for the given suffix
 		largestPreReleaseNum := 0
 		for _, existingTag := range allTags {
@@ -115,22 +133,7 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 		version.PreReleaseNum++
 	}
 
-	if suffix != "" {
-		version.PreRelease = suffix
-	}
+	version.PreRelease = suffix
 
-	// Construct the version string
-	versionStr := fmt.Sprintf("v%d.%d.%d", version.Major, version.Minor, version.Patch)
-
-	if version.PreRelease != "" {
-		if version.PreReleaseNum > 0 {
-			versionStr = fmt.Sprintf("%sv%d.%d.%d-%s.%d", version.Prefix, version.Major, version.Minor, version.Patch, version.PreRelease, version.PreReleaseNum)
-		} else {
-			versionStr = fmt.Sprintf("%sv%d.%d.%d-%s", version.Prefix, version.Major, version.Minor, version.Patch, version.PreRelease)
-		}
-	} else if version.Prefix != "" {
-		versionStr = fmt.Sprintf("%sv%d.%d.%d", version.Prefix, version.Major, version.Minor, version.Patch)
-	}
-
-	return versionStr, nil
+	return version.String(), nil
 }
