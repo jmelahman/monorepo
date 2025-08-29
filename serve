@@ -2,8 +2,9 @@
 set -eo pipefail
 
 python -m http.server &
+# shellcheck disable=SC2064 # We want this to expand immediately.
 trap "kill -9 $!" EXIT
 xdg-open http://localhost:8000
 
 # Leave the script running to avoid the trap
-cat > /dev/null
+cat >/dev/null
