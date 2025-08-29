@@ -67,6 +67,20 @@ repos:
         language: system
         files: ^python-blessings/PKGBUILD$
         pass_filenames: false
+      - id: python-dict2xml
+        name: python-dict2xml
+        entry: ./build python-dict2xml
+        language: system
+        files: ^python-dict2xml/PKGBUILD$
+        pass_filenames: false
+      # This depends on python-e3-core[aur] and there's currently no precedence for checking
+      # packages with AUR deps.
+      # - id: python-e3-testsuite
+      #   name: python-e3-testsuite
+      #   entry: ./build python-e3-testsuite
+      #   language: system
+      #   files: ^python-e3-testsuite/PKGBUILD$
+      #   pass_filenames: false
       - id: release-tag
         name: release-tag
         entry: ./build release-tag

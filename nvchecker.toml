@@ -75,6 +75,19 @@ source = "github"
 github = "erikrose/blessings"
 use_max_tag = true
 
+[python-dict2xml]
+source = "github"
+github = "delfick/python-dict2xml"
+use_max_tag = true
+prefix = "release-"
+
+# PyPi is currently ahead, so Github may not be the source of truth :shrug:.
+[python-e3-testsuite]
+source = "github"
+github = "AdaCore/e3-testsuite"
+use_max_tag = true
+prefix = "v"
+
 [ripsecrets]
 source = "github"
 github = "sirwart/ripsecrets"

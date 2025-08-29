@@ -1,4 +1,5 @@
 *.tar
+*.whl
 *.tar.*
 *.jar
 *.exe
@@ -9,7 +10,6 @@
 *.log.*
 *.sig
 
-**/*
 !**/PKGBUILD
 !**/README.md
 !**/.SRCINFO
