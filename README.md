@@ -42,7 +42,7 @@ This is slightly more convenient to make shell functions since the `git-subtree`
 Update all upstreams with this command,
 
 ```shell
-for d in */; do gsp $d; done
+for d in */; do gsp ${d%/}; done
 ```
 
 # Tooling
