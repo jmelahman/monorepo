@@ -19,5 +19,6 @@ def main() -> None:
         readme = README_CONTENTS_TPL.format(package=package, repository=info["github"])
         (pathlib.Path(package) / "README.md").write_text(readme.lstrip())
 
+
 if __name__ == "__main__":
     main()
