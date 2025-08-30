@@ -17,7 +17,7 @@ class Package(NamedTuple):
 
 
 def run_nvchecker(entry: str) -> list[str]:
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         ["uvx", "nvchecker", "--entry", entry, "--logger=json", "-c", "nvchecker.toml"],
         check=True,
         text=True,
@@ -43,11 +43,13 @@ def process_package(package: Package) -> None:
 
     content = pkgbuild_path.read_text()
     if not content:
-        raise RuntimeError(f"Failed to read PKGBUILD for package {package.name}")
+        msg = f"Failed to read PKGBUILD for package {package.name}"
+        raise RuntimeError(msg)
 
     match = re.search(r"(?m)^pkgver=(.+)$", content)
     if not match:
-        raise RuntimeError(f"pkgver not found in PKGBUILD for package {package.name}")
+        msg = f"pkgver not found in PKGBUILD for package {package.name}"
+        raise RuntimeError(msg)
 
     current_version = match.group(1).strip()
 
@@ -71,13 +73,14 @@ def process_package(package: Package) -> None:
     print(f"Bump {package.name} from {current_version} to {package.version}")
 
 
-def _directory(value):
+def _directory(value: str) -> str:
     if not os.path.isdir(value):
-        raise argparse.ArgumentTypeError(f"'{value}' is not a valid directory path.")
+        msg = f"'{value}' is not a valid directory path."
+        raise argparse.ArgumentTypeError(msg)
     return value
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Process package version updates")
     parser.add_argument("package", type=_directory, help="The name of the package to process")
     args = parser.parse_args()
