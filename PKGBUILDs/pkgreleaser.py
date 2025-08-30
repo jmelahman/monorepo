@@ -9,6 +9,11 @@ import re
 import subprocess
 from typing import NamedTuple
 
+# AUR package name to upstream package name.
+ENTRY_TO_UPSTREAM = {
+    "python-e3-testsuite": "e3-testsuite",
+}
+
 
 class Package(NamedTuple):
     name: str
@@ -18,7 +23,15 @@ class Package(NamedTuple):
 
 def run_nvchecker(entry: str) -> list[str]:
     result = subprocess.run(  # noqa: S603
-        ["uvx", "nvchecker", "--entry", entry, "--logger=json", "-c", "nvchecker.toml"],
+        [
+            "uvx",
+            "nvchecker[pypi]",
+            "--entry",
+            ENTRY_TO_UPSTREAM.get(entry, entry),
+            "--logger=json",
+            "-c",
+            "nvchecker.toml",
+        ],
         check=True,
         text=True,
         stdout=subprocess.PIPE,
@@ -31,7 +44,11 @@ def parse_nvchecker_output(lines: list[str]) -> list[Package]:
     for line in lines:
         data = json.loads(line)
         nv_data.append(
-            Package(name=data["name"], version=data["version"], revision=data["revision"])
+            Package(
+                name=ENTRY_TO_UPSTREAM.get(data["name"]) or data["name"],
+                version=data["version"],
+                revision=data["revision"],
+            )
         )
     return nv_data
 
