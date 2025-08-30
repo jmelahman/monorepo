@@ -25,7 +25,8 @@ def run_nvchecker(entry: str) -> list[str]:
     result = subprocess.run(  # noqa: S603
         [
             "uvx",
-            "nvchecker[pypi]",
+            "--with=nvchecker[pypi]",
+            "nvchecker",
             "--entry",
             ENTRY_TO_UPSTREAM.get(entry, entry),
             "--logger=json",
