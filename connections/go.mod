@@ -3,8 +3,8 @@ module github.com/jmelahman/connections
 go 1.24.3
 
 require (
-	github.com/gdamore/tcell/v2 v2.8.1
-	github.com/rivo/tview v0.0.0-20250625164341-a4a78f1e05cb
+	github.com/gdamore/tcell/v2 v2.9.0
+	github.com/rivo/tview v0.42.0
 	golang.org/x/text v0.28.0
 )
 
