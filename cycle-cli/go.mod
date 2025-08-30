@@ -23,7 +23,7 @@ require (
 	github.com/soypat/cyw43439 v0.0.0-20250505012923-830110c8f4af // indirect
 	github.com/soypat/seqs v0.0.0-20250630134107-01c3f05666ba // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/tinygo-org/cbgo v0.0.4 // indirect
 	github.com/tinygo-org/pio v0.2.0 // indirect
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b // indirect
