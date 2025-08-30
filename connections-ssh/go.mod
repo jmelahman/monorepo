@@ -3,7 +3,7 @@ module github.com/jmelahman/connections-ssh
 go 1.24.3
 
 require (
-	github.com/gdamore/tcell/v2 v2.8.1
+	github.com/gdamore/tcell/v2 v2.9.0
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/jmelahman/connections v0.1.17
 	github.com/spf13/cobra v1.9.1
@@ -15,7 +15,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/rivo/tview v0.0.0-20250625164341-a4a78f1e05cb // indirect
+	github.com/rivo/tview v0.42.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
