@@ -40,7 +40,6 @@ def send_message(
         By.CSS_SELECTOR, ".editor-input" if kick else ".chat-wysiwyg-input__editor"
     )
     chat_input.click()
-    time.sleep(2)
     is_emoji = False
     for ch in message:
         if ch == ":" and is_emoji:
@@ -98,7 +97,9 @@ def main() -> int:
     driver = webdriver.Firefox(options)
     atexit.register(driver.quit)
 
-    driver.get(f"https://www.{'kick.com' if args.kick else 'twitch.tv'}/{args.channel}")
+    driver.get(f"https://www.{'kick.com' if args.kick else 'twitch.tv'}/popout/{args.channel}/chat")
+
+    time.sleep(2)
 
     send_message(driver, args.message, kick=args.kick, dry_run=args.dry_run)
     while args.loop:
