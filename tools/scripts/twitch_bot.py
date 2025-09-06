@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import atexit
+import random
 import shutil
 import time
 import typing
@@ -27,6 +28,7 @@ class Args(typing.NamedTuple):
     kick: bool
     headless: bool
     mute: bool
+    random: bool
     dry_run: bool
     period: int
     message: str
@@ -71,6 +73,7 @@ def parse_args() -> Args:
     parser.add_argument("--kick", action="store_true", help="Send message on kick")
     parser.add_argument("--headless", action="store_true", help="Run in headless mode")
     parser.add_argument("--mute", action="store_true", help="Run in without audio")
+    parser.add_argument("--random", action="store_true", help="Run at random intervals")
     parser.add_argument("--dry-run", action="store_true", help="Don't send the message")
     parser.add_argument("--noloop", action="store_true", help="Exit after sending message")
     args = parser.parse_args()
@@ -80,6 +83,7 @@ def parse_args() -> Args:
         kick=args.kick,
         headless=args.headless,
         mute=args.mute,
+        random=args.random,
         dry_run=args.dry_run,
         period=args.period,
         message=args.message,
@@ -99,12 +103,15 @@ def main() -> int:
 
     driver.get(f"https://www.{'kick.com' if args.kick else 'twitch.tv'}/popout/{args.channel}/chat")
 
-    time.sleep(2)
+    time.sleep(4)
 
     send_message(driver, args.message, kick=args.kick, dry_run=args.dry_run)
+    period = args.period
     while args.loop:
-        for i in range(args.period):
-            print(f"\r{i:02}", end="", flush=True)
+        if args.random:
+            period = random.randint(240, 480)
+        for i in range(period):
+            print(f"\r{period - i:02}", end="", flush=True)
             time.sleep(1)
         send_message(driver, args.message, kick=args.kick, dry_run=args.dry_run)
     return 0
