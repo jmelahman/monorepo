@@ -109,7 +109,7 @@ def main() -> int:
     period = args.period
     while args.loop:
         if args.random:
-            period = random.randint(240, 480)
+            period = random.randint(240, 480)  # noqa: S311
         for i in range(period):
             print(f"\r{period - i:02}", end="", flush=True)
             time.sleep(1)
