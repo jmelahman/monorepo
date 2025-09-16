@@ -15,9 +15,9 @@
   <meta name="twitter:site" content="@jmelahman" />
   <meta name="twitter:creator" content="@jmelahman" />
   <meta name="twitter:image" content="https://jamison.lahman.dev/images/icon.png" />
-  <link rel="stylesheet" href="/css/stylesheet.min.css">
-  <link rel="stylesheet" href="/css/kate.css">
-  <link rel="icon" type="image/png" href="/images/icon.png">
+  <link rel="stylesheet" href="$root-prefix$/css/stylesheet.min.css">
+  <link rel="stylesheet" href="$root-prefix$/css/kate.css">
+  <link rel="icon" type="image/png" href="$root-prefix$/images/icon.png">
 $if(date-meta)$
   <meta name="dcterms.date" content="$date-meta$" />
 $endif$
@@ -44,18 +44,19 @@ $endif$
 $for(include-before)$
 $include-before$
 $endfor$
+$if(header)$
 <header id="title-block-header">
   <nav class="stateless">
     <a href="/" class="$if(nav_about)$active$endif$" title="Return to the home page">About</a>
-    <a href="/resume" title="Jamison's Resume">Resume</a>
+    <a href="/resume" class="$if(nav_resume)$active$endif$" title="Jamison's Resume">Resume</a>
     <a href="/blog" class="$if(nav_blog)$active$endif$" title="Personal blog">Blog</a>
     <a href="/feed" class="$if(nav_feed)$active$endif$" title="Reverse blog">Feed</a>
     <div class="right">
-      <a alt="Email" title="Email" href="mailto:jamison@lahman.dev" title="Email"><i class="fas fa-envelope"></i></a>
-      <a alt="Twitter" title="Twitter" href="https://x.com/jmelahman" title="Twitter"><i class="fab fa-twitter"></i></a>
+      <a alt="Email" title="Email" href="mailto:jamison@lahman.dev"><i class="fas fa-envelope"></i></a>
+      <a alt="Twitter" title="Twitter" href="https://x.com/jmelahman"><i class="fab fa-twitter"></i></a>
       <a alt="Strava" title="Strava" href="https://www.strava.com/athletes/jamison_lahman"><i class="fab fa-strava"></i></a>
-      <a alt="GitHub" title="GitHub" href="https://github.com/jmelahman" title="GitHub"><i class="fab fa-github"></i></a>
-      <a alt="LinkedIn" title="LinkedIn" href="https://linkedin.com/in/jamison-lahman" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
+      <a alt="GitHub" title="GitHub" href="https://github.com/jmelahman"><i class="fab fa-github"></i></a>
+      <a alt="LinkedIn" title="LinkedIn" href="https://linkedin.com/in/jamison-lahman"><i class="fab fa-linkedin"></i></a>
       <a alt="RSS" title="RSS" href="/rss"><i class="fas fa-rss"></i> RSS</a>
     </div>
   </nav>
@@ -79,6 +80,7 @@ $endif$
 $endif$
 </header>
 <hr>
+$endif$
 <main>
 $if(toc)$
 <nav id="$idprefix$TOC" role="doc-toc">
