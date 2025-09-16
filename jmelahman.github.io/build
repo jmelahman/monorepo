@@ -11,7 +11,7 @@ pushd "$DIR" >/dev/null || exit
 
 # Compile HTML
 for md in **/*.md; do
-  if [ "$(basename "$md")" == "README.md" ]; then
+	if [ "$(basename "$md")" == "README.md" ]; then
 		continue
 	fi
 	pandoc \
@@ -27,7 +27,7 @@ pandoc \
 	--template=template.html \
 	--from markdown+raw_html \
 	--variable=header=true \
-  --variable=script=/scripts/feed.js \
+	--variable=script=/scripts/feed.js \
 	--variable=title-prefix=Feed \
 	--variable=nav_feed=true
 
