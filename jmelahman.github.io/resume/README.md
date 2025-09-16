@@ -13,12 +13,6 @@ The conversion from HTML to PDF is done by [weasyprint](https://weasyprint.org/)
 
 ## Building
 
-The default resume can be built with,
-
 ```shell
 ./build
-```
-
-```shell
-./build --pdf
 ```

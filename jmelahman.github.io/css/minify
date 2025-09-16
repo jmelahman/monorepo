@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 {
-  cd "$DIR" || exit
-  docker run --rm -i node:alpine \
-    sh -c "npm install -g clean-css-cli > /dev/null && cleancss -o /dev/stdout" \
-    <stylesheet.css >stylesheet.min.css
+	cd "$DIR" || exit
+	docker run --rm -i node:alpine \
+		sh -c "npm install -g clean-css-cli > /dev/null && cleancss -o /dev/stdout" \
+		<stylesheet.css >stylesheet.min.css
 }
