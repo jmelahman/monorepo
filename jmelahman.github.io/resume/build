@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+
+docker run \
+  --rm \
+  -v "${DIR}/..":/mnt \
+  -w /mnt \
+  pandoc/latex \
+  resume/index.md \
+  -o resume/pdf.html \
+  --template=template.html \
+  --standalone \
+  --embed-resources \
+  --css=css/stylesheet.css \
+  --css=css/resume.css \
+  --variable skip-header=true \
+  --variable root-prefix=/mnt
+uvx weasyprint "${DIR}/pdf.html" "${DIR}/resume.pdf"

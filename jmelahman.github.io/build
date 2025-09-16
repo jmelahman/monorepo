@@ -11,13 +11,14 @@ pushd "$DIR" >/dev/null || exit
 
 # Compile HTML
 for md in **/*.md; do
-	if [ "$md" == "README.md" ]; then
+  if [ "$(basename "$md")" == "README.md" ]; then
 		continue
 	fi
 	pandoc \
 		"$md" \
 		-o "${md%.md}.html" \
-		--template=template.html
+		--template=template.html \
+		--variable=header=true
 done
 
 pandoc \
@@ -25,14 +26,13 @@ pandoc \
 	-o feed/index.html \
 	--template=template.html \
 	--from markdown+raw_html \
-	--metadata=script=/scripts/feed.js \
-	--metadata=title-prefix=Feed \
-	--metadata=nav_feed=true
+	--variable=header=true \
+  --variable=script=/scripts/feed.js \
+	--variable=title-prefix=Feed \
+	--variable=nav_feed=true
 
 # Minify CSS
-docker run --rm -i node:alpine \
-	sh -c "npm install -g clean-css-cli > /dev/null && cleancss -o /dev/stdout" \
-	<css/stylesheet.css >css/stylesheet.min.css
+./css/minify
 
 # Start RSS feed
 RSS_PATH="rss.xml"
