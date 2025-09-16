@@ -27,9 +27,9 @@ Experienced with: Git, Docker, Bazel, Buildkite, AWS, Ansible, Terraform, Github
 
 <hr/>
 
-+---------------------------------------------------------------------------------------+------------------------+
-| **Software Engineer - Platform** *&mdash; Applied Intuition, Inc., Mountain View, CA* |  Nov 2020 - July 2025  |
-+---------------------------------------------------------------------------------------+------------------------+
++---------------------------------------------------------------------------------------+-----------------------+
+| **Software Engineer - Platform** *&mdash; Applied Intuition, Inc., Mountain View, CA* |  Nov 2020 - Jul 2025  |
++---------------------------------------------------------------------------------------+-----------------------+
 
 - Re-architected packaging and releasing of microservices as part of a migration from a monolithic
 application, reducing feature lead times by weeks and deployment times by hours.
@@ -49,9 +49,9 @@ reducing CI p50 time by 20 minutes and reducing total compute cost by 40%.
 - Owned CI/CD infrastructure including on-prem and cloud (Azure, AWS EC2) servers,
 test selection and orchestration, build health, and data pipelines.
 
-+---------------------------------------------------------------------------------------+------------------------+
-| **Software Quality Operations** *&mdash; Waymo LLC, Mountain View, CA*                |  June 2017 - Apr 2019  |
-+---------------------------------------------------------------------------------------+------------------------+
++---------------------------------------------------------------------------------------+-----------------------+
+| **Software Quality Operations** *&mdash; Waymo LLC, Mountain View, CA*                |  Jun 2017 - Apr 2019  |
++---------------------------------------------------------------------------------------+-----------------------+
 
 - Investigated simulator crashes and test failures as first-pass triage.
 - Created custom Google Sheets integrations with Apps Script and Dremel SQL,
