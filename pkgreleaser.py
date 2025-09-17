@@ -9,6 +9,11 @@ import re
 import subprocess
 from typing import NamedTuple
 
+# AUR package name to upstream package name.
+ENTRY_TO_UPSTREAM = {
+    "python-e3-testsuite": "e3-testsuite",
+}
+
 
 class Package(NamedTuple):
     name: str
@@ -17,8 +22,17 @@ class Package(NamedTuple):
 
 
 def run_nvchecker(entry: str) -> list[str]:
-    result = subprocess.run(
-        ["uvx", "nvchecker", "--entry", entry, "--logger=json", "-c", "nvchecker.toml"],
+    result = subprocess.run(  # noqa: S603
+        [
+            "uvx",
+            "--with=nvchecker[pypi]",
+            "nvchecker",
+            "--entry",
+            ENTRY_TO_UPSTREAM.get(entry, entry),
+            "--logger=json",
+            "-c",
+            "nvchecker.toml",
+        ],
         check=True,
         text=True,
         stdout=subprocess.PIPE,
@@ -31,7 +45,11 @@ def parse_nvchecker_output(lines: list[str]) -> list[Package]:
     for line in lines:
         data = json.loads(line)
         nv_data.append(
-            Package(name=data["name"], version=data["version"], revision=data["revision"])
+            Package(
+                name=ENTRY_TO_UPSTREAM.get(data["name"]) or data["name"],
+                version=data["version"],
+                revision=data["revision"],
+            )
         )
     return nv_data
 
@@ -43,11 +61,13 @@ def process_package(package: Package) -> None:
 
     content = pkgbuild_path.read_text()
     if not content:
-        raise RuntimeError(f"Failed to read PKGBUILD for package {package.name}")
+        msg = f"Failed to read PKGBUILD for package {package.name}"
+        raise RuntimeError(msg)
 
     match = re.search(r"(?m)^pkgver=(.+)$", content)
     if not match:
-        raise RuntimeError(f"pkgver not found in PKGBUILD for package {package.name}")
+        msg = f"pkgver not found in PKGBUILD for package {package.name}"
+        raise RuntimeError(msg)
 
     current_version = match.group(1).strip()
 
@@ -71,13 +91,14 @@ def process_package(package: Package) -> None:
     print(f"Bump {package.name} from {current_version} to {package.version}")
 
 
-def _directory(value):
+def _directory(value: str) -> str:
     if not os.path.isdir(value):
-        raise argparse.ArgumentTypeError(f"'{value}' is not a valid directory path.")
+        msg = f"'{value}' is not a valid directory path."
+        raise argparse.ArgumentTypeError(msg)
     return value
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Process package version updates")
     parser.add_argument("package", type=_directory, help="The name of the package to process")
     args = parser.parse_args()
