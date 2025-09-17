@@ -11,6 +11,7 @@ from typing import NamedTuple
 
 # AUR package name to upstream package name.
 ENTRY_TO_UPSTREAM = {
+    "python-e3-core": "e3-core",
     "python-e3-testsuite": "e3-testsuite",
 }
 

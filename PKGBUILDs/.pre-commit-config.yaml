@@ -73,6 +73,12 @@ repos:
         language: system
         files: ^python-dict2xml/PKGBUILD$
         pass_filenames: false
+      - id: python-e3-core
+        name: python-e3-core
+        entry: ./build python-e3-core
+        language: system
+        files: ^python-e3-core/PKGBUILD$
+        pass_filenames: false
       # This depends on python-e3-core[aur] and there's currently no precedence for checking
       # packages with AUR deps.
       # - id: python-e3-testsuite
