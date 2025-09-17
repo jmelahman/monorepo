@@ -19,8 +19,8 @@ docker run \
 	--variable root-prefix=/mnt
 uvx weasyprint "${DIR}/pdf.html" "${DIR}/resume.pdf"
 docker run \
-  --rm \
-  -v "${DIR}":/mnt \
-  -w /mnt \
-  minidocks/poppler \
-  pdftoppm -singlefile -png resume.pdf preview
+	--rm \
+	-v "${DIR}":/mnt \
+	-w /mnt \
+	minidocks/poppler \
+	pdftoppm -singlefile -png resume.pdf preview
