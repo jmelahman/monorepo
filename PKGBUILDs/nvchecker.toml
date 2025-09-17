@@ -81,6 +81,9 @@ github = "delfick/python-dict2xml"
 use_max_tag = true
 prefix = "release-"
 
+[e3-core]
+source = "pypi"
+
 [e3-testsuite]
 source = "pypi"
 
