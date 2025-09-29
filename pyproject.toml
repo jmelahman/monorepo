@@ -51,3 +51,8 @@ dev = [
 pythonpath = [
   "manygo",
 ]
+
+[tool.uv.workspace]
+members = [
+    "ollama_chat",
+]
