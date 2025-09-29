@@ -9,6 +9,6 @@ A simple and straightforward way to interface with an Ollama server.
 For now, the intended way to run the application is via a [PEP 0723 script](https://peps.python.org/pep-0723/),
 
 ```
-curl -o ollama_chat.py -sS https://github.com/jmelahman/monorepo/tree/master/ollama_chat/main.py
+curl -o ollama_chat.py https://raw.githubusercontent.com/jmelahman/monorepo/refs/heads/master/ollama_chat/main.py
 uv run ollama_chat.py
 ```
