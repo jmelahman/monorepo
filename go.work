@@ -9,8 +9,10 @@ use (
 	./dashboard
 	./docker-status
 	./git-orchard
+	./jview
 	./nature-sounds
 	./runtainer
+	./smart-lights
 	./tag
 	./work
 )
