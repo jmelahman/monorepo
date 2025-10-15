@@ -6,6 +6,7 @@ use (
 	./connections
 	./connections-ssh
 	./cycle-cli
+	./cycle-lights
 	./dashboard
 	./docker-status
 	./git-orchard
