@@ -57,7 +57,7 @@ func initConfig() {
 func getRGBForPower(powerPercentage float64) (int32, int32, int32) {
 	switch {
 	case powerPercentage < 60:
-		return 255, 260, 120 // White (Zone 1: Recovery)
+		return 255, 160, 120 // White (Zone 1: Recovery)
 	case powerPercentage <= 75:
 		return 0, 0, 255 // Blue (Zone 2: Endurance)
 	case powerPercentage <= 89:
