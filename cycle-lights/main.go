@@ -33,11 +33,6 @@ func init() {
 	cobra.CheckErr(viper.BindPFlag("ftp", rootCmd.Flags().Lookup("ftp")))
 	cobra.CheckErr(viper.BindPFlag("power_meter", rootCmd.Flags().Lookup("power-meter")))
 	cobra.CheckErr(viper.BindPFlag("smart_light", rootCmd.Flags().Lookup("smart-light")))
-
-	// Mark flags as required
-	cobra.CheckErr(rootCmd.MarkFlagRequired("ftp"))
-	cobra.CheckErr(rootCmd.MarkFlagRequired("power-meter"))
-	cobra.CheckErr(rootCmd.MarkFlagRequired("smart-light"))
 }
 
 func initConfig() {
@@ -55,10 +50,7 @@ func initConfig() {
 	}
 
 	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	_ = viper.ReadInConfig()
 }
 
 // getRGBForPower returns RGB values based on power percentage of FTP
@@ -83,10 +75,20 @@ var rootCmd = &cobra.Command{
 	Use:   "cycle-lights",
 	Short: "Control smart lights based on cycling power data",
 	Long:  "A tool to control smart lights based on power meter data from cycling",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		ftp := viper.GetInt("ftp")
 		powerMeterAddress := viper.GetString("power_meter")
 		smartLightAddress := viper.GetString("smart_light")
+
+		if ftp == 0 {
+			return fmt.Errorf("required flag \"ftp\" not set")
+		}
+		if powerMeterAddress == "" {
+			return fmt.Errorf("required flag \"power-meter\" not set")
+		}
+		if smartLightAddress == "" {
+			return fmt.Errorf("required flag \"smart-light\" not set")
+		}
 
 		adapter := bluetooth.DefaultAdapter
 		must("enable adapter", adapter.Enable())
