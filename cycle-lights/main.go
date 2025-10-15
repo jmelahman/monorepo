@@ -123,9 +123,7 @@ var rootCmd = &cobra.Command{
 
 		for _, srv := range services {
 			chars, err := srv.DiscoverCharacteristics(nil)
-			if err != nil {
-				must("discover characteristics", err)
-			}
+			must("discover characteristics", err)
 			for _, char := range chars {
 				if char.UUID() == cyclingPowerMeasurementUUID {
 					powerChar = &char
@@ -171,7 +169,7 @@ var rootCmd = &cobra.Command{
 						sum += int64(v)
 					}
 					avg := int16(sum / int64(len(power.values)))
-					fmt.Printf("Latest Power: %v\r", avg)
+					fmt.Printf("\rLatest Power: %4d", avg)
 
 					// Calculate power percentage of FTP
 					powerPercentage := float64(avg) / float64(ftp) * 100.0
