@@ -101,12 +101,12 @@ var rootCmd = &cobra.Command{
 				device, err := smartlightsble.ConnectAndDiscover(adapter, result.Address)
 				must("connect to smart lights", err)
 				lightDevice = device
-				fmt.Println("Connected to smart lights")
+				fmt.Println("Connected to smart lights:", result.LocalName())
 			} else if powerDevice == nil && result.Address.String() == powerMeterAddress {
 				device, err := adapter.Connect(result.Address, bluetooth.ConnectionParams{})
 				must("connect to power meter", err)
 				powerDevice = &device
-				fmt.Println("Connected to power meter")
+				fmt.Println("Connected to power meter: ", result.LocalName())
 			}
 			if lightDevice != nil && powerDevice != nil {
 				_ = adapter.StopScan()
@@ -161,8 +161,8 @@ var rootCmd = &cobra.Command{
 			power.mu.Lock()
 			power.values = append(power.values, data.InstantaneousPower)
 
-			// Every 1 seconds, calculate average and update lights
-			if time.Since(power.lastPrint) >= 1*time.Second {
+			// Every second, calculate average and update lights
+			if time.Since(power.lastPrint) >= time.Second {
 				if len(power.values) > 0 {
 					var sum int64
 					for _, v := range power.values {
