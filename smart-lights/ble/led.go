@@ -7,6 +7,7 @@ import (
 
 type Device struct {
 	adapter   *bluetooth.Adapter
+	address   bluetooth.Address
 	dev       *bluetooth.Device
 	writeChar *bluetooth.DeviceCharacteristic
 }
@@ -70,7 +71,7 @@ func ConnectAndDiscover(adapter *bluetooth.Adapter, address bluetooth.Address) (
 		return nil, err
 	}
 
-	d := &Device{dev: &dev, adapter: adapter}
+	d := &Device{dev: &dev, adapter: adapter, address: address}
 	if err := d.discover(); err != nil {
 		return nil, err
 	}
@@ -95,7 +96,16 @@ func (d *Device) discover() error {
 }
 
 func (d *Device) Connect() error {
-	return d.adapter.Enable()
+	if err := d.adapter.Enable(); err != nil {
+		return err
+	}
+
+	dev, err := d.adapter.Connect(d.address, bluetooth.ConnectionParams{})
+	if err != nil {
+		return err
+	}
+	d.dev = &dev
+	return nil
 }
 
 // Power toggles the LED power state.
