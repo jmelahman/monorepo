@@ -18,9 +18,9 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cycle-lights.yaml)")
 
-	rootCmd.Flags().Int("ftp", 0, "FTP value (required)")
-	rootCmd.Flags().String("power-meter", "", "Power meter bluetooth address (required)")
-	rootCmd.Flags().String("smart-light", "", "Smart light bluetooth address (required)")
+	rootCmd.Flags().Int("ftp", 0, "FTP value")
+	rootCmd.Flags().String("power-meter", "", "Power meter bluetooth address")
+	rootCmd.Flags().String("smart-light", "", "Smart light bluetooth address")
 
 	// Bind flags to viper
 	viper.BindPFlag("ftp", rootCmd.Flags().Lookup("ftp"))
