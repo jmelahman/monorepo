@@ -63,9 +63,9 @@ func getRGBForPower(powerPercentage float64) (int32, int32, int32) {
 	case powerPercentage <= 89:
 		return 0, 255, 0 // Green (Zone 3: Tempo)
 	case powerPercentage <= 104:
-		return 255, 255, 0 // Yellow (Zone 4: Threshold)
+		return 255, 55, 0 // Yellow (Zone 4: Threshold)
 	case powerPercentage <= 118:
-		return 255, 165, 0 // Orange (Zone 5: VO2 Max)
+		return 255, 20, 0 // Orange (Zone 5: VO2 Max)
 	default:
 		return 255, 0, 0 // Red (Zone 6: Anaerobic)
 	}
