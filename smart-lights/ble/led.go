@@ -6,6 +6,7 @@ import (
 )
 
 type Device struct {
+	adapter   *bluetooth.Adapter
 	dev       *bluetooth.Device
 	writeChar *bluetooth.DeviceCharacteristic
 }
@@ -69,7 +70,7 @@ func ConnectAndDiscover(adapter *bluetooth.Adapter, address bluetooth.Address) (
 		return nil, err
 	}
 
-	d := &Device{dev: &dev}
+	d := &Device{dev: &dev, adapter: adapter}
 	if err := d.discover(); err != nil {
 		return nil, err
 	}
@@ -93,11 +94,20 @@ func (d *Device) discover() error {
 	return nil
 }
 
+func (d *Device) Connect() error {
+	return d.adapter.Enable()
+}
+
 // Power toggles the LED power state.
 func (d *Device) Power(on bool) error {
 	if d.writeChar == nil {
 		return fmt.Errorf("write characteristic undiscovered")
 	}
+
+	if err := d.Connect(); err != nil {
+		return err
+	}
+
 	cmd := []byte{0xA0, 0x11, 0x04}
 	if on {
 		cmd = append(cmd, 0x01, 0xB1, 0x21) // on
@@ -123,6 +133,11 @@ func (d *Device) SetBrightness(level int) error {
 	if d.writeChar == nil {
 		return fmt.Errorf("write characteristic undiscovered")
 	}
+
+	if err := d.Connect(); err != nil {
+		return err
+	}
+
 	cmd := append([]byte{0xA0, 0x13, 0x04}, getLevelHex(level)...)
 	_, err := d.writeChar.WriteWithoutResponse(cmd)
 	return err
@@ -147,6 +162,11 @@ func (d *Device) SetRGB(r, g, b int32) error {
 	if d.writeChar == nil {
 		return fmt.Errorf("write characteristic undiscovered")
 	}
+
+	if err := d.Connect(); err != nil {
+		return err
+	}
+
 	cmd := []byte{0xA0, 0x15, 0x06, byte(r & 0xFF), byte(g & 0xFF), byte(b & 0xFF)}
 	crc := crc16Modbus(cmd)
 	cmd = append(cmd, byte(crc&0xFF), byte(crc>>8))
