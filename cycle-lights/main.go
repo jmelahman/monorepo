@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -16,7 +17,7 @@ var (
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cycle-lights.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/cycle-lights/config.yaml)")
 
 	rootCmd.Flags().Int("ftp", 0, "FTP value")
 	rootCmd.Flags().String("power-meter", "", "Power meter bluetooth address")
@@ -40,9 +41,11 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		viper.AddConfigPath(home)
+		// Use ~/.config/cycle-lights/config.yaml as default
+		configPath := filepath.Join(home, ".config", "cycle-lights")
+		viper.AddConfigPath(configPath)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".cycle-lights")
+		viper.SetConfigName("config")
 	}
 
 	viper.AutomaticEnv()
