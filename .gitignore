@@ -192,6 +192,9 @@ src/gatsby-types.d.ts
 *.tfstate
 *.tfvars
 
+# Temporary directory for experiments
+sandbox
+
 # Homelab data
 homelab/audiobooks/
 homelab/auth/
