@@ -161,8 +161,8 @@ var rootCmd = &cobra.Command{
 			power.mu.Lock()
 			power.values = append(power.values, data.InstantaneousPower)
 
-			// Every 3 seconds, calculate average and update lights
-			if time.Since(power.lastPrint) >= 3*time.Second {
+			// Every 1 seconds, calculate average and update lights
+			if time.Since(power.lastPrint) >= 1*time.Second {
 				if len(power.values) > 0 {
 					var sum int64
 					for _, v := range power.values {
