@@ -73,6 +73,12 @@ repos:
         language: system
         files: ^python-dict2xml/PKGBUILD$
         pass_filenames: false
+      - id: prek
+        name: prek
+        entry: ./build prek
+        language: system
+        files: ^prek/PKGBUILD$
+        pass_filenames: false
       - id: python-e3-core
         name: python-e3-core
         entry: ./build python-e3-core
