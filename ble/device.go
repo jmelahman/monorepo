@@ -59,14 +59,13 @@ func ConnectToTrainer() (*bluetooth.Device, error) {
 	utils.Must("enable BLE stack", adapter.Enable())
 
 	var trainerAddr bluetooth.Address
-	var device = bluetooth.Device{}
 
 	utils.Must("scan", adapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
 		name := result.LocalName()
 		if isTrainerName(name) {
 			log.Infof("✅ Found trainer: %s [%s]\n", name, result.Address.String())
 			trainerAddr = result.Address
-			adapter.StopScan()
+			utils.Must("stop bluetooth adapter scan", adapter.StopScan())
 		}
 	}))
 
@@ -123,6 +122,7 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 
 			handler(state)
 		})
+		utils.Must("enable bike data notifications", err)
 	}
 
 	if controlPointChar != nil {
@@ -149,6 +149,7 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 
 			handler(state)
 		})
+		utils.Must("enable cycling speed and cadence notifications", err)
 	}
 
 	if fitnessChar != nil {
@@ -162,10 +163,11 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 				fmt.Printf("New Target Power: %d watts\n", targetPower)
 			}
 		})
+		utils.Must("enable fitness machine status notifications", err)
 	}
 
 	if hrChar != nil {
-		hrChar.EnableNotifications(func(buf []byte) {
+		err = hrChar.EnableNotifications(func(buf []byte) {
 			if len(buf) < 2 {
 				return
 			}
@@ -177,10 +179,11 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 			state.HR = hr
 			handler(state)
 		})
+		utils.Must("enable heart rate notifications", err)
 	}
 
 	if powerChar != nil {
-		powerChar.EnableNotifications(func(buf []byte) {
+		err = powerChar.EnableNotifications(func(buf []byte) {
 			data, err := cps.ParseCyclingPowerMeasurement(buf)
 			utils.Must("parse cycling power measurement", err)
 
@@ -231,6 +234,7 @@ func SubscribeToMetrics(dev *bluetooth.Device, state Telemetry, unitSystem strin
 
 			handler(state)
 		})
+		utils.Must("enable cycling power measurement notifications", err)
 	}
 
 	return nil
