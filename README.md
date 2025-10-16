@@ -41,8 +41,16 @@ This is slightly more convenient to make shell functions since the `git-subtree`
 Update all upstreams with this command,
 
 ```shell
-for d in */; do gsp ${d%/}; done
+for d in */; do gsp "${d%/}"; done
 ```
+
+And pulling from upstreams with,
+
+```shell
+for d in */; do gspull "${d%/}" -m "Update ${d%/}"; done
+```
+
+_See my [dotfiles](https://github.com/jmelahman/dotfiles/blob/a1a3e8abd2f746b5e24919f189d7df1d5f2d5911/.zshrc#L176-L203) for the `gsp` and `gspull` aliases._
 
 # Tooling
 
