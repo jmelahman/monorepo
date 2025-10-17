@@ -85,6 +85,7 @@ nav > a:first-child {
 
 code, .monospace {
   font-family: 'JetBrains Mono', monospace;
+  font-variant-ligatures: none;
 }
 
 code {
