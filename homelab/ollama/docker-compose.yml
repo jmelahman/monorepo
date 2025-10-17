@@ -18,8 +18,8 @@ services:
     environment:
       OLLAMA_CONTEXT_LENGTH: 131072
       HSA_OVERRIDE_GFX_VERSION: 11.0.2
-    expose:
-      - 11434
+    ports:
+      - 11434:11434
     volumes:
       - ollama_data:/root/.ollama
     devices:
