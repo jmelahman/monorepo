@@ -59,7 +59,7 @@ jobs:
         with:
           go-version: stable
           cache: false
-      - uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d # ratchet:astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # ratchet:astral-sh/setup-uv@v7
         with:
           enable-cache: false
       - run: |
