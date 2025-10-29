@@ -68,6 +68,7 @@ func initConfig() {
 	}
 
 	viper.AutomaticEnv()
+	viper.SetEnvPrefix("CYCLE_LIGHTS")
 	_ = viper.ReadInConfig()
 }
 
@@ -391,8 +392,12 @@ var rootCmd = &cobra.Command{
 
 		if useZwift {
 			// Use Zwift API
-			if zwiftEmail == "" || zwiftPassword == "" {
-				return fmt.Errorf("zwift-email and zwift-password are required when using Zwift API")
+			// Check if email/password were provided via flags or config
+			if zwiftEmail == "" {
+				return fmt.Errorf("zwift-email is required when using Zwift API")
+			}
+			if zwiftPassword == "" {
+				return fmt.Errorf("zwift-password is required when using Zwift API")
 			}
 
 			zwiftClient, err := NewZwiftClient(zwiftEmail, zwiftPassword, zwiftUserID)
