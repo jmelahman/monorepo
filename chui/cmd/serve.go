@@ -16,9 +16,9 @@ func NewServeCommand() *cobra.Command {
 		Long:  "Start a server to handle chat connections",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Starting server on port %d...\n", port)
-			
+
 			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintf(w, "chui server is running!")
+				_ = fmt.Fprintf(w, "chui server is running!")
 			})
 
 			fmt.Printf("Server listening on :%d\n", port)

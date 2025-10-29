@@ -13,8 +13,8 @@ import (
 type Role string
 
 type Message struct {
-	content string
-	role    Role
+	// content string
+	// role    Role
 }
 
 type Conversation struct {
