@@ -18,7 +18,7 @@ func NewServeCommand() *cobra.Command {
 			fmt.Printf("Starting server on port %d...\n", port)
 
 			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				_ = fmt.Fprintf(w, "chui server is running!")
+				_, _ = fmt.Fprintf(w, "chui server is running!")
 			})
 
 			fmt.Printf("Server listening on :%d\n", port)
