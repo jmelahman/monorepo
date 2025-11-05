@@ -1,4 +1,4 @@
-go 1.25.1
+go 1.25.3
 
 use (
 	./check-symlinks
@@ -15,5 +15,6 @@ use (
 	./runtainer
 	./smart-lights
 	./tag
+	./tools/gha_metrics
 	./work
 )
