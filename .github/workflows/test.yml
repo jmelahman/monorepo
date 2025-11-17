@@ -19,7 +19,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # ratchet:astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # ratchet:astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - name: Run check-symlinks
@@ -65,7 +65,7 @@ jobs:
       - run: go test ./...
         working-directory: ${{ matrix.modules }}
       - name: golangci-lint ${{ matrix.modules }}
-        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # ratchet:golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@0a35821d5c230e903fcfe077583637dea1b27b47 # ratchet:golangci/golangci-lint-action@v9
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: ${{ matrix.modules }}
@@ -95,7 +95,7 @@ jobs:
         with:
           args: "format --check --diff"
       - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1 # ratchet:astral-sh/ruff-action@v3
-      - uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # ratchet:astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # ratchet:astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - name: Install deps
