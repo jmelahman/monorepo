@@ -31,6 +31,36 @@ Only incrementing the trailing pre-release identifier is currently supported.
 
 `tag` authoritatively discourages duplicate tags for a single commit.
 
+For the most up-to-date options, run `tag --help`,
+
+```
+$ tag --help
+Calculate the next semantic version tag
+
+Usage:
+  tag [flags]
+  tag [command]
+
+Available Commands:
+  completion  Generate completion script
+  help        Help about any command
+
+Flags:
+  -h, --help              help for tag
+      --major             increment the major version
+      --metadata string   set the build metadata
+      --minor             increment the minor version
+      --patch             increment the patch version
+      --prefix string     set a prefix for the tag
+      --print-only        print the next tag and exit
+      --push              create and push the tag to remote
+      --remote string     remote repository to push tag to (default "origin")
+      --suffix string     set the pre-release suffix (e.g., rc, alpha, beta)
+  -v, --version           version for tag
+
+Use "tag [command] --help" for more information about a command.
+```
+
 ### Autocomplete
 
 `tag` provides autocomplete for `bash`, `fish`, `powershell` and `zsh` shells.
