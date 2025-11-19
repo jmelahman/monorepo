@@ -15,16 +15,10 @@ services:
     image: ollama/ollama:rocm
     restart: unless-stopped
     container_name: ollama
-    environment:
-      OLLAMA_CONTEXT_LENGTH: 131072
-      HSA_OVERRIDE_GFX_VERSION: 11.0.2
     ports:
       - 11434:11434
     volumes:
       - ollama_data:/root/.ollama
-    devices:
-      - /dev/kfd
-      - /dev/dri
 
 volumes:
   ollama_data:
