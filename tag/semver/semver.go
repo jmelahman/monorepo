@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Version struct {
@@ -91,7 +93,14 @@ func CompareSemver(v1, v2 *Version) bool {
 	return false
 }
 
-func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
+func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incPatch bool, suffix string, logger *logrus.Logger) (string, error) {
+	logger.WithFields(logrus.Fields{
+		"latest": tag,
+		"major":  incMajor,
+		"minor":  incMinor,
+		"patch":  incPatch,
+		"suffix": suffix,
+	}).Debug("Calculating next version")
 	// Parse the current version
 	version, err := ParseSemver(tag)
 	if err != nil {
@@ -135,5 +144,7 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 
 	version.PreRelease = suffix
 
-	return version.String(), nil
+	nextVersion := version.String()
+	logger.WithField("nextVersion", nextVersion).Debug("Calculated next version")
+	return nextVersion, nil
 }
