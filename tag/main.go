@@ -9,14 +9,13 @@ import (
 	"github.com/jmelahman/tag/completion"
 	"github.com/jmelahman/tag/git"
 	"github.com/jmelahman/tag/semver"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
 	version = "dev"
 	commit  = "none"
-	logger  *logrus.Logger
 )
 
 func main() {
@@ -43,15 +42,13 @@ func main() {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			logger = logrus.New()
-			logger.SetOutput(os.Stderr)
 			if debug {
-				logger.SetLevel(logrus.DebugLevel)
+				log.SetLevel(log.DebugLevel)
 			} else {
-				logger.SetLevel(logrus.InfoLevel)
+				log.SetLevel(log.InfoLevel)
 			}
 
-			logger.WithFields(logrus.Fields{
+			log.WithFields(log.Fields{
 				"prefix": prefix,
 				"suffix": suffix,
 				"remote": remote,
@@ -60,13 +57,13 @@ func main() {
 				"patch":  patch,
 			}).Debug("Configuration")
 
-			if err := git.FetchSemverTags(remote, prefix, suffix, logger); err != nil {
+			if err := git.FetchSemverTags(remote, prefix, suffix); err != nil {
 				fmt.Printf("Error fetching tags: %v\n", err)
 				os.Exit(1)
 			}
 
 			// Check if HEAD is already tagged
-			alreadyTagged, err := git.IsHEADAlreadyTagged(prefix, suffix, logger)
+			alreadyTagged, err := git.IsHEADAlreadyTagged(prefix, suffix)
 			if err != nil {
 				fmt.Printf("Error checking tags: %v\n", err)
 				os.Exit(1)
@@ -76,19 +73,19 @@ func main() {
 				os.Exit(1)
 			}
 
-			latestTag, err := git.GetLatestSemverTag(prefix, suffix, logger)
+			latestTag, err := git.GetLatestSemverTag(prefix, suffix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			allTags, err := git.ListTags(prefix, suffix, logger)
+			allTags, err := git.ListTags(prefix, suffix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			nextVersion, err := semver.CalculateNextVersion(latestTag, allTags, major, minor, patch, suffix, logger)
+			nextVersion, err := semver.CalculateNextVersion(latestTag, allTags, major, minor, patch, suffix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
@@ -98,7 +95,7 @@ func main() {
 				nextVersion = fmt.Sprint(nextVersion, "+", metadata)
 			}
 
-			tagExists, err := git.TagExists(nextVersion, logger)
+			tagExists, err := git.TagExists(nextVersion)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
@@ -126,7 +123,7 @@ func main() {
 			}
 
 			if push {
-				if err := git.CreateAndPushTag(nextVersion, remote, logger); err != nil {
+				if err := git.CreateAndPushTag(nextVersion, remote); err != nil {
 					fmt.Printf("Error: %v\n", err)
 					os.Exit(1)
 				}
