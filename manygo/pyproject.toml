@@ -41,5 +41,6 @@ pythonpath = ["."]
 
 [dependency-groups]
 dev = [
-    "pytest",
+    "pytest>=8.4.0",
+    "ty>=0.0.1a28",
 ]
