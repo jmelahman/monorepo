@@ -62,6 +62,20 @@ wheels = [
 ]
 
 [[package]]
+name = "check-symlinks"
+version = "0.5.3"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3a/e8/d7e734d2c34679649f29e320bc8b03411230c92568c024318976d2370998/check_symlinks-0.5.3-py3-none-any.whl", hash = "sha256:a3c7cc5022de46268ea16587db8a7463c4ebed1c39b942dd968a6bc26eebd8fd", size = 1058818, upload-time = "2025-08-19T10:39:08.233Z" },
+    { url = "https://files.pythonhosted.org/packages/44/17/62a608697ff0bc4d1dd7e1c76d85bd822dcecab20c149f2147edc756d9dd/check_symlinks-0.5.3-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:293c50afc1b506e67c5fcd05f3174b6f2c440ef1a1502e77d224fe0f1beaa185", size = 1073990, upload-time = "2025-08-19T11:05:07.72Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/5c/b2a8cc7f7a2245fc3e42578f237d4b5399d5550c2539abb0f15c8d431319/check_symlinks-0.5.3-py3-none-macosx_11_0_arm64.whl", hash = "sha256:47437ed03f4fbcd3d33d6de6384bc4de5dceffc1d71e2e07571b057836f766fa", size = 1020887, upload-time = "2025-08-19T10:39:05.476Z" },
+    { url = "https://files.pythonhosted.org/packages/61/ba/04c571304c497df4e71f9cb1bacb43ae4bfb720ad206886b92cf461ab53a/check_symlinks-0.5.3-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:362f3f862c38c26ecd1b14b247754556b4e013f457028d07140998613cacbba9", size = 977333, upload-time = "2025-08-19T10:39:04.093Z" },
+    { url = "https://files.pythonhosted.org/packages/54/8f/ba47034dcc2d1d1140e8965e5a0b6eb49e7db907f6563a31568c8b37a7ea/check_symlinks-0.5.3-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:307b7b512e9cd2fe08c46e8b873cf1847d009e2241b6b7c44431c62945c1dd9e", size = 1058835, upload-time = "2025-08-19T10:39:06.532Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/af/8c7e012587c712d95265029eb7581f417fb5792f68d60e1c9ffe1db0fc09/check_symlinks-0.5.3-py3-none-win_amd64.whl", hash = "sha256:76973a00fc9259fcda4c79dc5c4793688e7565d5e775f158acf92df3f256861a", size = 1163856, upload-time = "2025-08-19T10:39:07.384Z" },
+    { url = "https://files.pythonhosted.org/packages/16/2b/829138ab40b98f3c8caa59eab99996216e0315db0a944f866bb2e6a33f81/check_symlinks-0.5.3-py3-none-win_arm64.whl", hash = "sha256:4c9b8f7912ee68baddaa91fdccef1109f9aa11adad2edd1fbd3cb05c04630121", size = 1063177, upload-time = "2025-08-19T10:39:07.248Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -141,6 +155,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "check-symlinks" },
     { name = "hatchling" },
     { name = "manygo" },
     { name = "pytest" },
@@ -156,6 +171,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "check-symlinks", specifier = ">=0.5.3" },
     { name = "hatchling", specifier = ">=1.27.0" },
     { name = "manygo", editable = "manygo" },
     { name = "pytest", specifier = ">=8.4.0" },

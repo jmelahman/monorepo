@@ -23,7 +23,7 @@ jobs:
         with:
           enable-cache: true
       - name: Run check-symlinks
-        run: uvx check-symlinks
+        run: uv run check-symlinks
   detect-modules:
     runs-on: ubuntu-latest
     outputs:
@@ -101,6 +101,6 @@ jobs:
       - name: Install deps
         run: uv sync --locked --all-extras --dev
       - name: Run type-checking
-        run: uvx ty check
+        run: uv run ty check
       - name: Run tests
-        run: uvx pytest
+        run: uv run pytest

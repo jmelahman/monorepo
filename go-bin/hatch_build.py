@@ -19,7 +19,7 @@ class GoBinaryBuildHook(BuildHookInterface):
         goos = os.getenv("GOOS")
         goarch = os.getenv("GOARCH")
         if goos and goarch:
-            build_data["tag"] = "py3-none-" + manygo.get_platform_tag(goos=goos, goarch=goarch)
+            build_data["tag"] = "py3-none-" + manygo.get_platform_tag(goos=goos, goarch=goarch)  # type: ignore[invalid-argument-type]
         tag = os.environ["GITHUB_REF_NAME"]
         match = re.search(r"v(\d+\.\d+\.\d+)(?:\.\d+)?", tag)
         assert match is not None
