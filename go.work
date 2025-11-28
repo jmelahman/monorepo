@@ -15,6 +15,5 @@ use (
 	./runtainer
 	./smart-lights
 	./tag
-	./tools/gha_metrics
 	./work
 )
