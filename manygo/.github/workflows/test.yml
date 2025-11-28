@@ -24,6 +24,6 @@ jobs:
         with:
           enable-cache: true
       - name: Run type-checking
-        run: uvx ty check --ignore unresolved-import
+        run: uv run ty check
       - name: Run tests
-        run: uvx pytest
+        run: uv run pytest
