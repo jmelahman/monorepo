@@ -9,7 +9,7 @@ def test_get_platform_tag_darwin() -> None:
     assert get_platform_tag("darwin", "amd64") == "macosx_10_12_x86_64"
     assert get_platform_tag("darwin", "arm64") == "macosx_11_0_arm64"
     with pytest.raises(ValueError):  # noqa: PT011
-        get_platform_tag("darwin", "386")
+        get_platform_tag("darwin", "386")  # type: ignore[arg-type]
 
 
 def test_get_platform_tag_linux() -> None:
@@ -32,16 +32,16 @@ def test_get_platform_tag_other_architectures() -> None:
 
     # Unsupported OS
     with pytest.raises(ValueError):  # noqa: PT011
-        get_platform_tag("freebsd", "amd64")
+        get_platform_tag("freebsd", "amd64")  # type: ignore[arg-type]
 
     # Unsupported architecture for a supported OS
     with pytest.raises(ValueError):  # noqa: PT011
-        get_platform_tag("darwin", "ppc64")
+        get_platform_tag("darwin", "ppc64")  # type: ignore[arg-type]
 
     # Unsupported architecture for Linux
     with pytest.raises(ValueError):  # noqa: PT011
-        get_platform_tag("linux", "mips")
+        get_platform_tag("linux", "mips")  # type: ignore[arg-type]
 
     # Unsupported combination
     with pytest.raises(ValueError):  # noqa: PT011
-        get_platform_tag("windows", "s390x")
+        get_platform_tag("windows", "s390x")  # type: ignore[arg-type]
