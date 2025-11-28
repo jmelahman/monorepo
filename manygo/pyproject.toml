@@ -31,9 +31,15 @@ Repository = "https://github.com/jmelahman/manygo"
 
 [tool.hatch.version]
 source = "vcs"
+fallback-version = "v0.0.0-dev"
 
 [tool.setuptools.package-data]
 manygo = ["py.typed", "*.pyi"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
