@@ -8,6 +8,7 @@ requires-python = ">=3.13"
 dependencies = [
     "selenium>=4.35.0",
     "tweepy>=4.15.0",
+    "zizmor>=1.18.0",
 ]
 
 [tool.ruff]

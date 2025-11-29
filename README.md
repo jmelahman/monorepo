@@ -74,7 +74,7 @@ find . -name go.mod -execdir go get -u ./... \;
 Check for broken symlinks,
 
 ```shell
-uvx check-symlinks
+uv run check-symlinks
 ```
 ### Golang
 
@@ -85,13 +85,13 @@ find . -name go.mod -execdir golangci-lint run ./... \;
 ### Github Actions
 
 ```
-uvx zizmor $(fd --hidden --type file --extension yml --full-path .github/workflows)
+uv run zizmor $(fd --hidden --type file --extension yml --full-path .github/workflows)
 ```
 
 ### Python
 
 ```shell
-uvx ruff check
+uv run ruff check
 ```
 
 ### Shell
@@ -105,8 +105,7 @@ uvx ruff check
 ### Python
 
 ```shell
-uv sync
-uvx ty check
+uv run ty check
 ```
 
 ## Formatting
@@ -114,7 +113,7 @@ uvx ty check
 ### Python
 
 ```shell
-uvx ruff format
+uv run ruff format
 ```
 
 ### Shell
