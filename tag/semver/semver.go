@@ -93,11 +93,21 @@ func CompareSemver(v1, v2 *Version) bool {
 	return false
 }
 
-// FindPreviousVersion finds the tag immediately before the given tag by semver ordering
+// FindPreviousVersion finds the previous stable version tag before the given tag.
+// It only considers stable releases (no pre-release suffix) to avoid requiring
+// pre-releases of the same version to be ancestors of each other.
 func FindPreviousVersion(currentTag string, allTags []string) (string, error) {
 	currentVersion, err := ParseSemver(currentTag)
 	if err != nil {
 		return "", err
+	}
+
+	// Create a stable version of current for comparison (strip pre-release)
+	currentStable := &Version{
+		Prefix: currentVersion.Prefix,
+		Major:  currentVersion.Major,
+		Minor:  currentVersion.Minor,
+		Patch:  currentVersion.Patch,
 	}
 
 	var previousTag string
@@ -118,12 +128,17 @@ func FindPreviousVersion(currentTag string, allTags []string) (string, error) {
 			continue
 		}
 
-		// Skip versions that are >= current version
-		if CompareSemver(version, currentVersion) || versionsEqual(version, currentVersion) {
+		// Skip pre-release versions - we only want stable releases as ancestors
+		if version.PreRelease != "" {
 			continue
 		}
 
-		// Keep track of the largest version that is still less than current
+		// Skip versions that are >= current stable version
+		if CompareSemver(version, currentStable) || versionsEqual(version, currentStable) {
+			continue
+		}
+
+		// Keep track of the largest stable version that is still less than current
 		if previousVersion == nil || CompareSemver(version, previousVersion) {
 			previousTag = tag
 			previousVersion = version
