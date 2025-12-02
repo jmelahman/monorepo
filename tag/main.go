@@ -153,13 +153,38 @@ func main() {
 				os.Exit(1)
 			}
 
-			latestTag, err := git.GetLatestSemverTag(prefix, suffix)
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-				os.Exit(1)
-			}
+		latestTag, err := git.GetLatestSemverTag(prefix, suffix)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
 
-			allTags, err := git.ListTags(prefix, suffix)
+		// When using a suffix, also check the latest stable tag to ensure we
+		// don't create a pre-release based on an older version than the latest stable
+		if suffix != "" {
+			latestStableTag, err := git.GetLatestStableSemverTag(prefix)
+			if err == nil && latestStableTag != "" {
+				stableVer, stableErr := semver.ParseSemver(latestStableTag)
+				currentVer, currentErr := semver.ParseSemver(latestTag)
+
+				if stableErr == nil && currentErr == nil {
+					// Compare base versions (major.minor.patch only)
+					stableBase := &semver.Version{Major: stableVer.Major, Minor: stableVer.Minor, Patch: stableVer.Patch}
+					currentBase := &semver.Version{Major: currentVer.Major, Minor: currentVer.Minor, Patch: currentVer.Patch}
+
+					// Use stable tag if it has a higher or equal base version
+					if semver.CompareSemver(stableBase, currentBase) || (stableBase.Major == currentBase.Major && stableBase.Minor == currentBase.Minor && stableBase.Patch == currentBase.Patch) {
+						log.WithFields(log.Fields{
+							"stableTag":     latestStableTag,
+							"preReleaseTag": latestTag,
+						}).Debug("Using stable tag as base (higher or equal base version)")
+						latestTag = latestStableTag
+					}
+				}
+			}
+		}
+
+		allTags, err := git.ListTags(prefix, suffix)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
