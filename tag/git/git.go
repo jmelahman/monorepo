@@ -247,6 +247,77 @@ func FetchSemverTags(remote string, prefix, suffix string) error {
 	return nil
 }
 
+// GetTagAtHEAD returns the semver tag at HEAD, or empty string if none exists
+func GetTagAtHEAD(prefix, suffix string) (string, error) {
+	tagPattern := genTagPattern(prefix, suffix)
+	log.WithFields(log.Fields{
+		"pattern": tagPattern,
+		"prefix":  prefix,
+		"suffix":  suffix,
+	}).Debug("GetTagAtHEAD")
+	cmd := exec.Command("git", "tag", "--points-at", "HEAD", "--list", tagPattern)
+	cmd.Stderr = os.Stderr
+	output, err := cmd.Output()
+	if err != nil {
+		log.WithError(err).Debug("GetTagAtHEAD: error checking tags")
+		return "", fmt.Errorf("failed to check tags for HEAD: %w", err)
+	}
+	tags := strings.TrimSpace(string(output))
+	if tags == "" {
+		log.Debug("GetTagAtHEAD: no tags found at HEAD")
+		return "", nil
+	}
+
+	// If multiple tags exist, find the largest one
+	tagList := strings.Split(tags, "\n")
+	var largestTag string
+	var largestVersion *semver.Version
+
+	for _, tag := range tagList {
+		if tag == "" {
+			continue
+		}
+		version, err := semver.ParseSemver(tag)
+		if err != nil {
+			log.WithError(err).WithField("tag", tag).Debug("GetTagAtHEAD: failed to parse tag")
+			continue
+		}
+
+		// Check suffix match if specified
+		if suffix != "" && version.PreRelease != suffix {
+			continue
+		}
+
+		if largestVersion == nil || semver.CompareSemver(version, largestVersion) {
+			largestTag = tag
+			largestVersion = version
+		}
+	}
+
+	log.WithField("tag", largestTag).Debug("GetTagAtHEAD: returning tag at HEAD")
+	return largestTag, nil
+}
+
+// IsAncestor checks if ancestorRef is an ancestor of descendantRef
+func IsAncestor(ancestorRef, descendantRef string) (bool, error) {
+	log.WithFields(log.Fields{
+		"ancestor":   ancestorRef,
+		"descendant": descendantRef,
+	}).Debug("IsAncestor: checking ancestry")
+	cmd := exec.Command("git", "merge-base", "--is-ancestor", ancestorRef, descendantRef)
+	err := cmd.Run()
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
+			log.Debug("IsAncestor: not an ancestor")
+			return false, nil
+		}
+		log.WithError(err).Debug("IsAncestor: error checking ancestry")
+		return false, err
+	}
+	log.Debug("IsAncestor: is an ancestor")
+	return true, nil
+}
+
 func IsHEADAlreadyTagged(prefix, suffix string) (bool, error) {
 	tagPattern := genTagPattern(prefix, suffix)
 	log.WithFields(log.Fields{

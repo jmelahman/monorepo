@@ -19,7 +19,7 @@ var (
 )
 
 func main() {
-	var major, minor, patch, push, print bool
+	var major, minor, patch, push, print, check bool
 	var metadata, prefix, suffix, remote string
 	var debug bool
 
@@ -55,11 +55,52 @@ func main() {
 				"major":  major,
 				"minor":  minor,
 				"patch":  patch,
+				"check":  check,
 			}).Debug("Configuration")
 
 			if err := git.FetchSemverTags(remote, prefix, suffix); err != nil {
 				fmt.Printf("Error fetching tags: %v\n", err)
 				os.Exit(1)
+			}
+
+			// Handle --check flag: validate that the tag at HEAD has its previous version as an ancestor
+			if check {
+				currentTag, err := git.GetTagAtHEAD(prefix, suffix)
+				if err != nil {
+					fmt.Printf("Error getting tag at HEAD: %v\n", err)
+					os.Exit(1)
+				}
+				if currentTag == "" {
+					fmt.Println("Error: HEAD is not tagged")
+					os.Exit(1)
+				}
+
+				allTags, err := git.ListTags(prefix, suffix)
+				if err != nil {
+					fmt.Printf("Error listing tags: %v\n", err)
+					os.Exit(1)
+				}
+
+				previousTag, err := semver.FindPreviousVersion(currentTag, allTags)
+				if err != nil {
+					// No previous version means this is the first version, which is valid
+					fmt.Printf("Tag '%s' is valid (first version)\n", currentTag)
+					os.Exit(0)
+				}
+
+				isAncestor, err := git.IsAncestor(previousTag, "HEAD")
+				if err != nil {
+					fmt.Printf("Error checking ancestry: %v\n", err)
+					os.Exit(1)
+				}
+
+				if !isAncestor {
+					fmt.Printf("Error: Previous tag '%s' is not an ancestor of current tag '%s'\n", previousTag, currentTag)
+					os.Exit(1)
+				}
+
+				fmt.Printf("Tag '%s' is valid (previous version '%s' is an ancestor)\n", currentTag, previousTag)
+				os.Exit(0)
 			}
 
 			// Check if HEAD is already tagged
@@ -137,6 +178,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&patch, "patch", false, "increment the patch version")
 	rootCmd.Flags().BoolVar(&push, "push", false, "create and push the tag to remote")
 	rootCmd.Flags().BoolVar(&print, "print-only", false, "print the next tag and exit")
+	rootCmd.Flags().BoolVar(&check, "check", false, "validate that the tag at HEAD has its previous version as an ancestor")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "enable debug logging")
 	rootCmd.Flags().StringVar(&prefix, "prefix", "", "set a prefix for the tag")
 	rootCmd.Flags().StringVar(&suffix, "suffix", "", "set the pre-release suffix (e.g., rc, alpha, beta)")
