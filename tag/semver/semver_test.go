@@ -266,6 +266,22 @@ func TestCalculateNextVersion(t *testing.T) {
 			allTags:     []string{"v1.2.3-rc.1", "v1.2.3-beta.2"},
 			expectedTag: "v1.2.4",
 		},
+		// Bug fix: when stable version is higher than old pre-release,
+		// new pre-release should be based on stable (fixed in main.go)
+		{
+			name:        "Suffix with stable version base (not old pre-release)",
+			currentTag:  "v1.0.1",
+			suffix:      "alpha",
+			allTags:     []string{"v1.0.0", "v1.0.0-alpha", "v1.0.1"},
+			expectedTag: "v1.0.1-alpha",
+		},
+		{
+			name:        "Suffix with stable version base (not old pre-release)",
+			currentTag:  "v1.0.2",
+			suffix:      "alpha",
+			allTags:     []string{"v1.0.0", "v1.0.0-alpha", "v1.0.1", "v1.0.2"},
+			expectedTag: "v1.0.2-alpha",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -247,6 +247,80 @@ func FetchSemverTags(remote string, prefix, suffix string) error {
 	return nil
 }
 
+// GetLatestStableSemverTag returns the latest stable (non-pre-release) semver tag
+func GetLatestStableSemverTag(prefix string) (string, error) {
+	// Get all tags matching the base pattern (without suffix)
+	tagPattern := "v[0-9]*.[0-9]*.[0-9]*"
+	if prefix != "" {
+		tagPattern = fmt.Sprintf("%s/%s", prefix, tagPattern)
+	}
+	log.WithFields(log.Fields{
+		"pattern": tagPattern,
+		"prefix":  prefix,
+	}).Debug("GetLatestStableSemverTag")
+
+	cmd := exec.Command("git", "tag", "-l", tagPattern)
+	cmd.Stderr = os.Stderr
+	output, err := cmd.Output()
+	if err != nil {
+		log.WithError(err).Debug("GetLatestStableSemverTag: error listing tags")
+		if prefix == "" {
+			return "v0.0.0", nil
+		}
+		return fmt.Sprintf("%s/v0.0.0", prefix), nil
+	}
+
+	tagList := strings.Split(strings.TrimSpace(string(output)), "\n")
+	log.WithField("count", len(tagList)).Debug("GetLatestStableSemverTag: found tags")
+
+	var largestTag string
+	var largestVersion *semver.Version
+
+	expectedPrefix := ""
+	if prefix != "" {
+		expectedPrefix = prefix + "/"
+	}
+
+	for _, tag := range tagList {
+		if tag == "" {
+			continue
+		}
+
+		version, err := semver.ParseSemver(tag)
+		if err != nil {
+			log.WithError(err).WithField("tag", tag).Debug("GetLatestStableSemverTag: failed to parse tag")
+			continue
+		}
+
+		// Skip tags with different prefix
+		if version.Prefix != expectedPrefix {
+			continue
+		}
+
+		// Skip pre-release versions - we only want stable tags
+		if version.PreRelease != "" {
+			log.WithField("tag", tag).Debug("GetLatestStableSemverTag: skipping pre-release tag")
+			continue
+		}
+
+		if largestVersion == nil || semver.CompareSemver(version, largestVersion) {
+			largestTag = tag
+			largestVersion = version
+			log.WithField("tag", tag).Debug("GetLatestStableSemverTag: found newer stable tag")
+		}
+	}
+
+	if largestTag == "" {
+		if prefix == "" {
+			return "v0.0.0", nil
+		}
+		return fmt.Sprintf("%s/v0.0.0", prefix), nil
+	}
+
+	log.WithField("latestTag", largestTag).Debug("GetLatestStableSemverTag: returning latest stable tag")
+	return largestTag, nil
+}
+
 // GetTagAtHEAD returns the semver tag at HEAD, or empty string if none exists
 func GetTagAtHEAD(prefix, suffix string) (string, error) {
 	tagPattern := genTagPattern(prefix, suffix)
