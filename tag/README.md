@@ -46,6 +46,8 @@ Available Commands:
   help        Help about any command
 
 Flags:
+      --check             validate that the tag at HEAD has its previous version as an ancestor
+      --debug             enable debug logging
   -h, --help              help for tag
       --major             increment the major version
       --metadata string   set the build metadata
