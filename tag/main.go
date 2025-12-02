@@ -64,6 +64,7 @@ func main() {
 			}
 
 			// Handle --check flag: validate that the tag at HEAD has its previous version as an ancestor
+			// and no larger version is an ancestor
 			if check {
 				currentTag, err := git.GetTagAtHEAD(prefix, suffix)
 				if err != nil {
@@ -81,25 +82,63 @@ func main() {
 					os.Exit(1)
 				}
 
-				previousTag, err := semver.FindPreviousVersion(currentTag, allTags)
+				// Check that no larger version is an ancestor of HEAD
+				largerTags, err := semver.FindLargerVersions(currentTag, allTags)
 				if err != nil {
-					// No previous version means this is the first version, which is valid
+					fmt.Printf("Error finding larger versions: %v\n", err)
+					os.Exit(1)
+				}
+
+				for _, largerTag := range largerTags {
+					isAncestor, err := git.IsAncestor(largerTag, "HEAD")
+					if err != nil {
+						fmt.Printf("Error checking ancestry: %v\n", err)
+						os.Exit(1)
+					}
+					if isAncestor {
+						fmt.Printf("Error: Larger tag '%s' is an ancestor of current tag '%s'\n", largerTag, currentTag)
+						os.Exit(1)
+					}
+				}
+
+				// Check that the expected predecessor exists (no skipped versions)
+				expectedPred, err := semver.GetExpectedPredecessor(currentTag)
+				if err != nil {
+					fmt.Printf("Error getting expected predecessor: %v\n", err)
+					os.Exit(1)
+				}
+
+				if expectedPred == "" {
+					// v0.0.0 or similar - no predecessor expected
 					fmt.Printf("Tag '%s' is valid (first version)\n", currentTag)
 					os.Exit(0)
 				}
 
-				isAncestor, err := git.IsAncestor(previousTag, "HEAD")
+				// Check if expected predecessor exists
+				predExists, err := git.TagExists(expectedPred)
+				if err != nil {
+					fmt.Printf("Error checking tag existence: %v\n", err)
+					os.Exit(1)
+				}
+
+				if !predExists {
+					fmt.Printf("Error: Expected predecessor tag '%s' does not exist (version skipped)\n", expectedPred)
+					os.Exit(1)
+				}
+
+				// Check that the expected predecessor is an ancestor
+				isAncestor, err := git.IsAncestor(expectedPred, "HEAD")
 				if err != nil {
 					fmt.Printf("Error checking ancestry: %v\n", err)
 					os.Exit(1)
 				}
 
 				if !isAncestor {
-					fmt.Printf("Error: Previous tag '%s' is not an ancestor of current tag '%s'\n", previousTag, currentTag)
+					fmt.Printf("Error: Previous tag '%s' is not an ancestor of current tag '%s'\n", expectedPred, currentTag)
 					os.Exit(1)
 				}
 
-				fmt.Printf("Tag '%s' is valid (previous version '%s' is an ancestor)\n", currentTag, previousTag)
+				fmt.Printf("Tag '%s' is valid (previous version '%s' is an ancestor)\n", currentTag, expectedPred)
 				os.Exit(0)
 			}
 
