@@ -93,6 +93,64 @@ func CompareSemver(v1, v2 *Version) bool {
 	return false
 }
 
+// FindPreviousVersion finds the tag immediately before the given tag by semver ordering
+func FindPreviousVersion(currentTag string, allTags []string) (string, error) {
+	currentVersion, err := ParseSemver(currentTag)
+	if err != nil {
+		return "", err
+	}
+
+	var previousTag string
+	var previousVersion *Version
+
+	for _, tag := range allTags {
+		if tag == "" || tag == currentTag {
+			continue
+		}
+		version, err := ParseSemver(tag)
+		if err != nil {
+			log.WithError(err).WithField("tag", tag).Debug("FindPreviousVersion: failed to parse tag")
+			continue
+		}
+
+		// Skip tags with different prefix
+		if version.Prefix != currentVersion.Prefix {
+			continue
+		}
+
+		// Skip versions that are >= current version
+		if CompareSemver(version, currentVersion) || versionsEqual(version, currentVersion) {
+			continue
+		}
+
+		// Keep track of the largest version that is still less than current
+		if previousVersion == nil || CompareSemver(version, previousVersion) {
+			previousTag = tag
+			previousVersion = version
+		}
+	}
+
+	if previousTag == "" {
+		return "", fmt.Errorf("no previous version found for %s", currentTag)
+	}
+
+	log.WithFields(log.Fields{
+		"currentTag":  currentTag,
+		"previousTag": previousTag,
+	}).Debug("FindPreviousVersion: found previous version")
+
+	return previousTag, nil
+}
+
+// versionsEqual checks if two versions are equal
+func versionsEqual(v1, v2 *Version) bool {
+	return v1.Major == v2.Major &&
+		v1.Minor == v2.Minor &&
+		v1.Patch == v2.Patch &&
+		v1.PreRelease == v2.PreRelease &&
+		v1.PreReleaseNum == v2.PreReleaseNum
+}
+
 func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incPatch bool, suffix string) (string, error) {
 	log.WithFields(log.Fields{
 		"latest": tag,
