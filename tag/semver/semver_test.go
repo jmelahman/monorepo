@@ -276,11 +276,11 @@ func TestCalculateNextVersion(t *testing.T) {
 			expectedTag: "v1.0.1-alpha",
 		},
 		{
-			name:        "Suffix with stable version base (not old pre-release)",
-			currentTag:  "v1.0.2",
+			name:        "Suffix with stable version base ",
+			currentTag:  "v1.0.1",
 			suffix:      "alpha",
-			allTags:     []string{"v1.0.0", "v1.0.0-alpha", "v1.0.1", "v1.0.2"},
-			expectedTag: "v1.0.2-alpha",
+			allTags:     []string{"v1.0.0", "v1.0.0-alpha.1", "v1.0.1"},
+			expectedTag: "v1.0.1-alpha",
 		},
 	}
 
