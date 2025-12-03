@@ -207,11 +207,14 @@ func CalculateNextVersion(tag string, allTags []string, incMajor, incMinor, incP
 		version.PreReleaseNum = 0
 	} else if version.PreRelease != suffix {
 		// TODO: This should probably only consider tags with HEAD as an ancestor.
-		// Find the largest PreReleaseNum for the given suffix
+		// Find the largest PreReleaseNum for the given suffix with the same base version
 		largestPreReleaseNum := 0
 		for _, existingTag := range allTags {
 			existingVersion, err := ParseSemver(existingTag)
-			if err == nil && existingVersion.PreRelease == suffix {
+			if err == nil && existingVersion.PreRelease == suffix &&
+				existingVersion.Major == version.Major &&
+				existingVersion.Minor == version.Minor &&
+				existingVersion.Patch == version.Patch {
 				if existingVersion.PreReleaseNum > largestPreReleaseNum {
 					largestPreReleaseNum = existingVersion.PreReleaseNum
 				}
