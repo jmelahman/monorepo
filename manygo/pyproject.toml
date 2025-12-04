@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "manygo"
 description = "Python library with helpers for packaging golang source code"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "MIT"
 authors = [
     { name = "Jamison Lahman", email = "jamison@lahman.dev" }
@@ -41,6 +41,6 @@ pythonpath = ["."]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.0",
-    "ty>=0.0.1a28",
+    "pytest>=9.0.1",
+    "ty>=0.0.1a31",
 ]
