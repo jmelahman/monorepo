@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TypeGuard
 
 # Supported Go operating systems with known platform tags
 GOOS = Literal["darwin", "linux", "windows"]
 
 # Supported Go architectures with known platform tags
 GOARCH = Literal["amd64", "arm64", "386", "arm", "s390x", "ppc64le", "ppc64"]
+
+
+def is_goos(value: str | None) -> TypeGuard[GOOS]:
+    return value in ("darwin", "linux", "windows")
+
+
+def is_goarch(value: str | None) -> TypeGuard[GOARCH]:
+    return value in ("amd64", "arm64", "386", "arm", "s390x", "ppc64le", "ppc64")
 
 
 def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
