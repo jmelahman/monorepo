@@ -1,5 +1,6 @@
 const feeds = [
   { title: "Thorsten Ball", url: "https://registerspill.thorstenball.com/feed" },
+  { title: "Uros Popovic", url: "https://popovicu.com/rss.xml" },
   { title: "Kyla Scanlon", url: "https://kyla.substack.com/feed" },
   { title: "Sam Harris", url: "https://wakingup.libsyn.com/rss" },
   { title: "Pragmatic Engineer", url: "https://newsletter.pragmaticengineer.com/feed" },
