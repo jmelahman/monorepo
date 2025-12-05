@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -36,7 +35,7 @@ func init() {
 	rootCmd.Flags().Int("ftp", 0, "FTP value")
 	rootCmd.Flags().String("power-meter", "", "Power meter bluetooth address")
 	rootCmd.Flags().String("smart-light", "", "Smart light bluetooth address")
-	
+
 	// Zwift API flags
 	rootCmd.Flags().String("zwift-email", "", "Zwift account email")
 	rootCmd.Flags().String("zwift-password", "", "Zwift account password")
@@ -406,14 +405,14 @@ var rootCmd = &cobra.Command{
 			}
 
 			fmt.Println("Monitoring power data from Zwift and controlling lights. Press Ctrl+C to exit.")
-			
+
 			// Create context for cancellation
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			
+
 			// Start monitoring in a goroutine
 			go zwiftClient.StartPowerMonitoring(lightDevice, ftp, ctx)
-			
+
 			// Keep the program running
 			select {}
 		} else {
