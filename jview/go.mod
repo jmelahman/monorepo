@@ -3,7 +3,7 @@ module github.com/jmelahman/jview
 go 1.25.1
 
 require (
-	github.com/gdamore/tcell/v2 v2.12.2
+	github.com/gdamore/tcell/v2 v2.13.2
 	github.com/rivo/tview v0.42.0
 )
 

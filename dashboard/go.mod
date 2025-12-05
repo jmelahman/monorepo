@@ -5,9 +5,9 @@ go 1.24.4
 replace github.com/jmelahman/work => ../work
 
 require (
-	github.com/gdamore/tcell/v2 v2.12.2
+	github.com/gdamore/tcell/v2 v2.13.2
 	github.com/google/go-github/v57 v57.0.0
-	github.com/jmelahman/docker-status v0.0.0-20251117164523-dbbaa31f0d98
+	github.com/jmelahman/docker-status v0.0.0-20251128202954-4ec88911e30b
 	github.com/jmelahman/work v1.0.12
 	github.com/rivo/tview v0.42.0
 	golang.org/x/oauth2 v0.33.0
