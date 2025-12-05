@@ -5,8 +5,9 @@ go 1.25.1
 require (
 	github.com/jmelahman/cycle-cli v0.0.2
 	github.com/jmelahman/smart-lights v0.1.0
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+	golang.org/x/oauth2 v0.33.0
 	tinygo.org/x/bluetooth v0.13.0
 )
 

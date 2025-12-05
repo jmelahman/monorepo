@@ -4,9 +4,9 @@ go 1.24.4
 
 require (
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203
-	github.com/gdamore/tcell/v2 v2.12.2
+	github.com/gdamore/tcell/v2 v2.13.2
 	github.com/gopxl/beep/v2 v2.1.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 )
 
 require (
