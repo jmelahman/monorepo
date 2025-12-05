@@ -2,8 +2,6 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/gdamore/encoding v1.0.1 h1:YzKZckdBL6jVt2Gc+5p82qhrGiqMdG/eNs6Wy0u3Uhw=
 github.com/gdamore/encoding v1.0.1/go.mod h1:0Z0cMFinngz9kS1QfMjCP8TY7em3bZYeeklsSDPivEo=
-github.com/gdamore/tcell/v2 v2.12.2 h1:7hBtHPlPGNH6/ZLl22eLl7q0kfNsL+FGEggcWZuk6jk=
-github.com/gdamore/tcell/v2 v2.12.2/go.mod h1:+Wfe208WDdB7INEtCsNrAN6O2m+wsTPk1RAovjaILlo=
 github.com/gdamore/tcell/v2 v2.13.2 h1:5j4srfF8ow3HICOv/61/sOhQtA25qxEB2XR3Q/Bhx2g=
 github.com/gdamore/tcell/v2 v2.13.2/go.mod h1:+Wfe208WDdB7INEtCsNrAN6O2m+wsTPk1RAovjaILlo=
 github.com/google/go-cmp v0.5.2/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
@@ -13,8 +11,6 @@ github.com/google/go-github/v57 v57.0.0 h1:L+Y3UPTY8ALM8x+TV0lg+IEBI+upibemtBD8Q
 github.com/google/go-github/v57 v57.0.0/go.mod h1:s0omdnye0hvK/ecLvpsGfJMiRt85PimQh4oygmLIxHw=
 github.com/google/go-querystring v1.1.0 h1:AnCroh3fv4ZBgVIf1Iwtovgjaw/GiKJo8M8yD/fhyJ8=
 github.com/google/go-querystring v1.1.0/go.mod h1:Kcdr2DB4koayq7X8pmAG4sNG59So17icRSOU623lUBU=
-github.com/jmelahman/docker-status v0.0.0-20251117164523-dbbaa31f0d98 h1:SLPziWGC71WToQDWgnwkp1mml3PSPcM28dhGzl5Ve6U=
-github.com/jmelahman/docker-status v0.0.0-20251117164523-dbbaa31f0d98/go.mod h1:xPIJzKNxfP25hAQbeS/f/jFjFDomGgJ1LgmxShilfm4=
 github.com/jmelahman/docker-status v0.0.0-20251128202954-4ec88911e30b h1:0IAAox3t2Z8K1SMBOtacA1qlU98DKfDPB1TYWiraXvc=
 github.com/jmelahman/docker-status v0.0.0-20251128202954-4ec88911e30b/go.mod h1:aVjLI4PHK/u/hHAd57T6oWFzbUNhH7anW2xvxvHxdG0=
 github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQwVHXptag=
