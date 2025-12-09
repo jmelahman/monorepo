@@ -7,3 +7,5 @@ updates:
     open-pull-requests-limit: 3
     labels:
       - "dependabot:actions"
+    cooldown:
+      default-days: 7
