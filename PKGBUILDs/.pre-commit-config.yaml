@@ -1,4 +1,4 @@
-orhan: true
+orphan: true
 repos:
   - repo: local
     hooks:
