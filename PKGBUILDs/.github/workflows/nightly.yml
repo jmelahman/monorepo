@@ -40,6 +40,7 @@ jobs:
               git commit -am "$MESSAGE"
               git push -f -u origin "$BRANCH"
               gh pr create --base master --head "$BRANCH" --fill
+              gh pr merge --auto --squash "$BRANCH"
             fi
           done
         env:
