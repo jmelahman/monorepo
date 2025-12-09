@@ -1,3 +1,4 @@
+orhan: true
 repos:
   - repo: local
     hooks:
