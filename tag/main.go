@@ -21,7 +21,7 @@ var (
 func main() {
 	var major, minor, patch, push, print, check bool
 	var metadata, prefix, suffix, remote string
-	var debug bool
+	var debug, noFetch, allowUntagged bool
 
 	rootCmd := &cobra.Command{
 		Use:     "tag",
@@ -49,18 +49,22 @@ func main() {
 			}
 
 			log.WithFields(log.Fields{
-				"prefix": prefix,
-				"suffix": suffix,
-				"remote": remote,
-				"major":  major,
-				"minor":  minor,
-				"patch":  patch,
-				"check":  check,
+				"prefix":        prefix,
+				"suffix":        suffix,
+				"remote":        remote,
+				"major":         major,
+				"minor":         minor,
+				"patch":         patch,
+				"check":         check,
+				"noFetch":       noFetch,
+				"allowUntagged": allowUntagged,
 			}).Debug("Configuration")
 
-			if err := git.FetchSemverTags(remote, prefix, suffix); err != nil {
-				fmt.Printf("Error fetching tags: %v\n", err)
-				os.Exit(1)
+			if !noFetch {
+				if err := git.FetchSemverTags(remote, prefix, suffix); err != nil {
+					fmt.Printf("Error fetching tags: %v\n", err)
+					os.Exit(1)
+				}
 			}
 
 			// Handle --check flag: validate that the tag at HEAD has its previous version as an ancestor
@@ -72,6 +76,10 @@ func main() {
 					os.Exit(1)
 				}
 				if currentTag == "" {
+					if allowUntagged {
+						fmt.Println("HEAD is not tagged (allowed)")
+						os.Exit(0)
+					}
 					fmt.Println("Error: HEAD is not tagged")
 					os.Exit(1)
 				}
@@ -243,6 +251,8 @@ func main() {
 	rootCmd.Flags().BoolVar(&push, "push", false, "create and push the tag to remote")
 	rootCmd.Flags().BoolVar(&print, "print-only", false, "print the next tag and exit")
 	rootCmd.Flags().BoolVar(&check, "check", false, "validate that the tag at HEAD has its previous version as an ancestor")
+	rootCmd.Flags().BoolVar(&noFetch, "no-fetch", false, "skip fetching tags from remote")
+	rootCmd.Flags().BoolVar(&allowUntagged, "allow-untagged", false, "allow HEAD to be untagged when using --check")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "enable debug logging")
 	rootCmd.Flags().StringVar(&prefix, "prefix", "", "set a prefix for the tag")
 	rootCmd.Flags().StringVar(&suffix, "suffix", "", "set the pre-release suffix (e.g., rc, alpha, beta)")
