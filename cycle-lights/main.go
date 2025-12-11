@@ -154,7 +154,11 @@ func NewZwiftClient(email, password string, userID int) (*ZwiftClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Error closing response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -213,7 +217,11 @@ func (z *ZwiftClient) GetProfile() (*ZwiftProfile, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Error closing response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("get profile failed: %d", resp.StatusCode)
@@ -240,7 +248,11 @@ func (z *ZwiftClient) GetRiderState(worldID, userID int64) (*ZwiftRiderState, er
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Error closing response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("get rider state failed: %d", resp.StatusCode)
@@ -274,7 +286,11 @@ func (z *ZwiftClient) GetRiderState(worldID, userID int64) (*ZwiftRiderState, er
 	if err != nil {
 		return nil, err
 	}
-	defer worldResp.Body.Close()
+	defer func() {
+		if err := worldResp.Body.Close(); err != nil {
+			log.Printf("Error closing response body: %v", err)
+		}
+	}()
 
 	if worldResp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("get world rider state failed: %d", worldResp.StatusCode)
@@ -518,8 +534,6 @@ var rootCmd = &cobra.Command{
 			fmt.Println("Monitoring power data and controlling lights. Press Ctrl+C to exit.")
 			select {}
 		}
-
-		return nil
 	},
 }
 
