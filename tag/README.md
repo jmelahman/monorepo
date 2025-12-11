@@ -103,3 +103,20 @@ go install github.com/jmelahman/tag@latest
 **github:**
 
 Prebuilt packages are available from [Github Releases](https://github.com/jmelahman/tag/releases).
+
+### Pre-commit
+
+In your `.pre-commit-config.yaml`,
+
+```yaml
+default_install_hook_types:
+  - pre-push
+repos:
+  - repo: https://github.com/jmelahman/tag
+    rev: a069af54b5de5379d3581e3fc027395d1ad0a982  # frozen: v0.5.0
+    hooks:
+      - id: tag-check
+```
+
+By default, it only runs on the [`pre-push`](git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) stage,
+so you may need to install the `pre-push` hook after staging your changes.
