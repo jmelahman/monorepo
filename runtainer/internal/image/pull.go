@@ -21,7 +21,7 @@ func getCacheFilePath() string {
 func loadImageCache() (*imageCache, error) {
 	cachePath := getCacheFilePath()
 	cache := &imageCache{RefToID: make(map[string]string)}
-	
+
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -29,12 +29,12 @@ func loadImageCache() (*imageCache, error) {
 		}
 		return nil, err
 	}
-	
+
 	err = json.Unmarshal(data, cache)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return cache, nil
 }
 
@@ -44,12 +44,12 @@ func saveImageCache(cache *imageCache) error {
 	if err != nil {
 		return err
 	}
-	
+
 	err = os.MkdirAll(filepath.Dir(cachePath), 0755)
 	if err != nil {
 		return err
 	}
-	
+
 	return os.WriteFile(cachePath, data, 0644)
 }
 
@@ -59,7 +59,7 @@ func PullImage(ref string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to load image cache: %w", err)
 	}
-	
+
 	if imageID, exists := cache.RefToID[ref]; exists {
 		// Check if the image files still exist
 		imageDir := filepath.Join(paths.ImageDir(), imageID)

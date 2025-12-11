@@ -66,4 +66,3 @@ imageUpload.addEventListener('change', async (event) => {
     });
   };
 });
-
