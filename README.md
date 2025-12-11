@@ -31,6 +31,38 @@ Only incrementing the trailing pre-release identifier is currently supported.
 
 `tag` authoritatively discourages duplicate tags for a single commit.
 
+For the most up-to-date options, run `tag --help`,
+
+```
+$ tag --help
+Calculate the next semantic version tag
+
+Usage:
+  tag [flags]
+  tag [command]
+
+Available Commands:
+  completion  Generate completion script
+  help        Help about any command
+
+Flags:
+      --check             validate that the tag at HEAD has its previous version as an ancestor
+      --debug             enable debug logging
+  -h, --help              help for tag
+      --major             increment the major version
+      --metadata string   set the build metadata
+      --minor             increment the minor version
+      --patch             increment the patch version
+      --prefix string     set a prefix for the tag
+      --print-only        print the next tag and exit
+      --push              create and push the tag to remote
+      --remote string     remote repository to push tag to (default "origin")
+      --suffix string     set the pre-release suffix (e.g., rc, alpha, beta)
+  -v, --version           version for tag
+
+Use "tag [command] --help" for more information about a command.
+```
+
 ### Autocomplete
 
 `tag` provides autocomplete for `bash`, `fish`, `powershell` and `zsh` shells.
@@ -71,3 +103,20 @@ go install github.com/jmelahman/tag@latest
 **github:**
 
 Prebuilt packages are available from [Github Releases](https://github.com/jmelahman/tag/releases).
+
+### Pre-commit
+
+In your `.pre-commit-config.yaml`,
+
+```yaml
+default_install_hook_types:
+  - pre-push
+repos:
+  - repo: https://github.com/jmelahman/tag
+    rev: a069af54b5de5379d3581e3fc027395d1ad0a982  # frozen: v0.5.0
+    hooks:
+      - id: tag-check
+```
+
+By default, it only runs on the [`pre-push`](git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) stage,
+so you may need to install the `pre-push` hook after staging your changes.
