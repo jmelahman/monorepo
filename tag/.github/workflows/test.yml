@@ -25,4 +25,3 @@ jobs:
       - uses: golangci/golangci-lint-action@e7fa5ac41e1cf5b7d48e45e42232ce7ada589601 # ratchet:golangci/golangci-lint-action@v9
         with:
           version: latest
-
