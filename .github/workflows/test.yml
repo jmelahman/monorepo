@@ -94,9 +94,8 @@ jobs:
       - name: Run tests
         run: uv run pytest
 
-  presubmit:
+  pre-commit:
     runs-on: ubuntu-latest
-    if: ${{ github.ref_name != 'master' }}
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # ratchet:actions/checkout@v6
         with:
@@ -104,16 +103,4 @@ jobs:
       - uses: j178/prek-action@91fd7d7cf70ae1dee9f4f44e7dfa5d1073fe6623
         with:
           prek-version: '0.2.21'
-          extra_args: --files $(git diff origin/master HEAD --name-only | tr '\n' ' ')
-
-  postsubmit:
-    runs-on: ubuntu-latest
-    if: ${{ github.ref_name == 'master' }}
-    steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # ratchet:actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: j178/prek-action@91fd7d7cf70ae1dee9f4f44e7dfa5d1073fe6623
-        with:
-          prek-version: '0.2.21'
-          extra_args: --files $(git diff origin/master~1 HEAD --name-only | tr '\n' ' ')
+          extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
