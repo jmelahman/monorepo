@@ -43,3 +43,12 @@ _It is recommended to use [compatible release versions (`~=`)](https://peps.pyth
 
 then use it in your build scripts as if it were your system's version of `go`.
 For an example, see [`github.com/jmelahman/connections`](https://github.com/jmelahman/connections).
+
+## Building the wheel locally
+
+The build depends on a few environment variables to be set.
+For example, to build the `v1.25.5` version for x64 Linux, run,
+
+```shell
+GITHUB_REF_NAME=v1.25.5 GOOS=linux GOARCH=amd64 uv build --wheel
+```
