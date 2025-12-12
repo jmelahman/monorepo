@@ -30,7 +30,7 @@ class GoBinaryBuildHook(BuildHookInterface):
             archive = f"go{version}.{goos}-{goarch}.tar.gz"
 
         if not os.path.exists(archive):
-            urllib.request.urlretrieve("https://storage.googleapis.com/golang/" + archive, archive)
+            urllib.request.urlretrieve("https://go.dev/dl/" + archive, archive)
 
         if not os.path.exists("go"):
             with tempfile.TemporaryDirectory() as temp_dir:
