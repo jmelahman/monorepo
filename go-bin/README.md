@@ -1,5 +1,9 @@
 # Prebuilt Go Runtime
 
+[![Deploy Status](https://github.com/jmelahman/go-bin/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/go-bin/actions/workflows/release.yml)
+[![Go Latest Release](https://img.shields.io/github/v/tag/golang/go?sort=semver&logo=go)](https://github.com/golang/go/tags)
+[![PyPI](https://img.shields.io/pypi/v/go-bin.svg)](https://pypi.org/project/go-bin/)
+
 ## Overview
 
 This package provides a prebuilt Go runtime for integrating Golang artifacts into Python projects.
