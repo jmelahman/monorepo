@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs", "manygo"]
+requires = ["hatchling", "manygo"]
 build-backend = "hatchling.build"
 
 [project]
@@ -26,6 +26,7 @@ go = "go:main"
 Repository = "https://github.com/jmelahman/go-bin"
 
 [tool.hatch.version]
-source = "vcs"
+source = "code"
+path = "src/go/_version.py"
 
 [tool.hatch.build.hooks.custom]
