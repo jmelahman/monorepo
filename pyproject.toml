@@ -44,10 +44,10 @@ required-imports = ["from __future__ import annotations"]
 dev = [
     "check-symlinks>=0.5.3",
     "hatchling>=1.27.0",
-    "manygo>=0.1.3",
+    "manygo>=0.2.0",
     "pytest>=8.4.0",
     "ruff>=0.12.9",
-    "ty>=0.0.1a28",
+    "ty>=0.0.1a34",
 ]
 
 [tool.pytest.ini_options]
