@@ -9,5 +9,5 @@ Handles Power On/Off, Brightness, and Color.
 ## Installation
 
 ```shell
-go install github.com/jmelahman/smart-lights
+go install github.com/jmelahman/smart-lights@latest
 ```
