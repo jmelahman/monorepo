@@ -2,13 +2,13 @@ target "default" {
   context = "."
   dockerfile = "Dockerfile"
   cache_from = [
-    "docker.io/lahmanja/nvchecker:latest",
+    "docker.io/lahmanja/archlinux:latest",
   ]
   cache_to = [
     "inline",
   ]
   tags = [
-    "lahmanja/nvchecker:2026-03-01",
-    "lahmanja/nvchecker:latest",
+    "lahmanja/archlinux:2026-03-01",
+    "lahmanja/archlinux:latest",
   ]
 }

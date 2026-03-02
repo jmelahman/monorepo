@@ -3,14 +3,12 @@ target "default" {
   dockerfile = "Dockerfile"
   cache_from = [
     "docker.io/lahmanja/arch:latest",
-    "registry.lahman.dev/lahmanja/arch:latest",
   ]
   cache_to = [
-    "type=registry,ref=registry.lahman.dev/lahmanja/arch:latest,mode=max",
+    "inline",
   ]
   tags = [
-    "lahmanja/arch:v1.4.2",
+    "lahmanja/arch:2026-03-01",
     "lahmanja/arch:latest",
-    "registry.lahman.dev/lahmanja/arch:latest",
   ]
 }
