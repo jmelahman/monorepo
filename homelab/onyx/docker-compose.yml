@@ -2,7 +2,7 @@ name: onyx
 
 services:
   api_server:
-    image: ${ONYX_BACKEND_IMAGE:-onyxdotapp/onyx-backend:${IMAGE_TAG:-latest}}
+    image: onyxdotapp/onyx-backend:latest
     command: >
       /bin/sh -c "alembic upgrade head &&
       uvicorn onyx.main:app --host 0.0.0.0 --port 8080"
@@ -15,8 +15,8 @@ services:
       required: false
     environment:
     - AUTH_TYPE=${AUTH_TYPE:-basic}
-    - POSTGRES_HOST=${POSTGRES_HOST:-relational_db}
-    - CODE_INTERPRETER_BASE_URL=${CODE_INTERPRETER_BASE_URL:-http://code-interpreter:8000}
+    - POSTGRES_HOST=relational_db
+    - CODE_INTERPRETER_BASE_URL=http://code-interpreter:8000
     - DISABLE_VECTOR_DB=true
     - FILE_STORE_BACKEND=postgres
     - CACHE_BACKEND=postgres
@@ -36,14 +36,12 @@ services:
       - api_server
     ports:
       - "3000:3000"
-    restart: unless-stopped
     environment:
-      - INTERNAL_URL=${INTERNAL_URL:-http://api_server:8080}
+      - INTERNAL_URL=http://api_server:8080
       - OVERRIDE_API_PRODUCTION=true
 
   relational_db:
     image: postgres:15.2-alpine
-    command: -c 'max_connections=250'
     env_file:
     - path: .env
       required: false
@@ -66,14 +64,12 @@ services:
 
   cli_server:
     image: onyxdotapp/onyx-cli:latest
-    command: ["serve", "--host", "0.0.0.0", "--port", "2222"]
+    command: ["serve", "--host", "0.0.0.0", "--port", "2222", "--api-server-url", "http://api_server:8080"]
     depends_on:
     - api_server
     restart: unless-stopped
     ports:
     - "${ONYX_SSH_PORT:-2222}:2222"
-    environment:
-    - ONYX_SERVER_URL=http://api_server:8080
     volumes:
     - cli_config:/home/onyx/.config
 
