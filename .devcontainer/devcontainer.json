@@ -10,7 +10,11 @@
     "--cap-add=NET_ADMIN",
     "--cap-add=NET_RAW"
   ],
-  "remoteUser": "dev",
+  "mounts": [
+    "source=${localEnv:XDG_RUNTIME_DIR}/docker.sock,target=/var/run/docker.sock,type=bind",
+    "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind"
+  ],
+  "remoteUser": "root",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
