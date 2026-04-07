@@ -1,0 +1,37 @@
+FROM ubuntu:25.10
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  curl \
+  git \
+  sudo \
+  ca-certificates \
+  iptables \
+  ipset \
+  iproute2 \
+  dnsutils \
+  jq \
+  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y nodejs \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -s /bin/bash dev && \
+  echo "dev ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/dev-firewall && \
+  chmod 0440 /etc/sudoers.d/dev-firewall
+
+ENV DEVCONTAINER=true
+
+RUN mkdir -p /workspace && \
+  chown -R dev:dev /workspace
+
+WORKDIR /workspace
+
+# Install Claude Code
+ARG CLAUDE_CODE_VERSION=latest
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+
+# Copy firewall script
+COPY init-firewall.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/init-firewall.sh
+
+USER dev
