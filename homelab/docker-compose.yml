@@ -139,9 +139,34 @@ services:
       - /etc/os-release:/etc/os-release:ro
     pid: "host"
 
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: llama
+    restart: unless-stopped
+    ports:
+      - "8012:8080"
+    volumes:
+      - llama_models:/models
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ ! -f /models/Qwen3-0.6B-Q8_0.gguf ] || ! head -c 4 /models/Qwen3-0.6B-Q8_0.gguf | grep -q "GGUF"; then
+          rm -f /models/Qwen3-0.6B-Q8_0.gguf
+          echo "Downloading Qwen3-0.6B model..." &&
+          curl -fL -o /models/Qwen3-0.6B-Q8_0.gguf \
+            "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf"
+        fi &&
+        /app/llama-server \
+          --model /models/Qwen3-0.6B-Q8_0.gguf \
+          --host 0.0.0.0 \
+          --port 8080 \
+          --ctx-size 2048
+
 volumes:
   registry_data:
   buildbuddy_data:
   jellyfin_data:
   proxpi_data:
   pacoloco_data:
+  llama_models:
