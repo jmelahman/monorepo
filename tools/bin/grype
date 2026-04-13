@@ -2,5 +2,5 @@
 DOCKER_SOCK="${DOCKER_HOST#unix://}"
 docker run --rm -it \
 	-v "${DOCKER_SOCK:-/var/run/docker.sock}":"/var/run/docker.sock" \
-	wagoodman/dive:latest \
+	anchore/grype:v0.111.0 \
 	"$@"
