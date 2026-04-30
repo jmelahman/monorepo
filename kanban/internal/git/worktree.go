@@ -31,6 +31,37 @@ func DeleteBranch(repoPath, branch string) error {
 	return run("git", "-C", repoPath, "branch", "-D", branch)
 }
 
+// Rebase rebases the current branch in worktreePath onto ref.
+func Rebase(worktreePath, ref string) error {
+	return run("git", "-C", worktreePath, "rebase", ref)
+}
+
+// Merge merges ref into the current branch in worktreePath (no edit).
+func Merge(worktreePath, ref string) error {
+	return run("git", "-C", worktreePath, "merge", "--no-edit", ref)
+}
+
+// RebaseAbort aborts an in-progress rebase. Errors are swallowed.
+func RebaseAbort(worktreePath string) {
+	_ = exec.Command("git", "-C", worktreePath, "rebase", "--abort").Run()
+}
+
+// MergeAbort aborts an in-progress merge. Errors are swallowed.
+func MergeAbort(worktreePath string) {
+	_ = exec.Command("git", "-C", worktreePath, "merge", "--abort").Run()
+}
+
+// IsClean reports whether the worktree has no uncommitted changes.
+func IsClean(worktreePath string) (bool, error) {
+	cmd := exec.Command("git", "-C", worktreePath, "status", "--porcelain")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out.String()) == "", nil
+}
+
 // CurrentHead returns the abbreviated SHA at HEAD.
 func CurrentHead(repoPath, ref string) (string, error) {
 	if ref == "" {

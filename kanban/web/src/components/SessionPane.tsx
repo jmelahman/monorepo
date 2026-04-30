@@ -1,22 +1,37 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, Session } from "../api/client";
+import { useToast } from "../toast";
 import { PtyTerminal } from "./PtyTerminal";
 import { TasksPanel } from "./TasksPanel";
 
 export function SessionPane({
   boardId,
+  baseBranch,
   ticketId,
   session,
   onClose,
 }: {
   boardId: number;
+  baseBranch: string;
   ticketId: number | null;
   session: Session | null;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [tab, setTab] = useState<"terminal" | "tasks">("terminal");
+  const [syncMenuOpen, setSyncMenuOpen] = useState(false);
+  const syncMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!syncMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!syncMenuRef.current?.contains(e.target as Node)) setSyncMenuOpen(false);
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [syncMenuOpen]);
 
   const ensureMut = useMutation({
     mutationFn: () => api.ensureSession(ticketId!),
@@ -35,6 +50,14 @@ export function SessionPane({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["board", boardId] });
       onClose();
+    },
+  });
+  const syncMut = useMutation({
+    mutationFn: (strategy: "rebase" | "merge") => api.syncTicket(ticketId!, strategy),
+    onSuccess: (_data, strategy) => {
+      setSyncMenuOpen(false);
+      toast.push("success", `${strategy} from ${baseBranch} succeeded`);
+      qc.invalidateQueries({ queryKey: ["board", boardId] });
     },
   });
 
@@ -61,6 +84,34 @@ export function SessionPane({
             <button className="rounded bg-zinc-700 px-2 py-1" onClick={() => stopMut.mutate()} disabled={stopMut.isPending}>
               stop
             </button>
+          )}
+          {session && (
+            <div className="relative" ref={syncMenuRef}>
+              <button
+                className="rounded bg-zinc-800 px-2 py-1 text-zinc-300 disabled:opacity-50"
+                onClick={() => setSyncMenuOpen((v) => !v)}
+                disabled={syncMut.isPending}
+                title={`update from ${baseBranch}`}
+              >
+                {syncMut.isPending ? "syncing…" : "sync ▾"}
+              </button>
+              {syncMenuOpen && (
+                <div className="absolute right-0 top-full z-10 mt-1 w-56 rounded border border-zinc-700 bg-zinc-900 p-1 text-xs shadow-lg">
+                  <button
+                    className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-800"
+                    onClick={() => syncMut.mutate("rebase")}
+                  >
+                    rebase from <span className="font-mono">{baseBranch}</span>
+                  </button>
+                  <button
+                    className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-800"
+                    onClick={() => syncMut.mutate("merge")}
+                  >
+                    merge from <span className="font-mono">{baseBranch}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <button className="rounded bg-zinc-800 px-2 py-1 text-zinc-300" onClick={() => archiveMut.mutate()}>
             archive

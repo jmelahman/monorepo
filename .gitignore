@@ -139,6 +139,7 @@ user.bazelrc
 dist/
 node_modules
 .yarn
+*.tsbuildinfo
 
 # Prerequisites
 *.d

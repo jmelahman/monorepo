@@ -38,6 +38,9 @@ ALLOWED_DOMAINS=(
     "files.anthropic.com"
     "sentry.io"
     "update.code.visualstudio.com"
+    "proxy.golang.org"
+    "sum.golang.org"
+    "storage.googleapis.com"
 )
 
 for domain in "${ALLOWED_DOMAINS[@]}"; do

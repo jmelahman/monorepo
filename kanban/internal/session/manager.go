@@ -186,6 +186,44 @@ func (m *Manager) Destroy(ctx context.Context, sessionID int64) error {
 	return m.store.DeleteSession(ctx, sess.ID)
 }
 
+// Sync brings the session's branch up to date with the board's base branch
+// using either "rebase" or "merge". Aborts on conflict and surfaces the error.
+func (m *Manager) Sync(ctx context.Context, sessionID int64, strategy string) error {
+	sess, err := m.store.GetSession(ctx, sessionID)
+	if err != nil {
+		return err
+	}
+	if sess.WorktreePath == "" {
+		return fmt.Errorf("session has no worktree")
+	}
+	board, err := m.boardForSession(ctx, sess)
+	if err != nil {
+		return err
+	}
+	clean, err := git.IsClean(sess.WorktreePath)
+	if err != nil {
+		return fmt.Errorf("check worktree clean: %w", err)
+	}
+	if !clean {
+		return fmt.Errorf("worktree has uncommitted changes; commit or stash before syncing")
+	}
+	switch strategy {
+	case "rebase":
+		if err := git.Rebase(sess.WorktreePath, board.BaseBranch); err != nil {
+			git.RebaseAbort(sess.WorktreePath)
+			return fmt.Errorf("rebase aborted: %w", err)
+		}
+	case "merge":
+		if err := git.Merge(sess.WorktreePath, board.BaseBranch); err != nil {
+			git.MergeAbort(sess.WorktreePath)
+			return fmt.Errorf("merge aborted: %w", err)
+		}
+	default:
+		return fmt.Errorf("unknown strategy %q (want rebase or merge)", strategy)
+	}
+	return nil
+}
+
 func (m *Manager) Proxies() *docker.ProxyManager { return m.proxies }
 
 func (m *Manager) Docker() *docker.Client { return m.docker }
