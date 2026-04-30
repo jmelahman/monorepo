@@ -36,7 +36,7 @@ export function CreateBoardForm({ onCreated }: { onCreated: (b: Board) => void }
       <input className="rounded bg-zinc-900 px-2 py-1" placeholder="name" value={name} onChange={(e) => setName(e.target.value)} required />
       <input className="rounded bg-zinc-900 px-2 py-1 w-72" placeholder="/host/path/to/repo" value={repo} onChange={(e) => setRepo(e.target.value)} required />
       <input className="rounded bg-zinc-900 px-2 py-1 w-28" placeholder="base branch" value={base} onChange={(e) => setBase(e.target.value)} />
-      <button disabled={busy} className="rounded bg-emerald-700 px-3 py-1 text-white disabled:opacity-50">
+      <button disabled={busy} className="rounded bg-red-700 px-3 py-1 text-white disabled:opacity-50">
         create
       </button>
       <button type="button" className="text-zinc-400" onClick={() => setOpen(false)}>

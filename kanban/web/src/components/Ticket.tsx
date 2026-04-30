@@ -34,7 +34,7 @@ export function Ticket({
       {...listeners}
       style={style}
       onClick={onSelect}
-      className={`cursor-pointer rounded bg-zinc-800 p-2 text-sm hover:bg-zinc-700 ${active ? "ring-2 ring-emerald-500" : ""}`}
+      className={`cursor-pointer rounded bg-zinc-800 p-2 text-sm hover:bg-zinc-700 ${active ? "ring-2 ring-red-500" : ""}`}
     >
       <div className="flex items-center justify-between">
         <span className="font-medium">{ticket.title}</span>

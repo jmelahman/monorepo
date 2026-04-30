@@ -40,8 +40,13 @@ func (m *Manager) Ensure(ctx context.Context, board *db.Board, ticket *db.Ticket
 	worktreePath := filepath.Join(board.WorktreeRoot, ticket.Slug)
 	containerName := fmt.Sprintf("kanban-%s-%s", board.Slug, ticket.Slug)
 
-	if err := git.AddWorktree(board.SourceRepoPath, branch, worktreePath, board.BaseBranch); err != nil {
-		return nil, fmt.Errorf("create worktree: %w", err)
+	if _, statErr := os.Stat(worktreePath); statErr == nil {
+		// Worktree directory already exists from a previous run; trust it.
+	} else if err := git.AddWorktree(board.SourceRepoPath, branch, worktreePath, board.BaseBranch); err != nil {
+		// Branch may already exist (orphaned). Try attaching it to a fresh worktree.
+		if err2 := git.AddWorktreeFromExisting(board.SourceRepoPath, branch, worktreePath); err2 != nil {
+			return nil, fmt.Errorf("create worktree: %w", err)
+		}
 	}
 
 	sess := &db.Session{

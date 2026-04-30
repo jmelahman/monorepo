@@ -29,7 +29,7 @@ export function Column(props: {
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-72 shrink-0 flex-col gap-2 rounded border border-zinc-800 bg-zinc-900 p-2 ${isOver ? "ring-2 ring-emerald-600" : ""}`}
+      className={`flex w-72 shrink-0 flex-col gap-2 rounded border border-zinc-800 bg-zinc-900 p-2 ${isOver ? "ring-2 ring-red-600" : ""}`}
     >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-300">{props.column.name}</h2>
@@ -64,7 +64,7 @@ export function Column(props: {
             placeholder="ticket title"
           />
           <div className="flex gap-2 text-xs">
-            <button className="rounded bg-emerald-700 px-2 py-1" type="submit">
+            <button className="rounded bg-red-700 px-2 py-1" type="submit">
               add
             </button>
             <button className="text-zinc-400" type="button" onClick={() => setAdding(false)}>
