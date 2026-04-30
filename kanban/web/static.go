@@ -1,43 +1,20 @@
+//go:build !embed
+
 package web
 
 import (
-	"embed"
-	"io/fs"
 	"net/http"
 	"strings"
 )
 
-//go:embed all:dist
-var distFS embed.FS
-
-// Handler returns the embedded frontend, falling back to index.html for SPA routes.
+// Handler returns a placeholder when the frontend is not embedded. Build with
+// `-tags embed` (and a populated web/dist) to serve the real SPA.
 func Handler() http.Handler {
-	sub, err := fs.Sub(distFS, "dist")
-	if err != nil {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "frontend not built", http.StatusServiceUnavailable)
-		})
-	}
-	fileServer := http.FileServer(http.FS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Unknown /api/* and /ws/* routes must 404, not fall through to index.html.
 		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/ws/") {
 			http.NotFound(w, r)
 			return
 		}
-		if _, err := fs.Stat(sub, trimLeadingSlash(r.URL.Path)); err != nil {
-			r2 := r.Clone(r.Context())
-			r2.URL.Path = "/"
-			fileServer.ServeHTTP(w, r2)
-			return
-		}
-		fileServer.ServeHTTP(w, r)
+		http.Error(w, "frontend not built (rebuild with -tags embed)", http.StatusServiceUnavailable)
 	})
-}
-
-func trimLeadingSlash(p string) string {
-	if len(p) > 0 && p[0] == '/' {
-		return p[1:]
-	}
-	return p
 }

@@ -16,9 +16,12 @@ export function TasksPanel({ session }: { session: Session; boardId: number }) {
     refetchInterval: 2000,
   });
 
+  const [openOutputId, setOpenOutputId] = useState<number | null>(null);
+
   const startMut = useMutation({
     mutationFn: (label: string) => api.startTaskRun(session.id, label),
-    onSuccess: () => {
+    onSuccess: (run) => {
+      setOpenOutputId(run.id);
       qc.invalidateQueries({ queryKey: ["runs", session.id] });
       qc.invalidateQueries({ queryKey: ["ports", session.id] });
     },
@@ -27,8 +30,6 @@ export function TasksPanel({ session }: { session: Session; boardId: number }) {
     mutationFn: (id: number) => api.stopTaskRun(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["runs", session.id] }),
   });
-
-  const [openOutputId, setOpenOutputId] = useState<number | null>(null);
 
   if (session.status === "stopped") {
     return <p className="p-4 text-sm text-zinc-400">Start the session to discover tasks.</p>;

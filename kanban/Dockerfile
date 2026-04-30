@@ -13,7 +13,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=web /web/dist ./web/dist
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/kanban .
+RUN CGO_ENABLED=0 GOOS=linux go build -tags embed -trimpath -ldflags="-s -w" -o /out/kanban .
 
 FROM alpine:3.20
 RUN apk add --no-cache git ca-certificates

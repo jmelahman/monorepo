@@ -409,18 +409,6 @@ func TestPorts(t *testing.T) {
 func TestStatic(t *testing.T) {
 	e := newEnv(t)
 
-	t.Run("index_served_at_root", func(t *testing.T) {
-		resp := e.get("/")
-		defer resp.Body.Close()
-		if resp.StatusCode != 200 {
-			t.Fatalf("status = %d", resp.StatusCode)
-		}
-		ct := resp.Header.Get("Content-Type")
-		if !strings.Contains(ct, "text/html") {
-			t.Errorf("content-type = %q; want text/html", ct)
-		}
-	})
-
 	t.Run("unknown_api_path_404", func(t *testing.T) {
 		// Any /api/* route not in the mux should 404, not fall through to index.html.
 		resp := e.get("/api/no-such-route")

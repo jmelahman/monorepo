@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      cache_from:
+        - lahmanja/kanban:latest
     restart: unless-stopped
     ports:
       - "127.0.0.1:7474:7474"

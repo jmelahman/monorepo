@@ -165,6 +165,9 @@ func (h *handlers) createTicket(w http.ResponseWriter, r *http.Request) {
 		"ticket_id": fmt.Sprintf("%d", t.ID),
 		"board":    board.Name,
 	})
+	if sess, err := h.sessions.Ensure(r.Context(), board, t); err == nil {
+		h.bus.publish(boardID, "session_updated", sess)
+	}
 	writeJSON(w, 201, t)
 }
 
@@ -244,6 +247,35 @@ func (h *handlers) deleteTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.bus.publish(t.BoardID, "ticket_deleted", t)
+	w.WriteHeader(204)
+}
+
+type syncTicketReq struct {
+	Strategy string `json:"strategy"`
+}
+
+func (h *handlers) syncTicket(w http.ResponseWriter, r *http.Request) {
+	id := pathID(r, "id")
+	var req syncTicketReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpError(w, err, 400)
+		return
+	}
+	if req.Strategy == "" {
+		req.Strategy = "rebase"
+	}
+	sess, err := h.store.GetSessionByTicket(r.Context(), id)
+	if err != nil || sess == nil {
+		httpError(w, fmt.Errorf("no session for ticket"), 404)
+		return
+	}
+	if err := h.sessions.Sync(r.Context(), sess.ID, req.Strategy); err != nil {
+		httpError(w, err, 409)
+		return
+	}
+	if t, _ := h.store.GetTicket(r.Context(), id); t != nil {
+		h.bus.publish(t.BoardID, "session_updated", sess)
+	}
 	w.WriteHeader(204)
 }
 

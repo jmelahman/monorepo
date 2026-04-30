@@ -115,6 +115,8 @@ export const api = {
   archiveTicket: (id: number) => request<void>(`/api/tickets/${id}/archive`, { method: "POST" }),
   listArchivedTickets: (boardId: number) => request<Ticket[]>(`/api/boards/${boardId}/archived`),
   deleteTicket: (id: number) => request<void>(`/api/tickets/${id}`, { method: "DELETE" }),
+  syncTicket: (id: number, strategy: "rebase" | "merge") =>
+    request<void>(`/api/tickets/${id}/sync`, { method: "POST", body: JSON.stringify({ strategy }) }),
 
   ensureSession: (ticketId: number) => request<Session>(`/api/tickets/${ticketId}/session`, { method: "POST" }),
   startSession: (id: number) => request<Session>(`/api/sessions/${id}/start`, { method: "POST" }),

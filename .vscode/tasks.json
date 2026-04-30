@@ -22,8 +22,7 @@
     {
       "label": "Kanban Frontend",
       "type": "shell",
-      "command": "npm",
-      "args": ["run", "dev", "--", "--host", "0.0.0.0"],
+      "command": "npm install && npm run dev -- --host 0.0.0.0",
       "options": {
         "cwd": "${workspaceFolder}/kanban/web"
       }
