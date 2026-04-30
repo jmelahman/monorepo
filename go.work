@@ -11,6 +11,7 @@ use (
 	./docker-status
 	./git-orchard
 	./jview
+	./kanban
 	./nature-sounds
 	./runtainer
 	./smart-lights

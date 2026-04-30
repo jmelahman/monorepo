@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/api/client.ts","./src/components/Board.tsx","./src/components/Column.tsx","./src/components/CreateBoardForm.tsx","./src/components/PtyTerminal.tsx","./src/components/SessionPane.tsx","./src/components/TasksPanel.tsx","./src/components/Ticket.tsx"],"version":"5.9.3"}

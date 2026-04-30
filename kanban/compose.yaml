@@ -1,0 +1,20 @@
+services:
+  kanban:
+    image: lahmanja/kanban:latest
+    container_name: kanban
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "13000-13099:13000-13099"
+    environment:
+      HOME: ${HOME}
+      XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR}
+      KANBAN_DATA_DIR: ${HOME}/.local/share/kanban
+    volumes:
+      - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock
+      - ${HOME}/.claude:${HOME}/.claude
+      - ${HOME}/code/monorepo:${HOME}/code/monorepo
+      - ${HOME}/.local/share/kanban:${HOME}/.local/share/kanban
