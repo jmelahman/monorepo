@@ -15,7 +15,7 @@ docker run -d --name kanban \
   -e HOME=$HOME \
   -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
   -e KANBAN_DATA_DIR=$HOME/.local/share/kanban \
-  ghcr.io/jmelahman/kanban:latest
+  lahmanja/kanban:latest
 ```
 
 Open `http://localhost:7474`.
