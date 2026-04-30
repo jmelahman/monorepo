@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Kanban Tests",
+      "type": "shell",
+      "command": "go",
+      "args": ["test", "./kanban/..."],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Kanban Backend",
+      "type": "shell",
+      "command": "go",
+      "args": ["run", "./kanban", "serve"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Kanban Frontend",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev", "--", "--host", "0.0.0.0"],
+      "options": {
+        "cwd": "${workspaceFolder}/kanban/web"
+      }
+    }
+  ]
+}

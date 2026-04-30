@@ -1,0 +1,7 @@
+[[task]]
+label = "Kanban Backend"
+container_port = 7474
+
+[[task]]
+label = "Kanban Frontend"
+container_port = 5173

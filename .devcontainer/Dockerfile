@@ -10,6 +10,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   iproute2 \
   dnsutils \
   jq \
+  less \
+  zsh \
+  fzf \
+  ripgrep \
+  fd-find \
+  neovim \
+  socat \
+  openssh-client \
+  gh \
   && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && apt-get install -y nodejs \
   && install -m 0755 -d /etc/apt/keyrings \
@@ -18,6 +27,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get update \
   && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ARG GO_VERSION=1.25.3
+RUN ARCH="$(dpkg --print-architecture)" \
+  && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" | tar -C /usr/local -xz
+ENV PATH="/usr/local/go/bin:/root/go/bin:/home/dev/go/bin:${PATH}" \
+    GOPATH="/home/dev/go"
 
 # Create non-root user
 RUN useradd -m -s /bin/bash dev && \

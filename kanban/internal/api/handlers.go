@@ -484,11 +484,10 @@ func (h *handlers) ensurePortProxy(ctx context.Context, sess *db.Session, label 
 }
 
 func (h *handlers) startProxy(ctx context.Context, sess *db.Session, p db.PortAllocation) error {
-	bridgeIP, ok := h.sessions.BridgeIP(sess.ID)
-	if !ok {
+	if sess.ContainerID == nil || *sess.ContainerID == "" {
 		return fmt.Errorf("session not running")
 	}
-	if err := h.sessions.Proxies().Open(p.HostPort, bridgeIP, p.ContainerPort); err != nil {
+	if err := h.sessions.Proxies().Open(p.HostPort, *sess.ContainerID, p.ContainerPort); err != nil {
 		return err
 	}
 	if err := h.store.SetPortActive(ctx, p.ID, true); err != nil {

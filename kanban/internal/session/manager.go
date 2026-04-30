@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/jmelahman/kanban/internal/db"
@@ -18,18 +17,15 @@ type Manager struct {
 	docker *docker.Client
 	hooks  *hooks.Runner
 
-	mu        sync.Mutex
-	bridgeIPs map[int64]string // sessionID → container bridge IP
-	proxies   *docker.ProxyManager
+	proxies *docker.ProxyManager
 }
 
 func NewManager(store *db.Store, dc *docker.Client, h *hooks.Runner) *Manager {
 	return &Manager{
-		store:     store,
-		docker:    dc,
-		hooks:     h,
-		bridgeIPs: map[int64]string{},
-		proxies:   docker.NewProxyManager(context.Background()),
+		store:   store,
+		docker:  dc,
+		hooks:   h,
+		proxies: docker.NewProxyManager(context.Background(), dc),
 	}
 }
 
@@ -108,10 +104,6 @@ func (m *Manager) Start(ctx context.Context, sessionID int64) (*db.Session, erro
 		return nil, err
 	}
 
-	m.mu.Lock()
-	m.bridgeIPs[sess.ID] = res.BridgeIP
-	m.mu.Unlock()
-
 	board, _ := m.boardForSession(ctx, sess)
 	var boardID *int64
 	if board != nil {
@@ -153,10 +145,6 @@ func (m *Manager) Stop(ctx context.Context, sessionID int64) error {
 		}
 	}
 
-	m.mu.Lock()
-	delete(m.bridgeIPs, sess.ID)
-	m.mu.Unlock()
-
 	board, _ := m.boardForSession(ctx, sess)
 	var boardID *int64
 	if board != nil {
@@ -166,13 +154,6 @@ func (m *Manager) Stop(ctx context.Context, sessionID int64) error {
 		"session_id": fmt.Sprintf("%d", sess.ID),
 	})
 	return nil
-}
-
-func (m *Manager) BridgeIP(sessionID int64) (string, bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	ip, ok := m.bridgeIPs[sessionID]
-	return ip, ok
 }
 
 func (m *Manager) Proxies() *docker.ProxyManager { return m.proxies }

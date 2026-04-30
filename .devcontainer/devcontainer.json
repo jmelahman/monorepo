@@ -1,5 +1,5 @@
 {
-  "name": "Onyx - Claude Code Sandbox",
+  "name": "Personal Dev Sandbox",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
