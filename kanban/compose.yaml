@@ -13,6 +13,7 @@ services:
       HOME: ${HOME}
       XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR}
       KANBAN_DATA_DIR: ${HOME}/.local/share/kanban
+      GH_TOKEN: ${GH_TOKEN:-}
     volumes:
       - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock
       - ${HOME}/.claude:${HOME}/.claude

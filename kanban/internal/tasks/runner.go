@@ -21,6 +21,34 @@ import (
 	"github.com/jmelahman/kanban/internal/hooks"
 )
 
+// substituteVSCodeVars replaces a small set of VS Code task variables with
+// their container-side equivalents.
+func substituteVSCodeVars(s, workspaceFolder string) string {
+	if s == "" {
+		return s
+	}
+	r := strings.NewReplacer(
+		"${workspaceFolder}", workspaceFolder,
+		"${workspaceRoot}", workspaceFolder,
+		"${workspaceFolderBasename}", filepath.Base(workspaceFolder),
+	)
+	return r.Replace(s)
+}
+
+// resolveContainerPath substitutes VS Code variables in a path and forces it
+// to be absolute, defaulting to workspaceFolder. Docker exec rejects any
+// non-absolute WorkingDir with "Cwd must be an absolute path".
+func resolveContainerPath(p, workspaceFolder string) string {
+	p = substituteVSCodeVars(strings.TrimSpace(p), workspaceFolder)
+	if p == "" {
+		return workspaceFolder
+	}
+	if !filepath.IsAbs(p) {
+		return filepath.Join(workspaceFolder, p)
+	}
+	return p
+}
+
 // VSCodeTask is the parsed-down subset of a tasks.json entry.
 type VSCodeTask struct {
 	Label   string            `json:"label"`
@@ -200,10 +228,8 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 	if sess.ContainerID == nil || *sess.ContainerID == "" {
 		return nil, errors.New("session not running")
 	}
-	cwd := task.Cwd
-	if cwd == "" {
-		cwd = "/workspace"
-	}
+	const workspaceFolder = "/workspace"
+	cwd := resolveContainerPath(task.Cwd, workspaceFolder)
 
 	full := strings.TrimSpace(task.Command + " " + strings.Join(task.Args, " "))
 	tr := &db.TaskRun{SessionID: sess.ID, TaskLabel: task.Label, Command: full, Status: db.TaskRunStatusRunning}
@@ -213,7 +239,7 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 
 	env := make([]string, 0, len(task.Env))
 	for k, v := range task.Env {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
+		env = append(env, fmt.Sprintf("%s=%s", k, substituteVSCodeVars(v, workspaceFolder)))
 	}
 
 	resp, err := r.docker.Raw().ContainerExecCreate(ctx, *sess.ContainerID, container.ExecOptions{

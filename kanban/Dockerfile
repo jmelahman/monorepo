@@ -15,7 +15,8 @@ COPY . .
 COPY --from=web /web/dist ./web/dist
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/kanban .
 
-FROM gcr.io/distroless/static-debian12
+FROM alpine:3.20
+RUN apk add --no-cache git ca-certificates
 COPY --from=go /out/kanban /kanban
 EXPOSE 7474
 ENTRYPOINT ["/kanban", "serve"]

@@ -161,6 +161,31 @@ func (s *Store) ArchiveTicket(ctx context.Context, id int64) error {
 	return err
 }
 
+func (s *Store) ListArchivedTickets(ctx context.Context, boardID int64) ([]Ticket, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, board_id, column_id, title, slug, body, position, created_at, archived_at
+         FROM tickets WHERE board_id=? AND archived_at IS NOT NULL ORDER BY archived_at DESC`,
+		boardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	tickets := []Ticket{}
+	for rows.Next() {
+		var t Ticket
+		if err := rows.Scan(&t.ID, &t.BoardID, &t.ColumnID, &t.Title, &t.Slug, &t.Body, &t.Position, &t.CreatedAt, &t.ArchivedAt); err != nil {
+			return nil, err
+		}
+		tickets = append(tickets, t)
+	}
+	return tickets, rows.Err()
+}
+
+func (s *Store) DeleteTicket(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM tickets WHERE id=?`, id)
+	return err
+}
+
 // Sessions
 
 func (s *Store) UpsertSession(ctx context.Context, sess *Session) error {
