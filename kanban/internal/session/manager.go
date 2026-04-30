@@ -68,8 +68,18 @@ func (m *Manager) Start(ctx context.Context, sessionID int64) (*db.Session, erro
 	if err != nil {
 		return nil, err
 	}
-	if sess.Status != db.SessionStatusStopped {
+	switch sess.Status {
+	case db.SessionStatusStopped, db.SessionStatusError:
+		// proceed
+	default:
 		return sess, nil
+	}
+
+	// Stale container from a prior run (e.g. host reboot): clear the reference
+	// so we don't try to reuse a vanished container ID below.
+	if sess.ContainerID != nil && *sess.ContainerID != "" {
+		cleared := ""
+		sess.ContainerID = &cleared
 	}
 
 	cfg, err := docker.LoadDevcontainer(sess.WorktreePath)
@@ -89,6 +99,13 @@ func (m *Manager) Start(ctx context.Context, sessionID int64) (*db.Session, erro
 	containerName := ""
 	if sess.ContainerName != nil {
 		containerName = *sess.ContainerName
+	}
+
+	// Remove any pre-existing container with this name (e.g. left over after a
+	// host reboot). Docker would otherwise reject ContainerCreate with a name
+	// conflict.
+	if containerName != "" {
+		_ = m.docker.RemoveContainer(ctx, containerName)
 	}
 
 	res, err := m.docker.Spawn(ctx, cfg, docker.SpawnOptions{
