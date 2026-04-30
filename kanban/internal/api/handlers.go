@@ -200,7 +200,6 @@ func (h *handlers) archiveTicket(w http.ResponseWriter, r *http.Request) {
 	}
 	if sess, err := h.store.GetSessionByTicket(r.Context(), id); err == nil && sess != nil {
 		_ = h.sessions.Stop(r.Context(), sess.ID)
-		_ = h.store.DeleteSession(r.Context(), sess.ID)
 	}
 	if err := h.store.ArchiveTicket(r.Context(), id); err != nil {
 		httpError(w, err, 500)
@@ -213,6 +212,38 @@ func (h *handlers) archiveTicket(w http.ResponseWriter, r *http.Request) {
 			"ticket_id": fmt.Sprintf("%d", t.ID),
 		})
 	}
+	w.WriteHeader(204)
+}
+
+func (h *handlers) listArchivedTickets(w http.ResponseWriter, r *http.Request) {
+	boardID := pathID(r, "id")
+	tickets, err := h.store.ListArchivedTickets(r.Context(), boardID)
+	if err != nil {
+		httpError(w, err, 500)
+		return
+	}
+	writeJSON(w, 200, tickets)
+}
+
+func (h *handlers) deleteTicket(w http.ResponseWriter, r *http.Request) {
+	id := pathID(r, "id")
+	t, err := h.store.GetTicket(r.Context(), id)
+	if err != nil {
+		httpError(w, err, 404)
+		return
+	}
+	if t.ArchivedAt == nil {
+		httpError(w, fmt.Errorf("ticket must be archived before deletion"), 400)
+		return
+	}
+	if sess, err := h.store.GetSessionByTicket(r.Context(), id); err == nil && sess != nil {
+		_ = h.sessions.Destroy(r.Context(), sess.ID)
+	}
+	if err := h.store.DeleteTicket(r.Context(), id); err != nil {
+		httpError(w, err, 500)
+		return
+	}
+	h.bus.publish(t.BoardID, "ticket_deleted", t)
 	w.WriteHeader(204)
 }
 

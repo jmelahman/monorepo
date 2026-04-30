@@ -71,6 +71,17 @@ export type PortAllocation = {
   proxy_active: boolean;
 };
 
+export class ApiError extends Error {
+  status: number;
+  body: string;
+  constructor(status: number, message: string, body: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
@@ -78,7 +89,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`${res.status}: ${text}`);
+    let message = text;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed.error === "string") message = parsed.error;
+    } catch {
+      // not JSON; use raw body
+    }
+    throw new ApiError(res.status, message || `HTTP ${res.status}`, text);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -95,6 +113,8 @@ export const api = {
   moveTicket: (id: number, input: { column_id: number; position: number }) =>
     request<void>(`/api/tickets/${id}/move`, { method: "PATCH", body: JSON.stringify(input) }),
   archiveTicket: (id: number) => request<void>(`/api/tickets/${id}/archive`, { method: "POST" }),
+  listArchivedTickets: (boardId: number) => request<Ticket[]>(`/api/boards/${boardId}/archived`),
+  deleteTicket: (id: number) => request<void>(`/api/tickets/${id}`, { method: "DELETE" }),
 
   ensureSession: (ticketId: number) => request<Session>(`/api/tickets/${ticketId}/session`, { method: "POST" }),
   startSession: (id: number) => request<Session>(`/api/sessions/${id}/start`, { method: "POST" }),
@@ -112,17 +132,27 @@ export const api = {
   deletePort: (id: number) => request<void>(`/api/ports/${id}`, { method: "DELETE" }),
 };
 
-export function subscribeBoard(boardId: number, onEvent: (type: string, data: unknown) => void): () => void {
+export type SubscribeOptions = {
+  onEvent: (type: string, data: unknown) => void;
+  onStatus?: (status: "open" | "error" | "closed") => void;
+};
+
+export function subscribeBoard(boardId: number, opts: SubscribeOptions): () => void {
   const es = new EventSource(`/api/boards/${boardId}/events`);
   const handler = (e: MessageEvent) => {
     try {
-      onEvent(e.type, JSON.parse((e as MessageEvent).data));
+      opts.onEvent(e.type, JSON.parse(e.data));
     } catch {
-      onEvent(e.type, null);
+      opts.onEvent(e.type, null);
     }
   };
-  for (const t of ["ticket_created", "ticket_moved", "ticket_archived", "session_updated", "ready"]) {
+  for (const t of ["ticket_created", "ticket_moved", "ticket_archived", "ticket_deleted", "session_updated", "ready"]) {
     es.addEventListener(t, handler as EventListener);
   }
-  return () => es.close();
+  es.onopen = () => opts.onStatus?.("open");
+  es.onerror = () => opts.onStatus?.("error");
+  return () => {
+    es.close();
+    opts.onStatus?.("closed");
+  };
 }

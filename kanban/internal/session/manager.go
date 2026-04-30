@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -154,6 +155,30 @@ func (m *Manager) Stop(ctx context.Context, sessionID int64) error {
 		"session_id": fmt.Sprintf("%d", sess.ID),
 	})
 	return nil
+}
+
+// Destroy fully tears down a session: stops the container, removes the
+// worktree directory, deletes the branch, and removes the session row.
+// Errors from filesystem/git cleanup are non-fatal and reported via the
+// returned error only when the DB row removal itself fails.
+func (m *Manager) Destroy(ctx context.Context, sessionID int64) error {
+	sess, err := m.store.GetSession(ctx, sessionID)
+	if err != nil {
+		return err
+	}
+	_ = m.Stop(ctx, sessionID)
+
+	board, _ := m.boardForSession(ctx, sess)
+	if board != nil && sess.WorktreePath != "" {
+		_ = git.RemoveWorktree(board.SourceRepoPath, sess.WorktreePath)
+	}
+	if sess.WorktreePath != "" {
+		_ = os.RemoveAll(sess.WorktreePath)
+	}
+	if board != nil && sess.BranchName != "" {
+		_ = git.DeleteBranch(board.SourceRepoPath, sess.BranchName)
+	}
+	return m.store.DeleteSession(ctx, sess.ID)
 }
 
 func (m *Manager) Proxies() *docker.ProxyManager { return m.proxies }
