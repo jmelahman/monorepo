@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io/fs"
 	"net/http"
+	"strings"
 )
 
 //go:embed all:dist
@@ -19,7 +20,11 @@ func Handler() http.Handler {
 	}
 	fileServer := http.FileServer(http.FS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// API and ws routes are matched first by the parent mux.
+		// Unknown /api/* and /ws/* routes must 404, not fall through to index.html.
+		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/ws/") {
+			http.NotFound(w, r)
+			return
+		}
 		if _, err := fs.Stat(sub, trimLeadingSlash(r.URL.Path)); err != nil {
 			r2 := r.Clone(r.Context())
 			r2.URL.Path = "/"
