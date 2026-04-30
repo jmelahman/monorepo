@@ -48,12 +48,12 @@ export function SessionPane({
         <span className="text-zinc-400">{session?.branch_name}</span>
         <div className="ml-auto flex gap-2">
           {!session && (
-            <button className="rounded bg-emerald-700 px-2 py-1" onClick={() => ensureMut.mutate()} disabled={ensureMut.isPending}>
+            <button className="rounded bg-red-700 px-2 py-1" onClick={() => ensureMut.mutate()} disabled={ensureMut.isPending}>
               create session
             </button>
           )}
           {session && session.status === "stopped" && (
-            <button className="rounded bg-emerald-700 px-2 py-1" onClick={() => startMut.mutate()} disabled={startMut.isPending}>
+            <button className="rounded bg-red-700 px-2 py-1" onClick={() => startMut.mutate()} disabled={startMut.isPending}>
               start
             </button>
           )}
@@ -94,7 +94,7 @@ function Tab({ active, onClick, label }: { active: boolean; onClick: () => void;
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-2 ${active ? "border-b-2 border-emerald-500 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"}`}
+      className={`px-3 py-2 ${active ? "border-b-2 border-red-500 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"}`}
     >
       {label}
     </button>

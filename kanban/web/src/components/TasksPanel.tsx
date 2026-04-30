@@ -58,13 +58,13 @@ export function TasksPanel({ session }: { session: Session; boardId: number }) {
                     <span className="text-xs text-zinc-400">
                       :{t.container_port}
                       {port && (
-                        <a className="ml-1 text-emerald-400" href={`http://localhost:${port.host_port}`} target="_blank" rel="noreferrer">
+                        <a className="ml-1 text-red-400" href={`http://localhost:${port.host_port}`} target="_blank" rel="noreferrer">
                           → :{port.host_port}
                         </a>
                       )}
                     </span>
                   )}
-                  <button className="rounded bg-emerald-700 px-2 py-0.5 text-xs" onClick={() => startMut.mutate(t.label)}>
+                  <button className="rounded bg-red-700 px-2 py-0.5 text-xs" onClick={() => startMut.mutate(t.label)}>
                     run
                   </button>
                 </div>

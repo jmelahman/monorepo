@@ -48,7 +48,7 @@ WORKDIR /workspace
 
 # Install Claude Code
 ARG CLAUDE_CODE_VERSION=latest
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} vite
 
 # Copy firewall script
 COPY init-firewall.sh /usr/local/bin/

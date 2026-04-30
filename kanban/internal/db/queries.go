@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -102,19 +103,30 @@ func (s *Store) CreateTicket(ctx context.Context, t *Ticket) error {
 		return err
 	}
 	t.Position = int(maxPos.Int64) + 1
-	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO tickets (board_id, column_id, title, slug, body, position) VALUES (?, ?, ?, ?, ?, ?)`,
-		t.BoardID, t.ColumnID, t.Title, t.Slug, t.Body, t.Position,
-	)
-	if err != nil {
-		return err
+
+	baseSlug := t.Slug
+	for attempt := 1; attempt <= 100; attempt++ {
+		if attempt > 1 {
+			t.Slug = fmt.Sprintf("%s-%d", baseSlug, attempt)
+		}
+		res, err := s.db.ExecContext(ctx,
+			`INSERT INTO tickets (board_id, column_id, title, slug, body, position) VALUES (?, ?, ?, ?, ?, ?)`,
+			t.BoardID, t.ColumnID, t.Title, t.Slug, t.Body, t.Position,
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "tickets.board_id, tickets.slug") {
+				continue
+			}
+			return err
+		}
+		id, err := res.LastInsertId()
+		if err != nil {
+			return err
+		}
+		t.ID = id
+		return nil
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	t.ID = id
-	return nil
+	return fmt.Errorf("could not allocate unique slug for %q after 100 attempts", baseSlug)
 }
 
 func (s *Store) ListTickets(ctx context.Context, boardID int64) ([]Ticket, error) {

@@ -1,11 +1,6 @@
 {
   "name": "Personal Dev Sandbox",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "args": {
-      "CLAUDE_CODE_VERSION": "latest"
-    }
-  },
+  "image": "lahmanja/devcontainer:latest",
   "runArgs": [
     "--cap-add=NET_ADMIN",
     "--cap-add=NET_RAW"
