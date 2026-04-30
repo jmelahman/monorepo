@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -62,7 +61,6 @@ type SpawnOptions struct {
 type SpawnResult struct {
 	ContainerID   string
 	ContainerName string
-	BridgeIP      string
 }
 
 var varRE = regexp.MustCompile(`\$\{([^}]+)\}`)
@@ -187,17 +185,7 @@ func (c *Client) Spawn(ctx context.Context, cfg *DevcontainerConfig, opts SpawnO
 		}
 	}
 
-	bridgeIP, err := c.bridgeIP(ctx, created.ID)
-	if err != nil {
-		return nil, fmt.Errorf("inspect bridge ip: %w", err)
-	}
-
-	if err := c.allowBridgeInbound(ctx, created.ID); err != nil {
-		// Non-fatal: log and continue. The proxy may still fail.
-		_ = err
-	}
-
-	return &SpawnResult{ContainerID: created.ID, ContainerName: opts.ContainerName, BridgeIP: bridgeIP}, nil
+	return &SpawnResult{ContainerID: created.ID, ContainerName: opts.ContainerName}, nil
 }
 
 func buildContainerConfig(cfg *DevcontainerConfig, opts SpawnOptions, imageRef string) (*container.HostConfig, *network.NetworkingConfig, *container.Config, error) {
@@ -447,76 +435,6 @@ func buildBuildContext(contextDir, dockerfilePath string) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
-}
-
-// bridgeIP returns the container's IP on the default bridge network.
-func (c *Client) bridgeIP(ctx context.Context, containerID string) (string, error) {
-	info, err := c.cli.ContainerInspect(ctx, containerID)
-	if err != nil {
-		return "", err
-	}
-	if info.NetworkSettings == nil {
-		return "", fmt.Errorf("no network settings")
-	}
-	if net := info.NetworkSettings.Networks["bridge"]; net != nil && net.IPAddress != "" {
-		return net.IPAddress, nil
-	}
-	if info.NetworkSettings.IPAddress != "" {
-		return info.NetworkSettings.IPAddress, nil
-	}
-	for _, n := range info.NetworkSettings.Networks {
-		if n.IPAddress != "" {
-			return n.IPAddress, nil
-		}
-	}
-	return "", fmt.Errorf("no bridge IP for container")
-}
-
-// allowBridgeInbound runs an iptables rule inside the container to accept
-// inbound TCP from the host docker bridge gateway. Required because the
-// example devcontainer's init-firewall.sh sets INPUT DROP without re-allowing
-// the bridge.
-func (c *Client) allowBridgeInbound(ctx context.Context, containerID string) error {
-	gateway, err := c.bridgeGateway(ctx, containerID)
-	if err != nil {
-		return err
-	}
-	cidr := gatewayToCIDR(gateway)
-	// -I prepends so it runs before the REJECT line.
-	_, err = c.ExecRun(ctx, containerID, []string{"sh", "-c",
-		fmt.Sprintf("command -v iptables >/dev/null 2>&1 && iptables -I INPUT -s %s -p tcp -j ACCEPT || true", cidr),
-	})
-	return err
-}
-
-func (c *Client) bridgeGateway(ctx context.Context, containerID string) (string, error) {
-	info, err := c.cli.ContainerInspect(ctx, containerID)
-	if err != nil {
-		return "", err
-	}
-	if info.NetworkSettings == nil {
-		return "", fmt.Errorf("no network settings")
-	}
-	if net := info.NetworkSettings.Networks["bridge"]; net != nil && net.Gateway != "" {
-		return net.Gateway, nil
-	}
-	for _, n := range info.NetworkSettings.Networks {
-		if n.Gateway != "" {
-			return n.Gateway, nil
-		}
-	}
-	return "", fmt.Errorf("no gateway")
-}
-
-func gatewayToCIDR(ip string) string {
-	parsed := net.ParseIP(ip)
-	if parsed == nil || parsed.To4() == nil {
-		return ip + "/32"
-	}
-	mask := parsed.DefaultMask()
-	netw := parsed.Mask(mask)
-	ones, _ := mask.Size()
-	return fmt.Sprintf("%s/%d", netw.String(), ones)
 }
 
 // Exec creates and starts an exec; non-attached, returns exec ID.
