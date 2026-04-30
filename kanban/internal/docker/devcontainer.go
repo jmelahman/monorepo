@@ -204,11 +204,14 @@ func buildContainerConfig(cfg *DevcontainerConfig, opts SpawnOptions, imageRef s
 
 	hostCfg := &container.HostConfig{
 		Mounts:        mounts,
-		PortBindings:  nat.PortMap{},
 		AutoRemove:    false,
 		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyDisabled},
 	}
 
+	// Note: we deliberately do not publish session container ports to the host.
+	// The kanban server's PortProxy bridges traffic via `docker exec ... socat`,
+	// so the host-side binding lives on the kanban container itself (which
+	// reserves the entire configured port range).
 	exposed := nat.PortSet{}
 	for _, p := range opts.Ports {
 		port, err := nat.NewPort("tcp", fmt.Sprintf("%d", p.ContainerPort))
@@ -216,7 +219,6 @@ func buildContainerConfig(cfg *DevcontainerConfig, opts SpawnOptions, imageRef s
 			return nil, nil, nil, err
 		}
 		exposed[port] = struct{}{}
-		hostCfg.PortBindings[port] = []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", p.HostPort)}}
 	}
 
 	applyRunArgs(cfg.RunArgs, hostCfg)

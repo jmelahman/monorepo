@@ -63,6 +63,7 @@ export function SessionPane({
 
   if (ticketId == null) return null;
   const isRunning = session?.status && !["stopped", "error"].includes(session.status);
+  const canStart = session && !isRunning;
 
   return (
     <aside className="flex w-[640px] flex-col border-l border-zinc-800 bg-zinc-950">
@@ -75,7 +76,7 @@ export function SessionPane({
               create session
             </button>
           )}
-          {session && session.status === "stopped" && (
+          {canStart && (
             <button className="rounded bg-red-700 px-2 py-1" onClick={() => startMut.mutate()} disabled={startMut.isPending}>
               start
             </button>
