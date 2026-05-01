@@ -19,5 +19,5 @@ services:
     volumes:
       - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock
       - ${HOME}/.claude:${HOME}/.claude
-      - ${HOME}/code/monorepo:${HOME}/code/monorepo
+      - ${HOME}/code:${HOME}/code
       - ${HOME}/.local/share/kanban:${HOME}/.local/share/kanban
