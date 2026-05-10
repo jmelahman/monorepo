@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
 
 jobs:
   pypi:
@@ -14,12 +15,16 @@ jobs:
       fail-fast: false
       matrix:
         os-arch:
-          - {goos: "linux", goarch: "amd64"}
-          - {goos: "linux", goarch: "arm64"}
-          - {goos: "windows", goarch: "amd64"}
-          - {goos: "windows", goarch: "arm64"}
-          - {goos: "darwin", goarch: "amd64"}
-          - {goos: "darwin", goarch: "arm64"}
+          - { goos: "linux", goarch: "amd64" }
+          - { goos: "linux", goarch: "arm64" }
+          - { goos: "linux", goarch: "386" }
+          - { goos: "linux", goarch: "s390x" }
+          - { goos: "linux", goarch: "ppc64le" }
+          - { goos: "windows", goarch: "amd64" }
+          - { goos: "windows", goarch: "arm64" }
+          - { goos: "windows", goarch: "386" }
+          - { goos: "darwin", goarch: "amd64" }
+          - { goos: "darwin", goarch: "arm64" }
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
         with:
