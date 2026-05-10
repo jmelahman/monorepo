@@ -1,0 +1,40 @@
+name: Check Go Release
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check for new Go release and tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_GO=$(curl -sf 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | sed 's/^go//')
+          if [ -z "${LATEST_GO}" ]; then
+            echo "::error::Failed to fetch latest Go version"
+            exit 1
+          fi
+          echo "Latest Go version: ${LATEST_GO}"
+
+          TAG="v${LATEST_GO}"
+
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists, nothing to do."
+            exit 0
+          fi
+
+          echo "New Go version detected, creating tag ${TAG}"
+          git tag "${TAG}"
+          git push origin "${TAG}"
+          gh workflow run release.yml --ref "${TAG}"

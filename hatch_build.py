@@ -18,7 +18,7 @@ class GoBinaryBuildHook(BuildHookInterface):
         build_data["pure_python"] = False
         goos = os.getenv("GOOS")
         goarch = os.getenv("GOARCH")
-        if goos and goarch:
+        if manygo.is_goos(goos) and manygo.is_goarch(goarch):
             build_data["tag"] = "py3-none-" + manygo.get_platform_tag(goos=goos, goarch=goarch)  # type: ignore[invalid-argument-type]
         tag = os.environ["GITHUB_REF_NAME"]
         match = re.search(r"v(\d+\.\d+\.\d+)(?:\.\d+)?", tag)
@@ -30,7 +30,7 @@ class GoBinaryBuildHook(BuildHookInterface):
             archive = f"go{version}.{goos}-{goarch}.tar.gz"
 
         if not os.path.exists(archive):
-            urllib.request.urlretrieve("https://storage.googleapis.com/golang/" + archive, archive)
+            urllib.request.urlretrieve("https://go.dev/dl/" + archive, archive)
 
         if not os.path.exists("go"):
             with tempfile.TemporaryDirectory() as temp_dir:
