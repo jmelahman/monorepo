@@ -7,4 +7,3 @@ builds:
       - installsuffix=static
     ldflags:
       - -s -w
-
