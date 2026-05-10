@@ -94,6 +94,9 @@ func CompareSemver(v1, v2 *Version) bool {
 }
 
 // GetExpectedPredecessor returns the expected immediate predecessor version.
+// For v1.2.3-rc.2, this returns v1.2.3-rc.1
+// For v1.2.3-rc.1, this returns v1.2.3-rc
+// For v1.2.3-rc, this returns v1.2.2 (pre-release with no num falls back to stable decrement)
 // For v1.1.2, this returns v1.1.1
 // For v1.1.0, this returns v1.0.0 (expects previous minor to exist)
 // For v1.0.0, this returns v0.0.0 (expects previous major to exist)
@@ -104,13 +107,26 @@ func GetExpectedPredecessor(currentTag string) (string, error) {
 		return "", err
 	}
 
-	// Strip pre-release for calculating predecessor
 	pred := &Version{
-		Prefix: version.Prefix,
-		Major:  version.Major,
-		Minor:  version.Minor,
-		Patch:  version.Patch,
+		Prefix:        version.Prefix,
+		Major:         version.Major,
+		Minor:         version.Minor,
+		Patch:         version.Patch,
+		PreRelease:    version.PreRelease,
+		PreReleaseNum: version.PreReleaseNum,
 	}
+
+	if pred.PreReleaseNum > 1 {
+		pred.PreReleaseNum--
+		return pred.String(), nil
+	} else if pred.PreReleaseNum == 1 {
+		pred.PreReleaseNum = 0
+		return pred.String(), nil
+	}
+
+	// No pre-release num: strip pre-release and decrement the base version
+	pred.PreRelease = ""
+	pred.PreReleaseNum = 0
 
 	if pred.Patch > 0 {
 		pred.Patch--
@@ -122,7 +138,6 @@ func GetExpectedPredecessor(currentTag string) (string, error) {
 		pred.Minor = 0
 		pred.Patch = 0
 	} else {
-		// v0.0.0 has no predecessor
 		return "", nil
 	}
 
