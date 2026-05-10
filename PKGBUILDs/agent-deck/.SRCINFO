@@ -1,0 +1,15 @@
+pkgbase = agent-deck
+	pkgdesc = Terminal session manager for AI coding agents. Built with Go + Bubble Tea.
+	pkgver = 1.8.3
+	pkgrel = 1
+	url = https://github.com/asheshgoplani/agent-deck
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = go
+	makedepends = git
+	depends = glibc
+	source = git+https://github.com/asheshgoplani/agent-deck.git#tag=v1.8.3
+	sha256sums = SKIP
+
+pkgname = agent-deck

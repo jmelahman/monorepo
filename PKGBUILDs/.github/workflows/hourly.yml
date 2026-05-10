@@ -1,8 +1,8 @@
-name: Nightly Updates
+name: Hourly Updates
 
 on:
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "0 * * * *"
   push:
     branches:
       - master
@@ -17,24 +17,35 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: true
-          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          token: ${{ secrets.PAT }}
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - run: |
-          set -x
+          FAILED=0
           for dir in **/; do
             [[ "$dir" =~ ^[a-zA-Z0-9/_-]+$ ]] || { echo "Invalid input"; exit 1; }
-            MESSAGE=$(
-              docker run --rm -v "$PWD:/mnt" -w "/mnt" lahmanja/nvchecker:latest \
-                bash -c "chown packager -R \"$dir\" && su packager -c './pkgreleaser.py \"${dir///}\"' && chown $(id -u) -R \"$dir\""
-            )
+            echo "Checking package: ${dir///}"
+            # NOTE: Spinning up a container each time may be slow, but it's a poor man's backoff.
+            if ! MESSAGE=$(
+              docker run --rm -v "$PWD:/mnt" -w "/mnt" -u "$(id -u):$(id -g)" lahmanja/nvchecker:2026-03-01 \
+                python ./pkgreleaser.py "${dir///}"
+            ); then
+              echo "::error::docker run failed for ${dir///}"
+              FAILED=1
+              continue
+            fi
             if [ -n "$MESSAGE" ]; then
-              BRANCH="pkgreleaser/${dir}$(echo "$MESSAGE" | grep -oP '\b[0-9]+\.[0-9]+\.[0-9]+$')"
+              VERSION=$(echo "$MESSAGE" | grep -oP '\b[0-9]+\.[0-9]+\.[0-9]+$') || true
+              if [ -z "$VERSION" ]; then
+                echo "::warning::Could not extract version from: $MESSAGE"
+                continue
+              fi
+              BRANCH="pkgreleaser/${dir}${VERSION}"
               if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
                 continue
               fi
@@ -45,5 +56,6 @@ jobs:
               gh pr merge --auto --squash "$BRANCH"
             fi
           done
+          exit "$FAILED"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}

@@ -1,0 +1,15 @@
+pkgbase = cls3
+	pkgdesc = The CLI tool "cls3" is to CLear S3 Buckets. It empties (so deletes all objects and versions/delete-markers in) S3 Buckets or deletes the buckets themselves.
+	pkgver = 0.32.4
+	pkgrel = 3
+	url = https://github.com/go-to-k/cls3
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = go
+	makedepends = git
+	depends = glibc
+	source = git+https://github.com/go-to-k/cls3.git#tag=v0.32.4
+	sha256sums = SKIP
+
+pkgname = cls3
