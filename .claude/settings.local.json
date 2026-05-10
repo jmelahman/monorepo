@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -fsS -m 2 -X PATCH -H 'Content-Type: application/json' -d '{\"status\":\"working\"}' \"$KANBAN_API_URL/api/sessions/$KANBAN_SESSION_ID/status\" >/dev/null 2>&1 || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -fsS -m 2 -X PATCH -H 'Content-Type: application/json' -d '{\"status\":\"idle\"}' \"$KANBAN_API_URL/api/sessions/$KANBAN_SESSION_ID/status\" >/dev/null 2>&1 || true"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -fsS -m 2 -X PATCH -H 'Content-Type: application/json' -d '{\"status\":\"awaiting_perm\"}' \"$KANBAN_API_URL/api/sessions/$KANBAN_SESSION_ID/status\" >/dev/null 2>&1 || true"
+          }
+        ]
+      }
+    ]
+  }
+}
