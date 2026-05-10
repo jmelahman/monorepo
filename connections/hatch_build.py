@@ -13,8 +13,8 @@ class GoBinaryBuildHook(BuildHookInterface):
         build_data["pure_python"] = False
         goos = os.getenv("GOOS")
         goarch = os.getenv("GOARCH")
-        if goos and goarch:
-            build_data["tag"] = "py3-none-" + manygo.get_platform_tag(goos=goos, goarch=goarch)  # type: ignore[invalid-argument-type]
+        if manygo.is_goos(goos) and manygo.is_goarch(goarch):
+            build_data["tag"] = "py3-none-" + manygo.get_platform_tag(goos=goos, goarch=goarch)
         binary_name = self.config["binary_name"]
         tag = os.getenv("GITHUB_REF_NAME", "dev")
         commit = os.getenv("GITHUB_SHA", "none")
