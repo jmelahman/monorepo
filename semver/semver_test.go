@@ -134,6 +134,89 @@ func TestCompareSemver(t *testing.T) {
 	}
 }
 
+func TestGetExpectedPredecessor(t *testing.T) {
+	testCases := []struct {
+		name     string
+		tag      string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Patch decrement",
+			tag:      "v1.1.2",
+			expected: "v1.1.1",
+		},
+		{
+			name:     "Minor decrement",
+			tag:      "v1.1.0",
+			expected: "v1.0.0",
+		},
+		{
+			name:     "Major decrement",
+			tag:      "v1.0.0",
+			expected: "v0.0.0",
+		},
+		{
+			name:     "No predecessor for v0.0.0",
+			tag:      "v0.0.0",
+			expected: "",
+		},
+		{
+			name:     "Pre-release num > 1 decrements num",
+			tag:      "v1.2.3-rc.2",
+			expected: "v1.2.3-rc.1",
+		},
+		{
+			name:     "Pre-release num 1 drops to base pre-release",
+			tag:      "v1.2.3-rc.1",
+			expected: "v1.2.3-rc",
+		},
+		{
+			name:     "Pre-release with no num falls back to stable decrement",
+			tag:      "v1.2.3-rc",
+			expected: "v1.2.2",
+		},
+		{
+			name:     "Pre-release with no num on minor boundary",
+			tag:      "v1.2.0-alpha",
+			expected: "v1.1.0",
+		},
+		{
+			name:     "Pre-release with no num on major boundary",
+			tag:      "v2.0.0-beta",
+			expected: "v1.0.0",
+		},
+		{
+			name:     "Prefixed pre-release num decrement",
+			tag:      "org/v1.0.0-rc.3",
+			expected: "org/v1.0.0-rc.2",
+		},
+		{
+			name:     "Pre-release v0.0.0 has no predecessor",
+			tag:      "v0.0.0-alpha",
+			expected: "",
+		},
+		{
+			name:    "Invalid tag",
+			tag:     "not-a-version",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := GetExpectedPredecessor(tc.tag)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expected, result)
+			}
+		})
+	}
+}
+
 func TestCalculateNextVersion(t *testing.T) {
 	testCases := []struct {
 		name        string
