@@ -1,6 +1,36 @@
+[agent-deck]
+source = "github"
+github = "asheshgoplani/agent-deck"
+use_max_release = true
+prefix = "v"
+
 [aligo]
 source = "github"
 github = "essentialkaos/aligo"
+use_max_tag = true
+prefix = "v"
+
+[annas-mcp]
+source = "github"
+github = "iosifache/annas-mcp"
+use_max_tag = true
+prefix = "v"
+
+[aws-doctor]
+source = "github"
+github = "elC0mpa/aws-doctor"
+use_max_tag = true
+prefix = "v"
+
+[blipgloss]
+source = "github"
+github = "wobsoriano/blipgloss"
+use_max_tag = true
+prefix = "v"
+
+[brev-cli]
+source = "github"
+github = "brevdev/brev-cli"
 use_max_tag = true
 prefix = "v"
 
@@ -28,9 +58,26 @@ github = "bazelbuild/buildtools"
 use_max_tag = true
 prefix = "v"
 
-[connections]
+[captain]
 source = "github"
-github = "jmelahman/connections"
+github = "harbur/captain"
+use_max_tag = true
+prefix = "v"
+
+[cascadia]
+source = "github"
+github = "suntong/cascadia"
+use_max_tag = true
+prefix = "v"
+
+[cert]
+source = "github"
+github = "genkiroid/cert"
+use_max_tag = true
+
+[cfnctl]
+source = "github"
+github = "rogerwelin/cfnctl"
 use_max_tag = true
 prefix = "v"
 
@@ -40,15 +87,242 @@ github = "jmelahman/check-symlinks"
 use_max_tag = true
 prefix = "v"
 
+[checkip]
+source = "github"
+github = "jreisinger/checkip"
+use_max_tag = true
+prefix = "v"
+
+[clive]
+source = "github"
+github = "koki-develop/clive"
+use_max_tag = true
+prefix = "v"
+
+[cloud189]
+source = "github"
+github = "gowsp/cloud189"
+use_max_tag = true
+prefix = "v"
+
+[cls3]
+source = "github"
+github = "go-to-k/cls3"
+use_max_tag = true
+prefix = "v"
+
+[codeowners]
+source = "github"
+github = "hmarr/codeowners"
+use_max_tag = true
+prefix = "v"
+
+[comigo]
+source = "github"
+github = "yumenaka/comigo"
+use_max_tag = true
+prefix = "v"
+
+[connections]
+source = "github"
+github = "jmelahman/connections"
+use_max_tag = true
+prefix = "v"
+
 [cycle-cli]
 source = "github"
 github = "jmelahman/cycle-cli"
 use_max_tag = true
 prefix = "v"
 
+[docker-debug]
+source = "github"
+github = "zeromake/docker-debug"
+use_max_tag = true
+prefix = "v"
+
+[dockerfilegraph]
+source = "github"
+github = "patrickhoefler/dockerfilegraph"
+use_max_tag = true
+prefix = "v"
+
+[e3-core]
+source = "pypi"
+
+[e3-testsuite]
+source = "pypi"
+
+[enpasscli]
+source = "github"
+github = "hazcod/enpass-cli"
+use_max_tag = true
+prefix = "v"
+
+[faas-cli]
+source = "github"
+github = "openfaas/faas-cli"
+use_max_tag = true
+
+[fil]
+source = "github"
+github = "file-go/fil"
+use_max_tag = true
+prefix = "v"
+
+[gh-eco]
+source = "github"
+github = "jrnxf/gh-eco"
+use_max_tag = true
+prefix = "v"
+
+[gh-markdown-preview]
+source = "github"
+github = "yusukebe/gh-markdown-preview"
+use_max_tag = true
+prefix = "v"
+
+[gh-s]
+source = "github"
+github = "gennaro-tedesco/gh-s"
+use_max_tag = true
+prefix = "v"
+
 [git-orchard]
 source = "github"
 github = "jmelahman/git-orchard"
+use_max_tag = true
+prefix = "v"
+
+[gitcs]
+source = "github"
+github = "hrtsegv/gitcs"
+use_max_tag = true
+prefix = "v"
+
+[go-carpet]
+source = "github"
+github = "msoap/go-carpet"
+use_max_tag = true
+prefix = "v"
+
+[go-global-update]
+source = "github"
+github = "Gelio/go-global-update"
+use_max_tag = true
+prefix = "v"
+
+[go-grip]
+source = "github"
+github = "chrishrb/go-grip"
+use_max_tag = true
+prefix = "v"
+
+[go-perftuner]
+source = "github"
+github = "go-perf/go-perftuner"
+use_max_tag = true
+prefix = "v"
+
+[go-test-report]
+source = "github"
+github = "vakenbolt/go-test-report"
+use_max_tag = true
+prefix = "v"
+
+[goben]
+source = "github"
+github = "udhos/goben"
+use_max_tag = true
+prefix = "v"
+
+[gocognit]
+source = "github"
+github = "uudashr/gocognit"
+use_max_tag = true
+prefix = "v"
+
+[gocovsh]
+source = "github"
+github = "orlangure/gocovsh"
+use_max_tag = true
+prefix = "v"
+
+[gojekyll]
+source = "github"
+github = "osteele/gojekyll"
+use_max_tag = true
+prefix = "v"
+
+[gosuki]
+source = "github"
+github = "blob42/gosuki"
+use_max_release = true
+prefix = "v"
+
+[gotouch]
+source = "github"
+github = "denizgursoy/gotouch"
+use_max_tag = true
+prefix = "v"
+
+[gotun]
+source = "github"
+github = "Sesame2/gotun"
+use_max_tag = true
+prefix = "v"
+
+[gowebdav]
+source = "github"
+github = "studio-b12/gowebdav"
+use_max_release = true
+prefix = "v"
+
+[gowsdl]
+source = "github"
+github = "hooklift/gowsdl"
+use_max_tag = true
+prefix = "v"
+
+[grpcmd]
+source = "github"
+github = "grpcmd/grpcmd"
+use_max_tag = true
+prefix = "v"
+
+[gscript]
+source = "github"
+github = "gen0cide/gscript"
+use_max_tag = true
+prefix = "v"
+
+[gtasks]
+source = "github"
+github = "BRO3886/gtasks"
+use_max_tag = true
+prefix = "v"
+
+[gvm]
+source = "github"
+github = "toodofun/gvm"
+use_max_tag = true
+prefix = "v"
+
+[hanime-hunter]
+source = "github"
+github = "acgtools/hanime-hunter"
+use_max_tag = true
+prefix = "v"
+
+[hashi-up]
+source = "github"
+github = "jsiebens/hashi-up"
+use_max_tag = true
+prefix = "v"
+
+[htb-cli]
+source = "github"
+github = "GoToolSharing/htb-cli"
 use_max_tag = true
 prefix = "v"
 
@@ -64,15 +338,151 @@ github = "bazelbuild/bazel-watcher"
 use_max_tag = true
 prefix = "v"
 
+[iftree]
+source = "github"
+github = "t1anz0ng/iftree"
+use_max_release = true
+prefix = "v"
+
+[jaggr]
+source = "github"
+github = "rs/jaggr"
+use_max_tag = true
+
+[jenkins-cli]
+source = "github"
+github = "jenkins-zh/jenkins-cli"
+use_max_tag = true
+prefix = "v"
+
+[json2struct]
+source = "github"
+github = "marhaupe/json2struct"
+use_max_tag = true
+prefix = "v"
+
+[ktail]
+source = "github"
+github = "atombender/ktail"
+use_max_tag = true
+prefix = "v"
+
+[kure]
+source = "github"
+github = "GGP1/kure"
+use_max_tag = true
+prefix = "v"
+
+[mac-cleanup-go]
+source = "github"
+github = "2ykwang/mac-cleanup-go"
+use_max_tag = true
+prefix = "v"
+
+[madonctl]
+source = "github"
+github = "McKael/madonctl"
+use_max_tag = true
+prefix = "v"
+
+[mirrorbits]
+source = "github"
+github = "etix/mirrorbits"
+use_max_tag = true
+prefix = "v"
+
+[mufetch]
+source = "github"
+github = "ashish0kumar/mufetch"
+use_max_tag = true
+prefix = "v"
+
+[my-token]
+source = "github"
+github = "polyrabbit/my-token"
+use_max_tag = true
+prefix = "v"
+
+[n26]
+source = "github"
+github = "guitmz/n26"
+use_max_tag = true
+
 [nature-sounds]
 source = "github"
 github = "jmelahman/nature-sounds"
 use_max_tag = true
 prefix = "v"
 
+[nirvana]
+source = "github"
+github = "caicloud/nirvana"
+use_max_tag = true
+prefix = "v"
+
+[nomore403]
+source = "github"
+github = "devploit/nomore403"
+use_max_tag = true
+prefix = "v"
+
+[ojosama]
+source = "github"
+github = "jiro4989/ojosama"
+use_max_tag = true
+prefix = "v"
+
+[opsy]
+source = "github"
+github = "datolabs-io/opsy"
+use_max_tag = true
+prefix = "v"
+
+[otel-cli]
+source = "github"
+github = "equinix-labs/otel-cli"
+use_max_tag = true
+prefix = "v"
+
+[ovpm]
+source = "github"
+github = "cad/ovpm"
+use_max_tag = true
+prefix = "v"
+
+[paclear]
+source = "github"
+github = "orangekame3/paclear"
+use_max_tag = true
+prefix = "v"
+
+[pep-ebook]
+source = "github"
+github = "maogou/pep-ebook"
+use_max_tag = true
+prefix = "v"
+
+[poutine]
+source = "github"
+github = "boostsecurityio/poutine"
+use_max_tag = true
+prefix = "v"
+
 [prek]
 source = "github"
 github = "j178/prek"
+use_max_tag = true
+prefix = "v"
+
+[protolock]
+source = "github"
+github = "nilslice/protolock"
+use_max_tag = true
+prefix = "v"
+
+[prxy]
+source = "github"
+github = "Madh93/prxy"
 use_max_tag = true
 prefix = "v"
 
@@ -87,15 +497,15 @@ github = "delfick/python-dict2xml"
 use_max_tag = true
 prefix = "release-"
 
-[e3-core]
-source = "pypi"
-
-[e3-testsuite]
-source = "pypi"
-
-[ripsecrets]
+[rad]
 source = "github"
-github = "sirwart/ripsecrets"
+github = "amterp/rad"
+use_max_tag = true
+prefix = "v"
+
+[redis_tui]
+source = "github"
+github = "mat2cc/redis_tui"
 use_max_tag = true
 prefix = "v"
 
@@ -105,8 +515,115 @@ github = "jmelahman/tag"
 use_max_tag = true
 prefix = "v"
 
+[ripsecrets]
+source = "github"
+github = "sirwart/ripsecrets"
+use_max_tag = true
+prefix = "v"
+
+[saw]
+source = "github"
+github = "TylerBrock/saw"
+use_max_tag = true
+prefix = "v"
+
+[snipkit]
+source = "github"
+github = "lemoony/snipkit"
+use_max_tag = true
+prefix = "v"
+
+[sqsmover]
+source = "github"
+github = "mercury2269/sqsmover"
+use_max_tag = true
+prefix = "v"
+
+[stree]
+source = "github"
+github = "orangekame3/stree"
+use_max_tag = true
+prefix = "v"
+
+[tabtoy]
+source = "github"
+github = "davyxu/tabtoy"
+use_max_release = true
+
+[tecli]
+source = "github"
+github = "awslabs/tecli"
+use_max_tag = true
+from_pattern = '-alpha$'
+to_pattern = ''
+
+[tfsort]
+source = "github"
+github = "AlexNabokikh/tfsort"
+use_max_tag = true
+prefix = "v"
+
+[tinyfeed]
+source = "github"
+github = "TheBigRoomXXL/tinyfeed"
+use_max_tag = true
+prefix = "v"
+
+[trice]
+source = "github"
+github = "rokath/trice"
+use_max_tag = true
+prefix = "v"
+
+[truss]
+source = "github"
+github = "metaverse/truss"
+use_max_tag = true
+prefix = "v"
+
+[vgo]
+source = "github"
+github = "vg006/vgo"
+use_max_tag = true
+prefix = "v"
+
+[vibecheck]
+source = "github"
+github = "rshdhere/vibecheck"
+use_max_tag = true
+prefix = "v"
+
+[wacli]
+source = "github"
+github = "steipete/wacli"
+use_max_tag = true
+prefix = "v"
+
 [work]
 source = "github"
 github = "jmelahman/work"
+use_max_tag = true
+prefix = "v"
+
+[world-cup-2022-cli-dashboard]
+source = "github"
+github = "cedricblondeau/world-cup-2022-cli-dashboard"
+use_max_tag = true
+prefix = "v"
+
+[yamldiff]
+source = "github"
+github = "sahilm/yamldiff"
+use_max_tag = true
+
+[zeit]
+source = "github"
+github = "mrusme/zeit"
+use_max_tag = true
+prefix = "v"
+
+[zkcli]
+source = "github"
+github = "let-us-go/zkcli"
 use_max_tag = true
 prefix = "v"

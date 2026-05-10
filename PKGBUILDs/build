@@ -11,7 +11,7 @@ DIR=$1
 	exit 2
 }
 
-if command -v makepkg >/dev/null; then
+if command -v makepkg >/dev/null && [ -z "${PKGBUILD_DOCKER:-}" ]; then
 	pushd "$DIR" || exit
 	# Don't install (-i) since we may not have root permissions and might hang.
 	yes | makepkg -sf
@@ -20,6 +20,6 @@ else
 		--rm \
 		-v "$PWD":"/mnt" \
 		-w /mnt \
-		lahmanja/archlinux:latest \
+		lahmanja/archlinux:2026-03-01 \
 		bash -c "pacman -Sy && chown builder -R ${DIR} && su builder -c 'cd ${DIR} && yes | makepkg -Csi' && chown root -R ${DIR}"
 fi

@@ -1,0 +1,15 @@
+pkgbase = go-perftuner
+	pkgdesc = Helper tool for manual Go code optimization.
+	pkgver = 0.6.2
+	pkgrel = 3
+	url = https://github.com/go-perf/go-perftuner
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = go
+	makedepends = git
+	depends = glibc
+	source = git+https://github.com/go-perf/go-perftuner.git#tag=v0.6.2
+	sha256sums = SKIP
+
+pkgname = go-perftuner

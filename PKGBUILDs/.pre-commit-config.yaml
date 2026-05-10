@@ -1,11 +1,41 @@
 repos:
   - repo: local
     hooks:
+      - id: agent-deck
+        name: agent-deck
+        entry: ./build agent-deck
+        language: system
+        files: ^agent-deck/PKGBUILD$
+        pass_filenames: false
       - id: aligo
         name: aligo
         entry: ./build aligo
         language: system
         files: ^aligo/PKGBUILD$
+        pass_filenames: false
+      - id: annas-mcp
+        name: annas-mcp
+        entry: ./build annas-mcp
+        language: system
+        files: ^annas-mcp/PKGBUILD$
+        pass_filenames: false
+      - id: aws-doctor
+        name: aws-doctor
+        entry: ./build aws-doctor
+        language: system
+        files: ^aws-doctor/PKGBUILD$
+        pass_filenames: false
+      - id: blipgloss
+        name: blipgloss
+        entry: ./build blipgloss
+        language: system
+        files: ^blipgloss/PKGBUILD$
+        pass_filenames: false
+      - id: brev-cli
+        name: brev-cli
+        entry: ./build brev-cli
+        language: system
+        files: ^brev-cli/PKGBUILD$
         pass_filenames: false
       - id: buildifier
         name: buildifier
@@ -31,17 +61,269 @@ repos:
         language: system
         files: ^buildozer-bin/PKGBUILD$
         pass_filenames: false
+      - id: captain
+        name: captain
+        entry: ./build captain
+        language: system
+        files: ^captain/PKGBUILD$
+        pass_filenames: false
+      - id: cascadia
+        name: cascadia
+        entry: ./build cascadia
+        language: system
+        files: ^cascadia/PKGBUILD$
+        pass_filenames: false
+      - id: cert
+        name: cert
+        entry: ./build cert
+        language: system
+        files: ^cert/PKGBUILD$
+        pass_filenames: false
+      - id: cfnctl
+        name: cfnctl
+        entry: ./build cfnctl
+        language: system
+        files: ^cfnctl/PKGBUILD$
+        pass_filenames: false
       - id: check-symlinks
         name: check-symlinks
         entry: ./build check-symlinks
         language: system
         files: ^check-symlinks/PKGBUILD$
         pass_filenames: false
+      - id: checkip
+        name: checkip
+        entry: ./build checkip
+        language: system
+        files: ^checkip/PKGBUILD$
+        pass_filenames: false
+      - id: clive
+        name: clive
+        entry: ./build clive
+        language: system
+        files: ^clive/PKGBUILD$
+        pass_filenames: false
+      - id: cloud189
+        name: cloud189
+        entry: ./build cloud189
+        language: system
+        files: ^cloud189/PKGBUILD$
+        pass_filenames: false
+      - id: cls3
+        name: cls3
+        entry: ./build cls3
+        language: system
+        files: ^cls3/PKGBUILD$
+        pass_filenames: false
+      - id: codeowners
+        name: codeowners
+        entry: ./build codeowners
+        language: system
+        files: ^codeowners/PKGBUILD$
+        pass_filenames: false
+      - id: comigo
+        name: comigo
+        entry: ./build comigo
+        language: system
+        files: ^comigo/PKGBUILD$
+        pass_filenames: false
       - id: connections
         name: connections
         entry: ./build connections
         language: system
         files: ^connections/PKGBUILD$
+        pass_filenames: false
+      - id: cycle-cli
+        name: cycle-cli
+        entry: ./build cycle-cli
+        language: system
+        files: ^cycle-cli/PKGBUILD$
+        pass_filenames: false
+      - id: docker-debug
+        name: docker-debug
+        entry: ./build docker-debug
+        language: system
+        files: ^docker-debug/PKGBUILD$
+        pass_filenames: false
+      - id: dockerfilegraph
+        name: dockerfilegraph
+        entry: ./build dockerfilegraph
+        language: system
+        files: ^dockerfilegraph/PKGBUILD$
+        pass_filenames: false
+      - id: enpasscli
+        name: enpasscli
+        entry: ./build enpasscli
+        language: system
+        files: ^enpasscli/PKGBUILD$
+        pass_filenames: false
+      - id: faas-cli
+        name: faas-cli
+        entry: ./build faas-cli
+        language: system
+        files: ^faas-cli/PKGBUILD$
+        pass_filenames: false
+      - id: fil
+        name: fil
+        entry: ./build fil
+        language: system
+        files: ^fil/PKGBUILD$
+        pass_filenames: false
+      - id: gh-eco
+        name: gh-eco
+        entry: ./build gh-eco
+        language: system
+        files: ^gh-eco/PKGBUILD$
+        pass_filenames: false
+      - id: gh-markdown-preview
+        name: gh-markdown-preview
+        entry: ./build gh-markdown-preview
+        language: system
+        files: ^gh-markdown-preview/PKGBUILD$
+        pass_filenames: false
+      - id: gh-s
+        name: gh-s
+        entry: ./build gh-s
+        language: system
+        files: ^gh-s/PKGBUILD$
+        pass_filenames: false
+      - id: git-orchard
+        name: git-orchard
+        entry: ./build git-orchard
+        language: system
+        files: ^git-orchard/PKGBUILD$
+        pass_filenames: false
+      - id: gitcs
+        name: gitcs
+        entry: ./build gitcs
+        language: system
+        files: ^gitcs/PKGBUILD$
+        pass_filenames: false
+      - id: go-carpet
+        name: go-carpet
+        entry: ./build go-carpet
+        language: system
+        files: ^go-carpet/PKGBUILD$
+        pass_filenames: false
+      - id: go-global-update
+        name: go-global-update
+        entry: ./build go-global-update
+        language: system
+        files: ^go-global-update/PKGBUILD$
+        pass_filenames: false
+      - id: go-grip
+        name: go-grip
+        entry: ./build go-grip
+        language: system
+        files: ^go-grip/PKGBUILD$
+        pass_filenames: false
+      - id: go-perftuner
+        name: go-perftuner
+        entry: ./build go-perftuner
+        language: system
+        files: ^go-perftuner/PKGBUILD$
+        pass_filenames: false
+      - id: go-test-report
+        name: go-test-report
+        entry: ./build go-test-report
+        language: system
+        files: ^go-test-report/PKGBUILD$
+        pass_filenames: false
+      - id: goben
+        name: goben
+        entry: ./build goben
+        language: system
+        files: ^goben/PKGBUILD$
+        pass_filenames: false
+      - id: gocognit
+        name: gocognit
+        entry: ./build gocognit
+        language: system
+        files: ^gocognit/PKGBUILD$
+        pass_filenames: false
+      - id: gocovsh
+        name: gocovsh
+        entry: ./build gocovsh
+        language: system
+        files: ^gocovsh/PKGBUILD$
+        pass_filenames: false
+      - id: gojekyll
+        name: gojekyll
+        entry: ./build gojekyll
+        language: system
+        files: ^gojekyll/PKGBUILD$
+        pass_filenames: false
+      - id: gosuki
+        name: gosuki
+        entry: ./build gosuki
+        language: system
+        files: ^gosuki/PKGBUILD$
+        pass_filenames: false
+      - id: gotouch
+        name: gotouch
+        entry: ./build gotouch
+        language: system
+        files: ^gotouch/PKGBUILD$
+        pass_filenames: false
+      - id: gotun
+        name: gotun
+        entry: ./build gotun
+        language: system
+        files: ^gotun/PKGBUILD$
+        pass_filenames: false
+      - id: gowebdav
+        name: gowebdav
+        entry: ./build gowebdav
+        language: system
+        files: ^gowebdav/PKGBUILD$
+        pass_filenames: false
+      - id: gowsdl
+        name: gowsdl
+        entry: ./build gowsdl
+        language: system
+        files: ^gowsdl/PKGBUILD$
+        pass_filenames: false
+      - id: grpcmd
+        name: grpcmd
+        entry: ./build grpcmd
+        language: system
+        files: ^grpcmd/PKGBUILD$
+        pass_filenames: false
+      - id: gscript
+        name: gscript
+        entry: ./build gscript
+        language: system
+        files: ^gscript/PKGBUILD$
+        pass_filenames: false
+      - id: gtasks
+        name: gtasks
+        entry: ./build gtasks
+        language: system
+        files: ^gtasks/PKGBUILD$
+        pass_filenames: false
+      - id: gvm
+        name: gvm
+        entry: ./build gvm
+        language: system
+        files: ^gvm/PKGBUILD$
+        pass_filenames: false
+      - id: hanime-hunter
+        name: hanime-hunter
+        entry: ./build hanime-hunter
+        language: system
+        files: ^hanime-hunter/PKGBUILD$
+        pass_filenames: false
+      - id: hashi-up
+        name: hashi-up
+        entry: ./build hashi-up
+        language: system
+        files: ^hashi-up/PKGBUILD$
+        pass_filenames: false
+      - id: htb-cli
+        name: htb-cli
+        entry: ./build htb-cli
+        language: system
+        files: ^htb-cli/PKGBUILD$
         pass_filenames: false
       - id: ibazel-bin
         name: ibazel-bin
@@ -55,11 +337,155 @@ repos:
         language: system
         files: ^ibazel/PKGBUILD$
         pass_filenames: false
+      - id: iftree
+        name: iftree
+        entry: ./build iftree
+        language: system
+        files: ^iftree/PKGBUILD$
+        pass_filenames: false
+      - id: jaggr
+        name: jaggr
+        entry: ./build jaggr
+        language: system
+        files: ^jaggr/PKGBUILD$
+        pass_filenames: false
+      - id: jenkins-cli
+        name: jenkins-cli
+        entry: ./build jenkins-cli
+        language: system
+        files: ^jenkins-cli/PKGBUILD$
+        pass_filenames: false
+      - id: json2struct
+        name: json2struct
+        entry: ./build json2struct
+        language: system
+        files: ^json2struct/PKGBUILD$
+        pass_filenames: false
+      - id: ktail
+        name: ktail
+        entry: ./build ktail
+        language: system
+        files: ^ktail/PKGBUILD$
+        pass_filenames: false
+      - id: kure
+        name: kure
+        entry: ./build kure
+        language: system
+        files: ^kure/PKGBUILD$
+        pass_filenames: false
+      - id: mac-cleanup-go
+        name: mac-cleanup-go
+        entry: ./build mac-cleanup-go
+        language: system
+        files: ^mac-cleanup-go/PKGBUILD$
+        pass_filenames: false
+      - id: madonctl
+        name: madonctl
+        entry: ./build madonctl
+        language: system
+        files: ^madonctl/PKGBUILD$
+        pass_filenames: false
+      - id: mirrorbits
+        name: mirrorbits
+        entry: ./build mirrorbits
+        language: system
+        files: ^mirrorbits/PKGBUILD$
+        pass_filenames: false
+      - id: mufetch
+        name: mufetch
+        entry: ./build mufetch
+        language: system
+        files: ^mufetch/PKGBUILD$
+        pass_filenames: false
+      - id: my-token
+        name: my-token
+        entry: ./build my-token
+        language: system
+        files: ^my-token/PKGBUILD$
+        pass_filenames: false
+      - id: n26
+        name: n26
+        entry: ./build n26
+        language: system
+        files: ^n26/PKGBUILD$
+        pass_filenames: false
       - id: nature-sounds
         name: nature-sounds
         entry: ./build nature-sounds
         language: system
         files: ^nature-sounds/PKGBUILD$
+        pass_filenames: false
+      - id: nirvana
+        name: nirvana
+        entry: ./build nirvana
+        language: system
+        files: ^nirvana/PKGBUILD$
+        pass_filenames: false
+      - id: nomore403
+        name: nomore403
+        entry: ./build nomore403
+        language: system
+        files: ^nomore403/PKGBUILD$
+        pass_filenames: false
+      - id: ojosama
+        name: ojosama
+        entry: ./build ojosama
+        language: system
+        files: ^ojosama/PKGBUILD$
+        pass_filenames: false
+      - id: opsy
+        name: opsy
+        entry: ./build opsy
+        language: system
+        files: ^opsy/PKGBUILD$
+        pass_filenames: false
+      - id: otel-cli
+        name: otel-cli
+        entry: ./build otel-cli
+        language: system
+        files: ^otel-cli/PKGBUILD$
+        pass_filenames: false
+      - id: ovpm
+        name: ovpm
+        entry: ./build ovpm
+        language: system
+        files: ^ovpm/PKGBUILD$
+        pass_filenames: false
+      - id: paclear
+        name: paclear
+        entry: ./build paclear
+        language: system
+        files: ^paclear/PKGBUILD$
+        pass_filenames: false
+      - id: pep-ebook
+        name: pep-ebook
+        entry: ./build pep-ebook
+        language: system
+        files: ^pep-ebook/PKGBUILD$
+        pass_filenames: false
+      - id: poutine
+        name: poutine
+        entry: ./build poutine
+        language: system
+        files: ^poutine/PKGBUILD$
+        pass_filenames: false
+      - id: prek
+        name: prek
+        entry: ./build prek
+        language: system
+        files: ^prek/PKGBUILD$
+        pass_filenames: false
+      - id: protolock
+        name: protolock
+        entry: ./build protolock
+        language: system
+        files: ^protolock/PKGBUILD$
+        pass_filenames: false
+      - id: prxy
+        name: prxy
+        entry: ./build prxy
+        language: system
+        files: ^prxy/PKGBUILD$
         pass_filenames: false
       - id: python-blessings
         name: python-blessings
@@ -72,12 +498,6 @@ repos:
         entry: ./build python-dict2xml
         language: system
         files: ^python-dict2xml/PKGBUILD$
-        pass_filenames: false
-      - id: prek
-        name: prek
-        entry: ./build prek
-        language: system
-        files: ^prek/PKGBUILD$
         pass_filenames: false
       - id: python-e3-core
         name: python-e3-core
@@ -93,6 +513,18 @@ repos:
       #   language: system
       #   files: ^python-e3-testsuite/PKGBUILD$
       #   pass_filenames: false
+      - id: rad
+        name: rad
+        entry: ./build rad
+        language: system
+        files: ^rad/PKGBUILD$
+        pass_filenames: false
+      - id: redis_tui
+        name: redis_tui
+        entry: ./build redis_tui
+        language: system
+        files: ^redis_tui/PKGBUILD$
+        pass_filenames: false
       - id: release-tag
         name: release-tag
         entry: ./build release-tag
@@ -105,9 +537,111 @@ repos:
         language: system
         files: ^ripsecrets/PKGBUILD$
         pass_filenames: false
+      - id: saw
+        name: saw
+        entry: ./build saw
+        language: system
+        files: ^saw/PKGBUILD$
+        pass_filenames: false
+      - id: snipkit
+        name: snipkit
+        entry: ./build snipkit
+        language: system
+        files: ^snipkit/PKGBUILD$
+        pass_filenames: false
+      - id: sqsmover
+        name: sqsmover
+        entry: ./build sqsmover
+        language: system
+        files: ^sqsmover/PKGBUILD$
+        pass_filenames: false
+      - id: stree
+        name: stree
+        entry: ./build stree
+        language: system
+        files: ^stree/PKGBUILD$
+        pass_filenames: false
+      - id: tabtoy
+        name: tabtoy
+        entry: ./build tabtoy
+        language: system
+        files: ^tabtoy/PKGBUILD$
+        pass_filenames: false
+      - id: tecli
+        name: tecli
+        entry: ./build tecli
+        language: system
+        files: ^tecli/PKGBUILD$
+        pass_filenames: false
+      - id: tfsort
+        name: tfsort
+        entry: ./build tfsort
+        language: system
+        files: ^tfsort/PKGBUILD$
+        pass_filenames: false
+      - id: tinyfeed
+        name: tinyfeed
+        entry: ./build tinyfeed
+        language: system
+        files: ^tinyfeed/PKGBUILD$
+        pass_filenames: false
+      - id: trice
+        name: trice
+        entry: ./build trice
+        language: system
+        files: ^trice/PKGBUILD$
+        pass_filenames: false
+      - id: truss
+        name: truss
+        entry: ./build truss
+        language: system
+        files: ^truss/PKGBUILD$
+        pass_filenames: false
+      - id: vgo
+        name: vgo
+        entry: ./build vgo
+        language: system
+        files: ^vgo/PKGBUILD$
+        pass_filenames: false
+      - id: vibecheck
+        name: vibecheck
+        entry: ./build vibecheck
+        language: system
+        files: ^vibecheck/PKGBUILD$
+        pass_filenames: false
+      - id: wacli
+        name: wacli
+        entry: ./build wacli
+        language: system
+        files: ^wacli/PKGBUILD$
+        pass_filenames: false
       - id: work
         name: work
         entry: ./build work
         language: system
         files: ^work/PKGBUILD$
+        pass_filenames: false
+      - id: world-cup-2022-cli-dashboard
+        name: world-cup-2022-cli-dashboard
+        entry: ./build world-cup-2022-cli-dashboard
+        language: system
+        files: ^world-cup-2022-cli-dashboard/PKGBUILD$
+        pass_filenames: false
+      - id: yamldiff
+        name: yamldiff
+        entry: ./build yamldiff
+        language: system
+        files: ^yamldiff/PKGBUILD$
+        pass_filenames: false
+      - id: zeit
+        name: zeit
+        entry: ./build zeit
+        language: system
+        files: ^zeit/PKGBUILD$
+        pass_filenames: false
+      - id: zkcli
+        name: zkcli
+        entry: ./build zkcli
+        language: system
+        files: ^zkcli/PKGBUILD$
         pass_filenames: false

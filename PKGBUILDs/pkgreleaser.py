@@ -1,8 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "nvchecker[pypi]>=2.20",
+# ]
+# ///
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -25,8 +32,8 @@ class Package(NamedTuple):
 def run_nvchecker(entry: str) -> list[str]:
     result = subprocess.run(  # noqa: S603
         [
-            "uvx",
-            "--with=nvchecker[pypi]",
+            "python",
+            "-m",
             "nvchecker",
             "--entry",
             ENTRY_TO_UPSTREAM.get(entry, entry),
@@ -45,13 +52,17 @@ def parse_nvchecker_output(lines: list[str]) -> list[Package]:
     nv_data = []
     for line in lines:
         data = json.loads(line)
-        nv_data.append(
-            Package(
-                name=ENTRY_TO_UPSTREAM.get(data["name"]) or data["name"],
-                version=data["version"],
-                revision=data["revision"],
+        try:
+            nv_data.append(
+                Package(
+                    name=ENTRY_TO_UPSTREAM.get(data["name"]) or data["name"],
+                    version=data["version"],
+                    revision=data["revision"],
+                )
             )
-        )
+        except KeyError as e:
+            logging.warning("Skipping malformed nvchecker entry '%s': %s", data["name"], data["event"])
+            raise
     return nv_data
 
 
@@ -99,19 +110,23 @@ def _directory(value: str) -> str:
     return value
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description="Process package version updates")
     parser.add_argument("package", type=_directory, help="The name of the package to process")
     args = parser.parse_args()
 
     lines = run_nvchecker(args.package)
-    packages = parse_nvchecker_output(lines)
+    try:
+        packages = parse_nvchecker_output(lines)
+    except KeyError:
+        return 1
 
     package = next((p for p in packages if p.name == args.package), None)
 
     if package:
         process_package(package)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

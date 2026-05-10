@@ -1,0 +1,15 @@
+pkgbase = codeowners
+	pkgdesc = 🔒 Command line tool and Go library for CODEOWNERS files
+	pkgver = 1.2.1
+	pkgrel = 3
+	url = https://github.com/hmarr/codeowners
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = go
+	makedepends = git
+	depends = glibc
+	source = git+https://github.com/hmarr/codeowners.git#tag=v1.2.1
+	sha256sums = SKIP
+
+pkgname = codeowners
