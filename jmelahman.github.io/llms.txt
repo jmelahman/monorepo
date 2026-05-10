@@ -1,0 +1,3 @@
+# Jamison Lahman
+## Projects
+- [Agentic Kanban](https://jmelahman.github.io/agentic-kanban/llms.txt): Kanban for AI agent sessions
