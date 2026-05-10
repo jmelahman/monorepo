@@ -1,0 +1,15 @@
+pkgbase = iftree
+	pkgdesc = iftree help understand container networks by visualizing network interfaces( veth bridge lo ) relation , output in text, table, images and dot language.
+	pkgver = 0.0.10
+	pkgrel = 3
+	url = https://github.com/t1anz0ng/iftree
+	arch = x86_64
+	arch = aarch64
+	license = Apache-2.0
+	makedepends = go
+	makedepends = git
+	depends = glibc
+	source = git+https://github.com/t1anz0ng/iftree.git#tag=v0.0.10
+	sha256sums = SKIP
+
+pkgname = iftree

@@ -1,0 +1,15 @@
+pkgbase = poutine
+	pkgdesc = boostsecurityio/poutine
+	pkgver = 1.1.4
+	pkgrel = 1
+	url = https://github.com/boostsecurityio/poutine
+	arch = x86_64
+	arch = aarch64
+	license = Apache-2.0
+	makedepends = go
+	makedepends = git
+	depends = glibc
+	source = git+https://github.com/boostsecurityio/poutine.git#tag=v1.1.4
+	sha256sums = SKIP
+
+pkgname = poutine

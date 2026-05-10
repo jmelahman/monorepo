@@ -1,0 +1,15 @@
+pkgbase = sqsmover
+	pkgdesc = AWS SQS Message mover
+	pkgver = 0.4.0
+	pkgrel = 3
+	url = https://github.com/mercury2269/sqsmover
+	arch = x86_64
+	arch = aarch64
+	license = Apache-2.0
+	makedepends = go
+	makedepends = git
+	depends = glibc
+	source = git+https://github.com/mercury2269/sqsmover.git#tag=v0.4.0
+	sha256sums = SKIP
+
+pkgname = sqsmover
