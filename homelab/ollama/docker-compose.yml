@@ -15,15 +15,21 @@ services:
     image: ollama/ollama
     restart: unless-stopped
     container_name: ollama
+    environment:
+      - OLLAMA_CONTEXT_LENGTH=32768
+      - OLLAMA_KV_CACHE_TYPE=q8_0
     ports:
       - 11434:11434
     volumes:
       - ollama_data:/root/.ollama
     networks:
       - onyx_default
+      - kanban-net
 
 networks:
   onyx_default:
+    external: true
+  kanban-net:
     external: true
 
 volumes:

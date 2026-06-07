@@ -8,6 +8,7 @@ use (
 	./cycle-cli
 	./cycle-lights
 	./dashboard
+	./heart-lights
 	./docker-status
 	./git-orchard
 	./jview
