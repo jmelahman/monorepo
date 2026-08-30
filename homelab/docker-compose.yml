@@ -79,9 +79,12 @@ services:
     ports:
       - "53:53/tcp"
       - "53:53/udp"
+      - "8081:80/tcp"
     environment:
       TZ: 'US/Pacific'
       FTLCONF_dns_listeningMode: 'all'
+      FTLCONF_dns_upstreams: '1.1.1.2;1.0.0.2'
+      FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD:?set PIHOLE_PASSWORD in homelab/.env}
     volumes:
       - './etc-pihole:/etc/pihole'
     cap_add:
