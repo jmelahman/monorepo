@@ -2,8 +2,14 @@ services:
   ollama:
     image: ollama/ollama:rocm
     environment:
+      # NOTE: measured clean up to ~32k attention depth; a ~64k-token prompt
+      # GPU-hangs this iGPU (amdgpu MODE2 reset, freezes the desktop),
+      # regardless of KV dtype. Not a memory limit. Drop to 32768 to make
+      # over-long prompts truncate instead of hang.
       OLLAMA_CONTEXT_LENGTH: 131072
+      OLLAMA_KV_CACHE_TYPE: f16
       HSA_OVERRIDE_GFX_VERSION: 11.0.2
+      OLLAMA_IGPU_ENABLE: 1
     devices:
       - /dev/kfd
       - /dev/dri
