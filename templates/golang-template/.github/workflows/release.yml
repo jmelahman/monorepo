@@ -1,0 +1,53 @@
+name: Release
+
+# Tag and push to release: `git tag v1.2.3 && git push origin v1.2.3`.
+# Library-only repo? Delete this workflow and .goreleaser.yaml — a Go module
+# is "released" by the tag alone.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions: {}
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # ratchet:actions/setup-go@v7
+        with:
+          go-version: stable
+          # No cache: this job runs on a release tag, and a poisoned build
+          # cache is a supply-chain hazard for artifacts published from it.
+          cache: false
+      - name: govulncheck
+        run: scripts/modules.sh go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+  goreleaser:
+    needs: audit
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      contents: write # Creates the GitHub release.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # GoReleaser builds the changelog from history.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # ratchet:actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # ratchet:goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
