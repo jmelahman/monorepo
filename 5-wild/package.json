@@ -1,0 +1,32 @@
+{
+  "name": "5-wild",
+  "private": true,
+  "version": "0.4.5",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint",
+    "format": "biome format --write",
+    "check": "biome check",
+    "check:fix": "biome check --write",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug",
+    "golden": "UPDATE_GOLDEN=1 vitest run test/golden.test.ts",
+    "sim": "SIM=1 vitest run test/sim.test.ts"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.0.0",
+    "vitest": "^4.0.0"
+  }
+}

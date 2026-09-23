@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108"
+     role="img" aria-label="5 Wild">
+  <title>5 Wild</title>
+  <!-- The round legacy icon, for launchers on API 23-25 that ask for one. -->
+  <circle cx="54" cy="54" r="50" fill="#538d4e"/>
+  <text x="54" y="79" text-anchor="middle" fill="#e8e8ea"
+        font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="700">5</text>
+</svg>

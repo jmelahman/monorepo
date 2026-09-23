@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The bg custom property from src/style.css, and android.backgroundColor
+         in capacitor.config.ts. Used by the launch window so the WebView
+         appears over the same colour it is about to paint. -->
+    <color name="launchBackground">#0E0F13</color>
+</resources>

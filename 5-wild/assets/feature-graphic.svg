@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500"
+     role="img" aria-label="5 Wild — a word-guessing roguelike">
+  <title>5 Wild</title>
+  <!--
+    The Play listing's feature graphic. Exactly 1024x500 or the upload is
+    rejected, which is what test/store-art.test.ts is guarding.
+
+    Play crops this: it is shown full width at the top of the listing, but also
+    letterboxed and centre-cropped in search results and promo slots, and the
+    crop is not documented as any fixed ratio. So everything that has to survive
+    lives in the middle — the composition spans x 278..746 and y 140..360, well
+    inside the frame, and the corners carry nothing but background.
+
+    The tiles spell WILDS in the three feedback colours rather than showing a
+    real guess, because a real one would be a spoiler-shaped lie: the colours in
+    this game are multipliers, not just information, and a row that reads as one
+    plausible turn invites the reader to score it. This row is a wordmark.
+  -->
+
+  <!-- The bg and panel custom properties from src/style.css; the app opens
+       into it. Spelled out rather than named because a CSS variable's leading
+       double hyphen cannot appear inside an XML comment. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0e0f13"/>
+      <stop offset="1" stop-color="#191b22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="500" fill="url(#bg)"/>
+
+  <!--
+    Five 84px tiles on a 12px gap: 5*84 + 4*12 = 468 wide, so a centred row
+    starts at 512 - 234 = 278. The digits below are hand-placed against the same
+    arithmetic; if a tile size changes here, both rows move.
+  -->
+  <g font-family="Inter, system-ui, sans-serif" font-size="52" font-weight="700"
+     fill="#e8e8ea" text-anchor="middle">
+    <rect x="278" y="140" width="84" height="84" rx="8" fill="#538d4e"/>
+    <text x="320" y="196">W</text>
+
+    <rect x="374" y="140" width="84" height="84" rx="8" fill="#3a3a3c"/>
+    <text x="416" y="196">I</text>
+
+    <rect x="470" y="140" width="84" height="84" rx="8" fill="#b59f3b"/>
+    <text x="512" y="196">L</text>
+
+    <rect x="566" y="140" width="84" height="84" rx="8" fill="#3a3a3c"/>
+    <text x="608" y="196">D</text>
+
+    <rect x="662" y="140" width="84" height="84" rx="8" fill="#538d4e"/>
+    <text x="704" y="196">S</text>
+  </g>
+
+  <text x="512" y="305" text-anchor="middle" fill="#e8e8ea"
+        font-family="Inter, system-ui, sans-serif" font-size="68" font-weight="700"
+        letter-spacing="2">5 WILD</text>
+
+  <text x="512" y="350" text-anchor="middle" fill="#8b8d98"
+        font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="500"
+        letter-spacing="1">A word-guessing roguelike</text>
+</svg>

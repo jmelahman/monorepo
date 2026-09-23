@@ -1,0 +1,36 @@
+default_install_hook_types:
+  - pre-commit
+  - post-checkout
+  - post-merge
+  - post-rewrite
+repos:
+  # See https://prek.j178.dev/builtin/#2-explicit-builtin-repository
+  - repo: builtin
+    hooks:
+      - id: check-added-large-files
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        types: [yaml]
+        files: ^\.github/workflows/
+      - id: ripsecrets
+        name: ripsecrets
+        entry: ripsecrets
+        language: system
+        args:
+          - --strict-ignore
+          - --additional-pattern
+          - ^sk-[A-Za-z0-9_\-]{20,}$

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108"
+     role="img" aria-label="5">
+  <title>5</title>
+  <!--
+    The adaptive-icon foreground. The background is a flat colour resource, so
+    all this carries is the digit — and it is set smaller than the one in
+    icon.svg on purpose: a launcher may mask this canvas down to a circle of
+    66dp, and anything outside that is a crop waiting to happen.
+  -->
+  <text x="54" y="77" text-anchor="middle" fill="#e8e8ea"
+        font-family="Inter, system-ui, sans-serif" font-size="64" font-weight="700">5</text>
+</svg>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launch window's background, shown for the moment before the WebView paints.
+
+  A layer-list rather than the bitmap Capacitor ships: a bare PNG window
+  background is stretched to the window, which is why the template needed
+  eleven of them at eleven aspect ratios and still distorted on anything it had
+  not guessed. Here the colour fills and the mark is only centred, so one image
+  is right on every screen.
+
+  The colour matches android.backgroundColor in capacitor.config.ts and the bg
+  custom property in src/style.css; all three being the same is what makes the
+  handover to the WebView invisible.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launchBackground"/>
+    <item>
+        <bitmap android:src="@drawable/splash_logo" android:gravity="center"/>
+    </item>
+</layer-list>
