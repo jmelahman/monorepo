@@ -6,11 +6,13 @@ on:
       - "v*.*.*"
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
-  pypi:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -33,12 +35,37 @@ jobs:
       - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
         with:
           go-version: stable
+          # Each platform builds on its own runner with no persisted cache so the
+          # GOOS/GOARCH-specific go/ toolchain that hatch_build.py downloads cannot
+          # leak into another platform's wheel.
           cache: false
       - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # ratchet:astral-sh/setup-uv@v7
         with:
           enable-cache: false
-      - run: |
-          GOOS="${{ matrix.os-arch.goos }}" \
-          GOARCH="${{ matrix.os-arch.goarch }}" \
+      - env:
+          MATRIX_GOOS: ${{ matrix.os-arch.goos }}
+          MATRIX_GOARCH: ${{ matrix.os-arch.goarch }}
+        run: |
+          GOOS="$MATRIX_GOOS" \
+          GOARCH="$MATRIX_GOARCH" \
           uv build --wheel
-      - run: uv publish
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # ratchet:actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os-arch.goos }}-${{ matrix.os-arch.goarch }}
+          path: dist/*.whl
+          if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # ratchet:astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # ratchet:actions/download-artifact@v8
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - run: uv publish dist/*
