@@ -1,0 +1,57 @@
+# golangci-lint v2 configuration. Verify changes with
+# `golangci-lint config verify` (also wired into the pre-commit hooks).
+version: "2"
+
+run:
+  timeout: 5m
+  # Analyze files behind build tags too, so tagged integration tests are not
+  # silently unlinted. Add your own tags here.
+  build-tags:
+    - integration
+
+linters:
+  # "standard" is errcheck, govet, ineffassign, staticcheck and unused.
+  default: standard
+  enable:
+    - bodyclose # HTTP response bodies must be closed.
+    - errname # Sentinel errors named ErrFoo, error types FooError.
+    - errorlint # %w vs %v, errors.Is/As over == and type asserts.
+    - gocritic # Broad correctness/style/performance checks.
+    - gosec # Common security mistakes.
+    - misspell # Typos in comments and strings.
+    - nilerr # `return nil` when err is non-nil.
+    - noctx # HTTP requests without a context.
+    - predeclared # Shadowing len, cap, new, ...
+    - revive # Exported symbols documented, naming, early returns.
+    - thelper # Test helpers must call t.Helper().
+    - tparallel # t.Parallel() used consistently.
+    - unconvert # Redundant type conversions.
+    - unparam # Unused function parameters and always-nil returns.
+    - usestdlibvars # http.MethodGet over "GET".
+    - wastedassign # Values assigned but never used.
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+    # govet's fieldalignment check is deliberately left off: `aligo check`
+    # already reports struct packing, with better output and one place to
+    # silence it.
+
+  exclusions:
+    generated: lax
+    rules:
+      # Tests may ignore errors and use weak randomness; they are not
+      # production code paths.
+      - path: _test\.go$
+        linters:
+          - errcheck
+          - gosec
+          - unparam
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
