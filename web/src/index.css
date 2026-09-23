@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/*
+ * Theme tokens. The same utility name (e.g. bg-surface, text-fg) resolves to
+ * different colors depending on data-theme on <html>, which is set by the
+ * inline script in index.html before first paint.
+ */
+@theme {
+  --color-bg: #09090b;
+  --color-surface: #18181b;
+  --color-surface-2: #27272a;
+  --color-fg: #f4f4f5;
+  --color-fg-muted: #a1a1aa;
+  --color-border: #3f3f46;
+  --color-danger: #f87171;
+  --color-accent-500: #60a5fa;
+  --color-accent-600: #3b82f6;
+  --color-accent-700: #2563eb;
+}
+
+[data-theme="light"] {
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f5;
+  --color-fg: #18181b;
+  --color-fg-muted: #71717a;
+  --color-border: #e4e4e7;
+  --color-danger: #b91c1c;
+  --color-accent-500: #3b82f6;
+  --color-accent-600: #2563eb;
+  --color-accent-700: #1d4ed8;
+}

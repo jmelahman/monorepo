@@ -1,0 +1,26 @@
+services:
+  app:
+    image: lahmanja/fullstack-template:latest
+    container_name: fullstack-template
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - lahmanja/fullstack-template:latest
+      # Build metadata. Resolve on the host since .git is dockerignored and
+      # worktrees only stash a gitdir pointer. Set alongside your other env
+      # vars when invoking `docker compose up --build`, e.g.:
+      #   VERSION=$(git describe --tags --always --dirty) \
+      #   docker compose up -d --build
+      args:
+        VERSION: ${VERSION:-dev}
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # The image runs as UID 65532 (nonroot) and owns /data, so a named
+      # volume inherits the right permissions on first mount.
+      - app-data:/data
+
+volumes:
+  app-data:

@@ -1,0 +1,15 @@
+{
+  "name": "fullstack-template-docs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev --port 5175 --host",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview --port 5176 --host"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-llms": "^1.12.2"
+  }
+}
