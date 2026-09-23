@@ -42,7 +42,7 @@ def test_get_platform_tag_other_architectures() -> None:
 
     # Unsupported OS
     with pytest.raises(ValueError):  # noqa: PT011
-        manygo.get_platform_tag("freebsd", "amd64")  # type: ignore[arg-type]
+        manygo.get_platform_tag("freebsd", "amd64")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Unsupported architecture for a supported OS
     with pytest.raises(ValueError):  # noqa: PT011
@@ -50,7 +50,7 @@ def test_get_platform_tag_other_architectures() -> None:
 
     # Unsupported architecture for Linux
     with pytest.raises(ValueError):  # noqa: PT011
-        manygo.get_platform_tag("linux", "mips")  # type: ignore[arg-type]
+        manygo.get_platform_tag("linux", "mips")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Unsupported combination
     with pytest.raises(ValueError):  # noqa: PT011
