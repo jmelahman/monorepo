@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-docker run --rm -v "$PWD:/mnt" -w "/mnt" lahmanja/namcap:v3.5.2 \
-	namcap -i ./**/PKGBUILD
