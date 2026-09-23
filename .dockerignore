@@ -1,0 +1,14 @@
+.git
+.gitignore
+.dockerignore
+docker-bake.hcl
+compose.yaml
+Dockerfile
+README.md
+**/*.md
+web/node_modules
+web/dist
+docs/node_modules
+docs/.vitepress/dist
+docs/.vitepress/cache
+**/.DS_Store

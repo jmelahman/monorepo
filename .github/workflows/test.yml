@@ -1,0 +1,88 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions: {}
+
+jobs:
+  golang:
+    runs-on: ubuntu-latest
+    container:
+      image: lahmanja/devcontainer@sha256:f3f954bc31d635f8a2c574a8ba2f46278f77bde02e0a7137cd4891b4e72c6e2a
+      options: --user root
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: go mod tidy
+      - run: git diff --exit-code go.mod go.sum
+      - run: go test ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a
+        continue-on-error: true
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    container:
+      image: lahmanja/devcontainer@sha256:f3f954bc31d635f8a2c574a8ba2f46278f77bde02e0a7137cd4891b4e72c6e2a
+      options: --user root
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: prek
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            prek run --from-ref "${{ github.event.pull_request.base.sha }}" --to-ref "${{ github.event.pull_request.head.sha }}"
+          else
+            prek run --all-files
+          fi
+
+  image-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c
+      - uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f
+        with:
+          context: .
+          load: true
+          tags: app:smoke
+          build-args: |
+            VERSION=smoke
+      - name: assert image entrypoint runs as non-root
+        run: |
+          uid="$(docker run --rm --entrypoint id app:smoke -u)"
+          name="$(docker run --rm --entrypoint id app:smoke -un)"
+          if [ "$uid" != "65532" ] || [ "$name" != "nonroot" ]; then
+            echo "expected uid=65532(nonroot), got uid=$uid($name)" >&2
+            exit 1
+          fi
+      - name: boot image and hit API
+        run: |
+          docker run -d --name app-smoke -p 127.0.0.1:8080:8080 app:smoke --in-memory
+          for _ in $(seq 1 30); do
+            if curl -sf -m 1 http://127.0.0.1:8080/api/health >/dev/null; then
+              ok=1; break
+            fi
+            sleep 1
+          done
+          if [ "${ok:-0}" != "1" ]; then
+            echo "app did not become healthy" >&2
+            docker logs app-smoke >&2 || true
+            exit 1
+          fi
+          curl -sf -m 5 http://127.0.0.1:8080/api/items >/dev/null
+      - if: always()
+        run: docker rm -f app-smoke >/dev/null 2>&1 || true
