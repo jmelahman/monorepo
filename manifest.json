@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "PR Token Diff for GitHub",
+  "version": "0.1.4",
+  "description": "Shows the estimated token difference of a GitHub pull request next to GitHub's line-count diffstat.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "pr-token-diff@lahmanja.dev",
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://github.com/*",
+    "https://patch-diff.githubusercontent.com/*"
+  ],
+  "background": {
+    "scripts": ["background/background.js"],
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": [
+        "content/pr-locator.js",
+        "content/dom-injector.js",
+        "content/content.js"
+      ],
+      "css": ["content/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  }
+}

@@ -1,0 +1,78 @@
+.ghtd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  vertical-align: middle;
+  color: var(--fgColor-muted, var(--color-fg-muted, #59636e));
+}
+
+.ghtd-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  opacity: 0.8;
+}
+
+.ghtd-added {
+  color: var(--fgColor-success, var(--color-success-fg, #1a7f37));
+  font-weight: 600;
+}
+
+.ghtd-removed {
+  color: var(--fgColor-danger, var(--color-danger-fg, #cf222e));
+  font-weight: 600;
+}
+
+/* Sits before GitHub's "+X −Y" line diffstat, so the gap goes on the right. */
+.ghtd-header-badge {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+/* margin-left: auto pushes the badge to the right edge of GitHub's flex file
+   header; padding keeps a minimum gap where the parent isn't a flex row. */
+.ghtd-file-badge {
+  font-size: 11px;
+  margin-left: auto;
+  padding-left: 6px;
+}
+
+/* Inline placement just before GitHub's per-file line diffstat (React large-PR
+   view). No auto margin — sit snug with a small gap before the line counter,
+   matching the header badge. Defined after .ghtd-file-badge so it wins. */
+.ghtd-file-badge-inline {
+  margin-left: 0;
+  padding-left: 0;
+  margin-right: 8px;
+}
+
+/* Standalone sibling case (React /changes view): the badge isn't inside the
+   line counter's flex row, so span the full row width and right-align its own
+   contents to sit flush right instead of inheriting the parent's centering. */
+.ghtd-file-badge-block {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  margin-left: 0;
+}
+
+.ghtd-file-badge .ghtd-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.ghtd-floating {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2147483646;
+  padding: 4px 10px;
+  border-radius: 2em;
+  background: var(--bgColor-default, var(--color-canvas-default, #ffffff));
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}

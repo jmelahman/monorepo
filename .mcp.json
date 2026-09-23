@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "amo": {
+      "command": "node",
+      "args": ["tools/amo-mcp.mjs"],
+      "env": {
+        "AMO_ADDON_ID": "pr-token-diff@lahmanja.dev",
+        "AMO_JWT_ISSUER": "${AMO_JWT_ISSUER}",
+        "AMO_JWT_SECRET": "${AMO_JWT_SECRET}"
+      }
+    }
+  }
+}

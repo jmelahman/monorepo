@@ -1,0 +1,8 @@
+diff --git a/docs/notes.md b/docs/notes.md
+new file mode 100644
+index 0000000..3b18e51
+--- /dev/null
++++ b/docs/notes.md
+@@ -0,0 +1,2 @@
++# Notes
++hello world

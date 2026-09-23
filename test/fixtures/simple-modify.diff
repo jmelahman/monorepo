@@ -1,0 +1,10 @@
+diff --git a/src/app.js b/src/app.js
+index 83db48f..bf269f4 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -1,5 +1,6 @@
+ const a = 1;
+-const b = 2;
++const b = 3;
++const c = 4;
+ console.log(a + b);

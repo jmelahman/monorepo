@@ -1,0 +1,4 @@
+node_modules/
+plans/
+web-ext-artifacts/
+*.png
