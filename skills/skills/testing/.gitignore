@@ -1,0 +1,4 @@
+# Full-text episode copies are Google's copyright — kept local only.
+# Rebuild with scripts/fetch_episodes.py (manifest: references/INDEX.md).
+references/episodes/
+__pycache__/

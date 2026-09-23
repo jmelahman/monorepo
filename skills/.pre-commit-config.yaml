@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-json
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+
+  - repo: local
+    hooks:
+      - id: validate-skills
+        name: validate skills and manifests
+        entry: python3 .github/validate.py
+        language: python
+        additional_dependencies: [pyyaml]
+        pass_filenames: false
+        files: ^(skills/|\.claude-plugin/|\.github/validate\.py$)
+
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]

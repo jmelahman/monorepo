@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "skills",
+  "displayName": "jmelahman skills",
+  "description": "A collection of Agent Skills, starting with testing guidance distilled from Google's Testing on the Toilet.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Jamison Lahman",
+    "url": "https://github.com/jmelahman"
+  },
+  "homepage": "https://github.com/jmelahman/skills",
+  "repository": "https://github.com/jmelahman/skills",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "testing",
+    "test-doubles",
+    "testability",
+    "flaky-tests"
+  ]
+}

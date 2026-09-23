@@ -1,0 +1,21 @@
+{
+  "name": "jmelahman-skills",
+  "description": "Jamison Lahman's Agent Skills.",
+  "owner": {
+    "name": "Jamison Lahman",
+    "url": "https://github.com/jmelahman"
+  },
+  "plugins": [
+    {
+      "name": "skills",
+      "source": "./",
+      "description": "A collection of Agent Skills, starting with testing guidance distilled from Google's Testing on the Toilet.",
+      "version": "0.1.0",
+      "license": "GPL-3.0-or-later",
+      "author": {
+        "name": "Jamison Lahman",
+        "url": "https://github.com/jmelahman"
+      }
+    }
+  ]
+}
