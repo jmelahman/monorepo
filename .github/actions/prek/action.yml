@@ -1,0 +1,38 @@
+name: Run prek
+description: Run every hook -- lint and build alike -- over the files a change touches.
+
+inputs:
+  base:
+    description: The revision HEAD is compared against.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create the build user
+      uses: $/.github/actions/build-user
+
+    # PREK_HOME is shared with the build user so that prek-action's cache covers
+    # the hook environments and the Go toolchain prek downloads for the pkglint
+    # hook -- the build user's own $HOME wouldn't be restored into or saved from.
+    - name: Install prek
+      uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
+      env:
+        PREK_HOME: ${{ runner.temp }}/prek
+      with:
+        install-only: "true"
+
+    # One invocation: --stage manual picks up the pre-commit-stage hooks too,
+    # and prek works out the changed files from the diff itself.
+    - name: Run the hooks
+      shell: bash
+      env:
+        BASE: ${{ inputs.base }}
+        PREK_HOME: ${{ runner.temp }}/prek
+        # For zizmor's online audits.
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -eu
+        mkdir -p "$PREK_HOME"
+        chown -R builder: "$PREK_HOME"
+        su builder -c "$(command -v prek) run --stage manual --color=always --from-ref $BASE --to-ref HEAD"

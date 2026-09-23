@@ -1,0 +1,43 @@
+repos:
+  - repo: https://github.com/jmelahman/pkglint
+    rev: a3b3651b15d3c2b04b2548a39925643a625d5f4e # frozen: v1.6.1
+    hooks:
+      - id: pkglint
+      - id: pkglint-build
+        # -s lets makepkg install what the package needs. It only reaches for
+        # sudo when something is actually missing, so a local run with the
+        # dependencies already installed never prompts; CI grants the build user
+        # passwordless `sudo pacman` for the case where they are not.
+        args: ["--makepkg-arg=-s"]
+  # shellcheck-py rather than koalaman's own hook: that one is a docker_image
+  # hook, and CI runs the hooks inside a container, where there is no docker.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: a6564f5d57444e123433a5c9af733e3975c77229 # frozen: v0.11.0.1-1
+    hooks:
+      - id: shellcheck
+        args:
+          [
+            "--severity=style",
+            "--color=always",
+            "--shell=bash",
+            "--exclude=SC2034,SC2154",
+          ]
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: cef8b8350da46d8114c7e6b7272aebdccdf193ce # frozen: v1.30.0
+    hooks:
+      - id: zizmor
+  - repo: https://github.com/rhysd/actionlint
+    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca # frozen: v1.7.12
+    hooks:
+      - id: actionlint
+        # actionlint does not know the `$/` self-repository syntax yet:
+        # https://github.com/rhysd/actionlint/issues/711
+        args: ['-ignore=specifying action "\$/.*" in invalid format']
+  - repo: local
+    hooks:
+      - id: validate-configs
+        name: Every package has an nvchecker entry
+        entry: python3 validate_configs.py
+        language: system
+        pass_filenames: false
+        files: ^([^/]+/PKGBUILD|nvchecker\.toml)$

@@ -1,0 +1,12 @@
+# Package directories hold only what the AUR needs. makepkg drops sources,
+# clones and built packages next to the PKGBUILD.
+/*/*
+!/*/PKGBUILD
+!/*/.SRCINFO
+!/*/README.md
+!/*/*.patch
+!/*/*.install
+!/*/.nvchecker.toml
+!/.github/*
+
+__pycache__/

@@ -1,0 +1,16 @@
+# One section per package directory. See
+# https://nvchecker.readthedocs.io/en/latest/usage.html for every source.
+#
+# A GitHub project that tags releases as "v1.2.3":
+#
+#   [my-package]
+#   source = "github"
+#   github = "owner/repo"
+#   use_max_tag = true
+#   prefix = "v"
+#
+# A PyPI project (pkgreleaser.py maps the AUR name to the upstream name):
+#
+#   [example]
+#   source = "pypi"
+#   pypi = "example"
