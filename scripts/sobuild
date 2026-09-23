@@ -1,0 +1,42 @@
+#!/bin/sh
+# GoReleaser `gobinary` shim: builds the solod (so/) module with the solod
+# toolchain instead of `go build`, cross-compiling with zig. GoReleaser
+# invokes `<gobinary> build <flags> -o <path> <main>` with GOOS/GOARCH in
+# the environment; anything that isn't a build (version/env probes) falls
+# through to the real go.
+set -eu
+
+if [ "${1:-}" != "build" ]; then
+    exec go "$@"
+fi
+shift
+
+out=""
+while [ $# -gt 0 ]; do
+    if [ "$1" = "-o" ]; then
+        out=$2
+        shift 2
+        continue
+    fi
+    shift
+done
+if [ -z "$out" ]; then
+    echo "sobuild: no -o output path given" >&2
+    exit 1
+fi
+
+# solod's os package needs POSIX, so Windows is not a supported target.
+case "${GOOS:?}_${GOARCH:?}" in
+    linux_amd64)  target=x86_64-linux-musl ;;
+    linux_arm64)  target=aarch64-linux-musl ;;
+    darwin_amd64) target=x86_64-macos-none ;;
+    darwin_arm64) target=aarch64-macos-none ;;
+    *)
+        echo "sobuild: unsupported target ${GOOS}/${GOARCH}" >&2
+        exit 1
+        ;;
+esac
+
+here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+CC="$here/zigcc" CFLAGS="--target=$target -Os" \
+    exec so build -panic=exit -o "$out" "$here/../so"

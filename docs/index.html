@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>undot — declutter your repository root</title>
+<meta name="description" content="undot tames configuration file sprawl: tool configs move into .config/ with symlinks back, so the repository root stays readable while every tool keeps working.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="undot">
+<meta property="og:description" content="Declutter a project's root directory by taming configuration file sprawl.">
+<meta property="og:url" content="https://jamison.lahman.dev/undot/">
+<meta property="og:image" content="https://jamison.lahman.dev/undot/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="undot">
+<meta name="twitter:description" content="Declutter a project's root directory by taming configuration file sprawl.">
+<meta name="twitter:image" content="https://jamison.lahman.dev/undot/og.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1f24;
+    --muted: #57606a;
+    --accent: #0b62d6;
+    --border: #d8dee4;
+    --code-bg: #f4f6f8;
+    --pre-bg: #f7f9fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1116;
+      --fg: #e2e8ee;
+      --muted: #9aa4af;
+      --accent: #6cb0ff;
+      --border: #2b323a;
+      --code-bg: #1a2027;
+      --pre-bg: #151b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 17px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+  }
+  header { margin-bottom: 2.5rem; }
+  h1 {
+    font-size: 2.2rem;
+    margin: 0 0 .3rem;
+    letter-spacing: -.02em;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  .tagline { color: var(--muted); font-size: 1.1rem; margin: 0 0 1rem; }
+  nav a { margin-right: 1.2rem; }
+  h2 {
+    font-size: 1.35rem;
+    margin: 2.8rem 0 .8rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--border);
+    letter-spacing: -.01em;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  p, li { max-width: 42rem; }
+  code {
+    font: .88em ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: .12em .35em;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--pre-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; font-size: .85rem; }
+  ol li, ul li { margin-bottom: .45rem; }
+  .muted { color: var(--muted); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: .9rem;
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>undot</h1>
+  <p class="tagline">Declutter a project's root directory by taming configuration file sprawl.</p>
+  <nav>
+    <a href="https://github.com/jmelahman/undot">GitHub</a>
+    <a href="#install">Install</a>
+    <a href="#migrate">Migrate</a>
+    <a href="#hook">Automatic setup</a>
+    <a href="#ci">CI</a>
+  </nav>
+</header>
+
+<p>Every tool wants a dotfile at the repository root. undot moves them into a single
+tracked <code>.config/</code> directory. Gitignored symlinks point back to the root, so
+every tool keeps working. A <a href="https://pre-commit.com">pre-commit</a> hook (or
+<a href="https://github.com/j178/prek">prek</a>) recreates the symlinks on every clone and
+checkout. Teammates install nothing and notice nothing.</p>
+
+<pre><code>before              after
+──────              ─────
+.claude/            .config/
+.cursor/            .github/
+.editorconfig       src/
+.github/
+.npmrc
+.yarn/
+src/</code></pre>
+
+<h2 id="install">Install</h2>
+
+<pre><code>uv tool install undot   # or: pip install undot</code></pre>
+
+<p>Small static binaries (~200KB, instant startup) for Linux and macOS, also on
+<a href="https://github.com/jmelahman/undot/releases">GitHub releases</a>.
+The pre-commit hook (below) needs no install at all.</p>
+
+<h2 id="migrate">Migrate an existing repository</h2>
+
+<pre><code>undot migrate             # or name entries: undot migrate .claude .cursor
+git add -A &amp;&amp; git commit
+pre-commit install</code></pre>
+
+<p>One idempotent command:</p>
+
+<ul>
+  <li>moves the configs</li>
+  <li>creates the symlinks</li>
+  <li>updates <code>.gitignore</code> (existing rules that reached inside a moved directory
+      get matching <code>.config/</code> patterns)</li>
+  <li>registers the git hook below</li>
+</ul>
+
+<h2 id="hook">Clones and new repos set themselves up</h2>
+
+<p><code>migrate</code> writes this hook config. After <code>clone</code>,
+<code>checkout</code>, <code>merge</code>, or <code>rebase</code>, it restores any missing
+symlink:</p>
+
+<pre><code>default_install_hook_types: [pre-commit, post-checkout, post-merge, post-rewrite]
+repos:
+  - repo: https://github.com/jmelahman/undot
+    rev: v0.3.0
+    hooks:
+      - id: undot</code></pre>
+
+<h2 id="ci">CI configs migrate too</h2>
+
+<p>CI checkouts don't run hooks. Most tools accept an explicit config path, so a file
+like <code>.goreleaser.yaml</code> can live in <code>.config/</code> with no symlink at
+all:</p>
+
+<pre><code>undot migrate .goreleaser.yaml
+echo 'nolink .goreleaser.yaml' &gt;&gt; .config/undot.conf</code></pre>
+
+<pre><code>- run: goreleaser release --clean --config .config/.goreleaser.yaml</code></pre>
+
+<h2 id="guardrails">Guardrails</h2>
+
+<ul>
+  <li><code>.git*</code> files are never migrated. <code>.github</code> and
+      <code>.pre-commit-config.yaml</code> require <code>--force</code>, because a fresh
+      clone must be able to bootstrap the hook.</li>
+  <li>Caches, secrets, and CI-read configs (<code>.venv</code>, <code>.env</code>,
+      <code>.golangci.yml</code>, …) are skipped unless you name them.</li>
+  <li>Conflicts are reported, never overwritten. Migrating a tracked <em>file</em>
+      prints the <code>git rm --cached</code> command you'll want afterwards.</li>
+</ul>
+
+<p>Tune the scan in <code>.config/undot.conf</code> or
+<code>~/.config/undot/undot.conf</code>, one name or glob per line:</p>
+
+<pre><code># never migrate these here
+.idea*
+# do migrate .env, despite the default skip
+!.env
+# keep in .config/ without a root symlink
+nolink .goreleaser.yaml</code></pre>
+
+<footer>
+  <a href="https://github.com/jmelahman/undot">undot on GitHub</a> ·
+  GPL-3.0 licensed
+</footer>
+
+</main>
+</body>
+</html>

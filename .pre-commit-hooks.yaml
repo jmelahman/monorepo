@@ -1,0 +1,25 @@
+# Hooks provided by this repository. The symlinks that undot manages
+# are gitignored, so they must be recreated after every operation that
+# rewrites the worktree — hence the post-checkout/post-merge/post-rewrite
+# stages. Install them with:
+#
+#   default_install_hook_types: [pre-commit, post-checkout, post-merge, post-rewrite]
+#
+# in .pre-commit-config.yaml (undot migrate adds this), or with
+# `pre-commit install --hook-type post-checkout ...`.
+- id: undot
+  name: undot
+  description: Recreate root symlinks into .config/. Built by the Go toolchain (the default modfile swaps solod.dev for the gocompat implementations); no other dependencies.
+  entry: undot link
+  language: golang
+  always_run: true
+  pass_filenames: false
+  stages: [post-checkout, post-merge, post-rewrite, manual]
+- id: undot-system
+  name: undot (from PATH)
+  description: Recreate root symlinks into .config/ using a undot binary already installed on PATH.
+  entry: undot link
+  language: system
+  always_run: true
+  pass_filenames: false
+  stages: [post-checkout, post-merge, post-rewrite, manual]
