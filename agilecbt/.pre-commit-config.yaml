@@ -1,0 +1,64 @@
+default_install_hook_types:
+  - pre-commit
+  - post-checkout
+  - post-merge
+  - post-rewrite
+repos:
+  # See https://prek.j178.dev/builtin/#2-explicit-builtin-repository
+  - repo: builtin
+    hooks:
+      - id: check-added-large-files
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        types: [yaml]
+        files: ^\.github/workflows/
+      - id: ripsecrets
+        name: ripsecrets
+        entry: ripsecrets
+        language: system
+        args:
+          - --strict-ignore
+          - --additional-pattern
+          - ^sk-[A-Za-z0-9_\-]{20,}$
+      # biome is installed via `npm install` in web/ (see web/package.json).
+      # If web/node_modules is missing (fresh clone, CI), bootstrap with
+      # `npm ci` so the hook works without a separate setup step — without
+      # it, `npx biome` would try to resolve an unrelated `biome` package
+      # from the registry. The wrapper strips the leading `web/` from each
+      # path so biome — invoked inside web/ where its biome.json lives —
+      # finds the files.
+      - id: biome
+        name: biome
+        entry: bash -c 'cd web && { [ -x node_modules/.bin/biome ] || npm ci --no-audit --no-fund; } >&2 && exec node_modules/.bin/biome check --no-errors-on-unmatched "${@#web/}"' --
+        language: system
+        files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc)$
+        # Hook is invoked in parallel batches by prek when many files match;
+        # without serial, concurrent `npm ci` runs race on web/node_modules
+        # and corrupt the install. biome handles file parallelism itself.
+        require_serial: true
+      - id: govulncheck
+        name: govulncheck
+        entry: scripts/govulncheck.sh
+        language: system
+        files: ^(go\.mod|go\.sum)$
+        pass_filenames: false
+      - id: npm-audit
+        name: npm audit
+        entry: bash -c 'cd web && npm audit --audit-level=high'
+        language: system
+        files: ^web/package(-lock)?\.json$
+        pass_filenames: false

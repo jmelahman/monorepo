@@ -1,0 +1,41 @@
+name: Run Zizmor
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["**"]
+    paths:
+      - ".github/**"
+
+permissions: {}
+
+jobs:
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-slim
+    timeout-minutes: 45
+    permissions:
+      security-events: write # needed for SARIF uploads
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          enable-cache: false
+          version: "0.11.14"
+
+      - name: Run zizmor
+        run: uvx zizmor==1.24.1 --format=sarif . > results.sarif
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@bc0b696b4103f5fe60f15749af68a046868d511a
+        with:
+          sarif_file: results.sarif
+          category: zizmor

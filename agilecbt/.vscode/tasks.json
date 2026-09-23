@@ -1,0 +1,67 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Prek",
+      "type": "shell",
+      "command": "prek",
+      "args": ["run", "--from-ref", "origin/master", "--to-ref", "HEAD"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Run Tests",
+      "type": "shell",
+      "command": "go",
+      "args": ["test", "./..."],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Run Playwright E2E",
+      "type": "shell",
+      "command": "npm install && npm run test:e2e",
+      "options": {
+        "cwd": "${workspaceFolder}/web"
+      }
+    },
+    {
+      "label": "Backend",
+      "type": "shell",
+      "command": "wgo",
+      "args": ["run", ".", "serve"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Frontend",
+      "type": "shell",
+      "command": "npm install && npm run dev -- --host 0.0.0.0",
+      "options": {
+        "cwd": "${workspaceFolder}/web"
+      }
+    },
+    {
+      "label": "Frontend (Local Backend)",
+      "type": "shell",
+      "command": "npm install && npm run dev -- --host 0.0.0.0 --port 5174",
+      "options": {
+        "cwd": "${workspaceFolder}/web",
+        "env": {
+          "APP_BACKEND": "localhost:8080"
+        }
+      }
+    },
+    {
+      "label": "Docs",
+      "type": "shell",
+      "command": "npm install && npm run docs:dev",
+      "options": {
+        "cwd": "${workspaceFolder}/docs"
+      }
+    }
+  ]
+}
