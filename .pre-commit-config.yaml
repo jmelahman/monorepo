@@ -1,0 +1,23 @@
+# bundled OFL text is upstream's verbatim (the whitespace hooks rewrite it).
+exclude: ^internal/cli/testdata/|^site/assets/fonts/
+
+repos:
+  - repo: builtin
+    hooks:
+      - id: check-added-large-files
+      - id: check-executables-have-shebangs
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+
+  - repo: https://github.com/jmelahman/go-pre-commit-hooks
+    rev: v1.0.0
+    hooks:
+      - id: gofmt
+      - id: go-vet
+      - id: go-test
+        args: [-race, ./...]

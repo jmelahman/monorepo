@@ -1,0 +1,24 @@
+malicious: grade F, 20 finding(s)
+  PKGBUILD:1:1: info [PB908] no '# Maintainer:' comment; AUR convention names the responsible maintainer at the top of the PKGBUILD
+  PKGBUILD:13:9: error [PB101] remote source "http://cdn.not-github.example/badpkg.tar.gz" has no checksum (SKIP): the download is never verified
+  PKGBUILD:13:9: error [PB104] source "http://cdn.not-github.example/badpkg.tar.gz" is fetched over unencrypted http:// with nothing verifying what arrives
+  PKGBUILD:13:9: info [PB105] source host "cdn.not-github.example" differs from project url host "github.com"
+  PKGBUILD:18:3: error [PB210] npm install fetches "atomic-lockfile", "axios", "cosmiconfig", "uuid" at whatever version the npm registry serves at build time and runs their install scripts; install from the project's package.json and lockfile (`npm ci`) or declare the tool in makedepends
+  PKGBUILD:18:3: warn [PB979] npm is used but "npm" is not in makedepends; a clean build environment cannot run this build
+  PKGBUILD:18:3: info [PB980] npm install writes the invoking user's ~/.npm cache; the Node.js package guidelines pass --cache "$srcdir/npm-cache" so the build leaves no droppings outside $srcdir
+  PKGBUILD:23:3: warn [PB201] curl downloads during build(); network access belongs in prepare() with pinned hashes
+  PKGBUILD:23:3: critical [PB304] a network download is piped straight into bash and executed
+  PKGBUILD:24:3: critical [PB302] eval executes the output of a network download
+  PKGBUILD:24:11: warn [PB201] wget downloads during build(); network access belongs in prepare() with pinned hashes
+  PKGBUILD:25:17: error [PB401] redirection to "$HOME/.bashrc" writes into the user's home directory
+  PKGBUILD:31:3: error [PB401] install writes to an absolute system path ("/usr/bin/badpkg")
+  PKGBUILD:31:3: error [PB402] sudo escalates privileges during a build; anything needing root belongs to pacman's install step
+  PKGBUILD:32:3: warn [PB403] chmod 4755 creates a setuid/setgid file
+  badpkg.install:3:3: error [PB210] npm install fetches "atomic-lockfile", "axios", "cosmiconfig", "uuid" at whatever version the npm registry serves at install time and runs their install scripts as root; files a package needs belong in package(), fetched by makepkg from a checksummed source= entry, not installed by a scriptlet
+  badpkg.install:3:3: critical [PB501] npm accesses the network from an install scriptlet running as root
+  badpkg.install:4:3: critical [PB501] curl accesses the network from an install scriptlet running as root
+  badpkg.install:5:3: error [PB502] scriptlet creates a user with login shell "/bin/bash"; system users should get nologin
+  badpkg.install:6:43: critical [PB502] scriptlet writes to "/var/spool/cron/root", a persistence location outside pacman's tracking
+
+1 package linted: 1 with findings
+1 finding(s) fixable with --fix, 3 more with --unsafe-fix

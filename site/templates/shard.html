@@ -1,0 +1,44 @@
+{{define "shard.html"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body>
+{{template "topbar" .}}
+<main id="main">
+
+<section class="row hero-row">
+  <div class="tag"></div>
+  <div class="hero">
+    <div>
+      <h1>Packages: {{.Key}}</h1>
+      <p class="lede">Every package base beginning with <b>{{.Key}}</b>, graded by
+      <a href="https://github.com/jmelahman/pkglint">pkglint</a> without ever sourcing it.
+      <a href="{{.Root}}index.html">Back to the report card</a>.</p>
+    </div>
+    <dl class="titleblock">
+      <div><dt>packages</dt><dd>{{.Total}}</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="row">
+  <div class="tag">Roster<small>n = {{.Total}}</small></div>
+  <div>
+    {{template "shardnav" .}}
+    {{template "rostertable" .}}
+    {{/* Prev/Next as well as the full nav above: the letter strip is the way
+         to jump, but at the foot of a long table the next page is the more
+         likely destination and scrolling back up to find it is not. */}}
+    <nav class="pager" aria-label="Adjacent letters">
+      {{with .Prev}}<a class="prev" href="{{$.Root}}roster/{{.}}.html" rel="prev">&larr; {{.}}</a>{{end}}
+      {{with .Next}}<a class="next" href="{{$.Root}}roster/{{.}}.html" rel="next">{{.}} &rarr;</a>{{end}}
+    </nav>
+  </div>
+</section>
+
+</main>
+<script src="{{.Root}}assets/site.js?v={{.Ver}}"></script>
+</body>
+</html>
+{{end}}

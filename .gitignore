@@ -1,0 +1,9 @@
+/pkglint
+/public/
+/.cache/
+/dist/
+__pycache__/
+/plans/
+/docs/
+/data/
+/fptriage.jsonl

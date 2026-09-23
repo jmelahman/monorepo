@@ -1,0 +1,764 @@
+/* pkglint — AUR Report Card
+   A PKGBUILD is a build plan. pkglint reads the plan and never runs it, so the
+   report card is styled as a marked-up engineering drawing: hairline rules, a
+   margin gutter for annotations, a title block for the scan record, and color
+   used only as fill (never as text) so the grade ramp survives both themes. */
+
+/* ── type ─────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Plex Cond";
+  src: url(fonts/plex-cond-600.woff2) format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Plex Cond";
+  src: url(fonts/plex-cond-700.woff2) format("woff2");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Plex Sans";
+  src: url(fonts/plex-sans-var.woff2) format("woff2");
+  font-weight: 100 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url(fonts/plex-mono-400.woff2) format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url(fonts/plex-mono-600.woff2) format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+
+/* ── tokens ───────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+
+  --ink: #0a0a0c;          /* charcoal ground */
+  --ink-2: #141417;        /* row hover, quiet bands */
+  --panel: #17171a;        /* cards, code */
+  --rule: #2b2b32;         /* hairlines */
+  --rule-soft: #1f1f24;
+  --chalk: #f4f4f5;        /* primary text */
+  --dim: #9797a2;          /* secondary text */
+  --accent: #f4635e;       /* red, lifted off the charcoal to 6.4:1 */
+  --accent-soft: rgba(244, 99, 94, 0.15);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+
+  /* Grade ramp: the report-card ramp everyone already knows, green through red,
+     because a grade that has to be learned isn't doing its job. The hues are
+     pulled down off full saturation so five of them can sit on a charcoal page
+     without turning it into a dashboard. Identical in both themes, always with
+     dark text on top, so a grade reads the same everywhere including the badges
+     — every fill clears 5.4:1 against --on-g, the worst being F.
+
+     The letter is always present on the fill, so the colour is a second channel,
+     not the only one; red/green confusion costs nothing a reader needs. */
+  --g-A: #57b87e;
+  --g-B: #a3c265;
+  --g-C: #d8b04a;
+  --g-D: #e08a48;
+  --g-F: #e05a55;
+  --g-U: #898994;          /* unscannable: off the ramp, not a point on it */
+  --on-g: #0a0a0c;
+
+  /* Severity shares the grade hues, because grades are derived from it:
+     a critical makes an F, an error a D, warnings a C or B. These are fills
+     under dark text or 3px borders, never text — at their luminance they would
+     not hold as text on the light theme's ground. */
+  --s-info: #898994;
+  --s-warn: #d8b04a;
+  --s-error: #e08a48;
+  --s-critical: #e05a55;
+
+  --bar-h: 3rem;
+  --gutter: 6.5rem;
+  --gap: 1.75rem;
+  --measure: 40rem;
+
+  --mono: "Plex Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+  --sans: "Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cond: "Plex Cond", "Plex Sans", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --ink: #fafafa;
+    --ink-2: #f1f1f3;
+    --panel: #ffffff;
+    --rule: #dcdce1;
+    --rule-soft: #e8e8ec;
+    --chalk: #18181b;
+    --dim: #57575f;          /* 6.9:1 on --ink */
+    --accent: #c0272d;       /* the same red, dropped for a light ground */
+    --accent-soft: rgba(192, 39, 45, 0.09);
+    --shadow: 0 1px 0 rgba(9, 9, 11, 0.04);
+  }
+}
+
+/* ── base ─────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--chalk);
+  font: 400 0.9375rem/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+code, kbd, samp {
+  font-family: var(--mono); font-size: 0.86em;
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-radius: 2px; padding: 0.05em 0.3em; overflow-wrap: break-word;
+  /* A command that wraps mid-sentence should look like two pieces of one
+     thing, not like a box that broke. */
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 20;
+  background: var(--panel); color: var(--chalk);
+  padding: 0.6rem 1rem; border: 1px solid var(--rule);
+}
+.skip:focus { left: 0.5rem; top: 0.5rem; }
+
+/* ── top bar ──────────────────────────────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  height: var(--bar-h);
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+.topbar > div {
+  max-width: 78rem; height: 100%; margin: 0 auto; padding: 0 1.25rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.mark { display: flex; align-items: baseline; gap: 0.55rem; color: var(--chalk); }
+.mark:hover { text-decoration: none; }
+.mark b { font: 600 0.9375rem/1 var(--mono); letter-spacing: -0.01em; }
+.mark span {
+  font: 600 0.6875rem/1 var(--cond);
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim);
+}
+.topbar nav { margin-left: auto; display: flex; gap: 1.25rem; }
+.topbar nav a {
+  font: 600 0.6875rem/1 var(--cond);
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim);
+}
+.topbar nav a:hover { color: var(--chalk); text-decoration: none; }
+
+/* ── page frame ───────────────────────────────────────────────────────── */
+main { max-width: 78rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+/* A drawing's margin: section names live in the gutter, annotations to the
+   left of the work they describe. */
+.row {
+  display: grid;
+  grid-template-columns: var(--gutter) minmax(0, 1fr);
+  gap: 0 var(--gap);
+  margin: 0 0 3.25rem;
+}
+.row > .tag {
+  font: 600 0.6875rem/1.4 var(--cond);
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--dim); text-align: right; padding-top: 0.35rem;
+}
+/* The count sits under its label and stays quieter than it — but through case,
+   family and tracking, not colour. Fading it toward the page took 12px text to
+   2.7:1 in light mode; the hierarchy reads fine without spending contrast. */
+.row > .tag small {
+  display: block; font-family: var(--mono); font-weight: 400;
+  letter-spacing: 0; text-transform: none; font-size: 0.75rem;
+  color: var(--dim); margin-top: 0.2rem;
+}
+.row > :last-child { min-width: 0; }
+
+.eyebrow {
+  font: 600 0.6875rem/1 var(--cond);
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim);
+  margin: 0 0 0.9rem;
+}
+/* Breadcrumbs sit above the headline; they are a way back, not a call to
+   action, so they stay the colour of the label they interrupt. */
+.eyebrow a { color: inherit; }
+.eyebrow a:hover { color: var(--chalk); }
+
+h1 {
+  font: 700 clamp(2.25rem, 6vw, 3.5rem)/0.98 var(--cond);
+  letter-spacing: 0.005em; text-transform: uppercase;
+  margin: 0 0 0.75rem;
+}
+h1 a { color: inherit; }
+h1 .obj { font-family: var(--mono); font-weight: 600; text-transform: none;
+  font-size: 0.78em; letter-spacing: -0.02em; }
+
+h2 {
+  font: 600 1.0625rem/1.3 var(--cond);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--rule);
+}
+
+.lede { font-size: 1.0625rem; line-height: 1.6; color: var(--chalk); max-width: var(--measure); margin: 0 0 1.25rem; }
+.lede .quiet { color: var(--dim); }
+p { max-width: var(--measure); }
+
+/* ── hero + title block ───────────────────────────────────────────────── */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2.5rem; align-items: start; }
+/* The masthead is one line at every width. The clamp is sized so it stays that
+   way down to 320px; package titles elsewhere still wrap, since a name like
+   discord_arch_electron has to. */
+.hero h1 { white-space: nowrap; }
+.hero-row { margin-bottom: 2.25rem; }
+
+/* The scan record, set as a drawing's title block. */
+.titleblock { border: 1px solid var(--rule); min-width: 15rem; background: var(--panel); box-shadow: var(--shadow); }
+.titleblock div {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 1.5rem;
+  padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--rule-soft);
+}
+.titleblock div:last-child { border-bottom: 0; }
+.titleblock dt {
+  font: 600 0.6875rem/1.4 var(--cond);
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim);
+}
+.titleblock dd { margin: 0; font: 600 0.9375rem/1.4 var(--mono); font-variant-numeric: tabular-nums; }
+.titleblock dd.stamp-date { font-weight: 400; font-size: 0.8125rem; color: var(--dim); }
+
+/* ── grade chips ──────────────────────────────────────────────────────── */
+.grade {
+  display: inline-block; min-width: 1.5rem; padding: 0.1rem 0.35rem;
+  font: 600 0.8125rem/1.35 var(--mono); text-align: center;
+  color: var(--on-g); background: var(--g-U); border-radius: 2px;
+}
+.grade-A { background: var(--g-A); }
+.grade-B { background: var(--g-B); }
+.grade-C { background: var(--g-C); }
+.grade-D { background: var(--g-D); }
+.grade-F { background: var(--g-F); }
+/* "?" is not a point on the ramp, it is missing data. A grey fill would sit off
+   the green-to-red scale, but it would still be a filled chip in a column of
+   filled chips — it would read as a sixth grade, somewhere below F. Hollow it
+   out instead, so it reads as an empty slot. The selector escapes the literal
+   "?" the template writes into the class name; the inset ring keeps the chip
+   exactly the size of a filled one, so the column still aligns. */
+.grade-\?, .stamp-\? {
+  background: none; color: var(--dim);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+/* ── the corpus bar: the whole scan at one glance, and the roster filter ── */
+.corpus { margin: 0; }
+.bar { display: flex; height: 3.25rem; }
+.band {
+  flex: 1 1 0; min-width: 12px; padding: 0; border: 0;
+  background: var(--g-U); cursor: pointer; position: relative;
+  transform-origin: left center;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease;
+}
+.band-A { background: var(--g-A); }
+.band-B { background: var(--g-B); }
+.band-C { background: var(--g-C); }
+.band-D { background: var(--g-D); }
+.band-F { background: var(--g-F); }
+/* The band carries no text, so here "no data" can be hatched — the way a
+   drawing marks an area it cannot describe. */
+.band-\? {
+  background: repeating-linear-gradient(-45deg,
+    var(--g-U) 0 4px, color-mix(in srgb, var(--g-U) 55%, var(--ink)) 4px 8px);
+}
+.band + .band { border-left: 1px solid var(--ink); }
+.band:first-child { border-radius: 2px 0 0 2px; }
+.band:last-child { border-radius: 0 2px 2px 0; }
+.band:hover { opacity: 0.82; }
+.band[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--chalk); }
+.bar.filtered .band[aria-pressed="false"] { opacity: 0.3; }
+
+/* Drafting scale: magnitude you can actually read off the bar. */
+.scale { position: relative; height: 1.6rem; margin-top: 0.4rem; border-top: 1px solid var(--rule); }
+.scale span {
+  position: absolute; top: 0; transform: translateX(-50%);
+  font: 400 0.6875rem/1 var(--mono); color: var(--dim); padding-top: 0.45rem;
+}
+.scale span::before {
+  content: ""; position: absolute; top: 0; left: 50%; width: 1px; height: 0.3rem;
+  background: var(--rule);
+}
+.scale span:first-child { transform: none; }
+.scale span:first-child::before { left: 0; }
+.scale span:last-child { transform: translateX(-100%); }
+.scale span:last-child::before { left: auto; right: 0; }
+
+/* Legend doubles as the filter, and states the grading rule while it does. */
+.legend { display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; margin-top: 1.5rem; }
+/* The legend is a key first and a filter second: with no script it still
+   reads the distribution, and only then does it behave like a control. */
+.gkey {
+  display: flex; align-items: baseline; gap: 0.6rem; text-align: left;
+  padding: 0.6rem 0.75rem; border: 0; border-radius: 3px;
+  background: transparent; color: var(--chalk); cursor: default; font: inherit;
+}
+.js .gkey { cursor: pointer; }
+.js .gkey:hover { background: var(--ink-2); }
+.gkey[aria-pressed="true"] { background: var(--accent-soft); }
+.gkey b { font: 600 0.9375rem/1.35 var(--mono); font-variant-numeric: tabular-nums; }
+.gkey em { display: block; font-style: normal; font-size: 0.8125rem; color: var(--dim); }
+
+/* ── repositories ─────────────────────────────────────────────────────── */
+/* The repository chip says where a package comes from. It is deliberately
+   not a grade: a hairline box in the label face, the same shape for every
+   repository, so the eye reads the word and keeps colour for the grades.
+   Official repositories are set a step brighter than the AUR — on this site
+   they are the exception, and the roster's tail is where they sit. */
+.repo {
+  display: inline-block; padding: 0.05rem 0.4rem; border-radius: 2px; white-space: nowrap;
+  border: 1px solid var(--rule); color: var(--dim);
+  font: 600 0.6875rem/1.5 var(--cond); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.repo-core, .repo-extra, .repo-multilib { color: var(--chalk); border-color: var(--dim); }
+/* A dash where a number is not: an official package has no votes, and a zero
+   would say it is unpopular. */
+.none { color: var(--dim); }
+
+/* The repository toggles beside the disclosure. Pressed is shown: they read
+   as plain labels with no script and as controls with it, styled as the
+   legend's keys are. */
+.keys {
+  display: grid; grid-template-columns: auto minmax(0, 1fr);
+  align-items: start; column-gap: 1rem; margin-top: 1.75rem;
+}
+/* The toggles hold the first column and the disclosure spans both as a
+   subgrid: its button sits in the second column, on the toggles' line at
+   every width, and its text opens across the full width beneath. Nothing
+   already on the page moves when it is expanded, and on a narrow screen
+   the button stays beside the toggles rather than dropping under them. */
+/* The disclosure shares row 1 and is painted later, so without a stacking
+   order its box covers the toggles beside its button and takes their clicks. */
+.keys .rkeys { grid-column: 1; grid-row: 1; position: relative; z-index: 1; min-height: 2.15rem; align-items: center; }
+.keys .explain {
+  grid-column: 1 / -1; grid-row: 1; margin-top: 0;
+  display: grid; grid-template-columns: subgrid; column-gap: 1rem;
+}
+.keys .explain summary { grid-column: 2; justify-self: start; }
+.keys .explain > div, .keys .explain::details-content { grid-column: 1 / -1; }
+.rkeys { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+/* A flex box rather than inline-block: the button inherits the body's
+   15px/1.6 line, whose strut is taller than the chip and, with Plex Sans'
+   ascent exceeding its descent, leaves the slack above the chip. A flex
+   container lays out no strut, so the chip is centred by its own height. */
+.rkey {
+  display: inline-flex; align-items: center; padding: 0.35rem 0.5rem; border: 0; border-radius: 3px;
+  background: transparent; color: inherit; cursor: default; font: inherit;
+}
+.js .rkey { cursor: pointer; }
+.js .rkey:hover { background: var(--ink-2); }
+.rkey[aria-pressed="true"] { background: var(--accent-soft); }
+/* In the toggle row the chips are peers: the roster's brighter official
+   chips would read as the AUR being disabled here, so pressed is the only
+   distinction, and it is what dims the rest. */
+.rkey .repo { color: var(--chalk); border-color: var(--dim); }
+.js .rkey[aria-pressed="false"] .repo { opacity: 0.45; }
+/* The script hides what the pressed repositories hold none of: a grade's band
+   and key, the drifted row. The attribute has to win over the display the
+   element's own class set. */
+.band[hidden], .gkey[hidden], .titleblock div[hidden] { display: none !important; }
+
+/* ── disclosure ───────────────────────────────────────────────────────── */
+/* The caveat about what a grade is worth has to be reachable without being
+   permanently in the way. <details> does that with no script, so it still
+   opens with JavaScript off. */
+.explain { margin-top: 1.75rem; max-width: var(--measure); }
+.explain summary {
+  display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;
+  font: 600 0.6875rem/1 var(--cond);
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim);
+  padding: 0.55rem 0.8rem; background: var(--panel);
+  border: 1px solid var(--rule); border-radius: 2px;
+  list-style: none; /* Safari and Firefox each need their own opt-out. */
+}
+.explain summary::-webkit-details-marker { display: none; }
+.explain summary::before {
+  content: "+"; color: var(--accent);
+  font: 400 0.9375rem/1 var(--mono);
+}
+.explain[open] summary::before { content: "\2212"; }
+.explain summary:hover { color: var(--chalk); border-color: var(--dim); }
+.explain > div { border-left: 2px solid var(--accent); padding: 0.15rem 0 0.15rem 1.1rem; margin-top: 1.1rem; }
+.explain p { margin: 0 0 0.7rem; }
+.explain p:last-child { margin-bottom: 0; }
+
+/* ── the roster ───────────────────────────────────────────────────────── */
+.toolbar { display: none; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.js .toolbar { display: flex; }
+input[type="search"] {
+  flex: 1 1 16rem; max-width: 26rem; padding: 0.5rem 0.7rem;
+  border: 1px solid var(--rule); border-radius: 3px;
+  background: var(--panel); color: var(--chalk);
+  font: 400 0.875rem/1.4 var(--mono);
+}
+input[type="search"]::placeholder { color: var(--dim); }
+.count { font: 400 0.8125rem/1 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.clear {
+  border: 1px solid var(--rule); background: transparent; color: var(--dim); cursor: pointer;
+  font: 600 0.6875rem/1 var(--cond); letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.5rem 0.7rem; border-radius: 3px;
+}
+.clear:hover { color: var(--chalk); border-color: var(--dim); }
+.clear[hidden] { display: none; }
+
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left; white-space: nowrap;
+  font: 600 0.6875rem/1 var(--cond); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--dim); padding: 0.6rem 0.7rem; border-bottom: 1px solid var(--rule);
+}
+thead th button {
+  border: 0; background: none; padding: 0; cursor: pointer; color: inherit; font: inherit;
+  letter-spacing: inherit; text-transform: inherit;
+}
+thead th button:hover { color: var(--chalk); }
+thead th button::after { content: "  "; white-space: pre; }
+thead th[aria-sort="ascending"] button::after { content: " \2191"; }
+thead th[aria-sort="descending"] button::after { content: " \2193"; }
+thead th[aria-sort] button { color: var(--chalk); }
+/* Only the roster header pins: it sits directly in the page flow, so it can
+   stick to the viewport under the top bar. Tables inside a .scroll container
+   cannot — the container becomes the scrollport. */
+#roster thead th { position: sticky; top: var(--bar-h); z-index: 2; background: var(--ink); }
+
+tbody td { padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule-soft); vertical-align: baseline; }
+tbody tr:hover td { background: var(--ink-2); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+/* break-word, not anywhere: anywhere lets the column shrink to one character
+   wide, which wraps names that would have fit. Long names wrap rather than
+   widening the column for all 600-odd rows. */
+.pkg { font: 600 0.875rem/1.5 var(--mono); overflow-wrap: break-word; }
+/* The roster's names are not accent-coloured. Red is the report's one loud
+   signal — 600 red links beside the red F chips would spend it on navigation
+   and leave the grades competing with the thing you navigate by. The names
+   keep a hairline underline so they still read as links, and take the accent
+   only under the cursor. */
+.pkg a {
+  color: var(--chalk);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+}
+.pkg a:hover { color: var(--accent); text-decoration-color: currentColor; }
+/* One line per description, clipped: it is context for the name, not something
+   you read down the column, and letting it wrap made row heights jump around
+   with the filter. The full text is still in the DOM, so search still matches
+   it, and the cell carries it as a tooltip. */
+.desc {
+  color: var(--dim); font-size: 0.875rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+td.gcell { padding-left: 0; }
+
+/* Fixed geometry so filtering cannot resize the roster. Under auto layout the
+   browser measures only the rows it can see, so narrowing 607 packages down to
+   three re-fits every column and the whole table jumps. The widths come from
+   the full set once, and then stay put. */
+#roster { table-layout: fixed; }
+#roster .grade-h { width: 4.5rem; }
+#roster .pkg-h { width: 30%; }
+#roster .repo-h { width: 6.5rem; }
+#roster th.num { width: 6rem; }
+/* Description takes whatever is left, so only it reflows as the page resizes. */
+/* The drift glyph is the one severity-coloured thing that is text rather than a
+   fill, and --s-warn is mixed for dark text on top of it, not for standing on a
+   near-white ground. It takes the accent, which is tuned per theme. */
+.drift { color: var(--accent); font-weight: 600; }
+.empty { color: var(--dim); padding: 2rem 0.7rem; text-align: center; }
+.empty[hidden] { display: none; }
+
+/* ── reaching the rest of the corpus ──────────────────────────────────── */
+/* The index server-renders its most-voted head only, so this line says what
+   the table actually holds and points at the pages that hold the rest. It is
+   not a .js affordance: with scripting off it is the only thing on the page
+   that admits the roster is a slice, so it must render either way. */
+.rest {
+  margin: 1rem 0 0; padding-top: 0.9rem; border-top: 1px solid var(--rule);
+  color: var(--dim); font-size: 0.875rem;
+}
+
+/* The letter strip. Monospace and fixed-width cells so the row reads as an
+   index rather than a sentence — "i" and "w" get the same target. */
+.shardnav { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 1.25rem; }
+.shardnav a {
+  min-width: 2rem; padding: 0.35rem 0.4rem; text-align: center;
+  border: 1px solid var(--rule); border-radius: 3px;
+  color: var(--dim); text-decoration: none;
+  font: 600 0.8125rem/1 var(--mono);
+}
+.shardnav a:hover { color: var(--chalk); border-color: var(--dim); }
+.shardnav a[aria-current="page"] {
+  color: var(--chalk); border-color: var(--accent); background: var(--accent-soft);
+}
+
+.pager {
+  display: flex; justify-content: space-between; gap: 1rem;
+  margin-top: 1.25rem; padding-top: 0.9rem; border-top: 1px solid var(--rule);
+  font: 600 0.8125rem/1 var(--mono);
+}
+/* The next link sits at the right edge even when there is no previous one —
+   without this an only child would be pushed left by justify-content. */
+.pager .next:only-child { margin-left: auto; }
+.pager a { color: var(--dim); text-decoration: none; }
+.pager a:hover { color: var(--accent); }
+
+/* One tile per letter, each carrying its count, so the index doubles as a
+   histogram of where the corpus actually sits. */
+.shardlist {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: 0.5rem;
+}
+.shardlist a {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+  padding: 0.6rem 0.7rem; border: 1px solid var(--rule); border-radius: 3px;
+  text-decoration: none;
+}
+.shardlist a:hover { border-color: var(--dim); background: var(--ink-2); }
+.shardlist b { color: var(--chalk); font: 600 1rem/1 var(--mono); }
+.shardlist span {
+  color: var(--dim); font: 400 0.8125rem/1 var(--mono); font-variant-numeric: tabular-nums;
+}
+
+/* ── notes ────────────────────────────────────────────────────────────── */
+.note {
+  border: 1px solid var(--rule); border-left: 3px solid var(--dim);
+  background: var(--panel); padding: 0.9rem 1.1rem; margin: 0 0 1.5rem;
+  font-size: 0.9375rem; max-width: 48rem;
+}
+.note p { margin: 0 0 0.6rem; max-width: 46rem; }
+.note p:last-child, .note ul:last-child { margin-bottom: 0; }
+.note ul { margin: 0 0 0.6rem; padding-left: 1.1rem; }
+.note li { margin-bottom: 0.2rem; }
+.note-alert { border-left-color: var(--s-warn); }
+.note h3 {
+  font: 600 0.6875rem/1 var(--cond); letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--dim); margin: 0 0 0.6rem;
+}
+
+/* ── package page ─────────────────────────────────────────────────────── */
+.pkghead { display: flex; align-items: flex-start; gap: 1.5rem; }
+.stamp {
+  flex: none; width: 5rem; height: 5rem; display: grid; place-items: center;
+  border-radius: 3px; background: var(--g-U); color: var(--on-g);
+  font: 600 2.75rem/1 var(--mono);
+  box-shadow: inset 0 0 0 1px rgba(10, 10, 12, 0.28), inset 0 0 0 5px transparent, inset 0 0 0 6px rgba(10, 10, 12, 0.28);
+}
+.stamp-A { background: var(--g-A); }
+.stamp-B { background: var(--g-B); }
+.stamp-C { background: var(--g-C); }
+.stamp-D { background: var(--g-D); }
+.stamp-F { background: var(--g-F); }
+/* A package name is an identifier, so it is set as one. */
+.pkghead h1 {
+  font: 600 clamp(1.5rem, 4vw, 2.25rem)/1.15 var(--mono);
+  letter-spacing: -0.02em; text-transform: none; margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+.facts { display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; margin: 0 0 0.6rem; max-width: none;
+  font: 400 0.8125rem/1.5 var(--mono); color: var(--dim); }
+.facts b { font-weight: 600; color: var(--chalk); }
+
+.findings { border-top: 1px solid var(--rule); }
+.file {
+  font: 400 0.8125rem/1 var(--mono); color: var(--dim);
+  padding: 1.1rem 0 0.5rem; letter-spacing: 0;
+}
+.finding {
+  display: grid; grid-template-columns: 5.5rem 5.5rem minmax(0, 1fr);
+  gap: 0 1rem; align-items: baseline;
+  padding: 0.7rem 0.7rem 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--rule-soft); border-left: 3px solid var(--s-info);
+}
+.finding:hover { background: var(--ink-2); }
+.sev-info { border-left-color: var(--s-info); }
+.sev-warn { border-left-color: var(--s-warn); }
+.sev-error { border-left-color: var(--s-error); }
+.sev-critical { border-left-color: var(--s-critical); }
+.finding .loc { font: 400 0.8125rem/1.5 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+/* Messages quote paths and source URLs, which have no break opportunities of
+   their own; let them wrap rather than push the column past the page. */
+.finding .msg { font-size: 0.9375rem; overflow-wrap: anywhere; }
+.finding .rid { font: 600 0.8125rem/1.5 var(--mono); display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+
+.sev {
+  display: inline-block; padding: 0.05rem 0.35rem; border-radius: 2px;
+  font: 600 0.6875rem/1.5 var(--cond); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--on-g); background: var(--s-info);
+}
+.sev.warn { background: var(--s-warn); }
+.sev.error { background: var(--s-error); }
+.sev.critical { background: var(--s-critical); }
+
+/* Auto-fix pill: color rides the dot, never the text, so both themes hold. The
+   dot borrows the ramp's two ends of "safe" — green for a rewrite pkglint will
+   make unasked, orange for one it wants you to look at first. */
+.fix {
+  display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;
+  padding: 0.05rem 0.4rem; border: 1px solid var(--rule); border-radius: 2px;
+  font: 400 0.75rem/1.5 var(--mono); color: var(--chalk);
+}
+.fix::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--g-A); }
+.fix-unsafe::before { background: var(--g-D); }
+
+/* ── rule pages ───────────────────────────────────────────────────────── */
+/* Flagged above preferred, each at full width: the examples run to 100
+   columns, and side by side would have cut every one of them in half. Read
+   down, it is also the order you fix in. */
+.example { display: grid; gap: 1.1rem; margin: 0; }
+.example figure { margin: 0; min-width: 0; }
+.example figcaption { margin-bottom: 0.45rem; }
+.tag-bad, .tag-good {
+  display: inline-block; padding: 0.1rem 0.45rem; border-radius: 2px;
+  font: 600 0.6875rem/1.5 var(--cond); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--on-g); background: var(--g-F);
+}
+.tag-good { background: var(--g-A); }
+pre {
+  margin: 0; padding: 0.85rem 1rem; overflow-x: auto;
+  background: var(--panel); border: 1px solid var(--rule); border-radius: 3px;
+  font: 400 0.8125rem/1.65 var(--mono); color: var(--chalk);
+  tab-size: 2;
+}
+.example .bad pre { border-left: 3px solid var(--g-F); }
+.example .good pre { border-left: 3px solid var(--g-A); }
+/* A one-line directive shouldn't be framed like a code listing. */
+.snippet { display: inline-block; min-width: min(100%, 20rem); margin: 0 0 1.1rem; }
+
+.rulenav { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--rule); padding-top: 1rem; margin-top: 2rem; }
+.rulenav a { font: 400 0.8125rem/1.5 var(--mono); }
+.rulenav span { color: var(--dim); font: 400 0.8125rem/1.5 var(--mono); }
+
+td.rid { white-space: nowrap; font: 600 0.875rem/1.5 var(--mono); }
+td.rname { font: 400 0.875rem/1.5 var(--mono); color: var(--dim); white-space: nowrap; }
+/* anywhere, not break-word: a slash-joined run like
+   GOFLAGS/GONOSUMCHECK/GOSUMDB/GOINSECURE carries no break opportunity of its
+   own, and break-word still counts the whole run toward the column's minimum.
+   That was enough to push one category's table past its container and give it a
+   horizontal scrollbar the other six didn't have. The description is the only
+   column that flexes, so letting it break the run keeps every table flush. */
+td.rdoc { font-size: 0.875rem; overflow-wrap: anywhere; }
+td.rfix { width: 1%; }
+/* Severity rides in badges, so the cell only has to refuse to wrap: a range
+   broken across two lines would read as two separate rules. */
+td.rsev { width: 1%; white-space: nowrap; }
+/* The dash is spelled out rather than inherited: it also renders inside the
+   header's invisible sizer, where the surrounding font is the condensed
+   header face, and a sizer that measures wider than the cells it sizes would
+   pad the column by the difference. */
+.sevto { color: var(--dim); padding: 0 0.15rem; font: 400 0.8125rem/1 var(--mono); }
+/* An invisible copy of a column's widest possible content, rendered in its
+   header cell: zero height, but the width still counts toward the column, so
+   the seven category tables all land on the same widths. The header's
+   uppercase tracking would inflate the copy, so both reset here; the name
+   sizer wears td.rname's font so it measures like a real cell. */
+.colsizer { display: block; height: 0; overflow: hidden; visibility: hidden; letter-spacing: normal; text-transform: none; }
+.rname-sizer { font: 400 0.875rem/1.5 var(--mono); }
+
+/* The grading rule, drawn as the ladder it is. */
+.ladder { display: grid; gap: 1px; margin: 0 0 1.5rem; }
+.rung { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 0.75rem; align-items: baseline; padding: 0.35rem 0; }
+.rung > span { font-size: 0.875rem; color: var(--dim); }
+.rung > span.grade { color: var(--on-g); font-size: 0.8125rem; }
+.rung span b { color: var(--chalk); font-weight: 600; }
+
+/* ── motion ───────────────────────────────────────────────────────────── */
+@keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes rise { from { opacity: 0; transform: translateY(0.4rem); } to { opacity: 1; transform: none; } }
+.band { animation: draw 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) backwards; }
+.corpus .scale, .corpus .legend { animation: rise 0.35s ease-out 0.4s backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important; animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 64rem) {
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
+  .titleblock { min-width: 0; }
+  /* Descriptions are the first thing to go: they are the only column whose
+     width the dataset controls, and the roster still answers its question
+     without them. */
+  .desc, th.desc-h { display: none; }
+  /* Description was the column absorbing the slack; with it gone the name has
+     to, or fixed layout shares the freed width out in proportion to the widths
+     that remain and hands most of it to Grade. */
+  #roster .pkg-h { width: auto; }
+}
+@media (max-width: 56rem) {
+  main { padding-top: 1.75rem; }
+  .row { grid-template-columns: minmax(0, 1fr); gap: 0.6rem; margin-bottom: 2.5rem; }
+  .row > .tag { text-align: left; padding-top: 0; border-top: 1px solid var(--rule); padding-top: 0.6rem; }
+  .row > .tag small { display: inline; margin-left: 0.5rem; }
+  .row.hero-row > .tag { border-top: 0; padding-top: 0; }
+  .example { grid-template-columns: minmax(0, 1fr); }
+  .finding { grid-template-columns: minmax(0, 1fr); gap: 0.35rem 0; }
+  .finding .rid { order: -1; }
+  .rname, th.rname-h { display: none; }
+}
+@media (max-width: 34rem) {
+  .pkghead { gap: 1rem; }
+  .stamp { width: 3.5rem; height: 3.5rem; font-size: 1.75rem; }
+  .votes, th.votes-h, .rcell, th.repo-h { display: none; }
+  h1 { font-size: clamp(1.75rem, 9vw, 2.5rem); }
+  .mark span { display: none; }
+  /* On a phone the roster is down to grade, name, count; give the name the
+     room and let it break mid-word, which is the lesser evil at this width.
+     Grade and Findings tighten here too: at this width their desktop widths
+     are a third of the table between them, and every pixel they hold is one
+     the name wraps for. Once the columns are that narrow the header labels no
+     longer fit inside them — they are the widest thing in the column, not the
+     data — so the roster's headers lose a step of size and most of their
+     tracking, and the sort control gives up the second space it reserves for
+     the arrow. */
+  #roster th, #roster td { padding-left: 0.4rem; padding-right: 0.4rem; }
+  #roster .grade-h { width: 3.5rem; }
+  #roster th.num { width: 4.5rem; }
+  #roster thead th { font-size: 0.625rem; letter-spacing: 0.04em; }
+  /* The sort control reserves two spaces so a column does not shift when its
+     arrow appears. Here that reservation is most of what does not fit, and the
+     arrow itself has to stay: it is the only thing saying which column the
+     table is sorted by. Drop the placeholder and the arrow's leading space —
+     the header tracking already leaves a gap — and the arrow fits. */
+  #roster thead th button::after { content: ""; }
+  #roster thead th[aria-sort="ascending"] button::after { content: "\2191"; }
+  #roster thead th[aria-sort="descending"] button::after { content: "\2193"; }
+  .pkg { max-width: none; overflow-wrap: anywhere; }
+
+  /* The rule reference is the one table you actually read rather than scan,
+     so on a phone each row unfolds into a block instead of scrolling
+     sideways. With the width back, the rule name comes back with it. */
+  .ruletable, .ruletable tbody, .ruletable tr, .ruletable td { display: block; }
+  .ruletable thead { display: none; }
+  .ruletable { border-collapse: collapse; }
+  .ruletable tr { padding: 1rem 0; border-bottom: 1px solid var(--rule-soft); }
+  .ruletable tr:last-child { border-bottom: 0; }
+  .ruletable td { border: 0; padding: 0; }
+  .ruletable td.rid, .ruletable td.rname, .ruletable td.rsev, .ruletable td.rfix { display: inline-block; margin-right: 0.6rem; }
+  /* The 1% that shrink-wraps these two as table cells is 1% of the row once
+     they are inline-blocks, which their badges then overflow into whatever
+     sits to the right. Off the table layout, shrink-wrapping is the default. */
+  .ruletable td.rsev, .ruletable td.rfix { width: auto; }
+  .ruletable td.rdoc { margin-top: 0.45rem; }
+}

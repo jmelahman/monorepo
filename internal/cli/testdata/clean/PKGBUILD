@@ -1,0 +1,50 @@
+# Maintainer: Example <example@example.com>
+pkgname=goodpkg
+pkgver=2.1.0
+pkgrel=1
+pkgdesc='A well-behaved package'
+arch=('x86_64')
+url='https://github.com/example/goodpkg'
+license=('MIT')
+makedepends=('go')
+
+# Top-level dispatch through the file's own helpers: they only read, test and
+# print, so sourcing this PKGBUILD for its metadata runs nothing.
+_format_version() {
+  printf '%s' "${1//_/.}"
+}
+_goarch() {
+  case "$CARCH" in
+    x86_64) echo amd64 ;;
+    aarch64) echo arm64 ;;
+    *) echo "$CARCH" ;;
+  esac
+}
+_arch=$(_goarch)
+_tag=v$(_format_version "$pkgver")
+
+source=("$pkgname-$pkgver.tar.gz::https://github.com/example/goodpkg/archive/refs/tags/$_tag.tar.gz")
+sha256sums=('8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  go mod download -modcacherw
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  export CGO_CPPFLAGS="${CPPFLAGS}" CGO_CFLAGS="${CFLAGS}" CGO_CXXFLAGS="${CXXFLAGS}" CGO_LDFLAGS="${LDFLAGS}"
+  export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+  GOARCH="$_arch" go build -o "$pkgname" .
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  go test ./...
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 "$pkgname" "$pkgdir/usr/bin/$pkgname"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

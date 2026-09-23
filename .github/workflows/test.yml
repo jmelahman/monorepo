@@ -1,0 +1,52 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      # -coverpkg=./... credits cross-package hits (e.g. the golden tests
+      # exercising the internal parsers), which is the honest total.
+      - run: go test -race -coverpkg=./... -coverprofile=cover.out ./...
+      - name: Enforce coverage floor
+        # A ratchet, not a target: raise it as gaps close, never lower it.
+        run: |
+          floor=91.0
+          total=$(go tool cover -func=cover.out | awk '/^total:/ {gsub(/%/,""); print $3}')
+          echo "total statement coverage: ${total}% (floor: ${floor}%)"
+          awk -v t="$total" -v f="$floor" 'BEGIN { exit (t+0 >= f+0) ? 0 : 1 }' \
+            || { echo "::error::coverage ${total}% fell below the ${floor}% floor"; exit 1; }
+
+  # The checked-in seed corpora (testdata/fuzz/) already replay under `go test`
+  # above; this job additionally explores new inputs for a short, bounded time.
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+      - name: Fuzz smoke
+        run: |
+          for pkg in ./internal/pkgbuild ./internal/pkgfile ./internal/alpmdb ./internal/rules ./site; do
+            for target in $(go test "$pkg" -list '^Fuzz' | grep '^Fuzz'); do
+              go test "$pkg" -fuzz "^${target}\$" -fuzztime 15s
+            done
+          done

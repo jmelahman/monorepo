@@ -1,0 +1,23 @@
+# Maintainer: Sam Coder <sam@example.com>
+pkgname=suppressed
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Fixture for inline ignore directives'
+arch=('x86_64')
+url='https://github.com/example/suppressed'
+license=('MIT')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/example/suppressed/archive/v$pkgver.tar.gz")
+sha256sums=('deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef')
+
+build() {
+  cd "$pkgname-$pkgver"
+  # pkglint: ignore=PB204
+  go build -o "$pkgname" .
+  # pkglint: ignore=PB203
+  make
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 "$pkgname" "$pkgdir/usr/bin/$pkgname"
+}
