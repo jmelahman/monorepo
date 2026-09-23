@@ -1,0 +1,8 @@
+diff --git a/tmp/scratch.txt b/tmp/scratch.txt
+deleted file mode 100644
+index 3b18e51..0000000
+--- a/tmp/scratch.txt
++++ /dev/null
+@@ -1,2 +0,0 @@
+-line one
+-line two
