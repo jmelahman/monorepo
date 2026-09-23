@@ -1,0 +1,3216 @@
+/*
+ * Mobile-first baseline. Every rule in the first two blocks exists because of a
+ * specific Android WebView behavior documented in plans §4.6; read before
+ * removing. Everything below that is the game.
+ */
+
+:root {
+  --bg: #0e0f13;
+  --panel: #191b22;
+  --panel-2: #22242e;
+  --line: #2e313d;
+  --fg: #e8e8ea;
+  --muted: #8b8d98;
+
+  /* Wordle tile colors. */
+  --green: #538d4e;
+  --yellow: #b59f3b;
+  --gray: #3a3a3c;
+
+  /* Scoring readout. */
+  --chips: #4a9eff;
+  --mult: #ff5c5c;
+  --gold: #f0b429;
+
+  --rare-common: #6b7280;
+  --rare-uncommon: #3d8f6a;
+  --rare-rare: #3f6fd8;
+  --rare-legendary: #a855f7;
+
+  /*
+   * The bottom two rungs of the type scale, named because the floor wants to be
+   * a rule rather than twenty separate judgement calls: nothing in the game is
+   * set smaller than `--type-pip`, and anything made of words starts at
+   * `--type-small`.
+   *
+   * They were 8px and 9px. That was picked on a desktop browser at desk
+   * distance and is the wrong measurement. This is a phone game, read
+   * one-handed, and at 8px a corner pip is a smudge you tilt the screen to
+   * resolve, which is a poor deal for the number telling you what a letter
+   * pays. 10px is the smallest a two-digit figure holds up at in the corner of
+   * a key; 11px is the smallest a line of prose on a card does. Everything that
+   * was below those is now on them, which is why they are variables: the next
+   * person to think the game is squinting at them can move two numbers rather
+   * than go hunting for every `0.5625rem` in the file.
+   */
+  --type-pip: 0.625rem;
+  --type-small: 0.6875rem;
+
+  /*
+   * What a letter is worth, and whether that was bought. Two places print this
+   * figure, the corner of a key on the board and the corner of a key in the
+   * sheet that asks which letter a modifier should go on, and they have to
+   * agree, because a player reads the rule off one and applies it to the other.
+   * Named here so the pair is one decision rather than two that drift.
+   */
+  --value-base: color-mix(in srgb, var(--fg) 72%, transparent);
+  --value-raised: var(--chips);
+
+  /*
+   * How long everything takes, as a scale on every animation duration below.
+   *
+   * A scale on *duration* rather than a speed, so it runs the other way from the
+   * setting a player chooses: ×2 as fast is `--pace: 0.5`. `setSpeed` in
+   * `src/ui/speed.ts` writes it, from the same number `app.ts` divides its own
+   * timers by, which is what keeps a class coming off a tile exactly when the
+   * flip it names ends. The `1` here is the speed every duration in this file is
+   * authored at, and is what a first launch and a blocked store both get.
+   *
+   * The rule for what carries it: a keyframe sequence the player is waiting on
+   * does, and nothing else. The two loops that never end, `sheen` and
+   * `coach-mark`, are ambient rather than in the way, and running them faster
+   * would only make them insistent. The transitions here are all per-touch
+   * feedback of 260ms or less, fired under a finger that is still on the glass,
+   * where a duration is not a wait.
+   */
+  --pace: 1;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  /*
+   * svh, not dvh, and not vh.
+   *
+   * `vh` overshoots: it is the viewport with the browser chrome hidden, so the
+   * bottom of the game sits behind the URL bar. `dvh` fits exactly, but it is
+   * *live*, and on Android Chrome the URL bar slides in and out on its own.
+   * Every pixel it moves re-runs this height, which re-runs the leftover space
+   * the board measures itself against, and the board is centered and square, so
+   * it changes size and position in both axes at once. Measured: 60px of chrome
+   * resizes the board by 28px across and 34px down. That reads as a shake.
+   *
+   * `svh` is the small viewport, chrome visible, and it is static. The layout
+   * is sized for the worst case once and never moves again. When the bar does
+   * retract, the extra strip below the keyboard is body background, which is
+   * the same color as the app, so nothing shows.
+   */
+  height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh above is the fallback */
+  height: 100svh;
+  overflow: hidden;
+  /* Pull-to-refresh and rubber-band scroll both read as bugs inside a game. */
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Kills the ~300ms double-tap-zoom delay on keyboard keys. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  /* The game claims the long press for itself, since holding a key reads what
+     the letter is worth, so iOS must not answer it with a callout of its own. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/*
+ * One ring, everywhere, and only for the keyboard: `:focus-visible` leaves a
+ * tapped button alone. It is spelled out rather than left to the browser because
+ * every surface here is dark and custom-colored, and the default ring is drawn
+ * assuming neither. Without it the sheets are tabbable but the tab is invisible,
+ * which is the same problem one step further on.
+ */
+:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* The exception: a sheet takes focus when it opens so the keyboard starts
+   inside it, and a ring around the whole panel would announce that as a
+   selection. It is a destination, not a control. */
+.sheet:focus,
+.sheet:focus-visible {
+  outline: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh above is the fallback */
+  height: 100svh;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+
+.screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  /* The game is designed for a thumb. On anything wider it stays phone-shaped
+     and centered rather than stretching into a keyboard three feet across. */
+  width: 100%;
+  max-width: 30rem;
+  margin-inline: auto;
+}
+
+.screen.center {
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+/* ------------------------------------------------------------------- HUD */
+
+.hud {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem;
+  background: var(--panel);
+  border-radius: 0.5rem;
+}
+
+.round-name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.stage {
+  color: var(--muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+}
+
+/* The run's difficulty, in the boss's color: both are rules bending the guess. */
+.stage-asc {
+  margin-left: 0.3125rem;
+  color: var(--mult);
+  font-weight: 800;
+}
+
+.hud-score {
+  min-width: 5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-score .score {
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.1;
+  transition: color 200ms ease;
+}
+
+.hud-score .target {
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+/* The moment the round is won. It is worth a light going on. */
+.hud-score.met .score {
+  color: var(--green);
+  text-shadow: 0 0 0.75rem color-mix(in srgb, var(--green) 60%, transparent);
+}
+
+.meter {
+  margin-top: 0.1875rem;
+  height: 0.1875rem;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+/* Scaled rather than sized, so the count-up can drive it every frame without
+   asking the browser for a layout each time. */
+.meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--chips);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left;
+}
+
+.hud-score.met .meter-fill {
+  background: var(--green);
+}
+
+.hud-gold {
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Money changing hands. Borrows the readout's pop so a purchase and a scoring
+   guess react in the same visual language. */
+.hud-gold.bumped {
+  --pop: 1.22;
+  animation: pop calc(300ms * var(--pace)) ease;
+}
+
+.boss {
+  flex: 0 0 auto;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--mult) 18%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--mult) 40%, transparent);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+}
+
+.boss strong {
+  color: var(--mult);
+}
+
+/* --------------------------------------------------------------- relics */
+
+/*
+ * The tray scrolls sideways when the slots are full. `overflow-x: auto` forces
+ * the y axis to `auto` too, which was quietly shaving the top off every relic
+ * that fired. The padding gives the lift and its ring somewhere to go, and the
+ * matching negative margin keeps the row occupying exactly the space it did.
+ */
+.relics {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.3125rem 0.1875rem;
+  margin: -0.3125rem -0.1875rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.relics::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Rarity is one inherited color rather than a border override per class, so a
+ * card's tint, its edge and its pip all come from the same place and a relic in
+ * the shop matches the same relic in the tray.
+ */
+.rarity-common {
+  --rare: var(--rare-common);
+}
+.rarity-uncommon {
+  --rare: var(--rare-uncommon);
+}
+.rarity-rare {
+  --rare: var(--rare-rare);
+}
+.rarity-legendary {
+  --rare: var(--rare-legendary);
+}
+
+.relic {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 3.5rem;
+  min-height: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--rare, var(--rare-common)) 26%, var(--panel-2)),
+    var(--panel-2) 72%
+  );
+  border-top: 2px solid var(--rare, var(--rare-common));
+  box-shadow: 0 1px 2px #0006;
+  text-align: center;
+  transition: transform 120ms ease;
+}
+
+.relic.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+  border-top-width: 1px;
+  box-shadow: none;
+}
+
+/*
+ * A rarity pip, so the tray can be read at a glance without matching four
+ * shades of edge against each other. Common has nothing to boast about and
+ * does not get one.
+ */
+.rarity-uncommon::after,
+.rarity-rare::after,
+.rarity-legendary::after {
+  content: "";
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 50%;
+  background: var(--rare);
+  box-shadow: 0 0 0.375rem var(--rare);
+}
+
+/*
+ * Legendaries catch the light. One pass every few seconds, at an angle no other
+ * element in the game moves at, so it registers in peripheral vision.
+ */
+.rarity-legendary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 42%, #ffffff26 50%, transparent 58%);
+  background-size: 300% 100%;
+  /* Off the animation-speed dial, with `coach-mark`: nothing waits on a loop
+     that never ends, so hurrying it makes a shimmer into a strobe and hands the
+     player back no time. See `--pace`. */
+  animation: sheen 5s ease-in-out infinite;
+}
+
+@keyframes sheen {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+
+/* The one label that stays on the pip rung, and not for want of trying. Five
+   cards across a phone leaves 64px of card for a name, and the tray is already
+   losing that argument at this size: `Lexicographer` measures 69px and
+   `Doppelgänger` 67px, so both lose a letter or so to the card's `overflow:
+   hidden` today. At the small rung they measure 76px and 74px and lose two or
+   three, which is the difference between a hairline and a mistake. Two-word
+   names wrap and are unaffected either way.
+
+   Left alone rather than fixed here: the repairs are all tray-shaped, whether
+   that is scrolling, breaking mid-word, hyphenating or abbreviating, and none
+   of them belong in a
+   change about type sizes. The name is a mnemonic; the tip panel is where a
+   relic is read, and that is the thing that got bigger. */
+.relic-name {
+  font-size: var(--type-pip);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.relic .sell {
+  font-size: var(--type-pip);
+  color: var(--gold);
+}
+
+/*
+ * What a scaling relic has grown to. Tinted like mult rather than like the card,
+ * because it is a live number rather than part of the card's identity, and the one
+ * thing on a relic that is worth re-reading between rounds.
+ */
+.relic-detail {
+  font-size: var(--type-pip);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--mult);
+}
+
+.relic.fired {
+  transform: translateY(-3px) scale(1.06);
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+/*
+ * A relic's name is a mnemonic, not an explanation, and on a mouse the player
+ * has a way to ask what it does that costs them nothing, so the card leans
+ * toward the pointer and the text arrives beside it. A phone asks by holding the
+ * card and a keyboard by tabbing to it; neither leans, so none of this is bound
+ * for them. A tap does nothing at all: it used to throw the same sentence across
+ * the board as a toast, and the tray is close enough to the keys that most of
+ * those taps were a thumb on its way past.
+ */
+@media (hover: hover) {
+  .relic[data-tip]:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 3px 6px #0007,
+      0 0 0 1px color-mix(in srgb, var(--rare, var(--rare-common)) 55%, transparent);
+  }
+
+  /* Losing to `.fired` matters: a relic scoring is louder news than a hover. */
+  .relic[data-tip].fired:hover {
+    transform: translateY(-3px) scale(1.06);
+  }
+}
+
+/*
+ * Fixed, and a sibling of the tray rather than a child of the card, because
+ * `.relics` scrolls sideways, which forces the other axis to clip too, and
+ * `.relic` hides its own overflow so the legendary sheen stays inside its
+ * edges. Anything nested would be cut off by one of the two. The position is
+ * set from script; the transition is the whole animation.
+ */
+.relic-tip {
+  position: fixed;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  max-width: min(16rem, 80vw);
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  background: #000d;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--rare, var(--rare-common));
+  box-shadow: 0 0.25rem 0.75rem #0009;
+  /* Above the small rung rather than on it. Everything else set this small is a
+     label on a card the player already recognizes: a name, a price, a tag. It
+     is being glanced at; this is the one panel in the game that has to be *read*,
+     sentences of it, and it was set smaller than the prose in the help sheet
+     explaining the same mechanics. It has a whole panel to itself and no
+     neighbor to crowd, so the size can come from what it is for. */
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-align: center;
+  /* A letter's tip is a few short lines: what it pays, where that came from,
+     what is riding on it. They are written as lines rather than run
+     together into a paragraph. A relic's tip has no newlines and is unaffected. */
+  white-space: pre-line;
+  opacity: 0;
+  /* Not `display: none`: the panel has to be measurable before it is placed,
+     and it has to already be somewhere for the move to be a move. */
+  visibility: hidden;
+  pointer-events: none;
+  /* Signed by the placement, so the panel always drifts out of the card it
+     belongs to rather than through it. */
+  transform: translateY(var(--slide, 0.25rem));
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    visibility 140ms;
+}
+
+.relic-tip.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* ----------------------------------------------------------- consumables */
+
+.consumables {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.consumable {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.0625rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--rare-legendary) 16%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--rare-legendary) 45%, transparent);
+  text-align: left;
+}
+
+.consumable-name {
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.consumable-text {
+  font-size: var(--type-small);
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+/* ----------------------------------------------------------------- grid */
+
+/*
+ * The board takes whatever is left after the HUD, the boss banner, the relic
+ * row and the keyboard have taken theirs, and that total is not knowable in
+ * CSS, since half of it is conditional. So the grid claims the leftover space
+ * as a size container and fits itself to it, keeping tiles square via
+ * aspect-ratio. Nothing here needs to be told how tall the chrome is.
+ */
+.grid-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  /* The anchor for `.coach-slot`, and it has to be said out loud.
+     `container-type: size` reads as though it covered this, since it applies
+     layout containment and layout containment makes a box a containing block
+     for its absolutely positioned descendants, but the two were split deliberately, and
+     Chromium 147 agrees: probed side by side on a static box, `contain: layout`
+     anchors an abspos child to the box and `container-type: size` leaves it on
+     the viewport. The card was landing over the keyboard, 227px below the board
+     it is meant to be lying on. */
+  position: relative;
+}
+
+.grid {
+  /* Centered in whatever the wrap turned out to be. */
+  margin: auto;
+  display: grid;
+  grid-template-rows: repeat(var(--rows, 6), 1fr);
+  gap: 0.3125rem;
+  aspect-ratio: var(--cols, 5) / var(--rows, 6);
+  /* Narrower of "as wide as there is room" and "as wide as the height allows",
+     so the board is bound by whichever axis runs out first. The first of each
+     pair is not dead weight: a browser without container-query units fails to
+     parse the `cq` declaration outright and keeps the plain one, which is the
+     whole point of writing them in this order. */
+  width: 100%;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the plain declaration above is the fallback */
+  width: min(100%, calc(100cqh * var(--cols, 5) / var(--rows, 6)));
+  /* Letters scale with the board, bounded by whichever axis is tighter. */
+  font-size: 1.25rem;
+  font-size: min(calc(45cqh / var(--rows, 6)), calc(45cqw / var(--cols, 5)));
+}
+
+.row {
+  /* The anchor for `.tile-gain`, which is measured against this box. */
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), 1fr);
+  gap: 0.3125rem;
+}
+
+.tile {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.25rem;
+  border: 2px solid var(--line);
+  font-weight: 700;
+  transition:
+    transform 90ms ease,
+    background-color 90ms linear;
+}
+
+/* The modifier that letter is carrying, marked where the score is happening.
+   Hidden until the tile turns, so it arrives with the color rather than
+   spoiling a row that has not been revealed yet. */
+.tile[data-mod]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: var(--mod);
+  box-shadow: 0 0 0.3rem var(--mod);
+}
+
+.tile.pending[data-mod]::after {
+  display: none;
+}
+
+/* A modifier firing. An outline rather than an animation: the flip owns
+   `animation` on this element, and two of them would fight. */
+.tile.fired {
+  outline: 2px solid var(--mod);
+  outline-offset: 2px;
+}
+
+.tile.filled {
+  border-color: var(--muted);
+}
+
+/* The letter arriving. Short enough that it keeps up with a fast typist and
+   never queues up behind itself. */
+.tile.land {
+  animation: land calc(110ms * var(--pace)) ease-out;
+}
+
+@keyframes land {
+  from {
+    transform: scale(0.86);
+  }
+}
+
+.tile.ghost {
+  border-style: dashed;
+  border-color: var(--green);
+  color: color-mix(in srgb, var(--green) 70%, var(--fg));
+}
+
+.tile.green {
+  background: var(--green);
+  border-color: var(--green);
+}
+.tile.yellow {
+  background: var(--yellow);
+  border-color: var(--yellow);
+}
+.tile.gray {
+  background: var(--gray);
+  border-color: var(--gray);
+}
+
+/* Tiles arrive blank and light up as the score walks across them. */
+.tile.pending {
+  background: transparent;
+  border-color: var(--muted);
+}
+
+/*
+ * What the boss says about a row, over the row's bottom edge.
+ *
+ * Yellow, and that is the whole design: The Silence's trick is that yellow is
+ * gone from the board, so the one yellow thing left on it is the count of what
+ * is missing. The letters are centered in their tiles and this sits on the
+ * gutter below them, so it covers nothing that has to be read.
+ */
+.row-note {
+  position: absolute;
+  right: 0.125rem;
+  bottom: -0.375rem;
+  z-index: 2;
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--yellow) 22%, #000);
+  border: 1px solid color-mix(in srgb, var(--yellow) 55%, transparent);
+  color: var(--yellow);
+  font-size: var(--type-small);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: opacity 140ms ease-out;
+}
+
+.row-note.pending {
+  opacity: 0;
+}
+
+/*
+ * The turn-over. There are no stacked front/back faces here. The tile is
+ * squashed to nothing on the vertical axis and the color is swapped by the
+ * controller at the trough, where there is nothing on screen to give it away.
+ * One transform, no extra nodes, and it composites on the GPU, which is what
+ * an Android WebView wants.
+ */
+/* Kept in step with FLIP.total in app.ts; see the note there. Both are the same
+   380 divided by the same animation speed, which is the only way the pair can
+   stay in step now that either can be a third of what it says. */
+.tile.flip {
+  animation: flip calc(380ms * var(--pace)) ease-in-out;
+}
+
+@keyframes flip {
+  50% {
+    transform: scaleY(0.04);
+  }
+}
+
+/* ----------------------------------------------------------------- coach */
+
+/*
+ * The first round explaining itself, laid over the rows it has not reached yet.
+ *
+ * Absolute, and unconditionally so, even while it is empty. `.grid-wrap` is a
+ * flex container whose only child centers itself with `margin: auto`, and a
+ * second child in the flow would take a share of the main axis and push the
+ * board off its own center. Out of flow it costs nothing either way, which is
+ * the point: the card appears and disappears five times in the first round, and
+ * a board that resized on each of those would be a board that moves under the
+ * thumb aiming at it.
+ *
+ * The containing block is `.grid-wrap`, which had to be told to be one; see the
+ * note on `position: relative` there. So this pins to the board's own bottom
+ * edge, whichever axis the board turned out to be bound by.
+ */
+.coach-slot {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* The empty slot spans the board's full width and must not intercept the long
+     press that reads a boss's note off the row underneath it. */
+  pointer-events: none;
+}
+
+/* One paragraph and nothing else. The card carried a "got it" button until the
+   choice it offered moved to the intro card, and losing it is what lets the text
+   have the board's full width instead of the width left over beside a control. */
+.coach {
+  pointer-events: auto;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  /* Nearly opaque rather than a wash: it is over tiles, and a translucent panel
+     with a grid of squares showing through it is the one thing on this screen
+     that would be harder to read than the numbers it is explaining. */
+  background: color-mix(in srgb, var(--panel-2) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chips) 40%, var(--line));
+  animation: coach-in calc(220ms * var(--pace)) ease;
+}
+
+.coach-text {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+@keyframes coach-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+}
+
+/*
+ * The thing the card is pointing at, marked so the sentence has a referent.
+ *
+ * An outline rather than a border or a padded background, for one reason: three
+ * of the four anchors are inside lines whose spacing is already measured to the
+ * pixel, the readout's chips and mult and the HUD's score block, and outline is
+ * the only ring in CSS that is drawn outside the box without occupying any. The
+ * mark can be added and removed on every keystroke without a single figure on
+ * the screen shifting.
+ */
+.coached {
+  outline: 2px solid color-mix(in srgb, var(--chips) 70%, transparent);
+  outline-offset: 3px;
+  border-radius: 0.25rem;
+  /* Unpaced, for the reason the sheen is: it breathes for as long as the card
+     it belongs to is up, and the card is waiting on the player, not the reverse. */
+  animation: coach-mark 1800ms ease-in-out infinite;
+}
+
+/* Breathing rather than blinking. The eye is meant to find it once and then get
+   on with reading the card; a hard flash keeps calling the eye back. */
+@keyframes coach-mark {
+  50% {
+    outline-color: color-mix(in srgb, var(--chips) 22%, transparent);
+  }
+}
+
+/* ------------------------------------------------------------- category */
+
+/* The slot the fill writes into. Always in the document, empty or not, so the
+   draft patch has somewhere to write. It centers because a `button` sizes to
+   its content: before the slot existed the button was a flex item of `.screen`
+   and got stretched the full width, which is what its own `justify-content`
+   was centering against. Wrapped in a plain div it kept the centering rule and
+   lost the width, and slid to the left margin. */
+.category-slot {
+  /* The height of this line, empty or full, in one place.
+     Held open whether or not there is a shape to name. The slot used to collapse
+     to nothing until the fifth letter landed, and then the line arrived and took
+     its height out of the grid above: every tile resized and the board slid up,
+     on the exact keystroke where the player is staring hardest at the tiles.
+     Deleting a letter played the whole thing backwards.
+     One custom property rather than a `min-height` here and a matching height
+     over there: the first attempt reserved 1rem against a button that measured
+     17px, because `.category` is a baseline-aligned flex box of two font sizes
+     and its height is a sum of font metrics rather than of the numbers written
+     down here. Two numbers that have to agree and are derived differently will
+     drift on some device nobody is testing on. Inherited by `.category` below,
+     which is pinned to it, so the filled line cannot disagree with the space
+     kept for it. */
+  --shape-line: 1.0625rem;
+  flex: 0 0 auto;
+  min-height: var(--shape-line);
+  display: flex;
+  justify-content: center;
+}
+
+/* Sits directly above the readout it feeds, and stays quiet at level one: a
+   category worth nothing yet is a label, not a number. When it does pay, it
+   lights the same way a relic card does, which is what it has become. */
+.category {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.375rem;
+  /* Pinned to the space the slot keeps for it, so the two cannot disagree. Any
+     font that wants a pixel more than this spills it rather than moving the
+     board, which is the trade the whole reservation exists to make. */
+  height: var(--shape-line);
+  padding: 0.125rem 0.25rem 0;
+  font-size: 0.75rem;
+  /* Left off `normal`, which resolves off the font, for the same reason. */
+  line-height: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.category-level {
+  padding: 0 0.25rem;
+  border-radius: 0.1875rem;
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+}
+
+.category-bonus {
+  color: var(--mult);
+}
+
+.category.fired {
+  color: var(--gold);
+  transform: scale(1.08);
+}
+
+.category.fired .category-level {
+  background: color-mix(in srgb, var(--gold) 26%, var(--panel));
+}
+
+/* The affordance, and nothing more. It has to read as pressable without
+   competing with the shape name, which is the thing actually being said. */
+.category-more {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  opacity: 0.65;
+}
+
+/* -------------------------------------------------------------- readout */
+
+/* The row exists to be the switch's anchor. The readout itself is unchanged and
+   keeps the center of the line. */
+.readout-row {
+  flex: 0 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The face is the setting: a letter carrying its value, a letter carrying a
+   mark, or the letter alone. Baseline-aligned so the digit sits where a value
+   sits on a key, and sized to the same box in all three states so nothing
+   twitches when it is pressed.
+   Hung off the right end of the row rather than sitting in it as a second flex
+   item, because the chips × mult figure is centered against the board above and a
+   button in the row would shove it off that center by half its own width. */
+.decor-toggle {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.0625rem;
+  min-width: 2rem;
+  /* Padded rather than given a height: `align-items: baseline` in a fixed-height
+     box parks the pair at the top of it. Equal padding centers them instead, and
+     lands on the same 2rem square the menu button uses. */
+  padding: 0.5rem 0.375rem;
+  /* Carried transparent in both states so switching to the outlined one cannot
+     move the line by the width of a border. */
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Drawn as an ordinary letter's value rather than a raised one, off-white and
+   not chip blue, because that is what most of the keyboard looks like, and the face
+   of the switch should be the common case it is turning off.
+   Weight 400 for the same reason `.value-pip` takes it: the button sets 800 for
+   its letter, and a digit inheriting that reads as the second character of a
+   two-character label rather than as a value hung off an A. The switch showing
+   the board's own defect was the tell that the defect was in the shared idea and
+   not in either place separately. */
+.decor-toggle-value {
+  font-size: var(--type-pip);
+  font-weight: 400;
+  color: var(--value-base);
+}
+
+/* The middle state's face. Larger than the digit it replaces because a bullet
+   at the pip size is a speck rather than a mark, and sitting on the same
+   baseline so the two faces do not shift the letter beside them. Same off-white
+   as the digit: it stands in for the marks a letter would still be showing, and
+   coloring it after any one modifier would name a modifier the letter does not
+   have. */
+.decor-toggle-mark {
+  font-size: 0.75rem;
+  color: var(--value-base);
+}
+
+/* The bare board dims rather than empties. The affordance has to survive the
+   state it turns the numbers off in, or the way back is a thing the player has
+   to remember. Only the last state gets this: the middle one is still a
+   decorated board, and the filled face says so. */
+.decor-toggle.bare {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.readout {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  font-size: 1.125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.readout .chips {
+  min-width: 3.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  text-align: right;
+  background: color-mix(in srgb, var(--chips) 22%, var(--panel));
+  color: var(--chips);
+}
+
+.readout .chips,
+.readout .mult {
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
+}
+
+/*
+ * The guess that multiplies the whole pile. Both halves go gold, because at that
+ * moment they have stopped being chips and mult and become one number.
+ */
+.readout.solved .chips,
+.readout.solved .mult {
+  background: color-mix(in srgb, var(--gold) 26%, var(--panel));
+  color: var(--gold);
+}
+
+.readout .times {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.readout .mult {
+  min-width: 3.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  text-align: left;
+  background: color-mix(in srgb, var(--mult) 22%, var(--panel));
+  color: var(--mult);
+}
+
+/*
+ * The word being typed, counted as it is typed. The chips stay lit, being a
+ * real figure, while the multiplier goes hollow, because it is the half only
+ * the answer knows. Dashed rather than dimmed: an outline reads as a slot
+ * waiting to be filled, where lower opacity would read as a number that had
+ * merely gone quiet.
+ */
+.readout.drafting .mult.pending {
+  background: none;
+  border: 1px dashed color-mix(in srgb, var(--mult) 45%, transparent);
+  padding: calc(0.125rem - 1px) calc(0.5rem - 1px);
+  color: color-mix(in srgb, var(--mult) 60%, transparent);
+  text-align: center;
+}
+
+/* The cash-out readout. Deliberately quiet until it says something worth
+   acting on, at which point it turns green and stops being advice. */
+.solve-hint {
+  /* The height of this line, said or unsaid, held open the way `.category-slot`
+     holds the shape line, and for the same reason. There is nothing to advise
+     once the round is `done`, but the board stays on screen through the reveal
+     after that, so an emptied line took its height out of the grid on the
+     scoring guess: 275px of board to 301px at 390×640, tiles growing 10% while
+     they were still turning over. On a screen tall enough for the board to be
+     bound by width it slid down 13px instead of growing; neither is a thing the
+     round should do as it ends.
+     A height rather than a `min-height`, because the two states have to measure
+     the same and only one number can decide that. `min-height` leaves the filled
+     line free to want a seventeenth pixel out of the font's metrics and jump by
+     it: a pixel instead of twenty, but the same bug, and the drift
+     `.category-slot` records paying for. The bottom padding is inside this
+     figure rather than under it: everything vertical about the line is one
+     number, and there is no second one to disagree with it. */
+  --solve-line: 1.25rem;
+  flex: 0 0 auto;
+  height: var(--solve-line);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0 0.25rem;
+  font-size: 0.8125rem;
+  /* Stated, not inherited, and deliberately short of the height: the text keeps
+     to the top of the box and the slack below it is the gap to the keyboard that
+     the old bottom padding used to be. Left to `normal` the line box would come
+     off the font, which is the metric the pinned height exists to stop
+     consulting. */
+  line-height: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.solve-hint.clears {
+  color: var(--green);
+}
+
+.solve-hint .solve-floor {
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* --pop is set per guess from the score's size against the target, so the
+   reaction is proportional: a chip guess twitches, a round-clearing one lunges. */
+.readout.popped {
+  animation: pop calc(300ms * var(--pace)) ease;
+}
+
+@keyframes pop {
+  50% {
+    transform: scale(var(--pop, 1.14));
+  }
+}
+
+/*
+ * Screen shake, reserved for a guess worth half the target or more. Translation
+ * only, since anything that triggers layout here drops frames on a phone. The
+ * amplitude arrives as --shake from the same score ratio that drives the pop.
+ */
+.screen.shaking {
+  animation: shake calc(400ms * var(--pace)) cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/*
+ * A refused guess, shaken on the same curve at a fixed amplitude. It answers
+ * which of the things on screen was refused, which is the question a player has
+ * in the half second before they get round to reading the toast.
+ */
+.row.rejected {
+  --shake: 6px;
+  animation: shake calc(400ms * var(--pace)) cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes shake {
+  10%,
+  90% {
+    transform: translate3d(calc(var(--shake, 4px) * -0.4), 0, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(calc(var(--shake, 4px) * 0.7), 0, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(calc(var(--shake, 4px) * -1), 0, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(var(--shake, 4px), 0, 0);
+  }
+}
+
+.floater {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gold);
+  pointer-events: none;
+  animation: rise calc(900ms * var(--pace)) ease-out forwards;
+}
+
+@keyframes rise {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -2.5rem);
+  }
+}
+
+/*
+ * What one tile paid, floating off the tile that paid it.
+ *
+ * Absolutely positioned against the row, from the tile's measured box. Not a
+ * child of the tile, which is mid-flip and would scale it edge-on; and not a
+ * grid item in the tile's cell either, which perturbs the auto-placement of the
+ * five tiles around it and wraps the row.
+ */
+.tile-gain {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  gap: 0.25rem;
+  pointer-events: none;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  /* The badge starts on top of a tile whose color it does not control, so the
+     shadow is what keeps a blue number legible against a green square. */
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.75);
+  animation: gain-rise calc(760ms * var(--pace)) ease-out forwards;
+}
+
+.tile-gain .gain-chips {
+  color: var(--chips);
+}
+
+.tile-gain .gain-mult {
+  color: var(--mult);
+}
+
+/* Arrives quickly and leaves slowly, so five of these in a cascade read as five
+   separate payments rather than as one blur. */
+@keyframes gain-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.35rem);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -0.25rem);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -1.75rem);
+  }
+}
+
+/* The half of the readout that just moved. Chips and mult sit side by side and
+   change for different reasons, so reacting per half is the difference between
+   "the score went up" and "that green tile is why". */
+.readout .chips.bumped,
+.readout .mult.bumped {
+  --pop: 1.18;
+  animation: pop calc(300ms * var(--pace)) ease;
+}
+
+/* ------------------------------------------------------------- keyboard */
+
+/*
+ * The key height is declared on the screen rather than on the keyboard, because
+ * the toast has to clear the keyboard and is not inside it. One definition, two
+ * readers, because a second copy is a second thing to keep in step, and the one that
+ * drifts is the one nothing draws.
+ */
+.round-screen {
+  /* Taller than it is wide, and taller than the old 2.75rem, because the keys
+     are the thing being aimed at. Capped so a tall phone does not spend its
+     extra height on the keyboard when the board wants it more. */
+  --key-h: clamp(2.75rem, 7svh, 3.375rem);
+  /* Three key rows, the two gaps between them, the screen's own bottom padding,
+     and a gap above. Everything between the foot of the viewport and the top of
+     the keyboard, which is where a refusal has to land to be read. */
+  --toast-lift: calc(3 * var(--key-h) + 0.75rem + 0.5rem + 1rem);
+}
+
+/*
+ * Wordle's proportions, and for its reason: every key is the same width, so the
+ * nine-key middle row comes out narrower than the ten-key top row and centers.
+ * Stretching each row to full width instead, the obvious flexbox default,
+ * moves every key center between rows, and a thumb aiming for K keeps finding L.
+ */
+.keyboard {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  --key-gap: 0.25rem;
+  /* The widest row is ten keys and nine gaps; that divides into the unit every
+     key in every row is then built from. */
+  --key-w: calc((100% - 9 * var(--key-gap)) / 10);
+}
+
+.key-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--key-gap);
+}
+
+.key {
+  position: relative;
+  /* Fixed, not flexible: no growing to fill the row. */
+  flex: 0 0 var(--key-w);
+  min-width: 0;
+  height: var(--key-h);
+  display: grid;
+  place-items: center;
+  border-radius: 0.25rem;
+  background: #565758;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* One and a half keys, plus the gap they swallow, so the bottom row still
+   lands on the same column grid as the two above it. */
+.key.wide {
+  flex-basis: calc(var(--key-w) * 1.5 + var(--key-gap) * 0.5);
+  font-size: 0.6875rem;
+}
+
+.key.green {
+  background: var(--green);
+}
+.key.yellow {
+  background: var(--yellow);
+}
+.key.gray {
+  background: var(--gray);
+  color: var(--muted);
+}
+
+/*
+ * A bought-up letter has no ring of its own, and that is the second half of a
+ * decision the value pip below makes.
+ *
+ * It used to wear one in `--gold`, which was wrong twice over. Loud: gold is a
+ * signal color, the color money is printed in, and an etching buys a whole
+ * group of letters at once, so ten keys would light at full saturation and the
+ * keyboard became the brightest thing on a screen whose subject is five letters
+ * and three colors. And ambiguous: the Gold modifier is drawn in the same
+ * `--gold`, so a letter somebody had etched and a letter carrying a Gold mod
+ * wore the identical ring while meaning unrelated things.
+ *
+ * Dropping it rather than recoloring it, because the ring is the only place a
+ * modifier can say which modifier it is, while "raised" now has a number in the
+ * corner that says both that it is raised and by how much. One mark, one
+ * meaning: the ring is modifier identity, the corner figure is what the letter
+ * pays.
+ */
+.key.broken {
+  background: #1b1c20;
+  color: #4a4b52;
+  text-decoration: line-through;
+}
+
+/*
+ * What the letter is worth, in the corner of every key.
+ *
+ * Off-white while the letter is worth what it started as, and `--chips` blue
+ * once an etching or a range level has raised it. Blue rather than gold, and the
+ * choice is not decorative: a raised letter is *more chips*, and blue is the
+ * color chips are counted in everywhere else in the game: the readout under
+ * the board, the chip figure on a shop card, the Chip modifier itself. Gold
+ * means money, and money is a different quantity that happens to also be a
+ * number on a card. Two of them next to each other is a question the player has
+ * to answer every time they look.
+ *
+ * That the shared hue with the Chip modifier is fine, where the shared hue with
+ * the Gold one was not, is the whole argument in one line: the Chip modifier
+ * pays chips. Agreeing with it is the point.
+ *
+ * The off-white is mixed toward transparent rather than set to `--muted`, so it
+ * darkens against a light key and lifts against a dark one instead of landing
+ * flat on the gray ones.
+ *
+ * The shadow is not decoration. This used to appear on the handful of keys
+ * somebody had spent money on, and it could be drawn for the neutral key
+ * background those mostly sat on; it is on all twenty-six now, so it spends the
+ * round over green, yellow and gray instead, and 10px of type on a yellow key is
+ * not readable without something behind it.
+ *
+ * The weight is the load-bearing line here, and it was learned the hard way. The
+ * pip shipped once with no `font-weight` of its own, inheriting the 700 the key
+ * sets for its letter. 10px against 16px is an ordinary annotation ratio, about
+ * roughly what a superscript runs at, but at matching weight the ratio stops
+ * doing the work, and every key read as a two-character key: "A1", "B3", a
+ * keyboard of pairs rather than of letters with figures on them. Dropping to 400
+ * fixes it without touching either size, which is the right trade, because the
+ * size is what makes a two-digit value legible and the weight was never carrying
+ * anything.
+ */
+.value-pip {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font-size: var(--type-pip);
+  font-weight: 400;
+  color: var(--value-base);
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.6);
+}
+
+/* Bolder as well as bluer. The keyboard is read at a glance and from a distance
+   the weight carries further than the hue does, and it has to, because this is
+   now the only mark saying a letter was bought up.
+   600 rather than the letter's own 700: the bought keys are a handful and the
+   blue already separates them, so the step up only has to be visible against the
+   other twenty-odd pips, not against the letter it sits on. Matching the letter
+   exactly is what produced the two-character read in the first place. */
+.key.etched .value-pip {
+  color: var(--value-raised);
+  font-weight: 600;
+}
+
+/* Broken keys keep the figure rather than dropping it, since the letter is still
+   worth that and is just no longer typeable, and gray to the same dead color the
+   modifier pip takes, so the whole key reads as one switched-off thing. */
+.key.broken .value-pip {
+  color: #4a4b52;
+  text-shadow: none;
+}
+
+/*
+ * Letter modifiers. One inherited color per modifier, the same trick rarity
+ * plays for relics: the ring on the key, the pip in its corner and the dot on a
+ * played tile all read off `--mod`, so a steel K looks like a steel K wherever
+ * it turns up.
+ */
+[data-mod="chip"] {
+  --mod: var(--chips);
+}
+[data-mod="mult"] {
+  --mod: var(--mult);
+}
+[data-mod="gold"] {
+  --mod: var(--gold);
+}
+[data-mod="wild"] {
+  --mod: var(--rare-legendary);
+}
+[data-mod="steel"] {
+  --mod: #9fb4c8;
+}
+[data-mod="glass"] {
+  --mod: #7fd8e8;
+}
+/*
+ * The three that arrived with the wider modifier pool and were never given a
+ * color. `--mod` simply went undeclared on them, so the pip fell back to
+ * whatever it inherited, which on a key is the key's own text color, meaning
+ * to say the pip that names the modifier was drawn in the ink of the letter it
+ * was sitting on, and the ring the key wears was dropped entirely. Three of the
+ * nine modifiers had no mark of their own on the board.
+ *
+ * Picked out of the hues the palette had not spent, rather than for what the
+ * card does, because the glyph is what says which modifier this is, and `?` and
+ * `↺` and `⚓` are not confusable with each other at any size, so the color's job
+ * is to be legible over green, yellow and gray keys alike and to be the same
+ * color in all three places the modifier appears. Anchor is the one that got to
+ * be about the card: it pays on greens, and it is lightened well clear of the
+ * green key it will most often be read against.
+ */
+[data-mod="lucky"] {
+  --mod: #ff8fd0;
+}
+[data-mod="echo"] {
+  --mod: #f2a65a;
+}
+[data-mod="anchor"] {
+  --mod: #7ee787;
+}
+
+/* After the color rules above, so a modified green key still shows its ring.
+   Held back from full strength for the reason the etched ring was dropped over:
+   a saturated 2px edge is louder than a mark this incidental needs to be. But
+   only held back, not dropped: this is the one thing the ring says now, there
+   are a handful of them rather than a dozen, and each is a different color
+   naming a different modifier rather than one signal color repeated. */
+.key[data-mod] {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mod) 62%, transparent);
+}
+
+.key.broken[data-mod] {
+  box-shadow: none;
+}
+
+.mod-pip {
+  position: absolute;
+  bottom: 1px;
+  left: 3px;
+  font-size: var(--type-pip);
+  font-weight: 800;
+  color: var(--mod);
+  /* Same reason the value pip carries one: it sits on whatever color the guess
+     has painted the key. */
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.6);
+}
+
+.key.broken .mod-pip {
+  color: #4a4b52;
+}
+
+/*
+ * The Vandal: the modifier is still on the letter and still owned, it just does
+ * nothing for one round. Grayed to the broken color rather than hidden, and the
+ * ring the key wears goes with it, so the whole keyboard reads as switched off
+ * at a glance instead of one pip at a time.
+ */
+.mod-pip.silenced {
+  color: #4a4b52;
+}
+
+.key:has(.mod-pip.silenced) {
+  box-shadow: none;
+}
+
+/*
+ * The quiet board: the middle setting, which marks only what is not ordinary.
+ *
+ * One rule: a letter that is still worth what it started as says nothing. The
+ * value goes from the twenty-odd keys nobody has touched and stays on the ones
+ * that were paid for, where it is already drawn in chip blue and is the only
+ * thing left saying they were; modifiers keep their pip, their ring and the dot
+ * they leave on a played tile, because which letter is Gold is a decision the
+ * player made and has to keep making.
+ *
+ * What else goes is the scoring animation: the `+chips +mult` a tile floats as
+ * it turns, and the outline a modifier throws round the tile it fires on. Those
+ * are the board narrating arithmetic while the guess resolves, and they are the
+ * loudest thing on it at exactly the moment there is nothing to decide. The dot
+ * stays and the flash goes, which is the same rule again: what a tile *is*
+ * survives, what it is *doing* does not.
+ *
+ * This is roughly the board the game had before values went on every key, so it
+ * is a screen that is known to work rather than one invented for a third state.
+ */
+.quiet .key:not(.etched) .value-pip,
+.quiet .tile-gain {
+  display: none;
+}
+
+.quiet .tile.fired {
+  outline: none;
+}
+
+/*
+ * The plain board, for the half of the game that is only a word puzzle.
+ *
+ * Independent of `.quiet` rather than layered on it, though it hides a superset:
+ * the two never appear together, and each block is readable on its own instead
+ * of one of them being half a state whose other half is in `setDecor`. The cost
+ * is that `.tile-gain` and the fired outline are turned off twice.
+ *
+ * Every per-letter number and mark goes: the chip value in the corner of a key,
+ * the modifier pip beside it, the dot the modifier leaves on a played tile, and
+ * the `+chips +mult` a tile floats as it turns. One rule, easy to state:
+ * nothing on the board says what a letter is worth. What survives is Wordle,
+ * five letters and three colors, plus the whole-guess score, which is the game
+ * rather than a decoration of it and which the readout above the keyboard still
+ * counts out.
+ *
+ * Nothing here changes what anything is worth. The letters score exactly what
+ * they scored a moment ago, and holding a key still says what that is; they have
+ * only stopped announcing it unprompted.
+ */
+.plain .value-pip,
+.plain .mod-pip,
+.plain .tile[data-mod]::after,
+.plain .tile-gain {
+  display: none;
+}
+
+/*
+ * And the outlines, which are the same claims made in color rather than in
+ * digits: the modifier's ring on the key, and the outline a modifier throws
+ * round the tile it fires on.
+ *
+ * Hiding the pips and keeping these was the half-measure the setting shipped
+ * with, and it was most wrong exactly where the setting is for. The board still
+ * had a purple K on it, still drew a ring round the tile that just paid, and a
+ * player trying to think about five letters and three colors was being shown a
+ * fourth and a fifth. The Wordle colors stay: they are the word puzzle rather
+ * than a decoration of it.
+ */
+.plain .key[data-mod] {
+  box-shadow: none;
+}
+
+.plain .tile.fired {
+  outline: none;
+}
+
+.key:active {
+  filter: brightness(1.35);
+}
+
+/* ------------------------------------------------------------ shop, panels */
+
+.shop-screen {
+  overflow-y: auto;
+}
+
+.shop-items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.shop-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 6.5rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--rare, var(--rare-common)) 24%, var(--panel-2)),
+    var(--panel-2) 70%
+  );
+  border-top: 3px solid var(--rare, var(--rare-common));
+  box-shadow: 0 2px 6px #0007;
+  text-align: left;
+  /* Dealt in one at a time. `backwards` matters: without it every card is
+     visible at its final position for the frame before its delay elapses. */
+  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1) backwards;
+  /* The stagger is paced with the deal it staggers, or a shop set to ×3 would
+     lay five cards out over the same 280ms it always did, each of them arriving
+     three times as fast, which is a queue rather than a deal. */
+  animation-delay: calc(var(--deal, 0) * 70ms * var(--pace));
+}
+
+.shop-item.broke {
+  opacity: 0.45;
+}
+
+.shop-item.sold {
+  background: transparent;
+  border: 1px dashed var(--line);
+  box-shadow: none;
+  color: var(--muted);
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+/* Name left, ticket right, one line. Baseline rather than center, so the two
+   sizes of type sit on the same line and a tag that has to wrap does it under
+   itself instead of pushing the name around. */
+.shop-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.375rem;
+}
+
+/*
+ * The kind tag. Small, letterspaced and muted, ticketed to the right of the name
+ * as a label on the shelf rather than a second title, and the thing an eye
+ * scanning five cards for "is there a relic" lands on.
+ *
+ * Uppercased in CSS rather than in the string, so the tag that has to say
+ * something in prose, "Consumable · slots full", is still written as prose in
+ * the one place a reader of the view code will look for it.
+ */
+.shop-item-kind {
+  /* Yields the width before the name does: the name is the card's identity and
+     the tag is a category anyone can also read off the color of the border. */
+  flex: 0 1 auto;
+  text-align: right;
+  font-size: var(--type-pip);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The collectible lines take the card's own rarity color. The tag stopped
+   saying the rarity in words, since the border, this ink and the tray were
+   already three tellings of it, so this is now the whole of what it contributes:
+   "RELIC" in the rare color, teaching a border a player would otherwise have
+   had to learn by rote. */
+.shop-item.kind-relic .shop-item-kind {
+  color: color-mix(in srgb, var(--rare, var(--rare-common)) 65%, var(--fg));
+}
+
+/*
+ * The ticket is also a question, "what is one of these?", and on a mouse it
+ * answers itself through `data-tip`. This is only the hint that asking is
+ * possible. Underlined rather than brightened, because the color on the relic
+ * line is carrying the rarity and a hover that changed it would be saying
+ * something the hover does not mean. Nothing on touch: the long-press is the
+ * gesture there, and it is the same one the tray already teaches.
+ */
+@media (hover: hover) {
+  .shop-item-kind[data-tip]:hover {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.15em;
+  }
+}
+
+/* No seat for it. Mult red, because that is this game's color for a number
+   that is against you, and because the tag is now a warning rather than a
+   label: the purchase will be refused at the till.
+
+   The consumable's alone, since the relic stopped wearing one: a full hand is a
+   wall for the whole shop visit, and a full tray is a thing you can sell your
+   way out of two rows further down the same screen. */
+.shop-item-kind.blocked {
+  color: var(--mult);
+}
+
+.shop-item-name {
+  /* `min-width: 0` because a flex item will not shrink below its longest word
+     without it, and one long relic name would otherwise push the ticket off the
+     card, which `overflow: hidden` would silently swallow. */
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.shop-item-text {
+  flex: 1;
+  font-size: 0.6875rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+/*
+ * "Replaces Steel ×2", the only line on a shelf card describing something the
+ * tap takes away rather than something it hands over.
+ *
+ * It used to be the tail of `.shop-item-text`, in muted 11px, at the end of the
+ * longest sentence on the card. That is the wrong place for it twice over: it is
+ * the last thing read on a card that is mostly skimmed, and it is in the ink the
+ * card uses for sales copy. Lifted onto a line of its own, in the outgoing
+ * modifier's own color, which is the color the letter it names has been
+ * wearing on the keyboard since it was bought.
+ *
+ * Not `--mult` and not a warning red, though it is a warning. Red is the mult
+ * readout everywhere else in this game, and a shelf card that suddenly speaks in
+ * the scoring palette would be read as a number before it is read as a caution.
+ */
+.shop-item-swap {
+  flex: 0 0 auto;
+  font-size: var(--type-pip);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--mod);
+}
+
+.shop-item-cost {
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 0.875rem;
+}
+
+/*
+ * The pack takes the full width of the shelf. Five cards in a two-column grid
+ * would otherwise strand it in a half-row, and it is the one purchase that opens
+ * into a decision rather than resolving on the spot, and the wide card is what says
+ * so before it is tapped.
+ */
+.shop-item.pack {
+  grid-column: 1 / -1;
+  min-height: 4.5rem;
+}
+
+.shop-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/*
+ * The levels line under the stock. A row rather than a card, because it sells
+ * nothing. It is the context the cards above are priced against, and a shop
+ * where the fifth thing looks buyable but is not would be a worse shop.
+ */
+.shapes-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  background: var(--panel-2);
+  font-size: 0.6875rem;
+  color: var(--muted);
+  text-align: left;
+}
+
+.shapes-line-label {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.shapes-line-body {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--mult);
+}
+
+.shapes-line-more {
+  flex: 0 0 auto;
+  opacity: 0.65;
+}
+
+/* ---------------------------------------------------------- shape panel */
+
+.shapes-note {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.shapes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-y: auto;
+}
+
+/*
+ * Same left-edge treatment the codex uses, for the same reason: five rows read
+ * as a list rather than as five panels. The edge is where the answer lives:
+ * lit for the shape that is scoring, half-lit for the ones that merely matched.
+ */
+.shape {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.375rem 0.5rem;
+  border-left: 2px solid var(--line);
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.shape.scoring {
+  border-left-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+}
+
+.shape.matched {
+  border-left-color: color-mix(in srgb, var(--mult) 55%, transparent);
+}
+
+.shape-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-weight: 700;
+}
+
+.shape-level {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  border-radius: 0.1875rem;
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.shape-tag {
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  border-radius: 0.1875rem;
+  background: color-mix(in srgb, var(--gold) 26%, var(--panel));
+  font-size: var(--type-small);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+/* The quieter half of the pair: it matched, and it lost the tie. */
+.shape-tag.also {
+  background: none;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.shape-text {
+  font-size: 0.8125rem;
+}
+
+.shape-pay {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mult);
+}
+
+/*
+ * An open pack. Same sheet as every other modal, but without the tap-to-dismiss
+ * backdrop: the pack is already paid for, so walking away from it has to be a
+ * button that was meant to be pressed.
+ */
+.pack-hint {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.pack-options {
+  display: grid;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+/*
+ * The letter picker, which borrows the pack's sheet for the same reason: it is a
+ * decision that has already been paid for, so there is no way out of it either.
+ *
+ * The keys are the round's keys, same class, same colors, same modifier pips,
+ * because the player has spent the whole run learning to aim at that layout, and
+ * this is a question about which of those keys they actually press.
+ */
+.place-keys {
+  /* Shorter than the board's, where the keyboard is the thing under the thumb
+     for a whole round. Here it is a single tap, and the sheet has a note under
+     it that should not be pushed off a short screen. */
+  --key-h: clamp(2.5rem, 6svh, 3rem);
+
+  /*
+   * The color of the modifier being placed, frozen here so the keys below can
+   * still say what they are already carrying.
+   *
+   * The container wears the incoming modifier's `data-mod`, which sets `--mod`
+   * on it; every key that carries one sets `--mod` again for itself, and after
+   * that there is no way down there to name the incoming color. This copies it
+   * before the overrides happen: a custom property's `var()` is substituted
+   * against the element it is declared on, so `--incoming` computes to the
+   * incoming color here and inherits down as that literal, untouched by what
+   * the keys do to `--mod` afterwards.
+   */
+  --incoming: var(--mod);
+}
+
+/* What the letter is already worth, which is the number the choice turns on,
+   and drawn by the same rule the board draws it by, base against raised, since
+   the player has just come from there. Which now includes the weights: these
+   were 700 and 800 against the same 16px key the board uses, so the picker had
+   the two-character read worse than the board did, on the one screen where the
+   player is reading the number rather than glancing past it. */
+.place-chips {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font-size: var(--type-pip);
+  font-weight: 400;
+  color: var(--value-base);
+}
+
+.place-key.etched .place-chips {
+  color: var(--value-raised);
+  font-weight: 600;
+}
+
+/*
+ * Already carrying something, so choosing it is a trade rather than a placement.
+ *
+ * Dimmed rather than disabled, because trading up is a real move and the pip says what
+ * is being given. What the dimming could never say is that the trade is the
+ * expensive move: on this keyboard the free letters are the loud ones and the
+ * occupied letter reads as the *less* interesting key, which is backwards. It is
+ * left alone anyway, because it is no longer the only thing saying so. A taken
+ * key now takes two taps and the second one is asked for in words.
+ */
+.place-key.taken {
+  opacity: 0.7;
+}
+
+/*
+ * Armed: tapped once, waiting on the answer to the question that has appeared
+ * under the keyboard.
+ *
+ * Ringed in the incoming modifier's color, over the top of the ring it wears in
+ * its own, so one key on the board is now wearing the color of the card in the
+ * player's hand, which is the whole message. Brought back to full strength at
+ * the same time, so the key the question is about is the brightest thing on the
+ * sheet rather than one of the dimmed ones.
+ *
+ * The outgoing pip is struck through, and that is the only place the loss is
+ * drawn rather than written. It is small on purpose: at 10px a strikethrough is
+ * a texture rather than a legible mark, and it is there to agree with the
+ * sentence below for a player who has already read it, not to carry it.
+ */
+.place-key.arming {
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 2px var(--incoming),
+    0 0 0.5rem color-mix(in srgb, var(--incoming) 45%, transparent);
+}
+
+.place-key.arming .mod-pip {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+/*
+ * The question itself. A block rather than the footnote it replaces, because the
+ * footnote was the version that did not work: this is the one moment on the
+ * sheet where something is about to be destroyed, and it gets the room the rest
+ * of the sheet gives to the keyboard.
+ */
+.place-swap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--panel-2);
+  /* Edged in the color of what is being lost, which is the same color as the
+     struck-through pip on the key above and the name inside this block. Three
+     marks, one color, one thing being said. */
+  border: 1px solid color-mix(in srgb, var(--mod) 45%, transparent);
+}
+
+.place-swap-line {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+/* The outgoing modifier, named in its own ink, the color the player has been
+   reading off that key since they bought it. */
+.place-swap-line strong {
+  color: var(--mod);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.place-key:disabled {
+  background: #1b1c20;
+  color: #4a4b52;
+  box-shadow: none;
+}
+
+.place-key:disabled .place-chips {
+  color: #4a4b52;
+}
+
+.place-note {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* What the card would have cost in the stock, struck out: the pack covered it. */
+.shop-item-cost.free {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-decoration: line-through;
+}
+
+.owned-label {
+  padding: 0.25rem 0;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.primary,
+.secondary,
+.danger {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  background: var(--green);
+}
+
+.secondary {
+  background: var(--panel-2);
+}
+
+/* Reserved for actions that destroy something. Currently that is exactly one
+   button, and it should not blend in with the two either side of it. */
+.danger {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--mult) 50%, transparent);
+  color: var(--mult);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.4;
+}
+
+.panel {
+  width: min(100%, 22rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--panel);
+  box-shadow: 0 0.5rem 1.5rem #0006;
+  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1);
+}
+
+.reward-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.reward-line.total {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.banner {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.banner.win {
+  color: var(--green);
+}
+.banner.lose {
+  color: var(--mult);
+}
+
+.answer-note {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.score-note {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The win, on a screen that is otherwise reporting a death. It keeps the color
+ * the banner would have had, because the run really did beat the game. */
+.won-note {
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* The rung just climbed, and the one it opened. Gold rather than green: it is a
+   reward being handed over, not the win being restated. */
+.asc-note {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* What playing on costs, said before the button that does it. */
+.endless-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-align: left;
+}
+
+/* ------------------------------------------------------------ round intro */
+
+/*
+ * The card between the shop and the board. The whole screen is a tap target,
+ * because on a phone hunting for a button after every round gets old fast, so the
+ * Play button is an affordance rather than the only way through.
+ */
+.intro {
+  cursor: pointer;
+}
+
+/* The tap-anywhere cursor is a promise the asking card does not keep, so it is
+   withdrawn with the handler it was advertising. */
+.intro.asking {
+  cursor: auto;
+}
+
+.intro-stage {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.intro-card {
+  width: min(100%, 20rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1.5rem 1rem;
+  border-radius: 1rem;
+  border: 2px solid var(--line);
+  background: linear-gradient(160deg, var(--panel-2), var(--panel));
+  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1);
+}
+
+/* A boss announces itself before it is played, never during. */
+.intro-card.boss-card {
+  border-color: var(--mult);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--mult) 22%, var(--panel)),
+    var(--panel)
+  );
+}
+
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+}
+
+/*
+ * The round's token, Balatro's chip at phone scale. The two ordinary rounds get
+ * a disc and the boss gets a spiked one, so the shape says which kind of trouble
+ * this is from across the room, before the name has been read.
+ *
+ * The ring is a gradient stop rather than an inset shadow because the boss is
+ * clipped to a star, and an inset shadow would be cut into ribbons by the points.
+ */
+.round-token {
+  width: 4.25rem;
+  height: 4.25rem;
+  margin-bottom: 0.375rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 30%,
+      color-mix(in srgb, var(--token) 35%, #000) 30% 36%,
+      transparent 36%
+    ),
+    radial-gradient(
+      circle at 34% 26%,
+      color-mix(in srgb, var(--token) 60%, #fff),
+      var(--token) 45%,
+      color-mix(in srgb, var(--token) 55%, #000)
+    );
+  filter: drop-shadow(0 0.375rem 0.5rem #0008);
+  animation: token calc(460ms * var(--pace)) cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.round-token.normal {
+  --token: #5a7fa8;
+}
+
+.round-token.elite {
+  --token: #c08a3e;
+}
+
+/*
+ * Twenty-four points around the circle at alternating radii: a twelve-pointed
+ * star. Written out because clip-path has no polar form. The only interesting
+ * numbers are the two radii, 50% and 42%.
+ */
+.round-token.boss {
+  --token: #a83a3f;
+  border-radius: 0;
+  clip-path: polygon(
+    50% 0%,
+    60.9% 9.4%,
+    75% 6.7%,
+    79.7% 20.3%,
+    93.3% 25%,
+    90.6% 39.1%,
+    100% 50%,
+    90.6% 60.9%,
+    93.3% 75%,
+    79.7% 79.7%,
+    75% 93.3%,
+    60.9% 90.6%,
+    50% 100%,
+    39.1% 90.6%,
+    25% 93.3%,
+    20.3% 79.7%,
+    6.7% 75%,
+    9.4% 60.9%,
+    0% 50%,
+    9.4% 39.1%,
+    6.7% 25%,
+    20.3% 20.3%,
+    25% 6.7%,
+    39.1% 9.4%
+  );
+}
+
+/* Lands with a little more spring than the card it sits on, so it reads as
+   having been tossed onto the table rather than drawn with it. */
+@keyframes token {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem) scale(0.7) rotate(-25deg);
+  }
+}
+
+.intro-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.intro-rule {
+  padding: 0 0.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--mult) 55%, var(--fg));
+}
+
+.intro-label {
+  margin-top: 0.75rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.intro-target {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--chips);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.intro-meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/*
+ * The run's standing rules, ruled off from the round's own numbers above them.
+ * They belong to a different scope, the whole run and not this card, and the line
+ * is what says so without a heading.
+ */
+.intro-asc {
+  margin-top: 0.625rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  text-align: center;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.intro-asc strong {
+  color: var(--mult);
+}
+
+/*
+ * The tutorial question, between the card and the buttons that answer it.
+ *
+ * Sized and colored like the card's own footnotes rather than like a heading,
+ * because the round is still the thing being announced here. The question is a
+ * one-off riding along on that card, and a line loud enough to compete with the
+ * target would be teaching a first-time player that the target does not matter.
+ */
+.intro-ask {
+  width: min(100%, 22rem);
+  text-align: center;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.mute {
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.screen.center .primary,
+.screen.center .secondary {
+  flex: 0 0 auto;
+  width: min(100%, 22rem);
+}
+
+/* ---------------------------------------------------------------- title */
+
+/*
+ * The first thing anyone sees, so it gets the one gradient fill in the game: lit
+ * from above like the tokens and the cards are, which is the whole of the visual
+ * grammar here: everything is an object on a table under one light.
+ */
+.title-name {
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  /* Indented by the tracking it adds to the last letter, or it reads off-center
+     even though the box is not. */
+  text-indent: 0.15em;
+  background: linear-gradient(175deg, #86d97f, var(--green) 55%, #2f6b2c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0.25rem 1rem color-mix(in srgb, var(--green) 45%, transparent));
+}
+
+.title-tag {
+  margin-top: -0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/*
+ * The career line. Quieter than the tagline above it and set in the digit font,
+ * because it is read as numbers rather than as a sentence, and it sits above
+ * the buttons rather than below them so it reads as part of the masthead instead
+ * of as a caption on Play.
+ */
+.title-record {
+  margin-top: -0.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  /* It is a button now, and buttons come with a look this line does not want. */
+  border: 0;
+  background: none;
+  padding: 0.125rem 0.25rem;
+  font-family: inherit;
+  /* Dotted rather than solid: enough to read as pressable at this weight
+     without turning the quietest line on the screen into a link. */
+  border-bottom: 1px dotted color-mix(in srgb, var(--muted) 45%, transparent);
+  cursor: pointer;
+}
+
+.title-record:active {
+  color: var(--fg);
+}
+
+/* ------------------------------------------------------------- the record */
+
+/* Three across, two down. Four across fit the first four figures and had no room
+   for the next two; three gives every label a line of its own on a 390px screen
+   and splits the six along the seam they already had: the run record above, the
+   word record below. */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25rem;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.0625rem;
+  padding: 0.5rem 0.25rem;
+  border-radius: 0.375rem;
+  background: var(--panel-2);
+}
+
+.figure strong {
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.figure span {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.stat-line {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.stat-line strong {
+  color: var(--fg);
+}
+
+.stat-head {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.breakdown-row {
+  display: grid;
+  /* The bar is the only elastic column; the three text ones are sized so the
+     rows stack into columns that line up down the sheet. */
+  grid-template-columns: 5.5rem 1fr 2.25rem 2rem;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-label {
+  color: var(--muted);
+}
+
+.breakdown-track {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.breakdown-fill {
+  display: block;
+  width: var(--fill);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+
+.breakdown-row.lost .breakdown-fill {
+  background: var(--gray);
+}
+
+.breakdown-share {
+  text-align: right;
+  font-weight: 700;
+}
+
+.breakdown-count {
+  text-align: right;
+  color: var(--muted);
+}
+
+.stat-foot {
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.title {
+  /* Anchor for the build stamp below. */
+  position: relative;
+}
+
+/*
+ * The difficulty dial. Sized to the Play button under it so the two read as one
+ * control stack rather than as a widget parked above a button, and boxed the way
+ * a shop slot is: this is the one thing on the screen that is being chosen.
+ *
+ * The height is pinned because the box is a stepper and a stepper is held down:
+ * a rule that wraps to two lines where the last one wrapped to one moved the
+ * Play button under the thumb already on its way to it. Measured by stepping all
+ * 101 levels at 390 and at 320, the two ends of the widths this ever renders at,
+ * and the tallest rung comes to 110: the earned edge, whose rule wraps to two lines
+ * and whose carrot sits under it. Both widths agree, because the rule tops out at
+ * two lines either way. So 7rem, two pixels of slack over the worst case.
+ *
+ * It was 8rem while a two-line warning could sit under an unearned level, then
+ * 7rem once that line was cut, then 6.375rem when the padding that warning had
+ * needed turned out to be padding around nothing. It is back at 7rem now, and the
+ * pixels bought there are the difference between the tallest rung being exact and
+ * being cramped: at 6.75rem the sentence cleared the dial by 3px. Two of the four
+ * went to the label's own gap (see `.ladder-level`), which is what the rest of
+ * this comment's numbers were re-measured against.
+ *
+ * What changed under it: the box is a column now, and the rule text takes the
+ * slack instead of the foot of the box (see `.ladder-text`). A pin sized to the
+ * tallest rung leaves every shorter rung holding the difference, and the height
+ * that stops the Play button moving should not decide where the white sits
+ * inside a card that isn't that tall. Stepping all 101 rungs at both widths: box
+ * 112 throughout, Play constant, the dial's row at a constant 10 from the top,
+ * nothing overflowing. Measured from the step row's bottom edge to the sentence's
+ * first glyph, it lands 27.4 clear of the dial on a one-line rung, 18.4 on a
+ * two-line one, 10.4 on the earned edge where the carrot is also in the box.
+ *
+ * That is the whole reason the measurement is written down: the next person to
+ * delete a line needs to know these numbers were measured rather than chosen, or
+ * the box will sit at its old height holding nothing forever.
+ *
+ * `min-height` rather than `height`: at a root font much larger than 16px the
+ * wrap counts are no longer the measured ones, and the failure worth having
+ * there is a box that grows rather than one that crops the rule it exists to
+ * explain.
+ */
+.ladder {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 22rem);
+  min-height: 7rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5625rem 0.625rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-align: center;
+}
+
+/* Lit only above zero, so the ordinary game does not wear a warning color. */
+.ladder.lit {
+  border-color: color-mix(in srgb, var(--mult) 45%, transparent);
+  background: color-mix(in srgb, var(--mult) 12%, var(--panel));
+}
+
+.ladder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Wider than it is tall, which is the one place the tightening shows. The row is
+   the tallest thing in the box and the only one whose height is arbitrary, so it
+   gave up the four pixels; the width stayed because the thumb aiming at a `+`
+   beside a `−` is aiming sideways, and it is the horizontal miss that costs a
+   rung. Square at 2.25rem before, and it is still the widest target on the
+   screen after the Play button. */
+.ladder-step {
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.ladder-step:disabled {
+  opacity: 0.3;
+}
+
+/* The `+` when the step it would take is off the earned ladder. Same footprint
+   as the `+` it replaces, so the row does not reflow as the boundary moves, and
+   a size below the glyph beside it: an emoji at 1.125rem is the loudest thing
+   on the title screen, and this is a door, not an alarm. */
+.ladder-step.shut {
+  font-size: 0.875rem;
+}
+
+/* The two lines of the label, which rung this is and what it is called, with
+   air between them bought out of the leading rather than out of the box. The gap
+   was 1px, which put 2.3 between the glyphs against the 29.6 to the sentence
+   below: a ratio that read as one crushed line rather than as two.
+
+   Five pixels is what the row can hold. The `−` and `+` set the row's height at
+   32, and this column measures 15 + gap + 12.65; the gap only starts costing the
+   box anything past 4px, and the pin has four pixels of slack over the tallest
+   rung to spend after that. Six would have cost 1.65 of them and left the earned
+   edge's sentence 3px clear of the dial, which is the cramp `6.75rem` was
+   rejected for. Hence also `line-height: 1` on the name and not here: the rule
+   line wraps to two on the earned edge, and tightening its leading to pay for the
+   gap would only move the crush one line down. */
+.ladder-level {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  line-height: 1.15;
+}
+
+/* Tabular figures because the line is centered: anything that changes its width
+   slides every glyph in it, and the one the eye catches sliding is the lock, which
+   is supposed to sit still and mean one thing. Measured here, stepping every rung
+   from 2 to 100, the lock moves at exactly two places, 9 to 10 and 99 to 100, four
+   and a half pixels each, because the digits of the font this resolves to are all
+   one width already. Those two are a digit arriving, they are allowed, and buying
+   them off costs a reserved slot's worth of air after the word at every level below
+   ten. This line is the guard for the fonts where the figures are *not* uniform:
+   Segoe UI sets a narrow 1, and there the same stepper would twitch on nearly every
+   press. Free where it is not needed, which is why it is here rather than measured
+   again on every platform the thing ships to. */
+.ladder-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3125rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  /* Always one line, since "Ascension 100" fits at 320, so the leading under it is
+     dead space held between two lines it is not separating. Given to the column's
+     gap instead, where it is visible. */
+  line-height: 1;
+}
+
+/* Smaller than the text it sits beside: it is a state, not a heading, and an
+   emoji rendered at its natural weight would outshout the level it marks. */
+.ladder-lock {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.ladder-rule {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--mult);
+}
+
+/* Takes the slack rather than leaving it at the foot of the box, and centers
+   itself in whatever it took.
+
+   It used to reserve two lines whether the rule needed two or one, so that the
+   line under it sat at a constant height on every rung. That was worth its 16px
+   when every unearned rung had a line under it; now only rung zero does, and
+   only until the first win, with no second note anywhere to hold level with. What
+   the reservation actually bought, at the end, was a blank line above 17px of
+   dead box: 41px of white under a one-line rule against 8px over the dial.
+
+   The dial keeps its anchor at the top, because it is the thing a thumb aims at
+   and it is the only part of the box that is pressed. Everything the pin does
+   not need goes here instead, split above and below the sentence: 27.4 above and
+   30.6 below on a one-line rung, 18.4 and 21.6 on a two-line one, 10.4 and 10 on
+   the earned edge where the carrot takes the foot. Centering the whole column
+   instead would have shared the slack the same way and taken the dial with it,
+   sliding the buttons 8px up the box on whichever rung happened to wrap. */
+.ladder-text {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+/* The carrot, and the only forward-looking line on the screen. */
+.ladder-note {
+  margin-top: 0.1875rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--gold) 80%, var(--muted));
+}
+
+/* Dimmed, not alarmed. The box keeps whatever color its level earned it and
+   loses a little confidence, which is the whole of what a lock means here. */
+.ladder.locked {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+/*
+ * Pulled out of the centered stack and pinned to the foot of the screen: it is a
+ * fact about the binary, not part of the composition, and it should be findable
+ * without ever competing with the Play button for attention.
+ *
+ * Selectable against the app-wide `user-select: none`, because the one time this
+ * text matters is when someone is quoting it into a bug report.
+ */
+.title-build {
+  position: absolute;
+  /* `#app` already pays the safe-area inset, so this is clear of the notch. */
+  bottom: 0.75rem;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* -------------------------------------------------------------- overlays */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  padding-bottom: calc(var(--safe-bottom) + 1rem);
+  background: #000a;
+  animation: fade calc(140ms * var(--pace)) ease;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/*
+ * A sheet, not a centered dialog: it rises from the bottom edge, which is where
+ * a thumb already is. The height cap plus the scrolling body means the rules can
+ * grow without the buttons ever leaving the screen.
+ */
+.sheet {
+  width: min(100%, 26rem);
+  max-height: min(80svh, 40rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  animation: rise-sheet calc(180ms * var(--pace)) cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes rise-sheet {
+  from {
+    transform: translateY(1.5rem);
+    opacity: 0;
+  }
+}
+
+.sheet-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.sheet-body {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted);
+  /* The scroll belongs to this box; letting it chain to the page behind the
+     sheet is how a modal ends up scrolling the board it is covering. */
+  overscroll-behavior: contain;
+}
+
+.sheet-lead {
+  color: var(--fg);
+}
+
+.sheet-heading {
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.rule strong {
+  color: var(--fg);
+}
+
+/* ----------------------------------------------------------------- codex */
+
+/*
+ * The catalog is long, every relic, boss and shape in the game, so entries
+ * are denser than the rules sheet and lean on a left edge rather than on gaps
+ * to separate themselves. The edge takes the rarity color where there is one,
+ * which is what lets the relic list be skimmed by tier without reading it.
+ */
+.codex-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.375rem 0 0.375rem 0.625rem;
+  border-left: 2px solid var(--rare, var(--line));
+}
+
+.codex-entry-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--fg);
+  font-weight: 700;
+}
+
+/* The price, or what a level is worth. Never wraps under the name it belongs to. */
+.codex-note {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.codex-text {
+  font-size: 0.8125rem;
+}
+
+/*
+ * A band label inside a section: a rarity, or a boss tier. Sticky, because the
+ * relic list is longer than the sheet and losing track of which rarity you are
+ * reading is the one way this screen fails to answer the question you opened it
+ * with.
+ */
+.codex-group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0;
+  background: var(--panel);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rare, var(--muted));
+}
+
+.codex-blurb {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/*
+ * Sections are shut until asked for. Laid out flat the catalog runs to ten
+ * phone screens, which is fine to read once and useless for the thing it is
+ * really for: looking one card up mid-run. Closed, the whole screen is seven
+ * rows and a count.
+ */
+.codex-section {
+  border-top: 1px solid var(--line);
+}
+
+.codex-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+/* Safari still draws its own marker through `list-style`. */
+.codex-summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Points down when the section is open, right when it is shut. */
+.codex-summary::before {
+  content: "▸";
+  margin-right: 0.375rem;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.codex-section[open] > .codex-summary::before {
+  transform: rotate(90deg);
+}
+
+.codex-count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------ language button */
+
+/*
+ * One wrapping button, and a plain `.secondary` besides, which is the whole
+ * point: it inherits its width from whichever stack it is in — 22rem beside Play
+ * on the title screen, full-bleed in `.sheet-actions` — and needs no rule for
+ * either. This block is only about the flag.
+ *
+ * It was four buttons in a 2×2 grid, with a label above them; see
+ * `languageButton` for the argument that replaced it.
+ */
+.lang-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/*
+ * Sized down rather than up. Emoji are drawn from a font with its own metrics
+ * and a flag set at the button's own size sits taller than the caps beside it,
+ * which puts the row's baseline on the flag instead of on the word. 0.9em reads
+ * as the same height as the text it labels.
+ *
+ * `line-height: 1` for the same reason from the other side: the emoji font's
+ * default leading is generous enough to grow the button by a pixel or two on
+ * Android, which is a button that changes size when the language changes.
+ */
+.lang-flag {
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+/*
+ * Only on screen while a run is being played in another language's words. Sized
+ * and coloured as a footnote because that is what it is: nothing is being asked
+ * of the player and nothing has gone wrong.
+ */
+.lang-note {
+  font-size: var(--type-small);
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.menu-button {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.375rem;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* ---------------------------------------------------------------- toast */
+
+/* Lifted clear of the keyboard on the board, and sat at the foot of the screen
+   anywhere else, since the shop has no keyboard to clear, so it keeps the fallback.
+
+   The z-index is not decoration. `.key` is `position: relative` for the sake of
+   its own pseudo-elements, which makes every key a positioned box at the same
+   auto level as this one; document order then decides, the keyboard is written
+   after the toast, and the refusal loses. It was being drawn all along,
+   underneath the row of keys the player was about to press again.
+
+   Above `.overlay` for the same reason one rung up, and this one is a guard
+   rather than a repair. Nothing reaches it today: the two sheets that dispatch
+   at all pre-empt their own refusals, the pack by refusing to open one it has
+   no room for and the letter picker by disabling every key that would bounce.
+   But a sheet is drawn at 10 over a #000a backdrop, so a refusal fired from
+   inside one was painted at 6 underneath it: technically drawn, two-thirds
+   swallowed, and read by a player as the tap having done nothing. The relic
+   card's own warning came off in favor of the till saying it, which makes this
+   the one channel a refusal has; it should not also depend on every sheet
+   having thought of its refusals in advance. */
+.toast {
+  position: fixed;
+  z-index: 11;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + var(--toast-lift, 1rem));
+  transform: translateX(-50%);
+  max-width: 90vw;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  background: #000c;
+  border: 1px solid var(--line);
+  font-size: 0.75rem;
+  text-align: center;
+  opacity: 0;
+  /* A fade and nothing else. How long the message stays is `TOAST` in `app.ts`,
+     deliberately out of reach of the kill-switch below. As a keyframe ending at
+     `opacity: 0` it was being run to completion in a millisecond and held there,
+     which deleted the one sentence this game has for saying no. Flattening a
+     fade costs nothing; flattening a dwell costs the message. */
+  transition: opacity 260ms ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------- rebuilds */
+
+/*
+ * Things that were already here, and are only here again.
+ *
+ * Every dispatch rebuilds the whole screen, so an unchanged node is still a new
+ * node, and a new node runs its animation from the top. `render` marks the two
+ * it knows arrived at nothing: a sheet that was already open, and the screen
+ * standing behind an open sheet. See `settle` in `app.ts` for which is which
+ * and why they are asked as two questions; this is the half that acts on the
+ * answer.
+ *
+ * The bug it fixes was a tap inside the pause sheet, which is the worst place in
+ * the game to rebuild something, because the sheet is a hand's width from the
+ * player's eye and the tap changes one word of one label. Measured in Chrome at
+ * 390x844: the frame after the tap put the backdrop at `opacity: 0` and the
+ * sheet at 0 and 24px low, and the pair took 140ms and 180ms to come back, on
+ * every tap of sound, music or the speed dial. Over the shop the same render
+ * took the shelf with it, all five cards at 0.00 on the next frame and dealt
+ * back in one at a time, the last of them not solid again for 250ms at ×2 and
+ * twice that at the speed the shop is authored to deal at.
+ *
+ * What may be added here is an animation that means "this just appeared", on a
+ * node a *view* builds. Nothing a handler adds after a render may be listed: the
+ * marks outlive the render that set them, so `.tile.land`, which `patchDraft`
+ * puts on the letter being typed, would be silenced for as long as the sheet
+ * stayed open, and typing would stop moving. `.coach` is left out for the
+ * opposite reason: it is never on screen beside a sheet, and the render that
+ * brings it back is bringing a new step of the tutorial, which is an arrival.
+ */
+.settled.overlay,
+.settled .sheet,
+.settled .shop-item,
+.settled .panel,
+.settled .intro-card,
+.settled .round-token {
+  animation: none;
+}
+
+/*
+ * A blanket kill-switch has to outrank every animation and transition shorthand
+ * in the file, and it is deliberately the last word on the subject. This is the
+ * one place `!important` is the correct tool rather than a workaround.
+ *
+ * What it must not do is compress motion instead of stopping it. Both rules
+ * below say `none` for the same reason, spelled out at each: a duration short
+ * enough to look like stillness is still a duration, and the engine will spend a
+ * frame on it. See the APK flashes it cost.
+ */
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * The pseudo-elements are listed because `*` does not match them, and the one
+   * animation that never stops on its own, the legendary sheen, is on a
+   * ::before. A universal selector alone would leave exactly the animation this
+   * block most needs to reach still running.
+   */
+  *,
+  *::before,
+  *::after {
+    /*
+     * `none`, not `1ms`.
+     *
+     * This was `animation-duration: 1ms` plus `animation-iteration-count: 1`,
+     * which is the snippet everyone ships, and it does not mean "still". A 1ms
+     * animation is not skipped. It is sampled once, at t=0, and 0% of a
+     * keyframe list is its `from` state. So a duration of 1ms buys exactly one
+     * painted frame of the starting pose and then a jump to the resting one,
+     * which is a glitch where there used to be a movement.
+     *
+     * Seven of the twelve animations in this file are `from {}`-shaped and were
+     * all doing it: `rise-sheet` opens every sheet from `translateY(1.5rem)`, so
+     * the pause sheet painted at y=426 and snapped to 402 and the quit sheet at
+     * 561.1 snapped to 537.1, a 24px jump each, twice on the way out of a run,
+     * which is what "quitting mid-guess flashes" turned out to be. `deal` starts
+     * at `opacity: 0` 12px low, `token` at 0.7 scale and 25 degrees over,
+     * `coach-in` 6px low, `land` at 0.86, `fade` transparent. The five that
+     * survived, `pop`, `flip`, `shake`, `sheen` and `coach-mark`, are the ones
+     * whose keyframes start where they end, so one frame at 0% is one frame of
+     * nothing happening. That is the whole difference, and it is not a property
+     * of the duration.
+     *
+     * The shorthand also does what the longhand could not reach. A duration says
+     * nothing about a delay or a fill, and `.shop-item` has both: `deal` with
+     * `backwards` and `animation-delay: calc(var(--deal) * 70ms * var(--pace))`. Under the old
+     * rule a five-card shop computed `delay=0.28s fill=backwards dur=0.001s` on
+     * its last card and held every card at `opacity: 0` until its own delay ran
+     * out, measured 0.00 across all five at t=9ms and the fifth still 0.00 at
+     * t=259ms, so the one setting a player turns on to stop things moving got
+     * them a shop that appeared a card at a time over 280ms with no animation to
+     * explain why. `none` resets the delay and the fill with the name, and the
+     * shop is simply there.
+     *
+     * The iteration count is gone rather than kept: the reason it was here was
+     * that the legendary sheen loops forever and a 1ms loop is a strobe, and
+     * `animation: none` reaches the sheen without needing the count at all.
+     *
+     * Nothing in the app reads `getAnimations()` or listens for `animationend`,
+     * which is the usual argument for a nonzero duration, so there is nothing left to
+     * keep alive.
+     */
+    /* biome-ignore lint/complexity/noImportantStyles: must override every animation shorthand above */
+    animation: none !important;
+    /*
+     * And `transition: none`, which is the same mistake with a much longer
+     * reach, because `transition-property` initially means `all`.
+     *
+     * Every transition written in this file names its properties. None of them
+     * says `all`. But a bare `transition-duration` does not shorten those. It
+     * lands on `*` next to an untouched `transition-property: all` and *arms* a
+     * transition on every element in the document, on every animatable
+     * property, most of which no rule here ever asked to animate. The board is
+     * where that bill came due. `.grid` sizes itself in `cqh`/`cqw` against
+     * `.grid-wrap`, and container query units resolve in a second style pass:
+     * the element is laid out once with the units unresolved and restyled once
+     * the container's size is known. That restyle is a style change like any
+     * other, so with a transition armed the engine transitioned *into* the
+     * correct size instead of being born at it, and a 1ms transition still owns
+     * a whole frame at its start value.
+     *
+     * Measured at 360x800 with the preference set: for one frame after every
+     * render, `.grid` was 344px wide at `font-size: 30.96px` rather than
+     * 339.84px at 30.5859px. 344 is the `100%` branch of `min(100%, 100cqh *
+     * 5/6)` and 30.96 is the `45cqw/5` branch, i.e. exactly the pre-resolution
+     * pass, overflowing a `.grid-wrap` that measured 407.81px on the bad frame
+     * and the good one alike. `getAnimations()` on that frame named the culprit
+     * outright: `width` and `font-size`, running, on `.grid`. Three decor taps
+     * produced three bad frames and a guess produced one; with this rule, zero
+     * of each. Without the preference the same runs never missed, because
+     * `transition-duration` is 0s there and no transition object is ever built.
+     *
+     * That is the whole of "the board flashes after guessing and after the
+     * decoration toggle, but only in the APK": Android's "Remove animations"
+     * passes `prefers-reduced-motion` straight through to the WebView, and a
+     * desktop browser without the preference set cannot reproduce any of it. It
+     * is not CPU speed, since 6x throttling without the preference produced zero
+     * bad frames and 1x with it produced them, and it is not `reuseBoard`, which
+     * keeps the `.grid-wrap` box but replaces the `.grid` inside it, so the
+     * element being transitioned is new on every render regardless.
+     */
+    /* biome-ignore lint/complexity/noImportantStyles: must override every transition shorthand above */
+    transition: none !important;
+  }
+
+  /*
+   * The two animations that are not decoration, and the one thing killing an
+   * animation cannot hand back on its own.
+   *
+   * Everything else in this file animates something already on screen. These
+   * two *carry* a number, what one tile paid and what the guess paid, and
+   * they are the only keyframes here that end at `opacity: 0`. That is what
+   * made them the first casualty of the old `animation-duration: 1ms`: run to
+   * their last frame in a millisecond and pinned there by `forwards`, every
+   * `+chips +mult` badge in a cascade read 0.00 for its whole life, measured,
+   * all of them, with the preference set. Turning animations off should not cost
+   * a player the scoring breakdown. That is the half of the game the coaching
+   * exists to teach. `animation: none` above now stills these along with
+   * everything else, so that part is answered by the blanket rule; they are
+   * named here for what it does not answer.
+   *
+   * Neither depends on the animation to leave: `floater` and `tileGain` each
+   * remove their node on a timer, 900ms and `GAIN`, so what the keyframes
+   * contributed was the drift and the fade and nothing else. What they also
+   * contributed, and it is easy to miss, is the horizontal centering: both are
+   * placed by a `left` that marks their middle, and every frame of both carries
+   * the `-50%` that makes that true. It lives nowhere but the keyframes, so
+   * killing the animation has to hand it back or the badge sits a half-width
+   * right of the tile it is announcing.
+   */
+  .floater,
+  .tile-gain {
+    transform: translateX(-50%);
+  }
+}

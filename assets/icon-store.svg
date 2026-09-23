@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108"
+     role="img" aria-label="5 Wild">
+  <title>5 Wild</title>
+  <!--
+    The Play listing icon: the same mark as icon.svg, full bleed.
+
+    Play does its own masking — it rounds and shadows the 512px upload to match
+    whatever surface it is drawing on — so the corners have to be painted, not
+    transparent. icon.svg leaves them clear because a legacy launcher draws that
+    square as-is and wants the radius baked in; hand Play the same file and the
+    listing shows a green blob with four transparent notches, or a black square,
+    depending on the surface. Hence a second source rather than a flag.
+
+    Same 108 viewBox and the same digit metrics as icon.svg on purpose: the two
+    files should differ in exactly one rect attribute and nothing else, so a
+    change to the mark is a change to both or it is a mistake.
+  -->
+  <rect width="108" height="108" fill="#538d4e"/>
+  <text x="54" y="79" text-anchor="middle" fill="#e8e8ea"
+        font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="700">5</text>
+</svg>

@@ -1,0 +1,54 @@
+name: Pages
+
+# Publishes the static build to https://5-wild.com.
+#
+# The custom domain is declared by public/CNAME, which vite copies verbatim into
+# dist/. GitHub reads that file out of the uploaded artifact on every deploy, so
+# the domain survives even if someone clears it in repo settings — setting it
+# only in the UI is the configuration that silently reverts.
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions: {}
+
+# Queue deploys rather than cancelling them: a push that lands mid-deploy should
+# still end up live, and Pages only tracks one deployment at a time anyway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      # Setting `permissions` at all drops every unlisted scope to none, so the
+      # checkout needs `contents` spelled out even though the repo is public.
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      # `npm run build` is `tsc --noEmit && vite build`, so a type error fails the
+      # deploy before anything is uploaded. Behavioural coverage is test.yml's job.
+      - run: npm run build
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128

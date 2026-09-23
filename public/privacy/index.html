@@ -1,0 +1,162 @@
+<!doctype html>
+<!--
+  The privacy policy, served at https://5-wild.com/privacy/.
+
+  It exists because Play requires a reachable policy URL for every app, ads or
+  none, data or none. The Data safety form will not submit without one. Vite
+  copies public/ verbatim, so this deploys with the game on every push to master
+  and needs no route; the directory-plus-index shape is what gets it a clean URL
+  on GitHub Pages, which does not strip .html extensions.
+
+  It is a standalone page on purpose: no bundle, no stylesheet import, nothing
+  the app build can break. A policy that 404s after a refactor is worse than an
+  ugly one, and Play re-checks the URL on every submission.
+
+  Keep it true. Every claim below is currently a fact about the code: no
+  network calls outside the bundle, no analytics, no ads, no third-party SDKs.
+  Each one is also an answer on the Data safety form, where a mismatch
+  between the form and the app is a policy violation rather than a typo. Adding
+  anything that phones home means editing this page in the same commit.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0e0f13" />
+    <meta name="description" content="Privacy policy for the game 5 Wild." />
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <title>Privacy Policy for 5 Wild</title>
+    <style>
+      :root {
+        --bg: #0e0f13;
+        --panel: #191b22;
+        --line: #2e313d;
+        --fg: #e8e8ea;
+        --muted: #8b8d98;
+        --green: #538d4e;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif;
+        padding: 2.5rem 1.25rem 4rem;
+      }
+      main {
+        max-width: 42rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.75rem;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 1.15rem;
+        margin: 2rem 0 0.6rem;
+        color: var(--green);
+      }
+      p,
+      ul {
+        margin-top: 0.75rem;
+      }
+      ul {
+        padding-left: 1.25rem;
+      }
+      li {
+        margin-top: 0.35rem;
+      }
+      a {
+        color: var(--fg);
+      }
+      .updated {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-top: 0.35rem;
+      }
+      .home {
+        display: inline-block;
+        margin-top: 2.5rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Privacy Policy for 5 Wild</h1>
+      <p class="updated">Last updated 15 August 2026</p>
+
+      <p>
+        5 Wild does not collect, transmit, or share any personal data. There are no
+        accounts, no analytics, no advertising, and no third-party services of any
+        kind. This policy describes what the game stores and where it stays.
+      </p>
+
+      <h2>What the game stores</h2>
+      <p>
+        The game saves your progress on your own device so that closing it does not
+        lose a run. That save holds only:
+      </p>
+      <ul>
+        <li>the state of the run in progress: the board, your score, gold, and relics;</li>
+        <li>your record across runs, such as best score and furthest stage reached;</li>
+        <li>your settings, including sound, music, and display preferences.</li>
+      </ul>
+      <p>
+        On the web this is stored in your browser's local storage. In the Android app
+        it is stored in the app's private storage. In both cases it never leaves the
+        device, and it is not readable by us or by anyone else.
+      </p>
+
+      <h2>What the game does not do</h2>
+      <ul>
+        <li>It does not collect your name, email address, location, or contacts.</li>
+        <li>It does not use advertising or analytics software.</li>
+        <li>It does not track you across apps or websites.</li>
+        <li>It does not send your gameplay, scores, or settings anywhere.</li>
+      </ul>
+      <p>
+        The Android app requests internet permission because of the framework it is
+        built on, but the game does not use it: the word lists and all other content
+        ship inside the app and it plays fully offline.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        The game is not directed at children under 13 and collects no data from anyone,
+        including children.
+      </p>
+
+      <h2>Deleting your data</h2>
+      <p>
+        Because everything is stored locally, you remove it yourself: uninstall the
+        Android app, or clear its storage from your device's app settings. On the web,
+        clear site data for this domain in your browser. There is nothing stored
+        elsewhere for us to delete.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        If a future version of the game handles data differently, this page will be
+        updated before that version ships, and the date above will change with it.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        You can raise questions about this policy at
+        <a href="https://github.com/jmelahman/5-wild/issues">
+          github.com/jmelahman/5-wild/issues</a
+        >.
+      </p>
+
+      <a class="home" href="/">← Back to 5 Wild</a>
+    </main>
+  </body>
+</html>

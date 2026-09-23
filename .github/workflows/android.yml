@@ -1,0 +1,142 @@
+name: Android
+
+# Builds the two Android packages, which are the same code aimed at two doors.
+#
+# The APK is the sideload: every push builds one so a break is caught at the
+# commit that caused it, but only a published release gets a signed build
+# attached to it — that asset is the install path for a phone, reachable at
+# https://github.com/jmelahman/5-wild/releases/latest/download/5-wild.apk
+# without a GitHub login, which a workflow artifact is not.
+#
+# The AAB is for Play, which has not accepted APKs for new apps since 2021. It
+# stays a workflow artifact rather than a release asset on purpose: an .aab is
+# not installable, and a file sitting on the releases page beside the .apk is a
+# file someone will download and be unable to open. The only party who needs it
+# is whoever is doing the Play upload, and they are logged in already.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # Caching is off here, unlike the test workflow, and switched off
+      # explicitly rather than by omission. This job holds the signing key on a
+      # release, and a restored npm cache is writable by any pull request that
+      # ran before it — a poisoned cache would be executing inside the one job
+      # that can sign an APK. `npm ci` cold costs a few seconds; not a close
+      # trade. zizmor flags setup-node on a release trigger regardless of the
+      # input, so the opt-out below is the fix and this is the paperwork.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # zizmor: ignore[cache-poisoning]
+        with:
+          node-version: 24
+          cache: ""
+      # Android Gradle Plugin 8.7 does not support JDK 26; 21 is the newest
+      # release it builds against cleanly.
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+
+      # Only a release gets the real key. A push build is unsigned on purpose:
+      # it proves the build works without handing the signing material to every
+      # commit, and an unsigned APK cannot be installed by accident.
+      - name: Decode signing key
+        if: github.event_name == 'release'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      # Both packages in one Gradle invocation: they share every task up to
+      # packaging, so building the pair costs a fraction of building each. The
+      # bundle is built on a plain push too, unsigned and discarded, for the
+      # reason the APK is — a break in it should surface at the commit that
+      # caused it, not on the evening someone is trying to ship.
+      - name: Assemble release APK and AAB
+        env:
+          # Monotonic across the repo's history, which is all Android asks of a
+          # versionCode. The name is what shows up in the phone's app settings.
+          #
+          # Play is stricter than Android here: a versionCode may never be
+          # *reused*, even by a draft that was deleted without publishing. A
+          # re-run of a failed job keeps the same run_number, so if the first
+          # attempt got as far as a Play upload, the retry needs a bump — push
+          # an empty commit rather than re-running the job.
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_VERSION_NAME: ${{ github.event.release.tag_name || github.sha }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
+        working-directory: android
+
+      # Signed builds land as app-release.apk and unsigned ones as
+      # app-release-unsigned.apk, so the glob covers both trigger paths.
+      - name: Name the APK for humans
+        run: |
+          find android/app/build/outputs/apk/release -name 'app-release*.apk' \
+            -exec mv {} 5-wild.apk \;
+          ls -l 5-wild.apk
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: 5-wild-apk
+          path: 5-wild.apk
+          if-no-files-found: error
+
+      # Gradle does not suffix an unsigned bundle the way it does an unsigned
+      # APK, so both trigger paths write app-release.aab; the glob is only there
+      # so this step fails the same way its neighbour does if that ever changes.
+      - name: Name the AAB for humans
+        run: |
+          find android/app/build/outputs/bundle/release -name 'app-release*.aab' \
+            -exec mv {} 5-wild.aab \;
+          ls -l 5-wild.aab
+
+      # Kept out of the publish job below: that one attaches assets to the
+      # release, and this is not one. Download it from this run's artifacts when
+      # promoting a version to Play.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: 5-wild-aab
+          path: 5-wild.aab
+          if-no-files-found: error
+
+  publish:
+    needs: apk
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      # The only scope in this workflow that can write anything, confined to the
+      # one job that attaches the asset. The build job above runs `npm ci`, and
+      # a job running third-party install scripts has no business holding it.
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: 5-wild-apk
+      - name: Attach the APK to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        # --clobber so re-running a failed publish replaces the asset rather
+        # than erroring on a name that is already taken.
+        run: gh release upload "$TAG" 5-wild.apk --clobber
