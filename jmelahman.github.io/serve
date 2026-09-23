@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-python -m http.server &
+DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+
+# Generate the HTML before serving. The feed needs the network and the CSS
+# minifier needs docker, so skip both unless their output is missing.
+[ -f "$DIR/feed/index.html" ] && export SKIP_FEED=1
+[ -f "$DIR/css/stylesheet.min.css" ] && export SKIP_CSS=1
+"$DIR/build"
+
+python -m http.server --directory "$DIR" &
 # shellcheck disable=SC2064 # We want this to expand immediately.
 trap "kill -9 $!" EXIT
 xdg-open http://localhost:8000

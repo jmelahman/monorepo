@@ -210,3 +210,240 @@ hr {
   position: relative;
   top: -8px;
 }
+
+/* Projects */
+.project {
+  margin: 1.5em 0;
+  padding: 0 1.25rem 1rem;
+  border: 1px solid #e3e1cf;
+  border-radius: 4px;
+  font-size: 90%;
+}
+
+.project p {
+  text-indent: 0;
+}
+
+.project-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.project-head h2 {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-ligatures: none;
+  font-size: 1.3em;
+  margin-bottom: 0.25em;
+}
+
+.project-head h2 a {
+  text-decoration: none;
+  color: #8c0000;
+}
+
+.project-head h2 a:hover, .project-head h2 a:focus {
+  text-decoration: underline;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 70%;
+  color: #5c5c5c;
+  padding: 2px 9px;
+  border: 1px solid #d9d6c3;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.terminal {
+  margin: 1em 0;
+  border: 1px solid #e3e1cf;
+  border-radius: 6px;
+  background-color: #efeee0;
+  overflow: hidden;
+}
+
+.terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e3e1cf;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 70%;
+  color: #8a8878;
+}
+
+.terminal-bar i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #d9d6c3;
+}
+
+.terminal-bar i:first-child {
+  background-color: #8c0000;
+  opacity: 0.6;
+}
+
+.terminal-bar span {
+  margin-left: 6px;
+}
+
+.terminal pre {
+  margin: 0;
+  padding: 0.8rem;
+  overflow-x: auto;
+  font-size: 85%;
+  line-height: 1.45;
+}
+
+.terminal pre.wrap {
+  white-space: pre-wrap;
+}
+
+.terminal code {
+  background-color: unset;
+  padding: 0;
+  font-size: 100%;
+}
+
+.muted {
+  color: #8a8878;
+}
+
+.grade, .sev-critical, .sev-error {
+  color: #8c0000;
+  font-weight: bold;
+}
+
+.sev-warn {
+  color: #9a6b00;
+  font-weight: bold;
+}
+
+.grades {
+  margin: 1em 0;
+}
+
+.grade-bar {
+  display: flex;
+  height: 1.8em;
+  border-radius: 4px;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 85%;
+  font-weight: bold;
+}
+
+.grade-bar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  color: #2c2c2c;
+}
+
+.band-A { background-color: #dcd9c4; }
+.band-B { background-color: #c4bf9f; }
+.band-C { background-color: #b38d4d; color: #fbfaef !important; }
+.band-D { background-color: #a94a2f; color: #fbfaef !important; }
+.band-F { background-color: #8c0000; color: #fbfaef !important; }
+
+.grade-caption {
+  margin-top: 0.4em;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 70%;
+  color: #8a8878;
+}
+
+.tiles {
+  display: flex;
+  gap: 6px;
+  margin: 1em 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2em;
+  height: 2.2em;
+  border-radius: 3px;
+  color: #fbfaef;
+}
+
+.tile-green { background-color: #538d4e; }
+.tile-yellow { background-color: #b59f3b; }
+.tile-gray { background-color: #787c7e; }
+
+.project-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  font-size: 85%;
+  font-weight: bold;
+}
+
+.project-links a {
+  text-decoration: none;
+}
+
+.project-links i {
+  margin-right: 0.4em;
+  color: #8c0000;
+}
+
+.nb {
+  white-space: nowrap;
+}
+
+.terminal.dark {
+  background-color: #1c1c1c;
+  border-color: #1c1c1c;
+}
+
+.terminal.dark .terminal-bar {
+  border-bottom-color: #3a3a3a;
+  color: #9a9a9a;
+}
+
+.terminal.dark .terminal-bar i {
+  background-color: #4a4a4a;
+}
+
+.conn {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 78%;
+}
+
+.conn span {
+  display: block;
+  padding: 0.75em 1em;
+  text-align: center;
+  color: #1c1c1c;
+}
+
+.conn-green { background-color: #2fd12f; }
+.conn-yellow { background-color: #f4f42c; }
+.conn-purple { background-color: #c73bb0; }
+.conn-blue { background-color: #3a96ec; }
