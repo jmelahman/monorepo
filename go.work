@@ -1,6 +1,8 @@
-go 1.25.3
+go 1.27
 
 use (
+	./agentic-kanban
+	./agilecbt
 	./check-symlinks
 	./chui
 	./connections
@@ -8,14 +10,15 @@ use (
 	./cycle-cli
 	./cycle-lights
 	./dashboard
-	./heart-lights
 	./docker-status
 	./git-orchard
+	./go-pre-commit-hooks
+	./heart-lights
 	./jview
-	./kanban
 	./nature-sounds
+	./pkglint
 	./runtainer
 	./smart-lights
-	./tag
+	./typesafe-sdk-go
 	./work
 )

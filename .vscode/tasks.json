@@ -5,7 +5,7 @@
       "label": "Run Kanban Tests",
       "type": "shell",
       "command": "go",
-      "args": ["test", "./kanban/..."],
+      "args": ["test", "./agentic-kanban/..."],
       "options": {
         "cwd": "${workspaceFolder}"
       }
@@ -14,7 +14,7 @@
       "label": "Kanban Backend",
       "type": "shell",
       "command": "go",
-      "args": ["run", "./kanban", "serve"],
+      "args": ["run", "./agentic-kanban", "serve"],
       "options": {
         "cwd": "${workspaceFolder}"
       }
@@ -24,7 +24,7 @@
       "type": "shell",
       "command": "npm install && npm run dev -- --host 0.0.0.0",
       "options": {
-        "cwd": "${workspaceFolder}/kanban/web"
+        "cwd": "${workspaceFolder}/agentic-kanban/web"
       }
     }
   ]
