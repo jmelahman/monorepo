@@ -1,3 +1,4 @@
 # Jamison Lahman
 ## Projects
+- [pkglint](https://github.com/jmelahman/pkglint): Security-focused linter for Arch Linux PKGBUILDs
 - [Agentic Kanban](https://jmelahman.github.io/agentic-kanban/llms.txt): Kanban for AI agent sessions
