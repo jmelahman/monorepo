@@ -5,63 +5,110 @@ on:
     tags:
       - "v*.*.*"
 
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  goreleaser:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, target: x86_64-unknown-linux-gnu, zig: true}
+          - {os: ubuntu-latest, target: aarch64-unknown-linux-gnu, zig: true}
+          - {os: windows-latest, target: x86_64-pc-windows-msvc}
+          - {os: windows-latest, target: aarch64-pc-windows-msvc}
+          - {os: macos-latest, target: x86_64-apple-darwin}
+          - {os: macos-latest, target: aarch64-apple-darwin}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@6ee6290f1cbc4156c0bdd66691b2c144ef8df19a # ratchet:astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+      - run: rustup toolchain install stable --profile minimal
+      - run: rustup target add "${{ matrix.target }}"
+      # The wheel and crate versions come from Cargo.toml, so pin it to the tag.
+      - name: Set crate version from tag
+        run: uv run --no-project .github/set-version.py "${GITHUB_REF_NAME#v}"
+      - name: Build wheel
+        env:
+          TAG_VERSION: ${{ github.ref_name }}
+          TAG_COMMIT: ${{ github.sha }}
+        run: |
+          uvx --with ziglang maturin build \
+            --release \
+            --target "${{ matrix.target }}" \
+            --out dist \
+            ${{ matrix.zig && '--zig' || '' }}
+      - name: Archive binary
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          # Stage the files first so they sit at the root of the archive.
+          mkdir -p archives stage
+          cp README.md LICENSE stage/
+          name="tag_${GITHUB_REF_NAME}_${TARGET}"
+          if [[ "$TARGET" == *windows* ]]; then
+            cp "target/${TARGET}/release/tag.exe" stage/
+            (cd stage && 7z a "../archives/${name}.zip" tag.exe README.md LICENSE)
+          else
+            cp "target/${TARGET}/release/tag" stage/
+            tar -czf "archives/${name}.tar.gz" -C stage tag README.md LICENSE
+          fi
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # ratchet:actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.target }}
+          path: dist/*.whl
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # ratchet:actions/upload-artifact@v7
+        with:
+          name: archives-${{ matrix.target }}
+          path: archives/*
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@6ee6290f1cbc4156c0bdd66691b2c144ef8df19a # ratchet:astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+      - run: uv run --no-project .github/set-version.py "${GITHUB_REF_NAME#v}"
+      - run: uvx maturin sdist --out dist
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # ratchet:actions/upload-artifact@v7
+        with:
+          name: wheels-sdist
+          path: dist/*
+
+  github-release:
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: release
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # ratchet:actions/download-artifact@v8
         with:
-          persist-credentials: false
-          fetch-depth: 0
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # ratchet:actions/setup-go@v6
-        with:
-          go-version: stable
-          cache: false
-      - uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # ratchet:goreleaser/goreleaser-action@v7
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
-        env:
+          pattern: archives-*
+          path: archives
+          merge-multiple: true
+      # There is no checkout in this job, so tell gh which repository to use.
+      - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  build-pypi:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os-arch:
-          - {goos: "linux", goarch: "amd64"}
-          - {goos: "linux", goarch: "arm64"}
-          - {goos: "windows", goarch: "amd64"}
-          - {goos: "windows", goarch: "arm64"}
-          - {goos: "darwin", goarch: "amd64"}
-          - {goos: "darwin", goarch: "arm64"}
-          - {goos: "", goarch: ""}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # ratchet:actions/setup-go@v6
-        with:
-          go-version: stable
-          cache: false
-      - uses: astral-sh/setup-uv@6ee6290f1cbc4156c0bdd66691b2c144ef8df19a # ratchet:astral-sh/setup-uv@v7
-        with:
-          enable-cache: false
-      - run: |
-          GOOS="${{ matrix.os-arch.goos }}" \
-          GOARCH="${{ matrix.os-arch.goarch }}" \
-          uv build --wheel
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # ratchet:actions/upload-artifact@v7
-        with:
-          name: wheels-${{ matrix.os-arch.goos || 'source' }}-${{ matrix.os-arch.goarch || 'any' }}
-          path: dist/*.whl
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes archives/*
+
   publish-pypi:
-    needs: build-pypi
+    needs: [build, sdist]
     runs-on: ubuntu-latest
     environment:
       name: release

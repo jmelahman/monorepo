@@ -1,0 +1,29 @@
+[package]
+name = "release-tag"
+version = "0.6.0"
+edition = "2021"
+rust-version = "1.82"
+description = "Automatically create semantic version git tags"
+authors = ["Jamison Lahman <jamison@lahman.dev>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/jmelahman/tag"
+keywords = ["releasing", "release", "git", "semver", "tagging"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "tag"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
+clap_complete = "4"
+log = "0.4"
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

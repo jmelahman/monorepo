@@ -2,7 +2,7 @@
   name: tag-check
   description: Validate that the tag at HEAD has its previous version as an ancestor
   entry: tag --check --no-fetch --allow-untagged
-  language: golang
+  language: rust
   pass_filenames: false
   always_run: true
   stages: [pre-push]
