@@ -1,0 +1,55 @@
+version: 2
+
+before:
+  hooks:
+    - npm --prefix web ci
+    - npm --prefix web run build
+
+builds:
+  - id: kanban
+    main: .
+    binary: kanban
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -tags=embed
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/jmelahman/kanban/cmd/server.version={{.Version}}
+      - -X github.com/jmelahman/kanban/cmd/server.commit={{.Commit}}
+      - -X github.com/jmelahman/kanban/internal/docker.BuiltinImage={{ envOrDefault "KANBAN_DEVCONTAINER_IMAGE" "lahmanja/kanban-devcontainer:latest" }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  draft: false

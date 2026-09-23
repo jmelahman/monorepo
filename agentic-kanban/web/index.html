@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Kanban</title>
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem("kanban.themeMode") || "system";
+          var c = localStorage.getItem("kanban.contrast") || "normal";
+          var a = localStorage.getItem("kanban.accent") || "red";
+          var dark =
+            m === "dark" ||
+            (m === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+          var r = document.documentElement;
+          r.dataset.theme = dark ? "dark" : "light";
+          if (c === "high") r.dataset.contrast = "high";
+          r.dataset.accent = a;
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+          document.documentElement.dataset.accent = "red";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

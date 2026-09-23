@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs", "go-bin~=1.26.3", "manygo"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-kanban"
+description = "Kanban board for managing AI agent sessions"
+license = {file = "LICENSE"}
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = ["kanban", "claude", "claude-code", "agents", "agentic"]
+classifiers = [
+    "Programming Language :: Go",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version"]
+
+
+[project.urls]
+Repository = "https://github.com/jmelahman/agentic-kanban"
+
+[tool.hatch.build]
+include = [
+    "go.mod",
+    "go.sum",
+    "**/*.go",
+    "web/package.json",
+    "web/package-lock.json",
+    "web/index.html",
+    "web/tsconfig.json",
+    "web/vite.config.ts",
+    "web/src/**",
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.custom]
+binary_name = "kanban"

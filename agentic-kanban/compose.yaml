@@ -1,0 +1,106 @@
+services:
+  kanban:
+    image: lahmanja/kanban:${KANBAN_VERSION:-latest}
+    container_name: kanban
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - lahmanja/kanban:latest
+      # Build metadata. Resolve on the host since .git is dockerignored and
+      # worktrees only stash a gitdir pointer. Set alongside your other env
+      # vars when invoking `docker compose up --build`, e.g.:
+      #   VERSION=$(git describe --tags --always --dirty) \
+      #   docker compose up -d --build
+      args:
+        VERSION: ${VERSION:-dev}
+    restart: unless-stopped
+    # The image entrypoint runs as UID 65532 (nonroot). Override with the
+    # invoking host user so bind-mounted dirs under $HOME stay writable, and
+    # grant the supplementary GID that owns the docker socket so kanban can
+    # spawn session containers. Export DOCKER_SOCK_GID before `docker compose
+    # up`, e.g.:
+    #   DOCKER_SOCK_GID=$(stat -c '%g' "${DOCKER_SOCK_PATH:-/var/run/docker.sock}") \
+    #   docker compose up -d
+    user: "${KANBAN_UID:-1000}:${KANBAN_GID:-1000}"
+    group_add:
+      - "${DOCKER_SOCK_GID:-0}"
+    ports:
+      - "7474:7474"
+      - "13000-13099:13000-13099"
+    environment:
+      HOME: ${HOME}
+      XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR}
+      KANBAN_DATA_DIR: ${HOME}/.local/share/kanban
+      GH_TOKEN: ${GH_TOKEN:-}
+      DEVCONTAINER_FIREWALL: ${DEVCONTAINER_FIREWALL:-}
+      DEVCONTAINER_REMOTE_USER: ${DEVCONTAINER_REMOTE_USER:-}
+      DEVCONTAINER_REMOTE_HOME: ${DEVCONTAINER_REMOTE_HOME:-}
+      SSH_AUTH_SOCK: ${SSH_AUTH_SOCK:-}
+      # Host path of the docker socket, used as the bind source when kanban
+      # spawns session containers. Without this, kanban would emit
+      # source=/var/run/docker.sock — a path that exists inside this
+      # container but not on a rootless-docker host. Tracks the volume
+      # source below so the two can't drift.
+      KANBAN_HOST_DOCKER_SOCK: ${DOCKER_SOCK_PATH:-/var/run/docker.sock}
+      # Where the kanban backend can reach the in-cluster Prometheus so its
+      # /prometheus/ route can reverse-proxy the UI. Only set when the
+      # prometheus service is in the compose project.
+      KANBAN_PROMETHEUS_URL: http://prometheus:9090
+    volumes:
+      - ${DOCKER_SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
+      # Agent config dirs. Claude Code reads ~/.claude; pi reads ~/.pi/agent.
+      # For other harnesses (e.g. Ollama) substitute or add the relevant path.
+      - ${HOME}/.claude:${HOME}/.claude
+      - ${HOME}/.claude.json:${HOME}/.claude.json
+      - ${HOME}/.pi/agent:${HOME}/.pi/agent
+      - ${HOME}/code:${HOME}/code
+      - ${HOME}/.local/share/kanban:${HOME}/.local/share/kanban
+      - ${HOME}/.config/kanban:${HOME}/.config/kanban
+      # Out-of-repo preview manifests (<board-slug>.toml) for boards whose
+      # repo can't carry a preview.toml. Shared with the `preview` CLI's own
+      # manifest dir. Read-only — kanban only ever reads them. Override the
+      # location with KANBAN_PREVIEW_MANIFESTS.
+      - ${HOME}/.config/preview:${HOME}/.config/preview:ro
+      # Your git config + global excludes, so the session diff view honors the
+      # files you ignore "in all situations". ~/.gitconfig carries
+      # core.excludesFile; ~/.config/git is its default target
+      # (~/.config/git/ignore). Put e.g. .claude/settings.local.json in your
+      # global excludes to keep it out of every board's diff. Read-only — git
+      # only reads them; kanban runs its own merge/squash commits with signing
+      # disabled, so a commit.gpgsign here won't break merges (and your signing
+      # key is never mounted). If core.excludesFile points at a non-default path
+      # (e.g. ~/.gitignore), mount that file too.
+      - ${HOME}/.gitconfig:${HOME}/.gitconfig:ro
+      - ${HOME}/.config/git:${HOME}/.config/git:ro
+    networks:
+      - kanban-net
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: kanban-prometheus
+    restart: unless-stopped
+    # No host ports published — reach the UI via the kanban backend at
+    # http://localhost:7474/prometheus/, which reverse-proxies to this
+    # container over kanban-net. --web.external-url + --web.route-prefix
+    # tell Prometheus to generate UI links under that prefix.
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # External URL determines the path prefix Prometheus listens on
+      # (route-prefix defaults to its path component). The reverse-proxy in
+      # the kanban backend forwards /prometheus/* as-is, so both sides agree.
+      - --web.external-url=http://localhost:7474/prometheus
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/recording_rules.yml:/etc/prometheus/rules/recording_rules.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - kanban-net
+
+networks:
+  kanban-net:
+    name: kanban-net
+
+volumes:
+  prometheus-data:
