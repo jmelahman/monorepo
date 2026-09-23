@@ -1,0 +1,17 @@
+name: Create the build user
+description: Add an unprivileged user that owns the workspace, since makepkg refuses to run as root.
+
+runs:
+  using: composite
+  steps:
+    - name: Create the build user
+      shell: bash
+      run: |
+        set -eu
+        useradd --create-home builder
+        # `makepkg -s` runs `sudo -k pacman -S ...`, which would otherwise stop on a password prompt.
+        echo 'builder ALL=(ALL) NOPASSWD: /usr/bin/pacman' >/etc/sudoers.d/builder
+        # Debug split packages fail pkglint's PB826 (their build-id symlinks resolve through the
+        # installed-package database, where a freshly built package never is), so don't build them.
+        echo 'OPTIONS+=(!debug)' >/etc/makepkg.conf.d/nodebug.conf
+        chown -R builder: "$GITHUB_WORKSPACE"

@@ -1,0 +1,67 @@
+name: Deploy to AUR
+
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    # Nightly fallback in case the push-triggered deploy failed.
+    - cron: "25 4 * * *"
+  workflow_dispatch:
+
+# Concurrent runs push the same subtrees to the same AUR repos and race, which
+# fails with "cannot lock ref" / "[rejected] (fetch first)". As with the hourly
+# workflow, cancel-in-progress stays false so a run midway through pushing 100+
+# subtrees is never interrupted partway.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  push-to-remote:
+    name: Push subtrees to the AUR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # ratchet:actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+      - name: Add known hosts
+        run: |
+          # Pinned rather than ssh-keyscan'd at runtime so a MITM can't hand us its own key.
+          # SHA256:RFzBCUItH9LZS0cKB5UE6ceAYhBD5C8GeOBip8Z11+4, published at https://aur.archlinux.org/
+          echo "aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN" >> ~/.ssh/known_hosts
+
+      - name: Push each package
+        run: |
+          FAILED=0
+          for dir in */; do
+            PACKAGE="${dir%/}"
+            [[ "$PACKAGE" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Invalid input"; exit 1; }
+            REMOTE="ssh://aur@aur.archlinux.org/$PACKAGE.git"
+            # A subtree split replays ~1000 commits per package (~10s each), so skip it
+            # when AUR's master already holds this exact tree. A failed fetch (new package,
+            # transient SSH drop) just falls through to the push.
+            if git fetch -q "$REMOTE" master 2>/dev/null &&
+               [ "$(git rev-parse 'FETCH_HEAD^{tree}')" = "$(git rev-parse "HEAD:$PACKAGE")" ]; then
+              echo "$PACKAGE: up to date"
+              continue
+            fi
+            if ! git subtree push "--prefix=$PACKAGE" "$REMOTE" master; then
+              echo "::error::subtree push failed for $PACKAGE"
+              FAILED=1
+            fi
+          done
+          exit "$FAILED"

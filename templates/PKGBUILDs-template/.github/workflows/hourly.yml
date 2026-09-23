@@ -1,0 +1,89 @@
+name: Hourly Updates
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+# This workflow pushes branches and opens PRs, so overlapping runs race each
+# other. Every push to master triggers it, so a batch of merges can otherwise
+# stampede dozens of concurrent runs. cancel-in-progress is false deliberately:
+# a run that is midway through `git push` / `gh pr create` must be allowed to
+# finish, or it can leave a branch pushed with no PR behind it. GitHub keeps at
+# most one pending run per group and discards older pending ones, so the
+# stampede collapses to a single queued run without ever interrupting work in
+# flight.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Open update PRs
+    runs-on: ubuntu-latest
+    # makepkg and updpkgsums are Arch-only.
+    container: archlinux:base-devel@sha256:84cd9ef000b3cff245ec028e87965b84724f4bf1cc63fc2741ba927b88515ed6 # 2026-09-05
+    environment:
+      name: pkgreleaser
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Install packages
+        run: pacman -Syu --noconfirm --needed git github-cli pacman-contrib python-uv
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # ratchet:actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ secrets.PAT }}
+      - name: Configure git
+        run: |
+          # The workspace is owned by the host runner's uid, not the container's root.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Create the build user
+        uses: $/.github/actions/build-user
+      - name: Check upstreams and open PRs
+        run: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "::error::GITHUB_TOKEN is empty; nvchecker would be rate limited without it"
+            exit 1
+          fi
+          cat >"$RUNNER_TEMP/release.sh" <<'SCRIPT'
+          set -u
+          FAILED=0
+          # One nvchecker run for every package. Each bump is reported as
+          # "Bump <package> from <old> to <new>" and edits only that package.
+          BUMPS=$(uv run ./pkgreleaser.py) || FAILED=1
+          while read -r MESSAGE; do
+            [ -n "$MESSAGE" ] || continue
+            PACKAGE=$(echo "$MESSAGE" | grep -oP '^Bump \K[a-zA-Z0-9_-]+(?= from )') || {
+              echo "::warning::Unexpected output: $MESSAGE"
+              continue
+            }
+            VERSION=$(echo "$MESSAGE" | grep -oP '\b[0-9]+\.[0-9]+\.[0-9]+$') || {
+              echo "::warning::Could not extract version from: $MESSAGE"
+              continue
+            }
+            BRANCH="pkgreleaser/$PACKAGE/$VERSION"
+            if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
+              continue
+            fi
+            git checkout -q -b "$BRANCH" origin/master
+            git add "$PACKAGE"
+            git commit -q -m "$MESSAGE"
+            git push -f -u origin "$BRANCH"
+            gh pr create --base master --head "$BRANCH" --fill
+            gh pr merge --auto --squash "$BRANCH"
+          done <<<"$BUMPS"
+          exit "$FAILED"
+          SCRIPT
+          # makepkg refuses to run as root; sudo resets HOME to the build user's.
+          sudo -u builder --preserve-env=GITHUB_TOKEN bash "$RUNNER_TEMP/release.sh"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
