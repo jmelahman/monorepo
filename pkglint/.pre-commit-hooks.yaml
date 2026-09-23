@@ -1,0 +1,62 @@
+# Hooks this repo exposes to *other* repos, so a packaging tree can lint its
+# own PKGBUILDs on commit with a .pre-commit-config.yaml:
+#
+#   repos:
+#     - repo: https://github.com/jmelahman/pkglint
+#       rev: v1.0.1
+#       hooks:
+#         - id: pkglint
+
+- id: pkglint
+  name: pkglint
+  description: statically analyze PKGBUILDs for source-integrity, hermeticity, and code-execution problems
+  entry: pkglint
+  language: golang
+  # Only PKGBUILDs are passed; pkglint picks up each one's .SRCINFO and install
+  # scriptlets from the same directory itself. A commit that touches only a
+  # scriptlet therefore doesn't trigger this hook — add
+  # `files: (^|/)(PKGBUILD|.*\.install)$` downstream if that matters, but note
+  # pkglint must still be handed the PKGBUILD, not the scriptlet.
+  files: (^|/)PKGBUILD$
+  # Tune per repo with e.g. `args: [--ignore, PB105, --fail-on, critical]`.
+  minimum_pre_commit_version: "3.0.0"
+
+- id: pkglint-fix
+  name: pkglint (autofix)
+  description: apply pkglint's safe auto-fixes to PKGBUILDs in place
+  entry: pkglint --fix
+  language: golang
+  files: (^|/)PKGBUILD$
+  # Committing shouldn't reach the network; drop this with `args: []` to let
+  # fixes that need it (resolving a VCS ref to a commit) run. Swap for
+  # `args: [--unsafe-fix]` to also apply behavior-changing rewrites.
+  args: ["--offline"]
+  minimum_pre_commit_version: "3.0.0"
+
+- id: pkglint-build
+  name: pkglint (build)
+  description: build each PKGBUILD with makepkg and lint the package it produces
+  entry: pkglint build
+  language: golang
+  files: (^|/)PKGBUILD$
+  # A build is far too slow for every commit, so this one is opt-in: run it
+  # with `pre-commit run --hook-stage manual pkglint-build`, or set
+  # `stages: [pre-push]` downstream. Serial because parallel makepkg runs
+  # contend for the same source cache.
+  require_serial: true
+  stages: [manual]
+  # Dependencies are not synced by default (that needs root, and a hook that
+  # can prompt for a password is a hook that hangs); opt in with
+  # `args: [--makepkg-arg=-s]`. A bare `--` cannot be used in `args:` — it
+  # would swallow the filenames pre-commit appends. To build in a container
+  # instead of on the host: `args: [--image, archlinux:base-devel]`.
+  minimum_pre_commit_version: "3.0.0"
+
+- id: pkglint-system
+  name: pkglint (system)
+  description: same as pkglint, but runs the pkglint already installed on the machine
+  entry: pkglint
+  language: system
+  files: (^|/)PKGBUILD$
+  # `args: [--fix]` turns this into the autofix hook without a Go toolchain,
+  # and `args: [build]` the build hook.

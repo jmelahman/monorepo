@@ -1,0 +1,28 @@
+# Maintainer: Demo Maintainer <demo@example.com>
+# A source array built from a whole-array reference: the parser expands
+# "${_files[@]/#/$_dlpath/}" statically, so the three sources pair with the
+# three sha256sums (no PB110) and each expanded URL is visible to the
+# transport rules (three PB104 hits on one written element). The arch-specific
+# array shows a genuine count mismatch caught through the same expansion.
+pkgname=arrayref-demo
+pkgver=1.0
+pkgrel=1
+pkgdesc='Fixture for whole-array reference sources'
+arch=('x86_64')
+url="https://downloads.example.com"
+license=('MIT')
+_files=('one.bin'
+        'two.bin'
+        'three.bin')
+_dlpath="http://downloads.example.com/pub"
+source=("${_files[@]/#/$_dlpath/}")
+sha256sums=('0524fe42951adc3a7eb870e32f0920313c71f170c859b5f770d82b4ee111e970'
+            '85297a4d146e9c87ac6f74822734bdee5f4b2a722d7eaa584b7f2cbf76f478f6'
+            'a425f0ffb6a1a5ede5b979ed6177f4f4f4fdef6ae7c302a7b7720ef332fec0a8')
+_extras=('alpha.conf' 'beta.conf')
+source_x86_64=("${_extras[@]}")
+sha256sums_x86_64=('9c6df3feefde26d4e41d4a4fe5db2a89f9123a772594d7f59afd062625cd204e')
+
+package() {
+    install -Dm644 -t "$pkgdir/usr/share/$pkgname/" *.bin *.conf
+}

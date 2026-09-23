@@ -1,0 +1,114 @@
+{{define "head"}}
+{{- $alt := "The AUR Report Card masthead over pkglint's grade ramp: A for no warnings through F for any critical finding." -}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+<meta name="description" content="{{.Desc}}">
+{{/* No font preloads: the stylesheet is same-origin and small, every face is
+     font-display:swap, and Chromium reports same-origin font preloads as
+     unused even when they are the only fetch. A false warning on every page
+     costs more here than the millisecond it buys. */}}
+<link rel="stylesheet" href="{{.Root}}assets/site.css?v={{.Ver}}">
+{{/* Declaring the icon is also how the /favicon.ico request is avoided: without
+     a link the browser asks for one on every page and takes a 404. */}}
+<link rel="icon" href="{{.Root}}assets/favicon.svg" type="image/svg+xml">
+{{/* Link previews — X, Slack, Discord, iMessage — read Open Graph out of the
+     head and will not resolve a relative URL, so the page and its card image
+     are spelled out against the published origin. twitter:card is the only
+     twitter:* tag that earns its place: X falls back to og:title,
+     og:description and og:image, but has no fallback for the image's alt
+     text, which is the one thing a screen reader on that timeline needs. */}}
+<link rel="canonical" href="{{.URL}}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AUR Report Card">
+<meta property="og:title" content="{{.Title}}">
+<meta property="og:description" content="{{.Desc}}">
+<meta property="og:url" content="{{.URL}}">
+<meta property="og:image" content="{{.Site}}assets/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{$alt}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image:alt" content="{{$alt}}">
+{{end}}
+
+{{define "topbar"}}
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div>
+    <a class="mark" href="{{.Root}}index.html"><b>pkglint</b><span>AUR report card</span></a>
+    <nav>
+      <a href="{{.Root}}rules/index.html">Rules</a>
+      <a href="{{.Root}}results.json">JSON</a>
+      <a href="https://github.com/jmelahman/pkglint">Source</a>
+    </nav>
+  </div>
+</header>
+{{end}}
+
+{{/* rostertable renders a slice of results as the roster. Three things show
+     these rows — the index's head, each alphabetical shard, and site.js
+     rebuilding them from roster.json — so the row shape is defined once here.
+     .Sort names the column the rows are already in, which is the only part
+     that differs: the index arrives votes-first, a shard alphabetically. */}}
+{{define "rostertable"}}
+{{/* Root and Total ride on the table because the script renders rows the
+     server never sent, and has to spell their links relative to whichever
+     page it is running on. Total is the corpus behind the table, not the rows
+     in it, so the count can say "1000 of 47429" before roster.json lands. */}}
+<table id="roster" data-root="{{.Root}}" data-total="{{.Total}}">
+  <thead>
+    <tr>
+      <th class="grade-h" data-sort="grade">Grade</th>
+      <th class="pkg-h" data-sort="name"{{if eq .Sort "name"}} aria-sort="ascending"{{end}}>Package</th>
+      <th class="repo-h" data-sort="repo">Repo</th>
+      <th class="num" data-sort="findings">Findings</th>
+      <th class="num votes-h" data-sort="votes"{{if eq .Sort "votes"}} aria-sort="descending"{{end}}>Votes</th>
+      <th class="desc-h">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .Results}}
+    {{/* Neither the maintainer nor the co-maintainers have a column of their
+         own, so they ride in data attributes for the filter to match, and in
+         the name cell's tooltip so a row that matched on one can still say
+         why. Co-maintainers are space-joined into one attribute, the same
+         shape roster.json carries them in. An official package's packager
+         and its maintainers on archlinux.org ride the same way, the
+         maintainers space-joined like the co-maintainers; its repository has
+         a column, but the attribute is what the repository filter reads.
+
+         Votes are the AUR's: an official package has none, and a dash says
+         so where a zero would say "unpopular". */}}
+    <tr data-grade="{{.Grade}}" data-name="{{.Name}}" data-repo="{{.Repo}}" data-maintainer="{{.Maintainer}}" data-comaintainers="{{join .CoMaintainers " "}}" data-packager="{{.Packager}}" data-maintainers="{{join .Maintainers " "}}" data-findings="{{len .Findings}}" data-votes="{{.Votes}}">
+      <td class="gcell"><span class="grade grade-{{.Grade}}">{{.Grade}}</span></td>
+      <td class="pkg"{{with .MaintainedBy}} title="{{.}}"{{end}}><a href="{{$.Root}}package/{{.Name}}.html">{{.Name}}</a>{{if .Drift}}
+        <span class="drift" title="source drift since the previous scan">&#9888;</span>{{end}}</td>
+      <td class="rcell"><span class="repo repo-{{.Repo}}">{{.Repo}}</span></td>
+      <td class="num">{{len .Findings}}</td>
+      <td class="num votes">{{if .Official}}<span class="none">&ndash;</span>{{else}}{{.Votes}}{{end}}</td>
+      <td class="desc" title="{{.Description}}">{{.Description}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+
+{{/* shardnav links the alphabetical roster pages. Every package page on the
+     site is reachable through these, which is what keeps the corpus outside
+     the index's head crawlable and browsable without JavaScript. */}}
+{{define "shardnav"}}
+<nav class="shardnav" aria-label="Packages by first letter">
+  {{range .Keys}}<a href="{{$.Root}}roster/{{.}}.html"{{if eq . $.Key}} aria-current="page"{{end}}>{{.}}</a>{{end}}
+</nav>
+{{end}}
+
+{{/* fixpill renders an auto-fix badge for a rules.FixLevel; nothing when the
+     rule has no fix. */}}
+{{define "fixpill"}}{{if .Fixable}}<span class="fix fix-{{if .Safe}}safe{{else}}unsafe{{end}}" title="pkglint rewrites this for you with {{.Flag}}">{{.Flag}}</span>{{end}}{{end}}
+
+{{/* sevpills renders a rules.SeverityRange: one badge for a rule that always
+     reports the same severity, two spanned by an en dash for one that
+     escalates on what it finds. */}}
+{{define "sevpills"}}<span class="sev {{sev .Low}}">{{sev .Low}}</span>{{if .Varies}}<span class="sevto">–</span><span class="sev {{sev .High}}">{{sev .High}}</span>{{end}}{{end}}

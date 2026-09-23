@@ -1,0 +1,94 @@
+{{define "package.html"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body>
+{{template "topbar" .}}
+<main id="main">
+
+<section class="row">
+  <div class="tag">Package</div>
+  <div>
+    <div class="pkghead">
+      <div class="stamp stamp-{{.R.Grade}}" title="grade {{.R.Grade}}">{{.R.Grade}}</div>
+      <div>
+        <p class="eyebrow"><a href="{{.Root}}index.html">AUR report card</a></p>
+        <h1>{{.R.Name}}</h1>
+        {{/* The facts are what the repository says about the package: the AUR
+             has a maintainer, co-maintainers and votes; an official repository
+             has its maintainers on archlinux.org and a packager; both have a
+             page for the package and a place its PKGBUILD lives. */}}
+        <p class="facts">
+          <span class="repo repo-{{.R.Repo}}">{{.R.Repo}}</span>
+          <b>{{.R.Version}}</b>
+          {{if .R.Official}}
+          {{with .R.Maintainers}}<span>maintained by {{join . ", "}}</span>{{end}}
+          {{with .R.Packager}}<span>packaged by {{.}}</span>{{end}}
+          <a href="{{.R.PageURL}}">Arch Linux page</a>
+          <a href="{{.R.SourceURL}}">PKGBUILD</a>
+          {{else}}
+          {{with .R.Maintainer}}<span>maintained by {{.}}</span>{{end}}
+          {{with .R.CoMaintainers}}<span>co-maintained by {{join . ", "}}</span>{{end}}
+          <span>{{.R.Votes}} votes</span>
+          <a href="{{.R.PageURL}}">AUR page</a>
+          {{end}}
+          <a href="{{.Root}}badge/{{.R.Name}}.svg">badge</a>
+        </p>
+        {{with .R.Description}}<p>{{.}}</p>{{end}}
+      </div>
+    </div>
+  </div>
+</section>
+
+{{with .R.Drift}}
+<section class="row">
+  <div class="tag">Drift</div>
+  <div>
+    <div class="note note-alert">
+      <h3>Source drift since the previous scan</h3>
+      <ul>{{range .}}<li>{{.}}</li>{{end}}</ul>
+      <p>A changed artifact behind an unchanged URL, or a commit pin that moved without a
+      version bump, is the shape a hijacked upstream release takes. A re-tagged release
+      looks identical — which is why it is worth re-reading this one.</p>
+    </div>
+  </div>
+</section>
+{{end}}
+
+<section class="row">
+  <div class="tag">Findings{{if .R.Findings}}<small>n = {{len .R.Findings}}</small>{{end}}</div>
+  <div>
+  {{if .R.Err}}
+    <div class="note note-alert">
+      <h3>Not scanned</h3>
+      <p>pkglint reads a PKGBUILD by parsing it as bash. This one did not parse, so there is
+      nothing to grade:</p>
+      <p><code>{{scanErr .R.Err}}</code></p>
+    </div>
+  {{else if not .R.Findings}}
+    <p class="lede">Nothing to report. Sources are pinned, the build stays off the network,
+    and nothing runs at parse time.</p>
+  {{else}}
+    {{range .Files}}
+    <p class="file">{{.Path}}</p>
+    <div class="findings">
+      {{range .Findings}}
+      <div class="finding sev-{{sev .Severity}}">
+        <div class="loc">line {{.Line}}</div>
+        <div class="rid"><a href="{{$.Root}}rules/{{.RuleID}}.html">{{.RuleID}}</a></div>
+        <div class="msg"><span class="sev {{sev .Severity}}">{{sev .Severity}}</span>
+          {{.Message}}
+          {{with index $.Rules .RuleID}}{{template "fixpill" .FixLevel}}{{end}}</div>
+      </div>
+      {{end}}
+    </div>
+    {{end}}
+  {{end}}
+  </div>
+</section>
+
+</main>
+</body>
+</html>
+{{end}}

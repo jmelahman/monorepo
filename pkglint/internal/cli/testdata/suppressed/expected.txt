@@ -1,0 +1,9 @@
+suppressed: grade C, 5 finding(s)
+  PKGBUILD:15:3: warn [PB914] go build without -buildmode=pie produces a non-PIE executable, so ASLR cannot relocate it; set it in GOFLAGS or on the command
+  PKGBUILD:15:3: warn [PB915] go build without -trimpath embeds $srcdir paths in the binary, so builds are not reproducible and leak the build layout
+  PKGBUILD:15:3: info [PB916] go build writes a read-only module cache; without -modcacherw, cleaning the build directory needs a chmod first
+  PKGBUILD:15:3: info [PB917] CFLAGS/LDFLAGS are not forwarded to cgo: without CGO_CFLAGS/CGO_LDFLAGS exports, Arch's hardening flags never reach C code in this build; export them or set CGO_ENABLED=0
+  PKGBUILD:16:3: warn [PB913] ignore directive for PB203 matches no finding on this or the next line; remove it
+
+1 package linted: 1 with findings
+2 finding(s) fixable with --fix, 3 more with --unsafe-fix

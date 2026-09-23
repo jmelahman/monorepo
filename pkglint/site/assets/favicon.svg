@@ -1,0 +1,10 @@
+<!-- A report card at 16px: three ruled lines on charcoal, the top one marked in
+     red. Nothing smaller than a bar survives at favicon size, and a letter would
+     have to be a grade — which would say something about the site that isn't
+     true of every page on it. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="pkglint">
+  <rect width="32" height="32" rx="5" fill="#0a0a0c"/>
+  <rect x="7" y="7" width="18" height="4" rx="1" fill="#f4635e"/>
+  <rect x="7" y="14" width="18" height="4" rx="1" fill="#4a4a54"/>
+  <rect x="7" y="21" width="11" height="4" rx="1" fill="#4a4a54"/>
+</svg>

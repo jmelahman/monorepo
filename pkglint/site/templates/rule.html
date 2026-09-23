@@ -1,0 +1,63 @@
+{{define "rule.html"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body>
+{{template "topbar" .}}
+<main id="main">
+
+<section class="row">
+  <div class="tag">{{.Rule.ID}}</div>
+  <div>
+    <p class="eyebrow"><a href="{{.Root}}index.html">AUR report card</a> ·
+      <a href="index.html">Rule reference</a></p>
+    <h1><span class="obj">{{.Rule.Name}}</span></h1>
+    {{if .Rule.FixLevel.Fixable}}<p class="facts">{{template "fixpill" .Rule.FixLevel}}</p>{{end}}
+    <p class="lede">{{doc .Rule.Doc}}</p>
+    {{if .Rule.FixLevel.Fixable}}
+    <div class="note">
+      <h3>Auto-fix</h3>
+      <p>Run <code>pkglint {{.Rule.FixLevel.Flag}}</code> to rewrite this in place{{if not .Rule.FixLevel.Safe}} —
+      the rewrite is mechanical but changes what the build does, so read the result{{end}}.
+      Add <code>--diff</code> to see the change without writing it.</p>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+<section class="row">
+  <div class="tag">Example</div>
+  <div>
+    <div class="example">
+      <figure class="bad">
+        <figcaption><span class="tag-bad">Flagged</span></figcaption>
+        <pre>{{.Rule.Bad}}</pre>
+      </figure>
+      <figure class="good">
+        <figcaption><span class="tag-good">Preferred</span></figcaption>
+        <pre>{{.Rule.Good}}</pre>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="row">
+  <div class="tag">Suppress</div>
+  <div>
+    <p>If a package trips this rule on purpose and you have reviewed it, put the directive on
+    the offending line or the line above it:</p>
+    <pre class="snippet"># pkglint: ignore={{.Rule.ID}}</pre>
+    <p>It covers only that line pair, in that file. Passing <code>--ignore {{.Rule.ID}}</code>
+    turns the rule off for a whole run instead.</p>
+    <nav class="rulenav">
+      {{if .Prev}}<a href="{{.Prev.ID}}.html">&larr; {{.Prev.ID}} {{.Prev.Name}}</a>{{else}}<span></span>{{end}}
+      {{if .Next}}<a href="{{.Next.ID}}.html">{{.Next.ID}} {{.Next.Name}} &rarr;</a>{{else}}<span></span>{{end}}
+    </nav>
+  </div>
+</section>
+
+</main>
+</body>
+</html>
+{{end}}

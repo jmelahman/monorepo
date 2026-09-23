@@ -1,0 +1,139 @@
+name: Report card site
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # nightly, ~1am PT
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: report-card-site
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false # no push token while parsing untrusted PKGBUILDs
+      # The scan state lives on the `site` branch with the pages it produced,
+      # not on master: master carries source only, so checking it out costs a
+      # couple of megabytes instead of the 350MB the generated tree weighs.
+      # Sparse and cone-mode, so this pulls data/ and leaves docs/ on the
+      # server.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: site
+          sparse-checkout: data
+          path: .site
+          persist-credentials: false
+      - name: Restore scan state
+        run: |
+          mkdir -p data
+          if [ -f .site/data/state.jsonl ]; then
+            cp .site/data/state.jsonl data/state.jsonl
+          else
+            echo "No prior state on the site branch; scanning from empty."
+          fi
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: .cache
+          key: snapshots-${{ github.run_id }}
+          restore-keys: |
+            snapshots-
+            aur-snapshots-
+      # The corpus is two sources. The official repositories — core, extra,
+      # multilib, ~12,300 bases — are scanned whole, indexed from the pacman
+      # sync databases with each PKGBUILD tree fetched from its release tag on
+      # gitlab.archlinux.org. The AUR side is every base that has seen a
+      # change in the last 180 days: ~35,000. Together far more than one run
+      # can download, so the seed is ordered for a bounded night: the AUR
+      # window first, then the official fill, alphabetically within each
+      # repository, so a partial night is a contiguous slice that the next
+      # night continues. Widening the window is a one-line change and the
+      # state carries over, so this can grow later — a year is ~47,600 AUR
+      # bases.
+      #
+      # The restored state.jsonl carries the previous scan, so a base whose
+      # LastModified (the build date, for an official package) has not moved
+      # is served from it without a fetch, and -budget caps the rest. 8000
+      # comes from the request throttles rather than the runner: AUR fetches
+      # are spaced 500ms apart and GitLab's 1.2s — its unauthenticated limit
+      # is 600 requests per ten minutes — so the ceiling is 2/s no matter what
+      # -jobs says, and measured throughput is nearer 1/s. That puts a full
+      # budget at roughly two hours, well inside the 6h job limit. Once the
+      # corpus has filled, a run fetches only the bases that actually changed
+      # and finishes in minutes, with the budget never binding.
+      #
+      # -deadline caps the run's wall clock: past it the run stops starting
+      # fetches and finishes with what it has, so the site and state still
+      # land instead of the job dying at the 6h kill limit with everything
+      # uncommitted. Unfetched bases simply roll to the next run, same as
+      # over-budget ones, so the state advances a little every night no matter
+      # what. At 1h the deadline, not the budget, is what bounds a fill-in
+      # night (~3600 AUR fetches, or ~3000 from GitLab, at the throttles'
+      # pace), stretching a from-empty fill over about a week for the AUR
+      # window and four or five nights more for the official repositories —
+      # the price of never tying up a runner for longer than an hour. The
+      # generator logs progress with a rate and ETA as it fetches, so a run
+      # that is merely slow is distinguishable from one that is stuck.
+      - run: >
+          go run ./site
+          -repos core,extra,multilib
+          -maintainer Jamison
+          -since-days 180
+          -top 500
+          -budget 8000
+          -deadline 1h
+          -state data/state.jsonl
+          -out docs
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          # Both paths, so their least common ancestor is the workspace root
+          # and the publish job can restore them side by side, laid out the way
+          # the site branch wants them.
+          path: |
+            docs
+            data/state.jsonl
+          name: report-card-docs
+          retention-days: 1
+          if-no-files-found: error
+          include-hidden-files: true # docs/.nojekyll must ride along
+
+  publish:
+    needs: scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        with:
+          name: report-card-docs
+          path: out # the artifact holds docs/ and data/ already
+      # The site branch is generated output only — docs/ for Pages to serve
+      # (its source is this branch's /docs) and the state.jsonl that produced
+      # it, which the next scan reads back. It is rebuilt here as a fresh root
+      # commit and force-pushed, never appended to: 48 nightly snapshots on
+      # master are what made the repo 157MB, and a branch that is always one
+      # commit deep cannot repeat that. Nothing merges into it and no human
+      # commit touches it, so there is nothing to rebase onto and no reason to
+      # retry the push.
+      - name: Publish the site branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: out
+        run: |
+          git init -q -b site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Report card site $(date -u +%Y-%m-%d)"
+          git push --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" site

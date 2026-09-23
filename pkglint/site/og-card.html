@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AUR Report Card — link preview card</title>
+<!-- Source for assets/og.png, the image every page points og:image at. It is a
+     committed PNG rather than something the generator draws, because X and the
+     other preview readers will not take the SVG this site is otherwise built
+     from. Rendered at exactly 1200x630 (the 1.91:1 summary_large_image size)
+     and checked in; regenerate it after a change here with:
+
+       python3 -m http.server 8000 --directory site
+       # then screenshot http://localhost:8000/og-card.html at 1200x630, e.g.
+       npx playwright screenshot --viewport-size=1200,630 \
+         http://localhost:8000/og-card.html site/assets/og.png
+
+     The tokens below are copied from site.css rather than linked to it: this
+     page is a fixed-size drawing, not a responsive page, and a stylesheet
+     change should never silently re-cut an image that is already published. -->
+<style>
+@font-face {
+  font-family: "Plex Cond";
+  src: url(assets/fonts/plex-cond-700.woff2) format("woff2");
+  font-weight: 700; font-style: normal;
+}
+@font-face {
+  font-family: "Plex Cond";
+  src: url(assets/fonts/plex-cond-600.woff2) format("woff2");
+  font-weight: 600; font-style: normal;
+}
+@font-face {
+  font-family: "Plex Sans";
+  src: url(assets/fonts/plex-sans-var.woff2) format("woff2");
+  font-weight: 100 700; font-style: normal;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url(assets/fonts/plex-mono-600.woff2) format("woff2");
+  font-weight: 600; font-style: normal;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url(assets/fonts/plex-mono-400.woff2) format("woff2");
+  font-weight: 400; font-style: normal;
+}
+
+:root {
+  --ink: #0a0a0c;
+  --panel: #17171a;
+  --rule: #2b2b32;
+  --rule-soft: #1f1f24;
+  --chalk: #f4f4f5;
+  --dim: #9797a2;
+  --accent: #f4635e;
+  --g-A: #57b87e; --g-B: #a3c265; --g-C: #d8b04a; --g-D: #e08a48; --g-F: #e05a55;
+  --on-g: #0a0a0c;
+  --mono: "Plex Mono", monospace;
+  --sans: "Plex Sans", sans-serif;
+  --cond: "Plex Cond", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  width: 1200px; height: 630px; overflow: hidden;
+  background: var(--ink); color: var(--chalk);
+  font: 400 15px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.card { width: 1200px; height: 630px; display: flex; flex-direction: column; }
+
+/* The site's topbar, at card scale. */
+.top {
+  height: 84px; flex: none; display: flex; align-items: baseline; gap: 16px;
+  padding: 30px 64px 0; border-bottom: 1px solid var(--rule);
+}
+.top b { font: 600 27px/1 var(--mono); letter-spacing: -0.01em; }
+.top span { font: 600 17px/1 var(--cond); letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
+.top .host { margin-left: auto; font: 400 17px/1 var(--mono); color: var(--dim); }
+
+/* The hero. */
+.body { flex: 1; min-height: 0; padding: 56px 64px 0; }
+h1 {
+  margin: 0 0 26px;
+  font: 700 98px/0.92 var(--cond);
+  letter-spacing: 0.005em; text-transform: uppercase;
+}
+.lede { margin: 0; max-width: 900px; font-size: 26px; line-height: 1.45; }
+.lede .quiet { color: var(--dim); }
+
+/* The grade ramp as a scale rather than a measurement: even bands, so the card
+   states the rubric without pretending to be last night's distribution. */
+.ramp { margin: auto 64px 0; padding-bottom: 56px; }
+.bar { display: flex; height: 62px; }
+.band { flex: 1 1 0; position: relative; }
+.band + .band { border-left: 1px solid var(--ink); }
+.band:first-child { border-radius: 3px 0 0 3px; }
+.band:last-child { border-radius: 0 3px 3px 0; }
+.band b {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font: 600 26px/1 var(--mono); color: var(--on-g);
+}
+.band-A { background: var(--g-A); }
+.band-B { background: var(--g-B); }
+.band-C { background: var(--g-C); }
+.band-D { background: var(--g-D); }
+.band-F { background: var(--g-F); }
+.scale { display: flex; margin-top: 12px; border-top: 1px solid var(--rule); }
+.scale span {
+  flex: 1 1 0; position: relative; padding-top: 16px;
+  font: 400 17px/1 var(--mono); color: var(--dim); text-align: center;
+}
+.scale span::before {
+  content: ""; position: absolute; top: 0; left: 50%; width: 1px; height: 7px; background: var(--rule);
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <b>pkglint</b><span>AUR report card</span>
+    <span class="host">jamison.lahman.dev/pkglint</span>
+  </div>
+
+  <div class="body">
+    <h1>AUR Report<br>Card</h1>
+    <p class="lede">Security and hygiene grades for the AUR's most-voted PKGBUILDs.
+    <span class="quiet">Every grade is static: the build plan is read, never sourced,
+    never run.</span></p>
+  </div>
+
+  <div class="ramp">
+    <div class="bar">
+      <div class="band band-A"><b>A</b></div>
+      <div class="band band-B"><b>B</b></div>
+      <div class="band band-C"><b>C</b></div>
+      <div class="band band-D"><b>D</b></div>
+      <div class="band band-F"><b>F</b></div>
+    </div>
+    <div class="scale">
+      <span>no warnings</span>
+      <span>1–2 warnings</span>
+      <span>3+ warnings</span>
+      <span>any error</span>
+      <span>any critical</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
