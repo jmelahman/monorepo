@@ -1,5 +1,8 @@
+# Only the packages needed to *import* the build hook live here, pinned
+# exactly. The toolchain pins (go-bin, ziglang, solod) are centralized in
+# hatch_build.py and declared dynamically via the hook's dependencies().
 [build-system]
-requires = ["hatchling", "hatch-vcs", "go-bin~=1.24", "manygo"]
+requires = ["hatchling==1.32.0", "hatch-vcs==0.5.0", "manygo==0.2.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -15,7 +18,8 @@ keywords = [
 classifiers = [
     "Programming Language :: Go",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
 ]
 dynamic = ["version"]
 
@@ -23,8 +27,22 @@ dynamic = ["version"]
 [project.urls]
 Repository = "https://github.com/jmelahman/check-symlinks"
 
-[tool.hatch.build]
-include = ["go.mod", "go.sum", "main.go"]
+# Go/solod sources belong in the sdist only; the wheel carries just the
+# built binary (as a script), so nothing from the tree is selected there.
+[tool.hatch.build.targets.sdist]
+include = [
+    "go.mod",
+    "**/*.go",
+    "so/go.mod",
+    "so/go.sum",
+    "so/gotest.mod",
+    "gocompat/go.mod",
+    "scripts/zigcc",
+    "build-constraints.txt",
+]
+
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
 
 [tool.hatch.version]
 source = "vcs"

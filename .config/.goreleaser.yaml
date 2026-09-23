@@ -1,0 +1,30 @@
+version: 2
+project_name: check-symlinks
+
+builds:
+  - main: ./so
+    binary: check-symlinks
+    # scripts/sobuild builds with the solod toolchain (so + zig cc) instead
+    # of go, producing small static binaries. Windows is not a target:
+    # solod's os package needs POSIX.
+    tool: ./scripts/sobuild
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

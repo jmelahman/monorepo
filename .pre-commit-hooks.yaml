@@ -1,0 +1,14 @@
+# Hooks provided by this repository. Both run the same checker; they differ
+# only in where the binary comes from.
+- id: check-symlinks
+  name: check symlinks
+  description: Check for broken symbolic links. Built by the Go toolchain (the default modfile swaps solod.dev for the gocompat implementations); no other dependencies.
+  entry: check-symlinks
+  language: golang
+  types: [symlink]
+- id: check-symlinks-system
+  name: check symlinks (from PATH)
+  description: Check for broken symbolic links using a check-symlinks binary already installed on PATH.
+  entry: check-symlinks
+  language: system
+  types: [symlink]
