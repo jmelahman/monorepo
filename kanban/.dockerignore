@@ -1,9 +1,0 @@
-.git
-.gitignore
-.dockerignore
-Dockerfile
-README.md
-**/*.md
-web/node_modules
-web/dist
-**/.DS_Store
