@@ -1,0 +1,119 @@
+#!/bin/bash
+# Boots a local-preview *worker*: same image as the control node, --role=worker.
+# Deliberately stateless — no EBS volume, no manifests, no dependency stacks.
+# Artifact files hydrate from the S3 tier; run specs arrive on the worker API
+# wire. Losing a worker loses only warm processes and cached artifacts.
+set -euxo pipefail
+
+dnf install -y docker
+
+# Every preview pair gets its own bridge network, and docker's stock address
+# pools hand each one a /16 (or a /20 from 192.168/16) — about 30 networks in
+# all before "could not find an available, non-overlapping IPv4 address pool"
+# fails every start. Carve /24s instead: thousands of two-container networks,
+# so a burst (or a leak) runs the disk out long before the pool. 172.16/13
+# stops short of a default VPC's 172.31/16, which the daemon must never
+# overlap. The control node keeps docker's defaults; it runs no previews.
+mkdir -p /etc/docker
+cat >/etc/docker/daemon.json <<'EOF'
+{"default-address-pools":[{"base":"172.16.0.0/13","size":24},{"base":"192.168.0.0/16","size":24}]}
+EOF
+systemctl enable --now docker
+
+mkdir -p "${data_dir}"
+
+# --- identity --------------------------------------------------------------
+# The worker's routable private IP, used both to bind the worker API and as the
+# advertise address the control node dials back. A static-tier worker has it
+# rendered in by Terraform; an elastic-tier (ASG) worker has no fixed address,
+# so it reads its own from IMDS at boot. The orchestrator runs --network host,
+# so IMDS is one hop away and reachable here (preview containers on the docker
+# bridge are one hop further and still cannot reach it).
+# INSTANCE_ID is the EC2 instance-id an elastic worker passes to the control
+# node so it can scale-in-protect this node while it serves previews. A static
+# worker leaves it empty (it isn't part of an ASG).
+INSTANCE_ID=""
+%{ if private_ip != "" ~}
+PRIVATE_IP='${private_ip}'
+%{ else ~}
+IMDS_TOKEN=$(curl -sX PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 300')
+PRIVATE_IP=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+%{ endif ~}
+
+# --- secrets ---------------------------------------------------------------
+# The worker-API shared secret plus the PREVIEW_SECRET_* env manifests
+# reference — pulled at boot, never Terraform values. Tracing is off across
+# every write so no value reaches the cloud-init log.
+install -m 600 /dev/null /etc/local-preview.env
+WORKER_SECRET=$(aws ssm get-parameter --region ${aws_region} \
+  --name '${worker_ssm}' --with-decryption --query Parameter.Value --output text)
+set +x
+printf 'PREVIEW_WORKER_SECRET=%s\n' "$WORKER_SECRET" >>/etc/local-preview.env
+set -x
+%{ for env_name, param in secret_env ~}
+VAL=$(aws ssm get-parameter --region ${aws_region} \
+  --name '${param}' --with-decryption --query Parameter.Value --output text)
+set +x
+printf '${env_name}=%s\n' "$VAL" >>/etc/local-preview.env
+set -x
+%{ endfor ~}
+
+# --- service ---------------------------------------------------------------
+# Host networking for the same reason as the control node: supervised
+# processes publish ports in the host namespace. The public HTTP listener is
+# bound to loopback — nothing routes previews through a worker directly — and
+# the worker API binds the private IP, reachable only from the control node's
+# security group. The loopback address rides in twice like on the control
+# node: PREVIEW_ADDR drives the image HEALTHCHECK's probe port, --addr keeps
+# an older image listening right.
+cat >/etc/systemd/system/local-preview-worker.service <<EOF
+[Unit]
+Description=local-preview worker
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f local-preview-worker
+ExecStartPre=/usr/bin/docker pull ${image}
+ExecStart=/usr/bin/docker run --rm --name local-preview-worker \\
+  --network host \\
+  --user 0:0 \\
+  --env-file /etc/local-preview.env \\
+  -e PREVIEW_DATA_DIR=${data_dir} \\
+  -e PREVIEW_ADDR=127.0.0.1:8081 \\
+  -v /var/run/docker.sock:/var/run/docker.sock \\
+  -v ${data_dir}:${data_dir} \\
+  ${image} \\
+  --addr 127.0.0.1:8081 \\
+  --role worker \\
+  --worker-listen $PRIVATE_IP:${api_port} \\
+%{ if control_endpoint != "" ~}
+  --control-endpoint ${control_endpoint} \\
+  --worker-advertise http://$PRIVATE_IP:${api_port} \\
+  --worker-instance-id "$INSTANCE_ID" \\
+%{ endif ~}
+%{ if warm_per_gb > 0 ~}
+  --max-warm-per-gb ${warm_per_gb} \\
+  --max-warm-reserve-gb ${warm_reserve_gb} \\
+%{ endif ~}
+  --max-warm ${max_warm} ${server_args}
+ExecStop=/usr/bin/docker stop local-preview-worker
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now local-preview-worker.service
+
+%{ if length(warm_images) > 0 ~}
+# --- warm images -------------------------------------------------------------
+# Pre-pull the images previews run in, so the first cold start on a fresh
+# worker doesn't pay a multi-GB pull. Backgrounded (boot needn't wait) and
+# best-effort: a digest-pinned manifest still pulls exactly what it names —
+# a tag pulled here only warms shared layers.
+nohup sh -c '%{ for img in warm_images }docker pull "${img}" || true; %{ endfor }' >/var/log/local-preview-warm-pull.log 2>&1 &
+%{ endif ~}

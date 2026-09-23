@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/*
+ * Theme tokens. The same utility name (e.g. bg-surface, text-fg) resolves to
+ * different colors depending on data-theme on <html>, which is set by the
+ * inline script in index.html before first paint. The palette mirrors
+ * agentic-kanban's zinc scale and default red accent so the two dashboards
+ * read as siblings.
+ */
+@theme {
+  --color-bg: #09090b;
+  --color-surface: #18181b;
+  --color-surface-2: #27272a;
+  --color-surface-3: #3f3f46;
+  --color-surface-4: #52525b;
+  --color-fg: #f4f4f5;
+  --color-fg-muted: #a1a1aa;
+  --color-border: #3f3f46;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-accent-500: oklch(63.7% 0.237 25.331);
+  --color-accent-600: oklch(57.7% 0.245 27.325);
+  --color-accent-700: oklch(50.5% 0.213 27.518);
+}
+
+[data-theme="light"] {
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f5;
+  --color-surface-3: #e4e4e7;
+  --color-surface-4: #d4d4d8;
+  --color-fg: #18181b;
+  --color-fg-muted: #71717a;
+  --color-border: #e4e4e7;
+  --color-danger: #b91c1c;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}

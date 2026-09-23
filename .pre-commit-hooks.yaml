@@ -1,0 +1,12 @@
+# Hook manifest for repos subscribing via the pre-commit framework — see
+# docs/guide/triggers.md. `language: golang` builds the CLI from this repo
+# at the consumer's pinned rev (`go install ./...` names the binary after
+# the module, hence `local-preview`, not `preview`).
+- id: local-preview-deploy
+  name: local-preview deploy
+  description: Deploy the new commit as a preview to a running local-preview server
+  entry: local-preview deploy --no-wait
+  language: golang
+  stages: [post-commit]
+  always_run: true
+  pass_filenames: false

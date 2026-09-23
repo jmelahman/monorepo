@@ -1,0 +1,97 @@
+services:
+  app:
+    image: lahmanja/local-preview:latest
+    container_name: local-preview
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - lahmanja/local-preview:latest
+      # Build metadata. Resolve on the host since .git is dockerignored and
+      # worktrees only stash a gitdir pointer. Set alongside your other env
+      # vars when invoking `docker compose up --build`, e.g.:
+      #   VERSION=$(git describe --tags --always --dirty) \
+      #   docker compose up -d --build
+      args:
+        VERSION: ${VERSION:-dev}
+    restart: unless-stopped
+    # Runs as container root so `docker compose up -d` works out of the
+    # box: the server needs the docker socket (mounted below) to run build
+    # steps in manifest-declared images (preview.toml `image` keys), and
+    # holding the socket is root-equivalent on the daemon anyway. To keep
+    # the data dir's files owned by your host user instead, run non-root
+    # and grant the supplementary GID that owns the socket:
+    #   mkdir -p ~/.local/share/local-preview
+    #   DOCKER_SOCK_GID=$(stat -c '%g' /var/run/docker.sock) \
+    #   PREVIEW_UID=$(id -u) PREVIEW_GID=$(id -g) \
+    #   docker compose up -d
+    # Rootless daemon: point at the rootless socket — container root maps
+    # to your host user, so the default user is already right:
+    #   DOCKER_SOCK_PATH=$XDG_RUNTIME_DIR/docker.sock docker compose up -d
+    user: "${PREVIEW_UID:-0}:${PREVIEW_GID:-0}"
+    group_add:
+      - "${DOCKER_SOCK_GID:-0}"
+    # Host networking, not a port mapping: manifest `run_image` processes
+    # publish their ports on the DOCKER HOST's loopback, which is only this
+    # server's loopback when it shares the host network namespace. The
+    # server still listens on :8080. Repos using only static frontends and
+    # host-run backends could revert to `ports: ["8080:8080"]`.
+    network_mode: host
+    environment:
+      # Same absolute path on the host and in the container: build
+      # containers are started via the host daemon, which resolves bind
+      # sources against ITS filesystem, so the scratch-dir paths the server
+      # hands it must mean the same thing on both sides. A named volume
+      # can't provide that — keep this in lockstep with the bind below.
+      PREVIEW_DATA_DIR: ${HOME}/.local/share/local-preview
+      # Out-of-repo manifests (<config>/manifests/<repo>.toml) for repos
+      # that can't carry a preview.toml upstream. Same-path bind so failed
+      # deploys name the host path to drop the file at.
+      PREVIEW_CONFIG_DIR: ${XDG_CONFIG_HOME:-${HOME}/.config}/preview
+      # Durable artifact tier (optional): with an S3/MinIO bucket configured,
+      # built artifacts are uploaded and hydrated instead of rebuilt after
+      # eviction — see docs/guide/configuration.md#artifact-tier-s3. To use the
+      # bundled `minio-artifacts` service below, start it with
+      # `docker compose --profile artifacts up -d`, create the bucket once, and
+      # uncomment these (the app uses host networking, so localhost:9000 reaches
+      # the published MinIO port):
+      #   PREVIEW_S3_ENDPOINT: localhost:9000
+      #   PREVIEW_S3_BUCKET: preview-artifacts
+      #   PREVIEW_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      #   PREVIEW_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      #   PREVIEW_S3_USE_SSL: "false"
+    volumes:
+      # Host path of the docker socket. Without it the server warns at
+      # build time and falls back to host execution — and the image bundles
+      # no toolchains, so only shell-only builds would work.
+      - ${DOCKER_SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${HOME}/.local/share/local-preview:${HOME}/.local/share/local-preview
+      # Create the directory first (`mkdir -p ~/.config/preview`) — a
+      # missing bind source is auto-created by the rootful daemon as
+      # root-owned.
+      - ${XDG_CONFIG_HOME:-${HOME}/.config}/preview:${XDG_CONFIG_HOME:-${HOME}/.config}/preview:ro
+      # Repos registered by local path must be visible in-container at the
+      # registered path, e.g.:
+      - ./:/code/local-preview:ro
+
+  # Optional durable artifact tier. Deliberately named `minio-artifacts` (not
+  # `minio`) so it isn't confused with a MinIO a previewed app's own stack runs
+  # for its file store — this one backs local-preview's build artifacts. Opt in
+  # with `docker compose --profile artifacts up -d`, then create the bucket once:
+  #   docker compose exec minio-artifacts \
+  #     mc alias set local http://localhost:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+  #   docker compose exec minio-artifacts mc mb --ignore-existing local/preview-artifacts
+  minio-artifacts:
+    image: minio/minio:latest
+    container_name: local-preview-minio-artifacts
+    profiles: ["artifacts"]
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    # Host networking to match the app service, so it reaches MinIO at
+    # localhost:9000. The console is on :9001.
+    network_mode: host
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ${HOME}/.local/share/local-preview-minio:/data

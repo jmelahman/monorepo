@@ -1,0 +1,220 @@
+#!/bin/bash
+# Boots the local-preview orchestrator as a docker-managed systemd service.
+# Rendered by Terraform: $${...} is shell, $${} escapes template interpolation.
+set -euxo pipefail
+
+# --- data volume -----------------------------------------------------------
+# Mounted before docker is installed: docker's data-root lives on this volume
+# (below), so the mount must exist first.
+#
+# Nitro instances remap device names, so address the volume by its stable
+# by-id symlink (the volume id with the dash stripped) rather than /dev/sdf.
+DEVICE="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${replace(data_volume_id, "-", "")}"
+for _ in $(seq 1 60); do
+  [ -e "$DEVICE" ] && break
+  sleep 2
+done
+
+# Format only when there is no filesystem — this script re-runs on rebuild,
+# and reformatting would discard every artifact and state dir.
+if ! blkid "$DEVICE"; then
+  mkfs -t xfs "$DEVICE"
+fi
+
+mkdir -p "${data_dir}"
+UUID=$(blkid -s UUID -o value "$DEVICE")
+if ! grep -q "$UUID" /etc/fstab; then
+  echo "UUID=$UUID ${data_dir} xfs defaults,nofail 0 2" >>/etc/fstab
+fi
+mount -a
+mountpoint -q "${data_dir}" # refuse to proceed onto the root volume
+
+# --- docker ----------------------------------------------------------------
+# Image storage on the data volume, not the (discarded-on-rebuild) root
+# volume: the target repos' devcontainer images and the dependency stack's
+# images run to many GB, and re-pulling all of them was most of every
+# rebuild's cold-start tax. Set before docker ever starts, so the default
+# /var/lib/docker is never populated.
+dnf install -y docker
+mkdir -p /etc/docker "${data_dir}/docker"
+cat >/etc/docker/daemon.json <<EOF
+{"data-root": "${data_dir}/docker"}
+EOF
+systemctl enable --now docker
+
+# --- secrets ---------------------------------------------------------------
+# The webhook secret and the SSO client secret, pulled at boot instead of
+# being passed as Terraform variables, which would persist them in state; the
+# env file keeps them out of `ps` too.
+#
+# Rewritten from scratch each boot, and tracing is off across every write:
+# xtrace expands the value, so a traced printf would publish the secret to the
+# cloud-init log — the one place this whole dance exists to avoid.
+install -m 600 /dev/null /etc/local-preview.env
+%{ if webhook_ssm != "" ~}
+SECRET=$(aws ssm get-parameter --region ${aws_region} \
+  --name '${webhook_ssm}' --with-decryption --query Parameter.Value --output text)
+set +x
+printf 'PREVIEW_GITHUB_WEBHOOK_SECRET=%s\n' "$SECRET" >>/etc/local-preview.env
+set -x
+%{ endif ~}
+%{ if sso_secret_ssm != "" ~}
+SSO_SECRET=$(aws ssm get-parameter --region ${aws_region} \
+  --name '${sso_secret_ssm}' --with-decryption --query Parameter.Value --output text)
+set +x
+printf 'PREVIEW_SSO_GITHUB_CLIENT_SECRET=%s\n' "$SSO_SECRET" >>/etc/local-preview.env
+set -x
+%{ endif ~}
+%{ if worker_ssm != "" ~}
+WORKER_SECRET=$(aws ssm get-parameter --region ${aws_region} \
+  --name '${worker_ssm}' --with-decryption --query Parameter.Value --output text)
+set +x
+printf 'PREVIEW_WORKER_SECRET=%s\n' "$WORKER_SECRET" >>/etc/local-preview.env
+set -x
+%{ endif ~}
+%{ for env_name, param in secret_env ~}
+VAL=$(aws ssm get-parameter --region ${aws_region} \
+  --name '${param}' --with-decryption --query Parameter.Value --output text)
+set +x
+printf '${env_name}=%s\n' "$VAL" >>/etc/local-preview.env
+set -x
+%{ endfor ~}
+
+# --- out-of-repo manifests -------------------------------------------------
+# Fallback manifests for repos whose commits carry no preview.toml. Terraform
+# owns this directory outright, so it is rewritten from scratch. Tracing is off
+# through the writes to keep manifest bodies out of the cloud-init log.
+rm -rf '${config_dir}/manifests'
+mkdir -p '${config_dir}/manifests'
+%{ for name, content in local_manifests ~}
+set +x
+base64 -d >'${config_dir}/manifests/${name}.toml' <<'MANIFEST_B64'
+${base64encode(content)}
+MANIFEST_B64
+set -x
+%{ endfor ~}
+
+%{ if length(compose_stacks) > 0 ~}
+# --- dependency stacks -----------------------------------------------------
+# Shared services previews connect to (databases, search, caches). They are
+# per-repo but not per-commit, so they run beside the orchestrator rather than
+# through it. Each stack's compose project name is its key, which is what
+# makes its network predictable: project "onyx" owns network "onyx_default".
+#
+# Amazon Linux ships docker without the compose plugin.
+mkdir -p /usr/libexec/docker/cli-plugins
+curl -fsSL -o /usr/libexec/docker/cli-plugins/docker-compose \
+  "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-$(uname -m)"
+chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+
+# Working directories live on the data volume, so bind-mounted stack data
+# outlives the instance. Only the compose file is rewritten — the data beside
+# it is the whole point of keeping it here.
+cat >/etc/systemd/system/local-preview-stack@.service <<EOF
+[Unit]
+Description=local-preview dependency stack %i
+Requires=docker.service
+After=docker.service network-online.target
+RequiresMountsFor=${data_dir}
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=0
+WorkingDirectory=${data_dir}/stacks/%i
+ExecStart=/usr/bin/docker compose -p %i up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -p %i down
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Each stack also gets a .env beside its compose file — compose interpolates
+# $${VAR} references from it. It carries the secret_env values (rotated
+# credentials referenced as e.g. $${PREVIEW_SECRET_FOO}) plus HOST_PRIVATE_IP,
+# so a stack can publish ports bound to the instance's private address only.
+TOKEN=$(curl -sX PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 300')
+HOST_PRIVATE_IP=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+
+%{ for name, content in compose_stacks ~}
+mkdir -p '${data_dir}/stacks/${name}'
+set +x
+base64 -d >'${data_dir}/stacks/${name}/compose.yaml' <<'COMPOSE_B64'
+${base64encode(content)}
+COMPOSE_B64
+set -x
+install -m 600 /dev/null '${data_dir}/stacks/${name}/.env'
+echo "HOST_PRIVATE_IP=$HOST_PRIVATE_IP" >>'${data_dir}/stacks/${name}/.env'
+%{ for env_name, param in secret_env ~}
+set +x
+grep '^${env_name}=' /etc/local-preview.env >>'${data_dir}/stacks/${name}/.env'
+set -x
+%{ endfor ~}
+%{ endfor ~}
+
+systemctl daemon-reload
+%{ for name, content in compose_stacks ~}
+# Non-fatal: a stack that can't come up leaves previews unable to reach their
+# dependencies, but it must not stop the orchestrator itself from starting.
+systemctl enable 'local-preview-stack@${name}.service'
+systemctl start 'local-preview-stack@${name}.service' || true
+%{ endfor ~}
+
+%{ endif ~}
+# --- service ---------------------------------------------------------------
+# Runs as container root: it needs the docker socket for manifest `image`
+# build steps (root-equivalent on the daemon regardless), and the image's
+# default nonroot user cannot bind a privileged port.
+#
+# Host networking, not a port publish: `run_image` preview processes publish
+# their ports on the docker HOST's loopback, which is only this server's
+# loopback while it shares the host network namespace.
+#
+# The data dir is bind-mounted at the same absolute path it has on the host,
+# because build containers are started through the host daemon and it
+# resolves bind sources against its own filesystem.
+#
+# The listen address rides in twice on purpose: PREVIEW_ADDR is what the
+# image's HEALTHCHECK derives its probe port from, and the --addr flag keeps
+# an older image (which predates the env) listening on the right port. Both
+# render from the same http_port, so they cannot drift.
+cat >/etc/systemd/system/local-preview.service <<EOF
+[Unit]
+Description=local-preview orchestrator
+Requires=docker.service
+After=docker.service network-online.target
+# The data volume is fstab'd nofail, so a boot where it is slow to attach
+# proceeds without it. Without this line the orchestrator would then start and
+# bind-mount an empty data dir, coming up with no repos and a fresh SQLite
+# database — indistinguishable from total data loss, and not fixed by mounting
+# afterwards, because a bind mount does not follow a later mount at its source
+# path. Fail to start instead. (The stack unit above already does this.)
+RequiresMountsFor=${data_dir}
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f local-preview
+ExecStartPre=/usr/bin/docker pull ${image}
+ExecStart=/usr/bin/docker run --rm --name local-preview \\
+  --network host \\
+  --user 0:0 \\
+  --env-file /etc/local-preview.env \\
+  -e PREVIEW_DATA_DIR=${data_dir} \\
+  -e PREVIEW_CONFIG_DIR=${config_dir} \\
+  -e PREVIEW_DOMAIN=${preview_domain} \\
+  -e PREVIEW_ADDR=0.0.0.0:${http_port} \\
+  -v /var/run/docker.sock:/var/run/docker.sock \\
+  -v ${data_dir}:${data_dir} \\
+  -v ${config_dir}:${config_dir}:ro \\
+  ${image} \\
+  --addr 0.0.0.0:${http_port} ${server_args}
+ExecStop=/usr/bin/docker stop local-preview
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now local-preview.service

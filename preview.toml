@@ -1,0 +1,66 @@
+# local-preview's own preview contract — the canonical example for a repo
+# with a Go backend at the root and a Vite frontend in web/. Register this
+# repo with itself to preview every commit of the orchestrator.
+#
+# No image/run_image is pinned: builds and runs default into
+# .devcontainer/devcontainer.json (warm caches shared with the dev
+# sandbox), falling back to the host when no docker daemon is around.
+
+[frontend]
+path  = "web"
+build = [["npm", "ci"], ["npm", "run", "build"]]
+dist  = "dist"
+
+[backend]
+path    = "."
+exclude = [
+  "docs/",
+  "plans/",
+  "*.md",
+  ".github/",
+  ".devcontainer/",
+  ".vscode/",
+  ".kanban.toml",
+  ".pre-commit-config.yaml",
+  "compose.yaml",
+  "docker-bake.hcl",
+  "Dockerfile",
+]
+build       = [["go", "build", "-o", "bin/server", "."]]
+# 0.0.0.0 works on both runtimes: required inside the devcontainer, merely
+# wider on the host.
+run         = ["./bin/server", "serve", "--addr", "0.0.0.0:{port}", "--data-dir", "{state_dir}"]
+health_path = "/api/health"
+
+# The server binary doubles as the CLI — downloadable per commit from the
+# dashboard. Same partition as the backend, but its own content address.
+# Cross-compiled for every supported platform (windows is out until
+# internal/supervise grows a non-unix implementation); the dashboard offers
+# the set as one download menu.
+[artifacts.cli]
+path    = "."
+exclude = [
+  "docs/",
+  "plans/",
+  "*.md",
+  ".github/",
+  ".devcontainer/",
+  ".vscode/",
+  ".kanban.toml",
+  ".pre-commit-config.yaml",
+  "compose.yaml",
+  "docker-bake.hcl",
+  "Dockerfile",
+]
+build   = [
+  ["env", "CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64", "go", "build", "-ldflags", "-s -w", "-o", "bin/preview-linux-amd64", "."],
+  ["env", "CGO_ENABLED=0", "GOOS=linux", "GOARCH=arm64", "go", "build", "-ldflags", "-s -w", "-o", "bin/preview-linux-arm64", "."],
+  ["env", "CGO_ENABLED=0", "GOOS=darwin", "GOARCH=amd64", "go", "build", "-ldflags", "-s -w", "-o", "bin/preview-darwin-amd64", "."],
+  ["env", "CGO_ENABLED=0", "GOOS=darwin", "GOARCH=arm64", "go", "build", "-ldflags", "-s -w", "-o", "bin/preview-darwin-arm64", "."],
+]
+files   = [
+  "bin/preview-linux-amd64",
+  "bin/preview-linux-arm64",
+  "bin/preview-darwin-amd64",
+  "bin/preview-darwin-arm64",
+]
