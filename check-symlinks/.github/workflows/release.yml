@@ -5,8 +5,31 @@ on:
     tags:
       - "v*.*.*"
 
+permissions: {}
+
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
+        with:
+          go-version: "1.26.6"
+          cache: false
+      - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # ratchet:astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+      - run: go install "solod.dev/cmd/so@$(sed -n 's/^SOLOD_VERSION = "\(.*\)"$/\1/p' hatch_build.py)"
+      # The checks live in .pre-commit-config.yaml; run the same hooks a
+      # local commit runs.
+      - run: PATH="$(go env GOPATH)/bin:$PATH" uvx prek@0.3.8 run --all-files
   goreleaser:
+    needs: check
     runs-on: ubuntu-latest
     environment:
       name: release
@@ -19,45 +42,78 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
         with:
-          go-version: stable
+          go-version: "1.26.6"
           cache: false
+      - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # ratchet:astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+      - run: go install "solod.dev/cmd/so@$(sed -n 's/^SOLOD_VERSION = "\(.*\)"$/\1/p' hatch_build.py)"
+      # zig (via the ziglang PyPI package) for scripts/zigcc cross-compiles,
+      # at the version pinned in hatch_build.py.
+      - run: |
+          uv venv "$HOME/.zig"
+          uv pip install -p "$HOME/.zig/bin/python" "$(sed -n 's/^ZIGLANG_PIN = "\(.*\)"$/\1/p' hatch_build.py)"
+          echo "$HOME/.zig/bin" >> "$GITHUB_PATH"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # ratchet:goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --config .config/.goreleaser.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  pypi:
+  build-pypi:
+    needs: check
     runs-on: ubuntu-latest
-    environment:
-      name: release
     permissions:
-      id-token: write
+      contents: read
     strategy:
       matrix:
-        os-arch:
+        target:
           - {goos: "linux", goarch: "amd64"}
           - {goos: "linux", goarch: "arm64"}
-          - {goos: "windows", goarch: "amd64"}
-          - {goos: "windows", goarch: "arm64"}
           - {goos: "darwin", goarch: "amd64"}
           - {goos: "darwin", goarch: "arm64"}
-          - {goos: "", goarch: ""}
+          - {sdist: true}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
-        with:
-          go-version: stable
-          cache: false
       - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # ratchet:astral-sh/setup-uv@v7
         with:
           enable-cache: false
-      - run: |
-          GOOS="${{ matrix.os-arch.goos }}" \
-          GOARCH="${{ matrix.os-arch.goarch }}" \
-          uv build --wheel
-      - run: uv publish
+      - env:
+          MATRIX_GOOS: ${{ matrix.target.goos }}
+          MATRIX_GOARCH: ${{ matrix.target.goarch }}
+          MATRIX_SDIST: ${{ matrix.target.sdist }}
+        run: |
+          if [ "$MATRIX_SDIST" = "true" ]; then
+            uv build --sdist --build-constraints build-constraints.txt
+          else
+            GOOS="$MATRIX_GOOS" GOARCH="$MATRIX_GOARCH" \
+              uv build --wheel --build-constraints build-constraints.txt
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # ratchet:actions/upload-artifact@v6.0.0
+        with:
+          name: dist-${{ matrix.target.goos || 'sdist' }}-${{ matrix.target.goarch || 'source' }}
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+  publish-pypi:
+    needs: build-pypi
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      id-token: write
+    steps:
+      - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # ratchet:astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # ratchet:actions/download-artifact@v6.0.0
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - run: uv publish dist/*

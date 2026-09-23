@@ -28,5 +28,14 @@ go.work.sum
 dist/
 *.egg-info/
 __pycache__
-check-symlinks
+*.whl
+
+# build artifacts: check-symlinks is the go/gocompat binary main_test.go
+# builds, -go and -so the two toolchains' pre-commit outputs, .so-bin the
+# pinned solod toolchain the hatch hook installs.
+/check-symlinks
+/check-symlinks-go
+/check-symlinks-so
+/.so-bin/
+
 .aider*

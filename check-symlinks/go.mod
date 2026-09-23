@@ -1,16 +1,19 @@
+// Root module, used by `go build` and `go install ./...` — which is what
+// pre-commit's `golang` language runs for the hook in .pre-commit-hooks.yaml.
+// solod.dev is replaced with gocompat/, a small Go-stdlib-backed
+// implementation of the solod APIs this tool uses, because the real
+// solod.dev packages are transpiler stubs that only become functional once
+// translated to C. The solod toolchain builds the same cli package against
+// the real solod.dev through the nested module in so/ (see so/go.mod).
+//
+// Note: `go install github.com/jmelahman/check-symlinks@version` is refused
+// by Go because of the replace directive — that is intentional. Install a
+// release binary, the PyPI package, or run `go install ./...` from a
+// checkout.
 module github.com/jmelahman/check-symlinks
 
-go 1.24.4
+go 1.22
 
-require (
-	github.com/charlievieth/fastwalk v1.0.14
-	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v1.10.2
-)
+require solod.dev v0.3.0
 
-require (
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/stretchr/testify v1.11.1 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-)
+replace solod.dev => ./gocompat

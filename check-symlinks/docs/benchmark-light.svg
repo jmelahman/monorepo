@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="240" viewBox="0 0 760 240" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-label="Benchmark: checking a 83,533-file worktree, warm cache — lower is better">
+<text x="168" y="26.0" text-anchor="end" dominant-baseline="central" font-size="14" font-weight="600" fill="#1f2328">check-symlinks</text>
+<rect x="178" y="14" width="8.6" height="24" rx="3" fill="#1a7f37"/>
+<text x="195.6" y="26.0" dominant-baseline="central" font-size="13" fill="#59636e">4.0 ± 0.7 ms</text>
+<text x="168" y="66.0" text-anchor="end" dominant-baseline="central" font-size="14" font-weight="400" fill="#59636e">fd</text>
+<rect x="178" y="54" width="33.4" height="24" rx="3" fill="#afb8c1"/>
+<text x="220.4" y="66.0" dominant-baseline="central" font-size="13" fill="#59636e">15.6 ± 1.8 ms</text>
+<text x="168" y="106.0" text-anchor="end" dominant-baseline="central" font-size="14" font-weight="400" fill="#59636e">check_symlinks.py</text>
+<rect x="178" y="94" width="223.0" height="24" rx="3" fill="#afb8c1"/>
+<text x="410.0" y="106.0" dominant-baseline="central" font-size="13" fill="#59636e">104.3 ± 5.5 ms</text>
+<text x="168" y="146.0" text-anchor="end" dominant-baseline="central" font-size="14" font-weight="400" fill="#59636e">find</text>
+<rect x="178" y="134" width="321.0" height="24" rx="3" fill="#afb8c1"/>
+<text x="508.0" y="146.0" dominant-baseline="central" font-size="13" fill="#59636e">150.1 ± 3.4 ms</text>
+<text x="168" y="186.0" text-anchor="end" dominant-baseline="central" font-size="14" font-weight="400" fill="#59636e">shell loop</text>
+<rect x="178" y="174" width="482.0" height="24" rx="3" fill="#afb8c1"/>
+<text x="669.0" y="186.0" dominant-baseline="central" font-size="13" fill="#59636e">225.4 ± 3.6 ms</text>
+<text x="178" y="232" font-size="12" fill="#59636e">checking a 83,533-file worktree, warm cache — lower is better</text>
+</svg>

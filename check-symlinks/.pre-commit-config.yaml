@@ -1,0 +1,53 @@
+repos:
+  - repo: local
+    hooks:
+      - id: check-version
+        name: version and pin consistency
+        entry: scripts/check-version.sh
+        language: system
+        always_run: true
+        pass_filenames: false
+      - id: gofmt
+        name: gofmt
+        entry: gofmt -l -w
+        language: system
+        types: [go]
+      - id: so-build
+        name: build with solod
+        entry: so build -o check-symlinks-so ./so
+        language: system
+        files: '(\.go|\.mod|\.sum)$'
+        pass_filenames: false
+      - id: go-build
+        name: build with go (gocompat)
+        entry: go build -o check-symlinks-go .
+        language: system
+        files: '(\.go|\.mod|\.sum)$'
+        pass_filenames: false
+      - id: go-vet
+        name: go vet (gocompat)
+        entry: go vet ./...
+        language: system
+        files: '(\.go|\.mod|\.sum)$'
+        pass_filenames: false
+      - id: so-test
+        name: test with solod
+        entry: so test ./so
+        language: system
+        files: '(\.go|\.mod|\.sum)$'
+        pass_filenames: false
+      # Runs after so-test on purpose: so-test regenerates so/test/main.go,
+      # which this reads.
+      - id: go-test
+        name: test with go (gocompat)
+        entry: go -C so run -modfile=gotest.mod ./test
+        language: system
+        files: '(\.go|\.mod|\.sum)$'
+        pass_filenames: false
+      # The end-to-end suite: drives the built binary over testdata/.
+      - id: go-test-e2e
+        name: end-to-end test (gocompat binary)
+        entry: go test ./...
+        language: system
+        files: '(\.go|\.mod|\.sum)$'
+        pass_filenames: false
