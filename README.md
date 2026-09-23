@@ -27,14 +27,13 @@ These projects are still in active development but may be considered "stable",
 - [undot](https://github.com/jmelahman/undot)
 - [work](https://github.com/jmelahman/work) [![Test status](https://github.com/jmelahman/work/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/work/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/work/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/work/actions/workflows/release.yml)
 
-
 ## Unfinished Projects
 
 - [AgileCBT](https://github.com/jmelahman/AgileCBT)
-- cycle-cli
-- git-orchard
+- [cycle-cli](https://github.com/jmelahman/cycle-cli)
+- [git-orchard](https://github.com/jmelahman/git-orchard)
 
-## Extensions
+## Browser Extensions
 
 - [extensions/github-token-diff-extension](https://github.com/jmelahman/github-token-diff-extension)
 
@@ -82,6 +81,7 @@ _See my [dotfiles](https://github.com/jmelahman/dotfiles/blob/a1a3e8abd2f746b5e2
 ```
 ratchet upgrade $(fd --hidden --type file --extension yml --full-path .github/workflows)
 ```
+
 ### Golang
 
 ```shell
@@ -97,6 +97,7 @@ Check for broken symlinks,
 ```shell
 uv run check-symlinks
 ```
+
 ### Golang
 
 ```shell

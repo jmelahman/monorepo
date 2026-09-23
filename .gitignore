@@ -35,9 +35,5 @@ homelab/etc-pihole/
 homelab/metadata/
 homelab/podcasts/
 
-# Scratch space for experiments
-sandbox/
-
 # Editor / AI tooling
-.aider*
 settings.local.json
