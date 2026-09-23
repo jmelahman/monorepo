@@ -1,0 +1,36 @@
+version: 2
+
+before:
+  hooks:
+    - npm --prefix web ci
+    - npm --prefix web run build
+
+builds:
+  - binary: preview
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -tags=embed
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/jmelahman/local-preview/cmd/server.version={{.Version}}
+    # The supervisor is Unix process-group machinery (Setpgid, kill(-pgid));
+    # no Windows builds until it grows a Windows backend.
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - {}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

@@ -1,0 +1,54 @@
+name: Devcontainer
+
+# Rebuilds the personal dev sandbox image (.devcontainer/Dockerfile) and
+# pushes it to Docker Hub as lahmanja/devcontainer:latest. After a run, pin
+# the printed digest in .devcontainer/devcontainer.json and the CI container
+# images in test.yml / release.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      no-cache:
+        description: "Build without cache"
+        type: boolean
+        default: true
+  push:
+    branches:
+      - master
+    paths:
+      - .devcontainer/**
+      - .github/workflows/devcontainer.yml
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c
+      - uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f
+        with:
+          context: .devcontainer
+          # amd64 only: the ripsecrets install step has no arm64 prebuilt binary.
+          platforms: linux/amd64
+          push: true
+          pull: true
+          no-cache: ${{ github.event_name != 'workflow_dispatch' || inputs.no-cache }}
+          tags: lahmanja/devcontainer:latest
+      - env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          echo "Pushed lahmanja/devcontainer@${DIGEST}"
+          echo "\`lahmanja/devcontainer@${DIGEST}\`" >> "$GITHUB_STEP_SUMMARY"
