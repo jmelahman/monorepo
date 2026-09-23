@@ -1,0 +1,33 @@
+version: 2
+
+before:
+  hooks:
+    - npm --prefix web ci
+    - npm --prefix web run build
+
+builds:
+  - binary: app
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -tags=embed
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/jmelahman/fullstack-template/cmd/server.version={{.Version}}
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format_overrides:
+      - goos: windows
+        formats: [zip]
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
