@@ -1,0 +1,11 @@
+.git
+.gitignore
+.dockerignore
+docker-bake.hcl
+compose.yaml
+Dockerfile
+README.md
+**/*.md
+web/node_modules
+web/dist
+**/.DS_Store

@@ -1,0 +1,30 @@
+groups:
+  - name: kanban_db
+    rules:
+      - record: kanban:db_query_duration_seconds:p99_5m
+        expr: histogram_quantile(0.99, sum by (op, target, le) (rate(kanban_db_query_duration_seconds_bucket[5m])))
+      - record: kanban:db_query_duration_seconds:mean_5m
+        expr: |
+          sum by (op, target) (rate(kanban_db_query_duration_seconds_sum[5m]))
+          /
+          sum by (op, target) (rate(kanban_db_query_duration_seconds_count[5m]))
+
+  - name: kanban_http
+    rules:
+      - record: kanban:http_request_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (method, route, le) (rate(kanban_http_request_duration_seconds_bucket[5m])))
+      - record: kanban:http_request_duration_seconds:mean_5m
+        expr: |
+          sum by (method, route) (rate(kanban_http_request_duration_seconds_sum[5m]))
+          /
+          sum by (method, route) (rate(kanban_http_request_duration_seconds_count[5m]))
+
+  - name: kanban_github
+    rules:
+      - record: kanban:github_api_request_duration_seconds:mean_5m
+        expr: |
+          sum by (method, endpoint) (rate(kanban_github_api_request_duration_seconds_sum[5m]))
+          /
+          sum by (method, endpoint) (rate(kanban_github_api_request_duration_seconds_count[5m]))
+      - record: kanban:github_api_requests:rate_5m
+        expr: sum by (method, endpoint) (rate(kanban_github_api_requests_total[5m]))

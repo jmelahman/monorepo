@@ -1,0 +1,39 @@
+[[task]]
+label = "Kanban Backend"
+container_port = 7474
+
+[[task]]
+label = "Kanban Frontend"
+container_port = 5173
+
+[[task]]
+label = "Kanban Frontend (Local Backend)"
+container_port = 5174
+
+[[task]]
+label = "Kanban Docs"
+container_port = 5175
+
+[sync]
+allow_rebase = true
+allow_merge = false
+
+[merge]
+allow_merge_commit = false
+allow_squash = true
+allow_rebase = false
+
+# Preview deployments of this repo (kanban previewing kanban): the embedded
+# local-preview orchestrator reads this table from the deployed commit.
+# Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
+[previews.frontend]
+path  = "web"
+build = [["npm", "ci"], ["npm", "run", "build"]]
+dist  = "dist"
+
+[previews.backend]
+path        = "."
+exclude     = ["docs/", "plans/", "assets/", "build/", "deploy/", "*.md", ".github/", ".devcontainer/", ".vscode/"]
+build       = [["go", "build", "-o", "bin/server", "."]]
+run         = ["./bin/server", "serve", "--addr", "127.0.0.1:{port}", "--data-dir", "{state_dir}"]
+health_path = "/api/health"

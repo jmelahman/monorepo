@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp", "--headless", "--isolated"]
+    },
+    "kanban": {
+      "command": "go",
+      "args": ["run", ".", "mcp", "--server", "http://kanban:7474"]
+    }
+  }
+}
