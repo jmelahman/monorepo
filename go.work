@@ -4,21 +4,17 @@ use (
 	./agentic-kanban
 	./agilecbt
 	./check-symlinks
-	./chui
 	./connections
 	./connections-ssh
 	./cycle-cli
 	./cycle-lights
-	./dashboard
 	./docker-status
 	./git-orchard
-	./heart-lights
 	./jview
 	./local-preview
 	./nature-sounds
 	./pkglint
 	./pre-commit-hooks/go-pre-commit-hooks
-	./runtainer
 	./smart-lights
 	./templates/golang-template
 	./typesafe-sdk-go

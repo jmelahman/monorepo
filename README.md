@@ -32,10 +32,7 @@ These projects are still in active development but may be considered "stable",
 
 - [AgileCBT](https://github.com/jmelahman/AgileCBT)
 - cycle-cli
-- dashboard
 - git-orchard
-- heart-lights
-- runtainer
 
 ## Extensions
 
