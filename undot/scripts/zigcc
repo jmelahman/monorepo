@@ -1,0 +1,9 @@
+#!/bin/sh
+# One-word CC front-end for solod cross builds (so v0.3.0 does not split a
+# multi-word $CC like "zig cc"). Prefers zig from PATH, falling back to the
+# ziglang PyPI package; the hatch build hook passes its own interpreter via
+# $PYTHON so the package is found inside pip's build isolation.
+if command -v zig >/dev/null 2>&1; then
+    exec zig cc "$@"
+fi
+exec "${PYTHON:-python3}" -m ziglang cc "$@"
