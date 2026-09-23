@@ -12,13 +12,15 @@ use (
 	./dashboard
 	./docker-status
 	./git-orchard
-	./go-pre-commit-hooks
 	./heart-lights
 	./jview
+	./local-preview
 	./nature-sounds
 	./pkglint
+	./pre-commit-hooks/go-pre-commit-hooks
 	./runtainer
 	./smart-lights
+	./templates/golang-template
 	./typesafe-sdk-go
 	./work
 )
