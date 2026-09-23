@@ -1,0 +1,54 @@
+# All hooks use `language: golang` so the framework provisions the Go
+# toolchain itself — a system `go` is used when present, downloaded otherwise.
+# Downloading requires pre-commit >= 3.0.0; prek supports it out of the box.
+
+# Fixers — rewrite files and fail the run when they do.
+
+- id: gofmt
+  name: gofmt
+  description: Rewrite Go sources with `gofmt -l -w`; fails when a file changes.
+  entry: gofmt -l -w
+  language: golang
+  types: [go]
+  minimum_pre_commit_version: 3.0.0
+
+- id: go-fix
+  name: go fix
+  description: Apply `go fix` suggested fixes; fails when a file changes.
+  entry: go fix
+  args: [./...]
+  language: golang
+  types: [go]
+  pass_filenames: false
+  minimum_pre_commit_version: 3.0.0
+
+- id: go-mod-tidy
+  name: go mod tidy
+  description: Make go.mod and go.sum match the source code; fails when they change.
+  entry: go mod tidy
+  language: golang
+  types_or: [go, go-mod, go-sum]
+  pass_filenames: false
+  minimum_pre_commit_version: 3.0.0
+
+# Checks — read-only.
+
+- id: go-vet
+  name: go vet
+  description: Report likely mistakes with `go vet`.
+  entry: go vet
+  args: [./...]
+  language: golang
+  types_or: [go, go-mod, go-sum]
+  pass_filenames: false
+  minimum_pre_commit_version: 3.0.0
+
+- id: go-test
+  name: go test
+  description: Run `go test`.
+  entry: go test
+  args: [./...]
+  language: golang
+  types_or: [go, go-mod, go-sum]
+  pass_filenames: false
+  minimum_pre_commit_version: 3.0.0
