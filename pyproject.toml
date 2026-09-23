@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs", "go-bin~=1.24", "manygo"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
 
 [project]
 name = "release-tag"
@@ -8,26 +8,20 @@ description = "Automatically create semantic version git tags"
 license = {file = "LICENSE"}
 authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 keywords = [
   "releasing", "release", "git", "semver", "tagging", "git tags"
 ]
 classifiers = [
-    "Programming Language :: Go",
+    "Programming Language :: Rust",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dynamic = ["version"]
 
-
 [project.urls]
 Repository = "https://github.com/jmelahman/tag"
 
-[tool.hatch.build]
-include = ["go.mod", "go.sum", "**/*.go"]
-
-[tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.build.hooks.custom]
-binary_name = "tag"
+[tool.maturin]
+# Ship the `tag` binary itself; there is no Python extension module.
+bindings = "bin"

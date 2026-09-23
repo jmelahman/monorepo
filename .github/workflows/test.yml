@@ -12,16 +12,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
-        with:
-          go-version: stable
-          cache-dependency-path: go.sum
-      - run: go mod tidy
-      - run: go test ./... -v
-      - uses: golangci/golangci-lint-action@e7fa5ac41e1cf5b7d48e45e42232ce7ada589601 # ratchet:golangci/golangci-lint-action@v9
-        with:
-          version: latest
+      - run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test

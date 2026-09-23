@@ -2,10 +2,8 @@
 
 [![Test status](https://github.com/jmelahman/tag/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
 [![Deploy Status](https://github.com/jmelahman/tag/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions)
-[![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/tag.svg)](https://pkg.go.dev/github.com/jmelahman/tag)
 [![Arch User Repsoitory](https://img.shields.io/aur/version/release-tag)](https://aur.archlinux.org/packages/release-tag)
 [![PyPI](https://img.shields.io/pypi/v/release-tag.svg)](https://pypi.org/project/release-tag/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/tag)](https://goreportcard.com/report/github.com/jmelahman/tag)
 
 Automatically create [semantic version](https://semver.org/) git tags.
 
@@ -37,30 +35,28 @@ For the most up-to-date options, run `tag --help`,
 $ tag --help
 Calculate the next semantic version tag
 
-Usage:
-  tag [flags]
-  tag [command]
+Usage: tag [OPTIONS] [COMMAND]
 
-Available Commands:
+Commands:
   completion  Generate completion script
-  help        Help about any command
+  help        Print this message or the help of the given subcommand(s)
 
-Flags:
-      --check             validate that the tag at HEAD has its previous version as an ancestor
-      --debug             enable debug logging
-  -h, --help              help for tag
-      --major             increment the major version
-      --metadata string   set the build metadata
-      --minor             increment the minor version
-      --patch             increment the patch version
-      --prefix string     set a prefix for the tag
-      --print-only        print the next tag and exit
-      --push              create and push the tag to remote
-      --remote string     remote repository to push tag to (default "origin")
-      --suffix string     set the pre-release suffix (e.g., rc, alpha, beta)
-  -v, --version           version for tag
-
-Use "tag [command] --help" for more information about a command.
+Options:
+      --major                increment the major version
+      --minor                increment the minor version
+      --patch                increment the patch version
+      --push                 create and push the tag to remote
+      --print-only           print the next tag and exit
+      --check                validate that the tag at HEAD has its previous version as an ancestor
+      --no-fetch             skip fetching tags from remote
+      --allow-untagged       allow HEAD to be untagged when using --check
+      --debug                enable debug logging
+      --prefix <PREFIX>      set a prefix for the tag [default: ""]
+      --suffix <SUFFIX>      set the pre-release suffix (e.g., rc, alpha, beta) [default: ""]
+      --metadata <METADATA>  set the build metadata [default: ""]
+      --remote <REMOTE>      remote repository to push tag to [default: origin]
+  -v, --version              version for tag
+  -h, --help                 Print help
 ```
 
 ### Autocomplete
@@ -94,10 +90,10 @@ yay -S release-tag
 pip install release-tag
 ```
 
-**go:**
+**cargo:**
 
 ```shell
-go install github.com/jmelahman/tag@latest
+cargo install --locked --git https://github.com/jmelahman/tag
 ```
 
 **github:**
