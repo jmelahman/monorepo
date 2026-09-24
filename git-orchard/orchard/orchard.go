@@ -239,7 +239,8 @@ type ReleaseOptions struct {
 }
 
 // Release tags opts.Rev as version of s, <prefix>/<version>, and pushes the
-// tag to opts.Remote. It returns the tag.
+// tag to opts.Remote. It returns the tag. A tag already at opts.Rev is kept
+// and published again, to finish a release whose publishing failed.
 //
 // The upstream branch must already contain the release, or the upstream tag
 // would point at a commit outside its history; with opts.Upstream, the
@@ -253,39 +254,50 @@ func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions)
 		return "", fmt.Errorf("%s is not a valid tag name", tag)
 	}
 	rev := opts.Rev + "^{commit}"
-	if _, err := o.Repo.Output("rev-parse", "--quiet", "--verify", "refs/tags/"+tag); err == nil {
+	commit, err := o.Repo.Output("rev-parse", "--verify", rev)
+	if err != nil {
+		return "", err
+	}
+	tagged, err := o.Repo.Output("rev-parse", "--quiet", "--verify", "refs/tags/"+tag+"^{commit}")
+	exists := err == nil
+	resume := exists && tagged == commit
+	if exists && !resume {
 		if !opts.Force {
-			return "", fmt.Errorf("tag %s already exists; pass --force to move it", tag)
+			return "", fmt.Errorf("tag %s already exists at %.12s; pass --force to move it", tag, tagged)
 		}
 		if err := o.checkUnpublished(s, version, rev); err != nil {
 			return "", err
 		}
 	}
 
-	if opts.Upstream {
+	// Only a branch lacking the release is pushed, since one that has moved
+	// on past it would be rewound.
+	st, err := o.Status(s, rev)
+	if err != nil {
+		return "", err
+	}
+	if st.Ahead > 0 {
+		if !opts.Upstream {
+			return "", fmt.Errorf("%s's upstream lacks %d commit(s) of this release; publish them first with git orchard push %s, or pass --upstream", s.Prefix, st.Ahead, s.Prefix)
+		}
 		if err := o.Push(s, rev, PushOptions{}); err != nil {
 			return "", err
 		}
-	} else {
-		st, err := o.Status(s, rev)
-		if err != nil {
-			return "", err
-		}
-		if st.Ahead > 0 {
-			return "", fmt.Errorf("%s's upstream lacks %d commit(s) of this release; publish them first with git orchard push %s, or pass --upstream", s.Prefix, st.Ahead, s.Prefix)
-		}
 	}
 
-	message := opts.Message
-	if message == "" {
-		message = s.Prefix + " " + version
-	}
-	tagArgs := []string{"tag", "--annotate", "--message=" + message}
-	if opts.Force {
-		tagArgs = append(tagArgs, "--force")
-	}
-	if _, err := o.Repo.Output(append(tagArgs, tag, rev)...); err != nil {
-		return "", err
+	moving := exists && !resume
+	if !resume {
+		message := opts.Message
+		if message == "" {
+			message = s.Prefix + " " + version
+		}
+		tagArgs := []string{"tag", "--annotate", "--message=" + message}
+		if moving {
+			tagArgs = append(tagArgs, "--force")
+		}
+		if _, err := o.Repo.Output(append(tagArgs, tag, rev)...); err != nil {
+			return "", err
+		}
 	}
 	if opts.Upstream {
 		if err := o.PushTag(tag, PushOptions{Force: opts.Force}); err != nil {
@@ -294,7 +306,7 @@ func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions)
 	}
 	if opts.Remote != "" {
 		args := o.pushArgs()
-		if opts.Force {
+		if moving {
 			lease, err := o.lease(opts.Remote, "refs/tags/"+tag)
 			if err != nil {
 				return tag, err
@@ -325,22 +337,28 @@ type NextOptions struct {
 // with opts.Suffix, the next pre-release of that name. Where tag takes the
 // latest release reachable from HEAD, this takes the latest overall. The
 // releases are the <prefix>/v* tags here and on opts.Remote, and the v* tags
-// upstream, which may predate the subtree.
-func (o *Orchard) NextVersion(s config.Subtree, opts NextOptions) (string, error) {
+// upstream, which may predate the subtree. If opts.Rev is already released,
+// it's that version, for Release to finish publishing, and released is true.
+func (o *Orchard) NextVersion(s config.Subtree, opts NextOptions) (version string, released bool, err error) {
 	at, err := o.Repo.Output("tag", "--points-at", opts.Rev+"^{commit}", "--list", s.Prefix+"/v*")
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
-	// A pre-release can still be promoted.
+	// A pre-release can still be promoted, or followed by another name's.
+	var existing *semver.Version
 	for _, tag := range strings.Fields(at) {
 		v, err := semver.Parse(strings.TrimPrefix(tag, s.Prefix+"/"))
-		if err == nil && v.Prefix == "" && (v.Stable() || v.PreRelease == opts.Suffix) {
-			return "", fmt.Errorf("%s is already released as %s", opts.Rev, tag)
+		if err == nil && v.Prefix == "" && (v.Stable() || v.PreRelease == opts.Suffix) &&
+			(existing == nil || semver.Compare(v, *existing) > 0) {
+			existing = &v
 		}
+	}
+	if existing != nil {
+		return existing.String(), true, nil
 	}
 	versions, err := o.releases(s, opts.Remote)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	var latest, stable *semver.Version
@@ -367,12 +385,12 @@ func (o *Orchard) NextVersion(s config.Subtree, opts NextOptions) (string, error
 	if inc == semver.Auto {
 		switch {
 		case opts.Suffix == "" && !latest.Stable():
-			return latest.Base().String(), nil
+			return latest.Base().String(), false, nil
 		case opts.Suffix != "" && latest.Stable():
 			inc = semver.Patch
 		}
 	}
-	return latest.Next(inc, opts.Suffix, versions).String(), nil
+	return latest.Next(inc, opts.Suffix, versions).String(), false, nil
 }
 
 // releases returns the versions s has been released as.

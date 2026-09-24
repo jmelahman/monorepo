@@ -52,7 +52,10 @@ the branch and tag upstream directly, e.g. where no action runs.
 
 --force moves an existing tag, unless the upstream has already published it
 at another commit: the Go module proxy and release artifacts won't follow a
-moved release, so publish a new version instead.`,
+moved release, so publish a new version instead.
+
+A release that already tags --rev is published again rather than retagged,
+so a release whose publishing failed can be finished by running it again.`,
 		Example: `  git orchard release connections
   git orchard release connections --minor --suffix rc
   git orchard release git-orchard v1.0.0 --upstream`,
@@ -107,7 +110,8 @@ func runRelease(opts *ReleaseOptions, prefix, version string) error {
 		case opts.Patch:
 			inc = semver.Patch
 		}
-		version, err = o.NextVersion(s, orchard.NextOptions{
+		var released bool
+		version, released, err = o.NextVersion(s, orchard.NextOptions{
 			Rev:       opts.Rev,
 			Remote:    opts.Remote,
 			Increment: inc,
@@ -120,8 +124,12 @@ func runRelease(opts *ReleaseOptions, prefix, version string) error {
 			fmt.Println(version)
 			return nil
 		}
+		question := fmt.Sprintf("Release %s/%s?", s.Prefix, version)
+		if released {
+			question = fmt.Sprintf("%s is already released as %s/%s; publish it again?", opts.Rev, s.Prefix, version)
+		}
 		if !opts.Yes {
-			ok, err := confirm(fmt.Sprintf("Release %s/%s?", s.Prefix, version))
+			ok, err := confirm(question)
 			if err != nil || !ok {
 				return err
 			}

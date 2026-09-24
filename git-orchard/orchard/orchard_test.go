@@ -314,8 +314,20 @@ func TestRelease(t *testing.T) {
 	if got := f.git(git.Repo{Dir: origin}, "log", "-1", "--format=%s", tag); got != "Add main" {
 		t.Errorf("origin's %s is at %q", tag, got)
 	}
-	if _, err := f.orchard.Release(s, "v1.0.0", opts); err == nil {
-		t.Error("releasing an existing tag should fail")
+	// A release tagged but never published is finished by releasing it again.
+	f.git(f.mono, "tag", "--annotate", "--message=Unpublished", "tools/foo/v1.0.1")
+	if _, err := f.orchard.Release(s, "v1.0.1", opts); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.git(git.Repo{Dir: origin}, "tag", "--list", "--format=%(contents:subject)", "tools/foo/v1.0.1"); got != "Unpublished" {
+		t.Errorf("origin's tools/foo/v1.0.1 is %q, want the existing tag", got)
+	}
+	f.commit(f.mono, "tools/foo/other.go", "package main\n", "Add other")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.orchard.Release(s, "v1.0.0", opts); err == nil || !strings.Contains(err.Error(), "--force") {
+		t.Errorf("releasing a tag of another commit: got %v", err)
 	}
 	for _, bad := range []string{"", "a/b", "v1..0"} {
 		if _, err := f.orchard.Release(s, bad, opts); err == nil {
@@ -334,6 +346,22 @@ func TestRelease(t *testing.T) {
 	}
 	if got := f.git(upstream, "rev-parse", "master"); got != f.git(upstream, "rev-parse", "v1.1.0^{commit}") {
 		t.Error("--upstream should publish the branch too")
+	}
+
+	// Releasing again changes nothing, even after the upstream moves on.
+	f.commit(f.mono, "tools/foo/next.go", "package main\n", "Add next")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	head := f.git(upstream, "rev-parse", "master")
+	opts.Rev = "HEAD~1"
+	for range 2 {
+		if _, err := f.orchard.Release(s, "v1.1.0", opts); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := f.git(upstream, "rev-parse", "master"); got != head {
+		t.Error("releasing again rewound the upstream branch")
 	}
 }
 
@@ -434,11 +462,15 @@ func TestNextVersion(t *testing.T) {
 	s := f.subtree()
 	origin := filepath.Join(filepath.Dir(f.bare), "mono.git")
 	f.git(f.mono, "init", "--quiet", "--bare", origin)
+	// A want of "=v1.0.0" expects HEAD's existing release.
 	next := func(inc semver.Increment, suffix, want string) {
 		t.Helper()
-		got, err := f.orchard.NextVersion(s, NextOptions{Rev: "HEAD", Remote: origin, Increment: inc, Suffix: suffix})
+		got, released, err := f.orchard.NextVersion(s, NextOptions{Rev: "HEAD", Remote: origin, Increment: inc, Suffix: suffix})
 		if err != nil {
 			t.Fatal(err)
+		}
+		if released {
+			got = "=" + got
 		}
 		if got != want {
 			t.Errorf("next version (increment %d, suffix %q): got %s, want %s", inc, suffix, got, want)
@@ -464,9 +496,8 @@ func TestNextVersion(t *testing.T) {
 	next(semver.Major, "", "v1.0.0")
 
 	release("v1.0.0")
-	if _, err := f.orchard.NextVersion(s, NextOptions{Rev: "HEAD"}); err == nil || !strings.Contains(err.Error(), "already released as tools/foo/v1.0.0") {
-		t.Errorf("an already released revision: got %v", err)
-	}
+	// An already released revision is released again, to finish publishing.
+	next(semver.Auto, "", "=v1.0.0")
 	f.commit(f.mono, "tools/foo/later", "later\n", "Later")
 	next(semver.Auto, "", "v1.0.1")
 
@@ -474,9 +505,8 @@ func TestNextVersion(t *testing.T) {
 	next(semver.Auto, "rc", "v1.0.1-rc")
 	release("v1.0.1-rc")
 	next(semver.Auto, "", "v1.0.1")
-	if _, err := f.orchard.NextVersion(s, NextOptions{Rev: "HEAD", Suffix: "rc"}); err == nil {
-		t.Error("a pre-release of an already released revision should fail")
-	}
+	next(semver.Auto, "rc", "=v1.0.1-rc")
+	next(semver.Auto, "beta", "v1.0.1-beta")
 	f.commit(f.mono, "tools/foo/fix", "fix\n", "Fix")
 	next(semver.Auto, "rc", "v1.0.1-rc.1")
 	next(semver.Auto, "beta", "v1.0.1-beta")
