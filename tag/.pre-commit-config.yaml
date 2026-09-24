@@ -16,6 +16,6 @@ repos:
       - id: fix-byte-order-marker
       - id: trailing-whitespace
   - repo: https://github.com/jmelahman/tag
-    rev: a069af54b5de5379d3581e3fc027395d1ad0a982  # frozen: v0.5.0
+    rev: 05c7b0f4da54388f7d31fe43f2ebe8458bbff3f5  # frozen: v0.6.1
     hooks:
       - id: tag-check

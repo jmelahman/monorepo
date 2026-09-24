@@ -1,7 +1,7 @@
 default_install_hook_types: [pre-commit, post-checkout, post-merge, post-rewrite]
 repos:
   - repo: https://github.com/jmelahman/undot
-    rev: v0.3.0
+    rev: a0fbe570d4d793047edb8729a405e9aaf4434581  # frozen: v0.3.0
     hooks:
       - id: undot
   # The Go and solod hooks set GOWORK=off: so/ has its own go.mod, and a
