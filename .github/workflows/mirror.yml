@@ -18,11 +18,13 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: jmelahman/git-orchard@05a021adff171d3ac1c7aa6cc863be17e7611d51
+      - name: Mirror subtrees
+        uses: jmelahman/git-orchard@05a021adff171d3ac1c7aa6cc863be17e7611d51
         with:
           # Created and stored by `git orchard github-app`; the App is
           # installed on the mirror repositories.
