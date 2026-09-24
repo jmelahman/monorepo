@@ -12,19 +12,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: daaku/gh-action-apt-install@92eea4f84f90c895b544aaec6ae21839127c84e5 # ratchet:daaku/gh-action-apt-install@v4
+      - uses: daaku/gh-action-apt-install@92eea4f84f90c895b544aaec6ae21839127c84e5
         with:
           packages: libasound2-dev
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
         with:
           go-version: stable
           cache-dependency-path: go.sum
       - run: go mod tidy
       - run: go test ./... -v
-      - uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # ratchet:golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20
         with:
           version: latest

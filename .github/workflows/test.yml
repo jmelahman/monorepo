@@ -100,7 +100,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      # Go hooks build with the Go on PATH and GOTOOLCHAIN=local, so the
+      # runner's older Go can't build a hook that needs a newer one.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.work.sum
       - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
         with:
-          prek-version: "0.2.21"
+          prek-version: "0.5.3"
           extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}

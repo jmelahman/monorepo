@@ -61,7 +61,7 @@ runs:
 
     # Built from the action's own source, so the CLI is always the version
     # the action is pinned to.
-    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
+    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
       with:
         go-version-file: ${{ github.action_path }}/go.mod
         cache: false
@@ -97,7 +97,7 @@ runs:
         OWNER: ${{ inputs.owner }}
     - id: app
       if: ${{ inputs.app-client-id != '' }}
-      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # ratchet:actions/create-github-app-token@v3
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
       with:
         client-id: ${{ inputs.app-client-id }}
         private-key: ${{ inputs.app-private-key }}
