@@ -28,10 +28,10 @@ func TestParseMinWarmWindow(t *testing.T) {
 		{"Fri-Mon 08:00-18:00", at(10, 12, 0), true}, // Saturday
 		{"Fri-Mon 08:00-18:00", at(7, 12, 0), false}, // Wednesday
 		// Overnight span belongs to the day it starts on.
-		{"Fri 18:00-02:00", at(9, 23, 0), true},   // Fri night
-		{"Fri 18:00-02:00", at(10, 1, 0), true},   // Sat 01:00, still Friday's window
-		{"Fri 18:00-02:00", at(10, 3, 0), false},  // Sat 03:00
-		{"Fri 18:00-02:00", at(11, 1, 0), false},  // Sun 01:00 (Saturday isn't active)
+		{"Fri 18:00-02:00", at(9, 23, 0), true},  // Fri night
+		{"Fri 18:00-02:00", at(10, 1, 0), true},  // Sat 01:00, still Friday's window
+		{"Fri 18:00-02:00", at(10, 3, 0), false}, // Sat 03:00
+		{"Fri 18:00-02:00", at(11, 1, 0), false}, // Sun 01:00 (Saturday isn't active)
 		// Timezone: 09:00 in Chicago is 15:00 UTC in January (CST, UTC-6).
 		{"Mon-Fri 08:00-18:00 America/Chicago", at(5, 15, 0), true},
 		{"Mon-Fri 08:00-18:00 America/Chicago", at(5, 9, 0), false}, // 03:00 in Chicago

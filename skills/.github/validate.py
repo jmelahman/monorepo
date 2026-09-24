@@ -9,10 +9,12 @@ Run locally with `python3 .github/validate.py`. For a second opinion from the
 authoritative implementation, run `claude plugin validate .claude-plugin/plugin.json`.
 """
 
+from __future__ import annotations
+
 import json
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 import yaml
 
@@ -103,7 +105,10 @@ def validate_skill(skill_dir: Path) -> None:
 
     description = front.get("description")
     if not description:
-        error(skill_md, "frontmatter is missing `description`; agents use it to decide when to load the skill")
+        error(
+            skill_md,
+            "frontmatter is missing `description`; agents use it to decide when to load the skill",
+        )
     elif not isinstance(description, str):
         error(skill_md, "`description` must be a string")
 
@@ -118,7 +123,10 @@ def validate_skill(skill_dir: Path) -> None:
 
     listing = f"{description or ''}{front.get('when_to_use') or ''}"
     if len(listing) > DESCRIPTION_LIMIT:
-        warn(skill_md, f"description + when_to_use is {len(listing)} chars, truncated at {DESCRIPTION_LIMIT}")
+        warn(
+            skill_md,
+            f"description + when_to_use is {len(listing)} chars, truncated at {DESCRIPTION_LIMIT}",
+        )
 
     unknown = set(front) - SPEC_FIELDS - CLAUDE_CODE_FIELDS
     if unknown:
@@ -127,9 +135,12 @@ def validate_skill(skill_dir: Path) -> None:
     if claude_only:
         warn(skill_md, f"Claude Code-only frontmatter field(s): {', '.join(sorted(claude_only))}")
 
-    body_lines = text[match.end():].splitlines()
+    body_lines = text[match.end() :].splitlines()
     if len(body_lines) > 500:
-        warn(skill_md, f"body is {len(body_lines)} lines; move detail into references/ and link to it")
+        warn(
+            skill_md,
+            f"body is {len(body_lines)} lines; move detail into references/ and link to it",
+        )
 
     for link in MARKDOWN_LINK.findall(text):
         target = link.split("#", 1)[0]
@@ -160,7 +171,9 @@ def validate_manifests() -> None:
     for entry in entries:
         for key in ("name", "source"):
             if key not in entry:
-                error(MARKETPLACE_MANIFEST, f"plugin entry {entry.get('name', '?')!r} missing `{key}`")
+                error(
+                    MARKETPLACE_MANIFEST, f"plugin entry {entry.get('name', '?')!r} missing `{key}`"
+                )
 
     # `claude plugin tag` requires plugin.json and its enclosing marketplace
     # entry to agree, so keep them in sync here too.

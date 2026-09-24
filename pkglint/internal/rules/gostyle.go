@@ -115,7 +115,7 @@ func scanAssignments(u *pkgbuild.Unit, name, fn string, at int, own *syntax.Call
 		}
 		foreign := map[*syntax.Assign]bool{}
 		syntax.Walk(n, func(node syntax.Node) bool {
-			if ce, ok := node.(*syntax.CallExpr); ok && ce != own && !(standalone && len(ce.Args) == 0) {
+			if ce, ok := node.(*syntax.CallExpr); ok && ce != own && (!standalone || len(ce.Args) != 0) {
 				for _, as := range ce.Assigns {
 					foreign[as] = true
 				}

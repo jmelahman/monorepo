@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 
 	"github.com/jmelahman/git-orchard/config"
 	"github.com/jmelahman/git-orchard/history"

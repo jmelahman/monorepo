@@ -537,7 +537,7 @@ func (r Repo) ReadFile(_ context.Context, sha, path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read %s:%s: %w", sha, path, err)
 	}
-	rd, err := f.Blob.Reader()
+	rd, err := f.Reader()
 	if err != nil {
 		return nil, fmt.Errorf("read %s:%s: %w", sha, path, err)
 	}

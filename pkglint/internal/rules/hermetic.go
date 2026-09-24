@@ -618,7 +618,7 @@ func checkGoDownloads(ctx *Context) []Finding {
 			continue
 		}
 		sub := c.Subcommand()
-		if sub != "build" && sub != "install" && sub != "test" && sub != "run" && sub != "get" && !(sub == "mod" && c.HasArg("download")) {
+		if sub != "build" && sub != "install" && sub != "test" && sub != "run" && sub != "get" && (sub != "mod" || !c.HasArg("download")) {
 			continue
 		}
 		out = append(out, c.finding("PB204", Warn,

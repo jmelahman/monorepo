@@ -17,8 +17,8 @@ import (
 
 func TestRepoName(t *testing.T) {
 	cases := map[string]string{
-		"demo-board":  "demo-board",
-		"My Board":    "myboard", // invalid chars dropped
+		"demo-board":   "demo-board",
+		"My Board":     "myboard", // invalid chars dropped
 		"-lead-trail-": "lead-trail",
 	}
 	for slug, want := range cases {

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import shutil
 import subprocess
-from pathlib import Path
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
@@ -11,7 +11,7 @@ import manygo
 
 
 class GoBinaryBuildHook(BuildHookInterface):
-    def initialize(self, version, build_data) -> None:  # noqa: ANN001, ARG002
+    def initialize(self, version, build_data) -> None:  # noqa: ANN001
         build_data["pure_python"] = False
         goos = os.getenv("GOOS")
         goarch = os.getenv("GOARCH")
@@ -34,8 +34,7 @@ class GoBinaryBuildHook(BuildHookInterface):
         if not os.path.exists(binary_name):
             print(f"Building Go binary '{binary_name}'...")
             ldflags = (
-                f"-X github.com/jmelahman/fullstack-template/cmd/server.version={version} "
-                "-s -w"
+                f"-X github.com/jmelahman/fullstack-template/cmd/server.version={version} -s -w"
             )
             subprocess.check_call(  # noqa: S603
                 [
@@ -67,8 +66,8 @@ def _resolve_version() -> str:
             return ref
         return f"{ref}-{sha[:7]}"
     try:
-        out = subprocess.check_output(  # noqa: S603
-            ["git", "describe", "--tags", "--always", "--dirty"],  # noqa: S607
+        out = subprocess.check_output(
+            ["git", "describe", "--tags", "--always", "--dirty"],
             stderr=subprocess.DEVNULL,
         )
         return out.decode().strip()

@@ -350,7 +350,7 @@ func parseDetachKeys(spec string) ([]byte, error) {
 				return nil, fmt.Errorf("detach keys: bad item %q (want ctrl-<key>)", item)
 			}
 			k := unicode.ToUpper(key[0])
-			if !(k >= 'A' && k <= 'Z') && !strings.ContainsRune("@[\\]^_", k) {
+			if (k < 'A' || k > 'Z') && !strings.ContainsRune("@[\\]^_", k) {
 				return nil, fmt.Errorf("detach keys: ctrl-%c is not a control character", key[0])
 			}
 			seq = append(seq, byte(k)&0x1f)

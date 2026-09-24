@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import shutil
 import subprocess
-from pathlib import Path
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
@@ -59,12 +59,15 @@ class GoBinaryBuildHook(BuildHookInterface):
         print(f"Building Go binary '{binary_name}'...")
         subprocess.check_call(  # noqa: S603
             [
-                go, "build", "-trimpath",
+                go,
+                "build",
+                "-trimpath",
                 # `version` lives in internal/cli, behind the root shim, so
                 # -X names that package and not main.
                 "-ldflags",
                 f"-s -w -X {VERSION_SYMBOL}={self.metadata.version}",
-                "-o", str(Path(self.root) / binary_name),
+                "-o",
+                str(Path(self.root) / binary_name),
                 ".",
             ],
             cwd=self.root,

@@ -20,14 +20,18 @@ Requires: python3 with beautifulsoup4. Uses pandoc when available; falls back
 to a plain-text conversion (code blocks and Bad/Good labels survive, inline
 formatting and links are dropped).
 """
+
+from __future__ import annotations
+
+from pathlib import Path
 import re
 import subprocess
 import sys
 import time
 import urllib.request
-from pathlib import Path
 
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup
+from bs4 import NavigableString
 
 BASE = Path(__file__).resolve().parent.parent
 INDEX = BASE / "references" / "INDEX.md"
@@ -39,7 +43,7 @@ LINK_RE = re.compile(r"^- \[([^\]]+)\]\((https?://[^\)]+)\)")
 # TotT color convention: red background = bad example, green = good example
 RED_HEXES = ("f4cccc", "ea9999", "f4c7c3", "fbe5e1", "fce8e6")
 GREEN_HEXES = ("d9ead3", "b6d7a8", "e2f3eb", "e6f4ea", "d9ead2")
-MONO_RE = re.compile(r"courier|consolas|monospace", re.I)
+MONO_RE = re.compile(r"courier|consolas|monospace", re.IGNORECASE)
 
 
 def parse_index():
@@ -191,7 +195,9 @@ def to_markdown(html_fragment):
     try:
         p = subprocess.run(
             ["pandoc", "-f", "html", "-t", "gfm-raw_html", "--wrap=none"],
-            input=html_fragment.encode(), capture_output=True,
+            check=False,
+            input=html_fragment.encode(),
+            capture_output=True,
         )
     except FileNotFoundError:
         # No pandoc: plain-text fallback. <pre> blocks become indented code so
@@ -239,9 +245,9 @@ def clean_markdown(md):
         md = re.sub(b, "", md)
     md = strip_hard_breaks(md)
     # image-only lines (blogger assets not downloaded)
-    md = re.sub(r"^\s*!\[[^\]]*\]\([^)]*\)\s*$", "", md, flags=re.M)
+    md = re.sub(r"^\s*!\[[^\]]*\]\([^)]*\)\s*$", "", md, flags=re.MULTILINE)
     # empty list items from hollow <li> tags
-    md = re.sub(r"^\s*(?:[-*]|\d+\.)\s*$\n?", "", md, flags=re.M)
+    md = re.sub(r"^\s*(?:[-*]|\d+\.)\s*$\n?", "", md, flags=re.MULTILINE)
     md = re.sub(r"\[\]\([^)]*\)", "", md)
     return re.sub(r"\n{3,}", "\n\n", md).strip()
 

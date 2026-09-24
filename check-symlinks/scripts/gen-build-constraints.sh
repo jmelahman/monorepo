@@ -8,9 +8,9 @@ set -eu
 cd "$(dirname "$0")/.."
 
 pins() {
-    sed -n 's/^requires = \[\(.*\)\]$/\1/p' pyproject.toml | tr ',' '\n' | tr -d ' "'
-    sed -n 's/^GO_BIN_PIN = "\(.*\)"$/\1/p' hatch_build.py
-    sed -n 's/^ZIGLANG_PIN = "\(.*\)"$/\1/p' hatch_build.py
+	sed -n 's/^requires = \[\(.*\)\]$/\1/p' pyproject.toml | tr ',' '\n' | tr -d ' "'
+	sed -n 's/^GO_BIN_PIN = "\(.*\)"$/\1/p' hatch_build.py
+	sed -n 's/^ZIGLANG_PIN = "\(.*\)"$/\1/p' hatch_build.py
 }
 
 pins | uv pip compile - -o build-constraints.txt --universal --generate-hashes

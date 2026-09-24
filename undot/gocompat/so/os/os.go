@@ -89,18 +89,18 @@ func WriteFile(name string, data []byte, perm FileMode) error {
 	return goos.WriteFile(name, data, perm)
 }
 
-func Getenv(key string) string          { return goos.Getenv(key) }
-func Setenv(key, value string) error    { return goos.Setenv(key, value) }
-func Unsetenv(key string) error         { return goos.Unsetenv(key) }
+func Getenv(key string) string            { return goos.Getenv(key) }
+func Setenv(key, value string) error      { return goos.Setenv(key, value) }
+func Unsetenv(key string) error           { return goos.Unsetenv(key) }
 func LookupEnv(key string) (string, bool) { return goos.LookupEnv(key) }
 
-func Chdir(dir string) error               { return goos.Chdir(dir) }
-func Exit(code int)                        { goos.Exit(code) }
+func Chdir(dir string) error                 { return goos.Chdir(dir) }
+func Exit(code int)                          { goos.Exit(code) }
 func Mkdir(name string, perm FileMode) error { return goos.Mkdir(name, perm) }
-func Remove(name string) error             { return goos.Remove(name) }
-func Rename(oldpath, newpath string) error { return goos.Rename(oldpath, newpath) }
-func Symlink(oldname, newname string) error { return goos.Symlink(oldname, newname) }
-func TempDir() string                      { return goos.TempDir() }
+func Remove(name string) error               { return goos.Remove(name) }
+func Rename(oldpath, newpath string) error   { return goos.Rename(oldpath, newpath) }
+func Symlink(oldname, newname string) error  { return goos.Symlink(oldname, newname) }
+func TempDir() string                        { return goos.TempDir() }
 
 func Getwd(buf []byte) (string, error) {
 	_ = buf

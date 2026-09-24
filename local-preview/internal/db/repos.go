@@ -131,10 +131,8 @@ func (s *Store) SetRepoWatch(id int64, watch bool, branches string, backfill boo
 			return Repo{}, err
 		}
 	}
-	baselined := true
-	if arm && !backfill {
-		baselined = false
-	}
+	baselined := !arm || backfill
+
 	var r Repo
 	err = tx.QueryRow(
 		`UPDATE repos

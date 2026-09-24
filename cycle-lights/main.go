@@ -119,18 +119,18 @@ type ZwiftWorld struct {
 }
 
 type ZwiftProfile struct {
-	ID       int64  `json:"id"`
+	ID        int64  `json:"id"`
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 }
 
 // ZwiftClient handles communication with Zwift API
 type ZwiftClient struct {
-	client   *http.Client
-	baseURL  string
-	token    *oauth2.Token
-	userID   int64
-	worldID  int
+	client  *http.Client
+	baseURL string
+	token   *oauth2.Token
+	userID  int64
+	worldID int
 }
 
 // NewZwiftClient creates a new Zwift API client

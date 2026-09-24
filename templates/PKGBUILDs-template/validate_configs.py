@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Validate that nvchecker.toml has an entry for every package."""
 
+from __future__ import annotations
+
 import os
 import sys
 

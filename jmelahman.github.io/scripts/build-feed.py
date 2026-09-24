@@ -8,14 +8,15 @@ chrome (head, nav, footer) comes from template.html.
 from __future__ import annotations
 
 import concurrent.futures
+from dataclasses import dataclass
+from datetime import datetime
+from datetime import UTC
+from email.utils import parsedate_to_datetime
 import html
+from pathlib import Path
 import sys
 import urllib.request
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
-from pathlib import Path
 
 FEEDS = [
     ("Thorsten Ball", "https://registerspill.thorstenball.com/feed"),
@@ -57,13 +58,15 @@ def parse_date(raw: str | None) -> datetime | None:
 
 
 def aware(d: datetime) -> datetime:
-    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+    return d if d.tzinfo else d.replace(tzinfo=UTC)
 
 
 def extract_link(entry: ET.Element) -> str:
     # Atom: prefer rel="alternate" or unspecified rel.
     alts = entry.findall(f"{ATOM}link")
-    chosen = next((l for l in alts if (l.get("rel") or "alternate") == "alternate" and l.get("href")), None)
+    chosen = next(
+        (l for l in alts if (l.get("rel") or "alternate") == "alternate" and l.get("href")), None
+    )
     if chosen is None and alts:
         chosen = alts[0]
     if chosen is not None:
@@ -93,10 +96,13 @@ def parse_entries(name: str, root: ET.Element) -> list[Item]:
 
 
 def fetch(name: str, url: str) -> list[Item]:
-    req = urllib.request.Request(url, headers={
-        "User-Agent": USER_AGENT,
-        "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5",
-    })
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5",
+        },
+    )
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
             data = resp.read()
@@ -116,11 +122,11 @@ def render_table(items: list[Item]) -> str:
             f'<td style="white-space: nowrap">{html.escape(item.feed)}</td></tr>'
         )
     return (
-        '<table>\n'
-        '    <colgroup><col><col><col></colgroup>\n'
+        "<table>\n"
+        "    <colgroup><col><col><col></colgroup>\n"
         '    <tr><th class="date-col">Date</th><th>Title</th><th>Feed</th></tr>\n'
         + "\n".join(rows)
-        + '\n</table>'
+        + "\n</table>"
     )
 
 
@@ -130,7 +136,9 @@ def main() -> int:
     if not any(results):
         print("error: every feed failed; aborting", file=sys.stderr)
         return 1
-    items = sorted((it for sub in results for it in sub), key=lambda it: it.date, reverse=True)[:MAX_ITEMS]
+    items = sorted((it for sub in results for it in sub), key=lambda it: it.date, reverse=True)[
+        :MAX_ITEMS
+    ]
     body = Path(__file__).resolve().parent.parent.joinpath("feed/index.html.body").read_text()
     sys.stdout.write(body.replace(PLACEHOLDER, render_table(items)))
     return 0

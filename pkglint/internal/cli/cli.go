@@ -816,7 +816,7 @@ func editHunk(orig []byte, e rules.Edit) string {
 		ls--
 	}
 	le := e.End
-	if !(le > 0 && le <= len(orig) && orig[le-1] == '\n') {
+	if le <= 0 || le > len(orig) || orig[le-1] != '\n' {
 		for le < len(orig) && orig[le] != '\n' {
 			le++
 		}

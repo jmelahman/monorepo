@@ -93,7 +93,7 @@ def extract_git_url(content: str) -> str | None:
 def resolve_revision(git_url: str, gitref: str) -> str | None:
     """Resolve a ref to a commit sha, peeling annotated tags."""
     result = subprocess.run(  # noqa: S603
-        ["git", "ls-remote", git_url, gitref, f"{gitref}^{{}}"],  # noqa: S607
+        ["git", "ls-remote", git_url, gitref, f"{gitref}^{{}}"],
         check=True,
         text=True,
         stdout=subprocess.PIPE,
@@ -164,7 +164,10 @@ def _directory(value: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Process package version updates")
     parser.add_argument(
-        "packages", nargs="*", type=_directory, help="Packages to process (default: every entry in nvchecker.toml)"
+        "packages",
+        nargs="*",
+        type=_directory,
+        help="Packages to process (default: every entry in nvchecker.toml)",
     )
     args = parser.parse_args()
 

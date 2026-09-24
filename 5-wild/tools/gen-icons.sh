@@ -15,12 +15,12 @@ cd "$(dirname "$0")/.."
 res=android/app/src/main/res
 
 command -v rsvg-convert >/dev/null || {
-  echo "rsvg-convert not found (install librsvg)" >&2
-  exit 1
+	echo "rsvg-convert not found (install librsvg)" >&2
+	exit 1
 }
 fc-list : family | tr ',' '\n' | grep -qx Inter || {
-  echo "the Inter font is not installed, so the 5 would render in a fallback face" >&2
-  exit 1
+	echo "the Inter font is not installed, so the 5 would render in a fallback face" >&2
+	exit 1
 }
 
 # density:multiplier. Every size below is in dp and scaled by these.
@@ -36,17 +36,17 @@ assets/icon.svg:splash_logo:120
 "
 
 for job in $jobs; do
-  IFS=: read -r svg name dp <<<"$job"
-  for density in $densities; do
-    IFS=: read -r bucket scale <<<"$density"
-    px=$(awk -v d="$dp" -v s="$scale" 'BEGIN { printf "%d", d * s }')
-    # splash_logo is a plain drawable; the launcher icons are mipmaps, which
-    # survive density stripping when a launcher asks for a bigger bucket.
-    dir=$res/$([ "$name" = splash_logo ] && echo drawable || echo mipmap)-$bucket
-    mkdir -p "$dir"
-    rsvg-convert -w "$px" -h "$px" "$svg" -o "$dir/$name.png"
-    echo "$dir/$name.png ${px}x${px}"
-  done
+	IFS=: read -r svg name dp <<<"$job"
+	for density in $densities; do
+		IFS=: read -r bucket scale <<<"$density"
+		px=$(awk -v d="$dp" -v s="$scale" 'BEGIN { printf "%d", d * s }')
+		# splash_logo is a plain drawable; the launcher icons are mipmaps, which
+		# survive density stripping when a launcher asks for a bigger bucket.
+		dir=$res/$([ "$name" = splash_logo ] && echo drawable || echo mipmap)-$bucket
+		mkdir -p "$dir"
+		rsvg-convert -w "$px" -h "$px" "$svg" -o "$dir/$name.png"
+		echo "$dir/$name.png ${px}x${px}"
+	done
 done
 
 # The browser tab gets the same mark from the same file, so the two cannot

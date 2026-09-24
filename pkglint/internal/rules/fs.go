@@ -539,7 +539,7 @@ func leavesBuildTree(ctx *Context, u *pkgbuild.Unit, fn string) bool {
 		// `cd -` returns to $OLDPWD and pushd's +N/-N rotate the stack:
 		// neither names where it goes.
 		if dir == "" || dyn || dir == "-" || dir[0] == '+' || dir[0] == '-' ||
-			!(insideBuildTree(dir) || referencesStaging(dir)) {
+			(!insideBuildTree(dir) && !referencesStaging(dir)) {
 			return true
 		}
 	}

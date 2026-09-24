@@ -76,6 +76,12 @@ _See my [dotfiles](https://github.com/jmelahman/dotfiles/blob/a1a3e8abd2f746b5e2
 
 ## Upgrading
 
+### Hooks
+
+```shell
+prek auto-update --freeze
+```
+
 ### Github Actions
 
 ```
@@ -88,58 +94,15 @@ ratchet upgrade $(fd --hidden --type file --extension yml --full-path .github/wo
 find . -name go.mod -execdir go get -u ./... \;
 ```
 
-## Linting
+## Checks
 
-### Generic
-
-Check for broken symlinks,
+Linting, formatting and type-checking run as [prek](https://prek.j178.dev) hooks (see `.pre-commit-config.yaml`), with tools pinned by the config or `uv.lock` rather than taken from the host.
 
 ```shell
-uv run check-symlinks
+prek install        # once per clone
+prek run            # staged files
+prek run --all-files
 ```
 
-### Golang
-
-```shell
-find . -name go.mod -execdir golangci-lint run ./... \;
-```
-
-### Github Actions
-
-```
-uv run zizmor $(fd --hidden --type file --extension yml --full-path .github/workflows)
-```
-
-### Python
-
-```shell
-uv run ruff check
-```
-
-### Shell
-
-```shell
-./tools/bin/shellcheck
-```
-
-## Type-checking
-
-### Python
-
-```shell
-uv run ty check
-```
-
-## Formatting
-
-### Python
-
-```shell
-uv run ruff format
-```
-
-### Shell
-
-```shell
-./tools/bin/shfmt
-```
+The monorepo is a prek [workspace](https://prek.j178.dev/workspace/): each project's own `.pre-commit-config.yaml` runs from that project's directory, and the root config also runs on every file in the tree.
+Module-scoped Go checks (`go vet`, `go test`, `golangci-lint`, ...) live in each module's config, since they have to run from a module root.

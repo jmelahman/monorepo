@@ -92,12 +92,12 @@ type HookConfig struct {
 }
 
 const (
-	SessionStatusStopped       = "stopped"
-	SessionStatusStarting      = "starting"
-	SessionStatusIdle          = "idle"
-	SessionStatusWorking       = "working"
-	SessionStatusAwaitingPerm  = "awaiting_perm"
-	SessionStatusError         = "error"
+	SessionStatusStopped      = "stopped"
+	SessionStatusStarting     = "starting"
+	SessionStatusIdle         = "idle"
+	SessionStatusWorking      = "working"
+	SessionStatusAwaitingPerm = "awaiting_perm"
+	SessionStatusError        = "error"
 
 	TaskRunStatusRunning = "running"
 	TaskRunStatusExited  = "exited"

@@ -13,8 +13,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 	"strings"
+	"time"
 )
 
 // runLogTailBytes caps how much history a fresh run-log view loads; the

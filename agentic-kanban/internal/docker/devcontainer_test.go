@@ -230,9 +230,9 @@ func TestBuildContainerConfig_TranslatesHostPaths(t *testing.T) {
 	}
 
 	wantSources := map[string]string{
-		"/workspace":            "", // workspace mount target
-		"/repository":           "", // repo worktree target
-		"/extra":                "", // user-supplied extra mount
+		"/workspace":                "", // workspace mount target
+		"/repository":               "", // repo worktree target
+		"/extra":                    "", // user-supplied extra mount
 		filepath.Join(repo, ".git"): "", // .git target stays in-container
 	}
 	wantSources["/workspace"] = "/host/proj/wt"

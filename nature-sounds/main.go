@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	version    = "dev"
+	version     = "dev"
 	downloadAll bool
 )
 

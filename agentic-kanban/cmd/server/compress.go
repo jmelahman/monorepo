@@ -50,9 +50,9 @@ func clientAcceptsGzip(r *http.Request) bool {
 type writeMode int
 
 const (
-	modeUndecided  writeMode = iota // buffering, no headers committed
-	modePassthrough                 // never compress (SSE, hijack, etc.)
-	modeGzip                        // compressing
+	modeUndecided   writeMode = iota // buffering, no headers committed
+	modePassthrough                  // never compress (SSE, hijack, etc.)
+	modeGzip                         // compressing
 )
 
 // gzipWriter defers the gzip/Content-Encoding decision until either the buffer
@@ -109,7 +109,7 @@ func (g *gzipWriter) Write(p []byte) (int, error) {
 // shouldPassthrough inspects committed response headers to detect streaming
 // or pre-encoded responses that must not be compressed.
 func (g *gzipWriter) shouldPassthrough() bool {
-	h := g.ResponseWriter.Header()
+	h := g.Header()
 	if h.Get("Content-Encoding") != "" {
 		return true
 	}
@@ -121,7 +121,7 @@ func (g *gzipWriter) shouldPassthrough() bool {
 
 func (g *gzipWriter) startGzip() {
 	g.mode = modeGzip
-	h := g.ResponseWriter.Header()
+	h := g.Header()
 	h.Set("Content-Encoding", "gzip")
 	h.Del("Content-Length") // encoded length differs
 	g.gz = gzipPool.Get().(*gzip.Writer)

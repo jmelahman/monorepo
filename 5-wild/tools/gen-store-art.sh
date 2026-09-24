@@ -18,12 +18,12 @@ cd "$(dirname "$0")/.."
 out=assets/store
 
 command -v rsvg-convert >/dev/null || {
-  echo "rsvg-convert not found (install librsvg)" >&2
-  exit 1
+	echo "rsvg-convert not found (install librsvg)" >&2
+	exit 1
 }
 fc-list : family | tr ',' '\n' | grep -qx Inter || {
-  echo "the Inter font is not installed, so the wordmark would render in a fallback face" >&2
-  exit 1
+	echo "the Inter font is not installed, so the wordmark would render in a fallback face" >&2
+	exit 1
 }
 
 mkdir -p "$out"
@@ -36,9 +36,9 @@ assets/feature-graphic.svg:feature-graphic:1024:500
 "
 
 for job in $jobs; do
-  IFS=: read -r svg name w h <<<"$job"
-  rsvg-convert -w "$w" -h "$h" "$svg" -o "$out/$name.png"
-  echo "$out/$name.png ${w}x${h}"
+	IFS=: read -r svg name w h <<<"$job"
+	rsvg-convert -w "$w" -h "$h" "$svg" -o "$out/$name.png"
+	echo "$out/$name.png ${w}x${h}"
 done
 
 # Play caps the icon at 1MB and the feature graphic at 15MB. Flat colour on a

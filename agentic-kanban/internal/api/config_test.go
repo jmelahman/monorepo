@@ -120,9 +120,9 @@ func TestConfig_Collections(t *testing.T) {
 	assertStatus(t, e.patch("/api/config", map[string]any{
 		"scope": "global",
 		"set": map[string]any{
-			"devcontainer.run_args":         []string{"--a", "--b"},
+			"devcontainer.run_args":          []string{"--a", "--b"},
 			"devcontainer.container_env.FOO": "bar",
-			"task":                          []map[string]any{{"label": "web", "container_port": 3000}},
+			"task":                           []map[string]any{{"label": "web", "container_port": 3000}},
 		},
 	}), 200)
 

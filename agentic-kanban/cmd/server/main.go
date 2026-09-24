@@ -280,7 +280,7 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 
 	// Previews are routed by Host header (<sha>.<repo>.<domain>); every other
 	// host falls through to the kanban mux.
-	var root http.Handler = mux
+	var root = mux
 	if previewOrch != nil {
 		root = previewOrch.WrapHost(mux)
 	}

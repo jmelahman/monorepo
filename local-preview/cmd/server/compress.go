@@ -124,7 +124,7 @@ func (g *gzipWriter) shouldPassthrough() bool {
 	if g.status == http.StatusSwitchingProtocols {
 		return true
 	}
-	h := g.ResponseWriter.Header()
+	h := g.Header()
 	if h.Get("Content-Encoding") != "" {
 		return true
 	}
@@ -141,7 +141,7 @@ func (g *gzipWriter) shouldPassthrough() bool {
 
 func (g *gzipWriter) startGzip() {
 	g.mode = modeGzip
-	h := g.ResponseWriter.Header()
+	h := g.Header()
 	h.Set("Content-Encoding", "gzip")
 	h.Del("Content-Length") // encoded length differs
 	// Byte ranges address the identity encoding; don't advertise them on a

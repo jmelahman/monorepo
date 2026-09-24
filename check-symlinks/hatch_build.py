@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 

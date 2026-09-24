@@ -4,6 +4,6 @@
 # ziglang PyPI package; the hatch build hook passes its own interpreter via
 # $PYTHON so the package is found inside pip's build isolation.
 if command -v zig >/dev/null 2>&1; then
-    exec zig cc "$@"
+	exec zig cc "$@"
 fi
 exec "${PYTHON:-python3}" -m ziglang cc "$@"

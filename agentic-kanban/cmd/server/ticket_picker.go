@@ -538,10 +538,11 @@ func (p *ticketPicker) renderItem(s tcell.Screen, x, y, width, idWidth int, it p
 	}
 	status := it.Status
 	statusStyle := style
-	if status == "" {
+	switch status {
+	case "":
 		status = noSessionLabel
 		statusStyle = style.Dim(true)
-	} else if status == "stopped" || status == "error" {
+	case "stopped", "error":
 		statusStyle = style.Dim(true)
 	}
 	prefix := fmt.Sprintf("  #%-*d  ", idWidth, it.ID)

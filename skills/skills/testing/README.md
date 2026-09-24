@@ -28,4 +28,3 @@ Requires python3 with beautifulsoup4; uses pandoc when available, falling
 back to a plain-text conversion otherwise. Raw HTML is cached under
 `references/episodes/.raw/`, and existing converted files are never
 overwritten — delete a file (or the directory) to force reconversion.
-
