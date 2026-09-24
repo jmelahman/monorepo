@@ -177,6 +177,30 @@ func TestPushFastForwards(t *testing.T) {
 	}
 }
 
+// TestPushFromFreshClone pushes from a clone that, like CI's checkout, lacks
+// the upstream commits the squashes were made from.
+func TestPushFromFreshClone(t *testing.T) {
+	f := newFixture(t)
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	clone := git.Repo{Dir: filepath.Join(t.TempDir(), "clone")}
+	f.git(f.mono, "clone", "--quiet", "--no-local", f.mono.Dir, clone.Dir)
+	split := f.git(f.mono, "log", "-1", "--format=%(trailers:key=git-subtree-split,valueonly)", "--grep=^git-subtree-dir:")
+	if _, err := clone.Output("cat-file", "-e", split); err == nil {
+		t.Fatal("the clone already has the upstream commit")
+	}
+
+	o, err := Open(clone.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := o.Push(f.subtree(), "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.git(git.Repo{Dir: f.bare}, "log", "-1", "--format=%s", "master"); got != "Add main" {
+		t.Errorf("upstream head is %q", got)
+	}
+}
+
 func TestPushRefusesDivergedUpstream(t *testing.T) {
 	f := newFixture(t)
 	f.commit(f.upstream, "UPSTREAM", "x\n", "Upstream only")

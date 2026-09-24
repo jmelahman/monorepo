@@ -68,7 +68,12 @@ func (o *Orchard) ChangedSince(subtrees []config.Subtree, since, rev string) ([]
 // Splits are deterministic, so the same monorepo history always yields the
 // same commits; that is what lets a push to the upstream fast-forward.
 func (o *Orchard) Split(s config.Subtree, rev string) (string, error) {
-	split, err := o.Repo.Output("subtree", "split", "--quiet", "--prefix="+s.Prefix, rev)
+	if err := o.fetchSplits(s, rev); err != nil {
+		return "", err
+	}
+	// With the repository, git subtree fetches any upstream commit it still
+	// lacks, e.g. one the upstream branch no longer contains.
+	split, err := o.Repo.Output("subtree", "split", "--quiet", "--prefix="+s.Prefix, rev, s.Remote)
 	if err != nil {
 		return "", err
 	}
@@ -76,6 +81,30 @@ func (o *Orchard) Split(s config.Subtree, rev string) (string, error) {
 		return "", fmt.Errorf("%s has no history at %s", s.Prefix, rev)
 	}
 	return split, nil
+}
+
+// fetchSplits fetches the upstream branch of s if rev's history lacks any
+// upstream commit its squashes were made from, which git subtree split needs.
+// A fresh clone, like CI's, has none of them. Fetching the branch brings them
+// in at once instead of git subtree's fetch per commit.
+func (o *Orchard) fetchSplits(s config.Subtree, rev string) error {
+	out, err := o.Repo.Output("log", "--grep=^git-subtree-dir: "+s.Prefix+"/*$",
+		"--format=%(trailers:key=git-subtree-split,valueonly)", rev)
+	if err != nil {
+		return err
+	}
+	for _, split := range strings.Fields(out) {
+		if _, err := o.Repo.Output("cat-file", "-e", split+"^{commit}"); err != nil {
+			return o.fetchUpstream(s)
+		}
+	}
+	return nil
+}
+
+// fetchUpstream fetches the upstream branch of s to UpstreamRef(s).
+func (o *Orchard) fetchUpstream(s config.Subtree) error {
+	_, err := o.Repo.Output("fetch", "--quiet", "--no-tags", s.Remote, "+refs/heads/"+s.Branch+":"+UpstreamRef(s))
+	return err
 }
 
 // PushOptions configure Push and PushTag.
@@ -491,7 +520,7 @@ func UpstreamRef(s config.Subtree) string {
 // Status fetches the upstream branch of s and compares it with rev's split.
 func (o *Orchard) Status(s config.Subtree, rev string) (Status, error) {
 	ref := UpstreamRef(s)
-	if _, err := o.Repo.Output("fetch", "--quiet", "--no-tags", s.Remote, "+refs/heads/"+s.Branch+":"+ref); err != nil {
+	if err := o.fetchUpstream(s); err != nil {
 		return Status{}, err
 	}
 	split, err := o.Split(s, rev)
