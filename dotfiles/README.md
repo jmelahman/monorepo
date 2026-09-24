@@ -16,3 +16,13 @@ GIT_LFS_SKIP_SMUDGE=0 dotfiles checkout --force
 ```shell
 systemctl enable --now --user dot-sync.timer
 ```
+
+## Enabling Git maintenance
+
+The timers run `git maintenance run` on the repositories listed under `[maintenance]` in `.gitconfig`.
+
+```shell
+systemctl enable --now --user git-maintenance@{hourly,daily,weekly}.timer
+```
+
+The units are the ones `git maintenance start` writes. Skip that command here: it also appends the current repository to `~/.gitconfig` by absolute path, duplicating its `~/` entry.
