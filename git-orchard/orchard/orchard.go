@@ -3,6 +3,7 @@ package orchard
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strconv"
@@ -101,9 +102,12 @@ func (o *Orchard) fetchSplits(s config.Subtree, rev string) error {
 	return nil
 }
 
-// fetchUpstream fetches the upstream branch of s to UpstreamRef(s).
+// fetchUpstream fetches the upstream branch of s to UpstreamRef(s). It
+// leaves FETCH_HEAD and maintenance alone, since other subtrees' fetches may
+// be running at the same time.
 func (o *Orchard) fetchUpstream(s config.Subtree) error {
-	_, err := o.Repo.Output("fetch", "--quiet", "--no-tags", s.Remote, "+refs/heads/"+s.Branch+":"+UpstreamRef(s))
+	_, err := o.Repo.Output("fetch", "--quiet", "--no-tags", "--no-write-fetch-head", "--no-auto-maintenance",
+		s.Remote, "+refs/heads/"+s.Branch+":"+UpstreamRef(s))
 	return err
 }
 
@@ -113,6 +117,8 @@ type PushOptions struct {
 	// Force overwrites the upstream ref, leased on its value when the push
 	// starts, so an update that lands in between still fails the push.
 	Force bool
+	// Output receives git push's output; nil means stderr.
+	Output io.Writer
 }
 
 // Push publishes rev's split of s to the upstream branch. Unless forced, an
@@ -167,7 +173,11 @@ func (o *Orchard) push(s config.Subtree, rev, ref string, opts PushOptions) erro
 		}
 		args = append(args, lease)
 	}
-	return o.Repo.Run(append(args, s.Remote, split+":"+ref)...)
+	out := opts.Output
+	if out == nil {
+		out = os.Stderr
+	}
+	return o.Repo.RunTo(out, append(args, s.Remote, split+":"+ref)...)
 }
 
 // lease is a --force-with-lease on ref's current value on remote. Pushes go

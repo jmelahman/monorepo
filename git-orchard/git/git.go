@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -52,9 +53,14 @@ func (r Repo) Output(args ...string) (string, error) {
 // Run runs git with its output going to stderr, for commands whose progress
 // the user should see.
 func (r Repo) Run(args ...string) error {
+	return r.RunTo(os.Stderr, args...)
+}
+
+// RunTo is Run with the output going to w.
+func (r Repo) RunTo(w io.Writer, args ...string) error {
 	cmd := r.command(args...)
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = w
+	cmd.Stderr = w
 	if err := cmd.Run(); err != nil {
 		return &Error{Args: args, Err: err}
 	}

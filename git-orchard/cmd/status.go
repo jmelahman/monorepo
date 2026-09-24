@@ -2,13 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/spf13/cobra"
+
+	"github.com/jmelahman/git-orchard/orchard"
 )
 
 // StatusOptions holds options for the status command
 type StatusOptions struct {
-	Rev string
+	Rev  string
+	Jobs int
 }
 
 // NewStatusCommand creates a new status command
@@ -29,6 +33,7 @@ push would publish, "behind" ones a pull would bring in.`,
 	}
 
 	cmd.Flags().StringVar(&opts.Rev, "rev", "HEAD", "monorepo revision to compare")
+	cmd.Flags().IntVarP(&opts.Jobs, "jobs", "j", runtime.NumCPU(), "subtrees to compare at once")
 
 	return cmd
 }
@@ -43,20 +48,34 @@ func runStatus(opts *StatusOptions, prefixes []string) error {
 		return err
 	}
 
-	// Print each line as it's ready, since each one can take a while, so
-	// align by hand rather than with a tabwriter.
+	// Compare subtrees in parallel, but print in manifest order, each line as
+	// soon as it and those above it are ready, since each can take a while;
+	// so align by hand rather than with a tabwriter.
 	width := 0
 	for _, s := range subtrees {
 		width = max(width, len(s.Prefix))
 	}
+	type result struct {
+		status orchard.Status
+		err    error
+	}
+	results := make([]result, len(subtrees))
+	done := make([]chan struct{}, len(subtrees))
+	for i := range done {
+		done[i] = make(chan struct{})
+	}
+	go orchard.Each(len(subtrees), opts.Jobs, func(i int) {
+		results[i].status, results[i].err = o.Status(subtrees[i], opts.Rev)
+		close(done[i])
+	})
 	failed := 0
-	for _, s := range subtrees {
-		st, err := o.Status(s, opts.Rev)
-		if err != nil {
+	for i, s := range subtrees {
+		<-done[i]
+		if err := results[i].err; err != nil {
 			failed++
 			fmt.Printf("%-*s  error: %v\n", width, s.Prefix, err)
 		} else {
-			fmt.Printf("%-*s  %s\n", width, s.Prefix, st)
+			fmt.Printf("%-*s  %s\n", width, s.Prefix, results[i].status)
 		}
 	}
 	if failed > 0 {

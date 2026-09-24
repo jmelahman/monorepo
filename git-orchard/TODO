@@ -1,5 +1,4 @@
 - Cache splits (e.g. under refs/orchard/split/<prefix>, or `git subtree split
   --rejoin`-style annotations) so `push` and `status` don't rewalk the whole
   history for each subtree; it's ~10s per subtree on a large monorepo.
-- Run `status` and `push` across subtrees in parallel.
 - `status` against a branch other than HEAD's upstream-tracking branch.
