@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/jmelahman/git-orchard/config"
+	"github.com/jmelahman/git-orchard/orchard"
 )
 
 var (
@@ -24,45 +24,42 @@ func NewRootCommand() *cobra.Command {
 	opts := &RootOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "git-orchard [paths...]",
+		Use:   "git-orchard",
 		Short: "Utilities for managing git subtrees",
-		Run: func(cmd *cobra.Command, args []string) {
-			runRoot(opts, args)
+		Long: `Utilities for managing git subtrees.
+
+Subtrees are listed in a committed manifest at the repository root,
+.gitsubtrees or .config/git-orchard/subtrees, in gitconfig syntax:
+
+  [subtree "path/to/dir"]
+  	remote = git@github.com:owner/dir.git
+  	branch = master
+
+The same keys in git's own configuration override it.`,
+		Version:       fmt.Sprintf("%s\ncommit %s", Version, Commit),
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if opts.Debug {
+				log.SetLevel(log.DebugLevel)
+			}
 		},
-		Version: fmt.Sprintf("%s\ncommit %s", Version, Commit),
 	}
 
-	cmd.Flags().BoolVar(&opts.Debug, "debug", false, "run in debug mode")
+	cmd.PersistentFlags().BoolVar(&opts.Debug, "debug", false, "run in debug mode")
 
 	// Add subcommands
+	cmd.AddCommand(NewAddCommand())
+	cmd.AddCommand(NewGitHubAppCommand())
 	cmd.AddCommand(NewInitCommand())
 	cmd.AddCommand(NewListCommand())
+	cmd.AddCommand(NewPullCommand())
+	cmd.AddCommand(NewPushCommand())
+	cmd.AddCommand(NewStatusCommand())
 
 	return cmd
 }
 
-func runRoot(opts *RootOptions, args []string) {
-	if opts.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
-
-	// Read subtree configurations from git config
-	reader := config.NewGitConfigReader("")
-	subtrees, orchardConfig, err := reader.ReadSubtreeConfigs()
-	if err != nil {
-		log.Errorf("Failed to read subtree configs: %v", err)
-		return
-	}
-
-	log.Debugf("Found %d subtree configurations", len(subtrees))
-	for _, subtree := range subtrees {
-		log.Debugf("Subtree: %s -> %s (%s)", subtree.Name, subtree.Repository, subtree.Prefix)
-		if subtree.Branch != "" {
-			log.Debugf("  Branch: %s", subtree.Branch)
-		}
-	}
-
-	if orchardConfig.Squash {
-		log.Debug("Orchard config: squash enabled")
-	}
+func openOrchard() (*orchard.Orchard, error) {
+	return orchard.Open(".")
 }

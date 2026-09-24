@@ -2,18 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"text/tabwriter"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/jmelahman/git-orchard/config"
 	"github.com/jmelahman/git-orchard/history"
 )
 
 // ListOptions holds options for the list command
 type ListOptions struct {
 	UseHistory bool
-	Debug      bool
 }
 
 // NewListCommand creates a new list command
@@ -23,64 +22,42 @@ func NewListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all configured subtrees",
-		Run: func(cmd *cobra.Command, args []string) {
-			if opts.Debug {
-				log.SetLevel(log.DebugLevel)
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.UseHistory {
+				return listSubtreesFromHistory()
 			}
-			runList(opts)
+			return listSubtreesFromConfig()
 		},
 	}
 
 	cmd.Flags().BoolVar(&opts.UseHistory, "use-history", false, "determine subtrees from git log history instead of config")
-	cmd.Flags().BoolVar(&opts.Debug, "debug", false, "run in debug mode")
 
 	return cmd
 }
 
-func runList(opts *ListOptions) {
-	if opts.UseHistory {
-		listSubtreesFromHistory()
-	} else {
-		listSubtreesFromConfig()
-	}
-}
-
-func listSubtreesFromConfig() {
-	reader := config.NewGitConfigReader(".")
-	subtrees, _, err := reader.ReadSubtreeConfigs()
+func listSubtreesFromConfig() error {
+	o, err := openOrchard()
 	if err != nil {
-		log.Errorf("Failed to read subtree configs: %v", err)
-		return
+		return err
 	}
-
-	if len(subtrees) == 0 {
-		fmt.Println("No subtrees configured.")
-		return
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	for _, s := range o.Config.Subtrees {
+		fmt.Fprintf(w, "%s\t%s\t%s\n", s.Prefix, s.Remote, s.Branch)
 	}
-
-	fmt.Printf("Found %d configured subtree(s):\n\n", len(subtrees))
-	for _, subtree := range subtrees {
-		fmt.Printf("Name: %s\n", subtree.Name)
-		fmt.Printf("  Repository: %s\n", subtree.Repository)
-		fmt.Printf("  Prefix: %s\n", subtree.Prefix)
-		if subtree.Branch != "" {
-			fmt.Printf("  Branch: %s\n", subtree.Branch)
-		}
-		fmt.Println()
-	}
+	return w.Flush()
 }
 
-func listSubtreesFromHistory() {
+func listSubtreesFromHistory() error {
 	reader := history.NewGitHistoryReader()
 	subtreeMap, err := reader.GetSubtreesFromHistory()
 	if err != nil {
-		log.Errorf("Failed to execute git log: %v", err)
-		return
+		return fmt.Errorf("failed to read git history: %w", err)
 	}
 
 	if len(subtreeMap) == 0 {
 		fmt.Println("No subtree merges found in git history.")
-		return
+		return nil
 	}
 
 	fmt.Printf("Found %d subtree(s) from git history:\n\n", len(subtreeMap))
@@ -90,4 +67,5 @@ func listSubtreesFromHistory() {
 		fmt.Printf("  Last message: %s\n", info.LastMessage)
 		fmt.Println()
 	}
+	return nil
 }
