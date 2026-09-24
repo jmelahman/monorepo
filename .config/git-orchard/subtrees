@@ -4,33 +4,55 @@
 [subtree "5-wild"]
 	remote = git@github.com:jmelahman/5-wild.git
 	branch = master
+	shared = base
+	shared = shell
 [subtree "agentic-kanban"]
 	remote = git@github.com:jmelahman/agentic-kanban.git
 	branch = master
+	shared = base
+	shared = go
+	shared = shell
 [subtree "agilecbt"]
 	remote = git@github.com:jmelahman/AgileCBT.git
 	branch = master
+	shared = base
+	shared = go
+	shared = shell
 [subtree "check-symlinks"]
 	remote = git@github.com:jmelahman/check-symlinks.git
 	branch = master
+	shared = base
+	shared = go
+	shared = shell
 [subtree "connections"]
 	remote = git@github.com:jmelahman/connections.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "connections-ssh"]
 	remote = git@github.com:jmelahman/connections-ssh.git
 	branch = master
+	shared = base
+	shared = go
+	shared = shell
 [subtree "cycle-cli"]
 	remote = git@github.com:jmelahman/cycle-cli.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "docker-status"]
 	remote = git@github.com:jmelahman/docker-status.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "extensions/github-token-diff-extension"]
 	remote = git@github.com:jmelahman/github-token-diff-extension.git
 	branch = master
 [subtree "git-orchard"]
 	remote = git@github.com:jmelahman/git-orchard.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "go-bin"]
 	remote = git@github.com:jmelahman/go-bin.git
 	branch = master
@@ -40,30 +62,43 @@
 [subtree "jview"]
 	remote = git@github.com:jmelahman/jview.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "local-preview"]
 	remote = git@github.com:jmelahman/local-preview.git
 	branch = master
+	shared = base
+	shared = go
+	shared = shell
 [subtree "manygo"]
 	remote = git@github.com:jmelahman/manygo.git
 	branch = master
 [subtree "nature-sounds"]
 	remote = git@github.com:jmelahman/nature-sounds.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "pkglint"]
 	remote = git@github.com:jmelahman/pkglint.git
 	branch = master
+	shared = base
 [subtree "pre-commit-hooks/go-pre-commit-hooks"]
 	remote = git@github.com:jmelahman/go-pre-commit-hooks.git
 	branch = master
+	shared = base
 [subtree "skills"]
 	remote = git@github.com:jmelahman/skills.git
 	branch = master
+	shared = base
 [subtree "smart-lights"]
 	remote = git@github.com:jmelahman/smart-lights.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "tag"]
 	remote = git@github.com:jmelahman/tag.git
 	branch = master
+	shared = base
 [subtree "templates/PKGBUILDs-template"]
 	remote = git@github.com:jmelahman/PKGBUILDs-template.git
 	branch = master
@@ -76,12 +111,18 @@
 [subtree "typesafe-sdk-go"]
 	remote = git@github.com:jmelahman/typesafe-sdk-go.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "undot"]
 	remote = git@github.com:jmelahman/undot.git
 	branch = master
+	shared = base
+	shared = shell
 [subtree "work"]
 	remote = git@github.com:jmelahman/work.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "dotfiles"]
 	remote = git@github.com:jmelahman/dotfiles.git
 	branch = master

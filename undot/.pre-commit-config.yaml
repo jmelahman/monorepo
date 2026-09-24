@@ -1,5 +1,65 @@
 default_install_hook_types: [pre-commit, post-checkout, post-merge, post-rewrite]
 repos:
+  # BEGIN orchard:base
+  # Shared by every subtree: .config/git-orchard/shared/base in the monorepo
+  # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+  # copies it here.
+  # See https://prek.j178.dev/builtin/#2-explicit-builtin-repository
+  - repo: builtin
+    hooks:
+      - id: check-added-large-files
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+
+  - repo: https://github.com/sirwart/ripsecrets
+    rev: 7d94620933e79b8acaa0cd9e60e9864b07673d86  # frozen: v0.1.11
+    hooks:
+      - id: ripsecrets
+        args:
+          - --strict-ignore
+          - --additional-pattern
+          - ^sk-[A-Za-z0-9_\-]{20,}$
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca  # frozen: v1.7.12
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: fa412071e4f5d44d44f9e365f4676f9df92456a2  # frozen: v1.30.1
+    hooks:
+      - id: zizmor
+  # END orchard:base
+
+  # BEGIN orchard:shell
+  # Shared by subtrees with shell scripts: .config/git-orchard/shared/shell in
+  # the monorepo.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: a6564f5d57444e123433a5c9af733e3975c77229  # frozen: v0.11.0.1-1
+    hooks:
+      - id: shellcheck
+        args: [--severity=style]
+
+  - repo: local
+    hooks:
+      - id: shfmt
+        name: shfmt
+        entry: shfmt -w -s
+        language: golang
+        additional_dependencies:
+          - mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
+        types: [shell]
+  # END orchard:shell
+
   - repo: https://github.com/jmelahman/undot
     rev: a0fbe570d4d793047edb8729a405e9aaf4434581  # frozen: v0.3.0
     hooks:

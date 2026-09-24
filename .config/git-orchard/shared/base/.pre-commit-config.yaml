@@ -1,7 +1,3 @@
-default_install_hook_types:
-  - pre-push
-repos:
-  # BEGIN orchard:base
   # Shared by every subtree: .config/git-orchard/shared/base in the monorepo
   # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
   # copies it here.
@@ -39,9 +35,3 @@ repos:
     rev: fa412071e4f5d44d44f9e365f4676f9df92456a2  # frozen: v1.30.1
     hooks:
       - id: zizmor
-  # END orchard:base
-
-  - repo: https://github.com/jmelahman/tag
-    rev: 05c7b0f4da54388f7d31fe43f2ebe8458bbff3f5  # frozen: v0.6.1
-    hooks:
-      - id: tag-check

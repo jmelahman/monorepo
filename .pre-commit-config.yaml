@@ -32,6 +32,14 @@ repos:
       - id: mixed-line-ending
       - id: trailing-whitespace
 
+  # Copies the profiles in .config/git-orchard/shared into the subtrees that
+  # list them in .config/git-orchard/subtrees, so each mirror carries its own
+  # complete config.
+  - repo: https://github.com/jmelahman/git-orchard
+    rev: 50de16612d3ebcd745b8feb5bb4d3637b732140d  # frozen: v1.1.0
+    hooks:
+      - id: git-orchard-sync
+
   - repo: https://github.com/sirwart/ripsecrets
     rev: 7d94620933e79b8acaa0cd9e60e9864b07673d86 # frozen: v0.1.11
     hooks:
