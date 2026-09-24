@@ -1,34 +1,34 @@
 [buildcop]
 enabled = true
+interval = '10m'
 
 [[buildcop.boards]]
-branch = 'main'
+branch = 'master'
 failure_threshold = 0.01
 green_streak_required = 3
-interval = 10
 min_runs = 5
-name = 'Build Cop: main'
-repo_path = '/home/jamison/code/onyx'
+name = 'Build Cop: monorepo'
+repo_path = '/home/jamison/code/monorepo'
 window_days = 3
-
-[[buildcop.boards]]
-failure_threshold = 0.1
-flaky_threshold = 2
-green_streak_required = 10
-min_runs = 5
-name = 'Build Cop: onyx'
-repo_path = '/home/jamison/code/onyx'
-window_days = 5
 
 [dev_toolbar]
 enabled = true
 
 [devcontainer]
-mounts = ['type=bind,source=/run/user/1000/ssh-agent.socket,target=/tmp/ssh-agent.sock']
-run_args = ['--cap-add=SYS_PTRACE']
+mounts = [
+  'type=bind,source=${localEnv:HOME}/.zshrc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.zshrc,readonly',
+  'type=bind,source=${localEnv:HOME}/.config/nvim,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/nvim,readonly',
+  'type=bind,source=${localEnv:HOME}/.gitconfig,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.gitconfig,readonly',
+  'type=volume,source=devcontainer-go-mod,target=/home/dev/go/pkg/mod',
+  'type=volume,source=devcontainer-cache,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.cache',
+  'type=volume,source=devcontainer-local,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local',
+  'type=volume,source=devcontainer-npm,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.npm',
+]
+run_args = ['--cap-add=SYS_PTRACE', '--network=kanban-net']
 
 [devcontainer.container_env]
-SSH_AUTH_SOCK = '/tmp/ssh-agent.sock'
+COLORTERM = 'truecolor'
+TZ = 'America/Los_Angeles'
 
 [errors]
 enabled = true
@@ -36,6 +36,7 @@ enabled = true
 [merge]
 allow_merge_commit = false
 allow_rebase = false
+default_strategy = 'squash'
 
 [plans]
 dir = './plans'
