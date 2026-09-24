@@ -11,6 +11,7 @@ import (
 type PullOptions struct {
 	Message  string
 	NoSquash bool
+	NoVerify bool
 }
 
 // NewPullCommand creates a new pull command
@@ -32,6 +33,7 @@ Pulling stops at the first failure, e.g. a merge conflict to resolve.`,
 
 	cmd.Flags().StringVarP(&opts.Message, "message", "m", "", `merge commit message (default "Update <prefix>")`)
 	cmd.Flags().BoolVar(&opts.NoSquash, "no-squash", false, "merge upstream history instead of squashing it")
+	cmd.Flags().BoolVar(&opts.NoVerify, "no-verify", false, "run the merge without any hooks")
 
 	return cmd
 }
@@ -41,6 +43,7 @@ func runPull(opts *PullOptions, prefixes []string) error {
 	if err != nil {
 		return err
 	}
+	o.NoVerify = opts.NoVerify
 	if opts.NoSquash {
 		o.Config.Squash = false
 	}

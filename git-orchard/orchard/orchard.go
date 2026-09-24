@@ -3,6 +3,7 @@ package orchard
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,6 +16,9 @@ import (
 type Orchard struct {
 	Repo   git.Repo
 	Config config.Config
+	// NoVerify skips the hooks that git commit, merge and push would run,
+	// like their --no-verify.
+	NoVerify bool
 }
 
 // Open loads the orchard containing dir.
@@ -73,16 +77,24 @@ func (o *Orchard) Split(s config.Subtree, rev string) (string, error) {
 	return split, nil
 }
 
-// Push publishes rev's split of s to the upstream branch. It never forces: an
+// PushOptions configure Push and PushTag.
+type PushOptions struct {
+	DryRun bool
+	// Force overwrites the upstream ref, leased on its value when the push
+	// starts, so an update that lands in between still fails the push.
+	Force bool
+}
+
+// Push publishes rev's split of s to the upstream branch. Unless forced, an
 // upstream with commits the monorepo lacks rejects the push until they are
 // pulled in.
-func (o *Orchard) Push(s config.Subtree, rev string, dryRun bool) error {
-	return o.push(s, rev, "refs/heads/"+s.Branch, dryRun)
+func (o *Orchard) Push(s config.Subtree, rev string, opts PushOptions) error {
+	return o.push(s, rev, "refs/heads/"+s.Branch, opts)
 }
 
 // PushTag publishes a monorepo release tag, <prefix>/<name>, to the upstream
 // of <prefix> as <name>.
-func (o *Orchard) PushTag(tag string, dryRun bool) error {
+func (o *Orchard) PushTag(tag string, opts PushOptions) error {
 	tag = strings.TrimPrefix(tag, "refs/tags/")
 	prefix, name, ok := SplitTag(tag)
 	if !ok {
@@ -96,7 +108,7 @@ func (o *Orchard) PushTag(tag string, dryRun bool) error {
 	if _, err := o.Repo.Output("rev-parse", "--quiet", "--verify", rev); err != nil {
 		return fmt.Errorf("tag %s doesn't exist; create it first, e.g. git tag -a -m %q %s", tag, tag, tag)
 	}
-	return o.push(s, rev, "refs/tags/"+name, dryRun)
+	return o.push(s, rev, "refs/tags/"+name, opts)
 }
 
 // SplitTag splits a release tag at its last slash, so nested prefixes work:
@@ -109,21 +121,77 @@ func SplitTag(tag string) (prefix, name string, ok bool) {
 	return tag[:i], tag[i+1:], true
 }
 
-func (o *Orchard) push(s config.Subtree, rev, ref string, dryRun bool) error {
+func (o *Orchard) push(s config.Subtree, rev, ref string, opts PushOptions) error {
 	split, err := o.Split(s, rev)
 	if err != nil {
 		return err
 	}
-	args := []string{"push"}
-	if dryRun {
+	args := o.pushArgs()
+	if opts.DryRun {
 		args = append(args, "--dry-run")
+	}
+	if opts.Force {
+		lease, err := o.lease(s.Remote, ref)
+		if err != nil {
+			return err
+		}
+		args = append(args, lease)
 	}
 	return o.Repo.Run(append(args, s.Remote, split+":"+ref)...)
 }
 
+// lease is a --force-with-lease on ref's current value on remote. Pushes go
+// to URLs, which have no remote-tracking refs for a bare --force-with-lease
+// to check against.
+func (o *Orchard) lease(remote, ref string) (string, error) {
+	current, _, err := o.lsRemote(remote, ref)
+	if err != nil {
+		return "", err
+	}
+	return "--force-with-lease=" + ref + ":" + current, nil
+}
+
+// lsRemote returns ref's value on remote and the commit it peels to, or
+// empty strings if remote has no such ref.
+func (o *Orchard) lsRemote(remote, ref string) (oid, commit string, err error) {
+	out, err := o.Repo.Output("ls-remote", remote, ref, ref+"^{}")
+	if err != nil {
+		return "", "", err
+	}
+	for _, line := range strings.Split(out, "\n") {
+		value, name, _ := strings.Cut(line, "\t")
+		switch name {
+		case ref:
+			oid = value
+		case ref + "^{}":
+			commit = value
+		}
+	}
+	if commit == "" {
+		commit = oid
+	}
+	return oid, commit, nil
+}
+
+func (o *Orchard) pushArgs() []string {
+	if o.NoVerify {
+		return []string{"push", "--no-verify"}
+	}
+	return []string{"push"}
+}
+
+// hooklessArgs prefixes a git command whose own hooks can't be skipped,
+// like git subtree's merge, so that it runs none under NoVerify.
+func (o *Orchard) hooklessArgs(args ...string) []string {
+	if o.NoVerify {
+		return append([]string{"-c", "core.hooksPath=" + os.DevNull}, args...)
+	}
+	return args
+}
+
 // Pull merges the upstream branch of s into its prefix.
 func (o *Orchard) Pull(s config.Subtree, message string) error {
-	args := []string{"subtree", "pull", "--prefix=" + s.Prefix}
+	args := o.hooklessArgs("subtree", "pull", "--prefix="+s.Prefix)
 	if o.Config.Squash {
 		args = append(args, "--squash")
 	}
@@ -150,6 +218,110 @@ func (o *Orchard) Add(s config.Subtree, message string) error {
 		return err
 	}
 	return config.Add(o.Repo, o.Config.Manifest, s)
+}
+
+// ReleaseOptions configure Release.
+type ReleaseOptions struct {
+	// Rev is the monorepo revision to release.
+	Rev string
+	// Message annotates the tag; it defaults to "<prefix> <version>".
+	Message string
+	// Remote is the monorepo remote to push the tag to, where the mirror
+	// action publishes it upstream. Empty only tags locally.
+	Remote string
+	// Upstream publishes the upstream branch and tag directly as well.
+	Upstream bool
+	// Force moves an existing tag, provided the upstream hasn't published it
+	// at another commit: consumers of a published release (the Go module
+	// proxy, release artifacts) won't follow it.
+	Force bool
+}
+
+// Release tags opts.Rev as version of s, <prefix>/<version>, and pushes the
+// tag to opts.Remote. It returns the tag.
+//
+// The upstream branch must already contain the release, or the upstream tag
+// would point at a commit outside its history; with opts.Upstream, the
+// branch is published first.
+func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions) (string, error) {
+	if version == "" || strings.Contains(version, "/") {
+		return "", fmt.Errorf("version %q must be non-empty and contain no slashes", version)
+	}
+	tag := s.Prefix + "/" + version
+	if _, err := o.Repo.Output("check-ref-format", "refs/tags/"+tag); err != nil {
+		return "", fmt.Errorf("%s is not a valid tag name", tag)
+	}
+	rev := opts.Rev + "^{commit}"
+	if _, err := o.Repo.Output("rev-parse", "--quiet", "--verify", "refs/tags/"+tag); err == nil {
+		if !opts.Force {
+			return "", fmt.Errorf("tag %s already exists; pass --force to move it", tag)
+		}
+		if err := o.checkUnpublished(s, version, rev); err != nil {
+			return "", err
+		}
+	}
+
+	if opts.Upstream {
+		if err := o.Push(s, rev, PushOptions{}); err != nil {
+			return "", err
+		}
+	} else {
+		st, err := o.Status(s, rev)
+		if err != nil {
+			return "", err
+		}
+		if st.Ahead > 0 {
+			return "", fmt.Errorf("%s's upstream lacks %d commit(s) of this release; publish them first with git orchard push %s, or pass --upstream", s.Prefix, st.Ahead, s.Prefix)
+		}
+	}
+
+	message := opts.Message
+	if message == "" {
+		message = s.Prefix + " " + version
+	}
+	tagArgs := []string{"tag", "--annotate", "--message=" + message}
+	if opts.Force {
+		tagArgs = append(tagArgs, "--force")
+	}
+	if _, err := o.Repo.Output(append(tagArgs, tag, rev)...); err != nil {
+		return "", err
+	}
+	if opts.Upstream {
+		if err := o.PushTag(tag, PushOptions{Force: opts.Force}); err != nil {
+			return tag, err
+		}
+	}
+	if opts.Remote != "" {
+		args := o.pushArgs()
+		if opts.Force {
+			lease, err := o.lease(opts.Remote, "refs/tags/"+tag)
+			if err != nil {
+				return tag, err
+			}
+			args = append(args, lease)
+		}
+		if err := o.Repo.Run(append(args, opts.Remote, "refs/tags/"+tag)...); err != nil {
+			return tag, err
+		}
+	}
+	return tag, nil
+}
+
+// checkUnpublished fails if the upstream of s already has version at a
+// commit other than rev's split.
+func (o *Orchard) checkUnpublished(s config.Subtree, version, rev string) error {
+	_, published, err := o.lsRemote(s.Remote, "refs/tags/"+version)
+	if err != nil || published == "" {
+		return err
+	}
+	split, err := o.Split(s, rev)
+	if err != nil {
+		return err
+	}
+	if published != split {
+		return fmt.Errorf("%s is already published upstream at %.12s; release a new version instead (git orchard push --tag --force overwrites it regardless)", version, published)
+	}
+	return nil
 }
 
 // Status compares a subtree's split with its upstream branch.

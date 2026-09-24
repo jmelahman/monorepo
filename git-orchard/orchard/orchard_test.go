@@ -161,7 +161,7 @@ func TestPushFastForwards(t *testing.T) {
 		t.Errorf("got %s, want 1 ahead", st)
 	}
 
-	if err := f.orchard.Push(f.subtree(), "HEAD", false); err != nil {
+	if err := f.orchard.Push(f.subtree(), "HEAD", PushOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	f.git(f.upstream, "pull", "--quiet", "--ff-only")
@@ -185,7 +185,7 @@ func TestPushRefusesDivergedUpstream(t *testing.T) {
 	if st := f.status(); st != (Status{Ahead: 1, Behind: 1}) {
 		t.Errorf("got %s, want diverged", st)
 	}
-	if err := f.orchard.Push(f.subtree(), "HEAD", false); err == nil {
+	if err := f.orchard.Push(f.subtree(), "HEAD", PushOptions{}); err == nil {
 		t.Fatal("push over a diverged upstream should fail")
 	}
 
@@ -196,7 +196,7 @@ func TestPushRefusesDivergedUpstream(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(f.mono.Dir, "tools/foo/UPSTREAM")); err != nil {
 		t.Errorf("pull didn't bring in UPSTREAM: %v", err)
 	}
-	if err := f.orchard.Push(f.subtree(), "HEAD", false); err != nil {
+	if err := f.orchard.Push(f.subtree(), "HEAD", PushOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if st := f.status(); st != (Status{}) {
@@ -210,17 +210,17 @@ func TestPushTag(t *testing.T) {
 	f.git(f.mono, "tag", "-a", "-m", "Release", "tools/foo/v1.0.0")
 	f.commit(f.mono, "tools/foo/later.go", "package main\n", "After the release")
 
-	if err := f.orchard.PushTag("refs/tags/tools/foo/v1.0.0", false); err != nil {
+	if err := f.orchard.PushTag("refs/tags/tools/foo/v1.0.0", PushOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	got := f.git(git.Repo{Dir: f.bare}, "log", "-1", "--format=%s", "v1.0.0")
 	if got != "Add main" {
 		t.Errorf("v1.0.0 is at %q, want the tagged commit", got)
 	}
-	if err := f.orchard.PushTag("tools/foo/v2.0.0", false); err == nil || !strings.Contains(err.Error(), "doesn't exist") {
+	if err := f.orchard.PushTag("tools/foo/v2.0.0", PushOptions{}); err == nil || !strings.Contains(err.Error(), "doesn't exist") {
 		t.Errorf("a missing tag should say so, got %v", err)
 	}
-	if err := f.orchard.PushTag("bar/v1.0.0", false); err == nil {
+	if err := f.orchard.PushTag("bar/v1.0.0", PushOptions{}); err == nil {
 		t.Error("a tag for an unlisted prefix should fail")
 	}
 }
@@ -245,5 +245,185 @@ func TestChangedSince(t *testing.T) {
 		if got, err := f.orchard.ChangedSince(all, since, "HEAD"); err != nil || len(got) != 1 {
 			t.Errorf("since %s: got %+v, %v; want everything", since, got, err)
 		}
+	}
+}
+
+// installHook makes repo's hook fail.
+func (f *fixture) installHook(repo git.Repo, hook string) {
+	f.t.Helper()
+	path := filepath.Join(f.git(repo, "rev-parse", "--absolute-git-dir"), "hooks", hook)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		f.t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
+		f.t.Fatal(err)
+	}
+}
+
+func TestNoVerify(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	f.installHook(f.mono, "pre-push")
+	f.installHook(f.mono, "pre-merge-commit")
+
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err == nil {
+		t.Error("push should run the pre-push hook")
+	}
+	f.orchard.NoVerify = true
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	f.git(f.upstream, "pull", "--quiet", "origin", "master")
+	f.commit(f.upstream, "lib.go", "package main\n", "Add lib")
+	f.git(f.upstream, "push", "--quiet", "origin", "HEAD:master")
+	f.orchard.NoVerify = false
+	if err := f.orchard.Pull(s, ""); err == nil {
+		t.Error("pull should run the pre-merge-commit hook")
+	}
+	f.git(f.mono, "merge", "--abort")
+	f.orchard.NoVerify = true
+	if err := f.orchard.Pull(s, ""); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRelease(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	origin := filepath.Join(filepath.Dir(f.bare), "mono.git")
+	f.git(f.mono, "init", "--quiet", "--bare", origin)
+	opts := ReleaseOptions{Rev: "HEAD", Remote: origin}
+
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	if _, err := f.orchard.Release(s, "v1.0.0", opts); err == nil || !strings.Contains(err.Error(), "lacks 1 commit") {
+		t.Fatalf("releasing a commit the upstream lacks: got %v", err)
+	}
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	tag, err := f.orchard.Release(s, "v1.0.0", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag != "tools/foo/v1.0.0" {
+		t.Errorf("got tag %s", tag)
+	}
+	if got := f.git(git.Repo{Dir: origin}, "log", "-1", "--format=%s", tag); got != "Add main" {
+		t.Errorf("origin's %s is at %q", tag, got)
+	}
+	if _, err := f.orchard.Release(s, "v1.0.0", opts); err == nil {
+		t.Error("releasing an existing tag should fail")
+	}
+	for _, bad := range []string{"", "a/b", "v1..0"} {
+		if _, err := f.orchard.Release(s, bad, opts); err == nil {
+			t.Errorf("version %q should be rejected", bad)
+		}
+	}
+
+	f.commit(f.mono, "tools/foo/later.go", "package main\n", "Add later")
+	opts.Upstream = true
+	if _, err := f.orchard.Release(s, "v1.1.0", opts); err != nil {
+		t.Fatal(err)
+	}
+	upstream := git.Repo{Dir: f.bare}
+	if got := f.git(upstream, "log", "-1", "--format=%s", "v1.1.0"); got != "Add later" {
+		t.Errorf("upstream v1.1.0 is at %q", got)
+	}
+	if got := f.git(upstream, "rev-parse", "master"); got != f.git(upstream, "rev-parse", "v1.1.0^{commit}") {
+		t.Error("--upstream should publish the branch too")
+	}
+}
+
+func TestPushForce(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	f.commit(f.upstream, "lib.go", "package main\n", "Upstream only")
+	f.git(f.upstream, "push", "--quiet", "origin", "HEAD:master")
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err == nil {
+		t.Fatal("a diverged upstream should reject an unforced push")
+	}
+	if err := f.orchard.Push(s, "HEAD", PushOptions{Force: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.git(git.Repo{Dir: f.bare}, "log", "-1", "--format=%s", "master"); got != "Add main" {
+		t.Errorf("upstream master is at %q", got)
+	}
+}
+
+func TestLsRemote(t *testing.T) {
+	f := newFixture(t)
+	head := f.git(git.Repo{Dir: f.bare}, "rev-parse", "master")
+	f.git(f.upstream, "tag", "-a", "-m", "annotated", "v1")
+	f.git(f.upstream, "push", "--quiet", "origin", "v1")
+
+	for ref, want := range map[string][2]string{
+		"refs/heads/master": {head, head},
+		"refs/tags/v1":      {f.git(f.upstream, "rev-parse", "v1"), head},
+		"refs/tags/v2":      {"", ""},
+	} {
+		oid, commit, err := f.orchard.lsRemote(f.bare, ref)
+		if err != nil || oid != want[0] || commit != want[1] {
+			t.Errorf("%s: got %q, %q, %v; want %q", ref, oid, commit, err, want)
+		}
+	}
+}
+
+func TestReleaseForce(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	origin := filepath.Join(filepath.Dir(f.bare), "mono.git")
+	f.git(f.mono, "init", "--quiet", "--bare", origin)
+	opts := ReleaseOptions{Rev: "HEAD", Remote: origin}
+	release := func(force bool) error {
+		opts.Force = force
+		_, err := f.orchard.Release(s, "v1.0.0", opts)
+		return err
+	}
+	originTag := func() string {
+		return f.git(git.Repo{Dir: origin}, "log", "-1", "--format=%s", "tools/foo/v1.0.0")
+	}
+
+	// Tagged on origin, but not yet published upstream: movable.
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := release(false); err != nil {
+		t.Fatal(err)
+	}
+	f.commit(f.mono, "tools/foo/fix.go", "package main\n", "Fix main")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := release(false); err == nil {
+		t.Fatal("an existing tag should need --force")
+	}
+	if err := release(true); err != nil {
+		t.Fatal(err)
+	}
+	if got := originTag(); got != "Fix main" {
+		t.Errorf("origin's tag is at %q, want it moved", got)
+	}
+
+	// Published upstream: re-releasing the same commit is fine, moving isn't.
+	if err := f.orchard.PushTag("tools/foo/v1.0.0", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := release(true); err != nil {
+		t.Errorf("re-releasing the published commit: %v", err)
+	}
+	f.commit(f.mono, "tools/foo/later.go", "package main\n", "Later")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := release(true); err == nil || !strings.Contains(err.Error(), "already published") {
+		t.Errorf("moving a published release: got %v", err)
+	}
+	if got := originTag(); got != "Fix main" {
+		t.Errorf("a refused release moved origin's tag to %q", got)
 	}
 }

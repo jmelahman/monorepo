@@ -51,10 +51,16 @@ git orchard init                        # list the subtrees already in git histo
 git orchard add tools/foo git@github.com:owner/foo.git
 git orchard status                      # commits ahead/behind each upstream
 git orchard pull [prefix...]            # merge upstream changes
-git orchard push [prefix...]            # publish, never forced
+git orchard push [prefix...]            # publish, fast-forward only
 git orchard push --changed-since REV    # only subtrees changed since REV
 git orchard push --tag tools/foo/v1.2.3 # publish as v1.2.3 upstream
+git orchard release tools/foo v1.2.3    # tag tools/foo/v1.2.3 and push it to origin
 ```
+
+`release` requires the upstream branch to contain the release already, so the upstream tag lands on its history; `--upstream` pushes the branch and tag there directly instead of leaving it to the action.
+`push`, `pull` and `release` take `--no-verify` to skip git hooks.
+`push --force` overwrites upstream branches and tags, leased on their value when the push starts so a concurrent update still fails it; the action never forces.
+`release --force` moves an existing tag, unless the upstream already published it at another commit: the Go module proxy and release artifacts won't follow a moved release.
 
 `push` splits each subtree out of the monorepo with `git subtree split`, which is deterministic, so the same history always gives the same commits and every push is a fast-forward.
 An upstream with commits the monorepo doesn't have rejects the push until they're pulled in.

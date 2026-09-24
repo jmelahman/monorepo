@@ -55,6 +55,7 @@ The same keys in git's own configuration override it.`,
 	cmd.AddCommand(NewListCommand())
 	cmd.AddCommand(NewPullCommand())
 	cmd.AddCommand(NewPushCommand())
+	cmd.AddCommand(NewReleaseCommand())
 	cmd.AddCommand(NewStatusCommand())
 
 	return cmd
