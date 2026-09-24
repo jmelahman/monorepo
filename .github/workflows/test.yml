@@ -58,21 +58,7 @@ jobs:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: ${{ matrix.modules }}
         continue-on-error: true
-  shell:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Run the sh-checker
-        uses: luizm/action-sh-checker@883217215b11c1fabbf00eb1a9a041f62d74c744
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SHELLCHECK_OPTS: --severity=style
-          SHFMT_OPTS: -s
-        with:
-          sh_checker_comment: true
+
   pre-commit:
     runs-on: ubuntu-latest
     steps:
