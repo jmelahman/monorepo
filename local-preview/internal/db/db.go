@@ -7,12 +7,19 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	_ "modernc.org/sqlite"
 )
 
 //go:embed schema.sql
 var schema string
+
+// memSeq names each ":memory:" Open's database. A shared-cache in-memory DB
+// is keyed by name process-wide, so an unnamed one would be the same database
+// for every concurrently open Store — tests' "fresh" stores saw each other's
+// rows.
+var memSeq atomic.Int64
 
 // ErrNotFound is returned when a row does not exist.
 var ErrNotFound = errors.New("not found")
@@ -29,8 +36,8 @@ func Open(path string) (*Store, error) {
 	if path == ":memory:" {
 		// Shared cache so the in-memory DB survives across pooled
 		// connections; combined with MaxOpenConns(1) below it behaves like a
-		// single persistent connection.
-		dsn = "file::memory:?cache=shared"
+		// single persistent connection. Uniquely named per Open (see memSeq).
+		dsn = fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", memSeq.Add(1))
 	}
 	sqlDB, err := sql.Open("sqlite", dsn)
 	if err != nil {

@@ -28,6 +28,19 @@ func TestOpenFile(t *testing.T) {
 	defer store.Close()
 }
 
+// TestOpenMemoryIsolated: concurrently open ":memory:" stores are separate
+// databases — a process-wide shared cache made parallel tests collide on
+// "already exists".
+func TestOpenMemoryIsolated(t *testing.T) {
+	a, b := newTestStore(t), newTestStore(t)
+	if _, err := a.CreateRepo("demo", "/src", "/bare", RepoReady); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.CreateRepo("demo", "/src", "/bare", RepoReady); err != nil {
+		t.Fatalf("second store saw the first's row: %v", err)
+	}
+}
+
 // TestOpenMigratesOldSchema opens a database whose backend_artifacts table
 // predates the init_done_at column and expects Open's migrations to add it.
 func TestOpenMigratesOldSchema(t *testing.T) {
