@@ -399,12 +399,10 @@ func TestSessionSummary(t *testing.T) {
 }
 
 func TestSessions(t *testing.T) {
-	// Sessions must not reach a real daemon: on hosts where docker is up and
-	// the built-in image is cached, start_without_devcontainer_500 would
-	// really spawn (and leak) a session container and get 200 instead of 500.
-	// FromEnv reads DOCKER_HOST at client construction, so set it before
-	// newEnv wires the session manager.
-	t.Setenv("DOCKER_HOST", "unix:///nonexistent/docker.sock")
+	// Sessions must not reach a real daemon (TestMain sets a dead
+	// DOCKER_HOST): otherwise, on hosts where docker is up and the built-in
+	// image is cached, start_without_devcontainer_500 would really spawn (and
+	// leak) a session container and get 200 instead of 500.
 	e := newEnv(t)
 	board := e.seedBoard("Sessions")
 	tk := e.seedTicket(board, "ImplementX")
