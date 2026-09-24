@@ -29,9 +29,10 @@ repos:
       - id: mixed-line-ending
       - id: trailing-whitespace
 
-  # Toolchain-provided Go tools: gofmt, go fix, go mod tidy, go vet, go test.
+  # Toolchain-provided Go tools: gofmt, go fix, go mod tidy, go vet, go test,
+  # and go get -u.
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: v1.0.0
+    rev: v1.1.0
     hooks:
       - id: gofmt
         args: [-s] # Appended to `gofmt -l -w`: also simplify.
@@ -44,6 +45,9 @@ repos:
       - id: go-test
         args: [-race, ./...]
         stages: [pre-push]
+      # Manual only: `prek run --all-files --stage manual go-get` upgrades
+      # every dependency.
+      - id: go-get
 
   # Third-party Go tools. `language: golang` + `additional_dependencies` means
   # the framework `go install`s them into the hook environment — still no

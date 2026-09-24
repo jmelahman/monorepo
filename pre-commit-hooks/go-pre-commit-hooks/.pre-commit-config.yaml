@@ -10,10 +10,11 @@ repos:
   # Dogfood the released hooks. Pinned to a tag, so this exercises the last
   # release, not the working tree — bump rev after tagging.
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: v1.0.0
+    rev: v1.1.0
     hooks:
       - id: gofmt
       - id: go-fix
       - id: go-mod-tidy
       - id: go-vet
       - id: go-test
+      - id: go-get

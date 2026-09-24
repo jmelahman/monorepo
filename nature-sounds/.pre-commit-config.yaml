@@ -6,3 +6,4 @@ repos:
       - id: go-mod-tidy
       - id: go-vet
       - id: go-test
+      - id: go-get

@@ -60,3 +60,7 @@ repos:
         language: system
         files: ^web/package(-lock)?\.json$
         pass_filenames: false
+  - repo: https://github.com/jmelahman/go-pre-commit-hooks
+    rev: 4148d5ef186eb979ccf07d9052101b312b0f025c  # frozen: v1.1.0
+    hooks:
+      - id: go-get
