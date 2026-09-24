@@ -99,7 +99,7 @@ repos:
         entry: shfmt -w -s
         language: golang
         additional_dependencies:
-          - mvdan.cc/sh/v3/cmd/shfmt@v3.12.0
+          - mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
         types: [shell]
 
   # GitHub Actions.

@@ -33,6 +33,7 @@ def setUp(self):
     self.addresses = [Address("a@x.com"), Address("b@x.com")]
     self.list = MailingList()
 
+
 def test_subscribe_multiple(self):
     self._subscribe_all()
     for addr in self.addresses:
@@ -56,8 +57,9 @@ def test_can_subscribe_multiple_addresses(self):
 # breaks this and every test shaped like it.
 def test_rename_updates_display_name():
     profile = service.rename(profile_id, "Ada")
-    assert profile == Profile(id=profile_id, display_name="Ada",
-                              created=CREATED, locale="en", theme="dark")
+    assert profile == Profile(
+        id=profile_id, display_name="Ada", created=CREATED, locale="en", theme="dark"
+    )
 ```
 
 ```python
@@ -79,9 +81,11 @@ invoice = make_invoice(None, None, "EUR", PAST_DUE, None)
 # (In builder-less languages, a helper with keyword arguments does the same.)
 invoice = an_invoice(currency="EUR", status=PAST_DUE)
 
+
 def an_invoice(**overrides):
-    fields = dict(customer=CUSTOMER, total=Money(100), currency="USD",
-                  status=OPEN)  # reasonable required defaults
+    fields = dict(
+        customer=CUSTOMER, total=Money(100), currency="USD", status=OPEN
+    )  # reasonable required defaults
     fields.update(overrides)
     return Invoice(**fields)
 ```
@@ -93,7 +97,7 @@ def an_invoice(**overrides):
 # joining logic exists in both and the test can't see it.
 def test_export_path():
     base = "reports/2026/"
-    assert exporter.path_for(JUNE) == base + "/june.csv"   # oops: "2026//june"
+    assert exporter.path_for(JUNE) == base + "/june.csv"  # oops: "2026//june"
 ```
 
 ```python
@@ -118,9 +122,11 @@ def test_signup():
 def test_signup_activates_the_account():
     assert service.signup("ada@x.com").is_active
 
+
 def test_signup_sends_a_welcome_email():
     service.signup("ada@x.com")
     assert mailer.sent[0].subject == "Welcome!"
+
 
 def test_signup_increments_the_signup_counter():
     service.signup("ada@x.com")
@@ -177,6 +183,7 @@ def is_expired(subscription):
 # Good: inject the time; the wrapper keeps callers working.
 def is_expired(subscription, today):
     return subscription.end_date < today
+
 
 def test_subscription_expires_the_day_after_end_date():
     sub = a_subscription(end_date=date(2026, 2, 28))
