@@ -276,10 +276,12 @@ func TestDevcontainerRuntimeBackend(t *testing.T) {
 	const beHash = "be-devc-0000000"
 	f.provisionContainerCfg(t, beHash, backendRunConfig{
 		Backend: manifest.Backend{
-			// Writing into the volume target proves the mount exists (the
-			// redirect fails and the start never turns healthy otherwise).
+			// The start never turns healthy unless the volume is mounted.
+			// Checked via /proc/mounts rather than a write: on a rootful
+			// daemon the container runs as the host uid, and a fresh named
+			// volume is root-owned.
 			Run: []string{"sh", "-c",
-				"env > env.txt && echo warm > /devc-cache/marker && exec busybox httpd -f -p 0.0.0.0:{port} -h ."},
+				"env > env.txt && grep -q ' /devc-cache ' /proc/mounts && exec busybox httpd -f -p 0.0.0.0:{port} -h ."},
 			HealthPath:   "/health.txt",
 			StartTimeout: manifest.Duration(60 * time.Second),
 		},
