@@ -22,8 +22,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      # TODO: pin with `ratchet pin` once v1 is released.
-      - uses: jmelahman/git-orchard@v1 # zizmor: ignore[unpinned-uses]
+      - uses: jmelahman/git-orchard@ad01276d6f8e26581c4018942b4f919745756cfd # ratchet:jmelahman/git-orchard@v1
         with:
           # Created and stored by `git orchard github-app`; the App is
           # installed on the mirror repositories.
