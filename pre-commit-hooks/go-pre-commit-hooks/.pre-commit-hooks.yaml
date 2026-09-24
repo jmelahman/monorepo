@@ -31,6 +31,16 @@
   pass_filenames: false
   minimum_pre_commit_version: 3.0.0
 
+- id: go-work-sync
+  name: go work sync
+  description: Sync the workspace build list back into each module's go.mod; fails when one changes.
+  entry: go work sync
+  language: golang
+  # There is no `go-work` file type to match on.
+  files: (^|/)go\.(work|mod|sum)$
+  pass_filenames: false
+  minimum_pre_commit_version: 3.0.0
+
 # Checks — read-only.
 
 - id: go-vet

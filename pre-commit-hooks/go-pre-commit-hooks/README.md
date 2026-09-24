@@ -20,6 +20,7 @@ repos:
       - id: gofmt
       - id: go-fix
       - id: go-mod-tidy
+      - id: go-work-sync # only in repositories with a go.work
       - id: go-vet
       - id: go-test
       - id: go-get
@@ -46,6 +47,14 @@ report the patch without rewriting.
 Runs `go mod tidy` and fails when `go.mod` or `go.sum` change. May touch the
 network to fill in missing requirements or checksums. Use `args: [-diff]`
 (Go >= 1.23) to report changes without rewriting.
+
+### `go-work-sync`
+
+For multi-module repositories with a `go.work`. Runs `go work sync`, which
+raises each workspace module's requirements to the versions the workspace
+build list selected, and fails when a `go.mod` changes. It runs whenever
+`go.work`, a `go.mod`, or a `go.sum` changes. Add it to the config next to
+`go.work`, since `go work sync` must run inside the workspace.
 
 ### `go-vet`
 
