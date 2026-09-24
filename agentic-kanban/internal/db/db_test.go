@@ -34,6 +34,32 @@ func TestOpen_InMemory(t *testing.T) {
 	assertBoardLifecycle(t, store)
 }
 
+// TestOpen_InMemoryIsolated: concurrently open ":memory:" stores are separate
+// databases — a process-wide shared cache made parallel tests collide.
+func TestOpen_InMemoryIsolated(t *testing.T) {
+	a, err := db.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = a.Close() })
+	b, err := db.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = b.Close() })
+
+	if err := a.CreateBoard(t.Context(), &db.Board{Name: "A", Slug: "a", BaseBranch: "main", RepoPath: "/tmp/a"}); err != nil {
+		t.Fatal(err)
+	}
+	boards, err := b.ListBoards(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(boards) != 0 {
+		t.Fatalf("second store saw the first's boards: %+v", boards)
+	}
+}
+
 func TestOpen_FreshFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "kanban.db")
 	store, err := db.Open(path)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 
 	"database/sql"
 
@@ -30,6 +31,12 @@ const onDiskPragmas = "_pragma=journal_mode(WAL)" +
 	"&_pragma=cache_size(-20000)" +
 	"&_pragma=mmap_size(134217728)"
 
+// memSeq names each ":memory:" Open's database. A shared-cache in-memory DB
+// is keyed by name process-wide, so an unnamed one would be the same database
+// for every concurrently open Store — tests' "fresh" stores saw each other's
+// rows.
+var memSeq atomic.Int64
+
 type Store struct {
 	db *sql.DB
 	// envCipher encrypts/decrypts board env var values inside the Store so
@@ -45,12 +52,12 @@ func (s *Store) SetEnvCipher(box *secrets.Box) { s.envCipher = box }
 // Open opens a Store backed by a SQLite database at path, applies the
 // embedded schema, and runs migrations. The sentinel path ":memory:" opens
 // a process-local in-memory database (shared cache so the connection pool
-// sees one DB) and skips on-disk file setup; data is discarded when Close
+// sees one DB, uniquely named per Open) and skips on-disk file setup; data is discarded when Close
 // is called.
 func Open(path string) (*Store, error) {
 	var dsn string
 	if path == ":memory:" {
-		dsn = "file::memory:?cache=shared&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)"
+		dsn = fmt.Sprintf("file:memdb%d?mode=memory&cache=shared&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)", memSeq.Add(1))
 	} else {
 		if err := config.MakeFileAll(path); err != nil {
 			return nil, fmt.Errorf("ensure db file: %w", err)
