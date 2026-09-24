@@ -1,129 +1,241 @@
+// Package config reads the subtree manifest.
+//
+// The manifest is a committed file at the repository root, either
+// .gitsubtrees or .config/git-orchard/subtrees, in gitconfig syntax like
+// .gitmodules:
+//
+//	[orchard]
+//		squash = true
+//	[subtree "pre-commit-hooks/go-pre-commit-hooks"]
+//		remote = git@github.com:jmelahman/go-pre-commit-hooks.git
+//		branch = master
+//
+// The same keys in git's own configuration (e.g. .git/config) override it, so
+// a clone can point a subtree somewhere else without touching the manifest.
 package config
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
+	"github.com/jmelahman/git-orchard/git"
 )
 
-// SubtreeConfig represents a subtree configuration
-type SubtreeConfig struct {
-	Name       string
-	Repository string
-	Prefix     string
-	Branch     string
+// Manifests are the paths the manifest may have, relative to the repository
+// root. A repository without one gets the first.
+var Manifests = []string{".gitsubtrees", ".config/git-orchard/subtrees"}
+
+// DefaultBranch is the upstream branch of a subtree that doesn't name one.
+const DefaultBranch = "master"
+
+// Subtree is one subtree and the upstream it mirrors.
+type Subtree struct {
+	Prefix string
+	Remote string
+	Branch string
 }
 
-// OrchardConfig represents git-orchard configuration
-type OrchardConfig struct {
-	Squash bool
+// Config is the parsed manifest.
+type Config struct {
+	// Manifest is the manifest's path relative to the repository root,
+	// whether or not it exists yet.
+	Manifest string
+	// Squash makes pull and add squash upstream history into one commit.
+	Squash   bool
+	Subtrees []Subtree
 }
 
-// Reader interface for reading configurations (useful for testing)
-type Reader interface {
-	ReadSubtreeConfigs() ([]SubtreeConfig, OrchardConfig, error)
-}
-
-// GitConfigReader reads configuration from git config
-type GitConfigReader struct {
-	repoPath string
-}
-
-// NewGitConfigReader creates a new GitConfigReader
-// If repoPath is empty, it will search for the git repository root starting from the current directory
-func NewGitConfigReader(repoPath string) *GitConfigReader {
-	if repoPath == "" {
-		if root, err := findGitRoot(); err == nil {
-			repoPath = root
-		} else {
-			repoPath = "."
+// Lookup returns the subtree at prefix.
+func (c Config) Lookup(prefix string) (Subtree, bool) {
+	prefix = Clean(prefix)
+	for _, s := range c.Subtrees {
+		if s.Prefix == prefix {
+			return s, true
 		}
 	}
-	return &GitConfigReader{repoPath: repoPath}
+	return Subtree{}, false
 }
 
-// findGitRoot searches for the git repository root starting from the current directory
-func findGitRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
+// Select returns the subtrees at prefixes, or every subtree if there are none.
+func (c Config) Select(prefixes []string) ([]Subtree, error) {
+	if len(prefixes) == 0 {
+		return c.Subtrees, nil
 	}
-
-	for {
-		gitDir := filepath.Join(dir, ".git")
-		if _, err := os.Stat(gitDir); err == nil {
-			return dir, nil
+	selected := make([]Subtree, 0, len(prefixes))
+	for _, p := range prefixes {
+		s, ok := c.Lookup(p)
+		if !ok {
+			return nil, fmt.Errorf("%s is not a subtree listed in %s", p, c.Manifest)
 		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached the root directory
-			break
-		}
-		dir = parent
+		selected = append(selected, s)
 	}
-
-	return "", fmt.Errorf("not in a git repository")
+	return selected, nil
 }
 
-// ReadSubtreeConfigs reads subtree configurations from git config
-func (r *GitConfigReader) ReadSubtreeConfigs() ([]SubtreeConfig, OrchardConfig, error) {
-	// Open the repository
-	repo, err := git.PlainOpen(r.repoPath)
+// Clean normalizes a prefix as typed on the command line ("./tag/" → "tag").
+func Clean(prefix string) string {
+	return filepath.ToSlash(filepath.Clean(prefix))
+}
+
+// FindManifest returns the path of the manifest in the repository at root,
+// relative to it, or the default path if there is none. Having more than one
+// is an error, since it would be ambiguous which one to edit.
+func FindManifest(root string) (path string, exists bool, err error) {
+	var found []string
+	for _, m := range Manifests {
+		if _, err := os.Stat(filepath.Join(root, m)); err == nil {
+			found = append(found, m)
+		} else if !os.IsNotExist(err) {
+			return "", false, err
+		}
+	}
+	switch len(found) {
+	case 0:
+		return Manifests[0], false, nil
+	case 1:
+		return found[0], true, nil
+	}
+	return "", false, fmt.Errorf("found both %s; keep one", strings.Join(found, " and "))
+}
+
+// Load reads the manifest of repo, with git's own configuration layered on
+// top. A missing manifest is an empty one.
+func Load(repo git.Repo) (Config, error) {
+	b := newBuilder()
+
+	manifest, exists, err := FindManifest(repo.Dir)
 	if err != nil {
-		return nil, OrchardConfig{}, fmt.Errorf("failed to open repository: %w", err)
+		return Config{}, err
+	}
+	if exists {
+		out, err := repo.Output("config", "--file", filepath.Join(repo.Dir, manifest), "--null", "--list")
+		if err != nil {
+			return Config{}, err
+		}
+		if err := b.apply(out); err != nil {
+			return Config{}, fmt.Errorf("%s: %w", manifest, err)
+		}
 	}
 
-	// Get the repository config
-	cfg, err := repo.Config()
-	if err != nil {
-		return nil, OrchardConfig{}, fmt.Errorf("failed to read config: %w", err)
+	// Exit status 1 means no key matched.
+	out, err := repo.Output("config", "--null", "--get-regexp", `^(orchard|subtree)\.`)
+	if err != nil && git.ExitCode(err) != 1 {
+		return Config{}, err
+	}
+	if err := b.apply(out); err != nil {
+		return Config{}, fmt.Errorf("git config: %w", err)
 	}
 
-	var subtrees []SubtreeConfig
-	orchardConfig := OrchardConfig{}
+	c, err := b.build()
+	c.Manifest = manifest
+	return c, err
+}
 
-	// Parse the raw config to find subtree sections
-	for _, section := range cfg.Raw.Sections {
-		if strings.HasPrefix(section.Name, "subtree") {
-			// Extract subsection name from section name like "subtree \"name\""
-			parts := strings.SplitN(section.Name, " ", 2)
-			var subsectionName string
-			if len(parts) > 1 {
-				// Remove quotes from subsection name
-				subsectionName = strings.Trim(parts[1], "\"")
-			}
+// Add records s in the manifest of repo at the path manifest, relative to the
+// repository root.
+func Add(repo git.Repo, manifest string, s Subtree) error {
+	path := filepath.Join(repo.Dir, manifest)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	section := "subtree." + s.Prefix
+	for _, kv := range [][2]string{{"remote", s.Remote}, {"branch", s.Branch}} {
+		if kv[1] == "" {
+			continue
+		}
+		if _, err := repo.Output("config", "--file", path, section+"."+kv[0], kv[1]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-			subtree := SubtreeConfig{
-				Name: subsectionName,
-			}
+type builder struct {
+	squash   bool
+	subtrees map[string]*Subtree
+}
 
-			for _, option := range section.Options {
-				switch option.Key {
-				case "repository":
-					subtree.Repository = option.Value
-				case "prefix":
-					subtree.Prefix = option.Value
-				case "branch":
-					subtree.Branch = option.Value
+func newBuilder() *builder {
+	return &builder{squash: true, subtrees: map[string]*Subtree{}}
+}
+
+// apply merges `git config --null` output ("key\nvalue\0" per entry, or
+// "key\0" for a key with no value) into b.
+func (b *builder) apply(entries string) error {
+	for _, entry := range strings.Split(entries, "\x00") {
+		if entry == "" {
+			continue
+		}
+		key, value, hasValue := strings.Cut(entry, "\n")
+		// Section and variable names are case-insensitive (git lowercases
+		// them); the subsection, here the prefix, is not.
+		first := strings.Index(key, ".")
+		last := strings.LastIndex(key, ".")
+		section, name := key[:first], key[last+1:]
+
+		switch section {
+		case "orchard":
+			if name == "squash" {
+				squash, err := parseBool(value, hasValue)
+				if err != nil {
+					return fmt.Errorf("%s: %w", key, err)
 				}
+				b.squash = squash
 			}
-
-			if subtree.Repository != "" && subtree.Prefix != "" {
-				subtrees = append(subtrees, subtree)
+		case "subtree":
+			if first == last {
+				return fmt.Errorf("%s: subtree sections need a prefix, like [subtree \"path/to/dir\"]", key)
 			}
-		} else if section.Name == "orchard" {
-			for _, option := range section.Options {
-				switch option.Key {
-				case "squash":
-					orchardConfig.Squash = option.Value == "true"
-				}
+			prefix := Clean(key[first+1 : last])
+			s, ok := b.subtrees[prefix]
+			if !ok {
+				s = &Subtree{Prefix: prefix}
+				b.subtrees[prefix] = s
+			}
+			switch name {
+			case "remote":
+				s.Remote = value
+			case "branch":
+				s.Branch = value
 			}
 		}
 	}
+	return nil
+}
 
-	return subtrees, orchardConfig, nil
+func (b *builder) build() (Config, error) {
+	c := Config{Squash: b.squash}
+	for _, s := range b.subtrees {
+		if s.Remote == "" {
+			return Config{}, fmt.Errorf("subtree %q has no remote", s.Prefix)
+		}
+		if s.Branch == "" {
+			s.Branch = DefaultBranch
+		}
+		c.Subtrees = append(c.Subtrees, *s)
+	}
+	sort.Slice(c.Subtrees, func(i, j int) bool { return c.Subtrees[i].Prefix < c.Subtrees[j].Prefix })
+	return c, nil
+}
+
+// parseBool parses a git boolean; a bare key ("squash" alone on a line) is
+// true.
+func parseBool(value string, hasValue bool) (bool, error) {
+	if !hasValue {
+		return true, nil
+	}
+	switch strings.ToLower(value) {
+	case "yes", "on", "true", "1":
+		return true, nil
+	case "no", "off", "false", "0", "":
+		return false, nil
+	}
+	if n, err := strconv.Atoi(value); err == nil {
+		return n != 0, nil
+	}
+	return false, fmt.Errorf("invalid boolean %q", value)
 }

@@ -28,6 +28,25 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Point the major version tag (v1 for v1.2.3), which `uses:
+  # jmelahman/git-orchard@v1` resolves, at the release. Prereleases don't move
+  # it.
+  major-tag:
+    needs: goreleaser
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - run: |
+          major="${REF_NAME%%.*}"
+          gh api --method PATCH "repos/$REPO/git/refs/tags/$major" -f sha="$SHA" -F force=true ||
+            gh api --method POST "repos/$REPO/git/refs" -f ref="refs/tags/$major" -f sha="$SHA"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
   pypi:
     runs-on: ubuntu-latest
     environment:

@@ -1,0 +1,128 @@
+name: git-orchard mirror
+description: Publish a monorepo's subtrees to their upstream repositories with git-orchard.
+author: jmelahman
+branding:
+  icon: git-branch
+  color: green
+
+inputs:
+  app-client-id:
+    description: >-
+      Client ID of a GitHub App installed on the upstream repositories, as
+      created by `git orchard github-app`. The action mints a token from it.
+    required: false
+  app-private-key:
+    description: Private key of the App.
+    required: false
+  owner:
+    description: >-
+      Owner of the upstream repositories, whose installation of the App is
+      used. Defaults to this repository's owner.
+    required: false
+    default: ${{ github.repository_owner }}
+  token:
+    description: >-
+      Instead of an App, a token that can push to the upstream repositories,
+      e.g. a fine-grained token with "Contents" and "Workflows" read and write
+      on them (GitHub refuses pushes that change .github/workflows without
+      the latter). GitHub remotes in the manifest, SSH or HTTPS, are
+      rewritten to use it.
+    required: false
+  changed-since:
+    description: >-
+      Only push subtrees changed between this revision and the checked-out
+      commit. Defaults to the start of the pushed range; empty pushes every
+      subtree. Ignored for tags.
+    required: false
+    default: ${{ github.event.before }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check inputs
+      shell: bash
+      run: |
+        if [ -n "$TOKEN" ] && [ -n "$APP_CLIENT_ID$APP_PRIVATE_KEY" ]; then
+          echo "::error::pass either token or app-client-id and app-private-key, not both"
+          exit 1
+        fi
+        if [ -z "$TOKEN" ] && { [ -z "$APP_CLIENT_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; }; then
+          echo "::error::pass app-client-id and app-private-key (see git orchard github-app), or token"
+          exit 1
+        fi
+        if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+          echo "::error::git-orchard splits subtrees out of the full history; check out with fetch-depth: 0"
+          exit 1
+        fi
+      env:
+        TOKEN: ${{ inputs.token }}
+        APP_CLIENT_ID: ${{ inputs.app-client-id }}
+        APP_PRIVATE_KEY: ${{ inputs.app-private-key }}
+
+    # Built from the action's own source, so the CLI is always the version
+    # the action is pinned to.
+    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+        cache: false
+    - name: Build git-orchard
+      shell: bash
+      run: go build -C "$GITHUB_ACTION_PATH" -o "$RUNNER_TEMP/git-orchard" .
+      env:
+        GOWORK: "off"
+        GOFLAGS: -mod=readonly
+
+    # Scope the App's token to the manifest's upstreams under owner.
+    - id: repos
+      if: ${{ inputs.app-client-id != '' }}
+      name: List upstreams
+      shell: bash
+      run: |
+        repos=()
+        while read -r _ remote _; do
+          if [[ $remote =~ ^(git@github\.com:|ssh://git@github\.com/|https://github\.com/)([^/]+)/([^/]+)$ ]]; then
+            if [ "${BASH_REMATCH[2],,}" = "${OWNER,,}" ]; then
+              repos+=("${BASH_REMATCH[3]%.git}")
+              continue
+            fi
+          fi
+          echo "::warning::$remote isn't a GitHub repository owned by $OWNER; the App's token can't push to it"
+        done < <("$RUNNER_TEMP/git-orchard" list)
+        if [ "${#repos[@]}" -eq 0 ]; then
+          echo "::error::no upstreams in the manifest are owned by $OWNER; set owner"
+          exit 1
+        fi
+        (IFS=,; echo "list=${repos[*]}") >> "$GITHUB_OUTPUT"
+      env:
+        OWNER: ${{ inputs.owner }}
+    - id: app
+      if: ${{ inputs.app-client-id != '' }}
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # ratchet:actions/create-github-app-token@v3
+      with:
+        client-id: ${{ inputs.app-client-id }}
+        private-key: ${{ inputs.app-private-key }}
+        owner: ${{ inputs.owner }}
+        repositories: ${{ steps.repos.outputs.list }}
+        permission-contents: write
+        permission-workflows: write
+
+    - name: Push
+      shell: bash
+      run: |
+        echo "::add-mask::$TOKEN"
+        if [ "$REF_TYPE" = tag ]; then
+          "$RUNNER_TEMP/git-orchard" push --tag "$REF_NAME"
+        else
+          "$RUNNER_TEMP/git-orchard" push --changed-since "$CHANGED_SINCE"
+        fi
+      env:
+        TOKEN: ${{ steps.app.outputs.token || inputs.token }}
+        REF_TYPE: ${{ github.ref_type }}
+        REF_NAME: ${{ github.ref_name }}
+        CHANGED_SINCE: ${{ inputs.changed-since }}
+        # Set through the environment so the token is never written to disk.
+        GIT_CONFIG_COUNT: "2"
+        GIT_CONFIG_KEY_0: url.https://x-access-token:${{ steps.app.outputs.token || inputs.token }}@github.com/.insteadOf
+        GIT_CONFIG_VALUE_0: "git@github.com:"
+        GIT_CONFIG_KEY_1: url.https://x-access-token:${{ steps.app.outputs.token || inputs.token }}@github.com/.insteadOf
+        GIT_CONFIG_VALUE_1: https://github.com/

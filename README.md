@@ -51,25 +51,25 @@ These projects are still in active development but may be considered "stable".
 Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
 This allows them to be developed uniformly while leaving operational tasks, such as deployments, independent.
 
-By design, the last component of each project's directory (referred to as the subtree's `<prefix>`) matches the upstream repository name.
-For example, `connections/` → [github.com/jmelahman/connections](https://github.com/jmelahman/connections).
-This is slightly more convenient to make shell functions since the `git-subtree` commands can be a bit cumbersome.
-
-Update all upstreams with this command,
+Subtrees and their repositories are listed in [`.config/git-orchard/subtrees`](.config/git-orchard/subtrees) and managed with [git-orchard](git-orchard):
 
 ```shell
-for d in $(git log --format=%b | sed -n 's/^git-subtree-dir: //p' | sort -u); do [ -d "$d" ] && gsp "$d"; done
+git orchard status          # ahead/behind each upstream
+git orchard pull [prefix…]  # merge upstream changes (squashed)
+git orchard push [prefix…]  # publish, fast-forward only
+git orchard add <prefix> git@github.com:jmelahman/<name>.git
 ```
 
-And pulling from upstreams with,
+On every push to `master`, [`mirror.yml`](.github/workflows/mirror.yml) runs `git orchard push` for each changed subtree.
+Mirror pushes are fast-forward only: if an upstream has commits the monorepo doesn't (e.g. a merged PR), `git orchard pull` it in before the next push.
+
+Releases are tagged in the monorepo as `<prefix>/v<version>`; the mirror job publishes the tag upstream as `v<version>`, which triggers that repository's release workflow.
 
 ```shell
-for d in $(git log --format=%b | sed -n 's/^git-subtree-dir: //p' | sort -u); do [ -d "$d" ] && gspull "$d" -m "Update $d"; done
+git tag connections/v1.2.3 && git push origin connections/v1.2.3
 ```
 
-New projects are added with `git subtree add --squash --prefix=[<group>/]<name> git@github.com:jmelahman/<name>.git master` (and to `go.work`, for Go modules).
-
-_See my [dotfiles](https://github.com/jmelahman/dotfiles/blob/a1a3e8abd2f746b5e24919f189d7df1d5f2d5911/.zshrc#L176-L203) for the `gsp` and `gspull` aliases._
+New Go modules also go in `go.work`.
 
 # Tooling
 
