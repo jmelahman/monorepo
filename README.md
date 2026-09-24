@@ -1,30 +1,29 @@
 [![CI Status](https://github.com/jmelahman/monorepo/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/test.yml)
-[![Dependabot Updates](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Dependabot](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates)
 
 # Projects
 
-## Finished Projects
+## Stable Projects
 
-These projects are still in active development but may be considered "stable",
+These projects are still in active development but may be considered "stable".
 
-- [5-wild](https://github.com/jmelahman/5-wild)
-- [agentic-kanban](https://github.com/jmelahman/agentic-kanban)
+- [5-wild](https://github.com/jmelahman/5-wild) [![Test status](https://github.com/jmelahman/5-wild/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/5-wild/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/5-wild/actions/workflows/pages.yml/badge.svg)](https://github.com/jmelahman/5-wild/actions/workflows/pages.yml)
+- [agentic-kanban](https://github.com/jmelahman/agentic-kanban) [![Test status](https://github.com/jmelahman/agentic-kanban/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/agentic-kanban/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/agentic-kanban/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/agentic-kanban/actions/workflows/release.yml)
 - [check-symlinks](https://github.com/jmelahman/check-symlinks) [![Test status](https://github.com/jmelahman/check-symlinks/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/check-symlinks/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/check-symlinks/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/check-symlinks/actions/workflows/release.yml)
 - [connections](https://github.com/jmelahman/connections) [![Test status](https://github.com/jmelahman/connections/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/connections/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/connections/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections/actions/workflows/release.yml)
 - [connections-ssh](https://github.com/jmelahman/connections-ssh) [![Test status](https://github.com/jmelahman/connections-ssh/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/connections-ssh/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/connections-ssh/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections-ssh/actions/workflows/release.yml)
 - [docker-status](https://github.com/jmelahman/docker-status)
 - [go-bin](https://github.com/jmelahman/go-bin) [![Deploy Status](https://github.com/jmelahman/go-bin/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/go-bin/actions/workflows/release.yml)
 - homelab
-- [jmelahman.github.io](https://github.com/jmelahman/jmelahman.github.io) [![Deploy Status](https://github.com/jmelahman/jmelahman.github.io/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/jmelahman/jmelahman.github.io/actions/workflows/pages/pages-build-deployment)
-- [local-preview](https://github.com/jmelahman/local-preview)
+- [jmelahman.github.io](https://github.com/jmelahman/jmelahman.github.io) [![Deploy Status](https://github.com/jmelahman/jmelahman.github.io/actions/workflows/deploy.yml/badge.svg)](https://github.com/jmelahman/jmelahman.github.io/actions/workflows/deploy.yml)
+- [local-preview](https://github.com/jmelahman/local-preview) [![Test status](https://github.com/jmelahman/local-preview/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/local-preview/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/local-preview/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/local-preview/actions/workflows/release.yml)
 - [manygo](https://github.com/jmelahman/manygo) [![Test status](https://github.com/jmelahman/manygo/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/manygo/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/manygo/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/manygo/actions/workflows/release.yml)
 - [nature-sounds](https://github.com/jmelahman/nature-sounds) [![Test status](https://github.com/jmelahman/nature-sounds/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/nature-sounds/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions/workflows/release.yml)
-- [pkglint](https://github.com/jmelahman/pkglint)
-- [skills](https://github.com/jmelahman/skills)
+- [pkglint](https://github.com/jmelahman/pkglint) [![Test status](https://github.com/jmelahman/pkglint/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/pkglint/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/pkglint/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/pkglint/actions/workflows/release.yml)
+- [skills](https://github.com/jmelahman/skills) [![Test status](https://github.com/jmelahman/skills/actions/workflows/validate.yml/badge.svg)](https://github.com/jmelahman/skills/actions/workflows/validate.yml)
 - [tag](https://github.com/jmelahman/tag) [![Test status](https://github.com/jmelahman/tag/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/tag/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/tag/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions/workflows/release.yml)
-- [typesafe-sdk-go](https://github.com/jmelahman/typesafe-sdk-go)
-- [undot](https://github.com/jmelahman/undot)
+- [typesafe-sdk-go](https://github.com/jmelahman/typesafe-sdk-go) [![Test status](https://github.com/jmelahman/typesafe-sdk-go/actions/workflows/ci.yml/badge.svg)](https://github.com/jmelahman/typesafe-sdk-go/actions/workflows/ci.yml)
+- [undot](https://github.com/jmelahman/undot) [![Deploy Status](https://github.com/jmelahman/undot/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/undot/actions/workflows/release.yml)
 - [work](https://github.com/jmelahman/work) [![Test status](https://github.com/jmelahman/work/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/work/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/work/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/work/actions/workflows/release.yml)
 
 ## Unfinished Projects
