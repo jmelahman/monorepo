@@ -87,6 +87,14 @@ func (m *Manager) Ensure(ctx context.Context, board *db.Board, ticket *db.Ticket
 		// runs: the session row exists and its container may well be healthy on
 		// the workspace folder it was created with, so squaring the row with the
 		// daemon stays useful. Start reports the real error.
+		// Worktrees created before kanban locked them at creation time get
+		// locked here, so `git worktree prune` inside a session container
+		// can't orphan them.
+		if paths.HasRepo && isGitRepo(sess.WorktreePath) {
+			if err := git.LockWorktree(sess.WorktreePath); err != nil {
+				log.Printf("lock worktree %s: %v", sess.WorktreePath, err)
+			}
+		}
 		if err := checkProjectRoot(board, paths, sess.WorktreePath); err != nil {
 			log.Printf("skip claude settings for ticket %d: %v", ticket.ID, err)
 		} else if err := writeClaudeSettings(paths.ProjectRoot(sess.WorktreePath)); err != nil {
@@ -113,6 +121,9 @@ func (m *Manager) Ensure(ctx context.Context, board *db.Board, ticket *db.Ticket
 			// the session container.
 			if !isGitRepo(worktreePath) {
 				return nil, fmt.Errorf("worktree path %q exists but is not a git worktree (likely a stale empty directory from a prior failed start); remove it and try again", worktreePath)
+			}
+			if err := git.LockWorktree(worktreePath); err != nil {
+				log.Printf("lock worktree %s: %v", worktreePath, err)
 			}
 		} else {
 			base := git.ResolveLatestBase(paths.RepoPath, board.BaseBranch)

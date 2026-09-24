@@ -468,3 +468,71 @@ func TestIsCleanTracked_IgnoresUntracked(t *testing.T) {
 	assertClean("IsClean with modified file", IsClean, false)
 	assertClean("IsCleanTracked with modified file", IsCleanTracked, false)
 }
+
+// TestWorktreeLocking covers the fix for session containers running
+// `git worktree prune` and orphaning kanban's worktrees: every worktree kanban
+// creates is locked, prune leaves it registered even when its path doesn't
+// resolve, and RemoveWorktree still tears it down.
+func TestWorktreeLocking(t *testing.T) {
+	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+	repo := initBareishRepo(t)
+	mustGit(t, repo, "config", "user.name", "Seed")
+	mustGit(t, repo, "config", "user.email", "seed@example.com")
+	writeAndCommit(t, repo, "main", "seed.txt", "seed", "init")
+
+	wtRoot := t.TempDir()
+	for name, add := range map[string]func(string) error{
+		"new-branch": func(p string) error { return AddWorktree(repo, "kanban/new", p, "main") },
+		"existing-branch": func(p string) error {
+			mustGit(t, repo, "branch", "kanban/existing", "main")
+			return AddWorktreeFromExisting(repo, "kanban/existing", p)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			wt := filepath.Join(wtRoot, name)
+			if err := add(wt); err != nil {
+				t.Fatalf("add worktree: %v", err)
+			}
+			if !IsWorktreeLocked(wt) {
+				t.Fatalf("worktree %s not locked after creation", wt)
+			}
+
+			// Simulate the container's view: the recorded path doesn't exist.
+			moved := wt + ".elsewhere"
+			if err := os.Rename(wt, moved); err != nil {
+				t.Fatal(err)
+			}
+			mustGit(t, repo, "worktree", "prune")
+			if err := os.Rename(moved, wt); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(mustGitOut(t, repo, "worktree", "list", "--porcelain"), "worktree "+wt+"\n") {
+				t.Fatalf("prune removed locked worktree %s", wt)
+			}
+
+			if err := RemoveWorktree(repo, wt); err != nil {
+				t.Fatalf("RemoveWorktree on locked worktree: %v", err)
+			}
+			if _, err := os.Stat(wt); !errors.Is(err, fs.ErrNotExist) {
+				t.Fatalf("worktree dir still present after remove: %v", err)
+			}
+		})
+	}
+
+	t.Run("backfill", func(t *testing.T) {
+		wt := filepath.Join(wtRoot, "legacy")
+		mustGit(t, repo, "worktree", "add", "-q", "-b", "kanban/legacy", wt, "main")
+		if IsWorktreeLocked(wt) {
+			t.Fatal("plain worktree unexpectedly locked")
+		}
+		if err := LockWorktree(wt); err != nil {
+			t.Fatalf("LockWorktree: %v", err)
+		}
+		if !IsWorktreeLocked(wt) {
+			t.Fatal("worktree not locked after LockWorktree")
+		}
+		if err := LockWorktree(wt); err != nil {
+			t.Fatalf("LockWorktree on already-locked worktree: %v", err)
+		}
+	})
+}

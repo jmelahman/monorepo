@@ -153,6 +153,7 @@ entry to `REGRESSIONS.md` and a one-line title here.
 - A deleted board can refetch its `/state` on a loop — board-level events
 - Build Cop boards on the same repo share one jobs cache — per-tick cache eviction
 - Exec sites hardcode `/workspace` — anything that needs a container working directory
+- `git worktree prune` from the other side of the mount orphans worktrees — creating/removing worktrees
 
 ## Documentation upkeep
 

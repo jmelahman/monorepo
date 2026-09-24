@@ -196,3 +196,32 @@ Rules:
 - `UpsertSession` does not persist this column (it already silently forgets
   `harness`); `UpdateSessionLifecycle` does. Adding a write through the
   wrong one looks like it works and then loses the value on the next upsert.
+
+### `git worktree prune` from the other side of the mount orphans worktrees
+
+A worktree's admin dir (`<repo>/.git/worktrees/<name>/gitdir`) records the
+worktree path as kanban saw it when running `git worktree add`. Session
+containers mount the same checkout at `/workspace`, so from inside a container
+(or from a host whose paths differ from kanban's) that recorded path doesn't
+exist. `git worktree prune` treats that as a deleted worktree and removes the
+admin dir, which leaves the checkout's `.git` pointing at nothing. The prune
+can come from the agent, from a user, or from git itself: `git gc` runs
+`worktree prune` once `gc.worktreePruneExpire` has passed.
+
+The fix is to lock every worktree kanban creates (`--lock --reason` on
+`AddWorktree`/`AddWorktreeFromExisting` in `internal/git/worktree.go`). Prune
+skips locked worktrees. `Manager.Ensure` also calls `git.LockWorktree` when it
+reuses a worktree, which locks any worktree created before this change.
+
+Rules:
+
+- New code that creates a worktree goes through the `internal/git` helpers,
+  or passes `--lock` itself. An unlocked worktree only breaks once something
+  prunes, which can be weeks later.
+- Removal needs `--force --force`. A single `--force` refuses a locked
+  worktree, and the `os.RemoveAll` fallback in `Destroy` then removes the
+  checkout but not its admin dir. Because the admin dir stays locked, prune
+  never cleans it up, and `git branch -D` fails because the branch is still
+  checked out in a registered worktree.
+- Don't "fix" an orphaned worktree by pruning. Run `git worktree repair
+  <path>` from the side whose path matches the recorded one.

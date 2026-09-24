@@ -38,13 +38,21 @@ func (i Identity) configArgs() []string {
 	return []string{"-c", "user.name=" + i.Name, "-c", "user.email=" + i.Email}
 }
 
-// AddWorktree creates a new worktree at path, creating a new branch from base.
-// Passes --no-track so the new branch never inherits a remote upstream when
-// base is a remote-tracking ref (e.g. "origin/main"); session branches aren't
-// meant to push back to the base.
+// lockReason is recorded in `.git/worktrees/<name>/locked` for every worktree
+// kanban creates. Kanban and the session containers see the same worktree
+// under different paths (host path vs. the container's /workspace mount), so a
+// `git worktree prune` run from the "wrong" side decides the worktree's gitdir
+// is missing and deletes its admin directory, orphaning the checkout. Locked
+// worktrees are skipped by prune.
+const lockReason = "managed by kanban; path may not resolve inside session containers"
+
+// AddWorktree creates a new locked worktree at path, creating a new branch
+// from base. Passes --no-track so the new branch never inherits a remote
+// upstream when base is a remote-tracking ref (e.g. "origin/main"); session
+// branches aren't meant to push back to the base.
 func AddWorktree(repoPath, branch, worktreePath, base string) error {
 	start := time.Now()
-	args := []string{"-C", repoPath, "worktree", "add", "--no-track", "-b", branch, worktreePath}
+	args := []string{"-C", repoPath, "worktree", "add", "--lock", "--reason", lockReason, "--no-track", "-b", branch, worktreePath}
 	if base != "" {
 		args = append(args, base)
 	}
@@ -98,18 +106,41 @@ func revParse(repoPath, ref string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
-// AddWorktreeFromExisting checks out an existing branch into a new worktree.
+// AddWorktreeFromExisting checks out an existing branch into a new locked
+// worktree.
 func AddWorktreeFromExisting(repoPath, branch, worktreePath string) error {
 	start := time.Now()
-	err := run("git", "-C", repoPath, "worktree", "add", worktreePath, branch)
+	err := run("git", "-C", repoPath, "worktree", "add", "--lock", "--reason", lockReason, worktreePath, branch)
 	metrics.ObserveGitCommand("worktree_add", start, err)
 	return err
 }
 
-// RemoveWorktree removes a worktree (force).
+// LockWorktree locks an existing worktree so `git worktree prune` leaves it
+// alone. Already-locked worktrees are a no-op. Used to backfill worktrees
+// created before kanban locked them at creation time.
+func LockWorktree(worktreePath string) error {
+	if IsWorktreeLocked(worktreePath) {
+		return nil
+	}
+	return run("git", "-C", worktreePath, "worktree", "lock", "--reason", lockReason, worktreePath)
+}
+
+// IsWorktreeLocked reports whether the worktree at worktreePath has a lock
+// file in its admin directory.
+func IsWorktreeLocked(worktreePath string) bool {
+	out, err := exec.Command("git", "-C", worktreePath, "rev-parse", "--path-format=absolute", "--git-dir").Output()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(strings.TrimSpace(string(out)), "locked"))
+	return err == nil
+}
+
+// RemoveWorktree removes a worktree. Force is doubled so locked worktrees
+// (every one kanban creates) are removed too; a single --force refuses them.
 func RemoveWorktree(repoPath, worktreePath string) error {
 	start := time.Now()
-	err := run("git", "-C", repoPath, "worktree", "remove", "--force", worktreePath)
+	err := run("git", "-C", repoPath, "worktree", "remove", "--force", "--force", worktreePath)
 	metrics.ObserveGitCommand("worktree_remove", start, err)
 	return err
 }
