@@ -1,0 +1,7 @@
+- id: git-orchard-sync
+  name: git orchard sync
+  description: Copy shared files from the manifest's profiles into subtrees.
+  entry: git-orchard sync
+  language: golang
+  pass_filenames: false
+  always_run: true

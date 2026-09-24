@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -20,6 +21,11 @@ func main() {
 	rootCmd := cmd.NewRootCommand()
 
 	if err := rootCmd.Execute(); err != nil {
+		// Exit 1, like a formatter, when sync found work to do; it has
+		// already said what. 2 is for failures.
+		if errors.Is(err, cmd.ErrOutOfDate) {
+			os.Exit(1)
+		}
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(2)
 	}

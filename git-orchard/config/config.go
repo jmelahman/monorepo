@@ -9,6 +9,12 @@
 //	[subtree "pre-commit-hooks/go-pre-commit-hooks"]
 //		remote = git@github.com:jmelahman/go-pre-commit-hooks.git
 //		branch = master
+//		shared = base
+//		shared = go
+//
+// Each shared value names a profile, a directory under orchard.sharedDir
+// (.config/git-orchard/shared by default) whose files sync copies into the
+// subtree.
 //
 // The same keys in git's own configuration (e.g. .git/config) override it, so
 // a clone can point a subtree somewhere else without touching the manifest.
@@ -18,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -32,11 +39,17 @@ var Manifests = []string{".gitsubtrees", ".config/git-orchard/subtrees"}
 // DefaultBranch is the upstream branch of a subtree that doesn't name one.
 const DefaultBranch = "master"
 
+// DefaultSharedDir is where profiles live when orchard.sharedDir isn't set,
+// relative to the repository root.
+const DefaultSharedDir = ".config/git-orchard/shared"
+
 // Subtree is one subtree and the upstream it mirrors.
 type Subtree struct {
 	Prefix string
 	Remote string
 	Branch string
+	// Shared names the profiles synced into the subtree, in manifest order.
+	Shared []string
 }
 
 // Config is the parsed manifest.
@@ -45,8 +58,11 @@ type Config struct {
 	// whether or not it exists yet.
 	Manifest string
 	// Squash makes pull and add squash upstream history into one commit.
-	Squash   bool
-	Subtrees []Subtree
+	Squash bool
+	// SharedDir is the directory holding the profiles subtrees share,
+	// relative to the repository root.
+	SharedDir string
+	Subtrees  []Subtree
 }
 
 // Lookup returns the subtree at prefix.
@@ -155,12 +171,13 @@ func Add(repo git.Repo, manifest string, s Subtree) error {
 }
 
 type builder struct {
-	squash   bool
-	subtrees map[string]*Subtree
+	squash    bool
+	sharedDir string
+	subtrees  map[string]*Subtree
 }
 
 func newBuilder() *builder {
-	return &builder{squash: true, subtrees: map[string]*Subtree{}}
+	return &builder{squash: true, sharedDir: DefaultSharedDir, subtrees: map[string]*Subtree{}}
 }
 
 // apply merges `git config --null` output ("key\nvalue\0" per entry, or
@@ -179,12 +196,18 @@ func (b *builder) apply(entries string) error {
 
 		switch section {
 		case "orchard":
-			if name == "squash" {
+			switch name {
+			case "squash":
 				squash, err := parseBool(value, hasValue)
 				if err != nil {
 					return fmt.Errorf("%s: %w", key, err)
 				}
 				b.squash = squash
+			case "shareddir":
+				if value == "" {
+					return fmt.Errorf("%s: needs a directory", key)
+				}
+				b.sharedDir = Clean(value)
 			}
 		case "subtree":
 			if first == last {
@@ -201,6 +224,15 @@ func (b *builder) apply(entries string) error {
 				s.Remote = value
 			case "branch":
 				s.Branch = value
+			case "shared":
+				// Multi-valued, so a later layer adds profiles rather than
+				// replacing them.
+				if value == "" {
+					return fmt.Errorf("%s: needs a profile name", key)
+				}
+				if !slices.Contains(s.Shared, value) {
+					s.Shared = append(s.Shared, value)
+				}
 			}
 		}
 	}
@@ -208,7 +240,7 @@ func (b *builder) apply(entries string) error {
 }
 
 func (b *builder) build() (Config, error) {
-	c := Config{Squash: b.squash}
+	c := Config{Squash: b.squash, SharedDir: b.sharedDir}
 	for _, s := range b.subtrees {
 		if s.Remote == "" {
 			return Config{}, fmt.Errorf("subtree %q has no remote", s.Prefix)

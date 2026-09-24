@@ -56,6 +56,7 @@ git orchard push --changed-since REV    # only subtrees changed since REV
 git orchard push --tag tools/foo/v1.2.3 # publish as v1.2.3 upstream
 git orchard release tools/foo          # tag the next version, e.g. tools/foo/v1.2.4, and push it to origin
 git orchard release tools/foo v2.0.0   # or a version of your choosing
+git orchard sync [prefix...]            # copy shared files into subtrees
 ```
 
 Without a version, `release` picks one after the latest release, much as [tag](https://github.com/jmelahman/tag) does: the patch version incremented (`--minor` and `--major` increment those instead), or a pre-release's stable release; `--suffix rc` picks the next release candidate, e.g. `v1.2.4-rc`, then `v1.2.4-rc.1`.
@@ -69,6 +70,53 @@ Releases are the `<prefix>/v*` tags in the monorepo and on its remote, and the `
 An upstream with commits the monorepo doesn't have rejects the push until they're pulled in.
 
 git-orchard only runs `git`, so credentials, SSH config and `url.<base>.insteadOf` rewrites apply as usual.
+
+## Shared files
+
+Subtrees that are published on their own each need their own copy of config like `.pre-commit-config.yaml` or `.github/dependabot.yml`.
+`git orchard sync` keeps those copies in step with one source.
+A subtree lists the profiles it shares, and each profile is a directory under `orchard.sharedDir` (`.config/git-orchard/shared` by default):
+
+```gitconfig
+[subtree "tools/foo"]
+	remote = git@github.com:owner/foo.git
+	shared = base
+	shared = go
+```
+
+```
+.config/git-orchard/shared/
+  base/.github/dependabot.yml   # → tools/foo/.github/dependabot.yml
+  base/.pre-commit-config.yaml
+  go/.pre-commit-config.yaml
+```
+
+A file in a profile lands at the same path in the subtree, replacing it whole.
+When the subtree's file marks a block for the profile, only the lines between the markers are replaced, and the rest of the file stays the subtree's own:
+
+```yaml
+repos:
+  # BEGIN orchard:base
+  # END orchard:base
+  # BEGIN orchard:go
+  # END orchard:go
+  - repo: local # not shared
+    hooks: [...]
+```
+
+Markers work in any comment syntax, since git-orchard only looks for `BEGIN orchard:<profile>` and `END orchard:<profile>` in the line.
+Two profiles can share a file only through blocks.
+
+`sync` exits 1 when it changes a file, like a formatter, and `--check` prints the differences without writing them.
+To run it on every commit, add the hook to the monorepo's root pre-commit config (not to the subtrees', since their mirrors have no manifest):
+
+```yaml
+repos:
+  - repo: https://github.com/jmelahman/git-orchard
+    rev: v1.2.3
+    hooks:
+      - id: git-orchard-sync
+```
 
 ## GitHub Action
 

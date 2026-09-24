@@ -27,7 +27,8 @@ func TestApply(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := Config{
-		Squash: false,
+		Squash:    false,
+		SharedDir: DefaultSharedDir,
 		Subtrees: []Subtree{
 			{Prefix: "tag", Remote: "/srv/tag.git", Branch: "main"},
 			{Prefix: "templates/PKGBUILDs-template", Remote: "git@github.com:o/PKGBUILDs-template.git", Branch: DefaultBranch},
@@ -35,6 +36,34 @@ func TestApply(t *testing.T) {
 	}
 	if !reflect.DeepEqual(c, want) {
 		t.Errorf("got %+v, want %+v", c, want)
+	}
+}
+
+func TestApplyShared(t *testing.T) {
+	b := newBuilder()
+	manifest := "orchard.shareddir\nconfigs/shared/\x00" +
+		"subtree.tag.remote\ngit@github.com:o/tag.git\x00" +
+		"subtree.tag.shared\nbase\x00" +
+		"subtree.tag.shared\ngo\x00"
+	if err := b.apply(manifest); err != nil {
+		t.Fatal(err)
+	}
+	// A later layer adds profiles, skipping ones already listed.
+	if err := b.apply("subtree.tag.shared\ngo\x00subtree.tag.shared\ngo-cli\x00"); err != nil {
+		t.Fatal(err)
+	}
+	c, err := b.build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.SharedDir != "configs/shared" {
+		t.Errorf("shared dir is %q", c.SharedDir)
+	}
+	if s, _ := c.Lookup("tag"); !reflect.DeepEqual(s.Shared, []string{"base", "go", "go-cli"}) {
+		t.Errorf("shared is %q", s.Shared)
+	}
+	if err := newBuilder().apply("subtree.tag.shared\x00"); err == nil {
+		t.Error("expected an error for a shared key without a profile")
 	}
 }
 

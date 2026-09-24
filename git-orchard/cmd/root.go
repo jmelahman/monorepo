@@ -34,6 +34,7 @@ Subtrees are listed in a committed manifest at the repository root,
   [subtree "path/to/dir"]
   	remote = git@github.com:owner/dir.git
   	branch = master
+  	shared = base
 
 The same keys in git's own configuration override it.`,
 		Version:       fmt.Sprintf("%s\ncommit %s", Version, Commit),
@@ -57,6 +58,7 @@ The same keys in git's own configuration override it.`,
 	cmd.AddCommand(NewPushCommand())
 	cmd.AddCommand(NewReleaseCommand())
 	cmd.AddCommand(NewStatusCommand())
+	cmd.AddCommand(NewSyncCommand())
 
 	return cmd
 }
