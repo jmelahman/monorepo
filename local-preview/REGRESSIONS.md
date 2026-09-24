@@ -38,6 +38,29 @@ daemon — CI job containers, devcontainers with the socket mounted, remote
 code, note that `autoRunner` has the same blind spot: builds "succeed" but
 outputs land on the daemon host.
 
+## Container sweeps in one test package kill another package's containers
+
+**Symptom.** The `supervise` container tests failed on CI with `process
+exited during startup: exit 137`, `network ... not found`, and `orphan
+survived reclaim` — but passed when that package ran alone.
+
+**Root cause.** `go test ./...` runs packages in parallel against one docker
+daemon. Test packages that build a real `supervise.Manager` also reach its
+daemon-wide cleanup: `orchestrator.New` runs `ReclaimOrphans` (removes every
+`local-preview.managed` container and network), and the API's repo delete
+runs `PurgeRepoContainers("demo")` — the same repo name the container tests
+use. Those sweeps force-removed the supervise tests' live containers (137)
+and deploy networks, and raced the reclaim test's own removal.
+
+**Fix.** Packages whose tests don't need docker (`orchestrator`,
+`internal/api`) point `DOCKER_HOST` at a dead socket in `TestMain`, so their
+sweeps skip silently the way they do on a docker-less host.
+
+**What would reintroduce it.** A new test package that constructs the
+orchestrator, calls `run`, or deletes a repo through a real `Manager` while
+a daemon is reachable. Give it the same `TestMain`, or, if it genuinely
+needs docker, labels and repo names no other package uses.
+
 ## Side publishes rename their subtree out of the shared scratch dir
 
 **Symptom.** Downloadable-artifact builds failed with `chdir

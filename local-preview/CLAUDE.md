@@ -89,6 +89,10 @@ full entry to `REGRESSIONS.md` and a one-line title here.
 - Container tests in CI see the runner host's daemon, not their own
   filesystem — bind mounts silently resolve on the host; probe before
   asserting on bind-mounted output.
+- Daemon-wide container sweeps (`ReclaimOrphans`, `PurgeRepoContainers`)
+  reached from one test package kill another's live containers under
+  `go test ./...` — packages that don't need docker set a dead `DOCKER_HOST`
+  in `TestMain`.
 - Side publishes rename their subtree out of the shared scratch dir —
   anything reading the extracted tree (checksums, post-publish steps) must
   run before `PublishFrontend`/`PublishBackend`, or take its own extraction
