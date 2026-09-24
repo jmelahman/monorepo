@@ -82,3 +82,6 @@
 [subtree "work"]
 	remote = git@github.com:jmelahman/work.git
 	branch = master
+[subtree "dotfiles"]
+	remote = git@github.com:jmelahman/dotfiles.git
+	branch = master
