@@ -6,7 +6,7 @@ ARGS=(hook-impl --hook-type=pre-commit --color=always --skip-on-missing-config -
 
 # Detect quiet mode and forward to prek
 if [ -n "$GIT_QUIET" ]; then
-    ARGS+=(--quiet)
+	ARGS+=(--quiet)
 fi
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -15,7 +15,7 @@ PREK="/usr/bin/prek"
 
 # Check if the full path to prek is executable, otherwise fallback to PATH
 if [ ! -x "$PREK" ]; then
-    PREK="prek"
+	PREK="prek"
 fi
 
 exec "$PREK" "${ARGS[@]}"

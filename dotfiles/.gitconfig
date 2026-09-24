@@ -74,8 +74,7 @@
 [maintenance]
 	repo = ~/.dotfiles
 	repo = ~/code/monorepo
-	auto = false
-	strategy = incremental
+	strategy = geometric
 [advice]
 	skippedCherryPicks = false
 [extensions]
