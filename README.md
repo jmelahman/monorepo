@@ -91,7 +91,7 @@ ratchet upgrade $(fd --hidden --type file --extension yml --full-path .github/wo
 ### Golang
 
 ```shell
-prek run --all-files --stage manual go-get
+prek run --stage manual go-get
 ```
 
 This runs `go get -u ./...` from each module's root, in every module whose config includes the `go-get` hook.

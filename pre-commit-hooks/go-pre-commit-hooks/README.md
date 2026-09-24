@@ -86,7 +86,7 @@ Upgrades dependencies with `go get -u ./...` and fails when `go.mod` or
 run it on demand:
 
 ```shell
-prek run --all-files --stage manual go-get
+prek run --stage manual go-get
 ```
 
 Use `args: [-u=patch, ./...]` to stay within patch releases, or add `-t` to
