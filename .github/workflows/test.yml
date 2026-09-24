@@ -73,27 +73,6 @@ jobs:
           SHFMT_OPTS: -s
         with:
           sh_checker_comment: true
-  python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89
-        with:
-          args: "format --check --diff"
-      - uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
-        with:
-          enable-cache: true
-      - name: Install deps
-        run: uv sync --locked --all-extras --dev
-      - name: Run type-checking
-        run: uv run ty check
-      - name: Run tests
-        run: uv run pytest
-
   pre-commit:
     runs-on: ubuntu-latest
     steps:

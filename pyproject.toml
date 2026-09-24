@@ -5,10 +5,12 @@ authors = [
   {name="Jamison Lahman", email="jamison@lahman.dev"}
 ]
 requires-python = ">=3.13"
-dependencies = [
-    "selenium>=4.35.0",
-    "tweepy>=4.15.0",
-    "zizmor>=1.18.0",
+
+[dependency-groups]
+dev = [
+    "hatchling>=1.27.0",
+    "pytest>=8.4.0",
+    "ty>=0.0.1a34",
 ]
 
 [tool.ruff]
@@ -39,16 +41,6 @@ force-sort-within-sections=true
 order-by-type=false
 single-line-exclusions = ["typing", "collections.abc"]
 required-imports = ["from __future__ import annotations"]
-
-[dependency-groups]
-dev = [
-    "check-symlinks>=0.5.3",
-    "hatchling>=1.27.0",
-    "manygo>=0.2.0",
-    "pytest>=8.4.0",
-    "ruff>=0.12.9",
-    "ty>=0.0.1a34",
-]
 
 [tool.pytest.ini_options]
 pythonpath = [
