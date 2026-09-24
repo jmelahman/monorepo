@@ -22,6 +22,7 @@ repos:
       - id: go-mod-tidy
       - id: go-vet
       - id: go-test
+      - id: go-get
 ```
 
 ## Hooks
@@ -68,6 +69,20 @@ only:
 
 (Remember `default_install_hook_types: [pre-commit, pre-push]` so the pre-push
 hook actually gets installed.)
+
+### `go-get`
+
+Upgrades dependencies with `go get -u ./...` and fails when `go.mod` or
+`go.sum` change. It is on the `manual` stage, so it never fires on a commit;
+run it on demand:
+
+```shell
+prek run --all-files --stage manual go-get
+```
+
+Use `args: [-u=patch, ./...]` to stay within patch releases, or add `-t` to
+upgrade test dependencies too. Follow up with `go-mod-tidy` (which runs on the
+next commit touching `go.mod` anyway).
 
 ## Scope
 

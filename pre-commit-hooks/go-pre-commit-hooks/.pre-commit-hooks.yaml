@@ -52,3 +52,17 @@
   types_or: [go, go-mod, go-sum]
   pass_filenames: false
   minimum_pre_commit_version: 3.0.0
+
+# Updaters — manual stage only, so they never fire on a commit. Run on demand:
+#   prek run --all-files --stage manual go-get
+
+- id: go-get
+  name: go get -u
+  description: Upgrade dependencies with `go get -u ./...`; fails when go.mod or go.sum change.
+  entry: go get
+  args: [-u, ./...]
+  language: golang
+  always_run: true
+  pass_filenames: false
+  stages: [manual]
+  minimum_pre_commit_version: 3.0.0
