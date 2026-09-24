@@ -10,6 +10,7 @@ import (
 
 	"github.com/jmelahman/git-orchard/config"
 	"github.com/jmelahman/git-orchard/git"
+	"github.com/jmelahman/git-orchard/semver"
 )
 
 // Orchard is a repository and its subtree manifest.
@@ -305,6 +306,127 @@ func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions)
 		}
 	}
 	return tag, nil
+}
+
+// NextOptions configure NextVersion.
+type NextOptions struct {
+	// Rev is the monorepo revision to release.
+	Rev string
+	// Remote is a monorepo remote whose release tags count too; empty
+	// counts only local ones.
+	Remote    string
+	Increment semver.Increment
+	// Suffix makes the next version a pre-release, e.g. "rc".
+	Suffix string
+}
+
+// NextVersion picks the version to release opts.Rev of s as, like tag: after
+// the latest release, the patch version incremented (or opts.Increment), or
+// with opts.Suffix, the next pre-release of that name. Where tag takes the
+// latest release reachable from HEAD, this takes the latest overall. The
+// releases are the <prefix>/v* tags here and on opts.Remote, and the v* tags
+// upstream, which may predate the subtree.
+func (o *Orchard) NextVersion(s config.Subtree, opts NextOptions) (string, error) {
+	at, err := o.Repo.Output("tag", "--points-at", opts.Rev+"^{commit}", "--list", s.Prefix+"/v*")
+	if err != nil {
+		return "", err
+	}
+	// A pre-release can still be promoted.
+	for _, tag := range strings.Fields(at) {
+		v, err := semver.Parse(strings.TrimPrefix(tag, s.Prefix+"/"))
+		if err == nil && v.Prefix == "" && (v.Stable() || v.PreRelease == opts.Suffix) {
+			return "", fmt.Errorf("%s is already released as %s", opts.Rev, tag)
+		}
+	}
+	versions, err := o.releases(s, opts.Remote)
+	if err != nil {
+		return "", err
+	}
+
+	var latest, stable *semver.Version
+	for i, v := range versions {
+		if v.Stable() && (stable == nil || semver.Compare(v, *stable) > 0) {
+			stable = &versions[i]
+		}
+		if (opts.Suffix == "" || v.PreRelease == opts.Suffix) && (latest == nil || semver.Compare(v, *latest) > 0) {
+			latest = &versions[i]
+		}
+	}
+	// A pre-release never starts from an older version than the latest
+	// stable one.
+	if opts.Suffix != "" && stable != nil && (latest == nil || semver.Compare(stable.Base(), latest.Base()) >= 0) {
+		latest = stable
+	}
+	if latest == nil {
+		latest = &semver.Version{}
+	}
+	// Unlike tag, a stable release follows its pre-releases rather than the
+	// version after them, and a pre-release follows a stable release rather
+	// than preceding it.
+	inc := opts.Increment
+	if inc == semver.Auto {
+		switch {
+		case opts.Suffix == "" && !latest.Stable():
+			return latest.Base().String(), nil
+		case opts.Suffix != "" && latest.Stable():
+			inc = semver.Patch
+		}
+	}
+	return latest.Next(inc, opts.Suffix, versions).String(), nil
+}
+
+// releases returns the versions s has been released as.
+func (o *Orchard) releases(s config.Subtree, remote string) ([]semver.Version, error) {
+	local, err := o.Repo.Output("tag", "--list", s.Prefix+"/v*")
+	if err != nil {
+		return nil, err
+	}
+	tags := strings.Fields(local)
+	if remote != "" {
+		remoteTags, err := o.remoteTags(remote)
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, remoteTags...)
+	}
+	var names []string
+	for _, tag := range tags {
+		if name, ok := strings.CutPrefix(tag, s.Prefix+"/"); ok {
+			names = append(names, name)
+		}
+	}
+	upstream, err := o.remoteTags(s.Remote)
+	if err != nil {
+		return nil, err
+	}
+	names = append(names, upstream...)
+
+	var versions []semver.Version
+	for _, name := range names {
+		if !strings.HasPrefix(name, "v") {
+			continue
+		}
+		// A prefix left over is a nested subtree's release.
+		if v, err := semver.Parse(name); err == nil && v.Prefix == "" {
+			versions = append(versions, v)
+		}
+	}
+	return versions, nil
+}
+
+// remoteTags lists the tags on remote.
+func (o *Orchard) remoteTags(remote string) ([]string, error) {
+	out, err := o.Repo.Output("ls-remote", "--tags", "--refs", remote)
+	if err != nil {
+		return nil, err
+	}
+	var tags []string
+	for _, line := range strings.Split(out, "\n") {
+		if _, ref, ok := strings.Cut(line, "\t"); ok {
+			tags = append(tags, strings.TrimPrefix(ref, "refs/tags/"))
+		}
+	}
+	return tags, nil
 }
 
 // checkUnpublished fails if the upstream of s already has version at a

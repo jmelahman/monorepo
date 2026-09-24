@@ -8,6 +8,7 @@ import (
 
 	"github.com/jmelahman/git-orchard/config"
 	"github.com/jmelahman/git-orchard/git"
+	"github.com/jmelahman/git-orchard/semver"
 )
 
 func TestSplitTag(t *testing.T) {
@@ -426,4 +427,67 @@ func TestReleaseForce(t *testing.T) {
 	if got := originTag(); got != "Fix main" {
 		t.Errorf("a refused release moved origin's tag to %q", got)
 	}
+}
+
+func TestNextVersion(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	origin := filepath.Join(filepath.Dir(f.bare), "mono.git")
+	f.git(f.mono, "init", "--quiet", "--bare", origin)
+	next := func(inc semver.Increment, suffix, want string) {
+		t.Helper()
+		got, err := f.orchard.NextVersion(s, NextOptions{Rev: "HEAD", Remote: origin, Increment: inc, Suffix: suffix})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Errorf("next version (increment %d, suffix %q): got %s, want %s", inc, suffix, got, want)
+		}
+	}
+	release := func(version string) {
+		t.Helper()
+		f.commit(f.mono, "tools/foo/"+version, version+"\n", "Prepare "+version)
+		if _, err := f.orchard.Release(s, version, ReleaseOptions{Rev: "HEAD", Remote: origin, Upstream: true}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	next(semver.Auto, "", "v0.0.1")
+	next(semver.Auto, "rc", "v0.0.1-rc")
+
+	// Releases from before the subtree count.
+	f.git(f.upstream, "tag", "v0.6.1")
+	f.git(f.upstream, "tag", "not-a-version")
+	f.git(f.upstream, "push", "--quiet", "origin", "--tags")
+	next(semver.Auto, "", "v0.6.2")
+	next(semver.Minor, "", "v0.7.0")
+	next(semver.Major, "", "v1.0.0")
+
+	release("v1.0.0")
+	if _, err := f.orchard.NextVersion(s, NextOptions{Rev: "HEAD"}); err == nil || !strings.Contains(err.Error(), "already released as tools/foo/v1.0.0") {
+		t.Errorf("an already released revision: got %v", err)
+	}
+	f.commit(f.mono, "tools/foo/later", "later\n", "Later")
+	next(semver.Auto, "", "v1.0.1")
+
+	// Pre-releases follow the stable release and precede the next one.
+	next(semver.Auto, "rc", "v1.0.1-rc")
+	release("v1.0.1-rc")
+	next(semver.Auto, "", "v1.0.1")
+	if _, err := f.orchard.NextVersion(s, NextOptions{Rev: "HEAD", Suffix: "rc"}); err == nil {
+		t.Error("a pre-release of an already released revision should fail")
+	}
+	f.commit(f.mono, "tools/foo/fix", "fix\n", "Fix")
+	next(semver.Auto, "rc", "v1.0.1-rc.1")
+	next(semver.Auto, "beta", "v1.0.1-beta")
+	next(semver.Auto, "", "v1.0.1")
+	next(semver.Patch, "", "v1.0.2")
+
+	// Tags only on the monorepo's remote count, but not other subtrees'.
+	f.git(f.mono, "tag", "tools/foo/v1.4.0")
+	f.git(f.mono, "tag", "tools/foo/bar/v9.0.0")
+	f.git(f.mono, "tag", "tools/v9.0.0")
+	f.git(f.mono, "push", "--quiet", origin, "tools/foo/v1.4.0")
+	f.git(f.mono, "tag", "--delete", "tools/foo/v1.4.0")
+	next(semver.Auto, "", "v1.4.1")
 }

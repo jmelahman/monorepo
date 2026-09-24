@@ -54,9 +54,12 @@ git orchard pull [prefix...]            # merge upstream changes
 git orchard push [prefix...]            # publish, fast-forward only
 git orchard push --changed-since REV    # only subtrees changed since REV
 git orchard push --tag tools/foo/v1.2.3 # publish as v1.2.3 upstream
-git orchard release tools/foo v1.2.3    # tag tools/foo/v1.2.3 and push it to origin
+git orchard release tools/foo          # tag the next version, e.g. tools/foo/v1.2.4, and push it to origin
+git orchard release tools/foo v2.0.0   # or a version of your choosing
 ```
 
+Without a version, `release` picks one after the latest release, much as [tag](https://github.com/jmelahman/tag) does: the patch version incremented (`--minor` and `--major` increment those instead), or a pre-release's stable release; `--suffix rc` picks the next release candidate, e.g. `v1.2.4-rc`, then `v1.2.4-rc.1`.
+Releases are the `<prefix>/v*` tags in the monorepo and on its remote, and the `v*` tags upstream, so releases from before the subtree count; `--dry-run` prints the pick.
 `release` requires the upstream branch to contain the release already, so the upstream tag lands on its history; `--upstream` pushes the branch and tag there directly instead of leaving it to the action.
 `push`, `pull` and `release` take `--no-verify` to skip git hooks.
 `push --force` overwrites upstream branches and tags, leased on their value when the push starts so a concurrent update still fails it; the action never forces.

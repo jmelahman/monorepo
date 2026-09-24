@@ -66,7 +66,8 @@ Mirror pushes are fast-forward only: if an upstream has commits the monorepo doe
 Releases are tagged in the monorepo as `<prefix>/v<version>`; the mirror job publishes the tag upstream as `v<version>`, which triggers that repository's release workflow.
 
 ```shell
-git orchard release connections v1.2.3  # tags connections/v1.2.3 and pushes it
+git orchard release connections          # tags the next patch version, e.g. connections/v1.2.4, and pushes it
+git orchard release connections --minor  # or --major, --suffix rc, or an explicit version like v1.3.0
 ```
 
 New Go modules also go in `go.work`.
