@@ -1,0 +1,8 @@
+repos:
+  # Module-scoped Go checks, run from this directory.
+  - repo: https://github.com/jmelahman/go-pre-commit-hooks
+    rev: d4204df560ab3edc0d35a29239bda12b73c0cf03  # frozen: v1.0.0
+    hooks:
+      - id: go-mod-tidy
+      - id: go-vet
+      - id: go-test

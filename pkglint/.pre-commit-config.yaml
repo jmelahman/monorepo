@@ -18,6 +18,7 @@ repos:
     rev: v1.0.0
     hooks:
       - id: gofmt
+      - id: go-mod-tidy
       - id: go-vet
       - id: go-test
         args: [-race, ./...]
