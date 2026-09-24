@@ -1,0 +1,8 @@
+[Unit]
+Description=Auto Git Sync Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h
+ExecStart=%h/dot-sync

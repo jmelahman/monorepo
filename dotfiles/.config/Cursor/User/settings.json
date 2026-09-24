@@ -1,0 +1,14 @@
+{
+    "window.commandCenter": true,
+    "workbench.colorTheme": "Cursor Dark High Contrast",
+    "editor.fontFamily": "JetBrains Mono",
+    "vim.handleKeys": {
+        "<C-p>": false
+    },
+    "update.showReleaseNotes": false,
+    "workbench.cloudChanges.continueOn": "off",
+    "mypy-type-checker.importStrategy": "fromEnvironment",
+    "mypy-type-checker.cwd": "${workspaceFolder}/backend",
+    "mypy-type-checker.preferDaemon": true,
+    "mypy-type-checker.reportingScope": "workspace"
+}

@@ -1,0 +1,44 @@
+[buildcop]
+enabled = true
+
+[[buildcop.boards]]
+branch = 'main'
+failure_threshold = 0.01
+green_streak_required = 3
+interval = 10
+min_runs = 5
+name = 'Build Cop: main'
+repo_path = '/home/jamison/code/onyx'
+window_days = 3
+
+[[buildcop.boards]]
+failure_threshold = 0.1
+flaky_threshold = 2
+green_streak_required = 10
+min_runs = 5
+name = 'Build Cop: onyx'
+repo_path = '/home/jamison/code/onyx'
+window_days = 5
+
+[dev_toolbar]
+enabled = true
+
+[devcontainer]
+mounts = ['type=bind,source=/run/user/1000/ssh-agent.socket,target=/tmp/ssh-agent.sock']
+run_args = ['--cap-add=SYS_PTRACE']
+
+[devcontainer.container_env]
+SSH_AUTH_SOCK = '/tmp/ssh-agent.sock'
+
+[errors]
+enabled = true
+
+[merge]
+allow_merge_commit = false
+allow_rebase = false
+
+[plans]
+dir = './plans'
+
+[sync]
+allow_merge = false

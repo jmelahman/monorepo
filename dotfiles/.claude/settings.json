@@ -1,0 +1,46 @@
+{
+  "env": {
+    "CLAUDE_CODE_DISABLE_1M_CONTEXT": "1",
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1",
+    "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "SHELL": "/usr/bin/bash"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Edit(*)",
+      "Write(*)",
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "NotebookEdit(*)",
+      "Agent(*)",
+      "LSP(*)",
+      "mcp__amo__*",
+      "mcp__figma__*",
+      "mcp__kanban__*",
+      "mcp__linear__*",
+      "mcp__playwright__*",
+      "mcp__sentry__*",
+      "mcp__vanta__*"
+    ]
+  },
+  "model": "claude-opus-5",
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "posthog@claude-plugins-official": true
+  },
+  "effortLevel": "xhigh",
+  "plansDirectory": "./plans",
+  "tui": "fullscreen",
+  "showThinkingSummaries": true,
+  "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark",
+  "remoteControlAtStartup": false
+}

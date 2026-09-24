@@ -1,0 +1,10 @@
+[Unit]
+Description=Sync Dotfiles Every 10 Minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
