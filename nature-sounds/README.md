@@ -1,6 +1,6 @@
 # Nature Sounds
 
-[![Test status](https://github.com/jmelahman/nature-sounds/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions)
+[![pre-commit status](https://github.com/jmelahman/nature-sounds/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions)
 [![Deploy Status](https://github.com/jmelahman/nature-sounds/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/nature-sounds.svg)](https://pkg.go.dev/github.com/jmelahman/nature-sounds)
 [![Arch User Repsoitory](https://img.shields.io/aur/version/nature-sounds)](https://aur.archlinux.org/packages/nature-sounds)

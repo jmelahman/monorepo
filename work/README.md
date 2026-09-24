@@ -1,6 +1,6 @@
 # work
 
-[![Test status](https://github.com/jmelahman/work/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/work/actions)
+[![pre-commit status](https://github.com/jmelahman/work/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/work/actions)
 [![Deploy Status](https://github.com/jmelahman/work/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/work/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/work.svg)](https://pkg.go.dev/github.com/jmelahman/work)
 [![Arch User Repsoitory](https://img.shields.io/aur/version/work)](https://aur.archlinux.org/packages/work)

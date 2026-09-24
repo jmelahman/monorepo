@@ -1,6 +1,6 @@
 # Connections Over SSH
 
-[![Test status](https://github.com/jmelahman/connections-ssh/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/connections-ssh/actions)
+[![pre-commit status](https://github.com/jmelahman/connections-ssh/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/connections-ssh/actions)
 [![Deploy Status](https://github.com/jmelahman/connections-ssh/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections-ssh/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/connections-ssh.svg)](https://pkg.go.dev/github.com/jmelahman/connections-ssh)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jmelahman/connections-ssh)](https://goreportcard.com/report/github.com/jmelahman/connections-ssh)

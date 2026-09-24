@@ -1,0 +1,30 @@
+  # Shared by Go subtrees released with GoReleaser:
+  # .config/git-orchard/shared/goreleaser in the monorepo
+  # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+  # copies it here.
+  goreleaser:
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
+        with:
+          go-version: stable
+          cache: false
+      # What this subtree's build needs beyond Go, e.g. system packages.
+      - name: Set up the subtree
+        if: hashFiles('.github/ci-setup.sh') != ''
+        run: .github/ci-setup.sh
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

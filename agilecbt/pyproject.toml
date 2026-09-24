@@ -1,6 +1,13 @@
+# BEGIN orchard:manygo
+# Shared by Go subtrees built into wheels with manygo:
+# .config/git-orchard/shared/manygo in the monorepo
+# (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+# copies it here.
 [build-system]
-requires = ["hatchling", "hatch-vcs", "go-bin~=1.26.3", "manygo"]
+# go-bin must cover the newest `go` directive among these subtrees' go.mod.
+requires = ["hatchling", "hatch-vcs", "go-bin~=1.26", "manygo"]
 build-backend = "hatchling.build"
+# END orchard:manygo
 
 [project]
 name = "fullstack-template"

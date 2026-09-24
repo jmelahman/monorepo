@@ -1,7 +1,14 @@
 version: 2
 updates:
+  # Subtrees have no dependabot.yml of their own: updates land here and reach
+  # the mirrors through git orchard push. Each entry covers the directories the
+  # subtrees' own configs did, and groups them so a bump lands in one PR.
   - package-ecosystem: "github-actions"
-    directory: /
+    directories:
+      - /
+      - /*
+      - /pre-commit-hooks/*
+      - /templates/*
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
@@ -9,3 +16,51 @@ updates:
       - "dependabot:actions"
     cooldown:
       default-days: 7
+    groups:
+      actions:
+        group-by: dependency-name
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directories:
+      - /5-wild
+      - /agentic-kanban/web
+      - /agilecbt/web
+      - /local-preview/web
+      - /templates/fullstack-template/web
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependabot:npm"
+    cooldown:
+      default-days: 7
+    groups:
+      # react and react-dom must be bumped in lockstep — a version skew
+      # trips React error #527 ("Incompatible React versions") at startup.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+
+  - package-ecosystem: "docker"
+    directories:
+      - /agentic-kanban/build/devcontainer
+      - /agilecbt/.devcontainer
+      - /local-preview/.devcontainer
+      - /templates/fullstack-template/.devcontainer
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependabot:docker"
+    cooldown:
+      default-days: 7
+    groups:
+      devcontainer:
+        group-by: dependency-name
+        patterns:
+          - "*"

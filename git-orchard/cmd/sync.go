@@ -96,7 +96,7 @@ func printDiff(c share.Change) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	old := os.DevNull
 	if c.Old != nil {

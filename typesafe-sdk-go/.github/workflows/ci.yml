@@ -9,32 +9,19 @@ permissions:
   contents: read
 
 jobs:
+  # gofmt, go vet and go test on the latest Go run from .pre-commit-config.yaml
+  # in pre-commit.yml. This covers what those hooks don't: the race detector,
+  # the integration build tag, and the oldest Go that go.mod allows.
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        go: ['1.27.x', 'stable']
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
-          go-version: ${{ matrix.go }}
+          go-version: '1.27.x'
           check-latest: true
-
-      - name: Check formatting
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "These files need gofmt:"
-            echo "$unformatted"
-            exit 1
-          fi
-
-      - run: go build ./...
-      - run: go vet ./...
       - run: go vet -tags=integration ./...
       - run: go test -race ./...
 

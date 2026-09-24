@@ -106,7 +106,7 @@ func runPush(opts *PushOptions, prefixes []string) error {
 		} else {
 			log.Infof("Pushed %s to %s %s", s.Prefix, s.Remote, s.Branch)
 		}
-		os.Stderr.Write(out.Bytes())
+		_, _ = os.Stderr.Write(out.Bytes())
 	})
 	if len(failed) > 0 {
 		return fmt.Errorf("failed to push %d of %d subtree(s): %v", len(failed), len(subtrees), failed)

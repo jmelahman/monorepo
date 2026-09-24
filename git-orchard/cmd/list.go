@@ -43,7 +43,7 @@ func listSubtreesFromConfig() error {
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	for _, s := range o.Config.Subtrees {
-		fmt.Fprintf(w, "%s\t%s\t%s\n", s.Prefix, s.Remote, s.Branch)
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", s.Prefix, s.Remote, s.Branch)
 	}
 	return w.Flush()
 }

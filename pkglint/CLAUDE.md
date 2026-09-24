@@ -41,8 +41,9 @@ git's `ext::` "run this command" transport out. Keep it that way.)
   `-dry-run` with `TYPESAFE_API_KEY` set.
 - `go test ./internal/cli -run TestGolden -update` regenerates
   `internal/cli/testdata/*/expected.txt`.
-- CI enforces a statement-coverage floor (test.yml, `-coverpkg=./...`) and a
-  fuzz smoke over the untrusted-input parsers; a crasher found by fuzzing is
+- The `coverage` pre-commit hook (`scripts/coverage.sh`, `-coverpkg=./...`)
+  enforces a statement-coverage floor, and test.yml runs a fuzz smoke over the
+  untrusted-input parsers; a crasher found by fuzzing is
   checked in under `*/testdata/fuzz/` as a regression seed. Ratchet the floor
   up as gaps close; never lower it.
 - `PKGLINT_SMOKE=1 go test ./internal/pkgfile/ -run Inventory -v` sweeps the host's pacman cache.

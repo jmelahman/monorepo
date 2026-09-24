@@ -48,6 +48,14 @@ repos:
       - id: gofmt
       - id: go-mod-tidy
       - id: go-vet
-      - id: go-test
-        args: [-race, ./...]
       - id: go-get
+
+  - repo: local
+    hooks:
+      # go-test, plus the coverage floor.
+      - id: coverage
+        name: go test (coverage floor)
+        entry: scripts/coverage.sh
+        language: script
+        types: [go]
+        pass_filenames: false

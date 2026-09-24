@@ -1,0 +1,40 @@
+# Shared by subtrees whose CI is their pre-commit config:
+# .config/git-orchard/shared/ci in the monorepo
+# (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+# copies it here.
+name: pre-commit
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions: {}
+
+jobs:
+  prek:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          # A pull request's hooks run on its diff from the base commit.
+          fetch-depth: 0
+      # Go hooks build with the Go on PATH, and the runner's may be too old.
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: stable
+          cache: false
+      # What this subtree's hooks need beyond Go, e.g. system packages.
+      - name: Set up the subtree
+        if: hashFiles('.github/ci-setup.sh') != ''
+        run: .github/ci-setup.sh
+      - name: Run prek hooks
+        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
+        with:
+          prek-version: "0.5.3"
+          # Pull requests check what they change; pushes check everything.
+          extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}

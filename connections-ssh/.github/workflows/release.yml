@@ -6,6 +6,11 @@ on:
       - "v*.*.*"
 
 jobs:
+  # BEGIN orchard:goreleaser
+  # Shared by Go subtrees released with GoReleaser:
+  # .config/git-orchard/shared/goreleaser in the monorepo
+  # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+  # copies it here.
   goreleaser:
     runs-on: ubuntu-latest
     environment:
@@ -21,6 +26,10 @@ jobs:
         with:
           go-version: stable
           cache: false
+      # What this subtree's build needs beyond Go, e.g. system packages.
+      - name: Set up the subtree
+        if: hashFiles('.github/ci-setup.sh') != ''
+        run: .github/ci-setup.sh
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
         with:
           distribution: goreleaser
@@ -28,3 +37,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # END orchard:goreleaser

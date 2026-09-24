@@ -1,1 +1,25 @@
 resume/preview.png filter=lfs diff=lfs merge=lfs -text
+
+# Whole files `git orchard sync` copies from .config/git-orchard/shared. Their
+# changes show up in the profile they come from, so keep them out of local
+# diffs (-diff) and collapse them in GitHub's (linguist-generated). Files
+# that share only a marked block are left out: the rest of them is the
+# subtree's own.
+5-wild/.github/workflows/pre-commit.yml -diff linguist-generated
+connections-ssh/.github/workflows/pre-commit.yml -diff linguist-generated
+connections/.github/workflows/pre-commit.yml -diff linguist-generated
+cycle-cli/.github/workflows/pre-commit.yml -diff linguist-generated
+docker-status/.github/workflows/pre-commit.yml -diff linguist-generated
+git-orchard/.github/workflows/pre-commit.yml -diff linguist-generated
+jview/.github/workflows/pre-commit.yml -diff linguist-generated
+nature-sounds/.github/workflows/pre-commit.yml -diff linguist-generated
+pkglint/.github/workflows/pre-commit.yml -diff linguist-generated
+pre-commit-hooks/go-pre-commit-hooks/.github/workflows/pre-commit.yml -diff linguist-generated
+skills/.github/workflows/pre-commit.yml -diff linguist-generated
+smart-lights/.github/workflows/pre-commit.yml -diff linguist-generated
+tag/.github/workflows/pre-commit.yml -diff linguist-generated
+typesafe-sdk-go/.github/workflows/pre-commit.yml -diff linguist-generated
+work/.github/workflows/pre-commit.yml -diff linguist-generated
+agilecbt/web/biome.json -diff linguist-generated
+local-preview/web/biome.json -diff linguist-generated
+templates/fullstack-template/web/biome.json -diff linguist-generated

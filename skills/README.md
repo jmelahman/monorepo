@@ -69,7 +69,7 @@ npx skills add jmelahman/skills
 prek run --all-files
 ```
 
-CI runs the same hooks — [`.github/workflows/validate.yml`](.github/workflows/validate.yml)
+CI runs the same hooks — [`.github/workflows/pre-commit.yml`](.github/workflows/pre-commit.yml)
 
 ## License
 

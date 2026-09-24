@@ -1,6 +1,6 @@
 # NYT Connections TUI
 
-[![Test status](https://github.com/jmelahman/connections/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/connections/actions)
+[![pre-commit status](https://github.com/jmelahman/connections/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/connections/actions)
 [![Deploy Status](https://github.com/jmelahman/connections/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/connections.svg)](https://pkg.go.dev/github.com/jmelahman/connections)
 [![Arch User Repsoitory](https://img.shields.io/aur/version/connections)](https://aur.archlinux.org/packages/connections)

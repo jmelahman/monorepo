@@ -1,6 +1,6 @@
 # `git-orchard`
 
-[![Test status](https://github.com/jmelahman/git-orchard/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/git-orchard/actions)
+[![pre-commit status](https://github.com/jmelahman/git-orchard/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/git-orchard/actions)
 [![Deploy Status](https://github.com/jmelahman/git-orchard/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/git-orchard/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/git-orchard.svg)](https://pkg.go.dev/github.com/jmelahman/git-orchard)
 [![Arch User Repsoitory](https://img.shields.io/aur/version/git-orchard)](https://aur.archlinux.org/packages/git-orchard)
