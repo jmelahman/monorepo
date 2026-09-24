@@ -3,9 +3,9 @@ set -eo pipefail
 
 ERROR_LOG="$(mktemp)"
 GIT=(
-  "/usr/bin/git"
-  "--git-dir=$HOME/.dotfiles/.git"
-  "--work-tree=$HOME"
+	"/usr/bin/git"
+	"--git-dir=$HOME/.dotfiles/.git"
+	"--work-tree=$HOME"
 )
 
 function notify_on_error {
@@ -27,12 +27,12 @@ if command -v pacman >/dev/null; then
 	pacman -Qqe >.arch.conf 2>"$ERROR_LOG"
 fi
 if command -v ripsecrets >/dev/null; then
-  ripsecrets --strict-ignore $("${GIT[@]}" diff --name-only --diff-filter=ACM) >"$ERROR_LOG" 2>&1
+	ripsecrets --strict-ignore "$("${GIT[@]}" diff --name-only --diff-filter=ACM)" >"$ERROR_LOG" 2>&1
 fi
 
 if [ -n "$("${GIT[@]}" status --short)" ]; then
- "${GIT[@]}" commit --quiet -am "Auto-sync $(date)" 2>"$ERROR_LOG" --no-verify
+	"${GIT[@]}" commit --quiet -am "Auto-sync $(date)" --no-verify 2>"$ERROR_LOG"
 fi
-"${GIT[@]}" push -q origin master 2>"$ERROR_LOG" --no-verify
+"${GIT[@]}" push -q origin master --no-verify 2>"$ERROR_LOG"
 
 trap - EXIT
