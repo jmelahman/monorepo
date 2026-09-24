@@ -17,10 +17,10 @@ jobs:
     outputs:
       modules: ${{ steps.set-modules.outputs.modules }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: go.work.sum
@@ -34,14 +34,14 @@ jobs:
       matrix:
         modules: ${{ fromJSON(needs.detect-modules.outputs.modules) }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: daaku/gh-action-apt-install@92eea4f84f90c895b544aaec6ae21839127c84e5 # ratchet:daaku/gh-action-apt-install@v4
+      - uses: daaku/gh-action-apt-install@92eea4f84f90c895b544aaec6ae21839127c84e5
         with:
           packages: libasound2-dev
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: go.work.sum
@@ -53,7 +53,7 @@ jobs:
         working-directory: ${{ matrix.modules }}
         continue-on-error: true
       - name: golangci-lint ${{ matrix.modules }}
-        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # ratchet:golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: ${{ matrix.modules }}
@@ -61,12 +61,12 @@ jobs:
   shell:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 0
       - name: Run the sh-checker
-        uses: luizm/action-sh-checker@a3627bbade03e7684152ea3f66d1d350d6cfac14 # ratchet:luizm/action-sh-checker@master
+        uses: luizm/action-sh-checker@883217215b11c1fabbf00eb1a9a041f62d74c744
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHELLCHECK_OPTS: --severity=style
@@ -76,15 +76,15 @@ jobs:
   python:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1 # ratchet:astral-sh/ruff-action@v3
+      - uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89
         with:
           args: "format --check --diff"
-      - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1 # ratchet:astral-sh/ruff-action@v3
-      - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # ratchet:astral-sh/setup-uv@v7
+      - uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
         with:
           enable-cache: true
       - name: Install deps
@@ -97,10 +97,10 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: j178/prek-action@91fd7d7cf70ae1dee9f4f44e7dfa5d1073fe6623 # ratchet:j178/prek-action@v1.0.11
+      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
         with:
-          prek-version: '0.2.21'
+          prek-version: "0.2.21"
           extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
