@@ -81,14 +81,17 @@ func TestBeginClonesAndReports(t *testing.T) {
 	c.Begin(repo)
 
 	waitStatus(t, database, "demo", db.RepoReady)
-	if !kicked.Load() {
-		t.Error("onReady was not called")
+	// The row turns ready before onReady fires and before the job is
+	// dropped from the active set, so wait for the goroutine to finish.
+	deadline := time.Now().Add(5 * time.Second)
+	for !kicked.Load() || c.Progress(repo.ID) != "" {
+		if time.Now().After(deadline) {
+			t.Fatalf("clone never finished: onReady called=%v, progress %q", kicked.Load(), c.Progress(repo.ID))
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 	if _, err := os.Stat(repo.BarePath); err != nil {
 		t.Errorf("mirror missing after clone: %v", err)
-	}
-	if got := c.Progress(repo.ID); got != "" {
-		t.Errorf("finished clone still reports progress %q", got)
 	}
 }
 

@@ -1,13 +1,13 @@
 module github.com/jmelahman/cycle-cli
 
-go 1.24.4
+go 1.25.0
 
 require (
-	github.com/gdamore/tcell/v2 v2.13.2
+	github.com/gdamore/tcell/v2 v2.13.8
 	github.com/rivo/tview v0.42.0
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/term v0.38.0
+	golang.org/x/term v0.45.0
 	tinygo.org/x/bluetooth v0.13.0
 )
 
@@ -16,7 +16,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/saltosystems/winrt-go v0.0.0-20241223121953-98e32661f6ff // indirect
 	github.com/soypat/cyw43439 v0.0.0-20251110224555-0a1d121ea3af // indirect
@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/tinygo-org/cbgo v0.0.4 // indirect
 	github.com/tinygo-org/pio v0.2.0 // indirect
-	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 )

@@ -397,6 +397,8 @@ files = ["bin/tool-linux-amd64"]
 	assertStatus(t, resp, 202)
 	deploy := decodeJSON[orchestrator.Deploy](t, resp)
 
+	// Artifacts build after the deploy turns ready, so wait for the file to
+	// publish too, not just the deploy.
 	var ready orchestrator.Deploy
 	deadline := time.Now().Add(30 * time.Second)
 	for {
@@ -404,7 +406,7 @@ files = ["bin/tool-linux-amd64"]
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.Status == orchestrator.StatusReady {
+		if got.Status == orchestrator.StatusReady && len(got.Artifacts) > 0 && len(got.Artifacts[0].Files) > 0 {
 			ready = got
 			break
 		}
@@ -413,7 +415,8 @@ files = ["bin/tool-linux-amd64"]
 			t.Fatalf("deploy failed: %s\n%s", got.Error, logs)
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("deploy never became ready: %+v", got)
+			logs, _ := e.previews.DeployLogs(deploy.ID)
+			t.Fatalf("deploy artifacts never became ready: %+v\n%s", got, logs)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
