@@ -77,6 +77,7 @@ Create a new board. Body fields:
 | `name` | string | Required. Display name; the slug is derived from this. |
 | `repo_path` | string | Host path to the git repo. One of `repo_path` / `mount_path` is required. |
 | `mount_path` | string | Host directory mounted into session containers, when distinct from the repo. |
+| `project_dir` | string | Repo-relative subdirectory the agent works from. The whole repo is still checked out and mounted; only the working directory moves. Requires `repo_path` and an empty `mount_path`. See [Monorepos](/guide/monorepos). |
 | `worktree_root` | string | Parent directory for new session worktrees. Defaults to `<data_dir>/worktrees/<slug>`. |
 | `base_branch` | string | Branch session worktrees fork from. When omitted, the server detects it from `repo_path` (`origin/HEAD`, falling back to the currently checked-out branch); if detection fails it defaults to `main`. Each new session worktree best-effort fetches `origin/<base_branch>` (10s timeout) and uses it as the start-point if it ends up strictly ahead of local; on failure, tie, or divergence, the local branch is used. |
 | `branch_prefix` | string | Prefix prepended to session branch names. |

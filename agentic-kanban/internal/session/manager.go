@@ -72,17 +72,30 @@ func (m *Manager) SetClaudeConfigOverride(b *bool) { m.claudeConfigOverride = b 
 // the session's "worktree path" is the board's mount path (or repo_path
 // fallback) so downstream tools that need a host-side directory still have one.
 func (m *Manager) Ensure(ctx context.Context, board *db.Board, ticket *db.Ticket) (*db.Session, error) {
+	// Resolve paths against an empty session so we use the board defaults.
+	paths := ResolvePaths(board, &db.Session{})
+
 	if sess, err := m.store.GetSessionByTicket(ctx, ticket.ID); err == nil {
-		if err := writeClaudeSettings(sess.WorktreePath); err != nil {
+		// Settings go where the agent will actually launch — for a board
+		// scoped to a subproject that is the subproject, not the worktree
+		// root, or Claude Code never reads the status hooks.
+		//
+		// Gate the write on the project directory being real. writeClaudeSettings
+		// MkdirAlls its parents, so an edited-to-garbage project_dir would have
+		// this path fabricate `<worktree>/<project_dir>/.claude` inside the
+		// worktree every time someone merely opens the ticket. Reconcile still
+		// runs: the session row exists and its container may well be healthy on
+		// the workspace folder it was created with, so squaring the row with the
+		// daemon stays useful. Start reports the real error.
+		if err := checkProjectRoot(board, paths, sess.WorktreePath); err != nil {
+			log.Printf("skip claude settings for ticket %d: %v", ticket.ID, err)
+		} else if err := writeClaudeSettings(paths.ProjectRoot(sess.WorktreePath)); err != nil {
 			log.Printf("write claude settings for ticket %d: %v", ticket.ID, err)
 		}
 		return m.Reconcile(ctx, sess)
 	}
 
 	containerName := fmt.Sprintf("kanban-%s-%s", board.Slug, ticket.Slug)
-
-	// Resolve paths against an empty session so we use the board defaults.
-	paths := ResolvePaths(board, &db.Session{})
 
 	var worktreePath, branch string
 	if paths.HasRepo {
@@ -125,6 +138,10 @@ func (m *Manager) Ensure(ctx context.Context, board *db.Board, ticket *db.Ticket
 		}
 	}
 
+	if err := checkProjectRoot(board, paths, worktreePath); err != nil {
+		return nil, err
+	}
+
 	sess := &db.Session{
 		TicketID:      ticket.ID,
 		WorktreePath:  worktreePath,
@@ -135,7 +152,7 @@ func (m *Manager) Ensure(ctx context.Context, board *db.Board, ticket *db.Ticket
 	if err := m.store.UpsertSession(ctx, sess); err != nil {
 		return nil, err
 	}
-	if err := writeClaudeSettings(worktreePath); err != nil {
+	if err := writeClaudeSettings(paths.ProjectRoot(worktreePath)); err != nil {
 		log.Printf("write claude settings for ticket %d: %v", ticket.ID, err)
 	}
 	return sess, nil
@@ -169,12 +186,26 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 		sess.ContainerID = &cleared
 	}
 
-	cfg, err := docker.LoadDevcontainer(sess.WorktreePath)
+	board, _ := m.boardForSession(ctx, sess)
+	paths := ResolvePaths(board, sess)
+	// Re-checked on every start, not just at Ensure: the board's project_dir
+	// can be edited (or the subproject deleted on a branch) between the
+	// session row being created and the container being built.
+	if err := checkProjectRoot(board, paths, sess.WorktreePath); err != nil {
+		_ = m.store.UpdateSessionStatus(ctx, sess.ID, db.SessionStatusError)
+		return nil, err
+	}
+	projectRoot := paths.ProjectRoot(sess.WorktreePath)
+
+	// Subproject config wins, the worktree root is the fallback. LoadDevcontainerFrom
+	// dedupes, so a whole-repo board (where projectRoot == WorktreePath) still
+	// probes each path once.
+	cfg, err := docker.LoadDevcontainerFrom(projectRoot, sess.WorktreePath)
 	if err != nil {
 		_ = m.store.UpdateSessionStatus(ctx, sess.ID, db.SessionStatusError)
 		return nil, err
 	}
-	applyKanbanDevcontainerOverrides(cfg, kanbantoml.Load(sess.WorktreePath).Devcontainer, m.claudeConfigOverride)
+	applyKanbanDevcontainerOverrides(cfg, kanbantoml.LoadFrom(sess.WorktreePath, projectRoot).Devcontainer, m.claudeConfigOverride)
 
 	_ = m.store.UpdateSessionStatus(ctx, sess.ID, db.SessionStatusStarting)
 
@@ -196,8 +227,6 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 		_ = m.docker.RemoveContainer(ctx, containerName)
 	}
 
-	board, _ := m.boardForSession(ctx, sess)
-	paths := ResolvePaths(board, sess)
 	worktreeMount := ""
 	if paths.HasRepo {
 		worktreeMount = sess.WorktreePath
@@ -220,6 +249,7 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 		MountPath:        paths.MountPath,
 		RepoWorktreePath: worktreeMount,
 		SourceRepoPath:   paths.RepoPath,
+		ProjectDir:       paths.ProjectDir,
 		ContainerName:    containerName,
 		Ports:            mappings,
 		// mergeEnv keeps the KANBAN_* system vars authoritative even if a
@@ -242,7 +272,8 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 	sess.Status = db.SessionStatusIdle
 	sess.StartedAt = &now
 	sess.StoppedAt = nil
-	if err := m.store.UpdateSessionLifecycle(ctx, sess.ID, sess.Status, sess.ContainerID, sess.StartedAt, sess.StoppedAt); err != nil {
+	sess.WorkspaceFolder = res.WorkspaceFolder
+	if err := m.store.UpdateSessionLifecycle(ctx, sess.ID, sess.Status, sess.ContainerID, sess.StartedAt, sess.StoppedAt, &res.WorkspaceFolder); err != nil {
 		return nil, err
 	}
 	// Refresh from DB so any columns written concurrently (e.g. the github
@@ -477,7 +508,7 @@ func (m *Manager) Stop(ctx context.Context, sessionID int64) error {
 	sess.StoppedAt = &now
 	cleared := ""
 	sess.ContainerID = &cleared
-	if err := m.store.UpdateSessionLifecycle(ctx, sess.ID, sess.Status, sess.ContainerID, sess.StartedAt, sess.StoppedAt); err != nil {
+	if err := m.store.UpdateSessionLifecycle(ctx, sess.ID, sess.Status, sess.ContainerID, sess.StartedAt, sess.StoppedAt, nil); err != nil {
 		return err
 	}
 
@@ -682,7 +713,7 @@ func (m *Manager) generateCommitMessage(ctx context.Context, sess *db.Session, h
 		"Write a one-line git commit message in imperative mood for the staged diff piped via stdin. The change is for the ticket %q. Output only the commit message text - no preamble, no quotes, no markdown, no code fences.",
 		ticketTitle,
 	)
-	script, err := h.RenderCommitScript(prompt)
+	script, err := h.RenderCommitScript(prompt, sess.WorkspaceDir())
 	if err != nil {
 		return "", err
 	}
@@ -709,6 +740,39 @@ func (m *Manager) generateCommitMessage(ctx context.Context, sess *db.Session, h
 func (m *Manager) Proxies() *docker.ProxyManager { return m.proxies }
 
 func (m *Manager) Docker() *docker.Client { return m.docker }
+
+// checkProjectRoot validates a board's project_dir and confirms it names a
+// real directory inside the worktree.
+//
+// The existence check is load-bearing: dockerd creates a missing WorkingDir
+// at container-create time, and since the workspace is a bind mount it
+// creates it on the host inside the worktree, owned by the container user.
+// Every later `docker exec` still fails, because exec does not create
+// directories — so the failure surfaces far from its cause.
+//
+// The validation re-runs against the raw column rather than the resolved
+// paths. ResolvePaths clamps an escaping value to "" so it can never reach
+// dockerd, but silently working from the repo root is not what the board
+// asked for; a row written by an older binary or edited by hand should say so.
+func checkProjectRoot(board *db.Board, paths ResolvedPaths, worktreePath string) error {
+	// Callers reach here with a nil board when boardForSession failed, so
+	// every message below goes through slug rather than board.Slug.
+	slug := "<unknown>"
+	if board != nil {
+		slug = board.Slug
+		if _, err := ValidateProjectDir(board.ProjectDir, board.RepoPath, board.MountPath); err != nil {
+			return fmt.Errorf("board %q: %w", slug, err)
+		}
+	}
+	projectRoot := paths.ProjectRoot(worktreePath)
+	if projectRoot == worktreePath {
+		return nil
+	}
+	if info, err := os.Stat(projectRoot); err != nil || !info.IsDir() {
+		return fmt.Errorf("board %q has project_dir %q, but %s is not a directory in the worktree; fix the board's project directory or create it in the repo", slug, paths.ProjectDir, projectRoot)
+	}
+	return nil
+}
 
 func (m *Manager) boardForSession(ctx context.Context, sess *db.Session) (*db.Board, error) {
 	t, err := m.store.GetTicket(ctx, sess.TicketID)

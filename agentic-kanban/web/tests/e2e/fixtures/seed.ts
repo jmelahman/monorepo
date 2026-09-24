@@ -7,7 +7,7 @@ import { api, type Board, type Ticket } from "./api";
 // playwright.config.ts populates this in `metadata.mountRoot` when the
 // suite is running inside a container that needs host-visible bind
 // sources. Outside that case we fall back to tmpdir().
-function mountRootFromConfig(testInfo: { config: { metadata?: unknown } }): string {
+export function mountRootFromConfig(testInfo: { config: { metadata?: unknown } }): string {
   const meta = testInfo.config.metadata as
     | { mountRoot?: string }
     | undefined;

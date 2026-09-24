@@ -119,11 +119,18 @@ inference only fills in what you omit. Inference assumes the CLI and the
 server share a filesystem (true for a local `kanban serve`); for dockerized
 deploys keep passing `--mount-path` explicitly.
 
+Run from a subdirectory of that repo and `--project-dir` is inferred too,
+with `--name` defaulting to the subdirectory's name rather than the repo's —
+see [Monorepos](/guide/monorepos). This only applies when the repo itself
+was inferred: passing `--repo-path` explicitly says nothing about which
+directory you happen to be standing in, so no project directory is guessed.
+
 | Flag              | Required | Description                                                         |
 | ----------------- | -------- | ------------------------------------------------------------------- |
 | `--name`          | no       | Board name. Defaults to the repo directory's name. Required when only `--mount-path` is set. |
 | `--repo-path`     | no       | Path to the host git repo. Defaults to the repo containing the current directory; pass it (or `--mount-path`) when running outside a git repo. |
 | `--mount-path`    | no       | Mount path inside session containers. Alternative to `--repo-path`. |
+| `--project-dir`   | no       | Repo-relative subdirectory the agent works from. The whole repo is still checked out and mounted. Requires `--repo-path`, and conflicts with `--mount-path`. Inferred from the current directory when the repo was. |
 | `--worktree-root` | no       | Override the parent directory for new session worktrees.            |
 | `--base-branch`   | no       | Branch new session worktrees fork from. Defaults to `main`. Before creating each worktree, kanban best-effort runs `git fetch origin <base-branch>` (10s timeout) and uses `origin/<base-branch>` as the start-point if it ends up strictly ahead of local; otherwise it falls back to local. |
 | `--branch-prefix` | no       | Optional prefix prepended to session branch names.                  |
@@ -133,9 +140,17 @@ deploys keep passing `--mount-path` explicitly.
 
 Prints a single board. `<id>` accepts a numeric id or a slug. When
 omitted, the board is inferred from the git repo containing the current
-directory — an error if zero or several boards use that repo. The same
-inference applies to `board state` and `board archived`; mutating
-commands (`update`, `delete`, `archived-clear`) always require an
+directory — an error if zero or several boards match. The same inference
+applies to `board state` and `board archived`; mutating commands
+(`update`, `delete`, `archived-clear`) always require an explicit id.
+
+When several boards share one repo path, the current directory decides
+between them: kanban compares it against each board's `project_dir` and
+keeps the longest match, so standing in `services/api` picks the
+`services/api` board and standing at the repo root picks the board with no
+`project_dir`. A board with an empty `project_dir` is the repo-wide
+catch-all, so a repo with one board behaves exactly as it always has. Two
+boards with the same `project_dir` stay ambiguous and still need an
 explicit id.
 
 ### `board update <id> [flags]`

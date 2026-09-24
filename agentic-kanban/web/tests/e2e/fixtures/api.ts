@@ -10,6 +10,8 @@ export type Board = {
   name: string;
   slug: string;
   mount_path: string;
+  repo_path: string;
+  project_dir: string;
   base_branch: string;
 };
 
@@ -21,6 +23,10 @@ export type Session = {
   id: number;
   ticket_id: number;
   status: string;
+  worktree_path: string;
+  branch_name: string;
+  container_name?: string;
+  workspace_folder?: string;
   started_at?: number;
   stopped_at?: number;
 };
@@ -46,7 +52,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  createBoard: (input: { name: string; mount_path: string }) =>
+  createBoard: (input: {
+    name: string;
+    mount_path?: string;
+    repo_path?: string;
+    project_dir?: string;
+  }) =>
     request<Board>("/api/boards", { method: "POST", body: JSON.stringify(input) }),
   deleteBoard: (id: number) =>
     request<void>(`/api/boards/${id}`, { method: "DELETE" }),

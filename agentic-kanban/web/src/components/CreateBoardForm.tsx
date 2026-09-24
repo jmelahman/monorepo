@@ -21,6 +21,7 @@ export function CreateBoardModal({
       api.createBoard({
         name: fields.name,
         repo_path: fields.repo.trim(),
+        project_dir: fields.projectDir.trim(),
       }),
     onSuccess: (board) => {
       onCreated(board);
@@ -64,6 +65,17 @@ export function CreateBoardModal({
             value={fields.repo}
             onChange={(e) => update("repo", e.target.value)}
             required
+          />
+        </FormField>
+        <FormField
+          label="Project directory"
+          hint="Optional. For a monorepo: the repo-relative subdirectory the agent works from, e.g. services/api. The whole repo is still checked out and mounted."
+        >
+          <FormInput
+            mono
+            placeholder="services/api"
+            value={fields.projectDir}
+            onChange={(e) => update("projectDir", e.target.value)}
           />
         </FormField>
         <div className="mt-2 flex items-center justify-end gap-2">

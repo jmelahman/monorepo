@@ -4,6 +4,13 @@ CREATE TABLE IF NOT EXISTS boards (
   slug TEXT NOT NULL UNIQUE,
   repo_path TEXT,
   mount_path TEXT,
+  -- project_dir scopes the board to a subdirectory of repo_path (a monorepo
+  -- subproject). Repo-relative and slash-separated; the whole repo is still
+  -- checked out and mounted, but the agent's working directory is this
+  -- subdirectory. Mutually exclusive with mount_path, which names an absolute
+  -- host path and is meant for mounting a *parent* of the repo. Added by
+  -- migrate() on older databases.
+  project_dir TEXT,
   worktree_root TEXT,
   base_branch TEXT NOT NULL DEFAULT 'main',
   branch_prefix TEXT,
@@ -52,14 +59,20 @@ CREATE TABLE IF NOT EXISTS sessions (
   pr_number INTEGER,
   pr_url TEXT,
   pr_title TEXT,
-  -- mount_path and repo_path are snapshotted from boards at session creation
-  -- so resume keeps working even if the board's paths are later edited.
+  -- mount_path and repo_path are per-session overrides of the board's paths,
+  -- read by session.ResolvePaths. Nothing assigns them today; they exist so a
+  -- session can be pinned to paths that outlive a board edit.
   mount_path TEXT,
   repo_path TEXT,
   claude_session_id TEXT,
   -- harness is the agent harness ID chosen for this session; NULL means the
   -- user/project default. Added by migrate() on older databases.
-  harness TEXT
+  harness TEXT,
+  -- workspace_folder is the container path the agent's working directory was
+  -- created at, snapshotted when the container was spawned: the devcontainer's
+  -- workspaceFolder joined with the board's project_dir. NULL on rows predating
+  -- this column, which fall back to /workspace. Added by migrate().
+  workspace_folder TEXT
 );
 
 CREATE TABLE IF NOT EXISTS port_allocations (

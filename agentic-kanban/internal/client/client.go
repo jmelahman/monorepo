@@ -35,6 +35,10 @@ type Board struct {
 	Name     string `json:"name"`
 	Slug     string `json:"slug"`
 	RepoPath string `json:"repo_path"`
+	// ProjectDir is the repo-relative subdirectory the board is scoped to, ""
+	// for a whole-repo board. Board auto-detection uses it to pick between
+	// several boards sharing one monorepo repo_path.
+	ProjectDir string `json:"project_dir"`
 }
 
 // Ticket mirrors the subset of fields callers need from ticket responses.
@@ -97,6 +101,7 @@ type CreateBoardArgs struct {
 	Name           string `json:"name"`
 	RepoPath       string `json:"repo_path,omitempty"`
 	MountPath      string `json:"mount_path,omitempty"`
+	ProjectDir     string `json:"project_dir,omitempty"`
 	WorktreeRoot   string `json:"worktree_root,omitempty"`
 	BaseBranch     string `json:"base_branch,omitempty"`
 	BranchPrefix   string `json:"branch_prefix,omitempty"`
@@ -110,6 +115,7 @@ type UpdateBoardArgs struct {
 	Name           *string `json:"name,omitempty"`
 	RepoPath       *string `json:"repo_path,omitempty"`
 	MountPath      *string `json:"mount_path,omitempty"`
+	ProjectDir     *string `json:"project_dir,omitempty"`
 	WorktreeRoot   *string `json:"worktree_root,omitempty"`
 	BaseBranch     *string `json:"base_branch,omitempty"`
 	BranchPrefix   *string `json:"branch_prefix,omitempty"`
@@ -155,6 +161,7 @@ func (c *Client) ListBoards(ctx context.Context) ([]Board, error) {
 		_ = json.Unmarshal(b["name"], &s.Name)
 		_ = json.Unmarshal(b["slug"], &s.Slug)
 		_ = json.Unmarshal(b["repo_path"], &s.RepoPath)
+		_ = json.Unmarshal(b["project_dir"], &s.ProjectDir)
 		out = append(out, s)
 	}
 	return out, nil

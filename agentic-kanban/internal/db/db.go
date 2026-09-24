@@ -3,6 +3,9 @@ package db
 import (
 	_ "embed"
 	"fmt"
+	"log"
+	"path/filepath"
+	"strings"
 
 	"database/sql"
 
@@ -106,6 +109,80 @@ func migrate(db *sql.DB) error {
 		if _, err := db.Exec(`ALTER TABLE sessions ADD COLUMN harness TEXT`); err != nil {
 			return fmt.Errorf("add sessions.harness: %w", err)
 		}
+	}
+	hasColumn, err = tableHasColumn(db, "boards", "project_dir")
+	if err != nil {
+		return fmt.Errorf("inspect boards: %w", err)
+	}
+	if !hasColumn {
+		if _, err := db.Exec(`ALTER TABLE boards ADD COLUMN project_dir TEXT`); err != nil {
+			return fmt.Errorf("add boards.project_dir: %w", err)
+		}
+		// Convert the pre-project_dir way of expressing "this board is one
+		// subproject": a mount_path pointing inside repo_path. That shape is
+		// broken (it binds the main checkout, not the ticket's worktree, and
+		// mounts no .git above it), so nothing is lost by rewriting it.
+		if err := backfillProjectDir(db); err != nil {
+			return err
+		}
+	}
+	hasColumn, err = tableHasColumn(db, "sessions", "workspace_folder")
+	if err != nil {
+		return fmt.Errorf("inspect sessions: %w", err)
+	}
+	if !hasColumn {
+		if _, err := db.Exec(`ALTER TABLE sessions ADD COLUMN workspace_folder TEXT`); err != nil {
+			return fmt.Errorf("add sessions.workspace_folder: %w", err)
+		}
+	}
+	return nil
+}
+
+// backfillProjectDir rewrites boards whose mount_path is a strict descendant
+// of their repo_path into the equivalent project_dir, clearing mount_path.
+//
+// Only strict descendants convert. mount_path == repo_path is a deliberate
+// configuration ("mount the main checkout rather than the worktree") and
+// clearing it would silently move those boards onto branch-isolated
+// worktrees; ancestors are the parent-of-many-repos pattern mount_path was
+// built for. Called only when project_dir was just added, so it never re-runs
+// against a mount_path a user set on purpose afterwards.
+func backfillProjectDir(db *sql.DB) error {
+	rows, err := db.Query(`SELECT id, repo_path, mount_path FROM boards
+		WHERE repo_path IS NOT NULL AND repo_path != ''
+		  AND mount_path IS NOT NULL AND mount_path != ''`)
+	if err != nil {
+		return fmt.Errorf("scan boards for project_dir backfill: %w", err)
+	}
+	type conversion struct {
+		id         int64
+		projectDir string
+	}
+	var converted []conversion
+	for rows.Next() {
+		var id int64
+		var repo, mount string
+		if err := rows.Scan(&id, &repo, &mount); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan board for project_dir backfill: %w", err)
+		}
+		rel, err := filepath.Rel(filepath.Clean(repo), filepath.Clean(mount))
+		if err != nil || rel == "." || rel == "" || strings.HasPrefix(rel, "..") {
+			continue
+		}
+		converted = append(converted, conversion{id: id, projectDir: filepath.ToSlash(rel)})
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("scan boards for project_dir backfill: %w", err)
+	}
+	rows.Close()
+
+	for _, c := range converted {
+		if _, err := db.Exec(`UPDATE boards SET project_dir = ?, mount_path = NULL WHERE id = ?`, c.projectDir, c.id); err != nil {
+			return fmt.Errorf("backfill boards.project_dir: %w", err)
+		}
+		log.Printf("migrate: board %d mount_path was inside repo_path; converted to project_dir=%s", c.id, c.projectDir)
 	}
 	return nil
 }

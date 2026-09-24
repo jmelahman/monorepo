@@ -195,6 +195,7 @@ func toolDefinitions() []map[string]any {
 					"name":             schemaProp("string", "Board name"),
 					"repo_path":        schemaProp("string", "Path to the host git repo (one of repo_path/mount_path is required)"),
 					"mount_path":       schemaProp("string", "Mount path inside session containers (alternative to repo_path)"),
+					"project_dir":      schemaProp("string", "Repo-relative subdirectory the agent works from, for a monorepo subproject (e.g. \"services/api\"). Requires repo_path and cannot be combined with mount_path."),
 					"worktree_root":    schemaProp("string", "Override the parent directory for new session worktrees"),
 					"base_branch":      schemaProp("string", "Branch session worktrees fork from (default: main)"),
 					"branch_prefix":    schemaProp("string", "Optional prefix prepended to session branch names"),
@@ -225,6 +226,7 @@ func toolDefinitions() []map[string]any {
 					"name":             schemaProp("string", "New name"),
 					"repo_path":        schemaProp("string", "New repo path"),
 					"mount_path":       schemaProp("string", "New mount path"),
+					"project_dir":      schemaProp("string", "New repo-relative project directory; empty string clears it"),
 					"worktree_root":    schemaProp("string", "New worktree root"),
 					"base_branch":      schemaProp("string", "New base branch"),
 					"branch_prefix":    schemaProp("string", "New branch prefix"),
@@ -554,6 +556,7 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 		Name           string            `json:"name"`
 		RepoPath       string            `json:"repo_path"`
 		MountPath      string            `json:"mount_path"`
+		ProjectDir     string            `json:"project_dir"`
 		WorktreeRoot   string            `json:"worktree_root"`
 		BaseBranch     string            `json:"base_branch"`
 		BranchPrefix   string            `json:"branch_prefix"`
@@ -602,6 +605,7 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 			Name:           a.Name,
 			RepoPath:       a.RepoPath,
 			MountPath:      a.MountPath,
+			ProjectDir:     a.ProjectDir,
 			WorktreeRoot:   a.WorktreeRoot,
 			BaseBranch:     a.BaseBranch,
 			BranchPrefix:   a.BranchPrefix,
@@ -632,6 +636,9 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 		}
 		if hasField("mount_path") {
 			patch.MountPath = &a.MountPath
+		}
+		if hasField("project_dir") {
+			patch.ProjectDir = &a.ProjectDir
 		}
 		if hasField("worktree_root") {
 			patch.WorktreeRoot = &a.WorktreeRoot

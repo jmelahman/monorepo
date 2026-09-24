@@ -589,3 +589,149 @@ func TestEndPTYScript(t *testing.T) {
 		t.Errorf("no match: err %v, output %q; want silent success", err, out)
 	}
 }
+
+// newProjectDirEnv builds a board scoped to a monorepo subproject plus a
+// pre-made worktree, so Ensure takes its "worktree already exists" path and
+// the test never shells out to git.
+func newProjectDirEnv(t *testing.T, projectDir string) (*Manager, *db.Store, *db.Board, *db.Ticket, string) {
+	t.Helper()
+	t.Setenv("DOCKER_HOST", "unix:///nonexistent/docker.sock")
+	t.Setenv("KANBAN_CONFIG", filepath.Join(t.TempDir(), "missing.toml"))
+	ctx := context.Background()
+
+	store, err := db.Open(filepath.Join(t.TempDir(), "kanban.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { store.Close() })
+
+	repo := t.TempDir()
+	if err := os.Mkdir(filepath.Join(repo, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	worktreeRoot := t.TempDir()
+
+	board := &db.Board{
+		Name:         "Monorepo",
+		Slug:         "monorepo",
+		RepoPath:     repo,
+		WorktreeRoot: worktreeRoot,
+		ProjectDir:   projectDir,
+		BaseBranch:   "main",
+	}
+	if err := store.CreateBoard(ctx, board); err != nil {
+		t.Fatal(err)
+	}
+	cols, err := store.ListColumns(ctx, board.ID)
+	if err != nil || len(cols) == 0 {
+		t.Fatalf("columns: %v", err)
+	}
+	ticket := &db.Ticket{BoardID: board.ID, ColumnID: cols[0].ID, Title: "Work", Slug: "work"}
+	if err := store.CreateTicket(ctx, ticket); err != nil {
+		t.Fatal(err)
+	}
+
+	// Stand in for `git worktree add`: Ensure trusts an existing directory
+	// that carries a .git entry.
+	worktreePath := filepath.Join(worktreeRoot, ticket.Slug)
+	if err := os.MkdirAll(worktreePath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(worktreePath, ".git"), []byte("gitdir: "+repo+"/.git/worktrees/work\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dc, err := docker.NewClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { dc.Close() })
+	return NewManager(store, dc, hooks.NewRunner(store)), store, board, ticket, worktreePath
+}
+
+func TestEnsure_ProjectDir(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("claude settings land in the project dir", func(t *testing.T) {
+		// The bug this whole feature exists to fix: settings written at the
+		// worktree root are never read, because the agent launches from the
+		// subproject — so the SessionStart/Stop hooks never fire and the
+		// ticket's status badge goes dead.
+		m, _, board, ticket, worktreePath := newProjectDirEnv(t, "services/api")
+		projectRoot := filepath.Join(worktreePath, "services", "api")
+		if err := os.MkdirAll(projectRoot, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := m.Ensure(ctx, board, ticket); err != nil {
+			t.Fatalf("Ensure: %v", err)
+		}
+
+		if _, err := os.Stat(filepath.Join(projectRoot, ".claude", "settings.local.json")); err != nil {
+			t.Errorf("settings not written to the project dir: %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(worktreePath, ".claude")); !os.IsNotExist(err) {
+			t.Errorf("settings also written at the worktree root (err = %v); want a single write", err)
+		}
+	})
+
+	t.Run("missing project dir fails without creating anything", func(t *testing.T) {
+		// dockerd would otherwise create the missing WorkingDir on the host
+		// inside the worktree, owned by the container user, after which every
+		// docker exec still fails.
+		m, store, board, ticket, worktreePath := newProjectDirEnv(t, "services/api")
+
+		sess, err := m.Ensure(ctx, board, ticket)
+		if err == nil {
+			t.Fatalf("Ensure = %+v, nil; want an error", sess)
+		}
+		if !strings.Contains(err.Error(), "services/api") {
+			t.Errorf("error = %v; want it to name the project dir", err)
+		}
+		if _, err := store.GetSessionByTicket(ctx, ticket.ID); err == nil {
+			t.Error("a session row was created despite the failure")
+		}
+		if _, err := os.Stat(filepath.Join(worktreePath, "services")); !os.IsNotExist(err) {
+			t.Errorf("project dir was created on disk (err = %v); want it left alone", err)
+		}
+	})
+
+	t.Run("escaping project dir is rejected", func(t *testing.T) {
+		m, _, board, ticket, _ := newProjectDirEnv(t, "../../etc")
+
+		if _, err := m.Ensure(ctx, board, ticket); err == nil {
+			t.Fatal("Ensure succeeded; want an error")
+		} else if !strings.Contains(err.Error(), "stay inside") {
+			t.Errorf("error = %v; want it to reject the escape", err)
+		}
+	})
+
+	t.Run("an edited project dir does not fabricate one on re-ensure", func(t *testing.T) {
+		// Ensure's early return runs on every ticket open once a session row
+		// exists. writeClaudeSettings MkdirAlls, so without the project-root
+		// check this path would silently create <worktree>/<project_dir>/.claude
+		// for a project_dir edited to point at nothing.
+		m, store, board, ticket, worktreePath := newProjectDirEnv(t, "services/api")
+		projectRoot := filepath.Join(worktreePath, "services", "api")
+		if err := os.MkdirAll(projectRoot, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := m.Ensure(ctx, board, ticket); err != nil {
+			t.Fatalf("Ensure: %v", err)
+		}
+
+		board.ProjectDir = "services/renamed"
+		if err := store.UpdateBoard(ctx, board); err != nil {
+			t.Fatal(err)
+		}
+
+		// Reconcile still runs — the row and its container are unaffected by a
+		// board edit — so this is not an error, it just writes nothing.
+		if _, err := m.Ensure(ctx, board, ticket); err != nil {
+			t.Fatalf("Ensure after edit: %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(worktreePath, "services", "renamed")); !os.IsNotExist(err) {
+			t.Errorf("renamed project dir was created on disk (err = %v); want it left alone", err)
+		}
+	})
+}

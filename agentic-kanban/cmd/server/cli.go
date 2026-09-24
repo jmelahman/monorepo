@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -63,8 +64,9 @@ func boardCmd() *cobra.Command {
 	}
 
 	var (
-		bcName, bcRepo, bcMount, bcWorktreeRoot, bcBaseBranch, bcBranchPrefix string
-		bcJSON                                                                bool
+		bcName, bcRepo, bcMount, bcProjectDir        string
+		bcWorktreeRoot, bcBaseBranch, bcBranchPrefix string
+		bcJSON                                       bool
 	)
 	create := &cobra.Command{
 		Use:   "create",
@@ -81,6 +83,7 @@ Explicit flags always win; inference only fills in what you omit.`,
 				Name:         bcName,
 				RepoPath:     bcRepo,
 				MountPath:    bcMount,
+				ProjectDir:   bcProjectDir,
 				WorktreeRoot: bcWorktreeRoot,
 				BaseBranch:   bcBaseBranch,
 				BranchPrefix: bcBranchPrefix,
@@ -94,6 +97,7 @@ Explicit flags always win; inference only fills in what you omit.`,
 	create.Flags().StringVar(&bcName, "name", "", "Board name (default: the repo directory's name)")
 	create.Flags().StringVar(&bcRepo, "repo-path", "", "Path to the git repo on the host (default: the repo containing the current directory)")
 	create.Flags().StringVar(&bcMount, "mount-path", "", "Mount path inside session containers (alternative to --repo-path)")
+	create.Flags().StringVar(&bcProjectDir, "project-dir", "", "Repo-relative subdirectory the agent works from, for a monorepo subproject (default: the current directory's path within the repo)")
 	create.Flags().StringVar(&bcWorktreeRoot, "worktree-root", "", "Override the parent directory for new session worktrees")
 	create.Flags().StringVar(&bcBaseBranch, "base-branch", "", "Branch session worktrees fork from (default: detected from the repo)")
 	create.Flags().StringVar(&bcBranchPrefix, "branch-prefix", "", "Optional prefix prepended to session branch names")
@@ -116,8 +120,9 @@ Explicit flags always win; inference only fills in what you omit.`,
 	get.Flags().BoolVar(&bgJSON, "json", false, "Print the full board JSON instead of a one-line summary")
 
 	var (
-		buName, buRepo, buMount, buWorktreeRoot, buBaseBranch, buBranchPrefix string
-		buJSON                                                                bool
+		buName, buRepo, buMount, buProjectDir        string
+		buWorktreeRoot, buBaseBranch, buBranchPrefix string
+		buJSON                                       bool
 	)
 	update := &cobra.Command{
 		Use:   "update <id>",
@@ -134,6 +139,9 @@ Explicit flags always win; inference only fills in what you omit.`,
 			if cmd.Flags().Changed("mount-path") {
 				a.MountPath = &buMount
 			}
+			if cmd.Flags().Changed("project-dir") {
+				a.ProjectDir = &buProjectDir
+			}
 			if cmd.Flags().Changed("worktree-root") {
 				a.WorktreeRoot = &buWorktreeRoot
 			}
@@ -149,6 +157,7 @@ Explicit flags always win; inference only fills in what you omit.`,
 	update.Flags().StringVar(&buName, "name", "", "Rename the board")
 	update.Flags().StringVar(&buRepo, "repo-path", "", "Update repo path")
 	update.Flags().StringVar(&buMount, "mount-path", "", "Update mount path")
+	update.Flags().StringVar(&buProjectDir, "project-dir", "", "Update the repo-relative project directory (pass an empty value to clear it)")
 	update.Flags().StringVar(&buWorktreeRoot, "worktree-root", "", "Update worktree root")
 	update.Flags().StringVar(&buBaseBranch, "base-branch", "", "Update base branch")
 	update.Flags().StringVar(&buBranchPrefix, "branch-prefix", "", "Update branch prefix")
@@ -350,25 +359,53 @@ func printBoardSummary(out io.Writer, raw json.RawMessage, asJSON bool) error {
 
 // inferBoardCreateArgs fills the gaps a bare `kanban board create` leaves.
 // With neither --repo-path nor --mount-path it resolves the git repo
-// containing the current directory, and with no --name it uses the repo
-// directory's basename. Explicit flags always win; inference only fills
-// what's missing. The inferred path is only meaningful when the CLI and
-// the server share a filesystem — same as a hand-typed --repo-path.
+// containing the current directory; --project-dir defaults to where in that
+// repo you ran from, and --name to the basename of whichever of the two is
+// more specific. Explicit flags always win; inference only fills what's
+// missing. The inferred path is only meaningful when the CLI and the server
+// share a filesystem — same as a hand-typed --repo-path.
 func inferBoardCreateArgs(a client.CreateBoardArgs) (client.CreateBoardArgs, error) {
+	inferredRepo := false
 	if a.RepoPath == "" && a.MountPath == "" {
 		repo, err := cwdRepoRoot()
 		if err != nil {
 			return a, fmt.Errorf("cannot infer --repo-path: %w (run inside a git repo or pass --repo-path/--mount-path)", err)
 		}
 		a.RepoPath = repo
+		inferredRepo = true
+	}
+	// Only infer the subproject when the repo itself was inferred: with an
+	// explicit --repo-path the cwd says nothing about which repo it is.
+	if inferredRepo && a.ProjectDir == "" {
+		if prefix, err := cwdRepoPrefix(); err == nil {
+			a.ProjectDir = prefix
+		}
 	}
 	if strings.TrimSpace(a.Name) == "" {
 		if a.RepoPath == "" {
 			return a, fmt.Errorf("--name required when --mount-path is set without --repo-path")
 		}
-		a.Name = filepath.Base(a.RepoPath)
+		// A subproject board is about the subproject, not the monorepo.
+		if a.ProjectDir != "" {
+			a.Name = path.Base(a.ProjectDir)
+		} else {
+			a.Name = filepath.Base(a.RepoPath)
+		}
 	}
 	return a, nil
+}
+
+// cwdRepoPrefix returns the current directory's path relative to the git
+// working tree containing it, slash-separated with no trailing slash, or ""
+// at the top level. Unlike --show-toplevel it reads the same from the main
+// checkout and from a linked worktree of the same repo, which is what makes
+// it usable for matching a board's project_dir.
+func cwdRepoPrefix() (string, error) {
+	prefix, err := gitRevParse("--show-prefix")
+	if err != nil {
+		return "", err
+	}
+	return strings.Trim(strings.TrimSpace(prefix), "/"), nil
 }
 
 // cwdRepoRoot returns the root of the git working tree containing the
@@ -407,7 +444,8 @@ func gitRevParse(flag string) (string, error) {
 
 // resolveBoardIdent returns the board identifier for a command whose [id]
 // arg is optional: the explicit arg when given, otherwise the id of the
-// board whose repo_path is the git repo containing the current directory.
+// board matching the current directory. Matching is two-stage — the git repo
+// containing the cwd, then the most specific project_dir that contains it.
 // Zero or several matching boards is an error, never a guess — boards may
 // legitimately share a repo (e.g. Build Cop boards).
 func resolveBoardIdent(ctx context.Context, url string, args []string) (string, error) {
@@ -422,24 +460,80 @@ func resolveBoardIdent(ctx context.Context, url string, args []string) (string, 
 	if err != nil {
 		return "", err
 	}
-	var matches []client.Board
+	var repoMatches []client.Board
 	for _, b := range boards {
 		if b.RepoPath != "" && samePath(b.RepoPath, repo) {
-			matches = append(matches, b)
+			repoMatches = append(repoMatches, b)
 		}
 	}
+	// Best-effort: an unreadable prefix reads as the repo root, which selects
+	// the whole-repo board. cwdRepoRoot already succeeded, so the only way to
+	// get here is a git state where --show-toplevel works and --show-prefix
+	// does not.
+	prefix, _ := cwdRepoPrefix()
+	matches := boardsForPrefix(repoMatches, prefix)
+
 	switch len(matches) {
 	case 1:
 		return strconv.FormatInt(matches[0].ID, 10), nil
 	case 0:
+		if len(repoMatches) > 0 {
+			return "", fmt.Errorf("no board covers %s within repo %s; pass an id or slug", cwdDescription(prefix), repo)
+		}
 		return "", fmt.Errorf("no board has repo path %s; pass an id or slug", repo)
 	default:
 		slugs := make([]string, len(matches))
 		for i, b := range matches {
 			slugs[i] = b.Slug
 		}
-		return "", fmt.Errorf("%d boards use repo %s (%s); pass an id or slug", len(matches), repo, strings.Join(slugs, ", "))
+		where := repo
+		if dir := matches[0].ProjectDir; dir != "" {
+			where = repo + "/" + dir
+		}
+		return "", fmt.Errorf("%d boards use %s (%s); pass an id or slug", len(matches), where, strings.Join(slugs, ", "))
 	}
+}
+
+// boardsForPrefix narrows same-repo boards to those whose project_dir
+// contains prefix (the cwd relative to the repo root), keeping only the most
+// specific ones. A board with an empty project_dir covers the whole repo and
+// so is the catch-all — which is why a single-board repo behaves exactly as
+// it did before project_dir existed. Ties (two boards on the same
+// project_dir) are preserved so the caller can report the ambiguity.
+func boardsForPrefix(boards []client.Board, prefix string) []client.Board {
+	best := -1
+	var matches []client.Board
+	for _, b := range boards {
+		dir := strings.Trim(strings.TrimSpace(b.ProjectDir), "/")
+		if !prefixContains(dir, prefix) {
+			continue
+		}
+		switch n := len(dir); {
+		case n > best:
+			best, matches = n, []client.Board{b}
+		case n == best:
+			matches = append(matches, b)
+		}
+	}
+	return matches
+}
+
+// prefixContains reports whether the repo-relative directory dir contains
+// cwd (also repo-relative), i.e. whether dir is cwd or one of its ancestors.
+// Both are slash-separated with no leading or trailing slash; "" is the repo
+// root and contains everything.
+func prefixContains(dir, cwd string) bool {
+	if dir == "" {
+		return true
+	}
+	return cwd == dir || strings.HasPrefix(cwd, dir+"/")
+}
+
+func cwdDescription(prefix string) string {
+	if prefix == "" {
+		return "the repository root"
+	}
+	return prefix
 }
 
 // samePath reports whether two paths name the same location, tolerating

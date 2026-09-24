@@ -32,6 +32,7 @@ Create a new board. The server seeds the default columns
 | `name`           | string | yes      | Board name.                                                        |
 | `repo_path`      | string | one of   | Host git repo path. Required if `mount_path` is empty.             |
 | `mount_path`     | string | one of   | Mount path inside session containers.                              |
+| `project_dir`    | string | no       | Repo-relative subdirectory the agent works from. Requires `repo_path`, and conflicts with `mount_path`. |
 | `worktree_root`  | string | no       | Override the parent directory for new session worktrees.           |
 | `base_branch`    | string | no       | Branch session worktrees fork from. Detected from `repo_path` (`origin/HEAD`, then current branch) when omitted; falls back to `main`. |
 | `branch_prefix`  | string | no       | Prefix for session branch names.                                   |
@@ -54,6 +55,7 @@ Patch fields on a board. Only fields you supply are updated.
 | `name`           | string | no       | New name.                          |
 | `repo_path`      | string | no       | New repo path.                     |
 | `mount_path`     | string | no       | New mount path.                    |
+| `project_dir`    | string | no       | New project directory; empty clears it. |
 | `worktree_root`  | string | no       | New worktree root.                 |
 | `base_branch`    | string | no       | New base branch.                   |
 | `branch_prefix`  | string | no       | New branch prefix.                 |

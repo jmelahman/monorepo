@@ -49,7 +49,7 @@ type BuildMount struct {
 // by content hash under tagBase, so unchanged devcontainer configs reuse the
 // cached image across commits and scratch dirs.
 func (c *Client) EnsureBuildImage(ctx context.Context, cfg *DevcontainerConfig, root, tagBase string) (string, error) {
-	return c.ensureImage(ctx, cfg, root, tagBase, nil)
+	return c.ensureImage(ctx, cfg, []string{root}, tagBase, nil)
 }
 
 // RunBuildStep runs one build step to completion, streaming combined

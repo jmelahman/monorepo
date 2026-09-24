@@ -182,12 +182,28 @@ func ProjectPath(repoPath string) string {
 // unparseable, in which case it is treated as empty) and returns a merged
 // File where user values win.
 func Load(repoPath string) File {
-	project := readFileAt(ProjectPath(repoPath))
+	return LoadFrom(repoPath, "")
+}
+
+// LoadFrom is Load with a monorepo subproject layered between the repo root
+// and the user file, so precedence runs repo root < subproject < user.
+//
+// The subproject layer matters because a board scoped to a subdirectory runs
+// its tasks from there: .vscode/tasks.json is discovered in the subproject,
+// so the label -> port mapping that pairs with it has to come from the same
+// place. Merging rather than replacing keeps repo-wide settings — a root
+// [devcontainer] section, say — applying to every subproject that doesn't
+// override them. An empty or repo-root-equal projectPath is a no-op.
+func LoadFrom(repoPath, projectPath string) File {
+	out := readFileAt(ProjectPath(repoPath))
+	if projectPath != "" && projectPath != repoPath {
+		out = merge(out, readFileAt(ProjectPath(projectPath)))
+	}
 	user := File{}
 	if path, err := UserPath(); err == nil {
 		user = readFileAt(path)
 	}
-	return merge(project, user)
+	return merge(out, user)
 }
 
 func readFileAt(path string) File {

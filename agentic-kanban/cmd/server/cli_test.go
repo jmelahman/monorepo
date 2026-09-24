@@ -164,6 +164,9 @@ func TestInferBoardCreateArgs(t *testing.T) {
 	})
 
 	t.Run("infers_from_subdirectory", func(t *testing.T) {
+		// A board created from inside a monorepo subproject is about that
+		// subproject, so the name follows project_dir rather than the
+		// monorepo root's basename.
 		sub := filepath.Join(repo, "a", "b")
 		if err := os.MkdirAll(sub, 0o755); err != nil {
 			t.Fatal(err)
@@ -175,6 +178,60 @@ func TestInferBoardCreateArgs(t *testing.T) {
 		}
 		if !samePath(got.RepoPath, repo) {
 			t.Errorf("RepoPath = %q, want %q", got.RepoPath, repo)
+		}
+		if got.ProjectDir != "a/b" {
+			t.Errorf("ProjectDir = %q, want %q", got.ProjectDir, "a/b")
+		}
+		if got.Name != "b" {
+			t.Errorf("Name = %q, want b", got.Name)
+		}
+	})
+
+	t.Run("repo_root_infers_no_project_dir", func(t *testing.T) {
+		t.Chdir(repo)
+		got, err := inferBoardCreateArgs(client.CreateBoardArgs{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.ProjectDir != "" {
+			t.Errorf("ProjectDir = %q, want empty", got.ProjectDir)
+		}
+	})
+
+	t.Run("explicit_project_dir_wins", func(t *testing.T) {
+		sub := filepath.Join(repo, "a", "b")
+		if err := os.MkdirAll(sub, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		t.Chdir(sub)
+		got, err := inferBoardCreateArgs(client.CreateBoardArgs{ProjectDir: "elsewhere"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.ProjectDir != "elsewhere" {
+			t.Errorf("ProjectDir = %q, want %q", got.ProjectDir, "elsewhere")
+		}
+		if got.Name != "elsewhere" {
+			t.Errorf("Name = %q, want elsewhere", got.Name)
+		}
+	})
+
+	t.Run("explicit_repo_path_suppresses_project_dir_inference", func(t *testing.T) {
+		// The cwd says nothing about a repo the user named explicitly.
+		sub := filepath.Join(repo, "a", "b")
+		if err := os.MkdirAll(sub, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		t.Chdir(sub)
+		got, err := inferBoardCreateArgs(client.CreateBoardArgs{RepoPath: "/elsewhere/proj"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.ProjectDir != "" {
+			t.Errorf("ProjectDir = %q, want empty", got.ProjectDir)
+		}
+		if got.Name != "proj" {
+			t.Errorf("Name = %q, want proj", got.Name)
 		}
 	})
 
@@ -330,6 +387,51 @@ func TestResolveBoardIdent(t *testing.T) {
 			t.Errorf("ambiguity error should list candidates: %v", err)
 		}
 	})
+}
+
+// TestResolveBoardIdent_ProjectDir is the end-to-end half of
+// TestBoardsForPrefix: two boards on one monorepo repo_path must still
+// auto-detect, chosen by where in the repo the command runs.
+func TestResolveBoardIdent_ProjectDir(t *testing.T) {
+	srv, store, board := newKanbanCLITestServer(t)
+
+	sub := &db.Board{
+		Name:       "Subproject",
+		Slug:       "subproject",
+		RepoPath:   board.RepoPath,
+		ProjectDir: "services/api",
+		BaseBranch: "main",
+	}
+	if err := store.CreateBoard(context.Background(), sub); err != nil {
+		t.Fatal(err)
+	}
+	projectDir := filepath.Join(board.RepoPath, "services", "api")
+	nested := filepath.Join(projectDir, "internal", "handler")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name string
+		dir  string
+		want int64
+	}{
+		{name: "repo root picks the whole-repo board", dir: board.RepoPath, want: board.ID},
+		{name: "project dir picks the subproject board", dir: projectDir, want: sub.ID},
+		{name: "nested dir picks the subproject board", dir: nested, want: sub.ID},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Chdir(tc.dir)
+			got, err := resolveBoardIdent(t.Context(), srv.URL, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := strconv.FormatInt(tc.want, 10); got != want {
+				t.Errorf("ident = %q, want %q", got, want)
+			}
+		})
+	}
 }
 
 func TestRunBoardStateAndArchived(t *testing.T) {
@@ -865,5 +967,96 @@ func TestPickTicketEmptyBoard(t *testing.T) {
 	t.Chdir(t.TempDir())
 	if _, err := pickTicket(t.Context(), srv.URL, "", attachAction, false); err == nil {
 		t.Error("expected an error when no board can be inferred")
+	}
+}
+
+// TestBoardsForPrefix covers the narrowing that makes `[id]` auto-detection
+// work in a monorepo. Without it, the second board on a shared repo_path
+// breaks auto-detection for every subcommand, everywhere in the repo.
+func TestBoardsForPrefix(t *testing.T) {
+	root := client.Board{ID: 1, Slug: "root"}
+	api := client.Board{ID: 2, Slug: "api", ProjectDir: "services/api"}
+	apiWeb := client.Board{ID: 3, Slug: "api-web", ProjectDir: "services/api/web"}
+	other := client.Board{ID: 4, Slug: "worker", ProjectDir: "services/worker"}
+	apiDup := client.Board{ID: 5, Slug: "api-2", ProjectDir: "services/api"}
+
+	cases := []struct {
+		name   string
+		boards []client.Board
+		prefix string
+		want   []int64
+	}{
+		{
+			name:   "single whole-repo board is the catch-all",
+			boards: []client.Board{root},
+			prefix: "services/api",
+			want:   []int64{1},
+		},
+		{
+			name:   "most specific project dir wins",
+			boards: []client.Board{root, api, other},
+			prefix: "services/api",
+			want:   []int64{2},
+		},
+		{
+			name:   "longest prefix wins over a shorter ancestor",
+			boards: []client.Board{root, api, apiWeb},
+			prefix: "services/api/web/src",
+			want:   []int64{3},
+		},
+		{
+			name:   "falls back to the ancestor outside the deeper board",
+			boards: []client.Board{root, api, apiWeb},
+			prefix: "services/api/cmd",
+			want:   []int64{2},
+		},
+		{
+			name:   "repo root matches only the whole-repo board",
+			boards: []client.Board{root, api},
+			prefix: "",
+			want:   []int64{1},
+		},
+		{
+			name:   "sibling prefix does not match",
+			boards: []client.Board{api},
+			prefix: "services/api-staging",
+			want:   nil,
+		},
+		{
+			name:   "unrelated subdirectory falls through to nothing",
+			boards: []client.Board{api},
+			prefix: "docs",
+			want:   nil,
+		},
+		{
+			name:   "duplicate project dirs stay ambiguous",
+			boards: []client.Board{root, api, apiDup},
+			prefix: "services/api",
+			want:   []int64{2, 5},
+		},
+		{
+			name:   "tolerates stored slashes",
+			boards: []client.Board{{ID: 9, Slug: "messy", ProjectDir: "/services/api/"}},
+			prefix: "services/api",
+			want:   []int64{9},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := boardsForPrefix(tc.boards, tc.prefix)
+			ids := make([]int64, len(got))
+			for i, b := range got {
+				ids[i] = b.ID
+			}
+			if len(ids) != len(tc.want) {
+				t.Fatalf("ids = %v; want %v", ids, tc.want)
+			}
+			for i := range ids {
+				if ids[i] != tc.want[i] {
+					t.Fatalf("ids = %v; want %v", ids, tc.want)
+				}
+			}
+		})
 	}
 }

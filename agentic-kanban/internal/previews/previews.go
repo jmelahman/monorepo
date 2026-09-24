@@ -158,6 +158,9 @@ func (r *DockerRunner) Run(ctx context.Context, spec orchestrator.RunSpec, out i
 			mounts = append(mounts, docker.BuildMount{Source: m.Source, Target: m.Target})
 		}
 	default:
+		// Whole-repo on purpose: previews are keyed on the repo, not on a
+		// board, so there is no project_dir to descend into. If per-subproject
+		// previews ever land, this is where LoadDevcontainerFrom belongs.
 		loaded, err := docker.LoadDevcontainer(spec.ScratchDir)
 		if err != nil {
 			return fmt.Errorf("load devcontainer config: %w", err)

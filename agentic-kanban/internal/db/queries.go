@@ -30,8 +30,8 @@ func (s *Store) CreateBoardRaw(ctx context.Context, b *Board) error {
 	}
 	b.Position = int(maxPos.Int64) + 1
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO boards (name, slug, repo_path, mount_path, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		b.Name, b.Slug, nullIfEmpty(b.RepoPath), nullIfEmpty(b.MountPath), nullIfEmpty(b.WorktreeRoot), b.BaseBranch, nullIfEmpty(b.BranchPrefix), nullIfEmpty(b.GitAuthorName), nullIfEmpty(b.GitAuthorEmail), b.Position,
+		`INSERT INTO boards (name, slug, repo_path, mount_path, project_dir, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		b.Name, b.Slug, nullIfEmpty(b.RepoPath), nullIfEmpty(b.MountPath), nullIfEmpty(b.ProjectDir), nullIfEmpty(b.WorktreeRoot), b.BaseBranch, nullIfEmpty(b.BranchPrefix), nullIfEmpty(b.GitAuthorName), nullIfEmpty(b.GitAuthorEmail), b.Position,
 	)
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func (s *Store) createDefaultColumns(ctx context.Context, boardID int64) error {
 }
 
 func (s *Store) ListBoards(ctx context.Context) ([]Board, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, slug, repo_path, mount_path, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards ORDER BY position, id`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, slug, repo_path, mount_path, project_dir, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards ORDER BY position, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func (s *Store) ListBoards(ctx context.Context) ([]Board, error) {
 
 func (s *Store) UpdateBoard(ctx context.Context, b *Board) error {
 	res, err := s.db.ExecContext(ctx,
-		`UPDATE boards SET name=?, repo_path=?, mount_path=?, worktree_root=?, base_branch=?, branch_prefix=?, git_author_name=?, git_author_email=? WHERE id=?`,
-		b.Name, nullIfEmpty(b.RepoPath), nullIfEmpty(b.MountPath), nullIfEmpty(b.WorktreeRoot), b.BaseBranch, nullIfEmpty(b.BranchPrefix), nullIfEmpty(b.GitAuthorName), nullIfEmpty(b.GitAuthorEmail), b.ID,
+		`UPDATE boards SET name=?, repo_path=?, mount_path=?, project_dir=?, worktree_root=?, base_branch=?, branch_prefix=?, git_author_name=?, git_author_email=? WHERE id=?`,
+		b.Name, nullIfEmpty(b.RepoPath), nullIfEmpty(b.MountPath), nullIfEmpty(b.ProjectDir), nullIfEmpty(b.WorktreeRoot), b.BaseBranch, nullIfEmpty(b.BranchPrefix), nullIfEmpty(b.GitAuthorName), nullIfEmpty(b.GitAuthorEmail), b.ID,
 	)
 	if err != nil {
 		return err
@@ -171,7 +171,7 @@ func (s *Store) DeleteBoard(ctx context.Context, id int64) error {
 
 func (s *Store) GetBoard(ctx context.Context, id int64) (*Board, error) {
 	b, err := scanBoard(s.db.QueryRowContext(ctx,
-		`SELECT id, name, slug, repo_path, mount_path, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards WHERE id=?`, id))
+		`SELECT id, name, slug, repo_path, mount_path, project_dir, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards WHERE id=?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -180,7 +180,7 @@ func (s *Store) GetBoard(ctx context.Context, id int64) (*Board, error) {
 
 func (s *Store) GetBoardBySlug(ctx context.Context, slug string) (*Board, error) {
 	b, err := scanBoard(s.db.QueryRowContext(ctx,
-		`SELECT id, name, slug, repo_path, mount_path, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards WHERE slug=?`, slug))
+		`SELECT id, name, slug, repo_path, mount_path, project_dir, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards WHERE slug=?`, slug))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -487,10 +487,14 @@ func (s *Store) UpdateSessionStatus(ctx context.Context, id int64, status string
 // instead of UpsertSession so concurrent writes to other columns — most
 // importantly the github poller's pr_* fields — aren't clobbered by a stale
 // in-memory snapshot loaded at the start of the lifecycle action.
-func (s *Store) UpdateSessionLifecycle(ctx context.Context, id int64, status string, containerID *string, startedAt, stoppedAt *int64) error {
+//
+// workspaceFolder records the container path the agent's working directory
+// was created at. A nil value leaves the stored one alone, so Stop doesn't
+// erase what Start wrote.
+func (s *Store) UpdateSessionLifecycle(ctx context.Context, id int64, status string, containerID *string, startedAt, stoppedAt *int64, workspaceFolder *string) error {
 	_, err := s.db.ExecContext(ctx,
-		`UPDATE sessions SET status=?, container_id=?, started_at=?, stopped_at=? WHERE id=?`,
-		status, containerID, startedAt, stoppedAt, id,
+		`UPDATE sessions SET status=?, container_id=?, started_at=?, stopped_at=?, workspace_folder=COALESCE(?, workspace_folder) WHERE id=?`,
+		status, containerID, startedAt, stoppedAt, workspaceFolder, id,
 	)
 	return err
 }
@@ -570,7 +574,7 @@ func (s *Store) RepointSessionBranch(ctx context.Context, id int64, branch strin
 
 func (s *Store) GetSession(ctx context.Context, id int64) (*Session, error) {
 	sess, err := scanSession(s.db.QueryRowContext(ctx,
-		`SELECT id, ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, mount_path, repo_path, claude_session_id, harness FROM sessions WHERE id=?`, id))
+		`SELECT id, ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, mount_path, repo_path, claude_session_id, harness, workspace_folder FROM sessions WHERE id=?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -579,7 +583,7 @@ func (s *Store) GetSession(ctx context.Context, id int64) (*Session, error) {
 
 func (s *Store) GetSessionByTicket(ctx context.Context, ticketID int64) (*Session, error) {
 	sess, err := scanSession(s.db.QueryRowContext(ctx,
-		`SELECT id, ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, mount_path, repo_path, claude_session_id, harness FROM sessions WHERE ticket_id=?`, ticketID))
+		`SELECT id, ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, mount_path, repo_path, claude_session_id, harness, workspace_folder FROM sessions WHERE ticket_id=?`, ticketID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -588,7 +592,7 @@ func (s *Store) GetSessionByTicket(ctx context.Context, ticketID int64) (*Sessio
 
 func (s *Store) ListSessionsByBoard(ctx context.Context, boardID int64) ([]Session, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT s.id, s.ticket_id, s.worktree_path, s.branch_name, s.container_id, s.container_name, s.status, s.started_at, s.stopped_at, s.pr_state, s.pr_number, s.pr_url, s.pr_title, s.mount_path, s.repo_path, s.claude_session_id, s.harness
+		`SELECT s.id, s.ticket_id, s.worktree_path, s.branch_name, s.container_id, s.container_name, s.status, s.started_at, s.stopped_at, s.pr_state, s.pr_number, s.pr_url, s.pr_title, s.mount_path, s.repo_path, s.claude_session_id, s.harness, s.workspace_folder
          FROM sessions s JOIN tickets t ON t.id=s.ticket_id WHERE t.board_id=?`, boardID)
 	if err != nil {
 		return nil, err
@@ -835,12 +839,13 @@ func affectedOrNotFound(res sql.Result) error {
 
 func scanBoard(sc scanner) (*Board, error) {
 	var b Board
-	var repo, mount, worktreeRoot, branchPrefix, gitAuthorName, gitAuthorEmail sql.NullString
-	if err := sc.Scan(&b.ID, &b.Name, &b.Slug, &repo, &mount, &worktreeRoot, &b.BaseBranch, &branchPrefix, &gitAuthorName, &gitAuthorEmail, &b.CreatedAt, &b.Position); err != nil {
+	var repo, mount, projectDir, worktreeRoot, branchPrefix, gitAuthorName, gitAuthorEmail sql.NullString
+	if err := sc.Scan(&b.ID, &b.Name, &b.Slug, &repo, &mount, &projectDir, &worktreeRoot, &b.BaseBranch, &branchPrefix, &gitAuthorName, &gitAuthorEmail, &b.CreatedAt, &b.Position); err != nil {
 		return nil, err
 	}
 	b.RepoPath = repo.String
 	b.MountPath = mount.String
+	b.ProjectDir = projectDir.String
 	b.WorktreeRoot = worktreeRoot.String
 	b.BranchPrefix = branchPrefix.String
 	b.GitAuthorName = gitAuthorName.String
@@ -850,8 +855,8 @@ func scanBoard(sc scanner) (*Board, error) {
 
 func scanSession(sc scanner) (*Session, error) {
 	var sess Session
-	var prState, mount, repo, prURL, prTitle, claudeSessionID, harness sql.NullString
-	if err := sc.Scan(&sess.ID, &sess.TicketID, &sess.WorktreePath, &sess.BranchName, &sess.ContainerID, &sess.ContainerName, &sess.Status, &sess.StartedAt, &sess.StoppedAt, &prState, &sess.PRNumber, &prURL, &prTitle, &mount, &repo, &claudeSessionID, &harness); err != nil {
+	var prState, mount, repo, prURL, prTitle, claudeSessionID, harness, workspaceFolder sql.NullString
+	if err := sc.Scan(&sess.ID, &sess.TicketID, &sess.WorktreePath, &sess.BranchName, &sess.ContainerID, &sess.ContainerName, &sess.Status, &sess.StartedAt, &sess.StoppedAt, &prState, &sess.PRNumber, &prURL, &prTitle, &mount, &repo, &claudeSessionID, &harness, &workspaceFolder); err != nil {
 		return nil, err
 	}
 	sess.PRState = prState.String
@@ -861,6 +866,7 @@ func scanSession(sc scanner) (*Session, error) {
 	sess.RepoPath = repo.String
 	sess.ClaudeSessionID = claudeSessionID.String
 	sess.Harness = harness.String
+	sess.WorkspaceFolder = workspaceFolder.String
 	return &sess, nil
 }
 

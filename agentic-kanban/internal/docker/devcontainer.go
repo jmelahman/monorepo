@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -147,8 +148,15 @@ type SpawnOptions struct {
 	// at the same absolute host path so the worktree's gitdir pointer
 	// resolves and `git` works inside the container.
 	SourceRepoPath string
-	ContainerName  string
-	Ports          []PortMapping
+	// ProjectDir, when non-empty, scopes the session to a subdirectory of the
+	// workspace: the whole worktree is still bind-mounted at the
+	// devcontainer's workspaceFolder, but the agent's working directory (and
+	// ${containerWorkspaceFolder}) descend into this subdirectory. Slash-
+	// separated and relative; callers must have validated it stays inside the
+	// workspace.
+	ProjectDir    string
+	ContainerName string
+	Ports         []PortMapping
 	// ExtraEnv is appended to the container's environment after devcontainer
 	// containerEnv values, so callers can override.
 	ExtraEnv map[string]string
@@ -167,10 +175,68 @@ type SpawnOptions struct {
 // at a stable, predictable path.
 const RepoMountTarget = "/repository"
 
+// DefaultWorkspaceFolder is the container path a devcontainer.json that
+// declares no workspaceFolder gets. Mirrored by db.DefaultWorkspaceFolder,
+// which is the fallback for sessions started before the column recording it
+// existed.
+const DefaultWorkspaceFolder = "/workspace"
+
 // SpawnResult is what we return after starting a devcontainer.
 type SpawnResult struct {
 	ContainerID   string
 	ContainerName string
+	// WorkspaceFolder is the container path the agent's working directory was
+	// created at: the devcontainer's workspaceFolder joined with ProjectDir.
+	// Callers snapshot it so later execs land where the container actually
+	// put the agent, even if the board's project_dir is edited afterwards.
+	WorkspaceFolder string
+}
+
+// workspaceLayout is the resolved set of workspace paths for one spawn. The
+// devcontainer spec has a single "workspace folder", but a monorepo board
+// needs two: the bind still lands at the config's workspaceFolder (the whole
+// worktree must be mounted for git to work), while the agent works from a
+// subdirectory of it. Derive these once and read them everywhere rather than
+// re-joining, so the mount and the working directory can never disagree.
+type workspaceLayout struct {
+	// MountSource is the host directory handed to dockerd as the bind source.
+	MountSource string
+	// MountTarget is the container path that bind lands at — the
+	// devcontainer's declared workspaceFolder.
+	MountTarget string
+	// LocalFolder is the host equivalent of ContainerFolder, and what
+	// ${localWorkspaceFolder} resolves to.
+	LocalFolder string
+	// ContainerFolder is the agent's working directory and what
+	// ${containerWorkspaceFolder} resolves to.
+	ContainerFolder string
+}
+
+// resolveWorkspaceLayout derives the four workspace paths for a spawn.
+// workspaceFolder must already have been variable-substituted, since the
+// working directory and every exec path are derived from it.
+func resolveWorkspaceLayout(opts SpawnOptions, workspaceFolder string) workspaceLayout {
+	if workspaceFolder == "" {
+		workspaceFolder = DefaultWorkspaceFolder
+	}
+	mountSource := opts.MountPath
+	if mountSource == "" {
+		mountSource = opts.WorktreePath
+	}
+	substSource := mountSource
+	l := workspaceLayout{
+		MountSource:     mountSource,
+		MountTarget:     workspaceFolder,
+		LocalFolder:     substSource,
+		ContainerFolder: workspaceFolder,
+	}
+	if projectDir := strings.Trim(filepath.ToSlash(opts.ProjectDir), "/"); projectDir != "" {
+		// Container paths are always slash-separated, so path.Join — not
+		// filepath.Join, which would emit backslashes on a Windows host.
+		l.ContainerFolder = path.Join(workspaceFolder, projectDir)
+		l.LocalFolder = filepath.Join(substSource, filepath.FromSlash(projectDir))
+	}
+	return l
 }
 
 var varRE = regexp.MustCompile(`\$\{([^}]+)\}`)
@@ -183,15 +249,26 @@ type SubstitutionContext struct {
 	DevcontainerID           string
 }
 
-// NewSubstitutionContext builds a context for the given worktree and the
-// container-side workspace folder (defaults to /workspace if empty).
-func NewSubstitutionContext(worktreePath, containerWorkspaceFolder string) SubstitutionContext {
+// NewSubstitutionContext builds a context for the given host workspace folder
+// and its container-side counterpart (defaults to /workspace if empty).
+//
+// idSeed is what ${devcontainerId} is derived from; pass the workspace bind
+// source, not localWorkspaceFolder. The two differ for a board scoped to a
+// subdirectory, and the id identifies the container — which is the same
+// container whichever subdirectory the agent works from. Seeding it from the
+// subdirectory path would rename every ${devcontainerId} named volume and
+// orphan the caches they hold. An empty idSeed falls back to
+// localWorkspaceFolder.
+func NewSubstitutionContext(localWorkspaceFolder, containerWorkspaceFolder, idSeed string) SubstitutionContext {
 	if containerWorkspaceFolder == "" {
-		containerWorkspaceFolder = "/workspace"
+		containerWorkspaceFolder = DefaultWorkspaceFolder
 	}
-	sum := sha256.Sum256([]byte(worktreePath))
+	if idSeed == "" {
+		idSeed = localWorkspaceFolder
+	}
+	sum := sha256.Sum256([]byte(idSeed))
 	return SubstitutionContext{
-		LocalWorkspaceFolder:     worktreePath,
+		LocalWorkspaceFolder:     localWorkspaceFolder,
 		ContainerWorkspaceFolder: containerWorkspaceFolder,
 		DevcontainerID:           hex.EncodeToString(sum[:]),
 	}
@@ -214,7 +291,8 @@ func Substitute(s string, ctx SubstitutionContext) string {
 		case "containerWorkspaceFolder":
 			return ctx.ContainerWorkspaceFolder
 		case "containerWorkspaceFolderBasename":
-			return filepath.Base(ctx.ContainerWorkspaceFolder)
+			// Container paths are slash-separated regardless of host OS.
+			return path.Base(ctx.ContainerWorkspaceFolder)
 		case "devcontainerId":
 			return ctx.DevcontainerID
 		}
@@ -277,44 +355,83 @@ func (c *DevcontainerConfig) Substitute(ctx SubstitutionContext) {
 // a sibling Dockerfile; the built-in fallback ensures every session gets a
 // container even with no kanban configuration on disk.
 func LoadDevcontainer(worktreePath string) (*DevcontainerConfig, error) {
-	candidates := []string{
-		filepath.Join(worktreePath, ".devcontainer", "devcontainer.json"),
-		filepath.Join(worktreePath, ".devcontainer.json"),
+	return LoadDevcontainerFrom(worktreePath)
+}
+
+// LoadDevcontainerFrom is LoadDevcontainer over several workspace roots,
+// probing each root's .devcontainer/devcontainer.json then its
+// .devcontainer.json before moving to the next, and falling back to the
+// user-level pair and then the built-in default.
+//
+// Callers pass most specific first: a board scoped to a monorepo subproject
+// passes the subproject then the worktree root, so a subproject that ships
+// its own toolchain image wins while one that doesn't still inherits the
+// repo's. Empty and duplicate roots are skipped, so passing the same path
+// twice (a whole-repo board, where the project root *is* the worktree) probes
+// it once.
+func LoadDevcontainerFrom(roots ...string) (*DevcontainerConfig, error) {
+	// userLevel marks the shared ~/.config/kanban fallbacks, which are worth
+	// logging because the workspace itself defined nothing.
+	type candidate struct {
+		path      string
+		userLevel bool
+	}
+	var candidates []candidate
+	seen := map[string]bool{}
+	for _, root := range roots {
+		if root == "" || seen[root] {
+			continue
+		}
+		seen[root] = true
+		candidates = append(candidates,
+			candidate{path: filepath.Join(root, ".devcontainer", "devcontainer.json")},
+			candidate{path: filepath.Join(root, ".devcontainer.json")},
+		)
 	}
 	if userDir, err := userKanbanConfigDir(); err == nil {
 		candidates = append(candidates,
-			filepath.Join(userDir, ".devcontainer", "devcontainer.json"),
-			filepath.Join(userDir, "devcontainer.json"),
+			candidate{path: filepath.Join(userDir, ".devcontainer", "devcontainer.json"), userLevel: true},
+			candidate{path: filepath.Join(userDir, "devcontainer.json"), userLevel: true},
 		)
 	}
 
+	// primary names the workspace in log lines; roots are ordered most
+	// specific first, so it is the one the caller cares about.
+	primary := ""
+	for _, root := range roots {
+		if root != "" {
+			primary = root
+			break
+		}
+	}
+
 	var data []byte
-	var loaded string
-	for _, path := range candidates {
-		b, err := os.ReadFile(path)
+	var loaded candidate
+	for _, c := range candidates {
+		b, err := os.ReadFile(c.path)
 		if err == nil {
 			data = b
-			loaded = path
+			loaded = c
 			break
 		}
 		if !errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("read %s: %w", path, err)
+			return nil, fmt.Errorf("read %s: %w", c.path, err)
 		}
 	}
 	if data == nil {
-		log.Printf("devcontainer: %s has no devcontainer.json; using built-in default %s", worktreePath, BuiltinImage)
+		log.Printf("devcontainer: %s has no devcontainer.json; using built-in default %s", primary, BuiltinImage)
 		return BuiltinDevcontainer(), nil
 	}
-	if !strings.HasPrefix(loaded, worktreePath) {
-		log.Printf("devcontainer: %s has no devcontainer.json; using user fallback at %s", worktreePath, loaded)
+	if loaded.userLevel {
+		log.Printf("devcontainer: %s has no devcontainer.json; using user fallback at %s", primary, loaded.path)
 	}
 
 	stripped := jsonc.Strip(data)
 	var cfg DevcontainerConfig
 	if err := json.Unmarshal(stripped, &cfg); err != nil {
-		return nil, fmt.Errorf("parse %s: %w", loaded, err)
+		return nil, fmt.Errorf("parse %s: %w", loaded.path, err)
 	}
-	cfg.ConfigDir = filepath.Dir(loaded)
+	cfg.ConfigDir = filepath.Dir(loaded.path)
 	return &cfg, nil
 }
 
@@ -333,16 +450,31 @@ func userKanbanConfigDir() (string, error) {
 
 // Spawn builds and runs the devcontainer for a given worktree.
 func (c *Client) Spawn(ctx context.Context, cfg *DevcontainerConfig, opts SpawnOptions) (*SpawnResult, error) {
-	if cfg.WorkspaceFolder == "" {
-		cfg.WorkspaceFolder = "/workspace"
+	mountSource := opts.MountPath
+	if mountSource == "" {
+		mountSource = opts.WorktreePath
 	}
-	substSource := opts.MountPath
-	if substSource == "" {
-		substSource = opts.WorktreePath
-	}
-	cfg.Substitute(NewSubstitutionContext(substSource, cfg.WorkspaceFolder))
+	// workspaceFolder may itself contain variables, and the working directory
+	// plus every later exec path derive from it, so resolve that one field
+	// first against a bootstrap context and only then build the real one. The
+	// container-side tokens are seeded with the unresolved value here, which
+	// only matters for a workspaceFolder that refers to itself — meaningless
+	// either way.
+	bootstrap := NewSubstitutionContext(mountSource, cfg.WorkspaceFolder, mountSource)
+	cfg.WorkspaceFolder = Substitute(cfg.WorkspaceFolder, bootstrap)
+	layout := resolveWorkspaceLayout(opts, cfg.WorkspaceFolder)
+	cfg.WorkspaceFolder = layout.MountTarget
+	cfg.Substitute(NewSubstitutionContext(layout.LocalFolder, layout.ContainerFolder, layout.MountSource))
 
-	imageRef, err := c.ensureImage(ctx, cfg, opts.WorktreePath, filepath.Base(opts.WorktreePath), opts.OnPullProgress)
+	// Build from the project root first so a subproject's devcontainer.json can
+	// reference a Dockerfile beside it rather than falling back to the monorepo
+	// root's, with the worktree root behind it so a subproject that inherits the
+	// repo-root config still finds that config's Dockerfile. The cache key stays
+	// the worktree basename (the ticket slug): the image content already
+	// distinguishes subprojects, and folding project_dir in would invalidate
+	// every cached image on upgrade.
+	buildRoots := []string{layout.LocalFolder, opts.WorktreePath}
+	imageRef, err := c.ensureImage(ctx, cfg, buildRoots, filepath.Base(opts.WorktreePath), opts.OnPullProgress)
 	if err != nil {
 		return nil, fmt.Errorf("ensure image: %w", err)
 	}
@@ -357,7 +489,7 @@ func (c *Client) Spawn(ctx context.Context, cfg *DevcontainerConfig, opts SpawnO
 		hostGatewayIP = c.NetworkGatewayIPv4(ctx, opts.AttachNetwork)
 	}
 
-	hostCfg, netCfg, containerCfg, err := buildContainerConfig(cfg, opts, imageRef, hostGatewayIP)
+	hostCfg, netCfg, containerCfg, err := buildContainerConfig(cfg, opts, layout, imageRef, hostGatewayIP)
 	if err != nil {
 		return nil, err
 	}
@@ -381,16 +513,19 @@ func (c *Client) Spawn(ctx context.Context, cfg *DevcontainerConfig, opts SpawnO
 		}
 	}
 
-	return &SpawnResult{ContainerID: created.ID, ContainerName: opts.ContainerName}, nil
+	return &SpawnResult{
+		ContainerID:     created.ID,
+		ContainerName:   opts.ContainerName,
+		WorkspaceFolder: layout.ContainerFolder,
+	}, nil
 }
 
-func buildContainerConfig(cfg *DevcontainerConfig, opts SpawnOptions, imageRef string, hostGatewayIP string) (*container.HostConfig, *network.NetworkingConfig, *container.Config, error) {
-	wsFolder := cfg.WorkspaceFolder
-
-	mountSource := opts.MountPath
-	if mountSource == "" {
-		mountSource = opts.WorktreePath
-	}
+func buildContainerConfig(cfg *DevcontainerConfig, opts SpawnOptions, layout workspaceLayout, imageRef string, hostGatewayIP string) (*container.HostConfig, *network.NetworkingConfig, *container.Config, error) {
+	// The bind still lands at the declared workspaceFolder even when the
+	// agent works from a subdirectory of it — the whole worktree has to be
+	// mounted for git to resolve its index and gitdir pointer.
+	wsFolder := layout.MountTarget
+	mountSource := layout.MountSource
 	mounts := []mount.Mount{
 		{Type: mount.TypeBind, Source: TranslateToHost(mountSource), Target: wsFolder, Consistency: mount.ConsistencyDelegated},
 	}
@@ -465,7 +600,7 @@ func buildContainerConfig(cfg *DevcontainerConfig, opts SpawnOptions, imageRef s
 	}
 	containerCfg := &container.Config{
 		Image:        imageRef,
-		WorkingDir:   wsFolder,
+		WorkingDir:   layout.ContainerFolder,
 		Tty:          false,
 		AttachStdout: false,
 		AttachStderr: false,
@@ -565,7 +700,7 @@ func parseMountString(s string) (mount.Mount, error) {
 	return m, nil
 }
 
-func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, worktreePath, tagBase string, onProgress PullProgressFunc) (string, error) {
+func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, buildRoots []string, tagBase string, onProgress PullProgressFunc) (string, error) {
 	if cfg.Image != "" {
 		if _, _, err := c.cli.ImageInspectWithRaw(ctx, cfg.Image); err == nil {
 			return cfg.Image, nil
@@ -584,7 +719,7 @@ func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, workt
 		}
 		return cfg.Image, nil
 	}
-	contextDir, dockerfilePath := resolveBuildPaths(cfg, worktreePath)
+	contextDir, dockerfilePath := resolveBuildPaths(cfg, buildRoots...)
 
 	tag, err := imageTag(tagBase, dockerfilePath, cfg.Build.Args)
 	if err != nil {
@@ -624,9 +759,17 @@ func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, workt
 // resolveBuildPaths picks the build context dir and Dockerfile path for cfg.
 // It prefers the directory the loaded devcontainer.json lives in (handling
 // repo .devcontainer/, repo-root .devcontainer.json, and user-level fallback
-// uniformly), then falls back to the worktree root so an in-.devcontainer/
-// json can reference a Dockerfile at the repo root without a `..` prefix.
-func resolveBuildPaths(cfg *DevcontainerConfig, worktreePath string) (contextDir, dockerfilePath string) {
+// uniformly), then falls back to a workspace root so an in-.devcontainer/
+// json can reference a Dockerfile beside it without a `..` prefix.
+//
+// A board scoped to a subproject passes both roots, subproject first. The
+// order then matters in both directions: a subproject devcontainer.json
+// naming a sibling Dockerfile must not build the monorepo root's, and a
+// monorepo-root devcontainer.json inherited by a subproject that has none of
+// its own must not build a Dockerfile that merely happens to sit in the
+// subproject. rootsForConfig resolves that by promoting whichever root the
+// config was actually loaded from.
+func resolveBuildPaths(cfg *DevcontainerConfig, roots ...string) (contextDir, dockerfilePath string) {
 	dockerfileRel := cfg.Build.Dockerfile
 	if dockerfileRel == "" {
 		dockerfileRel = "Dockerfile"
@@ -635,19 +778,61 @@ func resolveBuildPaths(cfg *DevcontainerConfig, worktreePath string) (contextDir
 	if contextRel == "" {
 		contextRel = "."
 	}
+	ordered := rootsForConfig(cfg.ConfigDir, roots)
 	configDir := cfg.ConfigDir
+	if configDir == "" && len(ordered) > 0 {
+		configDir = filepath.Join(ordered[0], ".devcontainer")
+	}
+	return firstExisting(configDir, contextRel, ordered), firstExisting(configDir, dockerfileRel, ordered)
+}
+
+// rootsForConfig moves the workspace root that cfg.ConfigDir sits in to the
+// front, leaving the rest in their original order. ConfigDir is the directory
+// holding the devcontainer.json, so it is either the root itself (a top-level
+// .devcontainer.json) or its .devcontainer/ subdirectory. A user-level or
+// built-in config matches no root and leaves the order alone.
+func rootsForConfig(configDir string, roots []string) []string {
 	if configDir == "" {
-		configDir = filepath.Join(worktreePath, ".devcontainer")
+		return roots
 	}
-	contextDir = filepath.Join(configDir, contextRel)
-	if _, err := os.Stat(contextDir); err != nil {
-		contextDir = filepath.Join(worktreePath, contextRel)
+	for i, root := range roots {
+		if root == "" || (configDir != root && configDir != filepath.Join(root, ".devcontainer")) {
+			continue
+		}
+		if i == 0 {
+			return roots
+		}
+		out := make([]string, 0, len(roots))
+		out = append(out, root)
+		out = append(out, roots[:i]...)
+		return append(out, roots[i+1:]...)
 	}
-	dockerfilePath = filepath.Join(configDir, dockerfileRel)
-	if _, err := os.Stat(dockerfilePath); err != nil {
-		dockerfilePath = filepath.Join(worktreePath, dockerfileRel)
+	return roots
+}
+
+// firstExisting joins rel onto configDir and then each root in turn, and
+// returns the first that exists. When none does it returns the configDir
+// candidate — the location the devcontainer.json actually named, which is
+// what a "no such file" error should point at.
+func firstExisting(configDir, rel string, roots []string) string {
+	candidates := make([]string, 0, len(roots)+1)
+	if configDir != "" {
+		candidates = append(candidates, filepath.Join(configDir, rel))
 	}
-	return contextDir, dockerfilePath
+	for _, root := range roots {
+		if root != "" {
+			candidates = append(candidates, filepath.Join(root, rel))
+		}
+	}
+	if len(candidates) == 0 {
+		return rel
+	}
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return candidates[0]
 }
 
 // imageTag content-addresses a Dockerfile build: same Dockerfile + args

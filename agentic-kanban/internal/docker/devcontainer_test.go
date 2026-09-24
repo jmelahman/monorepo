@@ -56,7 +56,7 @@ func TestSubstitute(t *testing.T) {
 	t.Setenv("KANBAN_TEST_SET", "world")
 	t.Setenv("KANBAN_TEST_EMPTY", "")
 
-	ctx := NewSubstitutionContext("/host/onyx", "/workspace")
+	ctx := NewSubstitutionContext("/host/onyx", "/workspace", "/host/onyx")
 
 	cases := []struct {
 		name string
@@ -90,14 +90,122 @@ func TestSubstitute(t *testing.T) {
 }
 
 func TestSubstitute_DevcontainerIDIsStable(t *testing.T) {
-	a := NewSubstitutionContext("/foo", "/workspace").DevcontainerID
-	b := NewSubstitutionContext("/foo", "/workspace").DevcontainerID
-	c := NewSubstitutionContext("/bar", "/workspace").DevcontainerID
+	a := NewSubstitutionContext("/foo", "/workspace", "/foo").DevcontainerID
+	b := NewSubstitutionContext("/foo", "/workspace", "/foo").DevcontainerID
+	c := NewSubstitutionContext("/bar", "/workspace", "/bar").DevcontainerID
 	if a != b {
 		t.Errorf("devcontainerId not stable for same worktree: %q vs %q", a, b)
 	}
 	if a == c {
 		t.Errorf("devcontainerId collided across worktrees: %q", a)
+	}
+}
+
+func TestSubstitute_DevcontainerIDIgnoresProjectDir(t *testing.T) {
+	// The id identifies the container, which is the same container whichever
+	// subdirectory the agent sits in. Seeding it from the project-joined path
+	// would rename every ${devcontainerId} named volume on upgrade and orphan
+	// warm caches.
+	opts := SpawnOptions{WorktreePath: "/host/wt"}
+	plain := resolveWorkspaceLayout(opts, "/workspace")
+
+	opts.ProjectDir = "services/api"
+	sub := resolveWorkspaceLayout(opts, "/workspace")
+
+	if sub.ContainerFolder == plain.ContainerFolder {
+		t.Fatalf("project_dir did not change the working directory: %q", sub.ContainerFolder)
+	}
+	a := NewSubstitutionContext(plain.LocalFolder, plain.ContainerFolder, plain.MountSource).DevcontainerID
+	b := NewSubstitutionContext(sub.LocalFolder, sub.ContainerFolder, sub.MountSource).DevcontainerID
+	if a != b {
+		t.Errorf("devcontainerId changed with project_dir: %q vs %q", a, b)
+	}
+}
+
+func TestSubstitute_WorkspaceFolderPairing(t *testing.T) {
+	opts := SpawnOptions{WorktreePath: "/host/monorepo", ProjectDir: "services/api"}
+	layout := resolveWorkspaceLayout(opts, "/workspace")
+
+	if layout.MountSource != "/host/monorepo" {
+		t.Errorf("MountSource = %q; want %q", layout.MountSource, "/host/monorepo")
+	}
+	if layout.MountTarget != "/workspace" {
+		t.Errorf("MountTarget = %q; want %q", layout.MountTarget, "/workspace")
+	}
+	if want := filepath.Join("/host/monorepo", "services", "api"); layout.LocalFolder != want {
+		t.Errorf("LocalFolder = %q; want %q", layout.LocalFolder, want)
+	}
+	if layout.ContainerFolder != "/workspace/services/api" {
+		t.Errorf("ContainerFolder = %q; want %q", layout.ContainerFolder, "/workspace/services/api")
+	}
+
+	ctx := NewSubstitutionContext(layout.LocalFolder, layout.ContainerFolder, layout.MountSource)
+	cases := map[string]string{
+		"${localWorkspaceFolder}":             filepath.Join("/host/monorepo", "services", "api"),
+		"${localWorkspaceFolderBasename}":     "api",
+		"${containerWorkspaceFolder}":         "/workspace/services/api",
+		"${containerWorkspaceFolderBasename}": "api",
+	}
+	for in, want := range cases {
+		if got := Substitute(in, ctx); got != want {
+			t.Errorf("Substitute(%q) = %q; want %q", in, got, want)
+		}
+	}
+}
+
+func TestBuildContainerConfig_ProjectDir(t *testing.T) {
+	// The regression guard for the whole monorepo feature: the *whole*
+	// worktree still binds at the workspace folder (git needs its index and
+	// gitdir pointer), and only the working directory moves down.
+	cases := []struct {
+		name            string
+		workspaceFolder string
+		wantTarget      string
+		wantWorkingDir  string
+	}{
+		{
+			name:            "default workspace folder",
+			workspaceFolder: "/workspace",
+			wantTarget:      "/workspace",
+			wantWorkingDir:  "/workspace/services/api",
+		},
+		{
+			name:            "custom workspace folder",
+			workspaceFolder: "/src",
+			wantTarget:      "/src",
+			wantWorkingDir:  "/src/services/api",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &DevcontainerConfig{WorkspaceFolder: tc.workspaceFolder}
+			opts := SpawnOptions{
+				WorktreePath:  "/host/wt",
+				ProjectDir:    "services/api",
+				ContainerName: "test",
+			}
+			layout := resolveWorkspaceLayout(opts, cfg.WorkspaceFolder)
+
+			hostCfg, _, containerCfg, err := buildContainerConfig(cfg, opts, layout, "img", "")
+			if err != nil {
+				t.Fatalf("buildContainerConfig: %v", err)
+			}
+			var ws *mount.Mount
+			for i, m := range hostCfg.Mounts {
+				if m.Target == tc.wantTarget {
+					ws = &hostCfg.Mounts[i]
+				}
+			}
+			if ws == nil {
+				t.Fatalf("no mount targeting %q; got %#v", tc.wantTarget, hostCfg.Mounts)
+			}
+			if ws.Source != "/host/wt" {
+				t.Errorf("workspace mount source = %q; want the whole worktree %q", ws.Source, "/host/wt")
+			}
+			if containerCfg.WorkingDir != tc.wantWorkingDir {
+				t.Errorf("WorkingDir = %q; want %q", containerCfg.WorkingDir, tc.wantWorkingDir)
+			}
+		})
 	}
 }
 
@@ -122,7 +230,7 @@ func TestDevcontainerConfig_Substitute(t *testing.T) {
 		PostStartCommand: "echo ${localWorkspaceFolderBasename}",
 	}
 
-	cfg.Substitute(NewSubstitutionContext("/host/proj", cfg.WorkspaceFolder))
+	cfg.Substitute(NewSubstitutionContext("/host/proj", cfg.WorkspaceFolder, "/host/proj"))
 
 	want := &DevcontainerConfig{
 		Name:  "root-box",
@@ -155,14 +263,14 @@ func TestDevcontainerConfig_Substitute_RemoteUserDefault(t *testing.T) {
 	t.Setenv("DEVCONTAINER_REMOTE_USER", "")
 	os.Unsetenv("DEVCONTAINER_REMOTE_USER")
 	cfg := &DevcontainerConfig{RemoteUser: "${localEnv:DEVCONTAINER_REMOTE_USER:dev}"}
-	cfg.Substitute(NewSubstitutionContext("/x", "/workspace"))
+	cfg.Substitute(NewSubstitutionContext("/x", "/workspace", "/x"))
 	if cfg.RemoteUser != "dev" {
 		t.Errorf("RemoteUser = %q; want %q (default applied)", cfg.RemoteUser, "dev")
 	}
 
 	t.Setenv("DEVCONTAINER_REMOTE_USER", "root")
 	cfg = &DevcontainerConfig{RemoteUser: "${localEnv:DEVCONTAINER_REMOTE_USER:dev}"}
-	cfg.Substitute(NewSubstitutionContext("/x", "/workspace"))
+	cfg.Substitute(NewSubstitutionContext("/x", "/workspace", "/x"))
 	if cfg.RemoteUser != "root" {
 		t.Errorf("RemoteUser = %q; want %q (env var applied)", cfg.RemoteUser, "root")
 	}
@@ -185,7 +293,7 @@ func TestBuildContainerConfig_SourceRepoGitMount(t *testing.T) {
 		ContainerName:  "test",
 	}
 
-	hostCfg, _, _, err := buildContainerConfig(cfg, opts, "img", "")
+	hostCfg, _, _, err := buildContainerConfig(cfg, opts, resolveWorkspaceLayout(opts, cfg.WorkspaceFolder), "img", "")
 	if err != nil {
 		t.Fatalf("buildContainerConfig: %v", err)
 	}
@@ -224,7 +332,7 @@ func TestBuildContainerConfig_TranslatesHostPaths(t *testing.T) {
 		ContainerName:    "test",
 	}
 
-	hostCfg, _, _, err := buildContainerConfig(cfg, opts, "img", "")
+	hostCfg, _, _, err := buildContainerConfig(cfg, opts, resolveWorkspaceLayout(opts, cfg.WorkspaceFolder), "img", "")
 	if err != nil {
 		t.Fatalf("buildContainerConfig: %v", err)
 	}
@@ -259,7 +367,7 @@ func TestBuildContainerConfig_NoGitMountWhenSourceMissing(t *testing.T) {
 	cfg := &DevcontainerConfig{WorkspaceFolder: "/workspace"}
 	opts := SpawnOptions{WorktreePath: "/host/worktree", ContainerName: "test"}
 
-	hostCfg, _, _, err := buildContainerConfig(cfg, opts, "img", "")
+	hostCfg, _, _, err := buildContainerConfig(cfg, opts, resolveWorkspaceLayout(opts, cfg.WorkspaceFolder), "img", "")
 	if err != nil {
 		t.Fatalf("buildContainerConfig: %v", err)
 	}
@@ -352,6 +460,61 @@ func TestLoadDevcontainer_FallbackOrder(t *testing.T) {
 		}
 	})
 
+	t.Run("prefers the subproject over the worktree root", func(t *testing.T) {
+		repo := t.TempDir()
+		xdg := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+		project := filepath.Join(repo, "services", "api")
+		write(t, filepath.Join(project, ".devcontainer", "devcontainer.json"), `{"name":"project"}`)
+		write(t, filepath.Join(repo, ".devcontainer", "devcontainer.json"), `{"name":"root"}`)
+		write(t, filepath.Join(xdg, "kanban", "devcontainer.json"), `{"name":"user"}`)
+
+		cfg, err := LoadDevcontainerFrom(project, repo)
+		if err != nil {
+			t.Fatalf("LoadDevcontainerFrom: %v", err)
+		}
+		if cfg.Name != "project" {
+			t.Errorf("Name = %q; want %q", cfg.Name, "project")
+		}
+	})
+
+	t.Run("falls back to the worktree root when the subproject has none", func(t *testing.T) {
+		repo := t.TempDir()
+		xdg := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+		project := filepath.Join(repo, "services", "api")
+		if err := os.MkdirAll(project, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		write(t, filepath.Join(repo, ".devcontainer", "devcontainer.json"), `{"name":"root"}`)
+		write(t, filepath.Join(xdg, "kanban", "devcontainer.json"), `{"name":"user"}`)
+
+		cfg, err := LoadDevcontainerFrom(project, repo)
+		if err != nil {
+			t.Fatalf("LoadDevcontainerFrom: %v", err)
+		}
+		if cfg.Name != "root" {
+			t.Errorf("Name = %q; want %q", cfg.Name, "root")
+		}
+	})
+
+	t.Run("duplicate roots probe once and still reach the user fallback", func(t *testing.T) {
+		// A whole-repo board passes the same path twice (project root ==
+		// worktree). Dedupe must not change the outcome.
+		repo := t.TempDir()
+		xdg := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+		write(t, filepath.Join(xdg, "kanban", "devcontainer.json"), `{"name":"user"}`)
+
+		cfg, err := LoadDevcontainerFrom(repo, repo)
+		if err != nil {
+			t.Fatalf("LoadDevcontainerFrom: %v", err)
+		}
+		if cfg.Name != "user" {
+			t.Errorf("Name = %q; want %q", cfg.Name, "user")
+		}
+	})
+
 	t.Run("falls back to built-in when neither repo nor user config has one", func(t *testing.T) {
 		repo := t.TempDir()
 		xdg := t.TempDir()
@@ -415,7 +578,7 @@ func TestBuildContainerConfig_ContainerUserFallback(t *testing.T) {
 	opts := SpawnOptions{WorktreePath: "/tmp/wt"}
 
 	cfg := &DevcontainerConfig{WorkspaceFolder: "/workspace", ContainerUser: "node"}
-	_, _, containerCfg, err := buildContainerConfig(cfg, opts, "img", "")
+	_, _, containerCfg, err := buildContainerConfig(cfg, opts, resolveWorkspaceLayout(opts, cfg.WorkspaceFolder), "img", "")
 	if err != nil {
 		t.Fatalf("buildContainerConfig: %v", err)
 	}
@@ -424,7 +587,7 @@ func TestBuildContainerConfig_ContainerUserFallback(t *testing.T) {
 	}
 
 	cfg = &DevcontainerConfig{WorkspaceFolder: "/workspace", RemoteUser: "dev", ContainerUser: "node"}
-	_, _, containerCfg, err = buildContainerConfig(cfg, opts, "img", "")
+	_, _, containerCfg, err = buildContainerConfig(cfg, opts, resolveWorkspaceLayout(opts, cfg.WorkspaceFolder), "img", "")
 	if err != nil {
 		t.Fatalf("buildContainerConfig: %v", err)
 	}
@@ -466,6 +629,56 @@ func TestResolveBuildPaths(t *testing.T) {
 		_, dfPath := resolveBuildPaths(cfg, repo)
 		if dfPath != filepath.Join(repo, "Dockerfile") {
 			t.Errorf("dockerfilePath = %q; want fallback to %q", dfPath, filepath.Join(repo, "Dockerfile"))
+		}
+	})
+
+	t.Run("subproject Dockerfile beats the monorepo root's", func(t *testing.T) {
+		// Spawn hands resolveBuildPaths the project root first, so a subproject
+		// devcontainer.json naming a sibling Dockerfile must not silently build
+		// the monorepo root's instead.
+		repo := t.TempDir()
+		project := filepath.Join(repo, "services", "api")
+		write(t, filepath.Join(repo, "Dockerfile"))
+		write(t, filepath.Join(project, "Dockerfile"))
+		cfg := &DevcontainerConfig{ConfigDir: filepath.Join(project, ".devcontainer")}
+
+		ctxDir, dfPath := resolveBuildPaths(cfg, project, repo)
+		if dfPath != filepath.Join(project, "Dockerfile") {
+			t.Errorf("dockerfilePath = %q; want %q", dfPath, filepath.Join(project, "Dockerfile"))
+		}
+		if ctxDir != project {
+			t.Errorf("contextDir = %q; want %q", ctxDir, project)
+		}
+	})
+
+	t.Run("an inherited repo-root config keeps the repo-root Dockerfile", func(t *testing.T) {
+		// The mirror image: the subproject ships no devcontainer.json, so the
+		// repo root's is loaded. Its `Dockerfile` means the one beside it —
+		// not an unrelated file that happens to sit in the subproject.
+		repo := t.TempDir()
+		project := filepath.Join(repo, "services", "api")
+		write(t, filepath.Join(repo, "Dockerfile"))
+		write(t, filepath.Join(project, "Dockerfile"))
+		cfg := &DevcontainerConfig{ConfigDir: filepath.Join(repo, ".devcontainer")}
+
+		ctxDir, dfPath := resolveBuildPaths(cfg, project, repo)
+		if dfPath != filepath.Join(repo, "Dockerfile") {
+			t.Errorf("dockerfilePath = %q; want %q", dfPath, filepath.Join(repo, "Dockerfile"))
+		}
+		if ctxDir != repo {
+			t.Errorf("contextDir = %q; want %q", ctxDir, repo)
+		}
+	})
+
+	t.Run("nothing on disk reports the path the config named", func(t *testing.T) {
+		repo := t.TempDir()
+		project := filepath.Join(repo, "services", "api")
+		cfg := &DevcontainerConfig{ConfigDir: filepath.Join(project, ".devcontainer")}
+
+		_, dfPath := resolveBuildPaths(cfg, project, repo)
+		want := filepath.Join(project, ".devcontainer", "Dockerfile")
+		if dfPath != want {
+			t.Errorf("dockerfilePath = %q; want %q", dfPath, want)
 		}
 	})
 
@@ -734,7 +947,7 @@ func TestBuildContainerConfig_HostDockerInternalAlias(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			hostCfg, _, _, err := buildContainerConfig(cfg, opts, "img", tc.gatewayIP)
+			hostCfg, _, _, err := buildContainerConfig(cfg, opts, resolveWorkspaceLayout(opts, cfg.WorkspaceFolder), "img", tc.gatewayIP)
 			if err != nil {
 				t.Fatalf("buildContainerConfig: %v", err)
 			}

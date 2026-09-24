@@ -158,9 +158,11 @@ func Discover(worktreePath string) ([]VSCodeTask, []string, error) {
 }
 
 // PortFor returns the container port for a task label, sourced from the
-// merged kanban config (user file layered over <worktree>/.kanban.toml).
-func PortFor(worktreePath, label string) (int, bool) {
-	return kanbantoml.Load(worktreePath).PortFor(label)
+// merged kanban config: the user file layered over the board's project dir,
+// layered over <worktree>/.kanban.toml. projectPath may be empty or equal to
+// worktreePath when the board isn't scoped to a monorepo subproject.
+func PortFor(worktreePath, projectPath, label string) (int, bool) {
+	return kanbantoml.LoadFrom(worktreePath, projectPath).PortFor(label)
 }
 
 // Runner manages task executions inside session containers.
@@ -182,7 +184,11 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 	if sess.ContainerID == nil || *sess.ContainerID == "" {
 		return nil, errors.New("session not running")
 	}
-	const workspaceFolder = "/workspace"
+	// The agent's working directory as the container was actually created —
+	// the devcontainer's workspaceFolder, descended into the board's
+	// project_dir. ${workspaceFolder} in a task must resolve to the same
+	// place the task is run from, or a relative cwd lands in the wrong tree.
+	workspaceFolder := sess.WorkspaceDir()
 	cwd := resolveContainerPath(task.Cwd, workspaceFolder)
 
 	full := strings.TrimSpace(task.Command + " " + strings.Join(task.Args, " "))

@@ -7,6 +7,11 @@ Kanban reads two TOML files and merges them, with **user values overriding proje
 
 Either file may be absent. Both accept the same schema.
 
+A board scoped to a monorepo subdirectory adds a third layer in the middle,
+so precedence runs **repo root → subproject → user**: `<repo>/<project_dir>/.kanban.toml`
+overrides the repo-wide file key by key and inherits everything it doesn't
+set. See [Monorepos](/guide/monorepos).
+
 ## Schema
 
 ```toml
@@ -237,6 +242,10 @@ Kanban understands `.vscode/tasks.json` in the target repo. When a task whose `l
 
 Adjust the proxy range with `--port-range-start` and `--port-range-end` on `kanban serve`.
 
+On a board with a `project_dir`, `.vscode/tasks.json` is read from the
+subproject rather than the repo root, so the `[[tasks]]` entries that pair
+with it belong in the subproject's `.kanban.toml`.
+
 ## Resuming Claude Code sessions across restarts
 
 When a session container is restarted (or kanban itself is restarted and the container has to be recreated), the next `claude` launch automatically resumes the prior conversation for that ticket. There's nothing to configure — the mechanism is on by default whenever `~/.claude` is bind-mounted into the session container (the built-in devcontainer does this; see `claude_config = true` above).
@@ -362,3 +371,4 @@ hosts.
 - [REST API](/reference/api) — endpoints exposed by the running server, including `/api/config`.
 - [MCP reference](/reference/mcp) — the `*_config` tools and the rest of the agent-facing surface.
 - [Previews](/guide/previews) — per-branch preview deployments and `$KANBAN_PREVIEW_DOMAIN`.
+- [Monorepos](/guide/monorepos) — scoping a board to a subdirectory of the repo.

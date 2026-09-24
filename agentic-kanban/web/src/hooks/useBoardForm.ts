@@ -4,6 +4,7 @@ export type BoardFormFields = {
   name: string;
   repo: string;
   mount: string;
+  projectDir: string;
   worktreeRoot: string;
   base: string;
   branchPrefix: string;
@@ -15,6 +16,7 @@ const EMPTY: BoardFormFields = {
   name: "",
   repo: "",
   mount: "",
+  projectDir: "",
   worktreeRoot: "",
   base: "main",
   branchPrefix: "",

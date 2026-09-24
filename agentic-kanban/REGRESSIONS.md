@@ -159,3 +159,40 @@ Rules:
 - If you add conditional-request (ETag) support or otherwise touch the cache,
   keep the union-retain invariant: any code path that retains against a single
   board's window reintroduces the storm.
+
+### Exec sites hardcode `/workspace` instead of the session's workspace folder
+
+Every `docker exec` kanban issues needs a working directory, and for a long
+time four of them wrote the string `/workspace` rather than asking where the
+container's workspace actually is: `AttachAgent` and `AttachShell`
+(`internal/api/handlers.go`), the task runner's `${workspaceFolder}`
+substitution *and* exec `WorkingDir` (`internal/tasks/runner.go`), and the
+`CommitMsgTemplate` in `internal/harness/harness.go`, which literally began
+`cd /workspace && git diff --staged`. That was already wrong for any repo
+whose `devcontainer.json` declares a custom `workspaceFolder`, and it became
+wrong for every monorepo board once `boards.project_dir` moved the agent's
+cwd into a subdirectory.
+
+The fix is `sessions.workspace_folder`, written from `SpawnResult` in
+`Manager.Start` and read back through `db.Session.WorkspaceDir()`, which
+falls back to `/workspace` so pre-existing rows behave exactly as before.
+It lives on `db.Session` specifically so `internal/api` and `internal/tasks`
+can use it without importing `internal/session`.
+
+Rules:
+
+- A new exec site takes its `WorkingDir` from `sess.WorkspaceDir()`. Never
+  the literal, never `board.ProjectDir` re-joined at call time.
+- Record, don't recompute. Mounts and `WorkingDir` are frozen when the
+  container is created, so a cwd recomputed from the board after someone
+  edits `project_dir` can point at a directory the running container does
+  not have. The column is the container's ground truth until it is
+  recreated.
+- Two drifts follow from that and are deliberate: host-side discovery
+  (tasks, plans, `.kanban.toml`, `devcontainer.json`) reads `board.ProjectDir`
+  and so follows an edit immediately, and a `.claude/settings.local.json`
+  already written at the old location stays there, inert. Restarting the
+  session reconciles both.
+- `UpsertSession` does not persist this column (it already silently forgets
+  `harness`); `UpdateSessionLifecycle` does. Adding a write through the
+  wrong one looks like it works and then loses the value on the next upsert.

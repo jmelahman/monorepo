@@ -6,6 +6,7 @@ export type Board = {
   slug: string;
   repo_path: string;
   mount_path: string;
+  project_dir: string;
   worktree_root: string;
   base_branch: string;
   branch_prefix: string;
@@ -316,6 +317,7 @@ export const api = {
     name: string;
     repo_path?: string;
     mount_path?: string;
+    project_dir?: string;
     worktree_root?: string;
     base_branch?: string;
     branch_prefix?: string;
@@ -328,6 +330,7 @@ export const api = {
       name?: string;
       repo_path?: string;
       mount_path?: string;
+      project_dir?: string;
       worktree_root?: string;
       base_branch?: string;
       branch_prefix?: string;

@@ -1,11 +1,16 @@
 package db
 
 type Board struct {
-	ID             int64  `json:"id"`
-	Name           string `json:"name"`
-	Slug           string `json:"slug"`
-	RepoPath       string `json:"repo_path"`
-	MountPath      string `json:"mount_path"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	RepoPath  string `json:"repo_path"`
+	MountPath string `json:"mount_path"`
+	// ProjectDir scopes the board to a subdirectory of RepoPath: the whole
+	// repo is still checked out and mounted, but the agent works from this
+	// subdirectory. Repo-relative, slash-separated, "" for whole-repo boards.
+	// Requires RepoPath and an empty MountPath.
+	ProjectDir     string `json:"project_dir"`
 	WorktreeRoot   string `json:"worktree_root"`
 	BaseBranch     string `json:"base_branch"`
 	BranchPrefix   string `json:"branch_prefix"`
@@ -60,6 +65,26 @@ type Session struct {
 	// the user/project default (harness.Resolve). Written only by
 	// UpdateSessionHarness; UpsertSession leaves it alone.
 	Harness string `json:"harness,omitempty"`
+	// WorkspaceFolder is the container path the agent's working directory was
+	// created at, snapshotted at spawn time. Empty on sessions started before
+	// the column existed; read it through WorkspaceDir.
+	WorkspaceFolder string `json:"workspace_folder,omitempty"`
+}
+
+// DefaultWorkspaceFolder is the container path sessions used before
+// workspaceFolder and project_dir were honored, and the fallback for rows
+// that predate the sessions.workspace_folder column.
+const DefaultWorkspaceFolder = "/workspace"
+
+// WorkspaceDir is the container path execs against this session should use as
+// their working directory. It is a snapshot of how the container was actually
+// created, so it stays correct for a running container even if the board's
+// project_dir is edited underneath it.
+func (s *Session) WorkspaceDir() string {
+	if s == nil || s.WorkspaceFolder == "" {
+		return DefaultWorkspaceFolder
+	}
+	return s.WorkspaceFolder
 }
 
 type PortAllocation struct {

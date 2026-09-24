@@ -67,6 +67,7 @@ type createBoardReq struct {
 	Name           string `json:"name"`
 	RepoPath       string `json:"repo_path"`
 	MountPath      string `json:"mount_path"`
+	ProjectDir     string `json:"project_dir"`
 	WorktreeRoot   string `json:"worktree_root"`
 	BaseBranch     string `json:"base_branch"`
 	BranchPrefix   string `json:"branch_prefix"`
@@ -100,6 +101,11 @@ func (h *handlers) createBoard(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, fmt.Errorf("at least one of repo_path or mount_path required"), 400)
 		return
 	}
+	projectDir, err := session.ValidateProjectDir(req.ProjectDir, req.RepoPath, req.MountPath)
+	if err != nil {
+		h.httpError(w, err, 400)
+		return
+	}
 	if req.BaseBranch == "" && req.RepoPath != "" {
 		if b, err := git.DefaultBranch(req.RepoPath); err == nil {
 			req.BaseBranch = strings.TrimSpace(b)
@@ -116,6 +122,7 @@ func (h *handlers) createBoard(w http.ResponseWriter, r *http.Request) {
 		Slug:           slug.Make(req.Name, "x"),
 		RepoPath:       req.RepoPath,
 		MountPath:      req.MountPath,
+		ProjectDir:     projectDir,
 		WorktreeRoot:   req.WorktreeRoot,
 		BaseBranch:     req.BaseBranch,
 		BranchPrefix:   strings.TrimSpace(req.BranchPrefix),
@@ -137,6 +144,7 @@ type updateBoardReq struct {
 	Name           *string `json:"name"`
 	RepoPath       *string `json:"repo_path"`
 	MountPath      *string `json:"mount_path"`
+	ProjectDir     *string `json:"project_dir"`
 	WorktreeRoot   *string `json:"worktree_root"`
 	BaseBranch     *string `json:"base_branch"`
 	BranchPrefix   *string `json:"branch_prefix"`
@@ -174,6 +182,18 @@ func (h *handlers) updateBoard(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, fmt.Errorf("at least one of repo_path or mount_path required"), 400)
 		return
 	}
+	if req.ProjectDir != nil {
+		board.ProjectDir = strings.TrimSpace(*req.ProjectDir)
+	}
+	// Re-validate on every update, not just when project_dir itself changes:
+	// setting mount_path on a board that already has a project_dir is the
+	// same invalid pair arrived at from the other side.
+	projectDir, err := session.ValidateProjectDir(board.ProjectDir, board.RepoPath, board.MountPath)
+	if err != nil {
+		h.httpError(w, err, 400)
+		return
+	}
+	board.ProjectDir = projectDir
 	if req.WorktreeRoot != nil {
 		board.WorktreeRoot = strings.TrimSpace(*req.WorktreeRoot)
 	}
@@ -1168,11 +1188,12 @@ func (h *handlers) discoverTasks(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 404)
 		return
 	}
-	found, warnings, _ := tasks.Discover(sess.WorktreePath)
+	projectRoot := h.sessionProjectRoot(r.Context(), sess)
+	found, warnings, _ := tasks.Discover(projectRoot)
 	out := make([]taskInfo, 0, len(found))
 	for _, t := range found {
 		info := taskInfo{VSCodeTask: t}
-		if port, ok := tasks.PortFor(sess.WorktreePath, t.Label); ok {
+		if port, ok := tasks.PortFor(sess.WorktreePath, projectRoot, t.Label); ok {
 			info.ContainerPort = port
 			info.HasPort = true
 		}
@@ -1210,7 +1231,8 @@ func (h *handlers) createTaskRun(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 400)
 		return
 	}
-	found, _, err := tasks.Discover(sess.WorktreePath)
+	projectRoot := h.sessionProjectRoot(r.Context(), sess)
+	found, _, err := tasks.Discover(projectRoot)
 	if err != nil {
 		h.httpError(w, err, 500)
 		return
@@ -1232,7 +1254,7 @@ func (h *handlers) createTaskRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if port, ok := tasks.PortFor(sess.WorktreePath, task.Label); ok {
+	if port, ok := tasks.PortFor(sess.WorktreePath, projectRoot, task.Label); ok {
 		_ = h.ensurePortProxy(r.Context(), sess, task.Label, port)
 	}
 
@@ -1423,6 +1445,19 @@ func (h *handlers) boardForSession(ctx context.Context, sess *db.Session) (*db.B
 	return board, err
 }
 
+// sessionProjectRoot is the host directory the agent actually works in: the
+// worktree root descended into the board's project_dir. Host-side discovery
+// (tasks, plans) has to agree with the container's working directory or it
+// reads the wrong tree. Falls back to the worktree root when the board can't
+// be loaded, which is what every caller did before project_dir existed.
+func (h *handlers) sessionProjectRoot(ctx context.Context, sess *db.Session) string {
+	board, err := h.boardForSession(ctx, sess)
+	if err != nil {
+		return sess.WorktreePath
+	}
+	return session.ResolvePaths(board, sess).ProjectRoot(sess.WorktreePath)
+}
+
 // ticketBoard fetches a ticket and its parent board in one go. The returned
 // status is the HTTP code callers should pass to httpError when err != nil:
 // 404 if the ticket lookup failed (typically ErrNotFound), 500 otherwise.
@@ -1477,7 +1512,7 @@ func (h *handlers) wsPTY(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if err := h.sessions.AttachAgent(r.Context(), sess, w, r, resolved.ID, cmd, "/workspace"); err != nil {
+	if err := h.sessions.AttachAgent(r.Context(), sess, w, r, resolved.ID, cmd, sess.WorkspaceDir()); err != nil {
 		h.reconcileAfterAttach(r.Context(), sess)
 	}
 }
@@ -1521,7 +1556,7 @@ func (h *handlers) wsShell(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 404)
 		return
 	}
-	if err := h.sessions.AttachShell(r.Context(), sess, w, r, "/workspace"); err != nil {
+	if err := h.sessions.AttachShell(r.Context(), sess, w, r, sess.WorkspaceDir()); err != nil {
 		h.reconcileAfterAttach(r.Context(), sess)
 	}
 }
@@ -1861,16 +1896,24 @@ func isUniqueViolation(err error) bool {
 // resolvePlansDir gives a session-scoped absolute path for the configured
 // plans directory. An absolute config value (the default `~/.claude/plans`
 // post-expansion) is shared globally; a relative one (e.g. `./plans`) is
-// joined onto the session worktree so each ticket gets its own plans.
-func (h *handlers) resolvePlansDir(sess *db.Session) string {
+// joined onto the agent's working directory so each ticket gets its own
+// plans — and so a monorepo board finds the plans the agent wrote from
+// inside its project_dir rather than looking at the repo root.
+func (h *handlers) resolvePlansDir(ctx context.Context, sess *db.Session) string {
 	dir := h.config.PlansDir()
-	if filepath.IsAbs(dir) {
-		return dir
-	}
 	if sess.WorktreePath == "" {
 		return dir
 	}
-	return filepath.Join(sess.WorktreePath, dir)
+	return plansDirUnder(dir, h.sessionProjectRoot(ctx, sess))
+}
+
+// plansDirUnder joins a relative plans dir onto root, leaving an absolute one
+// (and an empty root) alone.
+func plansDirUnder(configured, root string) string {
+	if filepath.IsAbs(configured) || root == "" {
+		return configured
+	}
+	return filepath.Join(root, configured)
 }
 
 type planMeta struct {
@@ -1890,7 +1933,7 @@ func (h *handlers) listSessionPlans(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 404)
 		return
 	}
-	dir := h.resolvePlansDir(sess)
+	dir := h.resolvePlansDir(r.Context(), sess)
 	plans := []planMeta{}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -1933,7 +1976,7 @@ func (h *handlers) getSessionPlan(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 404)
 		return
 	}
-	full := filepath.Join(h.resolvePlansDir(sess), name)
+	full := filepath.Join(h.resolvePlansDir(r.Context(), sess), name)
 	data, err := os.ReadFile(full)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

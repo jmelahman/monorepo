@@ -18,8 +18,9 @@ type Harness struct {
 	PTYCommand []string `json:"pty_command"`
 	// CommitMsgTemplate is a sh(1) script template for one-shot commit-message
 	// generation. The placeholder {{.Prompt}} is replaced with a shell-quoted
-	// prompt before execution. An empty value disables AI commit messages for
-	// this harness, falling back to the ticket title.
+	// prompt and {{.WorkDir}} with the session's container working directory
+	// before execution. An empty value disables AI commit messages for this
+	// harness, falling back to the ticket title.
 	CommitMsgTemplate string `json:"-"`
 }
 
@@ -27,10 +28,14 @@ type Harness struct {
 // default. Add a new harness by appending to this slice.
 var Registry = []Harness{
 	{
-		ID:                "claude",
-		Label:             "Claude Code",
-		PTYCommand:        []string{"claude"},
-		CommitMsgTemplate: `cd /workspace && git diff --staged --no-color | claude --model haiku -p {{.Prompt}}`,
+		ID:         "claude",
+		Label:      "Claude Code",
+		PTYCommand: []string{"claude"},
+		// The cd is load-bearing: ExecRun takes no working directory. The
+		// diff stays repo-wide even from a subproject — `git diff --staged`
+		// with no pathspec ignores cwd — and -c diff.relative=false keeps it
+		// that way against a user gitconfig that would scope it.
+		CommitMsgTemplate: `cd {{.WorkDir}} && git -c diff.relative=false diff --staged --no-color | claude --model haiku -p {{.Prompt}}`,
 	},
 	{
 		ID:                "pi",
@@ -61,18 +66,25 @@ func IsKnown(id string) bool {
 }
 
 // RenderCommitScript returns the shell script to execute for commit-message
-// generation, with prompt shell-quoted into the {{.Prompt}} placeholder.
+// generation, with prompt shell-quoted into the {{.Prompt}} placeholder and
+// workDir — the session's container working directory — into {{.WorkDir}}.
 // Returns "" when this harness has no template (caller should fall back).
-func (h Harness) RenderCommitScript(prompt string) (string, error) {
+func (h Harness) RenderCommitScript(prompt, workDir string) (string, error) {
 	if h.CommitMsgTemplate == "" {
 		return "", nil
+	}
+	if workDir == "" {
+		// Mirrors db.DefaultWorkspaceFolder; importing internal/db here would
+		// pull the storage layer into the harness registry.
+		workDir = "/workspace"
 	}
 	t, err := template.New("commit").Parse(h.CommitMsgTemplate)
 	if err != nil {
 		return "", fmt.Errorf("parse commit template: %w", err)
 	}
 	var b bytes.Buffer
-	if err := t.Execute(&b, struct{ Prompt string }{Prompt: ShellQuote(prompt)}); err != nil {
+	data := struct{ Prompt, WorkDir string }{Prompt: ShellQuote(prompt), WorkDir: ShellQuote(workDir)}
+	if err := t.Execute(&b, data); err != nil {
 		return "", fmt.Errorf("render commit template: %w", err)
 	}
 	return b.String(), nil

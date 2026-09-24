@@ -16,6 +16,7 @@ function fieldsFromBoard(board: Board) {
     name: board.name,
     repo: board.repo_path,
     mount: board.mount_path,
+    projectDir: board.project_dir,
     worktreeRoot: board.worktree_root,
     base: board.base_branch,
     branchPrefix: board.branch_prefix,
@@ -166,6 +167,7 @@ export function BoardSettings({
     board.name,
     board.repo_path,
     board.mount_path,
+    board.project_dir,
     board.worktree_root,
     board.base_branch,
     board.branch_prefix,
@@ -183,6 +185,7 @@ export function BoardSettings({
         name: fields.name.trim(),
         repo_path: fields.repo.trim(),
         mount_path: fields.mount.trim(),
+        project_dir: fields.projectDir.trim(),
         worktree_root: fields.worktreeRoot.trim(),
         base_branch: fields.base.trim(),
         branch_prefix: fields.branchPrefix.trim(),
@@ -210,6 +213,7 @@ export function BoardSettings({
     fields.name.trim() !== board.name ||
     fields.repo.trim() !== board.repo_path ||
     fields.mount.trim() !== board.mount_path ||
+    fields.projectDir.trim() !== board.project_dir ||
     fields.worktreeRoot.trim() !== board.worktree_root ||
     fields.base.trim() !== board.base_branch ||
     fields.branchPrefix.trim() !== board.branch_prefix ||
@@ -221,6 +225,7 @@ export function BoardSettings({
     (!hasRepo || fields.base.trim() !== "") &&
     (!hasRepo || fields.worktreeRoot.trim() !== "");
   const worktreeRootChanged = fields.worktreeRoot.trim() !== board.worktree_root;
+  const projectDirChanged = fields.projectDir.trim() !== board.project_dir;
   const busy = updateMut.isPending || deleteMut.isPending;
 
   return (
@@ -274,6 +279,22 @@ export function BoardSettings({
                 onChange={(e) => update("repo", e.target.value)}
               />
             </FormField>
+            {hasRepo && (
+              <FormField label="Project directory">
+                <FormInput
+                  mono
+                  placeholder="subdirectory the agent works from, e.g. services/api (optional)"
+                  value={fields.projectDir}
+                  onChange={(e) => update("projectDir", e.target.value)}
+                />
+                {projectDirChanged && (
+                  <span className="text-xs text-amber-400">
+                    Running sessions keep the working directory their container was created with.
+                    Restart a session to move it.
+                  </span>
+                )}
+              </FormField>
+            )}
             {hasRepo && (
               <FormField label="Base branch">
                 <FormInput
