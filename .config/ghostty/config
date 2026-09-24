@@ -1,0 +1,14 @@
+background-opacity = 0.7
+
+foreground = #ff0000
+cursor-color = #ff0000
+theme = Kitty Default
+
+font-family = "JetBrains Mono"
+font-size = 12
+
+# Does this even work?
+cursor-style = block
+cursor-style-blink = true
+
+window-decoration = false

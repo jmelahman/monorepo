@@ -1,0 +1,21 @@
+alias:
+  # Main
+  - "qwen3-coder:openrouter/qwen/qwen3-coder"
+  - "kimi:openrouter/moonshotai/kimi-k2"
+  - "gemini:openrouter/google/gemini-2.5-pro-preview"
+  - "claude:openrouter/anthropic/claude-sonnet-4"
+  # Weak
+  - "qwen3-free:openrouter/qwen/qwen3-coder:free"
+  - "devstral:openrouter/mistralai/devstral-small-2505:free"
+  - "chat:openrouter/deepseek/deepseek-r1-0528-qwen3-8b:free"
+  - "r1:openrouter/deepseek/deepseek-chat-v3-0324:free"
+  # Local
+  - "qwen-coder:ollama/qwen3-coder:latest"
+  - "qwen3:ollama/qwen3:latest"
+  - "coder:ollama/deepseek-coder:1.3b"
+  - "orchestrator:ollama/hf.co/jmelahman/Orchestrator-8B-Q4_K_M-GGUF:latest"
+model: "qwen-coder"
+weak-model: "qwen3"
+subtree-only: true
+show-model-warnings: false
+dark-mode: true

@@ -1,0 +1,9 @@
+/* Remove left padding next to pinned tabs */
+.tabbrowser-tab[pinned] {
+    margin-inline-start: 0 !important;
+}
+
+/* Optional: Reduce overall tab bar padding */
+#tabbrowser-tabs {
+    padding-inline-start: 0 !important;
+}

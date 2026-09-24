@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# git-lfs first (previous content of this hook), then prek's post-commit
+# stage, modeled on the sibling prek shims in this directory.
+command -v git-lfs >/dev/null 2>&1 && git lfs post-commit "$@"
+
+ARGS=(hook-impl --hook-type=post-commit --color=always --skip-on-missing-config --script-version=4)
+
+# Detect quiet mode and forward to prek
+if [ -n "$GIT_QUIET" ]; then
+    ARGS+=(--quiet)
+fi
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ARGS+=(--hook-dir "$HERE" -- "$@")
+PREK="/usr/bin/prek"
+
+# Check if the full path to prek is executable, otherwise fallback to PATH
+if [ ! -x "$PREK" ]; then
+    PREK="prek"
+fi
+
+exec "$PREK" "${ARGS[@]}"

@@ -1,0 +1,11 @@
+# Copy this `/etc/pacman.d/mirrorlist`.
+# See also, https://wiki.archlinux.org/title/Mirrors
+## Personal
+Server = http://cache.pacman.home/repo/archlinux/$repo/os/$arch
+## United States
+Server = http://mirrors.kernel.org/archlinux/$repo/os/$arch
+Server = https://mirrors.kernel.org/archlinux/$repo/os/$arch
+Server = http://mirror.sfo12.us.leaseweb.net/archlinux/$repo/os/$arch
+Server = http://arch.hu.fo/archlinux/$repo/os/$arch
+Server = https://codingflyboy.mm.fcix.net/archlinux/$repo/os/$arch
+Server = https://mirror.fcix.net/archlinux/$repo/os/$arch
