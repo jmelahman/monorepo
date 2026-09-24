@@ -57,10 +57,10 @@ func TestMain(m *testing.M) {
 func runHelperInit(stateDir, mode string) int {
 	runsFile := filepath.Join(stateDir, "init-runs")
 	prev, _ := os.ReadFile(runsFile)
-	os.WriteFile(runsFile, append(prev, 'x'), 0o644)
+	_ = os.WriteFile(runsFile, append(prev, 'x'), 0o644)
 	switch mode {
 	case "marker":
-		os.WriteFile(markerPath(stateDir), []byte("x"), 0o644)
+		_ = os.WriteFile(markerPath(stateDir), []byte("x"), 0o644)
 	case "fail":
 		return 3
 	case "fail-once":
@@ -85,7 +85,7 @@ func runHelperServer(portStr, stateDir string) {
 			n, _ = strconv.Atoi(strings.TrimSpace(string(b)))
 		}
 		n++
-		os.WriteFile(countFile, []byte(strconv.Itoa(n)), 0o644)
+		_ = os.WriteFile(countFile, []byte(strconv.Itoa(n)), 0o644)
 		fmt.Fprintf(w, "%d", n)
 	})
 	http.ListenAndServe("127.0.0.1:"+portStr, mux) //nolint:errcheck
@@ -353,7 +353,9 @@ func TestOutOfBandKillRecovers(t *testing.T) {
 	if len(recs) != 1 {
 		t.Fatalf("records = %+v", recs)
 	}
-	syscall.Kill(-recs[0].PGID, syscall.SIGKILL)
+	if err := syscall.Kill(-recs[0].PGID, syscall.SIGKILL); err != nil {
+		t.Fatal(err)
+	}
 
 	// The reaper notices and clears state; a new EnsureRunning restarts.
 	f.waitStatus(t, k, "crashed")

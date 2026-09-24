@@ -367,7 +367,9 @@ func (s *Store) SweepTmp(maxAge time.Duration) error {
 }
 
 func (s *Store) ensureTmp() string {
-	os.MkdirAll(s.tmpDir, 0o755)
+	// Best-effort: every caller immediately os.MkdirTemp(s.ensureTmp(), ...)
+	// and checks that error, so a failure here still surfaces there.
+	_ = os.MkdirAll(s.tmpDir, 0o755)
 	return s.tmpDir
 }
 

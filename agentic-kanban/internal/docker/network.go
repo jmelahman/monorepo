@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/network"
-	derrdefs "github.com/docker/docker/errdefs"
 )
 
 // KanbanNetworkName is the docker network shared by the kanban server and all
@@ -19,7 +19,7 @@ const KanbanNetworkName = "kanban"
 func (c *Client) EnsureNetwork(ctx context.Context, name string) error {
 	if _, err := c.cli.NetworkInspect(ctx, name, network.InspectOptions{}); err == nil {
 		return nil
-	} else if !derrdefs.IsNotFound(err) {
+	} else if !cerrdefs.IsNotFound(err) {
 		return err
 	}
 	if _, err := c.cli.NetworkCreate(ctx, name, network.CreateOptions{Driver: "bridge"}); err != nil {

@@ -12,6 +12,7 @@ package supervise
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -133,8 +134,10 @@ func (m *Manager) startContainer(k Key, p *process, spec runSpec, rt runtimeEnv,
 	}
 	p.containerID = id
 	p.startedAt = time.Now()
-	m.db.AddProcessEvent(k.RepoID, k.Hash, "start_attempt",
-		fmt.Sprintf("container %.12s port %d", id, port))
+	if err := m.db.AddProcessEvent(k.RepoID, k.Hash, "start_attempt",
+		fmt.Sprintf("container %.12s port %d", id, port)); err != nil {
+		log.Printf("record start_attempt event for %s %s: %v", k.Side, shortHash(k.Hash), err)
+	}
 
 	logsDone := make(chan struct{})
 	go func() {
@@ -163,7 +166,9 @@ func (m *Manager) startContainer(k Key, p *process, spec runSpec, rt runtimeEnv,
 		close(p.done)
 		m.forget(k, p)
 		if !p.intentional {
-			m.db.AddProcessEvent(k.RepoID, k.Hash, "exited", p.exit)
+			if err := m.db.AddProcessEvent(k.RepoID, k.Hash, "exited", p.exit); err != nil {
+				log.Printf("record exited event for %s %s: %v", k.Side, shortHash(k.Hash), err)
+			}
 			m.noteExit(k, p)
 		}
 	}()

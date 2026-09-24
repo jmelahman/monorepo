@@ -150,7 +150,7 @@ func TestCredsForFallsBackToEnvironment(t *testing.T) {
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "rolesecret")
 	t.Setenv("AWS_SESSION_TOKEN", "roletoken")
 
-	got, err := credsFor(Config{}).Get()
+	got, err := credsFor(Config{}).GetWithContext(nil)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestCredsForPrefersExplicitKeypair(t *testing.T) {
 	t.Setenv("AWS_ACCESS_KEY_ID", "ASIAROLE")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "rolesecret")
 
-	got, err := credsFor(Config{AccessKey: "minio", SecretKey: "miniosecret"}).Get()
+	got, err := credsFor(Config{AccessKey: "minio", SecretKey: "miniosecret"}).GetWithContext(nil)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}

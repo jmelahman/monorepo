@@ -22,7 +22,7 @@ func (m *memTier) putDir(t *testing.T, repo, side, hash, dir string) {
 	t.Helper()
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -46,6 +46,9 @@ func (m *memTier) putDir(t *testing.T, repo, side, hash, dir string) {
 		_, err = io.Copy(tw, f)
 		return err
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	tw.Close()
 	if m.blobs == nil {
 		m.blobs = map[string][]byte{}

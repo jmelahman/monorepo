@@ -56,6 +56,14 @@ repos:
       - id: go-vet
       - id: go-test
       - id: go-get
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: 114493f9b3e7257d29e4130f2b4a4aadefbb6845  # frozen: v2.14.0
+    hooks:
+      - id: golangci-lint-full
+        # prek runs the monorepo's projects at once, and golangci-lint otherwise
+        # refuses to start while another run holds its lock.
+        args: [--allow-parallel-runners]
   # END orchard:go
 
   # BEGIN orchard:shell

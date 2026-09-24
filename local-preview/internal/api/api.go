@@ -734,7 +734,7 @@ func (d Deps) handleDeployLogs(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(w, "(no log)")
 			continue
 		}
-		w.Write(b)
+		_, _ = w.Write(b)
 		fmt.Fprintln(w)
 	}
 }

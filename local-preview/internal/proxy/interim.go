@@ -137,7 +137,7 @@ func (rt *Router) pollJSON(w http.ResponseWriter, r *http.Request, status int, i
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(p)
+	_ = json.NewEncoder(w).Encode(p)
 }
 
 const (

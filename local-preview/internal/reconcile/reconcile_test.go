@@ -41,7 +41,7 @@ func (f *fakeTier) Stat(_ context.Context, repo, side, hash string) (s3store.Obj
 func (f *fakeTier) Save(_ context.Context, repo, side, hash, srcDir string) error {
 	// Count regular files so a re-Save lands consistent metadata.
 	var count int64
-	filepath.WalkDir(srcDir, func(_ string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(srcDir, func(_ string, d os.DirEntry, err error) error {
 		if err == nil && d.Type().IsRegular() {
 			count++
 		}

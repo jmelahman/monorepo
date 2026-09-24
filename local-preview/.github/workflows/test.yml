@@ -9,23 +9,6 @@ on:
 permissions: {}
 
 jobs:
-  golang:
-    runs-on: ubuntu-latest
-    container:
-      image: lahmanja/devcontainer@sha256:f3f954bc31d635f8a2c574a8ba2f46278f77bde02e0a7137cd4891b4e72c6e2a
-      options: --user root
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        with:
-          persist-credentials: false
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: go mod tidy
-      - run: git diff --exit-code go.mod go.sum
-      - run: go test ./...
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a
-        continue-on-error: true
-
   pre-commit:
     runs-on: ubuntu-latest
     container:

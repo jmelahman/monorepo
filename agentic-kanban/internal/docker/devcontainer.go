@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
@@ -702,7 +703,7 @@ func parseMountString(s string) (mount.Mount, error) {
 
 func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, buildRoots []string, tagBase string, onProgress PullProgressFunc) (string, error) {
 	if cfg.Image != "" {
-		if _, _, err := c.cli.ImageInspectWithRaw(ctx, cfg.Image); err == nil {
+		if _, err := c.cli.ImageInspect(ctx, cfg.Image); err == nil {
 			return cfg.Image, nil
 		}
 		rc, err := c.cli.ImagePull(ctx, cfg.Image, image.PullOptions{})
@@ -725,7 +726,7 @@ func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, build
 	if err != nil {
 		return "", err
 	}
-	if _, _, err := c.cli.ImageInspectWithRaw(ctx, tag); err == nil {
+	if _, err := c.cli.ImageInspect(ctx, tag); err == nil {
 		return tag, nil
 	}
 
@@ -740,7 +741,7 @@ func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, build
 		buildArgs[k] = &val
 	}
 
-	resp, err := c.cli.ImageBuild(ctx, bytes.NewReader(tarball), types.ImageBuildOptions{
+	resp, err := c.cli.ImageBuild(ctx, bytes.NewReader(tarball), build.ImageBuildOptions{
 		Tags:       []string{tag},
 		Dockerfile: filepath.Base(dockerfilePath),
 		BuildArgs:  buildArgs,

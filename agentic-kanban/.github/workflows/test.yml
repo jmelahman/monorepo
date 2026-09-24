@@ -9,51 +9,6 @@ on:
 permissions: {}
 
 jobs:
-  detect-modules:
-    runs-on: ubuntu-latest
-    container:
-      image: lahmanja/devcontainer@sha256:c33d05c036a69508f41766974d78fe20ab152cd2c16be66c2655c1abd9909a90
-      options: --user root
-    outputs:
-      modules: ${{ steps.set-modules.outputs.modules }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - id: set-modules
-        run: echo "modules=$(go list -m -json | jq -s '.' | jq -c '[.[].Dir]')" >> "$GITHUB_OUTPUT"
-
-  golang:
-    needs: detect-modules
-    runs-on: ubuntu-latest
-    container:
-      image: lahmanja/devcontainer@sha256:c33d05c036a69508f41766974d78fe20ab152cd2c16be66c2655c1abd9909a90
-      options: --user root
-    strategy:
-      matrix:
-        modules: ${{ fromJSON(needs.detect-modules.outputs.modules) }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev
-      - run: go mod tidy
-        working-directory: ${{ matrix.modules }}
-      - run: git diff --exit-code go.mod go.sum
-        working-directory: ${{ matrix.modules }}
-      - run: go test ./...
-        working-directory: ${{ matrix.modules }}
-        continue-on-error: true
-      - name: golangci-lint ${{ matrix.modules }}
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a
-        with:
-          version: ${{ env.GOLANGCI_LINT_VERSION }}
-          working-directory: ${{ matrix.modules }}
-        continue-on-error: true
-
   pre-commit:
     runs-on: ubuntu-latest
     container:
@@ -65,6 +20,8 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # The Go hooks build the audio package, which needs the ALSA headers.
+      - run: apt-get update && apt-get install -y --no-install-recommends libasound2-dev
       - name: prek
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then

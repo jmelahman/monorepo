@@ -176,7 +176,7 @@ func (s *Store) ResidentSide(repo, side, hash string) (dir string, bytes int64, 
 	if dir == "" || !dirExists(dir) {
 		return "", 0, 0, false
 	}
-	filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -212,7 +212,7 @@ func (s *Store) cachedDirSize(dir string, mtime time.Time) int64 {
 // dirSizeOf sums regular-file sizes under root; 0 if root is missing.
 func dirSizeOf(root string) int64 {
 	var total int64
-	filepath.WalkDir(root, func(_ string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(root, func(_ string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}

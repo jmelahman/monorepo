@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/client"
-	derrdefs "github.com/docker/docker/errdefs"
 )
 
 type Client struct {
@@ -40,7 +40,7 @@ func (c *Client) Ping(ctx context.Context) error {
 func (c *Client) ContainerRunning(ctx context.Context, id string) (bool, error) {
 	insp, err := c.cli.ContainerInspect(ctx, id)
 	if err != nil {
-		if derrdefs.IsNotFound(err) {
+		if cerrdefs.IsNotFound(err) {
 			return false, nil
 		}
 		return false, err

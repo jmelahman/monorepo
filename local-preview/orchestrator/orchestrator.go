@@ -295,7 +295,7 @@ func New(opts Options) (*Orchestrator, error) {
 	}
 
 	files := store.New(opts.DataDir+"/artifacts", opts.DataDir+"/state", opts.DataDir+"/tmp")
-	files.SweepTmp(24 * time.Hour)
+	_ = files.SweepTmp(24 * time.Hour) // best-effort: crash-orphaned staging dirs, not fatal to startup
 	gitMgr := gitrepo.NewManager(opts.DataDir + "/repos")
 	if opts.MaxWarm == 0 {
 		opts.MaxWarm = 8
@@ -413,8 +413,8 @@ func (o *Orchestrator) DeleteRepo(name string) error {
 	if err := o.database.DeleteRepo(repo.ID); err != nil {
 		return err
 	}
-	o.git.Remove(repo.Name)
-	o.files.RemoveRepo(repo.Name)
+	_ = o.git.Remove(repo.Name)
+	_ = o.files.RemoveRepo(repo.Name)
 	os.RemoveAll(o.opts.DataDir + "/logs/" + repo.Name)
 	return nil
 }

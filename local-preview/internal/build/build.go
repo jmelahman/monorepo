@@ -375,7 +375,9 @@ func (q *Queue) process(ctx context.Context, id int64) {
 	rebuild := q.takeRebuild(id)
 	if err := q.buildDeploy(ctx, row, rebuild); err != nil {
 		log.Printf("build: deploy %d (%s@%s) failed: %v", id, row.RepoName, row.ShortSHA, err)
-		q.db.SetDeployFailed(id, truncate(err.Error(), 500))
+		if err := q.db.SetDeployFailed(id, truncate(err.Error(), 500)); err != nil {
+			log.Printf("build: deploy %d: mark failed: %v", id, err)
+		}
 		return
 	}
 	// The hashes landed during the build; a worker serves by hydrating them
@@ -386,15 +388,22 @@ func (q *Queue) process(ctx context.Context, id int64) {
 	built, err := q.db.GetDeployByID(id)
 	if err != nil {
 		log.Printf("build: deploy %d: reload before ready: %v", id, err)
-		q.db.SetDeployFailed(id, truncate(err.Error(), 500))
+		if err := q.db.SetDeployFailed(id, truncate(err.Error(), 500)); err != nil {
+			log.Printf("build: deploy %d: mark failed: %v", id, err)
+		}
 		return
 	}
 	if err := q.ensureDurable(built.RepoName, built.FeHash, built.BeHash); err != nil {
 		log.Printf("build: deploy %d (%s@%s) persist: %v", id, built.RepoName, built.ShortSHA, err)
-		q.db.SetDeployFailed(id, truncate("persist to durable tier: "+err.Error(), 500))
+		if err := q.db.SetDeployFailed(id, truncate("persist to durable tier: "+err.Error(), 500)); err != nil {
+			log.Printf("build: deploy %d: mark failed: %v", id, err)
+		}
 		return
 	}
-	q.db.SetDeployReady(id)
+	if err := q.db.SetDeployReady(id); err != nil {
+		log.Printf("build: deploy %d: mark ready: %v", id, err)
+		return
+	}
 	log.Printf("build: deploy %d (%s@%s) ready", id, row.RepoName, row.ShortSHA)
 	if q.autoStart {
 		q.autoStartDeploy(ctx, id)
@@ -681,7 +690,9 @@ func (q *Queue) buildArtifacts(ctx context.Context, row db.DeployRow, rebuild bo
 			q.hydrate(ctx, row.RepoName, "dl", ref.Hash)
 		}
 		if !rebuild && q.files.HasArtifact(row.RepoName, ref.Hash) {
-			q.db.SetDeployArtifactStatus(row.ID, name, db.ArtifactReady, "")
+			if err := q.db.SetDeployArtifactStatus(row.ID, name, db.ArtifactReady, ""); err != nil {
+				log.Printf("build: mark artifacts.%s ready for deploy %d: %v", name, row.ID, err)
+			}
 			continue
 		}
 		spec, ok := m.Artifacts[name]
@@ -709,7 +720,9 @@ func (q *Queue) buildArtifacts(ctx context.Context, row db.DeployRow, rebuild bo
 			fail(name, fmt.Errorf("%w (log: %s)", err, ref.LogPath))
 			continue
 		}
-		q.db.SetDeployArtifactStatus(row.ID, name, db.ArtifactReady, "")
+		if err := q.db.SetDeployArtifactStatus(row.ID, name, db.ArtifactReady, ""); err != nil {
+			log.Printf("build: mark artifacts.%s ready for deploy %d: %v", name, row.ID, err)
+		}
 	}
 }
 

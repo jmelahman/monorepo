@@ -23,3 +23,17 @@ work/.github/workflows/pre-commit.yml -diff linguist-generated
 agilecbt/web/biome.json -diff linguist-generated
 local-preview/web/biome.json -diff linguist-generated
 templates/fullstack-template/web/biome.json -diff linguist-generated
+agentic-kanban/.golangci.yml -diff linguist-generated
+agilecbt/.golangci.yml -diff linguist-generated
+check-symlinks/.golangci.yml -diff linguist-generated
+connections-ssh/.golangci.yml -diff linguist-generated
+connections/.golangci.yml -diff linguist-generated
+cycle-cli/.golangci.yml -diff linguist-generated
+docker-status/.golangci.yml -diff linguist-generated
+git-orchard/.golangci.yml -diff linguist-generated
+jview/.golangci.yml -diff linguist-generated
+local-preview/.golangci.yml -diff linguist-generated
+nature-sounds/.golangci.yml -diff linguist-generated
+smart-lights/.golangci.yml -diff linguist-generated
+typesafe-sdk-go/.golangci.yml -diff linguist-generated
+work/.golangci.yml -diff linguist-generated

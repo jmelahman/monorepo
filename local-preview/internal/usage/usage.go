@@ -148,7 +148,7 @@ func Reclaimable(dirs Dirs) int64 {
 // skipped: usage reporting must never fail on a permission oddity.
 func DirSize(root string) int64 {
 	var total int64
-	filepath.WalkDir(root, func(_ string, entry fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(root, func(_ string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return fs.SkipDir
 		}

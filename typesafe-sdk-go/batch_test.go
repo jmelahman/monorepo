@@ -30,7 +30,7 @@ func TestSystemOneBatch(t *testing.T) {
 
 		var req struct{ State string }
 		body, _ := io.ReadAll(r.Body)
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 		if req.State == "fail" {
 			jsonHandler(http.StatusBadRequest, `{"error":{"message":"bad state"}}`)(w, r)
 			return

@@ -43,7 +43,7 @@ func TestCompressLargeResponse(t *testing.T) {
 	body := strings.Repeat("local-preview ", 200) // ~2.8KB, over the threshold
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		io.WriteString(w, body)
+		_, _ = io.WriteString(w, body)
 	}, nil)
 	if got := rec.Header().Get("Content-Encoding"); got != "gzip" {
 		t.Fatalf("Content-Encoding = %q, want gzip", got)
@@ -61,7 +61,7 @@ func TestCompressLargeResponse(t *testing.T) {
 
 func TestSmallResponseStaysPlain(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, `{"status":"ok"}`)
+		_, _ = io.WriteString(w, `{"status":"ok"}`)
 	}, nil)
 	if got := rec.Header().Get("Content-Encoding"); got != "" {
 		t.Fatalf("Content-Encoding = %q, want none", got)
@@ -76,7 +76,7 @@ func TestSmallResponseStaysPlain(t *testing.T) {
 func TestThresholdSpansWrites(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
 		for range 100 {
-			io.WriteString(w, strings.Repeat("x", 32))
+			_, _ = io.WriteString(w, strings.Repeat("x", 32))
 		}
 	}, nil)
 	if got := rec.Header().Get("Content-Encoding"); got != "gzip" {
@@ -91,7 +91,7 @@ func TestClientWithoutGzipGetsPlain(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil) // no Accept-Encoding
 	rec := httptest.NewRecorder()
 	compressResponses(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, strings.Repeat("y", 4096))
+		_, _ = io.WriteString(w, strings.Repeat("y", 4096))
 	})).ServeHTTP(rec, req)
 	if got := rec.Header().Get("Content-Encoding"); got != "" {
 		t.Fatalf("Content-Encoding = %q, want none", got)
@@ -106,19 +106,19 @@ func TestPassthroughs(t *testing.T) {
 	for name, handler := range map[string]http.HandlerFunc{
 		"octet-stream downloads": func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/octet-stream")
-			io.WriteString(w, big)
+			_, _ = io.WriteString(w, big)
 		},
 		"pre-encoded": func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Encoding", "br")
-			io.WriteString(w, big)
+			_, _ = io.WriteString(w, big)
 		},
 		"event streams": func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/event-stream")
-			io.WriteString(w, big)
+			_, _ = io.WriteString(w, big)
 		},
 		"range responses": func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusPartialContent)
-			io.WriteString(w, big)
+			_, _ = io.WriteString(w, big)
 		},
 	} {
 		rec := doCompressed(t, handler, nil)
@@ -136,9 +136,9 @@ func TestPassthroughs(t *testing.T) {
 // didn't set its Content-Type before the first write).
 func TestFlushCommitsPlain(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "tick\n")
+		_, _ = io.WriteString(w, "tick\n")
 		w.(http.Flusher).Flush()
-		io.WriteString(w, strings.Repeat("tock\n", 1000))
+		_, _ = io.WriteString(w, strings.Repeat("tock\n", 1000))
 	}, nil)
 	if got := rec.Header().Get("Content-Encoding"); got != "" {
 		t.Fatalf("Content-Encoding = %q, want none after early flush", got)
@@ -152,7 +152,7 @@ func TestCompressDropsIdentityHeaders(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Accept-Ranges", "bytes")
 		w.Header().Set("Content-Length", "4096")
-		io.WriteString(w, strings.Repeat("w", 4096))
+		_, _ = io.WriteString(w, strings.Repeat("w", 4096))
 	}, nil)
 	if got := rec.Header().Get("Accept-Ranges"); got != "" {
 		t.Errorf("Accept-Ranges = %q, want dropped on gzipped response", got)
@@ -165,7 +165,7 @@ func TestCompressDropsIdentityHeaders(t *testing.T) {
 func TestStatusCodePreserved(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		io.WriteString(w, strings.Repeat("missing ", 512))
+		_, _ = io.WriteString(w, strings.Repeat("missing ", 512))
 	}, nil)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)

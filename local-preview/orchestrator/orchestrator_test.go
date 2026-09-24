@@ -192,7 +192,7 @@ func TestEmbeddedLifecycle(t *testing.T) {
 	// WrapHost: preview subdomains are served, everything else falls
 	// through to the embedding application.
 	fallback := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "host-app")
+		_, _ = io.WriteString(w, "host-app")
 	})
 	handler := o.WrapHost(fallback)
 

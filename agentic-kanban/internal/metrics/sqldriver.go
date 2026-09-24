@@ -48,17 +48,16 @@ func (c *instConn) Prepare(query string) (driver.Stmt, error) {
 func (c *instConn) Close() error { return c.base.Close() }
 
 func (c *instConn) Begin() (driver.Tx, error) {
-	if cb, ok := c.base.(driver.ConnBeginTx); ok {
-		return cb.BeginTx(context.Background(), driver.TxOptions{})
-	}
-	return c.base.Begin()
+	return c.BeginTx(context.Background(), driver.TxOptions{})
 }
 
 func (c *instConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	if cb, ok := c.base.(driver.ConnBeginTx); ok {
 		return cb.BeginTx(ctx, opts)
 	}
-	return c.base.Begin()
+	// driver.Conn requires Begin; fall back to it when base doesn't also
+	// implement the context-aware ConnBeginTx.
+	return c.base.Begin() //nolint:staticcheck // no non-deprecated path when base lacks ConnBeginTx
 }
 
 func (c *instConn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
@@ -111,10 +110,37 @@ type instStmt struct {
 	query string
 }
 
-func (s *instStmt) Close() error                                    { return s.base.Close() }
-func (s *instStmt) NumInput() int                                   { return s.base.NumInput() }
-func (s *instStmt) Exec(args []driver.Value) (driver.Result, error) { return s.base.Exec(args) }
-func (s *instStmt) Query(args []driver.Value) (driver.Rows, error)  { return s.base.Query(args) }
+func (s *instStmt) Close() error  { return s.base.Close() }
+func (s *instStmt) NumInput() int { return s.base.NumInput() }
+
+func (s *instStmt) Exec(args []driver.Value) (driver.Result, error) {
+	if ec, ok := s.base.(driver.StmtExecContext); ok {
+		return ec.ExecContext(context.Background(), namedValues(args))
+	}
+	// driver.Stmt requires Exec; fall back to it when base doesn't also
+	// implement the context-aware StmtExecContext.
+	return s.base.Exec(args) //nolint:staticcheck // no non-deprecated path when base lacks StmtExecContext
+}
+
+func (s *instStmt) Query(args []driver.Value) (driver.Rows, error) {
+	if qc, ok := s.base.(driver.StmtQueryContext); ok {
+		return qc.QueryContext(context.Background(), namedValues(args))
+	}
+	// driver.Stmt requires Query; fall back to it when base doesn't also
+	// implement the context-aware StmtQueryContext.
+	return s.base.Query(args) //nolint:staticcheck // no non-deprecated path when base lacks StmtQueryContext
+}
+
+// namedValues converts legacy positional driver.Value args (as passed to the
+// non-context Exec/Query) into driver.NamedValue, matching how database/sql
+// itself numbers ordinals (1-based) when calling the context-aware variants.
+func namedValues(args []driver.Value) []driver.NamedValue {
+	nv := make([]driver.NamedValue, len(args))
+	for i, v := range args {
+		nv[i] = driver.NamedValue{Ordinal: i + 1, Value: v}
+	}
+	return nv
+}
 
 func (s *instStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
 	op, target := fingerprint(s.query)

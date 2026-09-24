@@ -17,8 +17,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 
 	"github.com/jmelahman/local-preview/orchestrator"
 
@@ -295,14 +293,18 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 		go buildcop.NewPoller(store, bus, buildCopCfg, buildCopCfg.Interval).Start(pollerCtx)
 	}
 
-	// h2c lets clients that opt in (curl --http2-prior-knowledge, Go's
-	// http2.Transport, or a TLS-terminating proxy upstream) multiplex over
-	// one connection. Browsers don't negotiate HTTP/2 over plain HTTP, so the
-	// web frontend stays on HTTP/1.1 unless fronted by a TLS proxy.
-	h2s := &http2.Server{}
+	// Unencrypted HTTP/2 (h2c) lets clients that opt in (curl
+	// --http2-prior-knowledge, Go's http2.Transport, or a TLS-terminating
+	// proxy upstream) multiplex over one connection. Browsers don't
+	// negotiate HTTP/2 over plain HTTP, so the web frontend stays on
+	// HTTP/1.1 unless fronted by a TLS proxy.
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           h2c.NewHandler(recoverPanics(reporter, metrics.HTTPMiddleware(logRequests(compressResponses(root)))), h2s),
+		Handler:           recoverPanics(reporter, metrics.HTTPMiddleware(logRequests(compressResponses(root)))),
+		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

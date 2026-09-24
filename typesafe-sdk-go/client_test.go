@@ -67,7 +67,7 @@ func jsonHandler(status int, body string) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(requestIDHeader, "req_abc123")
 		w.WriteHeader(status)
-		io.WriteString(w, body)
+		_, _ = io.WriteString(w, body)
 	}
 }
 
@@ -277,7 +277,7 @@ func TestRetryAfterIsHonored(t *testing.T) {
 	rateLimited := func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Retry-After", "2")
 		w.WriteHeader(http.StatusTooManyRequests)
-		io.WriteString(w, `{"error":"slow down"}`)
+		_, _ = io.WriteString(w, `{"error":"slow down"}`)
 	}
 	s := newScriptedServer(t, rateLimited, jsonHandler(http.StatusOK, okBody))
 	c, delays := testClient(t, s.URL)

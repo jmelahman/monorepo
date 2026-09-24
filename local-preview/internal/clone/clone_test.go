@@ -126,13 +126,19 @@ func TestStartResumesInterruptedClones(t *testing.T) {
 
 func TestProgressTailKeepsCurrentLine(t *testing.T) {
 	p := &progressTail{}
-	p.Write([]byte("Counting objects: 10\rCounting objects: 20\r"))
-	p.Write([]byte("Compressing objects: 5%"))
+	if _, err := p.Write([]byte("Counting objects: 10\rCounting objects: 20\r")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Write([]byte("Compressing objects: 5%")); err != nil {
+		t.Fatal(err)
+	}
 	if got, want := p.Last(), "Compressing objects: 5%"; got != want {
 		t.Errorf("Last() = %q, want %q", got, want)
 	}
 	// A trailing newline means the last full line is still current.
-	p.Write([]byte("\n"))
+	if _, err := p.Write([]byte("\n")); err != nil {
+		t.Fatal(err)
+	}
 	if got, want := p.Last(), "Compressing objects: 5%"; got != want {
 		t.Errorf("Last() after newline = %q, want %q", got, want)
 	}

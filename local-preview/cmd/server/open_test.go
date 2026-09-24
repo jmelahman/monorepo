@@ -36,7 +36,7 @@ func fakeDeployServer(t *testing.T, deploys []client.Deploy) *httptest.Server {
 			}
 			out = append(out, d)
 		}
-		json.NewEncoder(w).Encode(out)
+		_ = json.NewEncoder(w).Encode(out)
 	}))
 	t.Cleanup(ts.Close)
 	return ts

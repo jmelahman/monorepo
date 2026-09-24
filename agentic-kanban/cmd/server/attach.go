@@ -157,7 +157,7 @@ func sessionWSURL(serverURL string, sessionID int64, kind string) (wsURL, origin
 	if err != nil {
 		return "", "", fmt.Errorf("server url: %w", err)
 	}
-	httpScheme := u.Scheme
+	var httpScheme string
 	switch u.Scheme {
 	case "http", "ws":
 		u.Scheme, httpScheme = "ws", "http"

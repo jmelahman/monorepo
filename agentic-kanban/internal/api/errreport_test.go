@@ -89,7 +89,7 @@ func TestPostErrors_DisabledReporter_NoTicket(t *testing.T) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("status = %d; want 204", resp.StatusCode)
 	}
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	boards, err := env.store.ListBoards(context.Background())
 	if err != nil {
@@ -112,7 +112,7 @@ func TestPostErrors_EnabledReporter_FilesTicket(t *testing.T) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("status = %d; want 204", resp.StatusCode)
 	}
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	board, err := env.store.GetBoardBySlug(context.Background(), "errors")
 	if err != nil {
@@ -144,7 +144,7 @@ func TestPostErrors_LogsToStdoutEvenWhenReporterDisabled(t *testing.T) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("status = %d; want 204", resp.StatusCode)
 	}
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	out := logBuf.String()
 	wantSubstrings := []string{
@@ -172,7 +172,7 @@ func TestPostErrors_LogLineSurvivesEmbeddedNewline(t *testing.T) {
 		"source":  "window",
 	})
 	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	for _, line := range strings.Split(strings.TrimSpace(logBuf.String()), "\n") {
 		if strings.Contains(line, "client error") && !strings.Contains(line, `"first line\nsecond line"`) {
@@ -190,7 +190,7 @@ func TestPostErrors_TruncatesOversizeMessage(t *testing.T) {
 		"source":  "window",
 	})
 	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	out := logBuf.String()
 	if !strings.Contains(out, "...[truncated]") {

@@ -1,0 +1,16 @@
+# Shared by Go subtrees: .config/git-orchard/shared/go in the monorepo
+# (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+# copies it here.
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      exclude-functions:
+        # Deferred after Commit, where it returns sql.ErrTxDone.
+        - (*database/sql.Tx).Rollback
+  exclusions:
+    presets:
+      # Errors conventionally left unchecked: Close, fmt.Fprint*, os.Remove*,
+      # and the like.
+      - std-error-handling

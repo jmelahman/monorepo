@@ -998,10 +998,12 @@ func (m *Manager) start(k Key, p *process) {
 		p.startedAt = time.Now()
 		m.recordEvent(k.RepoID, k.Hash, "start_attempt",
 			fmt.Sprintf("pid %d port %d", cmd.Process.Pid, port))
-		m.db.UpsertProcessRecord(db.ProcessRecord{
+		if err := m.db.UpsertProcessRecord(db.ProcessRecord{
 			RepoID: k.RepoID, BeHash: k.Hash,
 			PID: cmd.Process.Pid, PGID: cmd.Process.Pid, Port: port,
-		})
+		}); err != nil {
+			log.Printf("record process %s %s: %v", k.Side, shortHash(k.Hash), err)
+		}
 
 		// Reaper: closes done when the child exits and clears bookkeeping.
 		go func() {
@@ -1013,7 +1015,9 @@ func (m *Manager) start(k Key, p *process) {
 			}
 			close(p.done)
 			m.forget(k, p)
-			m.db.DeleteProcessRecord(k.RepoID, k.Hash)
+			if err := m.db.DeleteProcessRecord(k.RepoID, k.Hash); err != nil {
+				log.Printf("delete process record for %s %s: %v", k.Side, shortHash(k.Hash), err)
+			}
 			if !p.intentional {
 				m.recordEvent(k.RepoID, k.Hash, "exited", p.exit)
 				m.noteExit(k, p)
@@ -1590,7 +1594,9 @@ func (m *Manager) ReclaimOrphans() {
 				killGroup(r.PGID) //nolint:errcheck
 				m.recordEvent(r.RepoID, r.BeHash, "exited", "reclaimed orphan after unclean shutdown")
 			}
-			m.db.DeleteProcessRecord(r.RepoID, r.BeHash)
+			if err := m.db.DeleteProcessRecord(r.RepoID, r.BeHash); err != nil {
+				log.Printf("delete process record for %s: %v", shortHash(r.BeHash), err)
+			}
 		}
 	}
 	m.removeLabeled("", "")
