@@ -20,6 +20,7 @@ jobs:
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
         with:
           go-version-file: go.mod
+          cache: false
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -race ./...
@@ -38,6 +39,7 @@ jobs:
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
         with:
           go-version-file: go.mod
+          cache: false
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
         with:
           version: "~> v2"

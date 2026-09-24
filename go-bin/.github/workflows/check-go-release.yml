@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for new Go release and tag
         env:
@@ -35,6 +36,5 @@ jobs:
           fi
 
           echo "New Go version detected, creating tag ${TAG}"
-          git tag "${TAG}"
-          git push origin "${TAG}"
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${TAG}" -f sha="${GITHUB_SHA}"
           gh workflow run release.yml --ref "${TAG}"
