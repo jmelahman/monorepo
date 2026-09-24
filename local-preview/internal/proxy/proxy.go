@@ -104,8 +104,8 @@ type Router struct {
 	// Router behaves exactly as before. authBaseURL is the dashboard origin the
 	// grant handshake bounces through; authSecure marks the preview cookie
 	// Secure.
-	authEnabled bool
 	authBaseURL string
+	authEnabled bool
 	authSecure  bool
 
 	// runLogs, when set, lets the interim "starting" pages stream the

@@ -19,11 +19,11 @@ type state struct {
 	stack   []string // directories left to visit; each string is owned
 	pending int      // directories checked out by a worker but not yet read
 
-	checked atomic.Int64
-	broken  atomic.Bool
-
 	patterns []string // ignore patterns; each string is owned
 	topLevel string
+
+	checked atomic.Int64
+	broken  atomic.Bool
 
 	includeHidden bool
 	quiet         bool

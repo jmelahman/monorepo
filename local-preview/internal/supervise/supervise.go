@@ -110,7 +110,6 @@ type Manager struct {
 	locks     map[Key]*sync.Mutex
 	failures  map[Key]Failure  // last unexpected exit / failed start, per key
 	wireSpecs map[Key]WireSpec // control-supplied run specs (worker serving)
-	stopping  bool             // set by StopAll; refuses new starts during shutdown
 
 	// initRevoked marks backend artifacts whose recorded init-done is no
 	// longer trusted on this node: a start that skipped init because the
@@ -131,13 +130,11 @@ type Manager struct {
 	eventMu  sync.Mutex
 	eventBuf []ProcEventRecord
 
-	stateDirWarned bool   // one {state_dir}-over-workers warning per process
-	publishIP      string // extra host address container ports publish on
+	publishIP string // extra host address container ports publish on
 
-	dockerMu     sync.Mutex
-	dockerProbed bool
-	dockerCli    *dockerapi.Client
-	dockerErr    error
+	dockerMu  sync.Mutex
+	dockerCli *dockerapi.Client
+	dockerErr error
 
 	// netMu serializes deploy-network membership changes: a container's
 	// resolve-or-create → start window against a peer's release. Docker only
@@ -146,6 +143,13 @@ type Manager struct {
 	// exiting between its frontend's EnsureNetwork and StartContainer would
 	// delete the network out from under the frontend.
 	netMu sync.Mutex
+
+	// The bools live together rather than beside the state they describe:
+	// spread through the struct each one costs a word of padding. The
+	// mutex guarding each is named in its comment.
+	stopping       bool // mu; set by StopAll, refuses new starts during shutdown
+	stateDirWarned bool // mu; one {state_dir}-over-workers warning per process
+	dockerProbed   bool // dockerMu; the lazy dial has run, cli and err are set
 }
 
 // New returns a Manager. logsDir is the root for per-process run logs.

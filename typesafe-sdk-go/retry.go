@@ -47,13 +47,18 @@ type RetryPolicy struct {
 	// Default: 408, 429, and 500 through 599.
 	Statuses map[int]bool
 
-	// RespectRetryAfter honors the Retry-After and retry-after-ms response
-	// headers in place of the computed backoff. Default: true.
-	RespectRetryAfter bool
-
 	// MaxRetryAfter is the longest server-requested delay to honor. A longer
 	// delay falls back to the computed backoff. Default: 60s.
 	MaxRetryAfter time.Duration
+
+	// Budget caps the total elapsed time across all attempts and delays.
+	// Zero, the default, disables it; prefer a deadline on the context, which
+	// is always honored.
+	Budget time.Duration
+
+	// RespectRetryAfter honors the Retry-After and retry-after-ms response
+	// headers in place of the computed backoff. Default: true.
+	RespectRetryAfter bool
 
 	// RetryConnectionErrors retries requests that failed to reach the API,
 	// including a response body that ended early. Default: true.
@@ -61,11 +66,6 @@ type RetryPolicy struct {
 
 	// RetryTimeouts retries attempts that exceeded their timeout. Default: true.
 	RetryTimeouts bool
-
-	// Budget caps the total elapsed time across all attempts and delays.
-	// Zero, the default, disables it; prefer a deadline on the context, which
-	// is always honored.
-	Budget time.Duration
 }
 
 // DefaultRetryPolicy returns the SDK's default retry policy. Each call returns a

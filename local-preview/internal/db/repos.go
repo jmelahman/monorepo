@@ -23,19 +23,20 @@ type Repo struct {
 	Name     string `json:"name"`
 	Source   string `json:"source"`
 	BarePath string `json:"-"`
-	// Watch marks the repo for polling: new branch tips deploy
-	// automatically. WatchBranches narrows which branches (comma-separated
+	// WatchBranches narrows which branches Watch polls (comma-separated
 	// globs, empty = all).
-	Watch         bool   `json:"watch"`
 	WatchBranches string `json:"watch_branches"`
-	// WatchBaselined reports whether the tips that predate watching have
-	// been recorded; until they are, the watcher deploys nothing.
-	WatchBaselined bool `json:"-"`
 	// Status is the mirror clone's outcome; Error carries the failure
 	// message while Status is RepoFailed.
 	Status    string `json:"status"`
 	Error     string `json:"error,omitempty"`
 	CreatedAt string `json:"created_at"`
+	// Watch marks the repo for polling: new branch tips deploy
+	// automatically.
+	Watch bool `json:"watch"`
+	// WatchBaselined reports whether the tips that predate watching have
+	// been recorded; until they are, the watcher deploys nothing.
+	WatchBaselined bool `json:"-"`
 }
 
 const repoCols = `id, name, source, bare_path, watch, watch_branches, watch_baselined, status, error, created_at`

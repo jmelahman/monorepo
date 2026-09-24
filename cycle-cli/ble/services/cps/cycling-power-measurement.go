@@ -7,24 +7,25 @@ import (
 )
 
 type CyclingPowerMeasurement struct {
+	PedalPowerBalance   *uint8
+	AccumulatedTorque   *uint16
+	WheelRevs           *uint32
+	WheelEventTime      *uint16
+	CrankRevs           *uint16
+	CrankEventTime      *uint16
+	ExtremeForceMin     *int16
+	ExtremeForceMax     *int16
+	ExtremeTorqueMin    *int16
+	ExtremeTorqueMax    *int16
+	ExtremeAngles       *[2]uint16 // degrees (min, max)
+	TopDeadSpotAngle    *uint16
+	BottomDeadSpotAngle *uint16
+	AccumulatedEnergy   *uint8
+
 	Flags uint16
 
 	InstantaneousPower int16
 
-	PedalPowerBalance     *uint8
-	AccumulatedTorque     *uint16
-	WheelRevs             *uint32
-	WheelEventTime        *uint16
-	CrankRevs             *uint16
-	CrankEventTime        *uint16
-	ExtremeForceMin       *int16
-	ExtremeForceMax       *int16
-	ExtremeTorqueMin      *int16
-	ExtremeTorqueMax      *int16
-	ExtremeAngles         *[2]uint16 // degrees (min, max)
-	TopDeadSpotAngle      *uint16
-	BottomDeadSpotAngle   *uint16
-	AccumulatedEnergy     *uint8
 	OffsetCompensationSet bool
 }
 

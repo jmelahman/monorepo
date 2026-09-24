@@ -89,7 +89,6 @@ func Build() BuildInfo {
 type serveOptions struct {
 	addr             string
 	dataDir          string
-	inMemory         bool
 	previewDomain    string
 	previewBaseURL   string
 	buildConcurrency int
@@ -114,7 +113,6 @@ type serveOptions struct {
 	s3Region         string
 	s3AccessKey      string
 	s3SecretKey      string
-	s3UseSSL         bool
 
 	cacheMaxArtifactBytes int64
 	maxUploadBytes        int64
@@ -137,6 +135,11 @@ type serveOptions struct {
 	asgName          string
 	awsRegion        string
 	metricsNamespace string
+
+	// The bools live here, away from the group each belongs to: spread
+	// through the struct they cost a word of padding apiece.
+	inMemory bool // --in-memory: ephemeral SQLite, nothing on disk
+	s3UseSSL bool // --s3-use-ssl: TLS for the artifact-tier endpoint
 }
 
 func Root() *cobra.Command {

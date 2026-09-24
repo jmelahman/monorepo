@@ -18,12 +18,13 @@ import (
 // ReleaseOptions holds options for the release command
 type ReleaseOptions struct {
 	orchard.ReleaseOptions
-	NoVerify bool
 
-	Major, Minor, Patch bool
 	Suffix              string
-	DryRun              bool
-	Yes                 bool
+	Major, Minor, Patch bool
+
+	NoVerify bool
+	DryRun   bool
+	Yes      bool
 }
 
 // NewReleaseCommand creates a new release command
