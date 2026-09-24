@@ -46,16 +46,14 @@ def main() -> int:
     packages = find_packages()
     nvchecker_pkgs = get_nvchecker_sections()
 
-    errors: list[str] = []
-
     # Check nvchecker coverage.
-    missing_nvchecker = packages - nvchecker_pkgs
-    for pkg in sorted(missing_nvchecker):
-        errors.append(f"nvchecker.toml: missing entry for '{pkg}'")
-
-    extra_nvchecker = nvchecker_pkgs - packages
-    for pkg in sorted(extra_nvchecker):
-        errors.append(f"nvchecker.toml: entry '{pkg}' has no matching package directory")
+    errors = [
+        f"nvchecker.toml: missing entry for '{pkg}'" for pkg in sorted(packages - nvchecker_pkgs)
+    ]
+    errors.extend(
+        f"nvchecker.toml: entry '{pkg}' has no matching package directory"
+        for pkg in sorted(nvchecker_pkgs - packages)
+    )
 
     if errors:
         print()

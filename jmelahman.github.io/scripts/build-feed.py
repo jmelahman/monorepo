@@ -52,7 +52,7 @@ def parse_date(raw: str | None) -> datetime | None:
     except (TypeError, ValueError):
         pass
     try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        return datetime.fromisoformat(raw)
     except ValueError:
         return None
 
@@ -65,7 +65,7 @@ def extract_link(entry: ET.Element) -> str:
     # Atom: prefer rel="alternate" or unspecified rel.
     alts = entry.findall(f"{ATOM}link")
     chosen = next(
-        (l for l in alts if (l.get("rel") or "alternate") == "alternate" and l.get("href")), None
+        (a for a in alts if (a.get("rel") or "alternate") == "alternate" and a.get("href")), None
     )
     if chosen is None and alts:
         chosen = alts[0]
@@ -96,7 +96,8 @@ def parse_entries(name: str, root: ET.Element) -> list[Item]:
 
 
 def fetch(name: str, url: str) -> list[Item]:
-    req = urllib.request.Request(
+    # The URLs are the https feeds listed in FEEDS.
+    req = urllib.request.Request(  # noqa: S310
         url,
         headers={
             "User-Agent": USER_AGENT,
@@ -104,10 +105,12 @@ def fetch(name: str, url: str) -> list[Item]:
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:  # noqa: S310
             data = resp.read()
-        return parse_entries(name, ET.fromstring(data))
-    except Exception as err:
+        # Feeds are third-party XML; parse failures are caught below.
+        return parse_entries(name, ET.fromstring(data))  # noqa: S314
+    # One broken feed must not break the page build.
+    except Exception as err:  # noqa: BLE001
         print(f"warn: {name} <{url}>: {err}", file=sys.stderr)
         return []
 
@@ -118,7 +121,8 @@ def render_table(items: list[Item]) -> str:
         date = item.date.astimezone().strftime("%m/%d/%Y")
         rows.append(
             f'    <tr><td class="date-col">{date}</td>'
-            f'<td><a href="{html.escape(item.link, quote=True)}" target="_blank" rel="noopener noreferrer">{html.escape(item.title)}</a></td>'
+            f'<td><a href="{html.escape(item.link, quote=True)}" target="_blank" '
+            f'rel="noopener noreferrer">{html.escape(item.title)}</a></td>'
             f'<td style="white-space: nowrap">{html.escape(item.feed)}</td></tr>'
         )
     return (

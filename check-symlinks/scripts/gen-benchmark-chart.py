@@ -52,9 +52,11 @@ def render(theme: dict[str, str]) -> str:
     height = PAD_TOP + ROW_H * len(RESULTS) + 26
 
     out = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{height}" '
-        f'viewBox="0 0 {WIDTH} {height}" font-family="{FONT}" '
-        f'role="img" aria-label="Benchmark: {CAPTION}">'
+        (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{height}" '
+            f'viewBox="0 0 {WIDTH} {height}" font-family="{FONT}" '
+            f'role="img" aria-label="Benchmark: {CAPTION}">'
+        )
     ]
     for i, (label, mean, sigma, highlight) in enumerate(RESULTS):
         y = PAD_TOP + i * ROW_H
@@ -76,7 +78,8 @@ def render(theme: dict[str, str]) -> str:
             f"{mean:.1f} ± {sigma:.1f} ms</text>"
         )
     out.append(
-        f'<text x="{bar_x}" y="{height - 8}" font-size="12" fill="{theme["muted"]}">{CAPTION}</text>'
+        f'<text x="{bar_x}" y="{height - 8}" font-size="12" fill="{theme["muted"]}">'
+        f"{CAPTION}</text>"
     )
     out.append("</svg>")
     return "\n".join(out) + "\n"

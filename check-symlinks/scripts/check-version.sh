@@ -31,6 +31,11 @@ for f in so/go.mod so/gotest.mod; do
 		exit 1
 	fi
 done
+# The prek hooks install their own `so`.
+if grep "solod.dev/cmd/so@" .pre-commit-config.yaml | grep -qv "solod.dev/cmd/so@$solod\]"; then
+	echo "check-version: .pre-commit-config.yaml does not pin solod.dev/cmd/so@$solod" >&2
+	exit 1
+fi
 # build-constraints.txt is generated from the direct pins
 # (scripts/gen-build-constraints.sh); fail if it went stale.
 for pin in $(sed -n 's/^requires = \[\(.*\)\]$/\1/p' pyproject.toml | tr ',' '\n' | tr -d ' "') \

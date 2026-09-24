@@ -24,6 +24,8 @@ ENTRY_TO_UPSTREAM: dict[str, str] = {
 }
 UPSTREAM_TO_ENTRY = {v: k for k, v in ENTRY_TO_UPSTREAM.items()}
 
+logger = logging.getLogger(__name__)
+
 
 class Package(NamedTuple):
     name: str
@@ -40,7 +42,7 @@ def run_nvchecker(entry: str | None = None) -> list[str]:
 
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
-        logging.warning("GITHUB_TOKEN is not set; GitHub API requests will be rate limited")
+        logger.warning("GITHUB_TOKEN is not set; GitHub API requests will be rate limited")
         result = subprocess.run(cmd, check=True, text=True, stdout=subprocess.PIPE)  # noqa: S603
         return result.stdout.splitlines()
 
@@ -72,7 +74,7 @@ def parse_nvchecker_output(lines: list[str]) -> tuple[list[Package], bool]:
             )
         elif data.get("level") == "error" and data["event"] != "no-result":
             # nvchecker logs the failure itself and then a "no-result" line for the same entry.
-            logging.error("nvchecker failed for '%s': %s", name, data.get("error") or data["event"])
+            logger.error("nvchecker failed for '%s': %s", name, data.get("error") or data["event"])
             failed = True
     return packages, failed
 
@@ -182,12 +184,12 @@ def main() -> int:
 
     for package in packages:
         if not os.path.isdir(package.name):
-            logging.warning("Skipping '%s': no such package directory", package.name)
+            logger.warning("Skipping '%s': no such package directory", package.name)
             continue
         try:
             process_package(package)
         except (RuntimeError, subprocess.CalledProcessError):
-            logging.exception("Failed to process '%s'", package.name)
+            logger.exception("Failed to process '%s'", package.name)
             failed = True
     return int(failed)
 

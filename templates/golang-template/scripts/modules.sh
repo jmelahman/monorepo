@@ -20,7 +20,16 @@
 # first failure.
 set -uo pipefail
 
-root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+# The repo root is this script's parent, not `git rev-parse --show-toplevel`:
+# vendored into a larger repository, that would pick up the host's go.work
+# and its modules. For the same reason, pin Go to this repo's own workspace,
+# or to none, rather than whatever go.work sits further up.
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -f "$root/go.work" ]; then
+	export GOWORK="$root/go.work"
+else
+	export GOWORK=off
+fi
 
 list_modules() {
 	cd "$root" || exit 1

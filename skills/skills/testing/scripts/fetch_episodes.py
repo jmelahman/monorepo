@@ -32,6 +32,7 @@ import urllib.request
 
 from bs4 import BeautifulSoup
 from bs4 import NavigableString
+from bs4 import Tag
 
 BASE = Path(__file__).resolve().parent.parent
 INDEX = BASE / "references" / "INDEX.md"
@@ -45,8 +46,11 @@ RED_HEXES = ("f4cccc", "ea9999", "f4c7c3", "fbe5e1", "fce8e6")
 GREEN_HEXES = ("d9ead3", "b6d7a8", "e2f3eb", "e6f4ea", "d9ead2")
 MONO_RE = re.compile(r"courier|consolas|monospace", re.IGNORECASE)
 
+# codify_divs treats a block as code once this share of its text is monospace.
+MONO_THRESHOLD = 0.5
 
-def parse_index():
+
+def parse_index() -> list[dict[str, str]]:
     episodes = []
     for line in INDEX.read_text().splitlines():
         m = LINK_RE.match(line)
@@ -55,30 +59,34 @@ def parse_index():
     return episodes
 
 
-def slugify(title):
+def slugify(title: str) -> str:
     s = title.lower()
-    s = re.sub(r"['’]", "", s)
+    s = re.sub(r"['\u2019]", "", s)
     return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
 
 
-def fetch(url, dest):
+def fetch(url: str, dest: Path) -> bool:
     if dest.exists() and dest.stat().st_size > 0:
         return True
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (episode-archiver)"})
+    # INDEX.md lists only http(s) links (LINK_RE).
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (episode-archiver)"})  # noqa: S310
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310
             dest.write_bytes(r.read())
-        return True
-    except Exception as e:
+    # Report and move on: one bad episode must not stop the rebuild.
+    except Exception as e:  # noqa: BLE001
         print(f"  FETCH FAILED {url}: {e}", file=sys.stderr)
         return False
+    return True
 
 
-def cell_color(cell):
+def cell_color(cell: Tag) -> str | None:
     """Classify a table cell as bad/good/None from background colors."""
-    styles = [cell.get("style", ""), cell.get("bgcolor", "")]
-    for d in cell.find_all(["pre", "div", "span"]):
-        styles.append(d.get("style", "") + " " + d.get("bgcolor", ""))
+    styles = [str(cell.get("style", "")), str(cell.get("bgcolor", ""))]
+    styles.extend(
+        f"{d.get('style', '')} {d.get('bgcolor', '')}"
+        for d in cell.find_all(["pre", "div", "span"])
+    )
     blob = " ".join(styles).lower()
     if any(h in blob for h in RED_HEXES):
         return "bad"
@@ -87,14 +95,14 @@ def cell_color(cell):
     return None
 
 
-def cell_is_code(cell):
+def cell_is_code(cell: Tag) -> bool:
     if cell.find("pre") or cell.find("code"):
         return True
-    blob = " ".join(d.get("style", "") for d in cell.find_all(True)).lower()
+    blob = " ".join(str(d.get("style", "")) for d in cell.find_all(name=True)).lower()
     return "monospace" in blob or "courier" in blob or "consolas" in blob
 
 
-def cell_text(cell):
+def cell_text(cell: Tag) -> str:
     """Extract text preserving line structure."""
     for br in cell.find_all("br"):
         br.replace_with("\n")
@@ -110,7 +118,7 @@ def cell_text(cell):
     return "\n".join(lines)
 
 
-def flatten_tables(soup, body):
+def flatten_tables(soup: BeautifulSoup, body: Tag) -> None:
     """Replace each table with labeled <pre> blocks / paragraphs."""
     for table in body.find_all("table"):
         replacements = []
@@ -139,7 +147,7 @@ def flatten_tables(soup, body):
         table.decompose()
 
 
-def _mono_chars(el):
+def _mono_chars(el: Tag) -> tuple[int, int]:
     """Chars of text whose ancestor chain includes a monospace-styled element."""
     mono = total = 0
     for s in el.descendants:
@@ -151,27 +159,27 @@ def _mono_chars(el):
         total += n
         p = s.parent
         while p is not None and p is not el.parent:
-            if MONO_RE.search(p.get("style", "") or ""):
+            if MONO_RE.search(str(p.get("style", "") or "")):
                 mono += n
                 break
             p = getattr(p, "parent", None)
     return mono, total
 
 
-def codify_divs(soup, body):
+def codify_divs(soup: BeautifulSoup, body: Tag) -> None:
     """Old posts (2007-09) put code in styled divs/paragraphs of monospace
     spans + <br>. Convert any div/p dominated by monospace text into a <pre>."""
     for div in body.find_all(["div", "p"]):
         if div.find("table") or div.find("pre") or div.find("div"):
             continue
         mono, total = _mono_chars(div)
-        if total and mono / total >= 0.5:
+        if total and mono / total >= MONO_THRESHOLD:
             pre = soup.new_tag("pre")
             pre.string = cell_text(div)
             div.replace_with(pre)
 
 
-def extract_body(html):
+def extract_body(html: str) -> tuple[str | None, str | None]:
     soup = BeautifulSoup(html, "html.parser")
     body = soup.find("div", class_="post-body")
     if body is None:
@@ -183,7 +191,7 @@ def extract_body(html):
     if not date:
         meta = soup.find("abbr", class_="published") or soup.find("time", class_="published")
         if meta:
-            date = meta.get("title") or meta.get("datetime") or meta.get_text(strip=True)
+            date = str(meta.get("title") or meta.get("datetime") or meta.get_text(strip=True))
     for sel in body.find_all(["script", "style", "iframe"]):
         sel.decompose()
     flatten_tables(soup, body)
@@ -191,7 +199,7 @@ def extract_body(html):
     return str(body), date
 
 
-def to_markdown(html_fragment):
+def to_markdown(html_fragment: str) -> str:
     try:
         p = subprocess.run(
             ["pandoc", "-f", "html", "-t", "gfm-raw_html", "--wrap=none"],
@@ -222,7 +230,7 @@ BOILERPLATE = [
 ]
 
 
-def strip_hard_breaks(md):
+def strip_hard_breaks(md: str) -> str:
     """Remove pandoc's trailing-backslash hard breaks outside code fences."""
     out = []
     in_fence = False
@@ -231,16 +239,17 @@ def strip_hard_breaks(md):
             in_fence = not in_fence
             out.append(line)
             continue
+        kept = line
         if not in_fence:
             if line.strip() == "\\":
-                line = ""
+                kept = ""
             elif line.endswith("\\") and not line.endswith("\\\\"):
-                line = line[:-1].rstrip()
-        out.append(line)
+                kept = line[:-1].rstrip()
+        out.append(kept)
     return "\n".join(out)
 
 
-def clean_markdown(md):
+def clean_markdown(md: str) -> str:
     for b in BOILERPLATE:
         md = re.sub(b, "", md)
     md = strip_hard_breaks(md)
@@ -252,7 +261,7 @@ def clean_markdown(md):
     return re.sub(r"\n{3,}", "\n\n", md).strip()
 
 
-def convert_episode(ep):
+def convert_episode(ep: dict[str, str]) -> Path | str:
     """Fetch and convert one episode; returns its output path or an error str."""
     slug = slugify(ep["title"])
     out_path = OUT / f"{slug}.md"
@@ -275,7 +284,7 @@ def convert_episode(ep):
     return out_path
 
 
-def fetch_all(episodes):
+def fetch_all(episodes: list[dict[str, str]]) -> int:
     print(f"{len(episodes)} episodes listed in {INDEX.name}")
     failures = []
     for ep in episodes:
@@ -289,7 +298,7 @@ def fetch_all(episodes):
     return 1 if failures else 0
 
 
-def fetch_one(episodes, query):
+def fetch_one(episodes: list[dict[str, str]], query: str) -> int:
     q = slugify(query)
     matches = [ep for ep in episodes if q in slugify(ep["title"])]
     if not matches:
@@ -308,7 +317,7 @@ def fetch_one(episodes, query):
     return 0
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     episodes = parse_index()
     if argv:
         return fetch_one(episodes, " ".join(argv))

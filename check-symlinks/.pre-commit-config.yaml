@@ -8,6 +8,10 @@ repos:
       # The end-to-end suite: builds the binary and drives it over testdata/.
       - id: go-test
 
+  # The Go and solod hooks set GOWORK=off: so/ has its own go.mod, and a
+  # go.work further up (a monorepo checkout) would otherwise claim this module.
+  # prek builds `so` itself with the Go on PATH; `so` has to be built by the
+  # same Go release it runs against, so a host-installed one may not do.
   - repo: local
     hooks:
       - id: check-version
@@ -18,27 +22,29 @@ repos:
         pass_filenames: false
       - id: so-build
         name: build with solod
-        entry: so build -o check-symlinks-so ./so
-        language: system
+        entry: env GOWORK=off so build -o check-symlinks-so ./so
+        language: golang
+        additional_dependencies: [solod.dev/cmd/so@v0.3.0]  # = SOLOD_VERSION
         files: '(\.go|\.mod|\.sum)$'
         pass_filenames: false
       - id: go-build
         name: build with go (gocompat)
-        entry: go build -o check-symlinks-go .
+        entry: env GOWORK=off go build -o check-symlinks-go .
         language: system
         files: '(\.go|\.mod|\.sum)$'
         pass_filenames: false
       - id: so-test
         name: test with solod
-        entry: so test ./so
-        language: system
+        entry: env GOWORK=off so test ./so
+        language: golang
+        additional_dependencies: [solod.dev/cmd/so@v0.3.0]  # = SOLOD_VERSION
         files: '(\.go|\.mod|\.sum)$'
         pass_filenames: false
       # Runs after so-test on purpose: so-test regenerates so/test/main.go,
       # which this reads.
       - id: go-test-gocompat
         name: test with go (gocompat)
-        entry: go -C so run -modfile=gotest.mod ./test
+        entry: env GOWORK=off go -C so run -modfile=gotest.mod ./test
         language: system
         files: '(\.go|\.mod|\.sum)$'
         pass_filenames: false

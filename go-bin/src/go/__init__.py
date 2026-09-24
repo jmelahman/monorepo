@@ -11,6 +11,6 @@ def main() -> None:
     if os.name == "posix":
         os.execv(go_bin, [go_bin, *sys.argv[1:]])  # noqa: S606
     else:
-        import subprocess
+        import subprocess  # noqa: PLC0415 - only Windows needs it
 
         sys.exit(subprocess.call([go_bin, *sys.argv[1:]]))  # noqa: S603

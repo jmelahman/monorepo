@@ -52,6 +52,9 @@ CLAUDE_CODE_FIELDS = {
 # The skill listing truncates description + when_to_use at this many characters.
 DESCRIPTION_LIMIT = 1536
 
+# Past this many lines, a SKILL.md body should move detail into references/.
+BODY_LINE_LIMIT = 500
+
 errors: list[str] = []
 warnings: list[str] = []
 
@@ -103,6 +106,28 @@ def validate_skill(skill_dir: Path) -> None:
         error(skill_md, "frontmatter must be a YAML mapping")
         return
 
+    validate_frontmatter(skill_dir, skill_md, front)
+
+    body_lines = text[match.end() :].splitlines()
+    if len(body_lines) > BODY_LINE_LIMIT:
+        warn(
+            skill_md,
+            f"body is {len(body_lines)} lines; move detail into references/ and link to it",
+        )
+
+    validate_links(skill_dir, skill_md, text)
+
+
+def validate_links(skill_dir: Path, skill_md: Path, text: str) -> None:
+    for link in MARKDOWN_LINK.findall(text):
+        target = link.split("#", 1)[0]
+        if not target or "://" in target or target.startswith("mailto:"):
+            continue
+        if not (skill_dir / target).exists():
+            error(skill_md, f"broken relative link: {link}")
+
+
+def validate_frontmatter(skill_dir: Path, skill_md: Path, front: dict) -> None:
     description = front.get("description")
     if not description:
         error(
@@ -135,20 +160,6 @@ def validate_skill(skill_dir: Path) -> None:
     if claude_only:
         warn(skill_md, f"Claude Code-only frontmatter field(s): {', '.join(sorted(claude_only))}")
 
-    body_lines = text[match.end() :].splitlines()
-    if len(body_lines) > 500:
-        warn(
-            skill_md,
-            f"body is {len(body_lines)} lines; move detail into references/ and link to it",
-        )
-
-    for link in MARKDOWN_LINK.findall(text):
-        target = link.split("#", 1)[0]
-        if not target or "://" in target or target.startswith("mailto:"):
-            continue
-        if not (skill_dir / target).exists():
-            error(skill_md, f"broken relative link: {link}")
-
 
 def validate_manifests() -> None:
     plugin = load_json(PLUGIN_MANIFEST)
@@ -156,13 +167,7 @@ def validate_manifests() -> None:
     if plugin is None or marketplace is None:
         return
 
-    for key in ("name", "owner", "plugins"):
-        if key not in marketplace:
-            error(MARKETPLACE_MANIFEST, f"missing required field `{key}`")
-    if not KEBAB.match(marketplace.get("name", "")):
-        error(MARKETPLACE_MANIFEST, "`name` must be kebab-case")
-    if not (marketplace.get("owner") or {}).get("name"):
-        error(MARKETPLACE_MANIFEST, "`owner.name` is required")
+    validate_marketplace_fields(marketplace)
 
     if not KEBAB.match(plugin.get("name", "")):
         error(PLUGIN_MANIFEST, "`name` must be kebab-case")
@@ -188,6 +193,16 @@ def validate_manifests() -> None:
                     MARKETPLACE_MANIFEST,
                     f"`{key}` is {entry.get(key)!r} but plugin.json says {plugin.get(key)!r}",
                 )
+
+
+def validate_marketplace_fields(marketplace: dict) -> None:
+    for key in ("name", "owner", "plugins"):
+        if key not in marketplace:
+            error(MARKETPLACE_MANIFEST, f"missing required field `{key}`")
+    if not KEBAB.match(marketplace.get("name", "")):
+        error(MARKETPLACE_MANIFEST, "`name` must be kebab-case")
+    if not (marketplace.get("owner") or {}).get("name"):
+        error(MARKETPLACE_MANIFEST, "`owner.name` is required")
 
 
 def main() -> int:
