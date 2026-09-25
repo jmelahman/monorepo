@@ -3,6 +3,7 @@ require("core.options")
 
 -- Must be before the lazyvim setup.
 vim.g.coq_settings = {
+  auto_start = vim.fn.has("nvim-0.12") == 0 and "shut-up" or nil,
   display = {
     icons = { mode = "none" },
   },
