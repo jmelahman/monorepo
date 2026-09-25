@@ -3,12 +3,8 @@ require("core.options")
 
 -- Must be before the lazyvim setup.
 vim.g.coq_settings = {
-  auto_start = "shut-up",
   display = {
     icons = { mode = "none" },
-    pum = {
-      y_max_len = 4,     -- cap height to 4; hack around coq's _update_pumheight()
-    },
   },
 }
 
