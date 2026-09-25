@@ -1,8 +1,7 @@
 services:
   ollama:
-    image: ollama/ollama:rocm
     environment:
-      HSA_OVERRIDE_GFX_VERSION: 11.0.2
+      OLLAMA_VULKAN: 1
       OLLAMA_IGPU_ENABLE: 1
     devices:
       - /dev/kfd

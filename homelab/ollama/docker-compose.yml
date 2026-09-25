@@ -1,34 +1,18 @@
 services:
-  nginx:
-    image: nginx
-    container_name: nginx
-    restart: unless-stopped
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - ./nginx/:/etc/nginx/:ro
-    depends_on:
-      - ollama
-
   ollama:
     image: ollama/ollama
     restart: unless-stopped
     container_name: ollama
     environment:
-      - OLLAMA_CONTEXT_LENGTH=131072
-      - OLLAMA_KV_CACHE_TYPE=q8_0
+      OLLAMA_CONTEXT_LENGTH: 131072
     ports:
       - 11434:11434
     volumes:
       - ollama_data:/root/.ollama
     networks:
-      - onyx_default
       - kanban-net
 
 networks:
-  onyx_default:
-    external: true
   kanban-net:
     external: true
 
