@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   neovim \
   openssh-client \
   python3-dev \
+  python3-venv \
   ripgrep \
   socat \
   sudo \
