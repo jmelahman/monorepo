@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "fullstack-template-docs",
+      "name": "agilecbt-docs",
       "devDependencies": {
         "vitepress": "^1.6.4",
         "vitepress-plugin-llms": "^1.12.2",

@@ -1,4 +1,4 @@
-# Fullstack Template — Claude Notes
+# AgileCBT — Claude Notes
 
 A Go backend (repo root) plus a React/Vite frontend (`web/`).
 Source of truth for run commands is `.vscode/tasks.json`; this file translates

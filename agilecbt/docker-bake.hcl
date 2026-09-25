@@ -8,10 +8,10 @@ target "default" {
   context = "."
   dockerfile = "Dockerfile"
   cache_from = [
-    "docker.io/lahmanja/fullstack-template:latest",
+    "docker.io/lahmanja/agilecbt:latest",
   ]
   tags = [
-    "lahmanja/fullstack-template:latest",
+    "lahmanja/agilecbt:latest",
   ]
   args = {
     BUILDKIT_INLINE_CACHE = 1

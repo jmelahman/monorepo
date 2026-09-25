@@ -17,12 +17,12 @@ export default defineConfig({
   },
   title: 'AgileCBT',
   description: 'Agile planning meets CBT: check-ins, a gentle board, and an AI curator.',
-  base: '/fullstack-template/',
+  base: '/AgileCBT/',
   lastUpdated: true,
   cleanUrls: true,
   ignoreDeadLinks: 'localhostLinks',
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/fullstack-template/favicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/AgileCBT/favicon.svg' }],
     ['meta', { name: 'theme-color', content: '#c2703a' }],
   ],
   themeConfig: {
@@ -30,7 +30,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
       { text: 'Reference', link: '/reference/api', activeMatch: '/reference/' },
-      { text: 'Releases', link: 'https://github.com/jmelahman/fullstack-template/releases' },
+      { text: 'Releases', link: 'https://github.com/jmelahman/AgileCBT/releases' },
     ],
     sidebar: {
       '/guide/': [
@@ -56,10 +56,10 @@ export default defineConfig({
       ],
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/jmelahman/fullstack-template' },
+      { icon: 'github', link: 'https://github.com/jmelahman/AgileCBT' },
     ],
     editLink: {
-      pattern: 'https://github.com/jmelahman/fullstack-template/edit/master/docs/:path',
+      pattern: 'https://github.com/jmelahman/AgileCBT/edit/master/docs/:path',
       text: 'Edit this page on GitHub',
     },
     search: { provider: 'local' },

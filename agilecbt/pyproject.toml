@@ -20,7 +20,7 @@ license = {file = "LICENSE"}
 authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
 readme = "README.md"
 requires-python = ">=3.6"
-keywords = ["template", "fullstack", "go", "react", "sqlite"]
+keywords = ["agile", "cbt", "mental-health", "go", "react", "sqlite"]
 classifiers = [
     "Programming Language :: Go",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -30,7 +30,7 @@ dynamic = ["version"]
 
 
 [project.urls]
-Repository = "https://github.com/jmelahman/fullstack-template"
+Repository = "https://github.com/jmelahman/AgileCBT"
 
 [tool.hatch.build]
 include = [

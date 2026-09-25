@@ -6,9 +6,9 @@ name: Devcontainer
 # images in test.yml / release.yml.
 #
 # Manual dispatch only: the image tag is shared across repos, so exactly one
-# repo should own automatic rebuilds. When instantiating this template, point
-# the tag at your own registry, add DOCKERHUB_USERNAME / DOCKERHUB_TOKEN
-# secrets, and optionally restore a push trigger on .devcontainer/** changes.
+# repo should own automatic rebuilds. Point the tag at your own registry, add
+# DOCKERHUB_USERNAME / DOCKERHUB_TOKEN secrets, and optionally restore a push
+# trigger on .devcontainer/** changes.
 
 on:
   workflow_dispatch:

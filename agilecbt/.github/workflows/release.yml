@@ -129,7 +129,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302
         with:
-          images: lahmanja/fullstack-template
+          images: lahmanja/agilecbt
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -144,5 +144,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
-          cache-from: type=registry,ref=lahmanja/fullstack-template:latest
+          cache-from: type=registry,ref=lahmanja/agilecbt:latest
           cache-to: type=inline
