@@ -1,3 +1,6 @@
+[devcontainer]
+image = "ghcr.io/jmelahman/devcontainer:latest"
+
 [[task]]
 label = "Backend"
 container_port = 8080
@@ -13,12 +16,3 @@ container_port = 5174
 [[task]]
 label = "Docs"
 container_port = 5175
-
-[sync]
-allow_rebase = true
-allow_merge = false
-
-[merge]
-allow_merge_commit = false
-allow_squash = true
-allow_rebase = false
