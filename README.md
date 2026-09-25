@@ -10,9 +10,10 @@ These projects are still in active development but may be considered "stable".
 - [5-wild](https://github.com/jmelahman/5-wild) [![Test status](https://github.com/jmelahman/5-wild/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/5-wild/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/5-wild/actions/workflows/pages.yml/badge.svg)](https://github.com/jmelahman/5-wild/actions/workflows/pages.yml)
 - [agentic-kanban](https://github.com/jmelahman/agentic-kanban) [![Test status](https://github.com/jmelahman/agentic-kanban/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/agentic-kanban/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/agentic-kanban/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/agentic-kanban/actions/workflows/release.yml)
 - [check-symlinks](https://github.com/jmelahman/check-symlinks) [![Test status](https://github.com/jmelahman/check-symlinks/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/check-symlinks/actions/workflows/test.yml) [![Deploy Status](https://github.com/jmelahman/check-symlinks/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/check-symlinks/actions/workflows/release.yml)
-- [connections](https://github.com/jmelahman/connections) [![Test status](https://github.com/jmelahman/connections/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/connections/actions/workflows/pre-commit.yml) [![Deploy Status](https://github.com/jmelahman/connections/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections/actions/workflows/release.yml)
+- [connections](https://github.com/jmelahman/connections) [![test status](https://github.com/jmelahman/connections/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/connections/actions/workflows/pre-commit.yml) [![deploy status](https://github.com/jmelahman/connections/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections/actions/workflows/release.yml)
 - [connections-ssh](https://github.com/jmelahman/connections-ssh) [![Test status](https://github.com/jmelahman/connections-ssh/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/connections-ssh/actions/workflows/pre-commit.yml) [![Deploy Status](https://github.com/jmelahman/connections-ssh/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/connections-ssh/actions/workflows/release.yml)
 - [docker-status](https://github.com/jmelahman/docker-status)
+- [git-orchard](https://github.com/jmelahman/git-orchard) [![test status](https://github.com/jmelahman/git-orchard/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/git-orchard/actions/workflows/pre-commit.yml) [![deploy status](https://github.com/jmelahman/git-orchard/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/git-orchard/actions/workflows/release.yml)
 - [go-bin](https://github.com/jmelahman/go-bin) [![Deploy Status](https://github.com/jmelahman/go-bin/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/go-bin/actions/workflows/release.yml)
 - homelab
 - [jmelahman.github.io](https://github.com/jmelahman/jmelahman.github.io) [![Deploy Status](https://github.com/jmelahman/jmelahman.github.io/actions/workflows/deploy.yml/badge.svg)](https://github.com/jmelahman/jmelahman.github.io/actions/workflows/deploy.yml)
@@ -30,7 +31,6 @@ These projects are still in active development but may be considered "stable".
 
 - [AgileCBT](https://github.com/jmelahman/AgileCBT)
 - [cycle-cli](https://github.com/jmelahman/cycle-cli)
-- [git-orchard](https://github.com/jmelahman/git-orchard)
 
 ## Browser Extensions
 
