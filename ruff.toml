@@ -1,0 +1,2 @@
+# The monorepo lints with the same config the Python subtrees get a copy of.
+extend = ".config/git-orchard/shared/python/ruff.toml"

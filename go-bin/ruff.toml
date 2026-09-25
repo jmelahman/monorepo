@@ -1,0 +1,34 @@
+# Shared by Python subtrees: .config/git-orchard/shared/python in the monorepo
+# (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+# copies it here.
+line-length = 100
+
+[lint]
+ignore = [
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in {name}
+    "COM812", # Trailing comma missing
+    "CPY001", # Missing copyright notice at top of file
+    "D",      # pydocstyle
+    "EM101",  # Exception must not use a string literal
+    "EM102",  # Exception must not use an f-string literal
+    "ERA001", # Found commented-out code
+    "FIX001", # Line contains FIXME, consider resolving the issue
+    "FIX002", # Line contains TODO, consider resolving the issue
+    "FIX004", # Line contains HACK, consider resolving the issue
+    "INP001", # File {filename} is part of an implicit namespace package. Add an __init__.py.
+    "PTH",    # flake8-use-pathlib
+    "S101",   # Use of assert detected
+    "S607",   # Starting a process with a partial executable path
+    "T201",   # `print` found
+    "TD",     # flake8-todos
+    "TRY003", # Avoid specifying long messages outside the exception class
+]
+select = ["ALL"]
+
+[lint.isort]
+# Google config: https://pycqa.github.io/isort/docs/configuration/profiles.html#google
+force-single-line=true
+force-sort-within-sections=true
+order-by-type=false
+single-line-exclusions = ["typing", "collections.abc"]
+required-imports = ["from __future__ import annotations"]

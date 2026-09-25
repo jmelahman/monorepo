@@ -9,7 +9,6 @@ import urllib.request
 import zipfile
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
-
 import manygo
 
 
