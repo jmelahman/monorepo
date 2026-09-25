@@ -18,8 +18,7 @@ def is_goarch(value: str | None) -> TypeGuard[GOARCH]:
 
 
 def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
-    """
-    Convert GOOS and GOARCH to a valid Python platform tag.
+    """Convert GOOS and GOARCH to a valid Python platform tag.
 
     This function provides a mapping between Go's platform identifiers
     (operating system and architecture) and Python platform tags used
@@ -39,6 +38,7 @@ def get_platform_tag(goos: GOOS, goarch: GOARCH) -> str:
 
     Raises:
         ValueError: If no platform tag can be generated for the given combination
+
     """
     # Mapping of special cases and conversions
     platform_map = {

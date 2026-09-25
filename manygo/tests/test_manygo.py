@@ -18,7 +18,7 @@ def test_is_goos() -> None:
 def test_get_platform_tag_darwin() -> None:
     assert manygo.get_platform_tag("darwin", "amd64") == "macosx_10_12_x86_64"
     assert manygo.get_platform_tag("darwin", "arm64") == "macosx_11_0_arm64"
-    with pytest.raises(ValueError):  # noqa: PT011
+    with pytest.raises(ValueError, match="No platform tag for darwin/386"):
         manygo.get_platform_tag("darwin", "386")  # type: ignore[arg-type]
 
 
@@ -41,17 +41,17 @@ def test_get_platform_tag_other_architectures() -> None:
     assert manygo.get_platform_tag("linux", "ppc64") == "manylinux_2_17_ppc64"
 
     # Unsupported OS
-    with pytest.raises(ValueError):  # noqa: PT011
+    with pytest.raises(ValueError, match="No platform tag for freebsd/amd64"):
         manygo.get_platform_tag("freebsd", "amd64")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Unsupported architecture for a supported OS
-    with pytest.raises(ValueError):  # noqa: PT011
+    with pytest.raises(ValueError, match="No platform tag for darwin/ppc64"):
         manygo.get_platform_tag("darwin", "ppc64")  # type: ignore[arg-type]
 
     # Unsupported architecture for Linux
-    with pytest.raises(ValueError):  # noqa: PT011
+    with pytest.raises(ValueError, match="No platform tag for linux/mips"):
         manygo.get_platform_tag("linux", "mips")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Unsupported combination
-    with pytest.raises(ValueError):  # noqa: PT011
+    with pytest.raises(ValueError, match="No platform tag for windows/s390x"):
         manygo.get_platform_tag("windows", "s390x")  # type: ignore[arg-type]

@@ -16,14 +16,17 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1
-        with:
-          args: "format --check --diff"
-      - uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1
-      - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a
+      - name: Setup ruff
+        uses: astral-sh/ruff-action@57714a7c8a2e59f32539362ba31877a1957dded1
+      - name: Format
+        run: ruff format --check --diff
+      - name: Lint
+        run: ruff check
+      - name: Setup uv
+        uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a
         with:
           enable-cache: true
       - name: Run type-checking
         run: uv run ty check
       - name: Run tests
-        run: uv run pytest
+        run: uv run pyest

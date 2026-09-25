@@ -1,0 +1,69 @@
+repos:
+  # BEGIN orchard:base
+  # Shared by every subtree: .config/git-orchard/shared/base in the monorepo
+  # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+  # copies it here.
+  # See https://prek.j178.dev/builtin/#2-explicit-builtin-repository
+  - repo: builtin
+    hooks:
+      - id: check-added-large-files
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+
+  - repo: https://github.com/sirwart/ripsecrets
+    rev: 7d94620933e79b8acaa0cd9e60e9864b07673d86  # frozen: v0.1.11
+    hooks:
+      - id: ripsecrets
+        args:
+          - --strict-ignore
+          - --additional-pattern
+          - ^sk-[A-Za-z0-9_\-]{20,}$
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca  # frozen: v1.7.12
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: fa412071e4f5d44d44f9e365f4676f9df92456a2  # frozen: v1.30.1
+    hooks:
+      - id: zizmor
+  # END orchard:base
+
+  # BEGIN orchard:python
+  # Python. ruff reads only the source, so it runs from its own hook. ty and
+  # pytest need the project's packages, so they run from uv.lock with
+  # --locked: a stale lockfile fails the hook instead of being re-resolved.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: a56c0b927e6465d37cae3e97d35d4d18ab2b96cd # frozen: v0.16.9
+    hooks:
+      - id: ruff-check
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/astral-sh/ty-pre-commit
+    rev: 6972e4c5a7e9f45f05a2f30b668f221f43b770c9  # frozen: v0.0.84
+    hooks:
+      - id: ty
+        args: [--locked]
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: uv run --locked --quiet pytest
+        language: python
+        additional_dependencies: [uv==0.9.15]
+        types_or: [python, pyi]
+        pass_filenames: false
+        require_serial: true
+  # END orchard:python

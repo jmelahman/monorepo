@@ -74,6 +74,9 @@
 [subtree "go-bin"]
 	remote = git@github.com:jmelahman/go-bin.git
 	branch = master
+	shared = base
+	shared = python
+	shared = ci
 [subtree "jmelahman.github.io"]
 	remote = git@github.com:jmelahman/jmelahman.github.io.git
 	branch = master
@@ -94,6 +97,9 @@
 [subtree "manygo"]
 	remote = git@github.com:jmelahman/manygo.git
 	branch = master
+	shared = base
+	shared = python
+	shared = ci
 [subtree "nature-sounds"]
 	remote = git@github.com:jmelahman/nature-sounds.git
 	branch = master

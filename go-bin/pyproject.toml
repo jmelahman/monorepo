@@ -30,3 +30,20 @@ source = "code"
 path = "src/go/_version.py"
 
 [tool.hatch.build.hooks.custom]
+
+[tool.hatch.build.targets.wheel]
+# Editable installs (uv sync, and uv check behind the ty hook) just put src on
+# the path; the wheel itself is assembled by hatch_build.py.
+dev-mode-dirs = ["src"]
+
+[dependency-groups]
+dev = [
+    # hatch_build.py imports both; installing them is what lets ty check it.
+    "hatchling>=1.27.0",
+    "manygo>=0.2.0",
+    "pytest>=9.1.0",
+]
+
+[tool.uv.dependency-groups]
+# The published wheels support back to 3.6; the build-time tooling does not.
+dev = { requires-python = ">=3.10" }

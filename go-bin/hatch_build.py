@@ -15,6 +15,10 @@ import manygo
 
 class GoBinaryBuildHook(BuildHookInterface):
     def initialize(self, version, build_data) -> None:  # noqa: ANN001
+        if version == "editable":
+            # `uv sync`/`uv check` install the project editable for local dev.
+            # There is no wheel to tag and no reason to fetch a Go toolchain.
+            return
         build_data["pure_python"] = False
         goos = os.getenv("GOOS")
         goarch = os.getenv("GOARCH")

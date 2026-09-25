@@ -36,7 +36,7 @@ repos:
   # list them in .config/git-orchard/subtrees, so each mirror carries its own
   # complete config.
   - repo: https://github.com/jmelahman/git-orchard
-    rev: 50de16612d3ebcd745b8feb5bb4d3637b732140d  # frozen: v1.1.0
+    rev: 50de16612d3ebcd745b8feb5bb4d3637b732140d # frozen: v1.1.0
     hooks:
       - id: git-orchard-sync
 
@@ -60,31 +60,29 @@ repos:
         args: [-s]
       - id: go-work-sync
 
-  # Python. ruff reads only the source, so it runs from its own hook. ty and
-  # pytest need the project's packages, so they run from uv.lock; the hook
+  # Python. ruff and ty read only the source, so they run from their own hook.
+  # pytest needs the project's packages, so it runs from uv.lock; the hook
   # environment pins only uv itself, so nothing comes off the host PATH.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 2eeb5678de71a00c0902cbda7105d328432f72cb # frozen: v0.16.8
+    rev: a56c0b927e6465d37cae3e97d35d4d18ab2b96cd # frozen: v0.16.9
     hooks:
       - id: ruff-check
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 9b16a472943852b803af3785c45041dcf10b9f12 # frozen: 0.12.18
+    rev: 2aeb804518b4373dbf5adb8dddc5466d9a6e6b21 # frozen: 0.12.19
     hooks:
       - id: uv-sync
 
-  - repo: local
+  - repo: https://github.com/astral-sh/ty-pre-commit
+    rev: 6972e4c5a7e9f45f05a2f30b668f221f43b770c9 # frozen: v0.0.84
     hooks:
       - id: ty
-        name: ty check
-        entry: uv run --locked --quiet ty check
-        language: python
-        additional_dependencies: [uv==0.9.15]
-        types_or: [python, pyi]
-        require_serial: true
+        args: ["--locked"]
 
+  - repo: local
+    hooks:
       - id: pytest
         name: pytest
         entry: uv run --locked --quiet pytest
