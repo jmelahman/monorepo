@@ -30,6 +30,6 @@ docker run -d --name app \
 ```sh
 git clone https://github.com/jmelahman/fullstack-template
 cd fullstack-template
-npm --prefix web ci && npm --prefix web run build
+bun install --cwd web --frozen-lockfile && bun run --cwd web build
 go build -tags embed -o app .
 ```

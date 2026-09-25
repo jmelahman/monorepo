@@ -1,14 +1,21 @@
-target "default" {
-  context = ".devcontainer"
+group "default" {
+  targets = ["devcontainer"]
+}
+
+target "devcontainer" {
+  context = "templates/fullstack-template/.devcontainer"
   dockerfile = "Dockerfile"
+  platforms = ["linux/amd64", "linux/arm64"]
   cache_from = [
-    "docker.io/lahmanja/devcontainer:latest",
+    "ghcr.io/jmelahman/devcontainer:latest",
   ]
   tags = [
-    "lahmanja/devcontainer:latest",
+    "ghcr.io/jmelahman/devcontainer:latest",
   ]
+  labels = {
+    "org.opencontainers.image.source" = "https://github.com/jmelahman/monorepo"
+  }
   args = {
-    BUILDKIT_CONTEXT_KEEP_GIT_DIR = 1
     BUILDKIT_INLINE_CACHE = 1
   }
 }

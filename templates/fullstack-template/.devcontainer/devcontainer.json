@@ -15,7 +15,7 @@
     "source=devcontainer-go-mod,target=/home/dev/go/pkg/mod,type=volume",
     "source=devcontainer-cache,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.cache,type=volume",
     "source=devcontainer-local,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local,type=volume",
-    "source=devcontainer-npm,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.npm,type=volume"
+    "source=devcontainer-bun,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.bun/install/cache,type=volume"
   ],
   "containerEnv": {
     "COLORTERM": "truecolor",

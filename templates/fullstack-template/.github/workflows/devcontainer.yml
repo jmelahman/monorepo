@@ -31,6 +31,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c
       - uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0
         with:
@@ -40,8 +41,7 @@ jobs:
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f
         with:
           context: .devcontainer
-          # amd64 only: the ripsecrets install step has no arm64 prebuilt binary.
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           pull: true
           no-cache: ${{ github.event_name != 'workflow_dispatch' || inputs.no-cache }}

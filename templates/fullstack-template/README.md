@@ -70,11 +70,11 @@ to copy from.
      `vite.config.ts`, `playwright.config.ts`).
 3. The CI/devcontainer image is `lahmanja/devcontainer` (rebuilt by
    `devcontainer.yml`, manual dispatch only); point it at your own registry
-   or swap the container jobs for setup-go/setup-node.
+   or swap the container jobs for setup-go/setup-bun.
 4. Configure repo settings: a `release` environment, `DOCKERHUB_USERNAME` /
    `DOCKERHUB_TOKEN` secrets, PyPI trusted publishing, and GitHub Pages
    (source: GitHub Actions).
-5. Regenerate lockfiles (`npm install` in `web/` and `docs/`) and run
+5. Regenerate lockfiles (`bun install` in `web/` and `docs/`) and run
    `prek run --all-files`.
 6. Replace this README with your project's own and update `LICENSE` with
    your name (or swap in a different license).
@@ -109,7 +109,7 @@ docker compose up -d --build
 wgo run . serve
 
 # Frontend on :5173, proxying /api to the backend
-cd web && npm install && npm run dev
+cd web && bun install && bun run dev
 ```
 
 ### Docs site
@@ -120,7 +120,7 @@ the site and publishes it through the Pages Actions deploy (no `gh-pages`
 branch). Run it locally with:
 
 ```sh
-cd docs && npm install && npm run docs:dev   # http://localhost:5175
+cd docs && bun install && bun run docs:dev   # http://localhost:5175
 ```
 
 One-time setup on a new repo: enable Pages with the "GitHub Actions" source

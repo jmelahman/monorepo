@@ -43,6 +43,8 @@ ALLOWED_DOMAINS=(
 	"static.rust-lang.org"
 	"index.crates.io"
 	"static.crates.io"
+	"cdn.playwright.dev"
+	"playwright.download.prss.microsoft.com"
 )
 
 for domain in "${ALLOWED_DOMAINS[@]}"; do

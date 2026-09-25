@@ -30,7 +30,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `npm run dev -- --port ${FRONTEND_PORT} --strictPort`,
+      command: `bun run dev --port ${FRONTEND_PORT} --strictPort`,
       cwd: ".",
       env: { APP_BACKEND: `localhost:${BACKEND_PORT}` },
       url: `http://localhost:${FRONTEND_PORT}/`,

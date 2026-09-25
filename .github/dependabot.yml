@@ -28,7 +28,6 @@ updates:
       - /agentic-kanban/web
       - /agilecbt/web
       - /local-preview/web
-      - /templates/fullstack-template/web
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
@@ -46,11 +45,31 @@ updates:
           - "@types/react"
           - "@types/react-dom"
 
+  - package-ecosystem: "bun"
+    directories:
+      - /templates/fullstack-template/docs
+      - /templates/fullstack-template/web
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependabot:bun"
+    cooldown:
+      default-days: 7
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+
   - package-ecosystem: "docker"
     directories:
       - /agentic-kanban/build/devcontainer
       - /agilecbt/.devcontainer
       - /local-preview/.devcontainer
+      - /templates/fullstack-template
       - /templates/fullstack-template/.devcontainer
     schedule:
       interval: "weekly"

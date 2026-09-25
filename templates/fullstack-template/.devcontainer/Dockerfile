@@ -1,6 +1,23 @@
-FROM ubuntu:26.04
+# Toolchains copied in below. Declared as stages (not inline COPY --from) so
+# Dependabot bumps their version and digest pins.
+FROM golang:1.27.1@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS go
+
+# Go tools are cross-compiled on the build platform so multi-arch builds don't
+# compile them under emulation. Cross-compiled `go install` output lands in
+# bin/<os>_<arch>/, hence the find.
+FROM --platform=$BUILDPLATFORM golang:1.27.1@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS gotools
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install github.com/bokwoon95/wgo@latest \
+  && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install golang.org/x/vuln/cmd/govulncheck@latest \
+  && mkdir /out && find /go/bin -type f -exec mv {} /out/ \;
+
+FROM oven/bun:1.4.2-debian@sha256:4f6e31d1a54d6a3dd312daef655fc998101b5043d52e12592ac293ef04b9bc73 AS bun
+
+FROM ubuntu:26.04@sha256:da6fc2be547864451aa253836dd926da33623312df4a9a243e35dc877c378a78
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
   curl \
   git \
   sudo \
@@ -20,8 +37,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   openssh-client \
   gh \
   git-delta \
-  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get install -y nodejs \
   && install -m 0755 -d /etc/apt/keyrings \
   && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list \
@@ -29,52 +44,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ARG GO_VERSION=1.26.3
-RUN ARCH="$(dpkg --print-architecture)" \
-  && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" | tar -C /usr/local -xz
+COPY --from=go /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:/root/go/bin:/home/dev/go/bin:${PATH}" \
     GOPATH="/home/dev/go"
 
-RUN GOBIN=/usr/local/bin /usr/local/go/bin/go install github.com/bokwoon95/wgo@latest \
-  && GOBIN=/usr/local/bin /usr/local/go/bin/go install golang.org/x/vuln/cmd/govulncheck@latest
+COPY --from=gotools /out/ /usr/local/bin/
 
-ARG PREK_VERSION=0.3.13
-RUN ARCH="$(dpkg --print-architecture)" \
-  && case "$ARCH" in \
-       amd64) TARGET="x86_64-unknown-linux-gnu" ;; \
-       arm64) TARGET="aarch64-unknown-linux-gnu" ;; \
-       *) echo "unsupported arch: $ARCH" >&2; exit 1 ;; \
-     esac \
-  && curl -fsSL "https://github.com/j178/prek/releases/download/v${PREK_VERSION}/prek-${TARGET}.tar.gz" \
-     | tar -xz --strip-components=1 -C /usr/local/bin "prek-${TARGET}/prek" \
-  && ln -s /usr/local/bin/prek /usr/local/bin/pre-commit
-
-# Pre-install ripsecrets so the prek hook uses language: system instead of
-# `cargo install`-ing it at runtime — index.crates.io rotates Fastly IPs and
-# breaks the firewall ipset captured at boot.
-ARG RIPSECRETS_VERSION=0.1.11
-RUN ARCH="$(dpkg --print-architecture)" \
-  && case "$ARCH" in \
-       amd64) TARGET="x86_64-unknown-linux-gnu" ;; \
-       *) echo "ripsecrets has no prebuilt binary for arch: $ARCH" >&2; exit 1 ;; \
-     esac \
-  && curl -fsSL "https://github.com/sirwart/ripsecrets/releases/download/v${RIPSECRETS_VERSION}/ripsecrets-${RIPSECRETS_VERSION}-${TARGET}.tar.gz" \
-     | tar -xz --strip-components=1 -C /usr/local/bin "ripsecrets-${RIPSECRETS_VERSION}-${TARGET}/ripsecrets"
-
-# Pre-install actionlint for the same reason — the upstream pre-commit hook
-# uses `go install`, which fails when proxy.golang.org's IPs rotate out of
-# the firewall ipset captured at boot.
-ARG ACTIONLINT_VERSION=1.7.9
-RUN ARCH="$(dpkg --print-architecture)" \
-  && case "$ARCH" in \
-       amd64) TARGET="linux_amd64" ;; \
-       arm64) TARGET="linux_arm64" ;; \
-       *) echo "unsupported arch: $ARCH" >&2; exit 1 ;; \
-     esac \
-  && curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_${TARGET}.tar.gz" \
-     | tar -xz -C /usr/local/bin actionlint
+COPY --from=ghcr.io/j178/prek:latest /prek /usr/local/bin/prek
+RUN ln -s /usr/local/bin/prek /usr/local/bin/pre-commit
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# Bun replaces Node. The fallback dir sits last on PATH so `#!/usr/bin/env
+# node` scripts (pi, playwright) run on bun unless a real node is installed.
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx \
+  && mkdir -p /usr/local/bun-node-fallback-bin \
+  && ln -s /usr/local/bin/bun /usr/local/bun-node-fallback-bin/node
+ENV PATH="${PATH}:/usr/local/bun-node-fallback-bin"
 
 # Create non-root user. Both root and dev get zsh as their login shell so
 # interactive terminals — which the kanban server attaches to via /etc/passwd
@@ -88,8 +75,8 @@ RUN chsh -s /bin/zsh root && \
 # Pre-create the dirs that devcontainer.json mounts named volumes onto so the
 # volume inherits dev ownership on first mount (docker copies the target dir's
 # perms into a fresh empty volume). Without this dev hits EACCES on ~/.cache,
-# ~/.local, ~/.npm after a clean rebuild.
-RUN mkdir -p /home/dev/.cache /home/dev/.local /home/dev/.npm \
+# ~/.local, ~/.bun after a clean rebuild.
+RUN mkdir -p /home/dev/.cache /home/dev/.local /home/dev/.bun/install/cache \
              /home/dev/.config /home/dev/.ssh /home/dev/go/pkg/mod && \
   chmod 700 /home/dev/.ssh && \
   chown -R dev:dev /home/dev
@@ -102,22 +89,21 @@ RUN mkdir -p /workspace && \
 WORKDIR /workspace
 
 # Install agent CLIs (Claude Code, pi)
-ARG CLAUDE_CODE_VERSION=latest
-ARG PI_CODING_AGENT_VERSION=latest
-RUN npm install -g \
-    @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
-    @mariozechner/pi-coding-agent@${PI_CODING_AGENT_VERSION} \
-    vite typescript @typescript/native-preview \
-    playwright @playwright/mcp
+# Installed into /usr/local (not root's ~/.bun) so both root and dev get them.
+RUN BUN_INSTALL_BIN=/usr/local/bin \
+    BUN_INSTALL_GLOBAL_DIR=/usr/local/share/bun-global \
+    BUN_INSTALL_CACHE_DIR=/tmp/bun-cache \
+    bun add -g \
+    @anthropic-ai/claude-code@latest \
+    @mariozechner/pi-coding-agent@$latest \
+  && rm -rf /tmp/bun-cache
 
-# Headless Chromium for Playwright (downloaded at build time so the runtime
-# firewall doesn't need to allow the Playwright CDN). Shared path so both the
-# root and dev users can launch it.
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN npx playwright install --with-deps chromium \
- && chmod -R a+rX /ms-playwright \
- && mkdir -p /opt/google/chrome \
- && ln -sf "$(find /ms-playwright -maxdepth 3 -type f -name chrome -path '*chrome-linux64*' | head -n1)" /opt/google/chrome/chrome
+# System libraries for Playwright's Chromium. The browsers themselves are
+# installed per project (`bun run test:e2e:install`, `bunx @playwright/mcp
+# install-browser chromium`) into ~/.cache/ms-playwright, the devcontainer-cache
+# volume, so each gets the revision it pins and survives container rebuilds.
+RUN BUN_INSTALL_CACHE_DIR=/tmp/bun-cache bunx playwright install-deps chromium \
+  && rm -rf /tmp/bun-cache /var/lib/apt/lists/*
 
 # Pre-seed GitHub's SSH host keys so git-over-SSH never prompts.  Keys are
 # pinned in-repo (verified against the fingerprints GitHub publishes at

@@ -5,11 +5,12 @@ A containerized development environment.
 ## What's included
 
 - Ubuntu base image
-- Node.js 20 (with `vite`, `typescript`, `@typescript/native-preview`)
-- Go (with `wgo` for live reload and `govulncheck`)
+- Bun (`node` falls back to Bun)
+- Go (from the `golang` image, with `wgo` for live reload and `govulncheck`)
 - Docker CLI + Compose plugin (talks to the host daemon via mounted socket)
-- Claude Code
-- Playwright + headless Chromium (shared at `/ms-playwright`) for browser-based UI testing
+- Claude Code, pi
+- prek and uv
+- Playwright's Chromium system libraries. Browsers are installed per project into `~/.cache/ms-playwright`, which persists across rebuilds
 - Shell tools: zsh, fzf, ripgrep, fd, neovim, less, jq
 - `socat`, `openssh-client`, `gh` CLI
 - Optional network firewall (off by default; set `DEVCONTAINER_FIREWALL=true` to opt in to a default-deny allowlist of npm, GitHub, Anthropic, Sentry, Go module proxy, and VS Code update servers)
@@ -25,7 +26,7 @@ A containerized development environment.
 ### CLI
 
 ```bash
-npm install -g @devcontainers/cli
+bun add -g @devcontainers/cli
 
 # Start the container
 devcontainer up --workspace-folder .
@@ -62,7 +63,7 @@ The container bind-mounts a few things from the host so it feels like a normal s
 - The host Docker socket — `docker` commands inside the container act on the host daemon
 - `$GH_TOKEN` is forwarded for the `gh` CLI
 
-Named volumes cache the Go module/build directories and `~/.npm` so reinstalls are fast across container rebuilds.
+Named volumes cache the Go module/build directories and Bun's package cache (`~/.bun/install/cache`) so reinstalls are fast across container rebuilds.
 
 ### Remote user
 
@@ -74,7 +75,7 @@ VS Code or `devcontainer up` from:
 - `DEVCONTAINER_REMOTE_USER` (default `dev`) — value of `remoteUser`.
 - `DEVCONTAINER_REMOTE_HOME` (default `/home/dev`) — prefix used as the target
   for every host-home bind (`~/.claude`, `~/.zshrc`, the `~/.cache` /
-  `~/.local` / `~/.npm` named volumes, etc.).
+  `~/.local` / `~/.bun/install/cache` named volumes, etc.).
 
 To run as root instead, export both:
 
@@ -102,6 +103,7 @@ The container ships with an opt-in default-deny firewall (`init-firewall.sh`). I
 - VS Code update servers
 - Go module proxy (`proxy.golang.org`, `sum.golang.org`, `storage.googleapis.com`)
 - Rust toolchain + crates registry (`static.rust-lang.org`, `index.crates.io`, `static.crates.io`) — needed for prek to build ripsecrets
+- Playwright browser downloads (`cdn.playwright.dev`, `playwright.download.prss.microsoft.com`)
 - Subnets of attached Docker networks (so sibling containers are reachable)
 
 This requires the `NET_ADMIN` and `NET_RAW` capabilities, which are added via `runArgs` in `devcontainer.json`.
