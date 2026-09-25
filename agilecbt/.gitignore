@@ -61,4 +61,4 @@ dist/
 __pycache__/
 
 # release artifacts
-/app
+/agilecbt
