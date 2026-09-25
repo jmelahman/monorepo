@@ -110,9 +110,11 @@ flaky_threshold       = 3                    # passes-on-retry in the window tha
 
 # Extra knobs layered onto the worktree's devcontainer.json at session spawn.
 # `mounts` and `run_args` append to whatever the devcontainer.json declares;
-# `container_env` merges with kanban values winning. `docker_socket` and
-# `claude_config` only affect the built-in fallback devcontainer —
-# hand-written devcontainer.json files manage their own mounts.
+# `container_env` merges with kanban values winning. `image`,
+# `docker_socket` and `claude_config` only affect the built-in fallback
+# devcontainer (used when neither the repo nor ~/.config/kanban has a
+# devcontainer.json) — hand-written devcontainer.json files declare their
+# own image/build and manage their own mounts.
 # `docker_socket` defaults to false because forwarding the host daemon
 # grants the session agent root-equivalent authority on the host; opt in
 # only when a session legitimately needs to drive Docker. `claude_config`
@@ -121,6 +123,7 @@ flaky_threshold       = 3                    # passes-on-retry in the window tha
 # the toml value (useful when running kanban inside a devcontainer that
 # already mounts `~/.claude` at a path the host's docker daemon can't see).
 [devcontainer]
+image         = "ghcr.io/me/devbox:latest"   # built-in only: replaces the bundled image
 mounts        = ["type=bind,source=/tmp/ssh-agent.sock,target=/tmp/ssh-agent.sock"]
 run_args      = ["--cap-add=SYS_PTRACE"]
 docker_socket = false          # built-in only: bind /var/run/docker.sock into the container
@@ -359,6 +362,10 @@ a session can't end up as `root` with `/home/dev` (or vice versa):
 | --- | --- |
 | `$DEVCONTAINER_REMOTE_USER` | In-container user (`dev` or `root`). If only this is set, the home is derived from a known-user table. |
 | `$DEVCONTAINER_REMOTE_HOME` | In-container home prefix. If only this is set, the user still comes from the `~/.claude` auto-pick. |
+
+A custom `[devcontainer].image` still goes through this pick, so it should
+ship the same `dev` (UID 1000) and/or `root` accounts, or set the env
+vars above to an account it does ship.
 
 For host UIDs the image doesn't ship an account for (e.g. macOS users
 with UID 501), the auto-pick falls back to `dev`. Set the env vars

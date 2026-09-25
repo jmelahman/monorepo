@@ -131,7 +131,12 @@ type MergeSection struct {
 // DockerSocket and ClaudeConfig toggle host bind mounts on the *built-in*
 // devcontainer only — hand-written devcontainer.json files are unaffected
 // and manage their own mounts. Both default to true when unset.
+//
+// Image likewise only applies to the built-in devcontainer: it replaces the
+// bundled image reference, while a hand-written devcontainer.json keeps
+// whatever image or build it declares.
 type DevcontainerSection struct {
+	Image        *string           `toml:"image"`
 	RunArgs      []string          `toml:"run_args"`
 	Mounts       []string          `toml:"mounts"`
 	ContainerEnv map[string]string `toml:"container_env"`
@@ -443,6 +448,7 @@ func mergeDevcontainer(p, u *DevcontainerSection) *DevcontainerSection {
 			}
 			out.ContainerEnv[k] = v
 		}
+		out.Image = p.Image
 		out.DockerSocket = p.DockerSocket
 		out.ClaudeConfig = p.ClaudeConfig
 	}
@@ -454,6 +460,9 @@ func mergeDevcontainer(p, u *DevcontainerSection) *DevcontainerSection {
 				out.ContainerEnv = map[string]string{}
 			}
 			out.ContainerEnv[k] = v
+		}
+		if u.Image != nil {
+			out.Image = u.Image
 		}
 		if u.DockerSocket != nil {
 			out.DockerSocket = u.DockerSocket

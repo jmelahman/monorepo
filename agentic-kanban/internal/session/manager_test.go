@@ -735,3 +735,33 @@ func TestEnsure_ProjectDir(t *testing.T) {
 		}
 	})
 }
+
+func TestApplyKanbanDevcontainerOverrides_Image(t *testing.T) {
+	image := "ghcr.io/me/custom:latest"
+	dev := &kanbantoml.DevcontainerSection{Image: &image, ClaudeConfig: new(bool)}
+
+	t.Run("replaces the built-in image", func(t *testing.T) {
+		cfg := &docker.DevcontainerConfig{BuiltIn: true, Image: docker.BuiltinImage}
+		applyKanbanDevcontainerOverrides(cfg, dev, nil)
+		if cfg.Image != image {
+			t.Errorf("image = %q; want %q", cfg.Image, image)
+		}
+	})
+
+	t.Run("empty value keeps the built-in image", func(t *testing.T) {
+		empty := ""
+		cfg := &docker.DevcontainerConfig{BuiltIn: true, Image: docker.BuiltinImage}
+		applyKanbanDevcontainerOverrides(cfg, &kanbantoml.DevcontainerSection{Image: &empty, ClaudeConfig: new(bool)}, nil)
+		if cfg.Image != docker.BuiltinImage {
+			t.Errorf("image = %q; want %q", cfg.Image, docker.BuiltinImage)
+		}
+	})
+
+	t.Run("hand-written config keeps its image", func(t *testing.T) {
+		cfg := &docker.DevcontainerConfig{Image: "repo/declared:1"}
+		applyKanbanDevcontainerOverrides(cfg, dev, nil)
+		if cfg.Image != "repo/declared:1" {
+			t.Errorf("image = %q; want repo/declared:1", cfg.Image)
+		}
+	})
+}

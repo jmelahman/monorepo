@@ -66,6 +66,7 @@ var schema = []KeySpec{
 
 	{Key: "branches.prefix", Kind: KindString},
 
+	{Key: "devcontainer.image", Kind: KindString},
 	{Key: "devcontainer.run_args", Kind: KindStringArray},
 	{Key: "devcontainer.mounts", Kind: KindStringArray},
 	{Key: "devcontainer.container_env", Kind: KindStringMap},
@@ -343,6 +344,10 @@ func GetValue(f File, key string) (any, bool) {
 	case "branches.prefix":
 		if f.Branches != nil && f.Branches.Prefix != nil {
 			return *f.Branches.Prefix, true
+		}
+	case "devcontainer.image":
+		if f.Devcontainer != nil && f.Devcontainer.Image != nil {
+			return *f.Devcontainer.Image, true
 		}
 	case "devcontainer.run_args":
 		if f.Devcontainer != nil && f.Devcontainer.RunArgs != nil {

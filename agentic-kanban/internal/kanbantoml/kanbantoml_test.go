@@ -399,3 +399,30 @@ allow_rebase = false
 		t.Errorf("sync.allow_rebase = %v; want false (preserved)", f.Sync)
 	}
 }
+
+func TestLoad_DevcontainerImageUserOverridesProject(t *testing.T) {
+	withUserConfig(t, `[devcontainer]
+image = "ghcr.io/me/custom:latest"
+`)
+	repo := writeProject(t, `[devcontainer]
+image = "ghcr.io/team/base:1"
+docker_socket = true
+`)
+
+	d := Load(repo).Devcontainer
+	if d == nil || d.Image == nil {
+		t.Fatal("devcontainer.image missing")
+	}
+	if *d.Image != "ghcr.io/me/custom:latest" {
+		t.Errorf("image = %q; want user override", *d.Image)
+	}
+	if d.DockerSocket == nil || !*d.DockerSocket {
+		t.Errorf("docker_socket = %v; want project value preserved", d.DockerSocket)
+	}
+
+	withUserConfig(t, "")
+	d = Load(repo).Devcontainer
+	if d == nil || d.Image == nil || *d.Image != "ghcr.io/team/base:1" {
+		t.Errorf("image = %v; want project value when user file is absent", d.Image)
+	}
+}
