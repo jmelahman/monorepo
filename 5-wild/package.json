@@ -19,7 +19,7 @@
     "sim": "SIM=1 vitest run test/sim.test.ts"
   },
   "dependencies": {
-    "@capacitor/core": "^8.0.0"
+    "@capacitor/core": "^8.5.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.0",
