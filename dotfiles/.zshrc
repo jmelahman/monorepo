@@ -1,4 +1,5 @@
 # Enable completion
+fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit add-zsh-hook
 compinit
 # add-zsh-hook chpwd auto_activate_venv
