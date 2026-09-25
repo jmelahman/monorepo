@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeClipboardHelper puts a script named after the first entry of
@@ -49,6 +50,34 @@ func TestNativeCopy(t *testing.T) {
 		}
 		if strings.Contains(err.Error(), "noise") {
 			t.Errorf("err carries more than the first stderr line: %v", err)
+		}
+	})
+
+	// xclip, xsel and wl-copy leave a child behind to serve the selection,
+	// holding the helper's stdio open. Waiting on that child froze the
+	// task view until the user copied something else.
+	t.Run("a helper's background child doesn't block", func(t *testing.T) {
+		sink := fakeClipboardHelper(t, `cat > "$SINK"; sleep 30 & exit 0`)
+		start := time.Now()
+		if err := nativeCopy("x"); err != nil {
+			t.Fatal(err)
+		}
+		if d := time.Since(start); d > 2*time.Second {
+			t.Errorf("nativeCopy waited %v for the helper's child", d)
+		}
+		if got, _ := os.ReadFile(sink); string(got) != "x" {
+			t.Errorf("helper received %q", got)
+		}
+	})
+
+	t.Run("a hung helper times out", func(t *testing.T) {
+		restore := nativeCopyTimeout
+		nativeCopyTimeout = 100 * time.Millisecond
+		t.Cleanup(func() { nativeCopyTimeout = restore })
+		fakeClipboardHelper(t, "exec sleep 30")
+		err := nativeCopy("x")
+		if err == nil || !strings.Contains(err.Error(), "timed out") {
+			t.Errorf("err = %v, want a timeout", err)
 		}
 	})
 

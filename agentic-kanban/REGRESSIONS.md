@@ -225,3 +225,23 @@ Rules:
   checked out in a registered worktree.
 - Don't "fix" an orphaned worktree by pruning. Run `git worktree repair
   <path>` from the side whose path matches the recorded one.
+
+### Piping a daemonizing helper's stdio hangs `cmd.Run()`
+
+`exec.Cmd.Wait` waits for the process to exit **and** for every stdio pipe
+Go created (any `Stdout`/`Stderr` that isn't an `*os.File`) to reach EOF.
+Helpers that fork a long-lived child, such as `xclip`, `xsel` and `wl-copy`, which
+stay alive to serve the selection, hand that child their stderr. The pipe
+stays open until the child exits. For a clipboard helper, the child exits
+only when the user copies something else. `nativeCopy` captured stderr
+into a `bytes.Buffer` and ran on the TUI event loop, so pressing `c` in
+`kanban ticket tasks` froze the terminal.
+
+Rules:
+
+- When shelling out to anything that may daemonize, send stdout/stderr to
+  `nil` or an `*os.File` (see `nativeCopy`'s temp file), never a
+  `bytes.Buffer`.
+- Anything that runs synchronously on a tcell event loop gets a timeout
+  (`exec.CommandContext`). A blocked loop can't redraw, so the user sees a
+  frozen terminal with no error.

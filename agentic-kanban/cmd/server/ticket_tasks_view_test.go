@@ -89,6 +89,11 @@ func TestTasksViewCopyURL(t *testing.T) {
 	if copied != "http://localhost:13001" {
 		t.Errorf("copied %q", copied)
 	}
+	v.render(screen)
+	screen.Show()
+	if got := screenText(screen); !strings.Contains(got, "copied http://localhost:13001 to the clipboard") {
+		t.Errorf("footer doesn't confirm the copy:\n%s", got)
+	}
 	v.handleKey(screen, formKey(tcell.KeyDown))
 	v.handleKey(screen, runeKey('c'))
 	if !strings.Contains(v.errMsg, "no port") {

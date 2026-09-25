@@ -506,7 +506,7 @@ func (v *tasksView) copyURL(s tcell.Screen) {
 		v.setError("copy failed: " + err.Error())
 		return
 	}
-	v.setMsg("copied " + r.URL)
+	v.setMsg("copied " + r.URL + " to the clipboard")
 }
 
 func (v *tasksView) scrollOutput(delta int) {

@@ -1,10 +1,13 @@
 package server
 
 import (
-	"bytes"
+	"context"
 	"errors"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -40,21 +43,44 @@ var setClipboard = func(s tcell.Screen, text string) error {
 	return nativeCopy(text)
 }
 
+// nativeCopyTimeout bounds a clipboard helper. Copies run on the view's
+// event loop, so a wedged helper would otherwise freeze the terminal.
+var nativeCopyTimeout = 3 * time.Second
+
 // nativeCopy pipes text into the first installed clipboard helper. Finding
 // none is not an error — see setClipboard. A package variable so tests can
 // exercise setClipboard without writing the machine's real clipboard.
+//
+// xclip, xsel and wl-copy fork a child that stays alive to serve the
+// selection until something else takes it, and that child inherits the
+// helper's stdio. Stderr therefore goes to a file, never a pipe: with a
+// pipe, Wait blocks until every holder of the write end exits — i.e.
+// until the user next copies something elsewhere — and the view hangs.
 var nativeCopy = func(text string) error {
 	for _, argv := range clipboardCommands {
 		path, err := exec.LookPath(argv[0])
 		if err != nil {
 			continue
 		}
-		cmd := exec.Command(path, argv[1:]...)
+		stderr, err := os.CreateTemp("", "kanban-clipboard-*")
+		if err != nil {
+			return err
+		}
+		defer func() {
+			stderr.Close()
+			os.Remove(stderr.Name())
+		}()
+		ctx, cancel := context.WithTimeout(context.Background(), nativeCopyTimeout)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, path, argv[1:]...)
 		cmd.Stdin = strings.NewReader(text)
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
+		cmd.Stderr = stderr
 		if err := cmd.Run(); err != nil {
-			return errors.New(argv[0] + ": " + firstLine(stderr.String(), err.Error()))
+			if ctx.Err() != nil {
+				return errors.New(argv[0] + ": timed out")
+			}
+			msg, _ := io.ReadAll(io.NewSectionReader(stderr, 0, 4096))
+			return errors.New(argv[0] + ": " + firstLine(string(msg), err.Error()))
 		}
 		return nil
 	}

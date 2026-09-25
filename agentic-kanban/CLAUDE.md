@@ -154,6 +154,7 @@ entry to `REGRESSIONS.md` and a one-line title here.
 - Build Cop boards on the same repo share one jobs cache — per-tick cache eviction
 - Exec sites hardcode `/workspace` — anything that needs a container working directory
 - `git worktree prune` from the other side of the mount orphans worktrees — creating/removing worktrees
+- Piping a daemonizing helper's stdio hangs `cmd.Run()` — shelling out from a TUI (clipboard helpers)
 
 ## Documentation upkeep
 
