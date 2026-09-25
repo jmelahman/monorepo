@@ -1,5 +1,6 @@
 [buildcop]
-enabled = true
+# False for now; I'd rather `kanban ticket create` work than have a buildcop.
+enabled = false
 interval = '10m'
 
 [[buildcop.boards]]
