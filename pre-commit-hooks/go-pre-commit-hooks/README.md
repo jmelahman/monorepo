@@ -107,8 +107,11 @@ package including test files, and `go-test` builds for real.
 ## Toolchain selection
 
 Both prek and pre-commit (>= 4.1.0) run these hooks with `GOTOOLCHAIN=local`,
-disabling Go's automatic toolchain switching. If your `go.mod` requires a
-newer Go than the one the hook environment selected, pin one explicitly:
+disabling Go's automatic toolchain switching. prek infers a minimum from this
+repository's `go.mod` (`go 1.27`), so it downloads a current Go when the
+system's is older; pre-commit doesn't, and uses the system `go` as is. If your
+`go.mod` requires a newer Go than the one the hook environment selected, pin
+one explicitly:
 
 ```yaml
 - id: go-vet
