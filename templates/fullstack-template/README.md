@@ -76,8 +76,8 @@ to copy from.
    (source: GitHub Actions).
 5. Regenerate lockfiles (`npm install` in `web/` and `docs/`) and run
    `prek run --all-files`.
-6. Replace this README (and the LICENSE, if GPLv3 doesn't fit) with your
-   project's own.
+6. Replace this README with your project's own and update `LICENSE` with
+   your name (or swap in a different license).
 
 ## Install
 

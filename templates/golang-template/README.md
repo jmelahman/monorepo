@@ -95,8 +95,9 @@ runs it on a `v*.*.*` tag after a govulncheck audit.
    `main_test.go` keeps working.
 
 4. Rename `greeter/` to your package (the directory name and the `package`
-   clause should match, so plain imports read well), and replace this README
-   and the LICENSE with your own.
+   clause should match, so plain imports read well), replace this README with
+   your own, and update `LICENSE` with your name (or swap in a different
+   license).
 5. `prek install && prek run --all-files`.
 
 ### Growing into a monorepo
