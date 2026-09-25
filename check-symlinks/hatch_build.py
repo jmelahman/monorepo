@@ -22,7 +22,7 @@ import manygo
 #   pyproject.toml [build-system].requires — they must be installed before
 #   this file can be imported.
 SOLOD_VERSION = "v0.3.0"
-GO_BIN_PIN = "go-bin==1.26.6"
+GO_BIN_PIN = "go-bin==1.27.1"
 ZIGLANG_PIN = "ziglang==0.16.0"
 
 # solod's os package needs POSIX, so Windows is not a supported target.

@@ -14,6 +14,7 @@
 	shared = go
 	shared = shell
 	shared = manygo
+	shared = pybuild
 [subtree "agilecbt"]
 	remote = git@github.com:jmelahman/AgileCBT.git
 	branch = master
@@ -22,12 +23,14 @@
 	shared = shell
 	shared = manygo
 	shared = fullstack
+	shared = pybuild
 [subtree "check-symlinks"]
 	remote = git@github.com:jmelahman/check-symlinks.git
 	branch = master
 	shared = base
 	shared = go
 	shared = shell
+	shared = pybuild
 [subtree "connections"]
 	remote = git@github.com:jmelahman/connections.git
 	branch = master
@@ -37,6 +40,7 @@
 	shared = goreleaser
 	shared = pypi
 	shared = manygo
+	shared = pybuild
 [subtree "connections-ssh"]
 	remote = git@github.com:jmelahman/connections-ssh.git
 	branch = master
@@ -53,6 +57,7 @@
 	shared = ci
 	shared = goreleaser
 	shared = manygo
+	shared = pybuild
 [subtree "docker-status"]
 	remote = git@github.com:jmelahman/docker-status.git
 	branch = master
@@ -71,12 +76,14 @@
 	shared = goreleaser
 	shared = pypi
 	shared = manygo
+	shared = pybuild
 [subtree "go-bin"]
 	remote = git@github.com:jmelahman/go-bin.git
 	branch = master
 	shared = base
 	shared = python
 	shared = ci
+	shared = pybuild
 [subtree "jmelahman.github.io"]
 	remote = git@github.com:jmelahman/jmelahman.github.io.git
 	branch = master
@@ -94,12 +101,14 @@
 	shared = shell
 	shared = manygo
 	shared = fullstack
+	shared = pybuild
 [subtree "manygo"]
 	remote = git@github.com:jmelahman/manygo.git
 	branch = master
 	shared = base
 	shared = python
 	shared = ci
+	shared = pybuild
 [subtree "nature-sounds"]
 	remote = git@github.com:jmelahman/nature-sounds.git
 	branch = master
@@ -108,11 +117,13 @@
 	shared = ci
 	shared = goreleaser
 	shared = manygo
+	shared = pybuild
 [subtree "pkglint"]
 	remote = git@github.com:jmelahman/pkglint.git
 	branch = master
 	shared = base
 	shared = ci
+	shared = pybuild
 [subtree "pre-commit-hooks/go-pre-commit-hooks"]
 	remote = git@github.com:jmelahman/go-pre-commit-hooks.git
 	branch = master
@@ -143,6 +154,7 @@
 	branch = master
 	shared = manygo
 	shared = fullstack
+	shared = pybuild
 [subtree "templates/golang-template"]
 	remote = git@github.com:jmelahman/golang-template.git
 	branch = master
@@ -157,6 +169,7 @@
 	branch = master
 	shared = base
 	shared = shell
+	shared = pybuild
 [subtree "work"]
 	remote = git@github.com:jmelahman/work.git
 	branch = master
@@ -166,6 +179,7 @@
 	shared = goreleaser
 	shared = pypi
 	shared = manygo
+	shared = pybuild
 [subtree "dotfiles"]
 	remote = git@github.com:jmelahman/dotfiles.git
 	branch = master

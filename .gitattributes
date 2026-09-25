@@ -37,3 +37,17 @@ nature-sounds/.golangci.yml -diff linguist-generated
 smart-lights/.golangci.yml -diff linguist-generated
 typesafe-sdk-go/.golangci.yml -diff linguist-generated
 work/.golangci.yml -diff linguist-generated
+agentic-kanban/build-constraints.txt -diff linguist-generated
+agilecbt/build-constraints.txt -diff linguist-generated
+check-symlinks/build-constraints.txt -diff linguist-generated
+connections/build-constraints.txt -diff linguist-generated
+cycle-cli/build-constraints.txt -diff linguist-generated
+git-orchard/build-constraints.txt -diff linguist-generated
+go-bin/build-constraints.txt -diff linguist-generated
+local-preview/build-constraints.txt -diff linguist-generated
+manygo/build-constraints.txt -diff linguist-generated
+nature-sounds/build-constraints.txt -diff linguist-generated
+pkglint/build-constraints.txt -diff linguist-generated
+templates/fullstack-template/build-constraints.txt -diff linguist-generated
+undot/build-constraints.txt -diff linguist-generated
+work/build-constraints.txt -diff linguist-generated

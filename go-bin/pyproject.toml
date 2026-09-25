@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "manygo"]
+requires = ["hatchling==1.32.0", "manygo==0.3.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -40,7 +40,7 @@ dev-mode-dirs = ["src"]
 dev = [
     # hatch_build.py imports both; installing them is what lets ty check it.
     "hatchling>=1.27.0",
-    "manygo>=0.2.0",
+    "manygo>=0.3.0",
     "pytest>=9.1.0",
 ]
 

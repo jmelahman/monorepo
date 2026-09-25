@@ -32,6 +32,19 @@ repos:
       - id: mixed-line-ending
       - id: trailing-whitespace
 
+  # Keeps the shared build-constraints.txt locked to the subtrees' build
+  # pins; runs before the sync so the regenerated file reaches them in the
+  # same pass.
+  - repo: local
+    hooks:
+      - id: build-constraints
+        name: build-constraints
+        entry: tools/scripts/gen-build-constraints.sh
+        language: python
+        additional_dependencies: [uv==0.12.10]
+        files: (^|/)(pyproject\.toml|hatch_build\.py|subtrees)$
+        pass_filenames: false
+
   # Copies the profiles in .config/git-orchard/shared into the subtrees that
   # list them in .config/git-orchard/subtrees, so each mirror carries its own
   # complete config.

@@ -4,8 +4,12 @@
 # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
 # copies it here.
 [build-system]
+# Pinned exactly; build-constraints.txt (the monorepo's pybuild profile)
+# locks the transitive closure with hashes, and CI passes it to
+# `uv build --build-constraints`. The monorepo's build-constraints hook
+# regenerates it when a pin changes.
 # go-bin must cover the newest `go` directive among these subtrees' go.mod.
-requires = ["hatchling", "hatch-vcs", "go-bin~=1.26", "manygo"]
+requires = ["hatchling==1.32.0", "hatch-vcs==0.5.0", "go-bin==1.27.1", "manygo==0.3.0"]
 build-backend = "hatchling.build"
 # END orchard:manygo
 

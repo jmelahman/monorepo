@@ -64,7 +64,8 @@ constant is the source of truth). The workflow then publishes:
 Build dependencies are pinned exactly — directly in `pyproject.toml` and
 `hatch_build.py` (the central pin registry), transitively (with hashes) in the
 generated `build-constraints.txt` that CI passes to `uv build --build-constraints`.
-After changing a pin, regenerate it with `scripts/gen-build-constraints.sh`;
+After changing a pin, regenerate it from the monorepo
+(https://github.com/jmelahman/monorepo) with `tools/scripts/gen-build-constraints.sh`;
 `scripts/check-version.sh` fails when it's stale.
 
 `goreleaser release --snapshot --clean --skip=publish --config .config/.goreleaser.yaml`

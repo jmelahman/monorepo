@@ -88,7 +88,7 @@ jobs:
         run: |
           GOOS="$MATRIX_GOOS" \
           GOARCH="$MATRIX_GOARCH" \
-          uv build --wheel
+          uv build --wheel --build-constraints build-constraints.txt
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: wheels-${{ matrix.os-arch.goos || 'source' }}-${{ matrix.os-arch.goarch || 'any' }}

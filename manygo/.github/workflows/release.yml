@@ -19,5 +19,5 @@ jobs:
       - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a
         with:
           enable-cache: false
-      - run: uv build
+      - run: uv build --build-constraints build-constraints.txt
       - run: uv publish

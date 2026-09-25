@@ -2,7 +2,7 @@
 # exactly. The toolchain pins (go-bin, ziglang, solod) are centralized in
 # hatch_build.py and declared dynamically via the hook's dependencies().
 [build-system]
-requires = ["hatchling==1.32.0", "hatch-vcs==0.5.0", "manygo==0.2.0"]
+requires = ["hatchling==1.32.0", "hatch-vcs==0.5.0", "manygo==0.3.0"]
 build-backend = "hatchling.build"
 
 [project]

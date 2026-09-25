@@ -43,7 +43,7 @@ dev = [
 [package.metadata.requires-dev]
 dev = [
     { name = "hatchling", marker = "python_full_version >= '3.10'", specifier = ">=1.27.0" },
-    { name = "manygo", marker = "python_full_version >= '3.10'", specifier = ">=0.2.0" },
+    { name = "manygo", marker = "python_full_version >= '3.10'", specifier = ">=0.3.0" },
     { name = "pytest", marker = "python_full_version >= '3.10'", specifier = ">=9.1.0" },
 ]
 
@@ -75,11 +75,11 @@ wheels = [
 
 [[package]]
 name = "manygo"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/a7/977d391cdb2993d9b2907bfe85dfc2f1840cd06169552af8a3e0b8e0950b/manygo-0.2.0.tar.gz", hash = "sha256:90a951179f0d294d7063a4fc5446b52646cff140c386f9c92ca391116a287098", size = 5633, upload-time = "2025-12-04T23:16:32.996Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/45/c9/d8d8b475b78959cbcca169e9a451cb7d8aded6c0055e4f7d8cb8787eaba7/manygo-0.3.0.tar.gz", hash = "sha256:89da1384736ba14249f3d50a2607c3992f2b4d7bfa157ed5acf1a4f435db0a81", size = 14851, upload-time = "2026-09-25T02:35:59.126Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/5c/b9a9846531971d89d16c8640a85c00fc5e159d6710cde60411b906fb8be8/manygo-0.2.0-py3-none-any.whl", hash = "sha256:322567f555f0c9896e163f4cecdcd5aa6402996933a6a8ec1cea7f67dae9accd", size = 3490, upload-time = "2025-12-04T23:16:33.591Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/7d/61be1b6fd46f458ed3b177945607fd4d53a05b268f21b608aaa9ab2e0d00/manygo-0.3.0-py3-none-any.whl", hash = "sha256:28b44548df213934a82d59c3e5bed450c26447dc0c23a7241004ddce3d3b0f5a", size = 3864, upload-time = "2026-09-25T02:35:58.13Z" },
 ]
 
 [[package]]
