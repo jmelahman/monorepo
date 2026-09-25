@@ -1,15 +1,18 @@
-// Package api defines the HTTP surface: JSON endpoints under /api/ plus the
-// embedded web frontend at /.
+// Package api defines the HTTP surface: JSON endpoints under /api/, the MCP
+// endpoint at /mcp, and the embedded web frontend at /.
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/jmelahman/agilecbt/internal/app"
 	"github.com/jmelahman/agilecbt/internal/db"
 	"github.com/jmelahman/agilecbt/web"
 )
@@ -20,74 +23,145 @@ type BuildInfo struct {
 	Version string `json:"version"`
 }
 
+// LLMStatus reports whether the curator's LLM backend is usable.
+type LLMStatus struct {
+	Backend   string `json:"backend"`
+	Available bool   `json:"available"`
+	Detail    string `json:"detail,omitempty"`
+}
+
+// Curator is the AI check-in coach. Implemented by internal/curator.
+type Curator interface {
+	Status(ctx context.Context) LLMStatus
+	// Chat runs one user turn on a check-in, calling emit for each streamed
+	// event ("text" deltas, "error"). It stores both sides of the exchange.
+	Chat(ctx context.Context, checkinID int64, text string, emit func(event string, data any)) error
+	// DraftRetro writes an AI draft for a week's retro and returns it.
+	DraftRetro(ctx context.Context, weekID int64) (db.Retro, error)
+}
+
 // Deps carries the dependencies handlers need.
 type Deps struct {
-	Store *db.Store
+	App   *app.App
 	Build BuildInfo
+	// Secret enables auth when non-empty.
+	Secret string
+	// Curator is optional; nil means AI chat is unavailable.
+	Curator Curator
+	// MCP serves /mcp when non-nil.
+	MCP http.Handler
 }
 
-// NewMux returns the full application handler: API routes plus the SPA.
-func NewMux(d Deps) *http.ServeMux {
+// NewMux returns the full application handler: API routes, MCP, and the SPA.
+func NewMux(d Deps) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/health", d.handleHealth)
-	mux.HandleFunc("GET /api/items", d.handleListItems)
-	mux.HandleFunc("POST /api/items", d.handleCreateItem)
-	mux.HandleFunc("DELETE /api/items/{id}", d.handleDeleteItem)
+	d.routes(mux)
+	if d.MCP != nil {
+		mux.Handle("/mcp", d.MCP)
+	}
 	mux.Handle("/", web.Handler())
-	return mux
+	return d.requireAuth(mux)
 }
 
-func (d Deps) handleHealth(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
-		"status":  "ok",
-		"version": d.Build.Version,
-	})
+// apiFunc is a JSON handler: it returns a value to encode, or an error that
+// fail maps to a status code. A nil value with a nil error means 204.
+type apiFunc func(r *http.Request) (any, error)
+
+// handle adapts an apiFunc. POSTs that return a value answer 201.
+func handle(fn apiFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		v, err := fn(r)
+		if err != nil {
+			fail(w, r, err)
+			return
+		}
+		if v == nil {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if ok, isOK := v.(okBody); isOK {
+			writeJSON(w, http.StatusOK, ok.v)
+			return
+		}
+		status := http.StatusOK
+		if r.Method == http.MethodPost {
+			status = http.StatusCreated
+		}
+		writeJSON(w, status, v)
+	}
 }
 
-func (d Deps) handleListItems(w http.ResponseWriter, r *http.Request) {
-	items, err := d.Store.ListItems()
+// okBody forces a 200 for POSTs that act rather than create.
+type okBody struct{ v any }
+
+// ok wraps an action-style POST result so it answers 200 rather than 201.
+func ok[T any](v T, err error) (any, error) {
 	if err != nil {
-		internalError(w, "list items", err)
-		return
+		return nil, err
 	}
-	writeJSON(w, http.StatusOK, items)
+	return okBody{v}, nil
 }
 
-func (d Deps) handleCreateItem(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Title string `json:"title"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpError(w, http.StatusBadRequest, "invalid JSON body")
-		return
-	}
-	req.Title = strings.TrimSpace(req.Title)
-	if req.Title == "" {
-		httpError(w, http.StatusBadRequest, "title is required")
-		return
-	}
-	item, err := d.Store.CreateItem(req.Title)
-	if err != nil {
-		internalError(w, "create item", err)
-		return
-	}
-	writeJSON(w, http.StatusCreated, item)
+// errUnavailable means the AI curator can't be reached right now.
+var errUnavailable = errors.New("AI curator is unavailable")
+
+// errBadRequest marks request-shape problems (bad JSON, bad ids).
+type errBadRequest struct{ msg string }
+
+func (e errBadRequest) Error() string { return e.msg }
+
+func badRequest(format string, args ...any) error {
+	return errBadRequest{fmt.Sprintf(format, args...)}
 }
 
-func (d Deps) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
+// fail maps domain errors to HTTP statuses.
+func fail(w http.ResponseWriter, r *http.Request, err error) {
+	var br errBadRequest
+	switch {
+	case errors.As(err, &br):
+		httpError(w, http.StatusBadRequest, br.msg)
+	case errors.Is(err, db.ErrInvalid):
+		httpError(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), db.ErrInvalid.Error()+": "))
+	case errors.Is(err, db.ErrNotFound):
+		httpError(w, http.StatusNotFound, "not found")
+	case errors.Is(err, errUnavailable):
+		httpError(w, http.StatusServiceUnavailable, err.Error())
+	default:
+		internalError(w, r.Method+" "+r.URL.Path, err)
+	}
+}
+
+// decode reads a JSON body into dst, rejecting unknown fields so typos in
+// scripts fail loudly instead of silently doing nothing.
+func decode(r *http.Request, dst any) error {
+	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		return badRequest("invalid JSON body: %v", err)
+	}
+	return nil
+}
+
+// pathID parses the {id} path value.
+func pathID(r *http.Request) (int64, error) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		httpError(w, http.StatusBadRequest, "invalid item id")
-		return
+		return 0, badRequest("invalid id %q", r.PathValue("id"))
 	}
-	switch err := d.Store.DeleteItem(id); {
-	case errors.Is(err, db.ErrNotFound):
-		httpError(w, http.StatusNotFound, "item not found")
-	case err != nil:
-		internalError(w, "delete item", err)
-	default:
-		w.WriteHeader(http.StatusNoContent)
+	return id, nil
+}
+
+// queryInt parses an optional integer query parameter.
+func queryInt(r *http.Request, name string, def int) (int, error) {
+	s := r.URL.Query().Get(name)
+	if s == "" {
+		return def, nil
 	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, badRequest("invalid %s %q", name, s)
+	}
+	return n, nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

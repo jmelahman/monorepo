@@ -1,6 +1,8 @@
 package server
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -50,4 +52,16 @@ func TestResolveURL(t *testing.T) {
 			t.Errorf("resolveURL = %q, want flag value", got)
 		}
 	})
+}
+
+// The chat event stream must be able to flush through the logging
+// middleware's wrapper.
+func TestStatusRecorderFlushes(t *testing.T) {
+	rec := httptest.NewRecorder()
+	if err := http.NewResponseController(&statusRecorder{ResponseWriter: rec}).Flush(); err != nil {
+		t.Fatal(err)
+	}
+	if !rec.Flushed {
+		t.Fatal("not flushed")
+	}
 }

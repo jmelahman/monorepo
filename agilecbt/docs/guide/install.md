@@ -1,35 +1,28 @@
 # Install
 
-## PyPI (recommended)
+## From source
+
+You need Go 1.26+ and [Bun](https://bun.sh).
 
 ```sh
-uv tool install fullstack-template
+cd agilecbt
+bun install --cwd web --frozen-lockfile && bun run --cwd web build
+go build -tags embed -o agilecbt .
 ```
 
-This installs the `app` binary to `~/.local/bin`. Make sure that directory is
-on your `PATH`.
-
-## GitHub releases
-
-Download a prebuilt archive for your platform from the
-[releases page](https://github.com/jmelahman/fullstack-template/releases) and
-place the `app` binary on your `PATH`.
+Put `agilecbt` on your `PATH`.
 
 ## Docker
 
 ```sh
-docker run -d --name app \
-  --restart unless-stopped \
-  -p 127.0.0.1:8080:8080 \
-  -v app-data:/data \
-  lahmanja/fullstack-template:latest
+APP_SECRET='something long' docker compose up -d --build
 ```
 
-## From source
+The image doesn't include the `claude` CLI, so `compose.yaml` defaults to
+`APP_LLM=ollama` and connects to Ollama on the host at
+`host.docker.internal:11434`. Set `APP_LLM=anthropic` with `ANTHROPIC_API_KEY`,
+or `APP_LLM=none`, to change that. To use your Claude subscription, run the
+binary directly on a machine where `claude` is logged in.
 
-```sh
-git clone https://github.com/jmelahman/fullstack-template
-cd fullstack-template
-npm --prefix web ci && npm --prefix web run build
-go build -tags embed -o app .
-```
+Data is kept in the `agilecbt-data` volume. Back it up with
+`agilecbt export` (see the [CLI](/reference/cli)).

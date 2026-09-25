@@ -2,11 +2,11 @@ version: 2
 
 before:
   hooks:
-    - npm --prefix web ci
-    - npm --prefix web run build
+    - bun install --cwd web --frozen-lockfile
+    - bun run --cwd web build
 
 builds:
-  - binary: app
+  - binary: agilecbt
     env:
       - CGO_ENABLED=0
     flags:

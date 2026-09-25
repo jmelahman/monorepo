@@ -1,7 +1,7 @@
 # Configuration
 
-Configuration is intentionally small: a few flags on `app serve`, each with an
-environment-variable fallback.
+Configuration is intentionally small: a few flags on `agilecbt serve` plus
+environment variables.
 
 ## Data directory
 
@@ -9,8 +9,8 @@ The SQLite database lives in the data directory, resolved in order:
 
 1. `--data-dir` flag
 2. `$APP_DATA_DIR`
-3. `$XDG_DATA_HOME/app`
-4. `~/.local/share/app`
+3. `$XDG_DATA_HOME/agilecbt`
+4. `~/.local/share/agilecbt`
 
 ## Flags
 
@@ -24,6 +24,33 @@ The SQLite database lives in the data directory, resolved in order:
 
 | Variable | Used by | Description |
 | --- | --- | --- |
-| `APP_DATA_DIR` | `app serve` | Data directory override |
+| `APP_SECRET` | server, CLI | Shared secret. When set, the web UI asks for it and API/MCP clients send it as `Authorization: Bearer`. Unset means no auth |
+| `APP_LLM` | server | AI curator backend: `claude-code` (default), `ollama`, `anthropic`, or `none` |
+| `APP_MODEL` | server | Model override for the chosen backend |
+| `OLLAMA_HOST` | server | Ollama base URL (default `http://localhost:11434`; a bare `host:port` works) |
+| `ANTHROPIC_API_KEY` | server | API key for `APP_LLM=anthropic` |
+| `APP_SELF_URL` | server | How the `claude` subprocess reaches this server's `/mcp`. Defaults to loopback on the `--addr` port |
+| `APP_DATA_DIR` | server | Data directory override |
 | `APP_URL` | CLI subcommands | Server base URL (an explicit `--server` flag wins) |
 | `APP_BACKEND` | `web/` dev server | Backend `host:port` the Vite proxy targets |
+
+See [AI curator & MCP](/guide/ai) for how each `APP_LLM` backend works and
+what it needs.
+
+::: warning Reaching it from your phone
+This app holds sensitive personal data. If `--addr` listens beyond localhost,
+for example `:8080` in Docker or on a Tailscale address, set `APP_SECRET`. The
+server logs a warning when it doesn't. Put it behind HTTPS, such as
+`tailscale serve` or a reverse proxy, so the session cookie is marked `Secure`.
+:::
+
+## In-app settings
+
+The Settings page (or `PATCH /api/settings`) stores the following in the
+database:
+
+- **Check-ins**: morning, evening, or both. This sets which check-in the Today
+  screen offers.
+- **Crisis resources**: the text behind the "Need help now?" button. The
+  curator also sees it. The default lists 988 (US) and findahelpline.com.
+- **Theme**: system, light, or dark. This is stored per browser.

@@ -1,0 +1,13 @@
+{
+  "name": "AgileCBT",
+  "short_name": "AgileCBT",
+  "description": "Gentle weekly sprints and daily check-ins for your mood.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1c1917",
+  "theme_color": "#1c1917",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

@@ -15,15 +15,15 @@ export default defineConfig({
       }],
     ]
   },
-  title: 'Fullstack Template',
-  description: 'A template for fullstack Go + React applications.',
+  title: 'AgileCBT',
+  description: 'Agile planning meets CBT: check-ins, a gentle board, and an AI curator.',
   base: '/fullstack-template/',
   lastUpdated: true,
   cleanUrls: true,
   ignoreDeadLinks: 'localhostLinks',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/fullstack-template/favicon.svg' }],
-    ['meta', { name: 'theme-color', content: '#3b82f6' }],
+    ['meta', { name: 'theme-color', content: '#c2703a' }],
   ],
   themeConfig: {
     logo: '/favicon.svg',
@@ -41,6 +41,7 @@ export default defineConfig({
             { text: 'Install', link: '/guide/install' },
             { text: 'Quickstart', link: '/guide/quickstart' },
             { text: 'Configuration', link: '/guide/configuration' },
+            { text: 'AI curator & MCP', link: '/guide/ai' },
           ],
         },
       ],

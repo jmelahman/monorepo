@@ -14,8 +14,8 @@ build-backend = "hatchling.build"
 # END orchard:manygo
 
 [project]
-name = "fullstack-template"
-description = "A template for fullstack Go + React applications"
+name = "agilecbt"
+description = "Agile planning meets CBT: a self-hosted check-in coach for depression and anxiety"
 license = {file = "LICENSE"}
 authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
 readme = "README.md"
@@ -51,4 +51,4 @@ include = [
 source = "vcs"
 
 [tool.hatch.build.hooks.custom]
-binary_name = "app"
+binary_name = "agilecbt"

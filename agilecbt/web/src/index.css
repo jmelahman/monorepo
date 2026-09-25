@@ -5,35 +5,53 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 /*
  * Theme tokens. The same utility name (e.g. bg-surface, text-fg) resolves to
  * different colors depending on data-theme on <html>, which is set by the
- * inline script in index.html before first paint.
+ * inline script in index.html before first paint. The palette is warm and
+ * low-contrast on purpose: this is a calm space, not a dashboard.
  */
 @theme {
-  --color-bg: #09090b;
-  --color-surface: #18181b;
-  --color-surface-2: #27272a;
-  --color-fg: #f4f4f5;
-  --color-fg-muted: #a1a1aa;
-  --color-border: #3f3f46;
-  --color-danger: #f87171;
-  --color-accent-500: #60a5fa;
-  --color-accent-600: #3b82f6;
-  --color-accent-700: #2563eb;
+  --color-bg: #1c1917;
+  --color-surface: #292524;
+  --color-surface-2: #34302d;
+  --color-fg: #f5efe6;
+  --color-fg-muted: #b3a89b;
+  --color-border: #48413c;
+  --color-danger: #f0a08a;
+  --color-accent-500: #f0a870;
+  --color-accent-600: #e08e52;
+  --color-accent-700: #c4723a;
+  --color-calm: #9cc5a1;
+  --color-calm-soft: #2f3b31;
+  --color-mood: #d95926;
+  --color-energy: #199e70;
+  --color-anxiety: #3987e5;
 }
 
 [data-theme="light"] {
-  --color-bg: #fafafa;
+  --color-bg: #faf6f0;
   --color-surface: #ffffff;
-  --color-surface-2: #f4f4f5;
-  --color-fg: #18181b;
-  --color-fg-muted: #71717a;
-  --color-border: #e4e4e7;
-  --color-danger: #b91c1c;
-  --color-accent-500: #3b82f6;
-  --color-accent-600: #2563eb;
-  --color-accent-700: #1d4ed8;
+  --color-surface-2: #f3ece2;
+  --color-fg: #2b2420;
+  --color-fg-muted: #7a6e64;
+  --color-border: #e6dccf;
+  --color-danger: #b4533a;
+  --color-accent-500: #d9824a;
+  --color-accent-600: #c2703a;
+  --color-accent-700: #a35a2c;
+  --color-calm: #4f8a5b;
+  --color-calm-soft: #e5f0e3;
+  --color-mood: #eb6834;
+  --color-energy: #1baf7a;
+  --color-anxiety: #2a78d6;
+}
+
+input[type="range"] {
+  accent-color: var(--color-accent-600);
 }

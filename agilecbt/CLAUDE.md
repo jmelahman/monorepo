@@ -18,13 +18,13 @@ wgo run . serve
 **Frontend** (`:5173`, proxies `/api` to the backend):
 
 ```bash
-cd web && npm install && npm run dev -- --host 0.0.0.0
+cd web && bun install && bun run dev --host 0.0.0.0
 ```
 
 **Frontend against a non-default backend** (`:5174`):
 
 ```bash
-cd web && APP_BACKEND=localhost:8080 npm install && npm run dev -- --host 0.0.0.0 --port 5174
+cd web && bun install && APP_BACKEND=localhost:8080 bun run dev --host 0.0.0.0 --port 5174
 ```
 
 Wait for both to be reachable before navigating:
@@ -49,19 +49,22 @@ zero, and shutting the process down discards everything.
 ## Tests / typecheck / lint
 
 - Go: `go test ./...`
-- Frontend types: `cd web && npm run typecheck`
-- Frontend lint/format (Biome): `cd web && npm run check` (`check:fix` to
+- Frontend types: `cd web && bun run typecheck`
+- Frontend lint/format (Biome): `cd web && bun run check` (`check:fix` to
   auto-apply safe fixes). The `prek` `biome` hook runs the same check on
   staged `web/**/*.{ts,tsx,js,jsx,json}` files.
-- Playwright E2E: `cd web && npm run test:e2e` (boots the real backend with
-  `--in-memory` plus the Vite dev server).
+- Playwright E2E: `cd web && bun run test:e2e` (first run `bun run test:e2e:install` for Chromium; boots the real backend with
+  `--in-memory` on :8095 with `APP_LLM=ollama` pointed at the scripted
+  `tests/e2e/fake-ollama.mjs` on :11499, plus Vite on :5177 — separate ports
+  so a running dev stack is never reused). Tests share one DB and must not
+  assume it's empty (unique titles, `.last()`).
 - Pre-commit hooks: `prek run --all-files` (run before committing).
 
 ## Driving the UI with Playwright MCP
 
 `.mcp.json` registers `@playwright/mcp --headless --isolated`. Use the
 `mcp__playwright__browser_*` tools (e.g. `browser_navigate
-http://localhost:5173/`, then `browser_snapshot`) — never spawn `npx
+http://localhost:5173/`, then `browser_snapshot`) — never spawn `bunx
 playwright` ad-hoc.
 
 ## Layout

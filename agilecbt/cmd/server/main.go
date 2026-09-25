@@ -5,18 +5,25 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jmelahman/agilecbt/internal/api"
+	"github.com/jmelahman/agilecbt/internal/app"
 	"github.com/jmelahman/agilecbt/internal/config"
+	"github.com/jmelahman/agilecbt/internal/curator"
 	"github.com/jmelahman/agilecbt/internal/db"
+	"github.com/jmelahman/agilecbt/internal/mcp"
+	"github.com/jmelahman/agilecbt/internal/tools"
 )
 
 // version is populated at build time via -ldflags -X (see Dockerfile /
@@ -67,8 +74,8 @@ func Root() *cobra.Command {
 	var inMemory bool
 
 	cmd := &cobra.Command{
-		Use:     "app",
-		Short:   "Fullstack application template",
+		Use:     "agilecbt",
+		Short:   "Agile planning meets CBT: check-ins, a gentle board, and an AI curator",
 		Version: Build().Version,
 	}
 
@@ -106,9 +113,32 @@ func run(addr, dataDirOverride string, inMemory bool) error {
 	}
 	defer store.Close()
 
+	a := app.New(store)
+	reg := tools.New(a)
+	build := Build()
+	cur, cleanup, err := newCurator(cfg, reg, addr, inMemory)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	if cfg.Secret == "" {
+		if isLoopback(addr) {
+			log.Printf("auth is off (APP_SECRET unset); fine for localhost only")
+		} else {
+			log.Printf("WARNING: APP_SECRET is unset and %s is reachable from other machines; anyone who can reach it can read your data", addr)
+		}
+	}
+
+	var curIface api.Curator
+	if cur != nil {
+		curIface = cur
+	}
 	mux := api.NewMux(api.Deps{
-		Store: store,
-		Build: api.BuildInfo(Build()),
+		App:     a,
+		Build:   api.BuildInfo(build),
+		Secret:  cfg.Secret,
+		Curator: curIface,
+		MCP:     mcp.Handler(reg, build.Version),
 	})
 
 	srv := &http.Server{
@@ -144,6 +174,10 @@ func (s *statusRecorder) WriteHeader(code int) {
 	s.ResponseWriter.WriteHeader(code)
 }
 
+// Unwrap lets http.ResponseController reach the underlying writer (for
+// flushing the chat event stream).
+func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
+
 // recoverPanics is the outermost middleware. It catches panics from any
 // downstream handler so the process survives, logs the trace, and writes a
 // 500 response.
@@ -168,4 +202,70 @@ func logRequests(h http.Handler) http.Handler {
 		h.ServeHTTP(rec, r)
 		log.Printf("%s %s %d %s", r.Method, r.URL.Path, rec.status, time.Since(start))
 	})
+}
+
+// newCurator builds the in-app curator for the configured LLM backend. It
+// returns nil (chat disabled, manual check-ins still work) for APP_LLM=none.
+func newCurator(cfg config.Config, reg *tools.Registry, addr string, inMemory bool) (*curator.Curator, func(), error) {
+	noop := func() {}
+	var backend curator.Backend
+	cleanup := noop
+	switch cfg.LLM {
+	case config.LLMNone:
+		log.Printf("AI curator disabled (APP_LLM=none)")
+		return nil, noop, nil
+	case config.LLMOllama:
+		backend = &curator.Ollama{Host: cfg.OllamaHost, Model: cfg.Model, Registry: reg}
+	case config.LLMAnthropic:
+		backend = &curator.Anthropic{Model: cfg.Model, Registry: reg}
+	case config.LLMClaudeCode:
+		// Claude Code keeps sessions per working directory; keep it stable
+		// so --resume works across restarts, or throwaway for --in-memory.
+		dir := filepath.Join(cfg.DataDir, "claude")
+		if inMemory {
+			tmp, err := os.MkdirTemp("", "agilecbt-claude-")
+			if err != nil {
+				return nil, noop, err
+			}
+			dir = tmp
+			cleanup = func() { os.RemoveAll(tmp) }
+		}
+		selfURL := cfg.SelfURL
+		if selfURL == "" {
+			selfURL = loopbackURL(addr)
+		}
+		backend = &curator.ClaudeCode{
+			MCPURL: strings.TrimRight(selfURL, "/") + "/mcp",
+			Secret: cfg.Secret,
+			Model:  cfg.Model,
+			Dir:    dir,
+		}
+	}
+	log.Printf("AI curator backend: %s", backend.Name())
+	return curator.New(reg, backend), cleanup, nil
+}
+
+// loopbackURL is how a local subprocess reaches a server listening on addr.
+func loopbackURL(addr string) string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "http://127.0.0.1:8080"
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	return "http://" + net.JoinHostPort(host, port)
+}
+
+// isLoopback reports whether addr only accepts local connections.
+func isLoopback(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

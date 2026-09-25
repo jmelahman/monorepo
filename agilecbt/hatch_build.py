@@ -24,12 +24,11 @@ class GoBinaryBuildHook(BuildHookInterface):
         dist_dir = web_dir / "dist"
         if not dist_dir.exists() or not any(dist_dir.iterdir()):
             print("Building frontend...")
-            npm = shutil.which("npm")
-            if npm is None:
-                raise RuntimeError("npm is required to build the frontend")
-            install_cmd = "ci" if (web_dir / "package-lock.json").exists() else "install"
-            subprocess.check_call([npm, install_cmd], cwd=web_dir)  # noqa: S603
-            subprocess.check_call([npm, "run", "build"], cwd=web_dir)  # noqa: S603
+            bun = shutil.which("bun")
+            if bun is None:
+                raise RuntimeError("bun is required to build the frontend")
+            subprocess.check_call([bun, "install", "--frozen-lockfile"], cwd=web_dir)  # noqa: S603
+            subprocess.check_call([bun, "run", "build"], cwd=web_dir)  # noqa: S603
 
         if not os.path.exists(binary_name):
             print(f"Building Go binary '{binary_name}'...")

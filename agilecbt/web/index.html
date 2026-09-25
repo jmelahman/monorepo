@@ -4,11 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Fullstack Template</title>
+    <meta name="theme-color" content="#1c1917" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <title>AgileCBT</title>
     <script>
       (function () {
         try {
-          var m = localStorage.getItem("app.themeMode") || "system";
+          var m = localStorage.getItem("agilecbt.themeMode") || "system";
           var dark =
             m === "dark" ||
             (m === "system" && matchMedia("(prefers-color-scheme: dark)").matches);

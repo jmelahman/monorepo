@@ -22,7 +22,7 @@
     {
       "label": "Run Playwright E2E",
       "type": "shell",
-      "command": "npm install && npm run test:e2e",
+      "command": "bun install && bun run test:e2e:install && bun run test:e2e",
       "options": {
         "cwd": "${workspaceFolder}/web"
       }
@@ -39,7 +39,7 @@
     {
       "label": "Frontend",
       "type": "shell",
-      "command": "npm install && npm run dev -- --host 0.0.0.0",
+      "command": "bun install && bun run dev --host 0.0.0.0",
       "options": {
         "cwd": "${workspaceFolder}/web"
       }
@@ -47,7 +47,7 @@
     {
       "label": "Frontend (Local Backend)",
       "type": "shell",
-      "command": "npm install && npm run dev -- --host 0.0.0.0 --port 5174",
+      "command": "bun install && bun run dev --host 0.0.0.0 --port 5174",
       "options": {
         "cwd": "${workspaceFolder}/web",
         "env": {
@@ -58,7 +58,7 @@
     {
       "label": "Docs",
       "type": "shell",
-      "command": "npm install && npm run docs:dev",
+      "command": "bun install && bun run docs:dev",
       "options": {
         "cwd": "${workspaceFolder}/docs"
       }

@@ -1,12 +1,10 @@
 services:
-  app:
-    image: lahmanja/fullstack-template:latest
-    container_name: fullstack-template
+  agilecbt:
+    image: agilecbt:local
+    container_name: agilecbt
     build:
       context: .
       dockerfile: Dockerfile
-      cache_from:
-        - lahmanja/fullstack-template:latest
       # Build metadata. Resolve on the host since .git is dockerignored and
       # worktrees only stash a gitdir pointer. Set alongside your other env
       # vars when invoking `docker compose up --build`, e.g.:
@@ -17,10 +15,20 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    environment:
+      # Required whenever the port is reachable beyond this machine.
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET}
+      # The image has no `claude` CLI; use a local Ollama (or anthropic/none).
+      APP_LLM: ${APP_LLM:-ollama}
+      APP_MODEL: ${APP_MODEL:-}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # The image runs as UID 65532 (nonroot) and owns /data, so a named
       # volume inherits the right permissions on first mount.
-      - app-data:/data
+      - agilecbt-data:/data
 
 volumes:
-  app-data:
+  agilecbt-data:
