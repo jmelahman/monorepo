@@ -10,6 +10,7 @@ ARG TARGETOS
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install github.com/bokwoon95/wgo@latest \
   && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install golang.org/x/vuln/cmd/govulncheck@latest \
+  && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest \
   && mkdir /out && find /go/bin -type f -exec mv {} /out/ \;
 
 FROM oven/bun:1.4.2-debian@sha256:4f6e31d1a54d6a3dd312daef655fc998101b5043d52e12592ac293ef04b9bc73 AS bun
