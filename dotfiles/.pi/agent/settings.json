@@ -1,5 +1,6 @@
 {
   "defaultProvider": "ollama",
-  "defaultModel": "qwen3.6:35b-a3b",
-  "lastChangelogVersion": "0.78.1"
+  "defaultModel": "jqwen3.8:27b",
+  "lastChangelogVersion": "0.85.1",
+  "theme": "dark"
 }
