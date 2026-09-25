@@ -22,13 +22,9 @@ jobs:
           persist-credentials: false
           # A pull request's hooks run on its diff from the base commit.
           fetch-depth: 0
-      # Go hooks build with the Go on PATH, and the runner's may be too old.
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
-        with:
-          go-version: stable
-          cache: false
-      # What this subtree's hooks need beyond Go, e.g. system packages.
+      # What this subtree's hooks need from the system, e.g. apt packages. Not
+      # Go: prek downloads one when the runner's is older than a hook's pinned
+      # `language_version`, or the minimum it infers from the hook repo's go.mod.
       - name: Set up the subtree
         if: hashFiles('.github/ci-setup.sh') != ''
         run: .github/ci-setup.sh

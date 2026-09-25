@@ -43,7 +43,7 @@ repos:
   # Shared by Go subtrees: .config/git-orchard/shared/go in the monorepo. The
   # module-scoped hooks run from this directory, the module root.
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: 51820c603eaa31a81da2ff40ccb83ca2be1dd9d2  # frozen: v1.2.0
+    rev: c843811864d03fc517b10d29199efe6167ecfc72  # frozen: v1.3.0
     hooks:
       - id: gofmt
         args: [-s]

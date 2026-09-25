@@ -59,6 +59,9 @@ repos:
         name: shfmt
         entry: shfmt -w -s
         language: golang
+        # shfmt's go.mod needs Go 1.26, and a local hook gets no version
+        # inferred, so without this prek builds it with CI's older Go.
+        language_version: ">=1.26"
         additional_dependencies:
           - mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
         types: [shell]

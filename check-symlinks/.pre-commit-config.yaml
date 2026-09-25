@@ -1,6 +1,11 @@
 # testdata/ holds broken and odd symlinks on purpose.
 exclude: ^testdata/
 
+# The local Go hooks below get no version inferred, and CI installs no Go, so
+# pin one: prek downloads it when the host's doesn't match.
+default_language_version:
+  golang: "1.27"
+
 repos:
   # BEGIN orchard:base
   # Shared by every subtree: .config/git-orchard/shared/base in the monorepo
@@ -46,7 +51,7 @@ repos:
   # Shared by Go subtrees: .config/git-orchard/shared/go in the monorepo. The
   # module-scoped hooks run from this directory, the module root.
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: 51820c603eaa31a81da2ff40ccb83ca2be1dd9d2  # frozen: v1.2.0
+    rev: c843811864d03fc517b10d29199efe6167ecfc72  # frozen: v1.3.0
     hooks:
       - id: gofmt
         args: [-s]
@@ -79,6 +84,9 @@ repos:
         name: shfmt
         entry: shfmt -w -s
         language: golang
+        # shfmt's go.mod needs Go 1.26, and a local hook gets no version
+        # inferred, so without this prek builds it with CI's older Go.
+        language_version: ">=1.26"
         additional_dependencies:
           - mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
         types: [shell]
@@ -86,8 +94,9 @@ repos:
 
   # The Go and solod hooks set GOWORK=off: so/ has its own go.mod, and a
   # go.work further up (a monorepo checkout) would otherwise claim this module.
-  # prek builds `so` itself with the Go on PATH; `so` has to be built by the
-  # same Go release it runs against, so a host-installed one may not do.
+  # Every Go hook is `language: golang`, so they all share the Go that
+  # default_language_version selects: `so` has to be built by the same Go
+  # release it runs against.
   - repo: local
     hooks:
       - id: check-version
@@ -106,7 +115,7 @@ repos:
       - id: go-build
         name: build with go (gocompat)
         entry: env GOWORK=off go build -o check-symlinks-go .
-        language: system
+        language: golang
         files: '(\.go|\.mod|\.sum)$'
         pass_filenames: false
       - id: so-test
@@ -121,6 +130,6 @@ repos:
       - id: go-test-gocompat
         name: test with go (gocompat)
         entry: env GOWORK=off go -C so run -modfile=gotest.mod ./test
-        language: system
+        language: golang
         files: '(\.go|\.mod|\.sum)$'
         pass_filenames: false

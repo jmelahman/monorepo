@@ -15,7 +15,7 @@ Requires [prek](https://prek.j178.dev) (any recent version) or
 ```yaml
 repos:
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: v1.2.0
+    rev: v1.3.0
     hooks:
       - id: gofmt
       - id: go-fix
