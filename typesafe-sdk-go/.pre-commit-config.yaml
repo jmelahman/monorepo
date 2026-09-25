@@ -60,3 +60,29 @@ repos:
         # refuses to start while another run holds its lock.
         args: [--allow-parallel-runners]
   # END orchard:go
+
+  # What the shared go hooks don't cover: vetting the integration build tag,
+  # the race detector, and the live API tests.
+  - repo: local
+    hooks:
+      - id: go-vet-integration
+        name: go vet (integration)
+        entry: go vet -tags=integration ./...
+        language: system
+        types_or: [go, go-mod, go-sum]
+        pass_filenames: false
+      - id: go-test-race
+        name: go test -race
+        entry: go test -race ./...
+        language: system
+        types_or: [go, go-mod, go-sum]
+        pass_filenames: false
+      # Talks to the live API, so it never fires on a commit. Run on demand:
+      #   TYPESAFE_API_KEY=... prek run --all-files --stage manual go-test-integration
+      - id: go-test-integration
+        name: go test (integration)
+        entry: go test -tags=integration ./...
+        language: system
+        types_or: [go, go-mod, go-sum]
+        pass_filenames: false
+        stages: [manual]
