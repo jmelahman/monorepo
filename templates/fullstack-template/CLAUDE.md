@@ -70,18 +70,7 @@ playwright` ad-hoc.
 - `web/` — Vite + React 19 + Tailwind 4 frontend, embedded into the binary
   with `-tags embed`.
 - `docs/` — VitePress site (`guide/`, `reference/api.md`, `reference/cli.md`).
-- `.kanban.toml` — maps the task labels above to container ports for
-  agentic-kanban sessions.
 - `.devcontainer/` — dev sandbox image with an opt-in network firewall.
-
-## Recurring regression notes
-
-Tripwires for code that's bitten us before. Full write-ups live in
-`REGRESSIONS.md` (kept out of the published `docs/` site — it's internal
-lore, not user docs). When you fix something new and likely to recur, add the
-full entry to `REGRESSIONS.md` and a one-line title here.
-
-(none yet)
 
 ## Documentation upkeep
 
