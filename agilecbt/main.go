@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jmelahman/fullstack-template/cmd/server"
+	"github.com/jmelahman/agilecbt/cmd/server"
 )
 
 func main() {

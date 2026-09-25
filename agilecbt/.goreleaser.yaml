@@ -14,7 +14,7 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/jmelahman/fullstack-template/cmd/server.version={{.Version}}
+      - -X github.com/jmelahman/agilecbt/cmd/server.version={{.Version}}
     goarch:
       - amd64
       - arm64

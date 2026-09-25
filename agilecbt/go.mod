@@ -1,4 +1,4 @@
-module github.com/jmelahman/fullstack-template
+module github.com/jmelahman/agilecbt
 
 go 1.26.5
 

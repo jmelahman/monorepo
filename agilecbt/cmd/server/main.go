@@ -14,9 +14,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jmelahman/fullstack-template/internal/api"
-	"github.com/jmelahman/fullstack-template/internal/config"
-	"github.com/jmelahman/fullstack-template/internal/db"
+	"github.com/jmelahman/agilecbt/internal/api"
+	"github.com/jmelahman/agilecbt/internal/config"
+	"github.com/jmelahman/agilecbt/internal/db"
 )
 
 // version is populated at build time via -ldflags -X (see Dockerfile /

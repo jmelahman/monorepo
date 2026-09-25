@@ -16,6 +16,7 @@ use (
 	./pkglint
 	./pre-commit-hooks/go-pre-commit-hooks
 	./smart-lights
+	./templates/fullstack-template
 	./templates/golang-template
 	./typesafe-sdk-go
 	./work

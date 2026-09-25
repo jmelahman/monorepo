@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jmelahman/fullstack-template/internal/db"
+	"github.com/jmelahman/agilecbt/internal/db"
 )
 
 func newTestMux(t *testing.T) *http.ServeMux {

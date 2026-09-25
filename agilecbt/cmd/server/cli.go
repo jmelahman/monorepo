@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jmelahman/fullstack-template/internal/client"
+	"github.com/jmelahman/agilecbt/internal/client"
 )
 
 // addClientCommands attaches the user-facing CLI subcommand groups (`item`)

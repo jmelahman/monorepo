@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jmelahman/fullstack-template/internal/db"
-	"github.com/jmelahman/fullstack-template/web"
+	"github.com/jmelahman/agilecbt/internal/db"
+	"github.com/jmelahman/agilecbt/web"
 )
 
 // BuildInfo describes the running binary; mirrored from cmd/server so the
