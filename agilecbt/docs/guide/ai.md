@@ -18,7 +18,7 @@ Set `APP_LLM` on the server:
 | `APP_LLM` | Runs on | Needs | Default model |
 | --- | --- | --- | --- |
 | `claude-code` (default) | Your Claude subscription (e.g. Max) | `claude` on `PATH`, logged in | Claude Code's default |
-| `ollama` | Your own machine; data never leaves it | A running [Ollama](https://ollama.com) with a tool-calling model | `qwen3:14b` |
+| `ollama` | Your own machine; data never leaves it | A running [Ollama](https://ollama.com) with a tool-calling model | `qwen3.8:27b` |
 | `anthropic` | The Claude API, billed per token | `ANTHROPIC_API_KEY` | `claude-opus-5` |
 | `none` | — | — | Curator off; everything else works |
 
@@ -49,11 +49,12 @@ unset.
 
 The server calls Ollama's `/api/chat` with the tool definitions and runs the
 tool loop itself. Reasoning/thinking is turned off (`think: false`) so replies
-stay short. For natural check-in conversations and reliable tool calls, use a
-model of about 14B or larger. Smaller models work, but are noticeably weaker.
+stay short. For natural check-in conversations and reliable tool calls, stick
+to a mid-size tool-calling model (the default is fine). Smaller models work,
+but are noticeably weaker.
 
 ```sh
-ollama pull qwen3:14b
+ollama pull qwen3.8:27b
 APP_LLM=ollama agilecbt serve
 ```
 

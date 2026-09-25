@@ -3,6 +3,9 @@
     "playwright": {
       "command": "bunx",
       "args": ["@playwright/mcp", "--headless", "--isolated"]
+    },
+    "agilecbt": {
+      "url": "http://localhost:8080/mcp"
     }
   }
 }

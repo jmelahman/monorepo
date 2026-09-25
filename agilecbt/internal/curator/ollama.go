@@ -20,13 +20,13 @@ const maxToolRounds = 10
 // leave the machine. Tools run in-process through the registry.
 type Ollama struct {
 	Host     string // e.g. http://localhost:11434
-	Model    string // default qwen3:14b
+	Model    string // default qwen3.8:27b
 	Registry *tools.Registry
 	HTTP     *http.Client
 }
 
 // DefaultOllamaModel is solid at tool calling while fitting on one GPU.
-const DefaultOllamaModel = "qwen3:14b"
+const DefaultOllamaModel = "qwen3.8:27b"
 
 // Name implements Backend.
 func (o *Ollama) Name() string { return "ollama" }

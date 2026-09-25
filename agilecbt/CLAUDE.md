@@ -60,12 +60,16 @@ zero, and shutting the process down discards everything.
   assume it's empty (unique titles, `.last()`).
 - Pre-commit hooks: `prek run --all-files` (run before committing).
 
-## Driving the UI with Playwright MCP
+## MCP
 
-`.mcp.json` registers `@playwright/mcp --headless --isolated`. Use the
-`mcp__playwright__browser_*` tools (e.g. `browser_navigate
-http://localhost:5173/`, then `browser_snapshot`) — never spawn `bunx
-playwright` ad-hoc.
+`.mcp.json` registers:
+
+- **playwright** — `@playwright/mcp --headless --isolated`. Use the
+  `mcp__playwright__browser_*` tools (e.g. `browser_navigate
+  http://localhost:5173/`, then `browser_snapshot`) — never spawn `bunx
+  playwright` ad-hoc.
+- **agilecbt** — streamable HTTP at `http://localhost:8080/mcp` (same tools
+  as the in-app curator). Needs `agilecbt serve` running.
 
 ## Layout
 

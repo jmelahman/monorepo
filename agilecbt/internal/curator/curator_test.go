@@ -48,7 +48,7 @@ type fakeOllama struct {
 func (f *fakeOllama) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/api/tags":
-		fmt.Fprint(w, `{"models":[{"name":"qwen3:14b"}]}`)
+		fmt.Fprint(w, `{"models":[{"name":"qwen3.8:27b"}]}`)
 	case "/api/chat":
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)
