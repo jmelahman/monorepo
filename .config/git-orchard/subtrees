@@ -6,7 +6,6 @@
 	branch = master
 	shared = base
 	shared = shell
-	shared = ci
 [subtree "agentic-kanban"]
 	remote = git@github.com:jmelahman/agentic-kanban.git
 	branch = master
@@ -36,7 +35,6 @@
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 	shared = goreleaser
 	shared = pypi
 	shared = manygo
@@ -47,14 +45,12 @@
 	shared = base
 	shared = go
 	shared = shell
-	shared = ci
 	shared = goreleaser
 [subtree "cycle-cli"]
 	remote = git@github.com:jmelahman/cycle-cli.git
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 	shared = goreleaser
 	shared = manygo
 	shared = pybuild
@@ -63,7 +59,6 @@
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 [subtree "extensions/github-token-diff-extension"]
 	remote = git@github.com:jmelahman/github-token-diff-extension.git
 	branch = master
@@ -72,7 +67,6 @@
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 	shared = goreleaser
 	shared = pypi
 	shared = manygo
@@ -82,7 +76,6 @@
 	branch = master
 	shared = base
 	shared = python
-	shared = ci
 	shared = pybuild
 [subtree "jmelahman.github.io"]
 	remote = git@github.com:jmelahman/jmelahman.github.io.git
@@ -92,7 +85,6 @@
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 [subtree "local-preview"]
 	remote = git@github.com:jmelahman/local-preview.git
 	branch = master
@@ -107,14 +99,12 @@
 	branch = master
 	shared = base
 	shared = python
-	shared = ci
 	shared = pybuild
 [subtree "nature-sounds"]
 	remote = git@github.com:jmelahman/nature-sounds.git
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 	shared = goreleaser
 	shared = manygo
 	shared = pybuild
@@ -122,48 +112,46 @@
 	remote = git@github.com:jmelahman/pkglint.git
 	branch = master
 	shared = base
-	shared = ci
 	shared = pybuild
 [subtree "pre-commit-hooks/go-pre-commit-hooks"]
 	remote = git@github.com:jmelahman/go-pre-commit-hooks.git
 	branch = master
 	shared = base
-	shared = ci
 [subtree "skills"]
 	remote = git@github.com:jmelahman/skills.git
 	branch = master
 	shared = base
-	shared = ci
 [subtree "smart-lights"]
 	remote = git@github.com:jmelahman/smart-lights.git
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 	shared = goreleaser
 [subtree "tag"]
 	remote = git@github.com:jmelahman/tag.git
 	branch = master
 	shared = base
-	shared = ci
 [subtree "templates/PKGBUILDs-template"]
 	remote = git@github.com:jmelahman/PKGBUILDs-template.git
 	branch = master
 [subtree "templates/fullstack-template"]
 	remote = git@github.com:jmelahman/fullstack-template.git
 	branch = master
+	shared = base
+	shared = go
 	shared = manygo
 	shared = fullstack
 	shared = pybuild
 [subtree "templates/golang-template"]
 	remote = git@github.com:jmelahman/golang-template.git
 	branch = master
+	shared = base
+	shared = go
 [subtree "typesafe-sdk-go"]
 	remote = git@github.com:jmelahman/typesafe-sdk-go.git
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 [subtree "undot"]
 	remote = git@github.com:jmelahman/undot.git
 	branch = master
@@ -175,7 +163,6 @@
 	branch = master
 	shared = base
 	shared = go
-	shared = ci
 	shared = goreleaser
 	shared = pypi
 	shared = manygo

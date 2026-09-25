@@ -9,25 +9,6 @@ on:
 permissions: {}
 
 jobs:
-  pre-commit:
-    runs-on: ubuntu-latest
-    container:
-      image: lahmanja/devcontainer@sha256:f3f954bc31d635f8a2c574a8ba2f46278f77bde02e0a7137cd4891b4e72c6e2a
-      options: --user root
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: prek
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            prek run --from-ref "${{ github.event.pull_request.base.sha }}" --to-ref "${{ github.event.pull_request.head.sha }}"
-          else
-            prek run --all-files
-          fi
-
   image-smoke:
     runs-on: ubuntu-latest
     permissions:
