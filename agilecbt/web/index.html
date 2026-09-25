@@ -9,16 +9,28 @@
     <link rel="apple-touch-icon" href="/icon.svg" />
     <title>AgileCBT</title>
     <script>
+      // Mirrors applyTheme in src/theme.ts; runs before first paint.
       (function () {
-        try {
-          var m = localStorage.getItem("agilecbt.themeMode") || "system";
-          var dark =
-            m === "dark" ||
-            (m === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-          document.documentElement.dataset.theme = dark ? "dark" : "light";
-        } catch (e) {
-          document.documentElement.dataset.theme = "dark";
+        var r = document.documentElement;
+        function get(k, ok, d) {
+          try {
+            var v = localStorage.getItem("agilecbt." + k);
+            return ok.indexOf(v) >= 0 ? v : d;
+          } catch (e) {
+            return d;
+          }
         }
+        var m = get("themeMode", ["system", "light", "dark"], "system");
+        var dark =
+          m === "dark" ||
+          (m === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        r.dataset.theme = dark ? "dark" : "light";
+        r.dataset.style = get("themeStyle", ["warm", "drafting"], "warm");
+        r.dataset.accent = get(
+          "themeAccent",
+          ["apricot", "signal", "sage", "sky", "violet"],
+          "apricot",
+        );
       })();
     </script>
   </head>

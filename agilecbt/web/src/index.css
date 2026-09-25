@@ -12,9 +12,15 @@
 
 /*
  * Theme tokens. The same utility name (e.g. bg-surface, text-fg) resolves to
- * different colors depending on data-theme on <html>, which is set by the
- * inline script in index.html before first paint. The palette is warm and
- * low-contrast on purpose: this is a calm space, not a dashboard.
+ * different values depending on three attributes on <html>, set by the inline
+ * script in index.html before first paint (and by src/theme.ts afterwards):
+ *
+ *   data-theme  light | dark      which half of each palette
+ *   data-style  warm | drafting   neutrals, type and corners
+ *   data-accent apricot | …       the single hue for actions, focus, progress
+ *
+ * Style and accent are orthogonal, so every accent works on every style. The
+ * values below are the fallback (warm, dark, apricot) if the script never ran.
  */
 @theme {
   --color-bg: #1c1917;
@@ -27,6 +33,7 @@
   --color-accent-500: #f0a870;
   --color-accent-600: #e08e52;
   --color-accent-700: #c4723a;
+  --color-on-accent: #ffffff;
   --color-calm: #9cc5a1;
   --color-calm-soft: #2f3b31;
   --color-mood: #d95926;
@@ -34,6 +41,10 @@
   --color-anxiety: #3987e5;
 }
 
+/* ── styles: neutrals, type, corners ─────────────────────────────────── */
+
+/* Warm is the default: low-contrast stone and soft corners, because this is
+   a calm space, not a dashboard. Dark is the @theme fallback above. */
 [data-theme="light"] {
   --color-bg: #faf6f0;
   --color-surface: #ffffff;
@@ -42,14 +53,150 @@
   --color-fg-muted: #7a6e64;
   --color-border: #e6dccf;
   --color-danger: #b4533a;
-  --color-accent-500: #d9824a;
-  --color-accent-600: #c2703a;
-  --color-accent-700: #a35a2c;
   --color-calm: #4f8a5b;
   --color-calm-soft: #e5f0e3;
   --color-mood: #eb6834;
   --color-energy: #1baf7a;
   --color-anxiety: #2a78d6;
+}
+
+/* Drafting reads like a marked-up engineering drawing: charcoal ground,
+   hairline rules, near-square corners, IBM Plex, and condensed caps for
+   labels. Pair it with the signal accent for the full look. */
+[data-style="drafting"] {
+  --color-bg: #0a0a0c;
+  --color-surface: #17171a;
+  --color-surface-2: #222227;
+  --color-fg: #f4f4f5;
+  --color-fg-muted: #9797a2;
+  --color-border: #2b2b32;
+  --color-calm-soft: #1b2a20;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-cond: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 3px;
+  --radius-2xl: 3px;
+}
+[data-theme="light"][data-style="drafting"] {
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f1f3;
+  --color-fg: #18181b;
+  --color-fg-muted: #57575f;
+  --color-border: #dcdce1;
+  --color-calm-soft: #e6f2ea;
+}
+
+/* ── accents ─────────────────────────────────────────────────────────── */
+
+/* Each accent sets its dark half on the bare attribute and its light half on
+   the compound. The descendant form lets a settings swatch preview an accent
+   other than the active one by carrying its own data-accent. --on-accent is
+   the text colour on a filled accent-600 button. */
+[data-accent="apricot"] {
+  --color-accent-500: #f0a870;
+  --color-accent-600: #e08e52;
+  --color-accent-700: #c4723a;
+  --color-on-accent: #ffffff;
+}
+[data-theme="light"][data-accent="apricot"],
+[data-theme="light"] [data-accent="apricot"] {
+  --color-accent-500: #d9824a;
+  --color-accent-600: #c2703a;
+  --color-accent-700: #a35a2c;
+  --color-on-accent: #ffffff;
+}
+
+[data-accent="signal"] {
+  --color-accent-500: #f4635e;
+  --color-accent-600: #e84c47;
+  --color-accent-700: #cc3a35;
+  --color-on-accent: #0a0a0c;
+}
+[data-theme="light"][data-accent="signal"],
+[data-theme="light"] [data-accent="signal"] {
+  --color-accent-500: #d8363b;
+  --color-accent-600: #c0272d;
+  --color-accent-700: #9f1f24;
+  --color-on-accent: #ffffff;
+}
+
+[data-accent="sage"] {
+  --color-accent-500: #8fc79a;
+  --color-accent-600: #6fb07c;
+  --color-accent-700: #57965f;
+  --color-on-accent: #0f1a12;
+}
+[data-theme="light"][data-accent="sage"],
+[data-theme="light"] [data-accent="sage"] {
+  --color-accent-500: #4f8a5b;
+  --color-accent-600: #3f7a4b;
+  --color-accent-700: #31633b;
+  --color-on-accent: #ffffff;
+}
+
+[data-accent="sky"] {
+  --color-accent-500: #7fb2f0;
+  --color-accent-600: #5a98e6;
+  --color-accent-700: #3f7fcf;
+  --color-on-accent: #0a1320;
+}
+[data-theme="light"][data-accent="sky"],
+[data-theme="light"] [data-accent="sky"] {
+  --color-accent-500: #2f78d0;
+  --color-accent-600: #2566b8;
+  --color-accent-700: #1d5296;
+  --color-on-accent: #ffffff;
+}
+
+[data-accent="violet"] {
+  --color-accent-500: #b9a1f2;
+  --color-accent-600: #9d80e8;
+  --color-accent-700: #8365d6;
+  --color-on-accent: #140f22;
+}
+[data-theme="light"][data-accent="violet"],
+[data-theme="light"] [data-accent="violet"] {
+  --color-accent-500: #7a55d6;
+  --color-accent-600: #6843c4;
+  --color-accent-700: #5533a8;
+  --color-on-accent: #ffffff;
+}
+
+/* ── drafting type ───────────────────────────────────────────────────── */
+
+/* Headings and small labels go to condensed caps; the brand and numbers go
+   mono. These hook onto elements and a few semantic classes rather than
+   per-component utilities, so the warm style is untouched. */
+@layer base {
+  [data-style="drafting"] :is(h1, h2, .ui-caps) {
+    font-family: var(--font-cond);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  [data-style="drafting"] h1 {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  [data-style="drafting"] h2 {
+    letter-spacing: 0.1em;
+  }
+  [data-style="drafting"] .ui-caps {
+    letter-spacing: 0.14em;
+  }
+  [data-style="drafting"] .ui-section-title {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.5rem;
+  }
+  [data-style="drafting"] .ui-brand {
+    font-family: var(--font-mono);
+    letter-spacing: -0.01em;
+  }
+  [data-style="drafting"] .tabular-nums {
+    font-family: var(--font-mono);
+  }
 }
 
 input[type="range"] {

@@ -53,4 +53,15 @@ database:
   screen offers.
 - **Crisis resources**: the text behind the "Need help now?" button. The
   curator also sees it. The default lists 988 (US) and findahelpline.com.
-- **Theme**: system, light, or dark. This is stored per browser.
+
+Settings also has an **Appearance** section. These choices are stored per
+browser, not in the database:
+
+- **Mode**: system, light, or dark.
+- **Style**: *Warm* (the default: soft stone neutrals and rounded corners) or
+  *Drafting* (charcoal and white neutrals, IBM Plex type, hairline rules,
+  square corners, and condensed caps for headings and labels).
+- **Accent**: the single colour used for buttons, focus rings, and progress:
+  apricot (the default), signal red, sage, sky, or violet. Each accent has its
+  own light and dark shades and works with either style. Drafting with signal
+  red gives the high-contrast "engineering drawing" look.

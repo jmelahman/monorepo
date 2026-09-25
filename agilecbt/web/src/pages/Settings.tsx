@@ -2,15 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, type Health, type Note } from "@/api/client";
 import { Button, Card, ErrorText, inputClass, SectionTitle } from "@/components/ui";
-
-type ThemeMode = "system" | "light" | "dark";
-const THEME_KEY = "agilecbt.themeMode";
-
-function applyTheme(mode: ThemeMode) {
-  const dark =
-    mode === "dark" || (mode === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
-}
+import {
+  loadTheme,
+  saveTheme,
+  THEME_ACCENTS,
+  THEME_MODES,
+  THEME_STYLES,
+  type Theme,
+} from "@/theme";
 
 export default function Settings({ health }: { health: Health }) {
   return (
@@ -19,6 +18,7 @@ export default function Settings({ health }: { health: Health }) {
       <CuratorStatus health={health} />
       <NotesEditor />
       <Preferences />
+      <Appearance />
       <DataCard />
       {health.auth_required && <Logout />}
       <p className="text-center text-xs text-fg-muted">AgileCBT {health.version}</p>
@@ -123,13 +123,6 @@ function Preferences() {
   const qc = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const [crisis, setCrisis] = useState("");
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    try {
-      return (localStorage.getItem(THEME_KEY) as ThemeMode) || "system";
-    } catch {
-      return "system";
-    }
-  });
   useEffect(() => {
     if (settings.data) setCrisis(settings.data.crisis_resources);
   }, [settings.data]);
@@ -147,32 +140,11 @@ function Preferences() {
           <select
             value={settings.data.checkin_times}
             onChange={(e) => update.mutate({ checkin_times: e.target.value as "both" })}
-            className="rounded-lg border border-border bg-bg px-2 py-1"
+            className={selectClass}
           >
             <option value="both">Morning and evening</option>
             <option value="morning">Morning only</option>
             <option value="evening">Evening only</option>
-          </select>
-        </label>
-        <label className="flex items-center justify-between gap-2">
-          <span className="font-medium">Theme</span>
-          <select
-            value={theme}
-            onChange={(e) => {
-              const m = e.target.value as ThemeMode;
-              setTheme(m);
-              try {
-                localStorage.setItem(THEME_KEY, m);
-              } catch {
-                // private mode: theme still applies for this visit
-              }
-              applyTheme(m);
-            }}
-            className="rounded-lg border border-border bg-bg px-2 py-1"
-          >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
           </select>
         </label>
         <label className="block">
@@ -201,6 +173,77 @@ function Preferences() {
           </Button>
         </div>
         <ErrorText error={update.error} />
+      </div>
+    </Card>
+  );
+}
+
+const selectClass = "rounded-lg border border-border bg-bg px-2 py-1";
+
+function Appearance() {
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+  const set = (patch: Partial<Theme>) => {
+    const next = { ...theme, ...patch };
+    setTheme(next);
+    saveTheme(next);
+  };
+  return (
+    <Card>
+      <SectionTitle aside={<span className="text-xs text-fg-muted">This browser only</span>}>
+        Appearance
+      </SectionTitle>
+      <div className="space-y-4 text-sm">
+        <label className="flex items-center justify-between gap-2">
+          <span className="font-medium">Mode</span>
+          <select
+            value={theme.mode}
+            onChange={(e) => set({ mode: e.target.value as Theme["mode"] })}
+            className={selectClass}
+          >
+            {THEME_MODES.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center justify-between gap-2">
+          <span className="font-medium">Style</span>
+          <select
+            value={theme.style}
+            onChange={(e) => set({ style: e.target.value as Theme["style"] })}
+            className={selectClass}
+          >
+            {THEME_STYLES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <fieldset className="flex items-center justify-between gap-2">
+          <legend className="float-left font-medium">Accent</legend>
+          <div className="flex gap-2">
+            {THEME_ACCENTS.map((a) => (
+              <label key={a.value} title={a.label} className="relative">
+                <input
+                  type="radio"
+                  name="accent"
+                  value={a.value}
+                  checked={theme.accent === a.value}
+                  onChange={() => set({ accent: a.value })}
+                  aria-label={a.label}
+                  className="peer sr-only"
+                />
+                {/* Carries its own data-accent so it shows that accent, not the active one. */}
+                <span
+                  data-accent={a.value}
+                  className="block h-7 w-7 cursor-pointer rounded-full bg-accent-600 ring-offset-2 ring-offset-surface peer-checked:ring-2 peer-checked:ring-fg peer-focus-visible:ring-2 peer-focus-visible:ring-accent-500"
+                />
+              </label>
+            ))}
+          </div>
+        </fieldset>
       </div>
     </Card>
   );

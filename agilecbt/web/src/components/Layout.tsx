@@ -18,7 +18,7 @@ export default function Layout() {
     <div className="min-h-dvh bg-bg text-fg">
       <header className="sticky top-0 z-10 border-b border-border bg-bg/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
-          <NavLink to="/" className="text-lg font-semibold tracking-tight">
+          <NavLink to="/" className="ui-brand text-lg font-semibold tracking-tight">
             AgileCBT
           </NavLink>
           <div className="flex items-center gap-1">
@@ -63,7 +63,7 @@ export default function Layout() {
                 <span aria-hidden className="text-lg leading-none">
                   {t.icon}
                 </span>
-                {t.label}
+                <span className="ui-caps">{t.label}</span>
               </NavLink>
             </li>
           ))}

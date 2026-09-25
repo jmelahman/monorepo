@@ -3,7 +3,7 @@ import { type ButtonHTMLAttributes, type ReactNode, useEffect, useId, useRef } f
 type Variant = "primary" | "soft" | "ghost";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-accent-600 text-white hover:bg-accent-700",
+  primary: "bg-accent-600 text-on-accent hover:bg-accent-700",
   soft: "bg-surface-2 text-fg hover:bg-border",
   ghost: "text-fg-muted hover:text-fg hover:bg-surface-2",
 };
@@ -32,7 +32,7 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
 
 export function SectionTitle({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-baseline justify-between gap-2">
+    <div className="ui-section-title mb-3 flex items-baseline justify-between gap-2">
       <h2 className="text-base font-semibold">{children}</h2>
       {aside}
     </div>
