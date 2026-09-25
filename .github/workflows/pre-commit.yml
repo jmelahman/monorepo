@@ -19,6 +19,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          # prek diffs the PR's base..head, so both commits must be present.
+          fetch-depth: 0
       # nature-sounds plays audio through oto, whose cgo build needs the ALSA
       # headers.
       - name: Install ALSA headers
