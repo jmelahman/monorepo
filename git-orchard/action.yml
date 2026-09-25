@@ -61,7 +61,7 @@ runs:
 
     # Built from the action's own source, so the CLI is always the version
     # the action is pinned to.
-    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
       with:
         go-version-file: ${{ github.action_path }}/go.mod
         cache: false
