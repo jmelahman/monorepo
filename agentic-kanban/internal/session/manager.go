@@ -414,6 +414,8 @@ func applyKanbanDevcontainerOverrides(cfg *docker.DevcontainerConfig, dev *kanba
 // alone, as is any row whose container can't be inspected for a reason other
 // than "not found": the daemon being unreachable is not evidence the
 // container is gone, and whatever the caller does next fails loudly anyway.
+//
+// See REGRESSIONS.md: "sessions rows don't track container liveness".
 func (m *Manager) Reconcile(ctx context.Context, sess *db.Session) (*db.Session, error) {
 	if m.containerRunning == nil || sess.ContainerID == nil || *sess.ContainerID == "" {
 		return sess, nil
@@ -451,6 +453,8 @@ const endPTYTimeout = 15 * time.Second
 // running unseen. Its process is sent SIGHUP (as a closed terminal would) and
 // then SIGKILL if it lingers. A working/awaiting_perm status it reported is
 // reset to idle, since it will never send the matching idle.
+//
+// See REGRESSIONS.md: "Closing a PTY broker doesn't end its process".
 func (m *Manager) StopAgentUnless(ctx context.Context, sessionID int64, harnessID string) bool {
 	b := m.brokers.closeAgentUnless(sessionID, harnessID)
 	if b == nil {

@@ -88,6 +88,7 @@ export function PtyTerminal({ sessionId, kind, mountTarget }: Props) {
       // ghostty only rewrites the inline canvas size from term.resize() and
       // font changes; we own every resize via this function and never change
       // the font at runtime, so re-applying the stretch here is sufficient.
+      // See REGRESSIONS.md: "ghostty-web canvas doesn't fill its container".
       const fitToHost = () => {
         const m = term.renderer?.getMetrics();
         if (!m?.width || !m.height) return;
@@ -177,6 +178,7 @@ export function PtyTerminal({ sessionId, kind, mountTarget }: Props) {
         // multi-codepoint grapheme cluster, breaking every later terminal on
         // the page. Null wasmTerm so dispose() skips that call. Remove once
         // the fix in coder/ghostty-web#142 ships.
+        // See REGRESSIONS.md: "ghostty-web terminal dispose poisons the WASM heap".
         (term as unknown as { wasmTerm?: unknown }).wasmTerm = undefined;
         term.dispose();
         controls.dispose();

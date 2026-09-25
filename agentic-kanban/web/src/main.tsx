@@ -50,6 +50,7 @@ function Root() {
           // refetches its 404ing /state on a loop. Refetch the boards list so
           // its Overview node unmounts and stops re-subscribing — and stay
           // quiet, since this is expected churn, not a bug to surface.
+          // See REGRESSIONS.md: "A deleted board can refetch its /state on a loop".
           if (
             err instanceof ApiError &&
             err.status === 404 &&

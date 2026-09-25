@@ -200,6 +200,8 @@ func (p *Poller) tick(ctx context.Context) {
 // when their run is in the UNION of every board's window for that repo, so two
 // boards sharing a repo never evict each other (see the jobsCache comment).
 // Repos in skip are left untouched this tick.
+//
+// See REGRESSIONS.md: "Build Cop boards on the same repo share one jobs cache".
 func (p *Poller) retainJobsForBoards(synced []boardKeep, skip map[string]struct{}) {
 	union := make(map[string]map[int64]struct{})
 	for _, bk := range synced {

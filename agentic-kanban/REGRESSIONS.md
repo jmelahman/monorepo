@@ -4,13 +4,13 @@ Tripwires for code that has bitten us before. Each entry states the rule and
 the trap, not the war story. They earn their keep when you hit them *before*
 you knew you needed them — several fire from changes that don't look risky
 (adding an SSE event, a routine handler that updates a couple of columns), so
-skim the index in `CLAUDE.md` before touching the areas these name, and read
-the full entry here before changing one.
+skim the headings before finishing a change and read any entry it touches.
 
 When you fix a regression that fits an entry below, extend it. When you fix
-something new and likely to recur, add a fresh entry here **and** a one-line
-title to the index in `CLAUDE.md`. This file is deliberately kept out of the
-published `docs/` site — it's internal engineering lore, not user docs.
+something new and likely to recur, add a fresh entry here **and** a
+`See REGRESSIONS.md: "<title>"` comment at the code it guards. This file is
+deliberately kept out of the published `docs/` site — it's internal
+engineering lore, not user docs.
 
 ### `ghostty-web` terminal dispose poisons the WASM heap
 

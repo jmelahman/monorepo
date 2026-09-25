@@ -44,6 +44,8 @@ func (i Identity) configArgs() []string {
 // `git worktree prune` run from the "wrong" side decides the worktree's gitdir
 // is missing and deletes its admin directory, orphaning the checkout. Locked
 // worktrees are skipped by prune.
+//
+// See REGRESSIONS.md: "git worktree prune from the other side of the mount".
 const lockReason = "managed by kanban; path may not resolve inside session containers"
 
 // AddWorktree creates a new locked worktree at path, creating a new branch

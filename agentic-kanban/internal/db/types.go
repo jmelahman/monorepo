@@ -80,6 +80,8 @@ const DefaultWorkspaceFolder = "/workspace"
 // their working directory. It is a snapshot of how the container was actually
 // created, so it stays correct for a running container even if the board's
 // project_dir is edited underneath it.
+//
+// See REGRESSIONS.md: "Exec sites hardcode /workspace".
 func (s *Session) WorkspaceDir() string {
 	if s == nil || s.WorkspaceFolder == "" {
 		return DefaultWorkspaceFolder

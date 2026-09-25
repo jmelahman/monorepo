@@ -453,6 +453,8 @@ func (s *Store) DeleteAllArchivedTickets(ctx context.Context, boardID int64) (in
 
 // Sessions
 
+// UpsertSession writes every column, so only a path that owns the whole row
+// may use it. See REGRESSIONS.md: "sessions row has multiple writers".
 func (s *Store) UpsertSession(ctx context.Context, sess *Session) error {
 	if sess.ID == 0 {
 		res, err := s.db.ExecContext(ctx,
@@ -491,6 +493,8 @@ func (s *Store) UpdateSessionStatus(ctx context.Context, id int64, status string
 // workspaceFolder records the container path the agent's working directory
 // was created at. A nil value leaves the stored one alone, so Stop doesn't
 // erase what Start wrote.
+//
+// See REGRESSIONS.md: "sessions row has multiple writers".
 func (s *Store) UpdateSessionLifecycle(ctx context.Context, id int64, status string, containerID *string, startedAt, stoppedAt *int64, workspaceFolder *string) error {
 	_, err := s.db.ExecContext(ctx,
 		`UPDATE sessions SET status=?, container_id=?, started_at=?, stopped_at=?, workspace_folder=COALESCE(?, workspace_folder) WHERE id=?`,

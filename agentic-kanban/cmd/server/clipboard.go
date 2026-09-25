@@ -56,6 +56,8 @@ var nativeCopyTimeout = 3 * time.Second
 // helper's stdio. Stderr therefore goes to a file, never a pipe: with a
 // pipe, Wait blocks until every holder of the write end exits — i.e.
 // until the user next copies something elsewhere — and the view hangs.
+//
+// See REGRESSIONS.md: "Piping a daemonizing helper's stdio hangs cmd.Run()".
 var nativeCopy = func(text string) error {
 	for _, argv := range clipboardCommands {
 		path, err := exec.LookPath(argv[0])

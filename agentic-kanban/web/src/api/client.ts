@@ -621,6 +621,7 @@ type MultiplexListener = {
 // once. Without this, a freshly-started session's WebSocket handshake gets
 // queued behind the SSE streams and never opens — the terminal hangs on a
 // blank cursor until the user refreshes.
+// See REGRESSIONS.md: "Per-origin SSE streams starve the WebSocket pool".
 class BoardEventManager {
   private listeners = new Set<MultiplexListener>();
   private es: EventSource | null = null;
