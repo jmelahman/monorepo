@@ -6,17 +6,17 @@
       "apiKey": "ollama",
       "models": [
         {
-          "id": "qwen3.6:35b-a3b",
+          "id": "jqwen3.6:35b-a3b",
           "name": "Qwen 3.6 35B-A3B",
           "contextWindow": 131072
         },
         {
-          "id": "qwen3.6:27b",
+          "id": "jqwen3.6:27b",
           "name": "Qwen 3.6 27B",
           "contextWindow": 131072
         },
         {
-          "id": "qwen3.5:6b",
+          "id": "jqwen3.5:6b",
           "name": "Qwen 3.5 8B",
           "contextWindow": 131072
         }
