@@ -44,7 +44,7 @@ to copy from.
 
 - GoReleaser (linux/darwin/windows × amd64/arm64) publishing GitHub releases.
 - Multi-arch Docker image (distroless-style nonroot Alpine) + `compose.yaml`
-  + `docker-bake.hcl`.
+  - `docker-bake.hcl`.
 - PyPI wheels per platform via hatch + `go-bin` + `manygo`
   (`uv tool install <name>` installs the Go binary).
 - prek (pre-commit) hooks: builtin checks, actionlint, ripsecrets,
@@ -52,7 +52,6 @@ to copy from.
 - GitHub Actions: tests + lint + image smoke test, release pipeline, docs
   deploy, zizmor, Dependabot.
 - `.devcontainer/` dev sandbox with an opt-in default-deny network firewall.
-- `.kanban.toml` task/port mapping for [agentic-kanban](https://github.com/jmelahman/agentic-kanban) sessions.
 
 ## Using this template
 
