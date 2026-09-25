@@ -1,8 +1,7 @@
 # AgileCBT — Claude Notes
 
-A Go backend (repo root) plus a React/Vite frontend (`web/`).
-Source of truth for run commands is `.vscode/tasks.json`; this file translates
-them for direct shell use.
+A Go backend (repo root) plus a React/Vite frontend (`web/`). Run commands
+below translate `.vscode/tasks.json` (the source of truth) for shell use.
 
 ## Running the app
 
@@ -42,9 +41,8 @@ Boot a clean instance with no on-disk DB:
 wgo run . serve --in-memory
 ```
 
-The server logs `WARNING: --in-memory set` at startup and uses an ephemeral
-SQLite database for the lifetime of the process. Each launch starts from
-zero, and shutting the process down discards everything.
+It logs `WARNING: --in-memory set` and uses an ephemeral SQLite DB: each
+launch starts from zero and shutdown discards everything.
 
 ## Tests / typecheck / lint
 
@@ -53,21 +51,29 @@ zero, and shutting the process down discards everything.
 - Frontend lint/format (Biome): `cd web && bun run check` (`check:fix` to
   auto-apply safe fixes). The `prek` `biome` hook runs the same check on
   staged `web/**/*.{ts,tsx,js,jsx,json}` files.
-- Playwright E2E: `cd web && bun run test:e2e` (first run `bun run test:e2e:install` for Chromium; boots the real backend with
-  `--in-memory` on :8095 with `APP_LLM=ollama` pointed at the scripted
-  `tests/e2e/fake-ollama.mjs` on :11499, plus Vite on :5177 — separate ports
-  so a running dev stack is never reused). Tests share one DB and must not
-  assume it's empty (unique titles, `.last()`).
+- Playwright E2E: `cd web && bun run test:e2e` (first run `test:e2e:install`
+  for Chromium). Boots the backend `--in-memory` on :8095 with `APP_LLM=ollama`
+  pointed at scripted `tests/e2e/fake-ollama.mjs` on :11499, plus Vite on :5177,
+  so a running dev stack is never reused. Tests share one DB: don't assume it's
+  empty (unique titles, `.last()`).
 - Pre-commit hooks: `prek run --all-files` (run before committing).
+
+## QA via Sonnet subagents
+
+Delegate token-heavy QA where an occasional miss is acceptable (Playwright
+MCP walkthroughs, `bun run test:e2e` triage, API/MCP smoke tests) to an
+`Agent` with `model: "sonnet"`. Give it the URL, steps, and pass criteria
+(start the dev stack first or tell it how); ask for a short verdict with
+evidence (failing step, error text), not raw tool output. Keep code changes
+and final calls in the main session, and verify results that look wrong.
 
 ## MCP
 
 `.mcp.json` registers:
 
 - **playwright** — `@playwright/mcp --headless --isolated`. Use the
-  `mcp__playwright__browser_*` tools (e.g. `browser_navigate
-  http://localhost:5173/`, then `browser_snapshot`) — never spawn `bunx
-  playwright` ad-hoc.
+  `mcp__playwright__browser_*` tools (`browser_navigate`, `browser_snapshot`);
+  never spawn `bunx playwright` ad-hoc.
 - **agilecbt** — streamable HTTP at `http://localhost:8080/mcp` (same tools
   as the in-app curator). Needs `agilecbt serve` running.
 
@@ -77,29 +83,17 @@ zero, and shutting the process down discards everything.
 - `web/` — Vite + React 19 + Tailwind 4 frontend, embedded into the binary
   with `-tags embed`.
 - `docs/` — VitePress site (`guide/`, `reference/api.md`, `reference/cli.md`).
-- `.kanban.toml` — maps the task labels above to container ports for
-  agentic-kanban sessions.
+- `.kanban.toml` — maps task labels to container ports for agentic-kanban.
 - `.devcontainer/` — dev sandbox image with an opt-in network firewall.
-
-## Recurring regression notes
-
-Tripwires for code that's bitten us before. Full write-ups live in
-`REGRESSIONS.md` (kept out of the published `docs/` site — it's internal
-lore, not user docs). When you fix something new and likely to recur, add the
-full entry to `REGRESSIONS.md` and a one-line title here.
-
-(none yet)
 
 ## Documentation upkeep
 
-User-facing changes need a docs update in the same PR. Match the change to
-the page:
+User-facing changes need a docs update in the same PR:
 
 - New/changed CLI flags or subcommands → `docs/reference/cli.md`.
 - New/changed HTTP endpoints or request/response shapes → `docs/reference/api.md`.
 - Config keys (env vars, `--in-memory`, etc.) → `docs/guide/configuration.md`.
 - Install/setup steps → `docs/guide/install.md` or `docs/guide/quickstart.md`.
 
-If a feature doesn't fit an existing page, add one under `docs/guide/` and
-link it from `docs/.vitepress/config.ts`. Skip docs only for purely internal
-refactors with no observable behavior change.
+Otherwise add a page under `docs/guide/` linked from `docs/.vitepress/config.ts`.
+Skip docs only for internal refactors with no observable behavior change.
