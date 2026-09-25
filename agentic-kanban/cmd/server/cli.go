@@ -854,7 +854,7 @@ shell in the container is attached instead of the agent.`,
 	}
 	mergeCmd.Flags().StringVar(&mergeStrategy, "strategy", "", "Merge strategy: merge-commit, squash, or rebase (default: merge.default_strategy)")
 
-	parent.AddCommand(create, info, attach, update, move, archive, unarchive, delTicket, doneCmd, sync, mergeCmd)
+	parent.AddCommand(create, info, attach, ticketTasksCmd(&serverURL, &boardIdent), update, move, archive, unarchive, delTicket, doneCmd, sync, mergeCmd)
 	// A cancelled picker or a failed API call isn't a usage error; don't
 	// bury any of them under the flag table.
 	for _, c := range parent.Commands() {

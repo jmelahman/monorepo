@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/pkg/stdcopy"
 
 	"github.com/jmelahman/kanban/internal/db"
 	"github.com/jmelahman/kanban/internal/docker"
@@ -214,6 +215,14 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 		_ = r.store.UpdateTaskRunStatus(ctx, tr.ID, db.TaskRunStatusExited, &zero)
 		return nil, err
 	}
+	// Stop finds the process through the stored exec id, so a run without
+	// one couldn't be stopped. The exec hasn't started yet (attach starts
+	// it), so bail out before anything runs.
+	if err := r.store.SetTaskRunExecID(ctx, tr.ID, resp.ID); err != nil {
+		zero := -1
+		_ = r.store.UpdateTaskRunStatus(ctx, tr.ID, db.TaskRunStatusExited, &zero)
+		return nil, fmt.Errorf("record exec id: %w", err)
+	}
 	tr.ExecID = &resp.ID
 
 	att, err := r.docker.Raw().ContainerExecAttach(ctx, resp.ID, container.ExecStartOptions{})
@@ -225,9 +234,18 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 
 	bc := r.getOrCreateChannel(tr.ID)
 
+	// Without a TTY the exec's stdout and stderr arrive multiplexed, each
+	// frame behind an 8-byte header; demux them back into one plain stream
+	// so the headers don't leak into the output lines.
+	pr, pw := io.Pipe()
+	go func() {
+		_, err := stdcopy.StdCopy(pw, pw, att.Reader)
+		pw.CloseWithError(err)
+	}()
+
 	go func() {
 		defer att.Close()
-		reader := bufio.NewReader(att.Reader)
+		reader := bufio.NewReader(pr)
 		for {
 			line, err := reader.ReadBytes('\n')
 			if len(line) > 0 {

@@ -763,6 +763,14 @@ func (s *Store) CreateTaskRun(ctx context.Context, tr *TaskRun) error {
 	return nil
 }
 
+// SetTaskRunExecID records the docker exec a run is attached to. The exec
+// only exists after the row does, so Start stores it in a second step; Stop
+// reads it back to find the process to signal.
+func (s *Store) SetTaskRunExecID(ctx context.Context, id int64, execID string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE task_runs SET exec_id=? WHERE id=?`, execID, id)
+	return err
+}
+
 func (s *Store) UpdateTaskRunStatus(ctx context.Context, id int64, status string, exitCode *int) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE task_runs SET status=?, exit_code=?, stopped_at=unixepoch() WHERE id=?`, status, exitCode, id)
 	return err

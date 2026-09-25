@@ -4,9 +4,11 @@
 package client
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -92,6 +94,30 @@ type Port struct {
 	ContainerPort int    `json:"container_port"`
 	HostPort      int    `json:"host_port"`
 	ProxyActive   bool   `json:"proxy_active"`
+}
+
+// Task mirrors one entry of GET /api/sessions/{id}/discover-tasks: a
+// .vscode/tasks.json or launch.json entry, plus the container port
+// .kanban.toml maps its label to (HasPort false when none).
+type Task struct {
+	Label         string   `json:"label"`
+	Command       string   `json:"command"`
+	Args          []string `json:"args,omitempty"`
+	Cwd           string   `json:"cwd,omitempty"`
+	ContainerPort int      `json:"container_port,omitempty"`
+	HasPort       bool     `json:"has_port"`
+}
+
+// TaskRun mirrors one execution of a task in a session container.
+type TaskRun struct {
+	ID        int64  `json:"id"`
+	SessionID int64  `json:"session_id"`
+	TaskLabel string `json:"task_label"`
+	Command   string `json:"command"`
+	Status    string `json:"status"`
+	ExitCode  *int   `json:"exit_code,omitempty"`
+	StartedAt int64  `json:"started_at"`
+	StoppedAt *int64 `json:"stopped_at,omitempty"`
 }
 
 // CreateBoardArgs is the request body for POST /api/boards. Name plus one of
@@ -351,6 +377,117 @@ func (c *Client) ListPorts(ctx context.Context, sessionID int64) ([]Port, error)
 		return nil, err
 	}
 	return ports, nil
+}
+
+// CreatePort calls POST /api/sessions/{id}/ports, allocating a host port for
+// containerPort (or reusing the existing allocation) and opening its proxy.
+// It returns the session's ports afterwards.
+func (c *Client) CreatePort(ctx context.Context, sessionID int64, label string, containerPort int) ([]Port, error) {
+	raw, err := c.do(ctx, http.MethodPost, "/api/sessions/"+strconv.FormatInt(sessionID, 10)+"/ports",
+		map[string]any{"label": label, "container_port": containerPort}, http.StatusCreated)
+	if err != nil {
+		return nil, err
+	}
+	var ports []Port
+	if err := json.Unmarshal(raw, &ports); err != nil {
+		return nil, err
+	}
+	return ports, nil
+}
+
+// DiscoverTasks calls GET /api/sessions/{id}/discover-tasks. The warnings
+// describe task files that failed to parse.
+func (c *Client) DiscoverTasks(ctx context.Context, sessionID int64) ([]Task, []string, error) {
+	raw, err := c.do(ctx, http.MethodGet, "/api/sessions/"+strconv.FormatInt(sessionID, 10)+"/discover-tasks", nil, http.StatusOK)
+	if err != nil {
+		return nil, nil, err
+	}
+	var resp struct {
+		Tasks    []Task   `json:"tasks"`
+		Warnings []string `json:"warnings"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, nil, err
+	}
+	return resp.Tasks, resp.Warnings, nil
+}
+
+// ListTaskRuns calls GET /api/sessions/{id}/task-runs (newest first).
+func (c *Client) ListTaskRuns(ctx context.Context, sessionID int64) ([]TaskRun, error) {
+	raw, err := c.do(ctx, http.MethodGet, "/api/sessions/"+strconv.FormatInt(sessionID, 10)+"/task-runs", nil, http.StatusOK)
+	if err != nil {
+		return nil, err
+	}
+	var runs []TaskRun
+	if err := json.Unmarshal(raw, &runs); err != nil {
+		return nil, err
+	}
+	return runs, nil
+}
+
+// StartTaskRun calls POST /api/sessions/{id}/task-runs to run the task with
+// the given label in the session's container.
+func (c *Client) StartTaskRun(ctx context.Context, sessionID int64, label string) (TaskRun, error) {
+	var tr TaskRun
+	raw, err := c.do(ctx, http.MethodPost, "/api/sessions/"+strconv.FormatInt(sessionID, 10)+"/task-runs",
+		map[string]string{"label": label}, http.StatusCreated)
+	if err != nil {
+		return tr, err
+	}
+	err = json.Unmarshal(raw, &tr)
+	return tr, err
+}
+
+// StopTaskRun calls DELETE /api/task-runs/{id}, signalling the run's
+// process tree. The run is marked exited once its output stream closes.
+func (c *Client) StopTaskRun(ctx context.Context, id int64) error {
+	_, err := c.do(ctx, http.MethodDelete, "/api/task-runs/"+strconv.FormatInt(id, 10), nil, http.StatusNoContent)
+	return err
+}
+
+// StreamTaskRunOutput follows GET /api/task-runs/{id}/output (SSE), calling
+// onLine for each output line: first the buffered backlog, then live
+// output. It returns nil once the run's output ends, or ctx's error if ctx
+// is cancelled first.
+func (c *Client) StreamTaskRunOutput(ctx context.Context, id int64, onLine func(string)) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/task-runs/"+strconv.FormatInt(id, 10)+"/output", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return c.readError(resp)
+	}
+	sc := bufio.NewScanner(resp.Body)
+	sc.Buffer(make([]byte, 64*1024), 1024*1024)
+	event := ""
+	for sc.Scan() {
+		line := sc.Text()
+		switch {
+		case line == "":
+			event = ""
+		case strings.HasPrefix(line, "event:"):
+			event = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+		case strings.HasPrefix(line, "data:"):
+			if event == "end" {
+				return nil
+			}
+			data := strings.TrimPrefix(line, "data:")
+			onLine(strings.TrimPrefix(data, " "))
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := sc.Err(); err != nil {
+		return err
+	}
+	return errors.New("task output stream closed before the run ended")
 }
 
 // ListHarnesses calls GET /api/harnesses. A non-zero boardID flags the

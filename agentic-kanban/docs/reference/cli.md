@@ -384,6 +384,97 @@ accepts the request; the CLI sends the server's own host as `Origin`,
 which matches a direct `kanban serve` and reverse proxies that preserve
 the `Host` header.
 
+### `ticket tasks [id]`
+
+```sh
+kanban ticket tasks [id] [--board <board>] [--json]
+kanban ticket tasks [id] --run <label> [--detach]
+kanban ticket tasks [id] --stop <label>
+```
+
+Lists, runs, and stops the tasks a ticket's worktree defines in
+`.vscode/tasks.json` and `.vscode/launch.json` — the same ones the web UI's
+Tasks tab shows. Tasks run inside the ticket's session container.
+
+Without `--run` or `--stop`, on a terminal it opens a full-screen view:
+the tasks on top, each with its container port (from the `[[task]]`
+entries in `.kanban.toml`), the status of its latest run, and the URL its
+port is proxied to; the highlighted task's live output below.
+
+```
+ #42 Fix the login bug · tasks
+ session #7 idle
+
+   TASK             PORT   STATUS            URL
+ ▸ Kanban Frontend  5173   running (run #5)  http://localhost:13001
+   Run Tests        -      exited 0          -
+
+ ── output · Kanban Frontend (run #5) ─────────────────────────────
+   VITE v6.0.0  ready in 312 ms
+   ➜  Local:   http://localhost:5173/
+```
+
+| Key                                   | Action                                                                 |
+| ------------------------------------- | ---------------------------------------------------------------------- |
+| `↑`/`↓` (`Ctrl+P`/`Ctrl+N`, `k`/`j`)  | Select a task; the output pane follows its latest run.                 |
+| `Enter` / `r`                         | Run the task (the same steps as `--run`), or stop it if it's running.  |
+| `s`                                   | Stop the task.                                                         |
+| `c` / `y`                             | Copy the task's proxied URL to the clipboard (see `ticket info`).      |
+| `PgUp`/`PgDn`, `Home`/`End`           | Scroll the output back / return to the live tail.                      |
+| `Esc` / `q` / `Ctrl+C`                | Close the view. Tasks started from it keep running.                    |
+
+The list refreshes every couple of seconds, so runs started or stopped
+elsewhere (the web UI, another terminal) show up. Opening the view on a
+ticket with no session creates one (worktree only — the container starts
+when you first run a task).
+
+Piped or redirected, it prints the list as a table instead, and `--json`
+prints `{tasks, warnings}`, where each task carries its `host_port`, `url`,
+and `last_run`.
+
+`--run <label>` does everything needed to use the task from your machine:
+
+1. Creates and starts the ticket's session if it isn't running (a first
+   start pulls or builds the devcontainer image).
+2. Runs the task in the container.
+3. If the task has a port in `.kanban.toml`, allocates a host port from
+   the server's range (`--port-range-start`/`--port-range-end`), opens the
+   proxy, and prints the URL, e.g.
+   `Kanban Frontend → http://localhost:13001 (container port 5173)`. The
+   proxy listens on the server's host, so the URL uses the host from
+   `--server`.
+4. Streams the task's output to stdout until it exits. Status lines go to
+   stderr, so stdout carries only the task's output. `Ctrl+C` stops the
+   task (press it again to stop waiting for it to exit). A task that exits
+   non-zero makes the command fail.
+
+With `--detach` (`-d`), the command returns once the task has started
+and its port is proxied, and the task keeps running. `--stop <label>`
+stops every running run of that task.
+
+The table, `--json`, and `--stop` never create a session; on a ticket that
+doesn't have one, they tell you to `--run` a task first.
+
+| Flag           | Default                    | Description                                                            |
+| -------------- | -------------------------- | ---------------------------------------------------------------------- |
+| `--board`      | board for the current repo | Board id or slug whose tickets to list. Only used when no id is given. |
+| `--run`        |                            | Run the task with this label and stream its output.                    |
+| `--detach, -d` | `false`                    | With `--run`, return once the task has started and leave it running.   |
+| `--stop`       |                            | Stop the running task with this label.                                 |
+| `--json`       | `false`                    | Print the task list as JSON.                                           |
+
+```sh
+# What can this ticket run, and where is it served?
+kanban ticket tasks 42
+
+# Run the frontend in the foreground; Ctrl+C stops it.
+kanban ticket tasks 42 --run "Kanban Frontend"
+
+# Start the backend in the background, then stop it later.
+kanban ticket tasks 42 --run "Kanban Backend" -d
+kanban ticket tasks 42 --stop "Kanban Backend"
+```
+
 ### `ticket update [id] [flags]`
 
 | Flag      | Description                 |
