@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.0",
-    "@capacitor/android": "^8.0.0",
+    "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.0.0",
