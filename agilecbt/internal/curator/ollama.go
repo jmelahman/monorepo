@@ -163,7 +163,10 @@ func (o *Ollama) Complete(ctx context.Context, system, user string) (string, err
 
 // chat streams one /api/chat call, returning the assembled assistant message.
 func (o *Ollama) chat(ctx context.Context, msgs []ollamaMessage, withTools bool, onText func(string)) (ollamaMessage, error) {
-	body := map[string]any{"model": o.model(), "messages": msgs, "stream": true}
+	// think:false keeps Qwen3 and other hybrid models from spending a
+	// reasoning pass before each reply. Check-in chat wants short, tool-heavy
+	// answers, not a hidden chain of thought.
+	body := map[string]any{"model": o.model(), "messages": msgs, "stream": true, "think": false}
 	if withTools {
 		body["tools"] = o.tools()
 	}

@@ -48,9 +48,9 @@ unset.
 ### `ollama`
 
 The server calls Ollama's `/api/chat` with the tool definitions and runs the
-tool loop itself. For natural check-in conversations and reliable tool calls,
-use a model of about 14B or larger. Smaller models work, but are noticeably
-weaker.
+tool loop itself. Reasoning/thinking is turned off (`think: false`) so replies
+stay short. For natural check-in conversations and reliable tool calls, use a
+model of about 14B or larger. Smaller models work, but are noticeably weaker.
 
 ```sh
 ollama pull qwen3:14b

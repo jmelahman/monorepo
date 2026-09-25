@@ -77,8 +77,8 @@ func TestOllamaToolLoop(t *testing.T) {
 			`{"message":{"role":"assistant","content":""},"done":true}`,
 		},
 		{
-			`{"message":{"role":"assistant","content":"Done — "},"done":false}`,
-			`{"message":{"role":"assistant","content":"a walk is on Today."},"done":true}`,
+			`{"message":{"role":"assistant","content":"Done. "},"done":false}`,
+			`{"message":{"role":"assistant","content":"A walk is on Today."},"done":true}`,
 		},
 	}}
 	srv := httptest.NewServer(fake)
@@ -106,13 +106,16 @@ func TestOllamaToolLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(msgs) != 2 || msgs[0].Text != "I could walk today" || msgs[1].Text != "Let me add that. \n\nDone — a walk is on Today." {
+	if len(msgs) != 2 || msgs[0].Text != "I could walk today" || msgs[1].Text != "Let me add that. \n\nDone. A walk is on Today." {
 		t.Fatalf("messages: %+v", msgs)
 	}
 
 	// The first request carries system prompt, context, and tools; the
 	// second carries the tool result.
 	first := fake.requests[0]
+	if think, ok := first["think"].(bool); !ok || think {
+		t.Errorf("think want false, got %v", first["think"])
+	}
 	if len(first["tools"].([]any)) != len(reg.List()) {
 		t.Errorf("tools not sent")
 	}
