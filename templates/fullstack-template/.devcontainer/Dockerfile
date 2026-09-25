@@ -18,25 +18,26 @@ FROM ubuntu:26.04@sha256:da6fc2be547864451aa253836dd926da33623312df4a9a243e35dc8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   build-essential \
-  curl \
-  git \
-  sudo \
   ca-certificates \
-  iptables \
-  ipset \
-  iproute2 \
+  curl \
   dnsutils \
+  gh \
+  git \
+  git-delta \
+  fd-find \
+  fzf \
+  iproute2 \
+  ipset \
+  iptables \
   jq \
   less \
-  zsh \
-  fzf \
-  ripgrep \
-  fd-find \
   neovim \
-  socat \
   openssh-client \
-  gh \
-  git-delta \
+  python3-dev \
+  ripgrep \
+  socat \
+  sudo \
+  zsh \
   && install -m 0755 -d /etc/apt/keyrings \
   && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list \
