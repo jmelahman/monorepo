@@ -6,12 +6,12 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"regexp"
 	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/jmelahman/git-orchard/ghrun"
 	"github.com/jmelahman/git-orchard/git"
 	"github.com/jmelahman/git-orchard/githubapp"
 )
@@ -76,7 +76,7 @@ func runGitHubApp(ctx context.Context, opts *GitHubAppOptions) error {
 	if repo == "" {
 		if r, err := git.Open("."); err == nil {
 			if origin, err := r.Output("config", "--get", "remote.origin.url"); err == nil {
-				if owner, name, ok := ParseGitHubRepo(origin); ok {
+				if owner, name, ok := ghrun.ParseGitHubRepo(origin); ok {
 					repo = owner + "/" + name
 				}
 			}
@@ -172,15 +172,4 @@ func openBrowser(url string) error {
 		cmd = exec.Command("xdg-open", url)
 	}
 	return cmd.Start()
-}
-
-var githubRepo = regexp.MustCompile(`^(?:git@github\.com:|ssh://git@github\.com/|https://github\.com/)([^/]+)/([^/]+?)(?:\.git)?/?$`)
-
-// ParseGitHubRepo returns the owner and name of a github.com remote URL.
-func ParseGitHubRepo(url string) (owner, repo string, ok bool) {
-	m := githubRepo.FindStringSubmatch(url)
-	if m == nil {
-		return "", "", false
-	}
-	return m[1], m[2], true
 }

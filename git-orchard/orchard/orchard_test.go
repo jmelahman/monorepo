@@ -423,6 +423,20 @@ func TestLsRemote(t *testing.T) {
 			t.Errorf("%s: got %q, %q, %v; want %q", ref, oid, commit, err, want)
 		}
 	}
+	if commit, err := f.orchard.UpstreamTag(f.subtree(), "v1"); err != nil || commit != head {
+		t.Errorf("UpstreamTag(v1) = %q, %v; want %q", commit, err, head)
+	}
+}
+
+func TestRemoteURL(t *testing.T) {
+	f := newFixture(t)
+	f.git(f.mono, "remote", "add", "origin", f.bare)
+	if got := f.orchard.RemoteURL("origin"); got != f.bare {
+		t.Errorf("RemoteURL(origin) = %q, want %q", got, f.bare)
+	}
+	if got := f.orchard.RemoteURL(f.bare); got != f.bare {
+		t.Errorf("RemoteURL(%s) = %q, want it back", f.bare, got)
+	}
 }
 
 func TestReleaseForce(t *testing.T) {

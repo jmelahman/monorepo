@@ -13,22 +13,3 @@ func TestRemoteTemplate(t *testing.T) {
 		}
 	}
 }
-
-func TestParseGitHubRepo(t *testing.T) {
-	for url, want := range map[string]string{
-		"git@github.com:jmelahman/monorepo.git":                  "jmelahman/monorepo",
-		"https://github.com/jmelahman/monorepo":                  "jmelahman/monorepo",
-		"https://github.com/jmelahman/monorepo.git/":             "jmelahman/monorepo",
-		"ssh://git@github.com/jmelahman/jmelahman.github.io.git": "jmelahman/jmelahman.github.io",
-		"git@gitlab.com:jmelahman/monorepo.git":                  "",
-	} {
-		owner, repo, ok := ParseGitHubRepo(url)
-		got := ""
-		if ok {
-			got = owner + "/" + repo
-		}
-		if got != want {
-			t.Errorf("ParseGitHubRepo(%q) = %q, want %q", url, got, want)
-		}
-	}
-}

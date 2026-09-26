@@ -213,6 +213,21 @@ func (o *Orchard) lsRemote(remote, ref string) (oid, commit string, err error) {
 	return oid, commit, nil
 }
 
+// UpstreamTag returns the commit the upstream of s has tagged name, or an
+// empty string if it has no such tag.
+func (o *Orchard) UpstreamTag(s config.Subtree, name string) (string, error) {
+	_, commit, err := o.lsRemote(s.Remote, "refs/tags/"+name)
+	return commit, err
+}
+
+// RemoteURL returns the URL of a monorepo remote, which may already be one.
+func (o *Orchard) RemoteURL(remote string) string {
+	if url, err := o.Repo.Output("remote", "get-url", remote); err == nil {
+		return url
+	}
+	return remote
+}
+
 func (o *Orchard) pushArgs() []string {
 	if o.NoVerify {
 		return []string{"push", "--no-verify"}
