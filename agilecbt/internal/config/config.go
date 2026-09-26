@@ -36,7 +36,7 @@ const (
 // Config holds the resolved runtime configuration.
 type Config struct {
 	DataDir string
-	// Secret protects the API when non-empty ($APP_SECRET).
+	// Secret protects the API when non-empty ($AGILECBT_SECRET).
 	Secret string
 	// LLM selects the curator backend ($AGILECBT_LLM, default openai).
 	LLM string
@@ -51,7 +51,7 @@ type Config struct {
 	// ($AGILECBT_LLM_REASONING_EFFORT); "none" turns thinking off, "" omits it.
 	ReasoningEffort string
 	// CrisisResources replaces the built-in crisis lines the coach shares
-	// ($APP_CRISIS_RESOURCES); empty keeps the default.
+	// ($AGILECBT_CRISIS_RESOURCES); empty keeps the default.
 	CrisisResources string
 	// Files lists the config.toml files that were read, lowest precedence
 	// first.
@@ -143,10 +143,10 @@ func resolve(files []string) (Config, string, error) {
 		return Config{}, "", err
 	}
 	for dst, key := range map[*string]string{
-		&c.Secret: "APP_SECRET", &c.LLM: "AGILECBT_LLM", &c.Model: "AGILECBT_MODEL",
+		&c.Secret: "AGILECBT_SECRET", &c.LLM: "AGILECBT_LLM", &c.Model: "AGILECBT_MODEL",
 		&c.BaseURL: "AGILECBT_LLM_BASE_URL", &c.APIKey: "AGILECBT_LLM_API_KEY",
 		&c.ReasoningEffort: "AGILECBT_LLM_REASONING_EFFORT",
-		&c.CrisisResources: "APP_CRISIS_RESOURCES",
+		&c.CrisisResources: "AGILECBT_CRISIS_RESOURCES",
 	} {
 		if v, ok := os.LookupEnv(key); ok {
 			*dst = v
@@ -157,8 +157,6 @@ func resolve(files []string) (Config, string, error) {
 	}
 	switch c.LLM {
 	case LLMOpenAI, LLMNone:
-	case "ollama", "claude-code", "anthropic":
-		return Config{}, "", fmt.Errorf("llm %q was removed: use llm = %q with base_url (Ollama is %s), or %q", c.LLM, LLMOpenAI, DefaultBaseURL, LLMNone)
 	default:
 		return Config{}, "", fmt.Errorf("llm %q: want openai or none", c.LLM)
 	}
@@ -174,7 +172,7 @@ func resolve(files []string) (Config, string, error) {
 }
 
 // Load reads the config files and environment, resolves the data directory
-// (flag override > $APP_DATA_DIR > data_dir in config.toml >
+// (flag override > $AGILECBT_DATA_DIR > data_dir in config.toml >
 // $XDG_DATA_HOME/agilecbt > ~/.local/share/agilecbt), and ensures it exists.
 func Load(dataDirOverride string) (Config, error) {
 	cfg, fileDataDir, err := resolve(Files())
@@ -183,7 +181,7 @@ func Load(dataDirOverride string) (Config, error) {
 	}
 	dir := dataDirOverride
 	if dir == "" {
-		dir = os.Getenv("APP_DATA_DIR")
+		dir = os.Getenv("AGILECBT_DATA_DIR")
 	}
 	if dir == "" {
 		dir = fileDataDir

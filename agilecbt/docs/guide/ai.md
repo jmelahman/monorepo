@@ -76,10 +76,10 @@ privacy terms first.
 
 ```sh
 claude mcp add --transport http agilecbt http://localhost:8080/mcp \
-  --header "Authorization: Bearer $APP_SECRET"
+  --header "Authorization: Bearer $AGILECBT_SECRET"
 ```
 
-Leave out the header if the server has no `APP_SECRET`.
+Leave out the header if the server has no `AGILECBT_SECRET`.
 
 Then, in Claude Code:
 

@@ -34,7 +34,7 @@ RUN apk add --no-cache ca-certificates \
 COPY --from=go --chown=nonroot:nonroot /out/agilecbt /agilecbt
 USER nonroot
 ENV HOME=/home/nonroot \
-    APP_DATA_DIR=/data
+    AGILECBT_DATA_DIR=/data
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD wget -q --spider http://127.0.0.1:8080/api/health || exit 1

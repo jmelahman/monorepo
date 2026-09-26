@@ -20,7 +20,7 @@ type App struct {
 	Now    func() time.Time
 	Broker *Broker
 	// ConfigCrisisResources is crisis_resources from config.toml (or
-	// $APP_CRISIS_RESOURCES); see CrisisResources.
+	// $AGILECBT_CRISIS_RESOURCES); see CrisisResources.
 	ConfigCrisisResources string
 }
 

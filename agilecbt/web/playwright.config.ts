@@ -40,7 +40,7 @@ export default defineConfig({
         AGILECBT_LLM_BASE_URL: `http://127.0.0.1:${FAKE_LLM_PORT}/v1`,
         AGILECBT_LLM_API_KEY: "",
         AGILECBT_MODEL: "fake",
-        APP_SECRET: "",
+        AGILECBT_SECRET: "",
       },
       url: `http://127.0.0.1:${BACKEND_PORT}/api/health`,
       reuseExistingServer: !process.env.CI,
@@ -51,7 +51,7 @@ export default defineConfig({
     {
       command: `node_modules/.bin/vite --port ${FRONTEND_PORT} --strictPort`,
       cwd: ".",
-      env: { APP_BACKEND: `127.0.0.1:${BACKEND_PORT}` },
+      env: { AGILECBT_BACKEND: `127.0.0.1:${BACKEND_PORT}` },
       url: `http://localhost:${FRONTEND_PORT}/`,
       reuseExistingServer: !process.env.CI,
       stdout: "pipe",

@@ -122,8 +122,8 @@ API, to grade them:
 
 ```sh
 agilecbt eval --judge-model qwen3.8:27b                  # the coach's endpoint
-APP_EVAL_JUDGE_BASE_URL=https://openrouter.ai/api/v1 \
-APP_EVAL_JUDGE_API_KEY=… agilecbt eval --judge-model <model>
+AGILECBT_EVAL_JUDGE_BASE_URL=https://openrouter.ai/api/v1 \
+AGILECBT_EVAL_JUDGE_API_KEY=… agilecbt eval --judge-model <model>
 ```
 
 Without a judge, these questions are skipped and counted in the summary. A

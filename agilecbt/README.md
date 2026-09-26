@@ -31,7 +31,7 @@ Needs Go 1.26+ and [Bun](https://bun.sh).
 ```sh
 bun install --cwd web --frozen-lockfile && bun run --cwd web build
 go build -tags embed -o agilecbt .
-APP_SECRET='something long' ./agilecbt serve
+AGILECBT_SECRET='something long' ./agilecbt serve
 ```
 
 Open <http://localhost:8080/>. See `docs/guide/` for

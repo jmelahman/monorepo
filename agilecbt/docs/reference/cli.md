@@ -2,7 +2,7 @@
 
 The `agilecbt` binary is both the server and a client for it. Client
 subcommands talk to a running `agilecbt serve` over HTTP. To use a different
-server, pass `--server` or set `$APP_URL`. When `$APP_SECRET` is set, it's sent
+server, pass `--server` or set `$AGILECBT_URL`. When `$AGILECBT_SECRET` is set, it's sent
 as a bearer token.
 
 ## `agilecbt serve`
@@ -15,7 +15,7 @@ Start the HTTP server, which also serves the web UI and `/mcp`.
 | `--data-dir` | (XDG) | Override the data directory |
 | `--in-memory` | `false` | Ephemeral in-memory SQLite |
 
-Environment variables such as `APP_SECRET` and `AGILECBT_LLM` are covered in
+Environment variables such as `AGILECBT_SECRET` and `AGILECBT_LLM` are covered in
 [Configuration](/guide/configuration).
 
 ## `agilecbt today`
@@ -115,9 +115,9 @@ OPENROUTER_API_KEY=sk-or-… agilecbt eval --matrix --matrix-file evals/models.h
 | `--no-baseline` | `false` | Skip the baseline comparison |
 | `--update-baseline` | `false` | Save this run as the model's baseline (full scenario set, built-in prompts only) |
 | `--turn-timeout` | `5m` | Time limit for one model turn |
-| `--judge-base-url` | (coach's) | Judge API (`$APP_EVAL_JUDGE_BASE_URL`) |
-| `--judge-model` | | Judge model (`$APP_EVAL_JUDGE_MODEL`) |
-| `--judge-api-key` | | Judge API key (`$APP_EVAL_JUDGE_API_KEY`) |
+| `--judge-base-url` | (coach's) | Judge API (`$AGILECBT_EVAL_JUDGE_BASE_URL`) |
+| `--judge-model` | | Judge model (`$AGILECBT_EVAL_JUDGE_MODEL`) |
+| `--judge-api-key` | | Judge API key (`$AGILECBT_EVAL_JUDGE_API_KEY`) |
 
 ## `agilecbt version`
 

@@ -18,7 +18,7 @@ func writeFile(t *testing.T, path, body string) {
 }
 
 func TestResolvePrecedence(t *testing.T) {
-	for _, k := range []string{"APP_SECRET", "AGILECBT_LLM", "AGILECBT_MODEL", "AGILECBT_LLM_BASE_URL", "AGILECBT_LLM_API_KEY", "AGILECBT_LLM_REASONING_EFFORT", "APP_CRISIS_RESOURCES"} {
+	for _, k := range []string{"AGILECBT_SECRET", "AGILECBT_LLM", "AGILECBT_MODEL", "AGILECBT_LLM_BASE_URL", "AGILECBT_LLM_API_KEY", "AGILECBT_LLM_REASONING_EFFORT", "AGILECBT_CRISIS_RESOURCES"} {
 		// t.Setenv then Unsetenv restores the original value after the test.
 		t.Setenv(k, "")
 		os.Unsetenv(k)
@@ -58,7 +58,7 @@ Call my sister: 555-0100.
 	}
 
 	// A set-but-empty variable still wins, e.g. to turn auth off.
-	t.Setenv("APP_SECRET", "")
+	t.Setenv("AGILECBT_SECRET", "")
 	if c, _, _ = resolve([]string{user}); c.Secret != "" {
 		t.Fatalf("secret = %q, want empty", c.Secret)
 	}
@@ -86,9 +86,9 @@ func TestResolveDefaults(t *testing.T) {
 	}
 }
 
-func TestResolveRejectsRemovedBackends(t *testing.T) {
-	t.Setenv("AGILECBT_LLM", "claude-code")
-	if _, _, err := resolve(nil); err == nil || !strings.Contains(err.Error(), "removed") {
-		t.Fatalf("err = %v, want removed backend", err)
+func TestResolveRejectsUnknownLLM(t *testing.T) {
+	t.Setenv("AGILECBT_LLM", "bogus")
+	if _, _, err := resolve(nil); err == nil || !strings.Contains(err.Error(), "want openai or none") {
+		t.Fatalf("err = %v, want unknown llm", err)
 	}
 }

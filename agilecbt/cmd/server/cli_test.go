@@ -40,14 +40,14 @@ func TestResolveURL(t *testing.T) {
 	})
 
 	t.Run("env wins over default", func(t *testing.T) {
-		t.Setenv("APP_URL", "http://env:1234")
+		t.Setenv("AGILECBT_URL", "http://env:1234")
 		if got := runLeaf(t); got != "http://env:1234" {
 			t.Errorf("resolveURL = %q, want env value", got)
 		}
 	})
 
 	t.Run("explicit flag wins over env", func(t *testing.T) {
-		t.Setenv("APP_URL", "http://env:1234")
+		t.Setenv("AGILECBT_URL", "http://env:1234")
 		if got := runLeaf(t, "--server", "http://flag:5678"); got != "http://flag:5678" {
 			t.Errorf("resolveURL = %q, want flag value", got)
 		}

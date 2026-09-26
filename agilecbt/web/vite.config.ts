@@ -17,7 +17,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": `http://${process.env.APP_BACKEND ?? "localhost:8080"}`,
+      "/api": `http://${process.env.AGILECBT_BACKEND ?? "localhost:8080"}`,
     },
   },
 });

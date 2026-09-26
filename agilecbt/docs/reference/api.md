@@ -15,14 +15,14 @@ of the form `{"error": "message"}`.
 
 ## Authentication
 
-When `APP_SECRET` is set, everything under `/api/` (except `health`, `login`,
+When `AGILECBT_SECRET` is set, everything under `/api/` (except `health`, `login`,
 and `logout`) and `/mcp` requires either:
 
 - the `agilecbt_session` cookie set by `POST /api/login`, or
-- an `Authorization: Bearer <APP_SECRET>` header (CLI, scripts, MCP clients).
+- an `Authorization: Bearer <AGILECBT_SECRET>` header (CLI, scripts, MCP clients).
 
 The cookie holds an HMAC derived from the secret, not the secret itself, so
-rotating `APP_SECRET` logs out every browser.
+rotating `AGILECBT_SECRET` logs out every browser.
 
 ### `POST /api/login`
 

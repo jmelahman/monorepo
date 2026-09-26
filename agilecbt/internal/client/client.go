@@ -140,7 +140,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 			return fmt.Errorf("%s %s: %s", method, path, e.Error)
 		}
 		if resp.StatusCode == http.StatusUnauthorized {
-			return fmt.Errorf("%s %s: unauthorized (set APP_SECRET)", method, path)
+			return fmt.Errorf("%s %s: unauthorized (set AGILECBT_SECRET)", method, path)
 		}
 		return fmt.Errorf("%s %s: unexpected status %d", method, path, resp.StatusCode)
 	}

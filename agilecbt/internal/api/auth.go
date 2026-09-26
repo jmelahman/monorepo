@@ -11,7 +11,7 @@ import (
 )
 
 // sessionCookie holds a token derived from the secret, so rotating
-// APP_SECRET logs out every browser.
+// AGILECBT_SECRET logs out every browser.
 const sessionCookie = "agilecbt_session"
 
 // sessionToken derives the cookie value from the secret. It is not the secret

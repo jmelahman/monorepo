@@ -32,7 +32,7 @@ cd web && bun install && bun run dev --host 0.0.0.0
 **Frontend against a non-default backend** (`:5174`):
 
 ```bash
-cd web && bun install && APP_BACKEND=localhost:8080 bun run dev --host 0.0.0.0 --port 5174
+cd web && bun install && AGILECBT_BACKEND=localhost:8080 bun run dev --host 0.0.0.0 --port 5174
 ```
 
 Wait for both to be reachable before navigating:

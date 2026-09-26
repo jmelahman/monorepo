@@ -77,9 +77,9 @@ regresses against the baseline. See docs/guide/benchmarks.md.`,
 	fl.BoolVar(&f.noBaseline, "no-baseline", false, "Don't compare against the baseline")
 	fl.BoolVar(&f.updateBaseline, "update-baseline", false, "Save this run as the model's baseline")
 	fl.DurationVar(&f.turnTimeout, "turn-timeout", 5*time.Minute, "Time limit for one model turn")
-	fl.StringVar(&f.judgeBaseURL, "judge-base-url", os.Getenv("APP_EVAL_JUDGE_BASE_URL"), "OpenAI-compatible API for the rubric judge ($APP_EVAL_JUDGE_BASE_URL; default: the coach's)")
-	fl.StringVar(&f.judgeModel, "judge-model", os.Getenv("APP_EVAL_JUDGE_MODEL"), "Judge model; rubric questions are skipped without one ($APP_EVAL_JUDGE_MODEL)")
-	fl.StringVar(&f.judgeAPIKey, "judge-api-key", "", "API key for the judge (default $APP_EVAL_JUDGE_API_KEY)")
+	fl.StringVar(&f.judgeBaseURL, "judge-base-url", os.Getenv("AGILECBT_EVAL_JUDGE_BASE_URL"), "OpenAI-compatible API for the rubric judge ($AGILECBT_EVAL_JUDGE_BASE_URL; default: the coach's)")
+	fl.StringVar(&f.judgeModel, "judge-model", os.Getenv("AGILECBT_EVAL_JUDGE_MODEL"), "Judge model; rubric questions are skipped without one ($AGILECBT_EVAL_JUDGE_MODEL)")
+	fl.StringVar(&f.judgeAPIKey, "judge-api-key", "", "API key for the judge (default $AGILECBT_EVAL_JUDGE_API_KEY)")
 	cmd.AddCommand(evalRenderCmd())
 	return cmd
 }
@@ -189,7 +189,7 @@ func runEval(cmd *cobra.Command, f evalFlags) error {
 			j.BaseURL = cfg.BaseURL
 		}
 		if j.APIKey == "" {
-			j.APIKey = os.Getenv("APP_EVAL_JUDGE_API_KEY")
+			j.APIKey = os.Getenv("AGILECBT_EVAL_JUDGE_API_KEY")
 		}
 		if j.APIKey == "" && j.BaseURL == cfg.BaseURL {
 			j.APIKey = cfg.APIKey

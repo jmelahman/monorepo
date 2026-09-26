@@ -85,7 +85,7 @@ func Root() *cobra.Command {
 		},
 	}
 	serve.Flags().StringVar(&addr, "addr", ":8080", "HTTP listen address")
-	serve.Flags().StringVar(&dataDir, "data-dir", "", "Override data directory (default: $APP_DATA_DIR or XDG)")
+	serve.Flags().StringVar(&dataDir, "data-dir", "", "Override data directory (default: $AGILECBT_DATA_DIR or XDG)")
 	serve.Flags().BoolVar(&inMemory, "in-memory", false, "Use an ephemeral in-memory SQLite database; all data is discarded on shutdown")
 	cmd.AddCommand(serve, evalCmd())
 
@@ -116,9 +116,6 @@ func run(addr, dataDirOverride string, inMemory bool) error {
 
 	a := app.New(store)
 	a.ConfigCrisisResources = cfg.CrisisResources
-	if cfg.CrisisResources == "" && a.LegacyCrisisResources() != "" {
-		log.Printf("WARNING: using the crisis resources saved from the old Settings page; crisis lines are now configuration, so move them to crisis_resources in config.toml (see docs/guide/configuration.md)")
-	}
 	reg := tools.New(a)
 	build := Build()
 	cur, err := newCurator(cfg, reg)
@@ -127,9 +124,9 @@ func run(addr, dataDirOverride string, inMemory bool) error {
 	}
 	if cfg.Secret == "" {
 		if isLoopback(addr) {
-			log.Printf("auth is off (APP_SECRET unset); fine for localhost only")
+			log.Printf("auth is off (AGILECBT_SECRET unset); fine for localhost only")
 		} else {
-			log.Printf("WARNING: APP_SECRET is unset and %s is reachable from other machines; anyone who can reach it can read your data", addr)
+			log.Printf("WARNING: AGILECBT_SECRET is unset and %s is reachable from other machines; anyone who can reach it can read your data", addr)
 		}
 	}
 

@@ -40,7 +40,7 @@ off, and every other feature keeps working without it.
 Set a secret and listen on your LAN or tailnet address:
 
 ```sh
-APP_SECRET='something long' agilecbt serve --addr :8080
+AGILECBT_SECRET='something long' agilecbt serve --addr :8080
 ```
 
 Serve it over HTTPS, for example with `tailscale serve 8080`. Then open it on

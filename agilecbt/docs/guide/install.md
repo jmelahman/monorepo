@@ -15,7 +15,7 @@ Put `agilecbt` on your `PATH`.
 ## Docker
 
 ```sh
-APP_SECRET='something long' docker compose up -d --build
+AGILECBT_SECRET='something long' docker compose up -d --build
 ```
 
 `compose.yaml` points the coach at Ollama on the host

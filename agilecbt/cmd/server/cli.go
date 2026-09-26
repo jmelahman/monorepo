@@ -23,10 +23,10 @@ func addClientCommands(root *cobra.Command) {
 	root.AddCommand(todayCmd(), goalCmd(), stepCmd(), exportCmd(), importCmd())
 }
 
-// resolveURL returns the effective server URL for a leaf command. APP_URL
+// resolveURL returns the effective server URL for a leaf command. AGILECBT_URL
 // wins only when the user didn't explicitly pass --server.
 func resolveURL(cmd *cobra.Command, serverURL string) string {
-	if env := os.Getenv("APP_URL"); env != "" && !cmd.Flags().Changed("server") {
+	if env := os.Getenv("AGILECBT_URL"); env != "" && !cmd.Flags().Changed("server") {
 		return env
 	}
 	return serverURL
@@ -40,9 +40,9 @@ func addServerFlag(parent *cobra.Command, dst *string) {
 }
 
 // newClient builds an API client for a leaf, authenticating with
-// $APP_SECRET when set.
+// $AGILECBT_SECRET when set.
 func newClient(cmd *cobra.Command, serverURL string) *client.Client {
-	return client.New(resolveURL(cmd, serverURL), os.Getenv("APP_SECRET"), nil)
+	return client.New(resolveURL(cmd, serverURL), os.Getenv("AGILECBT_SECRET"), nil)
 }
 
 func todayCmd() *cobra.Command {

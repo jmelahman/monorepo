@@ -95,7 +95,7 @@ func TestConfiguredOverridesAndKeyBinding(t *testing.T) {
 	}
 
 	for _, bad := range []map[string]*string{
-		{"llm": ptr("claude-code")},
+		{"llm": ptr("bogus")},
 		{"base_url": ptr("ftp://x")},
 		{"reasoning_effort": ptr("max")},
 		{"secret": ptr("x")},

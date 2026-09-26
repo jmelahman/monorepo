@@ -60,7 +60,7 @@
       "options": {
         "cwd": "${workspaceFolder}/web",
         "env": {
-          "APP_BACKEND": "localhost:8080"
+          "AGILECBT_BACKEND": "localhost:8080"
         }
       }
     },
