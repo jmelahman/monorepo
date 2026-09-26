@@ -487,7 +487,6 @@ export type Strings = {
       skipTo: (level: number) => string
       /** Said once, under the rule, rather than at every rung. */
       andBelow: string
-      noRule: string
       askTitle: (level: number) => string
       /** The rung's name, in bold, ahead of what it does. */
       ruleLabel: (name: string) => string

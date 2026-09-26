@@ -581,7 +581,6 @@ export const es: Strings = {
       locked: "Bloqueada",
       skipTo: (level) => `Saltar a la ascensión ${level}`,
       andBelow: "Y todas las reglas por debajo, también.",
-      noRule: "El juego tal como está escrito, sin nada más que se te pida.",
       askTitle: (level) => `¿Saltar a la ascensión ${level}?`,
       ruleLabel: (name) => `${name}:`,
       askAndBelow: "Más todas las reglas por debajo.",

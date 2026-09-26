@@ -75,6 +75,14 @@
    */
   --pace: 1;
 
+  /*
+   * The one curve for anything answering a finger. The built-in `ease` spends
+   * its first third getting going, which under a thumb reads as the button
+   * thinking about it; this one is most of the way there in the first frame and
+   * spends the rest settling, so the press lands with the touch.
+   */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -135,6 +143,20 @@ button {
   background: none;
   border: none;
   cursor: pointer;
+}
+
+/* The line icons from `icons.ts`. Sized like a glyph and drawn in the colour
+   of whatever holds them, so a caller changes one with `color` and never has to
+   know it is an SVG. */
+.icon {
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /*
@@ -1744,6 +1766,32 @@ button {
 .shop-actions {
   display: flex;
   gap: 0.5rem;
+  /* The two ways out of the shop, at the foot of the screen where the thumb
+     already is. They used to sit between the shelf and the tray, which put Next
+     round mid-screen on a short shop and pushed the tray under the fold on a
+     long one: the one button pressed every shop was the one that moved. */
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+/*
+ * A refusal in the shop (too poor, tray full) has to land above the two buttons
+ * it is most likely about, not on top of them. One button's height, its own
+ * padding, and the same gap the round screen leaves over its keyboard.
+ */
+.shop-screen {
+  --toast-lift: calc(2.875rem + 0.5rem + 1rem);
+}
+
+/*
+ * No rarity pip on a card for sale. The pip is for the tray, where a relic is a
+ * 3rem chip and its edge colour alone is hard to tell apart from its
+ * neighbour's; a shop card already says its rarity with a 3px edge and a tinted
+ * face, and its top-right corner is where the kind tag sits, which the pip was
+ * drawn straight through.
+ */
+.shop-item::after {
+  display: none;
 }
 
 /*
@@ -2059,6 +2107,54 @@ button {
   opacity: 0.4;
 }
 
+/*
+ * Press feedback. Every one of these used to do nothing visible between the
+ * finger landing and the screen being rebuilt, which on a slow phone is long
+ * enough to tap again. A 3% give is felt more than seen, which is the point:
+ * it answers the touch without pretending the action has happened.
+ *
+ * `:active` and no `:hover`, on purpose. The APK's WebView answers hover
+ * queries like a desktop (see `bindTips`), and a hover state on a screen that is
+ * rebuilt under a still finger is one that sticks to whatever button is drawn
+ * where the last one was.
+ *
+ * A transition, so it is off the pace dial with every other per-touch
+ * transition (see `--pace`), and killed outright by the reduced-motion block,
+ * which leaves the press instant rather than gone.
+ */
+.primary,
+.secondary,
+.danger,
+.setting,
+.shop-item,
+.menu-button,
+.shapes-line,
+.mute,
+.ladder-step,
+.title-pill,
+.title-sound {
+  transition: transform 120ms var(--ease-out);
+}
+
+.primary:active:not(:disabled),
+.secondary:active:not(:disabled),
+.danger:active:not(:disabled),
+.shop-item:active:not(:disabled),
+.menu-button:active,
+.shapes-line:active,
+.mute:active,
+.ladder-step:active:not(:disabled),
+.title-pill:active,
+.title-sound:active {
+  transform: scale(0.97);
+}
+
+/* The rows of a list give by darkening rather than shrinking: a row that
+   narrows pulls away from the dividers above and below it. */
+.setting:active:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
 .panel {
   width: min(100%, 22rem);
   display: flex;
@@ -2089,7 +2185,10 @@ button {
 .banner {
   font-size: 1.75rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  /* Tightened, not tracked: at 28px and 800 the default spacing already reads
+     loose, and positive tracking on a mixed-case word is a caption's look. */
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .banner.win {
@@ -2102,7 +2201,6 @@ button {
 .answer-note {
   font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
 }
 
 .score-note {
@@ -2357,28 +2455,175 @@ button {
 /* ---------------------------------------------------------------- title */
 
 /*
- * The first thing anyone sees, so it gets the one gradient fill in the game: lit
- * from above like the tokens and the cards are, which is the whole of the visual
- * grammar here: everything is an object on a table under one light.
+ * The first thing anyone sees, drawn in the game's own material: the top of a
+ * board, two empty rows and then the name as the row being played. It was the
+ * name alone in a centred stack of buttons, which read as a menu with a logo on
+ * it; the board is what says "this is the game" before a word has been read.
+ *
+ * Top-down rather than centred, with the footer on the floor: the masthead
+ * starts where a board would, the controls follow it, and the slack sits between
+ * the last button and the footer, where the thumb is not.
+ *
+ * The one lit surface in the app is here: a radial wash behind the board, the
+ * panel colour at its brightest and `--bg` well before the edges. It is painted
+ * on `#app` rather than on the screen, because `.screen` stops at 30rem and a
+ * wash clipped to that column was a lit rectangle on a desktop, with hard edges
+ * wherever the ellipse had not reached `--bg` yet. `:has` is how the shell
+ * learns which screen it holds without the views reaching up to tell it; where
+ * it is not supported the title is simply flat, which is what it was.
+ *
+ * The ellipse is capped in width so that on a wide window it stays a light over
+ * the board rather than stretching into a band across the whole monitor. By a
+ * breakpoint rather than `min(120%, 48rem)`, which Blink rejects as a gradient
+ * size and drops the whole declaration over: the title went flat on every
+ * screen. The breakpoint sits where 120% of the viewport *is* 48rem, so the two
+ * branches meet without a step.
  */
-.title-name {
-  font-size: 3.5rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  /* Indented by the tracking it adds to the last letter, or it reads off-center
-     even though the box is not. */
-  text-indent: 0.15em;
-  background: linear-gradient(175deg, #86d97f, var(--green) 55%, #2f6b2c);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0.25rem 1rem color-mix(in srgb, var(--green) 45%, transparent));
+#app:has(> .screen.title) {
+  --wash: 120%;
+  background: radial-gradient(
+    ellipse var(--wash) 55% at 50% 18%,
+    color-mix(in srgb, var(--panel) 70%, #2a3350) 0%,
+    color-mix(in srgb, var(--bg) 60%, var(--panel)) 45%,
+    var(--bg) 75%
+  );
 }
 
-.title-tag {
-  margin-top: -0.75rem;
+@media (min-width: 40rem) {
+  #app:has(> .screen.title) {
+    --wash: 48rem;
+  }
+}
+
+.screen.title {
+  container: title / inline-size;
+  gap: 0;
+  padding: clamp(1rem, 7svh, 4.5rem) 1.25rem 1rem;
+}
+
+.title-mast {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* A tile is a fifth of the row, less the gaps, up to the board's own 62px.
+     From the viewport rather than from the box, because the box is what the
+     tiles are sizing, and 2.5rem is `.screen.title`'s padding either side. */
+  --t: min(3.875rem, calc((100vw - 2.5rem - 4 * var(--g)) / 5));
+  --g: 0.375rem;
+}
+
+.title-ghost {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g);
+  margin-bottom: var(--g);
+}
+
+.title-ghost-row {
+  display: flex;
+  gap: var(--g);
+}
+
+/* The upper of the two is fainter, so the board reads as fading in from above
+   rather than as two rows of a grid somebody forgot to fill. */
+.title-ghost-row:first-child {
+  opacity: 0.35;
+}
+
+.title-ghost-row:last-child {
+  opacity: 0.6;
+}
+
+.title-ghost-tile {
+  width: var(--t);
+  height: var(--t);
+  border-radius: 0.375rem;
+  border: 2px solid var(--line);
+}
+
+/* Anchor for the score badge, and no wider than the row, so the badge's
+   offsets are measured from the last tile and not from the screen. */
+.title-word {
+  position: relative;
+}
+
+.title-name {
+  display: flex;
+  gap: var(--g);
+  font-size: calc(var(--t) * 0.58);
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* Lit from above like every other object on this table, and dropped onto it:
+   the shadow under the row is what lifts it off the ghosts above, which are
+   the same size and would otherwise read as the same thing filled in. */
+.title-tile {
+  display: grid;
+  place-items: center;
+  width: var(--t);
+  height: var(--t);
+  border-radius: 0.375rem;
+  background: var(--gray);
+  box-shadow:
+    inset 0 -0.3125rem 0 #0000004d,
+    0 0.5rem 1.125rem #00000073;
+}
+
+/* The wild, and the only colour in the row. Its shadow is its own green rather
+   than black, which is the nearest thing to a glow this table allows. */
+.title-tile.wild {
+  background: var(--green);
+  box-shadow:
+    inset 0 -0.3125rem 0 #00000038,
+    0 0.625rem 1.75rem color-mix(in srgb, var(--green) 40%, transparent);
+}
+
+/* Chips times mult, stuck to the corner at an angle as though slapped on after
+   the row was played. Dark figures on the two score colours because those are
+   the brightest fills in the palette and white on them is the lower contrast. */
+.title-score {
+  position: absolute;
+  top: -1rem;
+  right: -0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.1875rem;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  transform: rotate(6deg);
+}
+
+.title-chips,
+.title-mult {
+  padding: 0.1875rem 0.5rem;
+  border-radius: 0.375rem;
+  color: var(--bg);
+}
+
+.title-chips {
+  background: var(--chips);
+}
+
+.title-mult {
+  background: var(--mult);
+}
+
+.title-times {
+  font-size: 0.75rem;
   color: var(--muted);
-  font-size: 0.875rem;
+}
+
+/* Halfway between the text colour and muted: it is the second thing read on
+   the screen and the muted grey made it the last. */
+.title-tag {
+  margin-top: 1.125rem;
+  color: color-mix(in srgb, var(--fg) 50%, var(--muted));
+  font-size: 1rem;
+  text-align: center;
+  text-wrap: balance;
 }
 
 /*
@@ -2388,8 +2633,7 @@ button {
  * of as a caption on Play.
  */
 .title-record {
-  margin-top: -0.25rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0.5rem;
   color: var(--muted);
   font-size: 0.75rem;
   letter-spacing: 0.06em;
@@ -2515,45 +2759,37 @@ button {
   color: var(--muted);
 }
 
-.title {
-  /* Anchor for the build stamp below. */
-  position: relative;
-}
-
 /*
- * The difficulty dial. Sized to the Play button under it so the two read as one
- * control stack rather than as a widget parked above a button, and boxed the way
- * a shop slot is: this is the one thing on the screen that is being chosen.
+ * The difficulty dial, and the one thing on the screen that is being chosen,
+ * which is why it is a card when nothing else here is. A row that reads left to
+ * right the way the sentence under it does: which rung this is, then the two
+ * steps. It was centred between the `−` and `+`, which put the name where a
+ * thumb aimed at either button covered it.
  *
- * The height is pinned because the box is a stepper and a stepper is held down:
- * a rule that wraps to two lines where the last one wrapped to one moved the
- * Play button under the thumb already on its way to it. Measured by stepping all
- * 101 levels at 390 and at 320, the two ends of the widths this ever renders at,
- * and the tallest rung comes to 110: the earned edge, whose rule wraps to two lines
- * and whose carrot sits under it. Both widths agree, because the rule tops out at
- * two lines either way. So 7rem, two pixels of slack over the worst case.
+ * The height is pinned on every rung that has a rule (`.steps`, set in
+ * `ladder`), because a stepper is held down, and a rule that wraps to two lines
+ * where the last one wrapped to one moves the Play button under the thumb
+ * already on its way to it.
  *
- * It was 8rem while a two-line warning could sit under an unearned level, then
- * 7rem once that line was cut, then 6.375rem when the padding that warning had
- * needed turned out to be padding around nothing. It is back at 7rem now, and the
- * pixels bought there are the difference between the tallest rung being exact and
- * being cramped: at 6.75rem the sentence cleared the dial by 3px. Two of the four
- * went to the label's own gap (see `.ladder-level`), which is what the rest of
- * this comment's numbers were re-measured against.
+ * Measured by stepping all 101 rungs in all four languages at 390, 360 and 320.
+ * Three lines is the ceiling everywhere and four never happens; the box is
+ * 112.4 on a two-line rung and 130.6 on a three-line one. English at 390 is
+ * two lines on 99 rungs, but Spanish, French and German at 360 are three on
+ * 93 to 95 of them, and English at 320 is three on two (5 and 10, the two
+ * longest rules). A two-line pin would have held for one language at one width.
+ * So 8.25rem, a pixel and a half over the tallest, and Play and the dial's row
+ * are constant across every rung and every language at each width.
  *
- * What changed under it: the box is a column now, and the rule text takes the
- * slack instead of the foot of the box (see `.ladder-text`). A pin sized to the
- * tallest rung leaves every shorter rung holding the difference, and the height
- * that stops the Play button moving should not decide where the white sits
- * inside a card that isn't that tall. Stepping all 101 rungs at both widths: box
- * 112 throughout, Play constant, the dial's row at a constant 10 from the top,
- * nothing overflowing. Measured from the step row's bottom edge to the sentence's
- * first glyph, it lands 27.4 clear of the dial on a one-line rung, 18.4 on a
- * two-line one, 10.4 on the earned edge where the carrot is also in the box.
+ * What that costs is the English two-line rung at a phone's width, 18px taller
+ * than its sentence, which `.ladder-text` splits above and below the sentence
+ * rather than leaving at the foot of the card.
  *
- * That is the whole reason the measurement is written down: the next person to
- * delete a line needs to know these numbers were measured rather than chosen, or
- * the box will sit at its old height holding nothing forever.
+ * Rung zero is not pinned, and is the one deliberate exception. It has no rule
+ * and so no sentence, only the row, and at the pin it would be a 62px hole in
+ * the one card a new player reads. Stepping between zero and one moves Play by
+ * that much, once, at the floor of the ladder, where the `−` is dead and the
+ * `+` that leaves is in the row the pin never moves anyway. Before the first win
+ * zero also carries the carrot, and is 70 either way.
  *
  * `min-height` rather than `height`: at a root font much larger than 16px the
  * wrap counts are no longer the measured ones, and the failure worth having
@@ -2563,14 +2799,17 @@ button {
 .ladder {
   display: flex;
   flex-direction: column;
-  width: min(100%, 22rem);
-  min-height: 7rem;
-  margin-bottom: 0.5rem;
-  padding: 0.5625rem 0.625rem 0.5rem;
+  gap: 0.375rem;
+  width: 100%;
+  margin-top: 2rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
   border-radius: 0.75rem;
   border: 1px solid var(--line);
-  background: var(--panel);
-  text-align: center;
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+}
+
+.ladder.steps {
+  min-height: 8.25rem;
 }
 
 /* Lit only above zero, so the ordinary game does not wear a warning color. */
@@ -2582,90 +2821,41 @@ button {
 .ladder-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
 }
 
-/* Wider than it is tall, which is the one place the tightening shows. The row is
-   the tallest thing in the box and the only one whose height is arbitrary, so it
-   gave up the four pixels; the width stayed because the thumb aiming at a `+`
-   beside a `−` is aiming sideways, and it is the horizontal miss that costs a
-   rung. Square at 2.25rem before, and it is still the widest target on the
-   screen after the Play button. */
-.ladder-step {
-  flex: 0 0 auto;
-  width: 2.25rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  background: var(--panel-2);
-  color: var(--fg);
-  font-size: 1.125rem;
-  line-height: 1;
-}
-
-.ladder-step:disabled {
-  opacity: 0.3;
-}
-
-/* The `+` when the step it would take is off the earned ladder. Same footprint
-   as the `+` it replaces, so the row does not reflow as the boundary moves, and
-   a size below the glyph beside it: an emoji at 1.125rem is the loudest thing
-   on the title screen, and this is a door, not an alarm. */
-.ladder-step.shut {
-  font-size: 0.875rem;
-}
-
-/* The two lines of the label, which rung this is and what it is called, with
-   air between them bought out of the leading rather than out of the box. The gap
-   was 1px, which put 2.3 between the glyphs against the 29.6 to the sentence
-   below: a ratio that read as one crushed line rather than as two.
-
-   Five pixels is what the row can hold. The `−` and `+` set the row's height at
-   32, and this column measures 15 + gap + 12.65; the gap only starts costing the
-   box anything past 4px, and the pin has four pixels of slack over the tallest
-   rung to spend after that. Six would have cost 1.65 of them and left the earned
-   edge's sentence 3px clear of the dial, which is the cramp `6.75rem` was
-   rejected for. Hence also `line-height: 1` on the name and not here: the rule
-   line wraps to two on the earned edge, and tightening its leading to pay for the
-   gap would only move the crush one line down. */
 .ladder-level {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 0.3125rem;
-  line-height: 1.15;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
-/* Tabular figures because the line is centered: anything that changes its width
-   slides every glyph in it, and the one the eye catches sliding is the lock, which
-   is supposed to sit still and mean one thing. Measured here, stepping every rung
-   from 2 to 100, the lock moves at exactly two places, 9 to 10 and 99 to 100, four
-   and a half pixels each, because the digits of the font this resolves to are all
-   one width already. Those two are a digit arriving, they are allowed, and buying
-   them off costs a reserved slot's worth of air after the word at every level below
-   ten. This line is the guard for the fonts where the figures are *not* uniform:
-   Segoe UI sets a narrow 1, and there the same stepper would twitch on nearly every
-   press. Free where it is not needed, which is why it is here rather than measured
-   again on every platform the thing ships to. */
+/* Tabular figures because a width that changes with the level slides the lock
+   after it, which is supposed to sit still and mean one thing. Segoe UI sets a
+   narrow 1, and there the lock would twitch on nearly every press; elsewhere the
+   digits are one width already and this costs nothing. */
 .ladder-name {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.3125rem;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
-  /* Always one line, since "Ascension 100" fits at 320, so the leading under it is
-     dead space held between two lines it is not separating. Given to the column's
-     gap instead, where it is visible. */
+  gap: 0.375rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Smaller than the text it sits beside: it is a state, not a heading, and an
-   emoji rendered at its natural weight would outshout the level it marks. */
+/* Gold, as every "not earned yet" on this screen is, and smaller than the name
+   it follows: it is a state, not a heading. */
 .ladder-lock {
-  font-size: 0.75rem;
-  line-height: 1;
+  display: inline-flex;
+  color: var(--gold);
+}
+
+.ladder-lock .icon {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .ladder-rule {
@@ -2674,40 +2864,59 @@ button {
   color: var(--mult);
 }
 
-/* Takes the slack rather than leaving it at the foot of the box, and centers
-   itself in whatever it took.
+/* A thumb's width in both directions. They were 36 by 32 while the name sat
+   between them and the row had to fit three things; with the name on the left
+   the steps have the room, and the `+` is the one control here pressed ten
+   times in a row. */
+.ladder-step {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.625rem;
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 1.25rem;
+  line-height: 1;
+}
 
-   It used to reserve two lines whether the rule needed two or one, so that the
-   line under it sat at a constant height on every rung. That was worth its 16px
-   when every unearned rung had a line under it; now only rung zero does, and
-   only until the first win, with no second note anywhere to hold level with. What
-   the reservation actually bought, at the end, was a blank line above 17px of
-   dead box: 41px of white under a one-line rule against 8px over the dial.
+.ladder-step:disabled {
+  opacity: 0.3;
+}
 
-   The dial keeps its anchor at the top, because it is the thing a thumb aims at
-   and it is the only part of the box that is pressed. Everything the pin does
-   not need goes here instead, split above and below the sentence: 27.4 above and
-   30.6 below on a one-line rung, 18.4 and 21.6 on a two-line one, 10.4 and 10 on
-   the earned edge where the carrot takes the foot. Centering the whole column
-   instead would have shared the slack the same way and taken the dial with it,
-   sliding the buttons 8px up the box on whichever rung happened to wrap. */
+/* The `+` when the step it would take is off the earned ladder: the same
+   square with a gold padlock in it. A door, not an alarm, so the lock is drawn
+   in a line and not filled. */
+.ladder-step.shut {
+  color: var(--gold);
+}
+
+.ladder-step .icon {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.2;
+}
+
+/* Takes the pin's slack and centres itself in it, so a two-line rule inside a
+   three-line box has air on both sides of it rather than a strip of dead card
+   under it. The row keeps its anchor at the top, because it is the part that
+   is pressed. */
 .ladder-text {
   display: flex;
   flex: 1;
   align-items: center;
-  justify-content: center;
-  margin-top: 0.375rem;
-  font-size: 0.75rem;
-  line-height: 1.35;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   color: var(--muted);
+  text-wrap: pretty;
 }
 
 /* The carrot, and the only forward-looking line on the screen. */
 .ladder-note {
-  margin-top: 0.1875rem;
-  font-size: 0.6875rem;
-  letter-spacing: 0.04em;
-  color: color-mix(in srgb, var(--gold) 80%, var(--muted));
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--gold);
 }
 
 /* Dimmed, not alarmed. The box keeps whatever color its level earned it and
@@ -2717,22 +2926,136 @@ button {
   border-color: color-mix(in srgb, var(--muted) 55%, transparent);
 }
 
+/* The bevel the tiles wear, and a glow under it held to the gap below. It was
+   `0 8px 20px` at 25%, the same size as the 5 tile's, and at this width and
+   10px above the row under it that lay across the top of How to play and
+   Codex like a stain; the tile can afford a wide one because nothing sits under
+   it. Tightened to a 12px blur and 18% so it has faded out inside the 12px gap,
+   which keeps Play lit without lighting its neighbours. */
+.primary.title-play {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 3.5rem;
+  margin-top: 0.875rem;
+  border-radius: 0.625rem;
+  font-size: 1.1875rem;
+  font-weight: 800;
+  box-shadow:
+    inset 0 -0.25rem 0 #00000040,
+    0 0.25rem 0.75rem color-mix(in srgb, var(--green) 18%, transparent);
+}
+
+.title-more {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.625rem;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+/* The labels may wrap: "Spielanleitung" beside its icon is wider than half a
+   320px screen, and two lines in a 48px button is better than a clipped word. */
+.title-more .secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4375rem;
+  min-height: 3rem;
+  padding: 0.375rem 0.25rem;
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  line-height: 1.15;
+  box-shadow: inset 0 -0.1875rem 0 #00000040;
+}
+
+.title-more .icon {
+  color: var(--muted);
+}
+
+/* On the floor, and three things that are about the device rather than the
+   game: its language, its build, its sound.
+
+   A grid of two equal outer columns rather than `space-between`, so the stamp
+   sits on the centre line whatever the pill beside it says. Between, it was
+   centred in the leftover space, and the pill runs from 102.3 ("English") to
+   109.4 ("Français"), so every language switch nudged the version sideways by
+   half the difference. Measured at 390, the stamp's left edge is now 141.9 in
+   all four.
+
+   The row needs two of the widest pill plus the 106.2 stamp and the gaps, 344,
+   which is 21.5rem of the screen's content box (a container query measures
+   inside the padding, so a 390 phone has 350 and keeps the row). Below that an outer column
+   cannot hold "Français" and the columns would stop being equal, which is the
+   shift again by another route, so the stamp drops to a line of its own under
+   the other two. Queried on the screen, since a container cannot query itself. */
+.title-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: "lang build sound";
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+@container title (max-width: 21.5rem) {
+  /* "Spielanleitung" alone is 125px at this size and half the row is 135 at
+     320; with the icon beside it the icon was pushed out of the button. It
+     needs 158 with the icon, which is a 326 column, close enough to the
+     footer's 344 that one breakpoint serves both. The
+     label is the thing that says where the button goes, so the icon is what
+     yields, in every language at once rather than only in the long ones. */
+  .title-more .icon {
+    display: none;
+  }
+
+  .title-foot {
+    grid-template-columns: auto auto;
+    grid-template-areas: "lang sound" "build build";
+    justify-content: space-between;
+  }
+
+  .title-build {
+    justify-self: center;
+  }
+}
+
+.title-pill {
+  grid-area: lang;
+  justify-self: start;
+  height: 2.75rem;
+  padding: 0 0.875rem;
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--fg) 50%, var(--muted));
+}
+
+.title-sound {
+  grid-area: sound;
+  justify-self: end;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: var(--panel);
+  color: color-mix(in srgb, var(--fg) 50%, var(--muted));
+}
+
 /*
- * Pulled out of the centered stack and pinned to the foot of the screen: it is a
- * fact about the binary, not part of the composition, and it should be findable
- * without ever competing with the Play button for attention.
+ * A fact about the binary, not part of the composition: findable, and never
+ * competing with the Play button for attention.
  *
  * Selectable against the app-wide `user-select: none`, because the one time this
  * text matters is when someone is quoting it into a bug report.
  */
 .title-build {
-  position: absolute;
-  /* `#app` already pays the safe-area inset, so this is clear of the notch. */
-  bottom: 0.75rem;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 0.625rem;
+  grid-area: build;
+  white-space: nowrap;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   color: var(--muted);
   opacity: 0.65;
@@ -2904,6 +3227,10 @@ button {
   cursor: pointer;
   font-weight: 700;
   list-style: none;
+  /* The section names are the table of contents, and inherited the sheet's
+     muted body colour, which set the headings a step quieter than the counts
+     beside them. */
+  color: var(--fg);
 }
 
 /* Safari still draws its own marker through `list-style`. */
@@ -2937,13 +3264,95 @@ button {
   gap: 0.5rem;
 }
 
+/*
+ * The pause sheet's settings, as one grouped list rather than four more
+ * full-width buttons. They were the same green-less `.secondary` slab as Codex
+ * and Quit, seven buttons stacked at one weight, and the eye had nothing to
+ * sort them by: the four that change a preference and come straight back, and
+ * the three that take you somewhere. A list of rows is the shape every phone
+ * already uses for the first kind, which is why it needs no explaining here.
+ */
+.settings {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.5rem;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  /* 44px, the thumb's floor, as a minimum rather than a padding sum, so a
+     label that wraps in German grows the row instead of crowding it. */
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.setting + .setting {
+  border-top: 1px solid var(--line);
+}
+
+.setting:disabled {
+  color: var(--muted);
+}
+
+/* The flag and the name sit on the left with the other labels, where the
+   centred look `.lang-button` gives the title screen's copy would leave this
+   one row floating in the middle of a list. */
+.setting.lang-button {
+  justify-content: flex-start;
+}
+
+/*
+ * The track. Drawn rather than an `<input type="checkbox">`, because the row is
+ * the control and the track only reports on it; a real checkbox inside a
+ * button is two focus stops for one switch.
+ */
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: var(--gray);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+/* On is the game's own green, the colour a letter turns when it is right. No
+   transition on the knob: a tap rebuilds the sheet, so the track is always a
+   new node drawn in its final state and there is no old position to slide
+   from. The row's own press is the feedback. */
+.setting[aria-checked="true"] .switch {
+  background: var(--green);
+}
+
+.setting[aria-checked="true"] .switch::after {
+  transform: translateX(1rem);
+  background: var(--fg);
+}
+
 /* ------------------------------------------------------ language button */
 
 /*
- * One wrapping button, and a plain `.secondary` besides, which is the whole
- * point: it inherits its width from whichever stack it is in — 22rem beside Play
- * on the title screen, full-bleed in `.sheet-actions` — and needs no rule for
- * either. This block is only about the flag.
+ * One wrapping button that borrows its look from wherever it is: a plain
+ * `.secondary` in the title screen's stack, 22rem beside Play, and a `.setting`
+ * row in the pause sheet's list (see `.settings`), which is the one place it
+ * needs a rule of its own. This block is only about the flag.
  *
  * It was four buttons in a 2×2 grid, with a label above them; see
  * `languageButton` for the argument that replaced it.

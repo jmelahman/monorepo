@@ -591,7 +591,6 @@ export const de: Strings = {
       locked: "Gesperrt",
       skipTo: (level) => `Zu Aufstieg ${level} springen`,
       andBelow: "Und alle Regeln darunter, ebenfalls.",
-      noRule: "Das Spiel, wie es geschrieben ist, ohne zusätzliche Forderung.",
       askTitle: (level) => `Zu Aufstieg ${level} springen?`,
       ruleLabel: (name) => `${name}:`,
       askAndBelow: "Dazu alle Regeln darunter.",
@@ -625,8 +624,8 @@ export const de: Strings = {
       solving: {
         term: "Lösen multipliziert die Runde",
         text:
-          "Finde das Wort, und der ganze in der Runde angesammelte Haufen — nicht nur der " +
-          "Versuch, der gelöst hat — wird mit 1 plus deinen übrigen Versuchen multipliziert. " +
+          "Finde das Wort, und der ganze in der Runde angesammelte Haufen (nicht nur der " +
+          "Versuch, der gelöst hat) wird mit 1 plus deinen übrigen Versuchen multipliziert. " +
           "Dann endet die Runde sofort, ob das Ziel erreicht ist oder nicht.",
       },
       farming:

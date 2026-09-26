@@ -1699,14 +1699,22 @@ export class App {
    *
    * The sheet still wins where both apply. A button that opens a sheet is asking
    * for the sheet to be read, not to keep a ring on itself behind the backdrop.
+   *
+   * Except over a name the sheet itself is wearing. The pause sheet's settings
+   * are rebuilt by their own taps, and sending focus back to the sheet's top
+   * after each one made a keyboard player tab down through the list again to
+   * press the speed dial a second time. Looked up inside the sheet only, so a
+   * name on the board behind it can never pull focus out from under the sheet.
    */
   private holdFocus(keeping?: string): void {
     const sheet = this.root.querySelector<HTMLElement>(".sheet")
+    const named = (scope: ParentNode) =>
+      keeping ? scope.querySelector<HTMLElement>(`[data-focus="${keeping}"]`) : null
     if (!sheet) {
-      if (keeping) this.root.querySelector<HTMLElement>(`[data-focus="${keeping}"]`)?.focus()
+      named(this.root)?.focus()
       return
     }
-    if (!sheet.contains(document.activeElement)) sheet.focus()
+    if (!sheet.contains(document.activeElement)) (named(sheet) ?? sheet).focus()
   }
 
   /* ----------------------------------------------------------------- save */

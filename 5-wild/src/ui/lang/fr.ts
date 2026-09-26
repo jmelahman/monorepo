@@ -597,7 +597,6 @@ export const fr: Strings = {
       locked: "Verrouillé",
       skipTo: (level) => `Passer à l'ascension ${level}`,
       andBelow: "Et toutes les règles en dessous, aussi.",
-      noRule: "Le jeu tel qu'il est écrit, sans rien de plus demandé.",
       askTitle: (level) => `Passer à l'ascension ${level}\u00A0?`,
       ruleLabel: (name) => `${name}\u00A0:`,
       askAndBelow: "Plus toutes les règles en dessous.",

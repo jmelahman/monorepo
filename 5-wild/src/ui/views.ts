@@ -53,6 +53,7 @@ import {
 import type { CoachStep } from "./coach"
 import { h } from "./dom"
 import { money, formatNumber as num } from "./format"
+import { icon } from "./icons"
 import type { Lang, Rule, RuleOf, Section, SectionOf } from "./lang"
 import {
   ascensionCard,
@@ -1857,6 +1858,27 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
     shopShapes(state, on),
     h(
       "div",
+      { class: "owned" },
+      h(
+        "div",
+        { class: "owned-label" },
+        (state.relics.length > 0 ? copy.ownedSellable : copy.owned)(
+          state.relics.length,
+          difficultyOf(state).relicSlots,
+          state.consumables.length,
+          CONSUMABLE_SLOTS,
+        ),
+      ),
+      h("div", { class: "relics" }, ...owned),
+    ),
+    // The tray sits under the shelf it is priced against and the two buttons
+    // that leave the shop go last, pushed to the foot of the screen by
+    // `.shop-actions`. They were between the two, which put Next round at the
+    // middle of a phone with half the screen empty below it, and put the question
+    // "do I have room for this relic" a row further from the relic than it
+    // needed to be.
+    h(
+      "div",
       { class: "shop-actions" },
       h(
         "button",
@@ -1873,21 +1895,6 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
         { class: "primary", type: "button", onclick: () => on.nextRound() },
         copy.nextRound,
       ),
-    ),
-    h(
-      "div",
-      { class: "owned" },
-      h(
-        "div",
-        { class: "owned-label" },
-        (state.relics.length > 0 ? copy.ownedSellable : copy.owned)(
-          state.relics.length,
-          difficultyOf(state).relicSlots,
-          state.consumables.length,
-          CONSUMABLE_SLOTS,
-        ),
-      ),
-      h("div", { class: "relics" }, ...owned),
     ),
     h("div", { class: "relic-tip" }),
     h("div", { class: "toast" }),
@@ -2024,12 +2031,13 @@ function cleared(state: RunState, won: boolean): HTMLElement | null {
  * See `cycleLanguage` in `app.ts` for the half of this that is not the label:
  * the interface changes now, the run keeps the words it was dealt from.
  */
-function languageButton(on: Handlers, chrome: Chrome): HTMLElement {
+function languageButton(on: Handlers, chrome: Chrome, look = "secondary"): HTMLElement {
   return h(
     "button",
     {
-      class: "secondary lang-button",
+      class: `${look} lang-button`,
       type: "button",
+      "data-focus": look === "setting" ? "lang" : undefined,
       "aria-label": `${ui().pause.language}: ${LANG_NAMES[chrome.lang]}`,
       onclick: () => on.cycleLanguage(),
     },
@@ -2062,34 +2070,128 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
   const common = ui().common
   return h(
     "div",
-    { class: "screen center title" },
-    h("h1", { class: "title-name" }, copy.name),
-    h("p", { class: "title-tag" }, copy.tagline),
-    record(meta, on),
-    ladder(on, meta),
-    h("button", { class: "primary", type: "button", onclick: () => on.newRun() }, common.play),
+    // Not `center`: the screen is a column that starts at the top and puts its
+    // footer on the floor, and centring it would float the whole stack in the
+    // middle with the footer's slack split above and below it.
+    { class: "screen title" },
     h(
-      "button",
-      { class: "secondary", type: "button", onclick: () => on.openHelp() },
-      common.howToPlay,
+      "div",
+      { class: "title-mast" },
+      // The name set as the first row of a board, with the rows above it still
+      // empty: the screen before a run is the board before a guess, and the two
+      // ghost rows say "a board" before anyone has read a word. They are drawn
+      // rather than said, so they are hidden from everything but the eye.
+      h(
+        "div",
+        { class: "title-ghost", "aria-hidden": "true" },
+        ...[0, 1].map(() =>
+          h(
+            "div",
+            { class: "title-ghost-row" },
+            ...Array.from({ length: 5 }, () => h("span", { class: "title-ghost-tile" })),
+          ),
+        ),
+      ),
+      h(
+        "div",
+        { class: "title-word" },
+        // The row itself, lit the way a solved guess is lit. The digit is the
+        // green, the wild in the name and the one letter "placed"; the four
+        // letters are gray, which is the colour of a guess the board has read
+        // and has nothing to say about. It was all five green with a gold digit,
+        // which is a won round and read as a logo rather than a board. The space
+        // is dropped rather than drawn: a sixth column would be a row a board
+        // does not have. The heading keeps the name as its accessible text.
+        h(
+          "h1",
+          { class: "title-name", "aria-label": copy.name },
+          ...[...copy.name.replace(/\s/g, "")].map((ch) =>
+            h(
+              "span",
+              { class: `title-tile ${/\d/.test(ch) ? "wild" : ""}`, "aria-hidden": "true" },
+              ch,
+            ),
+          ),
+        ),
+        // The other half of the game, pinned to the corner of the row the way a
+        // scored guess wears its badge: chips in their blue, mult in its red.
+        // Decoration, so figures and not a sentence, and nothing to translate.
+        h(
+          "div",
+          { class: "title-score", "aria-hidden": "true" },
+          h("span", { class: "title-chips" }, "+120"),
+          h("span", { class: "title-times" }, "×"),
+          h("span", { class: "title-mult" }, "4"),
+        ),
+      ),
+      h("p", { class: "title-tag" }, copy.tagline),
+      record(meta, on),
     ),
+    ladder(on, meta),
     h(
       "button",
-      { class: "secondary", type: "button", onclick: () => on.openCodex() },
-      common.codex,
+      { class: "primary title-play", type: "button", onclick: () => on.newRun() },
+      common.play,
+    ),
+    // Side by side rather than stacked under Play: two full-width grays under a
+    // full-width green made three buttons of one weight, and these two are where
+    // a player goes instead of playing, not after.
+    h(
+      "div",
+      { class: "title-more" },
+      h(
+        "button",
+        { class: "secondary", type: "button", onclick: () => on.openHelp() },
+        icon("help"),
+        common.howToPlay,
+      ),
+      h(
+        "button",
+        { class: "secondary", type: "button", onclick: () => on.openCodex() },
+        icon("book"),
+        common.codex,
+      ),
     ),
     // Here as well as on the pause sheet, and this is the copy that matters more
     // of the two: the title screen is the first screen anybody sees, and a
     // player who has landed on the wrong language needs the way out of it before
     // they have started a run, not from a menu inside one.
     //
-    // Last of the four rather than first, because the flag finds the eye on its
-    // own and the three above it are what the screen is for. No deferred-words
-    // line under it: `wordsDeferred` is false at the title by construction, and
-    // it is the only screen where that is true of every language.
-    languageButton(on, chrome),
-    muteButton(on, chrome),
-    h("p", { class: "title-build" }, buildStamp()),
+    // On the floor with the sound and the build stamp, because those three are
+    // settings of the device rather than of the game, and the flag finds the eye
+    // on its own wherever it sits. No deferred-words line beside it:
+    // `wordsDeferred` is false at the title by construction, and it is the only
+    // screen where that is true of every language.
+    h(
+      "div",
+      { class: "title-foot" },
+      languageButton(on, chrome, "title-pill"),
+      h("p", { class: "title-build" }, buildStamp()),
+      soundButton(on, chrome),
+    ),
+  )
+}
+
+/**
+ * The title screen's sound toggle: the speaker alone, in a circle the size of a
+ * thumb.
+ *
+ * Not `muteButton`, which the intro card keeps. That one is a word on a card
+ * that is itself a tap target; this one sits in a footer beside the language
+ * pill, where a second pill with "Sound on" in it made the floor a row of labels
+ * nobody was reading. The label moves to `aria-label`, and names the state the
+ * way the word did, so a screen reader hears what a sighted player sees drawn.
+ */
+function soundButton(on: Handlers, chrome: Chrome): HTMLElement {
+  return h(
+    "button",
+    {
+      class: "title-sound",
+      type: "button",
+      "aria-label": chrome.muted ? ui().common.soundOff : ui().common.soundOn,
+      onclick: () => on.mute(),
+    },
+    icon(chrome.muted ? "muted" : "sound"),
   )
 }
 
@@ -2338,7 +2440,7 @@ export function streakLine(meta: MetaState): string {
  * closing.
  *
  * Only the very first rung says in words what beating it would open, under the
- * description where a rung's second sentence belongs. That is the one rung whose
+ * row where every other rung's sentence goes, since zero has none of its own. That is the one rung whose
  * player may not know the ladder goes anywhere; from there on the lock carries
  * the whole message, and a sentence repeating it at every rung would be the box
  * selling something the player has already bought.
@@ -2374,30 +2476,41 @@ function ladder(on: Handlers, meta: MetaState): HTMLElement {
       label,
     )
 
+  // Only a rung with a rule is pinned. Zero has no sentence to hold a place
+  // for, and the pin sized for three lines of one would leave it a 62px hole
+  // under a single row. See `.ladder.steps` for what that costs and why it is
+  // the cheaper of the two.
+  const steps = rule != null
+
   return h(
     "div",
-    { class: `ladder ${level > 0 ? "lit" : ""} ${locked ? "locked" : ""}` },
+    {
+      class: `ladder ${level > 0 ? "lit" : ""} ${locked ? "locked" : ""} ${steps ? "steps" : ""}`,
+    },
     h(
       "div",
       { class: "ladder-row" },
-      step("−", level - 1, level > 0),
       h(
         "div",
         { class: "ladder-level" },
         h(
           "span",
           { class: "ladder-name" },
+          ui().common.ascension(level),
           // The lock rides the name rather than sitting in the note alone, so
           // the state is legible from the one line the eye lands on first.
-          locked && h("span", { class: "ladder-lock", "aria-label": copy.locked }, "🔒"),
-          ui().common.ascension(level),
+          locked &&
+            h(
+              "span",
+              { class: "ladder-lock", role: "img", "aria-label": copy.locked },
+              icon("lock"),
+            ),
         ),
-        // The second line of the dial is "what this rung is", and at zero there
-        // is no rule to be, so the slot stays empty. Zero's carrot used to sit
-        // here instead, which put the one line the box is trying to say in a
-        // different place than every other rung says it.
+        // The second line of the label is "what this rung is", and at zero
+        // there is no rule to be, so it is not drawn at all.
         rule && h("span", { class: "ladder-rule" }, ascensionCard(rule).name),
       ),
+      step("−", level - 1, level > 0),
       ahead
         ? h(
             "button",
@@ -2407,19 +2520,24 @@ function ladder(on: Handlers, meta: MetaState): HTMLElement {
               "aria-label": copy.skipTo(level + 1),
               onclick: () => on.askAscend(level + 1),
             },
-            "🔒",
+            icon("lock"),
           )
         : step("+", level + 1, level < MAX_ASCENSION),
     ),
-    h(
-      "p",
-      { class: "ladder-text" },
-      rule ? `${ascensionCard(rule).text}${level > 1 ? ` ${copy.andBelow}` : ""}` : copy.noRule,
-    ),
-    // One line under the description, and only ever the forward-looking one:
-    // what beating this rung would open. Under the description rather than in the
-    // dial because that is where a rung's second sentence goes, and the first
-    // rung is not a special case worth reading differently from the rest.
+    // Only a rung with a rule has a sentence. Zero used to say "the game as it
+    // is written, with nothing extra asked of you", which is the absence of a
+    // rule spelled out at length on the one rung a new player reads, and a line
+    // of prose standing between them and Play for no information at all.
+    rule &&
+      h(
+        "p",
+        { class: "ladder-text" },
+        `${ascensionCard(rule).text}${level > 1 ? ` ${copy.andBelow}` : ""}`,
+      ),
+    // One line under the row, and only ever the forward-looking one: what
+    // beating this rung would open. Where every other rung's sentence sits
+    // rather than in the dial, because the first rung is not a special case
+    // worth reading differently from the rest.
     //
     // The warning that used to displace it here is gone. It said the player had
     // not won yet, in a box whose lock says the same thing in a glyph and whose
@@ -2890,13 +3008,19 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
   return overlay(
     on,
     h("h2", { class: "sheet-title" }, copy.title),
+    // The four settings are one quiet list rather than four more buttons in the
+    // stack. Drawn as buttons they were the same size, color and weight as Resume
+    // and Quit, so the sheet read as eight equal choices when it is two kinds of
+    // thing: dials the player adjusts and leaves, and ways out of the sheet.
+    // Full-width rows rather than a 2×2 grid, because "Velocidad de animación ×1"
+    // and "Sonido desactivado" do not fit half a phone.
     h(
       "div",
-      { class: "sheet-actions" },
-      h(
-        "button",
-        { class: "secondary", type: "button", onclick: () => on.mute() },
+      { class: "settings" },
+      setting(
+        { "data-focus": "sound", onclick: () => on.mute() },
         chrome.muted ? common.soundOff : common.soundOn,
+        !chrome.muted,
       ),
       // Music gets its own switch rather than riding on the sound one: it plays
       // continuously, so it is the thing a player is most likely to want gone
@@ -2904,15 +3028,10 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       //
       // Muting sound silences it too, and the switch goes dead rather than
       // sitting there reading "Music on" over silence.
-      h(
-        "button",
-        {
-          class: "secondary",
-          type: "button",
-          disabled: chrome.muted,
-          onclick: () => on.toggleMusic(),
-        },
+      setting(
+        { "data-focus": "music", disabled: chrome.muted, onclick: () => on.toggleMusic() },
         chrome.muted || chrome.musicOff ? copy.musicOff : copy.musicOn,
+        !(chrome.muted || chrome.musicOff),
       ),
       // How fast the game plays what it has to say, and unlike the letter values
       // below it, this one belongs on the sheet. The argument that moved the
@@ -2926,18 +3045,8 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       // needs a legend and invites a second opinion about what brisk means;
       // "×2" is the whole of the arithmetic, and a player who wants the cascade
       // out of the way can tap until the number is big enough.
-      h(
-        "button",
-        { class: "secondary", type: "button", onclick: () => on.cycleSpeed() },
-        copy.speed(chrome.speed),
-      ),
-      languageButton(on, chrome),
-      // The honest footnote, on screen only while it is true. Changing the
-      // language repaints every sentence here immediately and does not touch the
-      // run: a run is dealt from one word list and keeps it, so the answer stays
-      // in the language it was drawn from. Said here and not on the title
-      // screen, because `wordsDeferred` needs a run open to be true at all.
-      chrome.wordsDeferred ? h("p", { class: "lang-note" }, copy.wordsNextRun) : null,
+      setting({ "data-focus": "speed", onclick: () => on.cycleSpeed() }, copy.speed(chrome.speed)),
+      languageButton(on, chrome, "setting"),
       // Letter values are not here. The board is dense by design, with a value on
       // every key and a pip on every modifier, and that density is the scoring
       // game asking to be played; some of the time the player is doing the other
@@ -2950,6 +3059,16 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       // states now is a further reason to leave it there: a segmented control
       // here would be the readable way to show them, and it would show them on
       // top of the board the reader needs to see to choose between them.
+    ),
+    // The honest footnote, on screen only while it is true. Changing the
+    // language repaints every sentence here immediately and does not touch the
+    // run: a run is dealt from one word list and keeps it, so the answer stays
+    // in the language it was drawn from. Said here and not on the title
+    // screen, because `wordsDeferred` needs a run open to be true at all.
+    chrome.wordsDeferred ? h("p", { class: "lang-note" }, copy.wordsNextRun) : null,
+    h(
+      "div",
+      { class: "sheet-actions" },
       h(
         "button",
         { class: "secondary", type: "button", onclick: () => on.openHelp() },
@@ -2967,6 +3086,38 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       { class: "primary", type: "button", onclick: () => on.closeOverlay() },
       copy.resume,
     ),
+  )
+}
+
+/**
+ * One row of the pause sheet's settings list.
+ *
+ * `on` is present only for the two that are switches, and draws the track at
+ * the row's end. The label already says the state ("Sound on"), which is the
+ * trouble with it alone: a button reading "Sound on" is equally a report and an
+ * instruction, and a player has to tap it to find out which. The track answers
+ * that without a word a translator has to be asked for, and `aria-checked` says
+ * the same to a screen reader.
+ *
+ * `data-focus` on each, so a keyboard player toggling sound keeps their place in
+ * the list across the rebuild instead of being thrown back to the sheet's top.
+ */
+function setting(
+  attrs: { "data-focus": string; disabled?: boolean; onclick: () => void },
+  label: string,
+  on?: boolean,
+): HTMLElement {
+  return h(
+    "button",
+    {
+      class: "setting",
+      type: "button",
+      role: on === undefined ? undefined : "switch",
+      "aria-checked": on === undefined ? undefined : String(on),
+      ...attrs,
+    },
+    h("span", { class: "setting-label" }, label),
+    on === undefined ? null : h("span", { class: "switch", "aria-hidden": "true" }),
   )
 }
 

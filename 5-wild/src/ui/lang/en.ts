@@ -642,7 +642,6 @@ export const en: Strings = {
       // Every level plays the rules below it as well, and saying so once here is
       // what stops the stepper reading as a menu of separate modes.
       andBelow: "Every rule below it, too.",
-      noRule: "The game as it is written, with nothing extra asked of you.",
       askTitle: (level) => `Skip to ascension ${level}?`,
       ruleLabel: (name) => `${name}:`,
       askAndBelow: "Plus every rule below it.",
