@@ -1,6 +1,6 @@
 # Install
 
-Pick whichever path matches your environment. All three give you the same `kanban` binary; the Docker image bakes it into a long-running container.
+Every option below installs the same `kanban` binary.
 
 ## With uv (recommended)
 
@@ -8,16 +8,11 @@ Pick whichever path matches your environment. All three give you the same `kanba
 uv tool install agentic-kanban
 ```
 
-This installs the binary to `~/.local/bin/kanban`. Make sure that's on your `PATH`.
+This puts `kanban` in `~/.local/bin`. Make sure that directory is on your `PATH`.
 
 ## With Docker
 
-The Docker image is the most "batteries-included" option — it ships with a Docker socket mount so kanban can spawn session containers, and it pre-mounts agent config dirs (`~/.claude` for Claude Code, `~/.pi/agent` for pi) so the harness picks up your existing credentials.
-
-The image entrypoint runs as the unprivileged `nonroot` user (UID/GID `65532`), not root. That means two things you need to plan for at run time:
-
-1. **Bind-mounted host paths must be writable by UID 65532.** Either `chown` the host directories (`$HOME/.local/share/kanban`, `$HOME/.config/kanban`, `$HOME/.claude`) to that UID, or pass `--user "$(id -u):$(id -g)"` to override the image's UID with your own (in which case the host paths can keep their normal ownership).
-2. **The bind-mounted docker socket must be group-accessible to the container user.** Add `--group-add "$(stat -c '%g' "${DOCKER_SOCK_PATH:-/var/run/docker.sock}")"` so the container process inherits the host group that owns the socket. Without it, `nonroot` cannot talk to `/var/run/docker.sock` and session spawning fails with `permission denied`.
+The image runs kanban as a long-lived service. It needs your Docker socket so it can start session containers. It also needs your agent config directories (`~/.claude` for Claude Code, `~/.pi/agent` for pi) so the agent can use your existing login.
 
 ```sh
 SOURCE=$HOME/code
@@ -44,38 +39,48 @@ docker run -d --name kanban \
   lahmanja/kanban:latest
 ```
 
-::: tip Hiding files from the diff view
-The session **diff** tab honors git's full ignore chain, including your **global** excludes — the file named by `core.excludesFile` in your `~/.gitconfig` (default `~/.config/git/ignore`). Both are mounted read-only above, so adding a pattern like `.claude/settings.local.json` to your global excludes keeps it out of every board's diff without editing each repo. If your `core.excludesFile` points at a non-default path such as `~/.gitignore`, mount that file too: `-v $HOME/.gitignore:$HOME/.gitignore:ro`.
+Set `SOURCE` to the directory holding your repositories. It's mounted at the same path inside the container, so board paths match on both sides.
 
-Your signing key is never mounted into the container, and kanban makes its own merge/squash commits with **signing disabled by default** — so a `commit.gpgsign = true` in the mounted gitconfig won't break merges. If you've mounted your signing key + agent and want kanban's commits signed, enable **Sign commits** in App Settings (or `[git] sign_commits = true` in `~/.config/kanban/config.toml`).
-:::
+The image runs as an unprivileged user (UID 65532) by default. The command above changes two things so it can reach your files and Docker:
+
+- `--user "$(id -u):$(id -g)"` runs the container as you, so the mounted directories stay writable without a `chown`.
+- `--group-add` adds the group that owns the Docker socket. Without it, starting a session fails with `permission denied`.
 
 ::: tip Rootless Docker
-Set `DOCKER_SOCK_PATH` in your shell to point at your rootless socket — see the [rootless Docker docs](https://docs.docker.com/engine/security/rootless/). The same value flows into `KANBAN_HOST_DOCKER_SOCK` so the host path is used as the bind source when kanban spawns session containers. On rootless setups the socket is typically owned by your own UID/GID, so `--user "$(id -u):$(id -g)" --group-add "$(stat -c '%g' "$DOCKER_SOCK_PATH")"` is usually enough — no `chown` needed.
+Point `DOCKER_SOCK_PATH` at your rootless socket before running the command. See the [rootless Docker docs](https://docs.docker.com/engine/security/rootless/). The same flags work unchanged.
 :::
+
+### Git config in the container
+
+The command mounts your `~/.gitconfig` and `~/.config/git` read-only. This does two things:
+
+- Your global ignore file (`core.excludesFile`) applies to the ticket diff. Add a pattern like `.claude/settings.local.json` there to hide it on every board. If `core.excludesFile` points somewhere else, such as `~/.gitignore`, mount that file too.
+- Kanban's merge commits use your name and email.
+
+Kanban doesn't sign its own commits by default, so `commit.gpgsign = true` in your config won't break merges. To sign them, mount your signing key and agent, then turn on **Sign commits** in the app settings.
 
 ## From GitHub Releases
 
-Prebuilt Linux/macOS/Windows binaries are attached to every tag on the [Releases page](https://github.com/jmelahman/agentic-kanban/releases). Drop the binary somewhere on your `PATH`.
+Download a Linux, macOS, or Windows binary from the [Releases page](https://github.com/jmelahman/agentic-kanban/releases) and put it on your `PATH`.
 
-## Build from source
+## From source
 
-You'll need Go 1.22+ and [Bun](https://bun.sh).
+You need Go and [Bun](https://bun.sh).
 
 ```sh
 git clone https://github.com/jmelahman/agentic-kanban
 cd agentic-kanban
-docker bake          # builds the multi-arch container image
-# ...or, for a local Go build:
 bun install --cwd web --frozen-lockfile && bun run --cwd web build
 go build -tags embed -o kanban
 ```
 
-## Verify
+To build the container image instead, run `docker bake`.
+
+## Check that it works
 
 ```sh
 kanban --version
 kanban serve
 ```
 
-The server starts listening on `:7474`. Open <http://localhost:7474/>.
+Then open <http://localhost:7474/>.

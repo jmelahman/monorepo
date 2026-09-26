@@ -1,158 +1,79 @@
 # Previews
 
-Every ticket branch can be deployed as a live preview: a real build of the
-branch's latest commit, served at its own subdomain like
+Kanban can build any ticket's branch and serve it at its own address, so you can try the change in a browser:
 
 ```
 http://a1b2c3d.my-board.preview.localhost:7474/
 ```
 
-Previews are powered by an embedded
-[local-preview](https://jmelahman.github.io/local-preview/) orchestrator:
-frontend and backend are content-addressed separately (commits that don't
-touch a side reuse the existing artifact and even the running backend
-process), backend processes start on demand, and backend state follows git
-lineage — a new backend version forks its data from the nearest deployed
-ancestor commit, so previews on one branch feel continuous while divergent
-branches can never corrupt each other. See the local-preview
-[concepts](https://jmelahman.github.io/local-preview/guide/concepts) page
-for how that works.
+Previews are built by an embedded copy of [local-preview](https://jmelahman.github.io/local-preview/). It only rebuilds the frontend or backend when that part changed. It starts backends on demand. A new backend starts with a copy of the data from the nearest ancestor commit that has a preview, so data on one branch never leaks into another. The local-preview [concepts](https://jmelahman.github.io/local-preview/guide/concepts) page explains the details.
 
-## Onboarding a repo
+## Setting up a repo
 
-The board's repo needs a preview manifest describing how to build and run
-it — either a dedicated
-[`preview.toml`](https://jmelahman.github.io/local-preview/reference/preview-toml)
-at the repo root, or the same schema under a `[previews]` table in the
-`.kanban.toml` the repo may already carry (`[previews.frontend]` /
-`[previews.backend]`; `preview.toml` wins when both exist — this repo's own
-`.kanban.toml` is a working example). That's the only setup — kanban
-registers the repo with the orchestrator automatically on the first deploy,
-and worktree branches are deployable as-is (they share the repo's object
-store). The manifest is always read from the deployed commit, so onboarding
-applies to commits made after it landed.
+Add a [`preview.toml`](https://jmelahman.github.io/local-preview/reference/preview-toml) to the repo root that describes how to build and run the app. You can put the same content under a `[previews]` table in `.kanban.toml` instead. If both exist, `preview.toml` wins. Kanban's own `.kanban.toml` is a working example.
+
+Kanban reads the manifest from the commit being built, so it only applies to commits made after you add it.
+
+To preview an app that needs a database or other services, see local-preview's [external dependencies](https://jmelahman.github.io/local-preview/guide/external-dependencies) guide.
 
 ### Repos you can't change
 
-Some boards track a repo whose upstream won't take a `preview.toml`. Those
-are onboarded from the **server side** instead: drop a manifest named for
-the board's slug in kanban's manifest directory, in the plain `preview.toml`
-schema.
+If you can't add a manifest to the repo, put one on the kanban server instead, named after the board's slug:
 
-```bash
-# Board "Onyx" (slug: onyx) → the manifest kanban looks for
-~/.config/preview/manifests/onyx.toml
+```
+~/.config/preview/manifests/<board-slug>.toml
 ```
 
-That's local-preview's own manifest directory, so a manifest written for the
-`preview` CLI works in kanban unchanged, and vice versa. It's read from the
-server's disk at build time rather than from the deployed commit — the
-tradeoff for onboarding a repo that can't carry its own contract: the
-manifest doesn't version with the code, so a commit that moves the build
-needs the manifest updated by hand.
+It uses the plain `preview.toml` format and is shared with the standalone `preview` CLI. Kanban only uses it when the commit has no manifest of its own. Since it isn't versioned with the code, update it by hand if the build changes. Set `KANBAN_PREVIEW_MANIFESTS` to use a different directory.
 
-In-repo sources win: kanban only falls back to this directory when the
-deployed commit has neither a `preview.toml` nor a `[previews]` table.
-Automatic deploy-on-idle honors it too — a board onboarded this way deploys
-on agent idle like any other.
+## Deploying
 
-Set `KANBAN_PREVIEW_MANIFESTS` to point elsewhere (a containerized kanban
-wants a mounted path, not the server user's home).
+Open a ticket's **previews** tab and click **deploy tip**. Kanban builds the branch's latest commit (not uncommitted changes) and shows the status, build logs, and a link when it's ready. `*.preview.localhost` works in modern browsers with no DNS setup.
 
-::: tip
-Previewing an app with real infrastructure — a database, a search engine, a
-model server — is what the manifest's `run_image`, `networks`, and `env`
-keys are for: you run the dependency stack once and every preview's
-processes join its docker network. local-preview's
-[external dependencies](https://jmelahman.github.io/local-preview/guide/external-dependencies)
-guide walks through exactly that.
-:::
+Kanban also deploys automatically whenever an agent finishes working, if the board has a manifest. Deploying a commit that's already built does nothing. Set `KANBAN_PREVIEW_AUTO_DEPLOY=0` to turn this off.
 
-## Using it
+### Build environment
 
-Open a ticket's session pane → **previews** tab → **deploy tip**. The deploy
-builds the branch's current commit (from the committed tree, never the
-working directory) and the row shows status, build logs, and the preview
-link once ready. `*.preview.localhost` resolves in every modern browser
-with no DNS setup.
+Builds run in the repo's devcontainer, using the devcontainer config from the commit being built. They share the session's cache volumes, so dependency downloads are reused. Repos without a devcontainer build in the bundled image. A manifest that names its own `image` uses that instead.
 
-Deploys are idempotent per commit — "deploy tip" after new agent commits
-builds only what changed.
+Set `KANBAN_PREVIEW_BUILDS=host` to build directly on the kanban host. Kanban also builds on the host if Docker isn't available.
 
 ## The previews dashboard
 
-The **preview** item in the header opens a dashboard over every deploy on
-the server, across every board — the fleet view the session tab's
-single-branch list can't give you.
+Click **preview** in the header to see every deploy across all boards. Each row shows the board, commit, branch, author, and status:
 
-Each row carries the board it belongs to, the commit, its branch and author,
-and a status badge that reads the build status until the deploy is ready and
-the live process state after that:
+| Status                | Meaning                                                  |
+| --------------------- | -------------------------------------------------------- |
+| `queued` / `building` | Waiting to build, or building.                           |
+| `ready`               | Built. A static site is served right away.               |
+| `idle`                | Built. The backend starts on the first request.          |
+| `starting`            | The backend is starting.                                 |
+| `running`             | The backend is running.                                  |
+| `failed`              | The build failed. Open the logs for details.             |
+| `evicted`             | Removed to save disk. Deploy again to rebuild.           |
 
-| Badge | Meaning |
-| --- | --- |
-| `queued` / `building` | Waiting for a build slot, or building now. |
-| `ready` | Built. Static preview — served instantly. |
-| `idle` | Built, backend not running — it starts on the first request. |
-| `starting` | A supervised process is warming up. |
-| `running` | Every side is warm. |
-| `failed` | The build failed; the error is on the row, the detail in the logs. |
-| `evicted` | Artifacts were cleaned up. Redeploy to rebuild. |
+From a row you can:
 
-Rows link out to the live preview, open the build log, and offer any
-[artifacts](#downloadable-artifacts) as downloads. Filter to one board with
-the board picker; the list polls once a second while anything is building or
-starting and every five seconds otherwise.
+- Open the preview, its build logs, or its [downloads](#downloads).
+- **stop** its backend. It returns to `idle` and starts again on the next request. Deploys built from identical output share a backend, so those stop too.
+- Delete it. Deploying the same commit later rebuilds it.
 
-Two lifecycle controls sit on each row:
+**deploy** in the dashboard builds any branch, tag, or commit on any board. Leave the ref empty to build the base branch, which is handy for comparing tickets against `main`.
 
-- **stop** — shown while a deploy is `starting` or `running`. It stops the
-  supervised processes and leaves the deploy in place, so it drops back to
-  `idle` and cold-starts on the next request. Processes are shared per
-  artifact hash, so a sibling deploy built to the same output stops too.
-- The trash icon **deletes** the deploy, reclaiming any build output no
-  surviving deploy still references. Sides are content-addressed, so a half
-  another deploy shares is kept. Redeploying the commit rebuilds it.
+## Disk usage
 
-**deploy** opens a dialog that deploys any ref of any git-linked board — a
-branch, a tag, a bare sha. Leave the ref empty to deploy the board's base
-branch, which is the usual way to get a preview of `main` alongside the
-ticket branches diverging from it.
+Every preview leaves build output, backend data, and logs behind. The database icon in the dashboard header opens **Storage & retention**, which shows disk usage by category and by board.
 
-## Storage and retention
+You can set two limits there:
 
-Every commit previewed leaves build output, backend state, and logs behind,
-so previews only ever grow until something reclaims them. The database icon
-in the dashboard header opens **Storage & retention**.
+- **Deploys per board** keeps the newest N.
+- **Max age (days)** removes deploys older than N days.
 
-The top half reports where the disk went — artifacts, backend state, logs,
-git mirrors, staging, and the orchestrator's own database — then breaks the
-total down per board, with each board's deploy count. Sizes are measured by
-walking the data dir, so they're read when you open the dialog rather than
-polled.
+Both are empty by default, so nothing is removed. Cleanup runs hourly, or immediately with **sweep now**. Removed deploys stay in the list as `evicted`. Kanban never removes a board's newest working preview, or anything still building.
 
-The bottom half is the policy that bounds it, with two independent limits:
+## Downloads
 
-- **Deploys per board** keeps at most N deploys, newest first.
-- **Max age (days)** evicts deploys older than N days.
-
-Leave a field empty for no limit; empty both and nothing is ever evicted,
-which is the default. A sweep runs hourly, and **sweep now** runs one
-immediately and reports what it freed.
-
-Eviction reclaims a deploy's bytes but keeps its row, which is what the
-`evicted` state in the table above means — the deploy stays visible as
-history and redeploying the same commit rebuilds it. A board's newest ready
-deploy is never evicted, so tight limits can't leave a board with no working
-preview, and neither are deploys still queued or building. Even with
-retention off, a sweep clears stale staging leftovers from interrupted
-builds.
-
-## Downloadable artifacts
-
-A manifest can also declare build outputs that are published for download
-rather than run — a CLI binary per commit, say — as
-`[artifacts.<name>]` sections:
+A manifest can also publish files for download instead of running them, such as a CLI binary for each commit:
 
 ```toml
 [artifacts.cli]
@@ -162,55 +83,15 @@ build = [["go", "build", "-o", "bin/mytool-linux-amd64", "."]]
 files = ["bin/mytool-linux-amd64"]
 ```
 
-They're hashed and cached like the other sides, so a commit that doesn't
-touch the artifact's partition reuses the existing build. Ready deploys list
-them in the previews tab as download links; files are addressed by base
-name, so base names must be unique within one artifact. Each artifact's
-build output also gets its own section in the deploy's build logs.
+Ready deploys list these as download links, each named after the file. File names must be unique within one artifact. This needs local-preview v0.1.2 or newer. Older versions reject any manifest that contains `[artifacts]`.
 
-::: tip
-Artifacts need local-preview v0.1.2 or newer. Earlier versions reject the
-whole manifest — `unknown keys: artifacts.<name>` — failing every deploy of
-a repo that declares them.
-:::
+## Settings
 
-## Automatic deploys
+| Variable                     | Default                       | Description                                                                  |
+| ---------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
+| `KANBAN_PREVIEW_DOMAIN`      | `preview.localhost`           | Domain previews are served under. Point a wildcard DNS record at kanban to use your own. |
+| `KANBAN_PREVIEW_BUILDS`      | `devcontainer`                | `host` builds on the kanban host.                                            |
+| `KANBAN_PREVIEW_AUTO_DEPLOY` | on                            | `0` turns off automatic deploys.                                             |
+| `KANBAN_PREVIEW_MANIFESTS`   | `~/.config/preview/manifests` | Directory for server-side manifests. Respects `$PREVIEW_CONFIG_DIR`.         |
 
-When an agent finishes a burst of work (its session transitions to idle),
-kanban automatically deploys the branch tip. Deploys are idempotent per
-commit, so an unchanged tip is a no-op — and the trigger only fires for
-boards that are onboarded (a manifest in the worktree, or a server-side one
-named for the board slug), so boards that haven't onboarded never accumulate
-failed deploys. Disable with `KANBAN_PREVIEW_AUTO_DEPLOY=0`.
-
-## Reproducible builds
-
-Build steps run inside the board repo's **devcontainer** by default: the
-devcontainer config is read from the deployed commit's tree (old commits
-build with the environment they shipped with), resolved through kanban's
-content-addressed image cache (unchanged configs reuse the image), and each
-step runs in a one-shot container with the extracted tree mounted. The
-devcontainer's named cache volumes are mounted alongside it and `HOME` points
-at the remote user's home, so Go and npm resolve their caches onto the same
-volumes the interactive session container uses and a repeat build starts
-warm. Repos without a devcontainer build in the builtin session image. Set
-`KANBAN_PREVIEW_BUILDS=host` to run build steps directly on the kanban host
-instead (or previews fall back to host builds automatically when Docker is
-unavailable). A manifest-declared `image` on a side beats devcontainer
-discovery — the repo's explicit contract wins.
-
-## Configuration
-
-| Env var | Default | Description |
-| --- | --- | --- |
-| `KANBAN_PREVIEW_DOMAIN` | `preview.localhost` | Base domain previews are served under. Point a wildcard DNS record at the kanban server to use a real domain. |
-| `KANBAN_PREVIEW_BUILDS` | `devcontainer` | Set to `host` to run build steps on the kanban host instead of in the repo's devcontainer. |
-| `KANBAN_PREVIEW_AUTO_DEPLOY` | on | Set to `0` to disable deploy-on-idle. |
-| `KANBAN_PREVIEW_MANIFESTS` | `$PREVIEW_CONFIG_DIR/manifests`, else `~/.config/preview/manifests` | Directory searched for out-of-repo manifests (`<board-slug>.toml`) for repos that can't carry their own. |
-
-Preview state (builds, artifacts, backend state, its own SQLite) lives under
-`<data-dir>/previews/`. With `--in-memory` it moves to a temp dir and an
-ephemeral DB. Deleting a board tears its previews down with it — running
-backends are stopped and the board's mirror clone, artifacts, state dirs,
-and build logs are removed. If the orchestrator can't start (e.g. `git` missing), kanban
-runs normally and the preview endpoints report unavailable.
+Preview data lives in `<data-dir>/previews/`. Deleting a board deletes its previews. If previews can't start, for example because `git` is missing, the rest of kanban still works.

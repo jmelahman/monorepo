@@ -1,381 +1,259 @@
 # Configuration
 
-Kanban reads two TOML files and merges them, with **user values overriding project values per key**:
+Kanban reads settings from two TOML files that share the same schema:
 
-- **Project**: `<repo>/.kanban.toml` — checked into the target repo, applies to every worktree of that repo.
-- **User**: `$XDG_CONFIG_HOME/kanban/config.toml` (falling back to `~/.config/kanban/config.toml`) — your personal overrides across all repos.
+- **Project**: `<repo>/.kanban.toml`, checked into the repo. It applies to every ticket on that repo's boards.
+- **User**: `~/.config/kanban/config.toml` (or `$XDG_CONFIG_HOME/kanban/config.toml`). It holds your personal settings across all repos.
 
-Either file may be absent. Both accept the same schema.
+Both are optional. When both set a key, the user file wins. On a [monorepo](./monorepos) board, a `.kanban.toml` in the subproject sits between the two. It overrides the repo root's file and is overridden by yours.
 
-A board scoped to a monorepo subdirectory adds a third layer in the middle,
-so precedence runs **repo root → subproject → user**: `<repo>/<project_dir>/.kanban.toml`
-overrides the repo-wide file key by key and inherits everything it doesn't
-set. See [Monorepos](/guide/monorepos).
+To use a different user file, pass `kanban serve --config <path>` or set `$KANBAN_CONFIG`.
 
-## Schema
+## Example
+
+Every key is shown below with its default unless noted.
 
 ```toml
 [harness]
-id = "claude"                 # default agent harness: "claude" or "pi"
+id = "claude"                 # default agent: "claude" or "pi"
 
 [worktrees]
-root = "/path/to/worktrees"   # parent dir for new worktrees (overrides --worktrees-dir)
+root = "/path/to/worktrees"   # where new worktrees go (unset by default)
 
-# How kanban makes its own merge/squash commits. sign_commits is off by
-# default: kanban forces signing off (`-c commit.gpgsign=false`) so merges
-# never fail when the container has no signing key. Turn it on — also via the
-# App Settings dialog — only when you've mounted your signing key/agent into
-# the container and want kanban's commits signed; kanban then defers to your
-# gitconfig's commit.gpgsign.
+[branches]
+prefix = "kanban"             # ticket branches are named <prefix>/<ticket-slug>
+
+[plans]
+dir = "~/.claude/plans"       # directory shown in the ticket's "plans" tab
+
+[sync]
+allow_rebase = true
+allow_merge  = true
+
+[merge]
+allow_merge_commit = true
+allow_squash       = true
+allow_rebase       = false
+default_strategy   = "squash" # unset by default
+ai_commit_message  = false
+
 [git]
 sign_commits = false
 
-# Directory the per-ticket "plans" tab reads. The tab only appears when the
-# directory has at least one `.md` file. An absolute path is shared across
-# every ticket. A relative path (e.g. "./plans") is resolved against each
-# session's worktree, so each ticket sees its own plans — Claude Code's
-# `/plan` mode writes there by default.
-[plans]
-dir = "~/.claude/plans"        # default; expand-home is applied
-
-[branches]
-prefix = "kanban"              # branch name = "<prefix>/<ticket-slug>"
-
-[sync]
-allow_rebase = true            # offer "rebase onto base" in the sync menu
-allow_merge  = true            # offer "merge base into branch"
-
-[merge]
-allow_merge_commit = true      # which strategies appear in the merge menu
-allow_squash       = true
-allow_rebase       = false
-ai_commit_message  = false     # opt in to harness-generated messages for the auto-commit (default off — uses ticket title)
-default_strategy   = "squash"  # used when a merge names no strategy (unset by default)
-
 [github]
-auto_move     = true           # move tickets when the linked PR/issue changes state
+auto_move     = true
 draft_column  = "In Progress"
-review_column = "In Review"
+review_column = "Review"
 done_column   = "Done"
-closed_column = "Done"
+closed_column = ""            # empty: closed PRs don't move the ticket
 
-# Toggles the in-process error-to-ticket reporter. Off by default — typically
-# only useful to developers maintaining kanban itself.
-[errors]
-enabled    = false
-board_name = "kanban-errors"
-
-# Opt in to the in-app developer toolbar. Off by default. When enabled, a
-# "Developer" tab appears in App Settings with a "Show developer toolbar"
-# toggle for a small corner widget showing live frontend health: FPS / worst
-# frame time, JS heap usage (Chromium only) plus a cross-browser loaded-asset
-# size estimate, DOM node and React Query cache counts (with growth deltas that
-# flag possible leaks), fetch/mutation activity, SSE connection status, and
-# in-flight request count.
-# Which sections show and where the widget pins are per-browser preferences
-# (localStorage), so this flag only controls whether the feature is available at
-# all.
-[dev_toolbar]
-enabled = false
-
-# Build Cop polls GitHub Actions on a schedule and files tickets when a job's
-# failure rate over a rolling window exceeds the threshold, or when the same
-# job passes on retry too often (a flake signal — see below). Off by default.
-# Each [[buildcop.boards]] entry produces one auto-managed board scoped to
-# the given branch filter; columns are "Failing" / "Investigating" / "Fixed" /
-# "Won't fix". A job auto-moves to "Fixed" once it has `green_streak_required`
-# consecutive successful runs — flake events count as non-green for that
-# purpose. Drag a ticket to "Won't fix" to silence a job you've decided not to
-# address (a known-flaky test, an infra failure): the poller never touches a
-# ticket parked there — it won't re-open it on continued failure or auto-move
-# it to "Fixed" on recovery — until you move it out yourself. ("Won't fix" is
-# backfilled onto boards created before it existed on the next poll.)
-[buildcop]
-enabled  = false
-interval = "2m"  # poll cadence; default 2m. Each tick lists completed runs
-                 # in `window_days`, then fetches jobs for any uncached run
-                 # (a `/repos/.../actions/runs/{id}/jobs` call per new run).
-                 # Bump this if you're hitting GitHub's 5000/hr REST rate
-                 # limit — observability metrics live at `/metrics`.
-
-[[buildcop.boards]]
-name                  = "Build Cop: master"  # optional — defaults to "Build Cop: <branch>"
-repo_path             = "/workspace"         # required: absolute path to a checkout with a GitHub origin
-branch                = "master"             # "" or "*" matches every branch
-failure_threshold     = 0.10                 # rate (0..1) above which a ticket is filed
-min_runs              = 5                    # minimum runs in the window before evaluating
-green_streak_required = 10                   # consecutive green runs to auto-move to Fixed
-window_days           = 7                    # rolling window in days
-flaky_threshold       = 3                    # passes-on-retry in the window that trigger a flake ticket
-
-# Extra knobs layered onto the worktree's devcontainer.json at session spawn.
-# `mounts` and `run_args` append to whatever the devcontainer.json declares;
-# `container_env` merges with kanban values winning. `image`,
-# `docker_socket` and `claude_config` only affect the built-in fallback
-# devcontainer (used when neither the repo nor ~/.config/kanban has a
-# devcontainer.json) — hand-written devcontainer.json files declare their
-# own image/build and manage their own mounts.
-# `docker_socket` defaults to false because forwarding the host daemon
-# grants the session agent root-equivalent authority on the host; opt in
-# only when a session legitimately needs to drive Docker. `claude_config`
-# defaults to true and can also be forced from the CLI via
-# `--claude-config` or `$KANBAN_CLAUDE_CONFIG`, which take precedence over
-# the toml value (useful when running kanban inside a devcontainer that
-# already mounts `~/.claude` at a path the host's docker daemon can't see).
 [devcontainer]
-image         = "ghcr.io/me/devbox:latest"   # built-in only: replaces the bundled image
+image         = "ghcr.io/me/devbox:latest"  # bundled image only
+docker_socket = false                       # bundled image only
+claude_config = true                        # bundled image only
 mounts        = ["type=bind,source=/tmp/ssh-agent.sock,target=/tmp/ssh-agent.sock"]
 run_args      = ["--cap-add=SYS_PTRACE"]
-docker_socket = false          # built-in only: bind /var/run/docker.sock into the container
-claude_config = true           # built-in only: bind ~/.claude into the container
 
 [devcontainer.container_env]
 SSH_AUTH_SOCK = "/tmp/ssh-agent.sock"
 
-# Per-task ports: associate .vscode/tasks.json labels with container ports.
-# When such a task runs, kanban allocates a host port from 13000-13099 and
-# runs a TCP proxy.
 [[task]]
-label = "Start Frontend"
+label          = "Start Frontend"
 container_port = 3000
 
-[[task]]
-label = "Start Backend"
-container_port = 8080
+[buildcop]
+enabled  = false
+interval = "2m"
+
+[[buildcop.boards]]
+repo_path = "/workspace"
+branch    = "master"
 ```
 
-### Build Cop flake detection
+Two more sections are mainly for people working on kanban itself: `[errors]` files server errors as tickets on a board, and `[dev_toolbar]` adds a frontend performance widget to the app settings. Both are off by default.
 
-The GitHub Actions runs API only returns the *latest* attempt of each workflow run, so a job that fails on attempt 1 and passes on attempt 2 looks green to a naive poller. Build Cop closes that gap: for every workflow run in the window with `run_attempt > 1` ending in `success`, it fetches each prior attempt's jobs and records a *pass-on-retry* for every job that failed earlier and still exists in the successful attempt. Because all attempts of a single run share `head_sha`, the code didn't change between attempts — the failure is a flake.
+## How the files merge
 
-The counter (`flaky_threshold` compares against this) is **one per commit**, not one per failed attempt: a single run whose `lint` job flaked twice before turning green on attempt 3 still contributes `1`, so the count reflects the true rate of flaky commits over the window. When it reaches `flaky_threshold` for a `(workflow, job)` pair, a ticket is filed in the `Failing` column with a title like `CI / lint flaky (3 passes-on-retry over 40 runs)`. If the same job also fails outright often enough to trip `failure_threshold`, the ticket title becomes `failing+flaky` and lists both counts. Flake events also break the green streak: a flaky job can only reach `Fixed` after `green_streak_required` consecutive clean, non-flaky runs.
+Most keys merge one at a time: a key in the user file replaces the same key in the project file, and everything else is kept. Three keys work differently:
 
-### Build Cop authentication
+- `[devcontainer].mounts` and `run_args` are **appended** to each other and to whatever `devcontainer.json` declares.
+- `[[task]]` entries merge by `label`. A user entry replaces a project entry with the same label.
+- `[[buildcop.boards]]` in the user file replaces the project's list entirely.
 
-The poller calls the GitHub REST API the same way the PR-state poller does: it reads `$GH_TOKEN`, falls back to `$GITHUB_TOKEN`, then shells out to `gh auth token`. Without any of those, requests go out unauthenticated and hit the 60-requests-per-hour-per-IP limit almost immediately. For a typical board (one workflow, ~50 runs in 7 days) the poller needs a few hundred requests per hour, so use an authenticated token. `$GITHUB_API_URL` is honored for GitHub Enterprise Server hosts.
+## Editing config from the CLI
 
-## Merge semantics
-
-Most sections are object-merged: a key set in the user file wins; keys only set in the project file remain. Three sections behave specially:
-
-- `[devcontainer].mounts` and `[devcontainer].run_args` are **appended** to whatever the worktree's `devcontainer.json` already declares. They aren't overrides.
-- `[[task]]` entries merge by `label`: a user entry with the same `label` replaces the project entry, and user-only labels are appended.
-- `[[buildcop.boards]]` is **replaced wholesale** when the user file sets any entries — board names can change and there's no stable identity to merge by, so the rule is "if the user declared boards, those are the boards."
-
-## Choosing a harness per session
-
-`[harness].id` is only the default. One ticket's session can run a different harness: pick it on the **Harness** row of `kanban ticket create` or `kanban ticket attach` (`←`/`→`), pass `--harness <id>` to either, or call `PUT /api/sessions/{id}/harness`. The choice is stored on the session and wins over both config files; clearing it (`""` through the API) puts the session back on the default. Switching stops an agent that is running another harness — see [`ticket attach`](/reference/cli#ticket-attach-id).
-
-## Managing config from the API / CLI / MCP
-
-Besides editing the TOML files by hand, every key above is readable and writable
-through a `git config`-style surface — REST, CLI, and MCP — backed by a running
-`kanban serve`. `--global` targets the user config; `--local --board <id-or-slug>`
-targets that board's project `.kanban.toml`. Reads default to the merged
-**effective** view, which also surfaces read-only runtime values (data dir,
-ports).
+You can edit either file by hand, or use `kanban config`, which works like `git config`. It needs a running server.
 
 ```sh
-kanban config list                                   # effective view
-kanban config set sync.allow_rebase true --global
-kanban config set branches.prefix feat --local --board playground
-kanban config set devcontainer.run_args '["--cap-add=NET_ADMIN"]' --global
+kanban config list                                  # merged view, with where each value comes from
+kanban config set sync.allow_rebase true --global   # your user file
+kanban config set branches.prefix feat --local --board playground  # the board's .kanban.toml
 kanban config unset github.draft_column --global
 ```
 
-Two caveats: writes rewrite the whole file, so **comments and key ordering are
-not preserved**; and because `[devcontainer].mounts`/`run_args` *append* across
-layers (see [merge semantics](#merge-semantics)), the effective view shows the
-combined value. See the [CLI](/reference/cli#config), [REST](/reference/api#config),
-and [MCP](/reference/mcp#config) references for the full surface.
+Writes rewrite the whole file, so comments and key order are lost. The same operations are available over [REST](/reference/api#config) and [MCP](/reference/mcp#config).
 
-## Per-board environment variables
+## Agent harness
 
-Boards can carry environment variables that kanban injects into every session
-container it launches for that board — the place for secrets an agent's
-tooling needs at runtime, such as an API key consumed by an MCP server inside
-the session. Unlike `[devcontainer].container_env` (plaintext in a
-`.kanban.toml` that can end up committed to the repo), board env vars live in
-kanban's local database and are treated as secrets:
+`[harness].id` sets the default agent. To use a different one on a single ticket, pick it on the **Harness** row of `kanban ticket create` or `kanban ticket attach`, or pass `--harness <id>`. The choice is saved on the ticket's session and overrides both config files. Switching stops an agent that's already running. See [`ticket attach`](/reference/cli#ticket-attach-id).
 
-- **Write-only.** No API, MCP tool, CLI subcommand, or UI view returns a
-  stored value — only key names. Editing means overwriting or removing a key.
-- **Encrypted at rest.** Values are sealed with AES-256-GCM before they touch
-  the database. The key is generated on first use at `<data-dir>/secrets.key`
-  (mode `0600`). Back that file up together with `kanban.db`; if it's lost,
-  the stored values are unrecoverable and must be re-entered. With
-  `--in-memory` the key is ephemeral and never written to disk.
-- **Applied at container creation.** Changes take effect the next time a
-  session is started or restarted — never inside a running container.
+## Sync and merge
 
-Manage them from the board settings **env** tab in the web UI, the CLI, or
-MCP (`list_board_env` / `set_board_env` / `unset_board_env`):
+`[sync]` and `[merge]` control which options appear in the ticket's **Sync** and **Merge** menus. Sync uses rebase unless `allow_rebase = false`, in which case it merges.
+
+### Default merge strategy
+
+`[merge].default_strategy` is used when a merge doesn't name a strategy, for example `kanban ticket merge` without `--strategy`. It's also listed first in the merge menu.
+
+If it's unset and the board allows only one strategy, that one is used. Otherwise the merge is rejected and the error lists the allowed strategies. Setting a default that the same config disables is an error.
+
+### Commit messages
+
+When kanban merges a ticket that has uncommitted changes, it commits them first using the ticket title as the message. Set `ai_commit_message = true` to have the agent write a one-line message from the diff instead. If that fails or takes longer than 90 seconds, kanban falls back to the title.
+
+### Commit identity
+
+Kanban makes merge and squash commits itself, so it needs a git name and email. If none is configured where kanban runs, the merge fails with `Author identity unknown`. Either:
+
+- Fill in **Commit identity** in the board settings. This applies only to that board and takes priority.
+- Or make your `~/.gitconfig` visible to kanban. The [Docker install](./install#with-docker) mounts it already.
+
+### Signing
+
+Kanban turns off commit signing for its own commits so merges don't fail when no signing key is available. To sign them, mount your signing key and agent into the container, then set `[git] sign_commits = true` or turn on **Sign commits** in the app settings. Kanban then follows your gitconfig's `commit.gpgsign`.
+
+## GitHub
+
+When `[github].auto_move` is on, kanban moves a ticket when its pull request changes state:
+
+| PR state | Column key      | Default       |
+| -------- | --------------- | ------------- |
+| Draft    | `draft_column`  | `In Progress` |
+| Open     | `review_column` | `Review`      |
+| Merged   | `done_column`   | `Done`        |
+| Closed   | `closed_column` | (no move)     |
+
+Kanban reads a GitHub token from `$GH_TOKEN`, then `$GITHUB_TOKEN`, then `gh auth token`. Set `$GITHUB_API_URL` for GitHub Enterprise Server.
+
+## Devcontainer
+
+Kanban uses the first `devcontainer.json` it finds in the repo's `.devcontainer/devcontainer.json`, the repo's `.devcontainer.json`, or `~/.config/kanban`. If there isn't one, it uses a bundled Ubuntu image.
+
+`[devcontainer]` adds to whichever one is used:
+
+- `mounts` and `run_args` add bind mounts and `docker run` arguments.
+- `container_env` adds environment variables. Kanban's own variables win on conflict.
+
+Three keys only affect the bundled image, since a `devcontainer.json` you write manages these itself:
+
+- `image` replaces the bundled image. It should include the same `dev` (UID 1000) or `root` user; see [Session container user](#session-container-user).
+- `docker_socket` mounts the host's Docker socket into the session. It's off by default because it gives the agent root-level access to your machine.
+- `claude_config` mounts your `~/.claude` so Claude Code is already logged in. It's on by default. `kanban serve --claude-config=false` or `$KANBAN_CLAUDE_CONFIG` overrides it.
+
+## Task ports
+
+Kanban runs the tasks in the repo's `.vscode/tasks.json`. To reach a task's server from your browser, map its label to a container port:
+
+```toml
+[[task]]
+label          = "Start Frontend"
+container_port = 3000
+```
+
+When that task runs, kanban picks a free host port between 13000 and 13099 and forwards it to port 3000 in the container. The ticket shows the URL. Change the range with `kanban serve --port-range-start` and `--port-range-end`.
+
+On a monorepo board, tasks come from the subproject's `.vscode/tasks.json`, so put the matching `[[task]]` entries in the subproject's `.kanban.toml`.
+
+## Plans
+
+The ticket's **plans** tab lists the markdown files in `[plans].dir`. It only appears when that directory has at least one `.md` file. An absolute path is shared by every ticket. A relative path such as `./plans` is resolved inside each ticket's worktree, so each ticket sees its own plans.
+
+## Board environment variables
+
+Board environment variables are set in every session container on a board. Use them for secrets the agent's tools need, such as an API key for an MCP server. Unlike `[devcontainer].container_env`, they're kept out of `.kanban.toml`, so they can't be committed by accident.
 
 ```sh
 kanban env set playground MY_API_KEY=sk-abc123
-kanban env list playground     # → MY_API_KEY (never the value)
+kanban env list playground     # prints key names only
 kanban env unset playground MY_API_KEY
 ```
 
-Precedence when the same key is defined in multiple places (lowest to
-highest): `devcontainer.json` `containerEnv` / `[devcontainer].container_env`
-→ board env vars → the server-injected `KANBAN_*` variables. Keys must match
-`[A-Za-z_][A-Za-z0-9_]*`, and the `KANBAN_` prefix is rejected as reserved.
+You can also manage them from the **env** tab in the board settings.
 
-Two limits worth knowing: encryption protects the database file, not the
-running container — anyone who can run `docker inspect` on a session container
-(or read `/proc/<pid>/environ` inside it) can see the values, which is
-inherent to environment-variable delivery. And the agent inside a session can
-of course read its own environment; only give a board secrets its sessions are
-meant to use.
+- **Values can't be read back.** Nothing in kanban displays a stored value. To change one, set it again.
+- **Values are encrypted on disk** with a key stored at `<data-dir>/secrets.key`. Back up that file along with `kanban.db`. If you lose it, you'll need to set the values again.
+- **Changes apply the next time a session starts or restarts.**
 
-## Overriding the user-config path
+Anyone who can `docker inspect` the session container can see the values, and so can the agent. Only give a board the secrets its sessions need.
 
-```sh
-kanban serve --config /path/to/config.toml
-# or
-KANBAN_CONFIG=/path/to/config.toml kanban serve
+If a key is set in more than one place, board variables override `container_env` and `devcontainer.json`. Kanban's own `KANBAN_*` variables override everything, and you can't set keys with that prefix.
+
+## Build Cop
+
+Build Cop watches GitHub Actions and files a ticket when a job fails too often. Each `[[buildcop.boards]]` entry creates a board that Build Cop manages, with the columns `Failing`, `Investigating`, `Fixed`, and `Won't fix`.
+
+```toml
+[buildcop]
+enabled  = true
+interval = "2m"                  # how often to check GitHub
+
+[[buildcop.boards]]
+name                  = "Build Cop: master"  # default: "Build Cop: <branch>"
+repo_path             = "/workspace"         # required; a checkout with a GitHub remote
+branch                = "master"             # "" or "*" for every branch
+failure_threshold     = 0.10                 # file a ticket above this failure rate
+min_runs              = 5                    # runs needed before judging a job
+window_days           = 7                    # how far back to look
+flaky_threshold       = 3                    # pass-on-retry count that files a flake ticket
+green_streak_required = 10                   # clean runs before moving to Fixed
 ```
 
-The `--config` flag wins over `$KANBAN_CONFIG`.
+A ticket moves to `Fixed` on its own once the job passes `green_streak_required` times in a row. To stop tracking a job, drag its ticket to `Won't fix`. Build Cop won't touch it again until you move it out.
 
-## Per-task ports
+**Flaky jobs.** A job that fails and then passes when re-run on the same commit counts as one pass-on-retry. Several retries of one run still count once. When a job reaches `flaky_threshold` in the window, Build Cop files a ticket for it, such as `CI / lint flaky (3 passes-on-retry over 40 runs)`. A flaky run also resets the job's green streak.
 
-Kanban understands `.vscode/tasks.json` in the target repo. When a task whose `label` matches a `[[task]]` entry starts inside a session, kanban allocates the next free host port in the range (default `13000–13099`) and runs a TCP proxy from that host port to the declared `container_port`. The host port is shown on the ticket so you can open the WIP service in your browser.
+**Rate limits.** Build Cop needs a GitHub token (see [GitHub](#github)). Without one, GitHub allows 60 requests an hour, which isn't enough for even a small repo. If you hit the limit of 5,000 an hour, raise `interval`. [Observability](./observability#github-rate-limits) shows how to check usage.
 
-Adjust the proxy range with `--port-range-start` and `--port-range-end` on `kanban serve`.
+## Claude Code resume
 
-On a board with a `project_dir`, `.vscode/tasks.json` is read from the
-subproject rather than the repo root, so the `[[tasks]]` entries that pair
-with it belong in the subproject's `.kanban.toml`.
+When a session container restarts, Claude Code picks up the previous conversation. This works whenever `~/.claude` is mounted into the container, which the bundled image does by default.
 
-## Resuming Claude Code sessions across restarts
-
-When a session container is restarted (or kanban itself is restarted and the container has to be recreated), the next `claude` launch automatically resumes the prior conversation for that ticket. There's nothing to configure — the mechanism is on by default whenever `~/.claude` is bind-mounted into the session container (the built-in devcontainer does this; see `claude_config = true` above).
-
-How it works:
-
-- On every `claude` startup, the bundled `.claude/settings.local.json` `SessionStart` hook PATCHes `/api/sessions/{id}/claude-session` with the conversation's UUID.
-- Kanban stores the UUID on the session row.
-- The next time the agent terminal is attached, kanban launches `claude --resume <uuid>` instead of a bare `claude`, so the transcript at `~/.claude/projects/<cwd-hash>/<uuid>.jsonl` is reopened.
-
-To force a fresh conversation for a ticket, clear the stored UUID:
+To start a fresh conversation instead, clear the saved conversation ID:
 
 ```sh
 sqlite3 "$KANBAN_DATA_DIR/kanban.db" \
   "UPDATE sessions SET claude_session_id = NULL WHERE id = <session_id>"
 ```
 
-The next attach will start a brand-new Claude Code session.
-
-Caveats:
-
-- Kanban only writes `.claude/settings.local.json` when no file is present. If one already exists — either hand-authored or shipped by an older kanban that didn't install the `SessionStart` hook — it's left untouched, no UUID is captured, and resume is silently off. To opt in, delete the file and re-ensure the session.
-- Only the `claude` harness is wired up; other harnesses (`pi`) have no equivalent flag and launch fresh every time.
-
-## Commit identity for merges
-
-When a session is merged or squash-merged, kanban shells out to `git commit` inside its own container. If that container has no `user.name` / `user.email` configured, git aborts with `Author identity unknown` — your host's `~/.gitconfig` isn't visible inside the container.
-
-Two ways to fix it, in order of preference:
-
-1. **Set it on the board.** In the board settings UI, fill in *Commit identity → Author name / Author email*. Both fields must be set; leaving either blank falls back to whatever `git config` resolves inside the kanban container. Stored per-board (so different repos can use different identities), persisted as `git_author_name` / `git_author_email` on the board, and passed through as `-c user.name=… -c user.email=…` on every commit kanban creates.
-2. **Mount your host gitconfig into the kanban container.** In `compose.yaml`, add `${HOME}/.gitconfig:/root/.gitconfig:ro` alongside the existing volumes. Useful if you want one identity across every board and don't mind the volume.
-
-The board-level setting wins when both are present (it's an explicit `-c` flag on the git invocation).
-
-## Default merge strategy
-
-`[merge].default_strategy` is the strategy used when a merge request names
-none — `kanban ticket merge` with no `--strategy`, the `merge_ticket` MCP tool
-with no `strategy`, or a `POST /api/tickets/{id}/merge` with an empty body. It
-also leads the merge menu in the session pane, marked `(default)`.
-
-Resolution order for an unnamed strategy:
-
-1. `merge.default_strategy`, if set and enabled on this board.
-2. The board's only enabled strategy, if exactly one is enabled — there is
-   nothing to choose.
-3. Otherwise the request is rejected with `strategy is required`, listing the
-   enabled strategies.
-
-Setting it to a strategy the same config disables is a misconfiguration: it is
-reported as `default strategy <x> is disabled for this board` rather than
-silently falling through. `[sync]` has no equivalent key — sync defaults to
-`rebase`, falling back to `merge` when `allow_rebase = false`.
-
-## AI-generated commit messages
-
-When kanban auto-commits a session's pending changes at merge time, it uses the ticket title as the message. Set `[merge].ai_commit_message = true` to instead invoke the session's harness (e.g. `claude --model haiku`) to generate a one-line message from the staged diff. The call is gated by a 90-second timeout and falls back to the ticket title on any error. Off by default because not every harness ships a working template, and the round-trip can be slow.
+Resume relies on a hook in `.claude/settings.local.json`, which kanban writes into the worktree. Kanban won't overwrite an existing file, so if your repo already has one, resume is off. Delete the file and restart the session to turn it on. Only Claude Code supports resume. Other harnesses start fresh each time.
 
 ## Running kanban inside a container
 
-When kanban itself runs inside a container (e.g. a devcontainer) but spawns
-session containers via the host's docker daemon, every bind-mount source
-kanban hands to dockerd needs to be a **host** path. Paths kanban sees as
-`/workspace/...` or `/root/.claude` mean nothing to the host's docker.
+If kanban runs in a container but starts sessions through the host's Docker, the paths it passes to Docker must be host paths. These variables tell kanban how to translate them:
 
-Set these env vars on the kanban process to translate prefixes before they
-reach dockerd:
+| Variable                  | Host path of                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `KANBAN_HOST_WORKSPACE`   | `/workspace` in kanban's container. Covers board repos, worktrees, and mounts under it. |
+| `KANBAN_HOST_HOME`        | `$HOME` in kanban's container. Covers `~/.claude` and `~/.claude.json`.       |
+| `KANBAN_HOST_DOCKER_SOCK` | The Docker socket. Needed when it isn't at `/var/run/docker.sock` on the host, as with rootless Docker. |
 
-| Env var | What it rewrites |
-| --- | --- |
-| `$KANBAN_HOST_WORKSPACE` | Host path of `/workspace` inside the kanban container. Covers board `repo_path`, `worktree_root`, and any `[devcontainer].mounts` whose source lives under `/workspace`. |
-| `$KANBAN_HOST_HOME` | Host path of the kanban container's `$HOME`. Covers `~/.claude` / `~/.claude.json` forwarding. |
-| `$KANBAN_HOST_DOCKER_SOCK` | Host path of the docker socket. Needed when kanban's own `/var/run/docker.sock` is a bind of the host's rootless socket (e.g. `/var/run/user/1000/docker.sock`) — the in-container path is invalid as a bind source on the host. When unset, kanban probes `/var/run/docker.sock` then `$XDG_RUNTIME_DIR/docker.sock` directly. |
-
-Example for a kanban devcontainer running as root with the project bind-mounted
-from `/home/jamison/code/kanban`:
+For example:
 
 ```sh
-export KANBAN_HOST_WORKSPACE=/home/jamison/code/kanban
-export KANBAN_HOST_HOME=/home/jamison
-# Set on rootless-docker hosts where the socket isn't at /var/run/docker.sock:
-export KANBAN_HOST_DOCKER_SOCK=/var/run/user/1000/docker.sock
+export KANBAN_HOST_WORKSPACE=/home/me/code/kanban
+export KANBAN_HOST_HOME=/home/me
+export KANBAN_HOST_DOCKER_SOCK=/run/user/1000/docker.sock
 ```
 
-Both are unset (and the translation is a no-op) on the default host install.
-Paths that don't start with either prefix pass through untouched.
+On a normal install none of these are needed.
 
-For full end-to-end terminal access, the worktree root also needs to be
-reachable on the host at the translated path — i.e. `KANBAN_HOST_WORKSPACE`
-must point at a directory the host's docker daemon can stat.
+### Session container user
 
-### Built-in session container user
+The bundled image has two users, `root` (UID 0) and `dev` (UID 1000). Kanban runs the session as whichever one owns your `~/.claude`, so Claude Code can read and write its credentials. If neither matches, as with UID 501 on macOS, kanban uses `dev`. Claude Code then asks you to log in on every new session.
 
-When kanban spawns a session in the built-in devcontainer image, it picks
-the in-container user by stat-ing the host's `~/.claude` and matching the
-owner UID against the accounts the image ships: UID `0` → `root` (home
-`/root`), UID `1000` → `dev` (home `/home/dev`). Other UIDs fall back to
-`dev`.
+To fix that, `chown` your `~/.claude` to UID 1000, or set the user yourself:
 
-The reason it matters: bind mounts preserve host UIDs verbatim, so if the
-session ran as `dev` but `~/.claude` is root-owned (mode 0700 directory,
-0600 credentials), `dev` couldn't read the credentials and Claude would
-re-prompt `/login` every new session — and couldn't write the new
-credentials back either, so the loop never broke.
-
-Two env vars override the auto-pick when set. They resolve together, so
-a session can't end up as `root` with `/home/dev` (or vice versa):
-
-| Env var | Effect |
-| --- | --- |
-| `$DEVCONTAINER_REMOTE_USER` | In-container user (`dev` or `root`). If only this is set, the home is derived from a known-user table. |
-| `$DEVCONTAINER_REMOTE_HOME` | In-container home prefix. If only this is set, the user still comes from the `~/.claude` auto-pick. |
-
-A custom `[devcontainer].image` still goes through this pick, so it should
-ship the same `dev` (UID 1000) and/or `root` accounts, or set the env
-vars above to an account it does ship.
-
-For host UIDs the image doesn't ship an account for (e.g. macOS users
-with UID 501), the auto-pick falls back to `dev`. Set the env vars
-explicitly or chown the bind source to avoid the re-auth loop on those
-hosts.
-
-## See also
-
-- [CLI reference](/reference/cli) — every flag for `serve`, `mcp`, `board list`, `ticket create`, `config set`.
-- [REST API](/reference/api) — endpoints exposed by the running server, including `/api/config`.
-- [MCP reference](/reference/mcp) — the `*_config` tools and the rest of the agent-facing surface.
-- [Previews](/guide/previews) — per-branch preview deployments and `$KANBAN_PREVIEW_DOMAIN`.
-- [Monorepos](/guide/monorepos) — scoping a board to a subdirectory of the repo.
+| Variable                   | Effect                                                         |
+| -------------------------- | -------------------------------------------------------------- |
+| `DEVCONTAINER_REMOTE_USER` | User to run as (`dev` or `root`). The home directory follows.  |
+| `DEVCONTAINER_REMOTE_HOME` | Home directory to use. The user is still picked automatically. |

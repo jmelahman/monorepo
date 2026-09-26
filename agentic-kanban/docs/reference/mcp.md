@@ -1,251 +1,20 @@
 # MCP
 
-The same binary can run as a [Model Context Protocol](https://modelcontextprotocol.io)
-server over stdio, exposing kanban tools to AI agents. The MCP server is a
-thin client of the HTTP API, so `kanban serve` must be running.
+`kanban mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server over stdio. It lets AI tools like Claude create and manage tickets. It talks to a running `kanban serve`, so start the server first.
+
+## Setup
+
+### Claude Code
 
 ```sh
-kanban mcp --server http://localhost:7474
-# or via env
-KANBAN_URL=http://localhost:7474 kanban mcp
+claude mcp add kanban -- kanban mcp --server http://localhost:7474
 ```
 
-## Tools
-
-Tool names use `verb_noun` snake_case. Read tools (`list_*`, `get_*`,
-`board_state`) return JSON; mutating tools that 204 from the REST layer
-return the literal string `"ok"`.
-
-### Boards
-
-#### `list_boards`
-
-Returns `[{ id, name, slug }]` for all boards.
-
-#### `create_board`
-
-Create a new board. The server seeds the default columns
-(Backlog / In Progress / Review / Done).
-
-| Argument         | Type   | Required | Notes                                                              |
-|------------------|--------|----------|--------------------------------------------------------------------|
-| `name`           | string | yes      | Board name.                                                        |
-| `repo_path`      | string | one of   | Host git repo path. Required if `mount_path` is empty.             |
-| `mount_path`     | string | one of   | Mount path inside session containers.                              |
-| `project_dir`    | string | no       | Repo-relative subdirectory the agent works from. Requires `repo_path`, and conflicts with `mount_path`. |
-| `worktree_root`  | string | no       | Override the parent directory for new session worktrees.           |
-| `base_branch`    | string | no       | Branch session worktrees fork from. Detected from `repo_path` (`origin/HEAD`, then current branch) when omitted; falls back to `main`. |
-| `branch_prefix`  | string | no       | Prefix for session branch names.                                   |
-| `git_author_name`  | string | no     | Author name used for merge/squash commits the server creates.     |
-| `git_author_email` | string | no     | Author email used for merge/squash commits.                       |
-
-#### `get_board`
-
-| Argument | Type   | Required | Notes                                |
-|----------|--------|----------|--------------------------------------|
-| `board`  | string | yes      | Numeric board id or slug.            |
-
-#### `update_board`
-
-Patch fields on a board. Only fields you supply are updated.
-
-| Argument         | Type   | Required | Notes                              |
-|------------------|--------|----------|------------------------------------|
-| `board`          | string | yes      | Board id or slug.                  |
-| `name`           | string | no       | New name.                          |
-| `repo_path`      | string | no       | New repo path.                     |
-| `mount_path`     | string | no       | New mount path.                    |
-| `project_dir`    | string | no       | New project directory; empty clears it. |
-| `worktree_root`  | string | no       | New worktree root.                 |
-| `base_branch`    | string | no       | New base branch.                   |
-| `branch_prefix`  | string | no       | New branch prefix.                 |
-| `git_author_name`  | string | no     | New commit author name.            |
-| `git_author_email` | string | no     | New commit author email.           |
-
-#### `delete_board`
-
-Destroys every associated session, then deletes the board.
-
-| Argument | Type   | Required | Notes                                |
-|----------|--------|----------|--------------------------------------|
-| `board`  | string | yes      | Board id or slug.                    |
-
-#### `board_state`
-
-Single-shot snapshot: `{board, columns, tickets, sessions, merge_config,
-sync_config}`.
-
-| Argument | Type   | Required | Notes                                |
-|----------|--------|----------|--------------------------------------|
-| `board`  | string | yes      | Board id or slug.                    |
-
-#### `list_archived` / `delete_archived`
-
-List or permanently delete every archived ticket on a board. `delete_archived`
-is destructive.
-
-| Argument | Type   | Required | Notes                                |
-|----------|--------|----------|--------------------------------------|
-| `board`  | string | yes      | Board id or slug.                    |
-
-### Board environment variables
-
-Per-board env vars injected into the board's session containers at the next
-session start/restart. Values are write-only secrets — encrypted at rest and
-never returned by any tool; only key names come back.
-
-#### `list_board_env`
-
-Returns `{"keys": [...]}` — key names only.
-
-| Argument | Type   | Required | Notes                                |
-|----------|--------|----------|--------------------------------------|
-| `board`  | string | yes      | Board id or slug.                    |
-
-#### `set_board_env`
-
-Set (or overwrite) one or more variables. Returns the updated key list.
-
-| Argument | Type   | Required | Notes                                                                 |
-|----------|--------|----------|-----------------------------------------------------------------------|
-| `board`  | string | yes      | Board id or slug.                                                     |
-| `vars`   | object | yes      | Map of NAME → value. Names match `[A-Za-z_][A-Za-z0-9_]*`; the `KANBAN_` prefix is reserved. |
-
-#### `unset_board_env`
-
-Remove variables by key name. Removing a missing key is a no-op.
-
-| Argument | Type     | Required | Notes                                |
-|----------|----------|----------|--------------------------------------|
-| `board`  | string   | yes      | Board id or slug.                    |
-| `keys`   | string[] | yes      | Key names to remove.                 |
-
-### Tickets
-
-#### `create_ticket`
-
-Create a ticket on a board.
-
-| Argument  | Type    | Required | Notes                                                              |
-|-----------|---------|----------|--------------------------------------------------------------------|
-| `board`   | string  | yes      | Board id or slug.                                                  |
-| `title`   | string  | yes      | Ticket title.                                                      |
-| `body`    | string  | no       | Markdown ticket body.                                              |
-| `column`  | string  | no       | Column name (case-insensitive) or id. Defaults to leftmost column. |
-
-#### `update_ticket`
-
-Patch ticket fields.
-
-| Argument | Type    | Required | Notes        |
-|----------|---------|----------|--------------|
-| `ticket` | integer | yes      | Ticket id.   |
-| `title`  | string  | no       | New title.   |
-| `body`   | string  | no       | New body.    |
-
-#### `move_ticket`
-
-| Argument    | Type    | Required | Notes                                |
-|-------------|---------|----------|--------------------------------------|
-| `ticket`    | integer | yes      | Ticket id.                           |
-| `column_id` | integer | yes      | Target column id.                    |
-| `position`  | integer | no       | 0-indexed position. Default `0`.     |
-
-#### `archive_ticket` / `unarchive_ticket` / `delete_ticket` / `done_ticket`
-
-All take a single `ticket` (integer) argument. `delete_ticket` requires
-the ticket to already be archived; `done_ticket` moves the ticket to the
-board's rightmost column and stops its session.
-
-#### `sync_ticket`
-
-| Argument   | Type    | Required | Notes                                  |
-|------------|---------|----------|----------------------------------------|
-| `ticket`   | integer | yes      | Ticket id.                             |
-| `strategy` | string  | no       | `rebase` or `merge`. Default `rebase`. |
-
-#### `merge_ticket`
-
-| Argument   | Type    | Required | Notes                                                |
-|------------|---------|----------|------------------------------------------------------|
-| `ticket`   | integer | yes      | Ticket id.                                           |
-| `strategy` | string  | no       | `merge-commit`, `squash`, or `rebase`. Omit to use the board's `merge.default_strategy`. |
-
-### Columns
-
-#### `archive_column_tickets`
-
-Archives every non-archived ticket in the column. Stops their sessions.
-
-| Argument    | Type    | Required | Notes                |
-|-------------|---------|----------|----------------------|
-| `column_id` | integer | yes      | Column id (numeric). |
-
-### Sessions
-
-#### `ensure_session`
-
-Ensures a session exists for the given ticket; creates one if absent.
-
-| Argument | Type    | Required | Notes        |
-|----------|---------|----------|--------------|
-| `ticket` | integer | yes      | Ticket id.   |
-
-#### `start_session` / `stop_session` / `restart_session`
-
-| Argument  | Type    | Required | Notes        |
-|-----------|---------|----------|--------------|
-| `session` | integer | yes      | Session id.  |
-
-### Config
-
-Read and write the layered kanban config (see [Configuration](/guide/configuration)), mirroring `git config`. Keys are dotted, e.g. `sync.allow_rebase` or `github.draft_column`.
-
-#### `list_config`
-
-Lists config keys with values and source.
-
-| Argument | Type   | Required | Notes                                                          |
-|----------|--------|----------|----------------------------------------------------------------|
-| `scope`  | string | no       | `effective` (default), `local`, or `global`.                   |
-| `board`  | string | no       | Board id or slug; selects the local layer.                     |
-
-#### `get_config`
-
-Returns `{ "key", "value" }` for one dotted key. A single `devcontainer.container_env` entry is addressable as `devcontainer.container_env.<NAME>`.
-
-| Argument | Type   | Required | Notes                                        |
-|----------|--------|----------|----------------------------------------------|
-| `key`    | string | yes      | Dotted config key.                           |
-| `scope`  | string | no       | `effective` (default), `local`, or `global`. |
-| `board`  | string | no       | Board id or slug.                            |
-
-#### `set_config`
-
-Sets a config key.
-
-| Argument | Type   | Required | Notes                                                                                          |
-|----------|--------|----------|------------------------------------------------------------------------------------------------|
-| `key`    | string | yes      | Dotted config key.                                                                             |
-| `value`  | any    | yes      | Native JSON value matching the key's type (bool/string, array, object, or array-of-objects).   |
-| `scope`  | string | yes      | `local` (requires `board`) or `global`.                                                        |
-| `board`  | string | no       | Board id or slug; required for `local`.                                                        |
-
-#### `unset_config`
-
-Removes a config key.
-
-| Argument | Type   | Required | Notes                                   |
-|----------|--------|----------|-----------------------------------------|
-| `key`    | string | yes      | Dotted config key.                      |
-| `scope`  | string | yes      | `local` (requires `board`) or `global`. |
-| `board`  | string | no       | Board id or slug; required for `local`. |
-
-## Wiring
+Run `claude mcp list` to check that it's registered.
 
 ### Claude Desktop
 
-Add to `claude_desktop_config.json`:
+Add this to `claude_desktop_config.json` and restart Claude Desktop:
 
 ```json
 {
@@ -258,23 +27,95 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-Restart Claude Desktop. The kanban tools should appear in the tools picker.
+`--server` defaults to `http://localhost:7474`. You can also set it with `$KANBAN_URL`.
 
-### Claude Code
+## Tools
 
-```sh
-claude mcp add kanban -- /path/to/kanban mcp --server http://localhost:7474
-```
+Read tools return JSON. Tools that change something return `"ok"` unless noted. Any `board` argument accepts a numeric ID or a slug.
 
-Run `claude mcp list` to confirm the server registered.
+### Boards
 
-::: tip Server must be running
-Both wirings invoke `kanban mcp`, which is a stdio client. It still needs
-`kanban serve` to be reachable at the URL you pass — start the server
-first (or run it as a long-lived service / Docker container).
-:::
+| Tool              | Arguments  | Description |
+| ----------------- | ---------- | ----------- |
+| `list_boards`     |            | Returns `[{ id, name, slug }]`. |
+| `get_board`       | `board`    | Returns one board. |
+| `board_state`     | `board`    | Returns the board, its columns, tickets, sessions, and merge and sync settings. |
+| `delete_board`    | `board`    | Stops every session on the board and deletes it. |
+| `list_archived`   | `board`    | Lists archived tickets. |
+| `delete_archived` | `board`    | Permanently deletes every archived ticket. |
 
-## See also
+#### `create_board`
 
-- [REST API reference](./api) — what the MCP tools call under the hood.
-- The MCP server source lives in [`internal/mcp/server.go`](https://github.com/jmelahman/agentic-kanban/blob/master/internal/mcp/server.go) if you want to add tools.
+Creates a board with the columns Backlog, In Progress, Review, and Done.
+
+| Argument           | Type   | Required | Notes |
+| ------------------ | ------ | -------- | ----- |
+| `name`             | string | yes      | |
+| `repo_path`        | string | one of   | Path to the git repo. |
+| `mount_path`       | string | one of   | Directory to mount when there's no repo. |
+| `project_dir`      | string | no       | Subdirectory the agent works from. Requires `repo_path`. |
+| `worktree_root`    | string | no       | Where to create worktrees. |
+| `base_branch`      | string | no       | Detected from the repo if omitted. |
+| `branch_prefix`    | string | no       | Prefix for ticket branch names. |
+| `git_author_name`  | string | no       | Name for kanban's merge commits. |
+| `git_author_email` | string | no       | Email for kanban's merge commits. |
+
+#### `update_board`
+
+Takes `board` plus any of the `create_board` arguments. Only the fields you pass are changed. An empty `project_dir` clears it.
+
+### Board environment variables
+
+Values are secret and never returned. Changes apply the next time a session starts.
+
+| Tool              | Arguments                | Description |
+| ----------------- | ------------------------ | ----------- |
+| `list_board_env`  | `board`                  | Returns `{"keys": [...]}`. |
+| `set_board_env`   | `board`, `vars` (object) | Sets variables from a name-to-value map. Names can't start with `KANBAN_`. Returns the updated keys. |
+| `unset_board_env` | `board`, `keys` (array)  | Removes variables. Returns the updated keys. |
+
+### Tickets
+
+| Tool               | Arguments                                   | Description |
+| ------------------ | ------------------------------------------- | ----------- |
+| `create_ticket`    | `board`, `title`, `body`?, `column`?        | `column` is a name or ID. Defaults to the leftmost column. |
+| `update_ticket`    | `ticket`, `title`?, `body`?                 | |
+| `move_ticket`      | `ticket`, `column_id`, `position`?          | `position` is zero-based and defaults to `0`. |
+| `archive_ticket`   | `ticket`                                    | |
+| `unarchive_ticket` | `ticket`                                    | |
+| `delete_ticket`    | `ticket`                                    | The ticket must be archived first. |
+| `done_ticket`      | `ticket`                                    | Moves to the rightmost column and stops the session. |
+| `sync_ticket`      | `ticket`, `strategy`?                       | `rebase` (default) or `merge`. |
+| `merge_ticket`     | `ticket`, `strategy`?                       | `merge-commit`, `squash`, or `rebase`. Defaults to the board's [default strategy](/guide/configuration#default-merge-strategy). |
+
+`?` marks an optional argument.
+
+### Columns
+
+| Tool                     | Arguments   | Description |
+| ------------------------ | ----------- | ----------- |
+| `archive_column_tickets` | `column_id` | Archives every ticket in the column and stops their sessions. |
+
+### Sessions
+
+| Tool              | Arguments | Description |
+| ----------------- | --------- | ----------- |
+| `ensure_session`  | `ticket`  | Returns the ticket's session, creating it if needed. |
+| `start_session`   | `session` | |
+| `stop_session`    | `session` | |
+| `restart_session` | `session` | |
+
+### Config
+
+Reads and writes the [configuration](/guide/configuration). `scope` is `global` (your user file), `local` (a board's `.kanban.toml`, which needs `board`), or `effective` (the merged view, for reads only).
+
+| Tool           | Arguments                                   | Description |
+| -------------- | ------------------------------------------- | ----------- |
+| `list_config`  | `scope`?, `board`?                          | Lists keys with their values and sources. |
+| `get_config`   | `key`, `scope`?, `board`?                   | Returns `{ key, value }`. |
+| `set_config`   | `key`, `value`, `scope`, `board`?           | `value` is JSON matching the key's type. |
+| `unset_config` | `key`, `scope`, `board`?                    | |
+
+## Adding tools
+
+The tools are defined in [`internal/mcp/server.go`](https://github.com/jmelahman/agentic-kanban/blob/master/internal/mcp/server.go). Each one calls the [REST API](./api).

@@ -1,68 +1,57 @@
 # Quickstart
 
-This walkthrough creates a board, adds a ticket, and starts an agent session — end to end in a few minutes.
+This walks through creating a board and a ticket, then handing the ticket to an agent.
 
 ## 1. Open the UI
 
-With `kanban serve` running, open <http://localhost:7474/>.
-
-You'll land on the boards list. It's empty — there's nothing here yet.
+Start the server with `kanban serve` and open <http://localhost:7474/>. You'll see an empty list of boards.
 
 <img class="light-only" src="/quickstart-01-empty-light.png" alt="Empty boards list" />
 <img class="dark-only" src="/quickstart-01-empty-dark.png" alt="Empty boards list" />
 
 ## 2. Create a board
 
-Click **New board**. Give it a name (e.g. `playground`) and point it at a local git repository on your machine. Kanban will read that repo's `.devcontainer/devcontainer.json` to figure out how to launch sessions for tickets.
+Click **New board**. Give it a name and the path to a git repository on your machine.
 
 <img class="light-only" src="/quickstart-02-create-board-light.png" alt="Create board dialog" />
 <img class="dark-only" src="/quickstart-02-create-board-dark.png" alt="Create board dialog" />
 
-The board opens with the default columns: `Backlog`, `In Progress`, `In Review`, `Done`.
+The board opens with four columns: `Backlog`, `In Progress`, `Review`, and `Done`.
 
 <img class="light-only" src="/quickstart-03-empty-board-light.png" alt="Empty board" />
 <img class="dark-only" src="/quickstart-03-empty-board-dark.png" alt="Empty board" />
 
 ## 3. Create a ticket
 
-Click **+** in the `Backlog` column. Title the ticket and write a markdown body describing what you want the agent to do.
+Click **+** on the `Backlog` column. Give the ticket a title and describe the task in markdown. The description is what the agent works from.
 
 <img class="light-only" src="/quickstart-04-create-ticket-light.png" alt="Create ticket" />
 <img class="dark-only" src="/quickstart-04-create-ticket-dark.png" alt="Create ticket" />
 
-When you save, the ticket appears as a card in `Backlog`.
+## 4. Start a session
 
-## 4. Start the session
+Open the ticket and click **Start session**. Kanban creates a worktree, starts its container, and launches the agent. The first start pulls or builds the container image, so it can take a few minutes.
 
-Open the ticket. The detail panel has tabs — **agent**, **terminal**, **tasks**, **info**, plus a **diff** tab once the session has a worktree. Click **Start session**. Kanban will:
+The ticket has several tabs:
 
-1. Create a git worktree off your base branch.
-2. Spawn the worktree's devcontainer.
-3. Launch the configured harness (Claude Code by default) inside it, attached to a PTY.
-
-The harness's terminal streams into the **agent** tab; the **terminal** tab gives you a regular shell inside the same container.
+- **agent**: the agent's terminal.
+- **terminal**: a plain shell in the same container.
+- **tasks**: run tasks from the repo's `.vscode/tasks.json`.
+- **diff**: everything the agent has changed.
+- **info**: the branch, container, pull request, and ports.
 
 ## 5. Review the changes
 
-The **diff** tab shows the session's changes as a GitHub-style split diff: a
-changed-files sidebar, per-file **View file** and **Viewed** toggles, and
-expandable context.
+The **diff** tab shows the branch's changes side by side, with a list of changed files.
 
-You can also leave a code review for the agent. Hover a line and click the
-**+** in the gutter to comment on it, or drag across the line numbers to select
-a range (the selected lines highlight as you drag) and comment on the whole
-span. Comments are saved per-session in your browser, so they survive tab
-switches and reloads. When you're done, the **Copy review** button in the
-sidebar header copies every comment — each with its file path, line range, and
-the referenced code — as one block you can paste straight back into the agent
-session for it to address.
+You can leave review comments for the agent. Click the **+** next to a line, or drag across line numbers to comment on a range. When you're done, click **Copy review** and paste the result into the agent's terminal. Each comment includes its file, lines, and code, so the agent knows what you mean.
 
 ## 6. Sync and merge
 
-When the agent's done, the **Sync** menu offers to rebase or merge your base branch into the worktree (whichever you've allowed in `.kanban.toml`). The **Merge** menu sends the work back to the base branch via merge commit, squash, or rebase — again, configurable.
+**Sync** brings the base branch into the ticket's branch, by rebase or merge. **Merge** lands the ticket's branch on the base branch as a merge commit, a squash, or a rebase. You can limit which options appear in [`.kanban.toml`](./configuration).
 
-## What's next
+## Next steps
 
-- Edit `.kanban.toml` in your repo to lock in policy — see [Configuration](./configuration).
-- Drive ticket creation from outside the UI — see the [REST API](/reference/api) and [CLI](/reference/cli) reference.
-- Wire up Claude Desktop or Claude Code to create tickets via [MCP](/reference/mcp).
+- Set per-repo policy in [`.kanban.toml`](./configuration).
+- Create and manage tickets from the [CLI](/reference/cli) or the [REST API](/reference/api).
+- Let Claude create tickets for you over [MCP](/reference/mcp).
