@@ -807,9 +807,26 @@ shell in the container is attached instead of the agent.`,
 	move.Flags().IntVar(&tmPosition, "position", 0, "Target position within the column (0-indexed)")
 	_ = move.MarkFlagRequired("column-id")
 
-	archive := simpleTicketCmd("archive", "Archive a ticket", pickerAction{"Archive ticket", "archive"}, false,
-		&serverURL, &boardIdent,
-		func(c *client.Client, ctx context.Context, id int64) error { return c.ArchiveTicket(ctx, id) })
+	var archiveDelete bool
+	archive := &cobra.Command{
+		Use:   "archive [id...]",
+		Short: "Archive tickets (--delete to also permanently delete them)",
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			url := resolveURL(cmd, serverURL)
+			action := pickerAction{"Archive tickets", "archive"}
+			if archiveDelete {
+				action = pickerAction{"Archive and delete tickets", "archive + delete"}
+			}
+			ids, err := ticketArgs(ctx, url, args, boardIdent, action)
+			if err != nil {
+				return err
+			}
+			return runTicketArchive(ctx, url, cmd.OutOrStdout(), ids, archiveDelete)
+		},
+	}
+	archive.Flags().BoolVar(&archiveDelete, "delete", false, "Permanently delete each ticket after archiving it")
 	unarchive := simpleTicketCmd("unarchive", "Unarchive a ticket", pickerAction{"Unarchive ticket", "unarchive"}, true,
 		&serverURL, &boardIdent,
 		func(c *client.Client, ctx context.Context, id int64) error { return c.UnarchiveTicket(ctx, id) })
@@ -905,6 +922,32 @@ func ticketArg(ctx context.Context, url string, args []string, boardIdent string
 	return pickTicket(ctx, url, boardIdent, action, archived)
 }
 
+// ticketArgs is ticketArg for subcommands that act on several tickets: every
+// positional id, otherwise the tickets marked (or the one highlighted) in a
+// multi-select picker over the board's open tickets.
+func ticketArgs(ctx context.Context, url string, args []string, boardIdent string, action pickerAction) ([]int64, error) {
+	if len(args) == 0 {
+		items, err := pickTicketItems(ctx, url, boardIdent, action, false, false, true)
+		if err != nil {
+			return nil, err
+		}
+		ids := make([]int64, len(items))
+		for i, it := range items {
+			ids[i] = it.ID
+		}
+		return ids, nil
+	}
+	ids := make([]int64, len(args))
+	for i, a := range args {
+		id, err := parseInt64(a, "ticket id")
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = id
+	}
+	return ids, nil
+}
+
 // pickTicket resolves the board (an explicit ident, else the cwd repo),
 // lists its tickets, and returns the one the user picks. archived selects
 // the board's archived tickets, for the subcommands that only act on those.
@@ -919,38 +962,49 @@ func pickTicket(ctx context.Context, url, boardIdent string, action pickerAction
 // adds the picker's harness row; the item's Harness is then the harness to
 // switch the ticket's session to, or "" to leave it as is.
 func pickTicketItem(ctx context.Context, url, boardIdent string, action pickerAction, archived, withHarness bool) (pickerItem, error) {
+	items, err := pickTicketItems(ctx, url, boardIdent, action, archived, withHarness, false)
+	if err != nil {
+		return pickerItem{}, err
+	}
+	return items[0], nil
+}
+
+// pickTicketItems is pickTicketItem returning every picked row; multi lets
+// the user mark several with Tab. It always returns at least one item or an
+// error.
+func pickTicketItems(ctx context.Context, url, boardIdent string, action pickerAction, archived, withHarness, multi bool) ([]pickerItem, error) {
 	if !stdinIsTerminal() {
-		return pickerItem{}, errors.New("a ticket id is required when not running in an interactive terminal")
+		return nil, errors.New("a ticket id is required when not running in an interactive terminal")
 	}
 	ident, err := resolveBoardIdent(ctx, url, boardArgs(boardIdent))
 	if err != nil {
-		return pickerItem{}, err
+		return nil, err
 	}
 	label, items, err := loadBoardTickets(ctx, url, ident, archived)
 	if err != nil {
-		return pickerItem{}, err
+		return nil, err
 	}
 	if len(items) == 0 {
 		kind := "open"
 		if archived {
 			kind = "archived"
 		}
-		return pickerItem{}, fmt.Errorf("board %s has no %s tickets", label, kind)
+		return nil, fmt.Errorf("board %s has no %s tickets", label, kind)
 	}
 	var opts *harnessOptions
 	if withHarness {
 		if opts, err = loadHarnessOptions(ctx, url, ident); err != nil {
-			return pickerItem{}, err
+			return nil, err
 		}
 	}
-	item, ok, err := promptTicketPicker(action, label, items, opts)
+	picked, ok, err := promptTicketPicker(action, label, items, opts, multi)
 	if err != nil {
-		return pickerItem{}, err
+		return nil, err
 	}
 	if !ok {
-		return pickerItem{}, errors.New("cancelled; no ticket selected")
+		return nil, errors.New("cancelled; no ticket selected")
 	}
-	return item, nil
+	return picked, nil
 }
 
 // runTicketCreate creates the ticket, prints its summary, and returns the
@@ -985,6 +1039,30 @@ func runTicketMove(ctx context.Context, url string, out io.Writer, id int64, arg
 	return nil
 }
 
+// runTicketArchive archives each ticket and, with del, deletes it right
+// after. It keeps going past a failed ticket so one bad id doesn't strand
+// the rest, and returns every failure joined.
+func runTicketArchive(ctx context.Context, url string, out io.Writer, ids []int64, del bool) error {
+	c := client.New(url, nil)
+	var errs []error
+	for _, id := range ids {
+		if err := c.ArchiveTicket(ctx, id); err != nil {
+			errs = append(errs, fmt.Errorf("archive ticket %d: %w", id, err))
+			continue
+		}
+		fmt.Fprintf(out, "archive ticket %d\n", id)
+		if !del {
+			continue
+		}
+		if err := c.DeleteTicket(ctx, id); err != nil {
+			errs = append(errs, fmt.Errorf("delete ticket %d: %w", id, err))
+			continue
+		}
+		fmt.Fprintf(out, "delete ticket %d\n", id)
+	}
+	return errors.Join(errs...)
+}
+
 func runTicketSync(ctx context.Context, url string, out io.Writer, id int64, strategy string) error {
 	if err := client.New(url, nil).SyncTicket(ctx, id, strategy); err != nil {
 		return err
@@ -1007,9 +1085,9 @@ func runTicketMerge(ctx context.Context, url string, out io.Writer, id int64, st
 	return nil
 }
 
-// simpleTicketCmd builds an archive/unarchive/delete/done style subcommand
+// simpleTicketCmd builds an unarchive/delete/done style subcommand
 // (optional positional ticket id, no body, no flags) that maps to a one-line
-// client call. The shape is the same for all four commands; this avoids four
+// client call. The shape is the same for all three commands; this avoids three
 // near-identical blocks in ticketCmd(). pick names the picker opened when no
 // id is given, and archived points it at the board's archived tickets for
 // the commands that only ever act on those.

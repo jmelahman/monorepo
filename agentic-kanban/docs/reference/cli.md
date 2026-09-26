@@ -22,7 +22,7 @@ kanban
 │   ├── attach         Attach your terminal to a ticket's agent
 │   ├── update         Update title/body of a ticket
 │   ├── move           Move a ticket to a different column / position
-│   ├── archive        Archive a ticket
+│   ├── archive        Archive tickets (--delete to also delete them)
 │   ├── unarchive      Unarchive a ticket
 │   ├── delete         Permanently delete (must be archived first)
 │   ├── done           Move a ticket to the rightmost column and stop its session
@@ -198,6 +198,10 @@ the subcommand acts on the ticket you pick:
   ticket … `Enter` archive"), so a list opened by `archive` can't be
   mistaken for one opened by `attach`. `Enter` runs the subcommand on the
   highlighted ticket; `Esc` cancels without touching anything.
+- `archive` accepts several tickets: `Tab` marks the highlighted ticket
+  (a `●` in the gutter, count in the header) and moves down, `Shift+Tab`
+  does the same moving up. Marks survive filtering, and `Enter` acts on
+  every marked ticket — or just the highlighted one if none are marked.
 - `unarchive` and `delete` act only on archived tickets, so their lists
   show the board's archived tickets instead of its open ones.
 - The list needs a real terminal, so in scripts and pipes the id is
@@ -488,16 +492,33 @@ kanban ticket tasks 42 --stop "Kanban Backend"
 Moves a ticket. `--column-id` is numeric and required (look up column
 ids via `kanban board state <id>`).
 
-### `ticket archive [id]` / `ticket unarchive [id]`
+### `ticket archive [id...] [--delete]`
 
-Archive or restore a ticket. Archiving stops any running session.
-`unarchive`'s list shows the board's archived tickets.
+Archives one or more tickets, stopping any running session. With no ids
+the picker opens in multi-select mode (see above).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--delete` | `false` | Permanently delete each ticket right after archiving it. |
+
+Each ticket is handled independently: a failure on one is reported and the
+rest still run, and the command exits non-zero if any failed.
+
+```bash
+kanban ticket archive 12 14 --delete   # archive and delete #12 and #14
+kanban ticket archive --delete         # pick them from the board
+```
+
+### `ticket unarchive [id]`
+
+Restores an archived ticket; its list shows the board's archived tickets.
 
 ### `ticket delete [id]`
 
 Permanently deletes a ticket. The ticket must be archived first
-(`ticket archive <id>` then `ticket delete <id>`), so its list shows the
-board's archived tickets.
+(`ticket archive <id>` then `ticket delete <id>`, or both at once with
+`ticket archive --delete <id>`), so its list shows the board's archived
+tickets.
 
 ### `ticket done [id]`
 

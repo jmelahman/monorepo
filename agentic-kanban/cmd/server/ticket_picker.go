@@ -120,11 +120,12 @@ type pickerAction struct {
 }
 
 // promptTicketPicker takes over the terminal with a tcell screen, runs the
-// ticket list, and returns the chosen ticket. ok is false when the user
+// ticket list, and returns the chosen tickets. ok is false when the user
 // cancelled (Esc / Ctrl+C). A non-nil harnesses adds a harness row for the
-// highlighted ticket (used by `ticket attach`); chosen.Harness is then the
-// harness picked for it — see ticketPicker.chosen.
-func promptTicketPicker(action pickerAction, boardLabel string, items []pickerItem, harnesses *harnessOptions) (chosen pickerItem, ok bool, err error) {
+// highlighted ticket (used by `ticket attach`); chosen[0].Harness is then
+// the harness picked for it — see ticketPicker.chosen. multi lets Tab mark
+// several tickets; without it chosen is always exactly one ticket.
+func promptTicketPicker(action pickerAction, boardLabel string, items []pickerItem, harnesses *harnessOptions, multi bool) (chosen []pickerItem, ok bool, err error) {
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		return chosen, false, fmt.Errorf("open terminal: %w", err)
@@ -142,29 +143,30 @@ func promptTicketPicker(action pickerAction, boardLabel string, items []pickerIt
 	}()
 	p := newTicketPicker(action, boardLabel, items)
 	p.harnesses = harnesses
+	p.multi = multi
 	return runTicketPicker(screen, p)
 }
 
 // runTicketPicker is the event loop, split from promptTicketPicker so tests
 // can drive it with a tcell.SimulationScreen.
-func runTicketPicker(screen tcell.Screen, p *ticketPicker) (pickerItem, bool, error) {
+func runTicketPicker(screen tcell.Screen, p *ticketPicker) ([]pickerItem, bool, error) {
 	for {
 		p.render(screen)
 		screen.Show()
 		switch ev := screen.PollEvent().(type) {
 		case nil:
 			// Screen was finalized underneath us.
-			return pickerItem{}, false, nil
+			return nil, false, nil
 		case *tcell.EventResize:
 			screen.Sync()
 		case *tcell.EventKey:
 			p.handleKey(ev)
 		}
 		if p.selected {
-			return p.chosen(), true, nil
+			return p.chosenItems(), true, nil
 		}
 		if p.cancelled {
-			return pickerItem{}, false, nil
+			return nil, false, nil
 		}
 	}
 }
@@ -189,6 +191,11 @@ type ticketPicker struct {
 	// the highlight away and back keeps what was chosen for that ticket.
 	harnesses *harnessOptions
 	picked    map[int64]int
+
+	// multi lets Tab / Shift+Tab mark tickets; marked holds the marked ids,
+	// kept across filter changes so a mark hidden by the filter still counts.
+	multi  bool
+	marked map[int64]bool
 
 	// Owned by render(): the first list row on screen and how many list
 	// rows fit, which PgUp/PgDn use as their stride.
@@ -278,6 +285,39 @@ func (p *ticketPicker) chosen() pickerItem {
 	return it
 }
 
+// chosenItems is what Enter picked: every marked ticket in list order, or
+// just the highlighted one (see chosen) when nothing is marked.
+func (p *ticketPicker) chosenItems() []pickerItem {
+	var out []pickerItem
+	for _, it := range p.items {
+		if p.marked[it.ID] {
+			out = append(out, it)
+		}
+	}
+	if len(out) == 0 {
+		out = []pickerItem{p.chosen()}
+	}
+	return out
+}
+
+// toggleMark flips the highlighted ticket's mark and steps the highlight by
+// delta, so repeated Tabs mark a run of tickets the way fzf's do.
+func (p *ticketPicker) toggleMark(delta int) {
+	if len(p.visible()) == 0 {
+		return
+	}
+	id := p.current().ID
+	if p.marked == nil {
+		p.marked = map[int64]bool{}
+	}
+	if p.marked[id] {
+		delete(p.marked, id)
+	} else {
+		p.marked[id] = true
+	}
+	p.move(delta)
+}
+
 // current returns the highlighted item, or the zero item when the filter
 // matches nothing.
 func (p *ticketPicker) current() pickerItem {
@@ -320,7 +360,10 @@ func (p *ticketPicker) submit() {
 //
 //	Up / Down, Ctrl+P / Ctrl+N   move the highlight
 //	PgUp / PgDn, Home / End      move by a page / to either end
-//	Enter                        run the action on the highlighted ticket
+//	Enter                        run the action on the marked tickets, else
+//	                             the highlighted one
+//	Tab / Shift+Tab              mark or unmark the highlighted ticket and move
+//	                             down / up (multi-select pickers only)
 //	Esc / Ctrl+C                 cancel
 //	printable keys               narrow the list; Backspace widens it again
 //	Left / Right                 cycle the harness when there's a harness row,
@@ -334,6 +377,14 @@ func (p *ticketPicker) handleKey(ev *tcell.EventKey) {
 		p.cancelled = true
 	case tcell.KeyEnter, tcell.KeyCtrlJ:
 		p.submit()
+	case tcell.KeyTab:
+		if p.multi {
+			p.toggleMark(1)
+		}
+	case tcell.KeyBacktab:
+		if p.multi {
+			p.toggleMark(-1)
+		}
 	case tcell.KeyUp, tcell.KeyCtrlP:
 		p.move(-1)
 	case tcell.KeyDown, tcell.KeyCtrlN:
@@ -437,7 +488,11 @@ func (p *ticketPicker) render(s tcell.Screen) {
 	}
 	width := w - 2*formPad
 
-	putText(s, formPad, 0, width, base.Bold(true), p.action.title+" · "+p.boardLabel)
+	title := p.action.title + " · " + p.boardLabel
+	if n := len(p.marked); n > 0 {
+		title += fmt.Sprintf(" · %d marked", n)
+	}
+	putText(s, formPad, 0, width, base.Bold(true), title)
 
 	// Filter line: a prompt plus the single-line buffer, scrolled so the
 	// cursor stays on screen.
@@ -504,10 +559,14 @@ func (p *ticketPicker) render(s tcell.Screen) {
 			putText(s, formPad, y, width, base.Bold(true).Dim(true), row.header)
 			continue
 		}
-		p.renderItem(s, formPad, y, width, idWidth, p.items[row.item], i == cursorRow)
+		it := p.items[row.item]
+		p.renderItem(s, formPad, y, width, idWidth, it, i == cursorRow, p.marked[it.ID])
 	}
 
 	help := "↑↓ move · Enter " + p.action.verb + " · type to filter · Esc cancel"
+	if p.multi {
+		help = "↑↓ move · Tab mark · Enter " + p.action.verb + " · type to filter · Esc cancel"
+	}
 	if p.harnesses != nil {
 		help = "↑↓ move · ←→ harness · Enter " + p.action.verb + " · type to filter · Esc cancel"
 		if vis := p.visible(); len(vis) > 0 {
@@ -525,10 +584,11 @@ func (p *ticketPicker) render(s tcell.Screen) {
 	}
 }
 
-// renderItem draws "  #id  title …  status" on one row. The highlighted
-// row is drawn in reverse video across the full width; the status sits at
-// the right edge and the title is cut with an ellipsis to make room.
-func (p *ticketPicker) renderItem(s tcell.Screen, x, y, width, idWidth int, it pickerItem, highlighted bool) {
+// renderItem draws "  #id  title …  status" on one row, with a "●" in the
+// leading gutter when the ticket is marked. The highlighted row is drawn in
+// reverse video across the full width; the status sits at the right edge
+// and the title is cut with an ellipsis to make room.
+func (p *ticketPicker) renderItem(s tcell.Screen, x, y, width, idWidth int, it pickerItem, highlighted, marked bool) {
 	style := tcell.StyleDefault
 	if highlighted {
 		style = style.Reverse(true).Bold(true)
@@ -545,11 +605,16 @@ func (p *ticketPicker) renderItem(s tcell.Screen, x, y, width, idWidth int, it p
 	case "stopped", "error":
 		statusStyle = style.Dim(true)
 	}
-	prefix := fmt.Sprintf("  #%-*d  ", idWidth, it.ID)
-	titleW := width - len(prefix) - len(status) - 2
+	gutter := "  "
+	if marked {
+		gutter = "● "
+	}
+	prefix := fmt.Sprintf("%s#%-*d  ", gutter, idWidth, it.ID)
+	prefixW := runesWidth([]rune(prefix)) // "●" is one cell but three bytes
+	titleW := width - prefixW - len(status) - 2
 	if titleW < 4 {
 		// Too narrow for a status column; give the whole row to the title.
-		status, titleW = "", width-len(prefix)
+		status, titleW = "", width-prefixW
 	}
 	putText(s, x, y, width, style, prefix+truncateText(it.Title, titleW))
 	if status != "" {

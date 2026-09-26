@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"os/exec"
@@ -518,6 +519,44 @@ func TestRunTicketLifecycle(t *testing.T) {
 	got, _ = store.GetTicket(t.Context(), tk.ID)
 	if got.ArchivedAt != nil {
 		t.Errorf("ticket still archived")
+	}
+}
+
+func TestRunTicketArchive(t *testing.T) {
+	srv, store, board := newKanbanCLITestServer(t)
+	cols, _ := store.ListColumns(t.Context(), board.ID)
+	mk := func(title string) int64 {
+		t.Helper()
+		tk := &db.Ticket{BoardID: board.ID, ColumnID: cols[0].ID, Title: title, Slug: title}
+		if err := store.CreateTicket(t.Context(), tk); err != nil {
+			t.Fatal(err)
+		}
+		return tk.ID
+	}
+	a, b, c := mk("alpha"), mk("beta"), mk("gamma")
+
+	var out bytes.Buffer
+	if err := runTicketArchive(t.Context(), srv.URL, &out, []int64{a}, false); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := store.GetTicket(t.Context(), a); got == nil || got.ArchivedAt == nil {
+		t.Errorf("ticket %d not archived: %+v", a, got)
+	}
+
+	// --delete archives then deletes each ticket; a bad id in the middle
+	// doesn't stop the rest.
+	out.Reset()
+	err := runTicketArchive(t.Context(), srv.URL, &out, []int64{b, 999999, c}, true)
+	if err == nil || !strings.Contains(err.Error(), "archive ticket 999999") {
+		t.Errorf("err = %v, want the missing ticket reported", err)
+	}
+	for _, id := range []int64{b, c} {
+		if got, _ := store.GetTicket(t.Context(), id); got != nil {
+			t.Errorf("ticket %d still exists after --delete", id)
+		}
+		if !strings.Contains(out.String(), fmt.Sprintf("delete ticket %d\n", id)) {
+			t.Errorf("output missing delete of %d: %q", id, out.String())
+		}
 	}
 }
 

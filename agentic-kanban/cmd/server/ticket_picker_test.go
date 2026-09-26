@@ -1,6 +1,7 @@
 package server
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -328,7 +329,11 @@ func TestRunTicketPickerEndToEnd(t *testing.T) {
 	run := func(p *ticketPicker) chan outcome {
 		done := make(chan outcome, 1)
 		go func() {
-			item, ok, err := runTicketPicker(screen, p)
+			items, ok, err := runTicketPicker(screen, p)
+			var item pickerItem
+			if len(items) == 1 {
+				item = items[0]
+			}
 			done <- outcome{item, ok, err}
 		}()
 		return done
@@ -369,5 +374,66 @@ func TestRunTicketPickerEndToEnd(t *testing.T) {
 	screen.InjectKey(tcell.KeyEscape, 0, tcell.ModNone)
 	if o := wait(t, done); o.err != nil || o.ok {
 		t.Errorf("cancel: ok=%v err=%v", o.ok, o.err)
+	}
+}
+
+// TestTicketPickerMultiSelect covers marking with Tab / Shift+Tab: marks
+// survive the filter, Enter returns them in list order, and with nothing
+// marked Enter falls back to the highlighted ticket.
+func TestTicketPickerMultiSelect(t *testing.T) {
+	ids := func(items []pickerItem) []int64 {
+		out := make([]int64, len(items))
+		for i, it := range items {
+			out[i] = it.ID
+		}
+		return out
+	}
+
+	p := newTicketPicker(pickerAction{"Archive tickets", "archive"}, "b", pickerItems())
+	p.multi = true
+	if got := ids(p.chosenItems()); len(got) != 1 || got[0] != 3 {
+		t.Errorf("nothing marked: chosen = %v, want [3]", got)
+	}
+
+	p.handleKey(formKey(tcell.KeyTab)) // marks #3, moves to #12
+	p.handleKey(formKey(tcell.KeyTab)) // marks #12, moves to #7
+	if got := p.current().ID; got != 7 {
+		t.Errorf("after two Tabs highlight = #%d, want #7", got)
+	}
+	p.handleKey(formKey(tcell.KeyBacktab)) // marks #7, moves back to #12
+	p.handleKey(formKey(tcell.KeyBacktab)) // unmarks #12, moves to #3
+	if got := p.current().ID; got != 3 {
+		t.Errorf("after two Shift+Tabs highlight = #%d, want #3", got)
+	}
+	// A mark hidden by the filter still counts.
+	pickerType(p, "bash")
+	p.handleKey(formKey(tcell.KeyTab)) // marks #9
+	p.handleKey(formKey(tcell.KeyEnter))
+	if !p.selected {
+		t.Fatal("Enter did not select")
+	}
+	if got, want := ids(p.chosenItems()), []int64{3, 7, 9}; !slices.Equal(got, want) {
+		t.Errorf("chosen = %v, want %v (list order)", got, want)
+	}
+
+	screen := newFormScreen(t, 60, 12)
+	p.render(screen)
+	screen.Show()
+	text := screenText(screen)
+	if !strings.Contains(text, "3 marked") {
+		t.Errorf("header missing mark count:\n%s", text)
+	}
+	if !strings.Contains(text, "● #9") {
+		t.Errorf("marked row missing its gutter mark:\n%s", text)
+	}
+	if !strings.Contains(text, "Tab mark") {
+		t.Errorf("help line missing Tab:\n%s", text)
+	}
+
+	// Single-select pickers ignore Tab.
+	single := newTicketPicker(attachAction, "b", pickerItems())
+	single.handleKey(formKey(tcell.KeyTab))
+	if len(single.marked) != 0 || single.current().ID != 3 {
+		t.Errorf("Tab in a single-select picker marked %v / moved to #%d", single.marked, single.current().ID)
 	}
 }
