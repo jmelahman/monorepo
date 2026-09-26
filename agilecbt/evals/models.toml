@@ -1,5 +1,5 @@
 # Model matrix for `agilecbt eval --matrix`. Each entry inherits the coach's
-# endpoint (config.toml / APP_LLM_BASE_URL) unless it sets base_url; api_key
+# endpoint (config.toml / AGILECBT_LLM_BASE_URL) unless it sets base_url; api_key
 # and reasoning_effort work the same way. Names are Ollama tags; pull them
 # first (`ollama pull <name>`).
 

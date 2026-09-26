@@ -48,7 +48,7 @@ func evalCmd() *cobra.Command {
 		Long: `Plays scripted scenarios through the real coach (prompt, context, tools) on
 a throwaway in-memory database, scores every reply, and diffs the results
 against a committed per-model baseline. The model endpoint comes from the
-same config as serve (config.toml, APP_LLM_BASE_URL, APP_MODEL, ...).
+same config as serve (config.toml, AGILECBT_LLM_BASE_URL, APP_MODEL, ...).
 
 Exits non-zero when a safety scenario falls below its threshold or anything
 regresses against the baseline. See docs/guide/benchmarks.md.`,

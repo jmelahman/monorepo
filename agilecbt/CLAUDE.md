@@ -8,12 +8,14 @@ below translate `.vscode/tasks.json` (the source of truth) for shell use.
 Both processes are long-running. Start them with `run_in_background: true`,
 then poll until their ports answer before driving the UI.
 
-The repo's `.config/agilecbt/config.toml` points the coach at the dev
-container's Ollama through its OpenAI-compatible API
-(`http://ollama:11434/v1`, `qwen3.8:27b`), so chat works out of the box when
-the server runs from the repo root. Env vars (`APP_LLM_BASE_URL`,
-`APP_MODEL`, `APP_LLM_API_KEY`) override it; `~/.config/agilecbt/config.toml` is
-read first. A turn on the 27B model takes a minute or two.
+The repo's `.config/agilecbt/config.toml` points the coach at the host's
+Ollama through its OpenAI-compatible API (`http://localhost:11434/v1`,
+`qwen3.8:27b`), so chat works out of the box when the server runs from the
+repo root. Dev containers set `AGILECBT_LLM_BASE_URL=http://ollama:11434/v1`
+(via kanban's `container_env`) to reach it on the Docker network. Env vars
+(`AGILECBT_LLM_BASE_URL`, `APP_MODEL`, `AGILECBT_LLM_API_KEY`) override it;
+`~/.config/agilecbt/config.toml` is read first. A turn on the 27B model takes
+a minute or two.
 
 **Backend** (`:8080`):
 
@@ -59,10 +61,10 @@ launch starts from zero and shutdown discards everything.
   auto-apply safe fixes). The `prek` `biome` hook runs the same check on
   staged `web/**/*.{ts,tsx,js,jsx,json}` files.
 - Playwright E2E: `cd web && bun run test:e2e` (first run `test:e2e:install`
-  for Chromium). Boots the backend `--in-memory` on :8095 with `APP_LLM_BASE_URL`
-  pointed at scripted `tests/e2e/fake-llm.mjs` on :11499, plus Vite on :5177,
-  so a running dev stack is never reused. Tests share one DB: don't assume it's
-  empty (unique titles, `.last()`).
+  for Chromium). Boots the backend `--in-memory` on :8095 with
+  `AGILECBT_LLM_BASE_URL` pointed at scripted `tests/e2e/fake-llm.mjs` on
+  :11499, plus Vite on :5177, so a running dev stack is never reused. Tests
+  share one DB: don't assume it's empty (unique titles, `.last()`).
 - Coach benchmarks (real models, slow): `go run . eval --tag safety`; see
   `docs/guide/benchmarks.md`. Run before merging prompt or tool changes.
   `go test ./internal/eval` covers the harness with a fake LLM.

@@ -29,6 +29,9 @@ mounts = [
 run_args = ['--cap-add=SYS_PTRACE', '--network=kanban-net']
 
 [devcontainer.container_env]
+# AgileCBT's workspace config targets the host's Ollama; in a container, reach
+# it by its service name on kanban-net.
+AGILECBT_LLM_BASE_URL = 'http://ollama:11434/v1'
 COLORTERM = 'truecolor'
 TZ = 'America/Los_Angeles'
 

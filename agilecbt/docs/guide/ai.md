@@ -22,11 +22,11 @@ needs to support tool calling.
 
 | Key (`config.toml`) | Environment | Default |
 | --- | --- | --- |
-| `llm` | `APP_LLM` | `openai`; `none` turns the coach off |
-| `base_url` | `APP_LLM_BASE_URL` | `http://localhost:11434/v1` (a local Ollama) |
-| `api_key` | `APP_LLM_API_KEY` | none; sent as `Authorization: Bearer` when set |
+| `llm` | `AGILECBT_LLM` | `openai`; `none` turns the coach off |
+| `base_url` | `AGILECBT_LLM_BASE_URL` | `http://localhost:11434/v1` (a local Ollama) |
+| `api_key` | `AGILECBT_LLM_API_KEY` | none; sent as `Authorization: Bearer` when set |
 | `model` | `APP_MODEL` | `qwen3.8:27b` |
-| `reasoning_effort` | `APP_LLM_REASONING_EFFORT` | `none`; set it to `""` to leave it out of requests |
+| `reasoning_effort` | `AGILECBT_LLM_REASONING_EFFORT` | `none`; set it to `""` to leave it out of requests |
 
 These are the defaults. **Settings → AI model** can override any of them from
 the app. It saves them in the database and applies them without a restart
@@ -66,7 +66,7 @@ model = "anthropic/claude-sonnet-5"
 Put the key in the environment rather than a file you might commit:
 
 ```sh
-APP_LLM_API_KEY=sk-or-… agilecbt serve
+AGILECBT_LLM_API_KEY=sk-or-… agilecbt serve
 ```
 
 Your check-ins go to OpenRouter and the model's provider, so read their

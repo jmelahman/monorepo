@@ -17,11 +17,11 @@ flags override everything. The server logs each file it reads. Every key is
 optional:
 
 ```toml
-llm = "openai"                          # APP_LLM
-base_url = "http://ollama:11434/v1"     # APP_LLM_BASE_URL
-api_key = "…"                           # APP_LLM_API_KEY
+llm = "openai"                          # AGILECBT_LLM
+base_url = "http://ollama:11434/v1"     # AGILECBT_LLM_BASE_URL
+api_key = "…"                           # AGILECBT_LLM_API_KEY
 model = "qwen3.8:27b"                   # APP_MODEL
-reasoning_effort = "none"               # APP_LLM_REASONING_EFFORT
+reasoning_effort = "none"               # AGILECBT_LLM_REASONING_EFFORT
 secret = "…"                            # APP_SECRET
 data_dir = "data"                       # APP_DATA_DIR, relative to this file
 crisis_resources = '''
@@ -31,9 +31,9 @@ crisis_resources = '''
 ```
 
 Unknown keys are an error, so a typo doesn't silently fall back to a default.
-The repository ships a `.config/agilecbt/config.toml` that points the dev
-container at its Ollama service. Don't put `secret` or `api_key` in a file
-you commit.
+The repository ships a `.config/agilecbt/config.toml` that points at Ollama
+on `localhost`; dev containers override it with `AGILECBT_LLM_BASE_URL`. Don't
+put `secret` or `api_key` in a file you commit.
 
 ## Crisis resources
 
@@ -71,11 +71,11 @@ The SQLite database lives in the data directory, resolved in order:
 | Variable | Used by | Description |
 | --- | --- | --- |
 | `APP_SECRET` | server, CLI | Shared secret. When set, the web UI asks for it and API/MCP clients send it as `Authorization: Bearer`. Unset means no auth |
-| `APP_LLM` | server | AI coach: `openai` (default, any OpenAI-compatible API) or `none` |
-| `APP_LLM_BASE_URL` | server | API root before `/chat/completions` (default `http://localhost:11434/v1`, a local Ollama) |
-| `APP_LLM_API_KEY` | server | Bearer token for the API, e.g. an OpenRouter key |
+| `AGILECBT_LLM` | server | AI coach: `openai` (default, any OpenAI-compatible API) or `none` |
+| `AGILECBT_LLM_BASE_URL` | server | API root before `/chat/completions` (default `http://localhost:11434/v1`, a local Ollama) |
+| `AGILECBT_LLM_API_KEY` | server | Bearer token for the API, e.g. an OpenRouter key |
 | `APP_MODEL` | server | Model id (default `qwen3.8:27b`) |
-| `APP_LLM_REASONING_EFFORT` | server | Sent as `reasoning_effort` (default `none`, thinking off); empty leaves it out |
+| `AGILECBT_LLM_REASONING_EFFORT` | server | Sent as `reasoning_effort` (default `none`, thinking off); empty leaves it out |
 | `APP_DATA_DIR` | server | Data directory override |
 | `APP_CRISIS_RESOURCES` | server | Crisis lines the coach shares; see [Crisis resources](#crisis-resources) |
 | `APP_URL` | CLI subcommands | Server base URL (an explicit `--server` flag wins) |

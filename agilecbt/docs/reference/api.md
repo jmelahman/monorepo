@@ -309,7 +309,7 @@ and `api_key`, and returns the same shape as `GET`.
 
 A saved API key is bound to the base URL in effect when it was saved,
 including a `base_url` sent in the same request. The key from `config.toml`
-or `APP_LLM_API_KEY` is only sent to the configured base URL. So changing the
+or `AGILECBT_LLM_API_KEY` is only sent to the configured base URL. So changing the
 URL never sends a key to another server. Saved keys are left out of exports
 and ignored on import.
 

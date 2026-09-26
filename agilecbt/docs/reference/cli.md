@@ -15,7 +15,7 @@ Start the HTTP server, which also serves the web UI and `/mcp`.
 | `--data-dir` | (XDG) | Override the data directory |
 | `--in-memory` | `false` | Ephemeral in-memory SQLite |
 
-Environment variables such as `APP_SECRET` and `APP_LLM` are covered in
+Environment variables such as `APP_SECRET` and `AGILECBT_LLM` are covered in
 [Configuration](/guide/configuration).
 
 ## `agilecbt today`

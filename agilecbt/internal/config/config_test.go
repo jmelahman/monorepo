@@ -18,7 +18,7 @@ func writeFile(t *testing.T, path, body string) {
 }
 
 func TestResolvePrecedence(t *testing.T) {
-	for _, k := range []string{"APP_SECRET", "APP_LLM", "APP_MODEL", "APP_LLM_BASE_URL", "APP_LLM_API_KEY", "APP_LLM_REASONING_EFFORT", "APP_CRISIS_RESOURCES"} {
+	for _, k := range []string{"APP_SECRET", "AGILECBT_LLM", "APP_MODEL", "AGILECBT_LLM_BASE_URL", "AGILECBT_LLM_API_KEY", "AGILECBT_LLM_REASONING_EFFORT", "APP_CRISIS_RESOURCES"} {
 		// t.Setenv then Unsetenv restores the original value after the test.
 		t.Setenv(k, "")
 		os.Unsetenv(k)
@@ -73,7 +73,7 @@ func TestResolveRejectsUnknownKeys(t *testing.T) {
 }
 
 func TestResolveDefaults(t *testing.T) {
-	for _, k := range []string{"APP_LLM", "APP_MODEL", "APP_LLM_BASE_URL", "APP_LLM_REASONING_EFFORT"} {
+	for _, k := range []string{"AGILECBT_LLM", "APP_MODEL", "AGILECBT_LLM_BASE_URL", "AGILECBT_LLM_REASONING_EFFORT"} {
 		t.Setenv(k, "")
 		os.Unsetenv(k)
 	}
@@ -87,7 +87,7 @@ func TestResolveDefaults(t *testing.T) {
 }
 
 func TestResolveRejectsRemovedBackends(t *testing.T) {
-	t.Setenv("APP_LLM", "claude-code")
+	t.Setenv("AGILECBT_LLM", "claude-code")
 	if _, _, err := resolve(nil); err == nil || !strings.Contains(err.Error(), "removed") {
 		t.Fatalf("err = %v, want removed backend", err)
 	}

@@ -36,9 +36,9 @@ export default defineConfig({
       cwd: "..",
       // The real OpenAI-compatible backend, pointed at the scripted fake.
       env: {
-        APP_LLM: "openai",
-        APP_LLM_BASE_URL: `http://127.0.0.1:${FAKE_LLM_PORT}/v1`,
-        APP_LLM_API_KEY: "",
+        AGILECBT_LLM: "openai",
+        AGILECBT_LLM_BASE_URL: `http://127.0.0.1:${FAKE_LLM_PORT}/v1`,
+        AGILECBT_LLM_API_KEY: "",
         APP_MODEL: "fake",
         APP_SECRET: "",
       },

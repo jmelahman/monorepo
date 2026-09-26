@@ -19,10 +19,10 @@ services:
       # Required whenever the port is reachable beyond this machine.
       APP_SECRET: ${APP_SECRET:?set APP_SECRET}
       # Any OpenAI-compatible API; defaults to Ollama on the host. Set
-      # APP_LLM=none to turn the coach off.
-      APP_LLM: ${APP_LLM:-openai}
-      APP_LLM_BASE_URL: ${APP_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
-      APP_LLM_API_KEY: ${APP_LLM_API_KEY:-}
+      # AGILECBT_LLM=none to turn the coach off.
+      AGILECBT_LLM: ${AGILECBT_LLM:-openai}
+      AGILECBT_LLM_BASE_URL: ${AGILECBT_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      AGILECBT_LLM_API_KEY: ${AGILECBT_LLM_API_KEY:-}
       APP_MODEL: ${APP_MODEL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"

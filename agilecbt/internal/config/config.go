@@ -38,17 +38,17 @@ type Config struct {
 	DataDir string
 	// Secret protects the API when non-empty ($APP_SECRET).
 	Secret string
-	// LLM selects the curator backend ($APP_LLM, default openai).
+	// LLM selects the curator backend ($AGILECBT_LLM, default openai).
 	LLM string
 	// BaseURL is the OpenAI-compatible API root, ending before
-	// /chat/completions ($APP_LLM_BASE_URL).
+	// /chat/completions ($AGILECBT_LLM_BASE_URL).
 	BaseURL string
-	// APIKey is sent as a bearer token when set ($APP_LLM_API_KEY).
+	// APIKey is sent as a bearer token when set ($AGILECBT_LLM_API_KEY).
 	APIKey string
 	// Model is the model id at BaseURL ($APP_MODEL).
 	Model string
 	// ReasoningEffort is sent as reasoning_effort
-	// ($APP_LLM_REASONING_EFFORT); "none" turns thinking off, "" omits it.
+	// ($AGILECBT_LLM_REASONING_EFFORT); "none" turns thinking off, "" omits it.
 	ReasoningEffort string
 	// CrisisResources replaces the built-in crisis lines the coach shares
 	// ($APP_CRISIS_RESOURCES); empty keeps the default.
@@ -143,9 +143,9 @@ func resolve(files []string) (Config, string, error) {
 		return Config{}, "", err
 	}
 	for dst, key := range map[*string]string{
-		&c.Secret: "APP_SECRET", &c.LLM: "APP_LLM", &c.Model: "APP_MODEL",
-		&c.BaseURL: "APP_LLM_BASE_URL", &c.APIKey: "APP_LLM_API_KEY",
-		&c.ReasoningEffort: "APP_LLM_REASONING_EFFORT",
+		&c.Secret: "APP_SECRET", &c.LLM: "AGILECBT_LLM", &c.Model: "APP_MODEL",
+		&c.BaseURL: "AGILECBT_LLM_BASE_URL", &c.APIKey: "AGILECBT_LLM_API_KEY",
+		&c.ReasoningEffort: "AGILECBT_LLM_REASONING_EFFORT",
 		&c.CrisisResources: "APP_CRISIS_RESOURCES",
 	} {
 		if v, ok := os.LookupEnv(key); ok {
