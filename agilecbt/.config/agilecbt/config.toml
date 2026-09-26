@@ -1,6 +1,7 @@
 # AgileCBT settings for this workspace. The server reads it when started from
 # the repo root; ~/.config/agilecbt/config.toml is read first, and any
-# environment variable (AGILECBT_LLM_BASE_URL, APP_MODEL, ...) overrides both.
+# environment variable (AGILECBT_LLM_BASE_URL, AGILECBT_MODEL, ...) overrides
+# both.
 # See docs/guide/configuration.md.
 
 # The host's Ollama, through its OpenAI-compatible API. Dev containers set

@@ -18,7 +18,7 @@ func writeFile(t *testing.T, path, body string) {
 }
 
 func TestResolvePrecedence(t *testing.T) {
-	for _, k := range []string{"APP_SECRET", "AGILECBT_LLM", "APP_MODEL", "AGILECBT_LLM_BASE_URL", "AGILECBT_LLM_API_KEY", "AGILECBT_LLM_REASONING_EFFORT", "APP_CRISIS_RESOURCES"} {
+	for _, k := range []string{"APP_SECRET", "AGILECBT_LLM", "AGILECBT_MODEL", "AGILECBT_LLM_BASE_URL", "AGILECBT_LLM_API_KEY", "AGILECBT_LLM_REASONING_EFFORT", "APP_CRISIS_RESOURCES"} {
 		// t.Setenv then Unsetenv restores the original value after the test.
 		t.Setenv(k, "")
 		os.Unsetenv(k)
@@ -38,7 +38,7 @@ crisis_resources = '''
 Call my sister: 555-0100.
 '''
 `)
-	t.Setenv("APP_MODEL", "env-model")
+	t.Setenv("AGILECBT_MODEL", "env-model")
 
 	c, dataDir, err := resolve([]string{user, project, filepath.Join(dir, "missing.toml")})
 	if err != nil {
@@ -73,7 +73,7 @@ func TestResolveRejectsUnknownKeys(t *testing.T) {
 }
 
 func TestResolveDefaults(t *testing.T) {
-	for _, k := range []string{"AGILECBT_LLM", "APP_MODEL", "AGILECBT_LLM_BASE_URL", "AGILECBT_LLM_REASONING_EFFORT"} {
+	for _, k := range []string{"AGILECBT_LLM", "AGILECBT_MODEL", "AGILECBT_LLM_BASE_URL", "AGILECBT_LLM_REASONING_EFFORT"} {
 		t.Setenv(k, "")
 		os.Unsetenv(k)
 	}

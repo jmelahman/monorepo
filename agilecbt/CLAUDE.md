@@ -13,7 +13,7 @@ Ollama through its OpenAI-compatible API (`http://localhost:11434/v1`,
 `qwen3.8:27b`), so chat works out of the box when the server runs from the
 repo root. Dev containers set `AGILECBT_LLM_BASE_URL=http://ollama:11434/v1`
 (via kanban's `container_env`) to reach it on the Docker network. Env vars
-(`AGILECBT_LLM_BASE_URL`, `APP_MODEL`, `AGILECBT_LLM_API_KEY`) override it;
+(`AGILECBT_LLM_BASE_URL`, `AGILECBT_MODEL`, `AGILECBT_LLM_API_KEY`) override it;
 `~/.config/agilecbt/config.toml` is read first. A turn on the 27B model takes
 a minute or two.
 

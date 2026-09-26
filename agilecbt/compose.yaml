@@ -23,7 +23,7 @@ services:
       AGILECBT_LLM: ${AGILECBT_LLM:-openai}
       AGILECBT_LLM_BASE_URL: ${AGILECBT_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
       AGILECBT_LLM_API_KEY: ${AGILECBT_LLM_API_KEY:-}
-      APP_MODEL: ${APP_MODEL:-}
+      AGILECBT_MODEL: ${AGILECBT_MODEL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

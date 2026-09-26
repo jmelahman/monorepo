@@ -45,7 +45,7 @@ type Config struct {
 	BaseURL string
 	// APIKey is sent as a bearer token when set ($AGILECBT_LLM_API_KEY).
 	APIKey string
-	// Model is the model id at BaseURL ($APP_MODEL).
+	// Model is the model id at BaseURL ($AGILECBT_MODEL).
 	Model string
 	// ReasoningEffort is sent as reasoning_effort
 	// ($AGILECBT_LLM_REASONING_EFFORT); "none" turns thinking off, "" omits it.
@@ -143,7 +143,7 @@ func resolve(files []string) (Config, string, error) {
 		return Config{}, "", err
 	}
 	for dst, key := range map[*string]string{
-		&c.Secret: "APP_SECRET", &c.LLM: "AGILECBT_LLM", &c.Model: "APP_MODEL",
+		&c.Secret: "APP_SECRET", &c.LLM: "AGILECBT_LLM", &c.Model: "AGILECBT_MODEL",
 		&c.BaseURL: "AGILECBT_LLM_BASE_URL", &c.APIKey: "AGILECBT_LLM_API_KEY",
 		&c.ReasoningEffort: "AGILECBT_LLM_REASONING_EFFORT",
 		&c.CrisisResources: "APP_CRISIS_RESOURCES",
