@@ -61,6 +61,12 @@ type Curator struct {
 	cfg     Config
 	busy    map[int64]bool
 	cache   statusCache
+
+	// Prompt and RetroPrompt replace the built-in system prompts when set
+	// (Prompt as a template with {{CRISIS_RESOURCES}}). The eval harness
+	// uses them to benchmark prompt drafts; set them before first use.
+	Prompt      string
+	RetroPrompt string
 }
 
 var _ api.Curator = (*Curator)(nil)
@@ -132,7 +138,7 @@ func (c *Curator) Chat(ctx context.Context, checkinID int64, text string, emit f
 	ctx = app.WithActor(ctx, app.Actor{Source: "curator", CheckinID: &checkinID})
 	req := TurnRequest{
 		CheckinID: checkinID,
-		System:    prompt.Curator(c.app.CrisisResources()),
+		System:    c.systemPrompt(),
 		History:   history,
 		User:      contextBlock + "\n\n" + text,
 	}
@@ -155,8 +161,15 @@ func (c *Curator) Chat(ctx context.Context, checkinID int64, text string, emit f
 	return turnErr
 }
 
-// retroSystem is the prompt for the one-shot retro draft.
-const retroSystem = `You help one person write their weekly retrospective in AgileCBT, an app that blends agile planning with CBT for depression and anxiety. Be warm, specific, and brief. Ground every point in the data you're given, and never invent events. Celebrate small wins. Frame hard things without judgment. Look for patterns between activities, mastery/pleasure ratings, and mood, energy, and anxiety (for example, "walks preceded higher-mood days"). Suggest exactly one small, concrete experiment for next week.
+func (c *Curator) systemPrompt() string {
+	if c.Prompt != "" {
+		return prompt.Render(c.Prompt, c.app.CrisisResources())
+	}
+	return prompt.Curator(c.app.CrisisResources())
+}
+
+// RetroSystem is the prompt for the one-shot retro draft.
+const RetroSystem = `You help one person write their weekly retrospective in AgileCBT, an app that blends agile planning with CBT for depression and anxiety. Be warm, specific, and brief. Ground every point in the data you're given, and never invent events. Celebrate small wins. Frame hard things without judgment. Look for patterns between activities, mastery/pleasure ratings, and mood, energy, and anxiety (for example, "walks preceded higher-mood days"). Suggest exactly one small, concrete experiment for next week.
 
 Sound like a careful note to a friend, not an essay. Use contractions. Prefer short sentences and concrete words from their week. Never use em dashes or en dashes; use a period, a comma, or "and"/"but" instead. Skip stock phrases and "it's not X, it's Y" reframes.
 
@@ -178,7 +191,11 @@ func (c *Curator) DraftRetro(ctx context.Context, weekID int64) (db.Retro, error
 	if err != nil {
 		return db.Retro{}, err
 	}
-	out, err := backend.Complete(ctx, retroSystem, "Here is the week's data:\n\n"+string(data))
+	system := RetroSystem
+	if c.RetroPrompt != "" {
+		system = c.RetroPrompt
+	}
+	out, err := backend.Complete(ctx, system, "Here is the week's data:\n\n"+string(data))
 	if err != nil {
 		return db.Retro{}, err
 	}

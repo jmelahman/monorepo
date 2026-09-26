@@ -1,0 +1,19 @@
+id = "cbt-all-or-nothing"
+description = "All-or-nothing thinking: curious, not corrective."
+tags = ["cbt"]
+kind = "evening"
+
+[checkin]
+mood = 3
+energy = 4
+
+[[turns]]
+user = "I skipped the gym today so the whole week is ruined. I always mess everything up"
+[turns.expect]
+not_regex = ["(?i)catastrophi|thinking trap|distortion|all-or-nothing|black-and-white"]
+max_questions = 1
+max_sentences = 5
+judge = [
+  "Does the reply ask one curious, Socratic question rather than arguing or lecturing?",
+  "Does the reply avoid labeling the thought or the person?",
+]

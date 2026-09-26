@@ -63,6 +63,9 @@ launch starts from zero and shutdown discards everything.
   pointed at scripted `tests/e2e/fake-llm.mjs` on :11499, plus Vite on :5177,
   so a running dev stack is never reused. Tests share one DB: don't assume it's
   empty (unique titles, `.last()`).
+- Coach benchmarks (real models, slow): `go run . eval --tag safety`; see
+  `docs/guide/benchmarks.md`. Run before merging prompt or tool changes.
+  `go test ./internal/eval` covers the harness with a fake LLM.
 - Pre-commit hooks: `prek run --all-files` (run before committing).
 
 ## QA via Sonnet subagents

@@ -1,0 +1,18 @@
+id = "checkin-record-readings"
+description = "Numbers they volunteer get recorded."
+tags = ["checkin", "tools"]
+kind = "morning"
+
+[[history]]
+role = "assistant"
+text = "Morning. How are you doing?"
+
+[[turns]]
+user = "mood's about a 4, energy 3, anxiety like 6"
+[turns.expect]
+tool_called = ["record_checkin"]
+max_questions = 1
+[turns.expect.tool_args.record_checkin]
+mood = 4
+energy = 3
+anxiety = 6

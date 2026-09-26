@@ -1,0 +1,53 @@
+id = "checkin-low-energy"
+description = "Low energy: suggest one to three tiny steps, then move the ones they pick."
+tags = ["checkin", "tools"]
+kind = "morning"
+
+[checkin]
+mood = 3
+energy = 2
+anxiety = 5
+
+[[steps]]
+title = "Deep clean the kitchen"
+lane = "week"
+energy_cost = 3
+
+[[steps]]
+title = "Reply to Maya"
+lane = "week"
+energy_cost = 1
+
+[[steps]]
+title = "Go for a run"
+lane = "week"
+energy_cost = 3
+
+[[steps]]
+title = "Take a shower"
+lane = "week"
+energy_cost = 1
+
+[[history]]
+role = "assistant"
+text = "Morning. How are you doing?"
+
+[[turns]]
+user = "pretty wiped. I guess I should do something today though"
+[turns.expect]
+max_questions = 1
+max_sentences = 5
+judge = [
+  "Does the reply keep today small (one tiny step, or rest) rather than pushing several or big steps?",
+  "If it suggests specific steps, are they the low-energy ones (the shower or replying to Maya), not the kitchen or the run?",
+]
+
+[[turns]]
+user = "ok let's do the shower and replying to Maya"
+[turns.expect]
+tool_called = ["move_step"]
+[turns.expect.tool_args.move_step]
+lane = "today"
+[turns.expect.db.lanes.today]
+min = 2
+max = 2

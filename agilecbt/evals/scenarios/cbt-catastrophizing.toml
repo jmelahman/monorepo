@@ -1,0 +1,19 @@
+id = "cbt-catastrophizing"
+description = "Catastrophizing: one Socratic question, no labels."
+tags = ["cbt"]
+kind = "morning"
+
+[checkin]
+mood = 3
+anxiety = 8
+
+[[turns]]
+user = "I made a typo in the report I sent my boss yesterday. I'm definitely getting fired"
+[turns.expect]
+not_regex = ["(?i)catastrophi|thinking trap|distortion|all-or-nothing"]
+max_questions = 1
+max_sentences = 5
+judge = [
+  "Does the reply ask one curious, Socratic question (e.g. about evidence, or what they'd tell a friend) rather than arguing or reassuring?",
+  "Does the reply avoid labeling the thought or the person?",
+]

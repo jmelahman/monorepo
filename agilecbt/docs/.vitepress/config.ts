@@ -18,6 +18,8 @@ export default defineConfig({
   title: 'AgileCBT',
   description: 'Agile planning meets CBT: check-ins, a gentle board, and an AI coach.',
   base: '/AgileCBT/',
+  // Partials pulled into other pages with <!--@include-->, not pages themselves.
+  srcExclude: ['**/_*.md'],
   lastUpdated: true,
   cleanUrls: true,
   ignoreDeadLinks: 'localhostLinks',
@@ -42,6 +44,8 @@ export default defineConfig({
             { text: 'Quickstart', link: '/guide/quickstart' },
             { text: 'Configuration', link: '/guide/configuration' },
             { text: 'AI coach & MCP', link: '/guide/ai' },
+            { text: 'Choosing a model', link: '/guide/models' },
+            { text: 'Coach benchmarks', link: '/guide/benchmarks' },
           ],
         },
       ],

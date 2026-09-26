@@ -80,6 +80,9 @@ The SQLite database lives in the data directory, resolved in order:
 | `APP_CRISIS_RESOURCES` | server | Crisis lines the coach shares; see [Crisis resources](#crisis-resources) |
 | `APP_URL` | CLI subcommands | Server base URL (an explicit `--server` flag wins) |
 | `APP_BACKEND` | `web/` dev server | Backend `host:port` the Vite proxy targets |
+| `APP_EVAL_JUDGE_BASE_URL` | `agilecbt eval` | OpenAI-compatible API for the rubric judge (default: the coach's) |
+| `APP_EVAL_JUDGE_MODEL` | `agilecbt eval` | Judge model; rubric questions are skipped without one. See [Coach benchmarks](/guide/benchmarks) |
+| `APP_EVAL_JUDGE_API_KEY` | `agilecbt eval` | Bearer token for the judge API |
 
 See [AI coach & MCP](/guide/ai) for Ollama and OpenRouter setups.
 

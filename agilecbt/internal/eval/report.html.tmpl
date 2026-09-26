@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgileCBT Coach Benchmarks</title>
+<style>
+:root {
+  --bg: #faf8f5; --panel: #ffffff; --text: #1f1d1a; --muted: #6b665e; --line: #e6e1d8;
+  --accent: #c2703a; --good: #2f7d4f; --good-bg: #e6f3ea; --bad: #b3261e; --bad-bg: #fbe9e7;
+  --warn: #8a5a00; --warn-bg: #fdf1d8; --code: #f3f0ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171513; --panel: #211e1b; --text: #ece8e2; --muted: #a39d93; --line: #35312c;
+    --accent: #e0915a; --good: #7fcf9c; --good-bg: #1d3326; --bad: #f2998f; --bad-bg: #3a1f1c;
+    --warn: #e9c46a; --warn-bg: #362c16; --code: #2a2622; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171513; --panel: #211e1b; --text: #ece8e2; --muted: #a39d93; --line: #35312c;
+  --accent: #e0915a; --good: #7fcf9c; --good-bg: #1d3326; --bad: #f2998f; --bad-bg: #3a1f1c;
+  --warn: #e9c46a; --warn-bg: #362c16; --code: #2a2622; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 18px; margin: 40px 0 4px; }
+h3 { font-size: 15px; margin: 24px 0 8px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+code, pre { font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+pre { background: var(--code); padding: 8px 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 4px 0; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 14px 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.card .big { font-size: 24px; font-weight: 650; }
+.card .label { font-size: 12.5px; color: var(--muted); }
+.good { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+.pill.ok { background: var(--good-bg); color: var(--good); }
+.pill.fail { background: var(--bad-bg); color: var(--bad); }
+.tag { display: inline-block; font-size: 11.5px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); margin-right: 3px; }
+.tag.safety { border-color: var(--bad); color: var(--bad); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+.diff { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.diff li { margin: 2px 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0; }
+.filters button { font: inherit; font-size: 13px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+details.scenario { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin: 6px 0; }
+details.scenario > summary { cursor: pointer; padding: 9px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; list-style: none; }
+details.scenario > summary::-webkit-details-marker { display: none; }
+details.scenario > summary::before { content: "▸"; color: var(--muted); }
+details.scenario[open] > summary::before { content: "▾"; }
+.sid { font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; }
+.body { padding: 0 14px 12px; }
+.run { border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 8px; }
+.turn { margin: 8px 0 12px; }
+.who { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.msg { white-space: pre-wrap; margin: 2px 0 6px; }
+.user { border-left: 3px solid var(--line); padding-left: 10px; }
+.coach { border-left: 3px solid var(--accent); padding-left: 10px; }
+.fail-list { margin: 4px 0; padding-left: 18px; color: var(--bad); font-size: 13.5px; }
+.calls { font-size: 13px; }
+.calls .err { color: var(--bad); }
+.hidden { display: none !important; }
+.num { font-variant-numeric: tabular-nums; }
+table.grid td:first-child { white-space: nowrap; }
+table.grid td:not(:first-child), table.grid th:not(:first-child) { text-align: center; }
+a.pill { text-decoration: none; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Coach benchmark report</h1>
+<p class="muted small">Generated {{.Generated.Format "2006-01-02 15:04"}}. Each scenario runs several times; one fails when any check fails on any turn. Judge questions only count when a judge model was set.</p>
+
+{{if gt (len .Pages) 1}}
+<h2>Summary</h2>
+<p class="muted small">Safety scenarios must pass every run. Tool recall is the share of turns that made every required call; phantom actions are replies that claim a change nothing saved.</p>
+<div class="tablewrap"><table>
+<tr><th>Model</th><th>Safety</th><th>Scenarios OK</th><th>Tool recall</th><th>Unwanted writes</th><th>Phantom actions</th><th>Tools</th><th>Runs</th><th>Took</th></tr>
+{{range $pi, $p := .Pages}}{{$r := $p.Report}}{{$m := $r.Metrics}}{{$sp := safetyPassed $r}}
+<tr><td><a href="#r{{$pi}}"><code>{{$r.Model}}</code></a></td>
+<td class="{{if eq $sp.N $sp.Of}}good{{else}}bad{{end}}">{{$sp.N}}/{{$sp.Of}}</td>
+<td>{{passed $r}}/{{len $r.Scenarios}}</td>
+<td class="{{rateClass $m.ToolRecall true}}">{{$m.ToolRecall}}</td>
+<td class="{{rateClass $m.UnwantedMutations false}}">{{$m.UnwantedMutations}}</td>
+<td class="{{rateClass $m.PhantomActions false}}">{{$m.PhantomActions}}</td>
+<td>{{$r.Tools.Count}}{{if $r.Tools.Decoys}} ({{$r.Tools.Decoys}} decoys){{end}}</td>
+<td>{{if $r.Scenarios}}{{(index $r.Scenarios 0).Runs}}{{end}}</td>
+<td class="num">{{dur $r.Duration}}</td></tr>
+{{end}}
+</table></div>
+
+<h3>By scenario</h3>
+<p class="muted small">Runs passed per model. Select a cell to open that transcript.</p>
+<div class="tablewrap"><table class="grid">
+<tr><th>Scenario</th>{{range .Pages}}<th><code>{{.Report.Model}}</code></th>{{end}}</tr>
+{{range grid .Pages}}{{$row := .}}
+<tr><td><span class="sid">{{.ID}}</span> {{range .Tags}}<span class="tag {{if eq . "safety"}}safety{{end}}">{{.}}</span>{{end}}</td>
+{{range $pi, $c := .Cells}}<td>{{if $c}}<a class="pill {{if $c.OK}}ok{{else}}fail{{end}}" href="#{{anchor $pi $row.ID}}" title="{{checks $c.FailedChecks}}">{{$c.Passed}}/{{$c.Runs}}</a>{{else}}<span class="muted">n/a</span>{{end}}</td>{{end}}</tr>
+{{end}}
+</table></div>
+{{end}}
+
+{{range $pi, $p := .Pages}}{{$r := $p.Report}}{{$m := $r.Metrics}}
+<section class="report" id="r{{$pi}}">
+<h2><code>{{$r.Model}}</code>{{if $r.Tools.Decoys}} with {{$r.Tools.Decoys}} decoy tools{{end}}</h2>
+<p class="muted small">{{$r.BaseURL}} · {{$r.StartedAt.Local.Format "2006-01-02 15:04"}} · took {{dur $r.Duration}} · prompt <code>{{short $r.PromptSHA}}</code> · retro prompt <code>{{short $r.RetroPromptSHA}}</code> · judge {{if $r.Judge}}<code>{{$r.Judge}}</code>{{else}}off{{end}}{{if $r.ToolsFilter}} · tools limited to {{join $r.ToolsFilter ", "}}{{end}}</p>
+
+<div class="cards">
+  {{$ok := passed $r}}
+  <div class="card"><div class="big {{if eq $ok (len $r.Scenarios)}}good{{else}}bad{{end}}">{{$ok}}/{{len $r.Scenarios}}</div><div class="label">scenarios met their threshold</div></div>
+  <div class="card"><div class="big {{rateClass $m.ToolRecall true}}">{{if $m.ToolRecall.Of}}{{pct $m.ToolRecall.Rate}}{{else}}n/a{{end}}</div><div class="label">tool recall ({{$m.ToolRecall.N}}/{{$m.ToolRecall.Of}} turns got every required call)</div></div>
+  <div class="card"><div class="big {{rateClass $m.UnwantedMutations false}}">{{if $m.UnwantedMutations.Of}}{{pct $m.UnwantedMutations.Rate}}{{else}}n/a{{end}}</div><div class="label">unwanted writes ({{$m.UnwantedMutations.N}}/{{$m.UnwantedMutations.Of}} constrained turns)</div></div>
+  <div class="card"><div class="big {{rateClass $m.PhantomActions false}}">{{if $m.PhantomActions.Of}}{{pct $m.PhantomActions.Rate}}{{else}}n/a{{end}}</div><div class="label">phantom actions ({{$m.PhantomActions.N}}/{{$m.PhantomActions.Of}} replies claimed an unsaved change)</div></div>
+  <div class="card"><div class="big">{{$r.Tools.Count}}</div><div class="label">tools offered, ~{{$r.Tools.Tokens}} tokens per turn</div></div>
+</div>
+<p class="muted small">{{$m.Calls}} tool calls: {{$m.UnknownTool}} unknown tool, {{$m.ToolErrors}} tool errors, {{$m.StringArgs}} string-encoded args, {{$m.DecoyCalls}} decoy, {{$m.RoundLimit}} round-limit hits.{{if $m.JudgeSkipped}} {{$m.JudgeSkipped}} judge questions skipped.{{end}}{{if $m.JudgeErrors}} <span class="bad">{{$m.JudgeErrors}} judge calls failed.</span>{{end}}</p>
+
+{{with $p.Diff}}
+<h3>Compared with <code>{{$p.BaselinePath}}</code></h3>
+<div class="diff">
+{{if and (not .Regressions) (not .Improvements) (not .Notes)}}<p class="good">No changes beyond noise.</p>{{end}}
+<ul>
+{{range .Regressions}}<li class="bad"><strong>Regression</strong> {{.}}</li>{{end}}
+{{range .Improvements}}<li class="good"><strong>Improved</strong> {{.}}</li>{{end}}
+{{range .Notes}}<li class="muted">{{.}}</li>{{end}}
+</ul>
+</div>
+{{end}}
+
+<h3>Scenarios</h3>
+<div class="filters" data-report="r{{$pi}}">
+  <button type="button" data-filter="failing" aria-pressed="false">Failing only</button>
+  <button type="button" data-tag="" aria-pressed="true">All</button>
+  {{range tags $r}}<button type="button" data-tag="{{.}}" aria-pressed="false">{{.}}</button>{{end}}
+</div>
+{{range $r.Scenarios}}
+<details class="scenario" id="{{anchor $pi .ID}}" data-ok="{{.OK}}" data-tags="{{join .Tags " "}}">
+<summary>
+  <span class="pill {{if .OK}}ok{{else}}fail{{end}}">{{.Passed}}/{{.Runs}}</span>
+  <span class="sid">{{.ID}}</span>
+  {{range .Tags}}<span class="tag {{if eq . "safety"}}safety{{end}}">{{.}}</span>{{end}}
+  <span class="muted small">needs {{pct .Threshold}} · avg {{dur .AvgLatency}}</span>
+  {{if .FailedChecks}}<span class="small bad">{{checks .FailedChecks}}</span>{{end}}
+</summary>
+<div class="body">
+  {{if .Description}}<p class="muted">{{.Description}}</p>{{end}}
+  {{range $ri, $run := .Transcripts}}
+  <div class="run">
+    <div class="small"><strong>Run {{add $ri 1}}</strong> <span class="pill {{if $run.Passed}}ok{{else}}fail{{end}}">{{if $run.Passed}}pass{{else}}fail{{end}}</span></div>
+    {{if $run.Error}}<ul class="fail-list"><li>setup: {{$run.Error}}</li></ul>{{end}}
+    {{range $run.Turns}}
+    <div class="turn">
+      {{if .User}}<div class="user"><div class="who">User</div><div class="msg">{{.User}}</div></div>{{end}}
+      {{if .Calls}}<div class="calls">
+        {{range .Calls}}<div><code>{{.Name}}</code>{{if .Error}} <span class="err">error: {{.Error}}</span>{{end}}<pre>{{args .Args}}</pre></div>{{end}}
+      </div>{{end}}
+      <div class="coach"><div class="who">Coach · {{dur .Latency}}</div><div class="msg">{{if .Reply}}{{.Reply}}{{else}}<span class="muted">(no reply)</span>{{end}}</div></div>
+      {{if .Failures}}<ul class="fail-list">{{range .Failures}}<li><code>{{.Check}}</code> {{.Detail}}</li>{{end}}</ul>{{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+</details>
+{{end}}
+</section>
+{{end}}
+</main>
+<script>
+function openTarget() {
+  var id = decodeURIComponent(location.hash.slice(1));
+  var el = id && document.getElementById(id);
+  if (el && el.tagName === "DETAILS") { el.classList.remove("hidden"); el.open = true; el.scrollIntoView(); }
+}
+window.addEventListener("hashchange", openTarget);
+openTarget();
+document.querySelectorAll(".filters").forEach(function (bar) {
+  var section = document.getElementById(bar.dataset.report);
+  var state = { failing: false, tag: "" };
+  function apply() {
+    section.querySelectorAll("details.scenario").forEach(function (d) {
+      var tags = d.dataset.tags.split(" ");
+      var hide = (state.failing && d.dataset.ok === "true") || (state.tag && tags.indexOf(state.tag) < 0);
+      d.classList.toggle("hidden", hide);
+    });
+  }
+  bar.addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b) return;
+    if (b.dataset.filter === "failing") {
+      state.failing = !state.failing;
+      b.setAttribute("aria-pressed", String(state.failing));
+    } else {
+      state.tag = b.dataset.tag;
+      bar.querySelectorAll("button[data-tag]").forEach(function (t) {
+        t.setAttribute("aria-pressed", String(t === b));
+      });
+    }
+    apply();
+  });
+});
+</script>
+</body>
+</html>

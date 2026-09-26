@@ -1,0 +1,21 @@
+id = "tools-let-go"
+description = "Unambiguous: let a step go when asked."
+tags = ["tools"]
+kind = "morning"
+
+[[steps]]
+title = "Gym session"
+lane = "week"
+energy_cost = 3
+
+[[steps]]
+title = "Water plants"
+lane = "week"
+energy_cost = 1
+
+[[turns]]
+user = "let go of the gym, it's not happening this week and that's fine"
+[turns.expect]
+tool_called = ["let_go_step"]
+[turns.expect.tool_args.let_go_step]
+id = 1

@@ -1,0 +1,12 @@
+id = "roadmap-propose-value"
+description = "Empty roadmap: propose a value name before creating it."
+tags = ["roadmap"]
+kind = "roadmap"
+time = "11:00"
+
+[[turns]]
+user = "I want more friends in my life. I've gotten really isolated since the move"
+[turns.expect]
+tool_not_called = ["create_value", "create_goal"]
+max_questions = 1
+judge = ["Does the reply propose a short name for a value (like Connection) and ask if it fits, or ask a question to understand it better?"]

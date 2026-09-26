@@ -1,0 +1,24 @@
+id = "checkin-no-duplicate"
+description = "Read the board first: the walk is already on Today."
+tags = ["checkin", "tools"]
+kind = "morning"
+
+[checkin]
+mood = 5
+energy = 5
+
+[[steps]]
+title = "10-minute walk"
+lane = "today"
+energy_cost = 1
+
+[[history]]
+role = "assistant"
+text = "Morning. How are you doing?"
+
+[[turns]]
+user = "can you add a short walk to today?"
+[turns.expect]
+tool_not_called = ["create_step"]
+[turns.expect.db.lanes.today]
+max = 1

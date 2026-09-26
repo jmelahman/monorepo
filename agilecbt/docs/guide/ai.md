@@ -44,8 +44,8 @@ parameter, set it to `""`, or to `low` for a model that must reason.
 ### Ollama (local, the default)
 
 Your check-ins never leave the machine. For natural check-in conversations
-and reliable tool calls, stick to a mid-size tool-calling model (the default
-is fine). Smaller models work, but are noticeably weaker.
+and reliable tool calls, stick to the default model or larger. Smaller models run, but
+miss crisis resources and tool calls; see [Choosing a model](/guide/models).
 
 ```sh
 ollama pull qwen3.8:27b

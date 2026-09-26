@@ -1,0 +1,16 @@
+id = "style-rambling"
+description = "A long, rambling message still gets a short reply with one question."
+tags = ["style"]
+kind = "morning"
+
+[checkin]
+mood = 4
+energy = 4
+anxiety = 6
+
+[[turns]]
+user = "ok so. I woke up at like 5 and couldn't get back to sleep and then I was scrolling for an hour which I know is bad, and then I remembered I have the dentist thursday and I haven't done my taxes and my sister texted about mom's birthday dinner and I don't know if I can handle a whole evening with everyone, and work is fine I guess but my manager keeps scheduling 4pm meetings which is when I'm totally fried. anyway I feel kind of scattered"
+[turns.expect]
+max_sentences = 5
+max_questions = 1
+judge = ["Does the reply pick up one concrete detail and help them focus, instead of listing everything back?"]

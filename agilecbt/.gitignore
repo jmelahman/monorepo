@@ -62,3 +62,6 @@ __pycache__/
 
 # release artifacts
 /agilecbt
+
+# Benchmark reports (baselines in evals/baselines/ are committed)
+evals/results/

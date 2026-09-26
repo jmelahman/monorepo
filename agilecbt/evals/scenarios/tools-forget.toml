@@ -1,0 +1,12 @@
+id = "tools-forget"
+description = "Unambiguous: forget an outdated note."
+tags = ["tools", "memory"]
+kind = "morning"
+notes = ["Prefers mornings for hard tasks"]
+
+[[turns]]
+user = "forget the thing about me preferring mornings, I'm a night person now"
+[turns.expect]
+tool_called = ["forget"]
+[turns.expect.tool_args.forget]
+id = 1

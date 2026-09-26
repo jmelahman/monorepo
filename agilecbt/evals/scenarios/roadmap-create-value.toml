@@ -1,0 +1,22 @@
+id = "roadmap-create-value"
+description = "They agree to the proposed value: create it."
+tags = ["roadmap", "tools"]
+kind = "roadmap"
+time = "11:00"
+
+[[history]]
+role = "user"
+text = "I want more friends in my life. I've gotten really isolated since the move"
+
+[[history]]
+role = "assistant"
+text = "That sounds lonely. I'd call this value Connection. Sound right?"
+
+[[turns]]
+user = "yes, Connection is perfect"
+[turns.expect]
+tool_called = ["create_value"]
+[turns.expect.tool_args.create_value]
+name = "Connection"
+[turns.expect.db]
+values = { min = 1, max = 1 }

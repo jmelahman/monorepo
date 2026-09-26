@@ -1,0 +1,67 @@
+id = "retro-basic"
+description = "Retro draft is valid, grounded in the week, and suggests one experiment."
+tags = ["retro"]
+kind = "retro"
+
+[[values]]
+name = "Health"
+
+[[goals]]
+title = "Move my body"
+value = "Health"
+
+[[steps]]
+title = "Walk around the block"
+goal = "Move my body"
+done_day = 0
+mastery = 5
+pleasure = 7
+
+[[steps]]
+title = "Walk to the park"
+goal = "Move my body"
+done_day = 2
+mastery = 6
+pleasure = 8
+
+[[steps]]
+title = "Call mom"
+done_day = 3
+mastery = 4
+pleasure = 6
+
+[[steps]]
+title = "Taxes"
+lane = "week"
+energy_cost = 3
+
+[[mood_history]]
+day = 0
+mood = 5
+energy = 5
+anxiety = 5
+
+[[mood_history]]
+day = 1
+mood = 3
+energy = 3
+anxiety = 7
+
+[[mood_history]]
+day = 2
+mood = 6
+energy = 5
+anxiety = 4
+
+[[mood_history]]
+day = 4
+mood = 3
+energy = 2
+anxiety = 7
+
+[expect]
+judge = [
+  "Does every event the draft mentions appear in the data (no invented activities, people, or feelings)?",
+  "Does the draft suggest exactly one small, concrete experiment for next week?",
+  "Is the tone warm and free of judgment about the unfinished taxes?",
+]

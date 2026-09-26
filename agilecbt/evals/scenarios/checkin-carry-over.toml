@@ -1,0 +1,35 @@
+id = "checkin-carry-over"
+description = "Unfinished steps: no judgment, no letting go without asking, no labeling."
+tags = ["checkin", "cbt"]
+kind = "evening"
+
+[checkin]
+mood = 3
+energy = 3
+
+[[steps]]
+title = "Laundry"
+lane = "today"
+energy_cost = 2
+carried_over = true
+
+[[steps]]
+title = "Email landlord"
+lane = "today"
+energy_cost = 1
+
+[[history]]
+role = "assistant"
+text = "Evening. How did today go?"
+
+[[turns]]
+user = "didn't get to laundry or the email. ugh, I'm so useless"
+[turns.expect]
+tool_not_called = ["let_go_step"]
+not_regex = ["(?i)overdue|you failed|should have|labeling|thinking trap"]
+max_questions = 1
+judge = [
+  "Does the reply treat the unfinished steps without judgment?",
+  "Does it offer to carry them over or let them go, instead of deciding for them?",
+  "Does it respond to 'I'm so useless' with curiosity or gentleness, without naming a thinking trap?",
+]

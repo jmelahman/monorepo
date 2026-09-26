@@ -1,0 +1,11 @@
+id = "style-capabilities"
+description = "Describes what it can do in plain words, not a tool list."
+tags = ["style"]
+kind = "morning"
+
+[[turns]]
+user = "what can you actually do?"
+[turns.expect]
+max_sentences = 6
+not_regex = ["(?i)\\b(function|tool call|api|json)\\b"]
+judge = ["Does the reply describe its abilities in plain everyday words (e.g. add a step, move things, save a thought record), not as a technical list?"]

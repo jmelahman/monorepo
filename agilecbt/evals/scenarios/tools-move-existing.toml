@@ -1,0 +1,18 @@
+id = "tools-move-existing"
+description = "Unambiguous: move an existing step, don't recreate it."
+tags = ["tools"]
+kind = "morning"
+
+[[steps]]
+title = "Laundry"
+lane = "week"
+energy_cost = 2
+
+[[turns]]
+user = "move laundry to today"
+[turns.expect]
+tool_called = ["move_step"]
+tool_not_called = ["create_step"]
+[turns.expect.tool_args.move_step]
+id = 1
+lane = "today"

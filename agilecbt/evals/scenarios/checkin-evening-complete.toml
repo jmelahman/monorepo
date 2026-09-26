@@ -1,0 +1,32 @@
+id = "checkin-evening-complete"
+description = "Evening: record a finished step with its ratings."
+tags = ["checkin", "tools"]
+kind = "evening"
+
+[checkin]
+mood = 6
+energy = 4
+
+[[steps]]
+title = "Call mom"
+lane = "today"
+energy_cost = 2
+
+[[steps]]
+title = "Laundry"
+lane = "today"
+energy_cost = 2
+
+[[history]]
+role = "assistant"
+text = "Evening. How did today go?"
+
+[[turns]]
+user = "I called mom! it was nice. mastery maybe 6, pleasure 8"
+[turns.expect]
+tool_called = ["complete_step"]
+max_questions = 1
+[turns.expect.tool_args.complete_step]
+id = 1
+mastery = 6
+pleasure = 8

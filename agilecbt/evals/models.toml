@@ -1,0 +1,31 @@
+# Model matrix for `agilecbt eval --matrix`. Each entry inherits the coach's
+# endpoint (config.toml / APP_LLM_BASE_URL) unless it sets base_url; api_key
+# and reasoning_effort work the same way. Names are Ollama tags; pull them
+# first (`ollama pull <name>`).
+
+[[models]]
+name = "qwen3.8:27b" # the default coach model
+
+[[models]]
+name = "qwen3.6:35b-a3b" # MoE, 3B active
+
+[[models]]
+name = "qwen3.5:9B"
+
+[[models]]
+name = "mistral-small3.2:24b"
+
+[[models]]
+name = "ministral-3:8b"
+
+[[models]]
+name = "gemma4:31b" # gemma3 has no tool support in Ollama
+
+[[models]]
+name = "gemma4:12b"
+
+[[models]]
+name = "gemma4:e4b"
+
+[[models]]
+name = "llama3.2:3b"

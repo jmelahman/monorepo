@@ -1,0 +1,9 @@
+id = "tools-week-intention"
+description = "Unambiguous: set the week's intention."
+tags = ["tools"]
+kind = "morning"
+
+[[turns]]
+user = "my intention for this week is to be gentle with myself. can you set that?"
+[turns.expect]
+tool_called = ["set_week_intention"]

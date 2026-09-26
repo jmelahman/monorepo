@@ -32,6 +32,21 @@ type OpenAI struct {
 	ReasoningEffort string
 	Registry        *tools.Registry
 	HTTP            *http.Client
+	// Tools replaces the registry's tool list sent to the model when non-nil.
+	// The eval harness uses it to benchmark smaller or padded tool sets.
+	Tools []tools.Tool
+	// OnToolCall, when set, observes every tool call the model makes.
+	OnToolCall func(ToolCall)
+}
+
+// ToolCall is one tool call a model made during a turn.
+type ToolCall struct {
+	Name string
+	// Args are the arguments as the model sent them, before any repair.
+	Args   json.RawMessage
+	Result string
+	// Err is the tool's error, if it failed.
+	Err error
 }
 
 // Name implements Backend.
@@ -169,8 +184,12 @@ type oaiTool struct {
 }
 
 func (o *OpenAI) tools() []oaiTool {
+	list := o.Tools
+	if list == nil {
+		list = o.Registry.List()
+	}
 	var out []oaiTool
-	for _, t := range o.Registry.List() {
+	for _, t := range list {
 		var ot oaiTool
 		ot.Type = "function"
 		ot.Function.Name = t.Name
@@ -222,7 +241,10 @@ func (o *OpenAI) Turn(ctx context.Context, req TurnRequest, onText func(string))
 			if strings.TrimSpace(call.Function.Arguments) == "" {
 				args = json.RawMessage("{}")
 			}
-			result := runTool(ctx, o.Registry, call.Function.Name, args)
+			result, err := runTool(ctx, o.Registry, call.Function.Name, args)
+			if o.OnToolCall != nil {
+				o.OnToolCall(ToolCall{Name: call.Function.Name, Args: args, Result: result, Err: err})
+			}
 			msgs = append(msgs, oaiMessage{Role: "tool", ToolCallID: call.ID, Content: &result})
 		}
 	}
@@ -339,8 +361,8 @@ func (o *OpenAI) chat(ctx context.Context, msgs []oaiMessage, withTools bool, on
 }
 
 // runTool calls a registry tool and renders the result or error as text for
-// the model.
-func runTool(ctx context.Context, reg *tools.Registry, name string, args json.RawMessage) string {
+// the model. The error is returned too, for OnToolCall.
+func runTool(ctx context.Context, reg *tools.Registry, name string, args json.RawMessage) (string, error) {
 	// Some models send arguments as a JSON-encoded string.
 	var s string
 	if json.Unmarshal(args, &s) == nil {
@@ -348,7 +370,7 @@ func runTool(ctx context.Context, reg *tools.Registry, name string, args json.Ra
 	}
 	out, err := reg.Call(ctx, name, args)
 	if err != nil {
-		return tools.ErrorText(err)
+		return tools.ErrorText(err), err
 	}
-	return tools.ResultText(out)
+	return tools.ResultText(out), nil
 }

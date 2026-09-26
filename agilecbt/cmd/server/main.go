@@ -87,7 +87,7 @@ func Root() *cobra.Command {
 	serve.Flags().StringVar(&addr, "addr", ":8080", "HTTP listen address")
 	serve.Flags().StringVar(&dataDir, "data-dir", "", "Override data directory (default: $APP_DATA_DIR or XDG)")
 	serve.Flags().BoolVar(&inMemory, "in-memory", false, "Use an ephemeral in-memory SQLite database; all data is discarded on shutdown")
-	cmd.AddCommand(serve)
+	cmd.AddCommand(serve, evalCmd())
 
 	addClientCommands(cmd)
 

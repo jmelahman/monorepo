@@ -1,0 +1,23 @@
+id = "cbt-thought-record"
+description = "Save a thought record once they want one and give the details."
+tags = ["cbt", "tools"]
+kind = "adhoc"
+time = "19:00"
+
+[checkin]
+mood = 3
+anxiety = 8
+
+[[history]]
+role = "user"
+text = "I have a presentation tomorrow and everyone's going to see I'm a fraud"
+
+[[history]]
+role = "assistant"
+text = "That sounds heavy the night before. Would it help to do a thought record on it together?"
+
+[[turns]]
+user = "yeah ok. situation is the team presentation tomorrow at 10. the thought is 'everyone will see I'm a fraud'. I feel anxious, like 80 out of 100, and ashamed maybe 60"
+[turns.expect]
+tool_called = ["create_thought_record"]
+max_questions = 1
