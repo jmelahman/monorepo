@@ -1,3 +1,4 @@
+import { XIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type Emotion, type ThoughtRecord } from "@/api/client";
@@ -59,11 +60,11 @@ const commonEmotions = [
 ];
 
 const stepsMeta = [
-  { title: "Situation", prompt: "What happened? Just the facts — where, when, who." },
+  { title: "Situation", prompt: "What happened? Just the facts: where, when, who." },
   { title: "Feelings", prompt: "What did you feel, and how strongly (0–100)?" },
   { title: "Thought", prompt: "What went through your mind? Any thinking traps?" },
   { title: "Evidence", prompt: "What supports the thought? What doesn't?" },
-  { title: "Balance", prompt: "A more balanced way to see it — then re-rate how you feel." },
+  { title: "Balance", prompt: "A more balanced way to see it, then re-rate how you feel." },
 ];
 
 export default function Thoughts() {
@@ -78,7 +79,11 @@ export default function Thoughts() {
             Slow a sticky thought down and look at it together.
           </p>
         </div>
-        {!writing && <Button onClick={() => setWriting(true)}>New thought record</Button>}
+        {!writing && (
+          <Button className="shrink-0 whitespace-nowrap" onClick={() => setWriting(true)}>
+            New record
+          </Button>
+        )}
       </div>
       {writing && <ThoughtForm onDone={() => setWriting(false)} />}
       <ErrorText error={thoughts.error} />
@@ -363,9 +368,9 @@ function IntensityRow({
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${name}`}
-          className="text-fg-muted"
+          className="grid size-8 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg focus-visible:outline-2 focus-visible:outline-accent-600"
         >
-          ×
+          <XIcon size={16} aria-hidden />
         </button>
       )}
     </div>

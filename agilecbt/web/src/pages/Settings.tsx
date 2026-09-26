@@ -517,7 +517,7 @@ function Appearance() {
                 {/* Carries its own data-accent so it shows that accent, not the active one. */}
                 <span
                   data-accent={a.value}
-                  className="block h-7 w-7 cursor-pointer rounded-full bg-accent-600 ring-offset-2 ring-offset-surface peer-checked:ring-2 peer-checked:ring-fg peer-focus-visible:ring-2 peer-focus-visible:ring-accent-500"
+                  className="block h-7 w-7 cursor-pointer rounded-full bg-accent-600 ring-offset-2 ring-offset-surface peer-checked:ring-2 peer-checked:ring-fg peer-focus-visible:ring-2 peer-focus-visible:ring-accent-600"
                 />
               </label>
             ))}

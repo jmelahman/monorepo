@@ -292,7 +292,7 @@ function ActionChip({ action }: { action: Action }) {
           type="button"
           onClick={() => undo.mutate()}
           disabled={undo.isPending}
-          className="rounded-lg px-2 py-0.5 font-medium text-accent-500 hover:bg-surface-2"
+          className="rounded-lg px-2 py-0.5 font-medium text-accent-ink hover:bg-surface-2"
           aria-label={`Undo: ${action.summary}`}
         >
           Undo

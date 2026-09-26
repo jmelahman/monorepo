@@ -1,13 +1,22 @@
+import {
+  ArrowsClockwiseIcon,
+  CompassIcon,
+  GearSixIcon,
+  KanbanIcon,
+  NotepadIcon,
+  type Icon,
+  SunIcon,
+} from "@phosphor-icons/react";
 import { NavLink, Outlet, useLocation, useSearchParams } from "react-router";
 import type { Health } from "@/api/client";
 import Settings, { isSettingsTab, type SettingsTab } from "@/pages/Settings";
 
-const tabs = [
-  { to: "/", label: "Today", icon: "☀" },
-  { to: "/board", label: "Board", icon: "▦" },
-  { to: "/roadmap", label: "Roadmap", icon: "✦" },
-  { to: "/thoughts", label: "Thoughts", icon: "❍" },
-  { to: "/retro", label: "Retro", icon: "↺" },
+const tabs: { to: string; label: string; icon: Icon }[] = [
+  { to: "/", label: "Today", icon: SunIcon },
+  { to: "/board", label: "Board", icon: KanbanIcon },
+  { to: "/roadmap", label: "Roadmap", icon: CompassIcon },
+  { to: "/thoughts", label: "Thoughts", icon: NotepadIcon },
+  { to: "/retro", label: "Retro", icon: ArrowsClockwiseIcon },
 ];
 
 // The shell is a fixed-height column: header and nav stay put and pages
@@ -38,7 +47,7 @@ export default function Layout({ health }: { health: Health }) {
   return (
     <div className="flex h-dvh flex-col bg-bg text-fg">
       <header className="shrink-0 border-b border-border bg-bg">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2">
           <NavLink to="/" className="ui-brand text-lg font-semibold tracking-tight">
             AgileCBT
           </NavLink>
@@ -46,9 +55,9 @@ export default function Layout({ health }: { health: Health }) {
             type="button"
             aria-label="Settings"
             onClick={() => openSettings("coach")}
-            className={`rounded-lg px-2 py-1 text-lg ${settingsTab ? "text-accent-500" : "text-fg-muted hover:text-fg"}`}
+            className={`-mr-2 grid size-11 place-items-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-accent-600 ${settingsTab ? "text-accent-ink" : "text-fg-muted hover:text-fg"}`}
           >
-            ⚙
+            <GearSixIcon size={22} aria-hidden />
           </button>
         </div>
       </header>
@@ -70,13 +79,15 @@ export default function Layout({ health }: { health: Health }) {
                 to={t.to}
                 end={t.to === "/"}
                 className={({ isActive }) =>
-                  `flex flex-col items-center gap-0.5 py-2 text-xs ${isActive ? "text-accent-500" : "text-fg-muted hover:text-fg"}`
+                  `flex flex-col items-center gap-0.5 py-2 text-xs transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-600 ${isActive ? "text-accent-ink" : "text-fg-muted hover:text-fg"}`
                 }
               >
-                <span aria-hidden className="text-lg leading-none">
-                  {t.icon}
-                </span>
-                <span className="ui-caps">{t.label}</span>
+                {({ isActive }) => (
+                  <>
+                    <t.icon size={22} weight={isActive ? "fill" : "regular"} aria-hidden />
+                    <span className="ui-caps">{t.label}</span>
+                  </>
+                )}
               </NavLink>
             </li>
           ))}

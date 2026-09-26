@@ -57,7 +57,7 @@ export default function Retro({ health }: { health: Health }) {
 
       <Card>
         <SectionTitle>What happened</SectionTitle>
-        <dl className="grid grid-cols-3 gap-2 text-center">
+        <dl className="grid grid-cols-3 divide-x divide-border text-center">
           <Stat label="steps done" value={String(r.completed.length)} />
           <Stat label="avg mastery" value={mean(r.completed.map((s) => s.mastery))} />
           <Stat label="avg pleasure" value={mean(r.completed.map((s) => s.pleasure))} />
@@ -86,9 +86,9 @@ export default function Retro({ health }: { health: Health }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-surface-2 p-2">
-      <dd className="text-xl font-semibold tabular-nums">{value}</dd>
+    <div className="flex flex-col-reverse px-2 py-1">
       <dt className="text-xs text-fg-muted">{label}</dt>
+      <dd className="text-xl font-semibold tabular-nums">{value}</dd>
     </div>
   );
 }

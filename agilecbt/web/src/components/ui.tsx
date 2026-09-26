@@ -1,3 +1,4 @@
+import { XIcon } from "@phosphor-icons/react";
 import {
   type ButtonHTMLAttributes,
   type ReactNode,
@@ -24,7 +25,7 @@ export function Button({
     <button
       type="button"
       {...props}
-      className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent-500 disabled:opacity-50 ${variants[variant]} ${className}`}
+      className={`rounded-xl px-4 py-2 text-sm font-medium transition-[background-color,color,scale] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 enabled:active:scale-[0.97] disabled:opacity-50 motion-reduce:transition-colors motion-reduce:active:scale-100 ${variants[variant]} ${className}`}
     />
   );
 }
@@ -47,7 +48,7 @@ export function SectionTitle({ children, aside }: { children: ReactNode; aside?:
 }
 
 export const inputClass =
-  "w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-muted/70 outline-none focus:ring-2 focus:ring-accent-500";
+  "w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-muted outline-none focus:ring-2 focus:ring-accent-600";
 
 // Slider is a labeled 0–max range with the current value shown.
 export function Slider({
@@ -143,9 +144,9 @@ export function Dialog({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="rounded-lg px-2 text-xl text-fg-muted hover:text-fg"
+              className="-mr-2 grid size-10 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg focus-visible:outline-2 focus-visible:outline-accent-600"
             >
-              ×
+              <XIcon size={18} aria-hidden />
             </button>
           </div>
           {children}

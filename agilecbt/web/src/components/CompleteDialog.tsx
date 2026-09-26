@@ -32,7 +32,7 @@ export default function CompleteDialog({
   return (
     <Dialog open={step !== null} onClose={onClose} title="Nice. That counts.">
       <p className="mb-4 text-sm text-fg-muted">
-        “{step?.title}” — how did it feel? Rating helps you spot what lifts your mood.
+        How did “{step?.title}” feel? Rating helps you spot what lifts your mood.
       </p>
       <div className="space-y-4">
         <Slider

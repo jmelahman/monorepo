@@ -78,7 +78,7 @@ test("standup is a coach chat, plan a step on the board, complete it", async ({ 
 test("thought record walkthrough", async ({ page }) => {
   const run = uid();
   await page.goto("/thoughts");
-  await page.getByRole("button", { name: "New thought record" }).click();
+  await page.getByRole("button", { name: "New record" }).click();
   await page.getByLabel("Situation").fill("Boss emailed asking to talk tomorrow");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "+ anxious" }).click();

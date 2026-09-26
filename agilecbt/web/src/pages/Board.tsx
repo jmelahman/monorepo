@@ -146,7 +146,7 @@ export default function Board() {
           if (steps.data) setCols(group(steps.data));
         }}
       >
-        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-4 md:px-0">
+        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 scroll-px-4 md:mx-0 md:grid md:grid-cols-4 md:px-0">
           {lanes.map((l) => (
             <LaneColumn
               key={l.id}

@@ -33,7 +33,8 @@
   --color-accent-500: #f0a870;
   --color-accent-600: #e08e52;
   --color-accent-700: #c4723a;
-  --color-on-accent: #ffffff;
+  --color-on-accent: #1c1917;
+  --color-accent-ink: var(--color-accent-500);
   --color-calm: #9cc5a1;
   --color-calm-soft: #2f3b31;
   --color-mood: #d95926;
@@ -50,9 +51,10 @@
   --color-surface: #ffffff;
   --color-surface-2: #f3ece2;
   --color-fg: #2b2420;
-  --color-fg-muted: #7a6e64;
+  --color-fg-muted: #6f635a;
   --color-border: #e6dccf;
   --color-danger: #b4533a;
+  --color-accent-ink: var(--color-accent-700);
   --color-calm: #4f8a5b;
   --color-calm-soft: #e5f0e3;
   --color-mood: #eb6834;
@@ -94,18 +96,20 @@
 /* Each accent sets its dark half on the bare attribute and its light half on
    the compound. The descendant form lets a settings swatch preview an accent
    other than the active one by carrying its own data-accent. --on-accent is
-   the text colour on a filled accent-600 button. */
+   the text colour on a filled accent-600 button (at least 4.5:1 on it and on
+   the accent-700 hover). --accent-ink is accent used as text on the ground:
+   500 in dark, 700 in light, where the lighter steps fall under 4.5:1. */
 [data-accent="apricot"] {
   --color-accent-500: #f0a870;
   --color-accent-600: #e08e52;
   --color-accent-700: #c4723a;
-  --color-on-accent: #ffffff;
+  --color-on-accent: #1c1917;
 }
 [data-theme="light"][data-accent="apricot"],
 [data-theme="light"] [data-accent="apricot"] {
-  --color-accent-500: #d9824a;
-  --color-accent-600: #c2703a;
-  --color-accent-700: #a35a2c;
+  --color-accent-500: #c2703a;
+  --color-accent-600: #aa602d;
+  --color-accent-700: #8c4b22;
   --color-on-accent: #ffffff;
 }
 
