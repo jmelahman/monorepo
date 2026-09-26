@@ -4,6 +4,8 @@
       "command": "bunx",
       "args": [
         "@playwright/mcp",
+        "--browser",
+        "chromium",
         "--headless",
         "--isolated",
         "--no-sandbox"

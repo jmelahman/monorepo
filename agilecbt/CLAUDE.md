@@ -78,9 +78,11 @@ and final calls in the main session, and verify results that look wrong.
 
 `.mcp.json` registers:
 
-- **playwright** — `@playwright/mcp --headless --isolated --no-sandbox`
-  (Chrome refuses to run as root with its sandbox on). It drives Google
-  Chrome; if it reports Chrome missing, run `bunx playwright install chrome`
+- **playwright** — `@playwright/mcp --browser chromium --headless --isolated
+  --no-sandbox` (Chromium refuses to run as root with its sandbox on). It
+  drives Playwright's bundled Chromium from `~/.cache/ms-playwright`, which
+  persists across devcontainers via the cache volume; if it reports the
+  browser missing, run `bunx @playwright/mcp install-browser chrome-for-testing`
   once and restart the session. Use the `mcp__playwright__browser_*` tools
   (`browser_navigate`, `browser_snapshot`); never spawn `bunx playwright`
   ad-hoc.
