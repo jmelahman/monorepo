@@ -1,6 +1,8 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -46,6 +48,7 @@ func (d Deps) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/checkins/{id}", handle(d.getCheckin))
 	mux.HandleFunc("PATCH /api/checkins/{id}", handle(d.updateCheckin))
 	mux.HandleFunc("POST /api/checkins/{id}/messages", d.handleChat)
+	mux.HandleFunc("GET /api/conversations/roadmap", handle(d.roadmapConversation))
 
 	mux.HandleFunc("GET /api/thoughts", handle(d.listThoughts))
 	mux.HandleFunc("POST /api/thoughts", handle(d.createThought))
@@ -60,6 +63,10 @@ func (d Deps) routes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /api/settings", handle(d.getSettings))
 	mux.HandleFunc("PATCH /api/settings", handle(d.patchSettings))
+	mux.HandleFunc("GET /api/support", handle(d.getSupport))
+	mux.HandleFunc("GET /api/llm", handle(d.getLLM))
+	mux.HandleFunc("PATCH /api/llm", handle(d.patchLLM))
+	mux.HandleFunc("GET /api/llm/models", handle(d.listModels))
 
 	mux.HandleFunc("GET /api/ai-actions", handle(d.listActions))
 	mux.HandleFunc("POST /api/ai-actions/{id}/undo", handle(d.undoAction))
@@ -71,7 +78,7 @@ func (d Deps) routes(mux *http.ServeMux) {
 func (d Deps) store() *db.Store { return d.App.Store }
 
 func (d Deps) handleHealth(w http.ResponseWriter, r *http.Request) {
-	llm := LLMStatus{Backend: "none", Detail: "AI curator is not configured"}
+	llm := LLMStatus{Backend: "none", Detail: "The AI coach is not configured"}
 	if d.Curator != nil {
 		llm = d.Curator.Status(r.Context())
 	}
@@ -326,16 +333,53 @@ func (d Deps) listCheckins(r *http.Request) (any, error) {
 	return d.store().ListCheckins(q.Get("from"), q.Get("to"))
 }
 
+// newCheckin is a check-in to create. Intro, if set, is the opening of its
+// conversation (the app's greeting, or its standup questions and answers), stored
+// as the first messages without a coach turn.
+type newCheckin struct {
+	db.CheckinPatch
+	Intro []introMessage `json:"intro"`
+}
+
+type introMessage struct {
+	Role string `json:"role"`
+	Text string `json:"text"`
+}
+
 func (d Deps) createCheckin(r *http.Request) (any, error) {
-	var p db.CheckinPatch
+	var p newCheckin
 	if err := decode(r, &p); err != nil {
 		return nil, err
+	}
+	if len(p.Intro) > 20 {
+		return nil, badRequest("intro has at most 20 messages")
+	}
+	for _, m := range p.Intro {
+		if m.Role != "user" && m.Role != "assistant" {
+			return nil, badRequest("intro role must be user or assistant")
+		}
+		if strings.TrimSpace(m.Text) == "" {
+			return nil, badRequest("intro messages need text")
+		}
 	}
 	if p.Date == nil {
 		today := d.App.Today()
 		p.Date = &today
 	}
-	return d.store().CreateCheckin(p)
+	var c db.Checkin
+	err := d.store().Tx(func(s *db.Store) error {
+		var err error
+		if c, err = s.CreateCheckin(p.CheckinPatch); err != nil {
+			return err
+		}
+		for _, m := range p.Intro {
+			if _, err := s.AppendMessage(c.ID, m.Role, strings.TrimSpace(m.Text), ""); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return c, err
 }
 
 // CheckinDetail is a check-in with its chat transcript and AI actions.
@@ -362,6 +406,19 @@ func (d Deps) getCheckin(r *http.Request) (any, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// roadmapConversation returns today's Roadmap-page chat, or null before the
+// first message (the client creates it with POST /api/checkins).
+func (d Deps) roadmapConversation(r *http.Request) (any, error) {
+	c, err := d.store().LatestCheckin(d.App.Today(), db.KindAdhoc, db.TopicRoadmap)
+	if errors.Is(err, db.ErrNotFound) {
+		return okBody{nil}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 func (d Deps) updateCheckin(r *http.Request) (any, error) {
@@ -464,6 +521,12 @@ func (d Deps) getSettings(r *http.Request) (any, error) {
 	return d.App.Settings()
 }
 
+// getSupport returns the crisis lines shown in Settings → Support. They're
+// read-only here; see app.CrisisResources.
+func (d Deps) getSupport(r *http.Request) (any, error) {
+	return map[string]string{"crisis_resources": d.App.CrisisResources()}, nil
+}
+
 func (d Deps) patchSettings(r *http.Request) (any, error) {
 	var req map[string]string
 	if err := decode(r, &req); err != nil {
@@ -475,6 +538,40 @@ func (d Deps) patchSettings(r *http.Request) (any, error) {
 		}
 	}
 	return d.App.Settings()
+}
+
+// The coach's model.
+
+var errNoCurator = fmt.Errorf("%w: the AI coach isn't available on this server", db.ErrInvalid)
+
+func (d Deps) getLLM(r *http.Request) (any, error) {
+	if d.Curator == nil {
+		return nil, errNoCurator
+	}
+	return d.Curator.LLMSettings()
+}
+
+func (d Deps) patchLLM(r *http.Request) (any, error) {
+	if d.Curator == nil {
+		return nil, errNoCurator
+	}
+	var req map[string]*string
+	if err := decode(r, &req); err != nil {
+		return nil, err
+	}
+	return d.Curator.UpdateLLM(req)
+}
+
+func (d Deps) listModels(r *http.Request) (any, error) {
+	if d.Curator == nil {
+		return nil, errNoCurator
+	}
+	ids, err := d.Curator.Models(r.Context())
+	if err != nil {
+		// The status line already explains why; offer no suggestions.
+		return []string{}, nil
+	}
+	return ids, nil
 }
 
 // AI actions.

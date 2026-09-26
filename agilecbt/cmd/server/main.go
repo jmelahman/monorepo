@@ -9,9 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime/debug"
-	"strings"
 	"syscall"
 	"time"
 
@@ -75,7 +73,7 @@ func Root() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "agilecbt",
-		Short:   "Agile planning meets CBT: check-ins, a gentle board, and an AI curator",
+		Short:   "Agile planning meets CBT: check-ins, a gentle board, and an AI coach",
 		Version: Build().Version,
 	}
 
@@ -101,6 +99,9 @@ func run(addr, dataDirOverride string, inMemory bool) error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+	for _, f := range cfg.Files {
+		log.Printf("config: %s", f)
+	}
 
 	dbPath := cfg.DBPath()
 	if inMemory {
@@ -114,13 +115,16 @@ func run(addr, dataDirOverride string, inMemory bool) error {
 	defer store.Close()
 
 	a := app.New(store)
+	a.ConfigCrisisResources = cfg.CrisisResources
+	if cfg.CrisisResources == "" && a.LegacyCrisisResources() != "" {
+		log.Printf("WARNING: using the crisis resources saved from the old Settings page; crisis lines are now configuration, so move them to crisis_resources in config.toml (see docs/guide/configuration.md)")
+	}
 	reg := tools.New(a)
 	build := Build()
-	cur, cleanup, err := newCurator(cfg, reg, addr, inMemory)
+	cur, err := newCurator(cfg, reg)
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 	if cfg.Secret == "" {
 		if isLoopback(addr) {
 			log.Printf("auth is off (APP_SECRET unset); fine for localhost only")
@@ -129,15 +133,11 @@ func run(addr, dataDirOverride string, inMemory bool) error {
 		}
 	}
 
-	var curIface api.Curator
-	if cur != nil {
-		curIface = cur
-	}
 	mux := api.NewMux(api.Deps{
 		App:     a,
 		Build:   api.BuildInfo(build),
 		Secret:  cfg.Secret,
-		Curator: curIface,
+		Curator: cur,
 		MCP:     mcp.Handler(reg, build.Version),
 	})
 
@@ -204,57 +204,26 @@ func logRequests(h http.Handler) http.Handler {
 	})
 }
 
-// newCurator builds the in-app curator for the configured LLM backend. It
-// returns nil (chat disabled, manual check-ins still work) for APP_LLM=none.
-func newCurator(cfg config.Config, reg *tools.Registry, addr string, inMemory bool) (*curator.Curator, func(), error) {
-	noop := func() {}
-	var backend curator.Backend
-	cleanup := noop
-	switch cfg.LLM {
-	case config.LLMNone:
-		log.Printf("AI curator disabled (APP_LLM=none)")
-		return nil, noop, nil
-	case config.LLMOllama:
-		backend = &curator.Ollama{Host: cfg.OllamaHost, Model: cfg.Model, Registry: reg}
-	case config.LLMAnthropic:
-		backend = &curator.Anthropic{Model: cfg.Model, Registry: reg}
-	case config.LLMClaudeCode:
-		// Claude Code keeps sessions per working directory; keep it stable
-		// so --resume works across restarts, or throwaway for --in-memory.
-		dir := filepath.Join(cfg.DataDir, "claude")
-		if inMemory {
-			tmp, err := os.MkdirTemp("", "agilecbt-claude-")
-			if err != nil {
-				return nil, noop, err
-			}
-			dir = tmp
-			cleanup = func() { os.RemoveAll(tmp) }
-		}
-		selfURL := cfg.SelfURL
-		if selfURL == "" {
-			selfURL = loopbackURL(addr)
-		}
-		backend = &curator.ClaudeCode{
-			MCPURL: strings.TrimRight(selfURL, "/") + "/mcp",
-			Secret: cfg.Secret,
-			Model:  cfg.Model,
-			Dir:    dir,
-		}
-	}
-	log.Printf("AI curator backend: %s", backend.Name())
-	return curator.New(reg, backend), cleanup, nil
-}
-
-// loopbackURL is how a local subprocess reaches a server listening on addr.
-func loopbackURL(addr string) string {
-	host, port, err := net.SplitHostPort(addr)
+// newCurator builds the in-app curator. Its model settings start from the
+// config and can be changed in Settings → Coach, including turning it on or
+// off.
+func newCurator(cfg config.Config, reg *tools.Registry) (*curator.Curator, error) {
+	cur, err := curator.NewConfigured(reg, curator.Config{
+		LLM:             cfg.LLM,
+		BaseURL:         cfg.BaseURL,
+		APIKey:          cfg.APIKey,
+		Model:           cfg.Model,
+		ReasoningEffort: cfg.ReasoningEffort,
+	})
 	if err != nil {
-		return "http://127.0.0.1:8080"
+		return nil, err
 	}
-	if host == "" || host == "0.0.0.0" || host == "::" {
-		host = "127.0.0.1"
+	if eff := cur.Effective(); eff.LLM == config.LLMNone {
+		log.Printf("AI coach is turned off")
+	} else {
+		log.Printf("AI coach: %s at %s", eff.Model, eff.BaseURL)
 	}
-	return "http://" + net.JoinHostPort(host, port)
+	return cur, nil
 }
 
 // isLoopback reports whether addr only accepts local connections.

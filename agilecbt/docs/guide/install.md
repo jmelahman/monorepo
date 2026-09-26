@@ -18,11 +18,10 @@ Put `agilecbt` on your `PATH`.
 APP_SECRET='something long' docker compose up -d --build
 ```
 
-The image doesn't include the `claude` CLI, so `compose.yaml` defaults to
-`APP_LLM=ollama` and connects to Ollama on the host at
-`host.docker.internal:11434`. Set `APP_LLM=anthropic` with `ANTHROPIC_API_KEY`,
-or `APP_LLM=none`, to change that. To use your Claude subscription, run the
-binary directly on a machine where `claude` is logged in.
+`compose.yaml` points the coach at Ollama on the host
+(`http://host.docker.internal:11434/v1`). Set `APP_LLM_BASE_URL`,
+`APP_LLM_API_KEY`, and `APP_MODEL` to use another OpenAI-compatible API such
+as OpenRouter, or `APP_LLM=none` to turn the coach off.
 
 Data is kept in the `agilecbt-data` volume. Back it up with
 `agilecbt export` (see the [CLI](/reference/cli)).

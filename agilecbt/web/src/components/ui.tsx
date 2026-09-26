@@ -1,4 +1,11 @@
-import { type ButtonHTMLAttributes, type ReactNode, useEffect, useId, useRef } from "react";
+import {
+  type ButtonHTMLAttributes,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 
 type Variant = "primary" | "soft" | "ghost";
 
@@ -105,11 +112,13 @@ export function Dialog({
   open,
   onClose,
   title,
+  wide = false,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  wide?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -124,7 +133,7 @@ export function Dialog({
       ref={ref}
       onClose={onClose}
       aria-label={title}
-      className="m-auto mb-0 w-full max-w-lg rounded-t-2xl border border-border bg-surface p-0 text-fg backdrop:bg-black/50 sm:mb-auto sm:rounded-2xl"
+      className={`m-auto mb-0 w-full rounded-t-2xl ${wide ? "max-w-2xl" : "max-w-lg"} border border-border bg-surface p-0 text-fg backdrop:bg-black/50 sm:mb-auto sm:rounded-2xl`}
     >
       {open && (
         <div className="p-5">
@@ -154,8 +163,17 @@ export function ErrorText({ error }: { error: unknown }) {
 }
 
 // Markdownish renders plain text with paragraph breaks and **bold** runs,
-// enough for curator replies and crisis resources without a markdown lib.
-export function Markdownish({ text, className = "" }: { text: string; className?: string }) {
+// enough for coach replies and crisis resources without a markdown lib.
+// With links, http(s) URLs become links that open in a new tab.
+export function Markdownish({
+  text,
+  className = "",
+  links = false,
+}: {
+  text: string;
+  className?: string;
+  links?: boolean;
+}) {
   return (
     <div className={`space-y-2 ${className}`}>
       {text.split(/\n{2,}/).map((para, i) => (
@@ -165,6 +183,9 @@ export function Markdownish({ text, className = "" }: { text: string; className?
             part.startsWith("**") && part.endsWith("**") ? (
               // biome-ignore lint/suspicious/noArrayIndexKey: inline runs have no identity
               <strong key={j}>{part.slice(2, -2)}</strong>
+            ) : links ? (
+              // biome-ignore lint/suspicious/noArrayIndexKey: inline runs have no identity
+              <Linkified key={j} text={part} />
             ) : (
               part
             ),
@@ -172,5 +193,52 @@ export function Markdownish({ text, className = "" }: { text: string; className?
         </p>
       ))}
     </div>
+  );
+}
+
+// A URL runs to the next space, minus trailing punctuation.
+const urlPattern = /(https?:\/\/\S*[^\s.,;:!?)'"])/;
+
+function Linkified({ text }: { text: string }) {
+  return text.split(urlPattern).map((part, i) =>
+    i % 2 === 1 ? (
+      // biome-ignore lint/suspicious/noArrayIndexKey: inline runs have no identity
+      <a key={i} href={part} target="_blank" rel="noreferrer" className="underline">
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
+// Collapsible is a quiet "▸ label" toggle for things that can wait.
+export function Collapsible({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        className="text-sm text-fg-muted hover:text-fg"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        {open ? "▾" : "▸"} {label}
+      </button>
+      {open && <div className="mt-2 space-y-4">{children}</div>}
+    </div>
+  );
+}
+
+// Shimmer is muted text with a highlight sweeping across it, for "the coach
+// is working" states. See .shimmer-clone in index.css.
+export function Shimmer({ children, className = "" }: { children: string; className?: string }) {
+  return (
+    <span className={`relative inline-block text-fg-muted ${className}`}>
+      <span className="inline-block">{children}</span>
+      <span aria-hidden className="shimmer-clone">
+        {children}
+      </span>
+    </span>
   );
 }

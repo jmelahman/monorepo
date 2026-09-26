@@ -7,7 +7,6 @@ import Board from "@/pages/Board";
 import Login from "@/pages/Login";
 import Retro from "@/pages/Retro";
 import Roadmap from "@/pages/Roadmap";
-import Settings from "@/pages/Settings";
 import Thoughts from "@/pages/Thoughts";
 import Today from "@/pages/Today";
 
@@ -43,13 +42,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Layout />}>
+        <Route element={<Layout health={health.data} />}>
           <Route index element={<Today health={health.data} />} />
           <Route path="board" element={<Board />} />
-          <Route path="roadmap" element={<Roadmap />} />
+          <Route path="roadmap" element={<Roadmap health={health.data} />} />
           <Route path="thoughts" element={<Thoughts />} />
           <Route path="retro" element={<Retro health={health.data} />} />
-          <Route path="settings" element={<Settings health={health.data} />} />
+          <Route path="settings" element={<Navigate to="/?settings=coach" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

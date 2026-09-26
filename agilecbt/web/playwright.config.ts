@@ -6,7 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Non-default ports so a running dev server is never reused with the wrong
 // curator config.
 const BACKEND_PORT = 8095;
-const FAKE_OLLAMA_PORT = 11499;
+const FAKE_LLM_PORT = 11499;
 const FRONTEND_PORT = 5177; // 5175 is the Docs task
 
 export default defineConfig({
@@ -24,21 +24,22 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: "node tests/e2e/fake-ollama.mjs",
+      command: "node tests/e2e/fake-llm.mjs",
       cwd: ".",
-      env: { FAKE_OLLAMA_PORT: String(FAKE_OLLAMA_PORT) },
-      url: `http://127.0.0.1:${FAKE_OLLAMA_PORT}/api/tags`,
+      env: { FAKE_LLM_PORT: String(FAKE_LLM_PORT) },
+      url: `http://127.0.0.1:${FAKE_LLM_PORT}/v1/models`,
       reuseExistingServer: false,
       stdout: "pipe",
     },
     {
       command: `go run . serve --in-memory --addr 127.0.0.1:${BACKEND_PORT}`,
       cwd: "..",
-      // The real Ollama backend, pointed at the scripted fake.
+      // The real OpenAI-compatible backend, pointed at the scripted fake.
       env: {
-        APP_LLM: "ollama",
+        APP_LLM: "openai",
+        APP_LLM_BASE_URL: `http://127.0.0.1:${FAKE_LLM_PORT}/v1`,
+        APP_LLM_API_KEY: "",
         APP_MODEL: "fake",
-        OLLAMA_HOST: `http://127.0.0.1:${FAKE_OLLAMA_PORT}`,
         APP_SECRET: "",
       },
       url: `http://127.0.0.1:${BACKEND_PORT}/api/health`,

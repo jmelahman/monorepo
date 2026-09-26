@@ -30,9 +30,43 @@ type LLMStatus struct {
 	Detail    string `json:"detail,omitempty"`
 }
 
+// LLMFields is one layer of the coach's model settings. The API key itself
+// never leaves the server.
+type LLMFields struct {
+	// LLM is "openai" or "none" (coach off).
+	LLM     string `json:"llm"`
+	BaseURL string `json:"base_url"`
+	Model   string `json:"model"`
+	// ReasoningEffort is sent as reasoning_effort; "" leaves it out.
+	ReasoningEffort string `json:"reasoning_effort"`
+	// APIKeySet reports whether a key will be sent to BaseURL.
+	APIKeySet bool `json:"api_key_set"`
+}
+
+// LLMSettings is what GET /api/llm returns.
+type LLMSettings struct {
+	// Effective is what the coach uses now.
+	Effective LLMFields `json:"effective"`
+	// Defaults come from config.toml and the environment.
+	Defaults LLMFields `json:"defaults"`
+	// Overrides holds the fields saved in the app (llm, base_url, model,
+	// reasoning_effort), which win over Defaults.
+	Overrides map[string]string `json:"overrides"`
+	// APIKeySaved reports whether a key saved in the app applies to the
+	// effective base URL.
+	APIKeySaved bool `json:"api_key_saved"`
+}
+
 // Curator is the AI check-in coach. Implemented by internal/curator.
 type Curator interface {
 	Status(ctx context.Context) LLMStatus
+	// LLMSettings returns the model settings.
+	LLMSettings() (LLMSettings, error)
+	// UpdateLLM saves overrides: a missing key is unchanged, null reverts
+	// to the default, and a string sets it. It takes effect immediately.
+	UpdateLLM(patch map[string]*string) (LLMSettings, error)
+	// Models lists the model ids the effective base URL offers.
+	Models(ctx context.Context) ([]string, error)
 	// Chat runs one user turn on a check-in, calling emit for each streamed
 	// event ("text" deltas, "error"). It stores both sides of the exchange.
 	Chat(ctx context.Context, checkinID int64, text string, emit func(event string, data any)) error
@@ -102,8 +136,8 @@ func ok[T any](v T, err error) (any, error) {
 	return okBody{v}, nil
 }
 
-// errUnavailable means the AI curator can't be reached right now.
-var errUnavailable = errors.New("AI curator is unavailable")
+// errUnavailable means the AI coach can't be reached right now.
+var errUnavailable = errors.New("the AI coach is unavailable")
 
 // errBadRequest marks request-shape problems (bad JSON, bad ids).
 type errBadRequest struct{ msg string }

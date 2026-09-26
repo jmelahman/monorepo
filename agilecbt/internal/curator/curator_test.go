@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -38,18 +36,24 @@ func newCheckin(t *testing.T, a *app.App) db.Checkin {
 	return c
 }
 
-// fakeOllama replays scripted /api/chat responses and records requests.
-type fakeOllama struct {
+// fakeOpenAI replays scripted /chat/completions streams and records
+// requests.
+type fakeOpenAI struct {
 	mu       sync.Mutex
-	replies  [][]string // NDJSON lines per call
+	models   string
+	replies  [][]string // SSE data payloads per call
 	requests []map[string]any
+	auth     []string
 }
 
-func (f *fakeOllama) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (f *fakeOpenAI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	f.mu.Lock()
+	f.auth = append(f.auth, r.Header.Get("Authorization"))
+	f.mu.Unlock()
 	switch r.URL.Path {
-	case "/api/tags":
-		fmt.Fprint(w, `{"models":[{"name":"qwen3.8:27b"}]}`)
-	case "/api/chat":
+	case "/v1/models":
+		fmt.Fprint(w, f.models)
+	case "/v1/chat/completions":
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		f.mu.Lock()
@@ -57,44 +61,55 @@ func (f *fakeOllama) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		lines := f.replies[0]
 		f.replies = f.replies[1:]
 		f.mu.Unlock()
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, ": keep-alive\n\n")
 		for _, l := range lines {
-			fmt.Fprintln(w, l)
+			fmt.Fprintf(w, "data: %s\n\n", l)
 		}
+		fmt.Fprint(w, "data: [DONE]\n\n")
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func TestOllamaToolLoop(t *testing.T) {
+func delta(d string) string { return `{"choices":[{"index":0,"delta":` + d + `}]}` }
+
+func TestOpenAIToolLoop(t *testing.T) {
 	reg := newRegistry(t)
 	a := reg.App()
 	c := newCheckin(t, a)
 
-	fake := &fakeOllama{replies: [][]string{
-		{
-			`{"message":{"role":"assistant","content":"Let me add that. "},"done":false}`,
-			`{"message":{"role":"assistant","content":"","tool_calls":[{"function":{"name":"create_step","arguments":{"title":"Short walk","lane":"today"}}}]},"done":false}`,
-			`{"message":{"role":"assistant","content":""},"done":true}`,
+	fake := &fakeOpenAI{
+		models: `{"object":"list","data":[{"id":"qwen3.8:27b"}]}`,
+		replies: [][]string{
+			{
+				delta(`{"role":"assistant","content":"Let me add that. "}`),
+				// Arguments arrive in fragments across chunks.
+				delta(`{"tool_calls":[{"index":0,"id":"call_a","type":"function","function":{"name":"create_step","arguments":"{\"title\":\"Short"}}]}`),
+				delta(`{"tool_calls":[{"index":0,"function":{"arguments":" walk\",\"lane\":\"today\"}"}}]}`),
+			},
+			{
+				delta(`{"content":"Done. "}`),
+				delta(`{"content":"A walk is on Today."}`),
+			},
 		},
-		{
-			`{"message":{"role":"assistant","content":"Done. "},"done":false}`,
-			`{"message":{"role":"assistant","content":"A walk is on Today."},"done":true}`,
-		},
-	}}
+	}
 	srv := httptest.NewServer(fake)
 	defer srv.Close()
 
-	cur := New(reg, &Ollama{Host: srv.URL, Registry: reg})
-	if st := cur.Status(context.Background()); !st.Available || st.Backend != "ollama" {
+	cur := New(reg, &OpenAI{BaseURL: srv.URL + "/v1", APIKey: "k3y", Model: "qwen3.8:27b", ReasoningEffort: "none", Registry: reg})
+	if st := cur.Status(context.Background()); !st.Available || st.Backend != "openai" {
 		t.Fatalf("status: %+v", st)
 	}
 
-	var events []string
 	var actions []db.Action
 	cancel := a.Broker.Subscribe(c.ID, func(act db.Action) { actions = append(actions, act) })
 	defer cancel()
+	var streamed strings.Builder
 	err := cur.Chat(context.Background(), c.ID, "I could walk today", func(ev string, data any) {
-		events = append(events, ev)
+		if ev == "text" {
+			streamed.WriteString(data.(map[string]string)["text"])
+		}
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -106,15 +121,21 @@ func TestOllamaToolLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(msgs) != 2 || msgs[0].Text != "I could walk today" || msgs[1].Text != "Let me add that. \n\nDone. A walk is on Today." {
-		t.Fatalf("messages: %+v", msgs)
+	want := "Let me add that. \n\nDone. A walk is on Today."
+	if len(msgs) != 2 || msgs[0].Text != "I could walk today" || msgs[1].Text != want || streamed.String() != want {
+		t.Fatalf("messages: %+v, streamed %q", msgs, streamed.String())
+	}
+	for _, h := range fake.auth {
+		if h != "Bearer k3y" {
+			t.Errorf("authorization = %q", h)
+		}
 	}
 
 	// The first request carries system prompt, context, and tools; the
-	// second carries the tool result.
+	// second carries the tool call and its result.
 	first := fake.requests[0]
-	if think, ok := first["think"].(bool); !ok || think {
-		t.Errorf("think want false, got %v", first["think"])
+	if first["reasoning_effort"] != "none" || first["model"] != "qwen3.8:27b" || first["stream"] != true {
+		t.Errorf("request params: %v %v %v", first["reasoning_effort"], first["model"], first["stream"])
 	}
 	if len(first["tools"].([]any)) != len(reg.List()) {
 		t.Errorf("tools not sent")
@@ -127,116 +148,17 @@ func TestOllamaToolLoop(t *testing.T) {
 		t.Errorf("context block missing: %s", user)
 	}
 	second := fake.requests[1]["messages"].([]any)
-	if last := second[len(second)-1].(map[string]any); last["role"] != "tool" || !strings.Contains(last["content"].(string), "Short walk") {
+	call := second[len(second)-2].(map[string]any)
+	calls, _ := call["tool_calls"].([]any)
+	if len(calls) != 1 || !strings.Contains(fmt.Sprint(calls[0]), `"title":"Short walk"`) {
+		t.Errorf("assistant tool call not sent back: %+v", call)
+	}
+	if last := second[len(second)-1].(map[string]any); last["role"] != "tool" || last["tool_call_id"] != "call_a" || !strings.Contains(last["content"].(string), "Short walk") {
 		t.Errorf("tool result not sent back: %+v", last)
 	}
-}
 
-func TestOllamaStatusMissingModel(t *testing.T) {
-	srv := httptest.NewServer(&fakeOllama{})
-	defer srv.Close()
-	ok, detail := (&Ollama{Host: srv.URL, Model: "llama3"}).Status(context.Background())
-	if ok || !strings.Contains(detail, "ollama pull llama3") {
-		t.Fatalf("status = %v %q", ok, detail)
-	}
-}
-
-// fakeClaude writes a stand-in `claude` script that logs its arguments and
-// stdin, then replays stream-json output.
-func fakeClaude(t *testing.T) (bin, logPath string) {
-	t.Helper()
-	dir := t.TempDir()
-	logPath = filepath.Join(dir, "calls.log")
-	bin = filepath.Join(dir, "claude")
-	script := `#!/bin/sh
-log="` + logPath + `"
-echo "ARGS: $*" >> "$log"
-if [ "$1" = "auth" ]; then echo '{"loggedIn":true,"authMethod":"claude.ai"}'; exit 0; fi
-echo "STDIN: $(cat)" >> "$log"
-for a in "$@"; do case "$prev" in --mcp-config) echo "MCP: $(cat "$a")" >> "$log";; esac; prev="$a"; done
-case "$*" in
-*stream-json*)
-cat <<'EOF'
-{"type":"system","subtype":"init","session_id":"sess-1"}
-{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}}
-{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Good morning."}}}
-{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use"}}}
-{"type":"stream_event","event":{"type":"content_block_start","index":2,"content_block":{"type":"text","text":""}}}
-{"type":"stream_event","event":{"type":"content_block_delta","index":2,"delta":{"type":"text_delta","text":"How are you arriving?"}}}
-{"type":"result","subtype":"success","is_error":false,"result":"How are you arriving?","session_id":"sess-1"}
-EOF
-;;
-*) echo '{"type":"result","subtype":"success","is_error":false,"result":"{\"went_well\":\"You walked.\",\"try_next\":\"Walk again.\"}"}';;
-esac
-`
-	if err := os.WriteFile(bin, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	return bin, logPath
-}
-
-func TestClaudeCodeTurns(t *testing.T) {
-	reg := newRegistry(t)
-	a := reg.App()
-	c := newCheckin(t, a)
-	bin, logPath := fakeClaude(t)
-	cc := &ClaudeCode{Bin: bin, MCPURL: "http://127.0.0.1:9/mcp", Secret: "s3cret", Dir: t.TempDir()}
-	cur := New(reg, cc)
-
-	if st := cur.Status(context.Background()); !st.Available || !strings.Contains(st.Detail, "claude.ai") {
-		t.Fatalf("status: %+v", st)
-	}
-
-	var text strings.Builder
-	emit := func(ev string, data any) {
-		if ev == "text" {
-			text.WriteString(data.(map[string]string)["text"])
-		}
-	}
-	if err := cur.Chat(context.Background(), c.ID, "hello", emit); err != nil {
-		t.Fatal(err)
-	}
-	if text.String() != "Good morning.\n\nHow are you arriving?" {
-		t.Fatalf("streamed text = %q", text.String())
-	}
-	got, err := a.Store.GetCheckin(c.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.LLMSession == "" {
-		t.Fatal("session id not saved")
-	}
-	if err := cur.Chat(context.Background(), c.ID, "tired", emit); err != nil {
-		t.Fatal(err)
-	}
-
-	raw, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	log := string(raw)
-	for _, want := range []string{
-		"--tools  --setting-sources  --strict-mcp-config",
-		"--allowedTools mcp__agilecbt",
-		"--session-id ",
-		"--resume sess-1",
-		`"Authorization":"Bearer s3cret"`,
-		fmt.Sprintf(`checkin=%d`, c.ID),
-		"STDIN: <context>",
-	} {
-		if !strings.Contains(log, want) {
-			t.Errorf("claude calls missing %q:\n%s", want, log)
-		}
-	}
-	if strings.Contains(log, "ARGS: "+"s3cret") || strings.Contains(strings.Split(log, "MCP:")[0], "s3cret") {
-		t.Errorf("secret leaked into argv")
-	}
-	// The per-turn MCP config file is cleaned up.
-	if m, _ := filepath.Glob(filepath.Join(cc.Dir, "mcp-*.json")); len(m) != 0 {
-		t.Errorf("leftover MCP configs: %v", m)
-	}
-
-	// Retro drafting uses the one-shot JSON mode.
+	// Retro drafting is one tool-free call.
+	fake.replies = [][]string{{delta(`{"content":"{\"went_well\":\"You walked.\",\"try_next\":\"Walk again.\"}"}`)}}
 	w, err := a.CurrentWeek()
 	if err != nil {
 		t.Fatal(err)
@@ -247,6 +169,47 @@ func TestClaudeCodeTurns(t *testing.T) {
 	}
 	if r.WentWell != "You walked." || r.TryNext != "Walk again." || !strings.Contains(r.AIDraft, "**What went well**") {
 		t.Fatalf("retro: %+v", r)
+	}
+	if _, ok := fake.requests[2]["tools"]; ok {
+		t.Errorf("retro draft sent tools")
+	}
+}
+
+func TestOpenAIStatus(t *testing.T) {
+	for _, tc := range []struct {
+		models, model string
+		ok            bool
+		detail        string
+	}{
+		{`{"data":[{"id":"qwen3.8:27b"}]}`, "llama3", false, "ollama pull llama3"},
+		{`{"data":[{"id":"llama3:latest"}]}`, "llama3", true, "llama3 at"},
+		{`not json`, "anything", true, "anything at"},
+	} {
+		srv := httptest.NewServer(&fakeOpenAI{models: tc.models})
+		ok, detail := (&OpenAI{BaseURL: srv.URL + "/v1", Model: tc.model}).Status(context.Background())
+		srv.Close()
+		if ok != tc.ok || !strings.Contains(detail, tc.detail) {
+			t.Errorf("%s: status = %v %q", tc.models, ok, detail)
+		}
+	}
+	for _, tc := range []struct {
+		code   int
+		ok     bool
+		detail string
+	}{
+		{http.StatusUnauthorized, false, "needs an API key"},
+		{http.StatusServiceUnavailable, false, "503 Service Unavailable"},
+		{http.StatusTooManyRequests, false, "429 Too Many Requests"},
+		{http.StatusNotFound, true, "m at"},
+	} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(tc.code)
+		}))
+		ok, detail := (&OpenAI{BaseURL: srv.URL, Model: "m"}).Status(context.Background())
+		srv.Close()
+		if ok != tc.ok || !strings.Contains(detail, tc.detail) {
+			t.Errorf("%d: status = %v %q", tc.code, ok, detail)
+		}
 	}
 }
 

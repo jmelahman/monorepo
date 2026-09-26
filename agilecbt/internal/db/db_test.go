@@ -162,11 +162,11 @@ func TestCheckinsAndMessages(t *testing.T) {
 	if _, err := s.CreateCheckin(CheckinPatch{Date: ptr("2026-09-25"), Mood: ptr(11)}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid for mood 11, got %v", err)
 	}
-	latest, err := s.LatestCheckin("2026-09-25", KindMorning)
+	latest, err := s.LatestCheckin("2026-09-25", KindMorning, "")
 	if err != nil || latest.ID != c.ID {
 		t.Fatalf("LatestCheckin = %+v, %v", latest, err)
 	}
-	if _, err := s.LatestCheckin("2026-09-25", KindEvening); !errors.Is(err, ErrNotFound) {
+	if _, err := s.LatestCheckin("2026-09-25", KindEvening, ""); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 	for _, role := range []string{"user", "assistant"} {

@@ -16,7 +16,7 @@ export default defineConfig({
     ]
   },
   title: 'AgileCBT',
-  description: 'Agile planning meets CBT: check-ins, a gentle board, and an AI curator.',
+  description: 'Agile planning meets CBT: check-ins, a gentle board, and an AI coach.',
   base: '/AgileCBT/',
   lastUpdated: true,
   cleanUrls: true,
@@ -41,7 +41,7 @@ export default defineConfig({
             { text: 'Install', link: '/guide/install' },
             { text: 'Quickstart', link: '/guide/quickstart' },
             { text: 'Configuration', link: '/guide/configuration' },
-            { text: 'AI curator & MCP', link: '/guide/ai' },
+            { text: 'AI coach & MCP', link: '/guide/ai' },
           ],
         },
       ],

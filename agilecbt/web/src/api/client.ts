@@ -4,6 +4,8 @@
 export type Lane = "someday" | "week" | "today" | "done" | "let_go";
 export type GoalStatus = "active" | "resting" | "done";
 export type CheckinKind = "morning" | "evening" | "adhoc";
+// Topic marks a conversation that isn't a daily standup.
+export type CheckinTopic = "" | "roadmap";
 
 export interface Value {
   id: number;
@@ -61,6 +63,7 @@ export interface Checkin {
   anxiety: number | null;
   note: string;
   summary: string;
+  topic: CheckinTopic;
   created_at: string;
   updated_at: string;
 }
@@ -161,8 +164,29 @@ export interface Health {
   llm: { backend: string; available: boolean; detail?: string };
 }
 
+export interface LLMFields {
+  llm: "openai" | "none";
+  base_url: string;
+  model: string;
+  /** Sent as reasoning_effort; "" leaves it out. */
+  reasoning_effort: string;
+  api_key_set: boolean;
+}
+
+/** The coach's model: config.toml/env defaults plus overrides saved here. */
+export interface LLMSettings {
+  effective: LLMFields;
+  defaults: LLMFields;
+  overrides: Partial<Record<"llm" | "base_url" | "model" | "reasoning_effort", string>>;
+  api_key_saved: boolean;
+}
+
+/** A missing field is unchanged, null reverts to the default. */
+export type LLMPatch = Partial<
+  Record<"llm" | "base_url" | "model" | "reasoning_effort" | "api_key", string | null>
+>;
+
 export type Settings = {
-  crisis_resources: string;
   checkin_times: "morning" | "evening" | "both";
 } & Record<string, string>;
 
@@ -175,7 +199,7 @@ export type GoalPatch = Partial<Pick<Goal, "title" | "why" | "horizon" | "status
 };
 
 export type CheckinPatch = Partial<
-  Pick<Checkin, "kind" | "mood" | "energy" | "anxiety" | "note" | "summary" | "date">
+  Pick<Checkin, "kind" | "mood" | "energy" | "anxiety" | "note" | "summary" | "date" | "topic">
 >;
 
 export type ThoughtPatch = Partial<Omit<ThoughtRecord, "id" | "created_at" | "updated_at">>;
@@ -260,9 +284,11 @@ export const api = {
   putRetro: (weekId: number, r: RetroPatch) => put<Retro>(`/weeks/${weekId}/retro`, r),
   draftRetro: (weekId: number) => post<Retro>(`/weeks/${weekId}/retro/draft`),
 
-  createCheckin: (c: CheckinPatch) => post<Checkin>("/checkins", c),
+  createCheckin: (c: CheckinPatch & { intro?: Pick<Message, "role" | "text">[] }) =>
+    post<Checkin>("/checkins", c),
   checkin: (id: number) => get<CheckinDetail>(`/checkins/${id}`),
   updateCheckin: (id: number, c: CheckinPatch) => patch<Checkin>(`/checkins/${id}`, c),
+  roadmapConversation: () => get<Checkin | null>("/conversations/roadmap"),
 
   thoughts: () => get<ThoughtRecord[]>("/thoughts"),
   createThought: (t: ThoughtPatch) => post<ThoughtRecord>("/thoughts", t),
@@ -276,6 +302,10 @@ export const api = {
 
   settings: () => get<Settings>("/settings"),
   updateSettings: (s: Partial<Settings>) => patch<Settings>("/settings", s),
+  llm: () => get<LLMSettings>("/llm"),
+  updateLLM: (p: LLMPatch) => patch<LLMSettings>("/llm", p),
+  llmModels: () => get<string[]>("/llm/models"),
+  support: () => get<{ crisis_resources: string }>("/support"),
 
   undo: (actionId: number) => post<Action>(`/ai-actions/${actionId}/undo`),
 
@@ -289,7 +319,7 @@ export type ChatEvent =
   | { event: "error"; data: { error: string } }
   | { event: "done"; data: Record<string, never> };
 
-// chat sends one message to the curator and streams the SSE reply.
+// chat sends one message to the coach and streams the SSE reply.
 export async function chat(
   checkinId: number,
   text: string,

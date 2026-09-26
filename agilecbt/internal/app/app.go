@@ -19,6 +19,9 @@ type App struct {
 	// Now returns the current time; its Location defines what "today" means.
 	Now    func() time.Time
 	Broker *Broker
+	// ConfigCrisisResources is crisis_resources from config.toml (or
+	// $APP_CRISIS_RESOURCES); see CrisisResources.
+	ConfigCrisisResources string
 }
 
 // New returns an App using the local wall clock.
@@ -82,7 +85,7 @@ func (a *App) TodaySnapshot() (Snapshot, error) {
 	now := a.Now()
 	snap := Snapshot{Date: now.Format(time.DateOnly), Today: []TodayStep{}}
 	for kind, dst := range map[string]**db.Checkin{db.KindMorning: &snap.Morning, db.KindEvening: &snap.Evening} {
-		c, err := a.Store.LatestCheckin(snap.Date, kind)
+		c, err := a.Store.LatestCheckin(snap.Date, kind, "")
 		switch {
 		case err == nil:
 			*dst = &c
@@ -340,15 +343,7 @@ func (a *App) restoreEntity(entity string, raw []byte) error {
 	case EntityStep:
 		return restore(raw, s.PutStep)
 	case EntityCheckin:
-		// LLMSession isn't serialized; keep the current one.
-		var c db.Checkin
-		if err := json.Unmarshal(raw, &c); err != nil {
-			return err
-		}
-		if cur, err := s.GetCheckin(c.ID); err == nil {
-			c.LLMSession = cur.LLMSession
-		}
-		return s.PutCheckin(c)
+		return restore(raw, s.PutCheckin)
 	case EntityThought:
 		return restore(raw, s.PutThoughtRecord)
 	case EntityWeek:

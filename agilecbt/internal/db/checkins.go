@@ -11,19 +11,24 @@ const (
 	KindAdhoc   = "adhoc"
 )
 
+// Conversation topics. A daily standup has no topic.
+const (
+	TopicRoadmap = "roadmap"
+)
+
 // Checkin is one daily standup: how you're arriving, plus the curator chat.
 type Checkin struct {
-	ID         int64  `json:"id"`
-	Date       string `json:"date"`
-	Kind       string `json:"kind"`
-	Mood       *int   `json:"mood"`
-	Energy     *int   `json:"energy"`
-	Anxiety    *int   `json:"anxiety"`
-	Note       string `json:"note"`
-	Summary    string `json:"summary"`
-	LLMSession string `json:"-"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
+	ID        int64  `json:"id"`
+	Date      string `json:"date"`
+	Kind      string `json:"kind"`
+	Mood      *int   `json:"mood"`
+	Energy    *int   `json:"energy"`
+	Anxiety   *int   `json:"anxiety"`
+	Note      string `json:"note"`
+	Summary   string `json:"summary"`
+	Topic     string `json:"topic"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 // CheckinPatch holds optional fields for creating or updating a Checkin.
@@ -35,14 +40,15 @@ type CheckinPatch struct {
 	Anxiety *int    `json:"anxiety"`
 	Note    *string `json:"note"`
 	Summary *string `json:"summary"`
+	Topic   *string `json:"topic"`
 }
 
-const checkinCols = `id, date, kind, mood, energy, anxiety, note, summary, llm_session, created_at, updated_at`
+const checkinCols = `id, date, kind, mood, energy, anxiety, note, summary, topic, created_at, updated_at`
 
 func scanCheckin(r rowScanner) (Checkin, error) {
 	var c Checkin
 	err := r.Scan(&c.ID, &c.Date, &c.Kind, &c.Mood, &c.Energy, &c.Anxiety, &c.Note, &c.Summary,
-		&c.LLMSession, &c.CreatedAt, &c.UpdatedAt)
+		&c.Topic, &c.CreatedAt, &c.UpdatedAt)
 	return c, err
 }
 
@@ -65,11 +71,11 @@ func (s *Store) GetCheckin(id int64) (Checkin, error) {
 	return c, notFound(err)
 }
 
-// LatestCheckin returns the most recent check-in of kind on date ("" kind =
-// any kind), or ErrNotFound.
-func (s *Store) LatestCheckin(date, kind string) (Checkin, error) {
-	q := `SELECT ` + checkinCols + ` FROM checkins WHERE date = ?`
-	args := []any{date}
+// LatestCheckin returns the most recent check-in of kind and topic on date
+// ("" kind = any kind), or ErrNotFound.
+func (s *Store) LatestCheckin(date, kind, topic string) (Checkin, error) {
+	q := `SELECT ` + checkinCols + ` FROM checkins WHERE date = ? AND topic = ?`
+	args := []any{date, topic}
 	if kind != "" {
 		q += ` AND kind = ?`
 		args = append(args, kind)
@@ -84,9 +90,9 @@ func (s *Store) CreateCheckin(p CheckinPatch) (Checkin, error) {
 	if err := applyCheckinPatch(&c, p); err != nil {
 		return Checkin{}, err
 	}
-	return scanCheckin(s.db.QueryRow(`INSERT INTO checkins (date, kind, mood, energy, anxiety, note, summary)
-		VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING `+checkinCols,
-		c.Date, c.Kind, c.Mood, c.Energy, c.Anxiety, c.Note, c.Summary))
+	return scanCheckin(s.db.QueryRow(`INSERT INTO checkins (date, kind, mood, energy, anxiety, note, summary, topic)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING `+checkinCols,
+		c.Date, c.Kind, c.Mood, c.Energy, c.Anxiety, c.Note, c.Summary, c.Topic))
 }
 
 // UpdateCheckin applies p to the check-in with id.
@@ -102,18 +108,13 @@ func (s *Store) UpdateCheckin(id int64, p CheckinPatch) (Checkin, error) {
 	return c, s.PutCheckin(c)
 }
 
-// SetCheckinSession records the LLM backend's session handle for resuming.
-func (s *Store) SetCheckinSession(id int64, session string) error {
-	return rowsAffected(s.db.Exec(`UPDATE checkins SET llm_session = ? WHERE id = ?`, session, id))
-}
-
 // PutCheckin writes c verbatim (insert or full update by id). Used for undo.
 func (s *Store) PutCheckin(c Checkin) error {
 	_, err := s.db.Exec(`INSERT INTO checkins (`+checkinCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET date = excluded.date, kind = excluded.kind, mood = excluded.mood,
 		energy = excluded.energy, anxiety = excluded.anxiety, note = excluded.note,
-		summary = excluded.summary, updated_at = excluded.updated_at`,
-		c.ID, c.Date, c.Kind, c.Mood, c.Energy, c.Anxiety, c.Note, c.Summary, c.LLMSession, c.CreatedAt, c.UpdatedAt)
+		summary = excluded.summary, topic = excluded.topic, updated_at = excluded.updated_at`,
+		c.ID, c.Date, c.Kind, c.Mood, c.Energy, c.Anxiety, c.Note, c.Summary, c.Topic, c.CreatedAt, c.UpdatedAt)
 	return err
 }
 
@@ -157,6 +158,14 @@ func applyCheckinPatch(c *Checkin, p CheckinPatch) error {
 	}
 	if p.Summary != nil {
 		c.Summary = strings.TrimSpace(*p.Summary)
+	}
+	if p.Topic != nil {
+		switch *p.Topic {
+		case "", TopicRoadmap:
+			c.Topic = *p.Topic
+		default:
+			return invalid("topic must be empty or roadmap")
+		}
 	}
 	if len(c.Date) != len("2006-01-02") {
 		return invalid("date must be YYYY-MM-DD")

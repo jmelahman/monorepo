@@ -117,10 +117,28 @@ func (s *Store) MarkActionUndone(id int64) error {
 	return rowsAffected(s.db.Exec(`UPDATE ai_actions SET undone_at = ? WHERE id = ? AND undone_at IS NULL`, nowUTC(), id))
 }
 
-// Setting keys.
+// SettingCrisisResources is where older versions kept the crisis lines
+// edited in Settings. They're config now; see app.CrisisResources.
+const SettingCrisisResources = "crisis_resources"
+
+// Settings for the coach's model, set in Settings → Coach. They override
+// config.toml and the environment; a missing row means "use the config".
 const (
-	SettingCrisisResources = "crisis_resources"
+	SettingLLM                = "llm"
+	SettingLLMBaseURL         = "llm_base_url"
+	SettingLLMModel           = "llm_model"
+	SettingLLMReasoningEffort = "llm_reasoning_effort"
+	// SettingLLMAPIKey is only sent to SettingLLMAPIKeyURL, the base URL it
+	// was saved for. Neither leaves the server: they're kept out of the API
+	// and exports.
+	SettingLLMAPIKey    = "llm_api_key"
+	SettingLLMAPIKeyURL = "llm_api_key_url"
 )
+
+// IsSecretSetting reports whether a setting must never leave the server.
+func IsSecretSetting(key string) bool {
+	return key == SettingLLMAPIKey || key == SettingLLMAPIKeyURL
+}
 
 // GetSettings returns all settings as a map.
 func (s *Store) GetSettings() (map[string]string, error) {
@@ -144,5 +162,11 @@ func (s *Store) GetSettings() (map[string]string, error) {
 func (s *Store) SetSetting(key, value string) error {
 	_, err := s.db.Exec(`INSERT INTO settings (key, value) VALUES (?, ?)
 		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
+	return err
+}
+
+// DeleteSetting removes one setting, restoring its default.
+func (s *Store) DeleteSetting(key string) error {
+	_, err := s.db.Exec(`DELETE FROM settings WHERE key = ?`, key)
 	return err
 }

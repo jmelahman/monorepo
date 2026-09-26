@@ -9,7 +9,7 @@ behavioral therapy (CBT):
 | Roadmap | Your **values** and the **goals** that serve them |
 | Sprint | A **week**, with one intention |
 | Board | **Steps** sized by energy: Someday → This week → Today → Done |
-| Daily standup | A morning or evening **check-in** (mood, energy, anxiety), optionally with an AI curator |
+| Daily standup | A morning or evening **check-in** (mood, energy, anxiety), optionally with an AI coach |
 | Retro | A weekly **retro**: what helped, what was hard, one thing to try |
 
 On top of that are the CBT pieces:
@@ -24,12 +24,14 @@ It's gentle by design:
 - Unfinished steps are *carried over* or *let go*, and nothing is ever
   "overdue".
 - Every finished step counts.
-- Today suggests how much to take on based on the energy you reported.
+- Today asks one question at a time, and the coach keeps your energy in mind
+  when it suggests how much to take on.
 
 ::: info Not a replacement for care
-AgileCBT is a self-help tool, and the AI curator is a coach, not a therapist.
-If you're in crisis, the **Need help now?** button in the header lists crisis
-lines, and you can edit that list under Settings.
+AgileCBT is a self-help tool, and the AI coach is supportive, not a therapist.
+If you're in crisis, call your local emergency number. In the US, call or
+text 988. The coach shares a list of crisis lines if a conversation
+calls for it, and you can [make it your own](/guide/configuration#crisis-resources).
 :::
 
 ## What's in the box

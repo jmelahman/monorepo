@@ -2,7 +2,12 @@
   "mcpServers": {
     "playwright": {
       "command": "bunx",
-      "args": ["@playwright/mcp", "--headless", "--isolated"]
+      "args": [
+        "@playwright/mcp",
+        "--headless",
+        "--isolated",
+        "--no-sandbox"
+      ]
     },
     "agilecbt": {
       "url": "http://localhost:8080/mcp"

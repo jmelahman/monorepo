@@ -1,6 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, type Goal, type GoalStatus, type Lane, type Step, type Value } from "@/api/client";
+import {
+  api,
+  type Goal,
+  type GoalStatus,
+  type Health,
+  type Lane,
+  type Step,
+  type Value,
+} from "@/api/client";
+import Chat from "@/components/Chat";
+import ChatPage from "@/components/ChatPage";
 import { Button, Card, EnergyDots, ErrorText, inputClass } from "@/components/ui";
 
 const statusLabel: Record<GoalStatus, string> = {
@@ -10,7 +20,10 @@ const statusLabel: Record<GoalStatus, string> = {
 };
 
 // Roadmap is Values → Goals → Steps: every step traces back to why it matters.
-export default function Roadmap() {
+// With a coach, the page is a full-height conversation and the coach does the
+// data entry; the roadmap itself is a read-only outline beside it. Without
+// one, the outline has the forms.
+export default function Roadmap({ health }: { health: Health }) {
   const values = useQuery({ queryKey: ["values"], queryFn: api.values });
   const goals = useQuery({ queryKey: ["goals"], queryFn: api.goals });
   const steps = useQuery({
@@ -18,39 +31,135 @@ export default function Roadmap() {
     queryFn: () => api.steps(["someday", "week", "today", "done"]),
   });
   if (!values.data || !goals.data) return <ErrorText error={values.error ?? goals.error} />;
+  const coach = health.llm.available;
+  const outline = (
+    <Outline values={values.data} goals={goals.data} steps={steps.data ?? []} editable={!coach} />
+  );
 
-  const loose = goals.data.filter((g) => g.value_id === null);
+  const title = (
+    <div className="shrink-0">
+      <h1 className="text-xl font-semibold">Roadmap</h1>
+      <p className="text-sm text-fg-muted">
+        What matters to you, and the goals that grow from it. Resting goals are fine.
+      </p>
+    </div>
+  );
+  if (!coach) {
+    return (
+      <div className="space-y-4">
+        {title}
+        {outline}
+      </div>
+    );
+  }
+  return (
+    <ChatPage
+      top={title}
+      title="Your roadmap"
+      label={`Your roadmap (${count(values.data.length, "value")}, ${count(goals.data.length, "goal")})`}
+      side={outline}
+    >
+      <RoadmapChat empty={values.data.length === 0 && goals.data.length === 0} />
+    </ChatPage>
+  );
+}
+
+function count(n: number, noun: string) {
+  return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+
+// RoadmapChat is today's roadmap conversation. The coach's opening line shows
+// at once and is saved when the conversation starts, on the first message.
+function RoadmapChat({ empty }: { empty: boolean }) {
+  const conv = useQuery({
+    queryKey: ["conversation", "roadmap"],
+    queryFn: api.roadmapConversation,
+  });
+  if (conv.isPending) return null;
+  const greeting = empty
+    ? "What matters to you? Tell me in your own words, and I'll turn it into values, goals, and small steps."
+    : "What would you like to change on your roadmap?";
+  return (
+    <Chat
+      fill
+      checkinId={conv.data?.id ?? null}
+      start={async () =>
+        (
+          await api.createCheckin({
+            kind: "adhoc",
+            topic: "roadmap",
+            intro: [{ role: "assistant", text: greeting }],
+          })
+        ).id
+      }
+      greeting={greeting}
+      suggestions={
+        empty
+          ? ["Help me figure out what matters to me", "I already have a goal in mind"]
+          : [
+              "Break a goal into small steps",
+              "Something doesn't fit anymore",
+              "I want to add something new",
+            ]
+      }
+      placeholder="Talk about your roadmap…"
+    />
+  );
+}
+
+function Outline({
+  values,
+  goals,
+  steps,
+  editable,
+}: {
+  values: Value[];
+  goals: Goal[];
+  steps: Step[];
+  editable: boolean;
+}) {
+  const loose = goals.filter((g) => g.value_id === null);
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Roadmap</h1>
-        <p className="text-sm text-fg-muted">
-          What matters to you, and the goals that grow from it. Resting goals are fine.
-        </p>
-      </div>
-      {values.data.length === 0 && (
+      {values.length === 0 && editable && (
         <Card>
           <p className="text-sm">
-            Start with a value — a direction you care about, like <em>Health</em>,{" "}
+            Start with a value: a direction you care about, like <em>Health</em>,{" "}
             <em>Connection</em>, or <em>Creativity</em>.
           </p>
         </Card>
       )}
-      {values.data.map((v) => (
+      {values.length === 0 && loose.length === 0 && !editable && (
+        <p className="text-sm text-fg-muted">Nothing here yet.</p>
+      )}
+      {values.map((v) => (
         <ValueCard
           key={v.id}
           value={v}
-          goals={goals.data.filter((g) => g.value_id === v.id)}
-          steps={steps.data ?? []}
+          goals={goals.filter((g) => g.value_id === v.id)}
+          steps={steps}
+          editable={editable}
         />
       ))}
-      {loose.length > 0 && <ValueCard value={null} goals={loose} steps={steps.data ?? []} />}
-      <AddValue />
+      {loose.length > 0 && (
+        <ValueCard value={null} goals={loose} steps={steps} editable={editable} />
+      )}
+      {editable && <AddValue />}
     </div>
   );
 }
 
-function ValueCard({ value, goals, steps }: { value: Value | null; goals: Goal[]; steps: Step[] }) {
+function ValueCard({
+  value,
+  goals,
+  steps,
+  editable,
+}: {
+  value: Value | null;
+  goals: Goal[];
+  steps: Step[];
+  editable: boolean;
+}) {
   const order: GoalStatus[] = ["active", "resting", "done"];
   const sorted = [...goals].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
   return (
@@ -65,17 +174,23 @@ function ValueCard({ value, goals, steps }: { value: Value | null; goals: Goal[]
           {value?.description && <p className="text-sm text-fg-muted">{value.description}</p>}
         </div>
       </div>
+      {sorted.length === 0 && !editable && <p className="text-sm text-fg-muted">No goals yet.</p>}
       <ul className="space-y-3">
         {sorted.map((g) => (
-          <GoalItem key={g.id} goal={g} steps={steps.filter((s) => s.goal_id === g.id)} />
+          <GoalItem
+            key={g.id}
+            goal={g}
+            steps={steps.filter((s) => s.goal_id === g.id)}
+            editable={editable}
+          />
         ))}
       </ul>
-      {value && <AddGoal valueId={value.id} />}
+      {value && editable && <AddGoal valueId={value.id} />}
     </Card>
   );
 }
 
-function GoalItem({ goal, steps }: { goal: Goal; steps: Step[] }) {
+function GoalItem({ goal, steps, editable }: { goal: Goal; steps: Step[]; editable: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(goal.status === "active");
   const update = useMutation({
@@ -101,20 +216,26 @@ function GoalItem({ goal, steps }: { goal: Goal; steps: Step[] }) {
             {open_.length} open · {done} done{goal.horizon ? ` · ${goal.horizon}` : ""}
           </p>
         </button>
-        <select
-          aria-label={`Status of ${goal.title}`}
-          value={goal.status}
-          onChange={(e) => update.mutate(e.target.value as GoalStatus)}
-          className="rounded-lg border border-border bg-surface px-1 py-0.5 text-xs"
-        >
-          {(Object.keys(statusLabel) as GoalStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {statusLabel[s]}
-            </option>
-          ))}
-        </select>
+        {editable ? (
+          <select
+            aria-label={`Status of ${goal.title}`}
+            value={goal.status}
+            onChange={(e) => update.mutate(e.target.value as GoalStatus)}
+            className="rounded-lg border border-border bg-surface px-1 py-0.5 text-xs"
+          >
+            {(Object.keys(statusLabel) as GoalStatus[]).map((s) => (
+              <option key={s} value={s}>
+                {statusLabel[s]}
+              </option>
+            ))}
+          </select>
+        ) : (
+          goal.status !== "active" && (
+            <span className="text-xs text-fg-muted">{statusLabel[goal.status]}</span>
+          )
+        )}
       </div>
-      {open && (
+      {open && (open_.length > 0 || editable) && (
         <div className="mt-2 border-t border-border pt-2">
           <ul className="space-y-1">
             {open_.map((s) => (
@@ -125,7 +246,7 @@ function GoalItem({ goal, steps }: { goal: Goal; steps: Step[] }) {
               </li>
             ))}
           </ul>
-          <AddStep goalId={goal.id} />
+          {editable && <AddStep goalId={goal.id} />}
         </div>
       )}
     </li>

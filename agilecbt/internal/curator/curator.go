@@ -1,6 +1,6 @@
 // Package curator is the in-app AI check-in coach. It builds the prompt and
 // per-turn context, stores the transcript, and delegates generation to a
-// pluggable Backend (headless Claude Code, Ollama, or the Anthropic API).
+// Backend (an OpenAI-compatible API such as Ollama or OpenRouter).
 package curator
 
 import (
@@ -23,19 +23,17 @@ import (
 type TurnRequest struct {
 	CheckinID int64
 	System    string
-	// History holds earlier user/assistant messages, for backends that don't
-	// keep their own session.
+	// History holds earlier user/assistant messages. It may start with the
+	// assistant: a check-in opens with the app's greeting or standup
+	// questions (see POST /api/checkins intro).
 	History []db.Message
 	// User is the new user message, with the fresh context block prepended.
 	User string
-	// Session is the backend's session id from a previous turn, if any.
-	Session string
 }
 
 // TurnResult is what a backend produced for a turn.
 type TurnResult struct {
-	Text    string
-	Session string
+	Text string
 }
 
 // Backend generates curator replies. Implementations run tools through the
@@ -51,33 +49,56 @@ type Backend interface {
 
 // Curator implements api.Curator on top of a Backend.
 type Curator struct {
-	app     *app.App
-	backend Backend
+	app *app.App
+	reg *tools.Registry
+	// defaults is nil when the backend is fixed (see New); otherwise the
+	// settings in the app layer over it (see NewConfigured).
+	defaults *Config
 
-	mu    sync.Mutex
-	busy  map[int64]bool
-	cache statusCache
+	mu sync.Mutex
+	// backend is nil when the coach is turned off.
+	backend Backend
+	cfg     Config
+	busy    map[int64]bool
+	cache   statusCache
 }
 
 var _ api.Curator = (*Curator)(nil)
 
-// New returns a curator using backend.
+// New returns a curator using a fixed backend.
 func New(reg *tools.Registry, backend Backend) *Curator {
-	return &Curator{app: reg.App(), backend: backend, busy: map[int64]bool{}}
+	return &Curator{app: reg.App(), reg: reg, backend: backend, busy: map[int64]bool{}}
+}
+
+func (c *Curator) current() Backend {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.backend
 }
 
 // Status reports backend availability, cached briefly because /api/health
 // is polled.
 func (c *Curator) Status(ctx context.Context) api.LLMStatus {
-	ok, detail := c.cache.get(ctx, c.backend.Status)
-	return api.LLMStatus{Backend: c.backend.Name(), Available: ok, Detail: detail}
+	b := c.current()
+	if b == nil {
+		return api.LLMStatus{Backend: llmNone, Detail: "The AI coach is turned off"}
+	}
+	ok, detail := c.cache.get(ctx, b.Status)
+	return api.LLMStatus{Backend: b.Name(), Available: ok, Detail: detail}
 }
 
 // ErrBusy means a reply is already streaming for the check-in.
 var ErrBusy = errors.New("the curator is still replying to your last message")
 
+// ErrOff means the coach is turned off.
+var ErrOff = errors.New("the AI coach is turned off")
+
 // Chat runs one turn on a check-in and stores both messages.
 func (c *Curator) Chat(ctx context.Context, checkinID int64, text string, emit func(string, any)) error {
+	backend := c.current()
+	if backend == nil {
+		return ErrOff
+	}
 	c.mu.Lock()
 	if c.busy[checkinID] {
 		c.mu.Unlock()
@@ -111,13 +132,12 @@ func (c *Curator) Chat(ctx context.Context, checkinID int64, text string, emit f
 	ctx = app.WithActor(ctx, app.Actor{Source: "curator", CheckinID: &checkinID})
 	req := TurnRequest{
 		CheckinID: checkinID,
-		System:    prompt.Curator(c.app.Setting(app.SettingCrisisResources)),
+		System:    prompt.Curator(c.app.CrisisResources()),
 		History:   history,
 		User:      contextBlock + "\n\n" + text,
-		Session:   checkin.LLMSession,
 	}
 	var streamed strings.Builder
-	res, turnErr := c.backend.Turn(ctx, req, func(delta string) {
+	res, turnErr := backend.Turn(ctx, req, func(delta string) {
 		streamed.WriteString(delta)
 		emit("text", map[string]string{"text": delta})
 	})
@@ -131,9 +151,6 @@ func (c *Curator) Chat(ctx context.Context, checkinID int64, text string, emit f
 		if _, err := store.AppendMessage(checkinID, "assistant", reply, ""); err != nil && turnErr == nil {
 			turnErr = err
 		}
-	}
-	if turnErr == nil && res.Session != "" && res.Session != checkin.LLMSession {
-		turnErr = store.SetCheckinSession(checkinID, res.Session)
 	}
 	return turnErr
 }
@@ -149,6 +166,10 @@ Write each field in second person ("you"), with 1-4 short sentences or a short b
 
 // DraftRetro asks the backend for a retro draft of a week and saves it.
 func (c *Curator) DraftRetro(ctx context.Context, weekID int64) (db.Retro, error) {
+	backend := c.current()
+	if backend == nil {
+		return db.Retro{}, ErrOff
+	}
 	review, err := c.app.ReviewWeek(weekID)
 	if err != nil {
 		return db.Retro{}, err
@@ -157,7 +178,7 @@ func (c *Curator) DraftRetro(ctx context.Context, weekID int64) (db.Retro, error
 	if err != nil {
 		return db.Retro{}, err
 	}
-	out, err := c.backend.Complete(ctx, retroSystem, "Here is the week's data:\n\n"+string(data))
+	out, err := backend.Complete(ctx, retroSystem, "Here is the week's data:\n\n"+string(data))
 	if err != nil {
 		return db.Retro{}, err
 	}
@@ -232,4 +253,11 @@ func (s *statusCache) get(ctx context.Context, probe func(context.Context) (bool
 	s.ok, s.detail = probe(ctx)
 	s.at = time.Now()
 	return s.ok, s.detail
+}
+
+// reset forgets the cached status, e.g. after the settings change.
+func (s *statusCache) reset() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.at = time.Time{}
 }

@@ -22,7 +22,12 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	goals, err := a.Store.ListGoals(db.GoalActive)
+	roadmap := checkin.Topic == db.TopicRoadmap
+	goalStatus := db.GoalActive
+	if roadmap {
+		goalStatus = "" // planning looks at resting and done goals too
+	}
+	goals, err := a.Store.ListGoals(goalStatus)
 	if err != nil {
 		return "", err
 	}
@@ -46,16 +51,24 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 
 	var b strings.Builder
 	b.WriteString("<context>\n")
-	fmt.Fprintf(&b, "Now: %s, %s. This is a %s check-in", now.Format("Monday"), now.Format("2006-01-02 15:04"), checkin.Kind)
-	if checkin.Date != snap.Date {
-		fmt.Fprintf(&b, " dated %s", checkin.Date)
+	fmt.Fprintf(&b, "Now: %s, %s. ", now.Format("Monday"), now.Format("2006-01-02 15:04"))
+	if roadmap {
+		b.WriteString("This is a roadmap conversation from the Roadmap page, not a check-in.\n")
+		if m, err := a.Store.LatestCheckin(snap.Date, "", ""); err == nil {
+			fmt.Fprintf(&b, "Today's check-in: %s\n", readings(m.Mood, m.Energy, m.Anxiety))
+		}
+	} else {
+		fmt.Fprintf(&b, "This is a %s check-in", checkin.Kind)
+		if checkin.Date != snap.Date {
+			fmt.Fprintf(&b, " dated %s", checkin.Date)
+		}
+		b.WriteString(".\n")
+		fmt.Fprintf(&b, "How they're arriving: %s", readings(checkin.Mood, checkin.Energy, checkin.Anxiety))
+		if checkin.Note != "" {
+			fmt.Fprintf(&b, ". Their note: %q", checkin.Note)
+		}
+		b.WriteString("\n")
 	}
-	b.WriteString(".\n")
-	fmt.Fprintf(&b, "How they're arriving: %s", readings(checkin.Mood, checkin.Energy, checkin.Anxiety))
-	if checkin.Note != "" {
-		fmt.Fprintf(&b, ". Their note: %q", checkin.Note)
-	}
-	b.WriteString("\n")
 
 	fmt.Fprintf(&b, "\nThis week (starting %s)", snap.Week.StartDate)
 	if snap.Week.Intention != "" {
@@ -100,12 +113,30 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 		fmt.Fprintf(&b, "  %s %s: %s/%s/%s\n", day.Format("Mon"), d.Date, intOr(d.Mood), intOr(d.Energy), intOr(d.Anxiety))
 	}
 
-	b.WriteString("\nActive goals:\n")
+	if roadmap {
+		someday, err := a.Store.ListSteps(db.StepFilter{Lanes: []string{db.LaneSomeday}})
+		if err != nil {
+			return "", err
+		}
+		b.WriteString("Someday lane:\n")
+		if len(someday) == 0 {
+			b.WriteString("  (empty)\n")
+		}
+		for _, st := range someday {
+			fmt.Fprintf(&b, "  %s\n", stepLine(st, goalTitle))
+		}
+		b.WriteString("\nGoals:\n")
+	} else {
+		b.WriteString("\nActive goals:\n")
+	}
 	if len(goals) == 0 {
 		b.WriteString("  (none yet; the roadmap is empty, so you could gently help them name a value and a first goal)\n")
 	}
 	for _, g := range goals {
 		fmt.Fprintf(&b, "  [goal %d] %s", g.ID, g.Title)
+		if roadmap && g.Status != db.GoalActive {
+			fmt.Fprintf(&b, " (%s)", g.Status)
+		}
 		if g.ValueID != nil {
 			fmt.Fprintf(&b, " (value: %s)", valueName[*g.ValueID])
 		}
@@ -118,6 +149,9 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 		names := make([]string, len(values))
 		for i, v := range values {
 			names[i] = fmt.Sprintf("[value %d] %s", v.ID, v.Name)
+			if roadmap && v.Description != "" {
+				names[i] += fmt.Sprintf(" (%s)", v.Description)
+			}
 		}
 		fmt.Fprintf(&b, "Values: %s\n", strings.Join(names, ", "))
 	}

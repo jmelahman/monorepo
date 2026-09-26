@@ -2,19 +2,17 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jmelahman/agilecbt/internal/db"
 )
 
-// Setting keys and their defaults.
-const (
-	SettingCrisisResources = db.SettingCrisisResources
-	// SettingCheckinTimes is "morning", "evening", or "both".
-	SettingCheckinTimes = "checkin_times"
-)
+// SettingCheckinTimes is "morning", "evening", or "both".
+const SettingCheckinTimes = "checkin_times"
 
-// DefaultCrisisResources is shown until the user edits it in Settings.
+// DefaultCrisisResources is what the coach shares unless crisis_resources
+// is set in config.toml.
 const DefaultCrisisResources = `If you might act on thoughts of harming yourself, please reach out now:
 
 - US: call or text 988 (Suicide & Crisis Lifeline), or text HOME to 741741.
@@ -24,9 +22,34 @@ const DefaultCrisisResources = `If you might act on thoughts of harming yourself
 
 You deserve support from a real person right now.`
 
+// settingDefaults lists the settings the app (and PATCH /api/settings)
+// accepts, with their defaults.
 var settingDefaults = map[string]string{
-	SettingCrisisResources: DefaultCrisisResources,
-	SettingCheckinTimes:    "both",
+	SettingCheckinTimes: "both",
+}
+
+// CrisisResources returns the crisis lines the coach shares: crisis_resources
+// from the config if set, else a list saved by an older version's Settings
+// page (so an edited list isn't silently lost), else the default. It's
+// configuration rather than a setting so it can't be changed by accident.
+func (a *App) CrisisResources() string {
+	if a.ConfigCrisisResources != "" {
+		return a.ConfigCrisisResources
+	}
+	if v := a.LegacyCrisisResources(); v != "" {
+		return v
+	}
+	return DefaultCrisisResources
+}
+
+// LegacyCrisisResources returns the crisis list older versions stored in the
+// database from their Settings page, or "".
+func (a *App) LegacyCrisisResources() string {
+	stored, err := a.Store.GetSettings()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(stored[db.SettingCrisisResources])
 }
 
 // Settings returns every known setting, with defaults filled in.
@@ -43,15 +66,6 @@ func (a *App) Settings() (map[string]string, error) {
 		}
 	}
 	return out, nil
-}
-
-// Setting returns one setting (or its default).
-func (a *App) Setting(key string) string {
-	s, err := a.Settings()
-	if err != nil {
-		return settingDefaults[key]
-	}
-	return s[key]
 }
 
 // SetSetting validates and stores one setting. An empty value restores the
@@ -138,8 +152,15 @@ func (a *App) Export() (Dump, error) {
 		if d.Notes, err = s.ListNotes(); err != nil {
 			return err
 		}
-		d.Settings, err = s.GetSettings()
-		return err
+		if d.Settings, err = s.GetSettings(); err != nil {
+			return err
+		}
+		for k := range d.Settings {
+			if db.IsSecretSetting(k) {
+				delete(d.Settings, k)
+			}
+		}
+		return nil
 	})
 	d.Format = DumpFormat
 	d.ExportedAt = a.Now().UTC().Format(time.RFC3339)
@@ -191,6 +212,9 @@ func (a *App) Import(d Dump) error {
 			return err
 		}
 		for k, v := range d.Settings {
+			if db.IsSecretSetting(k) {
+				continue
+			}
 			if err := s.SetSetting(k, v); err != nil {
 				return err
 			}

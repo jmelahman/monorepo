@@ -202,3 +202,54 @@
 input[type="range"] {
   accent-color: var(--color-accent-600);
 }
+
+/* Shimmer sweeps a highlight across muted text, e.g. "Thinking…". A
+   transparent clone over the text masks a gradient band to the glyphs (the
+   clone, not the text itself, so masking doesn't thin the real glyphs), and
+   only the band's translate animates, so it runs on the compositor. Browsers
+   without text mask clipping (Firefox) just show the text. The band is a
+   share of the text's width, not ch: on a short word a ch-sized band covers
+   the whole word and reads as a fade rather than a sweep. */
+.shimmer-clone {
+  --spread: 20%;
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  color: transparent;
+  contain: strict;
+  display: none;
+
+  @supports (-webkit-mask-clip: text) {
+    display: block;
+    mask-image: linear-gradient(white, white);
+    -webkit-mask-clip: text;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    display: none;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent calc(50% - var(--spread)),
+      var(--color-fg) 50%,
+      transparent calc(50% + var(--spread))
+    );
+    will-change: transform;
+    pointer-events: none;
+    animation: shimmer 2.5s infinite;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 100% 0;
+  }
+}

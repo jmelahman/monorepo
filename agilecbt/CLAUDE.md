@@ -8,6 +8,13 @@ below translate `.vscode/tasks.json` (the source of truth) for shell use.
 Both processes are long-running. Start them with `run_in_background: true`,
 then poll until their ports answer before driving the UI.
 
+The repo's `.config/agilecbt/config.toml` points the coach at the dev
+container's Ollama through its OpenAI-compatible API
+(`http://ollama:11434/v1`, `qwen3.8:27b`), so chat works out of the box when
+the server runs from the repo root. Env vars (`APP_LLM_BASE_URL`,
+`APP_MODEL`, `APP_LLM_API_KEY`) override it; `~/.config/agilecbt/config.toml` is
+read first. A turn on the 27B model takes a minute or two.
+
 **Backend** (`:8080`):
 
 ```bash
@@ -35,7 +42,7 @@ until curl -sf -m 1 http://localhost:8080/api/health >/dev/null \
 
 ## Reproducing fresh-install issues
 
-Boot a clean instance with no on-disk DB:
+Boot a clean instance with no on-disk DB (the `Backend (In-Memory)` task):
 
 ```bash
 wgo run . serve --in-memory
@@ -52,8 +59,8 @@ launch starts from zero and shutdown discards everything.
   auto-apply safe fixes). The `prek` `biome` hook runs the same check on
   staged `web/**/*.{ts,tsx,js,jsx,json}` files.
 - Playwright E2E: `cd web && bun run test:e2e` (first run `test:e2e:install`
-  for Chromium). Boots the backend `--in-memory` on :8095 with `APP_LLM=ollama`
-  pointed at scripted `tests/e2e/fake-ollama.mjs` on :11499, plus Vite on :5177,
+  for Chromium). Boots the backend `--in-memory` on :8095 with `APP_LLM_BASE_URL`
+  pointed at scripted `tests/e2e/fake-llm.mjs` on :11499, plus Vite on :5177,
   so a running dev stack is never reused. Tests share one DB: don't assume it's
   empty (unique titles, `.last()`).
 - Pre-commit hooks: `prek run --all-files` (run before committing).
@@ -71,9 +78,12 @@ and final calls in the main session, and verify results that look wrong.
 
 `.mcp.json` registers:
 
-- **playwright** — `@playwright/mcp --headless --isolated`. Use the
-  `mcp__playwright__browser_*` tools (`browser_navigate`, `browser_snapshot`);
-  never spawn `bunx playwright` ad-hoc.
+- **playwright** — `@playwright/mcp --headless --isolated --no-sandbox`
+  (Chrome refuses to run as root with its sandbox on). It drives Google
+  Chrome; if it reports Chrome missing, run `bunx playwright install chrome`
+  once and restart the session. Use the `mcp__playwright__browser_*` tools
+  (`browser_navigate`, `browser_snapshot`); never spawn `bunx playwright`
+  ad-hoc.
 - **agilecbt** — streamable HTTP at `http://localhost:8080/mcp` (same tools
   as the in-app curator). Needs `agilecbt serve` running.
 

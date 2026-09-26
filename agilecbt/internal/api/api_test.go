@@ -38,6 +38,14 @@ func (f *fakeCurator) Chat(ctx context.Context, checkinID int64, text string, em
 	return f.err
 }
 
+func (f *fakeCurator) LLMSettings() (api.LLMSettings, error) { return api.LLMSettings{}, nil }
+
+func (f *fakeCurator) UpdateLLM(map[string]*string) (api.LLMSettings, error) {
+	return api.LLMSettings{}, nil
+}
+
+func (f *fakeCurator) Models(context.Context) ([]string, error) { return nil, nil }
+
 func (f *fakeCurator) DraftRetro(ctx context.Context, weekID int64) (db.Retro, error) {
 	draft := "**What went well**\nYou showed up."
 	return f.reg.App().Store.UpsertRetro(weekID, db.RetroPatch{AIDraft: &draft})
@@ -352,7 +360,7 @@ func TestExportImport(t *testing.T) {
 	src.ok(201, "POST", "/api/goals", `{"title":"Call a friend weekly","value_id":1}`, nil)
 	src.ok(201, "POST", "/api/steps", `{"title":"Text Sam","goal_id":1,"lane":"today"}`, nil)
 	src.ok(201, "POST", "/api/notes", `{"text":"Mornings are hardest"}`, nil)
-	src.ok(200, "PATCH", "/api/settings", `{"crisis_resources":"Call my sister"}`, nil)
+	src.ok(200, "PATCH", "/api/settings", `{"checkin_times":"morning"}`, nil)
 	dump := src.do("GET", "/api/export", "").Body.String()
 
 	dst := newHarness(t, "", false)
@@ -364,10 +372,95 @@ func TestExportImport(t *testing.T) {
 	}
 	var settings map[string]string
 	dst.ok(200, "GET", "/api/settings", "", &settings)
-	if settings["crisis_resources"] != "Call my sister" {
+	if settings["checkin_times"] != "morning" {
 		t.Fatalf("settings: %+v", settings)
 	}
 	if rec := dst.do("POST", "/api/import", dump); rec.Code != http.StatusBadRequest {
 		t.Fatalf("import into non-empty = %d, want 400", rec.Code)
+	}
+}
+
+// Crisis lines are configuration, not a setting: the settings API neither
+// shows nor accepts them, /api/support shows them read-only, and the coach
+// gets config, then a list an older version saved, then the default.
+func TestCrisisResourcesAreConfig(t *testing.T) {
+	h := newHarness(t, "", false)
+	if rec := h.do("PATCH", "/api/settings", `{"crisis_resources":"x"}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("patch crisis_resources = %d, want 400", rec.Code)
+	}
+	var settings map[string]string
+	h.ok(200, "GET", "/api/settings", "", &settings)
+	if _, ok := settings["crisis_resources"]; ok {
+		t.Fatalf("settings expose crisis_resources: %+v", settings)
+	}
+	if got := h.app.CrisisResources(); got != app.DefaultCrisisResources {
+		t.Fatalf("default = %q", got)
+	}
+	if err := h.app.Store.SetSetting(db.SettingCrisisResources, "Call my sister"); err != nil {
+		t.Fatal(err)
+	}
+	if got := h.app.CrisisResources(); got != "Call my sister" {
+		t.Fatalf("legacy = %q", got)
+	}
+	h.app.ConfigCrisisResources = "Call my brother"
+	if got := h.app.CrisisResources(); got != "Call my brother" {
+		t.Fatalf("config = %q", got)
+	}
+	var support map[string]string
+	h.ok(200, "GET", "/api/support", "", &support)
+	if support["crisis_resources"] != "Call my brother" {
+		t.Fatalf("support = %+v", support)
+	}
+}
+
+func TestRoadmapConversation(t *testing.T) {
+	h := newHarness(t, "", true)
+	if rec := h.do("GET", "/api/conversations/roadmap", ""); rec.Code != 200 || strings.TrimSpace(rec.Body.String()) != "null" {
+		t.Fatalf("before any chat = %d %q, want 200 null", rec.Code, rec.Body)
+	}
+	if rec := h.do("POST", "/api/checkins", `{"kind":"adhoc","topic":"nope"}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("bad topic = %d, want 400", rec.Code)
+	}
+	var c db.Checkin
+	h.ok(201, "POST", "/api/checkins", `{"kind":"adhoc","topic":"roadmap"}`, &c)
+	var got db.Checkin
+	h.ok(200, "GET", "/api/conversations/roadmap", "", &got)
+	if got.ID != c.ID || got.Topic != db.TopicRoadmap {
+		t.Fatalf("roadmap conversation = %+v, want id %d", got, c.ID)
+	}
+
+	// It isn't a standup: Today still has no check-in.
+	h.ok(201, "POST", "/api/checkins", `{"kind":"morning","mood":5}`, nil)
+	var snap app.Snapshot
+	h.ok(200, "GET", "/api/today", "", &snap)
+	if snap.Morning == nil || snap.Morning.Topic != "" {
+		t.Fatalf("today morning = %+v", snap.Morning)
+	}
+	h.ok(200, "GET", "/api/conversations/roadmap", "", &got)
+	if got.ID != c.ID {
+		t.Fatalf("roadmap conversation after standup = %d, want %d", got.ID, c.ID)
+	}
+}
+
+// A standup's questions and answers are stored as the check-in's first
+// messages, with no coach turn.
+func TestCreateCheckinWithIntro(t *testing.T) {
+	h := newHarness(t, "", true)
+	if rec := h.do("POST", "/api/checkins", `{"kind":"morning","intro":[{"role":"system","text":"hi"}]}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("bad intro role = %d, want 400", rec.Code)
+	}
+	if rec := h.do("POST", "/api/checkins", `{"kind":"morning","intro":[{"role":"user","text":"  "}]}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("blank intro text = %d, want 400", rec.Code)
+	}
+	var c db.Checkin
+	h.ok(201, "POST", "/api/checkins", `{"kind":"morning","mood":4,"note":"Tired","intro":[
+		{"role":"assistant","text":"How are you doing?"},{"role":"user","text":"Tired"}]}`, &c)
+	var got api.CheckinDetail
+	h.ok(200, "GET", fmt.Sprintf("/api/checkins/%d", c.ID), "", &got)
+	if len(got.Messages) != 2 || got.Messages[0].Role != "assistant" || got.Messages[1].Text != "Tired" {
+		t.Fatalf("messages = %+v", got.Messages)
+	}
+	if got.Mood == nil || *got.Mood != 4 || got.Note != "Tired" {
+		t.Fatalf("checkin = %+v", got.Checkin)
 	}
 }

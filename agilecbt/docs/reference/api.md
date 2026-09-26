@@ -11,7 +11,7 @@ of the form `{"error": "message"}`.
 | `400 Bad Request` | Invalid JSON, id, or field value |
 | `401 Unauthorized` | Auth is on and the request has no valid session or token |
 | `404 Not Found` | No such resource |
-| `503 Service Unavailable` | The AI curator is required but unavailable |
+| `503 Service Unavailable` | The AI coach is required but unavailable |
 
 ## Authentication
 
@@ -38,7 +38,7 @@ Clears the session cookie.
 ### `GET /api/health`
 
 Always open. The web UI uses it to decide between the login screen and the app,
-and whether to show the curator chat.
+and whether to show the coach chat.
 
 ```json
 {
@@ -46,9 +46,12 @@ and whether to show the curator chat.
   "version": "v0.1.0",
   "auth_required": true,
   "authenticated": false,
-  "llm": { "backend": "claude-code", "available": true, "detail": "Claude Code (claude.ai)" }
+  "llm": { "backend": "openai", "available": true, "detail": "qwen3.8:27b at localhost:11434" }
 }
 ```
+
+When the coach is turned off, `llm` is
+`{ "backend": "none", "available": false, "detail": "The AI coach is turned off" }`.
 
 ## Today and mood
 
@@ -139,7 +142,7 @@ A week starts on Monday and is created the first time it's needed.
 | `PATCH` | `/api/weeks/{id}` | `{"intention"}` |
 | `GET` | `/api/weeks/{id}/review` | everything the retro looks at |
 | `PUT` | `/api/weeks/{id}/retro` | `{"went_well"?, "was_hard"?, "try_next"?, "ai_draft"?}` (upsert) |
-| `POST` | `/api/weeks/{id}/retro/draft` | the curator fills the retro; `503` if unavailable |
+| `POST` | `/api/weeks/{id}/retro/draft` | the coach fills the retro; `503` if unavailable |
 
 A review looks like this:
 
@@ -159,15 +162,28 @@ A review looks like this:
 | Method | Path | Body / notes |
 | --- | --- | --- |
 | `GET` | `/api/checkins?from=2026-09-01&to=2026-09-30` | both optional |
-| `POST` | `/api/checkins` | `{"kind": "morning"\|"evening"\|"adhoc", "mood"?, "energy"?, "anxiety"?, "note"?, "date"?}`; `date` defaults to today |
+| `POST` | `/api/checkins` | `{"kind": "morning"\|"evening"\|"adhoc", "mood"?, "energy"?, "anxiety"?, "note"?, "topic"?, "intro"?, "date"?}`; `date` defaults to today |
 | `GET` | `/api/checkins/{id}` | includes `messages` and `actions` (the chat transcript and AI writes) |
 | `PATCH` | `/api/checkins/{id}` | any field above plus `summary` |
 
 `mood`, `energy`, and `anxiety` are 0–10.
 
+`intro` is the opening of the conversation, stored as its first messages
+without a coach turn: `[{"role": "assistant"|"user", "text": "…"}]`, at most
+20. The Today screen uses it for the standup questions and answers, then sends
+the last answer with `POST /api/checkins/{id}/messages` so the coach replies.
+
+`topic` says what the conversation is about: `""` (the default) is a daily
+check-in, and `"roadmap"` is a planning chat from the Roadmap page (use it with
+`"kind": "adhoc"`). Only `""` check-ins count toward Today.
+
+| Method | Path | Body / notes |
+| --- | --- | --- |
+| `GET` | `/api/conversations/roadmap` | today's roadmap conversation with `messages` and `actions`, or `null` if there isn't one yet |
+
 ### `POST /api/checkins/{id}/messages`
 
-Sends one message (`{"text": "…"}`) to the AI curator and streams its reply as
+Sends one message (`{"text": "…"}`) to the AI coach and streams its reply as
 [server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html):
 
 ```text
@@ -185,12 +201,12 @@ data: {}
 ```
 
 - `text` events carry deltas of the assistant's reply. Concatenate them.
-- An `action` event arrives for each change the curator makes, in order with
+- An `action` event arrives for each change the coach makes, in order with
   the text. Each one can be undone.
 - `error` (`{"error": "…"}`) reports a failed turn. The stream still ends with
   `done`.
 
-This returns `503` when the curator is unavailable (see `llm` in `/api/health`).
+This returns `503` when the coach is unavailable (see `llm` in `/api/health`).
 
 ## Thought records
 
@@ -211,9 +227,9 @@ The fields are:
 - `evidence_for` and `evidence_against`
 - `balanced_thought`
 
-## Curator notes
+## Coach notes
 
-The curator's memory. Everything it remembers is listed here, and you can edit
+The coach's memory. Everything it remembers is listed here, and you can edit
 any of it.
 
 | Method | Path | Body |
@@ -233,11 +249,81 @@ returns the full map. An empty string restores a key's default.
 | Key | Values |
 | --- | --- |
 | `checkin_times` | `morning`, `evening`, or `both` (default) |
-| `crisis_resources` | Text shown under "Need help now?". The curator also sees it |
+
+Crisis lines aren't a setting; they're set with `crisis_resources` in
+[`config.toml`](/guide/configuration#crisis-resources).
+
+### `GET /api/support`
+
+The crisis lines the coach shares, as shown in Settings → Support. Read-only.
+
+```json
+{ "crisis_resources": "If you might act on thoughts of harming yourself, please reach out now:\n\n- US: call or text 988 …" }
+```
+
+## Coach model
+
+The coach's model settings (Settings → AI model) start from `config.toml` and
+the environment, and can be overridden here. Overrides are stored in the
+database and apply immediately, without a restart.
+
+### `GET /api/llm`
+
+```json
+{
+  "effective": {
+    "llm": "openai",
+    "base_url": "https://openrouter.ai/api/v1",
+    "model": "anthropic/claude-sonnet-5",
+    "reasoning_effort": "none",
+    "api_key_set": true
+  },
+  "defaults": {
+    "llm": "openai",
+    "base_url": "http://localhost:11434/v1",
+    "model": "qwen3.8:27b",
+    "reasoning_effort": "none",
+    "api_key_set": false
+  },
+  "overrides": { "base_url": "https://openrouter.ai/api/v1", "model": "anthropic/claude-sonnet-5" },
+  "api_key_saved": true
+}
+```
+
+`effective` is what the coach uses, `defaults` comes from `config.toml` and
+the environment, and `overrides` lists the fields saved in the app.
+`api_key_saved` is true when a key saved in the app is in use. The API key
+itself is never returned.
+
+### `PATCH /api/llm`
+
+Takes any of `llm` (`openai` or `none`), `base_url`, `model`,
+`reasoning_effort` (`none`, `minimal`, `low`, `medium`, `high`, or `""`),
+and `api_key`, and returns the same shape as `GET`.
+
+- A field that's missing is left alone.
+- `null` removes the override, going back to the default. An empty
+  `base_url` or `model` does the same.
+- `reasoning_effort: ""` keeps the parameter out of requests.
+- `api_key: null` or `""` removes the saved key.
+
+A saved API key is bound to the base URL in effect when it was saved,
+including a `base_url` sent in the same request. The key from `config.toml`
+or `APP_LLM_API_KEY` is only sent to the configured base URL. So changing the
+URL never sends a key to another server. Saved keys are left out of exports
+and ignored on import.
+
+Invalid values return `400`.
+
+### `GET /api/llm/models`
+
+Returns the model ids the server lists (`GET {base_url}/models`), sorted. The
+list is `[]` when the coach is off, or when the server can't be reached or
+doesn't list its models.
 
 ## AI actions
 
-Every change made by the curator or over MCP is logged along with the state
+Every change made by the coach or over MCP is logged along with the state
 before and after.
 
 | Method | Path | Notes |
@@ -262,5 +348,5 @@ Loads an export. The target database must be empty; otherwise this returns
 
 `/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io/) server
 over streamable HTTP. It uses the same auth as `/api/`. It exposes the
-curator's tools and a `daily_checkin` prompt. See
-[AI curator & MCP](/guide/ai).
+coach's tools and a `daily_checkin` prompt. See
+[AI coach & MCP](/guide/ai).

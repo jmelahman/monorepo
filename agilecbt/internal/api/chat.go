@@ -18,8 +18,8 @@ import (
 //	event: error   data: {"error": "..."}
 //	event: done    data: {}
 //
-// Actions are delivered by the app's broker, so tool calls made by any
-// backend (in-process tools or claude -p via /mcp) appear as chips.
+// Actions are delivered by the app's broker, so tool calls made during the
+// turn appear as chips.
 func (d Deps) handleChat(w http.ResponseWriter, r *http.Request) {
 	id, err := pathID(r)
 	if err != nil {

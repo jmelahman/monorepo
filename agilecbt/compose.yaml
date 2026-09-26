@@ -18,11 +18,12 @@ services:
     environment:
       # Required whenever the port is reachable beyond this machine.
       APP_SECRET: ${APP_SECRET:?set APP_SECRET}
-      # The image has no `claude` CLI; use a local Ollama (or anthropic/none).
-      APP_LLM: ${APP_LLM:-ollama}
+      # Any OpenAI-compatible API; defaults to Ollama on the host. Set
+      # APP_LLM=none to turn the coach off.
+      APP_LLM: ${APP_LLM:-openai}
+      APP_LLM_BASE_URL: ${APP_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      APP_LLM_API_KEY: ${APP_LLM_API_KEY:-}
       APP_MODEL: ${APP_MODEL:-}
-      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

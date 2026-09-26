@@ -1,0 +1,9 @@
+# AgileCBT settings for this workspace. The server reads it when started from
+# the repo root; ~/.config/agilecbt/config.toml is read first, and any
+# environment variable (APP_LLM_BASE_URL, APP_MODEL, ...) overrides both.
+# See docs/guide/configuration.md.
+
+# The dev container's Ollama, on the shared Docker network, through its
+# OpenAI-compatible API.
+base_url = "http://ollama:11434/v1"
+model = "qwen3.8:27b"

@@ -1,6 +1,6 @@
 // Package mcp exposes the tool registry over the Model Context Protocol
-// (streamable HTTP at /mcp), so Claude Code, Claude Desktop, and the
-// claude-code curator backend can all drive the app.
+// (streamable HTTP at /mcp), so Claude Code, Claude Desktop, and other MCP
+// clients can drive the app.
 package mcp
 
 import (
@@ -17,8 +17,8 @@ import (
 )
 
 // Handler serves MCP. It is stateless: each request gets a fresh server, so
-// the ?checkin=ID query parameter (set by the curator's claude-code backend)
-// can attribute tool calls to that check-in's chat.
+// the ?checkin=ID query parameter can attribute tool calls to that
+// check-in's chat, where they show up as undoable chips.
 func Handler(reg *tools.Registry, version string) http.Handler {
 	return sdk.NewStreamableHTTPHandler(func(r *http.Request) *sdk.Server {
 		actor := app.Actor{Source: "mcp"}
@@ -54,7 +54,7 @@ func NewServer(reg *tools.Registry, actor app.Actor, version string) *sdk.Server
 	s.AddPrompt(&sdk.Prompt{
 		Name:        "daily_checkin",
 		Title:       "Daily check-in",
-		Description: "Run a CBT-informed daily standup with the AgileCBT curator.",
+		Description: "Run a CBT-informed daily standup with the AgileCBT coach.",
 		Arguments:   []*sdk.PromptArgument{{Name: "kind", Description: "morning or evening (default: by time of day)"}},
 	}, func(ctx context.Context, req *sdk.GetPromptRequest) (*sdk.GetPromptResult, error) {
 		a := reg.App()
@@ -63,7 +63,7 @@ func NewServer(reg *tools.Registry, actor app.Actor, version string) *sdk.Server
 			kind = app.DefaultKind(a.Now())
 		}
 		text := fmt.Sprintf("%s\n\n---\n\nPlease run my %s check-in now. Start by calling get_today and list_curator_notes, then greet me and ask how I'm arriving.",
-			prompt.Curator(a.Setting(app.SettingCrisisResources)), kind)
+			prompt.Curator(a.CrisisResources()), kind)
 		return &sdk.GetPromptResult{
 			Description: "AgileCBT " + kind + " check-in",
 			Messages:    []*sdk.PromptMessage{{Role: "user", Content: &sdk.TextContent{Text: text}}},

@@ -221,7 +221,7 @@ function RetroForm({ review, canDraft }: { review: WeekReview; canDraft: boolean
         {field("One thing to try next week", tryNext, setTryNext, "Small and specific")}
         {aiDraft && (
           <details className="rounded-xl bg-surface-2 p-3 text-sm">
-            <summary className="cursor-pointer font-medium">Curator's notes</summary>
+            <summary className="cursor-pointer font-medium">Coach's notes</summary>
             <Markdownish text={aiDraft} className="mt-2" />
           </details>
         )}

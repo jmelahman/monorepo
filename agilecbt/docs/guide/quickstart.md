@@ -8,22 +8,31 @@ agilecbt serve
 
 The server listens on `:8080`. Open <http://localhost:8080/>.
 
-By default, the AI curator runs through the `claude` CLI on your Claude
-subscription. If you don't have that, or want everything to stay local, see
-[AI curator & MCP](/guide/ai). `APP_LLM=none` turns the curator off, and every
-other feature keeps working without it.
+By default, the AI coach uses a local [Ollama](https://ollama.com)
+(`ollama pull qwen3.8:27b`). Any OpenAI-compatible API works, including
+OpenRouter; see [AI coach & MCP](/guide/ai). `APP_LLM=none` turns the coach
+off, and every other feature keeps working without it.
 
 ## A first week
 
-1. **Today**: check in with mood, energy, and anxiety. If the curator is on,
-   chat with it about what fits today.
-2. **Roadmap**: add a value or two, such as *Health* or *Connection*. Then add a
-   goal under each one, and a few small steps.
+1. **Today**: the screen is a chat with your coach. It opens with "How are
+   you doing?". Answer in your own words or tap a quick reply, and the coach
+   takes it from there: what you'd like to get done, what might get in the
+   way, and one to three steps that fit your energy. Mood, energy, and anxiety
+   sliders sit in a slim strip above the chat, and you can skip them. Today's
+   plan is beside the chat on wide screens and a tap away on phones. With the
+   coach off, you get three short questions instead and plan the day yourself.
+2. **Roadmap**: another full-screen chat. The coach asks what matters to you,
+   with a few suggestions above the message box to get started. Answer with
+   something like *Health* or *Connection*, and it turns that into values,
+   goals, and a few small steps. Your roadmap is beside the chat on wide
+   screens and a tap away on phones. With the coach off, you add them
+   yourself.
 3. **Board**: drag a few steps into *This week*, and one or two into *Today*.
    Tap a Today step when you finish it, and rate how much accomplishment and
    enjoyment it gave you.
 4. **Thoughts**: when something knocks you sideways, write a thought record.
-5. **Retro**: at the end of the week, reflect, or let the curator draft it.
+5. **Retro**: at the end of the week, reflect, or let the coach draft it.
    What you'll "try next" becomes a suggested intention for the next week.
 
 ## From your phone
