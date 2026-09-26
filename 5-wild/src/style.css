@@ -223,16 +223,31 @@ button {
    and the three French names by 7 to 9px, in this layout and the old one
    alike. The middle is a bare `1fr`, whose floor is
    the score's own width: `minmax(0, 1fr)` let that same case centre an 80px
-   score in a 34px column, over the end of the name. */
+   score in a 34px column, over the end of the name.
+   That centred the score between its neighbours, not on the bar, and the bar's
+   centre is the board's: the middle letter column sits under it, and a score
+   beside a 97px "Normal Round" and a 72px gold-and-menu stood about 12px off it. The
+   sides are now equal halves with their content as the floor, which is the
+   true centre whenever both halves hold, and moves the score only as far as the
+   wider side needs when they do not, rather than wrapping the name the way
+   plain thirds did. The floor cannot wrap, so below the width where every
+   name, the score and a three-digit gold still fit on one line (about 340px,
+   French being the widest) the bar goes back to the layout above. */
 .hud {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
   align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.625rem;
   background: var(--panel);
   border-radius: 0.5rem;
+}
+
+@media (max-width: 21.25rem) {
+  .hud {
+    grid-template-columns: auto 1fr auto;
+  }
 }
 
 .round-name {
