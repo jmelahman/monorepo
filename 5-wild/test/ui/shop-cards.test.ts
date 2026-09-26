@@ -98,7 +98,7 @@ describe("what a shop card says it is", () => {
     )
   })
 
-  it("turns the tag into a warning when there is nowhere to put the card", () => {
+  it("blocks the card when there is nowhere to put it", () => {
     const state = fresh()
     const full: RunState = {
       ...state,
@@ -118,8 +118,10 @@ describe("what a shop card says it is", () => {
 
     // The consumable keeps it, because nothing on the shop screen empties a full
     // hand, since a card is used in a round, so the tap has no answer but this one.
+    // The tag itself stays the kind: it is drawn as a picture now, and the
+    // warning is a line of its own that `blocked` asks the card to grow.
     const card = describeItem(ONE_OF_EACH.consumable, full)
-    expect(card.tag).toBe("Consumable · slots full")
+    expect(card.tag).toBe("Consumable")
     expect(card.blocked).toBe(true)
 
     // The kinds that need no seat are never blocked, however full the run is:

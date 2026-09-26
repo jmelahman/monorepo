@@ -53,7 +53,7 @@ import {
 import type { CoachStep } from "./coach"
 import { h } from "./dom"
 import { money, formatNumber as num } from "./format"
-import { icon } from "./icons"
+import { type IconName, icon } from "./icons"
 import type { Lang, Rule, RuleOf, Section, SectionOf } from "./lang"
 import {
   ascensionCard,
@@ -328,18 +328,7 @@ function hud(state: RunState, on: Handlers): HTMLElement {
       "div",
       { class: "hud-round" },
       h("div", { class: "round-name" }, roundName(state.roundIndex)),
-      h(
-        "div",
-        { class: "stage" },
-        state.won ? board.stageEndless(state.stage) : board.stage(state.stage, STAGES),
-        // The terms the whole run is being played under, in the space of two
-        // characters. It shares its color with the boss banner because it is
-        // the same kind of fact, something bending what a guess may be, and
-        // the rules it stands for are named in full on every intro card.
-        state.ascension
-          ? h("span", { class: "stage-asc" }, board.ascensionTag(state.ascension))
-          : null,
-      ),
+      stageLine(state),
     ),
     h(
       "div",
@@ -355,8 +344,31 @@ function hud(state: RunState, on: Handlers): HTMLElement {
         h("div", { class: "meter-fill", style: `--fill:${meterFill(round.score, round.target)}` }),
       ),
     ),
-    h("div", { class: "hud-gold" }, money(state.gold)),
-    menuButton(on),
+    // Gold and menu as one group, pinned to the right edge. Loose in a
+    // space-between row the gold took whatever gap was left over, which was a
+    // different gap on every screen (x282 here, x253 in the shop at 390) and
+    // never beside anything it belonged to. See `.hud-end`.
+    h(
+      "div",
+      { class: "hud-end" },
+      h("div", { class: "hud-gold" }, money(state.gold)),
+      menuButton(on),
+    ),
+  )
+}
+
+/** The stage under the round's name, on the round screen and the shop's. */
+function stageLine(state: RunState): HTMLElement {
+  const board = ui().board
+  return h(
+    "div",
+    { class: "stage" },
+    state.won ? board.stageEndless(state.stage) : board.stage(state.stage, STAGES),
+    // The terms the whole run is being played under, in the space of two
+    // characters. It shares its color with the boss banner because it is
+    // the same kind of fact, something bending what a guess may be, and
+    // the rules it stands for are named in full on every intro card.
+    state.ascension ? h("span", { class: "stage-asc" }, board.ascensionTag(state.ascension)) : null,
   )
 }
 
@@ -1299,7 +1311,7 @@ export function describeItem(
    * exactly that reason.
    */
   let tip = ""
-  /** The tag is a warning rather than a label: this one has nowhere to go. */
+  /** This one has nowhere to go: the card grows a warning line and its ticket goes red. */
   let blocked = false
 
   if (item.kind === "pack") {
@@ -1325,7 +1337,7 @@ export function describeItem(
     title = consumableCard(item.id).name
     text = consumableCard(item.id).text
     blocked = state.consumables.length >= CONSUMABLE_SLOTS
-    tag = blocked ? copy.tagConsumableFull : copy.tagConsumable
+    tag = copy.tagConsumable
     tip = copy.tipConsumable
   } else if (item.kind === "mod") {
     const mod = MODIFIER_BY_ID.get(item.id)
@@ -1454,6 +1466,33 @@ function displaced(item: ShopItem, state: RunState): string | undefined {
   return current && current !== item.id ? current : undefined
 }
 
+/**
+ * Which drawing rides in a card's ticket, one per kind.
+ *
+ * Keyed on the kind rather than on the tag string, because the tag is prose and
+ * changes with the language and with the tray ("Consumable · slots full"), and
+ * the picture should not.
+ */
+const KIND_ICON: Record<ShopItem["kind"], IconName> = {
+  relic: "gem",
+  consumable: "flask",
+  pack: "box",
+  range: "alphabet",
+  mod: "letter",
+  level: "shape",
+  etch: "etching",
+}
+
+/**
+ * A card on the shelf, drawn as a price tag: what it is and what it does, top
+ * down, and what it costs at the foot, where the reading ends.
+ *
+ * Two columns of these rather than one of rows. The rows gave the sentence more
+ * width, and spent it: five full-width rows and a tray ran past the fold at 390,
+ * and a shelf you scroll is a shelf whose last card you forget. Half a phone is
+ * enough for the sentence at 13.5px, which the cards before the rows never were
+ * at 11px.
+ */
 function shopItemCard(item: ShopItem, index: number, state: RunState, on: Handlers): HTMLElement {
   const affordable = state.gold >= item.cost
   const { title, text, rarity, tag, tip, blocked, swap } = describeItem(item, state)
@@ -1461,69 +1500,90 @@ function shopItemCard(item: ShopItem, index: number, state: RunState, on: Handle
   return h(
     "button",
     {
-      class: `shop-item kind-${item.kind} rarity-${rarity} ${item.kind === "pack" ? "pack" : ""} ${
-        affordable ? "" : "broke"
-      }`,
+      class: `shop-item kind-${item.kind} rarity-${rarity} ${affordable ? "" : "broke"}`,
       // The stock deals in one card at a time rather than appearing all at once,
       // which is what makes a reroll feel like being dealt a new hand.
       style: `--deal:${index}`,
       type: "button",
+      // Dimmed, and still a button. The tap is how a thumb asks why, and the
+      // answer is the till's "not enough gold" toast; a `disabled` card would
+      // swallow the tap and leave a phone with no way to ask at all. The shortfall
+      // rides on the card as a tip for the pointer that can hover, and for the
+      // long-press, rather than printed under the price: "$1 short" on every card
+      // the player cannot reach was a second price tag in a quieter ink, and it
+      // made the dim cards the busiest thing on the shelf.
+      "aria-disabled": affordable ? undefined : "true",
+      "data-tip": affordable ? undefined : ui().shop.short(money(item.cost - state.gold)),
+      "data-rarity": affordable ? undefined : rarity,
       onclick: () => on.buy(index),
     },
-    shopItemHead(title, tag, blocked, tip, rarity),
+    h("div", { class: "shop-item-name" }, title),
     h("div", { class: "shop-item-text" }, text),
     swap ? swapLine(swap, displaced(item, state)) : null,
-    h("div", { class: "shop-item-cost" }, money(item.cost)),
+    // Said on a line of its own, where the ticket used to say it as
+    // "Consumable · slots full": at the foot beside a price, that pair ran to
+    // two lines on every card it was on.
+    blocked ? h("div", { class: "shop-item-full" }, ui().shop.slotsFull) : null,
+    h(
+      "div",
+      { class: "shop-item-foot" },
+      h("div", { class: "shop-item-cost" }, money(item.cost)),
+      kindTicket(item, tag, blocked, tip, rarity),
+    ),
   )
 }
 
 /**
- * The name, with the kind ticketed off to the right of it on the same line.
+ * The place a card stood before it was bought, or a pick already taken from a
+ * pack. It stays at all so the cards after it do not shuffle up a seat under a
+ * thumb that is about to tap again; the engine nulls the slot, so there is
+ * nothing left to say in it but that it went.
+ */
+function soldCard(index: number, label: string): HTMLElement {
+  return h("div", { class: "shop-item sold", style: `--deal:${index}` }, icon("check"), label)
+}
+
+/**
+ * The kind ticket, the drawing and the word in the card's rarity color, at the
+ * foot opposite the price.
  *
- * The tag used to have a row of its own above the name, and on a two-column
- * shelf that row cost the card a line of the body copy the purchase is actually
- * decided on. Beside the name it reads as the ticket on the shelf edge rather
- * than as a second title, and the line it was taking goes back to saying what
- * the thing does.
- *
- * Baseline-aligned rather than centered, so a long name and a long tag
- * ("Consumable · slots full" is the worst pair the shelf can deal) still sit on
- * one line of type, with the tag wrapping under itself in the corner rather than
- * dragging the name off its own baseline. An empty `tag` means no ticket, which
- * is how a pack asks for the name on its own.
+ * It has been in three places. Beside the name at the top right, word and all,
+ * it left the name ~100px of a ~150px card at 390, and relic names are one long
+ * word often enough that they broke mid-word ("Lexicograp/her"). As the drawing
+ * alone in that corner it fit, and gave up the word. The foot is where the room
+ * is: a price is three characters, and the rest of that line was empty on
+ * every card. The name gets the whole width back. On a 320 phone
+ * "Verbrauchskarte" still does not fit beside a price, and the foot wraps it
+ * under rather than squeezing either one.
  *
  * The tip hangs off the ticket rather than off the whole card, because the card
  * is a buy button: a panel that opened over the shelf every time the pointer
- * crossed a price would be in the way of the thing it is explaining. An empty
- * `tip` leaves the ticket inert, which is what the pack sheet asks for. Its
- * backdrop sits above the tip's layer, so a tip raised from inside it would be
- * drawn behind the sheet that asked for it.
+ * crossed a price would be in the way of the thing it is explaining. The one
+ * exception is a card that cannot be bought, which carries its shortfall as a
+ * tip of its own; see `shopItemCard`. An empty `tag` draws the ticket as the
+ * drawing alone, which is what the pack sheet asks for; an empty `tip` leaves
+ * it inert, since the sheet's backdrop sits above the tip's layer and a tip
+ * raised from inside it would be drawn behind the sheet that asked for it.
  *
- * The rarity rides along so the panel takes the card's own edge color, the way
- * a relic's does from the tray.
+ * The rarity rides along so the panel takes the card's own color, the way a
+ * relic's does from the tray.
  */
-function shopItemHead(
-  title: string,
+function kindTicket(
+  item: ShopItem,
   tag: string,
   blocked: boolean,
   tip: string,
   rarity: string,
 ): HTMLElement {
   return h(
-    "div",
-    { class: "shop-item-head" },
-    h("div", { class: "shop-item-name" }, title),
-    tag
-      ? h(
-          "div",
-          {
-            class: `shop-item-kind${blocked ? " blocked" : ""}`,
-            "data-tip": tip || undefined,
-            "data-rarity": tip ? rarity : undefined,
-          },
-          tag,
-        )
-      : null,
+    "span",
+    {
+      class: `shop-item-kind${blocked ? " blocked" : ""}`,
+      "data-tip": tip || undefined,
+      "data-rarity": tip ? rarity : undefined,
+    },
+    icon(KIND_ICON[item.kind]),
+    tag ? h("span", {}, tag) : null,
   )
 }
 
@@ -1556,8 +1616,7 @@ export function packView(state: RunState, on: Handlers): HTMLElement | null {
         "div",
         { class: "pack-options" },
         ...open.options.map((item, index) => {
-          if (!item)
-            return h("div", { class: "shop-item sold", style: `--deal:${index}` }, copy.taken)
+          if (!item) return soldCard(index, copy.taken)
           const { title, text, rarity, swap } = describeItem(item, state)
           return h(
             "button",
@@ -1582,7 +1641,10 @@ export function packView(state: RunState, on: Handlers): HTMLElement | null {
             // No tip either, and not only because there is no tag to hang it
             // on: this sheet is a held decision, and the pack's own title has
             // already said what kind of thing is being dealt.
-            shopItemHead(title, "", false, "", rarity),
+            //
+            // So the ticket is the drawing alone here, which is still worth its
+            // corner: it is what the shelf taught the rarity color on.
+            h("div", { class: "shop-item-name" }, title),
             h("div", { class: "shop-item-text" }, text),
             // The one warning that does stay on this sheet, and the difference
             // from the tag it replaced is that this pick does not bounce. A
@@ -1600,7 +1662,12 @@ export function packView(state: RunState, on: Handlers): HTMLElement | null {
             // The price it would have carried in the stock, struck through: the
             // pack already charged for it, and seeing what it would have cost is
             // most of what makes opening one feel like a win.
-            h("div", { class: "shop-item-cost free" }, money(item.cost)),
+            h(
+              "div",
+              { class: "shop-item-foot" },
+              h("div", { class: "shop-item-cost free" }, money(item.cost)),
+              kindTicket(item, "", false, "", rarity),
+            ),
           )
         }),
       ),
@@ -1804,7 +1871,7 @@ function shopShapes(state: RunState, on: Handlers): HTMLElement {
             .join(" · ")
         : copy.shapesNone,
     ),
-    h("span", { class: "shapes-line-more" }, "›"),
+    h("span", { class: "shapes-line-more", "aria-hidden": "true" }, "›"),
   )
 }
 
@@ -1836,47 +1903,73 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
     )
   })
 
+  // The round's consumable row, card for card: name over rule, and no row at
+  // all while the hand is empty, as on the board. Not buttons: a card is only
+  // played during a round (the engine refuses it anywhere else), so here it is
+  // a thing held. A full hand needs no empty seats to say so; the shelf card
+  // that will not fit says "No free slot" itself.
+  const cards =
+    state.consumables.length > 0
+      ? h(
+          "div",
+          { class: "consumables" },
+          ...state.consumables.map((instance) => {
+            const card = consumableCard(instance.id)
+            return h(
+              "div",
+              { class: "consumable" },
+              h("span", { class: "consumable-name" }, card.name),
+              h("span", { class: "consumable-text" }, card.text),
+            )
+          }),
+        )
+      : null
+
   return h(
     "div",
     { class: "screen shop-screen" },
     h(
       "header",
       { class: "hud" },
-      h("div", { class: "hud-round" }, h("div", { class: "round-name" }, copy.title)),
-      h("div", { class: "hud-gold" }, money(state.gold)),
-      menuButton(on),
+      h(
+        "div",
+        { class: "hud-round" },
+        h("div", { class: "round-name" }, copy.title),
+        stageLine(state),
+      ),
+      // The round's header, slot for slot, with the score's seat left empty:
+      // there is no score in a shop, and the seat is what holds the bar at the
+      // round's height. The gold no longer depends on it for its place; the
+      // grid in `.hud` pins it beside the menu on both screens.
+      h("div", { class: "hud-score", "aria-hidden": "true" }),
+      h(
+        "div",
+        { class: "hud-end" },
+        h("div", { class: "hud-gold" }, money(state.gold)),
+        menuButton(on),
+      ),
     ),
+    // What the run already holds, straight under the header and drawn exactly
+    // as the round draws it, because that is where the player already knows
+    // these things live and what they look like there. It was a tray of its own
+    // at the foot for a while, labelled and re-proportioned, beside the buttons
+    // so a relic sold was a thumb's width from Next round; a second look for
+    // the same five tiles cost more than the reach saved. The only difference
+    // from the board is the price on each relic, since here a tap sells it.
+    h("div", { class: "relics" }, ...owned),
+    cards,
     h(
       "div",
       { class: "shop-items" },
       ...(shop?.items ?? []).map((item, index) =>
-        item
-          ? shopItemCard(item, index, state, on)
-          : h("div", { class: "shop-item sold", style: `--deal:${index}` }, copy.sold),
+        item ? shopItemCard(item, index, state, on) : soldCard(index, copy.sold),
       ),
     ),
+    // Below the shelf, not in the tray with the relics, because the round has
+    // no such row to match, and at the foot rather than under the pack so the
+    // slack on a tall phone opens between it and the shelf: tucked under the
+    // last card it read as a sixth thing for sale, which it has been once.
     shopShapes(state, on),
-    h(
-      "div",
-      { class: "owned" },
-      h(
-        "div",
-        { class: "owned-label" },
-        (state.relics.length > 0 ? copy.ownedSellable : copy.owned)(
-          state.relics.length,
-          difficultyOf(state).relicSlots,
-          state.consumables.length,
-          CONSUMABLE_SLOTS,
-        ),
-      ),
-      h("div", { class: "relics" }, ...owned),
-    ),
-    // The tray sits under the shelf it is priced against and the two buttons
-    // that leave the shop go last, pushed to the foot of the screen by
-    // `.shop-actions`. They were between the two, which put Next round at the
-    // middle of a phone with half the screen empty below it, and put the question
-    // "do I have room for this relic" a row further from the relic than it
-    // needed to be.
     h(
       "div",
       { class: "shop-actions" },
@@ -1888,7 +1981,12 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
           disabled: state.gold < reroll,
           onclick: () => on.reroll(),
         },
-        copy.reroll(money(reroll)),
+        icon("reroll"),
+        copy.reroll,
+        // Gold, like every other price on the screen. It was the button's own
+        // ink, which made the one price the player pays over and over the only
+        // one that did not look like money.
+        h("span", { class: "reroll-cost" }, money(reroll)),
       ),
       h(
         "button",

@@ -456,12 +456,9 @@ export const de: Strings = {
       title: "Laden",
       sold: "verkauft",
       sell: (amount) => `für ${amount} verkaufen`,
-      reroll: (cost) => `Neu auslegen ${cost}`,
+      reroll: "Neu auslegen",
       nextRound: "Nächste Runde",
-      owned: (relics, relicSlots, cards, cardSlots) =>
-        `Relikte ${relics}/${relicSlots} · Verbrauchskarten ${cards}/${cardSlots}`,
-      ownedSellable: (relics, relicSlots, cards, cardSlots) =>
-        `Relikte ${relics}/${relicSlots} · Verbrauchskarten ${cards}/${cardSlots} · tippe ein Relikt an, um es zu verkaufen`,
+      short: (amount) => `Dir fehlen ${amount}.`,
       shapesLabel: "Wortformen",
       shapesLevel: (name, level) => `${name} Stufe ${level}`,
       shapesNone: "alle auf Stufe 1",
@@ -472,7 +469,7 @@ export const de: Strings = {
       tagRelic: "Relikt",
       tipRelic: "Du behältst es den ganzen Durchlauf, und es wirkt in jeder Runde von allein.",
       tagConsumable: "Verbrauchskarte",
-      tagConsumableFull: "Verbrauchskarte · Plätze voll",
+      slotsFull: "Kein Platz frei",
       tipConsumable: "Du benutzt sie einmal, wann du willst, dann ist sie weg.",
       tagLetter: "Buchstabe",
       tipMod: "Er klebt für den Rest des Durchlaufs an einem Buchstaben.",

@@ -485,15 +485,12 @@ export const en: Strings = {
       title: "Shop",
       sold: "sold",
       sell: (amount) => `sell ${amount}`,
-      reroll: (cost) => `Reroll ${cost}`,
+      reroll: "Reroll",
       nextRound: "Next round",
-      owned: (relics, relicSlots, cards, cardSlots) =>
-        `Relics ${relics}/${relicSlots} · Consumables ${cards}/${cardSlots}`,
-      // The instruction only when there is something to obey it with: an empty
-      // tray under "tap a relic to sell" reads as a control that is broken
-      // rather than as one with nothing to act on yet.
-      ownedSellable: (relics, relicSlots, cards, cardSlots) =>
-        `Relics ${relics}/${relicSlots} · Consumables ${cards}/${cardSlots} · tap a relic to sell`,
+      // The tip on a row the player cannot afford, and the only place the
+      // shortfall is said: printed under the price it was a second price tag on
+      // every dim row. The tap still gets the till's own refusal.
+      short: (amount) => `You need ${amount} more.`,
       shapesLabel: "Word shapes",
       shapesLevel: (name, level) => `${name} Lv ${level}`,
       shapesNone: "all at level 1",
@@ -510,7 +507,7 @@ export const en: Strings = {
       // drawn as a card had no way to hear that as a kind. The word that says the
       // mechanic is the one the code has used all along: it is consumed.
       tagConsumable: "Consumable",
-      tagConsumableFull: "Consumable · slots full",
+      slotsFull: "No free slot",
       tipConsumable: "You use it once, whenever you like, and then it is gone.",
       tagLetter: "Letter",
       tipMod: "It sticks to one letter for the rest of the run.",

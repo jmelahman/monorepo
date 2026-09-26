@@ -1,5 +1,6 @@
 /**
- * The handful of line icons the title screen draws, as SVG built in place.
+ * The handful of line icons the title screen and the shop draw, as SVG built in
+ * place.
  *
  * Its own module because `h()` cannot make them: it calls `createElement`, and
  * an `<svg>` made that way is an unknown HTML element that lays out as nothing.
@@ -31,6 +32,31 @@ const PATHS = {
   book: ["M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z", "M4 21V5"],
   sound: ["M11 5 6 9H3v6h3l5 4z", "M15.5 8.5a5 5 0 0 1 0 7", "M18.5 5.5a9 9 0 0 1 0 13"],
   muted: ["M11 5 6 9H3v6h3l5 4z", "M16 9l6 6", "M22 9l-6 6"],
+  // The shelf's kinds, one each, so a list of five rows can be scanned for "is
+  // there a relic" down the left edge without reading a word. Drawn as the thing
+  // rather than as a letter of its name: a gem, a flask, a box, a tile. See
+  // `KIND_ICON` in `views.ts` for which kind wears which.
+  gem: ["M6 3h12l4 6-10 12L2 9z", "M2 9h20"],
+  flask: ["M9 3h6", "M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3", "M7.5 15h9"],
+  box: ["M3 8l9-5 9 5v8l-9 5-9-5z", "M3 8l9 5 9-5", "M12 13v8"],
+  alphabet: [
+    "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+    "M8.5 16.5l3.5-9 3.5 9",
+    "M9.8 13.5h4.4",
+  ],
+  letter: [
+    "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+    "M12 7l3.5 5-3.5 5-3.5-5z",
+  ],
+  shape: ["M2 8h5v8H2z", "M9.5 8h5v8h-5z", "M17 8h5v8h-5z", "M2 20h20"],
+  etching: ["M14 4l6 6-9 9H5v-6z", "M11 7l6 6"],
+  check: ["M5 12l5 5 9-10"],
+  reroll: [
+    "M4 12a8 8 0 0 1 14-5.3L20 9",
+    "M20 4v5h-5",
+    "M20 12a8 8 0 0 1-14 5.3L4 15",
+    "M4 20v-5h5",
+  ],
 } as const
 
 export type IconName = keyof typeof PATHS

@@ -451,12 +451,9 @@ export const es: Strings = {
       sell: (amount) => `vender ${amount}`,
       // `Renovar` rather than a calque of reroll: what the button does is deal a
       // new shelf, and no Spanish player is rolling anything.
-      reroll: (cost) => `Renovar ${cost}`,
+      reroll: "Renovar",
       nextRound: "Siguiente ronda",
-      owned: (relics, relicSlots, cards, cardSlots) =>
-        `Reliquias ${relics}/${relicSlots} · Consumibles ${cards}/${cardSlots}`,
-      ownedSellable: (relics, relicSlots, cards, cardSlots) =>
-        `Reliquias ${relics}/${relicSlots} · Consumibles ${cards}/${cardSlots} · toca una reliquia para venderla`,
+      short: (amount) => `Te faltan ${amount}.`,
       shapesLabel: "Formas de palabra",
       shapesLevel: (name, level) => `${name} Nv ${level}`,
       shapesNone: "todas a nivel 1",
@@ -467,7 +464,7 @@ export const es: Strings = {
       tagRelic: "Reliquia",
       tipRelic: "La conservas toda la partida, y actúa sola en cada ronda.",
       tagConsumable: "Consumible",
-      tagConsumableFull: "Consumible · ranuras llenas",
+      slotsFull: "No te queda ranura libre",
       tipConsumable: "Lo usas una vez, cuando quieras, y desaparece.",
       tagLetter: "Letra",
       tipMod: "Se pega a una letra durante el resto de la partida.",

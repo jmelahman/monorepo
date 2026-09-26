@@ -464,12 +464,9 @@ export const fr: Strings = {
       title: "Boutique",
       sold: "vendu",
       sell: (amount) => `vendre ${amount}`,
-      reroll: (cost) => `Renouveler ${cost}`,
+      reroll: "Renouveler",
       nextRound: "Manche suivante",
-      owned: (relics, relicSlots, cards, cardSlots) =>
-        `Reliques ${relics}/${relicSlots} · Consommables ${cards}/${cardSlots}`,
-      ownedSellable: (relics, relicSlots, cards, cardSlots) =>
-        `Reliques ${relics}/${relicSlots} · Consommables ${cards}/${cardSlots} · appuyez sur une relique pour la vendre`,
+      short: (amount) => `Il vous manque ${amount}.`,
       shapesLabel: "Formes de mot",
       shapesLevel: (name, level) => `${name} Niv ${level}`,
       shapesNone: "toutes au niveau 1",
@@ -480,7 +477,7 @@ export const fr: Strings = {
       tagRelic: "Relique",
       tipRelic: "Vous la gardez toute la partie, et elle agit seule à chaque manche.",
       tagConsumable: "Consommable",
-      tagConsumableFull: "Consommable · emplacements pleins",
+      slotsFull: "Aucun emplacement libre",
       tipConsumable: "Vous l'utilisez une fois, quand vous voulez, et il disparaît.",
       tagLetter: "Lettre",
       tipMod: "Il colle à une lettre pour le reste de la partie.",

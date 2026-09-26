@@ -320,16 +320,11 @@ export type Strings = {
       title: string
       sold: string
       sell: (amount: string) => string
-      reroll: (cost: string) => string
+      /** The verb alone: the button sets the price after it, in gold. */
+      reroll: string
       nextRound: string
-      /** The tray count. Two shapes: with something to sell, and without. */
-      owned: (relics: number, relicSlots: number, cards: number, cardSlots: number) => string
-      ownedSellable: (
-        relics: number,
-        relicSlots: number,
-        cards: number,
-        cardSlots: number,
-      ) => string
+      /** Hover tip on a shelf card the player cannot afford: the shortfall, as money. */
+      short: (amount: string) => string
       shapesLabel: string
       shapesLevel: (name: string, level: number) => string
       shapesNone: string
@@ -339,8 +334,12 @@ export type Strings = {
       tagRelic: string
       tipRelic: string
       tagConsumable: string
-      /** The one tag that is a warning: this card has nowhere to land. */
-      tagConsumableFull: string
+      /**
+       * The line a consumable card grows when the tray has no seat for it. A
+       * line rather than a second tag: the tag is a drawing now, and a drawing
+       * cannot say "full".
+       */
+      slotsFull: string
       tipConsumable: string
       tagLetter: string
       tipMod: string
