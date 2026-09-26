@@ -58,7 +58,7 @@ user.
 | **MCP server** | Are `mcp__kanban__*` tools authenticated at the transport? Do they validate `repo_path` and worktree paths against an allowlist? Can a malicious agent escape the intended board? | `internal/mcp/`, `.mcp.json` |
 | **Docker / session containers** | Root inside session containers, missing `--cap-drop`, missing `--security-opt no-new-privileges`, missing read-only rootfs, forwarding `~/.claude` (secret material) into untrusted sessions, host-path leakage via `KANBAN_HOST_WORKSPACE` / `KANBAN_HOST_HOME`, docker socket exposure | `internal/docker/`, `internal/session/`, `.devcontainer/`, `Dockerfile` |
 | **CI/CD** | Secret exposure in workflow logs, `pull_request_target` misuse, third-party actions pinned by tag instead of SHA, missing image scans, missing SAST | `.github/workflows/{docs,release,test}.yml` |
-| **Dependencies** | Known CVEs in `go.sum` / `web/package-lock.json`; abandoned packages; suspicious transitive pulls | `go.mod`, `go.sum`, `web/package.json`, `web/package-lock.json` |
+| **Dependencies** | Known CVEs in `go.sum` / `web/bun.lock`; abandoned packages; suspicious transitive pulls | `go.mod`, `go.sum`, `web/package.json`, `web/bun.lock` |
 | **Configuration** | Default-on insecure flags (`--claude-config` forwarding into untrusted sessions, in-memory mode discarding audit), TLS enforcement, `.kanban.toml` defaults, env var handling for `KANBAN_*` | `.kanban.toml`, `cmd/server/`, `internal/config/`, `internal/kanbantoml/`, `docs/guide/configuration.md` |
 | **Network** | Unbounded read/write timeouts on `http.Server`, DNS rebinding on `Host`-trusting endpoints, firewall allowlist drift, body size limits | `.devcontainer/` firewall config, HTTP server setup in `internal/server*` or `internal/api/` |
 
@@ -80,7 +80,7 @@ user.
 4. Read `Dockerfile`, every file under `.devcontainer/`, and any
    `docker-compose*.yml`.
 5. Read every file in `.github/workflows/`.
-6. Skim `web/package-lock.json` and `go.sum` for known-bad versions of
+6. Skim `web/bun.lock` and `go.sum` for known-bad versions of
    common packages (e.g. `golang.org/x/net` < patched, `lodash`, etc.).
    Don't fetch CVE feeds — flag suspicious versions for the user to
    verify and link the package name + version in the finding.

@@ -37,21 +37,22 @@ devcontainer exec --workspace-folder . bash
 
 ## Rebuilding the image
 
-The image is published to Docker Hub as `lahmanja/devcontainer` and pinned by
-digest in `devcontainer.json` plus the CI container images in
-`.github/workflows/test.yml` and `.github/workflows/release.yml`.
+The image is published as `ghcr.io/jmelahman/devcontainer:latest` and
+referenced by `devcontainer.json` and the `[devcontainer] image` of each
+fullstack project's `.kanban.toml` in the monorepo (which replaces a
+per-project `.devcontainer/`). The `release.yml` audit job pins it by digest;
+advance that pin by hand.
 
-The `Devcontainer` GitHub workflow (`.github/workflows/devcontainer.yml`)
-rebuilds and pushes it — automatically when anything under `.devcontainer/`
-changes on `master` (always `--no-cache`), or on demand:
+The monorepo's `Devcontainer` workflow (`.github/workflows/devcontainer.yml`,
+driven by the root `docker-bake.hcl`) rebuilds and pushes it — automatically
+when anything under `templates/fullstack-template/.devcontainer/` changes on
+`master`, or on demand:
 
 ```bash
 gh workflow run devcontainer.yml
 ```
 
-The run's summary prints the new `lahmanja/devcontainer@sha256:...` digest;
-update the pins listed above with it. Dependabot bumps the `FROM` base image
-in the `Dockerfile` weekly, but the digest pins are only advanced by hand.
+Dependabot bumps the `FROM` base image in the `Dockerfile` weekly.
 
 ## Host integration
 

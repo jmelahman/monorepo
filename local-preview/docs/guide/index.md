@@ -32,5 +32,5 @@ separately for hot reload:
 wgo run . serve
 
 # Terminal 2 — dashboard on :5173, proxying /api to the backend
-cd web && npm install && npm run dev
+cd web && bun install && bun run dev
 ```

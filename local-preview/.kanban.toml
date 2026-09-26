@@ -1,3 +1,6 @@
+[devcontainer]
+image = "ghcr.io/jmelahman/devcontainer:latest"
+
 [[task]]
 label = "Backend"
 container_port = 8080

@@ -85,6 +85,6 @@ example in `compose.yaml`.
 ```sh
 git clone https://github.com/jmelahman/local-preview
 cd local-preview
-npm --prefix web ci && npm --prefix web run build
+bun install --cwd web --frozen-lockfile && bun run --cwd web build
 go build -tags embed -o preview .
 ```

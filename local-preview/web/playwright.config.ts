@@ -38,7 +38,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `npm run dev -- --port ${FRONTEND_PORT} --strictPort`,
+      command: `node_modules/.bin/vite --port ${FRONTEND_PORT} --strictPort`,
       cwd: ".",
       env: { PREVIEW_BACKEND: `localhost:${BACKEND_PORT}` },
       url: `http://localhost:${FRONTEND_PORT}/`,

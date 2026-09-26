@@ -11,13 +11,13 @@ Backend (`:8080`, auto-reloads on Go file changes) and frontend (`:5173`):
 
 ```bash
 wgo run . serve --in-memory                     # run_in_background
-cd web && npm install && npm run dev -- --host 0.0.0.0   # run_in_background
+cd web && bun install && bun run dev --host 0.0.0.0      # run_in_background
 until curl -sf -m 1 http://localhost:8080/api/health >/dev/null \
    && curl -sf -m 1 http://localhost:5173/ >/dev/null; do sleep 2; done
 ```
 
 Drive the UI with the Playwright MCP tools (`browser_navigate` to
-`http://localhost:5173/`, then `browser_snapshot`), never ad-hoc `npx
+`http://localhost:5173/`, then `browser_snapshot`), never ad-hoc `bunx
 playwright`.
 
 ## Gotchas

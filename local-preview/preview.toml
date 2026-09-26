@@ -2,13 +2,13 @@
 # with a Go backend at the root and a Vite frontend in web/. Register this
 # repo with itself to preview every commit of the orchestrator.
 #
-# No image/run_image is pinned: builds and runs default into
-# .devcontainer/devcontainer.json (warm caches shared with the dev
-# sandbox), falling back to the host when no docker daemon is around.
+# The frontend builds in the devcontainer image (it carries bun); the
+# backend pins nothing and builds and runs on the host.
 
 [frontend]
 path  = "web"
-build = [["npm", "ci"], ["npm", "run", "build"]]
+image = "ghcr.io/jmelahman/devcontainer:latest"
+build = [["bun", "install", "--frozen-lockfile"], ["bun", "run", "build"]]
 dist  = "dist"
 
 [backend]

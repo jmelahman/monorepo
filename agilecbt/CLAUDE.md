@@ -95,8 +95,9 @@ and final calls in the main session, and verify results that look wrong.
 - `web/` — Vite + React 19 + Tailwind 4 frontend, embedded into the binary
   with `-tags embed`.
 - `docs/` — VitePress site (`guide/`, `reference/api.md`, `reference/cli.md`).
-- `.kanban.toml` — maps task labels to container ports for agentic-kanban.
-- `.devcontainer/` — dev sandbox image with an opt-in network firewall.
+- `.kanban.toml` — agentic-kanban session image (`ghcr.io/jmelahman/devcontainer`,
+  built from the monorepo's `templates/fullstack-template/.devcontainer/`) and
+  the task label → container port map.
 
 ## Documentation upkeep
 

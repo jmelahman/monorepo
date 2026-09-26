@@ -23,13 +23,13 @@ wgo run . serve
 **Frontend** (`:5173`, proxies `/api` to the backend):
 
 ```bash
-cd web && npm install && npm run dev -- --host 0.0.0.0
+cd web && bun install && bun run dev --host 0.0.0.0
 ```
 
 **Frontend against a non-default backend** (`:5174`):
 
 ```bash
-cd web && PREVIEW_BACKEND=localhost:8080 npm install && npm run dev -- --host 0.0.0.0 --port 5174
+cd web && bun install && PREVIEW_BACKEND=localhost:8080 bun run dev --host 0.0.0.0 --port 5174
 ```
 
 Wait for both to be reachable before navigating:
@@ -54,20 +54,25 @@ zero, and shutting the process down discards everything.
 ## Tests / typecheck / lint
 
 - Go: `go test ./...`
-- Frontend types: `cd web && npm run typecheck`
-- Frontend lint/format (Biome): `cd web && npm run check` (`check:fix` to
+- Frontend types: `cd web && bun run typecheck`
+- Frontend lint/format (Biome): `cd web && bun run check` (`check:fix` to
   auto-apply safe fixes). The `prek` `biome` hook runs the same check on
   staged `web/**/*.{ts,tsx,js,jsx,json}` files.
-- Playwright E2E: `cd web && npm run test:e2e` (boots the real backend with
-  `--in-memory` plus the Vite dev server).
+- Playwright E2E: `cd web && bun run test:e2e` (first run `test:e2e:install`
+  for Chromium; boots the real backend with `--in-memory` plus the Vite dev
+  server).
 - Pre-commit hooks: `prek run --all-files` (run before committing).
 
 ## Driving the UI with Playwright MCP
 
-`.mcp.json` registers `@playwright/mcp --headless --isolated`. Use the
-`mcp__playwright__browser_*` tools (e.g. `browser_navigate
-http://localhost:5173/`, then `browser_snapshot`) — never spawn `npx
-playwright` ad-hoc.
+`.mcp.json` registers `@playwright/mcp --browser chromium --headless --isolated
+--no-sandbox` (Chromium refuses to run as root with its sandbox on). It
+drives Playwright's bundled Chromium from `~/.cache/ms-playwright`, which
+persists across devcontainers via the cache volume; if it reports the
+browser missing, run `bunx @playwright/mcp install-browser chrome-for-testing`
+once and restart the session. Use the `mcp__playwright__browser_*` tools
+(e.g. `browser_navigate http://localhost:5173/`, then `browser_snapshot`) —
+never spawn `bunx playwright` ad-hoc.
 
 ## Layout
 
@@ -75,9 +80,9 @@ playwright` ad-hoc.
 - `web/` — Vite + React 19 + Tailwind 4 frontend, embedded into the binary
   with `-tags embed`.
 - `docs/` — VitePress site (`guide/`, `reference/api.md`, `reference/cli.md`).
-- `.kanban.toml` — maps the task labels above to container ports for
-  agentic-kanban sessions.
-- `.devcontainer/` — dev sandbox image with an opt-in network firewall.
+- `.kanban.toml` — agentic-kanban session image (`ghcr.io/jmelahman/devcontainer`,
+  built from the monorepo's `templates/fullstack-template/.devcontainer/`) and
+  the task label → container port map.
 
 ## Recurring regression notes
 

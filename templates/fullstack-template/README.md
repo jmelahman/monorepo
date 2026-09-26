@@ -48,7 +48,7 @@ to copy from.
 - PyPI wheels per platform via hatch + `go-bin` + `manygo`
   (`uv tool install <name>` installs the Go binary).
 - prek (pre-commit) hooks: builtin checks, actionlint, ripsecrets,
-  govulncheck (with a documented allowlist wrapper), npm audit, Biome.
+  govulncheck (with a documented allowlist wrapper), bun audit, Biome.
 - GitHub Actions: tests + lint + image smoke test, release pipeline, docs
   deploy, zizmor, Dependabot.
 - `.devcontainer/` dev sandbox with an opt-in default-deny network firewall.
@@ -68,9 +68,9 @@ to copy from.
      `Dockerfile`, `internal/config`, docs).
    - `APP_` → your env-var prefix (`internal/config`, `cmd/server/cli.go`,
      `vite.config.ts`, `playwright.config.ts`).
-3. The CI/devcontainer image is `lahmanja/devcontainer` (rebuilt by
-   `devcontainer.yml`, manual dispatch only); point it at your own registry
-   or swap the container jobs for setup-go/setup-bun.
+3. The CI/devcontainer image is `ghcr.io/jmelahman/devcontainer`, built from
+   `.devcontainer/` by the monorepo's `devcontainer.yml`; point it at your own
+   registry or swap the container jobs for setup-go/setup-bun.
 4. Configure repo settings: a `release` environment, `DOCKERHUB_USERNAME` /
    `DOCKERHUB_TOKEN` secrets, PyPI trusted publishing, and GitHub Pages
    (source: GitHub Actions).

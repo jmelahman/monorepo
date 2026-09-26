@@ -38,7 +38,7 @@ include = [
     "go.sum",
     "**/*.go",
     "web/package.json",
-    "web/package-lock.json",
+    "web/bun.lock",
     "web/index.html",
     "web/tsconfig.json",
     "web/vite.config.ts",

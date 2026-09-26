@@ -11,7 +11,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     container:
-      image: lahmanja/devcontainer@sha256:c33d05c036a69508f41766974d78fe20ab152cd2c16be66c2655c1abd9909a90
+      image: ghcr.io/jmelahman/devcontainer@sha256:749c68b2a86cd8b9453b8f5f72bf3456193f12dcbd4d60d88e4f8b0d35d01c75
       options: --user root
     permissions:
       contents: read
@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: prek run --all-files npm-audit
+      - run: prek run --all-files bun-audit
 
   devcontainer:
     needs: audit
@@ -77,11 +77,10 @@ jobs:
         with:
           go-version: stable
           cache: false
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          node-version: "24"
-          package-manager-cache: false
-      - run: npm --prefix web ci
+          bun-version: "1.4.2"
+          no-cache: true
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94
         with:
           distribution: goreleaser
@@ -114,10 +113,10 @@ jobs:
         with:
           go-version: stable
           cache: false
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          node-version: "24"
-          package-manager-cache: false
+          bun-version: "1.4.2"
+          no-cache: true
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
           enable-cache: false

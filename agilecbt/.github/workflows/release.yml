@@ -11,7 +11,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     container:
-      image: lahmanja/devcontainer@sha256:f3f954bc31d635f8a2c574a8ba2f46278f77bde02e0a7137cd4891b4e72c6e2a
+      image: ghcr.io/jmelahman/devcontainer@sha256:749c68b2a86cd8b9453b8f5f72bf3456193f12dcbd4d60d88e4f8b0d35d01c75
       options: --user root
     permissions:
       contents: read

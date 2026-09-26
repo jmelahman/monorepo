@@ -10,7 +10,7 @@ then poll until their ports answer before driving the UI.
 
 ```bash
 wgo run . serve                                          # backend :7474
-cd web && npm install && npm run dev -- --host 0.0.0.0   # frontend :5173
+cd web && bun install && bun run dev --host 0.0.0.0      # frontend :5173
 ```
 
 Against a backend on the host, add `KANBAN_BACKEND=localhost:7474` and
@@ -28,10 +28,11 @@ starts from zero and shutdown discards everything.
 ## Tests / typecheck / lint
 
 - Go: `go test ./...`
-- Frontend types: `cd web && npm run typecheck`
-- Frontend lint/format (Biome): `cd web && npm run check` (`check:fix` to
+- Frontend types: `cd web && bun run typecheck`
+- Frontend lint/format (Biome): `cd web && bun run check` (`check:fix` to
   auto-apply safe fixes). The `prek` `biome` hook runs the same check.
-- Playwright E2E: `cd web && npm run test:e2e`. Read
+- Playwright E2E: `cd web && bun run test:e2e` (first run `test:e2e:install`
+  for Chromium). Read
   `web/tests/e2e/README.md` before adding or modifying a spec.
 - Pre-commit hooks: `prek run --all-files` (run before committing).
 - DB perf: `go test -tags=perfbench -run TestPerfReport -v ./internal/db/`
@@ -54,18 +55,23 @@ The `compose.yaml` Prometheus is reachable from the devcontainer at
 
 ## Playwright MCP
 
-`.mcp.json` registers `@playwright/mcp --headless --isolated`. Use the
-`mcp__playwright__browser_*` tools (`browser_navigate`, `browser_snapshot`);
-never spawn `npx playwright` ad-hoc.
+`.mcp.json` registers `@playwright/mcp --browser chromium --headless --isolated
+--no-sandbox` (Chromium refuses to run as root with its sandbox on). It
+drives Playwright's bundled Chromium from `~/.cache/ms-playwright`, which
+persists across devcontainers via the cache volume; if it reports the
+browser missing, run `bunx @playwright/mcp install-browser chrome-for-testing`
+once and restart the session. Use the `mcp__playwright__browser_*` tools
+(`browser_navigate`, `browser_snapshot`); never spawn `bunx playwright`
+ad-hoc.
 
 ## Layout
 
 - `main.go`, `cmd/`, `internal/` — Go server, MCP, CLI subcommands.
 - `web/` — Vite + React 19 + Tailwind 4 frontend.
 - `docs/` — VitePress site (`guide/`, `reference/{api,cli,mcp}.md`).
-- `.kanban.toml` — maps task labels to container ports (host `13000–13099`).
-- `.devcontainer/` — image plus an outbound allowlist firewall. `No route to
-  host` means firewalled — don't work around it; use an allowed mirror or ask.
+- `.kanban.toml` — session image (`ghcr.io/jmelahman/devcontainer`, built from
+  the monorepo's `templates/fullstack-template/.devcontainer/`) and task
+  label → container port map (host `13000–13099`).
 
 ## Recurring regression notes
 

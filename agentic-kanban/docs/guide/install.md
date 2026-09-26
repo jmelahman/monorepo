@@ -60,14 +60,14 @@ Prebuilt Linux/macOS/Windows binaries are attached to every tag on the [Releases
 
 ## Build from source
 
-You'll need Go 1.22+ and Node 24+.
+You'll need Go 1.22+ and [Bun](https://bun.sh).
 
 ```sh
 git clone https://github.com/jmelahman/agentic-kanban
 cd agentic-kanban
 docker bake          # builds the multi-arch container image
 # ...or, for a local Go build:
-npm --prefix web ci && npm --prefix web run build
+bun install --cwd web --frozen-lockfile && bun run --cwd web build
 go build -tags embed -o kanban
 ```
 

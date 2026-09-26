@@ -1,8 +1,15 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp", "--headless", "--isolated"]
+      "command": "bunx",
+      "args": [
+        "@playwright/mcp",
+        "--browser",
+        "chromium",
+        "--headless",
+        "--isolated",
+        "--no-sandbox"
+      ]
     },
     "kanban": {
       "command": "go",

@@ -88,3 +88,28 @@ repos:
           - mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
         types: [shell]
   # END orchard:shell
+
+  - repo: local
+    hooks:
+      - id: govulncheck
+        name: govulncheck
+        entry: scripts/govulncheck.sh
+        language: system
+        files: ^(go\.mod|go\.sum)$
+        pass_filenames: false
+      # prek installs bun and biome into the hook's own environment, so these
+      # need neither bun on PATH nor web/node_modules. Biome runs from web/ so
+      # it picks up web/biome.json as the root config; `bun x --bun` runs its
+      # node launcher under bun. Keep the pin in step with web/package.json.
+      - id: biome
+        name: biome
+        entry: bash -c 'cd web && exec bun x --bun biome check --no-errors-on-unmatched "${@#web/}"' --
+        language: bun
+        additional_dependencies: ["@biomejs/biome@2.5.6"]
+        files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc)$
+      - id: bun-audit
+        name: bun audit
+        entry: bun audit --cwd=web --audit-level=high
+        language: bun
+        files: ^web/(package\.json|bun\.lock)$
+        pass_filenames: false

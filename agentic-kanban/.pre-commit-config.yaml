@@ -91,31 +91,25 @@ repos:
 
   - repo: local
     hooks:
-      # biome is installed via `npm install` in web/ (see web/package.json).
-      # If web/node_modules is missing (fresh clone, CI), bootstrap with
-      # `npm ci` so the hook works without a separate setup step — without
-      # it, `npx biome` would try to resolve an unrelated `biome` package
-      # from the registry. The wrapper strips the leading `web/` from each
-      # path so biome — invoked inside web/ where its biome.json lives —
-      # finds the files.
-      - id: biome
-        name: biome
-        entry: bash -c 'cd web && { [ -x node_modules/.bin/biome ] || npm ci --no-audit --no-fund; } >&2 && exec node_modules/.bin/biome check --no-errors-on-unmatched "${@#web/}"' --
-        language: system
-        files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc)$
-        # Hook is invoked in parallel batches by prek when many files match;
-        # without serial, concurrent `npm ci` runs race on web/node_modules
-        # and corrupt the install. biome handles file parallelism itself.
-        require_serial: true
       - id: govulncheck
         name: govulncheck
         entry: scripts/govulncheck.sh
         language: system
         files: ^(go\.mod|go\.sum)$
         pass_filenames: false
-      - id: npm-audit
-        name: npm audit
-        entry: bash -c 'cd web && npm audit --audit-level=high'
-        language: system
-        files: ^web/package(-lock)?\.json$
+      # prek installs bun and biome into the hook's own environment, so these
+      # need neither bun on PATH nor web/node_modules. Biome runs from web/ so
+      # it picks up web/biome.json as the root config; `bun x --bun` runs its
+      # node launcher under bun. Keep the pin in step with web/package.json.
+      - id: biome
+        name: biome
+        entry: bash -c 'cd web && exec bun x --bun biome check --no-errors-on-unmatched "${@#web/}"' --
+        language: bun
+        additional_dependencies: ["@biomejs/biome@2.5.8"]
+        files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc)$
+      - id: bun-audit
+        name: bun audit
+        entry: bun audit --cwd=web --audit-level=high
+        language: bun
+        files: ^web/(package\.json|bun\.lock)$
         pass_filenames: false

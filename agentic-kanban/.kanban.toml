@@ -1,3 +1,6 @@
+[devcontainer]
+image = "ghcr.io/jmelahman/devcontainer:latest"
+
 [[task]]
 label = "Kanban Backend"
 container_port = 7474
@@ -28,7 +31,9 @@ allow_rebase = false
 # Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
 [previews.frontend]
 path  = "web"
-build = [["npm", "ci"], ["npm", "run", "build"]]
+# The builtin session image has no bun; build in the devcontainer image.
+image = "ghcr.io/jmelahman/devcontainer:latest"
+build = [["bun", "install", "--frozen-lockfile"], ["bun", "run", "build"]]
 dist  = "dist"
 
 [previews.backend]

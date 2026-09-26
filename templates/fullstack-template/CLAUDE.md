@@ -61,7 +61,7 @@ zero, and shutting the process down discards everything.
 ## Driving the UI with Playwright MCP
 
 `.mcp.json` registers `@playwright/mcp --headless --isolated --browser
-chromium`. If it reports the browser is missing, run `bunx @playwright/mcp
+chromium --no-sandbox` (Chromium refuses to run as root with its sandbox on). If it reports the browser is missing, run `bunx @playwright/mcp
 install-browser chromium` once. Use the `mcp__playwright__browser_*` tools (e.g. `browser_navigate
 http://localhost:5173/`, then `browser_snapshot`) — never spawn `bunx
 playwright` ad-hoc.
