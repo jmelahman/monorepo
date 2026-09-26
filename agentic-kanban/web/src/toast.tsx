@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/Button";
+import { XIcon } from "@/icons";
 
 export type ToastKind = "error" | "info" | "success";
 
@@ -51,7 +52,7 @@ function ToastViewport({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: num
   return (
     <div
       data-toast-viewport="true"
-      className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2"
+      className="pointer-events-none fixed bottom-4 right-4 z-(--z-toast) flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2"
     >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
@@ -63,7 +64,7 @@ function ToastViewport({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: num
 const kindStyles: Record<ToastKind, string> = {
   error: "border-danger-border bg-danger-bg text-danger",
   info: "border-border bg-surface text-fg",
-  success: "border-emerald-700 bg-emerald-950/95 text-emerald-100",
+  success: "border-success-border bg-success-bg text-success-fg",
 };
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
@@ -76,15 +77,22 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     <div
       role={toast.kind === "error" ? "alert" : "status"}
       data-toast="true"
-      className={`pointer-events-auto flex items-start gap-2 rounded border px-3 py-2 text-sm shadow-lg transition-all duration-150 ${
+      className={`pointer-events-auto flex items-start gap-2 rounded border px-3 py-2 text-sm shadow-lg transition-[opacity,transform] duration-200 ease-(--ease-out) ${
         kindStyles[toast.kind]
       } ${entered ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
     >
       <div className="flex-1 break-words whitespace-pre-wrap font-mono text-xs leading-snug">
         {toast.message}
       </div>
-      <Button type="button" variant="ghost" size="icon" onClick={onDismiss} aria-label="Dismiss">
-        ×
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="-my-1 -mr-2 shrink-0 text-current opacity-70 hover:opacity-100"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+      >
+        <XIcon />
       </Button>
     </div>
   );

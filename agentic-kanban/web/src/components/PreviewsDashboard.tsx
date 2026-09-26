@@ -40,35 +40,35 @@ const stateStyles: Record<DeployState, { dot: string; pill: string; hint: string
     hint: "Waiting for a build slot",
   },
   building: {
-    dot: "animate-pulse bg-amber-400",
-    pill: "border-amber-500/30 text-amber-400",
+    dot: "animate-pulse bg-warning",
+    pill: "border-warning/30 text-warning",
     hint: "Build in progress",
   },
   ready: {
-    dot: "bg-emerald-400",
-    pill: "border-emerald-500/30 text-emerald-400",
-    hint: "Static preview — served instantly",
+    dot: "bg-success",
+    pill: "border-success/30 text-success",
+    hint: "Static preview, served instantly",
   },
   idle: {
-    dot: "bg-emerald-400/40",
-    pill: "border-emerald-500/20 text-emerald-400/70",
-    hint: "Built — starts on the first request",
+    dot: "bg-success/40",
+    pill: "border-success/20 text-success/70",
+    hint: "Built, starts on the first request",
   },
   starting: {
-    dot: "animate-pulse bg-emerald-400",
-    pill: "border-emerald-500/30 text-emerald-400",
+    dot: "animate-pulse bg-success",
+    pill: "border-success/30 text-success",
     hint: "Starting up",
   },
   running: {
-    dot: "bg-emerald-400",
-    pill: "border-emerald-500/30 text-emerald-400",
-    hint: "Warm — served instantly",
+    dot: "bg-success",
+    pill: "border-success/30 text-success",
+    hint: "Warm, served instantly",
   },
   failed: { dot: "bg-danger", pill: "border-danger/30 text-danger", hint: "Build failed" },
   evicted: {
     dot: "bg-fg-muted/50",
     pill: "border-border text-fg-muted/70 line-through",
-    hint: "Artifacts were cleaned up — redeploy to rebuild",
+    hint: "Artifacts were cleaned up. Redeploy to rebuild",
   },
 };
 
@@ -176,7 +176,7 @@ function ArtifactDownload({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded border border-border bg-bg py-1 shadow-lg"
+          className="absolute right-0 top-full z-(--z-raised) mt-1 whitespace-nowrap rounded border border-border bg-bg py-1 shadow-lg"
         >
           {artifact.files.map((f) => (
             <a
@@ -237,7 +237,7 @@ function BuildLogModal({ preview, onClose }: { preview: DashboardPreview; onClos
         </pre>
         <p className="font-mono text-[11px] text-fg-muted">
           {building
-            ? "build in progress — refreshing"
+            ? "build in progress, refreshing"
             : "frontend, backend, and artifact build output"}
         </p>
       </div>
@@ -269,7 +269,7 @@ function DeployModal({ boards, onClose }: { boards: Board[]; onClose: () => void
       >
         <div className="flex flex-col gap-3 p-4 text-sm">
           <p className="text-xs text-fg-muted">
-            Builds are content-addressed per commit — an unchanged side is reused, not rebuilt.
+            Builds are content-addressed per commit: an unchanged side is reused, not rebuilt.
           </p>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-fg-muted">Board</span>
@@ -427,7 +427,7 @@ function StorageModal({ onClose }: { onClose: () => void }) {
             Retention
           </h3>
           <p className="mb-3 text-xs text-fg-muted">
-            Sweeps run hourly. Evicting reclaims a deploy's build output but keeps its row —
+            Sweeps run hourly. Evicting reclaims a deploy's build output but keeps its row, so
             redeploying the same commit rebuilds it. A board's newest ready deploy is never evicted.
             Leave a field empty for no limit.
           </p>
@@ -603,7 +603,7 @@ export function PreviewsDashboard() {
                   {all.length === 0 ? "No deployments yet" : "No deployments for this board"}
                 </p>
                 <p className="max-w-md text-xs text-fg-muted">
-                  A board's repo needs a preview manifest — a <code>preview.toml</code> at its root,
+                  A board's repo needs a preview manifest: a <code>preview.toml</code> at its root,
                   a <code>[previews]</code> table in its <code>.kanban.toml</code>, or a manifest
                   named for the board slug in the server's manifest directory.
                 </p>
@@ -691,7 +691,7 @@ export function PreviewsDashboard() {
                         type="button"
                         onClick={() => stopMut.mutate(p.id)}
                         disabled={stopMut.isPending && stopMut.variables === p.id}
-                        title="Stop this deploy's processes — it restarts on the next request"
+                        title="Stop this deploy's processes. It restarts on the next request"
                         className={`${pillClass} disabled:opacity-50`}
                       >
                         stop
@@ -708,7 +708,7 @@ export function PreviewsDashboard() {
                         <ExternalLinkIcon size={12} />
                       </a>
                     ) : (
-                      <span className="w-14 text-center text-xs text-fg-muted/50">—</span>
+                      <span className="w-14 text-center text-xs text-fg-muted/50">-</span>
                     )}
                     <time
                       dateTime={p.created_at}

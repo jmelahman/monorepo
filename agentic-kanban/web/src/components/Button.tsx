@@ -13,7 +13,7 @@ type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
 };
 
 const BASE =
-  "rounded transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
+  "rounded transition-[color,background-color,border-color,transform] duration-150 ease-(--ease-out) enabled:active:scale-[0.97] motion-reduce:enabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed";
 
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-accent-700 text-white hover:bg-accent-600",
@@ -31,6 +31,11 @@ const SIZES: Record<Size, string> = {
   lg: "px-3 py-1",
   icon: "inline-flex h-7 w-7 items-center justify-center",
 };
+
+// Shared with non-<button> elements (e.g. links) that should look like a Button.
+export function buttonClass(variant: Variant = "neutral", size: Size = "md"): string {
+  return `${BASE} ${VARIANTS[variant]} ${SIZES[size]}`;
+}
 
 export function Button({
   variant = "neutral",
@@ -56,7 +61,7 @@ export function Button({
     <button
       {...rest}
       disabled={pending || disabled}
-      className={`${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      className={`${buttonClass(variant, size)} ${className}`}
     >
       {content}
     </button>

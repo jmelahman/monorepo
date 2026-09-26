@@ -7,7 +7,7 @@ import { AppSettings } from "@/components/AppSettings";
 import { ArchivedDrawer } from "@/components/ArchivedDrawer";
 import { Board } from "@/components/Board";
 import { BoardSettings } from "@/components/BoardSettings";
-import { Button } from "@/components/Button";
+import { Button, buttonClass } from "@/components/Button";
 import { CreateBoardModal } from "@/components/CreateBoardForm";
 import { DevToolbar } from "@/components/devToolbar/DevToolbar";
 import { useDevToolbarPrefs } from "@/components/devToolbar/preferences";
@@ -164,11 +164,12 @@ export default function App() {
         </nav>
         {view === "board" && (
           <select
+            aria-label="Board"
             className="min-w-0 max-w-[40vw] cursor-pointer rounded bg-surface px-2 py-1 text-sm"
             value={activeId ?? ""}
             onChange={(e) => setActiveId(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">— select board —</option>
+            <option value="">Select a board</option>
             {(boardsQ.data ?? []).map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -220,7 +221,7 @@ export default function App() {
               rel="noopener noreferrer"
               aria-label="Help"
               title="Help"
-              className="rounded cursor-pointer transition-colors duration-150 bg-surface-2 text-fg hover:bg-surface-3 inline-flex h-7 w-7 items-center justify-center"
+              className={buttonClass("neutral", "icon")}
             >
               <HelpIcon />
             </a>
@@ -233,7 +234,7 @@ export default function App() {
                   aria-label="Board settings"
                   title={
                     suggestRepoLink
-                      ? "Board settings — git repo detected, link it for branches and pull requests"
+                      ? "Board settings: git repo detected, link it for branches and pull requests"
                       : "Board settings"
                   }
                 >
@@ -260,8 +261,11 @@ export default function App() {
         )}
       </header>
       {view === "board" && activeId != null && showStreamError && (
-        <div className="border-b border-amber-700 bg-amber-950/60 px-4 py-1 text-xs text-amber-200">
-          Live updates disconnected — reconnecting…
+        <div
+          role="status"
+          className="border-b border-warning-border bg-warning-bg px-4 py-1 text-xs text-warning-fg"
+        >
+          Live updates disconnected. Reconnecting…
         </div>
       )}
       <main className="min-h-0 flex-1 overflow-hidden">
@@ -272,8 +276,15 @@ export default function App() {
         ) : activeId != null ? (
           <Board boardId={activeId} />
         ) : noBoards ? (
-          <div className="flex h-full items-center justify-center p-4 text-sm text-fg-muted">
-            No board selected.
+          <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
+            <p className="text-sm text-fg">No boards yet.</p>
+            <p className="max-w-sm text-sm text-fg-muted">
+              A board tracks one git repository. Each ticket on it gets its own branch, worktree and
+              agent session.
+            </p>
+            <Button variant="primary" size="lg" onClick={() => setCreateBoardOpen(true)}>
+              create a board
+            </Button>
           </div>
         ) : null}
       </main>

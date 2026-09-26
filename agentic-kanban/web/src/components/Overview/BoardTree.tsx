@@ -84,7 +84,7 @@ export function BoardTree({
     });
 
   const header = (
-    <div className="sticky top-0 z-10 flex items-center border-b border-border bg-bg px-3 py-2">
+    <div className="sticky top-0 z-(--z-raised) flex items-center border-b border-border bg-bg px-3 py-2">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Boards</h2>
       {onCollapseSidebar && (
         <button

@@ -97,7 +97,7 @@ export class OverviewPage {
   // without reaching back into the desktop hierarchy.
   readonly mobileSession = {
     terminal: this.page.locator('[data-terminal="true"]'),
-    backButton: this.page.getByRole("button", { name: "✕" }),
+    backButton: this.page.getByRole("button", { name: "Close session" }),
   };
 }
 
@@ -351,9 +351,7 @@ export class SessionPanel {
   }
 
   async close() {
-    // SessionView's close button is a "✕" icon-only button with no
-    // aria-label — accessible name comes from textContent.
-    await this.root.getByRole("button", { name: "✕" }).click();
+    await this.root.getByRole("button", { name: "Close session" }).click();
   }
 
   // Bring focus to this panel without dragging — clicking the drag handle

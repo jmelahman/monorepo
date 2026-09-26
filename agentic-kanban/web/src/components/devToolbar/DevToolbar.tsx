@@ -36,8 +36,8 @@ const SECTION_LABELS: Record<DevToolbarSectionKey, string> = {
 const SECTION_ORDER: DevToolbarSectionKey[] = ["fps", "memory", "domReact", "appInternals"];
 
 const SSE_TONE: Record<SseStatus, string> = {
-  open: "text-emerald-400",
-  error: "text-amber-400",
+  open: "text-success",
+  error: "text-warning",
   closed: "text-fg-muted",
 };
 
@@ -76,7 +76,7 @@ export function DevToolbar() {
 
   return (
     <div
-      className={`fixed z-50 w-44 select-none rounded border border-border bg-surface-2/95 font-mono text-[11px] text-fg shadow-lg backdrop-blur ${CORNER_CLASS[prefs.corner]}`}
+      className={`fixed z-(--z-toast) w-44 select-none rounded border border-border bg-surface-2/95 font-mono text-[11px] text-fg shadow-lg backdrop-blur ${CORNER_CLASS[prefs.corner]}`}
     >
       <div className="flex items-center gap-1 border-b border-border px-2 py-1">
         <GaugeIcon size={12} className="text-fg-muted" />
@@ -120,7 +120,7 @@ export function DevToolbar() {
       <div className="py-1">
         {prefs.sections.fps && (
           <Section title={SECTION_LABELS.fps}>
-            <Row label="fps" value={frame.fps || "—"} warn={frame.fps > 0 && frame.fps < 30} />
+            <Row label="fps" value={frame.fps || "-"} warn={frame.fps > 0 && frame.fps < 30} />
             <Row label="worst" value={`${frame.worstMs} ms`} warn={frame.worstMs > 50} />
           </Section>
         )}
@@ -174,7 +174,7 @@ export function DevToolbar() {
         )}
 
         {SECTION_ORDER.every((k) => !prefs.sections[k]) && (
-          <p className="px-2 py-1 text-fg-muted">No metrics enabled — click ⚙.</p>
+          <p className="px-2 py-1 text-fg-muted">No metrics enabled. Click ⚙.</p>
         )}
       </div>
     </div>
@@ -232,7 +232,7 @@ function Row({ label, value, warn }: { label: string; value: ReactNode; warn?: b
   return (
     <div className="flex items-center justify-between gap-2 leading-tight">
       <span className="text-fg-muted">{label}</span>
-      <span className={warn ? "text-amber-400" : "text-fg"}>{value}</span>
+      <span className={warn ? "text-warning" : "text-fg"}>{value}</span>
     </div>
   );
 }

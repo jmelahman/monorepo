@@ -37,10 +37,10 @@ export type Ticket = {
 export type PRState = "draft" | "open" | "merged" | "closed";
 
 export const PR_STATE_COLOR: Record<PRState, string> = {
-  draft: "text-zinc-400",
-  open: "text-emerald-400",
-  merged: "text-purple-400",
-  closed: "text-red-400",
+  draft: "text-fg-muted",
+  open: "text-success",
+  merged: "text-merged",
+  closed: "text-danger",
 };
 
 export type Session = {

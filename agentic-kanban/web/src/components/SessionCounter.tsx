@@ -45,7 +45,7 @@ export function SessionCounter({ onActivate }: { onActivate?: () => void } = {})
   const title =
     running === 0
       ? "No running sessions"
-      : `${running} running — ${data?.working ?? 0} working, ${data?.awaiting_perm ?? 0} awaiting, ${data?.idle ?? 0} idle`;
+      : `${running} running: ${data?.working ?? 0} working, ${data?.awaiting_perm ?? 0} awaiting, ${data?.idle ?? 0} idle`;
   const dominant = DOMINANT_ORDER.find((key) => (data?.[key] ?? 0) > 0);
   const rows = ROWS.filter((row) => row.always || (data?.[row.key] ?? 0) > 0);
 
@@ -66,7 +66,7 @@ export function SessionCounter({ onActivate }: { onActivate?: () => void } = {})
           {running}
         </button>
         {open && (
-          <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded border border-border bg-surface text-sm shadow-lg">
+          <div className="absolute right-0 top-full z-(--z-popover) mt-1 w-44 overflow-hidden rounded border border-border bg-surface text-sm shadow-lg">
             <div className="px-3 py-2">
               <div className="mb-1.5 text-xs font-semibold text-fg-muted">
                 {running === 0 ? "No running sessions" : `${running} running`}

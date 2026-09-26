@@ -29,7 +29,7 @@ test.describe("Overview / Mobile", () => {
 
     // SessionView mounts. The terminal slot may not yet render (session
     // isn't started by default for mobile drill-in), but the SessionView
-    // header with the ✕ close button is visible.
+    // header with the close-session button is visible.
     await expect(overview.mobileSession.backButton).toBeVisible();
     // The tree node should be unmounted while the session is open.
     await expect(overview.boardNode(seed.board.id).root).toHaveCount(0);

@@ -76,7 +76,7 @@ export function PlansPanel({ session }: { session: Session }) {
         </button>
       ) : (
         <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-surface text-sm">
-          <div className="sticky top-0 z-10 flex items-center border-b border-border bg-surface px-3 py-2">
+          <div className="sticky top-0 z-(--z-raised) flex items-center border-b border-border bg-surface px-3 py-2">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Plans</h2>
             <button
               type="button"

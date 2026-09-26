@@ -150,7 +150,7 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
                 onChange={(e) => setHarness(e.target.value)}
                 disabled={settingsQ.isLoading || harnessesQ.isLoading}
               >
-                <option value="">— use project / default —</option>
+                <option value="">Use project or default</option>
                 {harnesses.map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.label}
@@ -210,7 +210,7 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
                 <span>Sign kanban's merge &amp; squash commits</span>
               </label>
               <span className="text-xs text-fg-muted">
-                Off by default — kanban forces signing off so merges don't fail when the container
+                Off by default: kanban forces signing off so merges don't fail when the container
                 has no key. When on, it defers to your gitconfig's{" "}
                 <span className="font-mono">commit.gpgsign</span>, so mount your signing key and
                 agent into the container. Saved to{" "}
@@ -251,7 +251,7 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
               <span>Show developer toolbar</span>
             </label>
             <span className="text-xs text-fg-muted">
-              Floating overlay of live frontend health metrics — FPS, JS heap, DOM / React Query
+              Floating overlay of live frontend health metrics: FPS, JS heap, DOM / React Query
               activity, and SSE status. Use the toolbar's own controls to reposition it or choose
               which sections show.
             </span>
@@ -263,7 +263,7 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
           </Button>
           <Button
             type="submit"
-            variant="secondary"
+            variant="primary"
             size="lg"
             disabled={!dirty || busy}
             pending={updateMut.isPending}

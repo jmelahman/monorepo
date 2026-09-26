@@ -144,7 +144,7 @@ export function SessionPane({
 
   const overlay = fullscreen || isMobile;
   const paneClass = overlay
-    ? "fixed inset-0 z-40 flex flex-col bg-bg"
+    ? "fixed inset-0 z-(--z-overlay) flex flex-col bg-bg"
     : isHorizontal
       ? "relative flex flex-col border-t border-border bg-bg"
       : "relative flex flex-col border-l border-border bg-bg";
@@ -194,10 +194,10 @@ export function SessionPane({
           onDoubleClick={() => (isHorizontal ? setHeight(DEFAULT_HEIGHT) : setWidth(DEFAULT_WIDTH))}
           className={
             isHorizontal
-              ? `absolute left-0 top-0 z-20 h-1 w-full -translate-y-1/2 cursor-row-resize hover:bg-accent-500/40 focus-visible:bg-accent-500/60 focus-visible:outline-none ${
+              ? `absolute left-0 top-0 z-(--z-popover) h-1 w-full -translate-y-1/2 cursor-row-resize hover:bg-accent-500/40 focus-visible:bg-accent-500/60 focus-visible:outline-none ${
                   resizing ? "bg-accent-500/60" : ""
                 }`
-              : `absolute left-0 top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize hover:bg-accent-500/40 focus-visible:bg-accent-500/60 focus-visible:outline-none ${
+              : `absolute left-0 top-0 z-(--z-popover) h-full w-1 -translate-x-1/2 cursor-col-resize hover:bg-accent-500/40 focus-visible:bg-accent-500/60 focus-visible:outline-none ${
                   resizing ? "bg-accent-500/60" : ""
                 }`
           }

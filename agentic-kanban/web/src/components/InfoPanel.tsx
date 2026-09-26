@@ -15,6 +15,7 @@ import { queryKeys } from "@/api/keys";
 import { useCopyFeedback } from "@/hooks/useCopyFeedback";
 import { sessionStore, ticketStore, useTicket } from "@/store";
 import { MARKDOWN_COMPONENTS } from "./markdownComponents";
+import { STATUS_LABEL } from "./Ticket";
 
 export function InfoPanel({ session }: { session: Session }) {
   const ticket = useTicket(session.ticket_id);
@@ -269,7 +270,7 @@ function BranchRow({ session }: { session: Session }) {
             className="w-full rounded bg-surface px-2 py-1 font-mono text-xs outline-none ring-1 ring-border focus:ring-accent-500"
           />
           {saveMut.isError ? (
-            <p className="text-xs text-red-400">{formatApiError(saveMut.error)}</p>
+            <p className="text-xs text-danger">{formatApiError(saveMut.error)}</p>
           ) : (
             <p className="text-xs text-fg-muted">Enter to save · Esc to cancel</p>
           )}
@@ -356,13 +357,13 @@ function Muted({ children }: { children: ReactNode }) {
 function StatusValue({ status }: { status: string }) {
   const color =
     status === "running"
-      ? "text-emerald-400"
+      ? "text-success"
       : status === "starting" || status === "stopping"
-        ? "text-amber-400"
+        ? "text-warning"
         : status === "error"
-          ? "text-red-400"
+          ? "text-danger"
           : "text-fg-muted";
-  return <span className={color}>{status}</span>;
+  return <span className={color}>{STATUS_LABEL[status] ?? status}</span>;
 }
 
 function Copyable({ text, display }: { text: string; display?: string }) {
@@ -430,33 +431,33 @@ function PRSection({ session }: { session: Session }) {
 
 function ReviewValue({ detail, loading }: { detail: PRDetail | undefined; loading: boolean }) {
   if (loading && !detail) return <Muted>…</Muted>;
-  if (!detail) return <Muted>—</Muted>;
+  if (!detail) return <Muted>-</Muted>;
   return reviewBadge(detail.review_decision);
 }
 
 function reviewBadge(decision: PRReviewDecision): ReactNode {
   switch (decision) {
     case "approved":
-      return <span className="text-emerald-400">✓ Approved</span>;
+      return <span className="text-success">✓ Approved</span>;
     case "changes_requested":
-      return <span className="text-red-400">✗ Changes requested</span>;
+      return <span className="text-danger">✗ Changes requested</span>;
     case "review_required":
       return <span className="text-fg-muted">· Review pending</span>;
     default:
-      return <Muted>—</Muted>;
+      return <Muted>-</Muted>;
   }
 }
 
 function ChecksValue({ detail, loading }: { detail: PRDetail | undefined; loading: boolean }) {
   if (loading && !detail) return <Muted>…</Muted>;
-  if (!detail) return <Muted>—</Muted>;
+  if (!detail) return <Muted>-</Muted>;
   const c = detail.checks;
   if (c.total === 0) return <Muted>none</Muted>;
   const parts: { key: string; node: ReactNode }[] = [];
   if (c.success > 0) {
     parts.push({
       key: "ok",
-      node: <span className="text-emerald-400">✓ {c.success}</span>,
+      node: <span className="text-success">✓ {c.success}</span>,
     });
   }
   if (c.failure > 0) {
@@ -464,7 +465,7 @@ function ChecksValue({ detail, loading }: { detail: PRDetail | undefined; loadin
       key: "fail",
       node: (
         <span
-          className="cursor-help text-red-400"
+          className="cursor-help text-danger"
           title={
             c.failing.length > 0
               ? `Failing:\n${c.failing.map((f) => `• ${f.name}`).join("\n")}`
@@ -479,7 +480,7 @@ function ChecksValue({ detail, loading }: { detail: PRDetail | undefined; loadin
   if (c.pending > 0) {
     parts.push({
       key: "pend",
-      node: <span className="text-amber-400">· {c.pending}</span>,
+      node: <span className="text-warning">· {c.pending}</span>,
     });
   }
   return (
@@ -564,10 +565,10 @@ function escapeHtml(s: string): string {
 }
 
 function formatTime(ts?: number): ReactNode {
-  if (ts == null) return <Muted>—</Muted>;
+  if (ts == null) return <Muted>-</Muted>;
   const ms = ts < 1e12 ? ts * 1000 : ts;
   const d = new Date(ms);
-  if (Number.isNaN(d.getTime())) return <Muted>—</Muted>;
+  if (Number.isNaN(d.getTime())) return <Muted>-</Muted>;
   return (
     <span className="text-xs" title={d.toISOString()}>
       {d.toLocaleString()}

@@ -5,6 +5,17 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+
+  /*
+   * One focus ring for every keyboard-reachable control. Components that draw
+   * their own focus treatment (ring utilities + outline-none) override this
+   * from the utilities layer. The terminal host owns its own cursor, so it is
+   * excluded.
+   */
+  :focus-visible:not([data-terminal], [data-terminal] *) {
+    outline: 2px solid var(--color-accent-500);
+    outline-offset: 2px;
+  }
 }
 
 /*
@@ -19,7 +30,7 @@
   --color-surface-3: #3f3f46;
   --color-surface-4: #52525b;
   --color-fg: #f4f4f5;
-  --color-fg-muted: #a1a1aa;
+  --color-fg-muted: #acacb4;
   --color-border: #3f3f46;
   --color-danger: #f87171;
   --color-danger-bg: rgb(69 10 10 / 0.95);
@@ -27,6 +38,42 @@
   --color-accent-500: oklch(63.7% 0.237 25.331);
   --color-accent-600: oklch(57.7% 0.245 27.325);
   --color-accent-700: oklch(50.5% 0.213 27.518);
+
+  /*
+   * Semantic status colors. Text-safe against bg/surface in every theme and
+   * contrast mode (>= 4.5:1), so they double as text and dot fills.
+   *   success   running / idle / ready / approved / PR open
+   *   warning   transitional (starting, stopping, building) and cautions
+   *   info      actively working
+   *   attention needs the user (awaiting permission)
+   *   merged    PR merged (GitHub's convention)
+   */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-info: #38bdf8;
+  --color-attention: #facc15;
+  --color-merged: #c084fc;
+  --color-success-bg: rgb(2 44 34 / 0.95);
+  --color-success-border: #047857;
+  --color-success-fg: #d1fae5;
+  --color-warning-bg: rgb(69 26 3 / 0.6);
+  --color-warning-border: #b45309;
+  --color-warning-fg: #fde68a;
+}
+
+/*
+ * Z-index scale. Use these (z-(--z-raised) etc.) instead of bare numbers.
+ *   raised   in-panel dropdowns, sticky headers, resize handles
+ *   popover  header popovers and menus
+ *   overlay  modals, drawers, fullscreen panes
+ *   toast    toasts and the developer toolbar, above everything
+ */
+:root {
+  --z-raised: 10;
+  --z-popover: 20;
+  --z-overlay: 40;
+  --z-toast: 50;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 [data-theme="light"] {
@@ -36,11 +83,22 @@
   --color-surface-3: #e4e4e7;
   --color-surface-4: #d4d4d8;
   --color-fg: #18181b;
-  --color-fg-muted: #71717a;
+  --color-fg-muted: #62626b;
   --color-border: #e4e4e7;
   --color-danger: #b91c1c;
   --color-danger-bg: #fee2e2;
   --color-danger-border: #dc2626;
+  --color-success: #047857;
+  --color-warning: #b45309;
+  --color-info: #0369a1;
+  --color-attention: #a16207;
+  --color-merged: #7e22ce;
+  --color-success-bg: #ecfdf5;
+  --color-success-border: #6ee7b7;
+  --color-success-fg: #065f46;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fcd34d;
+  --color-warning-fg: #92400e;
 }
 
 [data-theme="dark"][data-contrast="high"] {
@@ -55,6 +113,15 @@
   --color-danger: #fca5a5;
   --color-danger-bg: #7f1d1d;
   --color-danger-border: #fca5a5;
+  --color-success: #6ee7b7;
+  --color-warning: #fcd34d;
+  --color-info: #7dd3fc;
+  --color-attention: #fde047;
+  --color-merged: #d8b4fe;
+  --color-success-fg: #ecfdf5;
+  --color-success-border: #6ee7b7;
+  --color-warning-fg: #fef3c7;
+  --color-warning-border: #fcd34d;
 }
 
 [data-theme="light"][data-contrast="high"] {
@@ -69,6 +136,15 @@
   --color-danger: #7f1d1d;
   --color-danger-bg: #fecaca;
   --color-danger-border: #7f1d1d;
+  --color-success: #065f46;
+  --color-warning: #92400e;
+  --color-info: #075985;
+  --color-attention: #854d0e;
+  --color-merged: #6b21a8;
+  --color-success-fg: #064e3b;
+  --color-success-border: #065f46;
+  --color-warning-fg: #78350f;
+  --color-warning-border: #92400e;
 }
 
 [data-accent="red"] {
@@ -129,8 +205,63 @@ body {
 }
 
 /*
+ * Dialog entrance: a short fade + settle so modals and drawers don't pop in.
+ * Exit is instant (the node unmounts), which keeps dismissal feeling fast.
+ */
+@keyframes dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialog-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes dialog-drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+.animate-backdrop-in {
+  animation: dialog-backdrop-in 150ms var(--ease-out);
+}
+.animate-modal-in {
+  animation: dialog-modal-in 180ms var(--ease-out);
+}
+.animate-drawer-in {
+  animation: dialog-drawer-in 200ms var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-modal-in,
+  .animate-drawer-in {
+    animation: dialog-backdrop-in 150ms linear;
+  }
+}
+
+/*
+ * Loading skeleton blocks: a slow opacity breath, static under reduced motion.
+ */
+@keyframes skeleton-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+.skeleton {
+  background-color: var(--color-surface-2);
+  animation: skeleton-breathe 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/*
  * Pride Month easter egg: the wordmark flows through a rainbow gradient during
- * June (applied via the .rainbow-text class — see App.tsx). The gradient is
+ * June (applied via the .rainbow-text class, see App.tsx). The gradient is
  * clipped to the text; animation pans it horizontally for a shimmer.
  */
 @keyframes rainbow-text-pan {

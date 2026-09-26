@@ -22,7 +22,7 @@ function formatSize(bytes: number): string {
 const statusColor: Record<Preview["status"], string> = {
   queued: "text-fg-muted",
   building: "text-accent-500",
-  ready: "text-emerald-400",
+  ready: "text-success",
   failed: "text-danger",
   evicted: "text-fg-muted line-through",
 };
@@ -66,8 +66,8 @@ export function PreviewsPanel({ session }: { session: Session }) {
         {!previewsQ.isError && previews.length === 0 && (
           <p className="text-fg-muted">
             No previews yet. "deploy tip" builds this branch's latest commit and serves it at its
-            own subdomain. The repo needs a preview.toml at its root — or, for repos that can't
-            carry one, a manifest named for this board's slug in the server's manifest directory.
+            own subdomain. The repo needs a preview.toml at its root or, for repos that can't carry
+            one, a manifest named for this board's slug in the server's manifest directory.
           </p>
         )}
         <ul className="flex flex-col gap-1">
@@ -85,7 +85,7 @@ export function PreviewsPanel({ session }: { session: Session }) {
                       <span className="text-fg-muted"> · frontend {p.fe_process}</span>
                     ) : null}
                     {p.status === "failed" && p.error ? (
-                      <span className="text-danger"> — {p.error}</span>
+                      <span className="text-danger">: {p.error}</span>
                     ) : null}
                   </div>
                 </div>

@@ -64,7 +64,7 @@ function BoardEnvEditor({ boardId, active }: { boardId: number; active: boolean 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-fg-muted">
-        Environment variables injected into this board's session containers — e.g. API keys for MCP
+        Environment variables injected into this board's session containers, e.g. API keys for MCP
         servers the agent uses. Values are encrypted at rest and write-only: they can't be viewed
         after saving, only overwritten or removed. Changes take effect the next time a session
         starts or restarts.
@@ -130,8 +130,8 @@ function BoardEnvEditor({ boardId, active }: { boardId: number; active: boolean 
         />
       </div>
       {overwriting && (
-        <span className="text-xs text-amber-400">
-          {trimmedKey} already exists — saving replaces its value.
+        <span className="text-xs text-warning">
+          {trimmedKey} already exists. Saving replaces its value.
         </span>
       )}
     </div>
@@ -288,7 +288,7 @@ export function BoardSettings({
                   onChange={(e) => update("projectDir", e.target.value)}
                 />
                 {projectDirChanged && (
-                  <span className="text-xs text-amber-400">
+                  <span className="text-xs text-warning">
                     Running sessions keep the working directory their container was created with.
                     Restart a session to move it.
                   </span>
@@ -314,7 +314,7 @@ export function BoardSettings({
                   required
                 />
                 {worktreeRootChanged && (
-                  <span className="text-xs text-amber-400">
+                  <span className="text-xs text-warning">
                     Existing sessions will keep their old worktree paths and won't be cleaned up
                     automatically when the board is deleted. Stop and destroy them first if you want
                     a clean switch.

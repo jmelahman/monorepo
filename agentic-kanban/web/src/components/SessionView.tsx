@@ -35,6 +35,7 @@ import {
   PullIcon,
   RestartIcon,
   StopIcon,
+  XIcon,
 } from "@/icons";
 import { ActionButton } from "./ActionButton";
 import { Button } from "./Button";
@@ -543,7 +544,7 @@ export function SessionView({
               compactTitle={`update from ${baseBranch}`}
             />
             {interactive && syncMenuOpen && (
-              <div className="absolute right-0 top-full z-10 mt-1 w-56 rounded border border-border bg-surface p-1 text-xs shadow-lg">
+              <div className="absolute right-0 top-full z-(--z-raised) mt-1 w-56 rounded border border-border bg-surface p-1 text-xs shadow-lg">
                 {syncStrategies.map((s) => (
                   <Button
                     key={s}
@@ -586,7 +587,7 @@ export function SessionView({
               compactTitle={`integrate into ${baseBranch}`}
             />
             {interactive && mergeMenuOpen && (
-              <div className="absolute right-0 top-full z-10 mt-1 w-64 rounded border border-border bg-surface p-1 text-xs shadow-lg">
+              <div className="absolute right-0 top-full z-(--z-raised) mt-1 w-64 rounded border border-border bg-surface p-1 text-xs shadow-lg">
                 {mergeStrategies.map((s) => (
                   <Button
                     key={s}
@@ -627,8 +628,14 @@ export function SessionView({
           compactTitle="mark as done"
         />
         {headerExtras}
-        <Button variant="neutral" size="icon" onClick={onClose}>
-          ✕
+        <Button
+          variant="neutral"
+          size="icon"
+          onClick={onClose}
+          aria-label="Close session"
+          title="Close session"
+        >
+          <XIcon />
         </Button>
       </div>
     </>
@@ -718,7 +725,7 @@ function PullProgressBanner({ progress }: { progress: PullProgress | null }) {
   return (
     <div className="border-b border-border bg-surface px-3 py-1.5 text-xs">
       <div className="flex items-center justify-between gap-2 text-fg-muted">
-        <span className="truncate">{hasBytes ? `pulling image — ${status}` : "starting…"}</span>
+        <span className="truncate">{hasBytes ? `pulling image: ${status}` : "starting…"}</span>
         <span className="shrink-0 font-mono">
           {hasBytes
             ? `${formatBytes(progress.current)} / ${formatBytes(progress.total)} (${pct}%)`
@@ -728,8 +735,8 @@ function PullProgressBanner({ progress }: { progress: PullProgress | null }) {
       <div className="mt-1 h-1 w-full overflow-hidden rounded bg-border">
         {hasBytes ? (
           <div
-            className="h-full bg-accent-500 transition-[width] duration-200 ease-out"
-            style={{ width: `${pct}%` }}
+            className="h-full origin-left bg-accent-500 transition-transform duration-200 ease-(--ease-out)"
+            style={{ transform: `scaleX(${pct / 100})` }}
           />
         ) : (
           <div className="h-full w-1/3 animate-pulse bg-accent-500/60" />

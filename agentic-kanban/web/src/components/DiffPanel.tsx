@@ -276,7 +276,7 @@ function buildReviewText(
     return byPath !== 0 ? byPath : a.anchor.startLine - b.anchor.startLine;
   });
   const header = [
-    `Code review — ${ticket?.title ?? "(untitled)"}`,
+    `Code review: ${ticket?.title ?? "(untitled)"}`,
     `Branch: ${session.branch_name}`,
   ];
   const blocks = sorted.map((c) => {
@@ -719,7 +719,7 @@ export function DiffPanel({ session }: { session: Session }) {
         </button>
       ) : (
         <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-bg text-sm">
-          <div className="sticky top-0 z-10 flex min-h-11 items-center border-b border-border bg-bg px-3">
+          <div className="sticky top-0 z-(--z-raised) flex min-h-11 items-center border-b border-border bg-bg px-3">
             <h2 className="text-[13px] font-semibold uppercase tracking-wide text-fg-muted">
               Changed files
             </h2>
@@ -1213,7 +1213,7 @@ function FileBlob({
 // line up with every other file's header instead of sitting slightly inset.
 function MetaHeaderBar({ file, children }: { file: FileDiffMetadata; children: ReactNode }) {
   return (
-    <div className="sticky top-0 z-10 flex min-h-11 items-center gap-2 border-b border-border bg-surface px-4">
+    <div className="sticky top-0 z-(--z-raised) flex min-h-11 items-center gap-2 border-b border-border bg-surface px-4">
       <span
         className="min-w-0 flex-1 truncate font-sans text-[13px] leading-5 text-fg"
         title={displayPath(file)}
@@ -1278,7 +1278,7 @@ function ViewedToggle({ viewed, onToggle }: { viewed: boolean; onToggle: () => v
   return (
     <label
       className="flex shrink-0 cursor-pointer select-none items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-fg-muted hover:bg-surface-2 hover:text-fg"
-      title={viewed ? "Marked viewed — click to expand" : "Collapse and mark viewed"}
+      title={viewed ? "Marked viewed. Click to expand" : "Collapse and mark viewed"}
     >
       <input
         type="checkbox"

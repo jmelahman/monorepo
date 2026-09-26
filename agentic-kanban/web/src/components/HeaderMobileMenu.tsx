@@ -46,7 +46,7 @@ export function HeaderMobileMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1 w-56 overflow-hidden rounded border border-border bg-surface text-sm shadow-lg"
+          className="absolute right-0 top-full z-(--z-popover) mt-1 w-56 overflow-hidden rounded border border-border bg-surface text-sm shadow-lg"
         >
           <MenuItem
             icon={<PlusIcon />}

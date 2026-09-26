@@ -218,7 +218,7 @@ function createTerminalControls(
 } {
   const container = document.createElement("div");
   container.className =
-    "pointer-events-none absolute inset-y-0 right-2 z-10 hidden flex-col items-center justify-center gap-2 pointer-coarse:flex";
+    "pointer-events-none absolute inset-y-0 right-2 z-(--z-raised) hidden flex-col items-center justify-center gap-2 pointer-coarse:flex";
 
   const buttonClass =
     "pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/80 text-fg shadow-md backdrop-blur-sm active:bg-surface-2";

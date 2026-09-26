@@ -13,6 +13,7 @@ import {
   useSession,
   useTicket,
 } from "@/store";
+import { Button } from "./Button";
 import { Column } from "./Column";
 import { SessionPane } from "./SessionPane";
 import { TicketDragPreview } from "./Ticket";
@@ -88,8 +89,20 @@ export function Board({ boardId }: { boardId: number }) {
     addTicketRequestStore.set(target.id);
   });
 
-  if (stateQ.isLoading) return <p className="p-4 text-sm text-fg-muted">Loading…</p>;
-  if (!structure) return <p className="p-4 text-sm text-danger">No data.</p>;
+  if (stateQ.isLoading) return <BoardSkeleton />;
+  if (!structure) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
+        <p className="text-sm text-danger">Couldn't load this board.</p>
+        {stateQ.error && (
+          <p className="max-w-md font-mono text-xs text-fg-muted">{String(stateQ.error)}</p>
+        )}
+        <Button variant="neutral" onClick={() => stateQ.refetch()} pending={stateQ.isFetching}>
+          retry
+        </Button>
+      </div>
+    );
+  }
 
   const { board, columns, ticketIdsByColumn, sessionIdByTicket, merge_config, sync_config } =
     structure;
@@ -129,6 +142,30 @@ export function Board({ boardId }: { boardId: number }) {
         sessionIdByTicket={sessionIdByTicket}
         orientation={orientation}
       />
+    </div>
+  );
+}
+
+// Mirrors the column layout so the board doesn't jump when data arrives.
+function BoardSkeleton() {
+  const ticketCounts = [3, 2, 1, 0];
+  return (
+    <div className="flex h-full min-w-0 gap-2 overflow-hidden p-3" aria-busy="true">
+      <span className="sr-only">Loading board</span>
+      {ticketCounts.map((n, i) => (
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list.
+          key={i}
+          aria-hidden
+          className="flex h-full min-w-72 flex-1 flex-col gap-2 rounded border border-border bg-surface p-2"
+        >
+          <div className="skeleton h-4 w-24 rounded" />
+          {Array.from({ length: n }, (_, j) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list.
+            <div key={j} className="skeleton h-14 rounded" />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

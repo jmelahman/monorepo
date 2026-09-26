@@ -7,22 +7,27 @@ import { activeTicketStore, ticketStore, useIsActiveTicket, useSession, useTicke
 
 export const STATUS_COLOR: Record<string, string> = {
   stopped: "text-fg-muted",
-  starting: "text-amber-400",
-  stopping: "text-amber-400",
-  idle: "text-emerald-400",
-  working: "text-sky-400",
-  awaiting_perm: "text-yellow-400",
+  starting: "text-warning",
+  stopping: "text-warning",
+  idle: "text-success",
+  working: "text-info",
+  awaiting_perm: "text-attention",
   error: "text-danger",
 };
 
 export const STATUS_BG: Record<string, string> = {
   stopped: "bg-fg-muted",
-  starting: "bg-amber-400",
-  stopping: "bg-amber-400",
-  idle: "bg-emerald-400",
-  working: "bg-sky-400",
-  awaiting_perm: "bg-yellow-400",
+  starting: "bg-warning",
+  stopping: "bg-warning",
+  idle: "bg-success",
+  working: "bg-info",
+  awaiting_perm: "bg-attention",
   error: "bg-danger",
+};
+
+// Display text for session statuses whose enum value doesn't read well.
+export const STATUS_LABEL: Record<string, string> = {
+  awaiting_perm: "awaiting",
 };
 
 // Used when a ticket has no session at all yet.
@@ -81,7 +86,9 @@ function TicketCard({
     >
       <div className="flex items-center justify-between gap-2">
         {titleSlot ?? <span className="font-medium">{ticket.title}</span>}
-        <span className={`text-xs ${STATUS_COLOR[status] ?? "text-fg-muted"}`}>{status}</span>
+        <span className={`shrink-0 text-xs ${STATUS_COLOR[status] ?? "text-fg-muted"}`}>
+          {STATUS_LABEL[status] ?? status}
+        </span>
       </div>
       {ticket.body && <p className="mt-1 text-xs text-fg-muted line-clamp-2">{ticket.body}</p>}
     </div>

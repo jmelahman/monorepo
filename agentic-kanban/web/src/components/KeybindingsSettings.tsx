@@ -29,7 +29,7 @@ export function KeybindingsSettings() {
                 <span className="flex-1 text-sm">{a.label}</span>
                 {conflict && !isRecording && (
                   <span
-                    className="rounded bg-amber-900 px-1 py-0.5 text-[10px] uppercase tracking-wide text-amber-100"
+                    className="rounded border border-warning-border bg-warning-bg px-1 py-0.5 text-[10px] uppercase tracking-wide text-warning-fg"
                     title="Another action uses the same shortcut"
                   >
                     conflict
@@ -62,11 +62,11 @@ export function KeybindingsSettings() {
                     isRecording
                       ? "border-accent-700 ring-1 ring-accent-700"
                       : conflict
-                        ? "border-amber-700"
+                        ? "border-warning-border"
                         : "border-border"
                   }`}
                 >
-                  {isRecording ? "press a key…" : binding ? formatBinding(binding) : "—"}
+                  {isRecording ? "press a key…" : binding ? formatBinding(binding) : "unbound"}
                 </button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => resetBinding(a.id)}>
                   reset
