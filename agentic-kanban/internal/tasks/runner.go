@@ -198,10 +198,15 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 		return nil, err
 	}
 
-	env := make([]string, 0, len(task.Env))
+	env := make([]string, 0, len(task.Env)+1)
 	for k, v := range task.Env {
+		if k == taskRunEnv {
+			continue // Stop relies on the marker below being the only one.
+		}
 		env = append(env, fmt.Sprintf("%s=%s", k, substituteVSCodeVars(v, workspaceFolder)))
 	}
+	// Stop finds the run's processes by this marker; see stopScript.
+	env = append(env, taskRunMarker(tr.ID))
 
 	resp, err := r.docker.Raw().ContainerExecCreate(ctx, *sess.ContainerID, container.ExecOptions{
 		Cmd:          []string{"sh", "-c", full},
@@ -215,9 +220,8 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 		_ = r.store.UpdateTaskRunStatus(ctx, tr.ID, db.TaskRunStatusExited, &zero)
 		return nil, err
 	}
-	// Stop finds the process through the stored exec id, so a run without
-	// one couldn't be stopped. The exec hasn't started yet (attach starts
-	// it), so bail out before anything runs.
+	// Record the exec so the run can be traced back to it. The exec hasn't
+	// started yet (attach starts it), so bail out before anything runs.
 	if err := r.store.SetTaskRunExecID(ctx, tr.ID, resp.ID); err != nil {
 		zero := -1
 		_ = r.store.UpdateTaskRunStatus(ctx, tr.ID, db.TaskRunStatusExited, &zero)
@@ -282,33 +286,60 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 	return tr, nil
 }
 
-// Stop sends SIGTERM to the exec'd shell and every descendant. Docker exec
-// processes don't run in their own session, so signaling only the shell would
-// orphan grandchildren like `wgo`, `npm`, or `node` — they'd keep running and
-// hold the stdout pipe open, blocking the Start goroutine from ever marking
-// the run exited.
-func (r *Runner) Stop(ctx context.Context, sess *db.Session, tr *db.TaskRun) error {
-	if tr.ExecID == nil || sess.ContainerID == nil {
-		return nil
-	}
-	inspect, err := r.docker.Raw().ContainerExecInspect(ctx, *tr.ExecID)
-	if err != nil {
-		return err
-	}
-	if inspect.Pid == 0 {
-		return nil
-	}
-	script := fmt.Sprintf(`walk(){
-  echo "$1"
-  for s in /proc/[0-9]*/status; do
-    [ -r "$s" ] || continue
-    if [ "$(awk '/^PPid:/{print $2; exit}' "$s")" = "$1" ]; then
-      d=${s%%%%/status}; walk "${d##*/}"
-    fi
+// taskRunEnv is the environment variable Start tags every run's exec with.
+const taskRunEnv = "KANBAN_TASK_RUN"
+
+func taskRunMarker(id int64) string { return fmt.Sprintf("%s=%d", taskRunEnv, id) }
+
+// stopScript SIGTERMs every process in the container whose environment carries
+// the run's marker, plus all of their descendants. Docker exec processes don't
+// run in their own session, so signaling only the shell would orphan
+// grandchildren like `wgo`, `npm`, or `node` — they'd keep running and hold the
+// stdout pipe open, blocking the Start goroutine from ever marking the run
+// exited. The marker is inherited by every descendant, reparented orphans
+// included; the descendant walk catches children that dropped it (`sudo`,
+// `env -i`) while they're still under a marked parent.
+//
+// See REGRESSIONS.md: "Task stop can't use the exec's PID".
+func stopScript(id int64) string {
+	return fmt.Sprintf(`m='%s'
+all=' '
+tbl=''
+for s in /proc/[0-9]*/status; do
+  p=${s%%/status}; p=${p##*/}
+  [ "$p" = "$$" ] && continue
+  pp=$(awk '/^PPid:/{print $2; exit}' "$s" 2>/dev/null)
+  [ -n "$pp" ] || continue
+  tbl="$tbl $p:$pp"
+  if tr '\0' '\n' <"/proc/$p/environ" 2>/dev/null | grep -qxF "$m"; then
+    all="$all$p "
+  fi
+done
+[ "$all" = ' ' ] && exit 0
+grew=1
+while [ "$grew" = 1 ]; do
+  grew=0
+  for e in $tbl; do
+    p=${e%%:*}; pp=${e#*:}
+    case "$all" in *" $p "*) continue ;; esac
+    case "$all" in *" $pp "*) all="$all$p "; grew=1 ;; esac
   done
+done
+kill -TERM $all 2>/dev/null
+exit 0`, taskRunMarker(id))
 }
-kill -TERM $(walk %d) 2>/dev/null || true`, inspect.Pid)
-	_, _ = r.docker.ExecRun(ctx, *sess.ContainerID, []string{"sh", "-c", script})
+
+// Stop sends SIGTERM to every process belonging to the run.
+func (r *Runner) Stop(ctx context.Context, sess *db.Session, tr *db.TaskRun) error {
+	if tr.Status != db.TaskRunStatusRunning {
+		return nil
+	}
+	if sess.ContainerID == nil || *sess.ContainerID == "" {
+		return errors.New("session not running")
+	}
+	if _, err := r.docker.ExecRun(ctx, *sess.ContainerID, []string{"sh", "-c", stopScript(tr.ID)}); err != nil {
+		return fmt.Errorf("stop task run %d: %w", tr.ID, err)
+	}
 	return nil
 }
 

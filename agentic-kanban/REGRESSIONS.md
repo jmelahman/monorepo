@@ -245,3 +245,14 @@ Rules:
 - Anything that runs synchronously on a tcell event loop gets a timeout
   (`exec.CommandContext`). A blocked loop can't redraw, so the user sees a
   frozen terminal with no error.
+
+### Task stop can't use the exec's PID
+
+`ContainerExecInspect(...).Pid` is in the **host** PID namespace; inside the
+container that number is absent or belongs to something else, so signaling it
+(or walking `/proc` from it) silently stops nothing. `tasks.Runner.Start` tags
+each run's exec with `KANBAN_TASK_RUN=<id>` and `Stop` SIGTERMs every container
+process whose `/proc/<pid>/environ` carries it, which also reaches grandchildren
+reparented away from the task shell, plus every descendant of a tagged process
+(catching `sudo`/`env -i` children that drop the marker). Don't reintroduce a PID-based stop, and
+don't swallow the stop exec's error — both UIs trust a 204 to mean it worked.
