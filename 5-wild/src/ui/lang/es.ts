@@ -429,7 +429,6 @@ export const es: Strings = {
       solveFloor: (score) => `→ ${score}`,
       solveFloorClears: (score) => `→ ${score}, supera`,
       shapeLevel: (level) => `Nv ${level}`,
-      shapeBonus: (chips, mult) => `+${chips} +${mult} mult`,
       multUnknown: "El color es el multiplicador. Adivinar es como se descubre.",
       letterBroken: (letter) => `${letter.toUpperCase()} rota`,
       relicGone: (name) => `${name} se ha ido`,

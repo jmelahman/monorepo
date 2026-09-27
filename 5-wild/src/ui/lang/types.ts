@@ -249,7 +249,6 @@ export type Strings = {
       solveFloorClears: (score: string) => string
       /** Shared with the shapes sheet, which asks the same question of a shape. */
       shapeLevel: (level: number) => string
-      shapeBonus: (chips: number, mult: number) => string
       /** Why the mult reads `?` while a word is being typed. */
       multUnknown: string
       /** The floater when a letter breaks. Not a tile's, so it names the letter. */

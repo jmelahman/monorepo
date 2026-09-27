@@ -762,10 +762,30 @@ button {
      whole point of writing them in this order. */
   width: 100%;
   /* biome-ignore lint/suspicious/noDuplicateProperties: the plain declaration above is the fallback */
-  width: min(100%, calc(100cqh * var(--cols, 5) / var(--rows, 6)));
-  /* Letters scale with the board, bounded by whichever axis is tighter. */
+  width: min(
+    100%,
+    calc(100cqh * var(--cols, 5) / var(--rows, 6)),
+    calc(var(--cols, 5) * var(--tile-max))
+  );
+  /* Letters scale with the board, bounded by whichever axis is tighter, and by
+     the cap below. The cap has to be restated here as a size of its own:
+     `cqw` measures the wrap, not the board, so a board held under the wrap's
+     width would otherwise carry letters sized for the full width. */
   font-size: 1.25rem;
-  font-size: min(calc(45cqh / var(--rows, 6)), calc(45cqw / var(--cols, 5)));
+  font-size: min(
+    calc(45cqh / var(--rows, 6)),
+    calc(45cqw / var(--cols, 5)),
+    calc(0.45 * var(--tile-max))
+  );
+  /* A column's share of the widest the board may be, 4.5rem, so five letters
+     come to 360px. The board used to run the full width of the keyboard
+     whenever the height allowed it, which at 390 is 374px of tiles that read
+     no better for the extra, and on the wider screens the stylesheet allows
+     (up to 30rem) it ran to 464px. Wordle holds at 300; 320 was tried first
+     and read as a board shrunk to fit rather than one sized for a thumb. Per
+     column rather than a flat width, so a longer answer gets the same tile,
+     not a thinner one. */
+  --tile-max: 4.5rem;
 }
 
 .row {
@@ -1070,10 +1090,6 @@ button {
   padding: 0 0.25rem;
   border-radius: 0.1875rem;
   background: color-mix(in srgb, var(--muted) 18%, transparent);
-}
-
-.category-bonus {
-  color: var(--mult);
 }
 
 .category.fired {
@@ -1492,6 +1508,11 @@ button {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+  /* Clear of the dock line by more than a key row is clear of the next row, so
+     the line reads as the board's foot rather than as a fourth row of keys: the
+     screen's own 0.375rem gap alone was exactly the rows' gap. The toast is
+     lifted from the viewport's foot, not from this edge, and is unmoved. */
+  margin-top: 0.5rem;
   --key-gap: 0.25rem;
   /* The widest row is ten keys and nine gaps; that divides into the unit every
      key in every row is then built from. */

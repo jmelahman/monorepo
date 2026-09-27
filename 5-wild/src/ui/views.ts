@@ -1074,15 +1074,16 @@ export function fillCategory(slot: Element, state: RunState, on: Handlers): void
       {
         class: "category",
         type: "button",
-        // The badge is the bare number on a line this full, so the word it
-        // dropped ("Lv", "Niv", "Stufe") is said here instead.
         "aria-label": `${categoryCard(category.id).name} ${board.shapeLevel(bonus.level)}`,
         onclick: () => on.openShapes(),
       },
       h("span", { class: "category-name" }, categoryCard(category.id).name),
-      h("span", { class: "category-level" }, String(bonus.level)),
-      bonus.chips > 0 &&
-        h("span", { class: "category-bonus" }, board.shapeBonus(bonus.chips, bonus.mult)),
+      // The level, said as a level ("Lv 2"), and nothing after it. The chip
+      // used to spell out what the level pays, "+10 +2 mult", which on a seat
+      // this narrow was the first thing the ellipsis ate and took the name down
+      // with it. The number it quoted is on the shapes sheet a tap away, and
+      // the readout beside the chip is where the payment actually shows.
+      h("span", { class: "category-level" }, board.shapeLevel(bonus.level)),
       icon("chevron"),
     ),
   )

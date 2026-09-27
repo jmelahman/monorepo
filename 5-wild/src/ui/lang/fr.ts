@@ -447,7 +447,6 @@ export const fr: Strings = {
       solveFloor: (score) => `→ ${score}`,
       solveFloorClears: (score) => `→ ${score}, ça passe`,
       shapeLevel: (level) => `Niv ${level}`,
-      shapeBonus: (chips, mult) => `+${chips} +${mult} mult`,
       multUnknown: "La couleur est le multiplicateur. Deviner est le seul moyen de le savoir.",
       letterBroken: (letter) => `${letter.toUpperCase()} brisée`,
       relicGone: (name) => `${name} a disparu`,

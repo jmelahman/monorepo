@@ -436,7 +436,6 @@ export const de: Strings = {
       solveFloor: (score) => `→ ${score}`,
       solveFloorClears: (score) => `→ ${score}, geschafft`,
       shapeLevel: (level) => `Stufe ${level}`,
-      shapeBonus: (chips, mult) => `+${chips} +${mult} Mult`,
       multUnknown: "Die Farbe ist der Mult, und nur Raten deckt sie auf.",
       letterBroken: (letter) => `${letter.toUpperCase()} zerbrochen`,
       relicGone: (name) => `${name} ist weg`,

@@ -454,7 +454,6 @@ export const en: Strings = {
       solveFloor: (score) => `→ ${score}`,
       solveFloorClears: (score) => `→ ${score}, clears`,
       shapeLevel: (level) => `Lv ${level}`,
-      shapeBonus: (chips, mult) => `+${chips} +${mult} mult`,
       multUnknown: "Color is the multiplier. Guessing is how you find it out.",
       letterBroken: (letter) => `${letter.toUpperCase()} broken`,
       relicGone: (name) => `${name} is gone`,
