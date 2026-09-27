@@ -795,18 +795,23 @@ export const SCENARIOS: readonly Scenario[] = [
    * Picking a seed to get an outcome is normally how a vector stops being about
    * the rules and starts being about the bot, so the choice is defended rather
    * than asserted. Winning is genuinely rare, and the spread is not a curve but
-   * two piles: over the first 3,000 seeds, 2,310 die in stage one against 20
-   * that reach stage nine. No bot wins on an arbitrary seed, so a seed had to be
-   * chosen. What 982 was chosen *for*:
+   * two piles: over the first 20,000 seeds, 15,872 die in stage one against 46
+   * that win, and only 2 reach stage 11. The first 3,000, where every earlier
+   * seed was found, hold 5 wins and nothing past stage 9, which is why the
+   * search had to widen. No bot wins on an arbitrary seed, so a seed had to be
+   * chosen. What 12406 was chosen *for*:
    *
    *   - It supplies the late bosses the other sixteen vectors miss between
    *     them: The Famine, The Miser and The Auditor. Measured, not assumed: the
    *     check is the union of every `boss` this file records against `BOSSES`.
-   *   - It goes as deep as anything in 3,000 seeds, dying in stage 11's second
-   *     round, which it is alone among the 3,000 in reaching.
-   *   - It is not tuned to this bot. Four other scenarios' bots run on it win
-   *     outright, and two more reach stage 7. The run is winnable; the climber
-   *     is not being carried.
+   *   - It goes as deep as anything in 20,000 seeds, reaching stage 11's boss
+   *     round, and so meets all five of the late band, The Rust and The Plateau
+   *     included. 14585 is the other one that gets there, and was passed over
+   *     for the next point.
+   *   - It is not tuned to this bot. The greedy solver wins it outright, and the
+   *     etcher, wild-smith, leveler and pack-opener all reach stage 6 or 7 on
+   *     it, where on 14585 nothing but the climber gets past stage 6. The run is
+   *     winnable; the climber is not being carried.
    *
    * That second point is why one run can close most of the boss gap, and the
    * reason is structural rather than lucky. The late band is drawn without
@@ -814,11 +819,11 @@ export const SCENARIOS: readonly Scenario[] = [
    * four of the five in order, and one reaching its boss round has met all five.
    * Those bosses were uncovered *because* nothing survived past stage 7. No
    * shallow vector could have reached them, and no number of shallow vectors
-   * would have helped. The fifth, The Rust, comes from `midway` instead: no seed
-   * in the 3,000 reaches stage 11's boss under this bot.
+   * would have helped. The Rust and The Plateau are in `midway` as well, which is
+   * where they came from while no seed this bot played reached stage 11's boss.
    *
-   * The seed was 5517, then 2111, then 1983, and each was chosen the same way
-   * against the deal of its day. The audit that dropped SENOR and GONNA and
+   * The seed was 5517, then 2111, then 1983, then 982, and each was chosen the
+   * same way against the deal of its day. The audit that dropped SENOR and GONNA and
    * added TEETH and EMOJI changed which word every seed deals, and 5517 went
    * from a 75-guess win to dying in stage one, taking The Miser, The Rust and
    * The Plateau out of the file with it. The scrub that took the obscenities out
@@ -826,32 +831,36 @@ export const SCENARIOS: readonly Scenario[] = [
    * guesses and out, and took The Miser and The Rust with it a second time. The
    * nineteen relics that took the catalog to forty-seven did it to 1983 through
    * the shelf rather than the words, from a stage-11 win to dying in stage 3,
-   * and five late bosses left the file. None of those three times did anything
-   * go red: the vector re-recorded cleanly and went on asserting a short run.
-   * That is the standing hazard of a seed picked for what it draws, and the
-   * check that catches it is coverage, not a test. Re-run it after anything
-   * that moves the deal or the shelf — three times now, that warning has been
-   * the thing that found the damage.
+   * and five late bosses left the file. The trims that halved Green Thumb and
+   * Reserve and cut Sunk Cost and Hot Streak did it to 982, which held Hot
+   * Streak, from a stage-11 win to dying unwon in stage 7, and The Miser and The
+   * Auditor left with it. None of those four times did anything go red: the
+   * vector re-recorded cleanly and went on asserting a short run. That is the
+   * standing hazard of a seed picked for what it draws, and the check that
+   * catches it is coverage, not a test. Re-run it after anything that moves the
+   * deal or the shelf, or the price of a card a seed leans on — four times now,
+   * that warning has been the thing that found the damage.
    */
   {
     name: "victor",
     covers:
       "the run won and then played past, the computed targets beyond stage 8, and the whole " +
       "late boss band nothing else survives to meet",
-    seed: 982,
+    seed: 12406,
     next: climb,
   },
   /*
-   * Seed 226, and before it 161 rather than 13, for the reason the vectors
-   * above were reseeded. The answer-list scrub took 13 from four relics and
+   * Seed 351, and before it 226, 161 and 13, for the reason the vectors above
+   * were reseeded. The answer-list scrub took 13 from four relics and
    * stage 5 down to one relic and stage 1, which is a rung of the ladder covered
    * by nothing, and the nineteen relics that took the catalog to forty-seven did
-   * the same to 161 through the shelf: stage 6 to stage 1. So the criterion is
-   * the one 161 was picked by. Of the first 400 seeds 210 end holding four
-   * relics, a common enough shape to pick on its merits rather than a lucky one,
-   * and 226 is the shortest of the 16 among them that also reach stage 6, at 39
-   * guesses. Depth was available — seed 87 climbs to stage 11 — and declined on
-   * purpose. This scenario pins the ladder's rules, not how far a bot can be
+   * the same to 161 through the shelf: stage 6 to stage 1, and the relic trims
+   * that cut Hot Streak and three others took 226 from stage 6 to stage 5. So
+   * the criterion is the one 161 was picked by. Of the first 400 seeds 202 end
+   * holding four relics, a common enough shape to pick on its merits rather than
+   * a lucky one, and 351 is the shortest of the 9 among them that also reach
+   * stage 6, at 38 guesses. Depth was available — seed 231 climbs to stage 8 —
+   * and declined on purpose. This scenario pins the ladder's rules, not how far a bot can be
    * carried up it, and a vector twice the length would say the same thing twice.
    */
   {
@@ -859,7 +868,7 @@ export const SCENARIOS: readonly Scenario[] = [
     covers:
       "the whole written ascension ladder: guesses filtered by the run's rules, targets and " +
       "payouts bent by them, every round solved",
-    seed: 226,
+    seed: 351,
     ascension: AUTHORED_ASCENSIONS,
     next: climb,
   },
@@ -926,8 +935,8 @@ export const SCENARIOS: readonly Scenario[] = [
    * at a bent multiplier and still leaves `victory` and `continue_run` to
    * `victor`, which is the only vector that should own them. 60 guesses, 23
    * rounds banked, a full tray of five relics and a Hoarder banking 760 chips,
-   * and it meets The Rust on the way, the one late boss `victor` no longer
-   * reaches. It was 38 until the nineteen relics that took the catalog to
+   * and it meets The Rust on the way, which for a while was the one late boss
+   * `victor` did not reach. It was 38 until the nineteen relics that took the catalog to
    * forty-seven moved the shelf and sent 38 out in stage 1; 8 of the first 400
    * seeds die in stage 8 unwon on a full tray, and 40 is the first. Nothing
    * above stage 8 and nothing tuned: at this rung the mean run ends in stage 3,

@@ -205,13 +205,13 @@ describe("guess scoring", () => {
     })
 
     /*
-     * Chips a column paid but the letter did not: the relic's 8 lands on the
-     * column that earned it, so the tip can say "9 of 34" on the green and "10
-     * of 34" on the Q. `base` stays what the tile floated as it turned over.
+     * Chips a column paid but the letter did not: the relic's 4 lands on the
+     * column that earned it, so the tip can say "5 of 30" on the green and "10
+     * of 30" on the Q. `base` stays what the tile floated as it turned over.
      */
     it("counts a relic's chips into the column that earned them", () => {
       const guess = play({ ...start, relics: [{ id: "green_thumb" }] }, "quazy").round.guesses[0]
-      expect(guess?.paid?.[2]).toMatchObject({ base: 1, chips: 9, mult: 3 })
+      expect(guess?.paid?.[2]).toMatchObject({ base: 1, chips: 5, mult: 3 })
       expect(guess?.paid?.reduce((total, tile) => total + tile.chips, 0)).toBe(guess?.chips)
     })
 
@@ -281,9 +281,9 @@ describe("guess scoring", () => {
       const state = play({ ...start, relics: [{ id: "green_thumb" }] }, "quazy")
       expect(state.round.guesses[0]?.paid?.[2]).toEqual({
         base: 1,
-        chips: 9,
+        chips: 5,
         mult: 3,
-        relics: [{ id: "green_thumb", label: { kind: "chips", amount: 8 } }],
+        relics: [{ id: "green_thumb", label: { kind: "chips", amount: 4 } }],
       })
       expect(state.round.guesses[0]?.paid?.[0]).toEqual({ base: 10, chips: 10, mult: 0 })
     })

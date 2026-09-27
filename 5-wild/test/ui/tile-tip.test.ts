@@ -164,7 +164,7 @@ describe("what a played tile says about how it scored", () => {
 
   /*
    * The question the first draft of this tip could not answer: the tray is half
-   * the scoring and a tile that came out worth 9 with a base of 1 needs to say
+   * the scoring and a tile that came out worth 5 with a base of 1 needs to say
    * which card did it. One line per firing, in slot order, in the words the card
    * used as it lit up.
    */
@@ -173,10 +173,10 @@ describe("what a played tile says about how it scored", () => {
     expect(lines(state, 0, 2)).toEqual([
       "A · +1 chip",
       "green · +3 mult",
-      "Green Thumb · +8",
-      // The relic's 8 counts toward the column that earned it, so the share adds
+      "Green Thumb · +4",
+      // The relic's 4 counts toward the column that earned it, so the share adds
       // up the lines above it rather than repeating the letter's own chips.
-      "9 of 34 chips · 3 of 4 mult",
+      "5 of 30 chips · 3 of 4 mult",
     ])
     // And nothing on the four tiles it did not want.
     expect(lines(state, 0, 0).some((line) => line.startsWith("Green Thumb"))).toBe(false)

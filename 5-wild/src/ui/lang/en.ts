@@ -64,7 +64,7 @@ export const en: Strings = {
   endonym: "English",
 
   relic: {
-    green_thumb: { name: "Green Thumb", text: "+8 chips per green tile" },
+    green_thumb: { name: "Green Thumb", text: "+4 chips per green tile" },
     scavenger: { name: "Scavenger", text: "+$1 per yellow tile" },
     vowel_hoarder: { name: "Vowel Hoarder", text: "+4 mult per vowel" },
     slow_burn: {
@@ -85,14 +85,14 @@ export const en: Strings = {
       name: "Lexicographer",
       text: "+3 chips for each different letter in your earlier guesses this round",
     },
-    sunk_cost: { name: "Sunk Cost", text: "+10 mult per guess you would have left" },
+    sunk_cost: { name: "Sunk Cost", text: "+6 mult per guess you would have left" },
     speedrunner: { name: "Speedrunner", text: "×3 mult when you solve in 3 guesses or fewer" },
     qs_bargain: { name: "Q's Bargain", text: "J, Q, X and Z score triple chips" },
     greedy_grammarian: { name: "Greedy Grammarian", text: "+15 chips per gray tile" },
     doppelganger: { name: "Doppelgänger", text: "Repeated letters score their chips twice" },
     hot_streak: {
       name: "Hot Streak",
-      text: "Permanently gains +30 chips each round you clear in 3 guesses or fewer",
+      text: "Permanently gains +12 chips each round you clear in 3 guesses or fewer",
     },
     hoarder: {
       name: "The Hoarder",
@@ -119,7 +119,7 @@ export const en: Strings = {
     },
     first_draft: { name: "First Draft", text: "+20 mult, 4 less at the end of each round" },
     candle: { name: "Candle", text: "+30 chips, 6 less at the end of each round" },
-    reserve: { name: "Reserve", text: "+8 chips per guess you would have left" },
+    reserve: { name: "Reserve", text: "+4 chips per guess you would have left" },
     collector: { name: "Collector", text: "+4 mult per relic you hold" },
     second_look: { name: "Second Look", text: "Your first reroll in each shop is free" },
     stipend: { name: "Stipend", text: "Earn $2 at the end of each round you clear" },

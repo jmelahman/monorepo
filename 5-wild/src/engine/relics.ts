@@ -201,14 +201,42 @@ const RARITY_COST: Record<Rarity, number> = {
  * reroll, two wages, doubled interest and a second chance, so that a late slot
  * can be spent on something other than another multiplier. Carbon Copy is the
  * one that makes the order of the tray a decision.
+ *
+ * Then the whole set was re-priced a second way, because a price taken on an
+ * empty tray answers a question no shop asks. The complaint was a stage-two
+ * boss cleared ten times over at ascension 10 by Loaded Dice, Lexicographer and
+ * Keystone. The harness is a solver with a fixed tray and no shopping, over
+ * stages one to three and 250 seeds. It prices each card by what it adds on top
+ * of a two-card background drawn from the seed, which is the tray a card is
+ * actually bought into. It reproduced the complaint: that trio clears the
+ * stage-two boss by a median ×6.1 before any further shopping, against ×1.9 for
+ * a random three. It also cleared the trio. On a tray they read ×2.27, ×1.61
+ * and ×1.96, each inside its band. What stacks them is that they sit on three
+ * different factors of the product, and three cards that are each fair can
+ * still multiply to seven.
+ *
+ * The cards that were *not* fair on a tray were four, and they moved together:
+ * Hot Streak +30 to +12, Sunk Cost +10 to +6, Reserve +8 to +4, Green Thumb +8 to
+ * +4. Each card's comment has its pair. Over 300 full runs with shopping, the
+ * mean final stage went 4.46 to 4.29 at ascension 0 and 2.79 to 2.74 at
+ * ascension 10, and the median stage-two boss overshoot went ×5.3 to ×4.4 and
+ * ×3.1 to ×2.6. That is a trim, not a new curve. Blank Page read ×3.21 in the
+ * same harness and was left alone: three cards on a five-slot tray is the one
+ * tray it is built for, and at ascension 9, with a slot gone, it reads ×2.12.
  */
 export const RELICS: readonly Relic[] = [
   {
     id: "green_thumb",
     rarity: "common",
     cost: RARITY_COST.common,
+    // Halved from +8, and the reason is the size of what it adds to rather than
+    // the size of the number. A word's own chips are five to ten, so eight a
+    // green was the difference between a 7-chip row and a 31-chip one: ×2.55
+    // on top of a two-card tray over 250 seeds, where every other unflagged
+    // common read ×1.2 to ×1.7. +4 reads ×1.85, still the best common, no
+    // longer ahead of most uncommons.
     onTile: (ctx, tile) => {
-      if (tile.color === "green") ctx.addChips(8)
+      if (tile.color === "green") ctx.addChips(4)
     },
   },
   {
@@ -349,7 +377,8 @@ export const RELICS: readonly Relic[] = [
     //
     // Written at +100, and chips on an empty tray are the scarce half: ×9.53
     // over 120 seeds, above every rare in the game. +30 reads ×3.56, beside
-    // Reserve's ×3.60 and under Green Thumb's ×3.95.
+    // Reserve's ×3.60 and under Green Thumb's ×3.95, both of which have since
+    // been halved; on a two-card tray this reads ×1.56 against their ×1.9.
     onGuess: (ctx) => {
       const left = 30 - ctx.getData("spent")
       if (left > 0) ctx.addChips(left)
@@ -363,8 +392,13 @@ export const RELICS: readonly Relic[] = [
     cost: RARITY_COST.common,
     // Sunk Cost's chip half, at common: largest on the opening guess and zero
     // on the last, so it pays for the same early exit the solve bonus does.
+    //
+    // +4 a guess left rather than +8, cut beside Sunk Cost and for the same
+    // reason as Green Thumb: forty chips on an opener whose letters are worth
+    // five is not a common's worth. ×2.67 on top of a two-card tray over 250
+    // seeds, then ×1.91, level with Green Thumb at the top of the common band.
     onGuess: (ctx) => {
-      if (ctx.guessesLeft > 0) ctx.addChips(8 * ctx.guessesLeft)
+      if (ctx.guessesLeft > 0) ctx.addChips(4 * ctx.guessesLeft)
     },
   },
   {
@@ -479,8 +513,14 @@ export const RELICS: readonly Relic[] = [
     // Slow Burn read backwards: this one is worth most on the guess where the
     // solve bonus is also worth most, so it sharpens the incentive to leave
     // early instead of blunting it.
+    //
+    // +6 a guess left rather than +10. At +10 it read ×3.26 on top of a
+    // two-card tray over 250 seeds, level with The Vault and Snowball, two
+    // rares, and a card that also points the same way as the solve bonus has
+    // no need to be priced like one. +6 reads ×2.29, beside Lexicographer and
+    // Greedy Grammarian at the top of the uncommon band.
     onGuess: (ctx) => {
-      if (ctx.guessesLeft > 0) ctx.addMult(10 * ctx.guessesLeft)
+      if (ctx.guessesLeft > 0) ctx.addMult(6 * ctx.guessesLeft)
     },
   },
   {
@@ -525,12 +565,20 @@ export const RELICS: readonly Relic[] = [
     // The growth counterpart to Speedrunner, on the chip axis: both pull toward
     // cashing out early, and both are dead weight in a Slow Burn build. A
     // farming run will never trip this, which is the whole point of it.
+    //
+    // +12 a quick round rather than +30. The condition turned out to be no
+    // condition for a player who deduces: the solver clears most early rounds
+    // in three, so the card grew nearly every round and read ×4.12 on top of a
+    // two-card tray over 250 seeds, the highest of any card short of the
+    // Pyromaniac and above every rare. +15 still read ×2.60; +12 reads ×2.30,
+    // the top of the uncommon band, and the growth keeps it climbing past that
+    // for the run that keeps finding the word fast.
     onGuess: (ctx) => {
       const banked = ctx.getData("chips")
       if (banked > 0) ctx.addChips(banked)
     },
     onRoundEnd: (ctx, round) => {
-      if (round.solved && round.guesses.length <= 3) grow(ctx, "hot_streak", "chips", 30, "chips")
+      if (round.solved && round.guesses.length <= 3) grow(ctx, "hot_streak", "chips", 12, "chips")
     },
     growth: (instance) => ({ amount: grown(instance, "chips"), unit: "chips" }),
   },

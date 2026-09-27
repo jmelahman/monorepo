@@ -43,7 +43,7 @@ export const es: Strings = {
   endonym: "Español",
 
   relic: {
-    green_thumb: { name: "Mano Verde", text: "+8 fichas por casilla verde" },
+    green_thumb: { name: "Mano Verde", text: "+4 fichas por casilla verde" },
     scavenger: { name: "Carroñero", text: "+$1 por casilla amarilla" },
     vowel_hoarder: { name: "Acaparador de Vocales", text: "+4 mult por vocal" },
     slow_burn: {
@@ -64,7 +64,7 @@ export const es: Strings = {
       name: "Lexicógrafo",
       text: "+3 fichas por cada letra distinta de tus intentos anteriores en la ronda",
     },
-    sunk_cost: { name: "Coste Hundido", text: "+10 mult por cada intento que te quedaría" },
+    sunk_cost: { name: "Coste Hundido", text: "+6 mult por cada intento que te quedaría" },
     speedrunner: { name: "Velocista", text: "×3 mult si resuelves en 3 intentos o menos" },
     qs_bargain: { name: "El Trato de la Q", text: "J, Q, X y Z puntúan fichas triples" },
     greedy_grammarian: { name: "Gramático Avaro", text: "+15 fichas por casilla gris" },
@@ -74,7 +74,7 @@ export const es: Strings = {
     },
     hot_streak: {
       name: "Racha",
-      text: "Gana +30 fichas permanentes por cada ronda que superes en 3 intentos o menos",
+      text: "Gana +12 fichas permanentes por cada ronda que superes en 3 intentos o menos",
     },
     hoarder: {
       name: "El Acaparador",
@@ -107,7 +107,7 @@ export const es: Strings = {
     },
     first_draft: { name: "Borrador", text: "+20 mult, 4 menos al final de cada ronda" },
     candle: { name: "Vela", text: "+30 fichas, 6 menos al final de cada ronda" },
-    reserve: { name: "Reserva", text: "+8 fichas por cada intento que te quedaría" },
+    reserve: { name: "Reserva", text: "+4 fichas por cada intento que te quedaría" },
     collector: { name: "Coleccionista", text: "+4 mult por cada reliquia que tengas" },
     second_look: { name: "Otro Vistazo", text: "Tu primera renovación en cada tienda es gratis" },
     stipend: { name: "Estipendio", text: "Gana $2 al final de cada ronda que superes" },

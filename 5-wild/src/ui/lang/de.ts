@@ -48,7 +48,7 @@ export const de: Strings = {
   endonym: "Deutsch",
 
   relic: {
-    green_thumb: { name: "Grüner Daumen", text: "+8 Chips pro grünem Feld" },
+    green_thumb: { name: "Grüner Daumen", text: "+4 Chips pro grünem Feld" },
     scavenger: { name: "Aasfresser", text: "+$1 pro gelbem Feld" },
     vowel_hoarder: { name: "Vokalhorter", text: "+4 Mult pro Vokal" },
     slow_burn: { name: "Schwelbrand", text: "+5 Mult für jeden Versuch schon in der Runde" },
@@ -66,7 +66,7 @@ export const de: Strings = {
       name: "Lexikograph",
       text: "+3 Chips pro Buchstabe, den deine früheren Versuche der Runde nicht hatten",
     },
-    sunk_cost: { name: "Versunkene Kosten", text: "+10 Mult pro Versuch, der dir bliebe" },
+    sunk_cost: { name: "Versunkene Kosten", text: "+6 Mult pro Versuch, der dir bliebe" },
     speedrunner: { name: "Sprinter", text: "×3 Mult, wenn du in 3 Versuchen oder weniger löst" },
     qs_bargain: { name: "Das Q-Schnäppchen", text: "J, Q, X und Z bringen dreifache Chips" },
     greedy_grammarian: { name: "Gieriger Grammatiker", text: "+15 Chips pro grauem Feld" },
@@ -76,7 +76,7 @@ export const de: Strings = {
     },
     hot_streak: {
       name: "Glückssträhne",
-      text: "Gewinnt dauerhaft +30 Chips pro Runde, die in 3 Versuchen oder weniger geschafft ist",
+      text: "Gewinnt dauerhaft +12 Chips pro Runde, die in 3 Versuchen oder weniger geschafft ist",
     },
     hoarder: {
       name: "Der Hamsterer",
@@ -112,7 +112,7 @@ export const de: Strings = {
     },
     first_draft: { name: "Erster Entwurf", text: "+20 Mult, 4 weniger am Ende jeder Runde" },
     candle: { name: "Kerze", text: "+30 Chips, 6 weniger am Ende jeder Runde" },
-    reserve: { name: "Reserve", text: "+8 Chips pro Versuch, der dir bliebe" },
+    reserve: { name: "Reserve", text: "+4 Chips pro Versuch, der dir bliebe" },
     collector: { name: "Sammler", text: "+4 Mult pro Relikt, das du hältst" },
     second_look: {
       name: "Zweiter Blick",

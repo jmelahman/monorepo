@@ -43,9 +43,9 @@ describe("relics", () => {
     expect(state.round.guesses[0]).toMatchObject({ chips: 7, mult: 7, score: 49 })
   })
 
-  it("Green Thumb pays 8 chips per green", () => {
-    // CRANE lands two greens: 7 + 16 chips.
-    expect(withRelic("green_thumb", "crane").last).toMatchObject({ chips: 23, mult: 7 })
+  it("Green Thumb pays 4 chips per green", () => {
+    // CRANE lands two greens: 7 + 8 chips.
+    expect(withRelic("green_thumb", "crane").last).toMatchObject({ chips: 15, mult: 7 })
   })
 
   it("Vowel Hoarder pays 4 mult per vowel", () => {
@@ -117,9 +117,9 @@ describe("relics", () => {
   })
 
   it("Sunk Cost pays for the guesses you are about to give up", () => {
-    // Guess one of six leaves five behind: +50 mult on top of CRANE's 7.
-    expect(withRelic("sunk_cost", "crane").last.mult).toBe(57)
-    expect(withRelic("sunk_cost", "crane", "crane").last.mult).toBe(47)
+    // Guess one of six leaves five behind: +30 mult on top of CRANE's 7.
+    expect(withRelic("sunk_cost", "crane").last.mult).toBe(37)
+    expect(withRelic("sunk_cost", "crane", "crane").last.mult).toBe(31)
   })
 
   it("The Vault pays chips for stalling, the way Slow Burn pays mult", () => {
@@ -245,7 +245,7 @@ describe("the relics that close a build", () => {
       for (const word of probes) state = apply(state, type(word))
       return apply(state, type("braid"))
     }
-    expect(run([]).relics[0]?.data).toEqual({ chips: 30 })
+    expect(run([]).relics[0]?.data).toEqual({ chips: 12 })
     // Four guesses to solve is past the three-guess line: nothing banked.
     expect(run(["crane", "quazy", "dairy"]).relics[0]?.data).toBeUndefined()
   })
@@ -425,9 +425,9 @@ describe("the relics that widen the shelf", () => {
   })
 
   it("Reserve pays chips for the guesses still to come", () => {
-    // Guess one of six leaves five: +40 chips.
-    expect(withRelic("reserve", "crane").last.chips).toBe(47)
-    expect(withRelic("reserve", "crane", "crane").last.chips).toBe(39)
+    // Guess one of six leaves five: +20 chips.
+    expect(withRelic("reserve", "crane").last.chips).toBe(27)
+    expect(withRelic("reserve", "crane", "crane").last.chips).toBe(23)
   })
 
   it("Collector counts the tray, itself included", () => {

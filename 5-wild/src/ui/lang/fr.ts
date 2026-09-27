@@ -50,7 +50,7 @@ export const fr: Strings = {
   endonym: "Français",
 
   relic: {
-    green_thumb: { name: "Main Verte", text: "+8 jetons par case verte" },
+    green_thumb: { name: "Main Verte", text: "+4 jetons par case verte" },
     scavenger: { name: "Charognard", text: "+$1 par case jaune" },
     vowel_hoarder: { name: "Amasseur de Voyelles", text: "+4 mult par voyelle" },
     slow_burn: {
@@ -71,7 +71,7 @@ export const fr: Strings = {
       name: "Lexicographe",
       text: "+3 jetons par lettre différente de vos essais précédents dans la manche",
     },
-    sunk_cost: { name: "Coût Irrécupérable", text: "+10 mult par essai qu'il vous resterait" },
+    sunk_cost: { name: "Coût Irrécupérable", text: "+6 mult par essai qu'il vous resterait" },
     speedrunner: { name: "Sprinteur", text: "×3 mult si vous résolvez en 3 essais ou moins" },
     qs_bargain: { name: "L'Affaire du Q", text: "J, Q, X et Z rapportent le triple de jetons" },
     greedy_grammarian: { name: "Grammairien Cupide", text: "+15 jetons par case grise" },
@@ -81,7 +81,7 @@ export const fr: Strings = {
     },
     hot_streak: {
       name: "Bonne Série",
-      text: "Gagne +30 jetons définitifs par manche réussie en 3 essais ou moins",
+      text: "Gagne +12 jetons définitifs par manche réussie en 3 essais ou moins",
     },
     hoarder: {
       name: "L'Amasseur",
@@ -117,7 +117,7 @@ export const fr: Strings = {
     },
     first_draft: { name: "Premier Jet", text: "+20 mult, 4 de moins à la fin de chaque manche" },
     candle: { name: "Bougie", text: "+30 jetons, 6 de moins à la fin de chaque manche" },
-    reserve: { name: "Réserve", text: "+8 jetons par essai qu'il vous resterait" },
+    reserve: { name: "Réserve", text: "+4 jetons par essai qu'il vous resterait" },
     collector: { name: "Collectionneur", text: "+4 mult par relique que vous détenez" },
     second_look: {
       name: "Second Regard",
