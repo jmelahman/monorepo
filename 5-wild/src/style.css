@@ -2948,21 +2948,6 @@ button {
  * screen. The breakpoint sits where 120% of the viewport *is* 48rem, so the two
  * branches meet without a step.
  */
-/* The shop borrows the title's wash, lower and dimmer, lit behind the shelf
-   rather than behind a name. Centred on the shelf, not the top edge: at 0% its
-   brightest ring sat exactly behind the header and matched `--panel` there, so
-   the one bar kept for continuity with the round was the one thing on the
-   screen with no visible edge. */
-#app:has(> .screen.shop-screen) {
-  --wash: 120%;
-  background: radial-gradient(
-    ellipse var(--wash) 40% at 50% 32%,
-    color-mix(in srgb, var(--panel) 55%, #22293d) 0%,
-    color-mix(in srgb, var(--bg) 70%, var(--panel)) 55%,
-    var(--bg) 80%
-  );
-}
-
 #app:has(> .screen.title) {
   --wash: 120%;
   background: radial-gradient(
@@ -2974,8 +2959,7 @@ button {
 }
 
 @media (min-width: 40rem) {
-  #app:has(> .screen.title),
-  #app:has(> .screen.shop-screen) {
+  #app:has(> .screen.title) {
     --wash: 48rem;
   }
 }
