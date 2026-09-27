@@ -10,14 +10,27 @@ import type { Pack } from "./packs"
 import { PACKS } from "./packs"
 import { liveRanges } from "./ranges"
 import type { Relic } from "./relics"
-import { RELICS } from "./relics"
+import { RELIC_BY_ID, RELICS } from "./relics"
 import type { Rng } from "./rng"
 import { pick } from "./rng"
 import type { Rarity, RunState, ShopItem, ShopState } from "./state"
 
 const BASE_REROLL = 3
 
-export const rerollCost = (shop: ShopState): number => BASE_REROLL + shop.rerolls
+/**
+ * What the next reroll of this visit costs.
+ *
+ * Takes the run as well as the shop because the tray can pay for rerolls. The
+ * free ones come first, and the paid ones after them start from the base price
+ * rather than from wherever the free ones had pushed it: a card that paid for
+ * one reroll and then made the second one dearer would be charging for itself.
+ */
+export function rerollCost(state: RunState, shop: ShopState): number {
+  let free = 0
+  for (const instance of state.relics) free += RELIC_BY_ID.get(instance.id)?.freeRerolls ?? 0
+  if (shop.rerolls < free) return 0
+  return BASE_REROLL + shop.rerolls - free
+}
 
 /** Half price, rounded down, never nothing. */
 export const sellValue = (cost: number): number => Math.max(1, Math.floor(cost / 2))
@@ -250,12 +263,22 @@ const unowned = (state: RunState): readonly Relic[] => {
  * commons. The affordable-relic problem is a catalog problem, since seven of
  * the twenty-three cost $8 or $10, and it wants more cheap relics, not a shop that
  * deals the existing ones more often.
+ *
+ * The catalog then got them, nineteen cards of which seven are common, and the
+ * early column moved with it from 30/39/22/9 to 40/38/16/6. That is no longer the
+ * neutral shelf, since a uniform draw from forty-seven cards reads 34/36/23/6; it
+ * leans common on purpose, because the complaint this time was the other one, a
+ * rare in the tray by the second shop. And this time it did not cost: across 250
+ * seeds of the solver at ascension 0, with the new catalog in place, the tilt
+ * took the mean final stage from 4.19 to 4.38 rather than down, since there are
+ * now commons worth buying, and rare-or-better held at the end of stage one went
+ * from 26% of the tray to 16%.
  */
 const RARITY_ODDS: Record<Rarity, readonly [number, number]> = {
-  common: [30, 15],
-  uncommon: [39, 30],
-  rare: [22, 35],
-  legendary: [9, 20],
+  common: [40, 15],
+  uncommon: [38, 30],
+  rare: [16, 35],
+  legendary: [6, 20],
 }
 
 /**

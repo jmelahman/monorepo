@@ -33,7 +33,7 @@ const MODIFIER: Strings["modifier"] = {
  * moment; it is not, and the moment a second language fills it that stops being
  * a coincidence.
  */
-const UNIT: Record<Growth["unit"], string> = { chips: "chips", mult: "mult" }
+const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "chips", mult: "mult" }
 
 /**
  * The three colors, said in words.
@@ -80,7 +80,7 @@ export const en: Strings = {
     head_start: { name: "Head Start", text: "+15 mult if the word begins with a vowel" },
     loaded_dice: { name: "Loaded Dice", text: "+0 to +20 mult, rolled fresh every guess" },
     anagrammer: { name: "Anagrammer", text: "×2 mult if no letter repeats" },
-    keystone: { name: "Keystone", text: "×3 mult if the middle tile is green" },
+    keystone: { name: "Keystone", text: "×2.5 mult if the middle tile is green" },
     lexicographer: {
       name: "Lexicographer",
       text: "+3 chips for each different letter in your earlier guesses this round",
@@ -113,6 +113,43 @@ export const en: Strings = {
       name: "Pyromaniac",
       text: "+40 mult. Breaks a random letter out of the alphabet each round",
     },
+    fresh_ink: {
+      name: "Fresh Ink",
+      text: "+15 mult. 1 in 6 chance to dry up at the end of each round",
+    },
+    first_draft: { name: "First Draft", text: "+20 mult, 4 less at the end of each round" },
+    candle: { name: "Candle", text: "+30 chips, 6 less at the end of each round" },
+    reserve: { name: "Reserve", text: "+8 chips per guess you would have left" },
+    collector: { name: "Collector", text: "+4 mult per relic you hold" },
+    second_look: { name: "Second Look", text: "Your first reroll in each shop is free" },
+    stipend: { name: "Stipend", text: "Earn $2 at the end of each round you clear" },
+    first_impression: { name: "First Impression", text: "×2 mult if the first tile is green" },
+    twins: { name: "Twins", text: "×2.5 mult if some letter appears twice" },
+    blank_page: { name: "Blank Page", text: "×1 mult per empty relic slot, this one included" },
+    habit: {
+      name: "Force of Habit",
+      text: "+2 mult for each word of the same shape played since you bought this",
+    },
+    no_maybes: { name: "No Maybes", text: "×2 mult if the guess has no yellow tile" },
+    compound: { name: "Compound Interest", text: "Doubles the interest you earn" },
+    royalties: {
+      name: "Royalties",
+      text: "Earn $1 at the end of each round you clear, and $1 more for every boss beaten",
+    },
+    thesaurus: {
+      name: "Thesaurus",
+      text: "×1 mult, plus ×0.1 for every shape level you have bought",
+    },
+    patron: { name: "Patron", text: "×1.25 mult for each uncommon relic you hold" },
+    indelible: {
+      name: "Indelible",
+      text: "×2 mult. 1 in 40 chance to fade at the end of each round",
+    },
+    second_wind: {
+      name: "Second Wind",
+      text: "Survive one lost round if you reached a quarter of the target. Then it is gone",
+    },
+    carbon_copy: { name: "Carbon Copy", text: "Scores as the relic to its right" },
   },
 
   boss: {
@@ -298,7 +335,9 @@ export const en: Strings = {
   },
 
   event: {
-    growth: ({ amount, unit }) => `+${amount} ${UNIT[unit]}`,
+    // Gold wears the currency sign rather than a word, the way every other
+    // price in the game does.
+    growth: ({ amount, unit }) => (unit === "gold" ? `+$${amount}` : `+${amount} ${UNIT[unit]}`),
 
     /**
      * Chips are the bare number and mult is the number plus the word, which
@@ -413,6 +452,7 @@ export const en: Strings = {
       shapesMore: "shapes ›",
       multUnknown: "Color is the multiplier. Guessing is how you find it out.",
       letterBroken: (letter) => `${letter.toUpperCase()} broken`,
+      relicGone: (name) => `${name} is gone`,
     },
 
     tip: {
@@ -477,6 +517,8 @@ export const en: Strings = {
       score: (score, target) => `${score} of ${target}`,
       unusedGuesses: "Unused guesses",
       interest: "Interest",
+      relics: "Relics",
+      savedBy: (name) => `Saved by ${name}`,
       total: "Total",
       collect: "Collect",
     },

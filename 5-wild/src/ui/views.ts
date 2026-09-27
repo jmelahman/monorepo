@@ -1202,6 +1202,9 @@ export function rewardView(state: RunState, on: Handlers): HTMLElement {
       reward && line(roundName(state.roundIndex), reward.base),
       reward && reward.unusedGuesses > 0 && line(copy.unusedGuesses, reward.unusedGuesses),
       reward && reward.interest > 0 && line(copy.interest, reward.interest),
+      reward?.relics ? line(copy.relics, reward.relics) : null,
+      reward?.saved &&
+        h("div", { class: "answer-note" }, copy.savedBy(relicCard(reward.saved).name)),
       reward &&
         h(
           "div",
@@ -1878,7 +1881,7 @@ function shopShapes(state: RunState, on: Handlers): HTMLElement {
 export function shopView(state: RunState, on: Handlers): HTMLElement {
   const copy = ui().shop
   const shop = state.shop
-  const reroll = shop ? rerollCost(shop) : 0
+  const reroll = shop ? rerollCost(state, shop) : 0
 
   // Drawn as seats rather than as a list, the way the board draws it, because
   // the shop is the one screen where the empty ones are the point: a shelf

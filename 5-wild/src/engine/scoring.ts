@@ -4,7 +4,7 @@ import { categoryOf, levelBonus } from "./categories"
 import type { ModCtx } from "./modifiers"
 import { modifierOf } from "./modifiers"
 import { rangeChips } from "./ranges"
-import { RELIC_BY_ID } from "./relics"
+import { scoringRelic } from "./relics"
 import type { Rng } from "./rng"
 import { derive } from "./rng"
 import type { GameEvent, Payout, RunState, Tile, TileScore } from "./state"
@@ -177,8 +177,8 @@ export function draftChips(state: RunState, draft: string): number {
  */
 export function solveBonusFor(state: RunState, guessesLeft: number): number {
   let bonus = 1 + guessesLeft
-  for (const instance of state.relics) {
-    bonus += RELIC_BY_ID.get(instance.id)?.solveBonus?.(state) ?? 0
+  for (const slot of state.relics.keys()) {
+    bonus += scoringRelic(state.relics, slot)?.relic.solveBonus?.(state) ?? 0
   }
   const boss = getBoss(state.round.bossId)
   return boss?.solveBonus ? boss.solveBonus(bonus, state.round) : bonus
@@ -220,6 +220,15 @@ export function scoreGuess(params: {
    * slot to grow in.
    */
   let slotFiring: number | null = null
+  /**
+   * Whose counter `getData` reads while a copier is firing a borrowed hook: the
+   * card it copies, so a copied Snowball pays what the Snowball has banked.
+   * `setData` is shut off for the same span, so the copy pays the growth and
+   * never earns it. Growing twice a guess off one card would make the copier
+   * the best scaling card in the game by accident.
+   */
+  let readFrom: number | null = null
+  let borrowing = false
   const grown = new Map<number, Record<string, number>>()
 
   /** Copy-on-write, so a slot only lands in the result once it actually grows. */
@@ -271,16 +280,17 @@ export function scoreGuess(params: {
     },
     roll: () => roll(),
     getData(key) {
-      if (slotFiring === null) return 0
+      const from = readFrom ?? slotFiring
+      if (from === null) return 0
       // Reads through to what this guess has already written, so a relic that
       // grows and then spends its own counter in the same guess sees the new
       // value rather than a stale one.
-      const bucket = grown.get(slotFiring)
+      const bucket = grown.get(from)
       if (bucket) return bucket[key] ?? 0
-      return state.relics[slotFiring]?.data?.[key] ?? 0
+      return state.relics[from]?.data?.[key] ?? 0
     },
     setData(key, value) {
-      if (slotFiring === null) return
+      if (slotFiring === null || borrowing) return
       bucketFor(slotFiring)[key] = value
     },
     breakLetter(letter) {
@@ -295,7 +305,26 @@ export function scoreGuess(params: {
     },
   }
 
-  const relics = state.relics.map((instance) => RELIC_BY_ID.get(instance.id))
+  /**
+   * What each slot fires, which for a copier is another card's hooks. The id on
+   * the events stays the tray's own, so it is the copier's card that lights up
+   * and the copier's name the row remembers.
+   */
+  const relics = state.relics.map((instance, slot) => {
+    const found = scoringRelic(state.relics, slot)
+    return found ? { ...found, id: instance.id } : undefined
+  })
+  /** Point the counter reads at the card really firing, for one hook call. */
+  const lend = (slot: number, source: number) => {
+    slotFiring = slot
+    borrowing = source !== slot
+    readFrom = borrowing ? source : null
+  }
+  const unlend = () => {
+    slotFiring = null
+    borrowing = false
+    readFrom = null
+  }
 
   /** The row's own record of itself, filled in as the cadence walks across it. */
   const paid: TileScore[] = []
@@ -352,8 +381,9 @@ export function scoreGuess(params: {
       firing = null
     }
 
-    relics.forEach((relic, slot) => {
-      if (!relic?.onTile) return
+    relics.forEach((entry, slot) => {
+      const relic = entry?.relic
+      if (!entry || !relic?.onTile) return
       // One stream per slot per tile, so a chance effect is a property of where
       // it fired rather than of the order the slots happened to run in, on the
       // same rule the modifier stream above follows.
@@ -361,20 +391,20 @@ export function scoreGuess(params: {
       // The salt still says "joker" on purpose: it is a coordinate, not a name,
       // and changing it reshuffles every seed. See `derive` in `rng.ts`.
       roll = derive(state.seed, "joker", state.stage, state.roundIndex, guessIndex, slot, index)
-      slotFiring = slot
+      lend(slot, entry.source)
       firing = (paid) => {
-        events.push({ type: "relic", slot, id: relic.id, paid, chips: ctx.chips, mult: ctx.mult })
+        events.push({ type: "relic", slot, id: entry.id, paid, chips: ctx.chips, mult: ctx.mult })
         // Appended rather than assigned, which is where this parts company with
         // the modifier above. A letter carries one card; the tray carries five,
         // and a green Q pays Green Thumb and Q's Bargain both, and a row that kept
         // only the last of them would answer a narrower question than the one
         // being asked of it. Two firings from the same slot append twice for the
         // same reason: that is what the tile did.
-        record.relics = [...(record.relics ?? []), { id: relic.id, label: paid }]
+        record.relics = [...(record.relics ?? []), { id: entry.id, label: paid }]
       }
       relic.onTile(ctx, tile, index, base)
       firing = null
-      slotFiring = null
+      unlend()
     })
 
     record.chips = ctx.chips - opened.chips
@@ -399,17 +429,18 @@ export function scoreGuess(params: {
     })
   }
 
-  relics.forEach((relic, slot) => {
-    if (!relic?.onGuess) return
+  relics.forEach((entry, slot) => {
+    const relic = entry?.relic
+    if (!entry || !relic?.onGuess) return
     // One coordinate shorter than the per-tile stream above, so the two cannot
     // collide even for the same slot and guess. Same frozen salt, same reason.
     roll = derive(state.seed, "joker", state.stage, state.roundIndex, guessIndex, slot)
-    slotFiring = slot
+    lend(slot, entry.source)
     firing = (paid) =>
-      events.push({ type: "relic", slot, id: relic.id, paid, chips: ctx.chips, mult: ctx.mult })
+      events.push({ type: "relic", slot, id: entry.id, paid, chips: ctx.chips, mult: ctx.mult })
     relic.onGuess(ctx)
     firing = null
-    slotFiring = null
+    unlend()
   })
 
   // Solving pays tempo and ends the round on the spot, and its bonus multiplies

@@ -20,7 +20,7 @@ const MODIFIER: Strings["modifier"] = {
   glass: { name: "Verre", text: "rapporte ×3 mult, et peut se briser quand elle tombe grise" },
 }
 
-const UNIT: Record<Growth["unit"], string> = { chips: "jetons", mult: "mult" }
+const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "jetons", mult: "mult" }
 
 const COLOR: Record<Color, string> = { green: "vert", yellow: "jaune", gray: "gris" }
 
@@ -66,7 +66,7 @@ export const fr: Strings = {
     head_start: { name: "Avance", text: "+15 mult si le mot commence par une voyelle" },
     loaded_dice: { name: "Dés Pipés", text: "+0 à +20 mult, relancés à chaque essai" },
     anagrammer: { name: "Anagrammiste", text: "×2 mult si aucune lettre ne se répète" },
-    keystone: { name: "Clé de Voûte", text: "×3 mult si la case centrale est verte" },
+    keystone: { name: "Clé de Voûte", text: "×2,5 mult si la case centrale est verte" },
     lexicographer: {
       name: "Lexicographe",
       text: "+3 jetons par lettre différente de vos essais précédents dans la manche",
@@ -111,6 +111,49 @@ export const fr: Strings = {
       name: "Pyromane",
       text: "+40 mult. Brise une lettre au hasard hors de l'alphabet à chaque manche",
     },
+    fresh_ink: {
+      name: "Encre Fraîche",
+      text: "+15 mult. 1 chance sur 6 de sécher à la fin de chaque manche",
+    },
+    first_draft: { name: "Premier Jet", text: "+20 mult, 4 de moins à la fin de chaque manche" },
+    candle: { name: "Bougie", text: "+30 jetons, 6 de moins à la fin de chaque manche" },
+    reserve: { name: "Réserve", text: "+8 jetons par essai qu'il vous resterait" },
+    collector: { name: "Collectionneur", text: "+4 mult par relique que vous détenez" },
+    second_look: {
+      name: "Second Regard",
+      text: "Votre premier renouvellement dans chaque boutique est gratuit",
+    },
+    stipend: { name: "Allocation", text: "Gagnez $2 à la fin de chaque manche réussie" },
+    first_impression: {
+      name: "Première Impression",
+      text: "×2 mult si la première case est verte",
+    },
+    twins: { name: "Jumeaux", text: "×2,5 mult si une lettre apparaît deux fois" },
+    blank_page: {
+      name: "Page Blanche",
+      text: "×1 mult par emplacement de relique vide, celui-ci compris",
+    },
+    habit: {
+      name: "Force de l'Habitude",
+      text: "+2 mult par mot de la même forme joué depuis son achat",
+    },
+    no_maybes: { name: "Sans Peut-être", text: "×2 mult si l'essai n'a aucune case jaune" },
+    compound: { name: "Intérêts Composés", text: "Double les intérêts que vous gagnez" },
+    royalties: {
+      name: "Droits d'Auteur",
+      text: "Gagnez $1 à la fin de chaque manche réussie, et $1 de plus par boss vaincu",
+    },
+    thesaurus: { name: "Thésaurus", text: "×1 mult, plus ×0,1 par niveau de forme acheté" },
+    patron: { name: "Mécène", text: "×1,25 mult par relique peu commune que vous détenez" },
+    indelible: {
+      name: "Indélébile",
+      text: "×2 mult. 1 chance sur 40 de s'effacer à la fin de chaque manche",
+    },
+    second_wind: {
+      name: "Second Souffle",
+      text: "Survivez à une manche perdue si vous avez atteint un quart de l'objectif. Puis elle disparaît",
+    },
+    carbon_copy: { name: "Papier Carbone", text: "Compte comme la relique à sa droite" },
   },
 
   boss: {
@@ -298,7 +341,9 @@ export const fr: Strings = {
   },
 
   event: {
-    growth: ({ amount, unit }) => `+${amount} ${UNIT[unit]}`,
+    // Gold wears the currency sign rather than a word, the way every other
+    // price in the game does.
+    growth: ({ amount, unit }) => (unit === "gold" ? `+$${amount}` : `+${amount} ${UNIT[unit]}`),
 
     payout: (paid) => {
       switch (paid.kind) {
@@ -400,6 +445,7 @@ export const fr: Strings = {
       shapesMore: "formes ›",
       multUnknown: "La couleur est le multiplicateur. Deviner est le seul moyen de le savoir.",
       letterBroken: (letter) => `${letter.toUpperCase()} brisée`,
+      relicGone: (name) => `${name} a disparu`,
     },
 
     tip: {
@@ -456,6 +502,8 @@ export const fr: Strings = {
       score: (score, target) => `${score} sur ${target}`,
       unusedGuesses: "Essais inutilisés",
       interest: "Intérêts",
+      relics: "Reliques",
+      savedBy: (name) => `Sauvée par ${name}`,
       total: "Total",
       collect: "Encaisser",
     },

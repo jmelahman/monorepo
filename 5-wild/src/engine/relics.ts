@@ -1,8 +1,9 @@
 import { ALPHABET, isVowel, MIN_LIVE_LETTERS } from "../content/letters"
 import { CONSUMABLE_SLOTS, INTEREST_PER } from "../content/rounds"
-import { isCategory } from "./categories"
+import { difficultyOf } from "./ascensions"
+import { CATEGORIES, categoryOf, isCategory, levelOf } from "./categories"
 import type { Rng } from "./rng"
-import { shuffled } from "./rng"
+import { derive, randomInt, shuffled } from "./rng"
 import type { ScoreCtx } from "./scoring"
 import type { GameEvent, Growth, Rarity, RelicInstance, RoundState, RunState, Tile } from "./state"
 
@@ -22,6 +23,13 @@ export type RelicCtx = {
   slot: number
   rng: Rng
   events: GameEvent[]
+  /**
+   * Take this copy out of the tray once the hooks being fired have all run.
+   * Deferred rather than immediate because the caller is walking the tray, and
+   * a card that spliced itself out mid-walk would hand its slot number to the
+   * card behind it for the rest of the loop.
+   */
+  destroy(): void
 }
 
 export type Relic = {
@@ -71,6 +79,28 @@ export type Relic = {
    * one thing.
    */
   interest?: (base: number, state: RunState) => number
+  /**
+   * Gold this card adds to a cleared round, itemised on the reward screen as a
+   * line of its own. A hook rather than an `addGold` in `onRoundEnd` because
+   * the reward is a breakdown the player reads before banking it, and gold
+   * that arrived from nowhere would be the one figure on it with no line.
+   */
+  payout?: (state: RunState, instance: RelicInstance) => number
+  /**
+   * Called when a round is about to be lost. Returning true keeps the run
+   * alive: the round is paid nothing, and the card is expected to spend itself
+   * with `ctx.destroy()`, since a save that could fire twice is a second life
+   * and not a safety net. The first card in slot order that answers wins.
+   */
+  onRoundLost?: (ctx: RelicCtx, round: RoundState) => boolean
+  /** How many rerolls of each shop visit this card pays for. */
+  freeRerolls?: number
+  /**
+   * Borrow the scoring hooks of the card in the next slot to the right: its
+   * `onTile`, `onGuess` and `solveBonus`, and nothing that happens between
+   * guesses. See `scoringRelic`.
+   */
+  copiesRight?: boolean
 }
 
 /** What a growing relic has banked, and the key every one of them stores it under. */
@@ -82,14 +112,45 @@ const grown = (instance: RelicInstance, key: string): number => instance.data?.[
  * identical: the player learns "this card just got bigger" from one animation,
  * whatever earned it.
  */
-function grow(ctx: RelicCtx, id: string, key: string, step: number, unit: "chips" | "mult"): void {
+function grow(ctx: RelicCtx, id: string, key: string, step: number, unit: Growth["unit"]): void {
   const total = grown(ctx.instance, key) + step
   ctx.instance.data = { ...ctx.instance.data, [key]: total }
   // The running total and its unit, not the badge that used to be built here:
   // "+120 chips" is a sentence with a word in it, and the word belongs to a
-  // language. `unit` narrows to the two the badge can actually say, so a third
-  // one would have to be taught to the catalog rather than smuggled past it.
+  // language. `unit` narrows to the ones the badge can actually say, so a new
+  // one has to be taught to the catalog rather than smuggled past it.
   ctx.events.push({ type: "relic_grew", slot: ctx.slot, id, amount: total, unit })
+}
+
+/**
+ * Spend a step of a card that starts full and runs down, and retire it when it
+ * is empty. Stored as what has been *spent* rather than what is left, so an
+ * instance that has never been written reads as full, the same absent-means-
+ * default rule every growing card follows.
+ *
+ * Silent where `grow` announces. `relic_grew` is the animation for "this card
+ * just got bigger", and playing it for a card that just got smaller would teach
+ * the opposite of what happened. The card's own badge says the new number.
+ */
+function decay(ctx: RelicCtx, full: number, step: number): void {
+  const spent = grown(ctx.instance, "spent") + step
+  if (spent >= full) {
+    ctx.destroy()
+    return
+  }
+  ctx.instance.data = { ...ctx.instance.data, spent }
+}
+
+/**
+ * A one-in-`odds` chance this copy does not survive the round just ended.
+ *
+ * Its own stream rather than the hook's `rng`, keyed to where the card sat and
+ * when, so the roll does not move when a card is bought that fires before it,
+ * and a save resumed at the reward screen already knows the answer.
+ */
+function perish(ctx: RelicCtx, odds: number): void {
+  const { seed, stage, roundIndex } = ctx.state
+  if (randomInt(derive(seed, "perish", stage, roundIndex, ctx.slot), odds) === 0) ctx.destroy()
 }
 
 const RARITY_COST: Record<Rarity, number> = {
@@ -100,7 +161,7 @@ const RARITY_COST: Record<Rarity, number> = {
 }
 
 /**
- * Twenty-eight relics, spread deliberately across archetypes so a build identity
+ * Forty-seven relics, spread deliberately across archetypes so a build identity
  * shows up within the first shop. Note that scoring always reads `tile.color`,
  * never `tile.shown`: The Fog lies to the player, not to the math.
  *
@@ -129,6 +190,17 @@ const RARITY_COST: Record<Rarity, number> = {
  * Keystone ×2 to ×3. Each card's comment carries the pair of numbers that
  * settled it. What the harness cannot see is a player *steering*, so for the
  * two cards that want a shape it reads as a floor rather than as a price.
+ *
+ * The nineteen after those came as one batch, to a complaint rather than to a
+ * gap: late trays had converged on the same handful of ×mult cards, and the
+ * shop's first shelves had too little worth $4 on them. So seven of them are
+ * commons, and most of those either last (Collector, which counts the tray) or
+ * end (Fresh Ink, First Draft, Candle, which spend themselves and hand the slot
+ * back). Every shape now has a multiplier behind it, Twins being the one that
+ * was missing, and five of the nineteen do nothing on the board at all: a free
+ * reroll, two wages, doubled interest and a second chance, so that a late slot
+ * can be spent on something other than another multiplier. Carbon Copy is the
+ * one that makes the order of the tray a decision.
  */
 export const RELICS: readonly Relic[] = [
   {
@@ -242,6 +314,91 @@ export const RELICS: readonly Relic[] = [
     onGuess: (ctx) => ctx.addMult(Math.floor(ctx.roll() * 21)),
   },
   {
+    id: "fresh_ink",
+    rarity: "common",
+    cost: RARITY_COST.common,
+    // The strongest flat mult at common, and the price is that it may not be
+    // there next round. A one-in-six chance a round is a mean life of six
+    // rounds, two stages, which is long enough to carry an opening and short
+    // enough that nobody builds a late game on it.
+    onGuess: (ctx) => ctx.addMult(15),
+    onRoundEnd: (ctx) => perish(ctx, 6),
+  },
+  {
+    id: "first_draft",
+    rarity: "common",
+    cost: RARITY_COST.common,
+    // Front-loaded on purpose: +20 in the first round it is held, four less
+    // every round after, gone after the fifth. It is the card for the stretch
+    // where the tray is empty and the targets are not, and it clears its own
+    // slot by the time a real build wants it.
+    onGuess: (ctx) => {
+      const left = 20 - ctx.getData("spent")
+      if (left > 0) ctx.addMult(left)
+    },
+    onRoundEnd: (ctx) => decay(ctx, 20, 4),
+    growth: (instance) => ({ amount: 20 - grown(instance, "spent"), unit: "mult" }),
+  },
+  {
+    id: "candle",
+    rarity: "common",
+    cost: RARITY_COST.common,
+    // First Draft on the chip axis, burning down at the same pace: five rounds
+    // from +30 to nothing. Chips rather than mult so that the two are a pair
+    // and not a stack.
+    //
+    // Written at +100, and chips on an empty tray are the scarce half: ×9.53
+    // over 120 seeds, above every rare in the game. +30 reads ×3.56, beside
+    // Reserve's ×3.60 and under Green Thumb's ×3.95.
+    onGuess: (ctx) => {
+      const left = 30 - ctx.getData("spent")
+      if (left > 0) ctx.addChips(left)
+    },
+    onRoundEnd: (ctx) => decay(ctx, 30, 6),
+    growth: (instance) => ({ amount: 30 - grown(instance, "spent"), unit: "chips" }),
+  },
+  {
+    id: "reserve",
+    rarity: "common",
+    cost: RARITY_COST.common,
+    // Sunk Cost's chip half, at common: largest on the opening guess and zero
+    // on the last, so it pays for the same early exit the solve bonus does.
+    onGuess: (ctx) => {
+      if (ctx.guessesLeft > 0) ctx.addChips(8 * ctx.guessesLeft)
+    },
+  },
+  {
+    id: "collector",
+    rarity: "common",
+    cost: RARITY_COST.common,
+    // Counts itself, so it is never worth less than +4. The common that stays
+    // alive into the late game, because the thing it counts only goes up: a
+    // full tray makes it +20, which a stage-one card has no business
+    // being worth, and is why it is the card to keep when the others are sold.
+    // +4 a card rather than +3: ×1.34 over 120 seeds became ×1.45 on an empty
+    // tray, and ×1.24 on a late one, where most commons have faded to ×1.1.
+    onGuess: (ctx) => ctx.addMult(4 * ctx.state.relics.length),
+  },
+  {
+    id: "second_look",
+    rarity: "common",
+    cost: RARITY_COST.common,
+    // The one common that does nothing on the board. A reroll is worth more the
+    // more a build knows what it is looking for, so this is cheap early and
+    // dear late, the reverse of every scoring common.
+    freeRerolls: 1,
+  },
+  {
+    id: "stipend",
+    rarity: "common",
+    cost: RARITY_COST.common,
+    // Pays for itself in two rounds and then funds the shop, which is the
+    // entire case for it. Small on purpose: the unused-guess dollars are the
+    // economy's lever, and a flat wage large enough to rival them would pay a
+    // farming run the same as a fast one.
+    payout: () => 2,
+  },
+  {
     id: "anagrammer",
     rarity: "uncommon",
     cost: RARITY_COST.uncommon,
@@ -273,9 +430,14 @@ export const RELICS: readonly Relic[] = [
      * beside Anagrammer's ×2.19. The harness is the floor rather than the price:
      * it measures a player who never plays for the middle column, and the card
      * exists for the one who does.
+     *
+     * Then trimmed to ×2.5, not for the floor but for the ceiling: on a late kit
+     * it read ×2.00, the most of any uncommon, and it was one of the handful
+     * of multipliers every late tray converged on. ×2.5 reads ×1.74 there and
+     * ×2.04 on an empty tray, still the best uncommon for the player who steers.
      */
     onGuess: (ctx) => {
-      if (ctx.tiles[2]?.color === "green") ctx.timesMult(3)
+      if (ctx.tiles[2]?.color === "green") ctx.timesMult(2.5)
     },
   },
   {
@@ -389,6 +551,97 @@ export const RELICS: readonly Relic[] = [
       }
     },
     growth: (instance) => ({ amount: grown(instance, "chips"), unit: "chips" }),
+  },
+  {
+    id: "first_impression",
+    rarity: "uncommon",
+    cost: RARITY_COST.uncommon,
+    // Keystone's column-one twin. The first tile is the one a probe most often
+    // lands, because openers are chosen for their commonest starts, so this
+    // fires by accident far more than the middle column does and pays ×2
+    // rather than ×3 for it.
+    onGuess: (ctx) => {
+      if (ctx.tiles[0]?.color === "green") ctx.timesMult(2)
+    },
+  },
+  {
+    id: "twins",
+    rarity: "uncommon",
+    cost: RARITY_COST.uncommon,
+    // Twinned was the one shape with a category and no multiplier behind it.
+    // Anagrammer's mirror: the two ask opposite questions of the same word, so
+    // a tray cannot want both. ×2.5 rather than Anagrammer's ×2 because the
+    // shape is the rarer one: at ×2 it read ×1.14 over 120 seeds, the weakest
+    // uncommon on the shelf, and ×2.5 reads ×1.21. Still a floor, since the
+    // harness never steers into a repeated letter.
+    onGuess: (ctx) => {
+      if (isCategory("twinned", ctx.word)) ctx.timesMult(2.5)
+    },
+  },
+  {
+    id: "blank_page",
+    rarity: "uncommon",
+    cost: RARITY_COST.uncommon,
+    // Counts empty slots, itself included, so alone it is ×(slots) and in a
+    // full tray it is ×1. The only card that argues for *selling*, and the one
+    // an ascension that cuts a slot quietly nerfs.
+    onGuess: (ctx) => {
+      const open = difficultyOf(ctx.state).relicSlots - ctx.state.relics.length
+      if (open > 0) ctx.timesMult(1 + open)
+    },
+  },
+  {
+    id: "habit",
+    rarity: "uncommon",
+    cost: RARITY_COST.uncommon,
+    // Pays what the shape had, *then* counts this guess, the order Snowball
+    // follows, so the first word of a shape pays nothing. Counted from the day
+    // it was bought rather than from the start of the run, because the run
+    // keeps no such tally and one kept only for this card would be state that
+    // every other card pays to carry. No badge: the count is five numbers, one
+    // per shape, and a card cannot wear five. +2 a word rather than +1, which
+    // read ×1.22 over 120 seeds and was not worth a slot; +2 reads ×1.44.
+    onGuess: (ctx) => {
+      const shape = categoryOf(ctx.word).id
+      const played = ctx.getData(shape)
+      if (played > 0) ctx.addMult(2 * played)
+      ctx.setData(shape, played + 1)
+    },
+  },
+  {
+    id: "no_maybes",
+    rarity: "uncommon",
+    cost: RARITY_COST.uncommon,
+    // A yellow is a letter in the wrong place, so a guess without one is either
+    // a clean miss or a clean hit. Rewards the late, committed guess and the
+    // wild opener both, and punishes the half-informed middle.
+    onGuess: (ctx) => {
+      if (!ctx.tiles.some((tile) => tile.color === "yellow")) ctx.timesMult(2)
+    },
+  },
+  {
+    id: "compound",
+    rarity: "uncommon",
+    cost: RARITY_COST.uncommon,
+    // Doubles interest after the cap, so the cap doubles with it. Mint's
+    // opposite number: that card takes the interest and pays score, this one
+    // pays more interest and no score, and holding both is a card that does
+    // nothing, which is the honest outcome.
+    interest: (base) => base * 2,
+  },
+  {
+    id: "royalties",
+    rarity: "uncommon",
+    cost: RARITY_COST.uncommon,
+    // A wage that rises with the run: $1 a round to start, and a dollar more
+    // for every boss beaten while it is held. Bought in stage one, it is paying
+    // $5 or more by the end, which is what makes it a long bet at uncommon
+    // rather than a Stipend with a bigger number.
+    payout: (_state, instance) => 1 + grown(instance, "gold"),
+    onRoundEnd: (ctx, round) => {
+      if (round.solved && round.bossId !== null) grow(ctx, "royalties", "gold", 1, "gold")
+    },
+    growth: (instance) => ({ amount: 1 + grown(instance, "gold"), unit: "gold" }),
   },
   {
     id: "masochist",
@@ -513,6 +766,62 @@ export const RELICS: readonly Relic[] = [
     growth: (instance) => ({ amount: grown(instance, "mult"), unit: "mult" }),
   },
   {
+    id: "thesaurus",
+    rarity: "rare",
+    cost: RARITY_COST.rare,
+    // Pays for levels bought in *any* shape, and on every guess rather than
+    // only the ones of that shape, so it is the payoff for spreading upgrades
+    // instead of stacking one. A tenth per level keeps it modest until late:
+    // ten levels bought is ×2.
+    onGuess: (ctx) => {
+      const bought = CATEGORIES.reduce((sum, c) => sum + levelOf(ctx.state, c.id) - 1, 0)
+      if (bought > 0) ctx.timesMult(1 + 0.1 * bought)
+    },
+  },
+  {
+    id: "patron",
+    rarity: "rare",
+    cost: RARITY_COST.rare,
+    // A rare that makes the tier below it worth keeping, which is the point of
+    // it: the late-game tray was converging on rares and legendaries, and this
+    // is a reason to hold an uncommon past stage four.
+    onGuess: (ctx) => {
+      const held = ctx.state.relics.filter(
+        (r) => RELIC_BY_ID.get(r.id)?.rarity === "uncommon",
+      ).length
+      if (held > 0) ctx.timesMult(1.25 ** held)
+    },
+  },
+  {
+    id: "indelible",
+    rarity: "rare",
+    cost: RARITY_COST.rare,
+    // The largest unconditional multiplier in the game, and not quite
+    // permanent: one round in forty it is gone. That is a mean life of more
+    // than a full run, so the chance is not the price. It is the reason the
+    // player never quite stops watching it.
+    //
+    // Written at ×3 and measured at ×2.95 on a late kit (every shape at level
+    // three, every letter etched, two relics already held), the most any card
+    // in the game added there. ×2 reads ×1.97, beside Anagrammer's ×1.89.
+    onGuess: (ctx) => ctx.timesMult(2),
+    onRoundEnd: (ctx) => perish(ctx, 40),
+  },
+  {
+    id: "second_wind",
+    rarity: "rare",
+    cost: RARITY_COST.rare,
+    // Does nothing until the run is over, and then says it is not. A quarter of
+    // the target is the line between a round that went wrong and a build that
+    // was never going to make it, and only the first deserves a second chance.
+    // It spends itself either way, and the round it saved pays nothing.
+    onRoundLost: (ctx, round) => {
+      if (round.score < 0.25 * round.target) return false
+      ctx.destroy()
+      return true
+    },
+  },
+  {
     id: "long_game",
     rarity: "legendary",
     cost: RARITY_COST.legendary,
@@ -541,6 +850,40 @@ export const RELICS: readonly Relic[] = [
       events.push({ type: "letter_destroyed", letter })
     },
   },
+  {
+    id: "carbon_copy",
+    rarity: "legendary",
+    cost: RARITY_COST.legendary,
+    // Worth whatever sits to its right, which makes slot order a decision for
+    // the first time. Legendary because the best card in a tray is the ceiling
+    // on a copy of it, and a common copier would be a second copy of that
+    // ceiling at a common's price. See `scoringRelic` for what it borrows.
+    copiesRight: true,
+  },
 ]
 
 export const RELIC_BY_ID = new Map(RELICS.map((relic) => [relic.id, relic]))
+
+/**
+ * The card whose scoring hooks a slot fires, and the slot that card sits in.
+ *
+ * Itself, for every card but a copier, which walks right until it finds one
+ * that is not also a copier. Two copiers side by side both copy the card after
+ * them, and a copier in the last slot copies nothing. Rightward only, so the
+ * walk cannot loop.
+ *
+ * Only the *scoring* hooks are borrowed. The round, shop and reward hooks would
+ * each need their own answer to "whose state does this write", and a copied
+ * Pyromaniac breaking two letters a round is a card nobody asked for.
+ */
+export function scoringRelic(
+  tray: readonly RelicInstance[],
+  slot: number,
+): { relic: Relic; source: number } | null {
+  for (let at = slot; at < tray.length; at++) {
+    const relic = RELIC_BY_ID.get(tray[at]?.id ?? "")
+    if (!relic) return null
+    if (!relic.copiesRight) return { relic, source: at }
+  }
+  return null
+}

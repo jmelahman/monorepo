@@ -17,7 +17,7 @@ const MODIFIER: Strings["modifier"] = {
   glass: { name: "Glas", text: "bringt ×3 Mult und kann zerbrechen, wenn er grau wird" },
 }
 
-const UNIT: Record<Growth["unit"], string> = { chips: "Chips", mult: "Mult" }
+const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "Chips", mult: "Mult" }
 
 const COLOR: Record<Color, string> = { green: "grün", yellow: "gelb", gray: "grau" }
 
@@ -61,7 +61,7 @@ export const de: Strings = {
     head_start: { name: "Vorsprung", text: "+15 Mult, wenn das Wort mit einem Vokal beginnt" },
     loaded_dice: { name: "Gezinkte Würfel", text: "+0 bis +20 Mult, bei jedem Versuch neu" },
     anagrammer: { name: "Anagrammist", text: "×2 Mult, wenn sich kein Buchstabe wiederholt" },
-    keystone: { name: "Schlussstein", text: "×3 Mult, wenn das mittlere Feld grün ist" },
+    keystone: { name: "Schlussstein", text: "×2,5 Mult, wenn das mittlere Feld grün ist" },
     lexicographer: {
       name: "Lexikograph",
       text: "+3 Chips pro Buchstabe, den deine früheren Versuche der Runde nicht hatten",
@@ -106,6 +106,46 @@ export const de: Strings = {
       name: "Pyromane",
       text: "+40 Mult. Zerbricht in jeder Runde einen zufälligen Buchstaben aus dem Alphabet",
     },
+    fresh_ink: {
+      name: "Frische Tinte",
+      text: "+15 Mult. 1 zu 6, dass sie am Ende jeder Runde eintrocknet",
+    },
+    first_draft: { name: "Erster Entwurf", text: "+20 Mult, 4 weniger am Ende jeder Runde" },
+    candle: { name: "Kerze", text: "+30 Chips, 6 weniger am Ende jeder Runde" },
+    reserve: { name: "Reserve", text: "+8 Chips pro Versuch, der dir bliebe" },
+    collector: { name: "Sammler", text: "+4 Mult pro Relikt, das du hältst" },
+    second_look: {
+      name: "Zweiter Blick",
+      text: "Dein erstes Neuauslegen in jedem Laden ist kostenlos",
+    },
+    stipend: { name: "Stipendium", text: "Erhalte $2 am Ende jeder geschafften Runde" },
+    first_impression: { name: "Erster Eindruck", text: "×2 Mult, wenn das erste Feld grün ist" },
+    twins: { name: "Zwillinge", text: "×2,5 Mult, wenn ein Buchstabe zweimal vorkommt" },
+    blank_page: {
+      name: "Leeres Blatt",
+      text: "×1 Mult pro leerem Reliktplatz, dieser eingeschlossen",
+    },
+    habit: {
+      name: "Macht der Gewohnheit",
+      text: "+2 Mult für jedes Wort derselben Form, das seit dem Kauf gespielt wurde",
+    },
+    no_maybes: { name: "Kein Vielleicht", text: "×2 Mult, wenn der Versuch kein gelbes Feld hat" },
+    compound: { name: "Zinseszins", text: "Verdoppelt deine Zinsen" },
+    royalties: {
+      name: "Tantiemen",
+      text: "Erhalte $1 am Ende jeder geschafften Runde, und $1 mehr für jeden besiegten Boss",
+    },
+    thesaurus: { name: "Thesaurus", text: "×1 Mult, plus ×0,1 für jede gekaufte Formstufe" },
+    patron: { name: "Mäzen", text: "×1,25 Mult pro ungewöhnlichem Relikt, das du hältst" },
+    indelible: {
+      name: "Unauslöschlich",
+      text: "×2 Mult. 1 zu 40, dass es am Ende jeder Runde verblasst",
+    },
+    second_wind: {
+      name: "Zweiter Atem",
+      text: "Überlebe eine verlorene Runde, wenn du ein Viertel des Ziels erreicht hast. Dann ist er weg",
+    },
+    carbon_copy: { name: "Durchschlag", text: "Zählt wie das Relikt rechts daneben" },
   },
 
   boss: {
@@ -287,7 +327,9 @@ export const de: Strings = {
   },
 
   event: {
-    growth: ({ amount, unit }) => `+${amount} ${UNIT[unit]}`,
+    // Gold wears the currency sign rather than a word, the way every other
+    // price in the game does.
+    growth: ({ amount, unit }) => (unit === "gold" ? `+$${amount}` : `+${amount} ${UNIT[unit]}`),
 
     payout: (paid) => {
       switch (paid.kind) {
@@ -392,6 +434,7 @@ export const de: Strings = {
       shapesMore: "Formen ›",
       multUnknown: "Die Farbe ist der Mult, und nur Raten deckt sie auf.",
       letterBroken: (letter) => `${letter.toUpperCase()} zerbrochen`,
+      relicGone: (name) => `${name} ist weg`,
     },
 
     tip: {
@@ -448,6 +491,8 @@ export const de: Strings = {
       score: (score, target) => `${score} von ${target}`,
       unusedGuesses: "Ungenutzte Versuche",
       interest: "Zinsen",
+      relics: "Relikte",
+      savedBy: (name) => `Gerettet von ${name}`,
       total: "Gesamt",
       collect: "Kassieren",
     },

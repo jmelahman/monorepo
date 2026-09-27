@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest"
-import type { Action, GuessRecord, RunState, WordSource } from "../../src/engine"
-import { INTEREST_CAP, RELICS, reduce, startRun } from "../../src/engine"
+import type { Action, GameEvent, GuessRecord, RunState, WordSource } from "../../src/engine"
+import {
+  INTEREST_CAP,
+  RELIC_BY_ID,
+  RELIC_SLOTS,
+  RELICS,
+  reduce,
+  rerollCost,
+  startRun,
+} from "../../src/engine"
 import { realWords } from "../helpers/words"
 
 const words: WordSource = {
@@ -302,9 +310,9 @@ describe("the relics that read the word's shape", () => {
     expect(withRelic("head_start", "crane").last).toMatchObject({ mult: 7 })
   })
 
-  it("Keystone doubles on a green middle and leaves any other green alone", () => {
-    // QUAZY against BRAID lands its A in the middle column: 4 mult becomes 12.
-    expect(withRelic("keystone", "quazy").last).toMatchObject({ chips: 26, mult: 12 })
+  it("Keystone multiplies on a green middle and leaves any other green alone", () => {
+    // QUAZY against BRAID lands its A in the middle column: 4 mult becomes 10.
+    expect(withRelic("keystone", "quazy").last).toMatchObject({ chips: 26, mult: 10 })
     // GHOST lands nothing at all, so there is nothing to double.
     expect(withRelic("keystone", "ghost").last).toMatchObject({ mult: 1 })
   })
@@ -360,5 +368,214 @@ describe("etchings", () => {
       letters: { ...base.letters, a: { etch: 2, destroyed: false, mod: null } },
     }
     expect(apply(state, type("crane")).round.guesses[0]?.chips).toBe(9)
+  })
+})
+
+/*
+ * The second catalog: cheap cards that last, a multiplier for every shape, and
+ * the cards that do their work between guesses rather than on one. CRANE against
+ * BRAID is still the baseline everywhere below: 7 chips × 7 mult, two greens in
+ * the middle, no yellow, first tile gray.
+ */
+describe("the relics that widen the shelf", () => {
+  /** A round one guess from over, with a target any guess clears. */
+  const clearing = (relics: RunState["relics"], extra: Partial<RunState> = {}): RunState => {
+    const base = startRun(1, words).state
+    return apply({ ...base, ...extra, relics, round: { ...base.round, target: 1 } }, type("braid"))
+  }
+
+  it("Fresh Ink pays +15 mult, and dries up on some rounds and not others", () => {
+    expect(withRelic("fresh_ink", "crane").last.mult).toBe(22)
+    // The roll is keyed to the seed, so across enough of them both outcomes
+    // turn up, and the one that loses the card says so.
+    let gone = 0
+    for (let seed = 1; seed <= 60; seed++) {
+      const base = startRun(seed, words).state
+      const state: RunState = {
+        ...base,
+        relics: [{ id: "fresh_ink" }],
+        round: { ...base.round, draft: "braid", target: 1 },
+      }
+      const { state: after, events } = reduce(state, { type: "submit" }, words)
+      if (after.relics.length === 0) {
+        gone++
+        expect(events).toContainEqual({ type: "relic_destroyed", id: "fresh_ink" })
+      }
+    }
+    expect(gone).toBeGreaterThan(0)
+    expect(gone).toBeLessThan(30)
+  })
+
+  it("Indelible doubles the mult", () => {
+    expect(withRelic("indelible", "crane").last.mult).toBe(14)
+  })
+
+  it("First Draft and Candle burn down a round at a time and then leave", () => {
+    expect(withRelic("first_draft", "crane").last.mult).toBe(27)
+    expect(withRelic("candle", "crane").last.chips).toBe(37)
+    const once = clearing([{ id: "first_draft" }, { id: "candle" }])
+    expect(once.relics.map((r) => r.data)).toEqual([{ spent: 4 }, { spent: 6 }])
+    expect(RELIC_BY_ID.get("first_draft")?.growth?.(once.relics[0] ?? { id: "" }).amount).toBe(16)
+    // One step from empty: the round that spends it takes the card with it.
+    const last = clearing([
+      { id: "first_draft", data: { spent: 16 } },
+      { id: "candle", data: { spent: 24 } },
+    ])
+    expect(last.relics).toEqual([])
+  })
+
+  it("Reserve pays chips for the guesses still to come", () => {
+    // Guess one of six leaves five: +40 chips.
+    expect(withRelic("reserve", "crane").last.chips).toBe(47)
+    expect(withRelic("reserve", "crane", "crane").last.chips).toBe(39)
+  })
+
+  it("Collector counts the tray, itself included", () => {
+    expect(withRelic("collector", "crane").last.mult).toBe(11)
+    const base = startRun(1, words).state
+    const state: RunState = {
+      ...base,
+      relics: [{ id: "collector" }, { id: "stipend" }, { id: "compound" }],
+    }
+    expect(apply(state, type("crane")).round.guesses[0]?.mult).toBe(19)
+  })
+
+  it("Second Look pays for the first reroll of a visit and no more", () => {
+    const base = startRun(1, words).state
+    const shop = { items: [], rerolls: 0 }
+    const held: RunState = { ...base, relics: [{ id: "second_look" }] }
+    expect(rerollCost(base, shop)).toBeGreaterThan(0)
+    expect(rerollCost(held, shop)).toBe(0)
+    expect(rerollCost(held, { ...shop, rerolls: 1 })).toBe(rerollCost(base, shop))
+  })
+
+  it("Stipend and Royalties pay on the reward screen, on a line of their own", () => {
+    const plain = clearing([]).reward
+    const paid = clearing([{ id: "stipend" }, { id: "royalties", data: { gold: 2 } }]).reward
+    expect(plain?.relics).toBeUndefined()
+    expect(paid?.relics).toBe(2 + 3)
+    expect(paid?.total).toBe((plain?.total ?? 0) + 5)
+  })
+
+  it("Royalties grows on a boss beaten and not on any other round", () => {
+    const royalties = RELIC_BY_ID.get("royalties")
+    const base = startRun(1, words).state
+    const fire = (bossId: string | null, solved: boolean) => {
+      const instance = { id: "royalties" }
+      const events: GameEvent[] = []
+      royalties?.onRoundEnd?.(
+        { state: base, instance, slot: 0, rng: () => 0, events, destroy: () => {} },
+        { ...base.round, bossId, solved },
+      )
+      return instance as RunState["relics"][number]
+    }
+    expect(fire("the_fog", true).data).toEqual({ gold: 1 })
+    expect(fire(null, true).data).toBeUndefined()
+    expect(fire("the_fog", false).data).toBeUndefined()
+  })
+
+  it("First Impression doubles on a green first tile", () => {
+    expect(withRelic("first_impression", "crane").last.mult).toBe(7)
+    const plain = apply(startRun(1, words).state, type("braid")).round.guesses[0]?.mult ?? 0
+    expect(withRelic("first_impression", "braid").last.mult).toBe(plain * 2)
+  })
+
+  it("Twins doubles a word that repeats a letter", () => {
+    expect(withRelic("twins", "sassy").last.mult).toBe(5)
+    expect(withRelic("twins", "crane").last.mult).toBe(7)
+  })
+
+  it("No Maybes doubles a guess with no yellow", () => {
+    expect(withRelic("no_maybes", "crane").last.mult).toBe(14)
+    expect(withRelic("no_maybes", "dairy").last.mult).toBe(5)
+  })
+
+  it("Blank Page counts the empty slots and its own", () => {
+    expect(withRelic("blank_page", "crane").last.mult).toBe(7 * RELIC_SLOTS)
+    const base = startRun(1, words).state
+    const full = Array.from({ length: RELIC_SLOTS }, (_, i) => ({
+      id: i === 0 ? "blank_page" : "stipend",
+    }))
+    expect(apply({ ...base, relics: full }, type("crane")).round.guesses[0]?.mult).toBe(7)
+  })
+
+  it("Force of Habit pays for every earlier word of the same shape", () => {
+    const { state } = withRelic("habit", "crane", "crane", "crane")
+    expect(state.round.guesses.map((g) => g.mult)).toEqual([7, 9, 11])
+    // SASSY is Twinned, a shape it has not seen, so it starts again from zero.
+    expect(apply(state, type("sassy")).round.guesses[3]?.mult).toBe(2)
+  })
+
+  it("Compound Interest doubles interest, cap and all", () => {
+    const base = startRun(1, words).state
+    const paid = (relics: RunState["relics"]) =>
+      apply({ ...base, gold: 40, relics, round: { ...base.round, target: 1 } }, type("braid"))
+        .reward?.interest
+    expect(paid([{ id: "compound" }])).toBe(INTEREST_CAP * 2)
+  })
+
+  it("Thesaurus pays a tenth for every level bought, in any shape", () => {
+    const base = startRun(1, words).state
+    const state: RunState = {
+      ...base,
+      levels: { cluster: 3, twinned: 2 },
+      relics: [{ id: "thesaurus" }],
+    }
+    expect(apply(state, type("crane")).round.guesses[0]?.mult).toBeCloseTo(7 * 1.3)
+    expect(withRelic("thesaurus", "crane").last.mult).toBe(7)
+  })
+
+  it("Patron multiplies for each uncommon held", () => {
+    const base = startRun(1, words).state
+    const state: RunState = {
+      ...base,
+      relics: [{ id: "patron" }, { id: "twins" }, { id: "compound" }],
+    }
+    // Neither uncommon fires on CRANE, so the only thing moving is Patron.
+    expect(apply(state, type("crane")).round.guesses[0]?.mult).toBeCloseTo(7 * 1.25 ** 2)
+  })
+
+  it("Second Wind saves a round that reached a quarter of the target, once", () => {
+    const base = startRun(1, words).state
+    const losing = (target: number): RunState =>
+      apply(
+        {
+          ...base,
+          relics: [{ id: "second_wind" }],
+          round: { ...base.round, target, maxGuesses: 1 },
+        },
+        type("crane"),
+      )
+    // CRANE scores 49: a third of 147, a fifth of 245.
+    const saved = losing(147)
+    expect(saved.phase).toBe("reward")
+    expect(saved.reward).toEqual({
+      base: 0,
+      unusedGuesses: 0,
+      interest: 0,
+      total: 0,
+      saved: "second_wind",
+    })
+    expect(saved.relics).toEqual([])
+    expect(losing(245).phase).toBe("game_over")
+  })
+
+  it("Carbon Copy scores as the card to its right, and only on the right", () => {
+    const base = startRun(1, words).state
+    const mult = (relics: RunState["relics"]) =>
+      apply({ ...base, relics }, type("crane")).round.guesses[0]?.mult
+    expect(mult([{ id: "carbon_copy" }, { id: "indelible" }])).toBe(28)
+    expect(mult([{ id: "indelible" }, { id: "carbon_copy" }])).toBe(14)
+    expect(mult([{ id: "carbon_copy" }, { id: "carbon_copy" }, { id: "indelible" }])).toBe(56)
+  })
+
+  it("Carbon Copy pays what the card it copies has banked, and banks nothing itself", () => {
+    const base = startRun(1, words).state
+    let state: RunState = { ...base, relics: [{ id: "carbon_copy" }, { id: "snowball" }] }
+    state = apply(state, type("crane"))
+    // One Snowball's worth of growth, not two, and none of it on the copy.
+    expect(state.relics.map((r) => r.data)).toEqual([undefined, { mult: 2 }])
+    // Then both pay the banked 2.
+    expect(apply(state, type("crane")).round.guesses[1]?.mult).toBe(11)
   })
 })

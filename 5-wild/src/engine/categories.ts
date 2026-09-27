@@ -53,6 +53,14 @@ export type Category = {
  * the answer list run roughly 2% / 7% / 20% / 20% / 51%, and the per-level
  * values are graded against exactly that: the rarer the shape, the bigger the
  * step, so no category is obviously the one to level.
+ *
+ * Graded per *hit*, though, and a level pays per guess. Distinct was the
+ * category a good player always leveled, because it is the shape every good
+ * probe lands in: over 250 solver runs it took 47% of scored guesses and a level
+ * of it was worth 508 points a guess on average, against 114 for Twinned. Its
+ * step is now +10 chips / +1 mult, which halves that to 263 and leaves it
+ * clearly behind Cluster (488 at the same share of 37%). Cluster is the next
+ * candidate if a shape still reads as the one to level.
  */
 export const CATEGORIES: readonly Category[] = [
   {
@@ -90,10 +98,11 @@ export const CATEGORIES: readonly Category[] = [
   },
   {
     // The floor, and the one a good opening probe always lands in. Cheapest step
-    // per level because it is the shape you get for free by playing well.
+    // per level because it is the shape you get for free by playing well, and
+    // cheaper again since it was measured; see above.
     id: "distinct",
-    chips: 15,
-    mult: 2,
+    chips: 10,
+    mult: 1,
     matches: (word) => new Set(word).size === word.length,
   },
 ]

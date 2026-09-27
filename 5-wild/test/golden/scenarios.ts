@@ -343,17 +343,19 @@ export const SCENARIOS: readonly Scenario[] = [
    * in the game — stopped firing in any vector in the file. Nothing went red,
    * because no test asks which modifiers a vector happens to hold.
    *
-   * So: all three, and then the shortest run that has them. 8 of the first 1,200
-   * seeds hold Chip, Mult and Gold together, which is rare enough that depth
-   * cannot also be asked for — the eight run from stage 5 to stage 8. 125 is the
-   * shallowest and shortest of them at 26 guesses, two more than seed 9 spent,
-   * with all three landed on a, e and t, the letters a probe is most likely to
-   * put under them.
+   * So: all three, and then the shortest run that has them. 125 was that seed
+   * until the nineteen relics that took the catalog to forty-seven moved its
+   * shelf, and it landed Steel and Chip and lost the other two, which is this
+   * paragraph's warning coming true on schedule. 3 of the first 1,200 seeds now
+   * hold Chip, Mult and Gold together, rare enough that depth cannot also be
+   * asked for. 208 is the shallowest and shortest of them at 26 guesses, stage
+   * 5, with all three landed on a, e and t, the letters a probe is most likely
+   * to put under them.
    */
   {
     name: "letter-smith",
     covers: "letter modifiers bought, and then landed on tiles often enough to score",
-    seed: 125,
+    seed: 208,
     next: (state, words) => {
       if (state.phase === "round") {
         // One probe chosen for the modifiers it would fire, then the answer. A
@@ -457,7 +459,7 @@ export const SCENARIOS: readonly Scenario[] = [
         }
         // Same stopping rule as the rare hunt, for the same reason: reroll only
         // while the change still covers the card being hunted.
-        const reroll = rerollCost(state.shop ?? { items: [], rerolls: 0 })
+        const reroll = rerollCost(state, state.shop ?? { items: [], rerolls: 0 })
         if (state.gold >= reroll + ANCHOR_PRICE && accepted(state, words, [{ type: "reroll" }])) {
           return [{ type: "reroll" }]
         }
@@ -548,7 +550,7 @@ export const SCENARIOS: readonly Scenario[] = [
         // Keep hunting only while the gold left over could still pay for what is
         // being hunted. Without the second term the bot rerolls itself broke and
         // walks past the card it was looking for on the visit it finally appears.
-        const reroll = rerollCost(state.shop ?? { items: [], rerolls: 0 })
+        const reroll = rerollCost(state, state.shop ?? { items: [], rerolls: 0 })
         if (state.gold >= reroll + RARE_PRICE && accepted(state, words, [{ type: "reroll" }])) {
           return [{ type: "reroll" }]
         }
@@ -614,7 +616,7 @@ export const SCENARIOS: readonly Scenario[] = [
         if (wild >= 0 && accepted(state, words, [{ type: "buy", index: wild }])) {
           return [{ type: "buy", index: wild }]
         }
-        const reroll = rerollCost(state.shop ?? { items: [], rerolls: 0 })
+        const reroll = rerollCost(state, state.shop ?? { items: [], rerolls: 0 })
         if (state.gold >= reroll + WILD_PRICE && accepted(state, words, [{ type: "reroll" }])) {
           return [{ type: "reroll" }]
         }
@@ -712,10 +714,19 @@ export const SCENARIOS: readonly Scenario[] = [
       return null
     },
   },
+  /*
+   * Seed 1, and the criterion is written down because the seed before it had
+   * none. Wanted is a run that buys packs after stage 1, so that a pick lands,
+   * and one in stage 1 too, so that a skip does. Seed 5 did both until the
+   * nineteen relics that took the catalog to forty-seven moved its shelf and it
+   * died in stage 1 with nothing opened. Seed 1 picks seven cards and skips two
+   * in 22 guesses. It is simply the first seed that does both: 374 of the first
+   * 400 pick, so the choice buys nothing but a short search.
+   */
   {
     name: "pack-opener",
     covers: "packs bought, held open across the shop, and chosen from",
-    seed: 5,
+    seed: 1,
     next: (state, words) => {
       if (state.phase === "round") {
         // One probe, then the answer. Packs deal all three card lines, so the
@@ -784,63 +795,71 @@ export const SCENARIOS: readonly Scenario[] = [
    * Picking a seed to get an outcome is normally how a vector stops being about
    * the rules and starts being about the bot, so the choice is defended rather
    * than asserted. Winning is genuinely rare, and the spread is not a curve but
-   * two piles: over the first 3,000 seeds, 2,356 die in stage one against 50
+   * two piles: over the first 3,000 seeds, 2,310 die in stage one against 20
    * that reach stage nine. No bot wins on an arbitrary seed, so a seed had to be
-   * chosen. What 1983 was chosen *for*:
+   * chosen. What 982 was chosen *for*:
    *
-   *   - It supplies both bosses the other sixteen vectors miss between them,
-   *     The Miser and The Rust. Measured, not assumed: the check is the union
-   *     of every `boss` this file records against `BOSSES`.
-   *   - It goes as deep as anything in 3,000 seeds, dying on stage 11's boss
-   *     round, which four of the 3,000 reach.
-   *   - It is not tuned to this bot. Five other scenarios' bots run on it reach
-   *     stage 7 or 8. The run is winnable; the climber is not being carried.
+   *   - It supplies the late bosses the other sixteen vectors miss between
+   *     them: The Famine, The Miser and The Auditor. Measured, not assumed: the
+   *     check is the union of every `boss` this file records against `BOSSES`.
+   *   - It goes as deep as anything in 3,000 seeds, dying in stage 11's second
+   *     round, which it is alone among the 3,000 in reaching.
+   *   - It is not tuned to this bot. Four other scenarios' bots run on it win
+   *     outright, and two more reach stage 7. The run is winnable; the climber
+   *     is not being carried.
    *
-   * That second point is why one run can close the boss gap at all, and the
+   * That second point is why one run can close most of the boss gap, and the
    * reason is structural rather than lucky. The late band is drawn without
-   * replacement and indexed from stage 7, so a run reaching stage 11's boss has
-   * met all five of them in order. Those bosses were uncovered *because* nothing
-   * survived past stage 7. No shallow vector could have reached them, and no
-   * number of shallow vectors would have helped.
+   * replacement and indexed from stage 7, so a run reaching stage 11 has met
+   * four of the five in order, and one reaching its boss round has met all five.
+   * Those bosses were uncovered *because* nothing survived past stage 7. No
+   * shallow vector could have reached them, and no number of shallow vectors
+   * would have helped. The fifth, The Rust, comes from `midway` instead: no seed
+   * in the 3,000 reaches stage 11's boss under this bot.
    *
-   * The seed was 5517, then 2111, and each was chosen the same way against the
-   * answer list of its day. The audit that dropped SENOR and GONNA and added
-   * TEETH and EMOJI changed which word every seed deals, and 5517 went from a
-   * 75-guess win to dying in stage one, taking The Miser, The Rust and The
-   * Plateau out of the file with it. The scrub that took the obscenities out of
-   * the answer lists did the same thing to 2111, from a stage-11 win to six
-   * guesses and out, and took The Miser and The Rust with it a second time.
-   * Neither time did anything go red: the vector re-recorded cleanly and went on
-   * asserting stage one. That is the standing hazard of a seed picked for what it
-   * draws, and the check that catches it is coverage, not a test. Re-run it after
-   * anything that moves the deal — twice now, that warning has been the thing
-   * that found the damage.
+   * The seed was 5517, then 2111, then 1983, and each was chosen the same way
+   * against the deal of its day. The audit that dropped SENOR and GONNA and
+   * added TEETH and EMOJI changed which word every seed deals, and 5517 went
+   * from a 75-guess win to dying in stage one, taking The Miser, The Rust and
+   * The Plateau out of the file with it. The scrub that took the obscenities out
+   * of the answer lists did the same thing to 2111, from a stage-11 win to six
+   * guesses and out, and took The Miser and The Rust with it a second time. The
+   * nineteen relics that took the catalog to forty-seven did it to 1983 through
+   * the shelf rather than the words, from a stage-11 win to dying in stage 3,
+   * and five late bosses left the file. None of those three times did anything
+   * go red: the vector re-recorded cleanly and went on asserting a short run.
+   * That is the standing hazard of a seed picked for what it draws, and the
+   * check that catches it is coverage, not a test. Re-run it after anything
+   * that moves the deal or the shelf — three times now, that warning has been
+   * the thing that found the damage.
    */
   {
     name: "victor",
     covers:
       "the run won and then played past, the computed targets beyond stage 8, and the whole " +
       "late boss band nothing else survives to meet",
-    seed: 1983,
+    seed: 982,
     next: climb,
   },
   /*
-   * Seed 161 rather than 13, for the reason the two vectors above were reseeded:
-   * the answer-list scrub took 13 from four relics and stage 5 down to one relic
-   * and stage 1, which is a rung of the ladder covered by nothing. Of the first
-   * 1,200 seeds 679 end holding four relics, so this is a common enough shape to
-   * pick on its merits rather than a lucky one; 161 is the shortest run among
-   * those that also reach stage 6, at 35 guesses against the old seed's 49. Depth
-   * was available — seed 247 climbs to stage 12 — and declined on purpose. This
-   * scenario pins the ladder's rules, not how far a bot can be carried up it, and
-   * a vector twice the length would say the same thing twice.
+   * Seed 226, and before it 161 rather than 13, for the reason the vectors
+   * above were reseeded. The answer-list scrub took 13 from four relics and
+   * stage 5 down to one relic and stage 1, which is a rung of the ladder covered
+   * by nothing, and the nineteen relics that took the catalog to forty-seven did
+   * the same to 161 through the shelf: stage 6 to stage 1. So the criterion is
+   * the one 161 was picked by. Of the first 400 seeds 210 end holding four
+   * relics, a common enough shape to pick on its merits rather than a lucky one,
+   * and 226 is the shortest of the 16 among them that also reach stage 6, at 39
+   * guesses. Depth was available — seed 87 climbs to stage 11 — and declined on
+   * purpose. This scenario pins the ladder's rules, not how far a bot can be
+   * carried up it, and a vector twice the length would say the same thing twice.
    */
   {
     name: "ascendant",
     covers:
       "the whole written ascension ladder: guesses filtered by the run's rules, targets and " +
       "payouts bent by them, every round solved",
-    seed: 161,
+    seed: 226,
     ascension: AUTHORED_ASCENSIONS,
     next: climb,
   },
@@ -902,21 +921,24 @@ export const SCENARIOS: readonly Scenario[] = [
    * Steeper's target multiplier across the entire written stage ladder, which is
    * the rule that arrived here in the reshuffle.
    *
-   * Seed 38 for its length and its breadth: it dies on the last round of stage 8
+   * Seed 40 for its length and its breadth: it dies on the last round of stage 8
    * without ever reaching the win, so it plays the whole authored target curve
    * at a bent multiplier and still leaves `victory` and `continue_run` to
-   * `victor`, which is the only vector that should own them. 58 guesses, 23
-   * rounds banked, a full tray of five relics, five etchings and a Hot Streak
-   * banking 600 chips. Nothing above stage 8 and nothing tuned: at this rung a
-   * run of about five stages is typical, and this one is chosen for what it
-   * covers rather than for how far it got.
+   * `victor`, which is the only vector that should own them. 60 guesses, 23
+   * rounds banked, a full tray of five relics and a Hoarder banking 760 chips,
+   * and it meets The Rust on the way, the one late boss `victor` no longer
+   * reaches. It was 38 until the nineteen relics that took the catalog to
+   * forty-seven moved the shelf and sent 38 out in stage 1; 8 of the first 400
+   * seeds die in stage 8 unwon on a full tray, and 40 is the first. Nothing
+   * above stage 8 and nothing tuned: at this rung the mean run ends in stage 3,
+   * and this one is chosen for what it covers rather than for how far it got.
    */
   {
     name: "midway",
     covers:
       "the middle of the ladder: the rules in force at rung five and, just as much, the four " +
       "above it that are not",
-    seed: 38,
+    seed: 40,
     ascension: 5,
     next: climb,
   },

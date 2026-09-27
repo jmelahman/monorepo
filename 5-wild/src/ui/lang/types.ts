@@ -250,6 +250,8 @@ export type Strings = {
       multUnknown: string
       /** The floater when a letter breaks. Not a tile's, so it names the letter. */
       letterBroken: (letter: string) => string
+      /** The floater when a relic leaves the tray on its own. Gets the card's name. */
+      relicGone: (name: string) => string
     }
 
     /**
@@ -307,6 +309,10 @@ export type Strings = {
       score: (score: string, target: string) => string
       unusedGuesses: string
       interest: string
+      /** The line for gold a relic paid on top of the round. */
+      relics: string
+      /** Why a round under its target is being called cleared. Gets the card's name. */
+      savedBy: (name: string) => string
       total: string
       collect: string
     }

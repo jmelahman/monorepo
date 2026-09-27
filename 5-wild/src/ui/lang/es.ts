@@ -17,7 +17,7 @@ const MODIFIER: Strings["modifier"] = {
   glass: { name: "Cristal", text: "puntúa ×3 mult, y puede romperse cuando cae en gris" },
 }
 
-const UNIT: Record<Growth["unit"], string> = { chips: "fichas", mult: "mult" }
+const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "fichas", mult: "mult" }
 
 const COLOR: Record<Color, string> = { green: "verde", yellow: "amarillo", gray: "gris" }
 
@@ -59,7 +59,7 @@ export const es: Strings = {
     head_start: { name: "Ventaja", text: "+15 mult si la palabra empieza por vocal" },
     loaded_dice: { name: "Dados Cargados", text: "+0 a +20 mult, tirados de nuevo cada intento" },
     anagrammer: { name: "Anagramista", text: "×2 mult si no se repite ninguna letra" },
-    keystone: { name: "Clave de Bóveda", text: "×3 mult si la casilla central es verde" },
+    keystone: { name: "Clave de Bóveda", text: "×2,5 mult si la casilla central es verde" },
     lexicographer: {
       name: "Lexicógrafo",
       text: "+3 fichas por cada letra distinta de tus intentos anteriores en la ronda",
@@ -101,6 +101,46 @@ export const es: Strings = {
       name: "Pirómano",
       text: "+40 mult. Rompe una letra al azar del alfabeto en cada ronda",
     },
+    fresh_ink: {
+      name: "Tinta Fresca",
+      text: "+15 mult. 1 entre 6 de secarse al final de cada ronda",
+    },
+    first_draft: { name: "Borrador", text: "+20 mult, 4 menos al final de cada ronda" },
+    candle: { name: "Vela", text: "+30 fichas, 6 menos al final de cada ronda" },
+    reserve: { name: "Reserva", text: "+8 fichas por cada intento que te quedaría" },
+    collector: { name: "Coleccionista", text: "+4 mult por cada reliquia que tengas" },
+    second_look: { name: "Otro Vistazo", text: "Tu primera renovación en cada tienda es gratis" },
+    stipend: { name: "Estipendio", text: "Gana $2 al final de cada ronda que superes" },
+    first_impression: { name: "Primera Impresión", text: "×2 mult si la primera casilla es verde" },
+    twins: { name: "Gemelos", text: "×2,5 mult si alguna letra aparece dos veces" },
+    blank_page: {
+      name: "Página en Blanco",
+      text: "×1 mult por cada hueco de reliquia vacío, este incluido",
+    },
+    habit: {
+      name: "Fuerza de la Costumbre",
+      text: "+2 mult por cada palabra de la misma forma jugada desde que la compraste",
+    },
+    no_maybes: { name: "Sin Quizás", text: "×2 mult si el intento no tiene casillas amarillas" },
+    compound: { name: "Interés Compuesto", text: "Duplica los intereses que ganas" },
+    royalties: {
+      name: "Derechos de Autor",
+      text: "Gana $1 al final de cada ronda que superes, y $1 más por cada jefe vencido",
+    },
+    thesaurus: {
+      name: "Tesauro",
+      text: "×1 mult, más ×0,1 por cada nivel de forma que hayas comprado",
+    },
+    patron: { name: "Mecenas", text: "×1,25 mult por cada reliquia poco común que tengas" },
+    indelible: {
+      name: "Indeleble",
+      text: "×2 mult. 1 entre 40 de borrarse al final de cada ronda",
+    },
+    second_wind: {
+      name: "Segundo Aire",
+      text: "Sobrevive a una ronda perdida si llegaste a un cuarto del objetivo. Luego desaparece",
+    },
+    carbon_copy: { name: "Papel Carbón", text: "Puntúa como la reliquia a su derecha" },
   },
 
   boss: {
@@ -277,7 +317,9 @@ export const es: Strings = {
   },
 
   event: {
-    growth: ({ amount, unit }) => `+${amount} ${UNIT[unit]}`,
+    // Gold wears the currency sign rather than a word, the way every other
+    // price in the game does.
+    growth: ({ amount, unit }) => (unit === "gold" ? `+$${amount}` : `+${amount} ${UNIT[unit]}`),
 
     payout: (paid) => {
       switch (paid.kind) {
@@ -385,6 +427,7 @@ export const es: Strings = {
       shapesMore: "formas ›",
       multUnknown: "El color es el multiplicador. Adivinar es como se descubre.",
       letterBroken: (letter) => `${letter.toUpperCase()} rota`,
+      relicGone: (name) => `${name} se ha ido`,
     },
 
     tip: {
@@ -441,6 +484,8 @@ export const es: Strings = {
       score: (score, target) => `${score} de ${target}`,
       unusedGuesses: "Intentos sin usar",
       interest: "Intereses",
+      relics: "Reliquias",
+      savedBy: (name) => `Salvada por ${name}`,
       total: "Total",
       collect: "Cobrar",
     },

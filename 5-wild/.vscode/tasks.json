@@ -3,8 +3,9 @@
   "tasks": [
     {
       "label": "Run",
-      "type": "npm",
-      "script": "dev",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "dev", "--", "--host", "0.0.0.0"],
       "problemMatcher": [],
       "isBackground": true,
       "group": {

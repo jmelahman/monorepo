@@ -37,6 +37,7 @@ import type {
   PickedItem,
   Reduced,
   Refusal,
+  RelicInstance,
   RoundIndex,
   RoundState,
   RunState,
@@ -63,22 +64,35 @@ import { computeFeedback, toTiles } from "./words"
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 /**
- * Every equipped relic paired with the context its run-level hooks get.
+ * Fire one run-level hook across the tray, in slot order.
  *
  * One `Rng` shared across the slots rather than one each, so the draws stay in
  * slot order and a relic bought later cannot shift what an earlier one rolled.
+ *
+ * It used to hand back the pairs and let each caller loop, and it stopped when
+ * cards could leave the tray. A card that destroys itself is only *marked* while
+ * the walk is under way and swept out once it has finished, so every card that
+ * fires in the same walk sees the slot numbers it started with. Owning the loop
+ * here is what makes the sweep impossible to forget at a fourth call site.
  */
-function relicHooks(
+function fireRelics(
   state: RunState,
   rng: Rng,
   events: GameEvent[],
-): Array<readonly [Relic, RelicCtx]> {
-  const out: Array<readonly [Relic, RelicCtx]> = []
+  call: (relic: Relic, ctx: RelicCtx) => void,
+): void {
+  const doomed = new Set<RelicInstance>()
   state.relics.forEach((instance, slot) => {
     const relic = RELIC_BY_ID.get(instance.id)
-    if (relic) out.push([relic, { state, instance, slot, rng, events }])
+    if (!relic) return
+    const destroy = () => {
+      if (doomed.has(instance)) return
+      doomed.add(instance)
+      events.push({ type: "relic_destroyed", id: instance.id })
+    }
+    call(relic, { state, instance, slot, rng, events, destroy })
   })
-  return out
+  if (doomed.size > 0) state.relics = state.relics.filter((instance) => !doomed.has(instance))
 }
 
 function freshLetters(): Record<string, LetterState> {
@@ -137,7 +151,7 @@ function beginRound(state: RunState, words: WordSource, events: GameEvent[]): vo
   // The salt keeps the old spelling: it is a coordinate, and renaming it would
   // deal every seed a different run. See `derive` in `rng.ts`.
   const rng = derive(state.seed, "blind_start", state.stage, state.roundIndex)
-  for (const [relic, ctx] of relicHooks(state, rng, events)) relic.onRoundStart?.(ctx)
+  fireRelics(state, rng, events, (relic, ctx) => relic.onRoundStart?.(ctx))
 
   const boss = getBoss(bossId)
   const difficulty = difficultyOf(state)
@@ -190,7 +204,7 @@ function beginRound(state: RunState, words: WordSource, events: GameEvent[]): vo
  */
 function enterShop(state: RunState, events: GameEvent[]): void {
   const rng = derive(state.seed, "shop_enter", state.stage, state.roundIndex)
-  for (const [relic, ctx] of relicHooks(state, rng, events)) relic.onShopEnter?.(ctx)
+  fireRelics(state, rng, events, (relic, ctx) => relic.onShopEnter?.(ctx))
 
   state.shop = rollShop(state, derive(state.seed, "shop", state.stage, state.roundIndex, 0), 0)
   state.phase = "shop"
@@ -212,7 +226,7 @@ function resolveRound(state: RunState, events: GameEvent[]): void {
   //
   // Frozen salt, as at round start.
   const rng = derive(state.seed, "blind_end", state.stage, state.roundIndex)
-  for (const [relic, ctx] of relicHooks(state, rng, events)) relic.onRoundEnd?.(ctx, round)
+  fireRelics(state, rng, events, (relic, ctx) => relic.onRoundEnd?.(ctx, round))
 
   // Farming five wrong guesses to the target and never finding the word is a
   // real line in the ordinary game, and the whole of what ascension 10 takes
@@ -220,8 +234,24 @@ function resolveRound(state: RunState, events: GameEvent[]): void {
   // any one guess: it is about what the round had to have been.
   const difficulty = difficultyOf(state)
   if (round.score < round.target || (!round.solved && difficulty.mustSolve)) {
-    state.phase = "game_over"
-    events.push({ type: "round_lost" })
+    // A card may still refuse the loss. Asked here, after the round-end hooks,
+    // so a relic that grew on this round has grown whether or not it is saved,
+    // and asked of the whole tray in slot order with the first answer winning,
+    // so two safety nets are one used and one kept rather than two spent.
+    let saved: string | undefined
+    fireRelics(state, rng, events, (relic, ctx) => {
+      if (saved === undefined && relic.onRoundLost?.(ctx, round)) saved = relic.id
+    })
+    if (saved === undefined) {
+      state.phase = "game_over"
+      events.push({ type: "round_lost" })
+      return
+    }
+    // Paid nothing, on purpose: surviving is the payout, and a round the
+    // player lost must not also fund the shop they are about to walk into.
+    state.reward = { base: 0, unusedGuesses: 0, interest: 0, total: 0, saved }
+    state.phase = "reward"
+    events.push({ type: "round_won" })
     return
   }
 
@@ -251,9 +281,24 @@ function resolveRound(state: RunState, events: GameEvent[]): void {
   // round is still survived.
   const unpaid = difficulty.unpaidIfUnsolved && !round.solved
 
+  // What the tray pays on top. Withheld by Dead Weight along with the rest:
+  // the rule is that a farmed round funds nothing, and a card that funded it
+  // anyway would be the one way round it.
+  let relics = 0
+  for (const instance of state.relics)
+    relics += RELIC_BY_ID.get(instance.id)?.payout?.(state, instance) ?? 0
+
   state.reward = unpaid
     ? { base: 0, unusedGuesses: 0, interest: 0, total: 0 }
-    : { base, unusedGuesses, interest, total: base + unusedGuesses + interest }
+    : {
+        base,
+        unusedGuesses,
+        interest,
+        // Absent rather than zero, so a tray that pays nothing writes the same
+        // reward it always did and the golden vectors do not move for it.
+        ...(relics > 0 ? { relics } : {}),
+        total: base + unusedGuesses + interest + relics,
+      }
   state.phase = "reward"
   events.push({ type: "round_won" })
 }
@@ -717,7 +762,7 @@ export function reduce(state: RunState, action: Action, words: WordSource): Redu
       if (next.phase !== "shop" || !next.shop) return reject({ code: "not_in_shop" })
       if (next.pack) return reject({ code: "finish_pack_first" })
       if (next.placing) return reject({ code: "place_mod_first" })
-      const cost = rerollCost(next.shop)
+      const cost = rerollCost(next, next.shop)
       if (next.gold < cost) return reject({ code: "not_enough_gold" })
       next.gold -= cost
 
@@ -727,7 +772,9 @@ export function reduce(state: RunState, action: Action, words: WordSource): Redu
         derive(next.seed, "shop", next.stage, next.roundIndex, rerolls),
         rerolls,
       )
-      events.push({ type: "gold", delta: -cost, reason: "reroll" })
+      // Nothing when the tray paid for it: no gold moved, and a `-0` delta
+      // would not even survive the trip through JSON that a save takes.
+      if (cost > 0) events.push({ type: "gold", delta: -cost, reason: "reroll" })
       return { state: next, events }
     }
 

@@ -16,6 +16,7 @@ import {
   payoutBadge,
   readLang,
   refusalText,
+  relicCard,
   setLang,
   ui,
 } from "./lang"
@@ -667,6 +668,14 @@ export class App {
         }
         case "letter_destroyed":
           this.floater(screen, ui().board.letterBroken(event.letter))
+          this.sound.break()
+          await this.pace(PACE.relic)
+          break
+        case "relic_destroyed":
+          // No card to light: the screen was rebuilt from a tray that no longer
+          // holds it. The floater names it instead, and the break sound is the
+          // same one a letter makes, because it is the same kind of loss.
+          this.floater(screen, ui().board.relicGone(relicCard(event.id).name))
           this.sound.break()
           await this.pace(PACE.relic)
           break

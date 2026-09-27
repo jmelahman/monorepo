@@ -332,7 +332,20 @@ export type RewardBreakdown = {
   base: number
   unusedGuesses: number
   interest: number
+  /**
+   * What the tray paid on top: Stipend, Royalties. Optional, and absent rather
+   * than zero when nothing paid, so a save from before relics could pay a round
+   * reads back as what it was.
+   */
+  relics?: number
   total: number
+  /**
+   * The relic that spent itself to keep a lost round alive, by id. Set only on
+   * that round, whose reward is zero by construction: being saved is the
+   * payout. The screen needs it to explain why a round below its target is
+   * being called cleared.
+   */
+  saved?: string
 }
 
 export type Action =
@@ -384,13 +397,13 @@ export type PickedItem = {
 }
 
 /**
- * What a scaling relic has banked so far, in the only two currencies one can
+ * What a scaling relic has banked so far, in the only three currencies one can
  * bank. Read twice: on the card, as the line under its name, and in the toast
  * the moment it grows, which is why it is one type rather than two agreeing
- * ones. The union on `unit` is the whole guard — a relic that grew in gold
- * would not compile until someone taught the catalog to say so.
+ * ones. The union on `unit` is the whole guard: gold was the third, for
+ * Royalties, and it did not compile until every catalog was taught to say it.
  */
-export type Growth = { amount: number; unit: "chips" | "mult" }
+export type Growth = { amount: number; unit: "chips" | "mult" | "gold" }
 
 /**
  * What one effect did to the two numbers, at the moment it did it.
@@ -521,6 +534,13 @@ export type GameEvent =
    * differently from how it says "this just paid".
    */
   | ({ type: "relic_grew"; slot: number; id: string } & Growth)
+  /**
+   * A relic leaving the tray on its own: a chance card that came up, or a
+   * one-shot that spent itself. No slot, because by the time the screen plays
+   * this the tray has already been rebuilt without it, and a slot index would
+   * point at whichever card slid into the gap.
+   */
+  | { type: "relic_destroyed"; id: string }
   /** A letter's own modifier firing, on the tile that carried it. */
   | {
       type: "mod"
