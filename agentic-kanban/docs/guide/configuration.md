@@ -152,7 +152,19 @@ Three keys only affect the bundled image, since a `devcontainer.json` you write 
 
 ## Task ports
 
-Kanban runs the tasks in the repo's `.vscode/tasks.json`. To reach a task's server from your browser, map its label to a container port:
+Kanban runs the tasks in the repo's `.vscode/tasks.json`. Besides `shell` and `process` tasks, it runs these task types the way their VS Code extension would:
+
+| `type`                   | Runs                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| `npm`                    | `<pm> run <script>` in `path`, where `<pm>` is npm, yarn, pnpm, or bun, detected from the lockfile or `packageManager` field. The `install` script runs `<pm> install` |
+| `typescript`             | `npx tsc -p <tsconfig>`, plus `--watch` when `option` is `watch`                        |
+| `gulp`, `grunt`, `jake`  | `npx <type> <task>`                                                                     |
+| `rake`                   | `rake <task>`                                                                           |
+| `cargo`, `go`, `deno`    | `<type> <command> <args>`                                                               |
+
+A typed task without a `label` gets the name VS Code gives it, such as `npm: dev`. Tasks of other types are skipped with a warning.
+
+To reach a task's server from your browser, map its label to a container port:
 
 ```toml
 [[task]]

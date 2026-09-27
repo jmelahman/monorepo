@@ -70,9 +70,16 @@ type vsTasksFile struct {
 
 type vsTaskRaw struct {
 	Label   string   `json:"label"`
+	Type    string   `json:"type"`
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
-	Options struct {
+	// Task-provider fields; see resolveCommand.
+	Script   string `json:"script"`   // npm
+	Path     string `json:"path"`     // npm
+	Task     string `json:"task"`     // gulp, grunt, jake, rake
+	Tsconfig string `json:"tsconfig"` // typescript
+	Option   string `json:"option"`   // typescript
+	Options  struct {
 		Cwd string            `json:"cwd"`
 		Env map[string]string `json:"env"`
 	} `json:"options"`
@@ -112,18 +119,35 @@ func Discover(worktreePath string) ([]VSCodeTask, []string, error) {
 			log.Print(msg)
 			warnings = append(warnings, msg)
 		} else {
-			for _, t := range file.Tasks {
-				if t.Label == "" || t.Command == "" {
-					continue
+			for i, t := range file.Tasks {
+				if t.Label == "" {
+					t.Label = defaultLabel(t)
 				}
 				if separatorLabel.MatchString(strings.TrimSpace(t.Label)) {
 					continue
 				}
+				// Resolve before dropping unlabeled entries: a typed task with
+				// no label only lacks one because it's malformed or of an
+				// unsupported type, and that deserves a warning.
+				command, args, cwd, ok, err := resolveCommand(t, worktreePath)
+				if err != nil {
+					name := fmt.Sprintf("%q", t.Label)
+					if t.Label == "" {
+						name = fmt.Sprintf("#%d", i+1)
+					}
+					msg := fmt.Sprintf(".vscode/tasks.json: task %s: %v", name, err)
+					log.Print(msg)
+					warnings = append(warnings, msg)
+					continue
+				}
+				if !ok || t.Label == "" {
+					continue
+				}
 				out = append(out, VSCodeTask{
 					Label:   t.Label,
-					Command: t.Command,
-					Args:    t.Args,
-					Cwd:     t.Options.Cwd,
+					Command: command,
+					Args:    args,
+					Cwd:     cwd,
 					Env:     t.Options.Env,
 				})
 			}
