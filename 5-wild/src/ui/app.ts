@@ -1889,6 +1889,26 @@ export class App {
     // Desktop convenience during development; harmless on a phone.
     window.addEventListener("keydown", (event) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return
+      // Escape puts a tip down, and does nothing else while one is up. A tip
+      // brought up by tabbing had no way down but tabbing on, since it belongs
+      // to focus and focus stays put, so a player who tabbed to a relic to read
+      // it was left with the panel over the board until they moved somewhere
+      // else. Focus is left where it was, so the next Tab carries on from the
+      // card rather than from the top of the page; the tip comes back on the
+      // next focus or hover, because `hovered` is cleared with it.
+      //
+      // Above the sheet branch on purpose: a tip over an open sheet is the
+      // nearer thing, and an Escape that closed the sheet under it would take
+      // two things down to answer one key. The second Escape closes the sheet.
+      //
+      // Not a timeout, which was the other way to do it. A tip is read at the
+      // reader's pace, and one timed for the relic that says six words would
+      // vanish under the letter whose tip runs to five lines.
+      if (event.key === "Escape" && this.hovered) {
+        this.showTip(null)
+        event.preventDefault()
+        return
+      }
       // Tab is the one key an open sheet does not swallow, and the reason this
       // check sits above the overlay branch rather than inside it: the pack and
       // the letter picker are modal too, and they are held by the engine rather

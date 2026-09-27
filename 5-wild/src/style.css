@@ -366,9 +366,8 @@ button {
   animation: pop calc(300ms * var(--pace)) ease;
 }
 
-/* The round's name with its token beside it, the token at the size of a
-   letter. Scoped to the round because the shop's `.hud-round` is two lines of
-   text with nothing to sit beside. */
+/* The round's name with its token beside it. Scoped to the round because the
+   shop's `.hud-round` is two lines of text with nothing to sit beside. */
 .round-screen .hud-round {
   display: flex;
   align-items: center;
@@ -554,8 +553,14 @@ button {
 /*
  * Legendaries catch the light. One pass every few seconds, at an angle no other
  * element in the game moves at, so it registers in peripheral vision.
+ *
+ * On offer, not once owned. That peripheral pull is the point on a shelf of
+ * cards being weighed against each other, and the wrong thing in the tray over
+ * the board, where it was the one moving thing on the screen while the player
+ * was trying to think about a word, every five seconds for the rest of the run.
+ * The pip still says legendary there.
  */
-.rarity-legendary::before {
+.rarity-legendary:not(.relic)::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -647,8 +652,8 @@ button {
 /*
  * Fixed, and a sibling of the tray rather than a child of the card, because
  * `.relics` scrolls sideways, which forces the other axis to clip too, and
- * `.relic` hides its own overflow so the legendary sheen stays inside its
- * edges. Anything nested would be cut off by one of the two. The position is
+ * `.relic` hides its own overflow so a name too long for its card ends at the
+ * card's edge. Anything nested would be cut off by one of the two. The position is
  * set from script; the transition is the whole animation.
  */
 .relic-tip {
@@ -728,6 +733,46 @@ button {
   line-height: 1.2;
 }
 
+/* On the board the hand is a fixed band, seats and all, so the board below it
+   is the same size and in the same place whether the hand is full, empty or
+   emptied mid-round. The band is the relic tray's height, `--tray-h`, so the
+   two rows read as one pair of shelves; the rule clamps at one line to fit it,
+   and carries the rest as a tip. The pause sheet's copy of the row is not
+   clamped, since nothing there is sized against it. Stretched cards rather than
+   a height on each, so an empty seat and a held card are one height by
+   construction.
+
+   Its own line heights and a thinner pad: a name, 1px of gap, one line of rule
+   at 1.15 and 3px of pad a side come to 34px inside the 40. Two lines of rule
+   were 47px, and held both rows at 48, which the board paid for twice. The name
+   is what a held card is recognized by; the rule is on the tip, and in full in
+   the pause sheet. */
+.round-screen .consumables {
+  height: var(--tray-h);
+}
+
+.round-screen .consumable {
+  padding-block: 0.1875rem;
+}
+
+.round-screen .consumable-name,
+.round-screen .consumable-text {
+  line-height: 1.15;
+}
+
+.round-screen .consumable-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+.consumable.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+}
+
 /* ----------------------------------------------------------------- grid */
 
 /*
@@ -742,20 +787,21 @@ button {
   min-height: 0;
   container-type: size;
   display: flex;
-  /* The anchor for `.coach-slot`, and it has to be said out loud.
-     `container-type: size` reads as though it covered this, since it applies
-     layout containment and layout containment makes a box a containing block
-     for its absolutely positioned descendants, but the two were split deliberately, and
-     Chromium 147 agrees: probed side by side on a static box, `contain: layout`
-     anchors an abspos child to the box and `container-type: size` leaves it on
-     the viewport. The card was landing over the keyboard, 227px below the board
-     it is meant to be lying on. */
-  position: relative;
+  /* No `position` any more: it was the anchor for `.coach-slot`, which is
+     anchored to `.grid` now. Worth knowing if anything is anchored here again:
+     `container-type: size` reads as though it made this a containing block,
+     since it applies layout containment, but Chromium 147 does not agree, and
+     without `position: relative` the card landed over the keyboard, 227px below
+     the board it was meant to be lying on. */
 }
 
-/* A round without a boss keeps the band's height anyway, as padding split
-   either side of the board, so every round's tiles are the size of a boss
-   round's. The band was a banner of its own under the header, sized by its
+/* A round without a boss keeps the band's height anyway, as padding above
+   the board, so every round's tiles are the size of a boss round's and in the
+   same place. It was split either side at first, which kept the size and not
+   the place: the boss round's board sat half a band lower than the round
+   before it. All of it above is what the band itself does, so the wrap's
+   content box starts at the same pixel on both, and the board, flush to the
+   top of that box, starts there too whether it is bound by width or height. The band was a banner of its own under the header, sized by its
    text, and the grid took whatever it left: the same screen drew smaller tiles
    on a boss round than on the round before it, and a different size again per
    boss and per language, on the one round the player is most careful on.
@@ -765,13 +811,19 @@ button {
    padding is slack and costs nothing; when it is bound by height it costs the
    ordinary rounds what the boss round was already paying. */
 .round-screen:not(:has(.hud .boss)) .grid-wrap {
-  --board-reserve: calc(var(--boss-band) / 2);
-  padding-block: var(--board-reserve);
+  padding-top: var(--boss-band);
 }
 
 .grid {
-  /* Centered in whatever the wrap turned out to be. */
-  margin: auto;
+  /* Centered across the wrap and flush to its top, with any height left over
+     falling below the board rather than split either side of it. Centered both
+     ways, the board of a width-bound phone sat wherever half the slack put it,
+     which moved with every row of chrome above; flush, the top row is a fixed
+     distance under the trays, as high as the screen allows, and the slack is a
+     gap over the dock line where nothing is aimed at. */
+  margin: 0 auto auto;
+  /* The containing block for `.coach-slot`, which pins to the board's foot. */
+  position: relative;
   display: grid;
   grid-template-rows: repeat(var(--rows, 6), 1fr);
   gap: 0.3125rem;
@@ -952,26 +1004,25 @@ button {
 /*
  * The first round explaining itself, laid over the rows it has not reached yet.
  *
- * Absolute, and unconditionally so, even while it is empty. `.grid-wrap` is a
- * flex container whose only child centers itself with `margin: auto`, and a
- * second child in the flow would take a share of the main axis and push the
- * board off its own center. Out of flow it costs nothing either way, which is
+ * Absolute, and unconditionally so, even while it is empty. It lives inside
+ * `.grid`, where an in-flow child would be auto-placed as a seventh row and
+ * squeeze the six real ones. Out of flow it costs nothing either way, which is
  * the point: the card appears and disappears five times in the first round, and
  * a board that resized on each of those would be a board that moves under the
  * thumb aiming at it.
  *
- * The containing block is `.grid-wrap`, which had to be told to be one; see the
- * note on `position: relative` there. So this pins to the board's own bottom
- * edge, whichever axis the board turned out to be bound by.
+ * The containing block is `.grid` itself, so this pins to the board's own
+ * bottom edge whichever axis the board turned out to be bound by. It was the
+ * wrap once, which was the board's foot only while the board was centered in
+ * it; flush to the top, a width-bound board leaves all the slack below, and a
+ * card pinned to the wrap would sit under the rows it is meant to lie on.
  */
 .coach-slot {
   position: absolute;
   z-index: 3;
   left: 0;
   right: 0;
-  /* On the board's foot, not the wrap's: the wrap's padding box runs past the
-     board by the reservation on an ordinary round. */
-  bottom: var(--board-reserve, 0);
+  bottom: 0;
   /* The empty slot spans the board's full width and must not intercept the long
      press that reads a boss's note off the row underneath it. */
   pointer-events: none;
@@ -1516,6 +1567,36 @@ button {
      rather than on the band, because the board of a round without a boss has
      to reserve it too. See `.hud .boss` and `.grid-wrap`. */
   --boss-band: calc(2 * 1.3 * 0.6875rem + 0.75rem);
+  /* One height for the relic tray and the hand, both drawn whether or not
+     anything is in them. The tray was a 2.5rem minimum that grew by the name:
+     a two-line name over a growth badge came to 47px, so a relic that started
+     counting mid-round pushed the board down. 3rem held that case as it was,
+     and cost the board 16px across the two rows; 2.5rem, the tray's old
+     minimum, holds it with the card packed tighter below.
+     See `.round-screen .relic` and `.round-screen .consumables`. */
+  --tray-h: 2.5rem;
+}
+
+/* The tray's cards at the pinned height rather than on the tray, whose padding
+   and matching negative margin are there for the lift of a fired relic.
+
+   Packed to fit the worst case, which is common rather than rare: most of the
+   relics that grow have two-word names (Slow Burn, Sunk Cost, Compound
+   Interest), and two-word names wrap. The 2px edge, 2px of pad a side, two
+   lines of name at 1.1, 1px of gap and the badge at 1 come to 39px of the 40;
+   at the card's own 4px pad and unset badge line height they were 47. */
+.round-screen .relic {
+  height: var(--tray-h);
+  padding: 0.125rem 0.25rem;
+  gap: 0.0625rem;
+}
+
+.round-screen .relic-name {
+  line-height: 1.1;
+}
+
+.round-screen .relic-detail {
+  line-height: 1;
 }
 
 /*
@@ -2720,6 +2801,17 @@ button {
 .track-name .round-token {
   width: 1rem;
   height: 1rem;
+}
+
+/* The token at the height of the two lines beside it, the name and the stage,
+   rather than of a letter. At 18px the crown was a speck beside the name, and
+   the shape is meant to say which kind of round this is before the name has
+   been read. 30px is the most it can take for free: the name and the stage
+   are about 31px together, so the header is no taller than it was, and a
+   taller header is height out of the board. */
+.hud .round-token {
+  width: 1.875rem;
+  height: 1.875rem;
 }
 
 /* Lands with a little more spring than the card it sits on, so it reads as

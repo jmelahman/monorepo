@@ -381,8 +381,8 @@ function hud(state: RunState, on: Handlers): HTMLElement {
     h(
       "div",
       { class: "hud-round" },
-      // The intro card's token at the size of a letter, so the round keeps the
-      // shape it was announced with once the card has gone.
+      // The intro card's token at the height of the title beside it, so the round
+      // keeps the shape it was announced with once the card has gone.
       roundToken(tokenOf(state)),
       h(
         "div",
@@ -561,22 +561,35 @@ function relicRow(state: RunState): HTMLElement {
   return h("div", { class: "relics" }, ...slots)
 }
 
-function consumableRow(state: RunState, on: Handlers): HTMLElement | null {
-  if (state.consumables.length === 0) return null
-  const cards = state.consumables.map((instance, index) => {
+/**
+ * The hand, drawn as its seats whether or not anything is in them, for the
+ * tray's reason and one of the board's own. It was no row at all while the hand
+ * was empty, and the board is whatever the chrome leaves, so buying a card in
+ * the shop moved every tile of the next round down and shrank it by the row's
+ * height, and playing the last one moved them back, mid-round, under the thumb.
+ * An empty seat costs the ordinary round the row's height, the same trade the
+ * boss band makes, and at the relic tray's height; see `--tray-h`.
+ */
+function consumableRow(state: RunState, on: Handlers): HTMLElement {
+  const seats = Array.from({ length: CONSUMABLE_SLOTS }, (_, index) => {
+    const instance = state.consumables[index]
+    if (!instance) return h("div", { class: "consumable empty" })
     const card = consumableCard(instance.id)
     return h(
       "button",
       {
         class: "consumable",
         type: "button",
+        // The rule is clamped to the band's one line, which every rule in the
+        // English catalog outruns at 390px, so the whole of it is a press away.
+        "data-tip": card.text,
         onclick: () => on.useConsumable(index),
       },
       h("span", { class: "consumable-name" }, card.name),
       h("span", { class: "consumable-text" }, card.text),
     )
   })
-  return h("div", { class: "consumables" }, ...cards)
+  return h("div", { class: "consumables" }, ...seats)
 }
 
 /* --------------------------------------------------------------- the round */
@@ -659,10 +672,16 @@ function grid(state: RunState, coach: CoachStep | null): HTMLElement {
   return h(
     "div",
     { class: "grid-wrap" },
-    h("div", { class: "grid", style: `--rows:${round.maxGuesses};--cols:${width}` }, ...rows),
-    // The coaching card, laid over the board's unplayed rows. See `coachSlot`
-    // for why this is the one place on the round screen with room for it.
-    coachSlot(coach),
+    h(
+      "div",
+      { class: "grid", style: `--rows:${round.maxGuesses};--cols:${width}` },
+      ...rows,
+      // The coaching card, laid over the board's unplayed rows. See `coachSlot`
+      // for why this is the one place on the round screen with room for it.
+      // Inside the board rather than beside it so it pins to the board's foot
+      // and not the wrap's; see `.coach-slot`.
+      coachSlot(coach),
+    ),
   )
 }
 
@@ -680,7 +699,7 @@ function grid(state: RunState, coach: CoachStep | null): HTMLElement {
  * The board is the opposite: at the moment each beat fires, the rows below the
  * one being typed are empty by definition, so the card is laid over blank
  * squares and nothing the player needs is hidden. It costs no layout either. It
- * is absolutely positioned inside `.grid-wrap`, so the board does not resize
+ * is absolutely positioned inside `.grid`, so the board does not resize
  * when the card appears, which on this screen would be the board *moving*.
  *
  * The slot is always in the document, empty or not, for `fillCategory`'s
@@ -2078,7 +2097,8 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
   })
 
   // The round's consumable row, card for card: name over rule, and no row at
-  // all while the hand is empty, as on the board. Not buttons: a card is only
+  // all while the hand is empty. The board draws empty seats, because there a
+  // row that came and went moved the tiles; nothing here is aimed at. Not buttons: a card is only
   // played during a round (the engine refuses it anywhere else), so here it is
   // a thing held. A full hand needs no empty seats to say so; the shelf card
   // that will not fit says "No free slot" itself.
