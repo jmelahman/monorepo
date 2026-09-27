@@ -49,7 +49,14 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      # The action's default is `tools platform-tools`, and `tools` (the SDK
+      # Tools superseded by cmdline-tools years ago) has since left Google's
+      # repository: sdkmanager answers "Failed to find package 'tools'" and
+      # exits 1. Gradle fetches the platform and build-tools it needs itself
+      # once the licenses are accepted, so platform-tools is all this asks for.
       - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699
+        with:
+          packages: platform-tools
 
       - run: npm ci
       - run: npm run build
