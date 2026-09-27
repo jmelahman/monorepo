@@ -336,7 +336,10 @@ button {
   transform-origin: left;
 }
 
-.hud-score.met .meter-fill {
+/* Asked of the header rather than of the seat, because on the round the bar
+   is not inside the seat any more; `app.ts` still lights the seat as the
+   count-up crosses the target, and one class is still the only switch. */
+.hud:has(.hud-score.met) .meter-fill {
   background: var(--green);
 }
 
@@ -438,6 +441,24 @@ button {
    board is being told exactly how tall this header is. */
 .hud:has(.boss) {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--mult) 70%, transparent);
+}
+
+/* The bar as the header's own row, the header's full width, with the score
+   and target left where they were in the middle seat. There the bar was 80px,
+   the width of the figures over it, and a round's progress at 80px is a bar
+   you read to the nearest quarter. The figures stayed put because moving them
+   too was tried first, onto a line of their own under the name: that line cost
+   40px of header, and the board is height-bound on a boss round with a full
+   tray and both cards, so it came out of the tiles, 334px of board down to 301
+   at 390x844. The bar alone is its height and a row gap.
+   A grid row rather than a width on the bar inside the seat, because the seat
+   is the middle track and the bar has to cross the other two. Auto-placed: the
+   name, the score and the gold fill the first row, and a span of every track
+   has to open the next. */
+.round-screen .hud .meter {
+  grid-column: 1 / -1;
+  /* The row gap spaces it now. */
+  margin-top: 0;
 }
 
 /* --------------------------------------------------------------- relics */
@@ -1841,10 +1862,15 @@ button {
   padding: 0.5rem 0.5rem 0;
 }
 
-/* The score's seat, empty, at the score's height: a shop header 11px shorter
-   than the round's moved everything under it on the way in. See `shopView`. */
-.shop-screen .hud-score {
-  height: 2.7rem;
+/* The round's bar row, empty, held open under the shop's header: a shop header
+   11px shorter than the round's moved everything under it on the way in. See
+   `shopView`. It was a 2.7rem seat when the bar lived in the seat, under the
+   score; with the bar a row of its own the seat is the name's height on both
+   screens, and what the shop is missing is the row gap and the bar, which are
+   said here in the numbers the round's rules use rather than as a sum measured
+   once. The first row is the name block on both, so it needs no restating. */
+.shop-screen .hud {
+  padding-bottom: calc(0.375rem + 0.375rem + 0.3125rem);
 }
 
 /*

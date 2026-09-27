@@ -400,18 +400,13 @@ function hud(state: RunState, on: Handlers): HTMLElement {
         "data-tip": solveSaid(state),
       },
       // One line, the score and what it is out of on a shared baseline, so the
-      // seat is as short as the name beside it and the bar under it is the
-      // second line of the header rather than the third.
+      // seat is as short as the name beside it.
       h(
         "div",
         { class: "score-line" },
         h("div", { class: "score" }, num(round.score)),
         h("div", { class: "target" }, board.target(num(round.target))),
       ),
-      // The same fact as the two numbers above it, in the form a glance can take
-      // in. The scoring animation drives it frame by frame, so it fills as the
-      // total climbs rather than jumping to the answer.
-      meter(state),
     ),
     // Gold and menu as one group, pinned to the right edge. Loose in a
     // space-between row the gold took whatever gap was left over, which was a
@@ -423,6 +418,12 @@ function hud(state: RunState, on: Handlers): HTMLElement {
       h("div", { class: "hud-gold" }, money(state.gold)),
       menuButton(on),
     ),
+    // The same fact as the two numbers in the seat, in the form a glance can
+    // take in, and the header's full width. A sibling of the seat rather than
+    // its child so it can cross all three tracks; see `.round-screen .hud
+    // .meter`. The scoring animation drives it frame by frame, so it fills as
+    // the total climbs rather than jumping to the answer.
+    meter(state),
     boss &&
       h(
         "div",
