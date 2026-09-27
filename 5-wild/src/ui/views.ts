@@ -3215,7 +3215,7 @@ export function codexView(on: Handlers): HTMLElement {
       section(
         copy.packs,
         PACKS.length,
-        // "Choose one of three" already says how many you keep, so the count is
+        // "Choose 1 of 3" already says how many you keep, so the count is
         // only worth printing on a pack that keeps more than one, which none
         // do yet, and which is exactly why it is derived rather than assumed.
         ...PACKS.map((pack) => {

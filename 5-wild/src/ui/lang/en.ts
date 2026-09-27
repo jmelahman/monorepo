@@ -201,9 +201,9 @@ export const en: Strings = {
   },
 
   pack: {
-    alphabet: { name: "Alphabet Pack", text: "Choose one of three letter modifiers" },
-    relic: { name: "Relic Pack", text: "Choose one of three relics" },
-    category: { name: "Category Pack", text: "Choose one of three word categories to level" },
+    alphabet: { name: "Alphabet Pack", text: "Choose 1 of 3 letter modifiers" },
+    relic: { name: "Relic Pack", text: "Choose 1 of 3 relics" },
+    category: { name: "Category Pack", text: "Choose 1 of 3 word categories to level" },
   },
 
   category: {
@@ -595,7 +595,7 @@ export const en: Strings = {
     },
 
     pack: {
-      choose: (left) => `Choose one of ${left}`,
+      choose: (left) => `Choose 1 of ${left}`,
       choosePicks: (picks, left) => `Choose ${picks} of ${left}`,
       taken: "taken",
       skip: "Skip",

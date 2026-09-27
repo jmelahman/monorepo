@@ -195,11 +195,11 @@ export const es: Strings = {
   },
 
   pack: {
-    alphabet: { name: "Sobre de Alfabeto", text: "Elige uno de tres modificadores de letra" },
-    relic: { name: "Sobre de Reliquias", text: "Elige una de tres reliquias" },
+    alphabet: { name: "Sobre de Alfabeto", text: "Elige 1 de 3 modificadores de letra" },
+    relic: { name: "Sobre de Reliquias", text: "Elige 1 de 3 reliquias" },
     category: {
       name: "Sobre de Categorías",
-      text: "Elige una de tres categorías de palabra para subir de nivel",
+      text: "Elige 1 de 3 categorías de palabra para subir de nivel",
     },
   },
 
@@ -539,7 +539,9 @@ export const es: Strings = {
     },
 
     pack: {
-      choose: (left) => `Elige una de ${left}`,
+      // A numeral, as on the pack's own card, and it also settles the gender:
+      // "una" was feminine under an Alphabet pack dealing three modificadores.
+      choose: (left) => `Elige 1 de ${left}`,
       choosePicks: (picks, left) => `Elige ${picks} de ${left}`,
       taken: "cogida",
       skip: "Saltar",

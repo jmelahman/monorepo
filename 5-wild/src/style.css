@@ -2237,6 +2237,13 @@ button {
   grid-auto-rows: max-content;
   gap: 0.5rem;
   overflow-y: auto;
+  /* The same trade `.relics` makes, and for the same reason: scrolling one axis
+     clips both, and the focus ring is drawn 4px outside each card (2px outline,
+     2px offset), so a tabbed-to pick had its ring shaved off both sides and the
+     first one lost its top as well. The padding is room for the ring, and the
+     matching negative margin keeps the list exactly where it was. */
+  padding: 0.25rem;
+  margin: -0.25rem;
 }
 
 /* The shelf's floor height is there to line two columns up; the sheet is one

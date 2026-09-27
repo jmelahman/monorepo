@@ -216,12 +216,12 @@ export const fr: Strings = {
   pack: {
     alphabet: {
       name: "Booster Alphabet",
-      text: "Choisissez un modificateur de lettre parmi trois",
+      text: "Choisissez 1 modificateur de lettre parmi 3",
     },
-    relic: { name: "Booster Reliques", text: "Choisissez une relique parmi trois" },
+    relic: { name: "Booster Reliques", text: "Choisissez 1 relique parmi 3" },
     category: {
       name: "Booster Catégories",
-      text: "Choisissez une catégorie de mot à monter parmi trois",
+      text: "Choisissez 1 catégorie de mot à monter parmi 3",
     },
   },
 
@@ -557,7 +557,9 @@ export const fr: Strings = {
     },
 
     pack: {
-      choose: (left) => `Choisissez-en une parmi ${left}`,
+      // A numeral, as on the pack's own card, and it also settles the gender:
+      // "une" was feminine under an Alphabet pack dealing three modificateurs.
+      choose: (left) => `Choisissez-en 1 parmi ${left}`,
       choosePicks: (picks, left) => `Choisissez-en ${picks} parmi ${left}`,
       taken: "prise",
       skip: "Passer",

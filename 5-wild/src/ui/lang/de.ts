@@ -203,11 +203,11 @@ export const de: Strings = {
   },
 
   pack: {
-    alphabet: { name: "Alphabet-Booster", text: "Wähle einen von drei Buchstaben-Modifikatoren" },
-    relic: { name: "Relikt-Booster", text: "Wähle eines von drei Relikten" },
+    alphabet: { name: "Alphabet-Booster", text: "Wähle 1 von 3 Buchstaben-Modifikatoren" },
+    relic: { name: "Relikt-Booster", text: "Wähle 1 von 3 Relikten" },
     category: {
       name: "Kategorie-Booster",
-      text: "Wähle eine von drei Wortkategorien zum Aufstufen",
+      text: "Wähle 1 von 3 Wortkategorien zum Aufstufen",
     },
   },
 
@@ -547,7 +547,9 @@ export const de: Strings = {
     },
 
     pack: {
-      choose: (left) => `Wähle eine von ${left}`,
+      // A numeral, as on the pack's own card, and it also settles the gender:
+      // "eine" was feminine under packs dealing Modifikatoren and Relikte.
+      choose: (left) => `Wähle 1 von ${left}`,
       choosePicks: (picks, left) => `Wähle ${picks} von ${left}`,
       taken: "genommen",
       skip: "Überspringen",
