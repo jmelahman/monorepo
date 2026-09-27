@@ -3829,6 +3829,17 @@ button {
   border-top: 1px solid var(--line);
 }
 
+/* The ring goes inside the row. The one `:focus-visible` draws sits 4px outside
+   its control, and `.settings` clips to its rounded corners, so a tabbed-to row
+   lost its ring on both sides, and the first and last rows lost their top and
+   bottom as well. The fix `.pack-options` and `.relics` use (padding, then a
+   matching negative margin) does not work here: the list has a background, and
+   the padding would show as a band of it around every row. An inset ring keeps
+   the clip, and it also stays off the dividers above and below the row. */
+.setting:focus-visible {
+  outline-offset: -2px;
+}
+
 .setting:disabled {
   color: var(--muted);
 }
