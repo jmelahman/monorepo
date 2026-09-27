@@ -1,5 +1,6 @@
 import type { Action, GameEvent, Refusal, RunState, WordSource } from "../engine"
 import { MODIFIER_BY_ID, MULT_FOR_COLOR, reduce, startRun } from "../engine"
+import type { Cue, TileColor } from "./audio"
 import { Sound } from "./audio"
 import type { CoachStep } from "./coach"
 import { coachAsks, coachSpent, coachStep } from "./coach"
@@ -179,6 +180,38 @@ const reducedMotion = (): boolean =>
  */
 const TRANSIENT_SCREEN = ["shaking", "settled"]
 
+const TILE_COLORS: readonly TileColor[] = ["green", "yellow", "gray"]
+
+/**
+ * What a shop or reward action sounds like, read off what it did rather than
+ * what was asked, since the same tap can open a pack or buy a relic. First
+ * match wins, most specific first: buying a modifier is a purchase *and* opens
+ * the placing sheet, and the stamp that follows is the sound that matters, so
+ * the purchase is the fallback, not the headline.
+ *
+ * Typing and backspace are not here: they sound on the tap, before the
+ * dispatch, and a refusal never reaches this far.
+ */
+function actionCue(action: Action, events: readonly GameEvent[]): Cue | null {
+  for (const event of events) {
+    if (event.type === "mod_placed") return { name: "place" }
+    if (event.type === "consumable") return { name: "consume" }
+    if (event.type === "pack_opened") return { name: "pack" }
+    if (event.type === "pack_picked" && event.taken) return { name: "pick" }
+    // Collecting a round pays its reward on the way in, so this has to beat
+    // the coin below: the shelf being dealt is what the player is looking at.
+    if (event.type === "shop_entered") return { name: "reroll", shop: true }
+  }
+  // Checked on the action, because a reroll the tray paid for moves no gold
+  // and so leaves no event to find.
+  if (action.type === "reroll") return { name: "reroll" }
+  const gold = events.find((event) => event.type === "gold")
+  if (!gold) return null
+  if (gold.reason === "purchase") return { name: "buy" }
+  if (gold.reason === "sold") return { name: "sell" }
+  return { name: "coin" }
+}
+
 /** Which screen this is, ignoring whatever is currently happening to it. */
 const screenKind = (node: Element): string =>
   [...node.classList].filter((name) => !TRANSIENT_SCREEN.includes(name)).join(" ")
@@ -202,6 +235,13 @@ export class App {
    * render reads it, and two of the sheets are not named by it at all.
    */
   private sheetShown: string | null = null
+  /**
+   * Which named sheet the last render announced, for the whoosh. Only the
+   * named ones: the pack and the placing sheet are opened by a purchase that
+   * has already made its own noise, and a whoosh under it would be a second
+   * sound for one tap.
+   */
+  private sheetHeard: typeof this.overlay = null
   /** Which rung the open lock is offering. Only meaningful while `overlay` is "ascend". */
   private ascendTo = 0
   /**
@@ -388,7 +428,10 @@ export class App {
     this.tally(before)
     // Every arrival at a round from elsewhere gets the intro card, which is the
     // only thing that makes the shop and the board feel like separate places.
-    if (this.state.phase === "round" && wasPhase !== "round") this.intro = true
+    if (this.state.phase === "round" && wasPhase !== "round") {
+      this.intro = true
+      this.sound.cue({ name: "intro", boss: Boolean(this.state.round.bossId) })
+    }
     this.save()
 
     // The win is recorded where it is offered rather than where the run ends,
@@ -402,7 +445,8 @@ export class App {
     }
 
     const paid = events.some((event) => event.type === "gold")
-    if (paid) this.sound.coin()
+    const heard = actionCue(action, events)
+    if (heard) this.sound.cue(heard)
 
     // Both are a card leaving the player's hands and landing somewhere, and in
     // the shop there is no keyboard on screen to show where, so the toast is
@@ -537,8 +581,10 @@ export class App {
     this.busy = false
     this.render()
 
-    if (this.state.phase === "game_over") this.sound.lose()
-    else if (this.state.phase === "reward" || this.state.phase === "victory") this.sound.win()
+    if (this.state.phase === "game_over") this.sound.cue({ name: "lose" })
+    else if (this.state.phase === "reward" || this.state.phase === "victory") {
+      this.sound.cue({ name: "win", run: this.state.phase === "victory" })
+    }
   }
 
   /* ------------------------------------------------------------ animation */
@@ -608,6 +654,9 @@ export class App {
     let onScreen = scored ? scored.total - scored.score : this.state.round.score
     meter(onScreen)
 
+    // How many things have fired so far this guess. The trigger cue climbs a
+    // rung for each, so a long chain builds instead of repeating one blip.
+    let fired = 0
     for (const event of events) {
       switch (event.type) {
         case "tile": {
@@ -628,7 +677,7 @@ export class App {
           const tile = tiles[event.index]
           tile?.classList.add("fired")
           this.floater(screen, payoutBadge(event.paid))
-          this.sound.relic()
+          this.sound.cue({ name: "trigger", kind: "mod", n: fired++ })
           readout(event.chips, event.mult)
           await this.pace(PACE.relic)
           tile?.classList.remove("fired")
@@ -638,7 +687,7 @@ export class App {
           const slot = screen.querySelector(`.relic[data-slot="${event.slot}"]`)
           slot?.classList.add("fired")
           this.floater(screen, payoutBadge(event.paid))
-          this.sound.relic()
+          this.sound.cue({ name: "trigger", kind: "relic", n: fired++ })
           readout(event.chips, event.mult)
           await this.pace(PACE.relic)
           slot?.classList.remove("fired")
@@ -650,7 +699,7 @@ export class App {
           const line = screen.querySelector(".category")
           line?.classList.add("fired")
           this.floater(screen, categoryLevel(event.id, event.level))
-          this.sound.relic()
+          this.sound.cue({ name: "trigger", kind: "category", n: fired++ })
           readout(event.chips, event.mult)
           await this.pace(PACE.relic)
           line?.classList.remove("fired")
@@ -664,7 +713,7 @@ export class App {
           const slot = screen.querySelector(`.relic[data-slot="${event.slot}"]`)
           slot?.classList.add("fired")
           this.floater(screen, growthBadge(event))
-          this.sound.relic()
+          this.sound.cue({ name: "trigger", kind: "grew", n: fired++ })
           await this.pace(PACE.relic)
           slot?.classList.remove("fired")
           break
@@ -675,7 +724,7 @@ export class App {
           // the game, and the one the whole round was building toward.
           this.floater(screen, ui().board.solveFactor(event.factor))
           screen.querySelector(".readout")?.classList.add("solved")
-          this.sound.solve()
+          this.sound.cue({ name: "solve" })
           this.countUp(scoreEl, onScreen, event.total, meter)
           this.emphasize(screen, event.total / Math.max(1, this.state.round.target))
           onScreen = event.total
@@ -688,14 +737,17 @@ export class App {
           const from = event.total - event.score
           this.countUp(scoreEl, from, event.total, meter)
           this.emphasize(screen, event.score / Math.max(1, this.state.round.target))
-          this.sound.score(event.score / Math.max(1, this.state.round.target))
+          this.sound.cue({
+            name: "score",
+            ratio: event.score / Math.max(1, this.state.round.target),
+          })
           onScreen = event.total
           await this.pace(PACE.total)
           break
         }
         case "letter_destroyed":
           this.floater(screen, ui().board.letterBroken(event.letter))
-          this.sound.break()
+          this.sound.cue({ name: "break" })
           await this.pace(PACE.relic)
           break
         case "relic_destroyed":
@@ -703,7 +755,7 @@ export class App {
           // holds it. The floater names it instead, and the break sound is the
           // same one a letter makes, because it is the same kind of loss.
           this.floater(screen, ui().board.relicGone(relicCard(event.id).name))
-          this.sound.break()
+          this.sound.cue({ name: "break" })
           await this.pace(PACE.relic)
           break
         default:
@@ -740,9 +792,8 @@ export class App {
    */
   private reveal(tile: Element | undefined, index: number): void {
     if (!tile) return
-    const color =
-      ["green", "yellow", "gray"].find((name) => tile.classList.contains(name)) ?? "gray"
-    this.sound.tile(index, color)
+    const color = TILE_COLORS.find((name) => tile.classList.contains(name)) ?? "gray"
+    this.sound.cue({ name: "tile", index, color })
 
     if (this.skipping || reducedMotion()) {
       tile.classList.remove("pending")
@@ -904,6 +955,7 @@ export class App {
    */
   private refuse(refusal: Refusal): void {
     this.toast(refusalText(refusal))
+    this.sound.cue({ name: "reject" })
     if (this.state.phase !== "round") return
     const row = this.root.querySelector(`.row[data-row="${this.state.round.guesses.length}"]`)
     this.replay(row, "rejected", 420)
@@ -1163,11 +1215,14 @@ export class App {
 
   private readonly handlers: Handlers = {
     key: (letter) => {
-      this.sound.key()
+      this.sound.cue({ name: "key" })
       this.dispatch({ type: "type_letter", letter }, "arriving")
     },
     enter: () => void this.submit(),
-    back: () => this.dispatch({ type: "backspace" }, "leaving"),
+    back: () => {
+      this.sound.cue({ name: "back" })
+      this.dispatch({ type: "backspace" }, "leaving")
+    },
     useConsumable: (index) => this.dispatch({ type: "use_consumable", index }),
     collect: () => this.dispatch({ type: "collect" }),
     buy: (index) => this.dispatch({ type: "buy", index }),
@@ -1193,7 +1248,7 @@ export class App {
      * no gesture in between that could have been aimed badly.
      */
     placeMod: (letter) => {
-      this.sound.key()
+      this.sound.cue({ name: "key" })
       const armed = this.arming === letter
       // The same call the sheet makes to decide whether to draw the question, so
       // that the tap and the screen it produces cannot mean different things.
@@ -1425,6 +1480,7 @@ export class App {
     this.atTitle = false
     this.overlay = null
     this.intro = true
+    this.sound.cue({ name: "intro", boss: false })
     // Counted here rather than in the constructor: the class always holds a
     // run so that nothing downstream has to handle a null one, and most of
     // those are scaffolding the player never sees.
@@ -1568,6 +1624,10 @@ export class App {
     // always the one this render built, since nothing reuses a sheet.
     if (sheet && kind === this.sheetShown) sheet.classList.add("settled")
     this.sheetShown = kind
+    if (this.overlay !== this.sheetHeard) {
+      this.sound.cue({ name: "sheet", open: this.overlay !== null })
+      this.sheetHeard = this.overlay
+    }
 
     if (!this.reuseBoard(view)) clear(this.root).append(view)
     if (sheet) this.root.append(sheet)

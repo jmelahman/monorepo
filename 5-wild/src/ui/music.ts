@@ -1,10 +1,11 @@
 /**
  * The soundtrack, generated rather than recorded.
  *
- * Same constraint as the sound effects: no audio files, nothing fetched, so the
- * game still has music in airplane mode and the APK does not grow by a megabyte
- * per track. What that buys instead of a recording is a score that never repeats
- * exactly and that changes shape with the screen: the shop is not the boss.
+ * The sound effects are recordings now, but a clack is a few kilobytes and a
+ * track is a megabyte or more, so the music stayed synthesis: nothing for the
+ * APK to carry. What that buys instead of a recording is a score that never
+ * repeats exactly and that changes shape with the screen: the shop is not the
+ * boss.
  *
  * Notes are scheduled ahead on the audio clock rather than fired from a timer,
  * because `setInterval` drifts by tens of milliseconds under load and a rhythm
@@ -12,7 +13,7 @@
  * only decides *what* to queue; the audio clock decides when it sounds.
  */
 
-import { audioContext, C5, step } from "./audio"
+import { audioContext, audioMix, C5, step } from "./audio"
 
 const MUSIC_KEY = "5wild:music"
 
@@ -144,13 +145,20 @@ export class Music {
   enable(): void {
     if (this.started || this.off) return
     const ctx = audioContext()
-    if (!ctx) return
+    const mix = audioMix()
+    if (!ctx || !mix) return
     void ctx.resume()
     this.started = true
     this.bus = ctx.createGain()
     this.bus.gain.setValueAtTime(0, ctx.currentTime)
     this.bus.gain.linearRampToValueAtTime(PALETTES[this.mood].gain, ctx.currentTime + 1.5)
-    this.bus.connect(ctx.destination)
+    // Through the same limiter as the effects, so the two cannot sum into a
+    // clip, and a little into the same room, which is most of what stops a
+    // sparse sine melody sounding like a test tone.
+    this.bus.connect(mix.out)
+    const send = ctx.createGain()
+    send.gain.value = 0.35
+    this.bus.connect(send).connect(mix.room)
     this.nextAt = ctx.currentTime + 0.1
     this.run()
   }
