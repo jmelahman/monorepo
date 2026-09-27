@@ -13,6 +13,7 @@ import (
 
 // handleChat runs one curator turn and streams it as server-sent events:
 //
+//	event: safety  data: <safety.Result>        (crisis flag, before any text)
 //	event: text    data: {"text": "..."}        (assistant text delta)
 //	event: action  data: <db.Action>            (an AI write, undoable)
 //	event: error   data: {"error": "..."}

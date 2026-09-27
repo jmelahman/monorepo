@@ -28,6 +28,9 @@ crisis_resources = '''
 - Call my sister: 555-0100.
 - US: call or text 988.
 '''                                  # AGILECBT_CRISIS_RESOURCES
+safety_model = "gemma4:e4b"             # AGILECBT_SAFETY_MODEL
+safety_base_url = "…"                   # AGILECBT_SAFETY_BASE_URL
+safety_api_key = "…"                    # AGILECBT_SAFETY_API_KEY
 ```
 
 Unknown keys are an error, so a typo doesn't silently fall back to a default.
@@ -43,6 +46,21 @@ in the app, so it can't be changed by accident. The built-in list covers 988 (US
 findahelpline.com, and emergency services. Setting `crisis_resources` replaces
 it entirely, so include general lines alongside your own people and local
 numbers.
+
+## Crisis classifier
+
+Every chat message goes through a [crisis classifier](/guide/safety) before the
+coach replies. By default it's only a built-in phrase list, which adds no
+request. It can't be turned off.
+
+To also check each message with a model, which costs one extra request per
+message, opt in:
+
+- `safety_model` alone uses that model on the coach's endpoint and key.
+- Add `safety_base_url` to use a different endpoint, and `safety_api_key` for
+  its key. The coach's `api_key` is never sent to a different URL.
+
+The server logs which classifier it uses at startup.
 
 ## Data directory
 
@@ -74,11 +92,17 @@ The SQLite database lives in the data directory, resolved in order:
 | `AGILECBT_LLM_REASONING_EFFORT` | server | Sent as `reasoning_effort` (default `none`, thinking off); empty leaves it out |
 | `AGILECBT_DATA_DIR` | server | Data directory override |
 | `AGILECBT_CRISIS_RESOURCES` | server | Crisis lines the coach shares; see [Crisis resources](#crisis-resources) |
+| `AGILECBT_SAFETY_MODEL` | server | Crisis classifier model, one extra request per message (default: none, the phrase list alone). See [Crisis classifier](#crisis-classifier) |
+| `AGILECBT_SAFETY_BASE_URL` | server | Crisis classifier API root (default: the coach's) |
+| `AGILECBT_SAFETY_API_KEY` | server | Bearer token for `AGILECBT_SAFETY_BASE_URL` |
 | `AGILECBT_URL` | CLI subcommands | Server base URL (an explicit `--server` flag wins) |
 | `AGILECBT_BACKEND` | `web/` dev server | Backend `host:port` the Vite proxy targets |
 | `AGILECBT_EVAL_JUDGE_BASE_URL` | `agilecbt eval` | OpenAI-compatible API for the rubric judge (default: the coach's) |
 | `AGILECBT_EVAL_JUDGE_MODEL` | `agilecbt eval` | Judge model; rubric questions are skipped without one. See [Coach benchmarks](/guide/benchmarks) |
 | `AGILECBT_EVAL_JUDGE_API_KEY` | `agilecbt eval` | Bearer token for the judge API |
+| `AGILECBT_EVAL_SAFETY_MODEL` | `agilecbt eval` | Crisis classifier model for the run (default: the phrase list alone) |
+| `AGILECBT_EVAL_SAFETY_BASE_URL` | `agilecbt eval` | API for `AGILECBT_EVAL_SAFETY_MODEL` |
+| `AGILECBT_EVAL_SAFETY_API_KEY` | `agilecbt eval` | Bearer token for `AGILECBT_EVAL_SAFETY_BASE_URL` |
 
 See [AI coach & MCP](/guide/ai) for Ollama and OpenRouter setups.
 

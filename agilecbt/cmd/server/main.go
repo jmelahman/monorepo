@@ -211,6 +211,9 @@ func newCurator(cfg config.Config, reg *tools.Registry) (*curator.Curator, error
 		APIKey:          cfg.APIKey,
 		Model:           cfg.Model,
 		ReasoningEffort: cfg.ReasoningEffort,
+		SafetyModel:     cfg.SafetyModel,
+		SafetyBaseURL:   cfg.SafetyBaseURL,
+		SafetyAPIKey:    cfg.SafetyAPIKey,
 	})
 	if err != nil {
 		return nil, err
@@ -219,6 +222,16 @@ func newCurator(cfg config.Config, reg *tools.Registry) (*curator.Curator, error
 		log.Printf("AI coach is turned off")
 	} else {
 		log.Printf("AI coach: %s at %s", eff.Model, eff.BaseURL)
+		switch cfg.SafetyModel {
+		case "":
+			log.Printf("crisis classifier: phrase list only (set safety_model to add a model)")
+		default:
+			at := cfg.SafetyBaseURL
+			if at == "" {
+				at = eff.BaseURL
+			}
+			log.Printf("crisis classifier: phrase list + %s at %s", cfg.SafetyModel, at)
+		}
 	}
 	return cur, nil
 }

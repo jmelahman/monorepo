@@ -1,6 +1,7 @@
 package curator
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/jmelahman/agilecbt/internal/api"
 	"github.com/jmelahman/agilecbt/internal/db"
+	"github.com/jmelahman/agilecbt/internal/safety"
 	"github.com/jmelahman/agilecbt/internal/tools"
 )
 
@@ -20,6 +22,33 @@ type Config struct {
 	APIKey          string
 	Model           string
 	ReasoningEffort string
+	// SafetyModel opts in to a model tier for the crisis classifier, one
+	// extra request per turn; empty leaves the lexicon alone. SafetyBaseURL
+	// and SafetyAPIKey default to the coach's, but a different base URL
+	// never gets the coach's key.
+	SafetyModel   string
+	SafetyBaseURL string
+	SafetyAPIKey  string
+}
+
+// classifierFor builds the crisis classifier for a coach configuration.
+func (c *Curator) classifierFor(cfg Config) *safety.Classifier {
+	if cfg.LLM == llmNone || cfg.SafetyModel == "" {
+		return &safety.Classifier{}
+	}
+	base, coachKey := cfg.BaseURL, cfg.APIKey
+	if cfg.SafetyBaseURL != "" && cfg.SafetyBaseURL != cfg.BaseURL {
+		// Never send the coach's key to another endpoint.
+		base, coachKey = cfg.SafetyBaseURL, ""
+	}
+	o := &OpenAI{
+		BaseURL:         base,
+		APIKey:          cmp.Or(cfg.SafetyAPIKey, coachKey),
+		Model:           cfg.SafetyModel,
+		ReasoningEffort: cfg.ReasoningEffort,
+		Registry:        c.reg,
+	}
+	return &safety.Classifier{LLM: o}
 }
 
 const (
@@ -112,8 +141,9 @@ func (c *Curator) reload() error {
 			Registry:        c.reg,
 		}
 	}
+	cl := c.classifierFor(cfg)
 	c.mu.Lock()
-	c.cfg, c.backend = cfg, backend
+	c.cfg, c.backend, c.safety = cfg, backend, cl
 	c.mu.Unlock()
 	c.cache.reset()
 	return nil

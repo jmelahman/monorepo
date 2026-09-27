@@ -222,7 +222,7 @@ func (o *OpenAI) Turn(ctx context.Context, req TurnRequest, onText func(string))
 			onText(sep)
 		}
 		before := text.Len()
-		reply, err := o.chat(ctx, msgs, true, func(delta string) {
+		reply, err := o.chat(ctx, msgs, !req.NoTools, func(delta string) {
 			text.WriteString(delta)
 			onText(delta)
 		})

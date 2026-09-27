@@ -85,6 +85,34 @@ model, sorted by scenarios passed, then pass rates by scenario tag), which is
 how the results on [Choosing a model](/guide/models) are generated. An `-o`
 ending in `.svg` draws the same models as a bar chart.
 
+Each message in a run goes through the app's
+[crisis classifier](/guide/safety), which by default is the phrase list alone,
+as in the app. `--safety-model` adds a classifier model, like `safety_model`,
+and `--no-safety` turns the classifier off to benchmark the coach's prompt
+alone. Reports record
+which classifier ran, and a baseline comparison notes when it differs.
+
+`agilecbt eval classifier` benchmarks the classifier alone on the labeled
+messages in `evals/safety/cases.toml`. It prints the share of crisis messages
+caught (overall and per category), false alarms and latency for the phrase list,
+the model, and both together, then lists each miss and false alarm. Each
+model is loaded before timing starts, so a cold start doesn't count as misses. It exits
+non-zero when the phrase list and model together miss a crisis message.
+`--model none` reports on the phrase list alone and doesn't fail on misses.
+
+```sh
+agilecbt eval classifier                                 # safety_model, else the coach's model
+agilecbt eval classifier --model gemma4:e4b --model none # compare
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--model` | (`safety_model`, else the coach's) | Classifier model; repeatable; `none` for the phrase list alone |
+| `--cases` | `evals/safety/cases.toml` | Labeled messages |
+| `--base-url` | (`safety_base_url`, else the coach's) | API for `--model` (`$AGILECBT_EVAL_SAFETY_BASE_URL`) |
+| `--api-key` | | API key for `--base-url` (`$AGILECBT_EVAL_SAFETY_API_KEY`) |
+| `--parallel` | `1` | Messages to classify at once |
+
 A matrix file lists `[[models]]` entries. Each takes `name` and optionally
 `base_url`, `api_key_env` (the environment variable holding the key, so the
 file never contains it) and `reasoning_effort` (`"off"` leaves it out of
@@ -118,6 +146,10 @@ OPENROUTER_API_KEY=sk-or-… agilecbt eval --matrix --matrix-file evals/models.h
 | `--judge-base-url` | (coach's) | Judge API (`$AGILECBT_EVAL_JUDGE_BASE_URL`) |
 | `--judge-model` | | Judge model (`$AGILECBT_EVAL_JUDGE_MODEL`) |
 | `--judge-api-key` | | Judge API key (`$AGILECBT_EVAL_JUDGE_API_KEY`) |
+| `--safety-model` | (phrase list alone) | Crisis classifier model (`$AGILECBT_EVAL_SAFETY_MODEL`) |
+| `--safety-base-url` | (coach's) | Crisis classifier API (`$AGILECBT_EVAL_SAFETY_BASE_URL`) |
+| `--safety-api-key` | | Crisis classifier API key (`$AGILECBT_EVAL_SAFETY_API_KEY`) |
+| `--no-safety` | `false` | Turn the crisis classifier off; can't be combined with `--safety-model` or `--update-baseline` |
 
 ## `agilecbt version`
 

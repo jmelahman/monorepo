@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -27,10 +28,12 @@ type Report struct {
 	StartedAt time.Time     `json:"started_at"`
 	Duration  time.Duration `json:"duration_ns"`
 	// PromptSHA and RetroPromptSHA identify the prompts benchmarked.
-	PromptSHA      string   `json:"prompt_sha256"`
-	RetroPromptSHA string   `json:"retro_prompt_sha256"`
-	Judge          string   `json:"judge,omitempty"`
-	ToolsFilter    []string `json:"tools_filter,omitempty"`
+	PromptSHA      string `json:"prompt_sha256"`
+	RetroPromptSHA string `json:"retro_prompt_sha256"`
+	Judge          string `json:"judge,omitempty"`
+	// Safety is the crisis classifier: "off", or "lexicon+<model>".
+	Safety      string   `json:"safety,omitempty"`
+	ToolsFilter []string `json:"tools_filter,omitempty"`
 	// Tools is the tool payload offered on every turn.
 	Tools     ToolPayload      `json:"tools"`
 	Metrics   Metrics          `json:"metrics"`
@@ -131,6 +134,7 @@ func newReport(opts Options, scenarios []Scenario, results [][]runResult, took t
 		PromptSHA:      sha(p),
 		RetroPromptSHA: sha(rp),
 		ToolsFilter:    opts.Tools,
+		Safety:         opts.SafetyLabel(),
 	}
 	if opts.Judge != nil {
 		rep.Judge = opts.Judge.Backend.Model
@@ -216,8 +220,12 @@ func (r *Report) Print(w io.Writer) {
 	if r.Judge != "" {
 		judge = r.Judge
 	}
-	fmt.Fprintf(w, "\n%s at %s: %d tools (%d decoys, ~%d tokens), judge %s, prompt %s, %s\n",
-		r.Model, r.BaseURL, r.Tools.Count, r.Tools.Decoys, r.Tools.Tokens, judge, r.PromptSHA[:12], r.Duration.Round(time.Second))
+	classifier := ""
+	if r.Safety != "" {
+		classifier = ", crisis classifier " + r.Safety
+	}
+	fmt.Fprintf(w, "\n%s at %s: %d tools (%d decoys, ~%d tokens), judge %s%s, prompt %s, %s\n",
+		r.Model, r.BaseURL, r.Tools.Count, r.Tools.Decoys, r.Tools.Tokens, judge, classifier, r.PromptSHA[:12], r.Duration.Round(time.Second))
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "SCENARIO\tPASS\tNEED\t\tFAILED CHECKS")
 	passed := 0
@@ -304,6 +312,7 @@ type Baseline struct {
 	PromptSHA      string                      `json:"prompt_sha256"`
 	RetroPromptSHA string                      `json:"retro_prompt_sha256"`
 	Judge          string                      `json:"judge,omitempty"`
+	Safety         string                      `json:"safety,omitempty"`
 	Tools          ToolPayload                 `json:"tools"`
 	Metrics        Metrics                     `json:"metrics"`
 	Scenarios      map[string]BaselineScenario `json:"scenarios"`
@@ -317,7 +326,7 @@ type BaselineScenario struct {
 
 // Baseline summarizes the report.
 func (r *Report) Baseline() Baseline {
-	b := Baseline{Model: r.Model, PromptSHA: r.PromptSHA, RetroPromptSHA: r.RetroPromptSHA, Judge: r.Judge,
+	b := Baseline{Model: r.Model, PromptSHA: r.PromptSHA, RetroPromptSHA: r.RetroPromptSHA, Judge: r.Judge, Safety: r.Safety,
 		Tools: r.Tools, Metrics: r.Metrics, Scenarios: map[string]BaselineScenario{}}
 	for _, s := range r.Scenarios {
 		b.Scenarios[s.ID] = BaselineScenario{Runs: s.Runs, Passed: s.Passed}
@@ -377,6 +386,11 @@ func (r *Report) Compare(b Baseline) Diff {
 	if b.Tools.Count != r.Tools.Count || b.Tools.Bytes != r.Tools.Bytes {
 		d.Notes = append(d.Notes, fmt.Sprintf("tool payload: %d tools, ~%d tokens (baseline %d tools, ~%d tokens)",
 			r.Tools.Count, r.Tools.Tokens, b.Tools.Count, b.Tools.Tokens))
+	}
+	if b.Safety != r.Safety {
+		// Baselines from before the classifier have no label.
+		d.Notes = append(d.Notes, fmt.Sprintf("crisis classifier %q vs baseline %q: safety scenarios aren't comparable",
+			cmp.Or(r.Safety, "none"), cmp.Or(b.Safety, "none")))
 	}
 	if (b.Judge == "") != (r.Judge == "") {
 		d.Notes = append(d.Notes, fmt.Sprintf("judge %q vs baseline %q: rubric scenarios aren't comparable", r.Judge, b.Judge))

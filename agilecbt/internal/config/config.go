@@ -53,6 +53,15 @@ type Config struct {
 	// CrisisResources replaces the built-in crisis lines the coach shares
 	// ($AGILECBT_CRISIS_RESOURCES); empty keeps the default.
 	CrisisResources string
+	// SafetyModel opts in to a model for the crisis classifier
+	// ($AGILECBT_SAFETY_MODEL), one extra request per chat turn; empty keeps
+	// only the built-in phrase list.
+	SafetyModel string
+	// SafetyBaseURL is the classifier model's API root when it differs from
+	// the coach's ($AGILECBT_SAFETY_BASE_URL).
+	SafetyBaseURL string
+	// SafetyAPIKey is the classifier model's key ($AGILECBT_SAFETY_API_KEY).
+	SafetyAPIKey string
 	// Files lists the config.toml files that were read, lowest precedence
 	// first.
 	Files []string
@@ -69,6 +78,9 @@ type fileConfig struct {
 	Secret          *string `toml:"secret"`
 	// CrisisResources is free text, usually a multi-line ''' string.
 	CrisisResources *string `toml:"crisis_resources"`
+	SafetyModel     *string `toml:"safety_model"`
+	SafetyBaseURL   *string `toml:"safety_base_url"`
+	SafetyAPIKey    *string `toml:"safety_api_key"`
 	// DataDir is relative to the file's directory unless absolute.
 	DataDir *string `toml:"data_dir"`
 }
@@ -112,11 +124,12 @@ func fromFiles(c *Config, paths []string) (dataDir string, err error) {
 			return "", fmt.Errorf("%s: %w", abs, err)
 		}
 		if extra := md.Undecoded(); len(extra) > 0 {
-			return "", fmt.Errorf("%s: unknown keys %v (want llm, base_url, api_key, model, reasoning_effort, secret, crisis_resources, data_dir)", abs, extra)
+			return "", fmt.Errorf("%s: unknown keys %v (want llm, base_url, api_key, model, reasoning_effort, secret, crisis_resources, safety_model, safety_base_url, safety_api_key, data_dir)", abs, extra)
 		}
 		for dst, src := range map[*string]*string{
 			&c.LLM: f.LLM, &c.BaseURL: f.BaseURL, &c.APIKey: f.APIKey, &c.Model: f.Model,
 			&c.ReasoningEffort: f.ReasoningEffort, &c.Secret: f.Secret, &c.CrisisResources: f.CrisisResources,
+			&c.SafetyModel: f.SafetyModel, &c.SafetyBaseURL: f.SafetyBaseURL, &c.SafetyAPIKey: f.SafetyAPIKey,
 		} {
 			if src != nil {
 				*dst = *src
@@ -147,6 +160,8 @@ func resolve(files []string) (Config, string, error) {
 		&c.BaseURL: "AGILECBT_LLM_BASE_URL", &c.APIKey: "AGILECBT_LLM_API_KEY",
 		&c.ReasoningEffort: "AGILECBT_LLM_REASONING_EFFORT",
 		&c.CrisisResources: "AGILECBT_CRISIS_RESOURCES",
+		&c.SafetyModel:     "AGILECBT_SAFETY_MODEL", &c.SafetyBaseURL: "AGILECBT_SAFETY_BASE_URL",
+		&c.SafetyAPIKey: "AGILECBT_SAFETY_API_KEY",
 	} {
 		if v, ok := os.LookupEnv(key); ok {
 			*dst = v
@@ -161,6 +176,8 @@ func resolve(files []string) (Config, string, error) {
 		return Config{}, "", fmt.Errorf("llm %q: want openai or none", c.LLM)
 	}
 	c.CrisisResources = strings.TrimSpace(c.CrisisResources)
+	c.SafetyModel = strings.TrimSpace(c.SafetyModel)
+	c.SafetyBaseURL = strings.TrimRight(strings.TrimSpace(c.SafetyBaseURL), "/")
 	c.BaseURL = strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")
 	if c.BaseURL == "" {
 		c.BaseURL = DefaultBaseURL

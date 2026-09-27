@@ -1,10 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { type Action, api, chat } from "@/api/client";
+import { Link } from "react-router";
+import { type Action, api, chat, type SafetyCategory } from "@/api/client";
 import { Button, ErrorText, inputClass, Markdownish, Shimmer } from "@/components/ui";
 
 type Item =
-  | { kind: "msg"; key: string; role: "user" | "assistant"; text: string; at: string }
+  | {
+      kind: "msg";
+      key: string;
+      role: "user" | "assistant";
+      text: string;
+      at: string;
+      safety?: SafetyCategory;
+    }
   | { kind: "action"; key: string; action: Action; at: string };
 
 // Chat is a coach conversation (a check-in, or a topic chat like the
@@ -53,7 +61,14 @@ export default function Chat({
 
   const history: Item[] = [
     ...(detail.data?.messages ?? []).map(
-      (m): Item => ({ kind: "msg", key: `m${m.id}`, role: m.role, text: m.text, at: m.created_at }),
+      (m): Item => ({
+        kind: "msg",
+        key: `m${m.id}`,
+        role: m.role,
+        text: m.text,
+        at: m.created_at,
+        safety: m.safety,
+      }),
     ),
     ...(detail.data?.actions ?? []).map(
       (a): Item => ({ kind: "action", key: `a${a.id}`, action: a, at: a.created_at }),
@@ -79,6 +94,9 @@ export default function Chat({
     const now = new Date().toISOString();
     setLive([{ kind: "msg", key: "live-user", role: "user", text: msg, at: now }]);
     let id = checkinId;
+    // Set when the app flagged this message as a possible crisis; the reply
+    // gets the support card.
+    let flagged: SafetyCategory | undefined;
     try {
       id ??= start ? await start(msg) : null;
       if (id === null) throw new Error("no conversation to send to");
@@ -97,9 +115,12 @@ export default function Chat({
                 role: "assistant",
                 text: ev.data.text,
                 at: now,
+                safety: flagged,
               },
             ];
           });
+        } else if (ev.event === "safety") {
+          flagged = ev.data.category;
         } else if (ev.event === "action") {
           setLive((cur) => [
             ...cur,
@@ -159,9 +180,12 @@ export default function Chat({
         )}
         {items.map((it) =>
           it.kind === "msg" ? (
-            <Bubble key={it.key} from={it.role}>
-              <Markdownish text={it.text} />
-            </Bubble>
+            <div key={it.key} className="space-y-3">
+              <Bubble from={it.role}>
+                <Markdownish text={it.text} links={it.role === "assistant"} />
+              </Bubble>
+              {it.safety && <SupportCard />}
+            </div>
           ) : (
             <ActionChip key={it.key} action={it.action} />
           ),
@@ -263,6 +287,30 @@ export function Composer({
         </Button>
       </form>
     </div>
+  );
+}
+
+// SupportCard follows a reply to a message flagged as a possible crisis. The
+// reply itself carries the crisis lines (the server adds them if the coach
+// didn't), so the card stays short and points to the full list.
+function SupportCard() {
+  return (
+    <aside
+      className="mr-4 space-y-1 rounded-xl bg-calm-soft px-3 py-2 text-sm leading-relaxed"
+      aria-label="Crisis support"
+      data-testid="support-card"
+    >
+      <p className="font-semibold">You don't have to do this alone</p>
+      <p>
+        If you're in danger right now, call your local emergency number.{" "}
+        <Link
+          to={{ search: "?settings=support" }}
+          className="font-medium text-accent-ink underline"
+        >
+          All your crisis lines
+        </Link>
+      </p>
+    </aside>
   );
 }
 

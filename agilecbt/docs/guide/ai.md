@@ -134,3 +134,6 @@ The coach is supportive, not a therapist. Its system prompt tells it
 to answer any sign of crisis or self-harm directly and warmly, and to point to
 the crisis resources set by `crisis_resources` in
 [`config.toml`](/guide/configuration#crisis-resources), or the built-in list.
+The app doesn't rely on the prompt alone: a [crisis classifier](/guide/safety)
+checks each message first and, when it flags one, turns the coach's tools off
+and makes sure the crisis lines reach the person.

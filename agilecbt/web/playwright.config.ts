@@ -40,6 +40,8 @@ export default defineConfig({
         AGILECBT_LLM_BASE_URL: `http://127.0.0.1:${FAKE_LLM_PORT}/v1`,
         AGILECBT_LLM_API_KEY: "",
         AGILECBT_MODEL: "fake",
+        // Opt in to the classifier's model tier so the crisis test covers it.
+        AGILECBT_SAFETY_MODEL: "fake-guard",
         AGILECBT_SECRET: "",
       },
       url: `http://127.0.0.1:${BACKEND_PORT}/api/health`,

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/jmelahman/agilecbt/internal/config"
 	"github.com/jmelahman/agilecbt/internal/curator"
@@ -38,6 +40,38 @@ type evalFlags struct {
 	judgeBaseURL   string
 	judgeModel     string
 	judgeAPIKey    string
+	noSafety       bool
+	safety         safetyFlags
+}
+
+// safetyFlags pick the crisis classifier's model tier.
+type safetyFlags struct {
+	baseURL, model, apiKey string
+}
+
+func (f *safetyFlags) register(fl *pflag.FlagSet) {
+	fl.StringVar(&f.model, "safety-model", os.Getenv("AGILECBT_EVAL_SAFETY_MODEL"), "Model for the crisis classifier, one extra request per turn ($AGILECBT_EVAL_SAFETY_MODEL; default: the phrase list alone, like the app's default)")
+	fl.StringVar(&f.baseURL, "safety-base-url", os.Getenv("AGILECBT_EVAL_SAFETY_BASE_URL"), "OpenAI-compatible API for --safety-model ($AGILECBT_EVAL_SAFETY_BASE_URL; default: the coach's)")
+	fl.StringVar(&f.apiKey, "safety-api-key", "", "API key for --safety-model (default $AGILECBT_EVAL_SAFETY_API_KEY)")
+}
+
+// resolve returns the classifier model, or nil for the phrase list alone.
+// Like the app, a different base URL never gets the coach's key.
+func (f safetyFlags) resolve(cfg config.Config) *eval.Model {
+	if f.model == "" {
+		return nil
+	}
+	m := &eval.Model{Name: f.model, BaseURL: f.baseURL, APIKey: f.apiKey, ReasoningEffort: cfg.ReasoningEffort}
+	if m.BaseURL == "" {
+		m.BaseURL = cfg.BaseURL
+	}
+	if m.APIKey == "" {
+		m.APIKey = os.Getenv("AGILECBT_EVAL_SAFETY_API_KEY")
+	}
+	if m.APIKey == "" && m.BaseURL == cfg.BaseURL {
+		m.APIKey = cfg.APIKey
+	}
+	return m
 }
 
 func evalCmd() *cobra.Command {
@@ -80,7 +114,9 @@ regresses against the baseline. See docs/guide/benchmarks.md.`,
 	fl.StringVar(&f.judgeBaseURL, "judge-base-url", os.Getenv("AGILECBT_EVAL_JUDGE_BASE_URL"), "OpenAI-compatible API for the rubric judge ($AGILECBT_EVAL_JUDGE_BASE_URL; default: the coach's)")
 	fl.StringVar(&f.judgeModel, "judge-model", os.Getenv("AGILECBT_EVAL_JUDGE_MODEL"), "Judge model; rubric questions are skipped without one ($AGILECBT_EVAL_JUDGE_MODEL)")
 	fl.StringVar(&f.judgeAPIKey, "judge-api-key", "", "API key for the judge (default $AGILECBT_EVAL_JUDGE_API_KEY)")
-	cmd.AddCommand(evalRenderCmd())
+	fl.BoolVar(&f.noSafety, "no-safety", false, "Turn the crisis classifier off to benchmark the bare coach")
+	f.safety.register(fl)
+	cmd.AddCommand(evalRenderCmd(), evalClassifierCmd())
 	return cmd
 }
 
@@ -129,6 +165,95 @@ func evalRenderCmd() *cobra.Command {
 	return cmd
 }
 
+func evalClassifierCmd() *cobra.Command {
+	var (
+		models   []string
+		cases    string
+		baseURL  string
+		apiKey   string
+		parallel int
+	)
+	cmd := &cobra.Command{
+		Use:   "classifier",
+		Short: "Benchmark the crisis classifier on labeled messages",
+		Long: `Classifies every labeled message in --cases with the built-in phrase list
+and with each --model, and prints recall per crisis category, false alarms on
+ordinary messages, and latency. It's much faster than a full eval, so use it
+to choose a safety_model.
+
+Exits non-zero when the app's classifier (phrase list plus model) misses any
+crisis message; --model none only reports. See docs/guide/safety.md.`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
+			out := cmd.OutOrStdout()
+			cfg, err := config.Load("")
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+			cs, err := eval.LoadClassifierCases(cases)
+			if err != nil {
+				return err
+			}
+			if len(models) == 0 {
+				m := cfg.SafetyModel
+				if m == "" {
+					m = cfg.Model
+				}
+				models = []string{m}
+			}
+			var problems []string
+			for _, name := range models {
+				var llm *curator.OpenAI
+				if name != "none" {
+					f := safetyFlags{model: name, baseURL: baseURL, apiKey: apiKey}
+					if f.baseURL == "" && cfg.SafetyBaseURL != "" {
+						f.baseURL, f.apiKey = cfg.SafetyBaseURL, cfg.SafetyAPIKey
+					}
+					m := f.resolve(cfg)
+					llm = &curator.OpenAI{BaseURL: m.BaseURL, APIKey: m.APIKey, Model: m.Name, ReasoningEffort: m.ReasoningEffort}
+					// Load the model before timing anything, so a cold start
+					// doesn't show up as timeouts on the first cases.
+					fmt.Fprintf(cmd.ErrOrStderr(), "Loading %s at %s\n", m.Name, m.BaseURL)
+					warm, cancel := context.WithTimeout(cmd.Context(), 10*time.Minute)
+					_, err := llm.Complete(warm, "Reply with OK.", "Ready?")
+					cancel()
+					if err != nil {
+						return fmt.Errorf("load %s: %w", m.Name, err)
+					}
+					fmt.Fprintf(cmd.ErrOrStderr(), "Classifying %d messages with %s\n", len(cs), m.Name)
+				}
+				var rep *eval.ClassifierReport
+				if llm == nil {
+					rep, err = eval.RunClassifier(cmd.Context(), cs, "", nil, parallel)
+				} else {
+					rep, err = eval.RunClassifier(cmd.Context(), cs, name, llm, parallel)
+				}
+				if err != nil {
+					return err
+				}
+				rep.Print(out)
+				// The phrase list alone is meant to miss indirect phrasing;
+				// only a model run is held to catching everything.
+				if n := len(rep.Missed()); n > 0 && llm != nil {
+					problems = append(problems, fmt.Sprintf("%s: missed %d crisis message(s)", name, n))
+				}
+			}
+			if len(problems) > 0 {
+				return fmt.Errorf("%d problem(s):\n  %s", len(problems), strings.Join(problems, "\n  "))
+			}
+			return nil
+		},
+	}
+	fl := cmd.Flags()
+	fl.StringArrayVar(&models, "model", nil, `Classifier model (repeatable; "none" for the phrase list alone; default: safety_model, else the coach model)`)
+	fl.StringVar(&cases, "cases", eval.DefaultClassifierCases, "Labeled messages")
+	fl.StringVar(&baseURL, "base-url", os.Getenv("AGILECBT_EVAL_SAFETY_BASE_URL"), "OpenAI-compatible API for --model ($AGILECBT_EVAL_SAFETY_BASE_URL; default: safety_base_url, else the coach's)")
+	fl.StringVar(&apiKey, "api-key", "", "API key for --base-url (default $AGILECBT_EVAL_SAFETY_API_KEY)")
+	fl.IntVar(&parallel, "parallel", 1, "Messages to classify at once")
+	return cmd
+}
+
 func runEval(cmd *cobra.Command, f evalFlags) error {
 	out, errOut := cmd.OutOrStdout(), cmd.ErrOrStderr()
 	cfg, err := config.Load("")
@@ -138,6 +263,13 @@ func runEval(cmd *cobra.Command, f evalFlags) error {
 	filtered := len(f.tags) > 0 || len(f.only) > 0 || len(f.tools) > 0
 	if f.updateBaseline && (filtered || slices.ContainsFunc(f.decoys, func(n int) bool { return n != 0 })) {
 		return errors.New("--update-baseline needs the full scenario set and tool list; drop --tag, --only, --tools and --decoy-tools")
+	}
+	if f.noSafety && f.safety.model != "" {
+		return errors.New("--no-safety and --safety-model don't mix")
+	}
+	if f.updateBaseline && (f.noSafety || f.safety.model != "") {
+		// Baselines track the app's default classifier setup.
+		return errors.New("--update-baseline records the default crisis classifier; drop --no-safety and --safety-model")
 	}
 	if f.updateBaseline && (f.promptFile != "" || f.retroFile != "") {
 		// Baselines track the shipped prompts; land the draft first.
@@ -167,7 +299,8 @@ func runEval(cmd *cobra.Command, f evalFlags) error {
 	if err != nil {
 		return err
 	}
-	opts := eval.Options{Tools: f.tools, Runs: f.runs, Parallel: f.parallel, TurnTimeout: f.turnTimeout, Progress: errOut}
+	opts := eval.Options{Tools: f.tools, Runs: f.runs, Parallel: f.parallel, TurnTimeout: f.turnTimeout, Progress: errOut,
+		NoSafety: f.noSafety, SafetyModel: f.safety.resolve(cfg)}
 	if f.promptFile != "" {
 		if opts.Prompt, err = readPrompt(f.promptFile); err != nil {
 			return err

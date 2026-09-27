@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"strings"
 )
 
@@ -182,6 +183,9 @@ type Message struct {
 	Text        string `json:"text"`
 	ContentJSON string `json:"-"`
 	CreatedAt   string `json:"created_at"`
+	// Safety is the crisis category the app flagged the turn as, on the
+	// coach's reply (see internal/safety); empty for ordinary turns.
+	Safety string `json:"safety,omitempty"`
 }
 
 const messageCols = `id, checkin_id, seq, role, text, content_json, created_at`
@@ -189,6 +193,14 @@ const messageCols = `id, checkin_id, seq, role, text, content_json, created_at`
 func scanMessage(r rowScanner) (Message, error) {
 	var m Message
 	err := r.Scan(&m.ID, &m.CheckinID, &m.Seq, &m.Role, &m.Text, &m.ContentJSON, &m.CreatedAt)
+	if err == nil && m.ContentJSON != "" {
+		var meta struct {
+			Safety string `json:"safety"`
+		}
+		if json.Unmarshal([]byte(m.ContentJSON), &meta) == nil {
+			m.Safety = meta.Safety
+		}
+	}
 	return m, err
 }
 

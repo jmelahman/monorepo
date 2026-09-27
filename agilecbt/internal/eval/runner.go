@@ -15,6 +15,7 @@ import (
 	"github.com/jmelahman/agilecbt/internal/app"
 	"github.com/jmelahman/agilecbt/internal/curator"
 	"github.com/jmelahman/agilecbt/internal/db"
+	"github.com/jmelahman/agilecbt/internal/safety"
 	"github.com/jmelahman/agilecbt/internal/tools"
 )
 
@@ -34,6 +35,12 @@ type Options struct {
 	Model Model
 	// Judge grades rubric questions; nil skips them.
 	Judge *Judge
+	// NoSafety turns the crisis classifier off, lexicon too, to benchmark
+	// the bare coach.
+	NoSafety bool
+	// SafetyModel is the classifier's model tier, as in the app's
+	// safety_model; nil leaves the lexicon alone, like the app's default.
+	SafetyModel *Model
 	// Prompt and RetroPrompt replace the built-in prompts when set.
 	Prompt, RetroPrompt string
 	// Tools restricts the tools sent to the model; empty sends them all.
@@ -184,6 +191,8 @@ type TurnResult struct {
 	// Warnings are style slips that don't fail the turn.
 	Warnings []Failure     `json:"warnings,omitempty"`
 	Latency  time.Duration `json:"latency_ns"`
+	// Safety is what the crisis classifier flagged the turn as, if anything.
+	Safety *safety.Result `json:"safety,omitempty"`
 }
 
 // CallRecord is a tool call, as saved in the report.
@@ -287,6 +296,7 @@ func play(ctx context.Context, s Scenario, opts Options) (runResult, error) {
 	}
 	cur := curator.New(reg, backend)
 	cur.Prompt, cur.RetroPrompt = opts.Prompt, opts.RetroPrompt
+	cur.SetSafety(classifier(opts))
 
 	if s.Kind == KindRetro {
 		return playRetro(ctx, s, opts, a, cur, now, res)
@@ -306,7 +316,12 @@ func play(ctx context.Context, s Scenario, opts Options) (runResult, error) {
 		}
 		turnStart := time.Now()
 		tctx, cancel := context.WithTimeout(ctx, opts.TurnTimeout)
-		chatErr := cur.Chat(tctx, checkinID, t.User, func(string, any) {})
+		var flag *safety.Result
+		chatErr := cur.Chat(tctx, checkinID, t.User, func(ev string, data any) {
+			if r, ok := data.(safety.Result); ok && ev == "safety" {
+				flag = &r
+			}
+		})
 		cancel()
 		if ctx.Err() != nil {
 			return res, ctx.Err()
@@ -323,7 +338,7 @@ func play(ctx context.Context, s Scenario, opts Options) (runResult, error) {
 		turnCalls := slices.Clone(calls)
 		callsMu.Unlock()
 
-		tr := TurnResult{User: t.User, Reply: reply, Latency: time.Since(turnStart), Calls: records(turnCalls)}
+		tr := TurnResult{User: t.User, Reply: reply, Latency: time.Since(turnStart), Calls: records(turnCalls), Safety: flag}
 		if chatErr != nil {
 			tr.Failures = append(tr.Failures, Failure{CheckTurnError, chatErr.Error()})
 			if strings.Contains(chatErr.Error(), "tool rounds") {
@@ -358,6 +373,32 @@ func play(ctx context.Context, s Scenario, opts Options) (runResult, error) {
 		}
 	}
 	return res, nil
+}
+
+// classifier builds the crisis classifier the app would run.
+func classifier(opts Options) *safety.Classifier {
+	if opts.NoSafety {
+		return nil
+	}
+	if opts.SafetyModel == nil {
+		return &safety.Classifier{}
+	}
+	m := *opts.SafetyModel
+	return &safety.Classifier{LLM: &curator.OpenAI{
+		BaseURL: m.BaseURL, APIKey: m.APIKey, Model: m.Name, ReasoningEffort: m.ReasoningEffort, HTTP: opts.HTTP,
+	}}
+}
+
+// SafetyLabel describes the crisis classifier setup, for reports.
+func (o Options) SafetyLabel() string {
+	switch {
+	case o.NoSafety:
+		return "off"
+	case o.SafetyModel != nil:
+		return "lexicon+" + o.SafetyModel.Name
+	default:
+		return "lexicon"
+	}
 }
 
 func judgeTurn(ctx context.Context, j *Judge, msgs []db.Message, calls []curator.ToolCall, data string, qs []string, c *metricCounts) []Failure {

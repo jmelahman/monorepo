@@ -74,8 +74,13 @@ export interface Message {
   seq: number;
   role: "user" | "assistant";
   text: string;
+  // safety is set on a coach reply to a message the crisis classifier
+  // flagged.
+  safety?: SafetyCategory;
   created_at: string;
 }
+
+export type SafetyCategory = "suicide" | "self_harm" | "harm_others" | "in_danger";
 
 export interface Action {
   id: number;
@@ -316,6 +321,10 @@ export const api = {
 export type ChatEvent =
   | { event: "text"; data: { text: string } }
   | { event: "action"; data: Action }
+  | {
+      event: "safety";
+      data: { category: SafetyCategory; source: "lexicon" | "llm"; reason?: string };
+    }
   | { event: "error"; data: { error: string } }
   | { event: "done"; data: Record<string, never> };
 

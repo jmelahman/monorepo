@@ -205,6 +205,15 @@ data: {}
   the text. Each one can be undone.
 - `error` (`{"error": "…"}`) reports a failed turn. The stream still ends with
   `done`.
+- `safety` (`{"category": "suicide", "source": "llm", "reason": "…"}`)
+  arrives before any text when the [crisis classifier](/guide/safety) flagged
+  the message. `category` is `suicide`, `self_harm`, `harm_others` or
+  `in_danger`, and `source` is `lexicon` (the phrase list) or `llm`. That turn
+  has no `action` events, the reply always includes the crisis resources, and
+  a failed turn sends a fallback reply instead of `error`.
+
+In a check-in's `messages`, a coach reply to a flagged message has a
+`safety` field with the category. It's left out otherwise.
 
 This returns `503` when the coach is unavailable (see `llm` in `/api/health`).
 

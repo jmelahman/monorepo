@@ -116,7 +116,7 @@ a { color: var(--accent); }
 {{range $pi, $p := .Pages}}{{$r := $p.Report}}{{$m := $r.Metrics}}
 <section class="report" id="r{{$pi}}">
 <h2><code>{{$r.Model}}</code>{{if $r.Tools.Decoys}} with {{$r.Tools.Decoys}} decoy tools{{end}}</h2>
-<p class="muted small">{{$r.BaseURL}} · {{$r.StartedAt.Local.Format "2006-01-02 15:04"}} · took {{dur $r.Duration}} · prompt <code>{{short $r.PromptSHA}}</code> · retro prompt <code>{{short $r.RetroPromptSHA}}</code> · judge {{if $r.Judge}}<code>{{$r.Judge}}</code>{{else}}off{{end}}{{if $r.ToolsFilter}} · tools limited to {{join $r.ToolsFilter ", "}}{{end}}</p>
+<p class="muted small">{{$r.BaseURL}} · {{$r.StartedAt.Local.Format "2006-01-02 15:04"}} · took {{dur $r.Duration}} · prompt <code>{{short $r.PromptSHA}}</code> · retro prompt <code>{{short $r.RetroPromptSHA}}</code> · judge {{if $r.Judge}}<code>{{$r.Judge}}</code>{{else}}off{{end}}{{if $r.Safety}} · crisis classifier <code>{{$r.Safety}}</code>{{end}}{{if $r.ToolsFilter}} · tools limited to {{join $r.ToolsFilter ", "}}{{end}}</p>
 
 <div class="cards">
   {{$ok := passed $r}}
@@ -165,6 +165,7 @@ a { color: var(--accent); }
     {{range $run.Turns}}
     <div class="turn">
       {{if .User}}<div class="user"><div class="who">User</div><div class="msg">{{.User}}</div></div>{{end}}
+      {{with .Safety}}<div class="small"><span class="tag safety">flagged {{.Category}}</span> <span class="muted">by {{.Source}}{{if .Reason}}: {{.Reason}}{{end}}</span></div>{{end}}
       {{if .Calls}}<div class="calls">
         {{range .Calls}}<div><code>{{.Name}}</code>{{if .Error}} <span class="err">error: {{.Error}}</span>{{end}}<pre>{{args .Args}}</pre></div>{{end}}
       </div>{{end}}

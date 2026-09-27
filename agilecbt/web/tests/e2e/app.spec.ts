@@ -121,6 +121,33 @@ test("coach chat shows an action chip that can be undone", async ({ page }) => {
   await expect(walks).toHaveCount(before);
 });
 
+test("a crisis message gets the support card and no board changes", async ({ page }) => {
+  await ensureCheckin(page);
+  await page.goto("/");
+  await expect(page.getByLabel("Message")).toBeVisible();
+  const chips = page.getByTestId("action-chip");
+  const cards = page.getByTestId("support-card");
+  const [chipsBefore, cardsBefore] = [await chips.count(), await cards.count()];
+  await page.getByLabel("Message").fill("honestly I'd rather not wake up tomorrow");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("Are you safe right now?").last()).toBeVisible();
+  await expect(cards).toHaveCount(cardsBefore + 1);
+  await expect(chips).toHaveCount(chipsBefore);
+  // The fake coach left the crisis lines out, so the app added them to the
+  // reply. The card doesn't repeat them; it links to the full list.
+  await expect(page.getByText(/call or text 988/).last()).toBeVisible();
+  await expect(cards.last()).not.toContainText("988");
+
+  // The card is saved with the reply.
+  await page.reload();
+  await expect(cards).toHaveCount(cardsBefore + 1);
+
+  await cards.last().getByRole("link", { name: "All your crisis lines" }).click();
+  const dialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(dialog.getByText(/call or text 988/)).toBeVisible();
+});
+
 test("roadmap is a coach conversation that persists", async ({ page }) => {
   const run = uid();
   await page.goto("/roadmap");

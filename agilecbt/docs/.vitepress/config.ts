@@ -45,6 +45,7 @@ export default defineConfig({
             { text: 'Configuration', link: '/guide/configuration' },
             { text: 'AI coach & MCP', link: '/guide/ai' },
             { text: 'Choosing a model', link: '/guide/models' },
+            { text: 'Crisis safety', link: '/guide/safety' },
             { text: 'Coach benchmarks', link: '/guide/benchmarks' },
           ],
         },

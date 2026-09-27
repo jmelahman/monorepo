@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/jmelahman/agilecbt/internal/app"
 	"github.com/jmelahman/agilecbt/internal/db"
 	"github.com/jmelahman/agilecbt/internal/prompt"
+	"github.com/jmelahman/agilecbt/internal/safety"
 	"github.com/jmelahman/agilecbt/internal/tools"
 )
 
@@ -29,6 +31,8 @@ type TurnRequest struct {
 	History []db.Message
 	// User is the new user message, with the fresh context block prepended.
 	User string
+	// NoTools sends the turn without tools, as on a crisis turn.
+	NoTools bool
 }
 
 // TurnResult is what a backend produced for a turn.
@@ -61,6 +65,8 @@ type Curator struct {
 	cfg     Config
 	busy    map[int64]bool
 	cache   statusCache
+	// safety flags crisis messages before each turn; see Safety.
+	safety *safety.Classifier
 
 	// Prompt and RetroPrompt replace the built-in system prompts when set
 	// (Prompt as a template with {{CRISIS_RESOURCES}}). The eval harness
@@ -73,7 +79,22 @@ var _ api.Curator = (*Curator)(nil)
 
 // New returns a curator using a fixed backend.
 func New(reg *tools.Registry, backend Backend) *Curator {
-	return &Curator{app: reg.App(), reg: reg, backend: backend, busy: map[int64]bool{}}
+	return &Curator{app: reg.App(), reg: reg, backend: backend, busy: map[int64]bool{}, safety: &safety.Classifier{}}
+}
+
+// SetSafety replaces the crisis classifier. New starts with the lexicon
+// alone; NewConfigured adds a model tier. A nil classifier turns the check
+// off entirely, which only the eval harness does, to benchmark a bare model.
+func (c *Curator) SetSafety(s *safety.Classifier) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.safety = s
+}
+
+func (c *Curator) classifier() *safety.Classifier {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.safety
 }
 
 func (c *Curator) current() Backend {
@@ -135,12 +156,24 @@ func (c *Curator) Chat(ctx context.Context, checkinID int64, text string, emit f
 		return err
 	}
 
+	var flag safety.Result
+	if cl := c.classifier(); cl != nil {
+		flag = cl.Classify(ctx, history, text)
+	}
+
 	ctx = app.WithActor(ctx, app.Actor{Source: "curator", CheckinID: &checkinID})
 	req := TurnRequest{
 		CheckinID: checkinID,
 		System:    c.systemPrompt(),
 		History:   history,
 		User:      contextBlock + "\n\n" + text,
+	}
+	var resources string
+	if flag.Flagged() {
+		resources = c.app.CrisisResources()
+		req.NoTools = true
+		req.User += "\n\n" + safety.Directive(flag, resources)
+		emit("safety", flag)
 	}
 	var streamed strings.Builder
 	res, turnErr := backend.Turn(ctx, req, func(delta string) {
@@ -151,10 +184,31 @@ func (c *Curator) Chat(ctx context.Context, checkinID int64, text string, emit f
 	if reply == "" {
 		reply = streamed.String()
 	}
+	var meta string
+	if flag.Flagged() {
+		// The person must get the crisis resources whatever the model did.
+		extra := ""
+		if strings.TrimSpace(reply) == "" {
+			extra = safety.Fallback(flag, resources)
+		} else {
+			extra = safety.Ensure(flag, reply, resources)
+		}
+		if extra != "" {
+			emit("text", map[string]string{"text": extra})
+			reply = strings.TrimSpace(reply + extra)
+		}
+		if turnErr != nil {
+			// They got a reply, so don't also show an error.
+			log.Printf("curator: crisis turn on check-in %d failed; sent the fallback: %v", checkinID, turnErr)
+			turnErr = nil
+		}
+		b, _ := json.Marshal(map[string]safety.Category{"safety": flag.Category})
+		meta = string(b)
+	}
 	// Keep whatever was said even if the turn failed partway, so the
 	// transcript matches what the user saw.
 	if strings.TrimSpace(reply) != "" {
-		if _, err := store.AppendMessage(checkinID, "assistant", reply, ""); err != nil && turnErr == nil {
+		if _, err := store.AppendMessage(checkinID, "assistant", reply, meta); err != nil && turnErr == nil {
 			turnErr = err
 		}
 	}

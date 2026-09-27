@@ -17,7 +17,16 @@ through the real coach and score every reply.
 | can only run a model under 12B | Not supported yet: none tested was safe or reliable enough |
 
 Whatever you pick, set [`crisis_resources`](/guide/configuration#crisis-resources)
-for where you live. No model is guaranteed to share them every time.
+for where you live.
+
+::: info Results predate the crisis classifier
+These results were recorded with the coach's prompt alone. The app now runs a
+[crisis classifier](/guide/safety) before each reply, which turns tools off and
+makes sure the crisis lines reach the person when it flags a message. Its
+phrase list catches explicit messages by default, and adding a
+[`safety_model`](/guide/safety#adding-a-classifier-model) targets most of the
+safety misses below, but the models haven't been re-benchmarked with it yet.
+:::
 
 ## Recommendations
 
