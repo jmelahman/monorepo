@@ -605,19 +605,22 @@ button {
  * for them. A tap does nothing at all: it used to throw the same sentence across
  * the board as a toast, and the tray is close enough to the keys that most of
  * those taps were a thumb on its way past.
+ *
+ * Gated on `.mouse` rather than `(hover: hover)`, which the APK's WebView
+ * answers `true`: under the query, a thumb that tapped a card would leave it lifted,
+ * since a tap here dispatches nothing and so rebuilds nothing to clear it. See
+ * `bindMouse`.
  */
-@media (hover: hover) {
-  .relic[data-tip]:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 3px 6px #0007,
-      0 0 0 1px color-mix(in srgb, var(--rare, var(--rare-common)) 55%, transparent);
-  }
+.mouse .relic[data-tip]:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 3px 6px #0007,
+    0 0 0 1px color-mix(in srgb, var(--rare, var(--rare-common)) 55%, transparent);
+}
 
-  /* Losing to `.fired` matters: a relic scoring is louder news than a hover. */
-  .relic[data-tip].fired:hover {
-    transform: translateY(-3px) scale(1.06);
-  }
+/* Losing to `.fired` matters: a relic scoring is louder news than a hover. */
+.mouse .relic[data-tip].fired:hover {
+  transform: translateY(-3px) scale(1.06);
 }
 
 /*
@@ -1964,11 +1967,9 @@ button {
   cursor: help;
 }
 
-@media (hover: hover) {
-  .shop-item-kind[data-tip]:hover {
-    text-decoration: underline dotted;
-    text-underline-offset: 0.15em;
-  }
+.mouse .shop-item-kind[data-tip]:hover {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.15em;
 }
 
 /* No seat for it. Mult red, because that is this game's color for a number
@@ -2477,6 +2478,55 @@ button {
    narrows pulls away from the dividers above and below it. */
 .setting:active:not(:disabled) {
   background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+/*
+ * Hover, for a mouse and only a mouse. Gated on `.mouse`, which `bindMouse`
+ * sets from the `pointerType` of the last pointer event, and not on
+ * `(hover: hover)`, for the reason the press feedback above gives: the APK's
+ * WebView answers that query like a desktop, and a hover on a screen rebuilt
+ * under a still finger sticks to whatever is drawn where the last button was.
+ *
+ * Light, not motion. The press already owns `transform`, and a lift on hover
+ * followed by a give on press would read as two gestures fighting over one
+ * button. Brightness is used where the button has a fill of its own, because it
+ * lifts a gradient, a rarity tint and a flat panel alike without restating any
+ * of them; the unfilled ones take a faint wash instead, the same one `.setting`
+ * darkens to on a press, at two thirds the strength so the press still reads as
+ * a step further. No transition: a hover that eases in is a hover that has not
+ * arrived yet when the click does, and it keeps this off `--pace` and out of the
+ * reduced-motion block's reach altogether.
+ *
+ * Out of reach is excluded by both spellings the views use: `:disabled`, and
+ * `aria-disabled` on a card that is still focusable so its tip can be read. A
+ * sold card is a `div` and matches nothing here. So is `:active`, wherever the
+ * press is drawn in the same property: `.mouse` makes these selectors outrank
+ * the press rules, and a key held down under the cursor would otherwise show
+ * the hover's 1.12 instead of the press's 1.35.
+ */
+.mouse
+:is(
+  .primary,
+  .secondary,
+  .shop-item,
+  .menu-button,
+  .shapes-line,
+  .ladder-step,
+  .title-pill,
+  .title-sound
+):hover:not(:disabled, [aria-disabled="true"]),
+.mouse .key:hover:not(.broken, :active) {
+  filter: brightness(1.12);
+}
+
+.mouse :is(.danger, .setting):hover:not(:disabled, :active) {
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+
+/* The quietest button on the screen, and it answers a hover the way it answers
+   a press. */
+.mouse .title-record:hover {
+  color: var(--fg);
 }
 
 .panel {

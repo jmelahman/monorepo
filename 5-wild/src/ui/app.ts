@@ -290,6 +290,33 @@ export class App {
     this.bindPhysicalKeyboard()
     this.bindAudioWake()
     this.bindTips()
+    this.bindMouse()
+  }
+
+  /**
+   * Tell the stylesheet whether the pointer in use is a mouse, so hover states
+   * can be drawn for it and for nothing else.
+   *
+   * A class on the root rather than `@media (hover: hover)`, for the reason
+   * `bindTips` gives at length: the APK's WebView answers that query `true` on a
+   * phone, and a `:hover` gated on it is one the tapped element keeps after the
+   * finger lifts. Here that is worse than usual, since the screen is rebuilt
+   * under a still finger and the stuck state lands on whatever button is drawn
+   * where the last one was. The event says what actually happened, so the class
+   * follows the last pointer used: a hybrid that puts down the trackpad for the
+   * screen loses its hovers on the first touch and gets them back on the next
+   * move of the mouse. A pen is not a mouse here, as in `bindTips`.
+   *
+   * `pointerover` as well as `pointerdown` because a mouse announces itself by
+   * moving long before it clicks, and a touch fires `pointerover` as the finger
+   * lands, ahead of the `:hover` it would otherwise pick up. On the document,
+   * not the root, so a pointer that arrives over the margins counts too.
+   */
+  private bindMouse(): void {
+    const note = (event: PointerEvent) =>
+      document.documentElement.classList.toggle("mouse", event.pointerType === "mouse")
+    document.addEventListener("pointerover", note, { capture: true, passive: true })
+    document.addEventListener("pointerdown", note, { capture: true, passive: true })
   }
 
   /**
