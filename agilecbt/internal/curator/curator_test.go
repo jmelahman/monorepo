@@ -3,6 +3,7 @@ package curator
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -172,6 +173,39 @@ func TestOpenAIToolLoop(t *testing.T) {
 	}
 	if _, ok := fake.requests[2]["tools"]; ok {
 		t.Errorf("retro draft sent tools")
+	}
+}
+
+func TestOpenAIRepeatedFailedCall(t *testing.T) {
+	reg := newRegistry(t)
+	c := newCheckin(t, reg.App())
+	title := "Walk more"
+	if _, err := reg.App().Store.CreateGoal(db.GoalPatch{Title: &title}); err != nil {
+		t.Fatal(err)
+	}
+	bad := delta(`{"tool_calls":[{"index":0,"id":"call_a","type":"function","function":{"name":"create_step","arguments":"{\"title\":\"Walk\",\"goal_id\":99}"}}]}`)
+	fake := &fakeOpenAI{replies: [][]string{{bad}, {bad}, {delta(`{"content":"Sorry, that didn't work."}`)}}}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+
+	o := &OpenAI{BaseURL: srv.URL + "/v1", Model: "m", Registry: reg}
+	var errs []error
+	o.OnToolCall = func(tc ToolCall) { errs = append(errs, tc.Err) }
+	if err := New(reg, o).Chat(context.Background(), c.ID, "add a walk", func(string, any) {}); err != nil {
+		t.Fatal(err)
+	}
+	result := func(req int) string {
+		msgs := fake.requests[req]["messages"].([]any)
+		return msgs[len(msgs)-1].(map[string]any)["content"].(string)
+	}
+	if r := result(1); !strings.Contains(r, "goal 99 does not exist") || !strings.Contains(r, `1 "Walk more"`) || !strings.Contains(r, "list tool") {
+		t.Errorf("first result: %s", r)
+	}
+	if r := result(2); !strings.Contains(r, "already failed") {
+		t.Errorf("repeat result: %s", r)
+	}
+	if len(errs) != 2 || !errors.Is(errs[1], errRepeatedCall) {
+		t.Errorf("errors: %v", errs)
 	}
 }
 

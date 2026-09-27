@@ -66,6 +66,7 @@ details.scenario[open] > summary::before { content: "▾"; }
 .user { border-left: 3px solid var(--line); padding-left: 10px; }
 .coach { border-left: 3px solid var(--accent); padding-left: 10px; }
 .fail-list { margin: 4px 0; padding-left: 18px; color: var(--bad); font-size: 13.5px; }
+.warn-list { color: var(--warn); }
 .calls { font-size: 13px; }
 .calls .err { color: var(--bad); }
 .hidden { display: none !important; }
@@ -84,9 +85,9 @@ a { color: var(--accent); }
 
 {{if gt (len .Pages) 1}}
 <h2>Summary</h2>
-<p class="muted small">Safety scenarios must pass every run. Tool recall is the share of turns that made every required call; phantom actions are replies that claim a change nothing saved.</p>
+<p class="muted small">Safety scenarios must pass every run. Tool recall is the share of turns that made every required call; phantom actions are replies that claim a change nothing saved. Dashes (replies with an em or en dash) are style only and don't fail scenarios.</p>
 <div class="tablewrap"><table>
-<tr><th>Model</th><th>Safety</th><th>Scenarios OK</th><th>Tool recall</th><th>Unwanted writes</th><th>Phantom actions</th><th>Tools</th><th>Runs</th><th>Took</th></tr>
+<tr><th>Model</th><th>Safety</th><th>Scenarios OK</th><th>Tool recall</th><th>Unwanted writes</th><th>Phantom actions</th><th>Dashes</th><th>Tools</th><th>Runs</th><th>Took</th></tr>
 {{range $pi, $p := .Pages}}{{$r := $p.Report}}{{$m := $r.Metrics}}{{$sp := safetyPassed $r}}
 <tr><td><a href="#r{{$pi}}"><code>{{$r.Model}}</code></a></td>
 <td class="{{if eq $sp.N $sp.Of}}good{{else}}bad{{end}}">{{$sp.N}}/{{$sp.Of}}</td>
@@ -94,6 +95,7 @@ a { color: var(--accent); }
 <td class="{{rateClass $m.ToolRecall true}}">{{$m.ToolRecall}}</td>
 <td class="{{rateClass $m.UnwantedMutations false}}">{{$m.UnwantedMutations}}</td>
 <td class="{{rateClass $m.PhantomActions false}}">{{$m.PhantomActions}}</td>
+<td class="{{rateClass $m.Dashes false}}">{{$m.Dashes}}</td>
 <td>{{$r.Tools.Count}}{{if $r.Tools.Decoys}} ({{$r.Tools.Decoys}} decoys){{end}}</td>
 <td>{{if $r.Scenarios}}{{(index $r.Scenarios 0).Runs}}{{end}}</td>
 <td class="num">{{dur $r.Duration}}</td></tr>
@@ -122,6 +124,7 @@ a { color: var(--accent); }
   <div class="card"><div class="big {{rateClass $m.ToolRecall true}}">{{if $m.ToolRecall.Of}}{{pct $m.ToolRecall.Rate}}{{else}}n/a{{end}}</div><div class="label">tool recall ({{$m.ToolRecall.N}}/{{$m.ToolRecall.Of}} turns got every required call)</div></div>
   <div class="card"><div class="big {{rateClass $m.UnwantedMutations false}}">{{if $m.UnwantedMutations.Of}}{{pct $m.UnwantedMutations.Rate}}{{else}}n/a{{end}}</div><div class="label">unwanted writes ({{$m.UnwantedMutations.N}}/{{$m.UnwantedMutations.Of}} constrained turns)</div></div>
   <div class="card"><div class="big {{rateClass $m.PhantomActions false}}">{{if $m.PhantomActions.Of}}{{pct $m.PhantomActions.Rate}}{{else}}n/a{{end}}</div><div class="label">phantom actions ({{$m.PhantomActions.N}}/{{$m.PhantomActions.Of}} replies claimed an unsaved change)</div></div>
+  <div class="card"><div class="big {{rateClass $m.Dashes false}}">{{if $m.Dashes.Of}}{{pct $m.Dashes.Rate}}{{else}}n/a{{end}}</div><div class="label">dashes ({{$m.Dashes.N}}/{{$m.Dashes.Of}} replies used an em or en dash; style only)</div></div>
   <div class="card"><div class="big">{{$r.Tools.Count}}</div><div class="label">tools offered, ~{{$r.Tools.Tokens}} tokens per turn</div></div>
 </div>
 <p class="muted small">{{$m.Calls}} tool calls: {{$m.UnknownTool}} unknown tool, {{$m.ToolErrors}} tool errors, {{$m.StringArgs}} string-encoded args, {{$m.DecoyCalls}} decoy, {{$m.RoundLimit}} round-limit hits.{{if $m.JudgeSkipped}} {{$m.JudgeSkipped}} judge questions skipped.{{end}}{{if $m.JudgeErrors}} <span class="bad">{{$m.JudgeErrors}} judge calls failed.</span>{{end}}</p>
@@ -167,6 +170,7 @@ a { color: var(--accent); }
       </div>{{end}}
       <div class="coach"><div class="who">Coach · {{dur .Latency}}</div><div class="msg">{{if .Reply}}{{.Reply}}{{else}}<span class="muted">(no reply)</span>{{end}}</div></div>
       {{if .Failures}}<ul class="fail-list">{{range .Failures}}<li><code>{{.Check}}</code> {{.Detail}}</li>{{end}}</ul>{{end}}
+      {{if .Warnings}}<ul class="fail-list warn-list">{{range .Warnings}}<li><code>{{.Check}}</code> {{.Detail}} (warning)</li>{{end}}</ul>{{end}}
     </div>
     {{end}}
   </div>

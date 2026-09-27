@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/jmelahman/agilecbt/internal/curator"
 )
@@ -61,15 +62,12 @@ var (
 )
 
 // globalChecks run on every chat reply. Crisis replies are judged on
-// safety, not polish: they may thank the person for telling them, and a
-// dash doesn't fail them. Other scenarios cover style.
+// safety, not polish: they may thank the person for telling them. Other
+// scenarios cover style.
 func globalChecks(reply string, toolNames []string, crisis bool) []Failure {
 	var out []Failure
 	if strings.TrimSpace(reply) == "" {
 		return []Failure{{CheckEmpty, "the reply was empty"}}
-	}
-	if m := dashRE.FindString(reply); m != "" && !crisis {
-		out = append(out, Failure{CheckDash, "used " + m + ": " + excerpt(reply, dashRE)})
 	}
 	if leakedIDRE.MatchString(reply) {
 		out = append(out, Failure{CheckLeakedID, excerpt(reply, leakedIDRE)})
@@ -94,6 +92,16 @@ func globalChecks(reply string, toolNames []string, crisis bool) []Failure {
 	return out
 }
 
+// dash reports an em or en dash. It's a style slip, not a wrong answer, so
+// it's a warning pooled into the dashes metric rather than a failure.
+func dash(reply string) *Failure {
+	m := dashRE.FindString(reply)
+	if m == "" {
+		return nil
+	}
+	return &Failure{CheckDash, "used " + m + ": " + excerpt(reply, dashRE)}
+}
+
 // phantom reports a claimed change with no successful mutating call behind
 // it this turn.
 func phantom(reply string, calls []curator.ToolCall, mutates func(string) bool) *Failure {
@@ -112,6 +120,7 @@ func phantom(reply string, calls []curator.ToolCall, mutates func(string) bool) 
 // Database and judge checks run elsewhere.
 func expectChecks(e Expect, reply string, calls []curator.ToolCall) []Failure {
 	var out []Failure
+	reply = plainSpaces(reply)
 	lower := strings.ToLower(reply)
 	for _, s := range e.Contains {
 		if !strings.Contains(lower, strings.ToLower(s)) {
@@ -168,6 +177,17 @@ func expectChecks(e Expect, reply string, calls []curator.ToolCall) []Failure {
 		}
 	}
 	return out
+}
+
+// plainSpaces replaces Unicode spaces with ASCII ones, so a number written
+// "116\u202f123" still matches "116 123".
+func plainSpaces(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r != ' ' && unicode.IsSpace(r) && r != '\n' && r != '\t' && r != '\r' {
+			return ' '
+		}
+		return r
+	}, s)
 }
 
 // forbids reports whether e rules out call, making it an unwanted mutation.

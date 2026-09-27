@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jmelahman/agilecbt/internal/app"
 	"github.com/jmelahman/agilecbt/internal/db"
@@ -50,6 +51,7 @@ func writeTools() []Tool {
 				str("horizon", "Rough timeframe, e.g. 'this month' or 'this season'."),
 			},
 			func(ctx context.Context, a *app.App, in db.GoalPatch) (any, error) {
+				in.ValueID = unsetZero(in.ValueID)
 				g, err := a.Store.CreateGoal(in)
 				if err != nil {
 					return nil, err
@@ -82,7 +84,7 @@ func writeTools() []Tool {
 			}),
 
 		define("create_step",
-			"Add a small, concrete step. Prefer tiny steps (energy_cost 1) on low-energy days. Lane defaults to someday.",
+			"Add a new small, concrete step. If the step is already on the board, use move_step instead of adding a copy. Prefer tiny steps (energy_cost 1) on low-energy days. Lane defaults to someday.",
 			true, []prop{
 				str("title", "A concrete action, e.g. '10-minute walk after lunch'.").req(),
 				integer("goal_id", "The goal this step serves."),
@@ -99,8 +101,12 @@ func writeTools() []Tool {
 				if in.Lane == db.LaneDone || in.Lane == db.LaneLetGo {
 					return nil, fmt.Errorf("%w: new steps go in someday, week, or today", db.ErrInvalid)
 				}
+				in.GoalID = unsetZero(in.GoalID)
 				st, err := a.Store.CreateStep(in.Lane, in.StepPatch)
 				if err != nil {
+					if in.GoalID != nil && errors.Is(err, db.ErrInvalid) {
+						err = withGoalIDs(a, err)
+					}
 					return nil, err
 				}
 				return st, record(ctx, a, "create_step", fmt.Sprintf("Added %q to %s", st.Title, laneName(st.Lane)), app.EntityStep, st.ID, nil, st)
@@ -133,7 +139,7 @@ func writeTools() []Tool {
 			}),
 
 		define("move_step",
-			"Move a step between someday, week (this week), and today. Use complete_step for done and let_go_step to let it go.",
+			"Move an existing step to today, week (this week), or someday, e.g. when the user picks it for today. One call per step. Use complete_step for done and let_go_step to let it go.",
 			true, []prop{
 				integer("id", "Step id.").req(),
 				enum("lane", "", db.LaneSomeday, db.LaneWeek, db.LaneToday).req(),
@@ -160,7 +166,7 @@ func writeTools() []Tool {
 			}),
 
 		define("complete_step",
-			"Mark a step done, with optional mastery (sense of accomplishment) and pleasure ratings, 0-10. Every completed step counts.",
+			"Mark a step done when the user says they did it, with optional mastery (sense of accomplishment) and pleasure ratings, 0-10. Every completed step counts.",
 			true, []prop{
 				integer("id", "Step id.").req(),
 				integer("mastery", "", 0, 10),
@@ -202,7 +208,7 @@ func writeTools() []Tool {
 			}),
 
 		define("record_checkin",
-			"Record how the user is arriving: mood, energy, anxiety (0-10), a short note in their words, and/or a one-line summary of the check-in. Updates the current check-in; outside a check-in it starts a new one for today.",
+			"Record how the user is arriving: mood, energy, anxiety (0-10), a short note in their words, and/or a one-line summary of the check-in. Call it whenever they tell you these numbers. Updates the current check-in; outside a check-in it starts a new one for today.",
 			true, []prop{
 				integer("mood", "0 = very low, 10 = great.", 0, 10),
 				integer("energy", "0 = empty, 10 = full.", 0, 10),
@@ -321,7 +327,7 @@ func writeTools() []Tool {
 			}),
 
 		define("remember",
-			"Remember a fact about the user for future check-ins (preferences, what helps, important context). Keep it short. The user can see and edit these.",
+			"Remember a lasting fact about the user for future check-ins: what helps, what makes things harder, a preference (e.g. 'walks help most before noon'). Call it when they mention one. Keep it short. The user can see and edit these.",
 			true, []prop{str("text", "").req()},
 			func(ctx context.Context, a *app.App, in struct {
 				Text string `json:"text"`
@@ -360,6 +366,33 @@ func record(ctx context.Context, a *app.App, tool, summary, entity string, id in
 		return fmt.Errorf("change saved, but logging it for undo failed: %w", err)
 	}
 	return nil
+}
+
+// unsetZero treats an id of 0 as absent: models send 0 as a placeholder for
+// an optional id, and rows start at 1.
+func unsetZero(id *int64) *int64 {
+	if id != nil && *id == 0 {
+		return nil
+	}
+	return id
+}
+
+// withGoalIDs lists the real goal ids after a goal_id error. Small models
+// batch create_goal with create_step and guess the new goal's id; the list
+// lets them fix the guess instead of repeating it.
+func withGoalIDs(a *app.App, err error) error {
+	goals, lerr := a.Store.ListGoals("")
+	if lerr != nil {
+		return err
+	}
+	if len(goals) == 0 {
+		return fmt.Errorf("%w (there are no goals yet; leave goal_id out)", err)
+	}
+	ids := make([]string, len(goals))
+	for i, g := range goals {
+		ids[i] = fmt.Sprintf("%d %q", g.ID, g.Title)
+	}
+	return fmt.Errorf("%w (goals: %s)", err, strings.Join(ids, ", "))
 }
 
 func laneName(lane string) string {

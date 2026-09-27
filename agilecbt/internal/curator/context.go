@@ -71,10 +71,10 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 	}
 
 	fmt.Fprintf(&b, "\nThis week (starting %s)", snap.Week.StartDate)
+	// An unset intention isn't mentioned: small models took it as a cue to
+	// push setting one, even over what the person came for.
 	if snap.Week.Intention != "" {
 		fmt.Fprintf(&b, ", intention: %q", snap.Week.Intention)
-	} else {
-		b.WriteString(", no intention set yet")
 	}
 	b.WriteString(".\n")
 
@@ -129,8 +129,11 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 	} else {
 		b.WriteString("\nActive goals:\n")
 	}
-	if len(goals) == 0 {
+	switch {
+	case len(goals) == 0 && roadmap:
 		b.WriteString("  (none yet; the roadmap is empty, so you could gently help them name a value and a first goal)\n")
+	case len(goals) == 0:
+		b.WriteString("  (none yet)\n")
 	}
 	for _, g := range goals {
 		fmt.Fprintf(&b, "  [goal %d] %s", g.ID, g.Title)

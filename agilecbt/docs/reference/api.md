@@ -46,7 +46,7 @@ and whether to show the coach chat.
   "version": "v0.1.0",
   "auth_required": true,
   "authenticated": false,
-  "llm": { "backend": "openai", "available": true, "detail": "qwen3.8:27b at localhost:11434" }
+  "llm": { "backend": "openai", "available": true, "detail": "gemma4:26b at localhost:11434" }
 }
 ```
 
@@ -281,7 +281,7 @@ database and apply immediately, without a restart.
   "defaults": {
     "llm": "openai",
     "base_url": "http://localhost:11434/v1",
-    "model": "qwen3.8:27b",
+    "model": "gemma4:26b",
     "reasoning_effort": "none",
     "api_key_set": false
   },

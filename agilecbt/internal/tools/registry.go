@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/jmelahman/agilecbt/internal/app"
 	"github.com/jmelahman/agilecbt/internal/db"
@@ -96,7 +97,10 @@ func ResultText(v any) string {
 func ErrorText(err error) string {
 	switch {
 	case errors.Is(err, db.ErrNotFound):
-		return "error: not found"
+		return "error: not found. Nothing has that id, so nothing changed."
+	case errors.Is(err, db.ErrInvalid) && strings.Contains(err.Error(), "does not exist"):
+		// Small models guess ids for things they just created.
+		return "error: " + err.Error() + ". Use the id a create call returned, or look it up with a list tool."
 	default:
 		return "error: " + err.Error()
 	}

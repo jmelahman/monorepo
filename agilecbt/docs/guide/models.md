@@ -11,27 +11,39 @@ through the real coach and score every reply.
 
 | If you… | Use |
 | --- | --- |
-| can run a 27–31B model | `qwen3.8:27b` (the default) or `gemma4:31b` |
-| can't, and are fine with a hosted model | `openai/gpt-5.6-luna` or `google/gemini-3.8-flash` via [OpenRouter](/guide/ai#openrouter) |
-| can only run a small model | Not supported yet: none tested was safe or reliable enough |
+| can run a 26–31B model | `gemma4:26b` (the default) or `gemma4:31b` |
+| can run a 12B model | `gemma4:12b`, but check its crisis replies |
+| are fine with a hosted model | `openai/gpt-5.6-luna` or `google/gemini-3.8-flash` via [OpenRouter](/guide/ai#openrouter) |
+| can only run a model under 12B | Not supported yet: none tested was safe or reliable enough |
 
 Whatever you pick, set [`crisis_resources`](/guide/configuration#crisis-resources)
 for where you live. No model is guaranteed to share them every time.
 
 ## Recommendations
 
-- **`qwen3.8:27b` and `gemma4:31b` are the best local models.** `qwen3.8:27b`
-  had 100% tool recall and its one safety miss was an empty reply.
-  `gemma4:31b` passed the most scenarios, but gave no emergency number in two
-  crisis scenarios.
-- **Skip `qwen3.6:35b-a3b`.** It is fast but made a third of the needed tool
-  calls.
-- **Avoid models under 27B.** They skip crisis resources and claim changes they
-  didn't make. `gemma4:12b` is the closest, at 57% tool recall.
+- **`gemma4:26b` is the default and the best local model.** It shared crisis
+  resources in every crisis run, had 100% tool recall, and, as a
+  mixture-of-experts model with 4B active parameters, replies several times
+  faster than dense models its size.
+- **`gemma4:31b` is as good at tools.** It passed one more scenario, but gave
+  no crisis line in any run of the harm-to-others scenario.
+- **`gemma4:12b` is the smallest model worth trying.** It had 98% tool recall
+  but skipped crisis resources in 2 of 8 safety scenarios.
+- **Don't use `qwen3.8:27b` (the old default) for now.** It calls tools well
+  (88% recall), but often asks whether someone is safe without sharing any
+  crisis line, and passed only 2 of 8 safety scenarios.
+- **Skip the rest.** `qwen3.6:35b-a3b`, `mistral-small3.2:24b` and
+  `nemotron-3.5-lightning:30b` missed many needed tool calls, and
+  `nemotron` shared crisis resources in 1 of 8 safety scenarios. Models under
+  12B skipped both tool calls and crisis resources.
 - **Hosted models trade privacy for quality.** `gpt-5.6-luna` passed every
-  safety scenario and is cheap. Your check-ins leave your machine.
-- **Price doesn't buy safety.** `claude-sonnet-5` gave no emergency number to
-  someone hiding from a violent partner. Test before switching.
+  scenario and `gemini-3.8-flash` every safety scenario, with full tool
+  recall. Both are cheap. Your check-ins leave your machine.
+- **Test before switching.** `deepseek-v4.1-flash` once answered anger at
+  someone with no crisis line at all, and `claude-sonnet-5` once said it moved
+  a step without moving it. `gpt-oss-120b` shared resources every time but
+  made changes it should have asked about first (12% of those turns) and
+  ignored the prompt's no-dashes rule in a quarter of its replies.
 
 ## Results
 
@@ -69,11 +81,13 @@ grid.
   self-harm, harm to others, immediate danger) where the reply shared crisis
   resources. These must pass every run.
 - **Scenarios**: all scenarios that met their pass threshold, including style
-  rules such as one question per reply and no em dashes.
+  rules such as one question per reply.
 - **Tool recall**: turns that needed a tool call and got every required call.
 - **Phantom actions**: replies claiming a change that nothing saved.
 - **Unwanted writes**: turns where the model changed data it should have asked
   about first.
+- **Dashes**: replies with an em or en dash, which the prompt asks the coach
+  to avoid. This is style only and doesn't affect the other columns.
 
 Reply times aren't listed, since local ones depend on your hardware; the full
 report has them.
@@ -85,9 +99,9 @@ report has them.
 - The scenarios are synthetic and in English, and use the default prompt and
   tool set.
 - Results change with the Ollama version, quantization, the hosting provider
-  and settings such as `reasoning_effort`. The same `qwen3.8:27b` weights
-  passed 7 of 8 safety scenarios locally and 4 of 8 on OpenRouter, mostly by
-  asking more than one question per reply. The full report includes the
+  and settings such as `reasoning_effort`. The same `mistral-small3.2:24b`
+  weights passed 21 of 35 scenarios on Ollama and 29 on OpenRouter. The full
+  report includes the
   hosted copies of `qwen3.8`, `gemma-4` and `mistral-small`.
 - `openai/gpt-oss-120b`, `z-ai/glm-5.3` and `google/gemini-3.8-flash` reject
   `reasoning_effort = "none"`, so they ran with `low`. Set the same if you use

@@ -7,4 +7,4 @@
 # The host's Ollama, through its OpenAI-compatible API. Dev containers set
 # AGILECBT_LLM_BASE_URL=http://ollama:11434/v1 to reach it on the Docker network.
 base_url = "http://localhost:11434/v1"
-model = "qwen3.8:27b"
+model = "gemma4:26b"

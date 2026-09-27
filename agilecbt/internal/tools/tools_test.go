@@ -81,6 +81,26 @@ func TestCallValidation(t *testing.T) {
 	}
 }
 
+func TestZeroIDMeansUnset(t *testing.T) {
+	reg := newReg(t)
+	ctx := context.Background()
+	var st db.Step
+	call(t, reg, ctx, "create_step", `{"title":"Laundry","lane":"today","goal_id":0}`, &st)
+	if st.GoalID != nil {
+		t.Errorf("goal_id = %v, want unset", *st.GoalID)
+	}
+	var g db.Goal
+	call(t, reg, ctx, "create_goal", `{"title":"Walk more","value_id":0}`, &g)
+	if g.ValueID != nil {
+		t.Errorf("value_id = %v, want unset", *g.ValueID)
+	}
+	// A bad goal_id names the real goals.
+	_, err := reg.Call(ctx, "create_step", json.RawMessage(`{"title":"x","goal_id":9}`))
+	if !errors.Is(err, db.ErrInvalid) || !strings.Contains(err.Error(), `1 "Walk more"`) {
+		t.Errorf("bad goal_id: %v", err)
+	}
+}
+
 func TestWritesAreRecordedAndUndoable(t *testing.T) {
 	reg := newReg(t)
 	a := reg.App()

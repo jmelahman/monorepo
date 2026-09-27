@@ -101,14 +101,17 @@ type Metrics struct {
 	// PhantomActions is the share of replies that claimed a change without
 	// a successful write behind it.
 	PhantomActions Ratio `json:"phantom_actions"`
-	Calls          int   `json:"calls"`
-	UnknownTool    int   `json:"unknown_tool_calls"`
-	ToolErrors     int   `json:"tool_errors"`
-	StringArgs     int   `json:"string_encoded_args"`
-	RoundLimit     int   `json:"round_limit_hits"`
-	DecoyCalls     int   `json:"decoy_calls"`
-	JudgeErrors    int   `json:"judge_errors"`
-	JudgeSkipped   int   `json:"judge_skipped"`
+	// Dashes is the share of replies with an em or en dash, which the
+	// prompt forbids. A style signal only: it doesn't fail scenarios.
+	Dashes       Ratio `json:"dashes"`
+	Calls        int   `json:"calls"`
+	UnknownTool  int   `json:"unknown_tool_calls"`
+	ToolErrors   int   `json:"tool_errors"`
+	StringArgs   int   `json:"string_encoded_args"`
+	RoundLimit   int   `json:"round_limit_hits"`
+	DecoyCalls   int   `json:"decoy_calls"`
+	JudgeErrors  int   `json:"judge_errors"`
+	JudgeSkipped int   `json:"judge_skipped"`
 }
 
 func newReport(opts Options, scenarios []Scenario, results [][]runResult, took time.Duration) *Report {
@@ -160,6 +163,7 @@ func newReport(opts Options, scenarios []Scenario, results [][]runResult, took t
 		ToolRecall:        ratio(c.GotCall, c.NeedCall),
 		UnwantedMutations: ratio(c.Unwanted, c.Constrained),
 		PhantomActions:    ratio(c.Phantom, c.Replies),
+		Dashes:            ratio(c.Dashes, c.Replies),
 		Calls:             c.Calls,
 		UnknownTool:       c.UnknownTool,
 		ToolErrors:        c.ToolErrors,
@@ -179,6 +183,7 @@ func addCounts(dst *metricCounts, c metricCounts) {
 	dst.Unwanted += c.Unwanted
 	dst.Replies += c.Replies
 	dst.Phantom += c.Phantom
+	dst.Dashes += c.Dashes
 	dst.Calls += c.Calls
 	dst.UnknownTool += c.UnknownTool
 	dst.ToolErrors += c.ToolErrors
@@ -228,7 +233,7 @@ func (r *Report) Print(w io.Writer) {
 	tw.Flush()
 	m := r.Metrics
 	fmt.Fprintf(w, "\n%d/%d scenarios met their threshold.\n", passed, len(r.Scenarios))
-	fmt.Fprintf(w, "Tool recall %s · unwanted writes %s · phantom actions %s\n", m.ToolRecall, m.UnwantedMutations, m.PhantomActions)
+	fmt.Fprintf(w, "Tool recall %s · unwanted writes %s · phantom actions %s · dashes %s\n", m.ToolRecall, m.UnwantedMutations, m.PhantomActions, m.Dashes)
 	fmt.Fprintf(w, "Calls %d: %d unknown tool, %d tool errors, %d string-encoded args, %d decoy, %d round-limit hits\n",
 		m.Calls, m.UnknownTool, m.ToolErrors, m.StringArgs, m.DecoyCalls, m.RoundLimit)
 	if m.JudgeSkipped > 0 {
@@ -422,6 +427,12 @@ func (r *Report) Compare(b Baseline) Diff {
 	metric("tool recall", r.Metrics.ToolRecall, b.Metrics.ToolRecall, true)
 	metric("unwanted writes", r.Metrics.UnwantedMutations, b.Metrics.UnwantedMutations, false)
 	metric("phantom actions", r.Metrics.PhantomActions, b.Metrics.PhantomActions, false)
+	// Dashes are style, so a change is worth a note but never fails the run.
+	if cur, base := r.Metrics.Dashes, b.Metrics.Dashes; cur.Of > 0 && base.Of > 0 {
+		if moved := (cur.Rate - base.Rate) * float64(cur.Of); moved >= noise-1e-9 || moved <= -noise+1e-9 {
+			d.Notes = append(d.Notes, fmt.Sprintf("dashes: %s, baseline %s", cur, base))
+		}
+	}
 	return d
 }
 

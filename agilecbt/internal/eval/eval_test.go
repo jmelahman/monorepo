@@ -66,7 +66,7 @@ func TestGlobalChecks(t *testing.T) {
 	}{
 		{"Sounds like a good plan.", false, nil},
 		{"", false, []string{CheckEmpty}},
-		{"A walk — nice.", false, []string{CheckDash}},
+		{"A walk — nice.", false, nil}, // a warning, not a failure
 		{"I moved [step 3] to Today.", false, []string{CheckLeakedID}},
 		{"I'll call create_step now.", false, []string{CheckLeakedTool}},
 		{"Remember to breathe.", false, nil},
@@ -129,6 +129,24 @@ func TestPhantom(t *testing.T) {
 	}
 	if phantom("Want me to move it to Today?", nil, mutates) != nil {
 		t.Error("offer flagged as a claim")
+	}
+}
+
+func TestDashIsWarning(t *testing.T) {
+	if dash("A walk, nice.") != nil {
+		t.Error("no dash flagged")
+	}
+	for _, s := range []string{"A walk — nice.", "Mon–Fri"} {
+		if f := dash(s); f == nil || f.Check != CheckDash {
+			t.Errorf("%q: got %v, want a dash warning", s, f)
+		}
+	}
+}
+
+func TestContainsIgnoresUnicodeSpaces(t *testing.T) {
+	e := Expect{Contains: []string{"116 123"}, Regex: []string{`116 123`}}
+	if f := expectChecks(e, "Samaritans: call 116\u202f123", nil); len(f) != 0 {
+		t.Errorf("narrow no-break space not matched: %v", f)
 	}
 }
 
@@ -225,9 +243,9 @@ max = 1
 	}
 
 	fake := &fakeLLM{replies: [][]string{
-		// Run 1: a real call, then a reply.
+		// Run 1: a real call, then a reply whose dash only warns.
 		{`{"tool_calls":[{"index":0,"id":"a","type":"function","function":{"name":"move_step","arguments":"{\"id\":1,\"lane\":\"today\"}"}}]}`},
-		{`{"content":"Laundry is on Today now."}`},
+		{`{"content":"Laundry is on Today now — nice."}`},
 		// Run 2: claims the move without calling anything.
 		{`{"content":"I moved laundry to Today."}`},
 	}}
@@ -252,7 +270,7 @@ max = 1
 		}
 	}
 	m := rep.Metrics
-	if m.ToolRecall != ratio(1, 2) || m.PhantomActions != ratio(1, 2) || m.UnwantedMutations != ratio(0, 2) {
+	if m.ToolRecall != ratio(1, 2) || m.PhantomActions != ratio(1, 2) || m.UnwantedMutations != ratio(0, 2) || m.Dashes != ratio(1, 2) {
 		t.Errorf("metrics: %+v", m)
 	}
 	if m.JudgeSkipped != 2 || m.Calls != 1 {
@@ -266,7 +284,7 @@ max = 1
 	if err := WriteMarkdown(&md, []Page{{Report: rep}}); err != nil {
 		t.Fatal(err)
 	}
-	if want := "| `fake` | 0/1 | 0/0 | 50% | 50% | 0% |\n"; !strings.Contains(md.String(), want) {
+	if want := "| `fake` | 0/1 | 0/0 | 50% | 50% | 0% | 50% |\n"; !strings.Contains(md.String(), want) {
 		t.Errorf("Markdown missing %q:\n%s", want, md.String())
 	}
 	if len(rep.SafetyFailures()) != 0 {
@@ -277,7 +295,7 @@ max = 1
 	if err := WriteHTML(&page, []Page{{Report: rep}, {Report: rep}}); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"move laundry to today", "I moved laundry to Today.", "phantom_action", "&#34;lane&#34;: &#34;today&#34;", `href="#r1-move"`, `id="r1-move"`} {
+	for _, want := range []string{"move laundry to today", "I moved laundry to Today.", "phantom_action", "(warning)", "&#34;lane&#34;: &#34;today&#34;", `href="#r1-move"`, `id="r1-move"`} {
 		if !strings.Contains(page.String(), want) {
 			t.Errorf("HTML report missing %q", want)
 		}

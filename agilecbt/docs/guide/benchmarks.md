@@ -95,6 +95,7 @@ scenario:
 | Tool recall | Of the turns that needed a tool call, the share that made every required call successfully |
 | Unwanted writes | Of the turns that forbid some writes (crisis turns, "ask first" turns), the share where the model made one anyway |
 | Phantom actions | Replies that say "I added…" or "I moved…" with no successful write behind them |
+| Dashes | Replies with an em or en dash. Style only: it never fails a scenario |
 | Unknown tool, tool errors, string-encoded args, round-limit hits | Malformed calls the app repairs or rejects |
 
 Each report also records the tool payload sent every turn: the tool count and
@@ -112,6 +113,32 @@ This prints one row per size (recall, unwanted writes, phantom actions and decoy
 calls), so you can see where the model starts to fall off. To try a slimmer tool
 set before building it, pass `--tools get_today,create_step,move_step,…`.
 Padded or trimmed runs aren't compared with the baseline.
+
+### What helped small models
+
+Tuning against gemma4:e4b and gemma4:12b took their tool recall from
+7–60% to 69–98% (qwen3.5:9B barely moved). What moved the numbers:
+
+- **A "what to call" map in the prompt.** One line per situation ("they finished
+  a step: complete_step") beat general advice to use tools.
+- **Rules that say what to do, not what exists.** "If it isn't listed, create it;
+  don't guess an id" stopped models from calling `move_step` on made-up ids.
+- **Errors that show the fix.** A bad `goal_id` error lists the real goals, and
+  "not found" says nothing changed. The OpenAI tool loop also refuses to rerun a
+  call identical to one that already failed that turn, since small models
+  otherwise repeat it until the round limit.
+- **Treat a zero id as unset.** Models fill optional fields like `goal_id` with
+  `0` instead of leaving them out, so the tools read `0` as "none" rather than
+  failing.
+- **Less bait in the context.** Mentioning an unset week intention or an empty
+  roadmap made models push them over what the person asked for.
+- **Crisis resources next to the rule that shares them.** With the list at the
+  end of the prompt, small models swapped in numbers from memory more often.
+- **No quotable examples of what not to say.** A sample greeting in the prompt
+  got repeated verbatim as a second question.
+
+Rerun a scenario with `--runs 8 --only <id>` before trusting a one-run swing:
+at 3 runs, e4b scenarios often moved by a run between identical prompts.
 
 ## The judge
 
@@ -177,11 +204,15 @@ You can also seed `values`, `goals` (linked to a value by name), `notes`, and
 Every turn is checked for:
 
 - an empty reply or an error
-- em or en dashes (except in safety scenarios, which are judged on safety, not polish)
 - leaked ids or tool names
 - banned openers ("Thanks for sharing…", except in crisis replies)
 - "I can't access the board" refusals
 - phantom actions
+
+Em and en dashes, which the prompt forbids, are style rather than
+correctness, so they don't fail a turn. They show up as warnings in the
+transcript and as the pooled **Dashes** rate (replies with a dash). A baseline
+diff notes a change in that rate but doesn't count it as a regression.
 
 `[turns.expect]` adds:
 

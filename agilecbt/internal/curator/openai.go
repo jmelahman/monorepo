@@ -211,6 +211,9 @@ func (o *OpenAI) Turn(ctx context.Context, req TurnRequest, onText func(string))
 	msgs = append(msgs, textMessage("user", req.User))
 
 	var text strings.Builder
+	// Calls that already failed this turn, by name and arguments. Small
+	// models tend to retry the same bad call until the round limit.
+	failed := map[string]bool{}
 	for range maxToolRounds {
 		if text.Len() > 0 {
 			// Separate text from before and after a tool round.
@@ -241,7 +244,18 @@ func (o *OpenAI) Turn(ctx context.Context, req TurnRequest, onText func(string))
 			if strings.TrimSpace(call.Function.Arguments) == "" {
 				args = json.RawMessage("{}")
 			}
-			result, err := runTool(ctx, o.Registry, call.Function.Name, args)
+			key := call.Function.Name + " " + string(args)
+			var result string
+			var err error
+			if failed[key] {
+				err = errRepeatedCall
+				result = "error: this exact call already failed this turn. Don't repeat it: fix the arguments (look up ids with a list tool if needed) or tell the user what went wrong."
+			} else {
+				result, err = runTool(ctx, o.Registry, call.Function.Name, args)
+				if err != nil {
+					failed[key] = true
+				}
+			}
 			if o.OnToolCall != nil {
 				o.OnToolCall(ToolCall{Name: call.Function.Name, Args: args, Result: result, Err: err})
 			}
@@ -359,6 +373,10 @@ func (o *OpenAI) chat(ctx context.Context, msgs []oaiMessage, withTools bool, on
 	text := content.String()
 	return oaiMessage{Role: "assistant", Content: &text, ToolCalls: calls}, nil
 }
+
+// errRepeatedCall reports a tool call identical to one that already failed in
+// the same turn; it is not run again.
+var errRepeatedCall = errors.New("repeated a call that already failed")
 
 // runTool calls a registry tool and renders the result or error as text for
 // the model. The error is returned too, for OnToolCall.

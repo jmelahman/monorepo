@@ -20,7 +20,7 @@ optional:
 llm = "openai"                          # AGILECBT_LLM
 base_url = "http://ollama:11434/v1"     # AGILECBT_LLM_BASE_URL
 api_key = "…"                           # AGILECBT_LLM_API_KEY
-model = "qwen3.8:27b"                   # AGILECBT_MODEL
+model = "gemma4:26b"                   # AGILECBT_MODEL
 reasoning_effort = "none"               # AGILECBT_LLM_REASONING_EFFORT
 secret = "…"                            # AGILECBT_SECRET
 data_dir = "data"                       # AGILECBT_DATA_DIR, relative to this file
@@ -70,7 +70,7 @@ The SQLite database lives in the data directory, resolved in order:
 | `AGILECBT_LLM` | server | AI coach: `openai` (default, any OpenAI-compatible API) or `none` |
 | `AGILECBT_LLM_BASE_URL` | server | API root before `/chat/completions` (default `http://localhost:11434/v1`, a local Ollama) |
 | `AGILECBT_LLM_API_KEY` | server | Bearer token for the API, e.g. an OpenRouter key |
-| `AGILECBT_MODEL` | server | Model id (default `qwen3.8:27b`) |
+| `AGILECBT_MODEL` | server | Model id (default `gemma4:26b`) |
 | `AGILECBT_LLM_REASONING_EFFORT` | server | Sent as `reasoning_effort` (default `none`, thinking off); empty leaves it out |
 | `AGILECBT_DATA_DIR` | server | Data directory override |
 | `AGILECBT_CRISIS_RESOURCES` | server | Crisis lines the coach shares; see [Crisis resources](#crisis-resources) |

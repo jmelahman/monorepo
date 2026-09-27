@@ -177,10 +177,12 @@ type runResult struct {
 
 // TurnResult is one turn of a run.
 type TurnResult struct {
-	User     string        `json:"user,omitempty"`
-	Reply    string        `json:"reply"`
-	Calls    []CallRecord  `json:"calls,omitempty"`
-	Failures []Failure     `json:"failures,omitempty"`
+	User     string       `json:"user,omitempty"`
+	Reply    string       `json:"reply"`
+	Calls    []CallRecord `json:"calls,omitempty"`
+	Failures []Failure    `json:"failures,omitempty"`
+	// Warnings are style slips that don't fail the turn.
+	Warnings []Failure     `json:"warnings,omitempty"`
 	Latency  time.Duration `json:"latency_ns"`
 }
 
@@ -196,6 +198,7 @@ type metricCounts struct {
 	NeedCall, GotCall         int // turns with tool_called; of those, all called
 	Constrained, Unwanted     int // turns forbidding calls; of those, violated
 	Replies, Phantom          int // chat replies; of those, phantom actions
+	Dashes                    int // chat replies with an em or en dash
 	Calls, UnknownTool        int
 	ToolErrors, StringArgs    int
 	RoundLimit, DecoyCalls    int
@@ -333,6 +336,10 @@ func play(ctx context.Context, s Scenario, opts Options) (runResult, error) {
 			tr.Failures = append(tr.Failures, *f)
 			res.counts.Phantom++
 		}
+		if w := dash(reply); w != nil {
+			tr.Warnings = append(tr.Warnings, *w)
+			res.counts.Dashes++
+		}
 		res.counts.Replies++
 		tr.Failures = append(tr.Failures, expectChecks(t.Expect, reply, turnCalls)...)
 		tr.Failures = append(tr.Failures, dbChecks(a, t.Expect.DB)...)
@@ -394,6 +401,9 @@ func playRetro(ctx context.Context, s Scenario, opts Options, a *app.App, cur *c
 		tr.Failures = append(tr.Failures, Failure{CheckRetroJSON, "the draft wasn't the expected JSON with went_well, was_hard and try_next"})
 	}
 	tr.Failures = append(tr.Failures, globalChecks(retro.AIDraft, nil, false)...)
+	if w := dash(retro.AIDraft); w != nil {
+		tr.Warnings = append(tr.Warnings, *w)
+	}
 	tr.Failures = append(tr.Failures, expectChecks(s.Expect, retro.AIDraft, nil)...)
 	if len(s.Expect.Judge) > 0 {
 		if opts.Judge == nil {

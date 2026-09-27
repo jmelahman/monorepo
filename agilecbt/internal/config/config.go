@@ -29,7 +29,7 @@ const (
 // Defaults for the OpenAI-compatible backend: a local Ollama.
 const (
 	DefaultBaseURL         = "http://localhost:11434/v1"
-	DefaultModel           = "qwen3.8:27b"
+	DefaultModel           = "gemma4:26b"
 	DefaultReasoningEffort = "none"
 )
 
