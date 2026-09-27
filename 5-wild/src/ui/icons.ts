@@ -32,6 +32,14 @@ const PATHS = {
   book: ["M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z", "M4 21V5"],
   sound: ["M11 5 6 9H3v6h3l5 4z", "M15.5 8.5a5 5 0 0 1 0 7", "M18.5 5.5a9 9 0 0 1 0 13"],
   muted: ["M11 5 6 9H3v6h3l5 4z", "M16 9l6 6", "M22 9l-6 6"],
+  // Sound with music, the top of the three levels: a pair of beamed eighths
+  // rather than the speaker with a note beside it, which at the title button's
+  // size was a speaker with a smudge.
+  music: [
+    "M9 18V5l12-2v13",
+    "M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0",
+    "M15 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0",
+  ],
   // The shelf's kinds, one each, so a list of five rows can be scanned for "is
   // there a relic" down the left edge without reading a word. Drawn as the thing
   // rather than as a letter of its name: a gem, a flask, a box, a tile. See

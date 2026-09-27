@@ -201,6 +201,12 @@ export type Strings = {
       codex: string
       soundOn: string
       soundOff: string
+      /**
+       * The title speaker's `aria-label`, one per level. Each is the setting's
+       * name and then its value ("Sound: off"), so it reads as what is playing
+       * now and never as what a tap will do.
+       */
+      sound: { off: string; sound: string; music: string; musicOnly: string }
       /** The level, named as a level: "Ascension 3". */
       ascension: (level: number) => string
       /**

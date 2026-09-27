@@ -743,8 +743,9 @@ export class Sound {
     return this.muted
   }
 
-  toggleMute(): boolean {
-    this.muted = !this.muted
+  setMuted(muted: boolean): void {
+    if (muted === this.muted) return
+    this.muted = muted
     try {
       localStorage.setItem(MUTE_KEY, this.muted ? "1" : "0")
     } catch {
@@ -753,7 +754,6 @@ export class Sound {
     // Unmuting is itself a user gesture, so it is the cheapest moment to wake
     // a context that was created and then suspended.
     if (!this.muted) void audioContext()?.resume()
-    return this.muted
   }
 
   cue(cue: Cue): void {

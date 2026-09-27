@@ -118,7 +118,10 @@ export type Handlers = {
   /** The difficulty the *next* run starts at. Nothing in flight can hear this. */
   setAscension: (level: number) => void
   play: () => void
-  mute: () => void
+  /** Step down from sound with music, to sound, to off. See `NEXT_SOUND`. */
+  cycleSound: () => void
+  /** The effects alone. The music has its own switch and ignores this one. */
+  toggleEffects: () => void
   toggleMusic: () => void
   /** Step the board down a level of decoration, wrapping back to all of it. */
   cycleDecor: () => void
@@ -158,7 +161,9 @@ export type Handlers = {
  * screen takes.
  */
 export type Chrome = {
-  muted: boolean
+  sound: SoundLevel
+  /** The two switches `sound` is read from, for the pause sheet's rows. */
+  effectsOff: boolean
   musicOff: boolean
   decor: Decor
   speed: Speed
@@ -318,6 +323,37 @@ export const NEXT_DECOR: Record<Decor, Decor> = {
   all: "minimal",
   minimal: "none",
   none: "all",
+}
+
+/**
+ * How much the game says out loud, as the title screen's speaker shows it.
+ *
+ * Underneath are two switches, the effects and the music, and the pause sheet
+ * shows them as two. The speaker is the shortcut: one button with no room for a
+ * label, which cycles the three levels a player reaching for it wants: effects
+ * with music, effects, off.
+ *
+ * It counts down, as the decoration cycle does, and from the top because the
+ * music is on by default. It climbed at first, off to effects to music, and that
+ * order put "no music" behind "no sound": the player most likely to reach for the
+ * speaker is the one who wants the piano gone, and their first tap took the
+ * clacks with it. Counting down, every tap takes away one layer, and the first
+ * one takes away only the music, so the middle level is found by the tap that
+ * wanted it rather than looked for.
+ *
+ * The fourth pair, music with the effects off, is reachable from the sheet
+ * alone. The speaker still has to draw it, and it draws the note, since music is
+ * what is playing, and steps it to off: one layer away, as from anywhere else.
+ * It is not a stop on the cycle, because a fourth stop on a button with no label
+ * is one the player has to count past.
+ */
+export type SoundLevel = "off" | "sound" | "music" | "musicOnly"
+
+export const NEXT_SOUND: Record<SoundLevel, SoundLevel> = {
+  music: "sound",
+  sound: "off",
+  off: "music",
+  musicOnly: "off",
 }
 
 /**
@@ -2418,16 +2454,23 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
  * row of labels nobody was reading. The label moves to `aria-label`, and names the state the
  * way the word did, so a screen reader hears what a sighted player sees drawn.
  */
+const SOUND_ICON: Record<SoundLevel, IconName> = {
+  off: "muted",
+  sound: "sound",
+  music: "music",
+  musicOnly: "music",
+}
+
 function soundButton(on: Handlers, chrome: Chrome): HTMLElement {
   return h(
     "button",
     {
       class: "title-sound",
       type: "button",
-      "aria-label": chrome.muted ? ui().common.soundOff : ui().common.soundOn,
-      onclick: () => on.mute(),
+      "aria-label": ui().common.sound[chrome.sound],
+      onclick: () => on.cycleSound(),
     },
-    icon(chrome.muted ? "muted" : "sound"),
+    icon(SOUND_ICON[chrome.sound]),
   )
 }
 
@@ -3252,20 +3295,26 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       "div",
       { class: "settings" },
       setting(
-        { "data-focus": "sound", onclick: () => on.mute() },
-        chrome.muted ? common.soundOff : common.soundOn,
-        !chrome.muted,
+        { "data-focus": "sound", onclick: () => on.toggleEffects() },
+        chrome.effectsOff ? common.soundOff : common.soundOn,
+        !chrome.effectsOff,
       ),
       // Music gets its own switch rather than riding on the sound one: it plays
       // continuously, so it is the thing a player is most likely to want gone
       // while keeping the feedback that tells them what their guess scored.
       //
-      // Muting sound silences it too, and the switch goes dead rather than
-      // sitting there reading "Music on" over silence.
+      // And the two are independent here, as they are nowhere else. The title
+      // screen's speaker cycles three levels, effects with music, effects, off,
+      // and music with no effects is not one of them, because a fourth stop on a
+      // button with no label is a stop the player has to count past. It is a real
+      // preference, though (music while reading, say), so these switches can
+      // reach it, and the speaker draws it as the note and steps it to off. This
+      // switch used to go dead while sound was off, which is what had made that
+      // pair unreachable.
       setting(
-        { "data-focus": "music", disabled: chrome.muted, onclick: () => on.toggleMusic() },
-        chrome.muted || chrome.musicOff ? copy.musicOff : copy.musicOn,
-        !(chrome.muted || chrome.musicOff),
+        { "data-focus": "music", onclick: () => on.toggleMusic() },
+        chrome.musicOff ? copy.musicOff : copy.musicOn,
+        !chrome.musicOff,
       ),
       // How fast the game plays what it has to say, and unlike the letter values
       // below it, this one belongs on the sheet. The argument that moved the

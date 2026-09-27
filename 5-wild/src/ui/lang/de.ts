@@ -390,6 +390,12 @@ export const de: Strings = {
       codex: "Kodex",
       soundOn: "Ton an",
       soundOff: "Ton aus",
+      sound: {
+        off: "Ton: aus",
+        sound: "Ton: Effekte",
+        music: "Ton: Effekte und Musik",
+        musicOnly: "Ton: nur Musik",
+      },
       ascension: (level) => `Aufstieg ${level}`,
       // DIN 5008 puts a space between the number and the sign, and it is written
       // as an escape here for the same reason French writes its own: a literal

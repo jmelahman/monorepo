@@ -25,7 +25,7 @@ import { chosenAscension, Profile } from "./meta"
 import type { Mood } from "./music"
 import { Music } from "./music"
 import { atSpeed, loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
-import type { Chrome, Decor, Handlers } from "./views"
+import type { Chrome, Decor, Handlers, SoundLevel } from "./views"
 import {
   ascendView,
   codexView,
@@ -40,6 +40,7 @@ import {
   menuView,
   meterFill,
   NEXT_DECOR,
+  NEXT_SOUND,
   packView,
   placeView,
   quitView,
@@ -1288,17 +1289,25 @@ export class App {
       this.intro = false
       this.render()
     },
-    mute: () => {
-      // The effects switch carries the music with it when it silences the game,
-      // because a player reaching for it wants quiet, not a quieter mix. Turning
-      // sound back on only revives music that was not switched off on its own.
-      const muted = this.sound.toggleMute()
-      if (muted) this.music.suspend()
-      else this.music.resume()
+    cycleSound: () => {
+      // Both switches are written every step, not only the one that moved: each
+      // level is a pair, and two of the steps move both halves at once, off back
+      // up to music and music-only down to off.
+      const next = NEXT_SOUND[this.soundLevel]
+      this.sound.setMuted(next === "off")
+      this.music.setOff(next !== "music")
+      this.render()
+    },
+    // The effects switch used to carry the music with it when it silenced the
+    // game. It no longer does: the pause sheet has a switch for each, and one
+    // that reached into the other made "music, no effects" the one pair no tap
+    // could set. Quiet in one tap is the title speaker's job now.
+    toggleEffects: () => {
+      this.sound.setMuted(!this.sound.isMuted)
       this.render()
     },
     toggleMusic: () => {
-      this.music.toggle()
+      this.music.setOff(!this.music.isOff)
       this.render()
     },
     cycleDecor: () => {
@@ -1402,9 +1411,19 @@ export class App {
     },
   }
 
+  /**
+   * Read off the two stored switches rather than kept as a third, so there is
+   * nothing to fall out of step with them.
+   */
+  private get soundLevel(): SoundLevel {
+    if (this.sound.isMuted) return this.music.isOff ? "off" : "musicOnly"
+    return this.music.isOff ? "sound" : "music"
+  }
+
   private get chrome(): Chrome {
     return {
-      muted: this.sound.isMuted,
+      sound: this.soundLevel,
+      effectsOff: this.sound.isMuted,
       musicOff: this.music.isOff,
       decor: this.decor,
       speed: this.speed,

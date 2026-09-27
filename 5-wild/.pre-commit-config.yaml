@@ -3,6 +3,12 @@ default_install_hook_types:
   - post-checkout
   - post-merge
   - post-rewrite
+
+# The music is a deliberate 1.3MB, over check-added-large-files' 500KB. It will
+# not go under without Opus at 24kbps, which smears the piano and moves the
+# samples its seamless loop depends on.
+exclude: ^src/ui/tracks/.*\.ogg$
+
 repos:
   # BEGIN orchard:base
   # Shared by every subtree: .config/git-orchard/shared/base in the monorepo

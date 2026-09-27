@@ -12,7 +12,8 @@ exclude: |
     .*/testdata/.*|
     .*/test/fixtures/.*|
     .*\.min\.(css|js)|
-    pkglint/site/assets/fonts/.*
+    pkglint/site/assets/fonts/.*|
+    5-wild/src/ui/tracks/.*\.ogg
   )$
 
 repos:

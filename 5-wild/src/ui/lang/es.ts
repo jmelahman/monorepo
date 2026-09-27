@@ -384,6 +384,12 @@ export const es: Strings = {
       codex: "Códice",
       soundOn: "Sonido activado",
       soundOff: "Sonido desactivado",
+      sound: {
+        off: "Sonido: desactivado",
+        sound: "Sonido: efectos",
+        music: "Sonido: efectos y música",
+        musicOnly: "Sonido: solo música",
+      },
       ascension: (level) => `Ascensión ${level}`,
       // Spanish sets the sign off from the number, which is exactly why this is
       // a catalog entry and not a `${n}%` at the call site.

@@ -406,6 +406,12 @@ export const en: Strings = {
       codex: "Codex",
       soundOn: "Sound on",
       soundOff: "Sound off",
+      sound: {
+        off: "Sound: off",
+        sound: "Sound: effects",
+        music: "Sound: effects and music",
+        musicOnly: "Sound: music only",
+      },
       ascension: (level) => `Ascension ${level}`,
       percent: (share) => `${share}%`,
       none: "—",
