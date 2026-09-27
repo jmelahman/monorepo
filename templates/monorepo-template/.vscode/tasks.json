@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Prek",
+      "type": "shell",
+      "command": "prek",
+      "args": ["run", "--from-ref", "origin/master", "--to-ref", "HEAD"],
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Orchard Sync",
+      "type": "shell",
+      "command": "git",
+      "args": ["orchard", "sync"],
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Orchard Status",
+      "type": "shell",
+      "command": "git",
+      "args": ["orchard", "status"],
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    }
+  ]
+}

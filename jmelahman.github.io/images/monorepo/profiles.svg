@@ -1,0 +1,302 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 748 399" width="748" height="399" role="img" aria-labelledby="t"><title id="t">Which shared git-orchard profiles each of the 28 subtrees uses</title>
+<style>text{font-family:Inter,Helvetica,Arial,sans-serif;fill:#2c2c2c;font-size:11px}.m{font-family:"JetBrains Mono",Menlo,Consolas,monospace}.mu{fill:#8a8878}</style>
+<text class="m" font-size="10" transform="translate(105.0,162) rotate(-60)">agilecbt</text>
+<text class="m" font-size="10" transform="translate(126.0,162) rotate(-60)">local-preview</text>
+<text class="m" font-size="10" transform="translate(147.0,162) rotate(-60)">connections</text>
+<text class="m" font-size="10" transform="translate(168.0,162) rotate(-60)">git-orchard</text>
+<text class="m" font-size="10" transform="translate(189.0,162) rotate(-60)">work</text>
+<text class="m" font-size="10" transform="translate(210.0,162) rotate(-60)">agentic-kanban</text>
+<text class="m" font-size="10" transform="translate(231.0,162) rotate(-60)">cycle-cli</text>
+<text class="m" font-size="10" transform="translate(252.0,162) rotate(-60)">nature-sounds</text>
+<text class="m" font-size="10" transform="translate(273.0,162) rotate(-60)">fullstack-template</text>
+<text class="m" font-size="10" transform="translate(294.0,162) rotate(-60)">check-symlinks</text>
+<text class="m" font-size="10" transform="translate(315.0,162) rotate(-60)">connections-ssh</text>
+<text class="m" font-size="10" transform="translate(336.0,162) rotate(-60)">smart-lights</text>
+<text class="m" font-size="10" transform="translate(357.0,162) rotate(-60)">undot</text>
+<text class="m" font-size="10" transform="translate(378.0,162) rotate(-60)">go-bin</text>
+<text class="m" font-size="10" transform="translate(399.0,162) rotate(-60)">manygo</text>
+<text class="m" font-size="10" transform="translate(420.0,162) rotate(-60)">docker-status</text>
+<text class="m" font-size="10" transform="translate(441.0,162) rotate(-60)">golang-template</text>
+<text class="m" font-size="10" transform="translate(462.0,162) rotate(-60)">jview</text>
+<text class="m" font-size="10" transform="translate(483.0,162) rotate(-60)">typesafe-sdk-go</text>
+<text class="m" font-size="10" transform="translate(504.0,162) rotate(-60)">5-wild</text>
+<text class="m" font-size="10" transform="translate(525.0,162) rotate(-60)">pkglint</text>
+<text class="m" font-size="10" transform="translate(546.0,162) rotate(-60)">go-pre-commit-hooks</text>
+<text class="m" font-size="10" transform="translate(567.0,162) rotate(-60)">skills</text>
+<text class="m" font-size="10" transform="translate(588.0,162) rotate(-60)">tag</text>
+<text class="m" font-size="10" transform="translate(609.0,162) rotate(-60)">PKGBUILDs-template</text>
+<text class="m" font-size="10" transform="translate(630.0,162) rotate(-60)">dotfiles</text>
+<text class="m" font-size="10" transform="translate(651.0,162) rotate(-60)">github-token-diff-extension</text>
+<text class="m" font-size="10" transform="translate(672.0,162) rotate(-60)">jmelahman.github.io</text>
+<text class="m" x="84" y="183" text-anchor="end">base</text>
+<rect x="92" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>agilecbt: uses base</title></rect>
+<rect x="113" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>local-preview: uses base</title></rect>
+<rect x="134" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>connections: uses base</title></rect>
+<rect x="155" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>git-orchard: uses base</title></rect>
+<rect x="176" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>work: uses base</title></rect>
+<rect x="197" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>agentic-kanban: uses base</title></rect>
+<rect x="218" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>cycle-cli: uses base</title></rect>
+<rect x="239" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>nature-sounds: uses base</title></rect>
+<rect x="260" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>fullstack-template: uses base</title></rect>
+<rect x="281" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>check-symlinks: uses base</title></rect>
+<rect x="302" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>connections-ssh: uses base</title></rect>
+<rect x="323" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>smart-lights: uses base</title></rect>
+<rect x="344" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>undot: uses base</title></rect>
+<rect x="365" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>go-bin: uses base</title></rect>
+<rect x="386" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>manygo: uses base</title></rect>
+<rect x="407" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>docker-status: uses base</title></rect>
+<rect x="428" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>golang-template: uses base</title></rect>
+<rect x="449" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>jview: uses base</title></rect>
+<rect x="470" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>typesafe-sdk-go: uses base</title></rect>
+<rect x="491" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>5-wild: uses base</title></rect>
+<rect x="512" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>pkglint: uses base</title></rect>
+<rect x="533" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>go-pre-commit-hooks: uses base</title></rect>
+<rect x="554" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>skills: uses base</title></rect>
+<rect x="575" y="170" width="18" height="18" rx="3" fill="#8c0000"><title>tag: uses base</title></rect>
+<rect x="596" y="170" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no base</title></rect>
+<rect x="617" y="170" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no base</title></rect>
+<rect x="638" y="170" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no base</title></rect>
+<rect x="659" y="170" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no base</title></rect>
+<text class="mu" x="686" y="183">24</text>
+<text class="m" x="84" y="204" text-anchor="end">go</text>
+<rect x="92" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>agilecbt: uses go</title></rect>
+<rect x="113" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>local-preview: uses go</title></rect>
+<rect x="134" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>connections: uses go</title></rect>
+<rect x="155" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>git-orchard: uses go</title></rect>
+<rect x="176" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>work: uses go</title></rect>
+<rect x="197" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>agentic-kanban: uses go</title></rect>
+<rect x="218" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>cycle-cli: uses go</title></rect>
+<rect x="239" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>nature-sounds: uses go</title></rect>
+<rect x="260" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>fullstack-template: uses go</title></rect>
+<rect x="281" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>check-symlinks: uses go</title></rect>
+<rect x="302" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>connections-ssh: uses go</title></rect>
+<rect x="323" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>smart-lights: uses go</title></rect>
+<rect x="344" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>undot: no go</title></rect>
+<rect x="365" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>go-bin: no go</title></rect>
+<rect x="386" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>manygo: no go</title></rect>
+<rect x="407" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>docker-status: uses go</title></rect>
+<rect x="428" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>golang-template: uses go</title></rect>
+<rect x="449" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>jview: uses go</title></rect>
+<rect x="470" y="191" width="18" height="18" rx="3" fill="#8c0000"><title>typesafe-sdk-go: uses go</title></rect>
+<rect x="491" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>5-wild: no go</title></rect>
+<rect x="512" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>pkglint: no go</title></rect>
+<rect x="533" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>go-pre-commit-hooks: no go</title></rect>
+<rect x="554" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>skills: no go</title></rect>
+<rect x="575" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>tag: no go</title></rect>
+<rect x="596" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no go</title></rect>
+<rect x="617" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no go</title></rect>
+<rect x="638" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no go</title></rect>
+<rect x="659" y="191" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no go</title></rect>
+<text class="mu" x="686" y="204">16</text>
+<text class="m" x="84" y="225" text-anchor="end">shell</text>
+<rect x="92" y="212" width="18" height="18" rx="3" fill="#8c0000"><title>agilecbt: uses shell</title></rect>
+<rect x="113" y="212" width="18" height="18" rx="3" fill="#8c0000"><title>local-preview: uses shell</title></rect>
+<rect x="134" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>connections: no shell</title></rect>
+<rect x="155" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>git-orchard: no shell</title></rect>
+<rect x="176" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>work: no shell</title></rect>
+<rect x="197" y="212" width="18" height="18" rx="3" fill="#8c0000"><title>agentic-kanban: uses shell</title></rect>
+<rect x="218" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>cycle-cli: no shell</title></rect>
+<rect x="239" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>nature-sounds: no shell</title></rect>
+<rect x="260" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>fullstack-template: no shell</title></rect>
+<rect x="281" y="212" width="18" height="18" rx="3" fill="#8c0000"><title>check-symlinks: uses shell</title></rect>
+<rect x="302" y="212" width="18" height="18" rx="3" fill="#8c0000"><title>connections-ssh: uses shell</title></rect>
+<rect x="323" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>smart-lights: no shell</title></rect>
+<rect x="344" y="212" width="18" height="18" rx="3" fill="#8c0000"><title>undot: uses shell</title></rect>
+<rect x="365" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>go-bin: no shell</title></rect>
+<rect x="386" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>manygo: no shell</title></rect>
+<rect x="407" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>docker-status: no shell</title></rect>
+<rect x="428" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>golang-template: no shell</title></rect>
+<rect x="449" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>jview: no shell</title></rect>
+<rect x="470" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>typesafe-sdk-go: no shell</title></rect>
+<rect x="491" y="212" width="18" height="18" rx="3" fill="#8c0000"><title>5-wild: uses shell</title></rect>
+<rect x="512" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>pkglint: no shell</title></rect>
+<rect x="533" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>go-pre-commit-hooks: no shell</title></rect>
+<rect x="554" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>skills: no shell</title></rect>
+<rect x="575" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>tag: no shell</title></rect>
+<rect x="596" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no shell</title></rect>
+<rect x="617" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no shell</title></rect>
+<rect x="638" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no shell</title></rect>
+<rect x="659" y="212" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no shell</title></rect>
+<text class="mu" x="686" y="225">7</text>
+<text class="m" x="84" y="246" text-anchor="end">python</text>
+<rect x="92" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>agilecbt: no python</title></rect>
+<rect x="113" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>local-preview: no python</title></rect>
+<rect x="134" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>connections: no python</title></rect>
+<rect x="155" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>git-orchard: no python</title></rect>
+<rect x="176" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>work: no python</title></rect>
+<rect x="197" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>agentic-kanban: no python</title></rect>
+<rect x="218" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>cycle-cli: no python</title></rect>
+<rect x="239" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>nature-sounds: no python</title></rect>
+<rect x="260" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>fullstack-template: no python</title></rect>
+<rect x="281" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>check-symlinks: no python</title></rect>
+<rect x="302" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>connections-ssh: no python</title></rect>
+<rect x="323" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>smart-lights: no python</title></rect>
+<rect x="344" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>undot: no python</title></rect>
+<rect x="365" y="233" width="18" height="18" rx="3" fill="#8c0000"><title>go-bin: uses python</title></rect>
+<rect x="386" y="233" width="18" height="18" rx="3" fill="#8c0000"><title>manygo: uses python</title></rect>
+<rect x="407" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>docker-status: no python</title></rect>
+<rect x="428" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>golang-template: no python</title></rect>
+<rect x="449" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>jview: no python</title></rect>
+<rect x="470" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>typesafe-sdk-go: no python</title></rect>
+<rect x="491" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>5-wild: no python</title></rect>
+<rect x="512" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>pkglint: no python</title></rect>
+<rect x="533" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>go-pre-commit-hooks: no python</title></rect>
+<rect x="554" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>skills: no python</title></rect>
+<rect x="575" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>tag: no python</title></rect>
+<rect x="596" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no python</title></rect>
+<rect x="617" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no python</title></rect>
+<rect x="638" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no python</title></rect>
+<rect x="659" y="233" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no python</title></rect>
+<text class="mu" x="686" y="246">2</text>
+<text class="m" x="84" y="267" text-anchor="end">pybuild</text>
+<rect x="92" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>agilecbt: uses pybuild</title></rect>
+<rect x="113" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>local-preview: uses pybuild</title></rect>
+<rect x="134" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>connections: uses pybuild</title></rect>
+<rect x="155" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>git-orchard: uses pybuild</title></rect>
+<rect x="176" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>work: uses pybuild</title></rect>
+<rect x="197" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>agentic-kanban: uses pybuild</title></rect>
+<rect x="218" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>cycle-cli: uses pybuild</title></rect>
+<rect x="239" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>nature-sounds: uses pybuild</title></rect>
+<rect x="260" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>fullstack-template: uses pybuild</title></rect>
+<rect x="281" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>check-symlinks: uses pybuild</title></rect>
+<rect x="302" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>connections-ssh: no pybuild</title></rect>
+<rect x="323" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>smart-lights: no pybuild</title></rect>
+<rect x="344" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>undot: uses pybuild</title></rect>
+<rect x="365" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>go-bin: uses pybuild</title></rect>
+<rect x="386" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>manygo: uses pybuild</title></rect>
+<rect x="407" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>docker-status: no pybuild</title></rect>
+<rect x="428" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>golang-template: no pybuild</title></rect>
+<rect x="449" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>jview: no pybuild</title></rect>
+<rect x="470" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>typesafe-sdk-go: no pybuild</title></rect>
+<rect x="491" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>5-wild: no pybuild</title></rect>
+<rect x="512" y="254" width="18" height="18" rx="3" fill="#8c0000"><title>pkglint: uses pybuild</title></rect>
+<rect x="533" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>go-pre-commit-hooks: no pybuild</title></rect>
+<rect x="554" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>skills: no pybuild</title></rect>
+<rect x="575" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>tag: no pybuild</title></rect>
+<rect x="596" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no pybuild</title></rect>
+<rect x="617" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no pybuild</title></rect>
+<rect x="638" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no pybuild</title></rect>
+<rect x="659" y="254" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no pybuild</title></rect>
+<text class="mu" x="686" y="267">14</text>
+<text class="m" x="84" y="288" text-anchor="end">manygo</text>
+<rect x="92" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>agilecbt: uses manygo</title></rect>
+<rect x="113" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>local-preview: uses manygo</title></rect>
+<rect x="134" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>connections: uses manygo</title></rect>
+<rect x="155" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>git-orchard: uses manygo</title></rect>
+<rect x="176" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>work: uses manygo</title></rect>
+<rect x="197" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>agentic-kanban: uses manygo</title></rect>
+<rect x="218" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>cycle-cli: uses manygo</title></rect>
+<rect x="239" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>nature-sounds: uses manygo</title></rect>
+<rect x="260" y="275" width="18" height="18" rx="3" fill="#8c0000"><title>fullstack-template: uses manygo</title></rect>
+<rect x="281" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>check-symlinks: no manygo</title></rect>
+<rect x="302" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>connections-ssh: no manygo</title></rect>
+<rect x="323" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>smart-lights: no manygo</title></rect>
+<rect x="344" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>undot: no manygo</title></rect>
+<rect x="365" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>go-bin: no manygo</title></rect>
+<rect x="386" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>manygo: no manygo</title></rect>
+<rect x="407" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>docker-status: no manygo</title></rect>
+<rect x="428" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>golang-template: no manygo</title></rect>
+<rect x="449" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>jview: no manygo</title></rect>
+<rect x="470" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>typesafe-sdk-go: no manygo</title></rect>
+<rect x="491" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>5-wild: no manygo</title></rect>
+<rect x="512" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>pkglint: no manygo</title></rect>
+<rect x="533" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>go-pre-commit-hooks: no manygo</title></rect>
+<rect x="554" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>skills: no manygo</title></rect>
+<rect x="575" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>tag: no manygo</title></rect>
+<rect x="596" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no manygo</title></rect>
+<rect x="617" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no manygo</title></rect>
+<rect x="638" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no manygo</title></rect>
+<rect x="659" y="275" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no manygo</title></rect>
+<text class="mu" x="686" y="288">9</text>
+<text class="m" x="84" y="309" text-anchor="end">goreleaser</text>
+<rect x="92" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>agilecbt: no goreleaser</title></rect>
+<rect x="113" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>local-preview: no goreleaser</title></rect>
+<rect x="134" y="296" width="18" height="18" rx="3" fill="#8c0000"><title>connections: uses goreleaser</title></rect>
+<rect x="155" y="296" width="18" height="18" rx="3" fill="#8c0000"><title>git-orchard: uses goreleaser</title></rect>
+<rect x="176" y="296" width="18" height="18" rx="3" fill="#8c0000"><title>work: uses goreleaser</title></rect>
+<rect x="197" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>agentic-kanban: no goreleaser</title></rect>
+<rect x="218" y="296" width="18" height="18" rx="3" fill="#8c0000"><title>cycle-cli: uses goreleaser</title></rect>
+<rect x="239" y="296" width="18" height="18" rx="3" fill="#8c0000"><title>nature-sounds: uses goreleaser</title></rect>
+<rect x="260" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>fullstack-template: no goreleaser</title></rect>
+<rect x="281" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>check-symlinks: no goreleaser</title></rect>
+<rect x="302" y="296" width="18" height="18" rx="3" fill="#8c0000"><title>connections-ssh: uses goreleaser</title></rect>
+<rect x="323" y="296" width="18" height="18" rx="3" fill="#8c0000"><title>smart-lights: uses goreleaser</title></rect>
+<rect x="344" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>undot: no goreleaser</title></rect>
+<rect x="365" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>go-bin: no goreleaser</title></rect>
+<rect x="386" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>manygo: no goreleaser</title></rect>
+<rect x="407" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>docker-status: no goreleaser</title></rect>
+<rect x="428" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>golang-template: no goreleaser</title></rect>
+<rect x="449" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>jview: no goreleaser</title></rect>
+<rect x="470" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>typesafe-sdk-go: no goreleaser</title></rect>
+<rect x="491" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>5-wild: no goreleaser</title></rect>
+<rect x="512" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>pkglint: no goreleaser</title></rect>
+<rect x="533" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>go-pre-commit-hooks: no goreleaser</title></rect>
+<rect x="554" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>skills: no goreleaser</title></rect>
+<rect x="575" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>tag: no goreleaser</title></rect>
+<rect x="596" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no goreleaser</title></rect>
+<rect x="617" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no goreleaser</title></rect>
+<rect x="638" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no goreleaser</title></rect>
+<rect x="659" y="296" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no goreleaser</title></rect>
+<text class="mu" x="686" y="309">7</text>
+<text class="m" x="84" y="330" text-anchor="end">pypi</text>
+<rect x="92" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>agilecbt: no pypi</title></rect>
+<rect x="113" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>local-preview: no pypi</title></rect>
+<rect x="134" y="317" width="18" height="18" rx="3" fill="#8c0000"><title>connections: uses pypi</title></rect>
+<rect x="155" y="317" width="18" height="18" rx="3" fill="#8c0000"><title>git-orchard: uses pypi</title></rect>
+<rect x="176" y="317" width="18" height="18" rx="3" fill="#8c0000"><title>work: uses pypi</title></rect>
+<rect x="197" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>agentic-kanban: no pypi</title></rect>
+<rect x="218" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>cycle-cli: no pypi</title></rect>
+<rect x="239" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>nature-sounds: no pypi</title></rect>
+<rect x="260" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>fullstack-template: no pypi</title></rect>
+<rect x="281" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>check-symlinks: no pypi</title></rect>
+<rect x="302" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>connections-ssh: no pypi</title></rect>
+<rect x="323" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>smart-lights: no pypi</title></rect>
+<rect x="344" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>undot: no pypi</title></rect>
+<rect x="365" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>go-bin: no pypi</title></rect>
+<rect x="386" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>manygo: no pypi</title></rect>
+<rect x="407" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>docker-status: no pypi</title></rect>
+<rect x="428" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>golang-template: no pypi</title></rect>
+<rect x="449" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>jview: no pypi</title></rect>
+<rect x="470" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>typesafe-sdk-go: no pypi</title></rect>
+<rect x="491" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>5-wild: no pypi</title></rect>
+<rect x="512" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>pkglint: no pypi</title></rect>
+<rect x="533" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>go-pre-commit-hooks: no pypi</title></rect>
+<rect x="554" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>skills: no pypi</title></rect>
+<rect x="575" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>tag: no pypi</title></rect>
+<rect x="596" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no pypi</title></rect>
+<rect x="617" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no pypi</title></rect>
+<rect x="638" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no pypi</title></rect>
+<rect x="659" y="317" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no pypi</title></rect>
+<text class="mu" x="686" y="330">3</text>
+<text class="m" x="84" y="351" text-anchor="end">fullstack</text>
+<rect x="92" y="338" width="18" height="18" rx="3" fill="#8c0000"><title>agilecbt: uses fullstack</title></rect>
+<rect x="113" y="338" width="18" height="18" rx="3" fill="#8c0000"><title>local-preview: uses fullstack</title></rect>
+<rect x="134" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>connections: no fullstack</title></rect>
+<rect x="155" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>git-orchard: no fullstack</title></rect>
+<rect x="176" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>work: no fullstack</title></rect>
+<rect x="197" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>agentic-kanban: no fullstack</title></rect>
+<rect x="218" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>cycle-cli: no fullstack</title></rect>
+<rect x="239" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>nature-sounds: no fullstack</title></rect>
+<rect x="260" y="338" width="18" height="18" rx="3" fill="#8c0000"><title>fullstack-template: uses fullstack</title></rect>
+<rect x="281" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>check-symlinks: no fullstack</title></rect>
+<rect x="302" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>connections-ssh: no fullstack</title></rect>
+<rect x="323" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>smart-lights: no fullstack</title></rect>
+<rect x="344" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>undot: no fullstack</title></rect>
+<rect x="365" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>go-bin: no fullstack</title></rect>
+<rect x="386" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>manygo: no fullstack</title></rect>
+<rect x="407" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>docker-status: no fullstack</title></rect>
+<rect x="428" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>golang-template: no fullstack</title></rect>
+<rect x="449" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>jview: no fullstack</title></rect>
+<rect x="470" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>typesafe-sdk-go: no fullstack</title></rect>
+<rect x="491" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>5-wild: no fullstack</title></rect>
+<rect x="512" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>pkglint: no fullstack</title></rect>
+<rect x="533" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>go-pre-commit-hooks: no fullstack</title></rect>
+<rect x="554" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>skills: no fullstack</title></rect>
+<rect x="575" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>tag: no fullstack</title></rect>
+<rect x="596" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>PKGBUILDs-template: no fullstack</title></rect>
+<rect x="617" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>dotfiles: no fullstack</title></rect>
+<rect x="638" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>github-token-diff-extension: no fullstack</title></rect>
+<rect x="659" y="338" width="18" height="18" rx="3" fill="#efeee0"><title>jmelahman.github.io: no fullstack</title></rect>
+<text class="mu" x="686" y="351">3</text>
+<rect x="92" y="371" width="12" height="12" rx="3" fill="#8c0000"/><text x="110" y="381">profile synced into the subtree</text><rect x="302" y="371" width="12" height="12" rx="3" fill="#efeee0"/><text x="320" y="381">not used</text><text class="mu" x="742" y="381" text-anchor="end">subtrees per profile</text>
+</svg>

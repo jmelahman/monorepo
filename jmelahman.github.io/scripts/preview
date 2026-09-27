@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Build the site and serve it on 0.0.0.0:${PORT:-8000} for a local preview.
+#
+# Unlike ./serve, this runs headless (no browser to open), so it works inside
+# a devcontainer. Without pandoc on the PATH it borrows the one bundled in the
+# pypandoc_binary wheel; uv caches that, so it only downloads once.
+set -eo pipefail
+
+DIR="$(cd -- "$(dirname -- "$0")/.." && pwd)"
+
+if ! command -v pandoc >/dev/null; then
+	pandoc_path="$(uv run --no-project --quiet --with pypandoc_binary \
+		python -c 'import pypandoc; print(pypandoc.get_pandoc_path())')"
+	PATH="$(dirname "$pandoc_path"):$PATH"
+	export PATH
+fi
+
+# The feed needs the network and the CSS minifier needs docker; neither
+# matters for reviewing a post.
+SKIP_FEED=1 SKIP_CSS=1 "$DIR/build"
+
+exec python3 -m http.server "${PORT:-8000}" --bind 0.0.0.0 --directory "$DIR"

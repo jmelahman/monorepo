@@ -1,0 +1,4 @@
+# Settings for agentic-kanban (https://github.com/jmelahman/agentic-kanban).
+# Any devcontainer image works; this one has git, gh, Go, uv, bun and prek.
+[devcontainer]
+image = "ghcr.io/jmelahman/devcontainer:latest"
