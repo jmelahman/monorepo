@@ -76,7 +76,7 @@ describe("the first-round coach", () => {
     // relic or boss that bends the bonus cannot make the tutorial lie.
     expect(step?.text).toContain(`×${solveBonusFor(state, left)}`)
     expect(step?.text).toContain(`×${solveBonusFor(state, left - 1)}`)
-    expect(step?.anchor).toBe(".solve-hint")
+    expect(step?.anchor).toBe(".hud .meter")
   })
 
   it("has nothing left to say after three guesses, and says so twice", () => {

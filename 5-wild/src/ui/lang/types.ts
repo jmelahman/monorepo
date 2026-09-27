@@ -244,8 +244,6 @@ export type Strings = {
       /** Shared with the shapes sheet, which asks the same question of a shape. */
       shapeLevel: (level: number) => string
       shapeBonus: (chips: number, mult: number) => string
-      /** The link out of the category line. */
-      shapesMore: string
       /** Why the mult reads `?` while a word is being typed. */
       multUnknown: string
       /** The floater when a letter breaks. Not a tile's, so it names the letter. */
@@ -290,8 +288,20 @@ export type Strings = {
       stage: (stage: number, total: number) => string
       stageEndless: (stage: number) => string
       scoreAtLeast: string
-      /** "6 guesses · reward $4". The reward arrives as money. */
-      meta: (guesses: number, reward: string) => string
+      /** The word under the guess count on the card: "6 / guesses". */
+      guesses: (guesses: number) => string
+      /** The word under the payout on the card: "$4 / reward". */
+      reward: string
+      /** What the stage track is called to a screen reader. */
+      track: string
+      /** The three rounds of a stage as the track names them, token beside each. */
+      trackRound: readonly [string, string, string]
+      /** A round of this stage already won. */
+      cleared: string
+      /** The round this card is announcing. */
+      current: string
+      /** The round after it. */
+      upNext: string
       /** The endless half of the ladder, said as the number it is. */
       targets: (factor: string) => string
       /** Asked once, before the first board is dealt. */
@@ -486,6 +496,12 @@ export type Strings = {
     /** The difficulty dial, and the sheet behind its lock. */
     ladder: {
       carrot: string
+      /**
+       * Rung zero's two lines, standing where every other rung has its rule's
+       * name and its sentence, so the card is one shape at every level.
+       */
+      base: string
+      baseText: string
       lower: string
       raise: string
       locked: string

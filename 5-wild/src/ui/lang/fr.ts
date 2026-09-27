@@ -442,7 +442,6 @@ export const fr: Strings = {
       solveFloorClears: (score) => `→ ${score}, ça passe`,
       shapeLevel: (level) => `Niv ${level}`,
       shapeBonus: (chips, mult) => `+${chips} +${mult} mult`,
-      shapesMore: "formes ›",
       multUnknown: "La couleur est le multiplicateur. Deviner est le seul moyen de le savoir.",
       letterBroken: (letter) => `${letter.toUpperCase()} brisée`,
       relicGone: (name) => `${name} a disparu`,
@@ -484,11 +483,13 @@ export const fr: Strings = {
       stage: (stage, total) => `Étape ${stage} sur ${total}`,
       stageEndless: (stage) => `Étape ${stage} · sans fin`,
       scoreAtLeast: "Marquez au moins",
-      meta: (guesses, reward) =>
-        plural(guesses, {
-          one: `${guesses} essai · récompense ${reward}`,
-          other: `${guesses} essais · récompense ${reward}`,
-        }),
+      guesses: (guesses) => plural(guesses, { one: "essai", other: "essais" }),
+      reward: "récompense",
+      track: "Cette étape",
+      trackRound: ["Normale", "Élite", "Boss"],
+      cleared: "Réussie",
+      current: "Cette manche",
+      upNext: "Ensuite",
       targets: (factor) => `objectifs ×${factor}`,
       coachAsk: "Première partie. Le plateau peut vous expliquer le score au fur et à mesure.",
       coachYes: "Jouer avec les conseils",
@@ -637,6 +638,8 @@ export const fr: Strings = {
 
     ladder: {
       carrot: "Battez ceci pour débloquer l'ascension 1",
+      base: "Standard",
+      baseText: "Aucune règle en plus. Chaque niveau au-dessus en ajoute une.",
       lower: "Baisser l'ascension",
       raise: "Monter l'ascension",
       locked: "Verrouillé",
@@ -683,11 +686,11 @@ export const fr: Strings = {
         "C'est tout le jeu\u00A0: chaque essai dépensé à cultiver fait grossir le tas, et " +
         "rétrécit le multiplicateur qui l'attend.",
       solveLine: {
-        term: "Surveillez donc la ligne de résolution",
+        term: "Surveillez donc la barre",
         text:
-          "Sous le plateau, elle montre le multiplicateur qu'une résolution rapporterait tout " +
-          "de suite, et ce que le tas vaut déjà avec lui. Quand elle passe au vert, résoudre " +
-          "gagne la manche.",
+          "Derrière la barre du score, une plus pâle la devance. Elle montre où serait le tas " +
+          "si vous résolviez à votre prochain essai. Quand elle atteint le bout, " +
+          "résoudre gagne la manche. Maintenez le score pour voir le multiplicateur.",
       },
       runHeading: "La partie",
       target: {

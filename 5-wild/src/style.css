@@ -82,6 +82,10 @@
    * spends the rest settling, so the press lands with the touch.
    */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* The shade along the foot of a raised card: the stage track's current
+     round. The tiles and keys wore it too for one pass of the redesign and went
+     back to flat, which is the board every Wordle player already reads. */
+  --lip: inset 0 -3px 0 #00000047;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -239,6 +243,9 @@ button {
   grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
   align-items: center;
   gap: 0.5rem;
+  /* Equal to the bottom padding, which the boss band cancels, so the band adds
+     its own height to the header and not a rem more. See `.hud .boss`. */
+  row-gap: 0.375rem;
   padding: 0.375rem 0.625rem;
   background: var(--panel);
   border-radius: 0.5rem;
@@ -293,12 +300,30 @@ button {
   text-shadow: 0 0 0.75rem color-mix(in srgb, var(--green) 60%, transparent);
 }
 
+/* A grid of one cell, so the projection and the fill lie on top of each other
+   without either leaving the flow. */
 .meter {
+  display: grid;
   margin-top: 0.1875rem;
   height: 0.1875rem;
   border-radius: 999px;
   background: var(--line);
   overflow: hidden;
+}
+
+.meter > * {
+  grid-area: 1 / 1;
+}
+
+/* What solving next would bank, behind the fill: the fill's blue at a quarter,
+   so it reads as where the blue is headed and not as a second bar. See `meter`
+   in `views.ts` for the green it was once and why it is not. */
+.meter-solve {
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--chips) 28%, transparent);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left;
 }
 
 /* Scaled rather than sized, so the count-up can drive it every frame without
@@ -338,18 +363,81 @@ button {
   animation: pop calc(300ms * var(--pace)) ease;
 }
 
-.boss {
-  flex: 0 0 auto;
-  padding: 0.375rem 0.625rem;
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--mult) 18%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--mult) 40%, transparent);
+/* The round's name with its token beside it, the token at the size of a
+   letter. Scoped to the round because the shop's `.hud-round` is two lines of
+   text with nothing to sit beside. */
+.round-screen .hud-round {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.3125rem;
+  white-space: nowrap;
+}
+
+/* Thicker on the round than the 3px the shop's empty seat was sized around:
+   with the score and target on one line the bar is the header's second line,
+   and at 3px it read as an underline rather than as progress. */
+.round-screen .meter {
+  height: 0.3125rem;
+  margin-top: 0.3125rem;
+}
+
+/* The boss's rule, as the header's last row, bled out to its edges so it reads
+   as the header changing colour at the foot rather than as a box inside it.
+   The negative margins cancel the header's own padding exactly, and that is
+   what makes the reservation below simple: the band adds its height and the
+   row gap and takes back the bottom padding, which is the same 0.375rem, so a
+   boss header is taller by `--boss-band` and nothing else. */
+.hud .boss {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  height: var(--boss-band);
+  margin: 0 -0.625rem -0.375rem;
+  padding: 0 0.625rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--mult) 40%, transparent);
+  background: color-mix(in srgb, var(--mult) 14%, var(--panel));
   font-size: 0.6875rem;
   line-height: 1.3;
+  /* The header's outer tracks are `minmax(max-content, 1fr)`, and an item
+     spanning them offers its max-content width to that sizing: the rule's whole
+     sentence on one line, which widened the header past the screen and pushed
+     the gold and the menu off its right edge. Contained, it offers nothing and
+     takes the width the name, score and gold settle on. */
+  contain: inline-size;
+}
+
+/* Two lines is the budget. Measured in Chromium for every boss in all four
+   catalogs, name included: at 298px of band (a 350px screen) and wider none
+   takes a third, and at 268 (320px) only The Silence does, in French and in
+   German. Three lines were reserved at first for those two, and that line was
+   14px taken off every round's board, boss or not, on every phone. They are
+   clipped here with an ellipsis instead, and the band carries the whole rule as
+   a tip. */
+.boss p {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 .boss strong {
   color: var(--mult);
+}
+
+/* The ring rather than a border: a border is two pixels of height, and the
+   board is being told exactly how tall this header is. */
+.hud:has(.boss) {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--mult) 70%, transparent);
 }
 
 /* --------------------------------------------------------------- relics */
@@ -641,6 +729,22 @@ button {
   position: relative;
 }
 
+/* A round without a boss keeps the band's height anyway, as padding split
+   either side of the board, so every round's tiles are the size of a boss
+   round's. The band was a banner of its own under the header, sized by its
+   text, and the grid took whatever it left: the same screen drew smaller tiles
+   on a boss round than on the round before it, and a different size again per
+   boss and per language, on the one round the player is most careful on.
+   Padding rather than a spacer, because the wrap is the size container and
+   `cqh` measures its content box, so the board fits the space less the band
+   exactly the way it does beneath one. When the board is bound by width the
+   padding is slack and costs nothing; when it is bound by height it costs the
+   ordinary rounds what the boss round was already paying. */
+.round-screen:not(:has(.hud .boss)) .grid-wrap {
+  --board-reserve: calc(var(--boss-band) / 2);
+  padding-block: var(--board-reserve);
+}
+
 .grid {
   /* Centered in whatever the wrap turned out to be. */
   margin: auto;
@@ -675,7 +779,7 @@ button {
   min-height: 0;
   display: grid;
   place-items: center;
-  border-radius: 0.25rem;
+  border-radius: 0.375rem;
   border: 2px solid var(--line);
   font-weight: 700;
   transition:
@@ -821,7 +925,9 @@ button {
   z-index: 3;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* On the board's foot, not the wrap's: the wrap's padding box runs past the
+     board by the reservation on an ordinary round. */
+  bottom: var(--board-reserve, 0);
   /* The empty slot spans the board's full width and must not intercept the long
      press that reads a boss's note off the row underneath it. */
   pointer-events: none;
@@ -890,6 +996,18 @@ button {
    and got stretched the full width, which is what its own `justify-content`
    was centering against. Wrapped in a plain div it kept the centering rule and
    lost the width, and slid to the left margin. */
+/* The shape on the left, the solve figure on the right, both as chips. Each
+   holds its own height open empty or full, and they are the same height, so the
+   line is one fixed number whichever of the two is speaking. */
+.dock-line {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
 .category-slot {
   /* The height of this line, empty or full, in one place.
      Held open whether or not there is a shape to name. The slot used to collapse
@@ -905,33 +1023,41 @@ button {
      drift on some device nobody is testing on. Inherited by `.category` below,
      which is pinned to it, so the filled line cannot disagree with the space
      kept for it. */
-  --shape-line: 1.0625rem;
-  flex: 0 0 auto;
+  --shape-line: 1.75rem;
+  flex: 0 1 auto;
+  min-width: 0;
   min-height: var(--shape-line);
   display: flex;
-  justify-content: center;
 }
 
 /* Sits directly above the readout it feeds, and stays quiet at level one: a
    category worth nothing yet is a label, not a number. When it does pay, it
    lights the same way a relic card does, which is what it has become. */
 .category {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   gap: 0.375rem;
   /* Pinned to the space the slot keeps for it, so the two cannot disagree. Any
      font that wants a pixel more than this spills it rather than moving the
      board, which is the trade the whole reservation exists to make. */
   height: var(--shape-line);
-  padding: 0.125rem 0.25rem 0;
+  padding: 0 0.5rem 0 0.625rem;
+  /* The figures' corner, not a pill: it shares the line with them, and a pill
+     beside two rounded rectangles read as a control of a different kind. */
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
   font-size: 0.75rem;
   /* Left off `normal`, which resolves off the font, for the same reason. */
   line-height: 0.875rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  color: var(--fg);
   transition:
     color 180ms ease,
     transform 180ms ease;
@@ -958,10 +1084,11 @@ button {
 
 /* The affordance, and nothing more. It has to read as pressable without
    competing with the shape name, which is the thing actually being said. */
-.category-more {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  opacity: 0.65;
+.category .icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  stroke-width: 2.5;
+  color: var(--muted);
 }
 
 /* -------------------------------------------------------------- readout */
@@ -970,33 +1097,32 @@ button {
    keeps the center of the line. */
 .readout-row {
   flex: 0 0 auto;
-  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.5rem;
 }
 
 /* The face is the setting: a letter carrying its value, a letter carrying a
    mark, or the letter alone. Baseline-aligned so the digit sits where a value
    sits on a key, and sized to the same box in all three states so nothing
    twitches when it is pressed.
-   Hung off the right end of the row rather than sitting in it as a second flex
-   item, because the chips × mult figure is centered against the board above and a
-   button in the row would shove it off that center by half its own width. */
+   It hung off the right end of the row while the chips × mult figure was a
+   small thing centred against the board, which a button in the row would have
+   shoved off centre. The figure is the width of the row now, two blocks either
+   side of the ×, so the switch takes the last seat in it as an ordinary item,
+   the blocks' own height. */
 .decor-toggle {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  flex: 0 0 auto;
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 0.0625rem;
-  min-width: 2rem;
-  /* Padded rather than given a height: `align-items: baseline` in a fixed-height
-     box parks the pair at the top of it. Equal padding centers them instead, and
-     lands on the same 2rem square the menu button uses. */
-  padding: 0.5rem 0.375rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  /* `align-items: baseline` in a fixed-height box parks the pair at the top of
+     it, so the top padding is what centres them: half the box less half the
+     line, near enough, since both faces set `line-height: 1`. */
+  padding: 0.6875rem 0 0;
   /* Carried transparent in both states so switching to the outlined one cannot
      move the line by the width of a border. */
   border: 1px solid transparent;
@@ -1043,24 +1169,34 @@ button {
   color: var(--muted);
 }
 
+/* Two blocks the width of the row, meeting at the ×. They were two small
+   figures in a centred line, and they are the number the next guess is being
+   chosen for: at full width they are read from the keyboard without looking up. */
 .readout {
   position: relative;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  padding: 0.25rem;
-  font-size: 1.125rem;
+  font-size: 1.375rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
+.readout .chips,
+.readout .mult {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  border-radius: 0.5rem;
+}
+
 .readout .chips {
-  min-width: 3.5rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: 0.25rem;
-  text-align: right;
+  justify-content: flex-end;
   background: color-mix(in srgb, var(--chips) 22%, var(--panel));
   color: var(--chips);
 }
@@ -1088,10 +1224,7 @@ button {
 }
 
 .readout .mult {
-  min-width: 3.5rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: 0.25rem;
-  text-align: left;
+  justify-content: flex-start;
   background: color-mix(in srgb, var(--mult) 22%, var(--panel));
   color: var(--mult);
 }
@@ -1105,62 +1238,94 @@ button {
  */
 .readout.drafting .mult.pending {
   background: none;
-  border: 1px dashed color-mix(in srgb, var(--mult) 45%, transparent);
-  padding: calc(0.125rem - 1px) calc(0.5rem - 1px);
-  color: color-mix(in srgb, var(--mult) 60%, transparent);
-  text-align: center;
+  border: 1.5px dashed color-mix(in srgb, var(--mult) 50%, transparent);
+  padding: 0 calc(0.75rem - 1.5px);
+  color: color-mix(in srgb, var(--mult) 75%, transparent);
 }
 
-/* The cash-out readout. Deliberately quiet until it says something worth
-   acting on, at which point it turns green and stops being advice. */
-.solve-hint {
-  /* The height of this line, said or unsaid, held open the way `.category-slot`
-     holds the shape line, and for the same reason. There is nothing to advise
-     once the round is `done`, but the board stays on screen through the reveal
-     after that, so an emptied line took its height out of the grid on the
-     scoring guess: 275px of board to 301px at 390×640, tiles growing 10% while
-     they were still turning over. On a screen tall enough for the board to be
-     bound by width it slid down 13px instead of growing; neither is a thing the
-     round should do as it ends.
-     A height rather than a `min-height`, because the two states have to measure
-     the same and only one number can decide that. `min-height` leaves the filled
-     line free to want a seventeenth pixel out of the font's metrics and jump by
-     it: a pixel instead of twenty, but the same bug, and the drift
-     `.category-slot` records paying for. The bottom padding is inside this
-     figure rather than under it: everything vertical about the line is one
-     number, and there is no second one to disagree with it. */
-  --solve-line: 1.25rem;
-  flex: 0 0 auto;
-  height: var(--solve-line);
-  display: flex;
-  align-items: baseline;
+/* The dock as one line. Every seat is the same height, the chip line's, so the
+   row is one number tall; the readout gives up the full width it had on a line
+   of its own and sizes to its figures. */
+.dock-line {
+  --shape-line: 2.25rem;
+  gap: 0.3125rem;
+}
+
+/* The shape's seat is a fixed share of the line rather than the width of its
+   name, so the chip is one size whatever it says and the figures beside it do
+   not slide sideways when the fifth letter lands and "Distinct" becomes
+   "Vowel-Heavy". Held empty too, for the same reason. A share and not a length,
+   because the figures' floor is a length and the two have to fit together at
+   320 as well as at 390. The name gives way inside it, ellipsised: a figure
+   cut short is a wrong one, and the chip opens the shapes sheet, which spells
+   every name in full. */
+.dock-line .category-slot {
+  /* Restated, because the slot's own rule sets the two-line dock's 1.75rem and
+     would otherwise win over the line's for the one chip on it. */
+  --shape-line: 2.25rem;
+  flex: 0 0 var(--shape-share, 36%);
+}
+
+/* Tighter inside than the two-line dock's chip, whose width was its own: here
+   the seat is fixed, and every pixel of padding is a letter of the name. */
+.dock-line .category {
+  flex: 1 1 auto;
+  gap: 0.25rem;
+  padding: 0 0.375rem 0 0.5rem;
+}
+
+/* Centred with its level in a seat wider than it, as the figures beside it are
+   centred in theirs. Pushed left, with the level and chevron at the far end, a
+   short name like "Distinct" left a hole in the middle of the chip. */
+.category-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The figures take whatever the shape chip leaves, as they did when they had
+   the line to themselves, with a floor of three figures each: the four the
+   ask was for overflowed every language at 320, with the shape name already
+   cut to its ellipsis and nothing left to give. Sized to their
+   content they were a "5" in a 36px box beside a "?" in another, which read
+   as two buttons rather than the number the line is about. */
+.dock-line .readout {
+  flex: 1 1 0;
+  gap: 0.25rem;
+  font-size: 1.125rem;
+}
+
+.dock-line .readout .chips,
+.dock-line .readout .mult {
+  flex: 1 1 0;
   justify-content: center;
-  gap: 0.375rem;
-  padding: 0 0.25rem;
-  font-size: 0.8125rem;
-  /* Stated, not inherited, and deliberately short of the height: the text keeps
-     to the top of the box and the slack below it is the gap to the keyboard that
-     the old bottom padding used to be. Left to `normal` the line box would come
-     off the font, which is the metric the pinned height exists to stop
-     consulting. */
-  line-height: 1rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  min-width: calc(3ch + 0.875rem);
+  height: var(--shape-line);
+  padding: 0 0.4375rem;
 }
 
-.solve-hint.clears {
-  color: var(--green);
+.dock-line .readout.drafting .mult.pending {
+  padding: 0 calc(0.4375rem - 1.5px);
 }
 
-.solve-hint .solve-floor {
-  font-weight: 600;
-  opacity: 0.85;
+/* Big enough to read as the operator between the two figures rather than as a
+   stray mark in the gap: at 12px it was the smallest thing on the line. */
+.dock-line .readout .times {
+  font-size: 1rem;
+}
+
+.dock-line .decor-toggle {
+  width: var(--shape-line);
+  height: var(--shape-line);
+  padding-top: 0.5625rem;
 }
 
 /* --pop is set per guess from the score's size against the target, so the
-   reaction is proportional: a chip guess twitches, a round-clearing one lunges. */
-.readout.popped {
+   reaction is proportional: a chip guess twitches, a round-clearing one lunges.
+   The blocks pop rather than the readout, because the readout is the width of
+   the screen now, and a lunge of 1.2 on it put 33px past each edge at 390. */
+.readout.popped .chips,
+.readout.popped .mult {
   animation: pop calc(300ms * var(--pace)) ease;
 }
 
@@ -1306,6 +1471,11 @@ button {
      and a gap above. Everything between the foot of the viewport and the top of
      the keyboard, which is where a refusal has to land to be read. */
   --toast-lift: calc(3 * var(--key-h) + 0.75rem + 0.5rem + 1rem);
+  /* Two lines of the boss's rule at its 11px and 1.3 line height, plus
+     0.375rem above and below. Fixed rather than fitted, and declared here
+     rather than on the band, because the board of a round without a boss has
+     to reserve it too. See `.hud .boss` and `.grid-wrap`. */
+  --boss-band: calc(2 * 1.3 * 0.6875rem + 0.75rem);
 }
 
 /*
@@ -1339,10 +1509,17 @@ button {
   height: var(--key-h);
   display: grid;
   place-items: center;
-  border-radius: 0.25rem;
+  border-radius: 0.375rem;
   background: #565758;
   font-size: 1rem;
   font-weight: 700;
+}
+
+/* The drawn backspace, a size up from the glyph default so it has the weight
+   of the letters beside it. */
+.key .icon {
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 /* One and a half keys, plus the gap they swallow, so the bottom row still
@@ -2271,7 +2448,6 @@ button {
 .shop-item,
 .menu-button,
 .shapes-line,
-.mute,
 .ladder-step,
 .title-pill,
 .title-sound {
@@ -2284,7 +2460,6 @@ button {
 .shop-item:active:not(:disabled),
 .menu-button:active,
 .shapes-line:active,
-.mute:active,
 .ladder-step:active:not(:disabled),
 .title-pill:active,
 .title-sound:active {
@@ -2379,9 +2554,18 @@ button {
  * The card between the shop and the board. The whole screen is a tap target,
  * because on a phone hunting for a button after every round gets old fast, so the
  * Play button is an affordance rather than the only way through.
+ *
+ * Laid out top to bottom rather than centred: where the stage is, what the
+ * stage holds, the round in hand, and Play at the thumb. Centred, the card
+ * floated in the middle of a tall phone with Play hung under it at whatever
+ * height the card happened to end, and the one button on the screen moved
+ * between a boss and an ordinary round.
  */
 .intro {
   cursor: pointer;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 1.25rem;
+  overflow-y: auto;
 }
 
 /* The tap-anywhere cursor is a promise the asking card does not keep, so it is
@@ -2390,115 +2574,48 @@ button {
   cursor: auto;
 }
 
+/* Sits where the header sits on every other in-run screen, at its height, so
+   the page reads as the same place as the shop before it and the board after. */
 .intro-stage {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
   font-size: 0.75rem;
-  letter-spacing: 0.18em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-.intro-card {
-  width: min(100%, 20rem);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 1.5rem 1rem;
-  border-radius: 1rem;
-  border: 2px solid var(--line);
-  background: linear-gradient(160deg, var(--panel-2), var(--panel));
-  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1);
-}
-
-/* A boss announces itself before it is played, never during. */
-.intro-card.boss-card {
-  border-color: var(--mult);
-  background: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--mult) 22%, var(--panel)),
-    var(--panel)
-  );
-}
-
-@keyframes deal {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.94);
-  }
-}
-
 /*
- * The round's token, Balatro's chip at phone scale. The two ordinary rounds get
- * a disc and the boss gets a spiked one, so the shape says which kind of trouble
- * this is from across the room, before the name has been read.
+ * The round's token, Balatro's chip at phone scale: a disc for a normal round,
+ * a shield for an elite and a turned square with a crown for the boss, so the
+ * shape says which kind of trouble this is from across the room, before the
+ * name has been read. They were three tinted discs with a star clipped out of
+ * the boss's, and two of the three were the same shape in different colours.
  *
- * The ring is a gradient stop rather than an inset shadow because the boss is
- * clipped to a star, and an inset shadow would be cut into ribbons by the points.
+ * An SVG from `roundToken`, drawn at three sizes: here, in the stage track and
+ * in the board's header. Only this one is tossed onto the table; the other two
+ * are rebuilt on every render and would spin on every guess.
  */
 .round-token {
-  width: 4.25rem;
-  height: 4.25rem;
-  margin-bottom: 0.375rem;
-  border-radius: 50%;
-  background:
-    radial-gradient(
-      circle at 50% 50%,
-      transparent 0 30%,
-      color-mix(in srgb, var(--token) 35%, #000) 30% 36%,
-      transparent 36%
-    ),
-    radial-gradient(
-      circle at 34% 26%,
-      color-mix(in srgb, var(--token) 60%, #fff),
-      var(--token) 45%,
-      color-mix(in srgb, var(--token) 55%, #000)
-    );
+  display: block;
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.intro-card > .round-token {
+  width: 4.5rem;
+  height: 4.5rem;
   filter: drop-shadow(0 0.375rem 0.5rem #0008);
   animation: token calc(460ms * var(--pace)) cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
-.round-token.normal {
-  --token: #5a7fa8;
-}
-
-.round-token.elite {
-  --token: #c08a3e;
-}
-
-/*
- * Twenty-four points around the circle at alternating radii: a twelve-pointed
- * star. Written out because clip-path has no polar form. The only interesting
- * numbers are the two radii, 50% and 42%.
- */
-.round-token.boss {
-  --token: #a83a3f;
-  border-radius: 0;
-  clip-path: polygon(
-    50% 0%,
-    60.9% 9.4%,
-    75% 6.7%,
-    79.7% 20.3%,
-    93.3% 25%,
-    90.6% 39.1%,
-    100% 50%,
-    90.6% 60.9%,
-    93.3% 75%,
-    79.7% 79.7%,
-    75% 93.3%,
-    60.9% 90.6%,
-    50% 100%,
-    39.1% 90.6%,
-    25% 93.3%,
-    20.3% 79.7%,
-    6.7% 75%,
-    9.4% 60.9%,
-    0% 50%,
-    9.4% 39.1%,
-    6.7% 25%,
-    20.3% 20.3%,
-    25% 6.7%,
-    39.1% 9.4%
-  );
+.track-name .round-token {
+  width: 1rem;
+  height: 1rem;
 }
 
 /* Lands with a little more spring than the card it sits on, so it reads as
@@ -2510,36 +2627,233 @@ button {
   }
 }
 
-.intro-name {
-  font-size: 1.5rem;
+/* The stage's three rounds, the one in hand outlined in its own colour. */
+.stage-track {
+  flex: 0 0 auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.track-round {
+  --edge: #5a7fa8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.625rem;
+  border-radius: 0.625rem;
+  /* Carried transparent so the outlined one is not a pixel bigger. */
+  border: 1px solid transparent;
+  background: var(--panel);
+}
+
+.track-round.elite {
+  --edge: #c08a3e;
+}
+
+.track-round.boss {
+  --edge: var(--mult);
+}
+
+.track-round.current {
+  border-color: var(--edge);
+  background: var(--panel-2);
+  box-shadow: var(--lip);
+}
+
+.track-name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.track-round.current .track-name {
+  color: var(--fg);
+}
+
+.track-target {
+  font-size: 0.9375rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Struck rather than hidden: a cleared target is still the thing that was
+   beaten, and the run of three reads as a record as well as a plan. */
+.track-round.cleared .track-target {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.track-round.cleared .round-token {
+  opacity: 0.55;
+}
+
+.track-status {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  /* Held open when it has nothing to say, so the three cards match. */
+  min-height: 0.875rem;
+  font-size: 0.6875rem;
+  line-height: 0.875rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.track-round.cleared .track-status {
+  color: color-mix(in srgb, var(--green) 70%, var(--fg));
+}
+
+.track-round.current .track-status {
+  color: color-mix(in srgb, var(--edge) 60%, var(--fg));
+}
+
+.track-round .track-status .icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  stroke-width: 3;
+}
+
+/* Takes the height left between the track and Play and centres the card in
+   it, so Play stays at the foot however long the boss's rule runs. */
+.intro-body {
+  flex: 1 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.intro-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.75rem 1.25rem 1.375rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow:
+    inset 0 -4px 0 #00000040,
+    0 0.75rem 1.75rem #00000059;
+  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1);
+}
+
+/* A boss announces itself before it is played, never during. */
+.intro-card.boss-card {
+  border: 2px solid var(--mult);
+  background: color-mix(in srgb, var(--mult) 6%, var(--panel));
+}
+
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+}
+
+/* Over a boss's name, the kind of round it is, in the boss's colour. */
+.intro-kind {
+  margin-top: 0.875rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mult);
+}
+
+.intro-name {
+  margin: 0.875rem 0 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.intro-kind + .intro-name {
+  margin-top: 0.25rem;
 }
 
 .intro-rule {
-  padding: 0 0.5rem;
+  width: 100%;
+  margin: 0.75rem 0 0;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  border: 1px solid color-mix(in srgb, var(--mult) 28%, transparent);
+  background: color-mix(in srgb, var(--mult) 8%, transparent);
   text-align: center;
-  font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--mult) 55%, var(--fg));
+  text-wrap: balance;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--mult) 20%, var(--fg));
 }
 
 .intro-label {
-  margin-top: 0.75rem;
+  margin-top: 1.25rem;
   font-size: 0.6875rem;
+  font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .intro-target {
-  font-size: 2.5rem;
+  font-size: 4rem;
   font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
   color: var(--chips);
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
 }
 
-.intro-meta {
+/* Guesses and reward, two figures under a rule. They were a sentence in small
+   grey type, "6 guesses · reward $4", and the guess count is the round's other
+   limit beside the target: it deserved to be a number. */
+.intro-stats {
+  width: 100%;
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+
+.boss-card .intro-stats {
+  border-top-color: color-mix(in srgb, var(--mult) 22%, var(--line));
+}
+
+.intro-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  padding-top: 0.875rem;
+}
+
+.intro-stat + .intro-stat {
+  border-left: 1px solid var(--line);
+}
+
+.intro-stat-value {
+  font-size: 1.375rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.intro-stat-value.gold {
+  color: var(--gold);
+}
+
+.intro-stat-label {
   font-size: 0.75rem;
   color: var(--muted);
 }
@@ -2550,8 +2864,8 @@ button {
  * is what says so without a heading.
  */
 .intro-asc {
-  margin-top: 0.625rem;
-  padding-top: 0.5rem;
+  margin-top: 0.875rem;
+  padding-top: 0.625rem;
   border-top: 1px solid var(--line);
   width: 100%;
   text-align: center;
@@ -2573,19 +2887,32 @@ button {
  * target would be teaching a first-time player that the target does not matter.
  */
 .intro-ask {
-  width: min(100%, 22rem);
+  margin: 0;
   text-align: center;
-  font-size: 0.8125rem;
-  line-height: 1.4;
+  font-size: 0.75rem;
+  line-height: 1.35;
   color: var(--muted);
 }
 
-.mute {
-  padding: 0.375rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  color: var(--muted);
-  background: var(--panel);
+.intro-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* The width of the screen and a thumb tall, at the foot: the one button here,
+   where the thumb already is. */
+.intro-actions > button {
+  flex: 0 0 auto;
+}
+
+.intro-actions .primary {
+  height: 3.5rem;
+  border-radius: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 800;
+  box-shadow: inset 0 -4px 0 #00000040;
 }
 
 .screen.center .primary,
@@ -2919,35 +3246,41 @@ button {
 
 /*
  * The difficulty dial, and the one thing on the screen that is being chosen,
- * which is why it is a card when nothing else here is. A row that reads left to
- * right the way the sentence under it does: which rung this is, then the two
- * steps. It was centred between the `−` and `+`, which put the name where a
- * thumb aimed at either button covered it.
+ * which is why it is a card when nothing else here is. The rung is centred
+ * between its two steps, `−` at the left edge and `+` at the right, so each
+ * press goes the way its side of the card points.
  *
- * The height is pinned on every rung that has a rule (`.steps`, set in
- * `ladder`), because a stepper is held down, and a rule that wraps to two lines
+ * It has been both ways. Centred once before, with 36-by-32 steps crowding the
+ * name, a thumb aimed at either one covered it, and the row went name-first
+ * with both steps at the right. That fixed the covering and cost the direction:
+ * two buttons side by side read as a pair of choices, not as down and up. With
+ * the steps at a thumb's width and pushed to the card's edges, the name sits a
+ * full step clear of either, and the centre is safe again.
+ *
+ * The height is pinned on every rung, because a stepper is held down, and a
+ * rule that wraps to two lines
  * where the last one wrapped to one moves the Play button under the thumb
  * already on its way to it.
  *
  * Measured by stepping all 101 rungs in all four languages at 390, 360 and 320.
- * Three lines is the ceiling everywhere and four never happens; the box is
- * 112.4 on a two-line rung and 130.6 on a three-line one. English at 390 is
- * two lines on 99 rungs, but Spanish, French and German at 360 are three on
- * 93 to 95 of them, and English at 320 is three on two (5 and 10, the two
- * longest rules). A two-line pin would have held for one language at one width.
- * So 8.25rem, a pixel and a half over the tallest, and Play and the dial's row
- * are constant across every rung and every language at each width.
+ * It was pinned at 8.25rem to hold a three-line sentence at 0.8125rem, which
+ * made every card 132px against the 94 rung zero had been, and read as a panel
+ * rather than a dial. At 0.75rem and 1.35 the sentence is two lines on every
+ * rung in every language at 360 and 390, and the card is 102.4 on all of them,
+ * so the pin is that. At 320, Spanish, French and German take a third line on
+ * three rungs and grow to 118.6; that is the `min-height` doing its job, not the
+ * pin failing, and English at 320 never does.
  *
- * What that costs is the English two-line rung at a phone's width, 18px taller
- * than its sentence, which `.ladder-text` splits above and below the sentence
- * rather than leaving at the foot of the card.
+ * What that costs is the one-line rungs (35 of them in English at 390) 17px
+ * taller than their sentence, which `.ladder-text` splits above and below the
+ * sentence rather than leaving at the foot of the card.
  *
- * Rung zero is not pinned, and is the one deliberate exception. It has no rule
- * and so no sentence, only the row, and at the pin it would be a 62px hole in
- * the one card a new player reads. Stepping between zero and one moves Play by
- * that much, once, at the floor of the ladder, where the `−` is dead and the
- * `+` that leaves is in the row the pin never moves anyway. Before the first win
- * zero also carries the carrot, and is 70 either way.
+ * Rung zero used to be the one exception, unpinned because it had no rule and
+ * so no sentence, and at the pin it would have been a hole. It was 94px against
+ * every other rung's 132, so Play moved 38px on the first press up and the one
+ * line it did carry sat in a different place from every other rung's. It has a
+ * name line and a sentence of its own now (`base`, `baseText`, or the carrot
+ * before the first win), and is pinned like the rest.
  *
  * `min-height` rather than `height`: at a root font much larger than 16px the
  * wrap counts are no longer the measured ones, and the failure worth having
@@ -2957,17 +3290,14 @@ button {
 .ladder {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.25rem;
   width: 100%;
+  min-height: 6.4rem;
   margin-top: 2rem;
-  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  padding: 0.625rem;
   border-radius: 0.75rem;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel) 85%, transparent);
-}
-
-.ladder.steps {
-  min-height: 8.25rem;
 }
 
 /* Lit only above zero, so the ordinary game does not wear a warning color. */
@@ -2986,8 +3316,10 @@ button {
   display: flex;
   flex: 1;
   flex-direction: column;
+  align-items: center;
   gap: 0.25rem;
   min-width: 0;
+  text-align: center;
 }
 
 /* Tabular figures because a width that changes with the level slides the lock
@@ -2995,9 +3327,9 @@ button {
    narrow 1, and there the lock would twitch on nearly every press; elsewhere the
    digits are one width already and this costs nothing. */
 .ladder-name {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.375rem;
   font-size: 1.0625rem;
   font-weight: 800;
   line-height: 1;
@@ -3007,6 +3339,11 @@ button {
 /* Gold, as every "not earned yet" on this screen is, and smaller than the name
    it follows: it is a state, not a heading. */
 .ladder-lock {
+  /* Hung off the name's right edge rather than laid out beside it, so the name
+     stays on the card's centre line when the lock appears: in flow it pushed the
+     name 11px left on the one press that crosses into unearned rungs. */
+  position: absolute;
+  left: calc(100% + 0.375rem);
   display: inline-flex;
   color: var(--gold);
 }
@@ -3022,10 +3359,14 @@ button {
   color: var(--mult);
 }
 
-/* A thumb's width in both directions. They were 36 by 32 while the name sat
-   between them and the row had to fit three things; with the name on the left
-   the steps have the room, and the `+` is the one control here pressed ten
-   times in a row. */
+/* Zero's "Standard" is not a rule, so it does not wear a rule's red. */
+.ladder:not(.lit) .ladder-rule {
+  color: var(--muted);
+}
+
+/* A thumb's width in both directions. They were 36 by 32 the first time the
+   name sat between them; at 44 they are the room that keeps it clear of a
+   thumb, and the `+` is the one control here pressed ten times in a row. */
 .ladder-step {
   display: grid;
   flex: 0 0 auto;
@@ -3056,24 +3397,25 @@ button {
   stroke-width: 2.2;
 }
 
-/* Takes the pin's slack and centres itself in it, so a two-line rule inside a
-   three-line box has air on both sides of it rather than a strip of dead card
+/* Takes the pin's slack and centres itself in it, so a one-line rule inside a
+   two-line box has air on both sides of it rather than a strip of dead card
    under it. The row keeps its anchor at the top, because it is the part that
    is pressed. */
 .ladder-text {
   display: flex;
   flex: 1;
   align-items: center;
-  font-size: 0.8125rem;
-  line-height: 1.4;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.35;
   color: var(--muted);
   text-wrap: pretty;
 }
 
-/* The carrot, and the only forward-looking line on the screen. */
-.ladder-note {
-  font-size: 0.8125rem;
-  line-height: 1.4;
+/* The carrot, and the only forward-looking line on the screen. Rung zero's
+   sentence before the first win, in the seat every rung's sentence takes. */
+.ladder-text.carrot {
   color: var(--gold);
 }
 
@@ -3684,7 +4026,7 @@ button {
 .settled .shop-item,
 .settled .panel,
 .settled .intro-card,
-.settled .round-token {
+.settled .intro-card > .round-token {
   animation: none;
 }
 

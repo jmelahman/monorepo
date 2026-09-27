@@ -1,4 +1,4 @@
-import { BASE_GUESSES, RELIC_SLOTS } from "../content/rounds"
+import { BASE_GUESSES, RELIC_SLOTS, roundTargets } from "../content/rounds"
 import { getBoss } from "./bosses"
 import { found, keepGreens, useFound } from "./rules"
 import type { Refusal, RunState } from "./state"
@@ -517,6 +517,17 @@ export const difficultyOf = (state: RunState): Difficulty => difficultyAt(state.
  */
 export const scaleTarget = (target: number, scale: number): number =>
   scale === 1 ? target : Math.round((target * scale) / 10) * 10
+
+/**
+ * What a round of this run's current stage must score, ladder included.
+ *
+ * One function because two places ask: the reducer, dealing the round, and the
+ * intro card's stage track, which lists all three before any but the first has
+ * been dealt. Worked out separately they would agree only until someone changed
+ * one of them.
+ */
+export const roundTarget = (state: RunState, roundIndex: number): number =>
+  scaleTarget(roundTargets(state.stage)[roundIndex] ?? 0, difficultyOf(state).targets)
 
 /**
  * The rules a run is playing under, for the screens that name them.

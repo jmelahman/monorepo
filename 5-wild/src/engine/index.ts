@@ -29,6 +29,7 @@ export {
   difficultyOf,
   MAX_ASCENSION,
   mustSolve,
+  roundTarget,
   rulesFor,
 } from "./ascensions"
 export type { Boss, BossTier } from "./bosses"
@@ -38,6 +39,7 @@ export {
   CATEGORIES,
   CATEGORY_BY_ID,
   categoryOf,
+  DISTINCT,
   isCategory,
   levelBonus,
   levelOf,

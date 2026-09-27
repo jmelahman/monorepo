@@ -424,7 +424,6 @@ export const es: Strings = {
       solveFloorClears: (score) => `→ ${score}, supera`,
       shapeLevel: (level) => `Nv ${level}`,
       shapeBonus: (chips, mult) => `+${chips} +${mult} mult`,
-      shapesMore: "formas ›",
       multUnknown: "El color es el multiplicador. Adivinar es como se descubre.",
       letterBroken: (letter) => `${letter.toUpperCase()} rota`,
       relicGone: (name) => `${name} se ha ido`,
@@ -466,11 +465,13 @@ export const es: Strings = {
       stage: (stage, total) => `Fase ${stage} de ${total}`,
       stageEndless: (stage) => `Fase ${stage} · infinita`,
       scoreAtLeast: "Puntúa al menos",
-      meta: (guesses, reward) =>
-        plural(guesses, {
-          one: `${guesses} intento · recompensa ${reward}`,
-          other: `${guesses} intentos · recompensa ${reward}`,
-        }),
+      guesses: (guesses) => plural(guesses, { one: "intento", other: "intentos" }),
+      reward: "recompensa",
+      track: "Esta fase",
+      trackRound: ["Normal", "Élite", "Jefe"],
+      cleared: "Superada",
+      current: "Esta ronda",
+      upNext: "Siguiente",
       targets: (factor) => `objetivos ×${factor}`,
       coachAsk: "Primera partida. El tablero puede explicarte la puntuación mientras juegas.",
       coachYes: "Jugar con consejos",
@@ -618,6 +619,8 @@ export const es: Strings = {
 
     ladder: {
       carrot: "Supera esto para desbloquear la ascensión 1",
+      base: "Estándar",
+      baseText: "Sin reglas extra. Cada nivel de arriba añade una.",
       lower: "Bajar la ascensión",
       raise: "Subir la ascensión",
       locked: "Bloqueada",
@@ -664,10 +667,11 @@ export const es: Strings = {
         "Ese es el juego: cada intento que gastas cultivando hace crecer el montón, y " +
         "encoge el multiplicador que lo espera.",
       solveLine: {
-        term: "Así que vigila la línea de resolución",
+        term: "Así que vigila la barra",
         text:
-          "Debajo del tablero muestra el multiplicador que ganarías resolviendo ahora mismo, " +
-          "y lo que ya vale el montón con él. Cuando se pone verde, resolver gana la ronda.",
+          "Detrás de la barra de la puntuación avanza otra más tenue: dónde quedaría el " +
+          "montón si resolvieras en tu próximo intento. Cuando llega al final, resolver gana " +
+          "la ronda. Mantén pulsada la puntuación para ver el multiplicador.",
       },
       runHeading: "La partida",
       target: {

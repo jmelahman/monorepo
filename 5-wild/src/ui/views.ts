@@ -13,6 +13,7 @@ import {
   CONSUMABLE_SLOTS,
   CONSUMABLES,
   categoryOf,
+  DISTINCT,
   difficultyOf,
   draftChips,
   ETCHING_BY_ID,
@@ -44,6 +45,7 @@ import {
   rangeLevelOf,
   rangeOf,
   rerollCost,
+  roundTarget,
   rulesFor,
   STAGES,
   sellValue,
@@ -53,7 +55,7 @@ import {
 import type { CoachStep } from "./coach"
 import { h } from "./dom"
 import { money, formatNumber as num } from "./format"
-import { type IconName, icon } from "./icons"
+import { type IconName, icon, roundToken, type TokenKind } from "./icons"
 import type { Lang, Rule, RuleOf, Section, SectionOf } from "./lang"
 import {
   ascensionCard,
@@ -318,31 +320,62 @@ export const NEXT_DECOR: Record<Decor, Decor> = {
   none: "all",
 }
 
+/**
+ * The round's header: the shop's bar, seat for seat, with the score in the seat
+ * the shop leaves empty, so the gold and the menu do not move between the two.
+ *
+ * A two-row header was tried with this redesign, the score large on a row of
+ * its own over a full-width bar, and it cost the board more than it gave the
+ * score: 30px of header is 5px off every tile when the board is bound by
+ * height, which on most phones it is.
+ *
+ * The boss's rule is the header's second row when there is one, rather than a
+ * banner of its own below. It is a fact about the round, like the name beside
+ * the score, and inside the header its height is a known quantity the board can
+ * be told about, which is what keeps a boss round's tiles the size of every
+ * other round's. See `--boss-band`.
+ */
 function hud(state: RunState, on: Handlers): HTMLElement {
   const round = state.round
   const board = ui().board
+  const boss = getBoss(round.bossId)
   return h(
     "header",
     { class: "hud" },
     h(
       "div",
       { class: "hud-round" },
-      h("div", { class: "round-name" }, roundName(state.roundIndex)),
-      stageLine(state),
+      // The intro card's token at the size of a letter, so the round keeps the
+      // shape it was announced with once the card has gone.
+      roundToken(tokenOf(state)),
+      h(
+        "div",
+        { class: "hud-title" },
+        h("div", { class: "round-name" }, roundName(state.roundIndex)),
+        stageLine(state),
+      ),
     ),
     h(
       "div",
-      { class: `hud-score ${round.score >= round.target ? "met" : ""}` },
-      h("div", { class: "score" }, num(round.score)),
-      h("div", { class: "target" }, board.target(num(round.target))),
+      {
+        class: `hud-score ${round.score >= round.target ? "met" : ""}`,
+        // On the block and not on the bar, which is five pixels tall and no
+        // target for a thumb to hold.
+        "data-tip": solveSaid(state),
+      },
+      // One line, the score and what it is out of on a shared baseline, so the
+      // seat is as short as the name beside it and the bar under it is the
+      // second line of the header rather than the third.
+      h(
+        "div",
+        { class: "score-line" },
+        h("div", { class: "score" }, num(round.score)),
+        h("div", { class: "target" }, board.target(num(round.target))),
+      ),
       // The same fact as the two numbers above it, in the form a glance can take
       // in. The scoring animation drives it frame by frame, so it fills as the
       // total climbs rather than jumping to the answer.
-      h(
-        "div",
-        { class: "meter" },
-        h("div", { class: "meter-fill", style: `--fill:${meterFill(round.score, round.target)}` }),
-      ),
+      meter(state),
     ),
     // Gold and menu as one group, pinned to the right edge. Loose in a
     // space-between row the gold took whatever gap was left over, which was a
@@ -354,7 +387,31 @@ function hud(state: RunState, on: Handlers): HTMLElement {
       h("div", { class: "hud-gold" }, money(state.gold)),
       menuButton(on),
     ),
+    boss &&
+      h(
+        "div",
+        // The whole rule as a tip as well, because the band clamps at two lines
+        // and two rules (The Silence in French and in German) take a third on
+        // a 320px screen. Clipped there, they are a press away rather than gone.
+        { class: "boss", "data-tip": bossCard(boss.id).text },
+        // One paragraph inside the band rather than the band's own text, so the
+        // band can hold a fixed height and centre whatever length of rule it
+        // was handed. See `--boss-band`.
+        h("p", {}, h("strong", {}, bossCard(boss.id).name), ` ${bossCard(boss.id).text}`),
+      ),
   )
+}
+
+/**
+ * Which token a round wears. Three rounds, three shapes, and the shape carries
+ * the warning before the name is read, which matters most for the one that
+ * changes the rules. By position rather than by boss, for the track on the
+ * intro card, which draws rounds that have not been dealt yet.
+ */
+const TOKEN_AT: readonly TokenKind[] = ["normal", "elite", "boss"]
+
+function tokenOf(state: RunState): TokenKind {
+  return getBoss(state.round.bossId) ? "boss" : (TOKEN_AT[state.roundIndex] ?? "normal")
 }
 
 /** The stage under the round's name, on the round screen and the shop's. */
@@ -373,6 +430,47 @@ function stageLine(state: RunState): HTMLElement {
 }
 
 /** Shared with the animation controller, so the bar and the number agree. */
+/**
+ * The header's bar, and behind its fill, fainter, how far solving on the next
+ * guess would take it.
+ *
+ * That second length was a chip under the board, "×5 → 150", with a check when
+ * it cleared. It came up here because the board's line wanted the room (the
+ * shape name was cut to an ellipsis at 360 with it there) and because the
+ * question it answers, "would solving now win this", is a question about the
+ * bar. It was here once before, green, and was cut for reading as a second
+ * score. So it is drawn in the fill's own colour at a fraction of its strength:
+ * a projection of the blue rather than a rival to it, and no green, which the
+ * bar keeps for the round actually won.
+ *
+ * The figures the chip printed are the score block's tip and this bar's label,
+ * which is where a screen reader was always going to read them from.
+ */
+function meter(state: RunState): HTMLElement {
+  const round = state.round
+  const solve = round.score > 0 ? solveFloor(state) : null
+  const said = solveSaid(state)
+  return h(
+    "div",
+    { class: "meter", ...(said && { role: "img", "aria-label": said }) },
+    solve &&
+      h("div", { class: "meter-solve", style: `--fill:${meterFill(solve.floor, round.target)}` }),
+    h("div", { class: "meter-fill", style: `--fill:${meterFill(round.score, round.target)}` }),
+  )
+}
+
+/** "solve ×5 → 150", or nothing while the pile is empty and there is no floor. */
+function solveSaid(state: RunState): string | undefined {
+  const round = state.round
+  const solve = round.score > 0 ? solveFloor(state) : null
+  if (!solve) return undefined
+  const board = ui().board
+  const floor = (solve.floor >= round.target ? board.solveFloorClears : board.solveFloor)(
+    num(solve.floor),
+  )
+  return `${board.solveFactor(solve.factor)} ${floor}`
+}
+
 export const meterFill = (score: number, target: number): number =>
   target > 0 ? Math.min(1, score / target) : 1
 
@@ -854,8 +952,13 @@ function keyboard(state: RunState, on: Handlers): HTMLElement {
         index === 2 &&
           h(
             "button",
-            { class: "key wide", type: "button", onclick: () => on.back() },
-            ui().board.del,
+            {
+              class: "key wide",
+              type: "button",
+              "aria-label": ui().board.del,
+              onclick: () => on.back(),
+            },
+            icon("backspace"),
           ),
       ),
     ),
@@ -863,52 +966,16 @@ function keyboard(state: RunState, on: Handlers): HTMLElement {
 }
 
 /**
- * What solving on this guess is worth, right now.
+ * What solving on the next guess is guaranteed to bank, or nothing when there
+ * is no next guess to solve on or it would multiply by less than one.
  *
- * The solve bonus multiplies everything banked this round, so the decision the
- * whole game turns on, cash out or farm another guess, is arithmetic the
- * player would otherwise have to do in their head, against a multiplier that
- * shrinks every time they guess. Showing it is the difference between a
- * gamble and a choice.
- *
- * The figure is a floor, not a prediction: it is what the pile is already worth
- * multiplied, before the solving guess adds its own chips. Solving can only beat
- * it, never miss it, which is what makes it safe to act on.
- *
- * The factor comes from the engine rather than from `maxGuesses` arithmetic here,
- * so The Long Game and The Auditor move this line as well as the score.
- *
- * Returns the box whether or not it has anything to say, for the reason
- * `categorySlot` does, and this one was worse. The line goes quiet the instant
- * the round is `done`, and `submit` keeps the board on screen through the whole
- * reveal after that (`render("round")`), so the 20px it was holding came out of
- * the grid on the guess that ended the round. Measured at 390×640, where the
- * board is bound by height: the grid went 275px to 301px and every tile 41.7px
- * to 46.1px, mid-flip, on the one guess the player is watching hardest. The
- * board is centered, so on a taller screen it slid instead of growing; neither is
- * something the round should do as it ends.
+ * Drawn as the header bar's faint projection; see `meter`.
  */
-function solveHint(state: RunState): HTMLElement {
+function solveFloor(state: RunState): { factor: number; floor: number } | null {
   const round = state.round
   const factor = solveBonusFor(state, round.maxGuesses - round.guesses.length - 1)
-  if (round.done || round.guesses.length >= round.maxGuesses || factor < 1) {
-    return h("div", { class: "solve-hint" })
-  }
-
-  const board = ui().board
-  const floor = Math.round(round.score * factor)
-  const clears = floor >= round.target
-  return h(
-    "div",
-    { class: `solve-hint ${clears ? "clears" : ""}` },
-    h("span", { class: "solve-factor" }, board.solveFactor(factor)),
-    round.score > 0 &&
-      h(
-        "span",
-        { class: "solve-floor" },
-        clears ? board.solveFloorClears(num(floor)) : board.solveFloor(num(floor)),
-      ),
-  )
+  if (round.done || round.guesses.length >= round.maxGuesses || factor < 1) return null
+  return { factor, floor: Math.round(round.score * factor) }
 }
 
 /**
@@ -919,9 +986,9 @@ function solveHint(state: RunState): HTMLElement {
  * job: a category at level one pays nothing, so without this line there would be
  * no way to discover the system exists until after buying into it.
  *
- * Reads the draft once it is a full word, and otherwise the last guess, the
- * same rule the readout beside it follows, so the two never disagree about which
- * word they are describing.
+ * Reads the draft once it is a full word, and otherwise the last guess. The
+ * shape chip and the shapes sheet both ask this, so the two never disagree
+ * about which word they are describing.
  */
 export function wordInPlay(state: RunState): string {
   const round = state.round
@@ -933,11 +1000,9 @@ export function wordInPlay(state: RunState): string {
 /**
  * Where the shape of the word in play is named.
  *
- * The slot is always in the document, empty or not, because the draft row is
- * patched in place rather than re-rendered (see `patchDraft`), and this line
- * has to keep up with it. A line that appeared and vanished with the word would
- * mean the patch had to know where to reinsert it; an empty div costs nothing
- * and gives it somewhere to write.
+ * The slot is always in the document because the draft row is patched in place
+ * rather than re-rendered (see `patchDraft`), and this line has to keep up with
+ * it: the patch refills it and never has to know where to reinsert it.
  */
 function categorySlot(state: RunState, on: Handlers): HTMLElement {
   const slot = h("div", { class: "category-slot" })
@@ -946,17 +1011,23 @@ function categorySlot(state: RunState, on: Handlers): HTMLElement {
 }
 
 /**
- * Refill the slot from the word now in play. Called on every keystroke, so it
- * does the least it can: nothing at all until the draft is a whole word, which
- * is the first moment there is a shape to name.
+ * Refill the slot from the draft. Called on every keystroke.
+ *
+ * Always a chip, naming the shape of the word in play (see `wordInPlay`): the
+ * last guess's until the next word is whole, so a Cluster stays Cluster through
+ * the first four letters of the word after it. It used to be nothing until
+ * there was a word, so it came and went with the round's first guess and drew
+ * the eye to a line that had nothing new to say. Before any guess it is
+ * Distinct, which is not a placeholder: it is the shape every word has until it
+ * is shown to have a rarer one, and its level is what a plain word would score
+ * at.
  */
 export function fillCategory(slot: Element, state: RunState, on: Handlers): void {
   slot.replaceChildren()
   const word = wordInPlay(state)
-  if (!word) return
 
   const board = ui().board
-  const category = categoryOf(word)
+  const category = word ? categoryOf(word) : DISTINCT
   const bonus = levelBonus(state, category)
   // A button rather than a div, because this line is the only place the shape
   // system announces itself during a round, and a player who wants to know what
@@ -964,12 +1035,19 @@ export function fillCategory(slot: Element, state: RunState, on: Handlers): void
   slot.append(
     h(
       "button",
-      { class: "category", type: "button", onclick: () => on.openShapes() },
+      {
+        class: "category",
+        type: "button",
+        // The badge is the bare number on a line this full, so the word it
+        // dropped ("Lv", "Niv", "Stufe") is said here instead.
+        "aria-label": `${categoryCard(category.id).name} ${board.shapeLevel(bonus.level)}`,
+        onclick: () => on.openShapes(),
+      },
       h("span", { class: "category-name" }, categoryCard(category.id).name),
-      h("span", { class: "category-level" }, board.shapeLevel(bonus.level)),
+      h("span", { class: "category-level" }, String(bonus.level)),
       bonus.chips > 0 &&
         h("span", { class: "category-bonus" }, board.shapeBonus(bonus.chips, bonus.mult)),
-      h("span", { class: "category-more" }, board.shapesMore),
+      icon("chevron"),
     ),
   )
 }
@@ -1029,28 +1107,31 @@ export function fillReadout(el: Element, state: RunState): void {
 }
 
 export function roundView(state: RunState, on: Handlers, chrome: Chrome): HTMLElement {
-  const boss = getBoss(state.round.bossId)
   return h(
     "div",
     { class: "screen round-screen" },
     hud(state, on),
-    boss &&
-      h(
-        "div",
-        { class: "boss" },
-        h("strong", {}, bossCard(boss.id).name),
-        h("span", {}, ` ${bossCard(boss.id).text}`),
-      ),
     relicRow(state),
     consumableRow(state, on),
     grid(state, chrome.coach),
-    categorySlot(state, on),
+    // One line under the board: the shape of the word, the chips × mult it is
+    // being typed into, and the decor switch. What solving would bank sat here
+    // too, as a chip of its own, and is the header bar's projection now; see
+    // `meterSolve`.
+    // They were two lines, the two chips above and the readout the full width
+    // below, and every pixel of the second came out of the tiles.
+    //
     // The toggle is the readout's sibling and not its child on purpose:
     // `fillReadout` calls `replaceChildren` on every keystroke, so a button
     // inside that element would be rebuilt, and lose a press mid-tap, five
     // times a word.
-    h("div", { class: "readout-row" }, readoutSlot(state), decorToggle(on, chrome)),
-    solveHint(state),
+    h(
+      "div",
+      { class: "dock-line" },
+      categorySlot(state, on),
+      readoutSlot(state),
+      decorToggle(on, chrome),
+    ),
     h("div", { class: "relic-tip" }),
     h("div", { class: "toast" }),
     keyboard(state, on),
@@ -1067,11 +1148,7 @@ export function roundView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
 export function introView(state: RunState, on: Handlers, chrome: Chrome): HTMLElement {
   const copy = ui().intro
   const boss = getBoss(state.round.bossId)
-  const name = roundName(state.roundIndex)
-
-  // Three rounds, three tokens. The shape carries the warning before the name is
-  // read, which matters most for the one that changes the rules.
-  const token = boss ? "boss" : state.roundIndex === 0 ? "normal" : "elite"
+  const token = tokenOf(state)
 
   // The one question the tutorial asks, on the one screen it can be asked from:
   // before the board, on the round the cards would run on. Everywhere else is
@@ -1087,7 +1164,7 @@ export function introView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
     // something: a stray tap must not answer a question on the player's behalf,
     // least of all by picking the option they were reaching past.
     {
-      class: `screen center intro ${asking ? "asking" : ""}`,
+      class: `screen intro ${asking ? "asking" : ""}`,
       ...(asking ? {} : { onclick: () => on.play() }),
     },
     h(
@@ -1095,42 +1172,115 @@ export function introView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
       { class: "intro-stage" },
       state.won ? copy.stageEndless(state.stage) : copy.stage(state.stage, STAGES),
     ),
+    stageTrack(state),
     h(
       "div",
-      { class: `intro-card ${boss ? "boss-card" : ""}` },
-      h("div", { class: `round-token ${token}` }),
-      h("div", { class: "intro-name" }, boss ? bossCard(boss.id).name : name),
-      boss && h("div", { class: "intro-rule" }, bossCard(boss.id).text),
-      h("div", { class: "intro-label" }, copy.scoreAtLeast),
-      h("div", { class: "intro-target" }, num(state.round.target)),
+      { class: "intro-body" },
       h(
         "div",
-        { class: "intro-meta" },
-        // The payout the run will actually be handed, not the one the table
-        // lists: ascension 7 takes a dollar off it, and a card that promises $3
-        // before a round and pays $2 after it is the worst kind of wrong.
-        copy.meta(
-          state.round.maxGuesses,
-          money(Math.max(0, (ROUND_PAYOUT[state.roundIndex] ?? 0) - difficultyOf(state).payoutCut)),
+        { class: `intro-card ${boss ? "boss-card" : ""}` },
+        roundToken(token),
+        // A boss is named for itself, and the round it is, which is the name
+        // every other card leads with, drops to a label over it: the name is
+        // the thing that is about to change the rules.
+        boss && h("div", { class: "intro-kind" }, roundName(state.roundIndex)),
+        h(
+          "h1",
+          { class: "intro-name" },
+          boss ? bossCard(boss.id).name : roundName(state.roundIndex),
         ),
+        boss && h("p", { class: "intro-rule" }, bossCard(boss.id).text),
+        h("div", { class: "intro-label" }, copy.scoreAtLeast),
+        h("div", { class: "intro-target" }, num(state.round.target)),
+        h(
+          "div",
+          { class: "intro-stats" },
+          h(
+            "div",
+            { class: "intro-stat" },
+            h("span", { class: "intro-stat-value" }, `${state.round.maxGuesses}`),
+            h("span", { class: "intro-stat-label" }, copy.guesses(state.round.maxGuesses)),
+          ),
+          h(
+            "div",
+            { class: "intro-stat" },
+            // The payout the run will actually be handed, not the one the table
+            // lists: ascension 7 takes a dollar off it, and a card that promises
+            // $3 before a round and pays $2 after it is the worst kind of wrong.
+            h(
+              "span",
+              { class: "intro-stat-value gold" },
+              money(
+                Math.max(0, (ROUND_PAYOUT[state.roundIndex] ?? 0) - difficultyOf(state).payoutCut),
+              ),
+            ),
+            h("span", { class: "intro-stat-label" }, copy.reward),
+          ),
+        ),
+        standing(state),
       ),
-      standing(state),
     ),
     asking && h("p", { class: "intro-ask" }, copy.coachAsk),
     h(
-      "button",
-      { class: "primary", type: "button", onclick: () => on.play() },
-      asking ? copy.coachYes : copy.play,
-    ),
-    // Second and quieter. Why it is phrased as the whole tutorial rather than as
-    // this card is written down beside the string.
-    asking &&
+      "div",
+      { class: "intro-actions" },
       h(
         "button",
-        { class: "secondary", type: "button", onclick: () => on.skipCoach() },
-        copy.coachNo,
+        { class: "primary", type: "button", onclick: () => on.play() },
+        asking ? copy.coachYes : copy.play,
       ),
-    muteButton(on, chrome),
+      // Second and quieter. Why it is phrased as the whole tutorial rather than
+      // as this card is written down beside the string.
+      asking &&
+        h(
+          "button",
+          { class: "secondary", type: "button", onclick: () => on.skipCoach() },
+          copy.coachNo,
+        ),
+    ),
+  )
+}
+
+/**
+ * The stage's three rounds, in a row above the card.
+ *
+ * The card says what this round asks, and nothing on the screen said where it
+ * sits: a player arriving at an elite round could not see that a boss comes
+ * next, nor that it asks for half as much again, until the shop in between had
+ * already been spent. That is the decision the shop is for.
+ *
+ * Every target comes from `roundTarget`, the reducer's own arithmetic, rather
+ * than from the table here, so the two rounds not yet dealt carry the ascension
+ * the round in hand does. The boss slot is drawn as a boss and not as the boss:
+ * the boss is chosen when its round is dealt, and naming it early would be a
+ * promise about a draw that has not been made.
+ */
+function stageTrack(state: RunState): HTMLElement {
+  const copy = ui().intro
+  return h(
+    "ol",
+    { class: "stage-track", "aria-label": copy.track },
+    ...TOKEN_AT.map((kind, index) => {
+      const cleared = index < state.roundIndex
+      const current = index === state.roundIndex
+      const status = cleared
+        ? copy.cleared
+        : current
+          ? copy.current
+          : index === state.roundIndex + 1
+            ? copy.upNext
+            : ""
+      return h(
+        "li",
+        {
+          class: `track-round ${kind} ${cleared ? "cleared" : current ? "current" : ""}`,
+          ...(current ? { "aria-current": "step" } : {}),
+        },
+        h("div", { class: "track-name" }, roundToken(kind), copy.trackRound[index] ?? ""),
+        h("div", { class: "track-target" }, num(roundTarget(state, index))),
+        h("div", { class: "track-status" }, cleared && icon("check"), status),
+      )
+    }),
   )
 }
 
@@ -1158,23 +1308,6 @@ function standing(state: RunState): HTMLElement | null {
     // ascension 30 would otherwise put twenty copies of "Steeper" on this card,
     // when the one thing the player needs off it is how much the targets moved.
     targets > 1 ? ` · ${ui().intro.targets(targets.toFixed(2))}` : null,
-  )
-}
-
-function muteButton(on: Handlers, chrome: Chrome): HTMLElement {
-  return h(
-    "button",
-    {
-      class: "mute",
-      type: "button",
-      // The card behind this is itself a tap target; without stopping here the
-      // toggle would also start the round.
-      onclick: (event: Event) => {
-        event.stopPropagation()
-        on.mute()
-      },
-    },
-    chrome.muted ? ui().common.soundOff : ui().common.soundOn,
   )
 }
 
@@ -2277,10 +2410,12 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
  * The title screen's sound toggle: the speaker alone, in a circle the size of a
  * thumb.
  *
- * Not `muteButton`, which the intro card keeps. That one is a word on a card
- * that is itself a tap target; this one sits in a footer beside the language
- * pill, where a second pill with "Sound on" in it made the floor a row of labels
- * nobody was reading. The label moves to `aria-label`, and names the state the
+ * The intro card had a word-shaped one too, "Sound on" in a pill under Play,
+ * and it went when the card grew a stage track: the menu is one tap away on
+ * every screen after it, and a toggle on a card that is itself a tap target had
+ * to stop its own click from starting the round. Here it sits in a footer beside
+ * the language pill, where a second pill with the word in it made the floor a
+ * row of labels nobody was reading. The label moves to `aria-label`, and names the state the
  * way the word did, so a screen reader hears what a sighted player sees drawn.
  */
 function soundButton(on: Handlers, chrome: Chrome): HTMLElement {
@@ -2577,20 +2712,18 @@ function ladder(on: Handlers, meta: MetaState): HTMLElement {
       label,
     )
 
-  // Only a rung with a rule is pinned. Zero has no sentence to hold a place
-  // for, and the pin sized for three lines of one would leave it a 62px hole
-  // under a single row. See `.ladder.steps` for what that costs and why it is
-  // the cheaper of the two.
-  const steps = rule != null
-
   return h(
     "div",
     {
-      class: `ladder ${level > 0 ? "lit" : ""} ${locked ? "locked" : ""} ${steps ? "steps" : ""}`,
+      class: `ladder ${level > 0 ? "lit" : ""} ${locked ? "locked" : ""}`,
     },
     h(
       "div",
       { class: "ladder-row" },
+      // Down on the left and up on the right, with the rung between them, so
+      // the row reads as the dial it is: the direction of each press is where
+      // the thumb goes, and the name is the one thing neither thumb is on.
+      step("−", level - 1, level > 0),
       h(
         "div",
         { class: "ladder-level" },
@@ -2607,11 +2740,12 @@ function ladder(on: Handlers, meta: MetaState): HTMLElement {
               icon("lock"),
             ),
         ),
-        // The second line of the label is "what this rung is", and at zero
-        // there is no rule to be, so it is not drawn at all.
-        rule && h("span", { class: "ladder-rule" }, ascensionCard(rule).name),
+        // The second line of the label is "what this rung is". Zero says it is
+        // the standard game, rather than leaving the seat empty: an empty seat
+        // centred the name a line lower than on every other rung, and it jumped
+        // on the press that left zero.
+        h("span", { class: "ladder-rule" }, rule ? ascensionCard(rule).name : copy.base),
       ),
-      step("−", level - 1, level > 0),
       ahead
         ? h(
             "button",
@@ -2625,29 +2759,28 @@ function ladder(on: Handlers, meta: MetaState): HTMLElement {
           )
         : step("+", level + 1, level < MAX_ASCENSION),
     ),
-    // Only a rung with a rule has a sentence. Zero used to say "the game as it
-    // is written, with nothing extra asked of you", which is the absence of a
-    // rule spelled out at length on the one rung a new player reads, and a line
-    // of prose standing between them and Play for no information at all.
-    rule &&
-      h(
-        "p",
-        { class: "ladder-text" },
-        `${ascensionCard(rule).text}${level > 1 ? ` ${copy.andBelow}` : ""}`,
-      ),
-    // One line under the row, and only ever the forward-looking one: what
-    // beating this rung would open. Where every other rung's sentence sits
-    // rather than in the dial, because the first rung is not a special case
-    // worth reading differently from the rest.
+    // Every rung has a sentence, in the same seat, so the card is one shape
+    // from zero to the top. Zero once had none, on the grounds that "no extra
+    // rules" is the absence of a rule spelled out; but its card was then 38px
+    // shorter than rung one's, Play moved by that much on the first press up,
+    // and the lone line it did carry sat under the row where every other
+    // rung's sentence floats in the middle of the space. Two lines of
+    // standard-game prose were the cheaper fix than a second layout.
     //
-    // The warning that used to displace it here is gone. It said the player had
-    // not won yet, in a box whose lock says the same thing in a glyph and whose
-    // sheet had just said it in a sentence, and three tellings of "you have not
-    // earned this" is the screen holding a grudge about a choice it offered.
-    // Above the earned rung there is now no line at all, which is the right
-    // amount to say to someone who has already been asked and has already
-    // answered.
-    carrot ? h("p", { class: "ladder-note" }, carrot) : null,
+    // Before the first win zero's sentence is the carrot instead, the one
+    // forward-looking line on the screen: what beating this rung would open.
+    // The warning that used to sit here above the earned rung is gone. It said
+    // the player had not won yet, in a box whose lock says the same thing in a
+    // glyph and whose sheet had just said it in a sentence, and three tellings
+    // of "you have not earned this" is the screen holding a grudge about a
+    // choice it offered.
+    h(
+      "p",
+      { class: `ladder-text ${carrot ? "carrot" : ""}` },
+      rule
+        ? `${ascensionCard(rule).text}${level > 1 ? ` ${copy.andBelow}` : ""}`
+        : (carrot ?? copy.baseText),
+    ),
   )
 }
 

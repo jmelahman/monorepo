@@ -111,7 +111,8 @@ export const CATEGORY_BY_ID: Map<string, Category> = new Map(
   CATEGORIES.map((category) => [category.id, category]),
 )
 
-const DISTINCT = CATEGORIES[CATEGORIES.length - 1] as Category
+/** The shape every word has until it is shown to have a rarer one. */
+export const DISTINCT = CATEGORIES[CATEGORIES.length - 1] as Category
 
 /**
  * The category a word scores as.

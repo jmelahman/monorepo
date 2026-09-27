@@ -431,7 +431,6 @@ export const de: Strings = {
       solveFloorClears: (score) => `→ ${score}, geschafft`,
       shapeLevel: (level) => `Stufe ${level}`,
       shapeBonus: (chips, mult) => `+${chips} +${mult} Mult`,
-      shapesMore: "Formen ›",
       multUnknown: "Die Farbe ist der Mult, und nur Raten deckt sie auf.",
       letterBroken: (letter) => `${letter.toUpperCase()} zerbrochen`,
       relicGone: (name) => `${name} ist weg`,
@@ -473,11 +472,13 @@ export const de: Strings = {
       stage: (stage, total) => `Etappe ${stage} von ${total}`,
       stageEndless: (stage) => `Etappe ${stage} · endlos`,
       scoreAtLeast: "Erreiche mindestens",
-      meta: (guesses, reward) =>
-        plural(guesses, {
-          one: `${guesses} Versuch · Belohnung ${reward}`,
-          other: `${guesses} Versuche · Belohnung ${reward}`,
-        }),
+      guesses: (guesses) => plural(guesses, { one: "Versuch", other: "Versuche" }),
+      reward: "Belohnung",
+      track: "Diese Etappe",
+      trackRound: ["Normal", "Elite", "Boss"],
+      cleared: "Geschafft",
+      current: "Diese Runde",
+      upNext: "Als Nächstes",
       targets: (factor) => `Ziele ×${factor}`,
       coachAsk: "Erster Durchlauf. Das Brett kann dir die Wertung unterwegs erklären.",
       coachYes: "Mit Tipps spielen",
@@ -628,6 +629,8 @@ export const de: Strings = {
 
     ladder: {
       carrot: "Schlag das, um Aufstieg 1 freizuspielen",
+      base: "Standard",
+      baseText: "Keine Zusatzregeln. Jede Stufe darüber fügt eine hinzu.",
       lower: "Aufstieg senken",
       raise: "Aufstieg erhöhen",
       locked: "Gesperrt",
@@ -674,10 +677,11 @@ export const de: Strings = {
         "Das ist das ganze Spiel: Jeder Versuch, den du ins Sammeln steckst, macht den Haufen " +
         "größer und den Multiplikator kleiner, der auf ihn wartet.",
       solveLine: {
-        term: "Achte also auf die Lösungszeile",
+        term: "Achte also auf den Balken",
         text:
-          "Unter dem Brett zeigt sie, welchen Multiplikator ein Lösen gerade jetzt brächte und " +
-          "was der Haufen damit schon wert ist. Wird sie grün, gewinnt Lösen die Runde.",
+          "Hinter dem Balken der Punktzahl läuft ein blasserer voraus: wo der Haufen stünde, " +
+          "wenn du beim nächsten Versuch löst. Reicht er bis ans Ende, gewinnt Lösen die " +
+          "Runde. Halte die Punktzahl gedrückt, um den Multiplikator zu sehen.",
       },
       runHeading: "Der Durchlauf",
       target: {

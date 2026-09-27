@@ -135,7 +135,7 @@ export function baseChips(state: RunState, letter: string): number {
  * names the shape and prints its bonus, and two places showing the same number
  * is one place too many.
  *
- * So the figure is a floor, the same promise `solveHint` makes: nothing in the
+ * So the figure is a floor, the same promise the header bar's projection makes: nothing in the
  * pipeline subtracts chips, so the guess can only beat this. The boss part of it
  * is exact: the hook is asked at gray, and none of the four bosses that bend
  * chips reads the color: The Miser goes by whether the letter has been spent,

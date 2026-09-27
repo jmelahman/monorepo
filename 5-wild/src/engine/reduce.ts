@@ -6,7 +6,6 @@ import {
   INTEREST_CAP,
   INTEREST_PER,
   ROUND_PAYOUT,
-  roundTargets,
   STAGES,
   STARTING_GOLD,
 } from "../content/rounds"
@@ -14,7 +13,7 @@ import {
   clampAscension,
   difficultyOf,
   guessRestricted,
-  scaleTarget,
+  roundTarget,
   validateGuess,
 } from "./ascensions"
 import { bossForStage, getBoss } from "./bosses"
@@ -162,7 +161,7 @@ function beginRound(state: RunState, words: WordSource, events: GameEvent[]): vo
   // just finished.
   state.round = {
     answer: "",
-    target: scaleTarget(roundTargets(state.stage)[state.roundIndex], difficulty.targets),
+    target: roundTarget(state, state.roundIndex),
     // The tighter of the two wins rather than the boss's number simply winning.
     // No rung cuts the run's allowance any more, and `Dead Weight` records why
     // the one that did was removed, so today this is the boss's number or the base

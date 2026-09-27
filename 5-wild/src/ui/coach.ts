@@ -127,7 +127,7 @@ const BEATS: readonly Beat[] = [
     id: "solve",
     when: (state) => state.round.guesses.length === 2,
     // Both figures come from the engine rather than from `1 + guessesLeft` here,
-    // for the reason `solveHint` does: a relic or a boss can bend this number,
+    // for the reason `meter` does: a relic or a boss can bend this number,
     // and a tutorial that taught the arithmetic the game is not using would be
     // worse than one that taught nothing. Ascension 0 stage 1 has neither, and
     // this is still not the place to encode that.
@@ -137,7 +137,7 @@ const BEATS: readonly Beat[] = [
       const next = solveBonusFor(state, left - 1)
       return ui().coach.solve(num(now), num(next))
     },
-    anchor: ".solve-hint",
+    anchor: ".hud .meter",
   },
 ]
 

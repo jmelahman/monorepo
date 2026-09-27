@@ -449,7 +449,6 @@ export const en: Strings = {
       solveFloorClears: (score) => `→ ${score}, clears`,
       shapeLevel: (level) => `Lv ${level}`,
       shapeBonus: (chips, mult) => `+${chips} +${mult} mult`,
-      shapesMore: "shapes ›",
       multUnknown: "Color is the multiplier. Guessing is how you find it out.",
       letterBroken: (letter) => `${letter.toUpperCase()} broken`,
       relicGone: (name) => `${name} is gone`,
@@ -498,7 +497,15 @@ export const en: Strings = {
       stage: (stage, total) => `Stage ${stage} of ${total}`,
       stageEndless: (stage) => `Stage ${stage} · endless`,
       scoreAtLeast: "Score at least",
-      meta: (guesses, reward) => `${guesses} guesses · reward ${reward}`,
+      guesses: (guesses) => (guesses === 1 ? "guess" : "guesses"),
+      reward: "reward",
+      track: "This stage",
+      // The kind alone: the track sits under a caption that already says which
+      // stage, and "Normal Round" three times over would not fit a third of a phone.
+      trackRound: ["Normal", "Elite", "Boss"],
+      cleared: "Cleared",
+      current: "This round",
+      upNext: "Next",
       targets: (factor) => `targets ×${factor}`,
       // Said before the buttons rather than written into them, because the
       // choice is only meaningful to someone who knows what they are turning
@@ -674,6 +681,8 @@ export const en: Strings = {
 
     ladder: {
       carrot: "Beat this to unlock ascension 1",
+      base: "Standard",
+      baseText: "No extra rules. Each rung above adds one.",
       lower: "Lower the ascension",
       raise: "Raise the ascension",
       locked: "Locked",
@@ -725,11 +734,11 @@ export const en: Strings = {
         "That is the game: every guess you spend farming grows the pile, and " +
         "shrinks the multiplier waiting for it.",
       solveLine: {
-        term: "So watch the solve line",
+        term: "So watch the bar",
         text:
-          "Under the board it shows the multiplier a solve would earn right now, and " +
-          "what the pile is already worth at it. When it turns green, solving wins " +
-          "the round.",
+          "Behind the score's bar a fainter one runs ahead: where the pile would be if " +
+          "you solved on your next guess. When it reaches the end, solving wins the " +
+          "round. Hold the score to see the multiplier.",
       },
       runHeading: "The run",
       target: {

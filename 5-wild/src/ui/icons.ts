@@ -51,6 +51,14 @@ const PATHS = {
   shape: ["M2 8h5v8H2z", "M9.5 8h5v8h-5z", "M17 8h5v8h-5z", "M2 20h20"],
   etching: ["M14 4l6 6-9 9H5v-6z", "M11 7l6 6"],
   check: ["M5 12l5 5 9-10"],
+  // The category chip's way out to the shapes sheet. It said "shapes ›" in
+  // words, which on a chip sharing its line with the solve figure was the word
+  // that pushed the pair past 360.
+  chevron: ["M9 6l6 6-6 6"],
+  // DEL, drawn rather than written: the word was the one key on the board that
+  // changed its width per language (SUPPR, LÖSCH), and the glyph is the same
+  // key on every phone keyboard the player has ever used.
+  backspace: ["M21 5H9l-6 7 6 7h12z", "M17 9.5l-5 5", "M12 9.5l5 5"],
   reroll: [
     "M4 12a8 8 0 0 1 14-5.3L20 9",
     "M20 4v5h-5",
@@ -71,5 +79,101 @@ export function icon(name: IconName): SVGSVGElement {
     path.setAttribute("d", d)
     svg.append(path)
   }
+  return svg
+}
+
+/**
+ * The round's token: the same plate three times, told apart twice.
+ *
+ * It was a disc for the two ordinary rounds and a twelve-pointed star for the
+ * boss, so normal and elite differed by colour alone, which is the one channel
+ * The Fog exists to take away and the one a colour-blind player never had. Now
+ * the silhouette climbs (circle, shield, diamond) and so does the insignia on it
+ * (one chevron, two, a crown), and either alone names the round at 16px in the
+ * stage track as well as at 72 on the card.
+ *
+ * Filled rather than stroked like the icons above, because it is a thing on the
+ * table and not a label, and drawn here for the reason those are: `h()` cannot
+ * make SVG. The gradient needs an id, and an id is document-wide, so each token
+ * takes a fresh one; four are on the intro at once.
+ */
+export type TokenKind = "normal" | "elite" | "boss"
+
+const TOKENS: Record<
+  TokenKind,
+  {
+    stops: readonly [string, string, string]
+    ink: string
+    body: string
+    glyph: string
+    fill?: true
+  }
+> = {
+  normal: {
+    stops: ["#a9bdd3", "#5a7fa8", "#34496a"],
+    ink: "#1f2c3b",
+    body: "M24 3a21 21 0 1 0 0 42a21 21 0 1 0 0-42z",
+    glyph: "M15 28l9-7 9 7",
+  },
+  elite: {
+    stops: ["#e0c396", "#c08a3e", "#6a4c22"],
+    ink: "#433016",
+    body: "M24 3 41 9.5V23c0 10.5-7 17.5-17 22C14 40.5 7 33.5 7 23V9.5z",
+    glyph: "M15.5 20.5l8.5-6.5 8.5 6.5M15.5 29.5l8.5-6.5 8.5 6.5",
+  },
+  boss: {
+    stops: ["#dc9ea7", "#a83a3f", "#5c2023"],
+    ink: "#3b1416",
+    // A 30-unit square with 5-unit corners, turned 45 degrees about the centre.
+    body: "M20.5 5.5a5 5 0 0 1 7 0l15 15a5 5 0 0 1 0 7l-15 15a5 5 0 0 1-7 0l-15-15a5 5 0 0 1 0-7z",
+    glyph: "M15.5 29.5V19l5 4 3.5-6.5 3.5 6.5 5-4v10.5z",
+    fill: true,
+  },
+}
+
+let tokenSerial = 0
+
+export function roundToken(kind: TokenKind): SVGElement {
+  const spec = TOKENS[kind]
+  const id = `token-${++tokenSerial}`
+  const make = (tag: string, attrs: Record<string, string>) => {
+    const el = document.createElementNS(SVG, tag)
+    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value)
+    return el
+  }
+  // Prefixed, because the bare kind is taken: `.boss` is the header's rule
+  // band, and a token classed `boss` in that header was laid out as a second one.
+  const svg = make("svg", {
+    class: `round-token token-${kind}`,
+    viewBox: "0 0 48 48",
+    "aria-hidden": "true",
+  })
+  const gradient = make("linearGradient", { id, x1: "0", y1: "0", x2: "0.35", y2: "1" })
+  spec.stops.forEach((color, index) => {
+    gradient.append(make("stop", { offset: String(index / 2), "stop-color": color }))
+  })
+  const defs = make("defs", {})
+  defs.append(gradient)
+  // The rim is the body again at nine tenths, which is what keeps it concentric
+  // on the shield, where no offset path would be.
+  svg.append(
+    defs,
+    make("path", { d: spec.body, fill: `url(#${id})` }),
+    make("path", {
+      d: spec.body,
+      transform: "translate(2.4 2.4) scale(0.9)",
+      fill: "none",
+      stroke: "#ffffff42",
+      "stroke-width": "1.6",
+    }),
+    make("path", {
+      d: spec.glyph,
+      fill: spec.fill ? spec.ink : "none",
+      stroke: spec.ink,
+      "stroke-width": spec.fill ? "1.5" : "4",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+    }),
+  )
   return svg
 }
