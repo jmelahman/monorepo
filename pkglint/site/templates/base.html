@@ -87,7 +87,7 @@
         <span class="drift" title="source drift since the previous scan">&#9888;</span>{{end}}</td>
       <td class="rcell"><span class="repo repo-{{.Repo}}">{{.Repo}}</span></td>
       <td class="num">{{len .Findings}}</td>
-      <td class="num votes">{{if .Official}}<span class="none">&ndash;</span>{{else}}{{.Votes}}{{end}}</td>
+      <td class="num votes">{{if .Official}}<span class="none">&ndash;</span>{{else}}{{num .Votes}}{{end}}</td>
       <td class="desc" title="{{.Description}}">{{.Description}}</td>
     </tr>
   {{end}}

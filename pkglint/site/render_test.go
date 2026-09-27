@@ -262,7 +262,7 @@ func TestRenderMaintainerFilter(t *testing.T) {
 		`data-maintainer=""`,
 		`data-comaintainers=""`,
 		// Nobody searches a field the box does not admit to having.
-		`placeholder="Filter by name, maintainer, or description"`,
+		`placeholder="Name, maintainer, or description"`,
 	} {
 		if !strings.Contains(index, want) {
 			t.Errorf("index.html missing %s", want)
@@ -325,6 +325,37 @@ func TestClip(t *testing.T) {
 				t.Errorf("clip(%q, %d) = %q, want %q", tc.in, tc.n, got, tc.want)
 			}
 		})
+	}
+}
+
+// TestNum covers the digit grouping every count on the site is printed with;
+// site.js groups the numbers it redraws the same way.
+func TestNum(t *testing.T) {
+	for n, want := range map[int]string{
+		0: "0", 7: "7", 999: "999", 1000: "1,000", 22804: "22,804",
+		1234567: "1,234,567", -4200: "-4,200",
+	} {
+		if got := num(n); got != want {
+			t.Errorf("num(%d) = %q, want %q", n, got, want)
+		}
+	}
+}
+
+// TestTicks covers the scale under the distribution bar, and the classes a
+// phone hides it by: every other interior mark, and a last round number close
+// enough to the total that their labels would overprint.
+func TestTicks(t *testing.T) {
+	got := ticks(22804)
+	var labels, classes []string
+	for _, tk := range got {
+		labels = append(labels, tk.Label)
+		classes = append(classes, tk.Class)
+	}
+	if want := "0 5,000 10,000 15,000 20,000 22,804"; strings.Join(labels, " ") != want {
+		t.Errorf("labels = %q, want %q", strings.Join(labels, " "), want)
+	}
+	if want := []string{"", "minor", "", "minor", "near", ""}; strings.Join(classes, ",") != strings.Join(want, ",") {
+		t.Errorf("classes = %q, want %q", classes, want)
 	}
 }
 

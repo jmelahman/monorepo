@@ -11,7 +11,7 @@
   <div class="tag"></div>
   <div>
     <p class="eyebrow"><a href="{{.Root}}index.html">AUR report card</a></p>
-    <h1>Rule<br>Reference</h1>
+    <h1>Rule reference</h1>
     <p class="lede">Every check pkglint runs, grouped by what it protects. Each rule has a
     page with a flagged and a preferred example.</p>
   </div>
@@ -21,15 +21,15 @@
   <div class="tag">Grading</div>
   <div>
     <p>A package is graded by its worst finding, so one critical outweighs any number of
-    smaller notes. The severity beside each rule below is what it reports; a rule that
-    weighs what it found — an <code>eval</code> of a downloaded script is worse than an
-    <code>eval</code> — shows the range it spans.</p>
+    smaller notes. The severity beside each rule below is what it reports. A rule that
+    weighs what it found (an <code>eval</code> of a downloaded script is worse than a plain
+    <code>eval</code>) shows the range it spans.</p>
     <div class="ladder">
-      <div class="rung"><span class="grade grade-F">F</span><span>any <b>critical</b> finding</span></div>
-      <div class="rung"><span class="grade grade-D">D</span><span>any <b>error</b></span></div>
+      <div class="rung"><span class="grade grade-F">F</span><span><b>any critical finding</b></span></div>
+      <div class="rung"><span class="grade grade-D">D</span><span><b>any error</b></span></div>
       <div class="rung"><span class="grade grade-C">C</span><span><b>3 or more warnings</b></span></div>
       <div class="rung"><span class="grade grade-B">B</span><span><b>1 or 2 warnings</b></span></div>
-      <div class="rung"><span class="grade grade-A">A</span><span><b>no warnings</b>, only info</span></div>
+      <div class="rung"><span class="grade grade-A">A</span><span><b>no warnings</b>, info at most</span></div>
     </div>
     <p>Rules tagged {{template "fixpill" .FixSafe}} are rewritten in place by
     <code>pkglint --fix</code>, which never changes what the build does. Rules tagged

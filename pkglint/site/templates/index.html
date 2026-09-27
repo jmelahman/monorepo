@@ -22,16 +22,16 @@
          which is what a reader without the script gets. */}}
     <dl class="titleblock">
       <div><dt>scanned</dt><dd class="stamp-date">{{.Generated}}</dd></div>
-      <div><dt>packages</dt><dd data-stat="total">{{.Corpus.Total}}</dd></div>
-      <div><dt>findings</dt><dd data-stat="findings">{{.Corpus.Findings}}</dd></div>
-      <div><dt>auto-fixable</dt><dd data-stat="fixable">{{.Corpus.Fixable}}</dd></div>
-      <div{{if not .Corpus.Drifted}} hidden{{end}} data-stat-row="drifted"><dt>drifted</dt><dd data-stat="drifted">{{.Corpus.Drifted}}</dd></div>
+      <div><dt>packages</dt><dd data-stat="total">{{num .Corpus.Total}}</dd></div>
+      <div><dt>findings</dt><dd data-stat="findings">{{num .Corpus.Findings}}</dd></div>
+      <div><dt>auto-fixable</dt><dd data-stat="fixable">{{num .Corpus.Fixable}}</dd></div>
+      <div{{if not .Corpus.Drifted}} hidden{{end}} data-stat-row="drifted"><dt>drifted</dt><dd data-stat="drifted">{{num .Corpus.Drifted}}</dd></div>
     </dl>
   </div>
 </section>
 
 <section class="row">
-  <div class="tag">Distribution<small>n = <span data-stat="total">{{.Corpus.Total}}</span></small></div>
+  <div class="tag">Distribution<small>n = <span data-stat="total">{{num .Corpus.Total}}</span></small></div>
   <div class="corpus">
     <div class="bar" aria-hidden="true">
       {{range .Corpus.Bands}}
@@ -40,14 +40,14 @@
       {{end}}
     </div>
     <div class="scale" aria-hidden="true">
-      {{range .Corpus.Ticks}}<span style="{{.Style}}">{{.Label}}</span>{{end}}
+      {{range .Corpus.Ticks}}<span{{with .Class}} class="{{.}}"{{end}} style="{{.Style}}">{{.Label}}</span>{{end}}
     </div>
     <div class="legend">
       {{range .Corpus.Bands}}
       <button type="button" class="gkey" data-grade="{{.Grade}}" aria-pressed="false"
         title="Filter the roster to grade {{.Grade}}">
         <span class="grade grade-{{.Grade}}">{{.Grade}}</span>
-        <span><b>{{.Count}}</b><em>{{.Rubric}}</em></span>
+        <span><b>{{num .Count}}</b><em>{{.Rubric}}</em></span>
       </button>
       {{end}}
     </div>
@@ -61,7 +61,7 @@
     {{if gt (len .Repos) 1}}
     <div class="rkeys" role="group" aria-label="Repositories">
       {{range .Repos}}<button type="button" class="rkey" data-repo="{{.Name}}" aria-pressed="false"
-        title="Show {{.Name}} ({{.Total}} packages)"><span class="repo repo-{{.Name}}">{{.Name}}</span></button>
+        title="Show {{.Name}} ({{num .Total}} packages)"><span class="repo repo-{{.Name}}">{{.Name}}</span></button>
       {{end}}
     </div>
     <script type="application/json" id="repostats">{{.RepoJSON}}</script>
@@ -73,11 +73,11 @@
         underneath you, does the build stay off the network, and can a reader follow what
         the package does without running it? That is all it measures.</p>
         <p>It is not a malware verdict. An <strong>F</strong> means read this PKGBUILD
-        before you build it. An <strong>A</strong> means nothing stood out to a parser — not
+        before you build it. An <strong>A</strong> means nothing stood out to a parser, not
         that the package is safe. Static analysis cannot catch a malicious upstream release
         pinned with a perfectly valid checksum.</p>
-        <p><a href="{{.Root}}rules/index.html">See every rule and how each grade is
-        derived.</a></p>
+        <p><a href="{{.Root}}rules/index.html">Every rule, and how each grade is
+        derived</a></p>
       </div>
     </details>
     </div>
@@ -85,18 +85,18 @@
 </section>
 
 <section class="row">
-  <div class="tag">Roster<small>n = <span data-stat="total">{{.Total}}</span></small></div>
+  <div class="tag">Roster<small>n = <span data-stat="total">{{num .Total}}</span></small></div>
   <div>
     <div class="toolbar">
       {{/* The roster has no maintainer column, so the box is where it says so.
            The "@" prefix is spelled out in the title and the label rather than
            the placeholder: the placeholder has to describe what typing does by
-           default, and it is already as long as the field can hold. */}}
-      <input type="search" id="q" placeholder="Filter by name, maintainer, or description" autocomplete="off"
+           default, and it has to fit a phone-width field without clipping. */}}
+      <input type="search" id="q" placeholder="Name, maintainer, or description" autocomplete="off"
         title="Prefix the query with @ to match maintainers, co-maintainers and packagers only, e.g. @dbermond"
         aria-label="Filter packages by name, maintainer, packager, or description. Prefix the query with @ to match maintainers, co-maintainers and packagers only.">
       <button type="button" class="clear" id="clear" hidden>Reset</button>
-      <span class="count" id="count" role="status">{{if lt .Shown .Total}}{{.Shown}} of {{.Total}} packages{{else}}{{.Total}} packages{{end}}</span>
+      <span class="count" id="count" role="status">{{if lt .Shown .Total}}first {{num .Shown}} of {{num .Total}} packages{{else}}{{num .Total}} packages{{end}}</span>
     </div>
     {{template "rostertable" .}}
     <p class="empty" id="empty" hidden>No package matches that filter.</p>
@@ -109,8 +109,8 @@
          fewer packages than the table holds, and claiming to show "the 596
          most-voted of 596" would describe a slice that isn't one. */}}
     <p class="rest" id="rest" data-roster="{{.Root}}roster.json">
-      {{if lt .Shown .Total}}Showing the {{.Shown}} most-voted of {{.Total}} packages.{{else}}All {{.Total}} packages.{{end}}
-      <a href="{{.Root}}roster/index.html">Browse {{if lt .Shown .Total}}all {{.Total}} {{end}}alphabetically</a>.
+      {{if lt .Shown .Total}}Showing the {{num .Shown}} most-voted of {{num .Total}} packages.{{else}}All {{num .Total}} packages.{{end}}
+      <a href="{{.Root}}roster/index.html">Browse {{if lt .Shown .Total}}all {{num .Total}} {{end}}alphabetically</a>.
     </p>
   </div>
 </section>

@@ -62,9 +62,16 @@
     return rs;
   }
 
+  // num groups a count's digits in threes, as the Go side's num does for
+  // the numbers it renders.
+  function num(n) {
+    return Number(n).toLocaleString("en-US");
+  }
+
   // ticks mirrors the Go side's scale: round marks at a readable interval,
   // plus the total at the right edge, dropping a mark that would collide
-  // with it.
+  // with it. Each is [value, class]: "minor" on every other interior mark and
+  // "near" on one within a fifth of the bar of the total, which a phone hides.
   function ticks(total) {
     var out = [];
     if (!total) return out;
@@ -74,11 +81,13 @@
       step = steps[i];
       if (Math.floor(total / step) <= 6) break;
     }
-    for (var n = 0; n < total; n += step) {
+    for (var i = 0, n = 0; n < total; i++, n += step) {
       if (total - n < Math.floor(step / 2)) break;
-      out.push(n);
+      var cls = i % 2 === 1 ? "minor" : "";
+      if (n > 0 && (total - n) * 5 < total) cls = "near";
+      out.push([n, cls]);
     }
-    out.push(total);
+    out.push([total, ""]);
     return out;
   }
 
@@ -103,7 +112,7 @@
       });
     });
     statEls.forEach(function (el) {
-      el.textContent = sum[el.dataset.stat];
+      el.textContent = num(sum[el.dataset.stat]);
     });
     statRows.forEach(function (el) {
       el.hidden = !sum[el.dataset.statRow];
@@ -113,14 +122,15 @@
       el.hidden = n === 0;
       if (el.classList.contains("band")) el.style.flexGrow = n;
       var b = el.querySelector("b");
-      if (b) b.textContent = n;
+      if (b) b.textContent = num(n);
     });
     scales.forEach(function (scale) {
       scale.textContent = "";
-      ticks(sum.total).forEach(function (n) {
+      ticks(sum.total).forEach(function (t) {
         var span = document.createElement("span");
-        span.style.left = (n / sum.total * 100).toFixed(4) + "%";
-        span.textContent = n;
+        if (t[1]) span.className = t[1];
+        span.style.left = (t[0] / sum.total * 100).toFixed(4) + "%";
+        span.textContent = num(t[0]);
         scale.appendChild(span);
       });
     });
@@ -259,7 +269,7 @@
       none.textContent = "\u2013";
       votes.appendChild(none);
     } else {
-      votes.textContent = e.votes;
+      votes.textContent = num(e.votes);
     }
 
     var desc = document.createElement("td");
@@ -350,12 +360,12 @@
     var of = loaded || rpicked.length ? inScope : total || model.length;
     if (count) {
       if (shown < hits.length) {
-        count.textContent = "first " + shown + " of " + hits.length +
+        count.textContent = "first " + num(shown) + " of " + num(hits.length) +
           (hits.length === of ? " packages" : " matches");
       } else if (hits.length === of) {
-        count.textContent = of + " packages";
+        count.textContent = num(of) + " packages";
       } else {
-        count.textContent = hits.length + " of " + of + " packages";
+        count.textContent = num(hits.length) + " of " + num(of) + " packages";
       }
     }
     if (empty) empty.hidden = hits.length !== 0;
@@ -503,7 +513,7 @@
           return entry(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10]);
         });
         loaded = true;
-        rest.textContent = "Searching all " + model.length + " packages. ";
+        rest.textContent = "Searching all " + num(model.length) + " packages. ";
         var link = document.createElement("a");
         link.href = root + "roster/index.html";
         link.textContent = "Browse alphabetically";

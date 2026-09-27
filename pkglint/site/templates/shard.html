@@ -11,19 +11,20 @@
   <div class="tag"></div>
   <div class="hero">
     <div>
+      <p class="eyebrow"><a href="{{.Root}}index.html">AUR report card</a> ·
+        <a href="{{.Root}}roster/index.html">All packages</a></p>
       <h1>Packages: {{.Key}}</h1>
       <p class="lede">Every package base beginning with <b>{{.Key}}</b>, graded by
-      <a href="https://github.com/jmelahman/pkglint">pkglint</a> without ever sourcing it.
-      <a href="{{.Root}}index.html">Back to the report card</a>.</p>
+      <a href="https://github.com/jmelahman/pkglint">pkglint</a> without ever sourcing it.</p>
     </div>
     <dl class="titleblock">
-      <div><dt>packages</dt><dd>{{.Total}}</dd></div>
+      <div><dt>packages</dt><dd>{{num .Total}}</dd></div>
     </dl>
   </div>
 </section>
 
 <section class="row">
-  <div class="tag">Roster<small>n = {{.Total}}</small></div>
+  <div class="tag">Roster<small>n = {{num .Total}}</small></div>
   <div>
     {{template "shardnav" .}}
     {{template "rostertable" .}}

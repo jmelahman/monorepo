@@ -382,7 +382,7 @@ p { max-width: var(--measure); }
    opens with JavaScript off. */
 .explain { margin-top: 1.75rem; max-width: var(--measure); }
 .explain summary {
-  display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; white-space: nowrap;
   font: 600 0.6875rem/1 var(--cond);
   letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim);
   padding: 0.55rem 0.8rem; background: var(--panel);
@@ -721,6 +721,17 @@ td.rsev { width: 1%; white-space: nowrap; }
   .pkghead { gap: 1rem; }
   .stamp { width: 3.5rem; height: 3.5rem; font-size: 1.75rem; }
   .votes, th.votes-h, .rcell, th.repo-h { display: none; }
+  /* Four repository chips and the disclosure do not fit one phone line, and
+     squeezing the disclosure's button beside them folded its label into a
+     column of single words hanging off the screen edge. Here the button
+     takes a row of its own under the toggles; its text still opens across
+     the full width beneath it. */
+  .keys { grid-template-columns: minmax(0, 1fr); row-gap: 0.75rem; }
+  .keys .explain { grid-row: auto; grid-template-columns: minmax(0, 1fr); }
+  .keys .explain summary { grid-column: 1; }
+  /* Half the scale's labels, and never the round number beside the total:
+     at this width they print into each other. */
+  .scale .minor, .scale .near { display: none; }
   h1 { font-size: clamp(1.75rem, 9vw, 2.5rem); }
   .mark span { display: none; }
   /* On a phone the roster is down to grade, name, count; give the name the

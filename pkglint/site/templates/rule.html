@@ -18,8 +18,8 @@
     {{if .Rule.FixLevel.Fixable}}
     <div class="note">
       <h3>Auto-fix</h3>
-      <p>Run <code>pkglint {{.Rule.FixLevel.Flag}}</code> to rewrite this in place{{if not .Rule.FixLevel.Safe}} —
-      the rewrite is mechanical but changes what the build does, so read the result{{end}}.
+      <p>Run <code>pkglint {{.Rule.FixLevel.Flag}}</code> to rewrite this in place{{if not .Rule.FixLevel.Safe}}.
+      The rewrite is mechanical but changes what the build does, so read the result{{end}}.
       Add <code>--diff</code> to see the change without writing it.</p>
     </div>
     {{end}}
@@ -45,7 +45,7 @@
 <section class="row">
   <div class="tag">Suppress</div>
   <div>
-    <p>If a package trips this rule on purpose and you have reviewed it, put the directive on
+    <p>If a package trips this rule on purpose and you have reviewed it, put this directive on
     the offending line or the line above it:</p>
     <pre class="snippet"># pkglint: ignore={{.Rule.ID}}</pre>
     <p>It covers only that line pair, in that file. Passing <code>--ignore {{.Rule.ID}}</code>

@@ -30,10 +30,10 @@
           {{else}}
           {{with .R.Maintainer}}<span>maintained by {{.}}</span>{{end}}
           {{with .R.CoMaintainers}}<span>co-maintained by {{join . ", "}}</span>{{end}}
-          <span>{{.R.Votes}} votes</span>
+          <span>{{num .R.Votes}} {{if eq .R.Votes 1}}vote{{else}}votes{{end}}</span>
           <a href="{{.R.PageURL}}">AUR page</a>
           {{end}}
-          <a href="{{.Root}}badge/{{.R.Name}}.svg">badge</a>
+          <a href="{{.Root}}badge/{{.R.Name}}.svg">README badge</a>
         </p>
         {{with .R.Description}}<p>{{.}}</p>{{end}}
       </div>
@@ -49,8 +49,8 @@
       <h3>Source drift since the previous scan</h3>
       <ul>{{range .}}<li>{{.}}</li>{{end}}</ul>
       <p>A changed artifact behind an unchanged URL, or a commit pin that moved without a
-      version bump, is the shape a hijacked upstream release takes. A re-tagged release
-      looks identical — which is why it is worth re-reading this one.</p>
+      version bump, is the shape a hijacked upstream release takes. A legitimately
+      re-tagged release looks exactly the same, which is why this one is worth re-reading.</p>
     </div>
   </div>
 </section>

@@ -11,13 +11,14 @@
   <div class="tag"></div>
   <div class="hero">
     <div>
+      <p class="eyebrow"><a href="{{.Root}}index.html">AUR report card</a></p>
       <h1>All packages</h1>
-      <p class="lede">Every package base pkglint grades, official repositories and AUR alike, split by first character.
-      The <a href="{{.Root}}index.html">report card</a> shows the most-voted packages
-      and can search all of them; these pages list them alphabetically.</p>
+      <p class="lede">Every package base pkglint grades, official repositories and AUR alike,
+      split by first character. The <a href="{{.Root}}index.html">report card</a> leads with
+      the most-voted packages and searches all of them; these pages list them alphabetically.</p>
     </div>
     <dl class="titleblock">
-      <div><dt>packages</dt><dd>{{.Total}}</dd></div>
+      <div><dt>packages</dt><dd>{{num .Total}}</dd></div>
       <div><dt>pages</dt><dd>{{len .Shards}}</dd></div>
     </dl>
   </div>
@@ -26,10 +27,9 @@
 <section class="row">
   <div class="tag">Index</div>
   <div>
-    {{template "shardnav" .}}
     <ul class="shardlist">
       {{range .Shards}}
-      <li><a href="{{$.Root}}roster/{{.Key}}.html"><b>{{.Key}}</b><span>{{len .Results}}</span></a></li>
+      <li><a href="{{$.Root}}roster/{{.Key}}.html"><b>{{.Key}}</b><span>{{num (len .Results)}}</span></a></li>
       {{end}}
     </ul>
   </div>
