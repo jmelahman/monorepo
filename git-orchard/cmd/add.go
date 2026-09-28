@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -21,17 +22,28 @@ func NewAddCommand() *cobra.Command {
 	opts := &AddOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "add <prefix> <remote>",
+		Use:   "add <remote> [<prefix>]",
 		Short: "Import a repository as a subtree",
 		Long: `Import a repository as a subtree.
 
 The upstream branch is merged in at <prefix>, squashed unless the manifest
 sets orchard.squash = false, and the subtree is added to the manifest,
-which is left for you to commit.`,
-		Example: `  git orchard add tools/foo git@github.com:owner/foo.git`,
-		Args:    cobra.ExactArgs(2),
+which is left for you to commit.
+
+Like git clone, <prefix> defaults to the repository's name, e.g. foo for
+git@github.com:owner/foo.git.`,
+		Example: `  git orchard add git@github.com:owner/foo.git
+  git orchard add git@github.com:owner/foo.git tools/foo`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAdd(opts, config.Subtree{Prefix: config.Clean(args[0]), Remote: args[1], Branch: opts.Branch})
+			remote := args[0]
+			var prefix string
+			if len(args) == 2 {
+				prefix = args[1]
+			} else if prefix = RepoName(remote); prefix == "" {
+				return fmt.Errorf("can't guess a prefix from %s; pass one", remote)
+			}
+			return runAdd(opts, config.Subtree{Prefix: config.Clean(prefix), Remote: remote, Branch: opts.Branch})
 		},
 	}
 
@@ -55,4 +67,14 @@ func runAdd(opts *AddOptions, s config.Subtree) error {
 	}
 	fmt.Fprintf(os.Stderr, "Added %s to %s; commit it to finish.\n", s.Prefix, o.Config.Manifest)
 	return nil
+}
+
+// RepoName guesses the name of the repository at url the way git clone
+// names its directory: git@github.com:owner/foo.git becomes foo.
+func RepoName(url string) string {
+	name := strings.TrimRight(url, "/")
+	name = strings.TrimSuffix(name, "/.git")
+	name = strings.TrimSuffix(name, ".git")
+	name = strings.TrimRight(name, "/")
+	return name[strings.LastIndexAny(name, "/:")+1:]
 }

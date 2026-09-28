@@ -48,7 +48,8 @@ Pulls and adds are squashed unless the manifest sets `orchard.squash = false`.
 
 ```shell
 git orchard init                        # list the subtrees already in git history
-git orchard add tools/foo git@github.com:owner/foo.git
+git orchard add git@github.com:owner/foo.git tools/foo
+git orchard add git@github.com:owner/foo.git # prefix defaults to the repo name, foo
 git orchard status                      # commits ahead/behind each upstream
 git orchard pull [prefix...]            # merge upstream changes
 git orchard push [prefix...]            # publish, fast-forward only
