@@ -1,17 +1,22 @@
-<h1 align="center">5 Wild</h1>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/wordmark-dark.svg">
+    <img src="assets/wordmark-light.svg" alt="5 Wild" width="414">
+  </picture>
+</p>
 
 <p align="center"><b>A word-guessing roguelike.</b></p>
 
 <p align="center">
   <a href="https://5-wild.com"><img alt="Play now" src="https://img.shields.io/badge/Play%20now-5--wild.com-538d4e?style=for-the-badge&logoColor=white"></a>
-  <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild.apk"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-b59f3b?style=for-the-badge&logo=android&logoColor=white"></a>
+  <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild.apk"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-3a3a3c?style=for-the-badge&logo=android&logoColor=white"></a>
 </p>
+
+---
 
 <p align="center">
   <img src="assets/screenshot.png" alt="A boss round of 5 Wild in progress: The Drought making vowels score no chips, five relics above the keyboard, and a score of 3,786 against a 4,000 target" width="380">
 </p>
-
----
 
 Guess the five-letter word, but every guess you play is also a hand you score.
 Letters are worth chips by how rare they are, green and yellow feedback adds
