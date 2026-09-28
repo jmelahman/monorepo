@@ -4047,6 +4047,20 @@ button {
   user-select: text;
 }
 
+/* The hash is for whoever is filing the bug, and a phone has a better place to
+   find it: the report link on the about sheet carries the full stamp into the
+   issue on its own. On a thumb-width floor it is only noise beside the version,
+   so it shows from the same 40rem the title wash widens at. */
+.title-build-commit {
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .title-build-commit {
+    display: inline;
+  }
+}
+
 /* ---------------------------------------------------------- shop, exits */
 
 /* The shop's own pair of exits. Down here rather than beside `.shop-actions`

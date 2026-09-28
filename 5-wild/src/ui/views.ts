@@ -2516,7 +2516,15 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
       "div",
       { class: "title-foot" },
       languageButton(on, chrome, "title-pill"),
-      h("p", { class: "title-build" }, buildStamp()),
+      // The hash as its own node so a phone can drop it; see `.title-build-commit`.
+      h(
+        "p",
+        { class: "title-build" },
+        `v${__BUILD_VERSION__}`,
+        __BUILD_COMMIT__
+          ? h("span", { class: "title-build-commit" }, ` · ${__BUILD_COMMIT__}`)
+          : null,
+      ),
       // The ⓘ beside the speaker rather than on its own corner: both are
       // round, unlabelled and about the game rather than a run, and the floor
       // has three places, not four.
@@ -3798,11 +3806,16 @@ export function quitView(state: RunState, on: Handlers): HTMLElement {
         state.won ? copy.bodyEndless(state.stage, round) : copy.body(state.stage, STAGES, round),
       ),
     ),
+    // Built to the pause sheet's shape, Quit in `.sheet-actions` and the way
+    // back below it on the sheet's own gap, because this sheet replaces that one
+    // with the same button under the same thumb. Both inside the stack, as they
+    // were, put 0.5rem under Quit where the pause sheet has 0.75rem, and the
+    // button the player just pressed landed 4px lower than where they pressed it.
     h(
       "div",
       { class: "sheet-actions" },
       h("button", { class: "danger", type: "button", onclick: () => on.quit() }, copy.confirm),
-      h("button", { class: "primary", type: "button", onclick: () => on.openMenu() }, copy.cancel),
     ),
+    h("button", { class: "primary", type: "button", onclick: () => on.openMenu() }, copy.cancel),
   )
 }
