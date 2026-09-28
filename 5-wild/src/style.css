@@ -3959,11 +3959,12 @@ button {
    that the pill runs from 102.3 ("English") to 109.4 ("Français"), so a
    language switch nudges the stamp by half the difference, 3.6px.
 
-   The row needs the widest pill, the 106.2 stamp, the three dials' 148 and the
-   gaps, 380, which is 23.75rem of the screen's content box (a container query
-   measures inside the padding, so a 390 phone has 350). Below that the stamp
-   drops to a line of its own under the other two. Queried on the screen, since
-   a container cannot query itself. */
+   The row needs the widest pill, the three dials' 148 and the gaps, 273,
+   before the stamp gets any of it, and the stamp takes whatever is left and
+   ellipsizes into it rather than pushing anything. It used to drop to a line
+   of its own below 23.75rem instead, which on a 320 phone was a second row
+   under the controls to hold six characters; the version is the one thing on
+   the floor nobody taps, so it is the one that gives. */
 .title-foot {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -3983,16 +3984,6 @@ button {
      yields, in every language at once rather than only in the long ones. */
   .title-more .icon {
     display: none;
-  }
-}
-
-/* The floor on two rows, the build stamp under the controls; see `.title-foot`
-   for the 23.75rem. */
-@container title (max-width: 24rem) {
-  .title-foot {
-    grid-template-columns: auto auto;
-    grid-template-areas: "lang sound" "build build";
-    justify-content: space-between;
   }
 }
 
@@ -4037,6 +4028,12 @@ button {
 .title-build {
   grid-area: build;
   justify-self: center;
+  /* Ellipsized rather than wrapped; see `.title-foot`. The column is
+     `minmax(0, 1fr)`, so the cap is what makes this box narrower than its text
+     rather than the column wider than its share. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.75rem;
   letter-spacing: 0.04em;
