@@ -3,8 +3,9 @@ name: Android
 # Builds the two Android packages, which are the same code aimed at two doors.
 #
 # The APK is the sideload: every push builds one so a break is caught at the
-# commit that caused it, but only a published release gets a signed build
-# attached to it — that asset is the install path for a phone, reachable at
+# commit that caused it, but only a pushed `v*` tag gets a signed build, and
+# the GitHub release for that tag with it attached — that asset is the install
+# path for a phone, reachable at
 # https://github.com/jmelahman/5-wild/releases/latest/download/5-wild.apk
 # without a GitHub login, which a workflow artifact is not.
 #
@@ -17,10 +18,16 @@ on:
   push:
     branches:
       - master
+    # The tag is the release, not the other way round. This used to listen for
+    # `release: published`, which left the release page as a step someone had
+    # to remember; now pushing the tag is the whole act, and the publish job
+    # below creates the release if nobody has yet. A release made by hand still
+    # works, because making one pushes its tag: the job finds the release
+    # already there and only attaches the APK. Listening for both would build
+    # and sign twice for that one release, racing two uploads of one asset.
+    tags:
+      - "v*"
   pull_request:
-  release:
-    types:
-      - published
   workflow_dispatch:
 
 permissions: {}
@@ -37,7 +44,7 @@ jobs:
       # release, and a restored npm cache is writable by any pull request that
       # ran before it — a poisoned cache would be executing inside the one job
       # that can sign an APK. `npm ci` cold costs a few seconds; not a close
-      # trade. zizmor flags setup-node on a release trigger regardless of the
+      # trade. zizmor flags setup-node on a signing trigger regardless of the
       # input, so the opt-out below is the fix and this is the paperwork.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # zizmor: ignore[cache-poisoning]
         with:
@@ -62,11 +69,11 @@ jobs:
       - run: npm run build
       - run: npx cap sync android
 
-      # Only a release gets the real key. A push build is unsigned on purpose:
+      # Only a tag gets the real key. A push build is unsigned on purpose:
       # it proves the build works without handing the signing material to every
       # commit, and an unsigned APK cannot be installed by accident.
       - name: Decode signing key
-        if: github.event_name == 'release'
+        if: github.ref_type == 'tag'
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
@@ -89,7 +96,7 @@ jobs:
           # attempt got as far as a Play upload, the retry needs a bump — push
           # an empty commit rather than re-running the job.
           ANDROID_VERSION_CODE: ${{ github.run_number }}
-          ANDROID_VERSION_NAME: ${{ github.event.release.tag_name || github.sha }}
+          ANDROID_VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: ./gradlew assembleRelease bundleRelease --no-daemon
         working-directory: android
@@ -128,7 +135,7 @@ jobs:
 
   publish:
     needs: apk
-    if: github.event_name == 'release'
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       # The only scope in this workflow that can write anything, confined to the
@@ -139,11 +146,23 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: 5-wild-apk
+      # Created only after the signed build exists, so a tag whose build fails
+      # leaves no release behind claiming a version that has no APK, and
+      # /releases/latest/download keeps pointing at one that does. A release
+      # already there was made by hand (see the trigger) and is left as written.
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 ||
+            gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"
       - name: Attach the APK to the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.ref_name }}
         # --clobber so re-running a failed publish replaces the asset rather
         # than erroring on a name that is already taken.
         run: gh release upload "$TAG" 5-wild.apk --clobber

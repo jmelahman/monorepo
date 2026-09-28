@@ -45,13 +45,18 @@ run the script, and commit what changes.
 
 ## Releasing
 
-The web build is wrapped by Capacitor. Publishing a GitHub release builds a
-signed APK and attaches it, which is the whole publishing step:
+The web build is wrapped by Capacitor. Pushing a `v*` tag builds a signed APK,
+creates the GitHub release for that tag with generated notes, and attaches the
+APK to it, which is the whole publishing step:
 
 ```sh
 npm version patch --no-git-tag-version   # and commit it
-gh release create "v$(npm pkg get version --workspaces=false | tr -d '"')" --generate-notes
+git tag "v$(npm pkg get version --workspaces=false | tr -d '"')"   # and push that one tag
 ```
+
+`gh release create` still works for a release that wants hand-written notes: it
+pushes the tag, and the workflow finds the release already there and only
+attaches the APK.
 
 The tag is `v` plus the version in `package.json`, and that pair moves once per
 phase of work: a phase that changed nothing a player can see does not need a
