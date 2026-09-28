@@ -2,6 +2,17 @@
  * Mobile-first baseline. Every rule in the first two blocks exists because of a
  * specific Android WebView behavior documented in plans §4.6; read before
  * removing. Everything below that is the game.
+ *
+ * The file is laid out by component, each rule beside the comment that argues
+ * for it, and that is why Biome's noDescendingSpecificity is off for it in
+ * biome.json. The rule wants selectors sorted by specificity across the whole
+ * sheet, and it flagged ten pairs, none of them a bug: most never match the same
+ * element (`.shop-item.sold .icon` against the ladder's and the title's icons;
+ * a sold card holds a check and a label and nothing else), the rest set
+ * disjoint properties, and the one real overlap, `.readout.solved .mult` over
+ * `.readout .mult`, is the more specific rule meant to win and winning. Sorting
+ * would have scattered `.plain`, `.quiet` and the press transition across the
+ * file to quiet a warning about an override nobody was relying on.
  */
 
 :root {
