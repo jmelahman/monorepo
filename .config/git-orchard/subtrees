@@ -142,6 +142,11 @@
 	shared = manygo
 	shared = fullstack
 	shared = pybuild
+[subtree "templates/godot-template"]
+	remote = git@github.com:jmelahman/godot-template.git
+	branch = master
+	shared = base
+	shared = shell
 [subtree "templates/golang-template"]
 	remote = git@github.com:jmelahman/golang-template.git
 	branch = master
