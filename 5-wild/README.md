@@ -12,10 +12,7 @@
   <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild.apk"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-3a3a3c?style=for-the-badge&logo=android&logoColor=white"></a>
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/rule-dark.svg">
-  <img src="assets/rule-light.svg" alt="" width="100%" height="2">
-</picture>
+---
 
 <p align="center">
   <img src="assets/screenshot.png" alt="A boss round of 5 Wild in progress: The Drought making vowels score no chips, five relics above the keyboard, and a score of 3,786 against a 4,000 target" width="380">
