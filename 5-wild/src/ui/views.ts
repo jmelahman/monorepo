@@ -2275,7 +2275,12 @@ export function endView(state: RunState, on: Handlers): HTMLElement {
       "div",
       { class: "panel" },
       lost && h("div", { class: "answer-note" }, ui().reward.answerWas(state.round.answer)),
+      // Only when the score is what fell short. At ascension 10 a run also ends
+      // on a word left unsolved with the target met, and there "short by" would
+      // print zero or a negative number for a loss the points had nothing to do
+      // with; the answer above is the whole of what that ending has to say.
       lost &&
+        state.round.score < state.round.target &&
         h(
           "div",
           { class: "score-note" },
