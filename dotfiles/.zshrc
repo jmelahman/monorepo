@@ -418,6 +418,12 @@ if [ "$IN_DOCKER" != "true" ]; then
 fi
 export HOST_PORT_80="8888"
 
+# Resolve container hostnames (e.g. ollama) to published ports on the host.
+# Inside containers, Docker's DNS already resolves them.
+if [ "$IN_DOCKER" != "true" ]; then
+	export HOSTALIASES="$HOME/.hosts"
+fi
+
 #export OLLAMA_HOST=http://ollama.home
 #export OLLAMA_API_BASE="$OLLAMA_HOST"
 
