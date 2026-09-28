@@ -6,6 +6,16 @@
       "apiKey": "ollama",
       "models": [
         {
+          "id": "gemma4:26b",
+          "name": "Gemma 4 26B",
+          "contextWindow": 131072
+        },
+        {
+          "id": "gemma4:e4b",
+          "name": "Gemma 4 E4B",
+          "contextWindow": 131072
+        },
+        {
           "id": "qwen3.6:35b-a3b",
           "name": "Qwen 3.6 35B-A3B",
           "contextWindow": 131072
@@ -13,11 +23,6 @@
         {
           "id": "qwen3.8:27b",
           "name": "Qwen 3.8 27B",
-          "contextWindow": 131072
-        },
-        {
-          "id": "qwen3.5:6b",
-          "name": "Qwen 3.5 8B",
           "contextWindow": 131072
         }
       ]
