@@ -404,8 +404,6 @@ export const en: Strings = {
       play: "Play",
       howToPlay: "How to play",
       codex: "Codex",
-      soundOn: "Sound on",
-      soundOff: "Sound off",
       sound: {
         off: "Sound: off",
         sound: "Sound: effects",
@@ -637,9 +635,6 @@ export const en: Strings = {
       firstEarned: "Ascension 1 is earned, and the run can be made harder",
       earned: (level, next) => `Ascension ${level} cleared, and ${next} is earned`,
       topOfLadder: (level) => `Ascension ${level} cleared. There is nothing above it.`,
-      shareLater: "You can change this later in the menu.",
-      shareYes: "Share",
-      shareNo: "No thanks",
     },
 
     title: {
@@ -902,9 +897,10 @@ export const en: Strings = {
 
     pause: {
       title: "Paused",
-      musicOn: "Music on",
-      musicOff: "Music off",
-      speed: (speed) => `Animation speed ×${speed}`,
+      sound: "Sound",
+      music: "Music",
+      track: "Track",
+      speed: "Animation speed",
       language: "Language",
       wordsNextRun: "Words change when you start a new run.",
       quit: "Quit run",
@@ -931,7 +927,7 @@ export const en: Strings = {
       title: "Credits",
       madeBy: "Made by",
       music: "Music",
-      musicText: (piece, artist) => `“${piece}” by ${artist}. CC0.`,
+      musicText: (piece) => ({ before: `“${piece}” by `, after: "." }),
       sounds: "Sounds",
       soundsText: (people) => `Kenney, and ${people} on Freesound. All CC0.`,
       licence: "Licence",

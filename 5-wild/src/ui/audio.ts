@@ -35,9 +35,9 @@
  * Vorbis at q5; a replacement should be treated the same, or its entry in
  * `LEVELS` will not mean what the others do.
  *
- * The AudioContext is created lazily on the first sound, never at import: a
- * context constructed before a user gesture starts life suspended, and browsers
- * count that against the page.
+ * The AudioContext is created lazily, never at import. The first thing to ask
+ * for it is the music trying to start at boot (see `autostart`), which in most
+ * browsers gets a suspended context that the first gesture then resumes.
  */
 
 const MUTE_KEY = "5wild:muted"
@@ -53,8 +53,9 @@ let mix: Mix | null = null
  * The one AudioContext, shared by the effects and the music.
  *
  * Mobile browsers cap how many a page may hold and count a suspended one
- * against it, so this stays lazy: the first sound builds it, and a page that
- * never makes a noise never has one.
+ * against it, so this stays lazy and single: the music's boot attempt or the
+ * first sound builds it, and a page with the music off that never makes a
+ * noise never has one.
  */
 export function audioContext(): AudioContext | null {
   if (shared || refused) return shared

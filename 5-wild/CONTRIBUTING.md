@@ -282,13 +282,13 @@ taken from it.
 ## Telemetry
 
 The bots above answer what the rules are like for a policy. Players who opt in
-answer what they are like for people. At the end of a run the game asks once
-whether to share run replays. A yes sends each finished run as a replay:
-seed, ascension, word-list language, and the accepted actions with typing folded
-into one `guess` per submit, a few KB each. It carries no identifier, no clock
-and no settings. `src/ui/telemetry.ts` is the client and
-`public/privacy/index.html` says the same thing to players. Change them
-together.
+answer what they are like for people. A switch on the about and pause sheets,
+off until turned on and never prompted for, shares run replays. On, it sends
+each finished run as a replay: seed, ascension, word-list language, and the
+accepted actions with typing folded into one `guess` per submit, a few KB each.
+It carries no identifier, no clock and no settings. `src/ui/telemetry.ts` is the
+client and `public/privacy/index.html` says the same thing to players. Change
+them together.
 
 The address is `DEPLOYED` in `src/ui/telemetry.ts`, in source because it is
 public anyway, and emptying it switches the whole feature off. `VITE_TELEMETRY_URL`

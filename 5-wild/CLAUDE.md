@@ -203,19 +203,21 @@ style but not its prose is half-finished.
 ## Storage
 
 `5wild:run:v2` (the run save), `5wild:run:lang` and `5wild:run:log` beside it,
-`5wild:meta:v2` (the record), seven settings: `5wild:plain`, `5wild:speed`,
-`5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:coached`, `5wild:telemetry`,
-and the two telemetry queues, `5wild:telemetry:held` and
-`5wild:telemetry:outbox`. All the settings are booleans except four:
+`5wild:meta:v2` (the record), eight settings: `5wild:plain`, `5wild:speed`,
+`5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
+`5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. All the
+settings are booleans except five: `5wild:track` holds `promises` or
+`forget-me-not`, which recording plays, anything else reading as the first;
 `5wild:plain` holds one of `all`, `minimal` or `none`, how much of the scoring
 game the board draws on itself; `5wild:speed` holds `1`, `2` or `3`, how many
-times faster than authored the animations play; `5wild:lang` holds one of
-`en`, `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent
-meaning "not asked yet" and `asked` meaning the question is on an end screen
-right now. The next run turns an unanswered `asked` into `off`: the game asks
-once, and silence is a no. The switch for changing one's mind is on the about
-sheet behind the title screen's ⓘ and on the pause sheet. Adding
-an optional field needs no key bump; changing what an existing field means does.
+times faster than authored the animations play; `5wild:lang` holds one of `en`,
+`es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning
+the switch has never been touched, which sends nothing. The game never asks: the
+switch is on the about sheet behind the title screen's ⓘ and on the pause sheet,
+and nowhere else. An end-screen question used to ask once after the first run;
+old installs may still hold its `asked` value and an orphaned
+`5wild:telemetry:held`, and both read as no answer. Adding an optional field
+needs no key bump; changing what an existing field means does.
 
 `5wild:run:log` is the run's replay, for opt-in telemetry (`src/ui/telemetry.ts`):
 the seed, the ascension and every accepted action, with typing folded into one
@@ -226,9 +228,7 @@ before the key) plays on unlogged and is never sent, and the log carries the
 run's seed so a stale one can't be mistaken for it. What leaves the device is a replay,
 not a report, so every balance question is answered by replaying it against the
 engine in `test/telemetry-report.test.ts`. That replay is also the validation,
-which is why the worker in `telemetry/` checks shape and nothing else. `held` is
-one slot, the run whose end screen asked the question, so a yes sends what was on
-screen when it was given and never a backlog.
+which is why the worker in `telemetry/` checks shape and nothing else.
 
 `5wild:run:lang` is the only key that is neither a setting nor part of a blob,
 and it is required rather than optional, which is unusual enough to say why. The

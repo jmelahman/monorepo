@@ -107,18 +107,18 @@ export type Payload = {
 }
 
 /**
- * `null` means no answer yet. The key also holds a fourth value that never
- * leaves this module, `asked`: the question has been on screen once and not
- * answered. That still reads as `null`, so the end screen that showed it keeps
- * showing it through every re-render, and `lapse` turns it into `off` when the
- * player moves on.
+ * `null` means the switch has never been touched, which sends nothing, the same
+ * as `off`. It is kept apart only so the record of an answer stays an answer.
+ *
+ * The key once held a fourth value, `asked`, from when the end of a player's
+ * first run carried the question under its buttons. It reads as `null` like any
+ * other stranger, which is what it means now: nobody said yes.
  */
 export type Consent = "on" | "off" | null
 
 const LOG_KEY = "5wild:run:log"
 const CONSENT_KEY = "5wild:telemetry"
 const OUTBOX_KEY = "5wild:telemetry:outbox"
-const HELD_KEY = "5wild:telemetry:held"
 
 /**
  * Runs waiting for a connection. A phone that plays offline for a month should
@@ -224,77 +224,30 @@ export function loadConsent(): Consent {
 }
 
 /**
- * Record the answer and settle whatever was waiting on it.
+ * Record the answer. Only the about and pause sheets ask, so there is never a
+ * run on screen to go with a yes: sharing starts from the next finished run. A
+ * switch to off empties the outbox, since a run queued under a yes that has
+ * since been withdrawn is no longer one the player is offering.
  *
- * A yes sends the held run, which is the one whose end screen asked: the player
- * was looking at it when they agreed. Nothing older, because nothing older was
- * kept, and that is deliberate. A no, or a later switch to off, empties both the
- * held slot and the outbox, since a run queued under a yes that has since been
- * withdrawn is no longer one the player is offering.
+ * There used to be a question on the end screen, asked once after the first
+ * run, and a `held` slot beside it for the run it was asked under. It is gone,
+ * and the switch on those two sheets is now the only way in. Old installs keep an orphaned `5wild:telemetry:held`; nothing reads it.
  */
 export function setConsent(consent: "on" | "off"): void {
   try {
     localStorage.setItem(CONSENT_KEY, consent)
-    const held = localStorage.getItem(HELD_KEY)
-    localStorage.removeItem(HELD_KEY)
-    if (consent === "on" && held) enqueue(JSON.parse(held) as Payload)
     if (consent === "off") localStorage.removeItem(OUTBOX_KEY)
   } catch {
-    // The answer lasts the session. The prompt comes back on the next launch.
-  }
-}
-
-/**
- * The question is on screen. Written by the render that shows it, and only over
- * an absent key, so it is idempotent across the rebuilds of one end screen.
- */
-export function markAsked(): void {
-  try {
-    if (localStorage.getItem(CONSENT_KEY) === null) localStorage.setItem(CONSENT_KEY, "asked")
-  } catch {
-    // Unmarked, so it is asked again next time. The same as storage being gone.
-  }
-}
-
-/**
- * The player left an end screen without answering, and that is the answer.
- *
- * It used to ask again at every end screen until one of the buttons was
- * pressed, which is the version of telemetry players complain about: a
- * question that will not take silence for a no. Now it is asked once, and
- * ignoring it is a no, recorded the same way the button records one, so the
- * held run goes with it. The about and pause sheets still have the switch.
- */
-export function lapse(): void {
-  try {
-    if (localStorage.getItem(CONSENT_KEY) === "asked") setConsent("off")
-  } catch {
-    // Unread storage is unanswered storage; it asks again, which is harmless.
+    // The answer lasts the session. The switch reads off again on the next launch.
   }
 }
 
 /* -------------------------------------------------------------- outbox */
 
-/**
- * Hand a finished run to whatever the consent says to do with it: queue it,
- * hold it for the question, or drop it.
- *
- * Held is one slot, not a list. The question is asked on the end screen of the
- * run in the slot, so an unanswered question followed by another run replaces it
- * rather than piling up runs for a yes that would then send more than was on
- * screen when it was given.
- */
+/** Queue a finished run if sharing is on; otherwise it goes nowhere. */
 export function file(run: Payload, consent: Consent): void {
-  if (!enabled() || consent === "off") return
-  if (consent === "on") {
-    enqueue(run)
-    return
-  }
-  try {
-    localStorage.setItem(HELD_KEY, JSON.stringify(run))
-  } catch {
-    // Not held, so a yes to this run's question sends nothing. Nothing else lost.
-  }
+  if (!enabled() || consent !== "on") return
+  enqueue(run)
 }
 
 export function readOutbox(): Payload[] {

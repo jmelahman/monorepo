@@ -125,7 +125,9 @@ export type Handlers = {
   /** The effects alone. The music has its own switch and ignores this one. */
   toggleEffects: () => void
   toggleMusic: () => void
-  /** The answer to the end screen's question, or the switch for it on either sheet. */
+  /** Step to the other recording, from its top. */
+  nextTrack: () => void
+  /** The sharing switch, on the about sheet or the pause sheet. */
   setSharing: (on: boolean) => void
   /** Step the board down a level of decoration, wrapping back to all of it. */
   cycleDecor: () => void
@@ -171,6 +173,8 @@ export type Chrome = {
   /** The two switches `sound` is read from, for the pause sheet's rows. */
   effectsOff: boolean
   musicOff: boolean
+  /** The chosen recording's title, which no language translates. */
+  track: string
   decor: Decor
   speed: Speed
   /**
@@ -193,11 +197,11 @@ export type Chrome = {
    */
   coachOffer: boolean
   /**
-   * Whether run replays are shared: `ask` until the player has answered, and
-   * null when this build has nowhere to send them, in which case neither the
-   * question nor the switch is drawn. See `./telemetry`.
+   * Whether run replays are shared, `off` until the player turns it on, and
+   * null when this build has nowhere to send them, in which case the switch is
+   * not drawn. See `./telemetry`.
    */
-  sharing: "on" | "off" | "ask" | null
+  sharing: "on" | "off" | null
   /**
    * Sharing was just turned on, and the screen it was turned on from says
    * thanks. `fresh` for the render that answers the tap, which is the one the
@@ -2255,7 +2259,7 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
  * lying to make a button look brave. What is really being asked is whether to
  * start something new or find out where this one breaks.
  */
-export function endView(state: RunState, on: Handlers, chrome: Chrome): HTMLElement {
+export function endView(state: RunState, on: Handlers): HTMLElement {
   const copy = ui().end
   const offering = state.phase === "victory"
   const lost = state.phase === "game_over"
@@ -2298,43 +2302,6 @@ export function endView(state: RunState, on: Handlers, chrome: Chrome): HTMLElem
         onclick: () => (offering ? on.quit() : on.newRun()),
       },
       offering ? copy.mainMenu : copy.newRun,
-    ),
-    // The question is answered in place: a yes turns it into the thanks, a no
-    // takes it away. Either way nothing else on the screen moves.
-    chrome.thanked ? thanks(chrome.thanked) : chrome.sharing === "ask" && shareAsk(on),
-  )
-}
-
-/**
- * The one time the game asks to send anything, under the buttons that end the
- * run so it never stands between the player and the next one.
- *
- * Here, at the end of a run, rather than at a first launch: this is the first
- * moment the player knows what "a run" is, so it is the first moment "share
- * your runs" means anything, and a yes can include the run on screen. It is not
- * a sheet and does not block, and it is asked once: walking past it to the next
- * run is a no, and nothing asks again (see `lapse`). The pause sheet has the
- * switch for changing one's mind.
- */
-function shareAsk(on: Handlers): HTMLElement {
-  const copy = ui().end
-  return h(
-    "div",
-    { class: "share-ask" },
-    h("p", {}, `${ui().about.sharingNote} ${copy.shareLater} `, privacyLink()),
-    h(
-      "div",
-      { class: "share-choices" },
-      h(
-        "button",
-        { class: "secondary share-choice", type: "button", onclick: () => on.setSharing(false) },
-        copy.shareNo,
-      ),
-      h(
-        "button",
-        { class: "secondary share-choice", type: "button", onclick: () => on.setSharing(true) },
-        copy.shareYes,
-      ),
     ),
   )
 }
@@ -2412,7 +2379,6 @@ function languageButton(on: Handlers, chrome: Chrome, look = "secondary"): HTMLE
     {
       class: `${look} lang-button`,
       type: "button",
-      "data-focus": look === "setting" ? "lang" : undefined,
       "aria-label": `${ui().pause.language}: ${LANG_NAMES[chrome.lang]}`,
       onclick: () => on.cycleLanguage(),
     },
@@ -3418,7 +3384,7 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       { class: "settings" },
       setting(
         { "data-focus": "sound", onclick: () => on.toggleEffects() },
-        chrome.effectsOff ? common.soundOff : common.soundOn,
+        copy.sound,
         !chrome.effectsOff,
       ),
       // Music gets its own switch rather than riding on the sound one: it plays
@@ -3435,9 +3401,14 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       // pair unreachable.
       setting(
         { "data-focus": "music", onclick: () => on.toggleMusic() },
-        chrome.musicOff ? copy.musicOff : copy.musicOn,
+        copy.music,
         !chrome.musicOff,
       ),
+      // Which recording, named, and a tap steps to the other. Under the music
+      // switch because it is that switch's detail, and live while the music is
+      // off, so a player can pick the track before turning it back on and hear
+      // the one they chose rather than the one they were escaping.
+      setting({ "data-focus": "track", onclick: () => on.nextTrack() }, copy.track, chrome.track),
       // How fast the game plays what it has to say, and unlike the letter values
       // below it, this one belongs on the sheet. The argument that moved the
       // decoration switch onto the board was that its effect could not be seen
@@ -3449,9 +3420,26 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       // It reads as the multiplier it is rather than as a name for one. "Brisk"
       // needs a legend and invites a second opinion about what brisk means;
       // "×2" is the whole of the arithmetic, and a player who wants the cascade
-      // out of the way can tap until the number is big enough.
-      setting({ "data-focus": "speed", onclick: () => on.cycleSpeed() }, copy.speed(chrome.speed)),
-      languageButton(on, chrome, "setting"),
+      // out of the way can tap until the number is big enough. Written here and
+      // not in the catalogs: `×` is the glyph the modifier pips use, and it is
+      // the same in all four.
+      setting(
+        { "data-focus": "speed", onclick: () => on.cycleSpeed() },
+        copy.speed,
+        `×${chrome.speed}`,
+      ),
+      // The same flag and endonym as the title screen's pill, as this row's
+      // value. No `lang` attribute, for the reason `languageButton` gives.
+      setting(
+        { "data-focus": "lang", onclick: () => on.cycleLanguage() },
+        copy.language,
+        h(
+          "span",
+          { class: "lang-value" },
+          h("span", { class: "lang-flag" }, LANG_FLAGS[chrome.lang]),
+          LANG_NAMES[chrome.lang],
+        ),
+      ),
       // Run sharing, the same switch as the one on the about sheet. It is a
       // choice about the game rather than this run, which argued for the about
       // sheet alone, but that sheet is only on the title screen, and a player who
@@ -3636,12 +3624,42 @@ function reportUrl(): string {
 }
 
 /**
- * Who made what. Every recording is CC0, so none of this is owed; it is here
- * because the people are worth naming. `sounds/CREDITS.md` and
+ * Who made what. The effects are CC0, so none of that is owed; it is here
+ * because the people are worth naming. The music links to its composers. `sounds/CREDITS.md` and
  * `tracks/CREDITS.md` are the ledger of which file came from where, and this is
  * the reader's version of the same two tables.
  */
 const FREESOUND = ["tonmayster", "Paloma.SSSS", "NachtmahrTV", "plasterbrain"]
+
+/** Both tracks the pause sheet can switch between, in the order it steps through them. */
+const MUSIC = [
+  { piece: "promises", artist: "kate", url: "https://kate.garden/" },
+  {
+    piece: "Forget-me-not in F major",
+    artist: "Kistol",
+    url: "https://opengameart.org/users/kistol",
+  },
+]
+
+/** A `rule` row, each artist's name a link; see `privacyLink` for why a link. */
+function musicCredit(): HTMLElement {
+  const copy = ui().credits
+  return h(
+    "div",
+    { class: "rule" },
+    h("strong", {}, copy.music),
+    ...MUSIC.map(({ piece, artist, url }) => {
+      const { before, after } = copy.musicText(piece)
+      return h(
+        "span",
+        {},
+        ` ${before}`,
+        h("a", { class: "inline-link", href: url, target: "_blank", rel: "noopener" }, artist),
+        after,
+      )
+    }),
+  )
+}
 
 export function creditsView(on: Handlers): HTMLElement {
   const copy = ui().credits
@@ -3653,7 +3671,7 @@ export function creditsView(on: Handlers): HTMLElement {
       "div",
       { class: "sheet-body" },
       rule({ term: copy.madeBy, text: "Jamison Lahman" }),
-      rule({ term: copy.music, text: copy.musicText("Forget-me-not in F major", "Kistol") }),
+      musicCredit(),
       rule({ term: copy.sounds, text: copy.soundsText(people) }),
       rule({ term: copy.licence, text: copy.licenceText }),
     ),
@@ -3676,22 +3694,46 @@ export function creditsView(on: Handlers): HTMLElement {
  * `data-focus` on each, so a keyboard player toggling sound keeps their place in
  * the list across the rebuild instead of being thrown back to the sheet's top.
  */
+/**
+ * One row of a settings list, and every row is the same two columns: what the
+ * setting is called on the left, what it is set to on the right. A switch (`end`
+ * a boolean) is its own value. Anything else is written out, quieter than the
+ * name, with a chevron after it, because a value on the right of a row reads as
+ * information until something says the row can be pressed.
+ *
+ * The rows used to be sentences instead ("Music off", "Track: promises",
+ * "Animation speed ×2"), which put the part that changes somewhere different on
+ * every row and, in Spanish and German, far enough along to wrap. Naming the
+ * setting and not its state is also what a switch wants read aloud: the role
+ * and `aria-checked` already say on or off, so "Music off, switch, off" said
+ * it twice.
+ */
 function setting(
   attrs: { "data-focus": string; disabled?: boolean; onclick: () => void },
   label: string,
-  on?: boolean,
+  end?: boolean | Node | string,
 ): HTMLElement {
+  const toggle = typeof end === "boolean"
   return h(
     "button",
     {
       class: "setting",
       type: "button",
-      role: on === undefined ? undefined : "switch",
-      "aria-checked": on === undefined ? undefined : String(on),
+      role: toggle ? "switch" : undefined,
+      "aria-checked": toggle ? String(end) : undefined,
       ...attrs,
     },
     h("span", { class: "setting-label" }, label),
-    on === undefined ? null : h("span", { class: "switch", "aria-hidden": "true" }),
+    toggle
+      ? h("span", { class: "switch", "aria-hidden": "true" })
+      : end === undefined
+        ? null
+        : h(
+            "span",
+            { class: "setting-value" },
+            end,
+            h("span", { class: "setting-more", "aria-hidden": "true" }, "›"),
+          ),
   )
 }
 

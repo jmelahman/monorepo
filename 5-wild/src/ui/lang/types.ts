@@ -199,8 +199,6 @@ export type Strings = {
       play: string
       howToPlay: string
       codex: string
-      soundOn: string
-      soundOff: string
       /**
        * The title speaker's `aria-label`, one per level. Each is the setting's
        * name and then its value ("Sound: off"), so it reads as what is playing
@@ -433,19 +431,6 @@ export type Strings = {
       firstEarned: string
       earned: (level: number, next: number) => string
       topOfLadder: (level: number) => string
-      /**
-       * The one request to send anything off the device, asked under a
-       * finished run. It has to say what is sent and what is not in the same
-       * breath, because that is the whole of what the player is agreeing to,
-       * and where to undo it, because no second prompt will say so.
-       */
-      /**
-       * The tail on the question, after `about.sharingNote`, which is the rest of
-       * it: the case for sharing is written once and read in both places.
-       */
-      shareLater: string
-      shareYes: string
-      shareNo: string
     }
 
     title: {
@@ -599,20 +584,20 @@ export type Strings = {
 
     pause: {
       title: string
-      musicOn: string
-      musicOff: string
       /**
-       * The multiplier is the label, so the only part of this a translator
-       * writes is the noun in front of it. `×` travels: it is the same glyph
-       * the modifier pips use, and it is not read aloud in any of the four.
+       * The settings rows, each the name of a setting and never its state: the
+       * value sits on the right of the row, drawn as a switch or written out
+       * (the track's title, `×2`, a flag and an endonym), and none of it is
+       * the translator's. See `setting` in `views.ts`.
        */
-      speed: (speed: number) => string
+      sound: string
+      music: string
+      track: string
+      speed: string
       /**
-       * Never seen, only heard: the language button shows a flag and an endonym,
-       * and this is the noun in front of them in its accessible name, which is
-       * what tells a screen reader that "Español" is the setting rather than the
-       * destination. The endonym is a proper noun, so this is the only word here
-       * a translator writes.
+       * Also the noun in front of the title screen's language pill in its
+       * accessible name, which is what tells a screen reader that "Español" is
+       * the setting rather than the destination.
        */
       language: string
       /**
@@ -638,7 +623,7 @@ export type Strings = {
        * row's end says on or off, and the label says what is being shared.
        */
       sharing: string
-      /** Under the switch, and the body of the end screen's question. */
+      /** Under the switch on the about sheet: what is sent, and what is not. */
       sharingNote: string
       /**
        * A sentence after the note, pointing at the privacy page's account of
@@ -664,7 +649,12 @@ export type Strings = {
       title: string
       madeBy: string
       music: string
-      musicText: (piece: string, artist: string) => string
+      /**
+       * The sentence around the artist's name, which the view draws as a link
+       * to their site. Two pieces for the same reason as `about.privacy`: where
+       * the name falls is the language's business.
+       */
+      musicText: (piece: string) => { before: string; after: string }
       sounds: string
       /** `people` arrives already joined, by `Intl.ListFormat` in the language in force. */
       soundsText: (people: string) => string

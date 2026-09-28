@@ -382,8 +382,6 @@ export const es: Strings = {
       play: "Jugar",
       howToPlay: "Cómo se juega",
       codex: "Códice",
-      soundOn: "Sonido activado",
-      soundOff: "Sonido desactivado",
       sound: {
         off: "Sonido: desactivado",
         sound: "Sonido: efectos",
@@ -579,9 +577,6 @@ export const es: Strings = {
       firstEarned: "Has ganado la ascensión 1, y la partida ya puede ponerse más difícil",
       earned: (level, next) => `Ascensión ${level} superada, y has ganado la ${next}`,
       topOfLadder: (level) => `Ascensión ${level} superada. No hay nada por encima.`,
-      shareLater: "Puedes cambiarlo más tarde en el menú.",
-      shareYes: "Compartir",
-      shareNo: "No, gracias",
     },
 
     title: {
@@ -835,9 +830,10 @@ export const es: Strings = {
 
     pause: {
       title: "En pausa",
-      musicOn: "Música activada",
-      musicOff: "Música desactivada",
-      speed: (speed) => `Velocidad de animación ×${speed}`,
+      sound: "Sonido",
+      music: "Música",
+      track: "Pista",
+      speed: "Velocidad de animación",
       language: "Idioma",
       wordsNextRun: "Las palabras cambian cuando empieces una partida nueva.",
       quit: "Abandonar partida",
@@ -865,7 +861,7 @@ export const es: Strings = {
       title: "Créditos",
       madeBy: "Hecho por",
       music: "Música",
-      musicText: (piece, artist) => `«${piece}», de ${artist}. CC0.`,
+      musicText: (piece) => ({ before: `«${piece}», de `, after: "." }),
       sounds: "Sonidos",
       soundsText: (people) => `Kenney, y ${people} en Freesound. Todo CC0.`,
       licence: "Licencia",

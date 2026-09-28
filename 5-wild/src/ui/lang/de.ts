@@ -388,8 +388,6 @@ export const de: Strings = {
       play: "Spielen",
       howToPlay: "Spielanleitung",
       codex: "Kodex",
-      soundOn: "Ton an",
-      soundOff: "Ton aus",
       sound: {
         off: "Ton: aus",
         sound: "Ton: Effekte",
@@ -588,9 +586,6 @@ export const de: Strings = {
       firstEarned: "Aufstieg 1 ist freigespielt, und der Durchlauf lässt sich härter stellen",
       earned: (level, next) => `Aufstieg ${level} geschafft, und ${next} ist freigespielt`,
       topOfLadder: (level) => `Aufstieg ${level} geschafft. Darüber gibt es nichts mehr.`,
-      shareLater: "Später im Menü änderbar.",
-      shareYes: "Teilen",
-      shareNo: "Nein danke",
     },
 
     title: {
@@ -846,9 +841,10 @@ export const de: Strings = {
 
     pause: {
       title: "Pause",
-      musicOn: "Musik an",
-      musicOff: "Musik aus",
-      speed: (speed) => `Animationstempo ×${speed}`,
+      sound: "Ton",
+      music: "Musik",
+      track: "Stück",
+      speed: "Animationstempo",
       language: "Sprache",
       wordsNextRun: "Die Wörter wechseln beim nächsten Durchlauf.",
       quit: "Durchlauf aufgeben",
@@ -876,7 +872,7 @@ export const de: Strings = {
       title: "Mitwirkende",
       madeBy: "Von",
       music: "Musik",
-      musicText: (piece, artist) => `„${piece}“ von ${artist}. CC0.`,
+      musicText: (piece) => ({ before: `„${piece}“ von `, after: "." }),
       sounds: "Klänge",
       soundsText: (people) => `Kenney, und ${people} auf Freesound. Alles CC0.`,
       licence: "Lizenz",

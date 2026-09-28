@@ -10,10 +10,8 @@ import {
   expand,
   file,
   flush,
-  lapse,
   loadConsent,
   loadLog,
-  markAsked,
   OUTBOX_CAP,
   payload,
   readOutbox,
@@ -142,49 +140,30 @@ describe("the saved log", () => {
 })
 
 describe("consent", () => {
-  it("holds the run on screen until asked, and sends only that one on a yes", () => {
+  it("sends nothing until the switch is turned on, and nothing from before it", () => {
     expect(loadConsent()).toBeNull()
     file(run(1), null)
-    file(run(2), null)
-    expect(readOutbox()).toEqual([])
+    expect(store.items.size).toBe(0)
+    // A yes starts from the next run: there is no question on an end screen,
+    // so there is no run on screen that the yes could be about.
     setConsent("on")
+    expect(readOutbox()).toEqual([])
+    file(run(2), "on")
     expect(readOutbox().map((p) => p.seed)).toEqual([2])
   })
 
-  it("drops the held run on a no, and the queue on a change of mind", () => {
-    file(run(1), null)
-    setConsent("off")
-    expect(readOutbox()).toEqual([])
+  it("drops the queue on a change of mind", () => {
     setConsent("on")
-    file(run(2), "on")
+    file(run(1), "on")
     expect(readOutbox()).toHaveLength(1)
     setConsent("off")
     expect(readOutbox()).toEqual([])
-    file(run(3), "off")
+    file(run(2), "off")
     expect(readOutbox()).toEqual([])
   })
 
-  it("asks once, and takes walking past the question for a no", () => {
-    file(run(1), null)
-    markAsked()
-    markAsked() // every re-render of the same end screen
-    expect(loadConsent()).toBeNull()
-    lapse()
-    expect(loadConsent()).toBe("off")
-    // The run that was on screen went with the question, so a later switch to
-    // on starts from the next run rather than sending one nobody agreed to.
-    setConsent("on")
-    expect(readOutbox()).toEqual([])
-  })
-
-  it("leaves an answer alone", () => {
-    setConsent("on")
-    markAsked()
-    lapse()
-    expect(loadConsent()).toBe("on")
-    // And a question never shown has nothing to lapse.
-    store.items.clear()
-    lapse()
+  it("reads the retired `asked` as no answer", () => {
+    store.items.set("5wild:telemetry", "asked")
     expect(loadConsent()).toBeNull()
   })
 

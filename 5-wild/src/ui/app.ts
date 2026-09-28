@@ -1,7 +1,7 @@
 import type { Action, GameEvent, Refusal, RunState, WordSource } from "../engine"
 import { MODIFIER_BY_ID, MULT_FOR_COLOR, reduce, startRun } from "../engine"
 import type { Cue, TileColor } from "./audio"
-import { Sound } from "./audio"
+import { audioContext, Sound } from "./audio"
 import type { CoachStep } from "./coach"
 import { coachAsks, coachSpent, coachStep } from "./coach"
 import { clear, h, wait } from "./dom"
@@ -30,10 +30,8 @@ import {
   beginLog,
   file,
   flush,
-  lapse,
   loadConsent,
   loadLog,
-  markAsked,
   payload,
   saveLog,
   setConsent,
@@ -405,19 +403,25 @@ export class App {
   }
 
   /**
-   * Audio may not start before the player has touched something, so the first
-   * gesture of the session, whatever it was, is what starts the music. It also
-   * stops on the way out: a phone that locks with the tab alive would otherwise
-   * keep an oscillator running against the battery all night.
+   * Audio may not start before the player has touched something, so the music
+   * is tried at boot and the first gesture of the session, whatever it was,
+   * wakes whatever the browser refused. The key that reloaded the page is not
+   * one: it landed on the page before this one. It also stops on the way out:
+   * a phone that locks with the tab alive would otherwise keep an oscillator
+   * running against the battery all night.
    */
   private bindAudioWake(): void {
-    const wake = () => this.music.enable()
+    const wake = () => {
+      void audioContext()?.resume()
+      this.music.enable()
+    }
     document.addEventListener("pointerdown", wake, { once: true })
     document.addEventListener("keydown", wake, { once: true })
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.music.suspend()
       else this.music.resume()
     })
+    this.music.autostart()
   }
 
   /** The mood follows the screen, so the shop and the boss do not share a tune. */
@@ -1368,8 +1372,12 @@ export class App {
       this.music.setOff(!this.music.isOff)
       this.render()
     },
-    // One handler for the end screen's question and the switch on the about and pause sheets,
-    // since they are the same answer given in two places.
+    nextTrack: () => {
+      this.music.nextTrack()
+      this.render()
+    },
+    // One handler for the switch on the about and pause sheets, since they are
+    // the same answer given in two places.
     setSharing: (on) => {
       setConsent(on ? "on" : "off")
       this.thanked = on ? "fresh" : null
@@ -1508,13 +1516,14 @@ export class App {
       sound: this.soundLevel,
       effectsOff: this.sound.isMuted,
       musicOff: this.music.isOff,
+      track: this.music.title,
       decor: this.decor,
       speed: this.speed,
       lang: this.lang,
       wordsDeferred: this.wordsDeferred,
       coach: this.coach,
       coachOffer: this.coachOffer,
-      sharing: !sharingEnabled() ? null : (this.consent ?? "ask"),
+      sharing: !sharingEnabled() ? null : (this.consent ?? "off"),
       thanked: this.thanked,
     }
   }
@@ -1584,12 +1593,6 @@ export class App {
     // lands whose app was killed mid-round and never reopened to it.
     this.finish("abandoned")
     this.thanked = null
-    // An end screen that asked and was walked past is a no, settled here
-    // because this is the one door every next run comes through. After the
-    // finish above, so a run abandoned under an unanswered question is held and
-    // then dropped with it rather than filed under a consent it never had.
-    lapse()
-    this.consent = loadConsent()
     this.state = startRun(rootSeed(), this.words, chosenAscension(this.profile.stats)).state
     this.atTitle = false
     this.overlay = null
@@ -1681,15 +1684,6 @@ export class App {
       document.activeElement instanceof HTMLElement
         ? document.activeElement.dataset.focus
         : undefined
-    // The end screen is the only place the sharing question appears, so drawing
-    // one with the question on it is what spends the asking. See `lapse`.
-    if (
-      !this.loading &&
-      !this.atTitle &&
-      (phase === "game_over" || phase === "victory") &&
-      this.chrome.sharing === "ask"
-    )
-      markAsked()
     const view = this.loading
       ? loadingView()
       : this.atTitle
@@ -1701,7 +1695,7 @@ export class App {
             : phase === "shop"
               ? shopView(this.state, this.handlers)
               : phase === "game_over" || phase === "victory"
-                ? endView(this.state, this.handlers, this.chrome)
+                ? endView(this.state, this.handlers)
                 : roundView(this.state, this.handlers, this.chrome)
 
     // Overlays sit beside the screen rather than replacing it, so the board is

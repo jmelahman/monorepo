@@ -1,19 +1,20 @@
 /**
- * The soundtrack: one recorded piano loop, and a synthesized score for a
- * browser that cannot decode it.
+ * The soundtrack: two recorded tracks, the player's pick of which, and a
+ * synthesized score for a browser that cannot decode either.
  *
- * The recording is Kistol's "Forget-me-not in F major" (CC0, see
- * `tracks/CREDITS.md`). Lofi was auditioned first and turned down flat; what
- * the game wanted was nearer Debussy, Brahms or a Chopin nocturne. Public-domain
- * recordings of those exist, but a nocturne played end to end has a final
- * cadence and a silence at every repeat, and this piece was written in that
- * style as a seamless loop, so it has neither. It costs 1.3MB, against a few
- * kilobytes for a clack, which is why it is the only track: the moods no longer
- * change the music, and the synthesis that used to tell the shop from the boss
- * is now only the fallback for a browser that cannot decode Ogg.
+ * The recordings are "promises" by kate (https://kate.garden/) and Kistol's
+ * "Forget-me-not in F major" (CC0); see `tracks/CREDITS.md`. Forget-me-not was
+ * the only track first, a piano piece written as a seamless loop. "promises"
+ * replaced it and then joined it instead, so the choice is a setting on the
+ * pause sheet rather than an argument settled in this file. It is not a
+ * seamless loop: it is a finished piece with a cadence at its end, so its loop
+ * is an ending and a beginning, with the lead-in and tail silences trimmed to
+ * keep the gap between them to a breath. The moods do not change the music
+ * either way, and the synthesis that used to tell the shop from the boss is only
+ * the fallback for a browser that cannot decode Ogg.
  *
  * It was the stand-in during the load as well, playing from the first tap and
- * crossing into the piano once it decoded. On a warm cache that is a fraction of
+ * crossing into the recording once it decoded. On a warm cache that is a fraction of
  * a second, and a fraction of a second of a different instrument in a different
  * key reads as a glitch rather than as a stand-in. So the load is silence now,
  * which is also what a player hears in every other game before the music starts.
@@ -25,16 +26,51 @@
  */
 
 import { audioContext, audioMix, C5, step } from "./audio"
-import TRACK_URL from "./tracks/forget-me-not.ogg?url"
+import FORGET_ME_NOT_URL from "./tracks/forget-me-not.ogg?url"
+import PROMISES_URL from "./tracks/promises.ogg?url"
 
 const MUSIC_KEY = "5wild:music"
+const TRACK_KEY = "5wild:track"
+
+export type TrackId = "promises" | "forget-me-not"
+
+type Track = {
+  id: TrackId
+  /** A title, the same in every language, so it is here and not in the catalog. */
+  title: string
+  url: string
+  /**
+   * The recording's gain. Both are peak-normalized to -1dBFS like the effects,
+   * but a track is a bed and they are events: a tile reveal should land on top
+   * of the music, not inside it. Forget-me-not sat below `DEFAULT_LEVEL` in
+   * `audio.ts` at 0.1. "promises" averages 1.7dB quieter at the same peak
+   * (-22.7dB mean against -21.0), and at 0.1 it sat too far back; 0.14, about
+   * 3dB up, was still under it by ear. 0.17 is about 4.6dB up and over the
+   * effects' gain, but the effects are transients at that peak and this is a
+   * bed well under it on average, and the shared limiter keeps the sum from
+   * clipping. Per track, so switching does not make one of them jump.
+   */
+  level: number
+}
+
+/** In the order the switch steps through them. The first is the default. */
+const TRACKS: readonly Track[] = [
+  { id: "promises", title: "promises", url: PROMISES_URL, level: 0.17 },
+  { id: "forget-me-not", title: "Forget-me-not", url: FORGET_ME_NOT_URL, level: 0.1 },
+]
+
+const DEFAULT_TRACK = TRACKS[0] as Track
+
+function trackOf(id: string | null): Track {
+  return TRACKS.find((track) => track.id === id) ?? DEFAULT_TRACK
+}
 
 /**
- * The recording's gain. It is peak-normalized to -1dBFS like the effects, but
- * it is a bed and they are events, so it sits below `DEFAULT_LEVEL` in
- * `audio.ts`: a tile reveal should land on top of the piano, not inside it.
+ * How long the outgoing track takes to fade when the player switches. Shorter
+ * than `TRACK_FADE_S`, because the tap asked for the other one and the fade out
+ * is only there so it does not end in a click.
  */
-const TRACK_LEVEL = 0.1
+const SWITCH_FADE_S = 0.3
 
 /** Fade in and out of the recording, in seconds. */
 const TRACK_FADE_S = 1.5
@@ -133,6 +169,7 @@ function noise(seed: number): number {
 
 export class Music {
   private off: boolean
+  private choice: Track
   private mood: Mood = "title"
   private started = false
   /** Playing rather than suspended. Only meaningful once `started`. */
@@ -141,9 +178,14 @@ export class Music {
   private bus: GainNode | null = null
   /** The recording's own gain, straight into the mix and not into the room. */
   private deck: GainNode | null = null
+  /**
+   * The chosen recording, decoded. Only the one: four minutes of stereo PCM is
+   * some eighty megabytes, and the other is a fetch from the HTTP cache away.
+   */
   private track: AudioBuffer | null = null
-  private loading = false
-  /** The recording would not fetch or decode, so the score plays instead, for good. */
+  /** Which recording is being fetched or is in `track`, so a stale decode can be told. */
+  private loading: TrackId | null = null
+  /** The recording would not fetch or decode, so the score plays instead, until a switch. */
   private failed = false
   private source: AudioBufferSourceNode | null = null
   /** Audio-clock time the track would have started had it never been paused. */
@@ -156,18 +198,21 @@ export class Music {
 
   constructor() {
     let stored: string | null = null
+    let chosen: string | null = null
     try {
       stored = localStorage.getItem(MUSIC_KEY)
+      chosen = localStorage.getItem(TRACK_KEY)
     } catch {
       // A blocked store just means the preference does not survive the session.
     }
+    this.choice = trackOf(chosen)
     // On unless the player has turned it off. It was off by default, on the
     // argument that a game which starts singing on its own is a game opened on
     // a bus with the volume up, and it lost two ways. The effects were on by
     // default all along, so the bus heard the game regardless; and a soundtrack
     // behind a switch in the pause sheet was one most players never learned
     // existed. Nothing plays before the first tap in any case, since no audio
-    // may, and the piano fades in under the effects rather than starting on
+    // may, and the recording fades in under the effects rather than starting on
     // them. The stored preference still wins both ways.
     this.off = stored === "0"
   }
@@ -176,10 +221,80 @@ export class Music {
     return this.off
   }
 
+  get title(): string {
+    return this.choice.title
+  }
+
   /**
-   * Called from the first real user gesture. Until then there is deliberately no
-   * AudioContext at all: one built before a gesture starts life suspended, and
-   * mobile browsers hold that against the page.
+   * Step to the next track, from its top. Written even while the music is off,
+   * so the switch can be set first and heard when the music comes back.
+   */
+  nextTrack(): void {
+    const at = TRACKS.indexOf(this.choice)
+    this.choice = TRACKS[(at + 1) % TRACKS.length] as Track
+    try {
+      localStorage.setItem(TRACK_KEY, this.choice.id)
+    } catch {
+      // See the constructor. The switch works, it just will not be remembered.
+    }
+    const ctx = audioContext()
+    this.offset = 0
+    this.track = null
+    this.failed = false
+    this.loading = null
+    if (!ctx || !this.started) return
+    if (this.source) {
+      // Faded rather than cut, and let go of at once, so `play` can start the
+      // next one over the tail of this one without waiting on it.
+      const source = this.source
+      this.source = null
+      if (this.deck) {
+        this.deck.gain.cancelScheduledValues(ctx.currentTime)
+        this.deck.gain.setValueAtTime(this.deck.gain.value, ctx.currentTime)
+        this.deck.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + SWITCH_FADE_S)
+      }
+      source.stop(ctx.currentTime + SWITCH_FADE_S)
+      source.onended = () => source.disconnect()
+    }
+    // The score, if the last choice had failed to it: silenced until the new
+    // one has loaded or failed in its turn.
+    if (this.timer !== null) {
+      clearInterval(this.timer)
+      this.timer = null
+    }
+    if (this.bus) {
+      this.bus.gain.cancelScheduledValues(ctx.currentTime)
+      this.bus.gain.setValueAtTime(0.0001, ctx.currentTime)
+    }
+    this.load(ctx)
+  }
+
+  /**
+   * Tried once at boot, so a reload does not sit silent until the first tap.
+   * Most of the time it is refused and `enable` from the first gesture is what
+   * starts the music, but not always: the APK's WebView has the gesture
+   * requirement switched off (Capacitor's `Bridge` does it), and Chrome waives
+   * it for a site the player keeps coming back to. There is no asking Chrome
+   * which, so it is tried; a refused context sits suspended with its clock
+   * stopped, and everything here schedules against that clock, so the track
+   * waits at its first sample and the score writes nothing ahead, until the
+   * gesture resumes it.
+   *
+   * Firefox can say, and by default says no, so there it is not tried at all:
+   * the attempt would buy nothing but a console warning.
+   */
+  autostart(): void {
+    const policy = (
+      navigator as { getAutoplayPolicy?: (kind: "audiocontext") => string }
+    ).getAutoplayPolicy?.("audiocontext")
+    if (policy === "disallowed") return
+    this.enable()
+  }
+
+  /**
+   * Called from the first real user gesture, if `autostart` has not already
+   * built everything. The gesture's own job is `resume`, in the handler, which
+   * is the only place iOS Safari will honour it.
    */
   enable(): void {
     if (this.started || this.off) return
@@ -197,8 +312,8 @@ export class Music {
     const send = ctx.createGain()
     send.gain.value = 0.35
     this.bus.connect(send).connect(mix.room)
-    // The recording skips the room: it was made in one, and a second on top
-    // of it turned the sustain pedal into a wash.
+    // The recording skips the room: it was mixed with its own, and a second on
+    // top of it turned the previous track's sustain pedal into a wash.
     this.deck = ctx.createGain()
     this.deck.gain.setValueAtTime(0, ctx.currentTime)
     this.deck.connect(mix.out)
@@ -211,8 +326,8 @@ export class Music {
     this.mood = mood
     const ctx = audioContext()
     // The recording carries straight on across a change of screen. Restarting
-    // it would put the opening bars on every round, and there is no other
-    // track to change to.
+    // it would put the opening bars on every round, and which track plays is
+    // the player's choice, not the screen's.
     if (!this.bus || !ctx || this.source) return
     // Ride the gain across the change rather than cutting: the palettes differ
     // in tempo, so a hard switch lands mid-beat and reads as a glitch.
@@ -295,20 +410,28 @@ export class Music {
   }
 
   /**
-   * Fetch and decode the recording, once. A failure hands the music to the
-   * synthesized score for good, which is a plainer game and never a silent one.
+   * Fetch and decode the chosen recording, once per choice. A failure hands the
+   * music to the synthesized score until the player picks the other track,
+   * which is a plainer game and never a silent one.
+   *
+   * A switch can land while a decode is in flight, and the decode that finishes
+   * then is for a track nobody wants any more; `loading` is checked on the way
+   * back so it is dropped rather than played over the new one.
    */
   private load(ctx: AudioContext): void {
-    if (this.loading) return
-    this.loading = true
-    void fetch(TRACK_URL)
+    const want = this.choice.id
+    if (this.loading === want) return
+    this.loading = want
+    void fetch(this.choice.url)
       .then((response) => response.arrayBuffer())
       .then((bytes) => ctx.decodeAudioData(bytes))
       .then((buffer) => {
+        if (this.loading !== want) return
         this.track = buffer
         if (this.live) this.play(ctx, buffer)
       })
       .catch(() => {
+        if (this.loading !== want) return
         this.failed = true
         // Suspended, `resume` will find the flag and start the score itself.
         if (this.live) {
@@ -319,10 +442,12 @@ export class Music {
   }
 
   /**
-   * `loop` on the source rather than a restart on `ended`: the file was
-   * authored to run its last sample into its first, and the source is the
-   * only thing that can join them without a gap. The re-encode kept the
-   * sample count exact for the same reason.
+   * `loop` on the source rather than a restart on `ended`: the source is the
+   * only thing that can join the last sample to the first without a gap of
+   * its own. Forget-me-not was authored to run into itself. "promises" is not
+   * a seamless loop, but the silence at either end was trimmed in the
+   * re-encode, so the only pause at its join is the one the piece's ending
+   * leaves.
    */
   private play(ctx: AudioContext, track: AudioBuffer): void {
     if (!this.deck || this.source) return
@@ -335,7 +460,7 @@ export class Music {
     this.source = source
     this.deck.gain.cancelScheduledValues(ctx.currentTime)
     this.deck.gain.setValueAtTime(0.0001, ctx.currentTime)
-    this.deck.gain.linearRampToValueAtTime(TRACK_LEVEL, ctx.currentTime + TRACK_FADE_S)
+    this.deck.gain.linearRampToValueAtTime(this.choice.level, ctx.currentTime + TRACK_FADE_S)
   }
 
   private run(): void {

@@ -17,7 +17,7 @@
   the bundle, the opt-in run replay in src/ui/telemetry.ts, which sends what
   "Sharing run replays" lists and nothing else. A build with no endpoint (DEPLOYED
   emptied there) makes no such call and never offers it, and the section is still true
-  of it, since it only describes what happens if the player says yes.
+  of it, since it only describes what happens if the player turns it on.
   Each one is also an answer on the Data safety form, where a mismatch
   between the form and the app is a policy violation rather than a typo. Adding
   anything that phones home means editing this page in the same commit.
@@ -123,13 +123,12 @@
 
       <h2 id="sharing">Sharing run replays</h2>
       <p>
-        At the end of a run the game asks once whether you want to share your run
-        results to help improve it. Nothing is sent unless you say yes, and ignoring
-        the question counts as no. You can change your answer at any time from the ⓘ
-        button on the title screen or from the pause menu. Turning it off also
-        discards any replays still waiting to be sent.
+        You can choose to share your run results to help improve the game, with the
+        switch behind the ⓘ button on the title screen or in the pause menu. It is
+        off unless you turn it on, the game never asks, and nothing is sent while it
+        is off. Turning it off also discards any replays still waiting to be sent.
       </p>
-      <p>If you say yes, each finished run sends:</p>
+      <p>If you turn it on, each finished run sends:</p>
       <ul>
         <li>
           the moves you made: the words you guessed and what you bought, sold, or
