@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The light theme's bg, in src/style.css and BACKDROP in src/ui/theme.ts.
+         Picked over values/ whenever the app is not in night mode, which is the
+         device's mode unless ThemePlugin has set the player's choice. -->
+    <color name="launchBackground">#F4F3EF</color>
+</resources>

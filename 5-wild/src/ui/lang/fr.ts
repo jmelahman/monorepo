@@ -855,6 +855,8 @@ export const fr: Strings = {
       music: "Musique",
       track: "Morceau",
       speed: "Vitesse d'animation",
+      theme: "Thème",
+      themes: { light: "Clair", dark: "Sombre" },
       language: "Langue",
       wordsNextRun: "Les mots changeront à la prochaine partie.",
       quit: "Abandonner la partie",

@@ -8,9 +8,9 @@
   not guessed. Here the colour fills and the mark is only centred, so one image
   is right on every screen.
 
-  The colour matches android.backgroundColor in capacitor.config.ts and the bg
-  custom property in src/style.css; all three being the same is what makes the
-  handover to the WebView invisible.
+  The colour is launchBackground, which is also the WebView's background (see
+  MainActivity) and the bg custom property in src/style.css, per theme; all
+  three being the same is what makes the handover to the WebView invisible.
 -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/launchBackground"/>

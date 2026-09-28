@@ -91,6 +91,7 @@ import {
   wordsFound,
 } from "./meta"
 import type { Speed } from "./speed"
+import type { Theme } from "./theme"
 
 export type Handlers = {
   key: (letter: string) => void
@@ -133,6 +134,8 @@ export type Handlers = {
   cycleDecor: () => void
   /** Step the animations up a rung, wrapping back to the speed they are drawn at. */
   cycleSpeed: () => void
+  /** Step the look from the device's, to light, to dark, and back. */
+  toggleTheme: () => void
   /** Step the interface to the next language, wrapping back to English. */
   cycleLanguage: () => void
   openMenu: () => void
@@ -177,6 +180,7 @@ export type Chrome = {
   track: string
   decor: Decor
   speed: Speed
+  theme: Theme
   /**
    * Which language is chosen, which the views need for the picker alone: every
    * *sentence* on the screen comes from the catalog in force, which is a module
@@ -2525,8 +2529,32 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
           icon("info"),
         ),
         soundButton(on, chrome),
+        themeButton(on, chrome),
       ),
     ),
+  )
+}
+
+/**
+ * The title screen's theme dial, after the speaker and on its terms: the face is the look
+ * on screen, a tap swaps it, and the words are in `aria-label`. The
+ * pause sheet has the same setting as a labelled row; this is the copy for the
+ * first screen, where a player squinting at a bright page in a dark room should
+ * not have to start a run to find the switch.
+ */
+const THEME_ICON: Record<Theme, IconName> = { light: "sun", dark: "moon" }
+
+function themeButton(on: Handlers, chrome: Chrome): HTMLElement {
+  const copy = ui().pause
+  return h(
+    "button",
+    {
+      class: "title-dial",
+      type: "button",
+      "aria-label": `${copy.theme}: ${copy.themes[chrome.theme]}`,
+      onclick: () => on.toggleTheme(),
+    },
+    icon(THEME_ICON[chrome.theme]),
   )
 }
 
@@ -3427,6 +3455,11 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
         { "data-focus": "speed", onclick: () => on.cycleSpeed() },
         copy.speed,
         `×${chrome.speed}`,
+      ),
+      setting(
+        { "data-focus": "theme", onclick: () => on.toggleTheme() },
+        copy.theme,
+        copy.themes[chrome.theme],
       ),
       // The same flag and endonym as the title screen's pill, as this row's
       // value. No `lang` attribute, for the reason `languageButton` gives.

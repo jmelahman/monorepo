@@ -8,10 +8,9 @@ const config: CapacitorConfig = {
   appName: "5 Wild",
   // Must match vite.config.ts build.outDir; guarded by test/build-config.test.ts.
   webDir: "dist",
-  android: {
-    // Matches --bg in src/style.css so there is no white flash on launch.
-    backgroundColor: "#0e0f13",
-  },
+  // No android.backgroundColor: it is one color and the game has two themes.
+  // MainActivity sets the WebView's background from launchBackground, which
+  // follows the theme; see ThemePlugin.java.
   server: {
     androidScheme: "https",
     // For live reload on a physical device, uncomment and point at your LAN IP

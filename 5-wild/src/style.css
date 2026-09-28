@@ -37,6 +37,56 @@
   --rare-uncommon: #3d8f6a;
   --rare-rare: #3f6fd8;
   --rare-legendary: #a855f7;
+  /* How much of `--rare` a relic's face and edge take. A share of a hue over
+     near-black glows; the same share over near-white is a wash that reads as
+     no colour at all, so the light theme takes more of it. */
+  --rare-wash: 16%;
+  --rare-wash-tray: 26%;
+  --rare-edge: 40%;
+
+  /*
+   * What the theme switch moves beyond the palette above, each holding exactly
+   * the literal it replaced, so the dark theme is the game as it was.
+   *
+   * `--on-tile` is the ink on a colored tile or key. It was the page's own
+   * `--fg`, inherited, which only worked because the page was dark: a light page
+   * has dark ink, and dark ink on the tile green is the lower contrast. The
+   * tile colors do not change with the theme (they are the game's language,
+   * not its décor), so neither does the ink on them.
+   *
+   * `--shade` is the black every outer shadow is mixed from. The light theme
+   * thins it rather than restating nine shadows, because a shadow sized for a
+   * near-black page reads as a smudge on a light one. Inset bevels are drawn on
+   * the element's own fill and keep plain black.
+   */
+  --on-tile: var(--fg);
+  --on-bright: var(--bg);
+  --key: #565758;
+  --key-gray-fg: var(--muted);
+  --broken-bg: #1b1c20;
+  --broken-fg: #4a4b52;
+  --shade: #000;
+  --sheen: #ffffff26;
+  --scrim: #000a;
+  --title-tint: #2a3350;
+  --row-note-bg: color-mix(in srgb, var(--yellow) 22%, #000);
+  --row-note-fg: var(--yellow);
+  /*
+   * The modifier hues, as pastels for the dark page and for any key or tile a
+   * guess has colored, in either theme. `--mod-*` is the hue in force; the
+   * light theme points it at a deeper set for its pale keys and panels, and the
+   * colored fills point it back here.
+   */
+  --pastel-steel: #9fb4c8;
+  --pastel-glass: #7fd8e8;
+  --pastel-lucky: #ff8fd0;
+  --pastel-echo: #f2a65a;
+  --pastel-anchor: #7ee787;
+  --mod-steel: var(--pastel-steel);
+  --mod-glass: var(--pastel-glass);
+  --mod-lucky: var(--pastel-lucky);
+  --mod-echo: var(--pastel-echo);
+  --mod-anchor: var(--pastel-anchor);
 
   /*
    * The bottom two rungs of the type scale, named because the floor wants to be
@@ -97,6 +147,54 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+
+  color-scheme: dark;
+}
+
+/*
+ * The light theme. `theme.ts` resolves "follow the device" before it gets here,
+ * so this is the only place the light palette is written; see the note there.
+ *
+ * The score colors are darkened because they are read as text on the page, and
+ * `--gold` at its dark-theme value is invisible on white. Green and yellow stay:
+ * they are what a tile *means*, and a player who switches themes mid-run should
+ * not have to relearn which yellow is which.
+ */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f4f3ef;
+  --panel: #ffffff;
+  --panel-2: #ebeae5;
+  --rare-wash: 30%;
+  --rare-wash-tray: 42%;
+  --rare-edge: 70%;
+  --line: #d6d5cf;
+  --fg: #1c1d22;
+  --muted: #6b6d76;
+  --gray: #787c7e;
+
+  --chips: #1f6fd6;
+  --mult: #d93b3b;
+  --gold: #a87400;
+
+  --on-tile: #ffffff;
+  --on-bright: #ffffff;
+  --key: #d6d7db;
+  --key-gray-fg: #ffffffb3;
+  --broken-bg: #e4e3de;
+  --broken-fg: #a7a8ae;
+  --shade: #00000059;
+  --sheen: #ffffff99;
+  --scrim: #0006;
+  --title-tint: #dde3f3;
+  --row-note-bg: color-mix(in srgb, var(--yellow) 18%, var(--panel));
+  --row-note-fg: #6f5f14;
+  --mod-steel: #4f6d8a;
+  --mod-glass: #13899c;
+  --mod-lucky: #c2338a;
+  --mod-echo: #b8650f;
+  --mod-anchor: #2c8a3c;
 }
 
 *,
@@ -548,11 +646,11 @@ button {
   overflow: hidden;
   background: linear-gradient(
     155deg,
-    color-mix(in srgb, var(--rare, var(--rare-common)) 26%, var(--panel-2)),
+    color-mix(in srgb, var(--rare, var(--rare-common)) var(--rare-wash-tray), var(--panel-2)),
     var(--panel-2) 72%
   );
   border-top: 2px solid var(--rare, var(--rare-common));
-  box-shadow: 0 1px 2px #0006;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--shade) 40%, transparent);
   text-align: center;
   transition: transform 120ms ease;
 }
@@ -598,7 +696,7 @@ button {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(115deg, transparent 42%, #ffffff26 50%, transparent 58%);
+  background: linear-gradient(115deg, transparent 42%, var(--sheen) 50%, transparent 58%);
   background-size: 300% 100%;
   /* Off the animation-speed dial, with `coach-mark`: nothing waits on a loop
      that never ends, so hurrying it makes a shimmer into a strobe and hands the
@@ -673,7 +771,7 @@ button {
 .mouse .relic[data-tip]:hover {
   transform: translateY(-2px);
   box-shadow:
-    0 3px 6px #0007,
+    0 3px 6px color-mix(in srgb, var(--shade) 47%, transparent),
     0 0 0 1px color-mix(in srgb, var(--rare, var(--rare-common)) 55%, transparent);
 }
 
@@ -698,6 +796,10 @@ button {
   padding: 0.375rem 0.5rem;
   border-radius: 0.375rem;
   background: #000d;
+  /* Dark in both themes, a panel floating over whatever is under it, so it
+     brings its own light ink rather than inheriting the page's, which is dark
+     in the light theme. */
+  color: var(--on-tile);
   border: 1px solid var(--line);
   border-top: 2px solid var(--rare, var(--rare-common));
   box-shadow: 0 0.25rem 0.75rem #0009;
@@ -750,7 +852,7 @@ button {
   gap: 0.0625rem;
   padding: 0.25rem 0.5rem;
   border-radius: 0.375rem;
-  background: color-mix(in srgb, var(--rare-legendary) 16%, var(--panel));
+  background: color-mix(in srgb, var(--rare-legendary) var(--rare-wash), var(--panel));
   border: 1px solid color-mix(in srgb, var(--rare-legendary) 45%, transparent);
   text-align: left;
 }
@@ -999,6 +1101,13 @@ button {
   background: var(--gray);
   border-color: var(--gray);
 }
+/* Light only, where the page's ink stops being light enough for these fills;
+   the dark theme's tiles inherit the same off-white they always did. Not while
+   pending: the color class is on before the flip reveals it, over a
+   transparent face, where the ink has to be the page's. */
+:root[data-theme="light"] .tile:is(.green, .yellow, .gray):not(.pending) {
+  color: var(--on-tile);
+}
 
 /* Tiles arrive blank and light up as the score walks across them. */
 .tile.pending {
@@ -1021,9 +1130,9 @@ button {
   z-index: 2;
   padding: 0.0625rem 0.3125rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--yellow) 22%, #000);
+  background: var(--row-note-bg);
   border: 1px solid color-mix(in srgb, var(--yellow) 55%, transparent);
-  color: var(--yellow);
+  color: var(--row-note-fg);
   font-size: var(--type-small);
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -1707,7 +1816,7 @@ button {
   display: grid;
   place-items: center;
   border-radius: 0.375rem;
-  background: #565758;
+  background: var(--key);
   font-size: 1rem;
   font-weight: 700;
 }
@@ -1734,7 +1843,30 @@ button {
 }
 .key.gray {
   background: var(--gray);
-  color: var(--muted);
+  color: var(--key-gray-fg);
+}
+/* The corner figure follows the ink it sits beside. In the dark theme that is
+   the same off-white it always was; in the light one a key the guess has
+   painted wants light figures while an untouched key wants dark ones. The
+   modifier hues go back to their pastels for the same reason: they were picked
+   to read over these three fills, and the light theme's deeper set is for the
+   pale keys and panels. */
+:root[data-theme="light"] .key:is(.green, .yellow) {
+  color: var(--on-tile);
+}
+/* A pale key has dark figures, and a dark shadow under a dark figure is a
+   blur rather than an outline. */
+:root[data-theme="light"] .key:not(.green, .yellow, .gray) :is(.value-pip, .mod-pip) {
+  text-shadow: none;
+}
+.key:is(.green, .yellow, .gray),
+.tile:is(.green, .yellow, .gray) {
+  --value-base: color-mix(in srgb, var(--on-tile) 72%, transparent);
+  --mod-steel: var(--pastel-steel);
+  --mod-glass: var(--pastel-glass);
+  --mod-lucky: var(--pastel-lucky);
+  --mod-echo: var(--pastel-echo);
+  --mod-anchor: var(--pastel-anchor);
 }
 
 /*
@@ -1756,8 +1888,8 @@ button {
  * pays.
  */
 .key.broken {
-  background: #1b1c20;
-  color: #4a4b52;
+  background: var(--broken-bg);
+  color: var(--broken-fg);
   text-decoration: line-through;
 }
 
@@ -1823,7 +1955,7 @@ button {
    worth that and is just no longer typeable, and gray to the same dead color the
    modifier pip takes, so the whole key reads as one switched-off thing. */
 .key.broken .value-pip {
-  color: #4a4b52;
+  color: var(--broken-fg);
   text-shadow: none;
 }
 
@@ -1846,10 +1978,10 @@ button {
   --mod: var(--rare-legendary);
 }
 [data-mod="steel"] {
-  --mod: #9fb4c8;
+  --mod: var(--mod-steel);
 }
 [data-mod="glass"] {
-  --mod: #7fd8e8;
+  --mod: var(--mod-glass);
 }
 /*
  * The three that arrived with the wider modifier pool and were never given a
@@ -1868,13 +2000,13 @@ button {
  * green key it will most often be read against.
  */
 [data-mod="lucky"] {
-  --mod: #ff8fd0;
+  --mod: var(--mod-lucky);
 }
 [data-mod="echo"] {
-  --mod: #f2a65a;
+  --mod: var(--mod-echo);
 }
 [data-mod="anchor"] {
-  --mod: #7ee787;
+  --mod: var(--mod-anchor);
 }
 
 /* After the color rules above, so a modified green key still shows its ring.
@@ -1904,7 +2036,7 @@ button {
 }
 
 .key.broken .mod-pip {
-  color: #4a4b52;
+  color: var(--broken-fg);
 }
 
 /*
@@ -1914,7 +2046,7 @@ button {
  * at a glance instead of one pip at a time.
  */
 .mod-pip.silenced {
-  color: #4a4b52;
+  color: var(--broken-fg);
 }
 
 .key:has(.mod-pip.silenced) {
@@ -2054,10 +2186,10 @@ button {
   padding: 0.75rem 0.5rem;
   border-radius: 0.75rem;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--rare, var(--rare-common)) 40%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--rare, var(--rare-common)) var(--rare-edge), var(--line));
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--rare, var(--rare-common)) 16%, var(--panel-2)),
+    color-mix(in srgb, var(--rare, var(--rare-common)) var(--rare-wash), var(--panel-2)),
     var(--panel)
   );
   box-shadow: inset 0 -0.1875rem 0 #00000047;
@@ -2602,13 +2734,13 @@ button {
 }
 
 .place-key:disabled {
-  background: #1b1c20;
-  color: #4a4b52;
+  background: var(--broken-bg);
+  color: var(--broken-fg);
   box-shadow: none;
 }
 
 .place-key:disabled .place-chips {
-  color: #4a4b52;
+  color: var(--broken-fg);
 }
 
 .place-note {
@@ -2643,6 +2775,11 @@ button {
 
 .secondary {
   background: var(--panel-2);
+}
+
+/* Green fills carry the tile ink rather than the page's, as the tiles do. */
+:root[data-theme="light"] :is(.primary, .title-tile) {
+  color: var(--on-tile);
 }
 
 /* Reserved for actions that destroy something. Currently that is exactly one
@@ -2761,7 +2898,7 @@ button {
   padding: 1rem;
   border-radius: 0.75rem;
   background: var(--panel);
-  box-shadow: 0 0.5rem 1.5rem #0006;
+  box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--shade) 40%, transparent);
   animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1);
 }
 
@@ -2934,7 +3071,7 @@ button {
 .intro-card > .round-token {
   width: 4.5rem;
   height: 4.5rem;
-  filter: drop-shadow(0 0.375rem 0.5rem #0008);
+  filter: drop-shadow(0 0.375rem 0.5rem color-mix(in srgb, var(--shade) 53%, transparent));
   animation: token calc(460ms * var(--pace)) cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
@@ -3084,7 +3221,7 @@ button {
   background: var(--panel);
   box-shadow:
     inset 0 -4px 0 #00000040,
-    0 0.75rem 1.75rem #00000059;
+    0 0.75rem 1.75rem color-mix(in srgb, var(--shade) 35%, transparent);
   animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1);
 }
 
@@ -3098,7 +3235,7 @@ button {
   border: 2px solid var(--mult);
   border-bottom-width: 4px;
   background: color-mix(in srgb, var(--mult) 6%, var(--panel));
-  box-shadow: 0 0.75rem 1.75rem #00000059;
+  box-shadow: 0 0.75rem 1.75rem color-mix(in srgb, var(--shade) 35%, transparent);
 }
 
 @keyframes deal {
@@ -3300,7 +3437,7 @@ button {
   --wash: 120%;
   background: radial-gradient(
     ellipse var(--wash) 55% at 50% 18%,
-    color-mix(in srgb, var(--panel) 70%, #2a3350) 0%,
+    color-mix(in srgb, var(--panel) 70%, var(--title-tint)) 0%,
     color-mix(in srgb, var(--bg) 60%, var(--panel)) 45%,
     var(--bg) 75%
   );
@@ -3392,7 +3529,7 @@ button {
   background: var(--gray);
   box-shadow:
     inset 0 -0.3125rem 0 #0000004d,
-    0 0.5rem 1.125rem #00000073;
+    0 0.5rem 1.125rem color-mix(in srgb, var(--shade) 45%, transparent);
 }
 
 /* The wild, and the only colour in the row. Its shadow is its own green rather
@@ -3425,7 +3562,7 @@ button {
 .title-mult {
   padding: 0.1875rem 0.5rem;
   border-radius: 0.375rem;
-  color: var(--bg);
+  color: var(--on-bright);
 }
 
 .title-chips {
@@ -3815,22 +3952,21 @@ button {
 /* On the floor, and three things that are about the device rather than the
    game: its language, its build, its sound.
 
-   A grid of two equal outer columns rather than `space-between`, so the stamp
-   sits on the centre line whatever the pill beside it says. Between, it was
-   centred in the leftover space, and the pill runs from 102.3 ("English") to
-   109.4 ("Français"), so every language switch nudged the version sideways by
-   half the difference. Measured at 390, the stamp's left edge is now 141.9 in
-   all four.
+   The stamp is centred in the gap between the pill and the dials rather than
+   on the screen's centre line. With three dials against one pill the sides are
+   too lopsided for the centre line to look centred: equal outer columns left
+   the stamp hard against the dials and a wide hole beside the pill. The cost is
+   that the pill runs from 102.3 ("English") to 109.4 ("Français"), so a
+   language switch nudges the stamp by half the difference, 3.6px.
 
-   The row needs two of the widest pill plus the 106.2 stamp and the gaps, 344,
-   which is 21.5rem of the screen's content box (a container query measures
-   inside the padding, so a 390 phone has 350 and keeps the row). Below that an outer column
-   cannot hold "Français" and the columns would stop being equal, which is the
-   shift again by another route, so the stamp drops to a line of its own under
-   the other two. Queried on the screen, since a container cannot query itself. */
+   The row needs the widest pill, the 106.2 stamp, the three dials' 148 and the
+   gaps, 380, which is 23.75rem of the screen's content box (a container query
+   measures inside the padding, so a 390 phone has 350). Below that the stamp
+   drops to a line of its own under the other two. Queried on the screen, since
+   a container cannot query itself. */
 .title-foot {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas: "lang build sound";
   align-items: center;
   gap: 0.5rem;
@@ -3842,22 +3978,21 @@ button {
 @container title (max-width: 21.5rem) {
   /* "Spielanleitung" alone is 125px at this size and half the row is 135 at
      320; with the icon beside it the icon was pushed out of the button. It
-     needs 158 with the icon, which is a 326 column, close enough to the
-     footer's 344 that one breakpoint serves both. The
+     needs 158 with the icon, which is a 326 column. The
      label is the thing that says where the button goes, so the icon is what
      yields, in every language at once rather than only in the long ones. */
   .title-more .icon {
     display: none;
   }
+}
 
+/* The floor on two rows, the build stamp under the controls; see `.title-foot`
+   for the 23.75rem. */
+@container title (max-width: 24rem) {
   .title-foot {
     grid-template-columns: auto auto;
     grid-template-areas: "lang sound" "build build";
     justify-content: space-between;
-  }
-
-  .title-build {
-    justify-self: center;
   }
 }
 
@@ -3872,7 +4007,7 @@ button {
   color: color-mix(in srgb, var(--fg) 50%, var(--muted));
 }
 
-/* The two round buttons at the floor's right, the ⓘ and the speaker, as one
+/* The round buttons at the floor's right, the ⓘ, the speaker and the theme, as one
    grid cell so the narrow layout's "lang sound" row still has two things in it. */
 .title-dials {
   grid-area: sound;
@@ -3901,6 +4036,7 @@ button {
  */
 .title-build {
   grid-area: build;
+  justify-self: center;
   white-space: nowrap;
   font-size: 0.75rem;
   letter-spacing: 0.04em;
@@ -3963,7 +4099,7 @@ button {
   justify-content: center;
   padding: 1rem;
   padding-bottom: calc(var(--safe-bottom) + 1rem);
-  background: #000a;
+  background: var(--scrim);
   animation: fade calc(140ms * var(--pace)) ease;
 }
 
@@ -4365,6 +4501,8 @@ button {
   padding: 0.5rem 0.875rem;
   border-radius: 0.5rem;
   background: #000c;
+  /* Its own light ink, as `.relic-tip`: dark in both themes. */
+  color: var(--on-tile);
   border: 1px solid var(--line);
   font-size: 0.75rem;
   text-align: center;

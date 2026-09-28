@@ -901,6 +901,8 @@ export const en: Strings = {
       music: "Music",
       track: "Track",
       speed: "Animation speed",
+      theme: "Theme",
+      themes: { light: "Light", dark: "Dark" },
       language: "Language",
       wordsNextRun: "Words change when you start a new run.",
       quit: "Quit run",

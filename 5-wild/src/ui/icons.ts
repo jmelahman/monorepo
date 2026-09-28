@@ -75,6 +75,22 @@ const PATHS = {
   // changed its width per language (SUPPR, LÖSCH), and the glyph is the same
   // key on every phone keyboard the player has ever used.
   backspace: ["M21 5H9l-6 7 6 7h12z", "M17 9.5l-5 5", "M12 9.5l5 5"],
+  // The theme dial's three faces, one per setting, so the button says which is
+  // in force the way the speaker does. "Follow the phone" is the ring half
+  // filled, light and dark at once, rather than a phone: a handset on a button
+  // inside the phone is a picture of the thing you are holding.
+  sun: [
+    "M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8",
+    "M12 2v2",
+    "M12 20v2",
+    "M4.9 4.9l1.4 1.4",
+    "M17.7 17.7l1.4 1.4",
+    "M2 12h2",
+    "M20 12h2",
+    "M4.9 19.1l1.4-1.4",
+    "M17.7 6.3l1.4-1.4",
+  ],
+  moon: ["M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"],
   reroll: [
     "M4 12a8 8 0 0 1 14-5.3L20 9",
     "M20 4v5h-5",

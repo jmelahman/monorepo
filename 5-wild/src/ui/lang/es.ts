@@ -834,6 +834,8 @@ export const es: Strings = {
       music: "Música",
       track: "Pista",
       speed: "Velocidad de animación",
+      theme: "Tema",
+      themes: { light: "Claro", dark: "Oscuro" },
       language: "Idioma",
       wordsNextRun: "Las palabras cambian cuando empieces una partida nueva.",
       quit: "Abandonar partida",

@@ -26,8 +26,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0e0f13" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0e0f13" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f3ef" media="(prefers-color-scheme: light)" />
     <meta name="description" content="Privacy policy for the game 5 Wild." />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
     <title>Privacy Policy for 5 Wild</title>
@@ -39,6 +40,18 @@
         --fg: #e8e8ea;
         --muted: #8b8d98;
         --green: #538d4e;
+      }
+      /* The game's light theme, by the device alone: this page cannot see the
+         in-game setting and should not load anything to find it out. */
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f4f3ef;
+          --panel: #ffffff;
+          --line: #d6d5cf;
+          --fg: #1c1d22;
+          --muted: #6b6d76;
+          --green: #3d7a38;
+        }
       }
       * {
         box-sizing: border-box;

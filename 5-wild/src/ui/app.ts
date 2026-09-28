@@ -37,6 +37,7 @@ import {
   enabled as sharingEnabled,
   stepFor,
 } from "./telemetry"
+import { currentTheme, OTHER_THEME, setTheme } from "./theme"
 import type { Chrome, Decor, Handlers, SoundLevel } from "./views"
 import {
   aboutView,
@@ -291,6 +292,7 @@ export class App {
    * animation rather than a reading time goes through `beat`; see `./speed`.
    */
   private speed = loadSpeed()
+  /** Light, dark, or the device's. The shell applied it before the first paint. */
   /**
    * The language the interface is in, which the words follow at the next run
    * rather than at this instant. See `cycleLanguage`.
@@ -1386,6 +1388,13 @@ export class App {
       setSpeed(this.speed)
       this.render()
     },
+    // From the look on screen rather than a stored pick, because before the
+    // first tap there is no pick: the device's look is what the player sees, so
+    // it is what the tap leaves.
+    toggleTheme: () => {
+      setTheme(OTHER_THEME[currentTheme()])
+      this.render()
+    },
     /**
      * The interface changes now; the words change at the next run.
      *
@@ -1510,6 +1519,7 @@ export class App {
       track: this.music.title,
       decor: this.decor,
       speed: this.speed,
+      theme: currentTheme(),
       lang: this.lang,
       wordsDeferred: this.wordsDeferred,
       coach: this.coach,

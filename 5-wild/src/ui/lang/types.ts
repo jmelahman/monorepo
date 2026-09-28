@@ -10,6 +10,7 @@ import type {
   Rarity,
   Refusal,
 } from "../../engine"
+import type { Theme } from "../theme"
 
 /**
  * The shape every language has to fill.
@@ -594,6 +595,12 @@ export type Strings = {
       music: string
       track: string
       speed: string
+      /**
+       * The one row whose value is the translator's, since "Light" is a word
+       * rather than a number or a name: the device's look, light, and dark.
+       */
+      theme: string
+      themes: Record<Theme, string>
       /**
        * Also the noun in front of the title screen's language pill in its
        * accessible name, which is what tells a screen reader that "Español" is

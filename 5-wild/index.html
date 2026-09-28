@@ -6,8 +6,10 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0e0f13" />
+    <meta name="color-scheme" content="dark light" />
+    <!-- Both follow the device until src/ui/theme.ts rewrites them to the setting. -->
+    <meta name="theme-color" content="#0e0f13" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f3ef" media="(prefers-color-scheme: light)" />
     <meta
       name="description"
       content="A word-guessing roguelike: score chips and multipliers, buy relics, survive eight stages."

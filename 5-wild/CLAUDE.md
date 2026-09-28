@@ -176,6 +176,30 @@ and are switched off in the stylesheet (see `.plain` and `.quiet`) rather than
 threaded through the views, which the full rebuild would otherwise make every
 view's business.
 
+The theme is the exception that proves that rule: `src/ui/theme.ts` writes
+`data-theme` on the root, and it writes the *resolved* look, `light` or `dark`.
+There are only the two: the device decides until the player first taps the
+title-screen dial or the pause row, and the pick sticks from then on, with no "follow
+the phone" setting to go back to. Following the device is resolved in JS, with a `matchMedia`
+listener for a phone that changes its mind mid-game, so the light palette is
+written once under `:root[data-theme="light"]` rather than twice, once more
+inside a `prefers-color-scheme` block. The shell applies it before the word
+fetch so a light player never sees a dark page load. Two things are fixed
+across themes on purpose: the tile colors, which are what a letter *means*, and
+so the ink on them, `--on-tile`, which used to be the page's `--fg` inherited
+and was only light because the page was dark. Every new literal color belongs
+in `:root` beside the others with a light-theme value; a bare `#000` shadow
+reads as a smudge on the light page, which is what `--shade` is for.
+
+On Android the choice also goes native, because the launch window and the
+WebView's own background are drawn before the page exists. `ThemePlugin.java`
+hands it to `UiModeManager.setApplicationNightMode` (Android 12+), which the
+system persists per app and applies to the starting window, so `launchBackground`
+in `values/` or `values-notnight/` resolves to the player's theme rather than the
+device's. `MainActivity` paints the WebView from the same resource, which is why
+`capacitor.config.ts` no longer sets `backgroundColor`. `test/ui/theme.test.ts`
+holds both colors to `BACKDROP`. Below Android 12 the launch follows the device.
+
 Tests run in Node with no DOM: there is no jsdom. `test/ui` covers pure logic
 only; rendering and interaction get validated in a real browser instead.
 
@@ -203,14 +227,15 @@ style but not its prose is half-finished.
 ## Storage
 
 `5wild:run:v2` (the run save), `5wild:run:lang` and `5wild:run:log` beside it,
-`5wild:meta:v2` (the record), eight settings: `5wild:plain`, `5wild:speed`,
-`5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
+`5wild:meta:v2` (the record), nine settings: `5wild:plain`, `5wild:speed`,
+`5wild:theme`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
 `5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. All the
-settings are booleans except five: `5wild:track` holds `promises` or
+settings are booleans except six: `5wild:track` holds `promises` or
 `forget-me-not`, which recording plays, anything else reading as the first;
 `5wild:plain` holds one of `all`, `minimal` or `none`, how much of the scoring
 game the board draws on itself; `5wild:speed` holds `1`, `2` or `3`, how many
-times faster than authored the animations play; `5wild:lang` holds one of `en`,
+times faster than authored the animations play; `5wild:theme` holds `light`
+or `dark`, absent or anything else meaning the device decides; `5wild:lang` holds one of `en`,
 `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning
 the switch has never been touched, which sends nothing. The game never asks: the
 switch is on the about sheet behind the title screen's ⓘ and on the pause sheet,

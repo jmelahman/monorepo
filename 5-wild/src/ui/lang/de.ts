@@ -845,6 +845,8 @@ export const de: Strings = {
       music: "Musik",
       track: "Stück",
       speed: "Animationstempo",
+      theme: "Design",
+      themes: { light: "Hell", dark: "Dunkel" },
       language: "Sprache",
       wordsNextRun: "Die Wörter wechseln beim nächsten Durchlauf.",
       quit: "Durchlauf aufgeben",

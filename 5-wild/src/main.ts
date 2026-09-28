@@ -2,6 +2,7 @@ import "./style.css"
 import type { WordSource } from "./engine"
 import { App, loadRunLang, loadSave } from "./ui/app"
 import { type Lang, loadLang, S, setLang } from "./ui/lang"
+import { loadTheme, setTheme } from "./ui/theme"
 
 /**
  * The shell. Its whole job is to load the two things the engine refuses to
@@ -30,6 +31,10 @@ const loadWords = async (lang: Lang): Promise<WordSource> => {
 // before the render, because every string on every screen reads it.
 const lang = loadLang()
 setLang(lang)
+
+// Before the fetch too, because the page is painted while it runs, and a light
+// player shown a dark page for the length of a download has seen a flash.
+setTheme(loadTheme())
 
 const saved = loadSave()
 
