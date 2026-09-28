@@ -54,6 +54,7 @@ import {
 } from "../engine"
 import type { CoachStep } from "./coach"
 import { h } from "./dom"
+import { emblem } from "./emblems"
 import { money, formatNumber as num } from "./format"
 import { type IconName, icon, roundToken, type TokenKind } from "./icons"
 import type { Lang, Rule, RuleOf, Section, SectionOf } from "./lang"
@@ -451,10 +452,13 @@ function hud(state: RunState, on: Handlers, dock: HTMLElement): HTMLElement {
     boss &&
       h(
         "div",
-        // The whole rule as a tip as well, because the band clamps at two lines
-        // and two rules (The Silence in French and in German) take a third on
-        // a 320px screen. Clipped there, they are a press away rather than gone.
-        { class: "boss", "data-tip": bossCard(boss.id).text },
+        // No tip. It carried the whole rule, for the two (The Silence in French
+        // and in German) that take a third line on a 320px screen where the
+        // band clamps at two, and everywhere else it said again what the band
+        // already says, over the band, on every pass of the pointer. The rule
+        // is also on the round's intro card and in the rules sheet, which is
+        // where the clipped two can be read whole.
+        { class: "boss" },
         // One paragraph inside the band rather than the band's own text, so the
         // band can hold a fixed height and centre whatever length of rule it
         // was handed. See `--boss-band`.
@@ -1675,7 +1679,9 @@ function displaced(item: ShopItem, state: RunState): string | undefined {
 }
 
 /**
- * Which drawing rides in a card's ticket, one per kind.
+ * Which drawing rides in a card's ticket, one per kind. The card's own picture,
+ * beside its name, is a different question (which one, not what sort); see
+ * `cardHead`.
  *
  * Keyed on the kind rather than on the tag string, because the tag is prose and
  * changes with the language and with the tray ("Consumable · slots full"), and
@@ -1692,8 +1698,31 @@ const KIND_ICON: Record<ShopItem["kind"], IconName> = {
 }
 
 /**
- * A card on the shelf, drawn as a price tag: what it is and what it does, top
- * down, and what it costs at the foot, where the reading ends.
+ * The card's name with its picture beside it. Every card the shelf deals has
+ * a drawing of its own, and the kind's drawing stands in only for an id the
+ * tables have not caught up with. That is not only for the look of the thing:
+ * the shelf is two columns, and a card with no picture beside one with a
+ * picture lined its name up a picture's width to the left of its neighbour's.
+ * Modifiers, word shapes and ranges wore their kind's drawing for a while, and
+ * all nine modifiers, Chip to Glass, were the same diamond on a tile.
+ *
+ * Beside the name rather than over it. On a line of its own the picture cost
+ * every card on the shelf a 28px row, and the pack and the picks in an open
+ * pack, which are short full-width cards, had to be laid out on a grid of their
+ * own to keep it from being most of their height. Beside the name it costs a
+ * name that wraps a line sooner, which is the trade `.shop-item-head` answers.
+ */
+const cardHead = (item: ShopItem, title: string): HTMLElement =>
+  h(
+    "div",
+    { class: "shop-item-head" },
+    emblem(item.kind, item.id) ?? icon(KIND_ICON[item.kind]),
+    h("div", { class: "shop-item-name" }, title),
+  )
+
+/**
+ * A card on the shelf, drawn as a price tag: what it is, pictured and named, and
+ * what it does, top down, and what it costs at the foot, where the reading ends.
  *
  * Two columns of these rather than one of rows. The rows gave the sentence more
  * width, and spent it: five full-width rows and a tray ran past the fold at 390,
@@ -1725,7 +1754,7 @@ function shopItemCard(item: ShopItem, index: number, state: RunState, on: Handle
       "data-rarity": affordable ? undefined : rarity,
       onclick: () => on.buy(index),
     },
-    h("div", { class: "shop-item-name" }, title),
+    cardHead(item, title),
     h("div", { class: "shop-item-text" }, text),
     swap ? swapLine(swap, displaced(item, state)) : null,
     // Said on a line of its own, where the ticket used to say it as
@@ -1852,7 +1881,7 @@ export function packView(state: RunState, on: Handlers): HTMLElement | null {
             //
             // So the ticket is the drawing alone here, which is still worth its
             // corner: it is what the shelf taught the rarity color on.
-            h("div", { class: "shop-item-name" }, title),
+            cardHead(item, title),
             h("div", { class: "shop-item-text" }, text),
             // The one warning that does stay on this sheet, and the difference
             // from the tag it replaced is that this pick does not bounce. A

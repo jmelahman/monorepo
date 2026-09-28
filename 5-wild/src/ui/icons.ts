@@ -85,12 +85,20 @@ const PATHS = {
 
 export type IconName = keyof typeof PATHS
 
-export function icon(name: IconName): SVGSVGElement {
+export const icon = (name: IconName): SVGSVGElement => stroked(PATHS[name], `icon icon-${name}`)
+
+/**
+ * Any drawing on the icons' terms: the 24-unit box, silent, its stroke and color
+ * left to the stylesheet. Exported for `emblems.ts`, whose drawings are the same
+ * kind of thing but are content rather than chrome, and would have turned
+ * `IconName` from the chrome's short list into a second copy of the relic table.
+ */
+export function stroked(paths: readonly string[], className: string): SVGSVGElement {
   const svg = document.createElementNS(SVG, "svg")
-  svg.setAttribute("class", `icon icon-${name}`)
+  svg.setAttribute("class", className)
   svg.setAttribute("viewBox", "0 0 24 24")
   svg.setAttribute("aria-hidden", "true")
-  for (const d of PATHS[name]) {
+  for (const d of paths) {
     const path = document.createElementNS(SVG, "path")
     path.setAttribute("d", d)
     svg.append(path)

@@ -2047,7 +2047,10 @@ button {
   flex-direction: column;
   gap: 0.25rem;
   min-height: 8.5rem;
-  padding: 0.75rem;
+  /* Narrower at the sides than at the ends since the picture moved in beside
+     the name: at 0.75rem a side, a half-width card at 360 had 126px for a
+     picture and a name, and "Consonant Cluster" broke after its first word. */
+  padding: 0.75rem 0.5rem;
   border-radius: 0.75rem;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--rare, var(--rare-common)) 40%, var(--line));
@@ -2180,6 +2183,32 @@ button {
 .shop-item-full {
   font-size: var(--type-pip);
   font-weight: 700;
+}
+
+/*
+ * The name with the card's own picture beside it; see `cardHead`. The picture is
+ * in the ticket's ink rather than the name's, so the rarity reads from the top
+ * of the card as well as from the foot, and a legendary is gold before a word
+ * of it is read.
+ *
+ * Centred on the name, which is one line or two: on two, a picture pinned to
+ * the first line left a hole under itself beside the second.
+ */
+.shop-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.shop-item-head > .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: color-mix(in srgb, var(--rare, var(--rare-common)) 70%, var(--fg));
+}
+
+.shop-item-head > .shop-item-name {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .shop-item-name {
