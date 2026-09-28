@@ -39,7 +39,7 @@ until the worst letters in the alphabet are the ones you hunt for.
 
 🔩 **Letter modifiers.** Nine upgrades, each bought onto a letter and kept on it
 for the rest of the run. Steel doubles your mult, Glass triples it and might
-shatter, and Wild pays you *more* for being wrong.
+shatter, and Wild pays you _more_ for being wrong.
 
 👹 **Bosses.** Fifteen of them, one closing every stage, each breaking a rule you
 were relying on. The Fog makes yellow and gray look identical, The Tyrant makes
