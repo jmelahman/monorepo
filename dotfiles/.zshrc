@@ -18,6 +18,56 @@ zstyle ':completion:*' group-name ''
 zstyle ':completion:*:descriptions' format '%F{green}%d%f'
 zstyle ':completion:*' list-colors ''
 
+# Ollama doesn't ship a completion script, but as a Cobra CLI it still answers
+# the hidden `__complete` command. Wrap it, following Cobra's own zsh script:
+# the last output line is ":<directive>", a bitmask of ShellCompDirective flags.
+_ollama() {
+	local -a lines completions
+	local -i directive
+	local line
+
+	# The last word is the (possibly empty) one being completed. Cobra needs the
+	# empty string to be passed explicitly, hence the (@) and the quotes.
+	lines=("${(@f)$(ollama __complete "${(@)words[2,CURRENT]}" 2>/dev/null)}")
+	((${#lines} > 0)) || return 1
+	directive=${lines[-1]#:}
+	lines=("${(@)lines[1,-2]}")
+
+	((directive & 1)) && return 1 # ShellCompDirectiveError
+
+	if ((directive & 8)); then # ShellCompDirectiveFilterFileExt: lines are extensions
+		_files -g "*.(${(j:|:)${(@)lines}})"
+		return
+	elif ((directive & 16)); then # ShellCompDirectiveFilterDirs
+		_files -/
+		return
+	fi
+
+	# Each line is "value" or "value<TAB>description"; _describe wants "value:desc"
+	# with any colon in the value escaped.
+	for line in "${lines[@]}"; do
+		[[ -n $line ]] || continue
+		if [[ $line == *$'\t'* ]]; then
+			completions+=("${${line%%$'\t'*}//:/\\:}:${line#*$'\t'}")
+		else
+			completions+=("${line//:/\\:}")
+		fi
+	done
+
+	local -a describe_opts=()
+	((directive & 2)) && describe_opts+=(-S '') # ShellCompDirectiveNoSpace
+	((directive & 32)) && describe_opts+=(-V) # ShellCompDirectiveKeepOrder
+
+	if ((${#completions} > 0)); then
+		_describe -t values 'ollama' completions "${describe_opts[@]}" && return 0
+	fi
+
+	# ShellCompDirectiveNoFileComp: don't fall back to files
+	((directive & 4)) && return 1
+	_files
+}
+compdef _ollama ollama
+
 # Options
 setopt autocd       # cd into directories without typing 'cd'
 setopt correct      # auto-correct commands
