@@ -1,0 +1,9 @@
+/* Tabs, address bar and bookmarks all live in the toolbox; collapse it whole. */
+#navigator-toolbox {
+    visibility: collapse !important;
+}
+
+/* The vertical-tabs sidebar sits outside the toolbox. */
+#sidebar-main {
+    display: none !important;
+}

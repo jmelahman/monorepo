@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=5 Wild
+Comment=Play 5 Wild in a bare Firefox window
+Exec=sh -c "exec firefox --profile \\$HOME/.mozilla/firefox/5-wild --name 5-wild https://5-wild.com"
+Icon=firefox
+Terminal=false
+Type=Application
+Categories=Game;
+StartupWMClass=5-wild

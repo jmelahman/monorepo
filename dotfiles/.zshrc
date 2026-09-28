@@ -209,6 +209,7 @@ alias awslogin="aws sso login"
 alias venv="uv venv .venv --python 3.11 --allow-existing && source .venv/bin/activate"
 alias activate="source .venv/bin/activate"
 alias dot='/usr/bin/git --git-dir=$HOME/.dotfiles --work-tree=$HOME'
+alias 5wild='gtk-launch 5-wild'
 
 # Functions
 function home() {
