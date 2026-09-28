@@ -54,12 +54,12 @@ _ollama() {
 		fi
 	done
 
-	local -a describe_opts=()
-	((directive & 2)) && describe_opts+=(-S '') # ShellCompDirectiveNoSpace
-	((directive & 32)) && describe_opts+=(-V) # ShellCompDirectiveKeepOrder
+	local -a describe_flags=(-t values) compadd_opts=()
+	((directive & 2)) && compadd_opts+=(-S '') # ShellCompDirectiveNoSpace
+	((directive & 32)) && describe_flags+=(-V) # ShellCompDirectiveKeepOrder
 
 	if ((${#completions} > 0)); then
-		_describe -t values 'ollama' completions "${describe_opts[@]}" && return 0
+		_describe "${describe_flags[@]}" 'ollama' completions "${compadd_opts[@]}" && return 0
 	fi
 
 	# ShellCompDirectiveNoFileComp: don't fall back to files
