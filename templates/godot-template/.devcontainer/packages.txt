@@ -1,0 +1,30 @@
+# System packages the scripts need beyond the base devcontainer image, read by
+# `scripts/setup.sh system` (CI and the image build both run it). Ubuntu names.
+
+# Downloads and archives.
+curl
+unzip
+
+# A display for the tests, screenshots and the agent bridge: Godot's --headless
+# has no renderer and drops input, so these run under Xvfb on Mesa's software
+# GL (llvmpipe) and Vulkan (lavapipe) instead.
+xvfb
+xauth
+libgl1
+libgl1-mesa-dri
+mesa-vulkan-drivers
+libvulkan1
+
+# What the Godot binary links against at runtime.
+libfontconfig1
+libxcursor1
+libxinerama1
+libxrandr2
+libxi6
+libasound2t64
+libpulse0
+libdbus-1-3
+libwayland-client0
+libwayland-cursor0
+libwayland-egl1
+libxkbcommon0

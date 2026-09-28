@@ -1,0 +1,210 @@
+[gd_scene format=3 uid="uid://cxowimgo17vl7"]
+
+[ext_resource type="Script" uid="uid://dey2hnt1s7ug8" path="res://game/main.gd" id="1_main"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 48.0
+content_margin_top = 40.0
+content_margin_right = 48.0
+content_margin_bottom = 40.0
+bg_color = Color(0.17, 0.19, 0.25, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="Main" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12, 0.15, 0.22, 1)
+
+[node name="Board" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -500.0
+offset_top = -300.0
+offset_right = 500.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 32
+alignment = 1
+
+[node name="Title" type="Label" parent="Board"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 72
+text = "Push Your Luck"
+horizontal_alignment = 1
+
+[node name="Score" type="Label" parent="Board"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+horizontal_alignment = 1
+
+[node name="Pot" type="Label" parent="Board"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+horizontal_alignment = 1
+
+[node name="Message" type="Label" parent="Board"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Board"]
+layout_mode = 2
+theme_override_constants/separation = 32
+alignment = 1
+
+[node name="Roll" type="Button" parent="Board/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+focus_mode = 0
+text = "Roll"
+
+[node name="Bank" type="Button" parent="Board/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+focus_mode = 0
+text = "Bank"
+
+[node name="NewGame" type="Button" parent="Board/Buttons"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(320, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+focus_mode = 0
+text = "New game"
+
+[node name="Hint" type="Label" parent="Board"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.5)
+theme_override_font_sizes/font_size = 24
+text = "Space rolls, Enter banks, Esc for options"
+horizontal_alignment = 1
+
+[node name="Options" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="Options"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Center" type="CenterContainer" parent="Options"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Options/Center"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Rows" type="GridContainer" parent="Options/Center/Panel"]
+layout_mode = 2
+theme_override_constants/h_separation = 32
+theme_override_constants/v_separation = 24
+columns = 2
+
+[node name="MusicLabel" type="Label" parent="Options/Center/Panel/Rows"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Music"
+
+[node name="Music" type="HSlider" parent="Options/Center/Panel/Rows"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 48)
+layout_mode = 2
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+
+[node name="SfxLabel" type="Label" parent="Options/Center/Panel/Rows"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Sound"
+
+[node name="Sfx" type="HSlider" parent="Options/Center/Panel/Rows"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 48)
+layout_mode = 2
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+
+[node name="FullscreenLabel" type="Label" parent="Options/Center/Panel/Rows"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Fullscreen"
+
+[node name="Fullscreen" type="CheckBox" parent="Options/Center/Panel/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LanguageLabel" type="Label" parent="Options/Center/Panel/Rows"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Language"
+
+[node name="Language" type="OptionButton" parent="Options/Center/Panel/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+item_count = 3
+popup/item_0/text = "System"
+popup/item_0/id = 0
+popup/item_1/text = "English"
+popup/item_1/id = 1
+popup/item_2/text = "Español"
+popup/item_2/id = 2
+
+[node name="Spacer" type="Control" parent="Options/Center/Panel/Rows"]
+layout_mode = 2
+
+[node name="Resume" type="Button" parent="Options/Center/Panel/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Resume"

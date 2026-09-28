@@ -1,0 +1,18 @@
+# Godot's import cache and the redirected user dirs of scripted runs
+# (scripts/env.sh).
+.godot/
+.godot-home/
+
+# Third-party addons: scripts/setup.sh installs them at the pins in
+# scripts/versions.env. addons/agent_bridge is ours and is tracked.
+addons/gdUnit4/
+addons/godotsteam/
+
+build/
+*.tmp
+__pycache__/
+.ruff_cache/
+
+# Local planning artifacts
+plans/
+.claude/settings.local.json

@@ -1,0 +1,75 @@
+# Spanish. msgids are the English text as written in the scenes and in tr()
+# calls, so English needs no catalog of its own. Add a language by copying
+# this file, translating the msgstrs, and listing it under Project Settings >
+# Localization > Translations (internationalization/locale/translations).
+# Editor: Project Settings > Localization > POT Generation writes a fresh
+# template of every string from the scenes and scripts.
+msgid ""
+msgstr ""
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8-bit\n"
+
+msgid "Push Your Luck"
+msgstr "Tienta a la suerte"
+
+msgid "Score: %d / %d"
+msgstr "Puntos: %d / %d"
+
+msgid "Pot: %d"
+msgstr "Bote: %d"
+
+msgid "Roll"
+msgstr "Tirar"
+
+msgid "Bank"
+msgstr "Plantarse"
+
+msgid "New game"
+msgstr "Nueva partida"
+
+msgid "Space rolls, Enter banks, Esc for options"
+msgstr "Espacio tira, Intro se planta, Esc para opciones"
+
+msgid "Roll to fill the pot. A 1 loses it. Bank to keep it."
+msgstr "Tira para llenar el bote. Un 1 lo pierde. Plántate para guardarlo."
+
+msgid "You rolled %d."
+msgstr "Sacaste un %d."
+
+msgid "Bust! The pot of %d is gone."
+msgstr "¡Fallo! Se pierde el bote de %d."
+
+msgid "Banked %d."
+msgstr "Guardaste %d."
+
+msgid "You won in %d turns!"
+msgstr "¡Ganaste en %d turnos!"
+
+msgid "Nothing to bank yet."
+msgstr "Aún no hay nada que guardar."
+
+msgid "This game is over."
+msgstr "Esta partida ha terminado."
+
+msgid "That does nothing."
+msgstr "Eso no hace nada."
+
+msgid "Music"
+msgstr "Música"
+
+msgid "Sound"
+msgstr "Sonido"
+
+msgid "Fullscreen"
+msgstr "Pantalla completa"
+
+msgid "Language"
+msgstr "Idioma"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "Resume"
+msgstr "Continuar"

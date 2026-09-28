@@ -1,0 +1,54 @@
+name: Release
+
+# Tag and push to release: `git tag v1.2.3 && git push origin v1.2.3`. Exports
+# every preset in export_presets.cfg and attaches the zips to a GitHub release.
+# Steam is a separate upload (steamcmd and the partner site), not this.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions: {}
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # git describe names the zips.
+      # No download cache, by the same rule as the other release workflows: a
+      # poisoned cache is a supply-chain hazard for what ships from it. Every
+      # download is checked against the sha256 in scripts/versions.env anyway.
+      - name: Set up
+        run: scripts/setup.sh system godot addons import templates
+      - name: Test
+        run: scripts/test.sh
+      - name: Export
+        run: scripts/export.sh
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: builds
+          path: build/*.zip
+          if-no-files-found: error
+
+  # Split from the export so the job holding a write token runs no project code.
+  publish:
+    needs: export
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      contents: write # Creates the GitHub release.
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: builds
+          path: build
+      - name: Create the release
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes build/*.zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

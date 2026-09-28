@@ -1,0 +1,8 @@
+# Godot writes LF everywhere; keep a Windows checkout from turning a resave
+# into a whole-file diff.
+* text=auto eol=lf
+*.png binary
+*.ogg binary
+*.wav binary
+*.ttf binary
+*.otf binary

@@ -12,6 +12,11 @@ on:
       - master
     paths:
       - templates/fullstack-template/.devcontainer/**
+      - templates/godot-template/.devcontainer/**
+      - templates/godot-template/.dockerignore
+      - templates/godot-template/scripts/env.sh
+      - templates/godot-template/scripts/setup.sh
+      - templates/godot-template/scripts/versions.env
       - docker-bake.hcl
       - .github/workflows/devcontainer.yml
 
@@ -49,7 +54,7 @@ jobs:
           # Build from the checkout rather than bake-action's default remote
           # Git context.
           source: .
-          targets: devcontainer
+          targets: devcontainer,godot-devcontainer
           push: true
           pull: true
           no-cache: ${{ github.event_name != 'workflow_dispatch' || inputs.no-cache }}

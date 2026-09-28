@@ -47,6 +47,14 @@ ALLOWED_DOMAINS=(
 	"playwright.download.prss.microsoft.com"
 )
 
+# Images built on this one add their own, one domain per line, rather than
+# forking this script (templates/godot-template/.devcontainer does).
+for list in /usr/local/share/devcontainer/allowed-domains.d/*.txt; do
+	[[ -f $list ]] || continue
+	mapfile -t extra < <(grep -Ev '^[[:space:]]*(#|$)' "$list")
+	ALLOWED_DOMAINS+=("${extra[@]}")
+done
+
 for domain in "${ALLOWED_DOMAINS[@]}"; do
 	IPS=$(getent ahosts "$domain" 2>/dev/null | awk '{print $1}' | sort -u || echo "")
 	for ip in $IPS; do

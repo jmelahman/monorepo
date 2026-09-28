@@ -1,0 +1,9 @@
+# Added to the base devcontainer's firewall allowlist. Godot and the addons at
+# the current pins are baked into the image; these are for a pin bump, and for
+# prek installing the Python hooks (gdtoolkit, ruff).
+codeload.github.com
+objects.githubusercontent.com
+release-assets.githubusercontent.com
+codeberg.org
+pypi.org
+files.pythonhosted.org

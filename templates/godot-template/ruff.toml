@@ -1,0 +1,7 @@
+# scripts/bridge.py is the only Python, and it is standard library only, so
+# this is ruff alone rather than the monorepo's python profile (ty, pytest, a
+# uv lockfile).
+line-length = 100
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]

@@ -1,0 +1,9 @@
+# For .devcontainer/Dockerfile, whose context is this directory: it needs the
+# provisioning scripts and nothing else, and anything more would rebuild the
+# image on every edit to the game.
+*
+!scripts/env.sh
+!scripts/versions.env
+!scripts/setup.sh
+!.devcontainer/packages.txt
+!.devcontainer/allowed-domains.txt
