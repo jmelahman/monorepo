@@ -18,6 +18,37 @@ zstyle ':completion:*' group-name ''
 zstyle ':completion:*:descriptions' format '%F{green}%d%f'
 zstyle ':completion:*' list-colors ''
 
+# Ollama registers no argument completion, so `__complete` knows subcommands and
+# flags but not model names. Fill those in from `ollama list`.
+_ollama_models() {
+	local sub=${words[2]}
+	local -a models expl
+	local -i pos=0 i
+
+	case $sub in
+	run | show | rm | cp | stop | push | pull) ;;
+	*) return 1 ;;
+	esac
+	[[ $PREFIX == -* ]] && return 1
+
+	# Count the positional arguments already typed, skipping flags and the value
+	# of the ones that take a separate value.
+	for ((i = 3; i < CURRENT; i++)); do
+		case ${words[i]} in
+		--format | --keepalive | --dimensions) ((i++)) ;;
+		-*) ;;
+		*) ((pos++)) ;;
+		esac
+	done
+	# Only `rm` takes several models; for the rest, later arguments are a prompt,
+	# a new name, etc.
+	[[ $sub == rm ]] || ((pos == 0)) || return 1
+
+	models=(${(f)"$(ollama list 2>/dev/null | awk 'NR > 1 { print $1 }')"})
+	((${#models} > 0)) || return 1
+	_wanted models expl 'model' compadd -a models
+}
+
 # Ollama doesn't ship a completion script, but as a Cobra CLI it still answers
 # the hidden `__complete` command. Wrap it, following Cobra's own zsh script:
 # the last output line is ":<directive>", a bitmask of ShellCompDirective flags.
@@ -61,6 +92,8 @@ _ollama() {
 	if ((${#completions} > 0)); then
 		_describe "${describe_flags[@]}" 'ollama' completions "${compadd_opts[@]}" && return 0
 	fi
+
+	_ollama_models && return 0
 
 	# ShellCompDirectiveNoFileComp: don't fall back to files
 	((directive & 4)) && return 1
