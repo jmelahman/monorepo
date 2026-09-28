@@ -898,7 +898,7 @@ export const de: Strings = {
 
     coach: {
       chips:
-        "Jeder Versuch wird gewertet. Tippe ein Wort, und die Zeile unter dem Brett addiert, was seine Buchstaben wert sind.",
+        "Jeder Versuch wird gewertet. Tippe ein Wort, und die Zeile über dem Brett addiert, was seine Buchstaben wert sind.",
       rare: (chips) =>
         `${chips} Chips bisher. Seltene Buchstaben zahlen mehr: A bringt 1, K bringt 5, Z bringt 10.`,
       mult: "Das ? ist der Mult, und nur die Antwort kennt ihn: grün +3, gelb +1, grau nichts. Drück ENTER, um es herauszufinden.",

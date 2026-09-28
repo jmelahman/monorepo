@@ -953,7 +953,7 @@ export const en: Strings = {
 
     coach: {
       chips:
-        "Every guess is scored. Type a word, and the line under the board counts what its letters are worth.",
+        "Every guess is scored. Type a word, and the line over the board counts what its letters are worth.",
       // The three letters named are the ends and the middle of the table in
       // `content/letters.ts`, so a language whose chip table is retuned has to
       // retune this sentence with it.

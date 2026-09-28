@@ -260,10 +260,11 @@ function menuButton(on: Handlers): HTMLElement {
  * had to close the sheet to find out what they had done. Here the board changes
  * under the thumb, which is the entire feedback the switch needs.
  *
- * It sits beside the chips × mult readout rather than up in the HUD, because
- * that is where the thing it governs is being totted up. The numbers on the
- * keys feed that line, and the switch belongs at the bottom of the screen with
- * them and within reach of the thumb already on the keyboard.
+ * It sits at the foot of the screen, beside the hand and over the keys, because
+ * the keys are most of what it governs, and within reach of the thumb already
+ * on them. It sat beside the chips × mult readout while that was down there
+ * too, and stayed behind when the readout went up into the header: a control
+ * in the header is a reach across the screen, and the header is for reading.
  *
  * The face is the setting rather than a label for it: a letter carrying its
  * value, the same letter carrying only a mark, or the letter on its own. So a
@@ -383,13 +384,17 @@ export const NEXT_SOUND: Record<SoundLevel, SoundLevel> = {
  * score: 30px of header is 5px off every tile when the board is bound by
  * height, which on most phones it is.
  *
- * The boss's rule is the header's second row when there is one, rather than a
+ * The dock line, the shape and the chips × mult being typed, is the header's
+ * third row, under the bar: the hand beside the pile it is about to join. See
+ * `.hud .dock-line`.
+ *
+ * The boss's rule is the header's last row when there is one, rather than a
  * banner of its own below. It is a fact about the round, like the name beside
  * the score, and inside the header its height is a known quantity the board can
  * be told about, which is what keeps a boss round's tiles the size of every
  * other round's. See `--boss-band`.
  */
-function hud(state: RunState, on: Handlers): HTMLElement {
+function hud(state: RunState, on: Handlers, dock: HTMLElement): HTMLElement {
   const round = state.round
   const board = ui().board
   const boss = getBoss(round.bossId)
@@ -442,6 +447,7 @@ function hud(state: RunState, on: Handlers): HTMLElement {
     // .meter`. The scoring animation drives it frame by frame, so it fills as
     // the total climbs rather than jumping to the answer.
     meter(state),
+    dock,
     boss &&
       h(
         "div",
@@ -1185,28 +1191,19 @@ export function roundView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
   return h(
     "div",
     { class: "screen round-screen" },
-    hud(state, on),
-    relicRow(state),
-    consumableRow(state, on),
+    // The shape of the word and the chips × mult it is being typed into, as
+    // one line in the header. What solving would bank sat here too, as a chip
+    // of its own, and is the header bar's projection now; see `meterSolve`.
+    // The decor switch left it for the hand's row: `fillReadout` calls
+    // `replaceChildren` on the readout every keystroke, which is why the
+    // switch was only ever the readout's sibling, never its child, and why
+    // moving it cost nothing.
+    hud(state, on, h("div", { class: "dock-line" }, categorySlot(state, on), readoutSlot(state))),
     grid(state, chrome.coach),
-    // One line under the board: the shape of the word, the chips × mult it is
-    // being typed into, and the decor switch. What solving would bank sat here
-    // too, as a chip of its own, and is the header bar's projection now; see
-    // `meterSolve`.
-    // They were two lines, the two chips above and the readout the full width
-    // below, and every pixel of the second came out of the tiles.
-    //
-    // The toggle is the readout's sibling and not its child on purpose:
-    // `fillReadout` calls `replaceChildren` on every keystroke, so a button
-    // inside that element would be rebuilt, and lose a press mid-tap, five
-    // times a word.
-    h(
-      "div",
-      { class: "dock-line" },
-      categorySlot(state, on),
-      readoutSlot(state),
-      decorToggle(on, chrome),
-    ),
+    // Everything a thumb presses outside the keys, at the keys: the hand and
+    // the switch, then the relics flush to the keyboard. See `.hand-line`.
+    h("div", { class: "hand-line" }, consumableRow(state, on), decorToggle(on, chrome)),
+    relicRow(state),
     h("div", { class: "relic-tip" }),
     h("div", { class: "toast" }),
     keyboard(state, on),
@@ -2150,9 +2147,11 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
         stageLine(state),
       ),
       // The round's header, slot for slot, with the score's seat left empty:
-      // there is no score in a shop, and the seat is what holds the bar at the
-      // round's height. The gold no longer depends on it for its place; the
-      // grid in `.hud` pins it beside the menu on both screens.
+      // there is no score in a shop. The seat once held the bar at the round's
+      // height, and there is no bar here now either, nor room kept for one,
+      // since the round's dock line put a row between the two headers anyway;
+      // see the shop section of the stylesheet. The gold no longer depends on it for its
+      // place; the grid in `.hud` pins it beside the menu on both screens.
       h("div", { class: "hud-score", "aria-hidden": "true" }),
       h(
         "div",

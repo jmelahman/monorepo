@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="A boss round of 5 Wild in progress on ascension 5: The Tyrant demanding every guess reuse the greens found, five relics and two consumables along the top, and a score of 43.7K against a 49.1K target" width="380">
+  <img src="assets/screenshot.png" alt="A boss round of 5 Wild in progress: The Drought making vowels score no chips, five relics above the keyboard, and a score of 3,786 against a 4,000 target" width="380">
 </p>
 
 ---

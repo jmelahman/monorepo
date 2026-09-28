@@ -887,7 +887,7 @@ export const es: Strings = {
 
     coach: {
       chips:
-        "Cada intento se puntúa. Escribe una palabra, y la línea de debajo del tablero cuenta lo que valen sus letras.",
+        "Cada intento se puntúa. Escribe una palabra, y la línea de encima del tablero cuenta lo que valen sus letras.",
       rare: (chips) =>
         `${chips} fichas por ahora. Las letras raras pagan más: la A vale 1, la K vale 5, la Z vale 10.`,
       mult: "El ? es el mult, y solo la respuesta lo sabe: verde +3, amarillo +1, gris nada. Pulsa INTRO para averiguarlo.",

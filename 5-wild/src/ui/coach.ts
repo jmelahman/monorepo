@@ -56,7 +56,7 @@ export type CoachStep = {
   text: string
   /**
    * The thing on screen the card is about. Lit while the card is up, which is
-   * what ties a sentence about "the ?" to the actual `?` under the board. A
+   * what ties a sentence about "the ?" to the actual `?` in the header. A
    * selector rather than a node because the screen is rebuilt on every dispatch
    * and any node this held would be a node the next render threw away.
    */

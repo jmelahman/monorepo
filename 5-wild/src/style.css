@@ -417,7 +417,8 @@ button {
   border-radius: 0 0 0.5rem 0.5rem;
   border-top: 1px solid color-mix(in srgb, var(--mult) 40%, transparent);
   background: color-mix(in srgb, var(--mult) 14%, var(--panel));
-  font-size: 0.6875rem;
+  /* See `--boss-font`. */
+  font-size: var(--boss-font);
   line-height: 1.3;
   /* The header's outer tracks are `minmax(max-content, 1fr)`, and an item
      spanning them offers its max-content width to that sizing: the rule's whole
@@ -469,6 +470,26 @@ button {
   grid-column: 1 / -1;
   /* The row gap spaces it now. */
   margin-top: 0;
+}
+
+/* The dock line as the header's third row, under the bar, the header's full
+   width. It sat under the board, then over the keyboard, and both times it was
+   a line of its own paying the screen's gap twice for 36px of figures. Here it
+   is the hand beside the pile it will be added to, which is the sentence the
+   coaching's second card says out loud, and the gap it paid is the board's.
+   The trays went to the foot of the screen in the same move; see `.hand-line`. */
+.hud .dock-line {
+  grid-column: 1 / -1;
+}
+
+/* 4px of air under the header on top of the screen's gap, since the board's
+   top row met the boss's band at the same 6px the trays meet each other, and
+   a panel that size against a row of tiles read as the two touching. Plus 1px
+   for the boss ring, which is a box shadow drawn outside the header and so
+   sits in the gap rather than beside it. On every round and not only the
+   boss's, so the board stays where the band reservation puts it either way. */
+.round-screen .hud {
+  margin-bottom: calc(0.25rem + 1px);
 }
 
 /* --------------------------------------------------------------- relics */
@@ -744,7 +765,7 @@ button {
   line-height: 1.2;
 }
 
-/* On the board the hand is a fixed band, seats and all, so the board below it
+/* On the board the hand is a fixed band, seats and all, so the board above it
    is the same size and in the same place whether the hand is full, empty or
    emptied mid-round. The band is the relic tray's height, `--tray-h`, so the
    two rows read as one pair of shelves; the rule clamps at one line to fit it,
@@ -782,6 +803,26 @@ button {
 .consumable.empty {
   background: transparent;
   border: 1px dashed var(--line);
+}
+
+/* The hand and the decor switch, one row over the relic tray, both over the
+   keyboard. The cards are the only thing in either tray a thumb presses, so
+   they came down to where the thumb already is, and the switch came with them
+   when the dock line went up into the header: it is a control, and the header
+   is for reading. The relics sit under the hand rather than over it, flush to
+   the keys, because a relic is read by holding it and the hand is pressed, and
+   the row nearer the keyboard is the one most often brushed on the way to it.
+   The switch is `--tray-h` square by its own default size, so it adds no
+   height to the row. */
+.hand-line {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.hand-line .consumables {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* ----------------------------------------------------------------- grid */
@@ -830,8 +871,8 @@ button {
      falling below the board rather than split either side of it. Centered both
      ways, the board of a width-bound phone sat wherever half the slack put it,
      which moved with every row of chrome above; flush, the top row is a fixed
-     distance under the trays, as high as the screen allows, and the slack is a
-     gap over the dock line where nothing is aimed at. */
+     distance under the header, as high as the screen allows, and the slack is a
+     gap over the hand where nothing is aimed at. */
   margin: 0 auto auto;
   /* The containing block for `.coach-slot`, which pins to the board's foot. */
   position: relative;
@@ -861,15 +902,18 @@ button {
     calc(45cqw / var(--cols, 5)),
     calc(0.45 * var(--tile-max))
   );
-  /* A column's share of the widest the board may be, 4.5rem, so five letters
-     come to 360px. The board used to run the full width of the keyboard
-     whenever the height allowed it, which at 390 is 374px of tiles that read
-     no better for the extra, and on the wider screens the stylesheet allows
-     (up to 30rem) it ran to 464px. Wordle holds at 300; 320 was tried first
-     and read as a board shrunk to fit rather than one sized for a thumb. Per
-     column rather than a flat width, so a longer answer gets the same tile,
-     not a thinner one. */
-  --tile-max: 4.5rem;
+  /* A column's share of the widest the board may be, 3.75rem, so five letters
+     come to 300px on a phone, Wordle's own width. The board used to run the
+     full width of the keyboard whenever the height allowed it, which at 390 is
+     374px of tiles that read no better for the extra, and on the wider screens
+     the stylesheet allows (up to 30rem) it ran to 464px. It was 360 for a
+     while, after 320 read as a board shrunk to fit; once the header, trays and
+     dock had all given back height, 360 was a board that crowded the keyboard
+     on a phone, and 300 leaves the screen room around it. A desktop screen is
+     read from further off and keeps 360; see the `40rem` block. Per column
+     rather than a flat width, so a longer answer gets the same tile, not a
+     thinner one. */
+  --tile-max: 3.75rem;
 }
 
 .row {
@@ -1193,6 +1237,21 @@ button {
   color: var(--muted);
 }
 
+/* A hover that says the chip opens something, on a mouse only; see `bindMouse`
+   for why the gate is a class and not `(hover: hover)`. Not the brightness
+   filter the other buttons take: the chip is the header's own panel colour,
+   and 12% brighter than near-black is a change nobody sees. The edge and the
+   chevron come up instead, the two parts of it that were already saying
+   "press". Left off while it is `.fired`, whose gold is louder news. */
+.mouse .category:hover:not(.fired) {
+  border-color: color-mix(in srgb, var(--fg) 35%, var(--line));
+  background: var(--panel-2);
+}
+
+.mouse .category:hover .icon {
+  color: var(--fg);
+}
+
 /* -------------------------------------------------------------- readout */
 
 /* The row exists to be the switch's anchor. The readout itself is unchanged and
@@ -1208,11 +1267,10 @@ button {
    mark, or the letter alone. Baseline-aligned so the digit sits where a value
    sits on a key, and sized to the same box in all three states so nothing
    twitches when it is pressed.
-   It hung off the right end of the row while the chips × mult figure was a
-   small thing centred against the board, which a button in the row would have
-   shoved off centre. The figure is the width of the row now, two blocks either
-   side of the ×, so the switch takes the last seat in it as an ordinary item,
-   the blocks' own height. */
+   It hung off the right end of the dock line, and then took the last seat in
+   it; it went with the hand, not with the figures, when the line moved into
+   the header. See `.hand-line`. Its default box is `--tray-h` on both sides,
+   which is what lets it sit in that row at the cards' height. */
 .decor-toggle {
   flex: 0 0 auto;
   display: flex;
@@ -1416,12 +1474,6 @@ button {
   font-size: 1rem;
 }
 
-.dock-line .decor-toggle {
-  width: var(--shape-line);
-  height: var(--shape-line);
-  padding-top: 0.5625rem;
-}
-
 /* --pop is set per guess from the score's size against the target, so the
    reaction is proportional: a chip guess twitches, a round-clearing one lunges.
    The blocks pop rather than the readout, because the readout is the width of
@@ -1549,10 +1601,12 @@ button {
 
 /* The half of the readout that just moved. Chips and mult sit side by side and
    change for different reasons, so reacting per half is the difference between
-   "the score went up" and "that green tile is why". */
+   "the score went up" and "that green tile is why". A nudge at 1.08 rather than
+   the 1.18 it had under the board: it fires once a tile through a tally, inside
+   the header now, and at 1.18 five in a row read as the header jittering. */
 .readout .chips.bumped,
 .readout .mult.bumped {
-  --pop: 1.18;
+  --pop: 1.08;
   animation: pop calc(300ms * var(--pace)) ease;
 }
 
@@ -1573,11 +1627,17 @@ button {
      and a gap above. Everything between the foot of the viewport and the top of
      the keyboard, which is where a refusal has to land to be read. */
   --toast-lift: calc(3 * var(--key-h) + 0.75rem + 0.5rem + 1rem);
-  /* Two lines of the boss's rule at its 11px and 1.3 line height, plus
-     0.375rem above and below. Fixed rather than fitted, and declared here
+  /* The boss's rule, a size under the stage line's 11px beside it on a phone:
+     the rule is read once, on the intro card that states it at full size, and
+     here it is a reminder. At 11px it was the loudest thing in the header after
+     the score. A desktop screen has the room to spare and a reader further from
+     it, and gets it back and a pixel more; see the `40rem` block. */
+  --boss-font: 0.625rem;
+  /* Two lines of the boss's rule at its size and 1.3 line height, plus
+     0.3125rem above and below. Fixed rather than fitted, and declared here
      rather than on the band, because the board of a round without a boss has
      to reserve it too. See `.hud .boss` and `.grid-wrap`. */
-  --boss-band: calc(2 * 1.3 * 0.6875rem + 0.75rem);
+  --boss-band: calc(2 * 1.3 * var(--boss-font) + 0.625rem);
   /* One height for the relic tray and the hand, both drawn whether or not
      anything is in them. The tray was a 2.5rem minimum that grew by the name:
      a two-line name over a growth badge came to 47px, so a relic that started
@@ -1621,11 +1681,10 @@ button {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  /* Clear of the dock line by more than a key row is clear of the next row, so
-     the line reads as the board's foot rather than as a fourth row of keys: the
-     screen's own 0.375rem gap alone was exactly the rows' gap. The toast is
-     lifted from the viewport's foot, not from this edge, and is unmoved. */
-  margin-top: 0.5rem;
+  /* No margin of its own. It had 0.5rem, to keep the dock line that sat over
+     it from reading as a fourth row of keys. The relic tray sits there now, a
+     row of cards with rarity edges that reads as nothing like a key, at the
+     screen's one gap like every other seam. */
   --key-gap: 0.25rem;
   /* The widest row is ten keys and nine gaps; that divides into the unit every
      key in every row is then built from. */
@@ -1903,7 +1962,7 @@ button {
  * the `+chips +mult` a tile floats as it turns. One rule, easy to state:
  * nothing on the board says what a letter is worth. What survives is Wordle,
  * five letters and three colors, plus the whole-guess score, which is the game
- * rather than a decoration of it and which the readout above the keyboard still
+ * rather than a decoration of it and which the readout in the header still
  * counts out.
  *
  * Nothing here changes what anything is worth. The letters score exactly what
@@ -1954,16 +2013,12 @@ button {
   padding: 0.5rem 0.5rem 0;
 }
 
-/* The round's bar row, empty, held open under the shop's header: a shop header
-   11px shorter than the round's moved everything under it on the way in. See
-   `shopView`. It was a 2.7rem seat when the bar lived in the seat, under the
-   score; with the bar a row of its own the seat is the name's height on both
-   screens, and what the shop is missing is the row gap and the bar, which are
-   said here in the numbers the round's rules use rather than as a sum measured
-   once. The first row is the name block on both, so it needs no restating. */
-.shop-screen .hud {
-  padding-bottom: calc(0.375rem + 0.375rem + 0.3125rem);
-}
+/* No room held open under the shop's header for the round's bar. It had the
+   bar's row gap and height as padding, 11px, so the header was the round's
+   height and nothing under it moved on the way in. Once the dock line went
+   into the round's header the two were a whole row apart anyway, the shop's header
+   was a panel with an empty strip at its foot for no reason it could still
+   give, and the space is the shelf's. */
 
 /*
  * Two columns of price tags, the pack across the foot of them. Tried as one
@@ -3250,6 +3305,14 @@ button {
 @media (min-width: 40rem) {
   #app:has(> .screen.title) {
     --wash: 48rem;
+  }
+
+  .round-screen {
+    --boss-font: 0.75rem;
+  }
+
+  .grid {
+    --tile-max: 4.5rem;
   }
 }
 

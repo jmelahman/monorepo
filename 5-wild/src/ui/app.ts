@@ -956,7 +956,10 @@ export class App {
     readout?.classList.remove("popped")
     void (readout as HTMLElement | null)?.offsetWidth
     if (readout instanceof HTMLElement) {
-      readout.style.setProperty("--pop", String(1 + Math.min(0.5, ratio * 0.6)))
+      // Up to 1.2, from 1.5. The blocks live in the header now, between the bar
+      // and the boss's band, and at 1.5 a 103px block grew 26px a side over
+      // both; at 1.2 a round-clearing guess still lunges, into the gaps only.
+      readout.style.setProperty("--pop", String(1 + Math.min(0.2, ratio * 0.25)))
       readout.classList.add("popped")
     }
     if (ratio < 0.5 || reducedMotion()) return
@@ -1211,10 +1214,16 @@ export class App {
     const box = tip.getBoundingClientRect()
     const gap = 6
     const edge = 8
-    // Below by preference, since in a round the tray sits under the HUD with the
-    // whole board beneath it. The shop keeps its relics at the foot of the
-    // screen, and there this flips.
-    const below = card.bottom + gap + box.height + edge <= window.innerHeight
+    // Toward the middle of the screen, and the other way only when that side
+    // has no room. It was below by preference, from when the round's relic
+    // tray sat under the HUD, and the flip was for the shop's tray at the foot.
+    // The round's tray is at the foot now too, over the keys, and a panel
+    // opening below it would land on the keyboard, under the thumb holding the
+    // card; the header's own tips still open downward, over the board.
+    const lower = card.top + card.height / 2 > window.innerHeight / 2
+    const below = lower
+      ? card.top - gap - box.height < edge
+      : card.bottom + gap + box.height + edge <= window.innerHeight
     const centered = card.left + card.width / 2 - box.width / 2
     const left = Math.min(Math.max(edge, centered), window.innerWidth - box.width - edge)
 

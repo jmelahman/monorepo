@@ -908,7 +908,7 @@ export const fr: Strings = {
 
     coach: {
       chips:
-        "Chaque essai est compté. Tapez un mot, et la ligne sous le plateau additionne ce que valent ses lettres.",
+        "Chaque essai est compté. Tapez un mot, et la ligne au-dessus du plateau additionne ce que valent ses lettres.",
       rare: (chips) =>
         `${chips} jetons pour l'instant. Les lettres rares paient plus\u00A0: A vaut 1, K vaut 5, Z vaut 10.`,
       mult: "Le ? est le mult, et seule la réponse le connaît\u00A0: vert +3, jaune +1, gris rien. Appuyez sur ENTRÉE pour le découvrir.",
