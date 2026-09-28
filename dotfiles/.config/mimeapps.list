@@ -13,5 +13,6 @@ x-scheme-handler/claude-cli=claude-code-url-handler.desktop
 
 [Added Associations]
 image/jpeg=firefox.desktop;
-video/mp4=firefox.desktop;
 image/png=firefox.desktop;
+video/mp4=firefox.desktop;
+audio/mp4=firefox.desktop;

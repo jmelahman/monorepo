@@ -33,7 +33,16 @@
     "pyright-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
-    "posthog@claude-plugins-official": true
+    "posthog@claude-plugins-official": true,
+    "open-code-review@open-code-review": true
+  },
+  "extraKnownMarketplaces": {
+    "open-code-review": {
+      "source": {
+        "source": "github",
+        "repo": "alibaba/open-code-review"
+      }
+    }
   },
   "effortLevel": "xhigh",
   "plansDirectory": "./plans",
