@@ -234,7 +234,10 @@ style but not its prose is half-finished.
 `5wild:run:v2` (the run save), `5wild:run:lang` and `5wild:run:log` beside it,
 `5wild:meta:v2` (the record), nine settings: `5wild:plain`, `5wild:speed`,
 `5wild:theme`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
-`5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. All the
+`5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. The run
+save and its log are sealed (`src/ui/seal.ts`) so the answer is not readable in
+devtools; the key ships in the bundle, so this hides it from a glance, not from
+someone who reads the source. Bare JSON from older builds still loads. All the
 settings are booleans except six: `5wild:track` holds `promises` or
 `forget-me-not`, which recording plays, anything else reading as the first;
 `5wild:plain` holds one of `all`, `minimal` or `none`, how much of the scoring

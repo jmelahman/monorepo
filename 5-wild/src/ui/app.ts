@@ -23,6 +23,7 @@ import {
 } from "./lang"
 import { chosenAscension, Profile } from "./meta"
 import { Music } from "./music"
+import { seal, unseal } from "./seal"
 import { atSpeed, loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
 import type { Consent, RunEnd, RunLog } from "./telemetry"
 import {
@@ -2022,7 +2023,7 @@ export class App {
 
   private save(): void {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(this.state))
+      localStorage.setItem(SAVE_KEY, seal(JSON.stringify(this.state)))
       // Beside the run and written in the same breath, because the pair is only
       // meaningful together: a save whose language is a guess is a save that can
       // be resumed against the wrong dictionary, where every legal word is
@@ -2381,7 +2382,7 @@ export function loadSave(): RunState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY)
     if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
+    const parsed: unknown = JSON.parse(unseal(raw))
     // Just enough of a shape check to survive a save from an older build.
     if (typeof parsed !== "object" || parsed === null) return null
     const state = parsed as RunState

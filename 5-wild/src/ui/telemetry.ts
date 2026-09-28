@@ -1,6 +1,7 @@
 import type { Action, RunState } from "../engine"
 import { CONTENT_VERSION } from "../engine"
 import type { Lang } from "./lang"
+import { seal, unseal } from "./seal"
 
 /**
  * Opt-in run replays, for balance.
@@ -196,7 +197,7 @@ export function loadLog(state: RunState | null): RunLog | null {
   try {
     const raw = localStorage.getItem(LOG_KEY)
     if (!raw) return null
-    const log = JSON.parse(raw) as RunLog
+    const log = JSON.parse(unseal(raw)) as RunLog
     return log && log.seed === state.seed && Array.isArray(log.steps) ? log : null
   } catch {
     return null
@@ -205,7 +206,7 @@ export function loadLog(state: RunState | null): RunLog | null {
 
 export function saveLog(log: RunLog | null): void {
   try {
-    if (log) localStorage.setItem(LOG_KEY, JSON.stringify(log))
+    if (log) localStorage.setItem(LOG_KEY, seal(JSON.stringify(log)))
     else localStorage.removeItem(LOG_KEY)
   } catch {
     // The run is still logged in memory; only a relaunch loses it.
