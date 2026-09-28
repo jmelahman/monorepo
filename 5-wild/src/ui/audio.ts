@@ -1,6 +1,6 @@
 /**
- * Sound effects: a list of named cues, each one synthesized unless a recording
- * has been dropped in for it.
+ * Sound effects: a list of named cues, each one a recording, bar three that
+ * are synthesized.
  *
  * The game never names a noise, it names what happened (`tile`, `buy`,
  * `reject`) and hands over whatever the noise may want to know about it: which
@@ -8,25 +8,29 @@
  * sounds like is this file's business alone, which is what lets a cue be
  * re-voiced, or swapped for a sample, without `app.ts` hearing about it.
  *
- * Synthesized by default, because that is what keeps the bundle free of audio
- * assets and the game fully voiced in airplane mode. The first version of this
- * file was bare oscillators through a volume fade, and it sounded like it: a
- * raw sawtooth is a buzz, not a relic. What makes the difference is cheap and
- * all here now: a filter on the tone so it has a shape rather than a spectrum,
- * a noise burst wherever a real object would click or thud, a shared room so a
- * chime rings instead of stopping, and a compressor on the way out so a
- * cascade of twelve relics does not clip.
+ * **Recordings.** An audio file in `src/ui/sounds/` named after a cue voices
+ * it, picked up by the glob below with no other change: `coin.ogg` voices
+ * `coin`. A cue that has variants looks for the specific file first, so
+ * `tile-green.ogg` beats `tile.ogg` for a green tile, and a cue with a pitch
+ * (the tile's column, the relic ladder, the score) plays its recording that
+ * many semitones up by playback rate, which is the classic way and the one
+ * that keeps a chain of chip clacks climbing.
  *
- * **Recordings.** An audio file in `src/ui/sounds/` named after a cue
- * replaces that cue's synthesis, picked up by the glob below with no other
- * change: `coin.ogg` voices `coin`. A cue that has variants looks for the
- * specific file first, so `tile-green.ogg` beats `tile.ogg` for a green tile,
- * and a cue with a pitch (the tile's column, the relic ladder, the score)
- * plays its recording that many semitones up by playback rate, which is the
- * classic way and the one that keeps a chain of chip clacks climbing. Until
- * the files have decoded the synth stands in, so a slow first load is never a
- * silent one, and a file that will not decode leaves its cue on the synth for
- * good.
+ * **Synthesis.** `solve`, `break` and `consume` have no file, on purpose:
+ * recordings were tried for each and lost to the synth (see their recipes).
+ * What keeps them from sounding like bare oscillators through a volume fade is
+ * cheap and all here: a filter on the tone so it has a shape rather than a
+ * spectrum, a noise burst wherever a real object would click or thud, a shared
+ * room so a chime rings instead of stopping, and a compressor on the way out.
+ *
+ * Every cue used to have a recipe, and the synth was the whole of the game's
+ * sound before the recordings came, then their stand-in: until the files had
+ * decoded, and for good on a file that would not. It was cut. The stand-in was
+ * heard for a moment on a cold first load, as a different sound from the one
+ * every later tap makes, and for good only on a Safari too old to decode
+ * Vorbis, and two voicings of every cue was a lot of file to keep for that. A
+ * recorded cue is silent until its file has decoded now, and a cue whose file
+ * will not decode stays silent.
  *
  * What ships there now is CC0, mostly Kenney's packs and a few from Freesound,
  * chosen because public domain is the one licence with no quarrel with a
@@ -120,9 +124,9 @@ export function audioMix(): Mix | null {
 }
 
 /** Semitone ratios off a root, so chords are written as intervals not numbers. */
-export const step = (root: number, semitones: number) => root * 2 ** (semitones / 12)
+const step = (root: number, semitones: number) => root * 2 ** (semitones / 12)
 
-export const C5 = 523.25
+const C5 = 523.25
 
 /**
  * Major pentatonic, climbed by index. The tiles and the relic ladder both walk
@@ -187,9 +191,9 @@ function variant(cue: Cue): string | null {
     case "intro":
       return cue.boss ? "boss" : "round"
     // The shop's arrival is a reroll that nobody asked for, a shelf dealt
-    // out, so the synth voices it as one. The recording is its own, a door
-    // bell: it borrowed the reroll's card fan first and that was heard as
-    // wrong, and without `reroll-shop.ogg` it would borrow it again.
+    // out, so it is the reroll cue. The recording is its own, a door bell: it
+    // borrowed the reroll's card fan first and that was heard as wrong, and
+    // without `reroll-shop.ogg` it would borrow it again.
     case "reroll":
       return cue.shop ? "shop" : null
     // A round cleared and the run won are one cue with two sizes. The round is
@@ -202,7 +206,7 @@ function variant(cue: Cue): string | null {
   }
 }
 
-/** Semitones a sample is repitched by, so a recording climbs like the synth does. */
+/** Semitones a sample is repitched by, so a run of the same recording climbs. */
 function transpose(cue: Cue): number {
   switch (cue.name) {
     case "tile":
@@ -247,8 +251,6 @@ type Tone = {
   attack?: number
   lp?: number
   lpTo?: number
-  /** A second voice this many cents either side, for width. */
-  detune?: number
   /** Share sent to the room. */
   wet?: number
 }
@@ -265,15 +267,6 @@ type Noise = {
   attack?: number
   wet?: number
 }
-
-/**
- * Small random drift, for the cues that fire in quick runs. A keystroke that is
- * bit-identical every time is what makes a synth sound like a synth; a few
- * percent of wobble is what a real key does anyway. `Math.random` is fine
- * here: the engine's ban is about reproducing a run, and nobody reproduces
- * the sound of a keypress.
- */
-const drift = (value: number, by = 0.06) => value * (1 + (Math.random() * 2 - 1) * by)
 
 class Synth {
   private noiseBuffer: AudioBuffer | null = null
@@ -300,24 +293,13 @@ class Synth {
       into = filter
     }
 
-    const spread = voice.detune ? [-voice.detune, voice.detune] : [0]
-    for (const cents of spread) {
-      const osc = ctx.createOscillator()
-      osc.type = voice.type ?? "triangle"
-      osc.detune.value = cents
-      osc.frequency.setValueAtTime(voice.freq, start)
-      if (voice.to !== undefined) osc.frequency.exponentialRampToValueAtTime(voice.to, end)
-      if (spread.length > 1) {
-        // Two voices at full level would be louder than one, not wider.
-        const half = ctx.createGain()
-        half.gain.value = 0.6
-        osc.connect(half).connect(into)
-      } else {
-        osc.connect(into)
-      }
-      osc.start(start)
-      osc.stop(end + 0.02)
-    }
+    const osc = ctx.createOscillator()
+    osc.type = voice.type ?? "triangle"
+    osc.frequency.setValueAtTime(voice.freq, start)
+    if (voice.to !== undefined) osc.frequency.exponentialRampToValueAtTime(voice.to, end)
+    osc.connect(into)
+    osc.start(start)
+    osc.stop(end + 0.02)
   }
 
   noise(voice: Noise): void {
@@ -388,89 +370,14 @@ class Synth {
 
 /* ----------------------------------------------------------------- recipes */
 
-type Recipe<K extends CueName> = (s: Synth, cue: Extract<Cue, { name: K }>) => void
+type SynthName = "solve" | "break" | "consume"
+type Recipe<K extends SynthName> = (s: Synth, cue: Extract<Cue, { name: K }>) => void
 
 /**
- * One recipe per cue. Gains are per voice and deliberately small: the key fires
- * more than anything else in the game, and everything else is scaled so that a
- * relic is an event and a keystroke is barely there.
+ * One recipe per synthesized cue. Every other cue is its recording or nothing:
+ * a cue with neither is silent, which is what a new cue is until it has a file.
  */
-const RECIPES: { [K in CueName]: Recipe<K> } = {
-  // A plastic key: a bright tick with a little body under it.
-  key: (s) => {
-    s.noise({ ms: 18, band: drift(2600, 0.1), q: 1.4, gain: 0.05 })
-    s.tone({ freq: drift(190), to: 110, ms: 30, type: "sine", gain: 0.03 })
-  },
-
-  // The same key, duller and lower, so undoing reads as a different gesture.
-  back: (s) => {
-    s.noise({ ms: 20, band: drift(1300, 0.1), q: 1.2, gain: 0.04 })
-    s.tone({ freq: drift(140), to: 90, ms: 34, type: "sine", gain: 0.03 })
-  },
-
-  // A two-note "nuh-uh". Filtered hard: it has to be unmistakable without
-  // being a buzzer, since a refusal is the game saying no, not the game angry.
-  reject: (s) => {
-    const low = step(C5, -17)
-    s.tone({ freq: low, ms: 80, type: "square", gain: 0.035, lp: 900, detune: 8 })
-    s.tone({ freq: step(low, -2), ms: 110, delay: 95, type: "square", gain: 0.035, lp: 800 })
-  },
-
-  // Three timbres for three answers, heard before they are read: a bell for
-  // green, a softer mallet for yellow, a dry wooden knock for gray. All three
-  // climb the same pentatonic by column, so a row is a phrase whatever colors
-  // it came up.
-  tile: (s, { index, color }) => {
-    const degree = PENTATONIC[index] ?? 0
-    s.noise({ ms: 60, band: 900, bandTo: 2600, q: 0.8, gain: 0.015 })
-    if (color === "green") {
-      s.bell(step(C5, degree), 380, 0.055)
-      s.tone({ freq: step(C5, degree), ms: 90, gain: 0.02, lp: 3000 })
-    } else if (color === "yellow") {
-      const f = step(C5, degree - 12)
-      s.tone({ freq: f, ms: 220, type: "sine", gain: 0.06, wet: 0.15 })
-      s.tone({ freq: f * 4, ms: 50, type: "sine", gain: 0.012 })
-    } else {
-      s.tone({ freq: step(C5, degree - 24), ms: 110, gain: 0.07, lp: 900, lpTo: 300 })
-      s.noise({ ms: 35, band: 500, q: 2, gain: 0.03 })
-    }
-  },
-
-  // Each kind of trigger its own voice, all on one ladder. Relics pluck,
-  // modifiers ring like glass, categories stab a chord, and growth sparkles
-  // upward because it is the one about the future rather than this guess.
-  trigger: (s, { kind, n }) => {
-    const f = step(C5, ladder(Math.min(n, LADDER_TOP)))
-    switch (kind) {
-      case "relic":
-        s.tone({
-          freq: f,
-          ms: 190,
-          type: "sawtooth",
-          gain: 0.04,
-          lp: 5000,
-          lpTo: 500,
-          detune: 7,
-          wet: 0.2,
-        })
-        s.tone({ freq: f / 2, ms: 120, type: "sine", gain: 0.025 })
-        break
-      case "mod":
-        s.tone({ freq: f, ms: 240, type: "sine", gain: 0.045, wet: 0.3 })
-        s.tone({ freq: f * 3, ms: 120, type: "sine", gain: 0.012, wet: 0.3 })
-        break
-      case "category":
-        for (const interval of [0, 4, 7]) {
-          s.tone({ freq: step(f, interval), ms: 200, gain: 0.022, lp: 3000, lpTo: 900, wet: 0.2 })
-        }
-        break
-      case "grew":
-        s.tone({ freq: f, to: f * 2, ms: 200, type: "sine", gain: 0.035, wet: 0.35 })
-        s.noise({ ms: 160, band: 6000, bandTo: 9000, q: 1, gain: 0.012, wet: 0.3 })
-        break
-    }
-  },
-
+const RECIPES: { [K in SynthName]: Recipe<K> } = {
   // The biggest number in the game gets the biggest sound: a bell arpeggio
   // left ringing in the room, with a shimmer over the top as it lands.
   //
@@ -496,22 +403,6 @@ const RECIPES: { [K in CueName]: Recipe<K> } = {
     })
   },
 
-  // A riser pitched by how far past the target the guess landed, with a thump
-  // under it once it has cleared the target on its own.
-  score: (s, { ratio }) => {
-    const lift = Math.min(12, Math.round(ratio * 6))
-    s.noise({ ms: 200, band: 400, bandTo: 3200, q: 0.7, gain: 0.03, attack: 60 })
-    s.tone({
-      freq: step(C5, lift - 12),
-      to: step(C5, lift),
-      ms: 220,
-      gain: 0.04,
-      lp: 2500,
-      wet: 0.15,
-    })
-    if (ratio >= 1) s.tone({ freq: 110, to: 50, ms: 180, type: "sine", gain: 0.09, delay: 150 })
-  },
-
   // A crack and a fall: something lost, so it goes down and it goes dark.
   // Like solve, this ships as synth. A heavy pane of glass was recorded in its
   // place and heard as worse than this.
@@ -528,144 +419,12 @@ const RECIPES: { [K in CueName]: Recipe<K> } = {
     })
   },
 
-  // The arcade coin: two square notes a fourth apart, tamed by a lowpass so it
-  // is the idea of a coin rather than a 1985 speaker.
-  coin: (s) => {
-    s.tone({ freq: 988, ms: 70, type: "square", gain: 0.022, lp: 4000 })
-    s.tone({
-      freq: 1319,
-      ms: 260,
-      type: "square",
-      gain: 0.022,
-      lp: 4000,
-      lpTo: 1500,
-      delay: 60,
-      wet: 0.2,
-    })
-  },
-
-  // Spending: the coin run backwards, landing on the counter.
-  buy: (s) => {
-    s.tone({ freq: 1319, ms: 60, type: "square", gain: 0.02, lp: 3500 })
-    s.tone({ freq: 988, ms: 160, type: "square", gain: 0.02, lp: 3500, lpTo: 1200, delay: 55 })
-    s.tone({ freq: 170, to: 90, ms: 100, type: "sine", gain: 0.06, delay: 40 })
-    s.noise({ ms: 40, band: 3000, q: 1.5, gain: 0.025, delay: 40 })
-  },
-
-  sell: (s) => {
-    RECIPES.coin(s, { name: "coin" })
-  },
-
-  // A riffle: a handful of card-edge ticks and a lift, the shelf being dealt again.
-  reroll: (s) => {
-    for (let i = 0; i < 6; i++) {
-      s.noise({ ms: 14, band: drift(3200, 0.2), q: 2, gain: 0.03, delay: i * 32 })
-    }
-    s.tone({ freq: C5, to: step(C5, 7), ms: 200, gain: 0.02, lp: 2500 })
-  },
-
-  // A seal broken and a sheet unfolding.
-  pack: (s) => {
-    s.noise({ ms: 160, band: 1800, bandTo: 5000, q: 0.6, gain: 0.04 })
-    s.bell(step(C5, 7), 260, 0.03, 90)
-  },
-
-  pick: (s) => {
-    s.bell(step(C5, 12), 260, 0.04)
-    s.tone({ freq: step(C5, 7), ms: 120, gain: 0.02, lp: 3000 })
-  },
-
-  // A stamp coming down on the letter, and the letter ringing for having it.
-  place: (s) => {
-    s.tone({ freq: 150, to: 70, ms: 120, type: "sine", gain: 0.08 })
-    s.noise({ ms: 45, band: 1200, q: 1, gain: 0.04 })
-    s.bell(step(C5, 12), 320, 0.03, 60, 0.35)
-  },
-
   // Something used up and turned into an effect: a glide into the room.
   // Ships as synth, like solve and break. The recording it had was Kenney's
   // sci-fi `maximize_003`, the last of that pack left in the game.
   consume: (s) => {
     s.tone({ freq: C5, to: step(C5, 19), ms: 280, type: "sine", gain: 0.03, wet: 0.45 })
     s.noise({ ms: 260, band: 6000, bandTo: 9500, q: 0.8, gain: 0.012, wet: 0.4 })
-  },
-
-  // Air moving, not an event: a sheet is furniture, and the thing that opened
-  // it has usually already made its own noise.
-  sheet: (s, { open }) => {
-    s.noise({
-      ms: open ? 100 : 80,
-      band: open ? 600 : 1400,
-      bandTo: open ? 1500 : 600,
-      q: 0.7,
-      gain: open ? 0.02 : 0.014,
-      attack: 20,
-    })
-  },
-
-  // The round card. An ordinary round is a soft open fifth; a boss is a low
-  // hit with a tritone in it, so the card is recognizably the boss's before
-  // anybody reads it, the same job the boss palette does in the music.
-  intro: (s, { boss }) => {
-    if (boss) {
-      s.tone({ freq: 80, to: 42, ms: 900, type: "sine", gain: 0.1 })
-      s.tone({
-        freq: step(C5, -24),
-        ms: 1000,
-        type: "sawtooth",
-        gain: 0.03,
-        lp: 500,
-        lpTo: 150,
-        detune: 10,
-        attack: 15,
-        wet: 0.5,
-      })
-      s.tone({
-        freq: step(C5, -18),
-        ms: 1000,
-        type: "sawtooth",
-        gain: 0.02,
-        lp: 500,
-        lpTo: 150,
-        attack: 15,
-        wet: 0.5,
-      })
-    } else {
-      s.tone({ freq: step(C5, -12), ms: 600, gain: 0.03, lp: 1600, attack: 60, wet: 0.4 })
-      s.tone({
-        freq: step(C5, -5),
-        ms: 600,
-        gain: 0.025,
-        lp: 1600,
-        attack: 60,
-        delay: 80,
-        wet: 0.4,
-      })
-    }
-  },
-
-  win: (s) => {
-    for (const [i, interval] of [0, 4, 7, 12].entries()) {
-      s.bell(step(C5, interval), 800, 0.04, i * 90, 0.45)
-    }
-    s.tone({ freq: step(C5, -12), ms: 900, gain: 0.03, lp: 1200, attack: 40, wet: 0.3 })
-  },
-
-  // Three steps down a minor third each, the last one left to hang.
-  lose: (s) => {
-    for (const [i, interval] of [-5, -8, -12].entries()) {
-      const last = i === 2
-      s.tone({
-        freq: step(C5, interval),
-        ms: last ? 1100 : 320,
-        gain: 0.045,
-        lp: 1400,
-        lpTo: last ? 300 : 900,
-        delay: i * 200,
-        wet: 0.4,
-      })
-    }
-    s.tone({ freq: step(C5, -36), ms: 1300, type: "sine", gain: 0.06, delay: 400, attack: 40 })
   },
 }
 
@@ -677,10 +436,10 @@ const RECIPES: { [K in CueName]: Recipe<K> } = {
  * the whole of the mix for them, and it is here rather than baked into the
  * files so that tuning it is an edit, not a re-encode.
  *
- * Pitched against the synth, which peaks around 0.03 for a key and 0.15 for
- * the loud stings, and against the music bus, whose notes land around 0.02.
- * A recording left at full scale would bury the soundtrack under every
- * keystroke. Anything unlisted plays at `DEFAULT_LEVEL`.
+ * Pitched against the three synthesized stings, which peak around 0.05 per
+ * voice, and against the soundtrack, which plays at 0.1 to 0.17 (see `TRACKS`
+ * in `music.ts`). A recording left at full scale would bury the soundtrack
+ * under every keystroke. Anything unlisted plays at `DEFAULT_LEVEL`.
  */
 const LEVELS: Readonly<Record<string, number>> = {
   // Typed in runs of five, dozens of times a round, so it sits lowest but for
@@ -791,18 +550,18 @@ export class Sound {
       return
     }
 
+    if (!(cue.name in RECIPES)) return
     this.synth ??= new Synth(ctx, out)
     // The mapped type guarantees each recipe takes its own cue; TypeScript
     // cannot follow that through an index by a union, hence the widening.
-    ;(RECIPES[cue.name] as Recipe<CueName>)(this.synth, cue as never)
+    ;(RECIPES[cue.name as SynthName] as Recipe<SynthName>)(this.synth, cue as never)
   }
 
   /**
    * Fetch and decode every sample, once, on the first sound. Failures are
-   * silent and per file: a missing or undecodable recording leaves its cue on
-   * the synth, which is a quieter game, never a broken one. That includes Ogg
-   * on a Safari too old to decode it, which is the one platform where the
-   * fallback is expected to be heard.
+   * silent and per file: a missing or undecodable recording leaves its cue
+   * silent, which is a quieter game, never a broken one. That includes Ogg on
+   * a Safari too old to decode it.
    */
   private load(ctx: AudioContext): void {
     if (this.loading) return

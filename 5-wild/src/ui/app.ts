@@ -22,7 +22,6 @@ import {
   ui,
 } from "./lang"
 import { chosenAscension, Profile } from "./meta"
-import type { Mood } from "./music"
 import { Music } from "./music"
 import { atSpeed, loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
 import type { Consent, RunEnd, RunLog } from "./telemetry"
@@ -422,14 +421,6 @@ export class App {
       else this.music.resume()
     })
     this.music.autostart()
-  }
-
-  /** The mood follows the screen, so the shop and the boss do not share a tune. */
-  private get mood(): Mood {
-    if (this.atTitle) return "title"
-    if (this.state.phase === "game_over" || this.state.phase === "victory") return "over"
-    if (this.state.phase === "shop" || this.state.phase === "reward") return "shop"
-    return this.state.round.bossId ? "boss" : "round"
   }
 
   start(): void {
@@ -1673,7 +1664,6 @@ export class App {
       this.coachOwed = false
       markCoachSeen()
     }
-    this.music.set(this.mood)
     // The card the pointer was over is about to stop existing, and a stale node
     // here would read as "still hovering" and suppress the next tip.
     this.hovered = null
