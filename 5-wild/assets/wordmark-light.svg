@@ -11,9 +11,12 @@
     cropped close, with the shadows tightened to fit the crop rather than cut
     off by it.
 
-    On a light page the app's #3a3a3c is a black slab, so the gray lifts to
-    the one Wordle's light board uses, which still reads as read-and-gray, and
-    the shadows thin out, since a black shadow on white is a smudge.
+    On a light page it is the app's light theme, from :root[data-theme="light"]
+    in src/style.css: the gray lifts to its #787c7e, the ink on the tiles and on
+    the badge goes to white, chips and mult darken to hold against a light page,
+    and the drop shadow is its thinned shade at the title's 45%. The green and
+    its glow are the same as on the dark page, because the tile colors are what a
+    letter means and the app does not theme them either.
 
     Measurements are the stylesheet's at its cap: 62px tiles, 6px gaps, letters
     at 0.58 of a tile.
@@ -25,10 +28,10 @@
     <clipPath id="t3"><rect x="224" y="26" width="62" height="62" rx="6"/></clipPath>
     <clipPath id="t4"><rect x="292" y="26" width="62" height="62" rx="6"/></clipPath>
     <filter id="drop" x="-40%" y="-40%" width="180%" height="200%">
-      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.16"/>
     </filter>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="220%">
-      <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#538d4e" flood-opacity="0.3"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#538d4e" flood-opacity="0.4"/>
     </filter>
   </defs>
 
@@ -43,22 +46,22 @@
   <g filter="url(#drop)">
     <g clip-path="url(#t1)">
       <rect x="88" y="26" width="62" height="62" fill="#787c7e"/>
-      <rect x="88" y="83" width="62" height="5" fill="#000" opacity="0.18"/>
+      <rect x="88" y="83" width="62" height="5" fill="#000" opacity="0.3"/>
     </g>
     <g clip-path="url(#t2)">
       <rect x="156" y="26" width="62" height="62" fill="#787c7e"/>
-      <rect x="156" y="83" width="62" height="5" fill="#000" opacity="0.18"/>
+      <rect x="156" y="83" width="62" height="5" fill="#000" opacity="0.3"/>
     </g>
     <g clip-path="url(#t3)">
       <rect x="224" y="26" width="62" height="62" fill="#787c7e"/>
-      <rect x="224" y="83" width="62" height="5" fill="#000" opacity="0.18"/>
+      <rect x="224" y="83" width="62" height="5" fill="#000" opacity="0.3"/>
     </g>
     <g clip-path="url(#t4)">
       <rect x="292" y="26" width="62" height="62" fill="#787c7e"/>
-      <rect x="292" y="83" width="62" height="5" fill="#000" opacity="0.18"/>
+      <rect x="292" y="83" width="62" height="5" fill="#000" opacity="0.3"/>
     </g>
   </g>
-  <g fill="#e8e8ea" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="36" font-weight="900" text-anchor="middle">
+  <g fill="#ffffff" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="36" font-weight="900" text-anchor="middle">
     <text x="51" y="68">5</text>
     <text x="119" y="68">W</text>
     <text x="187" y="68">I</text>
@@ -69,10 +72,10 @@
   <!-- Chips times mult at the stylesheet's 6deg tilt. Dark figures on the two
        score colours, which are bright enough to carry them on either page. -->
   <g transform="rotate(6 322 21)" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="900" text-anchor="middle">
-    <rect x="276" y="10" width="50" height="23" rx="6" fill="#4a9eff"/>
-    <text x="301" y="26" font-size="13" fill="#0e0f13">+120</text>
-    <text x="335" y="26" font-size="12" fill="#787c7e">×</text>
-    <rect x="344" y="10" width="24" height="23" rx="6" fill="#ff5c5c"/>
-    <text x="356" y="26" font-size="13" fill="#0e0f13">4</text>
+    <rect x="276" y="10" width="50" height="23" rx="6" fill="#1f6fd6"/>
+    <text x="301" y="26" font-size="13" fill="#ffffff">+120</text>
+    <text x="335" y="26" font-size="12" fill="#6b6d76">×</text>
+    <rect x="344" y="10" width="24" height="23" rx="6" fill="#d93b3b"/>
+    <text x="356" y="26" font-size="13" fill="#ffffff">4</text>
   </g>
 </svg>
