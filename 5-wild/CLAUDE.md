@@ -217,6 +217,11 @@ Watch for tests that pin balance incidentally. A shelf reshuffle moves outcomes
 on seeds nobody was thinking about, and the right repair is usually to assert the
 distribution rather than to renumber the expectation.
 
+## Word lists
+
+`public/words/` is generated, and changing it can be a balance change: read
+`public/words/CLAUDE.md` before touching the lists or `tools/gen-wordlists.ts`.
+
 ## Comments
 
 The house style is heavy and deliberately so: comments explain *why*, and record
