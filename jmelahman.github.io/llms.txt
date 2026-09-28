@@ -2,12 +2,14 @@
 
 > Personal site of Jamison Lahman, a software engineer in Mountain View, CA with 10 years of experience across platform, backend, frontend, DevOps, and developer tooling. Mostly writes Go for developer tools these days, and maintains 100+ packages on the Arch User Repository.
 
+Every page except the feed is built from a Markdown source that is served next to it: replace `.html` with `.md`, or add `index.md` to a directory URL.
+
 Contact: [jamison@lahman.dev](mailto:jamison@lahman.dev) · [GitHub](https://github.com/jmelahman) · [LinkedIn](https://linkedin.com/in/jamison-lahman) · [X](https://x.com/jmelahman)
 
 ## Pages
 
 - [About](https://jamison.lahman.dev/): Home page
-- [Resumé](https://jamison.lahman.dev/resume/): Work history (Applied Intuition, Waymo), skills, and education; also available as a [PDF](https://jamison.lahman.dev/resume/resume.pdf)
+- [Resumé](https://jamison.lahman.dev/resume/index.md): Work history (Applied Intuition, Waymo), skills, and education; also available as a [PDF](https://jamison.lahman.dev/resume/resume.pdf)
 - [Projects](https://jamison.lahman.dev/projects/): Overview of open source projects
 - [Blog](https://jamison.lahman.dev/blog/): Blog post index
 - [Feed](https://jamison.lahman.dev/feed/): Activity feed
@@ -25,8 +27,8 @@ Contact: [jamison@lahman.dev](mailto:jamison@lahman.dev) · [GitHub](https://git
 
 ## Blog
 
-- [Using `uv` to package Go applications](https://jamison.lahman.dev/blog/2.html) (2025-08-12): Distributing Go binaries through PyPI with uv
-- [My Git Workflow](https://jamison.lahman.dev/blog/1.html) (2025-07-22, work in progress): Git aliases, configuration, and workflow
+- [Using `uv` to package Go applications](https://jamison.lahman.dev/blog/2.md) (2025-08-12): Distributing Go binaries through PyPI with uv
+- [My Git Workflow](https://jamison.lahman.dev/blog/1.md) (2025-07-22, work in progress): Git aliases, configuration, and workflow
 
 ## Optional
 
