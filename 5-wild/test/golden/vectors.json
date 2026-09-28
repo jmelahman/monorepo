@@ -3,7 +3,7 @@
     "name": "greedy-solver",
     "covers": "the solve bonus at its largest, and a shop purchase every time one is affordable",
     "seed": 1,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -809,7 +809,7 @@
     "name": "chip-farmer",
     "covers": "grays scoring, the guess budget spent down to one, and the solve bonus at its smallest",
     "seed": 7,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -1026,7 +1026,7 @@
     "name": "banker",
     "covers": "a pile banked and then multiplied, the line the scoring rule exists for",
     "seed": 2024,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -1600,7 +1600,7 @@
     "name": "never-solves",
     "covers": "running a round out of guesses, and the run ending in defeat",
     "seed": 42,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -1817,7 +1817,7 @@
     "name": "shopkeeper",
     "covers": "reroll, sell, consumables used rather than hoarded, and a corrected draft",
     "seed": 1234,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -2240,7 +2240,7 @@
     "name": "mystic",
     "covers": "consumables spent rather than hoarded, including the one that needs a guess behind it",
     "seed": 126,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -2687,6 +2687,10 @@
         "index": 0
       },
       {
+        "type": "use_consumable",
+        "index": 0
+      },
+      {
         "type": "type_letter",
         "letter": "a"
       },
@@ -2708,10 +2712,6 @@
       },
       {
         "type": "submit"
-      },
-      {
-        "type": "use_consumable",
-        "index": 0
       },
       {
         "type": "type_letter",
@@ -3139,7 +3139,7 @@
     "name": "letter-smith",
     "covers": "letter modifiers bought, and then landed on tiles often enough to score",
     "seed": 208,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -4213,7 +4213,7 @@
     "name": "anchor-smith",
     "covers": "Anchor stacked across letters, fired on greens no solve handed it",
     "seed": 249,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -5869,7 +5869,7 @@
     "name": "rare-smith",
     "covers": "the rare modifier pair, hunted down with rerolls and played through",
     "seed": 462,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -6540,7 +6540,7 @@
     "name": "wild-smith",
     "covers": "Wild bought over and over, aimed by letter frequency, and fired on every color",
     "seed": 130,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -7526,7 +7526,7 @@
     "name": "leveler",
     "covers": "category levels bought, stacked, and paid out on the guesses that match them",
     "seed": 77,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -8860,7 +8860,7 @@
     "name": "etcher",
     "covers": "alphabet range levels and etchings stacking on the same letters",
     "seed": 21,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -9954,7 +9954,7 @@
     "name": "pack-opener",
     "covers": "packs bought, held open across the shop, and chosen from",
     "seed": 1,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -11010,7 +11010,7 @@
     "name": "victor",
     "covers": "the run won and then played past, the computed targets beyond stage 8, and the whole late boss band nothing else survives to meet",
     "seed": 12406,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -14167,7 +14167,7 @@
     "covers": "the whole written ascension ladder: guesses filtered by the run's rules, targets and payouts bent by them, every round solved",
     "seed": 351,
     "ascension": 10,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -15815,7 +15815,7 @@
     "covers": "a rung above the written ladder: targets compounded by the endless step",
     "seed": 241,
     "ascension": 14,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",
@@ -16630,7 +16630,7 @@
     "covers": "the middle of the ladder: the rules in force at rung five and, just as much, the four above it that are not",
     "seed": 40,
     "ascension": 5,
-    "contentVersion": 25,
+    "contentVersion": 26,
     "actions": [
       {
         "type": "type_letter",

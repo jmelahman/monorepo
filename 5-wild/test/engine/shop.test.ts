@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Action, ModId, Rarity, RunState } from "../../src/engine"
+import type { Action, ModId, Rarity, RunState, ShopState } from "../../src/engine"
 import {
   ALPHABET,
   derive,
@@ -70,6 +70,30 @@ describe("the shop layout", () => {
     expect(items).toHaveLength(5)
     expect(items.map((item) => item?.kind)).not.toContain("relic")
     for (const item of items) expect(item).not.toBeNull()
+  })
+
+  // Before the filter this failed on 1.4% of ordinary shelves (always a card
+  // dealt twice) and 19% of shelves with every relic owned, so a few hundred
+  // shelves of each is enough to catch it coming back.
+  it("never puts the same item on one shelf twice, rerolls included", () => {
+    const shelves = (owned: boolean) => {
+      const out: ShopState[] = []
+      for (let seed = 1; seed <= 40; seed++) {
+        const base = startRun(seed, realWords).state
+        const relics = owned ? RELICS.map((relic) => ({ id: relic.id })) : base.relics
+        for (let stage = 1; stage <= STAGES; stage++) {
+          for (let rerolls = 0; rerolls < 3; rerolls++) {
+            const state: RunState = { ...base, stage, relics }
+            out.push(rollShop(state, derive(seed, "shop", stage, 0, rerolls), rerolls))
+          }
+        }
+      }
+      return out
+    }
+    for (const shop of [...shelves(false), ...shelves(true)]) {
+      const keys = shop.items.map((item) => `${item?.kind}:${item?.id}`)
+      expect(new Set(keys).size).toBe(keys.length)
+    }
   })
 
   it("sells modifiers with no letter on them, at the choice price", () => {
