@@ -141,11 +141,7 @@ body {
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   /* Kills the ~300ms double-tap-zoom delay on keyboard keys. */
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -601,12 +597,7 @@ button {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(
-    115deg,
-    transparent 42%,
-    #ffffff26 50%,
-    transparent 58%
-  );
+  background: linear-gradient(115deg, transparent 42%, #ffffff26 50%, transparent 58%);
   background-size: 300% 100%;
   /* Off the animation-speed dial, with `coach-mark`: nothing waits on a loop
      that never ends, so hurrying it makes a shimmer into a strobe and hands the
@@ -682,8 +673,7 @@ button {
   transform: translateY(-2px);
   box-shadow:
     0 3px 6px #0007,
-    0 0 0 1px
-      color-mix(in srgb, var(--rare, var(--rare-common)) 55%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--rare, var(--rare-common)) 55%, transparent);
 }
 
 /* Losing to `.fired` matters: a relic scoring is louder news than a hover. */
@@ -1505,8 +1495,7 @@ button {
  * amplitude arrives as --shake from the same score ratio that drives the pop.
  */
 .screen.shaking {
-  animation: shake calc(400ms * var(--pace))
-    cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  animation: shake calc(400ms * var(--pace)) cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
 /*
@@ -1516,8 +1505,7 @@ button {
  */
 .row.rejected {
   --shake: 6px;
-  animation: shake calc(400ms * var(--pace))
-    cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  animation: shake calc(400ms * var(--pace)) cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
 @keyframes shake {
@@ -2062,8 +2050,7 @@ button {
   padding: 0.75rem;
   border-radius: 0.75rem;
   overflow: hidden;
-  border: 1px solid
-    color-mix(in srgb, var(--rare, var(--rare-common)) 40%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--rare, var(--rare-common)) 40%, var(--line));
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--rare, var(--rare-common)) 16%, var(--panel-2)),
@@ -2073,8 +2060,7 @@ button {
   text-align: left;
   /* Dealt in one at a time. `backwards` matters: without it every card is
      visible at its final position for the frame before its delay elapses. */
-  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1)
-    backwards;
+  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1) backwards;
   /* The stagger is paced with the deal it staggers, or a shop set to ×3 would
      lay five cards out over the same 280ms it always did, each of them arriving
      three times as fast, which is a queue rather than a deal. */
@@ -2713,16 +2699,16 @@ button {
  * the hover's 1.12 instead of the press's 1.35.
  */
 .mouse
-  :is(
-    .primary,
-    .secondary,
-    .shop-item,
-    .menu-button,
-    .shapes-line,
-    .ladder-step,
-    .title-pill,
-    .title-dial
-  ):hover:not(:disabled, [aria-disabled="true"]),
+:is(
+  .primary,
+  .secondary,
+  .shop-item,
+  .menu-button,
+  .shapes-line,
+  .ladder-step,
+  .title-pill,
+  .title-dial
+):hover:not(:disabled, [aria-disabled="true"]),
 .mouse .key:hover:not(.broken, :active) {
   filter: brightness(1.12);
 }
