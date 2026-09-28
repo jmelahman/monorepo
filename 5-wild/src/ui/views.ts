@@ -145,6 +145,12 @@ export type Handlers = {
    * on that round's intro card, beside the button that starts it with them.
    */
   skipCoach: () => void
+  /**
+   * A fresh run straight onto the first round's board with the coaching on,
+   * past the intro card that would only ask again. From the rules sheet's note;
+   * see `helpView`.
+   */
+  startTutorial: () => void
   openCodex: () => void
   /** The shape panel, from the board or from the shop. */
   openShapes: () => void
@@ -403,7 +409,7 @@ export const NEXT_SOUND: Record<SoundLevel, SoundLevel> = {
  * be told about, which is what keeps a boss round's tiles the size of every
  * other round's. See `--boss-band`.
  */
-function hud(state: RunState, on: Handlers, dock: HTMLElement): HTMLElement {
+function hud(state: RunState, on: Handlers, dock: HTMLElement, coach: HTMLElement): HTMLElement {
   const round = state.round
   const board = ui().board
   const boss = getBoss(round.bossId)
@@ -472,6 +478,7 @@ function hud(state: RunState, on: Handlers, dock: HTMLElement): HTMLElement {
         // was handed. See `--boss-band`.
         h("p", {}, h("strong", {}, bossCard(boss.id).name), ` ${bossCard(boss.id).text}`),
       ),
+    coach,
   )
 }
 
@@ -630,7 +637,7 @@ function consumableRow(state: RunState, on: Handlers): HTMLElement {
 
 /* --------------------------------------------------------------- the round */
 
-function grid(state: RunState, coach: CoachStep | null): HTMLElement {
+function grid(state: RunState): HTMLElement {
   const round = state.round
   const width = round.answer.length
   const active = round.guesses.length
@@ -708,35 +715,29 @@ function grid(state: RunState, coach: CoachStep | null): HTMLElement {
   return h(
     "div",
     { class: "grid-wrap" },
-    h(
-      "div",
-      { class: "grid", style: `--rows:${round.maxGuesses};--cols:${width}` },
-      ...rows,
-      // The coaching card, laid over the board's unplayed rows. See `coachSlot`
-      // for why this is the one place on the round screen with room for it.
-      // Inside the board rather than beside it so it pins to the board's foot
-      // and not the wrap's; see `.coach-slot`.
-      coachSlot(coach),
-    ),
+    h("div", { class: "grid", style: `--rows:${round.maxGuesses};--cols:${width}` }, ...rows),
   )
 }
 
 /**
- * Where the first round explains itself.
+ * Where the first round explains itself: hung from the foot of the header,
+ * directly under the figures it is talking about.
  *
- * Inside the board rather than anywhere else on the screen, because there is
- * nowhere else: measured at 390×844 the round screen runs board 115–567,
- * category 573–590, readout 596–630, solve hint 636–656, keyboard 662–836.
- * Between the board's bottom edge and the keyboard there are twenty pixels of
- * gap and three lines of numbers, and the card is about those numbers, so putting
- * it there would mean covering the thing it is pointing at. The strip above the
- * keyboard is already spoken for by the toast, which is where a refusal lands.
+ * Everything the card names is in the header, the chips × mult readout, the
+ * score and its bar, and a sentence about "the ?" wants to be read beside the
+ * `?`. It lay on the board before this, first pinned to the board's foot, from
+ * when the readout was under the board and the foot was the nearest edge to
+ * it, then hung under the row being typed, and both left a gap between the card
+ * and its referent that grew with every guess: the board's top edge is a band's
+ * reservation and a row or three away from the header, and the card read as a
+ * note about the board rather than about the numbers.
  *
- * The board is the opposite: at the moment each beat fires, the rows below the
- * one being typed are empty by definition, so the card is laid over blank
- * squares and nothing the player needs is hidden. It costs no layout either. It
- * is absolutely positioned inside `.grid`, so the board does not resize
- * when the card appears, which on this screen would be the board *moving*.
+ * A child of the header rather than of the screen, so it is positioned against
+ * the box that holds every anchor, and hung from the anchor's own foot; see
+ * `aimCoach`. Under the readout it lies over the board's top edge, which is the
+ * band's reservation on a round without a boss (the tutorial's round never has
+ * one) and the first row's top edge on a narrow phone where a card runs to
+ * three lines. Under the score or the bar it lies over the header's lower lines.
  *
  * The slot is always in the document, empty or not, for `fillCategory`'s
  * reason: the draft row is patched rather than re-rendered, the card's text
@@ -756,6 +757,18 @@ function coachSlot(coach: CoachStep | null): HTMLElement {
  * number it is pointing at would be teaching the wrong lesson.
  */
 export function fillCoach(slot: Element, coach: CoachStep | null): void {
+  // The same beat as the card already up is a new figure, not a new card, so
+  // it is rewritten where it stands. Rebuilt, the node was new on every letter
+  // and replayed `coach-in` each time, and the rare-letters card, the one that
+  // counts chips as they are typed, blinked and dropped in again per keystroke
+  // on the very line the player was reading. A change of beat still builds a
+  // fresh card, because that is a new sentence and the entry says so.
+  const live = slot.querySelector<HTMLElement>(".coach")
+  if (coach && live?.dataset.step === coach.id) {
+    const text = live.querySelector(".coach-text")
+    if (text) text.textContent = coach.text
+    return
+  }
   slot.replaceChildren()
   if (!coach) return
   // No button. The card is a sentence about the board, and the one decision it
@@ -1061,9 +1074,10 @@ function keyboard(state: RunState, on: Handlers): HTMLElement {
  * What solving on the next guess is guaranteed to bank, or nothing when there
  * is no next guess to solve on or it would multiply by less than one.
  *
- * Drawn as the header bar's faint projection; see `meter`.
+ * Drawn as the header bar's faint projection; see `meter`. The tutorial's
+ * solve card quotes the same figure, so the sum it shows is the bar's length.
  */
-function solveFloor(state: RunState): { factor: number; floor: number } | null {
+export function solveFloor(state: RunState): { factor: number; floor: number } | null {
   const round = state.round
   const factor = solveBonusFor(state, round.maxGuesses - round.guesses.length - 1)
   if (round.done || round.guesses.length >= round.maxGuesses || factor < 1) return null
@@ -1210,8 +1224,14 @@ export function roundView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
     // `replaceChildren` on the readout every keystroke, which is why the
     // switch was only ever the readout's sibling, never its child, and why
     // moving it cost nothing.
-    hud(state, on, h("div", { class: "dock-line" }, categorySlot(state, on), readoutSlot(state))),
-    grid(state, chrome.coach),
+    hud(
+      state,
+      on,
+      h("div", { class: "dock-line" }, categorySlot(state, on), readoutSlot(state)),
+      // The coaching card, hung from the header's foot; see `coachSlot`.
+      coachSlot(chrome.coach),
+    ),
+    grid(state),
     // Everything a thumb presses outside the keys, at the keys: the hand and
     // the switch, then the relics flush to the keyboard. See `.hand-line`.
     h("div", { class: "hand-line" }, consumableRow(state, on), decorToggle(on, chrome)),
@@ -1304,7 +1324,6 @@ export function introView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
         standing(state),
       ),
     ),
-    asking && h("p", { class: "intro-ask" }, copy.coachAsk),
     h(
       "div",
       { class: "intro-actions" },
@@ -2120,7 +2139,7 @@ function shopShapes(state: RunState, on: Handlers): HTMLElement {
   )
 }
 
-export function shopView(state: RunState, on: Handlers): HTMLElement {
+export function shopView(state: RunState, on: Handlers, coach: CoachStep | null): HTMLElement {
   const copy = ui().shop
   const shop = state.shop
   const reroll = shop ? rerollCost(state, shop) : 0
@@ -2196,6 +2215,10 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
         h("div", { class: "hud-gold" }, money(state.gold)),
         menuButton(on),
       ),
+      // The first visit's card, from the header for the round's reason: the
+      // header is the one box both screens have, and `aimCoach` measures from
+      // it to whichever anchor the beat names.
+      coachSlot(coach),
     ),
     // What the run already holds, straight under the header and drawn exactly
     // as the round draws it, because that is where the player already knows
@@ -3098,7 +3121,7 @@ const rule = ({ term, text }: Rule) =>
 const ruleOf = <A extends unknown[]>({ term, text }: RuleOf<A>, ...args: A) =>
   rule({ term, text: text(...args) })
 
-export function helpView(on: Handlers): HTMLElement {
+export function helpView(on: Handlers, offerTutorial: boolean): HTMLElement {
   const copy = ui().help
   return overlay(
     on,
@@ -3106,6 +3129,23 @@ export function helpView(on: Handlers): HTMLElement {
     h(
       "div",
       { class: "sheet-body" },
+      // First, and above the rules rather than beside the buttons at the foot,
+      // because the player it is for is the one who opened this sheet to learn
+      // the game, and the tutorial is a better way to do that than the page
+      // under it: the rules say "green is +3 mult" to someone who has not yet
+      // seen a mult, and the tutorial says it with one on the screen. Only
+      // while the tutorial is still owed, which is the caller's to know.
+      offerTutorial &&
+        h(
+          "div",
+          { class: "help-tutorial" },
+          h("p", {}, copy.tutorial),
+          h(
+            "button",
+            { class: "primary", type: "button", onclick: () => on.startTutorial() },
+            copy.tutorialStart,
+          ),
+        ),
       h("p", {}, copy.lead),
       h("p", { class: "sheet-lead" }, copy.scored),
       rule(copy.chipsMult),
@@ -3253,14 +3293,16 @@ export function shapesView(state: RunState, on: Handlers, word: string): HTMLEle
         return h(
           "div",
           { class: `shape ${scores ? "scoring" : ""} ${matched ? "matched" : ""}` },
+          // Two rows of two: what it is called and how far it is leveled, then
+          // what it asks of a word and what it pays for one. See `.shape`.
           h(
             "div",
             { class: "shape-head" },
             h("strong", {}, card.name),
             scores ? h("span", { class: "shape-tag" }, copy.scoring) : null,
             matched ? h("span", { class: "shape-tag also" }, copy.alsoMatches) : null,
-            h("span", { class: "shape-level" }, ui().board.shapeLevel(bonus.level)),
           ),
+          h("span", { class: "shape-level" }, ui().board.shapeLevel(bonus.level)),
           h("span", { class: "shape-text" }, card.text),
           h(
             "span",

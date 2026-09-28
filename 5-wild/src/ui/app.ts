@@ -1441,6 +1441,12 @@ export class App {
       this.intro = false
       this.render()
     },
+    // Straight to the board: the intro card's only question is the one this
+    // button has just answered, and asking it again a screen later would be a
+    // confirmation dialog for a tap that was not a mistake.
+    startTutorial: () => {
+      void this.withWords(() => this.startFresh(false))
+    },
     openCodex: () => {
       this.overlay = "codex"
       this.render()
@@ -1588,8 +1594,11 @@ export class App {
     then()
   }
 
-  /** The body of `newRun`, once there is a word list to start one from. */
-  private startFresh(): void {
+  /**
+   * The body of `newRun`, once there is a word list to start one from.
+   * `intro` false skips the round's intro card; see `startTutorial`.
+   */
+  private startFresh(intro = true): void {
     // A run replaced without ending is still a run. This is also where a run
     // lands whose app was killed mid-round and never reopened to it.
     this.finish("abandoned")
@@ -1597,8 +1606,8 @@ export class App {
     this.state = startRun(rootSeed(), this.words, chosenAscension(this.profile.stats)).state
     this.atTitle = false
     this.overlay = null
-    this.intro = true
-    this.sound.cue({ name: "intro", boss: false })
+    this.intro = intro
+    if (intro) this.sound.cue({ name: "intro", boss: false })
     // Counted here rather than in the constructor: the class always holds a
     // run so that nothing downstream has to handle a null one, and most of
     // those are scaffolding the player never sees.
@@ -1608,6 +1617,18 @@ export class App {
     // closing the app on the intro card should not silently reroll the word.
     this.save()
     this.render()
+  }
+
+  /**
+   * Whether the rules sheet leads with the tutorial.
+   *
+   * Only at the title, which is only ever shown with no run saved, so starting
+   * one from here costs nothing. Anywhere else a run is open, and the tutorial
+   * is either already running on it (the first round, before the third guess,
+   * is the only place a run can be while it is still owed) or spent for good.
+   */
+  private get tutorialOffer(): boolean {
+    return this.coachOwed && this.atTitle
   }
 
   /**
@@ -1658,7 +1679,10 @@ export class App {
     for (const lit of this.root.querySelectorAll(".coached")) lit.classList.remove("coached")
     const step = this.coach
     if (!step) return
-    this.root.querySelector(step.anchor)?.classList.add("coached")
+    const anchor = this.root.querySelector(step.anchor)
+    anchor?.classList.add("coached")
+    const card = this.root.querySelector<HTMLElement>(".coach")
+    if (anchor && card) aimCoach(card, anchor)
   }
 
   /** `as` forces the round board to stay on screen while its scoring plays out. */
@@ -1693,7 +1717,7 @@ export class App {
           : phase === "reward"
             ? rewardView(this.state, this.handlers)
             : phase === "shop"
-              ? shopView(this.state, this.handlers)
+              ? shopView(this.state, this.handlers, this.coach)
               : phase === "game_over" || phase === "victory"
                 ? endView(this.state, this.handlers)
                 : roundView(this.state, this.handlers, this.chrome)
@@ -1706,7 +1730,7 @@ export class App {
     // close it, because the engine will not let the shop move on until it is.
     const sheet =
       this.overlay === "help"
-        ? helpView(this.handlers)
+        ? helpView(this.handlers, this.tutorialOffer)
         : this.overlay === "codex"
           ? codexView(this.handlers)
           : this.overlay === "shapes"
@@ -2278,6 +2302,60 @@ function setDecor(decor: Decor): void {
   } catch {
     // The setting lasts the session instead of the install. Nothing else breaks.
   }
+}
+
+/**
+ * Hang the card under the thing it is talking about, and point its tail at it.
+ *
+ * Measured rather than known, because the card spans the header and nothing in
+ * the view knows where the figure it names came to rest: the readout sits at
+ * the dock's right end, the score in the header's middle track, and both move
+ * with the language and the digits.
+ *
+ * Under the anchor rather than under the header, for the two later beats. The
+ * readout is the header's last line, so for the first three the two are the
+ * same edge; the score and its bar are not, and hung from the header's foot
+ * the card about the score sat under the readout, a line and a bar below the
+ * number it was quoting. Under the anchor it lies over the header's lower
+ * lines instead, which are the readout the card is not about while it is up.
+ * The gap is read off the lit ring rather than written down, since the tray
+ * draws its ring inside its own padding and everything else 5px outside: the
+ * ring's reach plus a pixel, so the tail meets the ring rather than crossing
+ * it. Under the readout that is 6px, the header's bottom padding, and the card
+ * lands on the header's foot exactly.
+ *
+ * Above the anchor instead when the anchor is below the board, which is the
+ * decoration switch and nothing else so far: hung under it the card would lie
+ * over the keyboard the player is about to type on, and the board's empty
+ * rows above it are the one place on the screen nobody is reading. `above`
+ * turns the tail over to point down.
+ *
+ * Both rects are read in the same frame, so a transform on the screen (the
+ * shake after a big guess) moves both and cancels. The tail is kept 14px in from
+ * either corner, where the card's rounding would leave the point hanging off a
+ * curve rather than an edge.
+ *
+ * Asked on the same pass the anchor is lit, which is every render and every
+ * keystroke, and the readout widens as the chip count gains a digit, so the
+ * point follows it rather than aiming at where the figure was.
+ */
+function aimCoach(card: HTMLElement, anchor: Element): void {
+  const slot = card.parentElement
+  const header = slot?.offsetParent
+  if (!slot || !header) return
+  const target = anchor.getBoundingClientRect()
+  const top = header.getBoundingClientRect().top
+  const ring = getComputedStyle(anchor)
+  const gap = Math.max(0, parseFloat(ring.outlineOffset) + parseFloat(ring.outlineWidth)) + 1
+  const above = target.top > window.innerHeight / 2
+  card.classList.toggle("above", above)
+  slot.style.top = above
+    ? `${target.top - top - gap - card.offsetHeight}px`
+    : `${target.bottom - top + gap}px`
+  const box = card.getBoundingClientRect()
+  const inset = 14
+  const x = target.left + target.width / 2 - box.left
+  card.style.setProperty("--tail", `${Math.max(inset, Math.min(box.width - inset, x))}px`)
 }
 
 function seenCoach(): boolean {

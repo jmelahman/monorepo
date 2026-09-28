@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Action, RunState, WordSource } from "../../src/engine"
-import { draftChips, reduce, solveBonusFor, startRun } from "../../src/engine"
+import { difficultyOf, draftChips, reduce, solveBonusFor, startRun } from "../../src/engine"
 import { coachAsks, coachSpent, coachStep } from "../../src/ui/coach"
 import { realWords } from "../helpers/words"
 
@@ -17,7 +17,7 @@ const MISS = "arose"
 
 const fresh = (): RunState => startRun(7, realWords).state
 
-/** Three misses, which is the whole tutorial walked at its natural pace. */
+/** Misses, one at a time: four of them is the whole tutorial walked at its natural pace. */
 const played = (state: RunState, count: number): RunState =>
   Array.from({ length: count }).reduce<RunState>((current) => apply(current, guess(MISS)), state)
 
@@ -64,7 +64,7 @@ describe("the first-round coach", () => {
     expect(step?.id).toBe("banked")
     expect(step?.text).toContain(`${record?.chips} × ${record?.mult} = ${record?.score}`)
     expect(step?.text).toContain(`${state.round.target}`)
-    expect(step?.anchor).toBe(".hud-score")
+    expect(step?.anchor).toBe(".hud")
   })
 
   it("quotes the solve bonus the engine would actually apply", () => {
@@ -74,32 +74,71 @@ describe("the first-round coach", () => {
     expect(step?.id).toBe("solve")
     // Both figures from the engine rather than from `1 + guessesLeft` here, so a
     // relic or boss that bends the bonus cannot make the tutorial lie.
-    expect(step?.text).toContain(`×${solveBonusFor(state, left)}`)
-    expect(step?.text).toContain(`×${solveBonusFor(state, left - 1)}`)
+    expect(step?.text).toContain(`${solveBonusFor(state, left)}×`)
+
     expect(step?.anchor).toBe(".hud .meter")
   })
 
-  it("has nothing left to say after three guesses, and says so twice", () => {
-    const state = played(fresh(), 3)
+  it("names the shape of the second guess once it is whole, and steps back from it", () => {
+    const state = apply(played(fresh(), 1), type("jazzy"))
+    const step = coachStep(state)
+    expect(step?.id).toBe("shape")
+    expect(step?.anchor).toBe(".category")
+    expect(step?.text).toContain("JAZZY scores as Cluster")
+    expect(coachStep(apply(state, [{ type: "backspace" }]))).toBeNull()
+  })
+
+  it("puts the banked card away at the first letter of the next word", () => {
+    // So the shape card arrives on an empty board rather than as a sentence
+    // swapped inside the card already up.
+    const state = played(fresh(), 1)
+    expect(coachStep(state)?.id).toBe("banked")
+    expect(coachStep(apply(state, type("j")))).toBeNull()
+    expect(coachStep(apply(state, type("jazz")))).toBeNull()
+    // Taken apart again, it is back, because the board is back where it was.
+    const cleared = apply(state, [
+      ...type("ja"),
+      { type: "backspace" },
+      { type: "backspace" },
+    ] as Action[])
+    expect(coachStep(cleared)?.id).toBe("banked")
+  })
+
+  it("names the decoration switch on the fourth guess, as a thing for later", () => {
+    const step = coachStep(played(fresh(), 3))
+    expect(step?.id).toBe("decor")
+    expect(step?.anchor).toBe(".decor-toggle")
+  })
+
+  it("has nothing left to say after four guesses, and is not finished", () => {
+    // The board is spent; the tutorial is not, because the first shop still
+    // has its own cards to show.
+    const state = played(fresh(), 4)
     expect(state.round.done).toBe(false)
     expect(coachStep(state)).toBeNull()
-    expect(coachSpent(state)).toBe(true)
+    expect(coachSpent(state)).toBe(false)
   })
 
   it("stays live for the whole of the first round", () => {
     let state = fresh()
-    for (let count = 0; count < 3; count++) {
+    for (let count = 0; count < 4; count++) {
       expect(coachSpent(state)).toBe(false)
       expect(coachStep(state)).not.toBeNull()
       state = played(state, 1)
     }
   })
 
-  it("goes quiet the moment the round is decided", () => {
+  it("goes quiet the moment the round is decided, with the shop still owed", () => {
     // Solving ends the round on the guess that lands it, whichever beat was up.
     const state = apply(fresh(), guess(fresh().round.answer))
     expect(state.round.solved).toBe(true)
     expect(coachStep(state)).toBeNull()
+    expect(coachSpent(state)).toBe(false)
+  })
+
+  it("is spent the moment the run ends in round one", () => {
+    const state = played(fresh(), fresh().round.maxGuesses)
+    expect(state.phase).toBe("game_over")
     expect(coachSpent(state)).toBe(true)
   })
 
@@ -132,6 +171,45 @@ describe("the first-round coach", () => {
   })
 })
 
+describe("the first shop", () => {
+  const shop = (): RunState => {
+    const state = apply(fresh(), [...guess(fresh().round.answer), { type: "collect" }])
+    expect(state.phase).toBe("shop")
+    return state
+  }
+
+  it("opens on the shelf, naming the kinds of card it deals", () => {
+    const step = coachStep(shop())
+    expect(step?.id).toBe("shelf")
+    expect(step?.anchor).toBe(".shop-items")
+    for (const kind of ["Relics", "Consumables", "Packs"]) expect(step?.text).toContain(kind)
+  })
+
+  it("stays on the shelf through a reroll", () => {
+    const state = apply(shop(), [{ type: "reroll" }])
+    expect(state.shop?.rerolls).toBe(1)
+    expect(coachStep(state)?.id).toBe("shelf")
+  })
+
+  it("moves to the tray once a relic is held, quoting the run's own slot count", () => {
+    const state: RunState = { ...shop(), relics: [{ id: "green_thumb" }] }
+    const step = coachStep(state)
+    expect(step?.id).toBe("relics")
+    expect(step?.text).toContain(`${difficultyOf(state).relicSlots} slots`)
+  })
+
+  it("keeps quiet while a pack is open over the shelf", () => {
+    const state: RunState = { ...shop(), pack: { id: "relic_pack", options: [], picks: 1 } }
+    expect(coachStep(state)).toBeNull()
+  })
+
+  it("is spent on leaving, and says nothing in the next shop", () => {
+    const next = apply(shop(), [{ type: "next_round" }])
+    expect(coachSpent(next)).toBe(true)
+    expect(coachStep({ ...next, phase: "shop" })).toBeNull()
+  })
+})
+
 /**
  * Every beat's prose, checked once. The wording is the deliverable here, and a card
  * that fires at the right moment and says nothing useful is the failure mode
@@ -143,29 +221,30 @@ describe("what the coach actually claims", () => {
 
   it("names the color multipliers the engine uses", () => {
     const step = coachStep(apply(startRun(3, words).state, type(MISS)))
-    expect(step?.text).toContain("green +3")
-    expect(step?.text).toContain("yellow +1")
+    expect(step?.text).toContain("yellow tile increases it by 1")
+    expect(step?.text).toContain("each green by 3")
   })
 
   it("keeps every card to a length a phone can hold", () => {
-    // Measured in the browser at 390×844, where the longest of these, the solve
-    // card at 127 characters, sets three lines in the 301px the text column comes
-    // out at and stands 67px tall against a board row of 71. So the cap is three
-    // lines' worth at the ~51 characters a line holds there, and it is the card
-    // staying inside a single board row that it is really buying: the beat that
-    // fires latest has three empty rows under it, and this keeps the worst case
-    // to one of them.
+    // Four lines at the ~60 characters a line holds in the card's text column
+    // at 390×844. The solve card, the longest, once ran to 270 characters and
+    // five lines walking the meter part by part, and covered the whole board's
+    // top row doing it. It is about 200 now, worked sum included, and was
+    // screenshotted at four lines, the last of them one word, with the card
+    // ending above the board. It lies over the chips × mult row, which the
+    // solve beat is not about; a fifth line would reach the tiles.
     let state = startRun(3, words).state
     const seen: string[] = []
-    for (let count = 0; count < 3; count++) {
+    for (let count = 0; count < 4; count++) {
       seen.push(coachStep(state)?.text ?? "")
       state = apply(state, guess(MISS))
     }
+    seen.push(coachStep(apply(played(startRun(3, words).state, 1), type(MISS)))?.text ?? "")
     seen.push(coachStep(apply(startRun(3, words).state, type("qu")))?.text ?? "")
     seen.push(coachStep(apply(startRun(3, words).state, type(MISS)))?.text ?? "")
     for (const text of seen) {
       expect(text.length).toBeGreaterThan(0)
-      expect(text.length).toBeLessThanOrEqual(160)
+      expect(text.length).toBeLessThanOrEqual(210)
     }
   })
 })

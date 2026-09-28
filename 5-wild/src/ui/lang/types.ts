@@ -308,8 +308,7 @@ export type Strings = {
       upNext: string
       /** The endless half of the ladder, said as the number it is. */
       targets: (factor: string) => string
-      /** Asked once, before the first board is dealt. */
-      coachAsk: string
+      /** The two buttons are the whole question, asked once before the first board. */
       coachYes: string
       coachNo: string
       /** When there is nothing to ask, the button is just the button. */
@@ -544,6 +543,12 @@ export type Strings = {
       packs: Rule
       mods: Rule
       codexNote: string
+      /**
+       * The tutorial's second door, at the top of the sheet for a player who
+       * has neither played it nor turned it down. `tutorialStart` is the button.
+       */
+      tutorial: string
+      tutorialStart: string
       openCodex: string
       gotIt: string
     }
@@ -690,7 +695,23 @@ export type Strings = {
       rare: (chips: string) => string
       mult: string
       banked: (chips: string, mult: string, score: string, target: string) => string
-      solve: (now: string, next: string) => string
+      /**
+       * The meter, part by part: `score` of `target` is the solid bar, `now` is
+       * what solving on this guess multiplies by, and `floor` is `score` times
+       * `now`, the faint bar's length.
+       */
+      solve: (score: string, target: string, now: string, floor: string) => string
+      /**
+       * The shape chip, quoting the word it is naming and the shape that word
+       * scores as, both as the chip shows them.
+       */
+      shape: (word: string, shape: string) => string
+      /** The board's decoration switch, named for the rounds that will need it. */
+      decor: string
+      /** The first shop, before a relic is held: what each kind of card is. */
+      shelf: string
+      /** Once one is: where it went, and `slots` is how many fit. */
+      relics: (slots: string) => string
     }
   }
 }

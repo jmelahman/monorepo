@@ -226,7 +226,7 @@ export const fr: Strings = {
   },
 
   category: {
-    alphabetical: { name: "Alphabétique", text: "Ses lettres ne reculent jamais" },
+    alphabetical: { name: "Alphabétique", text: "Lettres dans l'ordre A–Z" },
     vowel_heavy: { name: "Riche en Voyelles", text: "Trois voyelles ou plus" },
     cluster: { name: "Groupe", text: "Trois consonnes de suite" },
     twinned: { name: "Jumelée", text: "Une lettre apparaît deux fois" },
@@ -494,9 +494,8 @@ export const fr: Strings = {
       current: "Cette manche",
       upNext: "Ensuite",
       targets: (factor) => `objectifs ×${factor}`,
-      coachAsk: "Première partie. Le plateau peut vous expliquer le score au fur et à mesure.",
-      coachYes: "Jouer avec les conseils",
-      coachNo: "Passer les conseils",
+      coachYes: "Jouer le tutoriel",
+      coachNo: "Passer le tutoriel",
       play: "Jouer",
     },
 
@@ -755,6 +754,10 @@ export const fr: Strings = {
           "qu'elle vaut plus tard dans un mot que tôt. Les boosters les distribuent moins cher, " +
           "la lettre déjà choisie pour vous.",
       },
+      tutorial:
+        "Première fois ? Le tutoriel est conseillé : il joue votre première manche avec vous " +
+        "et explique le score au fil du jeu.",
+      tutorialStart: "Lancer le tutoriel",
       codexNote:
         "Le codex contient toutes les reliques, tous les boss, toutes les formes de mot et tous les modificateurs du jeu, en entier.",
       openCodex: "Ouvrir le codex",
@@ -909,12 +912,23 @@ export const fr: Strings = {
         "Chaque essai est compté. Tapez un mot, et la ligne au-dessus du plateau additionne ce que valent ses lettres.",
       rare: (chips) =>
         `${chips} jetons pour l'instant. Les lettres rares paient plus\u00A0: A vaut 1, K vaut 5, Z vaut 10.`,
-      mult: "Le ? est le mult, et seule la réponse le connaît\u00A0: vert +3, jaune +1, gris rien. Appuyez sur ENTRÉE pour le découvrir.",
+      mult: "Le ? est le mult. Chaque case jaune l'augmente de 1, et chaque verte de 3. Les formes de mot et les reliques l'augmentent encore. Appuyez sur ENTRÉE pour voir le mult de cet essai.",
       banked: (chips, mult, score, target) =>
         `${chips} × ${mult} = ${score}, mis de côté vers ${target}. Chaque essai s'ajoute au même tas.`,
-      solve: (now, next) =>
-        `Résoudre multiplie tout le tas par ×${now}, pas seulement l'essai qui y arrive, ` +
-        `et termine la manche. Un essai de plus et ce serait ×${next}.`,
+      solve: (score, target, now, floor) =>
+        `La barre pleine est votre score : ${score} sur ${target}. Résoudre multiplie votre score ` +
+        `final par les essais qu'il vous reste. Résoudre maintenant le multiplierait par ${now} : ${score} × ${now} = ${floor}. Une fois la barre pâle remplie, résoudre gagne la manche.`,
+      shape: (word, shape) =>
+        `${word.toUpperCase()} compte comme ${shape}. Chaque essai a une forme, et monter une forme ` +
+        "de niveau à la boutique fait marquer plus à ces essais. Touchez pour les voir toutes.",
+      decor:
+        "Plus tard, le clavier se charge. Ce bouton masque ses marques de score, étape par étape, pour vous concentrer sur le mot.",
+      shelf:
+        "Dépensez votre or ici entre les manches. Les reliques restent avec vous et marquent à chaque essai. " +
+        "Les consommables servent une fois. Le reste fait marquer plus les lettres ou les formes de mot. " +
+        "Les boosters coûtent moins cher, mais on ne voit leur contenu qu'après l'achat.",
+      relics: (slots) =>
+        `Vos reliques se rangent ici. Vous avez ${slots} emplacements, et toucher une relique la vend à moitié prix.`,
     },
   },
 }

@@ -207,7 +207,7 @@ export const en: Strings = {
   },
 
   category: {
-    alphabetical: { name: "Alphabetical", text: "Its letters never go backwards" },
+    alphabetical: { name: "Alphabetical", text: "Letters in A–Z order" },
     vowel_heavy: { name: "Vowel Heavy", text: "Three or more vowels" },
     cluster: { name: "Cluster", text: "Three consonants in a row" },
     twinned: { name: "Twinned", text: "Some letter appears twice" },
@@ -510,14 +510,10 @@ export const en: Strings = {
       current: "This round",
       upNext: "Next",
       targets: (factor) => `targets ×${factor}`,
-      // Said before the buttons rather than written into them, because the
-      // choice is only meaningful to someone who knows what they are turning
-      // down, and "tips" alone does not say the board is about to explain itself.
-      coachAsk: "First run. The board can talk you through the scoring as you play.",
-      coachYes: "Play with tips",
+      coachYes: "Play tutorial",
       // Phrased as the whole tutorial rather than as this card: it is the last
       // time the question is asked, so it must not read as "not now".
-      coachNo: "Skip the tips",
+      coachNo: "Skip tutorial",
       play: "Play",
     },
 
@@ -800,6 +796,10 @@ export const en: Strings = {
           "is worth more late in a word than early. Packs deal them cheaper, with the " +
           "letter already chosen for you.",
       },
+      tutorial:
+        "New here? The tutorial is recommended: it plays your first round with you and " +
+        "explains the scoring as it happens.",
+      tutorialStart: "Start the tutorial",
       codexNote:
         "The codex has every relic, boss, word shape and modifier in the game, listed in full.",
       openCodex: "Open the codex",
@@ -950,18 +950,49 @@ export const en: Strings = {
     },
 
     coach: {
-      chips:
-        "Every guess is scored. Type a word, and the line over the board counts what its letters are worth.",
+      // Every card is read over a board the player is in the middle of, so each
+      // one says one thing, points at it, and ends on what to do next. The
+      // numbers are the card's own business; the tail and the lit outline say
+      // where on screen they are, so the sentences stopped giving directions.
+      chips: "Every guess scores points. Start typing: each letter you use is worth chips.",
       // The three letters named are the ends and the middle of the table in
       // `content/letters.ts`, so a language whose chip table is retuned has to
       // retune this sentence with it.
-      rare: (chips) => `${chips} chips so far. Rare letters pay more: A is 1, K is 5, Z is 10.`,
-      mult: "The ? is mult, and only the answer knows it: green +3, yellow +1, gray nothing. Press ENTER to find out.",
+      rare: (chips) =>
+        `${chips} chips so far. Common letters pay 1, rarer ones more: K pays 5, Z pays 10.`,
+      mult: "The ? is mult. Each yellow tile increases it by 1, and each green by 3. Word shapes and relics raise it further. Press ENTER to see this guess's mult.",
       banked: (chips, mult, score, target) =>
-        `${chips} × ${mult} = ${score}, banked toward ${target}. Every guess adds to the same pile.`,
-      solve: (now, next) =>
-        `Solving multiplies the whole pile by ×${now}, not just the guess that lands it, ` +
-        `and ends the round. One more guess and it is ×${next}.`,
+        `${chips} × ${mult} = ${score}. Every guess adds to your score, and you need ${target} by the end of the round.`,
+      // The one card pointing at a thing with two parts, and it used to name
+      // neither: "×4" and "×3" floated free of the bar they were drawn on. So it
+      // walks the bar left to right: the solid part, the rule, then the faint
+      // part, which gets the one job a player needs from it: once it reaches the
+      // end, solving wins. Its exact figure is the meter's label. Written 4×
+      // rather than ×4 because it is said "four times", and "×4 your score" is
+      // not a sentence anyone speaks.
+      solve: (score, target, now, floor) =>
+        `The solid bar is your score: ${score} of ${target}. Solving multiplies your final score by ` +
+        `the guesses you have left. Solving now would ${now}× your score: ${score} × ${now} = ${floor}. ` +
+        "Once the faint bar is filled, solving wins the round.",
+      // Quotes the chip rather than explaining the five shapes: the sheet a tap
+      // away lists them, and what nobody finds out from the chip alone is that
+      // a shape is a thing you can buy into.
+      shape: (word, shape) =>
+        `${word.toUpperCase()} scores as ${shape}. Every guess has a shape, and leveling a shape ` +
+        "in the shop makes those guesses score more. Tap to see them all.",
+      decor:
+        "In later rounds the keyboard gets busy. This button hides its scoring marks, a step at a time, so you can focus on the word.",
+      // Every kind the shelf can deal, in the order of how long it lasts, so the
+      // card can end on packs, which are only ever the others in a box, sold
+      // cheaper for being shut. The names are the cards' own tags, which is how
+      // a player matches a sentence here to a card there.
+      shelf:
+        "Spend gold here between rounds. Relics stay with you and score on every guess. " +
+        "Consumables are used once. The rest make letters or word shapes score more. " +
+        "Packs cost less, but you only see what is inside after purchasing.",
+      // What a relic does was the shelf card's to say; this one says where it went.
+      relics: (slots) =>
+        `Your relics sit up here. You have ${slots} slots, and tapping a relic sells it for half its price.`,
     },
   },
 }

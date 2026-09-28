@@ -322,7 +322,7 @@ export const MOD_EMBLEMS: Record<ModId, Paths> = {
  * the same idea are drawn from another angle: a pair of tiles, a chain.
  */
 export const CATEGORY_EMBLEMS: Record<string, Paths> = {
-  // Its letters never go backwards: a one-way sign.
+  // Letters in A–Z order, never going backwards: a one-way sign.
   alphabetical: ["M2 8h20v8H2z", "M5 12h11", "M13.5 9.5 17 12l-3.5 2.5"],
   // A mouthful of vowels, said: the speech bubble, three sounds in it.
   vowel_heavy: ["M4 4h16v12h-9l-5 4v-4H4z", dot(8, 10), dot(12, 10), dot(16, 10)],

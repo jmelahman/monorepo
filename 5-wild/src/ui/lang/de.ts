@@ -212,7 +212,7 @@ export const de: Strings = {
   },
 
   category: {
-    alphabetical: { name: "Alphabetisch", text: "Seine Buchstaben gehen nie zurück" },
+    alphabetical: { name: "Alphabetisch", text: "Buchstaben in A–Z-Folge" },
     vowel_heavy: { name: "Vokalreich", text: "Drei oder mehr Vokale" },
     cluster: { name: "Häufung", text: "Drei Konsonanten hintereinander" },
     twinned: { name: "Gedoppelt", text: "Ein Buchstabe kommt zweimal vor" },
@@ -483,9 +483,8 @@ export const de: Strings = {
       current: "Diese Runde",
       upNext: "Als Nächstes",
       targets: (factor) => `Ziele ×${factor}`,
-      coachAsk: "Erster Durchlauf. Das Brett kann dir die Wertung unterwegs erklären.",
-      coachYes: "Mit Tipps spielen",
-      coachNo: "Tipps überspringen",
+      coachYes: "Tutorial spielen",
+      coachNo: "Tutorial überspringen",
       play: "Spielen",
     },
 
@@ -746,6 +745,10 @@ export const de: Strings = {
           "sodass er spät im Wort mehr wert ist als früh. Booster geben sie billiger aus, mit " +
           "schon gewähltem Buchstaben.",
       },
+      tutorial:
+        "Neu hier? Wir empfehlen das Tutorial: Es spielt deine erste Runde mit dir und " +
+        "erklärt die Wertung, während sie passiert.",
+      tutorialStart: "Tutorial starten",
       codexNote:
         "Der Kodex enthält jedes Relikt, jeden Boss, jede Wortform und jeden Modifikator im Spiel, vollständig.",
       openCodex: "Kodex öffnen",
@@ -899,12 +902,23 @@ export const de: Strings = {
         "Jeder Versuch wird gewertet. Tippe ein Wort, und die Zeile über dem Brett addiert, was seine Buchstaben wert sind.",
       rare: (chips) =>
         `${chips} Chips bisher. Seltene Buchstaben zahlen mehr: A bringt 1, K bringt 5, Z bringt 10.`,
-      mult: "Das ? ist der Mult, und nur die Antwort kennt ihn: grün +3, gelb +1, grau nichts. Drück ENTER, um es herauszufinden.",
+      mult: "Das ? ist der Mult. Jedes gelbe Feld erhöht ihn um 1, jedes grüne um 3. Wortformen und Relikte erhöhen ihn weiter. Drück ENTER, um den Mult dieses Versuchs zu sehen.",
       banked: (chips, mult, score, target) =>
         `${chips} × ${mult} = ${score}, angesammelt Richtung ${target}. Jeder Versuch kommt auf denselben Haufen.`,
-      solve: (now, next) =>
-        `Lösen multipliziert den ganzen Haufen mit ×${now}, nicht nur den Versuch, der dahin ` +
-        `kommt, und beendet die Runde. Ein Versuch mehr, und es wären ×${next}.`,
+      solve: (score, target, now, floor) =>
+        `Der volle Balken ist deine Punktzahl: ${score} von ${target}. Lösen multipliziert deine ` +
+        `Endpunktzahl mit deinen übrigen Versuchen. Jetzt zu lösen würde sie mit ${now} multiplizieren: ${score} × ${now} = ${floor}. Ist der blasse Balken voll, gewinnt Lösen die Runde.`,
+      shape: (word, shape) =>
+        `${word.toUpperCase()} zählt als ${shape}. Jeder Versuch hat eine Form, und eine Form im ` +
+        "Laden aufzuwerten lässt solche Versuche mehr punkten. Tippe, um alle zu sehen.",
+      decor:
+        "In späteren Runden wird die Tastatur voll. Dieser Knopf blendet ihre Wertungsmarken Schritt für Schritt aus, damit du dich aufs Wort konzentrierst.",
+      shelf:
+        "Gib hier zwischen den Runden dein Gold aus. Relikte bleiben bei dir und punkten bei jedem Versuch. " +
+        "Verbrauchskarten wirken einmal. Der Rest lässt Buchstaben oder Wortformen mehr punkten. " +
+        "Booster kosten weniger, aber was drin ist, siehst du erst nach dem Kauf.",
+      relics: (slots) =>
+        `Deine Relikte liegen hier oben. Du hast ${slots} Plätze, und Antippen verkauft eins zum halben Preis.`,
     },
   },
 }

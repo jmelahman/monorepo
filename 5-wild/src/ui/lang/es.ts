@@ -204,7 +204,7 @@ export const es: Strings = {
   },
 
   category: {
-    alphabetical: { name: "Alfabética", text: "Sus letras nunca retroceden" },
+    alphabetical: { name: "Alfabética", text: "Letras en orden A–Z" },
     vowel_heavy: { name: "Rica en Vocales", text: "Tres vocales o más" },
     cluster: { name: "Grupo", text: "Tres consonantes seguidas" },
     twinned: { name: "Gemela", text: "Alguna letra aparece dos veces" },
@@ -476,9 +476,8 @@ export const es: Strings = {
       current: "Esta ronda",
       upNext: "Siguiente",
       targets: (factor) => `objetivos ×${factor}`,
-      coachAsk: "Primera partida. El tablero puede explicarte la puntuación mientras juegas.",
-      coachYes: "Jugar con consejos",
-      coachNo: "Saltar los consejos",
+      coachYes: "Jugar el tutorial",
+      coachNo: "Saltar el tutorial",
       play: "Jugar",
     },
 
@@ -735,6 +734,10 @@ export const es: Strings = {
           "final de una palabra que al principio. Los sobres los reparten más baratos, con la " +
           "letra ya elegida.",
       },
+      tutorial:
+        "¿Primera vez? Te recomendamos el tutorial: juega contigo tu primera ronda y " +
+        "te explica la puntuación sobre la marcha.",
+      tutorialStart: "Empezar el tutorial",
       codexNote:
         "El códice tiene todas las reliquias, jefes, formas de palabra y modificadores del juego, en una lista completa.",
       openCodex: "Abrir el códice",
@@ -888,12 +891,23 @@ export const es: Strings = {
         "Cada intento se puntúa. Escribe una palabra, y la línea de encima del tablero cuenta lo que valen sus letras.",
       rare: (chips) =>
         `${chips} fichas por ahora. Las letras raras pagan más: la A vale 1, la K vale 5, la Z vale 10.`,
-      mult: "El ? es el mult, y solo la respuesta lo sabe: verde +3, amarillo +1, gris nada. Pulsa INTRO para averiguarlo.",
+      mult: "El ? es el mult. Cada casilla amarilla lo sube en 1, y cada verde en 3. Las formas de palabra y las reliquias lo suben más. Pulsa INTRO para ver el mult de este intento.",
       banked: (chips, mult, score, target) =>
         `${chips} × ${mult} = ${score}, guardado hacia ${target}. Cada intento suma al mismo montón.`,
-      solve: (now, next) =>
-        `Resolver multiplica todo el montón por ×${now}, no solo el intento que lo consigue, ` +
-        `y termina la ronda. Un intento más y sería ×${next}.`,
+      solve: (score, target, now, floor) =>
+        `La barra sólida es tu puntuación: ${score} de ${target}. Resolver multiplica tu puntuación ` +
+        `final por los intentos que te quedan. Resolver ahora la multiplicaría por ${now}: ${score} × ${now} = ${floor}. Con la barra tenue llena, resolver gana la ronda.`,
+      shape: (word, shape) =>
+        `${word.toUpperCase()} puntúa como ${shape}. Todo intento tiene una forma, y subir una forma ` +
+        "de nivel en la tienda hace que esos intentos puntúen más. Toca para verlas todas.",
+      decor:
+        "En rondas posteriores el teclado se llena. Este botón oculta sus marcas de puntuación, paso a paso, para que te centres en la palabra.",
+      shelf:
+        "Gasta tu oro aquí entre rondas. Las reliquias se quedan contigo y puntúan en cada intento. " +
+        "Los consumibles se usan una vez. El resto hace que letras o formas de palabra puntúen más. " +
+        "Los sobres cuestan menos, pero solo ves lo que traen después de comprarlos.",
+      relics: (slots) =>
+        `Tus reliquias van aquí arriba. Tienes ${slots} huecos, y tocar una la vende por la mitad de su precio.`,
     },
   },
 }
