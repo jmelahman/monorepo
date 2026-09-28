@@ -1,4 +1,33 @@
 # Jamison Lahman
+
+> Personal site of Jamison Lahman, a software engineer in Mountain View, CA with 10 years of experience across platform, backend, frontend, DevOps, and developer tooling. Mostly writes Go for developer tools these days, and maintains 100+ packages on the Arch User Repository.
+
+Contact: [jamison@lahman.dev](mailto:jamison@lahman.dev) · [GitHub](https://github.com/jmelahman) · [LinkedIn](https://linkedin.com/in/jamison-lahman) · [X](https://x.com/jmelahman)
+
+## Pages
+
+- [About](https://jamison.lahman.dev/): Home page
+- [Resumé](https://jamison.lahman.dev/resume/): Work history (Applied Intuition, Waymo), skills, and education; also available as a [PDF](https://jamison.lahman.dev/resume/resume.pdf)
+- [Projects](https://jamison.lahman.dev/projects/): Overview of open source projects
+- [Blog](https://jamison.lahman.dev/blog/): Blog post index
+- [Feed](https://jamison.lahman.dev/feed/): Activity feed
+
 ## Projects
-- [pkglint](https://github.com/jmelahman/pkglint): Security-focused linter for Arch Linux PKGBUILDs
+
+- [pkglint](https://github.com/jmelahman/pkglint): Security-focused linter for Arch Linux PKGBUILDs, built on a real bash AST; grades packages A–F
+- [AUR Report Card](https://jamison.lahman.dev/pkglint/): pkglint grades for every package in the AUR and official Arch repos, with per-package pages and [JSON results](https://jamison.lahman.dev/pkglint/results.json)
+- [local-preview](https://jmelahman.github.io/local-preview/): Local-first preview-deployment orchestrator; every commit becomes a servable preview at its own subdomain, with backend state following git lineage
 - [Agentic Kanban](https://jmelahman.github.io/agentic-kanban/llms.txt): Kanban for AI agent sessions
+- [5 Wild](https://5-wild.com/): Word-guessing roguelike where each guess is also a scored hand ([source](https://github.com/jmelahman/5-wild))
+- [connections](https://github.com/jmelahman/connections): Terminal client for the NYT Connections daily puzzle
+- [nature-sounds](https://github.com/jmelahman/nature-sounds): Command-line player for National Park Service nature soundscapes
+- [PKGBUILDs](https://github.com/jmelahman/PKGBUILDs): Monorepo of the AUR packages I maintain, with automated upstream update PRs and CI builds
+
+## Blog
+
+- [Using `uv` to package Go applications](https://jamison.lahman.dev/blog/2.html) (2025-08-12): Distributing Go binaries through PyPI with uv
+- [My Git Workflow](https://jamison.lahman.dev/blog/1.html) (2025-07-22, work in progress): Git aliases, configuration, and workflow
+
+## Optional
+
+- [RSS](https://jamison.lahman.dev/rss.xml): Blog RSS feed
