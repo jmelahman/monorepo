@@ -1,11 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="414" height="274" viewBox="0 0 414 274"
+<svg xmlns="http://www.w3.org/2000/svg" width="414" height="138" viewBox="0 0 414 138"
      role="img" aria-label="5 Wild">
   <title>5 Wild</title>
   <!--
-    The README's masthead, for a light page: the title screen's masthead drawn
-    again, two empty rows and then the name as the row being played, the 5 in
-    green and the rest in the gray of a letter the board has read, with chips
-    times mult slapped on the corner. See
+    The README's masthead, for a light page: the title screen's name drawn
+    again as the row being played, the 5 in green and the rest in the gray of a
+    letter the board has read, with chips times mult slapped on the corner. See
     `.title-mast` in src/style.css for why each piece is what it is; this file
     only copies the answers. The README picks between this and its twin with
     prefers-color-scheme, so the background is left transparent.
@@ -18,11 +17,11 @@
     at 0.58 of a tile.
   -->
   <defs>
-    <clipPath id="t0"><rect x="40" y="176" width="62" height="62" rx="6"/></clipPath>
-    <clipPath id="t1"><rect x="108" y="176" width="62" height="62" rx="6"/></clipPath>
-    <clipPath id="t2"><rect x="176" y="176" width="62" height="62" rx="6"/></clipPath>
-    <clipPath id="t3"><rect x="244" y="176" width="62" height="62" rx="6"/></clipPath>
-    <clipPath id="t4"><rect x="312" y="176" width="62" height="62" rx="6"/></clipPath>
+    <clipPath id="t0"><rect x="40" y="40" width="62" height="62" rx="6"/></clipPath>
+    <clipPath id="t1"><rect x="108" y="40" width="62" height="62" rx="6"/></clipPath>
+    <clipPath id="t2"><rect x="176" y="40" width="62" height="62" rx="6"/></clipPath>
+    <clipPath id="t3"><rect x="244" y="40" width="62" height="62" rx="6"/></clipPath>
+    <clipPath id="t4"><rect x="312" y="40" width="62" height="62" rx="6"/></clipPath>
     <filter id="drop" x="-40%" y="-40%" width="180%" height="200%">
       <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#000" flood-opacity="0.18"/>
     </filter>
@@ -31,67 +30,47 @@
     </filter>
   </defs>
 
-  <!-- The ghosts: the top of a board, the upper row fainter, so it fades in
-       from above rather than sitting there empty. Outlined in the empty-tile
-       colour for a light page. -->
-  <g fill="none" stroke="#d3d6da" stroke-width="2">
-    <g opacity="0.35">
-      <rect x="41" y="41" width="60" height="60" rx="5"/>
-      <rect x="109" y="41" width="60" height="60" rx="5"/>
-      <rect x="177" y="41" width="60" height="60" rx="5"/>
-      <rect x="245" y="41" width="60" height="60" rx="5"/>
-      <rect x="313" y="41" width="60" height="60" rx="5"/>
-    </g>
-    <g opacity="0.6">
-      <rect x="41" y="109" width="60" height="60" rx="5"/>
-      <rect x="109" y="109" width="60" height="60" rx="5"/>
-      <rect x="177" y="109" width="60" height="60" rx="5"/>
-      <rect x="245" y="109" width="60" height="60" rx="5"/>
-      <rect x="313" y="109" width="60" height="60" rx="5"/>
-    </g>
-  </g>
-
   <!-- Each tile is its fill plus a dark band along the bottom edge, clipped to
        the tile, which is the stylesheet's inset shadow. -->
   <g filter="url(#glow)">
     <g clip-path="url(#t0)">
-      <rect x="40" y="176" width="62" height="62" fill="#538d4e"/>
-      <rect x="40" y="233" width="62" height="5" fill="#000" opacity="0.22"/>
+      <rect x="40" y="40" width="62" height="62" fill="#538d4e"/>
+      <rect x="40" y="97" width="62" height="5" fill="#000" opacity="0.22"/>
     </g>
   </g>
   <g filter="url(#drop)">
     <g clip-path="url(#t1)">
-      <rect x="108" y="176" width="62" height="62" fill="#787c7e"/>
-      <rect x="108" y="233" width="62" height="5" fill="#000" opacity="0.18"/>
+      <rect x="108" y="40" width="62" height="62" fill="#787c7e"/>
+      <rect x="108" y="97" width="62" height="5" fill="#000" opacity="0.18"/>
     </g>
     <g clip-path="url(#t2)">
-      <rect x="176" y="176" width="62" height="62" fill="#787c7e"/>
-      <rect x="176" y="233" width="62" height="5" fill="#000" opacity="0.18"/>
+      <rect x="176" y="40" width="62" height="62" fill="#787c7e"/>
+      <rect x="176" y="97" width="62" height="5" fill="#000" opacity="0.18"/>
     </g>
     <g clip-path="url(#t3)">
-      <rect x="244" y="176" width="62" height="62" fill="#787c7e"/>
-      <rect x="244" y="233" width="62" height="5" fill="#000" opacity="0.18"/>
+      <rect x="244" y="40" width="62" height="62" fill="#787c7e"/>
+      <rect x="244" y="97" width="62" height="5" fill="#000" opacity="0.18"/>
     </g>
     <g clip-path="url(#t4)">
-      <rect x="312" y="176" width="62" height="62" fill="#787c7e"/>
-      <rect x="312" y="233" width="62" height="5" fill="#000" opacity="0.18"/>
+      <rect x="312" y="40" width="62" height="62" fill="#787c7e"/>
+      <rect x="312" y="97" width="62" height="5" fill="#000" opacity="0.18"/>
     </g>
   </g>
   <g fill="#e8e8ea" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="36" font-weight="900" text-anchor="middle">
-    <text x="71" y="218">5</text>
-    <text x="139" y="218">W</text>
-    <text x="207" y="218">I</text>
-    <text x="275" y="218">L</text>
-    <text x="343" y="218">D</text>
+    <text x="71" y="82">5</text>
+    <text x="139" y="82">W</text>
+    <text x="207" y="82">I</text>
+    <text x="275" y="82">L</text>
+    <text x="343" y="82">D</text>
   </g>
 
   <!-- Chips times mult at the stylesheet's 6deg tilt. Dark figures on the two
        score colours, which are bright enough to carry them on either page. -->
-  <g transform="rotate(6 342 171)" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="900" text-anchor="middle">
-    <rect x="296" y="160" width="50" height="23" rx="6" fill="#4a9eff"/>
-    <text x="321" y="176" font-size="13" fill="#0e0f13">+120</text>
-    <text x="355" y="176" font-size="12" fill="#787c7e">×</text>
-    <rect x="364" y="160" width="24" height="23" rx="6" fill="#ff5c5c"/>
-    <text x="376" y="176" font-size="13" fill="#0e0f13">4</text>
+  <g transform="rotate(6 342 35)" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="900" text-anchor="middle">
+    <rect x="296" y="24" width="50" height="23" rx="6" fill="#4a9eff"/>
+    <text x="321" y="40" font-size="13" fill="#0e0f13">+120</text>
+    <text x="355" y="40" font-size="12" fill="#787c7e">×</text>
+    <rect x="364" y="24" width="24" height="23" rx="6" fill="#ff5c5c"/>
+    <text x="376" y="40" font-size="13" fill="#0e0f13">4</text>
   </g>
 </svg>
