@@ -579,6 +579,9 @@ export const es: Strings = {
       firstEarned: "Has ganado la ascensión 1, y la partida ya puede ponerse más difícil",
       earned: (level, next) => `Ascensión ${level} superada, y has ganado la ${next}`,
       topOfLadder: (level) => `Ascensión ${level} superada. No hay nada por encima.`,
+      shareLater: "Puedes cambiarlo más tarde en el menú.",
+      shareYes: "Compartir",
+      shareNo: "No, gracias",
     },
 
     title: {
@@ -839,6 +842,35 @@ export const es: Strings = {
       wordsNextRun: "Las palabras cambian cuando empieces una partida nueva.",
       quit: "Abandonar partida",
       resume: "Continuar",
+    },
+
+    about: {
+      title: "Acerca de",
+      sharing: "Compartir datos de juego anónimos",
+      sharingNote:
+        "Ayuda a mejorar el juego compartiendo los resultados de tus partidas. " +
+        "Nunca se incluye nada personal.",
+      privacy: {
+        before: "Encontrarás más información sobre qué se recoge exactamente en la ",
+        link: "política de privacidad",
+        after: ".",
+      },
+      thanks: "¡Gracias por ayudar a mejorar el juego!",
+      credits: "Créditos",
+      source: "Código fuente",
+      report: "Informar de un problema",
+    },
+
+    credits: {
+      title: "Créditos",
+      madeBy: "Hecho por",
+      music: "Música",
+      musicText: (piece, artist) => `«${piece}», de ${artist}. CC0.`,
+      sounds: "Sonidos",
+      soundsText: (people) => `Kenney, y ${people} en Freesound. Todo CC0.`,
+      licence: "Licencia",
+      licenceText: "Software libre bajo la GNU GPL, versión 3.",
+      back: "Volver",
     },
 
     quit: {

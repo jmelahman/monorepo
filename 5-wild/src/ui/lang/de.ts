@@ -588,6 +588,9 @@ export const de: Strings = {
       firstEarned: "Aufstieg 1 ist freigespielt, und der Durchlauf lässt sich härter stellen",
       earned: (level, next) => `Aufstieg ${level} geschafft, und ${next} ist freigespielt`,
       topOfLadder: (level) => `Aufstieg ${level} geschafft. Darüber gibt es nichts mehr.`,
+      shareLater: "Später im Menü änderbar.",
+      shareYes: "Teilen",
+      shareNo: "Nein danke",
     },
 
     title: {
@@ -850,6 +853,35 @@ export const de: Strings = {
       wordsNextRun: "Die Wörter wechseln beim nächsten Durchlauf.",
       quit: "Durchlauf aufgeben",
       resume: "Weiterspielen",
+    },
+
+    about: {
+      title: "Über das Spiel",
+      sharing: "Anonyme Spieldaten teilen",
+      sharingNote:
+        "Hilf, das Spiel zu verbessern, indem du deine Ergebnisse teilst. " +
+        "Persönliche Daten sind nie dabei.",
+      privacy: {
+        before: "Was genau erhoben wird, steht in der ",
+        link: "Datenschutzerklärung",
+        after: ".",
+      },
+      thanks: "Danke, dass du hilfst, das Spiel zu verbessern!",
+      credits: "Mitwirkende",
+      source: "Quellcode",
+      report: "Problem melden",
+    },
+
+    credits: {
+      title: "Mitwirkende",
+      madeBy: "Von",
+      music: "Musik",
+      musicText: (piece, artist) => `„${piece}“ von ${artist}. CC0.`,
+      sounds: "Klänge",
+      soundsText: (people) => `Kenney, und ${people} auf Freesound. Alles CC0.`,
+      licence: "Lizenz",
+      licenceText: "Freie Software unter der GNU GPL, Version 3.",
+      back: "Zurück",
     },
 
     quit: {

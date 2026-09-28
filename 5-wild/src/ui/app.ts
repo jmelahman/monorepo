@@ -25,10 +25,27 @@ import { chosenAscension, Profile } from "./meta"
 import type { Mood } from "./music"
 import { Music } from "./music"
 import { atSpeed, loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
+import type { Consent, RunEnd, RunLog } from "./telemetry"
+import {
+  beginLog,
+  file,
+  flush,
+  lapse,
+  loadConsent,
+  loadLog,
+  markAsked,
+  payload,
+  saveLog,
+  setConsent,
+  enabled as sharingEnabled,
+  stepFor,
+} from "./telemetry"
 import type { Chrome, Decor, Handlers, SoundLevel } from "./views"
 import {
+  aboutView,
   ascendView,
   codexView,
+  creditsView,
   displacedAt,
   endView,
   fillCategory,
@@ -228,7 +245,17 @@ export class App {
   /** True when there is no run to return to and the front door is showing. */
   private atTitle: boolean
   /** The modal on top of everything, if any. */
-  private overlay: "help" | "codex" | "shapes" | "stats" | "menu" | "quit" | "ascend" | null = null
+  private overlay:
+    | "help"
+    | "codex"
+    | "shapes"
+    | "stats"
+    | "menu"
+    | "quit"
+    | "ascend"
+    | "about"
+    | "credits"
+    | null = null
   /**
    * Which sheet the last render put on screen, so this one can tell a sheet
    * arriving from the same sheet being rebuilt underneath the player's thumb.
@@ -299,6 +326,20 @@ export class App {
   private readonly music = new Music()
   /** The one thing here that outlives the run being played. */
   private readonly profile = new Profile()
+  /**
+   * The replay of the run in hand, kept whatever the player has said about
+   * sharing: it costs a few KB, and a switch turned on mid-run can then offer
+   * the whole run rather than its back half. Null for a run with no beginning
+   * on record, which is a save from before this existed or the scaffolding run
+   * behind the title screen; neither is ever sent. See `./telemetry`.
+   */
+  private log: RunLog | null
+  private consent: Consent = loadConsent()
+  /**
+   * The thanks for a yes, until the player moves on from the screen it was said
+   * on. See `Chrome.thanked`; cleared by anything that opens, closes or leaves.
+   */
+  private thanked: "fresh" | "shown" | null = null
 
   constructor(
     private readonly root: HTMLElement,
@@ -316,6 +357,9 @@ export class App {
     // a null state; it simply is not persisted until the player commits to it.
     this.state = saved ?? startRun(rootSeed(), words).state
     this.atTitle = saved === null
+    this.log = loadLog(saved)
+    // Whatever an earlier session finished without a connection.
+    void flush()
     // The class and the property are on the document rather than in the render,
     // so they have to be put back on the way in, since the stylesheet is the
     // only thing that remembers.
@@ -420,6 +464,7 @@ export class App {
     }
 
     this.state = state
+    this.logStep(action, before)
     // Nothing is armed once there is nothing in hand. The commit path clears it
     // on its way through, so what this catches is the run ending underneath an
     // armed key, quitting from the menu over the top of the picker, which
@@ -573,7 +618,11 @@ export class App {
     // `save`, in dispatch's order, since `save` reports the stage to the same
     // record and the two writes should land in the order they happened.
     this.tally(before)
+    this.logStep({ type: "submit" }, before)
     this.save()
+    // Filed the moment it is decided rather than when the end screen is left,
+    // because a player who closes the app on the loss never leaves it.
+    if (this.state.phase === "game_over") this.finish("lost")
 
     this.busy = true
     this.skipping = false
@@ -1310,6 +1359,15 @@ export class App {
       this.music.setOff(!this.music.isOff)
       this.render()
     },
+    // One handler for the end screen's question and the switch on the about and pause sheets,
+    // since they are the same answer given in two places.
+    setSharing: (on) => {
+      setConsent(on ? "on" : "off")
+      this.thanked = on ? "fresh" : null
+      this.consent = loadConsent() ?? (on ? "on" : "off")
+      void flush()
+      this.render()
+    },
     cycleDecor: () => {
       this.decor = NEXT_DECOR[this.decor]
       setDecor(this.decor)
@@ -1341,6 +1399,7 @@ export class App {
       this.render()
     },
     openMenu: () => {
+      this.thanked = null
       // Mid-animation the screen belongs to the scoring; the button is on the
       // HUD the whole time, so this is a reachable tap rather than a theory.
       if (this.busy) return
@@ -1377,7 +1436,17 @@ export class App {
       this.overlay = "stats"
       this.render()
     },
+    openAbout: () => {
+      this.thanked = null
+      this.overlay = "about"
+      this.render()
+    },
+    openCredits: () => {
+      this.overlay = "credits"
+      this.render()
+    },
     closeOverlay: () => {
+      this.thanked = null
       this.overlay = null
       this.render()
     },
@@ -1400,6 +1469,11 @@ export class App {
       this.render()
     },
     quit: () => {
+      // Quitting a won run from the victory screen is how a win is banked, so
+      // `quit` here covers both "gave up" and "took the win and left"; `won` on
+      // the payload is what tells them apart.
+      this.finish("quit")
+      this.thanked = null
       clearSave()
       // Back to a run nobody is playing, purely so `state` stays non-null. The
       // player gets one at the title screen when they ask for it.
@@ -1431,6 +1505,8 @@ export class App {
       wordsDeferred: this.wordsDeferred,
       coach: this.coach,
       coachOffer: this.coachOffer,
+      sharing: !sharingEnabled() ? null : (this.consent ?? "ask"),
+      thanked: this.thanked,
     }
   }
 
@@ -1495,6 +1571,16 @@ export class App {
 
   /** The body of `newRun`, once there is a word list to start one from. */
   private startFresh(): void {
+    // A run replaced without ending is still a run. This is also where a run
+    // lands whose app was killed mid-round and never reopened to it.
+    this.finish("abandoned")
+    this.thanked = null
+    // An end screen that asked and was walked past is a no, settled here
+    // because this is the one door every next run comes through. After the
+    // finish above, so a run abandoned under an unanswered question is held and
+    // then dropped with it rather than filed under a consent it never had.
+    lapse()
+    this.consent = loadConsent()
     this.state = startRun(rootSeed(), this.words, chosenAscension(this.profile.stats)).state
     this.atTitle = false
     this.overlay = null
@@ -1504,6 +1590,7 @@ export class App {
     // run so that nothing downstream has to handle a null one, and most of
     // those are scaffolding the player never sees.
     this.profile.started()
+    this.log = beginLog(this.state, this.wordsLang, this.profile.stats.runs)
     // Persisted before the first keypress: a fresh run is already a run, and
     // closing the app on the intro card should not silently reroll the word.
     this.save()
@@ -1585,6 +1672,15 @@ export class App {
       document.activeElement instanceof HTMLElement
         ? document.activeElement.dataset.focus
         : undefined
+    // The end screen is the only place the sharing question appears, so drawing
+    // one with the question on it is what spends the asking. See `lapse`.
+    if (
+      !this.loading &&
+      !this.atTitle &&
+      (phase === "game_over" || phase === "victory") &&
+      this.chrome.sharing === "ask"
+    )
+      markAsked()
     const view = this.loading
       ? loadingView()
       : this.atTitle
@@ -1596,7 +1692,7 @@ export class App {
             : phase === "shop"
               ? shopView(this.state, this.handlers)
               : phase === "game_over" || phase === "victory"
-                ? endView(this.state, this.handlers)
+                ? endView(this.state, this.handlers, this.chrome)
                 : roundView(this.state, this.handlers, this.chrome)
 
     // Overlays sit beside the screen rather than replacing it, so the board is
@@ -1621,18 +1717,22 @@ export class App {
                 )
               : this.overlay === "menu"
                 ? menuView(this.handlers, this.chrome)
-                : this.overlay === "quit"
-                  ? quitView(this.state, this.handlers)
-                  : this.overlay === "ascend"
-                    ? ascendView(this.ascendTo, this.handlers)
-                    : // Both are held decisions the engine will not let the shop move
-                      // past, and the two cannot be open at once, since buying is refused
-                      // while either is. Order is arbitrary; only exclusivity matters.
-                      (placeView(this.state, this.handlers, this.arming) ??
-                      packView(this.state, this.handlers))
+                : this.overlay === "about"
+                  ? aboutView(this.handlers, this.chrome)
+                  : this.overlay === "credits"
+                    ? creditsView(this.handlers)
+                    : this.overlay === "quit"
+                      ? quitView(this.state, this.handlers)
+                      : this.overlay === "ascend"
+                        ? ascendView(this.ascendTo, this.handlers)
+                        : // Both are held decisions the engine will not let the shop move
+                          // past, and the two cannot be open at once, since buying is refused
+                          // while either is. Order is arbitrary; only exclusivity matters.
+                          (placeView(this.state, this.handlers, this.arming) ??
+                          packView(this.state, this.handlers))
 
     // Which sheet that is, since the answer decides whether it may announce
-    // itself below. `overlay` names seven of them. The two the fallback builds
+    // itself below. `overlay` names nine of them. The two the fallback builds
     // have no name of their own, and are told apart by the run field that
     // decides which of the pair exists at all, which is `placeView`'s own guard.
     const kind = this.overlay ?? (!sheet ? null : this.state.placing ? "place" : "pack")
@@ -1660,6 +1760,8 @@ export class App {
     this.root.firstElementChild?.classList.toggle("settled", settled)
     this.holdFocus(keeping)
     this.lightCoach()
+    // The pop was this render's; any after it keeps the line and not the pop.
+    if (this.thanked === "fresh") this.thanked = "shown"
   }
 
   /**
@@ -1868,6 +1970,29 @@ export class App {
     }
   }
 
+  /**
+   * Both advance points call this, as they call `tally`, and for the same
+   * reason: a run that moves without coming through here is a replay with a
+   * hole in it, which replays into a different run.
+   */
+  private logStep(action: Action, before: RunState): void {
+    const step = stepFor(action, before)
+    if (step && this.log) this.log.steps.push(step)
+  }
+
+  /**
+   * Close the log and hand it to the consent to deal with. Clearing it is what
+   * makes this safe to call from every exit: the loss files the run, and the
+   * new run that follows the loss finds nothing left to call abandoned.
+   */
+  private finish(end: RunEnd): void {
+    if (!this.log) return
+    file(payload(this.log, this.state, end), this.consent)
+    this.log = null
+    saveLog(null)
+    void flush()
+  }
+
   private save(): void {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.state))
@@ -1879,6 +2004,9 @@ export class App {
     } catch {
       // A full or disabled store costs the player their resume, not their run.
     }
+    // The third of the set, and written here for the same reason the language
+    // is: a save resumed without its log is a run that can never be sent.
+    saveLog(this.log)
     // Every moment the run is worth persisting is a moment its stage may have
     // moved, so the record rides along here rather than keeping its own watch.
     // It writes only when the mark actually moves.

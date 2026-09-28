@@ -2597,7 +2597,7 @@ button {
 .shapes-line,
 .ladder-step,
 .title-pill,
-.title-sound {
+.title-dial {
   transition: transform 120ms var(--ease-out);
 }
 
@@ -2609,7 +2609,7 @@ button {
 .shapes-line:active,
 .ladder-step:active:not(:disabled),
 .title-pill:active,
-.title-sound:active {
+.title-dial:active {
   transform: scale(0.97);
 }
 
@@ -2652,7 +2652,7 @@ button {
   .shapes-line,
   .ladder-step,
   .title-pill,
-  .title-sound
+  .title-dial
 ):hover:not(:disabled, [aria-disabled="true"]),
 .mouse .key:hover:not(.broken, :active) {
   filter: brightness(1.12);
@@ -2742,6 +2742,82 @@ button {
   font-size: 0.8125rem;
   color: var(--muted);
   text-align: left;
+}
+
+/*
+ * The question about sharing runs, under the buttons that end the run. Quieter
+ * than either of them on purpose: it is a request, and the next run is what the
+ * player came to this screen for. Its two answers sit side by side at half
+ * width, since neither is the primary action and a stack of two more full-width
+ * slabs would read as two more ways forward.
+ */
+.share-ask {
+  width: min(100%, 22rem);
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-align: left;
+}
+
+.share-ask p {
+  margin: 0 0 0.5rem;
+}
+
+.share-choices {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* A link inside a sentence: the sentence's own size, underlined so it reads as
+   something to tap, and in the text colour so it does not shout over it. */
+.inline-link {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* The answer to a yes, on the end screen and on both sheets. The heart is the
+   one filled icon in the game, in the mult red, because it is the one that is
+   not a control: nothing to press, only something to be glad about. */
+.share-thanks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4375rem;
+  font-size: var(--type-small);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* On the end screen it takes the question's place and the question's margin
+   with it. Not on a sheet, whose gap already spaces it: a margin there stacked
+   on the gap and sat the line nearer the button below than the switch it
+   answers. */
+.screen > .share-thanks {
+  margin-top: 0.5rem;
+}
+
+.icon-heart {
+  fill: currentColor;
+  color: var(--mult);
+}
+
+/* Decoration, so the reduced-motion block may take it whole: a heart that is
+   simply there says the same thing. Paced like every other one-shot. */
+.share-thanks.fresh .icon-heart {
+  animation: heart calc(420ms * var(--pace)) var(--ease-out);
+}
+
+@keyframes heart {
+  0% {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* ------------------------------------------------------------ round intro */
@@ -3126,6 +3202,12 @@ button {
 .screen.center .secondary {
   flex: 0 0 auto;
   width: min(100%, 22rem);
+}
+
+/* The sharing question's two answers share a row; see `.share-ask`. */
+.screen.center .share-choice {
+  flex: 1 1 0;
+  width: auto;
 }
 
 /* ---------------------------------------------------------------- title */
@@ -3723,9 +3805,16 @@ button {
   color: color-mix(in srgb, var(--fg) 50%, var(--muted));
 }
 
-.title-sound {
+/* The two round buttons at the floor's right, the ⓘ and the speaker, as one
+   grid cell so the narrow layout's "lang sound" row still has two things in it. */
+.title-dials {
   grid-area: sound;
   justify-self: end;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.title-dial {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
@@ -3996,6 +4085,17 @@ button {
   gap: 0.5rem;
 }
 
+/* A link drawn as a button: the one on the about sheet that leaves the app.
+   `button` is reset at the top of the file and `a` is not, so this is that
+   reset, plus the centring a flex child does not get for free. */
+.sheet-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  text-decoration: none;
+}
+
 /*
  * The pause sheet's settings, as one grouped list rather than four more
  * full-width buttons. They were the same green-less `.secondary` slab as Codex
@@ -4127,7 +4227,8 @@ button {
  * and coloured as a footnote because that is what it is: nothing is being asked
  * of the player and nothing has gone wrong.
  */
-.lang-note {
+.lang-note,
+.sheet-note {
   font-size: var(--type-small);
   line-height: 1.4;
   color: var(--muted);

@@ -1,0 +1,16 @@
+{
+  "name": "5-wild-telemetry",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:local": "wrangler dev --local",
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 execute 5wild-telemetry --remote --file schema.sql",
+    "migrate:local": "wrangler d1 execute 5wild-telemetry --local --file schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260927.1",
+    "wrangler": "^4.142.0"
+  }
+}

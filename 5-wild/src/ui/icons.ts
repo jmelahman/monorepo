@@ -29,6 +29,14 @@ const PATHS = {
     "M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14",
     "M12 17.5h.01",
   ],
+  // The same ring as `help`, so the two read as a pair on the title screen: the
+  // question mark is how to play, this is about the game. A cog was the first
+  // draft, and it promised settings to a sheet that holds one switch.
+  info: ["M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18", "M12 11v5.5", "M12 7.5h.01"],
+  // Filled, where every other icon here is a line: see `.share-thanks`.
+  heart: [
+    "M12 20s-7.5-4.6-7.5-10.2a4.2 4.2 0 0 1 7.5-2.6a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z",
+  ],
   book: ["M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z", "M4 21V5"],
   sound: ["M11 5 6 9H3v6h3l5 4z", "M15.5 8.5a5 5 0 0 1 0 7", "M18.5 5.5a9 9 0 0 1 0 13"],
   muted: ["M11 5 6 9H3v6h3l5 4z", "M16 9l6 6", "M22 9l-6 6"],

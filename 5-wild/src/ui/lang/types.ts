@@ -433,6 +433,19 @@ export type Strings = {
       firstEarned: string
       earned: (level: number, next: number) => string
       topOfLadder: (level: number) => string
+      /**
+       * The one request to send anything off the device, asked under a
+       * finished run. It has to say what is sent and what is not in the same
+       * breath, because that is the whole of what the player is agreeing to,
+       * and where to undo it, because no second prompt will say so.
+       */
+      /**
+       * The tail on the question, after `about.sharingNote`, which is the rest of
+       * it: the case for sharing is written once and read in both places.
+       */
+      shareLater: string
+      shareYes: string
+      shareNo: string
     }
 
     title: {
@@ -611,6 +624,53 @@ export type Strings = {
       wordsNextRun: string
       quit: string
       resume: string
+    }
+
+    /**
+     * The sheet behind the title screen's ⓘ: the things about the game rather
+     * than about a run, which is why it is not the pause sheet.
+     */
+    about: {
+      /** The sheet's heading, and the ⓘ button's accessible name, since it has no other. */
+      title: string
+      /**
+       * The switch, and unlike music it does not state itself: the track at the
+       * row's end says on or off, and the label says what is being shared.
+       */
+      sharing: string
+      /** Under the switch, and the body of the end screen's question. */
+      sharingNote: string
+      /**
+       * A sentence after the note, pointing at the privacy page's account of
+       * exactly what a run carries; only `link` is the link. Three pieces
+       * rather than one template, because where the name falls in the sentence
+       * is the language's business, and either end may be empty.
+       */
+      privacy: { before: string; link: string; after: string }
+      /** Said the moment sharing is turned on, wherever it was turned on. */
+      thanks: string
+      credits: string
+      /** Opens the repository in the browser. */
+      source: string
+      /** Opens a new bug report on GitHub, partly filled in. */
+      report: string
+    }
+
+    /**
+     * Names and titles are not here: they are the same in every language, so the
+     * view holds them and these are only the words around them.
+     */
+    credits: {
+      title: string
+      madeBy: string
+      music: string
+      musicText: (piece: string, artist: string) => string
+      sounds: string
+      /** `people` arrives already joined, by `Intl.ListFormat` in the language in force. */
+      soundsText: (people: string) => string
+      licence: string
+      licenceText: string
+      back: string
     }
 
     quit: {

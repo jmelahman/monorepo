@@ -637,6 +637,9 @@ export const en: Strings = {
       firstEarned: "Ascension 1 is earned, and the run can be made harder",
       earned: (level, next) => `Ascension ${level} cleared, and ${next} is earned`,
       topOfLadder: (level) => `Ascension ${level} cleared. There is nothing above it.`,
+      shareLater: "You can change this later in the menu.",
+      shareYes: "Share",
+      shareNo: "No thanks",
     },
 
     title: {
@@ -906,6 +909,34 @@ export const en: Strings = {
       wordsNextRun: "Words change when you start a new run.",
       quit: "Quit run",
       resume: "Resume",
+    },
+
+    about: {
+      title: "About",
+      sharing: "Share anonymous game data",
+      sharingNote:
+        "Help improve the game by sharing your run results. Nothing personal is ever included.",
+      privacy: {
+        before: "More information about what exactly is collected is in the ",
+        link: "privacy policy",
+        after: ".",
+      },
+      thanks: "Thank you for helping improve the game!",
+      credits: "Credits",
+      source: "Source code",
+      report: "Report an issue",
+    },
+
+    credits: {
+      title: "Credits",
+      madeBy: "Made by",
+      music: "Music",
+      musicText: (piece, artist) => `“${piece}” by ${artist}. CC0.`,
+      sounds: "Sounds",
+      soundsText: (people) => `Kenney, and ${people} on Freesound. All CC0.`,
+      licence: "Licence",
+      licenceText: "Free software under the GNU GPL, version 3.",
+      back: "Back",
     },
 
     quit: {

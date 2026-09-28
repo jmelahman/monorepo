@@ -29,6 +29,7 @@ test/           unit tests, golden vectors, and the engine-purity guard
 tools/          word-list and icon generation
 assets/         icon source art and the README screenshot
 android/        Capacitor's Android project, committed
+telemetry/      the Cloudflare Worker that receives opt-in run replays
 ```
 
 `src/engine` is deliberately portable: it imports nothing outside itself and
@@ -272,3 +273,53 @@ a sum running into the thousands, so exact ties never occur and the chip term
 never fired at all. That player was blind to chips in a game about chips and died
 on stage one of 39 runs in 300. Quote the policy's constants alongside any number
 taken from it.
+
+## Telemetry
+
+The bots above answer what the rules are like for a policy. Players who opt in
+answer what they are like for people. At the end of a run the game asks once
+whether to share run replays. A yes sends each finished run as a replay:
+seed, ascension, word-list language, and the accepted actions with typing folded
+into one `guess` per submit, a few KB each. It carries no identifier, no clock
+and no settings. `src/ui/telemetry.ts` is the client and
+`public/privacy/index.html` says the same thing to players. Change them
+together.
+
+The address is `DEPLOYED` in `src/ui/telemetry.ts`, in source because it is
+public anyway, and emptying it switches the whole feature off. `VITE_TELEMETRY_URL`
+overrides it for a one-off build. The worker is already up. Standing it up again,
+on another account say, is:
+
+```sh
+cd telemetry && npm install
+echo 'CLOUDFLARE_API_TOKEN=…' > .env      # Workers Scripts + D1 edit; gitignored
+npx wrangler d1 create 5wild-telemetry   # paste the database_id into wrangler.toml
+npm run migrate
+npm run deploy                           # prints the workers.dev URL
+```
+
+Then put `<that URL>/runs` in `DEPLOYED`. The Play Console's Data safety form
+must say "App activity → Other actions": collected, not shared, optional, not
+linked to identity, and used for analytics. A mismatch between the form and the
+app is a policy violation.
+
+`npm run dev` at the root posts to a local worker on 8787, never the real one.
+To see those runs arrive, `npm run migrate:local` then `npm run dev:local` under
+`telemetry/`.
+
+Reading it:
+
+```sh
+cd telemetry && npx wrangler d1 execute 5wild-telemetry --remote --json \
+  --command "SELECT payload FROM runs" > ../.tmp/runs.json && cd ..
+RUNS=.tmp/runs.json npm run telemetry
+```
+
+The report replays every run at the current `CONTENT_VERSION` against this
+checkout's engine and prints the sim's shape plus what bots cannot give: splits
+by experience and ascension, relic win rates, boss lethality, gold at each
+shop, and the words people open with. A run the engine refuses at any step is
+dropped and counted, which is the whole of the validation; the worker checks
+shape only, so it never has to be redeployed for a balance change. Runs at an
+older version are set aside rather than replayed on new numbers. Their payload
+names the commit to check out if they are worth reading.

@@ -68,6 +68,7 @@ import {
   keyRows,
   LANG_FLAGS,
   LANG_NAMES,
+  lang,
   modifierCard,
   packCard,
   payoutBadge,
@@ -123,6 +124,8 @@ export type Handlers = {
   /** The effects alone. The music has its own switch and ignores this one. */
   toggleEffects: () => void
   toggleMusic: () => void
+  /** The answer to the end screen's question, or the switch for it on either sheet. */
+  setSharing: (on: boolean) => void
   /** Step the board down a level of decoration, wrapping back to all of it. */
   cycleDecor: () => void
   /** Step the animations up a rung, wrapping back to the speed they are drawn at. */
@@ -141,6 +144,8 @@ export type Handlers = {
   openShapes: () => void
   /** The long record, from the title screen's one-line version of it. */
   openStats: () => void
+  openAbout: () => void
+  openCredits: () => void
   closeOverlay: () => void
   askQuit: () => void
   quit: () => void
@@ -186,6 +191,19 @@ export type Chrome = {
    * `localStorage` flag that outlives the run and no view may read one.
    */
   coachOffer: boolean
+  /**
+   * Whether run replays are shared: `ask` until the player has answered, and
+   * null when this build has nowhere to send them, in which case neither the
+   * question nor the switch is drawn. See `./telemetry`.
+   */
+  sharing: "on" | "off" | "ask" | null
+  /**
+   * Sharing was just turned on, and the screen it was turned on from says
+   * thanks. `fresh` for the render that answers the tap, which is the one the
+   * heart pops on; `shown` for any rebuild after it, which keeps the line and
+   * drops the pop, since tapping music under it is not a second yes.
+   */
+  thanked: "fresh" | "shown" | null
 }
 
 /**
@@ -2209,7 +2227,7 @@ export function shopView(state: RunState, on: Handlers): HTMLElement {
  * lying to make a button look brave. What is really being asked is whether to
  * start something new or find out where this one breaks.
  */
-export function endView(state: RunState, on: Handlers): HTMLElement {
+export function endView(state: RunState, on: Handlers, chrome: Chrome): HTMLElement {
   const copy = ui().end
   const offering = state.phase === "victory"
   const lost = state.phase === "game_over"
@@ -2252,6 +2270,43 @@ export function endView(state: RunState, on: Handlers): HTMLElement {
         onclick: () => (offering ? on.quit() : on.newRun()),
       },
       offering ? copy.mainMenu : copy.newRun,
+    ),
+    // The question is answered in place: a yes turns it into the thanks, a no
+    // takes it away. Either way nothing else on the screen moves.
+    chrome.thanked ? thanks(chrome.thanked) : chrome.sharing === "ask" && shareAsk(on),
+  )
+}
+
+/**
+ * The one time the game asks to send anything, under the buttons that end the
+ * run so it never stands between the player and the next one.
+ *
+ * Here, at the end of a run, rather than at a first launch: this is the first
+ * moment the player knows what "a run" is, so it is the first moment "share
+ * your runs" means anything, and a yes can include the run on screen. It is not
+ * a sheet and does not block, and it is asked once: walking past it to the next
+ * run is a no, and nothing asks again (see `lapse`). The pause sheet has the
+ * switch for changing one's mind.
+ */
+function shareAsk(on: Handlers): HTMLElement {
+  const copy = ui().end
+  return h(
+    "div",
+    { class: "share-ask" },
+    h("p", {}, `${ui().about.sharingNote} ${copy.shareLater} `, privacyLink()),
+    h(
+      "div",
+      { class: "share-choices" },
+      h(
+        "button",
+        { class: "secondary share-choice", type: "button", onclick: () => on.setSharing(false) },
+        copy.shareNo,
+      ),
+      h(
+        "button",
+        { class: "secondary share-choice", type: "button", onclick: () => on.setSharing(true) },
+        copy.shareYes,
+      ),
     ),
   )
 }
@@ -2459,7 +2514,24 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
       { class: "title-foot" },
       languageButton(on, chrome, "title-pill"),
       h("p", { class: "title-build" }, buildStamp()),
-      soundButton(on, chrome),
+      // The ⓘ beside the speaker rather than on its own corner: both are
+      // round, unlabelled and about the game rather than a run, and the floor
+      // has three places, not four.
+      h(
+        "div",
+        { class: "title-dials" },
+        h(
+          "button",
+          {
+            class: "title-dial",
+            type: "button",
+            "aria-label": ui().about.title,
+            onclick: () => on.openAbout(),
+          },
+          icon("info"),
+        ),
+        soundButton(on, chrome),
+      ),
     ),
   )
 }
@@ -2487,7 +2559,7 @@ function soundButton(on: Handlers, chrome: Chrome): HTMLElement {
   return h(
     "button",
     {
-      class: "title-sound",
+      class: "title-dial",
       type: "button",
       "aria-label": ui().common.sound[chrome.sound],
       onclick: () => on.cycleSound(),
@@ -3352,6 +3424,12 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       // out of the way can tap until the number is big enough.
       setting({ "data-focus": "speed", onclick: () => on.cycleSpeed() }, copy.speed(chrome.speed)),
       languageButton(on, chrome, "setting"),
+      // Run sharing, the same switch as the one on the about sheet. It is a
+      // choice about the game rather than this run, which argued for the about
+      // sheet alone, but that sheet is only on the title screen, and a player who
+      // wants to change their mind mid-run should not have to quit to do it.
+      // Absent in a build with nowhere to send anything, like the other.
+      chrome.sharing !== null && sharingSwitch(on, chrome),
       // Letter values are not here. The board is dense by design, with a value on
       // every key and a pip on every modifier, and that density is the scoring
       // game asking to be played; some of the time the player is doing the other
@@ -3371,6 +3449,7 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
     // in the language it was drawn from. Said here and not on the title
     // screen, because `wordsDeferred` needs a run open to be true at all.
     chrome.wordsDeferred ? h("p", { class: "lang-note" }, copy.wordsNextRun) : null,
+    chrome.thanked && thanks(chrome.thanked),
     h(
       "div",
       { class: "sheet-actions" },
@@ -3391,6 +3470,168 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       { class: "primary", type: "button", onclick: () => on.closeOverlay() },
       copy.resume,
     ),
+  )
+}
+
+/** Where "Source code" goes. The privacy page links the same repository. */
+const SOURCE_URL = "https://github.com/jmelahman/5-wild"
+
+/**
+ * The sheet behind the title screen's ⓘ: run sharing, the credits, the source.
+ *
+ * Its own sheet rather than three more rows on the pause sheet, because none of
+ * the three is about the run the pause sheet interrupts. Sharing is on both:
+ * here so it can be found without starting a run, and on the pause sheet so it
+ * can be changed without leaving one.
+ *
+ * The switch comes with its note because this is where a player lands who
+ * wants to know what they agreed to, and "Run sharing on" alone does not say.
+ */
+export function aboutView(on: Handlers, chrome: Chrome): HTMLElement {
+  const copy = ui().about
+  return overlay(
+    on,
+    h("h2", { class: "sheet-title" }, copy.title),
+    // Absent entirely from a build with nowhere to send anything. An unanswered
+    // question draws as off, because off is what it is: nothing is sent until
+    // someone says yes.
+    chrome.sharing !== null && h("div", { class: "settings" }, sharingSwitch(on, chrome)),
+    chrome.sharing !== null &&
+      (chrome.thanked
+        ? thanks(chrome.thanked)
+        : h("p", { class: "sheet-note" }, `${copy.sharingNote} `, privacyLink())),
+    h(
+      "div",
+      { class: "sheet-actions" },
+      h(
+        "button",
+        { class: "secondary", type: "button", onclick: () => on.openCredits() },
+        copy.credits,
+      ),
+      // A link, not a button that calls `window.open`: the Capacitor shell sends
+      // a navigation off its own origin to the system browser, and a link is the
+      // one thing a browser tab already knows how to open elsewhere.
+      h(
+        "a",
+        { class: "secondary sheet-link", href: SOURCE_URL, target: "_blank", rel: "noopener" },
+        copy.source,
+      ),
+      h(
+        "a",
+        { class: "secondary sheet-link", href: reportUrl(), target: "_blank", rel: "noopener" },
+        copy.report,
+      ),
+    ),
+    h(
+      "button",
+      { class: "primary", type: "button", onclick: () => on.closeOverlay() },
+      ui().common.close,
+    ),
+  )
+}
+
+/** One row, two sheets. The labels live under `about` because that is its home. */
+function sharingSwitch(on: Handlers, chrome: Chrome): HTMLElement {
+  const copy = ui().about
+  return setting(
+    { "data-focus": "sharing", onclick: () => on.setSharing(chrome.sharing !== "on") },
+    copy.sharing,
+    chrome.sharing === "on",
+  )
+}
+
+/**
+ * The privacy page's section on sharing, which lists every field a run carries.
+ * Absolute, and out to the browser, rather than the copy bundled at `privacy/`:
+ * inside the APK that would replace the game in its own WebView, with no back
+ * button to return by. It is in English only, like the page.
+ */
+const PRIVACY_URL = "https://5-wild.com/privacy/#sharing"
+
+function privacyLink(): HTMLElement {
+  const copy = ui().about.privacy
+  return h(
+    "span",
+    {},
+    copy.before,
+    h(
+      "a",
+      { class: "inline-link", href: PRIVACY_URL, target: "_blank", rel: "noopener" },
+      copy.link,
+    ),
+    copy.after,
+  )
+}
+
+/**
+ * What a yes gets back. A player who agreed to send something has done the
+ * game a favour, and a switch that silently flips is a favour nobody noticed.
+ *
+ * In place rather than as a toast: the toast is how this game says a move was
+ * refused, and a thank-you in the same panel would read, for its first half
+ * second, as having done something wrong.
+ */
+function thanks(when: "fresh" | "shown"): HTMLElement {
+  return h(
+    "p",
+    { class: `share-thanks ${when === "fresh" ? "fresh" : ""}` },
+    icon("heart"),
+    h("span", {}, ui().about.thanks),
+  )
+}
+
+/**
+ * A new issue on the bug form in `.github/ISSUE_TEMPLATE/bug_report.yml`, with
+ * the three fields a player would have to go and look up already filled in:
+ * the build stamp off the title screen, where they play, and the language.
+ * Each query key is a field `id` in that form.
+ *
+ * Nothing leaves the device by opening it. The player sees every word on
+ * GitHub's page before anything is posted, which is why this can carry the
+ * platform when the telemetry, which is sent unseen, carries no such thing.
+ *
+ * The APK is told from the site by where it is served: Capacitor serves the
+ * bundle from `https://localhost`, and the dev server's `localhost` is a
+ * different port on plain http.
+ */
+function reportUrl(): string {
+  const params = new URLSearchParams({
+    template: "bug_report.yml",
+    version: buildStamp(),
+    platform:
+      location.protocol === "https:" && location.hostname === "localhost"
+        ? "Android app"
+        : "Browser",
+    language: lang(),
+  })
+  return `${SOURCE_URL}/issues/new?${params}`
+}
+
+/**
+ * Who made what. Every recording is CC0, so none of this is owed; it is here
+ * because the people are worth naming. `sounds/CREDITS.md` and
+ * `tracks/CREDITS.md` are the ledger of which file came from where, and this is
+ * the reader's version of the same two tables.
+ */
+const FREESOUND = ["tonmayster", "Paloma.SSSS", "NachtmahrTV", "plasterbrain"]
+
+export function creditsView(on: Handlers): HTMLElement {
+  const copy = ui().credits
+  const people = new Intl.ListFormat(lang(), { type: "conjunction" }).format(FREESOUND)
+  return overlay(
+    on,
+    h("h2", { class: "sheet-title" }, copy.title),
+    h(
+      "div",
+      { class: "sheet-body" },
+      rule({ term: copy.madeBy, text: "Jamison Lahman" }),
+      rule({ term: copy.music, text: copy.musicText("Forget-me-not in F major", "Kistol") }),
+      rule({ term: copy.sounds, text: copy.soundsText(people) }),
+      rule({ term: copy.licence, text: copy.licenceText }),
+    ),
+    // Back to the sheet it was opened from rather than closed outright, since
+    // that is the only way in.
+    h("button", { class: "primary", type: "button", onclick: () => on.openAbout() }, copy.back),
   )
 }
 

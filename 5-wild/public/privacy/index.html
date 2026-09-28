@@ -13,7 +13,11 @@
   ugly one, and Play re-checks the URL on every submission.
 
   Keep it true. Every claim below is currently a fact about the code: no
-  network calls outside the bundle, no analytics, no ads, no third-party SDKs.
+  analytics, no ads, no third-party SDKs, and exactly one network call outside
+  the bundle, the opt-in run replay in src/ui/telemetry.ts, which sends what
+  "Sharing run replays" lists and nothing else. A build with no endpoint (DEPLOYED
+  emptied there) makes no such call and never offers it, and the section is still true
+  of it, since it only describes what happens if the player says yes.
   Each one is also an answer on the Data safety form, where a mismatch
   between the form and the app is a policy violation rather than a typo. Adding
   anything that phones home means editing this page in the same commit.
@@ -91,12 +95,14 @@
   <body>
     <main>
       <h1>Privacy Policy for 5 Wild</h1>
-      <p class="updated">Last updated 15 August 2026</p>
+      <p class="updated">Last updated 27 September 2026</p>
 
       <p>
-        5 Wild does not collect, transmit, or share any personal data. There are no
-        accounts, no analytics, no advertising, and no third-party services of any
-        kind. This policy describes what the game stores and where it stays.
+        5 Wild does not collect or share any personal data. There are no accounts, no
+        analytics, and no advertising. The only thing the game will ever send is an
+        anonymous replay of your runs, and only if you agree to it. This policy
+        describes what the game stores, where it stays, and exactly what that replay
+        contains.
       </p>
 
       <h2>What the game stores</h2>
@@ -115,31 +121,65 @@
         device, and it is not readable by us or by anyone else.
       </p>
 
+      <h2 id="sharing">Sharing run replays</h2>
+      <p>
+        At the end of a run the game asks once whether you want to share your run
+        results to help improve it. Nothing is sent unless you say yes, and ignoring
+        the question counts as no. You can change your answer at any time from the ⓘ
+        button on the title screen or from the pause menu. Turning it off also
+        discards any replays still waiting to be sent.
+      </p>
+      <p>If you say yes, each finished run sends:</p>
+      <ul>
+        <li>
+          the moves you made: the words you guessed and what you bought, sold, or
+          used, in order;
+        </li>
+        <li>
+          the run's random seed, difficulty level, and word-list language, which are
+          what make those moves replayable;
+        </li>
+        <li>how the run ended, and how many runs you had started before it;</li>
+        <li>the version of the game you were playing.</li>
+      </ul>
+      <p>
+        It does not include any identifier for you or your device, your settings, or
+        the time you played. The server records only the day each replay arrived. The
+        replays are hosted by Cloudflare, which necessarily sees your IP address when
+        your device connects; the server uses it only to limit how often it accepts
+        replays and does not store it. Replays are used only to tune the game's balance
+        and are never sold or shared.
+      </p>
+
       <h2>What the game does not do</h2>
       <ul>
         <li>It does not collect your name, email address, location, or contacts.</li>
         <li>It does not use advertising or analytics software.</li>
         <li>It does not track you across apps or websites.</li>
-        <li>It does not send your gameplay, scores, or settings anywhere.</li>
+        <li>
+          It does not send your gameplay, scores, or settings anywhere, except the run
+          replays described above, and only if you agree.
+        </li>
       </ul>
       <p>
-        The Android app requests internet permission because of the framework it is
-        built on, but the game does not use it: the word lists and all other content
-        ship inside the app and it plays fully offline.
+        The Android app uses its internet permission only to send those replays. The
+        word lists and all other content ship inside the app and it plays fully
+        offline.
       </p>
 
       <h2>Children</h2>
       <p>
-        The game is not directed at children under 13 and collects no data from anyone,
-        including children.
+        The game is not directed at children under 13 and collects no personal data from
+        anyone, including children.
       </p>
 
       <h2>Deleting your data</h2>
       <p>
         Because everything is stored locally, you remove it yourself: uninstall the
         Android app, or clear its storage from your device's app settings. On the web,
-        clear site data for this domain in your browser. There is nothing stored
-        elsewhere for us to delete.
+        clear site data for this domain in your browser. Shared replays carry no
+        identifier, so there is no way to tell which ones were yours, and so no way for
+        us to find and delete them.
       </p>
 
       <h2>Changes</h2>
@@ -147,6 +187,12 @@
         If a future version of the game handles data differently, this page will be
         updated before that version ships, and the date above will change with it.
       </p>
+      <ul>
+        <li>
+          27 September 2026: added optional, anonymous sharing of run replays (see
+          <a href="#sharing">Sharing run replays</a>). Nothing is sent unless you agree.
+        </li>
+      </ul>
 
       <h2>Contact</h2>
       <p>
@@ -154,6 +200,11 @@
         <a href="https://github.com/jmelahman/5-wild/issues">
           github.com/jmelahman/5-wild/issues</a
         >.
+      </p>
+      <p>
+        The game's "Report an issue" button opens a new issue there, with the game's
+        version, platform and language filled in. Nothing is sent until you choose to
+        post it, and anything posted there is public.
       </p>
 
       <a class="home" href="/">← Back to 5 Wild</a>

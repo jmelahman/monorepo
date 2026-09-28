@@ -1,0 +1,20 @@
+name: Feedback or idea
+description: Balance, difficulty, a relic that feels wrong, or anything you'd change.
+labels: [feedback]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Balance notes are especially welcome: which relic, boss or ascension felt too strong or
+        too weak, and why. Everything here is public, so leave out anything personal.
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Your feedback
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Game version
+      description: Bottom of the title screen, if you know it.

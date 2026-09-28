@@ -1,0 +1,54 @@
+# Opened from the game's About sheet ("Report an issue"), which fills in
+# `version`, `platform` and `language` through the URL's query string, keyed by
+# the ids below. Renaming an id silently breaks that prefill, so change it in
+# `reportUrl` in src/ui/views.ts in the same commit.
+name: Report an issue
+description: Something in the game is broken, wrong, or confusing.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Everything here is public, so leave out anything personal.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      description: |
+        The steps that led to it, if you remember them: the stage and round, the
+        word you typed, what you had just bought. "It happened once" is fine too.
+      placeholder: |
+        1. Started a run on Ascension 2
+        2. Bought ...
+        3. Guessed ...
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: A picture is often worth the whole report. Drag one in if you have it.
+  - type: input
+    id: version
+    attributes:
+      label: Game version
+      description: Bottom of the title screen. Filled in for you when opened from the game.
+      placeholder: v0.5.0 · 7e9aa7d
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Where you play
+      description: The Android app, or which browser.
+      placeholder: Android app / Firefox on Windows / ...
+  - type: input
+    id: language
+    attributes:
+      label: Game language
+      placeholder: en

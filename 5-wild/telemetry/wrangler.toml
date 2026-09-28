@@ -1,0 +1,18 @@
+# The receiving end of `src/ui/telemetry.ts`. See CONTRIBUTING.md, "Telemetry".
+name = "5wild-telemetry"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "5wild-telemetry"
+# Printed by `npx wrangler d1 create 5wild-telemetry`. Not a secret: without
+# an API token for the account it names nothing anyone can reach.
+database_id = "649f5259-1e8a-4b5e-923b-f1bb316c00a1"
+
+# Per-IP, and the IP goes no further than this counter. A run takes minutes to
+# play, so thirty a minute is far above any person and well below a script.
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "5001"
+simple = { limit = 30, period = 60 }

@@ -7,8 +7,14 @@ dist/
 # Biome reads this file, so leaving it tracked also fails `npm run check`.
 .vite/
 
-# env file
+# Env files, every one of them, including telemetry/.env with the Cloudflare
+# token. Nothing the build needs lives in one; see `DEPLOYED` in
+# src/ui/telemetry.ts for why the one public value that did moved to source.
 .env
+.env.*
+
+# Wrangler's local D1 and build state for telemetry/
+.wrangler/
 
 # Local planning artifacts
 plans/
