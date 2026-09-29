@@ -21,7 +21,6 @@
   box-shadow: var(--top-light), var(--shadow-lift);
 }
 
-
 :root.skin-tabletop .stage {
   color: var(--muted);
 }
@@ -150,12 +149,25 @@
   color: color-mix(in srgb, var(--mult) 80%, var(--fg));
 }
 
-/* The boss: a band across the foot of the panel, full bleed, oxblood. */
+/* The boss: a band across the foot of the panel, full bleed, oxblood. On the
+   table it is a card inside the rail (see `table/round.css`), so it takes its
+   own rim and corners. */
 :root.skin-tabletop .round-screen .hud .boss {
   border-radius: 0;
   border-block: var(--rim);
   background: color-mix(in srgb, #b8383f 22%, var(--panel));
   color: var(--fg);
+}
+
+:root.skin-tabletop.table .round-screen .hud .boss {
+  border: var(--rim);
+  border-radius: var(--radius-m);
+}
+
+/* The rack reaches a rem past the keys; the switch stands clear of it by the
+   plain gap again, so it reads as the rack's neighbour and not as under it. */
+:root.skin-tabletop.table .round-screen {
+  --kb-flank: 1.75rem;
 }
 
 :root.skin-tabletop .boss strong {

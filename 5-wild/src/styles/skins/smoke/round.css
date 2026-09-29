@@ -14,7 +14,6 @@
   clip-path: var(--cut);
 }
 
-
 :root.skin-smoke .stage {
   color: var(--muted);
 }
@@ -152,6 +151,11 @@
   border-block: var(--rim);
   background: color-mix(in srgb, var(--mult) 14%, var(--panel));
   color: var(--fg);
+}
+
+:root.skin-smoke.table .round-screen .hud .boss {
+  border: var(--rim);
+  clip-path: var(--cut);
 }
 
 :root.skin-smoke .boss strong {

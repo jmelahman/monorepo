@@ -112,15 +112,15 @@
  * because a key or a card may already wear the accent (or a scored colour).
  */
 :root.skin-smoke
-  :is(
-    .key,
-    .relic,
-    .shop-item,
-    .consumable,
-    .decor-toggle,
-    .shapes-line,
-    .dock-line .category
-  ):focus-visible {
+:is(
+  .key,
+  .relic,
+  .shop-item,
+  .consumable,
+  .decor-toggle,
+  .shapes-line,
+  .dock-line .category
+):focus-visible {
   outline: var(--bw) solid var(--fg);
   outline-offset: calc(var(--bw) * -2);
 }

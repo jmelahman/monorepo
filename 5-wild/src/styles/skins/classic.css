@@ -30,3 +30,10 @@
   border: 1px solid var(--line);
   border-radius: 0.875rem;
 }
+
+/* The boss's rule is a card inside the rail on the table, not the phone's band
+   along the header's foot, so it takes a whole border and all four corners. */
+:root.table:is(.skin-classic-dark, .skin-classic-light) .round-screen .hud .boss {
+  border: 1px solid color-mix(in srgb, var(--mult) 40%, transparent);
+  border-radius: 0.5rem;
+}

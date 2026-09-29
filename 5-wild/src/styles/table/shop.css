@@ -232,12 +232,18 @@
   font-size: 0.9375rem;
 }
 
+/* Reroll above, Next round at the foot, in the order the view writes them. This
+   was `column-reverse`, which put Next round on top and left Tab walking the
+   pair bottom to top: focus went to the lower button first, then jumped up. The
+   phone lays them in a row in source order and never had the problem. The foot
+   is the right place for it anyway, the button this screen ends on at the
+   bottom of the rail, like the phone's at the right end of its row. */
 :root.table .shop-screen .shop-actions {
   grid-column: 1;
   grid-row: 4;
   position: relative;
   z-index: 1;
-  flex-direction: column-reverse;
+  flex-direction: column;
   gap: var(--space-3);
   margin: 0;
   padding: var(--space-1) var(--space-4) var(--space-4);

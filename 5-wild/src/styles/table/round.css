@@ -168,11 +168,17 @@
 :root.table .readout .times {
   font-size: 1.75rem;
 }
+/* The boss's rule, a card inside the rail's padding rather than the phone's
+   full-bleed band. Bled out to the rail's edges it lay over the rail's own ring:
+   in Classic the band's square sides covered the rounded border's run down to
+   the corner, and in the Smoke Room the band met the notch, so on a short table,
+   where the band sits lower and nearer the cut, both read as a border sawn off.
+   Inset, it has edges of its own and meets nothing. Each look draws those edges. */
 :root.table .round-screen .hud .boss {
   order: 5;
   height: auto;
   min-height: 0;
-  margin: 0 calc(-1 * var(--space-4));
+  margin: 0;
   padding: var(--space-3) var(--space-4);
   font-size: 0.8125rem;
   line-height: 1.35;
@@ -190,7 +196,9 @@
 }
 
 /* Gold is the panel's last row, pinned to the foot, and the menu goes to the
-   corner. `display: contents` frees the two from their group without a wrapper. */
+   corner. `display: contents` frees the two from their group without a wrapper.
+   Pinned in a boss round too: it used to follow the band up the rail there,
+   which put the money in a different place on one round in three. */
 :root.table :is(.round-screen, .shop-screen) .hud-end {
   display: contents;
 }
@@ -204,10 +212,6 @@
   justify-content: center;
   height: 3.25rem;
   font-size: 1.875rem;
-}
-
-:root.table .round-screen .hud:has(.boss) .hud-gold {
-  margin-top: 0;
 }
 
 :root.table .round-screen .hud:has(.boss) {
@@ -230,8 +234,13 @@
   grid-column: 2;
   grid-row: 1;
   align-self: start;
-  justify-self: start;
-  max-width: 100%;
+  /* Stretched across its column rather than shrunk to its seats, now that the
+     seats can shrink: a shrink-wrapped tray sized itself to its relics' text
+     and not to their preferred width, so every seat narrowed at 1440, where
+     there was room for all five at full width. The tray paints nothing, so a
+     wider box shows nothing; the seats still sit at its start. */
+  justify-self: stretch;
+  min-width: 0;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-1) var(--space-3);
   margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-1)) calc(-1 * var(--space-2));
@@ -239,26 +248,46 @@
 }
 
 :root.table .round-screen .relic {
-  flex: 0 0 clamp(5.25rem, 7.2vw, 6.5rem);
+  /* Shrinkable, down to the width a two-word name still sets in: fixed at the
+     clamp, five relics came to 452px at 1024 wide, and the row they share with
+     the hand is not that wide there, so the last of them ran under the first
+     consumable. Seats narrow evenly now before anything overlaps. */
+  /* Wider since the decor switch left the row (was clamp(5.25rem, 7.2vw,
+     6.5rem)): at 1440 a seat is 121px where it was 104. */
+  flex: 0 1 clamp(5.25rem, 8.4vw, 8rem);
+  min-width: 3.75rem;
   height: var(--tray-h);
 }
 
+/*
+ * The hand alone at the far end of the row, its seats flush: one strip, no
+ * gaps. With a gap between every seat, two empty consumable slots at the end of
+ * the row read as more relic slots on the same shelf, and the owner asked for
+ * the hand to be told apart from the relics. Closing it up makes the hand one
+ * object, and the gap to the relics is what separates the two.
+ *
+ * `display: contents` frees the decor switch from the line, so it can go down
+ * to the keyboard (below) while the consumables stay here. It sat at the end of
+ * this strip, where on a narrow table it was the thing the relics ran into and
+ * at any size it was one more tile-shaped box in a row of them.
+ */
 :root.table .round-screen .hand-line {
+  display: contents;
+}
+
+:root.table .round-screen .hand-line .consumables {
   grid-column: 3;
   grid-row: 1;
   align-self: start;
   justify-self: end;
-  display: flex;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-:root.table .round-screen .hand-line .consumables {
-  gap: var(--space-2);
+  gap: 0;
+  min-width: 0;
 }
 
 :root.table .round-screen .consumable {
-  flex: 0 0 clamp(7rem, 10vw, 9rem);
+  /* Likewise, from clamp(7rem, 10vw, 9rem). */
+  flex: 0 1 clamp(7rem, 11.5vw, 11rem);
+  min-width: 5rem;
 }
 
 :root.table .round-screen .consumable-text {
@@ -266,11 +295,40 @@
   line-clamp: 2;
 }
 
+/*
+ * The decor switch beside the keyboard's bottom row, a key's height square, at
+ * the backspace's right. It is a setting for how the board and the keys are
+ * drawn, so it sits with them rather than with the cards, and the player's hand
+ * is already at the keys when they want it.
+ *
+ * It shares the keyboard's cell and places itself against the keyboard rather
+ * than against the cell's edge, since at 1440 wide the keyboard stops 150px
+ * short of the edge and a switch out there would belong to nothing. Margins in
+ * percent are of the cell's width, the same width the keyboard's `100%` is, so
+ * the keyboard's half-width can be written again here: the switch starts one
+ * gap past the keyboard's right edge. The keyboard in turn gives up a switch
+ * and a gap on *both* sides, so it stays centred under the board and the switch
+ * always fits.
+ */
+/* `--kb-flank` is the gap between the keys and the switch, and a look that
+   draws something around the keys past their box says how far it reaches:
+   Tabletop's rack stands a rem clear of them, and at the plain gap the switch
+   sat under the rack, since the keyboard is positioned and paints above it. */
+:root.table .round-screen {
+  --kb-flank: var(--space-3);
+  --kb-half: min(calc(50% - var(--key-h) - var(--kb-flank)), 23rem);
+}
+
 :root.table .round-screen .decor-toggle {
-  width: var(--tray-h);
-  height: var(--tray-h);
-  padding-top: calc(var(--tray-h) / 2 - 0.9rem);
-  font-size: 1.5rem;
+  grid-column: 2 / -1;
+  grid-row: 3;
+  align-self: end;
+  justify-self: start;
+  width: var(--key-h);
+  height: var(--key-h);
+  margin-left: calc(50% + var(--kb-half) + var(--kb-flank));
+  padding-top: calc(var(--key-h) / 2 - 0.6rem);
+  font-size: 1.125rem;
 }
 
 /* The board: the row's leftover height, all of it, centred both ways. The
@@ -305,7 +363,9 @@
 :root.table .round-screen .keyboard {
   grid-column: 2 / -1;
   grid-row: 3;
-  width: min(100%, 46rem);
+  /* Two halves of `--kb-half`: room for the decor switch on the right and the
+     same again on the left, so the keys stay centred under the board. */
+  width: calc(2 * var(--kb-half));
   justify-self: center;
   gap: 0.4375rem;
   --key-gap: 0.4375rem;
