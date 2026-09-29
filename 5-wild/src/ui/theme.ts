@@ -4,7 +4,6 @@ import {
   currentSkin,
   loadLegacyTone,
   loadSkin,
-  loadStill,
   MOVING_CLASS,
   resolveSkin,
   SKINS,
@@ -72,8 +71,6 @@ const NativeTheme = registerPlugin<{ set(options: { theme: Theme | "system" }): 
 
 let picked: Skin | null = null
 let legacy: Tone | null = null
-/** The retired ambience switch said off; counts only while nothing is picked. */
-let still = false
 let watching = false
 
 /** What the player has said about tone, with or without a skin: a pick or an old theme. */
@@ -88,7 +85,6 @@ function apply(): void {
   const skin = resolveSkin({
     picked,
     legacy,
-    still,
     table: document.documentElement.classList.contains("table"),
     prefersLight: prefersLight(),
   })
@@ -142,7 +138,6 @@ function watch(): void {
 export function initLook(): void {
   picked = loadSkin()
   legacy = loadLegacyTone()
-  still = loadStill()
   watch()
   apply()
 }

@@ -92,6 +92,7 @@ import {
 } from "./meta"
 import type { Skin } from "./skin"
 import type { Speed } from "./speed"
+import { sprite } from "./sprites"
 
 export type Handlers = {
   key: (letter: string) => void
@@ -600,6 +601,7 @@ function relicRow(state: RunState): HTMLElement {
           ? ui().board.relicLabelGrown(card.name, card.text, detail)
           : ui().board.relicLabel(card.name, card.text),
       },
+      ...cardArt("relic", instance.id),
       h("span", { class: "relic-name" }, card.name),
       detail ? h("span", { class: "relic-detail" }, detail) : null,
     )
@@ -1746,9 +1748,28 @@ const cardHead = (item: ShopItem, title: string): HTMLElement =>
   h(
     "div",
     { class: "shop-item-head" },
-    emblem(item.kind, item.id) ?? icon(KIND_ICON[item.kind]),
+    ...cardArt(item.kind, item.id),
     h("div", { class: "shop-item-name" }, title),
   )
+
+/**
+ * A card's picture, drawn twice: the line emblem and the pixel sprite, side by
+ * side, and the stylesheet shows one. The view does not know which look is on,
+ * which is the point. The choice used to be a skin's alone (Smoke wants the
+ * sprite, Tabletop engraves the emblem onto a bone tile, Classic tints the
+ * emblem it always had), and asking the skin at render time would leave the
+ * shelf drawn for the wrong look after the one thing that changes a look
+ * without a render: the window crossing the table's breakpoint under an
+ * unpicked default. The price is one hidden `<svg>` of a few hundred bytes per
+ * card, on a screen that rebuilds a dozen of them. `.sprite` is `display: none`
+ * outside Smoke (`shop.css`), and every skin that wants the sprite says so.
+ */
+const cardArt = (kind: ShopItem["kind"], id: string): Node[] => {
+  const art: Node[] = [emblem(kind, id) ?? icon(KIND_ICON[kind])]
+  const pixels = sprite(kind, id)
+  if (pixels) art.push(pixels)
+  return art
+}
 
 /**
  * A card on the shelf, drawn as a price tag: what it is, pictured and named, and
@@ -2169,6 +2190,7 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
         type: "button",
         onclick: () => on.sell(slot),
       },
+      ...cardArt("relic", instance.id),
       h("span", { class: "relic-name" }, relicCard(instance.id).name),
       h("span", { class: "sell" }, copy.sell(money(sellValue(relic?.cost ?? 4)))),
     )

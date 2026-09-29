@@ -205,6 +205,15 @@
   color: color-mix(in srgb, var(--rare, var(--rare-common)) 70%, var(--fg));
 }
 
+/* The pixel sprite is drawn beside every emblem (`cardArt` in `views.ts`) and is
+   on show in Smoke alone; everywhere else it is a node with no box. */
+.shop-item-head > .sprite {
+  display: none;
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .shop-item-head > .shop-item-name {
   flex: 1 1 0;
   min-width: 0;

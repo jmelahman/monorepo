@@ -6,9 +6,11 @@
  * is a near-black room with one mint lamp in it, and a 2-unit line drawn in
  * `currentColor` reads there as a diagram, not as an object on a table. A sprite
  * carries its own colour and its own light, so a relic looks like a thing you
- * could pick up. Classic and Tabletop still draw the emblems, which are line art
- * on purpose and suit them; nothing here replaces them, and the two tables are
- * keyed alike so a card can be given either.
+ * could pick up. Classic and Tabletop draw the emblems, which are line art on
+ * purpose and suit them (Tabletop sets them in an engraved bone tile). The view
+ * puts both in every card and the stylesheet shows one, so a window crossing
+ * the table breakpoint changes the look with no render; see `cardArt` in
+ * `views.ts`. The two tables are keyed alike so a card can be given either.
  *
  * The format is the one a pixel artist would use, so a sprite is edited as a
  * picture. Twelve rows of twelve characters: `.` is nothing, `o` is the outline
@@ -35,6 +37,8 @@
  * Keyed by the engine table's `id`; `test/ui/sprites.test.ts` holds each table
  * to the engine's, so a relic added there fails until it is drawn.
  */
+
+import type { ShopItem } from "../engine"
 
 const SVG = "http://www.w3.org/2000/svg"
 
@@ -1512,4 +1516,28 @@ export const RANGE_SPRITES: Record<string, Sprite> = {
       "HSSHIIHSSMNN",
     ],
   },
+}
+
+/**
+ * The sprite a card wears, or null for an id the tables have no drawing for.
+ * The lookup `emblem` makes for the line drawings, kind for kind, so a view can
+ * ask for both and let the stylesheet decide which one is on show.
+ */
+export function sprite(kind: ShopItem["kind"], id: string): SVGSVGElement | null {
+  const table: Record<string, Sprite> =
+    kind === "relic"
+      ? RELIC_SPRITES
+      : kind === "consumable"
+        ? CONSUMABLE_SPRITES
+        : kind === "pack"
+          ? PACK_SPRITES
+          : kind === "etch"
+            ? ETCHING_SPRITES
+            : kind === "mod"
+              ? MOD_SPRITES
+              : kind === "level"
+                ? CATEGORY_SPRITES
+                : RANGE_SPRITES
+  const found = table[id]
+  return found ? spriteSvg(found, `sprite sprite-${id}`) : null
 }

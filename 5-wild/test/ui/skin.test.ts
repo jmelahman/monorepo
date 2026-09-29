@@ -2,7 +2,6 @@ import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   hasMovingBackground,
-  migrateSmoke,
   NEXT_SKIN,
   readLegacyTone,
   readSkin,
@@ -23,11 +22,6 @@ import {
 describe("skin", () => {
   it("reads a stored pick back as itself", () => {
     for (const skin of SKINS) expect(readSkin(skin)).toBe(skin)
-  })
-
-  it("reads the old Classic as Classic dark", () => {
-    // It was only ever offered on the dark table.
-    expect(readSkin("classic")).toBe("classic-dark")
   })
 
   it("reads absence and anything unknown as no pick", () => {
@@ -63,15 +57,6 @@ describe("skin", () => {
     }
   })
 
-  it("moves an old smoke to the moving one unless the drift was off", () => {
-    expect(migrateSmoke("smoke", null)).toBe("smoke-moving")
-    expect(migrateSmoke("smoke", "on")).toBe("smoke-moving")
-    expect(migrateSmoke("smoke", "off")).toBe("smoke")
-    for (const raw of [null, "tabletop", "classic-dark", "smoke-moving"]) {
-      expect(migrateSmoke(raw, null)).toBe(raw)
-    }
-  })
-
   it("is light only where the phone's light palette is meant", () => {
     expect(TONE["classic-light"]).toBe("light")
     for (const skin of SKINS) if (skin !== "classic-light") expect(TONE[skin]).toBe("dark")
@@ -93,12 +78,6 @@ describe("skin", () => {
     it("is the moving Smoke on the desktop, whatever the device says", () => {
       expect(stand({ table: true, prefersLight: false })).toBe("smoke-moving")
       expect(stand({ table: true, prefersLight: true })).toBe("smoke-moving")
-    })
-
-    it("is the still Smoke there for a player who had switched the drift off", () => {
-      expect(stand({ table: true, still: true })).toBe("smoke")
-      expect(stand({ table: true, still: true, legacy: "dark" })).toBe("smoke")
-      expect(stand({ table: false, still: true, prefersLight: false })).toBe("classic-dark")
     })
 
     it("moves an old light pick to Classic light on either layout", () => {

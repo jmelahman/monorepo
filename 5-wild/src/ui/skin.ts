@@ -12,10 +12,9 @@
  *   behind them drawn once, still. `smoke-moving` is the same room with the
  *   smoke drifting. They are one stylesheet: the second is a flag on the root
  *   (`moving-bg`, see `skinClass`), not a copy, so a change to the room is made
- *   once. Motion used to be its own setting, a row of its own and a key
- *   (`5wild:ambience`); it is a preset because it is a taste about the look and
- *   nothing else, and a second control for one look was a row every other look
- *   had to hide.
+ *   once. Motion is a preset because it is a taste about the look and
+ *   nothing else, and a second control for one look would be a row every other
+ *   look had to hide.
  * - `tabletop` is a board game's walnut, bone and terracotta, with a still
  *   room and only the motion of things being handled (see `Fx`).
  * - `classic-dark` and `classic-light` are the phone's two looks as they always
@@ -45,9 +44,6 @@ const KEY = "5wild:skin"
 
 /** The key the theme dial wrote before the two settings were one. Read, never written. */
 const LEGACY_THEME_KEY = "5wild:theme"
-
-/** The moving-background switch, retired into two presets. Read for migration; written only as `off` beside a still `smoke`. */
-const AMBIENCE_KEY = "5wild:ambience"
 
 export type Skin = "smoke" | "smoke-moving" | "tabletop" | "classic-dark" | "classic-light"
 
@@ -85,14 +81,12 @@ export const TONE: Record<Skin, Tone> = {
 }
 
 /**
- * A stored pick, or null for "never picked". `classic` is the one name an
- * earlier build wrote that this one has no look called: it was the phone's
- * board on the table, and it was only ever offered on the dark table, so it is
- * Classic dark. Anything else unrecognised is no pick rather than a wrong one,
- * which costs a player the default look and never a broken page.
+ * A stored pick, or null for "never picked". Anything unrecognised is no pick
+ * rather than a wrong one, which costs a player the default look and never a
+ * broken page.
  */
 export const readSkin = (raw: string | null): Skin | null =>
-  raw === "classic" ? "classic-dark" : (SKINS.find((skin) => skin === raw) ?? null)
+  SKINS.find((skin) => skin === raw) ?? null
 
 /** A stored theme from before the merge, or null. Only `light` and `dark` ever existed. */
 export const readLegacyTone = (raw: string | null): Tone | null =>
@@ -103,8 +97,6 @@ export type Standing = {
   picked: Skin | null
   /** What they chose with the old dial, which only counts while `picked` is null. */
   legacy: Tone | null
-  /** Whether the retired ambience switch was off, which only counts while `picked` is null. */
-  still?: boolean
   /** Whether the table layout is on: the window, not the setting. */
   table: boolean
   /** What the device says, for the one case that asks it. */
@@ -118,8 +110,7 @@ export type Standing = {
  * - An old `light` pick is Classic light everywhere, because the light theme was
  *   the clean board and a player who chose it chose that.
  * - An old `dark` pick is Classic dark on a phone, which is the board they had,
- *   and Smoke on the desktop, which is the table they had (moving unless they had
- *   switched the drift off): the dark theme on a
+ *   and Smoke on the desktop, which is the table they had: the dark theme on a
  *   desktop *was* the table, and Smoke is what that meant.
  * - Nothing at all is where every install starts. On a phone that is Classic
  *   following the device's light or dark exactly as before, `matchMedia` and
@@ -131,34 +122,12 @@ export type Standing = {
  * was, and a player who has never touched the dial would find a window resize
  * had made a decision for them.
  */
-export function resolveSkin({ picked, legacy, still, table, prefersLight }: Standing): Skin {
+export function resolveSkin({ picked, legacy, table, prefersLight }: Standing): Skin {
   if (picked) return picked
-  const room: Skin = still ? "smoke" : "smoke-moving"
   if (legacy === "light") return "classic-light"
-  if (legacy === "dark") return table ? room : "classic-dark"
-  if (table) return room
+  if (legacy === "dark") return table ? "smoke-moving" : "classic-dark"
+  if (table) return "smoke-moving"
   return prefersLight ? "classic-light" : "classic-dark"
-}
-
-/**
- * What to store for a `smoke` saved before motion was a preset. Those players
- * were looking at the drifting room unless they had switched it off, so an
- * absent or `on` ambience makes it `smoke-moving` and `off` leaves it `smoke`,
- * which is now the still one. Anything else is not a smoke and passes through.
- */
-export const migrateSmoke = (raw: string | null, ambience: string | null): string | null =>
-  raw === "smoke" && ambience !== "off" ? "smoke-moving" : raw
-
-/**
- * Whether the retired ambience key said off. Read for a player who never picked
- * a look and had turned the drift off on the default room.
- */
-export function loadStill(): boolean {
-  try {
-    return localStorage.getItem(AMBIENCE_KEY) === "off"
-  } catch {
-    return false
-  }
 }
 
 export function loadLegacyTone(): Tone | null {
@@ -169,25 +138,9 @@ export function loadLegacyTone(): Tone | null {
   }
 }
 
-/**
- * The pick, migrated. The one place a read writes: a stored `smoke` from before
- * motion was a preset is rewritten as `smoke-moving` (unless the retired
- * ambience key says off), and its key removed. The key is what tells an old
- * `smoke` from a new one, since the two spell the same word: `saveSkin` writes
- * `off` beside a still `smoke` for exactly that, so a `smoke` with no `off`
- * beside it is always one an earlier build wrote. With no pick the key is left
- * where it is, for `loadStill`.
- */
 export function loadSkin(): Skin | null {
   try {
-    const raw = localStorage.getItem(KEY)
-    const ambience = localStorage.getItem(AMBIENCE_KEY)
-    const stored = migrateSmoke(raw, ambience)
-    if (stored !== raw && stored !== null) {
-      localStorage.setItem(KEY, stored)
-      localStorage.removeItem(AMBIENCE_KEY)
-    }
-    return readSkin(stored)
+    return readSkin(localStorage.getItem(KEY))
   } catch {
     return null
   }
@@ -196,10 +149,6 @@ export function loadSkin(): Skin | null {
 export function saveSkin(skin: Skin): void {
   try {
     localStorage.setItem(KEY, skin)
-    // A pick settles what the retired ambience switch used to say, and the
-    // still Smoke leaves the one word that says it (see `loadSkin`).
-    if (skin === "smoke") localStorage.setItem(AMBIENCE_KEY, "off")
-    else localStorage.removeItem(AMBIENCE_KEY)
   } catch {
     // The setting lasts the session instead of the install. Nothing else breaks.
   }

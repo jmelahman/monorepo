@@ -34,15 +34,31 @@
   color: var(--ink);
 }
 
-/* The icon is the card's picture: printed in the rarity's ink on a deeper
-   bone, as the emblem on a game card is. */
-:root.skin-tabletop .shop-item-head > .icon {
+/* The picture is a Mahjong tile: a bone face with its lip showing below, the
+   emblem engraved into it in the rarity's ink. The lip is `--lip`, the same
+   depth as a key's, so the card's picture is made like everything else on this
+   table that can be picked up. The pixel sprite is Smoke's and stays hidden. */
+:root.skin-tabletop .shop-item-head > .icon,
+:root.skin-tabletop .relic > .icon {
   border-radius: var(--radius-m);
   border: 0;
-  background: var(--bone-deep);
+  background: linear-gradient(160deg, var(--bone), var(--bone-deep));
   color: var(--rare-c);
-  stroke-width: 2;
-  box-shadow: inset 0 0 0 1px #0000001c;
+  stroke-width: 2.25;
+  box-shadow:
+    inset 0 0 0 1px #0000001c,
+    0 var(--lip) 0 var(--bone-side);
+}
+
+/* A relic in its seat: a tile at the size of a chip, over the name. Only the
+   emblem, which is the drawing engraved; the fallback icon for an id with no
+   emblem gets the same tile and reads as a blank one, which none of them is. */
+:root.skin-tabletop .relic > .icon {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0.1875rem;
+  margin-bottom: var(--lip);
 }
 
 :root.skin-tabletop .shop-item-name {

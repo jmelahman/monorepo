@@ -62,6 +62,15 @@
   transition: transform 120ms ease;
 }
 
+/* A relic's picture, in the seat: the emblem and the sprite `cardArt` draws
+   for every card. Classic's seats are a name on a coloured edge and always were,
+   so neither shows until a skin asks for one. */
+.relic > .icon,
+.relic > .sprite {
+  display: none;
+  flex: 0 0 auto;
+}
+
 .relic.empty {
   background: transparent;
   border: 1px dashed var(--line);

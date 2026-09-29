@@ -20,3 +20,16 @@
   -webkit-text-stroke: 0;
   paint-order: normal;
 }
+
+/* The relic in its seat: the sprite over the name, at twice the grid, so the
+   tray reads as objects and not as a row of words. */
+:root.skin-smoke .relic > .sprite {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+:root.table.skin-smoke .relic > .sprite {
+  width: 2.25rem;
+  height: 2.25rem;
+}

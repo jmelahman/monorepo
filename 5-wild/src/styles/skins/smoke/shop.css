@@ -164,3 +164,34 @@
 :root.table.skin-smoke .shop-item-kind {
   letter-spacing: 0;
 }
+
+/*
+ * The picture on a card is the pixel sprite, not the emblem: a two-unit line in
+ * `currentColor` reads in this room as a diagram, and a sprite reads as a thing
+ * on a shelf (see `sprites.ts`). Boxed like the emblem was, in the rarity's
+ * colour along the foot so the shelf's rarities still read at a glance. The
+ * emblem stays in the DOM, hidden, for the reason `cardArt` gives. 36px on the
+ * phone and 60px on the table are three and five times the 12-unit grid, so
+ * every sprite pixel is a whole number of screen pixels.
+ */
+:root.skin-smoke .shop-item-head > .emblem {
+  display: none;
+}
+
+:root.skin-smoke .shop-item-head > .sprite {
+  display: block;
+  box-sizing: content-box;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.125rem;
+  border: var(--rim);
+  border-bottom-color: var(--rare-c);
+  background: var(--well);
+  image-rendering: pixelated;
+}
+
+:root.table.skin-smoke .shop-item-head > .sprite {
+  width: 3.75rem;
+  height: 3.75rem;
+  padding: 0.25rem;
+}

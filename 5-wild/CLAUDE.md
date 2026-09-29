@@ -287,17 +287,11 @@ game the board draws on itself; `5wild:speed` holds `1`, `2` or `3`, how many
 times faster than authored the animations play; `5wild:skin` holds `smoke`,
 `smoke-moving`, `tabletop`, `classic-dark` or `classic-light`, the look the
 player picked, absent meaning none has been (see the theme section for what the
-device then decides); an old `classic` reads as `classic-dark`. `5wild:theme` is
+device then decides); `5wild:theme` is
 legacy: nothing writes it, and it is read only while no skin is picked, `light`
 meaning Classic light everywhere and `dark` meaning Classic dark on a phone and
 the moving Smoke on a desktop, which is what each of those players was looking
-at. `5wild:ambience` is retired, the switch that made Smoke drift, and is read
-for migration only: a stored `smoke` with the key absent or `on` is an older
-build's drifting room and is rewritten as `smoke-moving`, while `off` keeps it
-`smoke`, now the still one. It is the one retired key still written, and only as
-`off` beside a still `smoke`, because a `smoke` and an old `smoke` are the same
-word and that key is all that tells them apart; any other pick removes it. No
-setting stills the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
+at. No setting stills the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
 `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning
 the switch has never been touched, which sends nothing. The game never asks: the
 switch is on the about sheet behind the title screen's ⓘ and on the pause sheet,
