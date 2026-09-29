@@ -1,4 +1,4 @@
-import { hasFx } from "../skin"
+import { hasFx, hasTactile } from "../skin"
 import { atSpeed, type Speed } from "../speed"
 import { isTable } from "../table"
 
@@ -49,6 +49,13 @@ export const rate = (): number => speed
  * the phone's board and holds still), and a player who wants motion.
  */
 export const juiced = (): boolean => isTable() && hasFx() && !reduced()
+
+/**
+ * The handled-object motion may run: everything `juiced()` allows, plus a skin
+ * that only wants tiles set down and keys pressed (Tabletop). Effects that
+ * throw light or debris stay on `juiced()`.
+ */
+export const tactile = (): boolean => isTable() && hasTactile() && !reduced()
 
 /** Every tween still running, so a skip can finish all of them at once. */
 const running = new Set<Animation>()

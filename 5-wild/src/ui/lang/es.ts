@@ -876,7 +876,7 @@ export const es: Strings = {
       licence: "Licencia",
       licenceText: "Software libre bajo la GNU GPL, versión 3.",
       font: "Tipografía",
-      fontText: "Lilita One, bajo la licencia SIL Open Font License 1.1.",
+      fontText: "Jersey 10 y Jost, bajo la licencia SIL Open Font License 1.1.",
       back: "Volver",
     },
 

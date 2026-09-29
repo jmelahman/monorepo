@@ -1,0 +1,50 @@
+/*
+ * The table itself: walnut, and it holds still.
+ *
+ * Painted on `html`, in four layers, and drawn once. There is no canvas and no
+ * script behind it (the Smoke Room's smoke is the one moving background in the
+ * game, and `background.ts` never creates one for this skin), so it costs one
+ * raster at first paint and nothing per frame, which is what lets it sit under
+ * a board that is animating on a laptop with no GPU to speak of.
+ *
+ * Top to bottom: a vignette that darkens toward the edges so the light seems to
+ * come from over the board; the plank seams, a two-pixel dark line every 11rem,
+ * which is what makes the grain read as boards and not as a smear; the grain,
+ * an SVG turbulence stretched hard along the horizontal (a base frequency of
+ * 0.012 across and 0.42 down, so the streaks run left to right like a plank's)
+ * and tinted a warm brown at 13% opacity; and the ground colour under all of it.
+ *
+ * The SVG is an inline data URI, so the skin needs no asset and a player who
+ * never picks it downloads nothing. Its colours are literals, since a data URI
+ * cannot read a custom property: the fill is `--smoke-a`'s lighter brown, and the
+ * seam is `--vig`. Change those tokens and change them here. `stitchTiles` makes
+ * the 640px tile repeat without a visible join.
+ */
+:root.table.skin-tabletop {
+  background:
+    radial-gradient(ellipse 80% 90% at 50% 42%, transparent 35%, var(--vig) 130%),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent calc(11rem - 2px),
+      #0a0603 calc(11rem - 2px),
+      #0a0603 11rem
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='640'><filter id='g' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.42' numOctaves='3' seed='11' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.62  0 0 0 0 0.4  0 0 0 0 0.22  2.4 0 0 0 -0.95'/></filter><rect width='100%25' height='100%25' filter='url(%23g)' opacity='0.13'/></svg>"),
+    var(--ground);
+  background-size:
+    auto,
+    auto,
+    640px 640px,
+    auto;
+}
+
+/* Transparent so the table shows through, on every screen, including the
+   title, which paints its own wash over the phone's page. */
+:root.table.skin-tabletop body {
+  background: transparent;
+}
+
+:root.table.skin-tabletop #app:has(> .screen.title) {
+  background: none;
+}

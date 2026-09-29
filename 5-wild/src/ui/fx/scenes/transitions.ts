@@ -3,7 +3,7 @@ import { h } from "../../dom"
 import { money } from "../../format"
 import { play, type Snapshot, snapshot } from "../flip"
 import { centerOf, fxDom, type Point } from "../layer"
-import { juiced, tween } from "../motion"
+import { juiced, tactile, tween } from "../motion"
 import { roll } from "../numbers"
 import { burst } from "../particles"
 import { shake } from "../shake"
@@ -152,7 +152,15 @@ export function leaving(root: HTMLElement, from: string | null): Leaving {
 }
 
 export function arrived(root: HTMLElement, to: string | null, was: Leaving): void {
-  if (!juiced()) return
+  if (!juiced()) {
+    // Tabletop has no scene changes, but a round is still dealt: the tiles are
+    // set down. `dealt` knows to do the plain version when it is not juiced.
+    if (tactile() && family(to) === "round" && family(was.from) !== "round") {
+      const screen = screenOf(root)
+      if (screen) dealt(screen)
+    }
+    return
+  }
   play(root, was.rects)
   const screen = screenOf(root)
   if (!screen) return

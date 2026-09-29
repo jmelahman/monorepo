@@ -1,5 +1,5 @@
 import { centerOf, fxDom, stand } from "../layer"
-import { juiced, tween } from "../motion"
+import { juiced, tactile, tween } from "../motion"
 import { burst } from "../particles"
 import { shake } from "../shake"
 
@@ -50,22 +50,26 @@ const RED = ["#ff6b73", "#ff3d48", "#ffb3b8"] as const
 
 /** A letter just landed in `tile` (after `patchDraft` drew it). */
 export function typed(tile: HTMLElement): void {
-  if (!juiced()) return
+  if (!tactile()) return
   held.set(tile, tile.textContent ?? "")
+  // Tabletop keeps the wave and the ghost and drops what is thrown off: dust
+  // and the streak are the Smoke Room's, a board game's tiles kick up nothing.
+  const fancy = juiced()
   const rect = tile.getBoundingClientRect()
   // Dust from the chip's foot, out to both sides. Few and short: a word is
   // five of these in about a second, and the point is the impact, not a burst.
   const foot = { x: rect.left + rect.width / 2, y: rect.bottom - rect.height * 0.08 }
-  burst("spark", foot, {
-    count: 5,
-    speed: 170,
-    angle: -Math.PI / 2,
-    spread: Math.PI * 1.1,
-    life: 0.26,
-    size: 2,
-    gravity: 520,
-    colors: DUST,
-  })
+  if (fancy)
+    burst("spark", foot, {
+      count: 5,
+      speed: 170,
+      angle: -Math.PI / 2,
+      spread: Math.PI * 1.1,
+      life: 0.26,
+      size: 2,
+      gravity: 520,
+      colors: DUST,
+    })
 
   // The fifth letter completes the row: a wave runs along it, each chip up by a
   // hair as it passes, and lets the word settle. A brightness pulse rode on it
@@ -77,7 +81,7 @@ export function typed(tile: HTMLElement): void {
   if (!row || tile.nextElementSibling) return
   const tiles = Array.from(row.children)
   if (!tiles.every((child) => child.classList.contains("filled"))) return
-  glint(row)
+  if (fancy) glint(row)
   tiles.forEach((child, index) => {
     void tween(
       child,
@@ -123,23 +127,24 @@ function glint(row: Element): void {
 
 /** A letter just left the row being typed. */
 export function erased(row: HTMLElement): void {
-  if (!juiced()) return
+  if (!tactile()) return
   // The tile that was just blanked is the first one without a letter in it.
   const gone = Array.from(row.children).find((tile) => !tile.classList.contains("filled"))
   if (!(gone instanceof HTMLElement)) return
   const letter = held.get(gone)
   held.delete(gone)
   const at = centerOf(gone)
-  burst("spark", at, {
-    count: 4,
-    speed: 130,
-    angle: -Math.PI / 2,
-    spread: Math.PI * 2,
-    life: 0.22,
-    size: 2,
-    gravity: 200,
-    colors: DUST,
-  })
+  if (juiced())
+    burst("spark", at, {
+      count: 4,
+      speed: 130,
+      angle: -Math.PI / 2,
+      spread: Math.PI * 2,
+      life: 0.22,
+      size: 2,
+      gravity: 200,
+      colors: DUST,
+    })
   if (!letter) return
   // The chip itself, drawn again in the layer where a render cannot take it,
   // and flicked up and away. `stand` copies the empty tile's box; the class and
@@ -210,7 +215,11 @@ export function rejected(row: HTMLElement): void {
  * diagonal, which was a shoe and not a machine.
  */
 export function dealt(screen: HTMLElement): void {
-  if (!juiced()) return
+  if (!tactile()) return
+  if (!juiced()) {
+    dealtByHand(screen)
+    return
+  }
   const rows = Array.from(screen.querySelectorAll(".grid .row"))
   rows.forEach((row, r) => {
     Array.from(row.children).forEach((tile, c) => {
@@ -256,6 +265,41 @@ export function dealt(screen: HTMLElement): void {
         { opacity: 1, transform: "none" },
       ],
       { duration: 300, delay: 260 + r * 90, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+    )
+  })
+}
+
+/**
+ * The tactile deal, for a skin whose board is a wooden tray: each tile is set
+ * down from a hand's height, column by column, and settles with one small
+ * bounce. No blur, no glowing rim and no reel overshoot, which is the Smoke
+ * Room's machine; here it is a tile meeting a table, so it drops and stops. The
+ * whole deal is 24ms a tile step and about 0.6s end to end, and it is
+ * `opacity` and `transform` only, like everything else on the board.
+ */
+function dealtByHand(screen: HTMLElement): void {
+  screen.querySelectorAll(".grid .row").forEach((row, r) => {
+    Array.from(row.children).forEach((tile, c) => {
+      if (!tile.classList.contains("tile")) return
+      void tween(
+        tile,
+        [
+          { opacity: 0, transform: "translateY(-0.9rem) scale(1.06)" },
+          { opacity: 1, transform: "translateY(0.06rem) scale(0.99)", offset: 0.6 },
+          { transform: "none" },
+        ],
+        { duration: 340, delay: c * 60 + r * 24, easing: "cubic-bezier(0.33, 1, 0.68, 1)" },
+      )
+    })
+  })
+  screen.querySelectorAll(".keyboard .key-row").forEach((keys, r) => {
+    void tween(
+      keys,
+      [
+        { opacity: 0, transform: "translateY(0.5rem)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 240, delay: 200 + r * 70, easing: "cubic-bezier(0.33, 1, 0.68, 1)" },
     )
   })
 }
@@ -313,7 +357,7 @@ function press(key: HTMLElement, physical: boolean): void {
 /**
  * Bound once, at import, because the hooks above only fire on typing and the
  * keyboard has to answer the first keystroke of the round as well as the rest.
- * Both bail on `juiced()`, so on a phone (or with reduced motion) they are two
+ * Both bail on `tactile()`, so on a phone (or with reduced motion) they are two
  * listeners that return.
  *
  * The physical press is looked up a frame late. `App`'s own keydown listener
@@ -323,7 +367,7 @@ function press(key: HTMLElement, physical: boolean): void {
  */
 if (typeof window !== "undefined") {
   window.addEventListener("keydown", (event) => {
-    if (!juiced() || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
+    if (!tactile() || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
     const name = event.key
     requestAnimationFrame(() => {
       // Under a sheet the keys are not being played.
@@ -335,7 +379,7 @@ if (typeof window !== "undefined") {
   document.addEventListener(
     "pointerdown",
     (event) => {
-      if (!juiced() || !(event.target instanceof Element)) return
+      if (!tactile() || !(event.target instanceof Element)) return
       const key = event.target.closest<HTMLElement>(".round-screen .key")
       if (key) press(key, false)
     },

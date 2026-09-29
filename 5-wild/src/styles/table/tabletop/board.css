@@ -1,0 +1,186 @@
+/*
+ * The board on the table: a framed tray, sockets, and bone tiles set in them.
+ *
+ * Three states. An empty socket is routed out of the tray: darker than it, with
+ * an inset shadow at the top so it reads as a hole. A letter being typed is a
+ * bone tile sitting in it, ink on bone, raised on its slab. A scored letter is
+ * the colour it means, and the colour is the game's exactly (`.tile.green` and
+ * friends still paint the fill); what is added is a slab a shade darker than the
+ * face, so a green tile stands on dark green and a bone one on dark bone. The
+ * slab is what makes them pieces and not paint.
+ *
+ * The tray is a frame round the whole grid, `.grid::before` (the grid already
+ * isolates, so its negative z-index stays inside it and cannot go under the
+ * table). Its inset is the frame's width plus the slab, so the bottom row's slab
+ * and shadow lie on the tray and not over its edge. Unlike the Smoke Room there
+ * is no clip-path anywhere, so shadows and frames can be drawn outside a box.
+ *
+ * Only `transform`, `translate`, `opacity` and `filter` ever move here, and every
+ * transition names its properties: the grid sizes itself in container units and
+ * its width and font-size are not to be transitioned by anything (CLAUDE.md, the
+ * long section on the board flash). `transform` belongs to the tile's own
+ * animations (the phone's flip, this file's set-down) and `translate` to the
+ * hover lift and the row's wave in `scenes/board.ts`, so they compose.
+ */
+
+/* ---- the tray -------------------------------------------------------- */
+
+:root.table.skin-tabletop .grid::before {
+  content: "";
+  position: absolute;
+  inset: -1.125rem;
+  z-index: -1;
+  border: 0.625rem solid var(--board-line);
+  border-radius: var(--radius-l);
+  background: var(--board-bg);
+  box-shadow:
+    inset 0 3px 10px #000c,
+    0 0 0 1px #000,
+    0 1.25rem 2.5rem #000b;
+  pointer-events: none;
+}
+
+/* ---- the socket ------------------------------------------------------ */
+
+:root.table.skin-tabletop .tile {
+  --lip: 0.25rem;
+  border: 0;
+  border-radius: 0.375rem;
+  color: var(--ink);
+  box-shadow: none;
+  transition:
+    transform 90ms ease,
+    translate 140ms var(--ease-out);
+}
+
+/* The fill is asked of the empty tile alone: `:root.table .tile` outranks the
+   phone's `.tile.green`, and a fill written on every tile painted every scored
+   letter the socket's colour. */
+:root.table.skin-tabletop .tile:not(.filled, .green, .yellow, .gray, .pending) {
+  background: var(--cell);
+  box-shadow:
+    inset 0 2px 4px #000c,
+    inset 0 -1px 0 #ffffff0a;
+}
+
+/* ---- the draft ------------------------------------------------------- */
+
+/* A letter typed and not yet sent, and one mid-reveal, are bone: the tile that
+   turns is the tile that was typed, and it is bone until the colour lands. */
+:root.table.skin-tabletop .tile:is(.filled:not(.green, .yellow, .gray), .pending) {
+  background: var(--bone);
+  color: var(--ink);
+  box-shadow:
+    0 var(--lip) 0 var(--bone-side),
+    0 0.4375rem 0.625rem #0009;
+}
+
+/* ---- the scored letter ----------------------------------------------- */
+
+:root.table.skin-tabletop .tile:is(.green, .yellow, .gray):not(.pending) {
+  color: var(--on-tile);
+}
+
+:root.table.skin-tabletop .tile.green:not(.pending) {
+  background: var(--green);
+  box-shadow:
+    0 var(--lip) 0 #35602f,
+    0 0.4375rem 0.625rem #0009;
+}
+
+:root.table.skin-tabletop .tile.yellow:not(.pending) {
+  background: var(--yellow);
+  box-shadow:
+    0 var(--lip) 0 #8a6c1c,
+    0 0.4375rem 0.625rem #0009;
+}
+
+:root.table.skin-tabletop .tile.gray:not(.pending) {
+  background: var(--gray);
+  box-shadow:
+    0 var(--lip) 0 #34322e,
+    0 0.4375rem 0.625rem #0009;
+}
+
+/* A ghost is a suggestion, not a guess: a socket with the letter faint. */
+:root.table.skin-tabletop .tile.ghost {
+  background: var(--cell);
+  border: 1px dashed var(--green);
+  color: color-mix(in srgb, var(--green) 70%, var(--fg));
+  box-shadow: inset 0 2px 4px #000c;
+}
+
+/* ---- setting a tile down --------------------------------------------- */
+
+/*
+ * The letter arriving is set down from a hand's height and settles onto its slab
+ * with one small bounce: it drops (`translateY`), lands a hair past level, and
+ * comes back. No blur, no squash, no stepping: this is a wooden piece meeting a
+ * table. 200ms at x1, which keeps up with a fast typist (the phone's 110ms read
+ * as a flicker at this tile size, and anything over ~280ms queued behind the
+ * next letter). The keyframes are here rather than in the layout because only
+ * this skin has them; they are global names all the same.
+ */
+:root.table.skin-tabletop .tile.land {
+  animation: tabletop-set calc(200ms * var(--pace)) cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+@keyframes tabletop-set {
+  0% {
+    transform: translateY(-0.5rem) scale(1.05);
+    opacity: 0.6;
+  }
+  62% {
+    transform: translateY(0.05rem) scale(0.99);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* ---- the row that was refused ---------------------------------------- */
+
+/* The phone's shake at a larger amplitude, and a terracotta-red flash of the
+   row. There is no jolt through the table and no sparks: a refusal is nothing
+   lost. Inside the row's box, since a flash outside it would read as a second
+   row. 420ms because that is what the app takes the class off at. */
+:root.table.skin-tabletop .row.rejected {
+  --shake: 0.625rem;
+}
+
+:root.table.skin-tabletop .row.rejected::after {
+  content: "";
+  position: absolute;
+  inset: -0.25rem;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--reject) 16%, transparent);
+  box-shadow: inset 0 0 0 2px var(--reject);
+  opacity: 0;
+  animation: table-reject-flash calc(420ms * var(--pace)) steps(1, end);
+}
+
+/* ---- hover ----------------------------------------------------------- */
+
+/* A mouse lifts a tile by a hair. `.mouse` is the class the app keeps on the
+   root from `pointerType` (see `bindMouse`), never a hover media query. */
+:root.table.skin-tabletop.mouse .tile:is(.filled, .green, .yellow, .gray):not(.pending):hover {
+  translate: 0 -0.125rem;
+}
+
+/* ---- the boss's note ------------------------------------------------- */
+
+:root.table.skin-tabletop .row-note {
+  border: 1px solid var(--bone-side);
+  background: var(--bone);
+  color: var(--ink);
+  box-shadow: 0 0.125rem 0 var(--bone-side);
+}
+
+/* Lives in `#fx`; `glint` is a `full` skin's, so this is only a dressing for it. */
+:root.table.skin-tabletop .row-glint > i {
+  opacity: 0;
+  background: linear-gradient(100deg, #ffffff00 0%, #ffffff33 50%, #ffffff00 100%);
+}

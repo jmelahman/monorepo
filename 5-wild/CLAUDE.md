@@ -269,12 +269,12 @@ as exactly one `skin-*` class on the root before first render, and the phone nev
 stylesheet is split on the same line: `src/styles/table/*.css` is layout only, under `:root.table`, with no
 colour, face, border, shadow or motion, and each dressing lives under `:root.table.skin-<name>` in its own
 place (`smoke/`, and so on). Classic is what is left when nothing is written over the layout, so the phone's
-partials show through, and and `hasFx` is true for the Smoke Room alone, so Classic (and Tabletop, until it has a look of its own and rides on `classic-skin.css`) has no canvas and no juice.
+partials show through. How much a skin animates is `Fx` in `skin.ts`: `full` (Smoke Room: the smoke canvas and everything `juiced()` gates), `tactile` (Tabletop: tiles set down, keys pressed, and nothing thrown off; gated by `tactile()`, whose set includes `juiced()`'s) and `none` (Classic, the phone's own board). A new effect asks `hasFx()` or `hasTactile()` and never names a skin.
 The Smoke Room is drawn flat and inside its own boxes: every panel is notched with `--cut`, a `clip-path`, which clips any `box-shadow`, outline or overflowing pseudo-element, so depth is an inset shadow or nothing.
 A new rule that paints goes in a skin, not the layout, and `test/ui/skin.test.ts` fails if it lands in the
 wrong one; `5wild:ambience` holds
 `on` or `off`, whether the desktop table's own lights (the smoke drifting behind the panels) runs, absent meaning on, applied as `.lights-off`
-on the root; the phone never shows the row and ignores the key, and it stills
+on the root; only the Smoke Room shows the row, since Tabletop's walnut is a still picture, and the phone never shows it and ignores the key, and it stills
 nothing of the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
 `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning
 the switch has never been touched, which sends nothing. The game never asks: the

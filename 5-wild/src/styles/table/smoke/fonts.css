@@ -10,7 +10,7 @@
  * face mid-word. Verified against the four catalogs' longest strings, not
  * assumed: see `type.css` for what a missing glyph costs here.
  *
- * It replaced Lilita One, and its `@import`s went with it. Classic needs
+ * It replaced Lilita One, which has since left the package altogether. Classic needs
  * neither: it is the phone's own system stack. So the face is loaded by the one
  * skin that draws it, and a player on Classic downloads no font at all.
  */

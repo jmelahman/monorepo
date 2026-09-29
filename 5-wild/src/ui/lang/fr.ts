@@ -897,7 +897,7 @@ export const fr: Strings = {
       licence: "Licence",
       licenceText: "Logiciel libre sous GNU GPL, version 3.",
       font: "Typographie",
-      fontText: "Lilita One, sous licence SIL Open Font License 1.1.",
+      fontText: "Jersey 10 et Jost, sous licence SIL Open Font License 1.1.",
       back: "Retour",
     },
 

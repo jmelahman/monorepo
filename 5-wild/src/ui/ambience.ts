@@ -16,7 +16,7 @@
  *
  * On by default, so the key is absent until a player turns it off and an absent
  * key means the look the table was drawn with. It is applied as `.lights-off` on
- * the root, which is the stylesheet's whole interface to it, for the reason
+ * the root (only the Smoke Room reads it: Tabletop's walnut is static), which is the stylesheet's whole interface to it, for the reason
  * `.plain` and `.quiet` are classes. It is the *off* state that is the class, so
  * a document that never ran this code, a phone's, is the document it always was.
  * `fx/background.ts` watches the same class, so no caller has to tell it.

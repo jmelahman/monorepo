@@ -110,11 +110,12 @@ describe("table stylesheet split", () => {
 
   it("writes every rule of a skin under its class", () => {
     const skinned: Array<[string, string]> = [
-      ...readdirSync(`${dir}/smoke`)
-        .filter((f) => f.endsWith(".css") && f !== "index.css" && f !== "fonts.css")
-        .map((f): [string, string] => [`${dir}/smoke/${f}`, ":root.table.skin-smoke"]),
-      // Tabletop rides on Classic until it has a look of its own (see the file).
-      [`${dir}/classic-skin.css`, ":root.table:is(.skin-classic, .skin-tabletop)"],
+      ...(["smoke", "tabletop"] as const).flatMap((skin) =>
+        readdirSync(`${dir}/${skin}`)
+          .filter((f) => f.endsWith(".css") && f !== "index.css" && f !== "fonts.css")
+          .map((f): [string, string] => [`${dir}/${skin}/${f}`, `:root.table.skin-${skin}`]),
+      ),
+      [`${dir}/classic-skin.css`, ":root.table.skin-classic"],
     ]
     for (const [file, cls] of skinned) {
       const css = strip(readFileSync(file, "utf8"))

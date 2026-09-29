@@ -3540,11 +3540,12 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
           copy.skin,
           copy.skins[chrome.skin],
         ),
-      // Beside the skin because it is the skin's: the lights are the moving
-      // room, and Classic is the one dressing with none, so its row would be a
-      // switch wired to nothing.
+      // Beside the skin because it is the skin's: the lights are the smoke, and
+      // the Smoke Room is the one dressing with a moving room. Classic has none
+      // and Tabletop's walnut is a still picture, so on either the row would be
+      // a switch wired to nothing.
       isTable() &&
-        chrome.skin !== "classic" &&
+        chrome.skin === "smoke" &&
         setting(
           { "data-focus": "ambience", onclick: () => on.toggleAmbience() },
           copy.ambience,
@@ -3786,8 +3787,8 @@ function musicCredit(): HTMLElement {
   )
 }
 
-/** Lilita One's designer, named in every language as the other credits' people are. */
-const FONT_DESIGNER = "Juan Montoreano"
+/** The typefaces' designers (Jersey 10, Jost), named in every language as the other credits' people are. */
+const FONT_DESIGNER = "Sarah Cadigan-Fried, Owen Earl"
 
 export function creditsView(on: Handlers): HTMLElement {
   const copy = ui().credits

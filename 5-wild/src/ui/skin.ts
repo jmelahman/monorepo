@@ -16,7 +16,8 @@
  *   also the one skin with no effects at all (see `hasFx`), which is the point
  *   of it: a player who wants the desktop's room to hold still gets the board
  *   the phone has, at desktop size.
- * - `tabletop` is a board game's walnut, bone and terracotta.
+ * - `tabletop` is a board game's walnut, bone and terracotta, with a still
+ *   room and only the motion of things being handled (see `Fx`).
  *
  * Meaningful only under `.table`: on a phone or the light theme the class is
  * on the root all the same and nothing is written under it, which is what
@@ -66,13 +67,31 @@ export function currentSkin(): Skin {
 }
 
 /**
- * Whether the skin runs the table's effects: the background and everything
- * `juiced()` gates. Only the Smoke Room does. Classic never will, by
- * definition, and Tabletop is still until its own phase gives it a look and
- * effects that suit it; every effect asks through here rather than naming a
- * skin, so that is one line in this file.
+ * How much the skin animates. Three levels, because two skins of the three want
+ * some motion and no two want the same amount:
+ *
+ * - `full` is the Smoke Room: the smoke, the reel-stop deal, the payline, the
+ *   jackpot, particles, shake, scene transitions. Everything `juiced()` gates.
+ * - `tactile` is Tabletop: things that are handled. A tile is set down and
+ *   settles, a key gives under a finger, a counter ticks. Nothing is thrown off
+ *   them: no sparks, no shake, no light crossing a row. A wooden board game
+ *   does not have a jackpot sign, and the room it is drawn in holds still.
+ * - `none` is Classic, the phone's own board at desktop size.
+ *
+ * Every effect asks through `hasFx` or `hasTactile` rather than naming a skin,
+ * so which skin gets what is this table and nothing else.
  */
-export const hasFx = (): boolean => currentSkin() === "smoke"
+export type Fx = "none" | "tactile" | "full"
+
+const FX: Record<Skin, Fx> = { smoke: "full", classic: "none", tabletop: "tactile" }
+
+export const fxLevel = (): Fx => FX[currentSkin()]
+
+/** The full show: the background and everything `juiced()` gates. */
+export const hasFx = (): boolean => fxLevel() === "full"
+
+/** At least the handled-object motion (`full` includes it). */
+export const hasTactile = (): boolean => fxLevel() !== "none"
 
 /**
  * Apply it, and remember it if asked. The shell applies without writing, as a

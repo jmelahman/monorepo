@@ -146,10 +146,19 @@
   font-size: 2.25rem;
 }
 
+/* A skin whose counters are not the rail's width can say so: `--counter-w` makes
+   each a fixed box (Tabletop's are round, so it is a square) and `--counter-h`
+   is its height. Unset, they are what they always were: half the row each. */
+:root.table .dock-line .readout {
+  justify-content: var(--counter-justify, normal);
+}
+
 :root.table .dock-line .readout .chips,
 :root.table .dock-line .readout .mult {
   --shape-line: 4.25rem;
-  height: 4.25rem;
+  flex: var(--counter-flex, 1 1 0);
+  width: var(--counter-w, auto);
+  height: var(--counter-h, 4.25rem);
   min-width: 0;
   padding: 0 var(--space-2);
 }
@@ -268,13 +277,17 @@
 :root.table .round-screen .grid-wrap {
   grid-column: 2 / -1;
   grid-row: 2;
-  padding-top: 0;
+  /* A skin that frames the board (Tabletop's tray) reserves the frame's width
+     here, all round, so the board is sized to what is left and the frame does
+     not run under the keyboard or the relics. The wrap is the size container,
+     so this is subtracted from `cqh` and `cqw` exactly as the boss's band is. */
+  padding: var(--frame-pad, 0);
   align-self: stretch;
   min-height: 0;
 }
 
 :root.table .round-screen:not(:has(.hud .boss)) .grid-wrap {
-  padding-top: 0;
+  padding-top: var(--frame-pad, 0);
 }
 
 :root.table .grid {

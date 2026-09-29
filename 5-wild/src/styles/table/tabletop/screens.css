@@ -1,0 +1,62 @@
+/* The look half of `screens.css`; the layout, and the reasons for it, are in `../screens.css`. */
+
+:root.table.skin-tabletop .track-round {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: var(--panel);
+  box-shadow: var(--shadow-soft);
+}
+
+/* The current stage is told by its edge colour and a bar down the top of it, in
+   the same place a card carries its rarity: one language for "this one". */
+:root.table.skin-tabletop .track-round.current {
+  border-color: var(--edge);
+  background: var(--panel-2);
+  box-shadow:
+    inset 0 0.25rem 0 var(--edge),
+    var(--shadow-soft);
+}
+
+:root.table.skin-tabletop .intro-card {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: var(--panel);
+  box-shadow: var(--top-light), var(--shadow-lift);
+}
+
+:root.table.skin-tabletop .intro-card.boss-card {
+  border-color: color-mix(in srgb, #b8383f 70%, var(--line));
+  background: color-mix(in srgb, #b8383f 12%, var(--panel));
+  box-shadow:
+    inset 0 0.25rem 0 #b8383f,
+    var(--shadow-lift);
+}
+
+:root.table.skin-tabletop .intro-rule {
+  border-radius: var(--radius-s);
+}
+
+:root.table.skin-tabletop .intro-stats {
+  border-top-color: var(--line);
+}
+
+/* One panel, centred: the same stock as the rail, since it is the same kind of
+   object. */
+:root.table.skin-tabletop .panel {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: var(--panel);
+  box-shadow: var(--top-light), var(--shadow-lift);
+}
+
+:root.table.skin-tabletop .reward-line.total {
+  border-top-color: var(--line);
+}
+
+:root.table.skin-tabletop .banner.win {
+  color: var(--accent-hi);
+}
+
+:root.table.skin-tabletop .banner.lose {
+  color: var(--mult);
+}

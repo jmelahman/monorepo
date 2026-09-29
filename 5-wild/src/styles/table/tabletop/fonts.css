@@ -1,0 +1,23 @@
+/*
+ * The face is Jost (SIL OFL 1.1, by Owen Earl), from `@fontsource`.
+ *
+ * Four weights, because this is the one skin whose design leans on weight to do
+ * what the Smoke Room does with case: 400 for prose, 500 for the figures on a
+ * tile, 600 for names and buttons, 700 for the few places the phone asks for
+ * more. Each weight is a Latin file and a Latin-extended one, and the browser
+ * fetches only the ones a page's text needs, so a phone or another skin
+ * downloads none of them. Latin-ext is what keeps `ñ`, `œ` and `ß` from falling
+ * back to a system face mid-word in the three translations.
+ *
+ * Jost is a geometric sans in the Futura line with a normal x-height, so unlike
+ * the Smoke Room's pixel face it needs no `font-size-adjust`: 1rem of it stands
+ * as tall as 1rem of the system face and the layout's sizes hold as drawn.
+ */
+@import "@fontsource/jost/latin-400.css";
+@import "@fontsource/jost/latin-ext-400.css";
+@import "@fontsource/jost/latin-500.css";
+@import "@fontsource/jost/latin-ext-500.css";
+@import "@fontsource/jost/latin-600.css";
+@import "@fontsource/jost/latin-ext-600.css";
+@import "@fontsource/jost/latin-700.css";
+@import "@fontsource/jost/latin-ext-700.css";

@@ -11,13 +11,8 @@
  * The rail is the header of a phone screen, which sits flush on the page; here
  * it is a column with edges, so it wants the panel the phone gives its cards.
  *
- * TABLETOP SHARES THIS FILE, INTERIMLY. It has no look of its own until its phase
- * lands, and a skin with the layout and no paint is a page of unstyled boxes, so
- * until then it is Classic: the same rules, the same stillness (`hasFx`). When
- * Tabletop gets `tabletop/`, delete it from the selectors here.
- *
  * Nothing moves either. `src/ui/skin.ts` says Classic has no effects
- * (`hasFx`), so `juiced()` is false, no background canvas is created
+ * (fx level `none`), so `juiced()` and `tactile()` are false, no background canvas is created
  * and the JS half of every flourish is off; and this file writes no animation
  * or transition of its own. The stylesheet's own reduced-motion block still
  * answers to the player's setting, as on the phone.
@@ -25,8 +20,8 @@
  * Only tokens the phone already defines are read here, so a change to the
  * phone's palette or its light/dark sets moves Classic with it.
  */
-:root.table:is(.skin-classic, .skin-tabletop) .round-screen .hud,
-:root.table:is(.skin-classic, .skin-tabletop) .shop-screen .hud {
+:root.table.skin-classic .round-screen .hud,
+:root.table.skin-classic .shop-screen .hud {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 0.875rem;

@@ -1,0 +1,106 @@
+/*
+ * Buttons: a walnut block with a bone one to press.
+ *
+ * Every button is a raised piece: a face, a hairline, and a slab under it
+ * (`--lip`) that is the depth. The ordinary button is dark wood a step up from
+ * the panel it sits on, so it reads as part of the table; the primary is bone
+ * with ink on it, the one light object on the screen, so the eye has one place
+ * to go. The danger button is the panel's own wood with a red hairline and red
+ * ink, and no fill, the same rule as the Smoke Room: it destroys something and
+ * is a button like the others but never the loudest.
+ *
+ * Pressing is the slab going away: the button drops by the slab's height and the
+ * slab is gone, in one frame. Only the drop is transitioned (`transform`, 90ms);
+ * the shadow is swapped, not animated, since a shadow repaints every frame and
+ * the drop alone reads as the button being pushed. The terracotta is for the
+ * hover edge and the focus ring, which are the two ways a button says "this one".
+ */
+:root.table.skin-tabletop
+:is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill) {
+  background: var(--btn);
+  color: var(--fg);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius-m);
+  box-shadow:
+    var(--top-light),
+    0 var(--lip) 0 var(--rack-deep);
+  transition: transform 90ms var(--ease-out);
+}
+
+:root.table.skin-tabletop .primary {
+  background: var(--bone);
+  border-color: var(--bone-side);
+  color: var(--ink);
+  box-shadow: 0 var(--lip) 0 var(--bone-side);
+}
+
+:root.table.skin-tabletop .danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+:root.table.skin-tabletop :is(.primary, .secondary, .danger):active:not(:disabled),
+:root.table.skin-tabletop :is(.menu-button, .title-dial, .title-pill):active {
+  transform: translateY(var(--lip));
+  box-shadow: none;
+}
+
+:root.table.skin-tabletop :is(.primary, .secondary, .danger):disabled {
+  opacity: 0.45;
+  filter: none;
+  cursor: default;
+  box-shadow: none;
+}
+
+:root.table.skin-tabletop.mouse
+  :is(.secondary, .menu-button, .title-dial, .title-pill):hover:not(:disabled, :active) {
+  border-color: var(--accent);
+}
+
+:root.table.skin-tabletop.mouse .primary:hover:not(:disabled, :active) {
+  border-color: var(--accent);
+  box-shadow:
+    0 var(--lip) 0 var(--bone-side),
+    0 0 0 1px var(--accent);
+}
+
+:root.table.skin-tabletop.mouse .danger:hover:not(:disabled, :active) {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+:root.table.skin-tabletop
+  :is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The phone's strips each set an inset bevel on their own selector; put the
+   walnut block's slab back over them. */
+:root.table.skin-tabletop
+:is(
+  .shop-screen .shop-actions > *,
+  .title-more .secondary,
+  .intro-actions .primary,
+  .primary.title-play
+) {
+  box-shadow:
+    var(--top-light),
+    0 var(--lip) 0 var(--rack-deep);
+}
+
+:root.table.skin-tabletop
+  :is(.shop-screen .shop-actions > .primary, .intro-actions .primary, .primary.title-play) {
+  box-shadow: 0 var(--lip) 0 var(--bone-side);
+}
+
+:root.table.skin-tabletop
+  :is(
+    .shop-screen .shop-actions > *,
+    .title-more .secondary,
+    .intro-actions .primary,
+    .primary.title-play
+  ):active:not(:disabled) {
+  box-shadow: none;
+}

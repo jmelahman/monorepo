@@ -5,13 +5,13 @@
    Sized off the window's height so the same rule fills a 900px window and
    still fits a 720px one, where the rail's rows have no slack to give. */
 :root.table .dock-line .readout {
-  font-size: clamp(2.75rem, 7.6svh, 4.5rem);
+  font-size: var(--counter-font, clamp(2.75rem, 7.6svh, 4.5rem));
 }
 
 :root.table .dock-line .readout .chips,
 :root.table .dock-line .readout .mult {
-  --shape-line: clamp(4.5rem, 13svh, 7rem);
-  height: clamp(4.5rem, 13svh, 7rem);
+  --shape-line: var(--counter-h, clamp(4.5rem, 13svh, 7rem));
+  height: var(--counter-h, clamp(4.5rem, 13svh, 7rem));
 }
 
 :root.table .dock-line .readout .times {

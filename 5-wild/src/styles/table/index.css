@@ -40,4 +40,5 @@
 
 /* The dressings. Each is inert unless its class is on the root. */
 @import "./smoke/index.css";
+@import "./tabletop/index.css";
 @import "./classic-skin.css";

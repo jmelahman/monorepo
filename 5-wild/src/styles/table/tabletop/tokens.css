@@ -1,0 +1,160 @@
+/*
+ * Tabletop's palette and scales.
+ *
+ * A board game on a walnut table: bone for anything you pick up (tiles, keys,
+ * cards, the scorecard), walnut for anything that holds them (the rail, the
+ * tray, the rack), and one terracotta accent, spent on the things you act on:
+ * the focus ring, the meter, the hover edge. Bone is the light in the room, so
+ * ink on it is dark, and the money that is written on bone is written in a deep
+ * green (`--cash`) and not the brass the dark surfaces use.
+ *
+ * What the game means in colour is the game's own, as on every skin: green,
+ * yellow and gray on a tile, chips blue and mult red on the counters. Here they
+ * are set a little earthier so that they sit on wood without a neon edge, and
+ * each piece stands on a lip a shade darker than itself (see `board.css`), which
+ * is the whole depth language: a thing is raised by the darker slab under it,
+ * and pressed by that slab going away.
+ *
+ * Depth is real here, unlike the Smoke Room's, because nothing is clipped: the
+ * corners are radii and shadows are drawn outside the box. That is also why
+ * nothing on this skin animates a shadow: they are static, and what moves is
+ * the piece (`transform`), which composites, where a shadow would repaint.
+ *
+ * Token names keep their meaning because the phone's partials, the views and
+ * the scripts read them; only the values move, under `.table`. Every custom
+ * property the layout or a script reads is defined below, whether or not this
+ * skin's `tactile` level ever reaches it, so that a scene added later finds a
+ * colour and not `initial`.
+ */
+:root.table.skin-tabletop {
+  --ground: #1a110b;
+  --vig: #080503;
+  --smoke-a: #2c1c11;
+  --smoke-b: #120b06;
+
+  --bg: #1a110b;
+  /* Surfaces, lightest on top: the rail, the button on it, the key beside it. */
+  --panel: #2a1b12;
+  --panel-2: #33221a;
+  --panel-3: #3a2517;
+  --well: #21150e;
+  --line: #4a2f1e;
+  --fg: #f0e7d3;
+  --muted: #b3a48c;
+
+  /* Bone, and what is written on it. */
+  --bone: #efe6d2;
+  --bone-side: #b8a988;
+  --bone-deep: #e3d9c0;
+  --ink: #2a211a;
+  --ink-soft: #6b5c48;
+  --outline: #120b06;
+
+  --green: #4f8a4a;
+  --yellow: #c29a2e;
+  --gray: #4d4a45;
+
+  /* On the dark wood; on bone the deep values below take over. */
+  --chips: #6ea0f0;
+  --mult: #e8686c;
+  --gold: #d6b25e;
+  --danger: #e0705c;
+  --cash: #2f6b3a;
+  --chips-ink: #24509a;
+  --mult-ink: #a8323a;
+
+  --accent: #c8643c;
+  --accent-hi: #e38a62;
+  --on-accent: #fff3e6;
+
+  --btn: #3a2517;
+  --btn-primary: var(--bone);
+  --btn-neutral: #3a2517;
+  --btn-blue: #3a2517;
+  --btn-danger: var(--danger);
+  --btn-go: var(--bone);
+  --on-btn: var(--fg);
+  --on-primary: var(--ink);
+
+  /* Rarity is the ink a card is written in and the bar across its top: the
+     design's deep set, which reads on bone. */
+  --rare-common: #2a211a;
+  --rare-uncommon: #2f6b3a;
+  --rare-rare: #24509a;
+  --rare-legendary: #a8323a;
+  --rare-wash: 0%;
+  --rare-wash-tray: 0%;
+  --rare-edge: 100%;
+
+  /* The tray a guess sits in, the socket an empty tile is, and the rack. */
+  --board-bg: #1c1916;
+  --board-line: #4a2e1c;
+  --cell: #15120f;
+  --cell-line: transparent;
+  --slot-line: #4a2f1e;
+  --draft-line: transparent;
+  --rack: #3a2416;
+  --rack-deep: #24160d;
+  --key: #efe6d2;
+  --key-line: transparent;
+  --key-dead: #4d4a45;
+  --key-gray-fg: #a8a095;
+  --broken-bg: #3a3631;
+  --broken-fg: #7a7268;
+  --shade: #000;
+  --sheen: #ffffff14;
+  --scrim: #0d0704cc;
+  --title-tint: #2c1c11;
+  --on-tile: #fff;
+  --on-bright: #2a211a;
+
+  --radius-s: 0.25rem;
+  --radius-m: 0.375rem;
+  --radius-l: 0.625rem;
+  --radius-pill: 99px;
+  --bw: 1px;
+
+  /* Depth: a slab under the piece, and a soft fall of shadow under that. */
+  --lip: 0.1875rem;
+  --shadow-hard: 0 var(--lip) 0 var(--bone-side);
+  --shadow-soft: 0 0.5rem 0.875rem #0009;
+  --shadow-lift: 0 1rem 2.5rem #000a;
+  --rim: var(--bw) solid var(--line);
+  --top-light: inset 0 1px 0 #ffffff14;
+
+  /* Roles, for the scripts that ask for "a spark" and "a coin". Tabletop plays
+     none of them, but they are defined for the reason in the header. */
+  --spark: var(--accent);
+  --spark-hi: var(--accent-hi);
+  --spark-lo: #8c4326;
+  --paper: var(--bone);
+  --paper-lo: var(--bone-side);
+  --lit: var(--accent);
+  --lit-hot: var(--bone);
+  --coin: var(--gold);
+  --coin-hi: #ecd28e;
+  --coin-lo: #8f7434;
+
+  /* The scoring show's and the moments' colours, defined and unused for the
+     same reason. */
+  --pop-chips: var(--chips);
+  --pop-mult: var(--mult);
+  --pop-gold: var(--gold);
+  --pop-dim: #6b5c48;
+  --score-lit: var(--lit);
+  --score-hot: var(--lit-hot);
+  --score-line: color-mix(in srgb, var(--fg) 40%, transparent);
+  --sign-bg: var(--panel);
+  --sign-ink: var(--fg);
+  --sign-ring: var(--accent);
+  --boss-band: #5e1720;
+  --boss-band-hi: #b23a44;
+  --boss-wash-in: #12030a80;
+  --boss-wash-out: #7a1a29d9;
+  --win-wash: #e38a62a6;
+  --gloom: grayscale(0.9) brightness(0.68) contrast(1.05);
+  --reject: var(--mult);
+
+  --font-display: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
