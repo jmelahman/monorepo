@@ -50,18 +50,17 @@ find "$out" -name '*.png' -size +1M -printf 'warning: %p is %s bytes\n'
 # The link previews: what Slack, X and LinkedIn draw when someone pastes
 # 5-wild.com, and what they drew before this was nothing but the bare title,
 # since the page is an empty #app until the script runs and none of them run it.
-# They are here rather than in a script of their own because they are the same
-# two pictures at other sizes, and a feature graphic re-rendered for Play with a
-# new mark should not leave the site's card showing the old one.
+# They are here rather than in a script of their own because they share the
+# sources: og.svg places the README's wordmark whole, and a mark re-rendered for
+# Play should not leave the site's card or touch icon showing the old one.
 #
-# og.png is the feature graphic at 1200 wide, the width LinkedIn asks for; its
-# 2.05:1 lands between X's 2:1 and LinkedIn's 1.91:1, and either crop only
-# trims background, since everything drawn sits in the middle half. It has to
-# be a PNG: none of the three will take an SVG for og:image. apple-touch-icon is
-# the full-bleed store mark at the 180 iOS asks for, and doubles as the icon
-# Slack falls back to when it skips the SVG favicon, which it usually does.
+# og.png is 1200x630, LinkedIn's ratio exactly; X's 2:1 crop only trims
+# background (see og.svg). It has to be a PNG: none of the three will take an
+# SVG for og:image. apple-touch-icon is the full-bleed store mark at the 180 iOS
+# asks for, and doubles as the icon Slack falls back to when it skips the SVG
+# favicon, which it usually does.
 web="
-assets/feature-graphic.svg:og:1200:586
+assets/og.svg:og:1200:630
 assets/icon-store.svg:apple-touch-icon:180:180
 "
 

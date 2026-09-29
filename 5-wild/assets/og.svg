@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1200" height="630" viewBox="0 0 1200 630"
+     role="img" aria-label="5 Wild — a word-guessing roguelike">
+  <title>5 Wild</title>
+  <!--
+    The link preview: what Slack, X and LinkedIn draw when someone pastes
+    5-wild.com. It is the README's masthead rather than the Play feature graphic,
+    because the README is the front page a link is most often shared from and
+    the card should look like where it came from.
+
+    The masthead is referenced, not redrawn: wordmark-dark.svg is placed whole,
+    so a change to it reaches the card on the next run of gen-store-art.sh.
+    Dark because every one of the three draws the card on its own surface and
+    an image with its own background is the only way to be sure the tiles'
+    gray reads as a tile.
+
+    1200x630 is LinkedIn's ratio exactly, and X's 2:1 crop takes 15px off the
+    top and bottom, which is background here: the composition spans y 150..470.
+  -->
+
+  <!-- The bg and panel custom properties from src/style.css, the same gradient
+       as the feature graphic. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0e0f13"/>
+      <stop offset="1" stop-color="#191b22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- The wordmark at 2.4x: 374x112 becomes 898x269, centred on 600. -->
+  <image x="151" y="150" width="898" height="269" xlink:href="wordmark-dark.svg" href="wordmark-dark.svg"/>
+
+  <!-- The README's line under the masthead, in the app's muted ink. -->
+  <text x="600" y="470" text-anchor="middle" fill="#8b8d98"
+        font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="40" font-weight="700">A word-guessing roguelike.</text>
+</svg>
