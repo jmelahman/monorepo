@@ -5,8 +5,6 @@
   </picture>
 </p>
 
----
-
 <p align="center"><b>A word-guessing roguelike.</b></p>
 
 <p align="center">
@@ -15,6 +13,8 @@
   <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-windows-setup.exe"><img alt="Download for Windows" src="https://img.shields.io/badge/Download-Windows-0078D4?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0wIDBoMTEuNHYxMS40SDB6TTEyLjYgMEgyNHYxMS40SDEyLjZ6TTAgMTIuNmgxMS40VjI0SDB6TTEyLjYgMTIuNkgyNFYyNEgxMi42eiIvPjwvc3ZnPg=="></a>
   <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-x86_64"><img alt="Download for Linux" src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=white"></a>
 </p>
+
+---
 
 <p align="center">
   <img src="assets/screenshot.png" alt="A boss round of 5 Wild in progress: The Drought making vowels score no chips, five relics above the keyboard, and a score of 3,786 against a 4,000 target" width="380">
