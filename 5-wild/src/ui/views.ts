@@ -3058,12 +3058,12 @@ export function ascendView(level: number, on: Handlers): HTMLElement {
 /**
  * What this bundle actually is, in the one place a player will look for it.
  *
- * Both halves are inlined at build time; see vite.config.ts. The version comes
- * from package.json and the hash from the commit, and the hash is the one that
- * can be trusted: Pages redeploys on every push, but the version bump is its own
- * commit landing after the change it names, so for the gap between them the site
- * serves new code under the old number. Where there is no hash to be had the
- * version stands alone rather than trailing a bare separator.
+ * Both halves are inlined at build time; see vite.config.ts. The version is
+ * the last release tag and the hash is the commit, and the hash is the one that
+ * can be trusted: Pages redeploys on every push, but a release is cut once per
+ * phase, so between two tags the site serves new code under the old number.
+ * Where there is no hash to be had the version stands alone rather than
+ * trailing a bare separator.
  */
 function buildStamp(): string {
   const version = `v${__BUILD_VERSION__}`

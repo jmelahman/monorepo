@@ -2,7 +2,6 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "5 Wild",
   "mainBinaryName": "5-wild",
-  "version": "../../package.json",
   "identifier": "com.jmelahman.fivewild",
   "build": {
     "frontendDist": "../../dist"

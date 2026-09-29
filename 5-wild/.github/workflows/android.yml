@@ -36,9 +36,13 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     steps:
+      # Full history, for the tags in it: the version the build stamps is the
+      # newest `v*` tag behind HEAD, and a one-commit clone has none to find.
+      # See `version` in vite.config.ts.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          fetch-depth: 0
       # Caching is off here, unlike the test workflow, and switched off
       # explicitly rather than by omission. This job holds the signing key on a
       # release, and a restored npm cache is writable by any pull request that

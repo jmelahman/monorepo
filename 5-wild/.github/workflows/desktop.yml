@@ -68,9 +68,13 @@ jobs:
       run:
         shell: bash
     steps:
+      # Full history, for the tags in it: the version the build stamps is the
+      # newest `v*` tag behind HEAD, and a one-commit clone has none to find.
+      # See `version` in vite.config.ts.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          fetch-depth: 0
       # No cache, as in android.yml and for its reason: these builds are what a
       # player runs, and a restored cache is writable by any pull request.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # zizmor: ignore[cache-poisoning]
@@ -103,11 +107,18 @@ jobs:
       # and a failed AppImage says only "failed to run linuxdeploy". That was
       # all the first failure here said; the real cause (see TO_SIGNPATH above)
       # was two lines of appimagetool's that only --verbose prints.
+      #
+      # The version is the tag's, handed over as a config patch, because
+      # tauri.conf.json has nowhere to read it from now that package.json holds
+      # none, and left alone Tauri falls back to Cargo.toml's 0.0.0. It is the
+      # same lookup vite.config.ts makes for the title screen, so the installer
+      # and the game it installs agree on their number.
       - name: Build the shell
         working-directory: desktop
         run: |
+          tag=$(git describe --tags --abbrev=0 --match 'v*')
           bun install --frozen-lockfile
-          bun run tauri build --verbose
+          bun run tauri build --verbose --config "{\"version\":\"${tag#v}\"}"
       # Stable names, as the APK has, so a download link can name the file
       # without a version in it. Tauri's own carry the product name, space and
       # all, and the version.

@@ -51,18 +51,21 @@ creates the GitHub release for that tag with generated notes, and attaches the
 APK to it, which is the whole publishing step:
 
 ```sh
-npm version patch --no-git-tag-version   # and commit it
-git tag "v$(npm pkg get version --workspaces=false | tr -d '"')"   # and push that one tag
+git tag v0.8.3 && git push origin v0.8.3
 ```
 
 `gh release create` still works for a release that wants hand-written notes: it
 pushes the tag, and the workflow finds the release already there and only
 attaches the APK.
 
-The tag is `v` plus the version in `package.json`, and that pair moves once per
-phase of work: a phase that changed nothing a player can see does not need a
-release, but anything that does gets a patch bump so the phone has a build to
-install and a number to name it by.
+The tag is the version, and the only place it is written: there is no
+`version` in `package.json` to bump first. The title screen, the telemetry
+payload, the APK and the desktop installers all read the newest `v*` tag at or
+behind the commit they were built from (see `version` in `vite.config.ts`), so a
+build between releases carries the last one's number and its own commit hash.
+The tag moves once per phase of work: a phase that changed nothing a player can
+see does not need a release, but anything that does gets a patch bump so the
+phone has a build to install and a number to name it by.
 
 Every push also builds the APK to prove it still compiles, but that one is
 unsigned and cannot be installed: the signing key belongs to the release path
@@ -78,10 +81,11 @@ npm run apk        # build + cap sync + gradlew assembleDebug
 ```
 
 The same tag builds the desktop app, the web build in Tauri's shell, and
-`desktop.yml` attaches a Linux AppImage and deb and a Windows installer to the
-release once `android.yml` has created it. Those are unsigned, so Windows shows
-SmartScreen's "unknown publisher" once. Building locally needs Rust, bun, and on
-Linux Tauri's WebKitGTK prerequisites:
+`desktop.yml` attaches a Linux tarball, AppImage and deb and a Windows
+installer to the release once `android.yml` has created it. Those are
+unsigned, so Windows shows SmartScreen's "unknown publisher" once. Building
+locally needs Rust, bun, and on Linux Tauri's WebKitGTK prerequisites, and
+comes out as version 0.0.0 unless handed one the way `desktop.yml` does:
 
 ```sh
 npm run build                         # the shell embeds dist/
