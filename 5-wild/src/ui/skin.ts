@@ -46,14 +46,14 @@ export type Skin = "smoke" | "tabletop" | "classic-dark" | "classic-light"
 
 export type Tone = "light" | "dark"
 
-export const SKINS: readonly Skin[] = ["smoke", "tabletop", "classic-dark", "classic-light"]
+export const SKINS: readonly Skin[] = ["smoke", "classic-dark", "classic-light", "tabletop"]
 
 /** The dial's one move, round the four in the order they are listed. */
 export const NEXT_SKIN: Record<Skin, Skin> = {
-  smoke: "tabletop",
-  tabletop: "classic-dark",
+  smoke: "classic-dark",
   "classic-dark": "classic-light",
-  "classic-light": "smoke",
+  "classic-light": "tabletop",
+  tabletop: "smoke",
 }
 
 /**
