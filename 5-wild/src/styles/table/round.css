@@ -33,14 +33,15 @@
   max-width: 96rem;
   padding: var(--space-4) var(--space-5) var(--space-4) var(--space-4);
   --key-h: clamp(2.6rem, 6.4svh, 3.5rem);
-  --tray-h: clamp(4.5rem, 10svh, 6rem);
+  /* A touch up from clamp(4.5rem, 10svh, 6rem), at the owner's asking. */
+  --tray-h: clamp(5rem, 11svh, 6.5rem);
   --boss-font: 0.8125rem;
   --toast-lift: calc(3 * var(--key-h) + 1.5rem + 2rem);
 }
 
 @media (max-height: 48rem) {
   :root.table .round-screen {
-    --tray-h: 4.25rem;
+    --tray-h: 4.5rem;
     row-gap: var(--space-2);
     padding-block: var(--space-3);
   }
@@ -147,8 +148,9 @@
 }
 
 /* A skin whose counters are not the rail's width can say so: `--counter-w` makes
-   each a fixed box (Tabletop's are round, so it is a square) and `--counter-h`
-   is its height. Unset, they are what they always were: half the row each. */
+   each a fixed box and `--counter-h` is its height. Tabletop set both while its
+   counters were round discs; no skin sets them now. Unset, they are what they
+   always were: half the row each. */
 :root.table .dock-line .readout {
   justify-content: var(--counter-justify, normal);
 }
@@ -237,7 +239,7 @@
 }
 
 :root.table .round-screen .relic {
-  flex: 0 0 clamp(4.75rem, 6.6vw, 6rem);
+  flex: 0 0 clamp(5.25rem, 7.2vw, 6.5rem);
   height: var(--tray-h);
 }
 

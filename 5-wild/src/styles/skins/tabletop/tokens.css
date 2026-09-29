@@ -156,7 +156,6 @@
   --boss-wash-out: #7a1a29d9;
   --win-wash: #e38a62a6;
   --gloom: grayscale(0.9) brightness(0.68) contrast(1.05);
-  --reject: var(--mult);
 
   --font-display: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;

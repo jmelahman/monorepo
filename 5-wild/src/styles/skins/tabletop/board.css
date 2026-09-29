@@ -159,25 +159,11 @@
 
 /* ---- the row that was refused ---------------------------------------- */
 
-/* The phone's shake at a larger amplitude, and a terracotta-red flash of the
-   row. There is no jolt through the table and no sparks: a refusal is nothing
-   lost. Inside the row's box, since a flash outside it would read as a second
-   row. 420ms because that is what the app takes the class off at. */
+/* The phone's sway a little wider, and nothing else: no red over the row, no
+   jolt through the table, no sparks. A refusal is nothing lost, and the toast
+   says why. 420ms because that is what the app takes the class off at. */
 :root.skin-tabletop .row.rejected {
-  --shake: 0.625rem;
-}
-
-:root.skin-tabletop .row.rejected::after {
-  content: "";
-  position: absolute;
-  inset: -0.25rem;
-  z-index: 2;
-  pointer-events: none;
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--reject) 16%, transparent);
-  box-shadow: inset 0 0 0 2px var(--reject);
-  opacity: 0;
-  animation: table-reject-flash calc(420ms * var(--pace)) steps(1, end);
+  --sway: 0.5rem;
 }
 
 /* ---- hover ----------------------------------------------------------- */

@@ -1,7 +1,6 @@
 import { centerOf, fxDom, stand } from "../layer"
 import { juiced, tactile, tween } from "../motion"
 import { burst } from "../particles"
-import { shake } from "../shake"
 
 /**
  * The board on the table: letters dropping in, backspace, a refused row, the
@@ -46,7 +45,6 @@ const held = new WeakMap<HTMLElement, string>()
  * and `--accent` of the Smoke Room.
  */
 const DUST = ["#ebe7df", "#9be8d8", "#58c9b3"] as const
-const RED = ["#ff6b73", "#ff3d48", "#ffb3b8"] as const
 
 /** A letter just landed in `tile` (after `patchDraft` drew it). */
 export function typed(tile: HTMLElement): void {
@@ -172,27 +170,6 @@ export function erased(row: HTMLElement): void {
   )
   const remove = () => ghost.remove()
   flight.then(remove, remove)
-}
-
-/** The row being typed was refused (after its `rejected` class went on). */
-export function rejected(row: HTMLElement): void {
-  if (!juiced()) return
-  // The row's own shake and red flash are CSS on `.row.rejected`. Here is what
-  // CSS cannot reach: a jolt through the whole table, and red sparks thrown off
-  // the row. The trauma is small (0.22 of 1, squared by the shake before it is
-  // used) so it reads as a knock rather than an impact, which is what a
-  // refusal is: nothing has been lost.
-  shake(0.22)
-  burst("spark", centerOf(row), {
-    count: 12,
-    speed: 300,
-    angle: -Math.PI / 2,
-    spread: Math.PI * 2,
-    life: 0.36,
-    size: 2.5,
-    gravity: 500,
-    colors: RED,
-  })
 }
 
 /**

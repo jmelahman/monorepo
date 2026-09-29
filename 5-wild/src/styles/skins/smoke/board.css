@@ -29,12 +29,6 @@
  * animations on the same one replace each other, which is how a hover would
  * have cancelled a flip.
  */
-:root.skin-smoke {
-  /* A refusal is the one thing on the table that is red, and it is the
-     multiplier's red: the same colour that says "this is the wrong side of the
-     score" on the rail. */
-  --reject: var(--mult);
-}
 
 /* ---- the cell -------------------------------------------------------- */
 
@@ -125,31 +119,15 @@
 /* ---- TILT: the row that was refused ---------------------------------- */
 
 /*
- * A refused word shakes the row (the phone's `shake` keyframes at a larger
- * `--shake`, with a small tilt riding on `rotate`, the individual property, so
- * the two do not replace each other), and a red frame flashes over it twice.
- * The lengths are 420ms because that is what the app takes the class off at
- * (`replay(row, "rejected", 420)`); longer would be cut off mid-flash.
+ * A refused word sways the row (the phone's `reject-sway`, a little wider), and
+ * that is all. It used to shake at 14px with a tilt riding on its own timing and
+ * blink a red frame over the row twice, three motions on three clocks, which the
+ * owner found jerky; the frame went too, since the toast already says it in
+ * words. 420ms because that is what the app takes the class off at
+ * (`replay(row, "rejected", 420)`).
  */
 :root.skin-smoke .row.rejected {
-  --shake: 0.875rem;
-  animation:
-    shake calc(420ms * var(--pace)) cubic-bezier(0.36, 0.07, 0.19, 0.97),
-    table-reject-tilt calc(420ms * var(--pace)) ease-in-out;
-}
-
-/* Inside the row's own box: the frame is what a hairline around a row can be
-   without a shadow, and it sits over the cells, tinted, not opaque. */
-:root.skin-smoke .row.rejected::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: color-mix(in srgb, var(--reject) 18%, transparent);
-  border: var(--bw) solid var(--reject);
-  opacity: 0;
-  animation: table-reject-flash calc(420ms * var(--pace)) steps(1, end);
+  --sway: 0.5rem;
 }
 
 /* ---- hover ----------------------------------------------------------- */

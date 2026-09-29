@@ -25,45 +25,6 @@
   }
 }
 
-@keyframes table-reject-tilt {
-  0%,
-  100% {
-    rotate: 0deg;
-  }
-  20% {
-    rotate: -0.8deg;
-  }
-  40% {
-    rotate: 0.7deg;
-  }
-  60% {
-    rotate: -0.45deg;
-  }
-  80% {
-    rotate: 0.25deg;
-  }
-}
-
-/* On, off, on, off: two flashes, not one long one, which is what reads as an
-   alarm and not as a highlight. */
-@keyframes table-reject-flash {
-  0%,
-  22% {
-    opacity: 1;
-  }
-  34%,
-  56% {
-    opacity: 0;
-  }
-  62%,
-  84% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
 :root.table .row-glint {
   position: fixed;
   overflow: hidden;

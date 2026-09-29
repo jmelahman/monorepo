@@ -218,7 +218,9 @@
   color: var(--on-tile);
   border: 1px solid var(--line);
   border-top: 2px solid var(--rare, var(--rare-common));
-  box-shadow: 0 0.25rem 0.75rem #0009;
+  /* Enough to lift it off the card under it and no more: it was
+     `0 0.25rem 0.75rem #0009`, a dark cloud round a four-word panel. */
+  box-shadow: 0 0.125rem 0.375rem #0006;
   /* Above the small rung rather than on it. Everything else set this small is a
      label on a card the player already recognizes: a name, a price, a tag. It
      is being glanced at; this is the one panel in the game that has to be *read*,

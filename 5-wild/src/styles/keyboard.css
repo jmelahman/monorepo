@@ -31,9 +31,10 @@
      a two-line name over a growth badge came to 47px, so a relic that started
      counting mid-round pushed the board down. 3rem held that case as it was,
      and cost the board 16px across the two rows; 2.5rem, the tray's old
-     minimum, holds it with the card packed tighter below.
+     minimum, holds it with the card packed tighter below. 2.75rem since the
+     owner asked for the relics a touch bigger: 4px a row, 8px off the board.
      See `.round-screen .relic` and `.round-screen .consumables`. */
-  --tray-h: 2.5rem;
+  --tray-h: 2.75rem;
 }
 
 /* The tray's cards at the pinned height rather than on the tray, whose padding

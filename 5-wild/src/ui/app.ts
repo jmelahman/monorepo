@@ -638,8 +638,9 @@ export class App {
     this.sound.cue({ name: "reject" })
     if (this.state.phase !== "round") return
     const row = this.root.querySelector(`.row[data-row="${this.state.round.guesses.length}"]`)
+    // The row sways and that is all: the red frame and the sparks the table
+    // threw off it went when the owner asked for a calmer refusal.
     replay(row, "rejected", 420)
-    if (row instanceof HTMLElement) board.rejected(row)
   }
 
   private bump(selector: string): void {

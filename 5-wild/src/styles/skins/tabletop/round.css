@@ -3,19 +3,14 @@
 /*
  * The rail: one walnut panel. Everything in it is a piece set into the panel and
  * not a panel of its own, so the rail stays the quietest surface on the screen
- * while the score card (bone) and the counters (round) are what the eye finds.
+ * while the score card (bone) and the counters are what the eye finds.
  * It is shared with the shop, whose header is the same rail.
  *
- * The counters are sized by variables the layout offers (`--counter-*`, see
- * `../../table/round.css`), and set here because a round counter is a look: fixed boxes,
- * not half the row each.
+ * The counters used to be round, sized as fixed squares through the layout's
+ * `--counter-*` variables (see `../../table/round.css`). They are plaques now,
+ * half the row each as Classic's blocks are, so none of those is set.
  */
 :root.skin-tabletop {
-  --counter-h: clamp(4.75rem, 11svh, 6.5rem);
-  --counter-w: var(--counter-h);
-  --counter-font: clamp(2rem, 5.6svh, 3.25rem);
-  --counter-flex: 0 0 auto;
-  --counter-justify: center;
   --frame-pad: 1.5rem;
 }
 
@@ -100,50 +95,50 @@
   border-radius: var(--radius-s);
 }
 
-/*
- * Chips and mult: two round counters, blue and red, each a disc with a darker
- * ring cut into its face, a pale ring inside that, and a slab under it, as a
- * pair of stacked chips on the table. The numbers are white and the discs are
- * the block's own colour, which is what the reader matches a pop to. A disc,
- * unlike the Smoke Room's well, does not need a bar to say which it is: it is
- * blue or it is red.
- */
 :root.skin-tabletop .dock-line .readout .chips,
 :root.skin-tabletop .dock-line .readout .mult {
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-m);
   justify-content: center;
-  padding: 0;
   color: #fff;
 }
 
+/*
+ * Chips and mult: two plaques, blue and red, the rectangular chips a high-stakes
+ * table plays with, each with a darker ring set into its face, a pale line
+ * inside that, and a slab under it. The numbers are white and the faces are the
+ * block's own colour, which is what the reader matches a pop to. They were round
+ * discs until the owner asked for the chip's rectangular shape; a disc sized to
+ * the rail was a fixed square with the number crowded into it, and a plaque
+ * takes the row's width as Classic's blocks do.
+ */
 :root.skin-tabletop .readout .chips {
   background: #2f63b8;
   box-shadow:
-    inset 0 0 0 0.3125rem #24509a,
-    inset 0 0 0 0.375rem #ffffff2e,
-    0 0.25rem 0 #1b3c74,
-    0 0.5rem 0.875rem #0009;
+    inset 0 0 0 0.1875rem #24509a,
+    inset 0 0 0 0.25rem #ffffff2e,
+    0 0.1875rem 0 #1b3c74,
+    0 0.375rem 0.625rem #0008;
 }
 
 :root.skin-tabletop .readout .mult {
   background: #b8383f;
   box-shadow:
-    inset 0 0 0 0.3125rem #972c33,
-    inset 0 0 0 0.375rem #ffffff2e,
-    0 0.25rem 0 #6f1f25,
-    0 0.5rem 0.875rem #0009;
+    inset 0 0 0 0.1875rem #972c33,
+    inset 0 0 0 0.25rem #ffffff2e,
+    0 0.1875rem 0 #6f1f25,
+    0 0.375rem 0.625rem #0008;
 }
 
-/* Solved: both counters go to brass, the colour of what the round paid. */
+/* Solved: both plaques go to brass, the colour of what the round paid. */
 :root.skin-tabletop .readout.solved .chips,
 :root.skin-tabletop .readout.solved .mult {
   background: #a67f27;
   box-shadow:
-    inset 0 0 0 0.3125rem #866520,
-    inset 0 0 0 0.375rem #ffffff2e,
-    0 0.25rem 0 #5c4614,
-    0 0.5rem 0.875rem #0009;
+    inset 0 0 0 0.1875rem #866520,
+    inset 0 0 0 0.25rem #ffffff2e,
+    0 0.1875rem 0 #5c4614,
+    0 0.375rem 0.625rem #0008;
 }
 
 :root.skin-tabletop .readout .times {

@@ -245,13 +245,47 @@
 }
 
 /*
- * A refused guess, shaken on the same curve at a fixed amplitude. It answers
- * which of the things on screen was refused, which is the question a player has
- * in the half second before they get round to reading the toast.
+ * A refused guess sways and settles. It answers which of the things on screen
+ * was refused, which is the question a player has in the half second before
+ * they get round to reading the toast.
+ *
+ * It borrowed the screen shake above until the owner found it jerky, and it
+ * was: ten keyframes a tenth apart, each a straight line to the next at a
+ * full-amplitude reversal, so the row changed direction at speed every 40ms.
+ * This is a damped swing instead: five turns, each smaller than the last, and
+ * each eased in and out (`ease-in-out` per keyframe), so the row slows to a
+ * stop at the end of every swing the way a pendulum does rather than bouncing
+ * off a wall. 420ms, which is when the app takes the class off.
  */
 .row.rejected {
-  --shake: 6px;
-  animation: shake calc(400ms * var(--pace)) cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  --sway: 6px;
+  animation: reject-sway calc(420ms * var(--pace)) both;
+}
+
+@keyframes reject-sway {
+  0% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: cubic-bezier(0.33, 0, 0.67, 1);
+  }
+  14% {
+    transform: translate3d(calc(var(--sway) * -1), 0, 0);
+    animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  }
+  34% {
+    transform: translate3d(calc(var(--sway) * 0.75), 0, 0);
+    animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  }
+  54% {
+    transform: translate3d(calc(var(--sway) * -0.45), 0, 0);
+    animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  }
+  74% {
+    transform: translate3d(calc(var(--sway) * 0.2), 0, 0);
+    animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 @keyframes shake {
