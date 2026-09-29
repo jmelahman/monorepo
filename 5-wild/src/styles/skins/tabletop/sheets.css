@@ -1,0 +1,21 @@
+/* The look half of `sheets.css`; the layout, and the reasons for it, are in `../../table/sheets.css`. */
+
+:root.skin-tabletop .sheet {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: var(--panel);
+  box-shadow: var(--top-light), var(--shadow-lift);
+}
+
+:root.skin-tabletop .sheet-lead {
+  color: var(--fg);
+}
+
+:root.skin-tabletop .sheet-heading {
+  color: var(--muted);
+}
+
+:root.skin-tabletop .help-tutorial {
+  border-radius: var(--radius-m);
+  background: var(--well);
+}

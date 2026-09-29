@@ -1,0 +1,182 @@
+/* The look half of `round.css`; the layout, and the reasons for it, are in `../../table/round.css`. */
+
+/*
+ * The rail: one panel, one hairline, one notch at each corner. Everything in it
+ * is a *well* (the same panel, one step darker), so the numbers read as
+ * things set into the rail and the rail itself stays the quietest surface on
+ * the screen. It is shared with the shop, whose header is the same rail.
+ */
+:root.skin-smoke :is(.round-screen, .shop-screen) .hud {
+  border: var(--rim);
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke :is(.round-screen, .shop-screen) .hud .round-token {
+  filter: none;
+}
+
+:root.skin-smoke .stage {
+  color: var(--muted);
+}
+
+/* The score, in its own well. */
+:root.skin-smoke .round-screen .hud-score {
+  border-radius: 0;
+  background: var(--well);
+  border: var(--rim);
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .hud-score .score {
+  color: var(--fg);
+}
+
+:root.skin-smoke .hud-score .target {
+  color: var(--muted);
+}
+
+/* A solved round: the score goes the accent's colour. No glow, since a glow is
+   light and this room has one lamp, which is the smoke. */
+:root.skin-smoke .hud-score.met .score {
+  color: var(--accent);
+}
+
+/* The progress bar: a trough with a flat fill, which the count-up drives with
+   `--fill` exactly as on the phone. */
+:root.skin-smoke .round-screen .hud .meter {
+  border-radius: 0;
+  border: var(--rim);
+  background: var(--well);
+  box-shadow: none;
+}
+
+:root.skin-smoke .meter-fill {
+  background: var(--accent);
+  border-radius: 0;
+}
+
+:root.skin-smoke .meter-solve {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+:root.skin-smoke .hud:has(.hud-score.met) .meter-fill {
+  background: var(--accent-hi);
+}
+
+:root.skin-smoke .dock-line .category {
+  border: var(--rim);
+  border-radius: 0;
+  background: var(--well);
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .category.fired {
+  color: var(--accent);
+}
+
+:root.skin-smoke .category-level {
+  color: var(--muted);
+  background: none;
+  border-radius: 0;
+}
+
+/*
+ * Chips and mult: a well each, the number in the block's own colour, and a
+ * four-pixel bar of the same colour along the top. That colour is what the
+ * reader matches a pop to on its way in, so it is the one thing on the block
+ * that is not the room's. The casino filled the whole block with it.
+ */
+:root.skin-smoke .dock-line .readout .chips,
+:root.skin-smoke .dock-line .readout .mult {
+  border: var(--rim);
+  border-radius: 0;
+  background: var(--well);
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .readout .chips {
+  color: var(--chips);
+  box-shadow: inset 0 0.25rem 0 var(--chips);
+}
+
+:root.skin-smoke .readout .mult {
+  color: var(--mult);
+  box-shadow: inset 0 0.25rem 0 var(--mult);
+}
+
+/* Solved: both blocks go to cash, the colour of what the round paid. */
+:root.skin-smoke .readout.solved .chips,
+:root.skin-smoke .readout.solved .mult {
+  color: var(--gold);
+  box-shadow: inset 0 0.25rem 0 var(--gold);
+}
+
+:root.skin-smoke .readout .times {
+  color: var(--muted);
+}
+
+/* The mult not yet known: an empty well with a dashed hairline. */
+:root.skin-smoke .dock-line .readout.drafting .mult.pending {
+  background: none;
+  border: var(--bw) dashed color-mix(in srgb, var(--mult) 55%, transparent);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--mult) 80%, var(--fg));
+}
+
+/* The boss: a band across the foot of the panel, full bleed, tinted with the
+   mult's red at a tenth of its strength so it says "danger" without shouting
+   over the tile colours. */
+:root.skin-smoke .round-screen .hud .boss {
+  border-radius: 0;
+  border-block: var(--rim);
+  background: color-mix(in srgb, var(--mult) 14%, var(--panel));
+  color: var(--fg);
+}
+
+:root.skin-smoke .boss strong {
+  color: var(--mult);
+}
+
+:root.skin-smoke .hud:has(.boss) {
+  border-color: color-mix(in srgb, var(--mult) 55%, var(--line));
+}
+
+:root.skin-smoke :is(.round-screen, .shop-screen) .hud-gold {
+  border-radius: 0;
+  border: var(--rim);
+  background: var(--well);
+  box-shadow: none;
+  clip-path: var(--cut);
+  color: var(--gold);
+}
+
+:root.skin-smoke :is(.round-screen, .shop-screen) .menu-button {
+  border-radius: 0;
+}
+
+:root.skin-smoke .round-screen .decor-toggle {
+  border: var(--rim);
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .round-screen .decor-toggle.bare {
+  background: none;
+  border: var(--bw) dashed var(--slot-line);
+}
+
+/* Toast: the play area's centre, not the page's. */
+:root.skin-smoke .round-screen .toast {
+  background: var(--panel);
+  border: var(--rim);
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--cut);
+}

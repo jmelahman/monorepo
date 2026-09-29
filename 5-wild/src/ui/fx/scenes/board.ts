@@ -274,7 +274,7 @@ export function dealt(screen: HTMLElement): void {
  * down from a hand's height, column by column, and settles with one small
  * bounce. No blur, no glowing rim and no reel overshoot, which is the Smoke
  * Room's machine; here it is a tile meeting a table, so it drops and stops. The
- * whole deal is 24ms a tile step and about 0.6s end to end, and it is
+ * whole deal is 60ms a column and 24ms a row, about 0.7s end to end at x1 (`tween` scales it by the pace and skips it under reduced motion), and it is
  * `opacity` and `transform` only, like everything else on the board.
  */
 function dealtByHand(screen: HTMLElement): void {

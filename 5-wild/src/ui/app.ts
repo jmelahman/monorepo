@@ -27,7 +27,7 @@ import {
 import { chosenAscension, Profile } from "./meta"
 import { Music } from "./music"
 import { seal, unseal } from "./seal"
-import { currentSkin, NEXT_SKIN, setSkin } from "./skin"
+import { currentSkin, NEXT_SKIN } from "./skin"
 import { loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
 import type { Consent, RunEnd, RunLog } from "./telemetry"
 import {
@@ -42,7 +42,7 @@ import {
   enabled as sharingEnabled,
   stepFor,
 } from "./telemetry"
-import { currentTheme, OTHER_THEME, setTheme } from "./theme"
+import { setSkin } from "./theme"
 import type { Chrome, Decor, Handlers, SoundLevel } from "./views"
 import {
   aboutView,
@@ -1016,8 +1016,10 @@ export class App {
       this.render()
     },
     // From the class on the root rather than a field: the shell applied the
-    // stored pick there before the first paint, and it is the one place the
-    // stylesheet reads it from, so it cannot disagree with what is on screen.
+    // look there before the first paint, and it is the one place the stylesheet
+    // reads it from, so it cannot disagree with what is on screen. That is also
+    // what makes the first tap right before there is a pick: the look the player
+    // sees, whether they chose it or the window did, is the one this leaves.
     cycleSkin: () => {
       setSkin(NEXT_SKIN[currentSkin()])
       this.render()
@@ -1025,13 +1027,6 @@ export class App {
     toggleAmbience: () => {
       this.ambience = !this.ambience
       setAmbience(this.ambience)
-      this.render()
-    },
-    // From the look on screen rather than a stored pick, because before the
-    // first tap there is no pick: the device's look is what the player sees, so
-    // it is what the tap leaves.
-    toggleTheme: () => {
-      setTheme(OTHER_THEME[currentTheme()])
       this.render()
     },
     /**
@@ -1166,7 +1161,6 @@ export class App {
       speed: this.speed,
       ambience: this.ambience,
       skin: currentSkin(),
-      theme: currentTheme(),
       lang: this.lang,
       wordsDeferred: this.wordsDeferred,
       coach: this.coach,

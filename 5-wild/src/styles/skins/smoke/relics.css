@@ -1,0 +1,22 @@
+/*
+ * The relic tray, on the table: cards resting in their seats, on the round and
+ * in the shop alike.
+ *
+ * They do not move on their own. This file used to give every tray card an idle
+ * bob on its own phase, a card game's way of saying a thing is alive; the table
+ * is a counter, and what is on a counter is still until somebody touches it.
+ * What a relic does is light up when it scores (`scoring.css`) and lift when the
+ * mouse is on it (`cards.css`), and that is the whole of its life, which is what
+ * makes the lit moment mean something.
+ *
+ * The brass plate that used to frame each one is gone with the rest of the
+ * brass: the card's own rarity bar (`cards.css`) is its frame now.
+ */
+
+/* The price a relic sells for is the thing a tap in the shop does, so it is
+   worth being able to find: the cash colour, like every other price. */
+:root.skin-smoke .shop-screen .relic .sell {
+  color: var(--gold);
+  -webkit-text-stroke: 0;
+  paint-order: normal;
+}

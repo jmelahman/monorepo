@@ -1,60 +1,35 @@
 import { readFileSync } from "node:fs"
 import { afterEach, describe, expect, it } from "vitest"
-import {
-  BACKDROP,
-  loadTheme,
-  OTHER_THEME,
-  readTheme,
-  resolveTheme,
-  THEMES,
-} from "../../src/ui/theme"
+import { loadLegacyTone, loadSkin, SKINS, TONE } from "../../src/ui/skin"
+import { BACKDROP } from "../../src/ui/theme"
 
 /**
- * The theme setting, which is a look the player picked or, until they pick,
- * none at all, in which case the device decides. So the part worth checking is
- * the step between them, where a pick or its absence becomes `light` or `dark`.
+ * What the look's tone is keyed to. The setting itself is `skin.test.ts`; what
+ * is checked here is the storage it reads (two keys, one of them retired) and
+ * the tone's contract with the parts of the shell that live outside the page.
  */
 describe("theme", () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "localStorage")
   })
 
-  it("starts with no pick", () => {
-    expect(readTheme(null)).toBeNull()
-  })
+  const store = (items: Record<string, string>): void => {
+    Object.defineProperty(globalThis, "localStorage", {
+      value: { getItem: (key: string) => items[key] ?? null },
+      configurable: true,
+    })
+  }
 
-  it("toggles between the two looks", () => {
-    for (const theme of THEMES) {
-      expect(OTHER_THEME[theme]).not.toBe(theme)
-      expect(OTHER_THEME[OTHER_THEME[theme]]).toBe(theme)
-    }
-  })
-
-  it("reads a stored pick back as itself", () => {
-    for (const stored of THEMES) expect(readTheme(stored)).toBe(stored)
-  })
-
-  it("reads anything else as no pick", () => {
-    for (const raw of ["", "system", "Light", "DARK", "auto", "sepia", "null", "[]"]) {
-      expect(readTheme(raw)).toBeNull()
-    }
-  })
-
-  it("asks the device only when nothing was picked", () => {
-    expect(resolveTheme(null, true)).toBe("light")
-    expect(resolveTheme(null, false)).toBe("dark")
-    // A player who picked one is not overruled by the phone.
-    for (const prefersLight of [true, false]) {
-      expect(resolveTheme("light", prefersLight)).toBe("light")
-      expect(resolveTheme("dark", prefersLight)).toBe("dark")
-    }
+  it("paints the page behind every look a tone has a colour for", () => {
+    for (const skin of SKINS) expect(BACKDROP[TONE[skin]]).toMatch(/^#[0-9a-f]{6}$/)
   })
 
   it("launches Android on the same backdrop the page paints", () => {
     // The launch window and the WebView's own background are `launchBackground`,
-    // one per theme, and both are on screen before the page exists. A pair that
+    // one per tone, and both are on screen before the page exists. A pair that
     // disagrees with `BACKDROP` is a flash on every launch, and nothing but this
-    // reads both files.
+    // reads both files. The look reaches them as its tone (`ThemePlugin` is
+    // handed `light` or `dark`), so four looks still have two launch windows.
     const res = "android/app/src/main/res"
     const launch = (dir: string): string =>
       readFileSync(`${res}/${dir}/colors.xml`, "utf8")
@@ -73,14 +48,24 @@ describe("theme", () => {
       },
       configurable: true,
     })
-    expect(loadTheme()).toBeNull()
+    expect(loadSkin()).toBeNull()
+    expect(loadLegacyTone()).toBeNull()
   })
 
-  it("loads what was stored", () => {
-    Object.defineProperty(globalThis, "localStorage", {
-      value: { getItem: (key: string) => (key === "5wild:theme" ? "light" : null) },
-      configurable: true,
-    })
-    expect(loadTheme()).toBe("light")
+  it("loads a pick from the skin key", () => {
+    store({ "5wild:skin": "tabletop" })
+    expect(loadSkin()).toBe("tabletop")
+    expect(loadLegacyTone()).toBeNull()
+  })
+
+  it("files an old Classic under Classic dark", () => {
+    store({ "5wild:skin": "classic" })
+    expect(loadSkin()).toBe("classic-dark")
+  })
+
+  it("still reads the theme key an earlier build wrote", () => {
+    store({ "5wild:theme": "light" })
+    expect(loadSkin()).toBeNull()
+    expect(loadLegacyTone()).toBe("light")
   })
 })

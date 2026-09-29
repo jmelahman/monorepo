@@ -1,62 +1,58 @@
 import { Capacitor, registerPlugin } from "@capacitor/core"
 import { StatusBar, Style } from "@capacitor/status-bar"
-import { syncTable } from "./table"
+import {
+  currentSkin,
+  loadLegacyTone,
+  loadSkin,
+  resolveSkin,
+  SKINS,
+  type Skin,
+  saveSkin,
+  skinClass,
+  TONE,
+  type Tone,
+} from "./skin"
+import { syncTable, watchTable } from "./table"
 
 /**
- * Light or dark, and until the player says which, whichever the device is.
+ * Putting the look on the page: which skin, and everything that is keyed on its
+ * tone.
  *
- * Two looks and no "system" rung. Following the device is where every install
- * starts, and it lasts until the first tap; after that the game keeps what was
- * picked. A third setting for "follow the phone" earned its place in neither
- * control: the dial had to draw it as a half-filled circle nobody reads, and on
- * a phone already in the look being followed, one of its three taps changed
- * nothing on screen. The price is that a player who picks cannot go back to
- * following except by clearing the app's data, which for a colour scheme is a
- * fair trade for a switch that always does what its face shows.
+ * `skin.ts` decides what the look is; this applies it, and is the one place that
+ * touches the root, the browser's chrome and the Android shell for it. The
+ * stylesheet sees two things and only two: the `skin-*` class, for a look's own
+ * rules, and `data-theme`, already resolved to `light` or `dark`, for the
+ * phone's palette and everything that predates skins.
  *
- * The stylesheet sees one thing: `data-theme` on the root, already resolved.
  * Resolving here rather than with a `prefers-color-scheme` block in the sheet
  * keeps each palette written out once instead of twice, once under the
  * attribute and again under the media query, which is a pair that drifts the
- * first time someone edits one and not the other.
+ * first time someone edits one and not the other. The cost is that the device
+ * can change its mind under a running game, which a media query would have
+ * followed for free, and the window can cross into or out of the table's
+ * layout, which moves the default look. `watch` follows both, and only while
+ * nothing has been picked: a pick is the player's and the window does not
+ * overrule it.
  *
- * The cost is that the device can change its mind under a running game, which a
- * media query would have followed for free. `watch` is that follow.
+ * `data-theme` carries the tone and not the skin so that nothing keyed on it had
+ * to change: `ThemePlugin.java`'s launch window, `BACKDROP`, the status bar, the
+ * light tile inks in `board.css` and `keyboard.css`. The one visible price is
+ * on Android, where the launch window is drawn in the tone's colour before the
+ * page exists: Smoke's ground is `#06070a` and Tabletop's walnut `#1a110b`,
+ * against the launch `#0e0f13`. Smoke is a step darker and Tabletop a step
+ * warmer, both dark to dark, so the one frame of Classic dark's window before
+ * the page paints is a shift in tint and not a flash; it was judged from the
+ * values and not measured on a device.
  */
 
-const THEME_KEY = "5wild:theme"
-
-export type Theme = "light" | "dark"
-
-export const THEMES: readonly Theme[] = ["light", "dark"]
-
-/** The dial's one move. */
-export const OTHER_THEME: Record<Theme, Theme> = { light: "dark", dark: "light" }
+export type Theme = Tone
 
 /**
- * What the page behind the game is, per look. `--bg` in the stylesheet, repeated
+ * What the page behind the game is, per tone. `--bg` in the stylesheet, repeated
  * because the browser chrome and the Android status bar are painted from it
  * outside the stylesheet's reach.
  */
 export const BACKDROP: Record<Theme, string> = { dark: "#0e0f13", light: "#f4f3ef" }
-
-/**
- * A stored pick, or null for "never picked", which is what a first launch and
- * anything unrecognized both get.
- */
-export const readTheme = (raw: string | null): Theme | null =>
-  THEMES.find((theme) => theme === raw) ?? null
-
-export const resolveTheme = (picked: Theme | null, prefersLight: boolean): Theme =>
-  picked ?? (prefersLight ? "light" : "dark")
-
-export function loadTheme(): Theme | null {
-  try {
-    return readTheme(localStorage.getItem(THEME_KEY))
-  } catch {
-    return null
-  }
-}
 
 const LIGHT_QUERY = "(prefers-color-scheme: light)"
 
@@ -64,65 +60,86 @@ const prefersLight = (): boolean =>
   typeof matchMedia === "function" && matchMedia(LIGHT_QUERY).matches
 
 /**
- * `ThemePlugin.java`, which hands the choice to Android so the next launch
- * window is drawn in it. The page can only theme itself once it exists, and
- * the launch is over by then.
+ * `ThemePlugin.java`, which hands the tone to Android so the next launch window
+ * is drawn in it. The page can only theme itself once it exists, and the launch
+ * is over by then.
  */
 const NativeTheme = registerPlugin<{ set(options: { theme: Theme | "system" }): Promise<void> }>(
   "Theme",
 )
 
-let picked: Theme | null = null
+let picked: Skin | null = null
+let legacy: Tone | null = null
 let watching = false
 
-/** The look on screen now, which is what the dial shows and what a tap leaves. */
-export const currentTheme = (): Theme => resolveTheme(picked, prefersLight())
+/** What the player has said about tone, with or without a skin: a pick or an old theme. */
+const stated = (): Tone | null => (picked ? TONE[picked] : legacy)
+
+/** The tone of the look on screen now. */
+export const currentTheme = (): Theme => TONE[currentSkin()]
 
 function apply(): void {
-  const resolved = currentTheme()
-  document.documentElement.dataset.theme = resolved
-  // The table look is dark-only, so it is re-asked every time the theme lands.
+  // The layout first: the default look depends on it.
   syncTable()
+  const skin = resolveSkin({
+    picked,
+    legacy,
+    table: document.documentElement.classList.contains("table"),
+    prefersLight: prefersLight(),
+  })
+  const root = document.documentElement
+  for (const other of SKINS) root.classList.toggle(skinClass(other), other === skin)
+  const tone = TONE[skin]
+  root.dataset.theme = tone
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
     // Both media-qualified tags, so whichever one the browser is reading agrees
     // with the setting rather than with the device.
-    meta.content = BACKDROP[resolved]
+    meta.content = BACKDROP[tone]
   }
   if (Capacitor.isNativePlatform()) {
     // Style names the *background* it suits: Light is dark icons on a light bar.
-    const style = resolved === "light" ? Style.Light : Style.Dark
+    const style = tone === "light" ? Style.Light : Style.Dark
     StatusBar.setStyle({ style }).catch(() => {})
-    StatusBar.setBackgroundColor({ color: BACKDROP[resolved] }).catch(() => {})
-    NativeTheme.set({ theme: picked ?? "system" }).catch(() => {})
+    StatusBar.setBackgroundColor({ color: BACKDROP[tone] }).catch(() => {})
+    // "system" only while the player has said nothing: the phone's default look
+    // follows the device, and so must the window it starts in.
+    NativeTheme.set({ theme: stated() ?? "system" }).catch(() => {})
   }
 }
 
 /**
- * Follow the device until the player picks. Installed once, on the first
- * `setTheme`, and it reads `picked` rather than closing over a theme, so the
- * first pick stops the following without anything being torn down.
+ * Follow the device and the window until the player picks. Installed once, and
+ * it reads `picked` rather than closing over a look, so the first pick stops
+ * the following without anything being torn down. The layout listener is
+ * unconditional, since a window crossing the room query changes `.table`
+ * whatever the look, and `apply` is what re-lands it.
  */
 function watch(): void {
-  if (watching || typeof matchMedia !== "function") return
+  if (watching) return
   watching = true
-  matchMedia(LIGHT_QUERY).addEventListener("change", () => {
-    if (picked === null) apply()
-  })
+  watchTable(apply)
+  if (typeof matchMedia === "function") {
+    matchMedia(LIGHT_QUERY).addEventListener("change", () => {
+      if (picked === null) apply()
+    })
+  }
 }
 
 /**
- * Apply it to the document, and remember it. Null is "not picked", which is
- * only ever what `loadTheme` hands back at startup, so it is applied and not
- * written: nothing was chosen, and the key stays absent until something is.
+ * Read what was stored and put it on the page, before the first render. Writes
+ * nothing: a first launch has chosen nothing and the keys stay absent until
+ * something is.
  */
-export function setTheme(theme: Theme | null): void {
-  picked = theme
+export function initLook(): void {
+  picked = loadSkin()
+  legacy = loadLegacyTone()
   watch()
   apply()
-  if (theme === null) return
-  try {
-    localStorage.setItem(THEME_KEY, theme)
-  } catch {
-    // The setting lasts the session instead of the install. Nothing else breaks.
-  }
+}
+
+/** Apply a pick and remember it. */
+export function setSkin(skin: Skin): void {
+  picked = skin
+  apply()
+  saveSkin(skin)
 }

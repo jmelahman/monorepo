@@ -1,0 +1,22 @@
+/* The look half of `sheets.css`; the layout, and the reasons for it, are in `../../table/sheets.css`. */
+
+:root.skin-smoke .sheet {
+  border: var(--rim);
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .sheet-lead {
+  color: var(--fg);
+}
+
+:root.skin-smoke .sheet-heading {
+  color: var(--muted);
+}
+
+:root.skin-smoke .help-tutorial {
+  border-radius: 0;
+  background: var(--well);
+}

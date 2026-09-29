@@ -1,59 +1,145 @@
 /**
- * The desktop table's skin, as a player setting.
+ * The look of the game, as a player setting: four presets, on every layout.
  *
- * The table is one layout and three dressings. The layout (where the rail, the
- * board and the keyboard sit, how big they are) is written once under
- * `:root.table`; the look (colours, type, how a button is drawn, what the room
- * behind it is) is written once per skin under `:root.table.skin-<name>`, so a
- * new skin is a directory of rules that restate no geometry. That is the split
- * `styles/table/index.css` describes, and this is its switch.
+ * It used to be two settings. A theme (light or dark) was the phone's, and a
+ * skin (Smoke, Classic, Tabletop) was the desktop table's, and the light theme
+ * switched the table off altogether. That made a pair of questions with one
+ * answer per screen shape, and left a phone player no way to ask for the
+ * walnut. The two are one thing now, because light and dark are only two of the
+ * looks: the phone's own board, in either tone, is Classic.
  *
- * - `smoke` is the default: a dark room, one accent, pixel-edged panels and a
- *   slow smoke behind them. The only skin with a moving background, and so the
- *   only one "Table lights" means anything to.
- * - `classic` is the phone's own look laid out on the table: no rule of the
- *   table's look applies to it, so the phone's partials show through. It is
- *   also the one skin with no effects at all (see `hasFx`), which is the point
- *   of it: a player who wants the desktop's room to hold still gets the board
- *   the phone has, at desktop size.
+ * - `smoke` is a dark room, one accent, pixel-edged panels and a slow smoke
+ *   behind them. The only look with a moving background, and so the only one
+ *   the "moving background" row means anything to.
  * - `tabletop` is a board game's walnut, bone and terracotta, with a still
  *   room and only the motion of things being handled (see `Fx`).
+ * - `classic-dark` and `classic-light` are the phone's two looks as they always
+ *   were: no rule of any skin applies to them, so what shows is the phone's
+ *   partials in the phone's tokens. Classic is also the look with no effects at
+ *   all, which is the point of it.
  *
- * Meaningful only under `.table`: on a phone or the light theme the class is
- * on the root all the same and nothing is written under it, which is what
- * keeps the setting from needing to know whether it currently applies. It is
- * applied before the first render for the reason the theme is, so nobody sees
- * one skin flash into another, and it is always exactly one of the three
- * classes, never none: the stylesheet has no "no skin" branch to keep in step.
+ * Layout is a different question and is not this one. Where the rail, the board
+ * and the keyboard sit is `.table` on the root (`table.ts`, wide landscape
+ * outside the APK), and every look is written to work on both: a look that
+ * applies on any layout is under `:root.skin-<name>`, and only a rule that
+ * depends on the table's geometry is under `:root.table.skin-<name>`.
  *
- * The key is absent until a pick, and absent, unknown or a value from a build
- * that had other names all read as `smoke`, so a stale value costs a player the
- * default look and never a broken page.
+ * Exactly one `skin-*` class is on the root, never none: the stylesheet has no
+ * "no skin" branch to keep in step. Its *tone* goes to `data-theme`, the one
+ * attribute the phone's palette, the browser chrome and the Android launch
+ * window already key on: `classic-light` is `light` and everything else is
+ * `dark`, so none of them had to learn there are four looks.
+ *
+ * The key is absent until a pick, and until then the look is a default that
+ * follows the window rather than a choice (see `resolveSkin`), so an install
+ * that never touches the dial keeps behaving as the phone always has.
  */
 
 const KEY = "5wild:skin"
 
-export type Skin = "smoke" | "classic" | "tabletop"
+/** The key the theme dial wrote before the two settings were one. Read, never written. */
+const LEGACY_THEME_KEY = "5wild:theme"
 
-export const SKINS: readonly Skin[] = ["smoke", "classic", "tabletop"]
+export type Skin = "smoke" | "tabletop" | "classic-dark" | "classic-light"
 
-export const DEFAULT_SKIN: Skin = "smoke"
+export type Tone = "light" | "dark"
 
-/** The row's one move, round the three in the order they are listed. */
+export const SKINS: readonly Skin[] = ["smoke", "tabletop", "classic-dark", "classic-light"]
+
+/** The dial's one move, round the four in the order they are listed. */
 export const NEXT_SKIN: Record<Skin, Skin> = {
-  smoke: "classic",
-  classic: "tabletop",
-  tabletop: "smoke",
+  smoke: "tabletop",
+  tabletop: "classic-dark",
+  "classic-dark": "classic-light",
+  "classic-light": "smoke",
 }
 
-export const readSkin = (raw: string | null): Skin =>
-  SKINS.find((skin) => skin === raw) ?? DEFAULT_SKIN
+/**
+ * Light or dark, per look: what `data-theme` says, what the browser chrome and
+ * the Android status bar are painted as, and which launch window the system
+ * shows. Smoke and Tabletop are dark rooms and say so, which is what keeps the
+ * phone's light palette from ever being applied under them.
+ */
+export const TONE: Record<Skin, Tone> = {
+  smoke: "dark",
+  tabletop: "dark",
+  "classic-dark": "dark",
+  "classic-light": "light",
+}
 
-export function loadSkin(): Skin {
+/**
+ * A stored pick, or null for "never picked". `classic` is the one name an
+ * earlier build wrote that this one has no look called: it was the phone's
+ * board on the table, and it was only ever offered on the dark table, so it is
+ * Classic dark. Anything else unrecognised is no pick rather than a wrong one,
+ * which costs a player the default look and never a broken page.
+ */
+export const readSkin = (raw: string | null): Skin | null =>
+  raw === "classic" ? "classic-dark" : (SKINS.find((skin) => skin === raw) ?? null)
+
+/** A stored theme from before the merge, or null. Only `light` and `dark` ever existed. */
+export const readLegacyTone = (raw: string | null): Tone | null =>
+  raw === "light" || raw === "dark" ? raw : null
+
+export type Standing = {
+  /** What the player chose with the dial, or null if they never have. */
+  picked: Skin | null
+  /** What they chose with the old dial, which only counts while `picked` is null. */
+  legacy: Tone | null
+  /** Whether the table layout is on: the window, not the setting. */
+  table: boolean
+  /** What the device says, for the one case that asks it. */
+  prefersLight: boolean
+}
+
+/**
+ * The look on screen. A pick always wins. With none, three cases, in the order
+ * the migration was specified:
+ *
+ * - An old `light` pick is Classic light everywhere, because the light theme was
+ *   the clean board and a player who chose it chose that.
+ * - An old `dark` pick is Classic dark on a phone, which is the board they had,
+ *   and Smoke on the desktop, which is the table they had: the dark theme on a
+ *   desktop *was* the table, and Smoke is what that meant.
+ * - Nothing at all is where every install starts. On a phone that is Classic
+ *   following the device's light or dark exactly as before, `matchMedia` and
+ *   all; on the desktop it is Smoke, whatever the device says, since the table
+ *   was never light.
+ *
+ * Only "nothing at all" reads `prefersLight`, and none of the three is stored:
+ * a default that was written down would stop following the window the moment it
+ * was, and a player who has never touched the dial would find a window resize
+ * had made a decision for them.
+ */
+export function resolveSkin({ picked, legacy, table, prefersLight }: Standing): Skin {
+  if (picked) return picked
+  if (legacy === "light") return "classic-light"
+  if (legacy === "dark") return table ? "smoke" : "classic-dark"
+  if (table) return "smoke"
+  return prefersLight ? "classic-light" : "classic-dark"
+}
+
+export function loadSkin(): Skin | null {
   try {
     return readSkin(localStorage.getItem(KEY))
   } catch {
-    return DEFAULT_SKIN
+    return null
+  }
+}
+
+export function loadLegacyTone(): Tone | null {
+  try {
+    return readLegacyTone(localStorage.getItem(LEGACY_THEME_KEY))
+  } catch {
+    return null
+  }
+}
+
+export function saveSkin(skin: Skin): void {
+  try {
+    localStorage.setItem(KEY, skin)
+  } catch {
+    // The setting lasts the session instead of the install. Nothing else breaks.
   }
 }
 
@@ -63,11 +149,11 @@ export const skinClass = (skin: Skin): string => `skin-${skin}`
 /** The skin in force, read off the root, which is where the stylesheet reads it. */
 export function currentSkin(): Skin {
   const classes = document.documentElement.classList
-  return SKINS.find((skin) => classes.contains(skinClass(skin))) ?? DEFAULT_SKIN
+  return SKINS.find((skin) => classes.contains(skinClass(skin))) ?? "classic-dark"
 }
 
 /**
- * How much the skin animates. Three levels, because two skins of the three want
+ * How much the skin animates. Three levels, because two looks of the four want
  * some motion and no two want the same amount:
  *
  * - `full` is the Smoke Room: the smoke, the reel-stop deal, the payline, the
@@ -76,14 +162,25 @@ export function currentSkin(): Skin {
  *   settles, a key gives under a finger, a counter ticks. Nothing is thrown off
  *   them: no sparks, no shake, no light crossing a row. A wooden board game
  *   does not have a jackpot sign, and the room it is drawn in holds still.
- * - `none` is Classic, the phone's own board at desktop size.
+ * - `none` is Classic in either tone, the phone's own board.
  *
  * Every effect asks through `hasFx` or `hasTactile` rather than naming a skin,
- * so which skin gets what is this table and nothing else.
+ * so which look gets what is this table and nothing else.
+ *
+ * Only the *background* of `full` reaches the phone. The scenes are built
+ * around the table's geometry (a payline across a rail-and-board layout, a
+ * jackpot sign over its scorecard), and `juiced()` and `tactile()` still ask
+ * for the table as well, so a phone in Smoke has the look and the smoke and the
+ * same tile flips as ever.
  */
 export type Fx = "none" | "tactile" | "full"
 
-const FX: Record<Skin, Fx> = { smoke: "full", classic: "none", tabletop: "tactile" }
+const FX: Record<Skin, Fx> = {
+  smoke: "full",
+  tabletop: "tactile",
+  "classic-dark": "none",
+  "classic-light": "none",
+}
 
 export const fxLevel = (): Fx => FX[currentSkin()]
 
@@ -93,18 +190,5 @@ export const hasFx = (): boolean => fxLevel() === "full"
 /** At least the handled-object motion (`full` includes it). */
 export const hasTactile = (): boolean => fxLevel() !== "none"
 
-/**
- * Apply it, and remember it if asked. The shell applies without writing, as a
- * first launch has chosen nothing and the key should stay absent until
- * something is.
- */
-export function setSkin(skin: Skin, remember = true): void {
-  const classes = document.documentElement.classList
-  for (const other of SKINS) classes.toggle(skinClass(other), other === skin)
-  if (!remember) return
-  try {
-    localStorage.setItem(KEY, skin)
-  } catch {
-    // The setting lasts the session instead of the install. Nothing else breaks.
-  }
-}
+/** Whether a look has a background that moves, which is what "moving background" means. */
+export const hasMovingBackground = (skin: Skin): boolean => FX[skin] === "full"

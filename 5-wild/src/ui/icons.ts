@@ -75,10 +75,9 @@ const PATHS = {
   // changed its width per language (SUPPR, LÖSCH), and the glyph is the same
   // key on every phone keyboard the player has ever used.
   backspace: ["M21 5H9l-6 7 6 7h12z", "M17 9.5l-5 5", "M12 9.5l5 5"],
-  // The theme dial's three faces, one per setting, so the button says which is
-  // in force the way the speaker does. "Follow the phone" is the ring half
-  // filled, light and dark at once, rather than a phone: a handset on a button
-  // inside the phone is a picture of the thing you are holding.
+  // The look dial's four faces, one per setting, so the button says which is
+  // in force the way the speaker does. Sun and moon are the two Classics; smoke
+  // and tile are the two rooms.
   sun: [
     "M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8",
     "M12 2v2",
@@ -91,6 +90,13 @@ const PATHS = {
     "M17.7 6.3l1.4-1.4",
   ],
   moon: ["M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"],
+  // Three drifting lines, the top and bottom curling one way and the middle the other.
+  smoke: ["M3 7c3-3 5 3 8 0s5-3 7 0", "M6 12c3-3 5 3 8 0s5-3 7 0", "M3 17c3-3 5 3 8 0s5-3 7 0"],
+  // A rounded tile with a letter's stem in it: the one thing the Tabletop is made of.
+  tile: [
+    "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z",
+    "M9 16V8l6 8V8",
+  ],
   reroll: [
     "M4 12a8 8 0 0 1 14-5.3L20 9",
     "M20 4v5h-5",

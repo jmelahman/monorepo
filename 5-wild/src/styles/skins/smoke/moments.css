@@ -1,0 +1,161 @@
+/*
+ * The moments: what the desk does between screens and on the big beats. The
+ * motion itself is script (`src/ui/fx/scenes/transitions.ts`, all of it through
+ * `tween`, so pace, skip and reduced motion are the clock's business); this file
+ * is the props those scripts put on the table and the two loops that are not
+ * script at all.
+ *
+ * Two rules keep it honest. First, nothing here is the *only* way to see a
+ * thing: the banner, the lines, the panel and the buttons are the views' own
+ * nodes, drawn at rest, and every effect is a tween that starts from somewhere
+ * else and ends there. Reduced motion (which makes `tween` return before it
+ * starts) therefore loses no information, only the trip. Second, the props in
+ * `#fx` are removed by the script that made them; the only thing that outlives a
+ * moment is a rule in this file, and every one of those is a static look.
+ */
+:root.skin-smoke {
+  /* The boss's colours: the band that sweeps across, and the wash the table
+     takes on for the second it lands. A duller red than the mult's, which is a
+     *score* colour and means something on the board; this is a mood. */
+  --boss-band: #5e1720;
+  --boss-band-hi: #b23a44;
+  --boss-wash-in: #12030a80;
+  --boss-wash-out: #7a1a29d9;
+  --win-wash: #9be8d8a6;
+  /* What a lost run does to the room: grey, and a shade darker than grey. */
+  --gloom: grayscale(0.9) brightness(0.68) contrast(1.05);
+}
+
+/* ---- ghosts ------------------------------------------------------------ */
+
+/*
+ * A ghost is a screen or a sheet the render has already thrown away, put back in
+ * `#fx` to leave in its own time. Putting a node back in the document starts
+ * every CSS animation on it again from the top, which would replay a shelf's
+ * deal and a board's flips inside something that is meant to be going away. So a
+ * ghost is stilled outright. `!important` is the honest tool: the rules it has
+ * to beat are the phone's and the table's own, across a dozen files, and none of
+ * them knows the ghost exists.
+ */
+:root.skin-smoke .fx-ghost,
+:root.skin-smoke .fx-ghost * {
+  /* biome-ignore lint/complexity/noImportantStyles: a ghost must not replay what the render already played */
+  animation: none !important;
+  /* biome-ignore lint/complexity/noImportantStyles: same */
+  transition: none !important;
+}
+
+:root.skin-smoke .fx-flash.boss {
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    var(--boss-wash-in) 0%,
+    var(--boss-wash-in) 30%,
+    var(--boss-wash-out) 100%
+  );
+}
+
+:root.skin-smoke .fx-flash.win {
+  background: radial-gradient(circle at 50% 32%, var(--win-wash), transparent 62%);
+}
+
+/* The table going grey. A backdrop filter over the whole window for a second and
+   a half is the one expensive thing in this file; it is one node, it is once
+   per lost run, and the alternative (a filter on `#app`) would make `#app` the
+   containing block for every fixed sheet inside it. */
+:root.skin-smoke .fx-gloom {
+  backdrop-filter: var(--gloom);
+}
+
+:root.skin-smoke .fx-banner {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--boss-band) 14%,
+    var(--boss-band-hi) 50%,
+    var(--boss-band) 86%,
+    transparent
+  );
+  border-block: var(--rim);
+  color: var(--on-btn);
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+:root.skin-smoke .fx-coin {
+  border: var(--bw) solid var(--coin-lo);
+  border-radius: 0;
+  background: var(--coin);
+  box-shadow: inset 0 0.125rem 0 var(--coin-hi);
+  clip-path: var(--cut);
+}
+
+/* ---- entries the script now owns --------------------------------------- */
+
+/*
+ * The phone's entry keyframes on these are switched off for the table, because
+ * the script deals them in on arrival and only on arrival. Left on, the CSS one
+ * would also play on every rebuild that is not an arrival (the coach's card
+ * answering, a sheet closing over the intro), which is the bug `settled` exists
+ * to hide, and the script's own version would then be a second animation on
+ * the same node. One owner each.
+ *
+ * The pack sheet is left to its own scene: it opens with its own choreography
+ * and is not centred card stock in the sense the spring is for.
+ */
+:root.skin-smoke .intro-card,
+:root.skin-smoke .intro-card > .round-token,
+:root.skin-smoke .panel,
+:root.skin-smoke .sheet:not(.pack-sheet),
+:root.skin-smoke .overlay:not(:has(.pack-sheet)) {
+  animation: none;
+}
+
+:root.skin-smoke .title-name .title-tile {
+  animation: table-title-bob 3.6s ease-in-out infinite;
+}
+
+:root.skin-smoke .title-name .title-tile:nth-child(2n) {
+  --sway: -1.4deg;
+  animation-duration: 4.1s;
+}
+
+:root.skin-smoke .title-name .title-tile:nth-child(3n) {
+  animation-duration: 3.2s;
+}
+
+:root.skin-smoke .title-name .title-tile:nth-child(1) {
+  animation-delay: -0.4s;
+}
+
+:root.skin-smoke .title-name .title-tile:nth-child(2) {
+  animation-delay: -1.3s;
+}
+
+:root.skin-smoke .title-name .title-tile:nth-child(3) {
+  animation-delay: -2.2s;
+}
+
+:root.skin-smoke .title-name .title-tile:nth-child(4) {
+  animation-delay: -0.9s;
+}
+
+:root.skin-smoke .title-name .title-tile:nth-child(5) {
+  animation-delay: -1.8s;
+}
+
+:root.skin-smoke .title-name .title-tile:nth-child(6) {
+  animation-delay: -2.7s;
+}
+
+:root.skin-smoke .primary.title-play {
+  animation: table-title-breathe 2.6s ease-in-out infinite;
+}
+
+/* A loop restarts from its first frame on every rebuild, and a sheet's own
+   buttons rebuild the screen behind it on every tap. Stilled while one is
+   open, which is also what a room does when someone has stepped up to the
+   table with a question. */
+:root.skin-smoke .settled :is(.title-name .title-tile, .primary.title-play) {
+  animation: none;
+}

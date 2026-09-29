@@ -1,0 +1,70 @@
+/* The look half of `title.css`; the layout, and the reasons for it, are in `../../table/title.css`. */
+
+/* `--t` is capped by the phone at 3.875rem and by the viewport's width; on a
+   monitor the viewport is never the limit, so this is simply the size. */
+:root.skin-smoke .title-mast {
+  --g: 0.5rem;
+}
+
+/* The five empty cells behind the name are the board's empty cells. */
+:root.skin-smoke .title-ghost-tile {
+  border: var(--bw) solid var(--cell-line);
+  border-radius: 0;
+  background: var(--cell);
+  clip-path: var(--cut);
+}
+
+/* The name's tiles are scored tiles: a fill, the same fill for an edge, the
+   bevel inside. No lip and no shadow (the notch would take both). */
+:root.skin-smoke .title-tile {
+  border: var(--bw) solid var(--gray);
+  border-radius: 0;
+  background: var(--gray);
+  box-shadow:
+    inset 0 0.125rem 0 #ffffff40,
+    inset 0 -0.25rem 0 #00000047;
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .title-tile.wild {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+:root.skin-smoke .title-chips,
+:root.skin-smoke .title-mult {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .title-tag {
+  color: var(--muted);
+}
+
+:root.skin-smoke .title-record {
+  color: var(--muted);
+  border-bottom-color: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+:root.skin-smoke.mouse .title-record:hover {
+  color: var(--fg);
+}
+
+:root.skin-smoke .title-more .icon {
+  color: var(--fg);
+}
+
+/* The footer is device business, and stays quiet. */
+:root.skin-smoke .title-build {
+  color: var(--muted);
+}
+
+/* The badge's figures are small and sit on a bright fill: ink on colour, no
+   outline, as the phone has it. */
+:root.skin-smoke .title-chips,
+:root.skin-smoke .title-mult {
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}

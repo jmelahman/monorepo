@@ -1,6 +1,5 @@
 import { hasFx } from "../skin"
-import { isTable } from "../table"
-import { juiced, reduced } from "./motion"
+import { reduced } from "./motion"
 
 /**
  * The smoke over the table: two slow banks of it, teal and wine, drifting over
@@ -22,9 +21,9 @@ import { juiced, reduced } from "./motion"
  * a win is mint and cash; a loss drains to grey and thins. The same mood goes to
  * the root as `data-mood`, so any panel can answer it in CSS.
  *
- * The flat ground in `styles/table/smoke/backdrop.css` stays underneath and is
- * what the game looks like when this does not run: no WebGL, a lost context, the
- * phone, another skin, the "Table lights" setting off. The canvas fades in only
+ * The flat ground in `styles/skins/smoke/backdrop.css` stays underneath and is
+ * what the game looks like when this does not run: no WebGL, a lost context,
+ * another skin, the "moving background" setting off. The canvas fades in only
  * once a frame has been painted, so a failure at any step leaves the ground
  * rather than a hole.
  *
@@ -43,8 +42,12 @@ import { juiced, reduced } from "./motion"
  *   rates every few seconds looks worse than one that settles.
  * - Nothing when nobody can see it: a hidden tab, and while a sheet is open,
  *   since a sheet rises over a board that is dimmed and not being read.
- * - Nothing at all on the phone: no canvas, no context, no listener but the
- *   class watcher.
+ * - The same on the phone, which is where it is cheapest: the canvas is a third
+ *   of the window in CSS pixels, so a 390x844 screen is 130x282 fragments, a
+ *   sixth of the desktop's, at the same 20 updates a second and with the same
+ *   step-down to 10. It is a property of the look and not of the layout, so the
+ *   Smoke Room on a phone has its smoke, and every other look on either layout
+ *   creates no canvas, no context and no listener but the class watcher.
  *
  * Reduced motion gets exactly one frame and then stops, and that frame is a
  * painted picture: motion is stopped, never compressed, so there is no
@@ -308,11 +311,10 @@ function ease(dt: number): boolean {
 }
 
 const running = (): boolean =>
-  canvas !== null && gpu !== null && !document.hidden && !covered && juiced()
+  canvas !== null && gpu !== null && !document.hidden && !covered && hasFx() && !reduced()
 
-/** The table's own lights: the smoke skin on a table, and the player has not switched them off. */
-const lit = (): boolean =>
-  isTable() && hasFx() && !document.documentElement.classList.contains("lights-off")
+/** The room's own lights: a look with a moving background, and the player has not switched it off. */
+const lit = (): boolean => hasFx() && !document.documentElement.classList.contains("lights-off")
 
 function frame(now: number): void {
   raf = 0
@@ -417,7 +419,7 @@ function destroy(): void {
   deltas.length = 0
 }
 
-/** Make the canvas match whether the table is on. */
+/** Make the canvas match whether the look has one and it is on. */
 function sync(): void {
   if (lit()) {
     create()
@@ -427,11 +429,11 @@ function sync(): void {
 }
 
 /**
- * Begin following the table. Called once by the shell after the theme lands.
- * The table can flip at any moment (a theme tap, a window crossing the room
- * query), so this watches the root's class rather than being told, and the
- * canvas is created and removed to match. A phone never has one: nothing here
- * creates a node until `isTable()` says so.
+ * Begin following the look. Called once by the shell after it lands. The look
+ * can change at any moment (a tap on the dial, the window moving the default),
+ * so this watches the root's class rather than being told, and the canvas is
+ * created and removed to match. Nothing here creates a node until the skin says
+ * it has a moving background.
  */
 export function startBackground(): void {
   if (watching) return
@@ -463,7 +465,10 @@ export function setMood(mood: Mood, sheetOpen = false): void {
   target = mood
   const wasCovered = covered
   covered = sheetOpen
-  if (isTable()) document.documentElement.dataset.mood = mood
+  // Only where something reads it, which is the look with the smoke; the
+  // attribute is dropped on the way out so it never outlives its reader.
+  if (hasFx()) document.documentElement.dataset.mood = mood
+  else document.documentElement.removeAttribute("data-mood")
   if (moved) stale = true
   if (moved || wasCovered !== covered) kick()
 }

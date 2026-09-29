@@ -1,0 +1,168 @@
+/*
+ * Cards: relics, consumables and the shop's shelf, cut from bone.
+ *
+ * One object at three sizes, and this file is what they share. A card is a bone
+ * tile with ink on it and a bar of its rarity's ink across the top, an inset
+ * shadow so the bar sits inside the rounded corner. The rarity colours are the
+ * design's deep set (ink, green, blue, oxblood) rather than the Smoke Room's
+ * bright ones, because they are printed on bone and have to hold against it.
+ * The slab under the card is what lifts it off the table, and a card being
+ * picked up is that slab growing by a pixel or two with the card moving up to
+ * meet it, which is a `transform` and costs nothing.
+ *
+ * Text on a card is ink, and the modifier and value tokens are the deep values
+ * the phone's light theme uses, since it is that same problem: dark figures on a
+ * pale face. `--chips` and `--mult` are the dark room's, brighter values and are
+ * swapped for `--chips-ink` and `--mult-ink` on anything bone.
+ */
+:root.skin-tabletop .rarity-common {
+  --rare: var(--rare-common);
+}
+:root.skin-tabletop .rarity-uncommon {
+  --rare: var(--rare-uncommon);
+}
+:root.skin-tabletop .rarity-rare {
+  --rare: var(--rare-rare);
+}
+:root.skin-tabletop .rarity-legendary {
+  --rare: var(--rare-legendary);
+}
+
+/* Anything bone carries the deep figures, not the room's bright ones. */
+:root.skin-tabletop
+:is(
+  .relic:not(.empty),
+  .shop-item:not(.sold),
+  .consumable:not(.empty),
+  .hud-score,
+  .hud-gold,
+  .key:not(.green, .yellow, .gray, .broken),
+  .tile:not(.green, .yellow, .gray),
+  .decor-toggle:not(.bare)
+) {
+  --chips: var(--chips-ink);
+  --mult: var(--mult-ink);
+  --gold: var(--cash);
+  --value-base: color-mix(in srgb, var(--ink) 68%, transparent);
+  --mod-steel: #4f6d8a;
+  --mod-glass: #13899c;
+  --mod-lucky: #c2338a;
+  --mod-echo: #b8650f;
+  --mod-anchor: #2c8a3c;
+}
+
+:root.skin-tabletop :is(.relic:not(.empty), .shop-item:not(.sold)) {
+  --rare-c: var(--rare, var(--rare-common));
+  border: var(--bw) solid var(--bone-side);
+  border-radius: var(--radius-l);
+  background: var(--bone);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0.25rem 0 var(--rare-c),
+    var(--shadow-hard),
+    var(--shadow-soft);
+}
+
+/* Empty seats: a dashed socket cut into the wood. */
+:root.skin-tabletop .relic.empty,
+:root.skin-tabletop .consumable.empty {
+  background: var(--well);
+  border: var(--bw) dashed var(--slot-line);
+  border-radius: var(--radius-l);
+  box-shadow: inset 0 2px 4px #000c;
+}
+
+/* The phone's foil, rarity pip and glint are pseudo-elements on these cards,
+   and each is a light effect this skin does not have. */
+:root.skin-tabletop :is(.relic, .shop-item)::before,
+:root.skin-tabletop :is(.relic, .shop-item)::after {
+  display: none;
+}
+
+:root.skin-tabletop :is(.shop-item:not(.sold), .relic:not(.empty)) {
+  transition: transform 120ms var(--ease-out);
+}
+
+:root.skin-tabletop.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover,
+:root.skin-tabletop :is(.shop-item, .relic).struck {
+  z-index: 3;
+}
+
+:root.skin-tabletop.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover {
+  transform: translateY(-0.25rem);
+}
+
+:root.skin-tabletop.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover:active {
+  transform: translateY(0);
+  transition-duration: 70ms;
+}
+
+/* The stand-ins the scenes fly are pictures of a card, not cards. */
+:root.skin-tabletop .shop-ghost {
+  animation: none;
+  transition: none;
+  filter: none;
+}
+
+:root.skin-tabletop .relic-name {
+  color: var(--ink);
+}
+
+:root.skin-tabletop .relic .sell {
+  color: var(--cash);
+}
+
+:root.skin-tabletop .relic-detail {
+  color: var(--mult-ink);
+}
+
+/* Firing is the card's own edge turned terracotta: an inset ring on the bone,
+   with the pop over the card carrying the number. */
+:root.skin-tabletop .relic.fired {
+  box-shadow:
+    inset 0 0 0 2px var(--accent),
+    inset 0 0.25rem 0 var(--rare-c),
+    var(--shadow-hard),
+    var(--shadow-soft);
+}
+
+/* Consumables, the hand: the same bone with a terracotta bar, so that one is
+   never mistaken for a relic. */
+:root.skin-tabletop .consumable:not(.empty) {
+  border: var(--bw) solid var(--bone-side);
+  border-radius: var(--radius-l);
+  background: var(--bone);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0.25rem 0 var(--accent),
+    var(--shadow-hard),
+    var(--shadow-soft);
+}
+
+:root.skin-tabletop .consumable-name {
+  color: var(--ink);
+}
+
+:root.skin-tabletop .consumable-text {
+  color: var(--ink-soft);
+}
+
+/* The tip that follows the pointer: walnut, with the card's bar. */
+:root.skin-tabletop .relic-tip {
+  background: var(--panel);
+  border: var(--rim);
+  border-radius: var(--radius-m);
+  box-shadow:
+    inset 0 0.25rem 0 var(--rare, var(--rare-common)),
+    var(--shadow-lift);
+}
+
+/* The phone lights a hovered card, key or primary button with
+   `filter: brightness(1.12)` (`../../packs.css`). Bone that brightens is white,
+   and a white card among bone ones is a glare and not a hover, so anything
+   bone keeps its colour and says "this one" by lifting (and, on a button, by
+   the terracotta edge) instead. */
+:root.skin-tabletop.mouse
+:is(.primary, .shop-item, .key):hover:not(:disabled, [aria-disabled="true"], :active) {
+  filter: none;
+}

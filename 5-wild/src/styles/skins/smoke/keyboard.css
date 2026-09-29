@@ -1,0 +1,87 @@
+/*
+ * The keyboard: flat caps.
+ *
+ * A key is a rectangle with a notch out of each corner, a two-pixel edge and a
+ * fill. A key the guess has coloured takes that colour for both, so the edge
+ * disappears and the key reads as a solid block: what has been learned should be
+ * visible across the room, and a solid does that where a tint does not. Gray is
+ * the elimination, the absence of information, and a key that is out recedes.
+ *
+ * No shadow, so no glow and no lip: the clip-path takes both (see `board.css`).
+ * The press is a step down by one pixel unit and a brightness change, which a
+ * physical key reads as the same key being pressed, because `scenes/board.ts`
+ * plays the same settle on it whether it was a pointer or a keydown.
+ *
+ * The one thing kept from the casino build is the ring. It is the modifier's
+ * outline, which the table rule had been overriding without saying so:
+ * `:root.table .key` outranks `.key[data-mod]`, and every etched letter lost its
+ * ring on the desktop until it was carried in here. It is an inset shadow, so it
+ * is inside the box and survives the notch.
+ *
+ * Motion is `translate` (hover lift and the press), with `transform` left for
+ * the settle `scenes/board.ts` plays on a real press.
+ */
+:root.skin-smoke .key {
+  --ring: inset 0 0 0 0 transparent;
+  border: var(--bw) solid var(--key-line);
+  border-radius: 0;
+  background: var(--key);
+  background-image: none;
+  box-shadow: var(--ring);
+  clip-path: var(--cut);
+  color: var(--fg);
+  transition:
+    translate 90ms var(--ease-out),
+    filter 120ms var(--ease-out);
+}
+
+/* Coloured: fill and edge the same, so the block is solid. */
+:root.skin-smoke .key.green {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--on-tile);
+}
+
+:root.skin-smoke .key.yellow {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--on-tile);
+}
+
+:root.skin-smoke .key.gray {
+  background: var(--key-dead);
+  border-color: var(--key-dead);
+  color: var(--key-gray-fg);
+}
+
+/* A letter that carries a modifier keeps its ring. Silenced by the Vandal, or
+   broken, or with the plain board on, it does not, exactly as the phone's. */
+:root.skin-smoke .key[data-mod]:not(.broken):not(:has(.mod-pip.silenced)) {
+  --ring: inset 0 0 0 0.125rem color-mix(in srgb, var(--mod) 70%, transparent);
+}
+
+:root.skin-smoke.plain .key {
+  --ring: inset 0 0 0 0 transparent;
+}
+
+/* A dead key: the lamp is out. */
+:root.skin-smoke .key.broken {
+  background: var(--key-dead);
+  border-color: var(--key-dead);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+/* Hover, for a mouse: up by a pixel unit and brighter. Not while pressed, so
+   `:active` below has the last word without needing more specificity. */
+:root.skin-smoke.mouse .key:not(.broken):hover:not(:active) {
+  translate: 0 calc(var(--px) * -1);
+  filter: brightness(1.2);
+}
+
+/* Pressed: down onto the surface. The phone's `filter: brightness(1.35)` on
+   `:active` is the same idea and is kept, at a lower strength. */
+:root.skin-smoke .key:not(.broken):active {
+  translate: 0 var(--px);
+  filter: brightness(1.25);
+}

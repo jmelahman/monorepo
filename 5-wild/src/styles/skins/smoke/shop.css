@@ -1,0 +1,158 @@
+/* The look half of `shop.css`; the layout, and the reasons for it, are in `../../table/shop.css`. */
+
+:root.skin-smoke .shop-screen .hud {
+  /* The panel is the rail's, not the header's: see `.shop-screen::before`. */
+  border: 0;
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+}
+
+/*
+ * The rail as one panel, top to bottom, as the round's is. The children are
+ * separate nodes placed in rows one, three and four, so the panel is a
+ * pseudo-element across all of them, under them, and the phone (which never
+ * matches this selector) keeps the three boxes it has always had.
+ *
+ * The casino ringed this one in teal to say "the one room where nothing is
+ * trying to score against you". Here the shop is told by what is in it (cash
+ * in the rail, cards on the table) and the panel is the round's own.
+ */
+:root.skin-smoke .shop-screen::before {
+  content: "";
+  grid-column: 1;
+  grid-row: 1 / -1;
+  border: var(--rim);
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: none;
+  clip-path: var(--cut);
+  pointer-events: none;
+}
+
+:root.skin-smoke .shop-screen .shop-items.coached {
+  border-radius: 0;
+}
+
+/* ---- the cards -------------------------------------------------------- */
+
+:root.skin-smoke .shop-item {
+  color: var(--fg);
+}
+
+/* The icon is the card's picture: a square in a hairline, the rarity's colour. */
+:root.skin-smoke .shop-item-head > .icon {
+  border-radius: 0;
+  border: var(--rim);
+  background: var(--well);
+  color: var(--rare-c);
+  stroke-width: 2.25;
+  box-shadow: none;
+}
+
+:root.skin-smoke .shop-item-name {
+  color: var(--fg);
+}
+
+:root.skin-smoke .shop-item-text {
+  border-radius: 0;
+  background: var(--well);
+  box-shadow: none;
+  color: var(--muted);
+}
+
+/* The price is a tag: the cash colour in a hairline, and nothing else about it
+   is gold. It was a gold coin; the room has one colour of money and it is text. */
+:root.skin-smoke .shop-item-cost {
+  border-radius: 0;
+  border: var(--rim);
+  background: var(--well);
+  box-shadow: none;
+  color: var(--gold);
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .shop-item-cost.free {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* Can't afford it: the card steps back, the price stays legible. */
+:root.skin-smoke .shop-item.broke {
+  opacity: 0.55;
+  filter: none;
+}
+
+:root.skin-smoke .shop-item.broke .shop-item-cost {
+  color: var(--mult);
+}
+
+:root.skin-smoke .shop-item-kind {
+  color: var(--muted);
+}
+
+:root.skin-smoke .shop-item.sold {
+  border: var(--bw) dashed var(--slot-line);
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  color: var(--muted);
+}
+
+:root.skin-smoke .shop-item.sold .icon {
+  color: var(--accent);
+}
+
+:root.skin-smoke .shop-item:active:not(:disabled) {
+  transform: translateY(var(--px));
+}
+
+/* ---- the rail's foot -------------------------------------------------- */
+
+:root.skin-smoke .shop-screen .shapes-line {
+  border: var(--rim);
+  border-radius: 0;
+  background: var(--well);
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+/* The reroll is a button like the rest: no blue of its own. */
+:root.skin-smoke .shop-screen .shop-actions > .secondary:disabled {
+  opacity: 0.4;
+}
+
+:root.skin-smoke .reroll-cost {
+  color: var(--gold);
+  border-radius: 0;
+  background: var(--well);
+  border: var(--rim);
+}
+
+:root.skin-smoke .shop-screen .toast {
+  background: var(--panel);
+  border: var(--rim);
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .shop-item-cost.deny {
+  animation: price-deny calc(480ms * var(--pace)) ease-out;
+}
+
+/* ---- coins in flight ---------------------------------------------------- */
+
+/* One coin, in the effects layer: the price of a card pushed out of the cash
+   counter, or what a relic sold for pushed back into it. Positioned and moved
+   by the script; this is only what it looks like: a square of cash colour with
+   a darker edge, cut at the corners like everything else. */
+:root.skin-smoke .shop-coin {
+  border: var(--bw) solid var(--coin-lo);
+  border-radius: 0;
+  background: var(--coin);
+  box-shadow: inset 0 0.125rem 0 var(--coin-hi);
+  clip-path: var(--cut);
+}

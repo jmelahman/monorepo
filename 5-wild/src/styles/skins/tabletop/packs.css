@@ -1,0 +1,9 @@
+/* The look half of `packs.css`; the layout, and the reasons for it, are in `../../table/packs.css`. */
+
+:root.skin-tabletop .pack-hint {
+  color: var(--muted);
+}
+
+:root.skin-tabletop .pack-sheet .shop-actions > .secondary {
+  border-radius: var(--radius-m);
+}

@@ -196,20 +196,43 @@ and are switched off in the stylesheet (see `.plain` and `.quiet`) rather than
 threaded through the views, which the full rebuild would otherwise make every
 view's business.
 
-The theme is the exception that proves that rule: `src/ui/theme.ts` writes
-`data-theme` on the root, and it writes the *resolved* look, `light` or `dark`.
-There are only the two: the device decides until the player first taps the
-title-screen dial or the pause row, and the pick sticks from then on, with no "follow
-the phone" setting to go back to. Following the device is resolved in JS, with a `matchMedia`
-listener for a phone that changes its mind mid-game, so the light palette is
-written once under `:root[data-theme="light"]` rather than twice, once more
-inside a `prefers-color-scheme` block. The shell applies it before the word
-fetch so a light player never sees a dark page load. Two things are fixed
-across themes on purpose: the tile colors, which are what a letter *means*, and
-so the ink on them, `--on-tile`, which used to be the page's `--fg` inherited
-and was only light because the page was dark. Every new literal color belongs
-in `:root` beside the others with a light-theme value; a bare `#000` shadow
-reads as a smudge on the light page, which is what `--shade` is for.
+The look is the exception that proves that rule: `src/ui/skin.ts` and
+`src/ui/theme.ts` write one `skin-*` class on the root (`skin-smoke`,
+`skin-tabletop`, `skin-classic-dark`, `skin-classic-light`) and beside it
+`data-theme`, which is the skin's *tone*, `light` for Classic light and `dark` for
+the other three. The tone is what everything that predates the skins still keys
+on (the light palette under `:root[data-theme="light"]`, `BACKDROP`, the status
+bar, `ThemePlugin`, the tile inks), which is why it was kept rather than
+replaced. Until the player first taps the title-screen dial or the pause row the
+look is *unpicked* and resolved live, not stored: a phone is Classic and follows
+the device's light or dark, a desktop window is Smoke, and both follow the window
+and the device as they change, with a `matchMedia` listener for each. A pick
+sticks from then on, with no "follow the phone" setting to go back to. The shell
+applies it before the word fetch so a light player never sees a dark page load.
+Two things are fixed across looks on purpose: the tile colors, which are what a
+letter *means*, and so the ink on them, `--on-tile`. Every new literal color
+belongs in `:root` beside the others with a light-theme value; a bare `#000`
+shadow reads as a smudge on the light page, which is what `--shade` is for.
+
+Layout and look are two questions and used to be one. `.table` on the root is
+layout only: a wide landscape window outside the APK (`src/ui/table.ts`), whatever
+the skin, so Classic light on a desktop is the table's arrangement in the phone's
+light colours. The look is `:root.skin-<name>` in `src/styles/skins/`, on both
+layouts; a phone in Smoke is deliberate, not the desktop squeezed. Only where a
+look depends on the table's geometry is it `:root.table.skin-<name>`.
+`src/styles/table/*.css` carries no colour, face, border, shadow or motion, and
+`test/ui/skin.test.ts` fails a rule that lands in the wrong one. What the look
+*does* is `Fx` in `skin.ts`: `full` (Smoke: the smoke canvas and everything
+`juiced()` gates), `tactile` (Tabletop: tiles set down, keys pressed; `tactile()`)
+and `none` (Classic). The scenes and the tile physics still ask `isTable()` as
+well, so they stay desktop-only; the one effect that is not is the smoke canvas,
+which runs on a phone at a third of the resolution and 20 fps, and answers to
+`5wild:ambience` and `prefers-reduced-motion` like everywhere else. A new effect
+asks `hasFx()` or `hasTactile()` and never names a skin.
+
+The Smoke Room is drawn flat and inside its own boxes: every panel is notched with
+`--cut`, a `clip-path`, which clips any `box-shadow`, outline or overflowing
+pseudo-element, so depth is an inset shadow or nothing.
 
 On Android the choice also goes native, because the launch window and the
 WebView's own background are drawn before the page exists. `ThemePlugin.java`
@@ -262,19 +285,16 @@ settings are booleans except eight: `5wild:track` holds `promises` or
 `forget-me-not`, which recording plays, anything else reading as the first;
 `5wild:plain` holds one of `all`, `minimal` or `none`, how much of the scoring
 game the board draws on itself; `5wild:speed` holds `1`, `2` or `3`, how many
-times faster than authored the animations play; `5wild:theme` holds `light`
-or `dark`, absent or anything else meaning the device decides; `5wild:skin` holds `smoke`, `classic` or `tabletop`, which
-dressing the desktop table wears, absent or anything else reading as `smoke`; `src/ui/skin.ts` writes it
-as exactly one `skin-*` class on the root before first render, and the phone never reads it. The table
-stylesheet is split on the same line: `src/styles/table/*.css` is layout only, under `:root.table`, with no
-colour, face, border, shadow or motion, and each dressing lives under `:root.table.skin-<name>` in its own
-place (`smoke/`, and so on). Classic is what is left when nothing is written over the layout, so the phone's
-partials show through. How much a skin animates is `Fx` in `skin.ts`: `full` (Smoke Room: the smoke canvas and everything `juiced()` gates), `tactile` (Tabletop: tiles set down, keys pressed, and nothing thrown off; gated by `tactile()`, whose set includes `juiced()`'s) and `none` (Classic, the phone's own board). A new effect asks `hasFx()` or `hasTactile()` and never names a skin.
-The Smoke Room is drawn flat and inside its own boxes: every panel is notched with `--cut`, a `clip-path`, which clips any `box-shadow`, outline or overflowing pseudo-element, so depth is an inset shadow or nothing.
-A new rule that paints goes in a skin, not the layout, and `test/ui/skin.test.ts` fails if it lands in the
-wrong one; `5wild:ambience` holds
-`on` or `off`, whether the desktop table's own lights (the smoke drifting behind the panels) runs, absent meaning on, applied as `.lights-off`
-on the root; only the Smoke Room shows the row, since Tabletop's walnut is a still picture, and the phone never shows it and ignores the key, and it stills
+times faster than authored the animations play; `5wild:skin` holds `smoke`,
+`tabletop`, `classic-dark` or `classic-light`, the look the player picked, absent
+meaning none has been (see the theme section for what the device then decides);
+an old `classic` reads as `classic-dark`. `5wild:theme` is legacy: nothing writes
+it, and it is read only while no skin is picked, `light` meaning Classic light
+everywhere and `dark` meaning Classic dark on a phone and Smoke on a desktop,
+which is what each of those players was looking at. `5wild:ambience` holds
+`on` or `off`, whether the skin's moving background (the smoke drifting behind
+the panels) runs, absent meaning on, applied as `.lights-off` on the root; only a
+skin with one shows the row, and it stills
 nothing of the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
 `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning
 the switch has never been touched, which sends nothing. The game never asks: the

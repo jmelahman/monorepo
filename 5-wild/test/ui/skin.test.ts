@@ -1,32 +1,50 @@
 import { readdirSync, readFileSync } from "node:fs"
-import { afterEach, describe, expect, it } from "vitest"
-import { DEFAULT_SKIN, loadSkin, NEXT_SKIN, readSkin, SKINS, skinClass } from "../../src/ui/skin"
+import { describe, expect, it } from "vitest"
+import {
+  hasMovingBackground,
+  NEXT_SKIN,
+  readLegacyTone,
+  readSkin,
+  resolveSkin,
+  SKINS,
+  type Skin,
+  skinClass,
+  TONE,
+} from "../../src/ui/skin"
 
 /**
- * The table's skin setting. The class it writes is the whole interface to the
- * stylesheet, so what is worth pinning is the step from a stored string to one
- * of three names (a stale value must land on the default, never on nothing) and
- * the stylesheet's half of the bargain: geometry in one place, dressing in the
- * other.
+ * The look setting. The class it writes is the whole interface to the
+ * stylesheet, and the tone it resolves to is the whole interface to everything
+ * keyed on `data-theme`, so what is worth pinning is the step from what is
+ * stored (and where the window is) to one of four names, and the stylesheet's
+ * half of the bargain: geometry in one place, dressing in the other.
  */
 describe("skin", () => {
-  afterEach(() => {
-    Reflect.deleteProperty(globalThis, "localStorage")
-  })
-
   it("reads a stored pick back as itself", () => {
     for (const skin of SKINS) expect(readSkin(skin)).toBe(skin)
   })
 
-  it("reads absence and anything unknown as the default", () => {
-    expect(DEFAULT_SKIN).toBe("smoke")
-    for (const raw of [null, "", "Classic", "SMOKE", "casino", "felt", "null", "[]"]) {
-      expect(readSkin(raw)).toBe(DEFAULT_SKIN)
+  it("reads the old Classic as Classic dark", () => {
+    // It was only ever offered on the dark table.
+    expect(readSkin("classic")).toBe("classic-dark")
+  })
+
+  it("reads absence and anything unknown as no pick", () => {
+    for (const raw of [null, "", "Classic", "SMOKE", "casino", "felt", "light", "null", "[]"]) {
+      expect(readSkin(raw)).toBeNull()
+    }
+  })
+
+  it("reads a legacy theme only if it was one of the two", () => {
+    expect(readLegacyTone("light")).toBe("light")
+    expect(readLegacyTone("dark")).toBe("dark")
+    for (const raw of [null, "", "system", "Light", "auto", "sepia"]) {
+      expect(readLegacyTone(raw)).toBeNull()
     }
   })
 
   it("cycles through every skin and comes back", () => {
-    let skin = SKINS[0] ?? DEFAULT_SKIN
+    let skin = SKINS[0] ?? "smoke"
     const seen = new Set<string>()
     for (let i = 0; i < SKINS.length; i++) {
       seen.add(skin)
@@ -41,24 +59,53 @@ describe("skin", () => {
     for (const skin of SKINS) expect(skinClass(skin)).toBe(`skin-${skin}`)
   })
 
-  it("has the default when the store cannot be read", () => {
-    Object.defineProperty(globalThis, "localStorage", {
-      value: {
-        getItem: () => {
-          throw new Error("SecurityError")
-        },
-      },
-      configurable: true,
-    })
-    expect(loadSkin()).toBe(DEFAULT_SKIN)
+  it("is light only where the phone's light palette is meant", () => {
+    expect(TONE["classic-light"]).toBe("light")
+    for (const skin of SKINS) if (skin !== "classic-light") expect(TONE[skin]).toBe("dark")
   })
 
-  it("loads what was stored", () => {
-    Object.defineProperty(globalThis, "localStorage", {
-      value: { getItem: () => "classic" },
-      configurable: true,
+  it("moves the background only for the smoke", () => {
+    expect(SKINS.filter(hasMovingBackground)).toEqual(["smoke"])
+  })
+
+  describe("the default", () => {
+    const stand = (over: Partial<Parameters<typeof resolveSkin>[0]>): Skin =>
+      resolveSkin({ picked: null, legacy: null, table: false, prefersLight: false, ...over })
+
+    it("is Classic following the device on a phone", () => {
+      expect(stand({ prefersLight: false })).toBe("classic-dark")
+      expect(stand({ prefersLight: true })).toBe("classic-light")
     })
-    expect(loadSkin()).toBe("classic")
+
+    it("is Smoke on the desktop, whatever the device says", () => {
+      expect(stand({ table: true, prefersLight: false })).toBe("smoke")
+      expect(stand({ table: true, prefersLight: true })).toBe("smoke")
+    })
+
+    it("moves an old light pick to Classic light on either layout", () => {
+      for (const table of [false, true]) {
+        for (const prefersLight of [false, true]) {
+          expect(stand({ legacy: "light", table, prefersLight })).toBe("classic-light")
+        }
+      }
+    })
+
+    it("moves an old dark pick to the board on a phone and the table on a desktop", () => {
+      for (const prefersLight of [false, true]) {
+        expect(stand({ legacy: "dark", table: false, prefersLight })).toBe("classic-dark")
+        expect(stand({ legacy: "dark", table: true, prefersLight })).toBe("smoke")
+      }
+    })
+
+    it("is overruled by a pick, on every layout and whatever the device says", () => {
+      for (const picked of SKINS) {
+        for (const table of [false, true]) {
+          for (const legacy of [null, "light", "dark"] as const) {
+            expect(stand({ picked, legacy, table, prefersLight: table })).toBe(picked)
+          }
+        }
+      }
+    })
   })
 })
 
@@ -66,11 +113,12 @@ describe("skin", () => {
  * The stylesheet's half. The layout files carry no dressing, which is what lets
  * Classic be "the phone's look on the table's layout" by having nothing written
  * over it, and every rule in a skin's directory is under that skin's class,
- * which is what lets three dressings share a bundle. Both are easy to break by
+ * which is what lets four looks share a bundle. Both are easy to break by
  * pasting a rule into the wrong directory and only visible in a browser.
  */
 describe("table stylesheet split", () => {
   const dir = "src/styles/table"
+  const skins = "src/styles/skins"
   const layout = readdirSync(dir).filter((f) => f.endsWith(".css") && f !== "index.css")
   // Split a selector list on the commas that are not inside :is()/:not().
   const topLevel = (list: string): string[] => {
@@ -95,7 +143,6 @@ describe("table stylesheet split", () => {
     const dressing =
       /^\s*(background(-[a-z]+)?|box-shadow|text-shadow|color|font-family|border(-[a-z]+)?|-webkit-text-stroke|animation(-[a-z]+)?|transition(-[a-z]+)?|filter)\s*:/m
     for (const file of layout) {
-      if (file === "classic-skin.css") continue
       // Keyframes are global names and stay with the layout by design.
       const css = strip(readFileSync(`${dir}/${file}`, "utf8")).replace(
         /@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g,
@@ -109,15 +156,24 @@ describe("table stylesheet split", () => {
   })
 
   it("writes every rule of a skin under its class", () => {
-    const skinned: Array<[string, string]> = [
+    const skinned: Array<[string, string[]]> = [
       ...(["smoke", "tabletop"] as const).flatMap((skin) =>
-        readdirSync(`${dir}/${skin}`)
+        readdirSync(`${skins}/${skin}`)
           .filter((f) => f.endsWith(".css") && f !== "index.css" && f !== "fonts.css")
-          .map((f): [string, string] => [`${dir}/${skin}/${f}`, `:root.table.skin-${skin}`]),
+          .map((f): [string, string[]] => [
+            `${skins}/${skin}/${f}`,
+            [`:root.skin-${skin}`, `:root.table.skin-${skin}`],
+          ]),
       ),
-      [`${dir}/classic-skin.css`, ":root.table.skin-classic"],
+      [
+        `${skins}/classic.css`,
+        [
+          ":root:is(.skin-classic-dark, .skin-classic-light)",
+          ":root.table:is(.skin-classic-dark, .skin-classic-light)",
+        ],
+      ],
     ]
-    for (const [file, cls] of skinned) {
+    for (const [file, prefixes] of skinned) {
       const css = strip(readFileSync(file, "utf8"))
         .replace(/@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "")
         .replace(/@media[^{]+\{/g, "")
@@ -125,7 +181,10 @@ describe("table stylesheet split", () => {
       expect(selectors.length).toBeGreaterThan(0)
       for (const selector of selectors) {
         for (const part of topLevel(selector)) {
-          expect(part.trim(), `${file}: ${part.trim()}`).toContain(cls)
+          expect(
+            prefixes.some((prefix) => part.trim().includes(prefix)),
+            `${file}: ${part.trim()}`,
+          ).toBe(true)
         }
       }
     }

@@ -1,0 +1,34 @@
+/*
+ * The looks. One directory per skin, every rule under that skin's class, and
+ * nothing in here says where anything sits: that is `../table/`, the layout,
+ * written under `:root.table` and free of colour, face, border, shadow and
+ * motion. A look is the other half, and it is written to work on *both*
+ * layouts, which is what lets the same four presets be offered on a phone and
+ * a desktop.
+ *
+ * Two prefixes, and the difference is the whole rule:
+ *
+ * - `:root.skin-<name>` for anything that is true of the look wherever it is
+ *   drawn: the palette, the faces, how a tile or a button or a card is made,
+ *   what the room behind it is. This is nearly all of it.
+ * - `:root.table.skin-<name>` only where the look depends on the table's
+ *   geometry: a value that was tuned to a rail 20rem wide beside a board, or a
+ *   decoration that exists because of the room the table has and the phone does
+ *   not. Written that way, a look that needs a phone-specific answer says so
+ *   with `:root.skin-<name>:not(.table)`, and `test/ui/skin.test.ts` holds every
+ *   selector in a skin's directory to one of those three shapes.
+ *
+ * Classic is the skin that is almost nothing: the phone's partials in the
+ * phone's tokens, light or dark. Its two tones are the phone's own
+ * `:root` and `:root[data-theme="light"]` palettes, so this directory has no
+ * colours for them and cannot drift from the phone's.
+ *
+ * The keyframes stay in `../table/`, whichever skin uses them: they are global
+ * names, and a skin that wants one should not have to import another skin to
+ * get it.
+ *
+ * Each is inert unless its class is on the root.
+ */
+@import "./smoke/index.css";
+@import "./tabletop/index.css";
+@import "./classic.css";

@@ -90,10 +90,8 @@ import {
   unlocked,
   wordsFound,
 } from "./meta"
-import type { Skin } from "./skin"
+import { hasMovingBackground, type Skin } from "./skin"
 import type { Speed } from "./speed"
-import { isTable } from "./table"
-import type { Theme } from "./theme"
 
 export type Handlers = {
   key: (letter: string) => void
@@ -136,12 +134,10 @@ export type Handlers = {
   cycleDecor: () => void
   /** Step the animations up a rung, wrapping back to the speed they are drawn at. */
   cycleSpeed: () => void
-  /** Move the desktop table to its next skin. */
+  /** Move the look to the next of the four, wrapping round. */
   cycleSkin: () => void
-  /** Turn the desktop table's lights (the drifting smoke) on or off. */
+  /** Turn the moving background (the drifting smoke) on or off. */
   toggleAmbience: () => void
-  /** Step the look from the device's, to light, to dark, and back. */
-  toggleTheme: () => void
   /** Step the interface to the next language, wrapping back to English. */
   cycleLanguage: () => void
   openMenu: () => void
@@ -192,11 +188,10 @@ export type Chrome = {
   track: string
   decor: Decor
   speed: Speed
-  /** Whether the table lights are on. Only the table shows the row. */
+  /** Whether the moving background is on. Only a look that has one shows the row. */
   ambience: boolean
-  /** The table's skin. Only the table shows the row. */
+  /** The look on screen: a pick, or the default the window gave. */
   skin: Skin
-  theme: Theme
   /**
    * Which language is chosen, which the views need for the picker alone: every
    * *sentence* on the screen comes from the catalog in force, which is a module
@@ -2579,32 +2574,42 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
           icon("info"),
         ),
         soundButton(on, chrome),
-        themeButton(on, chrome),
+        skinButton(on, chrome),
       ),
     ),
   )
 }
 
 /**
- * The title screen's theme dial, after the speaker and on its terms: the face is the look
- * on screen, a tap swaps it, and the words are in `aria-label`. The
+ * The title screen's look dial, after the speaker and on its terms: the face is the look
+ * on screen, a tap moves to the next of the four, and the words are in `aria-label`. The
  * pause sheet has the same setting as a labelled row; this is the copy for the
  * first screen, where a player squinting at a bright page in a dark room should
  * not have to start a run to find the switch.
+ *
+ * Sun and moon stay the two Classics' faces because they are what this button
+ * has always been, and a player who knew the theme dial still finds it where it
+ * was, doing what its face says; the two rooms get a drift of smoke and a
+ * tile, which say what they are dressed in rather than what the light is.
  */
-const THEME_ICON: Record<Theme, IconName> = { light: "sun", dark: "moon" }
+const SKIN_ICON: Record<Skin, IconName> = {
+  smoke: "smoke",
+  tabletop: "tile",
+  "classic-dark": "moon",
+  "classic-light": "sun",
+}
 
-function themeButton(on: Handlers, chrome: Chrome): HTMLElement {
+function skinButton(on: Handlers, chrome: Chrome): HTMLElement {
   const copy = ui().pause
   return h(
     "button",
     {
       class: "title-dial",
       type: "button",
-      "aria-label": `${copy.theme}: ${copy.themes[chrome.theme]}`,
-      onclick: () => on.toggleTheme(),
+      "aria-label": `${copy.skin}: ${copy.skins[chrome.skin]}`,
+      onclick: () => on.cycleSkin(),
     },
-    icon(THEME_ICON[chrome.theme]),
+    icon(SKIN_ICON[chrome.skin]),
   )
 }
 
@@ -3525,27 +3530,18 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
         copy.speed,
         `×${chrome.speed}`,
       ),
+      // One row for the whole look, on every layout: the four presets are the
+      // two tones and the two rooms, so there is no separate light or dark.
       setting(
-        { "data-focus": "theme", onclick: () => on.toggleTheme() },
-        copy.theme,
-        copy.themes[chrome.theme],
+        { "data-focus": "skin", onclick: () => on.cycleSkin() },
+        copy.skin,
+        copy.skins[chrome.skin],
       ),
-      // Only where it does something: the overlay is the desktop table's, and a
-      // phone or the light theme has none to turn off, so a switch there would
-      // be a dead row. Asked at render, which is every dispatch, so a window
-      // crossing into or out of the table has it right by the next tap.
-      isTable() &&
-        setting(
-          { "data-focus": "skin", onclick: () => on.cycleSkin() },
-          copy.skin,
-          copy.skins[chrome.skin],
-        ),
-      // Beside the skin because it is the skin's: the lights are the smoke, and
-      // the Smoke Room is the one dressing with a moving room. Classic has none
-      // and Tabletop's walnut is a still picture, so on either the row would be
-      // a switch wired to nothing.
-      isTable() &&
-        chrome.skin === "smoke" &&
+      // Beside the look because it is the look's: the smoke is the one
+      // background that moves, and it moves on a phone too. The other three
+      // are a flat colour or a still picture, so on them the row would be a
+      // switch wired to nothing.
+      hasMovingBackground(chrome.skin) &&
         setting(
           { "data-focus": "ambience", onclick: () => on.toggleAmbience() },
           copy.ambience,

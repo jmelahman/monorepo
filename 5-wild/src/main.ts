@@ -3,8 +3,7 @@ import type { WordSource } from "./engine"
 import { App, loadRunLang, loadSave } from "./ui/app"
 import { startBackground } from "./ui/fx/background"
 import { type Lang, loadLang, S, setLang } from "./ui/lang"
-import { loadSkin, setSkin } from "./ui/skin"
-import { loadTheme, setTheme } from "./ui/theme"
+import { initLook } from "./ui/theme"
 
 /**
  * The shell. Its whole job is to load the two things the engine refuses to
@@ -34,17 +33,15 @@ const loadWords = async (lang: Lang): Promise<WordSource> => {
 const lang = loadLang()
 setLang(lang)
 
-// Before the fetch too, because the page is painted while it runs, and a light
-// player shown a dark page for the length of a download has seen a flash.
-setTheme(loadTheme())
+// Before the fetch, because the page is painted while it runs, and a light
+// player shown a dark page for the length of a download has seen a flash. One
+// call for the layout, the look and its tone, since which look is the default
+// depends on the layout and the tone depends on the look; applied and not
+// written, as nothing has been chosen yet.
+initLook()
 
-// Beside the theme for the same reason: the table is dressed before it is first
-// drawn, so nobody sees one skin flash into another. Applied, not written, as
-// nothing has been chosen yet.
-setSkin(loadSkin(), false)
-
-// After the theme, because the table is a class the theme sets and the
-// background follows it. Creates nothing on a phone.
+// After the look, because the background follows the skin class it sets, and
+// creates nothing unless that look has a moving one.
 startBackground()
 
 const saved = loadSave()

@@ -1,0 +1,9 @@
+/* The look half of `packs.css`; the layout, and the reasons for it, are in `../../table/packs.css`. */
+
+:root.skin-smoke .pack-hint {
+  color: var(--muted);
+}
+
+:root.skin-smoke .pack-sheet .shop-actions > .secondary {
+  border-radius: 0;
+}

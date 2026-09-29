@@ -1,0 +1,167 @@
+/*
+ * The Smoke Room's palette and scales.
+ *
+ * A back room after the game has thinned out: a near-black ground with smoke
+ * hanging in it, panels one step lighter than the ground, hairlines lighter
+ * again, and a single mint accent that is spent on the things you act on
+ * (the lit button, the letter being typed, the meter). Cash is the only other
+ * colour that is ever "lit", a dull brass, and it is spent on money and
+ * nothing else. Everything the game means in colour (green, yellow, gray on a
+ * tile, chips blue, mult red) is the game's own and is not the room's to
+ * restyle; it is only set a little quieter so that it reads against a ground
+ * this dark without glaring.
+ *
+ * It replaced a navy-and-brass casino, and the retirement was total: no
+ * `--brass`, `--felt-*`, `--bulb`, `--neon-*`, `--ivory` or `--velvet` survives
+ * anywhere, including the scripts that read tokens for particle colours (they
+ * read the roles below now). Two things that look like leftovers are not:
+ * `--gold` is still the name the phone's partials and the views use for money,
+ * and `--outline` is now only the ink under a pixel shadow.
+ *
+ * Existing token names keep their meaning because the phone's partials read
+ * them and so do views and JS; only the values move, under `:root.skin-smoke`.
+ * The roles at the end (`--accent`, `--spark`, `--lit`) are the ones a script
+ * or a second skin is expected to define: a scene asks for "the spark colour",
+ * never for mint.
+ */
+:root.skin-smoke {
+  /* The room: the ground the smoke is drawn on, the two smokes and the
+     vignette the shader falls to. Also what the static page is painted with
+     when there is no WebGL, so nothing here is only for the shader. */
+  --ground: #06070a;
+  --smoke-a: #0e2a2e;
+  --smoke-b: #2a0d18;
+  --vig: #020305;
+
+  --bg: #06070a;
+  /* Surfaces, lightest on top: the panel, the button on it, the key beside it. */
+  --panel: #0c0e13;
+  --panel-2: #131720;
+  --panel-3: #151922;
+  --well: #080a0e;
+  --line: #1d212b;
+  --fg: #ebe7df;
+  --muted: #858b98;
+
+  /* The ink under a pixel shadow and round the icon glyphs. Near-black, not
+     black: the ground is #06070a and a true black would read as a hole in it. */
+  --outline: #030407;
+
+  --green: #4a9a45;
+  --yellow: #c9a22c;
+  --gray: #3a3f4c;
+
+  --chips: #5a9cff;
+  --mult: #ff5a64;
+  /* Cash. Brass at a third the saturation of the casino's; it is a number, not a fixture. */
+  --gold: #d8b563;
+  --danger: #e0626b;
+
+  /* The one accent, and the ink that goes on it. */
+  --accent: #58c9b3;
+  --accent-hi: #9be8d8;
+  --on-accent: #04110e;
+
+  /* Buttons: a flat face and a hairline. The primary is the accent, the only
+     filled button on any screen. The rest are the panel's own step up. */
+  --btn: #131720;
+  --btn-primary: var(--accent);
+  --btn-neutral: #131720;
+  --btn-blue: #131720;
+  --btn-danger: var(--danger);
+  --btn-go: var(--accent);
+  --on-btn: var(--fg);
+  --on-primary: var(--on-accent);
+
+  /* Rarity, told in a bar along the top of a card. Values are the design's:
+     grey, green, blue, pink. */
+  --rare-common: #8a8f9a;
+  --rare-uncommon: #4fc28a;
+  --rare-rare: #5a9cff;
+  --rare-legendary: #ff5fb8;
+  --rare-wash: 12%;
+  --rare-wash-tray: 16%;
+  --rare-edge: 70%;
+
+  /* The board: the tray a guess sits in, the cell an empty tile is, and the
+     rings that mark one. */
+  --board-bg: #090b0f;
+  --board-line: #232834;
+  --cell: #0e1117;
+  --cell-line: #1a1e27;
+  --slot-line: #181b23;
+  --draft-line: var(--accent);
+  --key: #151922;
+  --key-line: #232834;
+  --key-dead: #0b0d12;
+  --key-gray-fg: #858b98;
+  --broken-bg: #0b0d12;
+  --broken-fg: #3f4552;
+  --shade: #000;
+  --sheen: #ffffff1c;
+  --scrim: #030408cc;
+  --title-tint: #0e2a2e;
+  --on-tile: #fff;
+  --on-bright: #04110e;
+
+  /* One pixel is 2px, and the notch cut from a corner is two of them. There
+     are no radii: a rounded corner is what the other two skins have. */
+  --px: 0.125rem;
+  --notch: 0.25rem;
+  --radius-s: 0;
+  --radius-m: 0;
+  --radius-l: 0;
+  --radius-pill: 0;
+  --bw: 0.125rem;
+
+  /*
+   * The notched corner: a rectangle with a 4px square taken out of each
+   * corner, as a `clip-path`. It clips anything drawn outside the box
+   * (`box-shadow`, an outline, a child that overflows), so it goes only on
+   * things that draw nothing outside themselves, and depth on this skin is
+   * done inside the box or not at all.
+   */
+  --cut: polygon(
+    var(--notch) 0,
+    calc(100% - var(--notch)) 0,
+    calc(100% - var(--notch)) var(--notch),
+    100% var(--notch),
+    100% calc(100% - var(--notch)),
+    calc(100% - var(--notch)) calc(100% - var(--notch)),
+    calc(100% - var(--notch)) 100%,
+    var(--notch) 100%,
+    var(--notch) calc(100% - var(--notch)),
+    0 calc(100% - var(--notch)),
+    0 var(--notch),
+    var(--notch) var(--notch)
+  );
+
+  /* Depth: none. A panel is a hairline and a step in lightness; the only shadow
+     on the skin is the hard pixel one under a piece that can be picked up. */
+  --shadow-hard: 0 0 0 0 transparent;
+  --shadow-soft: 0 0 0 0 transparent;
+  --shadow-lift: 0 0 0 0 transparent;
+  --rim: var(--bw) solid var(--line);
+  --top-light: inset 0 0 0 0 transparent;
+
+  /* Roles. What a scene means by "a spark", "a lit bulb" and "a coin", so that
+     a second skin can define its own and no script names a colour. */
+  --spark: var(--accent);
+  --spark-hi: var(--accent-hi);
+  --spark-lo: #2f7d6e;
+  --paper: var(--fg);
+  --paper-lo: var(--muted);
+  --lit: var(--accent);
+  --lit-hot: var(--fg);
+  --coin: var(--gold);
+  --coin-hi: #f0dc9c;
+  --coin-lo: #8f7434;
+
+  /* Jersey 10 does every job: display, numbers, labels, prose. It is drawn on a
+     pixel grid and only holds together at whole multiples of it, which is what
+     `font-size-adjust` in `type.css` is for. The fallbacks are a monospace on
+     purpose: a system sans in a page of pixel type is a broken page, a
+     monospace is a different page. */
+  --font-display: "Jersey 10", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-body: "Jersey 10", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}

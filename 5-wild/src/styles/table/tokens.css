@@ -37,6 +37,4 @@
 
   /* Widths the screens share. */
   --rail-w: clamp(19rem, 24vw, 23rem);
-
-  color-scheme: dark;
 }

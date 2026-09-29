@@ -1,0 +1,32 @@
+/*
+ * Classic: the phone's own look, in either tone.
+ *
+ * There is almost nothing in this file, and that is the design. With no skin's
+ * look on top, every screen is drawn by the phone's partials (`../*.css`) in the
+ * phone's tokens: system-ui, the green primary, the phone's radii and panels,
+ * and the dark or light palette by `data-theme`. That holds on a phone, where
+ * this file is not needed at all, and on the table, where the layout files carry
+ * no colour, face, border, shadow or motion and so fall through to the same
+ * thing. What this file adds is the handful of surfaces the *table's layout
+ * invented* and the phone never had to dress, because on a phone they are not
+ * boxes. The rail is the header of a phone screen, which sits flush on the
+ * page; on the table it is a column with edges, so it wants the panel the phone
+ * gives its cards. It reads only tokens the phone defines, in both tones, so it
+ * is right in Classic light with no light-specific rule.
+ *
+ * Nothing moves either. `src/ui/skin.ts` says Classic has no effects (fx level
+ * `none`), so `juiced()` and `tactile()` are false, no background canvas is
+ * created and the JS half of every flourish is off; and this file writes no
+ * animation or transition of its own. The stylesheet's own reduced-motion block
+ * still answers to the player's setting, as on the phone.
+ *
+ * The one selector shape that is not `:root.skin-<name>`: Classic is two
+ * classes (`skin-classic-dark`, `skin-classic-light`) so that the tone is in the
+ * name, and a rule that is Classic's whichever tone it is in says both.
+ */
+:root.table:is(.skin-classic-dark, .skin-classic-light) .round-screen .hud,
+:root.table:is(.skin-classic-dark, .skin-classic-light) .shop-screen .hud {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+}

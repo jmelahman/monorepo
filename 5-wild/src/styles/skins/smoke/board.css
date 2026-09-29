@@ -1,0 +1,195 @@
+/*
+ * The board on the table: cells, and the letters set in them.
+ *
+ * Three states. An empty cell is a well: darker than the page, a two-pixel
+ * hairline inside it. A letter being typed is the same cell with the accent
+ * around it and the foreground colour in it, because the accent is what says
+ * "this is yours to change" everywhere else on the screen. A scored letter is
+ * the colour it means, and the colour is the phone's exactly (`.tile.green` and
+ * friends still paint the fill): what is added is a bevel drawn *inside* the
+ * box, white on the top edge and black on the foot, which lights the face
+ * without moving its hue. Tried first as a `color-mix` toward white: it made the
+ * green a different green, which is a rule the player has to relearn.
+ *
+ * Everything is inside the box, and that is the clip-path's doing, not taste.
+ * The notch (`--cut`) clips a `box-shadow`, an outline and anything a pseudo
+ * element puts outside the border box, so a lip under a tile or a bezel around
+ * the grid would be sawn off at exactly the corners it was meant to frame. The
+ * casino build had both; this one has neither, and the grid has no frame at all:
+ * five columns of cells are the frame.
+ *
+ * Every motion below is `transform`, `translate`, `rotate`, `opacity` or
+ * `filter` on a tile or a row, and every transition names its properties: the
+ * grid sizes itself in container units and its width and font-size are not to
+ * be transitioned by anything (CLAUDE.md, the long section on the board flash).
+ * Two properties carry the motion so they never fight: `transform` belongs to
+ * the tile's own animations (the phone's flip, this file's land) and
+ * `translate` to everything the table adds on top (the hover lift, the row's
+ * click in `scenes/board.ts`). Individual transform properties compose; two
+ * animations on the same one replace each other, which is how a hover would
+ * have cancelled a flip.
+ */
+:root.skin-smoke {
+  /* A refusal is the one thing on the table that is red, and it is the
+     multiplier's red: the same colour that says "this is the wrong side of the
+     score" on the rail. */
+  --reject: var(--mult);
+}
+
+/* ---- the cell -------------------------------------------------------- */
+
+:root.skin-smoke .tile {
+  border: var(--bw) solid var(--cell-line);
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--cut);
+  color: var(--fg);
+  /* Named properties only; `translate` is the hover lift. `transform` stays in
+     the list because the phone's rule has it and the flip is written against
+     that timing. */
+  transition:
+    transform 90ms ease,
+    translate 140ms var(--ease-out),
+    filter 140ms var(--ease-out),
+    background-color 90ms linear;
+}
+
+/* The fill is asked of the empty tile alone: `:root.table .tile` outranks the
+   phone's `.tile.green`, and a fill written on every tile painted every scored
+   letter the empty cell's colour. A tile mid-reveal is `.pending`: its colour
+   class is on but its face is transparent until the flip lands, so it keeps the
+   cell's look and not the piece's. */
+:root.skin-smoke .tile:not(.filled, .green, .yellow, .gray):not(.pending),
+:root.skin-smoke .tile.pending {
+  background: var(--cell);
+}
+
+/* ---- the draft ------------------------------------------------------- */
+
+/* A letter typed and not yet sent. The type layer draws every glyph with a
+   dark outline and a drop (right on a coloured face, wrong on a dark cell where
+   it only smudges the pixel font), so both dials go to nothing. */
+:root.skin-smoke .tile.filled:not(.green, .yellow, .gray) {
+  --stroke: 0em;
+  --drop: 0em;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  color: var(--fg);
+  background: var(--cell);
+  border-color: var(--draft-line);
+}
+
+/* ---- the scored letter ----------------------------------------------- */
+
+/* The border takes the fill's own colour, so the cell's hairline vanishes and
+   the bevel is the only edge. */
+:root.skin-smoke .tile.green:not(.pending) {
+  border-color: var(--green);
+}
+
+:root.skin-smoke .tile.yellow:not(.pending) {
+  border-color: var(--yellow);
+}
+
+:root.skin-smoke .tile.gray:not(.pending) {
+  border-color: var(--gray);
+}
+
+:root.skin-smoke .tile:is(.green, .yellow, .gray):not(.pending) {
+  color: var(--on-tile);
+  box-shadow:
+    inset 0 0.125rem 0 #ffffff40,
+    inset 0 -0.1875rem 0 #00000047;
+}
+
+/* A ghost is a suggestion, not a guess: a cell with the letter faint. */
+:root.skin-smoke .tile.ghost {
+  border-color: var(--green);
+}
+
+/* ---- typing ---------------------------------------------------------- */
+
+/*
+ * The letter arriving drops in from above with a short blur along the vertical
+ * and rides back up onto its cell. No squash: a solid that flattens is a
+ * cartoon. The blur is `filter` and lasts a third of the animation. 240ms at
+ * x1: the phone's 110ms read as a flicker at this tile size, and anything over
+ * ~280ms queued behind a fast typist's next letter. The keyframes are the
+ * layout's, and stepped here: on a pixel-font board a smooth glide is the one
+ * thing that is not in the same language.
+ */
+:root.skin-smoke .tile.land {
+  animation: table-land calc(240ms * var(--pace)) steps(6, end);
+}
+
+/* ---- TILT: the row that was refused ---------------------------------- */
+
+/*
+ * A refused word shakes the row (the phone's `shake` keyframes at a larger
+ * `--shake`, with a small tilt riding on `rotate`, the individual property, so
+ * the two do not replace each other), and a red frame flashes over it twice.
+ * The lengths are 420ms because that is what the app takes the class off at
+ * (`replay(row, "rejected", 420)`); longer would be cut off mid-flash.
+ */
+:root.skin-smoke .row.rejected {
+  --shake: 0.875rem;
+  animation:
+    shake calc(420ms * var(--pace)) cubic-bezier(0.36, 0.07, 0.19, 0.97),
+    table-reject-tilt calc(420ms * var(--pace)) ease-in-out;
+}
+
+/* Inside the row's own box: the frame is what a hairline around a row can be
+   without a shadow, and it sits over the cells, tinted, not opaque. */
+:root.skin-smoke .row.rejected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--reject) 18%, transparent);
+  border: var(--bw) solid var(--reject);
+  opacity: 0;
+  animation: table-reject-flash calc(420ms * var(--pace)) steps(1, end);
+}
+
+/* ---- hover ----------------------------------------------------------- */
+
+/* A mouse lifts a letter by a hair and brightens it, no tilt. `.mouse` is the
+   class the app keeps on the root from `pointerType` (see `bindMouse`), never a
+   hover media query: the APK's WebView answers `(hover: hover)` like a desktop.
+   Not a tile mid-reveal, and not a ghost, which cannot be picked up. */
+:root.skin-smoke.mouse .tile:is(.filled, .green, .yellow, .gray):not(.pending):hover {
+  translate: 0 calc(var(--px) * -1);
+  filter: brightness(1.1);
+}
+
+/* ---- the boss's note ------------------------------------------------- */
+
+:root.skin-smoke .row-note {
+  border: var(--rim);
+  background: var(--panel);
+  box-shadow: none;
+  clip-path: var(--cut);
+}
+
+/* ---- the glint ------------------------------------------------------- */
+
+/* Lives in `#fx` (see `glint` in `scenes/board.ts`), so it is prefixed like the
+   rest and cannot exist on the phone. A hard-edged band of the foreground at
+   low alpha, since a soft gradient is the one non-pixel thing that could be
+   here; it is lit by being wide, not by being bright. */
+:root.skin-smoke .row-glint {
+  border-radius: 0;
+}
+
+:root.skin-smoke .row-glint > i {
+  opacity: 0;
+  background: linear-gradient(
+    100deg,
+    #ffffff00 0%,
+    #ffffff1a 32%,
+    #ffffff40 50%,
+    #ffffff1a 68%,
+    #ffffff00 100%
+  );
+}

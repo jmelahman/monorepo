@@ -1,9 +1,9 @@
 /*
- * The desktop's game table, as a layout and three dressings. `src/ui/table.ts`
- * puts `.table` on the root only for a wide landscape window outside the APK in
- * the dark theme, and `src/ui/skin.ts` puts exactly one `skin-*` class beside
- * it. A phone never matches a `:root.table` rule and so renders exactly the
- * sheet it rendered before the table existed; that is the whole safety
+ * The desktop's game table, as a layout. `src/ui/table.ts` puts `.table` on the
+ * root for a wide landscape window outside the APK, and for that alone: it says
+ * nothing of the look, so Classic light sits on this arrangement as readily as
+ * Smoke does. A phone never matches a `:root.table` rule and so renders exactly
+ * the sheet it rendered before the table existed; that is the whole safety
  * argument for the redesign, and it holds only as long as nothing in here is
  * written without the prefix.
  *
@@ -11,9 +11,9 @@
  * alone: where things sit, how big they are, what wraps. They carry no colour,
  * no face, no border, no shadow and no motion, so a skin is free to dress them
  * in anything, and with no skin's rules on top they fall through to the
- * phone's own look, which is how Classic works. The look is one directory per
- * skin, every rule under `:root.table.skin-<name>`; see `smoke/index.css`, and
- * `classic-skin.css` for the skin that is nearly nothing.
+ * palette's own look, which is how Classic works. The looks live in
+ * `src/styles/skins/`, one directory per skin, on the phone as well; see
+ * `skins/index.css`, and `skins/classic.css` for the skin that is nearly nothing.
  *
  * The keyframes stay here, whichever skin uses them: they are global names, and
  * a skin that wants one should not have to import another skin to get it.
@@ -37,8 +37,3 @@
 @import "./scoring.css";
 @import "./packs.css";
 @import "./buttons.css";
-
-/* The dressings. Each is inert unless its class is on the root. */
-@import "./smoke/index.css";
-@import "./tabletop/index.css";
-@import "./classic-skin.css";

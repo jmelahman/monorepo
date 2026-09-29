@@ -11,7 +11,6 @@ import type {
   Refusal,
 } from "../../engine"
 import type { Skin } from "../skin"
-import type { Theme } from "../theme"
 
 /**
  * The shape every language has to fill.
@@ -603,18 +602,12 @@ export type Strings = {
       music: string
       track: string
       speed: string
-      /** The desktop table's dressing; the row exists only there. */
+      /** The look, on every layout: one row for what used to be a theme and a skin. */
       skin: string
-      /** Each skin's name, the row's value: a place or a style, so the translator's. */
+      /** Each look's name, the row's value: a place or a style, so the translator's. */
       skins: Record<Skin, string>
-      /** The desktop table's drifting smoke; the row exists only there. */
+      /** The moving background (the smoke); the row exists only where a look has one. */
       ambience: string
-      /**
-       * The one row whose value is the translator's, since "Light" is a word
-       * rather than a number or a name: the device's look, light, and dark.
-       */
-      theme: string
-      themes: Record<Theme, string>
       /**
        * Also the noun in front of the title screen's language pill in its
        * accessible name, which is what tells a screen reader that "Español" is

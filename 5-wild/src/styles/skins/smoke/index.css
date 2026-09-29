@@ -1,0 +1,27 @@
+/*
+ * The Smoke Room's look: every rule that dresses the table rather than lays it
+ * out, under `:root.skin-smoke`. The geometry it is drawn on is in the
+ * files one directory up, under `:root.table` alone, and nothing here restates
+ * any of it: no width, no grid placement, no padding, no font size. If a look
+ * seems to need one, the layout file wants a variable instead.
+ *
+ * Same order as the layout files, and for the same reason: tokens first, the
+ * surface and the type, the parts on every screen, then one file per screen.
+ */
+@import "./fonts.css";
+@import "./tokens.css";
+@import "./backdrop.css";
+@import "./type.css";
+@import "./buttons.css";
+@import "./cards.css";
+@import "./round.css";
+@import "./shop.css";
+@import "./screens.css";
+@import "./title.css";
+@import "./sheets.css";
+@import "./board.css";
+@import "./keyboard.css";
+@import "./moments.css";
+@import "./scoring.css";
+@import "./relics.css";
+@import "./packs.css";
