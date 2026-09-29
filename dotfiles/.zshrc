@@ -377,7 +377,7 @@ export LS_OPTIONS="--color=auto"
 export CLICOLOR="Yes"
 export LSCOLOR=""
 
-export GIT_QUIET=true
+export PREK_ALLOW_NO_CONFIG=1
 
 # Fall back to less if the configured git pager isn't installed
 if ! command -v "$(git config --get core.pager 2>/dev/null | awk '{print $1}')" &>/dev/null; then
