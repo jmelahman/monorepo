@@ -605,6 +605,19 @@ export class App {
     }
     this.busy = false
     this.render()
+    // The screen the guess led to (the reward, the end card, or the same board)
+    // gets the same after-the-render playback as any dispatched action, which
+    // is where the table's round-won and game-over moments live. The scoring
+    // events come along with the rest; the scenes pick out what is theirs.
+    const after = this.root.firstElementChild
+    if (after instanceof HTMLElement) {
+      playEvents({ type: "submit" }, events, {
+        root: this.root,
+        screen: after,
+        state: this.state,
+        sound: this.sound,
+      })
+    }
 
     if (this.state.phase === "game_over") this.sound.cue({ name: "lose" })
     else if (this.state.phase === "reward" || this.state.phase === "victory") {
