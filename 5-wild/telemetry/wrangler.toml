@@ -6,7 +6,7 @@ compatibility_date = "2026-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "5wild-telemetry"
-# Printed by `npx wrangler d1 create 5wild-telemetry`. Not a secret: without
+# Printed by `bunx wrangler d1 create 5wild-telemetry`. Not a secret: without
 # an API token for the account it names nothing anyone can reach.
 database_id = "649f5259-1e8a-4b5e-923b-f1bb316c00a1"
 

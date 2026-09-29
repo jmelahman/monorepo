@@ -166,7 +166,7 @@ function summarize(
  * moment it was recorded. It is kept out of `expected` for exactly that reason:
  * an always-empty array in the JSON would be re-recorded as an always-empty
  * array, so a rule that started refusing something would launder itself through
- * the next `npm run golden`. Asserted as a property instead, which re-recording
+ * the next `bun run golden`. Asserted as a property instead, which re-recording
  * cannot quietly agree with.
  */
 export type RefusedAction = { index: number; action: Action; refusal: Refusal }

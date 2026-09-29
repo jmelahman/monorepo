@@ -23,7 +23,7 @@ on:
       - public/**
       - index.html
       - package.json
-      - package-lock.json
+      - bun.lock
       - .github/workflows/desktop.yml
   pull_request:
     paths:
@@ -32,7 +32,7 @@ on:
       - public/**
       - index.html
       - package.json
-      - package-lock.json
+      - bun.lock
       - .github/workflows/desktop.yml
   workflow_dispatch:
 
@@ -76,11 +76,8 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       # No cache, as in android.yml and for its reason: these builds are what a
-      # player runs, and a restored cache is writable by any pull request.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # zizmor: ignore[cache-poisoning]
-        with:
-          node-version: 24
-          cache: ""
+      # player runs, and a restored cache is writable by any pull request. One
+      # setup covers both installs below: the root one and desktop/'s own.
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # zizmor: ignore[cache-poisoning]
         with:
           no-cache: true
@@ -99,10 +96,10 @@ jobs:
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good
       # The runners ship rustup; this only makes the toolchain explicit.
       - run: rustup toolchain install stable --profile minimal
-      # `npm run build` is `tsc --noEmit && vite build`, into dist/, which
+      # `bun run build` is `tsc --noEmit && vite build`, into dist/, which
       # tauri.conf.json embeds as `frontendDist`.
-      - run: npm ci
-      - run: npm run build
+      - run: bun install --frozen-lockfile
+      - run: bun run build
       # --verbose because without it the bundler swallows linuxdeploy's output,
       # and a failed AppImage says only "failed to run linuxdeploy". That was
       # all the first failure here said; the real cause (see TO_SIGNPATH above)

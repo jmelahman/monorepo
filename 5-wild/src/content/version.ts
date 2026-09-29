@@ -3,7 +3,7 @@
  *
  * Bump this whenever a change alters a number a recorded run could observe: a
  * letter value, a target, a relic's arithmetic, a payout, the answer list, the
- * order anything is drawn in. Then re-record (`npm run golden`) and read the
+ * order anything is drawn in. Then re-record (`bun run golden`) and read the
  * diff: that diff *is* the balance change, stated in scores rather than in
  * source.
  *

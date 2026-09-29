@@ -7,7 +7,7 @@
  * when it reproduces this file.
  *
  * To accept a deliberate balance change: bump CONTENT_VERSION, run
- * `npm run golden`, and read the diff. The diff is the change, priced in
+ * `bun run golden`, and read the diff. The diff is the change, priced in
  * points.
  */
 
@@ -42,7 +42,7 @@ describe("golden vectors", () => {
    */
   it("was recorded at the current content version", () => {
     for (const vector of vectors) {
-      expect(vector.contentVersion, `${vector.name}: re-record with \`npm run golden\``).toBe(
+      expect(vector.contentVersion, `${vector.name}: re-record with \`bun run golden\``).toBe(
         CONTENT_VERSION,
       )
     }

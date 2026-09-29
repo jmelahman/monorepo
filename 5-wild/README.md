@@ -87,5 +87,5 @@ the [AppImage](https://github.com/jmelahman/5-wild/releases/latest/download/5-wi
 APK. The installer is unsigned, so Windows warns about an unknown publisher the
 first time.
 
-**Source:** `npm ci && npm run dev` serves it at <http://localhost:5173>.
+**Source:** `bun install && bun run dev` serves it at <http://localhost:5173>.
 `CONTRIBUTING.md` has the rest.

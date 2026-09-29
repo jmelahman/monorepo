@@ -45,15 +45,14 @@ jobs:
           fetch-depth: 0
       # Caching is off here, unlike the test workflow, and switched off
       # explicitly rather than by omission. This job holds the signing key on a
-      # release, and a restored npm cache is writable by any pull request that
-      # ran before it — a poisoned cache would be executing inside the one job
-      # that can sign an APK. `npm ci` cold costs a few seconds; not a close
-      # trade. zizmor flags setup-node on a signing trigger regardless of the
-      # input, so the opt-out below is the fix and this is the paperwork.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # zizmor: ignore[cache-poisoning]
+      # release, and a restored cache is writable by any pull request that ran
+      # before it — a poisoned cache would be executing inside the one job that
+      # can sign an APK. A cold install costs a few seconds; not a close trade.
+      # zizmor flags setup-bun on a signing trigger regardless of the input, so
+      # the opt-out below is the fix and this is the paperwork.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # zizmor: ignore[cache-poisoning]
         with:
-          node-version: 24
-          cache: ""
+          no-cache: true
       # Android Gradle Plugin 8.7 does not support JDK 26; 21 is the newest
       # release it builds against cleanly.
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
@@ -69,9 +68,9 @@ jobs:
         with:
           packages: platform-tools
 
-      - run: npm ci
-      - run: npm run build
-      - run: npx cap sync android
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bunx cap sync android
 
       # Only a tag gets the real key. A push build is unsigned on purpose:
       # it proves the build works without handing the signing material to every
@@ -143,8 +142,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       # The only scope in this workflow that can write anything, confined to the
-      # one job that attaches the asset. The build job above runs `npm ci`, and
-      # a job running third-party install scripts has no business holding it.
+      # one job that attaches the asset. The build job above runs `bun install`,
+      # and a job running third-party install scripts has no business holding it.
       contents: write
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c

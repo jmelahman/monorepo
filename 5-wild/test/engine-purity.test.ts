@@ -51,8 +51,9 @@ describe("engine purity", () => {
       )
 
       for (const specifier of specifiers) {
-        // A bare specifier is an npm or Node builtin dependency. The engine has
-        // none, and that is the point: it can be lifted into any host as-is.
+        // A bare specifier is a registry package or Node builtin dependency.
+        // The engine has none, and that is the point: it can be lifted into
+        // any host as-is.
         expect(specifier.startsWith("."), `${specifier} is an external dependency`).toBe(true)
 
         const target = resolve(dirname(file), specifier)

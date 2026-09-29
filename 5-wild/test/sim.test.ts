@@ -9,9 +9,9 @@
  *
  * Two modes, on the same shape as `golden.test.ts`:
  *
- *   npm test        a dozen seeds, asserted loosely: a smoke alarm for a
+ *   bun run test    a dozen seeds, asserted loosely: a smoke alarm for a
  *                   balance edit that made the game unwinnable or trivial
- *   npm run sim     a few hundred seeds, printed as a report
+ *   bun run sim     a few hundred seeds, printed as a report
  *
  * The assertions are deliberately a wide band rather than a number. A tight one
  * would be a balance expectation pinned in a test nobody thinks of as a balance

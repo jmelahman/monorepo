@@ -14,7 +14,7 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: "https",
     // For live reload on a physical device, uncomment and point at your LAN IP
-    // while `npm run dev` is running, then re-run `npx cap sync android`:
+    // while `bun run dev` is running, then re-run `bunx cap sync android`:
     // url: "http://192.168.1.x:5173",
     // cleartext: true,
   },

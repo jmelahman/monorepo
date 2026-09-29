@@ -10,16 +10,16 @@
  * and dropped, whether it was forged, mangled, or played on rules this
  * checkout no longer has.
  *
- *   npx wrangler d1 execute 5wild-telemetry --remote --json \
+ *   bunx wrangler d1 execute 5wild-telemetry --remote --json \
  *     --command "SELECT payload FROM runs" > .tmp/runs.json   (from telemetry/)
- *   RUNS=.tmp/runs.json npm run telemetry
+ *   RUNS=.tmp/runs.json bun run telemetry
  *
  * Only runs at the current `CONTENT_VERSION` are replayed. An older one is a
  * run on different numbers, and replaying it here would report the new rules'
  * verdict on the old player's choices. They are counted and set aside, and the
  * way to read them is to check out the commit they name.
  *
- * Without `RUNS` this is skipped, so `npm test` never needs the network.
+ * Without `RUNS` this is skipped, so `bun run test` never needs the network.
  */
 
 import { readFileSync } from "node:fs"

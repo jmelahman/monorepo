@@ -6,16 +6,16 @@ design notes, and is worth reading before changing anything the engine owns.
 ## Running it
 
 ```sh
-npm ci
-npm run dev        # http://localhost:5173
+bun install
+bun run dev        # http://localhost:5173
 ```
 
 The same three commands CI runs:
 
 ```sh
-npm run typecheck
-npm run check      # Biome lint + format
-npm test           # Vitest
+bun run typecheck
+bun run check      # Biome lint + format
+bun run test       # Vitest
 ```
 
 ## Layout
@@ -77,7 +77,7 @@ means every future install is a fresh one with the save wiped.
 Building locally additionally needs a JDK and the Android SDK:
 
 ```sh
-npm run apk        # build + cap sync + gradlew assembleDebug
+bun run apk        # build + cap sync + gradlew assembleDebug
 ```
 
 The same tag builds the desktop app, the web build in Tauri's shell, and
@@ -88,7 +88,7 @@ locally needs Rust, bun, and on Linux Tauri's WebKitGTK prerequisites, and
 comes out as version 0.0.0 unless handed one the way `desktop.yml` does:
 
 ```sh
-npm run build                         # the shell embeds dist/
+bun run build                         # the shell embeds dist/
 cd desktop && bun install && bun run tauri build
 ```
 
@@ -139,7 +139,7 @@ that into a diff you can read. So a deliberate change is three steps:
 
 ```sh
 # bump CONTENT_VERSION in src/content/version.ts
-npm run golden     # re-record
+bun run golden     # re-record
 git diff test/golden/vectors.json
 ```
 
@@ -239,8 +239,8 @@ its own instrument.
 ## The blind simulator
 
 ```sh
-npm run sim                                        # 300 seeds, two policies
-SIM=1 SIM_SEEDS=60 npx vitest run test/sim.test.ts  # narrower, while iterating
+bun run sim                                         # 300 seeds, two policies
+SIM=1 SIM_SEEDS=60 bunx vitest run test/sim.test.ts # narrower, while iterating
 ```
 
 `test/helpers/blind.ts` is a player handed the run with `round.answer`
@@ -281,7 +281,7 @@ guess thrown at chips alone scores its tiles at ×1 and buys nothing toward the
 next one. Income is worth taking when a guess you wanted anyway happens to be
 rich; it does not survive being made the plan.
 
-`npm test` runs the same thing over a dozen seeds with deliberately loose
+`bun run test` runs the same thing over a dozen seeds with deliberately loose
 assertions: a smoke alarm for an edit that made the game unwinnable or trivial,
 not a measurement of the curve. Pinning the curve here would recreate exactly the
 problem the balance notes warn about: a balance expectation living in a test
@@ -312,11 +312,11 @@ overrides it for a one-off build. The worker is already up. Standing it up again
 on another account say, is:
 
 ```sh
-cd telemetry && npm install
+cd telemetry && bun install
 echo 'CLOUDFLARE_API_TOKEN=…' > .env      # Workers Scripts + D1 edit; gitignored
-npx wrangler d1 create 5wild-telemetry   # paste the database_id into wrangler.toml
-npm run migrate
-npm run deploy                           # prints the workers.dev URL
+bunx wrangler d1 create 5wild-telemetry  # paste the database_id into wrangler.toml
+bun run migrate
+bun run deploy                           # prints the workers.dev URL
 ```
 
 Then put `<that URL>/runs` in `DEPLOYED`. The Play Console's Data safety form
@@ -324,16 +324,16 @@ must say "App activity → Other actions": collected, not shared, optional, not
 linked to identity, and used for analytics. A mismatch between the form and the
 app is a policy violation.
 
-`npm run dev` at the root posts to a local worker on 8787, never the real one.
-To see those runs arrive, `npm run migrate:local` then `npm run dev:local` under
+`bun run dev` at the root posts to a local worker on 8787, never the real one.
+To see those runs arrive, `bun run migrate:local` then `bun run dev:local` under
 `telemetry/`.
 
 Reading it:
 
 ```sh
-cd telemetry && npx wrangler d1 execute 5wild-telemetry --remote --json \
+cd telemetry && bunx wrangler d1 execute 5wild-telemetry --remote --json \
   --command "SELECT payload FROM runs" > ../.tmp/runs.json && cd ..
-RUNS=.tmp/runs.json npm run telemetry
+RUNS=.tmp/runs.json bun run telemetry
 ```
 
 The report replays every run at the current `CONTENT_VERSION` against this

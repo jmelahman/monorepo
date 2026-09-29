@@ -40,7 +40,7 @@ const DEPLOYED = "https://5wild-telemetry.lahmanja.workers.dev/runs"
 
 /**
  * `VITE_TELEMETRY_URL` still overrides it, for pointing a build somewhere else
- * without an edit. `npm run dev` defaults to a local worker (`npm run dev` in
+ * without an edit. `bun run dev` defaults to a local worker (`bun run dev` in
  * `telemetry/`), so play on a laptop never lands in the real data, and a dev
  * server with nothing on 8787 just leaves runs in the outbox.
  *

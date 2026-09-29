@@ -225,7 +225,7 @@ only; rendering and interaction get validated in a real browser instead.
 
 ## Changing balance
 
-`CONTRIBUTING.md` has the mechanics: bump `CONTENT_VERSION`, `npm run golden`,
+`CONTRIBUTING.md` has the mechanics: bump `CONTENT_VERSION`, `bun run golden`,
 read the diff. What it does not state is the standard of evidence. Balance comments here
 cite run counts because the numbers came from actually simulating the change, and
 a nerf argued from intuition will read as out of place beside them. A throwaway

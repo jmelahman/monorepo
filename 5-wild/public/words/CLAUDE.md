@@ -75,7 +75,7 @@ The lists are part of the game's contract, not static assets.
   round picks an index into this sorted list. That moves the golden vectors,
   which are replayed against the English lists specifically
   (`test/helpers/words.ts`). So bump `CONTENT_VERSION` in
-  `src/content/version.ts`, run `npm run golden`, and read the diff, the same as
+  `src/content/version.ts`, run `bun run golden`, and read the diff, the same as
   a balance change. It also means telemetry replays from before the change get
   set aside rather than replayed.
 - **Adding to `allowed`** only makes guesses legal. It cannot move a vector.
