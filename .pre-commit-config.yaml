@@ -1,8 +1,10 @@
 default_install_hook_types:
   - pre-commit
+  - pre-push
   - post-checkout
   - post-merge
   - post-rewrite
+  - post-commit
 
 # In workspace mode this root project sees every file in the tree, subtrees
 # included. Skip bytes that are meant to be exactly what they are: vendored
