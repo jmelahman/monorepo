@@ -1,4 +1,4 @@
-import { centerOf, stand } from "../layer"
+import { centerOf, fxDom, stand } from "../layer"
 import { juiced, tween } from "../motion"
 import { burst } from "../particles"
 import { shake } from "../shake"
@@ -39,7 +39,13 @@ import { shake } from "../shake"
  */
 const held = new WeakMap<HTMLElement, string>()
 
-const DUST = ["#e4dcff", "#b3a4e6", "#8f7fcc"] as const
+/**
+ * Chips kick up brass and ivory dust off the felt, not the violet the first cut
+ * threw: the pieces are ivory in brass settings, and the dust is what they are
+ * made of. Literal here because particles take colours as strings; they are the
+ * tokens `--ivory`, `--brass-hi` and `--brass` as of the palette pass.
+ */
+const DUST = ["#f2e8d2", "#f0cf7a", "#c9973f"] as const
 const RED = ["#ff6b73", "#ff3d48", "#ffb3b8"] as const
 
 /** A letter just landed in `tile` (after `patchDraft` drew it). */
@@ -71,6 +77,7 @@ export function typed(tile: HTMLElement): void {
   if (!row || tile.nextElementSibling) return
   const tiles = Array.from(row.children)
   if (!tiles.every((child) => child.classList.contains("filled"))) return
+  glint(row)
   tiles.forEach((child, index) => {
     void tween(
       child,
@@ -83,6 +90,35 @@ export function typed(tile: HTMLElement): void {
       { duration: 300, delay: 110 + index * 34, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" },
     )
   })
+}
+
+/**
+ * A row completes: a bright streak crosses it left to right, the way light
+ * runs across a brass plate when the cabinet is nudged. It is a band in the fx
+ * layer over the row's box, clipped to it, because a render rebuilds the row
+ * (and anything parented to it) a moment after the last key, and one streak
+ * whose element outlives that is the whole point. The band is a gradient on a
+ * child that only ever translates, so it is composited and the row is not
+ * repainted. Starts as the last chip lands (the wave's own delay) and takes
+ * 420ms, so the chips rise under it rather than before it.
+ */
+function glint(row: Element): void {
+  const rect = row.getBoundingClientRect()
+  const clip = document.createElement("div")
+  clip.className = "row-glint"
+  clip.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px`
+  const band = document.createElement("i")
+  clip.append(band)
+  fxDom().append(clip)
+  const done = () => clip.remove()
+  tween(
+    band,
+    [
+      { translate: "-120% 0", opacity: 1 },
+      { translate: "340% 0", opacity: 1 },
+    ],
+    { duration: 420, delay: 120, easing: "cubic-bezier(0.45, 0, 0.35, 1)" },
+  ).then(done, done)
 }
 
 /** A letter just left the row being typed. */
@@ -157,14 +193,21 @@ export function rejected(row: HTMLElement): void {
 /**
  * A round screen just arrived from somewhere that was not a round.
  *
- * The board is dealt tile by tile down a diagonal, the way cards are turned out
- * of a shoe, and the keyboard rises behind it a row at a time. Every tile is
- * tweened from `opacity: 0` and starts holding that pose through its own delay
- * (`tween` fills backwards), so nothing is seen at rest before its turn. The
- * stagger is 60ms a row and 34ms a column: the last tile of six rows starts at
- * 0.4s and lands at about 0.75s, quick enough that a player who has already
- * begun typing is not waiting on it, and slow enough to be seen at all. All of
- * it is finished at once by a tap, since `tween` registers with `settle`.
+ * The board is five reels spinning up and stopping one after another, left to
+ * right, the way a slot cabinet settles once the lever is let go. Every tile of
+ * a column starts from the same blurred, stretched, low pose, drifts up past its
+ * stop as if still turning, and comes to rest with the same small overshoot the
+ * typed letter has, so the deal and the typing are one motion vocabulary. Reels
+ * stop 95ms apart; within a column a row lags the last by 14ms, which is what
+ * makes a reel read as a strip and not as six separate things. The last column
+ * starts at 0.38s and lands at about 0.95s: a player who begins typing is not
+ * held up (the tiles are live throughout), and it is slow enough to be seen.
+ * The sockets are dark on a dark cabinet, so a reel moving in them is nearly
+ * invisible; the socket's rim runs brass-bright while it turns and settles back
+ * to its own colour as it stops, which is what makes the spin readable. The
+ * blur is on the first 45% only, and every animation is finished at once by
+ * a tap, since `tween` registers with `settle`. It replaced a card deal down a
+ * diagonal, which was a shoe and not a machine.
  */
 export function dealt(screen: HTMLElement): void {
   if (!juiced()) return
@@ -175,11 +218,29 @@ export function dealt(screen: HTMLElement): void {
       void tween(
         tile,
         [
-          { opacity: 0, transform: "translateY(-1.4rem) scale(0.7) rotate(-7deg)" },
-          { opacity: 1, transform: "translateY(0.15rem) scale(1.06) rotate(1deg)", offset: 0.68 },
-          { opacity: 1, transform: "none" },
+          {
+            opacity: 0,
+            transform: "translateY(1.1rem) scaleY(1.25)",
+            filter: "blur(0.12rem)",
+            borderColor: "#f0cf7a",
+          },
+          {
+            opacity: 1,
+            transform: "translateY(-0.7rem) scaleY(1.15)",
+            filter: "blur(0.1rem)",
+            borderColor: "#f0cf7a",
+            offset: 0.3,
+          },
+          {
+            transform: "translateY(0.55rem) scaleY(1.1)",
+            filter: "blur(0.08rem)",
+            borderColor: "#f0cf7a",
+            offset: 0.45,
+          },
+          { transform: "translateY(0.16rem) scaleY(1)", filter: "blur(0)", offset: 0.75 },
+          { transform: "none", filter: "blur(0)" },
         ],
-        { duration: 340, delay: r * 60 + c * 34, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+        { duration: 560, delay: c * 95 + r * 14, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
       )
     })
   })

@@ -118,7 +118,10 @@ function family(kind: string | null): string | null {
   if (!kind) return null
   const names = kind.split(" ")
   for (const name of ["round-screen", "shop-screen", "intro", "title", "center"]) {
-    if (names.includes(name)) return name
+    // The classes are `round-screen` and `shop-screen`, and every comparison
+    // below says `"round"` and `"shop"`: until this mapped them, `dealt`, the
+    // crumble, the zoom and the shop fade were all unreachable.
+    if (names.includes(name)) return name.replace("-screen", "")
   }
   return kind
 }
