@@ -72,7 +72,10 @@ describe("link preview art", () => {
     const html = readFileSync("index.html", "utf8")
     const declared = (prop: string) =>
       Number(html.match(new RegExp(`property="og:image:${prop}" content="(\\d+)"`))?.[1])
-    expect(pngSize("public/og.png")).toEqual({ width: declared("width"), height: declared("height") })
+    expect(pngSize("public/og.png")).toEqual({
+      width: declared("width"),
+      height: declared("height"),
+    })
   })
 
   it("renders the touch icon at 180x180, opaque", () => {
