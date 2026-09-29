@@ -81,5 +81,3 @@
 	skippedCherryPicks = false
 [extensions]
 	worktreeConfig = true
-[notes]
-	rewriteRef = refs/notes/metrics
