@@ -78,10 +78,11 @@ your runs and records stay on the device.
 Linux:
 
 ```sh
-curl -L https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-x86_64.tar.gz | tar xz && ./5-wild
+curl -L https://download.5-wild.com | tar xz -C ~/.local/bin
 ```
 
-That uses the WebKitGTK already on most desktops; if yours has none, the
+Then run `5-wild`, or `~/.local/bin/5-wild` if that directory is not on your
+`PATH`. The same line again updates it. The binary uses the WebKitGTK already on most desktops; if yours has none, the
 [deb](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-amd64.deb) installs it for you on Debian and Ubuntu, and
 the [AppImage](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-x86_64.AppImage) brings its own. It is the same game as the site in its own window, offline like the
 APK. The installer is unsigned, so Windows warns about an unknown publisher the
