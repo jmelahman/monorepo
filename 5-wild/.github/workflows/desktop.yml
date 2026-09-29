@@ -93,11 +93,16 @@ jobs:
       # tauri.conf.json embeds as `frontendDist`.
       - run: npm ci
       - run: npm run build
+      # --verbose because without it the bundler swallows linuxdeploy's output,
+      # and a failed AppImage says only "failed to run linuxdeploy": the first
+      # one here did, on a runner, having built fine in a bare ubuntu:22.04
+      # container with the same packages both with and without
+      # APPIMAGE_EXTRACT_AND_RUN.
       - name: Build the shell
         working-directory: desktop
         run: |
           bun install --frozen-lockfile
-          bun run tauri build
+          bun run tauri build --verbose
       # Stable names, as the APK has, so a download link can name the file
       # without a version in it. Tauri's own carry the product name, space and
       # all, and the version.
