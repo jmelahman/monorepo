@@ -11,7 +11,7 @@
   <a href="https://5-wild.com"><img alt="Play now" src="https://img.shields.io/badge/Play%20now-5--wild.com-538d4e?style=for-the-badge&logoColor=white"></a>
   <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild.apk"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-3a3a3c?style=for-the-badge&logo=android&logoColor=white"></a>
   <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-windows-setup.exe"><img alt="Download for Windows" src="https://img.shields.io/badge/Download-Windows-3a3a3c?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0wIDBoMTEuNHYxMS40SDB6TTEyLjYgMEgyNHYxMS40SDEyLjZ6TTAgMTIuNmgxMS40VjI0SDB6TTEyLjYgMTIuNkgyNFYyNEgxMi42eiIvPjwvc3ZnPg=="></a>
-  <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-x86_64.AppImage"><img alt="Download for Linux" src="https://img.shields.io/badge/Download-Linux-3a3a3c?style=for-the-badge&logo=linux&logoColor=white"></a>
+  <a href="https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-x86_64"><img alt="Download for Linux" src="https://img.shields.io/badge/Download-Linux-3a3a3c?style=for-the-badge&logo=linux&logoColor=white"></a>
 </p>
 
 ---
@@ -75,10 +75,13 @@ inside the package, word lists included, so it plays with no network at all, and
 your runs and records stay on the device.
 
 **Desktop:** the [Windows installer](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-windows-setup.exe), or on
-Linux the [AppImage](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-x86_64.AppImage) (mark it executable and
-run it) or the [deb](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-amd64.deb) for Debian and Ubuntu. It is
-the same game as the site in its own window, offline like the APK. The installer
-is unsigned, so Windows warns about an unknown publisher the first time.
+Linux [the game itself](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-x86_64), which needs marking executable
+(`chmod +x`) and then runs. It uses the WebKitGTK already on most desktops; if
+yours has none, the [deb](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-amd64.deb) installs it for you on
+Debian and Ubuntu, and the [AppImage](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild-linux-x86_64.AppImage) brings
+its own. It is the same game as the site in its own window, offline like the
+APK. The installer is unsigned, so Windows warns about an unknown publisher the
+first time.
 
 **Source:** `npm ci && npm run dev` serves it at <http://localhost:5173>.
 `CONTRIBUTING.md` has the rest.

@@ -56,8 +56,14 @@ jobs:
     # only once the SignPath project exists, so until its variable is set the
     # workflow ships unsigned exactly as before rather than failing. Linux has
     # nothing to sign; a distro checks a package's repository, not the file.
+    #
+    # Not `SIGN`, which it was, and which cost the Linux build: appimagetool
+    # GPG-signs whenever `SIGN` is *set*, whatever it holds, so `SIGN: false`
+    # asked it to sign with a key the runner does not have, and it aborted
+    # with "Signing failed". Environment variables are one namespace shared
+    # with every tool a step runs, so this one is named for what it is.
     env:
-      SIGN: ${{ matrix.platform == 'windows' && github.ref_type == 'tag' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+      TO_SIGNPATH: ${{ matrix.platform == 'windows' && github.ref_type == 'tag' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
     defaults:
       run:
         shell: bash
@@ -94,10 +100,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       # --verbose because without it the bundler swallows linuxdeploy's output,
-      # and a failed AppImage says only "failed to run linuxdeploy": the first
-      # one here did, on a runner, having built fine in a bare ubuntu:22.04
-      # container with the same packages both with and without
-      # APPIMAGE_EXTRACT_AND_RUN.
+      # and a failed AppImage says only "failed to run linuxdeploy". That was
+      # all the first failure here said; the real cause (see TO_SIGNPATH above)
+      # was two lines of appimagetool's that only --verbose prints.
       - name: Build the shell
         working-directory: desktop
         run: |
@@ -106,6 +111,14 @@ jobs:
       # Stable names, as the APK has, so a download link can name the file
       # without a version in it. Tauri's own carry the product name, space and
       # all, and the version.
+      #
+      # Linux ships three ways, one per kind of player. The bare binary is 9 MB
+      # and the one the README links: it uses the system's WebKitGTK and
+      # GStreamer, which a desktop distro already has. The deb is the same
+      # binary with its dependencies declared, so apt fetches what is missing.
+      # The AppImage carries its own copies of both, 91 MB of them, for a
+      # system where neither is an option, such as the Steam Deck's read-only
+      # root.
       - name: Collect the bundles
         env:
           PLATFORM: ${{ matrix.platform }}
@@ -113,6 +126,7 @@ jobs:
           mkdir out
           bundle=desktop/src-tauri/target/release/bundle
           if [ "$PLATFORM" = linux ]; then
+            cp desktop/src-tauri/target/release/5-wild out/5-wild-linux-x86_64
             cp "$bundle"/appimage/*.AppImage out/5-wild-linux-x86_64.AppImage
             cp "$bundle"/deb/*.deb out/5-wild-linux-amd64.deb
           else
@@ -128,7 +142,7 @@ jobs:
       - id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: ${{ env.SIGN == 'true' && 'unsigned-windows' || format('5-wild-{0}', matrix.platform) }}
+          name: ${{ env.TO_SIGNPATH == 'true' && 'unsigned-windows' || format('5-wild-{0}', matrix.platform) }}
           path: out/*
           if-no-files-found: error
       # SignPath Foundation signs open-source releases for free, with its own
@@ -144,7 +158,7 @@ jobs:
       # binary too would mean a second request, and a second approval, from
       # inside `tauri build`.
       - name: Sign the installer
-        if: env.SIGN == 'true'
+        if: env.TO_SIGNPATH == 'true'
         uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -155,7 +169,7 @@ jobs:
           github-artifact-id: ${{ steps.upload.outputs.artifact-id }}
           wait-for-completion-timeout-in-seconds: 3600
           output-artifact-directory: signed
-      - if: env.SIGN == 'true'
+      - if: env.TO_SIGNPATH == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: 5-wild-windows
