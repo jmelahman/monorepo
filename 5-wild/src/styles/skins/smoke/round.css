@@ -22,13 +22,14 @@
   color: var(--muted);
 }
 
-/* The score, in its own well. */
+/* The score sits straight on the rail: no well, no rim, no notch. The owner
+   found a box round a single number one frame too many, and the count-up, the
+   chase ring and the progress bar under it already say where it is. */
 :root.skin-smoke .round-screen .hud-score {
   border-radius: 0;
-  background: var(--well);
-  border: var(--rim);
+  background: none;
+  border: 0;
   box-shadow: none;
-  clip-path: var(--cut);
 }
 
 :root.skin-smoke .hud-score .score {
@@ -46,12 +47,30 @@
 }
 
 /* The progress bar: a trough with a flat fill, which the count-up drives with
-   `--fill` exactly as on the phone. */
+   `--fill` exactly as on the phone. It was the phone's 5px hairline in a 2px
+   rim, which on a 390px screen read as a rule and not as progress. 14px was
+   tried and was too much; 8px, rim included, on the 2px grid, is the middle. The fill is cut into blocks by a stripe of the
+   trough's colour laid over it, so it fills the way a pixel meter does without
+   the fill itself being anything but a scaled box (the count-up drives
+   `transform`, and a segmented background would not scale, it would squash). */
 :root.skin-smoke .round-screen .hud .meter {
   border-radius: 0;
   border: var(--rim);
   background: var(--well);
   box-shadow: none;
+  position: relative;
+}
+
+:root.skin-smoke:not(.table) .round-screen .hud .meter {
+  height: 0.5rem;
+  margin-top: 0.3125rem;
+}
+
+:root.skin-smoke:not(.table) .round-screen .hud .meter::after {
+  content: "";
+  grid-area: 1 / 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, transparent 0 0.375rem, var(--well) 0.375rem 0.5rem);
 }
 
 :root.skin-smoke .meter-fill {
@@ -87,7 +106,7 @@
 
 /*
  * Chips and mult: a well each, the number in the block's own colour, and a
- * four-pixel bar of the same colour along the top. That colour is what the
+ * two-pixel bar of the same colour along the top. That colour is what the
  * reader matches a pop to on its way in, so it is the one thing on the block
  * that is not the room's. The casino filled the whole block with it.
  */
@@ -101,19 +120,19 @@
 
 :root.skin-smoke .readout .chips {
   color: var(--chips);
-  box-shadow: inset 0 0.25rem 0 var(--chips);
+  box-shadow: inset 0 var(--bw) 0 var(--chips);
 }
 
 :root.skin-smoke .readout .mult {
   color: var(--mult);
-  box-shadow: inset 0 0.25rem 0 var(--mult);
+  box-shadow: inset 0 var(--bw) 0 var(--mult);
 }
 
 /* Solved: both blocks go to cash, the colour of what the round paid. */
 :root.skin-smoke .readout.solved .chips,
 :root.skin-smoke .readout.solved .mult {
   color: var(--gold);
-  box-shadow: inset 0 0.25rem 0 var(--gold);
+  box-shadow: inset 0 var(--bw) 0 var(--gold);
 }
 
 :root.skin-smoke .readout .times {
@@ -148,10 +167,9 @@
 
 :root.skin-smoke :is(.round-screen, .shop-screen) .hud-gold {
   border-radius: 0;
-  border: var(--rim);
-  background: var(--well);
+  border: 0;
+  background: none;
   box-shadow: none;
-  clip-path: var(--cut);
   color: var(--gold);
 }
 

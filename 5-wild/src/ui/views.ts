@@ -90,7 +90,7 @@ import {
   unlocked,
   wordsFound,
 } from "./meta"
-import { hasMovingBackground, type Skin } from "./skin"
+import type { Skin } from "./skin"
 import type { Speed } from "./speed"
 
 export type Handlers = {
@@ -137,7 +137,6 @@ export type Handlers = {
   /** Move the look to the next of the four, wrapping round. */
   cycleSkin: () => void
   /** Turn the moving background (the drifting smoke) on or off. */
-  toggleAmbience: () => void
   /** Step the interface to the next language, wrapping back to English. */
   cycleLanguage: () => void
   openMenu: () => void
@@ -189,7 +188,6 @@ export type Chrome = {
   decor: Decor
   speed: Speed
   /** Whether the moving background is on. Only a look that has one shows the row. */
-  ambience: boolean
   /** The look on screen: a pick, or the default the window gave. */
   skin: Skin
   /**
@@ -2594,6 +2592,7 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
  */
 const SKIN_ICON: Record<Skin, IconName> = {
   smoke: "smoke",
+  "smoke-moving": "smoke",
   tabletop: "tile",
   "classic-dark": "moon",
   "classic-light": "sun",
@@ -3537,16 +3536,6 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
         copy.skin,
         copy.skins[chrome.skin],
       ),
-      // Beside the look because it is the look's: the smoke is the one
-      // background that moves, and it moves on a phone too. The other three
-      // are a flat colour or a still picture, so on them the row would be a
-      // switch wired to nothing.
-      hasMovingBackground(chrome.skin) &&
-        setting(
-          { "data-focus": "ambience", onclick: () => on.toggleAmbience() },
-          copy.ambience,
-          chrome.ambience,
-        ),
       // The same flag and endonym as the title screen's pill, as this row's
       // value. No `lang` attribute, for the reason `languageButton` gives.
       setting(

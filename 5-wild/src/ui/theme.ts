@@ -4,6 +4,8 @@ import {
   currentSkin,
   loadLegacyTone,
   loadSkin,
+  loadStill,
+  MOVING_CLASS,
   resolveSkin,
   SKINS,
   type Skin,
@@ -70,6 +72,8 @@ const NativeTheme = registerPlugin<{ set(options: { theme: Theme | "system" }): 
 
 let picked: Skin | null = null
 let legacy: Tone | null = null
+/** The retired ambience switch said off; counts only while nothing is picked. */
+let still = false
 let watching = false
 
 /** What the player has said about tone, with or without a skin: a pick or an old theme. */
@@ -84,11 +88,16 @@ function apply(): void {
   const skin = resolveSkin({
     picked,
     legacy,
+    still,
     table: document.documentElement.classList.contains("table"),
     prefersLight: prefersLight(),
   })
   const root = document.documentElement
-  for (const other of SKINS) root.classList.toggle(skinClass(other), other === skin)
+  // Both Smokes share a class, so the loop toggles it once per name and the
+  // last write for it is the wrong one; clear all, then set.
+  for (const other of SKINS) root.classList.remove(skinClass(other))
+  root.classList.add(skinClass(skin))
+  root.classList.toggle(MOVING_CLASS, skin === "smoke-moving")
   const tone = TONE[skin]
   root.dataset.theme = tone
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
@@ -133,6 +142,7 @@ function watch(): void {
 export function initLook(): void {
   picked = loadSkin()
   legacy = loadLegacyTone()
+  still = loadStill()
   watch()
   apply()
 }

@@ -200,12 +200,12 @@ The look is the exception that proves that rule: `src/ui/skin.ts` and
 `src/ui/theme.ts` write one `skin-*` class on the root (`skin-smoke`,
 `skin-tabletop`, `skin-classic-dark`, `skin-classic-light`) and beside it
 `data-theme`, which is the skin's *tone*, `light` for Classic light and `dark` for
-the other three. The tone is what everything that predates the skins still keys
+the other four. The tone is what everything that predates the skins still keys
 on (the light palette under `:root[data-theme="light"]`, `BACKDROP`, the status
 bar, `ThemePlugin`, the tile inks), which is why it was kept rather than
 replaced. Until the player first taps the title-screen dial or the pause row the
 look is *unpicked* and resolved live, not stored: a phone is Classic and follows
-the device's light or dark, a desktop window is Smoke, and both follow the window
+the device's light or dark, a desktop window is the moving Smoke, and both follow the window
 and the device as they change, with a `matchMedia` listener for each. A pick
 sticks from then on, with no "follow the phone" setting to go back to. The shell
 applies it before the word fetch so a light player never sees a dark page load.
@@ -222,12 +222,11 @@ layouts; a phone in Smoke is deliberate, not the desktop squeezed. Only where a
 look depends on the table's geometry is it `:root.table.skin-<name>`.
 `src/styles/table/*.css` carries no colour, face, border, shadow or motion, and
 `test/ui/skin.test.ts` fails a rule that lands in the wrong one. What the look
-*does* is `Fx` in `skin.ts`: `full` (Smoke: the smoke canvas and everything
+*does* is `Fx` in `skin.ts`: `full` (both Smokes: the smoke canvas and everything
 `juiced()` gates), `tactile` (Tabletop: tiles set down, keys pressed; `tactile()`)
 and `none` (Classic). The scenes and the tile physics still ask `isTable()` as
 well, so they stay desktop-only; the one effect that is not is the smoke canvas,
-which runs on a phone at a third of the resolution and 20 fps, and answers to
-`5wild:ambience` and `prefers-reduced-motion` like everywhere else. A new effect
+which runs on a phone at a third of the resolution and 20 fps. There are five presets and not four because motion is a preset: `smoke` is the room with the smoke drawn once, still, and `smoke-moving` is the same room drifting. They share `skin-smoke`, and the moving one adds `moving-bg` to the root, so the stylesheet is written once; `prefers-reduced-motion` stills the moving one to the frame the still one shows. A new effect
 asks `hasFx()` or `hasTactile()` and never names a skin.
 
 The Smoke Room is drawn flat and inside its own boxes: every panel is notched with
@@ -275,27 +274,30 @@ style but not its prose is half-finished.
 ## Storage
 
 `5wild:run:v2` (the run save), `5wild:run:lang` and `5wild:run:log` beside it,
-`5wild:meta:v2` (the record), eleven settings: `5wild:plain`, `5wild:speed`,
-`5wild:theme`, `5wild:skin`, `5wild:ambience`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
+`5wild:meta:v2` (the record), ten settings: `5wild:plain`, `5wild:speed`,
+`5wild:theme`, `5wild:skin`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
 `5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. The run
 save and its log are sealed (`src/ui/seal.ts`) so the answer is not readable in
 devtools; the key ships in the bundle, so this hides it from a glance, not from
 someone who reads the source. Bare JSON from older builds still loads. All the
-settings are booleans except eight: `5wild:track` holds `promises` or
+settings are booleans except seven: `5wild:track` holds `promises` or
 `forget-me-not`, which recording plays, anything else reading as the first;
 `5wild:plain` holds one of `all`, `minimal` or `none`, how much of the scoring
 game the board draws on itself; `5wild:speed` holds `1`, `2` or `3`, how many
 times faster than authored the animations play; `5wild:skin` holds `smoke`,
-`tabletop`, `classic-dark` or `classic-light`, the look the player picked, absent
-meaning none has been (see the theme section for what the device then decides);
-an old `classic` reads as `classic-dark`. `5wild:theme` is legacy: nothing writes
-it, and it is read only while no skin is picked, `light` meaning Classic light
-everywhere and `dark` meaning Classic dark on a phone and Smoke on a desktop,
-which is what each of those players was looking at. `5wild:ambience` holds
-`on` or `off`, whether the skin's moving background (the smoke drifting behind
-the panels) runs, absent meaning on, applied as `.lights-off` on the root; only a
-skin with one shows the row, and it stills
-nothing of the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
+`smoke-moving`, `tabletop`, `classic-dark` or `classic-light`, the look the
+player picked, absent meaning none has been (see the theme section for what the
+device then decides); an old `classic` reads as `classic-dark`. `5wild:theme` is
+legacy: nothing writes it, and it is read only while no skin is picked, `light`
+meaning Classic light everywhere and `dark` meaning Classic dark on a phone and
+the moving Smoke on a desktop, which is what each of those players was looking
+at. `5wild:ambience` is retired, the switch that made Smoke drift, and is read
+for migration only: a stored `smoke` with the key absent or `on` is an older
+build's drifting room and is rewritten as `smoke-moving`, while `off` keeps it
+`smoke`, now the still one. It is the one retired key still written, and only as
+`off` beside a still `smoke`, because a `smoke` and an old `smoke` are the same
+word and that key is all that tells them apart; any other pick removes it. No
+setting stills the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
 `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning
 the switch has never been touched, which sends nothing. The game never asks: the
 switch is on the about sheet behind the title screen's ⓘ and on the pause sheet,

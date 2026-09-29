@@ -22,7 +22,9 @@
  * notes that it "is set larger across the board". `font-size-adjust` is that,
  * done once, at the root, instead of a number on every rule: it scales each
  * glyph to a target x-height, so 1rem of Jersey 10 stands as tall as 1rem of
- * the system face. It is inherited, so nothing below restates it, and the
+ * the system face. It is set to 0.62, up from 0.5, which the owner found too
+ * small everywhere: labels, card text and key values were the worst. Judged at
+ * 1440x900 and 390x844 in English and German. It is inherited, so nothing below restates it, and the
  * layout files keep their sizes, which is the split that lets Classic exist.
  * A WebView that does not know the property shows the face smaller and nothing
  * else breaks.
@@ -33,7 +35,7 @@
   font-size-adjust: var(--face-adjust);
   /* Sharp edges only: the face is a grid of squares and smoothing rounds them. */
   -webkit-font-smoothing: none;
-  --face-adjust: 0.5;
+  --face-adjust: 0.62;
 }
 
 :root.skin-smoke body {

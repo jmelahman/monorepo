@@ -841,11 +841,11 @@ export const es: Strings = {
       skin: "Aspecto",
       skins: {
         smoke: "Sala de humo",
+        "smoke-moving": "Sala de humo (animada)",
         tabletop: "Tablero",
         "classic-dark": "Clásico oscuro",
         "classic-light": "Clásico claro",
       },
-      ambience: "Fondo animado",
       language: "Idioma",
       wordsNextRun: "Las palabras cambian cuando empieces una partida nueva.",
       quit: "Abandonar partida",

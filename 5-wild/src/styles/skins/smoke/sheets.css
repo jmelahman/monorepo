@@ -6,6 +6,11 @@
   background: var(--panel);
   box-shadow: none;
   clip-path: var(--cut);
+  /* The pause sheet is seven rows and four buttons, and the Smoke Room's buttons
+     are taller than the phone's, so at the phone's 80svh cap the rows list (which
+     clips rather than scrolls, and shrinks first) lost its last row. 90svh holds
+     all of it at 390x844 with the shop still showing over the top. */
+  max-height: min(90svh, 42rem);
 }
 
 :root.skin-smoke .sheet-lead {

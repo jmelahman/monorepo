@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   hasMovingBackground,
+  migrateSmoke,
   NEXT_SKIN,
   readLegacyTone,
   readSkin,
@@ -16,7 +17,7 @@ import {
  * The look setting. The class it writes is the whole interface to the
  * stylesheet, and the tone it resolves to is the whole interface to everything
  * keyed on `data-theme`, so what is worth pinning is the step from what is
- * stored (and where the window is) to one of four names, and the stylesheet's
+ * stored (and where the window is) to one of five names, and the stylesheet's
  * half of the bargain: geometry in one place, dressing in the other.
  */
 describe("skin", () => {
@@ -54,9 +55,21 @@ describe("skin", () => {
     expect(skin).toBe(SKINS[0])
   })
 
-  it("names one root class per skin", () => {
-    expect(new Set(SKINS.map(skinClass)).size).toBe(SKINS.length)
-    for (const skin of SKINS) expect(skinClass(skin)).toBe(`skin-${skin}`)
+  it("names one root class per look, the two smokes sharing theirs", () => {
+    expect(new Set(SKINS.map(skinClass)).size).toBe(SKINS.length - 1)
+    expect(skinClass("smoke-moving")).toBe(skinClass("smoke"))
+    for (const skin of SKINS) {
+      if (skin !== "smoke-moving") expect(skinClass(skin)).toBe(`skin-${skin}`)
+    }
+  })
+
+  it("moves an old smoke to the moving one unless the drift was off", () => {
+    expect(migrateSmoke("smoke", null)).toBe("smoke-moving")
+    expect(migrateSmoke("smoke", "on")).toBe("smoke-moving")
+    expect(migrateSmoke("smoke", "off")).toBe("smoke")
+    for (const raw of [null, "tabletop", "classic-dark", "smoke-moving"]) {
+      expect(migrateSmoke(raw, null)).toBe(raw)
+    }
   })
 
   it("is light only where the phone's light palette is meant", () => {
@@ -64,8 +77,8 @@ describe("skin", () => {
     for (const skin of SKINS) if (skin !== "classic-light") expect(TONE[skin]).toBe("dark")
   })
 
-  it("moves the background only for the smoke", () => {
-    expect(SKINS.filter(hasMovingBackground)).toEqual(["smoke"])
+  it("moves the background only for the moving smoke", () => {
+    expect(SKINS.filter(hasMovingBackground)).toEqual(["smoke-moving"])
   })
 
   describe("the default", () => {
@@ -77,9 +90,15 @@ describe("skin", () => {
       expect(stand({ prefersLight: true })).toBe("classic-light")
     })
 
-    it("is Smoke on the desktop, whatever the device says", () => {
-      expect(stand({ table: true, prefersLight: false })).toBe("smoke")
-      expect(stand({ table: true, prefersLight: true })).toBe("smoke")
+    it("is the moving Smoke on the desktop, whatever the device says", () => {
+      expect(stand({ table: true, prefersLight: false })).toBe("smoke-moving")
+      expect(stand({ table: true, prefersLight: true })).toBe("smoke-moving")
+    })
+
+    it("is the still Smoke there for a player who had switched the drift off", () => {
+      expect(stand({ table: true, still: true })).toBe("smoke")
+      expect(stand({ table: true, still: true, legacy: "dark" })).toBe("smoke")
+      expect(stand({ table: false, still: true, prefersLight: false })).toBe("classic-dark")
     })
 
     it("moves an old light pick to Classic light on either layout", () => {
@@ -93,7 +112,7 @@ describe("skin", () => {
     it("moves an old dark pick to the board on a phone and the table on a desktop", () => {
       for (const prefersLight of [false, true]) {
         expect(stand({ legacy: "dark", table: false, prefersLight })).toBe("classic-dark")
-        expect(stand({ legacy: "dark", table: true, prefersLight })).toBe("smoke")
+        expect(stand({ legacy: "dark", table: true, prefersLight })).toBe("smoke-moving")
       }
     })
 

@@ -1,6 +1,5 @@
 import type { Action, GameEvent, Refusal, RunState, WordSource } from "../engine"
 import { MODIFIER_BY_ID, reduce, startRun } from "../engine"
-import { loadAmbience, setAmbience } from "./ambience"
 import type { Cue } from "./audio"
 import { audioContext, Sound } from "./audio"
 import type { CoachStep } from "./coach"
@@ -260,9 +259,6 @@ export class App {
    * which `setMotionSpeed` keeps in step with this; see `./speed`.
    */
   private speed = loadSpeed()
-  /** The table lights (the drifting smoke), on until the player turns them off. */
-  private ambience = loadAmbience()
-  /** Light, dark, or the device's. The shell applied it before the first paint. */
   /**
    * The language the interface is in, which the words follow at the next run
    * rather than at this instant. See `cycleLanguage`.
@@ -335,7 +331,6 @@ export class App {
     setDecor(this.decor)
     setSpeed(this.speed)
     setMotionSpeed(this.speed)
-    setAmbience(this.ambience, false)
     bindShake(this.root)
     // The shell already put the catalog up, since its own failure screen is
     // written in it; this is the same call and it is not free to skip. A save
@@ -1024,11 +1019,6 @@ export class App {
       setSkin(NEXT_SKIN[currentSkin()])
       this.render()
     },
-    toggleAmbience: () => {
-      this.ambience = !this.ambience
-      setAmbience(this.ambience)
-      this.render()
-    },
     /**
      * The interface changes now; the words change at the next run.
      *
@@ -1159,7 +1149,6 @@ export class App {
       track: this.music.title,
       decor: this.decor,
       speed: this.speed,
-      ambience: this.ambience,
       skin: currentSkin(),
       lang: this.lang,
       wordsDeferred: this.wordsDeferred,

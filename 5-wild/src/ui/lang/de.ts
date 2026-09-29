@@ -852,11 +852,11 @@ export const de: Strings = {
       skin: "Design",
       skins: {
         smoke: "Rauchsalon",
+        "smoke-moving": "Rauchsalon (bewegt)",
         tabletop: "Spielbrett",
         "classic-dark": "Klassisch dunkel",
         "classic-light": "Klassisch hell",
       },
-      ambience: "Bewegter Hintergrund",
       language: "Sprache",
       wordsNextRun: "Die Wörter wechseln beim nächsten Durchlauf.",
       quit: "Durchlauf aufgeben",

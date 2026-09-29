@@ -63,6 +63,28 @@ describe("theme", () => {
     expect(loadSkin()).toBe("classic-dark")
   })
 
+  it("moves an old smoke to the moving one, and keeps a still one still", () => {
+    const items: Record<string, string> = { "5wild:skin": "smoke" }
+    Object.defineProperty(globalThis, "localStorage", {
+      value: {
+        getItem: (key: string) => items[key] ?? null,
+        setItem: (key: string, value: string) => {
+          items[key] = value
+        },
+        removeItem: (key: string) => {
+          Reflect.deleteProperty(items, key)
+        },
+      },
+      configurable: true,
+    })
+    expect(loadSkin()).toBe("smoke-moving")
+    expect(items["5wild:skin"]).toBe("smoke-moving")
+    items["5wild:skin"] = "smoke"
+    items["5wild:ambience"] = "off"
+    expect(loadSkin()).toBe("smoke")
+    expect(loadSkin()).toBe("smoke")
+  })
+
   it("still reads the theme key an earlier build wrote", () => {
     store({ "5wild:theme": "light" })
     expect(loadSkin()).toBeNull()

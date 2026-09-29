@@ -905,11 +905,11 @@ export const en: Strings = {
       skin: "Look",
       skins: {
         smoke: "Smoke room",
+        "smoke-moving": "Smoke room (moving)",
         tabletop: "Tabletop",
         "classic-dark": "Classic dark",
         "classic-light": "Classic light",
       },
-      ambience: "Moving background",
       language: "Language",
       wordsNextRun: "Words change when you start a new run.",
       quit: "Quit run",

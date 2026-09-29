@@ -606,8 +606,6 @@ export type Strings = {
       skin: string
       /** Each look's name, the row's value: a place or a style, so the translator's. */
       skins: Record<Skin, string>
-      /** The moving background (the smoke); the row exists only where a look has one. */
-      ambience: string
       /**
        * Also the noun in front of the title screen's language pill in its
        * accessible name, which is what tells a screen reader that "Español" is
