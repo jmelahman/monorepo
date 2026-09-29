@@ -1,0 +1,40 @@
+/* ---------------------------------------------------------- shop, exits */
+
+/* The shop's own pair of exits. Down here rather than beside `.shop-actions`
+   because they outrank `.primary` and `.secondary`, declared after it, and the
+   reverse order is a cascade that only works by specificity. The foot inset is
+   the screen's missing bottom padding, drawn here so the scroll ends on it. */
+.shop-screen .shop-actions {
+  margin-top: 0;
+  padding: 0.5rem 0 1rem;
+}
+
+.shop-screen .shop-actions > * {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.625rem;
+  border-radius: 0.625rem;
+  font-weight: 800;
+}
+
+/* Bigger than the stock `.primary` for the same reason the title's Play is: it
+   is the button this screen exists to end on, so it takes 3:5 of the row and
+   the largest type on the screen. */
+.shop-screen .shop-actions > .primary {
+  flex: 5;
+  font-size: 1.1875rem;
+  box-shadow: inset 0 -0.25rem 0 #00000040;
+}
+
+.shop-screen .shop-actions > .secondary {
+  flex: 3;
+  font-size: 1rem;
+  box-shadow: inset 0 -0.1875rem 0 #00000040;
+}
+
+.reroll-cost {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}

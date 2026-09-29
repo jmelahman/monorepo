@@ -1,0 +1,113 @@
+/* ------------------------------------------------------------- category */
+
+/* The slot the fill writes into. Always in the document, empty or not, so the
+   draft patch has somewhere to write. It centers because a `button` sizes to
+   its content: before the slot existed the button was a flex item of `.screen`
+   and got stretched the full width, which is what its own `justify-content`
+   was centering against. Wrapped in a plain div it kept the centering rule and
+   lost the width, and slid to the left margin. */
+/* The shape on the left, the solve figure on the right, both as chips. Each
+   holds its own height open empty or full, and they are the same height, so the
+   line is one fixed number whichever of the two is speaking. */
+.dock-line {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.category-slot {
+  /* The height of this line, empty or full, in one place.
+     Held open whether or not there is a shape to name. The slot used to collapse
+     to nothing until the fifth letter landed, and then the line arrived and took
+     its height out of the grid above: every tile resized and the board slid up,
+     on the exact keystroke where the player is staring hardest at the tiles.
+     Deleting a letter played the whole thing backwards.
+     One custom property rather than a `min-height` here and a matching height
+     over there: the first attempt reserved 1rem against a button that measured
+     17px, because `.category` is a baseline-aligned flex box of two font sizes
+     and its height is a sum of font metrics rather than of the numbers written
+     down here. Two numbers that have to agree and are derived differently will
+     drift on some device nobody is testing on. Inherited by `.category` below,
+     which is pinned to it, so the filled line cannot disagree with the space
+     kept for it. */
+  --shape-line: 1.75rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: var(--shape-line);
+  display: flex;
+}
+
+/* Sits directly above the readout it feeds, and stays quiet at level one: a
+   category worth nothing yet is a label, not a number. When it does pay, it
+   lights the same way a relic card does, which is what it has become. */
+.category {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  /* Pinned to the space the slot keeps for it, so the two cannot disagree. Any
+     font that wants a pixel more than this spills it rather than moving the
+     board, which is the trade the whole reservation exists to make. */
+  height: var(--shape-line);
+  padding: 0 0.5rem 0 0.625rem;
+  /* The figures' corner, not a pill: it shares the line with them, and a pill
+     beside two rounded rectangles read as a control of a different kind. */
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 0.75rem;
+  /* Left off `normal`, which resolves off the font, for the same reason. */
+  line-height: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.category-level {
+  padding: 0 0.25rem;
+  border-radius: 0.1875rem;
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+}
+
+.category.fired {
+  color: var(--gold);
+  transform: scale(1.08);
+}
+
+.category.fired .category-level {
+  background: color-mix(in srgb, var(--gold) 26%, var(--panel));
+}
+
+/* The affordance, and nothing more. It has to read as pressable without
+   competing with the shape name, which is the thing actually being said. */
+.category .icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  stroke-width: 2.5;
+  color: var(--muted);
+}
+
+/* A hover that says the chip opens something, on a mouse only; see `bindMouse`
+   for why the gate is a class and not `(hover: hover)`. Not the brightness
+   filter the other buttons take: the chip is the header's own panel colour,
+   and 12% brighter than near-black is a change nobody sees. The edge and the
+   chevron come up instead, the two parts of it that were already saying
+   "press". Left off while it is `.fired`, whose gold is louder news. */
+.mouse .category:hover:not(.fired) {
+  border-color: color-mix(in srgb, var(--fg) 35%, var(--line));
+  background: var(--panel-2);
+}
+
+.mouse .category:hover .icon {
+  color: var(--fg);
+}

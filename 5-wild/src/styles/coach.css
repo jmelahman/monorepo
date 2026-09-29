@@ -1,0 +1,148 @@
+/* ----------------------------------------------------------------- coach */
+
+/*
+ * The first round explaining itself, hung from the header's foot. See
+ * `coachSlot` for why there and not on the board.
+ *
+ * Absolute, and unconditionally so, even while it is empty. An in-flow child of
+ * the header would be auto-placed as a row of it and grow the header, which
+ * would push the board down every time a card came and went, five times in the
+ * first round, under the thumb aiming at it. An absolutely positioned child of
+ * a grid with no placement of its own takes the grid's padding box as its
+ * containing block, so the left and right are the header's sides and `top` is
+ * measured from its top edge, and the card is the header's width, which is wider than
+ * the board and what keeps most cards to two lines.
+ */
+.coach-slot {
+  position: absolute;
+  z-index: 3;
+  /* The header's foot, until `aimCoach` measures the anchor and moves it up
+     under that; the two agree for the readout, which is the header's last line. */
+  top: 100%;
+  left: 0;
+  right: 0;
+  /* The empty slot spans the screen's width and must not intercept a tap or a
+     long press on whatever is under it. */
+  pointer-events: none;
+}
+
+/* One paragraph and nothing else. The card carried a "got it" button until the
+   choice it offered moved to the intro card, and losing it is what lets the text
+   have the board's full width instead of the width left over beside a control.
+
+   No margin: the slot is placed 6px under the anchor already, and the tail
+   reaches up into that, so under the readout the card starts at the header's
+   foot and spends as little of the strip over the board as it can. Two lines
+   come to 43px against the 47 between the header and the first row, so a
+   two-line card lies over nothing but the band's reservation. */
+.coach {
+  position: relative;
+  pointer-events: auto;
+  padding: 0.3125rem 0.625rem;
+  border-radius: 0.5rem;
+  /* Nearly opaque rather than a wash: it is over tiles, and a translucent panel
+     with a grid of squares showing through it is the one thing on this screen
+     that would be harder to read than the numbers it is explaining. Opaque
+     outright is what the tail needs, though: it is a square half-tucked under
+     the card, and at 94% its buried half showed through as a diamond. */
+  --coach-bg: color-mix(in srgb, var(--panel-2) 94%, var(--bg));
+  --coach-edge: color-mix(in srgb, var(--chips) 40%, var(--line));
+  background: var(--coach-bg);
+  border: 1px solid var(--coach-edge);
+  animation: coach-in calc(220ms * var(--pace)) ease;
+}
+
+/* The point, aimed at the anchor. The whole card is under the header's
+   figures and the lit outline on one of them is the referent, but the card is
+   the header's width, so the readout, the score and the bar all sit over it
+   somewhere, and the tail is what says which. `--tail` is written by `aimCoach` from the
+   anchor's centre; the fallback is the middle, which is right for the bar. */
+.coach::before {
+  content: "";
+  position: absolute;
+  top: -0.3125rem;
+  left: var(--tail, 50%);
+  width: 0.5625rem;
+  height: 0.5625rem;
+  background: var(--coach-bg);
+  border-top: 1px solid var(--coach-edge);
+  border-left: 1px solid var(--coach-edge);
+  border-top-left-radius: 0.125rem;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* Turned over for a card standing above its anchor; see `aimCoach`. */
+.coach.above::before {
+  top: auto;
+  bottom: -0.3125rem;
+  border: 0;
+  border-bottom: 1px solid var(--coach-edge);
+  border-right: 1px solid var(--coach-edge);
+  border-radius: 0 0 0.125rem;
+}
+
+.coach-text {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--fg);
+}
+
+/* Dropping in from above rather than rising from below, since it hangs from
+   the header; it used to stand on the board's foot. */
+@keyframes coach-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
+/*
+ * The thing the card is pointing at, marked so the sentence has a referent.
+ *
+ * An outline rather than a border or a padded background, for one reason: three
+ * of the four anchors are inside lines whose spacing is already measured to the
+ * pixel, the readout's chips and mult and the HUD's score block, and outline is
+ * the only ring in CSS that is drawn outside the box without occupying any. The
+ * mark can be added and removed on every keystroke without a single figure on
+ * the screen shifting.
+ */
+.coached {
+  outline: 2px solid color-mix(in srgb, var(--chips) 70%, transparent);
+  outline-offset: 3px;
+  /* The chips and mult boxes' own 8px, so the ring runs parallel to the corners
+     of the anchor most beats point at. It reshapes the anchor too, which is
+     invisible there and nearly so on the 6px decor button. */
+  border-radius: 0.5rem;
+  /* Unpaced, for the reason the sheen is: it breathes for as long as the card
+     it belongs to is up, and the card is waiting on the player, not the reverse. */
+  animation: coach-mark 1800ms ease-in-out infinite;
+}
+
+/* The tray carries 5px of padding on a negative margin, room for a scroll
+   shadow the tray never draws, and the ring was drawn outside that, 10px off
+   the relics and up under the header. Pulled in by the side padding, it sits
+   flush with the relics' sides and 2px off their tops.
+
+   The radius is a relic's 6px plus the 3px the offset pulls in, because an
+   outline's curve is the box's radius moved by the offset: at the 8px
+   `.coached` gives everything else, the ring came out at 5px around slots
+   rounded at 6. */
+.relics.coached {
+  outline-offset: -0.1875rem;
+  border-radius: 0.5625rem;
+}
+
+/* The shelf's corners are its outer cards', 12px, and the ring sits the usual
+   3px outside them, so the grid takes the cards' radius and the ring runs
+   parallel. At the default 8px it cut across the cards' rounder corners. */
+.shop-items.coached {
+  border-radius: 0.75rem;
+}
+
+/* Breathing rather than blinking. The eye is meant to find it once and then get
+   on with reading the card; a hard flash keeps calling the eye back. */
+@keyframes coach-mark {
+  50% {
+    outline-color: color-mix(in srgb, var(--chips) 22%, transparent);
+  }
+}

@@ -1,0 +1,276 @@
+/* ------------------------------------------------------------------- HUD */
+
+/* The name at its own width, the gold-and-menu group hard against the right
+   edge, and the score centred in what is left between them. It was a
+   space-between flex row, which placed the gold in whatever gap the round name
+   left: x282 beside "Normal Round", x253 beside "Shop", so the one number
+   carried from a round into its shop moved 29px on the way, and on neither
+   screen sat beside anything it belonged to.
+   Equal outer thirds were tried first, for a score on the bar's true centre,
+   and cost more than it bought: a third of a 320px bar is 94px, and "Elite-
+   Runde" wrapped in it with room to spare in the bar. With the name on `auto`
+   it wraps only when the row cannot hold it, which at 320 is "Normale Runde"
+   and the three French names by 7 to 9px, in this layout and the old one
+   alike. The middle is a bare `1fr`, whose floor is
+   the score's own width: `minmax(0, 1fr)` let that same case centre an 80px
+   score in a 34px column, over the end of the name.
+   That centred the score between its neighbours, not on the bar, and the bar's
+   centre is the board's: the middle letter column sits under it, and a score
+   beside a 97px "Normal Round" and a 72px gold-and-menu stood about 12px off it. The
+   sides are now equal halves with their content as the floor, which is the
+   true centre whenever both halves hold, and moves the score only as far as the
+   wider side needs when they do not, rather than wrapping the name the way
+   plain thirds did. The floor cannot wrap, so below the width where every
+   name, the score and a three-digit gold still fit on one line (about 340px,
+   French being the widest) the bar goes back to the layout above. */
+.hud {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  /* Equal to the bottom padding, which the boss band cancels, so the band adds
+     its own height to the header and not a rem more. See `.hud .boss`. */
+  row-gap: 0.375rem;
+  /* A variable because the boss band bleeds out through it; see `.hud .boss`. */
+  --hud-pad-x: 0.5rem;
+  padding: 0.375rem var(--hud-pad-x);
+  background: var(--panel);
+  border-radius: 0.5rem;
+  /* The containing block for `.coach-slot`, which hangs from this box's foot. */
+  position: relative;
+}
+
+@media (max-width: 21.25rem) {
+  .hud {
+    grid-template-columns: auto 1fr auto;
+  }
+}
+
+.round-name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.stage {
+  color: var(--muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+}
+
+/* The run's difficulty, in the boss's color: both are rules bending the guess. */
+.stage-asc {
+  margin-left: 0.3125rem;
+  color: var(--mult);
+  font-weight: 800;
+}
+
+.hud-score {
+  justify-self: center;
+  min-width: 5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-score .score {
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.1;
+  transition: color 200ms ease;
+}
+
+.hud-score .target {
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+/* The moment the round is won. It is worth a light going on. */
+.hud-score.met .score {
+  color: var(--green);
+  text-shadow: 0 0 0.75rem color-mix(in srgb, var(--green) 60%, transparent);
+}
+
+/* A grid of one cell, so the projection and the fill lie on top of each other
+   without either leaving the flow. */
+.meter {
+  display: grid;
+  margin-top: 0.1875rem;
+  height: 0.1875rem;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.meter > * {
+  grid-area: 1 / 1;
+}
+
+/* What solving next would bank, behind the fill: the fill's blue at a quarter,
+   so it reads as where the blue is headed and not as a second bar. See `meter`
+   in `views.ts` for the green it was once and why it is not. */
+.meter-solve {
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--chips) 28%, transparent);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left;
+}
+
+/* Scaled rather than sized, so the count-up can drive it every frame without
+   asking the browser for a layout each time. */
+.meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--chips);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left;
+}
+
+/* Asked of the header rather than of the seat, because on the round the bar
+   is not inside the seat any more; `app.ts` still lights the seat as the
+   count-up crosses the target, and one class is still the only switch. */
+.hud:has(.hud-score.met) .meter-fill {
+  background: var(--green);
+}
+
+.hud-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  /* Wider than the bar's own gap: at 10px the gold read as the menu button's
+     label rather than a readout of its own. */
+  gap: 1.125rem;
+}
+
+.hud-gold {
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Money changing hands. Borrows the readout's pop so a purchase and a scoring
+   guess react in the same visual language. */
+.hud-gold.bumped {
+  --pop: 1.22;
+  animation: pop calc(300ms * var(--pace)) ease;
+}
+
+/* The round's name with its token beside it. Scoped to the round because the
+   shop's `.hud-round` is two lines of text with nothing to sit beside. */
+.round-screen .hud-round {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.3125rem;
+  white-space: nowrap;
+}
+
+/* Thicker on the round than the 3px the shop's empty seat was sized around:
+   with the score and target on one line the bar is the header's second line,
+   and at 3px it read as an underline rather than as progress. */
+.round-screen .meter {
+  height: 0.3125rem;
+  margin-top: 0.3125rem;
+}
+
+/* The boss's rule, as the header's last row, bled out to its edges so it reads
+   as the header changing colour at the foot rather than as a box inside it.
+   The negative margins cancel the header's own padding exactly, and that is
+   what makes the reservation below simple: the band adds its height and the
+   row gap and takes back the bottom padding, which is the same 0.375rem, so a
+   boss header is taller by `--boss-band` and nothing else.
+   The sideways half reads `--hud-pad-x` rather than repeating it. It was a
+   literal 0.625rem, and when the header's padding came down to 0.5rem the band
+   went on bleeding the old amount: 2px past the header on each side, painted
+   over the red ring, so the ring looked clipped at both bottom corners. */
+.hud .boss {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  height: var(--boss-band);
+  margin: 0 calc(-1 * var(--hud-pad-x)) -0.375rem;
+  padding: 0 var(--hud-pad-x);
+  border-radius: 0 0 0.5rem 0.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--mult) 40%, transparent);
+  background: color-mix(in srgb, var(--mult) 14%, var(--panel));
+  /* See `--boss-font`. */
+  font-size: var(--boss-font);
+  line-height: 1.3;
+  /* The header's outer tracks are `minmax(max-content, 1fr)`, and an item
+     spanning them offers its max-content width to that sizing: the rule's whole
+     sentence on one line, which widened the header past the screen and pushed
+     the gold and the menu off its right edge. Contained, it offers nothing and
+     takes the width the name, score and gold settle on. */
+  contain: inline-size;
+}
+
+/* Two lines is the budget. Measured in Chromium for every boss in all four
+   catalogs, name included: at 298px of band (a 350px screen) and wider none
+   takes a third, and at 268 (320px) only The Silence does, in French and in
+   German. Three lines were reserved at first for those two, and that line was
+   14px taken off every round's board, boss or not, on every phone. They are
+   clipped here with an ellipsis instead, and the band carries the whole rule as
+   a tip. */
+.boss p {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.boss strong {
+  color: var(--mult);
+}
+
+/* The ring rather than a border: a border is two pixels of height, and the
+   board is being told exactly how tall this header is. */
+.hud:has(.boss) {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--mult) 70%, transparent);
+}
+
+/* The bar as the header's own row, the header's full width, with the score
+   and target left where they were in the middle seat. There the bar was 80px,
+   the width of the figures over it, and a round's progress at 80px is a bar
+   you read to the nearest quarter. The figures stayed put because moving them
+   too was tried first, onto a line of their own under the name: that line cost
+   40px of header, and the board is height-bound on a boss round with a full
+   tray and both cards, so it came out of the tiles, 334px of board down to 301
+   at 390x844. The bar alone is its height and a row gap.
+   A grid row rather than a width on the bar inside the seat, because the seat
+   is the middle track and the bar has to cross the other two. Auto-placed: the
+   name, the score and the gold fill the first row, and a span of every track
+   has to open the next. */
+.round-screen .hud .meter {
+  grid-column: 1 / -1;
+  /* The row gap spaces it now. */
+  margin-top: 0;
+}
+
+/* The dock line as the header's third row, under the bar, the header's full
+   width. It sat under the board, then over the keyboard, and both times it was
+   a line of its own paying the screen's gap twice for 36px of figures. Here it
+   is the hand beside the pile it will be added to, which is the sentence the
+   coaching's second card says out loud, and the gap it paid is the board's.
+   The trays went to the foot of the screen in the same move; see `.hand-line`. */
+.hud .dock-line {
+  grid-column: 1 / -1;
+}
+
+/* 4px of air under the header on top of the screen's gap, since the board's
+   top row met the boss's band at the same 6px the trays meet each other, and
+   a panel that size against a row of tiles read as the two touching. Plus 1px
+   for the boss ring, which is a box shadow drawn outside the header and so
+   sits in the gap rather than beside it. On every round and not only the
+   boss's, so the board stays where the band reservation puts it either way. */
+.round-screen .hud {
+  margin-bottom: calc(0.25rem + 1px);
+}

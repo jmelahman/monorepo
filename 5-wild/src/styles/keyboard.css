@@ -1,0 +1,412 @@
+/* ------------------------------------------------------------- keyboard */
+
+/*
+ * The key height is declared on the screen rather than on the keyboard, because
+ * the toast has to clear the keyboard and is not inside it. One definition, two
+ * readers, because a second copy is a second thing to keep in step, and the one that
+ * drifts is the one nothing draws.
+ */
+.round-screen {
+  /* Taller than it is wide, and taller than the old 2.75rem, because the keys
+     are the thing being aimed at. Capped so a tall phone does not spend its
+     extra height on the keyboard when the board wants it more. */
+  --key-h: clamp(2.75rem, 7svh, 3.375rem);
+  /* Three key rows, the two gaps between them, the screen's own bottom padding,
+     and a gap above. Everything between the foot of the viewport and the top of
+     the keyboard, which is where a refusal has to land to be read. */
+  --toast-lift: calc(3 * var(--key-h) + 0.75rem + 0.5rem + 1rem);
+  /* The boss's rule, a size under the stage line's 11px beside it on a phone:
+     the rule is read once, on the intro card that states it at full size, and
+     here it is a reminder. At 11px it was the loudest thing in the header after
+     the score. A desktop screen has the room to spare and a reader further from
+     it, and gets it back and a pixel more; see the `40rem` block. */
+  --boss-font: 0.625rem;
+  /* Two lines of the boss's rule at its size and 1.3 line height, plus
+     0.3125rem above and below. Fixed rather than fitted, and declared here
+     rather than on the band, because the board of a round without a boss has
+     to reserve it too. See `.hud .boss` and `.grid-wrap`. */
+  --boss-band: calc(2 * 1.3 * var(--boss-font) + 0.625rem);
+  /* One height for the relic tray and the hand, both drawn whether or not
+     anything is in them. The tray was a 2.5rem minimum that grew by the name:
+     a two-line name over a growth badge came to 47px, so a relic that started
+     counting mid-round pushed the board down. 3rem held that case as it was,
+     and cost the board 16px across the two rows; 2.5rem, the tray's old
+     minimum, holds it with the card packed tighter below.
+     See `.round-screen .relic` and `.round-screen .consumables`. */
+  --tray-h: 2.5rem;
+}
+
+/* The tray's cards at the pinned height rather than on the tray, whose padding
+   and matching negative margin are there for the lift of a fired relic.
+
+   Packed to fit the worst case, which is common rather than rare: most of the
+   relics that grow have two-word names (Slow Burn, Sunk Cost, Compound
+   Interest), and two-word names wrap. The 2px edge, 2px of pad a side, two
+   lines of name at 1.1, 1px of gap and the badge at 1 come to 39px of the 40;
+   at the card's own 4px pad and unset badge line height they were 47. */
+.round-screen .relic {
+  height: var(--tray-h);
+  padding: 0.125rem 0.25rem;
+  gap: 0.0625rem;
+}
+
+.round-screen .relic-name {
+  line-height: 1.1;
+}
+
+.round-screen .relic-detail {
+  line-height: 1;
+}
+
+/*
+ * Wordle's proportions, and for its reason: every key is the same width, so the
+ * nine-key middle row comes out narrower than the ten-key top row and centers.
+ * Stretching each row to full width instead, the obvious flexbox default,
+ * moves every key center between rows, and a thumb aiming for K keeps finding L.
+ */
+.keyboard {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  /* No margin of its own. It had 0.5rem, to keep the dock line that sat over
+     it from reading as a fourth row of keys. The relic tray sits there now, a
+     row of cards with rarity edges that reads as nothing like a key, at the
+     screen's one gap like every other seam. */
+  --key-gap: 0.25rem;
+  /* The widest row is ten keys and nine gaps; that divides into the unit every
+     key in every row is then built from. */
+  --key-w: calc((100% - 9 * var(--key-gap)) / 10);
+}
+
+.key-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--key-gap);
+}
+
+.key {
+  position: relative;
+  /* Fixed, not flexible: no growing to fill the row. */
+  flex: 0 0 var(--key-w);
+  min-width: 0;
+  height: var(--key-h);
+  display: grid;
+  place-items: center;
+  border-radius: 0.375rem;
+  background: var(--key);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* The drawn backspace, a size up from the glyph default so it has the weight
+   of the letters beside it. */
+.key .icon {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+/* One and a half keys, plus the gap they swallow, so the bottom row still
+   lands on the same column grid as the two above it. */
+.key.wide {
+  flex-basis: calc(var(--key-w) * 1.5 + var(--key-gap) * 0.5);
+  font-size: 0.6875rem;
+}
+
+.key.green {
+  background: var(--green);
+}
+.key.yellow {
+  background: var(--yellow);
+}
+.key.gray {
+  background: var(--gray);
+  color: var(--key-gray-fg);
+}
+/* The corner figure follows the ink it sits beside. In the dark theme that is
+   the same off-white it always was; in the light one a key the guess has
+   painted wants light figures while an untouched key wants dark ones. The
+   modifier hues go back to their pastels for the same reason: they were picked
+   to read over these three fills, and the light theme's deeper set is for the
+   pale keys and panels. */
+:root[data-theme="light"] .key:is(.green, .yellow) {
+  color: var(--on-tile);
+}
+/* A pale key has dark figures, and a dark shadow under a dark figure is a
+   blur rather than an outline. */
+:root[data-theme="light"] .key:not(.green, .yellow, .gray) :is(.value-pip, .mod-pip) {
+  text-shadow: none;
+}
+.key:is(.green, .yellow, .gray),
+.tile:is(.green, .yellow, .gray) {
+  --value-base: color-mix(in srgb, var(--on-tile) 72%, transparent);
+  --mod-steel: var(--pastel-steel);
+  --mod-glass: var(--pastel-glass);
+  --mod-lucky: var(--pastel-lucky);
+  --mod-echo: var(--pastel-echo);
+  --mod-anchor: var(--pastel-anchor);
+}
+
+/*
+ * A bought-up letter has no ring of its own, and that is the second half of a
+ * decision the value pip below makes.
+ *
+ * It used to wear one in `--gold`, which was wrong twice over. Loud: gold is a
+ * signal color, the color money is printed in, and an etching buys a whole
+ * group of letters at once, so ten keys would light at full saturation and the
+ * keyboard became the brightest thing on a screen whose subject is five letters
+ * and three colors. And ambiguous: the Gold modifier is drawn in the same
+ * `--gold`, so a letter somebody had etched and a letter carrying a Gold mod
+ * wore the identical ring while meaning unrelated things.
+ *
+ * Dropping it rather than recoloring it, because the ring is the only place a
+ * modifier can say which modifier it is, while "raised" now has a number in the
+ * corner that says both that it is raised and by how much. One mark, one
+ * meaning: the ring is modifier identity, the corner figure is what the letter
+ * pays.
+ */
+.key.broken {
+  background: var(--broken-bg);
+  color: var(--broken-fg);
+  text-decoration: line-through;
+}
+
+/*
+ * What the letter is worth, in the corner of every key.
+ *
+ * Off-white while the letter is worth what it started as, and `--chips` blue
+ * once an etching or a range level has raised it. Blue rather than gold, and the
+ * choice is not decorative: a raised letter is *more chips*, and blue is the
+ * color chips are counted in everywhere else in the game: the readout under
+ * the board, the chip figure on a shop card, the Chip modifier itself. Gold
+ * means money, and money is a different quantity that happens to also be a
+ * number on a card. Two of them next to each other is a question the player has
+ * to answer every time they look.
+ *
+ * That the shared hue with the Chip modifier is fine, where the shared hue with
+ * the Gold one was not, is the whole argument in one line: the Chip modifier
+ * pays chips. Agreeing with it is the point.
+ *
+ * The off-white is mixed toward transparent rather than set to `--muted`, so it
+ * darkens against a light key and lifts against a dark one instead of landing
+ * flat on the gray ones.
+ *
+ * The shadow is not decoration. This used to appear on the handful of keys
+ * somebody had spent money on, and it could be drawn for the neutral key
+ * background those mostly sat on; it is on all twenty-six now, so it spends the
+ * round over green, yellow and gray instead, and 10px of type on a yellow key is
+ * not readable without something behind it.
+ *
+ * The weight is the load-bearing line here, and it was learned the hard way. The
+ * pip shipped once with no `font-weight` of its own, inheriting the 700 the key
+ * sets for its letter. 10px against 16px is an ordinary annotation ratio, about
+ * roughly what a superscript runs at, but at matching weight the ratio stops
+ * doing the work, and every key read as a two-character key: "A1", "B3", a
+ * keyboard of pairs rather than of letters with figures on them. Dropping to 400
+ * fixes it without touching either size, which is the right trade, because the
+ * size is what makes a two-digit value legible and the weight was never carrying
+ * anything.
+ */
+.value-pip {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font-size: var(--type-pip);
+  font-weight: 400;
+  color: var(--value-base);
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.6);
+}
+
+/* Bolder as well as bluer. The keyboard is read at a glance and from a distance
+   the weight carries further than the hue does, and it has to, because this is
+   now the only mark saying a letter was bought up.
+   600 rather than the letter's own 700: the bought keys are a handful and the
+   blue already separates them, so the step up only has to be visible against the
+   other twenty-odd pips, not against the letter it sits on. Matching the letter
+   exactly is what produced the two-character read in the first place. */
+.key.etched .value-pip {
+  color: var(--value-raised);
+  font-weight: 600;
+}
+
+/* Broken keys keep the figure rather than dropping it, since the letter is still
+   worth that and is just no longer typeable, and gray to the same dead color the
+   modifier pip takes, so the whole key reads as one switched-off thing. */
+.key.broken .value-pip {
+  color: var(--broken-fg);
+  text-shadow: none;
+}
+
+/*
+ * Letter modifiers. One inherited color per modifier, the same trick rarity
+ * plays for relics: the ring on the key, the pip in its corner and the dot on a
+ * played tile all read off `--mod`, so a steel K looks like a steel K wherever
+ * it turns up.
+ */
+[data-mod="chip"] {
+  --mod: var(--chips);
+}
+[data-mod="mult"] {
+  --mod: var(--mult);
+}
+[data-mod="gold"] {
+  --mod: var(--gold);
+}
+[data-mod="wild"] {
+  --mod: var(--rare-legendary);
+}
+[data-mod="steel"] {
+  --mod: var(--mod-steel);
+}
+[data-mod="glass"] {
+  --mod: var(--mod-glass);
+}
+/*
+ * The three that arrived with the wider modifier pool and were never given a
+ * color. `--mod` simply went undeclared on them, so the pip fell back to
+ * whatever it inherited, which on a key is the key's own text color, meaning
+ * to say the pip that names the modifier was drawn in the ink of the letter it
+ * was sitting on, and the ring the key wears was dropped entirely. Three of the
+ * nine modifiers had no mark of their own on the board.
+ *
+ * Picked out of the hues the palette had not spent, rather than for what the
+ * card does, because the glyph is what says which modifier this is, and `?` and
+ * `↺` and `⚓` are not confusable with each other at any size, so the color's job
+ * is to be legible over green, yellow and gray keys alike and to be the same
+ * color in all three places the modifier appears. Anchor is the one that got to
+ * be about the card: it pays on greens, and it is lightened well clear of the
+ * green key it will most often be read against.
+ */
+[data-mod="lucky"] {
+  --mod: var(--mod-lucky);
+}
+[data-mod="echo"] {
+  --mod: var(--mod-echo);
+}
+[data-mod="anchor"] {
+  --mod: var(--mod-anchor);
+}
+
+/* After the color rules above, so a modified green key still shows its ring.
+   Held back from full strength for the reason the etched ring was dropped over:
+   a saturated 2px edge is louder than a mark this incidental needs to be. But
+   only held back, not dropped: this is the one thing the ring says now, there
+   are a handful of them rather than a dozen, and each is a different color
+   naming a different modifier rather than one signal color repeated. */
+.key[data-mod] {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mod) 62%, transparent);
+}
+
+.key.broken[data-mod] {
+  box-shadow: none;
+}
+
+.mod-pip {
+  position: absolute;
+  bottom: 1px;
+  left: 3px;
+  font-size: var(--type-pip);
+  font-weight: 800;
+  color: var(--mod);
+  /* Same reason the value pip carries one: it sits on whatever color the guess
+     has painted the key. */
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.6);
+}
+
+.key.broken .mod-pip {
+  color: var(--broken-fg);
+}
+
+/*
+ * The Vandal: the modifier is still on the letter and still owned, it just does
+ * nothing for one round. Grayed to the broken color rather than hidden, and the
+ * ring the key wears goes with it, so the whole keyboard reads as switched off
+ * at a glance instead of one pip at a time.
+ */
+.mod-pip.silenced {
+  color: var(--broken-fg);
+}
+
+.key:has(.mod-pip.silenced) {
+  box-shadow: none;
+}
+
+/*
+ * The quiet board: the middle setting, which marks only what is not ordinary.
+ *
+ * One rule: a letter that is still worth what it started as says nothing. The
+ * value goes from the twenty-odd keys nobody has touched and stays on the ones
+ * that were paid for, where it is already drawn in chip blue and is the only
+ * thing left saying they were; modifiers keep their pip, their ring and the dot
+ * they leave on a played tile, because which letter is Gold is a decision the
+ * player made and has to keep making.
+ *
+ * What else goes is the scoring animation: the `+chips +mult` a tile floats as
+ * it turns, and the outline a modifier throws round the tile it fires on. Those
+ * are the board narrating arithmetic while the guess resolves, and they are the
+ * loudest thing on it at exactly the moment there is nothing to decide. The dot
+ * stays and the flash goes, which is the same rule again: what a tile *is*
+ * survives, what it is *doing* does not.
+ *
+ * This is roughly the board the game had before values went on every key, so it
+ * is a screen that is known to work rather than one invented for a third state.
+ */
+.quiet .key:not(.etched) .value-pip,
+.quiet .tile-gain {
+  display: none;
+}
+
+.quiet .tile.fired {
+  outline: none;
+}
+
+/*
+ * The plain board, for the half of the game that is only a word puzzle.
+ *
+ * Independent of `.quiet` rather than layered on it, though it hides a superset:
+ * the two never appear together, and each block is readable on its own instead
+ * of one of them being half a state whose other half is in `setDecor`. The cost
+ * is that `.tile-gain` and the fired outline are turned off twice.
+ *
+ * Every per-letter number and mark goes: the chip value in the corner of a key,
+ * the modifier pip beside it, the dot the modifier leaves on a played tile, and
+ * the `+chips +mult` a tile floats as it turns. One rule, easy to state:
+ * nothing on the board says what a letter is worth. What survives is Wordle,
+ * five letters and three colors, plus the whole-guess score, which is the game
+ * rather than a decoration of it and which the readout in the header still
+ * counts out.
+ *
+ * Nothing here changes what anything is worth. The letters score exactly what
+ * they scored a moment ago, and holding a key still says what that is; they have
+ * only stopped announcing it unprompted.
+ */
+.plain .value-pip,
+.plain .mod-pip,
+.plain .tile[data-mod]::after,
+.plain .tile-gain {
+  display: none;
+}
+
+/*
+ * And the outlines, which are the same claims made in color rather than in
+ * digits: the modifier's ring on the key, and the outline a modifier throws
+ * round the tile it fires on.
+ *
+ * Hiding the pips and keeping these was the half-measure the setting shipped
+ * with, and it was most wrong exactly where the setting is for. The board still
+ * had a purple K on it, still drew a ring round the tile that just paid, and a
+ * player trying to think about five letters and three colors was being shown a
+ * fourth and a fifth. The Wordle colors stay: they are the word puzzle rather
+ * than a decoration of it.
+ */
+.plain .key[data-mod] {
+  box-shadow: none;
+}
+
+.plain .tile.fired {
+  outline: none;
+}
+
+.key:active {
+  filter: brightness(1.35);
+}

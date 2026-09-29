@@ -1,0 +1,267 @@
+/* ---------------------------------------------------------- shape panel */
+
+.shapes-note {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.shapes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-y: auto;
+}
+
+/*
+ * Same left-edge treatment the codex uses, for the same reason: five rows read
+ * as a list rather than as five panels. The edge is where the answer lives:
+ * lit for the shape that is scoring, half-lit for the ones that merely matched.
+ */
+/* A two-by-two: the name and its level across the top, the rule and its pay
+   across the bottom, so the two figures a player compares between shapes sit
+   in one column down the right instead of one at the end of the head and one
+   under the rule.
+
+   The rule's column has a floor and the pay's does not, so on a narrow phone
+   it is the pay that wraps. Both `auto` sides let "+40 chips, +5 mult per
+   level" keep its one line at 320 and squeeze "Its letters never go
+   backwards" to a word a line, five lines tall; 8rem holds the rule to two
+   or three and puts the pay on two. */
+.shape {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) auto;
+  align-items: baseline;
+  gap: 0.125rem 0.75rem;
+  padding: 0.375rem 0.5rem;
+  border-left: 2px solid var(--line);
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.shape.scoring {
+  border-left-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+}
+
+.shape.matched {
+  border-left-color: color-mix(in srgb, var(--mult) 55%, transparent);
+}
+
+.shape-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-weight: 700;
+}
+
+.shape-level {
+  justify-self: end;
+  padding: 0 0.25rem;
+  border-radius: 0.1875rem;
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.shape-tag {
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  border-radius: 0.1875rem;
+  background: color-mix(in srgb, var(--gold) 26%, var(--panel));
+  font-size: var(--type-small);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+/* The quieter half of the pair: it matched, and it lost the tie. */
+.shape-tag.also {
+  background: none;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.shape-text {
+  font-size: 0.8125rem;
+}
+
+.shape-pay {
+  justify-self: end;
+  text-align: right;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mult);
+}
+
+/*
+ * An open pack. Same sheet as every other modal, but without the tap-to-dismiss
+ * backdrop: the pack is already paid for, so walking away from it has to be a
+ * button that was meant to be pressed.
+ */
+.pack-hint {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.pack-options {
+  display: grid;
+  /* `max-content` rows, or a sheet shorter than its three picks squeezes each
+     row instead of scrolling: a row clips its own overflow (for the legendary
+     sheen), and anything that clips has an automatic minimum height of zero, so
+     `auto` tracks were free to cut the last line off every card at once. */
+  grid-auto-rows: max-content;
+  gap: 0.5rem;
+  overflow-y: auto;
+  /* The same trade `.relics` makes, and for the same reason: scrolling one axis
+     clips both, and the focus ring is drawn 4px outside each card (2px outline,
+     2px offset), so a tabbed-to pick had its ring shaved off both sides and the
+     first one lost its top as well. The padding is room for the ring, and the
+     matching negative margin keeps the list exactly where it was. */
+  padding: 0.25rem;
+  margin: -0.25rem;
+}
+
+/* The shelf's floor height is there to line two columns up; the sheet is one
+   column, and three short picks each ending in an inch of nothing is a sheet
+   that scrolls for no reason. */
+.pack-options .shop-item {
+  min-height: 0;
+}
+
+/*
+ * The letter picker, which borrows the pack's sheet for the same reason: it is a
+ * decision that has already been paid for, so there is no way out of it either.
+ *
+ * The keys are the round's keys, same class, same colors, same modifier pips,
+ * because the player has spent the whole run learning to aim at that layout, and
+ * this is a question about which of those keys they actually press.
+ */
+.place-keys {
+  /* Shorter than the board's, where the keyboard is the thing under the thumb
+     for a whole round. Here it is a single tap, and the sheet has a note under
+     it that should not be pushed off a short screen. */
+  --key-h: clamp(2.5rem, 6svh, 3rem);
+
+  /*
+   * The color of the modifier being placed, frozen here so the keys below can
+   * still say what they are already carrying.
+   *
+   * The container wears the incoming modifier's `data-mod`, which sets `--mod`
+   * on it; every key that carries one sets `--mod` again for itself, and after
+   * that there is no way down there to name the incoming color. This copies it
+   * before the overrides happen: a custom property's `var()` is substituted
+   * against the element it is declared on, so `--incoming` computes to the
+   * incoming color here and inherits down as that literal, untouched by what
+   * the keys do to `--mod` afterwards.
+   */
+  --incoming: var(--mod);
+}
+
+/* What the letter is already worth, which is the number the choice turns on,
+   and drawn by the same rule the board draws it by, base against raised, since
+   the player has just come from there. Which now includes the weights: these
+   were 700 and 800 against the same 16px key the board uses, so the picker had
+   the two-character read worse than the board did, on the one screen where the
+   player is reading the number rather than glancing past it. */
+.place-chips {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font-size: var(--type-pip);
+  font-weight: 400;
+  color: var(--value-base);
+}
+
+.place-key.etched .place-chips {
+  color: var(--value-raised);
+  font-weight: 600;
+}
+
+/*
+ * Already carrying something, so choosing it is a trade rather than a placement.
+ *
+ * Dimmed rather than disabled, because trading up is a real move and the pip says what
+ * is being given. What the dimming could never say is that the trade is the
+ * expensive move: on this keyboard the free letters are the loud ones and the
+ * occupied letter reads as the *less* interesting key, which is backwards. It is
+ * left alone anyway, because it is no longer the only thing saying so. A taken
+ * key now takes two taps and the second one is asked for in words.
+ */
+.place-key.taken {
+  opacity: 0.7;
+}
+
+/*
+ * Armed: tapped once, waiting on the answer to the question that has appeared
+ * under the keyboard.
+ *
+ * Ringed in the incoming modifier's color, over the top of the ring it wears in
+ * its own, so one key on the board is now wearing the color of the card in the
+ * player's hand, which is the whole message. Brought back to full strength at
+ * the same time, so the key the question is about is the brightest thing on the
+ * sheet rather than one of the dimmed ones.
+ *
+ * The outgoing pip is struck through, and that is the only place the loss is
+ * drawn rather than written. It is small on purpose: at 10px a strikethrough is
+ * a texture rather than a legible mark, and it is there to agree with the
+ * sentence below for a player who has already read it, not to carry it.
+ */
+.place-key.arming {
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 2px var(--incoming),
+    0 0 0.5rem color-mix(in srgb, var(--incoming) 45%, transparent);
+}
+
+.place-key.arming .mod-pip {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+/*
+ * The question itself. A block rather than the footnote it replaces, because the
+ * footnote was the version that did not work: this is the one moment on the
+ * sheet where something is about to be destroyed, and it gets the room the rest
+ * of the sheet gives to the keyboard.
+ */
+.place-swap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--panel-2);
+  /* Edged in the color of what is being lost, which is the same color as the
+     struck-through pip on the key above and the name inside this block. Three
+     marks, one color, one thing being said. */
+  border: 1px solid color-mix(in srgb, var(--mod) 45%, transparent);
+}
+
+.place-swap-line {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+/* The outgoing modifier, named in its own ink, the color the player has been
+   reading off that key since they bought it. */
+.place-swap-line strong {
+  color: var(--mod);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.place-key:disabled {
+  background: var(--broken-bg);
+  color: var(--broken-fg);
+  box-shadow: none;
+}
+
+.place-key:disabled .place-chips {
+  color: var(--broken-fg);
+}
+
+.place-note {
+  font-size: 0.75rem;
+  color: var(--muted);
+}

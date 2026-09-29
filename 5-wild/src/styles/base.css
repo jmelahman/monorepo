@@ -1,0 +1,300 @@
+:root {
+  --bg: #0e0f13;
+  --panel: #191b22;
+  --panel-2: #22242e;
+  --line: #2e313d;
+  --fg: #e8e8ea;
+  --muted: #8b8d98;
+
+  /* Wordle tile colors. */
+  --green: #538d4e;
+  --yellow: #b59f3b;
+  --gray: #3a3a3c;
+
+  /* Scoring readout. */
+  --chips: #4a9eff;
+  --mult: #ff5c5c;
+  --gold: #f0b429;
+
+  --rare-common: #6b7280;
+  --rare-uncommon: #3d8f6a;
+  --rare-rare: #3f6fd8;
+  --rare-legendary: #a855f7;
+  /* How much of `--rare` a relic's face and edge take. A share of a hue over
+     near-black glows; the same share over near-white is a wash that reads as
+     no colour at all, so the light theme takes more of it. */
+  --rare-wash: 16%;
+  --rare-wash-tray: 26%;
+  --rare-edge: 40%;
+
+  /*
+   * What the theme switch moves beyond the palette above, each holding exactly
+   * the literal it replaced, so the dark theme is the game as it was.
+   *
+   * `--on-tile` is the ink on a colored tile or key. It was the page's own
+   * `--fg`, inherited, which only worked because the page was dark: a light page
+   * has dark ink, and dark ink on the tile green is the lower contrast. The
+   * tile colors do not change with the theme (they are the game's language,
+   * not its décor), so neither does the ink on them.
+   *
+   * `--shade` is the black every outer shadow is mixed from. The light theme
+   * thins it rather than restating nine shadows, because a shadow sized for a
+   * near-black page reads as a smudge on a light one. Inset bevels are drawn on
+   * the element's own fill and keep plain black.
+   */
+  --on-tile: var(--fg);
+  --on-bright: var(--bg);
+  --key: #565758;
+  --key-gray-fg: var(--muted);
+  --broken-bg: #1b1c20;
+  --broken-fg: #4a4b52;
+  --shade: #000;
+  --sheen: #ffffff26;
+  --scrim: #000a;
+  --title-tint: #2a3350;
+  --row-note-bg: color-mix(in srgb, var(--yellow) 22%, #000);
+  --row-note-fg: var(--yellow);
+  /*
+   * The modifier hues, as pastels for the dark page and for any key or tile a
+   * guess has colored, in either theme. `--mod-*` is the hue in force; the
+   * light theme points it at a deeper set for its pale keys and panels, and the
+   * colored fills point it back here.
+   */
+  --pastel-steel: #9fb4c8;
+  --pastel-glass: #7fd8e8;
+  --pastel-lucky: #ff8fd0;
+  --pastel-echo: #f2a65a;
+  --pastel-anchor: #7ee787;
+  --mod-steel: var(--pastel-steel);
+  --mod-glass: var(--pastel-glass);
+  --mod-lucky: var(--pastel-lucky);
+  --mod-echo: var(--pastel-echo);
+  --mod-anchor: var(--pastel-anchor);
+
+  /*
+   * The bottom two rungs of the type scale, named because the floor wants to be
+   * a rule rather than twenty separate judgement calls: nothing in the game is
+   * set smaller than `--type-pip`, and anything made of words starts at
+   * `--type-small`.
+   *
+   * They were 8px and 9px. That was picked on a desktop browser at desk
+   * distance and is the wrong measurement. This is a phone game, read
+   * one-handed, and at 8px a corner pip is a smudge you tilt the screen to
+   * resolve, which is a poor deal for the number telling you what a letter
+   * pays. 10px is the smallest a two-digit figure holds up at in the corner of
+   * a key; 11px is the smallest a line of prose on a card does. Everything that
+   * was below those is now on them, which is why they are variables: the next
+   * person to think the game is squinting at them can move two numbers rather
+   * than go hunting for every `0.5625rem` in the file.
+   */
+  --type-pip: 0.625rem;
+  --type-small: 0.6875rem;
+
+  /*
+   * What a letter is worth, and whether that was bought. Two places print this
+   * figure, the corner of a key on the board and the corner of a key in the
+   * sheet that asks which letter a modifier should go on, and they have to
+   * agree, because a player reads the rule off one and applies it to the other.
+   * Named here so the pair is one decision rather than two that drift.
+   */
+  --value-base: color-mix(in srgb, var(--fg) 72%, transparent);
+  --value-raised: var(--chips);
+
+  /*
+   * How long everything takes, as a scale on every animation duration below.
+   *
+   * A scale on *duration* rather than a speed, so it runs the other way from the
+   * setting a player chooses: ×2 as fast is `--pace: 0.5`. `setSpeed` in
+   * `src/ui/speed.ts` writes it, from the same number `app.ts` divides its own
+   * timers by, which is what keeps a class coming off a tile exactly when the
+   * flip it names ends. The `1` here is the speed every duration in this file is
+   * authored at, and is what a first launch and a blocked store both get.
+   *
+   * The rule for what carries it: a keyframe sequence the player is waiting on
+   * does, and nothing else. The two loops that never end, `sheen` and
+   * `coach-mark`, are ambient rather than in the way, and running them faster
+   * would only make them insistent. The transitions here are all per-touch
+   * feedback of 260ms or less, fired under a finger that is still on the glass,
+   * where a duration is not a wait.
+   */
+  --pace: 1;
+
+  /*
+   * The one curve for anything answering a finger. The built-in `ease` spends
+   * its first third getting going, which under a thumb reads as the button
+   * thinking about it; this one is most of the way there in the first frame and
+   * spends the rest settling, so the press lands with the touch.
+   */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  color-scheme: dark;
+}
+
+/*
+ * The light theme. `theme.ts` resolves "follow the device" before it gets here,
+ * so this is the only place the light palette is written; see the note there.
+ *
+ * The score colors are darkened because they are read as text on the page, and
+ * `--gold` at its dark-theme value is invisible on white. Green and yellow stay:
+ * they are what a tile *means*, and a player who switches themes mid-run should
+ * not have to relearn which yellow is which.
+ */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f4f3ef;
+  --panel: #ffffff;
+  --panel-2: #ebeae5;
+  --rare-wash: 30%;
+  --rare-wash-tray: 42%;
+  --rare-edge: 70%;
+  --line: #d6d5cf;
+  --fg: #1c1d22;
+  --muted: #6b6d76;
+  --gray: #787c7e;
+
+  --chips: #1f6fd6;
+  --mult: #d93b3b;
+  --gold: #a87400;
+
+  --on-tile: #ffffff;
+  --on-bright: #ffffff;
+  --key: #d6d7db;
+  --key-gray-fg: #ffffffb3;
+  --broken-bg: #e4e3de;
+  --broken-fg: #a7a8ae;
+  --shade: #00000059;
+  --sheen: #ffffff99;
+  --scrim: #0006;
+  --title-tint: #dde3f3;
+  --row-note-bg: color-mix(in srgb, var(--yellow) 18%, var(--panel));
+  --row-note-fg: #6f5f14;
+  --mod-steel: #4f6d8a;
+  --mod-glass: #13899c;
+  --mod-lucky: #c2338a;
+  --mod-echo: #b8650f;
+  --mod-anchor: #2c8a3c;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  /*
+   * svh, not dvh, and not vh.
+   *
+   * `vh` overshoots: it is the viewport with the browser chrome hidden, so the
+   * bottom of the game sits behind the URL bar. `dvh` fits exactly, but it is
+   * *live*, and on Android Chrome the URL bar slides in and out on its own.
+   * Every pixel it moves re-runs this height, which re-runs the leftover space
+   * the board measures itself against, and the board is centered and square, so
+   * it changes size and position in both axes at once. Measured: 60px of chrome
+   * resizes the board by 28px across and 34px down. That reads as a shake.
+   *
+   * `svh` is the small viewport, chrome visible, and it is static. The layout
+   * is sized for the worst case once and never moves again. When the bar does
+   * retract, the extra strip below the keyboard is body background, which is
+   * the same color as the app, so nothing shows.
+   */
+  height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh above is the fallback */
+  height: 100svh;
+  overflow: hidden;
+  /* Pull-to-refresh and rubber-band scroll both read as bugs inside a game. */
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Kills the ~300ms double-tap-zoom delay on keyboard keys. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  /* The game claims the long press for itself, since holding a key reads what
+     the letter is worth, so iOS must not answer it with a callout of its own. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* The line icons from `icons.ts`. Sized like a glyph and drawn in the colour
+   of whatever holds them, so a caller changes one with `color` and never has to
+   know it is an SVG. */
+.icon {
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/*
+ * One ring, everywhere, and only for the keyboard: `:focus-visible` leaves a
+ * tapped button alone. It is spelled out rather than left to the browser because
+ * every surface here is dark and custom-colored, and the default ring is drawn
+ * assuming neither. Without it the sheets are tabbable but the tab is invisible,
+ * which is the same problem one step further on.
+ */
+:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* The exception: a sheet takes focus when it opens so the keyboard starts
+   inside it, and a ring around the whole panel would announce that as a
+   selection. It is a destination, not a control. */
+.sheet:focus,
+.sheet:focus-visible {
+  outline: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh above is the fallback */
+  height: 100svh;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+
+.screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  /* The game is designed for a thumb. On anything wider it stays phone-shaped
+     and centered rather than stretching into a keyboard three feet across. */
+  width: 100%;
+  max-width: 30rem;
+  margin-inline: auto;
+}
+
+.screen.center {
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}

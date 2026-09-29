@@ -1,0 +1,233 @@
+/* ----------------------------------------------------------------- grid */
+
+/*
+ * The board takes whatever is left after the HUD, the boss banner, the relic
+ * row and the keyboard have taken theirs, and that total is not knowable in
+ * CSS, since half of it is conditional. So the grid claims the leftover space
+ * as a size container and fits itself to it, keeping tiles square via
+ * aspect-ratio. Nothing here needs to be told how tall the chrome is.
+ */
+.grid-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  /* No `position` any more: it was the anchor for `.coach-slot`, which hangs
+     from the header now. Worth knowing if anything is anchored here again:
+     `container-type: size` reads as though it made this a containing block,
+     since it applies layout containment, but Chromium 147 does not agree, and
+     without `position: relative` the card landed over the keyboard, 227px below
+     the board it was meant to be lying on. */
+}
+
+/* A round without a boss keeps the band's height anyway, as padding above
+   the board, so every round's tiles are the size of a boss round's and in the
+   same place. It was split either side at first, which kept the size and not
+   the place: the boss round's board sat half a band lower than the round
+   before it. All of it above is what the band itself does, so the wrap's
+   content box starts at the same pixel on both, and the board, flush to the
+   top of that box, starts there too whether it is bound by width or height. The band was a banner of its own under the header, sized by its
+   text, and the grid took whatever it left: the same screen drew smaller tiles
+   on a boss round than on the round before it, and a different size again per
+   boss and per language, on the one round the player is most careful on.
+   Padding rather than a spacer, because the wrap is the size container and
+   `cqh` measures its content box, so the board fits the space less the band
+   exactly the way it does beneath one. When the board is bound by width the
+   padding is slack and costs nothing; when it is bound by height it costs the
+   ordinary rounds what the boss round was already paying. */
+.round-screen:not(:has(.hud .boss)) .grid-wrap {
+  padding-top: var(--boss-band);
+}
+
+.grid {
+  /* Centered across the wrap and flush to its top, with any height left over
+     falling below the board rather than split either side of it. Centered both
+     ways, the board of a width-bound phone sat wherever half the slack put it,
+     which moved with every row of chrome above; flush, the top row is a fixed
+     distance under the header, as high as the screen allows, and the slack is a
+     gap over the hand where nothing is aimed at. */
+  margin: 0 auto auto;
+  display: grid;
+  grid-template-rows: repeat(var(--rows, 6), 1fr);
+  gap: 0.3125rem;
+  aspect-ratio: var(--cols, 5) / var(--rows, 6);
+  /* Narrower of "as wide as there is room" and "as wide as the height allows",
+     so the board is bound by whichever axis runs out first. The first of each
+     pair is not dead weight: a browser without container-query units fails to
+     parse the `cq` declaration outright and keeps the plain one, which is the
+     whole point of writing them in this order. */
+  width: 100%;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the plain declaration above is the fallback */
+  width: min(
+    100%,
+    calc(100cqh * var(--cols, 5) / var(--rows, 6)),
+    calc(var(--cols, 5) * var(--tile-max))
+  );
+  /* Letters scale with the board, bounded by whichever axis is tighter, and by
+     the cap below. The cap has to be restated here as a size of its own:
+     `cqw` measures the wrap, not the board, so a board held under the wrap's
+     width would otherwise carry letters sized for the full width. */
+  font-size: 1.25rem;
+  font-size: min(
+    calc(45cqh / var(--rows, 6)),
+    calc(45cqw / var(--cols, 5)),
+    calc(0.45 * var(--tile-max))
+  );
+  /* A column's share of the widest the board may be, 3.75rem, so five letters
+     come to 300px on a phone, Wordle's own width. The board used to run the
+     full width of the keyboard whenever the height allowed it, which at 390 is
+     374px of tiles that read no better for the extra, and on the wider screens
+     the stylesheet allows (up to 30rem) it ran to 464px. It was 360 for a
+     while, after 320 read as a board shrunk to fit; once the header, trays and
+     dock had all given back height, 360 was a board that crowded the keyboard
+     on a phone, and 300 leaves the screen room around it. A desktop screen is
+     read from further off and keeps 360; see the `40rem` block. Per column
+     rather than a flat width, so a longer answer gets the same tile, not a
+     thinner one. */
+  --tile-max: 3.75rem;
+}
+
+.row {
+  /* The anchor for `.tile-gain`, which is measured against this box. */
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), 1fr);
+  gap: 0.3125rem;
+}
+
+.tile {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.375rem;
+  border: 2px solid var(--line);
+  font-weight: 700;
+  transition:
+    transform 90ms ease,
+    background-color 90ms linear;
+}
+
+/* The modifier that letter is carrying, marked where the score is happening.
+   Hidden until the tile turns, so it arrives with the color rather than
+   spoiling a row that has not been revealed yet. */
+.tile[data-mod]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: var(--mod);
+  box-shadow: 0 0 0.3rem var(--mod);
+}
+
+.tile.pending[data-mod]::after {
+  display: none;
+}
+
+/* A modifier firing. An outline rather than an animation: the flip owns
+   `animation` on this element, and two of them would fight. */
+.tile.fired {
+  outline: 2px solid var(--mod);
+  outline-offset: 2px;
+}
+
+.tile.filled {
+  border-color: var(--muted);
+}
+
+/* The letter arriving. Short enough that it keeps up with a fast typist and
+   never queues up behind itself. */
+.tile.land {
+  animation: land calc(110ms * var(--pace)) ease-out;
+}
+
+@keyframes land {
+  from {
+    transform: scale(0.86);
+  }
+}
+
+.tile.ghost {
+  border-style: dashed;
+  border-color: var(--green);
+  color: color-mix(in srgb, var(--green) 70%, var(--fg));
+}
+
+.tile.green {
+  background: var(--green);
+  border-color: var(--green);
+}
+.tile.yellow {
+  background: var(--yellow);
+  border-color: var(--yellow);
+}
+.tile.gray {
+  background: var(--gray);
+  border-color: var(--gray);
+}
+/* Light only, where the page's ink stops being light enough for these fills;
+   the dark theme's tiles inherit the same off-white they always did. Not while
+   pending: the color class is on before the flip reveals it, over a
+   transparent face, where the ink has to be the page's. */
+:root[data-theme="light"] .tile:is(.green, .yellow, .gray):not(.pending) {
+  color: var(--on-tile);
+}
+
+/* Tiles arrive blank and light up as the score walks across them. */
+.tile.pending {
+  background: transparent;
+  border-color: var(--muted);
+}
+
+/*
+ * What the boss says about a row, over the row's bottom edge.
+ *
+ * Yellow, and that is the whole design: The Silence's trick is that yellow is
+ * gone from the board, so the one yellow thing left on it is the count of what
+ * is missing. The letters are centered in their tiles and this sits on the
+ * gutter below them, so it covers nothing that has to be read.
+ */
+.row-note {
+  position: absolute;
+  right: 0.125rem;
+  bottom: -0.375rem;
+  z-index: 2;
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 999px;
+  background: var(--row-note-bg);
+  border: 1px solid color-mix(in srgb, var(--yellow) 55%, transparent);
+  color: var(--row-note-fg);
+  font-size: var(--type-small);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: opacity 140ms ease-out;
+}
+
+.row-note.pending {
+  opacity: 0;
+}
+
+/*
+ * The turn-over. There are no stacked front/back faces here. The tile is
+ * squashed to nothing on the vertical axis and the color is swapped by the
+ * controller at the trough, where there is nothing on screen to give it away.
+ * One transform, no extra nodes, and it composites on the GPU, which is what
+ * an Android WebView wants.
+ */
+/* Kept in step with FLIP.total in app.ts; see the note there. Both are the same
+   380 divided by the same animation speed, which is the only way the pair can
+   stay in step now that either can be a third of what it says. */
+.tile.flip {
+  animation: flip calc(380ms * var(--pace)) ease-in-out;
+}
+
+@keyframes flip {
+  50% {
+    transform: scaleY(0.04);
+  }
+}

@@ -1,0 +1,300 @@
+/* ----------------------------------------------------------------- codex */
+
+/*
+ * The catalog is long, every relic, boss and shape in the game, so entries
+ * are denser than the rules sheet and lean on a left edge rather than on gaps
+ * to separate themselves. The edge takes the rarity color where there is one,
+ * which is what lets the relic list be skimmed by tier without reading it.
+ */
+.codex-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.375rem 0 0.375rem 0.625rem;
+  border-left: 2px solid var(--rare, var(--line));
+}
+
+.codex-entry-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--fg);
+  font-weight: 700;
+}
+
+/* The price, or what a level is worth. Never wraps under the name it belongs to. */
+.codex-note {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.codex-text {
+  font-size: 0.8125rem;
+}
+
+/*
+ * A band label inside a section: a rarity, or a boss tier. Sticky, because the
+ * relic list is longer than the sheet and losing track of which rarity you are
+ * reading is the one way this screen fails to answer the question you opened it
+ * with.
+ */
+.codex-group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0;
+  background: var(--panel);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rare, var(--muted));
+}
+
+.codex-blurb {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/*
+ * Sections are shut until asked for. Laid out flat the catalog runs to ten
+ * phone screens, which is fine to read once and useless for the thing it is
+ * really for: looking one card up mid-run. Closed, the whole screen is seven
+ * rows and a count.
+ */
+.codex-section {
+  border-top: 1px solid var(--line);
+}
+
+.codex-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+  /* The section names are the table of contents, and inherited the sheet's
+     muted body colour, which set the headings a step quieter than the counts
+     beside them. */
+  color: var(--fg);
+}
+
+/* Safari still draws its own marker through `list-style`. */
+.codex-summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Points down when the section is open, right when it is shut. */
+.codex-summary::before {
+  content: "▸";
+  margin-right: 0.375rem;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.codex-section[open] > .codex-summary::before {
+  transform: rotate(90deg);
+}
+
+.codex-count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* A link drawn as a button: the one on the about sheet that leaves the app.
+   `button` is reset at the top of the file and `a` is not, so this is that
+   reset, plus the centring a flex child does not get for free. */
+.sheet-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+/*
+ * The pause sheet's settings, as one grouped list rather than four more
+ * full-width buttons. They were the same green-less `.secondary` slab as Codex
+ * and Quit, seven buttons stacked at one weight, and the eye had nothing to
+ * sort them by: the four that change a preference and come straight back, and
+ * the three that take you somewhere. A list of rows is the shape every phone
+ * already uses for the first kind, which is why it needs no explaining here.
+ */
+.settings {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.5rem;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  /* 44px, the thumb's floor, as a minimum rather than a padding sum, so a
+     label that wraps in German grows the row instead of crowding it. */
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.setting + .setting {
+  border-top: 1px solid var(--line);
+}
+
+/* The ring goes inside the row. The one `:focus-visible` draws sits 4px outside
+   its control, and `.settings` clips to its rounded corners, so a tabbed-to row
+   lost its ring on both sides, and the first and last rows lost their top and
+   bottom as well. The fix `.pack-options` and `.relics` use (padding, then a
+   matching negative margin) does not work here: the list has a background, and
+   the padding would show as a band of it around every row. An inset ring keeps
+   the clip, and it also stays off the dividers above and below the row. */
+.setting:focus-visible {
+  outline-offset: -2px;
+}
+
+.setting:disabled {
+  color: var(--muted);
+}
+
+/* What a row is set to, in the column the switches sit in, so the list reads
+   as names down the left and states down the right. Quieter than the name,
+   which is what the eye should land on first, and never wrapped: the label
+   gives way instead, since "promises" broken over two lines is a worse row
+   than "Velocidad de animación" broken over two. */
+.setting-value {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* The flag and the endonym, spaced like the title screen's pill. */
+.lang-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The one thing on the row saying a tap does something. A glyph, not a
+   drawn chevron, so it takes the value's colour and size for free. */
+.setting-more {
+  font-size: 1.25em;
+  line-height: 1;
+}
+
+/*
+ * The track. Drawn rather than an `<input type="checkbox">`, because the row is
+ * the control and the track only reports on it; a real checkbox inside a
+ * button is two focus stops for one switch.
+ */
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: var(--gray);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+/* On is the game's own green, the colour a letter turns when it is right. No
+   transition on the knob: a tap rebuilds the sheet, so the track is always a
+   new node drawn in its final state and there is no old position to slide
+   from. The row's own press is the feedback. */
+.setting[aria-checked="true"] .switch {
+  background: var(--green);
+}
+
+.setting[aria-checked="true"] .switch::after {
+  transform: translateX(1rem);
+  background: var(--fg);
+}
+
+/* ------------------------------------------------------ language button */
+
+/*
+ * One wrapping button that borrows its look from wherever it is: a plain
+ * `.secondary` in the title screen's stack, 22rem beside Play. The pause sheet's
+ * row is a plain `.setting` with the flag as its value; see `.lang-value`.
+ * This block is only about the flag.
+ *
+ * It was four buttons in a 2×2 grid, with a label above them; see
+ * `languageButton` for the argument that replaced it.
+ */
+.lang-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/*
+ * Sized down rather than up. Emoji are drawn from a font with its own metrics
+ * and a flag set at the button's own size sits taller than the caps beside it,
+ * which puts the row's baseline on the flag instead of on the word. 0.9em reads
+ * as the same height as the text it labels.
+ *
+ * `line-height: 1` for the same reason from the other side: the emoji font's
+ * default leading is generous enough to grow the button by a pixel or two on
+ * Android, which is a button that changes size when the language changes.
+ */
+.lang-flag {
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+/*
+ * Only on screen while a run is being played in another language's words. Sized
+ * and coloured as a footnote because that is what it is: nothing is being asked
+ * of the player and nothing has gone wrong.
+ */
+.lang-note,
+.sheet-note {
+  font-size: var(--type-small);
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.menu-button {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.375rem;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.875rem;
+}

@@ -1,0 +1,49 @@
+/* ---------------------------------------------------------------- toast */
+
+/* Lifted clear of the keyboard on the board, and sat at the foot of the screen
+   anywhere else, since the shop has no keyboard to clear, so it keeps the fallback.
+
+   The z-index is not decoration. `.key` is `position: relative` for the sake of
+   its own pseudo-elements, which makes every key a positioned box at the same
+   auto level as this one; document order then decides, the keyboard is written
+   after the toast, and the refusal loses. It was being drawn all along,
+   underneath the row of keys the player was about to press again.
+
+   Above `.overlay` for the same reason one rung up, and this one is a guard
+   rather than a repair. Nothing reaches it today: the two sheets that dispatch
+   at all pre-empt their own refusals, the pack by refusing to open one it has
+   no room for and the letter picker by disabling every key that would bounce.
+   But a sheet is drawn at 10 over a #000a backdrop, so a refusal fired from
+   inside one was painted at 6 underneath it: technically drawn, two-thirds
+   swallowed, and read by a player as the tap having done nothing. The relic
+   card's own warning came off in favor of the till saying it, which makes this
+   the one channel a refusal has; it should not also depend on every sheet
+   having thought of its refusals in advance. */
+.toast {
+  position: fixed;
+  z-index: 11;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + var(--toast-lift, 1rem));
+  transform: translateX(-50%);
+  max-width: 90vw;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  background: #000c;
+  /* Its own light ink, as `.relic-tip`: dark in both themes. */
+  color: var(--on-tile);
+  border: 1px solid var(--line);
+  font-size: 0.75rem;
+  text-align: center;
+  opacity: 0;
+  /* A fade and nothing else. How long the message stays is `TOAST` in `app.ts`,
+     deliberately out of reach of the kill-switch below. As a keyframe ending at
+     `opacity: 0` it was being run to completion in a millisecond and held there,
+     which deleted the one sentence this game has for saying no. Flattening a
+     fade costs nothing; flattening a dwell costs the message. */
+  transition: opacity 260ms ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+}

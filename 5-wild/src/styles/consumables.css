@@ -1,0 +1,91 @@
+/* ----------------------------------------------------------- consumables */
+
+.consumables {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.consumable {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.0625rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--rare-legendary) var(--rare-wash), var(--panel));
+  border: 1px solid color-mix(in srgb, var(--rare-legendary) 45%, transparent);
+  text-align: left;
+}
+
+.consumable-name {
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.consumable-text {
+  font-size: var(--type-small);
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+/* On the board the hand is a fixed band, seats and all, so the board above it
+   is the same size and in the same place whether the hand is full, empty or
+   emptied mid-round. The band is the relic tray's height, `--tray-h`, so the
+   two rows read as one pair of shelves; the rule clamps at one line to fit it,
+   and carries the rest as a tip. The pause sheet's copy of the row is not
+   clamped, since nothing there is sized against it. Stretched cards rather than
+   a height on each, so an empty seat and a held card are one height by
+   construction.
+
+   Its own line heights and a thinner pad: a name, 1px of gap, one line of rule
+   at 1.15 and 3px of pad a side come to 34px inside the 40. Two lines of rule
+   were 47px, and held both rows at 48, which the board paid for twice. The name
+   is what a held card is recognized by; the rule is on the tip, and in full in
+   the pause sheet. */
+.round-screen .consumables {
+  height: var(--tray-h);
+}
+
+.round-screen .consumable {
+  padding-block: 0.1875rem;
+}
+
+.round-screen .consumable-name,
+.round-screen .consumable-text {
+  line-height: 1.15;
+}
+
+.round-screen .consumable-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+.consumable.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+}
+
+/* The hand and the decor switch, one row over the relic tray, both over the
+   keyboard. The cards are the only thing in either tray a thumb presses, so
+   they came down to where the thumb already is, and the switch came with them
+   when the dock line went up into the header: it is a control, and the header
+   is for reading. The relics sit under the hand rather than over it, flush to
+   the keys, because a relic is read by holding it and the hand is pressed, and
+   the row nearer the keyboard is the one most often brushed on the way to it.
+   The switch is `--tray-h` square by its own default size, so it adds no
+   height to the row. */
+.hand-line {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.hand-line .consumables {
+  flex: 1 1 auto;
+  min-width: 0;
+}

@@ -1,0 +1,113 @@
+/* -------------------------------------------------------------- overlays */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  padding-bottom: calc(var(--safe-bottom) + 1rem);
+  background: var(--scrim);
+  animation: fade calc(140ms * var(--pace)) ease;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/*
+ * A sheet, not a centered dialog: it rises from the bottom edge, which is where
+ * a thumb already is. The height cap plus the scrolling body means the rules can
+ * grow without the buttons ever leaving the screen.
+ */
+.sheet {
+  width: min(100%, 26rem);
+  max-height: min(80svh, 40rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  animation: rise-sheet calc(180ms * var(--pace)) cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes rise-sheet {
+  from {
+    transform: translateY(1.5rem);
+    opacity: 0;
+  }
+}
+
+.sheet-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.sheet-body {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted);
+  /* The scroll belongs to this box; letting it chain to the page behind the
+     sheet is how a modal ends up scrolling the board it is covering. */
+  overscroll-behavior: contain;
+  /* Out into the sheet's own padding, so a desktop's scrollbar runs down the
+     sheet's edge rather than down the text's. Drawn against the text it was
+     flush with the right border of the rules sheet's tutorial panel, and read
+     as a scrollbar *inside* that panel. A phone's scrollbar overlays and
+     takes no room, so there this moves nothing but where the fling ends.
+
+     Both sides rather than the right alone, for Firefox's sake: it puts every
+     scroll box in the tab order so a keyboard can scroll it, and the ring it
+     then drew hugged the text on the left and the sheet's edge on the right. */
+  margin-inline: -1.25rem;
+  padding-inline: 1.25rem;
+  scrollbar-width: thin;
+}
+
+/* Drawn inside, since the box now reaches the sheet's edges and a ring 2px
+   outside them would be clipped by the sheet or stand on its border. */
+.sheet-body:focus-visible {
+  outline-offset: -2px;
+}
+
+.sheet-lead {
+  color: var(--fg);
+}
+
+/* The tutorial's note at the head of the rules, set apart as a panel because
+   it is the one thing on the sheet that is a suggestion rather than a rule,
+   and in the chips' blue because that is the color the tutorial's own cards
+   wear on the board. */
+.help-tutorial {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--chips) 40%, var(--line));
+  background: var(--panel-2);
+  color: var(--fg);
+}
+
+.sheet-heading {
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.rule strong {
+  color: var(--fg);
+}

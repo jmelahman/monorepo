@@ -1,0 +1,359 @@
+/* ------------------------------------------------------------ shop, panels */
+
+.shop-screen {
+  overflow-y: auto;
+  /* More air than the round screen's, which is packing a board and a keyboard
+     into the same height. No bottom padding: the exits are the foot of this
+     screen and draw their own. */
+  gap: 0.5rem;
+  /* The round screen's own inset, so the header does not step in 4px on the
+     way from a round to its shop. */
+  padding: 0.5rem 0.5rem 0;
+}
+
+/* No room held open under the shop's header for the round's bar. It had the
+   bar's row gap and height as padding, 11px, so the header was the round's
+   height and nothing under it moved on the way in. Once the dock line went
+   into the round's header the two were a whole row apart anyway, the shop's header
+   was a panel with an empty strip at its foot for no reason it could still
+   give, and the space is the shelf's. */
+
+/*
+ * Two columns of price tags, the pack across the foot of them. Tried as one
+ * column of full-width rows, which gave the sentence more width and spent it:
+ * five rows and the tray ran past the fold at 390, and a shelf you scroll is a
+ * shelf whose last card you forget. The cards this replaced were two columns as
+ * well, and what failed there was the type (11px copy, a 13px name), not the
+ * column count.
+ */
+.shop-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+/*
+ * One card. Rarity is the whole face rather than an edge: a 3px top stripe
+ * was the only thing that said it before, and it read as a border colour more
+ * than as a fact about the card. The face is tinted from `--rare` and the
+ * outline drawn in it, so common comes out the plain dark panel and a
+ * legendary is unmistakable from across the shelf.
+ */
+.shop-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 8.5rem;
+  /* Narrower at the sides than at the ends since the picture moved in beside
+     the name: at 0.75rem a side, a half-width card at 360 had 126px for a
+     picture and a name, and "Consonant Cluster" broke after its first word. */
+  padding: 0.75rem 0.5rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid
+    color-mix(in srgb, var(--rare, var(--rare-common)) var(--rare-edge), var(--line));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--rare, var(--rare-common)) var(--rare-wash), var(--panel-2)),
+    var(--panel)
+  );
+  box-shadow: inset 0 -0.1875rem 0 #00000047;
+  text-align: left;
+  /* Dealt in one at a time. `backwards` matters: without it every card is
+     visible at its final position for the frame before its delay elapses. */
+  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1) backwards;
+  /* The stagger is paced with the deal it staggers, or a shop set to ×3 would
+     lay five cards out over the same 280ms it always did, each of them arriving
+     three times as fast, which is a queue rather than a deal. */
+  animation-delay: calc(var(--deal, 0) * 70ms * var(--pace));
+}
+
+/* The pack across both columns. It is always the last thing on the shelf and
+   the only one that is a question rather than a card, and at half width its one
+   short sentence left a card that was mostly price. */
+.shop-item.kind-pack {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+/* Out of reach, and said by the whole card going quiet rather than by a line
+   of copy; see `shopItemCard` for where the shortfall went. The price loses its
+   gold as well, since gold on this screen means "you can have this". */
+.shop-item.broke {
+  opacity: 0.5;
+}
+
+/* The seat a purchase left. Holds its cell in the grid so nothing after it
+   moves; see `soldCard`. */
+.shop-item.sold {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background: transparent;
+  border: 1px dashed var(--line);
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.shop-item.sold .icon {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 3;
+  color: var(--green);
+}
+
+/*
+ * The price and the kind ticket, on one line at the foot of the card. Pushed
+ * down so the prices of a row of cards line up whatever their sentences ran
+ * to. Wraps, rather than squeezing, on the one pairing that cannot share it:
+ * "Verbrauchskarte" beside a price at 320.
+ */
+.shop-item-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin-top: auto;
+  padding-top: 0.375rem;
+}
+
+/*
+ * The kind ticket: its drawing and its word, in the card's rarity ink. Common
+ * mixes to a quiet gray, which is right, since common has nothing to boast of.
+ * `margin-left: auto` keeps it at the right edge when it has wrapped to a line
+ * of its own.
+ */
+.shop-item-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  margin-left: auto;
+  font-size: var(--type-pip);
+  font-weight: 700;
+  line-height: 1;
+  color: color-mix(in srgb, var(--rare, var(--rare-common)) 70%, var(--fg));
+}
+
+.shop-item-kind .icon {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* The drawing alone, on the pack sheet: bigger, since it is no longer
+   sharing the ticket with a word. */
+.shop-item-kind:not(:has(span)) .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/*
+ * The ticket is also a question, "what is one of these?", and on a mouse it
+ * answers itself through `data-tip`. This is only the hint that asking is
+ * possible: the pointer changes and the word is underlined, and the color stays
+ * put, since it is carrying the rarity and a hover that changed it would be
+ * saying something the hover does not mean. Nothing on touch: the long-press is the gesture
+ * there, and it is the same one the tray already teaches.
+ */
+.shop-item-kind[data-tip] {
+  cursor: help;
+}
+
+.mouse .shop-item-kind[data-tip]:hover {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.15em;
+}
+
+/* No seat for it. Mult red, because that is this game's color for a number
+   that is against you: the purchase will be refused at the till.
+
+   The consumable's alone, since the relic stopped wearing one: a full hand is a
+   wall for the whole shop visit, and a full tray is a thing you can sell your
+   way out of in the tray above the shelf. */
+.shop-item-kind.blocked,
+.shop-item-full {
+  color: var(--mult);
+}
+
+.shop-item-full {
+  font-size: var(--type-pip);
+  font-weight: 700;
+}
+
+/*
+ * The name with the card's own picture beside it; see `cardHead`. The picture is
+ * in the ticket's ink rather than the name's, so the rarity reads from the top
+ * of the card as well as from the foot, and a legendary is gold before a word
+ * of it is read.
+ *
+ * Centred on the name, which is one line or two: on two, a picture pinned to
+ * the first line left a hole under itself beside the second.
+ */
+.shop-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.shop-item-head > .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: color-mix(in srgb, var(--rare, var(--rare-common)) 70%, var(--fg));
+}
+
+.shop-item-head > .shop-item-name {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.shop-item-name {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  /* Balanced, so "Cluster → Lv 2" breaks before the arrow rather than leaving
+     the 2 on a line alone. No `hyphens`: with balancing it chose to split
+     "Grü-ner Daumen" at 320, a name that fits on two lines whole. */
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+/* The sentence the purchase is decided on, so the largest body type in the
+   shop. It was 11px when these cards were last two columns. */
+.shop-item-text {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--fg) 62%, var(--muted));
+}
+
+/*
+ * "Replaces Steel ×2", the only line on a shelf card describing something the
+ * tap takes away rather than something it hands over.
+ *
+ * It used to be the tail of `.shop-item-text`, in muted 11px, at the end of the
+ * longest sentence on the card. That is the wrong place for it twice over: it is
+ * the last thing read on a card that is mostly skimmed, and it is in the ink the
+ * card uses for sales copy. Lifted onto a line of its own, in the outgoing
+ * modifier's own color, which is the color the letter it names has been
+ * wearing on the keyboard since it was bought.
+ *
+ * Not `--mult` and not a warning red, though it is a warning. Red is the mult
+ * readout everywhere else in this game, and a shelf card that suddenly speaks in
+ * the scoring palette would be read as a number before it is read as a caution.
+ */
+.shop-item-swap {
+  flex: 0 0 auto;
+  font-size: var(--type-pip);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--mod);
+}
+
+/*
+ * The price, bottom left, where the reading ends: in gold type rather than on
+ * a gold chip. A chip on every card made five bright blocks the loudest thing
+ * on the shelf, louder than the names, and the one number that should shout on
+ * this screen is the gold in the header that every price is read against.
+ */
+.shop-item-cost {
+  color: var(--gold);
+  font-size: 1.125rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-item.broke .shop-item-cost {
+  color: var(--muted);
+}
+
+/* A phone under 360px wide, where half the screen is 144px of card. */
+@media (max-width: 22.5rem) {
+  .shop-item {
+    padding: 0.625rem;
+  }
+
+  .shop-item-name {
+    font-size: 0.9375rem;
+  }
+}
+
+.shop-actions {
+  display: flex;
+  gap: 0.5rem;
+  /* The two ways out of the shop, at the foot of the screen where the thumb
+     already is. They used to sit between the shelf and the tray, which put Next
+     round mid-screen on a short shop and pushed the tray under the fold on a
+     long one: the one button pressed every shop was the one that moved. In the
+     shop the shapes line over them takes the push instead (see `.shapes-line`),
+     and this only pushes itself on the pack sheet. */
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+/*
+ * A refusal in the shop (too poor, tray full) has to land above the two buttons
+ * it is most likely about, not on top of them. One button's height, its own
+ * padding, and the same gap the round screen leaves over its keyboard.
+ */
+.shop-screen {
+  --toast-lift: calc(3.625rem + 0.5rem + 1rem);
+}
+
+/*
+ * No rarity pip on a card for sale. The pip is for the tray, where a relic is a
+ * 3rem chip and its edge colour alone is hard to tell apart from its
+ * neighbour's; a shop card already says its rarity with a 3px edge and a tinted
+ * face, and its top-right corner was where the kind tag sat, which the pip was
+ * drawn straight through. The row has since moved rarity into its icon well,
+ * which says it louder than a pip would.
+ */
+.shop-item::after {
+  display: none;
+}
+
+/*
+ * The levels line, at the foot of the shelf over the two exits. A row rather
+ * than a card, because it sells nothing. It is the context the cards above are
+ * priced against, and a shop where the sixth thing looks buyable but is not
+ * would be a worse shop. `margin-top: auto` puts the tall phone's slack above
+ * it rather than under the last card, which is what keeps it from reading as
+ * that sixth thing; the exits below it need no push of their own.
+ */
+.shapes-line {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  margin-top: auto;
+  padding: 0 0.75rem;
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--panel) 75%, transparent);
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-align: left;
+}
+
+.shapes-line-label {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.shapes-line-body {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* Muted, not mult red. It was red, and "all at level 1" is where every run
+     starts, not a fault: the first shop of every run opened on a warning. */
+  color: var(--muted);
+}
+
+.shapes-line-more {
+  flex: 0 0 auto;
+  opacity: 0.65;
+}

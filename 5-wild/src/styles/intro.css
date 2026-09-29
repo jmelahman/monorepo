@@ -1,0 +1,379 @@
+/* ------------------------------------------------------------ round intro */
+
+/*
+ * The card between the shop and the board. The whole screen is a tap target,
+ * because on a phone hunting for a button after every round gets old fast, so the
+ * Play button is an affordance rather than the only way through.
+ *
+ * Laid out top to bottom rather than centred: where the stage is, what the
+ * stage holds, the round in hand, and Play at the thumb. Centred, the card
+ * floated in the middle of a tall phone with Play hung under it at whatever
+ * height the card happened to end, and the one button on the screen moved
+ * between a boss and an ordinary round.
+ */
+.intro {
+  cursor: pointer;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 1.25rem;
+  overflow-y: auto;
+}
+
+/* The tap-anywhere cursor is a promise the asking card does not keep, so it is
+   withdrawn with the handler it was advertising. */
+.intro.asking {
+  cursor: auto;
+}
+
+/* Sits where the header sits on every other in-run screen, at its height, so
+   the page reads as the same place as the shop before it and the board after. */
+.intro-stage {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/*
+ * The round's token, Balatro's chip at phone scale: a disc for a normal round,
+ * a shield for an elite and a turned square with a crown for the boss, so the
+ * shape says which kind of trouble this is from across the room, before the
+ * name has been read. They were three tinted discs with a star clipped out of
+ * the boss's, and two of the three were the same shape in different colours.
+ *
+ * An SVG from `roundToken`, drawn at three sizes: here, in the stage track and
+ * in the board's header. Only this one is tossed onto the table; the other two
+ * are rebuilt on every render and would spin on every guess.
+ */
+.round-token {
+  display: block;
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.intro-card > .round-token {
+  width: 4.5rem;
+  height: 4.5rem;
+  filter: drop-shadow(0 0.375rem 0.5rem color-mix(in srgb, var(--shade) 53%, transparent));
+  animation: token calc(460ms * var(--pace)) cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.track-name .round-token {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* The token at the height of the two lines beside it, the name and the stage,
+   rather than of a letter. At 18px the crown was a speck beside the name, and
+   the shape is meant to say which kind of round this is before the name has
+   been read. 30px is the most it can take for free: the name and the stage
+   are about 31px together, so the header is no taller than it was, and a
+   taller header is height out of the board. */
+.hud .round-token {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+/* Lands with a little more spring than the card it sits on, so it reads as
+   having been tossed onto the table rather than drawn with it. */
+@keyframes token {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem) scale(0.7) rotate(-25deg);
+  }
+}
+
+/* The stage's three rounds, the one in hand outlined in its own colour. */
+.stage-track {
+  flex: 0 0 auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.track-round {
+  --edge: #5a7fa8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.625rem;
+  border-radius: 0.625rem;
+  /* Carried transparent so the outlined one is not a pixel bigger. The foot
+     is 3px because it is the current round's lip: a thicker bottom border in
+     the round's colour. It was an inset shadow, which paints inside the
+     border and follows its inner curve, so on the red boss outline it bit a
+     dark notch out of both bottom corners and the border read as clipped. A
+     border's width eases around the corner on its own. */
+  border: 1px solid transparent;
+  border-bottom-width: 3px;
+  background: var(--panel);
+}
+
+.track-round.elite {
+  --edge: #c08a3e;
+}
+
+.track-round.boss {
+  --edge: var(--mult);
+}
+
+.track-round.current {
+  border-color: var(--edge);
+  background: var(--panel-2);
+}
+
+.track-name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.track-round.current .track-name {
+  color: var(--fg);
+}
+
+.track-target {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Struck rather than hidden: a cleared target is still the thing that was
+   beaten, and the run of three reads as a record as well as a plan. */
+.track-round.cleared .track-target {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.track-round.cleared .round-token {
+  opacity: 0.55;
+}
+
+.track-status {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  /* Held open when it has nothing to say, so the three cards match. */
+  min-height: 0.875rem;
+  font-size: 0.6875rem;
+  line-height: 0.875rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.track-round.cleared .track-status {
+  color: color-mix(in srgb, var(--green) 70%, var(--fg));
+}
+
+.track-round.current .track-status {
+  color: color-mix(in srgb, var(--edge) 60%, var(--fg));
+}
+
+.track-round .track-status .icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  stroke-width: 3;
+}
+
+/* Takes the height left between the track and Play and centres the card in
+   it, so Play stays at the foot however long the boss's rule runs. */
+.intro-body {
+  flex: 1 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.intro-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.75rem 1.25rem 1.375rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow:
+    inset 0 -4px 0 #00000040,
+    0 0.75rem 1.75rem color-mix(in srgb, var(--shade) 35%, transparent);
+  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1);
+}
+
+/* A boss announces itself before it is played, never during.
+   The lip is a thicker bottom border here rather than the inset shadow the
+   plain card wears. An inset shadow paints inside the border and follows its
+   inner curve, so against a 2px red edge it bit a dark crescent out of both
+   bottom corners and the border read as clipped there. A border's width eases
+   around the corner on its own. */
+.intro-card.boss-card {
+  border: 2px solid var(--mult);
+  border-bottom-width: 4px;
+  background: color-mix(in srgb, var(--mult) 6%, var(--panel));
+  box-shadow: 0 0.75rem 1.75rem color-mix(in srgb, var(--shade) 35%, transparent);
+}
+
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+}
+
+/* Over a boss's name, the kind of round it is, in the boss's colour. */
+.intro-kind {
+  margin-top: 0.875rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mult);
+}
+
+.intro-name {
+  margin: 0.875rem 0 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.intro-kind + .intro-name {
+  margin-top: 0.25rem;
+}
+
+.intro-rule {
+  width: 100%;
+  margin: 0.75rem 0 0;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  border: 1px solid color-mix(in srgb, var(--mult) 28%, transparent);
+  background: color-mix(in srgb, var(--mult) 8%, transparent);
+  text-align: center;
+  text-wrap: balance;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--mult) 20%, var(--fg));
+}
+
+.intro-label {
+  margin-top: 1.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.intro-target {
+  font-size: 4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--chips);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Guesses and reward, two figures under a rule. They were a sentence in small
+   grey type, "6 guesses · reward $4", and the guess count is the round's other
+   limit beside the target: it deserved to be a number. */
+.intro-stats {
+  width: 100%;
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+
+.boss-card .intro-stats {
+  border-top-color: color-mix(in srgb, var(--mult) 22%, var(--line));
+}
+
+.intro-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  padding-top: 0.875rem;
+}
+
+.intro-stat + .intro-stat {
+  border-left: 1px solid var(--line);
+}
+
+.intro-stat-value {
+  font-size: 1.375rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.intro-stat-value.gold {
+  color: var(--gold);
+}
+
+.intro-stat-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/*
+ * The run's standing rules, ruled off from the round's own numbers above them.
+ * They belong to a different scope, the whole run and not this card, and the line
+ * is what says so without a heading.
+ */
+.intro-asc {
+  margin-top: 0.875rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  text-align: center;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.intro-asc strong {
+  color: var(--mult);
+}
+
+.intro-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* The width of the screen and a thumb tall, at the foot: the one button here,
+   where the thumb already is. */
+.intro-actions > button {
+  flex: 0 0 auto;
+}
+
+.intro-actions .primary {
+  height: 3.5rem;
+  border-radius: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 800;
+  box-shadow: inset 0 -4px 0 #00000040;
+}
+
+.screen.center .primary,
+.screen.center .secondary {
+  flex: 0 0 auto;
+  width: min(100%, 22rem);
+}

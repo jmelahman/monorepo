@@ -1,0 +1,261 @@
+/* What the card would have cost in the stock, struck out: the pack covered it. */
+.shop-item-cost.free {
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-decoration: line-through;
+  box-shadow: none;
+}
+
+.owned-label {
+  padding: 0.25rem 0;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.primary,
+.secondary,
+.danger {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  background: var(--green);
+}
+
+.secondary {
+  background: var(--panel-2);
+}
+
+/* Green fills carry the tile ink rather than the page's, as the tiles do. */
+:root[data-theme="light"] :is(.primary, .title-tile) {
+  color: var(--on-tile);
+}
+
+/* Reserved for actions that destroy something. Currently that is exactly one
+   button, and it should not blend in with the two either side of it. */
+.danger {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--mult) 50%, transparent);
+  color: var(--mult);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.4;
+}
+
+/*
+ * Press feedback. Every one of these used to do nothing visible between the
+ * finger landing and the screen being rebuilt, which on a slow phone is long
+ * enough to tap again. A 3% give is felt more than seen, which is the point:
+ * it answers the touch without pretending the action has happened.
+ *
+ * `:active` and no `:hover`, on purpose. The APK's WebView answers hover
+ * queries like a desktop (see `bindTips`), and a hover state on a screen that is
+ * rebuilt under a still finger is one that sticks to whatever button is drawn
+ * where the last one was.
+ *
+ * A transition, so it is off the pace dial with every other per-touch
+ * transition (see `--pace`), and killed outright by the reduced-motion block,
+ * which leaves the press instant rather than gone.
+ */
+.primary,
+.secondary,
+.danger,
+.setting,
+.shop-item,
+.menu-button,
+.shapes-line,
+.ladder-step,
+.title-pill,
+.title-dial {
+  transition: transform 120ms var(--ease-out);
+}
+
+.primary:active:not(:disabled),
+.secondary:active:not(:disabled),
+.danger:active:not(:disabled),
+.shop-item:active:not(:disabled),
+.menu-button:active,
+.shapes-line:active,
+.ladder-step:active:not(:disabled),
+.title-pill:active,
+.title-dial:active {
+  transform: scale(0.97);
+}
+
+/* The rows of a list give by darkening rather than shrinking: a row that
+   narrows pulls away from the dividers above and below it. */
+.setting:active:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+/*
+ * Hover, for a mouse and only a mouse. Gated on `.mouse`, which `bindMouse`
+ * sets from the `pointerType` of the last pointer event, and not on
+ * `(hover: hover)`, for the reason the press feedback above gives: the APK's
+ * WebView answers that query like a desktop, and a hover on a screen rebuilt
+ * under a still finger sticks to whatever is drawn where the last button was.
+ *
+ * Light, not motion. The press already owns `transform`, and a lift on hover
+ * followed by a give on press would read as two gestures fighting over one
+ * button. Brightness is used where the button has a fill of its own, because it
+ * lifts a gradient, a rarity tint and a flat panel alike without restating any
+ * of them; the unfilled ones take a faint wash instead, the same one `.setting`
+ * darkens to on a press, at two thirds the strength so the press still reads as
+ * a step further. No transition: a hover that eases in is a hover that has not
+ * arrived yet when the click does, and it keeps this off `--pace` and out of the
+ * reduced-motion block's reach altogether.
+ *
+ * Out of reach is excluded by both spellings the views use: `:disabled`, and
+ * `aria-disabled` on a card that is still focusable so its tip can be read. A
+ * sold card is a `div` and matches nothing here. So is `:active`, wherever the
+ * press is drawn in the same property: `.mouse` makes these selectors outrank
+ * the press rules, and a key held down under the cursor would otherwise show
+ * the hover's 1.12 instead of the press's 1.35.
+ */
+.mouse
+:is(
+  .primary,
+  .secondary,
+  .shop-item,
+  .menu-button,
+  .shapes-line,
+  .ladder-step,
+  .title-pill,
+  .title-dial
+):hover:not(:disabled, [aria-disabled="true"]),
+.mouse .key:hover:not(.broken, :active) {
+  filter: brightness(1.12);
+}
+
+.mouse :is(.danger, .setting):hover:not(:disabled, :active) {
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+
+/* The quietest button on the screen, and it answers a hover the way it answers
+   a press. */
+.mouse .title-record:hover {
+  color: var(--fg);
+}
+
+.panel {
+  width: min(100%, 22rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--panel);
+  box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--shade) 40%, transparent);
+  animation: deal calc(320ms * var(--pace)) cubic-bezier(0.2, 1.1, 0.4, 1);
+}
+
+.reward-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.reward-line.total {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.banner {
+  font-size: 1.75rem;
+  font-weight: 800;
+  /* Tightened, not tracked: at 28px and 800 the default spacing already reads
+     loose, and positive tracking on a mixed-case word is a caption's look. */
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.banner.win {
+  color: var(--green);
+}
+.banner.lose {
+  color: var(--mult);
+}
+
+.answer-note {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.score-note {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The win, on a screen that is otherwise reporting a death. It keeps the color
+ * the banner would have had, because the run really did beat the game. */
+.won-note {
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* The rung just climbed, and the one it opened. Gold rather than green: it is a
+   reward being handed over, not the win being restated. */
+.asc-note {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* What playing on costs, said before the button that does it. */
+.endless-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-align: left;
+}
+
+/* A link inside a sentence: the sentence's own size, underlined so it reads as
+   something to tap, and in the text colour so it does not shout over it. */
+.inline-link {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* The answer to a yes, on both sheets. The heart is the
+   one filled icon in the game, in the mult red, because it is the one that is
+   not a control: nothing to press, only something to be glad about. */
+.share-thanks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4375rem;
+  font-size: var(--type-small);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.icon-heart {
+  fill: currentColor;
+  color: var(--mult);
+}
+
+/* Decoration, so the reduced-motion block may take it whole: a heart that is
+   simply there says the same thing. Paced like every other one-shot. */
+.share-thanks.fresh .icon-heart {
+  animation: heart calc(420ms * var(--pace)) var(--ease-out);
+}
+
+@keyframes heart {
+  0% {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
