@@ -8,12 +8,15 @@
   clip-path: var(--cut);
 }
 
-/* The current stage is told by its edge colour and a bar down the top of it, in
-   the same place a card carries its rarity: one language for "this one". */
+/* The current stage is told by its edge colour and a lighter panel. It had a
+   bar along the top as well, where a card carries its rarity, but the border
+   under it is the same colour, so the two stacked into one heavy band (6px at
+   0.25rem, still 4px at two), and the owner asked for it thinner. The ring
+   alone is the two pixels a card's bar is. */
 :root.skin-smoke .track-round.current {
   border-color: var(--edge);
   background: var(--panel-2);
-  box-shadow: inset 0 0.25rem 0 var(--edge);
+  box-shadow: none;
 }
 
 :root.skin-smoke .intro-card {
