@@ -1,275 +1,592 @@
 /*
- * The shop, for a landscape window: the same rail as the round on the left
- * (the name, the gold, and here the things you do with it), the run's relics
- * along the top, and the shelf as cards laid out on the table.
+ * The shop, for a landscape window: a header across the top, the shelf as five
+ * tall cards, and under it the player's own side of the deal.
  *
- *   rail     | owned relics ............ hand
- *   (gold)   |
- *            |   card   card   card   card   card
- *   shapes   |
- *   reroll   |
- *   next     |
+ *   Shop  stage ............................................ gold  menu
+ *
+ *     card        card        card        card        card
+ *
+ *   shapes: Twinned Lv 3 · Cluster Lv 2                 [ reroll $2   ]
+ *   seat seat seat seat seat   hand hand                [ next round  ]
+ *
+ * The two ways out of the shop stand together at the far corner, the foot the
+ * screen ends on: another shelf, or the next round. Reroll is the full width of
+ * the column and dressed louder than a secondary button usually is, because it
+ * is the price paid over and over and it has been missed: in the round's rail
+ * it was the second of two buttons and read as furniture. It has also been
+ * under the shelf and in the bottom left over the seats, and the owner brought
+ * it back beside Next round, where a player deciding whether to leave already
+ * has their hand.
+ *
+ * The bottom left holds the seats, which every price on the shelf is weighed
+ * against: a $10 relic with the two empty seats it would fill in view is a
+ * question with its answer on screen. The shapes the run has leveled sit over
+ * them, for the same reason about the level cards.
  *
  * As in the round, the screen's own children are placed into the grid, so
- * nothing is wrapped. The rail is three separate children of the screen (the
- * header, the shapes line, the buttons) and rows one, three and four of a
- * column; the shelf spans the rows between them, which is what centres it on
- * the screen's height rather than on whatever the header happens to measure.
+ * nothing is wrapped. `.shop-actions` is `display: contents` so its two buttons
+ * are grid items and can sit in different corners; they stay in source order
+ * (Reroll, then Next round), which is the order Tab walks them.
  *
- * A shelf of one kind of thing is five portrait cards, so the shelf is a flex
- * row and not the phone's two-column grid: a card is 5:7 and takes a fifth of
- * the row up to a cap, and the pack, which is a full-width strip on the phone,
- * is a card like the others.
+ * This used to be the round's rail, down the left with the shelf beside it. Five
+ * cards in the width the rail left were 14rem and a shrug; across the window
+ * they get to be cards, and the header stops being a column of things with
+ * nowhere else to go.
+ *
+ * Every card rule is scoped to `.shop-items`: the open pack's sheet reuses
+ * `.shop-item` for its picks and must not inherit a shelf's proportions.
  */
 
 :root.table .shop-screen {
   display: grid;
-  grid-template-columns: var(--rail-w) minmax(0, 1fr) auto;
+  grid-template-columns: auto auto minmax(0, 1fr) minmax(16rem, 21.25rem);
   grid-template-rows: auto minmax(0, 1fr) auto auto;
-  column-gap: var(--space-5);
+  column-gap: var(--space-4);
   row-gap: var(--space-3);
   width: 100%;
   max-width: 96rem;
-  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-4);
+  padding: 0 clamp(var(--space-5), 3.9vw, 3.5rem) clamp(var(--space-4), 4.4svh, 2.5rem);
   overflow: hidden;
-  --tray-h: clamp(4.5rem, 10svh, 6rem);
   --toast-lift: 2rem;
-  /* Narrower than the round's rail: five portrait cards want the width more
-     than a column of buttons does. */
-  --rail-w: clamp(15rem, 18vw, 17.5rem);
 }
 
+/* ---- the header -------------------------------------------------------- */
+
+/* A row, not the round's rail: the name with the stage beside it on one
+   baseline, and the cash and the menu at the far end. */
 :root.table .shop-screen .hud {
-  grid-column: 1;
+  grid-column: 1 / -1;
   grid-row: 1;
-  align-self: start;
-  position: relative;
-  z-index: 1;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-5);
+  height: 5.5rem;
   margin: 0;
-  padding: var(--space-5) var(--space-4) var(--space-2);
-  --hud-pad-x: var(--space-4);
+  padding: 0;
+  overflow: visible;
+  --hud-pad-x: 0;
+}
+
+:root.table .shop-screen .hud-round {
+  order: 1;
+  display: flex;
+  align-items: baseline;
   gap: var(--space-4);
+  flex: 1 1 auto;
+  padding-right: 0;
+}
+
+:root.table .shop-screen .round-name {
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+:root.table .shop-screen .stage {
+  margin-top: 0;
+  font-size: 1rem;
 }
 
 :root.table .shop-screen .hud-score {
   display: none;
 }
 
-:root.table .shop-screen .hud-gold {
-  margin-top: 0;
-  order: 6;
+:root.table .shop-screen .hud-end {
+  order: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
 }
 
+:root.table .shop-screen .hud-gold {
+  margin-top: 0;
+  height: 3.25rem;
+  padding: 0 1.375rem;
+  font-size: 1.875rem;
+}
+
+:root.table .shop-screen .menu-button {
+  order: 7;
+  position: static;
+  width: 3.25rem;
+  height: 3.25rem;
+  font-size: 1.375rem;
+}
+
+/* ---- the shelf --------------------------------------------------------- */
+
+/* Five columns, one card each, as tall as the band leaves them up to a cap: the
+   card is a column of things read top down and wants the height more than the
+   width. The pack is last because the engine deals it last (`rollShop`), so
+   nothing here orders anything. */
+:root.table .shop-screen .shop-items {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* One row, as tall as the room up to the cap, and the cards stretch to it:
+     `height: 100%` against an auto row resolved to each card's content, and the
+     shelf sat short in a tall space. The cap was 29rem and the room's own
+     height less nothing, and both read as a shelf that filled the window: 24px
+     off each (the owner's number, taken in two goes) leaves air between the
+     cards and the band at every size, not only where the cap binds. */
+  grid-template-rows: minmax(0, min(27.5rem, 100% - 1.5rem));
+  align-content: center;
+  gap: 1.25rem;
+  min-height: 0;
+  padding: var(--space-2) 0;
+}
+
+:root.table .shop-screen .shop-items .shop-item {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  gap: 0;
+  align-items: stretch;
+  overflow: hidden;
+  text-align: left;
+}
+
+:root.table .shop-screen .shop-items .shop-item.kind-pack {
+  grid-column: auto;
+}
+
+/* The foot dissolves so its two children can be ordered among the card's own:
+   the kind word rises to the head of the card and the price stays last. The
+   bottom right used to spend a line on "Relic" beside the price; at the top it
+   is the card's label rather than a caption for its price. */
+:root.table .shop-screen .shop-items .shop-item-foot {
+  display: contents;
+}
+
+:root.table .shop-screen .shop-items .shop-item-kind {
+  order: -1;
+  align-self: stretch;
+  justify-content: flex-start;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.875rem 1.125rem;
+  font-size: 0.8125rem;
+}
+
+:root.table .shop-screen .shop-items .shop-item-kind > .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+:root.table .shop-screen .shop-items .shop-item-head {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  padding: var(--space-2) 1.25rem 0;
+}
+
+:root.table .shop-screen .shop-items .shop-item-head > .shop-item-name {
+  flex: 0 0 auto;
+}
+
+:root.table .shop-screen .shop-items .shop-item-name {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+:root.table .shop-screen .shop-items .shop-item-text {
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: var(--space-2) 1.25rem 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+  overflow: hidden;
+}
+
+:root.table .shop-screen .shop-items :is(.shop-item-swap, .shop-item-full) {
+  padding: var(--space-2) 1.25rem 0;
+}
+
+:root.table .shop-screen .shop-items .shop-item-ladder {
+  align-items: baseline;
+  white-space: nowrap;
+  gap: 0.625rem;
+  margin-top: auto;
+  padding: var(--space-3) 1.25rem var(--space-1);
+  font-size: 1.375rem;
+}
+
+:root.table .shop-screen .shop-items .ladder-to {
+  font-size: clamp(1.75rem, 2.6vw, 2.5rem);
+  line-height: 1;
+}
+
+/* Bottom left, where the reading ends, and pushed there: the text above it
+   takes what it needs and the room left over opens above the price.
+
+   And at one height across the shelf, whatever the card is dressed as. A skin
+   gives each kind its own frame (foil, an inset rule, a margin that makes a
+   slip shorter than a card), and when each price sat that frame's depth above
+   the card's own bottom the five prices were five heights, 21px apart at the
+   extremes, on a row the eye reads straight across to compare them. So the
+   price is measured from the foot of the row: `--price-foot` is where it sits,
+   `--frame-b` is how much of that a card's frame already takes up, and a skin
+   that frames a kind says how deep. */
+:root.table .shop-screen .shop-items .shop-item-cost {
+  order: 99;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  margin-top: auto;
+  padding: var(--space-3) 1.25rem calc(var(--price-foot, 1.125rem) - var(--frame-b, 0rem));
+  font-size: 1.625rem;
+  line-height: 1;
+}
+
+/* Unless a ladder is there to take the slack, which it does from above, so
+   the level stands over the price it is bought for. */
+:root.table .shop-screen .shop-items .shop-item-ladder ~ .shop-item-foot .shop-item-cost {
+  margin-top: 0;
+}
+
+/*
+ * ---- four kinds of card, four objects ------------------------------------
+ *
+ * Five cards of one shape read as five of the same thing, and the shelf is
+ * where the player decides what a run becomes. So the kinds differ in what they
+ * are: a relic is framed with its picture in a window, a pack is a boxed deck, a
+ * consumable is a tarot card and an upgrade is a slip. That was the Smoke Room's
+ * alone at first, and the owner asked for every look to share it, so the shapes
+ * are here and each skin dresses them: the window's fill, the foil, the card
+ * backs and the ruled lines are all its own.
+ *
+ * Which picture a card shows is a skin's call too. The line emblem is the
+ * default; the Smoke Room swaps in the pixel sprite, which is drawn beside every
+ * emblem for the reason `cardArt` gives. Every rule below sizes both, so a swap
+ * is one `display` and nothing moves.
+ *
+ * The price foot is the pack's foil and a little air, the deepest frame here;
+ * each kind says below how much of that its own frame covers.
+ */
+:root.table .shop-screen .shop-items {
+  --price-foot: 2rem;
+}
+
+:root.table .shop-screen .shop-items .shop-item-head > :is(.emblem, .sprite) {
+  display: none;
+}
+
+/* The relic: its picture in a window, centred over the name. */
+:root.table .shop-screen .shop-items .kind-relic .shop-item-head {
+  padding-top: 1.375rem;
+}
+
+:root.table .shop-screen .shop-items .kind-relic .shop-item-head > :is(.emblem, .sprite) {
+  box-sizing: border-box;
+  align-self: center;
+  width: 6.5rem;
+  height: 6.5rem;
+  padding: 1.25rem;
+  margin-bottom: var(--space-2);
+}
+
+/* A sprite is drawn on a 12-unit grid, so its window keeps 60px of it, five
+   screen pixels to the sprite's one, where the emblem's 64px would smear. */
+:root.table .shop-screen .shop-items .kind-relic .shop-item-head > .sprite {
+  padding: 1.375rem;
+}
+
+:root.table .shop-screen .shop-items .kind-relic .shop-item-head > .emblem {
+  display: block;
+}
+
+/* The pack: a band at each end for the foil, and a fan of three card backs where
+   a picture would be. The two behind are the head's pseudo-elements; the front
+   one is the picture itself, padded out to a card, so a category pack and a
+   relic pack are still told apart by what is on its face. */
+:root.table .shop-screen .shop-items .shop-item.kind-pack {
+  --frame-b: 1.25rem;
+  padding-block: 1.25rem;
+}
+
+:root.table .shop-screen .shop-items .kind-pack .shop-item-head {
+  position: relative;
+  isolation: isolate;
+}
+
+:root.table .shop-screen .shop-items .kind-pack .shop-item-head::before,
+:root.table .shop-screen .shop-items .kind-pack .shop-item-head::after {
+  content: "";
+  position: absolute;
+  top: 1.25rem;
+  left: calc(50% - 2.75rem);
+  z-index: -1;
+  width: 5.5rem;
+  height: 7.5rem;
+}
+
+:root.table .shop-screen .shop-items .kind-pack .shop-item-head::before {
+  transform: translateX(-2.125rem) rotate(-11deg);
+}
+
+:root.table .shop-screen .shop-items .kind-pack .shop-item-head::after {
+  transform: translateX(2.125rem) rotate(11deg);
+}
+
+:root.table .shop-screen .shop-items .kind-pack .shop-item-head > :is(.emblem, .sprite) {
+  box-sizing: content-box;
+  align-self: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 2.75rem 1.75rem;
+  margin: 0.875rem 0 var(--space-2);
+}
+
+:root.table .shop-screen .shop-items .kind-pack .shop-item-head > .emblem {
+  display: block;
+}
+
+/* The consumable: centred like a tarot card, a rule inside its edge, its
+   picture large, its name set off from its reading by a short rule of its own. */
+:root.table .shop-screen .shop-items .shop-item.kind-consumable {
+  --frame-b: 0.5rem;
+  align-items: center;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+:root.table .shop-screen .shop-items .kind-consumable .shop-item-kind {
+  justify-content: center;
+  padding-top: 1.125rem;
+}
+
+:root.table .shop-screen .shop-items .kind-consumable .shop-item-kind > .icon {
+  display: none;
+}
+
+:root.table .shop-screen .shop-items .kind-consumable .shop-item-head {
+  align-items: center;
+}
+
+:root.table .shop-screen .shop-items .kind-consumable .shop-item-head > .emblem {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+:root.table .shop-screen .shop-items .kind-consumable .shop-item-name {
+  font-size: 1.375rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+:root.table .shop-screen .shop-items .kind-consumable .shop-item-head::after {
+  content: "";
+  display: block;
+  width: 2.25rem;
+  height: 0.125rem;
+  margin: 0 auto;
+}
+
+:root.table .shop-screen .shop-items .kind-consumable .shop-item-cost {
+  justify-content: center;
+}
+
+/* The upgrades (an etching, a letter, a word shape, a range): a slip, ruled
+   inside its edge, with the price torn off along a line. A level card's picture
+   is its ladder; an etching and a letter keep theirs, small, because a
+   modifier's colour is what the letter will be wearing. The price starts where
+   every other card's does, 1.25rem in, less the slip's own padding. */
+:root.table
+  .shop-screen
+  .shop-items
+  .shop-item:is(.kind-etch, .kind-level, .kind-range, .kind-mod) {
+  --frame-b: 0.5rem;
+  padding: 0.5rem;
+}
+
+:root.table
+  .shop-screen
+  .shop-items
+  :is(.kind-etch, .kind-mod)
+  .shop-item-head
+  > :is(.emblem, .sprite) {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+:root.table .shop-screen .shop-items :is(.kind-etch, .kind-mod) .shop-item-head > .emblem {
+  display: block;
+}
+
+:root.table
+  .shop-screen
+  .shop-items
+  :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
+  .shop-item-cost {
+  margin-inline: 0.75rem;
+  padding-inline: 0;
+}
+
+@media (max-height: 48rem) {
+  /* At 720 the card is short enough that the longest rule ("Breaks a random
+     letter out of the alphabet each round") ran out of room by a line. A step
+     down in type is cheaper than a scrollbar in a card. */
+  :root.table .shop-screen .shop-items .shop-item-name {
+    font-size: 1.25rem;
+  }
+  :root.table .shop-screen .shop-items .shop-item-text {
+    font-size: 0.8125rem;
+    line-height: 1.3;
+  }
+}
+
+:root.table .shop-screen .shop-items .shop-item.sold {
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: 1rem;
+}
+
+:root.table .shop-screen .shop-items .shop-item.sold .icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* ---- the band ---------------------------------------------------------- */
+
+:root.table .shop-screen .shapes-line {
+  grid-column: 1 / 4;
+  grid-row: 3;
+  justify-self: start;
+  align-self: center;
+  max-width: 100%;
+  position: relative;
+  z-index: 1;
+  margin-top: var(--space-4);
+}
+
+:root.table .shop-screen .shapes-line-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+:root.table .shop-screen .shapes-chip {
+  padding: 0.375rem 0.75rem;
+}
+
+:root.table .shop-screen .shapes-chip + .shapes-chip::before {
+  content: none;
+}
+
+:root.table .shapes-line-label {
+  font-size: 0.875rem;
+}
+
+:root.table .shop-screen .shop-actions {
+  display: contents;
+}
+
+/* Over Next round and as wide; see the head of the file. */
+:root.table .shop-screen .shop-actions > .secondary {
+  grid-column: 4;
+  grid-row: 3;
+  align-self: end;
+  min-height: 4rem;
+  gap: var(--space-3);
+  font-size: 1.375rem;
+  position: relative;
+  z-index: 1;
+}
+
+:root.table .shop-screen .shop-actions > .primary {
+  grid-column: 4;
+  grid-row: 4;
+  align-self: end;
+  min-height: 5.25rem;
+  font-size: 1.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+:root.table .reroll-cost {
+  padding: 0;
+  font-size: 1.375rem;
+}
+
+/* What the run holds, in its seats, in the corner the shelf is read against. */
 :root.table .shop-screen .relics {
-  grid-column: 2;
-  grid-row: 1;
+  grid-column: 1;
+  grid-row: 4;
   position: relative;
   z-index: 2;
-  align-self: start;
   justify-self: start;
   max-width: 100%;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-1) var(--space-3);
-  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-1)) calc(-1 * var(--space-2));
+  gap: 0.625rem;
+  padding: var(--space-2) var(--space-1) 0;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-1)) 0;
   overflow: visible;
 }
 
 :root.table .shop-screen .relic {
-  flex: 0 0 clamp(4.75rem, 6.6vw, 6rem);
-  height: var(--tray-h);
+  flex: 0 0 clamp(7rem, 10.5vw, 9.5rem);
+  height: 6rem;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0;
+  text-align: left;
 }
 
-/* What is held, drawn by the shop only while there is something in the hand.
-   Beside the relics, at the far edge, as the round's hand is. */
+:root.table .shop-screen .relic > .icon {
+  display: block;
+  box-sizing: content-box;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0.5625rem 0.75rem;
+}
+
+:root.table .shop-screen .relic-name {
+  flex: 1 1 auto;
+  padding: var(--space-2) 0.75rem 0;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+:root.table .shop-screen .relic .sell {
+  padding: 0 0.75rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+/* What is held, drawn by the shop only while there is something in the hand. */
 :root.table .shop-screen .consumables {
-  grid-column: 3;
-  grid-row: 1;
-  align-self: start;
-  justify-self: end;
-  gap: var(--space-2);
+  grid-column: 2;
+  grid-row: 4;
+  justify-self: start;
+  gap: 0.625rem;
 }
 
 :root.table .shop-screen .consumable {
-  flex: 0 0 clamp(7rem, 10vw, 9rem);
-  height: var(--tray-h);
-}
-
-:root.table .shop-screen .consumable-text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-}
-
-:root.table .shop-screen .shop-items {
-  grid-column: 2 / -1;
-  /* The whole height of the screen, not the rows between the rail's boxes:
-     centred on the rows it used to span, the shelf sat a hand below the middle
-     because the two rows under it are as tall as the rail's buttons. The tray
-     is above it in the same column, so the top padding is what keeps the
-     centre the centre of the room that is left. */
-  grid-row: 1 / -1;
-  display: flex;
+  flex: 0 0 8.25rem;
+  height: 6rem;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
-  padding: calc(var(--tray-h) + var(--space-3)) var(--space-2) var(--space-3);
-  min-height: 0;
-  /* The box reaches under the tray; only the cards are to catch the pointer. */
-  pointer-events: none;
-}
-
-:root.table .shop-screen .shop-items > * {
-  pointer-events: auto;
-}
-
-:root.table .shop-item {
-  flex: 0 1 14rem;
-  min-width: 0;
-  aspect-ratio: 5 / 7;
-  max-height: 100%;
-  min-height: 0;
-  padding: var(--space-4) var(--space-3) var(--space-3);
-  gap: var(--space-2);
-  align-items: stretch;
-  overflow: hidden;
+  padding: 0.75rem;
   text-align: center;
 }
 
-:root.table .shop-item.kind-pack {
-  grid-column: auto;
-  min-height: 0;
-}
-
-:root.table .shop-item-head {
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-}
-:root.table .shop-item-head > .icon {
-  width: 3.5rem;
-  height: 3.5rem;
-  padding: 0.75rem;
-}
-
-:root.table .shop-item-head > .sprite {
-  width: 3.75rem;
-  height: 3.75rem;
-  padding: 0.25rem;
-}
-
-:root.table .shop-item-head > .shop-item-name {
-  flex: 0 0 auto;
-}
-
-:root.table .shop-item-name {
-  font-size: 1.25rem;
-  line-height: 1.05;
-  text-wrap: balance;
-}
-
-:root.table .shop-item-text {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: var(--space-2) var(--space-2);
+:root.table .shop-screen .consumable-name {
   font-size: 0.875rem;
-  line-height: 1.3;
-  overflow: hidden;
-}
-@media (max-height: 48rem) {
-  /* At 720 the card is short enough that the longest rule ("Breaks a random
-   letter out of the alphabet each round") ran out of its well by a line. A
-   step down in type is cheaper than a scrollbar in a card. */
-  :root.table .shop-item-text {
-    font-size: 0.8125rem;
-    line-height: 1.22;
-    padding: var(--space-1) var(--space-2);
-  }
+  line-height: 1.15;
 }
 
-:root.table .shop-item-foot {
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  margin-top: 0;
-  padding-top: var(--space-1);
-}
-:root.table .shop-item-cost {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  font-size: 1.375rem;
-  line-height: 1;
-}
-
-:root.table .shop-item-kind {
-  font-size: 0.75rem;
-}
-
-:root.table .shop-item.sold {
-  flex: 0 1 14rem;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  font-size: 1.125rem;
-}
-
-:root.table .shop-item.sold .icon {
-  width: 2rem;
-  height: 2rem;
-}
-
-:root.table .shop-screen .shapes-line {
-  grid-column: 1;
-  grid-row: 3;
-  position: relative;
-  z-index: 1;
-  margin: 0 var(--space-4);
-  min-height: 3rem;
-}
-
-:root.table .shapes-line-label {
-  font-size: 0.9375rem;
-}
-
-/* Reroll above, Next round at the foot, in the order the view writes them. This
-   was `column-reverse`, which put Next round on top and left Tab walking the
-   pair bottom to top: focus went to the lower button first, then jumped up. The
-   phone lays them in a row in source order and never had the problem. The foot
-   is the right place for it anyway, the button this screen ends on at the
-   bottom of the rail, like the phone's at the right end of its row. */
-:root.table .shop-screen .shop-actions {
-  grid-column: 1;
-  grid-row: 4;
-  position: relative;
-  z-index: 1;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0;
-  padding: var(--space-1) var(--space-4) var(--space-4);
-}
-
-:root.table .shop-screen .shop-actions > * {
-  flex: 0 0 auto;
-  min-height: 3.5rem;
-}
-
-:root.table .shop-screen .shop-actions > .primary {
-  min-height: 4.25rem;
-  font-size: 1.625rem;
-}
-
-:root.table .shop-screen .shop-actions > .secondary {
-  font-size: 1.25rem;
-}
-
-:root.table .reroll-cost {
-  padding: 0.0625rem 0.5rem;
-  font-size: 1rem;
+:root.table .shop-screen .consumable-text {
+  display: none;
 }
 
 :root.table .shop-screen .toast {
-  left: calc(var(--rail-w) / 2 + 50%);
+  left: 50%;
   bottom: 2rem;
   z-index: var(--z-toast);
   font-size: 1rem;

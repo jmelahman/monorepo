@@ -531,9 +531,8 @@ export const es: Strings = {
       modText: (letter, text) => `${letter} ${text}`,
       swap: (name, pip) => `Sustituye a ${name} ${pip}`,
 
-      rangeTitle: (name, level) => `${name} → Nv ${level}`,
+      level: (level) => `Nv ${level}`,
       rangeText: (letters, chips) => `${letters} valen +${chips} puntos por nivel`,
-      levelTitle: (name, level) => `${name} → Nv ${level}`,
       levelText: (name, chips, mult) =>
         `Las palabras ${name} dan +${chips} puntos y +${mult} mult por nivel`,
       fallbackRange: "Rango",

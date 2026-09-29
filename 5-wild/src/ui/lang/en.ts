@@ -581,11 +581,10 @@ export const en: Strings = {
       // "Replaces Steel ×2" says what is coming off the letter.
       swap: (name, pip) => `Replaces ${name} ${pip}`,
 
-      // Named as the level it buys rather than the one you hold, because the gold
-      // buys the step and the step is what the price is for.
-      rangeTitle: (name, level) => `${name} → Lv ${level}`,
+      // Said twice on a card, the level held and the level bought, so the step
+      // the price is for reads as a step.
+      level: (level) => `Lv ${level}`,
       rangeText: (letters, chips) => `${letters} are worth +${chips} points per level`,
-      levelTitle: (name, level) => `${name} → Lv ${level}`,
       levelText: (name, chips, mult) =>
         `${name} words score +${chips} points and +${mult} mult per level`,
       fallbackRange: "Range",

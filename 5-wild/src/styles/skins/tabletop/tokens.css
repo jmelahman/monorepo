@@ -111,6 +111,17 @@
   --on-tile: #fff;
   --on-bright: #2a211a;
 
+  /* The shop's pack: a bone box crimped at both ends in a darker bone, and
+     inside it a deck with the red backs of a pack of playing cards. */
+  --foil: #cfc2a2;
+  --foil-lo: #b8a988;
+  --foil-edge: #9c8d6c;
+  --back: #8e2a31;
+  --back-face: #a8323a;
+  --back-line: #5e1a20;
+  --back-edge: #efe6d2;
+  --back-lattice: #c2555c;
+
   --radius-s: 0.25rem;
   --radius-m: 0.375rem;
   --radius-l: 0.625rem;

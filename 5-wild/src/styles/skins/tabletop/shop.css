@@ -127,13 +127,110 @@
  * On the phone the description and the prices are set straight on their card
  * and their button, as Classic's always were: at that size a well behind three
  * lines of text is a box inside a box inside a box, and the phone's text has no
- * padding for one to sit in. The table keeps all three, where the card is tall
- * enough for the well to read as the card's face.
+ * padding for one to sit in. The table's shelf does the same now that its cards
+ * are four different objects (see below): a well inside a tarot card's rule or a
+ * slip's dash was the box inside the box again, and a pill under a price that
+ * shares one line across the shelf was five tags, each as tall as its card's
+ * frame left it. Only the reroll keeps its tag on the table.
  */
-:root.skin-tabletop:not(.table) :is(.shop-item-text, .shop-item-cost, .reroll-cost) {
+:root.skin-tabletop :is(.shop-item-text, .shop-item-cost),
+:root.skin-tabletop:not(.table) .reroll-cost {
   border: 0;
+  border-radius: 0;
   background: none;
   box-shadow: none;
+}
+
+/* ---- the table's four kinds of card ------------------------------------ */
+
+/*
+ * The shapes are shared (`../../table/shop.css`); these are the bone they are
+ * cut from. A relic keeps its rarity bar and wears its emblem as the large
+ * Mahjong tile the small one already was. A pack is a bone box crimped at both
+ * ends, with red-backed cards fanned inside. A consumable is a tarot card ruled
+ * in terracotta. An upgrade is a slip of the deeper bone, ruled with a dash.
+ */
+:root.table.skin-tabletop .shop-items .kind-relic .shop-item-head > .emblem {
+  stroke-width: 1.75;
+}
+
+:root.table.skin-tabletop .shop-items .shop-item.kind-pack {
+  --crimp: repeating-linear-gradient(
+    90deg,
+    var(--foil) 0 0.1875rem,
+    var(--foil-lo) 0.1875rem 0.375rem
+  );
+  background:
+    linear-gradient(var(--foil-edge), var(--foil-edge)) 0 1.0625rem / 100% 0.125rem no-repeat,
+    linear-gradient(var(--foil-edge), var(--foil-edge)) 0 calc(100% - 1.1875rem) / 100% 0.125rem
+    no-repeat,
+    var(--crimp) top / 100% 1.25rem no-repeat,
+    var(--crimp) bottom / 100% 1.25rem no-repeat,
+    var(--bone);
+  box-shadow: var(--shadow-hard), var(--shadow-soft);
+}
+
+:root.table.skin-tabletop .shop-items .kind-pack .shop-item-head::before,
+:root.table.skin-tabletop .shop-items .kind-pack .shop-item-head::after {
+  border: 0.25rem solid var(--back-edge);
+  border-radius: var(--radius-m);
+  background: var(--back);
+  box-shadow: 0 0 0 var(--bw) var(--bone-side);
+}
+
+/* The front card is the pack's own emblem, in bone on a lattice of red, inside
+   the white border a playing card's back has. The emblem's tile (above, for
+   every card's picture) would be a tile on a card, so it is not drawn here. */
+:root.table.skin-tabletop .shop-items .kind-pack .shop-item-head > .emblem {
+  border: 0.25rem solid var(--back-edge);
+  border-radius: var(--radius-m);
+  background:
+    repeating-linear-gradient(45deg, var(--back-lattice) 0 0.125rem, transparent 0.125rem 0.5625rem),
+    repeating-linear-gradient(
+      -45deg,
+      var(--back-lattice) 0 0.125rem,
+      transparent 0.125rem 0.5625rem
+    ),
+    var(--back-face);
+  box-shadow: 0 0 0 var(--bw) var(--bone-side);
+  color: var(--bone);
+  stroke-width: 2;
+}
+
+:root.table.skin-tabletop .shop-items .shop-item.kind-consumable {
+  outline: var(--bw) solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -0.5rem;
+}
+
+:root.table.skin-tabletop .shop-items .kind-consumable .shop-item-kind {
+  color: var(--accent);
+}
+
+:root.table.skin-tabletop .shop-items .kind-consumable .shop-item-head > .emblem {
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--accent);
+  stroke-width: 1.5;
+}
+
+:root.table.skin-tabletop .shop-items .kind-consumable .shop-item-head::after {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+:root.table.skin-tabletop
+  .shop-items
+  .shop-item:is(.kind-etch, .kind-level, .kind-range, .kind-mod) {
+  background: var(--bone-deep);
+  outline: var(--bw) dashed var(--bone-side);
+  outline-offset: -0.5rem;
+}
+
+:root.table.skin-tabletop
+  .shop-items
+  :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
+  .shop-item-cost {
+  border-top: var(--bw) dashed var(--bone-side);
 }
 
 :root.skin-tabletop .shop-screen .toast {
@@ -155,4 +252,16 @@
   border-radius: 50%;
   background: var(--coin);
   box-shadow: inset 0 0.125rem 0 var(--coin-hi);
+}
+
+/* The header is a panel here, and the table's shop draws it flush (the Smoke
+   Room's has none): the title against its left edge, the menu against its right
+   and the panel against the window's top. Dropped a rem from the top out of its
+   own height, so the shelf does not move, and padded so the title starts where
+   the cards' text does (1.25rem in) and the menu sits as far from the right
+   edge as the panel's height leaves it from the top and bottom. */
+:root.table.skin-tabletop .shop-screen .hud {
+  height: 4.5rem;
+  margin-top: 1rem;
+  padding: 0 0.625rem 0 1.25rem;
 }

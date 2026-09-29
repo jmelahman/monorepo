@@ -379,10 +379,10 @@ export type Strings = {
       /** What tapping it would throw away. Named with its pip, as the key wears it. */
       swap: (name: string, pip: string) => string
 
-      rangeTitle: (name: string, level: number) => string
+      /** A level on a card's ladder, "Lv 3": said twice, from and to. */
+      level: (level: number) => string
       /** Spelled out letter by letter, and shared with the codex's own list. */
       rangeText: (letters: string, chips: number) => string
-      levelTitle: (name: string, level: number) => string
       levelText: (name: string, chips: number, mult: number) => string
       /** Titles for a save that names something this build no longer sells. */
       fallbackRange: string

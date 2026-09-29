@@ -104,6 +104,27 @@
   --on-tile: #fff;
   --on-bright: #04110e;
 
+  /* The shop's shelf draws each kind of card as a different object, and these
+     are the three that are not the room's own panel: the pack's box and foil,
+     the backs of the cards inside it, and the tarot's teal-dark face. Greys, all
+     but the tarot, so the pack reads as a thing in a wrapper rather than as a
+     rarity: the relic is the card that wears one. See `shop.css`. */
+  --pack: #10131a;
+  --pack-line: #2c3242;
+  --foil: #2e3444;
+  --foil-lo: #1b1f2a;
+  --foil-edge: #3a4152;
+  --back: #151922;
+  --back-face: #181d28;
+  --back-line: #4a5266;
+  --back-edge: #7a8398;
+  --back-lattice: #3b4356;
+  --back-seal: #c3c8d3;
+  --tarot: #0a1214;
+  --tarot-line: #21403f;
+  --slip-line: #2a3040;
+  --soft: #b9bec9;
+
   /* One pixel is 2px, and the notch cut from a corner is two of them. There
      are no radii: a rounded corner is what the other two skins have. */
   --px: 0.125rem;

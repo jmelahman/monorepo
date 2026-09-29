@@ -187,3 +187,366 @@
   height: 3.75rem;
   padding: 0.25rem;
 }
+
+/*
+ * ---- the table: four kinds of card, four objects -------------------------
+ *
+ * Five cards in one panel, one hairline and one rarity bar read as five of the
+ * same thing, and the shelf is where the player decides what a run becomes. So
+ * on the table the kinds differ in what they are, not only in colour: a relic
+ * is framed and lit, a pack is a boxed deck, a consumable is a tarot card and an
+ * upgrade is a slip of paperwork. The relic keeps its rarity, as a colour and
+ * never as a word; nothing else on the shelf has one worth reading.
+ *
+ * Everything is drawn inside the card's own box, because `--cut` clips whatever
+ * is outside it: depth is an inset shadow or a background, never a glow. The
+ * inner rules of the tarot and the slip are `outline` with a negative offset,
+ * which draws inside the box and so survives the clip.
+ */
+
+:root.table.skin-smoke .shop-items .shop-item:not(.sold) {
+  border: 0;
+  box-shadow: inset 0 0 0 var(--bw) var(--line);
+}
+
+/* A mouse lifts a shelf card clear of its row, further than the tray's one
+   pixel-pair: these are things to pick up, and the lift is the offer. */
+:root.table.skin-smoke.mouse .shop-items .shop-item:not(.sold):hover {
+  transform: translateY(-0.375rem);
+  transition-duration: 180ms;
+}
+
+:root.table.skin-smoke.mouse .shop-items .shop-item:not(.sold):hover:active {
+  transform: translateY(-0.1875rem) scale(0.985);
+}
+
+:root.table.skin-smoke .shop-items .shop-item-kind {
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+:root.table.skin-smoke .shop-items .shop-item-name {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+:root.table.skin-smoke .shop-items .shop-item-text {
+  background: none;
+  color: var(--soft);
+}
+
+/* The price is set straight on the card now, in the numbers' face: a tag on
+   every card was five more boxes on a shelf of boxes. */
+:root.table.skin-smoke .shop-items .shop-item-cost {
+  border: 0;
+  background: none;
+  clip-path: none;
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+:root.table.skin-smoke .shop-items .shop-item.broke .shop-item-cost {
+  color: var(--danger);
+}
+
+/* The pictures are the room's own pixel sprites wherever the shared shapes put
+   a line emblem (`../../table/shop.css`), the relic's included: the owner asked
+   for the Smoke Room's relics on the Smoke Room's shelf. The consumable keeps
+   its emblem, drawn large in the tarot's one colour. The phone's boxed sprite
+   (above) is undressed here, since each kind below says what frames it. */
+:root.table.skin-smoke .shop-items :is(.kind-relic, .kind-pack) .shop-item-head > .emblem,
+:root.table.skin-smoke .shop-items :is(.kind-etch, .kind-mod) .shop-item-head > .emblem {
+  display: none;
+}
+
+:root.table.skin-smoke
+  .shop-items
+  :is(.kind-relic, .kind-pack, .kind-etch, .kind-mod)
+  .shop-item-head
+  > .sprite {
+  display: block;
+  border: 0;
+  background: none;
+}
+
+:root.table.skin-smoke .shop-items .shop-item-ladder {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+:root.table.skin-smoke .shop-items :is(.ladder-from, .ladder-arrow) {
+  color: var(--muted);
+}
+
+:root.table.skin-smoke .shop-items .ladder-to {
+  color: var(--accent);
+}
+
+/* ---- relic: framed in its rarity, lit in its window -------------------- */
+
+:root.table.skin-smoke .shop-items .shop-item.kind-relic {
+  --edge: color-mix(in srgb, var(--rare-c) var(--rare-edge), transparent);
+  --wash: color-mix(in srgb, var(--rare-c) var(--rare-wash), transparent);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 var(--bw) var(--edge);
+}
+
+:root.table.skin-smoke .shop-items .kind-relic .shop-item-kind {
+  background: var(--wash);
+  color: var(--rare-c);
+}
+
+:root.table.skin-smoke .shop-items .kind-relic .shop-item-head {
+  background: linear-gradient(180deg, var(--wash), transparent 8rem);
+}
+
+:root.table.skin-smoke .shop-items .kind-relic .shop-item-head > .sprite {
+  background: var(--well);
+  box-shadow: inset 0 0 0 var(--bw) var(--edge);
+  clip-path: var(--cut);
+}
+
+/* ---- pack: a boxed deck ------------------------------------------------- */
+
+/* Crimped foil across both ends, as background layers over the band the shape
+   leaves for it. Not inverted: the box is as dark as the room, one step warmer,
+   and the foil is grey. */
+:root.table.skin-smoke .shop-items .shop-item.kind-pack {
+  --crimp: repeating-linear-gradient(
+    90deg,
+    var(--foil) 0 0.1875rem,
+    var(--foil-lo) 0.1875rem 0.375rem
+  );
+  background:
+    linear-gradient(var(--foil-edge), var(--foil-edge)) 0 1.0625rem / 100% 0.1875rem no-repeat,
+    linear-gradient(var(--foil-edge), var(--foil-edge)) 0 calc(100% - 1.0625rem) / 100% 0.1875rem
+    no-repeat,
+    var(--crimp) top / 100% 1.25rem no-repeat,
+    var(--crimp) bottom / 100% 1.25rem no-repeat,
+    var(--pack);
+  box-shadow: inset 0 0 0 var(--bw) var(--pack-line);
+}
+
+:root.table.skin-smoke .shop-items .kind-pack .shop-item-head::before,
+:root.table.skin-smoke .shop-items .kind-pack .shop-item-head::after {
+  background: var(--back);
+  box-shadow: inset 0 0 0 var(--bw) var(--back-line);
+}
+
+/* The front card: a lattice inside a ruled border, and the sprite as its seal,
+   a 2rem square in a frame at the centre. The border, the frame and the seal
+   are all backgrounds, so the sprite is the only thing in the box. */
+:root.table.skin-smoke .shop-items .kind-pack .shop-item-head > .sprite {
+  background:
+    linear-gradient(var(--back-face), var(--back-face)) center / 2.375rem 2.375rem no-repeat,
+    linear-gradient(var(--back-edge), var(--back-edge)) center / 2.625rem 2.625rem no-repeat,
+    repeating-linear-gradient(45deg, var(--back-lattice) 0 0.125rem, transparent 0.125rem 0.5625rem),
+    repeating-linear-gradient(
+      -45deg,
+      var(--back-lattice) 0 0.125rem,
+      transparent 0.125rem 0.5625rem
+    ),
+    var(--back-face);
+  box-shadow:
+    inset 0 0 0 var(--bw) var(--back-edge),
+    inset 0 0 0 0.4375rem var(--back-face),
+    inset 0 0 0 0.5625rem var(--back-line);
+}
+
+/* ---- consumable: a tarot card ------------------------------------------- */
+
+/* The rule inside the edge is an `outline` with a negative offset, which draws
+   inside the box and so survives `--cut`. */
+:root.table.skin-smoke .shop-items .shop-item.kind-consumable {
+  background: var(--tarot);
+  box-shadow: inset 0 0 0 var(--bw) var(--tarot-line);
+  outline: 1px solid color-mix(in srgb, var(--accent) 33%, transparent);
+  outline-offset: -0.5rem;
+}
+
+:root.table.skin-smoke .shop-items .kind-consumable .shop-item-kind {
+  color: var(--accent);
+}
+
+:root.table.skin-smoke .shop-items .kind-consumable .shop-item-head > .emblem {
+  color: var(--accent);
+  stroke-width: 1.5;
+}
+
+:root.table.skin-smoke .shop-items .kind-consumable .shop-item-name {
+  font-weight: 600;
+}
+
+:root.table.skin-smoke .shop-items .kind-consumable .shop-item-head::after {
+  background: color-mix(in srgb, var(--accent) 33%, transparent);
+}
+
+/* ---- upgrade: a slip -------------------------------------------------- */
+
+/*
+ * Ruled with a dash inside its edge like the empty seats, in no colour but the
+ * room's own, so the things a run is built from stand apart from the things it
+ * is tuned with. It was bare, the smoke showing through the dash, and beside
+ * four solid cards it read as an empty place on the shelf rather than something
+ * for sale, so it is on the raised panel now.
+ */
+:root.table.skin-smoke .shop-items .shop-item:is(.kind-etch, .kind-level, .kind-range, .kind-mod) {
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 var(--bw) var(--slip-line);
+  outline: var(--bw) dashed var(--slip-line);
+  outline-offset: -0.5rem;
+}
+
+:root.table.skin-smoke
+  .shop-items
+  :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
+  .shop-item-cost {
+  border-top: var(--bw) dashed var(--slip-line);
+}
+
+/* ---- sold ------------------------------------------------------------- */
+
+:root.table.skin-smoke .shop-items .shop-item.sold {
+  border: 0;
+  background: repeating-linear-gradient(135deg, var(--panel) 0 0.5rem, var(--well) 0.5rem 1rem);
+  box-shadow: inset 0 0 0 var(--bw) var(--slot-line);
+  clip-path: var(--cut);
+}
+
+:root.table.skin-smoke .shop-items .shop-item.sold .icon {
+  color: var(--muted);
+}
+
+/* ---- the header and the band ------------------------------------------ */
+
+/* The header is flat on the table: the shelf under it is the room's panel,
+   and a second one over the name was a box around a word. */
+:root.table.skin-smoke .shop-screen .hud::before {
+  display: none;
+}
+
+:root.table.skin-smoke .shop-screen .round-name {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+:root.table.skin-smoke .shop-screen .stage {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+:root.table.skin-smoke .shop-screen .hud-gold {
+  background: var(--panel);
+  box-shadow: inset 0 0 0 var(--bw) var(--line);
+  clip-path: var(--cut);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+:root.table.skin-smoke .shop-screen .menu-button {
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 var(--bw) var(--line);
+  clip-path: var(--cut);
+}
+
+/* The shapes line is a label and a row of dashed chips, the slip's dash, since
+   these are what the slips bought. Still one button: it opens the sheet. */
+:root.table.skin-smoke .shop-screen .shapes-line {
+  border: 0;
+  background: none;
+  clip-path: none;
+}
+
+:root.table.skin-smoke .shop-screen .shapes-line-label {
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+:root.table.skin-smoke .shop-screen .shapes-chip {
+  border: var(--bw) dashed var(--slip-line);
+  color: var(--fg);
+}
+
+/* The one price on the screen paid over and over has the weight of a button
+   worth finding: the primary's mint as an outline on a dark mint, so Next round
+   is still the loudest thing in the room. */
+:root.table.skin-smoke .shop-screen .shop-actions > .secondary {
+  background: color-mix(in srgb, var(--accent) 12%, var(--ground));
+  color: var(--accent-hi);
+  box-shadow: inset 0 0 0 var(--bw) var(--accent);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+:root.table.skin-smoke .shop-screen .shop-actions > .secondary .icon {
+  color: var(--accent-hi);
+}
+
+:root.table.skin-smoke .shop-screen .reroll-cost {
+  border: 0;
+  background: none;
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+:root.table.skin-smoke .shop-screen .shop-actions > .primary {
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* The seats: the rarity's wash across the top with the sprite in it, the name
+   under it and the sale price at the foot. */
+:root.table.skin-smoke .shop-screen .relic:not(.empty) {
+  --edge: color-mix(in srgb, var(--rare-c) var(--rare-edge), transparent);
+  background: linear-gradient(
+    color-mix(in srgb, var(--rare-c) var(--rare-wash), var(--panel)) 0 2.375rem,
+    var(--panel) 2.375rem
+  );
+  box-shadow: inset 0 0 0 var(--bw) var(--edge);
+}
+
+:root.table.skin-smoke .shop-screen .relic > .icon {
+  display: none;
+}
+
+/* The room's own sprite in the strip where the emblem sits in the other looks,
+   at twice its 12-unit grid, the strip's 38px less its padding. */
+:root.table.skin-smoke .shop-screen .relic > .sprite {
+  display: block;
+  box-sizing: content-box;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0.4375rem 0.75rem;
+}
+
+:root.table.skin-smoke .shop-screen .relic-name {
+  font-weight: 600;
+}
+
+:root.table.skin-smoke .shop-screen .relic.empty {
+  background: var(--well);
+}
+
+/* A card in hand is the tarot again, small. */
+:root.table.skin-smoke .shop-screen .consumable {
+  border: 0;
+  border-radius: 0;
+  background: var(--tarot);
+  box-shadow: inset 0 0 0 var(--bw) var(--tarot-line);
+  outline: 1px solid color-mix(in srgb, var(--accent) 33%, transparent);
+  outline-offset: -0.3125rem;
+  clip-path: var(--cut);
+}
+
+:root.table.skin-smoke .shop-screen .consumable-name {
+  color: var(--fg);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

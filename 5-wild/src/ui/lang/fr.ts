@@ -549,9 +549,8 @@ export const fr: Strings = {
       modText: (letter, text) => `${letter} ${text}`,
       swap: (name, pip) => `Remplace ${name} ${pip}`,
 
-      rangeTitle: (name, level) => `${name} → Niv ${level}`,
+      level: (level) => `Niv ${level}`,
       rangeText: (letters, chips) => `${letters} valent +${chips} points par niveau`,
-      levelTitle: (name, level) => `${name} → Niv ${level}`,
       levelText: (name, chips, mult) =>
         `Les mots ${name} rapportent +${chips} points et +${mult} mult par niveau`,
       fallbackRange: "Plage",

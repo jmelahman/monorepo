@@ -539,9 +539,8 @@ export const de: Strings = {
       modText: (letter, text) => `${letter} ${text}`,
       swap: (name, pip) => `Ersetzt ${name} ${pip}`,
 
-      rangeTitle: (name, level) => `${name} → Stufe ${level}`,
+      level: (level) => `Stufe ${level}`,
       rangeText: (letters, chips) => `${letters} bringen +${chips} Punkte pro Stufe`,
-      levelTitle: (name, level) => `${name} → Stufe ${level}`,
       levelText: (name, chips, mult) =>
         `${name}-Wörter bringen +${chips} Punkte und +${mult} Mult pro Stufe`,
       fallbackRange: "Bereich",

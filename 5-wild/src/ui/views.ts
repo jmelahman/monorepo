@@ -1539,6 +1539,7 @@ export function describeItem(
   tip: string
   blocked: boolean
   swap: string
+  level: number
 } {
   const copy = ui().shop
   let title = ""
@@ -1555,6 +1556,12 @@ export function describeItem(
   let tip = ""
   /** This one has nowhere to go: the card grows a warning line and its ticket goes red. */
   let blocked = false
+  /**
+   * The level a word shape or a range stands at now, zero for every other kind.
+   * It was the title's tail, "Twinned → Lv 4", which told the player where the
+   * card went and not where it came from; `ladderLine` says both.
+   */
+  let level = 0
 
   if (item.kind === "pack") {
     const pack = PACK_BY_ID.get(item.id)
@@ -1620,9 +1627,8 @@ export function describeItem(
     // The one name that stayed in the engine: A–E is the letters it holds, said
     // in the punctuation every language uses for a span, and `ranges.test.ts`
     // asserts it as a fact about the partition rather than as copy.
-    title = range
-      ? copy.rangeTitle(range.name, rangeLevelOf(state, item.id) + 1)
-      : copy.fallbackRange
+    title = range ? range.name : copy.fallbackRange
+    level = range ? rangeLevelOf(state, item.id) : 0
     // Spelled out rather than named again. "A–E letters" is the title over
     // again in the body's ink, and it asks a player mid-shop to expand a dash
     // into five letters and check their own vocabulary against it, which is
@@ -1643,7 +1649,8 @@ export function describeItem(
   } else if (item.kind === "level") {
     const category = CATEGORY_BY_ID.get(item.id)
     const card = categoryCard(item.id)
-    title = category ? copy.levelTitle(card.name, levelOf(state, item.id) + 1) : copy.fallbackLevel
+    title = category ? card.name : copy.fallbackLevel
+    level = category ? levelOf(state, item.id) : 0
     text = category ? copy.levelText(card.name, category.chips, category.mult) : ""
     tag = copy.tagShape
     tip = copy.tipShape
@@ -1657,7 +1664,24 @@ export function describeItem(
     tip = copy.tipEtching
   }
 
-  return { title, text, rarity, tag, tip, blocked, swap }
+  return { title, text, rarity, tag, tip, blocked, swap, level }
+}
+
+/**
+ * Where a level card takes the thing it levels: "Lv 3 → Lv 4", the step it is
+ * sold as. On the table it is the card's picture, since a word shape has no
+ * better drawing than the number it is about to become.
+ */
+function ladderLine(level: number): HTMLElement | null {
+  if (level <= 0) return null
+  const copy = ui().shop
+  return h(
+    "div",
+    { class: "shop-item-ladder" },
+    h("span", { class: "ladder-from" }, copy.level(level)),
+    h("span", { class: "ladder-arrow", "aria-hidden": "true" }, "→"),
+    h("span", { class: "ladder-to" }, copy.level(level + 1)),
+  )
 }
 
 /**
@@ -1781,7 +1805,7 @@ const cardArt = (kind: ShopItem["kind"], id: string): Node[] => {
  */
 function shopItemCard(item: ShopItem, index: number, state: RunState, on: Handlers): HTMLElement {
   const affordable = state.gold >= item.cost
-  const { title, text, rarity, tag, tip, blocked, swap } = describeItem(item, state)
+  const { title, text, rarity, tag, tip, blocked, swap, level } = describeItem(item, state)
 
   return h(
     "button",
@@ -1806,6 +1830,7 @@ function shopItemCard(item: ShopItem, index: number, state: RunState, on: Handle
     },
     cardHead(item, title),
     h("div", { class: "shop-item-text" }, text),
+    ladderLine(level),
     swap ? swapLine(swap, displaced(item, state)) : null,
     // Said on a line of its own, where the ticket used to say it as
     // "Consumable · slots full": at the foot beside a price, that pair ran to
@@ -1904,7 +1929,7 @@ export function packView(state: RunState, on: Handlers): HTMLElement | null {
         { class: "pack-options" },
         ...open.options.map((item, index) => {
           if (!item) return soldCard(index, copy.taken)
-          const { title, text, rarity, swap } = describeItem(item, state)
+          const { title, text, rarity, swap, level } = describeItem(item, state)
           return h(
             "button",
             {
@@ -1933,6 +1958,7 @@ export function packView(state: RunState, on: Handlers): HTMLElement | null {
             // corner: it is what the shelf taught the rarity color on.
             cardHead(item, title),
             h("div", { class: "shop-item-text" }, text),
+            ladderLine(level),
             // The one warning that does stay on this sheet, and the difference
             // from the tag it replaced is that this pick does not bounce. A
             // relic dealt into a full tray is refused and the pack stays open,
@@ -2149,14 +2175,20 @@ function shopShapes(state: RunState, on: Handlers): HTMLElement {
     "button",
     { class: "shapes-line", type: "button", onclick: () => on.openShapes() },
     h("span", { class: "shapes-line-label" }, copy.shapesLabel),
+    // One span a shape rather than one string, so the table can draw each as a
+    // chip; the phone runs them together on a line, dotted by the stylesheet.
     h(
       "span",
       { class: "shapes-line-body" },
-      leveled.length > 0
-        ? leveled
-            .map((c) => copy.shapesLevel(categoryCard(c.id).name, levelOf(state, c.id)))
-            .join(" · ")
-        : copy.shapesNone,
+      ...(leveled.length > 0
+        ? leveled.map((c) =>
+            h(
+              "span",
+              { class: "shapes-chip" },
+              copy.shapesLevel(categoryCard(c.id).name, levelOf(state, c.id)),
+            ),
+          )
+        : [copy.shapesNone]),
     ),
     h("span", { class: "shapes-line-more", "aria-hidden": "true" }, "›"),
   )
