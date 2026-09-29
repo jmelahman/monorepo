@@ -58,6 +58,17 @@ git tag "v$(npm pkg get version --workspaces=false | tr -d '"')"   # and push th
 pushes the tag, and the workflow finds the release already there and only
 attaches the APK.
 
+The same tag also builds the desktop port (`godot/`) for Linux and Windows,
+and `.github/workflows/desktop.yml` attaches both zips to that release once
+the APK job has created it. It never creates the release itself, so a tag
+whose APK fails ships no desktop builds either. Locally, with the export
+templates installed (`godot/scripts/setup.sh templates`, 1.3 GB) and the
+`.dll` built (`godot/scripts/build-native.sh windows`, which needs mingw-w64):
+
+```sh
+godot/scripts/export.sh   # godot/build/5-wild-<version>-{linux,windows}.zip
+```
+
 The tag is `v` plus the version in `package.json`, and that pair moves once per
 phase of work: a phase that changed nothing a player can see does not need a
 release, but anything that does gets a patch bump so the phone has a build to

@@ -1,0 +1,10 @@
+; The QuickJS bridge in native/. One build per platform serves the editor and
+; both export kinds; see native/CMakeLists.txt.
+[configuration]
+entry_symbol = "fivewild_js_init"
+compatibility_minimum = "4.7"
+reloadable = false
+
+[libraries]
+linux.x86_64 = "res://bin/fivewild_js.linux.x86_64.so"
+windows.x86_64 = "res://bin/fivewild_js.windows.x86_64.dll"

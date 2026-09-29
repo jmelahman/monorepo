@@ -13,8 +13,8 @@ Every script sources `scripts/env.sh`, which points Godot's user dirs into
 - First run, and after a pin bump: `scripts/setup.sh` (Godot at the pinned
   version if yours differs, the addons, the first import). `scripts/setup.sh
   system` for the apt packages; `templates` for exporting.
-- Tests: `scripts/test.sh [res://tests/sim ...]` (gdUnit4, under Xvfb when
-  there is no display).
+- Tests: `scripts/test.sh [res://tests/sim ...]` (gdUnit4, always under Xvfb
+  so no window opens; `XVFB=0` to watch it).
 - Everything static: `scripts/lint.sh` (gdlint, gdformat, `check.sh`,
   `resave.sh --check`). `scripts/format.sh` fixes the formatting.
 - All of it, as CI runs it: `prek run --all-files`.

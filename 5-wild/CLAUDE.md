@@ -32,6 +32,15 @@ whatever operands the sentence will need; and every string lives in
 `src/content`, so a catalog that knew about locale could not live in either
 without making the engine language-aware and a run's prose part of run state.
 
+## The desktop build
+
+`godot/` runs this engine, not a port of it: `src/engine` is bundled and run
+inside Godot by QuickJS, and `godot/tests/engine` replays the golden vectors
+there, so a vector re-recorded here is checked there with nothing to update.
+What that asks of the engine is what it already promises: no DOM, no Node, no
+`Intl` (QuickJS has none; see `godot/js/intl-shim.ts`), plain-JSON state. See
+`godot/CLAUDE.md`.
+
 ## Language
 
 `src/ui/lang/types.ts` is the contract and `en.ts` is the reference filling of

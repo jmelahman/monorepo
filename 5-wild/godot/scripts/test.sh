@@ -2,7 +2,7 @@
 # Runs the gdUnit4 suites under tests/ and exits non-zero on any failure.
 #
 #   scripts/test.sh                        everything
-#   scripts/test.sh res://tests/sim        one directory (or one file)
+#   scripts/test.sh res://tests/engine     one directory (or one file)
 #
 # Always under Xvfb, even on a desktop, unless XVFB=0 asks to watch: gdUnit4
 # refuses --headless by default, and rightly, since input simulation and

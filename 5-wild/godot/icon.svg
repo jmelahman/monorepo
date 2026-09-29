@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108"
+     role="img" aria-label="5 Wild">
+  <title>5 Wild</title>
+  <!--
+    The launcher icon, and the same mark as the web favicon: a solved Wordle
+    tile with the 5 in it. Legacy launchers (API 23-25) get this whole square;
+    API 26+ splits it into the adaptive background colour and the foreground
+    glyph, which is why the digit lives in its own file too.
+  -->
+  <rect x="4" y="4" width="100" height="100" rx="22" fill="#538d4e"/>
+  <text x="54" y="79" text-anchor="middle" fill="#e8e8ea"
+        font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="700">5</text>
+</svg>
