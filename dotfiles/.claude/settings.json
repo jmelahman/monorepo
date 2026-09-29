@@ -28,12 +28,12 @@
       "mcp__vanta__*"
     ]
   },
-  "model": "opus",
+  "model": "sonnet",
   "enabledPlugins": {
-    "pyright-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
-    "posthog@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
     "open-code-review@open-code-review": true
   },
   "extraKnownMarketplaces": {
@@ -44,7 +44,7 @@
       }
     }
   },
-  "effortLevel": "xhigh",
+  "effortLevel": "high",
   "plansDirectory": "./plans",
   "tui": "fullscreen",
   "showThinkingSummaries": true,
