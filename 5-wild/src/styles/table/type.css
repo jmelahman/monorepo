@@ -1,0 +1,126 @@
+/*
+ * The chunky treatment: display type with a dark ink outline and a hard drop.
+ *
+ * Numbers, headings, buttons, tile letters, badges and prices get it; prose
+ * (rules, codex entries, tips, the sheets' bodies) stays on the system stack,
+ * because a paragraph in a poster face is a paragraph nobody reads to the end.
+ *
+ * The outline is `-webkit-text-stroke` painted *under* the fill
+ * (`paint-order: stroke fill`), which is what makes it an outline and not a
+ * thinning: a stroke over the fill eats the glyph from both sides, and at
+ * 16px that took the counters out of every `e`. Under the fill only the outer
+ * half of the stroke shows, so `--stroke` is twice the ink you see, and it is
+ * in `em` so the ink scales with the glyph. The hard drop is a text-shadow with
+ * no blur, one ink colour, straight down: the stroke belongs to the letter and
+ * the shadow to the table it stands on.
+ *
+ * Lilita One is a single weight. Asking it for 800 gets a synthetic bold that
+ * smears the counters shut, so everything in it is 400, and the fallbacks
+ * (Arial Black, Impact) are heavy enough on their own not to need more.
+ *
+ * `--stroke` and `--drop` are the two dials: a small label wants a hairline
+ * outline, a score wants a fat one.
+ */
+:root.table {
+  --stroke: 0.22em;
+  --drop: 0.07em;
+}
+
+:root.table
+  :is(
+    .round-name,
+    .hud-score .score,
+    .hud-gold,
+    .readout .chips,
+    .readout .mult,
+    .readout .times,
+    .category,
+    .tile,
+    .key,
+    .primary,
+    .secondary,
+    .danger,
+    .banner,
+    .sheet-title,
+    .intro-name,
+    .intro-target,
+    .intro-stat-value,
+    .intro-kind,
+    .track-name,
+    .track-target,
+    .shop-item-name,
+    .shop-item-cost,
+    .relic-name,
+    .relic .sell,
+    .consumable-name,
+    .title-name,
+    .title-score,
+    .reroll-cost,
+    .row-note,
+    .decor-toggle,
+    .shapes-line-label,
+    .stage-asc,
+    .answer-note,
+    .reward-line,
+    .menu-button
+  ) {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  -webkit-text-stroke: var(--stroke) var(--outline);
+  paint-order: stroke fill;
+  text-shadow: 0 var(--drop) 0 var(--outline);
+}
+
+/* Small labels: a hairline outline, no drop. At 11px the fat stroke closes the
+   letters up and the drop doubles the ink under them. */
+:root.table
+:is(
+  .category,
+  .relic-name,
+  .relic .sell,
+  .consumable-name,
+  .row-note,
+  .intro-kind,
+  .track-name,
+  .stage-asc,
+  .shapes-line-label,
+  .reward-line,
+  .decor-toggle
+) {
+  --stroke: 0.3em;
+  --drop: 0;
+}
+
+/* Keys and tiles carry a letter and, on a key, a value pip in the corner. The
+   stroke inherits, so the pips are put back to plain type: at their size an
+   outline is a smudge, and they are the numbers the player is reading. */
+:root.table .key {
+  --stroke: 0.16em;
+  --drop: 0.05em;
+}
+
+:root.table .key :is(.value-pip, .mod-pip),
+:root.table .decor-toggle-value,
+:root.table .decor-toggle-mark {
+  font-family: var(--font-body);
+  -webkit-text-stroke: 0;
+  paint-order: normal;
+  text-shadow: none;
+}
+
+:root.table .tile {
+  --stroke: 0.2em;
+  --drop: 0.06em;
+}
+
+/* Headings: the biggest ink and a proper drop. */
+:root.table :is(.banner, .sheet-title, .intro-name, .intro-target, .title-name, .hud-score .score) {
+  --stroke: 0.2em;
+  --drop: 0.08em;
+}
+
+:root.table .hud-score .target {
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+}

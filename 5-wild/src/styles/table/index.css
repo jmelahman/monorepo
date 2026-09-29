@@ -1,0 +1,26 @@
+/*
+ * The desktop's game table. Every rule in this directory is written under
+ * `:root.table`, which `src/ui/table.ts` sets only on a wide landscape window
+ * outside the APK in the dark theme, so a phone never matches one of them and
+ * renders exactly the sheet it rendered before the table existed. That is the
+ * whole safety argument for the redesign, and it holds only as long as nothing
+ * in here is written without the prefix.
+ *
+ * The order is the cascade, as in `style.css`: tokens first, because everything
+ * after reads them; then the surface the game sits on and the type it is set
+ * in; then the parts that are on every screen (buttons, cards, sheets); then
+ * one file per screen. A rule that needs to beat one of the phone partials
+ * does it by the prefix's specificity and not by being late, so the files
+ * below are free of each other except for the tokens.
+ */
+@import "./fonts.css";
+@import "./tokens.css";
+@import "./backdrop.css";
+@import "./type.css";
+@import "./buttons.css";
+@import "./cards.css";
+@import "./round.css";
+@import "./shop.css";
+@import "./screens.css";
+@import "./title.css";
+@import "./sheets.css";

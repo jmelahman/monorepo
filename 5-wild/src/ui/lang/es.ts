@@ -871,6 +871,8 @@ export const es: Strings = {
       soundsText: (people) => `Kenney, y ${people} en Freesound. Todo CC0.`,
       licence: "Licencia",
       licenceText: "Software libre bajo la GNU GPL, versión 3.",
+      font: "Tipografía",
+      fontText: "Lilita One, bajo la licencia SIL Open Font License 1.1.",
       back: "Volver",
     },
 

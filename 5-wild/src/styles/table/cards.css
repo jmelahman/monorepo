@@ -1,0 +1,181 @@
+/*
+ * Playing cards: relics, consumables and the shop's shelf are one object at
+ * three sizes, and this file is what they share.
+ *
+ * A card is printed stock with a rarity-coloured border, a face tinted a share
+ * of that colour, a 3px ink edge outside it and the hard slab shadow under it.
+ * Rare and legendary carry a foil: a diagonal band of light over a faint
+ * prismatic wash. It is *static* here on purpose, and it replaces the
+ * legendary sheen the phone runs (a `background-position` loop on the
+ * card's `::before`), which cannot share a pseudo-element with a foil that is
+ * drawn the same way. The moving specular is the shop phase's, and it lands on
+ * the same `::before`.
+ */
+:root.table .rarity-common {
+  --rare: var(--rare-common);
+}
+:root.table .rarity-uncommon {
+  --rare: var(--rare-uncommon);
+}
+:root.table .rarity-rare {
+  --rare: var(--rare-rare);
+}
+:root.table .rarity-legendary {
+  --rare: var(--rare-legendary);
+}
+
+/* The card face: a diagonal share of the rarity over card stock, and a lit top
+   edge. `--card-face` so a screen can restate the face without the border. */
+:root.table :is(.relic:not(.empty), .shop-item:not(.sold)) {
+  --rare-c: var(--rare, var(--rare-common));
+  border: 0.1875rem solid var(--outline);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--rare-c) 42%, var(--panel-2)) 0%,
+    var(--panel-2) 62%,
+    color-mix(in srgb, var(--rare-c) 12%, var(--panel)) 100%
+  );
+  box-shadow:
+    inset 0 0 0 0.1875rem var(--rare-c),
+    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
+    var(--shadow-hard),
+    0 0.75rem 1rem -0.25rem color-mix(in srgb, var(--shade) 70%, transparent);
+  border-radius: var(--radius-m);
+}
+
+/* Empty seats: cut into the felt, not printed on it. */
+:root.table .relic.empty,
+:root.table .consumable.empty {
+  background: color-mix(in srgb, var(--felt-lo) 55%, transparent);
+  border: 0.125rem dashed color-mix(in srgb, var(--muted) 38%, transparent);
+  box-shadow: inset 0 0.25rem 0.75rem #0000005c;
+  border-radius: var(--radius-m);
+}
+
+:root.table .relic {
+  border-top-width: 0.1875rem;
+  overflow: hidden;
+}
+
+/* The rarity pip the phone draws on the corner is redundant next to a coloured
+   border, and on a card that size it reads as a pimple. */
+:root.table :is(.rarity-uncommon, .rarity-rare, .rarity-legendary)::after {
+  display: none;
+}
+
+/* Foil. A band of light across the face and a low prismatic wash under it. On
+   `::before` at `mix-blend-mode: screen`, clipped by the card's own overflow. */
+:root.table :is(.relic, .shop-item).rarity-rare::before,
+:root.table :is(.relic, .shop-item).rarity-legendary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(115deg, transparent 32%, #ffffff40 46%, #ffffff10 54%, transparent 68%),
+    linear-gradient(
+      200deg,
+      color-mix(in srgb, var(--rare-c) 30%, transparent),
+      transparent 40%,
+      #ff7ad633 70%,
+      #5ad7ff33 100%
+    );
+  mix-blend-mode: screen;
+  animation: none;
+  background-size: 100% 100%;
+  background-position: 0 0;
+}
+
+:root.table :is(.relic, .shop-item).rarity-legendary::before {
+  background:
+    linear-gradient(115deg, transparent 28%, #ffffff55 44%, #ffffff18 54%, transparent 70%),
+    linear-gradient(200deg, #ff7ad655, transparent 32%, #ffe45a44 58%, #5ad7ff55 100%);
+}
+
+/* Card text sits over the foil. */
+:root.table :is(.relic, .shop-item) > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Relic tray cards, in the tray (round) and on the owned row (shop). */
+:root.table .relic {
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-1);
+  min-width: 0;
+}
+
+:root.table .relic-name {
+  font-size: 0.8125rem;
+  line-height: 1.05;
+  text-wrap: balance;
+  color: var(--fg);
+}
+
+:root.table .relic .sell,
+:root.table .relic-detail {
+  font-size: 0.75rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+}
+
+:root.table .relic-detail {
+  color: var(--mult);
+  -webkit-text-stroke: 0.3em var(--outline);
+  paint-order: stroke fill;
+}
+
+:root.table.mouse .relic[data-tip]:hover {
+  transform: translateY(-0.25rem);
+  box-shadow:
+    inset 0 0 0 0.1875rem var(--rare-c),
+    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
+    var(--shadow-lift);
+}
+
+:root.table .relic.fired {
+  box-shadow:
+    inset 0 0 0 0.1875rem var(--gold),
+    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
+    var(--shadow-hard);
+}
+
+/* Consumables, the hand: tarot-ish cards, purple by design. */
+:root.table .consumable:not(.empty) {
+  border: 0.1875rem solid var(--outline);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--rare-legendary) 45%, var(--panel-2)),
+    var(--panel-2) 70%
+  );
+  box-shadow:
+    inset 0 0 0 0.125rem color-mix(in srgb, var(--rare-legendary) 80%, #fff 10%),
+    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
+    var(--shadow-hard);
+  border-radius: var(--radius-m);
+  padding: var(--space-2) var(--space-3);
+}
+
+:root.table .consumable-name {
+  font-size: 0.8125rem;
+}
+
+:root.table .consumable-text {
+  color: color-mix(in srgb, var(--fg) 75%, var(--muted));
+  font-size: 0.6875rem;
+}
+
+/* The tip that follows the pointer: ink-edged card stock too. */
+:root.table .relic-tip {
+  z-index: var(--z-toast);
+  background: var(--panel);
+  border: var(--rim);
+  border-top-color: var(--outline);
+  box-shadow:
+    inset 0 0.25rem 0 var(--rare, var(--rare-common)),
+    var(--shadow-hard),
+    var(--shadow-soft);
+  border-radius: var(--radius-m);
+}

@@ -1,0 +1,135 @@
+/*
+ * The table's palette and scales.
+ *
+ * Existing colour tokens keep their names, because the phone's partials read
+ * them and so do views and JS; only their values move, and only under
+ * `.table`, so every component the phone draws picks the table up for free
+ * wherever a rule does not restate it. The tile colours are the exception to
+ * "values move": green, yellow and gray are what a letter *means*, and they are
+ * pushed a little brighter to hold their own against a saturated table and no
+ * further, since a tile that stops reading as the same green is a rule the
+ * player has to relearn.
+ *
+ * The felt is plum, not green. It was going to be baize until the tile green
+ * went on it: a green tile on green felt is a tile that has lost its edge,
+ * and the whole game is reading that edge. Indigo-plum is the far side of the
+ * wheel from both tile colours and warms the gold, which is the colour the
+ * table most wants to be looked at.
+ */
+:root.table {
+  /* Felt: centre, mid, and the edge the vignette falls to. */
+  --felt-hi: #33265a;
+  --felt-mid: #211840;
+  --felt-lo: #0e0919;
+  --felt-tint: transparent;
+
+  --bg: #150e28;
+  /* Card stock: the surfaces things are printed on, lightest on top. */
+  --panel: #251b42;
+  --panel-2: #33265a;
+  --panel-3: #43336f;
+  --line: #4d3d7c;
+  --fg: #f6f1ff;
+  --muted: #b1a6d0;
+
+  /* The ink round every display glyph and every panel edge. */
+  --outline: #120a22;
+
+  --green: #4da346;
+  --yellow: #d4ac2a;
+  --gray: #4d4860;
+
+  --chips: #3f9dff;
+  --mult: #ff4f58;
+  --gold: #ffc12e;
+
+  /* Buttons, each a face and the darker lip it stands on. */
+  --btn-primary: #ff8a1e;
+  --btn-primary-lip: #b9510a;
+  --btn-neutral: #5a4a8e;
+  --btn-neutral-lip: #2f2456;
+  --btn-blue: #3f8cff;
+  --btn-blue-lip: #1f4fb0;
+  --btn-danger: #e5484d;
+  --btn-danger-lip: #8c1f2a;
+  --btn-go: #47b552;
+  --btn-go-lip: #22702c;
+  --on-btn: #fffaf0;
+
+  --rare-common: #8e88ab;
+  --rare-uncommon: #33cf8a;
+  --rare-rare: #4f93ff;
+  --rare-legendary: #c66dff;
+  --rare-wash: 26%;
+  --rare-wash-tray: 34%;
+  --rare-edge: 70%;
+
+  --key: #5e5480;
+  --key-gray-fg: #d0c8e8;
+  --broken-bg: #1a1230;
+  --broken-fg: #54486f;
+  --shade: #06020f;
+  --sheen: #ffffff33;
+  --scrim: #0a0418cc;
+  --title-tint: #4a3585;
+  --on-tile: #fff;
+  --on-bright: #170d2b;
+
+  /* Radius scale. */
+  --radius-s: 0.375rem;
+  --radius-m: 0.75rem;
+  --radius-l: 1.125rem;
+  --radius-pill: 999px;
+
+  /* Spacing scale, a step of a quarter rem to start and then doubling-ish. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2.25rem;
+
+  /*
+   * Three depths. Hard is the offset slab that makes a thing physical, soft is
+   * the ambient shadow it casts on the felt, lift is a card picked up off the
+   * table (hover, and what the tilt will grow into). The hard one is mixed
+   * from `--outline` rather than black, so it reads as the panel's own edge
+   * continuing down instead of a smudge under it.
+   */
+  --shadow-hard: 0 0.25rem 0 var(--outline);
+  --shadow-soft: 0 0.75rem 1.5rem color-mix(in srgb, var(--shade) 55%, transparent);
+  --shadow-lift:
+    0 0.5rem 0 var(--outline), 0 1.5rem 2rem color-mix(in srgb, var(--shade) 65%, transparent);
+  /* `--rim`, not `--edge`: the intro's track cards already use that name for a
+     per-round colour, and a token of the same name would be theirs to override. */
+  --rim: 0.1875rem solid var(--outline);
+  --top-light: inset 0 0.125rem 0 #ffffff1f;
+
+  --font-display:
+    "Lilita One", "Arial Rounded MT Bold", "Arial Black", Impact, system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /*
+   * Layers, as the phone already has them: `.overlay` at 10, the toast at 11
+   * (see toast.css: a refusal must clear a sheet). The effects layer is `#fx`,
+   * a sibling of `#app` with its z-index inline at 12, so it draws over sheets
+   * too and owns its own value; `--z-fx` is here only to name it and nothing
+   * reads it. Restating the phone's numbers rather than spacing them out is
+   * what keeps the stacking order the same on both.
+   */
+  --z-board: 1;
+  --z-tray: 2;
+  --z-fx: 12;
+  --z-sheet: 10;
+  --z-toast: 11;
+
+  /* `--ease-out` is already the phone's; restated so the set is whole here. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Widths the screens share. */
+  --rail-w: clamp(19rem, 24vw, 23rem);
+
+  color-scheme: dark;
+}

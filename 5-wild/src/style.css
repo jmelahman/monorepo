@@ -20,9 +20,10 @@
  * laid out by component, one file each, imported here in the order they used to
  * stand in. The order is the cascade, so it is not alphabetical and must not be
  * sorted: `rebuilds` in particular carries the reduced-motion kill-switch and has
- * to come last. It was split so that work on one part of the screen
- * owns a file rather than a region of a shared one; Vite inlines the imports,
- * and the built stylesheet came out byte-identical to the single file's.
+ * to come last, after the desktop table too. It was split so that work on one
+ * part of the screen owns a file rather than a region of a shared one; Vite
+ * inlines the imports, and the built stylesheet came out byte-identical to the
+ * single file's.
  */
 
 @import "./styles/base.css";
@@ -44,4 +45,5 @@
 @import "./styles/overlays.css";
 @import "./styles/codex.css";
 @import "./styles/toast.css";
+@import "./styles/table/index.css";
 @import "./styles/rebuilds.css";

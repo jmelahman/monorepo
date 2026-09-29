@@ -1,0 +1,138 @@
+/*
+ * The screens that are a card on the felt: the round intro, the reward and the
+ * end. On the phone they are a column at the width of the screen; on a monitor
+ * that column would be a strip of card down the middle of a table, so each is
+ * given the width of the thing it holds and left in the middle of the felt.
+ *
+ * Nothing here animates beyond what the phone's `deal` and `token` keyframes
+ * already do on entry: the brief for this pass is press and hover only.
+ */
+
+/* ---- intro ------------------------------------------------------------ */
+
+:root.table .intro {
+  width: 100%;
+  max-width: 48rem;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-5) var(--space-5);
+}
+
+:root.table .intro-stage {
+  justify-content: center;
+}
+
+/* The three rounds of the stage as three cards on the table, the one in hand
+   lit by its own colour. The face is the panel stock, the edge is the ink. */
+:root.table .stage-track {
+  gap: var(--space-3);
+}
+
+:root.table .track-round {
+  padding: var(--space-3);
+  border: var(--rim);
+  border-radius: var(--radius-m);
+  background: var(--panel);
+  box-shadow: var(--top-light), var(--shadow-hard);
+}
+
+:root.table .track-round.current {
+  border-color: var(--edge);
+  background: var(--panel-2);
+  box-shadow:
+    var(--top-light),
+    0 0.25rem 0 var(--outline),
+    0 0 1.25rem color-mix(in srgb, var(--edge) 45%, transparent);
+}
+
+:root.table .track-target {
+  font-size: 1.125rem;
+}
+
+:root.table .intro-card {
+  max-width: 34rem;
+  margin-inline: auto;
+  padding: var(--space-5);
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  box-shadow: var(--top-light), var(--shadow-hard), var(--shadow-soft);
+}
+
+:root.table .intro-card.boss-card {
+  border-color: var(--mult);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--mult) 14%, var(--panel-2)),
+    var(--panel)
+  );
+  box-shadow:
+    var(--top-light),
+    0 0.25rem 0 color-mix(in srgb, var(--mult) 45%, var(--outline)),
+    var(--shadow-soft);
+}
+
+:root.table .intro-target {
+  font-size: 4.5rem;
+}
+
+:root.table .intro-rule {
+  border-radius: var(--radius-s);
+}
+
+:root.table .intro-stats {
+  border-top-color: var(--line);
+}
+
+:root.table .intro-actions {
+  align-items: center;
+}
+
+:root.table .intro-actions > button {
+  width: min(100%, 22rem);
+}
+
+/* ---- reward and end --------------------------------------------------- */
+
+:root.table .screen.center {
+  max-width: 48rem;
+  gap: var(--space-5);
+}
+
+/* One panel, centred, a size to be read across a desk rather than at arm's
+   length. Same stock as the rail: it is the same kind of object. */
+:root.table .panel {
+  width: min(100%, 28rem);
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  box-shadow: var(--top-light), var(--shadow-hard), var(--shadow-soft);
+}
+
+:root.table .reward-line {
+  font-size: 1rem;
+}
+
+:root.table .reward-line.total {
+  border-top-color: var(--line);
+  font-size: 1.25rem;
+}
+
+:root.table .banner {
+  font-size: 3rem;
+  line-height: 1.05;
+  text-align: center;
+}
+
+:root.table .banner.win {
+  color: var(--green);
+}
+
+:root.table .banner.lose {
+  color: var(--mult);
+}
+
+:root.table .answer-note {
+  font-size: 1.125rem;
+}

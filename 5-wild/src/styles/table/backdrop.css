@@ -1,0 +1,53 @@
+/*
+ * The felt, on `html` and not on `#app`.
+ *
+ * On the page rather than the app because a living background is coming
+ * (a canvas behind `#app`), and it has to be able to replace this without
+ * touching a screen. A fixed canvas at a negative z-index paints over the
+ * root's background and under everything else, so the static felt below is
+ * both what the game looks like without WebGL and what the shader lands on.
+ *
+ * Three layers, top to bottom: the vignette that pulls the eye to the middle,
+ * the grain, and the cloth. The grain is `feTurbulence` in an SVG data URI so
+ * it costs no request and no asset, at a `baseFrequency` fine enough to read
+ * as weave rather than cloud, and pushed to a low alpha by the colour matrix:
+ * at 0.22 it was a sandpaper filter, at 0.08 it is only felt. 220px tile,
+ * which is long enough that the repeat cannot be found by eye.
+ *
+ * `background-attachment: fixed` is left off. The page never scrolls (`html`
+ * is `overflow: hidden`), so it buys nothing, and it makes some engines
+ * repaint the noise on every frame.
+ */
+:root.table {
+  background:
+    radial-gradient(
+      ellipse 80% 75% at 50% 42%,
+      transparent 35%,
+      color-mix(in srgb, var(--felt-lo) 85%, transparent) 100%
+    ),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(
+      ellipse 90% 80% at 50% 38%,
+      var(--felt-hi) 0%,
+      var(--felt-mid) 48%,
+      var(--felt-lo) 100%
+    ),
+    var(--felt-lo);
+  background-size:
+    auto,
+    220px 220px,
+    auto,
+    auto;
+}
+
+/* Transparent so the page's felt shows through, and so a canvas behind `#app`
+   is not hidden by a body colour. */
+:root.table body {
+  background: transparent;
+}
+
+/* The title screen paints its own wash over the phone's flat page. On the felt
+   that reads as a grey box, so it goes and the felt is the stage. */
+:root.table #app:has(> .screen.title) {
+  background: none;
+}

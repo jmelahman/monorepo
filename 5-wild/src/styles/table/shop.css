@@ -1,0 +1,369 @@
+/*
+ * The shop, for a landscape window: the same rail as the round on the left
+ * (the name, the gold, and here the things you do with it), the run's relics
+ * along the top, and the shelf as cards laid out on the felt.
+ *
+ *   rail     | owned relics ............ hand
+ *   (gold)   |
+ *            |   card   card   card   card   card
+ *   shapes   |
+ *   reroll   |
+ *   next     |
+ *
+ * As in the round, the screen's own children are placed into the grid, so
+ * nothing is wrapped. The rail is three separate children of the screen (the
+ * header, the shapes line, the buttons) and rows one, three and four of a
+ * column; the shelf spans the rows between them, which is what centres it on
+ * the screen's height rather than on whatever the header happens to measure.
+ *
+ * A shelf of one kind of thing is five portrait cards, so the shelf is a flex
+ * row and not the phone's two-column grid: a card is 5:7 and takes a fifth of
+ * the row up to a cap, and the pack, which is a full-width strip on the phone,
+ * is a card like the others.
+ */
+:root.table .shop-screen {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  column-gap: var(--space-5);
+  row-gap: var(--space-3);
+  width: 100%;
+  max-width: 96rem;
+  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-4);
+  overflow: hidden;
+  --tray-h: clamp(4.5rem, 10svh, 6rem);
+  --toast-lift: 2rem;
+  /* Narrower than the round's rail: five portrait cards want the width more
+     than a column of buttons does. */
+  --rail-w: clamp(15rem, 18vw, 17.5rem);
+}
+
+:root.table .shop-screen .hud {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  margin: 0;
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel-2) 88%, #fff 4%),
+    var(--panel) 60%
+  );
+  box-shadow: var(--top-light), var(--shadow-hard), var(--shadow-soft);
+  --hud-pad-x: var(--space-4);
+  gap: var(--space-4);
+}
+
+:root.table .shop-screen .hud-score {
+  display: none;
+}
+
+:root.table .shop-screen .hud-gold {
+  margin-top: 0;
+  order: 6;
+}
+
+/* The header is a teal wash here, where the round's is plum: the shop is the
+   one room on the table where nothing is trying to score against you. */
+:root.table .shop-screen .hud {
+  box-shadow:
+    var(--top-light),
+    var(--shadow-hard),
+    var(--shadow-soft),
+    0 0 0 0.1875rem color-mix(in srgb, #2fd6b4 30%, transparent);
+}
+
+:root.table .shop-screen .relics {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: start;
+  max-width: 100%;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-1) var(--space-3);
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-1)) calc(-1 * var(--space-2));
+  overflow: visible;
+}
+
+:root.table .shop-screen .relic {
+  flex: 0 0 clamp(4.75rem, 6.6vw, 6rem);
+  height: var(--tray-h);
+}
+
+/* What is held, drawn by the shop only while there is something in the hand.
+   Beside the relics, at the far edge, as the round's hand is. */
+:root.table .shop-screen .consumables {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+  gap: var(--space-2);
+}
+
+:root.table .shop-screen .consumable {
+  flex: 0 0 clamp(7rem, 10vw, 9rem);
+  height: var(--tray-h);
+}
+
+:root.table .shop-screen .consumable-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+:root.table .shop-screen .shop-items {
+  grid-column: 2 / -1;
+  grid-row: 2 / span 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  min-height: 0;
+}
+
+:root.table .shop-screen .shop-items.coached {
+  border-radius: var(--radius-m);
+}
+
+/* ---- the cards -------------------------------------------------------- */
+
+:root.table .shop-item {
+  flex: 0 1 14rem;
+  min-width: 0;
+  aspect-ratio: 5 / 7;
+  max-height: 100%;
+  min-height: 0;
+  padding: var(--space-4) var(--space-3) var(--space-3);
+  gap: var(--space-2);
+  align-items: stretch;
+  overflow: hidden;
+  text-align: center;
+  color: var(--fg);
+}
+
+:root.table .shop-item.kind-pack {
+  grid-column: auto;
+  min-height: 0;
+}
+
+:root.table .shop-item-head {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The icon is the card's picture: a rarity-coloured medallion over the top. */
+:root.table .shop-item-head > .icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0.75rem;
+  border-radius: 50%;
+  border: 0.1875rem solid var(--outline);
+  background: color-mix(in srgb, var(--rare-c) 55%, var(--panel));
+  color: #fff;
+  stroke-width: 2.25;
+  box-shadow:
+    inset 0 0.25rem 0 #ffffff38,
+    0 0.25rem 0 var(--outline);
+}
+
+:root.table .shop-item-head > .shop-item-name {
+  flex: 0 0 auto;
+}
+
+:root.table .shop-item-name {
+  font-size: 1.25rem;
+  line-height: 1.05;
+  color: #fff;
+  text-wrap: balance;
+  --stroke: 0.24em;
+  --drop: 0.07em;
+}
+
+:root.table .shop-item-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--felt-lo) 55%, transparent);
+  box-shadow: inset 0 0.1875rem 0.375rem #0000005c;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--fg) 85%, var(--muted));
+  overflow: hidden;
+}
+
+/* At 720 the card is short enough that the longest rule ("Breaks a random
+   letter out of the alphabet each round") ran out of its well by a line. A
+   step down in type is cheaper than a scrollbar in a card. */
+@media (max-height: 48rem) {
+  :root.table .shop-item-text {
+    font-size: 0.8125rem;
+    line-height: 1.22;
+    padding: var(--space-1) var(--space-2);
+  }
+}
+
+:root.table .shop-item-foot {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  margin-top: 0;
+  padding-top: var(--space-1);
+}
+
+/* The price is a coin: gold, ink-edged, in the display face. */
+:root.table .shop-item-cost {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 0.1875rem solid var(--outline);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--gold) 70%, #fff),
+    var(--gold) 50%,
+    color-mix(in srgb, var(--gold) 80%, #7a4a00)
+  );
+  box-shadow:
+    inset 0 0.125rem 0 #ffffff66,
+    0 0.1875rem 0 var(--outline);
+  font-size: 1.375rem;
+  line-height: 1;
+  color: #fff;
+  --stroke: 0.26em;
+}
+
+:root.table .shop-item-cost.free {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+:root.table .shop-item.broke {
+  opacity: 1;
+  filter: saturate(0.35) brightness(0.72);
+}
+
+:root.table .shop-item.broke .shop-item-cost {
+  color: #fff;
+}
+
+:root.table .shop-item-kind {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 0.09em 0 var(--outline);
+  -webkit-text-stroke: 0.3em var(--outline);
+  paint-order: stroke fill;
+}
+
+:root.table .shop-item.sold {
+  flex: 0 1 14rem;
+  border: 0.1875rem dashed color-mix(in srgb, var(--muted) 45%, transparent);
+  background: color-mix(in srgb, var(--felt-lo) 45%, transparent);
+  box-shadow: inset 0 0.25rem 0.75rem #00000060;
+  border-radius: var(--radius-m);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  color: var(--muted);
+}
+
+:root.table .shop-item.sold .icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--green);
+}
+
+:root.table.mouse .shop-item:not(.sold):hover {
+  filter: brightness(1.08);
+  box-shadow:
+    inset 0 0 0 0.1875rem var(--rare-c),
+    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
+    var(--shadow-lift);
+}
+
+:root.table .shop-item:active:not(:disabled) {
+  transform: translateY(0.25rem);
+}
+
+/* ---- the rail's foot -------------------------------------------------- */
+
+:root.table .shop-screen .shapes-line {
+  grid-column: 1;
+  grid-row: 3;
+  margin: 0;
+  min-height: 3rem;
+  border: var(--rim);
+  border-radius: var(--radius-m);
+  background: var(--panel);
+  box-shadow: var(--top-light), var(--shadow-hard);
+}
+
+:root.table .shapes-line-label {
+  font-size: 0.9375rem;
+  --stroke: 0.28em;
+}
+
+:root.table .shop-screen .shop-actions {
+  grid-column: 1;
+  grid-row: 4;
+  flex-direction: column-reverse;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+:root.table .shop-screen .shop-actions > * {
+  flex: 0 0 auto;
+  min-height: 3.5rem;
+  border-radius: var(--radius-m);
+}
+
+:root.table .shop-screen .shop-actions > .primary {
+  min-height: 4.25rem;
+  font-size: 1.625rem;
+}
+
+:root.table .shop-screen .shop-actions > .secondary {
+  --face: var(--btn-blue);
+  --lip: var(--btn-blue-lip);
+  font-size: 1.25rem;
+}
+
+:root.table .shop-screen .shop-actions > .secondary:disabled {
+  --face: var(--btn-neutral);
+  --lip: var(--btn-neutral-lip);
+}
+
+:root.table .reroll-cost {
+  color: #fff;
+  padding: 0.0625rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--gold) 85%, #000);
+  border: 0.125rem solid var(--outline);
+  font-size: 1rem;
+}
+
+:root.table .shop-screen .toast {
+  left: calc(var(--rail-w) / 2 + 50%);
+  bottom: 2rem;
+  z-index: var(--z-toast);
+  background: var(--panel);
+  border: var(--rim);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-hard), var(--shadow-soft);
+  font-family: var(--font-display);
+  font-size: 1rem;
+}

@@ -672,6 +672,10 @@ export type Strings = {
       soundsText: (people: string) => string
       licence: string
       licenceText: string
+      /** The display face the desktop table sets its numbers and headings in. */
+      font: string
+      /** Names the face and its licence; the designer's name is the view's, as the artists' are. */
+      fontText: string
       back: string
     }
 

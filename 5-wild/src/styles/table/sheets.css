@@ -1,0 +1,67 @@
+/*
+ * Sheets, as dialogs. The phone's rise from the bottom edge because that is
+ * where a thumb already is; a mouse is nowhere near the bottom edge, and a card
+ * that slides in from below a 1440px window is a long way to look. So on the
+ * table they are centred, on card stock, over the felt with the scrim behind.
+ *
+ * The entry animation is left to the phone's `rise-sheet`, which is a small
+ * settle and not new motion; `settled` still silences it on a rebuild.
+ */
+
+:root.table .overlay {
+  align-items: center;
+  padding: var(--space-5);
+  z-index: var(--z-sheet);
+}
+
+:root.table .sheet {
+  width: min(100%, 32rem);
+  max-height: min(84svh, 46rem);
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel) 30%);
+  box-shadow:
+    var(--top-light),
+    var(--shadow-hard),
+    0 2rem 3rem color-mix(in srgb, var(--shade) 70%, transparent);
+}
+
+/* The wide ones: the codex is a catalogue and the pack's choices are cards. */
+:root.table .sheet:has(.codex-section, .codex-group, .codex-band) {
+  width: min(100%, 44rem);
+}
+
+:root.table .sheet.pack-sheet {
+  width: min(100%, 44rem);
+}
+
+:root.table .sheet-title {
+  font-size: 1.75rem;
+  line-height: 1.1;
+}
+
+:root.table .sheet-body {
+  font-size: 0.9375rem;
+  /* The padding the sheet grew is what the scroll box reaches out into. */
+  margin-inline: calc(-1 * var(--space-5));
+  padding-inline: var(--space-5);
+}
+
+:root.table .sheet-lead {
+  color: var(--fg);
+}
+
+:root.table .sheet-heading {
+  color: var(--muted);
+}
+
+:root.table .help-tutorial {
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--panel-3) 60%, var(--panel));
+}
+
+:root.table .sheet-actions {
+  gap: var(--space-3);
+}

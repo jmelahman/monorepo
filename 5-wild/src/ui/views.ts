@@ -3752,6 +3752,9 @@ function musicCredit(): HTMLElement {
   )
 }
 
+/** Lilita One's designer, named in every language as the other credits' people are. */
+const FONT_DESIGNER = "Juan Montoreano"
+
 export function creditsView(on: Handlers): HTMLElement {
   const copy = ui().credits
   const people = new Intl.ListFormat(lang(), { type: "conjunction" }).format(FREESOUND)
@@ -3765,6 +3768,9 @@ export function creditsView(on: Handlers): HTMLElement {
       musicCredit(),
       rule({ term: copy.sounds, text: copy.soundsText(people) }),
       rule({ term: copy.licence, text: copy.licenceText }),
+      // The typeface ships with the desktop table only, but the credit is owed
+      // by the build that carries the file, not by the look that draws with it.
+      rule({ term: copy.font, text: `${FONT_DESIGNER}: ${copy.fontText}` }),
     ),
     // Back to the sheet it was opened from rather than closed outright, since
     // that is the only way in.
