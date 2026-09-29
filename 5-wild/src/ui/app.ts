@@ -1,30 +1,31 @@
 import type { Action, GameEvent, Refusal, RunState, WordSource } from "../engine"
-import { MODIFIER_BY_ID, MULT_FOR_COLOR, reduce, startRun } from "../engine"
-import type { Cue, TileColor } from "./audio"
+import { MODIFIER_BY_ID, reduce, startRun } from "../engine"
+import type { Cue } from "./audio"
 import { audioContext, Sound } from "./audio"
 import type { CoachStep } from "./coach"
 import { coachAsks, coachSpent, coachStep } from "./coach"
-import { clear, h, wait } from "./dom"
-import { formatNumber as num } from "./format"
+import { clear } from "./dom"
+import { replay, setMotionSpeed } from "./fx/motion"
+import * as board from "./fx/scenes/board"
+import { playEvents } from "./fx/scenes/events"
+import { playScoring } from "./fx/scenes/scoring"
+import { arrived, leaving } from "./fx/scenes/transitions"
+import { bindShake } from "./fx/shake"
+import { begin } from "./fx/timeline"
 import type { Lang } from "./lang"
 import {
-  categoryLevel,
   consumableNote,
-  growthBadge,
   loadLang,
   modPlaced,
   NEXT_LANG,
-  payoutBadge,
   readLang,
   refusalText,
-  relicCard,
   setLang,
-  ui,
 } from "./lang"
 import { chosenAscension, Profile } from "./meta"
 import { Music } from "./music"
 import { seal, unseal } from "./seal"
-import { atSpeed, loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
+import { loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
 import type { Consent, RunEnd, RunLog } from "./telemetry"
 import {
   beginLog,
@@ -54,7 +55,6 @@ import {
   introView,
   loadingView,
   menuView,
-  meterFill,
   NEXT_DECOR,
   NEXT_SOUND,
   packView,
@@ -139,36 +139,6 @@ const COACH_KEY = "5wild:coached"
 const PLAIN_KEY = "5wild:plain"
 
 /**
- * Per-event pacing, in ms. Slow enough to read, fast enough to not be a cutscene.
- *
- * These, and every other duration below that is a motion rather than a reading
- * time, are what the game is *authored* at. What it plays at is these divided by
- * the animation speed the player chose; `beat` is where that happens and
- * `./speed` is why. Nothing here changes when the setting does.
- *
- * `solve` is the outlier on purpose: it is the last beat before the reward screen
- * takes the board away, and it has to outlast `COUNT_UP` by enough that the pile's
- * new total is legible standing still rather than glimpsed mid-climb.
- */
-const PACE = { tile: 170, relic: 150, solve: 900, total: 400 }
-
-/**
- * The tile turn. It runs longer than the gap between tiles on purpose, so the
- * reveals overlap into a cascade rather than a queue of separate flips.
- *
- * `total` must stay in step with the `.tile.flip` animation in the stylesheet.
- * CSS owns the motion, this owns when the class comes back off, and a mismatch
- * either clips the flip or leaves the tile stuck mid-turn.
- */
-const FLIP = { total: 380, half: 190 }
-
-/** How long the score counts up to its new value. */
-const COUNT_UP = 340
-
-/** How long a tile's `+chips +mult` badge lives. Matches `gain-rise` in the CSS. */
-const GAIN = 760
-
-/**
  * How long a refusal stays on screen. Counted here rather than in the
  * stylesheet, for the reason `toast` gives at length.
  */
@@ -183,9 +153,6 @@ const TOAST = 2200
 const HOLD = 350
 const HOLD_SLOP = 10
 
-const reducedMotion = (): boolean =>
-  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
-
 /**
  * Classes the app puts on a live screen that no freshly-built view will carry.
  *
@@ -196,8 +163,6 @@ const reducedMotion = (): boolean =>
  * that brought nothing new, and a board is a board through both.
  */
 const TRANSIENT_SCREEN = ["shaking", "settled"]
-
-const TILE_COLORS: readonly TileColor[] = ["green", "yellow", "gray"]
 
 /**
  * What a shop or reward action sounds like, read off what it did rather than
@@ -237,8 +202,6 @@ export class App {
   private state: RunState
   /** True while a scoring animation owns the screen; input is ignored. */
   private busy = false
-  /** Set when the player taps mid-animation: the rest of it plays instantly. */
-  private skipping = false
   /** True while the round's intro card is up, before the board is dealt. */
   private intro = false
   /** True when there is no run to return to and the front door is showing. */
@@ -290,7 +253,8 @@ export class App {
   private decor = loadDecor()
   /**
    * How fast the game plays what it has to say. Every duration below that is an
-   * animation rather than a reading time goes through `beat`; see `./speed`.
+   * animation rather than a reading time goes through `ms` in `./fx/motion`,
+   * which `setMotionSpeed` keeps in step with this; see `./speed`.
    */
   private speed = loadSpeed()
   /** Light, dark, or the device's. The shell applied it before the first paint. */
@@ -365,6 +329,8 @@ export class App {
     // only thing that remembers.
     setDecor(this.decor)
     setSpeed(this.speed)
+    setMotionSpeed(this.speed)
+    bindShake(this.root)
     // The shell already put the catalog up, since its own failure screen is
     // written in it; this is the same call and it is not free to skip. A save
     // whose language differs from the setting means the app opens with `words`
@@ -514,6 +480,12 @@ export class App {
     // After the render, not before: the node the bump lands on is built by it.
     if (paid) this.bump(".hud-gold")
     if (label) this.toast(label)
+    // The table's half of the same thought: what the action did, played over
+    // the screen that shows it. Returns at once on a phone.
+    const screen = this.root.firstElementChild
+    if (screen instanceof HTMLElement) {
+      playEvents(action, events, { root: this.root, screen, state: this.state, sound: this.sound })
+    }
   }
 
   /**
@@ -569,7 +541,9 @@ export class App {
           ? "tile ghost"
           : "tile"
       tile.textContent = (typed ?? revealed ?? "").toUpperCase()
+      if (lands && tile instanceof HTMLElement) board.typed(tile)
     }
+    if (letter === "leaving" && row instanceof HTMLElement) board.erased(row)
     // Two things outside the row change with a keystroke. The fifth letter is
     // what gives the word a shape, and naming it only after the guess was
     // submitted would be naming it one guess too late to be worth reading. The
@@ -623,9 +597,12 @@ export class App {
     if (this.state.phase === "game_over") this.finish("lost")
 
     this.busy = true
-    this.skipping = false
+    begin()
     this.render("round")
-    await this.animate(events)
+    const screen = this.root.firstElementChild
+    if (screen instanceof HTMLElement) {
+      await playScoring(events, { root: this.root, screen, state: this.state, sound: this.sound })
+    }
     this.busy = false
     this.render()
 
@@ -633,368 +610,6 @@ export class App {
     else if (this.state.phase === "reward" || this.state.phase === "victory") {
       this.sound.cue({ name: "win", run: this.state.phase === "victory" })
     }
-  }
-
-  /* ------------------------------------------------------------ animation */
-
-  private async animate(events: GameEvent[]): Promise<void> {
-    const screen = this.root.firstElementChild
-    if (!(screen instanceof HTMLElement)) return
-
-    const onSkip = () => {
-      this.skipping = true
-    }
-    screen.addEventListener("pointerdown", onSkip)
-
-    const row = screen.querySelector(`.row[data-row="${this.state.round.guesses.length - 1}"]`)
-    const tiles = [...(row?.querySelectorAll(".tile") ?? [])]
-    for (const tile of tiles) tile.classList.add("pending")
-    // Held back the same way the colors are, and released with the last of
-    // them: the boss's summary of a row is only meaningful after the row it
-    // summarizes has been seen, and it would otherwise be legible for the whole
-    // length of the cascade it is the answer to.
-    const note = row?.querySelector(".row-note")
-    note?.classList.add("pending")
-
-    const chipsEl = screen.querySelector(".readout .chips")
-    const multEl = screen.querySelector(".readout .mult")
-    const scoreEl = screen.querySelector(".hud .score")
-    // The figures already on screen, so each step can react to the half that
-    // moved rather than to both. Which half moved is the information: a gray
-    // tile pays chips and nothing else, a green one pays both, and a player who
-    // never sees the difference has to be told it in a tutorial instead.
-    let shownChips = 0
-    let shownMult = 1
-    const readout = (chips: number, mult: number) => {
-      if (chipsEl && chips !== shownChips) {
-        chipsEl.textContent = num(chips)
-        this.replay(chipsEl, "bumped", 320)
-      }
-      if (multEl && mult !== shownMult) {
-        multEl.textContent = num(mult)
-        this.replay(multEl, "bumped", 320)
-      }
-      shownChips = chips
-      shownMult = mult
-    }
-    // Wound back for the same reason the total below it is: the board was drawn
-    // after the guess was committed, so the readout starts out holding the
-    // figure this is about to build up to.
-    if (chipsEl) chipsEl.textContent = num(0)
-    if (multEl) multEl.textContent = num(1)
-
-    // The bar under the total is driven off the same numbers the count-up walks
-    // through, so it fills in step with the digits instead of trailing them.
-    const meterEl = screen.querySelector<HTMLElement>(".hud .meter-fill")
-    const scoreBox = screen.querySelector(".hud-score")
-    const target = this.state.round.target
-    const meter = (value: number) => {
-      meterEl?.style.setProperty("--fill", String(meterFill(value, target)))
-      scoreBox?.classList.toggle("met", value >= target)
-    }
-
-    // The state was committed before any of this ran, so the HUD is already
-    // showing the total the animation is about to build up to. Wind it back to
-    // the pre-guess figure first, or the reveal spoils its own punchline.
-    const scored = events.find((event) => event.type === "guess_scored")
-    if (scoreEl && scored) scoreEl.textContent = num(scored.total - scored.score)
-    /** The figure on screen, so the solve bonus knows what it is multiplying. */
-    let onScreen = scored ? scored.total - scored.score : this.state.round.score
-    meter(onScreen)
-
-    // How many things have fired so far this guess. The trigger cue climbs a
-    // rung for each, so a long chain builds instead of repeating one blip.
-    let fired = 0
-    for (const event of events) {
-      switch (event.type) {
-        case "tile": {
-          const tile = tiles[event.index]
-          this.reveal(tile, event.index)
-          // Held until the turn is half done, which is when the color appears.
-          // Saying what the tile paid before showing what color it came up
-          // would answer the question in the wrong order.
-          this.tileGain(tile, event.gained)
-          if (event.index === tiles.length - 1) this.revealNote(note)
-          readout(event.chips, event.mult)
-          await this.pace(PACE.tile)
-          break
-        }
-        case "mod": {
-          // The tile itself lights up rather than a card in the tray: the thing
-          // that fired is the letter, and it is already on screen.
-          const tile = tiles[event.index]
-          tile?.classList.add("fired")
-          this.floater(screen, payoutBadge(event.paid))
-          this.sound.cue({ name: "trigger", kind: "mod", n: fired++ })
-          readout(event.chips, event.mult)
-          await this.pace(PACE.relic)
-          tile?.classList.remove("fired")
-          break
-        }
-        case "relic": {
-          const slot = screen.querySelector(`.relic[data-slot="${event.slot}"]`)
-          slot?.classList.add("fired")
-          this.floater(screen, payoutBadge(event.paid))
-          this.sound.cue({ name: "trigger", kind: "relic", n: fired++ })
-          readout(event.chips, event.mult)
-          await this.pace(PACE.relic)
-          slot?.classList.remove("fired")
-          break
-        }
-        case "category": {
-          // Lights the line that was already naming this shape on the board, so
-          // the label the player read before submitting is the thing that pays.
-          const line = screen.querySelector(".category")
-          line?.classList.add("fired")
-          this.floater(screen, categoryLevel(event.id, event.level))
-          this.sound.cue({ name: "trigger", kind: "category", n: fired++ })
-          readout(event.chips, event.mult)
-          await this.pace(PACE.relic)
-          line?.classList.remove("fired")
-          break
-        }
-        case "relic_grew": {
-          // Lands after the guess has finished scoring, because that is when it
-          // happens: the round ended, and this card is worth more next time. No
-          // readout, because nothing about this guess's chips or mult moved, which is
-          // exactly what distinguishes growing from firing.
-          const slot = screen.querySelector(`.relic[data-slot="${event.slot}"]`)
-          slot?.classList.add("fired")
-          this.floater(screen, growthBadge(event))
-          this.sound.cue({ name: "trigger", kind: "grew", n: fired++ })
-          await this.pace(PACE.relic)
-          slot?.classList.remove("fired")
-          break
-        }
-        case "solve_bonus": {
-          // Arrives after the guess has already been counted onto the total, so
-          // this is the pile itself multiplying, the biggest number movement in
-          // the game, and the one the whole round was building toward.
-          this.floater(screen, ui().board.solveFactor(event.factor))
-          screen.querySelector(".readout")?.classList.add("solved")
-          this.sound.cue({ name: "solve" })
-          this.countUp(scoreEl, onScreen, event.total, meter)
-          this.emphasize(screen, event.total / Math.max(1, this.state.round.target))
-          onScreen = event.total
-          await this.pace(PACE.solve)
-          break
-        }
-        case "guess_scored": {
-          // The single most important number in the game, so it is the one
-          // thing that animates its value rather than snapping to it.
-          const from = event.total - event.score
-          this.countUp(scoreEl, from, event.total, meter)
-          this.emphasize(screen, event.score / Math.max(1, this.state.round.target))
-          this.sound.cue({
-            name: "score",
-            ratio: event.score / Math.max(1, this.state.round.target),
-          })
-          onScreen = event.total
-          await this.pace(PACE.total)
-          break
-        }
-        case "letter_destroyed":
-          this.floater(screen, ui().board.letterBroken(event.letter))
-          this.sound.cue({ name: "break" })
-          await this.pace(PACE.relic)
-          break
-        case "relic_destroyed":
-          // No card to light: the screen was rebuilt from a tray that no longer
-          // holds it. The floater names it instead, and the break sound is the
-          // same one a letter makes, because it is the same kind of loss.
-          this.floater(screen, ui().board.relicGone(relicCard(event.id).name))
-          this.sound.cue({ name: "break" })
-          await this.pace(PACE.relic)
-          break
-        default:
-          break
-      }
-    }
-
-    for (const tile of tiles) tile.classList.remove("pending")
-    // Belt and braces: a guess that produced no tile events at all, or a skip
-    // taken before the cascade reached the end, must not leave the note hidden
-    // until the next full rebuild happens to drop it.
-    note?.classList.remove("pending")
-    screen.removeEventListener("pointerdown", onSkip)
-  }
-
-  /**
-   * Lets the row's note in at the trough of the last tile's turn, which is the
-   * moment that tile's color appears. Same timing as `tileGain`, for the same
-   * reason: the answer and the thing it is an answer to arrive together.
-   */
-  private revealNote(note: Element | null | undefined): void {
-    if (!note) return
-    if (this.skipping || reducedMotion()) {
-      note.classList.remove("pending")
-      return
-    }
-    setTimeout(() => note.classList.remove("pending"), this.beat(FLIP.half))
-  }
-
-  /**
-   * Wordle's turn-over, done with a scale rather than a pair of stacked faces:
-   * the color is swapped at the trough, where the tile is edge-on and there is
-   * nothing to see, which is the whole trick.
-   */
-  private reveal(tile: Element | undefined, index: number): void {
-    if (!tile) return
-    const color = TILE_COLORS.find((name) => tile.classList.contains(name)) ?? "gray"
-    this.sound.cue({ name: "tile", index, color })
-
-    if (this.skipping || reducedMotion()) {
-      tile.classList.remove("pending")
-      return
-    }
-
-    tile.classList.add("flip")
-    // Timers rather than awaits: the flips are meant to overlap, so this one
-    // must keep running while the next tile starts. Both are harmless if the
-    // screen is replaced first, since the node is simply detached by then.
-    setTimeout(() => tile.classList.remove("pending"), this.beat(FLIP.half))
-    setTimeout(() => tile.classList.remove("flip"), this.beat(FLIP.total))
-  }
-
-  /**
-   * What a tile just paid, said at the tile.
-   *
-   * Every other effect in the game announces itself. A relic lights up and
-   * floats its number, a modifier lights the letter it rode in on, and the
-   * tiles, which are where most of a guess actually comes from, said nothing.
-   * The readout moved and the player was left to infer which of the five
-   * letters had moved it.
-   *
-   * Both halves are named, and the chips half is named even when it is zero,
-   * because a zero is the whole point under a boss that stops paying for
-   * vowels. The mult half only appears when there is one: gray pays no
-   * multiplier, and its silence next to a green tile's `+3 mult` is the clearest
-   * statement of the rule this game has.
-   *
-   * The badge hangs off the row and is placed from the tile's own box, which is
-   * the same lesson learned twice: a child of the tile would be scaled edge-on
-   * by the very flip it is announcing, and a grid item, even one placed
-   * explicitly into the tile's cell, perturbs the auto-placement of the five
-   * tiles around it and wraps the row. Absolute, off measurements, disturbs
-   * neither.
-   */
-  private tileGain(tile: Element | undefined, chips: number): void {
-    const row = tile?.parentElement
-    if (!(tile instanceof HTMLElement) || !row) return
-    const color = ["green", "yellow", "gray"].find((name) => tile.classList.contains(name))
-    const mult = MULT_FOR_COLOR[(color ?? "gray") as keyof typeof MULT_FOR_COLOR]
-
-    const show = () => {
-      const node = document.createElement("div")
-      node.className = "tile-gain"
-      node.style.left = `${tile.offsetLeft + tile.offsetWidth / 2}px`
-      // Starts just inside the tile rather than above it, so it is unambiguously
-      // this tile's number before it rises away over the row above.
-      node.style.top = `${tile.offsetTop + tile.offsetHeight * 0.18}px`
-      node.append(h("span", { class: "gain-chips" }, `+${chips}`))
-      if (mult > 0) node.append(h("span", { class: "gain-mult" }, `+${mult}`))
-      row.append(node)
-      setTimeout(() => node.remove(), this.beat(GAIN))
-    }
-
-    // Skipping runs the whole guess at once, so the badges would all land
-    // together and then all expire together, and five of them stacked on one row
-    // is noise, not information. The player asked for the end; give them it.
-    if (this.skipping) return
-    if (reducedMotion()) show()
-    else setTimeout(show, this.beat(FLIP.half))
-  }
-
-  /**
-   * Counts a number up on screen, snapping instantly if the player skipped.
-   *
-   * `also` sees every intermediate value, so anything drawn from the same figure,
-   * such as the progress bar, moves with the digits rather than after them.
-   */
-  private countUp(
-    node: Element | null,
-    from: number,
-    to: number,
-    also?: (value: number) => void,
-  ): void {
-    if (!node) return
-    if (this.skipping || reducedMotion() || from === to) {
-      node.textContent = num(to)
-      also?.(to)
-      return
-    }
-    const started = performance.now()
-    // Read once rather than per frame: the setting cannot change mid-count, and
-    // a climb whose span moved under it would ease out of the wrong number.
-    const span = this.beat(COUNT_UP)
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - started) / span)
-      // Ease out: most of the distance is covered early, so the number reads as
-      // arriving rather than crawling.
-      const eased = 1 - (1 - progress) ** 3
-      const value = Math.round(from + (to - from) * eased)
-      node.textContent = num(value)
-      also?.(value)
-      if (progress < 1 && !this.skipping) requestAnimationFrame(tick)
-      else {
-        node.textContent = num(to)
-        also?.(to)
-      }
-    }
-    requestAnimationFrame(tick)
-  }
-
-  /**
-   * Weight of the reaction, scaled by what the guess was worth against the
-   * target. A chip guess twitches; a guess that clears the round on its own
-   * shakes the screen.
-   */
-  private emphasize(screen: HTMLElement, ratio: number): void {
-    const readout = screen.querySelector(".readout")
-    readout?.classList.remove("popped")
-    void (readout as HTMLElement | null)?.offsetWidth
-    if (readout instanceof HTMLElement) {
-      // Up to 1.2, from 1.5. The blocks live in the header now, between the bar
-      // and the boss's band, and at 1.5 a 103px block grew 26px a side over
-      // both; at 1.2 a round-clearing guess still lunges, into the gaps only.
-      readout.style.setProperty("--pop", String(1 + Math.min(0.2, ratio * 0.25)))
-      readout.classList.add("popped")
-    }
-    if (ratio < 0.5 || reducedMotion()) return
-    screen.style.setProperty("--shake", `${Math.min(8, 3 + ratio * 4).toFixed(1)}px`)
-    screen.classList.add("shaking")
-    setTimeout(() => screen.classList.remove("shaking"), this.beat(420))
-  }
-
-  /**
-   * A duration as authored, at the speed the player asked for.
-   *
-   * Everything the scoring animation waits on comes through here, and every one
-   * of those numbers has a partner in the stylesheet scaled by `--pace` from the
-   * same setting, so a class still comes off its element exactly when the
-   * animation it names ends. The constants keep their authored values rather
-   * than being scaled once at load, because they are what the stylesheet is
-   * written against and a `380` that sometimes means 127 is a comment that lies.
-   *
-   * It is deliberately not on the toast, the long press, or anything else that
-   * is a duration without being a motion; see `./speed`.
-   */
-  private beat(ms: number): number {
-    return atSpeed(ms, this.speed)
-  }
-
-  private pace(ms: number): Promise<void> {
-    return this.skipping ? Promise.resolve() : wait(this.beat(ms))
-  }
-
-  private floater(screen: HTMLElement, text: string): void {
-    const host = screen.querySelector(".readout")
-    if (!host) return
-    const node = document.createElement("div")
-    node.className = "floater"
-    node.textContent = text
-    host.append(node)
-    setTimeout(() => node.remove(), this.beat(900))
   }
 
   /**
@@ -1009,21 +624,12 @@ export class App {
     this.sound.cue({ name: "reject" })
     if (this.state.phase !== "round") return
     const row = this.root.querySelector(`.row[data-row="${this.state.round.guesses.length}"]`)
-    this.replay(row, "rejected", 420)
-  }
-
-  /** A one-shot class, restarted if it is already running. */
-  private replay(node: Element | null, name: string, ms: number): void {
-    if (!(node instanceof HTMLElement)) return
-    node.classList.remove(name)
-    // Forcing a reflow restarts the animation when two of these land in a row.
-    void node.offsetWidth
-    node.classList.add(name)
-    setTimeout(() => node.classList.remove(name), this.beat(ms))
+    replay(row, "rejected", 420)
+    if (row instanceof HTMLElement) board.rejected(row)
   }
 
   private bump(selector: string): void {
-    this.replay(this.root.querySelector(selector), "bumped", 320)
+    replay(this.root.querySelector(selector), "bumped", 320)
   }
 
   /* ------------------------------------------------------------------ tips */
@@ -1387,6 +993,7 @@ export class App {
     cycleSpeed: () => {
       this.speed = NEXT_SPEED[this.speed]
       setSpeed(this.speed)
+      setMotionSpeed(this.speed)
       this.render()
     },
     // From the look on screen rather than a stored pick, because before the
@@ -1776,6 +1383,10 @@ export class App {
       this.sheetHeard = this.overlay
     }
 
+    // Measured before the old screen goes, since after it there is nothing
+    // left to measure. Free on a phone: the table's hooks return at once.
+    const live = this.root.firstElementChild
+    const was = leaving(this.root, live ? screenKind(live) : null)
     if (!this.reuseBoard(view)) clear(this.root).append(view)
     if (sheet) this.root.append(sheet)
     // On whatever is standing there afterwards rather than on `view`, because
@@ -1786,6 +1397,7 @@ export class App {
     // render may have decided otherwise. Nothing is painted between the append
     // and this line, so an animation suppressed here never had a frame.
     this.root.firstElementChild?.classList.toggle("settled", settled)
+    arrived(this.root, screenKind(view), was)
     this.holdFocus(keeping)
     this.lightCoach()
     // The pop was this render's; any after it keeps the line and not the pop.

@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from "@capacitor/core"
 import { StatusBar, Style } from "@capacitor/status-bar"
+import { syncTable } from "./table"
 
 /**
  * Light or dark, and until the player says which, whichever the device is.
@@ -80,6 +81,8 @@ export const currentTheme = (): Theme => resolveTheme(picked, prefersLight())
 function apply(): void {
   const resolved = currentTheme()
   document.documentElement.dataset.theme = resolved
+  // The table look is dark-only, so it is re-asked every time the theme lands.
+  syncTable()
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
     // Both media-qualified tags, so whichever one the browser is reading agrees
     // with the setting rather than with the device.
