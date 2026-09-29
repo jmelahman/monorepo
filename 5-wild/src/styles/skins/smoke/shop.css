@@ -111,16 +111,16 @@
 }
 
 /*
- * On the phone the description and the reroll price are set straight on their
- * card and their button, as Classic's always were: at that size a well behind
- * three lines of text is a box inside a box inside a box, and the phone's text
- * has no padding for one to sit in. The table keeps both, where the card is
- * tall enough for the well to read as the card's face.
+ * On the phone the description and the prices are set straight on their card
+ * and their button, as Classic's always were: at that size a well behind three
+ * lines of text is a box inside a box inside a box, and the phone's text has no
+ * padding for one to sit in. The table keeps all three, where the card is tall
+ * enough for the well to read as the card's face.
  */
-:root.skin-smoke:not(.table) .shop-item-text,
-:root.skin-smoke:not(.table) .reroll-cost {
+:root.skin-smoke:not(.table) :is(.shop-item-text, .shop-item-cost, .reroll-cost) {
   border: 0;
   background: none;
+  box-shadow: none;
 }
 
 :root.skin-smoke .shop-screen .toast {
