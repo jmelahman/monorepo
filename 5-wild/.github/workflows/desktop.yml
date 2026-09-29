@@ -112,13 +112,16 @@ jobs:
       # without a version in it. Tauri's own carry the product name, space and
       # all, and the version.
       #
-      # Linux ships three ways, one per kind of player. The bare binary is 9 MB
-      # and the one the README links: it uses the system's WebKitGTK and
-      # GStreamer, which a desktop distro already has. The deb is the same
-      # binary with its dependencies declared, so apt fetches what is missing.
-      # The AppImage carries its own copies of both, 91 MB of them, for a
-      # system where neither is an option, such as the Steam Deck's read-only
-      # root.
+      # Linux ships three ways, one per kind of player. The binary is 9 MB and
+      # the one the README links: it uses the system's WebKitGTK and GStreamer,
+      # which a desktop distro already has. It ships in a tarball because
+      # nothing else carries the executable bit: a download is only bytes, so a
+      # bare binary lands mode 644 and needs a chmod before it runs, while tar
+      # keeps the mode and a double-click or `tar xz` restores it. The deb is
+      # the same binary with its dependencies declared, so apt fetches what is
+      # missing. The AppImage carries its own copies of both, 91 MB of them,
+      # for a system where neither is an option, such as the Steam Deck's
+      # read-only root.
       - name: Collect the bundles
         env:
           PLATFORM: ${{ matrix.platform }}
@@ -126,7 +129,8 @@ jobs:
           mkdir out
           bundle=desktop/src-tauri/target/release/bundle
           if [ "$PLATFORM" = linux ]; then
-            cp desktop/src-tauri/target/release/5-wild out/5-wild-linux-x86_64
+            tar -czf out/5-wild-linux-x86_64.tar.gz --owner=0 --group=0 \
+              -C desktop/src-tauri/target/release 5-wild
             cp "$bundle"/appimage/*.AppImage out/5-wild-linux-x86_64.AppImage
             cp "$bundle"/deb/*.deb out/5-wild-linux-amd64.deb
           else
