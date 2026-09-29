@@ -1,0 +1,134 @@
+/*
+ * Buttons as slabs. A saturated face standing on a darker lip, 4px of it, and
+ * the lip is what compresses on a press: the face drops to meet it. It is one
+ * `box-shadow` for the lip and one `translateY` for the drop, both on the same
+ * 120ms `--ease-out` the phone's press already uses for its `transform`, so the
+ * two never fight: this replaces the phone's `scale(0.97)` under `.table`, it
+ * does not stack on it.
+ *
+ * The lip is a shadow and not a border, so the button's box is the face alone
+ * and the layout beneath it does not move when the lip shrinks.
+ *
+ * `.mouse` hover brightens, as it does on the phone, and only for a mouse (see
+ * `bindMouse` in `app.ts`). It is `filter`, which the press does not use.
+ */
+:root.table.skin-smoke :is(.primary, .secondary, .danger) {
+  --face: var(--btn-neutral);
+  --lip: var(--btn-neutral-lip);
+  background: var(--face);
+  color: var(--on-btn);
+  border: 0.1875rem solid var(--outline);
+  border-radius: var(--radius-m);
+  box-shadow:
+    inset 0 0.1875rem 0 #ffffff38,
+    inset 0 -0.125rem 0 #00000024,
+    0 0.25rem 0 0 var(--lip),
+    0 0.25rem 0 0.1875rem var(--outline),
+    0 0.75rem 1rem -0.25rem color-mix(in srgb, var(--shade) 60%, transparent);
+  transition:
+    transform 120ms var(--ease-out),
+    box-shadow 120ms var(--ease-out),
+    filter 120ms var(--ease-out);
+}
+
+:root.table.skin-smoke .primary {
+  --face: var(--btn-primary);
+  --lip: var(--btn-primary-lip);
+  /* Brass is too light for cream ink, so the lit button is inked dark, and
+     the display outline comes off: dark ink stroked in dark ink is a smudge.
+     Through type.css's own variables rather than restating the stroke here,
+     because its `:is()` list carries `.hud-score .score` and so outranks any
+     plain `.primary` rule that tries to. */
+  color: var(--on-primary);
+  --stroke: 0;
+  --drop: 0;
+}
+
+/* Not filled red: danger is the one button that destroys something, and it is
+   a slab like the rest so it is as pressable as the rest, but it stays a step
+   quieter than the brass so the eye still goes to the safe one first. */
+:root.table.skin-smoke .danger {
+  --face: var(--btn-danger);
+  --lip: var(--btn-danger-lip);
+}
+
+:root.table.skin-smoke :is(.primary, .secondary, .danger):active:not(:disabled) {
+  transform: translateY(0.25rem);
+  box-shadow:
+    inset 0 0.1875rem 0 #ffffff26,
+    inset 0 -0.125rem 0 #00000024,
+    0 0 0 0 var(--lip),
+    0 0 0 0.1875rem var(--outline),
+    0 0.125rem 0.5rem -0.25rem color-mix(in srgb, var(--shade) 60%, transparent);
+}
+
+:root.table.skin-smoke :is(.primary, .secondary, .danger):disabled {
+  opacity: 1;
+  filter: saturate(0.25) brightness(0.7);
+}
+
+:root.table.skin-smoke.mouse :is(.primary, .secondary, .danger):hover:not(:disabled, :active) {
+  filter: brightness(1.12) saturate(1.05);
+}
+
+/* The button strip's own ideas about shadow, from the phone: each sets an inset
+   bevel on its own selector, which would out-rank the slab's lip by
+   specificity. They are restated here in the slab's terms. */
+:root.table.skin-smoke
+:is(
+  .shop-screen .shop-actions > *,
+  .title-more .secondary,
+  .intro-actions .primary,
+  .primary.title-play
+) {
+  box-shadow:
+    inset 0 0.1875rem 0 #ffffff38,
+    inset 0 -0.125rem 0 #00000024,
+    0 0.25rem 0 0 var(--lip),
+    0 0.25rem 0 0.1875rem var(--outline),
+    0 0.75rem 1rem -0.25rem color-mix(in srgb, var(--shade) 60%, transparent);
+}
+
+:root.table.skin-smoke
+  :is(
+    .shop-screen .shop-actions > *,
+    .title-more .secondary,
+    .intro-actions .primary,
+    .primary.title-play
+  ):active:not(:disabled) {
+  box-shadow:
+    inset 0 0.1875rem 0 #ffffff26,
+    inset 0 -0.125rem 0 #00000024,
+    0 0 0 0 var(--lip),
+    0 0 0 0.1875rem var(--outline),
+    0 0.125rem 0.5rem -0.25rem color-mix(in srgb, var(--shade) 60%, transparent);
+}
+
+/* Round icon buttons: the menu, the title's dials. Same slab, circular. */
+:root.table.skin-smoke :is(.menu-button, .title-dial, .title-pill) {
+  --face: var(--btn-neutral);
+  --lip: var(--btn-neutral-lip);
+  background: var(--face);
+  color: var(--on-btn);
+  border: 0.1875rem solid var(--outline);
+  box-shadow:
+    inset 0 0.125rem 0 #ffffff38,
+    0 0.1875rem 0 0 var(--lip),
+    0 0.1875rem 0 0.1875rem var(--outline);
+  transition:
+    transform 120ms var(--ease-out),
+    box-shadow 120ms var(--ease-out),
+    filter 120ms var(--ease-out);
+}
+
+:root.table.skin-smoke :is(.menu-button, .title-dial, .title-pill):active {
+  transform: translateY(0.1875rem);
+  box-shadow:
+    inset 0 0.125rem 0 #ffffff26,
+    0 0 0 0 var(--lip),
+    0 0 0 0.1875rem var(--outline);
+}
+
+:root.table.skin-smoke.mouse :is(.menu-button, .title-dial, .title-pill):hover:not(:active) {
+  filter: brightness(1.15);
+}

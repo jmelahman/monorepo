@@ -1,0 +1,218 @@
+/* The look half of `round.css`; the layout, and the reasons for it, are in `../round.css`. */
+
+/* The panel itself, shared with the shop, whose header is the same rail. */
+:root.table.skin-smoke :is(.round-screen, .shop-screen) .hud {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel-2) 88%, #fff 4%),
+    var(--panel) 40%,
+    color-mix(in srgb, var(--panel) 85%, var(--felt-lo))
+  );
+  box-shadow: var(--top-light), var(--shadow-hard), var(--shadow-soft);
+}
+
+:root.table.skin-smoke :is(.round-screen, .shop-screen) .hud .round-token {
+  filter: drop-shadow(0 0.1875rem 0 var(--outline));
+}
+
+:root.table.skin-smoke .stage {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The score, on its own dark plate, like a score counter set into the panel. */
+:root.table.skin-smoke .round-screen .hud-score {
+  border-radius: var(--radius-m);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--felt-lo) 92%, #000),
+    color-mix(in srgb, var(--felt-lo) 70%, var(--panel))
+  );
+  border: 0.125rem solid var(--outline);
+  box-shadow:
+    inset 0 0.375rem 0.75rem #0009,
+    0 0.0625rem 0 #ffffff1a;
+}
+
+:root.table.skin-smoke .hud-score .score {
+  color: var(--fg);
+}
+
+:root.table.skin-smoke .hud-score .target {
+  color: var(--muted);
+}
+
+:root.table.skin-smoke .hud-score.met .score {
+  color: var(--green);
+  text-shadow:
+    0 var(--drop) 0 var(--outline),
+    0 0 1.25rem color-mix(in srgb, var(--green) 65%, transparent);
+}
+
+/* The progress bar, a trough with a thick fill, which the count-up drives with
+   `--fill` exactly as on the phone. Its own row in the flow so it sits under
+   the score plate, with the plate's bottom padding absorbed. */
+:root.table.skin-smoke .round-screen .hud .meter {
+  border-radius: var(--radius-pill);
+  border: 0.1875rem solid var(--outline);
+  background: color-mix(in srgb, var(--felt-lo) 80%, #000);
+  box-shadow: inset 0 0.1875rem 0.375rem #0009;
+}
+
+:root.table.skin-smoke .meter-fill {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--chips) 70%, #fff),
+    var(--chips) 45%,
+    color-mix(in srgb, var(--chips) 75%, #000)
+  );
+  border-radius: 0;
+}
+
+:root.table.skin-smoke .meter-solve {
+  background: color-mix(in srgb, var(--chips) 30%, transparent);
+}
+
+:root.table.skin-smoke .hud:has(.hud-score.met) .meter-fill {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--green) 70%, #fff),
+    var(--green) 45%,
+    color-mix(in srgb, var(--green) 75%, #000)
+  );
+}
+
+:root.table.skin-smoke .dock-line .category {
+  border: 0.1875rem solid var(--outline);
+  border-radius: var(--radius-m);
+  background: var(--panel-3);
+  box-shadow:
+    inset 0 0.125rem 0 #ffffff26,
+    0 0.1875rem 0 var(--outline);
+  --stroke: 0.28em;
+}
+
+:root.table.skin-smoke .category.fired {
+  color: var(--gold);
+}
+
+:root.table.skin-smoke .category-level {
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+  border-radius: var(--radius-s);
+}
+
+:root.table.skin-smoke .dock-line .readout .chips,
+:root.table.skin-smoke .dock-line .readout .mult {
+  border: 0.1875rem solid var(--outline);
+  border-radius: var(--radius-m);
+  box-shadow:
+    inset 0 0.25rem 0 #ffffff33,
+    inset 0 -0.25rem 0 #0000003a,
+    0 0.25rem 0 var(--outline);
+}
+
+:root.table.skin-smoke .readout .chips {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--chips) 85%, #fff), var(--chips));
+  color: #fff;
+}
+
+:root.table.skin-smoke .readout .mult {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mult) 85%, #fff), var(--mult));
+  color: #fff;
+}
+
+:root.table.skin-smoke .readout.solved .chips,
+:root.table.skin-smoke .readout.solved .mult {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 80%, #fff), var(--gold));
+  color: #fff;
+}
+
+:root.table.skin-smoke .readout .times {
+  color: var(--fg);
+  --stroke: 0.3em;
+}
+
+:root.table.skin-smoke .dock-line .readout.drafting .mult.pending {
+  background: color-mix(in srgb, var(--mult) 18%, var(--felt-lo));
+  border: 0.1875rem dashed color-mix(in srgb, var(--mult) 65%, transparent);
+  box-shadow: inset 0 0.25rem 0.5rem #0007;
+  color: color-mix(in srgb, var(--mult) 80%, #fff);
+}
+
+/* The boss: a red banner across the foot of the panel, full bleed. */
+:root.table.skin-smoke .round-screen .hud .boss {
+  border-radius: 0;
+  border-top: 0.1875rem solid var(--outline);
+  border-bottom: 0.1875rem solid var(--outline);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--mult) 55%, var(--panel)),
+    color-mix(in srgb, var(--mult) 32%, var(--panel))
+  );
+  color: var(--fg);
+}
+
+:root.table.skin-smoke .boss strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: #ffd1d4;
+  -webkit-text-stroke: 0.22em var(--outline);
+  paint-order: stroke fill;
+  text-shadow: 0 0.07em 0 var(--outline);
+}
+
+:root.table.skin-smoke .hud:has(.boss) {
+  box-shadow:
+    var(--top-light),
+    var(--shadow-hard),
+    var(--shadow-soft),
+    0 0 0 0.1875rem color-mix(in srgb, var(--mult) 55%, transparent);
+}
+
+:root.table.skin-smoke :is(.round-screen, .shop-screen) .hud-gold {
+  border-radius: var(--radius-pill);
+  border: 0.1875rem solid var(--outline);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--felt-lo) 92%, #000),
+    color-mix(in srgb, var(--felt-lo) 75%, var(--panel))
+  );
+  box-shadow:
+    inset 0 0.25rem 0.5rem #0009,
+    0 0.0625rem 0 #ffffff1a;
+  color: var(--gold);
+  --stroke: 0.24em;
+}
+
+:root.table.skin-smoke :is(.round-screen, .shop-screen) .menu-button {
+  border-radius: var(--radius-m);
+}
+
+:root.table.skin-smoke .round-screen .decor-toggle {
+  border: 0.1875rem solid var(--outline);
+  border-radius: var(--radius-m);
+  background: var(--panel-3);
+  box-shadow:
+    inset 0 0.1875rem 0 #ffffff26,
+    0 0.1875rem 0 var(--outline);
+}
+
+:root.table.skin-smoke .round-screen .decor-toggle.bare {
+  background: color-mix(in srgb, var(--felt-lo) 55%, transparent);
+  border: 0.1875rem dashed color-mix(in srgb, var(--muted) 45%, transparent);
+  box-shadow: none;
+}
+
+/* Toast and tip: the play area's centre, not the page's. */
+:root.table.skin-smoke .round-screen .toast {
+  background: var(--panel);
+  border: var(--rim);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-hard), var(--shadow-soft);
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}

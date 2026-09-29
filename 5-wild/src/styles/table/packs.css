@@ -8,6 +8,7 @@
  * `overflow` is visible: the tilt lifts a card out of its box and a clipped
  * row would shave it, and the sheet has room, which the phone's does not.
  */
+
 :root.table .sheet.pack-sheet {
   width: min(100%, 50rem);
   max-height: none;
@@ -18,7 +19,6 @@
 :root.table .pack-hint {
   text-align: center;
   font-size: 1rem;
-  color: var(--muted);
 }
 
 :root.table .pack-options {
@@ -55,7 +55,4 @@
 :root.table .pack-sheet .shop-actions > .secondary {
   flex: 0 1 16rem;
   min-height: 3rem;
-  border-radius: var(--radius-m);
-  --face: var(--btn-neutral);
-  --lip: var(--btn-neutral-lip);
 }

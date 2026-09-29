@@ -838,6 +838,8 @@ export const es: Strings = {
       music: "Música",
       track: "Pista",
       speed: "Velocidad de animación",
+      skin: "Aspecto de la mesa",
+      skins: { smoke: "Sala de humo", classic: "Clásico", tabletop: "Tablero" },
       ambience: "Luces de la mesa",
       theme: "Tema",
       themes: { light: "Claro", dark: "Oscuro" },

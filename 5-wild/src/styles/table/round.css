@@ -22,6 +22,7 @@
  * never by what is in it, which is what `container-type: size` needs. Nothing
  * here animates `.grid`'s width or font size.
  */
+
 :root.table .round-screen {
   display: grid;
   grid-template-columns: var(--rail-w) minmax(0, 1fr) auto;
@@ -51,8 +52,6 @@
   grid-column: 1;
   grid-row: 1 / -1;
 }
-
-/* The panel itself, shared with the shop, whose header is the same rail. */
 :root.table :is(.round-screen, .shop-screen) .hud {
   display: flex;
   flex-direction: column;
@@ -60,15 +59,6 @@
   gap: var(--space-4);
   margin: 0;
   padding: var(--space-5) var(--space-4) var(--space-4);
-  border: var(--rim);
-  border-radius: var(--radius-l);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-2) 88%, #fff 4%),
-    var(--panel) 40%,
-    color-mix(in srgb, var(--panel) 85%, var(--felt-lo))
-  );
-  box-shadow: var(--top-light), var(--shadow-hard), var(--shadow-soft);
   overflow: hidden;
   --hud-pad-x: var(--space-4);
 }
@@ -83,7 +73,6 @@
 :root.table :is(.round-screen, .shop-screen) .hud .round-token {
   width: 3rem;
   height: 3rem;
-  filter: drop-shadow(0 0.1875rem 0 var(--outline));
 }
 
 :root.table .round-name {
@@ -95,28 +84,13 @@
   display: block;
   margin-top: 0.125rem;
   font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
 }
-
-/* The score, on its own dark plate, like a score counter set into the panel. */
 :root.table .round-screen .hud-score {
   order: 2;
   align-self: stretch;
   justify-self: stretch;
   min-width: 0;
   padding: var(--space-3) var(--space-3) var(--space-2);
-  border-radius: var(--radius-m);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--felt-lo) 92%, #000),
-    color-mix(in srgb, var(--felt-lo) 70%, var(--panel))
-  );
-  border: 0.125rem solid var(--outline);
-  box-shadow:
-    inset 0 0.375rem 0.75rem #0009,
-    0 0.0625rem 0 #ffffff1a;
 }
 
 :root.table .round-screen .score-line {
@@ -128,56 +102,16 @@
 :root.table .hud-score .score {
   font-size: 3.5rem;
   line-height: 1;
-  color: var(--fg);
 }
 
 :root.table .hud-score .target {
   font-size: 1rem;
-  color: var(--muted);
   margin-top: 0.125rem;
 }
-
-:root.table .hud-score.met .score {
-  color: var(--green);
-  text-shadow:
-    0 var(--drop) 0 var(--outline),
-    0 0 1.25rem color-mix(in srgb, var(--green) 65%, transparent);
-}
-
-/* The progress bar, a trough with a thick fill, which the count-up drives with
-   `--fill` exactly as on the phone. Its own row in the flow so it sits under
-   the score plate, with the plate's bottom padding absorbed. */
 :root.table .round-screen .hud .meter {
   order: 3;
   height: 1.125rem;
   margin: calc(-1 * var(--space-2)) 0 0;
-  border-radius: var(--radius-pill);
-  border: 0.1875rem solid var(--outline);
-  background: color-mix(in srgb, var(--felt-lo) 80%, #000);
-  box-shadow: inset 0 0.1875rem 0.375rem #0009;
-}
-
-:root.table .meter-fill {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--chips) 70%, #fff),
-    var(--chips) 45%,
-    color-mix(in srgb, var(--chips) 75%, #000)
-  );
-  border-radius: 0;
-}
-
-:root.table .meter-solve {
-  background: color-mix(in srgb, var(--chips) 30%, transparent);
-}
-
-:root.table .hud:has(.hud-score.met) .meter-fill {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--green) 70%, #fff),
-    var(--green) 45%,
-    color-mix(in srgb, var(--green) 75%, #000)
-  );
 }
 
 /* The category line and the chips x mult, stacked: the hand beside the pile it
@@ -199,23 +133,10 @@
   flex: 1 1 auto;
   justify-content: space-between;
   padding: 0 var(--space-3);
-  border: 0.1875rem solid var(--outline);
-  border-radius: var(--radius-m);
-  background: var(--panel-3);
-  box-shadow:
-    inset 0 0.125rem 0 #ffffff26,
-    0 0.1875rem 0 var(--outline);
   font-size: 1rem;
-  --stroke: 0.28em;
-}
-
-:root.table .category.fired {
-  color: var(--gold);
 }
 
 :root.table .category-level {
-  background: color-mix(in srgb, var(--fg) 14%, transparent);
-  border-radius: var(--radius-s);
   padding: 0 var(--space-2);
 }
 
@@ -231,61 +152,19 @@
   height: 4.25rem;
   min-width: 0;
   padding: 0 var(--space-2);
-  border: 0.1875rem solid var(--outline);
-  border-radius: var(--radius-m);
-  box-shadow:
-    inset 0 0.25rem 0 #ffffff33,
-    inset 0 -0.25rem 0 #0000003a,
-    0 0.25rem 0 var(--outline);
-}
-
-:root.table .readout .chips {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--chips) 85%, #fff), var(--chips));
-  color: #fff;
-}
-
-:root.table .readout .mult {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--mult) 85%, #fff), var(--mult));
-  color: #fff;
-}
-
-:root.table .readout.solved .chips,
-:root.table .readout.solved .mult {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 80%, #fff), var(--gold));
-  color: #fff;
 }
 
 :root.table .readout .times {
   font-size: 1.75rem;
-  color: var(--fg);
-  --stroke: 0.3em;
 }
-
-:root.table .dock-line .readout.drafting .mult.pending {
-  background: color-mix(in srgb, var(--mult) 18%, var(--felt-lo));
-  border: 0.1875rem dashed color-mix(in srgb, var(--mult) 65%, transparent);
-  box-shadow: inset 0 0.25rem 0.5rem #0007;
-  color: color-mix(in srgb, var(--mult) 80%, #fff);
-}
-
-/* The boss: a red banner across the foot of the panel, full bleed. */
 :root.table .round-screen .hud .boss {
   order: 5;
   height: auto;
   min-height: 0;
   margin: 0 calc(-1 * var(--space-4));
   padding: var(--space-3) var(--space-4);
-  border-radius: 0;
-  border-top: 0.1875rem solid var(--outline);
-  border-bottom: 0.1875rem solid var(--outline);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--mult) 55%, var(--panel)),
-    color-mix(in srgb, var(--mult) 32%, var(--panel))
-  );
   font-size: 0.8125rem;
   line-height: 1.35;
-  color: var(--fg);
   contain: none;
 }
 
@@ -296,22 +175,7 @@
 
 :root.table .boss strong {
   display: block;
-  font-family: var(--font-display);
-  font-weight: 400;
   font-size: 1.125rem;
-  letter-spacing: 0.03em;
-  color: #ffd1d4;
-  -webkit-text-stroke: 0.22em var(--outline);
-  paint-order: stroke fill;
-  text-shadow: 0 0.07em 0 var(--outline);
-}
-
-:root.table .hud:has(.boss) {
-  box-shadow:
-    var(--top-light),
-    var(--shadow-hard),
-    var(--shadow-soft),
-    0 0 0 0.1875rem color-mix(in srgb, var(--mult) 55%, transparent);
 }
 
 /* Gold is the panel's last row, pinned to the foot, and the menu goes to the
@@ -328,19 +192,7 @@
   align-items: center;
   justify-content: center;
   height: 3.25rem;
-  border-radius: var(--radius-pill);
-  border: 0.1875rem solid var(--outline);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--felt-lo) 92%, #000),
-    color-mix(in srgb, var(--felt-lo) 75%, var(--panel))
-  );
-  box-shadow:
-    inset 0 0.25rem 0.5rem #0009,
-    0 0.0625rem 0 #ffffff1a;
   font-size: 1.875rem;
-  color: var(--gold);
-  --stroke: 0.24em;
 }
 
 :root.table .round-screen .hud:has(.boss) .hud-gold {
@@ -358,7 +210,6 @@
   z-index: 2;
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: var(--radius-m);
   font-size: 1.125rem;
 }
 
@@ -408,19 +259,7 @@
   width: var(--tray-h);
   height: var(--tray-h);
   padding-top: calc(var(--tray-h) / 2 - 0.9rem);
-  border: 0.1875rem solid var(--outline);
-  border-radius: var(--radius-m);
-  background: var(--panel-3);
-  box-shadow:
-    inset 0 0.1875rem 0 #ffffff26,
-    0 0.1875rem 0 var(--outline);
   font-size: 1.5rem;
-}
-
-:root.table .round-screen .decor-toggle.bare {
-  background: color-mix(in srgb, var(--felt-lo) 55%, transparent);
-  border: 0.1875rem dashed color-mix(in srgb, var(--muted) 45%, transparent);
-  box-shadow: none;
 }
 
 /* The board: the row's leftover height, all of it, centred both ways. The
@@ -456,18 +295,10 @@
   gap: 0.4375rem;
   --key-gap: 0.4375rem;
 }
-
-/* Toast and tip: the play area's centre, not the page's. */
 :root.table .round-screen .toast {
   left: calc(var(--rail-w) / 2 + 50%);
   z-index: var(--z-toast);
-  background: var(--panel);
-  border: var(--rim);
-  border-radius: var(--radius-m);
-  box-shadow: var(--shadow-hard), var(--shadow-soft);
-  font-family: var(--font-display);
   font-size: 1rem;
-  letter-spacing: 0.02em;
 }
 
 /* Tiles and keys live in board.css and keyboard.css. */

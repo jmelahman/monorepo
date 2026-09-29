@@ -90,6 +90,7 @@ import {
   unlocked,
   wordsFound,
 } from "./meta"
+import type { Skin } from "./skin"
 import type { Speed } from "./speed"
 import { isTable } from "./table"
 import type { Theme } from "./theme"
@@ -135,6 +136,8 @@ export type Handlers = {
   cycleDecor: () => void
   /** Step the animations up a rung, wrapping back to the speed they are drawn at. */
   cycleSpeed: () => void
+  /** Move the desktop table to its next skin. */
+  cycleSkin: () => void
   /** Turn the desktop table's lights (lamp drift, motes, marquee) on or off. */
   toggleAmbience: () => void
   /** Step the look from the device's, to light, to dark, and back. */
@@ -191,6 +194,8 @@ export type Chrome = {
   speed: Speed
   /** Whether the table lights are on. Only the table shows the row. */
   ambience: boolean
+  /** The table's skin. Only the table shows the row. */
+  skin: Skin
   theme: Theme
   /**
    * Which language is chosen, which the views need for the picker alone: every
@@ -3530,6 +3535,16 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       // be a dead row. Asked at render, which is every dispatch, so a window
       // crossing into or out of the table has it right by the next tap.
       isTable() &&
+        setting(
+          { "data-focus": "skin", onclick: () => on.cycleSkin() },
+          copy.skin,
+          copy.skins[chrome.skin],
+        ),
+      // Beside the skin because it is the skin's: the lights are the moving
+      // room, and Classic is the one dressing with none, so its row would be a
+      // switch wired to nothing.
+      isTable() &&
+        chrome.skin !== "classic" &&
         setting(
           { "data-focus": "ambience", onclick: () => on.toggleAmbience() },
           copy.ambience,

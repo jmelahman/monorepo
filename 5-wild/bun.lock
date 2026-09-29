@@ -7,6 +7,8 @@
       "dependencies": {
         "@capacitor/core": "^8.0.0",
         "@capacitor/status-bar": "^8.0.3",
+        "@fontsource/jersey-10": "^5.3.0",
+        "@fontsource/jost": "^5.3.0",
         "@fontsource/lilita-one": "^5.3.0",
       },
       "devDependencies": {
@@ -45,6 +47,10 @@
     "@capacitor/core": ["@capacitor/core@8.5.0", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-Ca4krtqH1hothjtBIwf2J2TW7IhYq1ujp8QeItTiJohNsqij8ja2DYYH3DU0l8RmxCWaBAFTGA2TgOgOMCSNsQ=="],
 
     "@capacitor/status-bar": ["@capacitor/status-bar@8.0.3", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-csSpfNeN49Hx9JaQBSJEIiEbOLtXg3kcc2IpScq2fu5L520h3AWEvsxoH8Srk1jxfRKepaJ4S4sqSC3foI4AgA=="],
+
+    "@fontsource/jersey-10": ["@fontsource/jersey-10@5.3.0", "", {}, "sha512-1dOTUg3JXm/Ls6j4BEPLRF5DHGadCGQy/sIHS7L0SWauB2rEd2W6614Xufxoc+TVXtrt8kVR6IWh3RFkXmy/Cw=="],
+
+    "@fontsource/jost": ["@fontsource/jost@5.3.0", "", {}, "sha512-lORv5y49hSoLVxjGb0qNuBzXvnaNYI3B94200uGPGJFei8fao6d6LLz2ziWbOZubGfZnibzuT6GVNX8fBw8WQQ=="],
 
     "@fontsource/lilita-one": ["@fontsource/lilita-one@5.3.0", "", {}, "sha512-bNW3tD+m5pOsAQpW/NvtRbFthFe+B73hDJK2DLLCFCtF+1p+UMBgo7ibxdcb9Sftr06LKAVbt080wiMdSqGbOg=="],
 

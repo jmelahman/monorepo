@@ -1,31 +1,4 @@
-/*
- * The scoring show's look. The motion is `fx/scenes/scoring.ts`; this is what
- * it moves, and what the rail looks like standing still when it is done.
- *
- * Written under `:root.table` like everything here. The `#fx` layer is a child
- * of `<body>`, so its nodes are reached through the root's class as well and
- * need no gate of their own beyond the one the scene already has.
- */
-
-:root.table {
-  /* The pops. Lighter than the blocks they feed, so a pop reads against the
-     felt and against a green tile alike, and its outline (`--outline`) is what
-     keeps it legible over either. */
-  --pop-chips: #4aa3ff;
-  --pop-mult: #ff5b64;
-  --pop-gold: #ffc12e;
-  --pop-dim: #6c6290;
-  /* Roles for the scoring show's decoration, so a restyle is one place. The
-     plate's bulbs at rest and at the jackpot, the beam's head, and the sign
-     that lights on a solve. Named for what they do, not what they are made of. */
-  --score-lit: var(--bulb);
-  --score-hot: var(--ivory);
-  --score-line: color-mix(in srgb, var(--ivory) 45%, transparent);
-  --sign-bg: var(--panel);
-  --sign-ink: var(--ivory);
-  --sign-ring: var(--brass);
-}
-
+/* The layout half of `scoring.css`; the look, and the reasons for it, are in `smoke/scoring.css`. */
 /* ---- the rail: more presence for the two numbers the game is about ------ */
 
 /* The blocks were 4.25rem in a rail with a hand's width of nothing under them.
@@ -39,9 +12,6 @@
 :root.table .dock-line .readout .mult {
   --shape-line: clamp(4.5rem, 13svh, 7rem);
   height: clamp(4.5rem, 13svh, 7rem);
-  border-radius: var(--radius-l);
-  --stroke: 0.2em;
-  --drop: 0.07em;
 }
 
 :root.table .dock-line .readout .times {
@@ -64,36 +34,10 @@
   isolation: isolate;
 }
 
-:root.table .hud-score::after {
-  content: "";
-  position: absolute;
-  inset: -0.55rem -0.45rem;
-  z-index: -1;
-  border: 0.24rem dotted var(--score-lit);
-  border-radius: var(--radius-l);
-  pointer-events: none;
-  opacity: 0.16;
-}
-
-:root.table .hud-score.chasing::after {
-  opacity: 0.85;
-  animation: bulbs calc(760ms - 520ms * var(--heat, 0)) steps(1, end) infinite;
-}
-
-:root.table .hud-score.jackpot::after {
-  border-color: var(--score-hot);
-  opacity: 1;
-  animation-duration: 150ms;
-}
-
 @keyframes bulbs {
   50% {
     opacity: 0.3;
   }
-}
-
-:root.table .hud-score.met {
-  border-color: color-mix(in srgb, var(--gold) 70%, var(--outline));
 }
 
 /* The odometer's wheels: one cell per digit, tabular so a wheel does not
@@ -106,76 +50,25 @@
   display: inline-block;
 }
 
-/* ---- on the board -------------------------------------------------------- */
-
-/* A modifier firing: the outline the phone draws, plus a glow in the modifier's
-   own colour. A filter and not a box-shadow, because the tile is turning and a
-   shadow would be repainted on every frame of it. */
-:root.table .tile.fired {
-  filter: drop-shadow(0 0 0.9rem var(--mod));
-}
-
-:root.table:is(.plain, .quiet) .tile.fired {
-  filter: none;
-}
-
-:root.table .relic.fired {
-  filter: drop-shadow(0 0 1rem color-mix(in srgb, var(--gold) 80%, transparent));
-}
-
 /* The per-letter pops are the board narrating arithmetic, which the quiet and
    plain boards turn off; the relic's, the category's and the total's are the
    game and stay. */
 :root.table:is(.plain, .quiet) .fx-pop.tile {
   display: none;
 }
-
-/* ---- #fx ------------------------------------------------------------------ */
-
-/* A pill in the block's own colour with white ink: the reader matches it to the
-   readout it is about to feed by colour before reading it. */
 :root.table .fx-pop {
   padding: 0.05em 0.5em 0.1em;
-  border: 0.125rem solid var(--outline);
-  border-radius: var(--radius-pill);
-  background: var(--pop-chips);
-  box-shadow: 0 0.1875rem 0 var(--outline);
-  color: #fff;
-  font-family: var(--font-display);
   font-size: 1.5rem;
   line-height: 1.1;
   white-space: nowrap;
-  -webkit-text-stroke: 0.18em var(--outline);
-  paint-order: stroke fill;
-  text-shadow: 0 0.06em 0 var(--outline);
   pointer-events: none;
 }
 
 :root.table .fx-pop.tile {
   font-size: 1.25rem;
 }
-
-:root.table .fx-pop.mult {
-  background: var(--pop-mult);
-}
-
-:root.table .fx-pop.gold,
-:root.table .fx-pop.words {
-  background: var(--pop-gold);
-  color: #fff;
-}
-
-:root.table .fx-pop.dim {
-  background: var(--pop-dim);
-}
-
-/* The payline: a hairline across a row, and a beam that runs it once. The rail
-   is the row's width plus a little, set by the scene; `.tall` is the solved
-   row, which gets a thicker line because it is the one that paid. */
 :root.table .fx-payline {
   height: 0.12rem;
-  border-radius: 1rem;
-  background: var(--score-line);
   pointer-events: none;
 }
 
@@ -188,51 +81,25 @@
   left: 0;
   top: -0.25rem;
   bottom: -0.25rem;
-  border-radius: 1rem;
-  background: linear-gradient(90deg, transparent, var(--score-hot));
 }
-
-/* The solve bonus's sign: the word over the factor on a dark plate with a
-   restrained dotted rim. Every colour is a role above, so this is the one rule
-   to restyle. */
 :root.table .fx-jackpot {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 0.3em 0.9em 0.4em;
-  border: 0.3rem dotted var(--sign-ring);
-  border-radius: var(--radius-l);
-  background: var(--sign-bg);
-  box-shadow: var(--shadow-hard);
-  color: var(--sign-ink);
-  font-family: var(--font-display);
   font-size: clamp(2.6rem, 9svh, 5rem);
   line-height: 1;
   pointer-events: none;
 }
 
-:root.table .fx-jackpot b {
-  font-weight: inherit;
-  letter-spacing: 0.06em;
-}
-
 :root.table .fx-jackpot span {
   font-size: 1.5em;
 }
-
-/* Stand-in for a relic that has left the tray: a card in the tray's own
-   colours, carrying the name, that the scene puts out like a lamp. */
 :root.table .fx-placard {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-2);
-  border: 0.1875rem solid var(--outline);
-  border-radius: var(--radius-m);
-  background: linear-gradient(180deg, var(--panel-3), var(--panel));
-  box-shadow: 0 0.25rem 0 var(--outline);
-  color: var(--fg);
-  font-family: var(--font-display);
   font-size: 0.8125rem;
   text-align: center;
   overflow-wrap: anywhere;

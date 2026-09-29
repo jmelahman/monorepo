@@ -902,6 +902,8 @@ export const en: Strings = {
       music: "Music",
       track: "Track",
       speed: "Animation speed",
+      skin: "Table skin",
+      skins: { smoke: "Smoke room", classic: "Classic", tabletop: "Tabletop" },
       ambience: "Table lights",
       theme: "Theme",
       themes: { light: "Light", dark: "Dark" },

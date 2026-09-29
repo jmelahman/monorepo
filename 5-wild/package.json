@@ -21,6 +21,8 @@
   "dependencies": {
     "@capacitor/core": "^8.0.0",
     "@capacitor/status-bar": "^8.0.3",
+    "@fontsource/jersey-10": "^5.3.0",
+    "@fontsource/jost": "^5.3.0",
     "@fontsource/lilita-one": "^5.3.0"
   },
   "devDependencies": {

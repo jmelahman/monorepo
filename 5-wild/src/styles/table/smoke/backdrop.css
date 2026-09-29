@@ -18,7 +18,7 @@
  * is `overflow: hidden`), so it buys nothing, and it makes some engines
  * repaint the noise on every frame.
  */
-:root.table {
+:root.table.skin-smoke {
   background:
     radial-gradient(
       ellipse 80% 75% at 50% 42%,
@@ -42,13 +42,13 @@
 
 /* Transparent so the page's felt shows through, and so a canvas behind `#app`
    is not hidden by a body colour. */
-:root.table body {
+:root.table.skin-smoke body {
   background: transparent;
 }
 
 /* The title screen paints its own wash over the phone's flat page. On the felt
    that reads as a grey box, so it goes and the felt is the stage. */
-:root.table #app:has(> .screen.title) {
+:root.table.skin-smoke #app:has(> .screen.title) {
   background: none;
 }
 
@@ -64,7 +64,7 @@
  * one-shot on opacity and is paced; reduced motion's blanket rule turns it into
  * an instant cut, which is the right answer there too.
  */
-:root.table #felt-gl {
+:root.table.skin-smoke #felt-gl {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -75,6 +75,6 @@
   transition: opacity calc(600ms * var(--pace)) ease;
 }
 
-:root.table #felt-gl.live {
+:root.table.skin-smoke #felt-gl.live {
   opacity: 1;
 }

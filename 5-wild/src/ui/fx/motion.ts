@@ -1,3 +1,4 @@
+import { hasFx } from "../skin"
 import { atSpeed, type Speed } from "../speed"
 import { isTable } from "../table"
 
@@ -43,8 +44,11 @@ export const ms = (authored: number): number => atSpeed(authored, speed)
 /** How many times faster than authored, for loops that integrate over time. */
 export const rate = (): number => speed
 
-/** The table's effects may run: a desktop table, and a player who wants motion. */
-export const juiced = (): boolean => isTable() && !reduced()
+/**
+ * The table's effects may run: a desktop table, a skin that has any (Classic is
+ * the phone's board and holds still), and a player who wants motion.
+ */
+export const juiced = (): boolean => isTable() && hasFx() && !reduced()
 
 /** Every tween still running, so a skip can finish all of them at once. */
 const running = new Set<Animation>()

@@ -849,6 +849,8 @@ export const de: Strings = {
       music: "Musik",
       track: "Stück",
       speed: "Animationstempo",
+      skin: "Tischdesign",
+      skins: { smoke: "Rauchsalon", classic: "Klassisch", tabletop: "Spielbrett" },
       ambience: "Tischlicht",
       theme: "Design",
       themes: { light: "Hell", dark: "Dunkel" },

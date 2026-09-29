@@ -252,18 +252,26 @@ style but not its prose is half-finished.
 ## Storage
 
 `5wild:run:v2` (the run save), `5wild:run:lang` and `5wild:run:log` beside it,
-`5wild:meta:v2` (the record), ten settings: `5wild:plain`, `5wild:speed`,
-`5wild:theme`, `5wild:ambience`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
+`5wild:meta:v2` (the record), eleven settings: `5wild:plain`, `5wild:speed`,
+`5wild:theme`, `5wild:skin`, `5wild:ambience`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
 `5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. The run
 save and its log are sealed (`src/ui/seal.ts`) so the answer is not readable in
 devtools; the key ships in the bundle, so this hides it from a glance, not from
 someone who reads the source. Bare JSON from older builds still loads. All the
-settings are booleans except seven: `5wild:track` holds `promises` or
+settings are booleans except eight: `5wild:track` holds `promises` or
 `forget-me-not`, which recording plays, anything else reading as the first;
 `5wild:plain` holds one of `all`, `minimal` or `none`, how much of the scoring
 game the board draws on itself; `5wild:speed` holds `1`, `2` or `3`, how many
 times faster than authored the animations play; `5wild:theme` holds `light`
-or `dark`, absent or anything else meaning the device decides; `5wild:ambience` holds
+or `dark`, absent or anything else meaning the device decides; `5wild:skin` holds `smoke`, `classic` or `tabletop`, which
+dressing the desktop table wears, absent or anything else reading as `smoke`; `src/ui/skin.ts` writes it
+as exactly one `skin-*` class on the root before first render, and the phone never reads it. The table
+stylesheet is split on the same line: `src/styles/table/*.css` is layout only, under `:root.table`, with no
+colour, face, border, shadow or motion, and each dressing lives under `:root.table.skin-<name>` in its own
+place (`smoke/`, and so on). Classic is what is left when nothing is written over the layout, so the phone's
+partials show through, and it is the one skin that switches the canvas, marquee and juice off (`hasFx`).
+A new rule that paints goes in a skin, not the layout, and `test/ui/skin.test.ts` fails if it lands in the
+wrong one; `5wild:ambience` holds
 `on` or `off`, whether the desktop table's own lights (the lamp's drift, the dust
 in its beam, the marquee bulbs) run, absent meaning on, applied as `.lights-off`
 on the root; the phone never shows the row and ignores the key, and it stills

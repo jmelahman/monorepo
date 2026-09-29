@@ -21,12 +21,12 @@
  * `--stroke` and `--drop` are the two dials: a small label wants a hairline
  * outline, a score wants a fat one.
  */
-:root.table {
+:root.table.skin-smoke {
   --stroke: 0.22em;
   --drop: 0.07em;
 }
 
-:root.table
+:root.table.skin-smoke
   :is(
     .round-name,
     .hud-score .score,
@@ -74,7 +74,7 @@
 
 /* Small labels: a hairline outline, no drop. At 11px the fat stroke closes the
    letters up and the drop doubles the ink under them. */
-:root.table
+:root.table.skin-smoke
 :is(
   .category,
   .relic-name,
@@ -95,32 +95,33 @@
 /* Keys and tiles carry a letter and, on a key, a value pip in the corner. The
    stroke inherits, so the pips are put back to plain type: at their size an
    outline is a smudge, and they are the numbers the player is reading. */
-:root.table .key {
+:root.table.skin-smoke .key {
   --stroke: 0.16em;
   --drop: 0.05em;
 }
 
-:root.table .key :is(.value-pip, .mod-pip),
-:root.table .decor-toggle-value,
-:root.table .decor-toggle-mark {
+:root.table.skin-smoke .key :is(.value-pip, .mod-pip),
+:root.table.skin-smoke .decor-toggle-value,
+:root.table.skin-smoke .decor-toggle-mark {
   font-family: var(--font-body);
   -webkit-text-stroke: 0;
   paint-order: normal;
   text-shadow: none;
 }
 
-:root.table .tile {
+:root.table.skin-smoke .tile {
   --stroke: 0.2em;
   --drop: 0.06em;
 }
 
 /* Headings: the biggest ink and a proper drop. */
-:root.table :is(.banner, .sheet-title, .intro-name, .intro-target, .title-name, .hud-score .score) {
+:root.table.skin-smoke
+:is(.banner, .sheet-title, .intro-name, .intro-target, .title-name, .hud-score .score) {
   --stroke: 0.2em;
   --drop: 0.08em;
 }
 
-:root.table .hud-score .target {
+:root.table.skin-smoke .hud-score .target {
   font-family: var(--font-display);
   letter-spacing: 0.03em;
 }

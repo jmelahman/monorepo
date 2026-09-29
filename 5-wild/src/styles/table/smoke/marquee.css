@@ -16,7 +16,7 @@
  * `--chase` is how long one full chase takes, and the scoring show sets it on
  * the element to speed the lights up with the heat of the hand.
  */
-:root.table #marquee {
+:root.table.skin-smoke #marquee {
   --lit: var(--bulb);
   --chase: 540ms;
   position: fixed;
@@ -35,19 +35,19 @@
     16px 30px repeat-y;
 }
 
-:root.table[data-mood="boss"] #marquee {
+:root.table.skin-smoke[data-mood="boss"] #marquee {
   --lit: var(--neon-a);
 }
 
-:root.table[data-mood="victory"] #marquee {
+:root.table.skin-smoke[data-mood="victory"] #marquee {
   --lit: var(--brass-hi);
 }
 
-:root.table[data-mood="game_over"] #marquee {
+:root.table.skin-smoke[data-mood="game_over"] #marquee {
   opacity: 0.35;
 }
 
-:root.table #marquee > i {
+:root.table.skin-smoke #marquee > i {
   position: absolute;
   inset: 0;
   opacity: 0;
@@ -55,7 +55,7 @@
 
 /* Every bulb at a glow: the layer idle breathes, flash lights, and a steady
    chase sits on so the ring never goes fully dark between hops. */
-:root.table #marquee > .all {
+:root.table.skin-smoke #marquee > .all {
   background:
     radial-gradient(circle at 15px 8px, #fff 0 1.5px, var(--lit) 2.5px, transparent 9px) 0 6px /
     30px 16px repeat-x,
@@ -69,21 +69,21 @@
 
 /* One phase: the bulb sits at X of a 90px cell, along the top and bottom, and at
    X of a 90px cell down the sides. */
-:root.table #marquee > .a {
+:root.table.skin-smoke #marquee > .a {
   --x: 15px;
 }
 
-:root.table #marquee > .b {
+:root.table.skin-smoke #marquee > .b {
   --x: 45px;
 }
 
-:root.table #marquee > .c {
+:root.table.skin-smoke #marquee > .c {
   --x: 75px;
 }
 
-:root.table #marquee > .a,
-:root.table #marquee > .b,
-:root.table #marquee > .c {
+:root.table.skin-smoke #marquee > .a,
+:root.table.skin-smoke #marquee > .b,
+:root.table.skin-smoke #marquee > .c {
   background:
     radial-gradient(circle at var(--x) 8px, #fff 0 1.5px, var(--lit) 2.5px, transparent 9px) 0 6px /
     90px 16px repeat-x,
@@ -96,36 +96,47 @@
 }
 
 /* Idle: a slow breath, nothing to read. Unpaced, like every loop nobody waits on. */
-:root.table #marquee[data-mode="idle"] > .all {
+:root.table.skin-smoke #marquee[data-mode="idle"] > .all {
   animation: marquee-breathe 5200ms ease-in-out infinite;
 }
 
 /* Chase: three phases taking a third of the cycle each, on a step so a bulb is
    on or off and never half-lit, which is what a real chase looks like. */
-:root.table #marquee[data-mode="chase"] > .all {
+:root.table.skin-smoke #marquee[data-mode="chase"] > .all {
   opacity: 0.16;
 }
 
-:root.table #marquee[data-mode="chase"] > .a,
-:root.table #marquee[data-mode="chase"] > .b,
-:root.table #marquee[data-mode="chase"] > .c {
+:root.table.skin-smoke #marquee[data-mode="chase"] > .a,
+:root.table.skin-smoke #marquee[data-mode="chase"] > .b,
+:root.table.skin-smoke #marquee[data-mode="chase"] > .c {
   animation: marquee-hop var(--chase) steps(1, end) infinite;
 }
 
-:root.table #marquee[data-mode="chase"] > .b {
+:root.table.skin-smoke #marquee[data-mode="chase"] > .b {
   animation-delay: calc(var(--chase) / -3);
 }
 
-:root.table #marquee[data-mode="chase"] > .c {
+:root.table.skin-smoke #marquee[data-mode="chase"] > .c {
   animation-delay: calc(var(--chase) / -1.5);
 }
 
 /* Flash: every bulb up and a fast decay. No fill, so it lands on the resting
    opacity by itself and nothing is left holding a value. */
-:root.table #marquee[data-mode="flash"] > .all {
+:root.table.skin-smoke #marquee[data-mode="flash"] > .all {
   animation: marquee-flash calc(700ms * var(--pace)) ease-out;
 }
+@media (prefers-reduced-motion: reduce) {
+  /* Stillness, not slow motion: the blanket rule removes the animations, and what
+   is left has to be a picture that still says what the mode meant. A chase is a
+   hot hand, so it is a steady ring; idle is a faint one; a flash is nothing. */
+  :root.table.skin-smoke #marquee[data-mode="idle"] > .all {
+    opacity: 0.4;
+  }
 
+  :root.table.skin-smoke #marquee[data-mode="chase"] > .all {
+    opacity: 0.85;
+  }
+}
 @keyframes marquee-breathe {
   0%,
   100% {
@@ -154,18 +165,5 @@
   }
   100% {
     opacity: 0.3;
-  }
-}
-
-/* Stillness, not slow motion: the blanket rule removes the animations, and what
-   is left has to be a picture that still says what the mode meant. A chase is a
-   hot hand, so it is a steady ring; idle is a faint one; a flash is nothing. */
-@media (prefers-reduced-motion: reduce) {
-  :root.table #marquee[data-mode="idle"] > .all {
-    opacity: 0.4;
-  }
-
-  :root.table #marquee[data-mode="chase"] > .all {
-    opacity: 0.85;
   }
 }

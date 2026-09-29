@@ -1,0 +1,66 @@
+/* The look half of `screens.css`; the layout, and the reasons for it, are in `../screens.css`. */
+
+:root.table.skin-smoke .track-round {
+  border: var(--rim);
+  border-radius: var(--radius-m);
+  background: var(--panel);
+  box-shadow: var(--top-light), var(--shadow-hard);
+}
+
+:root.table.skin-smoke .track-round.current {
+  border-color: var(--edge);
+  background: var(--panel-2);
+  box-shadow:
+    var(--top-light),
+    0 0.25rem 0 var(--outline),
+    0 0 1.25rem color-mix(in srgb, var(--edge) 45%, transparent);
+}
+
+:root.table.skin-smoke .intro-card {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  box-shadow: var(--top-light), var(--shadow-hard), var(--shadow-soft);
+}
+
+:root.table.skin-smoke .intro-card.boss-card {
+  border-color: var(--mult);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--mult) 14%, var(--panel-2)),
+    var(--panel)
+  );
+  box-shadow:
+    var(--top-light),
+    0 0.25rem 0 color-mix(in srgb, var(--mult) 45%, var(--outline)),
+    var(--shadow-soft);
+}
+
+:root.table.skin-smoke .intro-rule {
+  border-radius: var(--radius-s);
+}
+
+:root.table.skin-smoke .intro-stats {
+  border-top-color: var(--line);
+}
+
+/* One panel, centred, a size to be read across a desk rather than at arm's
+   length. Same stock as the rail: it is the same kind of object. */
+:root.table.skin-smoke .panel {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  box-shadow: var(--top-light), var(--shadow-hard), var(--shadow-soft);
+}
+
+:root.table.skin-smoke .reward-line.total {
+  border-top-color: var(--line);
+}
+
+:root.table.skin-smoke .banner.win {
+  color: var(--green);
+}
+
+:root.table.skin-smoke .banner.lose {
+  color: var(--mult);
+}

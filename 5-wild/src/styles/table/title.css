@@ -6,44 +6,12 @@
  * the tiles are chunky slabs, and the column is a little wider so the buttons
  * are not the width of a phone held up to a monitor.
  */
-
 :root.table .screen.title {
   max-width: 34rem;
   padding: clamp(1rem, 6svh, 4rem) var(--space-5) var(--space-4);
 }
-
-/* `--t` is capped by the phone at 3.875rem and by the viewport's width; on a
-   monitor the viewport is never the limit, so this is simply the size. */
 :root.table .title-mast {
   --t: 5.25rem;
-  --g: 0.5rem;
-}
-
-:root.table .title-ghost-tile {
-  border: var(--rim);
-  border-radius: var(--radius-s);
-  background: color-mix(in srgb, var(--felt-lo) 55%, transparent);
-  border-color: color-mix(in srgb, var(--outline) 80%, transparent);
-}
-
-:root.table .title-tile {
-  border: var(--rim);
-  border-radius: var(--radius-s);
-  background: var(--gray);
-  box-shadow:
-    inset 0 -0.375rem 0 #0000004d,
-    var(--top-light),
-    0 0.25rem 0 var(--outline),
-    0 1rem 1.5rem color-mix(in srgb, var(--shade) 55%, transparent);
-}
-
-:root.table .title-tile.wild {
-  background: var(--green);
-  box-shadow:
-    inset 0 -0.375rem 0 #00000038,
-    var(--top-light),
-    0 0.25rem 0 var(--outline),
-    0 1rem 2rem color-mix(in srgb, var(--green) 40%, transparent);
 }
 
 :root.table .title-name {
@@ -56,26 +24,9 @@
   font-size: 1.125rem;
 }
 
-:root.table .title-chips,
-:root.table .title-mult {
-  border: 0.125rem solid var(--outline);
-  border-radius: var(--radius-s);
-  box-shadow: 0 0.125rem 0 var(--outline);
-}
-
 :root.table .title-tag {
   margin-top: var(--space-5);
   font-size: 1.125rem;
-  color: var(--muted);
-}
-
-:root.table .title-record {
-  color: var(--muted);
-  border-bottom-color: color-mix(in srgb, var(--muted) 45%, transparent);
-}
-
-:root.table.mouse .title-record:hover {
-  color: var(--fg);
 }
 
 :root.table .primary.title-play {
@@ -91,22 +42,4 @@
 :root.table .title-more .secondary {
   min-height: 3.25rem;
   font-size: 1.0625rem;
-}
-
-:root.table .title-more .icon {
-  color: var(--fg);
-}
-
-/* The footer is device business, and stays quiet. */
-:root.table .title-build {
-  color: var(--muted);
-}
-
-/* The badge's figures are small and sit on a bright fill: the display stroke
-   at this size closes the counters of the digits into a smear. Ink on colour,
-   no outline, as the phone has it. */
-:root.table .title-chips,
-:root.table .title-mult {
-  -webkit-text-stroke: 0;
-  text-shadow: none;
 }

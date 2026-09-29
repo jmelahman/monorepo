@@ -9,7 +9,7 @@
  * and lift when the mouse is on it (`cards.css`), and that is the whole of its
  * life, which is what makes the lit moment mean something.
  */
-:root.table .relics > .relic:not(.empty) {
+:root.table.skin-smoke .relics > .relic:not(.empty) {
   /* A brass plate under the ink edge, the frame the plaque is set in. */
   outline: 0.125rem solid color-mix(in srgb, var(--brass) 55%, transparent);
   outline-offset: -0.0625rem;
@@ -17,7 +17,7 @@
 
 /* The price a relic sells for is the thing a tap in the shop does, so it is
    worth being able to find: gold, in the display face, like every other price. */
-:root.table .shop-screen .relic .sell {
+:root.table.skin-smoke .shop-screen .relic .sell {
   color: var(--gold);
   -webkit-text-stroke: 0.3em var(--outline);
   paint-order: stroke fill;

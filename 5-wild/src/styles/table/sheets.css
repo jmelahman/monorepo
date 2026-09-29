@@ -19,13 +19,6 @@
   max-height: min(84svh, 46rem);
   gap: var(--space-3);
   padding: var(--space-5);
-  border: var(--rim);
-  border-radius: var(--radius-l);
-  background: linear-gradient(180deg, var(--panel-2), var(--panel) 30%);
-  box-shadow:
-    var(--top-light),
-    var(--shadow-hard),
-    0 2rem 3rem color-mix(in srgb, var(--shade) 70%, transparent);
 }
 
 /* The wide ones: the codex is a catalogue and the pack's choices are cards. */
@@ -47,19 +40,6 @@
   /* The padding the sheet grew is what the scroll box reaches out into. */
   margin-inline: calc(-1 * var(--space-5));
   padding-inline: var(--space-5);
-}
-
-:root.table .sheet-lead {
-  color: var(--fg);
-}
-
-:root.table .sheet-heading {
-  color: var(--muted);
-}
-
-:root.table .help-tutorial {
-  border-radius: var(--radius-m);
-  background: color-mix(in srgb, var(--panel-3) 60%, var(--panel));
 }
 
 :root.table .sheet-actions {

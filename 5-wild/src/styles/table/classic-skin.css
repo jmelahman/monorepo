@@ -1,0 +1,28 @@
+/*
+ * Classic: the phone's own look, laid out as the table.
+ *
+ * There is almost nothing in this file, and that is the design. The layout
+ * files one directory up carry no colour, face, border, shadow or motion, and
+ * `:root.table` no longer repaints the palette, so with no skin's look on top
+ * the table's screens are drawn by the phone's partials (`../*.css`) in the
+ * phone's tokens: system-ui, the green primary, the phone's radii and panels.
+ * What this file adds is the handful of surfaces the *table's layout invented*
+ * and the phone never had to dress, because on a phone they are not boxes.
+ * The rail is the header of a phone screen, which sits flush on the page; here
+ * it is a column with edges, so it wants the panel the phone gives its cards.
+ *
+ * Nothing moves either. `src/ui/skin.ts` says Classic has no effects
+ * (`hasFx`), so `juiced()` is false, no background canvas or marquee is created
+ * and the JS half of every flourish is off; and this file writes no animation
+ * or transition of its own. The stylesheet's own reduced-motion block still
+ * answers to the player's setting, as on the phone.
+ *
+ * Only tokens the phone already defines are read here, so a change to the
+ * phone's palette or its light/dark sets moves Classic with it.
+ */
+:root.table.skin-classic .round-screen .hud,
+:root.table.skin-classic .shop-screen .hud {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+}

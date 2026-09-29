@@ -1,3 +1,4 @@
+import { hasFx } from "../skin"
 import { isTable } from "../table"
 import { startMarquee, stopMarquee } from "./marquee"
 import { juiced, reduced } from "./motion"
@@ -278,7 +279,8 @@ const running = (): boolean =>
   canvas !== null && gpu !== null && !document.hidden && !covered && juiced()
 
 /** The table's own lights: a table, and the player has not switched them off. */
-const lit = (): boolean => isTable() && !document.documentElement.classList.contains("lights-off")
+const lit = (): boolean =>
+  isTable() && hasFx() && !document.documentElement.classList.contains("lights-off")
 
 function frame(now: number): void {
   raf = 0

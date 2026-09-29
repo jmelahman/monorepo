@@ -27,6 +27,7 @@ import {
 import { chosenAscension, Profile } from "./meta"
 import { Music } from "./music"
 import { seal, unseal } from "./seal"
+import { currentSkin, NEXT_SKIN, setSkin } from "./skin"
 import { loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
 import type { Consent, RunEnd, RunLog } from "./telemetry"
 import {
@@ -1014,6 +1015,13 @@ export class App {
       setMotionSpeed(this.speed)
       this.render()
     },
+    // From the class on the root rather than a field: the shell applied the
+    // stored pick there before the first paint, and it is the one place the
+    // stylesheet reads it from, so it cannot disagree with what is on screen.
+    cycleSkin: () => {
+      setSkin(NEXT_SKIN[currentSkin()])
+      this.render()
+    },
     toggleAmbience: () => {
       this.ambience = !this.ambience
       setAmbience(this.ambience)
@@ -1157,6 +1165,7 @@ export class App {
       decor: this.decor,
       speed: this.speed,
       ambience: this.ambience,
+      skin: currentSkin(),
       theme: currentTheme(),
       lang: this.lang,
       wordsDeferred: this.wordsDeferred,

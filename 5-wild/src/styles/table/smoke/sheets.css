@@ -1,0 +1,24 @@
+/* The look half of `sheets.css`; the layout, and the reasons for it, are in `../sheets.css`. */
+
+:root.table.skin-smoke .sheet {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel) 30%);
+  box-shadow:
+    var(--top-light),
+    var(--shadow-hard),
+    0 2rem 3rem color-mix(in srgb, var(--shade) 70%, transparent);
+}
+
+:root.table.skin-smoke .sheet-lead {
+  color: var(--fg);
+}
+
+:root.table.skin-smoke .sheet-heading {
+  color: var(--muted);
+}
+
+:root.table.skin-smoke .help-tutorial {
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--panel-3) 60%, var(--panel));
+}

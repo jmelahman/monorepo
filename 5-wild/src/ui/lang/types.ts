@@ -10,6 +10,7 @@ import type {
   Rarity,
   Refusal,
 } from "../../engine"
+import type { Skin } from "../skin"
 import type { Theme } from "../theme"
 
 /**
@@ -602,6 +603,10 @@ export type Strings = {
       music: string
       track: string
       speed: string
+      /** The desktop table's dressing; the row exists only there. */
+      skin: string
+      /** Each skin's name, the row's value: a place or a style, so the translator's. */
+      skins: Record<Skin, string>
       /** The desktop table's lamp, dust and marquee bulbs; the row exists only there. */
       ambience: string
       /**
