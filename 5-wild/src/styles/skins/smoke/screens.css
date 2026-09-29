@@ -62,3 +62,41 @@
 :root.skin-smoke .banner.lose {
   color: var(--mult);
 }
+
+/*
+ * The round's token, drawn the way this room draws everything: flat, one hue,
+ * edged rather than lit. Classic's plate is a glossy chip with a gradient down
+ * it and a white ring inside, which is a lit object in a room that has no
+ * light. Here the plate is its round's colour at a fifth of the strength over
+ * the panel, the ring inside it is that colour at full, and the insignia is
+ * drawn in it with square ends and mitred corners, the pixel edge the panels
+ * are cut to. The silhouettes and insignia are untouched, since those are what
+ * name the round when colour cannot (see `roundToken`). Steel blue for the
+ * ordinary round rather than `--chips`, which is the blue of the counter under
+ * it and would read as one.
+ */
+:root.skin-smoke .round-token {
+  --tok-tint: #7ea6d8;
+  --tok-hi: color-mix(in srgb, var(--tok-tint) 20%, var(--panel));
+  --tok-mid: var(--tok-hi);
+  --tok-lo: var(--tok-hi);
+  --tok-rim: var(--tok-tint);
+  --tok-rim-w: 2.5px;
+  --tok-ink: var(--tok-tint);
+  --tok-cap: square;
+  --tok-join: miter;
+}
+
+:root.skin-smoke .round-token.token-elite {
+  --tok-tint: var(--gold);
+}
+
+:root.skin-smoke .round-token.token-boss {
+  --tok-tint: var(--mult);
+}
+
+/* Depth is an inset or nothing here, so the card's token lands without the
+   drop shadow Classic throws under it. */
+:root.skin-smoke .intro-card > .round-token {
+  filter: none;
+}

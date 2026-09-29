@@ -14,9 +14,6 @@
   clip-path: var(--cut);
 }
 
-:root.skin-smoke :is(.round-screen, .shop-screen) .hud .round-token {
-  filter: none;
-}
 
 :root.skin-smoke .stage {
   color: var(--muted);

@@ -142,6 +142,15 @@ export function stroked(paths: readonly string[], className: string): SVGSVGElem
  * table and not a label, and drawn here for the reason those are: `h()` cannot
  * make SVG. The gradient needs an id, and an id is document-wide, so each token
  * takes a fresh one; four are on the intro at once.
+ *
+ * The shapes are the token's and every look draws them; the paint is the look's.
+ * Each colour below is only the fallback of a custom property (`--tok-hi`,
+ * `--tok-mid`, `--tok-lo` down the gradient, `--tok-rim` and `--tok-rim-w` for
+ * the inner ring, `--tok-ink` for the insignia, `--tok-cap` and `--tok-join` for
+ * its line ends and corners), so Classic is these values exactly and a skin
+ * restyles the plate from its own stylesheet under `.token-<kind>` without this
+ * file knowing it exists. An attribute cannot hold `var()`, so the paint goes
+ * in `style`, which can.
  */
 export type TokenKind = "normal" | "elite" | "boss"
 
@@ -195,11 +204,18 @@ export function roundToken(kind: TokenKind): SVGElement {
     "aria-hidden": "true",
   })
   const gradient = make("linearGradient", { id, x1: "0", y1: "0", x2: "0.35", y2: "1" })
+  const STOP_VARS = ["--tok-hi", "--tok-mid", "--tok-lo"] as const
   spec.stops.forEach((color, index) => {
-    gradient.append(make("stop", { offset: String(index / 2), "stop-color": color }))
+    gradient.append(
+      make("stop", {
+        offset: String(index / 2),
+        style: `stop-color: var(${STOP_VARS[index]}, ${color})`,
+      }),
+    )
   })
   const defs = make("defs", {})
   defs.append(gradient)
+  const ink = `var(--tok-ink, ${spec.ink})`
   // The rim is the body again at nine tenths, which is what keeps it concentric
   // on the shield, where no offset path would be.
   svg.append(
@@ -209,16 +225,12 @@ export function roundToken(kind: TokenKind): SVGElement {
       d: spec.body,
       transform: "translate(2.4 2.4) scale(0.9)",
       fill: "none",
-      stroke: "#ffffff42",
-      "stroke-width": "1.6",
+      style: "stroke: var(--tok-rim, #ffffff42); stroke-width: var(--tok-rim-w, 1.6px)",
     }),
     make("path", {
       d: spec.glyph,
-      fill: spec.fill ? spec.ink : "none",
-      stroke: spec.ink,
       "stroke-width": spec.fill ? "1.5" : "4",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round",
+      style: `fill: ${spec.fill ? ink : "none"}; stroke: ${ink}; stroke-linecap: var(--tok-cap, round); stroke-linejoin: var(--tok-join, round)`,
     }),
   )
   return svg

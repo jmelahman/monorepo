@@ -21,9 +21,6 @@
   box-shadow: var(--top-light), var(--shadow-lift);
 }
 
-:root.skin-tabletop :is(.round-screen, .shop-screen) .hud .round-token {
-  filter: none;
-}
 
 :root.skin-tabletop .stage {
   color: var(--muted);

@@ -60,3 +60,41 @@
 :root.skin-tabletop .banner.lose {
   color: var(--mult);
 }
+
+/*
+ * The round's token as a printed counter: a bone piece like every other thing
+ * the player handles, standing on a slab of its own darker side, with the ring
+ * and the insignia printed on it in the round's ink. Classic's is a coloured
+ * glossy chip, which on walnut beside bone tiles was the one plastic thing on
+ * the table. The ink is the deep set bone is written in (`--chips-ink`,
+ * `--mult-ink`, a brass ink for the elite), so the colour still says what the
+ * shape and the insignia already say, for whoever reads colour first.
+ */
+:root.skin-tabletop .round-token {
+  --tok-tint: var(--chips-ink);
+  --tok-hi: #f8f2e4;
+  --tok-mid: var(--bone);
+  --tok-lo: var(--bone-deep);
+  --tok-rim: var(--tok-tint);
+  --tok-rim-w: 2px;
+  --tok-ink: var(--tok-tint);
+  filter: drop-shadow(0 0.0625rem 0 var(--bone-side));
+}
+
+:root.skin-tabletop .round-token.token-elite {
+  --tok-tint: #8a6417;
+}
+
+:root.skin-tabletop .round-token.token-boss {
+  --tok-tint: var(--mult-ink);
+}
+
+/* The slab scales with the piece: a hair in the stage track, the lip the tiles
+   stand on in the header, and on the card a lip and a fall of shadow under it. */
+:root.skin-tabletop :is(.round-screen, .shop-screen) .hud .round-token {
+  filter: drop-shadow(0 0.125rem 0 var(--bone-side));
+}
+
+:root.skin-tabletop .intro-card > .round-token {
+  filter: drop-shadow(0 var(--lip) 0 var(--bone-side)) drop-shadow(0 0.375rem 0.5rem #0009);
+}
