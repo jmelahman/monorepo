@@ -1,4 +1,4 @@
-import { currentSkin, hasFx, hasMovingBackground } from "../skin"
+import { hasFx } from "../skin"
 import { reduced } from "./motion"
 
 /**
@@ -23,7 +23,7 @@ import { reduced } from "./motion"
  *
  * The flat ground in `styles/skins/smoke/backdrop.css` stays underneath and is
  * what the game looks like when this does not run: no WebGL, a lost context,
- * another skin, and the still Smoke's frame not yet painted. The canvas fades in only
+ * another skin, and a reduced-motion frame not yet painted. The canvas fades in only
  * once a frame has been painted, so a failure at any step leaves the ground
  * rather than a hole.
  *
@@ -48,9 +48,6 @@ import { reduced } from "./motion"
  *   step-down to 10. It is a property of the look and not of the layout, so the
  *   Smoke Room on a phone has its smoke, and every other look on either layout
  *   creates no canvas, no context and no listener but the class watcher.
- *
- * The still Smoke gets exactly one frame and then stops, by the same road as
- * reduced motion, which is how "drawn once" is made without a second renderer.
  *
  * Reduced motion gets exactly one frame and then stops, and that frame is a
  * painted picture: motion is stopped, never compressed, so there is no
@@ -314,14 +311,9 @@ function ease(dt: number): boolean {
 }
 
 const running = (): boolean =>
-  canvas !== null &&
-  gpu !== null &&
-  !document.hidden &&
-  !covered &&
-  hasMovingBackground(currentSkin()) &&
-  !reduced()
+  canvas !== null && gpu !== null && !document.hidden && !covered && hasFx() && !reduced()
 
-/** The room's own smoke: either Smoke draws it, the still one once and the moving one always. */
+/** The room's own smoke: only the Smoke Room draws it. */
 const lit = (): boolean => hasFx()
 
 function frame(now: number): void {
@@ -444,7 +436,7 @@ function sync(): void {
  * can change at any moment (a tap on the dial, the window moving the default),
  * so this watches the root's class rather than being told, and the canvas is
  * created and removed to match. Nothing here creates a node until the skin says
- * it has a moving background.
+ * it has the smoke.
  */
 export function startBackground(): void {
   if (watching) return

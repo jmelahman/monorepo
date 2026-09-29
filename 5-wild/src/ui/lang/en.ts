@@ -904,8 +904,7 @@ export const en: Strings = {
       speed: "Animation speed",
       skin: "Look",
       skins: {
-        smoke: "Smoke room",
-        "smoke-moving": "Smoke room (moving)",
+        smoke: "Smoke Room",
         tabletop: "Tabletop",
         "classic-dark": "Classic dark",
         "classic-light": "Classic light",

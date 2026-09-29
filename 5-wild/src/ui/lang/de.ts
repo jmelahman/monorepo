@@ -852,7 +852,6 @@ export const de: Strings = {
       skin: "Design",
       skins: {
         smoke: "Rauchsalon",
-        "smoke-moving": "Rauchsalon (bewegt)",
         tabletop: "Spielbrett",
         "classic-dark": "Klassisch dunkel",
         "classic-light": "Klassisch hell",

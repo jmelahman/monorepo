@@ -186,7 +186,7 @@
 }
 
 :root.skin-smoke .round-screen .decor-toggle.bare {
-  background: none;
+  background: var(--well);
   border: var(--bw) dashed var(--slot-line);
 }
 

@@ -40,6 +40,24 @@
   pointer-events: none;
 }
 
+/*
+ * On a phone the grid is not positioned (only the table's is, `table/board.css`),
+ * so the same `::before` took the initial containing block for its box: a
+ * viewport-sized slab of `--board-bg`, 18px past every edge, which was painted
+ * over the walnut behind the whole screen (the "missing" table on the phone) and
+ * widened the page to 408x862 on a 390x844 screen. The grid becomes the anchor
+ * and the tray is drawn tighter, since a phone's grid is 25px off each edge and
+ * the desktop's 1.125rem frame plus its 0.625rem border would not fit beside it.
+ */
+:root.skin-tabletop:not(.table) .grid {
+  position: relative;
+}
+
+:root.skin-tabletop:not(.table) .grid::before {
+  inset: -0.625rem;
+  border-width: 0.25rem;
+}
+
 /* ---- the socket ------------------------------------------------------ */
 
 :root.skin-tabletop .tile {

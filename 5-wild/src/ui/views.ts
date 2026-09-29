@@ -2614,7 +2614,6 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
  */
 const SKIN_ICON: Record<Skin, IconName> = {
   smoke: "smoke",
-  "smoke-moving": "smoke",
   tabletop: "tile",
   "classic-dark": "moon",
   "classic-light": "sun",

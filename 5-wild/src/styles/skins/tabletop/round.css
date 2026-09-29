@@ -183,6 +183,42 @@
   color: var(--cash);
 }
 
+/*
+ * On the phone the score and the money sit straight on the header, and a bone
+ * card inside a walnut panel is a chip inside a chip: the header is already the
+ * object. So, as in the Smoke Room, the figures are set bare, in the panel's own
+ * ink and the money in brass, since `--cash` green is written for bone and goes
+ * to mud on brown. The desktop keeps the cards: there the rail's panel is tall
+ * and the figures are its headlines.
+ */
+:root.skin-tabletop:not(.table) .round-screen .hud-score,
+:root.skin-tabletop:not(.table) :is(.round-screen, .shop-screen) .hud-gold {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+:root.skin-tabletop:not(.table) .hud-score .score {
+  color: var(--fg);
+}
+
+:root.skin-tabletop:not(.table) .hud-score .target {
+  color: var(--muted);
+}
+
+:root.skin-tabletop:not(.table) .hud-score.met .score {
+  color: var(--accent-hi);
+}
+
+:root.skin-tabletop:not(.table) .hud-score.met {
+  border-color: transparent;
+}
+
+:root.skin-tabletop:not(.table) :is(.round-screen, .shop-screen) .hud-gold {
+  color: var(--brass);
+}
+
 :root.skin-tabletop :is(.round-screen, .shop-screen) .menu-button {
   border-radius: var(--radius-m);
 }

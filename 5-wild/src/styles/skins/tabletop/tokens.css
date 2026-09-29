@@ -58,6 +58,9 @@
   --chips: #6ea0f0;
   --mult: #e8686c;
   --gold: #d6b25e;
+  /* `--gold` is rebound to `--cash` on anything set on bone (see `cards.css`), so the
+     brass the bare phone figures need is kept under a name nothing rebinds. */
+  --brass: #d6b25e;
   --danger: #e0705c;
   --cash: #2f6b3a;
   --chips-ink: #24509a;

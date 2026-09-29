@@ -90,7 +90,7 @@
   --cell: #0e1117;
   --cell-line: #1a1e27;
   --slot-line: #181b23;
-  --draft-line: var(--accent);
+  --draft-line: #6b7180;
   --key: #151922;
   --key-line: #232834;
   --key-dead: #0b0d12;

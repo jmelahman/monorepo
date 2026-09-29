@@ -4,7 +4,6 @@ import {
   currentSkin,
   loadLegacyTone,
   loadSkin,
-  MOVING_CLASS,
   resolveSkin,
   SKINS,
   type Skin,
@@ -89,11 +88,9 @@ function apply(): void {
     prefersLight: prefersLight(),
   })
   const root = document.documentElement
-  // Both Smokes share a class, so the loop toggles it once per name and the
-  // last write for it is the wrong one; clear all, then set.
+  // One class at a time: clear every look's, then set this one's.
   for (const other of SKINS) root.classList.remove(skinClass(other))
   root.classList.add(skinClass(skin))
-  root.classList.toggle(MOVING_CLASS, skin === "smoke-moving")
   const tone = TONE[skin]
   root.dataset.theme = tone
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {

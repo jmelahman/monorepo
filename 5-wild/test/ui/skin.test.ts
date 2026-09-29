@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
-  hasMovingBackground,
   NEXT_SKIN,
   readLegacyTone,
   readSkin,
@@ -49,21 +48,14 @@ describe("skin", () => {
     expect(skin).toBe(SKINS[0])
   })
 
-  it("names one root class per look, the two smokes sharing theirs", () => {
-    expect(new Set(SKINS.map(skinClass)).size).toBe(SKINS.length - 1)
-    expect(skinClass("smoke-moving")).toBe(skinClass("smoke"))
-    for (const skin of SKINS) {
-      if (skin !== "smoke-moving") expect(skinClass(skin)).toBe(`skin-${skin}`)
-    }
+  it("names one root class per look", () => {
+    expect(new Set(SKINS.map(skinClass)).size).toBe(SKINS.length)
+    for (const skin of SKINS) expect(skinClass(skin)).toBe(`skin-${skin}`)
   })
 
   it("is light only where the phone's light palette is meant", () => {
     expect(TONE["classic-light"]).toBe("light")
     for (const skin of SKINS) if (skin !== "classic-light") expect(TONE[skin]).toBe("dark")
-  })
-
-  it("moves the background only for the moving smoke", () => {
-    expect(SKINS.filter(hasMovingBackground)).toEqual(["smoke-moving"])
   })
 
   describe("the default", () => {
@@ -75,9 +67,9 @@ describe("skin", () => {
       expect(stand({ prefersLight: true })).toBe("classic-light")
     })
 
-    it("is the moving Smoke on the desktop, whatever the device says", () => {
-      expect(stand({ table: true, prefersLight: false })).toBe("smoke-moving")
-      expect(stand({ table: true, prefersLight: true })).toBe("smoke-moving")
+    it("is the Smoke Room on the desktop, whatever the device says", () => {
+      expect(stand({ table: true, prefersLight: false })).toBe("smoke")
+      expect(stand({ table: true, prefersLight: true })).toBe("smoke")
     })
 
     it("moves an old light pick to Classic light on either layout", () => {
@@ -91,7 +83,7 @@ describe("skin", () => {
     it("moves an old dark pick to the board on a phone and the table on a desktop", () => {
       for (const prefersLight of [false, true]) {
         expect(stand({ legacy: "dark", table: false, prefersLight })).toBe("classic-dark")
-        expect(stand({ legacy: "dark", table: true, prefersLight })).toBe("smoke-moving")
+        expect(stand({ legacy: "dark", table: true, prefersLight })).toBe("smoke")
       }
     })
 

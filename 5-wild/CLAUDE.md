@@ -200,12 +200,12 @@ The look is the exception that proves that rule: `src/ui/skin.ts` and
 `src/ui/theme.ts` write one `skin-*` class on the root (`skin-smoke`,
 `skin-tabletop`, `skin-classic-dark`, `skin-classic-light`) and beside it
 `data-theme`, which is the skin's *tone*, `light` for Classic light and `dark` for
-the other four. The tone is what everything that predates the skins still keys
+the other three. The tone is what everything that predates the skins still keys
 on (the light palette under `:root[data-theme="light"]`, `BACKDROP`, the status
 bar, `ThemePlugin`, the tile inks), which is why it was kept rather than
 replaced. Until the player first taps the title-screen dial or the pause row the
 look is *unpicked* and resolved live, not stored: a phone is Classic and follows
-the device's light or dark, a desktop window is the moving Smoke, and both follow the window
+the device's light or dark, a desktop window is the Smoke Room, and both follow the window
 and the device as they change, with a `matchMedia` listener for each. A pick
 sticks from then on, with no "follow the phone" setting to go back to. The shell
 applies it before the word fetch so a light player never sees a dark page load.
@@ -222,11 +222,12 @@ layouts; a phone in Smoke is deliberate, not the desktop squeezed. Only where a
 look depends on the table's geometry is it `:root.table.skin-<name>`.
 `src/styles/table/*.css` carries no colour, face, border, shadow or motion, and
 `test/ui/skin.test.ts` fails a rule that lands in the wrong one. What the look
-*does* is `Fx` in `skin.ts`: `full` (both Smokes: the smoke canvas and everything
+*does* is `Fx` in `skin.ts`: `full` (the Smoke Room: the smoke canvas and everything
 `juiced()` gates), `tactile` (Tabletop: tiles set down, keys pressed; `tactile()`)
 and `none` (Classic). The scenes and the tile physics still ask `isTable()` as
 well, so they stay desktop-only; the one effect that is not is the smoke canvas,
-which runs on a phone at a third of the resolution and 20 fps. There are five presets and not four because motion is a preset: `smoke` is the room with the smoke drawn once, still, and `smoke-moving` is the same room drifting. They share `skin-smoke`, and the moving one adds `moving-bg` to the root, so the stylesheet is written once; `prefers-reduced-motion` stills the moving one to the frame the still one shows. A new effect
+which runs on a phone at a third of the resolution and 20 fps. Motion is not a preset: there is one Smoke Room, and `prefers-reduced-motion` stills it to the one frame
+a still picture needs, so no second look has to be kept in step. A new effect
 asks `hasFx()` or `hasTactile()` and never names a skin.
 
 The Smoke Room is drawn flat and inside its own boxes: every panel is notched with
@@ -285,12 +286,12 @@ settings are booleans except seven: `5wild:track` holds `promises` or
 `5wild:plain` holds one of `all`, `minimal` or `none`, how much of the scoring
 game the board draws on itself; `5wild:speed` holds `1`, `2` or `3`, how many
 times faster than authored the animations play; `5wild:skin` holds `smoke`,
-`smoke-moving`, `tabletop`, `classic-dark` or `classic-light`, the look the
+`tabletop`, `classic-dark` or `classic-light`, the look the
 player picked, absent meaning none has been (see the theme section for what the
 device then decides); `5wild:theme` is
 legacy: nothing writes it, and it is read only while no skin is picked, `light`
 meaning Classic light everywhere and `dark` meaning Classic dark on a phone and
-the moving Smoke on a desktop, which is what each of those players was looking
+the Smoke Room on a desktop, which is what each of those players was looking
 at. No setting stills the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
 `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning
 the switch has never been touched, which sends nothing. The game never asks: the

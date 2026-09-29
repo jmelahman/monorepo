@@ -862,7 +862,6 @@ export const fr: Strings = {
       skin: "Apparence",
       skins: {
         smoke: "Fumoir",
-        "smoke-moving": "Fumoir (animé)",
         tabletop: "Plateau",
         "classic-dark": "Classique sombre",
         "classic-light": "Classique clair",
