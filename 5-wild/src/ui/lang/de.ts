@@ -889,7 +889,7 @@ export const de: Strings = {
       licence: "Lizenz",
       licenceText: "Freie Software unter der GNU GPL, Version 3.",
       font: "Schrift",
-      fontText: "Jersey 10 und Jost, unter der SIL Open Font License 1.1.",
+      fontText: "IBM Plex und Jost, unter der SIL Open Font License 1.1.",
       back: "Zurück",
     },
 

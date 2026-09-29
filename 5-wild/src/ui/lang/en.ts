@@ -941,7 +941,7 @@ export const en: Strings = {
       licence: "Licence",
       licenceText: "Free software under the GNU GPL, version 3.",
       font: "Type",
-      fontText: "Jersey 10 and Jost, under the SIL Open Font License 1.1.",
+      fontText: "IBM Plex and Jost, under the SIL Open Font License 1.1.",
       back: "Back",
     },
 

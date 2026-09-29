@@ -157,11 +157,9 @@
   --coin-hi: #f0dc9c;
   --coin-lo: #8f7434;
 
-  /* Jersey 10 does every job: display, numbers, labels, prose. It is drawn on a
-     pixel grid and only holds together at whole multiples of it, which is what
-     `font-size-adjust` in `type.css` is for. The fallbacks are a monospace on
-     purpose: a system sans in a page of pixel type is a broken page, a
-     monospace is a different page. */
-  --font-display: "Jersey 10", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-body: "Jersey 10", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Plex Sans for everything the player reads; Plex Mono for the pops that fly
+     off a scoring letter, where a fixed width keeps a count-up from jittering
+     and the room's instrument-panel voice is worth keeping. See `fonts.css`. */
+  --font-display: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }

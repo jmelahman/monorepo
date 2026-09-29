@@ -1,18 +1,33 @@
 /*
- * The face is Jersey 10 (SIL OFL 1.1), from `@fontsource`.
+ * The faces are IBM Plex Sans and IBM Plex Mono (SIL OFL 1.1), from
+ * `@fontsource`.
  *
- * These two files are the whole of it: `@fontsource` ships one `@font-face` per
- * subset with a `unicode-range`, so a browser downloads the faces a page's
- * text actually needs, and a phone, which never matches a `:root.table` rule
- * that names the family, never downloads either. Latin-ext is what keeps the
- * Spanish, French and German prose the room carries (`ñ`, `œ`, `ß` are in it;
- * the accents on `é` and `ü` are Latin proper) from falling back to a system
- * face mid-word. Verified against the four catalogs' longest strings, not
- * assumed: see `type.css` for what a missing glyph costs here.
+ * These files are the whole of it: `@fontsource` ships one `@font-face` per
+ * subset and weight with a `unicode-range`, so a browser downloads only the
+ * faces a page's text actually needs, and a player on another skin, which never
+ * matches a rule that names the family, downloads none. Latin-ext is what keeps
+ * the Spanish, French and German prose (`ñ`, `œ`, `ß` are in it; the accents on
+ * `é` and `ü` are Latin proper) from falling back to a system face mid-word.
  *
- * It replaced Lilita One, which has since left the package altogether. Classic needs
- * neither: it is the phone's own system stack. So the face is loaded by the one
- * skin that draws it, and a player on Classic downloads no font at all.
+ * Plex replaced Jersey 10, a pixel face that did every job in the room and
+ * needed the type set 24% large across the board to be read at all; the owner
+ * still found it hard going. Four weights of the sans, because the phone's
+ * partials ask for 500 to 800 on buttons, scores and names and a real weight is
+ * what those were written for (800 lands on 700, the heaviest cut). The mono is
+ * only the score pops', at the two weights they use.
+ *
+ * It replaced Lilita One before that, which has since left the package. Classic
+ * needs none of it: it is the phone's own system stack.
  */
-@import "@fontsource/jersey-10/latin-400.css";
-@import "@fontsource/jersey-10/latin-ext-400.css";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-600.css";
+@import "@fontsource/ibm-plex-sans/latin-700.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-700.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-500.css";
+@import "@fontsource/ibm-plex-mono/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-600.css";

@@ -1,49 +1,23 @@
 /*
- * The type: one pixel face for everything, at one weight.
+ * The type: IBM Plex Sans for everything, at the weights the phone asks for.
  *
- * The casino had a chunky display face for headings and the system stack for
- * prose, and a dark outline round the display glyphs. The Smoke Room has
- * neither. Jersey 10 does numbers, headings, labels, buttons, tile letters and
- * the paragraphs in the sheets alike, because a room drawn on a pixel grid with
- * a second, smooth face in it is two rooms. What sets a label apart from a
- * paragraph is case and tracking, not family.
+ * This file used to be mostly workarounds for Jersey 10, a pixel face with one
+ * weight and a small x-height: every element pinned to 400 so a synthetic bold
+ * could not smear the pixels shut, `font-size-adjust: 0.62` to set the whole
+ * room a quarter larger than the layout was drawn for, and smoothing turned off
+ * to keep the squares square. The owner found it hard to read even so, and Plex
+ * needs none of it: it has real weights, a normal x-height and hinting made for
+ * screens, so the layout's own sizes and weights stand as Classic's do.
  *
- * Two things about a bitmap-style face that a vector one lets you ignore:
- *
- * It has one weight, so asking it for 700 gets a synthetic bold that smears the
- * pixels shut. Every element is 400 and `font-synthesis` is off, so the
- * phone's `font-weight: 800` on a button or a score cannot reach it. The
- * selector is `*` under the skin because those weights are set on dozens of
- * classes across the phone's partials, and restating each would be a list that
- * goes stale; an SVG's text is left alone, since it draws none.
- *
- * It runs small for its size. Set at the sizes the layout was drawn for, in a
- * face with a normal x-height, it reads as fine print: the design's own sheet
- * notes that it "is set larger across the board". `font-size-adjust` is that,
- * done once, at the root, instead of a number on every rule: it scales each
- * glyph to a target x-height, so 1rem of Jersey 10 stands as tall as 1rem of
- * the system face. It is set to 0.62, up from 0.5, which the owner found too
- * small everywhere: labels, card text and key values were the worst. Judged at
- * 1440x900 and 390x844 in English and German. It is inherited, so nothing below restates it, and the
- * layout files keep their sizes, which is the split that lets Classic exist.
- * A WebView that does not know the property shows the face smaller and nothing
- * else breaks.
+ * What sets a label apart from a paragraph is still case and tracking, below.
  */
 :root.skin-smoke {
   font-family: var(--font-body);
-  font-synthesis: none;
-  font-size-adjust: var(--face-adjust);
-  /* Sharp edges only: the face is a grid of squares and smoothing rounds them. */
-  -webkit-font-smoothing: none;
-  --face-adjust: 0.62;
+  font-variant-numeric: tabular-nums;
 }
 
 :root.skin-smoke body {
   font-family: var(--font-body);
-}
-
-:root.skin-smoke :is(*, *::before, *::after):not(svg *) {
-  font-weight: 400;
 }
 
 /* Labels: the small caps-and-tracking the design puts on anything that names

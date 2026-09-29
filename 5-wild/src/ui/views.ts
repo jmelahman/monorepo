@@ -3793,8 +3793,8 @@ function musicCredit(): HTMLElement {
   )
 }
 
-/** The typefaces' designers (Jersey 10, Jost), named in every language as the other credits' people are. */
-const FONT_DESIGNER = "Sarah Cadigan-Fried, Owen Earl"
+/** The typefaces' designers (IBM Plex, Jost), named in every language as the other credits' people are. */
+const FONT_DESIGNER = "Mike Abbink, Bold Monday, Owen Earl"
 
 export function creditsView(on: Handlers): HTMLElement {
   const copy = ui().credits
