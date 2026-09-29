@@ -55,17 +55,17 @@ describe("what a played tile says about how it scored", () => {
     // QUAZY against BRAID: 26 chips × 4 mult, and a lone green on the A.
     const state = play(start(), "quazy")
     expect(lines(state, 0, 0)).toEqual([
-      "Q · +10 chips",
+      "Q · +10 points",
       "gray · no mult",
-      "10 of 26 chips · no mult",
+      "10 of 26 points · no mult",
     ])
     // The green: a single chip of the 26 and three of the four mult, which is the
     // reading a share of the score would have lost: 1 × 4 of 104 makes the tile
     // that quadrupled the row look like the cheapest thing in it.
     expect(lines(state, 0, 2)).toEqual([
-      "A · +1 chip",
+      "A · +1 point",
       "green · +3 mult",
-      "1 of 26 chips · 3 of 4 mult",
+      "1 of 26 points · 3 of 4 mult",
     ])
   })
 
@@ -75,10 +75,10 @@ describe("what a played tile says about how it scored", () => {
     if (!q) throw new Error("no Q")
     const state = play({ ...etched, letters: { ...etched.letters, q: { ...q, etch: 2 } } }, "quazy")
     expect(lines(state, 0, 0)).toEqual([
-      "Q · +12 chips",
+      "Q · +12 points",
       "10 base +2 etched",
       "gray · no mult",
-      "12 of 28 chips · no mult",
+      "12 of 28 points · no mult",
     ])
   })
 
@@ -97,11 +97,11 @@ describe("what a played tile says about how it scored", () => {
     )
     const state = play(rusted, "quazy")
     expect(lines(state, 0, 0)).toEqual([
-      "Q · +10 chips",
+      "Q · +10 points",
       "10 base +2 etched",
       "The Rust: Letter upgrades score nothing. Letters are worth only what they started as.",
       "gray · no mult",
-      "10 of 26 chips · no mult",
+      "10 of 26 points · no mult",
     ])
     // U is worth what it always was, so The Rust is not named on it: a boss line
     // under every letter would make the whole row look cursed.
@@ -128,10 +128,10 @@ describe("what a played tile says about how it scored", () => {
     const state = play(underBoss({ ...start(), relics: [{ id: "bloodhound" }] }, "fog"), "dairy")
     expect(state.round.guesses[0]?.tiles[0]).toMatchObject({ color: "yellow", shown: "gray" })
     expect(lines(state, 0, 0)).toEqual([
-      "D · +2 chips",
+      "D · +2 points",
       "yellow · +1 mult",
       "Bloodhound · +6",
-      "8 of 33 chips · 1 of 5 mult",
+      "8 of 33 points · 1 of 5 mult",
     ])
   })
 
@@ -149,16 +149,16 @@ describe("what a played tile says about how it scored", () => {
   it("tells a card that declined apart from one that was silenced", () => {
     const declined = play(withMod(start(), "c", "anchor"), "crane")
     expect(lines(declined, 0, 0)).toContain(
-      "Anchor · scores +125 chips when it lands green · nothing this time",
+      "Anchor · scores +125 points when it lands green · nothing this time",
     )
 
     const silenced = play(underBoss(withMod(start(), "c", "steel"), "vandal"), "crane")
     expect(lines(silenced, 0, 0)).toContain("Steel · scores ×2 mult · silenced this round")
 
     expect(lines(play(start(), "crane"), 0, 0)).toEqual([
-      "C · +3 chips",
+      "C · +3 points",
       "gray · no mult",
-      "3 of 7 chips · no mult",
+      "3 of 7 points · no mult",
     ])
   })
 
@@ -171,12 +171,12 @@ describe("what a played tile says about how it scored", () => {
   it("names the relics that paid on the tile", () => {
     const state = play({ ...start(), relics: [{ id: "green_thumb" }] }, "quazy")
     expect(lines(state, 0, 2)).toEqual([
-      "A · +1 chip",
+      "A · +1 point",
       "green · +3 mult",
       "Green Thumb · +4",
       // The relic's 4 counts toward the column that earned it, so the share adds
       // up the lines above it rather than repeating the letter's own chips.
-      "5 of 30 chips · 3 of 4 mult",
+      "5 of 30 points · 3 of 4 mult",
     ])
     // And nothing on the four tiles it did not want.
     expect(lines(state, 0, 0).some((line) => line.startsWith("Green Thumb"))).toBe(false)
@@ -191,9 +191,9 @@ describe("what a played tile says about how it scored", () => {
   it("says nothing about a relic that was asked and did nothing", () => {
     const state = play({ ...start(), relics: [{ id: "bloodhound" }] }, "quazy")
     expect(lines(state, 0, 0)).toEqual([
-      "Q · +10 chips",
+      "Q · +10 points",
       "gray · no mult",
-      "10 of 26 chips · no mult",
+      "10 of 26 points · no mult",
     ])
   })
 

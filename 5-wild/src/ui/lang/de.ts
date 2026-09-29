@@ -6,18 +6,18 @@ const plural = pluralizer("de")
 
 /** Read by one refusal, which has to name the card it is turning down. */
 const MODIFIER: Strings["modifier"] = {
-  chip: { name: "Chip", text: "bringt +20 Chips" },
+  chip: { name: "Chip", text: "bringt +20 Punkte" },
   mult: { name: "Mult", text: "bringt +8 Mult" },
   gold: { name: "Gold", text: "bringt $2, jedes Mal wenn du ihn spielst" },
   wild: { name: "Joker", text: "bringt +24 Mult auf Grau, +14 auf Gelb, +4 auf Grün" },
   lucky: { name: "Glückspilz", text: "bringt mit 1-zu-4-Chance +20 Mult" },
-  echo: { name: "Echo", text: "bringt +60 Chips, wenn das Wort ihn wiederholt" },
-  anchor: { name: "Anker", text: "bringt +125 Chips, wenn er grün wird" },
+  echo: { name: "Echo", text: "bringt +60 Punkte, wenn das Wort ihn wiederholt" },
+  anchor: { name: "Anker", text: "bringt +125 Punkte, wenn er grün wird" },
   steel: { name: "Stahl", text: "bringt ×2 Mult" },
   glass: { name: "Glas", text: "bringt ×3 Mult und kann zerbrechen, wenn er grau wird" },
 }
 
-const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "Chips", mult: "Mult" }
+const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "Punkte", mult: "Mult" }
 
 const COLOR: Record<Color, string> = { green: "grün", yellow: "gelb", gray: "grau" }
 
@@ -25,7 +25,8 @@ const COLOR: Record<Color, string> = { green: "grün", yellow: "gelb", gray: "gr
  * German. `en.ts` is the reference; this is one filling of the same shape.
  *
  * The vocabulary, which is mostly a matter of picking one word and never
- * wavering: a *chip* is a `Chip`, a *guess* is a `Versuch`, a *run* is a
+ * wavering: what the engine calls a *chip* is a `Punkt` (it
+ * was a `Chip` until the English went to "points"), a *guess* is a `Versuch`, a *run* is a
  * `Durchlauf` — `Lauf` alone is a footrace — a *stage* is an `Etappe` and a
  * *round* a `Runde`. A *pack* is a `Booster`, which is what German card players
  * call one.
@@ -48,7 +49,7 @@ export const de: Strings = {
   endonym: "Deutsch",
 
   relic: {
-    green_thumb: { name: "Grüner Daumen", text: "+4 Chips pro grünem Feld" },
+    green_thumb: { name: "Grüner Daumen", text: "+4 Punkte pro grünem Feld" },
     scavenger: { name: "Aasfresser", text: "+$1 pro gelbem Feld" },
     vowel_hoarder: { name: "Vokalhorter", text: "+4 Mult pro Vokal" },
     slow_burn: { name: "Schwelbrand", text: "+5 Mult für jeden Versuch schon in der Runde" },
@@ -56,31 +57,31 @@ export const de: Strings = {
       name: "Konsonantenhäufung",
       text: "×1.5 Mult, wenn das Wort 3+ Konsonanten hintereinander hat",
     },
-    cold_open: { name: "Kaltstart", text: "+30 Chips beim ersten Versuch einer Runde" },
-    bloodhound: { name: "Bluthund", text: "+6 Chips pro gelbem Feld" },
+    cold_open: { name: "Kaltstart", text: "+30 Punkte beim ersten Versuch einer Runde" },
+    bloodhound: { name: "Bluthund", text: "+6 Punkte pro gelbem Feld" },
     head_start: { name: "Vorsprung", text: "+15 Mult, wenn das Wort mit einem Vokal beginnt" },
     loaded_dice: { name: "Gezinkte Würfel", text: "+0 bis +20 Mult, bei jedem Versuch neu" },
     anagrammer: { name: "Anagrammist", text: "×2 Mult, wenn sich kein Buchstabe wiederholt" },
     keystone: { name: "Schlussstein", text: "×2,5 Mult, wenn das mittlere Feld grün ist" },
     lexicographer: {
       name: "Lexikograph",
-      text: "+3 Chips pro Buchstabe, den deine früheren Versuche der Runde nicht hatten",
+      text: "+3 Punkte pro Buchstabe, den deine früheren Versuche der Runde nicht hatten",
     },
     sunk_cost: { name: "Versunkene Kosten", text: "+6 Mult pro Versuch, der dir bliebe" },
     speedrunner: { name: "Sprinter", text: "×3 Mult, wenn du in 3 Versuchen oder weniger löst" },
-    qs_bargain: { name: "Das Q-Schnäppchen", text: "J, Q, X und Z bringen dreifache Chips" },
-    greedy_grammarian: { name: "Gieriger Grammatiker", text: "+15 Chips pro grauem Feld" },
+    qs_bargain: { name: "Das Q-Schnäppchen", text: "J, Q, X und Z bringen dreifache Punkte" },
+    greedy_grammarian: { name: "Gieriger Grammatiker", text: "+15 Punkte pro grauem Feld" },
     doppelganger: {
       name: "Doppelgänger",
-      text: "Wiederholte Buchstaben bringen ihre Chips zweimal",
+      text: "Wiederholte Buchstaben bringen ihre Punkte zweimal",
     },
     hot_streak: {
       name: "Glückssträhne",
-      text: "Gewinnt dauerhaft +12 Chips pro Runde, die in 3 Versuchen oder weniger geschafft ist",
+      text: "Gewinnt dauerhaft +12 Punkte pro Runde, die in 3 Versuchen oder weniger geschafft ist",
     },
     hoarder: {
       name: "Der Hamsterer",
-      text: "Gewinnt dauerhaft +40 Chips, wenn du mit beiden Kartenplätzen voll in den Laden kommst",
+      text: "Gewinnt dauerhaft +40 Punkte, wenn du mit beiden Kartenplätzen voll in den Laden kommst",
     },
     masochist: { name: "Masochist", text: "+8 Mult pro grauem Feld" },
     chorus: { name: "Der Chor", text: "×3 Mult, wenn das Wort drei oder mehr Vokale hat" },
@@ -88,7 +89,7 @@ export const de: Strings = {
       name: "Alphabetist",
       text: "×2 Mult, wenn deine Buchstaben in alphabetischer Reihenfolge stehen",
     },
-    vault: { name: "Der Tresor", text: "+25 Chips für jeden Versuch schon in der Runde" },
+    vault: { name: "Der Tresor", text: "+25 Punkte für jeden Versuch schon in der Runde" },
     mint: {
       name: "Die Münzstätte",
       text: "+3 Mult pro $5, die du hältst. Du bekommst keine Zinsen.",
@@ -111,8 +112,8 @@ export const de: Strings = {
       text: "+15 Mult. 1 zu 6, dass sie am Ende jeder Runde eintrocknet",
     },
     first_draft: { name: "Erster Entwurf", text: "+20 Mult, 4 weniger am Ende jeder Runde" },
-    candle: { name: "Kerze", text: "+30 Chips, 6 weniger am Ende jeder Runde" },
-    reserve: { name: "Reserve", text: "+4 Chips pro Versuch, der dir bliebe" },
+    candle: { name: "Kerze", text: "+30 Punkte, 6 weniger am Ende jeder Runde" },
+    reserve: { name: "Reserve", text: "+4 Punkte pro Versuch, der dir bliebe" },
     collector: { name: "Sammler", text: "+4 Mult pro Relikt, das du hältst" },
     second_look: {
       name: "Zweiter Blick",
@@ -161,7 +162,7 @@ export const de: Strings = {
       name: "Der Tyrann",
       text: "Jeder Versuch muss die grünen Buchstaben wiederverwenden, die du gefunden hast.",
     },
-    miser: { name: "Der Geizhals", text: "Schon benutzte Buchstaben bringen keine Chips." },
+    miser: { name: "Der Geizhals", text: "Schon benutzte Buchstaben bringen keine Punkte." },
     clock: { name: "Die Uhr", text: "Nur vier Versuche." },
     glutton: { name: "Der Vielfraß", text: "Jeder Versuch braucht mindestens zwei Vokale." },
     auditor: { name: "Der Prüfer", text: "Dein Lösungs-Multiplikator ist bei ×2 gedeckelt." },
@@ -169,7 +170,7 @@ export const de: Strings = {
       name: "Der Purist",
       text: "Kein Buchstabe darf in einem Versuch zweimal vorkommen.",
     },
-    drought: { name: "Die Dürre", text: "Vokale bringen keine Chips." },
+    drought: { name: "Die Dürre", text: "Vokale bringen keine Punkte." },
     mirror: {
       name: "Der Spiegel",
       text: "Deine Hinweise erscheinen rückwärts. Sie zählen weiterhin so, wie sie gefallen sind.",
@@ -179,7 +180,7 @@ export const de: Strings = {
       name: "Der Rost",
       text: "Buchstaben-Aufwertungen bringen nichts. Jeder Buchstabe zählt nur seinen Grundwert.",
     },
-    margin: { name: "Der Rand", text: "Der erste und der letzte Buchstabe bringen keine Chips." },
+    margin: { name: "Der Rand", text: "Der erste und der letzte Buchstabe bringen keine Punkte." },
     vandal: { name: "Der Vandale", text: "Buchstaben-Modifikatoren tun nichts." },
     plateau: {
       name: "Das Plateau",
@@ -222,22 +223,22 @@ export const de: Strings = {
   etching: {
     etch_vowels: {
       name: "Vokale gravieren",
-      text: (chips) => `A E I O U bringen +${chips} Chips`,
+      text: (chips) => `A E I O U bringen +${chips} Punkte`,
     },
     etch_staples: {
       name: "Häufige gravieren",
-      text: (chips) => `L N S T R bringen +${chips} Chips`,
+      text: (chips) => `L N S T R bringen +${chips} Punkte`,
     },
     etch_heavy: {
       name: "Schwere gravieren",
-      text: (chips) => `J Q X Z bringen +${chips} Chips`,
+      text: (chips) => `J Q X Z bringen +${chips} Punkte`,
     },
     etch_consonants: {
       name: "Konsonanten gravieren",
       text: (chips) =>
         plural(chips, {
-          one: `Jeder Konsonant bringt +${chips} Chip`,
-          other: `Jeder Konsonant bringt +${chips} Chips`,
+          one: `Jeder Konsonant bringt +${chips} Punkt`,
+          other: `Jeder Konsonant bringt +${chips} Punkte`,
         }),
     },
   },
@@ -442,17 +443,17 @@ export const de: Strings = {
     tip: {
       tileChips: (letter, chips) =>
         chips === 0
-          ? `${letter.toUpperCase()} · keine Chips`
+          ? `${letter.toUpperCase()} · keine Punkte`
           : plural(chips, {
-              one: `${letter.toUpperCase()} · +${chips} Chip`,
-              other: `${letter.toUpperCase()} · +${chips} Chips`,
+              one: `${letter.toUpperCase()} · +${chips} Punkt`,
+              other: `${letter.toUpperCase()} · +${chips} Punkte`,
             }),
       keyChips: (letter, chips) =>
         chips === 0
-          ? `${letter.toUpperCase()} · keine Chips`
+          ? `${letter.toUpperCase()} · keine Punkte`
           : plural(chips, {
-              one: `${letter.toUpperCase()} · ${chips} Chip`,
-              other: `${letter.toUpperCase()} · ${chips} Chips`,
+              one: `${letter.toUpperCase()} · ${chips} Punkt`,
+              other: `${letter.toUpperCase()} · ${chips} Punkte`,
             }),
       broken: (letter) => `${letter.toUpperCase()} · zerbrochen, nicht mehr tippbar`,
       base: (chips) => `${chips} Grundwert`,
@@ -466,9 +467,9 @@ export const de: Strings = {
       modSilenced: (name, text) => `${name} · ${text} · diese Runde stumm`,
       modQuiet: (name, text) => `${name} · ${text} · diesmal nichts`,
       relic: (name, badge) => `${name} · ${badge}`,
-      share: (chips, total) => `${chips} von ${total} Chips · kein Mult`,
+      share: (chips, total) => `${chips} von ${total} Punkten · kein Mult`,
       shareWithMult: (chips, total, mult, multTotal) =>
-        `${chips} von ${total} Chips · ${mult} von ${multTotal} Mult`,
+        `${chips} von ${total} Punkten · ${mult} von ${multTotal} Mult`,
     },
 
     intro: {
@@ -528,7 +529,7 @@ export const de: Strings = {
       tipShape: "Es stuft eine Wortform auf, sodass jeder Versuch dieser Form mehr zahlt.",
       tagEtching: "Gravur",
       tipEtching:
-        "Sie gibt einer Gruppe von Buchstaben dauerhaft Chips, und Nachkaufen summiert sich.",
+        "Sie gibt einer Gruppe von Buchstaben dauerhaft Punkte, und Nachkaufen summiert sich.",
 
       modAnyTitle: (name) => `${name} · beliebiger Buchstabe`,
       modAnyText: (text) => `Wähle einen beliebigen Buchstaben. Er ${text}`,
@@ -539,10 +540,10 @@ export const de: Strings = {
       swap: (name, pip) => `Ersetzt ${name} ${pip}`,
 
       rangeTitle: (name, level) => `${name} → Stufe ${level}`,
-      rangeText: (letters, chips) => `${letters} bringen +${chips} Chips pro Stufe`,
+      rangeText: (letters, chips) => `${letters} bringen +${chips} Punkte pro Stufe`,
       levelTitle: (name, level) => `${name} → Stufe ${level}`,
       levelText: (name, chips, mult) =>
-        `${name}-Wörter bringen +${chips} Chips und +${mult} Mult pro Stufe`,
+        `${name}-Wörter bringen +${chips} Punkte und +${mult} Mult pro Stufe`,
       fallbackRange: "Bereich",
       fallbackLevel: "Stufe",
       fallbackEtching: "Gravur",
@@ -654,11 +655,11 @@ export const de: Strings = {
         "Platz, Gelb der richtige Buchstabe woanders.",
       scored: "Der Unterschied ist, dass jeder Versuch gewertet wird.",
       chipsMult: {
-        term: "Chips × Mult",
-        text: "Jeder Versuch ist seine Chips mal seinen Mult wert.",
+        term: "Punkte × Mult",
+        text: "Jeder Versuch ist seine Punkte mal seinen Mult wert.",
       },
       letters: {
-        term: "Buchstaben zahlen Chips",
+        term: "Buchstaben zahlen Punkte",
         text:
           "Seltene Buchstaben zahlen mehr. Der Laden verkauft zwei Wege, sie aufzuwerten: " +
           "Gravuren, die einer Sorte Buchstaben etwas geben, und Stufen auf einem Abschnitt des " +
@@ -765,8 +766,8 @@ export const de: Strings = {
         "Stufe 1 zahlt nichts, sodass erst eine Stufe eine Form lohnend macht.",
       scoring: "zählt als",
       alsoMatches: "erfüllt außerdem",
-      payNow: (chips, mult) => `jetzt +${chips} Chips, +${mult} Mult`,
-      payPerLevel: (chips, mult) => `+${chips} Chips, +${mult} Mult pro Stufe`,
+      payNow: (chips, mult) => `jetzt +${chips} Punkte, +${mult} Mult`,
+      payPerLevel: (chips, mult) => `+${chips} Punkte, +${mult} Mult pro Stufe`,
     },
 
     codex: {
@@ -812,7 +813,7 @@ export const de: Strings = {
       upgrades: {
         title: "Buchstaben-Aufwertungen",
         blurb:
-          "Zwei Wege, die beide Buchstaben Chips geben und sich summieren: Gravuren heben eine " +
+          "Zwei Wege, die beide Buchstaben Punkte geben und sich summieren: Gravuren heben eine " +
           "Sorte Buchstaben, Bereiche heben einen Abschnitt des Alphabets. Jeder Buchstabe " +
           "liegt in genau einem Abschnitt.",
       },
@@ -908,7 +909,7 @@ export const de: Strings = {
       chips:
         "Jeder Versuch wird gewertet. Tippe ein Wort, und die Zeile über dem Brett addiert, was seine Buchstaben wert sind.",
       rare: (chips) =>
-        `${chips} Chips bisher. Seltene Buchstaben zahlen mehr: A bringt 1, K bringt 5, Z bringt 10.`,
+        `${chips} Punkte bisher. Seltene Buchstaben zahlen mehr: A bringt 1, K bringt 5, Z bringt 10.`,
       mult: "Das ? ist der Mult. Jedes gelbe Feld erhöht ihn um 1, jedes grüne um 3. Wortformen und Relikte erhöhen ihn weiter. Drück ENTER, um den Mult dieses Versuchs zu sehen.",
       banked: (chips, mult, score, target) =>
         `${chips} × ${mult} = ${score}, angesammelt Richtung ${target}. Jeder Versuch kommt auf denselben Haufen.`,

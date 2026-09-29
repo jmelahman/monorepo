@@ -6,18 +6,18 @@ const plural = pluralizer("es")
 
 /** Read by one refusal, which has to name the card it is turning down. */
 const MODIFIER: Strings["modifier"] = {
-  chip: { name: "Ficha", text: "puntúa +20 fichas" },
-  mult: { name: "Mult", text: "puntúa +8 mult" },
+  chip: { name: "Ficha", text: "da +20 puntos" },
+  mult: { name: "Mult", text: "da +8 mult" },
   gold: { name: "Oro", text: "paga $2 cada vez que la juegas" },
-  wild: { name: "Comodín", text: "puntúa +24 mult en gris, +14 en amarillo, +4 en verde" },
+  wild: { name: "Comodín", text: "da +24 mult en gris, +14 en amarillo, +4 en verde" },
   lucky: { name: "Suerte", text: "tiene 1 posibilidad entre 4 de puntuar +20 mult" },
-  echo: { name: "Eco", text: "puntúa +60 fichas cuando la palabra la repite" },
-  anchor: { name: "Ancla", text: "puntúa +125 fichas cuando cae en verde" },
+  echo: { name: "Eco", text: "da +60 puntos cuando la palabra la repite" },
+  anchor: { name: "Ancla", text: "da +125 puntos cuando cae en verde" },
   steel: { name: "Acero", text: "puntúa ×2 mult" },
   glass: { name: "Cristal", text: "puntúa ×3 mult, y puede romperse cuando cae en gris" },
 }
 
-const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "fichas", mult: "mult" }
+const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "puntos", mult: "mult" }
 
 const COLOR: Record<Color, string> = { green: "verde", yellow: "amarillo", gray: "gris" }
 
@@ -25,9 +25,10 @@ const COLOR: Record<Color, string> = { green: "verde", yellow: "amarillo", gray:
  * Spanish. `en.ts` is the reference; this is one filling of the same shape.
  *
  * Four words carry the whole game and are used the same way everywhere below,
- * so they are worth stating once. A *chip* is a `ficha`, the gambling token, not
- * a `patata frita` and not a `chip` — the game is built out of a casino's
- * vocabulary and Spanish has the same casino. A *guess* is an `intento` rather
+ * so they are worth stating once. What the engine calls a *chip* is a `punto`
+ * (it was a `ficha`, the gambling token, until the English went to "points":
+ * a word-game player has never met the casino term, and the total already
+ * reads as `puntuación`). A *guess* is an `intento` rather
  * than a `conjetura`, because the player is spending one of six, and what they
  * spend is an attempt. A *run* is a `partida`, which is also what `game` would
  * be, and that collision is fine here: this game has no other meaning for the
@@ -43,7 +44,7 @@ export const es: Strings = {
   endonym: "Español",
 
   relic: {
-    green_thumb: { name: "Mano Verde", text: "+4 fichas por casilla verde" },
+    green_thumb: { name: "Mano Verde", text: "+4 puntos por casilla verde" },
     scavenger: { name: "Carroñero", text: "+$1 por casilla amarilla" },
     vowel_hoarder: { name: "Acaparador de Vocales", text: "+4 mult por vocal" },
     slow_burn: {
@@ -54,36 +55,36 @@ export const es: Strings = {
       name: "Grupo Consonántico",
       text: "×1.5 mult si la palabra tiene 3+ consonantes seguidas",
     },
-    cold_open: { name: "Arranque en Frío", text: "+30 fichas en el primer intento de la ronda" },
-    bloodhound: { name: "Sabueso", text: "+6 fichas por casilla amarilla" },
+    cold_open: { name: "Arranque en Frío", text: "+30 puntos en el primer intento de la ronda" },
+    bloodhound: { name: "Sabueso", text: "+6 puntos por casilla amarilla" },
     head_start: { name: "Ventaja", text: "+15 mult si la palabra empieza por vocal" },
     loaded_dice: { name: "Dados Cargados", text: "+0 a +20 mult, tirados de nuevo cada intento" },
     anagrammer: { name: "Anagramista", text: "×2 mult si no se repite ninguna letra" },
     keystone: { name: "Clave de Bóveda", text: "×2,5 mult si la casilla central es verde" },
     lexicographer: {
       name: "Lexicógrafo",
-      text: "+3 fichas por cada letra distinta de tus intentos anteriores en la ronda",
+      text: "+3 puntos por cada letra distinta de tus intentos anteriores en la ronda",
     },
     sunk_cost: { name: "Coste Hundido", text: "+6 mult por cada intento que te quedaría" },
     speedrunner: { name: "Velocista", text: "×3 mult si resuelves en 3 intentos o menos" },
-    qs_bargain: { name: "El Trato de la Q", text: "J, Q, X y Z puntúan fichas triples" },
-    greedy_grammarian: { name: "Gramático Avaro", text: "+15 fichas por casilla gris" },
+    qs_bargain: { name: "El Trato de la Q", text: "J, Q, X y Z dan puntos triples" },
+    greedy_grammarian: { name: "Gramático Avaro", text: "+15 puntos por casilla gris" },
     doppelganger: {
       name: "Doppelgänger",
-      text: "Las letras repetidas puntúan sus fichas dos veces",
+      text: "Las letras repetidas cuentan sus puntos dos veces",
     },
     hot_streak: {
       name: "Racha",
-      text: "Gana +12 fichas permanentes por cada ronda que superes en 3 intentos o menos",
+      text: "Gana +12 puntos permanentes por cada ronda que superes en 3 intentos o menos",
     },
     hoarder: {
       name: "El Acaparador",
-      text: "Gana +40 fichas permanentes al llegar a la tienda con las dos ranuras de carta llenas",
+      text: "Gana +40 puntos permanentes al llegar a la tienda con las dos ranuras de carta llenas",
     },
     masochist: { name: "Masoquista", text: "+8 mult por casilla gris" },
     chorus: { name: "El Coro", text: "×3 mult si la palabra tiene tres vocales o más" },
     alphabetist: { name: "Alfabetista", text: "×2 mult si tus letras van en orden alfabético" },
-    vault: { name: "La Cámara", text: "+25 fichas por cada intento ya hecho en la ronda" },
+    vault: { name: "La Cámara", text: "+25 puntos por cada intento ya hecho en la ronda" },
     mint: {
       name: "La Casa de la Moneda",
       text: "+3 mult por cada $5 que tengas. No ganas intereses.",
@@ -106,8 +107,8 @@ export const es: Strings = {
       text: "+15 mult. 1 entre 6 de secarse al final de cada ronda",
     },
     first_draft: { name: "Borrador", text: "+20 mult, 4 menos al final de cada ronda" },
-    candle: { name: "Vela", text: "+30 fichas, 6 menos al final de cada ronda" },
-    reserve: { name: "Reserva", text: "+4 fichas por cada intento que te quedaría" },
+    candle: { name: "Vela", text: "+30 puntos, 6 menos al final de cada ronda" },
+    reserve: { name: "Reserva", text: "+4 puntos por cada intento que te quedaría" },
     collector: { name: "Coleccionista", text: "+4 mult por cada reliquia que tengas" },
     second_look: { name: "Otro Vistazo", text: "Tu primera renovación en cada tienda es gratis" },
     stipend: { name: "Estipendio", text: "Gana $2 al final de cada ronda que superes" },
@@ -156,12 +157,12 @@ export const es: Strings = {
       name: "El Tirano",
       text: "Cada intento debe reutilizar las letras verdes que hayas encontrado.",
     },
-    miser: { name: "El Avaro", text: "Las letras que ya hayas usado no puntúan fichas." },
+    miser: { name: "El Avaro", text: "Las letras que ya hayas usado no dan puntos." },
     clock: { name: "El Reloj", text: "Solo cuatro intentos." },
     glutton: { name: "El Glotón", text: "Cada intento debe contener al menos dos vocales." },
     auditor: { name: "El Auditor", text: "Tu multiplicador de resolución se limita a ×2." },
     purist: { name: "El Purista", text: "Ninguna letra puede aparecer dos veces en un intento." },
-    drought: { name: "La Sequía", text: "Las vocales no puntúan fichas." },
+    drought: { name: "La Sequía", text: "Las vocales no dan puntos." },
     mirror: {
       name: "El Espejo",
       text: "Tus pistas se muestran del revés. Siguen puntuando como cayeron.",
@@ -171,7 +172,7 @@ export const es: Strings = {
       name: "El Óxido",
       text: "Las mejoras de letra no puntúan. Cada letra vale solo lo que valía al principio.",
     },
-    margin: { name: "El Margen", text: "La primera y la última letra no puntúan fichas." },
+    margin: { name: "El Margen", text: "La primera y la última letra no dan puntos." },
     vandal: { name: "El Vándalo", text: "Los modificadores de letra no hacen nada." },
     plateau: {
       name: "La Meseta",
@@ -214,22 +215,22 @@ export const es: Strings = {
   etching: {
     etch_vowels: {
       name: "Grabar Vocales",
-      text: (chips) => `A E I O U valen +${chips} fichas`,
+      text: (chips) => `A E I O U valen +${chips} puntos`,
     },
     etch_staples: {
       name: "Grabar Básicas",
-      text: (chips) => `L N S T R valen +${chips} fichas`,
+      text: (chips) => `L N S T R valen +${chips} puntos`,
     },
     etch_heavy: {
       name: "Grabar Pesadas",
-      text: (chips) => `J Q X Z valen +${chips} fichas`,
+      text: (chips) => `J Q X Z valen +${chips} puntos`,
     },
     etch_consonants: {
       name: "Grabar Consonantes",
       text: (chips) =>
         plural(chips, {
-          one: `Cada consonante vale +${chips} ficha`,
-          other: `Cada consonante vale +${chips} fichas`,
+          one: `Cada consonante vale +${chips} punto`,
+          other: `Cada consonante vale +${chips} puntos`,
         }),
     },
   },
@@ -435,21 +436,21 @@ export const es: Strings = {
     tip: {
       tileChips: (letter, chips) =>
         chips === 0
-          ? `${letter.toUpperCase()} · sin fichas`
+          ? `${letter.toUpperCase()} · sin puntos`
           : plural(chips, {
-              one: `${letter.toUpperCase()} · +${chips} ficha`,
-              other: `${letter.toUpperCase()} · +${chips} fichas`,
+              one: `${letter.toUpperCase()} · +${chips} punto`,
+              other: `${letter.toUpperCase()} · +${chips} puntos`,
             }),
       keyChips: (letter, chips) =>
         chips === 0
-          ? `${letter.toUpperCase()} · sin fichas`
+          ? `${letter.toUpperCase()} · sin puntos`
           : plural(chips, {
-              one: `${letter.toUpperCase()} · ${chips} ficha`,
-              other: `${letter.toUpperCase()} · ${chips} fichas`,
+              one: `${letter.toUpperCase()} · ${chips} punto`,
+              other: `${letter.toUpperCase()} · ${chips} puntos`,
             }),
       broken: (letter) => `${letter.toUpperCase()} · rota, ya no se puede escribir`,
       base: (chips) => `${chips} de base`,
-      etched: (chips) => `+${chips} grabadas`,
+      etched: (chips) => `+${chips} grabados`,
       fromRange: (chips, range, level) => `+${chips} de ${range} Nv ${level}`,
       boss: (name, text) => `${name}: ${text}`,
       color: (color, mult) =>
@@ -459,9 +460,9 @@ export const es: Strings = {
       modSilenced: (name, text) => `${name} · ${text} · silenciado esta ronda`,
       modQuiet: (name, text) => `${name} · ${text} · nada esta vez`,
       relic: (name, badge) => `${name} · ${badge}`,
-      share: (chips, total) => `${chips} de ${total} fichas · sin mult`,
+      share: (chips, total) => `${chips} de ${total} puntos · sin mult`,
       shareWithMult: (chips, total, mult, multTotal) =>
-        `${chips} de ${total} fichas · ${mult} de ${multTotal} mult`,
+        `${chips} de ${total} puntos · ${mult} de ${multTotal} mult`,
     },
 
     intro: {
@@ -521,7 +522,7 @@ export const es: Strings = {
       tagShape: "Forma de palabra",
       tipShape: "Sube de nivel una forma de palabra, así cada intento de esa forma paga más.",
       tagEtching: "Grabado",
-      tipEtching: "Añade fichas a un grupo de letras para siempre, y comprarlo otra vez acumula.",
+      tipEtching: "Añade puntos a un grupo de letras para siempre, y comprarlo otra vez acumula.",
 
       modAnyTitle: (name) => `${name} · cualquier letra`,
       modAnyText: (text) => `Elige cualquier letra. ${text}`,
@@ -531,10 +532,10 @@ export const es: Strings = {
       swap: (name, pip) => `Sustituye a ${name} ${pip}`,
 
       rangeTitle: (name, level) => `${name} → Nv ${level}`,
-      rangeText: (letters, chips) => `${letters} valen +${chips} fichas por nivel`,
+      rangeText: (letters, chips) => `${letters} valen +${chips} puntos por nivel`,
       levelTitle: (name, level) => `${name} → Nv ${level}`,
       levelText: (name, chips, mult) =>
-        `Las palabras ${name} puntúan +${chips} fichas y +${mult} mult por nivel`,
+        `Las palabras ${name} dan +${chips} puntos y +${mult} mult por nivel`,
       fallbackRange: "Rango",
       fallbackLevel: "Nivel",
       fallbackEtching: "Grabado",
@@ -644,11 +645,11 @@ export const es: Strings = {
         "correcto, amarillo es la letra correcta en otro sitio.",
       scored: "La diferencia es que cada intento se puntúa.",
       chipsMult: {
-        term: "Fichas × Mult",
-        text: "Cada intento vale sus fichas multiplicadas por su mult.",
+        term: "Puntos × Mult",
+        text: "Cada intento vale sus puntos multiplicados por su mult.",
       },
       letters: {
-        term: "Las letras pagan fichas",
+        term: "Las letras pagan puntos",
         text:
           "Las letras raras pagan más. La tienda vende dos formas de subirlas: los grabados, " +
           "que suman a un tipo de letra, y los niveles de un tramo del alfabeto. Cada letra " +
@@ -755,8 +756,8 @@ export const es: Strings = {
         "merezca la pena.",
       scoring: "puntúa",
       alsoMatches: "también encaja",
-      payNow: (chips, mult) => `ahora +${chips} fichas, +${mult} mult`,
-      payPerLevel: (chips, mult) => `+${chips} fichas, +${mult} mult por nivel`,
+      payNow: (chips, mult) => `ahora +${chips} puntos, +${mult} mult`,
+      payPerLevel: (chips, mult) => `+${chips} puntos, +${mult} mult por nivel`,
     },
 
     codex: {
@@ -801,7 +802,7 @@ export const es: Strings = {
       upgrades: {
         title: "Mejoras de letra",
         blurb:
-          "Dos vías que suman fichas a las letras, y se acumulan: los grabados suben un tipo " +
+          "Dos vías que suman puntos a las letras, y se acumulan: los grabados suben un tipo " +
           "de letra, los rangos suben un tramo del alfabeto. Cada letra está en exactamente un " +
           "tramo.",
       },
@@ -897,7 +898,7 @@ export const es: Strings = {
       chips:
         "Cada intento se puntúa. Escribe una palabra, y la línea de encima del tablero cuenta lo que valen sus letras.",
       rare: (chips) =>
-        `${chips} fichas por ahora. Las letras raras pagan más: la A vale 1, la K vale 5, la Z vale 10.`,
+        `${chips} puntos por ahora. Las letras raras pagan más: la A vale 1, la K vale 5, la Z vale 10.`,
       mult: "El ? es el mult. Cada casilla amarilla lo sube en 1, y cada verde en 3. Las formas de palabra y las reliquias lo suben más. Pulsa INTRO para ver el mult de este intento.",
       banked: (chips, mult, score, target) =>
         `${chips} × ${mult} = ${score}, guardado hacia ${target}. Cada intento suma al mismo montón.`,

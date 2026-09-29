@@ -16,13 +16,13 @@ const plural = pluralizer("en")
  * from a fragment at the call site.
  */
 const MODIFIER: Strings["modifier"] = {
-  chip: { name: "Chip", text: "scores +20 chips" },
+  chip: { name: "Chip", text: "scores +20 points" },
   mult: { name: "Mult", text: "scores +8 mult" },
   gold: { name: "Gold", text: "pays $2 every time you play it" },
   wild: { name: "Wild", text: "scores +24 mult on a gray, +14 on a yellow, +4 on a green" },
   lucky: { name: "Lucky", text: "has a 1 in 4 chance of scoring +20 mult" },
-  echo: { name: "Echo", text: "scores +60 chips when the word repeats it" },
-  anchor: { name: "Anchor", text: "scores +125 chips when it lands green" },
+  echo: { name: "Echo", text: "scores +60 points when the word repeats it" },
+  anchor: { name: "Anchor", text: "scores +125 points when it lands green" },
   steel: { name: "Steel", text: "scores ×2 mult" },
   glass: { name: "Glass", text: "scores ×3 mult, and can break when it lands gray" },
 }
@@ -33,7 +33,7 @@ const MODIFIER: Strings["modifier"] = {
  * moment; it is not, and the moment a second language fills it that stops being
  * a coincidence.
  */
-const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "chips", mult: "mult" }
+const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "points", mult: "mult" }
 
 /**
  * The three colors, said in words.
@@ -64,7 +64,7 @@ export const en: Strings = {
   endonym: "English",
 
   relic: {
-    green_thumb: { name: "Green Thumb", text: "+4 chips per green tile" },
+    green_thumb: { name: "Green Thumb", text: "+4 points per green tile" },
     scavenger: { name: "Scavenger", text: "+$1 per yellow tile" },
     vowel_hoarder: { name: "Vowel Hoarder", text: "+4 mult per vowel" },
     slow_burn: {
@@ -75,33 +75,33 @@ export const en: Strings = {
       name: "Consonant Cluster",
       text: "×1.5 mult if the word has 3+ consonants in a row",
     },
-    cold_open: { name: "Cold Open", text: "+30 chips on the first guess of a round" },
-    bloodhound: { name: "Bloodhound", text: "+6 chips per yellow tile" },
+    cold_open: { name: "Cold Open", text: "+30 points on the first guess of a round" },
+    bloodhound: { name: "Bloodhound", text: "+6 points per yellow tile" },
     head_start: { name: "Head Start", text: "+15 mult if the word begins with a vowel" },
     loaded_dice: { name: "Loaded Dice", text: "+0 to +20 mult, rolled fresh every guess" },
     anagrammer: { name: "Anagrammer", text: "×2 mult if no letter repeats" },
     keystone: { name: "Keystone", text: "×2.5 mult if the middle tile is green" },
     lexicographer: {
       name: "Lexicographer",
-      text: "+3 chips for each different letter in your earlier guesses this round",
+      text: "+3 points for each different letter in your earlier guesses this round",
     },
     sunk_cost: { name: "Sunk Cost", text: "+6 mult per guess you would have left" },
     speedrunner: { name: "Speedrunner", text: "×3 mult when you solve in 3 guesses or fewer" },
-    qs_bargain: { name: "Q's Bargain", text: "J, Q, X and Z score triple chips" },
-    greedy_grammarian: { name: "Greedy Grammarian", text: "+15 chips per gray tile" },
-    doppelganger: { name: "Doppelgänger", text: "Repeated letters score their chips twice" },
+    qs_bargain: { name: "Q's Bargain", text: "J, Q, X and Z score triple points" },
+    greedy_grammarian: { name: "Greedy Grammarian", text: "+15 points per gray tile" },
+    doppelganger: { name: "Doppelgänger", text: "Repeated letters score their points twice" },
     hot_streak: {
       name: "Hot Streak",
-      text: "Permanently gains +12 chips each round you clear in 3 guesses or fewer",
+      text: "Permanently gains +12 points each round you clear in 3 guesses or fewer",
     },
     hoarder: {
       name: "The Hoarder",
-      text: "Permanently gains +40 chips when you reach the shop with both card slots full",
+      text: "Permanently gains +40 points when you reach the shop with both card slots full",
     },
     masochist: { name: "Masochist", text: "+8 mult per gray tile" },
     chorus: { name: "The Chorus", text: "×3 mult if the word holds three or more vowels" },
     alphabetist: { name: "Alphabetist", text: "×2 mult if your letters are in alphabetical order" },
-    vault: { name: "The Vault", text: "+25 chips for each guess already made this round" },
+    vault: { name: "The Vault", text: "+25 points for each guess already made this round" },
     mint: { name: "The Mint", text: "+3 mult per $5 you hold. You earn no interest." },
     scorched_earth: {
       name: "Scorched Earth",
@@ -118,8 +118,8 @@ export const en: Strings = {
       text: "+15 mult. 1 in 6 chance to dry up at the end of each round",
     },
     first_draft: { name: "First Draft", text: "+20 mult, 4 less at the end of each round" },
-    candle: { name: "Candle", text: "+30 chips, 6 less at the end of each round" },
-    reserve: { name: "Reserve", text: "+4 chips per guess you would have left" },
+    candle: { name: "Candle", text: "+30 points, 6 less at the end of each round" },
+    reserve: { name: "Reserve", text: "+4 points per guess you would have left" },
     collector: { name: "Collector", text: "+4 mult per relic you hold" },
     second_look: { name: "Second Look", text: "Your first reroll in each shop is free" },
     stipend: { name: "Stipend", text: "Earn $2 at the end of each round you clear" },
@@ -162,12 +162,12 @@ export const en: Strings = {
       name: "The Tyrant",
       text: "Every guess must reuse the green letters you have found.",
     },
-    miser: { name: "The Miser", text: "Letters you have already used score no chips." },
+    miser: { name: "The Miser", text: "Letters you have already used score no points." },
     clock: { name: "The Clock", text: "Four guesses only." },
     glutton: { name: "The Glutton", text: "Every guess must contain at least two vowels." },
     auditor: { name: "The Auditor", text: "Your solve multiplier is capped at ×2." },
     purist: { name: "The Purist", text: "No letter may appear twice in a guess." },
-    drought: { name: "The Drought", text: "Vowels score no chips." },
+    drought: { name: "The Drought", text: "Vowels score no points." },
     mirror: {
       name: "The Mirror",
       text: "Your feedback is shown back to front. It still scores as it fell.",
@@ -177,7 +177,7 @@ export const en: Strings = {
       name: "The Rust",
       text: "Letter upgrades score nothing. Letters are worth only what they started as.",
     },
-    margin: { name: "The Margin", text: "The first and last letters score no chips." },
+    margin: { name: "The Margin", text: "The first and last letters score no points." },
     vandal: { name: "The Vandal", text: "Letter modifiers do nothing." },
     plateau: {
       name: "The Plateau",
@@ -223,22 +223,22 @@ export const en: Strings = {
   etching: {
     etch_vowels: {
       name: "Etch Vowels",
-      text: (chips) => `A E I O U are worth +${chips} chips`,
+      text: (chips) => `A E I O U are worth +${chips} points`,
     },
     etch_staples: {
       name: "Etch Staples",
-      text: (chips) => `L N S T R are worth +${chips} chips`,
+      text: (chips) => `L N S T R are worth +${chips} points`,
     },
     etch_heavy: {
       name: "Etch Heavy",
-      text: (chips) => `J Q X Z are worth +${chips} chips`,
+      text: (chips) => `J Q X Z are worth +${chips} points`,
     },
     etch_consonants: {
       name: "Etch Consonants",
       text: (chips) =>
         plural(chips, {
-          one: `Every consonant is worth +${chips} chip`,
-          other: `Every consonant is worth +${chips} chips`,
+          one: `Every consonant is worth +${chips} point`,
+          other: `Every consonant is worth +${chips} points`,
         }),
     },
   },
@@ -340,8 +340,8 @@ export const en: Strings = {
     growth: ({ amount, unit }) => (unit === "gold" ? `+$${amount}` : `+${amount} ${UNIT[unit]}`),
 
     /**
-     * Chips are the bare number and mult is the number plus the word, which
-     * looks inconsistent written out like this and is not. Chips are the default
+     * Points are the bare number and mult is the number plus the word, which
+     * looks inconsistent written out like this and is not. Points are the default
      * currency of the board: every tile already floats one, so `+20` over a tile
      * needs no more saying. Mult is the rarer half and the one worth naming.
      *
@@ -458,23 +458,23 @@ export const en: Strings = {
     },
 
     tip: {
-      // Zero is its own sentence rather than a plural form. "0 chips" is
-      // arithmetic and "no chips" is the answer to what the player asked, and
+      // Zero is its own sentence rather than a plural form. "0 points" is
+      // arithmetic and "no points" is the answer to what the player asked, and
       // CLDR has nothing to say about the difference: English selects `other` at
       // zero, so a `zero` key here would simply never be read.
       tileChips: (letter, chips) =>
         chips === 0
-          ? `${letter.toUpperCase()} · no chips`
+          ? `${letter.toUpperCase()} · no points`
           : plural(chips, {
-              one: `${letter.toUpperCase()} · +${chips} chip`,
-              other: `${letter.toUpperCase()} · +${chips} chips`,
+              one: `${letter.toUpperCase()} · +${chips} point`,
+              other: `${letter.toUpperCase()} · +${chips} points`,
             }),
       keyChips: (letter, chips) =>
         chips === 0
-          ? `${letter.toUpperCase()} · no chips`
+          ? `${letter.toUpperCase()} · no points`
           : plural(chips, {
-              one: `${letter.toUpperCase()} · ${chips} chip`,
-              other: `${letter.toUpperCase()} · ${chips} chips`,
+              one: `${letter.toUpperCase()} · ${chips} point`,
+              other: `${letter.toUpperCase()} · ${chips} points`,
             }),
       broken: (letter) => `${letter.toUpperCase()} · broken, no longer typeable`,
       base: (chips) => `${chips} base`,
@@ -491,9 +491,9 @@ export const en: Strings = {
       // Mult starts the row at 1 and that 1 belongs to no letter, so a column
       // that added none says so rather than claiming a share of it. That is why
       // this is two entries: the second half is absent, not zero.
-      share: (chips, total) => `${chips} of ${total} chips · no mult`,
+      share: (chips, total) => `${chips} of ${total} points · no mult`,
       shareWithMult: (chips, total, mult, multTotal) =>
-        `${chips} of ${total} chips · ${mult} of ${multTotal} mult`,
+        `${chips} of ${total} points · ${mult} of ${multTotal} mult`,
     },
 
     intro: {
@@ -566,7 +566,7 @@ export const en: Strings = {
       tagShape: "Word shape",
       tipShape: "It levels one shape of word, so every guess of that shape pays more.",
       tagEtching: "Etching",
-      tipEtching: "It adds chips to a group of letters for good, and buying it again stacks.",
+      tipEtching: "It adds points to a group of letters for good, and buying it again stacks.",
 
       // The qualifier sits after the name rather than reading as a verb ("Gold a
       // letter"), and it is what tells this card apart from the pack's aimed one
@@ -584,10 +584,10 @@ export const en: Strings = {
       // Named as the level it buys rather than the one you hold, because the gold
       // buys the step and the step is what the price is for.
       rangeTitle: (name, level) => `${name} → Lv ${level}`,
-      rangeText: (letters, chips) => `${letters} are worth +${chips} chips per level`,
+      rangeText: (letters, chips) => `${letters} are worth +${chips} points per level`,
       levelTitle: (name, level) => `${name} → Lv ${level}`,
       levelText: (name, chips, mult) =>
-        `${name} words score +${chips} chips and +${mult} mult per level`,
+        `${name} words score +${chips} points and +${mult} mult per level`,
       fallbackRange: "Range",
       fallbackLevel: "Level",
       fallbackEtching: "Etching",
@@ -706,11 +706,11 @@ export const en: Strings = {
         "the right place, yellow is the right letter somewhere else.",
       scored: "The difference is that every guess is scored.",
       chipsMult: {
-        term: "Chips × Mult",
-        text: "Each guess is worth its chips multiplied by its mult.",
+        term: "Points × Mult",
+        text: "Each guess is worth its points multiplied by its mult.",
       },
       letters: {
-        term: "Letters pay chips",
+        term: "Letters pay points",
         text:
           "Rare letters pay more. The shop sells two ways to raise them: etchings, which " +
           "add to a kind of letter, and levels on a slice of the alphabet. Every letter " +
@@ -816,8 +816,8 @@ export const en: Strings = {
         "pays nothing, so a level is what makes a shape worth aiming at.",
       scoring: "scoring",
       alsoMatches: "also matches",
-      payNow: (chips, mult) => `now +${chips} chips, +${mult} mult`,
-      payPerLevel: (chips, mult) => `+${chips} chips, +${mult} mult per level`,
+      payNow: (chips, mult) => `now +${chips} points, +${mult} mult`,
+      payPerLevel: (chips, mult) => `+${chips} points, +${mult} mult per level`,
     },
 
     codex: {
@@ -861,7 +861,7 @@ export const en: Strings = {
       upgrades: {
         title: "Letter upgrades",
         blurb:
-          "Two lines that both add chips to letters, and stack: etchings raise a kind of " +
+          "Two lines that both add points to letters, and stack: etchings raise a kind of " +
           "letter, ranges raise a slice of the alphabet. Every letter sits in exactly one " +
           "slice.",
       },
@@ -961,12 +961,12 @@ export const en: Strings = {
       // one says one thing, points at it, and ends on what to do next. The
       // numbers are the card's own business; the tail and the lit outline say
       // where on screen they are, so the sentences stopped giving directions.
-      chips: "Every guess scores points. Start typing: each letter you use is worth chips.",
+      chips: "Every guess adds to your score. Start typing: each letter you use is worth points.",
       // The three letters named are the ends and the middle of the table in
       // `content/letters.ts`, so a language whose chip table is retuned has to
       // retune this sentence with it.
       rare: (chips) =>
-        `${chips} chips so far. Common letters pay 1, rarer ones more: K pays 5, Z pays 10.`,
+        `${chips} points so far. Common letters pay 1, rarer ones more: K pays 5, Z pays 10.`,
       mult: "The ? is mult. Each yellow tile increases it by 1, and each green by 3. Word shapes and relics raise it further. Press ENTER to see this guess's mult.",
       banked: (chips, mult, score, target) =>
         `${chips} × ${mult} = ${score}. Every guess adds to your score, and you need ${target} by the end of the round.`,

@@ -33,7 +33,7 @@ describe("the first-round coach", () => {
     const step = coachStep(state)
     expect(step?.id).toBe("rare")
     // The figure in the card is the one under the board, not a worked example.
-    expect(step?.text).toContain(`${draftChips(state, "qu")} chips`)
+    expect(step?.text).toContain(`${draftChips(state, "qu")} points`)
     expect(step?.anchor).toBe(".readout .chips")
   })
 

@@ -6,7 +6,7 @@ const plural = pluralizer("fr")
 
 /** Read by one refusal, which has to name the card it is turning down. */
 const MODIFIER: Strings["modifier"] = {
-  chip: { name: "Jeton", text: "rapporte +20 jetons" },
+  chip: { name: "Jeton", text: "rapporte +20 points" },
   mult: { name: "Mult", text: "rapporte +8 mult" },
   gold: { name: "Or", text: "rapporte $2 à chaque fois que vous la jouez" },
   wild: {
@@ -14,13 +14,13 @@ const MODIFIER: Strings["modifier"] = {
     text: "rapporte +24 mult sur une grise, +14 sur une jaune, +4 sur une verte",
   },
   lucky: { name: "Chanceuse", text: "a 1 chance sur 4 de rapporter +20 mult" },
-  echo: { name: "Écho", text: "rapporte +60 jetons quand le mot la répète" },
-  anchor: { name: "Ancre", text: "rapporte +125 jetons quand elle tombe verte" },
+  echo: { name: "Écho", text: "rapporte +60 points quand le mot la répète" },
+  anchor: { name: "Ancre", text: "rapporte +125 points quand elle tombe verte" },
   steel: { name: "Acier", text: "rapporte ×2 mult" },
   glass: { name: "Verre", text: "rapporte ×3 mult, et peut se briser quand elle tombe grise" },
 }
 
-const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "jetons", mult: "mult" }
+const UNIT: Record<Exclude<Growth["unit"], "gold">, string> = { chips: "points", mult: "mult" }
 
 const COLOR: Record<Color, string> = { green: "vert", yellow: "jaune", gray: "gris" }
 
@@ -37,8 +37,9 @@ const COLOR: Record<Color, string> = { green: "vert", yellow: "jaune", gray: "gr
  * nicety: the HUD is narrow enough that a score wrapping away from its `%` is a
  * real outcome. Written as an escape, it is a thing a reviewer can see.
  *
- * The vocabulary: a *chip* is a `jeton`, a *guess* is an `essai` because it is
- * one of six things you spend, a *run* is a `partie`, a *stage* is an `étape`
+ * The vocabulary: what the engine calls a *chip* is a `point` (it
+ * was a `jeton` until the English went to "points"), a *guess* is an `essai`
+ * because it is one of six things you spend, a *run* is a `partie`, a *stage* is an `étape`
  * and a *round* is a `manche` — the two nested units of time, which have to stay
  * distinguishable in every sentence that names both. A *pack* is a `booster`,
  * which is what French card players call one; `pochette` would be a stationery
@@ -50,7 +51,7 @@ export const fr: Strings = {
   endonym: "Français",
 
   relic: {
-    green_thumb: { name: "Main Verte", text: "+4 jetons par case verte" },
+    green_thumb: { name: "Main Verte", text: "+4 points par case verte" },
     scavenger: { name: "Charognard", text: "+$1 par case jaune" },
     vowel_hoarder: { name: "Amasseur de Voyelles", text: "+4 mult par voyelle" },
     slow_burn: {
@@ -61,31 +62,31 @@ export const fr: Strings = {
       name: "Groupe Consonantique",
       text: "×1.5 mult si le mot a 3+ consonnes de suite",
     },
-    cold_open: { name: "Départ à Froid", text: "+30 jetons au premier essai d'une manche" },
-    bloodhound: { name: "Limier", text: "+6 jetons par case jaune" },
+    cold_open: { name: "Départ à Froid", text: "+30 points au premier essai d'une manche" },
+    bloodhound: { name: "Limier", text: "+6 points par case jaune" },
     head_start: { name: "Avance", text: "+15 mult si le mot commence par une voyelle" },
     loaded_dice: { name: "Dés Pipés", text: "+0 à +20 mult, relancés à chaque essai" },
     anagrammer: { name: "Anagrammiste", text: "×2 mult si aucune lettre ne se répète" },
     keystone: { name: "Clé de Voûte", text: "×2,5 mult si la case centrale est verte" },
     lexicographer: {
       name: "Lexicographe",
-      text: "+3 jetons par lettre différente de vos essais précédents dans la manche",
+      text: "+3 points par lettre différente de vos essais précédents dans la manche",
     },
     sunk_cost: { name: "Coût Irrécupérable", text: "+6 mult par essai qu'il vous resterait" },
     speedrunner: { name: "Sprinteur", text: "×3 mult si vous résolvez en 3 essais ou moins" },
-    qs_bargain: { name: "L'Affaire du Q", text: "J, Q, X et Z rapportent le triple de jetons" },
-    greedy_grammarian: { name: "Grammairien Cupide", text: "+15 jetons par case grise" },
+    qs_bargain: { name: "L'Affaire du Q", text: "J, Q, X et Z rapportent le triple de points" },
+    greedy_grammarian: { name: "Grammairien Cupide", text: "+15 points par case grise" },
     doppelganger: {
       name: "Doppelgänger",
-      text: "Les lettres répétées rapportent leurs jetons deux fois",
+      text: "Les lettres répétées rapportent leurs points deux fois",
     },
     hot_streak: {
       name: "Bonne Série",
-      text: "Gagne +12 jetons définitifs par manche réussie en 3 essais ou moins",
+      text: "Gagne +12 points définitifs par manche réussie en 3 essais ou moins",
     },
     hoarder: {
       name: "L'Amasseur",
-      text: "Gagne +40 jetons définitifs si vous arrivez en boutique avec les deux emplacements de carte pleins",
+      text: "Gagne +40 points définitifs si vous arrivez en boutique avec les deux emplacements de carte pleins",
     },
     masochist: { name: "Masochiste", text: "+8 mult par case grise" },
     chorus: { name: "Le Chœur", text: "×3 mult si le mot contient trois voyelles ou plus" },
@@ -93,7 +94,7 @@ export const fr: Strings = {
       name: "Alphabétiste",
       text: "×2 mult si vos lettres sont dans l'ordre alphabétique",
     },
-    vault: { name: "Le Coffre", text: "+25 jetons pour chaque essai déjà fait dans la manche" },
+    vault: { name: "Le Coffre", text: "+25 points pour chaque essai déjà fait dans la manche" },
     mint: {
       name: "La Monnaie",
       text: "+3 mult par $5 que vous détenez. Vous ne gagnez aucun intérêt.",
@@ -116,8 +117,8 @@ export const fr: Strings = {
       text: "+15 mult. 1 chance sur 6 de sécher à la fin de chaque manche",
     },
     first_draft: { name: "Premier Jet", text: "+20 mult, 4 de moins à la fin de chaque manche" },
-    candle: { name: "Bougie", text: "+30 jetons, 6 de moins à la fin de chaque manche" },
-    reserve: { name: "Réserve", text: "+4 jetons par essai qu'il vous resterait" },
+    candle: { name: "Bougie", text: "+30 points, 6 de moins à la fin de chaque manche" },
+    reserve: { name: "Réserve", text: "+4 points par essai qu'il vous resterait" },
     collector: { name: "Collectionneur", text: "+4 mult par relique que vous détenez" },
     second_look: {
       name: "Second Regard",
@@ -169,7 +170,7 @@ export const fr: Strings = {
       name: "Le Tyran",
       text: "Chaque essai doit réutiliser les lettres vertes que vous avez trouvées.",
     },
-    miser: { name: "L'Avare", text: "Les lettres déjà utilisées ne rapportent aucun jeton." },
+    miser: { name: "L'Avare", text: "Les lettres déjà utilisées ne rapportent aucun point." },
     clock: { name: "L'Horloge", text: "Quatre essais seulement." },
     glutton: { name: "Le Glouton", text: "Chaque essai doit contenir au moins deux voyelles." },
     auditor: { name: "L'Auditeur", text: "Votre multiplicateur de résolution est plafonné à ×2." },
@@ -177,7 +178,7 @@ export const fr: Strings = {
       name: "Le Puriste",
       text: "Aucune lettre ne peut apparaître deux fois dans un essai.",
     },
-    drought: { name: "La Sécheresse", text: "Les voyelles ne rapportent aucun jeton." },
+    drought: { name: "La Sécheresse", text: "Les voyelles ne rapportent aucun point." },
     mirror: {
       name: "Le Miroir",
       text: "Vos indices sont affichés à l'envers. Ils comptent toujours comme ils sont tombés.",
@@ -189,7 +190,7 @@ export const fr: Strings = {
     },
     margin: {
       name: "La Marge",
-      text: "La première et la dernière lettre ne rapportent aucun jeton.",
+      text: "La première et la dernière lettre ne rapportent aucun point.",
     },
     vandal: { name: "Le Vandale", text: "Les modificateurs de lettre ne font rien." },
     plateau: {
@@ -236,22 +237,22 @@ export const fr: Strings = {
   etching: {
     etch_vowels: {
       name: "Graver les Voyelles",
-      text: (chips) => `A E I O U valent +${chips} jetons`,
+      text: (chips) => `A E I O U valent +${chips} points`,
     },
     etch_staples: {
       name: "Graver les Courantes",
-      text: (chips) => `L N S T R valent +${chips} jetons`,
+      text: (chips) => `L N S T R valent +${chips} points`,
     },
     etch_heavy: {
       name: "Graver les Lourdes",
-      text: (chips) => `J Q X Z valent +${chips} jetons`,
+      text: (chips) => `J Q X Z valent +${chips} points`,
     },
     etch_consonants: {
       name: "Graver les Consonnes",
       text: (chips) =>
         plural(chips, {
-          one: `Chaque consonne vaut +${chips} jeton`,
-          other: `Chaque consonne vaut +${chips} jetons`,
+          one: `Chaque consonne vaut +${chips} point`,
+          other: `Chaque consonne vaut +${chips} points`,
         }),
     },
   },
@@ -453,17 +454,17 @@ export const fr: Strings = {
     tip: {
       tileChips: (letter, chips) =>
         chips === 0
-          ? `${letter.toUpperCase()} · aucun jeton`
+          ? `${letter.toUpperCase()} · aucun point`
           : plural(chips, {
-              one: `${letter.toUpperCase()} · +${chips} jeton`,
-              other: `${letter.toUpperCase()} · +${chips} jetons`,
+              one: `${letter.toUpperCase()} · +${chips} point`,
+              other: `${letter.toUpperCase()} · +${chips} points`,
             }),
       keyChips: (letter, chips) =>
         chips === 0
-          ? `${letter.toUpperCase()} · aucun jeton`
+          ? `${letter.toUpperCase()} · aucun point`
           : plural(chips, {
-              one: `${letter.toUpperCase()} · ${chips} jeton`,
-              other: `${letter.toUpperCase()} · ${chips} jetons`,
+              one: `${letter.toUpperCase()} · ${chips} point`,
+              other: `${letter.toUpperCase()} · ${chips} points`,
             }),
       broken: (letter) => `${letter.toUpperCase()} · brisée, ne peut plus être tapée`,
       base: (chips) => `${chips} de base`,
@@ -477,9 +478,9 @@ export const fr: Strings = {
       modSilenced: (name, text) => `${name} · ${text} · réduit au silence cette manche`,
       modQuiet: (name, text) => `${name} · ${text} · rien cette fois`,
       relic: (name, badge) => `${name} · ${badge}`,
-      share: (chips, total) => `${chips} sur ${total} jetons · aucun mult`,
+      share: (chips, total) => `${chips} sur ${total} points · aucun mult`,
       shareWithMult: (chips, total, mult, multTotal) =>
-        `${chips} sur ${total} jetons · ${mult} sur ${multTotal} mult`,
+        `${chips} sur ${total} points · ${mult} sur ${multTotal} mult`,
     },
 
     intro: {
@@ -538,7 +539,7 @@ export const fr: Strings = {
       tipShape: "Il monte une forme de mot, si bien que chaque essai de cette forme paie plus.",
       tagEtching: "Gravure",
       tipEtching:
-        "Elle ajoute des jetons à un groupe de lettres pour de bon, et la racheter se cumule.",
+        "Elle ajoute des points à un groupe de lettres pour de bon, et la racheter se cumule.",
 
       modAnyTitle: (name) => `${name} · n'importe quelle lettre`,
       modAnyText: (text) => `Choisissez n'importe quelle lettre. Elle ${text}`,
@@ -549,10 +550,10 @@ export const fr: Strings = {
       swap: (name, pip) => `Remplace ${name} ${pip}`,
 
       rangeTitle: (name, level) => `${name} → Niv ${level}`,
-      rangeText: (letters, chips) => `${letters} valent +${chips} jetons par niveau`,
+      rangeText: (letters, chips) => `${letters} valent +${chips} points par niveau`,
       levelTitle: (name, level) => `${name} → Niv ${level}`,
       levelText: (name, chips, mult) =>
-        `Les mots ${name} rapportent +${chips} jetons et +${mult} mult par niveau`,
+        `Les mots ${name} rapportent +${chips} points et +${mult} mult par niveau`,
       fallbackRange: "Plage",
       fallbackLevel: "Niveau",
       fallbackEtching: "Gravure",
@@ -663,11 +664,11 @@ export const fr: Strings = {
         "bonne place, jaune, c'est la bonne lettre ailleurs.",
       scored: "La différence, c'est que chaque essai est compté.",
       chipsMult: {
-        term: "Jetons × Mult",
-        text: "Chaque essai vaut ses jetons multipliés par son mult.",
+        term: "Points × Mult",
+        text: "Chaque essai vaut ses points multipliés par son mult.",
       },
       letters: {
-        term: "Les lettres paient des jetons",
+        term: "Les lettres paient des points",
         text:
           "Les lettres rares paient plus. La boutique vend deux façons de les monter\u00A0: les " +
           "gravures, qui ajoutent à un type de lettre, et les niveaux sur une tranche de " +
@@ -775,8 +776,8 @@ export const fr: Strings = {
         "digne d'être visée.",
       scoring: "compte comme",
       alsoMatches: "satisfait aussi",
-      payNow: (chips, mult) => `désormais +${chips} jetons, +${mult} mult`,
-      payPerLevel: (chips, mult) => `+${chips} jetons, +${mult} mult par niveau`,
+      payNow: (chips, mult) => `désormais +${chips} points, +${mult} mult`,
+      payPerLevel: (chips, mult) => `+${chips} points, +${mult} mult par niveau`,
     },
 
     codex: {
@@ -822,7 +823,7 @@ export const fr: Strings = {
       upgrades: {
         title: "Améliorations de lettre",
         blurb:
-          "Deux voies qui ajoutent toutes deux des jetons aux lettres, et se cumulent\u00A0: " +
+          "Deux voies qui ajoutent toutes deux des points aux lettres, et se cumulent\u00A0: " +
           "les gravures relèvent un type de lettre, les plages relèvent une tranche de " +
           "l'alphabet. Chaque lettre est dans exactement une tranche.",
       },
@@ -918,7 +919,7 @@ export const fr: Strings = {
       chips:
         "Chaque essai est compté. Tapez un mot, et la ligne au-dessus du plateau additionne ce que valent ses lettres.",
       rare: (chips) =>
-        `${chips} jetons pour l'instant. Les lettres rares paient plus\u00A0: A vaut 1, K vaut 5, Z vaut 10.`,
+        `${chips} points pour l'instant. Les lettres rares paient plus\u00A0: A vaut 1, K vaut 5, Z vaut 10.`,
       mult: "Le ? est le mult. Chaque case jaune l'augmente de 1, et chaque verte de 3. Les formes de mot et les reliques l'augmentent encore. Appuyez sur ENTRÉE pour voir le mult de cet essai.",
       banked: (chips, mult, score, target) =>
         `${chips} × ${mult} = ${score}, mis de côté vers ${target}. Chaque essai s'ajoute au même tas.`,

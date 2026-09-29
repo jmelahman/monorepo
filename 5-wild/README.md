@@ -17,11 +17,11 @@
 ---
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="A boss round of 5 Wild in progress: The Drought making vowels score no chips, five relics above the keyboard, and a score of 3,786 against a 4,000 target" width="380">
+  <img src="assets/screenshot.png" alt="A boss round of 5 Wild in progress: The Drought making vowels score no points, five relics above the keyboard, and a score of 3,786 against a 4,000 target" width="380">
 </p>
 
 Guess the five-letter word, but every guess you play is also a hand you score.
-Letters are worth chips by how rare they are, green and yellow feedback adds
+Letters are worth points by how rare they are, green and yellow feedback adds
 mult, and the relics you buy between rounds quietly rewrite the arithmetic
 underneath. It is a word game that turns into a numbers game.
 
@@ -53,7 +53,7 @@ you a letter, The Hermit rules one out, The Magician turns a gray into a yellow,
 and The Fool scores your last guess all over again.
 
 ✒️ **Etchings and categories.** An etching makes a whole group of letters worth
-more chips for the rest of the run, and a pack levels up a word category, so the
+more points for the rest of the run, and a pack levels up a word category, so the
 shape you keep reaching for pays more every time you play it.
 
 🪜 **Eight stages, then the ladder.** Win a run and the ascensions open, one rung

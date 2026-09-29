@@ -15,7 +15,7 @@ A word-guessing roguelike. Solve the word, spend the gold, climb the ladder.
 
 Guess a five-letter word in six tries. That part you know.
 
-What you may not know is what the word is worth. Every letter has a chip value,
+What you may not know is what the word is worth. Every letter has a point value,
 every guess scores whether it is right or wrong, and a round is not won by
 finding the answer — it is won by clearing a target. Find the word too early and
 you may not have scored enough to survive it.

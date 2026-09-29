@@ -78,7 +78,7 @@ describe("what a shop card says it is", () => {
     ]
     for (const [id, letters] of slices) {
       const { text } = describeItem({ kind: "range", id, cost: 7 }, state)
-      expect(text, id).toBe(`${letters} are worth +4 chips per level`)
+      expect(text, id).toBe(`${letters} are worth +4 points per level`)
     }
   })
 
@@ -94,7 +94,7 @@ describe("what a shop card says it is", () => {
       letters: { ...state.letters, c: { ...c, destroyed: true } },
     }
     expect(describeItem(ONE_OF_EACH.range, broken).text).toBe(
-      "A B C D E are worth +4 chips per level",
+      "A B C D E are worth +4 points per level",
     )
   })
 
