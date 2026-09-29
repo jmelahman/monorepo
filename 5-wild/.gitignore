@@ -29,6 +29,11 @@ plans/
 # reason the launcher icons are: nothing in CI can render an SVG, and the upload
 # form wants a file rather than a build step.
 !assets/store/*.png
+# The link-preview images the site serves, rendered by the same script and
+# committed for the same reason. By name, so a screenshot dropped in public/
+# still gets caught.
+!public/og.png
+!public/apple-touch-icon.png
 # The listing screenshots, captured from a scripted playthrough rather than
 # rendered, which is why they are committed and not generated: reproducing them
 # means driving the app to a shop, a pack and a boss again, and the upload form

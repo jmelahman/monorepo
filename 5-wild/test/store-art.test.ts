@@ -60,3 +60,24 @@ describe("play store art", () => {
     expect(statSync("assets/store/feature-graphic.png").size).toBeLessThan(15 * 1024 * 1024)
   })
 })
+
+describe("link preview art", () => {
+  /*
+   * Rendered by the same script into public/, and pinned for a quieter reason
+   * than Play's: index.html states og.png's size in og:image:width and height,
+   * and a preview reader that trusts those lays the card out before the image
+   * arrives, so a re-render at another size is a card drawn at the wrong shape.
+   */
+  it("renders og.png at the size index.html declares", () => {
+    const html = readFileSync("index.html", "utf8")
+    const declared = (prop: string) =>
+      Number(html.match(new RegExp(`property="og:image:${prop}" content="(\\d+)"`))?.[1])
+    expect(pngSize("public/og.png")).toEqual({ width: declared("width"), height: declared("height") })
+  })
+
+  it("renders the touch icon at 180x180, opaque", () => {
+    // iOS rounds it itself, the same as Play, so the full-bleed mark is right.
+    expect(pngSize("public/apple-touch-icon.png")).toEqual({ width: 180, height: 180 })
+    expect(pngColorType("public/apple-touch-icon.png")).toBe(2)
+  })
+})

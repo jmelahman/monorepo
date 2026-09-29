@@ -14,7 +14,29 @@
       name="description"
       content="A word-guessing roguelike: score chips and multipliers, buy relics, survive eight stages."
     />
+    <!--
+      The link preview, for Slack, X, LinkedIn and the rest. None of them run the
+      script, so this is all they ever see of the page. og:image and og:url must
+      be absolute, and the images are rendered by tools/gen-store-art.sh from the
+      same sources as the Play listing. After a change, LinkedIn's Post Inspector
+      is what makes it forget the old card.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="5 Wild" />
+    <meta property="og:title" content="5 Wild" />
+    <meta
+      property="og:description"
+      content="A word-guessing roguelike: score chips and multipliers, buy relics, survive eight stages."
+    />
+    <meta property="og:url" content="https://5-wild.com/" />
+    <meta property="og:image" content="https://5-wild.com/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="586" />
+    <meta property="og:image:alt" content="5 Wild: a word-guessing roguelike" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <title>5 Wild</title>
   </head>
   <body>

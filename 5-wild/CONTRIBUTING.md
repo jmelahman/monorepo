@@ -105,7 +105,7 @@ The listing graphics are rendered from `assets/*.svg` and committed, the same
 arrangement as the launcher icons and for the same reason:
 
 ```sh
-./tools/gen-store-art.sh   # assets/store/{icon,feature-graphic}.png
+./tools/gen-store-art.sh   # assets/store/{icon,feature-graphic}.png, public/{og,apple-touch-icon}.png
 ```
 
 Play's sizes are exact rather than minimums and it checks them at the upload
