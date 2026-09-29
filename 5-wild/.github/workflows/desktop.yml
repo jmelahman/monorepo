@@ -52,6 +52,12 @@ jobs:
           - os: windows-latest
             platform: windows
     runs-on: ${{ matrix.os }}
+    # Whether this leg sends its installer to SignPath: Windows, a release, and
+    # only once the SignPath project exists, so until its variable is set the
+    # workflow ships unsigned exactly as before rather than failing. Linux has
+    # nothing to sign; a distro checks a package's repository, not the file.
+    env:
+      SIGN: ${{ matrix.platform == 'windows' && github.ref_type == 'tag' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
     defaults:
       run:
         shell: bash
@@ -111,10 +117,44 @@ jobs:
       # One artifact per platform, since an artifact downloads as a zip of its
       # files: a single one holding both made every player download the other
       # platform's build as well.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      #
+      # A build headed for signing uploads under a name the publish job does not
+      # match, so the unsigned installer can never be the one that ships.
+      - id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: 5-wild-${{ matrix.platform }}
+          name: ${{ env.SIGN == 'true' && 'unsigned-windows' || format('5-wild-{0}', matrix.platform) }}
           path: out/*
+          if-no-files-found: error
+      # SignPath Foundation signs open-source releases for free, with its own
+      # certificate, so the publisher Windows names is "SignPath Foundation"
+      # rather than us. It fetches the artifact from GitHub itself and checks
+      # it was built here by this workflow, which is its whole trust model, and
+      # a release signing request waits for a person to approve it in
+      # SignPath's UI: hence the hour, and a wait on a runner rather than a
+      # second job, since a public repository's minutes are free.
+      #
+      # Only the installer is signed, not the 5-wild.exe inside it. SmartScreen
+      # judges what was downloaded, which is the installer; signing the inner
+      # binary too would mean a second request, and a second approval, from
+      # inside `tauri build`.
+      - name: Sign the installer
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: 5-wild
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.upload.outputs.artifact-id }}
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed
+      - if: env.SIGN == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: 5-wild-windows
+          path: signed/*
           if-no-files-found: error
 
   publish:
