@@ -1,3 +1,5 @@
+hide_status: [passed, skipped]
+
 repos:
   # BEGIN orchard:base
   # Shared by every subtree: .config/git-orchard/shared/base in the monorepo

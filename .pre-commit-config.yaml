@@ -16,6 +16,8 @@ exclude: |
     5-wild/src/ui/tracks/.*\.ogg
   )$
 
+hide_status: [passed, skipped]
+
 repos:
   # See https://prek.j178.dev/builtin/#2-explicit-builtin-repository
   - repo: builtin

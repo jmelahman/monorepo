@@ -4,6 +4,8 @@ default_install_hook_types: [pre-commit, post-checkout, post-merge, post-rewrite
 default_language_version:
   golang: "1.27"
 
+hide_status: [passed, skipped]
+
 repos:
   # BEGIN orchard:base
   # Shared by every subtree: .config/git-orchard/shared/base in the monorepo
