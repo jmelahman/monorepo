@@ -6,6 +6,7 @@ import { formatNumber as num } from "../../format"
 import { categoryLevel, growthBadge, payoutBadge, relicCard, ui } from "../../lang"
 import { meterFill } from "../../views"
 import { centerOf, fxDom, place } from "../layer"
+import { marquee } from "../marquee"
 import { juiced, ms, reduced, replay, tween } from "../motion"
 import { heat, roll } from "../numbers"
 import { burst, clearParticles, type Kind } from "../particles"
@@ -480,14 +481,11 @@ const LUNGE_HIT = 300
 export const PAYLINE = 1100
 /** The solve step, longer than the phone's 900 to let the line finish leaving. */
 const SOLVE_HOLD = 1250
-/**
- * `ignite` was the flaming score box; phase 2 replaces it with the marquee
- * chasing faster and brighter with heat. Inert until then, so it typechecks.
- */
-const ignite = (_x: number) => {}
-/** Stand-ins for the retired stamp and flame, until phase 2 replaces their uses. */
-const STAMP = PAYLINE
-const FLAME = ["#ffe08a", "#ff9f1c", "#ff5a1f"]
+/** The payline's sweep across a row, as authored: quick enough to read as one stroke. */
+const PAYLINE_SWEEP = 300
+/** A full turn of the marquee at rest-hot (one mult) and at its fastest, in ms. Unpaced, like every loop. */
+const CHASE_SLOW = 540
+const CHASE_FAST = 150
 /** Chips the stack under the readout will show; the rest still land, on top. */
 const STACK_MAX = 10
 /** One chip's thickness in px, which is also the pitch of the stack. */
@@ -578,6 +576,14 @@ async function playTable(
   const brassHi = token("--brass-hi", "#f0cf7a")
   const ivory = token("--ivory", "#f2e8d2")
   const GOLDS = [bulb, brassHi, brass]
+  /** The spill: the same three plus the ivory of a coin's face, all from the tokens. */
+  const COIN_GOLDS = [bulb, brassHi, brass, ivory]
+  /** A dead placard's shards: the plate's own dark and the ivory gone dull. */
+  const ASH = [
+    token("--ivory-lo", "#cbbd9c"),
+    token("--panel", "#14213d"),
+    token("--felt-hi", "#1d3561"),
+  ]
   const CLASH = [ivory, bulb, brassHi]
   const sparksFor = (tone: Tone): readonly string[] => {
     switch (tone) {
@@ -685,6 +691,24 @@ async function playTable(
       340,
     )
   }
+  /**
+   * The marquee's chase, quickened to `level` (0 to 1) and never slowed within
+   * a show: heat only rises through a hand, and a ring that eased off mid-guess
+   * would read as the hand having gone cold. Written on the ring itself, which
+   * outlives every render, so the `finally` below is what puts it back.
+   */
+  let hottest = 0
+  const spin = (level: number) => {
+    if (skipping()) return
+    hottest = Math.max(hottest, Math.min(1, level))
+    document
+      .getElementById("marquee")
+      ?.style.setProperty(
+        "--chase",
+        `${Math.round(CHASE_SLOW - (CHASE_SLOW - CHASE_FAST) * hottest)}ms`,
+      )
+    marquee("chase")
+  }
   const readout = (chips: number, mult: number, power = 1) => {
     if (chipsEl && chips !== shownChips) {
       chipsEl.textContent = num(chips)
@@ -693,7 +717,10 @@ async function playTable(
     if (multEl && mult !== shownMult) {
       multEl.textContent = num(mult)
       hit(multEl, power)
-      // Phase 2: `marquee("chase")` and its speed follow the multiplier here.
+      // The multiplier is what the sign is advertising: the bulbs start to run
+      // the first time it rises and quicken with each doubling, log2 because
+      // a x2 to x4 climb should feel as big as x16 to x32 does.
+      spin(Math.min(1, Math.log2(Math.max(1, mult)) / 5))
     }
     shownChips = chips
     shownMult = mult
@@ -760,41 +787,6 @@ async function playTable(
       made.delete(chip)
     })
   }
-  /** The pile leaves for the total: each chip slid up to the plate, top of the stack first. */
-  // Phase 2 wires this to the payline; unused until then.
-  const sweep = (to: { x: number; y: number }) => {
-    const chips = stack.splice(0).reverse()
-    chips.forEach((chip, i) => {
-      if (skipping()) return
-      const at = chip.getBoundingClientRect()
-      const dx = to.x - (at.left + at.width / 2)
-      const dy = to.y - (at.top + at.height / 2)
-      void tw(
-        chip,
-        [
-          { opacity: 1, transform: "translate(0px, 0px) scale(1)", easing: "ease-in" },
-          {
-            opacity: 1,
-            transform: `translate(${dx * 0.9}px, ${dy * 0.9}px) scale(0.8)`,
-            offset: 0.85,
-          },
-          { opacity: 0, transform: `translate(${dx}px, ${dy}px) scale(0.6)` },
-        ],
-        300,
-        i * 32,
-      ).then(() => {
-        chip.remove()
-        made.delete(chip)
-      })
-    })
-    if (skipping()) {
-      for (const chip of chips) {
-        chip.remove()
-        made.delete(chip)
-      }
-    }
-  }
-  void sweep
 
   // ---- keys and letters -------------------------------------------------
   const keyFor = (letter: string) =>
@@ -899,11 +891,44 @@ async function playTable(
    * the digits never outgrow the plate: a seven-figure total at 1.4x is wider
    * than the rail, and a number clipped at its edge is a wrong number.
    */
+  let shown = ""
+  /**
+   * The odometer: each digit that changes since the last frame is a fresh
+   * cell that drops in from above, the way a wheel clicks over, and the
+   * digits that have not moved stay put. The low wheels turn every frame and
+   * the high ones once in a long while, which is what the ease-out already
+   * does to the number, so the mechanism only has to draw it. Cells are
+   * aligned from the right, since a wheel belongs to a place, not to a
+   * position in the string.
+   */
+  const odometer = (el: HTMLElement) => {
+    const text = el.textContent ?? ""
+    if (skipping() || text === shown) return
+    const before = shown
+    shown = text
+    const cells = [...text].map((ch, i) => {
+      const cell = h("span", { class: "d" }, ch)
+      const was = before[before.length - (text.length - i)]
+      if (was !== undefined && was !== ch && /\d/.test(ch)) {
+        cell.animate(
+          [
+            { transform: "translateY(-45%)", opacity: 0.25 },
+            { transform: "translateY(0)", opacity: 1 },
+          ],
+          { duration: ms(110), easing: "ease-out" },
+        )
+      }
+      return cell
+    })
+    el.replaceChildren(...cells)
+  }
   const climb = (from: number, to: number, x: number) => {
     if (!scoreEl) return
     const el = scoreEl
     let done = false
+    shown = el.textContent ?? ""
     const paint = (value: number) => {
+      odometer(el)
       meter(value)
       const p = to === from ? 1 : Math.max(0, Math.min(1, (value - from) / (to - from)))
       const level = x * p
@@ -912,7 +937,10 @@ async function playTable(
       const cap = boxWidth() / Math.max(1, digits * 0.66 * baseFont)
       el.style.scale = String(Math.max(1, Math.min(1 + 0.42 * level, cap)))
       scoreBox?.style.setProperty("--heat", level.toFixed(3))
-      if (level > 0.05) chase(false)
+      if (level > 0.05) {
+        chase(false)
+        spin(level)
+      }
       if (p < 1 || done) return
       done = true
       const grown = Math.max(1, Math.min(1 + 0.42 * x + 0.12, cap))
@@ -931,15 +959,94 @@ async function playTable(
   }
 
   /**
-   * The score plate's bulbs: the chase quickens and brightens with `--heat`,
-   * which the count-up writes as it climbs, and at or over the target it goes
-   * to its fastest with the plate lit, the jackpot. It used to set the box on
-   * fire; the reference is now the sign over a slot machine, not a furnace.
+   * The score plate's own bulbs: the chase quickens and brightens with
+   * `--heat`, which the count-up writes as it climbs, and at or over the
+   * target it goes to its fastest with the plate lit, the jackpot. The ring
+   * round the window follows the same heat through `spin`. It used to set the
+   * box on fire; the reference is the sign over a slot machine, not a furnace.
    */
+  /** Whether the bell has rung this show; see `reached`. */
+  let rung = false
   const chase = (jackpot: boolean) => {
     if (!scoreBox || skipping()) return
     scoreBox.classList.add("chasing")
-    scoreBox.classList.toggle("jackpot", jackpot)
+    // Once the bell has rung the plate stays at its jackpot: the climb that
+    // follows calls this with false on every frame and must not put it out.
+    scoreBox.classList.toggle("jackpot", jackpot || rung)
+  }
+
+  /**
+   * The payline: a thin rail across `rect` with a beam that runs along it once,
+   * left to right, the line a slot machine lights when a hand pays. It is the
+   * same stroke over a solved row and over the score plate, so the two moments
+   * read as one thing happening twice. Everything about it lives in the fx
+   * layer, which is why it is a rail and a beam and not a class on the row: a
+   * render mid-sweep would take a class away.
+   */
+  const payline = (rect: DOMRect, span: number, tall = false) => {
+    if (skipping()) return Promise.resolve()
+    const beam = h("i", { class: "beam" })
+    const rail = h("div", { class: tall ? "fx-payline tall" : "fx-payline" }, beam)
+    rail.style.width = `${rect.width + 32}px`
+    made.add(rail)
+    beam.style.width = `${Math.max(64, rect.width * 0.28)}px`
+    const at = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+    const run = Promise.all([
+      tw(
+        rail,
+        [
+          { opacity: 0 },
+          { opacity: 1, offset: 0.12 },
+          { opacity: 1, offset: 0.85 },
+          { opacity: 0 },
+        ],
+        span * 1.6,
+      ),
+      tw(
+        beam,
+        [
+          { transform: "translateX(-60%)", easing: "ease-in-out" },
+          { transform: `translateX(${rect.width + 16}px)` },
+        ],
+        span,
+      ),
+    ])
+    place(rail, at, run)
+    void run.then(() => made.delete(rail))
+    return run
+  }
+  /**
+   * The bell: the target has been met. AUDIO PHASE: this is the one place to
+   * ring it, `over` being how many targets the total now is (1 exactly at the
+   * line), so the bell can be bigger for a hand that cleared it by a mile.
+   * Until that phase the bell is only seen, as the whole ring flashing.
+   */
+  const ringBell = (_over: number) => {
+    marquee("flash")
+  }
+  /** Target met: the plate goes to its fastest chase, a payline runs under it, and coins fall. */
+  const reached = (x: number, over: number) => {
+    // Once a show: a solve that lands on a total already over the target is
+    // the same bell, not a second one.
+    if (rung) return
+    rung = true
+    hottest = 1
+    spin(1)
+    chase(true)
+    ringBell(over)
+    if (!scoreBox) return
+    const r = scoreBox.getBoundingClientRect()
+    void payline(r, PAYLINE_SWEEP)
+    fx(
+      "coin",
+      { x: r.left + r.width / 2, y: r.top },
+      {
+        count: Math.round(14 + 40 * x),
+        speed: 620,
+        spread: Math.PI * 0.9,
+        colors: COIN_GOLDS,
+      },
+    )
   }
 
   // ---- the events -------------------------------------------------------
@@ -1087,6 +1194,10 @@ async function playTable(
             void tw(chipsEl, across(1), 500)
             void tw(multEl, across(-1), 500)
           }
+          // The payline runs the row while the blocks are still pulling back,
+          // so the pile is what the line was drawn for when they meet.
+          const rowEl = tiles[0]?.parentElement
+          if (rowEl) void payline(rowEl.getBoundingClientRect(), PAYLINE_SWEEP)
           later(() => {
             const at =
               mid ?? (scoreBox ? centerOf(scoreBox) : { x: innerWidth / 2, y: innerHeight / 2 })
@@ -1117,21 +1228,7 @@ async function playTable(
               )
             }
             climb(from, event.total, x)
-            if (event.total >= target) {
-              ignite(x)
-              if (scoreBox && x > 0.3) {
-                const r = scoreBox.getBoundingClientRect()
-                fx(
-                  "confetti",
-                  { x: r.left + r.width / 2, y: r.top },
-                  {
-                    count: Math.round(20 + 50 * x),
-                    speed: 620,
-                    spread: Math.PI * 0.9,
-                  },
-                )
-              }
-            }
+            if (event.total >= target) reached(x, event.total / Math.max(1, target))
           }, LUNGE_HIT)
           onScreen = event.total
           // The climb's span is only known once it has started, so its share of
@@ -1143,47 +1240,54 @@ async function playTable(
           const x = heat(event.total, target)
           const box = screen.querySelector(".grid-wrap")
           const at = box ? centerOf(box) : { x: innerWidth / 2, y: innerHeight / 2 }
+          const row = tiles[0]?.parentElement
+          if (row) void payline(row.getBoundingClientRect(), PAYLINE_SWEEP, true)
           if (!skipping()) {
-            const stamp = h("div", { class: "fx-stamp" }, `×${event.factor}`)
-            made.add(stamp)
-            const run = tw(
-              stamp,
-              [
-                {
-                  opacity: 0,
-                  transform: "scale(3.6) rotate(-16deg)",
-                  easing: "cubic-bezier(0.6, 0, 0.9, 0.5)",
-                },
-                { opacity: 1, transform: "scale(0.9) rotate(-6deg)", offset: 0.26, easing: OUT },
-                { opacity: 1, transform: "scale(1.07) rotate(-6deg)", offset: 0.36, easing: OUT },
-                { opacity: 1, transform: "scale(1) rotate(-6deg)", offset: 0.48, easing: "linear" },
-                {
-                  opacity: 1,
-                  transform: "scale(1.03) rotate(-6deg)",
-                  offset: 0.8,
-                  easing: "ease-in",
-                },
-                { opacity: 0, transform: "scale(1.3) rotate(-6deg)" },
-              ],
-              STAMP,
+            // The sign lights over the board once the line has crossed it:
+            // JACKPOT and the factor, on a marquee plate of its own bulbs.
+            const sign = h(
+              "div",
+              { class: "fx-jackpot" },
+              h("b", {}, ui().board.jackpot),
+              h("span", {}, `×${event.factor}`),
             )
-            place(stamp, at, run)
-            run.then(() => made.delete(stamp))
+            made.add(sign)
+            const run = tw(
+              sign,
+              [
+                { opacity: 0, transform: "scale(0.3)", easing: "cubic-bezier(0.3, 1.5, 0.5, 1)" },
+                { opacity: 1, transform: "scale(1.06)", offset: 0.24, easing: OUT },
+                { opacity: 1, transform: "scale(1)", offset: 0.34, easing: "linear" },
+                { opacity: 1, transform: "scale(1.03)", offset: 0.82, easing: "ease-in" },
+                { opacity: 0, transform: "scale(1.15)" },
+              ],
+              PAYLINE * 1.6,
+              PAYLINE_SWEEP,
+            )
+            place(sign, at, run)
+            run.then(() => made.delete(sign))
           }
           sound.cue({ name: "solve" })
           later(() => {
             // Impact: the stamp has hit the board, and the pile is what it hit.
-            fx("ring", at, { size: 520, life: 0.6, colors: ["#fff4c2"] })
+            fx("ring", at, { size: 520, life: 0.6, colors: [ivory] })
             fx("spark", at, { count: 60, speed: 760, life: 0.6, size: 4.5, colors: GOLDS })
-            fx("confetti", at, { count: 70, speed: 820, spread: Math.PI * 1.4 })
+            // The spill: coins thrown up from the board and left to fall.
+            fx("coin", at, {
+              count: 70,
+              speed: 860,
+              spread: Math.PI * 1.4,
+              colors: COIN_GOLDS,
+            })
+            spin(1)
             shake(0.95)
             screen.querySelector(".readout")?.classList.add("solved")
             hit(chipsEl, 1.5)
             hit(multEl, 1.5)
             climb(onScreen, event.total, x)
             onScreen = event.total
-            if (event.total >= target) ignite(x)
-          }, STAMP * 0.26)
+            if (event.total >= target) reached(x, event.total / Math.max(1, target))
+          }, PAYLINE_SWEEP)
           await step(SOLVE_HOLD)
           break
         }
@@ -1243,33 +1347,30 @@ async function playTable(
               ? (ref?.right ?? trayRect.left) + 8 + width / 2
               : trayRect.left + width / 2
             const at = { x: cx, y: trayRect.top + height / 2 }
-            const ghost = h("div", { class: "fx-ghost" }, h("span", {}, name))
+            const ghost = h("div", { class: "fx-placard" }, h("span", {}, name))
             ghost.style.width = `${width}px`
             ghost.style.height = `${height}px`
             made.add(ghost)
+            // The placard's lamp goes out: a stutter of the bulb, then dark, and
+            // the card sinks a hair as it dies. No fire, no spin: nothing
+            // burned, the sign lost its power.
             const burn = async () => {
               await tw(
                 ghost,
                 [
-                  { transform: "scale(1) rotate(0deg)", filter: "brightness(1)", easing: OUT },
+                  { transform: "scale(1)", filter: "brightness(1)", easing: OUT },
+                  { transform: "scale(1.04)", filter: "brightness(1.6)", offset: 0.18 },
+                  { transform: "scale(1)", filter: "brightness(0.7)", offset: 0.3 },
+                  { transform: "scale(1.02)", filter: "brightness(1.3)", offset: 0.42 },
                   {
-                    transform: "scale(1.06) rotate(-5deg)",
-                    filter: "brightness(1.5)",
-                    offset: 0.25,
+                    transform: "scale(1)",
+                    filter: "brightness(0.35) grayscale(0.8)",
+                    offset: 0.58,
                   },
+                  { transform: "scale(1)", filter: "brightness(0.2) grayscale(1)", offset: 0.8 },
                   {
-                    transform: "scale(1.06) rotate(5deg)",
-                    filter: "brightness(1.9) sepia(1)",
-                    offset: 0.5,
-                  },
-                  {
-                    transform: "scale(1.12) rotate(-3deg)",
-                    filter: "brightness(2.4) sepia(1) saturate(4)",
-                    offset: 0.72,
-                  },
-                  {
-                    transform: "scale(0.7) rotate(8deg) translateY(-1rem)",
-                    filter: "brightness(0.4) sepia(1)",
+                    transform: "scale(0.96) translateY(0.4rem)",
+                    filter: "brightness(0.15) grayscale(1)",
                     opacity: 0,
                   },
                 ],
@@ -1280,22 +1381,8 @@ async function playTable(
             place(ghost, at, done)
             done.then(() => made.delete(ghost))
             later(() => {
-              fx("shard", at, {
-                count: 18,
-                speed: 460,
-                life: 0.9,
-                size: 6,
-                colors: ["#ffe08a", "#ff9f1c", "#ff5a1f"],
-              })
-              fx("ember", at, {
-                count: 26,
-                speed: 200,
-                spread: Math.PI * 1.2,
-                life: 1,
-                size: 5,
-                colors: FLAME,
-              })
-              shake(0.35)
+              fx("shard", at, { count: 14, speed: 300, life: 0.8, size: 5, colors: ASH })
+              shake(0.2)
             }, 380)
             pop(
               "dim",
@@ -1331,6 +1418,13 @@ async function playTable(
       el?.style.removeProperty("rotate")
     }
     scoreEl?.style.removeProperty("scale")
+    // The odometer's cells back to one plain text node, so the next render
+    // and the next show start from the same shape the phone leaves behind.
+    if (scoreEl) scoreEl.replaceChildren(document.createTextNode(scoreEl.textContent ?? ""))
+    // The ring back to rest and its speed back to the sheet's own, so a
+    // hand's heat is not the next screen's.
+    document.getElementById("marquee")?.style.removeProperty("--chase")
+    marquee("idle")
     if (skipping()) clearParticles()
   }
 }

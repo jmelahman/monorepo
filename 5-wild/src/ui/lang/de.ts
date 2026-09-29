@@ -437,6 +437,7 @@ export const de: Strings = {
       multUnknown: "Die Farbe ist der Mult, und nur Raten deckt sie auf.",
       letterBroken: (letter) => `${letter.toUpperCase()} zerbrochen`,
       relicGone: (name) => `${name} ist weg`,
+      jackpot: "JACKPOT",
     },
 
     tip: {
