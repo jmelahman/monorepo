@@ -34,12 +34,23 @@ without making the engine language-aware and a run's prose part of run state.
 
 ## The desktop build
 
-`godot/` runs this engine, not a port of it: `src/engine` is bundled and run
-inside Godot by QuickJS, and `godot/tests/engine` replays the golden vectors
-there, so a vector re-recorded here is checked there with nothing to update.
-What that asks of the engine is what it already promises: no DOM, no Node, no
-`Intl` (QuickJS has none; see `godot/js/intl-shim.ts`), plain-JSON state. See
-`godot/CLAUDE.md`.
+`desktop/` is a Tauri shell around `dist/`, and nothing more: the page gets no
+IPC but the one command Tauri's own Ctrl +/- zoom needs on Linux, so there is
+no desktop code path in `src/` to keep in step. It replaced a Godot port that
+ran the engine under QuickJS and redrew every screen from a hand-kept copy of
+the stylesheet, at a 36 MB zip, and an Electron build measured at 128 MB. See
+`desktop/src-tauri/src/main.rs`.
+
+Two things about it are load-bearing. The origin is the save: localStorage is
+keyed on it, and it is `tauri://localhost` on Linux and
+`https://tauri.localhost` on Windows, so anything that changes either
+(`use_https_scheme`, the identifier) wipes every desktop player's run and
+record. The same two strings are how `reportUrl` tells a desktop player from a
+browser and what the telemetry worker's `ORIGINS` admits. And on Linux the page
+runs in WebKitGTK, the one engine nothing else here is tested against, which
+plays audio through GStreamer: a machine without GStreamer's Ogg plugins plays
+the game in silence, which is why the deb depends on them and the AppImage
+carries its own.
 
 ## Language
 

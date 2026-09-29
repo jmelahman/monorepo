@@ -3694,18 +3694,21 @@ function thanks(when: "fresh" | "shown"): HTMLElement {
  * GitHub's page before anything is posted, which is why this can carry the
  * platform when the telemetry, which is sent unseen, carries no such thing.
  *
- * The APK is told from the site by where it is served: Capacitor serves the
- * bundle from `https://localhost`, and the dev server's `localhost` is a
- * different port on plain http.
+ * The shells are told from the site by where they serve the bundle: Capacitor
+ * from `https://localhost`, which the dev server's plain-http `localhost` is
+ * not, and the desktop build from Tauri's: `tauri://localhost` on Linux,
+ * `https://tauri.localhost` on Windows (see desktop/src-tauri/src/main.rs).
  */
 function reportUrl(): string {
   const params = new URLSearchParams({
     template: "bug_report.yml",
     version: buildStamp(),
     platform:
-      location.protocol === "https:" && location.hostname === "localhost"
-        ? "Android app"
-        : "Browser",
+      location.protocol === "tauri:" || location.hostname === "tauri.localhost"
+        ? "Desktop app"
+        : location.protocol === "https:" && location.hostname === "localhost"
+          ? "Android app"
+          : "Browser",
     language: lang(),
   })
   return `${SOURCE_URL}/issues/new?${params}`

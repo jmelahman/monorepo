@@ -29,6 +29,7 @@ test/           unit tests, golden vectors, and the engine-purity guard
 tools/          word-list and icon generation
 assets/         icon source art and the README screenshot
 android/        Capacitor's Android project, committed
+desktop/        the Tauri shell for Linux and Windows
 telemetry/      the Cloudflare Worker that receives opt-in run replays
 ```
 
@@ -58,17 +59,6 @@ git tag "v$(npm pkg get version --workspaces=false | tr -d '"')"   # and push th
 pushes the tag, and the workflow finds the release already there and only
 attaches the APK.
 
-The same tag also builds the desktop port (`godot/`) for Linux and Windows,
-and `.github/workflows/desktop.yml` attaches both zips to that release once
-the APK job has created it. It never creates the release itself, so a tag
-whose APK fails ships no desktop builds either. Locally, with the export
-templates installed (`godot/scripts/setup.sh templates`, 1.3 GB) and the
-`.dll` built (`godot/scripts/build-native.sh windows`, which needs mingw-w64):
-
-```sh
-godot/scripts/export.sh   # godot/build/5-wild-<version>-{linux,windows}.zip
-```
-
 The tag is `v` plus the version in `package.json`, and that pair moves once per
 phase of work: a phase that changed nothing a player can see does not need a
 release, but anything that does gets a patch bump so the phone has a build to
@@ -85,6 +75,17 @@ Building locally additionally needs a JDK and the Android SDK:
 
 ```sh
 npm run apk        # build + cap sync + gradlew assembleDebug
+```
+
+The same tag builds the desktop app, the web build in Tauri's shell, and
+`desktop.yml` attaches a Linux AppImage and deb and a Windows installer to the
+release once `android.yml` has created it. Those are unsigned, so Windows shows
+SmartScreen's "unknown publisher" once. Building locally needs Rust, bun, and on
+Linux Tauri's WebKitGTK prerequisites:
+
+```sh
+npm run build                         # the shell embeds dist/
+cd desktop && bun install && bun run tauri build
 ```
 
 ## Publishing to Play

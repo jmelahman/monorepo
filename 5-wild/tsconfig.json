@@ -18,5 +18,5 @@
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true
   },
-  "include": ["src", "test", "tools", "godot/js", "vite.config.ts", "capacitor.config.ts"]
+  "include": ["src", "test", "tools", "vite.config.ts", "capacitor.config.ts"]
 }

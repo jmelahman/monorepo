@@ -45,8 +45,8 @@ body:
     id: platform
     attributes:
       label: Where you play
-      description: The Android app, or which browser.
-      placeholder: Android app / Firefox on Windows / ...
+      description: The Android app, the desktop app, or which browser.
+      placeholder: Android app / Desktop app / Firefox on Windows / ...
   - type: input
     id: language
     attributes:

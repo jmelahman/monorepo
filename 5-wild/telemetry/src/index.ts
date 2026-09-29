@@ -16,8 +16,19 @@ type Env = {
   LIMITER: { limit: (options: { key: string }) => Promise<{ success: boolean }> }
 }
 
-/** The site, and the APK, whose Capacitor shell serves the bundle from here. */
-const ORIGINS = new Set(["https://5-wild.com", "https://localhost", "http://localhost:5173"])
+/**
+ * The site, the APK (Capacitor serves the bundle from `https://localhost`), the
+ * desktop build (Tauri serves it from `tauri://localhost` on Linux and from
+ * `https://tauri.localhost` on Windows; see desktop/src-tauri/src/main.rs) and
+ * the dev server.
+ */
+const ORIGINS = new Set([
+  "https://5-wild.com",
+  "https://localhost",
+  "tauri://localhost",
+  "https://tauri.localhost",
+  "http://localhost:5173",
+])
 
 /** A long run is a few KB. Anything near this is not a run. */
 const MAX_BYTES = 32 * 1024

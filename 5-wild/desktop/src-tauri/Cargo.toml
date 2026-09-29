@@ -1,0 +1,23 @@
+[package]
+name = "five-wild"
+version = "0.0.0"
+description = "5 Wild, a word-guessing roguelike"
+edition = "2024"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2.7.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.0", features = [] }
+tauri-plugin-opener = "2.6.0"
+tauri-plugin-single-instance = "2.5.0"
+
+# The binary is most of the download, and nothing here is hot enough to miss
+# what size optimization gives up.
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

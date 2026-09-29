@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "zoom",
+  "description": "Ctrl +/- and Ctrl+wheel. WebView2 zooms natively; on Linux Tauri injects a key handler that calls back into this one command, and it is the only thing the page may call.",
+  "windows": ["main"],
+  "permissions": ["core:webview:allow-set-webview-zoom"]
+}

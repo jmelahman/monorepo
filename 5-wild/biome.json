@@ -9,9 +9,6 @@
     "includes": [
       "**",
       "!android",
-      "!godot/js/build",
-      "!godot/addons",
-      "!godot/.godot",
       "!dist",
       "!public/words",
       "!.mcp.json",
