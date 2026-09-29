@@ -306,26 +306,6 @@ function cd() {
 	HOME="${TEMP_HOME:=$HOME}" builtin cd "$@"
 }
 
-function rgplace() {
-	if [[ $# -lt 2 ]]; then
-		echo "Usage: rgplace <search_pattern> <replacement> [file_pattern]"
-		echo "Example: rgplace 'foo' 'bar' '*.txt'"
-		return 1
-	fi
-
-	local search_pattern=$1
-	local replacement=$2
-	local file_pattern=$3
-
-	if [ -z "$file_pattern" ]; then
-		file_pattern="*"
-	fi
-
-	rg --color=never --files-with-matches "$search_pattern" --glob "$file_pattern" | while read -r file; do
-		sed -i "s|$search_pattern|$replacement|g" "$file"
-	done
-}
-
 function ga() {
 	local message="$1"
 	if [ -z "$message" ]; then
@@ -335,59 +315,7 @@ function ga() {
 	git commit --amend -m "${message}"
 }
 
-function gsp() {
-	local subtree="${1:-}"
-	shift
-	__gsubtree push "$subtree" "$@"
-}
-
-function gspull() {
-	local subtree="${1}"
-	shift
-	__gsubtree pull "$subtree" --squash "$@"
-}
-
-function __gsubtree() {
-	local cmd="${1}"
-	shift
-	local subtree="${1:-}"
-	shift
-	local toplevel
-	toplevel="$(git rev-parse --show-toplevel)"
-	if [ -z "$subtree" ]; then
-		>&2 echo "Missing argument 'subtree'."
-		echo "Pick one of:"
-		# https://stackoverflow.com/a/18339297
-		git log | grep git-subtree-dir | tr -d ' ' | cut -d ":" -f2 | sort | uniq | xargs -I {} bash -c 'if [ -d $(git rev-parse --show-toplevel)/{} ] ; then echo "  {}"; fi'
-		return 2
-	fi
-	git -C "$toplevel" subtree "$cmd" --prefix "$subtree" "git@github.com:jmelahman/$(basename "${subtree}").git" master "$@"
-}
-
-fixbranch() {
-	local branch="$1"
-	if [[ -z $branch ]]; then
-		echo "Usage: fixbranch <branch>"
-		return 1
-	fi
-	git fetch origin "$branch"
-	git checkout "$branch"
-	prek run --last-commit || true
-	git commit -am "nit"
-	git push origin "$branch"
-
-	local pr
-	pr=$(gh pr list --head "$branch" --json number --jq '.[0].number')
-	if [[ -z $pr ]]; then
-		echo "No open PR found for branch $branch"
-		return 1
-	fi
-	echo "Found PR #$pr"
-	gh pr review "$pr" --approve
-	gh pr merge "$pr" --auto --squash
-}
-
-grb() {
+function grb() {
 	local input="$1"
 	local remote="${input%%:*}"
 	local branch="${input#*:}"
@@ -441,13 +369,6 @@ if [ -x "$(command -v fzf)" ] && [ -r /usr/share/fzf/key-bindings.zsh ]; then
 	source /usr/share/fzf/key-bindings.zsh
 fi
 
-# Load env
-if [ -f "$HOME/.env" ]; then
-	while read -r line; do
-		export "$line"
-	done <"$HOME/.env"
-fi
-
 # Vim as default
 export EDITOR="vim"
 
@@ -466,7 +387,7 @@ fi
 # Customize Path
 export GOPATH="$HOME/.go"
 export GOBIN="$GOPATH/bin"
-export PATH=$HOME/code/monorepo/tools/bin:$HOME/.local/bin:$GOBIN:$HOME/.bun/bin:$PATH:$PATH
+export PATH=$GOBIN:$HOME/.local/bin:$HOME/.bun/bin:$PATH:$PATH
 
 export GRIM_DEFAULT_DIR="~/Pictures"
 
@@ -495,26 +416,12 @@ export DEVCONTAINER_REMOTE_HOME=/root
 export KANBAN_UID=0
 export KANBAN_GID=0
 
-# TODO: npm install changes the lockfile on Linux, https://github.com/onyx-dot-app/onyx/issues/7381
-export SKIP=npm-install-check
-export IMAGE_TAG=edge
-
 if [ "$IN_DOCKER" != "true" ]; then
 	export AWS_PROFILE="jamison"
 fi
-export HOST_PORT_80="8888"
 
 # Resolve container hostnames (e.g. ollama) to published ports on the host.
 # Inside containers, Docker's DNS already resolves them.
 if [ "$IN_DOCKER" != "true" ]; then
 	export HOSTALIASES="$HOME/.hosts"
 fi
-
-#export OLLAMA_HOST=http://ollama.home
-#export OLLAMA_API_BASE="$OLLAMA_HOST"
-
-# For torch with AMD GPU
-export HSA_OVERRIDE_GFX_VERSION=11.0.0
-
-# Added by LM Studio CLI tool (lms)
-export PATH="$PATH:/home/jamison/.lmstudio/bin"
