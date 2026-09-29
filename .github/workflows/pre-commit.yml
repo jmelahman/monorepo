@@ -27,10 +27,6 @@ jobs:
         uses: daaku/gh-action-apt-install@92eea4f84f90c895b544aaec6ae21839127c84e5
         with:
           packages: libasound2-dev
-      # templates/godot-template's hooks compile, lint and test the project,
-      # so they need Godot, its addons and Xvfb at the template's pins.
-      - name: Set up Godot
-        run: templates/godot-template/.github/ci-setup.sh
       # Go hooks build with the Go on PATH and GOTOOLCHAIN=local, so the
       # runner's older Go can't build a hook that needs a newer one.
       - name: Set up Go
