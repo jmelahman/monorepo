@@ -35,11 +35,19 @@
 :root.table .primary {
   --face: var(--btn-primary);
   --lip: var(--btn-primary-lip);
+  /* Brass is too light for cream ink, so the lit button is inked dark, and
+     the display outline comes off: dark ink stroked in dark ink is a smudge.
+     Through type.css's own variables rather than restating the stroke here,
+     because its `:is()` list carries `.hud-score .score` and so outranks any
+     plain `.primary` rule that tries to. */
+  color: var(--on-primary);
+  --stroke: 0;
+  --drop: 0;
 }
 
 /* Not filled red: danger is the one button that destroys something, and it is
    a slab like the rest so it is as pressable as the rest, but it stays a step
-   quieter than the orange so the eye still goes to the safe one first. */
+   quieter than the brass so the eye still goes to the safe one first. */
 :root.table .danger {
   --face: var(--btn-danger);
   --lip: var(--btn-danger-lip);

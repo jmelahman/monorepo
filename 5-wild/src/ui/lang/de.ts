@@ -848,6 +848,7 @@ export const de: Strings = {
       music: "Musik",
       track: "Stück",
       speed: "Animationstempo",
+      ambience: "Tischlicht",
       theme: "Design",
       themes: { light: "Hell", dark: "Dunkel" },
       language: "Sprache",

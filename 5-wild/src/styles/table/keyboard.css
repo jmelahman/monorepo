@@ -1,0 +1,111 @@
+/*
+ * The keyboard: backlit caps on a brass rim.
+ *
+ * Each key is a lit button off a slot machine's deck: a cap with a soft glow
+ * in the middle of its face, a brass rim, and a lip of dark brass beneath that
+ * goes when the key is pressed and the cap drops onto it. A key the guess has
+ * coloured also *glows* in that colour, which is the part the keyboard is for:
+ * what has been learned should be visible across the room, and a lit button
+ * does that where a fill alone does not. Not on gray, on purpose. Gray is the
+ * elimination, the absence of information, and a key that is out should recede
+ * rather than shine.
+ *
+ * Box-shadow is one list and three variables, `--glow`, `--ring` and the lip,
+ * because a rule written per colour would have to restate the bevel and the
+ * lip six times. The ring is the modifier's outline, which the table rule had
+ * been overriding without saying so: `:root.table .key` outranks
+ * `.key[data-mod]`, and every etched letter lost its ring on the desktop until
+ * it was carried in here.
+ *
+ * Motion is `translate` (hover lift and the press), with `transform` left for
+ * the settle `scenes/board.ts` plays on a real press. A CSS `:active` alone
+ * would do for a pointer, but a physical key never sets it, and the two should
+ * look like the same key being pressed.
+ */
+:root.table .key {
+  --glow: 0 0 0 0 transparent;
+  --ring: inset 0 0 0 0 transparent;
+  --lip: 0.25rem;
+  border: 0.15rem solid var(--brass);
+  border-radius: var(--radius-s);
+  background-image:
+    radial-gradient(ellipse at 50% 32%, #ffffff40, #ffffff00 68%),
+    linear-gradient(180deg, #ffffff1f, #ffffff00 46%, #00000038);
+  box-shadow:
+    inset 0 0.125rem 0 #ffffff33,
+    inset 0 -0.25rem 0.25rem #0000002e,
+    inset 0 0 0 0.0625rem var(--brass-hi),
+    var(--ring),
+    0 var(--lip) 0 var(--brass-lo),
+    var(--glow);
+  font-size: 1.25rem;
+  color: var(--fg);
+  transition:
+    translate 90ms var(--ease-out),
+    filter 120ms var(--ease-out),
+    box-shadow 120ms var(--ease-out);
+}
+
+:root.table .key.wide {
+  font-size: 0.875rem;
+}
+
+:root.table .key:is(.green, .yellow, .gray) {
+  color: var(--on-tile);
+}
+
+:root.table .key.gray {
+  color: var(--key-gray-fg);
+}
+
+/* The glow: a halo at the key's own colour, tight enough not to reach the next
+   key (the gap is 0.4375rem). */
+:root.table .key.green {
+  --glow: 0 0 0.75rem 0.0625rem color-mix(in srgb, var(--green) 65%, transparent);
+}
+
+:root.table .key.yellow {
+  --glow: 0 0 0.75rem 0.0625rem color-mix(in srgb, var(--yellow) 65%, transparent);
+}
+
+/* A letter that carries a modifier keeps its ring. Silenced by the Vandal, or
+   broken, or with the plain board on, it does not, exactly as the phone's. */
+:root.table .key[data-mod]:not(.broken):not(:has(.mod-pip.silenced)) {
+  --ring: inset 0 0 0 0.125rem color-mix(in srgb, var(--mod) 62%, transparent);
+}
+
+:root.table.plain .key {
+  --ring: inset 0 0 0 0 transparent;
+}
+
+/* A dead key: the lamp is out. */
+:root.table .key.broken {
+  background-image: none;
+  border-color: var(--brass-lo);
+  box-shadow:
+    inset 0 0.1875rem 0.25rem #0000004d,
+    0 0.0625rem 0 #ffffff14;
+  translate: 0 0.125rem;
+}
+
+/* Hover, for a mouse: up by a hair and brighter. Not while pressed, so
+   `:active` below has the last word without needing more specificity. */
+:root.table.mouse .key:not(.broken):hover:not(:active) {
+  translate: 0 -0.125rem;
+  filter: brightness(1.14);
+}
+
+/* Pressed: the cap drops onto its lip, the lip is gone, and the lamp comes up.
+   The phone's `filter: brightness(1.35)` on `:active` is the same idea and is
+   kept, at a lower strength, since the press should read on a lit key. */
+:root.table .key:not(.broken):active {
+  translate: 0 var(--lip);
+  filter: brightness(1.25);
+  box-shadow:
+    inset 0 0.125rem 0 #ffffff26,
+    inset 0 -0.25rem 0.25rem #0000002e,
+    inset 0 0 0 0.0625rem var(--brass-hi),
+    var(--ring),
+    0 0 0 var(--brass-lo),
+    var(--glow);
+}

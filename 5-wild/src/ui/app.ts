@@ -1,10 +1,12 @@
 import type { Action, GameEvent, Refusal, RunState, WordSource } from "../engine"
 import { MODIFIER_BY_ID, reduce, startRun } from "../engine"
+import { loadAmbience, setAmbience } from "./ambience"
 import type { Cue } from "./audio"
 import { audioContext, Sound } from "./audio"
 import type { CoachStep } from "./coach"
 import { coachAsks, coachSpent, coachStep } from "./coach"
 import { clear } from "./dom"
+import { setMood } from "./fx/background"
 import { replay, setMotionSpeed } from "./fx/motion"
 import * as board from "./fx/scenes/board"
 import { playEvents } from "./fx/scenes/events"
@@ -257,6 +259,8 @@ export class App {
    * which `setMotionSpeed` keeps in step with this; see `./speed`.
    */
   private speed = loadSpeed()
+  /** The table lights (lamp drift, motes, marquee), on until the player turns them off. */
+  private ambience = loadAmbience()
   /** Light, dark, or the device's. The shell applied it before the first paint. */
   /**
    * The language the interface is in, which the words follow at the next run
@@ -330,6 +334,7 @@ export class App {
     setDecor(this.decor)
     setSpeed(this.speed)
     setMotionSpeed(this.speed)
+    setAmbience(this.ambience, false)
     bindShake(this.root)
     // The shell already put the catalog up, since its own failure screen is
     // written in it; this is the same call and it is not free to skip. A save
@@ -1009,6 +1014,11 @@ export class App {
       setMotionSpeed(this.speed)
       this.render()
     },
+    toggleAmbience: () => {
+      this.ambience = !this.ambience
+      setAmbience(this.ambience)
+      this.render()
+    },
     // From the look on screen rather than a stored pick, because before the
     // first tap there is no pick: the device's look is what the player sees, so
     // it is what the tap leaves.
@@ -1146,6 +1156,7 @@ export class App {
       track: this.music.title,
       decor: this.decor,
       speed: this.speed,
+      ambience: this.ambience,
       theme: currentTheme(),
       lang: this.lang,
       wordsDeferred: this.wordsDeferred,
@@ -1411,6 +1422,21 @@ export class App {
     // and this line, so an animation suppressed here never had a frame.
     this.root.firstElementChild?.classList.toggle("settled", settled)
     arrived(this.root, screenKind(view), was)
+    // The background's mood, from the same facts the view was chosen from. The
+    // boss reddens the table from its intro card on, and the reward screen after
+    // it is back to the round's own colour.
+    setMood(
+      this.atTitle || this.loading
+        ? "round"
+        : phase === "shop"
+          ? "shop"
+          : phase === "victory" || phase === "game_over"
+            ? phase
+            : phase === "round" && this.state.round.bossId
+              ? "boss"
+              : "round",
+      sheet !== null,
+    )
     this.holdFocus(keeping)
     this.lightCoach()
     // The pop was this render's; any after it keeps the line and not the pop.

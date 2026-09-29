@@ -600,6 +600,8 @@ export type Strings = {
       music: string
       track: string
       speed: string
+      /** The desktop table's lamp, dust and marquee bulbs; the row exists only there. */
+      ambience: string
       /**
        * The one row whose value is the translator's, since "Light" is a word
        * rather than a number or a name: the device's look, light, and dark.

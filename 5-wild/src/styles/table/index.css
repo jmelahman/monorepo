@@ -24,3 +24,10 @@
 @import "./screens.css";
 @import "./title.css";
 @import "./sheets.css";
+@import "./board.css";
+@import "./keyboard.css";
+@import "./moments.css";
+@import "./scoring.css";
+@import "./relics.css";
+@import "./packs.css";
+@import "./marquee.css";

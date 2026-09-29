@@ -1,0 +1,196 @@
+/*
+ * The scoring show's look. The motion is `fx/scenes/scoring.ts`; this is what
+ * it moves, and what the rail looks like standing still when it is done.
+ *
+ * Written under `:root.table` like everything here. The `#fx` layer is a child
+ * of `<body>`, so its nodes are reached through the root's class as well and
+ * need no gate of their own beyond the one the scene already has.
+ */
+
+:root.table {
+  /* The pops. Lighter than the blocks they feed, so a pop reads against the
+     felt and against a green tile alike, and its outline (`--outline`) is what
+     keeps it legible over either. */
+  --pop-chips: #4aa3ff;
+  --pop-mult: #ff5b64;
+  --pop-gold: #ffc12e;
+  --pop-dim: #6c6290;
+  --flame: #ff9f1c;
+  --flame-hot: #ff3d2e;
+}
+
+/* ---- the rail: more presence for the two numbers the game is about ------ */
+
+/* The blocks were 4.25rem in a rail with a hand's width of nothing under them.
+   Sized off the window's height so the same rule fills a 900px window and
+   still fits a 720px one, where the rail's rows have no slack to give. */
+:root.table .dock-line .readout {
+  font-size: clamp(2.75rem, 7.6svh, 4.5rem);
+}
+
+:root.table .dock-line .readout .chips,
+:root.table .dock-line .readout .mult {
+  --shape-line: clamp(4.5rem, 13svh, 7rem);
+  height: clamp(4.5rem, 13svh, 7rem);
+  border-radius: var(--radius-l);
+  --stroke: 0.2em;
+  --drop: 0.07em;
+}
+
+:root.table .dock-line .readout .times {
+  font-size: clamp(1.75rem, 4svh, 2.5rem);
+}
+
+:root.table .hud-score .score {
+  font-size: clamp(3.25rem, 7.6svh, 4.75rem);
+}
+
+/* The plate holds a glow of its own colour at rest once the target is met, and
+   the pseudo-element is where the flame lives: opacity and transform only, so
+   the loop costs a composite and no paint. `--heat` is set by the scene from
+   the count-up's own progress. */
+:root.table .round-screen .hud-score {
+  position: relative;
+  isolation: isolate;
+}
+
+:root.table .hud-score::after {
+  content: "";
+  position: absolute;
+  inset: -0.9rem -0.6rem -0.4rem;
+  z-index: -1;
+  border-radius: var(--radius-l);
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 75% 85% at 50% 100%,
+    color-mix(in srgb, var(--flame) 75%, transparent),
+    color-mix(in srgb, var(--flame-hot) 32%, transparent) 55%,
+    transparent 78%
+  );
+}
+
+:root.table .hud-score.met {
+  border-color: color-mix(in srgb, var(--gold) 70%, var(--outline));
+}
+
+:root.table .hud-score.met::after {
+  opacity: 0.5;
+}
+
+:root.table .hud-score.ablaze::after {
+  animation: ablaze 640ms ease-in-out infinite alternate;
+}
+
+@keyframes ablaze {
+  from {
+    opacity: 0.55;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.05) translateY(-0.2rem);
+  }
+}
+
+/* ---- on the board -------------------------------------------------------- */
+
+/* A modifier firing: the outline the phone draws, plus a glow in the modifier's
+   own colour. A filter and not a box-shadow, because the tile is turning and a
+   shadow would be repainted on every frame of it. */
+:root.table .tile.fired {
+  filter: drop-shadow(0 0 0.9rem var(--mod));
+}
+
+:root.table:is(.plain, .quiet) .tile.fired {
+  filter: none;
+}
+
+:root.table .relic.fired {
+  filter: drop-shadow(0 0 1rem color-mix(in srgb, var(--gold) 80%, transparent));
+}
+
+/* The per-letter pops are the board narrating arithmetic, which the quiet and
+   plain boards turn off; the relic's, the category's and the total's are the
+   game and stay. */
+:root.table:is(.plain, .quiet) .fx-pop.tile {
+  display: none;
+}
+
+/* ---- #fx ------------------------------------------------------------------ */
+
+/* A pill in the block's own colour with white ink: the reader matches it to the
+   readout it is about to feed by colour before reading it. */
+:root.table .fx-pop {
+  padding: 0.05em 0.5em 0.1em;
+  border: 0.125rem solid var(--outline);
+  border-radius: var(--radius-pill);
+  background: var(--pop-chips);
+  box-shadow: 0 0.1875rem 0 var(--outline);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  -webkit-text-stroke: 0.18em var(--outline);
+  paint-order: stroke fill;
+  text-shadow: 0 0.06em 0 var(--outline);
+  pointer-events: none;
+}
+
+:root.table .fx-pop.tile {
+  font-size: 1.25rem;
+}
+
+:root.table .fx-pop.mult {
+  background: var(--pop-mult);
+}
+
+:root.table .fx-pop.gold,
+:root.table .fx-pop.words {
+  background: var(--pop-gold);
+  color: #fff;
+}
+
+:root.table .fx-pop.dim {
+  background: var(--pop-dim);
+}
+
+/* The solve bonus's stamp: as big as the board's own letters and then some,
+   gold on a dark slab, set at an angle like a rubber stamp. */
+:root.table .fx-stamp {
+  padding: 0.05em 0.35em 0.12em;
+  border: 0.25rem solid var(--outline);
+  border-radius: var(--radius-l);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 80%, #fff), var(--gold));
+  box-shadow:
+    0 0.5rem 0 var(--outline),
+    0 0 4rem color-mix(in srgb, var(--gold) 60%, transparent);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(6rem, 22svh, 12rem);
+  line-height: 1;
+  -webkit-text-stroke: 0.14em var(--outline);
+  paint-order: stroke fill;
+  text-shadow: 0 0.06em 0 var(--outline);
+  pointer-events: none;
+}
+
+/* Stand-in for a relic that has left the tray: a card in the tray's own
+   colours, carrying the name, that the scene burns. */
+:root.table .fx-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  border: 0.1875rem solid var(--outline);
+  border-radius: var(--radius-m);
+  background: linear-gradient(180deg, var(--panel-3), var(--panel));
+  box-shadow: 0 0.25rem 0 var(--outline);
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}

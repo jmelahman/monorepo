@@ -901,6 +901,7 @@ export const en: Strings = {
       music: "Music",
       track: "Track",
       speed: "Animation speed",
+      ambience: "Table lights",
       theme: "Theme",
       themes: { light: "Light", dark: "Dark" },
       language: "Language",

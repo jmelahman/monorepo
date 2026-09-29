@@ -91,6 +91,7 @@ import {
   wordsFound,
 } from "./meta"
 import type { Speed } from "./speed"
+import { isTable } from "./table"
 import type { Theme } from "./theme"
 
 export type Handlers = {
@@ -134,6 +135,8 @@ export type Handlers = {
   cycleDecor: () => void
   /** Step the animations up a rung, wrapping back to the speed they are drawn at. */
   cycleSpeed: () => void
+  /** Turn the desktop table's lights (lamp drift, motes, marquee) on or off. */
+  toggleAmbience: () => void
   /** Step the look from the device's, to light, to dark, and back. */
   toggleTheme: () => void
   /** Step the interface to the next language, wrapping back to English. */
@@ -186,6 +189,8 @@ export type Chrome = {
   track: string
   decor: Decor
   speed: Speed
+  /** Whether the table lights are on. Only the table shows the row. */
+  ambience: boolean
   theme: Theme
   /**
    * Which language is chosen, which the views need for the picker alone: every
@@ -1768,6 +1773,7 @@ function shopItemCard(item: ShopItem, index: number, state: RunState, on: Handle
       // The stock deals in one card at a time rather than appearing all at once,
       // which is what makes a reroll feel like being dealt a new hand.
       style: `--deal:${index}`,
+      "data-flip": `shelf-${index}`,
       type: "button",
       // Dimmed, and still a button. The tap is how a thumb asks why, and the
       // answer is the till's "not enough gold" toast; a `disabled` card would
@@ -2157,6 +2163,9 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
       "button",
       {
         class: `relic rarity-${relic?.rarity ?? "common"}`,
+        // By id rather than slot: selling shifts the rest left, and a key that
+        // follows the card is what lets the table slide them into the gap.
+        "data-flip": `relic-${instance.id}`,
         "data-tip": relicCard(instance.id).text,
         "data-rarity": relic?.rarity ?? "common",
         type: "button",
@@ -3516,6 +3525,16 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
         copy.theme,
         copy.themes[chrome.theme],
       ),
+      // Only where it does something: the overlay is the desktop table's, and a
+      // phone or the light theme has none to turn off, so a switch there would
+      // be a dead row. Asked at render, which is every dispatch, so a window
+      // crossing into or out of the table has it right by the next tap.
+      isTable() &&
+        setting(
+          { "data-focus": "ambience", onclick: () => on.toggleAmbience() },
+          copy.ambience,
+          chrome.ambience,
+        ),
       // The same flag and endonym as the title screen's pill, as this row's
       // value. No `lang` attribute, for the reason `languageButton` gives.
       setting(

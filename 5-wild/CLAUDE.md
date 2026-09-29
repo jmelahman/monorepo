@@ -252,18 +252,22 @@ style but not its prose is half-finished.
 ## Storage
 
 `5wild:run:v2` (the run save), `5wild:run:lang` and `5wild:run:log` beside it,
-`5wild:meta:v2` (the record), nine settings: `5wild:plain`, `5wild:speed`,
-`5wild:theme`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
+`5wild:meta:v2` (the record), ten settings: `5wild:plain`, `5wild:speed`,
+`5wild:theme`, `5wild:ambience`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
 `5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. The run
 save and its log are sealed (`src/ui/seal.ts`) so the answer is not readable in
 devtools; the key ships in the bundle, so this hides it from a glance, not from
 someone who reads the source. Bare JSON from older builds still loads. All the
-settings are booleans except six: `5wild:track` holds `promises` or
+settings are booleans except seven: `5wild:track` holds `promises` or
 `forget-me-not`, which recording plays, anything else reading as the first;
 `5wild:plain` holds one of `all`, `minimal` or `none`, how much of the scoring
 game the board draws on itself; `5wild:speed` holds `1`, `2` or `3`, how many
 times faster than authored the animations play; `5wild:theme` holds `light`
-or `dark`, absent or anything else meaning the device decides; `5wild:lang` holds one of `en`,
+or `dark`, absent or anything else meaning the device decides; `5wild:ambience` holds
+`on` or `off`, whether the desktop table's own lights (the lamp's drift, the dust
+in its beam, the marquee bulbs) run, absent meaning on, applied as `.lights-off`
+on the root; the phone never shows the row and ignores the key, and it stills
+nothing of the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
 `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning
 the switch has never been touched, which sends nothing. The game never asks: the
 switch is on the about sheet behind the title screen's ⓘ and on the pause sheet,

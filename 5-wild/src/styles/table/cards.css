@@ -2,14 +2,10 @@
  * Playing cards: relics, consumables and the shop's shelf are one object at
  * three sizes, and this file is what they share.
  *
- * A card is printed stock with a rarity-coloured border, a face tinted a share
- * of that colour, a 3px ink edge outside it and the hard slab shadow under it.
- * Rare and legendary carry a foil: a diagonal band of light over a faint
- * prismatic wash. It is *static* here on purpose, and it replaces the
- * legendary sheen the phone runs (a `background-position` loop on the
- * card's `::before`), which cannot share a pseudo-element with a foil that is
- * drawn the same way. The moving specular is the shop phase's, and it lands on
- * the same `::before`.
+ * A card is a piece on the counter: printed stock with a rarity-coloured
+ * border, a face tinted a share of that colour, a 3px ink edge outside it and
+ * the hard slab shadow under it. What sets the rarities apart is the edge of
+ * the piece, chip-style, further down. It rests where it is put.
  */
 :root.table .rarity-common {
   --rare: var(--rare-common);
@@ -63,41 +59,146 @@
   display: none;
 }
 
-/* Foil. A band of light across the face and a low prismatic wash under it. On
-   `::before` at `mix-blend-mode: screen`, clipped by the card's own overflow. */
-:root.table :is(.relic, .shop-item).rarity-rare::before,
-:root.table :is(.relic, .shop-item).rarity-legendary::before {
+/*
+ * Rarity, told the way a casino tells the value of a chip: by its edge. Every
+ * card has a `::before` ring just inside the coloured border, and what that
+ * ring is made of is the rarity.
+ *
+ *   common      nothing: a plain piece;
+ *   uncommon    edge spots in the rarity colour, half strength, like the
+ *               inlay on a low denomination;
+ *   rare        the same spots in ivory over brass, at full strength;
+ *   legendary   a ring of marquee bulbs, lit, with their halo. The bulbs are
+ *               steady. A marquee chases when something is happening on it;
+ *               this one is a card sitting on the counter.
+ *
+ * It replaces the foil and the moving specular this file used to draw. That was
+ * a card game's light; the table's is a lamp overhead, and a lamp does not
+ * move when a piece is picked up.
+ */
+:root.table :is(.relic:not(.empty), .shop-item:not(.sold))::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0.1875rem;
   z-index: 0;
   pointer-events: none;
-  border-radius: inherit;
-  background:
-    linear-gradient(115deg, transparent 32%, #ffffff40 46%, #ffffff10 54%, transparent 68%),
-    linear-gradient(
-      200deg,
-      color-mix(in srgb, var(--rare-c) 30%, transparent),
-      transparent 40%,
-      #ff7ad633 70%,
-      #5ad7ff33 100%
-    );
-  mix-blend-mode: screen;
+  border-radius: calc(var(--radius-m) - 0.25rem);
+  background: none;
+  border: 0 dashed transparent;
+  mix-blend-mode: normal;
   animation: none;
-  background-size: 100% 100%;
-  background-position: 0 0;
+  filter: none;
 }
 
-:root.table :is(.relic, .shop-item).rarity-legendary::before {
-  background:
-    linear-gradient(115deg, transparent 28%, #ffffff55 44%, #ffffff18 54%, transparent 70%),
-    linear-gradient(200deg, #ff7ad655, transparent 32%, #ffe45a44 58%, #5ad7ff55 100%);
+:root.table :is(.relic, .shop-item).rarity-uncommon:not(.sold, .empty)::before {
+  border-width: 0.25rem;
+  border-color: color-mix(in srgb, var(--rare-c) 55%, transparent);
 }
 
-/* Card text sits over the foil. */
+:root.table :is(.relic, .shop-item).rarity-rare:not(.sold, .empty)::before {
+  border-width: 0.25rem;
+  border-color: color-mix(in srgb, var(--brass-hi) 80%, var(--rare-c));
+  box-shadow: inset 0 0 0 0.125rem color-mix(in srgb, var(--brass-lo) 70%, transparent);
+}
+
+:root.table :is(.relic, .shop-item).rarity-legendary:not(.sold, .empty)::before {
+  inset: 0.125rem;
+  border-style: dotted;
+  border-width: 0.3125rem;
+  border-color: var(--bulb);
+  filter: drop-shadow(0 0 0.25rem var(--bulb));
+}
+
+/* Card text sits over the ring. */
 :root.table :is(.relic, .shop-item) > * {
   position: relative;
   z-index: 1;
+}
+
+/*
+ * The glint. A card picked out by the pointer is lifted a few pixels off the
+ * felt, brightened as if it had come closer to the lamp, and one band of light
+ * crosses it once, corner to corner. Once and not on a loop: it is the answer
+ * to a hover, and a hover that keeps flashing is a card asking to be bought.
+ * The reels in `shop.ts` reuse it as `.struck` on the card that has just
+ * stopped. Mouse only; a finger has no hover to answer, and the APK's WebView
+ * says it has (see `bindTips`), which is why this reads `.mouse`.
+ */
+:root.table :is(.shop-item:not(.sold), .relic:not(.empty))::after {
+  display: block;
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: auto;
+  height: auto;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgb(255 255 255 / 0.32) 49%,
+    rgb(255 255 255 / 0.1) 55%,
+    transparent 64%
+  );
+  background-size: 300% 100%;
+  background-position: 130% 0;
+  box-shadow: none;
+  opacity: 0;
+}
+
+@keyframes glint {
+  0% {
+    background-position: 130% 0;
+    opacity: 1;
+  }
+  100% {
+    background-position: -30% 0;
+    opacity: 1;
+  }
+}
+
+:root.table :is(.shop-item:not(.sold), .relic:not(.empty)) {
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.8, 0.3, 1),
+    filter 160ms ease-out,
+    box-shadow 160ms ease-out;
+}
+
+:root.table.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover,
+:root.table :is(.shop-item, .relic).struck {
+  z-index: 3;
+}
+
+:root.table.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover {
+  transform: translateY(-0.25rem);
+  filter: brightness(1.07);
+  box-shadow:
+    inset 0 0 0 0.1875rem var(--rare-c),
+    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
+    var(--shadow-lift);
+}
+
+:root.table.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover::after,
+:root.table :is(.shop-item, .relic).struck::after {
+  animation: glint calc(720ms * var(--pace)) cubic-bezier(0.3, 0.2, 0.3, 1) both;
+}
+
+/* The press: pushed back down onto the felt. */
+:root.table.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover:active {
+  transform: translateY(0.0625rem) scale(0.97);
+  transition-duration: 70ms;
+}
+
+/* The stand-ins the scenes fly are pictures of a card, not cards. */
+:root.table .shop-ghost {
+  animation: none;
+  transition: none;
+  pointer-events: none;
+  filter: none;
+}
+:root.table .shop-ghost::after {
+  display: none;
 }
 
 /* Relic tray cards, in the tray (round) and on the owned row (shop). */
@@ -125,14 +226,6 @@
   color: var(--mult);
   -webkit-text-stroke: 0.3em var(--outline);
   paint-order: stroke fill;
-}
-
-:root.table.mouse .relic[data-tip]:hover {
-  transform: translateY(-0.25rem);
-  box-shadow:
-    inset 0 0 0 0.1875rem var(--rare-c),
-    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
-    var(--shadow-lift);
 }
 
 :root.table .relic.fired {

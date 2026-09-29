@@ -1,0 +1,61 @@
+/*
+ * An open pack, on the table: three or five cards laid in a row on a wide
+ * sheet, where the phone stacks them, and the tear that dealt them is the
+ * script's (`shop.ts`).
+ *
+ * The cards are the shelf's, 5:7, so a pick is the same object the player just
+ * weighed at the till and the rarity colours mean what they meant there.
+ * `overflow` is visible: the tilt lifts a card out of its box and a clipped
+ * row would shave it, and the sheet has room, which the phone's does not.
+ */
+:root.table .sheet.pack-sheet {
+  width: min(100%, 50rem);
+  max-height: none;
+  align-items: stretch;
+  overflow: visible;
+}
+
+:root.table .pack-hint {
+  text-align: center;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+:root.table .pack-options {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2) var(--space-4);
+  margin: 0;
+  overflow: visible;
+}
+
+:root.table .pack-options > .shop-item {
+  flex: 0 1 13rem;
+  min-width: 0;
+  aspect-ratio: 5 / 7;
+  min-height: 0;
+}
+
+:root.table .pack-options > .shop-item.sold {
+  flex: 0 1 13rem;
+  aspect-ratio: 5 / 7;
+}
+
+/* The pack's price is struck through on every card in it: it was already paid,
+   which is most of what makes opening one feel like winning. */
+:root.table .pack-options .shop-item-cost.free {
+  font-size: 1.125rem;
+}
+
+:root.table .pack-sheet .shop-actions {
+  justify-content: center;
+}
+
+:root.table .pack-sheet .shop-actions > .secondary {
+  flex: 0 1 16rem;
+  min-height: 3rem;
+  border-radius: var(--radius-m);
+  --face: var(--btn-neutral);
+  --lip: var(--btn-neutral-lip);
+}

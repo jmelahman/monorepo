@@ -1,0 +1,24 @@
+/*
+ * The relic tray, on the table: brass-framed plaques resting in their seats,
+ * on the round and in the shop alike.
+ *
+ * They do not move on their own. This file used to give every tray card an idle
+ * bob on its own phase, a card game's way of saying a thing is alive; the table
+ * is a counter, and what is on a counter is still until somebody touches it.
+ * What a relic does is light up when it scores (phase 2's, in `scoring.css`)
+ * and lift when the mouse is on it (`cards.css`), and that is the whole of its
+ * life, which is what makes the lit moment mean something.
+ */
+:root.table .relics > .relic:not(.empty) {
+  /* A brass plate under the ink edge, the frame the plaque is set in. */
+  outline: 0.125rem solid color-mix(in srgb, var(--brass) 55%, transparent);
+  outline-offset: -0.0625rem;
+}
+
+/* The price a relic sells for is the thing a tap in the shop does, so it is
+   worth being able to find: gold, in the display face, like every other price. */
+:root.table .shop-screen .relic .sell {
+  color: var(--gold);
+  -webkit-text-stroke: 0.3em var(--outline);
+  paint-order: stroke fill;
+}

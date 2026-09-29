@@ -858,6 +858,7 @@ export const fr: Strings = {
       music: "Musique",
       track: "Morceau",
       speed: "Vitesse d'animation",
+      ambience: "Lumières de la table",
       theme: "Thème",
       themes: { light: "Clair", dark: "Sombre" },
       language: "Langue",

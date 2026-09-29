@@ -1,11 +1,7 @@
 /*
- * The display face is Lilita One (SIL OFL 1.1), and this is where it is loaded
- * from once the package is installed:
+ * The display face is Lilita One (SIL OFL 1.1), from `@fontsource`.
  *
- *   @import "@fontsource/lilita-one/latin-400.css";
- *   @import "@fontsource/lilita-one/latin-ext-400.css";
- *
- * Those two files are the whole of it: `@fontsource` ships one `@font-face` per
+ * These two files are the whole of it: `@fontsource` ships one `@font-face` per
  * subset with a `unicode-range`, so a browser downloads the faces a page's
  * text actually needs, and a phone, which never matches a `:root.table` rule
  * that names the family, never downloads either. Latin-ext is what keeps the
@@ -13,12 +9,8 @@
  * are in it; the accents on `é` and `ü` are Latin proper) from falling back
  * to a system face mid-word.
  *
- * Not imported yet: the dependency has to be added by hand first (`bun add
- * @fontsource/lilita-one`), and an `@import` of a package that is not in
- * `node_modules` fails the whole build rather than the font. Until then
- * `--font-display` lands on its fallbacks, which is chunky enough to be
- * checked against and is what a machine that blocks web fonts would get.
- *
- * The family name is the same either way, so nothing else in this directory
- * changes when the import goes in.
+ * `--font-display` still names its fallbacks after the family, which is what a
+ * machine that blocks web fonts gets.
  */
+@import "@fontsource/lilita-one/latin-400.css";
+@import "@fontsource/lilita-one/latin-ext-400.css";
