@@ -29,6 +29,8 @@
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 0.875rem;
+  /* A panel, so the table's shop header insets its contents; see there. */
+  --hud-panel: 1;
 }
 
 /* The boss's rule is a card inside the rail on the table, not the phone's band
@@ -159,16 +161,4 @@
   :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
   .shop-item-cost {
   border-top: 1px dashed var(--line);
-}
-
-/* The header is a panel here, and the table's shop draws it flush (the Smoke
-   Room's has none): the title against its left edge, the menu against its right
-   and the panel against the window's top. Dropped a rem from the top out of its
-   own height, so the shelf does not move, and padded so the title starts where
-   the cards' text does (1.25rem in) and the menu sits as far from the right
-   edge as the panel's height leaves it from the top and bottom. */
-:root.table:is(.skin-classic-dark, .skin-classic-light) .shop-screen .hud {
-  height: 4.5rem;
-  margin-top: 1rem;
-  padding: 0 0.625rem 0 1.25rem;
 }

@@ -19,6 +19,8 @@
   border-radius: var(--radius-l);
   background: var(--panel);
   box-shadow: var(--top-light), var(--shadow-lift);
+  /* A panel, so the table's shop header insets its contents; see there. */
+  --hud-panel: 1;
 }
 
 :root.skin-tabletop .stage {

@@ -34,12 +34,22 @@
  * nowhere else to go.
  *
  * Every card rule is scoped to `.shop-items`: the open pack's sheet reuses
- * `.shop-item` for its picks and must not inherit a shelf's proportions.
+ * `.shop-item` for its picks and must not inherit a shelf's proportions. Its
+ * own card is in `packs.css`.
  */
 
 :root.table .shop-screen {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) minmax(16rem, 21.25rem);
+  /* The two left tracks are the seats and the hand, which want their own width
+     and are the first to give it up: `auto` alone cannot shrink, so five seats
+     and two held cards beside the 16rem column came to about 1290px at 1280
+     wide, and the overflow clipped Reroll and Next round off the right edge.
+     The buttons' column gives a little too, down to 24vw, since at 1280 it was
+     the only thing on the row still at its full width. */
+  grid-template-columns: minmax(0, auto) minmax(0, auto) minmax(0, 1fr) minmax(
+      14rem,
+      min(21.25rem, 24vw)
+    );
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   column-gap: var(--space-4);
   row-gap: var(--space-3);
@@ -53,16 +63,25 @@
 /* ---- the header -------------------------------------------------------- */
 
 /* A row, not the round's rail: the name with the stage beside it on one
-   baseline, and the cash and the menu at the far end. */
+   baseline, and the cash and the menu at the far end.
+
+   Flush where the header is bare (the Smoke Room's), and inset where a skin
+   draws it as a panel, which that skin says by setting `--hud-panel: 1` beside
+   the panel's own dressing, so the geometry is written once here rather than
+   once per look. Flush in a panel read as a mistake: the title against its left
+   edge, the menu against its right and the panel against the window's top. So a
+   panel drops a rem out of its own height, keeping the shelf where it was, and
+   pads the title in to where the cards' text starts (1.25rem) and the menu to
+   as far from the right edge as the height leaves it from top and bottom. */
 :root.table .shop-screen .hud {
   grid-column: 1 / -1;
   grid-row: 1;
   flex-direction: row;
   align-items: center;
   gap: var(--space-5);
-  height: 5.5rem;
-  margin: 0;
-  padding: 0;
+  height: calc(5.5rem - var(--hud-panel, 0) * 1rem);
+  margin: calc(var(--hud-panel, 0) * 1rem) 0 0;
+  padding: 0 calc(var(--hud-panel, 0) * 0.625rem) 0 calc(var(--hud-panel, 0) * 1.25rem);
   overflow: visible;
   --hud-pad-x: 0;
 }
@@ -530,7 +549,12 @@
 }
 
 :root.table .shop-screen .relic {
-  flex: 0 0 clamp(7rem, 10.5vw, 9.5rem);
+  /* A width, not a flex basis: the band's track is sized from what its seats
+     say they want, and an empty seat wants nothing, so with the size only in
+     `flex` the four free seats of a new run shrank to slivers. */
+  flex: 0 1 auto;
+  width: clamp(7rem, 10.5vw, 9.5rem);
+  min-width: 0;
   height: 6rem;
   align-items: stretch;
   justify-content: flex-start;
@@ -547,8 +571,13 @@
   padding: 0.5625rem 0.75rem;
 }
 
+/* One line, cut with an ellipsis: a full band squeezes the seats, and a name
+   that wrapped to a second line pushed the sell price out of the seat. */
 :root.table .shop-screen .relic-name {
   flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   padding: var(--space-2) 0.75rem 0;
   font-size: 1rem;
   line-height: 1.15;
@@ -564,25 +593,42 @@
   grid-column: 2;
   grid-row: 4;
   justify-self: start;
+  max-width: 100%;
   gap: 0.625rem;
 }
 
+/* A held card is spent in the round, not here, but what it does is still what
+   the two free slots are weighed with, so it keeps its rule, clamped to the
+   seat's height: it was hidden for a while and the name alone was a card the
+   player had to remember. */
 :root.table .shop-screen .consumable {
-  flex: 0 0 8.25rem;
+  flex: 0 1 auto;
+  width: 8.25rem;
+  min-width: 0;
   height: 6rem;
-  align-items: center;
+  gap: var(--space-1);
+  align-items: stretch;
   justify-content: center;
-  padding: 0.75rem;
-  text-align: center;
+  padding: 0.625rem 0.75rem;
+  text-align: left;
 }
 
 :root.table .shop-screen .consumable-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 0.875rem;
   line-height: 1.15;
 }
 
 :root.table .shop-screen .consumable-text {
-  display: none;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1.3;
 }
 
 :root.table .shop-screen .toast {

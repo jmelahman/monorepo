@@ -118,9 +118,6 @@
 
 :root.skin-tabletop .reroll-cost {
   color: var(--gold);
-  border-radius: var(--radius-s);
-  background: var(--well);
-  border: var(--rim);
 }
 
 /*
@@ -131,10 +128,10 @@
  * are four different objects (see below): a well inside a tarot card's rule or a
  * slip's dash was the box inside the box again, and a pill under a price that
  * shares one line across the shelf was five tags, each as tall as its card's
- * frame left it. Only the reroll keeps its tag on the table.
+ * frame left it. The reroll's price lost its tag too: a well on a button that
+ * is already the loudest thing in its corner read as a second button inside it.
  */
-:root.skin-tabletop :is(.shop-item-text, .shop-item-cost),
-:root.skin-tabletop:not(.table) .reroll-cost {
+:root.skin-tabletop :is(.shop-item-text, .shop-item-cost) {
   border: 0;
   border-radius: 0;
   background: none;
@@ -252,16 +249,4 @@
   border-radius: 50%;
   background: var(--coin);
   box-shadow: inset 0 0.125rem 0 var(--coin-hi);
-}
-
-/* The header is a panel here, and the table's shop draws it flush (the Smoke
-   Room's has none): the title against its left edge, the menu against its right
-   and the panel against the window's top. Dropped a rem from the top out of its
-   own height, so the shelf does not move, and padded so the title starts where
-   the cards' text does (1.25rem in) and the menu sits as far from the right
-   edge as the panel's height leaves it from the top and bottom. */
-:root.table.skin-tabletop .shop-screen .hud {
-  height: 4.5rem;
-  margin-top: 1rem;
-  padding: 0 0.625rem 0 1.25rem;
 }
