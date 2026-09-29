@@ -55,7 +55,7 @@ const TILE_COLORS: readonly TileColor[] = ["green", "yellow", "gray"]
  * when the sequence ends, or at once after a tap anywhere on the screen.
  */
 export async function playScoring(events: readonly GameEvent[], ctx: SceneContext): Promise<void> {
-  const { screen, state, sound } = ctx
+  const { screen, state } = ctx
 
   screen.addEventListener("pointerdown", skip)
 
@@ -73,18 +73,33 @@ export async function playScoring(events: readonly GameEvent[], ctx: SceneContex
   // ahead of any tile showing its own. Both looks hold the row's letters back
   // at their previous color and let each one go as its tile turns.
   const held = holdKeys(screen, state)
-  if (juiced()) {
-    try {
-      await playTable(events, ctx, tiles, note, held)
-    } finally {
-      for (const tile of tiles) tile.classList.remove("pending")
-      note?.classList.remove("pending")
-      held.releaseAll()
-      screen.removeEventListener("pointerdown", skip)
-    }
-    return
+  // One `finally` for both looks. The phone's cleanup used to be the last lines
+  // of its own path, so a throw part-way left the row's tiles `pending`, the
+  // boss's note hidden and the row's keys held at their old colours until the
+  // next full render; the table's had a `finally` from the start.
+  try {
+    if (juiced()) await playTable(events, ctx, tiles, note, held)
+    else await playPhone(events, ctx, tiles, note, held)
+  } finally {
+    // Belt and braces as well as cleanup: a guess that produced no tile events
+    // at all, or a skip taken before the cascade reached the end, must not
+    // leave the note hidden until the next full rebuild happens to drop it.
+    for (const tile of tiles) tile.classList.remove("pending")
+    note?.classList.remove("pending")
+    held.releaseAll()
+    screen.removeEventListener("pointerdown", skip)
   }
+}
 
+/** The phone's sequence: even steps, the readout and the total, no table effects. */
+async function playPhone(
+  events: readonly GameEvent[],
+  ctx: SceneContext,
+  tiles: readonly Element[],
+  note: Element | null | undefined,
+  held: Held,
+): Promise<void> {
+  const { screen, state, sound } = ctx
   const chipsEl = screen.querySelector(".readout .chips")
   const multEl = screen.querySelector(".readout .mult")
   const scoreEl = screen.querySelector(".hud .score")
@@ -237,14 +252,6 @@ export async function playScoring(events: readonly GameEvent[], ctx: SceneContex
         break
     }
   }
-
-  for (const tile of tiles) tile.classList.remove("pending")
-  // Belt and braces: a guess that produced no tile events at all, or a skip
-  // taken before the cascade reached the end, must not leave the note hidden
-  // until the next full rebuild happens to drop it.
-  note?.classList.remove("pending")
-  held.releaseAll()
-  screen.removeEventListener("pointerdown", skip)
 }
 
 type Held = {
@@ -480,7 +487,7 @@ const LUNGE_HIT = 300
 export const PAYLINE = 1100
 /** The solve step, longer than the phone's 900 to let the line finish leaving. */
 const SOLVE_HOLD = 1250
-/** The payline's sweep across a row, as authored: quick enough to read as one stroke. */
+/** The payline's sweep, as authored: quick enough to read as one stroke. Also the solve sign's delay. */
 const PAYLINE_SWEEP = 300
 /** Chips the stack under the readout will show; the rest still land, on top. */
 const STACK_MAX = 10
@@ -623,10 +630,10 @@ async function playTable(
     tone: Tone,
     text: string,
     at: { x: number; y: number },
-    { rise = 56, drift = 0, scale = 1, delay = 0, tile = false } = {},
+    { rise = 56, drift = 0, scale = 1, delay = 0 } = {},
   ) => {
     if (skipping()) return
-    const node = h("div", { class: `fx-pop ${tone}${tile ? " tile" : ""}` }, text)
+    const node = h("div", { class: `fx-pop ${tone}` }, text)
     made.add(node)
     const dx = `${drift}px`
     const run = tw(
@@ -821,30 +828,19 @@ async function playTable(
     )
   }
 
-  /** The color has appeared: say what the tile paid, and hit the readout. */
+  /**
+   * The color has appeared: hit the readout. It used to pop a `+chips` and a
+   * `+mult` tag off every tile as well, rising out of the row, and the owner
+   * asked for them gone: five dark-inked tags climbing off a word read as smoke
+   * coming off the board, not as sums, and the readout they fed says the same
+   * figures a beat later with its own hit. The relic's, the category's and the
+   * total's pops stay, since nothing else says those.
+   */
   const landTile = (tile: Element, event: Extract<GameEvent, { type: "tile" }>) => {
     const color = TILE_COLORS.find((name) => tile.classList.contains(name)) ?? "gray"
     const mult = MULT_FOR_COLOR[color]
     const at = centerOf(tile)
     const top = above(tile, -6)
-    pop(
-      "chips",
-      `+${event.gained}`,
-      { x: at.x - (mult > 0 ? 22 : 0), y: top.y + 6 },
-      {
-        drift: mult > 0 ? -8 : 0,
-        tile: true,
-        rise: 50,
-      },
-    )
-    if (mult > 0) {
-      pop(
-        "mult",
-        `+${mult}`,
-        { x: at.x + 22, y: top.y + 6 },
-        { drift: 8, tile: true, rise: 50, delay: 70 },
-      )
-    }
     if (event.gained > 0) drop({ x: at.x - (mult > 0 ? 22 : 0), y: top.y }, event.gained)
     if (color === "green") {
       fx("spark", at, { count: 12, speed: 380, life: 0.42, size: 3.5, colors: GREENS })
@@ -950,16 +946,16 @@ async function playTable(
 
   /**
    * The payline: a thin rail across `rect` with a beam that runs along it once,
-   * left to right, the line a slot machine lights when a hand pays. It is the
-   * same stroke over a solved row and over the score plate, so the two moments
-   * read as one thing happening twice. Everything about it lives in the fx
+   * left to right, the line a slot machine lights when a hand pays, under the
+   * score plate when the target is met. It ran over the row as well once; see
+   * `guess_scored` for why it no longer does. Everything about it lives in the fx
    * layer, which is why it is a rail and a beam and not a class on the row: a
    * render mid-sweep would take a class away.
    */
-  const payline = (rect: DOMRect, span: number, tall = false) => {
+  const payline = (rect: DOMRect, span: number) => {
     if (skipping()) return Promise.resolve()
     const beam = h("i", { class: "beam" })
-    const rail = h("div", { class: tall ? "fx-payline tall" : "fx-payline" }, beam)
+    const rail = h("div", { class: "fx-payline" }, beam)
     rail.style.width = `${rect.width + 32}px`
     made.add(rail)
     beam.style.width = `${Math.max(64, rect.width * 0.28)}px`
@@ -1164,10 +1160,11 @@ async function playTable(
             void tw(chipsEl, across(1), 500)
             void tw(multEl, across(-1), 500)
           }
-          // The payline runs the row while the blocks are still pulling back,
-          // so the pile is what the line was drawn for when they meet.
-          const rowEl = tiles[0]?.parentElement
-          if (rowEl) void payline(rowEl.getBoundingClientRect(), PAYLINE_SWEEP)
+          // A payline used to run the row here while the blocks pulled back,
+          // and another, thicker, on a solve. Over a word just entered a line
+          // straight through it read as the word struck out, and the owner
+          // asked for it gone; the one under the score plate, where nothing
+          // is written through, is kept.
           later(() => {
             const at =
               mid ?? (scoreBox ? centerOf(scoreBox) : { x: innerWidth / 2, y: innerHeight / 2 })
@@ -1210,11 +1207,11 @@ async function playTable(
           const x = heat(event.total, target)
           const box = screen.querySelector(".grid-wrap")
           const at = box ? centerOf(box) : { x: innerWidth / 2, y: innerHeight / 2 }
-          const row = tiles[0]?.parentElement
-          if (row) void payline(row.getBoundingClientRect(), PAYLINE_SWEEP, true)
           if (!skipping()) {
-            // The sign lights over the board once the line has crossed it:
-            // JACKPOT and the factor, on a plate of its own.
+            // The sign lights over the board a sweep's length in, the beat a
+            // payline across the row used to take (kept so the stamp and the
+            // pile still meet where they did): JACKPOT and the factor, on a
+            // plate of its own.
             const sign = h(
               "div",
               { class: "fx-jackpot" },

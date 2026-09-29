@@ -665,7 +665,19 @@ function bindPointer(): void {
     },
     { passive: true },
   )
-  document.addEventListener("pointerleave", untilt, { passive: true })
+  // Leaving the window. Moving off a card onto the table is the `pointermove`
+  // above, which finds no card; leaving the page sends no move at all, and this
+  // used to listen for `pointerleave` on the document, which does not bubble and
+  // never reaches it, so a card the pointer left the window from stayed leaning.
+  // `pointerout` bubbles, and its `relatedTarget` is null only when the pointer
+  // has gone somewhere outside the page.
+  document.addEventListener(
+    "pointerout",
+    (event) => {
+      if (!event.relatedTarget) untilt()
+    },
+    { passive: true },
+  )
   // A price that cannot be met shakes red. The click is seen on its way down,
   // ahead of the handler that refuses it, and nothing is rebuilt by a refusal,
   // so the class it leaves is still on the price when the toast arrives.

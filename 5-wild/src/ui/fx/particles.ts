@@ -216,8 +216,11 @@ function tick(now: number): void {
   // Clamped so a tab that was hidden mid-burst resumes where it was rather
   // than integrating a ten-second step and teleporting every particle off
   // screen. Scaled by the player's speed, since a burst is a one-shot motion
-  // like any other and ×3 should finish it three times sooner.
-  const dt = (Math.min(50, now - last) / 1000) * rate()
+  // like any other and ×3 should finish it three times sooner. Floored at zero
+  // because `now` is the frame's start and `last` came from `performance.now()`
+  // in `wake`, which can be later: a burst thrown mid-frame took its first step
+  // backwards, a few ms of every particle running the wrong way.
+  const dt = (Math.max(0, Math.min(50, now - last)) / 1000) * rate()
   last = now
   const c = ctx
   if (!c) {

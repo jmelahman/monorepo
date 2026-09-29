@@ -601,10 +601,19 @@ export class App {
     begin()
     this.render("round")
     const screen = this.root.firstElementChild
-    if (screen instanceof HTMLElement) {
-      await playScoring(events, { root: this.root, screen, state: this.state, sound: this.sound })
+    // The scene is decoration over a state that is already decided and saved,
+    // so a throw inside it must cost the show and never the input: without the
+    // `finally` a scene that tripped on a DOM shape it did not expect left
+    // `busy` up, and every tap and key after it was ignored until a reload.
+    try {
+      if (screen instanceof HTMLElement) {
+        await playScoring(events, { root: this.root, screen, state: this.state, sound: this.sound })
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      this.busy = false
     }
-    this.busy = false
     this.render()
     // The screen the guess led to (the reward, the end card, or the same board)
     // gets the same after-the-render playback as any dispatched action, which

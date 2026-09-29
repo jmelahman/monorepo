@@ -1,4 +1,4 @@
-import { centerOf, fxDom, stand } from "../layer"
+import { centerOf, stand } from "../layer"
 import { juiced, tactile, tween } from "../motion"
 import { burst } from "../particles"
 
@@ -50,8 +50,11 @@ const DUST = ["#ebe7df", "#9be8d8", "#58c9b3"] as const
 export function typed(tile: HTMLElement): void {
   if (!tactile()) return
   held.set(tile, tile.textContent ?? "")
-  // Tabletop keeps the wave and the ghost and drops what is thrown off: dust
-  // and the streak are the Smoke Room's, a board game's tiles kick up nothing.
+  // Tabletop keeps the wave and the ghost and drops what is thrown off: the
+  // dust is the Smoke Room's, a board game's tiles kick up nothing. A streak of
+  // light crossed the full row here too (`glint`), and the owner asked for it
+  // gone: a flash over the word just finished read as the game highlighting
+  // something, when nothing had happened yet but the typing.
   const fancy = juiced()
   const rect = tile.getBoundingClientRect()
   // Dust from the chip's foot, out to both sides. Few and short: a word is
@@ -79,7 +82,6 @@ export function typed(tile: HTMLElement): void {
   if (!row || tile.nextElementSibling) return
   const tiles = Array.from(row.children)
   if (!tiles.every((child) => child.classList.contains("filled"))) return
-  if (fancy) glint(row)
   tiles.forEach((child, index) => {
     void tween(
       child,
@@ -92,35 +94,6 @@ export function typed(tile: HTMLElement): void {
       { duration: 300, delay: 110 + index * 34, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" },
     )
   })
-}
-
-/**
- * A row completes: a bright streak crosses it left to right, the way light
- * runs across a brass plate when the cabinet is nudged. It is a band in the fx
- * layer over the row's box, clipped to it, because a render rebuilds the row
- * (and anything parented to it) a moment after the last key, and one streak
- * whose element outlives that is the whole point. The band is a gradient on a
- * child that only ever translates, so it is composited and the row is not
- * repainted. Starts as the last chip lands (the wave's own delay) and takes
- * 420ms, so the chips rise under it rather than before it.
- */
-function glint(row: Element): void {
-  const rect = row.getBoundingClientRect()
-  const clip = document.createElement("div")
-  clip.className = "row-glint"
-  clip.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px`
-  const band = document.createElement("i")
-  clip.append(band)
-  fxDom().append(clip)
-  const done = () => clip.remove()
-  tween(
-    band,
-    [
-      { translate: "-120% 0", opacity: 1 },
-      { translate: "340% 0", opacity: 1 },
-    ],
-    { duration: 420, delay: 120, easing: "cubic-bezier(0.45, 0, 0.35, 1)" },
-  ).then(done, done)
 }
 
 /** A letter just left the row being typed. */

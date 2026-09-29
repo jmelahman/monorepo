@@ -149,25 +149,3 @@
   box-shadow: none;
   clip-path: var(--cut);
 }
-
-/* ---- the glint ------------------------------------------------------- */
-
-/* Lives in `#fx` (see `glint` in `scenes/board.ts`), so it is prefixed like the
-   rest and cannot exist on the phone. A hard-edged band of the foreground at
-   low alpha, since a soft gradient is the one non-pixel thing that could be
-   here; it is lit by being wide, not by being bright. */
-:root.skin-smoke .row-glint {
-  border-radius: 0;
-}
-
-:root.skin-smoke .row-glint > i {
-  opacity: 0;
-  background: linear-gradient(
-    100deg,
-    #ffffff00 0%,
-    #ffffff1a 32%,
-    #ffffff40 50%,
-    #ffffff1a 68%,
-    #ffffff00 100%
-  );
-}

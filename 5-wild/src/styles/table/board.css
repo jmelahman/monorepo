@@ -24,17 +24,3 @@
     transform: none;
   }
 }
-
-:root.table .row-glint {
-  position: fixed;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-:root.table .row-glint > i {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 34%;
-}

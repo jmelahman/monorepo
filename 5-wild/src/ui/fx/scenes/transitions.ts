@@ -700,6 +700,10 @@ function purse(ctx: SceneContext, delta: number): void {
  * in as the last of the board goes.
  */
 function crumble(screen: HTMLElement, old: HTMLElement, box: DOMRect): void {
+  // A moment of its own, so it starts unskipped: the guess that lost the run
+  // may have been skipped through, and the skip would otherwise still be up and
+  // swallow this scene's shake (see `shake`), which asks the clock.
+  begin()
   const ghost = adopt(old, box)
   const mine = generation
   const bits = [...ghost.querySelectorAll<HTMLElement>(".grid .tile, .keyboard .key")]

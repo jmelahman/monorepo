@@ -137,7 +137,6 @@ export type Handlers = {
   cycleSpeed: () => void
   /** Move the look to the next of the four, wrapping round. */
   cycleSkin: () => void
-  /** Turn the moving background (the drifting smoke) on or off. */
   /** Step the interface to the next language, wrapping back to English. */
   cycleLanguage: () => void
   openMenu: () => void
@@ -188,7 +187,6 @@ export type Chrome = {
   track: string
   decor: Decor
   speed: Speed
-  /** Whether the moving background is on. Only a look that has one shows the row. */
   /** The look on screen: a pick, or the default the window gave. */
   skin: Skin
   /**

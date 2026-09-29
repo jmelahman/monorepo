@@ -201,6 +201,14 @@ let lastDraw = 0
 let began = 0
 let stale = true
 let capped = false
+/**
+ * Set once a build has failed, so the flat ground is the answer for the rest of
+ * the session. `sync` runs on every change to the root's class, and without
+ * this each one tried again: a new canvas and, on a GPU that compiles but will
+ * not link, a new live context every time the pointer moved between a mouse
+ * and a finger.
+ */
+let unable = false
 const deltas: number[] = []
 
 function copy(l: Look): Look {
@@ -236,14 +244,21 @@ function build(el: HTMLCanvasElement): Gpu | null {
     preserveDrawingBuffer: false,
   })
   if (!gl) return null
+  // A context that failed to build is handed back rather than left to the
+  // collector, which is in no hurry: browsers cap live contexts at about
+  // sixteen and drop the oldest with a console warning when a page goes past.
+  const fail = () => {
+    gl.getExtension("WEBGL_lose_context")?.loseContext()
+    return null
+  }
   const vs = compile(gl, gl.VERTEX_SHADER, VERT)
   const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG)
   const prog = gl.createProgram()
-  if (!vs || !fs || !prog) return null
+  if (!vs || !fs || !prog) return fail()
   gl.attachShader(prog, vs)
   gl.attachShader(prog, fs)
   gl.linkProgram(prog)
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return fail()
   gl.useProgram(prog)
   const buf = gl.createBuffer()
   gl.bindBuffer(gl.ARRAY_BUFFER, buf)
@@ -375,13 +390,16 @@ function kick(): void {
 }
 
 function create(): void {
-  if (canvas) return
+  if (canvas || unable) return
   const el = document.createElement("canvas")
   el.id = "smoke"
   el.setAttribute("aria-hidden", "true")
   el.dataset.fps = "20"
   const g = build(el)
-  if (!g) return
+  if (!g) {
+    unable = true
+    return
+  }
   canvas = el
   gpu = g
   const app = document.getElementById("app")

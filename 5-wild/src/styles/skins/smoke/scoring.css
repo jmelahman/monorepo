@@ -106,9 +106,8 @@
   color: var(--fg);
 }
 
-/* The payline: a hairline across a row, and a beam that runs it once. The rail
-   is the row's width plus a little, set by the scene; `.tall` is the solved
-   row, which gets a thicker line because it is the one that paid. */
+/* The payline: a hairline under the score plate, and a beam that runs it once.
+   The rail is the plate's width plus a little, set by the scene. */
 :root.skin-smoke .fx-payline {
   border-radius: 0;
   background: var(--score-line);

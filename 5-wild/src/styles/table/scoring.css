@@ -50,12 +50,6 @@
   display: inline-block;
 }
 
-/* The per-letter pops are the board narrating arithmetic, which the quiet and
-   plain boards turn off; the relic's, the category's and the total's are the
-   game and stay. */
-:root.table:is(.plain, .quiet) .fx-pop.tile {
-  display: none;
-}
 :root.table .fx-pop {
   padding: 0.05em 0.5em 0.1em;
   font-size: 1.5rem;
@@ -64,16 +58,9 @@
   pointer-events: none;
 }
 
-:root.table .fx-pop.tile {
-  font-size: 1.25rem;
-}
 :root.table .fx-payline {
   height: 0.12rem;
   pointer-events: none;
-}
-
-:root.table .fx-payline.tall {
-  height: 0.25rem;
 }
 
 :root.table .fx-payline .beam {

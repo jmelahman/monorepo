@@ -1,4 +1,5 @@
 import { juiced, rate } from "./motion"
+import { skipping } from "./timeline"
 
 /**
  * Screen shake, as trauma rather than as a keyframe.
@@ -42,9 +43,16 @@ export function bindShake(root: HTMLElement): void {
   host = root
 }
 
-/** Add a hit, 0 to 1. Returns without effect off the table or under reduced motion. */
+/**
+ * Add a hit, 0 to 1. Returns without effect off the table, under reduced motion,
+ * or once the sequence has been skipped. The last is the one that matters most:
+ * a skip runs every `later` callback left in the scene at once, and each of the
+ * scoring scene's hits (a tile, the total, the solve) used to add its trauma in
+ * the same tick, so the tap that asked for calm was the frame the screen jolted
+ * hardest.
+ */
 export function shake(amount: number): void {
-  if (!juiced() || !host) return
+  if (!juiced() || !host || skipping()) return
   trauma = Math.min(1, trauma + Math.max(0, amount))
   if (!frame) {
     last = performance.now()

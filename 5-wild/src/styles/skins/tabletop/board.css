@@ -182,9 +182,3 @@
   color: var(--ink);
   box-shadow: 0 0.125rem 0 var(--bone-side);
 }
-
-/* Lives in `#fx`; `glint` is a `full` skin's, so this is only a dressing for it. */
-:root.skin-tabletop .row-glint > i {
-  opacity: 0;
-  background: linear-gradient(100deg, #ffffff00 0%, #ffffff33 50%, #ffffff00 100%);
-}
