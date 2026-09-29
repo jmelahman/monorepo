@@ -44,7 +44,10 @@ _ollama_models() {
 	# a new name, etc.
 	[[ $sub == rm ]] || ((pos == 0)) || return 1
 
-	models=(${(f)"$(ollama list 2>/dev/null | awk 'NR > 1 { print $1 }')"})
+	# `ollama list` blocks on an unreachable OLLAMA_HOST; don't freeze the prompt.
+	local -a guard
+	(($+commands[timeout])) && guard=(timeout 2)
+	models=(${(f)"$($guard ollama list 2>/dev/null | awk 'NR > 1 { print $1 }')"})
 	((${#models} > 0)) || return 1
 	_wanted models expl 'model' compadd -a models
 }
