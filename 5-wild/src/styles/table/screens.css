@@ -1,8 +1,8 @@
 /*
- * The screens that are a card on the felt: the round intro, the reward and the
+ * The screens that are a card on the table: the round intro, the reward and the
  * end. On the phone they are a column at the width of the screen; on a monitor
  * that column would be a strip of card down the middle of a table, so each is
- * given the width of the thing it holds and left in the middle of the felt.
+ * given the width of the thing it holds and left in the middle of the table.
  *
  * Nothing here animates beyond what the phone's `deal` and `token` keyframes
  * already do on entry: the brief for this pass is press and hover only.

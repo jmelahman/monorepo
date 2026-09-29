@@ -40,12 +40,12 @@ import { shake } from "../shake"
 const held = new WeakMap<HTMLElement, string>()
 
 /**
- * Chips kick up brass and ivory dust off the felt, not the violet the first cut
- * threw: the pieces are ivory in brass settings, and the dust is what they are
- * made of. Literal here because particles take colours as strings; they are the
- * tokens `--ivory`, `--brass-hi` and `--brass` as of the palette pass.
+ * Chips kick up dust in the foreground colour, the accent and the cash colour:
+ * the palette the table is drawn in, and nothing brighter. Literal here because
+ * particles take colours as strings; they are the tokens `--fg`, `--accent-hi`
+ * and `--accent` of the Smoke Room.
  */
-const DUST = ["#f2e8d2", "#f0cf7a", "#c9973f"] as const
+const DUST = ["#ebe7df", "#9be8d8", "#58c9b3"] as const
 const RED = ["#ff6b73", "#ff3d48", "#ffb3b8"] as const
 
 /** A letter just landed in `tile` (after `patchDraft` drew it). */
@@ -222,19 +222,19 @@ export function dealt(screen: HTMLElement): void {
             opacity: 0,
             transform: "translateY(1.1rem) scaleY(1.25)",
             filter: "blur(0.12rem)",
-            borderColor: "var(--brass-hi)",
+            borderColor: "var(--accent-hi)",
           },
           {
             opacity: 1,
             transform: "translateY(-0.7rem) scaleY(1.15)",
             filter: "blur(0.1rem)",
-            borderColor: "var(--brass-hi)",
+            borderColor: "var(--accent-hi)",
             offset: 0.3,
           },
           {
             transform: "translateY(0.55rem) scaleY(1.1)",
             filter: "blur(0.08rem)",
-            borderColor: "var(--brass-hi)",
+            borderColor: "var(--accent-hi)",
             offset: 0.45,
           },
           { transform: "translateY(0.16rem) scaleY(1)", filter: "blur(0)", offset: 0.75 },

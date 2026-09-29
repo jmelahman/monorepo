@@ -66,12 +66,13 @@ export function currentSkin(): Skin {
 }
 
 /**
- * Whether the skin runs the table's effects: the background, the marquee and
- * everything `juiced()` gates. Classic does not, by definition, and every
- * effect asks through here rather than naming a skin, so the next skin that
- * wants stillness is one line in this file.
+ * Whether the skin runs the table's effects: the background and everything
+ * `juiced()` gates. Only the Smoke Room does. Classic never will, by
+ * definition, and Tabletop is still until its own phase gives it a look and
+ * effects that suit it; every effect asks through here rather than naming a
+ * skin, so that is one line in this file.
  */
-export const hasFx = (): boolean => currentSkin() !== "classic"
+export const hasFx = (): boolean => currentSkin() === "smoke"
 
 /**
  * Apply it, and remember it if asked. The shell applies without writing, as a

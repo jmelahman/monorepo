@@ -269,11 +269,11 @@ as exactly one `skin-*` class on the root before first render, and the phone nev
 stylesheet is split on the same line: `src/styles/table/*.css` is layout only, under `:root.table`, with no
 colour, face, border, shadow or motion, and each dressing lives under `:root.table.skin-<name>` in its own
 place (`smoke/`, and so on). Classic is what is left when nothing is written over the layout, so the phone's
-partials show through, and it is the one skin that switches the canvas, marquee and juice off (`hasFx`).
+partials show through, and and `hasFx` is true for the Smoke Room alone, so Classic (and Tabletop, until it has a look of its own and rides on `classic-skin.css`) has no canvas and no juice.
+The Smoke Room is drawn flat and inside its own boxes: every panel is notched with `--cut`, a `clip-path`, which clips any `box-shadow`, outline or overflowing pseudo-element, so depth is an inset shadow or nothing.
 A new rule that paints goes in a skin, not the layout, and `test/ui/skin.test.ts` fails if it lands in the
 wrong one; `5wild:ambience` holds
-`on` or `off`, whether the desktop table's own lights (the lamp's drift, the dust
-in its beam, the marquee bulbs) run, absent meaning on, applied as `.lights-off`
+`on` or `off`, whether the desktop table's own lights (the smoke drifting behind the panels) runs, absent meaning on, applied as `.lights-off`
 on the root; the phone never shows the row and ignores the key, and it stills
 nothing of the game's own effects, which answer only to `prefers-reduced-motion`; `5wild:lang` holds one of `en`,
 `es`, `fr`, `de`; and `5wild:telemetry` holds `on` or `off`, with absent meaning

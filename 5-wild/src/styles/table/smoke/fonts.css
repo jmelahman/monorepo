@@ -1,16 +1,18 @@
 /*
- * The display face is Lilita One (SIL OFL 1.1), from `@fontsource`.
+ * The face is Jersey 10 (SIL OFL 1.1), from `@fontsource`.
  *
  * These two files are the whole of it: `@fontsource` ships one `@font-face` per
  * subset with a `unicode-range`, so a browser downloads the faces a page's
  * text actually needs, and a phone, which never matches a `:root.table` rule
  * that names the family, never downloads either. Latin-ext is what keeps the
- * Spanish, French and German prose the display type carries (`ñ`, `œ`, `ß`
- * are in it; the accents on `é` and `ü` are Latin proper) from falling back
- * to a system face mid-word.
+ * Spanish, French and German prose the room carries (`ñ`, `œ`, `ß` are in it;
+ * the accents on `é` and `ü` are Latin proper) from falling back to a system
+ * face mid-word. Verified against the four catalogs' longest strings, not
+ * assumed: see `type.css` for what a missing glyph costs here.
  *
- * `--font-display` still names its fallbacks after the family, which is what a
- * machine that blocks web fonts gets.
+ * It replaced Lilita One, and its `@import`s went with it. Classic needs
+ * neither: it is the phone's own system stack. So the face is loaded by the one
+ * skin that draws it, and a player on Classic downloads no font at all.
  */
-@import "@fontsource/lilita-one/latin-400.css";
-@import "@fontsource/lilita-one/latin-ext-400.css";
+@import "@fontsource/jersey-10/latin-400.css";
+@import "@fontsource/jersey-10/latin-ext-400.css";

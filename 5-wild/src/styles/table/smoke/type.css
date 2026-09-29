@@ -1,127 +1,84 @@
 /*
- * The chunky treatment: display type with a dark ink outline and a hard drop.
+ * The type: one pixel face for everything, at one weight.
  *
- * Numbers, headings, buttons, tile letters, badges and prices get it; prose
- * (rules, codex entries, tips, the sheets' bodies) stays on the system stack,
- * because a paragraph in a poster face is a paragraph nobody reads to the end.
+ * The casino had a chunky display face for headings and the system stack for
+ * prose, and a dark outline round the display glyphs. The Smoke Room has
+ * neither. Jersey 10 does numbers, headings, labels, buttons, tile letters and
+ * the paragraphs in the sheets alike, because a room drawn on a pixel grid with
+ * a second, smooth face in it is two rooms. What sets a label apart from a
+ * paragraph is case and tracking, not family.
  *
- * The outline is `-webkit-text-stroke` painted *under* the fill
- * (`paint-order: stroke fill`), which is what makes it an outline and not a
- * thinning: a stroke over the fill eats the glyph from both sides, and at
- * 16px that took the counters out of every `e`. Under the fill only the outer
- * half of the stroke shows, so `--stroke` is twice the ink you see, and it is
- * in `em` so the ink scales with the glyph. The hard drop is a text-shadow with
- * no blur, one ink colour, straight down: the stroke belongs to the letter and
- * the shadow to the table it stands on.
+ * Two things about a bitmap-style face that a vector one lets you ignore:
  *
- * Lilita One is a single weight. Asking it for 800 gets a synthetic bold that
- * smears the counters shut, so everything in it is 400, and the fallbacks
- * (Arial Black, Impact) are heavy enough on their own not to need more.
+ * It has one weight, so asking it for 700 gets a synthetic bold that smears the
+ * pixels shut. Every element is 400 and `font-synthesis` is off, so the
+ * phone's `font-weight: 800` on a button or a score cannot reach it. The
+ * selector is `*` under the skin because those weights are set on dozens of
+ * classes across the phone's partials, and restating each would be a list that
+ * goes stale; an SVG's text is left alone, since it draws none.
  *
- * `--stroke` and `--drop` are the two dials: a small label wants a hairline
- * outline, a score wants a fat one.
+ * It runs small for its size. Set at the sizes the layout was drawn for, in a
+ * face with a normal x-height, it reads as fine print: the design's own sheet
+ * notes that it "is set larger across the board". `font-size-adjust` is that,
+ * done once, at the root, instead of a number on every rule: it scales each
+ * glyph to a target x-height, so 1rem of Jersey 10 stands as tall as 1rem of
+ * the system face. It is inherited, so nothing below restates it, and the
+ * layout files keep their sizes, which is the split that lets Classic exist.
+ * A WebView that does not know the property shows the face smaller and nothing
+ * else breaks.
  */
 :root.table.skin-smoke {
-  --stroke: 0.22em;
-  --drop: 0.07em;
+  font-family: var(--font-body);
+  font-synthesis: none;
+  font-size-adjust: var(--face-adjust);
+  /* Sharp edges only: the face is a grid of squares and smoothing rounds them. */
+  -webkit-font-smoothing: none;
+  --face-adjust: 0.5;
 }
 
-:root.table.skin-smoke
-  :is(
-    .round-name,
-    .hud-score .score,
-    .hud-gold,
-    .readout .chips,
-    .readout .mult,
-    .readout .times,
-    .category,
-    .tile,
-    .key,
-    .primary,
-    .secondary,
-    .danger,
-    .banner,
-    .sheet-title,
-    .intro-name,
-    .intro-target,
-    .intro-stat-value,
-    .intro-kind,
-    .track-name,
-    .track-target,
-    .shop-item-name,
-    .shop-item-cost,
-    .relic-name,
-    .relic .sell,
-    .consumable-name,
-    .title-name,
-    .title-score,
-    .reroll-cost,
-    .row-note,
-    .decor-toggle,
-    .shapes-line-label,
-    .stage-asc,
-    .answer-note,
-    .reward-line,
-    .menu-button
-  ) {
-  font-family: var(--font-display);
+:root.table.skin-smoke body {
+  font-family: var(--font-body);
+}
+
+:root.table.skin-smoke :is(*, *::before, *::after):not(svg *) {
   font-weight: 400;
-  letter-spacing: 0.02em;
-  -webkit-text-stroke: var(--stroke) var(--outline);
-  paint-order: stroke fill;
-  text-shadow: 0 var(--drop) 0 var(--outline);
 }
 
-/* Small labels: a hairline outline, no drop. At 11px the fat stroke closes the
-   letters up and the drop doubles the ink under them. */
+/* Labels: the small caps-and-tracking the design puts on anything that names
+   a thing rather than says one. */
 :root.table.skin-smoke
 :is(
+  .stage,
+  .stage-asc,
   .category,
-  .relic-name,
-  .relic .sell,
-  .consumable-name,
   .row-note,
   .intro-kind,
   .track-name,
-  .stage-asc,
+  .shop-item-kind,
   .shapes-line-label,
+  .sheet-heading,
   .reward-line,
-  .decor-toggle
+  .decor-toggle,
+  .relic .sell,
+  .primary,
+  .secondary,
+  .danger
 ) {
-  --stroke: 0.3em;
-  --drop: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* Keys and tiles carry a letter and, on a key, a value pip in the corner. The
-   stroke inherits, so the pips are put back to plain type: at their size an
-   outline is a smudge, and they are the numbers the player is reading. */
-:root.table.skin-smoke .key {
-  --stroke: 0.16em;
-  --drop: 0.05em;
-}
-
+   pips are numbers the player reads, so they stay in the same face at their
+   own size and are not tracked. */
 :root.table.skin-smoke .key :is(.value-pip, .mod-pip),
 :root.table.skin-smoke .decor-toggle-value,
 :root.table.skin-smoke .decor-toggle-mark {
-  font-family: var(--font-body);
-  -webkit-text-stroke: 0;
-  paint-order: normal;
-  text-shadow: none;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-:root.table.skin-smoke .tile {
-  --stroke: 0.2em;
-  --drop: 0.06em;
-}
-
-/* Headings: the biggest ink and a proper drop. */
-:root.table.skin-smoke
-:is(.banner, .sheet-title, .intro-name, .intro-target, .title-name, .hud-score .score) {
-  --stroke: 0.2em;
-  --drop: 0.08em;
-}
-
-:root.table.skin-smoke .hud-score .target {
-  font-family: var(--font-display);
-  letter-spacing: 0.03em;
+:root.table.skin-smoke .tile,
+:root.table.skin-smoke .key {
+  letter-spacing: 0;
 }

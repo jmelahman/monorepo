@@ -64,13 +64,6 @@
   }
 }
 
-@keyframes table-chase {
-  to {
-    background-position:
-      3.3rem 50%,
-      3.3rem 50%;
-  }
-}
 :root.table .row-glint {
   position: fixed;
   overflow: hidden;

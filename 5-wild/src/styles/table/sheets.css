@@ -2,7 +2,7 @@
  * Sheets, as dialogs. The phone's rise from the bottom edge because that is
  * where a thumb already is; a mouse is nowhere near the bottom edge, and a card
  * that slides in from below a 1440px window is a long way to look. So on the
- * table they are centred, on card stock, over the felt with the scrim behind.
+ * table they are centred, on card stock, over the table with the scrim behind.
  *
  * The entry animation is left to the phone's `rise-sheet`, which is a small
  * settle and not new motion; `settled` still silences it on a rebuild.

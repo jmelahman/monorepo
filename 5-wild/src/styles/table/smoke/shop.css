@@ -5,42 +5,33 @@
   border: 0;
   background: none;
   box-shadow: none;
+  clip-path: none;
 }
 
 /*
- * The rail as one panel, top to bottom, as the round's is. It was three boxes
- * (the header, the shapes line and the buttons) with the felt showing between
- * them, and against the round's tall panel the shop's rail read as a fragment
- * that had lost most of itself: a header at the top, two buttons at the foot
- * and a screenful of nothing between. The children are still separate nodes
- * placed in rows one, three and four, so the panel is a pseudo-element across
- * all of them, under them, and the phone (which never matches this selector)
- * keeps the three boxes it has always had.
+ * The rail as one panel, top to bottom, as the round's is. The children are
+ * separate nodes placed in rows one, three and four, so the panel is a
+ * pseudo-element across all of them, under them, and the phone (which never
+ * matches this selector) keeps the three boxes it has always had.
  *
- * The teal ring is the shop's colour: the one room on the table where nothing
- * is trying to score against you.
+ * The casino ringed this one in teal to say "the one room where nothing is
+ * trying to score against you". Here the shop is told by what is in it (cash
+ * in the rail, cards on the table) and the panel is the round's own.
  */
 :root.table.skin-smoke .shop-screen::before {
   content: "";
   grid-column: 1;
   grid-row: 1 / -1;
   border: var(--rim);
-  border-radius: var(--radius-l);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-2) 88%, #fff 4%),
-    var(--panel) 60%
-  );
-  box-shadow:
-    var(--top-light),
-    var(--shadow-hard),
-    var(--shadow-soft),
-    0 0 0 0.1875rem color-mix(in srgb, #2fd6b4 30%, transparent);
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: none;
+  clip-path: var(--cut);
   pointer-events: none;
 }
 
 :root.table.skin-smoke .shop-screen .shop-items.coached {
-  border-radius: var(--radius-m);
+  border-radius: 0;
 }
 
 /* ---- the cards -------------------------------------------------------- */
@@ -49,159 +40,119 @@
   color: var(--fg);
 }
 
-/* The icon is the card's picture: a rarity-coloured medallion over the top. */
+/* The icon is the card's picture: a square in a hairline, the rarity's colour. */
 :root.table.skin-smoke .shop-item-head > .icon {
-  border-radius: 50%;
-  border: 0.1875rem solid var(--outline);
-  background: color-mix(in srgb, var(--rare-c) 55%, var(--panel));
-  color: #fff;
+  border-radius: 0;
+  border: var(--rim);
+  background: var(--well);
+  color: var(--rare-c);
   stroke-width: 2.25;
-  box-shadow:
-    inset 0 0.25rem 0 #ffffff38,
-    0 0.25rem 0 var(--outline);
+  box-shadow: none;
 }
 
 :root.table.skin-smoke .shop-item-name {
-  color: #fff;
-  --stroke: 0.24em;
-  --drop: 0.07em;
+  color: var(--fg);
 }
 
 :root.table.skin-smoke .shop-item-text {
-  border-radius: var(--radius-s);
-  background: color-mix(in srgb, var(--felt-lo) 55%, transparent);
-  box-shadow: inset 0 0.1875rem 0.375rem #0000005c;
-  font-family: var(--font-body);
-  color: color-mix(in srgb, var(--fg) 85%, var(--muted));
+  border-radius: 0;
+  background: var(--well);
+  box-shadow: none;
+  color: var(--muted);
 }
 
-/* The price is a coin: gold, ink-edged, in the display face. */
+/* The price is a tag: the cash colour in a hairline, and nothing else about it
+   is gold. It was a gold coin; the room has one colour of money and it is text. */
 :root.table.skin-smoke .shop-item-cost {
-  border-radius: var(--radius-pill);
-  border: 0.1875rem solid var(--outline);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--gold) 70%, #fff),
-    var(--gold) 50%,
-    color-mix(in srgb, var(--gold) 80%, #7a4a00)
-  );
-  box-shadow:
-    inset 0 0.125rem 0 #ffffff66,
-    0 0.1875rem 0 var(--outline);
-  color: #fff;
-  --stroke: 0.26em;
+  border-radius: 0;
+  border: var(--rim);
+  background: var(--well);
+  box-shadow: none;
+  color: var(--gold);
+  clip-path: var(--cut);
 }
 
 :root.table.skin-smoke .shop-item-cost.free {
   background: transparent;
-  box-shadow: none;
   border-color: transparent;
   color: var(--muted);
   text-decoration: line-through;
 }
 
+/* Can't afford it: the card steps back, the price stays legible. */
 :root.table.skin-smoke .shop-item.broke {
-  opacity: 1;
-  filter: saturate(0.35) brightness(0.72);
+  opacity: 0.55;
+  filter: none;
 }
 
 :root.table.skin-smoke .shop-item.broke .shop-item-cost {
-  color: #fff;
+  color: var(--mult);
 }
 
 :root.table.skin-smoke .shop-item-kind {
-  font-family: var(--font-display);
-  letter-spacing: 0.04em;
-  color: #fff;
-  text-shadow: 0 0.09em 0 var(--outline);
-  -webkit-text-stroke: 0.3em var(--outline);
-  paint-order: stroke fill;
+  color: var(--muted);
 }
 
 :root.table.skin-smoke .shop-item.sold {
-  border: 0.1875rem dashed color-mix(in srgb, var(--muted) 45%, transparent);
-  background: color-mix(in srgb, var(--felt-lo) 45%, transparent);
-  box-shadow: inset 0 0.25rem 0.75rem #00000060;
-  border-radius: var(--radius-m);
-  font-family: var(--font-display);
+  border: var(--bw) dashed var(--slot-line);
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
   color: var(--muted);
 }
 
 :root.table.skin-smoke .shop-item.sold .icon {
-  color: var(--green);
-}
-
-:root.table.skin-smoke.mouse .shop-item:not(.sold):hover {
-  filter: brightness(1.08);
-  box-shadow:
-    inset 0 0 0 0.1875rem var(--rare-c),
-    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
-    var(--shadow-lift);
+  color: var(--accent);
 }
 
 :root.table.skin-smoke .shop-item:active:not(:disabled) {
-  transform: translateY(0.125rem) scale(0.94);
+  transform: translateY(var(--px));
 }
 
 /* ---- the rail's foot -------------------------------------------------- */
 
 :root.table.skin-smoke .shop-screen .shapes-line {
   border: var(--rim);
-  border-radius: var(--radius-m);
-  background: var(--panel);
-  box-shadow: var(--top-light), var(--shadow-hard);
+  border-radius: 0;
+  background: var(--well);
+  box-shadow: none;
+  clip-path: var(--cut);
 }
 
-:root.table.skin-smoke .shapes-line-label {
-  --stroke: 0.28em;
-}
-
-:root.table.skin-smoke .shop-screen .shop-actions > * {
-  border-radius: var(--radius-m);
-}
-
-:root.table.skin-smoke .shop-screen .shop-actions > .secondary {
-  --face: var(--btn-blue);
-  --lip: var(--btn-blue-lip);
-}
-
+/* The reroll is a button like the rest: no blue of its own. */
 :root.table.skin-smoke .shop-screen .shop-actions > .secondary:disabled {
-  --face: var(--btn-neutral);
-  --lip: var(--btn-neutral-lip);
+  opacity: 0.4;
 }
 
 :root.table.skin-smoke .reroll-cost {
-  color: #fff;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--gold) 85%, #000);
-  border: 0.125rem solid var(--outline);
+  color: var(--gold);
+  border-radius: 0;
+  background: var(--well);
+  border: var(--rim);
 }
 
 :root.table.skin-smoke .shop-screen .toast {
   background: var(--panel);
   border: var(--rim);
-  border-radius: var(--radius-m);
-  box-shadow: var(--shadow-hard), var(--shadow-soft);
-  font-family: var(--font-display);
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--cut);
 }
 
 :root.table.skin-smoke .shop-item-cost.deny {
   animation: price-deny calc(480ms * var(--pace)) ease-out;
 }
 
-/* ---- chips in flight ---------------------------------------------------- */
+/* ---- coins in flight ---------------------------------------------------- */
 
-/* One poker chip, in the effects layer: the price of a card pushed out of the
-   gold counter, or what a relic sold for pushed back into it. Positioned and
-   moved by the script; this is only what it looks like: a gold face, and the
-   edge spots that make a disc a chip. */
+/* One coin, in the effects layer: the price of a card pushed out of the cash
+   counter, or what a relic sold for pushed back into it. Positioned and moved
+   by the script; this is only what it looks like: a square of cash colour with
+   a darker edge, cut at the corners like everything else. */
 :root.table.skin-smoke .shop-coin {
-  border: 0.125rem solid var(--outline);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, var(--brass-hi) 0 34%, transparent 36%),
-    repeating-conic-gradient(var(--ivory) 0 18deg, var(--brass) 18deg 45deg);
-  box-shadow:
-    inset 0 0 0 0.125rem var(--brass-lo),
-    0 0.1875rem 0 var(--outline);
+  border: var(--bw) solid var(--coin-lo);
+  border-radius: 0;
+  background: var(--coin);
+  box-shadow: inset 0 0.125rem 0 var(--coin-hi);
+  clip-path: var(--cut);
 }

@@ -6,7 +6,6 @@ import { formatNumber as num } from "../../format"
 import { categoryLevel, growthBadge, payoutBadge, relicCard, ui } from "../../lang"
 import { meterFill } from "../../views"
 import { centerOf, fxDom, place } from "../layer"
-import { marquee } from "../marquee"
 import { juiced, ms, reduced, replay, tween } from "../motion"
 import { heat, roll } from "../numbers"
 import { burst, clearParticles, type Kind } from "../particles"
@@ -483,9 +482,6 @@ export const PAYLINE = 1100
 const SOLVE_HOLD = 1250
 /** The payline's sweep across a row, as authored: quick enough to read as one stroke. */
 const PAYLINE_SWEEP = 300
-/** A full turn of the marquee at rest-hot (one mult) and at its fastest, in ms. Unpaced, like every loop. */
-const CHASE_SLOW = 540
-const CHASE_FAST = 150
 /** Chips the stack under the readout will show; the rest still land, on top. */
 const STACK_MAX = 10
 /** One chip's thickness in px, which is also the pitch of the stack. */
@@ -509,17 +505,17 @@ const GREENS = ["#d4ffc9", "#7deb75", "#ffffff", "#4da346"]
 const GLASS = ["#dfe8ff", "#9fb4d9", "#ffffff", "#7fd6ff"]
 
 /**
- * The score's ink as it heats: ivory, bulb, brass, then a hot neon pink. Four
- * stops on `heat`, interpolated by hand because WAAPI cannot tween through a
- * `color-mix` and a per-frame `style.color` wants a plain string. It used to end
- * at red-hot for a flaming box; the box now has bulbs instead and the digits
- * only warm, so the last stop is the neon the marquee spends at a jackpot.
+ * The score's ink as it heats: the foreground, the accent, the cash colour, then
+ * the multiplier's red. Four stops on `heat`, interpolated by hand because WAAPI cannot tween through a
+ * `color-mix` and a per-frame `style.color` wants a plain string. The last
+ * stop is the red the multiplier wears, which is what the number is turning
+ * into.
  */
 const HEAT_STOPS: readonly (readonly [number, number, number, number])[] = [
-  [0, 242, 232, 210],
-  [0.35, 255, 231, 163],
-  [0.7, 255, 190, 80],
-  [1, 255, 90, 140],
+  [0, 235, 231, 223],
+  [0.35, 155, 232, 216],
+  [0.7, 216, 181, 99],
+  [1, 255, 90, 100],
 ]
 
 function heatColor(x: number): string {
@@ -571,18 +567,18 @@ async function playTable(
   const timers = new Set<ReturnType<typeof setTimeout>>()
   const restore: (() => void)[] = []
 
-  const bulb = token("--bulb", "#ffe7a3")
-  const brass = token("--brass", "#c9973f")
-  const brassHi = token("--brass-hi", "#f0cf7a")
-  const ivory = token("--ivory", "#f2e8d2")
+  const bulb = token("--lit", "#58c9b3")
+  const brass = token("--coin", "#d8b563")
+  const brassHi = token("--coin-hi", "#f0dc9c")
+  const ivory = token("--paper", "#ebe7df")
   const GOLDS = [bulb, brassHi, brass]
-  /** The spill: the same three plus the ivory of a coin's face, all from the tokens. */
-  const COIN_GOLDS = [bulb, brassHi, brass, ivory]
-  /** A dead placard's shards: the plate's own dark and the ivory gone dull. */
+  /** The spill: the cash colours plus the paper of a coin's face, all from the tokens. */
+  const COIN_GOLDS = [brassHi, brass, token("--coin-lo", "#8f7434"), ivory]
+  /** A dead placard's shards: the plate's own dark and the paper gone dull. */
   const ASH = [
-    token("--ivory-lo", "#cbbd9c"),
-    token("--panel", "#14213d"),
-    token("--felt-hi", "#1d3561"),
+    token("--paper-lo", "#858b98"),
+    token("--panel", "#0c0e13"),
+    token("--line", "#1d212b"),
   ]
   const CLASH = [ivory, bulb, brassHi]
   const sparksFor = (tone: Tone): readonly string[] => {
@@ -592,7 +588,7 @@ async function playTable(
       case "mult":
         return [ivory, token("--mult", "#ff4f58")]
       case "dim":
-        return [ivory, token("--ivory-lo", "#cbbd9c")]
+        return [ivory, token("--paper-lo", "#858b98")]
       default:
         return GOLDS
     }
@@ -691,24 +687,6 @@ async function playTable(
       340,
     )
   }
-  /**
-   * The marquee's chase, quickened to `level` (0 to 1) and never slowed within
-   * a show: heat only rises through a hand, and a ring that eased off mid-guess
-   * would read as the hand having gone cold. Written on the ring itself, which
-   * outlives every render, so the `finally` below is what puts it back.
-   */
-  let hottest = 0
-  const spin = (level: number) => {
-    if (skipping()) return
-    hottest = Math.max(hottest, Math.min(1, level))
-    document
-      .getElementById("marquee")
-      ?.style.setProperty(
-        "--chase",
-        `${Math.round(CHASE_SLOW - (CHASE_SLOW - CHASE_FAST) * hottest)}ms`,
-      )
-    marquee("chase")
-  }
   const readout = (chips: number, mult: number, power = 1) => {
     if (chipsEl && chips !== shownChips) {
       chipsEl.textContent = num(chips)
@@ -717,10 +695,6 @@ async function playTable(
     if (multEl && mult !== shownMult) {
       multEl.textContent = num(mult)
       hit(multEl, power)
-      // The multiplier is what the sign is advertising: the bulbs start to run
-      // the first time it rises and quicken with each doubling, log2 because
-      // a x2 to x4 climb should feel as big as x16 to x32 does.
-      spin(Math.min(1, Math.log2(Math.max(1, mult)) / 5))
     }
     shownChips = chips
     shownMult = mult
@@ -939,7 +913,6 @@ async function playTable(
       scoreBox?.style.setProperty("--heat", level.toFixed(3))
       if (level > 0.05) {
         chase(false)
-        spin(level)
       }
       if (p < 1 || done) return
       done = true
@@ -959,11 +932,11 @@ async function playTable(
   }
 
   /**
-   * The score plate's own bulbs: the chase quickens and brightens with
+   * The score well's own ring: the chase quickens and brightens with
    * `--heat`, which the count-up writes as it climbs, and at or over the
-   * target it goes to its fastest with the plate lit, the jackpot. The ring
-   * round the window follows the same heat through `spin`. It used to set the
-   * box on fire; the reference is the sign over a slot machine, not a furnace.
+   * target it goes to its fastest with the plate lit, the jackpot. It used to
+   * set the box on fire; a dotted frame stepping round it is as much as the
+   * pixel-font room wants to say.
    */
   /** Whether the bell has rung this show; see `reached`. */
   let rung = false
@@ -1019,19 +992,16 @@ async function playTable(
    * The bell: the target has been met. AUDIO PHASE: this is the one place to
    * ring it, `over` being how many targets the total now is (1 exactly at the
    * line), so the bell can be bigger for a hand that cleared it by a mile.
-   * Until that phase the bell is only seen, as the whole ring flashing.
+   * Until that phase the bell is only seen, as the score's ring going solid
+   * (`chase(true)` above), and there is nothing for this to do.
    */
-  const ringBell = (_over: number) => {
-    marquee("flash")
-  }
+  const ringBell = (_over: number) => {}
   /** Target met: the plate goes to its fastest chase, a payline runs under it, and coins fall. */
   const reached = (x: number, over: number) => {
     // Once a show: a solve that lands on a total already over the target is
     // the same bell, not a second one.
     if (rung) return
     rung = true
-    hottest = 1
-    spin(1)
     chase(true)
     ringBell(over)
     if (!scoreBox) return
@@ -1244,7 +1214,7 @@ async function playTable(
           if (row) void payline(row.getBoundingClientRect(), PAYLINE_SWEEP, true)
           if (!skipping()) {
             // The sign lights over the board once the line has crossed it:
-            // JACKPOT and the factor, on a marquee plate of its own bulbs.
+            // JACKPOT and the factor, on a plate of its own.
             const sign = h(
               "div",
               { class: "fx-jackpot" },
@@ -1279,7 +1249,6 @@ async function playTable(
               spread: Math.PI * 1.4,
               colors: COIN_GOLDS,
             })
-            spin(1)
             shake(0.95)
             screen.querySelector(".readout")?.classList.add("solved")
             hit(chipsEl, 1.5)
@@ -1421,10 +1390,6 @@ async function playTable(
     // The odometer's cells back to one plain text node, so the next render
     // and the next show start from the same shape the phone leaves behind.
     if (scoreEl) scoreEl.replaceChildren(document.createTextNode(scoreEl.textContent ?? ""))
-    // The ring back to rest and its speed back to the sheet's own, so a
-    // hand's heat is not the next screen's.
-    document.getElementById("marquee")?.style.removeProperty("--chase")
-    marquee("idle")
     if (skipping()) clearParticles()
   }
 }

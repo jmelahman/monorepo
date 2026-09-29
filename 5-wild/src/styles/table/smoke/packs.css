@@ -5,7 +5,5 @@
 }
 
 :root.table.skin-smoke .pack-sheet .shop-actions > .secondary {
-  border-radius: var(--radius-m);
-  --face: var(--btn-neutral);
-  --lip: var(--btn-neutral-lip);
+  border-radius: 0;
 }

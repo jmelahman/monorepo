@@ -2,12 +2,10 @@
 
 :root.table.skin-smoke .sheet {
   border: var(--rim);
-  border-radius: var(--radius-l);
-  background: linear-gradient(180deg, var(--panel-2), var(--panel) 30%);
-  box-shadow:
-    var(--top-light),
-    var(--shadow-hard),
-    0 2rem 3rem color-mix(in srgb, var(--shade) 70%, transparent);
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: none;
+  clip-path: var(--cut);
 }
 
 :root.table.skin-smoke .sheet-lead {
@@ -19,6 +17,6 @@
 }
 
 :root.table.skin-smoke .help-tutorial {
-  border-radius: var(--radius-m);
-  background: color-mix(in srgb, var(--panel-3) 60%, var(--panel));
+  border-radius: 0;
+  background: var(--well);
 }

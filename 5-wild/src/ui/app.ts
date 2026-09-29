@@ -260,7 +260,7 @@ export class App {
    * which `setMotionSpeed` keeps in step with this; see `./speed`.
    */
   private speed = loadSpeed()
-  /** The table lights (lamp drift, motes, marquee), on until the player turns them off. */
+  /** The table lights (the drifting smoke), on until the player turns them off. */
   private ambience = loadAmbience()
   /** Light, dark, or the device's. The shell applied it before the first paint. */
   /**

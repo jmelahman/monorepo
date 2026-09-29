@@ -1,100 +1,48 @@
 /*
- * The board on the table: a reel window and the pieces set in it.
+ * The board on the table: cells, and the letters set in them.
  *
- * Three states, three heights. An empty slot is a *socket* in the cabinet:
- * dark, cut in, with an inset shadow on its top edge and a hairline of light on
- * its bottom one. A typed letter is an ivory piece seated in it, the letter
- * engraved (dark ink, a light edge under it), set in a thin brass bezel on a
- * brass lip. A scored letter is the same piece in the colour it means. The
- * colour is the game's language and stays exactly the phone's (`.tile.green`
- * and friends still paint the fill); what is new is a gradient laid *over* it,
- * white at the top and black at the foot, which lights the face without moving
- * its hue. Tried first as a `color-mix` of each colour toward white: it made the
+ * Three states. An empty cell is a well: darker than the page, a two-pixel
+ * hairline inside it. A letter being typed is the same cell with the accent
+ * around it and the foreground colour in it, because the accent is what says
+ * "this is yours to change" everywhere else on the screen. A scored letter is
+ * the colour it means, and the colour is the phone's exactly (`.tile.green` and
+ * friends still paint the fill): what is added is a bevel drawn *inside* the
+ * box, white on the top edge and black on the foot, which lights the face
+ * without moving its hue. Tried first as a `color-mix` toward white: it made the
  * green a different green, which is a rule the player has to relearn.
  *
- * The whole grid is framed as the window of a slot cabinet. `.grid::before` is
- * the brass bezel and the dark reel well behind the pieces, `.grid::after` is
- * the glass over them: a faint diagonal glare and a shadow falling in from the
- * top and bottom edges, the way a reel goes dark as it turns away. Both are
- * absolutely placed outside the grid's own box, so neither takes part in its
- * sizing. That matters because `.grid` sizes itself from `cqw`/`cqh` against
- * `.grid-wrap`, and its width and font-size are not to be animated or
- * transitioned by anything (CLAUDE.md, the long section on the board flash).
- * Every motion below is `transform`, `translate`, `rotate`, `opacity` or
- * `filter` on a tile or a row, and every transition names its properties. The
- * one exception is the bulb chase, which steps a background position on a strip
- * four pixels tall, five times a second; see it below.
+ * Everything is inside the box, and that is the clip-path's doing, not taste.
+ * The notch (`--cut`) clips a `box-shadow`, an outline and anything a pseudo
+ * element puts outside the border box, so a lip under a tile or a bezel around
+ * the grid would be sawn off at exactly the corners it was meant to frame. The
+ * casino build had both; this one has neither, and the grid has no frame at all:
+ * five columns of cells are the frame.
  *
+ * Every motion below is `transform`, `translate`, `rotate`, `opacity` or
+ * `filter` on a tile or a row, and every transition names its properties: the
+ * grid sizes itself in container units and its width and font-size are not to
+ * be transitioned by anything (CLAUDE.md, the long section on the board flash).
  * Two properties carry the motion so they never fight: `transform` belongs to
  * the tile's own animations (the phone's flip, this file's land) and
- * `translate` to everything the table adds on top (hover lift, the row's click
- * in `scenes/board.ts`). Individual transform properties compose; two
+ * `translate` to everything the table adds on top (the hover lift, the row's
+ * click in `scenes/board.ts`). Individual transform properties compose; two
  * animations on the same one replace each other, which is how a hover would
  * have cancelled a flip.
  */
 :root.table.skin-smoke {
-  --slot-fill: color-mix(in srgb, var(--felt-lo) 82%, #000);
-  --slot-edge: color-mix(in srgb, var(--brass-lo) 60%, var(--outline));
-  --piece-ink: var(--outline);
-  --piece-hi: color-mix(in srgb, var(--ivory) 70%, #fff);
-  --piece-lo: color-mix(in srgb, var(--ivory) 80%, var(--ivory-lo));
-  /* A refusal is the one thing on the table that is red. */
-  --reject: #ff3d48;
-  --tile-lip: 0.25rem;
+  /* A refusal is the one thing on the table that is red, and it is the
+     multiplier's red: the same colour that says "this is the wrong side of the
+     score" on the rail. */
+  --reject: var(--mult);
 }
 
-/* The bezel and the well: brass, then a dark reel cavity with the light falling
-   off toward its top and bottom. Behind the pieces (z-index -1 inside the
-   grid's own stacking context). */
-:root.table.skin-smoke .grid::before {
-  content: "";
-  position: absolute;
-  inset: -0.75rem -0.875rem;
-  z-index: -1;
-  border-radius: var(--radius-m);
-  border: 0.3125rem solid var(--brass);
-  background:
-    linear-gradient(180deg, #00000099, #00000000 14%, #00000000 86%, #00000099), var(--felt-lo);
-  box-shadow:
-    inset 0 0 0 0.125rem var(--brass-lo),
-    inset 0 0.5rem 1.25rem #000000cc,
-    0 0.25rem 0 var(--brass-lo),
-    0 0.75rem 1.5rem #00000080;
-  pointer-events: none;
-}
-
-/* The glass: a soft diagonal glare across the upper left and a shadow at the
-   top and bottom edges, over the pieces. Kept faint (nothing over 0.3): the
-   colour of a scored tile is its meaning and the glass must not tint it. */
-:root.table.skin-smoke .grid::after {
-  content: "";
-  position: absolute;
-  inset: -0.5rem -0.625rem;
-  z-index: 3;
-  border-radius: var(--radius-s);
-  pointer-events: none;
-  background:
-    linear-gradient(
-      115deg,
-      #ffffff00 22%,
-      #ffffff14 30%,
-      #ffffff00 38%,
-      #ffffff00 52%,
-      #ffffff0d 58%,
-      #ffffff00 64%
-    ),
-    linear-gradient(180deg, #0000004d, #00000000 9%, #00000000 91%, #0000004d);
-}
-
-/* ---- the socket ------------------------------------------------------ */
+/* ---- the cell -------------------------------------------------------- */
 
 :root.table.skin-smoke .tile {
-  border: 0.1875rem solid var(--slot-edge);
-  border-radius: var(--radius-s);
-  box-shadow:
-    inset 0 0.375rem 0.625rem #000000b3,
-    inset 0 0 0 0.0625rem #00000066,
-    0 0.0625rem 0 #ffffff1f;
+  border: var(--bw) solid var(--cell-line);
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--cut);
   color: var(--fg);
   /* Named properties only; `translate` is the hover lift. `transform` stays in
      the list because the phone's rule has it and the flip is written against
@@ -108,51 +56,53 @@
 
 /* The fill is asked of the empty tile alone: `:root.table .tile` outranks the
    phone's `.tile.green`, and a fill written on every tile painted every scored
-   letter the socket's colour. A tile mid-reveal is `.pending`: its colour class
-   is on but its face is transparent until the flip lands, so it keeps the
-   socket's look and not the piece's, or a lit lip would sit under a face that
-   is not there yet. */
+   letter the empty cell's colour. A tile mid-reveal is `.pending`: its colour
+   class is on but its face is transparent until the flip lands, so it keeps the
+   cell's look and not the piece's. */
 :root.table.skin-smoke .tile:not(.filled, .green, .yellow, .gray):not(.pending),
 :root.table.skin-smoke .tile.pending {
-  background: linear-gradient(180deg, #00000040, #00000014 60%, #ffffff0a), var(--slot-fill);
+  background: var(--cell);
 }
 
-/* ---- the piece ------------------------------------------------------- */
+/* ---- the draft ------------------------------------------------------- */
 
-/* A letter typed: ivory, dark ink, engraved. The type layer draws every tile
-   glyph with a dark outline and a drop (right for a coloured face, wrong on
-   ivory, where it turns a fine engraving into a fat sticker), so both dials go
-   to nothing and a light edge under the letter stands in for the cut. */
+/* A letter typed and not yet sent. The type layer draws every glyph with a
+   dark outline and a drop (right on a coloured face, wrong on a dark cell where
+   it only smudges the pixel font), so both dials go to nothing. */
 :root.table.skin-smoke .tile.filled:not(.green, .yellow, .gray) {
   --stroke: 0em;
   --drop: 0em;
-  color: var(--piece-ink);
   -webkit-text-stroke: 0;
-  text-shadow: 0 0.045em 0 #ffffffb3;
-  background: linear-gradient(180deg, var(--piece-hi), var(--ivory) 45%, var(--piece-lo));
-  border-color: var(--brass);
-  box-shadow:
-    inset 0 0.1875rem 0 #ffffffcc,
-    inset 0 -0.3125rem 0.375rem #7a5f2a40,
-    inset 0 0 0 0.0625rem var(--brass-hi),
-    0 var(--tile-lip) 0 var(--brass-lo),
-    0 0.5rem 0.625rem #00000073;
+  text-shadow: none;
+  color: var(--fg);
+  background: var(--cell);
+  border-color: var(--draft-line);
 }
 
-/* A scored letter: the same piece in the colour it means. */
+/* ---- the scored letter ----------------------------------------------- */
+
+/* The border takes the fill's own colour, so the cell's hairline vanishes and
+   the bevel is the only edge. */
+:root.table.skin-smoke .tile.green:not(.pending) {
+  border-color: var(--green);
+}
+
+:root.table.skin-smoke .tile.yellow:not(.pending) {
+  border-color: var(--yellow);
+}
+
+:root.table.skin-smoke .tile.gray:not(.pending) {
+  border-color: var(--gray);
+}
+
 :root.table.skin-smoke .tile:is(.green, .yellow, .gray):not(.pending) {
-  background-image: linear-gradient(180deg, #ffffff33, #ffffff00 48%, #0000002e);
-  border-color: var(--brass);
   color: var(--on-tile);
   box-shadow:
-    inset 0 0.1875rem 0 #ffffff47,
-    inset 0 -0.3125rem 0.375rem #0000002e,
-    inset 0 0 0 0.0625rem var(--brass-hi),
-    0 var(--tile-lip) 0 var(--brass-lo),
-    0 0.5rem 0.625rem #00000073;
+    inset 0 0.125rem 0 #ffffff40,
+    inset 0 -0.1875rem 0 #00000047;
 }
 
-/* A ghost is a suggestion, not a guess: a socket with the letter faint. */
+/* A ghost is a suggestion, not a guess: a cell with the letter faint. */
 :root.table.skin-smoke .tile.ghost {
   border-color: var(--green);
 }
@@ -160,28 +110,26 @@
 /* ---- typing ---------------------------------------------------------- */
 
 /*
- * The letter arriving is a reel stopping: it comes down from above, stretched
- * and blurred along the vertical as though it were still moving, hits its stop
- * a hair low, and rides back up onto it. No squash: the piece is a solid, and a
- * solid that flattens is a cartoon (the first cut of this was one). The blur is
- * `filter` and lasts a third of the animation. 240ms at x1: the phone's 110ms
- * read as a flicker at this tile size, and anything over ~280ms queued behind a
- * fast typist's next letter.
+ * The letter arriving drops in from above with a short blur along the vertical
+ * and rides back up onto its cell. No squash: a solid that flattens is a
+ * cartoon. The blur is `filter` and lasts a third of the animation. 240ms at
+ * x1: the phone's 110ms read as a flicker at this tile size, and anything over
+ * ~280ms queued behind a fast typist's next letter. The keyframes are the
+ * layout's, and stepped here: on a pixel-font board a smooth glide is the one
+ * thing that is not in the same language.
  */
 :root.table.skin-smoke .tile.land {
-  animation: table-land calc(240ms * var(--pace)) var(--ease-out);
+  animation: table-land calc(240ms * var(--pace)) steps(6, end);
 }
 
 /* ---- TILT: the row that was refused ---------------------------------- */
 
 /*
- * A refused word is the machine tilting. The row shakes hard (the phone's
- * `shake` keyframes at a larger `--shake`, with a small tilt riding on
- * `rotate`, the individual property, so the two do not replace each other),
- * and its lights flash red twice: a glow over the row and the row's own bulbs,
- * both on opacity. The lengths are 420ms because that is what the app takes
- * the class off at (`replay(row, "rejected", 420)`); longer would be cut off
- * mid-flash.
+ * A refused word shakes the row (the phone's `shake` keyframes at a larger
+ * `--shake`, with a small tilt riding on `rotate`, the individual property, so
+ * the two do not replace each other), and a red frame flashes over it twice.
+ * The lengths are 420ms because that is what the app takes the class off at
+ * (`replay(row, "rejected", 420)`); longer would be cut off mid-flash.
  */
 :root.table.skin-smoke .row.rejected {
   --shake: 0.875rem;
@@ -190,103 +138,58 @@
     table-reject-tilt calc(420ms * var(--pace)) ease-in-out;
 }
 
+/* Inside the row's own box: the frame is what a hairline around a row can be
+   without a shadow, and it sits over the cells, tinted, not opaque. */
 :root.table.skin-smoke .row.rejected::after {
   content: "";
   position: absolute;
-  inset: -0.5rem;
+  inset: 0;
   z-index: 2;
-  border-radius: var(--radius-m);
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 50%, #ff3d4859, #ff3d4824 60%, transparent 80%);
-  box-shadow: inset 0 0 0 0.1875rem color-mix(in srgb, var(--reject) 85%, transparent);
+  background: color-mix(in srgb, var(--reject) 18%, transparent);
+  border: var(--bw) solid var(--reject);
   opacity: 0;
-  animation: table-reject-flash calc(420ms * var(--pace)) linear;
-}
-
-/* ---- the marquee under the live row ---------------------------------- */
-
-/*
- * A strip of bulbs under the row being typed, one of every three lit and the
- * lit one walking along. The row is found by what it is not: the first row with
- * no scored tile in it, which is the row `patchDraft` types into, so the view
- * needs to give it no class. It sits in the row gap, under the lip.
- *
- * Two background layers on one pseudo-element: every bulb dim, and every third
- * bulb lit on a period three times as long. Moving both by one bulb each step
- * walks the lit ones along while the dim ones, whose period is one bulb, land on
- * themselves. `steps(3)` on 0.72s is five updates a second, which is what a real
- * chase does, and is why animating `background-position` here is acceptable when
- * it would not be on anything large: it repaints a strip 0.25rem tall, and does
- * it five times a second, not sixty. An idle loop, so unpaced, and killed by the
- * reduced-motion block like any loop; it then rests as the dim strip with its
- * first bulb lit, which still marks the live row.
- */
-:root.table.skin-smoke
-  .grid
-  .row:not(:has(.tile:is(.green, .yellow, .gray))):not(
-    .row:not(:has(.tile:is(.green, .yellow, .gray))) ~ .row
-  )::before {
-  content: "";
-  position: absolute;
-  left: 4%;
-  right: 4%;
-  bottom: -0.6rem;
-  height: 0.25rem;
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle at 50% 50%, var(--bulb) 0 34%, transparent 46%),
-    radial-gradient(circle at 50% 50%, var(--bulb-off) 0 34%, transparent 46%);
-  background-size:
-    3.3rem 100%,
-    1.1rem 100%;
-  background-repeat: repeat-x;
-  background-position:
-    0 50%,
-    0 50%;
-  animation: table-chase 0.72s steps(3) infinite;
-}
-
-/* The bulbs go red with the refusal. Its own animation, on opacity only. */
-:root.table.skin-smoke .row.rejected::before {
-  filter: hue-rotate(-40deg) saturate(3);
-  animation: table-reject-flash calc(420ms * var(--pace)) linear;
+  animation: table-reject-flash calc(420ms * var(--pace)) steps(1, end);
 }
 
 /* ---- hover ----------------------------------------------------------- */
 
-/* A mouse lifts a piece by a hair and brightens it, no tilt. `.mouse` is the
+/* A mouse lifts a letter by a hair and brightens it, no tilt. `.mouse` is the
    class the app keeps on the root from `pointerType` (see `bindMouse`), never a
    hover media query: the APK's WebView answers `(hover: hover)` like a desktop.
    Not a tile mid-reveal, and not a ghost, which cannot be picked up. */
 :root.table.skin-smoke.mouse .tile:is(.filled, .green, .yellow, .gray):not(.pending):hover {
-  translate: 0 -0.1875rem;
-  filter: brightness(1.07);
+  translate: 0 calc(var(--px) * -1);
+  filter: brightness(1.1);
 }
 
 /* ---- the boss's note ------------------------------------------------- */
 
 :root.table.skin-smoke .row-note {
-  border: 0.125rem solid var(--outline);
-  box-shadow: 0 0.125rem 0 var(--outline);
+  border: var(--rim);
+  background: var(--panel);
+  box-shadow: none;
+  clip-path: var(--cut);
 }
 
 /* ---- the glint ------------------------------------------------------- */
 
 /* Lives in `#fx` (see `glint` in `scenes/board.ts`), so it is prefixed like the
-   rest and cannot exist on the phone. The band is warm white with a brass
-   shoulder, soft enough that it lights the pieces without hiding a letter. */
+   rest and cannot exist on the phone. A hard-edged band of the foreground at
+   low alpha, since a soft gradient is the one non-pixel thing that could be
+   here; it is lit by being wide, not by being bright. */
 :root.table.skin-smoke .row-glint {
-  border-radius: var(--radius-s);
+  border-radius: 0;
 }
 
 :root.table.skin-smoke .row-glint > i {
   opacity: 0;
   background: linear-gradient(
     100deg,
-    #f0cf7a00 0%,
-    #f0cf7a40 30%,
-    #fff8dc99 50%,
-    #f0cf7a40 70%,
-    #f0cf7a00 100%
+    #ffffff00 0%,
+    #ffffff1a 32%,
+    #ffffff40 50%,
+    #ffffff1a 68%,
+    #ffffff00 100%
   );
 }

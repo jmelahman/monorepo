@@ -1,130 +1,167 @@
 /*
- * The casino skin's palette (still the phase-1 look; the Smoke Room replaces it).
+ * The Smoke Room's palette and scales.
  *
- * The table's palette and scales.
+ * A back room after the game has thinned out: a near-black ground with smoke
+ * hanging in it, panels one step lighter than the ground, hairlines lighter
+ * again, and a single mint accent that is spent on the things you act on
+ * (the lit button, the letter being typed, the meter). Cash is the only other
+ * colour that is ever "lit", a dull brass, and it is spent on money and
+ * nothing else. Everything the game means in colour (green, yellow, gray on a
+ * tile, chips blue, mult red) is the game's own and is not the room's to
+ * restyle; it is only set a little quieter so that it reads against a ground
+ * this dark without glaring.
  *
- * Existing colour tokens keep their names, because the phone's partials read
- * them and so do views and JS; only their values move, and only under
- * `.table`, so every component the phone draws picks the table up for free
- * wherever a rule does not restate it. The tile colours are the exception to
- * "values move": green, yellow and gray are what a letter *means*, and they are
- * pushed a little brighter to hold their own against a saturated table and no
- * further, since a tile that stops reading as the same green is a rule the
- * player has to relearn.
+ * It replaced a navy-and-brass casino, and the retirement was total: no
+ * `--brass`, `--felt-*`, `--bulb`, `--neon-*`, `--ivory` or `--velvet` survives
+ * anywhere, including the scripts that read tokens for particle colours (they
+ * read the roles below now). Two things that look like leftovers are not:
+ * `--gold` is still the name the phone's partials and the views use for money,
+ * and `--outline` is now only the ink under a pixel shadow.
  *
- * The felt is midnight navy. It was going to be baize until the tile green
- * went on it: a green tile on green felt is a tile that has lost its edge,
- * and the whole game is reading that edge. It was plum for a day after that,
- * which kept the edge but read as another game's table; the owner asked for
- * "Wordle Casino" instead, so the room is a late-night casino and the palette
- * is its hardware: navy baize under a warm lamp, brass trim, ivory pieces,
- * lacquer panels, and neon kept for signage. Navy sits opposite the yellow
- * tile and well clear of the green one, and it is what makes brass and bulbs
- * look lit rather than printed.
+ * Existing token names keep their meaning because the phone's partials read
+ * them and so do views and JS; only the values move, and only under `.table`.
+ * The roles at the end (`--accent`, `--spark`, `--lit`) are the ones a script
+ * or a second skin is expected to define: a scene asks for "the spark colour",
+ * never for mint.
  */
 :root.table.skin-smoke {
-  /* Felt: centre (under the lamp), mid, and the edge the vignette falls to. */
-  --felt-hi: #1d3561;
-  --felt-mid: #122342;
-  --felt-lo: #060b17;
-  --felt-tint: transparent;
+  /* The room: the ground the smoke is drawn on, the two smokes and the
+     vignette the shader falls to. Also what the static page is painted with
+     when there is no WebGL, so nothing here is only for the shader. */
+  --ground: #06070a;
+  --smoke-a: #0e2a2e;
+  --smoke-b: #2a0d18;
+  --vig: #020305;
 
-  --bg: #0b1426;
-  /* Lacquer: the surfaces things sit on, lightest on top. */
-  --panel: #14213d;
-  --panel-2: #1c2d52;
-  --panel-3: #263b68;
-  --line: #34507f;
-  --fg: #f7f1e3;
-  --muted: #a9b4cc;
+  --bg: #06070a;
+  /* Surfaces, lightest on top: the panel, the button on it, the key beside it. */
+  --panel: #0c0e13;
+  --panel-2: #131720;
+  --panel-3: #151922;
+  --well: #080a0e;
+  --line: #1d212b;
+  --fg: #ebe7df;
+  --muted: #858b98;
 
-  /* The ink round every display glyph and every panel edge. */
-  --outline: #050913;
+  /* The ink under a pixel shadow and round the icon glyphs. Near-black, not
+     black: the ground is #06070a and a true black would read as a hole in it. */
+  --outline: #030407;
 
-  /*
-   * Casino hardware. Brass is the trim on everything that is a fixture (the
-   * board's bezel, panel rims, the tray); ivory is the face of a piece the
-   * player handles (an unscored tile, a key cap); bulbs are the marquee, lit
-   * and dark; the two neons are for signage and big moments only, and a
-   * screen that uses them at rest has spent them.
-   */
-  --brass: #c9973f;
-  --brass-hi: #f0cf7a;
-  --brass-lo: #7a5419;
-  --ivory: #f2e8d2;
-  --ivory-lo: #cbbd9c;
-  --ink: #1b1a24;
-  --bulb: #ffe7a3;
-  --bulb-off: #4a3f2a;
-  --neon-a: #ff3fa4;
-  --neon-b: #3fe3ff;
-  --velvet: #6e1230;
+  --green: #4a9a45;
+  --yellow: #c9a22c;
+  --gray: #3a3f4c;
 
-  --green: #4da346;
-  --yellow: #d4ac2a;
-  --gray: #4a5068;
+  --chips: #5a9cff;
+  --mult: #ff5a64;
+  /* Cash. Brass at a third the saturation of the casino's; it is a number, not a fixture. */
+  --gold: #d8b563;
+  --danger: #e0626b;
 
-  --chips: #3f9dff;
-  --mult: #ff4f58;
-  --gold: #ffc12e;
+  /* The one accent, and the ink that goes on it. */
+  --accent: #58c9b3;
+  --accent-hi: #9be8d8;
+  --on-accent: #04110e;
 
-  /* Buttons, each a face and the darker lip it stands on. The primary is
-     lacquered brass with dark ink, the one lit button on the deck. */
-  --btn-primary: #e3b04b;
-  --btn-primary-lip: #8a5d17;
-  --btn-neutral: #2c4474;
-  --btn-neutral-lip: #152443;
-  --btn-blue: #3f8cff;
-  --btn-blue-lip: #1f4fb0;
-  --btn-danger: #d8434f;
-  --btn-danger-lip: #7c1a26;
-  --btn-go: #47b552;
-  --btn-go-lip: #22702c;
-  --on-btn: #fffaf0;
-  --on-primary: #1b1405;
+  /* Buttons: a flat face and a hairline. The primary is the accent, the only
+     filled button on any screen. The rest are the panel's own step up. */
+  --btn: #131720;
+  --btn-primary: var(--accent);
+  --btn-neutral: #131720;
+  --btn-blue: #131720;
+  --btn-danger: var(--danger);
+  --btn-go: var(--accent);
+  --on-btn: var(--fg);
+  --on-primary: var(--on-accent);
 
-  --rare-common: #8f9ab3;
-  --rare-uncommon: #33cf8a;
-  --rare-rare: #4f93ff;
+  /* Rarity, told in a bar along the top of a card. Values are the design's:
+     grey, green, blue, pink. */
+  --rare-common: #8a8f9a;
+  --rare-uncommon: #4fc28a;
+  --rare-rare: #5a9cff;
   --rare-legendary: #ff5fb8;
-  --rare-wash: 26%;
-  --rare-wash-tray: 34%;
+  --rare-wash: 12%;
+  --rare-wash-tray: 16%;
   --rare-edge: 70%;
 
-  --key: #2e4270;
-  --key-gray-fg: #c6cfe2;
-  --broken-bg: #0d1628;
-  --broken-fg: #44536f;
-  --shade: #02050c;
-  --sheen: #ffffff33;
-  --scrim: #030814cc;
-  --title-tint: #24407a;
+  /* The board: the tray a guess sits in, the cell an empty tile is, and the
+     rings that mark one. */
+  --board-bg: #090b0f;
+  --board-line: #232834;
+  --cell: #0e1117;
+  --cell-line: #1a1e27;
+  --slot-line: #181b23;
+  --draft-line: var(--accent);
+  --key: #151922;
+  --key-line: #232834;
+  --key-dead: #0b0d12;
+  --key-gray-fg: #858b98;
+  --broken-bg: #0b0d12;
+  --broken-fg: #3f4552;
+  --shade: #000;
+  --sheen: #ffffff1c;
+  --scrim: #030408cc;
+  --title-tint: #0e2a2e;
   --on-tile: #fff;
-  --on-bright: #0c1426;
+  --on-bright: #04110e;
 
-  /* Radius scale. */
-  --radius-s: 0.375rem;
-  --radius-m: 0.75rem;
-  --radius-l: 1.125rem;
-  --radius-pill: 999px;
+  /* One pixel is 2px, and the notch cut from a corner is two of them. There
+     are no radii: a rounded corner is what the other two skins have. */
+  --px: 0.125rem;
+  --notch: 0.25rem;
+  --radius-s: 0;
+  --radius-m: 0;
+  --radius-l: 0;
+  --radius-pill: 0;
+  --bw: 0.125rem;
 
   /*
-   * Three depths. Hard is the offset slab that makes a thing physical, soft is
-   * the ambient shadow it casts on the felt, lift is a card picked up off the
-   * table (hover, and what the tilt will grow into). The hard one is mixed
-   * from `--outline` rather than black, so it reads as the panel's own edge
-   * continuing down instead of a smudge under it.
+   * The notched corner: a rectangle with a 4px square taken out of each
+   * corner, as a `clip-path`. It clips anything drawn outside the box
+   * (`box-shadow`, an outline, a child that overflows), so it goes only on
+   * things that draw nothing outside themselves, and depth on this skin is
+   * done inside the box or not at all.
    */
-  --shadow-hard: 0 0.25rem 0 var(--outline);
-  --shadow-soft: 0 0.75rem 1.5rem color-mix(in srgb, var(--shade) 55%, transparent);
-  --shadow-lift:
-    0 0.5rem 0 var(--outline), 0 1.5rem 2rem color-mix(in srgb, var(--shade) 65%, transparent);
-  /* `--rim`, not `--edge`: the intro's track cards already use that name for a
-     per-round colour, and a token of the same name would be theirs to override. */
-  --rim: 0.1875rem solid var(--outline);
-  --top-light: inset 0 0.125rem 0 #ffffff1f;
+  --cut: polygon(
+    var(--notch) 0,
+    calc(100% - var(--notch)) 0,
+    calc(100% - var(--notch)) var(--notch),
+    100% var(--notch),
+    100% calc(100% - var(--notch)),
+    calc(100% - var(--notch)) calc(100% - var(--notch)),
+    calc(100% - var(--notch)) 100%,
+    var(--notch) 100%,
+    var(--notch) calc(100% - var(--notch)),
+    0 calc(100% - var(--notch)),
+    0 var(--notch),
+    var(--notch) var(--notch)
+  );
 
-  --font-display:
-    "Lilita One", "Arial Rounded MT Bold", "Arial Black", Impact, system-ui, sans-serif;
-  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Depth: none. A panel is a hairline and a step in lightness; the only shadow
+     on the skin is the hard pixel one under a piece that can be picked up. */
+  --shadow-hard: 0 0 0 0 transparent;
+  --shadow-soft: 0 0 0 0 transparent;
+  --shadow-lift: 0 0 0 0 transparent;
+  --rim: var(--bw) solid var(--line);
+  --top-light: inset 0 0 0 0 transparent;
+
+  /* Roles. What a scene means by "a spark", "a lit bulb" and "a coin", so that
+     a second skin can define its own and no script names a colour. */
+  --spark: var(--accent);
+  --spark-hi: var(--accent-hi);
+  --spark-lo: #2f7d6e;
+  --paper: var(--fg);
+  --paper-lo: var(--muted);
+  --lit: var(--accent);
+  --lit-hot: var(--fg);
+  --coin: var(--gold);
+  --coin-hi: #f0dc9c;
+  --coin-lo: #8f7434;
+
+  /* Jersey 10 does every job: display, numbers, labels, prose. It is drawn on a
+     pixel grid and only holds together at whole multiples of it, which is what
+     `font-size-adjust` in `type.css` is for. The fallbacks are a monospace on
+     purpose: a system sans in a page of pixel type is a broken page, a
+     monospace is a different page. */
+  --font-display: "Jersey 10", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-body: "Jersey 10", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }

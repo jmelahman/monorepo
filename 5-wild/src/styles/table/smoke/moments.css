@@ -15,17 +15,15 @@
  */
 :root.table.skin-smoke {
   /* The boss's colours: the band that sweeps across, and the wash the table
-     takes on for the second it lands. Crimson rather than the mult red, which
-     is a *score* colour and means something on the board; this is a mood. */
-  --boss-band: #6d1026;
-  --boss-band-hi: #b3213f;
+     takes on for the second it lands. A duller red than the mult's, which is a
+     *score* colour and means something on the board; this is a mood. */
+  --boss-band: #5e1720;
+  --boss-band-hi: #b23a44;
   --boss-wash-in: #12030a80;
-  --boss-wash-out: #7a1029d9;
-  --win-wash: #fff2b8b3;
+  --boss-wash-out: #7a1a29d9;
+  --win-wash: #9be8d8a6;
   /* What a lost run does to the room: grey, and a shade darker than grey. */
   --gloom: grayscale(0.9) brightness(0.68) contrast(1.05);
-  --coin-hi: #fff1a8;
-  --coin-lo: #b37800;
 }
 
 /* ---- ghosts ------------------------------------------------------------ */
@@ -78,21 +76,18 @@
     transparent
   );
   border-block: var(--rim);
-  box-shadow: 0 0.5rem 2rem color-mix(in srgb, var(--shade) 60%, transparent);
   color: var(--on-btn);
   font-family: var(--font-display);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  -webkit-text-stroke: 0.22em var(--outline);
-  paint-order: stroke fill;
-  text-shadow: 0 0.07em 0 var(--outline);
 }
 
 :root.table.skin-smoke .fx-coin {
-  border: 0.125rem solid var(--outline);
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--coin-hi), var(--gold) 55%, var(--coin-lo));
-  box-shadow: 0 0.125rem 0 var(--outline);
+  border: var(--bw) solid var(--coin-lo);
+  border-radius: 0;
+  background: var(--coin);
+  box-shadow: inset 0 0.125rem 0 var(--coin-hi);
+  clip-path: var(--cut);
 }
 
 /* ---- entries the script now owns --------------------------------------- */

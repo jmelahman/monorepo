@@ -112,8 +112,9 @@ describe("table stylesheet split", () => {
     const skinned: Array<[string, string]> = [
       ...readdirSync(`${dir}/smoke`)
         .filter((f) => f.endsWith(".css") && f !== "index.css" && f !== "fonts.css")
-        .map((f): [string, string] => [`${dir}/smoke/${f}`, "skin-smoke"]),
-      [`${dir}/classic-skin.css`, "skin-classic"],
+        .map((f): [string, string] => [`${dir}/smoke/${f}`, ":root.table.skin-smoke"]),
+      // Tabletop rides on Classic until it has a look of its own (see the file).
+      [`${dir}/classic-skin.css`, ":root.table:is(.skin-classic, .skin-tabletop)"],
     ]
     for (const [file, cls] of skinned) {
       const css = strip(readFileSync(file, "utf8"))
@@ -123,7 +124,7 @@ describe("table stylesheet split", () => {
       expect(selectors.length).toBeGreaterThan(0)
       for (const selector of selectors) {
         for (const part of topLevel(selector)) {
-          expect(part.trim(), `${file}: ${part.trim()}`).toContain(`:root.table.${cls}`)
+          expect(part.trim(), `${file}: ${part.trim()}`).toContain(cls)
         }
       }
     }

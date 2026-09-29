@@ -1,11 +1,17 @@
 /*
- * Playing cards: relics, consumables and the shop's shelf are one object at
- * three sizes, and this file is what they share.
+ * Cards: relics, consumables and the shop's shelf are one object at three
+ * sizes, and this file is what they share.
  *
- * A card is a piece on the counter: printed stock with a rarity-coloured
- * border, a face tinted a share of that colour, a 3px ink edge outside it and
- * the hard slab shadow under it. What sets the rarities apart is the edge of
- * the piece, chip-style, further down. It rests where it is put.
+ * A card is a panel with a hairline and a bar of its rarity's colour across
+ * the top, four pixels of it, drawn as an inset shadow so it sits inside the
+ * clipped corner. That bar is the whole of the rarity language. The casino told
+ * rarity by the edge of a chip (spots, inlay, a ring of bulbs), which took a
+ * `::before` ring and a lit halo; a bar along the top says the same at a glance
+ * and is the same at every size, from the shelf to the tray.
+ *
+ * Nothing on a card is drawn outside its box (see `--cut` in `tokens.css`), so
+ * depth is the one thing it does not have, and a card being picked up is
+ * shown by moving it, not by a shadow growing under it.
  */
 :root.table.skin-smoke .rarity-common {
   --rare: var(--rare-common);
@@ -20,127 +26,36 @@
   --rare: var(--rare-legendary);
 }
 
-/* The card face: a diagonal share of the rarity over card stock, and a lit top
-   edge. `--card-face` so a screen can restate the face without the border. */
 :root.table.skin-smoke :is(.relic:not(.empty), .shop-item:not(.sold)) {
   --rare-c: var(--rare, var(--rare-common));
-  border: 0.1875rem solid var(--outline);
-  background: linear-gradient(
-    165deg,
-    color-mix(in srgb, var(--rare-c) 42%, var(--panel-2)) 0%,
-    var(--panel-2) 62%,
-    color-mix(in srgb, var(--rare-c) 12%, var(--panel)) 100%
-  );
-  box-shadow:
-    inset 0 0 0 0.1875rem var(--rare-c),
-    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
-    var(--shadow-hard),
-    0 0.75rem 1rem -0.25rem color-mix(in srgb, var(--shade) 70%, transparent);
-  border-radius: var(--radius-m);
+  border: var(--bw) solid var(--line);
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: inset 0 0.25rem 0 var(--rare-c);
+  clip-path: var(--cut);
 }
 
-/* Empty seats: cut into the felt, not printed on it. */
+/* Empty seats: a dashed outline and nothing else, as the design draws a slot. */
 :root.table.skin-smoke .relic.empty,
 :root.table.skin-smoke .consumable.empty {
-  background: color-mix(in srgb, var(--felt-lo) 55%, transparent);
-  border: 0.125rem dashed color-mix(in srgb, var(--muted) 38%, transparent);
-  box-shadow: inset 0 0.25rem 0.75rem #0000005c;
-  border-radius: var(--radius-m);
-}
-
-/* The rarity pip the phone draws on the corner is redundant next to a coloured
-   border, and on a card that size it reads as a pimple. */
-:root.table.skin-smoke :is(.rarity-uncommon, .rarity-rare, .rarity-legendary)::after {
-  display: none;
-}
-
-/*
- * Rarity, told the way a casino tells the value of a chip: by its edge. Every
- * card has a `::before` ring just inside the coloured border, and what that
- * ring is made of is the rarity.
- *
- *   common      nothing: a plain piece;
- *   uncommon    edge spots in the rarity colour, half strength, like the
- *               inlay on a low denomination;
- *   rare        the same spots in ivory over brass, at full strength;
- *   legendary   a ring of marquee bulbs, lit, with their halo. The bulbs are
- *               steady. A marquee chases when something is happening on it;
- *               this one is a card sitting on the counter.
- *
- * It replaces the foil and the moving specular this file used to draw. That was
- * a card game's light; the table's is a lamp overhead, and a lamp does not
- * move when a piece is picked up.
- */
-:root.table.skin-smoke :is(.relic:not(.empty), .shop-item:not(.sold))::before {
-  content: "";
-  position: absolute;
-  inset: 0.1875rem;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: calc(var(--radius-m) - 0.25rem);
   background: none;
-  border: 0 dashed transparent;
-  mix-blend-mode: normal;
-  animation: none;
-  filter: none;
-}
-
-:root.table.skin-smoke :is(.relic, .shop-item).rarity-uncommon:not(.sold, .empty)::before {
-  border-width: 0.25rem;
-  border-color: color-mix(in srgb, var(--rare-c) 55%, transparent);
-}
-
-:root.table.skin-smoke :is(.relic, .shop-item).rarity-rare:not(.sold, .empty)::before {
-  border-width: 0.25rem;
-  border-color: color-mix(in srgb, var(--brass-hi) 80%, var(--rare-c));
-  box-shadow: inset 0 0 0 0.125rem color-mix(in srgb, var(--brass-lo) 70%, transparent);
-}
-
-:root.table.skin-smoke :is(.relic, .shop-item).rarity-legendary:not(.sold, .empty)::before {
-  inset: 0.125rem;
-  border-style: dotted;
-  border-width: 0.3125rem;
-  border-color: var(--bulb);
-  filter: drop-shadow(0 0 0.25rem var(--bulb));
-}
-
-/*
- * The glint. A card picked out by the pointer is lifted a few pixels off the
- * felt, brightened as if it had come closer to the lamp, and one band of light
- * crosses it once, corner to corner. Once and not on a loop: it is the answer
- * to a hover, and a hover that keeps flashing is a card asking to be bought.
- * The reels in `shop.ts` reuse it as `.struck` on the card that has just
- * stopped. Mouse only; a finger has no hover to answer, and the APK's WebView
- * says it has (see `bindTips`), which is why this reads `.mouse`.
- */
-:root.table.skin-smoke :is(.shop-item:not(.sold), .relic:not(.empty))::after {
-  display: block;
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  width: auto;
-  height: auto;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(
-    105deg,
-    transparent 38%,
-    rgb(255 255 255 / 0.32) 49%,
-    rgb(255 255 255 / 0.1) 55%,
-    transparent 64%
-  );
-  background-size: 300% 100%;
-  background-position: 130% 0;
+  border: var(--bw) dashed var(--slot-line);
+  border-radius: 0;
   box-shadow: none;
-  opacity: 0;
+}
+
+/* The phone's foil, its rarity pip and its glint are all pseudo-elements on
+   these cards, and every one of them is a light effect this skin does not
+   have. Not drawn, rather than drawn and covered. */
+:root.table.skin-smoke :is(.relic, .shop-item)::before,
+:root.table.skin-smoke :is(.relic, .shop-item)::after {
+  display: none;
 }
 
 :root.table.skin-smoke :is(.shop-item:not(.sold), .relic:not(.empty)) {
   transition:
-    transform 160ms cubic-bezier(0.2, 0.8, 0.3, 1),
-    filter 160ms ease-out,
-    box-shadow 160ms ease-out;
+    transform 120ms var(--ease-out),
+    filter 120ms var(--ease-out);
 }
 
 :root.table.skin-smoke.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover,
@@ -148,23 +63,31 @@
   z-index: 3;
 }
 
+/* A mouse on a card lifts it one pixel-pair and no more. */
 :root.table.skin-smoke.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover {
-  transform: translateY(-0.25rem);
-  filter: brightness(1.07);
-  box-shadow:
-    inset 0 0 0 0.1875rem var(--rare-c),
-    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
-    var(--shadow-lift);
+  transform: translateY(calc(var(--px) * -1));
 }
 
-:root.table.skin-smoke.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover::after,
-:root.table.skin-smoke :is(.shop-item, .relic).struck::after {
-  animation: glint calc(720ms * var(--pace)) cubic-bezier(0.3, 0.2, 0.3, 1) both;
+/* The reels in `shop.ts` set `.struck` on the card that has just stopped. The
+   casino ran a band of light across it; this is one bright frame that steps
+   down to the card, three steps, so it lands like a pixel flash rather than a
+   fade. Filter only, and paced. */
+:root.table.skin-smoke :is(.shop-item, .relic).struck {
+  animation: smoke-strike calc(360ms * var(--pace)) steps(3, end) both;
 }
 
-/* The press: pushed back down onto the felt. */
+@keyframes smoke-strike {
+  from {
+    filter: brightness(1.9);
+  }
+  to {
+    filter: brightness(1);
+  }
+}
+
+/* The press: pushed back down. */
 :root.table.skin-smoke.mouse :is(.shop-item:not(.sold), .relic:not(.empty)):hover:active {
-  transform: translateY(0.0625rem) scale(0.97);
+  transform: translateY(var(--px));
   transition-duration: 70ms;
 }
 
@@ -174,60 +97,47 @@
   transition: none;
   filter: none;
 }
-:root.table.skin-smoke .shop-ghost::after {
-  display: none;
-}
 
 :root.table.skin-smoke .relic-name {
   color: var(--fg);
 }
 
-:root.table.skin-smoke .relic .sell,
-:root.table.skin-smoke .relic-detail {
-  font-family: var(--font-display);
-  letter-spacing: 0.03em;
+:root.table.skin-smoke .relic .sell {
+  color: var(--gold);
 }
 
 :root.table.skin-smoke .relic-detail {
   color: var(--mult);
-  -webkit-text-stroke: 0.3em var(--outline);
-  paint-order: stroke fill;
 }
 
+/* Firing is the card's own bar lit to the cash colour: the tray's answer to a
+   relic scoring. An inset ring, since a glow would be clipped, and the pop
+   over the card carries the number. */
 :root.table.skin-smoke .relic.fired {
   box-shadow:
-    inset 0 0 0 0.1875rem var(--gold),
-    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
-    var(--shadow-hard);
+    inset 0 0 0 var(--bw) var(--lit),
+    inset 0 0.25rem 0 var(--rare-c);
 }
 
-/* Consumables, the hand: tarot-ish cards, purple by design. */
+/* Consumables, the hand: the same panel, with the legendary pink for a bar
+   so that a consumable is never mistaken for a relic. */
 :root.table.skin-smoke .consumable:not(.empty) {
-  border: 0.1875rem solid var(--outline);
-  background: linear-gradient(
-    165deg,
-    color-mix(in srgb, var(--rare-legendary) 45%, var(--panel-2)),
-    var(--panel-2) 70%
-  );
-  box-shadow:
-    inset 0 0 0 0.125rem color-mix(in srgb, var(--rare-legendary) 80%, #fff 10%),
-    inset 0 0.3125rem 0 0.1875rem #ffffff1c,
-    var(--shadow-hard);
-  border-radius: var(--radius-m);
+  border: var(--bw) solid var(--line);
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: inset 0 0.25rem 0 var(--rare-legendary);
+  clip-path: var(--cut);
 }
 
 :root.table.skin-smoke .consumable-text {
-  color: color-mix(in srgb, var(--fg) 75%, var(--muted));
+  color: var(--muted);
 }
 
-/* The tip that follows the pointer: ink-edged card stock too. */
+/* The tip that follows the pointer: a panel with the card's bar. */
 :root.table.skin-smoke .relic-tip {
   background: var(--panel);
   border: var(--rim);
-  border-top-color: var(--outline);
-  box-shadow:
-    inset 0 0.25rem 0 var(--rare, var(--rare-common)),
-    var(--shadow-hard),
-    var(--shadow-soft);
-  border-radius: var(--radius-m);
+  border-radius: 0;
+  box-shadow: inset 0 0.25rem 0 var(--rare, var(--rare-common));
+  clip-path: var(--cut);
 }

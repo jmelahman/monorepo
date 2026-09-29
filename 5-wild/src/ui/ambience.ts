@@ -4,15 +4,13 @@
  * The table has two kinds of life. One is what the game *does*: tiles landing,
  * the score rolling, the shake. It has no switch here, because stillness already
  * has an answer, `prefers-reduced-motion`, and every effect honours it. The other
- * is what the room does on its own: the lamp over the baize breathing, the dust
- * turning in its beam, the marquee bulbs around the window. Those are a *taste*.
+ * is what the room does on its own: the smoke drifting behind the panels. Those are a *taste*.
  * Some players read them as a room and some as movement at the edge of the eye
  * while they are trying to tell two yellows apart, and a taste gets a switch.
  *
- * Off means the room holds still and dark-ish, not empty: the canvas, the motes
- * and the bulb ring are not created at all, and the static felt in
- * `styles/table/backdrop.css` (grain, lamp pool as a gradient, vignette) is what
- * is left, which is the same picture a machine without WebGL gets. It does not
+ * Off means the room holds still and dark-ish, not empty: the canvas is not
+ * created at all, and the flat ground in `styles/table/smoke/backdrop.css` (a
+ * vignette on near-black) is what is left, which is the same picture a machine without WebGL gets. It does not
  * touch the game's own effects, for the reason above: a "lights" switch that
  * also muted the scoring would be two settings sharing a button.
  *

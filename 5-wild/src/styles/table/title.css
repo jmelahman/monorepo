@@ -1,8 +1,8 @@
 /*
- * The title, on the felt. The phone's version is a column of about 24rem; the
+ * The title, on the table. The phone's version is a column of about 24rem; the
  * board-shaped masthead is kept and simply made bigger, because it is the one
  * thing here that already says what the game is. What changes is the material:
- * the wash on `#app` is gone (the felt is the backdrop now, see backdrop.css),
+ * the wash on `#app` is gone (the smoke is the backdrop now, see backdrop.css),
  * the tiles are chunky slabs, and the column is a little wider so the buttons
  * are not the width of a phone held up to a monitor.
  */

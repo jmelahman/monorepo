@@ -607,7 +607,7 @@ export type Strings = {
       skin: string
       /** Each skin's name, the row's value: a place or a style, so the translator's. */
       skins: Record<Skin, string>
-      /** The desktop table's lamp, dust and marquee bulbs; the row exists only there. */
+      /** The desktop table's drifting smoke; the row exists only there. */
       ambience: string
       /**
        * The one row whose value is the translator's, since "Light" is a word

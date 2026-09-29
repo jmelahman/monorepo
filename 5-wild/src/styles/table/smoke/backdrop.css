@@ -1,80 +1,60 @@
 /*
- * The felt, on `html` and not on `#app`.
+ * The ground, on `html` and not on `#app`.
  *
- * On the page rather than the app because a living background is coming
- * (a canvas behind `#app`), and it has to be able to replace this without
+ * On the page rather than the app because the smoke is a canvas behind `#app`
+ * (`src/ui/fx/background.ts`), and it has to be able to come and go without
  * touching a screen. A fixed canvas at a negative z-index paints over the
- * root's background and under everything else, so the static felt below is
- * both what the game looks like without WebGL and what the shader lands on.
+ * root's background and under everything else, so what is written here is both
+ * the room without WebGL and the colour the shader is drawn against.
  *
- * Three layers, top to bottom: the vignette that pulls the eye to the middle,
- * the grain, and the cloth. The grain is `feTurbulence` in an SVG data URI so
- * it costs no request and no asset, at a `baseFrequency` fine enough to read
- * as weave rather than cloud, and pushed to a low alpha by the colour matrix:
- * at 0.22 it was a sandpaper filter, at 0.08 it is only felt. 220px tile,
- * which is long enough that the repeat cannot be found by eye.
- *
- * `background-attachment: fixed` is left off. The page never scrolls (`html`
- * is `overflow: hidden`), so it buys nothing, and it makes some engines
- * repaint the noise on every frame.
+ * Two layers: the vignette and the ground. No grain, no texture: the smoke is
+ * the only thing in the room that is not flat, and a static page that already
+ * had texture would not tell the player whether the shader had run.
  */
 :root.table.skin-smoke {
   background:
-    radial-gradient(
-      ellipse 80% 75% at 50% 42%,
-      transparent 35%,
-      color-mix(in srgb, var(--felt-lo) 85%, transparent) 100%
-    ),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(
-      ellipse 90% 80% at 50% 38%,
-      var(--felt-hi) 0%,
-      var(--felt-mid) 48%,
-      var(--felt-lo) 100%
-    ),
-    var(--felt-lo);
-  background-size:
-    auto,
-    220px 220px,
-    auto,
-    auto;
+    radial-gradient(ellipse 70% 80% at 60% 45%, transparent 40%, var(--vig) 100%), var(--ground);
 }
 
-/* Transparent so the page's felt shows through, and so a canvas behind `#app`
+/* Transparent so the page's ground shows through, and so a canvas behind `#app`
    is not hidden by a body colour. */
 :root.table.skin-smoke body {
   background: transparent;
 }
 
-/* The title screen paints its own wash over the phone's flat page. On the felt
-   that reads as a grey box, so it goes and the felt is the stage. */
+/* The title screen paints its own wash over the phone's flat page. Over smoke
+   that reads as a grey box, so it goes and the room is the stage. */
 :root.table.skin-smoke #app:has(> .screen.title) {
   background: none;
 }
 
 /*
- * The living felt (`src/ui/fx/background.ts`): a canvas that is a sibling of
- * `#app`, fixed behind it. At z-index -2 (the marquee ring is -1) it paints over the root's own
- * background and under everything else in the page, which is why the static
- * felt above needs no change and is what shows through until the first frame is
- * drawn, and for good when there is no WebGL.
+ * The smoke (`src/ui/fx/background.ts`): a canvas that is a sibling of `#app`,
+ * fixed behind it, drawn at a third of the window's size in CSS pixels and
+ * stretched with `image-rendering: pixelated`, so every dither cell is a hard
+ * 3px square and the picture is the same coarse grain on a 4K panel as on a
+ * laptop. At z-index -2 it paints over the root's background and under
+ * everything else, which is why the static ground above needs no change and is
+ * what shows until the first frame is drawn, and for good when there is no
+ * WebGL.
  *
  * It fades in on `.live`, which the script sets after the first painted frame,
- * so a slow shader compile shows the CSS felt rather than black. The fade is a
- * one-shot on opacity and is paced; reduced motion's blanket rule turns it into
- * an instant cut, which is the right answer there too.
+ * so a slow shader compile shows the flat ground rather than black. The fade is
+ * a one-shot on opacity and is paced; reduced motion's blanket rule turns it
+ * into an instant cut, which is the right answer there too.
  */
-:root.table.skin-smoke #felt-gl {
+:root.table.skin-smoke #smoke {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: -2;
   pointer-events: none;
+  image-rendering: pixelated;
   opacity: 0;
   transition: opacity calc(600ms * var(--pace)) ease;
 }
 
-:root.table.skin-smoke #felt-gl.live {
+:root.table.skin-smoke #smoke.live {
   opacity: 1;
 }

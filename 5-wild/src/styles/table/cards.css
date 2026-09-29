@@ -4,22 +4,12 @@
   overflow: hidden;
 }
 
-/* Card text sits over the ring. */
+/* Card text sits above any pseudo-element a skin draws behind it. */
 :root.table :is(.relic, .shop-item) > * {
   position: relative;
   z-index: 1;
 }
 
-@keyframes glint {
-  0% {
-    background-position: 130% 0;
-    opacity: 1;
-  }
-  100% {
-    background-position: -30% 0;
-    opacity: 1;
-  }
-}
 :root.table .shop-ghost {
   pointer-events: none;
 }

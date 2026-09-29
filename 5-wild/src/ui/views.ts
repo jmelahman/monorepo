@@ -138,7 +138,7 @@ export type Handlers = {
   cycleSpeed: () => void
   /** Move the desktop table to its next skin. */
   cycleSkin: () => void
-  /** Turn the desktop table's lights (lamp drift, motes, marquee) on or off. */
+  /** Turn the desktop table's lights (the drifting smoke) on or off. */
   toggleAmbience: () => void
   /** Step the look from the device's, to light, to dark, and back. */
   toggleTheme: () => void

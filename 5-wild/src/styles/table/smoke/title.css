@@ -6,38 +6,37 @@
   --g: 0.5rem;
 }
 
+/* The five empty cells behind the name are the board's empty cells. */
 :root.table.skin-smoke .title-ghost-tile {
-  border: var(--rim);
-  border-radius: var(--radius-s);
-  background: color-mix(in srgb, var(--felt-lo) 55%, transparent);
-  border-color: color-mix(in srgb, var(--outline) 80%, transparent);
+  border: var(--bw) solid var(--cell-line);
+  border-radius: 0;
+  background: var(--cell);
+  clip-path: var(--cut);
 }
 
+/* The name's tiles are scored tiles: a fill, the same fill for an edge, the
+   bevel inside. No lip and no shadow (the notch would take both). */
 :root.table.skin-smoke .title-tile {
-  border: var(--rim);
-  border-radius: var(--radius-s);
+  border: var(--bw) solid var(--gray);
+  border-radius: 0;
   background: var(--gray);
   box-shadow:
-    inset 0 -0.375rem 0 #0000004d,
-    var(--top-light),
-    0 0.25rem 0 var(--outline),
-    0 1rem 1.5rem color-mix(in srgb, var(--shade) 55%, transparent);
+    inset 0 0.125rem 0 #ffffff40,
+    inset 0 -0.25rem 0 #00000047;
+  clip-path: var(--cut);
 }
 
 :root.table.skin-smoke .title-tile.wild {
+  border-color: var(--green);
   background: var(--green);
-  box-shadow:
-    inset 0 -0.375rem 0 #00000038,
-    var(--top-light),
-    0 0.25rem 0 var(--outline),
-    0 1rem 2rem color-mix(in srgb, var(--green) 40%, transparent);
 }
 
 :root.table.skin-smoke .title-chips,
 :root.table.skin-smoke .title-mult {
-  border: 0.125rem solid var(--outline);
-  border-radius: var(--radius-s);
-  box-shadow: 0 0.125rem 0 var(--outline);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--cut);
 }
 
 :root.table.skin-smoke .title-tag {
@@ -62,9 +61,8 @@
   color: var(--muted);
 }
 
-/* The badge's figures are small and sit on a bright fill: the display stroke
-   at this size closes the counters of the digits into a smear. Ink on colour,
-   no outline, as the phone has it. */
+/* The badge's figures are small and sit on a bright fill: ink on colour, no
+   outline, as the phone has it. */
 :root.table.skin-smoke .title-chips,
 :root.table.skin-smoke .title-mult {
   -webkit-text-stroke: 0;

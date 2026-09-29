@@ -14,7 +14,7 @@ import { shopWillRender } from "./shop"
 
 /**
  * What happens between screens, and the big moments on them, in the fiction the
- * table has: a late-night casino. Screens are pushed across the felt by a
+ * table has: a late-night casino. Screens are pushed across the table by a
  * dealer, the round's card is dealt face down and turned, a win is a payout
  * ticket printed out of a slot, a boss is a neon sign flickering on over a
  * velvet rope, a lost run is the croupier's rake, and a won one is the jackpot.
@@ -250,7 +250,7 @@ function leave(ghost: HTMLElement, style: "slide" | "zoom"): void {
 /* ------------------------------------------------------------- sheets */
 
 /**
- * A sheet opening springs up out of the felt, and one closing sinks back into
+ * A sheet opening springs up out of the table, and one closing sinks back into
  * it. Opening is asked of the node the render built: a sheet the render marked
  * `settled` was already open and is only being rebuilt around a button tap, and
  * replaying its entry there is the bug `settled` exists to stop. The pack sheet
@@ -294,7 +294,7 @@ function sheets(root: HTMLElement, was: Leaving): void {
 /* -------------------------------------------------------------- title */
 
 /**
- * The masthead drops onto the felt tile by tile. The idle loops after it are
+ * The masthead drops onto the table tile by tile. The idle loops after it are
  * CSS (`moments.css`), on `translate` and `rotate` so they compose with this.
  */
 function titleIn(screen: HTMLElement): void {
