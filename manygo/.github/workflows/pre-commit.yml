@@ -31,6 +31,6 @@ jobs:
       - name: Run prek hooks
         uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
         with:
-          prek-version: "0.5.3"
+          prek-version: "0.5.4"
           # Pull requests check what they change; pushes check everything.
           extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
