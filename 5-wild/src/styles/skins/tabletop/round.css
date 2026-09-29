@@ -192,7 +192,8 @@
  * and the figures are its headlines.
  */
 :root.skin-tabletop:not(.table) .round-screen .hud-score,
-:root.skin-tabletop:not(.table) :is(.round-screen, .shop-screen) .hud-gold {
+:root.skin-tabletop .shop-screen .hud-gold,
+:root.skin-tabletop:not(.table) .round-screen .hud-gold {
   border: 0;
   border-radius: 0;
   background: none;
@@ -215,7 +216,8 @@
   border-color: transparent;
 }
 
-:root.skin-tabletop:not(.table) :is(.round-screen, .shop-screen) .hud-gold {
+:root.skin-tabletop .shop-screen .hud-gold,
+:root.skin-tabletop:not(.table) .round-screen .hud-gold {
   color: var(--brass);
 }
 

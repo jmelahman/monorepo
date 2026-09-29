@@ -79,6 +79,13 @@
   outline-offset: -0.375rem;
 }
 
+/* The primary's face is the accent, so an accent ring on it was no ring at all:
+   PLAY and NEXT ROUND took the keyboard's focus and showed nothing. Drawn in
+   the ink the label is set in instead. */
+:root.skin-smoke .primary:focus-visible {
+  outline-color: var(--on-accent);
+}
+
 /* The phone's strips each set an inset bevel on their own selector, which would
    otherwise sit on top of the flat face. Flattened here, the primary keeping
    the one inner edge the design gives it. */
@@ -95,4 +102,25 @@
 :root.skin-smoke
   :is(.shop-screen .shop-actions > .primary, .intro-actions .primary, .primary.title-play) {
   box-shadow: inset 0 -0.1875rem 0 #00000033;
+}
+
+/*
+ * Everything else the keyboard can reach and the notch clips: the base ring
+ * sits 2px outside its box and `--cut` cut it away, so tabbing onto a card, a
+ * key or the rail's rows moved focus with nothing to show where it went. The
+ * same ring as the buttons, drawn inside, in the ink rather than the accent
+ * because a key or a card may already wear the accent (or a scored colour).
+ */
+:root.skin-smoke
+  :is(
+    .key,
+    .relic,
+    .shop-item,
+    .consumable,
+    .decor-toggle,
+    .shapes-line,
+    .dock-line .category
+  ):focus-visible {
+  outline: var(--bw) solid var(--fg);
+  outline-offset: calc(var(--bw) * -2);
 }

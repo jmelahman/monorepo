@@ -1,34 +1,13 @@
 /* The look half of `shop.css`; the layout, and the reasons for it, are in `../../table/shop.css`. */
 
-:root.skin-smoke .shop-screen .hud {
-  /* The panel is the rail's, not the header's: see `.shop-screen::before`. */
-  border: 0;
-  background: none;
-  box-shadow: none;
-  clip-path: none;
-}
-
 /*
- * The rail as one panel, top to bottom, as the round's is. The children are
- * separate nodes placed in rows one, three and four, so the panel is a
- * pseudo-element across all of them, under them, and the phone (which never
- * matches this selector) keeps the three boxes it has always had.
- *
- * The casino ringed this one in teal to say "the one room where nothing is
- * trying to score against you". Here the shop is told by what is in it (cash
- * in the rail, cards on the table) and the panel is the round's own.
+ * The shop's header is the round's: its own panel around the name, the stage
+ * and the cash, and the rail below it left open, as Classic draws it on both
+ * layouts. It used to be one panel down the whole rail on the table, drawn as a
+ * `::before` behind rows one to four, with the header stripped to let it show;
+ * the phone never matched that pseudo-element and so kept only the stripping,
+ * a header with no panel at all. The owner asked for Classic's shape instead.
  */
-:root.skin-smoke .shop-screen::before {
-  content: "";
-  grid-column: 1;
-  grid-row: 1 / -1;
-  border: var(--rim);
-  border-radius: 0;
-  background: var(--panel);
-  box-shadow: none;
-  clip-path: var(--cut);
-  pointer-events: none;
-}
 
 :root.skin-smoke .shop-screen .shop-items.coached {
   border-radius: 0;
@@ -129,6 +108,19 @@
   border-radius: 0;
   background: var(--well);
   border: var(--rim);
+}
+
+/*
+ * On the phone the description and the reroll price are set straight on their
+ * card and their button, as Classic's always were: at that size a well behind
+ * three lines of text is a box inside a box inside a box, and the phone's text
+ * has no padding for one to sit in. The table keeps both, where the card is
+ * tall enough for the well to read as the card's face.
+ */
+:root.skin-smoke:not(.table) .shop-item-text,
+:root.skin-smoke:not(.table) .reroll-cost {
+  border: 0;
+  background: none;
 }
 
 :root.skin-smoke .shop-screen .toast {
