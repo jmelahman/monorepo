@@ -19,13 +19,8 @@
       "NotebookEdit(*)",
       "Agent(*)",
       "LSP(*)",
-      "mcp__amo__*",
-      "mcp__figma__*",
       "mcp__kanban__*",
-      "mcp__linear__*",
-      "mcp__playwright__*",
-      "mcp__sentry__*",
-      "mcp__vanta__*"
+      "mcp__playwright__*"
     ]
   },
   "model": "sonnet",
@@ -33,16 +28,7 @@
     "gopls-lsp@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
-    "open-code-review@open-code-review": true
-  },
-  "extraKnownMarketplaces": {
-    "open-code-review": {
-      "source": {
-        "source": "github",
-        "repo": "alibaba/open-code-review"
-      }
-    }
+    "typescript-lsp@claude-plugins-official": true
   },
   "effortLevel": "high",
   "plansDirectory": "./plans",
