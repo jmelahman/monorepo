@@ -81,6 +81,20 @@
   border-radius: 0 0 0.125rem;
 }
 
+/* Turned to point left, for a card standing beside the table's rail; see
+   `aimCoachOnTable`. The corner between the left and bottom edges is the one a
+   45° turn points left, and `--tail` is a height here rather than a width.
+   Nothing on the phone sets `side`. */
+.coach.side::before {
+  top: var(--tail, 50%);
+  left: -0.3125rem;
+  border: 0;
+  border-left: 1px solid var(--coach-edge);
+  border-bottom: 1px solid var(--coach-edge);
+  border-radius: 0 0 0 0.125rem;
+  transform: translateY(-50%) rotate(45deg);
+}
+
 .coach-text {
   font-size: 0.75rem;
   line-height: 1.3;

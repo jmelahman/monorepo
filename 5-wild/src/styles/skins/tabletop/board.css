@@ -20,7 +20,7 @@
  * its width and font-size are not to be transitioned by anything (CLAUDE.md, the
  * long section on the board flash). `transform` belongs to the tile's own
  * animations (the phone's flip, this file's set-down) and `translate` to the
- * hover lift and the row's wave in `scenes/board.ts`, so they compose.
+ * hover lift, so they compose.
  */
 
 /* ---- the tray -------------------------------------------------------- */

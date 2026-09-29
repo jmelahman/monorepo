@@ -430,7 +430,6 @@ export const es: Strings = {
       multUnknown: "El color es el multiplicador. Adivinar es como se descubre.",
       letterBroken: (letter) => `${letter.toUpperCase()} rota`,
       relicGone: (name) => `${name} se ha ido`,
-      jackpot: "PREMIO GORDO",
     },
 
     tip: {

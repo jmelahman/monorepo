@@ -486,10 +486,19 @@ function flash(kind: "boss" | "win", duration: number): void {
 }
 
 /**
- * The reward screen after a winning guess. The banner slams down and the table
- * flashes; the panel rises; then the lines pay in one at a time, each counting
- * up from nothing and throwing a few coins, quickening as they go, and the
- * total lands last with a shower of them. Tap anywhere and it is all there.
+ * The reward screen after a winning guess. The banner settles in, the panel
+ * rises, then the lines pay in one at a time, each counting up from nothing,
+ * quickening as they go, and the total lands last with a few sparks. Tap
+ * anywhere and it is all there.
+ *
+ * It was louder, and the owner asked for it toned down with the rest of the
+ * scoring show. The banner slammed in from 2.6x with a 6deg twist; a green
+ * ring, 24 sparks, a full-window flash and a shake went off behind it; every
+ * line threw up to 7 coins; the total fired a fountain of 26, three rains of 8
+ * from the top edge, a gold ring and a second shake; and the button bounced to
+ * 1.09x at the end. That was a jackpot's worth of noise for the most frequent
+ * win in the game, and it all repeated every round. What is left is the count
+ * itself, which is the information, and one small beat on the total.
  *
  * The lines and the panel are tweened, never hidden: their delays are the
  * schedule, and a tap finishes every one of them at once (`settle`), so the
@@ -506,11 +515,10 @@ function roundWon(ctx: SceneContext): void {
   void tween(
     banner,
     [
-      { opacity: 0, transform: "scale(2.6) rotate(-6deg)" },
-      { opacity: 1, transform: "scale(0.94) rotate(1deg)", offset: 0.6 },
+      { opacity: 0, transform: "translateY(-0.75rem) scale(1.04)" },
       { opacity: 1, transform: "none" },
     ],
-    { duration: 480, delay: 140, easing: OUT },
+    { duration: 360, delay: 140, easing: OUT },
   )
   void tween(
     screen.querySelector(".panel"),
@@ -560,21 +568,7 @@ function roundWon(ctx: SceneContext): void {
   })
 
   void (async () => {
-    await step(140 + 300)
-    if (!alive(mine)) return
-    if (banner && !skipping()) {
-      const centre = centerOf(banner)
-      burst("ring", centre, { size: 320, life: 0.6, colors: ["#9dffb0"] })
-      burst("spark", centre, {
-        count: 24,
-        speed: 620,
-        life: 0.6,
-        colors: ["#e8ffe0", "#7ee08a", "#ffd166", "#ffffff"],
-      })
-      flash("win", 700)
-      shake(0.35)
-    }
-    let clock = 440
+    let clock = 0
     for (const [i, line] of lines.entries()) {
       await step((stamps[i] ?? clock) - clock)
       clock = stamps[i] ?? clock
@@ -584,44 +578,20 @@ function roundWon(ctx: SceneContext): void {
       if (entry) {
         roll(entry.span, 0, entry.value, { span: isTotal ? 520 : 300, format: money })
         if (!skipping()) {
-          const from = centerOf(entry.span)
-          if (isTotal) {
-            // The shower: a fountain from the total and a rain from above.
-            burst("coin", from, {
-              count: 26,
-              speed: 760,
-              spread: Math.PI * 1.1,
-              life: 1.2,
-              gravity: 1500,
+          // The total's one beat: a handful of sparks, short and slow, in the
+          // cash colours. The lines above it land on their sound alone.
+          if (isTotal)
+            burst("spark", centerOf(entry.span), {
+              count: 10,
+              speed: 260,
+              life: 0.45,
+              size: 2.5,
+              colors: ["#ffd166", "#ffffff"],
             })
-            for (const share of [0.25, 0.5, 0.75]) {
-              burst(
-                "coin",
-                { x: innerWidth * share, y: -12 },
-                { count: 8, angle: Math.PI / 2, spread: 0.8, speed: 240, life: 1.4 },
-              )
-            }
-            burst("ring", from, { size: 200, life: 0.5, colors: ["#ffd166"] })
-            shake(0.25)
-          } else {
-            burst("coin", from, {
-              count: Math.min(7, 2 + entry.value),
-              speed: 320,
-              spread: Math.PI * 0.8,
-              life: 0.8,
-            })
-          }
           sound.cue({ name: "coin" })
         }
       }
     }
-    await step(520)
-    if (!alive(mine)) return
-    void tween(
-      button,
-      [{ transform: "none" }, { transform: "scale(1.09)", offset: 0.4 }, { transform: "none" }],
-      { duration: 420, easing: BACK },
-    )
     running = false
   })()
 }

@@ -2,6 +2,15 @@
 
 .shop-screen {
   overflow-y: auto;
+  /* It scrolls on a short phone (360×640 lays out 707px of shelf), and a
+     browser without overlay scrollbars drew its full desktop bar, 15px of grey
+     down the right of the cards, which the owner saw on the phone layout and
+     called massive. Thin and in the panel's own line colour, as the sheets'
+     scroll is; a phone's overlay bar ignores both. Not hidden, as the relic
+     row's is: that row says it scrolls by the chip cut off at its edge, and a
+     shelf cut off at the screen's foot says nothing. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
   /* More air than the round screen's, which is packing a board and a keyboard
      into the same height. No bottom padding: the exits are the foot of this
      screen and draw their own. */

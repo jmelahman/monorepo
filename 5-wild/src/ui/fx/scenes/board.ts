@@ -1,6 +1,5 @@
-import { centerOf, stand } from "../layer"
+import { stand } from "../layer"
 import { juiced, tactile, tween } from "../motion"
-import { burst } from "../particles"
 
 /**
  * The board on the table: letters dropping in, backspace, a refused row, the
@@ -13,19 +12,16 @@ import { burst } from "../particles"
  * arriving tile), because a class the render already adds costs nothing to
  * answer and survives being interrupted by the next keystroke. What CSS cannot
  * do is the things that are not on the tile: the ghost of a letter that has
- * already been cleared, the wave that runs along a row once it is full, the dust
- * a chip kicks up, the tilt of the whole screen when a word is refused. Those
- * are here, all through `tween` and `burst` so that reduced motion, the pace
- * setting and tap-to-skip are honoured without this file asking.
+ * already been cleared, the tilt of the whole screen when a word is refused.
+ * Those are here, all through `tween` so that reduced motion, the pace setting
+ * and tap-to-skip are honoured without this file asking.
  *
  * Every hook is called on the phone too, and returns at once there: check
  * `juiced()` first. The two listeners at the foot are bound once at import and
  * do the same.
  *
  * Nothing here animates `.grid`, its width or its font size. Tiles get
- * `transform`, `translate`, `opacity` and `filter`, and the row's wave rides on
- * `translate` so that it composes with the landing (`transform`) instead of
- * replacing it. See the long section of CLAUDE.md on the board flash before
+ * `transform`, `translate`, `opacity` and `filter`. See the long section of CLAUDE.md on the board flash before
  * adding anything that measures or resizes.
  */
 
@@ -38,62 +34,21 @@ import { burst } from "../particles"
  */
 const held = new WeakMap<HTMLElement, string>()
 
-/**
- * Chips kick up dust in the foreground colour, the accent and the cash colour:
- * the palette the table is drawn in, and nothing brighter. Literal here because
- * particles take colours as strings; they are the tokens `--fg`, `--accent-hi`
- * and `--accent` of the Smoke Room.
- */
-const DUST = ["#ebe7df", "#9be8d8", "#58c9b3"] as const
-
 /** A letter just landed in `tile` (after `patchDraft` drew it). */
 export function typed(tile: HTMLElement): void {
   if (!tactile()) return
   held.set(tile, tile.textContent ?? "")
-  // Tabletop keeps the wave and the ghost and drops what is thrown off: the
-  // dust is the Smoke Room's, a board game's tiles kick up nothing. A streak of
-  // light crossed the full row here too (`glint`), and the owner asked for it
-  // gone: a flash over the word just finished read as the game highlighting
-  // something, when nothing had happened yet but the typing.
-  const fancy = juiced()
-  const rect = tile.getBoundingClientRect()
-  // Dust from the chip's foot, out to both sides. Few and short: a word is
-  // five of these in about a second, and the point is the impact, not a burst.
-  const foot = { x: rect.left + rect.width / 2, y: rect.bottom - rect.height * 0.08 }
-  if (fancy)
-    burst("spark", foot, {
-      count: 5,
-      speed: 170,
-      angle: -Math.PI / 2,
-      spread: Math.PI * 1.1,
-      life: 0.26,
-      size: 2,
-      gravity: 520,
-      colors: DUST,
-    })
-
-  // The fifth letter completes the row: a wave runs along it, each chip up by a
-  // hair as it passes, and lets the word settle. A brightness pulse rode on it
-  // once and was dropped: it put a compositing layer under each chip and was
-  // the one long task left at 4x CPU throttle. Delayed a beat so the last
-  // letter's own landing (230ms) is seen first and the wave carries on from it.
-  // Only in a row that is now full, and only from the last tile.
-  const row = tile.parentElement
-  if (!row || tile.nextElementSibling) return
-  const tiles = Array.from(row.children)
-  if (!tiles.every((child) => child.classList.contains("filled"))) return
-  tiles.forEach((child, index) => {
-    void tween(
-      child,
-      [
-        { translate: "0 0" },
-        { translate: "0 -0.4rem", offset: 0.38 },
-        { translate: "0 0.06rem", offset: 0.72 },
-        { translate: "0 0" },
-      ],
-      { duration: 300, delay: 110 + index * 34, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" },
-    )
-  })
+  // Nothing else is drawn for a letter landing: its own set-down is CSS. A
+  // streak of light crossed the full row here once (`glint`), and the owner
+  // asked for it gone: a flash over the word just finished read as the game
+  // highlighting something, when nothing had happened yet but the typing. Five
+  // sparks of dust kicked up from each chip's foot in the Smoke Room as well,
+  // and went the same way: a word is five of them in about a second, which is
+  // commotion under every keystroke. A backspace's went too; see `erased`.
+  // The fifth letter completed the row with a wave: each chip up by 0.4rem on
+  // an overshoot as it passed, 34ms apart. The owner asked for it gone: the
+  // row jumping as the last letter landed read as the tiles shaking, and a
+  // full row says it is full by being full.
 }
 
 /** A letter just left the row being typed. */
@@ -104,18 +59,8 @@ export function erased(row: HTMLElement): void {
   if (!(gone instanceof HTMLElement)) return
   const letter = held.get(gone)
   held.delete(gone)
-  const at = centerOf(gone)
-  if (juiced())
-    burst("spark", at, {
-      count: 4,
-      speed: 130,
-      angle: -Math.PI / 2,
-      spread: Math.PI * 2,
-      life: 0.22,
-      size: 2,
-      gravity: 200,
-      colors: DUST,
-    })
+  // Four sparks of dust went up from the emptied tile here, and went with the
+  // ones on a landing: the chip flicked away below is the whole event.
   if (!letter) return
   // The chip itself, drawn again in the layer where a render cannot take it,
   // and flicked up and away. `stand` copies the empty tile's box; the class and

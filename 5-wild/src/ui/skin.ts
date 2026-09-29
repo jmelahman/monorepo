@@ -156,20 +156,20 @@ export function currentSkin(): Skin {
  * How much the skin animates. Three levels, because two looks of the four want
  * some motion and no two want the same amount:
  *
- * - `full` is the Smoke Room: the smoke, the reel-stop deal, the payline, the
- *   jackpot, particles, shake, scene transitions. Everything `juiced()` gates.
+ * - `full` is the Smoke Room: the smoke, the reel-stop deal, the
+ *   particles, shake, scene transitions. Everything `juiced()` gates.
  * - `tactile` is Tabletop: things that are handled. A tile is set down and
  *   settles, a key gives under a finger, a counter ticks. Nothing is thrown off
  *   them: no sparks, no shake, no light crossing a row. A wooden board game
- *   does not have a jackpot sign, and the room it is drawn in holds still.
+ *   does not throw sparks, and the room it is drawn in holds still.
  * - `none` is Classic in either tone, the phone's own board.
  *
  * Every effect asks through `hasFx` or `hasTactile` rather than naming a skin,
  * so which look gets what is this table and nothing else.
  *
  * Only the *background* of `full` reaches the phone. The scenes are built
- * around the table's geometry (a payline across a rail-and-board layout, a
- * jackpot sign over its scorecard), and `juiced()` and `tactile()` still ask
+ * around the table's geometry (chip stacks under the rail's readout, a
+ * placard in its relic tray), and `juiced()` and `tactile()` still ask
  * for the table as well, so a phone in Smoke has the look and the smoke and the
  * same tile flips as ever.
  */

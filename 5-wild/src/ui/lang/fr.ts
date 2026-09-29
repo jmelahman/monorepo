@@ -448,7 +448,6 @@ export const fr: Strings = {
       multUnknown: "La couleur est le multiplicateur. Deviner est le seul moyen de le savoir.",
       letterBroken: (letter) => `${letter.toUpperCase()} brisée`,
       relicGone: (name) => `${name} a disparu`,
-      jackpot: "JACKPOT",
     },
 
     tip: {

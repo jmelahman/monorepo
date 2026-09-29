@@ -21,31 +21,55 @@
  * `.mouse` hover lifts the hairline to the accent and only for a mouse (see
  * `bindMouse` in `app.ts`); a finger has no hover. The keyboard focus ring is
  * drawn *inside* the box, since an outline outside a clipped box is cut away.
+ *
+ * The hairline steps round the notch rather than stopping at it. The notch is
+ * two pixels square and the hairline one, so the cut took the border's whole
+ * corner and left each side ending a pixel short of the next, a gap at all four
+ * corners; the lighter ring a hover or the danger red draws is what the owner
+ * saw as the border clipped. What is missing is the notch's own two inner
+ * edges, an L of three pixels just inside the padding box's corner, so a
+ * notch-sized square of the ring's colour is painted there at each corner as a
+ * background layer under the face (its outer quarter falls in the cut and is
+ * clipped with it, which leaves the L). That is why the ring is a variable
+ * (`--ring`) and every state sets that rather than `border-color`, and why the
+ * face is `background-color` and never the shorthand, which would wipe them.
+ * The ring no longer fades on hover: the border would have faded and its four
+ * corner pixels snapped, and a stepped ring is not a thing that glides anyway.
  */
 :root.skin-smoke :is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill) {
-  background: var(--btn);
+  --ring: var(--line);
+  --ring-px: linear-gradient(var(--ring), var(--ring));
+  background-color: var(--btn);
+  background-image: var(--ring-px), var(--ring-px), var(--ring-px), var(--ring-px);
+  background-size: var(--notch) var(--notch);
+  background-position:
+    top left,
+    top right,
+    bottom left,
+    bottom right;
+  background-repeat: no-repeat;
+  background-origin: padding-box;
   color: var(--fg);
-  border: var(--bw) solid var(--line);
+  border: var(--bw) solid var(--ring);
   border-radius: 0;
   box-shadow: none;
   clip-path: var(--cut);
   transition:
     transform 120ms var(--ease-out),
-    border-color 120ms var(--ease-out),
     filter 120ms var(--ease-out);
 }
 
 :root.skin-smoke .primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  --ring: var(--accent);
+  background-color: var(--accent);
   color: var(--on-accent);
   box-shadow: inset 0 -0.1875rem 0 #00000033;
 }
 
 /* Destructive, and quiet about it: see the note at the top. */
 :root.skin-smoke .danger {
-  background: transparent;
-  border-color: var(--danger);
+  --ring: var(--danger);
+  background-color: transparent;
   color: var(--danger);
 }
 
@@ -62,15 +86,29 @@
 
 :root.skin-smoke.mouse
   :is(.secondary, .menu-button, .title-dial, .title-pill):hover:not(:disabled, :active) {
-  border-color: var(--muted);
+  --ring: var(--muted);
 }
 
 :root.skin-smoke.mouse .primary:hover:not(:disabled, :active) {
   filter: brightness(1.12);
 }
 
+/* The corners restated: the phone's own danger hover (`packs.css`) is the
+   `background` shorthand on a selector that outranks the base rule above, so
+   it reset every background longhand and took the ring's corner pixels with
+   it. All four are restated, not just the image: with the size back at `auto`
+   each corner square grew to the whole button and painted it solid red over
+   its own label. */
 :root.skin-smoke.mouse .danger:hover:not(:disabled, :active) {
-  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  background-color: color-mix(in srgb, var(--danger) 14%, transparent);
+  background-image: var(--ring-px), var(--ring-px), var(--ring-px), var(--ring-px);
+  background-size: var(--notch) var(--notch);
+  background-position:
+    top left,
+    top right,
+    bottom left,
+    bottom right;
+  background-repeat: no-repeat;
 }
 
 :root.skin-smoke

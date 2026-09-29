@@ -455,7 +455,6 @@ export const en: Strings = {
       multUnknown: "Color is the multiplier. Guessing is how you find it out.",
       letterBroken: (letter) => `${letter.toUpperCase()} broken`,
       relicGone: (name) => `${name} is gone`,
-      jackpot: "JACKPOT",
     },
 
     tip: {

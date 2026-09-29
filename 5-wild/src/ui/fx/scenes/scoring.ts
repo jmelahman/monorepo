@@ -483,11 +483,9 @@ function floater(screen: HTMLElement, text: string): void {
 const TILE_GAP = 200
 /** Authored ms from the finale starting to the pile being swept into the total. */
 const LUNGE_HIT = 300
-/** The payline's whole life. The pile multiplies as it crosses the row, 40% in. */
-export const PAYLINE = 1100
 /** The solve step, longer than the phone's 900 to let the line finish leaving. */
 const SOLVE_HOLD = 1250
-/** The payline's sweep, as authored: quick enough to read as one stroke. Also the solve sign's delay. */
+/** The solve's impact delay: the sweep of the payline that once ran the row, kept so the sound leads the sparks. */
 const PAYLINE_SWEEP = 300
 /** Chips the stack under the readout will show; the rest still land, on top. */
 const STACK_MAX = 10
@@ -506,9 +504,6 @@ const OUT = "cubic-bezier(0.23, 1, 0.32, 1)"
 const token = (name: string, fallback: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
 
-// What a tile's own green is, and so what its sparks are: the one palette here
-// that is not the house's, because a green spark is what a green tile means.
-const GREENS = ["#d4ffc9", "#7deb75", "#ffffff", "#4da346"]
 const GLASS = ["#dfe8ff", "#9fb4d9", "#ffffff", "#7fd6ff"]
 
 /**
@@ -579,8 +574,6 @@ async function playTable(
   const brassHi = token("--coin-hi", "#f0dc9c")
   const ivory = token("--paper", "#ebe7df")
   const GOLDS = [bulb, brassHi, brass]
-  /** The spill: the cash colours plus the paper of a coin's face, all from the tokens. */
-  const COIN_GOLDS = [brassHi, brass, token("--coin-lo", "#8f7434"), ivory]
   /** A dead placard's shards: the plate's own dark and the paper gone dull. */
   const ASH = [
     token("--paper-lo", "#858b98"),
@@ -630,10 +623,12 @@ async function playTable(
     tone: Tone,
     text: string,
     at: { x: number; y: number },
-    { rise = 56, drift = 0, scale = 1, delay = 0 } = {},
+    { rise = 56, drift = 0, scale = 1, delay = 0, bare = false } = {},
   ) => {
     if (skipping()) return
-    const node = h("div", { class: `fx-pop ${tone}` }, text)
+    // `bare` is the figure alone, in its tone's colour, with no tag behind it:
+    // a relic's payout, which sits over a card that is already lit.
+    const node = h("div", { class: `fx-pop ${tone}${bare ? " bare" : ""}` }, text)
     made.add(node)
     const dx = `${drift}px`
     const run = tw(
@@ -786,18 +781,21 @@ async function playTable(
   }
 
   // ---- tiles ------------------------------------------------------------
+  // The relic's nudge, on a tile. It was a five-swing wobble from -11deg at
+  // 1.2x over 560ms, under a filled 1-1.3x badge and 9 sparks; the relics were
+  // taken down to one swing each way and a bare figure, and the owner asked for
+  // a modifier firing to match, so the two ways a guess gets paid extra now
+  // look like one gesture on two kinds of thing.
   const wobbleTile = (tile: Element) =>
     tw(
       tile,
       [
         { rotate: "0deg", scale: "1", easing: OUT },
-        { rotate: "-11deg", scale: "1.2", offset: 0.16, easing: OUT },
-        { rotate: "8deg", scale: "1.12", offset: 0.34, easing: OUT },
-        { rotate: "-4.5deg", scale: "1.06", offset: 0.52, easing: OUT },
-        { rotate: "2deg", scale: "1.02", offset: 0.7, easing: OUT },
+        { rotate: "-3deg", scale: "1.05", offset: 0.2, easing: OUT },
+        { rotate: "1.5deg", offset: 0.5, easing: OUT },
         { rotate: "0deg", scale: "1" },
       ],
-      560,
+      420,
     )
 
   /**
@@ -835,6 +833,15 @@ async function playTable(
    * coming off the board, not as sums, and the readout they fed says the same
    * figures a beat later with its own hit. The relic's, the category's and the
    * total's pops stay, since nothing else says those.
+   *
+   * No sparks and no shake either. A green tile threw 12 sparks and added 0.05
+   * of trauma, a yellow one 5 sparks, and the owner saw the flips jitter. The
+   * shake is the likelier culprit: trauma is squared, so 0.05 a tile moves the
+   * screen by fractions of a pixel and turns it by thousandths of a degree, and
+   * a screen that is turned at all is resampled whole, every tile in the middle
+   * of its flip with it. The sparks went at the owner's asking; the shake went
+   * with them because it was the same gesture and the one that could do that.
+   * The colour landing on the tile is the event, and it needs no help.
    */
   const landTile = (tile: Element, event: Extract<GameEvent, { type: "tile" }>) => {
     const color = TILE_COLORS.find((name) => tile.classList.contains(name)) ?? "gray"
@@ -842,12 +849,6 @@ async function playTable(
     const at = centerOf(tile)
     const top = above(tile, -6)
     if (event.gained > 0) drop({ x: at.x - (mult > 0 ? 22 : 0), y: top.y }, event.gained)
-    if (color === "green") {
-      fx("spark", at, { count: 12, speed: 380, life: 0.42, size: 3.5, colors: GREENS })
-      shake(0.05)
-    } else if (color === "yellow") {
-      fx("spark", at, { count: 5, speed: 260, life: 0.35, size: 3, colors: GOLDS })
-    }
     readout(event.chips, event.mult, 0.7)
   }
 
@@ -906,10 +907,6 @@ async function playTable(
       const digits = num(value).length
       const cap = boxWidth() / Math.max(1, digits * 0.66 * baseFont)
       el.style.scale = String(Math.max(1, Math.min(1 + 0.42 * level, cap)))
-      scoreBox?.style.setProperty("--heat", level.toFixed(3))
-      if (level > 0.05) {
-        chase(false)
-      }
       if (p < 1 || done) return
       done = true
       const grown = Math.max(1, Math.min(1 + 0.42 * x + 0.12, cap))
@@ -928,91 +925,34 @@ async function playTable(
   }
 
   /**
-   * The score well's own ring: the chase quickens and brightens with
-   * `--heat`, which the count-up writes as it climbs, and at or over the
-   * target it goes to its fastest with the plate lit, the jackpot. It used to
-   * set the box on fire; a dotted frame stepping round it is as much as the
-   * pixel-font room wants to say.
+   * Whether the bell has rung this show; see `reached`. The score well had a
+   * ring of its own here, a dotted frame that stepped round it as the count-up
+   * climbed, quicker with the heat, and went solid at the target. It used to set
+   * the box on fire before that. The owner wanted the border gone altogether:
+   * the count-up's colour and scale already say how hot the hand is.
    */
-  /** Whether the bell has rung this show; see `reached`. */
   let rung = false
-  const chase = (jackpot: boolean) => {
-    if (!scoreBox || skipping()) return
-    scoreBox.classList.add("chasing")
-    // Once the bell has rung the plate stays at its jackpot: the climb that
-    // follows calls this with false on every frame and must not put it out.
-    scoreBox.classList.toggle("jackpot", jackpot || rung)
-  }
 
-  /**
-   * The payline: a thin rail across `rect` with a beam that runs along it once,
-   * left to right, the line a slot machine lights when a hand pays, under the
-   * score plate when the target is met. It ran over the row as well once; see
-   * `guess_scored` for why it no longer does. Everything about it lives in the fx
-   * layer, which is why it is a rail and a beam and not a class on the row: a
-   * render mid-sweep would take a class away.
-   */
-  const payline = (rect: DOMRect, span: number) => {
-    if (skipping()) return Promise.resolve()
-    const beam = h("i", { class: "beam" })
-    const rail = h("div", { class: "fx-payline" }, beam)
-    rail.style.width = `${rect.width + 32}px`
-    made.add(rail)
-    beam.style.width = `${Math.max(64, rect.width * 0.28)}px`
-    const at = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-    const run = Promise.all([
-      tw(
-        rail,
-        [
-          { opacity: 0 },
-          { opacity: 1, offset: 0.12 },
-          { opacity: 1, offset: 0.85 },
-          { opacity: 0 },
-        ],
-        span * 1.6,
-      ),
-      tw(
-        beam,
-        [
-          { transform: "translateX(-60%)", easing: "ease-in-out" },
-          { transform: `translateX(${rect.width + 16}px)` },
-        ],
-        span,
-      ),
-    ])
-    place(rail, at, run)
-    void run.then(() => made.delete(rail))
-    return run
-  }
   /**
    * The bell: the target has been met. AUDIO PHASE: this is the one place to
    * ring it, `over` being how many targets the total now is (1 exactly at the
    * line), so the bell can be bigger for a hand that cleared it by a mile.
-   * Until that phase the bell is only seen, as the score's ring going solid
-   * (`chase(true)` above), and there is nothing for this to do.
+   * Until that phase the bell is only seen, as the score going the solved
+   * colour, and there is nothing for this to do.
    */
   const ringBell = (_over: number) => {}
-  /** Target met: the plate goes to its fastest chase, a payline runs under it, and coins fall. */
-  const reached = (x: number, over: number) => {
+  /**
+   * Target met: the bell, and that is all. A payline ran under the plate here
+   * and a fountain of coins (14 to 54, by heat) went up from it; the owner found
+   * the two, on top of the solve's own stamp, too much commotion for a moment
+   * the count-up already announces.
+   */
+  const reached = (_x: number, over: number) => {
     // Once a show: a solve that lands on a total already over the target is
     // the same bell, not a second one.
     if (rung) return
     rung = true
-    chase(true)
     ringBell(over)
-    if (!scoreBox) return
-    const r = scoreBox.getBoundingClientRect()
-    void payline(r, PAYLINE_SWEEP)
-    fx(
-      "coin",
-      { x: r.left + r.width / 2, y: r.top },
-      {
-        count: Math.round(14 + 40 * x),
-        speed: 620,
-        spread: Math.PI * 0.9,
-        colors: COIN_GOLDS,
-      },
-    )
   }
 
   // ---- the events -------------------------------------------------------
@@ -1037,12 +977,15 @@ async function playTable(
             void wobbleTile(tile)
             const tone = toneOf(event.paid)
             pop(tone, payoutBadge(event.paid), above(tile, 10), {
-              scale: 1 + Math.min(0.3, chain.length * 0.03),
+              rise: 16,
+              scale: 0.9 + Math.min(0.15, chain.length * 0.02),
+              bare: true,
             })
             fx("spark", centerOf(tile), {
-              count: 9,
-              speed: 300,
-              life: 0.4,
+              count: 5,
+              speed: 200,
+              life: 0.35,
+              size: 2.5,
               colors: sparksFor(tone),
             })
           }
@@ -1057,29 +1000,33 @@ async function playTable(
           slot?.classList.add("fired")
           if (slot) {
             const tone = toneOf(event.paid)
+            // A nudge, not a wobble. It was a five-swing shake from -9deg at
+            // 1.14x over 680ms, a 1.15-1.45x badge and 12 sparks, and with a
+            // tray of five relics firing in a chain the rail never held still;
+            // the owner asked for it smaller and quieter. One swing each way
+            // at a third of the angle still says which card paid.
             void tw(
               slot,
               [
                 { rotate: "0deg", scale: "1", easing: OUT },
-                { rotate: "-9deg", scale: "1.14", offset: 0.14, easing: OUT },
-                { rotate: "7deg", offset: 0.3, easing: OUT },
-                { rotate: "-4.5deg", offset: 0.46, easing: OUT },
-                { rotate: "2.6deg", offset: 0.62, easing: OUT },
-                { rotate: "-1.2deg", offset: 0.8, easing: OUT },
+                { rotate: "-3deg", scale: "1.05", offset: 0.2, easing: OUT },
+                { rotate: "1.5deg", offset: 0.5, easing: OUT },
                 { rotate: "0deg", scale: "1" },
               ],
-              680,
+              420,
             )
             // The badge is born on the card's top edge: this is the card paying.
             const at = above(slot, -14)
             pop(tone, payoutBadge(event.paid), at, {
-              rise: 22,
-              scale: 1.15 + Math.min(0.3, chain.length * 0.03),
+              rise: 16,
+              scale: 0.9 + Math.min(0.15, chain.length * 0.02),
+              bare: true,
             })
             fx("spark", centerOf(slot), {
-              count: 12,
-              speed: 340,
-              life: 0.45,
+              count: 5,
+              speed: 200,
+              life: 0.35,
+              size: 2.5,
               colors: sparksFor(tone),
             })
           }
@@ -1119,13 +1066,18 @@ async function playTable(
               slot,
               [
                 { scale: "1", translate: "0 0", easing: OUT },
-                { scale: "1.16", translate: "0 -0.5rem", offset: 0.3, easing: BACK },
+                { scale: "1.05", translate: "0 -0.25rem", offset: 0.3, easing: OUT },
                 { scale: "1", translate: "0 0" },
               ],
-              460,
+              380,
             )
-            pop("gold", growthBadge(event), above(slot, -14), { rise: 22, scale: 1.1 })
-            fx("coin", centerOf(slot), { count: 5, speed: 260, life: 0.7 })
+            // Toned down with the payout above: it was a 1.16x hop on an
+            // overshoot, a 1.1x badge and five coins.
+            pop("gold", growthBadge(event), above(slot, -14), {
+              rise: 16,
+              scale: 0.9,
+              bare: true,
+            })
           }
           sound.cue({ name: "trigger", kind: "grew", n: fired++ })
           await chain.next(PACE.relic)
@@ -1163,8 +1115,8 @@ async function playTable(
           // A payline used to run the row here while the blocks pulled back,
           // and another, thicker, on a solve. Over a word just entered a line
           // straight through it read as the word struck out, and the owner
-          // asked for it gone; the one under the score plate, where nothing
-          // is written through, is kept.
+          // asked for it gone; the one under the score plate went later with
+          // the coins (see `reached`).
           later(() => {
             const at =
               mid ?? (scoreBox ? centerOf(scoreBox) : { x: innerWidth / 2, y: innerHeight / 2 })
@@ -1175,7 +1127,8 @@ async function playTable(
               size: 3.5 + 2 * x,
               colors: CLASH,
             })
-            fx("ring", at, { size: 90 + 230 * x, colors: ["#ffffff"] })
+            // A white shockwave ring (90 to 320px, by heat) went out with the
+            // sparks; the owner found the sparks enough on their own.
             shake(0.16 + 0.78 * x)
             sound.cue({ name: "score", ratio: event.score / Math.max(1, target) })
             if (scoreBox) {
@@ -1207,45 +1160,17 @@ async function playTable(
           const x = heat(event.total, target)
           const box = screen.querySelector(".grid-wrap")
           const at = box ? centerOf(box) : { x: innerWidth / 2, y: innerHeight / 2 }
-          if (!skipping()) {
-            // The sign lights over the board a sweep's length in, the beat a
-            // payline across the row used to take (kept so the stamp and the
-            // pile still meet where they did): JACKPOT and the factor, on a
-            // plate of its own.
-            const sign = h(
-              "div",
-              { class: "fx-jackpot" },
-              h("b", {}, ui().board.jackpot),
-              h("span", {}, `×${event.factor}`),
-            )
-            made.add(sign)
-            const run = tw(
-              sign,
-              [
-                { opacity: 0, transform: "scale(0.3)", easing: "cubic-bezier(0.3, 1.5, 0.5, 1)" },
-                { opacity: 1, transform: "scale(1.06)", offset: 0.24, easing: OUT },
-                { opacity: 1, transform: "scale(1)", offset: 0.34, easing: "linear" },
-                { opacity: 1, transform: "scale(1.03)", offset: 0.82, easing: "ease-in" },
-                { opacity: 0, transform: "scale(1.15)" },
-              ],
-              PAYLINE * 1.6,
-              PAYLINE_SWEEP,
-            )
-            place(sign, at, run)
-            run.then(() => made.delete(sign))
-          }
+          // A sign lit over the board here, JACKPOT over the factor on a plate
+          // of its own, scaled in from 0.3 and held for 1.76s. The owner had it
+          // out at once: the readout going to cash and the sparks already say
+          // the word was solved, and the factor is in the total.
           sound.cue({ name: "solve" })
           later(() => {
-            // Impact: the stamp has hit the board, and the pile is what it hit.
-            fx("ring", at, { size: 520, life: 0.6, colors: [ivory] })
+            // Impact: the pile is swept into the total. A shockwave ring (520px)
+            // and a spill of 70 coins went off here as well, beside the sparks,
+            // the shake and a JACKPOT sign; the owner cut all three but the sparks
+            // and the shake.
             fx("spark", at, { count: 60, speed: 760, life: 0.6, size: 4.5, colors: GOLDS })
-            // The spill: coins thrown up from the board and left to fall.
-            fx("coin", at, {
-              count: 70,
-              speed: 860,
-              spread: Math.PI * 1.4,
-              colors: COIN_GOLDS,
-            })
             shake(0.95)
             screen.querySelector(".readout")?.classList.add("solved")
             hit(chipsEl, 1.5)

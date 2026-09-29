@@ -1,0 +1,31 @@
+/* The layout half of `coach.css` on the table; where the card stands is
+   `aimCoachOnTable` in `app.ts`, which writes `left` and `top`. */
+
+/* Fixed, because the slot lives in the rail and the rail clips what overflows
+   it (`overflow: hidden` in `round.css`), and the card now stands outside it,
+   beside the rail or by the keys. An absolute box whose containing block is
+   the rail is clipped by it; a fixed one is not. A width of its own rather
+   than the rail's, since it is no longer inside the rail to take it. */
+:root.table .coach-slot {
+  position: fixed;
+  right: auto;
+  width: 20rem;
+}
+
+/* The phone's 0.75rem is sized for a strip across a 390px screen, where two
+   lines is the budget. On the table it read at 12px beside 70px figures, and
+   the owner asked for it bigger. It has the gutter beside the rail to itself,
+   so a third line costs nothing it would cover. */
+:root.table .coach-text {
+  font-size: 1.125rem;
+  line-height: 1.35;
+}
+
+/* Fixed takes the card out of the rail's clip but not out of its stacking: it
+   still paints where the rail paints, and the board, which comes after the rail
+   and is isolated (`board.css`), painted over the card's right half. Lifting
+   the rail one step puts everything in it, the card included, over the board.
+   Nothing of the rail's own reaches the board, so the step moves nothing else. */
+:root.table :is(.round-screen, .shop-screen) .hud {
+  z-index: 1;
+}

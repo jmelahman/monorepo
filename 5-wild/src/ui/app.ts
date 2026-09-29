@@ -28,6 +28,7 @@ import { Music } from "./music"
 import { seal, unseal } from "./seal"
 import { currentSkin, NEXT_SKIN } from "./skin"
 import { loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
+import { isTable } from "./table"
 import type { Consent, RunEnd, RunLog } from "./telemetry"
 import {
   beginLog,
@@ -1995,12 +1996,17 @@ function setDecor(decor: Decor): void {
  */
 function aimCoach(card: HTMLElement, anchor: Element): void {
   const slot = card.parentElement
-  const header = slot?.offsetParent
-  if (!slot || !header) return
+  if (!slot) return
   const target = anchor.getBoundingClientRect()
-  const top = header.getBoundingClientRect().top
   const ring = getComputedStyle(anchor)
   const gap = Math.max(0, parseFloat(ring.outlineOffset) + parseFloat(ring.outlineWidth)) + 1
+  if (isTable()) {
+    aimCoachOnTable(card, slot, anchor, target, gap)
+    return
+  }
+  const header = slot.offsetParent
+  if (!header) return
+  const top = header.getBoundingClientRect().top
   const above = target.top > window.innerHeight / 2
   card.classList.toggle("above", above)
   slot.style.top = above
@@ -2010,6 +2016,104 @@ function aimCoach(card: HTMLElement, anchor: Element): void {
   const inset = 14
   const x = target.left + target.width / 2 - box.left
   card.style.setProperty("--tail", `${Math.max(inset, Math.min(box.width - inset, x))}px`)
+}
+
+/**
+ * The desktop's half of `aimCoach`. The phone hangs the card from the header's
+ * foot because the header is a strip across the top; the table's header is the
+ * rail, a column the height of the window, and its foot is the bottom of the
+ * screen. The banked beat, which rings the whole header, put its card there,
+ * at y=892 in a 900px window: every word of "7 × 5 = 35" was written, and none
+ * of it was on screen. The rail also clips what overflows it, so a card aimed
+ * anywhere outside it was cut away.
+ *
+ * So on the table the slot is `fixed` (`table/coach.css`) and the card stands
+ * beside the rail, out over the gutter between it and the board, level with
+ * whatever it names and with its tail pointing back at it. The owner asked for
+ * it there. Level with the anchor's middle, held inside the window, which for
+ * the whole rail is the middle of the screen and for everything in it is the
+ * figure being read back.
+ *
+ * An anchor outside the rail (the decor switch by the keys, the shop's shelf
+ * and relics) keeps the phone's rule, above it or below it by which half of the
+ * window it is in, and is centred on it rather than laid across it.
+ *
+ * `fixed` is measured from the viewport unless an ancestor is transformed, and
+ * the shake after a big guess transforms the screen, so the origin is read off
+ * the slot itself, parked at 0,0, rather than assumed.
+ */
+function aimCoachOnTable(
+  card: HTMLElement,
+  slot: HTMLElement,
+  anchor: Element,
+  target: DOMRect,
+  gap: number,
+): void {
+  const rail = anchor.closest(".hud")
+  // Beside the rail the card has the gutter up to the board and no more, which
+  // at 1440×900 is 290px against the stylesheet's 20rem: at 320 it ran 26px
+  // over the board's first column. Fitted to the gutter where that leaves a
+  // card worth reading, and left at 20rem, over the board's edge, where a
+  // narrow window leaves less than 14rem.
+  // The tail's reach out of the card's side, half the diagonal of the 9px
+  // square `coach.css` turns 45°, and 4px clear of the rail's edge besides.
+  const tail = 10
+  const board = rail && document.querySelector(".grid")?.getBoundingClientRect()
+  const room = board ? board.left - rail.getBoundingClientRect().right - gap - tail - 12 : 0
+  slot.style.width = room >= 224 ? `${Math.min(room, 360)}px` : ""
+  slot.style.left = "0px"
+  slot.style.top = "0px"
+  const origin = slot.getBoundingClientRect()
+  const width = card.offsetWidth
+  const height = card.offsetHeight
+  const edge = 12
+  const inset = 14
+  const within = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
+  let x: number
+  let y: number
+  if (rail) {
+    x = rail.getBoundingClientRect().right + gap + tail
+    y = within(target.top + target.height / 2 - height / 2, edge, innerHeight - height - edge)
+    card.style.setProperty(
+      "--tail",
+      `${within(target.top + target.height / 2 - y, inset, height - inset)}px`,
+    )
+  } else {
+    // Aimed at what the anchor holds rather than at the anchor. The table's
+    // shelf is the whole stage, 12px from the window's top to 12px from its
+    // foot, with five cards across its middle, and hung under the shelf the
+    // first shop's card stood at y=890 in a 900px window, where the round's
+    // banked card had stood. Under the cards it lies over the empty stage.
+    // The ring stays on the anchor, which is what the sentence is about.
+    const box = contentBox(anchor) ?? target
+    let above = box.top > innerHeight / 2
+    // And the other side when the rule's side would leave the window, which
+    // nothing on the phone ever needed and a tall box on the table can.
+    if (above ? box.top - gap - height < edge : box.bottom + gap + height > innerHeight - edge)
+      above = !above
+    card.classList.toggle("above", above)
+    x = within(box.left + box.width / 2 - width / 2, edge, innerWidth - width - edge)
+    y = above ? box.top - gap - height : box.bottom + gap
+    card.style.setProperty(
+      "--tail",
+      `${within(box.left + box.width / 2 - x, inset, width - inset)}px`,
+    )
+  }
+  card.classList.toggle("side", rail !== null)
+  if (rail) card.classList.remove("above")
+  slot.style.left = `${x - origin.left}px`
+  slot.style.top = `${y - origin.top}px`
+}
+
+/** The box round an element's children as drawn, or null for an element with none. */
+function contentBox(el: Element): DOMRect | null {
+  const rects = [...el.children].map((child) => child.getBoundingClientRect())
+  if (rects.length === 0) return null
+  const left = Math.min(...rects.map((r) => r.left))
+  const top = Math.min(...rects.map((r) => r.top))
+  const right = Math.max(...rects.map((r) => r.right))
+  const bottom = Math.max(...rects.map((r) => r.bottom))
+  return new DOMRect(left, top, right - left, bottom - top)
 }
 
 function seenCoach(): boolean {

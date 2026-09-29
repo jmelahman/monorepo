@@ -7,11 +7,35 @@
  * the screen. It is shared with the shop, whose header is the same rail.
  */
 :root.skin-smoke :is(.round-screen, .shop-screen) .hud {
-  border: var(--rim);
   border-radius: 0;
-  background: var(--panel);
+  background: none;
   box-shadow: none;
+  /* The panel is painted by `::before`, not by the rail itself, because the
+     notch is a `clip-path` and a clip-path clips descendants too. On the phone
+     the coach card hangs out of the header's foot (`.coach-slot`, `top: 100%`),
+     and with the clip on the header every card of the first round was cut away
+     whole: drawn, laid out, and invisible, with the board showing where it
+     should have been. The pseudo-element carries the rim, the fill and the
+     notch, and nothing hangs out of it. `isolation` keeps its `z-index: -1`
+     inside the header rather than under the screen behind it.
+
+     Isolating the header makes it one layer, and a layer at `auto` paints
+     under every positioned thing after it: the shop's card went under the
+     Shapes line. The clip-path did the same before it, but hid the card
+     outright first. `z-index: 1` puts the layer, card and all, back on top. */
+  isolation: isolate;
+  z-index: 1;
+}
+
+:root.skin-smoke :is(.round-screen, .shop-screen) .hud::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: var(--rim);
+  background: var(--panel);
   clip-path: var(--cut);
+  pointer-events: none;
 }
 
 :root.skin-smoke .stage {
@@ -19,8 +43,9 @@
 }
 
 /* The score sits straight on the rail: no well, no rim, no notch. The owner
-   found a box round a single number one frame too many, and the count-up, the
-   chase ring and the progress bar under it already say where it is. */
+   found a box round a single number one frame too many, and the count-up and
+   the progress bar under it already say where it is. The chase ring that
+   stepped round it while it climbed went the same way, for the same reason. */
 :root.skin-smoke .round-screen .hud-score {
   border-radius: 0;
   background: none;

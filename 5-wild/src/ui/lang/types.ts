@@ -254,8 +254,6 @@ export type Strings = {
       letterBroken: (letter: string) => string
       /** The floater when a relic leaves the tray on its own. Gets the card's name. */
       relicGone: (name: string) => string
-      /** The banner the solve bonus lights over the board, like the sign over a slot machine's top prize. */
-      jackpot: string
     }
 
     /**
