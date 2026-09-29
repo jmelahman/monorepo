@@ -4,22 +4,25 @@
   <title>5 Wild</title>
   <!--
     The link preview: what Slack, X and LinkedIn draw when someone pastes
-    5-wild.com. It is the README's masthead rather than the Play feature graphic,
-    because the README is the front page a link is most often shared from and
-    the card should look like where it came from.
+    5-wild.com. It is the title screen's masthead, the first thing the link
+    opens onto, rather than the Play feature graphic: the name set as a row of
+    a board, with two empty rows fading in above it. See `.title-mast` in
+    src/styles/title.css; this file copies its answers at 1.8x, the largest
+    scale at which all three rows and the tagline fit the card.
 
-    The masthead is referenced, not redrawn: wordmark-dark.svg is placed whole,
-    so a change to it reaches the card on the next run of gen-store-art.sh.
-    Dark because every one of the three draws the card on its own surface and
-    an image with its own background is the only way to be sure the tiles'
-    gray reads as a tile.
+    The row itself is referenced, not redrawn: wordmark-dark.svg (the README's
+    masthead, the same row) is placed whole, so a change to it reaches the card
+    on the next run of gen-store-art.sh. Only the ghost rows are drawn here,
+    because the README's crop leaves them out. Dark because every one of the
+    three draws the card on its own surface, and an image with its own
+    background is the only way to be sure the gray reads as a tile.
 
     1200x630 is LinkedIn's ratio exactly, and X's 2:1 crop takes 15px off the
-    top and bottom, which is background here: the composition spans y 150..470.
+    top and bottom, which is background here: the composition spans y 100..520.
   -->
 
-  <!-- The bg and panel custom properties from src/style.css, the same gradient
-       as the feature graphic. -->
+  <!-- The bg and panel custom properties from src/styles/base.css, the same
+       gradient as the feature graphic. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#0e0f13"/>
@@ -28,11 +31,38 @@
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- The wordmark at 2.4x: 374x112 becomes 898x269, centred on 600. -->
-  <image x="151" y="150" width="898" height="269" xlink:href="wordmark-dark.svg" href="wordmark-dark.svg"/>
+  <!--
+    The stylesheet's 62px tiles and 6px gaps at 1.8x: 111.6 and 10.8, so the
+    row is 5*111.6 + 4*10.8 = 601.2 wide and starts at 600 - 300.6 = 299.4.
+    Rows at y 100, 222.4 and 344.8. A CSS border sits inside its box and an SVG
+    stroke straddles its edge, so each ghost is inset by half its 3.6px stroke.
+    The upper is fainter, as in the app, so the board fades in from above.
+  -->
+  <g fill="none" stroke="#2e313d" stroke-width="3.6">
+    <g opacity="0.35">
+      <rect x="301.2" y="101.8" width="108" height="108" rx="9"/>
+      <rect x="423.6" y="101.8" width="108" height="108" rx="9"/>
+      <rect x="546" y="101.8" width="108" height="108" rx="9"/>
+      <rect x="668.4" y="101.8" width="108" height="108" rx="9"/>
+      <rect x="790.8" y="101.8" width="108" height="108" rx="9"/>
+    </g>
+    <g opacity="0.6">
+      <rect x="301.2" y="224.2" width="108" height="108" rx="9"/>
+      <rect x="423.6" y="224.2" width="108" height="108" rx="9"/>
+      <rect x="546" y="224.2" width="108" height="108" rx="9"/>
+      <rect x="668.4" y="224.2" width="108" height="108" rx="9"/>
+      <rect x="790.8" y="224.2" width="108" height="108" rx="9"/>
+    </g>
+  </g>
 
-  <!-- The README's line under the masthead, in the app's muted ink. -->
-  <text x="600" y="470" text-anchor="middle" fill="#8b8d98"
+  <!-- The row, badge and all. Its tiles sit at (20, 26) in its own 374x112, so
+       at 1.8x the image goes 36 left and 46.8 above where the row belongs. -->
+  <image x="263.4" y="298" width="673.2" height="201.6"
+         xlink:href="wordmark-dark.svg" href="wordmark-dark.svg"/>
+
+  <!-- The tagline in the app's own words and its colour: halfway between the
+       fg and muted properties, which is #b9bbc1. -->
+  <text x="600" y="520" text-anchor="middle" fill="#b9bbc1"
         font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
-        font-size="40" font-weight="700">A word-guessing roguelike.</text>
+        font-size="36" font-weight="500">A word-guessing roguelike</text>
 </svg>
