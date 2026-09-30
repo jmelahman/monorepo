@@ -46,11 +46,10 @@ keyed on it, and it is `tauri://localhost` on Linux and
 `https://tauri.localhost` on Windows, so anything that changes either
 (`use_https_scheme`, the identifier) wipes every desktop player's run and
 record. The same two strings are how `reportUrl` tells a desktop player from a
-browser and what the telemetry worker's `ORIGINS` admits. And on Linux the page
-runs in WebKitGTK, the one engine nothing else here is tested against, which
-plays audio through GStreamer: a machine without GStreamer's Ogg plugins plays
-the game in silence, which is why the deb depends on them and the AppImage
-carries its own.
+browser. And on Linux the page runs in WebKitGTK, the one engine nothing else
+here is tested against, which plays audio through GStreamer: a machine without
+GStreamer's Ogg plugins plays the game in silence, which is why the deb depends
+on them and the AppImage carries its own.
 
 ## Language
 
@@ -314,6 +313,22 @@ run's seed so a stale one can't be mistaken for it. What leaves the device is a 
 not a report, so every balance question is answered by replaying it against the
 engine in `test/telemetry-report.test.ts`. That replay is also the validation,
 which is why the worker in `telemetry/` checks shape and nothing else.
+
+**Telemetry is about runs, never about players**, and that is a rule rather
+than a default. Nothing that ties two runs to the same person, device or
+install may be sent, derived or stored: no device or install id, no account, no
+fingerprint, no hash of any of those, no IP kept past the rate limiter, no
+timestamp finer than the `day` the worker stamps. `nth` is the one field that
+leans that way, and it is a count, not a name: it says "someone's third run",
+never whose. When a problem looks like it wants an identifier, and dedup is the
+one that will keep coming back, solve it without one and accept the cost. The
+unique index on seed, `nth` and build (`runs_once` in `telemetry/schema.sql`)
+can mistake two players' first runs on the same build for one run, if they
+draw the same 31-bit seed, and silently keep only the first. That loss is
+tiny and it is the price; a per-device id to close it is exactly what this rule
+forbids. The privacy page and the Play Console's Data safety form ("not linked
+to identity") both promise this, so breaking it is a policy violation as well
+as a broken promise.
 
 `5wild:run:lang` is the only key that is neither a setting nor part of a blob,
 and it is required rather than optional, which is unusual enough to say why. The

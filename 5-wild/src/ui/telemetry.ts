@@ -245,9 +245,17 @@ export function setConsent(consent: "on" | "off"): void {
 
 /* -------------------------------------------------------------- outbox */
 
-/** Queue a finished run if sharing is on; otherwise it goes nowhere. */
+/**
+ * Queue a finished run if sharing is on; otherwise it goes nowhere.
+ *
+ * A run with no steps goes nowhere either. It is a run quit or replaced before
+ * its first guess landed, and its replay is `startRun` and nothing after it:
+ * the seed was drawn, nobody played it. Four of the first 28 runs the table
+ * held were that, every one a quit, and each read as a run that ended on stage
+ * one. Only a quit or an abandon can be empty, since losing takes guesses.
+ */
 export function file(run: Payload, consent: Consent): void {
-  if (!enabled() || consent !== "on") return
+  if (!enabled() || consent !== "on" || run.steps.length === 0) return
   enqueue(run)
 }
 

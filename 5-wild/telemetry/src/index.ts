@@ -17,18 +17,23 @@ type Env = {
 }
 
 /**
- * The site, the APK (Capacitor serves the bundle from `https://localhost`), the
- * desktop build (Tauri serves it from `tauri://localhost` on Linux and from
- * `https://tauri.localhost` on Windows; see desktop/src-tauri/src/main.rs) and
- * the dev server.
+ * Any origin, and the list of five this used to be is why. The client posts
+ * `text/plain` so that no preflight runs, which also means no preflight could
+ * ever refuse: a run from an origin off the list was filed like any other, and
+ * the only thing the list withheld was the header that lets the page read the
+ * 204. The client read the missing header as a dead connection, kept the run
+ * at the head of its outbox and sent it again on every launch, so one run from
+ * an unlisted origin arrived ten times on 2026-09-30 and everything that
+ * device finished afterwards queued behind it, never sent. The endpoint takes
+ * no credentials and hands nothing back, so there is nothing for an origin
+ * check to protect; the rate limiter below is the guard, and `INSERT OR
+ * IGNORE` is what makes a resend harmless whatever its cause.
  */
-const ORIGINS = new Set([
-  "https://5-wild.com",
-  "https://localhost",
-  "tauri://localhost",
-  "https://tauri.localhost",
-  "http://localhost:5173",
-])
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "POST, OPTIONS",
+  "access-control-allow-headers": "content-type",
+}
 
 /** A long run is a few KB. Anything near this is not a run. */
 const MAX_BYTES = 32 * 1024
@@ -88,21 +93,9 @@ function valid(body: unknown): body is Run {
   )
 }
 
-function cors(origin: string | null): Record<string, string> {
-  return origin && ORIGINS.has(origin)
-    ? {
-        "access-control-allow-origin": origin,
-        "access-control-allow-methods": "POST, OPTIONS",
-        "access-control-allow-headers": "content-type",
-        vary: "origin",
-      }
-    : {}
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const headers = cors(request.headers.get("origin"))
-    const reply = (status: number) => new Response(null, { status, headers })
+    const reply = (status: number) => new Response(null, { status, headers: CORS })
 
     // The client sends `text/plain` so browsers skip this, but a client that
     // does not is still answered properly.
@@ -125,8 +118,12 @@ export default {
     }
     if (!valid(body)) return reply(400)
 
+    // OR IGNORE against `runs_once` in schema.sql: a run the table already
+    // holds is answered 204 like a new one, since the client only needs to
+    // hear that it can stop sending. A bare INSERT would fail the constraint,
+    // answer 500, and teach the client to retry the duplicate forever.
     await env.DB.prepare(
-      `INSERT INTO runs (day, v, content, build, build_commit, words, ascension, nth, ended, won, stage, round, payload)
+      `INSERT OR IGNORE INTO runs (day, v, content, build, build_commit, words, ascension, nth, ended, won, stage, round, payload)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(

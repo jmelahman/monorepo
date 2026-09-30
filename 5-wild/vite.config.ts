@@ -80,6 +80,6 @@ export default defineConfig({
     // The engine is pure and DOM-free, so node is the right default. UI tests
     // opt into jsdom per-file with an @vitest-environment docblock.
     environment: "node",
-    include: ["test/**/*.test.ts", "src/**/*.test.ts"],
+    include: ["test/**/*.test.ts", "src/**/*.test.ts", "telemetry/test/**/*.test.ts"],
   },
 })

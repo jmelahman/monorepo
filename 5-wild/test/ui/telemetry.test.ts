@@ -119,12 +119,12 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-const run = (seed: number): Payload =>
-  payload(
-    beginLog(startRun(seed, realWords).state, "en", 1),
-    startRun(seed, realWords).state,
-    "lost",
-  )
+/** A run one guess long, since a run with no steps is never queued at all. */
+const run = (seed: number): Payload => {
+  const log = beginLog(startRun(seed, realWords).state, "en", 1)
+  log.steps.push({ type: "guess", word: "crane" })
+  return payload(log, startRun(seed, realWords).state, "lost")
+}
 
 describe("the saved log", () => {
   it("belongs to the save it was written beside, or to nothing", () => {
@@ -165,6 +165,15 @@ describe("consent", () => {
   it("reads the retired `asked` as no answer", () => {
     store.items.set("5wild:telemetry", "asked")
     expect(loadConsent()).toBeNull()
+  })
+
+  it("sends no run that was never played", () => {
+    setConsent("on")
+    const unplayed = { ...run(1), end: "quit" as const, steps: [] }
+    file(unplayed, "on")
+    expect(readOutbox()).toEqual([])
+    file(run(2), "on")
+    expect(readOutbox().map((p) => p.seed)).toEqual([2])
   })
 
   it("does nothing at all in a build with nowhere to send", () => {
