@@ -56,10 +56,38 @@ describe("the shop layout", () => {
   })
 
   it("keeps the upgrade and letter slots to their own stock", () => {
+    // Which of the two holds which can swap, since the card is moved beside
+    // the pack whichever slot dealt it.
     for (let seed = 1; seed <= 50; seed++) {
       const items = shopAt(seed).items
-      expect(["etch", "range", "level", "consumable"]).toContain(items[2]?.kind)
-      expect(["mod", "consumable"]).toContain(items[3]?.kind)
+      for (const item of items.slice(2, 4)) {
+        expect(["etch", "range", "level", "mod", "consumable"]).toContain(item?.kind)
+      }
+    }
+  })
+
+  // Before the cap, 5.7% of ordinary shelves dealt two or more cards and 54%
+  // of those that dealt one put it somewhere other than beside the pack.
+  it("deals one card at most, and sets it down beside the pack", () => {
+    for (const owned of [false, true]) {
+      for (let seed = 1; seed <= 40; seed++) {
+        const base = startRun(seed, realWords).state
+        const relics = owned ? RELICS.map((relic) => ({ id: relic.id })) : base.relics
+        for (let stage = 1; stage <= STAGES; stage++) {
+          for (let rerolls = 0; rerolls < 3; rerolls++) {
+            const state: RunState = { ...base, stage, relics }
+            const kinds = rollShop(
+              state,
+              derive(seed, "shop", stage, 0, rerolls),
+              rerolls,
+            ).items.map((item) => item?.kind)
+            const cards = kinds.flatMap((kind, index) => (kind === "consumable" ? [index] : []))
+            expect(cards.length).toBeLessThanOrEqual(1)
+            expect(kinds[4]).toBe("pack")
+            if (cards[0] !== undefined) expect(cards[0]).toBe(3)
+          }
+        }
+      }
     }
   })
 

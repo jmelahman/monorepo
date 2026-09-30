@@ -128,10 +128,10 @@ type Taken = ReadonlySet<string>
 const shelfKey = (item: { kind: string; id: string }): string => `${item.kind}:${item.id}`
 
 /**
- * A card nobody else on the shelf is selling. Four slots can fall back to a card
- * and there are four cards, so the pool is never empty on a real shelf; the full
- * list behind it is only there so an emptied catalog would deal a duplicate
- * rather than throw.
+ * A card nobody else on the shelf is selling. A shelf deals one card at most
+ * now (`cardDealt`), so the filter only matters to the guard at the end of
+ * `rollUpgrade`; the full list behind it is there so an emptied catalog would
+ * deal a duplicate rather than throw.
  */
 const rollConsumable = (rng: Rng, taken: Taken): ShopItem => {
   const fresh = CONSUMABLES.filter(
@@ -227,8 +227,50 @@ function rollRange(state: RunState, rng: Rng, taken: Taken): ShopItem | null {
   return { kind: "range", id: pick(rng, usable).id, cost: RANGE_COST }
 }
 
+/**
+ * Whether the shelf already has its one card. A second is never dealt: the
+ * card is a fallback for four of the five slots, and 5.7% of 48,000 shelves
+ * (2,000 seeds, three visits a stage for eight stages) dealt two or more, a
+ * visit spending two of its five decisions on the kind of card that is only
+ * ever used once. See `rollShop` for where the one that is dealt goes.
+ *
+ * The share of shelves with a card on them did not move (42%), since only the
+ * second was ever replaced, and neither did the game much: across 300 seeds of
+ * the blind solver, rounds banked went from 3,441 to 3,394 and wins from 8 to
+ * 6, and the farmer from 2,818 to 2,799 and 7 to 7, median stage 4 throughout.
+ * Most of that is the card changing seats under bots that buy by position.
+ */
+const cardDealt = (taken: Taken): boolean =>
+  CONSUMABLES.some((card) => taken.has(shelfKey({ kind: "consumable", id: card.id })))
+
+/**
+ * An upgrade slot's roll. With a card already on the shelf the table is drawn
+ * without its card entries, which keeps the other three in their proportions,
+ * and a kind that comes up empty tries the others before it would deal one.
+ */
 function rollUpgrade(state: RunState, rng: Rng, taken: Taken): ShopItem {
-  const kind = pick(rng, UPGRADE_TABLE)
+  const carded = cardDealt(taken)
+  const kind = pick(rng, carded ? UPGRADE_TABLE.filter((k) => k !== "consumable") : UPGRADE_TABLE)
+  if (kind !== "consumable") {
+    const item = rollUpgradeKind(state, rng, taken, kind)
+    if (item) return item
+  }
+  if (!carded) return rollConsumable(rng, taken)
+  for (const other of ["etch", "range", "level"] as const) {
+    const item = rollUpgradeKind(state, rng, taken, other)
+    if (item) return item
+  }
+  // Every etching, range and level already on this shelf or dead: five
+  // categories alone outnumber the slots, so this is a guard, not a path.
+  return rollConsumable(rng, taken)
+}
+
+function rollUpgradeKind(
+  state: RunState,
+  rng: Rng,
+  taken: Taken,
+  kind: "etch" | "range" | "level",
+): ShopItem | null {
   if (kind === "etch") {
     const item = rollEtch(state, rng, taken)
     if (item) return item
@@ -250,15 +292,17 @@ function rollUpgrade(state: RunState, rng: Rng, taken: Taken): ShopItem {
       return { kind: "level", id: pick(rng, categories).id, cost: LEVEL_COST }
     }
   }
-  return rollConsumable(rng, taken)
+  return null
 }
 
+/** The letter slot's roll: a modifier, or the card, or once the card is dealt an upgrade. */
 function rollLetter(state: RunState, rng: Rng, taken: Taken): ShopItem {
-  if (pick(rng, LETTER_TABLE) === "mod") {
+  const carded = cardDealt(taken)
+  if (carded || pick(rng, LETTER_TABLE) === "mod") {
     const item = rollMod(state, rng, taken)
     if (item) return item
   }
-  return rollConsumable(rng, taken)
+  return carded ? rollUpgrade(state, rng, taken) : rollConsumable(rng, taken)
 }
 
 /** Relics already owned are off the table, since duplicates do not stack. */
@@ -450,6 +494,10 @@ const relicItem = (relic: Relic): ShopItem => ({
  * shop with no build decision in it at all, which is what the retry loop and
  * the dedupe key dance existed to paper over.
  *
+ * A slot that says "or a card" deals one only while the shelf has none, and
+ * the card goes last before the pack whichever slot dealt it; see
+ * `cardDealt`.
+ *
  * The layout was supposed to make duplicates impossible and did not quite. Every
  * slot but the pack can fall back to a card, slots 2 and 3 both do on their own
  * odds, and once relics run out slots 0 and 2 are the same roll twice. Across
@@ -483,6 +531,12 @@ export function rollShop(state: RunState, rng: Rng, rerolls: number): ShopState 
   deal(second ? relicItem(second) : rollLetter(state, rng, taken))
   deal(rollUpgrade(state, rng, taken))
   deal(rollLetter(state, rng, taken))
+  // The card, wherever it was dealt, is set down beside the pack. Both are
+  // the things on the shelf that are not the run's build, and a player
+  // reading the row finds them together at its end. Only the order moves:
+  // every slot has already been dealt, so the odds are the layout's above.
+  const card = items.findIndex((item) => item.kind === "consumable")
+  if (card >= 0) items.push(...items.splice(card, 1))
   deal(rollPack(state, rng))
   return { items, rerolls }
 }
