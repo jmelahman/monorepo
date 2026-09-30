@@ -3,7 +3,7 @@ import { commandsFor } from "../../src/bench/commands"
 import { DEFAULT_LIMITS, replayEpisode, Session } from "../../src/bench/session"
 import type { RunState } from "../../src/engine"
 import { reduce, STAGES, startRun } from "../../src/engine"
-import { blindPlayer } from "../helpers/blind"
+import { blindPlayer, firstWinningSeed } from "../helpers/blind"
 import { realWords } from "../helpers/words"
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -53,10 +53,14 @@ describe("a benchmark session", () => {
 
   // `sim.test.ts` counts a round when the phase turns to reward, which the
   // last round of a won run skips on its way to victory. This does not.
-  it("counts a won run's final round", () => {
-    const won = SEEDS.map(throughSession).find((session) => session.state.phase === "victory")
-    expect(won).toBeDefined()
-    const result = won?.result()
+  //
+  // The long timeout is the seed search in `firstWinningSeed`: about thirty
+  // blind runs before the win, which alone sits near vitest's default five
+  // seconds on a cold start.
+  it("counts a won run's final round", { timeout: 30_000 }, () => {
+    const won = throughSession(firstWinningSeed(realWords))
+    expect(won.state.phase).toBe("victory")
+    const result = won.result()
     expect(result?.roundsCleared).toBe(STAGES * 3)
     expect(result?.won).toBe(true)
     expect(result?.end).toBe("victory")

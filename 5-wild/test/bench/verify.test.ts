@@ -3,7 +3,7 @@ import { commandsFor } from "../../src/bench/commands"
 import type { Episode } from "../../src/bench/session"
 import { episodeOf, Session } from "../../src/bench/session"
 import { verify } from "../../src/bench/verify"
-import { blindPlayer } from "../helpers/blind"
+import { blindPlayer, firstWinningSeed } from "../helpers/blind"
 import { realWords } from "../helpers/words"
 
 function played(seed: number): Episode {
@@ -30,7 +30,7 @@ function played(seed: number): Episode {
 
 describe("verifying an episode", () => {
   const died = played(1)
-  const won = played(3)
+  const won = played(firstWinningSeed(realWords))
 
   it("accepts the run as it was played", () => {
     expect(died.result.end).toBe("died")
@@ -75,6 +75,6 @@ describe("verifying an episode", () => {
   })
 
   it("catches a run moved to another seed", () => {
-    expect(verify({ ...won, seed: 4 }, realWords).ok).toBe(false)
+    expect(verify({ ...won, seed: won.seed + 1 }, realWords).ok).toBe(false)
   })
 })

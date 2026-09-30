@@ -386,6 +386,9 @@ const HAND_BLOCKED = [
  * ALIVE and never TEETH. Every entry here ranked above #5223, which is where
  * the 2300th answer sits, so each would have made the list on merit.
  *
+ * Except the four written words at the end of that group, which ranked nowhere
+ * near it and are here on a different argument; see the note above them.
+ *
  * The second group is younger than both corpora. EMOJI is in neither
  * words_alpha nor ENABLE, and OpenSubtitles-2018 ranks it #39350 on 249 hits,
  * so no amount of loosening a filter reaches it: a word the corpus has barely
@@ -396,23 +399,47 @@ const HAND_ADDED = [
   // Real words the lemma check ate. ALIVE is #113, TEETH #355, FORTH #698.
   "ahold",
   "alive",
+  "bosun",
   "caddy",
   "cyber",
   "depot",
   "donut",
+  "doozy",
   "forth",
+  "golem",
+  "hanky",
   "inlet",
   "input",
+  "merch",
+  "olden",
   "pinky",
+  "pouty",
+  "rebar",
+  "rebus",
   "repay",
   "rerun",
   "reset",
   "resin",
+  "sheik",
   "snuck",
   "teeth",
   "untie",
   "unzip",
   "woken",
+  // Common in print and rare on screen, which is a fault of the ranking rather
+  // than of any filter: OpenSubtitles puts FACET past #41000 and has never heard
+  // of ASKEW. About 380 of the original Wordle's answers are missing from this
+  // list for the same reason, SHRUB and TENET and TERSE among them, and these
+  // four are not special among them, only the ones somebody noticed.
+  //
+  // So this group is closed. The next word that belongs here is the signal to
+  // stop hand-picking and fix the ranking instead: blend in a written-text
+  // frequency list and rank each word by the better of its two positions,
+  // which lifts the whole class at once and needs no argument per word.
+  "askew",
+  "facet",
+  "jaunt",
+  "shrub",
   // Too new for a 2017 scrape of an older dictionary, let alone a 2001 lexicon.
   "bling",
   "chemo",

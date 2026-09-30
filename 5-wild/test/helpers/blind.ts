@@ -34,7 +34,7 @@
 import type { PlayerView } from "../../src/bench/observe"
 import { playerView } from "../../src/bench/observe"
 import type { Action, Color, RunState, ShopItem, WordSource } from "../../src/engine"
-import { baseChips, computeFeedback, LETTER_CHIPS, reduce } from "../../src/engine"
+import { baseChips, computeFeedback, LETTER_CHIPS, reduce, startRun } from "../../src/engine"
 import { placeMod } from "../golden/scenarios"
 
 /**
@@ -406,4 +406,35 @@ export function blindPlayer(policy: Policy): BlindPlayer {
       return null
     },
   }
+}
+
+/**
+ * The first seed the solver plays to victory, for a test that needs a won run.
+ *
+ * Searched rather than named, because the bot wins about one run in forty and
+ * which runs those are is a fact about the word list and the balance tables,
+ * not about the test. Seed 3 was the only win in the first eighty until the
+ * names came out of the English answers, and the two tests that had written it
+ * down failed on a change that made the game no harder: afterwards seeds 30 and
+ * 72 won instead. Two hundred seeds leaves the chance of finding none, at that
+ * rate, well under one percent. Cached, since both callers want the same one.
+ */
+const firstWins = new WeakMap<WordSource, number>()
+export function firstWinningSeed(words: WordSource): number {
+  const cached = firstWins.get(words)
+  if (cached !== undefined) return cached
+  for (let seed = 1; seed <= 200; seed++) {
+    const bot = blindPlayer("solver")
+    let state = startRun(seed, words, 0).state
+    while (state.phase !== "game_over" && state.phase !== "victory") {
+      const actions = bot.next(state, words)
+      if (!actions) break
+      for (const action of actions) state = reduce(state, action, words).state
+    }
+    if (state.phase === "victory") {
+      firstWins.set(words, seed)
+      return seed
+    }
+  }
+  throw new Error("the solver won none of the first 200 seeds")
 }
