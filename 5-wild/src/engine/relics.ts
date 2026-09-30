@@ -439,8 +439,17 @@ export const RELICS: readonly Relic[] = [
     // Five distinct letters is exactly what a good probe looks like, and the
     // exact opposite of what Doppelgänger wants. They do not belong in the
     // same build, which is what makes each of them a choice.
+    //
+    // ×1.5 rather than ×2, because the condition is barely one: 89% of the
+    // blind solver's guesses had five distinct letters, since that is what a
+    // probe is. On `bun run relics` (solver, 250 seeds) ×2 read ×1.87 / ×1.85
+    // / ×1.68 on stages 1–2 / 3–5 / 6+, ×1.75 overall, above every uncommon
+    // but Keystone and within 0.25 of Indelible, a rare that dies. +10 mult was
+    // the other candidate: ×1.40 early and ×1.12 late, an early card to sell,
+    // which is a different card and not Twins' mirror. ×1.5 reads ×1.43 /
+    // ×1.43 / ×1.34, ×1.38 overall, mid-shelf among the uncommons.
     onGuess: (ctx) => {
-      if (isCategory("distinct", ctx.word)) ctx.timesMult(2)
+      if (isCategory("distinct", ctx.word)) ctx.timesMult(1.5)
     },
   },
   {
@@ -469,9 +478,20 @@ export const RELICS: readonly Relic[] = [
      * it read ×2.00, the most of any uncommon, and it was one of the handful
      * of multipliers every late tray converged on. ×2.5 reads ×1.74 there and
      * ×2.04 on an empty tray, still the best uncommon for the player who steers.
+     *
+     * Back to ×2, because the premise was wrong. The condition does come up by
+     * accident: the middle tile is green on 54% of the blind solver's guesses,
+     * since every solving guess is five greens and the ones before it are mostly
+     * close. The ×1.40 above was a per-guess harness that could not see the
+     * solve bonus, which multiplies the whole round. On `bun run relics`
+     * (solver, 250 seeds, round totals) ×2.5 read ×1.81, the top uncommon by
+     * 0.16 and within 0.2 of Indelible, a rare. ×2 reads ×1.59 / ×1.59 / ×1.51
+     * on stages 1–2 / 3–5 / 6+, ×1.54 overall: still above First Impression's
+     * ×1.47, which is the order the columns deserve, and still the multiplier
+     * a player who steers for the middle will get the most out of.
      */
     onGuess: (ctx) => {
-      if (ctx.tiles[2]?.color === "green") ctx.timesMult(2.5)
+      if (ctx.tiles[2]?.color === "green") ctx.timesMult(2)
     },
   },
   {
@@ -608,6 +628,11 @@ export const RELICS: readonly Relic[] = [
     // lands, because openers are chosen for their commonest starts, so this
     // fires by accident far more than the middle column does and pays ×2
     // rather than ×3 for it.
+    //
+    // Keystone now pays the same ×2, and the premise above did not survive
+    // measuring: on `bun run relics` the first tile is green on 45% of the
+    // blind solver's guesses and the middle on 54%, the reverse of the claim.
+    // They read ×1.47 and ×1.54, close enough to call twins.
     onGuess: (ctx) => {
       if (ctx.tiles[0]?.color === "green") ctx.timesMult(2)
     },
@@ -618,7 +643,7 @@ export const RELICS: readonly Relic[] = [
     cost: RARITY_COST.uncommon,
     // Twinned was the one shape with a category and no multiplier behind it.
     // Anagrammer's mirror: the two ask opposite questions of the same word, so
-    // a tray cannot want both. ×2.5 rather than Anagrammer's ×2 because the
+    // a tray cannot want both. ×2.5 rather than Anagrammer's ×1.5 because the
     // shape is the rarer one: at ×2 it read ×1.14 over 120 seeds, the weakest
     // uncommon on the shelf, and ×2.5 reads ×1.21. Still a floor, since the
     // harness never steers into a repeated letter.
@@ -663,8 +688,19 @@ export const RELICS: readonly Relic[] = [
     // A yellow is a letter in the wrong place, so a guess without one is either
     // a clean miss or a clean hit. Rewards the late, committed guess and the
     // wild opener both, and punishes the half-informed middle.
+    //
+    // ×1.75 rather than ×2, because the clean hit is not a choice: every
+    // solving guess is five greens, so this pays on the round's biggest guess
+    // whatever else the player did, and fires on 64% of the blind solver's
+    // guesses, more than Keystone's 54% or First Impression's 45%. At ×2 that
+    // made it the top uncommon on `bun run relics` (solver, 250 seeds), ×1.68 /
+    // ×1.72 / ×1.61 on stages 1–2 / 3–5 / 6+ and ×1.65 overall, a rare's worth.
+    // Promoting it was the alternative, and was not taken because the three
+    // color-conditioned ×mults are one family and belong at one rarity, ordered
+    // so the easiest condition pays least. ×1.75 reads ×1.51 / ×1.54 / ×1.45,
+    // ×1.48 overall: level with First Impression, under Keystone's ×1.54.
     onGuess: (ctx) => {
-      if (!ctx.tiles.some((tile) => tile.color === "yellow")) ctx.timesMult(2)
+      if (!ctx.tiles.some((tile) => tile.color === "yellow")) ctx.timesMult(1.75)
     },
   },
   {
@@ -852,7 +888,13 @@ export const RELICS: readonly Relic[] = [
     // Written at ×3 and measured at ×2.95 on a late kit (every shape at level
     // three, every letter etched, two relics already held), the most any card
     // in the game added there. ×2 reads ×1.97, beside Anagrammer's ×1.89.
-    onGuess: (ctx) => ctx.timesMult(2),
+    //
+    // Then ×1.75, because ×2 was worth more than any legendary: ×1.99 overall
+    // on `bun run relics` (solver, 250 seeds), over Pyromaniac's ×1.87 and
+    // Patron's ×1.86, and it earns that on 99% of guesses with no condition to
+    // meet. ×1.75 reads ×1.75 / ×1.79 / ×1.71 on stages 1–2 / 3–5 / 6+, ×1.74
+    // overall: under both, and still the largest unconditional multiplier.
+    onGuess: (ctx) => ctx.timesMult(1.75),
     onRoundEnd: (ctx) => perish(ctx, 40),
   },
   {

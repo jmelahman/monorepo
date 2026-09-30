@@ -59,8 +59,8 @@ export const es: Strings = {
     bloodhound: { name: "Sabueso", text: "+6 puntos por casilla amarilla" },
     head_start: { name: "Ventaja", text: "+15 mult si la palabra empieza por vocal" },
     loaded_dice: { name: "Dados Cargados", text: "+0 a +20 mult, tirados de nuevo cada intento" },
-    anagrammer: { name: "Anagramista", text: "×2 mult si no se repite ninguna letra" },
-    keystone: { name: "Clave de Bóveda", text: "×2,5 mult si la casilla central es verde" },
+    anagrammer: { name: "Anagramista", text: "×1,5 mult si no se repite ninguna letra" },
+    keystone: { name: "Clave de Bóveda", text: "×2 mult si la casilla central es verde" },
     lexicographer: {
       name: "Lexicógrafo",
       text: "+3 puntos por cada letra distinta de tus intentos anteriores en la ronda",
@@ -122,7 +122,7 @@ export const es: Strings = {
       name: "Fuerza de la Costumbre",
       text: "+2 mult por cada palabra de la misma forma jugada desde que la compraste",
     },
-    no_maybes: { name: "Sin Quizás", text: "×2 mult si el intento no tiene casillas amarillas" },
+    no_maybes: { name: "Sin Quizás", text: "×1,75 mult si el intento no tiene casillas amarillas" },
     compound: { name: "Interés Compuesto", text: "Duplica los intereses que ganas" },
     royalties: {
       name: "Derechos de Autor",
@@ -135,7 +135,7 @@ export const es: Strings = {
     patron: { name: "Mecenas", text: "×1,25 mult por cada reliquia poco común que tengas" },
     indelible: {
       name: "Indeleble",
-      text: "×2 mult. 1 entre 40 de borrarse al final de cada ronda",
+      text: "×1,75 mult. 1 entre 40 de borrarse al final de cada ronda",
     },
     second_wind: {
       name: "Segundo Aire",

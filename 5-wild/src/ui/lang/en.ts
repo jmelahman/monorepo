@@ -79,8 +79,8 @@ export const en: Strings = {
     bloodhound: { name: "Bloodhound", text: "+6 points per yellow tile" },
     head_start: { name: "Head Start", text: "+15 mult if the word begins with a vowel" },
     loaded_dice: { name: "Loaded Dice", text: "+0 to +20 mult, rolled fresh every guess" },
-    anagrammer: { name: "Anagrammer", text: "×2 mult if no letter repeats" },
-    keystone: { name: "Keystone", text: "×2.5 mult if the middle tile is green" },
+    anagrammer: { name: "Anagrammer", text: "×1.5 mult if no letter repeats" },
+    keystone: { name: "Keystone", text: "×2 mult if the middle tile is green" },
     lexicographer: {
       name: "Lexicographer",
       text: "+3 points for each different letter in your earlier guesses this round",
@@ -130,7 +130,7 @@ export const en: Strings = {
       name: "Force of Habit",
       text: "+2 mult for each word of the same shape played since you bought this",
     },
-    no_maybes: { name: "No Maybes", text: "×2 mult if the guess has no yellow tile" },
+    no_maybes: { name: "No Maybes", text: "×1.75 mult if the guess has no yellow tile" },
     compound: { name: "Compound Interest", text: "Doubles the interest you earn" },
     royalties: {
       name: "Royalties",
@@ -143,7 +143,7 @@ export const en: Strings = {
     patron: { name: "Patron", text: "×1.25 mult for each uncommon relic you hold" },
     indelible: {
       name: "Indelible",
-      text: "×2 mult. 1 in 40 chance to fade at the end of each round",
+      text: "×1.75 mult. 1 in 40 chance to fade at the end of each round",
     },
     second_wind: {
       name: "Second Wind",

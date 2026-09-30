@@ -251,9 +251,10 @@ only; rendering and interaction get validated in a real browser instead.
 `CONTRIBUTING.md` has the mechanics: bump `CONTENT_VERSION`, `bun run golden`,
 read the diff. What it does not state is the standard of evidence. Balance comments here
 cite run counts because the numbers came from actually simulating the change, and
-a nerf argued from intuition will read as out of place beside them. A throwaway
-harness over a few hundred seeds costs minutes: write one, quote what it said,
-delete it. Batch balance edits into a single commit so the vector diff reads as
+a nerf argued from intuition will read as out of place beside them. For a
+relic, `bun run relics` is the harness; quote it by name so the next figure is
+comparable. For anything else a throwaway harness over a few hundred seeds
+costs minutes: write one, quote what it said, delete it. Batch balance edits into a single commit so the vector diff reads as
 one deliberate move.
 
 Watch for tests that pin balance incidentally. A shelf reshuffle moves outcomes

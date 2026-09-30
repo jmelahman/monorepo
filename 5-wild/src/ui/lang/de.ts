@@ -61,8 +61,8 @@ export const de: Strings = {
     bloodhound: { name: "Bluthund", text: "+6 Punkte pro gelbem Feld" },
     head_start: { name: "Vorsprung", text: "+15 Mult, wenn das Wort mit einem Vokal beginnt" },
     loaded_dice: { name: "Gezinkte Würfel", text: "+0 bis +20 Mult, bei jedem Versuch neu" },
-    anagrammer: { name: "Anagrammist", text: "×2 Mult, wenn sich kein Buchstabe wiederholt" },
-    keystone: { name: "Schlussstein", text: "×2,5 Mult, wenn das mittlere Feld grün ist" },
+    anagrammer: { name: "Anagrammist", text: "×1,5 Mult, wenn sich kein Buchstabe wiederholt" },
+    keystone: { name: "Schlussstein", text: "×2 Mult, wenn das mittlere Feld grün ist" },
     lexicographer: {
       name: "Lexikograph",
       text: "+3 Punkte pro Buchstabe, den deine früheren Versuche der Runde nicht hatten",
@@ -130,7 +130,10 @@ export const de: Strings = {
       name: "Macht der Gewohnheit",
       text: "+2 Mult für jedes Wort derselben Form, das seit dem Kauf gespielt wurde",
     },
-    no_maybes: { name: "Kein Vielleicht", text: "×2 Mult, wenn der Versuch kein gelbes Feld hat" },
+    no_maybes: {
+      name: "Kein Vielleicht",
+      text: "×1,75 Mult, wenn der Versuch kein gelbes Feld hat",
+    },
     compound: { name: "Zinseszins", text: "Verdoppelt deine Zinsen" },
     royalties: {
       name: "Tantiemen",
@@ -140,7 +143,7 @@ export const de: Strings = {
     patron: { name: "Mäzen", text: "×1,25 Mult pro ungewöhnlichem Relikt, das du hältst" },
     indelible: {
       name: "Unauslöschlich",
-      text: "×2 Mult. 1 zu 40, dass es am Ende jeder Runde verblasst",
+      text: "×1,75 Mult. 1 zu 40, dass es am Ende jeder Runde verblasst",
     },
     second_wind: {
       name: "Zweiter Atem",

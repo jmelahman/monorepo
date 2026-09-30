@@ -296,6 +296,29 @@ never fired at all. That player was blind to chips in a game about chips and die
 on stage one of 39 runs in 300. Quote the policy's constants alongside any number
 taken from it.
 
+## Pricing a relic
+
+```sh
+bun run relics                                   # every scoring relic, 250 seeds
+bun run relics --only keystone,twins --seeds 60  # narrower, while iterating
+bun run relics --policy farmer
+```
+
+`tools/relics.ts` answers "what is this card worth" the same way every time,
+which the comments in `relics.ts` could not until it existed: each figure in
+them came from a harness written for that one change and deleted, and no two
+measured the same thing. It plays the blind bot's own runs and scores every
+guess twice, with the tray the bot held and with the card added in the last
+slot, sums each round under both, applies each tray's solve bonus to a solved
+one, and prints the ratio by stage band (1-2, 3-5, 6+) beside how often the
+card moved a guess at all.
+
+Read `fires` before the ratio. A card whose condition the bot meets by
+accident reads near its ceiling, and one it would have to steer for reads as
+its floor; growers (`*`) are measured fresh, which is their worst case. It is a
+price, not a win rate: nothing is replayed with the card. Quote the command
+alongside the figure, as the comments on Anagrammer, Keystone and Indelible do.
+
 ## Telemetry
 
 The bots above answer what the rules are like for a policy. Players who opt in

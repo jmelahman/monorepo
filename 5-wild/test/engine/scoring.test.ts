@@ -312,12 +312,12 @@ describe("guess scoring", () => {
 
     /*
      * A relic that prices the finished row belongs to no letter in it. Hanging
-     * Anagrammer's ×2 on all five tiles would read as five doublings, and
+     * Anagrammer's ×1.5 on all five tiles would read as five multipliers, and
      * hanging it on one would be a lie about which letter earned it.
      */
     it("leaves the guess-wide relics out of the tiles entirely", () => {
       const state = play({ ...start, relics: [{ id: "anagrammer" }] }, "quazy")
-      expect(state.round.guesses[0]?.mult).toBe(8)
+      expect(state.round.guesses[0]?.mult).toBe(6)
       expect(state.round.guesses[0]?.paid?.some((tile) => tile.relics)).toBe(false)
     })
   })

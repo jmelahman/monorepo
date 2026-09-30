@@ -254,7 +254,7 @@ describe("boss rounds", () => {
       ...base,
       letters: { ...base.letters, a: { etch: 0, destroyed: false, mod: "steel" } },
     }
-    // Steel is ×2, Anagrammer is ×2, and BRAID trips both. Under this boss
+    // Steel is ×2, Anagrammer is ×1.5, and BRAID trips both. Under this boss
     // the mult is exactly what the tiles paid, and the modifier still fires;
     // only the multiplying part of it is swallowed.
     const plateau = apply({ ...steel, relics: [{ id: "anagrammer" }] }, type("braid"))
@@ -262,9 +262,9 @@ describe("boss rounds", () => {
     // Five greens: 1 + 5×3 = 16.
     expect(plateau.round.guesses[0]?.mult).toBe(16)
 
-    // The same board without the boss is the control, and it is 52 rather than
-    // 64 because the steel fires *during* the row: 10 at the A, ×2 to 20, then
-    // the last two greens, then Anagrammer's ×2 on 26. That interleave is the
+    // The same board without the boss is the control, and it is 39 rather than
+    // 48 because the steel fires *during* the row: 10 at the A, ×2 to 20, then
+    // the last two greens, then Anagrammer's ×1.5 on 26. That interleave is the
     // pipeline working as documented, and it is exactly what The Plateau spares
     // the player from having to think about: under the boss there is nothing to
     // order, because nothing multiplies.
@@ -272,7 +272,7 @@ describe("boss rounds", () => {
       { ...steel, round: { ...steel.round, bossId: null }, relics: [{ id: "anagrammer" }] },
       type("braid"),
     )
-    expect(loose.round.guesses[0]?.mult).toBe(52)
+    expect(loose.round.guesses[0]?.mult).toBe(39)
   })
 
   /*

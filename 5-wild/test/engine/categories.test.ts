@@ -128,13 +128,13 @@ describe("category levels", () => {
   })
 
   it("scores before the relics, so a ×mult relic multiplies the level", () => {
-    // Anagrammer is ×2 mult on a distinct word. Level 2 Distinct adds its mult
-    // to the base first, so the doubling lands on the raised figure.
+    // Anagrammer is ×1.5 mult on a distinct word. Level 2 Distinct adds its
+    // mult to the base first, so the multiplier lands on the raised figure.
     const distinct = CATEGORY_BY_ID.get("distinct")
     if (!distinct) throw new Error("no distinct category")
     const state: RunState = { ...leveled("distinct", 2), relics: [{ id: "anagrammer" }] }
     const played = apply(state, type("crane"))
-    expect(played.round.guesses[0]?.mult).toBe((7 + distinct.mult) * 2)
+    expect(played.round.guesses[0]?.mult).toBe((7 + distinct.mult) * 1.5)
   })
 })
 
@@ -193,7 +193,7 @@ describe("the relics that read a category", () => {
     expect(categoryOf("audio").id).toBe("vowel_heavy")
     const played = apply(state, type("audio"))
     const plain = apply(startRun(1, words).state, type("audio"))
-    expect(played.round.guesses[0]?.mult).toBe((plain.round.guesses[0]?.mult ?? 0) * 2)
+    expect(played.round.guesses[0]?.mult).toBe((plain.round.guesses[0]?.mult ?? 0) * 1.5)
   })
 
   it("still pays Alphabetist for a word that also repeats a letter", () => {

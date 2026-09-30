@@ -66,8 +66,8 @@ export const fr: Strings = {
     bloodhound: { name: "Limier", text: "+6 points par case jaune" },
     head_start: { name: "Avance", text: "+15 mult si le mot commence par une voyelle" },
     loaded_dice: { name: "Dés Pipés", text: "+0 à +20 mult, relancés à chaque essai" },
-    anagrammer: { name: "Anagrammiste", text: "×2 mult si aucune lettre ne se répète" },
-    keystone: { name: "Clé de Voûte", text: "×2,5 mult si la case centrale est verte" },
+    anagrammer: { name: "Anagrammiste", text: "×1,5 mult si aucune lettre ne se répète" },
+    keystone: { name: "Clé de Voûte", text: "×2 mult si la case centrale est verte" },
     lexicographer: {
       name: "Lexicographe",
       text: "+3 points par lettre différente de vos essais précédents dans la manche",
@@ -138,7 +138,7 @@ export const fr: Strings = {
       name: "Force de l'Habitude",
       text: "+2 mult par mot de la même forme joué depuis son achat",
     },
-    no_maybes: { name: "Sans Peut-être", text: "×2 mult si l'essai n'a aucune case jaune" },
+    no_maybes: { name: "Sans Peut-être", text: "×1,75 mult si l'essai n'a aucune case jaune" },
     compound: { name: "Intérêts Composés", text: "Double les intérêts que vous gagnez" },
     royalties: {
       name: "Droits d'Auteur",
@@ -148,7 +148,7 @@ export const fr: Strings = {
     patron: { name: "Mécène", text: "×1,25 mult par relique peu commune que vous détenez" },
     indelible: {
       name: "Indélébile",
-      text: "×2 mult. 1 chance sur 40 de s'effacer à la fin de chaque manche",
+      text: "×1,75 mult. 1 chance sur 40 de s'effacer à la fin de chaque manche",
     },
     second_wind: {
       name: "Second Souffle",

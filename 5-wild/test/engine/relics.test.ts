@@ -108,8 +108,8 @@ describe("relics", () => {
     expect(withRelic("bloodhound", "dairy").last).toMatchObject({ chips: 33, mult: 5 })
   })
 
-  it("Anagrammer doubles a word with five distinct letters", () => {
-    expect(withRelic("anagrammer", "crane").last.mult).toBe(14)
+  it("Anagrammer pays ×1.5 on a word with five distinct letters", () => {
+    expect(withRelic("anagrammer", "crane").last.mult).toBe(10.5)
     // SASSY repeats S three times, so it earns nothing: its lone yellow A is
     // the whole of that 2, exactly as it would be with no relic at all.
     expect(withRelic("anagrammer", "sassy").last.mult).toBe(2)
@@ -311,8 +311,8 @@ describe("the relics that read the word's shape", () => {
   })
 
   it("Keystone multiplies on a green middle and leaves any other green alone", () => {
-    // QUAZY against BRAID lands its A in the middle column: 4 mult becomes 10.
-    expect(withRelic("keystone", "quazy").last).toMatchObject({ chips: 26, mult: 10 })
+    // QUAZY against BRAID lands its A in the middle column: 4 mult becomes 8.
+    expect(withRelic("keystone", "quazy").last).toMatchObject({ chips: 26, mult: 8 })
     // GHOST lands nothing at all, so there is nothing to double.
     expect(withRelic("keystone", "ghost").last).toMatchObject({ mult: 1 })
   })
@@ -406,8 +406,8 @@ describe("the relics that widen the shelf", () => {
     expect(gone).toBeLessThan(30)
   })
 
-  it("Indelible doubles the mult", () => {
-    expect(withRelic("indelible", "crane").last.mult).toBe(14)
+  it("Indelible multiplies the mult by 1.75", () => {
+    expect(withRelic("indelible", "crane").last.mult).toBe(7 * 1.75)
   })
 
   it("First Draft and Candle burn down a round at a time and then leave", () => {
@@ -485,8 +485,8 @@ describe("the relics that widen the shelf", () => {
     expect(withRelic("twins", "crane").last.mult).toBe(7)
   })
 
-  it("No Maybes doubles a guess with no yellow", () => {
-    expect(withRelic("no_maybes", "crane").last.mult).toBe(14)
+  it("No Maybes pays ×1.75 on a guess with no yellow", () => {
+    expect(withRelic("no_maybes", "crane").last.mult).toBe(7 * 1.75)
     expect(withRelic("no_maybes", "dairy").last.mult).toBe(5)
   })
 
@@ -564,9 +564,13 @@ describe("the relics that widen the shelf", () => {
     const base = startRun(1, words).state
     const mult = (relics: RunState["relics"]) =>
       apply({ ...base, relics }, type("crane")).round.guesses[0]?.mult
-    expect(mult([{ id: "carbon_copy" }, { id: "indelible" }])).toBe(28)
-    expect(mult([{ id: "indelible" }, { id: "carbon_copy" }])).toBe(14)
-    expect(mult([{ id: "carbon_copy" }, { id: "carbon_copy" }, { id: "indelible" }])).toBe(56)
+    // CRANE's 7, times Indelible's 1.75 once per card that pays it. Exact
+    // rather than close, since 1.75 is a binary fraction.
+    expect(mult([{ id: "carbon_copy" }, { id: "indelible" }])).toBe(7 * 1.75 ** 2)
+    expect(mult([{ id: "indelible" }, { id: "carbon_copy" }])).toBe(7 * 1.75)
+    expect(mult([{ id: "carbon_copy" }, { id: "carbon_copy" }, { id: "indelible" }])).toBe(
+      7 * 1.75 ** 3,
+    )
   })
 
   it("Carbon Copy pays what the card it copies has banked, and banks nothing itself", () => {
