@@ -162,3 +162,13 @@
   .shop-item-cost {
   border-top: 1px dashed var(--line);
 }
+
+/* Both inner rules are `outline`, and so is the keyboard's ring in `base.css`,
+   which these outrank: tabbing onto a consumable or a slip moved focus with
+   nothing drawn. Focus trades the rule for the ring. */
+:root.table:is(.skin-classic-dark, .skin-classic-light)
+  .shop-items
+  .shop-item:is(.kind-consumable, .kind-etch, .kind-level, .kind-range, .kind-mod):focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}

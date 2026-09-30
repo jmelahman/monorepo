@@ -406,8 +406,13 @@
   margin: 0 auto;
 }
 
+/* The price is the one thing on the tarot not centred. It was, under the
+   picture like the rest, and on a shelf read straight across it was the one
+   price of five in the wrong place. It starts where every card's does, 1.25rem
+   in, less the frame's padding, as the slip's does below. */
 :root.table .shop-screen .shop-items .kind-consumable .shop-item-cost {
-  justify-content: center;
+  margin-inline: 0.75rem;
+  padding-inline: 0;
 }
 
 /* The upgrades (an etching, a letter, a word shape, a range): a slip, ruled

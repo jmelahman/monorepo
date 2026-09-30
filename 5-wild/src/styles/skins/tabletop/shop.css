@@ -230,6 +230,16 @@
   border-top: var(--bw) dashed var(--bone-side);
 }
 
+/* Both inner rules are `outline`, and so is the keyboard's ring in `base.css`,
+   which these outrank: tabbing onto a consumable or a slip moved focus with
+   nothing drawn. Focus trades the rule for the ring. */
+:root.table.skin-tabletop
+  .shop-items
+  .shop-item:is(.kind-consumable, .kind-etch, .kind-level, .kind-range, .kind-mod):focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
 :root.skin-tabletop .shop-screen .toast {
   background: var(--panel);
   border: var(--rim);

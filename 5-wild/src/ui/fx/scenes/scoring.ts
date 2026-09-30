@@ -580,7 +580,6 @@ async function playTable(
     token("--panel", "#0c0e13"),
     token("--line", "#1d212b"),
   ]
-  const CLASH = [ivory, bulb, brassHi]
   const sparksFor = (tone: Tone): readonly string[] => {
     switch (tone) {
       case "chips":
@@ -1089,12 +1088,10 @@ async function playTable(
           const x = heat(event.score, target)
           // The blocks pull back, then lunge together and meet in the gap
           // between them. What they were nudged by all guess long comes to a
-          // point here, and the point is where the sparks and the shake go.
-          let mid: { x: number; y: number } | null = null
+          // point here, and the point is where the shake goes.
           if (chipsEl && multEl && !skipping()) {
             const a = chipsEl.getBoundingClientRect()
             const b = multEl.getBoundingClientRect()
-            mid = { x: (a.right + b.left) / 2, y: (a.top + a.bottom) / 2 }
             const reach = Math.max(0, b.left - a.right) / 2 + 6 + 10 * x
             const pull = 8 + 8 * x
             const across = (dir: 1 | -1) => [
@@ -1118,17 +1115,10 @@ async function playTable(
           // asked for it gone; the one under the score plate went later with
           // the coins (see `reached`).
           later(() => {
-            const at =
-              mid ?? (scoreBox ? centerOf(scoreBox) : { x: innerWidth / 2, y: innerHeight / 2 })
-            fx("spark", at, {
-              count: 14 + Math.round(46 * x),
-              speed: 420 + 320 * x,
-              life: 0.5,
-              size: 3.5 + 2 * x,
-              colors: CLASH,
-            })
-            // A white shockwave ring (90 to 320px, by heat) went out with the
-            // sparks; the owner found the sparks enough on their own.
+            // Sparks went off where the blocks met, 14 to 60 by heat, and a
+            // white shockwave ring (90 to 320px) with them. The ring went
+            // first, the owner finding the sparks enough on their own, and
+            // then the sparks: the lunge and the shake carry the hit.
             shake(0.16 + 0.78 * x)
             sound.cue({ name: "score", ratio: event.score / Math.max(1, target) })
             if (scoreBox) {
