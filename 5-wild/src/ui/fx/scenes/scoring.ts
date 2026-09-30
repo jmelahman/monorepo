@@ -4,6 +4,7 @@ import type { TileColor } from "../../audio"
 import { h } from "../../dom"
 import { formatNumber as num } from "../../format"
 import { categoryLevel, growthBadge, payoutBadge, relicCard, ui } from "../../lang"
+import { hasFx } from "../../skin"
 import { meterFill } from "../../views"
 import { centerOf, fxDom, place } from "../layer"
 import { juiced, ms, reduced, replay, tween } from "../motion"
@@ -418,7 +419,14 @@ function tileGain(tile: Element | undefined, chips: number): void {
 /**
  * Weight of the reaction, scaled by what the guess was worth against the
  * target. A chip guess twitches; a guess that clears the round on its own
- * shakes the screen.
+ * shakes the screen, in the Smoke Room only.
+ *
+ * The shake is the one piece of this scene that asks which look is on. It ran
+ * under every look, since the phone's sequence is also what Classic and
+ * Tabletop play on the table, and the owner had it out of both: Tabletop is
+ * the look that "holds still" (see `Fx` in `skin.ts`) and was the only thing
+ * on it jolting, and Classic is the plain board. The pop on the readout stays
+ * everywhere, because it is the reaction the ratio is for.
  */
 function emphasize(screen: HTMLElement, ratio: number): void {
   const readout = screen.querySelector(".readout")
@@ -431,7 +439,7 @@ function emphasize(screen: HTMLElement, ratio: number): void {
     readout.style.setProperty("--pop", String(1 + Math.min(0.2, ratio * 0.25)))
     readout.classList.add("popped")
   }
-  if (ratio < 0.5 || reduced()) return
+  if (ratio < 0.5 || reduced() || !hasFx()) return
   screen.style.setProperty("--shake", `${Math.min(8, 3 + ratio * 4).toFixed(1)}px`)
   screen.classList.add("shaking")
   setTimeout(() => screen.classList.remove("shaking"), ms(420))

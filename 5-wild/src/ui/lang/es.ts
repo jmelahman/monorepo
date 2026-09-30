@@ -907,7 +907,7 @@ export const es: Strings = {
       shape: (word, shape) =>
         `${word.toUpperCase()} puntúa como ${shape}. Todo intento tiene una forma, y subir una forma ` +
         "de nivel en la tienda hace que esos intentos puntúen más. Toca para verlas todas.",
-      menu: "En el menú puedes cambiar el sonido, la música y el tema. Prueba varios temas: cada uno cambia más que los colores. Ahí están también Cómo se juega y el Códice.",
+      menu: "En el menú puedes cambiar el sonido, la música y el tema. Prueba varios temas: unos añaden efectos y otros reducen el movimiento al mínimo. Ahí están también Cómo se juega y el Códice.",
       decor:
         "Este botón tiene tres modos para el teclado y las fichas: el valor de cada letra, solo tus letras mejoradas o nada. Cuando las rondas distraigan, úsalo para centrarte en la palabra.",
       shelf:
