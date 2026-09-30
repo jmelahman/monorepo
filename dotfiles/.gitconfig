@@ -19,7 +19,7 @@
 [user]
 	email = jamison@lahman.dev
 	name = Jamison Lahman
-	signingkey = ~/.ssh/id_rsa.pub
+	signingkey = key::ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDZvHG/ar69SsaFJ3isum7nO0yEpWwUODwcKZBTQkfU0Z2XKZHq13lvkOZrKNyEys1IdjnY/VjItaslQ7ohHfkjOZOgy2VIyQ36OwwYXho159T+DgjxUQH6TBTUZ1FVOann9jNQJ2ZAZPewJGmTI9Ct4zVxPig5IeP4ZxYsWDmhpEaxlfWzVDU2NFTLjD0wUVgI/VBUiS+ii6z9b0kUtQKjZeXryc5TC5qZoIaEuAIEOQ6NvpPpomBIwSioKGIIWweo5xNl4189pwN5ojTyR6K+Sy8rXk0S1Yn4UsrrROJD1JqrRMh6qAozg+2935QidDSTTlUbj2BUnndmOXIE5S0qADapsEqg77kQ4XUxWyRbOcCTw6bUJqZg5wmr4VdCsuRYHPXSkQkbppnVUHcfbkb20dv93NwtcC48qhqhEzW+ulS1rhWqwzu5v/9wPfntEak+9DVmk/8bnfpN98+VOBoblHQse22p7hKQMTero+KUnjXeczURTz/xGI3O8YM6HaU= jamison@kyoko
 [alias]
    mylog = log --author="jamison@lahman.dev" --oneline --graph --pretty='%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'
 [gpg]
