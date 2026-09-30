@@ -268,7 +268,11 @@ export function ascensionCard(ascension: Ascension): Card {
   const endless = ascension.endless
   if (endless) {
     const entry = current.ascension.steeper
-    return { name: entry.name, text: entry.text(endless.percent, endless.total.toFixed(2)) }
+    const text = entry.text(endless.percent, endless.total.toFixed(2))
+    return {
+      name: entry.name,
+      text: ascension.endsFirstGuess ? `${text} ${current.ascension.endsFirstGuess}` : text,
+    }
   }
   return current.ascension[ascension.level] ?? missing(`ascension ${ascension.level}`)
 }

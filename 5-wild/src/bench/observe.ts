@@ -46,6 +46,7 @@ import {
   packCard,
   relicCard,
   roundName,
+  ui,
 } from "../ui/lang"
 import { describeItem } from "../ui/views"
 import { legalCommands } from "./commands"
@@ -133,6 +134,10 @@ function renderText(state: RunState, context: Context): string {
     push(
       "",
       `ROUND CLEARED with ${n(round.score)} against ${n(round.target)}${round.solved ? ", word found" : ""}.`,
+      // Why a round short of its target is being called cleared, which otherwise
+      // reads as a contradiction to an agent with nothing but this text to go on.
+      ...(reward.firstGuess ? [ui().reward.firstGuess] : []),
+      ...(reward.saved ? [ui().reward.savedBy(relicCard(reward.saved).name)] : []),
       `Reward: $${reward.base} base + $${reward.unusedGuesses} unused guesses + ` +
         `$${reward.interest} interest${reward.relics ? ` + $${reward.relics} relics` : ""} = $${reward.total}`,
     )

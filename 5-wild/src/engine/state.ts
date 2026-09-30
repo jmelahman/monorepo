@@ -346,6 +346,13 @@ export type RewardBreakdown = {
    * being called cleared.
    */
   saved?: string
+  /**
+   * Set when the round was lost on points but the word was found on its first
+   * guess, which clears it anyway. Zero by construction, as with `saved`, and
+   * for the same reason the screen needs it. Absent rather than false, so every
+   * other round's reward reads as it always did and no golden vector moves.
+   */
+  firstGuess?: true
 }
 
 export type Action =

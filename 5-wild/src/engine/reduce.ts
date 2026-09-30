@@ -214,6 +214,10 @@ function enterShop(state: RunState, events: GameEvent[]): void {
  * The fail state: score below target when the round ends and, at ascension 10,
  * a word left unsolved however big the pile is. One rung lower the same round is
  * survived and paid nothing.
+ *
+ * Two things refuse a loss. A word found on the first guess, through ascension
+ * 10 and within the run's first `STAGES` stages; then a relic that saves it,
+ * such as Second Wind. Both clear the round and pay nothing.
  */
 function resolveRound(state: RunState, events: GameEvent[]): void {
   const round = state.round
@@ -233,6 +237,37 @@ function resolveRound(state: RunState, events: GameEvent[]): void {
   // any one guess: it is about what the round had to have been.
   const difficulty = difficultyOf(state)
   if (round.score < round.target || (!round.solved && difficulty.mustSolve)) {
+    // A word found on the first guess is never a loss. The first guess is the
+    // only one made knowing nothing, so it is the only solve a player could not
+    // have chosen to avoid, and the scoring punishes it hardest: the ×6 solve
+    // bonus lands on a pile of one guess, which by the middle stages is well
+    // short of any target. So the rarest, luckiest thing a round can do was the
+    // one thing guaranteed to end the run, against a player whose only mistake
+    // was being right. Asked before the tray, so a Second Wind is not spent on a
+    // round that was never going to be lost.
+    //
+    // Deliberately not guarded against the Oracle, which can name letters
+    // before the first guess and so turn this from luck into a purchase. A
+    // player who buys their way to a one-guess solve has still done the most
+    // satisfying thing in the game, and paying nothing for the round keeps it a
+    // way to survive rather than a way to farm. What it is guarded against is
+    // the two endless halves, which are the game's scoreboards: the ladder past
+    // its authored rungs, and the stages past the last balanced one, which a
+    // won run can play on into and whose targets keep growing 2.2× a stage. A
+    // purchasable escape from any target is harmless in a run and corrosive in
+    // a ranking of how far a run got, so it stops where each of them begins.
+    if (
+      round.solved &&
+      round.guesses.length === 1 &&
+      difficulty.firstGuessClears &&
+      state.stage <= STAGES
+    ) {
+      // Paid nothing, as a relic-saved round is: see below.
+      state.reward = { base: 0, unusedGuesses: 0, interest: 0, total: 0, firstGuess: true }
+      state.phase = "reward"
+      events.push({ type: "round_won" })
+      return
+    }
     // A card may still refuse the loss. Asked here, after the round-end hooks,
     // so a relic that grew on this round has grown whether or not it is saved,
     // and asked of the whole tray in slot order with the first answer winning,

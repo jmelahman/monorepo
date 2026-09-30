@@ -1475,6 +1475,7 @@ export function rewardView(state: RunState, on: Handlers): HTMLElement {
       reward?.relics ? line(copy.relics, reward.relics) : null,
       reward?.saved &&
         h("div", { class: "answer-note" }, copy.savedBy(relicCard(reward.saved).name)),
+      reward?.firstGuess && h("div", { class: "answer-note" }, copy.firstGuess),
       reward &&
         h(
           "div",
@@ -3281,7 +3282,7 @@ export function helpView(on: Handlers, offerTutorial: boolean): HTMLElement {
       h("p", { class: "sheet-lead" }, copy.farming),
       rule(copy.solveLine),
       h("h3", { class: "sheet-heading" }, copy.runHeading),
-      ruleOf(copy.target, STAGES, ROUNDS_PER_STAGE),
+      ruleOf(copy.target, STAGES, ROUNDS_PER_STAGE, AUTHORED_ASCENSIONS),
       ruleOf(copy.endless, STAGES),
       rule(copy.bosses),
       ruleOf(copy.ascensions, AUTHORED_ASCENSIONS),

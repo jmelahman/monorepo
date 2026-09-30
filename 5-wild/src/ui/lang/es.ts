@@ -256,6 +256,7 @@ export const es: Strings = {
       name: "Más Empinado",
       text: (percent, total) => `Los objetivos suben otro ${percent}\u00A0% (×${total} en total).`,
     },
+    endsFirstGuess: "La inmunidad del primer intento está desactivada.",
   },
 
   round: ["Ronda Normal", "Ronda de Élite", "Ronda de Jefe"],
@@ -503,6 +504,7 @@ export const es: Strings = {
       interest: "Intereses",
       relics: "Reliquias",
       savedBy: (name) => `Salvada por ${name}`,
+      firstGuess: "Resuelta al primer intento",
       total: "Total",
       collect: "Cobrar",
     },
@@ -694,9 +696,11 @@ export const es: Strings = {
       runHeading: "La partida",
       target: {
         term: "Supera el objetivo",
-        text: (stages, rounds) =>
+        text: (stages, rounds, authored) =>
           `${stages} fases de ${rounds} rondas. Quédate corto en el objetivo de una ronda y ` +
-          "la partida acaba. Es la única forma de perder.",
+          "la partida acaba. Es la única forma de perder, con una excepción, la inmunidad " +
+          "del primer intento: acierta la palabra en tu primer intento y la ronda queda superada sea cual sea la puntuación, " +
+          `hasta la ascensión ${authored} y la fase ${stages}.`,
       },
       endless: {
         term: "Y luego sigue, si te atreves",

@@ -94,6 +94,11 @@ export type Strings = {
    */
   ascension: Record<number, Card> & {
     steeper: CardOf<[percent: number, total: string]>
+    /**
+     * Added to the first endless rung's text, the one place the ladder takes
+     * something besides a notch of target: the first-guess clear.
+     */
+    endsFirstGuess: string
   }
   round: readonly [string, string, string]
 
@@ -350,6 +355,8 @@ export type Strings = {
       relics: string
       /** Why a round under its target is being called cleared. Gets the card's name. */
       savedBy: (name: string) => string
+      /** Why a round under its target is being called cleared, when the word came first try. */
+      firstGuess: string
       total: string
       collect: string
     }
@@ -560,7 +567,7 @@ export type Strings = {
       farming: string
       solveLine: Rule
       runHeading: string
-      target: RuleOf<[stages: number, rounds: number]>
+      target: RuleOf<[stages: number, rounds: number, authored: number]>
       endless: RuleOf<[stages: number]>
       bosses: Rule
       ascensions: RuleOf<[authored: number]>

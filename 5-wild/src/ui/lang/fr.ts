@@ -279,6 +279,7 @@ export const fr: Strings = {
       text: (percent, total) =>
         `Les objectifs montent encore de ${percent}\u00A0% (×${total} au total).`,
     },
+    endsFirstGuess: "L'immunité au premier essai est désactivée.",
   },
 
   round: ["Manche Normale", "Manche d'Élite", "Manche de Boss"],
@@ -521,6 +522,7 @@ export const fr: Strings = {
       interest: "Intérêts",
       relics: "Reliques",
       savedBy: (name) => `Sauvée par ${name}`,
+      firstGuess: "Trouvé du premier coup",
       total: "Total",
       collect: "Encaisser",
     },
@@ -713,9 +715,11 @@ export const fr: Strings = {
       runHeading: "La partie",
       target: {
         term: "Battez l'objectif",
-        text: (stages, rounds) =>
+        text: (stages, rounds, authored) =>
           `${stages} étapes de ${rounds} manches. Ratez l'objectif d'une manche et la partie ` +
-          "est finie. C'est la seule façon de perdre.",
+          "est finie. C'est la seule façon de perdre, à une exception près, l'immunité au " +
+          "premier essai\u00A0: trouvez le mot dès votre premier essai et la manche est gagnée quel que soit le score, " +
+          `jusqu'à l'ascension ${authored} et l'étape ${stages}.`,
       },
       endless: {
         term: "Puis continuez, si vous l'osez",

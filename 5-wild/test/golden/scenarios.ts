@@ -92,6 +92,18 @@ function decoys(state: RunState, words: WordSource, offset: number): string[] {
   return out
 }
 
+/**
+ * Decoys for the round's first guess and nothing after it. For the bots that
+ * read the answer and would otherwise play it straight away: a word found on
+ * the first guess clears its round whatever it scored and pays nothing for it,
+ * so a bot that opened on the answer recorded that rule on nearly every round
+ * and starved its own shop of gold. One wrong word first is what a player who
+ * cannot see the answer has to spend anyway.
+ */
+function opener(state: RunState, words: WordSource, offset: number): string[] {
+  return state.round.guesses.length === 0 ? decoys(state, words, offset) : []
+}
+
 /** How many tiles of a word would carry a modifier, copies counted separately. */
 function modTiles(state: RunState, word: string): number {
   return [...word].filter((letter) => state.letters[letter]?.mod).length
@@ -170,10 +182,14 @@ function passThrough(state: RunState): Action[] | null {
 export const SCENARIOS: readonly Scenario[] = [
   {
     name: "greedy-solver",
-    covers: "the solve bonus at its largest, and a shop purchase every time one is affordable",
+    covers:
+      "the largest solve bonus a player who cannot see the word can earn, and a shop " +
+      "purchase every time one is affordable",
     seed: 1,
     next: (state, words) => {
-      if (state.phase === "round") return firstPlayable(state, words, [state.round.answer])
+      if (state.phase === "round") {
+        return firstPlayable(state, words, [...opener(state, words, 3), state.round.answer])
+      }
       if (state.phase === "reward") return [{ type: "collect" }]
       if (state.phase === "shop") {
         const index = state.shop?.items.findIndex((item) => item && item.cost <= state.gold) ?? -1
@@ -247,7 +263,10 @@ export const SCENARIOS: readonly Scenario[] = [
             return [{ type: "use_consumable", index: 0 }]
           }
         }
-        return withCorrection(state, firstPlayable(state, words, [state.round.answer]))
+        return withCorrection(
+          state,
+          firstPlayable(state, words, [...opener(state, words, 11), state.round.answer]),
+        )
       }
       if (state.phase === "reward") return [{ type: "collect" }]
       if (state.phase === "shop") {
@@ -440,13 +459,18 @@ export const SCENARIOS: readonly Scenario[] = [
         // color, so a guess that puts it on a gray costs a gold and records
         // nothing the solve was not going to record anyway.
         const armed = Object.values(state.letters).some((letter) => letter.mod === "anchor")
+        // With no such probe it opens on a plain decoy instead; see `opener`.
         const probes =
           armed && state.round.guesses.length === 0
             ? decoys(state, words, 29)
                 .filter((word) => greenMods(state, word, "anchor") > 0)
                 .sort((a, b) => greenMods(state, b, "anchor") - greenMods(state, a, "anchor"))
             : []
-        return firstPlayable(state, words, [...probes, state.round.answer])
+        return firstPlayable(state, words, [
+          ...probes,
+          ...opener(state, words, 31),
+          state.round.answer,
+        ])
       }
       if (state.phase === "reward") return [{ type: "collect" }]
       if (state.phase === "shop") {

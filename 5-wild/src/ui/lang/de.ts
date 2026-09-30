@@ -270,6 +270,7 @@ export const de: Strings = {
       name: "Steiler",
       text: (percent, total) => `Ziele steigen um weitere ${percent}\u00A0% (×${total} insgesamt).`,
     },
+    endsFirstGuess: "Die Erstversuch-Immunität ist deaktiviert.",
   },
 
   round: ["Normale Runde", "Elite-Runde", "Boss-Runde"],
@@ -513,6 +514,7 @@ export const de: Strings = {
       interest: "Zinsen",
       relics: "Relikte",
       savedBy: (name) => `Gerettet von ${name}`,
+      firstGuess: "Im ersten Versuch gelöst",
       total: "Gesamt",
       collect: "Kassieren",
     },
@@ -707,9 +709,11 @@ export const de: Strings = {
       runHeading: "Der Durchlauf",
       target: {
         term: "Schlag das Ziel",
-        text: (stages, rounds) =>
+        text: (stages, rounds, authored) =>
           `${stages} Etappen zu je ${rounds} Runden. Verfehle das Ziel einer Runde, und der ` +
-          "Durchlauf ist vorbei. Das ist die einzige Art zu verlieren.",
+          "Durchlauf ist vorbei. Das ist die einzige Art zu verlieren, mit einer Ausnahme, " +
+          "der Erstversuch-Immunität: Findest du das Wort mit dem ersten Versuch, ist die Runde geschafft, egal wie viele " +
+          `Punkte sie gebracht hat, bis Aufstieg ${authored} und Etappe ${stages}.`,
       },
       endless: {
         term: "Dann mach weiter, wenn du dich traust",

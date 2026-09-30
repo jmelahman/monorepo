@@ -261,6 +261,7 @@ export const en: Strings = {
       name: "Steeper",
       text: (percent, total) => `Targets rise another ${percent}% (×${total} in all).`,
     },
+    endsFirstGuess: "First-guess immunity is disabled.",
   },
 
   round: ["Normal Round", "Elite Round", "Boss Round"],
@@ -544,6 +545,7 @@ export const en: Strings = {
       interest: "Interest",
       relics: "Relics",
       savedBy: (name) => `Saved by ${name}`,
+      firstGuess: "Solved on the first guess",
       total: "Total",
       collect: "Collect",
     },
@@ -761,9 +763,11 @@ export const en: Strings = {
       runHeading: "The run",
       target: {
         term: "Beat the target",
-        text: (stages, rounds) =>
+        text: (stages, rounds, authored) =>
           `${stages} stages of ${rounds} rounds. Fall short of a round's target ` +
-          "and the run is over. That is the only way to lose.",
+          "and the run is over. That is the only way to lose, with one exception, " +
+          "first-guess immunity: find the word on your very first guess and the round is cleared whatever it scored, " +
+          `up to ascension ${authored} and stage ${stages}.`,
       },
       endless: {
         term: "Then keep going, if you dare",

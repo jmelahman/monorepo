@@ -130,6 +130,12 @@ export type Ascension = {
   relicCut?: number
   /** Whether a round cleared without the word being found pays nothing at all. */
   unpaidIfUnsolved?: true
+  /**
+   * The first endless rung alone: a word found on the first guess stops
+   * clearing a round short of its target. Carried on the rung so the card can
+   * say so; the rule itself is `Difficulty.firstGuessClears`.
+   */
+  endsFirstGuess?: true
 }
 
 export const ASCENSIONS: readonly Ascension[] = [
@@ -448,6 +454,7 @@ export function ascensionAt(level: number): Ascension | undefined {
       total: difficultyAt(level).targets,
     },
     targets: ENDLESS_STEP,
+    ...(level === AUTHORED_ASCENSIONS + 1 ? { endsFirstGuess: true as const } : {}),
   }
 }
 
@@ -478,6 +485,13 @@ export type Difficulty = {
   unpaidIfUnsolved: boolean
   /** Whether a round at target but unsolved is still a loss. */
   mustSolve: boolean
+  /**
+   * Whether a word found on the round's first guess clears the round whatever
+   * it scored, within the run's first `STAGES` stages. Not an authored rung: it
+   * holds on the whole authored ladder and goes the moment the endless half
+   * begins, which the first endless rung announces; see `resolveRound` for why.
+   */
+  firstGuessClears: boolean
 }
 
 /** The terms of a run at a level. Pure in the level, so nothing caches it. */
@@ -490,6 +504,7 @@ export function difficultyAt(level: number): Difficulty {
     guesses: BASE_GUESSES,
     unpaidIfUnsolved: false,
     mustSolve: false,
+    firstGuessClears: at <= AUTHORED_ASCENSIONS,
   }
   for (const rule of ASCENSIONS) {
     if (rule.level > at) break
@@ -555,7 +570,11 @@ export function rulesFor(state: RunState): readonly Ascension[] {
   return level > 0 ? ASCENSIONS.filter((rule) => rule.level <= level) : []
 }
 
-/** Ascension 10: a round at target but unsolved is still a loss. */
+/**
+ * Ascension 10: a round at target but unsolved is still a loss. The converse
+ * never arises: a first-guess solve that clears a round short of its target
+ * has, by definition, found the word.
+ */
 export const mustSolve = (state: RunState): boolean => difficultyOf(state).mustSolve
 
 /**

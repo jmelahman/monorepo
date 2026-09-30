@@ -13,22 +13,44 @@ const type = (word: string): Action[] => [
   { type: "submit" },
 ]
 
+/** Common, vowel-heavy, and distinct, so at least one survives any boss's rule. */
+const OPENERS = ["arose", "crane", "audio", "slate", "adieu", "irate"]
+
+/** The round after the first opener it will take that is not the answer, or null. */
+function open(state: RunState): RunState | null {
+  for (const word of OPENERS) {
+    if (word === state.round.answer) continue
+    const next = apply(state, type(word))
+    if (next.round.guesses.length === 1 && next.phase === "round") return next
+  }
+  return null
+}
+
 /**
- * A bot that plays the greedy-solve line: guess the answer immediately for the
- * maximum solve bonus, then spend everything on the first thing it can afford.
- * It is not a good player, since it never farms chips, but it is a complete one,
- * and it proves the loop runs start to finish without a screen attached.
+ * A bot that plays the greedy-solve line: one opener, then the answer, for the
+ * largest solve bonus a player could honestly have earned, then spend
+ * everything on the first thing it can afford. It is not a good player, since
+ * it never farms chips, but it is a complete one, and it proves the loop runs
+ * start to finish without a screen attached.
+ *
+ * It used to play the answer on the first guess. That stopped measuring
+ * anything once a first-guess solve began clearing its round whatever it
+ * scored: a bot that reads the answer won every seed, which is a fact about
+ * the bot and not the curve. The opener is what any player who cannot see the
+ * word has to spend, so this is still the greedy line, one guess later.
  */
 function playRun(seed: number): {
   state: RunState
   roundsCleared: number
   illegal: string[]
   misplacedBosses: string[]
+  unopened: number
 } {
   let state = startRun(seed, words).state
   let roundsCleared = 0
   const illegal: string[] = []
   const misplacedBosses: string[] = []
+  let unopened = 0
 
   // 24 rounds is a full win; the cap is a runaway guard, not an expectation.
   for (let step = 0; step < 200; step++) {
@@ -44,6 +66,20 @@ function playRun(seed: number): {
       if (refusal) {
         illegal.push(`${state.round.bossId}/${state.round.answer}: ${refusal}`)
         break
+      }
+      if (state.round.guesses.length === 0) {
+        // The first opener nothing refuses and that is not the answer. A boss or
+        // a broken letter can refuse all of them, which is rare enough that
+        // going straight to the answer is the honest fallback.
+        const opened = open(state)
+        if (opened) {
+          state = opened
+          continue
+        }
+        // Recorded rather than silent: the fallback is a first-guess solve, which
+        // clears the round for nothing, and a bot leaning on it would read as a
+        // curve gone easy.
+        unopened++
       }
       state = apply(state, type(state.round.answer))
       continue
@@ -67,7 +103,7 @@ function playRun(seed: number): {
     }
   }
 
-  return { state, roundsCleared, illegal, misplacedBosses }
+  return { state, roundsCleared, illegal, misplacedBosses, unopened }
 }
 
 describe("a full run, headless", () => {
@@ -129,7 +165,10 @@ describe("a full run, headless", () => {
    * know.
    */
   it("gets a greedy solver a few rounds in, and only sometimes all the way", () => {
-    const cleared = Array.from({ length: 20 }, (_, index) => playRun(index + 1).roundsCleared)
+    const runs = Array.from({ length: 20 }, (_, index) => playRun(index + 1))
+    // Every round opened honestly, so no clear here was bought by the fallback.
+    expect(runs.map((run) => run.unopened)).toEqual(runs.map(() => 0))
+    const cleared = runs.map((run) => run.roundsCleared)
     for (const count of cleared) expect(count).toBeGreaterThanOrEqual(2)
     const won = cleared.filter((count) => count >= 24).length
     expect(won).toBeLessThan(cleared.length / 2)

@@ -17,6 +17,7 @@ import {
   reduce,
   roundTargets,
   rulesFor,
+  STAGES,
   startRun,
 } from "../../src/engine"
 // The combined rule check is an internal seam: the reducer calls it, and this
@@ -97,9 +98,14 @@ describe("the ladder", () => {
     expect(step).toBeCloseTo(1.08, 10)
     // Compounding, not accumulating: rung 20 is the notch ten times over.
     expect(difficultyAt(20).targets).toBeCloseTo(difficultyAt(10).targets * step ** 10, 10)
-    // And nothing but the targets moves up there.
+    // And nothing but the targets moves up there, past the one thing the endless
+    // half takes on arrival: a first-guess solve no longer clears a round.
     const thirtieth = difficultyAt(30)
-    expect(thirtieth).toEqual({ ...difficultyAt(10), targets: thirtieth.targets })
+    expect(thirtieth).toEqual({
+      ...difficultyAt(10),
+      targets: thirtieth.targets,
+      firstGuessClears: false,
+    })
     expect(thirtieth.targets).toBeGreaterThan(difficultyAt(10).targets)
   })
 
@@ -259,6 +265,61 @@ describe("finishing the word", () => {
 
   it("still pays out when the word was actually solved", () => {
     expect(apply(farmed(AUTHORED_ASCENSIONS), type("braid")).phase).toBe("reward")
+  })
+})
+
+describe("a first-guess solve", () => {
+  /** A round no one guess can reach, so the solve is short on points by construction. */
+  const unreachable = (ascension: number, tray: RunState["relics"] = []): RunState => {
+    const base = startRun(1, words, ascension).state
+    return { ...base, relics: tray, round: { ...base.round, target: 1e12 } }
+  }
+
+  it("clears the round however short it fell, and pays nothing for it", () => {
+    const lucky = apply(unreachable(0), type("braid"))
+    expect(lucky.phase).toBe("reward")
+    expect(lucky.round.score).toBeLessThan(lucky.round.target)
+    expect(lucky.reward).toEqual({
+      base: 0,
+      unusedGuesses: 0,
+      interest: 0,
+      total: 0,
+      firstGuess: true,
+    })
+  })
+
+  it("holds through the whole authored ladder and not one rung past it", () => {
+    expect(apply(unreachable(AUTHORED_ASCENSIONS), type("braid")).phase).toBe("reward")
+    expect(apply(unreachable(AUTHORED_ASCENSIONS + 1), type("braid")).phase).toBe("game_over")
+    expect(difficultyAt(AUTHORED_ASCENSIONS).firstGuessClears).toBe(true)
+    expect(difficultyAt(AUTHORED_ASCENSIONS + 1).firstGuessClears).toBe(false)
+  })
+
+  it("holds through the balanced stages and not into the ones a won run plays on to", () => {
+    const at = (stage: number): RunState => ({ ...unreachable(0), stage })
+    expect(apply(at(STAGES), type("braid")).phase).toBe("reward")
+    expect(apply(at(STAGES + 1), type("braid")).phase).toBe("game_over")
+  })
+
+  it("is announced on the first endless rung, and only there", () => {
+    expect(ascensionAt(AUTHORED_ASCENSIONS)?.endsFirstGuess).toBeUndefined()
+    expect(ascensionAt(AUTHORED_ASCENSIONS + 1)?.endsFirstGuess).toBe(true)
+    expect(ascensionAt(AUTHORED_ASCENSIONS + 2)?.endsFirstGuess).toBeUndefined()
+  })
+
+  it("is the first guess only: a second-guess solve short of the target still loses", () => {
+    expect(apply(unreachable(0), [...type("crane"), ...type("braid")]).phase).toBe("game_over")
+  })
+
+  it("is asked before the tray, so a Second Wind is not spent on it", () => {
+    const lucky = apply(unreachable(0, [{ id: "second_wind" }]), type("braid"))
+    expect(lucky.reward?.firstGuess).toBe(true)
+    expect(lucky.reward?.saved).toBeUndefined()
+    expect(lucky.relics).toEqual([{ id: "second_wind" }])
+  })
+
+  it("leaves a first-guess solve that made the target paid as it always was", () => {
+    expect(apply(at(0), type("braid")).reward?.firstGuess).toBeUndefined()
   })
 })
 

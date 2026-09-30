@@ -46,7 +46,7 @@ export function rulesText(): string {
     "",
     `## ${copy.runHeading}`,
     "",
-    rule(copy.target.term, copy.target.text(STAGES, ROUNDS_PER_STAGE)),
+    rule(copy.target.term, copy.target.text(STAGES, ROUNDS_PER_STAGE, AUTHORED_ASCENSIONS)),
     rule(copy.endless.term, copy.endless.text(STAGES)),
     rule(copy.bosses.term, copy.bosses.text),
     rule(copy.ascensions.term, copy.ascensions.text(AUTHORED_ASCENSIONS)),
