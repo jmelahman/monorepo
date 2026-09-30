@@ -23,9 +23,9 @@ kanban
 │   ├── update         Change a ticket's title or description
 │   ├── move           Move a ticket to another column
 │   ├── archive        Archive tickets
-│   ├── unarchive      Restore an archived ticket
-│   ├── delete         Delete an archived ticket
-│   ├── done           Move a ticket to the last column and stop its session
+│   ├── unarchive      Restore archived tickets
+│   ├── delete         Delete archived tickets
+│   ├── done           Move tickets to the last column and stop their sessions
 │   ├── sync           Update a ticket's branch from its base
 │   └── merge          Merge a ticket's branch into its base
 ├── column
@@ -140,7 +140,7 @@ Every `ticket` command takes an optional ticket ID. Without one, it opens a list
 
 - Type to filter by ID, title, column, or status. For example, `#12`, `login`, or `progress idle`.
 - `↑`/`↓` move, `Enter` runs the command on the selected ticket, and `Esc` cancels.
-- For `archive`, `Tab` marks several tickets and `Enter` archives all of them.
+- For `archive`, `unarchive`, `delete`, and `done`, `Tab` marks several tickets and `Enter` runs the command on all of them.
 - For `unarchive` and `delete`, the list shows archived tickets.
 
 The list needs an interactive terminal. In scripts, pass the ID.
@@ -271,17 +271,19 @@ Archives tickets and stops their sessions. With `--delete`, deletes them too. If
 kanban ticket archive 12 14 --delete
 ```
 
-### `ticket unarchive [id]`
+### `ticket unarchive [id...]`
 
-Restores an archived ticket.
+Restores archived tickets.
 
-### `ticket delete [id]`
+### `ticket delete [id...]`
 
-Permanently deletes an archived ticket. To archive and delete in one step, use `ticket archive --delete`.
+Permanently deletes archived tickets. To archive and delete in one step, use `ticket archive --delete`.
 
-### `ticket done [id]`
+### `ticket done [id...]`
 
-Moves the ticket to the last column and stops its session.
+Moves tickets to the last column and stops their sessions.
+
+Like `archive`, these three keep going if one ticket fails, then exit with an error.
 
 ### `ticket sync [id] [--strategy rebase|merge]`
 

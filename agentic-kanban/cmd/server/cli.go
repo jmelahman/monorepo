@@ -819,7 +819,7 @@ shell in the container is attached instead of the agent.`,
 			if archiveDelete {
 				action = pickerAction{"Archive and delete tickets", "archive + delete"}
 			}
-			ids, err := ticketArgs(ctx, url, args, boardIdent, action)
+			ids, err := ticketArgs(ctx, url, args, boardIdent, action, false)
 			if err != nil {
 				return err
 			}
@@ -827,13 +827,13 @@ shell in the container is attached instead of the agent.`,
 		},
 	}
 	archive.Flags().BoolVar(&archiveDelete, "delete", false, "Permanently delete each ticket after archiving it")
-	unarchive := simpleTicketCmd("unarchive", "Unarchive a ticket", pickerAction{"Unarchive ticket", "unarchive"}, true,
+	unarchive := simpleTicketCmd("unarchive", "Unarchive tickets", pickerAction{"Unarchive tickets", "unarchive"}, true,
 		&serverURL, &boardIdent,
 		func(c *client.Client, ctx context.Context, id int64) error { return c.UnarchiveTicket(ctx, id) })
-	delTicket := simpleTicketCmd("delete", "Permanently delete a ticket (must be archived first)", pickerAction{"Delete ticket", "delete"}, true,
+	delTicket := simpleTicketCmd("delete", "Permanently delete tickets (must be archived first)", pickerAction{"Delete tickets", "delete"}, true,
 		&serverURL, &boardIdent,
 		func(c *client.Client, ctx context.Context, id int64) error { return c.DeleteTicket(ctx, id) })
-	doneCmd := simpleTicketCmd("done", "Move a ticket to the rightmost column and stop its session", pickerAction{"Finish ticket", "finish"}, false,
+	doneCmd := simpleTicketCmd("done", "Move tickets to the rightmost column and stop their sessions", pickerAction{"Finish tickets", "finish"}, false,
 		&serverURL, &boardIdent,
 		func(c *client.Client, ctx context.Context, id int64) error { return c.DoneTicket(ctx, id) })
 
@@ -924,10 +924,11 @@ func ticketArg(ctx context.Context, url string, args []string, boardIdent string
 
 // ticketArgs is ticketArg for subcommands that act on several tickets: every
 // positional id, otherwise the tickets marked (or the one highlighted) in a
-// multi-select picker over the board's open tickets.
-func ticketArgs(ctx context.Context, url string, args []string, boardIdent string, action pickerAction) ([]int64, error) {
+// multi-select picker over the board's tickets (its archived ones when
+// archived is set).
+func ticketArgs(ctx context.Context, url string, args []string, boardIdent string, action pickerAction, archived bool) ([]int64, error) {
 	if len(args) == 0 {
-		items, err := pickTicketItems(ctx, url, boardIdent, action, false, false, true)
+		items, err := pickTicketItems(ctx, url, boardIdent, action, archived, false, true)
 		if err != nil {
 			return nil, err
 		}
@@ -1086,30 +1087,42 @@ func runTicketMerge(ctx context.Context, url string, out io.Writer, id int64, st
 }
 
 // simpleTicketCmd builds an unarchive/delete/done style subcommand
-// (optional positional ticket id, no body, no flags) that maps to a one-line
-// client call. The shape is the same for all three commands; this avoids three
-// near-identical blocks in ticketCmd(). pick names the picker opened when no
-// id is given, and archived points it at the board's archived tickets for
-// the commands that only ever act on those.
+// (optional positional ticket ids, no body, no flags) that maps to a one-line
+// client call per ticket. The shape is the same for all three commands; this
+// avoids three near-identical blocks in ticketCmd(). pick names the
+// multi-select picker opened when no id is given, and archived points it at
+// the board's archived tickets for the commands that only ever act on those.
 func simpleTicketCmd(use, short string, pick pickerAction, archived bool, serverURL, boardIdent *string, action func(c *client.Client, ctx context.Context, id int64) error) *cobra.Command {
 	return &cobra.Command{
-		Use:   use + " [id]",
+		Use:   use + " [id...]",
 		Short: short,
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, *serverURL)
-			id, err := ticketArg(ctx, url, args, *boardIdent, pick, archived)
+			ids, err := ticketArgs(ctx, url, args, *boardIdent, pick, archived)
 			if err != nil {
 				return err
 			}
-			if err := action(client.New(url, nil), ctx, id); err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s ticket %d\n", use, id)
-			return nil
+			return runTicketsEach(ctx, url, cmd.OutOrStdout(), use, ids, action)
 		},
 	}
+}
+
+// runTicketsEach runs action on each ticket, printing "<verb> ticket <id>"
+// for each success. Like runTicketArchive it keeps going past a failed
+// ticket and returns every failure joined.
+func runTicketsEach(ctx context.Context, url string, out io.Writer, verb string, ids []int64, action func(c *client.Client, ctx context.Context, id int64) error) error {
+	c := client.New(url, nil)
+	var errs []error
+	for _, id := range ids {
+		if err := action(c, ctx, id); err != nil {
+			errs = append(errs, fmt.Errorf("%s ticket %d: %w", verb, id, err))
+			continue
+		}
+		fmt.Fprintf(out, "%s ticket %d\n", verb, id)
+	}
+	return errors.Join(errs...)
 }
 
 func printTicketSummary(out io.Writer, raw json.RawMessage, asJSON bool) error {

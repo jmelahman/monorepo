@@ -560,6 +560,39 @@ func TestRunTicketArchive(t *testing.T) {
 	}
 }
 
+func TestRunTicketsEachDelete(t *testing.T) {
+	srv, store, board := newKanbanCLITestServer(t)
+	cols, _ := store.ListColumns(t.Context(), board.ID)
+	mk := func(title string) int64 {
+		t.Helper()
+		tk := &db.Ticket{BoardID: board.ID, ColumnID: cols[0].ID, Title: title, Slug: title}
+		if err := store.CreateTicket(t.Context(), tk); err != nil {
+			t.Fatal(err)
+		}
+		if err := client.New(srv.URL, nil).ArchiveTicket(t.Context(), tk.ID); err != nil {
+			t.Fatal(err)
+		}
+		return tk.ID
+	}
+	a, b := mk("alpha"), mk("beta")
+
+	// A bad id in the middle doesn't stop the rest.
+	var out bytes.Buffer
+	del := func(c *client.Client, ctx context.Context, id int64) error { return c.DeleteTicket(ctx, id) }
+	err := runTicketsEach(t.Context(), srv.URL, &out, "delete", []int64{a, 999999, b}, del)
+	if err == nil || !strings.Contains(err.Error(), "delete ticket 999999") {
+		t.Errorf("err = %v, want the missing ticket reported", err)
+	}
+	for _, id := range []int64{a, b} {
+		if got, _ := store.GetTicket(t.Context(), id); got != nil {
+			t.Errorf("ticket %d still exists after delete", id)
+		}
+		if !strings.Contains(out.String(), fmt.Sprintf("delete ticket %d\n", id)) {
+			t.Errorf("output missing delete of %d: %q", id, out.String())
+		}
+	}
+}
+
 func TestRunColumnArchiveAll(t *testing.T) {
 	srv, store, board := newKanbanCLITestServer(t)
 	cols, _ := store.ListColumns(t.Context(), board.ID)
