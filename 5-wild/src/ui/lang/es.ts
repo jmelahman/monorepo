@@ -79,7 +79,7 @@ export const es: Strings = {
     },
     hoarder: {
       name: "El Acaparador",
-      text: "Gana +40 puntos permanentes al llegar a la tienda con las dos ranuras de carta llenas",
+      text: "Gana +10 puntos permanentes al llegar a la tienda con las dos ranuras de carta llenas",
     },
     masochist: { name: "Masoquista", text: "+8 mult por casilla gris" },
     chorus: { name: "El Coro", text: "×3 mult si la palabra tiene tres vocales o más" },

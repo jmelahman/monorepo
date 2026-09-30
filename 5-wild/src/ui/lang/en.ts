@@ -96,7 +96,7 @@ export const en: Strings = {
     },
     hoarder: {
       name: "The Hoarder",
-      text: "Permanently gains +40 points when you reach the shop with both card slots full",
+      text: "Permanently gains +10 points when you reach the shop with both card slots full",
     },
     masochist: { name: "Masochist", text: "+8 mult per gray tile" },
     chorus: { name: "The Chorus", text: "×3 mult if the word holds three or more vowels" },

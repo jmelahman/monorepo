@@ -81,7 +81,7 @@ export const de: Strings = {
     },
     hoarder: {
       name: "Der Hamsterer",
-      text: "Gewinnt dauerhaft +40 Punkte, wenn du mit beiden Kartenplätzen voll in den Laden kommst",
+      text: "Gewinnt dauerhaft +10 Punkte, wenn du mit beiden Kartenplätzen voll in den Laden kommst",
     },
     masochist: { name: "Masochist", text: "+8 Mult pro grauem Feld" },
     chorus: { name: "Der Chor", text: "×3 Mult, wenn das Wort drei oder mehr Vokale hat" },

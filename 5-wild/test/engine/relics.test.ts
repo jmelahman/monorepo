@@ -264,7 +264,7 @@ describe("the relics that close a build", () => {
     }
     expect(shopped([]).relics[0]?.data).toBeUndefined()
     expect(shopped([{ id: "oracle" }]).relics[0]?.data).toBeUndefined()
-    expect(shopped([{ id: "oracle" }, { id: "hermit" }]).relics[0]?.data).toEqual({ chips: 40 })
+    expect(shopped([{ id: "oracle" }, { id: "hermit" }]).relics[0]?.data).toEqual({ chips: 10 })
   })
 
   it("announces every growth, so the card visibly gets bigger", () => {

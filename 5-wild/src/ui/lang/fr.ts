@@ -86,7 +86,7 @@ export const fr: Strings = {
     },
     hoarder: {
       name: "L'Amasseur",
-      text: "Gagne +40 points définitifs si vous arrivez en boutique avec les deux emplacements de carte pleins",
+      text: "Gagne +10 points définitifs si vous arrivez en boutique avec les deux emplacements de carte pleins",
     },
     masochist: { name: "Masochiste", text: "+8 mult par case grise" },
     chorus: { name: "Le Chœur", text: "×3 mult si le mot contient trois voyelles ou plus" },

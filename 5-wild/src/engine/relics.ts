@@ -609,13 +609,25 @@ export const RELICS: readonly Relic[] = [
     // Consumables exist to be spent, and this pays you not to spend them. That
     // is the tension it is for: every Oracle you sit on is information you chose
     // not to have, banked as chips instead.
+    //
+    // +10 a visit rather than +40. `bun run relics` cannot see it, since it
+    // prices every card fresh and a fresh Hoarder is worth nothing (×1.02), so
+    // this came from a throwaway copy that credited the growth, assuming both
+    // slots held full from the purchase on, over 250 seeds. The condition is
+    // $6 once and then free forever, and the bank lands on every guess before
+    // mult rather than once a round, so at +40 it read ×9.34 bought at the
+    // first shop and ×6.80 at the third, against Pyromaniac's ×1.91 at the top
+    // of the stock table. From the third shop +20 read ×3.91, +15 ×3.19, and
+    // +10 ×2.46: still above every rare, but that is a ceiling the figure
+    // cannot price the two unspent consumables against. Rare at +15 was the
+    // other option, and was passed over because it would still top the shelf.
     onGuess: (ctx) => {
       const banked = ctx.getData("chips")
       if (banked > 0) ctx.addChips(banked)
     },
     onShopEnter: (ctx) => {
       if (ctx.state.consumables.length >= CONSUMABLE_SLOTS) {
-        grow(ctx, "hoarder", "chips", 40, "chips")
+        grow(ctx, "hoarder", "chips", 10, "chips")
       }
     },
     growth: (instance) => ({ amount: grown(instance, "chips"), unit: "chips" }),

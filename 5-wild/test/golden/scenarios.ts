@@ -795,35 +795,38 @@ export const SCENARIOS: readonly Scenario[] = [
    * Picking a seed to get an outcome is normally how a vector stops being about
    * the rules and starts being about the bot, so the choice is defended rather
    * than asserted. Winning is genuinely rare, and the spread is not a curve but
-   * two piles: over the first 20,000 seeds, 15,872 die in stage one against 46
-   * that win, and only 2 reach stage 11. The first 3,000, where every earlier
-   * seed was found, hold 5 wins and nothing past stage 9, which is why the
-   * search had to widen. No bot wins on an arbitrary seed, so a seed had to be
-   * chosen. What 12406 was chosen *for*:
+   * two piles: over the first 20,000 seeds, 16 get past stage 8 and none of them
+   * reaches stage 11, and the first 2,500 hold none at all, which is why the
+   * search has always had to go wide. No bot wins on an arbitrary seed, so a
+   * seed had to be chosen. What 13877 was chosen *for*:
    *
    *   - It supplies the late bosses the other sixteen vectors miss between
    *     them: The Famine, The Miser and The Auditor. Measured, not assumed: the
    *     check is the union of every `boss` this file records against `BOSSES`.
-   *   - It goes as deep as anything in 20,000 seeds, reaching stage 11's boss
-   *     round, and so meets all five of the late band, The Rust and The Plateau
-   *     included. 14585 is the other one that gets there, and was passed over
-   *     for the next point.
-   *   - It is not tuned to this bot. The greedy solver wins it outright, and the
-   *     etcher, wild-smith, leveler and pack-opener all reach stage 6 or 7 on
-   *     it, where on 14585 nothing but the climber gets past stage 6. The run is
+   *   - It goes as deep as anything in 20,000 seeds, dying in stage 10's boss
+   *     round, and meets four of the late band on the way, The Rust included.
+   *     The fifth, The Plateau, is met by nothing in this file. 11695 and 9546
+   *     reach stage 10 too and meet it, and were passed over because neither
+   *     meets The Auditor, and 11695 misses The Miser as well: one uncovered
+   *     boss rather than two. With 12406 it had been three, since The Vandal
+   *     and The Rust had gone too, and this seed brings both back.
+   *   - It is not tuned to this bot. The etcher and the mystic reach stage 8 on
+   *     it, and the greedy solver, wild-smith and leveler stage 7. The run is
    *     winnable; the climber is not being carried.
+   *   - It does not hold The Hoarder, which is what the seed before it was.
    *
    * That second point is why one run can close most of the boss gap, and the
    * reason is structural rather than lucky. The late band is drawn without
-   * replacement and indexed from stage 7, so a run reaching stage 11 has met
-   * four of the five in order, and one reaching its boss round has met all five.
+   * replacement and indexed from stage 7, so a run reaching stage 10 has met
+   * three of the five in order, and one reaching its boss round has met four.
    * Those bosses were uncovered *because* nothing survived past stage 7. No
    * shallow vector could have reached them, and no number of shallow vectors
-   * would have helped. The Rust and The Plateau are in `midway` as well, which is
-   * where they came from while no seed this bot played reached stage 11's boss.
+   * would have helped. The Rust and The Plateau were once in `midway` as well,
+   * from while no seed this bot played reached stage 11's boss, until a later
+   * deal took them out of it.
    *
-   * The seed was 5517, then 2111, then 1983, then 982, and each was chosen the
-   * same way against the deal of its day. The audit that dropped SENOR and GONNA and
+   * The seed was 5517, then 2111, then 1983, then 982, then 12406, and each was
+   * chosen the same way against the deal of its day. The audit that dropped SENOR and GONNA and
    * added TEETH and EMOJI changed which word every seed deals, and 5517 went
    * from a 75-guess win to dying in stage one, taking The Miser, The Rust and
    * The Plateau out of the file with it. The scrub that took the obscenities out
@@ -834,11 +837,14 @@ export const SCENARIOS: readonly Scenario[] = [
    * and five late bosses left the file. The trims that halved Green Thumb and
    * Reserve and cut Sunk Cost and Hot Streak did it to 982, which held Hot
    * Streak, from a stage-11 win to dying unwon in stage 7, and The Miser and The
-   * Auditor left with it. None of those four times did anything go red: the
+   * Auditor left with it. The Hoarder's cut from +40 to +10 a visit did it to
+   * 12406, which held The Hoarder at 1,000 chips by the end, from a stage-11
+   * win to dying unwon at The Famine in stage 7, and the same two left again.
+   * None of those five times did anything go red: the
    * vector re-recorded cleanly and went on asserting a short run. That is the
    * standing hazard of a seed picked for what it draws, and the check that
    * catches it is coverage, not a test. Re-run it after anything that moves the
-   * deal or the shelf, or the price of a card a seed leans on — four times now,
+   * deal or the shelf, or the price of a card a seed leans on — five times now,
    * that warning has been the thing that found the damage.
    */
   {
@@ -846,7 +852,7 @@ export const SCENARIOS: readonly Scenario[] = [
     covers:
       "the run won and then played past, the computed targets beyond stage 8, and the whole " +
       "late boss band nothing else survives to meet",
-    seed: 12406,
+    seed: 13877,
     next: climb,
   },
   /*
