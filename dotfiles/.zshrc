@@ -274,28 +274,18 @@ alias power="upower -i /org/freedesktop/UPower/devices/battery_BAT0"
 alias stop="pkill -STOP"
 alias resume="pkill -CONT"
 alias hostname="cat /etc/hostname"
-alias update="sudo nixos-rebuild switch"
 alias vim="nvim"
 alias kitty="kitty --session ~/.config/kitty/startup-session.conf"
 alias zwift="CONTAINER_TOOL='podman' zwift"
-# TODO: Remove python3.12 once https://github.com/Aider-AI/aider/issues/3660 is resolved.
-alias aider="uvx --python=3.12 --from=aider-chat aider"
-alias ruff="uvx ruff"
-alias pkillgrep='function _pg() { ps aux | grep "$1" | grep -v grep | awk "{print \$2}" | xargs -r kill; }; _pg'
 alias fix-monitors="swaymsg output DP-1 position 0 0 && swaymsg output eDP-1 position 2560 0"
 alias enable="swaymsg output eDP-1 enable"
 alias disable="swaymsg output eDP-1 disable"
 alias snip="slurp | grim -g -"
 alias snap="sleep 2 && swaymsg -t get_tree | jq -r '.. | select(.focused?) | .rect | \"\(.x),\(.y) \(.width)x\(.height)\"' | grim -g -"
-alias chat="ollama run mistral-small3.2:latest"
-alias coder="ollama run qwen3-coder:latest"
-alias weak="ollama run jqwen3:0.6b"
 alias lights='smart-lights'
 alias awslogin="aws sso login"
-alias venv="uv venv .venv --python 3.11 --allow-existing && source .venv/bin/activate"
 alias activate="source .venv/bin/activate"
 alias dot='/usr/bin/git --git-dir=$HOME/.dotfiles --work-tree=$HOME'
-alias 5wild='gtk-launch 5-wild'
 
 # Functions
 function home() {

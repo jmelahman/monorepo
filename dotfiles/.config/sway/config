@@ -16,7 +16,7 @@ set $right l
 # Your preferred terminal emulator
 set $term kitty
 # Your preferred application launcher
-set $menu wmenu-run
+set $menu env PATH="$HOME/.local/bin:$PATH" wmenu-run
 
 ### Output configuration
 #
