@@ -2,6 +2,9 @@ import type { Color, Growth } from "../../engine"
 import { formatNumber as num, pluralizer } from "../format"
 import type { Strings } from "./types"
 
+/** A level's factor on the mult, to two places at most: ×1.3, ×1.69. */
+const factor = (times: number): string => `×${Number(times.toFixed(2))}`.replace(".", ",")
+
 const plural = pluralizer("de")
 
 /** Read by one refusal, which has to name the card it is turning down. */
@@ -52,13 +55,19 @@ export const de: Strings = {
     green_thumb: { name: "Grüner Daumen", text: "+4 Punkte pro grünem Feld" },
     scavenger: { name: "Aasfresser", text: "+$1 pro gelbem Feld" },
     vowel_hoarder: { name: "Vokalhorter", text: "+4 Mult pro Vokal" },
-    slow_burn: { name: "Schwelbrand", text: "+5 Mult für jeden Versuch schon in der Runde" },
+    slow_burn: {
+      name: "Schwelbrand",
+      text: "+3 Mult für jeden Versuch schon in der Runde. Gewinnt dauerhaft +3 mehr pro Runde, die in 4 Versuchen oder mehr geschafft ist",
+    },
     consonant_cluster: {
       name: "Konsonantenhäufung",
       text: "×1.5 Mult, wenn das Wort 3+ Konsonanten hintereinander hat",
     },
     cold_open: { name: "Kaltstart", text: "+30 Punkte beim ersten Versuch einer Runde" },
-    bloodhound: { name: "Bluthund", text: "+6 Punkte pro gelbem Feld" },
+    bloodhound: {
+      name: "Bluthund",
+      text: "Gewinnt dauerhaft +2 Punkte für jedes gelbe Feld, das du spielst",
+    },
     head_start: { name: "Vorsprung", text: "+15 Mult, wenn das Wort mit einem Vokal beginnt" },
     loaded_dice: { name: "Gezinkte Würfel", text: "+0 bis +20 Mult, bei jedem Versuch neu" },
     anagrammer: { name: "Anagrammist", text: "×1,5 Mult, wenn sich kein Buchstabe wiederholt" },
@@ -83,7 +92,10 @@ export const de: Strings = {
       name: "Der Hamsterer",
       text: "Gewinnt dauerhaft +10 Punkte, wenn du mit beiden Kartenplätzen voll in den Laden kommst",
     },
-    masochist: { name: "Masochist", text: "+8 Mult pro grauem Feld" },
+    masochist: {
+      name: "Masochist",
+      text: "Gewinnt dauerhaft +2 Mult für jeden Versuch mit 3 oder mehr grauen Feldern",
+    },
     chorus: { name: "Der Chor", text: "×3 Mult, wenn das Wort drei oder mehr Vokale hat" },
     alphabetist: {
       name: "Alphabetist",
@@ -92,7 +104,7 @@ export const de: Strings = {
     vault: { name: "Der Tresor", text: "+25 Punkte für jeden Versuch schon in der Runde" },
     mint: {
       name: "Die Münzstätte",
-      text: "+3 Mult pro $5, die du hältst. Du bekommst keine Zinsen.",
+      text: "Gewinnt dauerhaft +1 Mult pro $2, die du am Rundenende hältst, bis $25. Du bekommst keine Zinsen.",
     },
     scorched_earth: {
       name: "Verbrannte Erde",
@@ -128,7 +140,7 @@ export const de: Strings = {
     },
     habit: {
       name: "Macht der Gewohnheit",
-      text: "+2 Mult für jedes Wort derselben Form, das seit dem Kauf gespielt wurde",
+      text: "+3 Mult für jedes Wort derselben Form, das seit dem Kauf gespielt wurde",
     },
     no_maybes: {
       name: "Kein Vielleicht",
@@ -560,8 +572,8 @@ export const de: Strings = {
 
       level: (level) => `Stufe ${level}`,
       rangeText: (letters, chips) => `${letters} bringen +${chips} Punkte pro Stufe`,
-      levelText: (name, chips, mult) =>
-        `${name}-Wörter bringen +${chips} Punkte und +${mult} Mult pro Stufe`,
+      levelText: (name, chips, mult, times) =>
+        `${name}-Wörter bringen +${chips} Punkte, +${mult} Mult und ${factor(times)} Mult pro Stufe`,
       fallbackRange: "Bereich",
       fallbackLevel: "Stufe",
       fallbackEtching: "Gravur",
@@ -783,11 +795,14 @@ export const de: Strings = {
       note:
         "Ein Versuch zählt als die seltenste Form, die er erfüllt, also als die erste in dieser " +
         "Liste, die er erfüllt. Eine Form aufzustufen hebt alle künftigen Versuche dieser Form. " +
-        "Stufe 1 zahlt nichts, sodass erst eine Stufe eine Form lohnend macht.",
+        "Stufe 1 zahlt nichts, sodass erst eine Stufe eine Form lohnend macht. Der Laden " +
+        "bietet eine Form umso öfter an, je höher sie schon gestuft ist.",
       scoring: "zählt als",
       alsoMatches: "erfüllt außerdem",
-      payNow: (chips, mult) => `jetzt +${chips} Punkte, +${mult} Mult`,
-      payPerLevel: (chips, mult) => `+${chips} Punkte, +${mult} Mult pro Stufe`,
+      payNow: (chips, mult, times) =>
+        `jetzt +${chips} Punkte, +${mult} Mult, ${factor(times)} Mult`,
+      payPerLevel: (chips, mult, times) =>
+        `+${chips} Punkte, +${mult} Mult, ${factor(times)} Mult pro Stufe`,
     },
 
     codex: {
@@ -855,7 +870,7 @@ export const de: Strings = {
       },
       tier: { early: "Früh", mid: "Mitte", late: "Spät" },
       tierBand: (tier, first, last) => `${tier} · Etappen ${first}–${last}`,
-      shapePer: (chips, mult) => `+${chips} / +${mult} pro Stufe`,
+      shapePer: (chips, mult, times) => `+${chips} / +${mult} / ${factor(times)} pro Stufe`,
       modName: (name, pip) => `${name} ${pip}`,
       modText: (text) => `Der Buchstabe ${text}.`,
       modTextOnly: (text, letters) => `Der Buchstabe ${text}. Nur auf ${letters}.`,

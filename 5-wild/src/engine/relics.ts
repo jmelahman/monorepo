@@ -1,5 +1,5 @@
 import { ALPHABET, isVowel, MIN_LIVE_LETTERS } from "../content/letters"
-import { CONSUMABLE_SLOTS, INTEREST_PER } from "../content/rounds"
+import { CONSUMABLE_SLOTS, INTEREST_CAP, INTEREST_PER } from "../content/rounds"
 import { difficultyOf } from "./ascensions"
 import { CATEGORIES, categoryOf, isCategory, levelOf } from "./categories"
 import type { Rng } from "./rng"
@@ -107,8 +107,8 @@ export type Relic = {
 const grown = (instance: RelicInstance, key: string): number => instance.data?.[key] ?? 0
 
 /**
- * Bank a step of growth and announce it. Shared because all three growing
- * relics do exactly this and the announcement is the part worth keeping
+ * Bank a step of growth and announce it. Shared because the growing relics
+ * nearly all do exactly this and the announcement is the part worth keeping
  * identical: the player learns "this card just got bigger" from one animation,
  * whatever earned it.
  */
@@ -152,6 +152,9 @@ function perish(ctx: RelicCtx, odds: number): void {
   const { seed, stage, roundIndex } = ctx.state
   if (randomInt(derive(seed, "perish", stage, roundIndex, ctx.slot), odds) === 0) ctx.destroy()
 }
+
+/** Slow Burn's mult per guess already made: 3, plus whatever it has grown. */
+const slowBurnStep = (grownBy: number): number => 3 + grownBy
 
 const RARITY_COST: Record<Rarity, number> = {
   common: 4,
@@ -223,6 +226,28 @@ const RARITY_COST: Record<Rarity, number> = {
  * ×3.1 to ×2.6. That is a trim, not a new curve. Blank Page read ×3.21 in the
  * same harness and was left alone: three cards on a five-slot tray is the one
  * tray it is built for, and at ascension 9, with a slot gone, it reads ×2.12.
+ *
+ * Then flat cards became growers, for a reason no price on a tray could
+ * show: a target that grows ×2.2 a stage is only ever met by something that
+ * grows too, and with Snowball, The Hoarder, Hot Streak and the Pyromaniac
+ * pair banned, the builder bot won no run in the yellow, gray or farming
+ * builds and 3 of 747 in money, over 5,000 seeds. Bloodhound, The Mint and Slow
+ * Burn were the weakest card in three of them (×1.08, ×1.02, ×1.16 on
+ * `bun run relics`), so they were converted rather than joined by new cards,
+ * and Masochist was the gray build's mult half. Each grows on its build's own
+ * condition: yellows played, gold held, rounds taken slowly, probes that
+ * missed. Habit, the one card that already grew on a shape, went +2 to +3.
+ *
+ * Each was swept on `bun run builds` to about 25 wins among the runs holding
+ * it, with the old growers banned: half a percent of 5,000 seeds, a door
+ * apiece, so that six builds with nothing growing behind them come to about
+ * what the four old doors carry between them. With those banned the builder
+ * went from 32 wins to 132. With nothing banned it went from 95 to 210
+ * (4.2%), the solver from 50 to 153 and the farmer to 109, and the old doors
+ * held rather than gave way: the solver's runs holding Snowball, The Hoarder
+ * and Hot Streak won 24, 15 and 22 with the new growers struck from the shelf
+ * and 39, 43 and 42 beside them, since a run now finds a second door to
+ * pair with its first.
  */
 export const RELICS: readonly Relic[] = [
   {
@@ -261,9 +286,40 @@ export const RELICS: readonly Relic[] = [
     cost: RARITY_COST.common,
     // Pays you to stall, which is the exact opposite of what the solve bonus
     // pays you to do. Owning both is a genuine dilemma rather than a stack.
+    //
+    // The farming build's door, and Hot Streak's mirror: that card grows on a
+    // round cleared in three, this one on a round cleared in four or more, so
+    // the two are the same bet placed at opposite ends of the guess budget. It
+    // grows its *step* rather than banking a flat sum, which keeps the card
+    // what it was, a payoff that rises through the round, and makes the
+    // growth pay most on exactly the late guesses a farmer is staying for.
+    //
+    // Farming had no grower, and the builder bot committed to it won 0 of 408
+    // runs with every existing grower banned (`bun run builds`, 5,000 seeds).
+    // The step starts at 3 rather than the old flat 5, so the fresh card is
+    // weaker than it was and the growth is what it is bought for; +3 a long
+    // round. Swept against the door's wins on the same run: step 5 growing +1
+    // on rounds of five or more won 5, +2 on four or more won 11, +3 won 40
+    // from a step of 5 and 28 from a step of 3. The last is the one that lands
+    // on the half a percent a door is asked for; see the header above `RELICS`.
     onGuess: (ctx) => {
-      if (ctx.guessIndex > 0) ctx.addMult(5 * ctx.guessIndex)
+      if (ctx.guessIndex > 0) ctx.addMult(slowBurnStep(ctx.getData("step")) * ctx.guessIndex)
     },
+    onRoundEnd: (ctx, round) => {
+      if (!round.solved || round.guesses.length < 4) return
+      // Not `grow`, which announces what it banked: the card wears its step,
+      // and the step is the bank plus the base.
+      const step = grown(ctx.instance, "step") + 3
+      ctx.instance.data = { ...ctx.instance.data, step }
+      ctx.events.push({
+        type: "relic_grew",
+        slot: ctx.slot,
+        id: "slow_burn",
+        amount: slowBurnStep(step),
+        unit: "mult",
+      })
+    },
+    growth: (instance) => ({ amount: slowBurnStep(grown(instance, "step")), unit: "mult" }),
   },
   {
     id: "consonant_cluster",
@@ -289,9 +345,29 @@ export const RELICS: readonly Relic[] = [
     cost: RARITY_COST.common,
     // Yellow is the color that actually teaches you something, so this is the
     // rare relic that pays for playing well rather than for playing wide.
-    onTile: (ctx, tile) => {
-      if (tile.color === "yellow") ctx.addChips(6)
+    //
+    // It was +6 points a yellow, flat, and the weakest common that touches a
+    // guess: ×1.08 on `bun run relics` (solver, 400 seeds), and the yellow
+    // build around it won 0 with every existing grower banned. Now it banks +2
+    // for each yellow played and pays the bank on every guess, Snowball's shape
+    // on the other color: pays what it had, *then* counts, so the number on the
+    // card is the number it just added. The condition is the color, not the
+    // guess: every probe lands some yellow, but a solving guess lands none, so
+    // the card grows on the guesses that were searching and a run that finds
+    // the word on the opener feeds it nothing.
+    //
+    // Swept on `bun run builds` (builder, 5,000 seeds, every existing grower
+    // banned): +1 a yellow won 8 runs holding it, +2 won 24, +3 won 74, the
+    // last three times what a door is asked for. Held from the first shop it
+    // ends a run a mean +48, against Snowball's +61 on the color that is on
+    // every row.
+    onGuess: (ctx) => {
+      const banked = ctx.getData("chips")
+      if (banked > 0) ctx.addChips(banked)
+      const yellows = ctx.tiles.filter((tile) => tile.color === "yellow").length
+      if (yellows > 0) ctx.setData("chips", banked + 2 * yellows)
     },
+    growth: (instance) => ({ amount: grown(instance, "chips"), unit: "chips" }),
   },
   {
     id: "head_start",
@@ -686,10 +762,17 @@ export const RELICS: readonly Relic[] = [
     // every other card pays to carry. No badge: the count is five numbers, one
     // per shape, and a card cannot wear five. +2 a word rather than +1, which
     // read ×1.22 over 120 seeds and was not worth a slot; +2 reads ×1.44.
+    //
+    // +3 since, as the shape build's grower beside its levels. On
+    // `bun run builds` (builder, 5,000 seeds, every other grower banned) the
+    // run won 109 without Habit on the shelf and 124 with it at +2, 15 wins
+    // for the card; +3 won about 40 and +4 57. It is already the one card
+    // that counts every shape at once, so +4 made it the door every run
+    // walked through, which is what the flat step on Distinct was cut for.
     onGuess: (ctx) => {
       const shape = categoryOf(ctx.word).id
       const played = ctx.getData(shape)
-      if (played > 0) ctx.addMult(2 * played)
+      if (played > 0) ctx.addMult(3 * played)
       ctx.setData(shape, played + 1)
     },
   },
@@ -743,9 +826,28 @@ export const RELICS: readonly Relic[] = [
     id: "masochist",
     rarity: "rare",
     cost: RARITY_COST.rare,
-    onTile: (ctx, tile) => {
-      if (tile.color === "gray") ctx.addMult(8)
+    // The gray build's door. It paid +8 mult a gray, flat, and the build
+    // around it won 0 of 374 runs with every existing grower banned (builder,
+    // 5,000 seeds, `bun run builds`). Now it banks +2 mult on every guess that
+    // lands three grays or more and pays the bank on every guess, in
+    // Snowball's order. Three rather than five: a guess of five grays is the
+    // one Masochist was named for, but the solver lands one so rarely that +3
+    // on it grew a card held from the first shop to a mean +8 by the end of a
+    // run, over 300 seeds. The condition is still the one gray was always
+    // for, a probe that mostly missed, and it is the probe a player choosing
+    // letters to eliminate lands on purpose.
+    //
+    // Swept on the same run: three grays at +1 won 9 runs holding it, +2 won
+    // 27, +3 won 44 and +6 won 100. Being rare is what makes it steep: the
+    // shelf deals rares late, and a card found at stage 5 has three stages to
+    // grow in. Held from the first shop, three grays at +3 won 51 of 300.
+    onGuess: (ctx) => {
+      const banked = ctx.getData("mult")
+      if (banked > 0) ctx.addMult(banked)
+      const grays = ctx.tiles.filter((tile) => tile.color === "gray").length
+      if (grays >= 3) ctx.setData("mult", banked + 2)
     },
+    growth: (instance) => ({ amount: grown(instance, "mult"), unit: "mult" }),
   },
   {
     id: "chorus",
@@ -804,10 +906,35 @@ export const RELICS: readonly Relic[] = [
     // Interest already pays you to hoard; a card that *also* paid you to hoard
     // would not be a choice, it would be the answer. This way the two are
     // alternatives: compound the pile, or cash it in every guess.
+    //
+    // It paid +3 mult per $5 held, on the pile as it stood, and that was a
+    // flat card with a moving number: ×1.02 on `bun run relics`, and the money
+    // build won 3 of 747 with every existing grower banned. Now it *mints*: at
+    // the end of each round the pile is struck into mult the card keeps, +1
+    // per $2, and the card pays what it has banked on every guess. The pile is
+    // still the player's to spend, so the choice is the same one, sharpened:
+    // every dollar spent in the shop is mult the next round will not strike.
+    //
+    // The step is steep because the card is rare and the condition is dear.
+    // On `bun run builds` (builder, 5,000 seeds, every existing grower banned,
+    // the builder keeping $25 back once its tray is full) +1 per $5 won 6 runs
+    // holding it, per $4 won 9, per $3 won 14, per $2 won 25. Uncommon at $4 a
+    // step was tried for the reach instead and won 13 on 627 runs held: the
+    // shelf was never what held it back, the pile was.
     onGuess: (ctx) => {
-      const steps = Math.floor(ctx.state.gold / INTEREST_PER)
-      if (steps > 0) ctx.addMult(3 * steps)
+      const banked = ctx.getData("mult")
+      if (banked > 0) ctx.addMult(banked)
     },
+    //
+    // Struck from the pile up to the one interest stops at, $25, so a round
+    // mints +12 at most. Uncapped, the golden victor, playing past the win on
+    // $366, ended with +3,552 mult on it; the bot never holds more than it
+    // needs to, and a person would have found the pile's ceiling was the sky.
+    onRoundEnd: (ctx) => {
+      const steps = Math.floor(Math.min(ctx.state.gold, INTEREST_PER * INTEREST_CAP) / 2)
+      if (steps > 0) grow(ctx, "mint", "mult", steps, "mult")
+    },
+    growth: (instance) => ({ amount: grown(instance, "mult"), unit: "mult" }),
     interest: () => 0,
   },
   {
@@ -869,6 +996,12 @@ export const RELICS: readonly Relic[] = [
     // only the ones of that shape, so it is the payoff for spreading upgrades
     // instead of stacking one. A tenth per level keeps it modest until late:
     // ten levels bought is ×2.
+    //
+    // Left alone when levels began to compound (`Category.growth`) and the
+    // shelf began to lean toward leveled shapes, which were the two reasons it
+    // might have needed repricing: on `bun run relics` (solver, 1,000 seeds)
+    // it read ×1.13 before and ×1.15 after, ×1.23 to ×1.28 on stages 6+, still
+    // among the weakest rares. It counts levels, not what they pay.
     onGuess: (ctx) => {
       const bought = CATEGORIES.reduce((sum, c) => sum + levelOf(ctx.state, c.id) - 1, 0)
       if (bought > 0) ctx.timesMult(1 + 0.1 * bought)

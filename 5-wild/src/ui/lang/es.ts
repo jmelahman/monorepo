@@ -2,6 +2,9 @@ import type { Color, Growth } from "../../engine"
 import { formatNumber as num, pluralizer } from "../format"
 import type { Strings } from "./types"
 
+/** A level's factor on the mult, to two places at most: ×1.3, ×1.69. */
+const factor = (times: number): string => `×${Number(times.toFixed(2))}`.replace(".", ",")
+
 const plural = pluralizer("es")
 
 /** Read by one refusal, which has to name the card it is turning down. */
@@ -49,14 +52,17 @@ export const es: Strings = {
     vowel_hoarder: { name: "Acaparador de Vocales", text: "+4 mult por vocal" },
     slow_burn: {
       name: "Fuego Lento",
-      text: "+5 mult por cada intento ya hecho en la ronda",
+      text: "+3 mult por cada intento ya hecho en la ronda. Gana +3 más permanentes por cada ronda que superes en 4 intentos o más",
     },
     consonant_cluster: {
       name: "Grupo Consonántico",
       text: "×1.5 mult si la palabra tiene 3+ consonantes seguidas",
     },
     cold_open: { name: "Arranque en Frío", text: "+30 puntos en el primer intento de la ronda" },
-    bloodhound: { name: "Sabueso", text: "+6 puntos por casilla amarilla" },
+    bloodhound: {
+      name: "Sabueso",
+      text: "Gana +2 puntos permanentes por cada casilla amarilla que juegues",
+    },
     head_start: { name: "Ventaja", text: "+15 mult si la palabra empieza por vocal" },
     loaded_dice: { name: "Dados Cargados", text: "+0 a +20 mult, tirados de nuevo cada intento" },
     anagrammer: { name: "Anagramista", text: "×1,5 mult si no se repite ninguna letra" },
@@ -81,13 +87,16 @@ export const es: Strings = {
       name: "El Acaparador",
       text: "Gana +10 puntos permanentes al llegar a la tienda con las dos ranuras de carta llenas",
     },
-    masochist: { name: "Masoquista", text: "+8 mult por casilla gris" },
+    masochist: {
+      name: "Masoquista",
+      text: "Gana +2 mult permanentes por cada intento con 3 o más casillas grises",
+    },
     chorus: { name: "El Coro", text: "×3 mult si la palabra tiene tres vocales o más" },
     alphabetist: { name: "Alfabetista", text: "×2 mult si tus letras van en orden alfabético" },
     vault: { name: "La Cámara", text: "+25 puntos por cada intento ya hecho en la ronda" },
     mint: {
       name: "La Casa de la Moneda",
-      text: "+3 mult por cada $5 que tengas. No ganas intereses.",
+      text: "Gana +1 mult permanente por cada $2 que tengas al acabar una ronda, hasta $25. No ganas intereses.",
     },
     scorched_earth: {
       name: "Tierra Quemada",
@@ -120,7 +129,7 @@ export const es: Strings = {
     },
     habit: {
       name: "Fuerza de la Costumbre",
-      text: "+2 mult por cada palabra de la misma forma jugada desde que la compraste",
+      text: "+3 mult por cada palabra de la misma forma jugada desde que la compraste",
     },
     no_maybes: { name: "Sin Quizás", text: "×1,75 mult si el intento no tiene casillas amarillas" },
     compound: { name: "Interés Compuesto", text: "Duplica los intereses que ganas" },
@@ -549,8 +558,8 @@ export const es: Strings = {
 
       level: (level) => `Nv ${level}`,
       rangeText: (letters, chips) => `${letters} valen +${chips} puntos por nivel`,
-      levelText: (name, chips, mult) =>
-        `Las palabras ${name} dan +${chips} puntos y +${mult} mult por nivel`,
+      levelText: (name, chips, mult, times) =>
+        `Las palabras ${name} dan +${chips} puntos, +${mult} mult y ${factor(times)} mult por nivel`,
       fallbackRange: "Rango",
       fallbackLevel: "Nivel",
       fallbackEtching: "Grabado",
@@ -770,11 +779,13 @@ export const es: Strings = {
         "Un intento puntúa como la forma más rara con la que encaja, que es la primera de " +
         "estas con la que encaja. Subir de nivel una forma sube todos los intentos futuros de " +
         "esa forma. El nivel 1 no paga nada, así que un nivel es lo que hace que una forma " +
-        "merezca la pena.",
+        "merezca la pena. La tienda ofrece más a menudo las formas que más has subido.",
       scoring: "puntúa",
       alsoMatches: "también encaja",
-      payNow: (chips, mult) => `ahora +${chips} puntos, +${mult} mult`,
-      payPerLevel: (chips, mult) => `+${chips} puntos, +${mult} mult por nivel`,
+      payNow: (chips, mult, times) =>
+        `ahora +${chips} puntos, +${mult} mult, ${factor(times)} mult`,
+      payPerLevel: (chips, mult, times) =>
+        `+${chips} puntos, +${mult} mult, ${factor(times)} mult por nivel`,
     },
 
     codex: {
@@ -841,7 +852,7 @@ export const es: Strings = {
       },
       tier: { early: "Inicio", mid: "Medio", late: "Final" },
       tierBand: (tier, first, last) => `${tier} · fases ${first}–${last}`,
-      shapePer: (chips, mult) => `+${chips} / +${mult} por nivel`,
+      shapePer: (chips, mult, times) => `+${chips} / +${mult} / ${factor(times)} por nivel`,
       modName: (name, pip) => `${name} ${pip}`,
       modText: (text) => `La letra ${text}.`,
       modTextOnly: (text, letters) => `La letra ${text}. Solo en ${letters}.`,

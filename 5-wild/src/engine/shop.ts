@@ -1,7 +1,8 @@
 import { ALPHABET } from "../content/letters"
 import { STAGES } from "../content/rounds"
 import { difficultyOf } from "./ascensions"
-import { CATEGORIES } from "./categories"
+import type { Category } from "./categories"
+import { CATEGORIES, levelOf } from "./categories"
 import { CONSUMABLES } from "./consumables"
 import { ETCHINGS } from "./etchings"
 import type { ModId, Modifier } from "./modifiers"
@@ -45,6 +46,34 @@ export const sellValue = (cost: number): number => Math.max(1, Math.floor(cost /
  * one, but not by so much that the letter slot becomes something to skip.
  */
 const LEVEL_COST = 8
+
+/**
+ * How much more often a shape is offered for each level it already holds: a
+ * category at level three sits in the bag 1 + 2 × `LEVEL_LEAN` times.
+ *
+ * Levels were offered uniformly, and a build cannot be made out of a card that
+ * turns up once a stage. Over 2,000 seeds of a bot committed to one shape,
+ * buying its level on sight, the committed shape averaged about one level a
+ * run, so a level that compounds compounded nothing. Leaning the offer
+ * toward what the run has already bought is the Balatro model the comment in
+ * `rollUpgradeKind` asked for without the play counts it said that would need:
+ * what a player has *bought* is already in the save, and it is the stronger
+ * signal of the two, since a probe lands in Distinct whether the player wanted
+ * it or not.
+ *
+ * With every growing card struck from the shelf (`bun run builds --policy
+ * builder --ban snowball,hoarder,hot_streak,pyromaniac`, 2,000 seeds at v33)
+ * and levels at ×1.25 a step, a lean of 0 won no game, 4 won 19 and 10 won 25.
+ * 4 is the one taken, because the first level is still a free choice among five
+ * and what the lean changes is the second.
+ */
+const LEVEL_LEAN = 4
+
+/** The shapes weighted by how far the run has leveled each; see `LEVEL_LEAN`. */
+const leanedCategories = (state: RunState, from: readonly Category[]): Category[] =>
+  from.flatMap((category) =>
+    Array.from({ length: 1 + LEVEL_LEAN * (levelOf(state, category.id) - 1) }, () => category),
+  )
 
 /**
  * What one alphabet range level costs. Priced in `ranges.ts` against the etching
@@ -280,16 +309,21 @@ function rollUpgradeKind(
     if (item) return item
   }
   if (kind === "level") {
-    // Uniform across the categories, because the player picks the shape they
-    // build toward rather than being dealt one. A rare category is harder to
-    // type on purpose, not harder to find on the shelf. Balatro's model, where
-    // the offer leans toward hands you have actually played, would need play
-    // counts in the run state; it is the upgrade if uniform reads as noise.
+    // Uniform across the categories to begin with, because the player picks the
+    // shape they build toward rather than being dealt one. A rare category is
+    // harder to type on purpose, not harder to find on the shelf. Balatro's
+    // model leans the offer toward hands actually played, which would need play
+    // counts in the run state; this leans it toward shapes already leveled,
+    // which the state already holds. See `LEVEL_LEAN`.
     const categories = CATEGORIES.filter(
       (category) => !taken.has(shelfKey({ kind: "level", id: category.id })),
     )
     if (categories.length > 0) {
-      return { kind: "level", id: pick(rng, categories).id, cost: LEVEL_COST }
+      return {
+        kind: "level",
+        id: pick(rng, leanedCategories(state, categories)).id,
+        cost: LEVEL_COST,
+      }
     }
   }
   return null
@@ -457,7 +491,16 @@ export function packContents(state: RunState, pack: Pack, rng: Rng): ShopItem[] 
       const relic = rollRelic(state, pool, rng)
       item = relic ? relicItem(relic) : null
     } else {
-      const category = pick(rng, CATEGORIES)
+      // Drawn from what the pack has not laid out yet rather than retried: a
+      // leaned bag at level eight is 29 parts one shape, and the retry budget
+      // would deal a short pack long before it found the other two.
+      const category = pick(
+        rng,
+        leanedCategories(
+          state,
+          CATEGORIES.filter((c) => !seen.has(c.id)),
+        ),
+      )
       item = { kind: "level", id: category.id, cost: LEVEL_COST }
     }
     if (!item || seen.has(key(item))) continue

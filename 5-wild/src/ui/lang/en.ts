@@ -2,6 +2,9 @@ import type { Color, Growth } from "../../engine"
 import { formatNumber as num, pluralizer } from "../format"
 import type { Strings } from "./types"
 
+/** A level's factor on the mult, to two places at most: ×1.3, ×1.69. */
+const factor = (times: number): string => `×${Number(times.toFixed(2))}`
+
 /** Every sentence below that has to agree with a count asks this, not a `=== 1`. */
 const plural = pluralizer("en")
 
@@ -69,14 +72,17 @@ export const en: Strings = {
     vowel_hoarder: { name: "Vowel Hoarder", text: "+4 mult per vowel" },
     slow_burn: {
       name: "Slow Burn",
-      text: "+5 mult for each guess already made this round",
+      text: "+3 mult for each guess already made this round. Permanently gains +3 more each round you clear in 4 guesses or more",
     },
     consonant_cluster: {
       name: "Consonant Cluster",
       text: "×1.5 mult if the word has 3+ consonants in a row",
     },
     cold_open: { name: "Cold Open", text: "+30 points on the first guess of a round" },
-    bloodhound: { name: "Bloodhound", text: "+6 points per yellow tile" },
+    bloodhound: {
+      name: "Bloodhound",
+      text: "Permanently gains +2 points for each yellow tile you play",
+    },
     head_start: { name: "Head Start", text: "+15 mult if the word begins with a vowel" },
     loaded_dice: { name: "Loaded Dice", text: "+0 to +20 mult, rolled fresh every guess" },
     anagrammer: { name: "Anagrammer", text: "×1.5 mult if no letter repeats" },
@@ -98,11 +104,17 @@ export const en: Strings = {
       name: "The Hoarder",
       text: "Permanently gains +10 points when you reach the shop with both card slots full",
     },
-    masochist: { name: "Masochist", text: "+8 mult per gray tile" },
+    masochist: {
+      name: "Masochist",
+      text: "Permanently gains +2 mult for each guess with 3 or more gray tiles",
+    },
     chorus: { name: "The Chorus", text: "×3 mult if the word holds three or more vowels" },
     alphabetist: { name: "Alphabetist", text: "×2 mult if your letters are in alphabetical order" },
     vault: { name: "The Vault", text: "+25 points for each guess already made this round" },
-    mint: { name: "The Mint", text: "+3 mult per $5 you hold. You earn no interest." },
+    mint: {
+      name: "The Mint",
+      text: "Permanently gains +1 mult per $2 you hold when a round ends, up to $25. You earn no interest.",
+    },
     scorched_earth: {
       name: "Scorched Earth",
       text: "+12 mult for each letter broken out of the alphabet",
@@ -128,7 +140,7 @@ export const en: Strings = {
     blank_page: { name: "Blank Page", text: "×1 mult per empty relic slot, this one included" },
     habit: {
       name: "Force of Habit",
-      text: "+2 mult for each word of the same shape played since you bought this",
+      text: "+3 mult for each word of the same shape played since you bought this",
     },
     no_maybes: { name: "No Maybes", text: "×1.75 mult if the guess has no yellow tile" },
     compound: { name: "Compound Interest", text: "Doubles the interest you earn" },
@@ -607,8 +619,8 @@ export const en: Strings = {
       // the price is for reads as a step.
       level: (level) => `Lv ${level}`,
       rangeText: (letters, chips) => `${letters} are worth +${chips} points per level`,
-      levelText: (name, chips, mult) =>
-        `${name} words score +${chips} points and +${mult} mult per level`,
+      levelText: (name, chips, mult, times) =>
+        `${name} words score +${chips} points, +${mult} mult and ${factor(times)} mult per level`,
       fallbackRange: "Range",
       fallbackLevel: "Level",
       fallbackEtching: "Etching",
@@ -836,11 +848,13 @@ export const en: Strings = {
       note:
         "A guess scores as the rarest shape it matches, which is the first of these it " +
         "matches. Leveling a shape raises every future guess of that shape. Level 1 " +
-        "pays nothing, so a level is what makes a shape worth aiming at.",
+        "pays nothing, so a level is what makes a shape worth aiming at. The shop offers a " +
+        "shape more often the higher it is leveled.",
       scoring: "scoring",
       alsoMatches: "also matches",
-      payNow: (chips, mult) => `now +${chips} points, +${mult} mult`,
-      payPerLevel: (chips, mult) => `+${chips} points, +${mult} mult per level`,
+      payNow: (chips, mult, times) => `now +${chips} points, +${mult} mult, ${factor(times)} mult`,
+      payPerLevel: (chips, mult, times) =>
+        `+${chips} points, +${mult} mult, ${factor(times)} mult per level`,
     },
 
     codex: {
@@ -910,7 +924,7 @@ export const en: Strings = {
       },
       tier: { early: "Early", mid: "Mid", late: "Late" },
       tierBand: (tier, first, last) => `${tier} · stages ${first}–${last}`,
-      shapePer: (chips, mult) => `+${chips} / +${mult} per level`,
+      shapePer: (chips, mult, times) => `+${chips} / +${mult} / ${factor(times)} per level`,
       modName: (name, pip) => `${name} ${pip}`,
       modText: (text) => `The letter ${text}.`,
       modTextOnly: (text, letters) => `The letter ${text}. Only on ${letters}.`,

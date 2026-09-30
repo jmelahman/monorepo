@@ -1731,7 +1731,7 @@ export function describeItem(
     const card = categoryCard(item.id)
     title = category ? card.name : copy.fallbackLevel
     level = category ? levelOf(state, item.id) : 0
-    text = category ? copy.levelText(card.name, category.chips, category.mult) : ""
+    text = category ? copy.levelText(card.name, category.chips, category.mult, category.growth) : ""
     tag = copy.tagShape
     tip = copy.tipShape
   } else {
@@ -3511,8 +3511,8 @@ export function shapesView(state: RunState, on: Handlers, word: string): HTMLEle
             "span",
             { class: "shape-pay" },
             bonus.chips > 0
-              ? copy.payNow(bonus.chips, bonus.mult)
-              : copy.payPerLevel(category.chips, category.mult),
+              ? copy.payNow(bonus.chips, bonus.mult, bonus.times)
+              : copy.payPerLevel(category.chips, category.mult, category.growth),
           ),
         )
       }),
@@ -3590,7 +3590,11 @@ export function codexView(on: Handlers): HTMLElement {
         CATEGORIES.length,
         ...CATEGORIES.map((category) => {
           const card = categoryCard(category.id)
-          return entry(card.name, card.text, copy.shapePer(category.chips, category.mult))
+          return entry(
+            card.name,
+            card.text,
+            copy.shapePer(category.chips, category.mult, category.growth),
+          )
         }),
       ),
 

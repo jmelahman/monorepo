@@ -416,7 +416,8 @@ export type Strings = {
       level: (level: number) => string
       /** Spelled out letter by letter, and shared with the codex's own list. */
       rangeText: (letters: string, chips: number) => string
-      levelText: (name: string, chips: number, mult: number) => string
+      /** `times` is the factor one level multiplies the mult by, 1.3 for ×1.3. */
+      levelText: (name: string, chips: number, mult: number, times: number) => string
       /** Titles for a save that names something this build no longer sells. */
       fallbackRange: string
       fallbackLevel: string
@@ -594,8 +595,9 @@ export type Strings = {
       note: string
       scoring: string
       alsoMatches: string
-      payNow: (chips: number, mult: number) => string
-      payPerLevel: (chips: number, mult: number) => string
+      /** `times` is the whole factor at this level, compounded: 1.69 at two steps of ×1.3. */
+      payNow: (chips: number, mult: number, times: number) => string
+      payPerLevel: (chips: number, mult: number, times: number) => string
     }
 
     codex: {
@@ -613,7 +615,7 @@ export type Strings = {
       rarity: Record<Rarity, string>
       tier: Record<BossTier, string>
       tierBand: (tier: string, first: number, last: number) => string
-      shapePer: (chips: number, mult: number) => string
+      shapePer: (chips: number, mult: number, times: number) => string
       modName: (name: string, pip: string) => string
       modText: (text: string) => string
       modTextOnly: (text: string, letters: string) => string

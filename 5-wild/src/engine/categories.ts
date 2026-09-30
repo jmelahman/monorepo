@@ -40,6 +40,33 @@ export type Category = {
   chips: number
   mult: number
   /**
+   * What each level above the first multiplies the base mult by, once the
+   * flat step has landed: ×`growth` at level two, ×`growth`² at three.
+   *
+   * The flat step alone never kept pace, and the reason was measured rather
+   * than guessed. Split by whether a run ever held a card that grows, 1,000
+   * seeds of the blind solver at v32 won 12 games with one and none without,
+   * and 5,000 seeds of a bot that commits to a shape and buys its levels won
+   * none either once every growing card was struck from the shelf (`bun run
+   * builds --policy builder --ban snowball,hoarder,hot_streak,pyromaniac`). A
+   * level is a flat step while the target grows ×2.2 a stage, so a shape could
+   * be a build's identity and never its scaling. This is what makes it scale.
+   *
+   * Graded by share like the flat steps, and for the same reason: the shape a
+   * good probe lands in anyway (Distinct) must not be the one every run levels.
+   * The rare three are ×1.3, Vowel-heavy is ×1.15 because the Chorus and the
+   * Vowel Hoarder already stack on it, and Distinct is ×1.1. On that same
+   * builder with every grower struck, 5,000 seeds at v33, alongside the shelf
+   * leaning toward leveled shapes (`LEVEL_LEAN` in `shop.ts`): 31 wins
+   * (0.6%), 19 of them Vowel-heavy and 7 Cluster, against 0. At a flat ×1.25
+   * it was 19 in 2,000 seeds and 15 of them Vowel-heavy, which is why Vowel is
+   * graded down rather than the others up. Twinned and Alphabetical read zero
+   * on the bot either way, which steers only inside its information band, and
+   * a repeated letter or an alphabetical word is almost never in it; that is
+   * the bot's floor, not the shape's.
+   */
+  growth: number
+  /**
    * Whether a word is of this shape. Read directly by the relics that were
    * written around these same predicates, and used by `categoryOf` to pick which
    * one a word scores as: two jobs, one definition, so they cannot drift apart.
@@ -67,6 +94,7 @@ export const CATEGORIES: readonly Category[] = [
     id: "alphabetical",
     chips: 40,
     mult: 5,
+    growth: 1.3,
     // "" sorts below every letter, so the missing predecessor at index 0 is
     // trivially satisfied, the same thing an index guard would have said.
     matches: (word) => [...word].every((letter, i, all) => letter >= (all[i - 1] ?? "")),
@@ -75,12 +103,14 @@ export const CATEGORIES: readonly Category[] = [
     id: "vowel_heavy",
     chips: 32,
     mult: 4,
+    growth: 1.15,
     matches: (word) => [...word].filter(isVowel).length >= 3,
   },
   {
     id: "cluster",
     chips: 25,
     mult: 3,
+    growth: 1.3,
     matches: (word) => {
       let run = 0
       for (const letter of word) {
@@ -94,6 +124,7 @@ export const CATEGORIES: readonly Category[] = [
     id: "twinned",
     chips: 20,
     mult: 3,
+    growth: 1.3,
     matches: (word) => new Set(word).size < word.length,
   },
   {
@@ -103,6 +134,7 @@ export const CATEGORIES: readonly Category[] = [
     id: "distinct",
     chips: 10,
     mult: 1,
+    growth: 1.1,
     matches: (word) => new Set(word).size === word.length,
   },
 ]
@@ -149,12 +181,20 @@ export const isCategory = (id: string, word: string): boolean =>
  */
 export const levelOf = (state: RunState, id: string): number => state.levels?.[id] ?? 1
 
-/** What a category contributes at its current level. Nothing at level one. */
+/**
+ * What a category contributes at its current level: flat chips and mult, then
+ * a factor on the mult. Nothing, and ×1, at level one.
+ */
 export function levelBonus(
   state: RunState,
   category: Category,
-): { level: number; chips: number; mult: number } {
+): { level: number; chips: number; mult: number; times: number } {
   const level = levelOf(state, category.id)
   const steps = level - 1
-  return { level, chips: category.chips * steps, mult: category.mult * steps }
+  return {
+    level,
+    chips: category.chips * steps,
+    mult: category.mult * steps,
+    times: category.growth ** steps,
+  }
 }

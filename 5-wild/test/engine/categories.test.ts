@@ -4,12 +4,15 @@ import {
   CATEGORIES,
   CATEGORY_BY_ID,
   categoryOf,
+  derive,
   isCategory,
   levelBonus,
   levelOf,
+  PACK_BY_ID,
   reduce,
   startRun,
 } from "../../src/engine"
+import { packContents } from "../../src/engine/shop"
 import { realWords } from "../helpers/words"
 
 const words: WordSource = {
@@ -82,7 +85,7 @@ describe("category levels", () => {
   it("pays nothing at level one", () => {
     const state = startRun(1, words).state
     for (const category of CATEGORIES) {
-      expect(levelBonus(state, category)).toEqual({ level: 1, chips: 0, mult: 0 })
+      expect(levelBonus(state, category)).toEqual({ level: 1, chips: 0, mult: 0, times: 1 })
     }
   })
 
@@ -90,7 +93,8 @@ describe("category levels", () => {
     const distinct = CATEGORY_BY_ID.get("distinct")
     if (!distinct) throw new Error("no distinct category")
     const bonus = levelBonus(leveled("distinct", 4), distinct)
-    expect(bonus).toEqual({ level: 4, chips: distinct.chips * 3, mult: distinct.mult * 3 })
+    expect(bonus).toMatchObject({ level: 4, chips: distinct.chips * 3, mult: distinct.mult * 3 })
+    expect(bonus.times).toBeCloseTo(distinct.growth ** 3)
   })
 
   it("lands on the base, so the guess scores more chips and more mult", () => {
@@ -101,10 +105,11 @@ describe("category levels", () => {
     const distinct = CATEGORY_BY_ID.get("distinct")
     if (!distinct) throw new Error("no distinct category")
     const raised = apply(leveled("distinct", 3), type("crane"))
-    expect(raised.round.guesses[0]).toMatchObject({
-      chips: 7 + distinct.chips * 2,
-      mult: 7 + distinct.mult * 2,
-    })
+    // The factor lands on the raised base, tile mult and flat step together.
+    expect(raised.round.guesses[0]).toMatchObject({ chips: 7 + distinct.chips * 2 })
+    expect(raised.round.guesses[0]?.mult).toBeCloseTo(
+      (7 + distinct.mult * 2) * distinct.growth ** 2,
+    )
   })
 
   it("only pays the category the word actually scored as", () => {
@@ -134,7 +139,7 @@ describe("category levels", () => {
     if (!distinct) throw new Error("no distinct category")
     const state: RunState = { ...leveled("distinct", 2), relics: [{ id: "anagrammer" }] }
     const played = apply(state, type("crane"))
-    expect(played.round.guesses[0]?.mult).toBe((7 + distinct.mult) * 1.5)
+    expect(played.round.guesses[0]?.mult).toBeCloseTo((7 + distinct.mult) * distinct.growth * 1.5)
   })
 })
 
@@ -208,5 +213,25 @@ describe("the relics that read a category", () => {
     const played = apply(state, type("shrub"))
     const plain = apply(startRun(1, words).state, type("shrub"))
     expect(played.round.guesses[0]?.mult).toBe((plain.round.guesses[0]?.mult ?? 0) * 1.5)
+  })
+
+  it("leans the category pack toward the shape the run has leveled, three shapes still", () => {
+    // Distinct is the likeliest shape unleveled only by being one of five; at
+    // level five it sits in the bag 17 times against one each for the rest.
+    const pack = PACK_BY_ID.get("category")
+    if (!pack) throw new Error("no category pack")
+    const plain = startRun(1, words).state
+    const raised = leveled("alphabetical", 5)
+    let even = 0
+    let leaned = 0
+    for (let seed = 1; seed <= 400; seed++) {
+      const dealt = packContents(raised, pack, derive(seed, "pack"))
+      expect(new Set(dealt.map((item) => item.id)).size).toBe(dealt.length)
+      expect(dealt).toHaveLength(pack.options)
+      if (dealt[0]?.id === "alphabetical") leaned++
+      if (packContents(plain, pack, derive(seed, "pack"))[0]?.id === "alphabetical") even++
+    }
+    expect(even).toBeLessThan(120)
+    expect(leaned).toBeGreaterThan(250)
   })
 })

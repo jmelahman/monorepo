@@ -58,8 +58,15 @@ describe("relics", () => {
     expect(withRelic("greedy_grammarian", "quazy").last).toMatchObject({ chips: 86, mult: 4 })
   })
 
-  it("Masochist pays 8 mult per gray", () => {
-    expect(withRelic("masochist", "quazy").last).toMatchObject({ chips: 26, mult: 36 })
+  it("Masochist banks mult on a guess that mostly missed and pays it after", () => {
+    // QUAZY leaves four grays: nothing paid, 2 banked. DAIRY lands four
+    // yellows and one gray, so it is paid the 2 and banks nothing.
+    const { state } = withRelic("masochist", "quazy")
+    expect(state.round.guesses[0]).toMatchObject({ chips: 26, mult: 4 })
+    expect(state.relics[0]?.data).toEqual({ mult: 2 })
+    const after = apply(state, type("dairy"))
+    expect(after.round.guesses[1]?.mult).toBe(7)
+    expect(after.relics[0]?.data).toEqual({ mult: 2 })
   })
 
   it("Q's Bargain triples the rare letters", () => {
@@ -85,7 +92,8 @@ describe("relics", () => {
 
   it("Slow Burn pays for stalling", () => {
     expect(withRelic("slow_burn", "crane").last.mult).toBe(7)
-    expect(withRelic("slow_burn", "crane", "crane").last.mult).toBe(12)
+    expect(withRelic("slow_burn", "crane", "crane").last.mult).toBe(10)
+    expect(withRelic("slow_burn", "crane", "crane", "crane").last.mult).toBe(13)
   })
 
   it("Speedrunner triples a fast solve", () => {
@@ -103,9 +111,18 @@ describe("relics", () => {
     expect(withRelic("cold_open", "crane", "crane").last.chips).toBe(7)
   })
 
-  it("Bloodhound pays chips per yellow", () => {
-    // DAIRY lands four yellows: 9 + 24 chips.
-    expect(withRelic("bloodhound", "dairy").last).toMatchObject({ chips: 33, mult: 5 })
+  it("Bloodhound banks chips per yellow and pays them on the guesses after", () => {
+    // DAIRY lands four yellows: the first pays nothing and banks 8, the second
+    // pays those 8 and banks 8 more, Snowball's order on the other color.
+    const { state } = withRelic("bloodhound", "dairy")
+    expect(state.round.guesses[0]).toMatchObject({ chips: 9, mult: 5 })
+    expect(state.relics[0]?.data).toEqual({ chips: 8 })
+    const second = apply(state, type("dairy")).round.guesses[1]
+    expect(second).toMatchObject({ chips: 17 })
+    // CRANE lands no yellow against BRAID, so it is paid and banks nothing.
+    const after = apply(state, type("crane"))
+    expect(after.round.guesses[1]?.chips).toBe(15)
+    expect(after.relics[0]?.data).toEqual({ chips: 8 })
   })
 
   it("Anagrammer pays ×1.5 on a word with five distinct letters", () => {
@@ -186,10 +203,20 @@ describe("the relics that close a build", () => {
     return last
   }
 
-  it("The Mint turns a held pile into mult, five dollars at a time", () => {
-    // CRANE is 7 x 7. At $23 that is four whole $5 steps, so +12 mult.
-    expect(held("mint", 23, "crane")).toMatchObject({ chips: 7, mult: 19 })
-    expect(held("mint", 4, "crane")).toMatchObject({ mult: 7 })
+  it("The Mint strikes the pile into mult when a round ends, two dollars a step", () => {
+    // Nothing is minted until a round is over, so the pile alone pays nothing.
+    expect(held("mint", 23, "crane")).toMatchObject({ chips: 7, mult: 7 })
+
+    const base = startRun(1, words).state
+    const ended = (gold: number): RunState =>
+      apply({ ...base, gold, relics: [{ id: "mint" }], round: { ...base.round, target: 1 } }, [
+        ...type("braid"),
+      ])
+    // $23 at the end of the round is eleven whole $2 steps, and the card keeps them.
+    expect(ended(23).relics[0]?.data).toEqual({ mult: 11 })
+    expect(ended(1).relics[0]?.data).toBeUndefined()
+    // Struck up to the $25 interest stops at, so a bigger pile mints no more.
+    expect(ended(90).relics[0]?.data).toEqual({ mult: 12 })
   })
 
   it("The Mint takes the interest away, which is what pays for it", () => {
@@ -250,6 +277,24 @@ describe("the relics that close a build", () => {
     expect(run(["crane", "quazy", "dairy"]).relics[0]?.data).toBeUndefined()
   })
 
+  it("Slow Burn grows its step on a slow clear and not on a fast one", () => {
+    const base = startRun(1, words).state
+    const run = (probes: string[]): RunState => {
+      let state: RunState = {
+        ...base,
+        relics: [{ id: "slow_burn" }],
+        round: { ...base.round, target: 1 },
+      }
+      for (const word of probes) state = apply(state, type(word))
+      return apply(state, type("braid"))
+    }
+    // Hot Streak's mirror: the fourth guess is where this one starts counting.
+    expect(run(["crane", "quazy"]).relics[0]?.data).toBeUndefined()
+    const slow = run(["crane", "quazy", "dairy"])
+    expect(slow.relics[0]?.data).toEqual({ step: 3 })
+    expect(RELIC_BY_ID.get("slow_burn")?.growth?.(slow.relics[0] ?? { id: "" }).amount).toBe(6)
+  })
+
   it("The Hoarder grows only when both card slots are full", () => {
     const base = startRun(1, words).state
     const shopped = (consumables: RunState["consumables"]): RunState => {
@@ -285,7 +330,7 @@ describe("the relics that close a build", () => {
   })
 
   it("wears what it has grown to, so the board never has to be guessed at", () => {
-    for (const id of ["snowball", "hot_streak", "hoarder"]) {
+    for (const id of ["snowball", "hot_streak", "hoarder", "bloodhound", "mint", "masochist"]) {
       const relic = RELICS.find((entry) => entry.id === id)
       expect(relic?.growth, `${id} has no growth`).toBeDefined()
       expect(relic?.growth?.({ id }).amount).toBe(0)
@@ -501,7 +546,7 @@ describe("the relics that widen the shelf", () => {
 
   it("Force of Habit pays for every earlier word of the same shape", () => {
     const { state } = withRelic("habit", "crane", "crane", "crane")
-    expect(state.round.guesses.map((g) => g.mult)).toEqual([7, 9, 11])
+    expect(state.round.guesses.map((g) => g.mult)).toEqual([7, 10, 13])
     // SASSY is Twinned, a shape it has not seen, so it starts again from zero.
     expect(apply(state, type("sassy")).round.guesses[3]?.mult).toBe(2)
   })

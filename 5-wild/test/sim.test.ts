@@ -138,10 +138,18 @@ function report(policy: Policy, runs: readonly Outcome[]): string {
   return lines.join("\n")
 }
 
+/**
+ * The builder beside the other two because it is the one that walks through a
+ * door on purpose: it commits to an archetype at its first relic that names
+ * one, and a rule change that closes a build shows up here first. See
+ * `bun run builds` for the rate by door.
+ */
+const POLICIES = ["solver", "farmer", "builder"] as const
+
 describe("blind simulation", () => {
   const seeds = Array.from({ length: SEEDS }, (_, i) => i * 7 + 1)
   const played = new Map<Policy, Outcome[]>()
-  for (const policy of ["solver", "farmer"] as const) {
+  for (const policy of POLICIES) {
     played.set(
       policy,
       seeds.map((seed) => play(seed, policy, realWords)),
@@ -158,7 +166,7 @@ describe("blind simulation", () => {
     expect("answer" in playerView(state).round).toBe(false)
   })
 
-  for (const policy of ["solver", "farmer"] as const) {
+  for (const policy of POLICIES) {
     const runs = () => played.get(policy) ?? []
 
     /*

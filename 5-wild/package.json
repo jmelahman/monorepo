@@ -17,6 +17,7 @@
     "golden": "UPDATE_GOLDEN=1 vitest run test/golden.test.ts",
     "sim": "SIM=1 vitest run test/sim.test.ts",
     "relics": "bun tools/relics.ts",
+    "builds": "bun tools/builds.ts",
     "telemetry": "vitest run test/telemetry-report.test.ts",
     "bench:mcp": "bun tools/bench/mcp.ts",
     "bench:baseline": "bun tools/bench/baseline.ts",

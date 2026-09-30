@@ -415,11 +415,15 @@ export function scoreGuess(params: {
   // the whole point: a level raises the *base*, so every ×mult relic downstream
   // multiplies it. Leveling and multiplying compound instead of competing,
   // which is what makes a leveled category a build rather than a bonus.
+  //
+  // The factor lands on the tiles' mult and the flat step together, and on
+  // nothing a relic adds after it: a +mult card is still the tray's, not the
+  // shape's, so the shape multiplies what the word itself earned.
   const category = categoryOf(word)
   const bonus = levelBonus(state, category)
   if (bonus.chips > 0 || bonus.mult > 0) {
     ctx.chips += bonus.chips
-    ctx.mult += bonus.mult
+    ctx.mult = (ctx.mult + bonus.mult) * bonus.times
     events.push({
       type: "category",
       id: category.id,

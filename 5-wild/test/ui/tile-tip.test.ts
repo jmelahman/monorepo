@@ -121,17 +121,17 @@ describe("what a played tile says about how it scored", () => {
    * takes it away from the attentive and gives it to whoever asks, and The Fog,
    * which attacks deduction itself, is a hard enough round played straight.
    *
-   * Bloodhound is here because it is the sharpest form of the same thing: it
+   * Scavenger is here because it is the sharpest form of the same thing: it
    * pays for yellows, so naming it on a tile drawn gray is the leak in one line.
    */
   it("tells a fogged gray what color it really scored as", () => {
-    const state = play(underBoss({ ...start(), relics: [{ id: "bloodhound" }] }, "fog"), "dairy")
+    const state = play(underBoss({ ...start(), relics: [{ id: "scavenger" }] }, "fog"), "dairy")
     expect(state.round.guesses[0]?.tiles[0]).toMatchObject({ color: "yellow", shown: "gray" })
     expect(lines(state, 0, 0)).toEqual([
       "D · +2 points",
       "yellow · +1 mult",
-      "Bloodhound · +6",
-      "8 of 33 points · 1 of 5 mult",
+      "Scavenger · +$1",
+      "2 of 9 points · 1 of 5 mult",
     ])
   })
 
@@ -189,7 +189,7 @@ describe("what a played tile says about how it scored", () => {
    * to the end.
    */
   it("says nothing about a relic that was asked and did nothing", () => {
-    const state = play({ ...start(), relics: [{ id: "bloodhound" }] }, "quazy")
+    const state = play({ ...start(), relics: [{ id: "scavenger" }] }, "quazy")
     expect(lines(state, 0, 0)).toEqual([
       "Q · +10 points",
       "gray · no mult",

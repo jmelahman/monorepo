@@ -33,8 +33,17 @@
 
 import type { PlayerView } from "../../src/bench/observe"
 import { playerView } from "../../src/bench/observe"
+import { INTEREST_CAP, INTEREST_PER } from "../../src/content/rounds"
 import type { Action, Color, RunState, ShopItem, WordSource } from "../../src/engine"
-import { baseChips, computeFeedback, LETTER_CHIPS, reduce, startRun } from "../../src/engine"
+import {
+  baseChips,
+  computeFeedback,
+  difficultyOf,
+  LETTER_CHIPS,
+  reduce,
+  startRun,
+} from "../../src/engine"
+import { CATEGORY_BY_ID } from "../../src/engine/categories"
 import { placeMod } from "../golden/scenarios"
 
 /**
@@ -59,6 +68,8 @@ export type Policy =
   | "solver"
   /** Burn the early guesses on chips, then solve. More tiles scored, smaller bonus. */
   | "farmer"
+  /** Guess like the solver, but commit to a build and shop and steer for it. */
+  | "builder"
 
 /**
  * How many guesses the farmer keeps in hand to actually find the word with.
@@ -174,9 +185,66 @@ function appeal(item: ShopItem): number {
   return 1
 }
 
+/**
+ * The builds a player can commit to, as the builder policy reads them: the
+ * relics that belong to each, and the word-shape category that feeds it, if
+ * one does.
+ *
+ * Bot-side on purpose. The engine has no notion of an archetype and should not
+ * grow one to serve a harness; a card's build is a player's reading of it, and
+ * this is one player's: the archetypes the relics were written for, with the
+ * shapes split out, since a player committed to Cluster does not want a level
+ * of Twinned.
+ *
+ * Habit, Collector, Patron, Indelible and the rest are in no build: they pay
+ * whatever the tray is doing, so buying one says nothing about what to buy next.
+ */
+const BUILDS: readonly { id: string; relics: readonly string[]; category?: string }[] = [
+  { id: "green", relics: ["green_thumb", "keystone", "first_impression", "no_maybes", "snowball"] },
+  { id: "yellow", relics: ["bloodhound", "scavenger"] },
+  { id: "gray", relics: ["masochist", "greedy_grammarian"] },
+  { id: "vowel", relics: ["vowel_hoarder", "head_start", "chorus"], category: "vowel_heavy" },
+  { id: "cluster", relics: ["consonant_cluster"], category: "cluster" },
+  { id: "twinned", relics: ["twins", "doppelganger"], category: "twinned" },
+  { id: "distinct", relics: ["anagrammer"], category: "distinct" },
+  { id: "alphabetical", relics: ["alphabetist"], category: "alphabetical" },
+  { id: "money", relics: ["stipend", "mint", "compound", "royalties"] },
+  { id: "speed", relics: ["speedrunner", "sunk_cost", "hot_streak", "reserve"] },
+  { id: "farming", relics: ["slow_burn", "vault", "long_game"] },
+  { id: "sacrifice", relics: ["pyromaniac", "scorched_earth"] },
+  { id: "levels", relics: ["thesaurus"] },
+]
+
+/**
+ * When to play a consumable rather than keep it.
+ *
+ * The bot bought cards and never played one, and that was not neutral: it
+ * filled both slots by accident and kept them full, which is The Hoarder's
+ * whole condition met for free. A person holding cards they never play is a
+ * person who bought Hoarder on purpose and is paying for it in information, so
+ * the bot now plays its cards unless Hoarder is in the tray, and then it keeps
+ * them, which is the trade the card offers.
+ *
+ * The rules are a person's, not an optimum. The Oracle and The Hermit narrow
+ * the word, so they are spent once a guess has landed and the pool is still
+ * wider than two; The Fool repeats the last guess's score, so it is spent as
+ * soon as there is a guess to repeat; The Magician is spent before a guess.
+ */
+function spend(state: RunState, pool: number): number {
+  if (state.relics.some((relic) => relic.id === "hoarder")) return -1
+  const guessed = state.round.guesses.length > 0
+  return state.consumables.findIndex(({ id }) => {
+    if (id === "oracle" || id === "hermit") return guessed && pool > 2
+    if (id === "fool") return guessed
+    return id === "magician"
+  })
+}
+
 export type BlindPlayer = {
   /** The next batch of actions, or null to stop. Fed the real state; sees a view. */
   next: (state: RunState, words: WordSource) => Action[] | null
+  /** The build this player committed to, for the policy that commits. */
+  build?: () => string | null
 }
 
 export function blindPlayer(policy: Policy): BlindPlayer {
@@ -185,6 +253,9 @@ export function blindPlayer(policy: Policy): BlindPlayer {
   let income: string[] = []
   let key = ""
   let filtered = 0
+  /** The builder's commitment, taken at the first relic that belongs to a build. */
+  let build: (typeof BUILDS)[number] | null = null
+  const shapes = () => (build?.category ? CATEGORY_BY_ID.get(build.category) : undefined)
 
   /**
    * Narrow the pool by the guesses that have landed since the last look.
@@ -277,6 +348,12 @@ export function blindPlayer(policy: Policy): BlindPlayer {
     const view = playerView(state)
     narrow(view, words)
 
+    const card = spend(state, pool.length)
+    if (card >= 0) {
+      const use: Action[] = [{ type: "use_consumable", index: card }]
+      if (accepted(state, words, use)) return use
+    }
+
     const chips = (word: string) =>
       [...word].reduce((total, letter) => total + baseChips(state, letter), 0)
 
@@ -292,7 +369,8 @@ export function blindPlayer(policy: Policy): BlindPlayer {
     // nothing. Requiring an untried letter costs a little chip value and is
     // what makes this an income *line* rather than a stuck one.
     const left = view.round.maxGuesses - view.round.guesses.length
-    if (policy === "farmer" && left > FARMER_RESERVE && pool.length > 1) {
+    const farming = policy === "farmer" || (policy === "builder" && build?.id === "farming")
+    if (farming && left > FARMER_RESERVE && pool.length > 1) {
       if (income.length === 0) {
         income = [...words.allowed].sort((a, b) => tableChips(b) - tableChips(a)).slice(0, INCOME)
       }
@@ -325,9 +403,16 @@ export function blindPlayer(policy: Policy): BlindPlayer {
     const from = first ? openers : pool
     const scored = from.map((word) => ({ word, info: information(word, freq) }))
     const best = scored.reduce((top, next) => Math.max(top, next.info), 0)
+    // The builder plays the same band and takes a word of its shape out of it
+    // first when there is one. Out of the band, never: a shape bought with a
+    // guess's worth of information is a round lost to pay for a level.
+    const shape = shapes()
+    const feeds = (word: string) => (shape?.matches(word) ? 1 : 0)
     const ranked = scored
       .filter((entry) => entry.info >= best * BAND)
-      .sort((a, b) => chips(b.word) - chips(a.word) || b.info - a.info)
+      .sort(
+        (a, b) => feeds(b.word) - feeds(a.word) || chips(b.word) - chips(a.word) || b.info - a.info,
+      )
       .map((entry) => entry.word)
     const played = playable(state, words, ranked.length ? ranked : pool)
     if (played) return played
@@ -369,15 +454,65 @@ export function blindPlayer(policy: Policy): BlindPlayer {
     return playable(state, words, affordable)
   }
 
+  /**
+   * What the builder would rather buy. Its build's relics first, then a level
+   * of its shape (any shape, for the Thesaurus), then whatever the solver
+   * would have bought. The other relics stay above everything but those two,
+   * because a tray of five is the run's scaling and an empty slot is worth
+   * more than a flat step.
+   */
+  function want(item: ShopItem): number {
+    if (policy !== "builder" || !build) return appeal(item)
+    if (item.kind === "relic" && build.relics.includes(item.id)) return 7
+    if (item.kind === "level" && (build.id === "levels" || item.id === build.category)) return 6
+    return appeal(item)
+  }
+
+  /**
+   * What the builder keeps back from a purchase. Nothing, except in the money
+   * build, which is the one whose cards pay for gold *held*: interest, Compound
+   * and The Mint all read the pile at the end of a round, and a bot that spent
+   * to zero at every shop, as the other two policies do, would price all three
+   * at a player who never plays them. The floor is the pile that earns the full
+   * interest, and the build's own cards are bought through it, since a money
+   * player who passed on The Mint to keep $25 would be keeping it for nothing.
+   *
+   * Only once the tray is full. Saving from the first shop starved it: holding
+   * The Mint from the start, the builder's runs ended a mean stage 3.4 when it
+   * kept $25 back from the outset, 4.2 from a tray of four and 4.6 from a full
+   * one, over 300 seeds, and never saving at all left the card a mean +2.
+   */
+  function saving(state: RunState, item: ShopItem): number {
+    if (policy !== "builder" || build?.id !== "money") return 0
+    if (state.relics.length < difficultyOf(state).relicSlots) return 0
+    if (item.kind === "relic" && build.relics.includes(item.id)) return 0
+    return INTEREST_PER * INTEREST_CAP
+  }
+
+  function commit(state: RunState): void {
+    if (policy !== "builder" || build) return
+    for (const held of state.relics) {
+      build = BUILDS.find((b) => b.relics.includes(held.id)) ?? null
+      if (build) return
+    }
+  }
+
   return {
+    build: () => build?.id ?? null,
     next(state, words) {
+      commit(state)
       // Forced, not strategy: the shop refuses everything else until a bought
       // modifier has been pointed at a letter. Same answer as the vectors give.
       if (state.placing) return placeMod(state)
 
       const pack = state.pack
       if (pack) {
-        const index = pack.options.findIndex(Boolean)
+        const options = pack.options.map((item, index) => ({ item, index }))
+        const best = options
+          .filter((slot): slot is { item: ShopItem; index: number } => slot.item !== null)
+          .sort((a, b) => want(b.item) - want(a.item))[0]
+        const index =
+          best && want(best.item) > appeal(best.item) ? best.index : pack.options.findIndex(Boolean)
         return index >= 0 ? [{ type: "pick_pack", index }] : [{ type: "skip_pack" }]
       }
 
@@ -393,9 +528,9 @@ export function blindPlayer(policy: Policy): BlindPlayer {
           .map((item, index) => ({ item, index }))
           .filter(
             (slot): slot is { item: ShopItem; index: number } =>
-              slot.item !== null && slot.item.cost <= state.gold,
+              slot.item !== null && slot.item.cost <= state.gold - saving(state, slot.item),
           )
-          .sort((a, b) => appeal(b.item) - appeal(a.item) || b.item.cost - a.item.cost)
+          .sort((a, b) => want(b.item) - want(a.item) || b.item.cost - a.item.cost)
         for (const slot of wanted) {
           if (accepted(state, words, [{ type: "buy", index: slot.index }])) {
             return [{ type: "buy", index: slot.index }]
