@@ -244,7 +244,12 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-1) var(--space-3);
   margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-1)) calc(-1 * var(--space-2));
-  overflow: visible;
+  /* Clipped sideways, not visible: on a medium window five seats at their
+     minimum are wider than the column, and visible let the overflow run across
+     the gap and paint over the hand. `clip` (unlike `hidden`) leaves y alone, so
+     a relic's lift when it fires still has room. */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 :root.table .round-screen .relic {
@@ -282,6 +287,10 @@
   justify-self: end;
   gap: 0;
   min-width: 0;
+  /* The hand is the thing the player acts on, so if the two ever meet it is
+     the one on top. */
+  position: relative;
+  z-index: 1;
 }
 
 :root.table .round-screen .consumable {

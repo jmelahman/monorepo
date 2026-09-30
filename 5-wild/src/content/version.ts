@@ -11,4 +11,4 @@
  * forgetting to bump this fails loudly instead of quietly rewriting the
  * baseline.
  */
-export const CONTENT_VERSION = 27
+export const CONTENT_VERSION = 28

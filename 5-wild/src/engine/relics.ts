@@ -777,8 +777,8 @@ export const RELICS: readonly Relic[] = [
   },
   {
     id: "snowball",
-    rarity: "rare",
-    cost: RARITY_COST.rare,
+    rarity: "legendary",
+    cost: RARITY_COST.legendary,
     // Pays what it had, *then* counts this guess, so a tile never pays on the
     // guess that earned it. Growing after paying is what keeps the card legible:
     // the number on the card is the number it just added.

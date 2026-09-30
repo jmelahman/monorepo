@@ -24,8 +24,13 @@ export const CONSUMABLES: readonly Consumable[] = [
     cost: CONSUMABLE_COST,
     apply: (state, rng, events) => {
       const round = state.round
+      // Only a letter the last guess left unsolved is worth naming: a position
+      // already green on the board is one the player has, so revealing it spends
+      // the card on nothing. `shown`, not `color`, because it is the board the
+      // player is reading, and a boss's lie is part of it.
+      const last = round.guesses[round.guesses.length - 1]
       const hidden = round.revealed
-        .map((value, index) => (value === null ? index : -1))
+        .map((value, index) => (value === null && last?.tiles[index]?.shown !== "green" ? index : -1))
         .filter((index) => index >= 0)
       const position = shuffled(rng, hidden)[0]
       if (position === undefined) return { code: "word_already_revealed" }

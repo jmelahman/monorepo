@@ -50,7 +50,7 @@ describe("what a shop card says it is", () => {
 
   it("says the kind and leaves the rarity to the color", () => {
     const state = fresh()
-    // Snowball is rare, Keystone uncommon, Head Start common, one tag between
+    // Snowball is legendary, Keystone uncommon, Head Start common, one tag between
     // them. Rarity is on the border, on the tag's own ink and on the tray the
     // relic is bound for; saying it a fourth time cost the name room on the
     // line and pushed the kind, which is what the tag is for, into second place.
@@ -58,7 +58,7 @@ describe("what a shop card says it is", () => {
       expect(describeItem({ kind: "relic", id, cost: 6 }, state).tag, id).toBe("Relic")
     }
     // The rarity itself still comes back, because the card is colored by it.
-    expect(describeItem(ONE_OF_EACH.relic, state).rarity).toBe("rare")
+    expect(describeItem(ONE_OF_EACH.relic, state).rarity).toBe("legendary")
   })
 
   /**
