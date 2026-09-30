@@ -45,10 +45,9 @@ export type Boss = {
   /** Overrides the usual six. */
   maxGuesses?: number
   /**
-   * Scales the round's target, applied when the round is dealt and not in
-   * `roundTarget`. The stage track on the intro card lists the boss slot's
-   * target before the boss is drawn, and reading it through the boss there
-   * would name the boss a round early by its number alone.
+   * Scales the round's target. Read by `roundTarget`, so the stage track quotes
+   * the cut before the round is dealt; it names the boss anyway, so the number
+   * gives nothing away that the name does not.
    */
   target?: number
   /** Rewrites feedback before it is scored and shown. */
@@ -337,12 +336,18 @@ export const bossesIn = (tier: BossTier): readonly Boss[] =>
  * Draw without replacement *within the stage's band*, so a run never meets the
  * same boss twice and never meets a late boss early.
  *
+ * It reads the seed and the stage and nothing else, and the signature says so,
+ * because the intro card names the boss from the stage's first round, two
+ * rounds before it is dealt. A draw that read anything the player can change
+ * in between (the relics, the gold, the letters) would turn that name into a
+ * promise the deal could break.
+ *
  * Each band gets its own RNG stream, keyed by the band name. Deriving a whole
  * band's order up front, rather than picking one boss per stage, keeps the
  * sequence stable if stages are ever skipped or replayed, and keying by name
  * rather than by index means adding a band cannot reshuffle the others.
  */
-export function bossForStage(state: RunState): string {
+export function bossForStage(state: Pick<RunState, "seed" | "stage">): string {
   const tier = tierForStage(state.stage)
   const order = shuffled(derive(state.seed, "bosses", tier), bossesIn(tier))
   // The offset within the band, so stage 4 takes the mid band's first boss

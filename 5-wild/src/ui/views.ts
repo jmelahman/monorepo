@@ -7,6 +7,7 @@ import {
   BOSSES,
   baseChips,
   bossesIn,
+  bossForStage,
   CATEGORIES,
   CATEGORY_BY_ID,
   CHIPS_PER_LEVEL,
@@ -1358,12 +1359,29 @@ export function introView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
  *
  * Every target comes from `roundTarget`, the reducer's own arithmetic, rather
  * than from the table here, so the two rounds not yet dealt carry the ascension
- * the round in hand does. The boss slot is drawn as a boss and not as the boss:
- * the boss is chosen when its round is dealt, and naming it early would be a
- * promise about a draw that has not been made.
+ * the round in hand does, and the boss's own cut.
+ *
+ * The boss slot names the boss, from the stage's first round. It used to be
+ * drawn as a boss and not as the boss, on the grounds that naming it early would
+ * promise a draw not yet made, but the draw is the seed and the stage and
+ * nothing else (see `bossForStage`), so it was made when the run began, and the
+ * only thing hiding it did was turn the two shops before a boss into a hedge.
+ * Knowing The Vandal is coming is what makes a letter modifier bought the round
+ * before a real decision rather than a bad one nobody could see.
+ *
+ * Its rule is spelled out in the cell, not on a hover tip: the tip was the
+ * first version, and a rule the player has to know to go looking for is one a
+ * thumb never finds. The cell takes it at the foot of the track's type, and the
+ * track grows to hold it, which the screen can afford: the card under it is
+ * centred in whatever height is left, and at 360x800 the longest rule in any
+ * language (French's Silence, 104 characters) still left Play where it was.
+ * The cell reads as three rows: the kind and the boss's name, the rule, and the
+ * target and the status, that last pushed to the cell's foot so all three cards
+ * still end on the same line however tall the boss's runs.
  */
 function stageTrack(state: RunState): HTMLElement {
   const copy = ui().intro
+  const boss = bossCard(bossForStage(state))
   return h(
     "ol",
     { class: "stage-track", "aria-label": copy.track },
@@ -1383,16 +1401,19 @@ function stageTrack(state: RunState): HTMLElement {
           class: `track-round ${kind} ${cleared ? "cleared" : current ? "current" : ""}`,
           ...(current ? { "aria-current": "step" } : {}),
         },
-        h("div", { class: "track-name" }, roundToken(kind), copy.trackRound[index] ?? ""),
-        // The round in hand quotes the target it was dealt, which a boss may
-        // have cut (`Boss.target`); the rest quote `roundTarget`, which cannot
-        // know the boss and must not.
         h(
           "div",
-          { class: "track-target" },
-          num(current ? state.round.target : roundTarget(state, index)),
+          { class: "track-head" },
+          h("div", { class: "track-name" }, roundToken(kind), copy.trackRound[index] ?? ""),
+          kind === "boss" && h("div", { class: "track-boss" }, boss.name),
         ),
-        h("div", { class: "track-status" }, cleared && icon("check"), status),
+        kind === "boss" && h("div", { class: "track-rule" }, boss.text),
+        h(
+          "div",
+          { class: "track-foot" },
+          h("div", { class: "track-target" }, num(roundTarget(state, index))),
+          h("div", { class: "track-status" }, cleared && icon("check"), status),
+        ),
       )
     }),
   )

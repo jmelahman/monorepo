@@ -4,18 +4,17 @@ import {
   BOSS_TIERS,
   BOSSES,
   bossesIn,
+  bossForStage,
   draftChips,
   getBoss,
   LETTER_CHIPS,
   reduce,
+  roundTarget,
   STAGES,
   solveBonusFor,
   startRun,
   tierForStage,
 } from "../../src/engine"
-// Not part of the engine's public surface. The draw is an internal detail that
-// only the stage loop and this test have any business calling.
-import { bossForStage } from "../../src/engine/bosses"
 
 const words: WordSource = {
   answers: ["braid"],
@@ -324,6 +323,34 @@ describe("boss rounds", () => {
         expect(seen.has(id), `seed ${seed} repeated ${id}`).toBe(false)
         seen.add(id)
         expect(getBoss(id)?.tier).toBe(tierForStage(stage))
+      }
+    }
+  })
+
+  /*
+   * The intro card names the boss from the stage's first round, and the shops
+   * in between are spent on the strength of it, so the name has to be the deal.
+   * The preview is taken from the round in hand and the deal from a shop two
+   * rounds on with everything a player can change in between changed, which is
+   * what would catch a draw that started reading the run.
+   */
+  it("names the boss, and its target, before the round is dealt", () => {
+    for (const ascension of [0, 10]) {
+      for (let seed = 1; seed <= 40; seed++) {
+        const opening = startRun(seed, words, ascension).state
+        for (let stage = 1; stage <= STAGES + 2; stage++) {
+          const preview = { ...opening, stage }
+          const shop: RunState = {
+            ...preview,
+            roundIndex: 1,
+            phase: "shop",
+            gold: preview.gold + 17,
+            relics: [{ id: "pyromaniac" }],
+          }
+          const dealt = reduce(shop, { type: "next_round" }, words).state.round
+          expect(dealt.bossId, `seed ${seed} stage ${stage}`).toBe(bossForStage(preview))
+          expect(dealt.target, `seed ${seed} stage ${stage}`).toBe(roundTarget(preview, 2))
+        }
       }
     }
   })

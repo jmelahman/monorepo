@@ -19,6 +19,7 @@ import {
   ALPHABET,
   ascensionAt,
   baseChips,
+  bossForStage,
   CATEGORY_BY_ID,
   CONSUMABLE_SLOTS,
   difficultyOf,
@@ -191,6 +192,11 @@ function roundLines(state: RunState): string[] {
   if (round.bossId) {
     const card = bossCard(round.bossId)
     lines.push(`BOSS ${card.name}: ${card.text}`)
+  } else if (state.phase === "round") {
+    // The intro card's stage track names the stage's boss from its first round,
+    // and the shops between here and there are where a player prepares for it.
+    const card = bossCard(bossForStage(state))
+    lines.push(`STAGE BOSS (round 3) ${card.name}: ${card.text}`)
   }
 
   lines.push("BOARD")
@@ -332,16 +338,24 @@ function letterLines(state: RunState): string[] {
 }
 
 /**
- * The next round's target, for a shop deciding how much to spend. The shop
- * screen does not show it, but the intro card does a tap later, and the model
- * has no later tap to wait for.
+ * The next round's target, for a shop deciding how much to spend, and its
+ * stage's boss. The shop screen shows neither, but the intro card does a tap
+ * later, in the card and on the stage track above it, and the model has no
+ * later tap to wait for. The boss is named whichever round comes next, not only
+ * before the boss round itself: the shop after the first round is one of the
+ * two a player gets to prepare in, and naming the boss only in the second left
+ * the model one.
  */
 function nextRoundLine(state: RunState): string | null {
   const last = state.roundIndex === ROUNDS_PER_STAGE - 1
   const stage = last ? state.stage + 1 : state.stage
   const index = last ? 0 : state.roundIndex + 1
   if (stage > STAGES && !state.won) return null
-  const target = roundTarget({ ...state, stage }, index)
-  const boss = index === ROUNDS_PER_STAGE - 1 ? " (a boss round)" : ""
-  return `NEXT ROUND stage ${stage}, ${roundName(index)}${boss}: target ${n(target)}.`
+  const next = { ...state, stage }
+  const target = roundTarget(next, index)
+  const card = bossCard(bossForStage(next))
+  const line = `NEXT ROUND stage ${stage}, ${roundName(index)}: target ${n(target)}`
+  return index === ROUNDS_PER_STAGE - 1
+    ? `${line}, boss ${card.name}: ${card.text}`
+    : `${line}. STAGE BOSS (round 3) ${card.name}: ${card.text}`
 }

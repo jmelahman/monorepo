@@ -146,6 +146,61 @@
   color: var(--fg);
 }
 
+/* The kind and the boss's name on one row, side by side. Not spread to the
+   row's ends the way the target and status are at the foot: those are two
+   facts, and this is one, a label and what it names. Pushed to the far corner
+   the name read as a status of its own, and sat apart from the rule under it,
+   which starts at the left edge. Wraps rather than clips, like the foot: on
+   a 360px phone a third of the width holds "Boss" or The Drought but not both,
+   and the name then drops under the label, where it sat before the row existed.
+   Allowed to break mid-word as well, since Die Hungersnot is wider than the
+   whole cell at the label's size, and a name cut to an ellipsis is a boss the
+   player still cannot read. */
+.track-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.375rem;
+  row-gap: 0.25rem;
+}
+
+.track-boss {
+  font-size: 0.6875rem;
+  line-height: 0.875rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--edge) 60%, var(--fg));
+  overflow-wrap: anywhere;
+}
+
+.track-round.cleared .track-boss {
+  color: var(--muted);
+}
+
+/* The boss's rule, in the cell rather than on a hover tip; see `stageTrack`.
+   The name's size in body weight, so the name still reads as the heading. */
+.track-rule {
+  font-size: 0.6875rem;
+  line-height: 0.9375rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Target and status on one row at the cell's foot. `margin-top: auto` against
+   the grid's stretched rows is what keeps the three cards' last lines level
+   when the boss's rule makes its cell the tallest. Wraps rather than clips:
+   "This round" beside a five-digit target is more than a third of a 360px
+   phone holds in some languages, and the status then drops under the number,
+   which is where it sat before the row existed. */
+.track-foot {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 0.375rem;
+  row-gap: 0.25rem;
+}
+
 .track-target {
   font-size: 0.9375rem;
   font-weight: 800;

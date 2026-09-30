@@ -1,5 +1,5 @@
 import { BASE_GUESSES, RELIC_SLOTS, roundTargets } from "../content/rounds"
-import { getBoss } from "./bosses"
+import { bossForStage, getBoss } from "./bosses"
 import { found, keepGreens, useFound } from "./rules"
 import type { Refusal, RunState } from "./state"
 
@@ -519,15 +519,28 @@ export const scaleTarget = (target: number, scale: number): number =>
   scale === 1 ? target : Math.round((target * scale) / 10) * 10
 
 /**
- * What a round of this run's current stage must score, ladder included.
+ * What a round of this run's current stage must score, ladder and boss included.
  *
- * One function because two places ask: the reducer, dealing the round, and the
+ * One function because three places ask: the reducer, dealing the round, the
  * intro card's stage track, which lists all three before any but the first has
- * been dealt. Worked out separately they would agree only until someone changed
- * one of them.
+ * been dealt, and the benchmark's shop. Worked out separately they would agree
+ * only until someone changed one of them, and they did: for a while the boss's
+ * cut was taken in the reducer alone, so that the track could quote the boss
+ * slot without naming the boss, and the track had to special-case the round in
+ * hand to stop contradicting the card under it. The track names the boss now,
+ * so the cut came back here.
+ *
+ * Two roundings, the ladder's and then the boss's, because that is the order
+ * the reducer always applied them in, and the vectors recorded it.
  */
-export const roundTarget = (state: RunState, roundIndex: number): number =>
-  scaleTarget(roundTargets(state.stage)[roundIndex] ?? 0, difficultyOf(state).targets)
+export function roundTarget(state: RunState, roundIndex: number): number {
+  const target = scaleTarget(
+    roundTargets(state.stage)[roundIndex] ?? 0,
+    difficultyOf(state).targets,
+  )
+  if (roundIndex !== 2) return target
+  return scaleTarget(target, getBoss(bossForStage(state))?.target ?? 1)
+}
 
 /**
  * The rules a run is playing under, for the screens that name them.

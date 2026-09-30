@@ -33,7 +33,15 @@ export {
   rulesFor,
 } from "./ascensions"
 export type { Boss, BossTier } from "./bosses"
-export { BOSS_TIERS, BOSSES, bossesIn, getBoss, TIER_STAGES, tierForStage } from "./bosses"
+export {
+  BOSS_TIERS,
+  BOSSES,
+  bossesIn,
+  bossForStage,
+  getBoss,
+  TIER_STAGES,
+  tierForStage,
+} from "./bosses"
 export type { Category } from "./categories"
 export {
   CATEGORIES,
