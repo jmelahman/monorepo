@@ -16,6 +16,16 @@
         "reveal": "always",
         "panel": "dedicated"
       }
+    },
+    {
+      "label": "Spectator feed",
+      "type": "shell",
+      "command": "echo 'The feed on :7777 is served by the 5wild MCP server (tools/bench/mcp.ts) once the agent starts it. Open the Run URL with ?watch=<this task URL>.'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
     }
   ]
 }

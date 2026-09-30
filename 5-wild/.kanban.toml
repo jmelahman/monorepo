@@ -4,3 +4,10 @@ image = "ghcr.io/jmelahman/devcontainer:latest"
 [[task]]
 label = "Run"
 container_port = 5173
+
+# Only opens the forward: kanban's proxy dials the container port per
+# connection and outlives the task, and the feed itself belongs to the MCP
+# server the agent runs, which would lose the port to anything bound here.
+[[task]]
+label = "Spectator feed"
+container_port = 7777
