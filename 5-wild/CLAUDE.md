@@ -278,7 +278,9 @@ style but not its prose is half-finished.
 `5wild:run:v2` (the run save), `5wild:run:lang` and `5wild:run:log` beside it,
 `5wild:meta:v2` (the record), ten settings: `5wild:plain`, `5wild:speed`,
 `5wild:theme`, `5wild:skin`, `5wild:lang`, `5wild:muted`, `5wild:music`, `5wild:track`, `5wild:coached`,
-`5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. The run
+`5wild:telemetry`, and the telemetry queue, `5wild:telemetry:outbox`. One more
+exists only under `bun run dev`: `5wild:admin:checkpoint`, the sealed snapshot of
+the latest round's start that Alt+R rewinds to; see `src/ui/admin.ts`. The run
 save and its log are sealed (`src/ui/seal.ts`) so the answer is not readable in
 devtools; the key ships in the bundle, so this hides it from a glance, not from
 someone who reads the source. Bare JSON from older builds still loads. All the

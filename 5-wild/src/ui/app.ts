@@ -1,5 +1,6 @@
 import type { Action, GameEvent, Refusal, RunState, WordSource } from "../engine"
 import { MODIFIER_BY_ID, reduce, startRun } from "../engine"
+import { admin, loadCheckpoint, stashCheckpoint } from "./admin"
 import { withAmounts } from "./amounts"
 import type { Cue } from "./audio"
 import { audioContext, Sound } from "./audio"
@@ -577,6 +578,7 @@ export class App {
     if (this.state.phase === "round" && wasPhase !== "round") {
       this.intro = true
       this.sound.cue({ name: "intro", boss: Boolean(this.state.round.bossId) })
+      if (!this.watching) stashCheckpoint(this.state, this.wordsLang)
     }
     this.save()
 
@@ -1385,8 +1387,32 @@ export class App {
     // those are scaffolding the player never sees.
     this.profile.started()
     this.log = beginLog(this.state, this.wordsLang, this.profile.stats.runs)
+    stashCheckpoint(this.state, this.wordsLang)
     // Persisted before the first keypress: a fresh run is already a run, and
     // closing the app on the intro card should not silently reroll the word.
+    this.save()
+    this.render()
+  }
+
+  /**
+   * Put the run back to the start of its latest round. Admin only; see `./admin`.
+   *
+   * The log goes with it: a replay whose steps run past the rewind replays into
+   * a different run, and one quietly rewound would be a balance figure nobody
+   * played. The record is left alone, so a retried round is tallied twice,
+   * which a tester can live with and a player never sees.
+   */
+  private retryRound(): void {
+    if (this.watching || this.busy) return
+    const checkpoint = loadCheckpoint(this.wordsLang)
+    if (!checkpoint) return
+    this.log = null
+    this.thanked = null
+    this.state = checkpoint
+    this.atTitle = false
+    this.overlay = null
+    this.arming = null
+    this.intro = true
     this.save()
     this.render()
   }
@@ -1854,6 +1880,14 @@ export class App {
       // Not a timeout, which was the other way to do it. A tip is read at the
       // reader's pace, and one timed for the relic that says six words would
       // vanish under the letter whose tip runs to five lines.
+      // Ahead of everything, sheets included: the round most worth retrying is
+      // the one whose game-over card is up. `code` rather than `key`, since
+      // Alt+R is ® on a Mac. See `./admin`.
+      if (admin && event.altKey && event.code === "KeyR") {
+        this.retryRound()
+        event.preventDefault()
+        return
+      }
       if (event.key === "Escape" && this.hovered) {
         this.showTip(null)
         event.preventDefault()
