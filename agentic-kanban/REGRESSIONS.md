@@ -256,3 +256,32 @@ process whose `/proc/<pid>/environ` carries it, which also reaches grandchildren
 reparented away from the task shell, plus every descendant of a tagged process
 (catching `sudo`/`env -i` children that drop the marker). Don't reintroduce a PID-based stop, and
 don't swallow the stop exec's error — both UIs trust a 204 to mean it worked.
+
+### `task_runs` rows outlive the process watching them
+
+A run leaves `running` only when something records it. Normally that's the
+output goroutine `tasks.Runner.Start` spawns, which marks the run exited
+at EOF. That goroutine lives in the server process, and Docker can't
+re-attach to an exec. So after a server restart (a restarted devcontainer,
+for example), every run it was watching stays `running` forever. `Stop`
+used to just run the stop script and wait for the goroutine to notice. For
+an orphan it killed a process nobody was watching, or found nothing after
+a container restart, and returned 204 with the row unchanged. Rules:
+
+- The runner tracks the runs it watches (`live`). Every other `running`
+  row is an orphan: `Stop` marks it `stopped` itself, and `Reconcile` (run
+  on `GET /api/sessions/{id}/task-runs`) closes it once there's definitive
+  evidence. That means the session has no container, the run has no exec,
+  or `ExecState` reports the exec gone or finished. An inspect error is not
+  evidence. Only orphans cost a docker call, which keeps the 2s-polled list
+  cheap.
+- Session `Stop` removes the container, so it marks the session's
+  remaining runs `stopped` (`StopRunningTaskRuns`).
+- If the stop script fails because the container is definitively gone,
+  `Stop` still closes the orphan instead of returning 500.
+- Close runs only with `FinishTaskRun` (conditional on `status='running'`).
+  The goroutine, `Stop`, reconciliation and session stop race each other,
+  and the first writer's exit code has to stand. Start's failure paths use
+  `abandon`, which outlives the cancelled request context.
+- A created-but-never-started exec inspects as not running with exit code
+  0. `ExecState` treats `Pid == 0` as "never ran", with no exit code.

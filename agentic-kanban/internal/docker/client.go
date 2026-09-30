@@ -48,6 +48,29 @@ func (c *Client) ContainerRunning(ctx context.Context, id string) (bool, error) 
 	return insp.State != nil && insp.State.Running, nil
 }
 
+// ExecState reports whether a docker exec is still running and, once it
+// has finished, its exit code. An exec the daemon no longer knows about
+// (its container was removed or restarted), or one that was created but
+// never started (no pid), is simply not running, with no exit code; any
+// other inspect failure is returned, as for ContainerRunning.
+func (c *Client) ExecState(ctx context.Context, execID string) (running bool, exitCode *int, err error) {
+	insp, err := c.cli.ContainerExecInspect(ctx, execID)
+	if err != nil {
+		if cerrdefs.IsNotFound(err) {
+			return false, nil, nil
+		}
+		return false, nil, err
+	}
+	if insp.Running {
+		return true, nil, nil
+	}
+	if insp.Pid == 0 {
+		return false, nil, nil // never started: its zero ExitCode is not a result
+	}
+	code := insp.ExitCode
+	return false, &code, nil
+}
+
 // Rootless reports whether the daemon runs in rootless mode (cached after
 // the first call). Under rootless docker, root inside a container maps to
 // the daemon's host user while other uids map to subordinate ids — callers

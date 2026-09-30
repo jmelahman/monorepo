@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -198,10 +199,45 @@ type Runner struct {
 
 	mu       sync.Mutex
 	channels map[int64]*broadcastChan
+
+	// live holds the runs this process is watching: Start's output goroutine
+	// records their exit. Any other run the DB calls running was started by
+	// an earlier server process, and nothing will ever record its exit (an
+	// exec can't be re-attached), so Stop and Reconcile close it out instead.
+	// liveMu is held across the row insert in Start so Reconcile never sees
+	// a new run before it's marked live.
+	liveMu sync.Mutex
+	live   map[int64]bool
+
+	// execState, stopExec and containerRunning reach the container for
+	// Reconcile and Stop. They default to the docker client; tests swap in
+	// stubs.
+	execState        func(ctx context.Context, execID string) (running bool, exitCode *int, err error)
+	stopExec         func(ctx context.Context, containerID string, runID int64) error
+	containerRunning func(ctx context.Context, containerID string) (bool, error)
 }
 
+// execInspectTimeout bounds each exec inspect Reconcile makes, so a hung
+// daemon can't stall the polled task-run list.
+const execInspectTimeout = 2 * time.Second
+
 func NewRunner(store *db.Store, dc *docker.Client, h *hooks.Runner) *Runner {
-	return &Runner{store: store, docker: dc, hooks: h, channels: map[int64]*broadcastChan{}}
+	r := &Runner{store: store, docker: dc, hooks: h, channels: map[int64]*broadcastChan{}, live: map[int64]bool{}}
+	if dc != nil {
+		r.execState = dc.ExecState
+		r.containerRunning = dc.ContainerRunning
+		r.stopExec = func(ctx context.Context, containerID string, runID int64) error {
+			_, err := dc.ExecRun(ctx, containerID, []string{"sh", "-c", stopScript(runID)})
+			return err
+		}
+	}
+	return r
+}
+
+func (r *Runner) isLive(id int64) bool {
+	r.liveMu.Lock()
+	defer r.liveMu.Unlock()
+	return r.live[id]
 }
 
 // Start launches a task inside the container; output is streamed via Subscribe.
@@ -218,9 +254,21 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 
 	full := strings.TrimSpace(task.Command + " " + strings.Join(task.Args, " "))
 	tr := &db.TaskRun{SessionID: sess.ID, TaskLabel: task.Label, Command: full, Status: db.TaskRunStatusRunning}
+	r.liveMu.Lock()
 	if err := r.store.CreateTaskRun(ctx, tr); err != nil {
+		r.liveMu.Unlock()
 		return nil, err
 	}
+	r.live[tr.ID] = true
+	r.liveMu.Unlock()
+	started := false
+	defer func() {
+		if !started {
+			r.liveMu.Lock()
+			delete(r.live, tr.ID)
+			r.liveMu.Unlock()
+		}
+	}()
 
 	env := make([]string, 0, len(task.Env)+1)
 	for k, v := range task.Env {
@@ -240,27 +288,25 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 		Env:          env,
 	})
 	if err != nil {
-		zero := -1
-		_ = r.store.UpdateTaskRunStatus(ctx, tr.ID, db.TaskRunStatusExited, &zero)
+		r.abandon(ctx, tr.ID)
 		return nil, err
 	}
 	// Record the exec so the run can be traced back to it. The exec hasn't
 	// started yet (attach starts it), so bail out before anything runs.
 	if err := r.store.SetTaskRunExecID(ctx, tr.ID, resp.ID); err != nil {
-		zero := -1
-		_ = r.store.UpdateTaskRunStatus(ctx, tr.ID, db.TaskRunStatusExited, &zero)
+		r.abandon(ctx, tr.ID)
 		return nil, fmt.Errorf("record exec id: %w", err)
 	}
 	tr.ExecID = &resp.ID
 
 	att, err := r.docker.Raw().ContainerExecAttach(ctx, resp.ID, container.ExecStartOptions{})
 	if err != nil {
-		zero := -1
-		_ = r.store.UpdateTaskRunStatus(ctx, tr.ID, db.TaskRunStatusExited, &zero)
+		r.abandon(ctx, tr.ID)
 		return nil, err
 	}
 
 	bc := r.getOrCreateChannel(tr.ID)
+	started = true
 
 	// Without a TTY the exec's stdout and stderr arrive multiplexed, each
 	// frame behind an 8-byte header; demux them back into one plain stream
@@ -291,7 +337,10 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 		if ierr == nil {
 			exitCode = inspect.ExitCode
 		}
-		_ = r.store.UpdateTaskRunStatus(context.Background(), tr.ID, db.TaskRunStatusExited, &exitCode)
+		_, _ = r.store.FinishTaskRun(context.Background(), tr.ID, db.TaskRunStatusExited, &exitCode)
+		r.liveMu.Lock()
+		delete(r.live, tr.ID)
+		r.liveMu.Unlock()
 		bc.close()
 
 		boardID := boardIDForSession(context.Background(), r.store, sess.ID)
@@ -308,6 +357,16 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 		"task_label": task.Label,
 	})
 	return tr, nil
+}
+
+// abandon closes a run Start couldn't get going, as exited -1. It outlives
+// ctx: Start usually fails because the request was cancelled, and the row
+// must not be left running.
+func (r *Runner) abandon(ctx context.Context, id int64) {
+	code := -1
+	if _, err := r.store.FinishTaskRun(context.WithoutCancel(ctx), id, db.TaskRunStatusExited, &code); err != nil {
+		log.Printf("task run %d: record failed start: %v", id, err)
+	}
 }
 
 // taskRunEnv is the environment variable Start tags every run's exec with.
@@ -353,16 +412,82 @@ kill -TERM $all 2>/dev/null
 exit 0`, taskRunMarker(id))
 }
 
-// Stop sends SIGTERM to every process belonging to the run.
+// Stop sends SIGTERM to every process belonging to the run. A run this
+// process is watching gets its exit recorded by Start's goroutine once its
+// output ends; any other run (orphaned by a server restart, or whose
+// container is gone) is marked stopped here, since nothing else will.
+//
+// See REGRESSIONS.md: "task_runs rows outlive the process watching them".
 func (r *Runner) Stop(ctx context.Context, sess *db.Session, tr *db.TaskRun) error {
 	if tr.Status != db.TaskRunStatusRunning {
 		return nil
 	}
-	if sess.ContainerID == nil || *sess.ContainerID == "" {
-		return errors.New("session not running")
+	if sess.ContainerID != nil && *sess.ContainerID != "" {
+		if err := r.stopExec(ctx, *sess.ContainerID, tr.ID); err != nil {
+			// The row may point at a container that's gone (removed while
+			// the server was down). Nothing can be running in it then, so
+			// close the orphan instead of failing. A live run's goroutine
+			// records its own end.
+			if r.isLive(tr.ID) || !r.containerGone(ctx, *sess.ContainerID) {
+				return fmt.Errorf("stop task run %d: %w", tr.ID, err)
+			}
+		} else if r.isLive(tr.ID) {
+			return nil
+		}
 	}
-	if _, err := r.docker.ExecRun(ctx, *sess.ContainerID, []string{"sh", "-c", stopScript(tr.ID)}); err != nil {
-		return fmt.Errorf("stop task run %d: %w", tr.ID, err)
+	_, err := r.store.FinishTaskRun(ctx, tr.ID, db.TaskRunStatusStopped, nil)
+	return err
+}
+
+// containerGone reports whether the daemon definitively says the container
+// isn't running. An inspect error is not evidence.
+func (r *Runner) containerGone(ctx context.Context, containerID string) bool {
+	if r.containerRunning == nil {
+		return false
+	}
+	running, err := r.containerRunning(ctx, containerID)
+	return err == nil && !running
+}
+
+// Reconcile squares a session's running task runs with the daemon. Runs this
+// process is watching are left to Start's goroutine; any other running row
+// was started by an earlier server process and nothing will record its exit,
+// so it is closed out once there's definitive evidence it ended: the session
+// has no container, the run never got an exec, or docker says the exec is
+// gone or finished. An inspect error means "unknown" and leaves the row be.
+// Only orphaned rows cost a docker round-trip, so this is cheap enough for
+// the task-run list the UIs poll.
+//
+// See REGRESSIONS.md: "task_runs rows outlive the process watching them".
+func (r *Runner) Reconcile(ctx context.Context, sess *db.Session) error {
+	runs, err := r.store.ListTaskRuns(ctx, sess.ID)
+	if err != nil {
+		return err
+	}
+	hasContainer := sess.ContainerID != nil && *sess.ContainerID != ""
+	for _, tr := range runs {
+		if tr.Status != db.TaskRunStatusRunning || r.isLive(tr.ID) {
+			continue
+		}
+		status, exitCode := db.TaskRunStatusStopped, (*int)(nil)
+		if hasContainer && tr.ExecID != nil && *tr.ExecID != "" && r.execState != nil {
+			ictx, cancel := context.WithTimeout(ctx, execInspectTimeout)
+			running, code, err := r.execState(ictx, *tr.ExecID)
+			cancel()
+			if err != nil {
+				log.Printf("task run %d: inspect exec %s: %v", tr.ID, *tr.ExecID, err)
+				continue
+			}
+			if running {
+				continue
+			}
+			if code != nil {
+				status, exitCode = db.TaskRunStatusExited, code
+			}
+		}
+		if _, err := r.store.FinishTaskRun(ctx, tr.ID, status, exitCode); err != nil {
+			return err
+		}
 	}
 	return nil
 }

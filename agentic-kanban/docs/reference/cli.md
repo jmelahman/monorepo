@@ -250,6 +250,8 @@ With no flags, it opens a view listing each task with its port, status, and URL,
 
 `--stop <label>` stops the task. Piped, the command prints a table. `--json` prints the tasks with their URLs and last runs.
 
+If the kanban server restarts, it can't reattach to the output of tasks that were already running. Those tasks show `running` until their process ends or the session's container goes away, then they show `exited` or `stopped`. You can still stop them with `--stop`. The server can't stream their output anymore.
+
 ```sh
 kanban ticket tasks 42 --run "Kanban Frontend"
 kanban ticket tasks 42 --run "Kanban Backend" -d

@@ -531,6 +531,11 @@ func (m *Manager) Stop(ctx context.Context, sessionID int64) error {
 	if err := m.store.UpdateSessionLifecycle(ctx, sess.ID, sess.Status, sess.ContainerID, sess.StartedAt, sess.StoppedAt, nil); err != nil {
 		return err
 	}
+	// The container took its task runs with it. See REGRESSIONS.md:
+	// "task_runs rows outlive the process watching them".
+	if err := m.store.StopRunningTaskRuns(ctx, sess.ID); err != nil {
+		log.Printf("session %d: mark task runs stopped: %v", sess.ID, err)
+	}
 
 	// Close any active proxies for this session.
 	ports, _ := m.store.ListPorts(ctx, sess.ID)

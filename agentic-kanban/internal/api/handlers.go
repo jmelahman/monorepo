@@ -1207,6 +1207,15 @@ func (h *handlers) discoverTasks(w http.ResponseWriter, r *http.Request) {
 
 func (h *handlers) listTaskRuns(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r, "id")
+	// Close out runs a previous server process left marked running, so the
+	// list doesn't report a task that's long gone.
+	if sess, err := h.store.GetSession(r.Context(), id); err != nil {
+		if !errors.Is(err, db.ErrNotFound) {
+			log.Printf("session %d: load for task-run reconcile: %v", id, err)
+		}
+	} else if err := h.tasks.Reconcile(r.Context(), sess); err != nil {
+		log.Printf("session %d: reconcile task runs: %v", id, err)
+	}
 	runs, err := h.store.ListTaskRuns(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 500)

@@ -775,8 +775,28 @@ func (s *Store) SetTaskRunExecID(ctx context.Context, id int64, execID string) e
 	return err
 }
 
-func (s *Store) UpdateTaskRunStatus(ctx context.Context, id int64, status string, exitCode *int) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE task_runs SET status=?, exit_code=?, stopped_at=unixepoch() WHERE id=?`, status, exitCode, id)
+// FinishTaskRun moves a run out of running, reporting whether it was still
+// running. A run that already finished is left alone, so the first writer's
+// status and exit code stand: the exec goroutine, Stop, and reconciliation
+// can all race to close the same run.
+func (s *Store) FinishTaskRun(ctx context.Context, id int64, status string, exitCode *int) (bool, error) {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE task_runs SET status=?, exit_code=?, stopped_at=unixepoch() WHERE id=? AND status=?`,
+		status, exitCode, id, TaskRunStatusRunning)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// StopRunningTaskRuns marks every still-running run of a session stopped.
+// Called once the session's container is gone, since nothing can still be
+// running in it.
+func (s *Store) StopRunningTaskRuns(ctx context.Context, sessionID int64) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE task_runs SET status=?, stopped_at=unixepoch() WHERE session_id=? AND status=?`,
+		TaskRunStatusStopped, sessionID, TaskRunStatusRunning)
 	return err
 }
 

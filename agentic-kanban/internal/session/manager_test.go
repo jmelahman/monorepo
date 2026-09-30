@@ -362,6 +362,25 @@ func TestReconcile(t *testing.T) {
 		}
 	})
 
+	t.Run("dead_container_stops_its_task_runs", func(t *testing.T) {
+		m, store, _, _, sess := newReconcileEnv(t, db.SessionStatusIdle)
+		m.SetContainerProbe(func(context.Context, string) (bool, error) { return false, nil })
+		tr := &db.TaskRun{SessionID: sess.ID, TaskLabel: "web", Command: "npm run dev", Status: db.TaskRunStatusRunning}
+		if err := store.CreateTaskRun(ctx, tr); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := m.Reconcile(ctx, sess); err != nil {
+			t.Fatal(err)
+		}
+		got, err := store.GetTaskRun(ctx, tr.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Status != db.TaskRunStatusStopped {
+			t.Errorf("task run status = %q, want %q", got.Status, db.TaskRunStatusStopped)
+		}
+	})
+
 	t.Run("running_container_is_left_alone", func(t *testing.T) {
 		m, _, _, _, sess := newReconcileEnv(t, db.SessionStatusWorking)
 		m.SetContainerProbe(func(context.Context, string) (bool, error) { return true, nil })
