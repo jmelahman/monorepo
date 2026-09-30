@@ -1,2 +1,3 @@
 # User-level host aliases (glibc HOSTALIASES): <alias> <hostname>
 ollama localhost
+kanban localhost
