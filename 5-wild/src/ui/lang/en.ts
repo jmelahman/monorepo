@@ -421,18 +421,24 @@ export const en: Strings = {
       // Each label names the state the *next* tap lands on, and each tip says
       // what the board is now before it says what the tap will do. Read them as
       // a cycle: a wrong order here shows up as a wrong sentence.
+      //
+      // The three states are named in the coach card's words (every letter's
+      // value, only your upgraded letters, nothing), so a player who read the
+      // card meets the same phrases on the button. They used to speak of
+      // "what you have changed" and "modifiers and raised letters", which is
+      // two names for one state and neither of them the card's.
       decor: {
         all: {
-          label: "Mark only what you have changed",
-          tip: "Every letter shows what it scores.\nTap to mark only what you have changed.",
+          label: "Show only your upgraded letters",
+          tip: "Showing every letter's value.\nTap to show only your upgraded letters.",
         },
         minimal: {
-          label: "Clear the board",
-          tip: "Only modifiers and raised letters are marked.\nTap to clear the board.",
+          label: "Hide every value",
+          tip: "Showing only your upgraded letters.\nTap to hide every value.",
         },
         none: {
           label: "Show every letter's value",
-          tip: "Nothing on the board says what a letter is worth.\nTap to show it all again.",
+          tip: "Every value is hidden.\nTap to show every letter's value.",
         },
       },
       stage: (stage, total) => `Stage ${stage}/${total}`,
@@ -900,7 +906,7 @@ export const en: Strings = {
       music: "Music",
       track: "Track",
       speed: "Animation speed",
-      skin: "Look",
+      skin: "Theme",
       skins: {
         smoke: "Smoke Room",
         tabletop: "Tabletop",
@@ -986,8 +992,19 @@ export const en: Strings = {
       shape: (word, shape) =>
         `${word.toUpperCase()} scores as ${shape}. Every guess has a shape, and leveling a shape ` +
         "in the shop makes those guesses score more. Tap to see them all.",
+      // Names the pause sheet's own labels, Theme, How to play and Codex, so
+      // the sentence can be matched to the buttons it is about. The nudge to
+      // try the themes is there because the default is picked by device, and
+      // a player who never opens the row never learns the others are more
+      // than a palette: the Smoke Room and Tabletop each move differently.
+      menu: "The menu is where you change the sound, the music and the theme. Try a few themes: each changes more than the colors. How to play and the Codex are in there too.",
+      // Names all three modes, in the order a thumb meets them. It used to say
+      // the button "hides its scoring marks, a step at a time", which named
+      // none of them, and a three-state button with no word on it is the one
+      // control on the board a player cannot learn by pressing once. The
+      // modes are the switch's own tips, `board.decor`, said shorter.
       decor:
-        "In later rounds the keyboard gets busy. This button hides its scoring marks, a step at a time, so you can focus on the word.",
+        "This button has three modes for the keyboard and tiles: every letter's value, only your upgraded letters, or nothing at all. When later rounds get distracting, use it to focus on the word.",
       // Every kind the shelf can deal, in the order of how long it lasts, so the
       // card can end on packs, which are only ever the others in a box, sold
       // cheaper for being shut. The names are the cards' own tags, which is how

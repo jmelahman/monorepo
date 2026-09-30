@@ -17,7 +17,7 @@ const MISS = "arose"
 
 const fresh = (): RunState => startRun(7, realWords).state
 
-/** Misses, one at a time: four of them is the whole tutorial walked at its natural pace. */
+/** Misses, one at a time: five of them is the whole tutorial walked at its natural pace. */
 const played = (state: RunState, count: number): RunState =>
   Array.from({ length: count }).reduce<RunState>((current) => apply(current, guess(MISS)), state)
 
@@ -104,16 +104,22 @@ describe("the first-round coach", () => {
     expect(coachStep(cleared)?.id).toBe("banked")
   })
 
-  it("names the decoration switch on the fourth guess, as a thing for later", () => {
+  it("points at the menu on the fourth guess, for the settings and the references", () => {
     const step = coachStep(played(fresh(), 3))
+    expect(step?.id).toBe("menu")
+    expect(step?.anchor).toBe(".menu-button")
+  })
+
+  it("names the decoration switch on the fifth guess, as a thing for later", () => {
+    const step = coachStep(played(fresh(), 4))
     expect(step?.id).toBe("decor")
     expect(step?.anchor).toBe(".decor-toggle")
   })
 
-  it("has nothing left to say after four guesses, and is not finished", () => {
+  it("has nothing left to say after five guesses, and is not finished", () => {
     // The board is spent; the tutorial is not, because the first shop still
     // has its own cards to show.
-    const state = played(fresh(), 4)
+    const state = played(fresh(), 5)
     expect(state.round.done).toBe(false)
     expect(coachStep(state)).toBeNull()
     expect(coachSpent(state)).toBe(false)
@@ -121,7 +127,7 @@ describe("the first-round coach", () => {
 
   it("stays live for the whole of the first round", () => {
     let state = fresh()
-    for (let count = 0; count < 4; count++) {
+    for (let count = 0; count < 5; count++) {
       expect(coachSpent(state)).toBe(false)
       expect(coachStep(state)).not.toBeNull()
       state = played(state, 1)
@@ -235,7 +241,7 @@ describe("what the coach actually claims", () => {
     // solve beat is not about; a fifth line would reach the tiles.
     let state = startRun(3, words).state
     const seen: string[] = []
-    for (let count = 0; count < 4; count++) {
+    for (let count = 0; count < 5; count++) {
       seen.push(coachStep(state)?.text ?? "")
       state = apply(state, guess(MISS))
     }

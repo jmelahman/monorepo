@@ -408,16 +408,16 @@ export const de: Strings = {
       menu: "Menü",
       decor: {
         all: {
-          label: "Nur markieren, was du geändert hast",
-          tip: "Jeder Buchstabe zeigt, was er bringt.\nTippen, um nur zu markieren, was du geändert hast.",
+          label: "Nur verbesserte Buchstaben zeigen",
+          tip: "Der Wert jedes Buchstabens wird gezeigt.\nTippen, um nur verbesserte Buchstaben zu zeigen.",
         },
         minimal: {
-          label: "Brett aufräumen",
-          tip: "Nur Modifikatoren und aufgewertete Buchstaben sind markiert.\nTippen, um das Brett aufzuräumen.",
+          label: "Alle Werte ausblenden",
+          tip: "Nur verbesserte Buchstaben werden gezeigt.\nTippen, um alle Werte auszublenden.",
         },
         none: {
           label: "Wert jedes Buchstabens zeigen",
-          tip: "Nichts auf dem Brett verrät, was ein Buchstabe wert ist.\nTippen, um alles wieder anzuzeigen.",
+          tip: "Alle Werte sind ausgeblendet.\nTippen, um den Wert jedes Buchstabens zu zeigen.",
         },
       },
       stage: (stage, total) => `Etappe ${stage}/${total}`,
@@ -918,8 +918,9 @@ export const de: Strings = {
       shape: (word, shape) =>
         `${word.toUpperCase()} zählt als ${shape}. Jeder Versuch hat eine Form, und eine Form im ` +
         "Laden aufzuwerten lässt solche Versuche mehr punkten. Tippe, um alle zu sehen.",
+      menu: "Im Menü stellst du Ton, Musik und Design ein. Probier ein paar Designs aus: Jedes ändert mehr als nur die Farben. Dort findest du auch die Spielanleitung und den Kodex.",
       decor:
-        "In späteren Runden wird die Tastatur voll. Dieser Knopf blendet ihre Wertungsmarken Schritt für Schritt aus, damit du dich aufs Wort konzentrierst.",
+        "Dieser Knopf hat drei Modi für Tastatur und Kacheln: der Wert jedes Buchstabens, nur verbesserte Buchstaben oder gar nichts. Wenn spätere Runden ablenken, hilft er dir, dich aufs Wort zu konzentrieren.",
       shelf:
         "Gib hier zwischen den Runden dein Gold aus. Relikte bleiben bei dir und punkten bei jedem Versuch. " +
         "Verbrauchskarten wirken einmal. Der Rest lässt Buchstaben oder Wortformen mehr punkten. " +

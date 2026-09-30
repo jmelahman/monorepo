@@ -401,16 +401,16 @@ export const es: Strings = {
       menu: "Menú",
       decor: {
         all: {
-          label: "Marcar solo lo que has cambiado",
-          tip: "Cada letra muestra lo que puntúa.\nToca para marcar solo lo que has cambiado.",
+          label: "Mostrar solo tus letras mejoradas",
+          tip: "Se ve el valor de cada letra.\nToca para ver solo tus letras mejoradas.",
         },
         minimal: {
-          label: "Despejar el tablero",
-          tip: "Solo se marcan los modificadores y las letras mejoradas.\nToca para despejar el tablero.",
+          label: "Ocultar todos los valores",
+          tip: "Solo se ven tus letras mejoradas.\nToca para ocultar todos los valores.",
         },
         none: {
           label: "Mostrar el valor de cada letra",
-          tip: "Nada en el tablero dice lo que vale una letra.\nToca para mostrarlo todo otra vez.",
+          tip: "Todos los valores están ocultos.\nToca para ver el valor de cada letra.",
         },
       },
       stage: (stage, total) => `Fase ${stage}/${total}`,
@@ -837,7 +837,7 @@ export const es: Strings = {
       music: "Música",
       track: "Pista",
       speed: "Velocidad de animación",
-      skin: "Aspecto",
+      skin: "Tema",
       skins: {
         smoke: "Sala de humo",
         tabletop: "Tablero",
@@ -907,8 +907,9 @@ export const es: Strings = {
       shape: (word, shape) =>
         `${word.toUpperCase()} puntúa como ${shape}. Todo intento tiene una forma, y subir una forma ` +
         "de nivel en la tienda hace que esos intentos puntúen más. Toca para verlas todas.",
+      menu: "En el menú puedes cambiar el sonido, la música y el tema. Prueba varios temas: cada uno cambia más que los colores. Ahí están también Cómo se juega y el Códice.",
       decor:
-        "En rondas posteriores el teclado se llena. Este botón oculta sus marcas de puntuación, paso a paso, para que te centres en la palabra.",
+        "Este botón tiene tres modos para el teclado y las fichas: el valor de cada letra, solo tus letras mejoradas o nada. Cuando las rondas distraigan, úsalo para centrarte en la palabra.",
       shelf:
         "Gasta tu oro aquí entre rondas. Las reliquias se quedan contigo y puntúan en cada intento. " +
         "Los consumibles se usan una vez. El resto hace que letras o formas de palabra puntúen más. " +

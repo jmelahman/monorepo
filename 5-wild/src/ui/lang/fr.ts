@@ -420,16 +420,16 @@ export const fr: Strings = {
       menu: "Menu",
       decor: {
         all: {
-          label: "Ne marquer que ce que vous avez changé",
-          tip: "Chaque lettre affiche ce qu'elle rapporte.\nAppuyez pour ne marquer que ce que vous avez changé.",
+          label: "N'afficher que vos lettres améliorées",
+          tip: "La valeur de chaque lettre est affichée.\nAppuyez pour n'afficher que vos lettres améliorées.",
         },
         minimal: {
-          label: "Nettoyer le plateau",
-          tip: "Seuls les modificateurs et les lettres améliorées sont marqués.\nAppuyez pour nettoyer le plateau.",
+          label: "Masquer toutes les valeurs",
+          tip: "Seules vos lettres améliorées sont affichées.\nAppuyez pour masquer toutes les valeurs.",
         },
         none: {
           label: "Afficher la valeur de chaque lettre",
-          tip: "Rien sur le plateau ne dit ce que vaut une lettre.\nAppuyez pour tout réafficher.",
+          tip: "Toutes les valeurs sont masquées.\nAppuyez pour afficher la valeur de chaque lettre.",
         },
       },
       stage: (stage, total) => `Étape ${stage}/${total}`,
@@ -858,7 +858,7 @@ export const fr: Strings = {
       music: "Musique",
       track: "Morceau",
       speed: "Vitesse d'animation",
-      skin: "Apparence",
+      skin: "Thème",
       skins: {
         smoke: "Fumoir",
         tabletop: "Plateau",
@@ -928,8 +928,9 @@ export const fr: Strings = {
       shape: (word, shape) =>
         `${word.toUpperCase()} compte comme ${shape}. Chaque essai a une forme, et monter une forme ` +
         "de niveau à la boutique fait marquer plus à ces essais. Touchez pour les voir toutes.",
+      menu: "Le menu permet de changer le son, la musique et le thème. Essayez-en plusieurs : chacun change plus que les couleurs. Vous y trouverez aussi Comment jouer et le Codex.",
       decor:
-        "Plus tard, le clavier se charge. Ce bouton masque ses marques de score, étape par étape, pour vous concentrer sur le mot.",
+        "Ce bouton a trois modes pour le clavier et les tuiles : la valeur de chaque lettre, vos lettres améliorées seulement, ou rien. Quand les manches distraient, il aide à se concentrer sur le mot.",
       shelf:
         "Dépensez votre or ici entre les manches. Les reliques restent avec vous et marquent à chaque essai. " +
         "Les consommables servent une fois. Le reste fait marquer plus les lettres ou les formes de mot. " +
