@@ -31,6 +31,12 @@ CREATE INDEX IF NOT EXISTS runs_content ON runs (content);
 -- be an id that ties runs to a device, which telemetry never carries (see the
 -- Storage section of CLAUDE.md).
 --
+-- Shared seeds make that likelier than 31 random bits suggest: two players who
+-- open the same link as the same nth run on one build are one row, and so are
+-- the run that was shared and a replay of it, whichever arrives first. The flag
+-- that marks a chosen seed (`seeded` in the payload) is not in the index, since
+-- it would only separate the second case. Accepted for the same reason.
+--
 -- The DELETE is for a table from before the index, which the resend loop fixed
 -- beside it had already filled with copies (ten of one run by 2026-09-30); the
 -- index cannot be built over them. It keeps the first copy and is a no-op on

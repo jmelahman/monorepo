@@ -67,6 +67,7 @@ const PATHS = {
   shape: ["M2 8h5v8H2z", "M9.5 8h5v8h-5z", "M17 8h5v8h-5z", "M2 20h20"],
   etching: ["M14 4l6 6-9 9H5v-6z", "M11 7l6 6"],
   check: ["M5 12l5 5 9-10"],
+  copy: ["M8 8h12v12H8z", "M16 8V4H4v12h4"],
   // The category chip's way out to the shapes sheet. It said "shapes ›" in
   // words, which on a chip sharing its line with the solve figure was the word
   // that pushed the pair past 360.

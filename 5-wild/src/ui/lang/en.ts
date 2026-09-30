@@ -979,6 +979,22 @@ export const en: Strings = {
       cancel: "Keep playing",
     },
 
+    seed: {
+      title: "Seeded run",
+      open: "Version and seeded runs",
+      blurb:
+        "Every run is dealt from a seed. A code plays at your level in your language; " +
+        "paste a shared link to get the same words, bosses and shops as its run.",
+      field: "Seed code",
+      play: "Play this seed",
+      abandons: "This ends the run in progress.",
+      badCode: "That is not a seed code: seven letters and digits, starting with 0 or 1.",
+      words: (language) => `Dealt from the ${language} word list.`,
+      line: (code) => `Seed ${code}`,
+      copy: "Copy a link to this run",
+      copied: "Link copied",
+    },
+
     coach: {
       // Every card is read over a board the player is in the middle of, so each
       // one says one thing, points at it, and ends on what to do next. The

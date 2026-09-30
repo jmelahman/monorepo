@@ -932,6 +932,23 @@ export const fr: Strings = {
       cancel: "Continuer à jouer",
     },
 
+    seed: {
+      title: "Partie à graine",
+      open: "Version et parties à graine",
+      blurb:
+        "Chaque partie est distribuée à partir d'une graine. Un code se joue à votre " +
+        "niveau et dans votre langue ; collez un lien partagé pour retrouver les mêmes " +
+        "mots, boss et boutiques que sa partie.",
+      field: "Code de graine",
+      play: "Jouer cette graine",
+      abandons: "Cela met fin à la partie en cours.",
+      badCode: "Ce n’est pas un code de graine : sept lettres et chiffres, commençant par 0 ou 1.",
+      words: (language) => `Distribuée avec la liste de mots\u00A0: ${language}.`,
+      line: (code) => `Graine ${code}`,
+      copy: "Copier un lien vers cette partie",
+      copied: "Lien copié",
+    },
+
     coach: {
       chips:
         "Chaque essai est compté. Tapez un mot, et la ligne au-dessus du plateau additionne ce que valent ses lettres.",

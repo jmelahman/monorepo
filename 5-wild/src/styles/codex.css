@@ -287,6 +287,73 @@
   color: var(--muted);
 }
 
+/*
+ * The run's code on the pause sheet and the end screen, and a tap copies its
+ * link. Footnote-quiet, like the note above it, because it is there for the
+ * player who wants it and in the way of nobody else; the copy glyph is the
+ * only sign it is a control, and the 44px floor is the only size it claims.
+ */
+.seed-line {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  font-size: var(--type-small);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.seed-line .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/*
+ * The game's one text field. Letter-spaced and centred because what goes in it
+ * is a code to be checked against another screen character by character, not a
+ * word to be read, and monospaced figures keep a 0 from shifting the rest.
+ */
+.seed-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: var(--type-small);
+  color: var(--muted);
+}
+
+.seed-input {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--panel-2);
+  color: var(--fg);
+  font: inherit;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-transform: uppercase;
+  /* Against the app-wide `user-select: none`, or a field could not be edited
+     by selection, nor its text pasted over. */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.seed-input::placeholder {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.seed-build {
+  font-variant-numeric: tabular-nums;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .menu-button {
   flex: 0 0 auto;
   width: 2rem;

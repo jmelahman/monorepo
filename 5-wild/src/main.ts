@@ -3,6 +3,7 @@ import type { WordSource } from "./engine"
 import { App, loadRunLang, loadSave } from "./ui/app"
 import { startBackground } from "./ui/fx/background"
 import { type Lang, loadLang, S, setLang } from "./ui/lang"
+import { readSeedParam } from "./ui/seed"
 import { spectate } from "./ui/spectate"
 import { initLook } from "./ui/theme"
 
@@ -59,6 +60,25 @@ const watching = new URLSearchParams(location.search).get("watch")
 const saved = watching ? null : loadSave()
 
 /**
+ * `?seed=<code>` is someone's run, shared from their pause sheet or end screen.
+ * See `src/ui/seed.ts`. It opens the seed sheet rather than dealing the run,
+ * because the player may have one of their own in hand. Taken off the address
+ * once read, so a reload is the player's game again and not the offer twice;
+ * the sheet stays up until they answer it.
+ */
+// A code that does not read (a link cut short in a chat, a hand-typed typo)
+// still opens the sheet, holding what arrived: landing on the title with no
+// word about the link would read as the link being ignored, and the field is
+// where it can be put right.
+const shared = watching ? null : new URLSearchParams(location.search).get("seed")
+const offer = shared === null ? null : (readSeedParam(location.search) ?? shared)
+if (offer !== null) {
+  const url = new URL(location.href)
+  for (const key of ["seed", "a", "w"]) url.searchParams.delete(key)
+  history.replaceState(history.state, "", url)
+}
+
+/**
  * Which list the game opens with, which is not always the language it opens in.
  *
  * A run is dealt from one word list and keeps it for its whole life, so a save
@@ -74,7 +94,10 @@ loadWords(wordsLang)
   .then((words) => {
     const game = new App(app, words, saved, { lang: wordsLang, load: loadWords })
     if (watching) spectate(game, watching)
-    else game.start()
+    else {
+      if (offer !== null) game.offerSeed(offer)
+      game.start()
+    }
   })
   .catch((error: unknown) => {
     app.replaceChildren()

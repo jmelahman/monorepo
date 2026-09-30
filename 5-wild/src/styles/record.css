@@ -425,6 +425,11 @@
   font-variant-numeric: tabular-nums;
   -webkit-user-select: text;
   user-select: text;
+  /* A button now, the door to seeded runs (see `titleView`), and dressed as the
+     stamp it was: the thumb's 44px floor comes from the height alone, so the
+     text sits where it did and the footer grid does not move. */
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
 }
 
 /* The hash is for whoever is filing the bug, and a phone has a better place to

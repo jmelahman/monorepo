@@ -313,6 +313,11 @@ run's seed so a stale one can't be mistaken for it. What leaves the device is a 
 not a report, so every balance question is answered by replaying it against the
 engine in `test/telemetry-report.test.ts`. That replay is also the validation,
 which is why the worker in `telemetry/` checks shape and nothing else.
+A run dealt from a chosen seed (typed on the sheet behind the title's version
+stamp, or opened from a `?seed=` link, which `main.ts` reads and strips) carries
+`seeded: true` in its log and payload, absent otherwise: a replayed seed is a
+biased sample, so the analysis has to be able to set it aside. See
+`src/ui/seed.ts` for the code's spelling and why the link carries the word list.
 
 **Telemetry is about runs, never about players**, and that is a rule rather
 than a default. Nothing that ties two runs to the same person, device or

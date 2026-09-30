@@ -79,6 +79,15 @@ export type RunLog = {
   words: Lang
   /** Which run this is for the player, from the record: 1 is their first. */
   nth: number
+  /**
+   * Set when the seed was chosen rather than drawn: a shared link or a typed
+   * code. Such a run is still a run and still worth having, but it is not a
+   * sample of the seed space, and a player replaying a friend's seed may know
+   * the answers, so the analysis has to be able to set it aside. Absent rather
+   * than false on every other run, so an ordinary payload is byte for byte what
+   * it was before the flag existed.
+   */
+  seeded?: true
   steps: Step[]
 }
 
@@ -99,6 +108,8 @@ export type Payload = {
   seed: number
   ascension: number
   nth: number
+  /** See `RunLog.seeded`. */
+  seeded?: true
   end: RunEnd
   won: boolean
   /** Where it stopped. Derivable by replay; carried so the table can be read by SQL. */
@@ -131,8 +142,15 @@ export const OUTBOX_CAP = 20
 
 /* ----------------------------------------------------------------- log */
 
-export function beginLog(state: RunState, words: Lang, nth: number): RunLog {
-  return { seed: state.seed, ascension: state.ascension ?? 0, words, nth, steps: [] }
+export function beginLog(state: RunState, words: Lang, nth: number, seeded = false): RunLog {
+  return {
+    seed: state.seed,
+    ascension: state.ascension ?? 0,
+    words,
+    nth,
+    ...(seeded ? { seeded: true as const } : {}),
+    steps: [],
+  }
 }
 
 /**
@@ -175,6 +193,7 @@ export function payload(log: RunLog, state: RunState, end: RunEnd): Payload {
     seed: log.seed,
     ascension: log.ascension,
     nth: log.nth,
+    ...(log.seeded ? { seeded: true as const } : {}),
     end,
     won: Boolean(state.won),
     stage: state.stage,

@@ -30,7 +30,9 @@ export const CONSUMABLES: readonly Consumable[] = [
       // player is reading, and a boss's lie is part of it.
       const last = round.guesses[round.guesses.length - 1]
       const hidden = round.revealed
-        .map((value, index) => (value === null && last?.tiles[index]?.shown !== "green" ? index : -1))
+        .map((value, index) =>
+          value === null && last?.tiles[index]?.shown !== "green" ? index : -1,
+        )
         .filter((index) => index >= 0)
       const position = shuffled(rng, hidden)[0]
       if (position === undefined) return { code: "word_already_revealed" }

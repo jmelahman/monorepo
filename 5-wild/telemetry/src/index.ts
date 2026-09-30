@@ -52,6 +52,7 @@ type Run = {
   seed: number
   ascension: number
   nth: number
+  seeded?: true
   end: string
   won: boolean
   stage: number
@@ -77,6 +78,10 @@ function valid(body: unknown): body is Run {
     int(run.seed, 0, 2 ** 31) &&
     int(run.ascension, 0, 100) &&
     int(run.nth, 0, 1e7) &&
+    // Present only on a run whose seed was chosen (a link or a typed code), and
+    // then only ever `true`: the client leaves it off rather than sending false,
+    // so anything else here is not a client this worker knows.
+    (run.seeded === undefined || run.seeded === true) &&
     typeof run.end === "string" &&
     ENDS.has(run.end) &&
     typeof run.won === "boolean" &&

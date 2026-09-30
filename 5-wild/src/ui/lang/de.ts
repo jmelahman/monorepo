@@ -925,6 +925,23 @@ export const de: Strings = {
       cancel: "Weiterspielen",
     },
 
+    seed: {
+      title: "Durchlauf mit Seed",
+      open: "Version und Durchläufe mit Seed",
+      blurb:
+        "Jeder Durchlauf wird aus einem Seed gegeben. Ein Code spielt auf deiner Stufe " +
+        "in deiner Sprache; füge einen geteilten Link ein, um dieselben Wörter, Bosse " +
+        "und Läden wie sein Durchlauf zu bekommen.",
+      field: "Seed-Code",
+      play: "Diesen Seed spielen",
+      abandons: "Das beendet den laufenden Durchlauf.",
+      badCode: "Das ist kein Seed-Code: sieben Buchstaben und Ziffern, beginnend mit 0 oder 1.",
+      words: (language) => `Gegeben aus der Wortliste: ${language}.`,
+      line: (code) => `Seed ${code}`,
+      copy: "Einen Link zu diesem Durchlauf kopieren",
+      copied: "Link kopiert",
+    },
+
     coach: {
       chips:
         "Jeder Versuch wird gewertet. Tippe ein Wort, und die Zeile über dem Brett addiert, was seine Buchstaben wert sind.",

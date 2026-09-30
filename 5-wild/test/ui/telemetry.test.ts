@@ -139,6 +139,22 @@ describe("the saved log", () => {
   })
 })
 
+describe("a chosen seed", () => {
+  // Flagged so the analysis can set it aside, and absent rather than false on
+  // every other run, so the payloads that were already being sent are unchanged.
+  it("is flagged on the payload, and only then", () => {
+    const state = startRun(5, realWords).state
+    expect(payload(beginLog(state, "en", 1, true), state, "lost").seeded).toBe(true)
+    expect("seeded" in payload(beginLog(state, "en", 1), state, "lost")).toBe(false)
+  })
+
+  it("stays flagged across a resume", () => {
+    const state = startRun(5, realWords).state
+    saveLog(beginLog(state, "en", 1, true))
+    expect(loadLog(state)?.seeded).toBe(true)
+  })
+})
+
 describe("consent", () => {
   it("sends nothing until the switch is turned on, and nothing from before it", () => {
     expect(loadConsent()).toBeNull()

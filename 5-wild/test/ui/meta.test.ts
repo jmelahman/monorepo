@@ -159,6 +159,14 @@ describe("keeping the record", () => {
     expect(profile.stats).toMatchObject({ wins: 3, cleared: 3 })
   })
 
+  it("counts a win that does not climb, and leaves the ladder where it was", () => {
+    // A seeded run from a link, played above the dial's reach; see `run_won`
+    // in `app.ts`.
+    const profile = new Profile()
+    profile.won(12, false)
+    expect(profile.stats).toMatchObject({ wins: 1, cleared: -1 })
+  })
+
   it("picks up where the last session left off", () => {
     const first = new Profile()
     first.started()

@@ -911,6 +911,23 @@ export const es: Strings = {
       cancel: "Seguir jugando",
     },
 
+    seed: {
+      title: "Partida con semilla",
+      open: "Versión y partidas con semilla",
+      blurb:
+        "Cada partida se reparte a partir de una semilla. Un código se juega en tu " +
+        "nivel y en tu idioma; pega un enlace compartido para tener las mismas " +
+        "palabras, jefes y tiendas que su partida.",
+      field: "Código de semilla",
+      play: "Jugar esta semilla",
+      abandons: "Esto termina la partida en curso.",
+      badCode: "Eso no es un código de semilla: siete letras y cifras, empezando por 0 o 1.",
+      words: (language) => `Se reparte con la lista de palabras en ${language}.`,
+      line: (code) => `Semilla ${code}`,
+      copy: "Copiar un enlace a esta partida",
+      copied: "Enlace copiado",
+    },
+
     coach: {
       chips:
         "Cada intento se puntúa. Escribe una palabra, y la línea de encima del tablero cuenta lo que valen sus letras.",

@@ -433,11 +433,14 @@ export class Profile {
     this.write({ relics: { ...this.state.relics, [id]: (this.state.relics[id] ?? 0) + 1 } })
   }
 
-  /** Banked at the offer, not at the ending: playing on cannot lose the win. */
-  won(ascension: number): void {
+  /**
+   * Banked at the offer, not at the ending: playing on cannot lose the win.
+   * `climbs` false is a win that counts and unlocks nothing; see the caller.
+   */
+  won(ascension: number, climbs = true): void {
     this.write({
       wins: this.state.wins + 1,
-      cleared: Math.max(this.state.cleared, ascension),
+      cleared: climbs ? Math.max(this.state.cleared, ascension) : this.state.cleared,
     })
   }
 

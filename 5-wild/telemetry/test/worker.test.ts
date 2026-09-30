@@ -100,6 +100,17 @@ describe("telemetry worker", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe("*")
   })
 
+  it("takes a run from a chosen seed, flagged, and keeps the flag in the payload", async () => {
+    expect((await post(run({ seeded: true }))).status).toBe(204)
+    const row = db.prepare("SELECT json_extract(payload, '$.seeded') AS seeded FROM runs").get()
+    expect(row).toEqual({ seeded: 1 })
+  })
+
+  it.each([false, "yes", 1])("refuses a seeded flag of %p", async (seeded) => {
+    expect((await post(run({ seeded }))).status).toBe(400)
+    expect(rows()).toBe(0)
+  })
+
   it("files a resent run once and answers every copy 204", async () => {
     for (let i = 0; i < 10; i++) expect((await post(run())).status).toBe(204)
     expect(rows()).toBe(1)

@@ -720,6 +720,35 @@ export type Strings = {
     }
 
     /**
+     * Seeded runs: the sheet behind the title screen's version stamp, which a
+     * `?seed=` link also opens, and the one line on the pause sheet and the end
+     * screen that names the run in hand. The code itself is never the
+     * translator's: it is seven characters of base 32, and it is the same code
+     * in every language.
+     */
+    seed: {
+      title: string
+      /** The version stamp's accessible name, since its face is only a version. */
+      open: string
+      /** One sentence on what a seed is, above the field. */
+      blurb: string
+      /** The field's label. */
+      field: string
+      play: string
+      /** Under Play while a run is open, which this would replace. */
+      abandons: string
+      /** A toast for a code that is not one, which says what one looks like. */
+      badCode: string
+      /** Only when a link's list differs from the interface: the run is dealt from it. */
+      words: (language: string) => string
+      /** The pause sheet's and end screen's line, which copies the link. */
+      line: (code: string) => string
+      /** The line's accessible name, since its face does not say it copies. */
+      copy: string
+      copied: string
+    }
+
+    /**
      * The first round, taught while it is played. Each beat quotes a live figure
      * off the board beside it, which is the whole reason these are functions and
      * the reason they cannot be shortened much: the sentence has to say what the

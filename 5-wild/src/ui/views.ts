@@ -92,6 +92,7 @@ import {
   unlocked,
   wordsFound,
 } from "./meta"
+import { SITE_URL } from "./seed"
 import type { Skin } from "./skin"
 import type { Speed } from "./speed"
 import { sprite } from "./sprites"
@@ -170,6 +171,19 @@ export type Handlers = {
   askAscend: (level: number) => void
   /** Past the lock, having read it. */
   ascend: () => void
+  /** The seed sheet, from the title screen's version stamp. */
+  openSeed: () => void
+  /**
+   * The seed field's text, kept by the app on every keystroke *without* a
+   * render: the render would rebuild the field under the caret. The sheet
+   * reads it back into the field's `value` whenever it is rebuilt for another
+   * reason.
+   */
+  editSeed: (text: string) => void
+  /** Deal the run the field names, after the field says it names one. */
+  playSeed: () => void
+  /** A link to the run in hand, onto the clipboard. */
+  copySeed: () => void
 }
 
 /**
@@ -183,6 +197,12 @@ export type Handlers = {
  * screen takes.
  */
 export type Chrome = {
+  /**
+   * The run in hand's seed, as its code, for the pause sheet's line. Null where
+   * there is no run of the player's to share: the title screen's scaffolding,
+   * and a spectator's view of someone else's.
+   */
+  seed: string | null
   sound: SoundLevel
   /** The two switches `sound` is read from, for the pause sheet's rows. */
   effectsOff: boolean
@@ -2403,7 +2423,7 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
  * lying to make a button look brave. What is really being asked is whether to
  * start something new or find out where this one breaks.
  */
-export function endView(state: RunState, on: Handlers): HTMLElement {
+export function endView(state: RunState, on: Handlers, seed: string | null): HTMLElement {
   const copy = ui().end
   const offering = state.phase === "victory"
   const lost = state.phase === "game_over"
@@ -2435,6 +2455,11 @@ export function endView(state: RunState, on: Handlers): HTMLElement {
       cleared(state, offering),
       offering && h("p", { class: "endless-note" }, copy.endlessNote(STAGES)),
     ),
+    // Under the panel rather than in it: the panel is what happened, and this is
+    // what to do with it. A lost run is the one most worth handing a friend.
+    // `seed` is the chrome's, which is null for a spectator: the copy is idle
+    // while watching, and a button that does nothing is worse than none.
+    seed !== null && seedLine(seed, on),
     offering &&
       h(
         "button",
@@ -2657,9 +2682,22 @@ export function titleView(on: Handlers, chrome: Chrome, meta: MetaState): HTMLEl
       { class: "title-foot" },
       languageButton(on, chrome, "title-pill"),
       // The hash as its own node so a phone can drop it; see `.title-build-commit`.
+      //
+      // It is also the door to seeded runs, and a door nobody new will find, which
+      // is the point. The title screen has one green button and two grays, and a
+      // seed field among them would be asking every first-time player a question
+      // only a returning one can answer. A player handed a code by a friend is
+      // told where to put it; a player who taps the version out of curiosity
+      // finds it and is none the worse. The APK and the desktop build can open no
+      // link, so this field is also the only way in for them.
       h(
-        "p",
-        { class: "title-build" },
+        "button",
+        {
+          class: "title-build",
+          type: "button",
+          "aria-label": `v${__BUILD_VERSION__}. ${ui().seed.open}`,
+          onclick: () => on.openSeed(),
+        },
         `v${__BUILD_VERSION__}`,
         __BUILD_COMMIT__
           ? h("span", { class: "title-build-commit" }, ` · ${__BUILD_COMMIT__}`)
@@ -3682,6 +3720,7 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
     // in the language it was drawn from. Said here and not on the title
     // screen, because `wordsDeferred` needs a run open to be true at all.
     chrome.wordsDeferred ? h("p", { class: "lang-note" }, copy.wordsNextRun) : null,
+    chrome.seed !== null && seedLine(chrome.seed, on),
     chrome.thanked && thanks(chrome.thanked),
     h(
       "div",
@@ -3779,7 +3818,7 @@ function sharingSwitch(on: Handlers, chrome: Chrome): HTMLElement {
  * inside the APK that would replace the game in its own WebView, with no back
  * button to return by. It is in English only, like the page.
  */
-const PRIVACY_URL = "https://5-wild.com/privacy/#sharing"
+const PRIVACY_URL = `${SITE_URL}/privacy/#sharing`
 
 function privacyLink(): HTMLElement {
   const copy = ui().about.privacy
@@ -3997,5 +4036,112 @@ export function quitView(state: RunState, on: Handlers): HTMLElement {
       h("button", { class: "danger", type: "button", onclick: () => on.quit() }, copy.confirm),
     ),
     h("button", { class: "primary", type: "button", onclick: () => on.openMenu() }, copy.cancel),
+  )
+}
+
+/**
+ * The run in hand's code, and a tap copies a link that deals it again.
+ *
+ * A link rather than the bare code, because a link is the thing a friend can
+ * act on without being told where the field is, and it carries the ascension
+ * and the word list, which the code alone does not. The code is still on the
+ * face, so it can be read aloud or typed into a phone that cannot open links.
+ */
+function seedLine(code: string, on: Handlers): HTMLElement {
+  const copy = ui().seed
+  return h(
+    "button",
+    {
+      class: "seed-line",
+      type: "button",
+      "data-focus": "seed",
+      "aria-label": `${copy.line(code)}. ${copy.copy}`,
+      onclick: () => on.copySeed(),
+    },
+    h("span", {}, copy.line(code)),
+    icon("copy"),
+  )
+}
+
+/** What the seed sheet needs that is not in the catalog. */
+export type SeedSheet = {
+  /** The field's text, as the app last heard it. */
+  draft: string
+  /** The level the run will be dealt at. */
+  ascension: number
+  /** The list it will be dealt from, only when that is not the interface's. */
+  words: Lang | null
+  /** Whether a run is open, which Play would end. */
+  inRun: boolean
+}
+
+/**
+ * The seed sheet: the version stamp's destination, and a link's.
+ *
+ * The build is written out in full at the foot, commit and all, because the
+ * stamp that opened this hides the commit on a phone and the commit is the half
+ * a bug report needs; a player who came here to read the version finds it.
+ *
+ * The field is the only `<input>` in the game, and the rebuild is why it takes
+ * the care it does: the value is written from `draft` on every render, and
+ * typing tells the app without asking for one. See `editSeed`.
+ */
+export function seedView(sheet: SeedSheet, on: Handlers): HTMLElement {
+  const copy = ui().seed
+  return overlay(
+    on,
+    h("h2", { class: "sheet-title" }, copy.title),
+    h("p", { class: "sheet-note" }, copy.blurb),
+    h(
+      "label",
+      { class: "seed-field" },
+      h("span", { class: "seed-field-label" }, copy.field),
+      h("input", {
+        class: "seed-input",
+        type: "text",
+        "data-focus": "seed-input",
+        value: sheet.draft,
+        // No `maxlength`: it cut a pasted link to its first nine characters,
+        // which is never a code. `parseSeed` is where length is judged.
+        autocomplete: "off",
+        autocapitalize: "characters",
+        autocorrect: "off",
+        spellcheck: "false",
+        enterkeyhint: "go",
+        // A code that could be real. 35 bits spell 31, so every seed's first
+        // character is 0 or 1, and a placeholder starting with a K would teach
+        // the one shape the field refuses.
+        placeholder: "1K7QX2M",
+        oninput: (event: Event) => on.editSeed((event.target as HTMLInputElement).value),
+        onkeydown: (event: Event) => {
+          if ((event as KeyboardEvent).key !== "Enter") return
+          // Stopped here as well as prevented: by the time it would bubble to the
+          // window the sheet is gone and the run's intro card is up, and any key
+          // at all deals that card's board, so the Enter that dealt the run
+          // skipped the card announcing it.
+          event.preventDefault()
+          event.stopPropagation()
+          on.playSeed()
+        },
+      }),
+    ),
+    h(
+      "p",
+      { class: "sheet-note seed-terms" },
+      ui().common.ascension(sheet.ascension),
+      sheet.words && ` · ${copy.words(LANG_NAMES[sheet.words])}`,
+    ),
+    sheet.inRun && h("p", { class: "sheet-note" }, copy.abandons),
+    h("p", { class: "sheet-note seed-build" }, buildStamp()),
+    h(
+      "div",
+      { class: "sheet-actions" },
+      h(
+        "button",
+        { class: "secondary", type: "button", onclick: () => on.closeOverlay() },
+        ui().common.close,
+      ),
+    ),
+    h("button", { class: "primary", type: "button", onclick: () => on.playSeed() }, copy.play),
   )
 }

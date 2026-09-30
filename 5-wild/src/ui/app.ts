@@ -24,10 +24,13 @@ import {
   readLang,
   refusalText,
   setLang,
+  ui,
 } from "./lang"
-import { chosenAscension, Profile } from "./meta"
+import { chosenAscension, Profile, unlocked } from "./meta"
 import { Music } from "./music"
 import { seal, unseal } from "./seal"
+import type { SeededOffer } from "./seed"
+import { parseSeed, readPastedLink, seedCode, seedLink } from "./seed"
 import { currentSkin, NEXT_SKIN } from "./skin"
 import { loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
 import { isTable } from "./table"
@@ -45,7 +48,7 @@ import {
   stepFor,
 } from "./telemetry"
 import { setSkin } from "./theme"
-import type { Chrome, Decor, Handlers, SoundLevel } from "./views"
+import type { Chrome, Decor, Handlers, SeedSheet, SoundLevel } from "./views"
 import {
   aboutView,
   ascendView,
@@ -67,6 +70,7 @@ import {
   quitView,
   rewardView,
   roundView,
+  seedView,
   shapesView,
   shopView,
   statsView,
@@ -225,6 +229,7 @@ export class App {
     | "ascend"
     | "about"
     | "credits"
+    | "seed"
     | null = null
   /**
    * Which sheet the last render put on screen, so this one can tell a sheet
@@ -242,6 +247,19 @@ export class App {
   private sheetHeard: typeof this.overlay = null
   /** Which rung the open lock is offering. Only meaningful while `overlay` is "ascend". */
   private ascendTo = 0
+  /**
+   * What is typed in the seed field, held here because the field is rebuilt
+   * with every render and would otherwise forget it. Not saved: a half-typed
+   * code is a gesture, like `arming`.
+   */
+  private seedDraft = ""
+  /**
+   * The run a `?seed=` link asked for, which carries the ascension and word
+   * list the code does not. It applies while the field still names its seed;
+   * a code typed over it is the player's own, and is dealt on the player's own
+   * terms: the dial's level and the interface's language, as Play would be.
+   */
+  private seedOffer: SeededOffer | null = null
   /**
    * The letter in the picker that has been tapped and is waiting to be confirmed,
    * because it is already carrying a modifier that placing would destroy.
@@ -470,6 +488,9 @@ export class App {
       "setAscension",
       "placeMod",
       "cancelPlace",
+      "openSeed",
+      "playSeed",
+      "copySeed",
     ] as const) {
       this.handlers[name] = idle
     }
@@ -591,8 +612,16 @@ export class App {
     //
     // The level comes off the run rather than off the record, so a win is banked
     // at the difficulty it was actually played at whatever has been chosen since.
+    //
+    // A seed from a link can be played at any level, and the ladder is climbed a
+    // rung at a time, so a seeded win above the dial's reach is still a win on
+    // the record but raises no rung: one friend's level-20 link would otherwise
+    // unlock the whole ladder for someone who never played past the first.
+    // At or below the reach it climbs as any win does, since the player could
+    // have picked that level for a run of their own.
     if (!this.watching && events.some((event) => event.type === "run_won")) {
-      this.profile.won(this.state.ascension ?? 0)
+      const level = this.state.ascension ?? 0
+      this.profile.won(level, !this.log?.seeded || level <= unlocked(this.profile.stats))
     }
 
     const paid = events.some((event) => event.type === "gold")
@@ -1033,12 +1062,30 @@ export class App {
    * the `translateX(-50%)` holding the panel in the middle of the screen.
    */
   private toast(message: string): void {
-    const host = this.root.querySelector(".toast")
-    if (!host) return
+    const host = this.root.querySelector(".toast") ?? this.toastHost()
     host.textContent = message
     host.classList.add("show")
     clearTimeout(this.toastTimer)
     this.toastTimer = setTimeout(() => host.classList.remove("show"), TOAST)
+  }
+
+  /**
+   * A host for a screen that did not draw one. The round and the shop draw
+   * their own, where their stylesheets can lift it clear of the keys, and every
+   * other screen gets this one at the foot of the window. It used to be that
+   * those screens had nowhere to say anything, and nothing did, until the seed
+   * sheet: it opens over any screen a link lands on, and its refusal and the
+   * copy button's "Link copied" are the only signs either tap did anything. The
+   * next render clears it with everything else.
+   */
+  private toastHost(): HTMLElement {
+    const host = document.createElement("div")
+    host.className = "toast"
+    this.root.append(host)
+    // Laid out once at `opacity: 0`, or the class added next lands in the same
+    // frame and the fade has nothing to fade from.
+    void host.offsetWidth
+    return host
   }
 
   /* --------------------------------------------------------------- render */
@@ -1264,6 +1311,50 @@ export class App {
       this.overlay = "ascend"
       this.render()
     },
+    openSeed: () => {
+      this.overlay = "seed"
+      this.render()
+    },
+    // Stored without a render, which would rebuild the field under the caret on
+    // every keystroke. A pasted link is the exception: it arrives in one event,
+    // and it changes the terms the sheet states, so it becomes the offer a link
+    // opened in the address bar would have made, and is drawn as its code.
+    editSeed: (text) => {
+      const pasted = readPastedLink(text)
+      if (!pasted) {
+        this.seedDraft = text
+        return
+      }
+      this.seedOffer = pasted
+      this.seedDraft = seedCode(pasted.seed)
+      this.render()
+    },
+    playSeed: () => {
+      const seed = parseSeed(this.seedDraft)
+      if (seed === null) {
+        this.toast(ui().seed.badCode)
+        return
+      }
+      const { ascension, words } = this.seedTerms(seed)
+      void this.startSeeded(seed, ascension, words)
+    },
+    // The link rather than the code, for the reason `seedLine` gives. The toast
+    // is the only sign the tap did anything, since a clipboard has no face; a
+    // refused write (no permission, an old WebView) puts the code up instead,
+    // which is at least a thing that can be read off and typed.
+    copySeed: () => {
+      const link = seedLink(this.state.seed, this.state.ascension ?? 0, this.wordsLang)
+      const code = ui().seed.line(seedCode(this.state.seed))
+      const write = navigator.clipboard?.writeText(link)
+      if (!write) {
+        this.toast(code)
+        return
+      }
+      write.then(
+        () => this.toast(ui().seed.copied),
+        () => this.toast(code),
+      )
+    },
     ascend: () => {
       this.profile.chose(this.ascendTo)
       this.overlay = null
@@ -1297,6 +1388,7 @@ export class App {
 
   private get chrome(): Chrome {
     return {
+      seed: this.atTitle || this.watching ? null : seedCode(this.state.seed),
       sound: this.soundLevel,
       effectsOff: this.sound.isMuted,
       musicOff: this.music.isOff,
@@ -1310,6 +1402,18 @@ export class App {
       coachOffer: this.coachOffer,
       sharing: !sharingEnabled() ? null : (this.consent ?? "off"),
       thanked: this.thanked,
+    }
+  }
+
+  private get seedSheet(): SeedSheet {
+    const { ascension, words } = this.seedTerms(parseSeed(this.seedDraft))
+    return {
+      draft: this.seedDraft,
+      ascension,
+      words: words === this.lang ? null : words,
+      // A lost run is still on screen but already over, so a link opened on its
+      // end screen replaces nothing. A won one is not: endless is still on offer.
+      inRun: !this.atTitle && this.state.phase !== "game_over",
     }
   }
 
@@ -1373,15 +1477,94 @@ export class App {
   }
 
   /**
+   * Open the seed sheet on a link's run, over whatever the launch would have
+   * shown. Called by the shell once, before `start`; the sheet is an offer and
+   * not a deal, because a link opened by a player mid-run must not cost them the
+   * run before they have read what it is.
+   */
+  offerSeed(offer: SeededOffer | string): void {
+    // A string is a link whose code did not read, offered as typed so Play can
+    // say what is wrong with it; its terms are the player's own until it does.
+    if (typeof offer === "string") this.seedDraft = offer
+    else {
+      this.seedOffer = offer
+      this.seedDraft = seedCode(offer.seed)
+    }
+    this.overlay = "seed"
+  }
+
+  /**
+   * The level and the list a seed will be dealt from: the link's, while the
+   * field still names the link's seed, and otherwise the player's own, the
+   * dial and the interface language, which is exactly what Play would use.
+   */
+  private seedTerms(seed: number | null): { ascension: number; words: Lang } {
+    const offer = this.seedOffer
+    if (offer && seed === offer.seed) return { ascension: offer.ascension, words: offer.words }
+    return { ascension: chosenAscension(this.profile.stats), words: this.lang }
+  }
+
+  /**
+   * Deal a chosen seed from a chosen list.
+   *
+   * Not through `withWords`, although Play is, because the two disagree about
+   * a failed fetch. Play shrugs one off and deals from the list in hand, which is
+   * right for a random run and wrong for this one: another list is another run
+   * under the same code, the "same seed, different word" the link exists to
+   * prevent. So a failure here deals nothing, and hands back the sheet exactly as
+   * it was, code and link terms and all, since the player's next move is to try
+   * again and a sheet emptied by the attempt would have lost the link's level and
+   * list for good. A retype cannot bring those back.
+   *
+   * The sheet comes down while the list loads, because it would otherwise sit
+   * over the loading card with a live Play button, and a second tap would start a
+   * second deal racing the first.
+   *
+   * Any list but the interface's becomes the run's, the way the spectator's does
+   * in `watchRun`; `deferWords` then starts the interface's own on its way for
+   * the run after, so the pause sheet's note about words changing is true.
+   */
+  private async startSeeded(seed: number, ascension: number, words: Lang): Promise<void> {
+    if (words !== this.wordsLang) {
+      this.overlay = null
+      this.loading = true
+      this.render()
+      try {
+        // The interface's list may already be on its way; asking again would
+        // fetch it twice.
+        this.words = await (words === this.lang && this.incoming
+          ? this.incoming
+          : this.lists.load(words))
+        this.wordsLang = words
+      } catch (error) {
+        this.loading = false
+        this.overlay = "seed"
+        // A rejected `incoming` would be handed back to every later attempt.
+        this.deferWords()
+        this.render()
+        this.toast(ui().error.words(String(error)))
+        return
+      }
+      this.loading = false
+      this.deferWords()
+    }
+    this.seedOffer = null
+    this.seedDraft = ""
+    this.startFresh(true, { seed, ascension })
+  }
+
+  /**
    * The body of `newRun`, once there is a word list to start one from.
    * `intro` false skips the round's intro card; see `startTutorial`.
    */
-  private startFresh(intro = true): void {
+  private startFresh(intro = true, seeded?: { seed: number; ascension: number }): void {
     // A run replaced without ending is still a run. This is also where a run
     // lands whose app was killed mid-round and never reopened to it.
     this.finish("abandoned")
     this.thanked = null
-    this.state = startRun(rootSeed(), this.words, chosenAscension(this.profile.stats)).state
+    this.state = seeded
+      ? startRun(seeded.seed, this.words, seeded.ascension).state
+      : startRun(rootSeed(), this.words, chosenAscension(this.profile.stats)).state
     this.atTitle = false
     this.overlay = null
     this.intro = intro
@@ -1390,7 +1573,7 @@ export class App {
     // run so that nothing downstream has to handle a null one, and most of
     // those are scaffolding the player never sees.
     this.profile.started()
-    this.log = beginLog(this.state, this.wordsLang, this.profile.stats.runs)
+    this.log = beginLog(this.state, this.wordsLang, this.profile.stats.runs, seeded !== undefined)
     stashCheckpoint(this.state, this.wordsLang)
     // Persisted before the first keypress: a fresh run is already a run, and
     // closing the app on the intro card should not silently reroll the word.
@@ -1521,7 +1704,7 @@ export class App {
             : phase === "shop"
               ? shopView(this.state, this.handlers, this.coach)
               : phase === "game_over" || phase === "victory"
-                ? endView(this.state, this.handlers)
+                ? endView(this.state, this.handlers, this.chrome.seed)
                 : roundView(this.state, this.handlers, this.chrome)
 
     // Overlays sit beside the screen rather than replacing it, so the board is
@@ -1554,11 +1737,13 @@ export class App {
                       ? quitView(this.state, this.handlers)
                       : this.overlay === "ascend"
                         ? ascendView(this.ascendTo, this.handlers)
-                        : // Both are held decisions the engine will not let the shop move
-                          // past, and the two cannot be open at once, since buying is refused
-                          // while either is. Order is arbitrary; only exclusivity matters.
-                          (placeView(this.state, this.handlers, this.arming) ??
-                          packView(this.state, this.handlers))
+                        : this.overlay === "seed"
+                          ? seedView(this.seedSheet, this.handlers)
+                          : // Both are held decisions the engine will not let the shop move
+                            // past, and the two cannot be open at once, since buying is refused
+                            // while either is. Order is arbitrary; only exclusivity matters.
+                            (placeView(this.state, this.handlers, this.arming) ??
+                            packView(this.state, this.handlers))
 
     // Which sheet that is, since the answer decides whether it may announce
     // itself below. `overlay` names nine of them. The two the fallback builds
@@ -1913,6 +2098,10 @@ export class App {
           event.preventDefault()
           return
         }
+        // A text field is the one thing in a sheet that wants the rest of the
+        // keyboard. Swallowed like everything else, the seed field could take
+        // no letter at all; let past, the field's own handler owns Enter.
+        if (event.target instanceof HTMLInputElement) return
         // Enter and Space are how a keyboard presses the button it has tabbed
         // to, and preventing them here is what made "Quit run" unreachable
         // without a mouse: the trap would walk focus onto it and neither key
