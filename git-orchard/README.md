@@ -58,6 +58,7 @@ git orchard push --tag tools/foo/v1.2.3 # publish as v1.2.3 upstream
 git orchard release tools/foo          # tag the next version, e.g. tools/foo/v1.2.4, and push it to origin
 git orchard release tools/foo v2.0.0   # or a version of your choosing
 git orchard sync [prefix...]            # copy shared files into subtrees
+git orchard detach [worktree]           # turn a linked worktree into a standalone clone
 ```
 
 Without a version, `release` picks one after the latest release, much as [tag](https://github.com/jmelahman/tag) does: the patch version incremented (`--minor` and `--major` increment those instead), or a pre-release's stable release; `--suffix rc` picks the next release candidate, e.g. `v1.2.4-rc`, then `v1.2.4-rc.1`.
@@ -69,6 +70,9 @@ Releases are the `<prefix>/v*` tags in the monorepo and on its remote, and the `
 
 `push` splits each subtree out of the monorepo with `git subtree split`, which is deterministic, so the same history always gives the same commits and every push is a fast-forward.
 An upstream with commits the monorepo doesn't have rejects the push until they're pulled in.
+
+`detach` gives a worktree made with `git worktree add` its own `.git` directory, with the repository's refs, config, hooks and excludes, and the worktree's HEAD and index, so uncommitted changes carry over; objects are hardlinked where possible, as for a local clone.
+It then drops the worktree from the original repository, and refuses one that is locked, has submodules, or is mid-merge, rebase, cherry-pick, revert or bisect.
 
 git-orchard only runs `git`, so credentials, SSH config and `url.<base>.insteadOf` rewrites apply as usual.
 
