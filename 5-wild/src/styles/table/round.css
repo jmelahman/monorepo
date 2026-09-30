@@ -265,11 +265,13 @@
 }
 
 /*
- * The hand alone at the far end of the row, its seats flush: one strip, no
- * gaps. With a gap between every seat, two empty consumable slots at the end of
- * the row read as more relic slots on the same shelf, and the owner asked for
- * the hand to be told apart from the relics. Closing it up makes the hand one
- * object, and the gap to the relics is what separates the two.
+ * The hand alone at the far end of the row, its seats close: half the relics'
+ * gap. With the relics' gap between every seat, two empty consumable slots at
+ * the end of the row read as more relic slots on the same shelf, and the owner
+ * asked for the hand to be told apart from the relics. Flush made it one
+ * object, but two held cards then read as one card with a seam, so the owner
+ * asked for a little air back; a quarter rem is enough to part them and still
+ * well short of the gap to the relics, which is what separates the two.
  *
  * `display: contents` frees the decor switch from the line, so it can go down
  * to the keyboard (below) while the consumables stay here. It sat at the end of
@@ -285,7 +287,7 @@
   grid-row: 1;
   align-self: start;
   justify-self: end;
-  gap: 0;
+  gap: var(--space-1);
   min-width: 0;
   /* The hand is the thing the player acts on, so if the two ever meet it is
      the one on top. */
@@ -294,8 +296,16 @@
 }
 
 :root.table .round-screen .consumable {
-  /* Likewise, from clamp(7rem, 10vw, 9rem). */
-  flex: 0 1 clamp(7rem, 11.5vw, 11rem);
+  /* Likewise, from clamp(7rem, 10vw, 9rem).
+
+     A width and not a flex-basis, though the two lay the hand out alike,
+     because the hand's column is `auto` and sized by what the hand says it
+     wants. Blink asks the basis; Gecko ignores it and asks the text, and a
+     held card's rule on one line is some 400px, so in Firefox two cards made
+     a 528px column at 1024 wide and left the relic tray 112px to clip five
+     seats into. Both engines take a definite width as the card's size. */
+  flex: 0 1 auto;
+  width: clamp(7rem, 11.5vw, 11rem);
   min-width: 5rem;
 }
 
