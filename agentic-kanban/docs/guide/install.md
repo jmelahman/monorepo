@@ -32,9 +32,11 @@ docker run -d --name kanban \
   -v $HOME/.local/share/kanban:$HOME/.local/share/kanban \
   -v $HOME/.gitconfig:$HOME/.gitconfig:ro \
   -v $HOME/.config/git:$HOME/.config/git:ro \
+  -v ${SSH_AUTH_SOCK:-/dev/null}:${SSH_AUTH_SOCK:-/dev/null} \
   -v $SOURCE:$SOURCE \
   -e HOME=$HOME \
   -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+  -e SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-} \
   -e KANBAN_DATA_DIR=$HOME/.local/share/kanban \
   -e KANBAN_HOST_DOCKER_SOCK=$DOCKER_SOCK_PATH \
   -e GH_TOKEN=$(gh auth token) \
@@ -59,7 +61,9 @@ The command mounts your `~/.gitconfig` and `~/.config/git` read-only. This does 
 - Your global ignore file (`core.excludesFile`) applies to the ticket diff. Add a pattern like `.claude/settings.local.json` there to hide it on every board. If `core.excludesFile` points somewhere else, such as `~/.gitignore`, mount that file too.
 - Kanban's merge commits use your name and email.
 
-Kanban doesn't sign its own commits by default, so `commit.gpgsign = true` in your config won't break merges. To sign them, mount your signing key and agent, then turn on **Sign commits** in the app settings.
+Kanban doesn't sign its own commits by default, so `commit.gpgsign = true` in your config won't break merges. To sign them, turn on **Sign commits** in the app settings. With SSH signing the command above has everything needed: the image has no `ssh-keygen`, and kanban signs through your forwarded agent itself. See [Signing](./configuration#signing).
+
+The `SSH_AUTH_SOCK` lines forward your ssh-agent. Without one, they mount `/dev/null` over itself, which does nothing.
 
 ## From GitHub Releases
 

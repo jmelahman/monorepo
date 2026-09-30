@@ -380,6 +380,40 @@ func TestCommit_SigningEnabled(t *testing.T) {
 	}
 }
 
+// TestSignerArgs_UsesKanban verifies that with signing on and no signer of the
+// user's own, kanban hands git itself as gpg.ssh.program. That kanban then
+// signs correctly is internal/sshsig's TestGitCommit.
+func TestSignerArgs_UsesKanban(t *testing.T) {
+	SetCommitSigning(true)
+	defer SetCommitSigning(false)
+	repo := signingRepo(t)
+	got := signerArgs(repo)
+	want := []string{"-c", "gpg.ssh.program=" + selfPath()}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("signerArgs = %q, want %q", got, want)
+	}
+}
+
+// TestCommit_SigningKeepsUserProgram verifies that kanban substitutes itself
+// as gpg.ssh.program only when the user hasn't chosen one: a configured
+// signer (op-ssh-sign and the like) is what actually holds their key.
+func TestCommit_SigningKeepsUserProgram(t *testing.T) {
+	SetCommitSigning(true)
+	defer SetCommitSigning(false)
+	repo := signingRepo(t)
+	marker := filepath.Join(t.TempDir(), "called")
+	prog := filepath.Join(t.TempDir(), "signer")
+	script := "#!/bin/sh\ntouch " + marker + "\nexit 1\n"
+	if err := os.WriteFile(prog, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustGit(t, repo, "config", "gpg.ssh.program", prog)
+	_ = Commit(repo, "sign", Identity{Name: "Ada", Email: "ada@example.com"})
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatal("the user's gpg.ssh.program was not the one git ran")
+	}
+}
+
 func initBareishRepo(t *testing.T) string {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "repo")

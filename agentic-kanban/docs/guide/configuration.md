@@ -120,7 +120,18 @@ Kanban makes merge and squash commits itself, so it needs a git name and email. 
 
 ### Signing
 
-Kanban turns off commit signing for its own commits so merges don't fail when no signing key is available. To sign them, mount your signing key and agent into the container, then set `[git] sign_commits = true` or turn on **Sign commits** in the app settings. Kanban then follows your gitconfig's `commit.gpgsign`.
+Kanban turns off commit signing for its own commits so merges don't fail when no signing key is available. To sign them, set `[git] sign_commits = true` or turn on **Sign commits** in the app settings. Kanban then follows your gitconfig's `commit.gpgsign`.
+
+With SSH signing (`gpg.format = ssh`), kanban signs through your ssh-agent itself, so it needs no `ssh-keygen` and no key files. It needs:
+
+- An agent holding the key, reachable at `SSH_AUTH_SOCK`. The [Docker install](./install#with-docker) forwards it.
+- `user.signingkey` set to the public key itself rather than a path, since `~/.ssh` isn't mounted in the container:
+
+  ```sh
+  git config --global user.signingkey "key::$(cat ~/.ssh/id_ed25519.pub)"
+  ```
+
+If kanban can't sign with the agent, it falls back to `ssh-keygen` when one is installed. If you've set `gpg.ssh.program` yourself (for example, 1Password's `op-ssh-sign`), kanban uses that instead. Any other signing setup, such as OpenPGP (`gpg.format = openpgp`), is up to your deployment: mount your signing key and agent into the container, and make sure the program your gitconfig signs with (`gpg`, by default) is installed there.
 
 ## GitHub
 

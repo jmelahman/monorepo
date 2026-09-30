@@ -71,11 +71,18 @@ services:
       # (~/.config/git/ignore). Put e.g. .claude/settings.local.json in your
       # global excludes to keep it out of every board's diff. Read-only — git
       # only reads them; kanban runs its own merge/squash commits with signing
-      # disabled, so a commit.gpgsign here won't break merges (and your signing
-      # key is never mounted). If core.excludesFile points at a non-default path
+      # disabled unless [git] sign_commits is on, so a commit.gpgsign here
+      # won't break merges. If core.excludesFile points at a non-default path
       # (e.g. ~/.gitignore), mount that file too.
       - ${HOME}/.gitconfig:${HOME}/.gitconfig:ro
       - ${HOME}/.config/git:${HOME}/.config/git:ro
+      # Your ssh-agent, which signs kanban's own commits when sign_commits is
+      # on (kanban is its own ssh-keygen; see internal/sshsig). Only the agent
+      # comes in, never a private key. Mounted at its host path because
+      # SSH_AUTH_SOCK above is also the bind *source* kanban gives session
+      # containers, so the two must agree. With no agent this binds /dev/null
+      # over itself, which is harmless.
+      - ${SSH_AUTH_SOCK:-/dev/null}:${SSH_AUTH_SOCK:-/dev/null}
     networks:
       - kanban-net
 

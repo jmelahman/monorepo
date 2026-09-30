@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -154,12 +155,12 @@ func DeleteBranch(repoPath, branch string) error {
 
 // Rebase rebases the current branch in worktreePath onto ref.
 func Rebase(worktreePath, ref string) error {
-	return run("git", "-C", worktreePath, "rebase", ref)
+	return runCommitting(worktreePath, "rebase", ref)
 }
 
 // Merge merges ref into the current branch in worktreePath (no edit).
 func Merge(worktreePath, ref string) error {
-	return run("git", "-C", worktreePath, "merge", "--no-edit", ref)
+	return runCommitting(worktreePath, "merge", "--no-edit", ref)
 }
 
 // MergeNoFF merges branch into the currently checked-out branch in repoPath
@@ -167,8 +168,8 @@ func Merge(worktreePath, ref string) error {
 // id is set, its name/email override the commit author/committer.
 func MergeNoFF(repoPath, branch string, id Identity) error {
 	args := append([]string{}, id.configArgs()...)
-	args = append(args, "-C", repoPath, "merge", "--no-ff", "--no-edit", branch)
-	return run("git", args...)
+	args = append(args, "merge", "--no-ff", "--no-edit", branch)
+	return runCommitting(repoPath, args...)
 }
 
 // MergeSquash squashes branch into the index of repoPath without committing,
@@ -179,8 +180,8 @@ func MergeSquash(repoPath, branch, message string, id Identity) error {
 		return err
 	}
 	args := append([]string{}, id.configArgs()...)
-	args = append(args, "-C", repoPath, "commit", "-m", message)
-	return run("git", args...)
+	args = append(args, "commit", "-m", message)
+	return runCommitting(repoPath, args...)
 }
 
 // MergeFFOnly fast-forwards the currently checked-out branch in repoPath to
@@ -245,8 +246,8 @@ func AddAll(worktreePath string) error {
 // set, its name/email override the commit author/committer.
 func Commit(worktreePath, message string, id Identity) error {
 	args := append([]string{}, id.configArgs()...)
-	args = append(args, "-C", worktreePath, "commit", "-m", message)
-	return run("git", args...)
+	args = append(args, "commit", "-m", message)
+	return runCommitting(worktreePath, args...)
 }
 
 // IsClean reports whether the worktree has no uncommitted changes, counting
@@ -503,9 +504,52 @@ var signCommits atomic.Bool
 
 // SetCommitSigning configures whether kanban's own commit/merge/squash/rebase
 // operations may be signed. When enabled, kanban stops forcing signing off and
-// defers to the git config's commit.gpgsign — the deployment is then
-// responsible for providing a signing key/agent inside the container.
+// defers to the git config's commit.gpgsign, and for SSH signing supplies its
+// own signer (see signerArgs) — the deployment is then responsible only for an
+// ssh-agent inside the container.
 func SetCommitSigning(enabled bool) { signCommits.Store(enabled) }
+
+// selfPath is kanban's own executable, which doubles as an ssh-keygen for
+// `-Y sign` (see internal/sshsig). Empty when it can't be resolved, in which
+// case git keeps its default program.
+var selfPath = sync.OnceValue(func() string {
+	p, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	return p
+})
+
+// signerArgs returns the `-c` override that picks who signs a commit made in
+// dir: kanban itself as gpg.ssh.program, so gpg.format=ssh works in an image
+// with no ssh-keygen (the override is inert for any other gpg.format). Nil
+// with signing off, where run's noSignArgs already decide it. A
+// gpg.ssh.program the user set (1Password's op-ssh-sign, say) is left alone:
+// it is there because ssh-keygen was not the right signer for them, and
+// kanban's fallback is ssh-keygen. That costs one `git config` read, which is
+// why only runCommitting asks, and why it isn't cached: each repo may set its
+// own.
+func signerArgs(dir string) []string {
+	if !signCommits.Load() {
+		return nil
+	}
+	self := selfPath()
+	if self == "" {
+		return nil
+	}
+	if exec.Command("git", "-C", dir, "config", "--get", "gpg.ssh.program").Run() == nil {
+		return nil
+	}
+	return []string{"-c", "gpg.ssh.program=" + self}
+}
+
+// runCommitting runs a git command in dir that may create commits and so may
+// sign them (commit, merge, rebase). args must not repeat the `-C dir`.
+func runCommitting(dir string, args ...string) error {
+	full := append([]string{}, signerArgs(dir)...)
+	full = append(full, "-C", dir)
+	return run("git", append(full, args...)...)
+}
 
 func run(name string, args ...string) error {
 	if name == "git" && !signCommits.Load() {
