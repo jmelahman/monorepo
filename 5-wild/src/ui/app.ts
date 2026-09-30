@@ -1,5 +1,6 @@
 import type { Action, GameEvent, Refusal, RunState, WordSource } from "../engine"
 import { MODIFIER_BY_ID, reduce, startRun } from "../engine"
+import { withAmounts } from "./amounts"
 import type { Cue } from "./audio"
 import { audioContext, Sound } from "./audio"
 import type { CoachStep } from "./coach"
@@ -965,7 +966,9 @@ export class App {
       return
     }
 
-    tip.textContent = host.dataset.tip ?? ""
+    // Nodes rather than `textContent`, so a tip marks its mult amounts the way
+    // the card it came off does. See `withAmounts`.
+    tip.replaceChildren(...withAmounts(host.dataset.tip ?? ""))
     // Borrowing the card's rarity keeps the two reading as one object, which a
     // sibling of the tray cannot do by inheritance. A key has no rarity and
     // takes the common edge, which is the neutral one.

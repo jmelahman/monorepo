@@ -560,3 +560,12 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+/* The chip notched like every other box in the room. On the mult tint and not
+   on `--well`, which is what the sentence around it already sits on: a well
+   chip in a well paragraph was an underline with nothing above it. */
+:root.skin-smoke .amt-times {
+  border-radius: 0;
+  clip-path: var(--cut);
+  background: color-mix(in srgb, var(--mult) 22%, var(--well));
+}

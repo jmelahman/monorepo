@@ -53,6 +53,7 @@ import {
   solveBonusFor,
   TIER_STAGES,
 } from "../engine"
+import { withAmounts } from "./amounts"
 import type { CoachStep } from "./coach"
 import { h } from "./dom"
 import { emblem } from "./emblems"
@@ -634,7 +635,7 @@ function consumableRow(state: RunState, on: Handlers): HTMLElement {
         onclick: () => on.useConsumable(index),
       },
       h("span", { class: "consumable-name" }, card.name),
-      h("span", { class: "consumable-text" }, card.text),
+      h("span", { class: "consumable-text" }, ...withAmounts(card.text)),
     )
   })
   return h("div", { class: "consumables" }, ...seats)
@@ -1858,7 +1859,7 @@ function shopItemCard(item: ShopItem, index: number, state: RunState, on: Handle
       onclick: () => on.buy(index),
     },
     cardHead(item, title),
-    h("div", { class: "shop-item-text" }, text),
+    h("div", { class: "shop-item-text" }, ...withAmounts(text)),
     ladderLine(level),
     swap ? swapLine(swap, displaced(item, state)) : null,
     // Said on a line of its own, where the ticket used to say it as
@@ -1986,7 +1987,7 @@ export function packView(state: RunState, on: Handlers): HTMLElement | null {
             // So the ticket is the drawing alone here, which is still worth its
             // corner: it is what the shelf taught the rarity color on.
             cardHead(item, title),
-            h("div", { class: "shop-item-text" }, text),
+            h("div", { class: "shop-item-text" }, ...withAmounts(text)),
             ladderLine(level),
             // The one warning that does stay on this sheet, and the difference
             // from the tag it replaced is that this pick does not bounce. A
@@ -2272,7 +2273,7 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
               "div",
               { class: "consumable" },
               h("span", { class: "consumable-name" }, card.name),
-              h("span", { class: "consumable-text" }, card.text),
+              h("span", { class: "consumable-text" }, ...withAmounts(card.text)),
             )
           }),
         )
@@ -3312,7 +3313,7 @@ function entry(name: string, text: string, note?: string): HTMLElement {
       h("strong", {}, name),
       note ? h("span", { class: "codex-note" }, note) : null,
     ),
-    h("span", { class: "codex-text" }, text),
+    h("span", { class: "codex-text" }, ...withAmounts(text)),
   )
 }
 

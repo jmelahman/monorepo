@@ -260,3 +260,11 @@
   background: var(--coin);
   box-shadow: inset 0 0.125rem 0 var(--coin-hi);
 }
+
+/* On bone the chip is the mult ink tinted into the card's own deeper bone. The
+   base rule mixes with `--panel`, which here is the walnut the tip sits on, so
+   on a card it came out a maroon slab heavier than the card's name. The tip
+   keeps the base rule, since it is walnut. */
+:root.skin-tabletop :is(.shop-item-text, .consumable-text) .amt-times {
+  background: color-mix(in srgb, var(--mult) 16%, var(--bone-deep));
+}

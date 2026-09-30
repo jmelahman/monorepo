@@ -408,3 +408,37 @@
   flex: 0 0 auto;
   opacity: 0.65;
 }
+
+/*
+ * The amounts in a card's sentence, marked by `withAmounts` (see `amounts.ts`)
+ * on the shelf, in a pack, on a consumable, in a tip and in the codex, each in
+ * the colour the scoring readout already uses for what it adds to.
+ *
+ * A ×mult and a +mult are told apart by shape rather than by a second hue: the
+ * ×mult is the readout's mult chip in small, the thing the player already
+ * watches multiply, and the +mult is bare type. A second red would have been a
+ * new word in a palette that has three.
+ */
+.amt {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amt-mult,
+.amt-times {
+  color: var(--mult);
+}
+
+.amt-chips {
+  color: var(--chips);
+}
+
+.amt-gold {
+  color: var(--gold);
+}
+
+.amt-times {
+  padding: 0 0.3em;
+  border-radius: 0.3em;
+  background: color-mix(in srgb, var(--mult) 22%, var(--panel));
+}
