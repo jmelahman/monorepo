@@ -854,6 +854,25 @@ shell in the container is attached instead of the agent.`,
 	}
 	sync.Flags().StringVar(&syncStrategy, "strategy", "rebase", "Sync strategy: rebase or merge")
 
+	var restartJSON bool
+	restart := &cobra.Command{
+		Use:   "restart [id]",
+		Short: "Restart a ticket's devcontainer",
+		Long: "Stop and remove the ticket's session container, then start a fresh one.\n" +
+			"The worktree, branch, and port allocations are kept.",
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			url := resolveURL(cmd, serverURL)
+			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Restart ticket container", "restart"}, false)
+			if err != nil {
+				return err
+			}
+			return runTicketRestart(ctx, url, cmd.OutOrStdout(), id, restartJSON)
+		},
+	}
+	restart.Flags().BoolVar(&restartJSON, "json", false, "Print the full session JSON instead of a one-line summary")
+
 	var mergeStrategy string
 	mergeCmd := &cobra.Command{
 		Use:   "merge [id]",
@@ -871,7 +890,7 @@ shell in the container is attached instead of the agent.`,
 	}
 	mergeCmd.Flags().StringVar(&mergeStrategy, "strategy", "", "Merge strategy: merge-commit, squash, or rebase (default: merge.default_strategy)")
 
-	parent.AddCommand(create, info, attach, ticketTasksCmd(&serverURL, &boardIdent), update, move, archive, unarchive, delTicket, doneCmd, sync, mergeCmd)
+	parent.AddCommand(create, info, attach, ticketTasksCmd(&serverURL, &boardIdent), update, move, archive, unarchive, delTicket, doneCmd, sync, mergeCmd, restart)
 	// A cancelled picker or a failed API call isn't a usage error; don't
 	// bury any of them under the flag table.
 	for _, c := range parent.Commands() {
@@ -1070,6 +1089,27 @@ func runTicketSync(ctx context.Context, url string, out io.Writer, id int64, str
 	}
 	fmt.Fprintf(out, "synced ticket %d (%s)\n", id, strategy)
 	return nil
+}
+
+// runTicketRestart restarts the session working on the ticket, which tears
+// down its devcontainer and starts a new one. A ticket with no session has
+// no container to restart, so that's an error rather than a silent create.
+func runTicketRestart(ctx context.Context, url string, out io.Writer, id int64, asJSON bool) error {
+	info, err := loadTicketInfo(ctx, url, id)
+	if err != nil {
+		return err
+	}
+	if info.Session == nil {
+		return fmt.Errorf("ticket %d has no session to restart; start one with `kanban ticket attach %d`", id, id)
+	}
+	if !asJSON {
+		fmt.Fprintf(out, "restarting session #%d (if the devcontainer image must be pulled or built, this can take a few minutes)...\n", info.Session.ID)
+	}
+	raw, err := client.New(url, nil).RestartSession(ctx, info.Session.ID)
+	if err != nil {
+		return err
+	}
+	return printSessionSummary(out, raw, asJSON)
 }
 
 func runTicketMerge(ctx context.Context, url string, out io.Writer, id int64, strategy string) error {

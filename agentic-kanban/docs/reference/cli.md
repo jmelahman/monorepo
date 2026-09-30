@@ -27,7 +27,8 @@ kanban
 │   ├── delete         Delete archived tickets
 │   ├── done           Move tickets to the last column and stop their sessions
 │   ├── sync           Update a ticket's branch from its base
-│   └── merge          Merge a ticket's branch into its base
+│   ├── merge          Merge a ticket's branch into its base
+│   └── restart        Restart a ticket's devcontainer
 ├── column
 │   └── archive-all    Archive every ticket in a column
 ├── session
@@ -294,6 +295,12 @@ Brings the base branch into the ticket's branch. Defaults to `rebase`.
 Merges the ticket's branch into the base branch. Without `--strategy`, it uses the board's [default strategy](/guide/configuration#default-merge-strategy), or the only allowed one. Otherwise `--strategy` is required. For a merge commit, use `merge-commit`, not `merge`.
 
 The base branch must be checked out in the repo with no uncommitted changes to tracked files.
+
+### `ticket restart [id]`
+
+Restarts the ticket's devcontainer. It removes the session's container and starts a new one, which also restarts the agent. The worktree, branch, and ports stay the same. If the image has to be pulled or built, this can take a few minutes. The ticket needs a session; if it has none, `ticket attach` creates one. `--json` prints the session.
+
+This works like `session restart`, but it takes a ticket ID.
 
 ## `column archive-all <id>`
 

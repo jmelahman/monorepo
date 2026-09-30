@@ -5,7 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -1130,5 +1133,56 @@ func TestBoardsForPrefix(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestRunTicketRestart checks that `ticket restart` resolves the ticket to
+// its session before restarting, and refuses a ticket with no session
+// rather than creating one.
+func TestRunTicketRestart(t *testing.T) {
+	srv, store, board := newKanbanCLITestServer(t)
+	cols, _ := store.ListColumns(t.Context(), board.ID)
+	tk := &db.Ticket{BoardID: board.ID, ColumnID: cols[0].ID, Title: "Restart me", Slug: "restart-me"}
+	if err := store.CreateTicket(t.Context(), tk); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	err := runTicketRestart(t.Context(), srv.URL, &out, tk.ID, false)
+	if err == nil || !strings.Contains(err.Error(), "no session") {
+		t.Fatalf("restart without a session: err = %v", err)
+	}
+	if _, err := store.GetSessionByTicket(t.Context(), tk.ID); err == nil {
+		t.Error("restart created a session for a ticket that had none")
+	}
+
+	// The real restart needs Docker, so route the restart call to a stub
+	// and let every lookup through to the real server.
+	sess := &db.Session{TicketID: tk.ID, Status: db.SessionStatusWorking, BranchName: "kanban/cli-board/restart-me"}
+	if err := store.UpsertSession(t.Context(), sess); err != nil {
+		t.Fatal(err)
+	}
+	var restarted string
+	real, _ := url.Parse(srv.URL)
+	proxy := httputil.NewSingleHostReverseProxy(real)
+	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/restart") {
+			restarted = r.URL.Path
+			fmt.Fprintf(w, `{"id":%d,"ticket_id":%d,"status":"working","branch_name":%q}`, sess.ID, tk.ID, sess.BranchName)
+			return
+		}
+		proxy.ServeHTTP(w, r)
+	}))
+	t.Cleanup(stub.Close)
+
+	out.Reset()
+	if err := runTicketRestart(t.Context(), stub.URL, &out, tk.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if want := fmt.Sprintf("/api/sessions/%d/restart", sess.ID); restarted != want {
+		t.Errorf("restarted %q, want %q", restarted, want)
+	}
+	if want := fmt.Sprintf("session #%d ticket=%d status=working", sess.ID, tk.ID); !strings.Contains(out.String(), want) {
+		t.Errorf("output = %q, want it to contain %q", out.String(), want)
 	}
 }
