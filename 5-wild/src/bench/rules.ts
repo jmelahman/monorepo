@@ -81,6 +81,7 @@ the current screen. Send exactly one command per move:
 - collect        bank a cleared round's reward
 - buy <n>        buy shop item n
 - sell <n>       sell relic n
+- drop <n>       throw away consumable n in the shop, for nothing
 - reroll         reroll the shop
 - next           leave the shop for the next round
 - pick <n>       take card n from an open pack

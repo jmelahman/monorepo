@@ -30,6 +30,15 @@
   line-height: 1.2;
 }
 
+/* What a tap on a held card does in the shop, set where the relic beside it
+   prints its price. Muted rather than in the cash colour, because it pays
+   nothing: the one thing this label must not look like is a sale. */
+.consumable .drop {
+  font-size: var(--type-pip);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 /* On the board the hand is a fixed band, seats and all, so the board above it
    is the same size and in the same place whether the hand is full, empty or
    emptied mid-round. The band is the relic tray's height, `--tray-h`, so the

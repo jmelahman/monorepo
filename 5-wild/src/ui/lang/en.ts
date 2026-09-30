@@ -303,6 +303,7 @@ export const en: Strings = {
 
     not_in_shop: "not in the shop",
     sell_only_in_shop: "you can only sell in the shop",
+    drop_only_in_shop: "you can only drop cards in the shop",
     finish_pack_first: "finish the open pack first",
     place_mod_first: "place the modifier first",
     already_bought: "already bought",
@@ -551,6 +552,7 @@ export const en: Strings = {
       title: "Shop",
       sold: "sold",
       sell: (amount) => `sell ${amount}`,
+      drop: "drop",
       reroll: "Reroll",
       nextRound: "Next round",
       // The tip on a row the player cannot afford, and the only place the

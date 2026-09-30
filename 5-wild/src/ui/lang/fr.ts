@@ -315,6 +315,7 @@ export const fr: Strings = {
 
     not_in_shop: "pas dans la boutique",
     sell_only_in_shop: "on ne vend qu'en boutique",
+    drop_only_in_shop: "on ne jette de cartes qu'en boutique",
     finish_pack_first: "finissez d'abord le booster ouvert",
     place_mod_first: "placez d'abord le modificateur",
     already_bought: "déjà acheté",
@@ -528,6 +529,7 @@ export const fr: Strings = {
       title: "Boutique",
       sold: "vendu",
       sell: (amount) => `vendre ${amount}`,
+      drop: "jeter",
       reroll: "Renouveler",
       nextRound: "Manche suivante",
       short: (amount) => `Il vous manque ${amount}.`,

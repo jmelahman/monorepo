@@ -9,6 +9,7 @@ const EVERY: Command[] = [
   { type: "use_consumable", index: 1 },
   { type: "buy", index: 0 },
   { type: "sell_relic", index: 4 },
+  { type: "drop_consumable", index: 1 },
   { type: "pick_pack", index: 2 },
   { type: "place_mod", letter: "e" },
   { type: "collect" },

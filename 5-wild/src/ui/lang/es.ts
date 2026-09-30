@@ -291,6 +291,7 @@ export const es: Strings = {
 
     not_in_shop: "no estás en la tienda",
     sell_only_in_shop: "solo puedes vender en la tienda",
+    drop_only_in_shop: "solo puedes tirar cartas en la tienda",
     finish_pack_first: "termina antes el sobre abierto",
     place_mod_first: "coloca antes el modificador",
     already_bought: "ya lo has comprado",
@@ -510,6 +511,7 @@ export const es: Strings = {
       title: "Tienda",
       sold: "vendido",
       sell: (amount) => `vender ${amount}`,
+      drop: "tirar",
       // `Renovar` rather than a calque of reroll: what the button does is deal a
       // new shelf, and no Spanish player is rolling anything.
       reroll: "Renovar",

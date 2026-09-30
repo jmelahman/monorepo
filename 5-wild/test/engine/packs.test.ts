@@ -203,12 +203,13 @@ describe("a pack holds the shop", () => {
     })
   })
 
-  it("refuses a reroll, a sale and the next round until it is resolved", () => {
-    const state = held()
+  it("refuses a reroll, a sale, a drop and the next round until it is resolved", () => {
+    const state = { ...held(), consumables: [{ id: "oracle" }] }
     for (const action of [
       { type: "reroll" },
       { type: "next_round" },
       { type: "sell_relic", index: 0 },
+      { type: "drop_consumable", index: 0 },
     ] satisfies Action[]) {
       expect(act(state, action).events).toContainEqual({
         type: "rejected",

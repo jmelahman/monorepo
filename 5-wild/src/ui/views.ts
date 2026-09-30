@@ -105,6 +105,7 @@ export type Handlers = {
   collect: () => void
   buy: (index: number) => void
   sell: (index: number) => void
+  drop: (index: number) => void
   reroll: () => void
   nextRound: () => void
   continueRun: () => void
@@ -2258,22 +2259,36 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
 
   // The round's consumable row, card for card: name over rule, and no row at
   // all while the hand is empty. The board draws empty seats, because there a
-  // row that came and went moved the tiles; nothing here is aimed at. Not buttons: a card is only
-  // played during a round (the engine refuses it anywhere else), so here it is
-  // a thing held. A full hand needs no empty seats to say so; the shelf card
-  // that will not fit says "No free slot" itself.
+  // row that came and went moved the tiles; nothing here is aimed at. A full
+  // hand needs no empty seats to say so; the shelf card that will not fit says
+  // "No free slot" itself.
+  //
+  // Buttons, as the relics beside them are, and a tap here throws the card away
+  // rather than playing it: a card is only played during a round (the engine
+  // refuses it anywhere else), and a hand with no way to make room turned every
+  // better card on the shelf into one the player could only walk past. One tap
+  // and no question, the relic's own terms, and the label says what the tap does
+  // the way the relic's price does.
   const cards =
     state.consumables.length > 0
       ? h(
           "div",
           { class: "consumables" },
-          ...state.consumables.map((instance) => {
+          ...state.consumables.map((instance, index) => {
             const card = consumableCard(instance.id)
             return h(
-              "div",
-              { class: "consumable" },
+              "button",
+              {
+                class: "consumable",
+                type: "button",
+                // The rule is clamped on the table, so the whole of it is a
+                // hover or a press away, as it is on the board's hand.
+                "data-tip": card.text,
+                onclick: () => on.drop(index),
+              },
               h("span", { class: "consumable-name" }, card.name),
               h("span", { class: "consumable-text" }, ...withAmounts(card.text)),
+              h("span", { class: "drop" }, copy.drop),
             )
           }),
         )

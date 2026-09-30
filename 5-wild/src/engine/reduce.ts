@@ -757,6 +757,24 @@ export function reduce(state: RunState, action: Action, words: WordSource): Redu
       return { state: next, events }
     }
 
+    case "drop_consumable": {
+      // Free, and that is the design rather than an omission. The player with a
+      // full hand looking at a better card had no move at all, since a card is
+      // only played in a round, and this is that move. A refund would have been
+      // a second one: The Hoarder pays for a full hand at the door, and a card
+      // bought cheap, sat on for its +40 a shop and then sold back would be a
+      // chip engine that also returned its stake. Thrown away, a card is worth
+      // exactly what it was worth unplayed, which is what the Hoarder already
+      // charges. It pays on `onShopEnter`, so a drop in here is always after
+      // the fact and never dodges the check.
+      if (next.phase !== "shop") return reject({ code: "drop_only_in_shop" })
+      if (next.pack) return reject({ code: "finish_pack_first" })
+      if (next.placing) return reject({ code: "place_mod_first" })
+      if (!next.consumables[action.index]) return reject({ code: "no_such_card" })
+      next.consumables.splice(action.index, 1)
+      return { state: next, events }
+    }
+
     case "reroll": {
       if (next.phase !== "shop" || !next.shop) return reject({ code: "not_in_shop" })
       if (next.pack) return reject({ code: "finish_pack_first" })

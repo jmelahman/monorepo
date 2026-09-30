@@ -363,6 +363,8 @@ export type Strings = {
       title: string
       sold: string
       sell: (amount: string) => string
+      /** The label on a held card in the shop, where a tap throws it away for nothing. */
+      drop: string
       /** The verb alone: the button sets the price after it, in gold. */
       reroll: string
       nextRound: string

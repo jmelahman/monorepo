@@ -192,6 +192,9 @@ function actionCue(action: Action, events: readonly GameEvent[]): Cue | null {
   // Checked on the action, because a reroll the tray paid for moves no gold
   // and so leaves no event to find.
   if (action.type === "reroll") return { name: "reroll" }
+  // A drop moves nothing and so says nothing in events; backspace's sound,
+  // since taking a thing away is what both of them are.
+  if (action.type === "drop_consumable") return { name: "back" }
   const gold = events.find((event) => event.type === "gold")
   if (!gold) return null
   if (gold.reason === "purchase") return { name: "buy" }
@@ -1054,6 +1057,7 @@ export class App {
     collect: () => this.dispatch({ type: "collect" }),
     buy: (index) => this.dispatch({ type: "buy", index }),
     sell: (index) => this.dispatch({ type: "sell_relic", index }),
+    drop: (index) => this.dispatch({ type: "drop_consumable", index }),
     reroll: () => this.dispatch({ type: "reroll" }),
     nextRound: () => this.dispatch({ type: "next_round" }),
     continueRun: () => this.dispatch({ type: "continue_run" }),

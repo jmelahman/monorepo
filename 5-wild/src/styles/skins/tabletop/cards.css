@@ -147,6 +147,12 @@
   color: var(--ink-soft);
 }
 
+/* The base sheet's `--muted` is a tan meant for walnut, and on bone it all but
+   vanished: the rule's ink instead, since a tap here throws the card away. */
+:root.skin-tabletop .consumable .drop {
+  color: var(--ink-soft);
+}
+
 /* The tip that follows the pointer: walnut, with the card's bar. */
 :root.skin-tabletop .relic-tip {
   background: var(--panel);

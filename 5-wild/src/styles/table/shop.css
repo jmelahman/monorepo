@@ -605,7 +605,9 @@
 /* A held card is spent in the round, not here, but what it does is still what
    the two free slots are weighed with, so it keeps its rule, clamped to the
    seat's height: it was hidden for a while and the name alone was a card the
-   player had to remember. */
+   player had to remember. Two lines rather than three since the seat also
+   says what a tap on it does: at three, a rule as long as The Magician's
+   outgrew the 6rem seat and its third line was drawn cut through. */
 :root.table .shop-screen .consumable {
   flex: 0 1 auto;
   width: 8.25rem;
@@ -629,8 +631,8 @@
 :root.table .shop-screen .consumable-text {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
   font-size: 0.75rem;
   line-height: 1.3;

@@ -67,7 +67,8 @@
   .sheet-heading,
   .reward-line,
   .decor-toggle,
-  .relic .sell
+  .relic .sell,
+  .consumable .drop
 ) {
   text-transform: uppercase;
   letter-spacing: 0.12em;

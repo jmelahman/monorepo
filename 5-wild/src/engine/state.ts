@@ -357,6 +357,8 @@ export type Action =
   | { type: "collect" }
   | { type: "buy"; index: number }
   | { type: "sell_relic"; index: number }
+  /** Throw a held card away, for nothing, to make room on the shelf's account. */
+  | { type: "drop_consumable"; index: number }
   | { type: "reroll" }
   | { type: "next_round" }
   /** Play on past the win, into stages nobody authored. */
@@ -490,6 +492,7 @@ export type Refusal =
   // that holds itself: a pack or a modifier in hand freezes every other button.
   | { code: "not_in_shop" }
   | { code: "sell_only_in_shop" }
+  | { code: "drop_only_in_shop" }
   | { code: "finish_pack_first" }
   | { code: "place_mod_first" }
   | { code: "already_bought" }

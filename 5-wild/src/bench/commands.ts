@@ -64,6 +64,8 @@ export function parseCommand(raw: string): Parsed {
       return needIndex((i) => ({ type: "buy", index: i }))
     case "sell":
       return needIndex((i) => ({ type: "sell_relic", index: i }))
+    case "drop":
+      return needIndex((i) => ({ type: "drop_consumable", index: i }))
     case "pick":
       return needIndex((i) => ({ type: "pick_pack", index: i }))
     case "place": {
@@ -101,6 +103,8 @@ export function formatCommand(command: Command): string {
       return `buy ${command.index + 1}`
     case "sell_relic":
       return `sell ${command.index + 1}`
+    case "drop_consumable":
+      return `drop ${command.index + 1}`
     case "pick_pack":
       return `pick ${command.index + 1}`
     case "place_mod":
@@ -186,8 +190,9 @@ export function legalCommands(state: RunState): string[] {
         item && item.cost <= state.gold ? [`buy ${i + 1}`] : [],
       )
       const sells = state.relics.map((_, i) => `sell ${i + 1}`)
+      const drops = state.consumables.map((_, i) => `drop ${i + 1}`)
       const reroll = shop && rerollCost(state, shop) <= state.gold ? ["reroll"] : []
-      return [...buys, ...sells, ...reroll, "next"]
+      return [...buys, ...sells, ...drops, ...reroll, "next"]
     }
     case "victory":
       return ["continue", "end"]

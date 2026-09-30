@@ -304,6 +304,7 @@ export const de: Strings = {
 
     not_in_shop: "nicht im Laden",
     sell_only_in_shop: "verkauft wird nur im Laden",
+    drop_only_in_shop: "Karten wirft man nur im Laden ab",
     finish_pack_first: "beende erst den offenen Booster",
     place_mod_first: "platziere erst den Modifikator",
     already_bought: "schon gekauft",
@@ -520,6 +521,7 @@ export const de: Strings = {
       title: "Laden",
       sold: "verkauft",
       sell: (amount) => `für ${amount} verkaufen`,
+      drop: "abwerfen",
       reroll: "Neu auslegen",
       nextRound: "Nächste Runde",
       short: (amount) => `Dir fehlen ${amount}.`,

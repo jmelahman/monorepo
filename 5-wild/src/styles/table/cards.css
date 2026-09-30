@@ -28,6 +28,7 @@
 }
 
 :root.table .relic .sell,
+:root.table .consumable .drop,
 :root.table .relic-detail {
   font-size: 0.75rem;
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { Action, ModId, Rarity, RunState, ShopState } from "../../src/engine"
 import {
   ALPHABET,
+  CONSUMABLES,
   derive,
   ETCHING_BY_ID,
   ETCHINGS,
@@ -253,6 +254,7 @@ describe("placing a bought modifier", () => {
       { type: "reroll" },
       { type: "next_round" },
       { type: "sell_relic", index: 0 },
+      { type: "drop_consumable", index: 0 },
     ] satisfies Action[]) {
       expect(act(state, action).events).toContainEqual({
         type: "rejected",
@@ -338,6 +340,45 @@ function relicRarities(stage: number, seeds = 200): Rarity[] {
 
 const shareOf = (list: readonly Rarity[], ...of: Rarity[]) =>
   list.filter((rarity) => of.includes(rarity)).length / list.length
+
+describe("dropping a held card", () => {
+  const [first, second, third] = CONSUMABLES.map((card) => ({ id: card.id }))
+  if (!first || !second || !third) throw new Error("the drop tests need three cards")
+  const holding = (state: RunState): RunState => ({ ...state, consumables: [first, second] })
+
+  it("throws the card away for nothing and frees its slot", () => {
+    const state = holding(inShop(1))
+    const { state: after, events } = act(state, { type: "drop_consumable", index: 0 })
+    expect(after.consumables).toEqual([second])
+    expect(after.gold).toBe(state.gold)
+    expect(events).toEqual([])
+  })
+
+  it("makes room for a card the full hand was refusing", () => {
+    const state = holding({
+      ...inShop(1),
+      shop: { items: [{ kind: "consumable", id: third.id, cost: 3 }], rerolls: 0 },
+    })
+    expect(act(state, { type: "buy", index: 0 }).events).toContainEqual({
+      type: "rejected",
+      refusal: { code: "no_card_slots" },
+    })
+    const bought = buy(act(state, { type: "drop_consumable", index: 1 }).state, 0)
+    expect(bought.consumables).toEqual([first, third])
+  })
+
+  it("is refused outside the shop and for a slot that holds nothing", () => {
+    const round = holding(startRun(1, realWords).state)
+    expect(act(round, { type: "drop_consumable", index: 0 }).events).toContainEqual({
+      type: "rejected",
+      refusal: { code: "drop_only_in_shop" },
+    })
+    expect(act(holding(inShop(1)), { type: "drop_consumable", index: 2 }).events).toContainEqual({
+      type: "rejected",
+      refusal: { code: "no_such_card" },
+    })
+  })
+})
 
 describe("what rarity the relic slots deal", () => {
   it("starts at the shelf the catalog was already dealing", () => {
