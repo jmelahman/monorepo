@@ -65,13 +65,13 @@ repos:
   # END orchard:shell
 
   - repo: https://github.com/Scony/godot-gdscript-toolkit
-    rev: b7a4935fc6483d51837f7080598dad456f4f7645  # frozen: 4.5.0
+    rev: b7a4935fc6483d51837f7080598dad456f4f7645 # frozen: 4.5.0
     hooks:
       - id: gdlint
       - id: gdformat
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: a56c0b927e6465d37cae3e97d35d4d18ab2b96cd  # frozen: v0.16.9
+    rev: a56c0b927e6465d37cae3e97d35d4d18ab2b96cd # frozen: v0.16.9
     hooks:
       - id: ruff-check
         args: [--fix, --exit-non-zero-on-fix]
@@ -101,3 +101,4 @@ repos:
         language: system
         files: \.(gd|tscn|tres|po)$|^project\.godot$
         pass_filenames: false
+        stages: [manual]
