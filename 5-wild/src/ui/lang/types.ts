@@ -193,6 +193,30 @@ export type Strings = {
       words: (cause: string) => string
     }
 
+    /**
+     * The spectator's banner, over a run someone else is playing: a model on
+     * the benchmark host, or an episode it recorded. See `src/ui/spectate.ts`.
+     *
+     * The label and the refused command arrive from the host as they were
+     * typed, and the refusal's reason is the host's English: it is the sentence
+     * the model was shown, and translating it would be showing the spectator a
+     * different sentence from the one being answered.
+     */
+    watch: {
+      /** Before the host has said which run it is dealing. */
+      waiting: string
+      /** The host is unreachable; the browser retries by itself. */
+      lost: string
+      seed: (seed: number, ascension: number) => string
+      move: (n: number) => string
+      refused: (command: string, reason: string) => string
+      over: string
+      /** The host is on another content version, so its moves will not fit this game. */
+      version: (host: number, here: number) => string
+      /** A move this browser's engine refused, which the host accepted. */
+      diverged: (n: number) => string
+    }
+
     /** Said the same way on more than one screen, so it is written once. */
     common: {
       close: string

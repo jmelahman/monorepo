@@ -1,0 +1,51 @@
+/* ------------------------------------------------------------ spectator */
+
+/* The banner over a run someone else is playing; see `src/ui/spectate.ts`.
+   Outside `#app`, so the full rebuild never touches it, and fixed to the top
+   edge, which is the one strip the phone layout leaves to the status bar and
+   the HUD's own margin rather than to anything tapped.
+
+   `pointer-events: none` because the pause button sits under it on a phone,
+   and a spectator still owns the settings behind that button. The banner is a
+   caption, not a control.
+
+   The same dark glass as `.toast` in both themes, for the same reason: it is
+   laid over whatever the screen is, and a light banner over a light board
+   would be a smudge. */
+.watch-banner {
+  position: fixed;
+  z-index: 12;
+  top: calc(var(--safe-top, 0px) + 0.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 2rem);
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #000c;
+  color: var(--on-tile);
+  border: 1px solid var(--line);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+}
+
+.watch-banner .watch-label {
+  font-weight: 600;
+}
+
+.watch-banner .watch-live {
+  color: var(--mult);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.watch-banner .watch-note {
+  display: block;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.watch-banner .watch-note.bad {
+  color: var(--mult);
+}

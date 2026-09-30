@@ -31,22 +31,19 @@
  * the answer is not visible from the report.
  */
 
-import type { Action, Color, RoundState, RunState, ShopItem, WordSource } from "../../src/engine"
+import type { PlayerView } from "../../src/bench/observe"
+import { playerView } from "../../src/bench/observe"
+import type { Action, Color, RunState, ShopItem, WordSource } from "../../src/engine"
 import { baseChips, computeFeedback, LETTER_CHIPS, reduce } from "../../src/engine"
 import { placeMod } from "../golden/scenarios"
 
 /**
- * The run as a player sees it. `round.answer` is gone; everything else stays,
- * including `bossId` and `round.target`. Both are on the screen, and a player
- * who could not see what they were up against would be blind in a way the game
- * never asks anyone to be.
+ * The run as a player sees it, now owned by `src/bench/observe.ts`: the
+ * benchmark makes the same claim this player does, that it played without the
+ * word, and one claim should rest on one piece of code.
  */
-export type PlayerView = Omit<RunState, "round"> & { round: Omit<RoundState, "answer"> }
-
-export function playerView(state: RunState): PlayerView {
-  const { answer: _hidden, ...round } = state.round
-  return { ...state, round }
-}
+export type { PlayerView } from "../../src/bench/observe"
+export { playerView } from "../../src/bench/observe"
 
 /**
  * How a player spends the guess budget. The whole tension the game is built on

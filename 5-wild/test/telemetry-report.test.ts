@@ -23,35 +23,17 @@
  */
 
 import { readFileSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
-import type { RunState, WordSource } from "../src/engine"
+import type { RunState } from "../src/engine"
 import { CONTENT_VERSION, reduce, startRun } from "../src/engine"
 import type { Payload } from "../src/ui/telemetry"
 import { expand } from "../src/ui/telemetry"
+// Any of the four, not only the English one `realWords` pins: a run is dealt
+// from the list it was played in, and replaying a Spanish run against English
+// answers deals a different run that the log will not fit.
+import { wordsFor } from "../tools/bench/words"
 
 const SOURCE = process.env.RUNS
-
-const WORDS = resolve(dirname(fileURLToPath(import.meta.url)), "..", "public", "words")
-const lists = new Map<string, WordSource>()
-/**
- * Any of the four, not only the English one `realWords` pins: a run is dealt
- * from the list it was played in, and replaying a Spanish run against English
- * answers deals a different run that the log will not fit.
- */
-function wordsFor(lang: string): WordSource {
-  let words = lists.get(lang)
-  if (!words) {
-    const read = (name: string) =>
-      readFileSync(join(WORDS, lang, `${name}.txt`), "utf8")
-        .split("\n")
-        .filter(Boolean)
-    words = { answers: read("answers"), allowed: new Set(read("allowed")) }
-    lists.set(lang, words)
-  }
-  return words
-}
 
 /**
  * Takes either what `wrangler d1 execute --json` prints, rows under `results`

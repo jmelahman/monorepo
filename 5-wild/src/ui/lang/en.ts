@@ -398,6 +398,18 @@ export const en: Strings = {
       words: (cause) => `Could not load the word lists: ${cause}`,
     },
 
+    watch: {
+      waiting: "Waiting for a run…",
+      lost: "Lost the host. Retrying…",
+      seed: (seed, ascension) => `Seed ${seed} · Ascension ${ascension}`,
+      move: (n) => `Move ${n}`,
+      refused: (command, reason) => `Refused "${command}": ${reason}`,
+      over: "Run over",
+      version: (host, here) =>
+        `The host runs content ${host}, this game ${here}. Moves may not fit.`,
+      diverged: (n) => `Move ${n} does not fit this game. Stopped here.`,
+    },
+
     common: {
       close: "Close",
       back: "Back",

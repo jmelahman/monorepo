@@ -3,6 +3,7 @@ import type { WordSource } from "./engine"
 import { App, loadRunLang, loadSave } from "./ui/app"
 import { startBackground } from "./ui/fx/background"
 import { type Lang, loadLang, S, setLang } from "./ui/lang"
+import { spectate } from "./ui/spectate"
 import { initLook } from "./ui/theme"
 
 /**
@@ -44,7 +45,18 @@ initLook()
 // creates nothing unless that look has a moving one.
 startBackground()
 
-const saved = loadSave()
+/**
+ * `?watch=<host>` opens the game as a spectator on the benchmark feed rather
+ * than as the player's own. See `src/ui/spectate.ts`.
+ *
+ * Decided before the save is read, because a spectator does not resume one:
+ * it is handed a run by the host, and the player's own run stays where it is,
+ * untouched, for the next time this page is opened without the parameter. The
+ * host deals in English, so that is the list it starts with.
+ */
+const watching = new URLSearchParams(location.search).get("watch")
+
+const saved = watching ? null : loadSave()
 
 /**
  * Which list the game opens with, which is not always the language it opens in.
@@ -56,11 +68,13 @@ const saved = loadSave()
  * A save with no language beside it is a save from before this key existed, and
  * that is not a guess: English was the only list there was.
  */
-const wordsLang = saved ? (loadRunLang() ?? "en") : lang
+const wordsLang = watching ? "en" : saved ? (loadRunLang() ?? "en") : lang
 
 loadWords(wordsLang)
   .then((words) => {
-    new App(app, words, saved, { lang: wordsLang, load: loadWords }).start()
+    const game = new App(app, words, saved, { lang: wordsLang, load: loadWords })
+    if (watching) spectate(game, watching)
+    else game.start()
   })
   .catch((error: unknown) => {
     app.replaceChildren()

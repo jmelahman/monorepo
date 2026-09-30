@@ -16,7 +16,12 @@
     "apk": "bun run build && cap sync android && cd android && ./gradlew assembleDebug",
     "golden": "UPDATE_GOLDEN=1 vitest run test/golden.test.ts",
     "sim": "SIM=1 vitest run test/sim.test.ts",
-    "telemetry": "vitest run test/telemetry-report.test.ts"
+    "telemetry": "vitest run test/telemetry-report.test.ts",
+    "bench:mcp": "bun tools/bench/mcp.ts",
+    "bench:baseline": "bun tools/bench/baseline.ts",
+    "bench:report": "bun tools/bench/report.ts",
+    "bench:export": "bun tools/bench/export.ts",
+    "bench:replay": "bun tools/bench/feed.ts --replay"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.0",

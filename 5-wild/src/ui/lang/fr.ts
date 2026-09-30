@@ -398,6 +398,18 @@ export const fr: Strings = {
       words: (cause) => `Impossible de charger les listes de mots\u00A0: ${cause}`,
     },
 
+    watch: {
+      waiting: "En attente d’une partie…",
+      lost: "Hôte perdu. Nouvelle tentative…",
+      seed: (seed, ascension) => `Graine ${seed} · Ascension ${ascension}`,
+      move: (n) => `Coup ${n}`,
+      refused: (command, reason) => `Refusé «\u00A0${command}\u00A0»\u00A0: ${reason}`,
+      over: "Partie terminée",
+      version: (host, here) =>
+        `L’hôte utilise le contenu ${host}, ce jeu le ${here}. Les coups risquent de ne pas correspondre.`,
+      diverged: (n) => `Le coup ${n} ne correspond pas à ce jeu. Arrêt ici.`,
+    },
+
     common: {
       close: "Fermer",
       back: "Retour",

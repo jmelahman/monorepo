@@ -377,6 +377,18 @@ export const es: Strings = {
       words: (cause) => `No se pudieron cargar las listas de palabras: ${cause}`,
     },
 
+    watch: {
+      waiting: "Esperando una partida…",
+      lost: "Se perdió el anfitrión. Reintentando…",
+      seed: (seed, ascension) => `Semilla ${seed} · Ascensión ${ascension}`,
+      move: (n) => `Jugada ${n}`,
+      refused: (command, reason) => `Rechazado «${command}»: ${reason}`,
+      over: "Partida terminada",
+      version: (host, here) =>
+        `El anfitrión usa el contenido ${host} y este juego el ${here}. Las jugadas pueden no encajar.`,
+      diverged: (n) => `La jugada ${n} no encaja en este juego. Detenido aquí.`,
+    },
+
     common: {
       close: "Cerrar",
       back: "Atrás",

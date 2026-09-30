@@ -6,7 +6,7 @@ import type { CoachStep } from "./coach"
 import { coachAsks, coachSpent, coachStep } from "./coach"
 import { clear } from "./dom"
 import { setMood } from "./fx/background"
-import { replay, setMotionSpeed } from "./fx/motion"
+import { ms, replay, setMotionSpeed } from "./fx/motion"
 import * as board from "./fx/scenes/board"
 import { playEvents } from "./fx/scenes/events"
 import { playScoring } from "./fx/scenes/scoring"
@@ -29,7 +29,7 @@ import { seal, unseal } from "./seal"
 import { currentSkin, NEXT_SKIN } from "./skin"
 import { loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
 import { isTable } from "./table"
-import type { Consent, RunEnd, RunLog } from "./telemetry"
+import type { Consent, RunEnd, RunLog, Step } from "./telemetry"
 import {
   beginLog,
   file,
@@ -306,6 +306,20 @@ export class App {
    * on. See `Chrome.thanked`; cleared by anything that opens, closes or leaves.
    */
   private thanked: "fresh" | "shown" | null = null
+  /**
+   * True when the run on screen is someone else's: a model on the benchmark
+   * host, or an episode it recorded. See `watch` and `src/ui/spectate.ts`.
+   *
+   * The one promise it makes is that a spectator writes nothing. The player's
+   * run, record, replay and coaching sit in this same origin's storage, and a
+   * tab left watching a model for an afternoon must not come back as the
+   * player's save, with the model's stage on their record. So the four methods
+   * every write goes through (`save`, `tally`, `logStep`, `finish`) each refuse
+   * at the top, rather than every caller remembering to ask.
+   */
+  private watching = false
+  /** Set only while the feed itself is moving the run; the player's input is not. */
+  private feeding = false
 
   constructor(
     private readonly root: HTMLElement,
@@ -415,10 +429,129 @@ export class App {
     this.render()
   }
 
+  /* ------------------------------------------------------------ spectating */
+
+  /**
+   * Hand the run to a feed. Called once, instead of `start`, by the spectator.
+   *
+   * What still answers the player is everything that changes how the game
+   * looks and sounds (the pause sheet, the dials, the rules), because those are
+   * settings and the player owns them. What does not is everything that would
+   * move the run or start another: those handlers are swapped for nothing here,
+   * in one list, and `dispatch` and `submit` refuse anything the feed did not
+   * send, which covers the keyboard, physical and drawn, without either of them
+   * having to know.
+   *
+   * The coaching is switched off rather than guarded: it would narrate a
+   * model's first round to a spectator as though they were playing it, and the
+   * flag it clears lives in this object, so turning it off writes nothing.
+   */
+  watch(): void {
+    this.watching = true
+    this.coachOwed = false
+    this.log = null
+    this.atTitle = false
+    this.loading = true
+    const idle = () => {}
+    for (const name of [
+      "play",
+      "newRun",
+      "startTutorial",
+      "skipCoach",
+      "quit",
+      "askQuit",
+      "ascend",
+      "askAscend",
+      "setAscension",
+      "placeMod",
+      "cancelPlace",
+    ] as const) {
+      this.handlers[name] = idle
+    }
+    this.render()
+  }
+
+  /**
+   * Deal the run the host dealt, from the same seed. The words come first when
+   * the host is playing in another language than this tab opened in, through
+   * the same shell handle a language change uses.
+   */
+  async watchRun(seed: number, ascension: number, lang: Lang): Promise<void> {
+    this.loading = true
+    this.render()
+    if (lang !== this.wordsLang) {
+      this.words = await this.lists.load(lang)
+      this.wordsLang = lang
+    }
+    this.state = startRun(seed, this.words, ascension).state
+    this.loading = false
+    this.overlay = null
+    this.arming = null
+    this.intro = true
+    this.sound.cue({ name: "intro", boss: false })
+    this.render()
+  }
+
+  /**
+   * Play one of the host's moves, at the pace a person would watch it, and say
+   * whether this tab's engine took it. A refusal means the tab and the host are
+   * not running the same game (another content version, another list), and
+   * the spectator stops there rather than drawing a run that is not the one
+   * being played.
+   *
+   * Through the same two doors the player's input uses, so every animation, cue
+   * and toast is the one a player would have seen: letters one at a time
+   * through `dispatch`, so each lands on the board, and the guess through
+   * `submit`, which is the scoring scene. Accepted is read off the state
+   * changing, since both doors swallow a refusal into a toast and return
+   * nothing.
+   */
+  async watchStep(step: Step): Promise<boolean> {
+    const wait = (authored: number) => new Promise((done) => setTimeout(done, ms(authored)))
+    // The intro card is the player's to dismiss, and here there is no player:
+    // long enough to read the round's name and target, then the board.
+    if (this.intro) {
+      await wait(1400)
+      this.intro = false
+      this.render()
+      await wait(400)
+    }
+    while (this.busy) await wait(100)
+    this.feeding = true
+    try {
+      if (step.type === "guess") {
+        for (const letter of step.word) {
+          const before = this.state
+          this.sound.cue({ name: "key" })
+          this.dispatch({ type: "type_letter", letter }, "arriving")
+          if (this.state === before) return false
+          await wait(140)
+        }
+        await wait(250)
+        const before = this.state
+        await this.submit()
+        if (this.state === before) return false
+        // The screen the guess led to, whatever it is, before the next move
+        // takes it away: a reward card flashed for one frame is a reward
+        // nobody watching saw.
+        await wait(this.state.phase === "round" ? 500 : 1600)
+        return true
+      }
+      const before = this.state
+      this.dispatch(step)
+      if (this.state === before) return false
+      await wait(900)
+      return true
+    } finally {
+      this.feeding = false
+    }
+  }
+
   /* ------------------------------------------------------------- dispatch */
 
   private dispatch(action: Action, typing?: "arriving" | "leaving"): void {
     if (this.busy) return
+    if (this.watching && !this.feeding) return
     const wasPhase = this.state.phase
     const before = this.state
     const { state, events } = reduce(this.state, action, this.words)
@@ -452,7 +585,7 @@ export class App {
     //
     // The level comes off the run rather than off the record, so a win is banked
     // at the difficulty it was actually played at whatever has been chosen since.
-    if (events.some((event) => event.type === "run_won")) {
+    if (!this.watching && events.some((event) => event.type === "run_won")) {
       this.profile.won(this.state.ascension ?? 0)
     }
 
@@ -573,6 +706,7 @@ export class App {
    */
   private async submit(): Promise<void> {
     if (this.busy) return
+    if (this.watching && !this.feeding) return
     const before = this.state
     const { state, events } = reduce(this.state, { type: "submit" }, this.words)
 
@@ -1633,6 +1767,7 @@ export class App {
    * hears about.
    */
   private tally(before: RunState): void {
+    if (this.watching) return
     const round = this.state.round
     // The round survives into the reward screen, so "same round, one more
     // guess" is a real comparison right up to the moment `next_round` swaps it.
@@ -1658,6 +1793,7 @@ export class App {
    * hole in it, which replays into a different run.
    */
   private logStep(action: Action, before: RunState): void {
+    if (this.watching) return
     const step = stepFor(action, before)
     if (step && this.log) this.log.steps.push(step)
   }
@@ -1668,7 +1804,7 @@ export class App {
    * new run that follows the loss finds nothing left to call abandoned.
    */
   private finish(end: RunEnd): void {
-    if (!this.log) return
+    if (this.watching || !this.log) return
     file(payload(this.log, this.state, end), this.consent)
     this.log = null
     saveLog(null)
@@ -1676,6 +1812,7 @@ export class App {
   }
 
   private save(): void {
+    if (this.watching) return
     try {
       localStorage.setItem(SAVE_KEY, seal(JSON.stringify(this.state)))
       // Beside the run and written in the same breath, because the pair is only

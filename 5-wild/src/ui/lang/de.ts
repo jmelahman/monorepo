@@ -383,6 +383,18 @@ export const de: Strings = {
       words: (cause) => `Wortlisten konnten nicht geladen werden: ${cause}`,
     },
 
+    watch: {
+      waiting: "Warte auf einen Lauf…",
+      lost: "Verbindung zum Host verloren. Neuer Versuch…",
+      seed: (seed, ascension) => `Seed ${seed} · Aufstieg ${ascension}`,
+      move: (n) => `Zug ${n}`,
+      refused: (command, reason) => `Abgelehnt: „${command}“: ${reason}`,
+      over: "Lauf beendet",
+      version: (host, here) =>
+        `Der Host nutzt Inhalt ${host}, dieses Spiel ${here}. Die Züge passen womöglich nicht.`,
+      diverged: (n) => `Zug ${n} passt nicht zu diesem Spiel. Hier angehalten.`,
+    },
+
     common: {
       close: "Schließen",
       back: "Zurück",

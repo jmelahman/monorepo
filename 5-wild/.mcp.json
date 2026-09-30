@@ -9,6 +9,10 @@
         "--browser",
         "chromium"
       ]
+    },
+    "5wild": {
+      "command": "bun",
+      "args": ["tools/bench/mcp.ts"]
     }
   }
 }
