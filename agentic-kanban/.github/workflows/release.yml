@@ -59,8 +59,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # cache-from: type=registry,ref=lahmanja/kanban-devcontainer:latest
-          cache-to: type=inline
+          no-cache: true
   goreleaser:
     needs: devcontainer
     runs-on: ubuntu-latest
@@ -97,13 +96,13 @@ jobs:
     strategy:
       matrix:
         os-arch:
-          - {goos: "linux", goarch: "amd64"}
-          - {goos: "linux", goarch: "arm64"}
-          - {goos: "windows", goarch: "amd64"}
-          - {goos: "windows", goarch: "arm64"}
-          - {goos: "darwin", goarch: "amd64"}
-          - {goos: "darwin", goarch: "arm64"}
-          - {goos: "", goarch: ""}
+          - { goos: "linux", goarch: "amd64" }
+          - { goos: "linux", goarch: "arm64" }
+          - { goos: "windows", goarch: "amd64" }
+          - { goos: "windows", goarch: "arm64" }
+          - { goos: "darwin", goarch: "amd64" }
+          - { goos: "darwin", goarch: "arm64" }
+          - { goos: "", goarch: "" }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -186,5 +185,4 @@ jobs:
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
             KANBAN_DEVCONTAINER_IMAGE=lahmanja/kanban-devcontainer@${{ needs.devcontainer.outputs.digest }}
-          cache-from: type=registry,ref=lahmanja/kanban:latest
-          cache-to: type=inline
+          no-cache: true
