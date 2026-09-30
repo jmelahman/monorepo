@@ -36,7 +36,8 @@
  * The ring no longer fades on hover: the border would have faded and its four
  * corner pixels snapped, and a stepped ring is not a thing that glides anyway.
  */
-:root.skin-smoke :is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill) {
+:root.skin-smoke
+:is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill, .ladder-step) {
   --ring: var(--line);
   --ring-px: linear-gradient(var(--ring), var(--ring));
   background-color: var(--btn);
@@ -73,19 +74,22 @@
   color: var(--danger);
 }
 
-:root.skin-smoke :is(.primary, .secondary, .danger):active:not(:disabled),
+:root.skin-smoke :is(.primary, .secondary, .danger, .ladder-step):active:not(:disabled),
 :root.skin-smoke :is(.menu-button, .title-dial, .title-pill):active {
   transform: translateY(var(--px));
 }
 
-:root.skin-smoke :is(.primary, .secondary, .danger):disabled {
+:root.skin-smoke :is(.primary, .secondary, .danger, .ladder-step):disabled {
   opacity: 0.4;
   filter: none;
   cursor: default;
 }
 
 :root.skin-smoke.mouse
-  :is(.secondary, .menu-button, .title-dial, .title-pill):hover:not(:disabled, :active) {
+  :is(.secondary, .menu-button, .title-dial, .title-pill, .ladder-step):hover:not(
+    :disabled,
+    :active
+  ) {
   --ring: var(--muted);
 }
 
@@ -112,7 +116,15 @@
 }
 
 :root.skin-smoke
-  :is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill):focus-visible {
+  :is(
+    .primary,
+    .secondary,
+    .danger,
+    .menu-button,
+    .title-dial,
+    .title-pill,
+    .ladder-step
+  ):focus-visible {
   outline: var(--bw) solid var(--accent);
   outline-offset: -0.375rem;
 }

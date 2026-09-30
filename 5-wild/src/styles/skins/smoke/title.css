@@ -68,3 +68,34 @@
   -webkit-text-stroke: 0;
   text-shadow: none;
 }
+
+/*
+ * The ascension card, in the stock every other panel here is cut from: a flat
+ * face, a hairline, the notch. Classic's rounded box with a translucent wash
+ * was the one soft object on a screen of notched ones, directly between the
+ * name and PLAY. Its steppers are buttons (`buttons.css`), which is what they
+ * were all along. Lit and locked keep the phone's meaning: the rule's red when
+ * above zero, a dashed edge when the rung is not yet earned.
+ */
+:root.skin-smoke .ladder {
+  border: var(--rim);
+  border-radius: 0;
+  background: var(--panel);
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke .ladder.lit {
+  border-color: color-mix(in srgb, var(--mult) 55%, var(--line));
+  background: color-mix(in srgb, var(--mult) 8%, var(--panel));
+}
+
+:root.skin-smoke .ladder.locked {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+/* The button face resets the ink to `--fg`; the lock on the earned edge is gold
+   on every skin, as every "not earned yet" on this screen is. */
+:root.skin-smoke .ladder-step.shut {
+  color: var(--gold);
+}

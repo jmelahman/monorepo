@@ -47,7 +47,8 @@
     .banner,
     .title-tile,
     .track-name,
-    .stage-asc
+    .stage-asc,
+    .ladder-name
   ) {
   font-weight: 600;
 }
@@ -57,6 +58,7 @@
 :is(
   .stage,
   .stage-asc,
+  .ladder-rule,
   .row-note,
   .intro-kind,
   .track-name,

@@ -79,3 +79,34 @@
 :root.skin-tabletop .title-build {
   color: var(--muted);
 }
+
+/*
+ * The ascension card, as the same walnut stock the intro card and the rail are
+ * made of: a board on the table with a soft fall of shadow under it, and its
+ * steppers the raised walnut blocks every other button is (`buttons.css`).
+ * Classic's translucent wash read as a hole in the wood. Lit takes the boss
+ * card's red, the colour this skin already spends on "harder than usual";
+ * locked keeps the phone's dashed edge.
+ */
+:root.skin-tabletop .ladder {
+  border: var(--rim);
+  border-radius: var(--radius-l);
+  background: var(--panel);
+  box-shadow: var(--top-light), var(--shadow-soft);
+}
+
+:root.skin-tabletop .ladder.lit {
+  border-color: color-mix(in srgb, #b8383f 70%, var(--line));
+  background: color-mix(in srgb, #b8383f 12%, var(--panel));
+}
+
+:root.skin-tabletop .ladder.locked {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+/* The button face resets the ink to `--fg`; the lock on the earned edge is gold
+   on every skin, as every "not earned yet" on this screen is. */
+:root.skin-tabletop .ladder-step.shut {
+  color: var(--brass);
+}
