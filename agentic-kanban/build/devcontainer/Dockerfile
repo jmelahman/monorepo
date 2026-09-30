@@ -56,9 +56,11 @@ RUN usermod -s /bin/zsh root \
 
 ARG CLAUDE_CODE_VERSION=latest
 ARG PI_CODING_AGENT_VERSION=latest
+ARG OPENCODE_VERSION=latest
 RUN npm install -g \
       @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
-      @earendil-works/pi-coding-agent@${PI_CODING_AGENT_VERSION}
+      @earendil-works/pi-coding-agent@${PI_CODING_AGENT_VERSION} \
+      opencode-ai@${OPENCODE_VERSION}
 
 COPY github_known_hosts /etc/ssh/ssh_known_hosts
 RUN chmod 644 /etc/ssh/ssh_known_hosts

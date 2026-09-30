@@ -43,6 +43,12 @@ var Registry = []Harness{
 		PTYCommand:        []string{"pi"},
 		CommitMsgTemplate: ``,
 	},
+	{
+		ID:                "opencode",
+		Label:             "opencode",
+		PTYCommand:        []string{"opencode"},
+		CommitMsgTemplate: ``,
+	},
 }
 
 func Default() Harness { return Registry[0] }

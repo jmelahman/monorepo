@@ -661,7 +661,7 @@ command is non-interactive and only prints the created ticket unless
 	create.Flags().BoolVar(&tcJSON, "json", false, "Print the full ticket JSON instead of a one-line summary")
 	create.Flags().BoolVar(&tcAttach, "attach", false, "Start the ticket's session and attach to its agent after creating (default: true when prompted, false with --title)")
 	create.Flags().StringVar(&tcDetachKeys, "detach-keys", defaultDetachKeys, "Key sequence that detaches from the agent, docker-style (e.g. ctrl-p,ctrl-q or ctrl-])")
-	create.Flags().StringVar(&tcHarness, "harness", "", "Agent harness for the ticket's session, e.g. claude or pi (default: the user/project harness; needs --attach)")
+	create.Flags().StringVar(&tcHarness, "harness", "", "Agent harness for the ticket's session, e.g. claude, pi or opencode (default: the user/project harness; needs --attach)")
 
 	var tiJSON bool
 	info := &cobra.Command{
@@ -753,7 +753,7 @@ shell in the container is attached instead of the agent.`,
 	}
 	attach.Flags().BoolVar(&taShell, "shell", false, "Attach an interactive shell in the session container instead of the agent")
 	attach.Flags().StringVar(&taDetachKeys, "detach-keys", defaultDetachKeys, "Key sequence that detaches, docker-style (e.g. ctrl-p,ctrl-q or ctrl-])")
-	attach.Flags().StringVar(&taHarness, "harness", "", "Switch the ticket's agent to this harness, e.g. claude or pi (restarts a running agent on another harness)")
+	attach.Flags().StringVar(&taHarness, "harness", "", "Switch the ticket's agent to this harness, e.g. claude, pi or opencode (restarts a running agent on another harness)")
 
 	var (
 		tuTitle, tuBody string

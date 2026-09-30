@@ -15,7 +15,7 @@ Every key is shown below with its default unless noted.
 
 ```toml
 [harness]
-id = "claude"                 # default agent: "claude" or "pi"
+id = "claude"                 # default agent: "claude", "pi" or "opencode"
 
 [worktrees]
 root = "/path/to/worktrees"   # where new worktrees go (unset by default)

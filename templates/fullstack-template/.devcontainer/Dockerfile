@@ -91,7 +91,7 @@ RUN mkdir -p /workspace && \
 
 WORKDIR /workspace
 
-# Install agent CLIs (Claude Code, pi)
+# Install agent CLIs (Claude Code, pi, opencode)
 # Installed into /usr/local (not root's ~/.bun) so both root and dev get them.
 RUN BUN_INSTALL_BIN=/usr/local/bin \
     BUN_INSTALL_GLOBAL_DIR=/usr/local/share/bun-global \
@@ -99,6 +99,7 @@ RUN BUN_INSTALL_BIN=/usr/local/bin \
     bun add -g \
     @anthropic-ai/claude-code@latest \
     @mariozechner/pi-coding-agent@$latest \
+    opencode-ai@latest \
   && rm -rf /tmp/bun-cache
 
 # System libraries for Playwright's Chromium. The browsers themselves are

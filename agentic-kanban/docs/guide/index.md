@@ -25,7 +25,7 @@ When the work looks good, you sync the branch with its base and merge it, both f
 :   The container, worktree, and agent working on a ticket.
 
 **Harness**
-:   The agent program that runs in the session, such as Claude Code or pi.dev. Set the default in the app's settings. You can override it for a single ticket.
+:   The agent program that runs in the session, such as Claude Code, pi.dev or opencode. Set the default in the app's settings. You can override it for a single ticket.
 
 **Worktree**
 :   The ticket's checkout of the repo, stored under `<data-dir>/worktrees/`. It's mounted into the container, so the agent's edits show up on your machine too. Deleting the ticket deletes the worktree.

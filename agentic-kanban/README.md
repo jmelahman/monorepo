@@ -16,7 +16,7 @@ A kanban board for managing AI agent sessions.
   </picture>
 </p>
 
-Each ticket is bound to an agent session (Claude Code, pi.dev) running inside its own git worktree, executed in the target repository's existing devcontainer. The active harness is selected globally in the app's settings.
+Each ticket is bound to an agent session (Claude Code, pi.dev, opencode) running inside its own git worktree, executed in the target repository's existing devcontainer. The active harness is selected globally in the app's settings.
 
 ## Features
 
@@ -24,7 +24,7 @@ Each ticket is bound to an agent session (Claude Code, pi.dev) running inside it
 
 - Every ticket runs an AI agent in its own git worktree, inside a Docker container — no contention, no rebasing pain.
 - Reuses the target repo's `.devcontainer/devcontainer.json`, or falls back to a bundled Ubuntu devcontainer (git, gh, node, Go) so any repo works with zero setup.
-- Pluggable harnesses (Claude Code, pi.dev), switchable globally in settings.
+- Pluggable harnesses (Claude Code, pi.dev, opencode), switchable globally in settings.
 - Drive the agent from a full terminal in the browser, plus a second plain shell — both backed by a WASM terminal emulator.
 - Claude Code conversations resume automatically across container and server restarts.
 
@@ -85,6 +85,8 @@ docker run -d --name kanban \
   -v $HOME/.claude:$HOME/.claude \
   -v $HOME/.claude.json:$HOME/.claude.json \
   -v $HOME/.pi/agent:$HOME/.pi/agent \
+  -v $HOME/.config/opencode:$HOME/.config/opencode \
+  -v $HOME/.local/share/opencode:$HOME/.local/share/opencode \
   -v $HOME/.local/share/kanban:$HOME/.local/share/kanban \
   -v $HOME/.gitconfig:$HOME/.gitconfig:ro \
   -v $HOME/.config/git:$HOME/.config/git:ro \

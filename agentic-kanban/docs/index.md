@@ -28,7 +28,7 @@ features:
   - title: Works without a devcontainer
     details: Repos with no `.devcontainer/devcontainer.json` run in a bundled Ubuntu image with git, gh, Node, and Go.
   - title: Your choice of agent
-    details: Run Claude Code or pi.dev, and switch harnesses per ticket.
+    details: Run Claude Code, pi.dev or opencode, and switch harnesses per ticket.
   - title: Diffs, tasks, and ports
     details: Review the branch diff, run `.vscode/tasks.json` tasks, and open forwarded dev-server ports from the ticket.
   - title: GitHub integration

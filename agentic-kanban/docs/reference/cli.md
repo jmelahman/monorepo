@@ -166,7 +166,7 @@ Passing `--title` skips the form and doesn't attach unless you add `--attach`. I
 | `--body`        |                                  | Markdown description. Fills in the form if there's no `--title`. |
 | `--column`      | leftmost column                  | Column name or ID. |
 | `--attach`      | `true` with the form, else `false` | Start the session and attach to the agent. |
-| `--harness`     | board default                    | Agent to use, such as `claude` or `pi`. Needs `--attach`. |
+| `--harness`     | board default                    | Agent to use, such as `claude`, `pi` or `opencode`. Needs `--attach`. |
 | `--detach-keys` | `ctrl-p,ctrl-q`                  | Keys that detach from the agent. |
 | `--json`        | `false`                          | Print the ticket as JSON. |
 
