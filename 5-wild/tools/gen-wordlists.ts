@@ -343,6 +343,32 @@ const HAND_BLOCKED = [
   "shalt",
   "thine",
   "wanna",
+  // Names the lemma check cannot see at all, because the lowercase word is a
+  // real entry: JENNY is a she-donkey, SALLY a sortie, SEINE a net, WEBER a unit.
+  // Found by asking which answers the same hunspell file also carries
+  // capitalized (188 of 2300) or a first-name list holds (40 more), and then
+  // reading them, since most of that is APPLE, GRACE and NORTH. What is kept
+  // is the reading a player would reach for: JIMMY a lock, PATSY, TEDDY, DOLLY,
+  // HOMER and PETER out stay; a word whose everyday reading is the person is out.
+  "billy",
+  "bobby",
+  "curie",
+  "hogan",
+  "jenny",
+  "luger",
+  "maria",
+  "marge",
+  "molly",
+  "ponce",
+  "romeo",
+  "sally",
+  "savoy",
+  "seine",
+  "terry",
+  "twain",
+  "wally",
+  "weber",
+  "xerox",
   // What blocking the above let in, since fifty-two seats freed is fifty-two
   // words pulled up from where the corpus is thinner. BOLLY fails the same test
   // as the names: in words_alpha, in no dictionary.

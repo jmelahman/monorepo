@@ -1384,7 +1384,14 @@ function stageTrack(state: RunState): HTMLElement {
           ...(current ? { "aria-current": "step" } : {}),
         },
         h("div", { class: "track-name" }, roundToken(kind), copy.trackRound[index] ?? ""),
-        h("div", { class: "track-target" }, num(roundTarget(state, index))),
+        // The round in hand quotes the target it was dealt, which a boss may
+        // have cut (`Boss.target`); the rest quote `roundTarget`, which cannot
+        // know the boss and must not.
+        h(
+          "div",
+          { class: "track-target" },
+          num(current ? state.round.target : roundTarget(state, index)),
+        ),
         h("div", { class: "track-status" }, cleared && icon("check"), status),
       )
     }),

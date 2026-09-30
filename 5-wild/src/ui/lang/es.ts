@@ -158,7 +158,7 @@ export const es: Strings = {
       text: "Cada intento debe reutilizar las letras verdes que hayas encontrado.",
     },
     miser: { name: "El Avaro", text: "Las letras que ya hayas usado no dan puntos." },
-    clock: { name: "El Reloj", text: "Solo cuatro intentos." },
+    clock: { name: "El Reloj", text: "Solo cuatro intentos. El objetivo baja una cuarta parte." },
     glutton: { name: "El Glotón", text: "Cada intento debe contener al menos dos vocales." },
     auditor: { name: "El Auditor", text: "Tu multiplicador de resolución se limita a ×2." },
     purist: { name: "El Purista", text: "Ninguna letra puede aparecer dos veces en un intento." },

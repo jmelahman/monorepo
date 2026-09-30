@@ -169,6 +169,7 @@ beret
 berry
 berth
 beryl
+beset
 betel
 bible
 bicep
@@ -177,7 +178,6 @@ bidet
 bigot
 biker
 bilge
-billy
 binge
 bingo
 birch
@@ -217,8 +217,8 @@ blurt
 blush
 board
 boast
-bobby
 bogey
+bogie
 bogus
 bolus
 boned
@@ -302,6 +302,7 @@ cable
 cache
 caddy
 cadet
+cadre
 caged
 cagey
 camel
@@ -483,7 +484,6 @@ cubic
 cumin
 cupid
 cured
-curie
 curly
 curry
 curse
@@ -673,6 +673,7 @@ famed
 fancy
 fanny
 farce
+fared
 fatal
 fated
 fatso
@@ -721,6 +722,7 @@ fixer
 fizzy
 fjord
 flack
+flail
 flair
 flake
 flaky
@@ -893,6 +895,7 @@ grown
 gruel
 gruff
 grunt
+guano
 guard
 guava
 guess
@@ -914,6 +917,7 @@ gypsy
 habit
 haiku
 hairy
+halal
 hammy
 handy
 happy
@@ -955,7 +959,6 @@ hired
 hitch
 hoard
 hobby
-hogan
 hoist
 hokey
 holed
@@ -966,10 +969,12 @@ honed
 honey
 honor
 hooch
+hooey
 hooky
 hoped
 horde
 horse
+hosed
 hotel
 hound
 house
@@ -991,6 +996,7 @@ hydra
 hydro
 hyena
 hymen
+hyped
 hyper
 icing
 ideal
@@ -998,6 +1004,7 @@ idiot
 igloo
 image
 imply
+inane
 inbox
 incur
 index
@@ -1011,6 +1018,7 @@ input
 intel
 inter
 intro
+irate
 irony
 issue
 itchy
@@ -1019,7 +1027,6 @@ jaded
 japan
 jazzy
 jelly
-jenny
 jerky
 jetty
 jewel
@@ -1106,6 +1113,7 @@ level
 lever
 libel
 liege
+lifer
 light
 liked
 lilac
@@ -1145,7 +1153,6 @@ lowly
 loyal
 lucid
 lucky
-luger
 lumen
 lumpy
 lunar
@@ -1185,8 +1192,6 @@ manor
 manta
 maple
 march
-marge
-maria
 marry
 marsh
 mason
@@ -1238,7 +1243,6 @@ mogul
 moist
 molar
 moldy
-molly
 mommy
 money
 month
@@ -1290,6 +1294,7 @@ nanny
 nappy
 nasal
 nasty
+natty
 naval
 navel
 needy
@@ -1355,6 +1360,7 @@ ounce
 outdo
 outed
 outer
+ovary
 overt
 owing
 owned
@@ -1427,6 +1433,7 @@ pious
 piper
 pitch
 pivot
+pixel
 pixie
 pizza
 place
@@ -1453,7 +1460,6 @@ pokey
 polar
 polio
 polka
-ponce
 pooch
 poppa
 poppy
@@ -1598,7 +1604,6 @@ rodeo
 roger
 rogue
 roman
-romeo
 roomy
 roost
 roped
@@ -1632,7 +1637,6 @@ safer
 saggy
 saint
 salad
-sally
 salon
 salsa
 salty
@@ -1650,7 +1654,6 @@ sauna
 saved
 saver
 savor
-savoy
 savvy
 sawed
 scale
@@ -1672,6 +1675,7 @@ score
 scorn
 scour
 scout
+scowl
 scram
 scrap
 screw
@@ -1682,7 +1686,6 @@ scuff
 sedan
 seedy
 segue
-seine
 seize
 senna
 sense
@@ -1722,6 +1725,7 @@ shift
 shine
 shiny
 shire
+shirk
 shirt
 shoal
 shock
@@ -1929,6 +1933,7 @@ straw
 stray
 strep
 strip
+strum
 strut
 stuck
 study
@@ -2016,7 +2021,6 @@ tempt
 tenor
 tense
 tenth
-terry
 testy
 thane
 thank
@@ -2120,7 +2124,6 @@ tuned
 tunic
 turbo
 tutor
-twain
 tweak
 tweed
 tweet
@@ -2208,7 +2211,6 @@ wagon
 waist
 waive
 waken
-wally
 waltz
 waste
 watch
@@ -2218,7 +2220,6 @@ waver
 waxed
 weary
 weave
-weber
 wedge
 weepy
 weigh
@@ -2282,7 +2283,6 @@ wrist
 write
 wrong
 wrote
-xerox
 yacht
 yahoo
 yearn

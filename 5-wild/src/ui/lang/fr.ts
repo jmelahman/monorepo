@@ -171,7 +171,7 @@ export const fr: Strings = {
       text: "Chaque essai doit réutiliser les lettres vertes que vous avez trouvées.",
     },
     miser: { name: "L'Avare", text: "Les lettres déjà utilisées ne rapportent aucun point." },
-    clock: { name: "L'Horloge", text: "Quatre essais seulement." },
+    clock: { name: "L'Horloge", text: "Quatre essais seulement. L'objectif baisse d'un quart." },
     glutton: { name: "Le Glouton", text: "Chaque essai doit contenir au moins deux voyelles." },
     auditor: { name: "L'Auditeur", text: "Votre multiplicateur de résolution est plafonné à ×2." },
     purist: {

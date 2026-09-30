@@ -14,6 +14,7 @@ import {
   difficultyOf,
   guessRestricted,
   roundTarget,
+  scaleTarget,
   validateGuess,
 } from "./ascensions"
 import { bossForStage, getBoss } from "./bosses"
@@ -161,7 +162,10 @@ function beginRound(state: RunState, words: WordSource, events: GameEvent[]): vo
   // just finished.
   state.round = {
     answer: "",
-    target: roundTarget(state, state.roundIndex),
+    // A boss's cut is taken here rather than in `roundTarget`, so the stage
+    // track can go on quoting the boss slot without naming the boss. See
+    // `Boss.target`.
+    target: scaleTarget(roundTarget(state, state.roundIndex), boss?.target ?? 1),
     // The tighter of the two wins rather than the boss's number simply winning.
     // No rung cuts the run's allowance any more, and `Dead Weight` records why
     // the one that did was removed, so today this is the boss's number or the base

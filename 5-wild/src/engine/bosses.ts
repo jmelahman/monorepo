@@ -44,6 +44,13 @@ export type Boss = {
   tier: BossTier
   /** Overrides the usual six. */
   maxGuesses?: number
+  /**
+   * Scales the round's target, applied when the round is dealt and not in
+   * `roundTarget`. The stage track on the intro card lists the boss slot's
+   * target before the boss is drawn, and reading it through the boss there
+   * would name the boss a round early by its number alone.
+   */
+  target?: number
   /** Rewrites feedback before it is scored and shown. */
   transform?: (tiles: Tile[]) => void
   /**
@@ -167,6 +174,26 @@ export const BOSSES: readonly Boss[] = [
     id: "clock",
     tier: "mid",
     maxGuesses: 4,
+    // Four guesses takes more than guesses. The solve bonus is one plus the
+    // guesses left, so the best this round can pay is ×4 against six's ×6, and a
+    // round that finds the word on its third guess cashes ×2 rather than ×4. It
+    // was the deadliest boss in the mid band on points and on points alone.
+    //
+    // Blind bot, 300 seeds a policy at A0 and 600 at A10, share of the runs that
+    // met it dying there:
+    //
+    //   target   A0      A10     A10 deaths short / unsolved
+    //   ×1.0     53.5%   74%     37 / 5
+    //   ×0.75    39.5%   62%     31 / 5
+    //   ×0.6     32.6%   44%     22 / 5
+    //
+    // Beside it The Mirror sat at 49% / 71% and The Silence at 44% / 86%, but
+    // both of those kill by leaving the word unfound, which no target cut
+    // touches. ×0.75 lands the Clock under both at both rungs and still above
+    // The Vandal; ×0.6 made it The Vandal at A0, a boss whose one rule is also
+    // a discount. At A10 the Clock meets about fifty runs in six hundred, so read
+    // that column to ±7 points.
+    target: 0.75,
   },
   {
     id: "glutton",

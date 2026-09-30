@@ -163,7 +163,7 @@ export const de: Strings = {
       text: "Jeder Versuch muss die grünen Buchstaben wiederverwenden, die du gefunden hast.",
     },
     miser: { name: "Der Geizhals", text: "Schon benutzte Buchstaben bringen keine Punkte." },
-    clock: { name: "Die Uhr", text: "Nur vier Versuche." },
+    clock: { name: "Die Uhr", text: "Nur vier Versuche. Das Ziel ist um ein Viertel niedriger." },
     glutton: { name: "Der Vielfraß", text: "Jeder Versuch braucht mindestens zwei Vokale." },
     auditor: { name: "Der Prüfer", text: "Dein Lösungs-Multiplikator ist bei ×2 gedeckelt." },
     purist: {

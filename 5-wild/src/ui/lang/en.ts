@@ -163,7 +163,7 @@ export const en: Strings = {
       text: "Every guess must reuse the green letters you have found.",
     },
     miser: { name: "The Miser", text: "Letters you have already used score no points." },
-    clock: { name: "The Clock", text: "Four guesses only." },
+    clock: { name: "The Clock", text: "Four guesses only. The target is a quarter lower." },
     glutton: { name: "The Glutton", text: "Every guess must contain at least two vowels." },
     auditor: { name: "The Auditor", text: "Your solve multiplier is capped at ×2." },
     purist: { name: "The Purist", text: "No letter may appear twice in a guess." },
