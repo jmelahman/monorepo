@@ -93,6 +93,7 @@ import {
 import type { Skin } from "./skin"
 import type { Speed } from "./speed"
 import { sprite } from "./sprites"
+import { isTable } from "./table"
 
 export type Handlers = {
   key: (letter: string) => void
@@ -2248,6 +2249,8 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
           }),
         )
       : null
+  const tray = [h("div", { class: "relics" }, ...owned), cards]
+  const table = isTable()
 
   return h(
     "div",
@@ -2286,8 +2289,17 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
     // so a relic sold was a thumb's width from Next round; a second look for
     // the same five tiles cost more than the reach saved. The only difference
     // from the board is the price on each relic, since here a tap sells it.
-    h("div", { class: "relics" }, ...owned),
-    cards,
+    //
+    // On the phone only. The table's grid draws the tray in the bottom row,
+    // beside Next round, and a grid places what it is told to without moving
+    // the tab order, which is the DOM's: Tab went from the menu straight into
+    // the relics at the foot of the window and then climbed back up to the
+    // shelf. CSS has no answer to that (`order` and grid placement both leave
+    // focus in source order, and a positive `tabindex` would pull the tray ahead
+    // of the header), so the view puts the tray where the table draws it. Read
+    // at render, which every dispatch is, so a window dragged across the room
+    // query keeps the old order only until the next tap.
+    ...(table ? [] : tray),
     h(
       "div",
       { class: "shop-items" },
@@ -2300,6 +2312,7 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
     // slack on a tall phone opens between it and the shelf: tucked under the
     // last card it read as a sixth thing for sale, which it has been once.
     shopShapes(state, on),
+    ...(table ? tray : []),
     h(
       "div",
       { class: "shop-actions" },
