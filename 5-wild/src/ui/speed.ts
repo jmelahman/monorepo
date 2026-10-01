@@ -55,20 +55,27 @@ const SPEED_KEY = "5wild:speed"
  *
  * The value *is* the setting: 2 means twice as fast and prints as "×2", so there
  * is no table mapping a name onto a number and no way for the two to disagree.
- * Three of them because a cycling button is one tap per step and a ladder with
+ * Five of them because a cycling button is one tap per step and a ladder with
  * ×1.5 on it costs every player a tap past a rung almost nobody can see; the
- * gap between ×1 and ×2 is the one anybody asked for.
+ * gap between ×1 and ×2 is the one anybody asked for. ×5 and ×10 were asked for
+ * next, by a player who has seen the cascade fifty times and wants only the
+ * result: at ×10 the 380ms flip takes 38ms and a whole guess is over in well
+ * under a quarter of a second. The shortest thing the game animates, the 110ms
+ * letter landing, comes to 11ms, which is under one frame at 60Hz and so is
+ * seen as no animation at all; that is harmless because it ends at full
+ * opacity, and it is the reason the ladder stops here rather than at ×20, where
+ * the `opacity: 0` endings would start to be completed rather than played.
  *
  * 1 leads because it is the speed every duration in this game is written at.
  * The stylesheet's `--pace: 1`, the fallback in `readSpeed`, and the constants
  * in `app.ts` are all the same claim, and a first launch has to land on it.
  */
-export type Speed = 1 | 2 | 3
+export type Speed = 1 | 2 | 3 | 5 | 10
 
-export const SPEEDS: readonly Speed[] = [1, 2, 3]
+export const SPEEDS: readonly Speed[] = [1, 2, 3, 5, 10]
 
 /** One button, one step per tap, wrapping at the end. As the decoration toggle. */
-export const NEXT_SPEED: Record<Speed, Speed> = { 1: 2, 2: 3, 3: 1 }
+export const NEXT_SPEED: Record<Speed, Speed> = { 1: 2, 2: 3, 3: 5, 5: 10, 10: 1 }
 
 /**
  * A duration, at a speed. The whole of the arithmetic, in one place, so the

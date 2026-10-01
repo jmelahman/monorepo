@@ -1894,7 +1894,7 @@ export class App {
     // Twenty milliseconds is not a race, it is a rule: the render lands inside
     // the shake every time, found a class the new view had no reason to carry,
     // and refused the reuse. It stays a rule at every animation speed, since
-    // both numbers are divided by the same setting; at ×3 the margin is seven
+    // both numbers are divided by the same setting; at ×10 the margin is two
     // milliseconds and the ordering is the one it always was. The board was
     // rebuilt against an unmeasured container on the one guess in the round
     // worth watching, which is both the most conspicuous moment available and

@@ -24,6 +24,7 @@ describe("animation speed", () => {
   it("divides a duration by the speed", () => {
     expect(atSpeed(380, 2)).toBe(190)
     expect(atSpeed(900, 3)).toBe(300)
+    expect(atSpeed(380, 10)).toBe(38)
   })
 
   it("never rounds a duration away to nothing", () => {
@@ -56,7 +57,7 @@ describe("animation speed", () => {
     // The list is what a store can actually hand back: nothing written yet, a
     // rung this build no longer offers, a number that is not one, and the string
     // that would divide a duration by zero if `Number` were trusted with it.
-    for (const raw of [null, "", "1.5", "4", "0", "-1", "fast", "NaN", "[]"]) {
+    for (const raw of [null, "", "1.5", "4", "20", "0", "-1", "fast", "NaN", "[]"]) {
       expect(readSpeed(raw)).toBe(1)
     }
   })
