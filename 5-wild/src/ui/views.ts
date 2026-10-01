@@ -1269,6 +1269,12 @@ export function fillReadout(el: Element, state: RunState): void {
 }
 
 export function roundView(state: RunState, on: Handlers, chrome: Chrome): HTMLElement {
+  const handLine = h(
+    "div",
+    { class: "hand-line" },
+    consumableRow(state, on),
+    decorToggle(on, chrome),
+  )
   return h(
     "div",
     { class: "screen round-screen" },
@@ -1289,8 +1295,14 @@ export function roundView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
     grid(state),
     // Everything a thumb presses outside the keys, at the keys: the hand and
     // the switch, then the relics flush to the keyboard. See `.hand-line`.
-    h("div", { class: "hand-line" }, consumableRow(state, on), decorToggle(on, chrome)),
-    relicRow(state),
+    // Tab order is the DOM's, and the table's grid draws the relics first and
+    // the hand beside them, so on the table the relics are built first as well:
+    // from the shape button Tab reaches relics, then consumables, then the
+    // switch. The phone draws them hand-first, and so builds them hand-first.
+    // Read at render, as `shopView` reads it for its own tray.
+    ...(isTable()
+      ? [relicRow(state), handLine]
+      : [handLine, relicRow(state)]),
     h("div", { class: "relic-tip" }),
     h("div", { class: "toast" }),
     keyboard(state, on),
