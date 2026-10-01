@@ -40,8 +40,13 @@
   font-size: 0.8125rem;
 }
 
+/* The name's size rather than a step under it, which was the phone's 11px on a
+   card twice the height. The rule is the half of a held card that says what it
+   does, and the round's seat has the room: two lines at this size and the name
+   come to 61px of the 72px the shortest tray allows. The shop's seat sets its
+   own; see `table/shop.css`. */
 :root.table .consumable-text {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
 }
 :root.table .relic-tip {
   z-index: var(--z-toast);

@@ -78,6 +78,12 @@
 /* The footer is device business, and stays quiet. */
 :root.skin-tabletop .title-build {
   color: var(--muted);
+  border-radius: var(--radius-m);
+}
+
+/* The pill's ring, so the floor's two pressable things answer Tab alike. */
+:root.skin-tabletop .title-build:focus-visible {
+  outline: 2px solid var(--accent);
 }
 
 /*

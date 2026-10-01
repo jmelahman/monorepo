@@ -593,6 +593,22 @@ function relicRow(state: RunState): HTMLElement {
     // rather than only in the tip.
     const growth = relic.growth?.(instance)
     const detail = growth ? growthBadge(growth) : null
+    // On the face the figure goes after the name, on the name's line, and in
+    // the colour of what it adds to rather than with its unit word. A row of its
+    // own under a sprite and a name came to 51px in a 40px seat, so the figure
+    // was the thing cut off, on the one card in the tray worth re-reading
+    // between rounds. The colour is the readout's own (blue points, red mult,
+    // gold money) and so already a word the player reads; the unit is in full
+    // in the tip and the label, which is where `detail` still goes.
+    //
+    // The sign stays, though it costs the name its last letters: without it
+    // Hot Streak fit its 66px line in Tabletop's face, with it the name ends
+    // "Hot Str…". A bare "12" beside a name reads as a fixed stat, which is
+    // wrong twice over for the two relics whose figure is a pool counting
+    // *down*, and with the unit word gone the `+` is the one cue left that is
+    // not a colour. The name is in full in the tip.
+    const figure =
+      growth && (growth.unit === "gold" ? `+${money(growth.amount)}` : `+${num(growth.amount)}`)
     const card = relicCard(instance.id)
     // A card to read, not a control to press. It answered a tap with its own
     // text in a toast, which is a message across the board for a thumb that only
@@ -624,8 +640,14 @@ function relicRow(state: RunState): HTMLElement {
           : ui().board.relicLabel(card.name, card.text),
       },
       ...cardArt("relic", instance.id),
-      h("span", { class: "relic-name" }, card.name),
-      detail ? h("span", { class: "relic-detail" }, detail) : null,
+      growth && figure
+        ? h(
+            "span",
+            { class: "relic-line" },
+            h("span", { class: "relic-name" }, card.name),
+            h("span", { class: `relic-detail amt-${growth.unit}` }, figure),
+          )
+        : h("span", { class: "relic-name" }, card.name),
     )
   })
   return h("div", { class: "relics" }, ...slots)
@@ -655,8 +677,14 @@ function consumableRow(state: RunState, on: Handlers): HTMLElement {
         "data-tip": card.text,
         onclick: () => on.useConsumable(index),
       },
-      h("span", { class: "consumable-name" }, card.name),
-      h("span", { class: "consumable-text" }, ...withAmounts(card.text)),
+      // In a wrapper that is nothing (`display: contents`) except on a phone,
+      // where the two run on as one clamped paragraph; see `consumables.css`.
+      h(
+        "span",
+        { class: "consumable-face" },
+        h("span", { class: "consumable-name" }, card.name),
+        h("span", { class: "consumable-text" }, ...withAmounts(card.text)),
+      ),
     )
   })
   return h("div", { class: "consumables" }, ...seats)
@@ -3191,7 +3219,7 @@ export function ascendView(level: number, on: Handlers): HTMLElement {
     h("h2", { class: "sheet-title" }, copy.askTitle(level)),
     h(
       "div",
-      { class: "sheet-body" },
+      SHEET_BODY_ATTRS,
       rule
         ? h(
             "p",
@@ -3250,6 +3278,16 @@ function buildStamp(): string {
 export const SHEET_ATTRS = { role: "dialog", "aria-modal": "true", tabindex: -1 }
 
 /**
+ * What every sheet's scroll box wears. `tabindex="-1"` for the reason the sheet
+ * has one, so that focus can be put on it when the sheet opens, and for the
+ * reason that is wanted: a keyboard scrolls the box at or above focus, never
+ * one below it. See `holdFocus`. Firefox and Chrome put a scroll box in the tab
+ * order on their own, and an explicit -1 takes it out again, which keeps the
+ * stops a Tab makes in a sheet its buttons and nothing else.
+ */
+export const SHEET_BODY_ATTRS = { class: "sheet-body", tabindex: -1 }
+
+/**
  * Everything modal shares this shell. The backdrop closes on tap, which on a
  * phone is the gesture people reach for before they look for a button.
  */
@@ -3293,7 +3331,7 @@ export function helpView(on: Handlers, offerTutorial: boolean): HTMLElement {
     h("h2", { class: "sheet-title" }, copy.title),
     h(
       "div",
-      { class: "sheet-body" },
+      SHEET_BODY_ATTRS,
       // First, and above the rules rather than beside the buttons at the foot,
       // because the player it is for is the one who opened this sheet to learn
       // the game, and the tutorial is a better way to do that than the page
@@ -3494,7 +3532,7 @@ export function codexView(on: Handlers): HTMLElement {
     h("h2", { class: "sheet-title" }, copy.title),
     h(
       "div",
-      { class: "sheet-body" },
+      SHEET_BODY_ATTRS,
       h("p", { class: "sheet-lead" }, copy.lead),
 
       sectionOf(
@@ -3620,7 +3658,18 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
   const common = ui().common
   return overlay(
     on,
-    h("h2", { class: "sheet-title" }, copy.title),
+    // The run's code rides the title's row, opposite it, rather than under the
+    // settings where it first went. There it was one more 44px row in a sheet
+    // already at its height cap, and the settings list, which clips rather than
+    // scrolls and is the first thing to shrink, paid for it with its last row:
+    // the sharing switch, cut in half. The title's row has the width to spare
+    // and was spending none of its height on anything but the word.
+    h(
+      "div",
+      { class: "sheet-top" },
+      h("h2", { class: "sheet-title" }, copy.title),
+      chrome.seed !== null && seedLine(chrome.seed, on),
+    ),
     // The four settings are one quiet list rather than four more buttons in the
     // stack. Drawn as buttons they were the same size, color and weight as Resume
     // and Quit, so the sheet read as eight equal choices when it is two kinds of
@@ -3720,7 +3769,6 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
     // in the language it was drawn from. Said here and not on the title
     // screen, because `wordsDeferred` needs a run open to be true at all.
     chrome.wordsDeferred ? h("p", { class: "lang-note" }, copy.wordsNextRun) : null,
-    chrome.seed !== null && seedLine(chrome.seed, on),
     chrome.thanked && thanks(chrome.thanked),
     h(
       "div",
@@ -3931,7 +3979,7 @@ export function creditsView(on: Handlers): HTMLElement {
     h("h2", { class: "sheet-title" }, copy.title),
     h(
       "div",
-      { class: "sheet-body" },
+      SHEET_BODY_ATTRS,
       rule({ term: copy.madeBy, text: "Jamison Lahman" }),
       musicCredit(),
       rule({ term: copy.sounds, text: copy.soundsText(people) }),
@@ -4015,7 +4063,7 @@ export function quitView(state: RunState, on: Handlers): HTMLElement {
     h("h2", { class: "sheet-title" }, copy.title),
     h(
       "div",
-      { class: "sheet-body" },
+      SHEET_BODY_ATTRS,
       // Two whole sentences in the catalog rather than one with "of N" spliced
       // in, because a run past the last stage has no denominator and the clause
       // a language wants that number in is not always the one English puts it in.

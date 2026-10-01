@@ -59,6 +59,14 @@
 /* The footer is device business, and stays quiet. */
 :root.skin-smoke .title-build {
   color: var(--muted);
+  border-radius: 0;
+}
+
+/* The pill's ring, in the pill's square corners. Outside rather than inset, as
+   the pill's is, since nothing here clips it and the stamp's text runs close
+   to its padding. */
+:root.skin-smoke .title-build:focus-visible {
+  outline: var(--bw) solid var(--accent);
 }
 
 /* The badge's figures are small and sit on a bright fill: ink on colour, no

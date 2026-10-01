@@ -264,9 +264,14 @@ button {
 
 /* The exception: a sheet takes focus when it opens so the keyboard starts
    inside it, and a ring around the whole panel would announce that as a
-   selection. It is a destination, not a control. */
+   selection. It is a destination, not a control. Its body likewise, which is
+   what takes the focus where the sheet has one; Chrome counts a script's
+   `focus()` after a keypress as keyboard focus, so every sheet opened from the
+   keyboard opened ringed. */
 .sheet:focus,
-.sheet:focus-visible {
+.sheet:focus-visible,
+.sheet-body:focus,
+.sheet-body:focus-visible {
   outline: none;
 }
 

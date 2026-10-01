@@ -1940,6 +1940,13 @@ export class App {
    * then starts at the title and reads down, where landing on "Open the codex"
    * would announce the last thing in the sheet as though it were the point of it.
    *
+   * Its body rather than the sheet, where it has one, which is the box that
+   * scrolls. The browser scrolls the nearest scroll box at or *above* focus, and
+   * the body is below the sheet, so on the sheet the arrows and the page keys
+   * had nothing to move and the rules could be read one screen deep. The body
+   * still starts above every button in it, and a reader loses the title, which
+   * is the cost.
+   *
    * On the board the same rebuild is the problem and a name is the answer. The
    * node is gone, so there is nothing to hold; what survives is the `data-focus`
    * it was carrying, and the new screen is asked for the node wearing the same
@@ -1965,7 +1972,10 @@ export class App {
       named(this.root)?.focus()
       return
     }
-    if (!sheet.contains(document.activeElement)) (named(sheet) ?? sheet).focus()
+    if (!sheet.contains(document.activeElement)) {
+      const body = sheet.querySelector<HTMLElement>(".sheet-body")
+      ;(named(sheet) ?? body ?? sheet).focus()
+    }
   }
 
   /* ----------------------------------------------------------------- save */
@@ -2109,12 +2119,29 @@ export class App {
         // activation, and only when focus is inside the sheet. With focus
         // anywhere else Space is a page scroll behind the backdrop, which is
         // the thing modality is for.
+        //
+        // The scrolling keys stop short of it for the same reason. The rules
+        // and the codex are longer than any phone, and swallowed with
+        // everything else they let a keyboard open either and read the first
+        // screen and nothing after it. Let through, the browser scrolls the
+        // nearest scroll box at or above focus, which is the sheet's body
+        // whenever focus is in it: the sheet opens with focus on the body
+        // itself (see `holdFocus`), and a button or a codex heading tabbed to
+        // is inside it. That is the browser's own step, smoothing and paging
+        // rather than a copy of them; a hand-rolled `scrollBy` here was tried
+        // first and was all of that again in 25 lines.
+        //
+        // Into the body and nowhere else. The pause sheet has no body, and the
+        // nearest scroll box above a button in it is the screen behind the
+        // backdrop, which an arrow there would scroll: the very thing the
+        // swallow is for. Space keeps the wider gate, since on a button it is
+        // a press and not a scroll.
         const focused = document.activeElement
-        const pressing =
-          (event.key === "Enter" || event.key === " ") &&
-          focused instanceof HTMLElement &&
-          focused.closest(".sheet") !== null
-        if (!pressing) event.preventDefault()
+        const inside = focused instanceof HTMLElement && focused.closest(".sheet") !== null
+        const reading = focused instanceof HTMLElement && focused.closest(".sheet-body") !== null
+        if (inside && (event.key === "Enter" || event.key === " ")) return
+        if (reading && SCROLL_KEYS.has(event.key)) return
+        event.preventDefault()
         return
       }
       if (this.atTitle) return
@@ -2227,6 +2254,13 @@ const focusableIn = (sheet: HTMLElement): HTMLElement[] => [
 ]
 
 /**
+ * The keys a browser scrolls with, which an open sheet lets through to it when
+ * focus is inside; see the overlay branch of `bindPhysicalKeyboard`. Space is
+ * both: on a button it presses, anywhere else in the body it pages.
+ */
+const SCROLL_KEYS = new Set(["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "])
+
+/**
  * Keep Tab inside the open sheet.
  *
  * Without this, tabbing off the last button walks into the screen *behind* the
@@ -2246,9 +2280,13 @@ function trapTab(sheet: HTMLElement, event: KeyboardEvent): void {
   const last = focusable[focusable.length - 1]
   // Forward off the end, backward off the front, or adrift outside the sheet
   // entirely. Backward from the sheet itself counts as off the front: it holds
-  // focus on the way in, and it sits before everything it contains.
+  // focus on the way in, and it sits before everything it contains. So does its
+  // body, which holds focus on the way in where there is one (see
+  // `holdFocus`) and is not a tab stop, so the browser's own step back from it
+  // went to whatever was tabbable before the sheet: the board behind it.
+  const body = sheet.querySelector(".sheet-body")
   const leaving = event.shiftKey
-    ? active === first || active === sheet || !sheet.contains(active)
+    ? active === first || active === sheet || active === body || !sheet.contains(active)
     : active === last || !sheet.contains(active)
   if (!leaving) return
   event.preventDefault()

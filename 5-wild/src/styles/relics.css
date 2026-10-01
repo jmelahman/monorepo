@@ -106,8 +106,15 @@
  * the board, where it was the one moving thing on the screen while the player
  * was trying to think about a word, every five seconds for the rest of the run.
  * The pip still says legendary there.
+ *
+ * And only on a card, which is what "on offer" meant and what `:not(.relic)`
+ * failed to say. Everything else wearing the class took the pass too: the
+ * relic's tip panel, and the codex's legendary band, which is not positioned,
+ * so its `inset: 0` resolved against the fixed `.overlay` and a ribbon of light
+ * crossed the whole window every five seconds while the catalog was open. A
+ * shop card and a pack's options are both `.shop-item`, both on offer.
  */
-.rarity-legendary:not(.relic)::before {
+.shop-item.rarity-legendary::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -154,15 +161,44 @@
 }
 
 /*
- * What a scaling relic has grown to. Tinted like mult rather than like the card,
- * because it is a live number rather than part of the card's identity, and the one
- * thing on a relic that is worth re-reading between rounds.
+ * What a scaling relic has grown to. Tinted like the number it feeds rather than
+ * like the card, because it is a live number rather than part of the card's
+ * identity, and the one thing on a relic that is worth re-reading between rounds.
+ *
+ * No colour of its own. It wears the class the card's sentence marks the same
+ * amount with, `amt-<unit>` (see `amounts.ts` and `shop.css`), and takes that
+ * rule's colour: it was mult-red here whatever it grew, so Hot Streak's points
+ * and Royalties' dollars both read as mult, and a second set of the same three
+ * colours in this file was one more place for a skin's rebinding to miss.
  */
 .relic-detail {
   font-size: var(--type-pip);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--mult);
+}
+
+/* The name and the figure on one line; see `relicRow`. The figure never gives
+   way, being the half that changes, so a name too long for what is left ends
+   in an ellipsis, and the tip has it in full. Only on a card that has a
+   figure: every other name keeps the room to wrap onto a second line. */
+.relic-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.125rem;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.relic-line .relic-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relic-line .relic-detail {
+  flex: 0 0 auto;
 }
 
 .relic.fired {

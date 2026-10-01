@@ -430,6 +430,11 @@
      text sits where it did and the footer grid does not move. */
   min-height: 2.75rem;
   padding: 0 0.5rem;
+  /* Drawn nowhere, and there only for the focus ring, which follows it: a
+     square ring beside the language pill read as a different kind of thing
+     from the control it shares the floor with. Each skin restates the pill's
+     corner for it. */
+  border-radius: 999px;
 }
 
 /* The hash is for whoever is filing the bug, and a phone has a better place to

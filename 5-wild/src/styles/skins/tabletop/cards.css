@@ -112,10 +112,6 @@
   color: var(--cash);
 }
 
-:root.skin-tabletop .relic-detail {
-  color: var(--mult-ink);
-}
-
 /* Firing is the card's own edge turned terracotta: an inset ring on the bone,
    with the pop over the card carrying the number. */
 :root.skin-tabletop .relic.fired {
@@ -137,6 +133,8 @@
     inset 0 0.25rem 0 var(--accent),
     var(--shadow-hard),
     var(--shadow-soft);
+  /* The bar's depth, for the phone's centred face to stand clear of. */
+  --bar: 0.25rem;
 }
 
 :root.skin-tabletop .consumable-name {

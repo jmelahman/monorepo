@@ -40,14 +40,16 @@
 /* The tray's cards at the pinned height rather than on the tray, whose padding
    and matching negative margin are there for the lift of a fired relic.
 
-   Packed to fit the worst case, which is common rather than rare: most of the
-   relics that grow have two-word names (Slow Burn, Sunk Cost, Compound
-   Interest), and two-word names wrap. The 2px edge, 2px of pad a side, two
-   lines of name at 1.1, 1px of gap and the badge at 1 come to 39px of the 40;
-   at the card's own 4px pad and unset badge line height they were 47. */
+   Packed for a name that wraps, since two-word names do (Slow Burn, Sunk
+   Cost, Compound Interest). A grown relic's figure is no longer a third line under those (see
+   `relicRow`), which in the skins that draw the 24px sprite came to 51px of
+   the 40 and lost the figure off the bottom of the card. */
 .round-screen .relic {
   height: var(--tray-h);
-  padding: 0.125rem 0.25rem;
+  /* 2px a side rather than 4, for the name and figure's one line: Hot Streak
+     and its +12 measure 67px in the Smoke Room's face, against 64 inside a
+     72px card at the old pad. */
+  padding: 0.125rem;
   gap: 0.0625rem;
 }
 

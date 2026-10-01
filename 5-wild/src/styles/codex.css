@@ -40,10 +40,15 @@
  * relic list is longer than the sheet and losing track of which rarity you are
  * reading is the one way this screen fails to answer the question you opened it
  * with.
+ *
+ * Stuck a quarter-rem above the box's edge rather than on it, so the label's
+ * own top padding goes up under the edge with it. At 0 the entries scrolling
+ * under the label showed through a sliver above it, and read as the list
+ * sliding over its own heading.
  */
 .codex-group {
   position: sticky;
-  top: 0;
+  top: -0.25rem;
   z-index: 1;
   margin-top: 0.25rem;
   padding: 0.25rem 0;
@@ -304,6 +309,26 @@
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
+}
+
+/* The pause sheet's head: the title, and the code across from it. The line's
+   own 44px floor is taller than the title, so it gives 8px a side back to the
+   sheet's padding rather than growing the row, and pulls its own padding back
+   to the sheet's edge, where the title's left edge already is; see `menuView`.
+   On the line and not the row, because the line is optional: there is no run
+   to name at the title or over someone else's, and a row pulled back without
+   it took the title 8px up into the padding. */
+.sheet-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sheet-top .seed-line {
+  align-self: auto;
+  margin-block: -0.5rem;
+  margin-right: -0.75rem;
 }
 
 .seed-line .icon {

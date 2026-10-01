@@ -42,17 +42,17 @@
 /* On the board the hand is a fixed band, seats and all, so the board above it
    is the same size and in the same place whether the hand is full, empty or
    emptied mid-round. The band is the relic tray's height, `--tray-h`, so the
-   two rows read as one pair of shelves; the rule clamps at one line to fit it,
-   and carries the rest as a tip. The pause sheet's copy of the row is not
-   clamped, since nothing there is sized against it. Stretched cards rather than
-   a height on each, so an empty seat and a held card are one height by
+   two rows read as one pair of shelves; the rule is clamped to fit it, and
+   carries the rest as a tip. The pause sheet's copy of the row is not clamped,
+   since nothing there is sized against it. Stretched cards rather than a
+   height on each, so an empty seat and a held card are one height by
    construction.
 
-   Its own line heights and a thinner pad: a name, 1px of gap, one line of rule
-   at 1.15 and 3px of pad a side come to 34px inside the 40. Two lines of rule
-   were 47px, and held both rows at 48, which the board paid for twice. The name
-   is what a held card is recognized by; the rule is on the tip, and in full in
-   the pause sheet. */
+   Its own line heights and a thinner pad. On a phone the name and the rule
+   were stacked, one line of rule at 1.15, because two stacked lines were 47px
+   and held both rows at 48, which the board paid for twice; they now run on as
+   one paragraph instead (below). The table stacks them in a band twice the
+   height and clamps the rule there; see `table/round.css`. */
 .round-screen .consumables {
   height: var(--tray-h);
 }
@@ -66,12 +66,50 @@
   line-height: 1.15;
 }
 
-.round-screen .consumable-text {
+/* Nothing but its children, except on a phone; see below. */
+.consumable-face {
+  display: contents;
+}
+
+/* On a phone the name and the rule run on as one paragraph, the name in bold
+   and then the rule after it, clamped at two lines. Stacked, the rule had one
+   line of half a phone to itself, which is three or four words: "Reveal one
+   letter of the…" told the player nothing the name had not. Run on, the same
+   band holds two lines and the name spends only its own width of them, which is
+   most of every rule in the English catalog. The name is still first and still
+   bold, so it is still what a held card is recognized by.
+
+   The clamp is on the face and not the button, because Chrome lays a clamped
+   button out as `flow-root` and went on painting the third line into the 40px
+   it had, under the ellipsis. Centred in the card, which is also what takes the
+   name off the top edge: the Smoke Room and Tabletop draw the card's bar inside
+   its box, and the stack's 3px of pad left the name sitting on it. Two lines at
+   1.2 are 26px, so there is room for the bar (`--bar`, set by each skin) and
+   an even margin either side. The table keeps the stack; its band is twice the
+   height and already clamps the rule at two. */
+:root:not(.table) .round-screen .consumable:not(.empty) {
+  justify-content: center;
+  padding-block: var(--bar, 0) 0;
+}
+
+:root:not(.table) .round-screen .consumable-face {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
+  font-size: var(--type-small);
+  line-height: 1.2;
+}
+
+:root:not(.table) .round-screen :is(.consumable-name, .consumable-text) {
+  display: inline;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+:root:not(.table) .round-screen .consumable-name {
+  margin-right: 0.3em;
 }
 
 .consumable.empty {

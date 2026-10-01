@@ -309,9 +309,16 @@
   min-width: 5rem;
 }
 
+/* Two lines of rule under the name. The clamp lives here whole rather than as
+   a count over a one-line clamp in `consumables.css`: the phone runs the name
+   and rule on inline, which no clamp on the rule can reach, so the table was
+   the only layout that one ever applied to. */
 :root.table .round-screen .consumable-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
+  overflow: hidden;
 }
 
 /*

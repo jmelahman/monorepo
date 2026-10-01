@@ -58,6 +58,34 @@
   border-width: 0.25rem;
 }
 
+/*
+ * The tray's overhang, given back to the box the grid is sized in. The grid
+ * sits flush to the top of its wrap, and a round without a boss pads that top
+ * by the band's height, which hid the overhang; a boss round has no padding,
+ * so its tray reached 10px up past the wrap and stopped 1px under the header's
+ * band, with the header's shadow lying across the gap. Padded by the overhang
+ * and 2px more, and on top of the band's padding in the other rounds, so a
+ * boss round's tiles are still the size of every other round's.
+ *
+ * At the top only, and no more than that, because the wrap is the box the
+ * grid's container query reads, so whatever pads it comes off the board's
+ * height wherever the board is height bound. From 390x844 up it is not (the
+ * grid stops at 300px wide), and this costs nothing. Below it is: at 360x740
+ * the grid went 249px to 239 and at 375x667 201 to 191, against 226 and 177
+ * for the 14px top-and-bottom pad this replaced, which also cleared the hand
+ * under the tray's bottom edge. Nobody had asked for that half. A negative
+ * margin anywhere does not escape it: any room between the header and the
+ * board is room the board does not have.
+ */
+:root.skin-tabletop:not(.table) .round-screen .grid-wrap {
+  --tray-over: 0.75rem;
+  padding-top: var(--tray-over);
+}
+
+:root.skin-tabletop:not(.table) .round-screen:not(:has(.hud .boss)) .grid-wrap {
+  padding-top: calc(var(--boss-band) + var(--tray-over));
+}
+
 /* ---- the socket ------------------------------------------------------ */
 
 :root.skin-tabletop .tile {

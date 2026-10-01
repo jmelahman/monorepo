@@ -161,6 +161,14 @@
   color: var(--fg);
 }
 
+/* On a phone the panel sits on the table right over the board's tray, so it
+   casts the cards' short shadow and not the sheets' lift, whose 16px drop and
+   40px blur lay across the gap and onto the tray's frame. The rail keeps the
+   lift, with nothing under it to fall on. */
+:root.skin-tabletop:not(.table) :is(.round-screen, .shop-screen) .hud {
+  box-shadow: var(--top-light), var(--shadow-soft);
+}
+
 :root.skin-tabletop.table .round-screen .hud .boss {
   border: var(--rim);
   border-radius: var(--radius-m);

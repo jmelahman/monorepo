@@ -67,18 +67,14 @@
      as a scrollbar *inside* that panel. A phone's scrollbar overlays and
      takes no room, so there this moves nothing but where the fling ends.
 
-     Both sides rather than the right alone, for Firefox's sake: it puts every
-     scroll box in the tab order so a keyboard can scroll it, and the ring it
-     then drew hugged the text on the left and the sheet's edge on the right. */
+     Both sides rather than the right alone, for Firefox's sake: it put every
+     scroll box in the tab order so a keyboard could scroll it, and the ring it
+     then drew hugged the text on the left and the sheet's edge on the right.
+     The box is out of the tab order now and draws no ring (`SHEET_BODY_ATTRS`,
+     `base.css`), and the symmetry costs nothing to keep. */
   margin-inline: -1.25rem;
   padding-inline: 1.25rem;
   scrollbar-width: thin;
-}
-
-/* Drawn inside, since the box now reaches the sheet's edges and a ring 2px
-   outside them would be clipped by the sheet or stand on its border. */
-.sheet-body:focus-visible {
-  outline-offset: -2px;
 }
 
 .sheet-lead {
