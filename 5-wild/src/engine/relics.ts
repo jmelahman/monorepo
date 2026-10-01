@@ -163,7 +163,7 @@ function perish(ctx: RelicCtx, odds: number, ...at: number[]): void {
 }
 
 /** How many fresh letters a guess must prove absent to feed Masochist. */
-export const MASOCHIST_MISSES = 4
+export const MASOCHIST_MISSES = 3
 
 /**
  * Letters this guess proved absent that no earlier guess this round had
@@ -818,10 +818,17 @@ export const RELICS: readonly Relic[] = [
     // for the card; +3 won about 40 and +4 57. It is already the one card
     // that counts every shape at once, so +4 made it the door every run
     // walked through, which is what the flat step on Distinct was cut for.
+    //
+    // Back to +2 when The Cliché arrived, which voids the run's most-played
+    // shape late and is meant as this card's counter. Same harness, Masochist
+    // banned too: +3 still won 15 runs holding the card against The Cliché,
+    // +2 won 9, +1 5, and +1 with ×1.1 6. +2 because by the late bosses the
+    // card has already grown the other four shapes, so a round in a second
+    // shape still pays; the step can come down again if that proves too kind.
     onGuess: (ctx) => {
       const shape = categoryOf(ctx.word).id
       const played = ctx.getData(shape)
-      if (played > 0) ctx.addMult(3 * played)
+      if (played > 0) ctx.addMult(2 * played)
       ctx.setData(shape, played + 1)
     },
   },
@@ -900,6 +907,15 @@ export const RELICS: readonly Relic[] = [
     // (5,000 seeds): +6 won 14 runs holding the card, +8 won 21, +10 won 29,
     // against 28 for the old card on the same seeds; the committed gray build
     // wins 24 where it won 10, which is the point of asking for a guess.
+    //
+    // Three fresh letters since, not four. Later shelves left it winning 5
+    // runs holding the card (builder, 5,000 seeds, every other grower and
+    // Force of Habit banned), the gray build 3, the same as no card at all.
+    // Of the two ways to loosen it, three letters won 18 holding it and the
+    // gray build 9; four letters with the opener counted won only 12, and
+    // both together won 35 and lifted the whole field from 32 wins to 62.
+    // The opener stays out for the reason it went out: it lands a burner's
+    // grays by accident, so paying for it pays for nothing given up.
     onGuess: (ctx) => {
       const banked = ctx.getData("mult")
       if (banked > 0) ctx.addMult(banked)
@@ -1131,12 +1147,15 @@ export const RELICS: readonly Relic[] = [
   },
   {
     id: "second_wind",
-    rarity: "rare",
-    cost: RARITY_COST.rare,
+    rarity: "legendary",
+    cost: RARITY_COST.legendary,
     // Does nothing until the run is over, and then says it is not. A quarter of
     // the target is the line between a round that went wrong and a build that
     // was never going to make it, and only the first deserves a second chance.
     // It spends itself either way, and the round it saved pays nothing.
+    //
+    // Legendary since it traded seats with Carbon Copy. It is the one card
+    // that undoes the end of a run, and that is the most a card can do.
     onRoundLost: (ctx, round) => {
       if (round.score < 0.25 * round.target) return false
       ctx.destroy()
@@ -1174,12 +1193,15 @@ export const RELICS: readonly Relic[] = [
   },
   {
     id: "carbon_copy",
-    rarity: "legendary",
-    cost: RARITY_COST.legendary,
+    rarity: "rare",
+    cost: RARITY_COST.rare,
     // Worth whatever sits to its right, which makes slot order a decision for
-    // the first time. Legendary because the best card in a tray is the ceiling
-    // on a copy of it, and a common copier would be a second copy of that
-    // ceiling at a common's price. See `scoringRelic` for what it borrows.
+    // the first time. Not common because the best card in a tray is the
+    // ceiling on a copy of it, and a common copier would be a second copy of
+    // that ceiling at a common's price. Rare rather than legendary since it
+    // traded seats with Second Wind, which leaves every rarity its count: a
+    // copier is only as good as the card beside it, and the rare odds deal it
+    // earlier, while the tray it copies is still being chosen.
     copiesRight: true,
   },
 ]

@@ -4,7 +4,7 @@ import type { Refusal, RoundState } from "./state"
  * The primitives that guess rules are built out of.
  *
  * Bosses and ascensions both restrict what may be typed, and they overlap by
- * design: ascension 5 *is* The Tyrant. Sharing the implementation is what keeps
+ * design: ascension 5 was The Tyrant, until the boss left. Sharing the implementation is what keeps
  * the two from drifting into two slightly different definitions of the same
  * sentence, which the player would experience as the rule changing meaning
  * depending on which system happened to impose it.
@@ -81,7 +81,7 @@ export function useFound(word: string, letters: Iterable<string>): Refusal | nul
   return null
 }
 
-/** Every green has to stay exactly where it was found. The Tyrant, and ascension 5. */
+/** Every green has to stay exactly where it was found. Ascension 5. */
 export function keepGreens(word: string, round: RoundState): Refusal | null {
   for (const [i, letter] of knownGreens(round)) {
     // One-based on the way out: the engine indexes tiles from zero and the

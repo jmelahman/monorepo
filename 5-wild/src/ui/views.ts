@@ -1067,10 +1067,10 @@ function keyboard(state: RunState, on: Handlers): HTMLElement {
     // modifier says which modifier it is.
     //
     // Deliberately the raw value rather than the boss-adjusted one `letterTip`
-    // leads with. A boss that bends chips does it per column (The Margin) or by
-    // what has already been spent (The Miser), and one number sitting on a key
-    // cannot say either without lying about the other; the tip has room for the
-    // sentence and prints it.
+    // leads with. A boss that bends chips does it per column (The Margin), by
+    // what has already been spent (The Miser) or by the whole word (The
+    // Cliché), and one number sitting on a key cannot say any of them without
+    // lying about the rest; the tip has room for the sentence and prints it.
     const value = baseChips(state, letter)
     const color = eliminated.has(letter) ? "gray" : colors.get(letter)
     // A modifier is bought once and paid off over the rest of the run, so the
@@ -1190,6 +1190,13 @@ export function fillCategory(slot: Element, state: RunState, on: Handlers): void
   const board = ui().board
   const category = word ? categoryOf(word) : DISTINCT
   const bonus = levelBonus(state, category)
+  // The Cliché, and the only place on the board that can say which shape it
+  // took: the boss's card has to describe every run, so it names the rule and
+  // not the shape, and the player cannot be asked to have kept count of their
+  // own run. Struck through on a whole word of that shape, which is the moment
+  // it matters, with the boss's line on the tip for whoever wonders why.
+  const boss = getBoss(state.round.bossId)
+  const barred = word !== "" && (boss?.voids?.(word, state) ?? false)
   // A button rather than a div, because this line is the only place the shape
   // system announces itself during a round, and a player who wants to know what
   // the other four shapes are has nowhere else to press.
@@ -1197,9 +1204,10 @@ export function fillCategory(slot: Element, state: RunState, on: Handlers): void
     h(
       "button",
       {
-        class: "category",
+        class: barred ? "category barred" : "category",
         type: "button",
         "aria-label": `${categoryCard(category.id).name} ${board.shapeLevel(bonus.level)}`,
+        "data-tip": barred && boss ? bossCard(boss.id).text : undefined,
         onclick: () => on.openShapes(),
       },
       h("span", { class: "category-name" }, categoryCard(category.id).name),

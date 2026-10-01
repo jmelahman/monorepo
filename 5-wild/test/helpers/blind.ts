@@ -393,7 +393,7 @@ export function blindPlayer(policy: Policy): BlindPlayer {
     }
 
     // The gray build's burner. Masochist pays for a guess after the first that
-    // proves four fresh letters absent, so a person holding it spends one guess
+    // proves three fresh letters absent, so a person holding it spends one guess
     // a round on exactly that, while there is room left to solve: a word made
     // of letters no remaining candidate contains, which is a sure miss and
     // still rules letters out. Once a round, because the guess it costs is a

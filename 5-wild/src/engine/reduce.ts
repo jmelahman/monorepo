@@ -156,8 +156,8 @@ function beginRound(state: RunState, words: WordSource, events: GameEvent[]): vo
   const difficulty = difficultyOf(state)
 
   // The empty round is installed before the answer is drawn, so guess rules that
-  // read the round's history, since The Tyrant reads its greens and so does
-  // ascension 5, judge candidate answers against this round rather than the one
+  // read the round's history, since ascension 5 reads its greens, judge
+  // candidate answers against this round rather than the one
   // just finished.
   state.round = {
     answer: "",

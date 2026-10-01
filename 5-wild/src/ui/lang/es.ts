@@ -89,7 +89,7 @@ export const es: Strings = {
     },
     masochist: {
       name: "Masoquista",
-      text: "Una vez por ronda, gana +10 mult permanentes cuando un intento tras el primero descarta 4 letras aún no probadas en la ronda",
+      text: "Una vez por ronda, gana +10 mult permanentes cuando un intento tras el primero descarta 3 letras aún no probadas en la ronda",
     },
     chorus: {
       name: "El Coro",
@@ -132,7 +132,7 @@ export const es: Strings = {
     },
     habit: {
       name: "Fuerza de la Costumbre",
-      text: "+3 mult por cada palabra de la misma forma jugada desde que la compraste",
+      text: "+2 mult por cada palabra de la misma forma jugada desde que la compraste",
     },
     no_maybes: { name: "Sin Quizás", text: "×1,75 mult si el intento no tiene casillas amarillas" },
     compound: { name: "Interés Compuesto", text: "Duplica los intereses que ganas" },
@@ -165,11 +165,11 @@ export const es: Strings = {
       name: "La Niebla",
       text: "El amarillo y el gris se ven iguales. Siguen puntuando distinto.",
     },
-    tyrant: {
-      name: "El Tirano",
-      text: "Cada intento debe reutilizar las letras verdes que hayas encontrado.",
-    },
     miser: { name: "El Avaro", text: "Las letras que ya hayas usado no dan puntos." },
+    cliche: {
+      name: "El Cliché",
+      text: "Las palabras de la forma que más has jugado en esta partida no dan puntos.",
+    },
     clock: { name: "El Reloj", text: "Solo cuatro intentos. El objetivo baja una cuarta parte." },
     glutton: { name: "El Glotón", text: "Cada intento debe contener al menos dos vocales." },
     auditor: { name: "El Auditor", text: "Tu multiplicador de resolución se limita a ×2." },

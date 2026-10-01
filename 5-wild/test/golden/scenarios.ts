@@ -825,15 +825,17 @@ export const SCENARIOS: readonly Scenario[] = [
    * seed had to be chosen. What 13877 was chosen *for*:
    *
    *   - It supplies the late bosses the other sixteen vectors miss between
-   *     them: The Famine, The Miser and The Auditor. Measured, not assumed: the
-   *     check is the union of every `boss` this file records against `BOSSES`.
-   *   - It goes as deep as anything in 20,000 seeds, dying in stage 10's boss
-   *     round, and meets four of the late band on the way, The Rust included.
-   *     The fifth, The Plateau, is met by nothing in this file. 11695 and 9546
-   *     reach stage 10 too and meet it, and were passed over because neither
+   *     them: The Famine, The Auditor, The Rust and The Plateau. Measured, not
+   *     assumed: the check is the union of every `boss` this file records
+   *     against `BOSSES`, and since The Cliché took The Miser's late seat that
+   *     union is all fifteen, with The Vandal and The Cliché from `ascendant`.
+   *   - It goes as deep as anything in 20,000 seeds, dying in stage 10's second
+   *     round, and meets four of the late band on the way, The Plateau among
+   *     them now, which it missed when it was chosen. 11695 and 9546
+   *     reach stage 10 too and meet The Plateau, and were passed over because neither
    *     meets The Auditor, and 11695 misses The Miser as well: one uncovered
    *     boss rather than two. With 12406 it had been three, since The Vandal
-   *     and The Rust had gone too, and this seed brings both back.
+   *     and The Rust had gone too, and this seed brought both back.
    *   - It is not tuned to this bot. The etcher and the mystic reach stage 8 on
    *     it, and the greedy solver, wild-smith and leveler stage 7. The run is
    *     winnable; the climber is not being carried.

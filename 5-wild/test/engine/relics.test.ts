@@ -23,6 +23,7 @@ const words: WordSource = {
     "arose",
     "audio",
     "felon",
+    "saucy",
   ]),
 }
 
@@ -82,6 +83,15 @@ describe("relics", () => {
     const after = apply(state, type("felon"))
     expect(after.round.guesses[2]?.mult).toBe(11)
     expect(after.relics[0]?.data).toMatchObject({ mult: 10 })
+  })
+
+  it("Masochist banks on three fresh misses and not on two", () => {
+    // After QUAZY: CRANE rules out C, N and E, its R yellow and its A tried;
+    // SAUCY rules out only S and C.
+    expect(withRelic("masochist", "quazy", "crane").state.relics[0]?.data).toMatchObject({
+      mult: 10,
+    })
+    expect(withRelic("masochist", "quazy", "saucy").state.relics[0]?.data).toBeUndefined()
   })
 
   it("Masochist pays nothing for typing the same miss twice", () => {
@@ -586,7 +596,7 @@ describe("the relics that widen the shelf", () => {
 
   it("Force of Habit pays for every earlier word of the same shape", () => {
     const { state } = withRelic("habit", "crane", "crane", "crane")
-    expect(state.round.guesses.map((g) => g.mult)).toEqual([7, 10, 13])
+    expect(state.round.guesses.map((g) => g.mult)).toEqual([7, 9, 11])
     // SASSY is Twinned, a shape it has not seen, so it starts again from zero.
     expect(apply(state, type("sassy")).round.guesses[3]?.mult).toBe(2)
   })

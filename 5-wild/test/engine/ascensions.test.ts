@@ -168,7 +168,7 @@ describe("the rules themselves", () => {
     expect(why(played, "dairy")).toBeUndefined()
   })
 
-  it("5: makes them stay where you put them, exactly as The Tyrant does", () => {
+  it("5: makes them stay where you put them", () => {
     const played = apply(at(5), type("acrid"))
     expect(why(played, "dairy")).toEqual({ code: "must_keep", letter: "i", position: 4 })
     expect(why(played, "braid")).toBeUndefined()

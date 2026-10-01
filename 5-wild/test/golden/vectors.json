@@ -3,7 +3,7 @@
     "name": "greedy-solver",
     "covers": "the largest solve bonus a player who cannot see the word can earn, and a shop purchase every time one is affordable",
     "seed": 1,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -1177,7 +1177,7 @@
         {
           "stage": 4,
           "round": 2,
-          "boss": "tyrant",
+          "boss": "miser",
           "word": "abhor",
           "chips": 135,
           "mult": 3.5,
@@ -1187,12 +1187,12 @@
         {
           "stage": 4,
           "round": 2,
-          "boss": "tyrant",
+          "boss": "miser",
           "word": "would",
-          "chips": 105,
+          "chips": 104,
           "mult": 49,
           "solveBonus": 5,
-          "score": 5145
+          "score": 5096
         },
         {
           "stage": 5,
@@ -1541,7 +1541,7 @@
     "name": "chip-farmer",
     "covers": "grays scoring, the guess budget spent down to one, and the solve bonus at its smallest",
     "seed": 7,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -1758,7 +1758,7 @@
     "name": "banker",
     "covers": "a pile banked and then multiplied, the line the scoring rule exists for",
     "seed": 2024,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -2220,7 +2220,7 @@
     "name": "never-solves",
     "covers": "running a round out of guesses, and the run ending in defeat",
     "seed": 42,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -2437,7 +2437,7 @@
     "name": "shopkeeper",
     "covers": "reroll, sell, consumables used rather than hoarded, and a corrected draft",
     "seed": 1234,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -3169,7 +3169,7 @@
     "name": "mystic",
     "covers": "consumables spent rather than hoarded, including the one that needs a guess behind it",
     "seed": 126,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -3704,6 +3704,118 @@
       },
       {
         "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "buy",
+        "index": 3
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "use_consumable",
+        "index": 0
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "i"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "o"
+      },
+      {
+        "type": "type_letter",
+        "letter": "l"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "r"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "i"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "h"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "type_letter",
+        "letter": "n"
+      },
+      {
+        "type": "type_letter",
+        "letter": "k"
+      },
+      {
+        "type": "submit"
       }
     ],
     "expected": {
@@ -3862,9 +3974,9 @@
           "boss": "glutton",
           "word": "adieu",
           "chips": 6,
-          "mult": 34,
+          "mult": 74,
           "solveBonus": 1,
-          "score": 204
+          "score": 444
         },
         {
           "stage": 3,
@@ -3872,9 +3984,45 @@
           "boss": "glutton",
           "word": "coupe",
           "chips": 9,
-          "mult": 28,
+          "mult": 68,
           "solveBonus": 5,
-          "score": 252
+          "score": 612
+        },
+        {
+          "stage": 4,
+          "round": 0,
+          "word": "adieu",
+          "chips": 6,
+          "mult": 79,
+          "solveBonus": 1,
+          "score": 474
+        },
+        {
+          "stage": 4,
+          "round": 0,
+          "word": "older",
+          "chips": 6,
+          "mult": 79,
+          "solveBonus": 5,
+          "score": 474
+        },
+        {
+          "stage": 4,
+          "round": 1,
+          "word": "adieu",
+          "chips": 6,
+          "mult": 73,
+          "solveBonus": 1,
+          "score": 438
+        },
+        {
+          "stage": 4,
+          "round": 1,
+          "word": "chunk",
+          "chips": 14,
+          "mult": 60,
+          "solveBonus": 5,
+          "score": 840
         }
       ],
       "gold": [
@@ -3957,6 +4105,18 @@
         {
           "delta": -10,
           "reason": "purchase"
+        },
+        {
+          "delta": 13,
+          "reason": "round cleared"
+        },
+        {
+          "delta": -3,
+          "reason": "purchase"
+        },
+        {
+          "delta": 12,
+          "reason": "round cleared"
         }
       ],
       "rewards": [
@@ -4007,32 +4167,48 @@
           "unusedGuesses": 4,
           "interest": 4,
           "total": 12
+        },
+        {
+          "base": 5,
+          "unusedGuesses": 4,
+          "interest": 4,
+          "total": 13
+        },
+        {
+          "base": 3,
+          "unusedGuesses": 4,
+          "interest": 5,
+          "total": 12
         }
       ],
       "outcome": "game_over",
-      "stage": 3,
-      "round": 2,
-      "finalGold": 22,
+      "stage": 4,
+      "round": 1,
+      "finalGold": 44,
       "relics": [
         "head_start",
         "vowel_hoarder",
         "masochist",
         "doppelganger",
-        "carbon_copy"
+        "pyromaniac"
       ],
       "etched": [],
       "mods": [],
       "levels": [],
       "ranges": [],
       "grown": [],
-      "destroyed": []
+      "destroyed": [
+        "b",
+        "g",
+        "p"
+      ]
     }
   },
   {
     "name": "letter-smith",
     "covers": "letter modifiers bought, and then landed on tiles often enough to score",
     "seed": 208,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -5207,7 +5383,7 @@
     "name": "anchor-smith",
     "covers": "Anchor stacked across letters, fired on greens no solve handed it",
     "seed": 249,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -5662,7 +5838,7 @@
     "name": "rare-smith",
     "covers": "the rare modifier pair, hunted down with rerolls and played through",
     "seed": 462,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -5865,7 +6041,7 @@
     "name": "wild-smith",
     "covers": "Wild bought over and over, aimed by letter frequency, and fired on every color",
     "seed": 130,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -7042,7 +7218,7 @@
     "name": "leveler",
     "covers": "category levels bought, stacked, and paid out on the guesses that match them",
     "seed": 77,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -8537,7 +8713,7 @@
     "name": "etcher",
     "covers": "alphabet range levels and etchings stacking on the same letters",
     "seed": 21,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -9453,7 +9629,7 @@
     "name": "pack-opener",
     "covers": "packs bought, held open across the shop, and chosen from",
     "seed": 1,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -10861,7 +11037,7 @@
         {
           "stage": 4,
           "round": 2,
-          "boss": "tyrant",
+          "boss": "miser",
           "word": "caddy",
           "chips": 99,
           "mult": 54.080000000000005,
@@ -10871,12 +11047,12 @@
         {
           "stage": 4,
           "round": 2,
-          "boss": "tyrant",
+          "boss": "miser",
           "word": "would",
-          "chips": 27,
+          "chips": 25,
           "mult": 48.12500000000001,
           "solveBonus": 5,
-          "score": 1299
+          "score": 1203
         },
         {
           "stage": 5,
@@ -11399,7 +11575,7 @@
     "name": "victor",
     "covers": "the run won and then played past, the computed targets beyond stage 8, and the whole late boss band nothing else survives to meet",
     "seed": 13877,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -12669,6 +12845,52 @@
       },
       {
         "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "g"
+      },
+      {
+        "type": "type_letter",
+        "letter": "r"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
         "letter": "f"
       },
       {
@@ -13180,104 +13402,6 @@
       },
       {
         "type": "type_letter",
-        "letter": "y"
-      },
-      {
-        "type": "type_letter",
-        "letter": "e"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "s"
-      },
-      {
-        "type": "type_letter",
-        "letter": "t"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "collect"
-      },
-      {
-        "type": "next_round"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "b"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "c"
-      },
-      {
-        "type": "type_letter",
-        "letter": "k"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "d"
-      },
-      {
-        "type": "type_letter",
-        "letter": "d"
-      },
-      {
-        "type": "type_letter",
-        "letter": "e"
-      },
-      {
-        "type": "type_letter",
-        "letter": "d"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "g"
-      },
-      {
-        "type": "type_letter",
-        "letter": "r"
-      },
-      {
-        "type": "type_letter",
-        "letter": "e"
-      },
-      {
-        "type": "type_letter",
-        "letter": "e"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "type_letter",
         "letter": "a"
       },
       {
@@ -13324,19 +13448,19 @@
       },
       {
         "type": "type_letter",
+        "letter": "y"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
         "letter": "s"
-      },
-      {
-        "type": "type_letter",
-        "letter": "n"
-      },
-      {
-        "type": "type_letter",
-        "letter": "o"
-      },
-      {
-        "type": "type_letter",
-        "letter": "u"
       },
       {
         "type": "type_letter",
@@ -13790,267 +13914,245 @@
         {
           "stage": 8,
           "round": 2,
-          "boss": "miser",
+          "boss": "cliche",
           "word": "aback",
-          "chips": 265,
-          "mult": 384.375,
+          "chips": 0,
+          "mult": 1,
           "solveBonus": 1,
-          "score": 101859
+          "score": 0
         },
         {
           "stage": 8,
           "round": 2,
-          "boss": "miser",
+          "boss": "cliche",
+          "word": "added",
+          "chips": 0,
+          "mult": 4,
+          "solveBonus": 1,
+          "score": 0
+        },
+        {
+          "stage": 8,
+          "round": 2,
+          "boss": "cliche",
+          "word": "agree",
+          "chips": 258,
+          "mult": 371.875,
+          "solveBonus": 1,
+          "score": 95944
+        },
+        {
+          "stage": 8,
+          "round": 2,
+          "boss": "cliche",
           "word": "foyer",
           "chips": 263,
-          "mult": 398.4375,
-          "solveBonus": 5,
-          "score": 104789
+          "mult": 379.6875,
+          "solveBonus": 3,
+          "score": 99858
         },
         {
           "stage": 9,
           "round": 0,
           "word": "aback",
-          "chips": 277,
+          "chips": 265,
           "mult": 403.125,
           "solveBonus": 1,
-          "score": 111666
+          "score": 106828
         },
         {
           "stage": 9,
           "round": 0,
           "word": "plush",
-          "chips": 274,
+          "chips": 262,
           "mult": 417.1875,
           "solveBonus": 5,
-          "score": 114309
+          "score": 109303
         },
         {
           "stage": 9,
           "round": 1,
           "word": "aback",
-          "chips": 289,
+          "chips": 277,
           "mult": 425,
           "solveBonus": 1,
-          "score": 122825
+          "score": 117725
         },
         {
           "stage": 9,
           "round": 1,
           "word": "panda",
-          "chips": 284,
+          "chips": 272,
           "mult": 435.9375,
           "solveBonus": 5,
-          "score": 123806
+          "score": 118575
         },
         {
           "stage": 9,
           "round": 2,
           "boss": "rust",
           "word": "aback",
-          "chips": 301,
+          "chips": 289,
           "mult": 440.625,
           "solveBonus": 1,
-          "score": 132628
+          "score": 127341
         },
         {
           "stage": 9,
           "round": 2,
           "boss": "rust",
           "word": "flyer",
-          "chips": 299,
+          "chips": 287,
           "mult": 454.6875,
           "solveBonus": 5,
-          "score": 135952
+          "score": 130495
         },
         {
           "stage": 10,
           "round": 0,
           "word": "aback",
-          "chips": 313,
+          "chips": 301,
           "mult": 460.9375,
           "solveBonus": 1,
-          "score": 144273
+          "score": 138742
         },
         {
           "stage": 10,
           "round": 0,
           "word": "smear",
-          "chips": 307,
+          "chips": 295,
           "mult": 473.4375,
           "solveBonus": 5,
-          "score": 145345
+          "score": 139664
         },
         {
           "stage": 10,
           "round": 1,
           "word": "aback",
-          "chips": 325,
+          "chips": 313,
           "mult": 481.25,
           "solveBonus": 1,
-          "score": 156406
+          "score": 150631
         },
         {
           "stage": 10,
           "round": 1,
           "word": "scrub",
-          "chips": 321,
+          "chips": 309,
           "mult": 492.1875,
           "solveBonus": 5,
-          "score": 157992
+          "score": 152086
         },
         {
           "stage": 10,
           "round": 2,
           "boss": "famine",
           "word": "aback",
-          "chips": 337,
+          "chips": 325,
           "mult": 470.3125,
           "solveBonus": 1,
-          "score": 158495
+          "score": 152852
         },
         {
           "stage": 10,
           "round": 2,
           "boss": "famine",
           "word": "added",
-          "chips": 332,
+          "chips": 320,
           "mult": 460.9375,
           "solveBonus": 1,
-          "score": 153031
+          "score": 147500
         },
         {
           "stage": 10,
           "round": 2,
           "boss": "famine",
           "word": "hammy",
-          "chips": 339,
+          "chips": 327,
           "mult": 473.4375,
           "solveBonus": 1,
-          "score": 160495
+          "score": 154814
         },
         {
           "stage": 11,
           "round": 0,
           "word": "aback",
-          "chips": 349,
+          "chips": 337,
           "mult": 521.875,
           "solveBonus": 1,
-          "score": 182134
+          "score": 175872
         },
         {
           "stage": 11,
           "round": 0,
           "word": "added",
-          "chips": 344,
+          "chips": 332,
           "mult": 509.375,
           "solveBonus": 1,
-          "score": 175225
+          "score": 169113
         },
         {
           "stage": 11,
           "round": 0,
           "word": "cease",
-          "chips": 343,
+          "chips": 331,
           "mult": 520.3125,
           "solveBonus": 4,
-          "score": 178467
+          "score": 172223
         },
         {
           "stage": 11,
           "round": 1,
           "word": "aback",
-          "chips": 361,
+          "chips": 349,
           "mult": 539.0625,
           "solveBonus": 1,
-          "score": 194602
+          "score": 188133
         },
         {
           "stage": 11,
           "round": 1,
           "word": "added",
-          "chips": 356,
+          "chips": 344,
           "mult": 528.125,
           "solveBonus": 1,
-          "score": 188013
+          "score": 181675
         },
         {
           "stage": 11,
           "round": 1,
           "word": "agree",
-          "chips": 354,
+          "chips": 342,
           "mult": 518.75,
           "solveBonus": 1,
-          "score": 183638
+          "score": 177413
+        },
+        {
+          "stage": 11,
+          "round": 1,
+          "word": "alley",
+          "chips": 344,
+          "mult": 510.9375,
+          "solveBonus": 1,
+          "score": 175763
+        },
+        {
+          "stage": 11,
+          "round": 1,
+          "word": "ample",
+          "chips": 345,
+          "mult": 500,
+          "solveBonus": 1,
+          "score": 172500
         },
         {
           "stage": 11,
           "round": 1,
           "word": "yeast",
-          "chips": 356,
-          "mult": 529.6875,
-          "solveBonus": 3,
-          "score": 188569
-        },
-        {
-          "stage": 11,
-          "round": 2,
-          "boss": "vandal",
-          "word": "aback",
-          "chips": 361,
-          "mult": 553.125,
+          "chips": 344,
+          "mult": 510.9375,
           "solveBonus": 1,
-          "score": 199678
-        },
-        {
-          "stage": 11,
-          "round": 2,
-          "boss": "vandal",
-          "word": "added",
-          "chips": 356,
-          "mult": 543.75,
-          "solveBonus": 1,
-          "score": 193575
-        },
-        {
-          "stage": 11,
-          "round": 2,
-          "boss": "vandal",
-          "word": "agree",
-          "chips": 354,
-          "mult": 534.375,
-          "solveBonus": 1,
-          "score": 189169
-        },
-        {
-          "stage": 11,
-          "round": 2,
-          "boss": "vandal",
-          "word": "alley",
-          "chips": 356,
-          "mult": 525,
-          "solveBonus": 1,
-          "score": 186900
-        },
-        {
-          "stage": 11,
-          "round": 2,
-          "boss": "vandal",
-          "word": "ample",
-          "chips": 357,
-          "mult": 515.625,
-          "solveBonus": 1,
-          "score": 184078
-        },
-        {
-          "stage": 11,
-          "round": 2,
-          "boss": "vandal",
-          "word": "snout",
-          "chips": 353,
-          "mult": 529.6875,
-          "solveBonus": 1,
-          "score": 186980
+          "score": 175763
         }
       ],
       "gold": [
@@ -14171,7 +14273,7 @@
           "reason": "round cleared"
         },
         {
-          "delta": 11,
+          "delta": 9,
           "reason": "round cleared"
         },
         {
@@ -14196,10 +14298,6 @@
         },
         {
           "delta": 7,
-          "reason": "round cleared"
-        },
-        {
-          "delta": 8,
           "reason": "round cleared"
         },
         {
@@ -14370,10 +14468,10 @@
         },
         {
           "base": 5,
-          "unusedGuesses": 4,
+          "unusedGuesses": 2,
           "interest": 0,
           "relics": 2,
-          "total": 11
+          "total": 9
         },
         {
           "base": 3,
@@ -14423,19 +14521,12 @@
           "interest": 0,
           "relics": 2,
           "total": 8
-        },
-        {
-          "base": 4,
-          "unusedGuesses": 2,
-          "interest": 0,
-          "relics": 2,
-          "total": 8
         }
       ],
       "outcome": "game_over",
       "stage": 11,
-      "round": 2,
-      "finalGold": 276,
+      "round": 1,
+      "finalGold": 266,
       "relics": [
         "stipend",
         "sunk_cost",
@@ -14448,8 +14539,8 @@
       "levels": [],
       "ranges": [],
       "grown": [
-        "hot_streak:chips=348",
-        "mint:mult=335"
+        "hot_streak:chips=336",
+        "mint:mult=323"
       ],
       "destroyed": []
     }
@@ -14459,7 +14550,7 @@
     "covers": "the whole written ascension ladder: guesses filtered by the run's rules, targets and payouts bent by them, every round solved",
     "seed": 351,
     "ascension": 10,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -15137,6 +15228,29 @@
       },
       {
         "type": "type_letter",
+        "letter": "m"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "type_letter",
+        "letter": "n"
+      },
+      {
+        "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "h"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
         "letter": "c"
       },
       {
@@ -15260,6 +15374,10 @@
         "type": "collect"
       },
       {
+        "type": "buy",
+        "index": 0
+      },
+      {
         "type": "next_round"
       },
       {
@@ -15281,52 +15399,6 @@
       {
         "type": "type_letter",
         "letter": "h"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "type_letter",
-        "letter": "c"
-      },
-      {
-        "type": "type_letter",
-        "letter": "l"
-      },
-      {
-        "type": "type_letter",
-        "letter": "o"
-      },
-      {
-        "type": "type_letter",
-        "letter": "w"
-      },
-      {
-        "type": "type_letter",
-        "letter": "n"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "type_letter",
-        "letter": "b"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "l"
-      },
-      {
-        "type": "type_letter",
-        "letter": "d"
-      },
-      {
-        "type": "type_letter",
-        "letter": "y"
       },
       {
         "type": "submit"
@@ -15408,29 +15480,6 @@
       },
       {
         "type": "type_letter",
-        "letter": "q"
-      },
-      {
-        "type": "type_letter",
-        "letter": "u"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "r"
-      },
-      {
-        "type": "type_letter",
-        "letter": "t"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "type_letter",
         "letter": "b"
       },
       {
@@ -15483,61 +15532,7 @@
       },
       {
         "type": "type_letter",
-        "letter": "d"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "n"
-      },
-      {
-        "type": "type_letter",
-        "letter": "d"
-      },
-      {
-        "type": "type_letter",
-        "letter": "y"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "type_letter",
-        "letter": "g"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "u"
-      },
-      {
-        "type": "type_letter",
-        "letter": "d"
-      },
-      {
-        "type": "type_letter",
-        "letter": "y"
-      },
-      {
-        "type": "submit"
-      },
-      {
-        "type": "type_letter",
-        "letter": "a"
-      },
-      {
-        "type": "type_letter",
-        "letter": "l"
-      },
-      {
-        "type": "type_letter",
-        "letter": "l"
+        "letter": "f"
       },
       {
         "type": "type_letter",
@@ -15545,7 +15540,15 @@
       },
       {
         "type": "type_letter",
-        "letter": "y"
+        "letter": "t"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
       },
       {
         "type": "submit"
@@ -15560,15 +15563,15 @@
       },
       {
         "type": "type_letter",
-        "letter": "y"
+        "letter": "u"
       },
       {
         "type": "type_letter",
-        "letter": "e"
+        "letter": "s"
       },
       {
         "type": "type_letter",
-        "letter": "r"
+        "letter": "h"
       },
       {
         "type": "submit"
@@ -15608,19 +15611,19 @@
       },
       {
         "type": "type_letter",
-        "letter": "e"
-      },
-      {
-        "type": "type_letter",
         "letter": "o"
       },
       {
         "type": "type_letter",
-        "letter": "n"
+        "letter": "w"
       },
       {
         "type": "type_letter",
-        "letter": "y"
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "r"
       },
       {
         "type": "submit"
@@ -15643,7 +15646,7 @@
       },
       {
         "type": "type_letter",
-        "letter": "y"
+        "letter": "e"
       },
       {
         "type": "submit"
@@ -15679,7 +15682,30 @@
       },
       {
         "type": "type_letter",
-        "letter": "l"
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "n"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "y"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "h"
       },
       {
         "type": "type_letter",
@@ -15691,7 +15717,111 @@
       },
       {
         "type": "type_letter",
+        "letter": "t"
+      },
+      {
+        "type": "type_letter",
+        "letter": "y"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "type_letter",
         "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "t"
+      },
+      {
+        "type": "type_letter",
+        "letter": "i"
+      },
+      {
+        "type": "type_letter",
+        "letter": "n"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "n"
+      },
+      {
+        "type": "type_letter",
+        "letter": "t"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "o"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "type_letter",
+        "letter": "t"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "i"
+      },
+      {
+        "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "k"
       },
       {
         "type": "type_letter",
@@ -15706,7 +15836,30 @@
       },
       {
         "type": "type_letter",
-        "letter": "a"
+        "letter": "l"
+      },
+      {
+        "type": "type_letter",
+        "letter": "o"
+      },
+      {
+        "type": "type_letter",
+        "letter": "w"
+      },
+      {
+        "type": "type_letter",
+        "letter": "n"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
       },
       {
         "type": "type_letter",
@@ -15714,7 +15867,7 @@
       },
       {
         "type": "type_letter",
-        "letter": "s"
+        "letter": "c"
       },
       {
         "type": "type_letter",
@@ -15724,8 +15877,18 @@
         "type": "submit"
       },
       {
+        "type": "collect"
+      },
+      {
+        "type": "next_round"
+      },
+      {
         "type": "type_letter",
-        "letter": "h"
+        "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "p"
       },
       {
         "type": "type_letter",
@@ -15733,7 +15896,22 @@
       },
       {
         "type": "type_letter",
-        "letter": "r"
+        "letter": "n"
+      },
+      {
+        "type": "type_letter",
+        "letter": "k"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "p"
       },
       {
         "type": "type_letter",
@@ -15741,14 +15919,234 @@
       },
       {
         "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "k"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "t"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "type_letter",
         "letter": "m"
+      },
+      {
+        "type": "type_letter",
+        "letter": "p"
       },
       {
         "type": "submit"
       },
       {
         "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "o"
+      },
+      {
+        "type": "type_letter",
+        "letter": "m"
+      },
+      {
+        "type": "type_letter",
+        "letter": "m"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "type_letter",
+        "letter": "t"
+      },
+      {
+        "type": "type_letter",
         "letter": "h"
+      },
+      {
+        "type": "type_letter",
+        "letter": "i"
+      },
+      {
+        "type": "type_letter",
+        "letter": "r"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "r"
+      },
+      {
+        "type": "type_letter",
+        "letter": "i"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "g"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "type_letter",
+        "letter": "t"
+      },
+      {
+        "type": "type_letter",
+        "letter": "y"
+      },
+      {
+        "type": "type_letter",
+        "letter": "i"
+      },
+      {
+        "type": "type_letter",
+        "letter": "n"
+      },
+      {
+        "type": "type_letter",
+        "letter": "g"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "f"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "type_letter",
+        "letter": "l"
+      },
+      {
+        "type": "type_letter",
+        "letter": "l"
+      },
+      {
+        "type": "type_letter",
+        "letter": "y"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "b"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "l"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "y"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "r"
+      },
+      {
+        "type": "type_letter",
+        "letter": "b"
+      },
+      {
+        "type": "type_letter",
+        "letter": "y"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "type_letter",
+        "letter": "w"
+      },
+      {
+        "type": "type_letter",
+        "letter": "h"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
       },
       {
         "type": "type_letter",
@@ -15759,12 +16157,73 @@
         "letter": "t"
       },
       {
+        "type": "submit"
+      },
+      {
         "type": "type_letter",
-        "letter": "e"
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "l"
+      },
+      {
+        "type": "type_letter",
+        "letter": "i"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "q"
+      },
+      {
+        "type": "type_letter",
+        "letter": "u"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
       },
       {
         "type": "type_letter",
         "letter": "d"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "s"
+      },
+      {
+        "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "r"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "p"
       },
       {
         "type": "submit"
@@ -15861,7 +16320,7 @@
           "word": "blunt",
           "chips": 19,
           "mult": 16,
-          "solveBonus": 6,
+          "solveBonus": 5,
           "score": 304
         },
         {
@@ -15879,7 +16338,7 @@
           "word": "delay",
           "chips": 33,
           "mult": 24,
-          "solveBonus": 6,
+          "solveBonus": 5,
           "score": 792
         },
         {
@@ -15899,7 +16358,7 @@
           "word": "papal",
           "chips": 45,
           "mult": 22,
-          "solveBonus": 6,
+          "solveBonus": 5,
           "score": 990
         },
         {
@@ -15926,7 +16385,7 @@
           "word": "fungi",
           "chips": 57,
           "mult": 17,
-          "solveBonus": 5,
+          "solveBonus": 4,
           "score": 969
         },
         {
@@ -15953,7 +16412,7 @@
           "word": "cocoa",
           "chips": 69,
           "mult": 18,
-          "solveBonus": 5,
+          "solveBonus": 4,
           "score": 1242
         },
         {
@@ -15983,7 +16442,7 @@
           "word": "brick",
           "chips": 85,
           "mult": 23,
-          "solveBonus": 5,
+          "solveBonus": 4,
           "score": 1955
         },
         {
@@ -16001,7 +16460,7 @@
           "word": "email",
           "chips": 91,
           "mult": 24,
-          "solveBonus": 6,
+          "solveBonus": 5,
           "score": 2184
         },
         {
@@ -16016,11 +16475,20 @@
         {
           "stage": 4,
           "round": 1,
+          "word": "munch",
+          "chips": 108,
+          "mult": 15,
+          "solveBonus": 1,
+          "score": 1620
+        },
+        {
+          "stage": 4,
+          "round": 1,
           "word": "chewy",
           "chips": 112,
-          "mult": 28,
-          "solveBonus": 6,
-          "score": 3136
+          "mult": 36,
+          "solveBonus": 4,
+          "score": 4032
         },
         {
           "stage": 4,
@@ -16059,7 +16527,7 @@
           "word": "gummy",
           "chips": 121,
           "mult": 21,
-          "solveBonus": 2,
+          "solveBonus": 1,
           "score": 2541
         },
         {
@@ -16067,194 +16535,321 @@
           "round": 0,
           "word": "lynch",
           "chips": 121,
-          "mult": 11,
+          "mult": 20,
           "solveBonus": 1,
-          "score": 1331
-        },
-        {
-          "stage": 5,
-          "round": 0,
-          "word": "clown",
-          "chips": 118,
-          "mult": 6,
-          "solveBonus": 1,
-          "score": 708
-        },
-        {
-          "stage": 5,
-          "round": 0,
-          "word": "baldy",
-          "chips": 119,
-          "mult": 24,
-          "solveBonus": 1,
-          "score": 2856
+          "score": 2420
         },
         {
           "stage": 5,
           "round": 0,
           "word": "spade",
           "chips": 116,
-          "mult": 22,
-          "solveBonus": 4,
-          "score": 2552
+          "mult": 25,
+          "solveBonus": 5,
+          "score": 2900
         },
         {
           "stage": 5,
           "round": 1,
           "word": "mount",
-          "chips": 115,
+          "chips": 127,
           "mult": 10,
           "solveBonus": 1,
-          "score": 1150
+          "score": 1270
         },
         {
           "stage": 5,
           "round": 1,
           "word": "grout",
-          "chips": 114,
-          "mult": 5,
+          "chips": 126,
+          "mult": 29,
           "solveBonus": 1,
-          "score": 570
-        },
-        {
-          "stage": 5,
-          "round": 1,
-          "word": "quart",
-          "chips": 122,
-          "mult": 17,
-          "solveBonus": 1,
-          "score": 2074
+          "score": 3654
         },
         {
           "stage": 5,
           "round": 1,
           "word": "built",
-          "chips": 115,
-          "mult": 20,
+          "chips": 127,
+          "mult": 37,
           "solveBonus": 4,
-          "score": 2300
+          "score": 4699
         },
         {
           "stage": 5,
           "round": 2,
-          "boss": "tyrant",
+          "boss": "miser",
           "word": "outdo",
-          "chips": 114,
-          "mult": 20,
+          "chips": 138,
+          "mult": 21,
           "solveBonus": 1,
-          "score": 2280
+          "score": 2898
         },
         {
           "stage": 5,
           "round": 2,
-          "boss": "tyrant",
-          "word": "dandy",
-          "chips": 118,
-          "mult": 11,
-          "solveBonus": 1,
-          "score": 1298
-        },
-        {
-          "stage": 5,
-          "round": 2,
-          "boss": "tyrant",
-          "word": "gaudy",
-          "chips": 118,
-          "mult": 11,
-          "solveBonus": 1,
-          "score": 1298
-        },
-        {
-          "stage": 5,
-          "round": 2,
-          "boss": "tyrant",
-          "word": "alley",
-          "chips": 116,
+          "boss": "miser",
+          "word": "fetus",
+          "chips": 138,
           "mult": 26,
           "solveBonus": 1,
-          "score": 3016
+          "score": 3588
         },
         {
           "stage": 5,
           "round": 2,
-          "boss": "tyrant",
-          "word": "flyer",
-          "chips": 119,
-          "mult": 24,
-          "solveBonus": 3,
-          "score": 2856
+          "boss": "miser",
+          "word": "flush",
+          "chips": 137,
+          "mult": 43,
+          "solveBonus": 4,
+          "score": 5891
         },
         {
           "stage": 6,
           "round": 0,
           "word": "pokey",
-          "chips": 122,
-          "mult": 15,
+          "chips": 158,
+          "mult": 25,
           "solveBonus": 1,
-          "score": 1830
+          "score": 3950
         },
         {
           "stage": 6,
           "round": 0,
-          "word": "peony",
-          "chips": 118,
-          "mult": 14,
+          "word": "power",
+          "chips": 154,
+          "mult": 41,
           "solveBonus": 1,
-          "score": 1652
+          "score": 6314
         },
         {
           "stage": 6,
           "round": 0,
-          "word": "stony",
-          "chips": 116,
-          "mult": 30,
-          "solveBonus": 5,
-          "score": 3480
+          "word": "stone",
+          "chips": 149,
+          "mult": 45,
+          "solveBonus": 4,
+          "score": 6705
         },
         {
           "stage": 6,
           "round": 1,
           "word": "razor",
-          "chips": 134,
-          "mult": 20,
+          "chips": 170,
+          "mult": 39,
           "solveBonus": 1,
-          "score": 2680
+          "score": 6630
         },
         {
           "stage": 6,
           "round": 1,
-          "word": "lasso",
-          "chips": 125,
-          "mult": 9,
+          "word": "dandy",
+          "chips": 166,
+          "mult": 32,
           "solveBonus": 1,
-          "score": 1125
+          "score": 5312
         },
         {
           "stage": 6,
           "round": 1,
-          "word": "cause",
-          "chips": 127,
-          "mult": 23,
-          "solveBonus": 1,
-          "score": 2921
+          "word": "hasty",
+          "chips": 167,
+          "mult": 49,
+          "solveBonus": 4,
+          "score": 8183
         },
         {
           "stage": 6,
-          "round": 1,
-          "word": "harem",
-          "chips": 130,
-          "mult": 16,
+          "round": 2,
+          "boss": "silence",
+          "word": "satin",
+          "chips": 173,
+          "mult": 53,
           "solveBonus": 1,
-          "score": 2080
+          "score": 9169,
+          "note": "1 misplaced"
         },
         {
           "stage": 6,
+          "round": 2,
+          "boss": "silence",
+          "word": "scent",
+          "chips": 175,
+          "mult": 48,
+          "solveBonus": 1,
+          "score": 8400,
+          "note": "none misplaced"
+        },
+        {
+          "stage": 6,
+          "round": 2,
+          "boss": "silence",
+          "word": "scout",
+          "chips": 175,
+          "mult": 63,
+          "solveBonus": 4,
+          "score": 11025,
+          "note": "none misplaced"
+        },
+        {
+          "stage": 7,
+          "round": 0,
+          "word": "sicko",
+          "chips": 191,
+          "mult": 54,
+          "solveBonus": 1,
+          "score": 10314
+        },
+        {
+          "stage": 7,
+          "round": 0,
+          "word": "clown",
+          "chips": 190,
+          "mult": 44,
+          "solveBonus": 1,
+          "score": 8360
+        },
+        {
+          "stage": 7,
+          "round": 0,
+          "word": "deuce",
+          "chips": 188,
+          "mult": 73,
+          "solveBonus": 4,
+          "score": 13724
+        },
+        {
+          "stage": 7,
           "round": 1,
-          "word": "hated",
-          "chips": 129,
-          "mult": 22,
+          "word": "spank",
+          "chips": 203,
+          "mult": 74,
+          "solveBonus": 1,
+          "score": 15022
+        },
+        {
+          "stage": 7,
+          "round": 1,
+          "word": "speck",
+          "chips": 205,
+          "mult": 84,
+          "solveBonus": 5,
+          "score": 17220
+        },
+        {
+          "stage": 7,
+          "round": 2,
+          "boss": "vandal",
+          "word": "stump",
+          "chips": 213,
+          "mult": 77,
+          "solveBonus": 1,
+          "score": 16401
+        },
+        {
+          "stage": 7,
+          "round": 2,
+          "boss": "vandal",
+          "word": "comma",
+          "chips": 215,
+          "mult": 83,
+          "solveBonus": 5,
+          "score": 17845
+        },
+        {
+          "stage": 8,
+          "round": 0,
+          "word": "third",
+          "chips": 225,
+          "mult": 74,
+          "solveBonus": 1,
+          "score": 16650
+        },
+        {
+          "stage": 8,
+          "round": 0,
+          "word": "ridge",
+          "chips": 223,
+          "mult": 95,
+          "solveBonus": 5,
+          "score": 21185
+        },
+        {
+          "stage": 8,
+          "round": 1,
+          "word": "tying",
+          "chips": 237,
+          "mult": 79,
+          "solveBonus": 1,
+          "score": 18723
+        },
+        {
+          "stage": 8,
+          "round": 1,
+          "word": "fully",
+          "chips": 239,
+          "mult": 77,
+          "solveBonus": 1,
+          "score": 18403
+        },
+        {
+          "stage": 8,
+          "round": 1,
+          "word": "baldy",
+          "chips": 239,
+          "mult": 76,
+          "solveBonus": 1,
+          "score": 18164
+        },
+        {
+          "stage": 8,
+          "round": 1,
+          "word": "derby",
+          "chips": 239,
+          "mult": 98,
           "solveBonus": 3,
-          "score": 2838
+          "score": 23422
+        },
+        {
+          "stage": 8,
+          "round": 2,
+          "boss": "cliche",
+          "word": "wheat",
+          "chips": 0,
+          "mult": 4,
+          "solveBonus": 1,
+          "score": 0
+        },
+        {
+          "stage": 8,
+          "round": 2,
+          "boss": "cliche",
+          "word": "alias",
+          "chips": 233,
+          "mult": 91,
+          "solveBonus": 1,
+          "score": 21203
+        },
+        {
+          "stage": 8,
+          "round": 2,
+          "boss": "cliche",
+          "word": "squad",
+          "chips": 0,
+          "mult": 7,
+          "solveBonus": 1,
+          "score": 0
+        },
+        {
+          "stage": 8,
+          "round": 2,
+          "boss": "cliche",
+          "word": "scrap",
+          "chips": 237,
+          "mult": 97,
+          "solveBonus": 3,
+          "score": 22989
         }
       ],
       "gold": [
@@ -16315,27 +16910,59 @@
           "reason": "round cleared"
         },
         {
-          "delta": 16,
-          "reason": "round cleared"
-        },
-        {
-          "delta": 14,
-          "reason": "round cleared"
-        },
-        {
-          "delta": 14,
-          "reason": "round cleared"
-        },
-        {
           "delta": 15,
           "reason": "round cleared"
         },
         {
+          "delta": 0,
+          "reason": "round cleared"
+        },
+        {
+          "delta": -10,
+          "reason": "purchase"
+        },
+        {
           "delta": 16,
           "reason": "round cleared"
         },
         {
           "delta": 16,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 18,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 16,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 17,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 19,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 17,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 19,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 21,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 19,
+          "reason": "round cleared"
+        },
+        {
+          "delta": 18,
           "reason": "round cleared"
         }
       ],
@@ -16411,38 +17038,38 @@
         },
         {
           "base": 3,
-          "unusedGuesses": 4,
+          "unusedGuesses": 3,
           "interest": 5,
           "relics": 4,
-          "total": 16
-        },
-        {
-          "base": 4,
-          "unusedGuesses": 0,
-          "interest": 5,
-          "relics": 5,
-          "total": 14
-        },
-        {
-          "base": 2,
-          "unusedGuesses": 2,
-          "interest": 5,
-          "relics": 5,
-          "total": 14
-        },
-        {
-          "base": 3,
-          "unusedGuesses": 2,
-          "interest": 5,
-          "relics": 5,
           "total": 15
         },
         {
+          "base": 0,
+          "unusedGuesses": 0,
+          "interest": 0,
+          "total": 0,
+          "saved": "second_wind"
+        },
+        {
+          "base": 2,
+          "unusedGuesses": 4,
+          "interest": 5,
+          "relics": 5,
+          "total": 16
+        },
+        {
+          "base": 3,
+          "unusedGuesses": 3,
+          "interest": 5,
+          "relics": 5,
+          "total": 16
+        },
+        {
           "base": 4,
-          "unusedGuesses": 1,
+          "unusedGuesses": 3,
           "interest": 5,
           "relics": 6,
-          "total": 16
+          "total": 18
         },
         {
           "base": 2,
@@ -16450,25 +17077,75 @@
           "interest": 5,
           "relics": 6,
           "total": 16
+        },
+        {
+          "base": 3,
+          "unusedGuesses": 3,
+          "interest": 5,
+          "relics": 6,
+          "total": 17
+        },
+        {
+          "base": 4,
+          "unusedGuesses": 3,
+          "interest": 5,
+          "relics": 7,
+          "total": 19
+        },
+        {
+          "base": 2,
+          "unusedGuesses": 3,
+          "interest": 5,
+          "relics": 7,
+          "total": 17
+        },
+        {
+          "base": 3,
+          "unusedGuesses": 4,
+          "interest": 5,
+          "relics": 7,
+          "total": 19
+        },
+        {
+          "base": 4,
+          "unusedGuesses": 4,
+          "interest": 5,
+          "relics": 8,
+          "total": 21
+        },
+        {
+          "base": 2,
+          "unusedGuesses": 4,
+          "interest": 5,
+          "relics": 8,
+          "total": 19
+        },
+        {
+          "base": 3,
+          "unusedGuesses": 2,
+          "interest": 5,
+          "relics": 8,
+          "total": 18
         }
       ],
       "outcome": "game_over",
-      "stage": 6,
-      "round": 1,
-      "finalGold": 181,
+      "stage": 8,
+      "round": 2,
+      "finalGold": 291,
       "relics": [
         "royalties",
         "hot_streak",
-        "long_game",
-        "loaded_dice"
+        "loaded_dice",
+        "snowball"
       ],
       "etched": [],
       "mods": [],
       "levels": [],
       "ranges": [],
       "grown": [
-        "hot_streak:chips=120",
-        "royalties:gold=5"
+        "hot_streak:chips=228",
+        "royalties:gold=8",
+        "snowball:mult=77"
       ],
       "destroyed": []
     }
@@ -16478,7 +17155,7 @@
     "covers": "a rung above the written ladder: targets compounded by the endless step",
     "seed": 241,
     "ascension": 14,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",
@@ -16696,7 +17373,7 @@
     "covers": "the middle of the ladder: the rules in force at rung five and, just as much, the four above it that are not",
     "seed": 40,
     "ascension": 5,
-    "contentVersion": 37,
+    "contentVersion": 38,
     "actions": [
       {
         "type": "type_letter",

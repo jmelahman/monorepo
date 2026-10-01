@@ -94,7 +94,7 @@ export const de: Strings = {
     },
     masochist: {
       name: "Masochist",
-      text: "Einmal pro Runde dauerhaft +10 Mult, wenn ein Versuch nach dem ersten 4 in dieser Runde noch nicht gespielte Buchstaben ausschließt",
+      text: "Einmal pro Runde dauerhaft +10 Mult, wenn ein Versuch nach dem ersten 3 in dieser Runde noch nicht gespielte Buchstaben ausschließt",
     },
     chorus: {
       name: "Der Chor",
@@ -143,7 +143,7 @@ export const de: Strings = {
     },
     habit: {
       name: "Macht der Gewohnheit",
-      text: "+3 Mult für jedes Wort derselben Form, das seit dem Kauf gespielt wurde",
+      text: "+2 Mult für jedes Wort derselben Form, das seit dem Kauf gespielt wurde",
     },
     no_maybes: {
       name: "Kein Vielleicht",
@@ -176,11 +176,11 @@ export const de: Strings = {
       name: "Der Nebel",
       text: "Gelb und Grau sehen gleich aus. Sie zählen weiterhin verschieden.",
     },
-    tyrant: {
-      name: "Der Tyrann",
-      text: "Jeder Versuch muss die grünen Buchstaben wiederverwenden, die du gefunden hast.",
-    },
     miser: { name: "Der Geizhals", text: "Schon benutzte Buchstaben bringen keine Punkte." },
+    cliche: {
+      name: "Das Klischee",
+      text: "Wörter der Form, die du in diesem Durchlauf am häufigsten gespielt hast, bringen keine Punkte.",
+    },
     clock: { name: "Die Uhr", text: "Nur vier Versuche. Das Ziel ist um ein Viertel niedriger." },
     glutton: { name: "Der Vielfraß", text: "Jeder Versuch braucht mindestens zwei Vokale." },
     auditor: { name: "Der Prüfer", text: "Dein Lösungs-Multiplikator ist bei ×2 gedeckelt." },

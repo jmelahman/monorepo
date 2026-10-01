@@ -88,6 +88,17 @@
   background: color-mix(in srgb, var(--gold) 26%, var(--panel));
 }
 
+/* The Cliché's shape, on a word that would score nothing. Struck rather than
+   recoloured, because colour on this chip already means it paid, and a red
+   one would read as a level gone wrong rather than a rule in force. */
+.category.barred {
+  color: var(--muted);
+}
+
+.category.barred .category-name {
+  text-decoration: line-through;
+}
+
 /* The affordance, and nothing more. It has to read as pressable without
    competing with the shape name, which is the thing actually being said. */
 .category .icon {

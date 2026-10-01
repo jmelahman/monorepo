@@ -31,10 +31,10 @@ export type GuessVector = {
    * someone. Recorded because the draw is a rule like any other and it was the
    * last one nothing wrote down: `bossForStage` is a shuffle of a band keyed by
    * seed, so a port that shuffled differently would meet a different boss, and
-   * five of the fifteen would score identically anyway. The Fog and The Mirror
-   * touch only `shown`; The Tyrant, The Glutton and The Purist only refuse words
-   * that were never played. None of the three columns a guess records can tell
-   * those five apart. This can.
+   * four of the fifteen would score identically anyway. The Fog and The Mirror
+   * touch only `shown`; The Glutton and The Purist only refuse words that were
+   * never played. None of the three columns a guess records can tell those four
+   * apart. This can.
    *
    * On the guess rather than on the round because that is where the diff wants
    * it: a boss that starts biting shows up as a changed score on a line that

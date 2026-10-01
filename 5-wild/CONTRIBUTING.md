@@ -170,9 +170,9 @@ the growing relics banked, and which letters were destroyed.
 The standard for adding a column is whether a rule can be wrong without moving a
 score. `levels`, `ranges` and `grown` are all there for that reason, and so is
 the boss: `bossForStage` is a shuffle of a difficulty band keyed by seed, and
-five of the fifteen change nothing a guess records: The Fog and The Mirror only
-repaint the feedback, The Tyrant, The Glutton and The Purist only refuse words
-that were never played. A port that shuffled the band differently could meet one
+four of the fifteen change nothing a guess records: The Fog and The Mirror only
+repaint the feedback, The Glutton and The Purist only refuse words that were
+never played. A port that shuffled the band differently could meet one
 of those instead of another and score every guess identically. The name is what
 tells them apart.
 

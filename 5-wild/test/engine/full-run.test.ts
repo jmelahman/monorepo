@@ -16,9 +16,21 @@ const type = (word: string): Action[] => [
 /** Common, vowel-heavy, and distinct, so at least one survives any boss's rule. */
 const OPENERS = ["arose", "crane", "audio", "slate", "adieu", "irate"]
 
-/** The round after the first opener it will take that is not the answer, or null. */
+/**
+ * The round after the first opener it will take that is not the answer, or null.
+ *
+ * The six openers first, then any answer still typeable. The fallback is for
+ * Pyromaniac, which burns a letter a round: by stage 4 a run holding it can
+ * have broken a letter in every one of the six, and seeds 12 and 14 got there
+ * once Carbon Copy and Second Wind traded rarities and reshuffled the shelf,
+ * 14 and 20 rounds solved on the first guess. A bot that cannot type its
+ * opener is not a curve gone easy, so it reaches for another word rather than
+ * the test learning to excuse it.
+ */
 function open(state: RunState): RunState | null {
-  for (const word of OPENERS) {
+  const live = (word: string) => [...word].every((letter) => !state.letters[letter]?.destroyed)
+  const spare = words.answers.filter((word) => !OPENERS.includes(word) && live(word))
+  for (const word of [...OPENERS, ...spare.slice(0, 20)]) {
     if (word === state.round.answer) continue
     const next = apply(state, type(word))
     if (next.round.guesses.length === 1 && next.phase === "round") return next

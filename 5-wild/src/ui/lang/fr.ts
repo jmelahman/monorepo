@@ -96,7 +96,7 @@ export const fr: Strings = {
     },
     masochist: {
       name: "Masochiste",
-      text: "Une fois par manche, gagne +10 mult définitifs quand un essai après le premier élimine 4 lettres pas encore jouées dans la manche",
+      text: "Une fois par manche, gagne +10 mult définitifs quand un essai après le premier élimine 3 lettres pas encore jouées dans la manche",
     },
     chorus: {
       name: "Le Chœur",
@@ -148,7 +148,7 @@ export const fr: Strings = {
     },
     habit: {
       name: "Force de l'Habitude",
-      text: "+3 mult par mot de la même forme joué depuis son achat",
+      text: "+2 mult par mot de la même forme joué depuis son achat",
     },
     no_maybes: { name: "Sans Peut-être", text: "×1,75 mult si l'essai n'a aucune case jaune" },
     compound: { name: "Intérêts Composés", text: "Double les intérêts que vous gagnez" },
@@ -178,11 +178,11 @@ export const fr: Strings = {
       name: "Le Brouillard",
       text: "Le jaune et le gris sont identiques à l'œil. Ils comptent toujours différemment.",
     },
-    tyrant: {
-      name: "Le Tyran",
-      text: "Chaque essai doit réutiliser les lettres vertes que vous avez trouvées.",
-    },
     miser: { name: "L'Avare", text: "Les lettres déjà utilisées ne rapportent aucun point." },
+    cliche: {
+      name: "Le Cliché",
+      text: "Les mots de la forme que vous avez le plus jouée dans cette partie ne rapportent rien.",
+    },
     clock: { name: "L'Horloge", text: "Quatre essais seulement. L'objectif baisse d'un quart." },
     glutton: { name: "Le Glouton", text: "Chaque essai doit contenir au moins deux voyelles." },
     auditor: { name: "L'Auditeur", text: "Votre multiplicateur de résolution est plafonné à ×2." },

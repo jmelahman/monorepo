@@ -191,7 +191,7 @@ export const ASCENSIONS: readonly Ascension[] = [
   },
   {
     level: 4,
-    // Greens, unpositioned: the step between hard mode and The Tyrant. Once
+    // Greens, unpositioned: the step between hard mode and rung 5. Once
     // level 5 lands this can no longer fire on its own, since a letter kept in
     // its place is by definition still in the word.
     //
@@ -204,9 +204,9 @@ export const ASCENSIONS: readonly Ascension[] = [
   {
     level: 5,
     /*
-     * The Tyrant, permanently. Shares its implementation with the boss rather
-     * than restating it, so the run-long version cannot drift from the one the
-     * player met on stage 4.
+     * The Tyrant, permanently, and now only here: the boss shared this
+     * implementation, and left the mid band because from this rung up its round
+     * was an ordinary round with a name on it.
      *
      * It is also the only rung that measures *negative*: +0.07 to +0.27 of a
      * mean final stage across six placements, never once a cost. Forcing a green
@@ -222,7 +222,7 @@ export const ASCENSIONS: readonly Ascension[] = [
      * beside another soft rung, early, where the absolute difficulty is high and
      * the player is still learning the vocabulary, is the cheapest place on the
      * ladder to spend one. If the middle ever has to bite, this is the rung to
-     * re-price rather than to re-place — and re-pricing it re-prices The Tyrant.
+     * re-price rather than to re-place.
      */
     validate: (word, state) => keepGreens(word, state.round),
   },

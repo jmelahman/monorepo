@@ -23,6 +23,7 @@ import {
   CATEGORY_BY_ID,
   CONSUMABLE_SLOTS,
   difficultyOf,
+  getBoss,
   keyboardColors,
   levelOf,
   RANGES,
@@ -32,6 +33,7 @@ import {
   rerollCost,
   roundTarget,
   rulesFor,
+  rutOf,
   STAGES,
   solveBonusFor,
 } from "../engine"
@@ -197,6 +199,10 @@ function roundLines(state: RunState): string[] {
   if (round.bossId) {
     const card = bossCard(round.bossId)
     lines.push(`BOSS ${card.name}: ${card.text}`)
+    // The board strikes the barred shape on the chip as a word is typed; a model
+    // has no chip, and no more reason than a player to have kept the count.
+    const rut = getBoss(round.bossId)?.voids ? rutOf(state) : null
+    if (rut) lines.push(`Barred shape this round: ${categoryCard(rut).name}.`)
   } else if (state.phase === "round") {
     // The intro card's stage track names the stage's boss from its first round,
     // and the shops between here and there are where a player prepares for it.

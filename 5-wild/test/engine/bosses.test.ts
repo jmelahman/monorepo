@@ -10,6 +10,7 @@ import {
   LETTER_CHIPS,
   reduce,
   roundTarget,
+  rutOf,
   STAGES,
   solveBonusFor,
   startRun,
@@ -95,23 +96,55 @@ describe("boss rounds", () => {
     expect(guess?.tiles[0]).toMatchObject({ color: "yellow", shown: "gray" })
   })
 
-  it("The Tyrant demands you keep the greens you have found", () => {
-    // CRANE fixes R and A in positions 2 and 3.
-    const state = apply(underBoss("tyrant"), type("crane"))
-    const { events } = reduce(
-      apply(state, [...[..."quazy"].map((letter): Action => ({ type: "type_letter", letter }))]),
-      { type: "submit" },
-      words,
-    )
-    expect(events).toEqual([
-      { type: "rejected", refusal: { code: "must_keep", letter: "r", position: 2 } },
-    ])
-  })
-
   it("The Miser pays nothing for a letter you have already spent", () => {
     const state = apply(underBoss("miser"), [...type("crane"), ...type("crane")])
     expect(state.round.guesses[0]?.chips).toBe(7)
     expect(state.round.guesses[1]).toMatchObject({ chips: 0, score: 0 })
+  })
+
+  describe("The Cliché", () => {
+    const withHistory = (...history: string[]): RunState => ({ ...underBoss("cliche"), history })
+
+    it("pays nothing for a word of the run's most-played shape", () => {
+      // CRANE and BRAID are Distinct, AROSE is Vowel-heavy.
+      const state = withHistory("crane", "braid", "arose")
+      expect(rutOf(state)).toBe("distinct")
+      const played = apply(state, [...type("crane"), ...type("arose")])
+      expect(played.round.guesses[0]).toMatchObject({ chips: 0, score: 0 })
+      expect(played.round.guesses[0]?.paid?.every((tile) => tile.base === 0)).toBe(true)
+      // The colors still land, since the guess was spent to learn them.
+      expect(played.round.guesses[0]?.mult).toBeGreaterThan(1)
+      expect(played.round.guesses[1]?.score).toBeGreaterThan(0)
+    })
+
+    it("fixes the shape at the round's start, whatever the round plays", () => {
+      const state = withHistory("arose", "arose")
+      const played = apply(state, [...type("crane"), ...type("crane"), ...type("crane")])
+      expect(rutOf(played)).toBe("vowel_heavy")
+      expect(played.round.guesses.every((guess) => guess.score > 0)).toBe(true)
+    })
+
+    it("breaks a tie toward the rarer shape", () => {
+      expect(rutOf(withHistory("crane", "arose"))).toBe("vowel_heavy")
+    })
+
+    it("bars nothing on a run with nothing on the record", () => {
+      const played = apply(underBoss("cliche"), type("crane"))
+      expect(played.round.guesses[0]?.chips).toBe(7)
+    })
+
+    it("fires no relic on a voided guess, so nothing grows on one", () => {
+      const state = { ...withHistory("crane"), relics: [{ id: "habit" }] }
+      const played = apply(state, [...type("crane"), ...type("crane"), ...type("arose")])
+      expect(played.relics[0]?.data).toEqual({ vowel_heavy: 1 })
+    })
+
+    it("prices the draft at nothing once it is a whole word of the shape", () => {
+      const state = withHistory("crane")
+      const draft = (word: string) => ({ ...state, round: { ...state.round, draft: word } })
+      expect(draftChips(draft("cran"), "cran")).toBeGreaterThan(0)
+      expect(draftChips(draft("crane"), "crane")).toBe(0)
+    })
   })
 
   it("The Clock allows only four guesses", () => {
@@ -169,6 +202,7 @@ describe("boss rounds", () => {
           boss.tileChips ??
           boss.solveBonus ??
           boss.noModifiers ??
+          boss.voids ??
           boss.noTimesMult,
       )
       expect(hasRule, `${boss.id} does nothing`).toBe(true)

@@ -106,7 +106,7 @@ export const en: Strings = {
     },
     masochist: {
       name: "Masochist",
-      text: "Once a round, permanently gains +10 mult when a guess after the first rules out 4 letters not yet tried this round",
+      text: "Once a round, permanently gains +10 mult when a guess after the first rules out 3 letters not yet tried this round",
     },
     chorus: {
       name: "The Chorus",
@@ -143,7 +143,7 @@ export const en: Strings = {
     blank_page: { name: "Blank Page", text: "×1 mult per empty relic slot, this one included" },
     habit: {
       name: "Force of Habit",
-      text: "+3 mult for each word of the same shape played since you bought this",
+      text: "+2 mult for each word of the same shape played since you bought this",
     },
     no_maybes: { name: "No Maybes", text: "×1.75 mult if the guess has no yellow tile" },
     compound: { name: "Compound Interest", text: "Doubles the interest you earn" },
@@ -173,11 +173,11 @@ export const en: Strings = {
       text: "Misplaced letters score as absent, and read as absent. You are told only how many.",
     },
     fog: { name: "The Fog", text: "Yellow and gray look identical. They still score differently." },
-    tyrant: {
-      name: "The Tyrant",
-      text: "Every guess must reuse the green letters you have found.",
-    },
     miser: { name: "The Miser", text: "Letters you have already used score no points." },
+    cliche: {
+      name: "The Cliché",
+      text: "Words of the shape you have played most this run score nothing.",
+    },
     clock: { name: "The Clock", text: "Four guesses only. The target is a quarter lower." },
     glutton: { name: "The Glutton", text: "Every guess must contain at least two vowels." },
     auditor: { name: "The Auditor", text: "Your solve multiplier is capped at ×2." },

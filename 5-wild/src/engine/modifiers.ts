@@ -283,7 +283,7 @@ export const MODIFIERS: readonly Modifier[] = [
     // sides of the color line are now purchasable.
     //
     // Back-loaded by nature, since greens accumulate through a round, and it
-    // rewards re-typing a letter you have locked, which The Tyrant compels and
+    // rewards re-typing a letter you have locked, which ascension 5 compels and
     // The Miser forbids, so the same card swings hard either way.
     //
     // +250 was priced off "only 8.8% of tiles land green", and that number is

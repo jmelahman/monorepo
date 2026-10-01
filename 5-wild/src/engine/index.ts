@@ -39,6 +39,7 @@ export {
   bossesIn,
   bossForStage,
   getBoss,
+  rutOf,
   TIER_STAGES,
   tierForStage,
 } from "./bosses"

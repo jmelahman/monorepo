@@ -140,7 +140,9 @@ export function baseChips(state: RunState, letter: string): number {
  * is exact: the hook is asked at gray, and none of the four bosses that bend
  * chips reads the color: The Miser goes by whether the letter has been spent,
  * The Drought by whether it is a vowel, The Rust by what the letter started as,
- * The Margin by which column it landed in. One that paid less on gray would
+ * The Margin by which column it landed in. The Cliché is exact too, and only once the word is whole, since a shape
+ * is a fact about five letters: four letters of a Distinct word are still
+ * priced, and the fifth takes the whole row to nothing. One that paid less on gray would
  * loosen the floor without breaking it, which is the direction a promise about
  * an unearned score should fail in.
  *
@@ -152,6 +154,7 @@ export function baseChips(state: RunState, letter: string): number {
  */
 export function draftChips(state: RunState, draft: string): number {
   const boss = getBoss(state.round.bossId)
+  if (draft.length === state.round.answer.length && boss?.voids?.(draft, state)) return 0
   let chips = 0
   for (const [index, letter] of [...draft].entries()) {
     const base = baseChips(state, letter)
@@ -211,6 +214,17 @@ export function scoreGuess(params: {
 
   /** The Plateau, read once rather than per call. */
   const blockTimesMult = boss?.noTimesMult ?? false
+
+  /**
+   * The Cliché. The tiles still turn and still say what color they came up,
+   * because that is feedback and the guess was spent to get it, and the mult
+   * they earn is left standing on the readout as the truth about the row. What
+   * goes is everything that pays: every tile is worth nothing, and no modifier,
+   * level or relic fires on a word that scores nothing, so a voided guess
+   * grows no counter and pays no gold. A guess that did not score is not one a
+   * card watching for scoring guesses should see.
+   */
+  const voided = boss?.voids?.(word, state) ?? false
 
   const broken: string[] = []
 
@@ -335,9 +349,11 @@ export function scoreGuess(params: {
     // what the column was worth; see `TileScore`.
     const opened = { chips: ctx.chips, mult: ctx.mult }
 
-    const base = boss?.tileChips
-      ? boss.tileChips(baseChips(state, tile.letter), tile, round, index)
-      : baseChips(state, tile.letter)
+    const base = voided
+      ? 0
+      : boss?.tileChips
+        ? boss.tileChips(baseChips(state, tile.letter), tile, round, index)
+        : baseChips(state, tile.letter)
 
     ctx.chips += base
     ctx.mult += MULT_FOR_COLOR[tile.color]
@@ -353,7 +369,7 @@ export function scoreGuess(params: {
     // each modifier so the tile emits no `mod` event at all: the letter still
     // wears its badge on the board, and the row it scores in stays silent about
     // it, which is the reading the boss's one line promises.
-    const modifier = boss?.noModifiers ? undefined : modifierOf(state, tile.letter)
+    const modifier = boss?.noModifiers || voided ? undefined : modifierOf(state, tile.letter)
     if (modifier) {
       // One stream per tile of one guess of one round, so a chance effect is a
       // property of the position it happened at rather than of the order things
@@ -383,7 +399,7 @@ export function scoreGuess(params: {
 
     relics.forEach((entry, slot) => {
       const relic = entry?.relic
-      if (!entry || !relic?.onTile) return
+      if (!entry || !relic?.onTile || voided) return
       // One stream per slot per tile, so a chance effect is a property of where
       // it fired rather than of the order the slots happened to run in, on the
       // same rule the modifier stream above follows.
@@ -421,7 +437,7 @@ export function scoreGuess(params: {
   // shape's, so the shape multiplies what the word itself earned.
   const category = categoryOf(word)
   const bonus = levelBonus(state, category)
-  if (bonus.chips > 0 || bonus.mult > 0) {
+  if (!voided && (bonus.chips > 0 || bonus.mult > 0)) {
     ctx.chips += bonus.chips
     ctx.mult = (ctx.mult + bonus.mult) * bonus.times
     events.push({
@@ -435,7 +451,7 @@ export function scoreGuess(params: {
 
   relics.forEach((entry, slot) => {
     const relic = entry?.relic
-    if (!entry || !relic?.onGuess) return
+    if (!entry || !relic?.onGuess || voided) return
     // One coordinate shorter than the per-tile stream above, so the two cannot
     // collide even for the same slot and guess. Same frozen salt, same reason.
     roll = derive(state.seed, "joker", state.stage, state.roundIndex, guessIndex, slot)

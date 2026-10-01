@@ -1,7 +1,7 @@
 import { isVowel, LETTER_CHIPS } from "../content/letters"
 import { STAGES } from "../content/rounds"
+import { CATEGORIES, categoryOf } from "./categories"
 import { derive, shuffled } from "./rng"
-import { keepGreens } from "./rules"
 import type { GuessNote, Refusal, RoundState, RunState, Tile } from "./state"
 
 /**
@@ -94,6 +94,48 @@ export type Boss = {
   noTimesMult?: true
   /** Rewrites the solve multiplier, relics included. Applied last, so a cap caps. */
   solveBonus?: (base: number, round: RoundState) => number
+  /**
+   * The whole guess scores nothing: no chips, and nothing that would have
+   * watched them fires. Reads the run rather than the round because the one
+   * boss that asks it is asking about the run's history, which a round does
+   * not hold.
+   */
+  voids?: (word: string, state: RunState) => boolean
+}
+
+/**
+ * The shape the run has played most before this round, or null for a run with
+ * nothing on the record (a save from before `history`, in practice).
+ *
+ * Counted from `history` with this round's own guesses taken back off the end,
+ * which is the same figure on the intro card, at the first guess and at the
+ * last: a boss that moved its target as the round was played would let a
+ * player walk it off their own build by spending the round's guesses on
+ * another shape, and would make the chip on the board change its mind
+ * mid-round.
+ *
+ * Ties go to the rarer shape, since `CATEGORIES` runs rarest first and only a
+ * strictly larger count replaces the leader. A tie between a build's own shape
+ * and Distinct is exactly the run this boss is aimed at.
+ */
+export function rutOf(state: Pick<RunState, "history" | "round">): string | null {
+  const history = state.history ?? []
+  const before = history.slice(0, Math.max(0, history.length - state.round.guesses.length))
+  const counts = new Map<string, number>()
+  for (const word of before) {
+    const id = categoryOf(word).id
+    counts.set(id, (counts.get(id) ?? 0) + 1)
+  }
+  let rut: string | null = null
+  let most = 0
+  for (const category of CATEGORIES) {
+    const count = counts.get(category.id) ?? 0
+    if (count > most) {
+      rut = category.id
+      most = count
+    }
+  }
+  return rut
 }
 
 export const BOSSES: readonly Boss[] = [
@@ -153,21 +195,44 @@ export const BOSSES: readonly Boss[] = [
     },
   },
   {
-    id: "tyrant",
-    tier: "mid",
-    // The same sentence ascension 5 imposes, and literally the same function, so
-    // the two can never come to mean slightly different things.
-    validate: keepGreens,
-  },
-  {
     id: "miser",
-    tier: "late",
-    // The sharpest of the set: it forbids the repeat-letter probing that good
-    // deduction leans on, so a scoring build has to carry the round.
+    tier: "mid",
+    // It forbids the repeat-letter probing that good deduction leans on, so a
+    // scoring build has to carry the round.
+    //
+    // Mid since it took The Tyrant's seat, and late before that. The Tyrant
+    // was ascension 5's rule as a boss, literally the same function, so from
+    // A5 up its round was an ordinary round with a name on it; it left, and
+    // `keepGreens` stayed for the rung. The Miser went the other way because the
+    // late band had outgrown it: it ended 26.3% of the solver's runs that met
+    // it there and 22.6% of the builder's (20,000 seeds each, A0), the softest
+    // seat in the band, beside The Auditor's 53% and 46%. In the mid band it
+    // ends 20.3% of the builder's runs that meet it (982 of 5,000 seeds, every
+    // grower banned). Taking The Tyrant's
+    // seat rather than a new one keeps the band's shuffle where it was, so
+    // every seed meets a boss in the same position it did.
     tileChips: (base, tile, round) => {
       const spent = round.guesses.some((g) => g.word.includes(tile.letter))
       return spent ? 0 : base
     },
+  },
+  {
+    id: "cliche",
+    tier: "late",
+    // Took The Miser's late seat when The Miser moved to the mid band. The
+    // Miser taxed solving more than it asked anything of a build; this one asks
+    // the build question instead: whatever shape the run
+    // has leaned on, the round must be scored in another. For most runs that
+    // is Distinct, every good probe's shape, so the probes go unpaid and the
+    // pile has to come from the rarer four; for a run that leveled one of
+    // those, it is that one, and the levels sit idle for a round.
+    //
+    // A refusal would have been the other reading, and it would have filtered
+    // the answer pool, telling a run under a Distinct rut that the word repeats
+    // a letter, a clue bigger than anything the shop sells. A voided guess is
+    // still feedback, and a solve still multiplies the pile, so the round is
+    // always winnable by farming in one shape and finding the word in another.
+    voids: (word, state) => categoryOf(word).id === rutOf(state),
   },
   {
     id: "clock",
