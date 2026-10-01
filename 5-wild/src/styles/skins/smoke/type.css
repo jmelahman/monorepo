@@ -1,18 +1,16 @@
 /*
- * The type: IBM Plex Sans for everything, at the weights the phone asks for.
+ * VT323 gives the whole room its lighter terminal-pixel voice, including the
+ * game grid and keyboard.
  *
- * This file used to be mostly workarounds for Jersey 10, a pixel face with one
- * weight and a small x-height: every element pinned to 400 so a synthetic bold
- * could not smear the pixels shut, `font-size-adjust: 0.62` to set the whole
- * room a quarter larger than the layout was drawn for, and smoothing turned off
- * to keep the squares square. The owner found it hard to read even so, and Plex
- * needs none of it: it has real weights, a normal x-height and hinting made for
- * screens, so the layout's own sizes and weights stand as Classic's do.
+ * Font synthesis stays off so a bold request cannot make VT323's thin strokes
+ * heavy. Its single regular cut does not supply weight hierarchy, so case and
+ * tracking continue to carry it in the labels below.
  *
  * What sets a label apart from a paragraph is still case and tracking, below.
  */
 :root.skin-smoke {
   font-family: var(--font-body);
+  font-synthesis: none;
   font-variant-numeric: tabular-nums;
 }
 

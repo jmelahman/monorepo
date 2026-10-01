@@ -32,9 +32,9 @@
  * window already key on: `classic-light` is `light` and everything else is
  * `dark`, so none of them had to learn there are four looks.
  *
- * The key is absent until a pick, and until then the look is a default that
- * follows the window rather than a choice (see `resolveSkin`), so an install
- * that never touches the dial keeps behaving as the phone always has.
+ * The key is absent until a pick. With no legacy tone to migrate, the default
+ * follows the device on every layout (see `resolveSkin`), so an install that
+ * never touches the dial keeps behaving as the phone always has.
  */
 
 const KEY = "5wild:skin"
@@ -101,21 +101,18 @@ export type Standing = {
  * - An old `dark` pick is Classic dark on a phone, which is the board they had,
  *   and Smoke on the desktop, which is the table they had: the dark theme on a
  *   desktop *was* the table, and Smoke is what that meant.
- * - Nothing at all is where every install starts. On a phone that is Classic
+ * - Nothing at all is where every install starts. On either layout it is Classic
  *   following the device's light or dark exactly as before, `matchMedia` and
- *   all; on the desktop it is the Smoke Room, whatever the device says, since the table
- *   was never light.
+ *   all; the table changes the arrangement, not the default look.
  *
- * Only "nothing at all" reads `prefersLight`, and none of the three is stored:
- * a default that was written down would stop following the window the moment it
- * was, and a player who has never touched the dial would find a window resize
- * had made a decision for them.
+ * Only the un-migrated default reads `prefersLight`, and it is not stored:
+ * writing it down would stop following the device as soon as its preference
+ * changed, and a window resize would not be the player's choice.
  */
 export function resolveSkin({ picked, legacy, table, prefersLight }: Standing): Skin {
   if (picked) return picked
   if (legacy === "light") return "classic-light"
   if (legacy === "dark") return table ? "smoke" : "classic-dark"
-  if (table) return "smoke"
   return prefersLight ? "classic-light" : "classic-dark"
 }
 

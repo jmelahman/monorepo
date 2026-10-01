@@ -1,32 +1,22 @@
 /*
- * The faces are IBM Plex Sans and IBM Plex Mono (SIL OFL 1.1), from
- * `@fontsource`.
+ * VT323 (SIL OFL 1.1) gives the whole room its pixel voice. IBM Plex Mono
+ * (also SIL OFL 1.1) stays available as the fixed-width numeric fallback. Both
+ * come from `@fontsource`.
  *
- * These files are the whole of it: `@fontsource` ships one `@font-face` per
- * subset and weight with a `unicode-range`, so a browser downloads only the
- * faces a page's text actually needs, and a player on another skin, which never
- * matches a rule that names the family, downloads none. Latin-ext is what keeps
- * the Spanish, French and German prose (`ñ`, `œ`, `ß` are in it; the accents on
- * `é` and `ü` are Latin proper) from falling back to a system face mid-word.
+ * Only these imports are scoped to the Smoke Room, so another skin downloads
+ * none of them. VT323's single regular cut gives the interface a lighter
+ * terminal-pixel stroke; synthesis is disabled so heavier requested weights
+ * cannot thicken it. Latin-ext keeps Spanish, French and German prose (`ñ`,
+ * `œ`, `ß`) in the same face rather than falling back mid-word.
  *
- * Plex replaced Jersey 10, a pixel face that did every job in the room and
- * needed the type set 24% large across the board to be read at all; the owner
- * still found it hard going. Four weights of the sans, because the phone's
- * partials ask for 500 to 800 on buttons, scores and names and a real weight is
- * what those were written for (800 lands on 700, the heaviest cut). The mono is
- * only the score pops', at the two weights they use.
+ * VT323 replaces Silkscreen across the room, including the board and keyboard:
+ * its narrow terminal forms carry the pixel treatment to the letters players
+ * read and enter constantly.
  *
- * It replaced Lilita One before that, which has since left the package. Classic
- * needs none of it: it is the phone's own system stack.
+ * Classic needs none of these: it is the phone's own system stack.
  */
-@import "@fontsource/ibm-plex-sans/latin-400.css";
-@import "@fontsource/ibm-plex-sans/latin-ext-400.css";
-@import "@fontsource/ibm-plex-sans/latin-500.css";
-@import "@fontsource/ibm-plex-sans/latin-ext-500.css";
-@import "@fontsource/ibm-plex-sans/latin-600.css";
-@import "@fontsource/ibm-plex-sans/latin-ext-600.css";
-@import "@fontsource/ibm-plex-sans/latin-700.css";
-@import "@fontsource/ibm-plex-sans/latin-ext-700.css";
+@import "@fontsource/vt323/latin-400.css";
+@import "@fontsource/vt323/latin-ext-400.css";
 @import "@fontsource/ibm-plex-mono/latin-500.css";
 @import "@fontsource/ibm-plex-mono/latin-ext-500.css";
 @import "@fontsource/ibm-plex-mono/latin-600.css";

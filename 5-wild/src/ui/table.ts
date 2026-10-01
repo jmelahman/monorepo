@@ -50,8 +50,8 @@ export function syncTable(): void {
 /**
  * Call back when the window crosses the room query, which is the one thing that
  * can change the answer mid-game. The look is told rather than left to notice,
- * because the look's default depends on the layout (see `resolveSkin`), so the
- * layout has to have landed before the look is asked.
+ * because a legacy dark pick still maps differently on the table (see
+ * `resolveSkin`), so the layout has to have landed before the look is asked.
  */
 export function watchTable(onChange: () => void): void {
   if (typeof matchMedia !== "function") return

@@ -62,14 +62,11 @@ describe("skin", () => {
     const stand = (over: Partial<Parameters<typeof resolveSkin>[0]>): Skin =>
       resolveSkin({ picked: null, legacy: null, table: false, prefersLight: false, ...over })
 
-    it("is Classic following the device on a phone", () => {
-      expect(stand({ prefersLight: false })).toBe("classic-dark")
-      expect(stand({ prefersLight: true })).toBe("classic-light")
-    })
-
-    it("is the Smoke Room on the desktop, whatever the device says", () => {
-      expect(stand({ table: true, prefersLight: false })).toBe("smoke")
-      expect(stand({ table: true, prefersLight: true })).toBe("smoke")
+    it("is Classic following the device on either layout", () => {
+      for (const table of [false, true]) {
+        expect(stand({ table, prefersLight: false })).toBe("classic-dark")
+        expect(stand({ table, prefersLight: true })).toBe("classic-light")
+      }
     })
 
     it("moves an old light pick to Classic light on either layout", () => {

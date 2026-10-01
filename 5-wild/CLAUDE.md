@@ -204,11 +204,12 @@ the other three. The tone is what everything that predates the skins still keys
 on (the light palette under `:root[data-theme="light"]`, `BACKDROP`, the status
 bar, `ThemePlugin`, the tile inks), which is why it was kept rather than
 replaced. Until the player first taps the title-screen dial or the pause row the
-look is *unpicked* and resolved live, not stored: a phone is Classic and follows
-the device's light or dark, a desktop window is the Smoke Room, and both follow the window
-and the device as they change, with a `matchMedia` listener for each. A pick
-sticks from then on, with no "follow the phone" setting to go back to. The shell
-applies it before the word fetch so a light player never sees a dark page load.
+look is *unpicked* and resolved live, not stored: Classic follows the device's
+light or dark on phones and desktops alike, with a `matchMedia` listener. The
+desktop layout still follows the window, and old theme values retain their
+migration mapping. A pick sticks from then on, with no "follow the phone"
+setting to go back to. The shell applies it before the word fetch so a light
+player never sees a dark page load.
 Two things are fixed across looks on purpose: the tile colors, which are what a
 letter *means*, and so the ink on them, `--on-tile`. Every new literal color
 belongs in `:root` beside the others with a light-theme value; a bare `#000`

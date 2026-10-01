@@ -30,9 +30,9 @@ import { syncTable, watchTable } from "./table"
  * first time someone edits one and not the other. The cost is that the device
  * can change its mind under a running game, which a media query would have
  * followed for free, and the window can cross into or out of the table's
- * layout, which moves the default look. `watch` follows both, and only while
- * nothing has been picked: a pick is the player's and the window does not
- * overrule it.
+ * layout, which also changes how a legacy dark pick is mapped. `watch` follows
+ * both, and only while nothing has been picked: a pick is the player's and the
+ * window does not overrule it.
  *
  * `data-theme` carries the tone and not the skin so that nothing keyed on it had
  * to change: `ThemePlugin.java`'s launch window, `BACKDROP`, the status bar, the

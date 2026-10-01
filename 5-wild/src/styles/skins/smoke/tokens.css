@@ -178,9 +178,9 @@
   --coin-hi: #f0dc9c;
   --coin-lo: #8f7434;
 
-  /* Plex Sans for everything the player reads; Plex Mono for the pops that fly
-     off a scoring letter, where a fixed width keeps a count-up from jittering
-     and the room's instrument-panel voice is worth keeping. See `fonts.css`. */
-  --font-display: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* VT323 gives the room its terminal-pixel voice. The board and keyboard name their
+     Plex Sans face explicitly in `type.css`; numeric displays keep tabular
+     figures, with Plex Mono as the fixed-width fallback. See `fonts.css`. */
+  --font-display: "VT323", "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-body: "VT323", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
