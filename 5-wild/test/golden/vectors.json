@@ -1001,15 +1001,52 @@
           "stage": 1,
           "round": 1,
           "word": "vicar",
-          "chips": 12,
+          "chips": 11,
           "mult": 16,
           "solveBonus": 5,
-          "score": 192
+          "score": 176
         },
         {
           "stage": 1,
           "round": 2,
           "boss": "fog",
+          "word": "abhor",
+          "chips": 41,
+          "mult": 3.5,
+          "solveBonus": 1,
+          "score": 144
+        },
+        {
+          "stage": 1,
+          "round": 2,
+          "boss": "fog",
+          "word": "stony",
+          "chips": 10,
+          "mult": 28,
+          "solveBonus": 5,
+          "score": 280
+        },
+        {
+          "stage": 2,
+          "round": 0,
+          "word": "abhor",
+          "chips": 42,
+          "mult": 3.0625,
+          "solveBonus": 1,
+          "score": 129
+        },
+        {
+          "stage": 2,
+          "round": 0,
+          "word": "twist",
+          "chips": 10,
+          "mult": 49,
+          "solveBonus": 5,
+          "score": 490
+        },
+        {
+          "stage": 2,
+          "round": 1,
           "word": "abhor",
           "chips": 42,
           "mult": 3.5,
@@ -1017,284 +1054,247 @@
           "score": 147
         },
         {
-          "stage": 1,
-          "round": 2,
-          "boss": "fog",
-          "word": "stony",
-          "chips": 12,
-          "mult": 28,
-          "solveBonus": 5,
-          "score": 336
-        },
-        {
-          "stage": 2,
-          "round": 0,
-          "word": "abhor",
-          "chips": 44,
-          "mult": 3.0625,
-          "solveBonus": 1,
-          "score": 135
-        },
-        {
-          "stage": 2,
-          "round": 0,
-          "word": "twist",
-          "chips": 12,
-          "mult": 49,
-          "solveBonus": 5,
-          "score": 588
-        },
-        {
-          "stage": 2,
-          "round": 1,
-          "word": "abhor",
-          "chips": 44,
-          "mult": 3.5,
-          "solveBonus": 1,
-          "score": 154
-        },
-        {
           "stage": 2,
           "round": 1,
           "word": "crust",
-          "chips": 13,
+          "chips": 10,
           "mult": 49,
           "solveBonus": 5,
-          "score": 637
+          "score": 490
         },
         {
           "stage": 2,
           "round": 2,
           "boss": "glutton",
           "word": "abhor",
-          "chips": 58,
+          "chips": 55,
           "mult": 3.5,
           "solveBonus": 1,
-          "score": 203
+          "score": 193
         },
         {
           "stage": 2,
           "round": 2,
           "boss": "glutton",
           "word": "glaze",
-          "chips": 35,
+          "chips": 31,
           "mult": 49,
           "solveBonus": 5,
-          "score": 1715
+          "score": 1519
         },
         {
           "stage": 3,
           "round": 0,
           "word": "abhor",
-          "chips": 72,
+          "chips": 68,
           "mult": 5.25,
           "solveBonus": 1,
-          "score": 378
+          "score": 357
         },
         {
           "stage": 3,
           "round": 0,
           "word": "grasp",
-          "chips": 44,
+          "chips": 38,
           "mult": 49,
           "solveBonus": 5,
-          "score": 2156
+          "score": 1862
         },
         {
           "stage": 3,
           "round": 1,
           "word": "abhor",
-          "chips": 88,
+          "chips": 82,
           "mult": 5.25,
           "solveBonus": 1,
-          "score": 462
+          "score": 431
         },
         {
           "stage": 3,
           "round": 1,
           "word": "forge",
-          "chips": 61,
+          "chips": 53,
           "mult": 49,
           "solveBonus": 5,
-          "score": 2989
+          "score": 2597
         },
         {
           "stage": 3,
           "round": 2,
           "boss": "drought",
           "word": "abhor",
-          "chips": 102,
+          "chips": 94,
           "mult": 3.5,
           "solveBonus": 1,
-          "score": 357
+          "score": 329
         },
         {
           "stage": 3,
           "round": 2,
           "boss": "drought",
           "word": "faced",
-          "chips": 75,
+          "chips": 66,
           "mult": 49,
           "solveBonus": 5,
-          "score": 3675
+          "score": 3234
         },
         {
           "stage": 4,
           "round": 0,
           "word": "abhor",
-          "chips": 118,
+          "chips": 109,
           "mult": 8.75,
           "solveBonus": 1,
-          "score": 1033
+          "score": 954
         },
         {
           "stage": 4,
           "round": 0,
           "word": "order",
-          "chips": 86,
+          "chips": 76,
           "mult": 49,
           "solveBonus": 5,
-          "score": 4214
+          "score": 3724
         },
         {
           "stage": 4,
           "round": 1,
           "word": "abhor",
-          "chips": 132,
+          "chips": 122,
           "mult": 3.5,
           "solveBonus": 1,
-          "score": 462
+          "score": 427
         },
         {
           "stage": 4,
           "round": 1,
           "word": "fried",
-          "chips": 103,
+          "chips": 92,
           "mult": 49,
           "solveBonus": 5,
-          "score": 5047
+          "score": 4508
         },
         {
           "stage": 4,
           "round": 2,
           "boss": "tyrant",
           "word": "abhor",
-          "chips": 146,
+          "chips": 135,
           "mult": 3.5,
           "solveBonus": 1,
-          "score": 511
+          "score": 473
         },
         {
           "stage": 4,
           "round": 2,
           "boss": "tyrant",
           "word": "would",
-          "chips": 117,
+          "chips": 105,
           "mult": 49,
           "solveBonus": 5,
-          "score": 5733
+          "score": 5145
         },
         {
           "stage": 5,
           "round": 0,
           "word": "abhor",
-          "chips": 160,
+          "chips": 148,
           "mult": 3.5,
           "solveBonus": 1,
-          "score": 560
+          "score": 518
         },
         {
           "stage": 5,
           "round": 0,
           "word": "point",
-          "chips": 129,
+          "chips": 116,
           "mult": 49,
           "solveBonus": 5,
-          "score": 6321
+          "score": 5684
         },
         {
           "stage": 5,
           "round": 1,
           "word": "abhor",
-          "chips": 174,
+          "chips": 161,
           "mult": 3.5,
           "solveBonus": 1,
-          "score": 609
+          "score": 564
         },
         {
           "stage": 5,
           "round": 1,
           "word": "prude",
-          "chips": 144,
+          "chips": 130,
           "mult": 49,
           "solveBonus": 5,
-          "score": 7056
+          "score": 6370
         },
         {
           "stage": 5,
           "round": 2,
           "boss": "mirror",
           "word": "abhor",
-          "chips": 188,
+          "chips": 174,
           "mult": 5.25,
           "solveBonus": 1,
-          "score": 987
+          "score": 914
         },
         {
           "stage": 5,
           "round": 2,
           "boss": "mirror",
           "word": "local",
-          "chips": 159,
+          "chips": 143,
           "mult": 49,
           "solveBonus": 5,
-          "score": 7791
+          "score": 7007
         },
         {
           "stage": 6,
           "round": 0,
           "word": "abhor",
-          "chips": 204,
+          "chips": 188,
           "mult": 3.5,
           "solveBonus": 1,
-          "score": 714
+          "score": 658
         },
         {
           "stage": 6,
           "round": 0,
           "word": "slave",
-          "chips": 174,
+          "chips": 157,
           "mult": 49,
           "solveBonus": 5,
-          "score": 8526
+          "score": 7693
         },
         {
           "stage": 6,
           "round": 1,
           "word": "abhor",
-          "chips": 218,
+          "chips": 201,
           "mult": 7,
           "solveBonus": 1,
-          "score": 1526
+          "score": 1407
         },
         {
           "stage": 6,
           "round": 1,
           "word": "hydro",
-          "chips": 196,
+          "chips": 176,
           "mult": 49,
           "solveBonus": 5,
-          "score": 9604
+          "score": 8624
         },
         {
           "stage": 6,
           "round": 2,
           "boss": "silence",
           "word": "abhor",
-          "chips": 236,
+          "chips": 216,
           "mult": 1.75,
           "solveBonus": 1,
-          "score": 413,
+          "score": 378,
           "note": "1 misplaced"
         },
         {
@@ -1302,10 +1302,10 @@
           "round": 2,
           "boss": "silence",
           "word": "bidet",
-          "chips": 224,
+          "chips": 204,
           "mult": 28,
           "solveBonus": 5,
-          "score": 6272,
+          "score": 5712,
           "note": "none misplaced"
         }
       ],
@@ -1531,7 +1531,7 @@
       "levels": [],
       "ranges": [],
       "grown": [
-        "bloodhound:chips=40",
+        "bloodhound:chips=20",
         "hot_streak:chips=168"
       ],
       "destroyed": []
@@ -2934,9 +2934,9 @@
           "round": 1,
           "word": "acorn",
           "chips": 7,
-          "mult": 3,
+          "mult": 6,
           "solveBonus": 1,
-          "score": 21
+          "score": 42
         },
         {
           "stage": 1,
@@ -2972,9 +2972,9 @@
           "round": 0,
           "word": "acorn",
           "chips": 7,
-          "mult": 7,
+          "mult": 8,
           "solveBonus": 1,
-          "score": 49
+          "score": 56
         },
         {
           "stage": 2,
@@ -3750,9 +3750,9 @@
           "boss": "purist",
           "word": "adieu",
           "chips": 6,
-          "mult": 50,
+          "mult": 52,
           "solveBonus": 1,
-          "score": 300
+          "score": 312
         },
         {
           "stage": 1,
@@ -3843,9 +3843,9 @@
           "round": 1,
           "word": "adieu",
           "chips": 6,
-          "mult": 50,
+          "mult": 52,
           "solveBonus": 1,
-          "score": 300
+          "score": 312
         },
         {
           "stage": 3,
@@ -10901,300 +10901,300 @@
           "stage": 1,
           "round": 1,
           "word": "vicar",
-          "chips": 16,
+          "chips": 13,
           "mult": 16,
           "solveBonus": 5,
-          "score": 256
+          "score": 208
         },
         {
           "stage": 1,
           "round": 2,
           "boss": "fog",
           "word": "acorn",
-          "chips": 43,
+          "chips": 40,
           "mult": 5,
           "solveBonus": 1,
-          "score": 215
+          "score": 200
         },
         {
           "stage": 1,
           "round": 2,
           "boss": "fog",
           "word": "stony",
-          "chips": 16,
+          "chips": 12,
           "mult": 16,
           "solveBonus": 5,
-          "score": 256
+          "score": 192
         },
         {
           "stage": 2,
           "round": 0,
           "word": "acorn",
-          "chips": 45,
+          "chips": 41,
           "mult": 1.75,
           "solveBonus": 1,
-          "score": 79
+          "score": 72
         },
         {
           "stage": 2,
           "round": 0,
           "word": "twist",
-          "chips": 16,
+          "chips": 12,
           "mult": 28,
           "solveBonus": 5,
-          "score": 448
+          "score": 336
         },
         {
           "stage": 2,
           "round": 1,
           "word": "howdy",
-          "chips": 73,
+          "chips": 69,
           "mult": 1.75,
           "solveBonus": 1,
-          "score": 128
+          "score": 121
         },
         {
           "stage": 2,
           "round": 1,
           "word": "crust",
-          "chips": 15,
+          "chips": 11,
           "mult": 28,
           "solveBonus": 5,
-          "score": 420
+          "score": 308
         },
         {
           "stage": 2,
           "round": 2,
           "boss": "glutton",
           "word": "whole",
-          "chips": 69,
+          "chips": 65,
           "mult": 5,
           "solveBonus": 1,
-          "score": 345
+          "score": 325
         },
         {
           "stage": 2,
           "round": 2,
           "boss": "glutton",
           "word": "glaze",
-          "chips": 25,
+          "chips": 20,
           "mult": 28,
           "solveBonus": 5,
-          "score": 700
+          "score": 560
         },
         {
           "stage": 3,
           "round": 0,
           "word": "howdy",
-          "chips": 100,
+          "chips": 95,
           "mult": 29.1,
           "solveBonus": 1,
-          "score": 2910
+          "score": 2765
         },
         {
           "stage": 3,
           "round": 0,
           "word": "grasp",
-          "chips": 18,
+          "chips": 13,
           "mult": 48,
           "solveBonus": 5,
-          "score": 864
+          "score": 624
         },
         {
           "stage": 3,
           "round": 1,
           "word": "daddy",
-          "chips": 76,
+          "chips": 71,
           "mult": 116.10000000000001,
           "solveBonus": 1,
-          "score": 8824
+          "score": 8243
         },
         {
           "stage": 3,
           "round": 1,
           "word": "forge",
-          "chips": 19,
+          "chips": 14,
           "mult": 44,
           "solveBonus": 5,
-          "score": 836
+          "score": 616
         },
         {
           "stage": 3,
           "round": 2,
           "boss": "drought",
           "word": "daddy",
-          "chips": 75,
+          "chips": 70,
           "mult": 48.4,
           "solveBonus": 1,
-          "score": 3630
+          "score": 3388
         },
         {
           "stage": 3,
           "round": 2,
           "boss": "drought",
           "word": "faced",
-          "chips": 31,
+          "chips": 25,
           "mult": 44.72500000000001,
           "solveBonus": 5,
-          "score": 1386
+          "score": 1118
         },
         {
           "stage": 4,
           "round": 0,
           "word": "caddy",
-          "chips": 79,
+          "chips": 73,
           "mult": 69.42500000000001,
           "solveBonus": 1,
-          "score": 5485
+          "score": 5068
         },
         {
           "stage": 4,
           "round": 0,
           "word": "order",
-          "chips": 18,
+          "chips": 12,
           "mult": 36,
           "solveBonus": 5,
-          "score": 648
+          "score": 432
         },
         {
           "stage": 4,
           "round": 1,
           "word": "caddy",
-          "chips": 104,
+          "chips": 98,
           "mult": 17.520000000000003,
           "solveBonus": 1,
-          "score": 1822
+          "score": 1717
         },
         {
           "stage": 4,
           "round": 1,
           "word": "fried",
-          "chips": 33,
+          "chips": 26,
           "mult": 36.72500000000001,
           "solveBonus": 5,
-          "score": 1212
+          "score": 955
         },
         {
           "stage": 4,
           "round": 2,
           "boss": "tyrant",
           "word": "caddy",
-          "chips": 106,
+          "chips": 99,
           "mult": 54.080000000000005,
           "solveBonus": 1,
-          "score": 5732
+          "score": 5354
         },
         {
           "stage": 4,
           "round": 2,
           "boss": "tyrant",
           "word": "would",
-          "chips": 35,
+          "chips": 27,
           "mult": 48.12500000000001,
           "solveBonus": 5,
-          "score": 1684
+          "score": 1299
         },
         {
           "stage": 5,
           "round": 0,
           "word": "caddy",
-          "chips": 108,
+          "chips": 100,
           "mult": 91.68250000000002,
           "solveBonus": 1,
-          "score": 9902
+          "score": 9168
         },
         {
           "stage": 5,
           "round": 0,
           "word": "point",
-          "chips": 33,
+          "chips": 25,
           "mult": 48.12500000000001,
           "solveBonus": 5,
-          "score": 1588
+          "score": 1203
         },
         {
           "stage": 5,
           "round": 1,
           "word": "caddy",
-          "chips": 108,
+          "chips": 100,
           "mult": 41.40500000000001,
           "solveBonus": 1,
-          "score": 4472
+          "score": 4141
         },
         {
           "stage": 5,
           "round": 1,
           "word": "prude",
-          "chips": 44,
+          "chips": 36,
           "mult": 97.40500000000002,
           "solveBonus": 5,
-          "score": 4286
+          "score": 3507
         },
         {
           "stage": 5,
           "round": 2,
           "boss": "mirror",
           "word": "caddy",
-          "chips": 133,
+          "chips": 125,
           "mult": 79.09200000000001,
           "solveBonus": 1,
-          "score": 10519
+          "score": 9887
         },
         {
           "stage": 5,
           "round": 2,
           "boss": "mirror",
           "word": "local",
-          "chips": 47,
+          "chips": 37,
           "mult": 61.425000000000004,
           "solveBonus": 5,
-          "score": 2887
+          "score": 2273
         },
         {
           "stage": 6,
           "round": 0,
           "word": "caddy",
-          "chips": 137,
+          "chips": 127,
           "mult": 76.89500000000002,
           "solveBonus": 1,
-          "score": 10535
+          "score": 9766
         },
         {
           "stage": 6,
           "round": 0,
           "word": "slave",
-          "chips": 50,
+          "chips": 39,
           "mult": 55.05500000000001,
           "solveBonus": 5,
-          "score": 2753
+          "score": 2147
         },
         {
           "stage": 6,
           "round": 1,
           "word": "caddy",
-          "chips": 139,
+          "chips": 128,
           "mult": 39.54600000000001,
           "solveBonus": 1,
-          "score": 5497
+          "score": 5062
         },
         {
           "stage": 6,
           "round": 1,
           "word": "hydro",
-          "chips": 131,
+          "chips": 119,
           "mult": 188.39275000000004,
           "solveBonus": 5,
-          "score": 24679
+          "score": 22419
         },
         {
           "stage": 6,
           "round": 2,
           "boss": "silence",
           "word": "caddy",
-          "chips": 141,
+          "chips": 129,
           "mult": 142.25575000000003,
           "solveBonus": 1,
-          "score": 20058,
+          "score": 18351,
           "note": "none misplaced"
         },
         {
@@ -11202,47 +11202,47 @@
           "round": 2,
           "boss": "silence",
           "word": "bidet",
-          "chips": 62,
+          "chips": 50,
           "mult": 62.88975000000002,
           "solveBonus": 5,
-          "score": 3899,
+          "score": 3144,
           "note": "none misplaced"
         },
         {
           "stage": 7,
           "round": 0,
           "word": "caddy",
-          "chips": 141,
+          "chips": 129,
           "mult": 142.25575000000003,
           "solveBonus": 1,
-          "score": 20058
+          "score": 18351
         },
         {
           "stage": 7,
           "round": 0,
           "word": "mason",
-          "chips": 61,
+          "chips": 49,
           "mult": 62.88975000000002,
           "solveBonus": 5,
-          "score": 3836
+          "score": 3082
         },
         {
           "stage": 7,
           "round": 1,
           "word": "caddy",
-          "chips": 141,
+          "chips": 129,
           "mult": 32.955000000000005,
           "solveBonus": 1,
-          "score": 4647
+          "score": 4251
         },
         {
           "stage": 7,
           "round": 1,
           "word": "found",
-          "chips": 65,
+          "chips": 52,
           "mult": 62.88975000000002,
           "solveBonus": 5,
-          "score": 4088
+          "score": 3270
         }
       ],
       "gold": [
@@ -11606,7 +11606,7 @@
       ],
       "ranges": [],
       "grown": [
-        "bloodhound:chips=26"
+        "bloodhound:chips=13"
       ],
       "destroyed": []
     }

@@ -286,7 +286,12 @@ export function blindPlayer(policy: Policy): BlindPlayer {
     }
 
     for (const guess of round.guesses.slice(filtered)) {
-      const shown: Color[] = guess.tiles.map((tile) => tile.shown)
+      // A tile The Magician painted reads as the gray it was, as the keyboard
+      // reads it (`keyboardColors`). Taken at its painted yellow, the filter
+      // kept only words holding a letter the answer may lack, and the bot threw
+      // the answer away: holding the card cut its solve rate from 90% to 74%
+      // over 2,046 forked rounds, which made the card look like a curse.
+      const shown: Color[] = guess.tiles.map((tile) => (tile.promoted ? "gray" : tile.shown))
       pool = pool.filter((word) => twin(computeFeedback(guess.word, word), shown))
     }
     filtered = round.guesses.length

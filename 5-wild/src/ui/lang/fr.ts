@@ -68,7 +68,7 @@ export const fr: Strings = {
     cold_open: { name: "Départ à Froid", text: "+30 points au premier essai d'une manche" },
     bloodhound: {
       name: "Limier",
-      text: "Gagne +2 points définitifs pour chaque case jaune que vous jouez",
+      text: "Gagne +1 point définitif pour chaque case jaune que vous jouez",
     },
     head_start: { name: "Avance", text: "+15 mult si le mot commence par une voyelle" },
     loaded_dice: { name: "Dés Pipés", text: "+0 à +20 mult, relancés à chaque essai" },
@@ -220,11 +220,11 @@ export const fr: Strings = {
     oracle: { name: "L'Oracle", text: "Révèle une lettre de la réponse, à sa place" },
     hermit: {
       name: "L'Ermite",
-      text: "Écarte une lettre de la réponse sans dépenser d'essai",
+      text: "Écarte 5 lettres de la réponse sans dépenser d'essai",
     },
     magician: {
       name: "Le Magicien",
-      text: "Votre prochain essai compte sa première case grise comme jaune. Cela vaut du mult, pas un indice.",
+      text: "Jusqu'à la fin de la manche, les cases grises comptent comme jaunes. Elles valent du mult, pas des indices.",
     },
     fool: { name: "Le Fou", text: "Compte votre essai précédent une seconde fois" },
   },
@@ -385,9 +385,9 @@ export const fr: Strings = {
         case "oracle":
           return `${note.letter.toUpperCase()} est en #${note.position}`
         case "hermit":
-          return `pas de ${note.letter.toUpperCase()}`
+          return `ni ${note.letters.map((letter) => letter.toUpperCase()).join(" ni ")}`
         case "magician":
-          return "la prochaine grise passe en jaune"
+          return "les grises comptent jaunes cette manche"
         case "fool":
           return `+${note.score}`
       }

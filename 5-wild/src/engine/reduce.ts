@@ -529,8 +529,10 @@ export function reduce(state: RunState, action: Action, words: WordSource): Redu
       // After the boss, so The Magician is a genuine counter to The Silence
       // rather than something it quietly erases.
       if (round.promote) {
-        const gray = tiles.find((tile) => tile.color === "gray")
-        if (gray) {
+        // Every gray, on every guess left in the round: the flag is never
+        // cleared, and the round's end clears it with the rest of the round.
+        // See `consumables.ts` for what the narrower card was worth.
+        for (const gray of tiles.filter((tile) => tile.color === "gray")) {
           gray.color = "yellow"
           gray.shown = "yellow"
           // Marked, because a color this card hands out is worth mult and
@@ -542,7 +544,6 @@ export function reduce(state: RunState, action: Action, words: WordSource): Redu
           // to avoid. See `Tile.promoted`.
           gray.promoted = true
         }
-        round.promote = false
       }
 
       const solved = word === round.answer

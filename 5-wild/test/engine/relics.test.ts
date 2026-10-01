@@ -133,17 +133,17 @@ describe("relics", () => {
   })
 
   it("Bloodhound banks chips per yellow and pays them on the guesses after", () => {
-    // DAIRY lands four yellows: the first pays nothing and banks 8, the second
-    // pays those 8 and banks 8 more, Snowball's order on the other color.
+    // DAIRY lands four yellows: the first pays nothing and banks 4, the second
+    // pays those 4 and banks 4 more, Snowball's order on the other color.
     const { state } = withRelic("bloodhound", "dairy")
     expect(state.round.guesses[0]).toMatchObject({ chips: 9, mult: 5 })
-    expect(state.relics[0]?.data).toEqual({ chips: 8 })
+    expect(state.relics[0]?.data).toEqual({ chips: 4 })
     const second = apply(state, type("dairy")).round.guesses[1]
-    expect(second).toMatchObject({ chips: 17 })
+    expect(second).toMatchObject({ chips: 13 })
     // CRANE lands no yellow against BRAID, so it is paid and banks nothing.
     const after = apply(state, type("crane"))
-    expect(after.round.guesses[1]?.chips).toBe(15)
-    expect(after.relics[0]?.data).toEqual({ chips: 8 })
+    expect(after.round.guesses[1]?.chips).toBe(11)
+    expect(after.relics[0]?.data).toEqual({ chips: 4 })
   })
 
   it("Anagrammer pays ×1.5 on a word with five distinct letters", () => {

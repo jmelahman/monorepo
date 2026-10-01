@@ -1,4 +1,4 @@
-import { ALPHABET, isVowel, MIN_LIVE_LETTERS } from "../content/letters"
+import { ALPHABET, isVowel, MIN_LIVE_LETTERS, MULT_FOR_COLOR } from "../content/letters"
 import { CONSUMABLE_SLOTS, INTEREST_CAP, INTEREST_PER } from "../content/rounds"
 import { difficultyOf } from "./ascensions"
 import { CATEGORIES, categoryOf, isCategory, levelOf } from "./categories"
@@ -376,7 +376,7 @@ export const RELICS: readonly Relic[] = [
     //
     // It was +6 points a yellow, flat, and the weakest common that touches a
     // guess: ×1.08 on `bun run relics` (solver, 400 seeds), and the yellow
-    // build around it won 0 with every existing grower banned. Now it banks +2
+    // build around it won 0 with every existing grower banned. Now it banks +1
     // for each yellow played and pays the bank on every guess, Snowball's shape
     // on the other color: pays what it had, *then* counts, so the number on the
     // card is the number it just added. The condition is the color, not the
@@ -389,11 +389,20 @@ export const RELICS: readonly Relic[] = [
     // last three times what a door is asked for. Held from the first shop it
     // ends a run a mean +48, against Snowball's +61 on the color that is on
     // every row.
+    //
+    // Back to +1 at v36. The new doors grew up around it and +2 had become the
+    // best of them by a distance: on the same harness, runs holding it won 109
+    // of 680 (16.0%) against Habit's 65 and Mint's 36, the nearest thing to
+    // Snowball on the shelf at a common's price, when Snowball is the same
+    // shape paying mult, at legendary. At +1 it won 40 (5.9%), level with Mint
+    // (6.0%) and Habit (6.0%); the yellow build fell from 20 wins to 6 and the
+    // whole sweep from 176 to 107. Unbanned the builder fell from 5.7% to 4.5%
+    // and the solver from 3.6% to 2.8%.
     onGuess: (ctx) => {
       const banked = ctx.getData("chips")
       if (banked > 0) ctx.addChips(banked)
       const yellows = ctx.tiles.filter((tile) => tile.color === "yellow").length
-      if (yellows > 0) ctx.setData("chips", banked + 2 * yellows)
+      if (yellows > 0) ctx.setData("chips", banked + yellows)
     },
     growth: (instance) => ({ amount: grown(instance, "chips"), unit: "chips" }),
   },
@@ -679,7 +688,9 @@ export const RELICS: readonly Relic[] = [
     cost: RARITY_COST.uncommon,
     onTile: (ctx, tile, _index, base) => {
       const copies = [...ctx.word].filter((letter) => letter === tile.letter).length
-      if (copies > 1) ctx.addChips(base)
+      if (copies < 2) return
+      ctx.addChips(base)
+      ctx.addMult(5) //DOPP
     },
   },
   {

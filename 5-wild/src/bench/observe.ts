@@ -224,8 +224,7 @@ function roundLines(state: RunState): string[] {
   if (round.eliminated.length) {
     lines.push(`Ruled out: ${round.eliminated.map(upper).join(" ")}`)
   }
-  if (round.promote)
-    lines.push("The Magician is primed: your next guess's first gray becomes yellow.")
+  if (round.promote) lines.push("The Magician is in force: every gray this round scores as yellow.")
 
   // The keyboard's own reading, which already skips the Magician's granted tile.
   const keys = keyboardColors(round.guesses)

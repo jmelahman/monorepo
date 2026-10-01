@@ -61,7 +61,7 @@ export const es: Strings = {
     cold_open: { name: "Arranque en Frío", text: "+30 puntos en el primer intento de la ronda" },
     bloodhound: {
       name: "Sabueso",
-      text: "Gana +2 puntos permanentes por cada casilla amarilla que juegues",
+      text: "Gana +1 punto permanente por cada casilla amarilla que juegues",
     },
     head_start: { name: "Ventaja", text: "+15 mult si la palabra empieza por vocal" },
     loaded_dice: { name: "Dados Cargados", text: "+0 a +20 mult, tirados de nuevo cada intento" },
@@ -201,11 +201,11 @@ export const es: Strings = {
     oracle: { name: "El Oráculo", text: "Revela una letra de la respuesta, en su sitio" },
     hermit: {
       name: "El Ermitaño",
-      text: "Descarta una letra de la respuesta sin gastar un intento",
+      text: "Descarta 5 letras de la respuesta sin gastar un intento",
     },
     magician: {
       name: "El Mago",
-      text: "Tu próximo intento puntúa su primera casilla gris como amarilla. Da mult, no una pista.",
+      text: "Durante el resto de la ronda, las casillas grises puntúan como amarillas. Dan mult, no pistas.",
     },
     fool: { name: "El Loco", text: "Puntúa tu intento anterior una segunda vez" },
   },
@@ -363,9 +363,9 @@ export const es: Strings = {
         case "oracle":
           return `la ${note.letter.toUpperCase()} es la #${note.position}`
         case "hermit":
-          return `sin ${note.letter.toUpperCase()}`
+          return `sin ${note.letters.map((letter) => letter.toUpperCase()).join(" ")}`
         case "magician":
-          return "el próximo gris pasa a amarillo"
+          return "los grises puntúan como amarillos esta ronda"
         case "fool":
           return `+${note.score}`
       }

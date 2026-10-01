@@ -184,7 +184,7 @@ export type RoundState = {
   revealed: (string | null)[]
   /** The Hermit: letters proven absent without spending a guess. */
   eliminated: string[]
-  /** The Magician: promote this guess's first gray to yellow. */
+  /** The Magician: promote every gray to yellow for the rest of the round. */
   promote: boolean
 }
 
@@ -384,11 +384,11 @@ export type Action =
  * carries the former and nothing of the latter. It was a preformatted `label`
  * until the prose left the engine, and the shapes are exactly what those
  * sentences interpolated: The Oracle names a letter and a position, The Hermit
- * a letter, The Fool a score, The Magician nothing at all.
+ * letters, The Fool a score, The Magician nothing at all.
  */
 export type ConsumableNote =
   | { card: "oracle"; letter: string; position: number }
-  | { card: "hermit"; letter: string }
+  | { card: "hermit"; letters: string[] }
   | { card: "magician" }
   | { card: "fool"; score: number }
 

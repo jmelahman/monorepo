@@ -81,7 +81,7 @@ export const en: Strings = {
     cold_open: { name: "Cold Open", text: "+30 points on the first guess of a round" },
     bloodhound: {
       name: "Bloodhound",
-      text: "Permanently gains +2 points for each yellow tile you play",
+      text: "Permanently gains +1 point for each yellow tile you play",
     },
     head_start: { name: "Head Start", text: "+15 mult if the word begins with a vowel" },
     loaded_dice: { name: "Loaded Dice", text: "+0 to +20 mult, rolled fresh every guess" },
@@ -206,11 +206,11 @@ export const en: Strings = {
     oracle: { name: "The Oracle", text: "Reveal one letter of the answer, in place" },
     hermit: {
       name: "The Hermit",
-      text: "Rule a letter out of the answer without spending a guess",
+      text: "Rule 5 letters out of the answer without spending a guess",
     },
     magician: {
       name: "The Magician",
-      text: "Your next guess scores its first gray tile as a yellow. It is worth mult, not a clue.",
+      text: "For the rest of the round, gray tiles score as yellow. They are worth mult, not clues.",
     },
     fool: { name: "The Fool", text: "Score your previous guess a second time" },
   },
@@ -392,9 +392,9 @@ export const en: Strings = {
         case "oracle":
           return `${note.letter.toUpperCase()} is #${note.position}`
         case "hermit":
-          return `no ${note.letter.toUpperCase()}`
+          return `no ${note.letters.map((letter) => letter.toUpperCase()).join(" ")}`
         case "magician":
-          return "next gray becomes yellow"
+          return "grays score yellow this round"
         case "fool":
           return `+${note.score}`
       }

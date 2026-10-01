@@ -18,6 +18,17 @@ export type Consumable = {
 
 const CONSUMABLE_COST = 3
 
+/**
+ * How many letters The Hermit rules out. It was one, and one letter is a
+ * twentieth of what an opener tells you for free: forking every round of 160
+ * solver runs (2,067 rounds) and handing the card over after the first guess,
+ * one letter was worth ×1.017 on the round's score and 0.07 guesses saved,
+ * against ×1.065 and 0.34 for five, and ×1.043 for three. Five is also what a
+ * guess spent entirely on gray letters would have told the player, which is
+ * the card's honest price: a guess's worth of absence without the guess.
+ */
+export const HERMIT_LETTERS = 5
+
 export const CONSUMABLES: readonly Consumable[] = [
   {
     id: "oracle",
@@ -62,10 +73,10 @@ export const CONSUMABLES: readonly Consumable[] = [
         (letter) =>
           !round.answer.includes(letter) && !known.has(letter) && !state.letters[letter]?.destroyed,
       )
-      const letter = shuffled(rng, candidates)[0]
-      if (letter === undefined) return { code: "nothing_to_rule_out" }
-      round.eliminated.push(letter)
-      events.push({ type: "consumable", id: "hermit", note: { card: "hermit", letter } })
+      const letters = shuffled(rng, candidates).slice(0, HERMIT_LETTERS)
+      if (letters.length === 0) return { code: "nothing_to_rule_out" }
+      round.eliminated.push(...letters)
+      events.push({ type: "consumable", id: "hermit", note: { card: "hermit", letters } })
       return null
     },
   },
@@ -74,6 +85,16 @@ export const CONSUMABLES: readonly Consumable[] = [
     cost: CONSUMABLE_COST,
     // Applied after the boss rewrites feedback, so this is a real counter to
     // The Silence rather than something it quietly erases.
+    //
+    // Every gray of every guess for the rest of the round. It was the first
+    // gray of the next guess, and a yellow is +1 mult, so the card was worth
+    // ×1.004 on the round's score: forking each of 2,067 rounds from 160 solver
+    // runs, with and without it, against ×1.065 for The Hermit and ×1.098 for
+    // The Oracle on the same rounds. Every gray of one guess read ×1.017,
+    // because grays are many only on the guesses that score little; every gray
+    // all round reads ×1.048. Still the least of the four on a bare tray, and
+    // deliberately: it is the one that tells the player nothing, and the yellow
+    // relics are where it is meant to pay.
     apply: (state, _rng, events) => {
       if (state.round.promote) return { code: "already_prepared" }
       state.round.promote = true

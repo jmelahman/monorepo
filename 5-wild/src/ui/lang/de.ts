@@ -66,7 +66,7 @@ export const de: Strings = {
     cold_open: { name: "Kaltstart", text: "+30 Punkte beim ersten Versuch einer Runde" },
     bloodhound: {
       name: "Bluthund",
-      text: "Gewinnt dauerhaft +2 Punkte für jedes gelbe Feld, das du spielst",
+      text: "Gewinnt dauerhaft +1 Punkt für jedes gelbe Feld, das du spielst",
     },
     head_start: { name: "Vorsprung", text: "+15 Mult, wenn das Wort mit einem Vokal beginnt" },
     loaded_dice: { name: "Gezinkte Würfel", text: "+0 bis +20 Mult, bei jedem Versuch neu" },
@@ -215,11 +215,11 @@ export const de: Strings = {
     oracle: { name: "Das Orakel", text: "Deckt einen Buchstaben der Antwort an seinem Platz auf" },
     hermit: {
       name: "Der Einsiedler",
-      text: "Schließt einen Buchstaben aus, ohne einen Versuch zu kosten",
+      text: "Schließt 5 Buchstaben aus, ohne einen Versuch zu kosten",
     },
     magician: {
       name: "Der Magier",
-      text: "Dein nächster Versuch wertet sein erstes graues Feld als gelb. Das bringt Mult, keinen Hinweis.",
+      text: "Für den Rest der Runde zählen graue Felder als gelb. Das bringt Mult, keine Hinweise.",
     },
     fool: { name: "Der Narr", text: "Zählt deinen vorigen Versuch ein zweites Mal" },
   },
@@ -377,9 +377,9 @@ export const de: Strings = {
         case "oracle":
           return `${note.letter.toUpperCase()} ist Nr. ${note.position}`
         case "hermit":
-          return `kein ${note.letter.toUpperCase()}`
+          return `kein ${note.letters.map((letter) => letter.toUpperCase()).join(" ")}`
         case "magician":
-          return "das nächste Graue wird gelb"
+          return "Graue zählen diese Runde als gelb"
         case "fool":
           return `+${note.score}`
       }

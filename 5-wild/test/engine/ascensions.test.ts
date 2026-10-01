@@ -23,6 +23,7 @@ import {
 // The combined rule check is an internal seam: the reducer calls it, and this
 // test needs to ask it things without playing a whole round to get there.
 import { validateGuess } from "../../src/engine/ascensions"
+import { HERMIT_LETTERS } from "../../src/engine/consumables"
 
 const words: WordSource = {
   answers: ["braid"],
@@ -423,9 +424,30 @@ describe("the answer is always reachable", () => {
     const armed = at(0)
     armed.consumables.push({ id: "magician" })
     const cast = reduce(armed, { type: "use_consumable", index: 0 }, words).state
-    const promoted = apply(cast, type("ghost")).round.guesses[0]
+    // GHOST against BRAID is five grays, and every one of them is promoted,
+    // on this guess and on the next: the card lasts the round.
+    const promoted = apply(cast, [...type("ghost"), ...type("ghost")]).round.guesses
     const plain = apply(at(0), type("ghost")).round.guesses[0]
-    expect(promoted?.mult).toBe((plain?.mult ?? 0) + MULT_FOR_COLOR.yellow)
+    for (const guess of promoted)
+      expect(guess.mult).toBe((plain?.mult ?? 0) + 5 * MULT_FOR_COLOR.yellow)
+  })
+
+  it("has The Hermit rule out five letters the board had not", () => {
+    const armed = apply(at(0), type("crane"))
+    armed.consumables.push({ id: "hermit" })
+    const { state, events } = reduce(armed, { type: "use_consumable", index: 0 }, words)
+    const out = state.round.eliminated
+    expect(out).toHaveLength(HERMIT_LETTERS)
+    expect(new Set(out).size).toBe(HERMIT_LETTERS)
+    for (const letter of out) {
+      expect("braid").not.toContain(letter)
+      expect("crane").not.toContain(letter)
+    }
+    expect(events).toContainEqual({
+      type: "consumable",
+      id: "hermit",
+      note: { card: "hermit", letters: out },
+    })
   })
 
   it("reads a promoted letter back to the keyboard as the gray it was", () => {
