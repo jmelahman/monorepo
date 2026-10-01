@@ -151,11 +151,12 @@
   color: color-mix(in srgb, var(--mult) 80%, var(--fg));
 }
 
-/* The boss: a band across the foot of the panel, full bleed, oxblood. On the
-   table it is a card inside the rail (see `table/round.css`), so it takes its
-   own rim and corners. */
+/* The boss: a band across the foot of the panel, full bleed, oxblood. Its lower
+   corners follow the rail's inner radius, so the red field ends at the panel's
+   edge without clipping the shadows of the pieces above it. On the table it is
+   a card inside the rail (see `table/round.css`), so it takes its own corners. */
 :root.skin-tabletop .round-screen .hud .boss {
-  border-radius: 0;
+  border-radius: 0 0 calc(var(--radius-l) - var(--bw)) calc(var(--radius-l) - var(--bw));
   border-block: var(--rim);
   background: color-mix(in srgb, #b8383f 22%, var(--panel));
   color: var(--fg);
