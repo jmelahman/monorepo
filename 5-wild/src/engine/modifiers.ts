@@ -167,14 +167,20 @@ export const MODIFIERS: readonly Modifier[] = [
   },
   {
     id: "gold",
-    pip: "$2",
+    pip: "$1",
     rarity: "uncommon",
     cost: 6,
     choiceCost: 9,
     // Income priced against Scavenger, which pays $1 a yellow from a relic slot.
     // This takes no slot and fires on any color, but only on one letter, so
     // what it is really worth is decided by the letter the shop offered.
-    onTile: (ctx) => ctx.addGold(2),
+    //
+    // It paid $2 until v37. Over 2,000 solver runs at v36 a run holding it
+    // collected $13.1 from it, better than double its $6 back, and halving the
+    // payout took that to $6.1: about what the card costs, so the money is now
+    // in the letter rather than in the card. Wins over 5,000 seeds went 144 to
+    // 134 (solver) and 227 to 221 (`bun run builds --policy builder`).
+    onTile: (ctx) => ctx.addGold(1),
   },
   {
     id: "wild",

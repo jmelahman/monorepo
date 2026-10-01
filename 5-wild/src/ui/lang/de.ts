@@ -11,7 +11,7 @@ const plural = pluralizer("de")
 const MODIFIER: Strings["modifier"] = {
   chip: { name: "Chip", text: "bringt +20 Punkte" },
   mult: { name: "Mult", text: "bringt +8 Mult" },
-  gold: { name: "Gold", text: "bringt $2, jedes Mal wenn du ihn spielst" },
+  gold: { name: "Gold", text: "bringt $1, jedes Mal wenn du ihn spielst" },
   wild: { name: "Joker", text: "bringt +24 Mult auf Grau, +14 auf Gelb, +4 auf Grün" },
   lucky: { name: "Glückspilz", text: "bringt mit 1-zu-4-Chance +20 Mult" },
   echo: { name: "Echo", text: "bringt +60 Punkte, wenn das Wort ihn wiederholt" },

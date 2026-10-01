@@ -11,7 +11,7 @@ const plural = pluralizer("fr")
 const MODIFIER: Strings["modifier"] = {
   chip: { name: "Jeton", text: "rapporte +20 points" },
   mult: { name: "Mult", text: "rapporte +8 mult" },
-  gold: { name: "Or", text: "rapporte $2 à chaque fois que vous la jouez" },
+  gold: { name: "Or", text: "rapporte $1 à chaque fois que vous la jouez" },
   wild: {
     name: "Joker",
     text: "rapporte +24 mult sur une grise, +14 sur une jaune, +4 sur une verte",

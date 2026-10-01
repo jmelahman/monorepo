@@ -21,7 +21,7 @@ const plural = pluralizer("en")
 const MODIFIER: Strings["modifier"] = {
   chip: { name: "Chip", text: "scores +20 points" },
   mult: { name: "Mult", text: "scores +8 mult" },
-  gold: { name: "Gold", text: "pays $2 every time you play it" },
+  gold: { name: "Gold", text: "pays $1 every time you play it" },
   wild: { name: "Wild", text: "scores +24 mult on a gray, +14 on a yellow, +4 on a green" },
   lucky: { name: "Lucky", text: "has a 1 in 4 chance of scoring +20 mult" },
   echo: { name: "Echo", text: "scores +60 points when the word repeats it" },

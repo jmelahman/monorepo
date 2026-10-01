@@ -59,7 +59,7 @@ describe("letter modifiers", () => {
   it("Gold pays into the run, not into the score", () => {
     const { last, state } = play("c", "gold", "crane")
     expect(last).toMatchObject({ chips: 7, mult: 7 })
-    expect(state.gold).toBe(startRun(1, words).state.gold + 2)
+    expect(state.gold).toBe(startRun(1, words).state.gold + 1)
   })
 
   it("Steel multiplies what the word has scored so far", () => {
