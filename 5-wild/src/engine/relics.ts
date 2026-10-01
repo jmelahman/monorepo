@@ -1,4 +1,4 @@
-import { ALPHABET, isVowel, MIN_LIVE_LETTERS, MULT_FOR_COLOR } from "../content/letters"
+import { ALPHABET, isVowel, MIN_LIVE_LETTERS } from "../content/letters"
 import { CONSUMABLE_SLOTS, INTEREST_CAP, INTEREST_PER } from "../content/rounds"
 import { difficultyOf } from "./ascensions"
 import { CATEGORIES, categoryOf, isCategory, levelOf } from "./categories"
