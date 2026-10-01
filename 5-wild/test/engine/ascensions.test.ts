@@ -408,7 +408,7 @@ describe("the answer is always reachable", () => {
     // G and invents a yellow for a letter in no word here at all.
     const played = apply(cast, type("ghost"))
     const tile = played.round.guesses[0]?.tiles[0]
-    expect(tile).toMatchObject({ letter: "g", color: "yellow", shown: "yellow", promoted: true })
+    expect(tile).toMatchObject({ letter: "g", color: "yellow", shown: "gray", promoted: true })
     expect(why(played, "braid")).toBeUndefined()
 
     // And the flag is what is doing the work, rather than the level happening
@@ -451,13 +451,24 @@ describe("the answer is always reachable", () => {
   })
 
   it("reads a promoted letter back to the keyboard as the gray it was", () => {
-    // The board shows the color, because the card really did paint it. The
-    // keyboard is a claim about the answer, so it says what the tile fell as.
+    // The keyboard is a claim about the answer, so it says what the tile fell
+    // as, and so does the board: the card is worth mult, not a clue.
     const armed = at(0)
     armed.consumables.push({ id: "magician" })
     const cast = reduce(armed, { type: "use_consumable", index: 0 }, words).state
     const played = apply(cast, type("ghost"))
     expect(keyboardColors(played.round.guesses).get("g")).toBe("gray")
+  })
+
+  it("leaves the board's colors alone under The Magician", () => {
+    // Every gray of every guess is promoted for the round, and a board that
+    // drew them yellow read as every letter being in the word.
+    const armed = at(0)
+    armed.consumables.push({ id: "magician" })
+    const cast = reduce(armed, { type: "use_consumable", index: 0 }, words).state
+    const played = apply(cast, [...type("ghost"), ...type("ghost")])
+    for (const guess of played.round.guesses)
+      for (const tile of guess.tiles) expect(tile).toMatchObject({ color: "yellow", shown: "gray" })
   })
 })
 

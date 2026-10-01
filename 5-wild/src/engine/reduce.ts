@@ -533,8 +533,14 @@ export function reduce(state: RunState, action: Action, words: WordSource): Redu
         // cleared, and the round's end clears it with the rest of the round.
         // See `consumables.ts` for what the narrower card was worth.
         for (const gray of tiles.filter((tile) => tile.color === "gray")) {
+          // `color` only. `shown` keeps whatever the boss left on it, which
+          // is gray unless one lied: the card is worth mult and says nothing
+          // about the answer, and a yellow on the board is a claim about the
+          // answer. It was painted too while the card took one tile of one
+          // guess, and at v0.9.5, when it took every gray all round, that
+          // turned every row after it entirely yellow and green, a board with
+          // no deduction left on it.
           gray.color = "yellow"
-          gray.shown = "yellow"
           // Marked, because a color this card hands out is worth mult and
           // nothing else. Left unmarked it entered `found()` as a letter proven
           // to be in the word, and ascension 10 then demanded it back in every

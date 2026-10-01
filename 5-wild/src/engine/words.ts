@@ -37,7 +37,8 @@ export function computeFeedback(guess: string, answer: string): Color[] {
 
 /**
  * `color` drives scoring, `shown` drives the screen. They are equal except when
- * a boss lies to the player. The Fog hides yellows without disarming them.
+ * a boss lies to the player, or The Magician promotes a gray. The Fog hides
+ * yellows without disarming them.
  */
 export function toTiles(guess: string, colors: readonly Color[]): Tile[] {
   return Array.from(guess, (letter, i) => {
@@ -53,17 +54,16 @@ export function toTiles(guess: string, colors: readonly Color[]): Tile[] {
  * agree: a boss that hides a yellow on the board would be caught out by a key
  * that did not hide it.
  *
- * The Magician's tile is the one place they are allowed to disagree, and it goes
- * the other way from a boss: the board shows the color because the card really
- * did paint it, and the keyboard reads the letter back as the gray it was,
- * because the keyboard is a running claim about the *answer* and this letter may
- * be in no word at all. See `Tile.promoted`, and `rules.ts` for the harder
- * version of the same reason.
+ * The Magician's tiles read back as gray. A tile promoted today never had its
+ * `shown` touched, so that is what the board says too; the override is for
+ * saves from before that, when the card painted the board yellow as well and
+ * the keyboard was the only place the gray survived. See `Tile.promoted`, and
+ * `rules.ts` for the harder version of the same reason.
  *
  * Gray rather than skipped: a promoted tile was gray before the card touched it,
- * which is real feedback and the only place it now survives. Dropping the letter
- * instead would leave a key looking untried when the round has in fact ruled it
- * out, and would make the card cost the player a deduction it never claimed to.
+ * which is real feedback. Dropping the letter instead would leave a key looking
+ * untried when the round has in fact ruled it out, and would make the card cost
+ * the player a deduction it never claimed to.
  */
 export function keyboardColors(guesses: ReadonlyArray<{ tiles: readonly Tile[] }>) {
   const rank: Record<Color, number> = { gray: 0, yellow: 1, green: 2 }

@@ -13,15 +13,19 @@ export type Tile = {
   letter: string
   /** Drives scoring. */
   color: Color
-  /** Drives the screen. Differs from `color` only when a boss lies. */
+  /**
+   * Drives the screen. Differs from `color` when a boss lies, and on a tile
+   * The Magician promoted, which scores as a yellow and is drawn as what it
+   * fell as.
+   */
   shown: Color
   /**
-   * Set on the one tile The Magician colored, which is the only color in the
-   * game that was granted rather than earned. Both other fields say yellow and
-   * both are telling the truth about what they drive: it scores as a yellow and
-   * it is drawn as one. What it is *not* is evidence, and everything that reads
-   * a played row as evidence about the answer — `rules.ts`, the keyboard — has
-   * to skip it, because the letter may well not be in the word at all.
+   * Set on every tile The Magician colored, the only color in the game that
+   * was granted rather than earned. `color` says yellow, because it scores as
+   * one; `shown` does not, because the board is a claim about the answer. What
+   * it is *not* is evidence, and everything that reads `color` as evidence
+   * about the answer (`rules.ts`) has to skip it, because the letter may well
+   * not be in the word at all.
    *
    * Absent rather than `false` when the tile earned its color, so a save written
    * before the flag existed loads as what it was; see `rules.ts` for why the
