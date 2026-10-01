@@ -94,9 +94,12 @@ export const de: Strings = {
     },
     masochist: {
       name: "Masochist",
-      text: "Gewinnt dauerhaft +2 Mult für jeden Versuch mit 3 oder mehr grauen Feldern",
+      text: "Einmal pro Runde dauerhaft +10 Mult, wenn ein Versuch nach dem ersten 4 in dieser Runde noch nicht gespielte Buchstaben ausschließt",
     },
-    chorus: { name: "Der Chor", text: "×3 Mult, wenn das Wort drei oder mehr Vokale hat" },
+    chorus: {
+      name: "Der Chor",
+      text: "×3 Mult, wenn das Wort drei oder mehr Vokale hat und einer davon grün ist",
+    },
     alphabetist: {
       name: "Alphabetist",
       text: "×2 Mult, wenn deine Buchstaben in alphabetischer Reihenfolge stehen",
@@ -155,7 +158,7 @@ export const de: Strings = {
     patron: { name: "Mäzen", text: "×1,25 Mult pro ungewöhnlichem Relikt, das du hältst" },
     indelible: {
       name: "Unauslöschlich",
-      text: "×1,75 Mult. 1 zu 40, dass es am Ende jeder Runde verblasst",
+      text: "×1,75 Mult. 1 zu 40, dass es nach jedem Versuch verblasst",
     },
     second_wind: {
       name: "Zweiter Atem",
@@ -190,7 +193,10 @@ export const de: Strings = {
       name: "Der Spiegel",
       text: "Deine Hinweise erscheinen rückwärts. Sie zählen weiterhin so, wie sie gefallen sind.",
     },
-    famine: { name: "Die Hungersnot", text: "Nur drei Versuche." },
+    famine: {
+      name: "Die Hungersnot",
+      text: "Nur drei Versuche. Das Ziel ist ein Drittel des üblichen.",
+    },
     rust: {
       name: "Der Rost",
       text: "Buchstaben-Aufwertungen bringen nichts. Jeder Buchstabe zählt nur seinen Grundwert.",

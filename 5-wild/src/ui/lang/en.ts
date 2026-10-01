@@ -106,9 +106,12 @@ export const en: Strings = {
     },
     masochist: {
       name: "Masochist",
-      text: "Permanently gains +2 mult for each guess with 3 or more gray tiles",
+      text: "Once a round, permanently gains +10 mult when a guess after the first rules out 4 letters not yet tried this round",
     },
-    chorus: { name: "The Chorus", text: "×3 mult if the word holds three or more vowels" },
+    chorus: {
+      name: "The Chorus",
+      text: "×3 mult if the word holds three or more vowels and one of them is green",
+    },
     alphabetist: { name: "Alphabetist", text: "×2 mult if your letters are in alphabetical order" },
     vault: { name: "The Vault", text: "+25 points for each guess already made this round" },
     mint: {
@@ -155,7 +158,7 @@ export const en: Strings = {
     patron: { name: "Patron", text: "×1.25 mult for each uncommon relic you hold" },
     indelible: {
       name: "Indelible",
-      text: "×1.75 mult. 1 in 40 chance to fade at the end of each round",
+      text: "×1.75 mult. 1 in 40 chance to fade after each guess",
     },
     second_wind: {
       name: "Second Wind",
@@ -184,7 +187,7 @@ export const en: Strings = {
       name: "The Mirror",
       text: "Your feedback is shown back to front. It still scores as it fell.",
     },
-    famine: { name: "The Famine", text: "Three guesses only." },
+    famine: { name: "The Famine", text: "Three guesses only. The target is a third of the usual." },
     rust: {
       name: "The Rust",
       text: "Letter upgrades score nothing. Letters are worth only what they started as.",

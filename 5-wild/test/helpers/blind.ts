@@ -44,6 +44,7 @@ import {
   startRun,
 } from "../../src/engine"
 import { CATEGORY_BY_ID } from "../../src/engine/categories"
+import { MASOCHIST_MISSES } from "../../src/engine/relics"
 import { placeMod } from "../golden/scenarios"
 
 /**
@@ -100,6 +101,9 @@ const FARMER_RESERVE = 4
  * chip tie-break.
  */
 const OPENERS = 40
+
+/** Fresh misses a burner needs to feed Masochist; the card's own threshold. */
+const BURN = MASOCHIST_MISSES
 
 /**
  * How deep into the allowed list the farmer will look for chips. Wide enough
@@ -253,6 +257,8 @@ export function blindPlayer(policy: Policy): BlindPlayer {
   let income: string[] = []
   let key = ""
   let filtered = 0
+  /** The round the gray build last burned a guess in, by `key`. */
+  let burned = ""
   /** The builder's commitment, taken at the first relic that belongs to a build. */
   let build: (typeof BUILDS)[number] | null = null
   const shapes = () => (build?.category ? CATEGORY_BY_ID.get(build.category) : undefined)
@@ -379,6 +385,38 @@ export function blindPlayer(policy: Policy): BlindPlayer {
       const ranked = fresh.sort((a, b) => chips(b) - chips(a))
       const played = playable(state, words, ranked)
       if (played) return played
+    }
+
+    // The gray build's burner. Masochist pays for a guess after the first that
+    // proves four fresh letters absent, so a person holding it spends one guess
+    // a round on exactly that, while there is room left to solve: a word made
+    // of letters no remaining candidate contains, which is a sure miss and
+    // still rules letters out. Once a round, because the guess it costs is a
+    // step of the solve bonus, and a player who burned every guess would be
+    // farming rather than building.
+    const burning =
+      policy === "builder" &&
+      build?.id === "gray" &&
+      state.relics.some((relic) => relic.id === "masochist")
+    if (
+      burning &&
+      view.round.guesses.length > 0 &&
+      burned !== key &&
+      left >= 3 &&
+      pool.length > 2
+    ) {
+      const tried = new Set(view.round.guesses.flatMap((guess) => [...guess.word]))
+      const live = new Set(pool.flatMap((word) => [...word]))
+      const misses = (word: string) =>
+        new Set([...word].filter((letter) => !tried.has(letter) && !live.has(letter))).size
+      const ranked = [...words.allowed]
+        .filter((word) => misses(word) >= BURN)
+        .sort((a, b) => misses(b) - misses(a) || chips(b) - chips(a))
+      const played = playable(state, words, ranked)
+      if (played) {
+        burned = key
+        return played
+      }
     }
 
     const first = view.round.guesses.length === 0

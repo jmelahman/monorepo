@@ -248,8 +248,23 @@ export const BOSSES: readonly Boss[] = [
     tier: "late",
     // The Clock, late and meant it. Three guesses is barely a deduction at all,
     // so this is the round that asks whether the build can simply out-score the
-    // target, and it hands you a ×4 solve multiplier if you can do it at once.
+    // target, and it hands you a ×3 solve multiplier if you can do it at once.
+    //
+    // It had the Clock's problem twice over and none of the Clock's cut. Three
+    // guesses is half the pile and half the solve bonus, against a late target
+    // at full size, and it ended 90% of the solver's runs that met it and 84% of
+    // the builder's (`bun run builds` harness, 5,000 seeds, A0), where the next
+    // deadliest late boss, The Auditor, ended 45%. Swept on the solver over the
+    // same seeds, share of runs meeting it dying there:
+    //
+    //   target   ×1.0   ×0.6   ×0.5   ×0.4   ×0.35   ×1/3
+    //   died     90%    76%    66%    49%    42%     41%
+    //
+    // A third puts it just under The Auditor, the way the Clock sits under The
+    // Mirror and The Silence, and it is a fraction the card can say in words.
+    // It meets about one run in thirty, so read that row to ±4 points.
     maxGuesses: 3,
+    target: 1 / 3,
   },
   {
     id: "rust",
@@ -283,12 +298,16 @@ export const BOSSES: readonly Boss[] = [
   },
   {
     id: "vandal",
-    tier: "mid",
+    tier: "late",
     // The etching line has The Rust; the modifier line had nothing, which left
     // the layer the run spends most of its shop money on unattackable. This is
-    // the counterpart, and mid rather than late on purpose: by stage 4 a run has
-    // two or three modifiers placed and the loss is felt, but it is not yet the
-    // whole build, so the round reads as a setback instead of a wall.
+    // the counterpart. It was mid on purpose, as a setback rather than a wall,
+    // and moved late to make room for The Plateau, which needed a gentler band
+    // more: in the mid band it ended 18% of the solver's runs that met it, the
+    // second softest there, and in the late band 33%, beside The Plateau's old
+    // 31% in the same seat (5,000 seeds, A0). It is the late band's other
+    // layer-switch, beside The Rust, and a run that leaned on modifiers meets
+    // it when they are the most it has bought.
     //
     // The bite scales with what the run actually bought, which is the property
     // worth having. Over 250 seeds it costs a board with one modifier ×0.60, two
@@ -299,17 +318,23 @@ export const BOSSES: readonly Boss[] = [
   },
   {
     id: "plateau",
-    tier: "late",
-    // The late band is where builds are finished, and a finished build wins by
-    // multiplying, whether by Anagrammer, Speedrunner, The Chorus, a leveled category or a
-    // ×mult etching. Nothing in the game attacked that side, so the answer to
-    // every late boss was the same stack. This one asks the opposite question:
-    // what does the build score when only the flat half fires? A run that bought
-    // Masochist and Sunk Cost walks through it, which is the whole idea.
+    tier: "mid",
+    // A finished build wins by multiplying, whether by Anagrammer, Speedrunner,
+    // The Chorus, a leveled category or a ×mult etching. Nothing in the game
+    // attacked that side, so the answer to every boss was the same stack. This
+    // one asks the opposite question: what does the build score when only the
+    // flat half fires? A run that bought Masochist and Sunk Cost walks through
+    // it, which is the whole idea.
     //
-    // ×0.51 over 250 seeds against a tray holding one ×mult relic, which puts it
-    // level with The Auditor, the other late boss that takes a multiplier away,
-    // and they take different ones, so a build cannot be safe from both.
+    // ×0.51 over 250 seeds against a tray holding one ×mult relic, which put it
+    // level with The Auditor when it was late. Mid now, because late it was the
+    // run killer for exactly the run it was aimed at: a ×-heavy tray at stage 7
+    // or 8 has nothing flat left to fall back on, and a player-reported A9 win
+    // came through it only on a Second Wind bought the shop before. At stage 4
+    // to 6 the same question is asked while the build can still answer it, and
+    // the targets are small enough to. It ends 17% of the solver's runs that
+    // meet it there, against 31% late (5,000 seeds, A0). The Vandal went the
+    // other way, so each band still holds five.
     noTimesMult: true,
   },
 ]

@@ -609,6 +609,17 @@ export function reduce(state: RunState, action: Action, words: WordSource): Redu
       }
       events.push({ type: "guess_scored", score: result.score, total: round.score })
 
+      // After the guess is banked and before the solve bonus, so a card that
+      // leaves here has paid for this guess and none after it. A run-level
+      // hook rather than a scoring one because leaving the tray is a change to
+      // the run, which scoring only ever prices.
+      fireRelics(
+        next,
+        derive(next.seed, "guess_end", next.stage, next.roundIndex, guessIndex),
+        events,
+        (relic, ctx) => relic.onGuessEnd?.(ctx, guessIndex),
+      )
+
       // The solve bonus lands on the running total, after the guess is banked,
       // so it multiplies the farming as well as the finish. Emitted last
       // because that is the order it reads on screen: the guess scores, then

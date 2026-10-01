@@ -89,9 +89,12 @@ export const es: Strings = {
     },
     masochist: {
       name: "Masoquista",
-      text: "Gana +2 mult permanentes por cada intento con 3 o más casillas grises",
+      text: "Una vez por ronda, gana +10 mult permanentes cuando un intento tras el primero descarta 4 letras aún no probadas en la ronda",
     },
-    chorus: { name: "El Coro", text: "×3 mult si la palabra tiene tres vocales o más" },
+    chorus: {
+      name: "El Coro",
+      text: "×3 mult si la palabra tiene tres vocales o más y una de ellas es verde",
+    },
     alphabetist: { name: "Alfabetista", text: "×2 mult si tus letras van en orden alfabético" },
     vault: { name: "La Cámara", text: "+25 puntos por cada intento ya hecho en la ronda" },
     mint: {
@@ -144,7 +147,7 @@ export const es: Strings = {
     patron: { name: "Mecenas", text: "×1,25 mult por cada reliquia poco común que tengas" },
     indelible: {
       name: "Indeleble",
-      text: "×1,75 mult. 1 entre 40 de borrarse al final de cada ronda",
+      text: "×1,75 mult. 1 entre 40 de borrarse tras cada intento",
     },
     second_wind: {
       name: "Segundo Aire",
@@ -176,7 +179,10 @@ export const es: Strings = {
       name: "El Espejo",
       text: "Tus pistas se muestran del revés. Siguen puntuando como cayeron.",
     },
-    famine: { name: "La Hambruna", text: "Solo tres intentos." },
+    famine: {
+      name: "La Hambruna",
+      text: "Solo tres intentos. El objetivo es un tercio del habitual.",
+    },
     rust: {
       name: "El Óxido",
       text: "Las mejoras de letra no puntúan. Cada letra vale solo lo que valía al principio.",

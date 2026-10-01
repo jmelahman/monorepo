@@ -40,6 +40,13 @@ export type Relic = {
   onTile?: (ctx: ScoreCtx, tile: Tile, index: number, base: number) => void
   /** Fires once after all tiles, in slot order. */
   onGuess?: (ctx: ScoreCtx) => void
+  /**
+   * Fires after each guess is banked, with its 0-based index in the round. The
+   * home for anything that happens to the card between one guess and the next,
+   * which scoring cannot do: scoring prices a guess, and a card leaving the
+   * tray is a change to the run.
+   */
+  onGuessEnd?: (ctx: RelicCtx, guessIndex: number) => void
   /** Fires when a round begins, before the answer is chosen. */
   onRoundStart?: (ctx: RelicCtx) => void
   /**
@@ -142,15 +149,36 @@ function decay(ctx: RelicCtx, full: number, step: number): void {
 }
 
 /**
- * A one-in-`odds` chance this copy does not survive the round just ended.
+ * A one-in-`odds` chance this copy does not survive the round just ended, or
+ * the guess, when `at` names one.
  *
  * Its own stream rather than the hook's `rng`, keyed to where the card sat and
  * when, so the roll does not move when a card is bought that fires before it,
  * and a save resumed at the reward screen already knows the answer.
  */
-function perish(ctx: RelicCtx, odds: number): void {
+function perish(ctx: RelicCtx, odds: number, ...at: number[]): void {
   const { seed, stage, roundIndex } = ctx.state
-  if (randomInt(derive(seed, "perish", stage, roundIndex, ctx.slot), odds) === 0) ctx.destroy()
+  if (randomInt(derive(seed, "perish", stage, roundIndex, ctx.slot, ...at), odds) === 0)
+    ctx.destroy()
+}
+
+/** How many fresh letters a guess must prove absent to feed Masochist. */
+export const MASOCHIST_MISSES = 4
+
+/**
+ * Letters this guess proved absent that no earlier guess this round had
+ * tried. Counted by letter, and only where every copy in the row is gray, so
+ * a doubled letter whose other copy landed is not a miss.
+ */
+function freshGrays(tiles: readonly Tile[], earlier: readonly { word: string }[]): number {
+  const tried = new Set(earlier.flatMap((guess) => [...guess.word]))
+  const missed = new Set<string>()
+  for (const tile of tiles) {
+    if (tried.has(tile.letter)) continue
+    if (tiles.every((other) => other.letter !== tile.letter || other.color === "gray"))
+      missed.add(tile.letter)
+  }
+  return missed.size
 }
 
 /** Slow Burn's mult per guess already made: 3, plus whatever it has grown. */
@@ -828,24 +856,39 @@ export const RELICS: readonly Relic[] = [
     cost: RARITY_COST.rare,
     // The gray build's door. It paid +8 mult a gray, flat, and the build
     // around it won 0 of 374 runs with every existing grower banned (builder,
-    // 5,000 seeds, `bun run builds`). Now it banks +2 mult on every guess that
-    // lands three grays or more and pays the bank on every guess, in
-    // Snowball's order. Three rather than five: a guess of five grays is the
-    // one Masochist was named for, but the solver lands one so rarely that +3
-    // on it grew a card held from the first shop to a mean +8 by the end of a
-    // run, over 300 seeds. The condition is still the one gray was always
-    // for, a probe that mostly missed, and it is the probe a player choosing
-    // letters to eliminate lands on purpose.
+    // 5,000 seeds, `bun run builds`). It then banked +2 mult on every guess
+    // that landed three grays, and that condition turned out to be the one
+    // every round meets by accident: 80% of the solver's openers land three
+    // grays and 45% of its second guesses do (300 seeds), so the card grew
+    // 1.66 times a round without a guess being given up for it. Worse, nothing
+    // refuses a repeated word, so a word known to be all gray could be typed
+    // five times a round and banked five times, and a run that did that early
+    // stopped caring what it played.
     //
-    // Swept on the same run: three grays at +1 won 9 runs holding it, +2 won
-    // 27, +3 won 44 and +6 won 100. Being rare is what makes it steep: the
-    // shelf deals rares late, and a card found at stage 5 has three stages to
-    // grow in. Held from the first shop, three grays at +3 won 51 of 300.
+    // So the gray it pays for is now a guess that was actually spent: one
+    // after the first that proves four letters absent that nobody had tried
+    // this round. The solver lands that on 12% of second guesses and almost
+    // never later, 0.15 times a round, so nearly every bank is a burner played
+    // on purpose, and each costs a step of the solve bonus. A repeated word
+    // has no fresh letters, so the spam pays nothing. And it banks once a
+    // round, because about twenty absent letters is still room for three
+    // burners, and three of them would put the farm back.
+    //
+    // +10 because a bank is now rare and dear. Swept with the builder's gray
+    // build burning one guess a round and every existing grower banned
+    // (5,000 seeds): +6 won 14 runs holding the card, +8 won 21, +10 won 29,
+    // against 28 for the old card on the same seeds; the committed gray build
+    // wins 24 where it won 10, which is the point of asking for a guess.
     onGuess: (ctx) => {
       const banked = ctx.getData("mult")
       if (banked > 0) ctx.addMult(banked)
-      const grays = ctx.tiles.filter((tile) => tile.color === "gray").length
-      if (grays >= 3) ctx.setData("mult", banked + 2)
+      if (ctx.guessIndex === 0) return
+      // One plus the round's index in the run, so zero still means never.
+      const round = ctx.state.stage * 3 + ctx.state.roundIndex + 1
+      if (ctx.getData("round") === round) return
+      if (freshGrays(ctx.tiles, ctx.state.round.guesses) < MASOCHIST_MISSES) return
+      ctx.setData("mult", banked + 10)
+      ctx.setData("round", round)
     },
     growth: (instance) => ({ amount: grown(instance, "mult"), unit: "mult" }),
   },
@@ -870,9 +913,23 @@ export const RELICS: readonly Relic[] = [
      * working: the harness types eight fixed probes, one of which happens to
      * hold three vowels, so that number is what the card pays a player who never
      * steers. It is priced for the one who does.
+     *
+     * One of the vowels now has to land green, because the stack paid most on
+     * the guess that knows least. A three-vowel word fires it whatever the
+     * tiles say, and the only guess free to be one is the opener, so a
+     * player-reported A9 win took 45–75k on guess one and 5–12k on every guess
+     * after, with an ADIEU that could land all gray and still triple. Rounds
+     * where the builder held this and Vowel Hoarder gave guess one 44% of the
+     * pile against an even 27% (1,000 seeds), where every other tray gives it
+     * less than even. A green asks the word to have been read, not just
+     * spelled. Over 400 solver seeds it moves the opener's share of the
+     * card's firings from 31% to 8% and its rate from 8.2% of guesses to
+     * 4.6%, and the builder's vowel build wins 21 runs in 5,000 where it won
+     * 26 (`bun run builds`).
      */
     onGuess: (ctx) => {
-      if ([...ctx.word].filter(isVowel).length >= 3) ctx.timesMult(3)
+      if ([...ctx.word].filter(isVowel).length < 3) return
+      if (ctx.tiles.some((tile) => isVowel(tile.letter) && tile.color === "green")) ctx.timesMult(3)
     },
   },
   {
@@ -1039,8 +1096,17 @@ export const RELICS: readonly Relic[] = [
     // Patron's ×1.86, and it earns that on 99% of guesses with no condition to
     // meet. ×1.75 reads ×1.75 / ×1.79 / ×1.71 on stages 1–2 / 3–5 / 6+, ×1.74
     // overall: under both, and still the largest unconditional multiplier.
+    //
+    // Then the roll moved from the round to the guess, at the same one in
+    // forty, because a round-end roll was a mean life of forty rounds, more
+    // than the run's twenty-four, and so no price at all. The solver plays four
+    // guesses a round (300 seeds), so rolled after every guess it lasts about
+    // ten rounds on average, and it can go in the middle of one: the guesses after the roll lose it, which is the thing
+    // the player was meant to be watching for. It also makes the card dearer
+    // to a farmer than to a solver, the one way a flat ×mult can lean on the
+    // solve bonus rather than past it.
     onGuess: (ctx) => ctx.timesMult(1.75),
-    onRoundEnd: (ctx) => perish(ctx, 40),
+    onGuessEnd: (ctx, guessIndex) => perish(ctx, 40, guessIndex),
   },
   {
     id: "second_wind",

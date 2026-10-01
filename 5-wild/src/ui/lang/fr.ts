@@ -96,9 +96,12 @@ export const fr: Strings = {
     },
     masochist: {
       name: "Masochiste",
-      text: "Gagne +2 mult définitifs pour chaque essai avec 3 cases grises ou plus",
+      text: "Une fois par manche, gagne +10 mult définitifs quand un essai après le premier élimine 4 lettres pas encore jouées dans la manche",
     },
-    chorus: { name: "Le Chœur", text: "×3 mult si le mot contient trois voyelles ou plus" },
+    chorus: {
+      name: "Le Chœur",
+      text: "×3 mult si le mot contient trois voyelles ou plus, dont une verte",
+    },
     alphabetist: {
       name: "Alphabétiste",
       text: "×2 mult si vos lettres sont dans l'ordre alphabétique",
@@ -157,7 +160,7 @@ export const fr: Strings = {
     patron: { name: "Mécène", text: "×1,25 mult par relique peu commune que vous détenez" },
     indelible: {
       name: "Indélébile",
-      text: "×1,75 mult. 1 chance sur 40 de s'effacer à la fin de chaque manche",
+      text: "×1,75 mult. 1 chance sur 40 de s'effacer après chaque essai",
     },
     second_wind: {
       name: "Second Souffle",
@@ -192,7 +195,10 @@ export const fr: Strings = {
       name: "Le Miroir",
       text: "Vos indices sont affichés à l'envers. Ils comptent toujours comme ils sont tombés.",
     },
-    famine: { name: "La Famine", text: "Trois essais seulement." },
+    famine: {
+      name: "La Famine",
+      text: "Trois essais seulement. L'objectif est le tiers de l'habituel.",
+    },
     rust: {
       name: "La Rouille",
       text: "Les améliorations de lettre ne rapportent rien. Chaque lettre ne vaut que sa valeur de départ.",

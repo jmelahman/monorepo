@@ -13,7 +13,17 @@ import { realWords } from "../helpers/words"
 
 const words: WordSource = {
   answers: ["braid"],
-  allowed: new Set(["braid", "crane", "quazy", "dairy", "ghost", "sassy", "arose"]),
+  allowed: new Set([
+    "braid",
+    "crane",
+    "quazy",
+    "dairy",
+    "ghost",
+    "sassy",
+    "arose",
+    "audio",
+    "felon",
+  ]),
 }
 
 const apply = (state: RunState, actions: Action[], source = words): RunState =>
@@ -58,15 +68,26 @@ describe("relics", () => {
     expect(withRelic("greedy_grammarian", "quazy").last).toMatchObject({ chips: 86, mult: 4 })
   })
 
-  it("Masochist banks mult on a guess that mostly missed and pays it after", () => {
-    // QUAZY leaves four grays: nothing paid, 2 banked. DAIRY lands four
-    // yellows and one gray, so it is paid the 2 and banks nothing.
-    const { state } = withRelic("masochist", "quazy")
-    expect(state.round.guesses[0]).toMatchObject({ chips: 26, mult: 4 })
-    expect(state.relics[0]?.data).toEqual({ mult: 2 })
-    const after = apply(state, type("dairy"))
-    expect(after.round.guesses[1]?.mult).toBe(7)
-    expect(after.relics[0]?.data).toEqual({ mult: 2 })
+  it("Masochist banks on a burner, once a round, and pays it after", () => {
+    // The opener never banks: QUAZY leaves four grays, every guess's first
+    // has, and that is what the card no longer pays for.
+    expect(withRelic("masochist", "quazy").state.relics[0]?.data).toBeUndefined()
+    // GHOST after it rules out five letters QUAZY never tried: 10 banked, and
+    // nothing paid on the guess that banked it.
+    const { state, last } = withRelic("masochist", "quazy", "ghost")
+    expect(last.mult).toBe(1)
+    expect(state.relics[0]?.data).toMatchObject({ mult: 10 })
+    // FELON rules out four more fresh letters, and is paid the 10 and banks
+    // nothing, because the round has had its bank.
+    const after = apply(state, type("felon"))
+    expect(after.round.guesses[2]?.mult).toBe(11)
+    expect(after.relics[0]?.data).toMatchObject({ mult: 10 })
+  })
+
+  it("Masochist pays nothing for typing the same miss twice", () => {
+    // The farm it used to pay: a word known to be gray, typed again. Every
+    // letter has been tried, so none of them is fresh.
+    expect(withRelic("masochist", "quazy", "quazy").state.relics[0]?.data).toBeUndefined()
   })
 
   it("Q's Bargain triples the rare letters", () => {
@@ -362,11 +383,13 @@ describe("the relics that read the word's shape", () => {
     expect(withRelic("keystone", "ghost").last).toMatchObject({ mult: 1 })
   })
 
-  it("The Chorus wants three vowels and counts them in the word, not on the board", () => {
-    // AROSE is A-O-E: 5 mult becomes 15, and only one of those vowels is even
-    // in the answer: the shape is the condition, the feedback is not.
-    expect(withRelic("chorus", "arose").last).toMatchObject({ mult: 15 })
-    // CRANE has A and E only.
+  it("The Chorus wants three vowels, one of them green", () => {
+    // AROSE is A-O-E, and its A lands yellow: three vowels, none green,
+    // so the shape alone no longer fires it.
+    expect(withRelic("chorus", "arose").last).toMatchObject({ mult: 5 })
+    // AUDIO's I lands green: 6 mult becomes 18.
+    expect(withRelic("chorus", "audio").last).toMatchObject({ mult: 18 })
+    // CRANE has A and E only, both green, and two is not three.
     expect(withRelic("chorus", "crane").last).toMatchObject({ mult: 7 })
   })
 
@@ -449,6 +472,23 @@ describe("the relics that widen the shelf", () => {
     }
     expect(gone).toBeGreaterThan(0)
     expect(gone).toBeLessThan(30)
+  })
+
+  it("Indelible can fade between two guesses of one round", () => {
+    // Rolled after each guess, so on some seed it pays the first guess and is
+    // gone for the second. Searched rather than pinned, so a reshuffle of the
+    // perish stream moves which seed it is, not whether one exists.
+    const faded = Array.from({ length: 400 }, (_, i) => i + 1).find((seed) => {
+      const base = startRun(seed, words).state
+      return apply({ ...base, relics: [{ id: "indelible" }] }, type("crane")).relics.length === 0
+    })
+    expect(faded).toBeDefined()
+    const base = startRun(faded ?? 0, words).state
+    const state = apply(
+      { ...base, relics: [{ id: "indelible" }] },
+      type("crane").concat(type("crane")),
+    )
+    expect(state.round.guesses.map((guess) => guess.mult)).toEqual([7 * 1.75, 7])
   })
 
   it("Indelible multiplies the mult by 1.75", () => {
