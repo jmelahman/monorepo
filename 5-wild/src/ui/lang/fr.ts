@@ -224,7 +224,7 @@ export const fr: Strings = {
     },
     magician: {
       name: "Le Magicien",
-      text: "Jusqu'à la fin de la manche, les cases grises comptent comme jaunes. Elles valent du mult, pas des indices.",
+      text: "Jusqu'à la fin de la manche, les cases grises comptent comme jaunes.",
     },
     fool: { name: "Le Fou", text: "Compte votre essai précédent une seconde fois" },
   },

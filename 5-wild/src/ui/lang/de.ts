@@ -219,7 +219,7 @@ export const de: Strings = {
     },
     magician: {
       name: "Der Magier",
-      text: "Für den Rest der Runde zählen graue Felder als gelb. Das bringt Mult, keine Hinweise.",
+      text: "Für den Rest der Runde zählen graue Felder als gelb.",
     },
     fool: { name: "Der Narr", text: "Zählt deinen vorigen Versuch ein zweites Mal" },
   },

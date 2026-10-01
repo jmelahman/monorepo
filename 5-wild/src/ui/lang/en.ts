@@ -210,7 +210,7 @@ export const en: Strings = {
     },
     magician: {
       name: "The Magician",
-      text: "For the rest of the round, gray tiles score as yellow. They are worth mult, not clues.",
+      text: "For the rest of the round, gray tiles score as yellow.",
     },
     fool: { name: "The Fool", text: "Score your previous guess a second time" },
   },

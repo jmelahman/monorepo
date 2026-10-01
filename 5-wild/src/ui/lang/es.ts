@@ -205,7 +205,7 @@ export const es: Strings = {
     },
     magician: {
       name: "El Mago",
-      text: "Durante el resto de la ronda, las casillas grises puntúan como amarillas. Dan mult, no pistas.",
+      text: "Durante el resto de la ronda, las casillas grises puntúan como amarillas.",
     },
     fool: { name: "El Loco", text: "Puntúa tu intento anterior una segunda vez" },
   },
