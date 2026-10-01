@@ -77,7 +77,7 @@ export const es: Strings = {
     greedy_grammarian: { name: "Gramático Avaro", text: "+15 puntos por casilla gris" },
     doppelganger: {
       name: "Doppelgänger",
-      text: "Las letras repetidas cuentan sus puntos dos veces",
+      text: "Las letras repetidas cuentan dos veces, y +5 mult cada una",
     },
     hot_streak: {
       name: "Racha",

@@ -82,7 +82,7 @@ export const de: Strings = {
     greedy_grammarian: { name: "Gieriger Grammatiker", text: "+15 Punkte pro grauem Feld" },
     doppelganger: {
       name: "Doppelgänger",
-      text: "Wiederholte Buchstaben bringen ihre Punkte zweimal",
+      text: "Wiederholte Buchstaben zählen doppelt, und je +5 Mult",
     },
     hot_streak: {
       name: "Glückssträhne",

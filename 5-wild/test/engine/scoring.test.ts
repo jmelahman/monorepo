@@ -292,7 +292,9 @@ describe("guess scoring", () => {
      * Two slots on one tile, which is the case the letter's own modifier never
      * has: the first Z of JAZZY is a rare letter *and* a repeat, so it pays Q's
      * Bargain and Doppelgänger both, and the two have to survive each other.
-     * Slot order, so the list reads along the tray.
+     * Slot order, so the list reads along the tray. Doppelgänger pays its chips
+     * and its mult as two firings from one slot, and both are kept: the Z is
+     * gray, so the mult is the flat +5 alone.
      */
     it("keeps every relic that fired on the same tile, in slot order", () => {
       const state = play(
@@ -302,10 +304,11 @@ describe("guess scoring", () => {
       expect(state.round.guesses[0]?.paid?.[2]).toEqual({
         base: 10,
         chips: 40,
-        mult: 0,
+        mult: 5,
         relics: [
           { id: "qs_bargain", label: { kind: "chips", amount: 20 } },
           { id: "doppelganger", label: { kind: "chips", amount: 10 } },
+          { id: "doppelganger", label: { kind: "mult", amount: 5 } },
         ],
       })
     })

@@ -1,4 +1,4 @@
-import { ALPHABET, isVowel, MIN_LIVE_LETTERS } from "../content/letters"
+import { ALPHABET, isVowel, MIN_LIVE_LETTERS, MULT_FOR_COLOR } from "../content/letters"
 import { CONSUMABLE_SLOTS, INTEREST_CAP, INTEREST_PER } from "../content/rounds"
 import { difficultyOf } from "./ascensions"
 import { CATEGORIES, categoryOf, isCategory, levelOf } from "./categories"
@@ -686,11 +686,21 @@ export const RELICS: readonly Relic[] = [
     id: "doppelganger",
     rarity: "uncommon",
     cost: RARITY_COST.uncommon,
+    // It paid each repeated letter's points a second time and nothing else, and
+    // that read ×1.04 on `bun run relics` (solver, 400 seeds), last in the
+    // uncommon band but for the growers measured fresh, against Twins' ×1.33 on
+    // the very same condition. Paying the color's mult again as well, so the
+    // letter really does score twice, only reached ×1.06: a repeat is gray or
+    // yellow often enough that the color is worth 0 or 1. A flat +5 on top
+    // reads ×1.12, ahead of Q's Bargain (×1.07) and still well short of Twins,
+    // which is right: Twins multiplies the whole row and this adds to two tiles
+    // of it. A flat +10 alone read ×1.15 and would have dropped the color,
+    // which is the half of the card that says what it is.
     onTile: (ctx, tile, _index, base) => {
       const copies = [...ctx.word].filter((letter) => letter === tile.letter).length
       if (copies < 2) return
       ctx.addChips(base)
-      ctx.addMult(5) //DOPP
+      ctx.addMult(MULT_FOR_COLOR[tile.color] + 5)
     },
   },
   {

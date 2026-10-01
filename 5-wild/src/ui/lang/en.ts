@@ -95,7 +95,7 @@ export const en: Strings = {
     speedrunner: { name: "Speedrunner", text: "×3 mult when you solve in 3 guesses or fewer" },
     qs_bargain: { name: "Q's Bargain", text: "J, Q, X and Z score triple points" },
     greedy_grammarian: { name: "Greedy Grammarian", text: "+15 points per gray tile" },
-    doppelganger: { name: "Doppelgänger", text: "Repeated letters score their points twice" },
+    doppelganger: { name: "Doppelgänger", text: "Repeated letters score twice, and +5 mult each" },
     hot_streak: {
       name: "Hot Streak",
       text: "Permanently gains +12 points each round you clear in 3 guesses or fewer",

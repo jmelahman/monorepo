@@ -3,7 +3,7 @@
     "name": "greedy-solver",
     "covers": "the largest solve bonus a player who cannot see the word can earn, and a shop purchase every time one is affordable",
     "seed": 1,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -1541,7 +1541,7 @@
     "name": "chip-farmer",
     "covers": "grays scoring, the guess budget spent down to one, and the solve bonus at its smallest",
     "seed": 7,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -1758,7 +1758,7 @@
     "name": "banker",
     "covers": "a pile banked and then multiplied, the line the scoring rule exists for",
     "seed": 2024,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -2220,7 +2220,7 @@
     "name": "never-solves",
     "covers": "running a round out of guesses, and the run ending in defeat",
     "seed": 42,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -2437,7 +2437,7 @@
     "name": "shopkeeper",
     "covers": "reroll, sell, consumables used rather than hoarded, and a corrected draft",
     "seed": 1234,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -3169,7 +3169,7 @@
     "name": "mystic",
     "covers": "consumables spent rather than hoarded, including the one that needs a guess behind it",
     "seed": 126,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -3796,9 +3796,9 @@
           "round": 1,
           "word": "maxim",
           "chips": 22,
-          "mult": 39,
+          "mult": 55,
           "solveBonus": 5,
-          "score": 858
+          "score": 1210
         },
         {
           "stage": 2,
@@ -3834,9 +3834,9 @@
           "round": 0,
           "word": "oasis",
           "chips": 7,
-          "mult": 58,
+          "mult": 74,
           "solveBonus": 5,
-          "score": 406
+          "score": 518
         },
         {
           "stage": 3,
@@ -3852,9 +3852,9 @@
           "round": 1,
           "word": "rigid",
           "chips": 9,
-          "mult": 39,
+          "mult": 55,
           "solveBonus": 5,
-          "score": 351
+          "score": 495
         },
         {
           "stage": 3,
@@ -4032,7 +4032,7 @@
     "name": "letter-smith",
     "covers": "letter modifiers bought, and then landed on tiles often enough to score",
     "seed": 208,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -4874,6 +4874,66 @@
       },
       {
         "type": "submit"
+      },
+      {
+        "type": "collect"
+      },
+      {
+        "type": "buy",
+        "index": 2
+      },
+      {
+        "type": "place_mod",
+        "letter": "e"
+      },
+      {
+        "type": "next_round"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "j"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "c"
+      },
+      {
+        "type": "type_letter",
+        "letter": "t"
+      },
+      {
+        "type": "submit"
+      },
+      {
+        "type": "type_letter",
+        "letter": "r"
+      },
+      {
+        "type": "type_letter",
+        "letter": "a"
+      },
+      {
+        "type": "type_letter",
+        "letter": "z"
+      },
+      {
+        "type": "type_letter",
+        "letter": "e"
+      },
+      {
+        "type": "type_letter",
+        "letter": "d"
+      },
+      {
+        "type": "submit"
       }
     ],
     "expected": {
@@ -5051,9 +5111,9 @@
           "round": 0,
           "word": "eject",
           "chips": 46,
-          "mult": 10,
+          "mult": 21,
           "solveBonus": 1,
-          "score": 460
+          "score": 966
         },
         {
           "stage": 4,
@@ -5069,9 +5129,9 @@
           "round": 1,
           "word": "eject",
           "chips": 90,
-          "mult": 8,
+          "mult": 18,
           "solveBonus": 1,
-          "score": 720
+          "score": 1620
         },
         {
           "stage": 4,
@@ -5088,9 +5148,9 @@
           "boss": "silence",
           "word": "eject",
           "chips": 86,
-          "mult": 7,
+          "mult": 17,
           "solveBonus": 1,
-          "score": 602,
+          "score": 1462,
           "note": "1 misplaced"
         },
         {
@@ -5109,9 +5169,9 @@
           "round": 0,
           "word": "eject",
           "chips": 106,
-          "mult": 13,
+          "mult": 23,
           "solveBonus": 1,
-          "score": 1378
+          "score": 2438
         },
         {
           "stage": 5,
@@ -5127,9 +5187,9 @@
           "round": 1,
           "word": "eject",
           "chips": 66,
-          "mult": 17,
+          "mult": 28,
           "solveBonus": 1,
-          "score": 1122
+          "score": 1848
         },
         {
           "stage": 5,
@@ -5139,6 +5199,26 @@
           "mult": 24,
           "solveBonus": 5,
           "score": 1080
+        },
+        {
+          "stage": 5,
+          "round": 2,
+          "boss": "plateau",
+          "word": "eject",
+          "chips": 66,
+          "mult": 27,
+          "solveBonus": 1,
+          "score": 1782
+        },
+        {
+          "stage": 5,
+          "round": 2,
+          "boss": "plateau",
+          "word": "razed",
+          "chips": 35,
+          "mult": 31,
+          "solveBonus": 5,
+          "score": 1085
         }
       ],
       "gold": [
@@ -5313,6 +5393,14 @@
         {
           "delta": 2,
           "reason": "scoring"
+        },
+        {
+          "delta": 8,
+          "reason": "round cleared"
+        },
+        {
+          "delta": -12,
+          "reason": "purchase"
         }
       ],
       "rewards": [
@@ -5393,12 +5481,18 @@
           "unusedGuesses": 4,
           "interest": 0,
           "total": 7
+        },
+        {
+          "base": 4,
+          "unusedGuesses": 4,
+          "interest": 0,
+          "total": 8
         }
       ],
       "outcome": "game_over",
       "stage": 5,
-      "round": 1,
-      "finalGold": 12,
+      "round": 2,
+      "finalGold": 8,
       "relics": [
         "cold_open",
         "green_thumb",
@@ -5408,13 +5502,13 @@
       ],
       "etched": [],
       "mods": [
-        "e:gold",
+        "e:steel",
         "t:chip"
       ],
       "levels": [],
       "ranges": [],
       "grown": [
-        "mint:mult=13"
+        "mint:mult=17"
       ],
       "destroyed": []
     }
@@ -5423,7 +5517,7 @@
     "name": "anchor-smith",
     "covers": "Anchor stacked across letters, fired on greens no solve handed it",
     "seed": 249,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -5878,7 +5972,7 @@
     "name": "rare-smith",
     "covers": "the rare modifier pair, hunted down with rerolls and played through",
     "seed": 462,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -6081,7 +6175,7 @@
     "name": "wild-smith",
     "covers": "Wild bought over and over, aimed by letter frequency, and fired on every color",
     "seed": 130,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -7258,7 +7352,7 @@
     "name": "leveler",
     "covers": "category levels bought, stacked, and paid out on the guesses that match them",
     "seed": 77,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -8358,7 +8452,7 @@
           "round": 0,
           "word": "aside",
           "chips": 102,
-          "mult": 37.81312499999999,
+          "mult": 37.813125,
           "solveBonus": 1,
           "score": 3857
         },
@@ -8395,7 +8489,7 @@
           "boss": "silence",
           "word": "aside",
           "chips": 102,
-          "mult": 39.33399999999999,
+          "mult": 39.333999999999996,
           "solveBonus": 1,
           "score": 4012,
           "note": "2 misplaced"
@@ -8472,7 +8566,7 @@
           "round": 0,
           "word": "aside",
           "chips": 102,
-          "mult": 39.33399999999999,
+          "mult": 39.333999999999996,
           "solveBonus": 1,
           "score": 4012
         },
@@ -8753,7 +8847,7 @@
     "name": "etcher",
     "covers": "alphabet range levels and etchings stacking on the same letters",
     "seed": 21,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -9669,7 +9763,7 @@
     "name": "pack-opener",
     "covers": "packs bought, held open across the shop, and chosen from",
     "seed": 1,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -11136,7 +11230,7 @@
           "boss": "mirror",
           "word": "caddy",
           "chips": 125,
-          "mult": 79.09200000000001,
+          "mult": 79.092,
           "solveBonus": 1,
           "score": 9887
         },
@@ -11155,7 +11249,7 @@
           "round": 0,
           "word": "caddy",
           "chips": 127,
-          "mult": 76.89500000000002,
+          "mult": 76.895,
           "solveBonus": 1,
           "score": 9766
         },
@@ -11173,7 +11267,7 @@
           "round": 1,
           "word": "caddy",
           "chips": 128,
-          "mult": 39.54600000000001,
+          "mult": 39.546,
           "solveBonus": 1,
           "score": 5062
         },
@@ -11182,7 +11276,7 @@
           "round": 1,
           "word": "hydro",
           "chips": 119,
-          "mult": 188.39275000000004,
+          "mult": 188.39275,
           "solveBonus": 5,
           "score": 22419
         },
@@ -11192,7 +11286,7 @@
           "boss": "silence",
           "word": "caddy",
           "chips": 129,
-          "mult": 142.25575000000003,
+          "mult": 142.25575,
           "solveBonus": 1,
           "score": 18351,
           "note": "none misplaced"
@@ -11213,7 +11307,7 @@
           "round": 0,
           "word": "caddy",
           "chips": 129,
-          "mult": 142.25575000000003,
+          "mult": 142.25575,
           "solveBonus": 1,
           "score": 18351
         },
@@ -11231,7 +11325,7 @@
           "round": 1,
           "word": "caddy",
           "chips": 129,
-          "mult": 32.955000000000005,
+          "mult": 32.955,
           "solveBonus": 1,
           "score": 4251
         },
@@ -11615,7 +11709,7 @@
     "name": "victor",
     "covers": "the run won and then played past, the computed targets beyond stage 8, and the whole late boss band nothing else survives to meet",
     "seed": 13877,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -14675,7 +14769,7 @@
     "covers": "the whole written ascension ladder: guesses filtered by the run's rules, targets and payouts bent by them, every round solved",
     "seed": 351,
     "ascension": 10,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -16694,7 +16788,7 @@
     "covers": "a rung above the written ladder: targets compounded by the endless step",
     "seed": 241,
     "ascension": 14,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",
@@ -16912,7 +17006,7 @@
     "covers": "the middle of the ladder: the rules in force at rung five and, just as much, the four above it that are not",
     "seed": 40,
     "ascension": 5,
-    "contentVersion": 35,
+    "contentVersion": 36,
     "actions": [
       {
         "type": "type_letter",

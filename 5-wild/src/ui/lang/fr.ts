@@ -84,7 +84,7 @@ export const fr: Strings = {
     greedy_grammarian: { name: "Grammairien Cupide", text: "+15 points par case grise" },
     doppelganger: {
       name: "Doppelgänger",
-      text: "Les lettres répétées rapportent leurs points deux fois",
+      text: "Les lettres répétées comptent deux fois, et +5 mult chacune",
     },
     hot_streak: {
       name: "Bonne Série",
