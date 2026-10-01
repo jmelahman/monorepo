@@ -47,12 +47,16 @@ export function loadSuite(path = join(ROOT, "bench", "suite.json")): Suite {
  * A label as a directory name. Labels are free text a harness types
  * ("claude-opus-5-5 via claude code, text"), so anything that would not
  * survive a path is folded to a dash.
+ *
+ * Dots survive for version numbers ("sonnet-4.5"), and so leading ones are
+ * trimmed: a label of `..` was a slug of `..`, and filed its episodes in
+ * `bench/` beside `results/` rather than in it, outside the ignore.
  */
 export const slug = (label: string): string =>
   label
     .toLowerCase()
     .replace(/[^a-z0-9.]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "unlabelled"
+    .replace(/^[-.]+|-+$/g, "") || "unlabelled"
 
 /**
  * A seed asked for by name goes under `adhoc/`, apart from the suite's files,
@@ -127,6 +131,13 @@ export type LiveRun = {
   format: Format
   steps: Step[]
   refusals: number
+  /**
+   * The rest of `Session.checkpoint()`. Absent from a checkpoint written before
+   * them, which resumes with no streak: the old file kept only the total, and
+   * nothing in it says how many of those refusals came in a row.
+   */
+  streak?: number
+  lastRefusal?: string | null
   started: number
 }
 

@@ -71,6 +71,9 @@ export type Limits = {
   endless: boolean
 }
 
+/** A session's refusal bookkeeping, as `Session.checkpoint()` hands it to `in-progress.json`. */
+export type Tally = { refusals: number; streak: number; lastRefusal: string | null }
+
 export const DEFAULT_LIMITS: Limits = { maxSteps: 3000, maxRefusals: 25, endless: false }
 
 export type Outcome =
@@ -176,6 +179,38 @@ export class Session {
   /** Stop the run where it stands, as a stall. For a harness that walked away. */
   abandon(): void {
     this.ended ??= "stalled"
+  }
+
+  /**
+   * The refusal count, the streak and the last refusal, which a resume needs
+   * besides the accepted steps. Replaying the steps rebuilds the game but not
+   * these, since a refusal changes nothing in it. And the streak is what stalls
+   * a run, so a checkpoint that kept only the total let a host restart wipe it:
+   * 24 refusals, a restart, 24 more, never stalled.
+   */
+  checkpoint(): Tally {
+    return { refusals: this.refusals, streak: this.streak, lastRefusal: this.lastRefusal }
+  }
+
+  /**
+   * Put a checkpoint's tally back, after its steps have been replayed. Refuses
+   * one that cannot have come from `checkpoint()` rather than guessing at it.
+   */
+  restore(tally: Tally): void {
+    const count = (n: unknown) => Number.isInteger(n) && (n as number) >= 0
+    if (
+      !count(tally.refusals) ||
+      !count(tally.streak) ||
+      tally.streak > tally.refusals ||
+      (tally.lastRefusal !== null && typeof tally.lastRefusal !== "string") ||
+      tally.streak > 0 !== (tally.lastRefusal !== null)
+    ) {
+      throw new Error(`Not a refusal tally: ${JSON.stringify(tally)}`)
+    }
+    this.refusals = tally.refusals
+    this.streak = tally.streak
+    this.lastRefusal = tally.lastRefusal
+    if (this.streak >= this.limits.maxRefusals) this.ended ??= "stalled"
   }
 
   private accept(): void {

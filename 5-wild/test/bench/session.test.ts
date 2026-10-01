@@ -94,4 +94,50 @@ describe("a benchmark session", () => {
     expect(session.done).toBe(true)
     expect(session.result().end).toBe("stalled")
   })
+
+  /** What a host restart does to a session: a new one, the steps replayed, the tally put back. */
+  const resumed = (from: Session) => {
+    const next = new Session(from.seed, realWords, from.ascension, from.limits)
+    for (const step of from.steps) next.apply(step)
+    next.restore(JSON.parse(JSON.stringify(from.checkpoint())))
+    return next
+  }
+
+  it("keeps the streak across a restart, so a restart cannot reset the stall", () => {
+    const session = new Session(1, realWords, 0, { ...DEFAULT_LIMITS, maxRefusals: 3 })
+    session.act("dance")
+    session.act("dance")
+    const next = resumed(session)
+    expect(next.checkpoint()).toEqual(session.checkpoint())
+    expect(next.lastRefusal).toBe(session.lastRefusal)
+    next.act("dance")
+    expect(next.done).toBe(true)
+    expect(next.result().end).toBe("stalled")
+  })
+
+  it("carries a streak an accepted command already cleared as none", () => {
+    const session = new Session(1, realWords, 0, { ...DEFAULT_LIMITS, maxRefusals: 3 })
+    session.act("dance")
+    session.act("dance")
+    expect(session.act("guess crane").ok).toBe(true)
+    const next = resumed(session)
+    expect(next.checkpoint()).toEqual({ refusals: 2, streak: 0, lastRefusal: null })
+    next.act("dance")
+    next.act("dance")
+    expect(next.done).toBe(false)
+  })
+
+  it("refuses a tally that no session could have written", () => {
+    const session = new Session(1, realWords)
+    for (const tally of [
+      { refusals: -1, streak: 0, lastRefusal: null },
+      { refusals: 1.5, streak: 0, lastRefusal: null },
+      { refusals: 1, streak: 2, lastRefusal: '"x": no' },
+      { refusals: 1, streak: 1, lastRefusal: null },
+      { refusals: 1, streak: 0, lastRefusal: '"x": no' },
+    ]) {
+      expect(() => session.restore(tally)).toThrow()
+    }
+    expect(session.checkpoint()).toEqual({ refusals: 0, streak: 0, lastRefusal: null })
+  })
 })

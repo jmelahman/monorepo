@@ -125,7 +125,7 @@ function keep(current: Live): void {
     ascension: current.session.ascension,
     format: current.format,
     steps: current.session.steps,
-    refusals: current.session.refusals,
+    ...current.session.checkpoint(),
     started: current.started,
   })
 }
@@ -239,10 +239,16 @@ function callTool(name: string, input: Record<string, unknown>): ToolResult {
         }
         const stored = loadLive(label)
         if (stored && stored.ascension === suite.ascension && suite.seeds.includes(stored.seed)) {
-          if (live && !live.session.done && live.suite === null) close(live)
           const session = new Session(stored.seed, words, stored.ascension, limits)
           for (const step of stored.steps) session.apply(step)
-          session.refusals = stored.refusals
+          // Throws on a tally it cannot trust, leaving the file where it is
+          // and the run in hand untouched, hence before the `close` below.
+          session.restore({
+            refusals: stored.refusals,
+            streak: stored.streak ?? 0,
+            lastRefusal: stored.lastRefusal ?? null,
+          })
+          if (live && !live.session.done && live.suite === null) close(live)
           return begin({ session, label, suite: suite.name, format, started: stored.started }, true)
         }
       }

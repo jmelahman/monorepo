@@ -98,6 +98,41 @@ function valid(body: unknown): body is Run {
   )
 }
 
+/**
+ * The body as text, or null past `MAX_BYTES`, counted in bytes as they arrive.
+ *
+ * The `content-length` check above is only as honest as the sender: a chunked
+ * body declares nothing, and this used to `request.text()` it whole and only
+ * then measure, so the cap bounded what was *filed* rather than what was held.
+ * It also measured UTF-16 units, which let a body of accented step words pass
+ * at nearly twice the bytes. Reading stops at the first chunk over the line.
+ * Invalid UTF-8 decodes to U+FFFD rather than throwing, and leaves `JSON.parse`
+ * or the shape check to refuse it with the usual 400.
+ */
+async function capped(stream: ReadableStream<Uint8Array> | null): Promise<string | null> {
+  if (!stream) return ""
+  const reader = stream.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > MAX_BYTES) {
+      await reader.cancel()
+      return null
+    }
+    chunks.push(value)
+  }
+  const bytes = new Uint8Array(size)
+  let at = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, at)
+    at += chunk.byteLength
+  }
+  return new TextDecoder().decode(bytes)
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const reply = (status: number) => new Response(null, { status, headers: CORS })
@@ -112,8 +147,8 @@ export default {
 
     const declared = Number(request.headers.get("content-length") ?? 0)
     if (declared > MAX_BYTES) return reply(413)
-    const text = await request.text()
-    if (text.length > MAX_BYTES) return reply(413)
+    const text = await capped(request.body)
+    if (text === null) return reply(413)
 
     let body: unknown
     try {

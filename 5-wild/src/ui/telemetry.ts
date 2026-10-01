@@ -334,9 +334,10 @@ export async function flush(send: Send = post): Promise<void> {
     for (;;) {
       const [head] = readOutbox()
       if (!head) return
+      const body = JSON.stringify(head)
       let status: number
       try {
-        const response = await send(JSON.stringify(head))
+        const response = await send(body)
         status = response.ok ? 200 : response.status
       } catch {
         return
@@ -344,7 +345,15 @@ export async function flush(send: Send = post): Promise<void> {
       if (status >= 500 || status === 429) return
       // Read again rather than reusing the list above: a switch to off during
       // the send has emptied it, and writing the stale tail back would undo that.
-      writeOutbox(readOutbox().slice(1))
+      // And drop the head only if it is still the run that went: off, on and a
+      // finished run during one send leaves a new run at the front, and a bare
+      // slice would discard it unsent on the strength of the old one's 200. A
+      // full queue evicting the head mid-send is the same case. Two queued runs
+      // that match byte for byte share a seed, `nth` and build, which
+      // `runs_once` on the server already treats as one run, so taking either
+      // for the other loses nothing.
+      const now = readOutbox()
+      if (now.length && JSON.stringify(now[0]) === body) writeOutbox(now.slice(1))
     }
   } finally {
     flushing = false

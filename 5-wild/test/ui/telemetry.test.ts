@@ -234,6 +234,38 @@ describe("the outbox", () => {
     expect(readOutbox().map((p) => p.seed)).toEqual([2])
   })
 
+  it("drops only the run that was sent, whatever the queue became meanwhile", async () => {
+    setConsent("on")
+    file(run(1), "on")
+    const sent: number[] = []
+    let answer = (_: { ok: boolean; status: number }) => {}
+    let pending = true
+    const send: Send = (body) => {
+      sent.push((JSON.parse(body) as Payload).seed)
+      if (!pending) return Promise.resolve({ ok: true, status: 200 })
+      pending = false
+      return new Promise((resolve) => {
+        answer = resolve
+      })
+    }
+    const flushed = flush(send)
+    try {
+      expect(sent).toEqual([1])
+      // A change of mind and back, and a run finished, all while the first is
+      // in the air: the new run is now the head of the queue.
+      setConsent("off")
+      setConsent("on")
+      file(run(2), "on")
+    } finally {
+      answer({ ok: true, status: 200 })
+      await flushed
+    }
+    // Run 2 went out on its own turn rather than being dropped on run 1's 200,
+    // and run 1 was not sent twice.
+    expect(sent).toEqual([1, 2])
+    expect(readOutbox()).toEqual([])
+  })
+
   it("gives up on a run the server will never take", async () => {
     file(run(1), "on")
     file(run(2), "on")

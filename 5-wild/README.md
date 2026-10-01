@@ -78,7 +78,7 @@ your runs and records stay on the device.
 Linux:
 
 ```sh
-curl -L https://download.5-wild.com | tar xz -C ~/.local/bin
+mkdir -p ~/.local/bin && curl -L https://download.5-wild.com | tar xz -C ~/.local/bin
 ```
 
 Then run `5-wild`, or `~/.local/bin/5-wild` if that directory is not on your

@@ -64,9 +64,10 @@ The catalog in force is a module-level value in `lang/index.ts`, not an argument
 threaded through the views, and that is safe for the same reason everything else
 here is: every dispatch rebuilds the whole screen, so there is never a
 half-rendered tree holding strings from before a switch. `current` is the prose;
-`currentLang` beside it is the *choice*, which is a different question, because
-three of the four languages fall back to the English catalog until their
-translations land — the keyboard layout has to read the choice, not the prose.
+`currentLang` beside it is the *choice*, which is a different question: a
+language can ship ahead of its translations as English prose under its own
+choice, as all three non-English ones once did, and the keyboard layout has to
+read the choice, not the prose.
 
 Two things that look like notation are prose: the abbreviation ladder
 (`10^9` is a billion in English and a milliard in French) and the keyboard

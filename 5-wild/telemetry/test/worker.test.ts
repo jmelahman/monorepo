@@ -67,6 +67,43 @@ const post = (body: unknown, origin?: string) =>
     env,
   )
 
+/** The worker's `MAX_BYTES`, which it does not export. */
+const MAX_BYTES = 32 * 1024
+
+const bytes = (text: string) => new TextEncoder().encode(text).byteLength
+
+/**
+ * A valid run exactly `size` bytes long, padded with É: two bytes in UTF-8 and
+ * one unit in a JS string, so a cap counting `.length` lets it through at
+ * nearly twice the bytes.
+ */
+const sized = (size: number) => {
+  const bare = JSON.stringify(run({ steps: [{ type: "guess", word: "" }] }))
+  const room = size - bytes(bare)
+  const word = "É".repeat(Math.floor(room / 2)) + "A".repeat(room % 2)
+  return JSON.stringify(run({ steps: [{ type: "guess", word }] }))
+}
+
+/** Posts a body with no `content-length`, the way a chunked upload arrives. */
+const stream = (body: ReadableStream<Uint8Array>) =>
+  worker.fetch(
+    new Request("https://telemetry.example/runs", {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body,
+      duplex: "half",
+    } as RequestInit),
+    env,
+  )
+
+const once = (text: string) =>
+  new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text))
+      controller.close()
+    },
+  })
+
 const rows = () => (db.prepare("SELECT COUNT(*) AS n FROM runs").get() as { n: number }).n
 
 beforeEach(() => {
@@ -109,6 +146,52 @@ describe("telemetry worker", () => {
   it.each([false, "yes", 1])("refuses a seeded flag of %p", async (seeded) => {
     expect((await post(run({ seeded }))).status).toBe(400)
     expect(rows()).toBe(0)
+  })
+
+  it("takes a run of exactly the cap in bytes, declared or not", async () => {
+    const body = sized(MAX_BYTES)
+    expect(bytes(body)).toBe(MAX_BYTES)
+    expect((await stream(once(body))).status).toBe(204)
+    expect(rows()).toBe(1)
+  })
+
+  it("counts bytes, not characters, against the cap", async () => {
+    const body = sized(MAX_BYTES + 1)
+    expect(body.length).toBeLessThan(MAX_BYTES)
+    const response = await stream(once(body))
+    expect(response.status).toBe(413)
+    expect(response.headers.get("access-control-allow-origin")).toBe("*")
+    expect(rows()).toBe(0)
+  })
+
+  it("refuses an undeclared body that never ends, and stops reading it", async () => {
+    let read = 0
+    let cancelled = false
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        read += 4096
+        controller.enqueue(new Uint8Array(4096).fill(0x20))
+      },
+      cancel() {
+        cancelled = true
+      },
+    })
+    expect((await stream(endless)).status).toBe(413)
+    expect(cancelled).toBe(true)
+    // Each pull is one chunk and the worker reads one at a time, so it can
+    // have asked for at most a chunk or two past the line.
+    expect(read).toBeLessThanOrEqual(MAX_BYTES + 2 * 4096)
+  })
+
+  it("answers an empty or broken body 400, not a crash", async () => {
+    expect((await stream(once(""))).status).toBe(400)
+    const broken = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array([0x7b, 0xff, 0xfe, 0x7d]))
+        controller.close()
+      },
+    })
+    expect((await stream(broken)).status).toBe(400)
   })
 
   it("files a resent run once and answers every copy 204", async () => {
