@@ -28,6 +28,10 @@ const AutoDeployEnv = "KANBAN_PREVIEW_AUTO_DEPLOY"
 // manifests.
 const ManifestDirEnv = "KANBAN_PREVIEW_MANIFESTS"
 
+// BaseURLEnv overrides the public preview URL base, for servers behind a
+// TLS-terminating proxy.
+const BaseURLEnv = "KANBAN_PREVIEW_BASE_URL"
+
 // RepoName derives the orchestrator repo name — a DNS label, since it
 // becomes the subdomain segment — from the board slug.
 func RepoName(b *db.Board) string {

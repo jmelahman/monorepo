@@ -379,13 +379,20 @@ func newPreviewOrchestrator(cfg *config.Config, addr string, inMemory bool, dock
 	}
 
 	domain := os.Getenv("KANBAN_PREVIEW_DOMAIN")
+	baseURL := os.Getenv(previews.BaseURLEnv)
+	if baseURL != "" {
+		// The public URL supplies the host and scheme; don't let the optional
+		// domain setting conflict with it.
+		domain = ""
+	}
 	manifestDir := previews.ManifestDir()
 	orch, err := orchestrator.New(orchestrator.Options{
-		DataDir:       dataDir,
-		DBPath:        dbPath,
-		Addr:          addr,
-		PreviewDomain: domain,
-		Runner:        runner,
+		DataDir:        dataDir,
+		DBPath:         dbPath,
+		Addr:           addr,
+		PreviewDomain:  domain,
+		PreviewBaseURL: baseURL,
+		Runner:         runner,
 		// Repos declare their preview manifest in a dedicated preview.toml
 		// or as a [previews] table in the .kanban.toml they already carry;
 		// preview.toml wins when both exist.
@@ -406,11 +413,16 @@ func newPreviewOrchestrator(cfg *config.Config, addr string, inMemory bool, dock
 		log.Printf("preview orchestrator disabled: %v", err)
 		return nil
 	}
-	if domain == "" {
-		domain = "preview.localhost"
+	if baseURL != "" {
+		log.Printf("preview orchestrator enabled: public base URL %s (builds: %s, manifests: %s)",
+			baseURL, buildMode, manifestDirLabel(manifestDir))
+	} else {
+		if domain == "" {
+			domain = "preview.localhost"
+		}
+		log.Printf("preview orchestrator enabled: previews at *.%s (builds: %s, manifests: %s)",
+			domain, buildMode, manifestDirLabel(manifestDir))
 	}
-	log.Printf("preview orchestrator enabled: previews at *.%s (builds: %s, manifests: %s)",
-		domain, buildMode, manifestDirLabel(manifestDir))
 	return orch
 }
 

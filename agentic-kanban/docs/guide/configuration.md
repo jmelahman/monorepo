@@ -270,6 +270,10 @@ export KANBAN_HOST_DOCKER_SOCK=/run/user/1000/docker.sock
 
 On a normal install none of these are needed.
 
+## Preview URLs
+
+When kanban is behind a TLS-terminating reverse proxy, set `KANBAN_PREVIEW_BASE_URL` to the public preview URL base (for example, `https://preview.example.com`) so deployment links use the public scheme and port. See the [Previews guide](/guide/previews#settings) for the other preview settings.
+
 ### Session container user
 
 The bundled image has two users, `root` (UID 0) and `dev` (UID 1000). Kanban runs the session as whichever one owns your `~/.claude`, so Claude Code can read and write its credentials. If neither matches, as with UID 501 on macOS, kanban uses `dev`. Claude Code then asks you to log in on every new session.

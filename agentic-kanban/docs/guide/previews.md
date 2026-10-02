@@ -49,6 +49,7 @@ Click **preview** in the header to see every deploy across all boards. Each row 
 | `idle`                | Built. The backend starts on the first request.          |
 | `starting`            | The backend is starting.                                 |
 | `running`             | The backend is running.                                  |
+| `crashed`             | A backend or frontend process exited; the error is shown on the row. |
 | `failed`              | The build failed. Open the logs for details.             |
 | `evicted`             | Removed to save disk. Deploy again to rebuild.           |
 
@@ -90,6 +91,7 @@ Ready deploys list these as download links, each named after the file. File name
 | Variable                     | Default                       | Description                                                                  |
 | ---------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
 | `KANBAN_PREVIEW_DOMAIN`      | `preview.localhost`           | Domain previews are served under. Point a wildcard DNS record at kanban to use your own. |
+| `KANBAN_PREVIEW_BASE_URL`    | unset                         | Public preview base URL, such as `https://preview.example.com`, for TLS-terminating proxies. Takes precedence over `KANBAN_PREVIEW_DOMAIN`. |
 | `KANBAN_PREVIEW_BUILDS`      | `devcontainer`                | `host` builds on the kanban host.                                            |
 | `KANBAN_PREVIEW_AUTO_DEPLOY` | on                            | `0` turns off automatic deploys.                                             |
 | `KANBAN_PREVIEW_MANIFESTS`   | `~/.config/preview/manifests` | Directory for server-side manifests. Respects `$PREVIEW_CONFIG_DIR`.         |

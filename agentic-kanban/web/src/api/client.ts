@@ -188,10 +188,14 @@ export type Preview = {
   error?: string;
   attempt_count: number;
   preview_url?: string;
-  /** Live backend state once ready: running, starting, or idle. */
+  /** Live backend state once ready: running, starting, idle, or crashed. */
   process?: string;
+  /** Last failure when the backend process crashed. */
+  process_error?: string;
   /** Same, for a process-mode frontend; absent for static bundles. */
   fe_process?: string;
+  /** Last failure when a process-mode frontend crashed. */
+  fe_process_error?: string;
   artifacts?: PreviewArtifact[];
   created_at: string;
   updated_at: string;
@@ -206,6 +210,11 @@ export type DashboardPreview = Preview & {
   board_id?: number;
   board_name?: string;
   board_slug?: string;
+};
+
+export type DashboardPreviewPage = {
+  deploys: DashboardPreview[];
+  total: number;
 };
 
 /** One board's share of the preview orchestrator's disk usage. */
@@ -418,7 +427,14 @@ export const api = {
   createPreview: (sessionId: number) =>
     request<Preview>(`/api/sessions/${sessionId}/previews`, { method: "POST" }),
 
-  listAllPreviews: () => request<DashboardPreview[]>("/api/previews"),
+  listAllPreviews: (options: { board?: number; limit?: number; offset?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (options.board != null) params.set("board", String(options.board));
+    if (options.limit != null) params.set("limit", String(options.limit));
+    if (options.offset != null) params.set("offset", String(options.offset));
+    const query = params.toString();
+    return request<DashboardPreviewPage>(`/api/previews${query ? `?${query}` : ""}`);
+  },
   previewLogs: async (previewId: number): Promise<string> => {
     const res = await fetch(`/api/previews/${previewId}/logs`);
     if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status}`, "");

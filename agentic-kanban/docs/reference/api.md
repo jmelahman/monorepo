@@ -178,14 +178,14 @@ Lists the session's forwarded ports.
 
 See [Previews](/guide/previews). These endpoints return `503` if previews couldn't start.
 
-A deploy has a `status` (`queued`, `building`, `ready`, `failed`, or `evicted`) and a `short_sha`. Once ready, it also has `preview_url`, the backend's `process` state, and any `artifacts`, each listed as `{ "name", "hash", "files": [{ "name", "size" }] }`.
+A deploy has a `status` (`queued`, `building`, `ready`, `failed`, or `evicted`) and a `short_sha`. Once ready, it also has `preview_url`, backend and frontend process states, and any `artifacts`, each listed as `{ "name", "hash", "files": [{ "name", "size" }] }`. A crashed process includes its `process_error` or `fe_process_error` detail.
 
 | Endpoint                                          | Description |
 | ------------------------------------------------- | ----------- |
 | `GET /api/sessions/{id}/previews`                 | Deploys of the session's branch, newest first. |
 | `POST /api/sessions/{id}/previews`                | Deploys the branch's latest commit. Returns `202`. Returns the existing deploy if that commit is already built. |
 | `POST /api/boards/{id}/previews`                  | Deploys any ref. Body: `{ "ref": "<branch, tag, or sha>" }`. Defaults to the base branch. Returns `202`. |
-| `GET /api/previews`                               | All deploys on every board, with `board_id`, `board_name`, and `board_slug`. |
+| `GET /api/previews?board=<id>&limit=<n>&offset=<n>` | A page of deploys, newest first, with `board_id`, `board_name`, and `board_slug`. Defaults to 25 rows; `limit` is 1–100. The response is `{ "deploys": [...], "total": <matching rows> }`. Omit `board` to list all boards. |
 | `POST /api/previews/{id}/stop`                    | Stops the deploy's backend. It starts again on the next request. |
 | `DELETE /api/previews/{id}`                       | Deletes a deploy and its files. |
 | `GET /api/previews/{id}/logs`                     | Build logs as plain text. |

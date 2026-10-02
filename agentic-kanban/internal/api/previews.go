@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -106,13 +107,15 @@ func (h *handlers) listSessionPreviews(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	all, err := h.previews.Deploys(repoName)
+	page, err := h.previews.DeploysPage(orchestrator.DeployQuery{
+		Repo: repoName, Query: sess.BranchName,
+	})
 	if err != nil {
 		h.httpError(w, err, 500)
 		return
 	}
 	deploys := []orchestrator.Deploy{}
-	for _, d := range all {
+	for _, d := range page.Deploys {
 		if d.Ref == sess.BranchName {
 			deploys = append(deploys, d)
 		}
@@ -151,16 +154,44 @@ type dashboardDeploy struct {
 	BoardSlug string `json:"board_slug,omitempty"`
 }
 
-// listPreviews returns every preview deploy across all boards, newest
-// first — the previews dashboard's data source.
+type dashboardPreviewPage struct {
+	Deploys []dashboardDeploy `json:"deploys"`
+	Total   int               `json:"total"`
+}
+
+const (
+	defaultPreviewPageSize = 25
+	maxPreviewPageSize     = 100
+)
+
+func previewPageParams(r *http.Request) (limit, offset int, err error) {
+	limit = defaultPreviewPageSize
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		limit, err = strconv.Atoi(raw)
+		if err != nil || limit < 1 || limit > maxPreviewPageSize {
+			return 0, 0, fmt.Errorf("limit must be between 1 and %d", maxPreviewPageSize)
+		}
+	}
+	if raw := r.URL.Query().Get("offset"); raw != "" {
+		offset, err = strconv.Atoi(raw)
+		if err != nil || offset < 0 {
+			return 0, 0, fmt.Errorf("offset must be a non-negative integer")
+		}
+	}
+	return limit, offset, nil
+}
+
+// listPreviews returns a page of preview deploys across all boards, newest
+// first — the previews dashboard's data source. Pages are bounded because
+// evicted deploys remain in history indefinitely.
 func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
 		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
-	deploys, err := h.previews.Deploys("")
+	limit, offset, err := previewPageParams(r)
 	if err != nil {
-		h.httpError(w, err, 500)
+		h.httpError(w, err, 400)
 		return
 	}
 	boards, err := h.store.ListBoards(r.Context())
@@ -169,16 +200,43 @@ func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	byRepo := make(map[string]db.Board, len(boards))
-	for _, b := range boards {
-		byRepo[previews.RepoName(&b)] = b
+	boardFilter := r.URL.Query().Get("board")
+	foundBoard := boardFilter == ""
+	var boardID int64
+	if boardFilter != "" {
+		boardID, err = strconv.ParseInt(boardFilter, 10, 64)
+		if err != nil || boardID < 1 {
+			h.httpError(w, fmt.Errorf("board must be a positive board ID"), 400)
+			return
+		}
 	}
-	out := make([]dashboardDeploy, 0, len(deploys))
-	for _, d := range deploys {
+	var repoFilter string
+	for _, b := range boards {
+		repoName := previews.RepoName(&b)
+		byRepo[repoName] = b
+		if boardFilter != "" && b.ID == boardID {
+			repoFilter = repoName
+			foundBoard = true
+		}
+	}
+	if !foundBoard {
+		h.httpError(w, fmt.Errorf("board not found"), 404)
+		return
+	}
+	page, err := h.previews.DeploysPage(orchestrator.DeployQuery{
+		Repo: repoFilter, Limit: limit, Offset: offset,
+	})
+	if err != nil {
+		h.httpError(w, err, 500)
+		return
+	}
+	out := dashboardPreviewPage{Deploys: make([]dashboardDeploy, 0, len(page.Deploys)), Total: page.Total}
+	for _, d := range page.Deploys {
 		row := dashboardDeploy{Deploy: d}
 		if b, ok := byRepo[d.Repo]; ok {
 			row.BoardID, row.BoardName, row.BoardSlug = b.ID, b.Name, b.Slug
 		}
-		out = append(out, row)
+		out.Deploys = append(out.Deploys, row)
 	}
 	writeJSON(w, 200, out)
 }

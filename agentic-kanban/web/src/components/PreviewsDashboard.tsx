@@ -13,22 +13,22 @@ import {
 import { Button } from "./Button";
 import { ConfirmModal, Modal } from "./Modal";
 
-// The previews dashboard: every deploy the embedded local-preview
-// orchestrator knows about, across every board, plus the controls to deploy
-// an arbitrary ref. The per-session previews tab covers one branch; this is
-// the whole fleet.
+// The previews dashboard: paged deploy history from the embedded local-preview
+// orchestrator, across every board, plus the controls to deploy an arbitrary
+// ref. The per-session previews tab covers one branch; this is the whole fleet.
 
 /**
  * A deploy's displayed state: its build status until it's ready, then the
- * merged runtime state of whichever sides it supervises — starting while any
- * warms up, running only once every side is warm, idle otherwise.
+ * merged runtime state of whichever sides it supervises — crashed if any
+ * side fails, starting while any warms up, running when all are warm, idle otherwise.
  */
-type DeployState = DashboardPreview["status"] | "starting" | "running" | "idle";
+type DeployState = DashboardPreview["status"] | "starting" | "running" | "idle" | "crashed";
 
 function deployState(p: DashboardPreview): DeployState {
   if (p.status !== "ready") return p.status;
   const procs = [p.process, p.fe_process].filter((s): s is string => !!s);
   if (procs.length === 0) return p.status;
+  if (procs.includes("crashed")) return "crashed";
   if (procs.includes("starting")) return "starting";
   return procs.every((s) => s === "running") ? "running" : "idle";
 }
@@ -63,6 +63,11 @@ const stateStyles: Record<DeployState, { dot: string; pill: string; hint: string
     dot: "bg-success",
     pill: "border-success/30 text-success",
     hint: "Warm, served instantly",
+  },
+  crashed: {
+    dot: "bg-danger",
+    pill: "border-danger/30 text-danger",
+    hint: "A preview process crashed",
   },
   failed: { dot: "bg-danger", pill: "border-danger/30 text-danger", hint: "Build failed" },
   evicted: {
@@ -109,6 +114,7 @@ function formatBytes(n: number): string {
 
 const pillClass =
   "inline-flex shrink-0 items-center gap-1 rounded bg-surface-2 px-2 py-0.5 text-xs text-fg transition-colors duration-150 hover:bg-surface-3";
+const PREVIEW_PAGE_SIZE = 25;
 
 /**
  * One artifact's download affordance: a plain link when the build produced a
@@ -499,6 +505,7 @@ export function PreviewsDashboard() {
   const [logsId, setLogsId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DashboardPreview | null>(null);
   const [boardFilter, setBoardFilter] = useState<number | "all">("all");
+  const [pageOffset, setPageOffset] = useState(0);
 
   const qc = useQueryClient();
   const invalidate = () => qc.invalidateQueries({ queryKey: queryKeys.allPreviews });
@@ -513,12 +520,17 @@ export function PreviewsDashboard() {
 
   const boardsQ = useQuery({ queryKey: queryKeys.boards, queryFn: api.listBoards });
   const previewsQ = useQuery({
-    queryKey: queryKeys.allPreviews,
-    queryFn: api.listAllPreviews,
+    queryKey: [...queryKeys.allPreviews, boardFilter, pageOffset],
+    queryFn: () =>
+      api.listAllPreviews({
+        ...(boardFilter === "all" ? {} : { board: boardFilter }),
+        limit: PREVIEW_PAGE_SIZE,
+        offset: pageOffset,
+      }),
     // Poll fast while anything is in flight (a build, a cold start) so state
     // flips surface promptly; idle otherwise.
     refetchInterval: (query) =>
-      query.state.data?.some(
+      query.state.data?.deploys.some(
         (p) =>
           p.status === "queued" ||
           p.status === "building" ||
@@ -529,9 +541,18 @@ export function PreviewsDashboard() {
         : 5000,
   });
 
+  useEffect(() => {
+    if (pageOffset > 0 && previewsQ.data && pageOffset >= previewsQ.data.total) {
+      setPageOffset(
+        Math.max(0, Math.floor((previewsQ.data.total - 1) / PREVIEW_PAGE_SIZE) * PREVIEW_PAGE_SIZE),
+      );
+    }
+  }, [pageOffset, previewsQ.data]);
+
   const deployableBoards = (boardsQ.data ?? []).filter((b) => b.repo_path);
-  const all = previewsQ.data ?? [];
-  const previews = boardFilter === "all" ? all : all.filter((p) => p.board_id === boardFilter);
+  const all = previewsQ.data?.deploys ?? [];
+  const total = previewsQ.data?.total ?? 0;
+  const previews = all;
   // Resolve from the live list each render so the log modal follows a build
   // to completion instead of freezing on the snapshot that opened it.
   const logsPreview = logsId != null ? all.find((p) => p.id === logsId) : undefined;
@@ -542,16 +563,15 @@ export function PreviewsDashboard() {
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-baseline gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide">Deployments</h2>
-            {all.length > 0 && (
-              <span className="text-xs tabular-nums text-fg-muted">{previews.length}</span>
-            )}
+            {total > 0 && <span className="text-xs tabular-nums text-fg-muted">{total}</span>}
           </div>
           <div className="flex items-center gap-2">
             <select
               value={boardFilter}
-              onChange={(e) =>
-                setBoardFilter(e.target.value === "all" ? "all" : Number(e.target.value))
-              }
+              onChange={(e) => {
+                setBoardFilter(e.target.value === "all" ? "all" : Number(e.target.value));
+                setPageOffset(0);
+              }}
               className="cursor-pointer rounded bg-surface px-2 py-1 text-sm"
               aria-label="Filter by board"
             >
@@ -600,7 +620,7 @@ export function PreviewsDashboard() {
               <div className="flex flex-col items-center gap-1 px-6 py-16 text-center">
                 <RocketIcon size={32} className="mb-2 text-fg-muted/50" />
                 <p className="text-sm font-medium">
-                  {all.length === 0 ? "No deployments yet" : "No deployments for this board"}
+                  {boardFilter === "all" ? "No deployments yet" : "No deployments for this board"}
                 </p>
                 <p className="max-w-md text-xs text-fg-muted">
                   A board's repo needs a preview manifest: a <code>preview.toml</code> at its root,
@@ -674,6 +694,22 @@ export function PreviewsDashboard() {
                           {p.error}
                         </p>
                       )}
+                      {p.process === "crashed" && p.process_error && (
+                        <p
+                          className="mt-0.5 max-w-full truncate text-xs text-danger"
+                          title={p.process_error}
+                        >
+                          backend: {p.process_error}
+                        </p>
+                      )}
+                      {p.fe_process === "crashed" && p.fe_process_error && (
+                        <p
+                          className="mt-0.5 max-w-full truncate text-xs text-danger"
+                          title={p.fe_process_error}
+                        >
+                          frontend: {p.fe_process_error}
+                        </p>
+                      )}
                     </div>
                     {p.artifacts?.map((a) => (
                       <ArtifactDownload key={a.name} previewId={p.id} artifact={a} />
@@ -730,6 +766,33 @@ export function PreviewsDashboard() {
                 );
               })}
             </ul>
+            {total > PREVIEW_PAGE_SIZE && (
+              <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs text-fg-muted">
+                <span>
+                  {pageOffset + 1}–{pageOffset + previews.length} of {total}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`${pillClass} disabled:pointer-events-none disabled:opacity-40`}
+                    disabled={pageOffset === 0 || previewsQ.isFetching}
+                    onClick={() =>
+                      setPageOffset((offset) => Math.max(0, offset - PREVIEW_PAGE_SIZE))
+                    }
+                  >
+                    newer
+                  </button>
+                  <button
+                    type="button"
+                    className={`${pillClass} disabled:pointer-events-none disabled:opacity-40`}
+                    disabled={pageOffset + previews.length >= total || previewsQ.isFetching}
+                    onClick={() => setPageOffset((offset) => offset + PREVIEW_PAGE_SIZE)}
+                  >
+                    older
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

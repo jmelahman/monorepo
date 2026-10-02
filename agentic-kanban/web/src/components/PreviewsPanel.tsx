@@ -84,6 +84,12 @@ export function PreviewsPanel({ session }: { session: Session }) {
                     {p.fe_process ? (
                       <span className="text-fg-muted"> · frontend {p.fe_process}</span>
                     ) : null}
+                    {p.process_error ? (
+                      <span className="text-danger">: {p.process_error}</span>
+                    ) : null}
+                    {p.fe_process_error ? (
+                      <span className="text-danger">: {p.fe_process_error}</span>
+                    ) : null}
                     {p.status === "failed" && p.error ? (
                       <span className="text-danger">: {p.error}</span>
                     ) : null}

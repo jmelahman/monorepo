@@ -523,8 +523,11 @@ func TestDashboardPreviews(t *testing.T) {
 	// Empty before anything deploys — the dashboard renders on a fresh install.
 	resp := e.get("/api/previews")
 	assertStatus(t, resp, 200)
-	if got := decodeJSON[[]map[string]any](t, resp); len(got) != 0 {
-		t.Fatalf("expected no deploys, got %+v", got)
+	if got := decodeJSON[struct {
+		Deploys []map[string]any `json:"deploys"`
+		Total   int              `json:"total"`
+	}](t, resp); len(got.Deploys) != 0 || got.Total != 0 {
+		t.Fatalf("expected an empty page, got %+v", got)
 	}
 
 	// No ref in the body → the board's base branch.
@@ -554,23 +557,51 @@ func TestDashboardPreviews(t *testing.T) {
 		t.Fatalf("ref = %q, want v2", tagged.Ref)
 	}
 
-	// Both show up on the dashboard, each carrying its board.
+	// Both show up on the dashboard, each carrying its board. The list is
+	// newest-first and reports the total independently of the selected page.
 	resp = e.get("/api/previews")
 	assertStatus(t, resp, 200)
-	rows := decodeJSON[[]struct {
-		orchestrator.Deploy
-		BoardID   int64  `json:"board_id"`
-		BoardName string `json:"board_name"`
-		BoardSlug string `json:"board_slug"`
+	page := decodeJSON[struct {
+		Deploys []struct {
+			orchestrator.Deploy
+			BoardID   int64  `json:"board_id"`
+			BoardName string `json:"board_name"`
+			BoardSlug string `json:"board_slug"`
+		} `json:"deploys"`
+		Total int `json:"total"`
 	}](t, resp)
-	if len(rows) != 2 {
-		t.Fatalf("expected 2 deploys, got %d: %+v", len(rows), rows)
+	if page.Total != 2 || len(page.Deploys) != 2 {
+		t.Fatalf("expected 2 deploys, got %+v", page)
 	}
-	for _, row := range rows {
+	for _, row := range page.Deploys {
 		if row.BoardID != board.ID || row.BoardName != "Demo Board" || row.BoardSlug != "demo-board" {
 			t.Fatalf("deploy %d not joined to its board: %+v", row.ID, row)
 		}
 	}
+	if page.Deploys[0].ID != tagged.ID || page.Deploys[1].ID != deploy.ID {
+		t.Fatalf("deploys not newest first: %+v", page.Deploys)
+	}
+
+	resp = e.get("/api/previews?limit=1")
+	assertStatus(t, resp, 200)
+	first := decodeJSON[struct {
+		Deploys []orchestrator.Deploy `json:"deploys"`
+		Total   int                   `json:"total"`
+	}](t, resp)
+	if first.Total != 2 || len(first.Deploys) != 1 || first.Deploys[0].ID != tagged.ID {
+		t.Fatalf("unexpected first page: %+v", first)
+	}
+	resp = e.get(fmt.Sprintf("/api/previews?board=%d&limit=1&offset=1", board.ID))
+	assertStatus(t, resp, 200)
+	second := decodeJSON[struct {
+		Deploys []orchestrator.Deploy `json:"deploys"`
+		Total   int                   `json:"total"`
+	}](t, resp)
+	if second.Total != 2 || len(second.Deploys) != 1 || second.Deploys[0].ID != deploy.ID {
+		t.Fatalf("unexpected filtered second page: %+v", second)
+	}
+	assertStatus(t, e.get("/api/previews?limit=0"), 400)
+	assertStatus(t, e.get("/api/previews?offset=-1"), 400)
 
 	resp = e.post("/api/boards/999/previews", map[string]string{"ref": "main"})
 	assertStatus(t, resp, 404)
@@ -619,9 +650,12 @@ func TestStopAndDeletePreview(t *testing.T) {
 	if _, err := e.previews.Deploy(deploy.ID); !errors.Is(err, orchestrator.ErrNotFound) {
 		t.Fatalf("deploy %d survived delete: %v", deploy.ID, err)
 	}
-	rows := decodeJSON[[]map[string]any](t, e.get("/api/previews"))
-	if len(rows) != 0 {
-		t.Fatalf("expected an empty dashboard after delete, got %+v", rows)
+	page := decodeJSON[struct {
+		Deploys []map[string]any `json:"deploys"`
+		Total   int              `json:"total"`
+	}](t, e.get("/api/previews"))
+	if len(page.Deploys) != 0 || page.Total != 0 {
+		t.Fatalf("expected an empty dashboard after delete, got %+v", page)
 	}
 
 	// Unknown ids are 404s, not silent successes.
