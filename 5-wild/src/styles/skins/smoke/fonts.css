@@ -16,9 +16,72 @@
  *
  * Classic needs none of these: it is the phone's own system stack.
  */
-@import "@fontsource/jersey-20/latin-400.css";
-@import "@fontsource/jersey-20/latin-ext-400.css";
 @import "@fontsource/ibm-plex-mono/latin-500.css";
 @import "@fontsource/ibm-plex-mono/latin-ext-500.css";
 @import "@fontsource/ibm-plex-mono/latin-600.css";
 @import "@fontsource/ibm-plex-mono/latin-ext-600.css";
+
+/*
+ * Jersey 20 is declared here rather than imported, because it is drawn small
+ * for its size: per 100px it has a 59px cap and a 44px x-height against the
+ * system face's 69 and 51, and a line 12% narrower. Every `font-size` in the
+ * layout was set against the system face Classic still uses, so the room read
+ * about a sixth smaller than the sizes said. `size-adjust` scales the glyphs
+ * back up without touching `font-size`, so no `em`, no `cqw` font and no
+ * container query moves.
+ *
+ * Scaling the face scales its metrics too, and with no `line-height` in the
+ * base styles most text sits on `normal`, so the glyphs alone would make every
+ * line 15% taller. The overrides hold the line where it was: the face's own
+ * ascent and descent are 79% and 21% with no line gap, a line of exactly 1em,
+ * and each override is that divided by 1.15, which the scale then multiplies
+ * back to the same 1em. The extra height falls inside the line, not beside it.
+ * The width is not held: text runs 1% wider than the system face, which is
+ * what the layout was set against, and wherever it wraps or truncates rather
+ * than grows, a label can give way where it used to fit. The one found at
+ * 360px was the shape chip's name; see `.category-name` in `type.css`.
+ *
+ * 115% rather than the 117% the caps would ask for, which is to say the
+ * x-height's figure (51 / 44) rather than the cap's (69 / 59): the room's text
+ * is mostly lowercase prose, and the smaller of the two is the one that cannot
+ * overshoot the system face. The tile and key letters are set in the same face
+ * and grow with it; at 360×800 they stay clear of the value pips.
+ *
+ * The unicode ranges are `@fontsource`'s from its `400.css`. The per-subset
+ * files it ships for import leave them out, so either face could match any
+ * letter.
+ */
+@font-face {
+  font-family: "Jersey 20";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src:
+    url("@fontsource/jersey-20/files/jersey-20-latin-ext-400-normal.woff2") format("woff2"),
+    url("@fontsource/jersey-20/files/jersey-20-latin-ext-400-normal.woff") format("woff");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+  size-adjust: 115%;
+  ascent-override: 68.7%;
+  descent-override: 18.26%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Jersey 20";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src:
+    url("@fontsource/jersey-20/files/jersey-20-latin-400-normal.woff2") format("woff2"),
+    url("@fontsource/jersey-20/files/jersey-20-latin-400-normal.woff") format("woff");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+    U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  size-adjust: 115%;
+  ascent-override: 68.7%;
+  descent-override: 18.26%;
+  line-gap-override: 0%;
+}

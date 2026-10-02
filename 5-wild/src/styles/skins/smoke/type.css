@@ -58,3 +58,15 @@
 :root.skin-smoke .key {
   letter-spacing: 0;
 }
+
+/* The shape chip's name sits in a seat of fixed width, 49px at 360, and gives
+   way to an ellipsis inside it. The face's `size-adjust` (`fonts.css`) cost the
+   seven- and eight-letter names the room they had: DISTINCT went from 44px to
+   51, and TWINNED, DISTINTA, JUMELÉE and HÄUFUNG over the edge with it. The
+   label tracking is 0.72px a letter at this size, nearly all of what the scale
+   added, so the name alone is set solid and the five measure 45.0 to 45.4. The
+   long names were ellipsised before and still are. It stays in capitals, and
+   the level beside it keeps its tracking. */
+:root.skin-smoke .category-name {
+  letter-spacing: 0;
+}
