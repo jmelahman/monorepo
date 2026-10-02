@@ -2,6 +2,7 @@ package watch
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -11,8 +12,13 @@ import (
 // resolve ".git/index" against whichever temp repo it is pointed at — and in a
 // linked worktree ".git" is a file, not a directory.
 func TestMain(m *testing.M) {
-	for _, k := range []string{"GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY", "GIT_COMMON_DIR"} {
-		os.Unsetenv(k)
+	for _, entry := range os.Environ() {
+		key, _, _ := strings.Cut(entry, "=")
+		if strings.HasPrefix(key, "GIT_") {
+			_ = os.Unsetenv(key)
+		}
 	}
+	_ = os.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	_ = os.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
 	os.Exit(m.Run())
 }

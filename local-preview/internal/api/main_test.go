@@ -2,6 +2,7 @@ package api
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -15,9 +16,14 @@ import (
 // hands its hooks GIT_INDEX_FILE and friends, so `go test` run from a
 // pre-commit hook would otherwise point every git command at the wrong index.
 func TestMain(m *testing.M) {
-	for _, k := range []string{"GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY", "GIT_COMMON_DIR"} {
-		os.Unsetenv(k)
+	for _, entry := range os.Environ() {
+		key, _, _ := strings.Cut(entry, "=")
+		if strings.HasPrefix(key, "GIT_") {
+			_ = os.Unsetenv(key)
+		}
 	}
+	_ = os.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	_ = os.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
 	os.Setenv("DOCKER_HOST", "unix:///nonexistent/docker.sock")
 	os.Exit(m.Run())
 }
