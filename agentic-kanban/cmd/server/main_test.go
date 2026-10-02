@@ -39,7 +39,9 @@ func TestPreviewBaseURLOverridesDomain(t *testing.T) {
 	defer orch.Close()
 
 	handler := orch.WrapHost(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		io.WriteString(w, "kanban")
+		if _, err := io.WriteString(w, "kanban"); err != nil {
+			t.Errorf("write response: %v", err)
+		}
 	}))
 	req := httptest.NewRequest("GET", "http://abc1234-demo.preview.example.com/", nil)
 	req.Host = "abc1234-demo.preview.example.com"
