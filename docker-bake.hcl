@@ -1,5 +1,5 @@
 group "default" {
-  targets = ["devcontainer", "godot-devcontainer"]
+  targets = ["devcontainer", "godot-devcontainer", "android-builder"]
 }
 
 target "devcontainer" {
@@ -35,6 +35,24 @@ target "godot-devcontainer" {
   ]
   tags = [
     "ghcr.io/jmelahman/godot-devcontainer:latest",
+  ]
+  labels = {
+    "org.opencontainers.image.source" = "https://github.com/jmelahman/monorepo"
+  }
+  args = {
+    BUILDKIT_INLINE_CACHE = 1
+  }
+}
+
+target "android-builder" {
+  context = "tools/containers/android"
+  dockerfile = "Dockerfile"
+  platforms = ["linux/amd64", "linux/arm64"]
+  cache_from = [
+    "ghcr.io/jmelahman/android-builder:latest",
+  ]
+  tags = [
+    "ghcr.io/jmelahman/android-builder:latest",
   ]
   labels = {
     "org.opencontainers.image.source" = "https://github.com/jmelahman/monorepo"

@@ -18,10 +18,10 @@ container_port = 7777
 # Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
 [previews.apk]
 path  = "."
-image = "ghcr.io/cirruslabs/android-sdk:36"
+image = "ghcr.io/jmelahman/android-builder:latest"
 build = [
-  ["sh", "-c", "curl -fsSL https://bun.sh/install | bash"],
-  ["sh", "-c", "export PATH=$HOME/.bun/bin:$PATH && bun install --frozen-lockfile"],
-  ["sh", "-c", "export PATH=$HOME/.bun/bin:$PATH && bun run apk && cp android/app/build/outputs/apk/debug/app-debug.apk 5-wild.apk"],
+  ["bun", "install", "--frozen-lockfile"],
+  ["bun", "run", "apk"],
+  ["cp", "android/app/build/outputs/apk/debug/app-debug.apk", "5-wild.apk"],
 ]
 files = ["5-wild.apk"]
