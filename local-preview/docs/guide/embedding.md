@@ -32,6 +32,16 @@ d, err := orch.RequestDeploy(ctx, "myapp", "feature-branch", false)
 // Poll orch.Deploy(d.ID) until StatusReady, then use d.PreviewURL.
 ```
 
+For a repo that hosts multiple apps, register a repo-relative project scope:
+
+```go
+orch.RegisterRepoWithProjectDir(ctx, "api", "/path/to/monorepo", "services/api")
+```
+
+Manifest discovery then starts in `services/api/`, and manifest paths such as
+`frontend.path` or `artifacts.cli.path` are relative to that directory. The
+scope is stored with the registered repo and survives restarts.
+
 Notes:
 
 - The orchestrator keeps everything under `Options.DataDir` — its own

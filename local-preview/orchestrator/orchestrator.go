@@ -25,6 +25,7 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -57,6 +58,7 @@ type RunSpec struct {
 	RepoName   string
 	SHA        string
 	ScratchDir string
+	ProjectDir string
 	Dir        string
 	Argv       []string
 	Image      string
@@ -146,8 +148,8 @@ type Options struct {
 	RetentionInterval time.Duration
 }
 
-// ManifestSource locates a preview manifest: a TOML file at the target
-// repo's root, optionally rooted at a top-level table of that file.
+// ManifestSource locates a preview manifest: a TOML file at the registered
+// repo scope's root, optionally rooted at a top-level table of that file.
 type ManifestSource struct {
 	Path  string
 	Table string
@@ -158,6 +160,9 @@ type Repo struct {
 	ID     int64  `json:"id"`
 	Name   string `json:"name"`
 	Source string `json:"source"`
+	// ProjectDir scopes manifest lookup and build paths to a repo-relative
+	// subdirectory. Empty means the repository root.
+	ProjectDir string `json:"project_dir,omitempty"`
 	// Watch marks the repo for polling: new branch tips deploy
 	// automatically. WatchBranches narrows which branches (comma-separated
 	// globs, empty = all).
@@ -250,6 +255,7 @@ func (a runnerAdapter) Run(ctx context.Context, spec build.RunSpec, output io.Wr
 		RepoName:   spec.RepoName,
 		SHA:        spec.SHA,
 		ScratchDir: spec.ScratchDir,
+		ProjectDir: spec.ProjectDir,
 		Dir:        spec.Dir,
 		Argv:       spec.Argv,
 		Image:      spec.Image,
@@ -372,11 +378,32 @@ func (o *Orchestrator) WrapHost(next http.Handler) http.Handler {
 // the existing repo; the same name with a different source is ErrConflict.
 // The name must be a lowercase DNS label — it becomes the subdomain segment.
 func (o *Orchestrator) RegisterRepo(ctx context.Context, name, source string) (Repo, error) {
+	return o.registerRepo(ctx, name, source, nil)
+}
+
+// RegisterRepoWithProjectDir registers a repository and scopes its preview
+// manifest and build paths to projectDir. An empty directory is the same as
+// RegisterRepo. Re-registering the same name and source updates the scope.
+func (o *Orchestrator) RegisterRepoWithProjectDir(ctx context.Context, name, source, projectDir string) (Repo, error) {
+	projectDir, err := normalizeProjectDir(projectDir)
+	if err != nil {
+		return Repo{}, err
+	}
+	return o.registerRepo(ctx, name, source, &projectDir)
+}
+
+func (o *Orchestrator) registerRepo(ctx context.Context, name, source string, projectDir *string) (Repo, error) {
 	if err := gitrepo.ValidateName(name); err != nil {
 		return Repo{}, err
 	}
 	if existing, err := o.database.GetRepoByName(name); err == nil {
 		if existing.Source == source {
+			if projectDir != nil {
+				existing, err = o.database.SetRepoProjectDir(existing.ID, *projectDir)
+				if err != nil {
+					return Repo{}, err
+				}
+			}
 			return toRepo(existing), nil
 		}
 		return Repo{}, fmt.Errorf("repo %q is registered with source %q: %w", name, existing.Source, ErrConflict)
@@ -385,7 +412,11 @@ func (o *Orchestrator) RegisterRepo(ctx context.Context, name, source string) (R
 	if err != nil {
 		return Repo{}, err
 	}
-	created, err := o.database.CreateRepo(name, source, gr.Path, db.RepoReady)
+	dir := ""
+	if projectDir != nil {
+		dir = *projectDir
+	}
+	created, err := o.database.CreateRepoWithProjectDir(name, source, gr.Path, dir, db.RepoReady)
 	if errors.Is(err, db.ErrConflict) {
 		return Repo{}, ErrConflict
 	}
@@ -393,6 +424,24 @@ func (o *Orchestrator) RegisterRepo(ctx context.Context, name, source string) (R
 		return Repo{}, err
 	}
 	return toRepo(created), nil
+}
+
+func normalizeProjectDir(projectDir string) (string, error) {
+	projectDir = strings.TrimSpace(strings.ReplaceAll(projectDir, `\`, "/"))
+	if projectDir == "" {
+		return "", nil
+	}
+	if path.IsAbs(projectDir) {
+		return "", fmt.Errorf("project directory must be repo-relative, got %q", projectDir)
+	}
+	cleaned := path.Clean(projectDir)
+	if cleaned == "." {
+		return "", nil
+	}
+	if cleaned == ".." || strings.HasPrefix(cleaned, "../") {
+		return "", fmt.Errorf("project directory must stay inside the repo, got %q", projectDir)
+	}
+	return cleaned, nil
 }
 
 // DeleteRepo unregisters a repository: it stops the repo's supervised
@@ -639,7 +688,7 @@ func (o *Orchestrator) DeployLogs(id int64) (string, error) {
 
 func toRepo(r db.Repo) Repo {
 	return Repo{
-		ID: r.ID, Name: r.Name, Source: r.Source,
+		ID: r.ID, Name: r.Name, Source: r.Source, ProjectDir: r.ProjectDir,
 		Watch: r.Watch, WatchBranches: r.WatchBranches,
 		CreatedAt: r.CreatedAt,
 	}

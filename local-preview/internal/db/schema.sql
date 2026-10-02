@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS repos (
     name TEXT NOT NULL UNIQUE,
     source TEXT NOT NULL,
     bare_path TEXT NOT NULL,
+    -- Optional repo-relative subdirectory that scopes this registered repo.
+    project_dir TEXT NOT NULL DEFAULT '',
     -- Watched repos are polled for new commits; watch_branches narrows which
     -- branch tips deploy (comma-separated globs, empty = all branches).
     watch INTEGER NOT NULL DEFAULT 0,

@@ -81,6 +81,44 @@ func TestOpenMigratesOldSchema(t *testing.T) {
 	}
 }
 
+func TestOpenMigratesRepoProjectDir(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "old-repos.db")
+	old, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := old.Exec(`CREATE TABLE repos (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE,
+		source TEXT NOT NULL,
+		bare_path TEXT NOT NULL,
+		watch INTEGER NOT NULL DEFAULT 0,
+		watch_branches TEXT NOT NULL DEFAULT '',
+		watch_baselined INTEGER NOT NULL DEFAULT 1,
+		status TEXT NOT NULL DEFAULT 'ready',
+		error TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL DEFAULT ''
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := old.Exec(`INSERT INTO repos (name, source, bare_path) VALUES ('demo', '/src', '/bare')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := old.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	repo, err := s.GetRepoByName("demo")
+	if err != nil || repo.ProjectDir != "" {
+		t.Fatalf("migrated repo = %+v, %v; project_dir should default to empty", repo, err)
+	}
+}
+
 func TestRepoCRUD(t *testing.T) {
 	s := newTestStore(t)
 
@@ -124,6 +162,24 @@ func TestRepoCRUD(t *testing.T) {
 	}
 	if _, err := s.SetRepoWatch(999, true, "", false); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("SetRepoWatch missing repo err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestRepoProjectDir(t *testing.T) {
+	s := newTestStore(t)
+	repo, err := s.CreateRepoWithProjectDir("demo", "/src/demo", "/bare/demo", "services/api", RepoReady)
+	if err != nil || repo.ProjectDir != "services/api" {
+		t.Fatalf("CreateRepoWithProjectDir = %+v, %v", repo, err)
+	}
+	got, err := s.SetRepoProjectDir(repo.ID, "web")
+	if err != nil || got.ProjectDir != "web" {
+		t.Fatalf("SetRepoProjectDir = %+v, %v", got, err)
+	}
+	if got, err = s.SetRepoProjectDir(repo.ID, ""); err != nil || got.ProjectDir != "" {
+		t.Fatalf("clear project dir = %+v, %v", got, err)
+	}
+	if _, err := s.SetRepoProjectDir(999, "missing"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("SetRepoProjectDir missing repo err = %v, want ErrNotFound", err)
 	}
 }
 

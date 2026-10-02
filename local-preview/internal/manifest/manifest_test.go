@@ -136,6 +136,25 @@ files   = ["./bin/mycli", "bin/checksums.txt"]
 	}
 }
 
+func TestParseArtifactsOnly(t *testing.T) {
+	src := `
+[previews.artifacts.apk]
+path  = "."
+build = [["sh", "-c", "printf apk > 5-wild.apk"]]
+files = ["5-wild.apk"]
+`
+	m, err := ParseAt([]byte(src), "previews")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.ArtifactsOnly() || m.Frontend.Path != "" || m.Backend.Path != "" {
+		t.Fatalf("manifest should be artifact-only: %+v", m)
+	}
+	if _, ok := m.Artifacts["apk"]; !ok {
+		t.Fatalf("artifacts = %+v, want apk", m.Artifacts)
+	}
+}
+
 func TestParseArtifactErrors(t *testing.T) {
 	cases := map[string]string{
 		"bad name": `

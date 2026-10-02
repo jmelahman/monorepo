@@ -21,6 +21,7 @@ type RunSpec struct {
 	RepoName   string
 	SHA        string
 	ScratchDir string
+	ProjectDir string
 	Dir        string
 	Argv       []string
 	Image      string

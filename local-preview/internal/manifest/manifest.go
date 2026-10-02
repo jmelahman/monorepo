@@ -80,6 +80,24 @@ func (m Manifest) DevcontainerEnabled() bool {
 	return m.Devcontainer == nil || *m.Devcontainer
 }
 
+// ArtifactsOnly reports whether the manifest declares downloadable outputs
+// without a frontend/backend preview. Such deploys become ready after their
+// artifact hashes are resolved; the artifacts then build as usual.
+func (m Manifest) ArtifactsOnly() bool {
+	return len(m.Artifacts) > 0 && !m.hasRuntimeConfig()
+}
+
+func (m Manifest) hasRuntimeConfig() bool {
+	fe, be := m.Frontend, m.Backend
+	return fe.Path != "" || len(fe.Build) > 0 || fe.Dist != "" || fe.Image != "" ||
+		len(fe.Run) > 0 || fe.HealthPath != "" || fe.StartTimeout != 0 || fe.IdleTimeout != 0 ||
+		fe.RunImage != "" || len(fe.Env) > 0 ||
+		be.Path != "" || len(be.Exclude) > 0 || len(be.Build) > 0 || len(be.Init) > 0 ||
+		len(be.Run) > 0 || be.HealthPath != "" || be.StartTimeout != 0 || be.IdleTimeout != 0 ||
+		be.InitTimeout != 0 || be.Image != "" || be.RunImage != "" || len(be.Env) > 0 ||
+		be.StripAPIPrefix || len(be.ExtraRoutes) > 0
+}
+
 // Frontend describes how to hash, build, and serve the frontend. Build
 // commands run with cwd <extracted-tree>/<Path>; Dist is relative to Path.
 // Path doubles as the hash-partition root. Image, when set, runs the build
@@ -222,65 +240,68 @@ func Parse(data []byte) (Manifest, error) {
 
 func (m *Manifest) normalize() error {
 	var err error
-	if m.Frontend.Path, err = cleanRel("frontend.path", m.Frontend.Path); err != nil {
-		return err
-	}
-	if err := validateSteps("frontend.build", m.Frontend.Build); err != nil {
-		return err
-	}
-	if len(m.Frontend.Run) > 0 {
-		// Process-mode frontend: a server, not a static bundle.
-		if m.Frontend.Run[0] == "" {
-			return fmt.Errorf("frontend.run must be a non-empty argv array")
-		}
-		if !strings.HasPrefix(m.Frontend.HealthPath, "/") {
-			return fmt.Errorf("frontend.health_path is required with frontend.run and must start with %q", "/")
-		}
-		if m.Frontend.StartTimeout <= 0 {
-			m.Frontend.StartTimeout = Duration(DefaultStartTimeout)
-		}
-		if m.Frontend.IdleTimeout <= 0 {
-			m.Frontend.IdleTimeout = Duration(DefaultIdleTimeout)
-		}
-	} else {
-		if m.Frontend.Dist, err = cleanRel("frontend.dist", m.Frontend.Dist); err != nil {
+	artifactsOnly := m.ArtifactsOnly()
+	if !artifactsOnly {
+		if m.Frontend.Path, err = cleanRel("frontend.path", m.Frontend.Path); err != nil {
 			return err
 		}
-	}
-	if m.Backend.Path, err = cleanRel("backend.path", m.Backend.Path); err != nil {
-		return err
-	}
-	if err := validateSteps("backend.build", m.Backend.Build); err != nil {
-		return err
-	}
-	for i, step := range m.Backend.Init {
-		if len(step) == 0 || step[0] == "" {
-			return fmt.Errorf("backend.init[%d] must be a non-empty argv array", i)
+		if err := validateSteps("frontend.build", m.Frontend.Build); err != nil {
+			return err
 		}
-		for _, arg := range step {
-			if strings.Contains(arg, "{port}") {
-				return fmt.Errorf("backend.init[%d]: {port} is not available during init (no port is assigned until the server starts)", i)
+		if len(m.Frontend.Run) > 0 {
+			// Process-mode frontend: a server, not a static bundle.
+			if m.Frontend.Run[0] == "" {
+				return fmt.Errorf("frontend.run must be a non-empty argv array")
+			}
+			if !strings.HasPrefix(m.Frontend.HealthPath, "/") {
+				return fmt.Errorf("frontend.health_path is required with frontend.run and must start with %q", "/")
+			}
+			if m.Frontend.StartTimeout <= 0 {
+				m.Frontend.StartTimeout = Duration(DefaultStartTimeout)
+			}
+			if m.Frontend.IdleTimeout <= 0 {
+				m.Frontend.IdleTimeout = Duration(DefaultIdleTimeout)
+			}
+		} else {
+			if m.Frontend.Dist, err = cleanRel("frontend.dist", m.Frontend.Dist); err != nil {
+				return err
 			}
 		}
-	}
-	if len(m.Backend.Run) == 0 || m.Backend.Run[0] == "" {
-		return fmt.Errorf("backend.run is required")
-	}
-	if !strings.HasPrefix(m.Backend.HealthPath, "/") {
-		return fmt.Errorf("backend.health_path must start with %q", "/")
-	}
-	if m.Backend.StartTimeout <= 0 {
-		m.Backend.StartTimeout = Duration(DefaultStartTimeout)
-	}
-	if m.Backend.IdleTimeout <= 0 {
-		m.Backend.IdleTimeout = Duration(DefaultIdleTimeout)
-	}
-	if m.Backend.InitTimeout <= 0 {
-		m.Backend.InitTimeout = Duration(DefaultInitTimeout)
-	}
-	for _, r := range m.Backend.ExtraRoutes {
-		if !strings.HasPrefix(r, "/") {
-			return fmt.Errorf("backend.extra_routes: %q must start with %q", r, "/")
+		if m.Backend.Path, err = cleanRel("backend.path", m.Backend.Path); err != nil {
+			return err
+		}
+		if err := validateSteps("backend.build", m.Backend.Build); err != nil {
+			return err
+		}
+		for i, step := range m.Backend.Init {
+			if len(step) == 0 || step[0] == "" {
+				return fmt.Errorf("backend.init[%d] must be a non-empty argv array", i)
+			}
+			for _, arg := range step {
+				if strings.Contains(arg, "{port}") {
+					return fmt.Errorf("backend.init[%d]: {port} is not available during init (no port is assigned until the server starts)", i)
+				}
+			}
+		}
+		if len(m.Backend.Run) == 0 || m.Backend.Run[0] == "" {
+			return fmt.Errorf("backend.run is required")
+		}
+		if !strings.HasPrefix(m.Backend.HealthPath, "/") {
+			return fmt.Errorf("backend.health_path must start with %q", "/")
+		}
+		if m.Backend.StartTimeout <= 0 {
+			m.Backend.StartTimeout = Duration(DefaultStartTimeout)
+		}
+		if m.Backend.IdleTimeout <= 0 {
+			m.Backend.IdleTimeout = Duration(DefaultIdleTimeout)
+		}
+		if m.Backend.InitTimeout <= 0 {
+			m.Backend.InitTimeout = Duration(DefaultInitTimeout)
+		}
+		for _, r := range m.Backend.ExtraRoutes {
+			if !strings.HasPrefix(r, "/") {
+				return fmt.Errorf("backend.extra_routes: %q must start with %q", r, "/")
+			}
 		}
 	}
 	for name, a := range m.Artifacts {
@@ -288,6 +309,9 @@ func (m *Manifest) normalize() error {
 			return err
 		}
 		m.Artifacts[name] = a
+	}
+	if artifactsOnly {
+		return nil
 	}
 	if err := validateEnv("frontend.env", m.Frontend.Env, frontendPlaceholders); err != nil {
 		return err

@@ -239,6 +239,10 @@ single-file artifact, a dropdown menu of its files for a matrix like the
 one above — and `preview deploy` prints the URLs alongside the preview
 URL.
 
+A manifest may contain only `[artifacts.<name>]` sections, with no
+`[frontend]` or `[backend]`. Such a deploy publishes downloads without
+serving a web preview; its preview URL displays a downloads-only message.
+
 ## Runtime images
 
 With `run_image` set on a side, its server process runs inside that stock

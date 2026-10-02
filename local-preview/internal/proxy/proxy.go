@@ -570,6 +570,11 @@ func (rt *Router) servePreview(w http.ResponseWriter, r *http.Request, e cacheEn
 		rt.errorPage(w, r, http.StatusGone, "Preview cleaned up",
 			fmt.Sprintf("Deploy %s was garbage-collected. Redeploy it with: preview deploy %s", d.ShortSHA, d.SHA))
 	case db.DeployReady:
+		if d.FeHash == "" && d.BeHash == "" {
+			rt.errorPage(w, r, http.StatusNotFound, "Downloads only",
+				"This deploy has downloadable artifacts but no web preview. Download its files from the Kanban previews panel.")
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/api/") || matchesRoute(e.extraRoutes, r.URL.Path) {
 			rt.proxyAPI(w, r, e, repoName)
 			return

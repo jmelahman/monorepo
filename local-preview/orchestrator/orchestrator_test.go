@@ -130,6 +130,21 @@ func TestEmbeddedLifecycle(t *testing.T) {
 	if err != nil || again.ID != repo.ID {
 		t.Fatalf("re-register: %+v, %v", again, err)
 	}
+	scoped, err := o.RegisterRepoWithProjectDir(ctx, "demo", src, "services/api")
+	if err != nil || scoped.ProjectDir != "services/api" {
+		t.Fatalf("register project dir: %+v, %v", scoped, err)
+	}
+	// The legacy registration API does not erase a scope set by an embedder.
+	again, err = o.RegisterRepo(ctx, "demo", src)
+	if err != nil || again.ProjectDir != "services/api" {
+		t.Fatalf("plain re-register erased project dir: %+v, %v", again, err)
+	}
+	if _, err := o.RegisterRepoWithProjectDir(ctx, "demo", src, "../../etc"); err == nil {
+		t.Fatal("escaping project dir should be rejected")
+	}
+	if _, err := o.RegisterRepoWithProjectDir(ctx, "demo", src, ""); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := o.RegisterRepo(ctx, "demo", "/elsewhere"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("conflicting source err = %v, want ErrConflict", err)
 	}
@@ -211,6 +226,86 @@ func TestEmbeddedLifecycle(t *testing.T) {
 	if rec.Body.String() != "host-app" {
 		t.Fatalf("fallback host: %q", rec.Body.String())
 	}
+}
+
+func TestProjectDirScopesManifestAndBuildPaths(t *testing.T) {
+	src := newSourceRepo(t) // includes a valid repo-root manifest
+	project := filepath.Join(src, "apps", "api")
+	files := map[string]string{
+		"preview.toml":   fixtureManifest,
+		"web/index.html": "<html>project frontend</html>",
+		"srv/main.txt":   "project backend",
+	}
+	for name, content := range files {
+		p := filepath.Join(project, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runTestGit(t, src, "add", "-A")
+	runTestGit(t, src, "commit", "-qm", "add project manifest")
+
+	runner := &recordingRunner{}
+	o, err := New(Options{DataDir: filepath.Join(t.TempDir(), "previews"), Runner: runner})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { o.Close() })
+	ctx := context.Background()
+
+	if _, err := o.RegisterRepoWithProjectDir(ctx, "api", src, "apps/api"); err != nil {
+		t.Fatal(err)
+	}
+	d, err := o.RequestDeploy(ctx, "api", "main", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d = waitReady(t, o, d.ID)
+	if d.FeHash == "" || d.BeHash == "" {
+		t.Fatalf("project deploy missing runtime hashes: %+v", d)
+	}
+
+	runner.mu.Lock()
+	specs := append([]RunSpec(nil), runner.specs...)
+	runner.mu.Unlock()
+	if len(specs) != 2 {
+		t.Fatalf("runner saw %d steps, want two: %+v", len(specs), specs)
+	}
+	for _, spec := range specs {
+		if spec.ProjectDir != "apps/api" || !strings.HasPrefix(spec.Dir, "apps/api/") {
+			t.Fatalf("project scope was not applied to build step: %+v", spec)
+		}
+	}
+
+	// A sibling project with no manifest must not inherit the repo-root one.
+	if _, err := o.RegisterRepoWithProjectDir(ctx, "other", src, "apps/other"); err != nil {
+		t.Fatal(err)
+	}
+	other, err := o.RequestDeploy(ctx, "other", "main", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		got, err := o.Deploy(other.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Status == StatusFailed {
+			if !strings.Contains(got.Error, "no preview manifest") {
+				t.Fatalf("sibling failed for wrong reason: %s", got.Error)
+			}
+			return
+		}
+		if got.Status == StatusReady {
+			t.Fatal("sibling project incorrectly inherited the repo-root manifest")
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	t.Fatal("sibling project deploy did not finish")
 }
 
 func TestNewValidation(t *testing.T) {

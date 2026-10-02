@@ -23,6 +23,9 @@ type Repo struct {
 	Name     string `json:"name"`
 	Source   string `json:"source"`
 	BarePath string `json:"-"`
+	// ProjectDir scopes manifests and their build paths to a repo-relative
+	// subdirectory. Empty means the repository root.
+	ProjectDir string `json:"project_dir,omitempty"`
 	// WatchBranches narrows which branches Watch polls (comma-separated
 	// globs, empty = all).
 	WatchBranches string `json:"watch_branches"`
@@ -39,26 +42,46 @@ type Repo struct {
 	WatchBaselined bool `json:"-"`
 }
 
-const repoCols = `id, name, source, bare_path, watch, watch_branches, watch_baselined, status, error, created_at`
+const repoCols = `id, name, source, bare_path, project_dir, watch, watch_branches, watch_baselined, status, error, created_at`
 
 func (r *Repo) scanFields() []any {
-	return []any{&r.ID, &r.Name, &r.Source, &r.BarePath, &r.Watch, &r.WatchBranches, &r.WatchBaselined, &r.Status, &r.Error, &r.CreatedAt}
+	return []any{&r.ID, &r.Name, &r.Source, &r.BarePath, &r.ProjectDir, &r.Watch, &r.WatchBranches, &r.WatchBaselined, &r.Status, &r.Error, &r.CreatedAt}
 }
 
 // CreateRepo inserts a repo with the given clone status and returns it.
 // Returns ErrConflict if the name is taken.
 func (s *Store) CreateRepo(name, source, barePath, status string) (Repo, error) {
+	return s.CreateRepoWithProjectDir(name, source, barePath, "", status)
+}
+
+// CreateRepoWithProjectDir inserts a repo scoped to projectDir. Returns
+// ErrConflict if the name is taken.
+func (s *Store) CreateRepoWithProjectDir(name, source, barePath, projectDir, status string) (Repo, error) {
 	var r Repo
 	err := s.db.QueryRow(
-		`INSERT INTO repos (name, source, bare_path, status) VALUES (?, ?, ?, ?)
+		`INSERT INTO repos (name, source, bare_path, project_dir, status) VALUES (?, ?, ?, ?, ?)
 		 RETURNING `+repoCols,
-		name, source, barePath, status,
+		name, source, barePath, projectDir, status,
 	).Scan(r.scanFields()...)
 	if isUniqueErr(err) {
 		return Repo{}, ErrConflict
 	}
 	if err != nil {
 		return Repo{}, err
+	}
+	return r, nil
+}
+
+// SetRepoProjectDir updates a repo's project scope and returns the row, or
+// ErrNotFound. An empty projectDir scopes the repo to its root.
+func (s *Store) SetRepoProjectDir(id int64, projectDir string) (Repo, error) {
+	var r Repo
+	err := s.db.QueryRow(
+		`UPDATE repos SET project_dir = ? WHERE id = ? RETURNING `+repoCols,
+		projectDir, id,
+	).Scan(r.scanFields()...)
+	if err != nil {
+		return Repo{}, mapNoRows(err)
 	}
 	return r, nil
 }
