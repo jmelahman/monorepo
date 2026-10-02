@@ -16,7 +16,7 @@ container_port = 7777
 # JDK 21 and the SDK; install Bun because `bun run apk` builds the web assets
 # before Capacitor syncs and packages them.
 # Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
-[previews.apk]
+[previews.artifacts.apk]
 path  = "."
 image = "ghcr.io/jmelahman/android-builder:latest"
 build = [
