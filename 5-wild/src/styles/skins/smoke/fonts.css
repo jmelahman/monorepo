@@ -1,22 +1,23 @@
 /*
- * VT323 (SIL OFL 1.1) gives the whole room its pixel voice. IBM Plex Mono
+ * Jersey 20 (SIL OFL 1.1) gives the whole room its pixel voice. IBM Plex Mono
  * (also SIL OFL 1.1) stays available as the fixed-width numeric fallback. Both
  * come from `@fontsource`.
  *
  * Only these imports are scoped to the Smoke Room, so another skin downloads
- * none of them. VT323's single regular cut gives the interface a lighter
- * terminal-pixel stroke; synthesis is disabled so heavier requested weights
- * cannot thicken it. Latin-ext keeps Spanish, French and German prose (`ñ`,
- * `œ`, `ß`) in the same face rather than falling back mid-word.
+ * none of them. Jersey 20's larger pixel design gives the interface more
+ * presence at its existing sizes. It has one regular cut, so synthesis is
+ * disabled rather than letting requested bold weights thicken the glyphs.
+ * Latin-ext keeps Spanish, French and German prose (`ñ`, `œ`, `ß`) in the same
+ * face rather than falling back mid-word.
  *
- * VT323 replaces Silkscreen across the room, including the board and keyboard:
- * its narrow terminal forms carry the pixel treatment to the letters players
- * read and enter constantly.
+ * Jersey 20 replaces VT323 across the room, including the board and keyboard:
+ * its larger, more square glyphs carry the pixel treatment to the letters
+ * players read and enter constantly.
  *
  * Classic needs none of these: it is the phone's own system stack.
  */
-@import "@fontsource/vt323/latin-400.css";
-@import "@fontsource/vt323/latin-ext-400.css";
+@import "@fontsource/jersey-20/latin-400.css";
+@import "@fontsource/jersey-20/latin-ext-400.css";
 @import "@fontsource/ibm-plex-mono/latin-500.css";
 @import "@fontsource/ibm-plex-mono/latin-ext-500.css";
 @import "@fontsource/ibm-plex-mono/latin-600.css";

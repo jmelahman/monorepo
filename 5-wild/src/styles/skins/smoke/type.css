@@ -1,10 +1,10 @@
 /*
- * VT323 gives the whole room its lighter terminal-pixel voice, including the
- * game grid and keyboard.
+ * Jersey 20 gives the whole room a larger pixel voice, including the game grid
+ * and keyboard.
  *
- * Font synthesis stays off so a bold request cannot make VT323's thin strokes
- * heavy. Its single regular cut does not supply weight hierarchy, so case and
- * tracking continue to carry it in the labels below.
+ * Font synthesis stays off so heavier requested weights do not thicken its
+ * pixels. The single regular cut leaves case and tracking to carry the labels'
+ * hierarchy below.
  *
  * What sets a label apart from a paragraph is still case and tracking, below.
  */

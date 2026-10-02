@@ -178,9 +178,8 @@
   --coin-hi: #f0dc9c;
   --coin-lo: #8f7434;
 
-  /* VT323 gives the room its terminal-pixel voice. The board and keyboard name their
-     Plex Sans face explicitly in `type.css`; numeric displays keep tabular
-     figures, with Plex Mono as the fixed-width fallback. See `fonts.css`. */
-  --font-display: "VT323", "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-body: "VT323", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Jersey 20 gives the whole room its larger pixel voice; numeric displays keep
+     tabular figures, with Plex Mono as the fixed-width fallback. See `fonts.css`. */
+  --font-display: "Jersey 20", "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-body: "Jersey 20", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
