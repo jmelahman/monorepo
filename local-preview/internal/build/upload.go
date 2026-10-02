@@ -60,13 +60,16 @@ func (q *Queue) Upload(ctx context.Context, repoName, ref, side, name string, bo
 		return UploadResult{}, err
 	}
 	row := db.DeployRow{Deploy: db.Deploy{SHA: sha, ShortSHA: shortSHA(sha)}, RepoName: repoName}
-	m, err := q.loadManifest(ctx, gr, row)
+	m, projectDir, err := q.loadManifest(ctx, gr, row)
 	if err != nil {
 		return UploadResult{}, err
 	}
+	if (side == SideFrontend || side == SideBackend) && m.ArtifactsOnly() {
+		return UploadResult{}, fmt.Errorf("manifest at %s declares only downloadable artifacts; it has no %s to upload", row.ShortSHA, side)
+	}
 	// Only the uploaded side is hashed — an upload of one side must not depend
 	// on the others' partitions being valid.
-	env, entries, err := q.hashInputs(ctx, gr, sha, m)
+	env, entries, err := q.hashInputs(ctx, gr, sha, m, projectDir)
 	if err != nil {
 		return UploadResult{}, err
 	}

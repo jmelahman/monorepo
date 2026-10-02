@@ -20,6 +20,7 @@ import (
 	"log"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -53,9 +54,9 @@ const ManifestName = "preview.toml"
 // locations (nested .devcontainer/<folder>/ variants are not searched).
 var devcontainerPaths = []string{".devcontainer/devcontainer.json", ".devcontainer.json"}
 
-// ManifestRef locates a preview manifest in a target repo: a TOML file at
-// the repo root, optionally rooted at a top-level table (so embedders can
-// host the manifest inside a larger config file).
+// ManifestRef locates a preview manifest in the registered repo scope: a
+// TOML file at its root, optionally rooted at a top-level table (so embedders
+// can host the manifest inside a larger config file).
 type ManifestRef struct {
 	Path  string
 	Table string
@@ -228,10 +229,13 @@ func (q *Queue) RequestDeploy(ctx context.Context, repoName, ref string, rebuild
 		switch {
 		case d.Status == db.DeployQueued || d.Status == db.DeployBuilding:
 			// Already in flight.
-		case d.Status == db.DeployReady && !rebuild:
+		case d.Status == db.DeployReady && !rebuild && d.ProjectDir == repo.ProjectDir:
 			// Nothing to do.
 		default:
-			// failed, evicted, or an explicit rebuild of a ready deploy.
+			// failed, evicted, an explicit rebuild of a ready deploy, or a
+			// ready deploy built under a project scope the repo has since
+			// changed. The last is an ordinary (cache-using) build: its
+			// hashes are recomputed from the re-scoped manifest.
 			if err := q.db.ResetDeploy(d.ID); err != nil {
 				return db.DeployRow{}, err
 			}
@@ -468,11 +472,11 @@ func startWithRetry(ctx context.Context, attempts int, gap time.Duration, start 
 func (q *Queue) buildDeploy(ctx context.Context, row db.DeployRow, rebuild bool) error {
 	gr := q.git.Open(row.RepoName)
 
-	m, err := q.loadManifest(ctx, gr, row)
+	m, projectDir, err := q.loadManifest(ctx, gr, row)
 	if err != nil {
 		return err
 	}
-	hs, err := q.resolveHashes(ctx, gr, row.SHA, m)
+	hs, err := q.resolveHashes(ctx, gr, row.SHA, m, projectDir)
 	if err != nil {
 		return err
 	}
@@ -488,9 +492,14 @@ func (q *Queue) buildDeploy(ctx context.Context, row db.DeployRow, rebuild bool)
 		}
 		artRefs[name] = db.ArtifactRef{Hash: h, LogPath: q.logPath(row.RepoName, "dl", h), Status: status}
 	}
-	feLog := q.logPath(row.RepoName, "fe", feHash)
-	beLog := q.logPath(row.RepoName, "be", beHash)
-	if err := q.db.SetDeployHashes(row.ID, feHash, beHash, feLog, beLog); err != nil {
+	feLog, beLog := "", ""
+	if feHash != "" {
+		feLog = q.logPath(row.RepoName, "fe", feHash)
+	}
+	if beHash != "" {
+		beLog = q.logPath(row.RepoName, "be", beHash)
+	}
+	if err := q.db.SetDeployHashes(row.ID, feHash, beHash, feLog, beLog, projectDir); err != nil {
 		return err
 	}
 	if err := q.db.SetDeployArtifacts(row.ID, artRefs); err != nil {
@@ -501,13 +510,15 @@ func (q *Queue) buildDeploy(ctx context.Context, row db.DeployRow, rebuild bool)
 	// HasFrontend/HasBackend true, so the build is skipped. Never on an explicit
 	// rebuild, which must re-run the build. Downloadable artifacts hydrate later
 	// (buildArtifacts), off the readiness-gating path.
-	if !rebuild {
+	if !rebuild && feHash != "" {
 		q.hydrate(ctx, row.RepoName, "fe", feHash)
+	}
+	if !rebuild && beHash != "" {
 		q.hydrate(ctx, row.RepoName, "be", beHash)
 	}
 
-	needFe := rebuild || !q.files.HasFrontend(row.RepoName, feHash)
-	needBe := rebuild || !q.files.HasBackend(row.RepoName, beHash)
+	needFe := feHash != "" && (rebuild || !q.files.HasFrontend(row.RepoName, feHash))
+	needBe := beHash != "" && (rebuild || !q.files.HasBackend(row.RepoName, beHash))
 
 	// One extraction serves both sides; skipped entirely on full cache hits.
 	var scratch string
@@ -526,7 +537,7 @@ func (q *Queue) buildDeploy(ctx context.Context, row db.DeployRow, rebuild bool)
 	if needFe {
 		key := row.RepoName + ":fe:" + feHash
 		if _, err, _ := q.sf.Do(key, func() (any, error) {
-			return nil, q.buildFrontend(ctx, row, m.Frontend, env, scratch, feHash, feLog, rebuild)
+			return nil, q.buildFrontend(ctx, row, m.Frontend, env, projectDir, scratch, feHash, feLog, rebuild)
 		}); err != nil {
 			return fmt.Errorf("frontend build: %w (log: %s)", err, feLog)
 		}
@@ -534,7 +545,7 @@ func (q *Queue) buildDeploy(ctx context.Context, row db.DeployRow, rebuild bool)
 	if needBe {
 		key := row.RepoName + ":be:" + beHash
 		if _, err, _ := q.sf.Do(key, func() (any, error) {
-			return nil, q.buildBackend(ctx, row, m.Backend, env, scratch, beHash, beLog, rebuild)
+			return nil, q.buildBackend(ctx, row, m.Backend, env, projectDir, scratch, beHash, beLog, rebuild)
 		}); err != nil {
 			return fmt.Errorf("backend build: %w (log: %s)", err, beLog)
 		}
@@ -546,34 +557,41 @@ func (q *Queue) buildDeploy(ctx context.Context, row db.DeployRow, rebuild bool)
 	// side's default runtime when it pins no run_image — alongside the
 	// section: run-time context the supervisor needs. Networks stay out of
 	// the artifact hash; the devcontainer already fed it via devcExtra.
-	runCfg, err := json.Marshal(struct {
-		manifest.Backend
-		Networks     []string             `json:"networks,omitempty"`
-		Devcontainer *devcontainer.Config `json:"devcontainer,omitempty"`
-	}{m.Backend, m.Networks, env.runDefault(m.Backend.RunImage)})
-	if err != nil {
-		return err
-	}
-	repo, err := q.db.GetRepoByName(row.RepoName)
-	if err != nil {
-		return err
-	}
-	if len(m.Frontend.Run) > 0 {
-		feCfg, err := json.Marshal(struct {
-			manifest.Frontend
+	// Both hashes are empty together (an artifacts-only manifest), so
+	// guarding on beHash covers the frontend run config too.
+	if beHash != "" {
+		runCfg, err := json.Marshal(struct {
+			manifest.Backend
 			Networks     []string             `json:"networks,omitempty"`
 			Devcontainer *devcontainer.Config `json:"devcontainer,omitempty"`
-		}{m.Frontend, m.Networks, env.runDefault(m.Frontend.RunImage)})
+		}{m.Backend, m.Networks, env.runDefault(m.Backend.RunImage)})
 		if err != nil {
 			return err
 		}
-		if err := q.db.CreateFrontendArtifact(db.FrontendArtifact{
-			RepoID: repo.ID, FeHash: feHash, RunConfig: string(feCfg),
-		}); err != nil {
+		repo, err := q.db.GetRepoByName(row.RepoName)
+		if err != nil {
+			return err
+		}
+		if len(m.Frontend.Run) > 0 {
+			feCfg, err := json.Marshal(struct {
+				manifest.Frontend
+				Networks     []string             `json:"networks,omitempty"`
+				Devcontainer *devcontainer.Config `json:"devcontainer,omitempty"`
+			}{m.Frontend, m.Networks, env.runDefault(m.Frontend.RunImage)})
+			if err != nil {
+				return err
+			}
+			if err := q.db.CreateFrontendArtifact(db.FrontendArtifact{
+				RepoID: repo.ID, FeHash: feHash, RunConfig: string(feCfg),
+			}); err != nil {
+				return err
+			}
+		}
+		if err := q.super.ForkOrInitStateDir(ctx, gr, repo.ID, row.RepoName, beHash, row.SHA, string(runCfg)); err != nil {
 			return err
 		}
 	}
-	return q.super.ForkOrInitStateDir(ctx, gr, repo.ID, row.RepoName, beHash, row.SHA, string(runCfg))
+	return nil
 }
 
 // hashSet is a commit's resolved content-addresses: the frontend and backend
@@ -592,8 +610,8 @@ type hashSet struct {
 // use it) and the filtered git tree. Splitting this out lets Upload hash a
 // single side without hashing — and thus without requiring valid partitions
 // for — the others.
-func (q *Queue) hashInputs(ctx context.Context, gr gitrepo.Repo, sha string, m manifest.Manifest) (buildEnv, []gitrepo.TreeEntry, error) {
-	env := q.loadDevcontainer(ctx, gr, sha, m)
+func (q *Queue) hashInputs(ctx context.Context, gr gitrepo.Repo, sha string, m manifest.Manifest, projectDir string) (buildEnv, []gitrepo.TreeEntry, error) {
+	env := q.loadDevcontainer(ctx, gr, sha, m, projectDir)
 	entries, err := gr.LsTree(ctx, sha, "")
 	return env, entries, err
 }
@@ -618,18 +636,21 @@ func artHashOf(m manifest.Manifest, spec manifest.Artifact, env buildEnv, entrie
 
 // resolveHashes computes the content-address of every side of a commit — what
 // buildDeploy needs, since it hashes all sides to decide what to build.
-func (q *Queue) resolveHashes(ctx context.Context, gr gitrepo.Repo, sha string, m manifest.Manifest) (hashSet, error) {
-	env, entries, err := q.hashInputs(ctx, gr, sha, m)
+func (q *Queue) resolveHashes(ctx context.Context, gr gitrepo.Repo, sha string, m manifest.Manifest, projectDir string) (hashSet, error) {
+	env, entries, err := q.hashInputs(ctx, gr, sha, m, projectDir)
 	if err != nil {
 		return hashSet{}, err
 	}
-	feHash, err := feHashOf(m.Frontend, env, entries)
-	if err != nil {
-		return hashSet{}, err
-	}
-	beHash, err := beHashOf(m, env, entries)
-	if err != nil {
-		return hashSet{}, err
+	var feHash, beHash string
+	if !m.ArtifactsOnly() {
+		feHash, err = feHashOf(m.Frontend, env, entries)
+		if err != nil {
+			return hashSet{}, err
+		}
+		beHash, err = beHashOf(m, env, entries)
+		if err != nil {
+			return hashSet{}, err
+		}
 	}
 	art := make(map[string]string, len(m.Artifacts))
 	for _, name := range slices.Sorted(maps.Keys(m.Artifacts)) {
@@ -671,14 +692,14 @@ func (q *Queue) buildArtifacts(ctx context.Context, row db.DeployRow, rebuild bo
 		}
 	}
 	gr := q.git.Open(row.RepoName)
-	m, err := q.loadManifest(ctx, gr, row)
+	m, projectDir, err := q.loadManifest(ctx, gr, row)
 	if err != nil {
 		for _, name := range pending {
 			fail(name, err)
 		}
 		return
 	}
-	env := q.loadDevcontainer(ctx, gr, row.SHA, m)
+	env := q.loadDevcontainer(ctx, gr, row.SHA, m, projectDir)
 
 	var scratch string
 	for _, name := range pending {
@@ -715,7 +736,7 @@ func (q *Queue) buildArtifacts(ctx context.Context, row db.DeployRow, rebuild bo
 		}
 		key := row.RepoName + ":dl:" + ref.Hash
 		if _, err, _ := q.sf.Do(key, func() (any, error) {
-			return nil, q.buildArtifact(ctx, row, spec, env, scratch, ref.Hash, ref.LogPath, rebuild)
+			return nil, q.buildArtifact(ctx, row, spec, env, projectDir, scratch, ref.Hash, ref.LogPath, rebuild)
 		}); err != nil {
 			fail(name, fmt.Errorf("%w (log: %s)", err, ref.LogPath))
 			continue
@@ -731,9 +752,17 @@ func (q *Queue) buildArtifacts(ctx context.Context, row db.DeployRow, rebuild bo
 // read from the server's disk rather than the committed tree). A missing
 // file or table means "try the next source"; a present but invalid manifest
 // fails the deploy with its parse error.
-func (q *Queue) loadManifest(ctx context.Context, gr gitrepo.Repo, row db.DeployRow) (manifest.Manifest, error) {
+func (q *Queue) loadManifest(ctx context.Context, gr gitrepo.Repo, row db.DeployRow) (manifest.Manifest, string, error) {
+	repo, err := q.db.GetRepoByName(row.RepoName)
+	if err != nil {
+		return manifest.Manifest{}, "", err
+	}
+	projectDir := repo.ProjectDir
 	tried := make([]string, 0, len(q.manifestRefs)+1)
 	for _, ref := range q.manifestRefs {
+		if projectDir != "" {
+			ref.Path = path.Join(projectDir, ref.Path)
+		}
 		tried = append(tried, ref.String())
 		raw, err := gr.ReadFile(ctx, row.SHA, ref.Path)
 		if err != nil {
@@ -744,9 +773,9 @@ func (q *Queue) loadManifest(ctx context.Context, gr gitrepo.Repo, row db.Deploy
 			continue
 		}
 		if err != nil {
-			return manifest.Manifest{}, fmt.Errorf("%s: %w", ref, err)
+			return manifest.Manifest{}, "", fmt.Errorf("%s: %w", ref, err)
 		}
-		return m, nil
+		return scopeManifest(m, projectDir), projectDir, nil
 	}
 	if q.localManifestDir != "" {
 		local := filepath.Join(q.localManifestDir, row.RepoName+".toml")
@@ -754,17 +783,56 @@ func (q *Queue) loadManifest(ctx context.Context, gr gitrepo.Repo, row db.Deploy
 		if raw, err := os.ReadFile(local); err == nil {
 			m, err := manifest.Parse(raw)
 			if err != nil {
-				return manifest.Manifest{}, fmt.Errorf("%s: %w", local, err)
+				return manifest.Manifest{}, "", fmt.Errorf("%s: %w", local, err)
 			}
-			return m, nil
+			return scopeManifest(m, projectDir), projectDir, nil
 		}
 	}
-	return manifest.Manifest{}, fmt.Errorf(
+	return manifest.Manifest{}, "", fmt.Errorf(
 		"no preview manifest at %s (looked for %s) — is the repo onboarded?",
 		row.ShortSHA, strings.Join(tried, ", "))
 }
 
-func (q *Queue) buildFrontend(ctx context.Context, row db.DeployRow, fe manifest.Frontend, env buildEnv, scratch, hash, logPath string, overwrite bool) error {
+// scopeManifest makes manifest paths repo-relative after interpreting them as
+// relative to the registered repo's project directory. Exclusions with a directory or
+// path prefix are rooted there too; basename-only globs remain unchanged.
+func scopeManifest(m manifest.Manifest, projectDir string) manifest.Manifest {
+	if projectDir == "" {
+		return m
+	}
+	prefix := func(p string) string {
+		if p == "" {
+			return ""
+		}
+		return path.Join(projectDir, p)
+	}
+	prefixExcludes := func(patterns []string) []string {
+		out := make([]string, len(patterns))
+		for i, pattern := range patterns {
+			trailingSlash := strings.HasSuffix(pattern, "/")
+			trimmed := strings.TrimSuffix(pattern, "/")
+			if trailingSlash || strings.Contains(trimmed, "/") {
+				trimmed = path.Join(projectDir, trimmed)
+			}
+			if trailingSlash {
+				trimmed += "/"
+			}
+			out[i] = trimmed
+		}
+		return out
+	}
+	m.Frontend.Path = prefix(m.Frontend.Path)
+	m.Backend.Path = prefix(m.Backend.Path)
+	m.Backend.Exclude = prefixExcludes(m.Backend.Exclude)
+	for name, artifact := range m.Artifacts {
+		artifact.Path = prefix(artifact.Path)
+		artifact.Exclude = prefixExcludes(artifact.Exclude)
+		m.Artifacts[name] = artifact
+	}
+	return m
+}
+
+func (q *Queue) buildFrontend(ctx context.Context, row db.DeployRow, fe manifest.Frontend, env buildEnv, projectDir, scratch, hash, logPath string, overwrite bool) error {
 	logF, err := openLog(logPath)
 	if err != nil {
 		return err
@@ -772,7 +840,7 @@ func (q *Queue) buildFrontend(ctx context.Context, row db.DeployRow, fe manifest
 	defer logF.Close()
 	env.noteSkipped(fe.Image, logF)
 	for _, step := range fe.Build {
-		if err := q.runStep(ctx, row, scratch, fe.Path, fe.Image, env.devc, step, logF); err != nil {
+		if err := q.runStep(ctx, row, projectDir, scratch, fe.Path, fe.Image, env.devc, step, logF); err != nil {
 			return err
 		}
 	}
@@ -796,7 +864,7 @@ func (q *Queue) buildFrontend(ctx context.Context, row db.DeployRow, fe manifest
 	return nil
 }
 
-func (q *Queue) buildBackend(ctx context.Context, row db.DeployRow, be manifest.Backend, env buildEnv, scratch, hash, logPath string, overwrite bool) error {
+func (q *Queue) buildBackend(ctx context.Context, row db.DeployRow, be manifest.Backend, env buildEnv, projectDir, scratch, hash, logPath string, overwrite bool) error {
 	logF, err := openLog(logPath)
 	if err != nil {
 		return err
@@ -804,7 +872,7 @@ func (q *Queue) buildBackend(ctx context.Context, row db.DeployRow, be manifest.
 	defer logF.Close()
 	env.noteSkipped(be.Image, logF)
 	for _, step := range be.Build {
-		if err := q.runStep(ctx, row, scratch, be.Path, be.Image, env.devc, step, logF); err != nil {
+		if err := q.runStep(ctx, row, projectDir, scratch, be.Path, be.Image, env.devc, step, logF); err != nil {
 			return err
 		}
 	}
@@ -815,7 +883,7 @@ func (q *Queue) buildBackend(ctx context.Context, row db.DeployRow, be manifest.
 	return nil
 }
 
-func (q *Queue) buildArtifact(ctx context.Context, row db.DeployRow, a manifest.Artifact, env buildEnv, scratch, hash, logPath string, overwrite bool) error {
+func (q *Queue) buildArtifact(ctx context.Context, row db.DeployRow, a manifest.Artifact, env buildEnv, projectDir, scratch, hash, logPath string, overwrite bool) error {
 	logF, err := openLog(logPath)
 	if err != nil {
 		return err
@@ -823,7 +891,7 @@ func (q *Queue) buildArtifact(ctx context.Context, row db.DeployRow, a manifest.
 	defer logF.Close()
 	env.noteSkipped(a.Image, logF)
 	for _, step := range a.Build {
-		if err := q.runStep(ctx, row, scratch, a.Path, a.Image, env.devc, step, logF); err != nil {
+		if err := q.runStep(ctx, row, projectDir, scratch, a.Path, a.Image, env.devc, step, logF); err != nil {
 			return err
 		}
 	}
@@ -834,7 +902,7 @@ func (q *Queue) buildArtifact(ctx context.Context, row db.DeployRow, a manifest.
 	return nil
 }
 
-func (q *Queue) runStep(ctx context.Context, row db.DeployRow, scratch, dir, image string, devc devcontainer.Config, argv []string, logF io.Writer) error {
+func (q *Queue) runStep(ctx context.Context, row db.DeployRow, projectDir, scratch, dir, image string, devc devcontainer.Config, argv []string, logF io.Writer) error {
 	cctx, cancel := context.WithTimeout(ctx, q.buildTimeout)
 	defer cancel()
 	fmt.Fprintf(logF, "$ %s\n", strings.Join(argv, " "))
@@ -842,6 +910,7 @@ func (q *Queue) runStep(ctx context.Context, row db.DeployRow, scratch, dir, ima
 		RepoName:     row.RepoName,
 		SHA:          row.SHA,
 		ScratchDir:   scratch,
+		ProjectDir:   projectDir,
 		Dir:          dir,
 		Argv:         argv,
 		Image:        image,
@@ -882,11 +951,18 @@ func (e buildEnv) runDefault(runImage string) *devcontainer.Config {
 // unusable config (parse error, no image — e.g. a Dockerfile build) never
 // fails the deploy — the file isn't part of the preview contract; it falls
 // back to the host with the reason in buildEnv.note.
-func (q *Queue) loadDevcontainer(ctx context.Context, gr gitrepo.Repo, sha string, m manifest.Manifest) buildEnv {
+func (q *Queue) loadDevcontainer(ctx context.Context, gr gitrepo.Repo, sha string, m manifest.Manifest, projectDir string) buildEnv {
 	if !m.DevcontainerEnabled() {
 		return buildEnv{}
 	}
-	for _, p := range devcontainerPaths {
+	paths := make([]string, 0, len(devcontainerPaths)*2)
+	if projectDir != "" {
+		for _, p := range devcontainerPaths {
+			paths = append(paths, path.Join(projectDir, p))
+		}
+	}
+	paths = append(paths, devcontainerPaths...)
+	for _, p := range paths {
 		raw, err := gr.ReadFile(ctx, sha, p)
 		if err != nil {
 			continue

@@ -109,6 +109,31 @@ func TestDeploysPage(t *testing.T) {
 		t.Errorf("query+status total = %d, want 4", narrowed.Total)
 	}
 
+	// MaxID pins a snapshot: a deploy created after the first page doesn't
+	// shift the rows (or the total) of later pages.
+	pinned, err := o.DeploysPage(DeployQuery{Limit: 2, Offset: 2, MaxID: ids[4]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pinned.Total != 5 || len(pinned.Deploys) != 2 || pinned.Deploys[0].ID != ids[2] {
+		t.Fatalf("pinned page = %+v, want total 5 starting at %d", pinned, ids[2])
+	}
+
+	// Branch matches exactly, unlike Query's substring match.
+	if _, err := o.database.CreateDeploy(repo.ID, sha(7), db.DeployMeta{Ref: "feature", Branch: "feature"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := o.database.CreateDeploy(repo.ID, sha(8), db.DeployMeta{Ref: "feature-2", Branch: "feature-2"}); err != nil {
+		t.Fatal(err)
+	}
+	branch, err := o.DeploysPage(DeployQuery{Branch: "feature"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if branch.Total != 1 || len(branch.Deploys) != 1 || branch.Deploys[0].Ref != "feature" {
+		t.Fatalf("branch filter = %+v, want only the feature deploy", branch)
+	}
+
 	// Unknown repo: an empty page, not an error.
 	none, err := o.DeploysPage(DeployQuery{Repo: "nope"})
 	if err != nil || none.Total != 0 || len(none.Deploys) != 0 {

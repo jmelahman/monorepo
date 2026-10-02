@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/jmelahman/local-preview/internal/db"
@@ -166,6 +167,24 @@ func TestUploadArtifactErrors(t *testing.T) {
 	// A tar missing the declared file.
 	if _, err := upload(t, e, "main", SideArtifact, "cli", tarGzBytes(t, map[string]string{"wrong-name": "z"}), false); err == nil {
 		t.Fatal("expected an error when the declared file is absent from the upload")
+	}
+}
+
+// An artifacts-only manifest has no frontend or backend partition, so a side
+// upload says so instead of reporting an empty partition.
+func TestUploadSideRejectedForArtifactsOnlyManifest(t *testing.T) {
+	src := newFixtureRepo(t)
+	if err := os.WriteFile(filepath.Join(src, "preview.toml"), []byte(fixtureArtifactSection), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runTestGit(t, src, "commit", "-qam", "artifacts-only manifest")
+	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
+
+	for _, side := range []string{SideFrontend, SideBackend} {
+		_, err := upload(t, e, "main", side, "", tarGzBytes(t, map[string]string{"x": "y"}), false)
+		if err == nil || !strings.Contains(err.Error(), "only downloadable artifacts") {
+			t.Fatalf("%s upload err = %v, want artifacts-only error", side, err)
+		}
 	}
 }
 

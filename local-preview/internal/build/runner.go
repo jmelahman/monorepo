@@ -21,6 +21,10 @@ type RunSpec struct {
 	RepoName   string
 	SHA        string
 	ScratchDir string
+	// ProjectDir is the repo's registered project scope ("" = repo root),
+	// for information only: Dir is already prefixed with it, so don't join
+	// the two.
+	ProjectDir string
 	Dir        string
 	Argv       []string
 	Image      string

@@ -98,7 +98,7 @@ func (e *testEnv) readyDeploy(t *testing.T, sha string) db.Deploy {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := e.db.SetDeployHashes(d.ID, feHash, "be"+sha[:8], "", ""); err != nil {
+	if err := e.db.SetDeployHashes(d.ID, feHash, "be"+sha[:8], "", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := e.db.SetDeployReady(d.ID); err != nil {
@@ -412,7 +412,7 @@ func TestBuildingPageStreamsBuildLogs(t *testing.T) {
 	if err := os.WriteFile(beLog, []byte("pip installing\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.db.SetDeployHashes(d.ID, "feBUILD01", "beBUILD01", feLog, beLog); err != nil {
+	if err := e.db.SetDeployHashes(d.ID, "feBUILD01", "beBUILD01", feLog, beLog, ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := e.db.SetDeployBuilding(d.ID); err != nil {

@@ -32,6 +32,25 @@ d, err := orch.RequestDeploy(ctx, "myapp", "feature-branch", false)
 // Poll orch.Deploy(d.ID) until StatusReady, then use d.PreviewURL.
 ```
 
+For a repo that hosts multiple apps, register a repo-relative project scope:
+
+```go
+orch.RegisterRepoWithProjectDir(ctx, "api", "/path/to/monorepo", "services/api")
+```
+
+Manifest discovery then starts in `services/api/`, and manifest paths such as
+`frontend.path` or `artifacts.cli.path` are relative to that directory. The
+scope is stored with the registered repo and survives restarts.
+
+- A server-local manifest (`<localManifestDir>/<repo>.toml`) is scoped the
+  same way: its paths are relative to the project directory too.
+- The build devcontainer is looked up in the project directory first
+  (`services/api/.devcontainer/devcontainer.json`, then
+  `services/api/.devcontainer.json`), falling back to the repo root's.
+- Calling `RegisterRepoWithProjectDir` again with the same name and source
+  changes the scope; passing `""` resets it to the repo root. A plain
+  `RegisterRepo` call leaves an existing scope untouched.
+
 Notes:
 
 - The orchestrator keeps everything under `Options.DataDir` — its own

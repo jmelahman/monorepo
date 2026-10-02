@@ -136,6 +136,34 @@ files   = ["./bin/mycli", "bin/checksums.txt"]
 	}
 }
 
+func TestParseArtifactsOnly(t *testing.T) {
+	src := `
+[previews.artifacts.apk]
+path  = "."
+build = [["sh", "-c", "printf apk > 5-wild.apk"]]
+files = ["5-wild.apk"]
+`
+	m, err := ParseAt([]byte(src), "previews")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.ArtifactsOnly() || m.Frontend.Path != "" || m.Backend.Path != "" {
+		t.Fatalf("manifest should be artifact-only: %+v", m)
+	}
+	if _, ok := m.Artifacts["apk"]; !ok {
+		t.Fatalf("artifacts = %+v, want apk", m.Artifacts)
+	}
+
+	// Any runtime field opts back into full frontend/backend validation.
+	partial := src + `
+[previews.backend]
+strip_api_prefix = true
+`
+	if _, err := ParseAt([]byte(partial), "previews"); err == nil || !strings.Contains(err.Error(), "is required") {
+		t.Fatalf("partial backend err = %v, want a required-field error", err)
+	}
+}
+
 func TestParseArtifactErrors(t *testing.T) {
 	cases := map[string]string{
 		"bad name": `

@@ -46,6 +46,11 @@ func TestMain(m *testing.M) {
 	if i := slices.Index(os.Args, "--helper-init"); i >= 0 && i+2 < len(os.Args) {
 		os.Exit(runHelperInit(os.Args[i+1], os.Args[i+2]))
 	}
+	// Drop the git environment a hook may have handed down, or the fixture
+	// repos' git commands land in the caller's repository.
+	for _, k := range []string{"GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY", "GIT_COMMON_DIR"} {
+		os.Unsetenv(k)
+	}
 	os.Exit(m.Run())
 }
 
@@ -755,7 +760,7 @@ func TestForkOrInitStateDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := f.db.SetDeployHashes(d1.ID, "fe1", "be1", "", ""); err != nil {
+	if err := f.db.SetDeployHashes(d1.ID, "fe1", "be1", "", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.db.SetDeployReady(d1.ID); err != nil {

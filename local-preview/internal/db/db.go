@@ -63,11 +63,13 @@ func Open(path string) (*Store, error) {
 func migrate(sqlDB *sql.DB) error {
 	const text = `TEXT NOT NULL DEFAULT ''`
 	added := []struct{ table, column, ddl string }{
+		{"repos", "project_dir", text},
 		{"deploys", "branch", text},
 		{"deploys", "author_name", text},
 		{"deploys", "author_email", text},
 		{"deploys", "artifacts", text},
 		{"deploys", "created_by", text},
+		{"deploys", "project_dir", text},
 		{"backend_artifacts", "init_done_at", text},
 		{"repos", "watch", `INTEGER NOT NULL DEFAULT 0`},
 		{"repos", "watch_branches", text},

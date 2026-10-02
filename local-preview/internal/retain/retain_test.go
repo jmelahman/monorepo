@@ -51,7 +51,7 @@ func (f *fixture) addDeploy(status, beHash string) db.Deploy {
 		f.t.Fatal(err)
 	}
 	if beHash != "" {
-		if err := f.db.SetDeployHashes(d.ID, "", beHash, "", ""); err != nil {
+		if err := f.db.SetDeployHashes(d.ID, "", beHash, "", "", ""); err != nil {
 			f.t.Fatal(err)
 		}
 		f.mkdirWithFile(f.files.BackendDir(f.repo.Name, beHash))

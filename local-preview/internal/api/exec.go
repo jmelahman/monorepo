@@ -31,7 +31,7 @@ func (d Deps) handleDeployExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if hash == "" {
-		httpError(w, http.StatusNotFound, "deploy has no such process (not built yet)")
+		httpError(w, http.StatusNotFound, "deploy has no such process (not built yet, or a downloads-only deploy)")
 		return
 	}
 	q := r.URL.Query()

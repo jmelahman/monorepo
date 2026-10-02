@@ -65,6 +65,10 @@ type Deploy struct {
 	// or empty for the automatic poller (which has no identity). Distinct from
 	// AuthorName/AuthorEmail, which are the commit's git author metadata.
 	CreatedBy string `json:"created_by,omitempty"`
+	// ProjectDir is the repo's project scope the deploy was last built
+	// under, so a re-scoped repo rebuilds a ready deploy instead of serving
+	// one built from the old directory.
+	ProjectDir string `json:"-"`
 }
 
 // DeployRow is a deploy joined with its repo name.
@@ -82,7 +86,7 @@ type DeployRow struct {
 // qualified for joins (repos shares column names like created_at).
 const deployCols = `id, repo_id, sha, short_sha, ref, branch, author_name, ` +
 	`author_email, fe_hash, be_hash, artifacts, status, error, attempt_count, ` +
-	`fe_build_log_path, be_build_log_path, created_at, updated_at, created_by`
+	`fe_build_log_path, be_build_log_path, created_at, updated_at, created_by, project_dir`
 
 var deployColsD = "d." + strings.ReplaceAll(deployCols, ", ", ", d.")
 
@@ -97,7 +101,7 @@ func scanDeploy(row interface{ Scan(...any) error }, extra ...any) (Deploy, erro
 	dest := []any{&d.ID, &d.RepoID, &d.SHA, &d.ShortSHA, &d.Ref, &d.Branch,
 		&d.AuthorName, &d.AuthorEmail, &d.FeHash, &d.BeHash, &artifacts,
 		&d.Status, &d.Error, &d.AttemptCount, &d.FeBuildLogPath, &d.BeBuildLogPath,
-		&d.CreatedAt, &d.UpdatedAt, &d.CreatedBy}
+		&d.CreatedAt, &d.UpdatedAt, &d.CreatedBy, &d.ProjectDir}
 	dest = append(dest, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return Deploy{}, err
@@ -201,6 +205,10 @@ type DeployFilter struct {
 	// by descending id, so a deploy created between two page fetches shifts
 	// the window rather than corrupting it.
 	Offset int
+	// MaxID, when positive, keeps only deploys with id <= MaxID. Pinning it
+	// to the newest id a listing has seen makes later pages a stable
+	// snapshot: deploys created since don't shift rows between pages.
+	MaxID int64
 }
 
 // CrashedMode selects how a filter treats deploys with a crashed side.
@@ -250,6 +258,10 @@ func deployWhere(f DeployFilter) (string, []any) {
 		where = append(where,
 			`(instr(lower(d.author_name), lower(?)) > 0 OR instr(lower(d.author_email), lower(?)) > 0)`)
 		args = append(args, f.Author, f.Author)
+	}
+	if f.MaxID > 0 {
+		where = append(where, `d.id <= ?`)
+		args = append(args, f.MaxID)
 	}
 	if f.Status != "" {
 		where = append(where, `d.status = ?`)
@@ -434,12 +446,13 @@ func (s *Store) SetDeployBuilding(id int64) error {
 	return s.updateDeploy(id, `status = ?`, DeployBuilding)
 }
 
-// SetDeployHashes records the computed partition hashes and log paths as
-// soon as they're known — visible even if the build later fails.
-func (s *Store) SetDeployHashes(id int64, feHash, beHash, feLog, beLog string) error {
+// SetDeployHashes records the computed partition hashes, log paths, and the
+// project scope they were computed under as soon as they're known — visible
+// even if the build later fails.
+func (s *Store) SetDeployHashes(id int64, feHash, beHash, feLog, beLog, projectDir string) error {
 	return s.updateDeploy(id,
-		`fe_hash = ?, be_hash = ?, fe_build_log_path = ?, be_build_log_path = ?`,
-		feHash, beHash, feLog, beLog)
+		`fe_hash = ?, be_hash = ?, fe_build_log_path = ?, be_build_log_path = ?, project_dir = ?`,
+		feHash, beHash, feLog, beLog, projectDir)
 }
 
 // SetDeployArtifacts records the deploy's named downloadable artifacts —

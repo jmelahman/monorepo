@@ -51,7 +51,7 @@ func readyDeploy(t *testing.T, deps Deps) db.Deploy {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := deps.Store.SetDeployHashes(dep.ID, "", "behash1234567890", "", ""); err != nil {
+	if err := deps.Store.SetDeployHashes(dep.ID, "", "behash1234567890", "", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := deps.Store.SetDeployReady(dep.ID); err != nil {

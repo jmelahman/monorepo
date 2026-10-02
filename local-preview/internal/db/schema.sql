@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS repos (
     name TEXT NOT NULL UNIQUE,
     source TEXT NOT NULL,
     bare_path TEXT NOT NULL,
+    -- Optional repo-relative subdirectory that scopes this registered repo.
+    project_dir TEXT NOT NULL DEFAULT '',
     -- Watched repos are polled for new commits; watch_branches narrows which
     -- branch tips deploy (comma-separated globs, empty = all branches).
     watch INTEGER NOT NULL DEFAULT 0,
@@ -66,6 +68,9 @@ CREATE TABLE IF NOT EXISTS deploys (
     -- CI/OIDC, or empty for the automatic poller). Audit trail only; distinct
     -- from author_name/author_email, which are the commit's git author.
     created_by TEXT NOT NULL DEFAULT '',
+    -- The repo's project_dir when the deploy was last built; a ready deploy
+    -- whose scope no longer matches the repo's is rebuilt on request.
+    project_dir TEXT NOT NULL DEFAULT '',
     UNIQUE (repo_id, sha),
     UNIQUE (repo_id, short_sha)
 );
