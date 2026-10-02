@@ -185,7 +185,8 @@ A deploy has a `status` (`queued`, `building`, `ready`, `failed`, or `evicted`) 
 | `GET /api/sessions/{id}/previews`                 | Deploys of the session's branch, newest first. |
 | `POST /api/sessions/{id}/previews`                | Deploys the branch's latest commit. Returns `202`. Returns the existing deploy if that commit is already built. |
 | `POST /api/boards/{id}/previews`                  | Deploys any ref. Body: `{ "ref": "<branch, tag, or sha>" }`. Defaults to the base branch. Returns `202`. |
-| `GET /api/previews?board=<id>&limit=<n>&offset=<n>` | A page of deploys, newest first, with `board_id`, `board_name`, and `board_slug`. Defaults to 25 rows; `limit` is 1–100. The response is `{ "deploys": [...], "total": <matching rows> }`. Omit `board` to list all boards. |
+| `GET /api/previews?board=<id>&limit=<n>&offset=<n>&max_id=<id>` | A page of deploys, newest first, with `board_id`, `board_name`, and `board_slug`. Defaults to 25 rows; `limit` is 1–100. The response is `{ "deploys": [...], "total": <matching rows> }`. Omit `board` to list all boards. Pass the first page's newest id as `max_id` while paging so new deploys don't shift later pages. |
+| `GET /api/previews/{id}`                          | One deploy, with the same board fields. |
 | `POST /api/previews/{id}/stop`                    | Stops the deploy's backend. It starts again on the next request. |
 | `DELETE /api/previews/{id}`                       | Deletes a deploy and its files. |
 | `GET /api/previews/{id}/logs`                     | Build logs as plain text. |

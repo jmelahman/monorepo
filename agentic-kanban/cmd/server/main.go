@@ -382,7 +382,11 @@ func newPreviewOrchestrator(cfg *config.Config, addr string, inMemory bool, dock
 	baseURL := os.Getenv(previews.BaseURLEnv)
 	if baseURL != "" {
 		// The public URL supplies the host and scheme; don't let the optional
-		// domain setting conflict with it.
+		// domain setting conflict with it, but say so when it's ignored.
+		if domain != "" {
+			log.Printf("preview orchestrator: %s is set, ignoring KANBAN_PREVIEW_DOMAIN=%s",
+				previews.BaseURLEnv, domain)
+		}
 		domain = ""
 	}
 	manifestDir := previews.ManifestDir()

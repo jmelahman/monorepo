@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type Preview, type Session } from "@/api/client";
+import { api, isDownloadsOnly, type Preview, type Session } from "@/api/client";
 import { queryKeys } from "@/api/keys";
 import { Button } from "./Button";
 
@@ -81,11 +81,11 @@ export function PreviewsPanel({ session }: { session: Session }) {
                     {p.process ? (
                       <span className="text-fg-muted"> · backend {p.process}</span>
                     ) : null}
-                    {p.fe_process ? (
-                      <span className="text-fg-muted"> · frontend {p.fe_process}</span>
-                    ) : null}
                     {p.process_error ? (
                       <span className="text-danger">: {p.process_error}</span>
+                    ) : null}
+                    {p.fe_process ? (
+                      <span className="text-fg-muted"> · frontend {p.fe_process}</span>
                     ) : null}
                     {p.fe_process_error ? (
                       <span className="text-danger">: {p.fe_process_error}</span>
@@ -104,7 +104,7 @@ export function PreviewsPanel({ session }: { session: Session }) {
                   >
                     logs
                   </a>
-                  {p.status === "ready" && p.preview_url && (
+                  {p.status === "ready" && p.preview_url && !isDownloadsOnly(p) && (
                     <a
                       className="text-accent-500"
                       href={p.preview_url}

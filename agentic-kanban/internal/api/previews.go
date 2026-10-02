@@ -108,12 +108,14 @@ func (h *handlers) listSessionPreviews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page, err := h.previews.DeploysPage(orchestrator.DeployQuery{
-		Repo: repoName, Query: sess.BranchName,
+		Repo: repoName, Branch: sess.BranchName,
 	})
 	if err != nil {
 		h.httpError(w, err, 500)
 		return
 	}
+	// Branch also matches shas deployed off this branch; the session tab
+	// lists only deploys of the branch itself.
 	deploys := []orchestrator.Deploy{}
 	for _, d := range page.Deploys {
 		if d.Ref == sess.BranchName {
@@ -164,32 +166,70 @@ const (
 	maxPreviewPageSize     = 100
 )
 
-func previewPageParams(r *http.Request) (limit, offset int, err error) {
+func previewPageParams(r *http.Request) (limit, offset int, maxID int64, err error) {
 	limit = defaultPreviewPageSize
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		limit, err = strconv.Atoi(raw)
 		if err != nil || limit < 1 || limit > maxPreviewPageSize {
-			return 0, 0, fmt.Errorf("limit must be between 1 and %d", maxPreviewPageSize)
+			return 0, 0, 0, fmt.Errorf("limit must be between 1 and %d", maxPreviewPageSize)
 		}
 	}
 	if raw := r.URL.Query().Get("offset"); raw != "" {
 		offset, err = strconv.Atoi(raw)
 		if err != nil || offset < 0 {
-			return 0, 0, fmt.Errorf("offset must be a non-negative integer")
+			return 0, 0, 0, fmt.Errorf("offset must be a non-negative integer")
 		}
 	}
-	return limit, offset, nil
+	if raw := r.URL.Query().Get("max_id"); raw != "" {
+		maxID, err = strconv.ParseInt(raw, 10, 64)
+		if err != nil || maxID < 1 {
+			return 0, 0, 0, fmt.Errorf("max_id must be a positive deploy ID")
+		}
+	}
+	return limit, offset, maxID, nil
+}
+
+// getPreview returns one deploy joined to its board — what the build-log
+// modal polls, so it follows its deploy even after the row pages away.
+func (h *handlers) getPreview(w http.ResponseWriter, r *http.Request) {
+	if h.previews == nil {
+		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		return
+	}
+	d, err := h.previews.Deploy(pathID(r, "id"))
+	if errors.Is(err, orchestrator.ErrNotFound) {
+		h.httpError(w, fmt.Errorf("preview not found"), 404)
+		return
+	}
+	if err != nil {
+		h.httpError(w, err, 500)
+		return
+	}
+	boards, err := h.store.ListBoards(r.Context())
+	if err != nil {
+		h.httpError(w, err, 500)
+		return
+	}
+	row := dashboardDeploy{Deploy: d}
+	for _, b := range boards {
+		if previews.RepoName(&b) == d.Repo {
+			row.BoardID, row.BoardName, row.BoardSlug = b.ID, b.Name, b.Slug
+			break
+		}
+	}
+	writeJSON(w, 200, row)
 }
 
 // listPreviews returns a page of preview deploys across all boards, newest
 // first — the previews dashboard's data source. Pages are bounded because
-// evicted deploys remain in history indefinitely.
+// evicted deploys remain in history indefinitely; max_id pins later pages to
+// a snapshot so new deploys don't shift rows between them.
 func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
 		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
-	limit, offset, err := previewPageParams(r)
+	limit, offset, maxID, err := previewPageParams(r)
 	if err != nil {
 		h.httpError(w, err, 400)
 		return
@@ -224,7 +264,7 @@ func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page, err := h.previews.DeploysPage(orchestrator.DeployQuery{
-		Repo: repoFilter, Limit: limit, Offset: offset,
+		Repo: repoFilter, Limit: limit, Offset: offset, MaxID: maxID,
 	})
 	if err != nil {
 		h.httpError(w, err, 500)

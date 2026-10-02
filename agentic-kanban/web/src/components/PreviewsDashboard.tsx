@@ -1,6 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { api, type Board, type DashboardPreview, type PreviewArtifact } from "@/api/client";
+import {
+  api,
+  type Board,
+  type DashboardPreview,
+  isDownloadsOnly,
+  type PreviewArtifact,
+} from "@/api/client";
 import { queryKeys } from "@/api/keys";
 import {
   BranchIcon,
@@ -506,6 +512,10 @@ export function PreviewsDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<DashboardPreview | null>(null);
   const [boardFilter, setBoardFilter] = useState<number | "all">("all");
   const [pageOffset, setPageOffset] = useState(0);
+  // Newest deploy id seen on the first page, pinned while browsing older
+  // pages so deploys created meanwhile don't shift rows between them. The
+  // first page itself stays live.
+  const [pageMaxId, setPageMaxId] = useState<number | undefined>(undefined);
 
   const qc = useQueryClient();
   const invalidate = () => qc.invalidateQueries({ queryKey: queryKeys.allPreviews });
@@ -520,13 +530,17 @@ export function PreviewsDashboard() {
 
   const boardsQ = useQuery({ queryKey: queryKeys.boards, queryFn: api.listBoards });
   const previewsQ = useQuery({
-    queryKey: [...queryKeys.allPreviews, boardFilter, pageOffset],
+    queryKey: [...queryKeys.allPreviews, boardFilter, pageOffset, pageMaxId],
     queryFn: () =>
       api.listAllPreviews({
         ...(boardFilter === "all" ? {} : { board: boardFilter }),
         limit: PREVIEW_PAGE_SIZE,
         offset: pageOffset,
+        maxId: pageMaxId,
       }),
+    // Keep the current page on screen while the next one loads, rather than
+    // flashing the skeleton and dropping the pager.
+    placeholderData: keepPreviousData,
     // Poll fast while anything is in flight (a build, a cold start) so state
     // flips surface promptly; idle otherwise.
     refetchInterval: (query) =>
@@ -542,20 +556,33 @@ export function PreviewsDashboard() {
   });
 
   useEffect(() => {
-    if (pageOffset > 0 && previewsQ.data && pageOffset >= previewsQ.data.total) {
-      setPageOffset(
-        Math.max(0, Math.floor((previewsQ.data.total - 1) / PREVIEW_PAGE_SIZE) * PREVIEW_PAGE_SIZE),
+    const data = previewsQ.data;
+    if (pageOffset > 0 && data && !previewsQ.isPlaceholderData && pageOffset >= data.total) {
+      const offset = Math.max(
+        0,
+        Math.floor((data.total - 1) / PREVIEW_PAGE_SIZE) * PREVIEW_PAGE_SIZE,
       );
+      setPageOffset(offset);
+      if (offset === 0) setPageMaxId(undefined);
     }
-  }, [pageOffset, previewsQ.data]);
+  }, [pageOffset, previewsQ.data, previewsQ.isPlaceholderData]);
 
   const deployableBoards = (boardsQ.data ?? []).filter((b) => b.repo_path);
-  const all = previewsQ.data?.deploys ?? [];
+  const previews = previewsQ.data?.deploys ?? [];
   const total = previewsQ.data?.total ?? 0;
-  const previews = all;
-  // Resolve from the live list each render so the log modal follows a build
-  // to completion instead of freezing on the snapshot that opened it.
-  const logsPreview = logsId != null ? all.find((p) => p.id === logsId) : undefined;
+  // Fetched by id so the log modal follows a build to completion even once
+  // newer deploys push its row off the current page.
+  const logsQ = useQuery({
+    queryKey: [...queryKeys.allPreviews, "one", logsId],
+    queryFn: () => api.getPreview(logsId as number),
+    enabled: logsId != null,
+    placeholderData: () => previews.find((p) => p.id === logsId),
+    refetchInterval: (query) =>
+      query.state.data?.status === "queued" || query.state.data?.status === "building"
+        ? 1000
+        : false,
+  });
+  const logsPreview = logsId != null ? logsQ.data : undefined;
 
   return (
     <div className="h-full overflow-y-auto [scrollbar-gutter:stable]">
@@ -571,6 +598,7 @@ export function PreviewsDashboard() {
               onChange={(e) => {
                 setBoardFilter(e.target.value === "all" ? "all" : Number(e.target.value));
                 setPageOffset(0);
+                setPageMaxId(undefined);
               }}
               className="cursor-pointer rounded bg-surface px-2 py-1 text-sm"
               aria-label="Filter by board"
@@ -733,7 +761,7 @@ export function PreviewsDashboard() {
                         stop
                       </button>
                     )}
-                    {p.preview_url ? (
+                    {p.preview_url && !isDownloadsOnly(p) ? (
                       <a
                         href={p.preview_url}
                         target="_blank"
@@ -776,9 +804,11 @@ export function PreviewsDashboard() {
                     type="button"
                     className={`${pillClass} disabled:pointer-events-none disabled:opacity-40`}
                     disabled={pageOffset === 0 || previewsQ.isFetching}
-                    onClick={() =>
-                      setPageOffset((offset) => Math.max(0, offset - PREVIEW_PAGE_SIZE))
-                    }
+                    onClick={() => {
+                      const offset = Math.max(0, pageOffset - PREVIEW_PAGE_SIZE);
+                      setPageOffset(offset);
+                      if (offset === 0) setPageMaxId(undefined);
+                    }}
                   >
                     newer
                   </button>
@@ -786,7 +816,10 @@ export function PreviewsDashboard() {
                     type="button"
                     className={`${pillClass} disabled:pointer-events-none disabled:opacity-40`}
                     disabled={pageOffset + previews.length >= total || previewsQ.isFetching}
-                    onClick={() => setPageOffset((offset) => offset + PREVIEW_PAGE_SIZE)}
+                    onClick={() => {
+                      if (pageOffset === 0) setPageMaxId(previews[0]?.id);
+                      setPageOffset(pageOffset + PREVIEW_PAGE_SIZE);
+                    }}
                   >
                     older
                   </button>

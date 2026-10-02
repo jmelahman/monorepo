@@ -202,6 +202,15 @@ export type Preview = {
 };
 
 /**
+ * Whether a deploy built only downloadable artifacts: ready, with neither a
+ * frontend nor a backend. Its preview URL shows a "downloads only" page, so
+ * there's nothing to open.
+ */
+export function isDownloadsOnly(p: Preview): boolean {
+  return p.status === "ready" && !p.fe_hash && !p.be_hash;
+}
+
+/**
  * A deploy from the cross-board dashboard feed, joined to the board that owns
  * it. The board fields are absent when a deploy outlives its board (renamed
  * or deleted) — the orchestrator only ever knows the repo name.
@@ -427,14 +436,18 @@ export const api = {
   createPreview: (sessionId: number) =>
     request<Preview>(`/api/sessions/${sessionId}/previews`, { method: "POST" }),
 
-  listAllPreviews: (options: { board?: number; limit?: number; offset?: number } = {}) => {
+  listAllPreviews: (
+    options: { board?: number; limit?: number; offset?: number; maxId?: number } = {},
+  ) => {
     const params = new URLSearchParams();
     if (options.board != null) params.set("board", String(options.board));
     if (options.limit != null) params.set("limit", String(options.limit));
     if (options.offset != null) params.set("offset", String(options.offset));
+    if (options.maxId != null) params.set("max_id", String(options.maxId));
     const query = params.toString();
     return request<DashboardPreviewPage>(`/api/previews${query ? `?${query}` : ""}`);
   },
+  getPreview: (previewId: number) => request<DashboardPreview>(`/api/previews/${previewId}`),
   previewLogs: async (previewId: number): Promise<string> => {
     const res = await fetch(`/api/previews/${previewId}/logs`);
     if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status}`, "");

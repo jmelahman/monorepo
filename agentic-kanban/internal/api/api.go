@@ -125,6 +125,7 @@ func NewMux(d Deps) http.Handler {
 	mux.HandleFunc("GET /api/previews/retention", h.previewRetention)
 	mux.HandleFunc("PUT /api/previews/retention", h.updatePreviewRetention)
 	mux.HandleFunc("POST /api/previews/gc", h.collectPreviewGarbage)
+	mux.HandleFunc("GET /api/previews/{id}", h.getPreview)
 	mux.HandleFunc("POST /api/previews/{id}/stop", h.stopPreview)
 	mux.HandleFunc("DELETE /api/previews/{id}", h.deletePreview)
 	mux.HandleFunc("GET /api/previews/{id}/logs", h.previewLogs)

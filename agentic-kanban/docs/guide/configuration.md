@@ -250,6 +250,10 @@ sqlite3 "$KANBAN_DATA_DIR/kanban.db" \
 
 Resume relies on a hook in `.claude/settings.local.json`, which kanban writes into the worktree. Kanban won't overwrite an existing file, so if your repo already has one, resume is off. Delete the file and restart the session to turn it on. Only Claude Code supports resume. Other harnesses start fresh each time.
 
+## Preview URLs
+
+When kanban is behind a TLS-terminating reverse proxy, set `KANBAN_PREVIEW_BASE_URL` to the public preview URL base (for example, `https://preview.example.com`) so deployment links use the public scheme and port. See the [Previews guide](/guide/previews#settings) for the other preview settings.
+
 ## Running kanban inside a container
 
 If kanban runs in a container but starts sessions through the host's Docker, the paths it passes to Docker must be host paths. These variables tell kanban how to translate them:
@@ -269,10 +273,6 @@ export KANBAN_HOST_DOCKER_SOCK=/run/user/1000/docker.sock
 ```
 
 On a normal install none of these are needed.
-
-## Preview URLs
-
-When kanban is behind a TLS-terminating reverse proxy, set `KANBAN_PREVIEW_BASE_URL` to the public preview URL base (for example, `https://preview.example.com`) so deployment links use the public scheme and port. See the [Previews guide](/guide/previews#settings) for the other preview settings.
 
 ### Session container user
 

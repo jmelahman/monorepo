@@ -602,6 +602,31 @@ func TestDashboardPreviews(t *testing.T) {
 	}
 	assertStatus(t, e.get("/api/previews?limit=0"), 400)
 	assertStatus(t, e.get("/api/previews?offset=-1"), 400)
+	assertStatus(t, e.get("/api/previews?max_id=0"), 400)
+
+	// max_id pins a snapshot: deploys newer than it drop out of the page and
+	// the total, so they can't shift rows between pages.
+	resp = e.get(fmt.Sprintf("/api/previews?max_id=%d", deploy.ID))
+	assertStatus(t, resp, 200)
+	pinned := decodeJSON[struct {
+		Deploys []orchestrator.Deploy `json:"deploys"`
+		Total   int                   `json:"total"`
+	}](t, resp)
+	if pinned.Total != 1 || len(pinned.Deploys) != 1 || pinned.Deploys[0].ID != deploy.ID {
+		t.Fatalf("unexpected pinned page: %+v", pinned)
+	}
+
+	// A single deploy, joined to its board, for the log modal to follow.
+	resp = e.get(fmt.Sprintf("/api/previews/%d", tagged.ID))
+	assertStatus(t, resp, 200)
+	one := decodeJSON[struct {
+		orchestrator.Deploy
+		BoardID int64 `json:"board_id"`
+	}](t, resp)
+	if one.ID != tagged.ID || one.BoardID != board.ID {
+		t.Fatalf("unexpected single deploy: %+v", one)
+	}
+	assertStatus(t, e.get("/api/previews/999"), 404)
 
 	resp = e.post("/api/boards/999/previews", map[string]string{"ref": "main"})
 	assertStatus(t, resp, 404)

@@ -89,8 +89,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
-github.com/jmelahman/local-preview v0.31.3 h1:FWwV1/4AXS6MAx07nRf40y0MD2JaFsg/yfA4T6ocRV4=
-github.com/jmelahman/local-preview v0.31.3/go.mod h1:ByekmsxxULTSHZHzIu7P95ZxmpAHQ4MW8oKi7xIDTl8=
+github.com/jmelahman/local-preview v0.31.4 h1:ITIc1ryqr194Z+ZD48tunG/ghCnJOsodum5s2fgB1wc=
+github.com/jmelahman/local-preview v0.31.4/go.mod h1:iJwLNYS1Xswkc1p3toZhIlTSHtVkYBTCxVnqRFE6xco=
 github.com/kevinburke/ssh_config v1.6.0 h1:J1FBfmuVosPHf5GRdltRLhPJtJpTlMdKTBjRgTaQBFY=
 github.com/kevinburke/ssh_config v1.6.0/go.mod h1:q2RIzfka+BXARoNexmF9gkxEX7DmvbW9P4hIVx2Kg4M=
 github.com/klauspost/compress v1.20.0 h1:a3C1ke2ohxFymNlb2HWAHjDeKCI90scRskErZkR0ezA=
