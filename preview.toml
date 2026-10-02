@@ -1,0 +1,10 @@
+[frontend]
+path  = "web"
+build = [["sh", "-c", "mkdir -p dist && cp src/index.html dist/"]]
+dist  = "dist"
+
+[backend]
+path        = "backend"
+build       = [["go", "build", "-o", "bin/fixture-server", "."]]
+run         = ["./bin/fixture-server", "--addr", "127.0.0.1:{port}", "--state", "{state_dir}"]
+health_path = "/api/health"
