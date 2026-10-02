@@ -12,13 +12,21 @@ container_port = 5173
 label = "Spectator feed"
 container_port = 7777
 
-# A downloadable, installable debug APK for this commit. The Android image has
-# JDK 21 and the SDK; install Bun because `bun run apk` builds the web assets
-# before Capacitor syncs and packages them.
+# A downloadable, installable debug APK for this commit, listed under the
+# deploy's downloads. The image (tools/containers/android in the monorepo) is
+# the Android SDK 36 with JDK 21 plus Bun, which `bun run apk` needs to build
+# the web assets before Capacitor syncs and packages them. Artifacts-only, so
+# there is no site to open, just the file.
+#
+# The build is content-addressed on `path` minus `exclude`, so a commit that
+# touches only what is excluded reuses the last APK rather than paying for
+# another Gradle run. test/ and tools/ stay in: `tsc` checks both, so they can
+# fail the build.
 # Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
 [previews.artifacts.apk]
-path  = "."
-image = "ghcr.io/jmelahman/android-builder:latest"
+path    = "."
+exclude = ["desktop/", "telemetry/", ".github/", ".agents/", ".pi/", ".vscode/", "*.md"]
+image   = "ghcr.io/jmelahman/android-builder:latest"
 build = [
   ["bun", "install", "--frozen-lockfile"],
   ["bun", "run", "apk"],

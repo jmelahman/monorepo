@@ -26,34 +26,35 @@ import (
 // are visible with no extra plumbing).
 
 // previewContext resolves the session-scoped preview inputs: the session,
-// its board, the orchestrator repo name, and the host repo path. Writes the
+// its board, the orchestrator repo name, and the board's resolved paths (the
+// host repo and the project directory the manifest lives in). Writes the
 // error response and returns ok=false on failure.
-func (h *handlers) previewContext(w http.ResponseWriter, r *http.Request) (sess *db.Session, repoName, repoPath string, ok bool) {
+func (h *handlers) previewContext(w http.ResponseWriter, r *http.Request) (sess *db.Session, repoName string, paths session.ResolvedPaths, ok bool) {
 	if h.previews == nil {
 		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
-		return nil, "", "", false
+		return nil, "", session.ResolvedPaths{}, false
 	}
 	id := pathID(r, "id")
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
-		return nil, "", "", false
+		return nil, "", session.ResolvedPaths{}, false
 	}
 	board, err := h.boardForSession(r.Context(), sess)
 	if err != nil {
 		h.httpError(w, err, 500)
-		return nil, "", "", false
+		return nil, "", session.ResolvedPaths{}, false
 	}
-	paths := session.ResolvePaths(board, sess)
+	paths = session.ResolvePaths(board, sess)
 	if !paths.HasRepo {
 		h.httpError(w, fmt.Errorf("board has no git repo to deploy"), 400)
-		return nil, "", "", false
+		return nil, "", session.ResolvedPaths{}, false
 	}
 	if sess.BranchName == "" {
 		h.httpError(w, fmt.Errorf("session has no branch to deploy"), 400)
-		return nil, "", "", false
+		return nil, "", session.ResolvedPaths{}, false
 	}
-	return sess, previews.RepoName(board), paths.RepoPath, true
+	return sess, previews.RepoName(board), paths, true
 }
 
 // maybeAutoDeployPreview requests a preview of the session branch's current
@@ -84,10 +85,10 @@ func (h *handlers) maybeAutoDeployPreview(sess *db.Session) {
 		name := previews.RepoName(board)
 		// The onboarding gate needs the repo name (out-of-repo manifests
 		// are keyed by it), hence resolving the board first.
-		if !previews.Onboarded(sess.WorktreePath, name) {
+		if !previews.Onboarded(paths.ProjectRoot(sess.WorktreePath), name) {
 			return
 		}
-		if _, err := h.previews.RegisterRepo(ctx, name, paths.RepoPath); err != nil {
+		if _, err := h.previews.RegisterRepoWithProjectDir(ctx, name, paths.RepoPath, paths.ProjectDir); err != nil {
 			log.Printf("preview auto-deploy: register %s: %v", name, err)
 			return
 		}
@@ -128,11 +129,11 @@ func (h *handlers) listSessionPreviews(w http.ResponseWriter, r *http.Request) {
 // createSessionPreview registers the board repo with the orchestrator
 // (idempotent) and requests a deploy of the session branch's current tip.
 func (h *handlers) createSessionPreview(w http.ResponseWriter, r *http.Request) {
-	sess, repoName, repoPath, ok := h.previewContext(w, r)
+	sess, repoName, paths, ok := h.previewContext(w, r)
 	if !ok {
 		return
 	}
-	if _, err := h.previews.RegisterRepo(r.Context(), repoName, repoPath); err != nil {
+	if _, err := h.previews.RegisterRepoWithProjectDir(r.Context(), repoName, paths.RepoPath, paths.ProjectDir); err != nil {
 		h.httpError(w, fmt.Errorf("register repo for previews: %w", err), 500)
 		return
 	}
@@ -315,7 +316,7 @@ func (h *handlers) createBoardPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := previews.RepoName(board)
-	if _, err := h.previews.RegisterRepo(r.Context(), name, paths.RepoPath); err != nil {
+	if _, err := h.previews.RegisterRepoWithProjectDir(r.Context(), name, paths.RepoPath, paths.ProjectDir); err != nil {
 		h.httpError(w, fmt.Errorf("register repo for previews: %w", err), 500)
 		return
 	}
