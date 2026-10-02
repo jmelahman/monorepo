@@ -36,7 +36,7 @@
   --hud-pad-x: 0.5rem;
   padding: 0.375rem var(--hud-pad-x);
   background: var(--panel);
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
   /* The containing block for `.coach-slot`, which hangs from this box's foot. */
   position: relative;
 }
@@ -96,7 +96,7 @@
   display: grid;
   margin-top: 0.1875rem;
   height: 0.1875rem;
-  border-radius: 999px;
+  border-radius: var(--corner-pill);
   background: var(--line);
   overflow: hidden;
 }
@@ -197,7 +197,7 @@
   height: var(--boss-band);
   margin: 0 calc(-1 * var(--hud-pad-x)) -0.375rem;
   padding: 0 var(--hud-pad-x);
-  border-radius: 0 0 0.5rem 0.5rem;
+  border-radius: 0 0 var(--corner-m) var(--corner-m);
   border-top: 1px solid color-mix(in srgb, var(--mult) 40%, transparent);
   background: color-mix(in srgb, var(--mult) 14%, var(--panel));
   /* See `--boss-font`. */

@@ -9,10 +9,6 @@
  * a header with no panel at all. The owner asked for Classic's shape instead.
  */
 
-:root.skin-smoke .shop-screen .shop-items.coached {
-  border-radius: 0;
-}
-
 /* ---- the cards -------------------------------------------------------- */
 
 :root.skin-smoke .shop-item {
@@ -21,7 +17,6 @@
 
 /* The icon is the card's picture: a square in a hairline, the rarity's colour. */
 :root.skin-smoke .shop-item-head > .icon {
-  border-radius: 0;
   border: var(--rim);
   background: var(--well);
   color: var(--rare-c);
@@ -34,7 +29,6 @@
 }
 
 :root.skin-smoke .shop-item-text {
-  border-radius: 0;
   background: var(--well);
   box-shadow: none;
   color: var(--muted);
@@ -43,7 +37,6 @@
 /* The price is a tag: the cash colour in a hairline, and nothing else about it
    is gold. It was a gold coin; the room has one colour of money and it is text. */
 :root.skin-smoke .shop-item-cost {
-  border-radius: 0;
   border: var(--rim);
   background: var(--well);
   box-shadow: none;
@@ -76,7 +69,6 @@
   border: var(--bw) dashed var(--slot-line);
   background: none;
   box-shadow: none;
-  border-radius: 0;
   color: var(--muted);
 }
 
@@ -92,7 +84,6 @@
 
 :root.skin-smoke .shop-screen .shapes-line {
   border: var(--rim);
-  border-radius: 0;
   background: var(--well);
   box-shadow: none;
   clip-path: var(--cut);
@@ -105,7 +96,6 @@
 
 :root.skin-smoke .reroll-cost {
   color: var(--gold);
-  border-radius: 0;
   background: var(--well);
   border: var(--rim);
 }
@@ -126,7 +116,6 @@
 :root.skin-smoke .shop-screen .toast {
   background: var(--panel);
   border: var(--rim);
-  border-radius: 0;
   box-shadow: none;
   clip-path: var(--cut);
 }
@@ -143,7 +132,6 @@
    a darker edge, cut at the corners like everything else. */
 :root.skin-smoke .shop-coin {
   border: var(--bw) solid var(--coin-lo);
-  border-radius: 0;
   background: var(--coin);
   box-shadow: inset 0 0.125rem 0 var(--coin-hi);
   clip-path: var(--cut);
@@ -546,7 +534,6 @@
 /* A card in hand is the tarot again, small. */
 :root.table.skin-smoke .shop-screen .consumable {
   border: 0;
-  border-radius: 0;
   background: var(--tarot);
   box-shadow: inset 0 0 0 var(--bw) var(--tarot-line);
   outline: 1px solid color-mix(in srgb, var(--accent) 33%, transparent);
@@ -565,7 +552,6 @@
    on `--well`, which is what the sentence around it already sits on: a well
    chip in a well paragraph was an underline with nothing above it. */
 :root.skin-smoke .amt-times {
-  border-radius: 0;
   clip-path: var(--cut);
   background: color-mix(in srgb, var(--mult) 22%, var(--well));
 }

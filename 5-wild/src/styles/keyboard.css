@@ -96,7 +96,7 @@
   height: var(--key-h);
   display: grid;
   place-items: center;
-  border-radius: 0.375rem;
+  border-radius: var(--corner-s);
   background: var(--key);
   font-size: 1rem;
   font-weight: 700;

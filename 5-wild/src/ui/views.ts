@@ -306,6 +306,9 @@ function menuButton(on: Handlers): HTMLElement {
  * on them. It sat beside the chips × mult readout while that was down there
  * too, and stayed behind when the readout went up into the header: a control
  * in the header is a reach across the screen, and the header is for reading.
+ * The table is the exception: there is no thumb on the keys, the rail's foot is
+ * the one row of buttons it has, and the switch sits there beside the gold and
+ * the ☰, a square like it. See `hud`.
  *
  * The face is the setting rather than a label for it: a letter carrying its
  * value, the same letter carrying only a mark, or the letter on its own. So a
@@ -434,27 +437,72 @@ export const NEXT_SOUND: Record<SoundLevel, SoundLevel> = {
  * the score, and inside the header its height is a known quantity the board can
  * be told about, which is what keeps a boss round's tiles the size of every
  * other round's. See `--boss-band`.
+ *
+ * The table's rail is a column rather than a bar, and two things change shape
+ * there. The round and its boss are one card, `.hud-head`, the rule continuing
+ * under the name rather than sitting at the rail's foot a screen away from it,
+ * and the card holds a boss card's height in every round, so the score starts
+ * at the same height whether or not there is a rule above it. And `decor`, the
+ * letter-values switch, joins the gold and the ☰ in the foot, which is the only
+ * row the rail has for buttons now that sound, music and speed went back to
+ * the pause sheet. On a phone it stays by the keys and this gets `null`. Asked
+ * of `isTable()` at render, as `roundView` and `shopView` ask it.
  */
-function hud(state: RunState, on: Handlers, dock: HTMLElement, coach: HTMLElement): HTMLElement {
+function hud(
+  state: RunState,
+  on: Handlers,
+  dock: HTMLElement,
+  coach: HTMLElement,
+  decor: HTMLElement | null,
+): HTMLElement {
   const round = state.round
   const board = ui().board
   const boss = getBoss(round.bossId)
+  const table = isTable()
+  const title = h(
+    "div",
+    { class: "hud-round" },
+    // The intro card's token at the height of the title beside it, so the round
+    // keeps the shape it was announced with once the card has gone.
+    roundToken(tokenOf(state)),
+    h(
+      "div",
+      { class: "hud-title" },
+      h("div", { class: "round-name" }, roundName(state.roundIndex)),
+      stageLine(state),
+    ),
+  )
+  // Gold and menu as one group, pinned to the right edge. Loose in a
+  // space-between row the gold took whatever gap was left over, which was a
+  // different gap on every screen (x282 here, x253 in the shop at 390) and
+  // never beside anything it belonged to. See `.hud-end`.
+  const end = h(
+    "div",
+    { class: "hud-end" },
+    h("div", { class: "hud-gold" }, money(state.gold)),
+    decor,
+    menuButton(on),
+  )
+  const rule =
+    boss &&
+    h(
+      "div",
+      // No tip. It carried the whole rule, for the two (The Silence in French
+      // and in German) that take a third line on a 320px screen where the
+      // band clamps at two, and everywhere else it said again what the band
+      // already says, over the band, on every pass of the pointer. The rule
+      // is also on the round's intro card and in the rules sheet, which is
+      // where the clipped two can be read whole.
+      { class: "boss" },
+      // One paragraph inside the band rather than the band's own text, so the
+      // band can hold a fixed height and centre whatever length of rule it
+      // was handed. See `--boss-band`.
+      h("p", {}, h("strong", {}, bossCard(boss.id).name), ` ${bossCard(boss.id).text}`),
+    )
   return h(
     "header",
     { class: "hud" },
-    h(
-      "div",
-      { class: "hud-round" },
-      // The intro card's token at the height of the title beside it, so the round
-      // keeps the shape it was announced with once the card has gone.
-      roundToken(tokenOf(state)),
-      h(
-        "div",
-        { class: "hud-title" },
-        h("div", { class: "round-name" }, roundName(state.roundIndex)),
-        stageLine(state),
-      ),
-    ),
+    table ? h("div", { class: "hud-head" }, title, rule) : title,
     h(
       "div",
       {
@@ -472,16 +520,7 @@ function hud(state: RunState, on: Handlers, dock: HTMLElement, coach: HTMLElemen
         h("div", { class: "target" }, board.target(num(round.target))),
       ),
     ),
-    // Gold and menu as one group, pinned to the right edge. Loose in a
-    // space-between row the gold took whatever gap was left over, which was a
-    // different gap on every screen (x282 here, x253 in the shop at 390) and
-    // never beside anything it belonged to. See `.hud-end`.
-    h(
-      "div",
-      { class: "hud-end" },
-      h("div", { class: "hud-gold" }, money(state.gold)),
-      menuButton(on),
-    ),
+    table ? null : end,
     // The same fact as the two numbers in the seat, in the form a glance can
     // take in, and the header's full width. A sibling of the seat rather than
     // its child so it can cross all three tracks; see `.round-screen .hud
@@ -489,22 +528,15 @@ function hud(state: RunState, on: Handlers, dock: HTMLElement, coach: HTMLElemen
     // the total climbs rather than jumping to the answer.
     meter(state),
     dock,
-    boss &&
-      h(
-        "div",
-        // No tip. It carried the whole rule, for the two (The Silence in French
-        // and in German) that take a third line on a 320px screen where the
-        // band clamps at two, and everywhere else it said again what the band
-        // already says, over the band, on every pass of the pointer. The rule
-        // is also on the round's intro card and in the rules sheet, which is
-        // where the clipped two can be read whole.
-        { class: "boss" },
-        // One paragraph inside the band rather than the band's own text, so the
-        // band can hold a fixed height and centre whatever length of rule it
-        // was handed. See `--boss-band`.
-        h("p", {}, h("strong", {}, bossCard(boss.id).name), ` ${bossCard(boss.id).text}`),
-      ),
+    table ? null : rule,
     coach,
+    // Last in the DOM on the table, where it is last on screen too: the rail's
+    // foot. Tab follows the DOM and not the flex `order` that draws the rail,
+    // so built in the bar's seat it put the ☰ and the switch ahead of the shape,
+    // which is the rail's first control on screen and the one a keyboard
+    // player is reaching for. On a phone the ☰ is the first control on screen,
+    // top right, and stays first in Tab as well.
+    table ? end : null,
   )
 }
 
@@ -1277,11 +1309,12 @@ export function fillReadout(el: Element, state: RunState): void {
 }
 
 export function roundView(state: RunState, on: Handlers, chrome: Chrome): HTMLElement {
+  const table = isTable()
   const handLine = h(
     "div",
     { class: "hand-line" },
     consumableRow(state, on),
-    decorToggle(on, chrome),
+    table ? null : decorToggle(on, chrome),
   )
   return h(
     "div",
@@ -1299,18 +1332,18 @@ export function roundView(state: RunState, on: Handlers, chrome: Chrome): HTMLEl
       h("div", { class: "dock-line" }, categorySlot(state, on), readoutSlot(state)),
       // The coaching card, hung from the header's foot; see `coachSlot`.
       coachSlot(chrome.coach),
+      table ? decorToggle(on, chrome) : null,
     ),
     grid(state),
     // Everything a thumb presses outside the keys, at the keys: the hand and
     // the switch, then the relics flush to the keyboard. See `.hand-line`.
     // Tab order is the DOM's, and the table's grid draws the relics first and
     // the hand beside them, so on the table the relics are built first as well:
-    // from the shape button Tab reaches relics, then consumables, then the
-    // switch. The phone draws them hand-first, and so builds them hand-first.
+    // from the rail's ☰, the header's last control, Tab reaches relics, then
+    // consumables. The phone draws
+    // them hand-first, and so builds them hand-first, with the switch after.
     // Read at render, as `shopView` reads it for its own tray.
-    ...(isTable()
-      ? [relicRow(state), handLine]
-      : [handLine, relicRow(state)]),
+    ...(table ? [relicRow(state), handLine] : [handLine, relicRow(state)]),
     h("div", { class: "relic-tip" }),
     h("div", { class: "toast" }),
     keyboard(state, on),
@@ -3778,11 +3811,10 @@ export function menuView(on: Handlers, chrome: Chrome): HTMLElement {
       // every key and a pip on every modifier, and that density is the scoring
       // game asking to be played; some of the time the player is doing the other
       // thing entirely, which is working out a five-letter word, and every
-      // number on screen is noise. The switch for it is `decorToggle`, sitting
-      // beside the chips × mult readout, because it was the one setting on this
-      // sheet whose whole effect was hidden behind the sheet while it was being
-      // set, and the readout is the densest numbers on the screen, so the
-      // switch is next to the thing it is loudest about. That it has three
+      // number on screen is noise. The switch for it is `decorToggle`, on the
+      // board itself (by the keys on a phone, in the rail's foot on the table),
+      // because it was the one setting on this sheet whose whole effect was
+      // hidden behind the sheet while it was being set. That it has three
       // states now is a further reason to leave it there: a segmented control
       // here would be the readable way to show them, and it would show them on
       // top of the board the reader needs to see to choose between them.

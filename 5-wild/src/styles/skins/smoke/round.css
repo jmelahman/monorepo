@@ -7,7 +7,6 @@
  * the screen. It is shared with the shop, whose header is the same rail.
  */
 :root.skin-smoke :is(.round-screen, .shop-screen) .hud {
-  border-radius: 0;
   background: none;
   box-shadow: none;
   /* The panel is painted by `::before`, not by the rail itself, because the
@@ -47,10 +46,35 @@
    the progress bar under it already say where it is. The chase ring that
    stepped round it while it climbed went the same way, for the same reason. */
 :root.skin-smoke .round-screen .hud-score {
-  border-radius: 0;
   background: none;
   border: 0;
   box-shadow: none;
+}
+
+/* On the table the score is boxed after all, as the Dock design draws it: a
+   card in the rail's notch, the one in the column with a number too big to sit
+   loose beside the round card above it and the category below. Its fill is the
+   round card's well rather than the design's raised panel, so the two read as
+   one set, and so is its rim; raised, the score was the only lit box in a
+   column of sunk ones.
+   The phone keeps it bare, for the reason above; there the header itself is
+   the box, and a box in it was the frame too many. The figures are the
+   design's: 60px over 18px, 12px of panel round them and 8px under, which
+   the meter's negative margin tucks itself into. */
+:root.skin-smoke.table .round-screen .hud-score {
+  border: var(--rim);
+  background: var(--well);
+  clip-path: var(--cut);
+}
+
+:root.skin-smoke.table .hud-score .score {
+  font-size: 3.75rem;
+}
+
+:root.skin-smoke.table .hud-score .target {
+  font-size: 1.125rem;
+  line-height: 1.1;
+  margin-top: 0;
 }
 
 :root.skin-smoke .hud-score .score {
@@ -75,11 +99,20 @@
    the fill itself being anything but a scaled box (the count-up drives
    `transform`, and a segmented background would not scale, it would squash). */
 :root.skin-smoke .round-screen .hud .meter {
-  border-radius: 0;
   border: var(--rim);
   background: var(--well);
   box-shadow: none;
   position: relative;
+}
+
+/* The table's bar, as the design draws it under the score panel: 14px with a
+   1px inset hairline rather than the 2px rim, which at this height left a
+   10px fill and read as a frame with something in it. Unstriped: across a
+   300px rail the blocks were noise rather than a scale. */
+:root.skin-smoke.table .round-screen .hud .meter {
+  height: 0.875rem;
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 :root.skin-smoke:not(.table) .round-screen .hud .meter {
@@ -96,7 +129,6 @@
 
 :root.skin-smoke .meter-fill {
   background: var(--accent);
-  border-radius: 0;
 }
 
 :root.skin-smoke .meter-solve {
@@ -109,7 +141,6 @@
 
 :root.skin-smoke .dock-line .category {
   border: var(--rim);
-  border-radius: 0;
   background: var(--well);
   box-shadow: none;
   clip-path: var(--cut);
@@ -122,7 +153,6 @@
 :root.skin-smoke .category-level {
   color: var(--muted);
   background: none;
-  border-radius: 0;
 }
 
 /*
@@ -130,11 +160,13 @@
  * two-pixel bar of the same colour along the top. That colour is what the
  * reader matches a pop to on its way in, so it is the one thing on the block
  * that is not the room's. The casino filled the whole block with it.
+ * The table's Dock design filled them too, a 14% tint inside a full ring of
+ * the colour, and on the rail it was tried and put back: the top bar is the
+ * phone's and the owner preferred the one look to two.
  */
 :root.skin-smoke .dock-line .readout .chips,
 :root.skin-smoke .dock-line .readout .mult {
   border: var(--rim);
-  border-radius: 0;
   background: var(--well);
   clip-path: var(--cut);
 }
@@ -172,15 +204,24 @@
    mult's red at a tenth of its strength so it says "danger" without shouting
    over the tile colours. */
 :root.skin-smoke .round-screen .hud .boss {
-  border-radius: 0;
   border-block: var(--rim);
   background: color-mix(in srgb, var(--mult) 14%, var(--panel));
   color: var(--fg);
 }
 
-:root.skin-smoke.table .round-screen .hud .boss {
+/* On the table the round is a card, a well under the rail's panel notched like
+   every other box here, and the rule is its lower half: no ring or notch of its
+   own, since the card's clip is both, only the line where the colour changes. */
+:root.skin-smoke.table .round-screen .hud-head {
   border: var(--rim);
+  background: var(--well);
   clip-path: var(--cut);
+}
+
+:root.skin-smoke.table .round-screen .hud .boss {
+  border: 0;
+  border-top: var(--bw) solid color-mix(in srgb, var(--mult) 55%, var(--line));
+  clip-path: none;
 }
 
 :root.skin-smoke .boss strong {
@@ -192,20 +233,22 @@
 }
 
 :root.skin-smoke :is(.round-screen, .shop-screen) .hud-gold {
-  border-radius: 0;
   border: 0;
   background: none;
   box-shadow: none;
   color: var(--gold);
 }
 
-:root.skin-smoke :is(.round-screen, .shop-screen) .menu-button {
-  border-radius: 0;
+/* In the rail's foot the money is a box like its two neighbours. Bare, it was
+   a figure floating beside two buttons, and read as their caption. */
+:root.skin-smoke.table .round-screen .hud-gold {
+  border: var(--rim);
+  background: var(--panel);
+  clip-path: var(--cut);
 }
 
 :root.skin-smoke .round-screen .decor-toggle {
   border: var(--rim);
-  border-radius: 0;
   background: var(--panel);
   box-shadow: none;
   clip-path: var(--cut);
@@ -220,7 +263,6 @@
 :root.skin-smoke .round-screen .toast {
   background: var(--panel);
   border: var(--rim);
-  border-radius: 0;
   box-shadow: none;
   clip-path: var(--cut);
 }

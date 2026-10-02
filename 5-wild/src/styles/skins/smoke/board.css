@@ -34,7 +34,6 @@
 
 :root.skin-smoke .tile {
   border: var(--bw) solid var(--cell-line);
-  border-radius: 0;
   box-shadow: none;
   clip-path: var(--cut);
   color: var(--fg);

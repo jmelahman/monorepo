@@ -49,7 +49,7 @@
   justify-content: center;
   gap: 0.125rem;
   padding: 0.25rem;
-  border-radius: 0.375rem;
+  border-radius: var(--corner-s);
   overflow: hidden;
   background: linear-gradient(
     155deg,
@@ -63,8 +63,8 @@
 }
 
 /* A relic's picture, in the seat: the emblem and the sprite `cardArt` draws
-   for every card. Classic's seats are a name on a coloured edge and always were,
-   so neither shows until a skin asks for one. */
+   for every card. Neither shows until a skin asks for one: Classic and
+   Tabletop show the emblem, the Smoke Room the sprite. */
 .relic > .icon,
 .relic > .sprite {
   display: none;
@@ -246,7 +246,7 @@
   left: 0;
   max-width: min(16rem, 80vw);
   padding: 0.375rem 0.5rem;
-  border-radius: 0.375rem;
+  border-radius: var(--corner-s);
   background: #000d;
   /* Dark in both themes, a panel floating over whatever is under it, so it
      brings its own light ink rather than inheriting the page's, which is dark

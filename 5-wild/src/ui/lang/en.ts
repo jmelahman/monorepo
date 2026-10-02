@@ -1051,7 +1051,6 @@ export const en: Strings = {
       // says which way, because the choice is also the game's motion setting:
       // Classic is the one that holds still, and a player who finds the Smoke
       // Room's shake too much should learn here that there is somewhere to go.
-      menu: "The menu is where you change the sound, the music and the theme. Try a few themes: some add effects, others keep motion to a minimum. How to play and the Codex are in there too.",
       // Names all three modes, in the order a thumb meets them. It used to say
       // the button "hides its scoring marks, a step at a time", which named
       // none of them, and a three-state button with no word on it is the one

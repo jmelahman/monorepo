@@ -84,7 +84,6 @@
 
 :root.skin-smoke .fx-coin {
   border: var(--bw) solid var(--coin-lo);
-  border-radius: 0;
   background: var(--coin);
   box-shadow: inset 0 0.125rem 0 var(--coin-hi);
   clip-path: var(--cut);

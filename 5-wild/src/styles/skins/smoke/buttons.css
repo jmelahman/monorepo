@@ -52,7 +52,6 @@
   background-origin: padding-box;
   color: var(--fg);
   border: var(--bw) solid var(--ring);
-  border-radius: 0;
   box-shadow: none;
   clip-path: var(--cut);
   transition:

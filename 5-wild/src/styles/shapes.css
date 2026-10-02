@@ -56,7 +56,7 @@
 .shape-level {
   justify-self: end;
   padding: 0 0.25rem;
-  border-radius: 0.1875rem;
+  border-radius: var(--corner-xs);
   background: color-mix(in srgb, var(--muted) 18%, transparent);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
@@ -65,7 +65,7 @@
 .shape-tag {
   flex: 0 0 auto;
   padding: 0 0.25rem;
-  border-radius: 0.1875rem;
+  border-radius: var(--corner-xs);
   background: color-mix(in srgb, var(--gold) 26%, var(--panel));
   font-size: var(--type-small);
   font-weight: 700;
@@ -229,7 +229,7 @@
   flex-direction: column;
   gap: 0.625rem;
   padding: 0.625rem;
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
   background: var(--panel-2);
   /* Edged in the color of what is being lost, which is the same color as the
      struck-through pip on the key above and the name inside this block. Three

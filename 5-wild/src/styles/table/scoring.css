@@ -1,26 +1,4 @@
 /* The layout half of `scoring.css`; the look, and the reasons for it, are in `smoke/scoring.css`. */
-/* ---- the rail: more presence for the two numbers the game is about ------ */
-
-/* The blocks were 4.25rem in a rail with a hand's width of nothing under them.
-   Sized off the window's height so the same rule fills a 900px window and
-   still fits a 720px one, where the rail's rows have no slack to give. */
-:root.table .dock-line .readout {
-  font-size: var(--counter-font, clamp(2.75rem, 7.6svh, 4.5rem));
-}
-
-:root.table .dock-line .readout .chips,
-:root.table .dock-line .readout .mult {
-  --shape-line: var(--counter-h, clamp(4.5rem, 13svh, 7rem));
-  height: var(--counter-h, clamp(4.5rem, 13svh, 7rem));
-}
-
-:root.table .dock-line .readout .times {
-  font-size: clamp(1.75rem, 4svh, 2.5rem);
-}
-
-:root.table .hud-score .score {
-  font-size: clamp(3.25rem, 7.6svh, 4.75rem);
-}
 
 /* The odometer's wheels: one cell per digit, tabular so a wheel does not
    change the width of the number as it turns. */

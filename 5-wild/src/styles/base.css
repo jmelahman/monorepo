@@ -28,6 +28,24 @@
   --rare-edge: 40%;
 
   /*
+   * The corner scale, the radii the partials were written with, one step per
+   * literal they used, so Classic is the game as it was. It is here so that a
+   * skin which wants a different corner can move one token rather than chase
+   * every box: the Smoke Room has no rounded corners, and it used to say so in
+   * forty-six separate `border-radius: 0` lines, one per box it re-dressed,
+   * and missed a few. A circle (`50%`) is a shape, not a corner, and stays
+   * literal. Tabletop's `--radius-*` is its own scale, read only by its own
+   * files, and is not this one.
+   */
+  --corner-xs: 0.1875rem;
+  --corner-s: 0.375rem;
+  --corner-m: 0.5rem;
+  --corner-l: 0.625rem;
+  --corner-xl: 0.75rem;
+  --corner-xxl: 1rem;
+  --corner-pill: 999px;
+
+  /*
    * What the theme switch moves beyond the palette above, each holding exactly
    * the literal it replaced, so the dark theme is the game as it was.
    *

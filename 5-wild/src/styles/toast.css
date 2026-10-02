@@ -27,7 +27,7 @@
   transform: translateX(-50%);
   max-width: 90vw;
   padding: 0.5rem 0.875rem;
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
   background: #000c;
   /* Its own light ink, as `.relic-tip`: dark in both themes. */
   color: var(--on-tile);

@@ -126,13 +126,17 @@
   --soft: #b9bec9;
 
   /* One pixel is 2px, and the notch cut from a corner is two of them. There
-     are no radii: a rounded corner is what the other two skins have. */
+     are no radii: a rounded corner is what the other two skins have, so the
+     corner scale (`base.css`) is zeroed here, once, for every box at once. */
   --px: 0.125rem;
   --notch: 0.25rem;
-  --radius-s: 0;
-  --radius-m: 0;
-  --radius-l: 0;
-  --radius-pill: 0;
+  --corner-xs: 0;
+  --corner-s: 0;
+  --corner-m: 0;
+  --corner-l: 0;
+  --corner-xl: 0;
+  --corner-xxl: 0;
+  --corner-pill: 0;
   --bw: 0.125rem;
 
   /*

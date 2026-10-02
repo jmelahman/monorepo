@@ -9,7 +9,6 @@
 /* The five empty cells behind the name are the board's empty cells. */
 :root.skin-smoke .title-ghost-tile {
   border: var(--bw) solid var(--cell-line);
-  border-radius: 0;
   background: var(--cell);
   clip-path: var(--cut);
 }
@@ -18,7 +17,6 @@
    bevel inside. No lip and no shadow (the notch would take both). */
 :root.skin-smoke .title-tile {
   border: var(--bw) solid var(--gray);
-  border-radius: 0;
   background: var(--gray);
   box-shadow:
     inset 0 0.125rem 0 #ffffff40,
@@ -34,7 +32,6 @@
 :root.skin-smoke .title-chips,
 :root.skin-smoke .title-mult {
   border: 0;
-  border-radius: 0;
   box-shadow: none;
   clip-path: var(--cut);
 }
@@ -59,7 +56,6 @@
 /* The footer is device business, and stays quiet. */
 :root.skin-smoke .title-build {
   color: var(--muted);
-  border-radius: 0;
 }
 
 /* The pill's ring, in the pill's square corners. Outside rather than inset, as
@@ -87,7 +83,6 @@
  */
 :root.skin-smoke .ladder {
   border: var(--rim);
-  border-radius: 0;
   background: var(--panel);
   clip-path: var(--cut);
 }

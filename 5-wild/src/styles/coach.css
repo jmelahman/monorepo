@@ -39,7 +39,7 @@
   position: relative;
   pointer-events: auto;
   padding: 0.3125rem 0.625rem;
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
   /* Nearly opaque rather than a wash: it is over tiles, and a translucent panel
      with a grid of squares showing through it is the one thing on this screen
      that would be harder to read than the numbers it is explaining. Opaque
@@ -126,7 +126,7 @@
   /* The chips and mult boxes' own 8px, so the ring runs parallel to the corners
      of the anchor most beats point at. It reshapes the anchor too, which is
      invisible there and nearly so on the 6px decor button. */
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
   /* Unpaced, for the reason the sheen is: it breathes for as long as the card
      it belongs to is up, and the card is waiting on the player, not the reverse. */
   animation: coach-mark 1800ms ease-in-out infinite;
@@ -150,7 +150,7 @@
    3px outside them, so the grid takes the cards' radius and the ring runs
    parallel. At the default 8px it cut across the cards' rounder corners. */
 .shop-items.coached {
-  border-radius: 0.75rem;
+  border-radius: var(--corner-xl);
 }
 
 /* Breathing rather than blinking. The eye is meant to find it once and then get

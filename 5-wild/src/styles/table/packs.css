@@ -30,18 +30,6 @@
   overflow: visible;
 }
 
-:root.table .pack-options > .shop-item {
-  flex: 0 1 13rem;
-  min-width: 0;
-  aspect-ratio: 5 / 7;
-  min-height: 0;
-}
-
-:root.table .pack-options > .shop-item.sold {
-  flex: 0 1 13rem;
-  aspect-ratio: 5 / 7;
-}
-
 /* The picks keep the card they had before the shelf became four objects. The
    shelf's rules are scoped to `.shop-items`, so they never reached here, and the
    pack's picks fell through to the phone's row of a card, crammed into a 5:7
@@ -49,6 +37,10 @@
    the name, the rules in a well and the price at the foot. A pick is one kind at
    a time and three abreast, so none of the shelf's four frames applies. */
 :root.table .pack-options > .shop-item {
+  flex: 0 1 13rem;
+  min-width: 0;
+  aspect-ratio: 5 / 7;
+  min-height: 0;
   padding: var(--space-4) var(--space-3) var(--space-3);
   gap: var(--space-2);
   align-items: stretch;

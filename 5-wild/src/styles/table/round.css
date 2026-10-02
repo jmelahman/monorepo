@@ -12,9 +12,18 @@
  *
  * The header is the rail: it already holds everything that belongs there (the
  * round's name, the score and its bar, the category and the chips x mult, the
- * boss's rule, the gold), and is reordered and restyled as a panel. The one
- * thing that moves is the gold, which `display: contents` on its group frees to
- * be the panel's last row while the menu button goes to the panel's corner.
+ * boss's rule, the gold), and is reordered and restyled as a panel, top to
+ * foot:
+ *
+ *   round card   token, name, stage; the boss's rule continuing under it
+ *   score        and its bar
+ *   dock         the shape, then the chips x mult
+ *   ...
+ *   foot         gold | values | menu
+ *
+ * Two pieces of that are the view's and not this file's: on the table the round
+ * and the rule come wrapped as one `.hud-head`, and the decor switch comes in
+ * the foot's group rather than the hand's. See `hud` in `views.ts`.
  *
  * The board is still a size container and sized in `cq` units against the cell
  * it is given. That is the whole trick and it is left exactly as it was: the
@@ -49,10 +58,6 @@
 
 /* ---- the rail --------------------------------------------------------- */
 
-:root.table .round-screen .hud {
-  grid-column: 1;
-  grid-row: 1 / -1;
-}
 :root.table :is(.round-screen, .shop-screen) .hud {
   display: flex;
   flex-direction: column;
@@ -64,28 +69,87 @@
   --hud-pad-x: var(--space-4);
 }
 
-/* The name, at the top, with the token that says what kind of round it is. */
-:root.table :is(.round-screen, .shop-screen) .hud-round {
-  order: 1;
-  gap: var(--space-3);
-  padding-right: 3rem;
+/*
+ * The round card: the token, the name and the stage on one strip, and in a boss
+ * round the rule continuing under them inside the same card. It holds a boss
+ * card's height in every round, `--head-strip` plus `--head-rule`, and a round
+ * without a boss draws only the strip and leaves the rest as space, so the score
+ * starts at the same height in all three rounds. With the rule at the rail's
+ * foot, where it used to be, the score sat still but the round's most important
+ * sentence was a screen away from the name it belongs to; with the rule here and
+ * no reservation, the score dropped six rem on one round in three, and the owner
+ * asked for neither.
+ *
+ * The rule's share is sized for the longest rule in the four catalogs at the
+ * narrowest rail (19rem): the name and three lines, clamped past that as the
+ * phone's band is. A rule clamped here is whole on the intro card and in the
+ * rules sheet, as on the phone.
+ */
+:root.table .round-screen .hud {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  --head-strip: 3.75rem;
+  --head-rule: 6.75rem;
 }
 
-:root.table :is(.round-screen, .shop-screen) .hud .round-token {
-  width: 3rem;
-  height: 3rem;
+:root.table .round-screen .hud-head {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  height: var(--head-strip);
+  margin-bottom: var(--head-rule);
+  overflow: hidden;
+}
+
+:root.table .round-screen .hud-head:has(.boss) {
+  height: calc(var(--head-strip) + var(--head-rule));
+  margin-bottom: 0;
+}
+
+:root.table .round-screen .hud-round {
+  flex: 0 0 var(--head-strip);
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 0 var(--space-3);
+}
+
+:root.table .round-screen .hud .round-token {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+/* The name and the stage share the strip's line, the stage pushed to its far
+   end. A name too long for the line with it (Manche d'élite at 19rem) wraps
+   the stage under itself rather than clipping, still at the right. */
+:root.table .round-screen .hud-title {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: var(--space-3);
+  min-width: 0;
 }
 
 :root.table .round-name {
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   line-height: 1.05;
 }
 
 :root.table .stage {
   display: block;
-  margin-top: 0.125rem;
-  font-size: 0.75rem;
+  margin-left: auto;
+  font-size: 0.9375rem;
+  white-space: nowrap;
 }
+
+/* The shop's header is still a bar, and has no card to sit the name in. */
+:root.table .shop-screen .hud-round {
+  gap: var(--space-3);
+}
+
 :root.table .round-screen .hud-score {
   order: 2;
   align-self: stretch;
@@ -100,8 +164,10 @@
   gap: 0;
 }
 
+/* Sized off the window's height, as the counters below are, so the same rule
+   fills a 900px window and still fits a 720px one. */
 :root.table .hud-score .score {
-  font-size: 3.5rem;
+  font-size: clamp(3.25rem, 7.6svh, 4.75rem);
   line-height: 1;
 }
 
@@ -109,6 +175,7 @@
   font-size: 1rem;
   margin-top: 0.125rem;
 }
+
 :root.table .round-screen .hud .meter {
   order: 3;
   height: 1.125rem;
@@ -132,7 +199,10 @@
 
 :root.table .dock-line .category {
   flex: 1 1 auto;
-  justify-content: space-between;
+  /* Centred, the level beside the name: spread to the ends, the name and the
+     chip read as two facts about two things, and the chip is about the name. */
+  justify-content: center;
+  gap: var(--space-2);
   padding: 0 var(--space-3);
   font-size: 1rem;
 }
@@ -141,53 +211,50 @@
   padding: 0 var(--space-2);
 }
 
+/* The blocks were 4.25rem in a rail with a hand's width of nothing under them.
+   Sized off the window's height so the same rule fills a 900px window and
+   still fits a 720px one, where the rail's rows have no slack to give. Half the
+   row each: Tabletop's round discs once made each a fixed box through a set of
+   `--counter-*` hooks here, and nothing has set them since the discs went. */
 :root.table .dock-line .readout {
   flex: 0 0 auto;
   gap: var(--space-2);
-  font-size: 2.25rem;
-}
-
-/* A skin whose counters are not the rail's width can say so: `--counter-w` makes
-   each a fixed box and `--counter-h` is its height. Tabletop set both while its
-   counters were round discs; no skin sets them now. Unset, they are what they
-   always were: half the row each. */
-:root.table .dock-line .readout {
-  justify-content: var(--counter-justify, normal);
+  font-size: clamp(2.75rem, 7.6svh, 4.5rem);
 }
 
 :root.table .dock-line .readout .chips,
 :root.table .dock-line .readout .mult {
-  --shape-line: 4.25rem;
-  flex: var(--counter-flex, 1 1 0);
-  width: var(--counter-w, auto);
-  height: var(--counter-h, 4.25rem);
+  --shape-line: clamp(4.5rem, 13svh, 7rem);
+  flex: 1 1 0;
+  height: var(--shape-line);
   min-width: 0;
   padding: 0 var(--space-2);
 }
 
 :root.table .readout .times {
-  font-size: 1.75rem;
+  font-size: clamp(1.75rem, 4svh, 2.5rem);
 }
-/* The boss's rule, a card inside the rail's padding rather than the phone's
-   full-bleed band. Bled out to the rail's edges it lay over the rail's own ring:
-   in Classic the band's square sides covered the rounded border's run down to
-   the corner, and in the Smoke Room the band met the notch, so on a short table,
-   where the band sits lower and nearer the cut, both read as a border sawn off.
-   Inset, it has edges of its own and meets nothing. Each look draws those edges. */
+/* The boss's rule, the round card's lower half: its full width and down to its
+   foot, the card changing colour under the name rather than a box inside it.
+   It used to be a card of its own at the rail's foot, inset from the rail's
+   ring because bled out it lay over it (Classic's rounded corner, the Smoke
+   Room's notch); inside the round card it meets only the card's own edges,
+   which clip it. Each look draws the fill and the line above it. */
 :root.table .round-screen .hud .boss {
-  order: 5;
+  flex: 1 1 auto;
   height: auto;
   min-height: 0;
   margin: 0;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   font-size: 0.8125rem;
   line-height: 1.35;
   contain: none;
 }
 
+/* The name and three lines of rule. */
 :root.table .boss p {
-  -webkit-line-clamp: 5;
-  line-clamp: 5;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
 }
 
 :root.table .boss strong {
@@ -195,37 +262,58 @@
   font-size: 1.125rem;
 }
 
-/* Gold is the panel's last row, pinned to the foot, and the menu goes to the
-   corner. `display: contents` frees the two from their group without a wrapper.
-   Pinned in a boss round too: it used to follow the band up the rail there,
-   which put the money in a different place on one round in three. */
-:root.table :is(.round-screen, .shop-screen) .hud-end {
-  display: contents;
+/*
+ * The foot: the gold, the values switch and the menu, one row pinned to the
+ * rail's bottom in every round. It is the rail's only row of buttons. Sound,
+ * music and speed sat here as a toolbar for a while and went back behind the ☰,
+ * since they are set once and the switch is the one setting a round changes its
+ * mind about. The menu used to be in the panel's top corner, which is where the
+ * round card's stage is now.
+ */
+:root.table .round-screen .hud-end {
+  order: 6;
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  margin-top: auto;
+  height: 3.25rem;
 }
 
 :root.table :is(.round-screen, .shop-screen) .hud-gold {
-  order: 6;
-  margin-top: auto;
-  align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 3.25rem;
   font-size: 1.875rem;
 }
 
-:root.table .round-screen .hud:has(.boss) {
-  gap: var(--space-3);
+:root.table .round-screen .hud-gold {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-:root.table :is(.round-screen, .shop-screen) .menu-button {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-  z-index: 2;
-  width: 2.5rem;
-  height: 2.5rem;
-  font-size: 1.125rem;
+/* A square the foot's height, like the ☰ beside it. A caption under the glyph
+   was tried ("Values") and taken off at the owner's asking: the face already
+   is the setting, which is the whole of its design (see `decorToggle`). */
+:root.table .round-screen .hud-end .decor-toggle {
+  flex: 0 0 3.25rem;
+  width: 3.25rem;
+  height: auto;
+  /* Half the box less half the 1.375rem line, as the base rule centres it:
+     baseline-aligned so the digit sits on the letter as a key's value does. */
+  padding: calc(1.625rem - 0.6875rem) 0 0;
+  font-size: 1.375rem;
+}
+
+:root.table .round-screen .menu-button {
+  flex: 0 0 3.25rem;
+  width: 3.25rem;
+  height: auto;
+  font-size: 1.375rem;
+}
+
+/* The shop's bar puts its own menu at its end; see `shop.css`. */
+:root.table .shop-screen .menu-button {
+  position: static;
 }
 
 /* ---- the play area ---------------------------------------------------- */
@@ -273,10 +361,11 @@
  * asked for a little air back; a quarter rem is enough to part them and still
  * well short of the gap to the relics, which is what separates the two.
  *
- * `display: contents` frees the decor switch from the line, so it can go down
- * to the keyboard (below) while the consumables stay here. It sat at the end of
- * this strip, where on a narrow table it was the thing the relics ran into and
- * at any size it was one more tile-shaped box in a row of them.
+ * `display: contents` frees the consumables from the line, which on the table
+ * is all the line holds: the decor switch is in the rail's foot. It sat at the
+ * end of this strip once, where on a narrow table it was the thing the relics
+ * ran into, and by the keyboard's backspace after that, where it was a key that
+ * was not a key.
  */
 :root.table .round-screen .hand-line {
   display: contents;
@@ -321,42 +410,6 @@
   overflow: hidden;
 }
 
-/*
- * The decor switch beside the keyboard's bottom row, a key's height square, at
- * the backspace's right. It is a setting for how the board and the keys are
- * drawn, so it sits with them rather than with the cards, and the player's hand
- * is already at the keys when they want it.
- *
- * It shares the keyboard's cell and places itself against the keyboard rather
- * than against the cell's edge, since at 1440 wide the keyboard stops 150px
- * short of the edge and a switch out there would belong to nothing. Margins in
- * percent are of the cell's width, the same width the keyboard's `100%` is, so
- * the keyboard's half-width can be written again here: the switch starts one
- * gap past the keyboard's right edge. The keyboard in turn gives up a switch
- * and a gap on *both* sides, so it stays centred under the board and the switch
- * always fits.
- */
-/* `--kb-flank` is the gap between the keys and the switch, and a look that
-   draws something around the keys past their box says how far it reaches:
-   Tabletop's rack stands a rem clear of them, and at the plain gap the switch
-   sat under the rack, since the keyboard is positioned and paints above it. */
-:root.table .round-screen {
-  --kb-flank: var(--space-3);
-  --kb-half: min(calc(50% - var(--key-h) - var(--kb-flank)), 23rem);
-}
-
-:root.table .round-screen .decor-toggle {
-  grid-column: 2 / -1;
-  grid-row: 3;
-  align-self: end;
-  justify-self: start;
-  width: var(--key-h);
-  height: var(--key-h);
-  margin-left: calc(50% + var(--kb-half) + var(--kb-flank));
-  padding-top: calc(var(--key-h) / 2 - 0.6rem);
-  font-size: 1.125rem;
-}
-
 /* The board: the row's leftover height, all of it, centred both ways. The
    boss's reservation the phone keeps above it is not needed, since the band is
    in the rail. */
@@ -389,9 +442,10 @@
 :root.table .round-screen .keyboard {
   grid-column: 2 / -1;
   grid-row: 3;
-  /* Two halves of `--kb-half`: room for the decor switch on the right and the
-     same again on the left, so the keys stay centred under the board. */
-  width: calc(2 * var(--kb-half));
+  /* It gave up a decor switch's width and a gap on each side while the switch
+     stood at the backspace's right; with the switch in the rail it has its
+     column back, to the same 46rem cap. */
+  width: min(100%, 46rem);
   justify-self: center;
   gap: 0.4375rem;
   --key-gap: 0.4375rem;

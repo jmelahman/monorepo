@@ -24,7 +24,6 @@
 :root.skin-smoke .key {
   --ring: inset 0 0 0 0 transparent;
   border: var(--bw) solid var(--key-line);
-  border-radius: 0;
   background: var(--key);
   background-image: none;
   box-shadow: var(--ring);

@@ -33,7 +33,7 @@ import type { SeededOffer } from "./seed"
 import { parseSeed, readPastedLink, seedCode, seedLink } from "./seed"
 import { currentSkin, NEXT_SKIN } from "./skin"
 import { loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
-import { isTable } from "./table"
+import { isTable, watchTable } from "./table"
 import type { Consent, RunEnd, RunLog, Step } from "./telemetry"
 import {
   beginLog,
@@ -381,6 +381,34 @@ export class App {
     this.bindAudioWake()
     this.bindTips()
     this.bindMouse()
+    this.bindLayout()
+  }
+
+  /**
+   * Rebuild the screen when the window crosses into or out of the table.
+   *
+   * `.table` is a class on the root and was once the whole of the difference, so
+   * a resize needed nothing but the stylesheet. It is not the whole of it now:
+   * the views ask `isTable()` at render, and the rail builds different DOM from
+   * the phone's header (the round card wrapping the boss's rule, the decor
+   * switch in the rail's foot rather than in the hand's row, the foot last in
+   * the header so Tab reaches the shape before the ☰). A window dragged across
+   * the line kept the old layout's nodes under the new layout's rules, and the ☰
+   * and the switch landed wherever the other layout's CSS put them. Styling
+   * both arrangements onto one DOM was the alternative, and it cannot be done
+   * whole: the switch lives in two different parents and Tab order is the
+   * DOM's, which no media query reaches. So the screen is rebuilt, which every
+   * dispatch already does.
+   *
+   * Not while a guess is scoring: the animation holds nodes from the render it
+   * started on, and it ends in a render of its own, which will be the new
+   * layout's. `watchTable` lands the class before calling back, so the views
+   * read the new answer.
+   */
+  private bindLayout(): void {
+    watchTable(() => {
+      if (!this.busy) this.render()
+    })
   }
 
   /**
@@ -2385,7 +2413,7 @@ function setDecor(decor: Decor): void {
  * lands on the header's foot exactly.
  *
  * Above the anchor instead when the anchor is below the board, which is the
- * decoration switch and nothing else so far: hung under it the card would lie
+ * decoration switch on a phone and nothing else so far: hung under it the card would lie
  * over the keyboard the player is about to type on, and the board's empty
  * rows above it are the one place on the screen nobody is reading. `above`
  * turns the tail over to point down.
@@ -2439,8 +2467,9 @@ function aimCoach(card: HTMLElement, anchor: Element): void {
  * the whole rail is the middle of the screen and for everything in it is the
  * figure being read back.
  *
- * An anchor outside the rail (the decor switch by the keys, the shop's shelf
- * and relics) keeps the phone's rule, above it or below it by which half of the
+ * The decor switch is in the rail on the table, in its foot, so its card stands
+ * beside the rail like the rest, held inside the window by its bottom edge. An
+ * anchor outside the rail (the shop's shelf and relics) keeps the phone's rule, above it or below it by which half of the
  * window it is in, and is centred on it rather than laid across it.
  *
  * `fixed` is measured from the viewport unless an ancestor is transformed, and

@@ -977,7 +977,6 @@ export const de: Strings = {
       shape: (word, shape) =>
         `${word.toUpperCase()} zählt als ${shape}. Jeder Versuch hat eine Form, und eine Form im ` +
         "Laden aufzuwerten lässt solche Versuche mehr punkten. Tippe, um alle zu sehen.",
-      menu: "Im Menü stellst du Ton, Musik und Design ein. Probier ein paar Designs aus: Manche haben mehr Effekte, andere kaum Bewegung. Dort findest du auch die Spielanleitung und den Kodex.",
       decor:
         "Dieser Knopf hat drei Modi für Tastatur und Kacheln: der Wert jedes Buchstabens, nur verbesserte Buchstaben oder gar nichts. Wenn spätere Runden ablenken, hilft er dir, dich aufs Wort zu konzentrieren.",
       shelf:

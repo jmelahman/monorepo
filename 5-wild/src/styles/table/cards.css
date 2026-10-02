@@ -1,8 +1,4 @@
 /* The layout half of `cards.css`; the look, and the reasons for it, are in `smoke/cards.css`. */
-:root.table .relic {
-  border-top-width: 0.1875rem;
-  overflow: hidden;
-}
 
 /* Card text sits above any pseudo-element a skin draws behind it. */
 :root.table :is(.relic, .shop-item) > * {
@@ -16,6 +12,8 @@
 
 /* Relic tray cards, in the tray (round) and on the owned row (shop). */
 :root.table .relic {
+  border-top-width: 0.1875rem;
+  overflow: hidden;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-1);
   min-width: 0;

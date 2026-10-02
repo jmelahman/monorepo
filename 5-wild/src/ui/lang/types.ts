@@ -772,11 +772,6 @@ export type Strings = {
        * scores as, both as the chip shows them.
        */
       shape: (word: string, shape: string) => string
-      /**
-       * The menu button: the settings behind it and the two references. The
-       * buttons it names should be named as the pause sheet labels them.
-       */
-      menu: string
       /** The board's decoration switch, named for the rounds that will need it. */
       decor: string
       /** The first shop, before a relic is held: what each kind of card is. */

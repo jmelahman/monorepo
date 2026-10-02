@@ -27,8 +27,7 @@ import { solveFloor, wordInPlay } from "./views"
  *     and typing           nothing, so the next card reads as new
  *     and a word complete  the shape that word scores as, and that it levels
  *   two guesses played   what solving would multiply that pile by
- *   three guesses played the menu: sound, music and look, and the references
- *   four guesses played  the switch that quiets the board, for later
+ *   three guesses played the switch that quiets the board, for later
  *
  * and then the first shop, which is the same idea on a screen with no clock:
  *
@@ -61,17 +60,7 @@ import { solveFloor, wordInPlay } from "./views"
  */
 export type CoachStep = {
   /** Stable name, so a test can pin a beat without quoting its prose. */
-  id:
-    | "chips"
-    | "rare"
-    | "mult"
-    | "banked"
-    | "solve"
-    | "shape"
-    | "menu"
-    | "decor"
-    | "shelf"
-    | "relics"
+  id: "chips" | "rare" | "mult" | "banked" | "solve" | "shape" | "decor" | "shelf" | "relics"
   /** What the card says, built against the run so it can quote live figures. */
   text: string
   /**
@@ -210,29 +199,16 @@ const BEATS: readonly Beat[] = [
     anchor: ".hud .meter",
   },
   {
-    id: "menu",
-    // Not scoring either, and first of the two that are not. The menu is the
-    // one button on the board that is only a glyph, and behind it are the
-    // settings a player goes looking for (sound, music, the look) and the two
-    // references (the rules and the codex) that the scoring cards above have
-    // been leaving things out in favour of. So it is named once the scoring
-    // lessons are spent, where it can say "the rest is in here" and be true.
-    // It took the fourth board from the decor card, which moved one later:
-    // the menu is the more likely to be wanted this round, and the switch is
-    // a thing for rounds that have not happened yet.
-    when: (state) => state.round.guesses.length === 3,
-    say: () => ui().coach.menu,
-    anchor: ".menu-button",
-  },
-  {
     id: "decor",
     // Not scoring: it is about the round after this one. Nothing on the first
     // board is busy enough to need the switch, which is exactly why nobody
     // finds it until the keyboard is covered in marks and they have stopped
-    // looking for buttons. So it is named here, last, as a thing for later: a
-    // round still going after four guesses is the round least likely to be
-    // read, and this is the card that can most afford that.
-    when: (state) => state.round.guesses.length === 4,
+    // looking for buttons. So it is named here, last, as a thing for later.
+    // There was a menu card on this board before it, naming the ☰ and what
+    // sits behind it, and this one waited a guess longer for it. That card is
+    // gone: the button is the one every app has, and a tutorial that spends a
+    // board saying "settings are in the menu" has stopped teaching the game.
+    when: (state) => state.round.guesses.length === 3,
     say: () => ui().coach.decor,
     anchor: ".decor-toggle",
   },

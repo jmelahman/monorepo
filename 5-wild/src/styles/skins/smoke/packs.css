@@ -3,7 +3,3 @@
 :root.skin-smoke .pack-hint {
   color: var(--muted);
 }
-
-:root.skin-smoke .pack-sheet .shop-actions > .secondary {
-  border-radius: 0;
-}

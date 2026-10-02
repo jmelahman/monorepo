@@ -58,7 +58,7 @@
      the name: at 0.75rem a side, a half-width card at 360 had 126px for a
      picture and a name, and "Consonant Cluster" broke after its first word. */
   padding: 0.75rem 0.5rem;
-  border-radius: 0.75rem;
+  border-radius: var(--corner-xl);
   overflow: hidden;
   border: 1px solid
     color-mix(in srgb, var(--rare, var(--rare-common)) var(--rare-edge), var(--line));
@@ -375,7 +375,7 @@
   min-height: 2.75rem;
   margin-top: auto;
   padding: 0 0.75rem;
-  border-radius: 0.625rem;
+  border-radius: var(--corner-l);
   background: color-mix(in srgb, var(--panel) 75%, transparent);
   font-size: 0.875rem;
   color: var(--muted);
@@ -439,6 +439,10 @@
 
 .amt-times {
   padding: 0 0.3em;
-  border-radius: 0.3em;
+  /* In `em`, off the corner scale, because the chip is set inside a sentence
+     at whatever size that sentence is. The `min` is what still lets a skin that
+     zeroes the scale square it: against Classic's 999px pill it is the 0.3em,
+     against the Smoke Room's 0 it is 0. */
+  border-radius: min(0.3em, var(--corner-pill));
   background: color-mix(in srgb, var(--mult) 22%, var(--panel));
 }

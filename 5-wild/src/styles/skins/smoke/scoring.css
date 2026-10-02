@@ -17,7 +17,6 @@
 
 :root.skin-smoke .dock-line .readout .chips,
 :root.skin-smoke .dock-line .readout .mult {
-  border-radius: 0;
   --stroke: 0em;
   --drop: 0em;
 }
@@ -42,7 +41,6 @@
 /* A flat tag in the block's own colour with dark ink. */
 :root.skin-smoke .fx-pop {
   border: 0;
-  border-radius: 0;
   background: var(--pop-chips);
   box-shadow: none;
   clip-path: var(--cut);
@@ -101,7 +99,6 @@
    colours, carrying the name, that the scene puts out. */
 :root.skin-smoke .fx-placard {
   border: var(--rim);
-  border-radius: 0;
   background: var(--panel);
   box-shadow: none;
   clip-path: var(--cut);

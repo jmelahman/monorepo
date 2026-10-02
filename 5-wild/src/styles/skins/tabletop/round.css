@@ -170,15 +170,19 @@
   box-shadow: var(--top-light), var(--shadow-soft);
 }
 
-:root.skin-tabletop.table .round-screen .hud .boss {
+/* On the table the round is a card sunk into the rail, and the rule its lower
+   half, square inside the card's corners, which clip it: only the line where
+   the oxblood starts is its own. */
+:root.skin-tabletop.table .round-screen .hud-head {
   border: var(--rim);
   border-radius: var(--radius-m);
+  background: var(--well);
 }
 
-/* The rack reaches a rem past the keys; the switch stands clear of it by the
-   plain gap again, so it reads as the rack's neighbour and not as under it. */
-:root.skin-tabletop.table .round-screen {
-  --kb-flank: 1.75rem;
+:root.skin-tabletop.table .round-screen .hud .boss {
+  border: 0;
+  border-top: var(--bw) solid color-mix(in srgb, #b8383f 60%, var(--line));
+  border-radius: 0;
 }
 
 :root.skin-tabletop .boss strong {

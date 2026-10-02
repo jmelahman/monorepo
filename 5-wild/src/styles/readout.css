@@ -1,14 +1,5 @@
 /* -------------------------------------------------------------- readout */
 
-/* The row exists to be the switch's anchor. The readout itself is unchanged and
-   keeps the center of the line. */
-.readout-row {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 /* The face is the setting: a letter carrying its value, a letter carrying a
    mark, or the letter alone. Baseline-aligned so the digit sits where a value
    sits on a key, and sized to the same box in all three states so nothing
@@ -16,23 +7,27 @@
    It hung off the right end of the dock line, and then took the last seat in
    it; it went with the hand, not with the figures, when the line moved into
    the header. See `.hand-line`. Its default box is `--tray-h` on both sides,
-   which is what lets it sit in that row at the cards' height. */
+   which is what lets it sit in that row at the cards' height. That was a
+   literal 2.5rem, the tray's height when it was written, and it stayed 2.5rem
+   when the tray grew to 2.75rem for the relics: 4px short of the cards beside
+   it, flush at the top and short at the bottom. Read off the token now, so the
+   next change to the tray carries the switch with it. */
 .decor-toggle {
   flex: 0 0 auto;
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 0.0625rem;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--tray-h, 2.5rem);
+  height: var(--tray-h, 2.5rem);
   /* `align-items: baseline` in a fixed-height box parks the pair at the top of
      it, so the top padding is what centres them: half the box less half the
      line, near enough, since both faces set `line-height: 1`. */
-  padding: 0.6875rem 0 0;
+  padding: calc(var(--tray-h, 2.5rem) / 2 - 0.5625rem) 0 0;
   /* Carried transparent in both states so switching to the outlined one cannot
      move the line by the width of a border. */
   border: 1px solid transparent;
-  border-radius: 0.375rem;
+  border-radius: var(--corner-s);
   background: var(--panel-2);
   color: var(--fg);
   font-size: 0.875rem;
@@ -98,20 +93,16 @@
   display: flex;
   align-items: center;
   padding: 0 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
 }
 
 .readout .chips {
   justify-content: flex-end;
   background: color-mix(in srgb, var(--chips) 22%, var(--panel));
   color: var(--chips);
-}
-
-.readout .chips,
-.readout .mult {
-  transition:
-    background-color 220ms ease,
-    color 220ms ease;
 }
 
 /*

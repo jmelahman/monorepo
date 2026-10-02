@@ -2,7 +2,6 @@
 
 :root.skin-smoke .sheet {
   border: var(--rim);
-  border-radius: 0;
   background: var(--panel);
   box-shadow: none;
   clip-path: var(--cut);
@@ -22,6 +21,5 @@
 }
 
 :root.skin-smoke .help-tutorial {
-  border-radius: 0;
   background: var(--well);
 }

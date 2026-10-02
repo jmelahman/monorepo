@@ -980,7 +980,6 @@ export const fr: Strings = {
       shape: (word, shape) =>
         `${word.toUpperCase()} compte comme ${shape}. Chaque essai a une forme, et monter une forme ` +
         "de niveau à la boutique fait marquer plus à ces essais. Touchez pour les voir toutes.",
-      menu: "Le menu permet de changer le son, la musique et le thème. Essayez-en plusieurs : certains ajoutent des effets, d'autres réduisent le mouvement au minimum. Vous y trouverez aussi Comment jouer et le Codex.",
       decor:
         "Ce bouton a trois modes pour le clavier et les tuiles : la valeur de chaque lettre, vos lettres améliorées seulement, ou rien. Quand les manches distraient, il aide à se concentrer sur le mot.",
       shelf:

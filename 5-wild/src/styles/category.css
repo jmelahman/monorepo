@@ -59,7 +59,7 @@
   padding: 0 0.5rem 0 0.625rem;
   /* The figures' corner, not a pill: it shares the line with them, and a pill
      beside two rounded rectangles read as a control of a different kind. */
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
   border: 1px solid var(--line);
   background: var(--panel);
   font-size: 0.75rem;
@@ -75,7 +75,7 @@
 
 .category-level {
   padding: 0 0.25rem;
-  border-radius: 0.1875rem;
+  border-radius: var(--corner-xs);
   background: color-mix(in srgb, var(--muted) 18%, transparent);
 }
 

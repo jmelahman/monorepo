@@ -25,9 +25,11 @@ import { Capacitor } from "@capacitor/core"
  *   narrowed to a column is a phone-shaped window and gets the phone's layout,
  *   and the Tauri window, which opens wide, gets the table.
  *
- * The answer is a class on the root, like `.plain` and `.quiet`, so no view has
- * to know it exists; every dispatch rebuilds the screen from the same views
- * either way, and the stylesheet decides what they look like.
+ * The answer is a class on the root, like `.plain` and `.quiet`, and for the
+ * most part the stylesheet decides what it means. Not wholly: a few views ask
+ * `isTable()` at render, where the two layouts want different DOM rather than
+ * different rules (Tab order, and a node that lives in a different parent),
+ * which is why a crossing rebuilds the screen; see `bindLayout` in `app.ts`.
  */
 
 /**
@@ -52,6 +54,8 @@ export function syncTable(): void {
  * can change the answer mid-game. The look is told rather than left to notice,
  * because a legacy dark pick still maps differently on the table (see
  * `resolveSkin`), so the layout has to have landed before the look is asked.
+ * The app is told too, to rebuild the screen; each caller gets its own
+ * listener, and each lands the class first, so neither depends on going first.
  */
 export function watchTable(onChange: () => void): void {
   if (typeof matchMedia !== "function") return

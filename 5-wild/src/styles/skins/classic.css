@@ -5,9 +5,9 @@
  * look on top, every screen is drawn by the phone's partials (`../*.css`) in the
  * phone's tokens: system-ui, the green primary, the phone's radii and panels,
  * and the dark or light palette by `data-theme`. That holds on a phone, where
- * this file is not needed at all, and on the table, where the layout files carry
- * no colour, face, border, shadow or motion and so fall through to the same
- * thing. What this file adds is the handful of surfaces the *table's layout
+ * this file adds nothing but the relic seat's emblem (at the end), and on the
+ * table, where the layout files carry no colour, face, border, shadow or motion
+ * and so fall through to the same thing. What this file adds is the handful of surfaces the *table's layout
  * invented* and the phone never had to dress, because on a phone they are not
  * boxes. The rail is the header of a phone screen, which sits flush on the
  * page; on the table it is a column with edges, so it wants the panel the phone
@@ -33,10 +33,37 @@
   --hud-panel: 1;
 }
 
-/* The boss's rule is a card inside the rail on the table, not the phone's band
-   along the header's foot, so it takes a whole border and all four corners. */
+/* The round card at the rail's top, and the boss's rule as its lower half: the
+   phone's band, fill and top line as the phone draws them, inside the card's
+   corners rather than along the header's foot. The card clips it, so it needs
+   no corners of its own. */
+:root.table:is(.skin-classic-dark, .skin-classic-light) .round-screen .hud-head {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+}
+
 :root.table:is(.skin-classic-dark, .skin-classic-light) .round-screen .hud .boss {
-  border: 1px solid color-mix(in srgb, var(--mult) 40%, transparent);
+  border-radius: 0;
+}
+
+/* The score in a raised panel, the round card's fill and corner, so the
+   column reads as three cards (round, score, readout) rather than a number
+   loose between two of them. Raised and not framed: the category under it is
+   the framed box, and two frames stacked read as one control. */
+:root.table:is(.skin-classic-dark, .skin-classic-light) .round-screen .hud-score {
+  background: var(--panel-2);
+  border-radius: 0.625rem;
+}
+
+/* The cash at the rail's foot, framed as the category is: the line, the panel
+   and the category's corner. Bare, it was a number floating beside two framed
+   buttons, and read as their caption rather than as the third thing in the row.
+   Not the decor's own frame, which is transparent until pressed and so would
+   be no frame at all. */
+:root.table:is(.skin-classic-dark, .skin-classic-light) .round-screen .hud-gold {
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 0.5rem;
 }
 
@@ -171,4 +198,37 @@
   .shop-item:is(.kind-consumable, .kind-etch, .kind-level, .kind-range, .kind-mod):focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
+}
+
+/*
+ * A relic in its seat: the emblem over the name, on the phone and the table
+ * both, which is why this is the one rule here without `.table`. The seat was a
+ * name on a coloured edge (`../relics.css`), and a row of five names is a row
+ * read rather than glanced at; the emblem is the same drawing the shop card
+ * showed when it was bought, in the same rarity ink, so the seat is recognised
+ * from across the board. Line-drawn in the tone's ink like every other icon in
+ * this look, with no tile behind it: the seat is already the box.
+ *
+ * The rarity pip goes in the same move. It was the seat's only picture and its
+ * only sign of rarity beyond the edge; with the emblem drawn in `--rare` there
+ * are three, and a glowing dot in the corner of a seat that is already that
+ * colour was saying it twice. It stays on the shop's cards and in the codex,
+ * where there is no emblem in the rarity's ink to say it instead.
+ */
+:root:is(.skin-classic-dark, .skin-classic-light) .relic > .icon {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: color-mix(in srgb, var(--rare, var(--rare-common)) 70%, var(--fg));
+}
+
+:root:is(.skin-classic-dark, .skin-classic-light) .relic::after {
+  content: none;
+}
+
+/* The table's seats are three times the phone's height, and the phone's
+   emblem sat in one like a bullet point. */
+:root.table:is(.skin-classic-dark, .skin-classic-light) .relic > .icon {
+  width: 1.75rem;
+  height: 1.75rem;
 }

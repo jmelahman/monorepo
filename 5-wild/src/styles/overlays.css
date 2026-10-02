@@ -31,7 +31,7 @@
   flex-direction: column;
   gap: 0.75rem;
   padding: 1.25rem;
-  border-radius: 1rem;
+  border-radius: var(--corner-xxl);
   background: var(--panel);
   border: 1px solid var(--line);
   animation: rise-sheet calc(180ms * var(--pace)) cubic-bezier(0.2, 0.8, 0.3, 1);
@@ -90,7 +90,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.625rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
   border: 1px solid color-mix(in srgb, var(--chips) 40%, var(--line));
   background: var(--panel-2);
   color: var(--fg);

@@ -20,7 +20,7 @@
   transform: translateX(-50%);
   max-width: calc(100vw - 2rem);
   padding: 0.25rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--corner-m);
   background: #000c;
   color: var(--on-tile);
   border: 1px solid var(--line);
