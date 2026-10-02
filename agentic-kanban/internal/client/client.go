@@ -366,6 +366,54 @@ func (c *Client) RestartSession(ctx context.Context, id int64) (json.RawMessage,
 	return c.do(ctx, http.MethodPost, "/api/sessions/"+strconv.FormatInt(id, 10)+"/restart", nil, http.StatusOK)
 }
 
+// Preview mirrors one preview deploy from the /api/.../previews endpoints.
+// Status is queued, building, ready, failed, or evicted; PreviewURL is set
+// once it's ready.
+type Preview struct {
+	ID         int64             `json:"id"`
+	ShortSHA   string            `json:"short_sha"`
+	Ref        string            `json:"ref,omitempty"`
+	Status     string            `json:"status"`
+	Error      string            `json:"error,omitempty"`
+	FeHash     string            `json:"fe_hash,omitempty"`
+	BeHash     string            `json:"be_hash,omitempty"`
+	PreviewURL string            `json:"preview_url,omitempty"`
+	Artifacts  []PreviewArtifact `json:"artifacts,omitempty"`
+}
+
+// PreviewArtifact is one named downloadable artifact of a ready deploy.
+type PreviewArtifact struct {
+	Name  string `json:"name"`
+	Files []struct {
+		Name string `json:"name"`
+		Size int64  `json:"size"`
+	} `json:"files"`
+}
+
+// CreateSessionPreview calls POST /api/sessions/{id}/previews, requesting a
+// deploy of the session branch's tip. Deploys are idempotent per commit, so
+// an already-deployed tip returns its existing deploy.
+func (c *Client) CreateSessionPreview(ctx context.Context, sessionID int64) (json.RawMessage, error) {
+	return c.do(ctx, http.MethodPost, "/api/sessions/"+strconv.FormatInt(sessionID, 10)+"/previews", nil, http.StatusAccepted)
+}
+
+// GetPreview calls GET /api/previews/{id}.
+func (c *Client) GetPreview(ctx context.Context, id int64) (json.RawMessage, error) {
+	return c.do(ctx, http.MethodGet, "/api/previews/"+strconv.FormatInt(id, 10), nil, http.StatusOK)
+}
+
+// PreviewLogs calls GET /api/previews/{id}/logs and returns the build log.
+func (c *Client) PreviewLogs(ctx context.Context, id int64) (string, error) {
+	raw, err := c.do(ctx, http.MethodGet, "/api/previews/"+strconv.FormatInt(id, 10)+"/logs", nil, http.StatusOK)
+	return string(raw), err
+}
+
+// PreviewArtifactURL is the download URL of one file of a deploy's artifact.
+func (c *Client) PreviewArtifactURL(id int64, artifact, file string) string {
+	return c.baseURL + "/api/previews/" + strconv.FormatInt(id, 10) + "/artifacts/" +
+		url.PathEscape(artifact) + "/" + url.PathEscape(file)
+}
+
 // ListPorts calls GET /api/sessions/{id}/ports.
 func (c *Client) ListPorts(ctx context.Context, sessionID int64) ([]Port, error) {
 	raw, err := c.do(ctx, http.MethodGet, "/api/sessions/"+strconv.FormatInt(sessionID, 10)+"/ports", nil, http.StatusOK)

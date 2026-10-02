@@ -13,24 +13,23 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+
+	"github.com/jmelahman/kanban/internal/gittest"
 )
 
 // TestMain lets the test binary stand in for kanban as gpg.ssh.program, the
 // way main.go dispatches a leading -Y, so TestGitCommit exercises the path git
 // really takes.
 //
-// It also drops the git environment a hook hands down, as internal/git's
-// TestMain does: `go test` run from pre-commit inherits GIT_INDEX_FILE and
-// friends, and TestGitCommit's `git commit` would build its tree from the
-// index of whatever repo is being committed to ("invalid object ... Error
-// building trees").
+// It also isolates git from the caller's environment and gitconfig (see
+// gittest.IsolateEnv). Under a pre-commit hook, TestGitCommit's `git commit`
+// would otherwise build its tree from the index of whatever repo is being
+// committed to ("invalid object ... Error building trees").
 func TestMain(m *testing.M) {
 	if len(os.Args) > 1 && os.Args[1] == "-Y" {
 		os.Exit(Main(os.Args[1:]))
 	}
-	for _, k := range []string{"GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY", "GIT_COMMON_DIR"} {
-		os.Unsetenv(k)
-	}
+	gittest.IsolateEnv()
 	os.Exit(m.Run())
 }
 

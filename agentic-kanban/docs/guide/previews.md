@@ -30,6 +30,8 @@ It uses the plain `preview.toml` format and is shared with the standalone `previ
 
 Open a ticket's **previews** tab and click **deploy tip**. Kanban builds the branch's latest commit (not uncommitted changes) and shows the status, build logs, and a link when it's ready. `*.preview.localhost` works in modern browsers with no DNS setup.
 
+From a terminal, [`kanban ticket preview`](/reference/cli#ticket-preview-id) does the same: it waits for the build and prints the link.
+
 Kanban also deploys automatically whenever an agent finishes working, if the board has a manifest. Deploying a commit that's already built does nothing. Set `KANBAN_PREVIEW_AUTO_DEPLOY=0` to turn this off.
 
 ### Build environment

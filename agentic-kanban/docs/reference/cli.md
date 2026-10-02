@@ -258,6 +258,22 @@ kanban ticket tasks 42 --run "Kanban Backend" -d
 kanban ticket tasks 42 --stop "Kanban Backend"
 ```
 
+### `ticket preview [id]`
+
+```sh
+kanban ticket preview [id] [--no-wait] [--json]
+```
+
+Deploys the latest commit on the ticket's branch as a [preview](/guide/previews), like **deploy tip** in the **previews** tab. It waits for the build, then prints the preview URL and download links for any [artifacts](/guide/previews#downloads). If that commit is already deployed, it reports the existing preview right away. If the build fails, it prints the last 20 lines of the build log and exits non-zero.
+
+The ticket needs a session; if it has none, `ticket attach` creates one.
+
+| Flag        | Default              | Description |
+| ----------- | -------------------- | ----------- |
+| `--no-wait` | `false`              | Request the deploy and exit without waiting for the build. |
+| `--json`    | `false`              | Print the deploy as JSON instead of a summary. |
+| `--board`   | current repo's board | Board to pick a ticket from. |
+
 ### `ticket update [id]`
 
 Changes a ticket's `--title` and/or `--body`.

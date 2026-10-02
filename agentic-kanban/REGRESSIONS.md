@@ -285,3 +285,17 @@ a container restart, and returned 204 with the row unchanged. Rules:
   `abandon`, which outlives the cancelled request context.
 - A created-but-never-started exec inspects as not running with exit code
   0. `ExecState` treats `Pid == 0` as "never ran", with no exit code.
+
+### Tests inherit the caller's git environment and gitconfig
+
+Git hands its hooks `GIT_INDEX_FILE` and similar variables as repo-relative
+paths. `go test` run from a pre-commit hook then points every git command at
+the wrong index. The developer's `~/.gitconfig` leaks in too. A global
+`core.hooksPath` runs a prek shim on every test `git commit`, and the shim
+fails outside a configured repo. A global `commit.gpgsign` breaks commits the
+same way. Both fail dozens of unrelated tests at once, on one machine only.
+
+Rule: every package whose tests run git (directly, or through the server
+under test) calls `gittest.IsolateEnv()` first in its `TestMain`. Tests that
+commit set their own identity on the repo or with `-c`, never through the
+global config.
