@@ -11,3 +11,17 @@ container_port = 5173
 [[task]]
 label = "Spectator feed"
 container_port = 7777
+
+# A downloadable, installable debug APK for this commit. The Android image has
+# JDK 21 and the SDK; install Bun because `bun run apk` builds the web assets
+# before Capacitor syncs and packages them.
+# Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
+[previews.apk]
+path  = "."
+image = "ghcr.io/cirruslabs/android-sdk:36"
+build = [
+  ["sh", "-c", "curl -fsSL https://bun.sh/install | bash"],
+  ["sh", "-c", "export PATH=$HOME/.bun/bin:$PATH && bun install --frozen-lockfile"],
+  ["sh", "-c", "export PATH=$HOME/.bun/bin:$PATH && bun run apk && cp android/app/build/outputs/apk/debug/app-debug.apk 5-wild.apk"],
+]
+files = ["5-wild.apk"]
