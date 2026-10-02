@@ -1,14 +1,30 @@
 /*
- * What the rail looks like standing still when a guess has been scored.
+ * Tabletop's scoring look.
  *
- * Tabletop's fx level is `tactile` (see `Fx` in `src/ui/skin.ts`), so the scoring
- * show does not play: no pops, no placards. A
- * guess is scored the phone's way, by the tiles turning over and the counters
- * changing (`.bumped`), which is a plain, legible reading of the same numbers
- * and is what a board game does. So this file is only the parts of that path
- * that are the table's: the modifier outline on a tile, and the pops' roles for
- * a later level.
+ * Its fx level is `tactile` (see `Fx` in `src/ui/skin.ts`), so the table's extra
+ * scoring show does not play: no sparks, pops or placards. The phone's path still
+ * turns tiles and bumps the counters, and its tile payment is visible on that
+ * layout too; the bone plaque below gives it the same material as the pieces.
+ * The other rules here are the table's modifier outline and the roles a later
+ * level's pops would use.
  */
+
+/* The phone's tile payment is a small bone plaque, inked like the readout. */
+:root.skin-tabletop .tile-gain {
+  border-color: var(--bone-side);
+  border-radius: var(--radius-s);
+  background: var(--bone);
+  box-shadow: 0 var(--bw) 0 var(--bone-side);
+  text-shadow: none;
+}
+
+:root.skin-tabletop .tile-gain .gain-chips {
+  color: var(--chips-ink);
+}
+
+:root.skin-tabletop .tile-gain .gain-mult {
+  color: var(--mult-ink);
+}
 
 /* A modifier firing: the outline the phone draws, over the tile's slab. */
 :root.skin-tabletop .tile.fired {

@@ -27,15 +27,17 @@
  *   breathing outline. Nothing waits on either, so running them faster makes an
  *   ambient thing insistent and buys back no time at all.
  *
- * Measured in Chrome at 390x844, one guess timed from Enter to the last badge
- * leaving the screen: 1361ms at ×1 and 529ms at ×3, with `flip` reading 0.38s
- * against 0.127s and `gain-rise` 0.76s against 0.253s on the frames in between,
- * which is the stylesheet moving with the timers rather than beside them. The
- * same guess with `prefers-reduced-motion` set takes 1404ms and 527ms, because
- * the beats are still paced for someone reading them one at a time even when
- * nothing is moving, and every animation on screen still computes to `none`
- * there: the kill-switch outranks a `calc()` duration exactly as it outranked a
- * literal one, and `.tile-gain` kept the `-50%` the carve-out hands back.
+ * One Chrome timing at 390x844 captured the old mobile cadence: a guess took
+ * 1361ms at ×1 and 529ms at ×3, with `flip` at 380ms and `gain-rise` at 760ms
+ * (127ms and 253ms at ×3). The same guess with reduced motion took 1404ms and
+ * 527ms, since the beats still gave the player time to read even while the CSS
+ * was still. Those were the old timings: a 170ms tile beat put the readout ahead
+ * of the 190ms reveal and the 760ms badge could leave all five payments in view
+ * at once. The phone now waits 200ms between tiles, pays at the 190ms trough,
+ * and removes each badge after 400ms, as the third payment lands. Both durations
+ * still go through the same speed dial. With reduced motion the tile
+ * pays immediately, the number stays in place, and the `.tile-gain` centering
+ * carve-out hands back the `-50%` the animation normally provides.
  *
  * There is no "off" rung, and that is the one value this file is not allowed to
  * reach. A duration of zero does not stop a `forwards` animation, it *completes*

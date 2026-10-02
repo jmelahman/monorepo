@@ -25,6 +25,11 @@ import type { SceneContext } from "./context"
 /**
  * Per-event pacing, in ms. Slow enough to read, fast enough to not be a cutscene.
  *
+ * The phone's tile takes 380ms to turn and shows its color at 190. Its next
+ * event waits 200, so the payment and the readout can land at the reveal, with
+ * ten ms before the following tile starts. The flips still overlap by 180ms.
+ * Without that small lead, the readout announces a tile before its color does.
+ *
  * These, and every other duration below that is a motion rather than a reading
  * time, are what the game is *authored* at. What it plays at is these divided by
  * the animation speed the player chose; `ms` is where that happens and
@@ -34,7 +39,7 @@ import type { SceneContext } from "./context"
  * takes the board away, and it has to outlast `COUNT_UP` by enough that the pile's
  * new total is legible standing still rather than glimpsed mid-climb.
  */
-export const PACE = { tile: 170, relic: 150, solve: 900, total: 400 }
+export const PACE = { tile: 200, relic: 150, solve: 900, total: 400 }
 
 /**
  * The tile turn. It runs longer than the gap between tiles on purpose, so the
@@ -47,7 +52,7 @@ export const PACE = { tile: 170, relic: 150, solve: 900, total: 400 }
 export const FLIP = { total: 380, half: 190 }
 
 /** How long a tile's `+chips +mult` badge lives. Matches `gain-rise` in the CSS. */
-const GAIN = 760
+const GAIN = 400
 
 const TILE_COLORS: readonly TileColor[] = ["green", "yellow", "gray"]
 
@@ -156,12 +161,16 @@ async function playPhone(
         const tile = tiles[event.index]
         reveal(tile, event.index, ctx)
         held.reveal(event.index, tile)
-        // Held until the turn is half done, which is when the color appears.
-        // Saying what the tile paid before showing what color it came up
-        // would answer the question in the wrong order.
-        tileGain(tile, event.gained)
+        // The badge and the counters say what this tile paid at the same moment
+        // its color appears. Reduced motion has no turn to wait for, and a skip
+        // should not leave a timer writing an older tile over the finished row.
+        const paid = () => {
+          tileGain(tile, event.gained)
+          readout(event.chips, event.mult)
+        }
+        if (skipping() || reduced()) paid()
+        else setTimeout(paid, ms(FLIP.half))
         if (event.index === tiles.length - 1) revealNote(note)
-        readout(event.chips, event.mult)
         await step(PACE.tile)
         break
       }
@@ -387,7 +396,9 @@ function reveal(tile: Element | undefined, index: number, ctx: SceneContext): vo
  * by the very flip it is announcing, and a grid item, even one placed
  * explicitly into the tile's cell, perturbs the auto-placement of the five
  * tiles around it and wraps the row. Absolute, off measurements, disturbs
- * neither.
+ * neither. It now lasts two tile beats, instead of 760ms, so the first payment
+ * leaves as the third arrives rather than all five hanging over the board
+ * together at the end of the cascade.
  */
 function tileGain(tile: Element | undefined, chips: number): void {
   const row = tile?.parentElement
@@ -409,11 +420,10 @@ function tileGain(tile: Element | undefined, chips: number): void {
   }
 
   // Skipping runs the whole guess at once, so the badges would all land
-  // together and then all expire together, and five of them stacked on one row
-  // is noise, not information. The player asked for the end; give them it.
+  // together and then all expire together, which is noise rather than a
+  // breakdown. The player asked for the end; give them it.
   if (skipping()) return
-  if (reduced()) show()
-  else setTimeout(show, ms(FLIP.half))
+  show()
 }
 
 /**

@@ -343,15 +343,19 @@
   position: absolute;
   z-index: 2;
   display: flex;
+  align-items: center;
   gap: 0.25rem;
+  padding: 0.0625rem 0.1875rem;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
   pointer-events: none;
   font-size: 0.6875rem;
   font-weight: 800;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
-  /* The badge starts on top of a tile whose color it does not control, so the
-     shadow is what keeps a blue number legible against a green square. */
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.75);
-  animation: gain-rise calc(760ms * var(--pace)) ease-out forwards;
+  /* A small face keeps the chip and mult inks legible over every tile color. */
+  animation: gain-rise calc(400ms * var(--pace)) var(--ease-out) forwards;
 }
 
 .tile-gain .gain-chips {
@@ -362,20 +366,27 @@
   color: var(--mult);
 }
 
-/* Arrives quickly and leaves slowly, so five of these in a cascade read as five
-   separate payments rather than as one blur. */
+/* A quick lift, a readable hold, then out before the final payments land. */
 @keyframes gain-rise {
   from {
     opacity: 0;
-    transform: translate(-50%, 0.35rem);
+    transform: translate(-50%, 0.2rem) scale(0.92);
   }
-  20% {
+  16% {
     opacity: 1;
-    transform: translate(-50%, -0.25rem);
+    transform: translate(-50%, -0.05rem) scale(1.04);
+  }
+  34% {
+    opacity: 1;
+    transform: translate(-50%, -0.05rem) scale(1);
+  }
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -0.05rem) scale(1);
   }
   to {
     opacity: 0;
-    transform: translate(-50%, -1.75rem);
+    transform: translate(-50%, -0.55rem) scale(0.98);
   }
 }
 
