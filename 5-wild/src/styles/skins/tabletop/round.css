@@ -196,7 +196,8 @@
   color: var(--mult);
 }
 
-:root.skin-tabletop .hud:has(.boss) {
+/* The phone's header only; on the table the red is the round card's rim, above. */
+:root.skin-tabletop:not(.table) .hud:has(.boss) {
   border-color: color-mix(in srgb, #b8383f 60%, var(--line));
 }
 

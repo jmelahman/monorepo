@@ -232,8 +232,15 @@
 }
 
 /* The ring rather than a border: a border is two pixels of height, and the
-   board is being told exactly how tall this header is. */
-.hud:has(.boss) {
+   board is being told exactly how tall this header is.
+   On a phone only. There the header is one bar and the boss's band is its
+   foot, so the ring is round the boss's own thing. The table's rail is a whole
+   column, score, readout and buttons, and the boss has a card of its own at
+   the top of it (`.hud-head`), which is what each look rims in red now: with
+   the rail ringed as well there were two red frames, one inside the other, and
+   the outer one was round the cash. `:where`, so the rule weighs what it did
+   and every look's own `box-shadow` on the header still beats it. */
+:where(:root:not(.table)) .hud:has(.boss) {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--mult) 70%, transparent);
 }
 
