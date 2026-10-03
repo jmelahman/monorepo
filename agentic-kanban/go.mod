@@ -8,7 +8,7 @@ require (
 	github.com/docker/go-connections v0.8.1
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/gorilla/websocket v1.5.3
-	github.com/jmelahman/local-preview v0.31.4
+	github.com/jmelahman/local-preview v0.31.5
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.3
