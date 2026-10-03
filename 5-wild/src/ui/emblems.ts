@@ -69,21 +69,30 @@ export const RELIC_EMBLEMS: Record<string, Paths> = {
     "M12 8V3",
     "M12 5c2-2 4-2 5-1",
   ],
-  // The first guess of a round is the cold one.
+  // The first guess of a round is the cold one. Every arm carries the barb: only
+  // the upright pair did, which read as an arrow pointing both ways with a cross
+  // through it rather than as a crystal.
   cold_open: [
     "M12 3v18",
     "M4.2 7.5l15.6 9",
     "M4.2 16.5l15.6-9",
-    "M9.5 4.5 12 6l2.5-1.5",
-    "M9.5 19.5 12 18l2.5 1.5",
+    "M9.5 4.5 12 6 14.5 4.5",
+    "M17.2 6.1 17.2 9 19.7 10.4",
+    "M19.7 13.6 17.2 15 17.2 17.9",
+    "M14.5 19.5 12 18 9.5 19.5",
+    "M6.8 17.9 6.8 15 4.3 13.6",
+    "M4.3 10.4 6.8 9 6.8 6.1",
   ],
-  // A paw print: the hound that follows the yellows.
+  // The hound itself, ears down: it follows the yellows. A paw print was here
+  // first, and is any animal's.
   bloodhound: [
-    "M12 13c-3 0-5 3-5 5a2 2 0 0 0 2 2c1 0 2-.5 3-.5s2 .5 3 .5a2 2 0 0 0 2-2c0-2-2-5-5-5z",
-    ring(5.5, 10.5, 1.5),
-    ring(9.5, 6, 1.5),
-    ring(14.5, 6, 1.5),
-    ring(18.5, 10.5, 1.5),
+    "M7 6h10a2 2 0 0 1 2 2v7a7 7 0 0 1-14 0V8a2 2 0 0 1 2-2z",
+    "M7 6C4 6 3 8 3 11l2 2",
+    "M17 6c3 0 4 2 4 5l-2 2",
+    dot(9.5, 11),
+    dot(14.5, 11),
+    "M11 15h2",
+    "M12 15v3",
   ],
   head_start: ["M5 21V3", "M5 4h13l-3 4 3 4H5"],
   loaded_dice: [
@@ -96,7 +105,7 @@ export const RELIC_EMBLEMS: Record<string, Paths> = {
     "M12 3c-3 4.5-6 7.5-6 11a6 6 0 0 0 12 0c0-3.5-3-6.5-6-11z",
     "M9.5 14.5a2.5 2.5 0 0 0 2 2.5",
   ],
-  // A page written on, where Blank Page is the slot left empty.
+  // A page written on, where Blank Page's has nothing on it.
   first_draft: ["M6 3h9l4 4v14H6z", "M15 3v4h4", "M9 11h7", "M9 14h7", "M9 17h4"],
   candle: [
     "M9 10h6v11H9z",
@@ -113,9 +122,10 @@ export const RELIC_EMBLEMS: Record<string, Paths> = {
     "M12 13c-3 0-6 2-5 5s4 1 5-3",
     "M12 13c3 0 6 2 5 5s-4 1-5-3",
   ],
-  second_look: [ring(7, 16, 4), ring(17, 16, 4), "M4 13V6h5v7", "M15 13V6h5v7", "M11 15h2"],
-  // The pay envelope.
-  stipend: ["M3 6h18v12H3z", "M3 6l9 7 9-7"],
+  // A telescope on its legs: the second look, taken from further off.
+  second_look: ["M3 13l12-6 2 4-12 6z", "M17 6l3-1.5 2 4-3 1.5", "M11 14l-3 7", "M11 14l4 7"],
+  // A banknote: the pay, counted out.
+  stipend: ["M2 6h20v12H2z", ring(12, 12, 3), dot(5.5, 12), dot(18.5, 12)],
   anagrammer: [
     "M3 7h3c5 0 7 10 12 10h3",
     "M3 17h3c5 0 7-10 12-10h3",
@@ -124,14 +134,12 @@ export const RELIC_EMBLEMS: Record<string, Paths> = {
   ],
   keystone: ["M3 21v-9a9 9 0 0 1 18 0v9", "M8 21v-9a4 4 0 0 1 8 0v9", "M10 3.2l.8 4.8h2.4l.8-4.8"],
   lexicographer: ["M20 3C12 3 7 8 5 19", "M20 3c0 7-5 11-11 12", "M4 21l1.5-2", "M10 11h5"],
-  // What a sunk cost does.
+  // What a sunk cost has done: money on the wing.
   sunk_cost: [
-    ring(12, 5, 2),
-    "M12 7v14",
-    "M8 11h8",
-    "M5 14a7 7 0 0 0 14 0",
-    "M3 16l2-2 2 2",
-    "M17 16l2-2 2 2",
+    "M7 9h10v8H7z",
+    ring(12, 13, 1.5),
+    "M7 11C5 8 3 7 1.5 7c0 3 2 5 5.5 6",
+    "M17 11c2-3 4-4 5.5-4 0 3-2 5-5.5 6",
   ],
   speedrunner: [ring(12, 13, 8), "M12 13l3-3", "M10 2h4", "M12 2v3", "M19 5l1.5 1.5"],
   qs_bargain: ["M3 3h8l10 10-8 8L3 11z", dot(7.5, 7.5)],
@@ -142,15 +150,25 @@ export const RELIC_EMBLEMS: Record<string, Paths> = {
     "M3 14 2 9",
     "M21 14l1-5",
   ],
-  // A figure and its double, the double not quite whole.
+  // Two masks, one face behind the other, and not the same face.
   doppelganger: [
-    ring(8, 7, 3),
-    "M2 20c0-4 3-6 6-6s6 2 6 6",
-    "M14.5 4.5a3 3 0 1 1 1.5 5.5",
-    "M16 14c3 0 6 2 6 6",
+    "M3 4h9v6a4.5 4.5 0 0 1-9 0z",
+    "M5.5 10c1 1 3 1 4 0",
+    dot(6, 7),
+    dot(9, 7),
+    "M15 10h6v6a4.5 4.5 0 0 1-9 0v-.5",
+    "M14.5 17.5c1-1 3-1 4 0",
+    dot(15.5, 13.5),
+    dot(18.5, 13.5),
   ],
   hot_streak: [ring(7, 17, 3), "M9.5 14.5 20 4", "M10 17.5 16 11.5", "M6.5 14 12 8.5"],
-  hoarder: ["M3 10h18v10H3z", "M3 10V8a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v2", "M10.5 10v3h3v-3"],
+  // A sack tied shut: what is held is not spent.
+  hoarder: [
+    "M9 8 7.5 4c2 1 3-1 4.5 0s2.5 1 4.5 0L15 8",
+    "M9 8h6",
+    "M9 8c-4 3-5 6-5 9a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4c0-3-1-6-5-9",
+    "M14 13.2c-.4-.7-1.1-1.2-2-1.2-1.1 0-2 .6-2 1.5 0 1.9 4 1 4 3 0 .9-.9 1.5-2 1.5-.9 0-1.6-.5-2-1.2",
+  ],
   // Prickly, and paid for every gray it lands on.
   masochist: [
     "M10 21V5a2 2 0 0 1 4 0v16",
@@ -164,46 +182,62 @@ export const RELIC_EMBLEMS: Record<string, Paths> = {
     "M3 8a9 9 0 0 1 2-4",
     "M21 8a9 9 0 0 0-2-4",
   ],
-  // Letters in order, climbing.
-  alphabetist: ["M3 20h5v-5h5v-5h5V5h3"],
-  vault: ["M3 3h18v18H3z", ring(12, 12, 4), "M12 5v3", "M12 16v3", "M5 12h3", "M16 12h3"],
+  // Letters in order, climbing: a ladder, a rung at a time.
+  alphabetist: ["M8 3v18", "M16 3v18", "M8 7h8", "M8 12h8", "M8 17h8"],
+  // Locked: the vault is what has been guessed so far, and it stays put.
+  vault: ["M5 11h14v10H5z", "M8 11V7a4 4 0 0 1 8 0v4", "M12 15v2"],
   mint: [
     "M4 6a8 3 0 1 0 16 0a8 3 0 1 0-16 0",
     "M4 6v5a8 3 0 0 0 16 0V6",
     "M4 11v5a8 3 0 0 0 16 0v-5",
   ],
-  scorched_earth: ["M2 20h20", "M5 20l4-9h6l4 9", "M10 8c0-2 2-2 2-5", "M14 8c0-2 2-2 2-4"],
+  // A volcano, lava over the rim: the ground left burnt.
+  scorched_earth: [
+    "M2 21h20",
+    "M4 21l5-11h6l5 11",
+    "M9 10l1.5 2.5 1.5-2 1.5 2L15 10",
+    "M10 7c0-2 2-2 2-4",
+    "M14 7c0-2 2-2 2-3",
+  ],
+  // A snowball rolling, speed lines behind it. It was a snowman for one
+  // afternoon, after the set's nearest emoji; the emoji was redrawn instead.
   snowball: [ring(14, 12, 7), "M10.5 9a4.5 4.5 0 0 1 3.5-2", "M2 9h3", "M1.5 12.5H5", "M2 16h3"],
   thesaurus: ["M5 4a1 1 0 0 1 1-1h13v18H6a1 1 0 0 1-1-1z", "M9 3v18", "M13 3v5l2-1.5L17 8V3"],
   // One for each uncommon relic, and the heart is what a patron gives.
   patron: ["M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z"],
   // The pen nib, whose ink is the one that does not fade.
   indelible: ["M12 3l6 7-6 11-6-11z", "M12 21v-8", ring(12, 11.5, 1.5)],
-  second_wind: ["M3 8h11a3 3 0 1 0-3-3", "M3 12h16a3 3 0 1 1-3 3", "M3 16h7"],
+  // A leaf the wind has got hold of.
+  second_wind: [
+    "M21 3c-7 0-11 4-11 10 6 0 11-4 11-10z",
+    "M10 13l6-6",
+    "M2 12h5",
+    "M3 16h9",
+    "M2 20h6",
+  ],
   long_game: [
     "M6 3h12",
     "M6 21h12",
     "M7 3v2c0 3 5 5 5 7s-5 4-5 7v2",
     "M17 3v2c0 3-5 5-5 7s5 4 5 7v2",
   ],
+  // A fire, well alight: the match that was here is Slow Burn's cousin, not this.
   pyromaniac: [
-    "M4 20l9-9",
-    "M16.5 11a3 3 0 0 0 3-3c0-2.5-3-4.5-3-6.5-1 2-3 4-3 6.5a3 3 0 0 0 3 3z",
+    "M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a7 7 0 0 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5z",
   ],
   carbon_copy: ["M8 8h12v12H8z", "M16 8V4H4v12h4"],
-  first_impression: ["M9 3h6v4c0 2 2 3 2 5H7c0-2 2-3 2-5z", "M5 12h14v4H5z", "M5 20h14"],
-  twins: [ring(9, 12, 6), ring(15, 12, 6)],
-  // An empty seat in the tray, drawn as the tray draws one: dashed.
-  blank_page: [
-    "M4 7V4h3",
-    "M10 4h4",
-    "M17 4h3v3",
-    "M20 10v4",
-    "M20 17v3h-3",
-    "M14 20h-4",
-    "M7 20H4v-3",
-    "M4 14v-4",
+  // A hand raised in greeting: the first impression is the first tile.
+  first_impression: [
+    "M7 14V7a1.5 1.5 0 0 1 3 0v4",
+    "M10 11V5a1.5 1.5 0 0 1 3 0v6",
+    "M13 11V6a1.5 1.5 0 0 1 3 0v5",
+    "M16 11V9a1.5 1.5 0 0 1 3 0v6a6 6 0 0 1-6 6h-1c-2 0-3.5-1-4.5-2.5L3.5 14a1.5 1.5 0 0 1 2.5-1.5l1 1.5",
+    "M20.5 3.5c1 .8 1.5 1.8 1.5 3",
   ],
+  // A pair of cherries on one stem: the letter that shows up twice.
+  twins: [ring(7, 17, 4), ring(17, 17, 4), "M7 13c1-5 4-8 9-10", "M17 13c0-4 0-7-1-10"],
+  // A page with nothing on it yet, where First Draft's is written.
+  blank_page: ["M6 3h9l4 4v14H6z", "M15 3v4h4"],
   habit: ["M12 12c-2-3-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1 6-4s4-4 6-4a4 4 0 0 1 0 8c-2 0-4-1-6-4z"],
   // No yellows is no maybes: dead centre or nothing.
   no_maybes: [ring(12, 12, 9), ring(12, 12, 5), dot(12, 12)],
@@ -212,7 +246,8 @@ export const RELIC_EMBLEMS: Record<string, Paths> = {
 }
 
 export const CONSUMABLE_EMBLEMS: Record<string, Paths> = {
-  oracle: ["M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z", ring(12, 12, 3)],
+  // Her crystal ball on its stand, something showing in it.
+  oracle: [ring(12, 10, 7), "M7 21l1.5-4h7L17 21z", "M12 7v5", "M9.5 9.5h5"],
   // His lantern.
   hermit: [
     "M12 2v2.5",
@@ -222,12 +257,17 @@ export const CONSUMABLE_EMBLEMS: Record<string, Paths> = {
     "M12 10.5c-1 1.3-1.5 2-1.5 2.8a1.5 1.5 0 0 0 3 0c0-.8-.5-1.5-1.5-2.8z",
   ],
   magician: ["M4 20 15 9", "M17 3v4", "M15 5h4", "M20 10v2", "M19 11h2"],
-  // The tarot Fool's bindle, carried on a stick. His cap was the first try, and
-  // three points over a band is a crown at 28px, which Royalties already is.
+  // The Fool as the pack draws him: a clown's face, hair out at both sides and
+  // a point of a hat. Two tufts and a nose keep it off Royalties' crown.
   fool: [
-    "M3 21 14 10",
-    "M14 10c-3-1-4-4-2-6.5s6-2.5 8 0 1 6-2 7.5c-1.5.5-3 .2-4-1z",
-    "M13 6.5c2 .5 4 .2 5.5-1",
+    ring(12, 14, 7),
+    ring(4.5, 9, 2.5),
+    ring(19.5, 9, 2.5),
+    "M10 7.3 12 2l2 5.3",
+    dot(9.5, 12),
+    dot(14.5, 12),
+    ring(12, 14.5, 1),
+    "M8.5 17c2 2.5 5 2.5 7 0",
   ],
 }
 
@@ -236,7 +276,8 @@ export const PACK_EMBLEMS: Record<PackId, Paths> = {
   // letter, since a letter is the thing this pack deals.
   alphabet: ["M9 3h11v14h-5", "M4 7h11v14H4z", "M7 18l2.5-7 2.5 7", "M7.8 16h3.4"],
   relic: ["M6 9h12l4 5-10 8L2 14z", "M2 14h20", "M12 2v3", "M5 4l1.5 2", "M19 4l-1.5 2"],
-  category: [ring(7, 7, 3), "M17 4l3.5 6h-7z", "M4 14h6v6H4z", "M14 14h6v6h-6z"],
+  // Categories, filed: a box of tabbed dividers.
+  category: ["M3 21V9h6l1.5-3h5L17 9h4v12z", "M3 13h18", "M3 17h18"],
 }
 
 /**
@@ -254,9 +295,16 @@ export const ETCHING_EMBLEMS: Record<string, Paths> = {
     "M13 8l-1 2",
     "M17 8l-1 2",
   ],
-  // J Q X Z are the heavy ones.
-  etch_heavy: [ring(12, 15, 6), "M8.5 10.2V7a3.5 3.5 0 0 1 7 0v3.2"],
-  etch_consonants: ["M4 6h16", "M4 10h16", "M4 14h16", "M4 18h10"],
+  // J Q X Z are the heavy ones: a rock.
+  etch_heavy: ["M3 19l2-8 5-5 6 1 5 7-1 5z", "M10 6l2 6 9 2", "M12 12l-7-1"],
+  // A scroll: the long roll of everything that is not a vowel.
+  etch_consonants: [
+    "M4 3a2 2 0 0 0-2 2v2h4V5a2 2 0 0 0-2-2z",
+    "M4 3h13a2 2 0 0 1 2 2v12",
+    "M6 7v12a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-2h12v2a2 2 0 0 1-2 2H8",
+    "M10 8h5",
+    "M10 12h5",
+  ],
 }
 
 /**
@@ -279,20 +327,27 @@ export const MOD_EMBLEMS: Record<ModId, Paths> = {
     "M18.4 5.6l-2.1 2.1",
     "M7.7 16.3l-2.1 2.1",
   ],
-  // Mult added, as two pluses: one plus would be a button to add something.
-  mult: ["M10 4v12", "M4 10h12", "M18.5 15v6", "M15.5 18h6"],
+  // The sign mult is written with everywhere else on the card.
+  mult: ["M5 5l14 14", "M19 5 5 19"],
+  // A dollar, with no coin round it: Mint and Stipend have the coin and the note.
   gold: [
-    ring(12, 12, 9),
-    "M15 9.2c-.5-1-1.6-1.7-3-1.7-1.8 0-3 .9-3 2.2 0 3 6 1.6 6 4.6 0 1.3-1.2 2.2-3 2.2-1.4 0-2.6-.7-3-1.7",
-    "M12 6v1.5",
-    "M12 16.5V18",
+    "M17 7c-.8-1.8-2.6-3-5-3-3 0-5 1.5-5 3.8 0 5 10 2.8 10 8 0 2.3-2 3.7-5 3.7-2.4 0-4.2-1.2-5-3",
+    "M12 2v2",
+    "M12 19.5V22",
   ],
-  // The wild card: it is best where the letter did worst, which is what a
-  // joker in the pack is for.
-  wild: ["M6 3h12v18H6z", "M12 7.5l1.2 3h3l-2.4 2 .9 3.2-2.7-1.9-2.7 1.9.9-3.2-2.4-2h3z"],
-  // A horseshoe rather than a clover, whose four rings would read as a
-  // cluster of grapes at 28px, and Consonant Cluster already is one.
-  lucky: ["M6 4v7a6 6 0 0 0 12 0V4", "M4 4h4", "M16 4h4", dot(8.5, 14.5), dot(15.5, 14.5)],
+  // The wild card, by the star that marks one. It was the star on a card, and
+  // at 28px the card was most of the drawing and the star a blot in it. Classic
+  // keeps the joker, which an emoji has the colours to draw.
+  wild: ["M12 2l3.1 6.3 6.9 1-5 4.8 1.2 6.9-6.2-3.2L5.8 21 7 14.1 2 9.3l6.9-1z"],
+  // A four-leaf clover. Four rings read as Consonant Cluster's grapes at 28px,
+  // which is why this was a horseshoe; four hearts on a stem do not.
+  lucky: [
+    "M12 11C9 9 8 7 8 5.5a2 2 0 0 1 4-.5 2 2 0 0 1 4 .5c0 1.5-1 3.5-4 5.5z",
+    "M12 11C10 8 8 7 6.5 7a2 2 0 0 0-.5 4 2 2 0 0 0 .5 4c1.5 0 3.5-1 5.5-4z",
+    "M12 11c2-3 4-4 5.5-4a2 2 0 0 1 .5 4 2 2 0 0 1-.5 4c-1.5 0-3.5-1-5.5-4z",
+    "M12 11c-3 2-4 4-4 5.5a2 2 0 0 0 4 .5 2 2 0 0 0 4-.5c0-1.5-1-3.5-4-5.5z",
+    "M15.5 16.5c1 2 2.5 3.5 4.5 4.5",
+  ],
   // Scores when the word repeats it: a sound and what comes back of it.
   echo: [
     dot(4, 12),
@@ -309,10 +364,11 @@ export const MOD_EMBLEMS: Record<ModId, Paths> = {
     "M2 15.5 4 14l1.5 2",
     "M22 15.5 20 14l-1.5 2",
   ],
-  // A girder in section.
-  steel: ["M5 3h14v4h-5v10h5v4H5v-4h5V7H5z"],
-  // A glass already cracked, since cracking is what this one does.
-  glass: ["M7 3h10l-1 7a4 4 0 0 1-8 0z", "M12 14v6", "M8 21h8", "M10.5 3.5l2 2.5-2 1.5 1.5 2"],
+  // A steel nut, seen down the thread.
+  steel: ["M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9z", ring(12, 12, 3.5)],
+  // A glass of water, already cracked, since cracking is what this one does.
+  // A tumbler and not a stemmed glass: the stem said wine, which nothing here is.
+  glass: ["M6 3h12l-1.5 18h-9z", "M7 14.5h10", "M10.5 3.5l2 2.5-2 1.5 1.5 2.5"],
 }
 
 /**
@@ -332,14 +388,8 @@ export const CATEGORY_EMBLEMS: Record<string, Paths> = {
     "M11 8.5h2a3.5 3.5 0 0 1 0 7h-2a3.5 3.5 0 0 1 0-7z",
     "M16.5 8.5h2a3.5 3.5 0 0 1 0 7h-2a3.5 3.5 0 0 1 0-7z",
   ],
-  // Some letter twice: two tiles, the same mark on each, joined.
-  twinned: [
-    "M3 10h7v10H3z",
-    "M14 10h7v10h-7z",
-    dot(6.5, 15),
-    dot(17.5, 15),
-    "M6.5 7c0-4 11-4 11 0",
-  ],
+  // Some letter twice: the sign of the twins.
+  twinned: ["M5 4c4 2 10 2 14 0", "M5 20c4-2 10-2 14 0", "M9 5.3v13.4", "M15 5.3v13.4"],
   // No letter repeats: the one thing nobody shares, a fingerprint.
   distinct: [
     "M5.5 18c-1-2-1.5-4-1.5-6a8 8 0 0 1 16 0c0 2-.3 3.5-.8 5",

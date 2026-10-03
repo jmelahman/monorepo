@@ -57,6 +57,7 @@ import { withAmounts } from "./amounts"
 import type { CoachStep } from "./coach"
 import { h } from "./dom"
 import { emblem } from "./emblems"
+import { emojied } from "./emoji"
 import { money, formatNumber as num } from "./format"
 import { type IconName, icon, roundToken, type TokenKind } from "./icons"
 import type { Lang, Rule, RuleOf, Section, SectionOf } from "./lang"
@@ -1921,9 +1922,14 @@ const cardHead = (item: ShopItem, title: string): HTMLElement =>
  * unpicked default. The price is one hidden `<svg>` of a few hundred bytes per
  * card, on a screen that rebuilds a dozen of them. `.sprite` is `display: none`
  * outside Smoke (`shop.css`), and every skin that wants the sprite says so.
+ *
+ * Every card has a third picture, the emoji Classic shows, and it is not a
+ * third node: it scales to the emblem's own box, so it rides inside the emblem
+ * and the stylesheet picks between the two there. See `emojied` in `emoji.ts`.
  */
 const cardArt = (kind: ShopItem["kind"], id: string): Node[] => {
-  const art: Node[] = [emblem(kind, id) ?? icon(KIND_ICON[kind])]
+  const line = emblem(kind, id)
+  const art: Node[] = [line ? emojied(line, kind, id) : icon(KIND_ICON[kind])]
   const pixels = sprite(kind, id)
   if (pixels) art.push(pixels)
   return art
@@ -3466,11 +3472,22 @@ export function helpView(on: Handlers, offerTutorial: boolean): HTMLElement {
 
 /* ----------------------------------------------------------------- codex */
 
-/** One catalog entry: what it is called, what it does, and what it costs. */
-function entry(name: string, text: string, note?: string): HTMLElement {
+/**
+ * One catalog entry: what it is called, what it does, and what it costs, and
+ * its picture where it has one.
+ *
+ * The picture is `cardArt`'s, the same nodes the shelf shows, so the codex
+ * answers "which one was that" for a player who remembers the sprout and not
+ * the name, which is most of what a relic is remembered by. Everything that
+ * can be bought has one. Bosses and ascensions have no picture anywhere and
+ * get no empty box here for one: the class is on the entry, not a blank column
+ * in every row.
+ */
+function entry(name: string, text: string, note?: string, art?: Node[]): HTMLElement {
   return h(
     "div",
-    { class: "codex-entry" },
+    { class: art ? "codex-entry pictured" : "codex-entry" },
+    art ? h("span", { class: "codex-art" }, ...art) : null,
     h(
       "div",
       { class: "codex-entry-head" },
@@ -3624,7 +3641,7 @@ export function codexView(on: Handlers): HTMLElement {
               h("div", { class: "codex-group" }, copy.rarity[rarity]),
               ...relics.map((relic) => {
                 const card = relicCard(relic.id)
-                return entry(card.name, card.text, money(relic.cost))
+                return entry(card.name, card.text, money(relic.cost), cardArt("relic", relic.id))
               }),
             ),
           ]
@@ -3666,6 +3683,7 @@ export function codexView(on: Handlers): HTMLElement {
             card.name,
             card.text,
             copy.shapePer(category.chips, category.mult, category.growth),
+            cardArt("level", category.id),
           )
         }),
       ),
@@ -3681,6 +3699,7 @@ export function codexView(on: Handlers): HTMLElement {
               ? copy.modTextOnly(card.text, [...mod.letters].join(" ").toUpperCase())
               : copy.modText(card.text),
             `${money(mod.choiceCost)} / ${money(mod.cost)}`,
+            cardArt("mod", mod.id),
           )
         }),
       ),
@@ -3690,9 +3709,11 @@ export function codexView(on: Handlers): HTMLElement {
         ETCHINGS.length + RANGES.length,
         ...ETCHINGS.map((etching) => {
           const card = etchingCard(etching)
-          return entry(card.name, card.text, money(etching.cost))
+          return entry(card.name, card.text, money(etching.cost), cardArt("etch", etching.id))
         }),
-        ...RANGES.map((range) => entry(range.name, rangeText(range))),
+        ...RANGES.map((range) =>
+          entry(range.name, rangeText(range), undefined, cardArt("range", range.id)),
+        ),
       ),
 
       sectionOf(
@@ -3701,7 +3722,12 @@ export function codexView(on: Handlers): HTMLElement {
         [CONSUMABLE_SLOTS],
         ...CONSUMABLES.map((consumable) => {
           const card = consumableCard(consumable.id)
-          return entry(card.name, card.text, money(consumable.cost))
+          return entry(
+            card.name,
+            card.text,
+            money(consumable.cost),
+            cardArt("consumable", consumable.id),
+          )
         }),
       ),
 
@@ -3717,6 +3743,7 @@ export function codexView(on: Handlers): HTMLElement {
             card.name,
             pack.picks > 1 ? copy.packTextPicks(card.text, pack.picks) : copy.packText(card.text),
             money(pack.cost),
+            cardArt("pack", pack.id),
           )
         }),
       ),
@@ -4046,6 +4073,9 @@ function musicCredit(): HTMLElement {
 /** The typefaces' designers (IBM Plex, Jost), named in every language as the other credits' people are. */
 const FONT_DESIGNER = "Mike Abbink, Bold Monday, Owen Earl"
 
+/** Whose the emoji are (`emoji.ts`); the handful named `5w-` are drawn here and owe nobody. */
+const EMOJI_MAKER = "Microsoft"
+
 export function creditsView(on: Handlers): HTMLElement {
   const copy = ui().credits
   const people = new Intl.ListFormat(lang(), { type: "conjunction" }).format(FREESOUND)
@@ -4062,6 +4092,10 @@ export function creditsView(on: Handlers): HTMLElement {
       // The typeface ships with the desktop table only, but the credit is owed
       // by the build that carries the file, not by the look that draws with it.
       rule({ term: copy.font, text: `${FONT_DESIGNER}: ${copy.fontText}` }),
+      // Owed on the same terms: Classic alone draws them, and every build ships
+      // them. MIT asks that its notice travel with the copies, and the bundle
+      // carries the pictures as strings with no file beside them to say so.
+      rule({ term: copy.emoji, text: `${EMOJI_MAKER}: ${copy.emojiText}` }),
     ),
     // Back to the sheet it was opened from rather than closed outright, since
     // that is the only way in.

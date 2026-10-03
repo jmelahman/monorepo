@@ -934,6 +934,8 @@ export const fr: Strings = {
       licenceText: "Logiciel libre sous GNU GPL, version 3.",
       font: "Typographie",
       fontText: "IBM Plex et Jost, sous licence SIL Open Font License 1.1.",
+      emoji: "Émojis",
+      emojiText: "Fluent Emoji, sous licence MIT.",
       back: "Retour",
     },
 

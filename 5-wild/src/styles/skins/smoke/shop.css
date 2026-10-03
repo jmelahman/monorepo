@@ -245,13 +245,17 @@
    its emblem, drawn large in the tarot's one colour. The phone's boxed sprite
    (above) is undressed here, since each kind below says what frames it. */
 :root.table.skin-smoke .shop-items :is(.kind-relic, .kind-pack) .shop-item-head > .emblem,
-:root.table.skin-smoke .shop-items :is(.kind-etch, .kind-mod) .shop-item-head > .emblem {
+:root.table.skin-smoke
+  .shop-items
+  :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
+  .shop-item-head
+  > .emblem {
   display: none;
 }
 
 :root.table.skin-smoke
   .shop-items
-  :is(.kind-relic, .kind-pack, .kind-etch, .kind-mod)
+  :is(.kind-relic, .kind-pack, .kind-etch, .kind-level, .kind-range, .kind-mod)
   .shop-item-head
   > .sprite {
   display: block;

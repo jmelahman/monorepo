@@ -5,7 +5,7 @@
  * look on top, every screen is drawn by the phone's partials (`../*.css`) in the
  * phone's tokens: system-ui, the green primary, the phone's radii and panels,
  * and the dark or light palette by `data-theme`. That holds on a phone, where
- * this file adds nothing but the relic seat's emblem (at the end), and on the
+ * this file adds nothing but the emoji and the relic's seat (at the end), and on the
  * table, where the layout files carry no colour, face, border, shadow or motion
  * and so fall through to the same thing. What this file adds is the handful of surfaces the *table's layout
  * invented* and the phone never had to dress, because on a phone they are not
@@ -201,19 +201,66 @@
 }
 
 /*
- * A relic in its seat: the emblem over the name, on the phone and the table
- * both, which is why this is the one rule here without `.table`. The seat was a
- * name on a coloured edge (`../relics.css`), and a row of five names is a row
- * read rather than glanced at; the emblem is the same drawing the shop card
- * showed when it was bought, in the same rarity ink, so the seat is recognised
- * from across the board. Line-drawn in the tone's ink like every other icon in
- * this look, with no tile behind it: the seat is already the box.
+ * A card's picture is its emoji (`src/ui/emoji.ts`), where it was the line
+ * emblem in the kind's one ink. Both are in the one `<svg>`, so this is the
+ * whole of the swap, and every window and seat the emblem had is the emoji's
+ * without a rule saying so. Wherever a card is drawn: the shelf, an opened
+ * pack, the tray, the shop's seats, the codex. An emblem with no emoji has no
+ * `.has-emoji` and keeps its lines.
+ */
+:root:is(.skin-classic-dark, .skin-classic-light) .emblem.has-emoji > path {
+  display: none;
+}
+
+:root:is(.skin-classic-dark, .skin-classic-light) .emblem.has-emoji > .emoji {
+  display: inline;
+}
+
+/*
+ * And half as big again on the phone's shelf: 36px where the line emblem was 24.
+ * A line drawing is legible at 24 because it is all edge; an emoji at 24 is a
+ * coloured smudge beside its name, and the Smoke Room's sprite, the picture this
+ * one answers, already had 36 in the same place. The table's shelf sizes its
+ * own pictures and outranks this, which is meant.
+ */
+:root:is(.skin-classic-dark, .skin-classic-light) .shop-item-head > .emblem.has-emoji {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+/*
+ * The table's shelf, where the relic's window was always 64px and nothing else
+ * came near it. A pack's picture was 32px in the middle of a card back five
+ * times its area, which suited a line in the pack's ink (a mark on a card) and
+ * leaves an emoji looking dropped there: 56px, and the padding gives back what
+ * the picture takes, so the card back is the 5.5 by 7.5rem it was and the fan
+ * behind it does not move. A slip's stays the 36px `../table/shop.css` gives
+ * every look's, in the name's row.
+ */
+:root.table:is(.skin-classic-dark, .skin-classic-light)
+  .shop-screen
+  .shop-items
+  .kind-pack
+  .shop-item-head
+  > .emblem.has-emoji {
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 2rem 1rem;
+}
+
+/*
+ * A relic in its seat: the picture over the name, on the phone and the table
+ * both, which is why this rule has no `.table`. The seat was a name on a
+ * coloured edge (`../relics.css`), and a row of five names is a row read rather
+ * than glanced at; the picture is the one the shop card showed when it was
+ * bought, so the seat is recognised from across the board. No tile behind it:
+ * the seat is already the box.
  *
- * The rarity pip goes in the same move. It was the seat's only picture and its
- * only sign of rarity beyond the edge; with the emblem drawn in `--rare` there
- * are three, and a glowing dot in the corner of a seat that is already that
- * colour was saying it twice. It stays on the shop's cards and in the codex,
- * where there is no emblem in the rarity's ink to say it instead.
+ * The rarity pip goes in the same move. It was the seat's only picture, and a
+ * glowing dot in the corner of a seat whose edge is already that colour was
+ * saying it twice. It stays on the shop's cards and in the codex. The `color`
+ * below is for the kind's fallback icon, the one picture here still drawn in
+ * ink; an emoji has its own colours and takes none.
  */
 :root:is(.skin-classic-dark, .skin-classic-light) .relic > .icon {
   display: block;
@@ -231,4 +278,17 @@
 :root.table:is(.skin-classic-dark, .skin-classic-light) .relic > .icon {
   width: 1.75rem;
   height: 1.75rem;
+}
+
+/*
+ * And the shop's seat has to be given the room back. It is 6rem tall and was
+ * cut for a 20px emblem in 9px of padding either side: at 28px the picture, the
+ * name and the sell price came to 100px in a 94px box, the name is the one of
+ * the three that may shrink (it hides its overflow to end in an ellipsis), and
+ * so it lost its descenders: "Bloodhound" cut off through the middle of its
+ * letters. The name carries its own space above, so the picture needs none
+ * below it; 36 + 26 + 28 fits with 4px to spare.
+ */
+:root.table:is(.skin-classic-dark, .skin-classic-light) .shop-screen .relic > .icon {
+  padding-bottom: 0;
 }

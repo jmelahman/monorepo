@@ -31,3 +31,20 @@
 :root.skin-smoke .switch::after {
   border-radius: 0;
 }
+
+/*
+ * The codex's pictures are the room's sprites, as the shelf's are. 24px is twice
+ * the 12-unit grid, so each sprite pixel is two of the screen's. The emblem
+ * is hidden only where there is a sprite to take its place, so an id drawn for
+ * one table and not yet the other shows its lines rather than nothing.
+ */
+:root.skin-smoke .codex-art:has(> .sprite) > .emblem {
+  display: none;
+}
+
+:root.skin-smoke .codex-art > .sprite {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  image-rendering: pixelated;
+}

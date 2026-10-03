@@ -709,6 +709,10 @@ export type Strings = {
       font: string
       /** Names the face and its licence; the designer's name is the view's, as the artists' are. */
       fontText: string
+      /** The pictures Classic draws its cards with. */
+      emoji: string
+      /** Names the set and its licence; the maker's name is the view's. */
+      emojiText: string
       back: string
     }
 

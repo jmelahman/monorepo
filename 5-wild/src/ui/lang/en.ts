@@ -981,6 +981,8 @@ export const en: Strings = {
       licenceText: "Free software under the GNU GPL, version 3.",
       font: "Type",
       fontText: "IBM Plex and Jost, under the SIL Open Font License 1.1.",
+      emoji: "Emoji",
+      emojiText: "Fluent Emoji, under the MIT License.",
       back: "Back",
     },
 

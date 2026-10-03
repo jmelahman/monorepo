@@ -276,6 +276,17 @@ button {
 }
 
 /*
+ * A card's emblem carries its emoji inside it (`emojied` in `src/ui/emoji.ts`),
+ * and the lines are the default: only a skin that wants the emoji shows it.
+ * `stroke: none` because the group is inside an `.icon` and would inherit a
+ * two-unit outline in the page's ink round every filled shape in it.
+ */
+.emblem > .emoji {
+  display: none;
+  stroke: none;
+}
+
+/*
  * One ring, everywhere, and only for the keyboard: `:focus-visible` leaves a
  * tapped button alone. It is spelled out rather than left to the browser because
  * every surface here is dark and custom-colored, and the default ring is drawn

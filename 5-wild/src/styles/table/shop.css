@@ -416,10 +416,19 @@
 }
 
 /* The upgrades (an etching, a letter, a word shape, a range): a slip, ruled
-   inside its edge, with the price torn off along a line. A level card's picture
-   is its ladder; an etching and a letter keep theirs, small, because a
-   modifier's colour is what the letter will be wearing. The price starts where
-   every other card's does, 1.25rem in, less the slip's own padding. */
+   inside its edge, with the price torn off along a line. The price starts where
+   every other card's does, 1.25rem in, less the slip's own padding.
+
+   Its picture sits in the name's row, beside the name and not over it. A relic,
+   a pack and a consumable each have a frame the picture is the middle of; a slip
+   has none, and a picture stacked over "Etch Heavy" was a second headline with
+   nothing round it, pushing the name a third of the way down the card. Beside
+   the name it is the bullet the phone's shelf already makes of it. All four
+   kinds show one: a word shape and a range used to hide theirs, on the grounds
+   that the ladder at the foot was their picture, and a shelf where the letter
+   had one and the shape beside it had none read as a card that failed to load.
+   36px is three times the sprite's 12-unit grid. The name keeps `text-wrap:
+   balance`, so "Lucky · any letter" breaks beside the picture, not under it. */
 :root.table
   .shop-screen
   .shop-items
@@ -431,14 +440,40 @@
 :root.table
   .shop-screen
   .shop-items
-  :is(.kind-etch, .kind-mod)
+  :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
+  .shop-item-head {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+:root.table
+  .shop-screen
+  .shop-items
+  :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
+  .shop-item-head
+  > .shop-item-name {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+:root.table
+  .shop-screen
+  .shop-items
+  :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
   .shop-item-head
   > :is(.emblem, .sprite) {
+  flex: none;
   width: 2.25rem;
   height: 2.25rem;
 }
 
-:root.table .shop-screen .shop-items :is(.kind-etch, .kind-mod) .shop-item-head > .emblem {
+:root.table
+  .shop-screen
+  .shop-items
+  :is(.kind-etch, .kind-level, .kind-range, .kind-mod)
+  .shop-item-head
+  > .emblem {
   display: block;
 }
 

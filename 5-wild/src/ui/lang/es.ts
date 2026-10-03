@@ -913,6 +913,8 @@ export const es: Strings = {
       licenceText: "Software libre bajo la GNU GPL, versión 3.",
       font: "Tipografía",
       fontText: "IBM Plex y Jost, bajo la licencia SIL Open Font License 1.1.",
+      emoji: "Emojis",
+      emojiText: "Fluent Emoji, bajo la licencia MIT.",
       back: "Volver",
     },
 

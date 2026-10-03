@@ -14,6 +14,39 @@
   border-left: 2px solid var(--rare, var(--line));
 }
 
+/*
+ * An entry with a picture: the picture in a column of its own down the left,
+ * the name and the sentence beside it. A grid and not a flex row, so the two
+ * lines of text stay the entry's own children and an entry without a picture
+ * (a boss, an ascension) is the same markup less one node.
+ *
+ * Which picture is the skin's call, as on the shelf: the emblem here, in the
+ * rarity's ink where there is one, and the sprite wherever a skin shows it.
+ */
+.codex-entry.pictured {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.625rem;
+}
+
+.codex-art {
+  grid-row: 1 / span 2;
+  align-self: center;
+  display: flex;
+  color: color-mix(in srgb, var(--rare, var(--muted)) 70%, var(--fg));
+}
+
+.codex-art > .icon,
+.codex-art > .sprite {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+}
+
+.codex-art > .sprite {
+  display: none;
+}
+
 .codex-entry-head {
   display: flex;
   align-items: baseline;
