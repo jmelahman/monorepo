@@ -72,10 +72,9 @@
   box-shadow: inset 0 2px 4px #000c;
 }
 
-/* The phone's foil, rarity pip and glint are pseudo-elements on these cards,
-   and each is a light effect this skin does not have. */
-:root.skin-tabletop :is(.relic, .shop-item)::before,
-:root.skin-tabletop :is(.relic, .shop-item)::after {
+/* The phone's foil and glint are a pseudo-element on these cards, and each is
+   a light effect this skin does not have. */
+:root.skin-tabletop :is(.relic, .shop-item)::before {
   display: none;
 }
 

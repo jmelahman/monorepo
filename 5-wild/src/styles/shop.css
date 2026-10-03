@@ -349,18 +349,6 @@
 }
 
 /*
- * No rarity pip on a card for sale. The pip is for the tray, where a relic is a
- * 3rem chip and its edge colour alone is hard to tell apart from its
- * neighbour's; a shop card already says its rarity with a 3px edge and a tinted
- * face, and its top-right corner was where the kind tag sat, which the pip was
- * drawn straight through. The row has since moved rarity into its icon well,
- * which says it louder than a pip would.
- */
-.shop-item::after {
-  display: none;
-}
-
-/*
  * The levels line, at the foot of the shelf over the two exits. A row rather
  * than a card, because it sells nothing. It is the context the cards above are
  * priced against, and a shop where the sixth thing looks buyable but is not

@@ -263,21 +263,14 @@
  * bought, so the seat is recognised from across the board. No tile behind it:
  * the seat is already the box.
  *
- * The rarity pip goes in the same move. It was the seat's only picture, and a
- * glowing dot in the corner of a seat whose edge is already that colour was
- * saying it twice. It stays on the shop's cards and in the codex. The `color`
- * below is for the kind's fallback icon, the one picture here still drawn in
- * ink; an emoji has its own colours and takes none.
+ * The `color` below is for the kind's fallback icon, the one picture here still
+ * drawn in ink; an emoji has its own colours and takes none.
  */
 :root:is(.skin-classic-dark, .skin-classic-light) .relic > .icon {
   display: block;
   width: 1.25rem;
   height: 1.25rem;
   color: color-mix(in srgb, var(--rare, var(--rare-common)) 70%, var(--fg));
-}
-
-:root:is(.skin-classic-dark, .skin-classic-light) .relic::after {
-  content: none;
 }
 
 /* The table's seats are three times the phone's height, and the phone's

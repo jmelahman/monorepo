@@ -22,7 +22,7 @@
 
 /*
  * Rarity is one inherited color rather than a border override per class, so a
- * card's tint, its edge and its pip all come from the same place and a relic in
+ * card's tint and its edge both come from the same place and a relic in
  * the shop matches the same relic in the tray.
  */
 .rarity-common {
@@ -79,25 +79,6 @@
 }
 
 /*
- * A rarity pip, so the tray can be read at a glance without matching four
- * shades of edge against each other. Common has nothing to boast about and
- * does not get one.
- */
-.rarity-uncommon::after,
-.rarity-rare::after,
-.rarity-legendary::after {
-  content: "";
-  position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  width: 0.3125rem;
-  height: 0.3125rem;
-  border-radius: 50%;
-  background: var(--rare);
-  box-shadow: 0 0 0.375rem var(--rare);
-}
-
-/*
  * Legendaries catch the light. One pass every few seconds, at an angle no other
  * element in the game moves at, so it registers in peripheral vision.
  *
@@ -105,7 +86,7 @@
  * cards being weighed against each other, and the wrong thing in the tray over
  * the board, where it was the one moving thing on the screen while the player
  * was trying to think about a word, every five seconds for the rest of the run.
- * The pip still says legendary there.
+ * The edge still says legendary there.
  *
  * And only on a card, which is what "on offer" meant and what `:not(.relic)`
  * failed to say. Everything else wearing the class took the pass too: the

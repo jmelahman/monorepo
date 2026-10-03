@@ -42,11 +42,10 @@
   box-shadow: none;
 }
 
-/* The phone's foil, its rarity pip and its glint are all pseudo-elements on
-   these cards, and every one of them is a light effect this skin does not
-   have. Not drawn, rather than drawn and covered. */
-:root.skin-smoke :is(.relic, .shop-item)::before,
-:root.skin-smoke :is(.relic, .shop-item)::after {
+/* The phone's foil and its glint are both a pseudo-element on these cards,
+   and each is a light effect this skin does not have. Not drawn, rather than
+   drawn and covered. */
+:root.skin-smoke :is(.relic, .shop-item)::before {
   display: none;
 }
 
