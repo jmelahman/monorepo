@@ -215,8 +215,10 @@
   font-size: 1rem;
 }
 
+/* The line stays 0.875rem under a 1rem face here, so with no padding above and
+   below the tint was shorter than the letters it sat behind. */
 :root.table .category-level {
-  padding: 0 var(--space-2);
+  padding: var(--space-1) var(--space-2);
 }
 
 /* The blocks were 4.25rem in a rail with a hand's width of nothing under them.

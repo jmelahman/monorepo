@@ -74,7 +74,11 @@
 }
 
 .category-level {
-  padding: 0 0.25rem;
+  /* Vertical as well as horizontal. The line is 0.875rem, set on the chip to
+     keep the font from moving the board, so a tint with no padding of its own
+     was a band exactly one line tall, with the digits touching both edges of
+     it. 18px of tint now, in a chip measured at 36px on a 360×800 phone. */
+  padding: 0.125rem 0.375rem;
   border-radius: var(--corner-xs);
   background: color-mix(in srgb, var(--muted) 18%, transparent);
 }
