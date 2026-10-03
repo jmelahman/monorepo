@@ -210,6 +210,8 @@ let capped = false
  * and a finger.
  */
 let unable = false
+/** Whether the look was Smoke at the last `sync`, so arriving is told from staying. */
+let wasLit = false
 const deltas: number[] = []
 
 function copy(l: Look): Look {
@@ -411,12 +413,15 @@ function create(): void {
     // hidden meanwhile so the flat ground shows, which is the fallback and is
     // never a blank.
     e.preventDefault()
+    // A canvas `sync` has already given up on and replaced is not the room's.
+    if (el !== canvas) return
     if (raf) cancelAnimationFrame(raf)
     raf = 0
     gpu = null
     el.classList.remove("live")
   })
   el.addEventListener("webglcontextrestored", () => {
+    if (el !== canvas) return
     gpu = build(el)
     if (!gpu) return
     stale = true
@@ -439,12 +444,29 @@ function create(): void {
  * it comes back on its last frame with `.live` still on it, and `stale` has the
  * next one drawn at once. The price is one idle context for the rest of the
  * session, and only for a player who has looked at the room at least once.
+ *
+ * Kept, it can also lose that context while nobody is looking at it: an idle
+ * context is the first a WebView evicts, and the browser need never send the
+ * `webglcontextrestored` the listener waits for. Rebuilding on every visit used
+ * to answer that for free, so a return that finds a canvas with no context
+ * throws it away and builds the room again, since a lost context cannot be
+ * asked for twice on the same canvas.
+ *
+ * `stale` only on the way in. The observer fires for every class on the root
+ * (`.plain`, `.quiet`, the table), and under reduced motion a stale canvas is a
+ * still frame redrawn, which a change of anything but the look does not need.
  */
 function sync(): void {
-  if (lit()) {
+  const now = lit()
+  if (now) {
+    if (canvas && !gpu) {
+      canvas.remove()
+      canvas = null
+    }
     create()
-    stale = true
+    if (!wasLit) stale = true
   }
+  wasLit = now
   // Starts the loop under Smoke and stops it under anything else, since
   // `running` asks the look; idempotent, so a class change that is not a change
   // of look costs nothing.

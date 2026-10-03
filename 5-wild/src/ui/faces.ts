@@ -1,4 +1,3 @@
-import { lang } from "./lang"
 import type { Skin } from "./skin"
 
 /**
@@ -44,33 +43,50 @@ const CAP_MS = 300
 
 /**
  * The text the faces are asked for with. `document.fonts.load` fetches only the
- * files whose `unicode-range` the sample touches, so English asks for the Latin
- * file alone, and the translations add the accented letters that pull in the
- * Latin-extended one their prose will need (`œ` and `ß` are outside Latin-1, so
- * they are what reaches it).
+ * files whose `unicode-range` the sample touches, and this one touches Latin
+ * alone, in every language. That is enough for all four: Jersey 20's Latin
+ * range (`smoke/fonts.css`) is Latin-1 plus `œ`, so `ñ`, `é` and `ß` are in it,
+ * and none of the catalogs writes a letter only the Latin-extended file has.
+ * Jost's per-subset imports declare no range at all, so for Tabletop which file
+ * a sample pulls is the browser's call and not this string's.
  */
-const sample = (): string => (lang() === "en" ? "5 Wild" : "5 Wild œß")
+const SAMPLE = "5 Wild"
 
-function load(skin: Skin): Promise<unknown> {
+/**
+ * One request per look for the session. A face's load settles once, loaded or
+ * failed, and asking again only allocates the same answer, which the warm-ahead
+ * would do on every render of the title and the pause sheet.
+ */
+const loads = new Map<Skin, Promise<void>>()
+
+function load(skin: Skin): Promise<void> {
   if (typeof document === "undefined" || !document.fonts) return Promise.resolve()
-  const text = sample()
-  // A face that fails to load is the stack's fallback and nothing worse, which is
-  // the look the page would have shown anyway; it is never a reason to hold the
-  // switch or to surface an error.
-  return Promise.all(FACES[skin].map((face) => document.fonts.load(face, text).catch(() => [])))
+  let pending = loads.get(skin)
+  if (!pending) {
+    // A face that fails to load is the stack's fallback and nothing worse, which
+    // is the look the page would have shown anyway; it is never a reason to hold
+    // the switch or to surface an error.
+    pending = Promise.all(
+      FACES[skin].map((face) => document.fonts.load(face, SAMPLE).catch(() => [])),
+    ).then(() => {})
+    loads.set(skin, pending)
+  }
+  return pending
 }
 
 /**
  * Start fetching a look's faces and forget about it. Cheap to call on every
- * render: a face already loaded resolves without asking the network again.
+ * render: after the first, it is a lookup.
  */
 export function warmSkin(skin: Skin): void {
   void load(skin)
 }
 
 /** Resolves when a look's faces are in, or when waiting longer would be worse. */
-export const skinReady = (skin: Skin): Promise<void> =>
-  Promise.race([
-    load(skin).then(() => {}),
-    new Promise<void>((resolve) => setTimeout(resolve, CAP_MS)),
-  ])
+export function skinReady(skin: Skin): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const cap = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, CAP_MS)
+  })
+  return Promise.race([load(skin), cap]).finally(() => clearTimeout(timer))
+}
