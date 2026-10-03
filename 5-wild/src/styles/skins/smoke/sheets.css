@@ -23,3 +23,11 @@
 :root.skin-smoke .help-tutorial {
   background: var(--well);
 }
+
+/* The settings switch. Its track rounds on `--corner-pill`, which the room
+   zeroes, but its knob is a literal `50%`, a circle being a shape rather than a
+   corner (`base.css`), so since the corner scale landed the room drew a round
+   knob in a square track. Square here as well: a block in a slot. */
+:root.skin-smoke .switch::after {
+  border-radius: 0;
+}

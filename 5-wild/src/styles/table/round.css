@@ -120,27 +120,35 @@
   height: 2.5rem;
 }
 
-/* The name and the stage share the strip's line, the stage pushed to its far
-   end. A name too long for the line with it (Manche d'élite at 19rem) wraps
-   the stage under itself rather than clipping, still at the right. */
+/* The name over the stage, two lines always, as the phone's header sets them.
+   They used to share the strip's line with the stage pushed to its far end,
+   wrapping it under the name when the two did not fit, and at the rail's
+   narrow end they never did: 192px of line against 217 for "Normal Round" and
+   "STAGE 1/8" in the Smoke Room and Classic, and 248 in Tabletop, whose stage
+   is tracked capitals. So the common case was a stage hung ragged at the
+   right of a second line, and the one line came back only past ~1500px, and
+   not in every look. Both lines fit the 60px strip beside the 40px token. The
+   name stays on one line and gives way to an ellipsis rather than wrapping
+   into a third. */
 :root.table .round-screen .hud-title {
   display: flex;
   flex: 1 1 auto;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  column-gap: var(--space-3);
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
 }
 
 :root.table .round-name {
+  max-width: 100%;
+  overflow: hidden;
   font-size: 1.375rem;
   line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 :root.table .stage {
   display: block;
-  margin-left: auto;
   font-size: 0.9375rem;
   white-space: nowrap;
 }
