@@ -23,7 +23,7 @@
       "mcp__playwright__*"
     ]
   },
-  "model": "sonnet",
+  "model": "opus",
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,

@@ -58,6 +58,18 @@ require("lazy").setup({
               end
             end,
           },
+          tombi = {
+            cmd = { "uv", "tool", "run", "tombi", "lsp" },
+            on_attach = function(client)
+              if client.server_capabilities.documentFormattingProvider then
+                vim.api.nvim_create_autocmd("BufWritePre", {
+                  group = vim.api.nvim_create_augroup("TomlFormat", { clear = true }),
+                  pattern = '*.toml',
+                  callback = function() vim.lsp.buf.format() end
+                })
+              end
+            end,
+          },
           yamlls = {
             settings = {
               yaml = {
