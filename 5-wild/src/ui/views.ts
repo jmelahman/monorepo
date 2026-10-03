@@ -707,6 +707,9 @@ function consumableRow(state: RunState, on: Handlers): HTMLElement {
         // The rule is clamped to the band's one line, which every rule in the
         // English catalog outruns at 390px, so the whole of it is a press away.
         "data-tip": card.text,
+        // Seated by index: the hand closes up behind a played card, so the name
+        // lands on the one that slid into its place. See `holdFocus`.
+        "data-focus": `consumable-${index}`,
         onclick: () => on.useConsumable(index),
       },
       // In a wrapper that is nothing (`display: contents`) except on a phone,
@@ -1959,6 +1962,9 @@ function shopItemCard(item: ShopItem, index: number, state: RunState, on: Handle
       "aria-disabled": affordable ? undefined : "true",
       "data-tip": affordable ? undefined : ui().shop.short(money(item.cost - state.gold)),
       "data-rarity": affordable ? undefined : rarity,
+      // A bought card leaves a sold tag in its seat, which takes no focus, so
+      // this is a seat in a row and the nearest card left stands in. See `holdFocus`.
+      "data-focus": `shelf-${index}`,
       onclick: () => on.buy(index),
     },
     cardHead(item, title),
@@ -2351,6 +2357,7 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
         "data-tip": relicCard(instance.id).text,
         "data-rarity": relic?.rarity ?? "common",
         type: "button",
+        "data-focus": `relic-${slot}`,
         onclick: () => on.sell(slot),
       },
       ...cardArt("relic", instance.id),
@@ -2386,6 +2393,7 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
                 // The rule is clamped on the table, so the whole of it is a
                 // hover or a press away, as it is on the board's hand.
                 "data-tip": card.text,
+                "data-focus": `consumable-${index}`,
                 onclick: () => on.drop(index),
               },
               h("span", { class: "consumable-name" }, card.name),
@@ -2468,6 +2476,9 @@ export function shopView(state: RunState, on: Handlers, coach: CoachStep | null)
           class: "secondary",
           type: "button",
           disabled: state.gold < reroll,
+          // Rerolling is the one press a player makes several times running,
+          // and it rebuilds the shop it is standing in. See `holdFocus`.
+          "data-focus": "reroll",
           onclick: () => on.reroll(),
         },
         icon("reroll"),
@@ -2635,6 +2646,9 @@ function languageButton(on: Handlers, chrome: Chrome, look = "secondary"): HTMLE
       class: `${look} lang-button`,
       type: "button",
       "aria-label": `${ui().pause.language}: ${LANG_NAMES[chrome.lang]}`,
+      // The same name as the pause sheet's switch, for the same reason: a
+      // cycle is up to three presses to the language wanted. See `holdFocus`.
+      "data-focus": "lang",
       onclick: () => on.cycleLanguage(),
     },
     // No `lang` attribute on either: the button names the language it is
@@ -2834,6 +2848,7 @@ function skinButton(on: Handlers, chrome: Chrome): HTMLElement {
       class: "title-dial",
       type: "button",
       "aria-label": `${copy.skin}: ${copy.skins[chrome.skin]}`,
+      "data-focus": "skin",
       onclick: () => on.cycleSkin(),
     },
     icon(SKIN_ICON[chrome.skin]),
@@ -2866,6 +2881,7 @@ function soundButton(on: Handlers, chrome: Chrome): HTMLElement {
       class: "title-dial",
       type: "button",
       "aria-label": ui().common.sound[chrome.sound],
+      "data-focus": "sound",
       onclick: () => on.cycleSound(),
     },
     icon(SOUND_ICON[chrome.sound]),
@@ -3148,6 +3164,9 @@ function ladder(on: Handlers, meta: MetaState): HTMLElement {
         type: "button",
         disabled: !live,
         "aria-label": label === "−" ? copy.lower : copy.raise,
+        // A row of two, so that walking to either end, where the step that got
+        // there goes `disabled`, hands focus to the other. See `holdFocus`.
+        "data-focus": `ladder-${label === "−" ? 0 : 1}`,
         onclick: () => on.setAscension(to),
       },
       label,

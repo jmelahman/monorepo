@@ -2006,11 +2006,19 @@ export class App {
    * after each one made a keyboard player tab down through the list again to
    * press the speed dial a second time. Looked up inside the sheet only, so a
    * name on the board behind it can never pull focus out from under the sheet.
+   *
+   * A name can outlive the thing it named. Buying a card leaves a sold tag in its
+   * seat, selling the last relic leaves an empty one, and the ladder's − goes
+   * `disabled` at zero, which `focus()` silently refuses. So a name spelled
+   * `group-N` is a seat in a row rather than a single control, and when the seat
+   * is gone the nearest live one in the same row stands in, the later of two
+   * equally near, because that is the card that slid into the gap. Without it
+   * a keyboard player buying down the shelf was sent back to the top of the
+   * document after every purchase, which is the bug the name was for.
    */
   private holdFocus(keeping?: string): void {
     const sheet = this.root.querySelector<HTMLElement>(".sheet")
-    const named = (scope: ParentNode) =>
-      keeping ? scope.querySelector<HTMLElement>(`[data-focus="${keeping}"]`) : null
+    const named = (scope: ParentNode) => (keeping ? seat(scope, keeping) : null)
     if (!sheet) {
       named(this.root)?.focus()
       return
@@ -2601,3 +2609,33 @@ export function loadSave(): RunState | null {
 }
 
 const rootSeed = (): number => Math.floor(Math.random() * 2 ** 31)
+
+/**
+ * The live control wearing `name`, or for a `group-N` name whose own control is
+ * gone or disabled, the nearest live one in its row. See `holdFocus`.
+ */
+function seat(scope: ParentNode, name: string): HTMLElement | null {
+  const live = (selector: string) =>
+    Array.from(scope.querySelectorAll<HTMLElement>(selector)).filter(
+      (node) => !node.matches(":disabled"),
+    )
+  const exact = live(`[data-focus="${name}"]`)[0]
+  if (exact) return exact
+  const row = /^(.+)-(\d+)$/.exec(name)
+  if (!row) return null
+  const [, group, at] = row
+  let best: HTMLElement | null = null
+  let gap = Infinity
+  for (const node of live(`[data-focus^="${group}-"]`)) {
+    const other = /^(.+)-(\d+)$/.exec(node.dataset.focus ?? "")
+    if (!other || other[1] !== group) continue
+    const d = Number(other[2]) - Number(at)
+    // Half a seat off the later side, so it wins a tie with the earlier one.
+    const far = d >= 0 ? d - 0.5 : -d
+    if (far < gap) {
+      gap = far
+      best = node
+    }
+  }
+  return best
+}
