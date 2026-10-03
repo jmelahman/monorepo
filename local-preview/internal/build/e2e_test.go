@@ -352,7 +352,7 @@ func TestProcessModeFrontendBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proc := strings.Replace(string(toml), `dist  = "dist"`,
+	proc := strings.Replace(string(toml), `dist = "dist"`,
 		"run         = [\"./never-started\"]\nhealth_path = \"/\"", 1)
 	if err := os.WriteFile(filepath.Join(src, "preview.toml"), []byte(proc), 0o644); err != nil {
 		t.Fatal(err)

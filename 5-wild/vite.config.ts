@@ -81,5 +81,16 @@ export default defineConfig({
     // opt into jsdom per-file with an @vitest-environment docblock.
     environment: "node",
     include: ["test/**/*.test.ts", "src/**/*.test.ts", "telemetry/test/**/*.test.ts"],
+    // Not vitest's five seconds, which is a figure about a machine nothing else
+    // is using. CI runs this suite as one prek hook among the monorepo's others,
+    // the Go tests among them, on a four-core runner, and the tests that play
+    // whole runs take about ten times what they take here: "plays exactly the
+    // run the engine plays" is 1.8s on a desk and was 16.0s there, "never draws
+    // an answer its own boss forbids" 1.1s and 7.8s, "records the same run
+    // twice" 0.7s and 5.3s. Every push to master failed on two or three of them
+    // with nothing wrong. A minute is four times the worst of those, and still
+    // short enough that a test which really hangs is a red run rather than a
+    // cancelled job.
+    testTimeout: 60_000,
   },
 })
