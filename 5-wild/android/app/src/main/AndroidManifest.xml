@@ -9,8 +9,16 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- Portrait only. The game is laid out for a thumb, and the landscape
+             arrangement (.table, src/ui/table.ts) is kept out of the APK
+             anyway, so a phone turned sideways only ever got the portrait
+             screen stretched wide. From Android 16 at targetSdk 36 the system
+             ignores this on large screens (smallest width 600dp and up:
+             tablets, unfolded foldables, ChromeOS), so the APK must still
+             survive landscape there; this only settles it on phones. -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:screenOrientation="portrait"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
