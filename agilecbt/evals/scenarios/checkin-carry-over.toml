@@ -24,6 +24,7 @@ text = "Evening. How did today go?"
 
 [[turns]]
 user = "didn't get to laundry or the email. ugh, I'm so useless"
+
 [turns.expect]
 tool_not_called = ["let_go_step"]
 not_regex = ["(?i)overdue|you failed|should have|labeling|thinking trap"]

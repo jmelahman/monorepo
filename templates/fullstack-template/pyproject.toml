@@ -1,3 +1,21 @@
+[project]
+name = "fullstack-template"
+description = "A template for fullstack Go + React applications"
+license = { file = "LICENSE" }
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = ["fullstack", "go", "react", "sqlite", "template"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Go",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/jmelahman/fullstack-template"
+
 # BEGIN orchard:manygo
 # Shared by Go subtrees built into wheels with manygo:
 # .config/git-orchard/shared/manygo in the monorepo
@@ -9,46 +27,32 @@
 # `uv build --build-constraints`. The monorepo's build-constraints hook
 # regenerates it when a pin changes.
 # go-bin must cover the newest `go` directive among these subtrees' go.mod.
-requires = ["hatchling==1.32.0", "hatch-vcs==0.5.0", "go-bin==1.27.1", "manygo==0.3.0"]
+requires = [
+  "go-bin==1.27.1",
+  "hatch-vcs==0.5.0",
+  "hatchling==1.32.0",
+  "manygo==0.3.0"
+]
 build-backend = "hatchling.build"
 # END orchard:manygo
 
-[project]
-name = "fullstack-template"
-description = "A template for fullstack Go + React applications"
-license = {file = "LICENSE"}
-authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
-readme = "README.md"
-requires-python = ">=3.6"
-keywords = ["template", "fullstack", "go", "react", "sqlite"]
-classifiers = [
-    "Programming Language :: Go",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-dynamic = ["version"]
-
-
-[project.urls]
-Repository = "https://github.com/jmelahman/fullstack-template"
-
 [tool.hatch.build]
 include = [
-    "go.mod",
-    "go.sum",
-    "**/*.go",
-    "internal/db/schema.sql",
-    "web/package.json",
-    "web/bun.lock",
-    "web/index.html",
-    "web/tsconfig.json",
-    "web/vite.config.ts",
-    "web/public/**",
-    "web/src/**",
+  "go.mod",
+  "go.sum",
+  "**/*.go",
+  "internal/db/schema.sql",
+  "web/package.json",
+  "web/bun.lock",
+  "web/index.html",
+  "web/tsconfig.json",
+  "web/vite.config.ts",
+  "web/public/**",
+  "web/src/**",
 ]
-
-[tool.hatch.version]
-source = "vcs"
 
 [tool.hatch.build.hooks.custom]
 binary_name = "app"
+
+[tool.hatch.version]
+source = "vcs"

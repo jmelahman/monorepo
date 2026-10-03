@@ -7,7 +7,7 @@
 name = "qwen3.8:27b"
 
 [[models]]
-name = "qwen3.6:35b-a3b" # MoE, 3B active
+name = "qwen3.6:35b-a3b"  # MoE, 3B active
 
 [[models]]
 name = "qwen3.5:9B"
@@ -19,10 +19,10 @@ name = "mistral-small3.2:24b"
 name = "ministral-3:8b"
 
 [[models]]
-name = "gemma4:31b" # gemma3 has no tool support in Ollama
+name = "gemma4:31b"  # gemma3 has no tool support in Ollama
 
 [[models]]
-name = "gemma4:26b" # the default coach model; MoE, 4B active
+name = "gemma4:26b"  # the default coach model; MoE, 4B active
 
 [[models]]
 name = "gemma4:12b"
@@ -34,4 +34,4 @@ name = "gemma4:e4b"
 name = "llama3.2:3b"
 
 [[models]]
-name = "nemotron-3.5-lightning:30b" # MoE, 3B active
+name = "nemotron-3.5-lightning:30b"  # MoE, 3B active

@@ -24,9 +24,17 @@ container_port = 7777
 # fail the build.
 # Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
 [previews.artifacts.apk]
-path    = "."
-exclude = ["desktop/", "telemetry/", ".github/", ".agents/", ".pi/", ".vscode/", "*.md"]
-image   = "ghcr.io/jmelahman/android-builder:latest"
+path = "."
+exclude = [
+  "desktop/",
+  "telemetry/",
+  ".github/",
+  ".agents/",
+  ".pi/",
+  ".vscode/",
+  "*.md"
+]
+image = "ghcr.io/jmelahman/android-builder:latest"
 build = [
   ["bun", "install", "--frozen-lockfile"],
   ["bun", "run", "apk"],

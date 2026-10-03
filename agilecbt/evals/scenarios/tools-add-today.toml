@@ -5,10 +5,13 @@ kind = "morning"
 
 [[turns]]
 user = "put laundry on today"
+
 [turns.expect]
 tool_called = ["create_step"]
+
 [turns.expect.tool_args.create_step]
 lane = "today"
+
 [turns.expect.db.lanes.today]
 min = 1
 max = 1

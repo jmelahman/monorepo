@@ -1,3 +1,3 @@
 [[task]]
-label          = "Preview report card"
+label = "Preview report card"
 container_port = 8765

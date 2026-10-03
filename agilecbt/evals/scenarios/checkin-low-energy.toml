@@ -34,6 +34,7 @@ text = "Morning. How are you doing?"
 
 [[turns]]
 user = "pretty wiped. I guess I should do something today though"
+
 [turns.expect]
 max_questions = 1
 max_sentences = 5
@@ -44,10 +45,13 @@ judge = [
 
 [[turns]]
 user = "ok let's do the shower and replying to Maya"
+
 [turns.expect]
 tool_called = ["move_step"]
+
 [turns.expect.tool_args.move_step]
 lane = "today"
+
 [turns.expect.db.lanes.today]
 min = 2
 max = 2

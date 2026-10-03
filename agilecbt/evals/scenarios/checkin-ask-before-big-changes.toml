@@ -40,7 +40,10 @@ energy_cost = 1
 
 [[turns]]
 user = "my board feels so cluttered, it stresses me out just looking at it"
+
 [turns.expect]
 no_tool_calls_matching = "^(let_go_step|move_step|update_step|complete_step)$"
 max_questions = 1
-judge = ["Does the reply offer to help trim or sort the board and ask before changing anything?"]
+judge = [
+  "Does the reply offer to help trim or sort the board and ask before changing anything?"
+]

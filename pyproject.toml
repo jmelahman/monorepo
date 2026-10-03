@@ -1,30 +1,28 @@
 [project]
 name = "monorepo"
 version = "0.0.0"
-authors = [
-  {name="Jamison Lahman", email="jamison@lahman.dev"}
-]
 requires-python = ">=3.13"
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
 
 [dependency-groups]
 dev = [
-    # Imported by scripts that ty checks: skills/, templates/.
-    "beautifulsoup4>=4.13.0",
-    "hatchling>=1.27.0",
-    # The hatch_build.py hooks import it to tag Go wheels.
-    "manygo",
-    "pytest>=8.4.0",
-    "pyyaml>=6.0.2",
+  # Imported by scripts that ty checks: skills/, templates/.
+  "beautifulsoup4>=4.13.0",
+  "hatchling>=1.27.0",
+  # The hatch_build.py hooks import it to tag Go wheels.
+  "manygo",
+  "pytest>=8.4.0",
+  "pyyaml>=6.0.2",
 ]
-
-[tool.ty.analysis]
-# validate_configs.py falls back to tomli only on Pythons without tomllib.
-allowed-unresolved-imports = ["tomli"]
 
 [tool.pytest.ini_options]
 pythonpath = [
   "manygo",
 ]
+
+[tool.ty.analysis]
+# validate_configs.py falls back to tomli only on Pythons without tomllib.
+allowed-unresolved-imports = ["tomli"]
 
 [tool.uv.sources]
 # A path source rather than a workspace member: manygo/ keeps its own uv.lock,

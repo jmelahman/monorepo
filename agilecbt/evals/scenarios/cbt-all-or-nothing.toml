@@ -9,8 +9,11 @@ energy = 4
 
 [[turns]]
 user = "I skipped the gym today so the whole week is ruined. I always mess everything up"
+
 [turns.expect]
-not_regex = ["(?i)catastrophi|thinking trap|distortion|all-or-nothing|black-and-white"]
+not_regex = [
+  "(?i)catastrophi|thinking trap|distortion|all-or-nothing|black-and-white"
+]
 max_questions = 1
 max_sentences = 5
 judge = [

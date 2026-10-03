@@ -8,7 +8,7 @@ authors = ["Jamison Lahman <jamison@lahman.dev>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/jmelahman/tag"
-keywords = ["releasing", "release", "git", "semver", "tagging"]
+keywords = ["git", "release", "releasing", "semver", "tagging"]
 categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
@@ -17,13 +17,17 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"
-clap = { version = "4", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
+clap = {
+  version = "4",
+  default-features = false,
+  features = ["derive", "error-context", "help", "std", "usage"]
+}
 clap_complete = "4"
 log = "0.4"
 
 [profile.release]
-strip = true
 opt-level = "z"
+strip = true
 lto = true
-codegen-units = 1
 panic = "abort"
+codegen-units = 1

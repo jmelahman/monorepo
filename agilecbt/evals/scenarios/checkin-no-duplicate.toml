@@ -18,7 +18,9 @@ text = "Morning. How are you doing?"
 
 [[turns]]
 user = "can you add a short walk to today?"
+
 [turns.expect]
 tool_not_called = ["create_step"]
+
 [turns.expect.db.lanes.today]
 max = 1

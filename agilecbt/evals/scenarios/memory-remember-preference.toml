@@ -5,7 +5,9 @@ kind = "morning"
 
 [[turns]]
 user = "fyi walks help me way more before noon. afternoons I just can't"
+
 [turns.expect]
 tool_called = ["remember"]
+
 [turns.expect.db]
 notes = { min = 1 }

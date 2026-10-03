@@ -1,15 +1,15 @@
 [buildcop]
 # False for now; I'd rather `kanban ticket create` work than have a buildcop.
 enabled = false
-interval = '10m'
+interval = "10m"
 
 [[buildcop.boards]]
-branch = 'master'
+branch = "master"
 failure_threshold = 0.01
 green_streak_required = 3
 min_runs = 5
-name = 'Build Cop: monorepo'
-repo_path = '/home/jamison/code/monorepo'
+name = "Build Cop: monorepo"
+repo_path = "/home/jamison/code/monorepo"
 window_days = 3
 
 [dev_toolbar]
@@ -17,25 +17,25 @@ enabled = true
 
 [devcontainer]
 mounts = [
-  'type=bind,source=${localEnv:HOME}/.zshrc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.zshrc,readonly',
-  'type=bind,source=${localEnv:HOME}/.config/nvim,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/nvim,readonly',
-  'type=bind,source=${localEnv:HOME}/.gitconfig,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.gitconfig,readonly',
-  'type=bind,source=${localEnv:HOME}/.githooks,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.githooks,readonly',
-  'type=bind,source=${localEnv:HOME}/.pi/agent/,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.pi/agent/',
-  'type=bind,source=${localEnv:HOME}/.config/opencode/,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/opencode/',
-  'type=volume,source=devcontainer-go-mod,target=/home/dev/go/pkg/mod',
-  'type=volume,source=devcontainer-cache,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.cache',
-  'type=volume,source=devcontainer-local,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local',
-  'type=volume,source=devcontainer-bun,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.bun',
+  "type=bind,source=${localEnv:HOME}/.zshrc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.zshrc,readonly",
+  "type=bind,source=${localEnv:HOME}/.config/nvim,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/nvim,readonly",
+  "type=bind,source=${localEnv:HOME}/.gitconfig,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.gitconfig,readonly",
+  "type=bind,source=${localEnv:HOME}/.githooks,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.githooks,readonly",
+  "type=bind,source=${localEnv:HOME}/.pi/agent/,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.pi/agent/",
+  "type=bind,source=${localEnv:HOME}/.config/opencode/,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/opencode/",
+  "type=volume,source=devcontainer-go-mod,target=/home/dev/go/pkg/mod",
+  "type=volume,source=devcontainer-cache,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.cache",
+  "type=volume,source=devcontainer-local,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local",
+  "type=volume,source=devcontainer-bun,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.bun",
 ]
-run_args = ['--cap-add=SYS_PTRACE', '--network=kanban-net']
+run_args = ["--cap-add=SYS_PTRACE", "--network=kanban-net"]
 
 [devcontainer.container_env]
 # AgileCBT's workspace config targets the host's Ollama; in a container, reach
 # it by its service name on kanban-net.
-AGILECBT_LLM_BASE_URL = 'http://ollama:11434/v1'
-COLORTERM = 'truecolor'
-TZ = 'America/Los_Angeles'
+AGILECBT_LLM_BASE_URL = "http://ollama:11434/v1"
+COLORTERM = "truecolor"
+TZ = "America/Los_Angeles"
 
 [errors]
 enabled = true
@@ -43,10 +43,10 @@ enabled = true
 [merge]
 allow_merge_commit = false
 allow_rebase = false
-default_strategy = 'squash'
+default_strategy = "squash"
 
 [plans]
-dir = './plans'
+dir = "./plans"
 
 [sync]
 allow_merge = false

@@ -18,7 +18,9 @@ text = "That fits Health. Want me to add a goal, 'In bed before midnight', under
 
 [[turns]]
 user = "yes please"
+
 [turns.expect]
 tool_called = ["create_goal"]
+
 [turns.expect.tool_args.create_goal]
 value_id = 1

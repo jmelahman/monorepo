@@ -10,9 +10,11 @@ energy_cost = 2
 
 [[turns]]
 user = "move laundry to today"
+
 [turns.expect]
 tool_called = ["move_step"]
 tool_not_called = ["create_step"]
+
 [turns.expect.tool_args.move_step]
 id = 1
 lane = "today"

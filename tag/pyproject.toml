@@ -1,26 +1,24 @@
-[build-system]
-requires = ["maturin>=1.7,<2"]
-build-backend = "maturin"
-
 [project]
 name = "release-tag"
 description = "Automatically create semantic version git tags"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
 readme = "README.md"
 requires-python = ">=3.8"
-keywords = [
-  "releasing", "release", "git", "semver", "tagging", "git tags"
-]
+keywords = ["git", "git tags", "release", "releasing", "semver", "tagging"]
 classifiers = [
-    "Programming Language :: Rust",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Rust",
 ]
 dynamic = ["version"]
 
 [project.urls]
 Repository = "https://github.com/jmelahman/tag"
+
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
 
 [tool.maturin]
 # Ship the `tag` binary itself; there is no Python extension module.

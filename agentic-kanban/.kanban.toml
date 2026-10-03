@@ -30,15 +30,32 @@ allow_rebase = false
 # local-preview orchestrator reads this table from the deployed commit.
 # Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
 [previews.frontend]
-path  = "web"
+path = "web"
 # The builtin session image has no bun; build in the devcontainer image.
 image = "ghcr.io/jmelahman/devcontainer:latest"
 build = [["bun", "install", "--frozen-lockfile"], ["bun", "run", "build"]]
-dist  = "dist"
+dist = "dist"
 
 [previews.backend]
-path        = "."
-exclude     = ["docs/", "plans/", "assets/", "build/", "deploy/", "*.md", ".github/", ".devcontainer/", ".vscode/"]
-build       = [["go", "build", "-o", "bin/server", "."]]
-run         = ["./bin/server", "serve", "--addr", "127.0.0.1:{port}", "--data-dir", "{state_dir}"]
+path = "."
+exclude = [
+  "docs/",
+  "plans/",
+  "assets/",
+  "build/",
+  "deploy/",
+  "*.md",
+  ".github/",
+  ".devcontainer/",
+  ".vscode/"
+]
+build = [["go", "build", "-o", "bin/server", "."]]
+run = [
+  "./bin/server",
+  "serve",
+  "--addr",
+  "127.0.0.1:{port}",
+  "--data-dir",
+  "{state_dir}"
+]
 health_path = "/api/health"

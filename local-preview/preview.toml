@@ -6,13 +6,13 @@
 # backend pins nothing and builds and runs on the host.
 
 [frontend]
-path  = "web"
+path = "web"
 image = "ghcr.io/jmelahman/devcontainer:latest"
 build = [["bun", "install", "--frozen-lockfile"], ["bun", "run", "build"]]
-dist  = "dist"
+dist = "dist"
 
 [backend]
-path    = "."
+path = "."
 exclude = [
   "docs/",
   "plans/",
@@ -26,10 +26,17 @@ exclude = [
   "docker-bake.hcl",
   "Dockerfile",
 ]
-build       = [["go", "build", "-o", "bin/server", "."]]
+build = [["go", "build", "-o", "bin/server", "."]]
 # 0.0.0.0 works on both runtimes: required inside the devcontainer, merely
 # wider on the host.
-run         = ["./bin/server", "serve", "--addr", "0.0.0.0:{port}", "--data-dir", "{state_dir}"]
+run = [
+  "./bin/server",
+  "serve",
+  "--addr",
+  "0.0.0.0:{port}",
+  "--data-dir",
+  "{state_dir}"
+]
 health_path = "/api/health"
 
 # The server binary doubles as the CLI — downloadable per commit from the
@@ -38,7 +45,7 @@ health_path = "/api/health"
 # internal/supervise grows a non-unix implementation); the dashboard offers
 # the set as one download menu.
 [artifacts.cli]
-path    = "."
+path = "."
 exclude = [
   "docs/",
   "plans/",
@@ -52,13 +59,61 @@ exclude = [
   "docker-bake.hcl",
   "Dockerfile",
 ]
-build   = [
-  ["env", "CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64", "go", "build", "-ldflags", "-s -w", "-o", "bin/preview-linux-amd64", "."],
-  ["env", "CGO_ENABLED=0", "GOOS=linux", "GOARCH=arm64", "go", "build", "-ldflags", "-s -w", "-o", "bin/preview-linux-arm64", "."],
-  ["env", "CGO_ENABLED=0", "GOOS=darwin", "GOARCH=amd64", "go", "build", "-ldflags", "-s -w", "-o", "bin/preview-darwin-amd64", "."],
-  ["env", "CGO_ENABLED=0", "GOOS=darwin", "GOARCH=arm64", "go", "build", "-ldflags", "-s -w", "-o", "bin/preview-darwin-arm64", "."],
+build = [
+  [
+    "env",
+    "CGO_ENABLED=0",
+    "GOOS=linux",
+    "GOARCH=amd64",
+    "go",
+    "build",
+    "-ldflags",
+    "-s -w",
+    "-o",
+    "bin/preview-linux-amd64",
+    "."
+  ],
+  [
+    "env",
+    "CGO_ENABLED=0",
+    "GOOS=linux",
+    "GOARCH=arm64",
+    "go",
+    "build",
+    "-ldflags",
+    "-s -w",
+    "-o",
+    "bin/preview-linux-arm64",
+    "."
+  ],
+  [
+    "env",
+    "CGO_ENABLED=0",
+    "GOOS=darwin",
+    "GOARCH=amd64",
+    "go",
+    "build",
+    "-ldflags",
+    "-s -w",
+    "-o",
+    "bin/preview-darwin-amd64",
+    "."
+  ],
+  [
+    "env",
+    "CGO_ENABLED=0",
+    "GOOS=darwin",
+    "GOARCH=arm64",
+    "go",
+    "build",
+    "-ldflags",
+    "-s -w",
+    "-o",
+    "bin/preview-darwin-arm64",
+    "."
+  ],
 ]
-files   = [
+files = [
   "bin/preview-linux-amd64",
   "bin/preview-linux-arm64",
   "bin/preview-darwin-amd64",

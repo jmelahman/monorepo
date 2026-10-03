@@ -1,3 +1,21 @@
+[project]
+name = "nyt-connections"
+description = "A command-line client for the NYT Connections game"
+license = { file = "LICENSE" }
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = ["connections", "games", "new-york-times", "nyt", "nyt-connections"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Go",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/jmelahman/connections"
+
 # BEGIN orchard:manygo
 # Shared by Go subtrees built into wheels with manygo:
 # .config/git-orchard/shared/manygo in the monorepo
@@ -9,36 +27,20 @@
 # `uv build --build-constraints`. The monorepo's build-constraints hook
 # regenerates it when a pin changes.
 # go-bin must cover the newest `go` directive among these subtrees' go.mod.
-requires = ["hatchling==1.32.0", "hatch-vcs==0.5.0", "go-bin==1.27.1", "manygo==0.3.0"]
+requires = [
+  "go-bin==1.27.1",
+  "hatch-vcs==0.5.0",
+  "hatchling==1.32.0",
+  "manygo==0.3.0"
+]
 build-backend = "hatchling.build"
 # END orchard:manygo
-
-[project]
-name = "nyt-connections"
-description = "A command-line client for the NYT Connections game"
-license = {file = "LICENSE"}
-authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
-readme = "README.md"
-requires-python = ">=3.6"
-keywords = [
-  "games", "connections", "new-york-times", "nyt", "nyt-connections"
-]
-classifiers = [
-    "Programming Language :: Go",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-dynamic = ["version"]
-
-
-[project.urls]
-Repository = "https://github.com/jmelahman/connections"
 
 [tool.hatch.build]
 include = ["go.mod", "go.sum", "main.go"]
 
-[tool.hatch.version]
-source = "vcs"
-
 [tool.hatch.build.hooks.custom]
 binary_name = "connections"
+
+[tool.hatch.version]
+source = "vcs"

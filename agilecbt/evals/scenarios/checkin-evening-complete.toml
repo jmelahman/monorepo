@@ -23,9 +23,11 @@ text = "Evening. How did today go?"
 
 [[turns]]
 user = "I called mom! it was nice. mastery maybe 6, pleasure 8"
+
 [turns.expect]
 tool_called = ["complete_step"]
 max_questions = 1
+
 [turns.expect.tool_args.complete_step]
 id = 1
 mastery = 6

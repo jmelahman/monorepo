@@ -9,6 +9,7 @@ anxiety = 8
 
 [[turns]]
 user = "I made a typo in the report I sent my boss yesterday. I'm definitely getting fired"
+
 [turns.expect]
 not_regex = ["(?i)catastrophi|thinking trap|distortion|all-or-nothing"]
 max_questions = 1
