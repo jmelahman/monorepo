@@ -1090,8 +1090,23 @@ export class App {
    * the `translateX(-50%)` holding the panel in the middle of the screen.
    */
   private toast(message: string): void {
-    const host = this.root.querySelector(".toast") ?? this.toastHost()
+    const host = this.root.querySelector<HTMLElement>(".toast") ?? this.toastHost()
     host.textContent = message
+    // On a phone's round, hung immediately under the board rather than lifted
+    // off the keyboard by `--toast-lift`. The board sits flush to the header
+    // with the slack falling below it (see `.grid` in `board.css`), so the
+    // sentence lands next to the row it is refusing, where the eye already is,
+    // instead of over the hand and the relics. Measured here rather than
+    // written in the stylesheet because the toast is `fixed` and a sibling of
+    // the board, so nothing in CSS knows where the board ends. Set on every
+    // call, since the node is the render's and the board's foot moves with the
+    // chrome above it. The table keeps its lift, as does every screen with no
+    // board.
+    const board = isTable() ? null : this.root.querySelector(".round-screen .grid")
+    if (board) {
+      host.style.top = `${Math.round(board.getBoundingClientRect().bottom + 12)}px`
+      host.style.bottom = "auto"
+    }
     host.classList.add("show")
     clearTimeout(this.toastTimer)
     this.toastTimer = setTimeout(() => host.classList.remove("show"), TOAST)
