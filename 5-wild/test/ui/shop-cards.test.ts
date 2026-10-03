@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { ModId, RunState, ShopItem, WordSource } from "../../src/engine"
 import { CONSUMABLE_SLOTS, difficultyOf, startRun } from "../../src/engine"
-import { describeItem } from "../../src/ui/views"
+import { describeItem } from "../../src/ui/cards"
 
 const words: WordSource = { answers: ["braid"], allowed: new Set(["braid", "crane"]) }
 

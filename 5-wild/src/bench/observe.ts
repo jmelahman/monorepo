@@ -37,6 +37,7 @@ import {
   STAGES,
   solveBonusFor,
 } from "../engine"
+import { describeItem } from "../ui/cards"
 import {
   ascensionCard,
   bossCard,
@@ -50,7 +51,6 @@ import {
   roundName,
   ui,
 } from "../ui/lang"
-import { describeItem } from "../ui/views"
 import { legalCommands } from "./commands"
 
 /**
