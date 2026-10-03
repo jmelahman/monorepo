@@ -105,7 +105,6 @@ repos:
         name: biome check
         entry: bun run check
         language: bun
-        files: \.(ts|tsx|js|mjs|json|jsonc|css)$|^bun\.lock$
         pass_filenames: false
         priority: 1
       # --bun runs vitest on bun's JavaScriptCore rather than Node, which the
@@ -115,7 +114,7 @@ repos:
         name: test
         entry: bun --bun run test
         language: bun
+        files: \.(ts|tsx|js|mjs|json|jsonc|css)$|^bun\.lock$
         pass_filenames: false
-        always_run: true
         priority: 1
   # END orchard:web
