@@ -6,6 +6,11 @@ on:
       - "v*.*.*"
 
 jobs:
+  # BEGIN orchard:goreleaser
+  # Shared by Go subtrees released with GoReleaser:
+  # .config/git-orchard/shared/goreleaser in the monorepo
+  # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+  # copies it here.
   goreleaser:
     runs-on: ubuntu-latest
     environment:
@@ -13,27 +18,35 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
         with:
           go-version: stable
           cache: false
-      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # ratchet:goreleaser/goreleaser-action@v6
+      # What this subtree's build needs beyond Go, e.g. system packages.
+      - name: Set up the subtree
+        if: hashFiles('.github/ci-setup.sh') != ''
+        run: .github/ci-setup.sh
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
         with:
           distribution: goreleaser
           version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  pypi:
+  # END orchard:goreleaser
+  # BEGIN orchard:pypi
+  # Shared by Go subtrees published to PyPI as wheels:
+  # .config/git-orchard/shared/pypi in the monorepo.
+  # Every wheel builds before any is published, so a failed platform can't
+  # leave a release half-uploaded.
+  build-pypi:
     runs-on: ubuntu-latest
-    environment:
-      name: release
     permissions:
-      id-token: write
+      contents: read
     strategy:
       matrix:
         os-arch:
@@ -45,19 +58,47 @@ jobs:
           - {goos: "darwin", goarch: "arm64"}
           - {goos: "", goarch: ""}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # ratchet:actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # ratchet:actions/setup-go@v6
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
         with:
           go-version: stable
           cache: false
-      - uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # ratchet:astral-sh/setup-uv@v7
+      - name: Set up the subtree
+        if: hashFiles('.github/ci-setup.sh') != ''
+        run: .github/ci-setup.sh
+      - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a
         with:
           enable-cache: false
-      - run: |
-          GOOS="${{ matrix.os-arch.goos }}" \
-          GOARCH="${{ matrix.os-arch.goarch }}" \
-          uv build --wheel
-      - run: uv publish
+      - env:
+          MATRIX_GOOS: ${{ matrix.os-arch.goos }}
+          MATRIX_GOARCH: ${{ matrix.os-arch.goarch }}
+        run: |
+          GOOS="$MATRIX_GOOS" \
+          GOARCH="$MATRIX_GOARCH" \
+          uv build --wheel --build-constraints build-constraints.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: wheels-${{ matrix.os-arch.goos || 'any' }}-${{ matrix.os-arch.goarch || 'any' }}
+          path: dist/*.whl
+          if-no-files-found: error
+  publish-pypi:
+    needs: build-pypi
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      id-token: write
+    steps:
+      - uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a
+        with:
+          enable-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - run: uv publish dist/*
+  # END orchard:pypi
