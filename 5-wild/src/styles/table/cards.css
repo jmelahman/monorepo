@@ -26,9 +26,43 @@
 }
 
 :root.table .relic .sell,
-:root.table .consumable .drop,
-:root.table .relic-detail {
+:root.table .consumable .drop {
   font-size: 0.75rem;
+}
+
+/* The name's size and line, not a step under it. At 0.75rem beside the name's
+   0.8125 it was a 12px box against a 13.65px line, and the two only ever met
+   on the baseline: centred on a wrapped name (below) the digits sat a
+   fraction of a pixel off the capitals beside them, which reads as a mistake
+   rather than as a smaller figure. Same box, and centre and baseline agree. */
+:root.table .relic-detail {
+  font-size: 0.8125rem;
+  line-height: 1.05;
+}
+
+/* A name with a figure wraps here as a name without one does, and the figure
+   sits beside it at the middle of however many lines that came to. On a phone
+   the name is held to one line and cut, 64px of card having no second line to
+   give; the table's card has, and "Hot Str… +12" was a name shortened to make
+   room for a number with an empty line under both. Centred rather than on the
+   baseline, which is the first line's and left the figure hanging off the top
+   of a two-line name. On one line the two are the same thing, the figure's
+   box being the name's (above), so a name that fits reads as it did. A single
+   word too long for the card still cannot wrap, and still ends in the
+   ellipsis.
+   Two lines and no more: the shortest tray's card is 72px, and four words
+   beside a three-digit figure at its 84px of width ran to four lines, 55px of
+   name under a picture, and out through the card's foot. */
+:root.table .relic-line {
+  align-items: center;
+}
+
+:root.table .relic-line .relic-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
 }
 :root.table .consumable:not(.empty) {
   padding: var(--space-2) var(--space-3);

@@ -43,6 +43,13 @@
   border-radius: 0.625rem;
 }
 
+/* A boss's card is ringed in the rule's red, the phone's ring at the phone's
+   strength. A border's colour and not a ring like the phone's: the card
+   already has the border, so the red costs no height. */
+:root.table:is(.skin-classic-dark, .skin-classic-light) .round-screen .hud-head:has(.boss) {
+  border-color: color-mix(in srgb, var(--mult) 70%, transparent);
+}
+
 :root.table:is(.skin-classic-dark, .skin-classic-light) .round-screen .hud .boss {
   border-radius: 0;
 }

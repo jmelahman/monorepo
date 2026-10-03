@@ -16,6 +16,7 @@ import { playScoring } from "./fx/scenes/scoring"
 import { arrived, leaving } from "./fx/scenes/transitions"
 import { bindShake } from "./fx/shake"
 import { begin } from "./fx/timeline"
+import { hugNames, watchNames } from "./hug"
 import type { Lang } from "./lang"
 import {
   consumableNote,
@@ -391,6 +392,25 @@ export class App {
     this.bindTips()
     this.bindMouse()
     this.bindLayout()
+    this.bindFaces()
+  }
+
+  /**
+   * Measure the wrapped names again when a face lands. A fitted name holds a
+   * width in pixels, taken from the text as it was first drawn, and the looks'
+   * faces swap in whenever they finish loading, which on a cold start is after
+   * that, with no seat changing size for `watchNames` to hear about. A width
+   * measured in the fallback is too narrow for a wider face, and the name it
+   * was fitted to breaks onto a third line. No render: nothing about the
+   * screen changed but the ink.
+   *
+   * Guarded as `faces.ts` guards it: a WebView without the font-loading API
+   * has no late faces to hear about, and must not lose the rest of the setup
+   * to the asking.
+   */
+  private bindFaces(): void {
+    if (!document.fonts) return
+    document.fonts.addEventListener("loadingdone", () => hugNames(this.root))
   }
 
   /**
@@ -1838,6 +1858,9 @@ export class App {
     // render may have decided otherwise. Nothing is painted between the append
     // and this line, so an animation suppressed here never had a frame.
     this.root.firstElementChild?.classList.toggle("settled", settled)
+    // Nothing is measured here: the observer reports before the paint, so a
+    // wrapped name is never seen at the width it was offered. See `watchNames`.
+    watchNames(this.root)
     arrived(this.root, screenKind(view), was)
     // The background's mood, from the same facts the view was chosen from. The
     // boss reddens the table from its intro card on, and the reward screen after

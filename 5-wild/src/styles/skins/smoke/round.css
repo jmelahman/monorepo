@@ -218,6 +218,13 @@
   clip-path: var(--cut);
 }
 
+/* A boss's card takes the rule's red on its rim, the same mix as the line
+   over the band, so the card reads as the boss's from its top edge and not
+   only from its lower half. */
+:root.skin-smoke.table .round-screen .hud-head:has(.boss) {
+  border-color: color-mix(in srgb, var(--mult) 55%, var(--line));
+}
+
 :root.skin-smoke.table .round-screen .hud .boss {
   border: 0;
   border-top: var(--bw) solid color-mix(in srgb, var(--mult) 55%, var(--line));
