@@ -332,7 +332,7 @@ func Run(app *tview.Application, screen tcell.Screen) error {
 	handleShare := func() {
 		var result strings.Builder
 		result.WriteString("Connections\n")
-		result.WriteString(fmt.Sprintf("Puzzle #%d\n", puzzleNumber))
+		fmt.Fprintf(&result, "Puzzle #%d\n", puzzleNumber)
 		for _, row := range gameState.history {
 			result.WriteString(row)
 			result.WriteByte('\n')
@@ -471,7 +471,7 @@ func Run(app *tview.Application, screen tcell.Screen) error {
 					SetStyle(tcell.StyleDefault.Background(tcell.ColorRed).Foreground(tcell.ColorBlack.TrueColor())).
 					SetActivatedStyle(tcell.StyleDefault.Background(tcell.ColorRed).Foreground(tcell.ColorBlack.TrueColor())).
 					SetLabel("Already Guessed")
-				break;
+				break
 			}
 			gameState.wrongGuesses[row] = true
 			gameState.mistakes++
