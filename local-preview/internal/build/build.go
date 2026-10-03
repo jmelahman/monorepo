@@ -807,6 +807,12 @@ func scopeManifest(m manifest.Manifest, projectDir string) manifest.Manifest {
 		return path.Join(projectDir, p)
 	}
 	prefixExcludes := func(patterns []string) []string {
+		// nil stays nil: ArtifactsOnly compares [frontend] and [backend] to
+		// their zero values, and an empty-but-allocated Exclude would turn an
+		// artifacts-only manifest into one with a backend that has no path.
+		if patterns == nil {
+			return nil
+		}
 		out := make([]string, len(patterns))
 		for i, pattern := range patterns {
 			trailingSlash := strings.HasSuffix(pattern, "/")
