@@ -74,3 +74,48 @@ repos:
           - mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
         types: [shell]
   # END orchard:shell
+
+  # BEGIN orchard:web
+  # Shared by bun web subtrees: .config/git-orchard/shared/web in the monorepo.
+  # prek installs bun into each hook's own environment, so CI needs no
+  # setup-bun. A local hook gets only its additional_dependencies there, not
+  # the subtree's node_modules, so bun-install fills those first. It always
+  # runs, since a fresh checkout has none whatever changed, and is a no-op once
+  # they're current. The rest share a priority and run concurrently after it.
+  - repo: local
+    hooks:
+      - id: bun-install
+        name: bun install
+        entry: bun install --frozen-lockfile --silent
+        language: bun
+        pass_filenames: false
+        always_run: true
+        priority: 0
+        # And on checkout, so switching to a branch with another bun.lock
+        # leaves node_modules matching it rather than waiting for a commit.
+        stages: [pre-commit, post-checkout]
+      - id: bun-typecheck
+        name: typecheck
+        entry: bun run typecheck
+        language: bun
+        files: \.(ts|tsx|js|mjs|json)$|^bun\.lock$
+        pass_filenames: false
+        priority: 1
+      - id: bun-check
+        name: biome check
+        entry: bun run check
+        language: bun
+        files: \.(ts|tsx|js|mjs|json|jsonc|css)$|^bun\.lock$
+        pass_filenames: false
+        priority: 1
+      # --bun runs vitest on bun's JavaScriptCore rather than Node, which the
+      # golden vectors were generated under: Node rounds some floats
+      # differently (32.955000000000005 against 32.955).
+      - id: bun-test
+        name: test
+        entry: bun --bun run test
+        language: bun
+        pass_filenames: false
+        always_run: true
+        priority: 1
+  # END orchard:web

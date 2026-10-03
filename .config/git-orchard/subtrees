@@ -6,6 +6,7 @@
 	branch = master
 	shared = base
 	shared = shell
+	shared = web
 [subtree "agentic-kanban"]
 	remote = git@github.com:jmelahman/agentic-kanban.git
 	branch = master

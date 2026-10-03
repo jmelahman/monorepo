@@ -44,7 +44,7 @@ jobs:
 
       - run: bun install --frozen-lockfile
       # `bun run build` is `tsc --noEmit && vite build`, so a type error fails the
-      # deploy before anything is uploaded. Behavioural coverage is test.yml's job.
+      # deploy before anything is uploaded. Behavioural coverage is pre-commit.yml's job.
       - run: bun run build
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
