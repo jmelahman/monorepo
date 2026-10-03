@@ -39,7 +39,8 @@ setLang(lang)
 // player shown a dark page for the length of a download has seen a flash. One
 // call for the layout, the look and its tone, since which look is the default
 // depends on the layout and the tone depends on the look; applied and not
-// written, as nothing has been chosen yet.
+// written, as nothing has been chosen yet. It also sets the look's faces
+// downloading, beside the word list rather than behind it.
 initLook()
 
 // After the look, because the background follows the skin class it sets, and

@@ -15,6 +15,11 @@
  * players read and enter constantly.
  *
  * Classic needs none of these: it is the phone's own system stack.
+ *
+ * Fetched when asked for, which is still never for a player who stays out of
+ * the room: the dial asks for Jersey 20 a stop ahead and holds its tap until it
+ * is in, so the room never paints in the system face first. The list of what to
+ * ask for is `FACES` in `src/ui/faces.ts`, and a face added here belongs there.
  */
 @import "@fontsource/ibm-plex-mono/latin-500.css";
 @import "@fontsource/ibm-plex-mono/latin-ext-500.css";

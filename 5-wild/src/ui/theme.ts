@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from "@capacitor/core"
 import { StatusBar, Style } from "@capacitor/status-bar"
+import { warmSkin } from "./faces"
 import {
   currentSkin,
   loadLegacyTone,
@@ -137,6 +138,10 @@ export function initLook(): void {
   legacy = loadLegacyTone()
   watch()
   apply()
+  // The look's faces would be asked for by the first render's text, which waits
+  // on the word list; asked for here, the two downloads run side by side, and a
+  // returning Smoke or Tabletop player sees less of the system face at launch.
+  warmSkin(currentSkin())
 }
 
 /** Apply a pick and remember it. */

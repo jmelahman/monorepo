@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { FACES } from "../../src/ui/faces"
 import {
   NEXT_SKIN,
   readLegacyTone,
@@ -174,6 +175,50 @@ describe("table stylesheet split", () => {
           ).toBe(true)
         }
       }
+    }
+  })
+})
+
+/**
+ * The faces the dial waits for (`faces.ts`) against the faces the stylesheet
+ * sets. A face added to a skin's `fonts.css` and left out of `FACES` would
+ * still work, and the thrash it was written to stop would come back for that
+ * face alone, which is the kind of thing nobody sees on a fast connection.
+ */
+describe("faces", () => {
+  const skins = "src/styles/skins"
+  const strip = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, "")
+  const unquote = (name: string): string => name.trim().replace(/^"|"$/g, "")
+
+  it("names every look", () => {
+    for (const skin of SKINS) expect(FACES[skin]).toBeDefined()
+    expect(FACES["classic-dark"]).toEqual([])
+    expect(FACES["classic-light"]).toEqual([])
+  })
+
+  it("asks for each room's own face in every weight its fonts.css ships", () => {
+    for (const skin of ["smoke", "tabletop"] as const) {
+      const tokens = strip(readFileSync(`${skins}/${skin}/tokens.css`, "utf8"))
+      const fonts = strip(readFileSync(`${skins}/${skin}/fonts.css`, "utf8"))
+      const primary = unquote(/--font-body:\s*([^,;]+)/.exec(tokens)?.[1] ?? "")
+      expect(primary, `${skin} has a --font-body`).not.toBe("")
+      // Weights from `@fontsource/<family>/<subset>-<weight>.css` imports and
+      // from hand-written `@font-face` blocks for the same family.
+      const slug = primary.toLowerCase().replace(/\s+/g, "-")
+      const weights = new Set<string>([
+        ...[...fonts.matchAll(new RegExp(`@fontsource/${slug}/[a-z-]+-(\\d{3})\\.css`, "g"))].map(
+          (m) => m[1] ?? "",
+        ),
+        ...[...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)]
+          .filter((m) => unquote(/font-family:\s*([^;]+);/.exec(m[1] ?? "")?.[1] ?? "") === primary)
+          .map((m) => /font-weight:\s*(\d{3})/.exec(m[1] ?? "")?.[1] ?? "400"),
+      ])
+      expect(weights.size, `${skin} ships ${primary}`).toBeGreaterThan(0)
+      const asked = FACES[skin].map((face) => {
+        const m = /^(\d{3}) 1em (.+)$/.exec(face)
+        return `${m?.[1]} ${unquote(m?.[2] ?? "")}`
+      })
+      for (const weight of weights) expect(asked).toContain(`${weight} ${primary}`)
     }
   })
 })

@@ -5,7 +5,10 @@
  * script behind it (the Smoke Room's smoke is the one moving background in the
  * game, and `background.ts` never creates one for this skin), so it costs one
  * raster at first paint and nothing per frame, which is what lets it sit under
- * a board that is animating on a laptop with no GPU to speak of.
+ * a board that is animating on a laptop with no GPU to speak of. That raster was
+ * suspected of the dial's stutter and cleared: in headless Chromium at 4× CPU,
+ * a class flip to Tabletop settled in the same two frames (33ms) as one to
+ * Classic light, six of six, so it was not worth baking into an image.
  *
  * Top to bottom: a vignette that darkens toward the edges so the light seems to
  * come from over the board; the plank seams, a two-pixel dark line every 11rem,

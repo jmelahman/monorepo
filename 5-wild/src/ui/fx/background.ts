@@ -47,7 +47,8 @@ import { reduced } from "./motion"
  *   sixth of the desktop's, at the same 20 updates a second and with the same
  *   step-down to 10. It is a property of the look and not of the layout, so the
  *   Smoke Room on a phone has its smoke, and every other look on either layout
- *   creates no canvas, no context and no listener but the class watcher.
+ *   creates no canvas, no context and no listener but the class watcher, until
+ *   the player has visited the room once (see `sync`).
  *
  * Reduced motion gets exactly one frame and then stops, and that frame is a
  * painted picture: motion is stopped, never compressed, so there is no
@@ -427,33 +428,34 @@ function create(): void {
   kick()
 }
 
-function destroy(): void {
-  if (raf) cancelAnimationFrame(raf)
-  raf = 0
-  canvas?.remove()
-  canvas = null
-  gpu = null
-  capped = false
-  deltas.length = 0
-}
-
-/** Make the canvas match whether the look has one and it is on. */
+/**
+ * Make the canvas match whether the look has one and it is on.
+ *
+ * Created the first time the look is Smoke and kept from then on, stopped and
+ * hidden (`#smoke` in `base.css`) under every other look. It used to be removed
+ * on the way out and built again on the way back, which put a new WebGL context
+ * and a shader compile behind every pass of the dial and replayed the 600ms
+ * fade from the flat ground each time, so the room arrived in two steps. Kept,
+ * it comes back on its last frame with `.live` still on it, and `stale` has the
+ * next one drawn at once. The price is one idle context for the rest of the
+ * session, and only for a player who has looked at the room at least once.
+ */
 function sync(): void {
   if (lit()) {
     create()
-    // The canvas outlives a move between the two Smokes, so the loop has to be
-    // started or stopped to match; `kick` is idempotent.
-    kick()
-  } else {
-    destroy()
+    stale = true
   }
+  // Starts the loop under Smoke and stops it under anything else, since
+  // `running` asks the look; idempotent, so a class change that is not a change
+  // of look costs nothing.
+  kick()
 }
 
 /**
  * Begin following the look. Called once by the shell after it lands. The look
  * can change at any moment (a tap on the dial, the window moving the default),
- * so this watches the root's class rather than being told, and the canvas is
- * created and removed to match. Nothing here creates a node until the skin says
+ * so this watches the root's class rather than being told, and the loop is
+ * started and stopped to match. Nothing here creates a node until the skin says
  * it has the smoke.
  */
 export function startBackground(): void {

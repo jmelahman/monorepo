@@ -246,6 +246,13 @@ body {
   user-select: none;
 }
 
+/* The Smoke Room's canvas (`src/ui/fx/background.ts`), outside the room. It is
+   kept once made rather than rebuilt on every visit, so under any other look it
+   is still in the page, and every rule that places it is the room's own. */
+#smoke {
+  display: none;
+}
+
 button {
   font: inherit;
   color: inherit;

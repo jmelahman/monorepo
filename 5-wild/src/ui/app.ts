@@ -7,6 +7,7 @@ import { audioContext, Sound } from "./audio"
 import type { CoachStep } from "./coach"
 import { coachAsks, coachSpent, coachStep } from "./coach"
 import { clear } from "./dom"
+import { skinReady, warmSkin } from "./faces"
 import { setMood } from "./fx/background"
 import { ms, replay, setMotionSpeed } from "./fx/motion"
 import * as board from "./fx/scenes/board"
@@ -31,7 +32,7 @@ import { Music } from "./music"
 import { seal, unseal } from "./seal"
 import type { SeededOffer } from "./seed"
 import { parseSeed, readPastedLink, seedCode, seedLink } from "./seed"
-import { currentSkin, NEXT_SKIN } from "./skin"
+import { currentSkin, NEXT_SKIN, type Skin } from "./skin"
 import { loadSpeed, NEXT_SPEED, setSpeed } from "./speed"
 import { isTable, watchTable } from "./table"
 import type { Consent, RunEnd, RunLog, Step } from "./telemetry"
@@ -238,6 +239,14 @@ export class App {
    * render reads it, and two of the sheets are not named by it at all.
    */
   private sheetShown: string | null = null
+  /**
+   * The look the dial is on its way to, while it waits for that look's faces
+   * (see `skinReady`). A second tap in the wait moves on from here rather than
+   * from the look still on screen, so three quick taps are three stops, and only
+   * the last of them is applied: an earlier one landing after it would put the
+   * dial back a step under the player's thumb.
+   */
+  private pendingSkin: Skin | null = null
   /**
    * Which named sheet the last render announced, for the whoosh. Only the
    * named ones: the pack and the placing sheet are opened by a purchase that
@@ -1259,9 +1268,19 @@ export class App {
     // reads it from, so it cannot disagree with what is on screen. That is also
     // what makes the first tap right before there is a pick: the look the player
     // sees, whether they chose it or the window did, is the one this leaves.
+    //
+    // The class waits for the look's faces, so the screen goes from one look to
+    // the other in a single paint rather than through the system face; see
+    // `faces.ts` for what that used to cost and why the wait is capped.
     cycleSkin: () => {
-      setSkin(NEXT_SKIN[currentSkin()])
-      this.render()
+      const next = NEXT_SKIN[this.pendingSkin ?? currentSkin()]
+      this.pendingSkin = next
+      void skinReady(next).then(() => {
+        if (this.pendingSkin !== next) return
+        this.pendingSkin = null
+        setSkin(next)
+        this.render()
+      })
     },
     /**
      * The interface changes now; the words change at the next run.
@@ -1837,6 +1856,13 @@ export class App {
     )
     this.holdFocus(keeping)
     this.lightCoach()
+    // The dial is on the title screen and the pause sheet and nowhere else, and
+    // wherever it is, the next tap's look is one stop on. Its faces are asked for
+    // now, so the wait in `cycleSkin` is usually over before it starts; a face
+    // already in costs nothing to ask for again.
+    if ((this.atTitle && !this.loading) || this.overlay === "menu") {
+      warmSkin(NEXT_SKIN[this.pendingSkin ?? currentSkin()])
+    }
     // The pop was this render's; any after it keeps the line and not the pop.
     if (this.thanked === "fresh") this.thanked = "shown"
   }

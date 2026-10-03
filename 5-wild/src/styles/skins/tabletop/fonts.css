@@ -12,6 +12,10 @@
  * Jost is a geometric sans in the Futura line with a normal x-height, so unlike
  * the Smoke Room's pixel face it needs no `font-size-adjust`: 1rem of it stands
  * as tall as 1rem of the system face and the layout's sizes hold as drawn.
+ *
+ * The dial asks for all four weights a stop ahead and holds its tap until they
+ * are in, so the walnut never lands in the system face first; see `FACES` in
+ * `src/ui/faces.ts`, which a weight added here must join.
  */
 @import "@fontsource/jost/latin-400.css";
 @import "@fontsource/jost/latin-ext-400.css";

@@ -39,11 +39,15 @@
  * WebGL.
  *
  * It fades in on `.live`, which the script sets after the first painted frame,
- * so a slow shader compile shows the flat ground rather than black. The fade is
+ * so a slow shader compile shows the flat ground rather than black. Once: the
+ * canvas is kept across a move to another look and back, `.live` with it, so a
+ * return is a cut to the room and not the fade again. The fade is
  * a one-shot on opacity and is paced; reduced motion's blanket rule turns it
  * into an instant cut, which is the right answer there too.
  */
 :root.skin-smoke #smoke {
+  /* Over `base.css`'s `none`, which hides the kept canvas under the other looks. */
+  display: block;
   position: fixed;
   inset: 0;
   width: 100%;
