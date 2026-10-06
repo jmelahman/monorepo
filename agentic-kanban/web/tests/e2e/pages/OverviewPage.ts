@@ -23,6 +23,13 @@ export class OverviewPage {
     this.canvas = page.locator('[data-overview-canvas="true"]');
     this.emptyState = page.getByText("Click a ticket on the left to open a session panel.");
     this.newTicketModal = new NewTicketModal(page);
+    // Assigned here rather than in a field initializer: initializers run
+    // before the `page` parameter property is set, so `this.page` is undefined.
+    this.mobileSession = {
+      root: page.locator("[data-session-view]"),
+      terminal: page.locator('[data-terminal="true"]'),
+      backButton: page.getByRole("button", { name: "Close session" }),
+    };
   }
 
   // Force the Overview view on and wipe every overview localStorage key so
@@ -40,6 +47,14 @@ export class OverviewPage {
     }, STORAGE_KEYS);
     await this.page.goto("/");
     await this.waitForReady();
+  }
+
+  // Land on the link a tapped notification opens when no window exists. It
+  // starts from the board view on purpose: the link itself has to bring the
+  // overview up. No ready wait, since the page goes straight to the session.
+  async gotoTicketLink(boardId: number, ticketId: number) {
+    await this.page.addInitScript(() => localStorage.setItem("app.view", "board"));
+    await this.page.goto(`/?board=${boardId}&ticket=${ticketId}`);
   }
 
   async reload() {
@@ -95,10 +110,7 @@ export class OverviewPage {
   // The mobile drilldown renders a SessionView at the root in place of the
   // tree. Surfaced as a top-level Locator so the spec can assert on it
   // without reaching back into the desktop hierarchy.
-  readonly mobileSession = {
-    terminal: this.page.locator('[data-terminal="true"]'),
-    backButton: this.page.getByRole("button", { name: "Close session" }),
-  };
+  readonly mobileSession: { root: Locator; terminal: Locator; backButton: Locator };
 }
 
 export class Sidebar {

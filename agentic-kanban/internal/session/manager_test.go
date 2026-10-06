@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 
@@ -359,6 +360,62 @@ func TestReconcile(t *testing.T) {
 		}
 		if fresh.Status != db.SessionStatusStopped || containerOf(fresh) != "" {
 			t.Errorf("persisted session = %+v, want stopped with no container", fresh)
+		}
+	})
+
+	t.Run("dead_container_notifies_but_user_stop_does_not", func(t *testing.T) {
+		m, _, _, _, sess := newReconcileEnv(t, db.SessionStatusWorking)
+		var failed []int64
+		m.SetFailureNotifier(func(id int64) { failed = append(failed, id) })
+		m.SetContainerProbe(func(context.Context, string) (bool, error) { return false, nil })
+		if _, err := m.Reconcile(ctx, sess); err != nil {
+			t.Fatal(err)
+		}
+		if len(failed) != 1 || failed[0] != sess.ID {
+			t.Fatalf("after reconcile, notified = %v, want [%d]", failed, sess.ID)
+		}
+		if err := m.Stop(ctx, sess.ID); err != nil {
+			t.Fatal(err)
+		}
+		if len(failed) != 1 {
+			t.Errorf("user stop notified: %v", failed)
+		}
+	})
+
+	// Stop removes the container before it updates the row, so a Reconcile
+	// racing a user's stop sees a "dead" container. It must not call that a
+	// crash, whether the stop is still running or has already finished.
+	t.Run("user_stop_is_not_reported_as_a_failure", func(t *testing.T) {
+		m, _, _, _, sess := newReconcileEnv(t, db.SessionStatusWorking)
+		var failed []int64
+		m.SetFailureNotifier(func(id int64) { failed = append(failed, id) })
+		m.SetContainerProbe(func(context.Context, string) (bool, error) { return false, nil })
+
+		inFlight := new(atomic.Int32)
+		inFlight.Add(1)
+		m.userStops.Store(sess.ID, inFlight)
+		got, err := m.Reconcile(ctx, sess)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(failed) != 0 || got.Status != db.SessionStatusWorking {
+			t.Fatalf("mid-stop reconcile: notified = %v, status = %q; want it left to the stop", failed, got.Status)
+		}
+		inFlight.Add(-1)
+
+		stale := *sess
+		if err := m.Stop(ctx, sess.ID); err != nil {
+			t.Fatal(err)
+		}
+		got, err = m.Reconcile(ctx, &stale)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(failed) != 0 {
+			t.Errorf("reconcile of a stale row after a user stop notified: %v", failed)
+		}
+		if got.Status != db.SessionStatusStopped {
+			t.Errorf("status = %q, want the fresh stopped row", got.Status)
 		}
 	})
 

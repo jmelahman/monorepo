@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jmelahman/kanban/internal/db"
@@ -36,6 +38,17 @@ type Manager struct {
 	// $KANBAN_PTY_ID marker. Defaults to running endPTYScript in the
 	// container; tests swap in a stub.
 	endPTY func(ctx context.Context, containerID, marker string) error
+
+	// onFailure is told when a session fails to start or its container dies
+	// underneath it. Nil when nothing is listening.
+	onFailure func(sessionID int64)
+
+	// userStops counts in-flight user-initiated Stops per session, so a
+	// Reconcile that sees the container vanish mid-stop doesn't report it as
+	// a crash. reconciling makes concurrent Reconciles of one dead session
+	// report it once.
+	userStops   sync.Map // session id -> *atomic.Int32
+	reconciling sync.Map // session id -> struct{}
 }
 
 func NewManager(store *db.Store, dc *docker.Client, h *hooks.Runner) *Manager {
@@ -57,6 +70,19 @@ func NewManager(store *db.Store, dc *docker.Client, h *hooks.Runner) *Manager {
 // container is still running. Pass nil to disable the check.
 func (m *Manager) SetContainerProbe(probe func(ctx context.Context, containerID string) (bool, error)) {
 	m.containerRunning = probe
+}
+
+// SetFailureNotifier registers fn to be called when a session ends up
+// unusable without the user asking for it: a failed start, or a container
+// Reconcile finds dead. A user-initiated Stop does not call it.
+func (m *Manager) SetFailureNotifier(fn func(sessionID int64)) { m.onFailure = fn }
+
+// failed records a start failure on the row and tells the notifier.
+func (m *Manager) failed(ctx context.Context, sessionID int64) {
+	_ = m.store.UpdateSessionStatus(ctx, sessionID, db.SessionStatusError)
+	if m.onFailure != nil {
+		m.onFailure(sessionID)
+	}
 }
 
 // SetAPIBase configures the URL session containers should use to call back
@@ -203,7 +229,7 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 	// can be edited (or the subproject deleted on a branch) between the
 	// session row being created and the container being built.
 	if err := checkProjectRoot(board, paths, sess.WorktreePath); err != nil {
-		_ = m.store.UpdateSessionStatus(ctx, sess.ID, db.SessionStatusError)
+		m.failed(ctx, sess.ID)
 		return nil, err
 	}
 	projectRoot := paths.ProjectRoot(sess.WorktreePath)
@@ -213,7 +239,7 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 	// probes each path once.
 	cfg, err := docker.LoadDevcontainerFrom(projectRoot, sess.WorktreePath)
 	if err != nil {
-		_ = m.store.UpdateSessionStatus(ctx, sess.ID, db.SessionStatusError)
+		m.failed(ctx, sess.ID)
 		return nil, err
 	}
 	applyKanbanDevcontainerOverrides(cfg, kanbantoml.LoadFrom(sess.WorktreePath, projectRoot).Devcontainer, m.claudeConfigOverride)
@@ -274,7 +300,7 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 		OnPullProgress: onPullProgress,
 	})
 	if err != nil {
-		_ = m.store.UpdateSessionStatus(ctx, sess.ID, db.SessionStatusError)
+		m.failed(ctx, sess.ID)
 		return nil, err
 	}
 
@@ -432,11 +458,38 @@ func (m *Manager) Reconcile(ctx context.Context, sess *db.Session) (*db.Session,
 	if running {
 		return sess, nil
 	}
-	log.Printf("session %d: container %s is no longer running; marking the session stopped", sess.ID, *sess.ContainerID)
-	if err := m.Stop(ctx, sess.ID); err != nil {
+	// The caller's row may be stale. Stop removes the container before it
+	// updates the row, so a session the user is stopping (or has just
+	// stopped) looks exactly like a crashed one from here. Leave those to
+	// the Stop that owns them, and never report them as failures.
+	// See REGRESSIONS.md: "Status hooks repeat, so push notifications key off the transition".
+	fresh, err := m.store.GetSession(ctx, sess.ID)
+	if err != nil {
 		return nil, err
 	}
+	if fresh.ContainerID == nil || *fresh.ContainerID != *sess.ContainerID {
+		return fresh, nil
+	}
+	if _, busy := m.reconciling.LoadOrStore(sess.ID, struct{}{}); busy || m.userStopping(sess.ID) {
+		if !busy {
+			m.reconciling.Delete(sess.ID)
+		}
+		return fresh, nil
+	}
+	defer m.reconciling.Delete(sess.ID)
+	log.Printf("session %d: container %s is no longer running; marking the session stopped", sess.ID, *sess.ContainerID)
+	if err := m.stop(ctx, sess.ID); err != nil {
+		return nil, err
+	}
+	if m.onFailure != nil {
+		m.onFailure(sess.ID)
+	}
 	return m.store.GetSession(ctx, sess.ID)
+}
+
+func (m *Manager) userStopping(sessionID int64) bool {
+	n, ok := m.userStops.Load(sessionID)
+	return ok && n.(*atomic.Int32).Load() > 0
 }
 
 // endPTYTimeout bounds how long a harness switch waits for the old agent to
@@ -512,6 +565,14 @@ func (m *Manager) execEndPTY(ctx context.Context, containerID, marker string) er
 
 // Stop tears down the devcontainer; worktree is preserved.
 func (m *Manager) Stop(ctx context.Context, sessionID int64) error {
+	n, _ := m.userStops.LoadOrStore(sessionID, new(atomic.Int32))
+	n.(*atomic.Int32).Add(1)
+	defer n.(*atomic.Int32).Add(-1)
+	return m.stop(ctx, sessionID)
+}
+
+// stop is Stop without the user-initiated marker, for Reconcile.
+func (m *Manager) stop(ctx context.Context, sessionID int64) error {
 	sess, err := m.store.GetSession(ctx, sessionID)
 	if err != nil {
 		return err

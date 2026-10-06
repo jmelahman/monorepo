@@ -32,6 +32,11 @@ func Handler() http.Handler {
 			fileServer.ServeHTTP(w, r2)
 			return
 		}
+		// Go's extension table doesn't reliably know .webmanifest (it depends
+		// on the host's mime.types), and sniffing would call it text/plain.
+		if strings.HasSuffix(r.URL.Path, ".webmanifest") {
+			w.Header().Set("Content-Type", "application/manifest+json")
+		}
 		fileServer.ServeHTTP(w, r)
 	})
 }

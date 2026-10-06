@@ -116,6 +116,27 @@ CREATE TABLE IF NOT EXISTS hook_configs (
   enabled INTEGER NOT NULL DEFAULT 1
 );
 
+-- One row per browser/device that opted into Web Push. endpoint is the push
+-- service URL the browser handed out; p256dh/auth are that subscription's
+-- public encryption keys. events is the comma-separated set of notification
+-- kinds this device wants (see internal/push).
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint TEXT PRIMARY KEY,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  events TEXT NOT NULL DEFAULT '',
+  user_agent TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+
+-- The server's VAPID keypair, generated on first use. Single row: rotating
+-- it would invalidate every existing subscription.
+CREATE TABLE IF NOT EXISTS push_vapid (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  private_key TEXT NOT NULL,
+  public_key TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_tickets_column_pos
   ON tickets(column_id, position) WHERE archived_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_tickets_board_archived

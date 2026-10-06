@@ -300,6 +300,10 @@ export function formatApiError(err: unknown): string {
   return String(err);
 }
 
+// Notification kinds a device can opt into (internal/push Events).
+export const PUSH_EVENTS = ["awaiting_perm", "finished", "error"] as const;
+export type PushEvent = (typeof PUSH_EVENTS)[number];
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // Count the request as in-flight for the developer toolbar. finally covers
   // every exit (network reject, !ok throw, 204, JSON body) so the gauge can't
@@ -510,6 +514,22 @@ export const api = {
   },
 
   getVersion: () => request<Version>("/api/version"),
+
+  // Web Push. The subscription body is PushSubscription.toJSON() plus the
+  // notification kinds this device wants; see internal/api/push.go.
+  getVapidKey: () => request<{ public_key: string }>("/api/push/vapid-key"),
+  putPushSubscription: (sub: PushSubscriptionJSON, events: PushEvent[]) =>
+    request<{ endpoint: string; events: PushEvent[] }>("/api/push/subscription", {
+      method: "PUT",
+      body: JSON.stringify({ ...sub, events }),
+    }),
+  deletePushSubscription: (endpoint: string) =>
+    request<void>("/api/push/subscription", {
+      method: "DELETE",
+      body: JSON.stringify({ endpoint }),
+    }),
+  testPush: (endpoint: string) =>
+    request<void>("/api/push/test", { method: "POST", body: JSON.stringify({ endpoint }) }),
 
   // Reads the merged config surface (GET /api/config). scope defaults to
   // "effective" (project file + user file merged). Entries are the registered

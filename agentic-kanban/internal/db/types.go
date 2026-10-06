@@ -130,3 +130,14 @@ const (
 	TaskRunStatusExited  = "exited"
 	TaskRunStatusStopped = "stopped"
 )
+
+// PushSubscription is one browser's Web Push subscription. Events is the set
+// of notification kinds the device opted into.
+type PushSubscription struct {
+	Endpoint  string   `json:"endpoint"`
+	P256dh    string   `json:"-"`
+	Auth      string   `json:"-"`
+	Events    []string `json:"events"`
+	UserAgent string   `json:"-"`
+	CreatedAt int64    `json:"created_at"`
+}

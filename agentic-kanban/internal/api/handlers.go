@@ -27,6 +27,7 @@ import (
 	"github.com/jmelahman/kanban/internal/hooks"
 	"github.com/jmelahman/kanban/internal/kanbantoml"
 	"github.com/jmelahman/kanban/internal/previews"
+	"github.com/jmelahman/kanban/internal/push"
 	"github.com/jmelahman/kanban/internal/session"
 	"github.com/jmelahman/kanban/internal/slug"
 	"github.com/jmelahman/kanban/internal/tasks"
@@ -43,6 +44,7 @@ type handlers struct {
 	build    BuildInfo
 	reporter *errreport.Reporter
 	previews *orchestrator.Orchestrator
+	push     *push.Service
 }
 
 func (h *handlers) health(w http.ResponseWriter, r *http.Request) {
@@ -1048,6 +1050,22 @@ func (h *handlers) updateSessionStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.publishSessionUpdated(r.Context(), sess.ID)
+	// sess is the row from before the update, so these fire on a
+	// transition: hooks re-report the same status freely and must not
+	// re-notify. Claude's Notification hook also reports awaiting_perm when
+	// a finished agent has sat idle for a minute, which would follow every
+	// "finished" with a bogus permission alert, so idle → awaiting_perm
+	// stays quiet. A turn that paused for a permission prompt can still be
+	// awaiting_perm when it ends (worktrees without the PostToolUse hook
+	// never go back to working), so that counts as finishing too.
+	// See REGRESSIONS.md: "Status hooks repeat, so push notifications key off the transition".
+	switch {
+	case req.Status == db.SessionStatusAwaitingPerm && sess.Status == db.SessionStatusWorking:
+		h.push.NotifySession(sess.ID, push.EventAwaitingPerm)
+	case req.Status == db.SessionStatusIdle &&
+		(sess.Status == db.SessionStatusWorking || sess.Status == db.SessionStatusAwaitingPerm):
+		h.push.NotifySession(sess.ID, push.EventFinished)
+	}
 	if t, _ := h.store.GetTicket(r.Context(), sess.TicketID); t != nil {
 		boardID := t.BoardID
 		h.hooks.Fire(&boardID, hookEvent, map[string]string{

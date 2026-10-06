@@ -38,6 +38,46 @@ inline canvas size only from `term.resize()` (which `fitToHost` owns) and font
 changes (we never do at runtime), so re-applying the stretch inside `fitToHost`
 is enough; if a package bump starts resetting it elsewhere, re-apply there too.
 
+### Soft keyboard covers the terminal
+
+`height: 100%` and `fixed inset-0` follow the *layout* viewport. On iOS
+Safari (and Android browsers that ignore `interactive-widget=resizes-content`)
+the soft keyboard only shrinks the *visual* viewport, so anything sized that
+way keeps its full height and the keyboard hides its bottom — for the agent
+terminal that is the prompt and the permission dialogs. `useVisualViewportHeight`
+publishes the visual viewport height as `--app-height`; `#root` and the
+`SessionPane` overlay size to it, and `PtyTerminal`'s ResizeObserver refits
+the grid so the TUI redraws above the keyboard. New full-screen surfaces that
+can hold a focused input must use `--app-height` (top-anchored, explicit
+height), never `inset-0`/`h-screen`/`100vh`. Headless Chromium has no soft
+keyboard: `mobile-keyboard.spec.ts` fakes `visualViewport`, so changes here
+still need a check on a real phone.
+
+### Status hooks repeat, so push notifications key off the transition
+
+The agent hooks `PATCH /api/sessions/{id}/status` more often than the
+status changes: `working` on every prompt and after every tool call, `idle`
+on every stop, and Claude's `Notification` hook reports `awaiting_perm` both
+for a real permission prompt *and* when a finished agent has sat idle for a
+minute. Sending a Web Push per report buzzes the phone constantly, and the
+idle reminder follows every "finished" with a bogus "waiting for permission".
+`updateSessionStatus` therefore compares against the row it read *before* the
+update: `working → awaiting_perm` is a prompt, and `working → idle` or
+`awaiting_perm → idle` is a finish.
+
+The second finish case matters. Nothing reports `working` when the user
+approves a prompt; only the `PostToolUse` hook does, once the tool has run,
+and worktrees whose `settings.local.json` predates that hook (or is
+hand-written) never send it. Gating "finished" on `working` alone silently
+drops it for every turn that needed a permission. A test that inserts its
+own `working` report between the prompt and the stop hides this.
+
+Likewise the manager's failure notifier fires from failed starts and from
+`Reconcile` finding a dead container, never from `Stop` itself, and
+`Reconcile` stays quiet while a user's `Stop` for that session is in flight
+(the container is removed before the row is updated). New triggers must
+compare against the previous status rather than react to the reported one.
+
 ### `sessions` row has multiple writers
 
 Two independent paths write to the `sessions` row: the session manager
@@ -299,3 +339,16 @@ Rule: every package whose tests run git (directly, or through the server
 under test) calls `gittest.IsolateEnv()` first in its `TestMain`. Tests that
 commit set their own identity on the repo or with `-c`, never through the
 global config.
+
+### Proxying `/ws` must preserve `Host`
+
+The PTY and shell WebSockets only upgrade when `Origin` matches `Host`
+(`session.CheckSameOrigin`), which is what keeps another site's page from
+opening a shell in a session container. A reverse proxy that rewrites `Host`
+to the upstream's address (the default for `httputil.ReverseProxy.SetURL` and
+for nginx `proxy_pass`) makes every terminal fail with a 403 while the rest
+of the UI, which is plain same-origin HTTP, keeps working.
+
+Rule: anything proxying to kanban forwards the browser's `Host` unchanged.
+`kanban web` does this in `newWebHandler`. Never fix a rejected upgrade by
+loosening `CheckSameOrigin`.

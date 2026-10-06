@@ -134,10 +134,13 @@ function DialogShell({
 
   if (!open) return null;
 
+  // Top-anchored with the app's visible height rather than `inset-0`, so the
+  // dialog and its buttons stay above the mobile soft keyboard.
+  // See REGRESSIONS.md: "Soft keyboard covers the terminal".
   const layoutClass =
     flavor === "modal"
-      ? "fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4 outline-none"
-      : "fixed inset-0 z-(--z-overlay) flex outline-none";
+      ? "fixed inset-x-0 top-0 z-(--z-overlay) flex h-(--app-height,100%) items-center justify-center p-4 outline-none"
+      : "fixed inset-x-0 top-0 z-(--z-overlay) flex h-(--app-height,100%) outline-none";
   const backdrop =
     flavor === "modal" ? (
       <button

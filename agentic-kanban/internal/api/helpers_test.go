@@ -24,6 +24,7 @@ import (
 	"github.com/jmelahman/kanban/internal/docker"
 	"github.com/jmelahman/kanban/internal/hooks"
 	previewsvc "github.com/jmelahman/kanban/internal/previews"
+	"github.com/jmelahman/kanban/internal/push"
 	"github.com/jmelahman/kanban/internal/secrets"
 	"github.com/jmelahman/kanban/internal/session"
 )
@@ -119,9 +120,14 @@ func newEnv(t *testing.T) *testEnv {
 	}
 	t.Cleanup(func() { previewOrch.Close() })
 
+	// The default push client refuses non-public addresses, and the fake push
+	// service in these tests lives on loopback.
+	pushSvc := push.New(store)
+	pushSvc.SetHTTPClient(http.DefaultClient)
+
 	handler := api.NewMux(api.Deps{
 		Store: store, Docker: dockerCli, Sessions: sessionMgr, Hooks: hookRunner, Config: cfg,
-		Previews: previewOrch,
+		Previews: previewOrch, Push: pushSvc,
 	})
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)

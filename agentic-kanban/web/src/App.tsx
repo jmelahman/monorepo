@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/keys";
-import { activeTicketStore } from "@/store";
+import { activeTicketStore, openTicketRequestStore, useScalarStore } from "@/store";
 import { AppSettings } from "@/components/AppSettings";
 import { ArchivedDrawer } from "@/components/ArchivedDrawer";
 import { Board } from "@/components/Board";
@@ -23,6 +23,7 @@ import { useContrast } from "@/hooks/useContrast";
 import { useDevToolbarEnabled } from "@/hooks/useDevToolbarEnabled";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useThemeMode } from "@/hooks/useThemeMode";
+import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import { ArchiveIcon, CogIcon, HelpIcon, MenuIcon, PlusIcon } from "@/icons";
 import { useShortcut } from "@/keys/useShortcut";
 import { readActiveBoardId, writeActiveBoardId } from "@/storage";
@@ -49,6 +50,7 @@ export default function App() {
   useThemeMode();
   useContrast();
   useAccent();
+  useVisualViewportHeight();
   const qc = useQueryClient();
   const boardsQ = useQuery({
     queryKey: queryKeys.boards,
@@ -129,6 +131,14 @@ export default function App() {
       // ignore
     }
   }, [view]);
+
+  // A tapped notification (or its cold-start deep link) asks for a ticket;
+  // the overview can show any board's session, so route there and let it
+  // consume the request.
+  const openTicketRequest = useScalarStore(openTicketRequestStore);
+  useEffect(() => {
+    if (openTicketRequest) setView("overview");
+  }, [openTicketRequest]);
 
   const cycleBoard = (delta: 1 | -1) => {
     const boards = boardsQ.data;

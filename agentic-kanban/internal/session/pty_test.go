@@ -31,8 +31,8 @@ func TestCheckSameOrigin(t *testing.T) {
 			if tc.origin != "" {
 				r.Header.Set("Origin", tc.origin)
 			}
-			if got := checkSameOrigin(r); got != tc.want {
-				t.Fatalf("checkSameOrigin(origin=%q host=%q) = %v, want %v", tc.origin, tc.host, got, tc.want)
+			if got := CheckSameOrigin(r); got != tc.want {
+				t.Fatalf("CheckSameOrigin(origin=%q host=%q) = %v, want %v", tc.origin, tc.host, got, tc.want)
 			}
 		})
 	}

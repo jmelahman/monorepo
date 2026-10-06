@@ -248,11 +248,15 @@ sqlite3 "$KANBAN_DATA_DIR/kanban.db" \
   "UPDATE sessions SET claude_session_id = NULL WHERE id = <session_id>"
 ```
 
-Resume relies on a hook in `.claude/settings.local.json`, which kanban writes into the worktree. Kanban won't overwrite an existing file, so if your repo already has one, resume is off. Delete the file and restart the session to turn it on. Only Claude Code supports resume. Other harnesses start fresh each time.
+Resume relies on a hook in `.claude/settings.local.json`, which kanban writes into the worktree. Kanban won't overwrite a file it didn't write, so if your repo already has one, resume is off. Delete the file and restart the session to turn it on. A file that an older kanban generated is updated when the session next starts. Only Claude Code supports resume. Other harnesses start fresh each time.
 
 ## Preview URLs
 
 When kanban is behind a TLS-terminating reverse proxy, set `KANBAN_PREVIEW_BASE_URL` to the public preview URL base (for example, `https://preview.example.com`) so deployment links use the public scheme and port. See the [Previews guide](/guide/previews#settings) for the other preview settings.
+
+## Serving the UI from another machine
+
+`kanban web` serves the UI and forwards everything else to a kanban server elsewhere. Set `KANBAN_BACKEND_URL` (or pass `--backend`) to that server's base URL, for example `http://devbox:7474`. See [UI on a different machine](/guide/mobile#ui-on-a-different-machine).
 
 ## Running kanban inside a container
 

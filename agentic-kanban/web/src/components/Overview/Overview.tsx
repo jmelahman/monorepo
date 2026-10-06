@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/api/keys";
-import { fetchBoardStructure } from "@/store";
+import { fetchBoardStructure, openTicketRequestStore, useScalarStore } from "@/store";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { SessionView } from "@/components/SessionView";
 import { BoardTree } from "./BoardTree";
@@ -46,6 +46,15 @@ function DesktopOverview() {
   const onOpenTicket = useCallback((boardId: number, ticketId: number) => {
     handleRef.current?.open(boardId, ticketId);
   }, []);
+
+  // PanelCanvas registers its handle in an effect, and child effects run
+  // before this one, so the handle is set by the time a request is seen.
+  const openRequest = useScalarStore(openTicketRequestStore);
+  useEffect(() => {
+    if (!openRequest || !handleRef.current) return;
+    handleRef.current.open(openRequest.boardId, openRequest.ticketId);
+    openTicketRequestStore.set(null);
+  }, [openRequest]);
 
   const [openTicketIds, setOpenTicketIds] = useState<ReadonlySet<number>>(() => new Set());
 
@@ -157,6 +166,12 @@ type MobileTicket = { boardId: number; ticketId: number };
 
 function MobileOverview() {
   const [active, setActive] = useState<MobileTicket | null>(null);
+  const openRequest = useScalarStore(openTicketRequestStore);
+  useEffect(() => {
+    if (!openRequest) return;
+    setActive(openRequest);
+    openTicketRequestStore.set(null);
+  }, [openRequest]);
   const openIds = active ? new Set([active.ticketId]) : new Set<number>();
 
   if (active) {

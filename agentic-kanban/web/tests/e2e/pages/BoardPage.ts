@@ -22,6 +22,10 @@ export class BoardPage {
     await this.page.reload();
   }
 
+  async setViewport(w: number, h: number) {
+    await this.page.setViewportSize({ width: w, height: h });
+  }
+
   ticketCard(title: string): TicketCard {
     return new TicketCard(this.page, title);
   }
@@ -50,9 +54,11 @@ export class TicketCard {
 }
 
 export class SessionPane {
+  readonly root: Locator;
   readonly terminal: Locator;
 
   constructor(private readonly page: Page) {
+    this.root = page.locator("[data-session-pane]");
     this.terminal = page.locator('[data-terminal="true"]');
   }
 

@@ -135,6 +135,8 @@ func Root() *cobra.Command {
 	mcpCmd.Flags().StringVar(&mcpServerURL, "server", "http://localhost:7474", "Base URL of the kanban HTTP server")
 	cmd.AddCommand(mcpCmd)
 
+	cmd.AddCommand(newWebCmd())
+
 	addClientCommands(cmd)
 
 	return cmd

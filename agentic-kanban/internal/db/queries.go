@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -850,6 +851,87 @@ func (s *Store) ListHooks(ctx context.Context, boardID *int64, event string) ([]
 		hooks = append(hooks, h)
 	}
 	return hooks, rows.Err()
+}
+
+// UpsertPushSubscription stores a subscription, replacing the keys and event
+// set of an existing row for the same endpoint.
+func (s *Store) UpsertPushSubscription(ctx context.Context, sub PushSubscription) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO push_subscriptions (endpoint, p256dh, auth, events, user_agent, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(endpoint) DO UPDATE SET
+           p256dh=excluded.p256dh, auth=excluded.auth,
+           events=excluded.events, user_agent=excluded.user_agent`,
+		sub.Endpoint, sub.P256dh, sub.Auth, strings.Join(sub.Events, ","), sub.UserAgent, time.Now().Unix(),
+	)
+	return err
+}
+
+func (s *Store) GetPushSubscription(ctx context.Context, endpoint string) (*PushSubscription, error) {
+	row := s.db.QueryRowContext(ctx,
+		`SELECT endpoint, p256dh, auth, events, user_agent, created_at
+         FROM push_subscriptions WHERE endpoint=?`, endpoint)
+	sub, err := scanPushSubscription(row)
+	if err != nil {
+		return nil, err
+	}
+	return &sub, nil
+}
+
+func (s *Store) ListPushSubscriptions(ctx context.Context) ([]PushSubscription, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT endpoint, p256dh, auth, events, user_agent, created_at
+         FROM push_subscriptions ORDER BY created_at, endpoint`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	subs := []PushSubscription{}
+	for rows.Next() {
+		sub, err := scanPushSubscription(rows)
+		if err != nil {
+			return nil, err
+		}
+		subs = append(subs, sub)
+	}
+	return subs, rows.Err()
+}
+
+// DeletePushSubscription removes a subscription. Deleting an endpoint that
+// isn't stored is not an error: unsubscribing is idempotent.
+func (s *Store) DeletePushSubscription(ctx context.Context, endpoint string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM push_subscriptions WHERE endpoint=?`, endpoint)
+	return err
+}
+
+func scanPushSubscription(sc scanner) (PushSubscription, error) {
+	var sub PushSubscription
+	var events string
+	if err := sc.Scan(&sub.Endpoint, &sub.P256dh, &sub.Auth, &events, &sub.UserAgent, &sub.CreatedAt); err != nil {
+		return sub, err
+	}
+	sub.Events = []string{}
+	if events != "" {
+		sub.Events = strings.Split(events, ",")
+	}
+	return sub, nil
+}
+
+// VAPIDKeys returns the server's stored VAPID keypair, or sql.ErrNoRows when
+// none has been generated yet.
+func (s *Store) VAPIDKeys(ctx context.Context) (privateKey, publicKey string, err error) {
+	err = s.db.QueryRowContext(ctx, `SELECT private_key, public_key FROM push_vapid WHERE id=1`).
+		Scan(&privateKey, &publicKey)
+	return privateKey, publicKey, err
+}
+
+// SetVAPIDKeysIfUnset stores the keypair unless one already exists, so two
+// racing first uses can't each hand out a different public key.
+func (s *Store) SetVAPIDKeysIfUnset(ctx context.Context, privateKey, publicKey string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO push_vapid (id, private_key, public_key) VALUES (1, ?, ?)
+         ON CONFLICT(id) DO NOTHING`, privateKey, publicKey)
+	return err
 }
 
 // scanner is the common surface of *sql.Row and *sql.Rows, letting the

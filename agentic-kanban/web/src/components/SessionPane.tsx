@@ -143,8 +143,12 @@ export function SessionPane({
   if (ticketId == null) return null;
 
   const overlay = fullscreen || isMobile;
+  // Top-anchored with an explicit height rather than `inset-0`: on iOS a fixed
+  // box's bottom edge follows the layout viewport, which the soft keyboard
+  // doesn't shrink, so `bottom: 0` would sit underneath the keyboard.
+  // See REGRESSIONS.md: "Soft keyboard covers the terminal".
   const paneClass = overlay
-    ? "fixed inset-0 z-(--z-overlay) flex flex-col bg-bg"
+    ? "fixed inset-x-0 top-0 z-(--z-overlay) box-border flex h-(--app-height,100%) flex-col bg-bg pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
     : isHorizontal
       ? "relative flex flex-col border-t border-border bg-bg"
       : "relative flex flex-col border-l border-border bg-bg";
@@ -155,7 +159,7 @@ export function SessionPane({
       : { width: `${width}px`, flex: `0 0 ${width}px` };
 
   return (
-    <aside className={paneClass} style={paneStyle}>
+    <aside data-session-pane className={paneClass} style={paneStyle}>
       {!overlay && (
         // biome-ignore lint/a11y/useSemanticElements: HTML has no semantic resizer; role="separator" is the canonical ARIA pattern.
         <div

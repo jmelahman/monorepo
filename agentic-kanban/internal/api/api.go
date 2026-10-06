@@ -11,6 +11,7 @@ import (
 	"github.com/jmelahman/kanban/internal/errreport"
 	"github.com/jmelahman/kanban/internal/hooks"
 	"github.com/jmelahman/kanban/internal/metrics"
+	"github.com/jmelahman/kanban/internal/push"
 	"github.com/jmelahman/kanban/internal/session"
 	"github.com/jmelahman/kanban/internal/tasks"
 	"github.com/jmelahman/kanban/web"
@@ -34,6 +35,8 @@ type Deps struct {
 	// Previews is the embedded local-preview orchestrator; nil when it
 	// failed to start (endpoints report unavailable).
 	Previews *orchestrator.Orchestrator
+	// Push sends Web Push notifications; nil builds one over Store.
+	Push *push.Service
 }
 
 // NewMux assembles the HTTP routes and embedded frontend.
@@ -46,7 +49,18 @@ func NewMux(d Deps) http.Handler {
 		bus = NewEventBus()
 	}
 
+	pushSvc := d.Push
+	if pushSvc == nil {
+		pushSvc = push.New(d.Store)
+	}
+	if d.Sessions != nil {
+		d.Sessions.SetFailureNotifier(func(sessionID int64) {
+			pushSvc.NotifySession(sessionID, push.EventError)
+		})
+	}
+
 	h := &handlers{
+		push:     pushSvc,
 		store:    d.Store,
 		docker:   d.Docker,
 		sessions: d.Sessions,
@@ -135,6 +149,11 @@ func NewMux(d Deps) http.Handler {
 
 	mux.HandleFunc("/ws/sessions/{id}/pty", h.wsPTY)
 	mux.HandleFunc("/ws/sessions/{id}/shell", h.wsShell)
+
+	mux.HandleFunc("GET /api/push/vapid-key", h.pushVAPIDKey)
+	mux.HandleFunc("PUT /api/push/subscription", h.putPushSubscription)
+	mux.HandleFunc("DELETE /api/push/subscription", h.deletePushSubscription)
+	mux.HandleFunc("POST /api/push/test", h.testPush)
 
 	mux.HandleFunc("POST /api/errors", h.reportFrontendError)
 

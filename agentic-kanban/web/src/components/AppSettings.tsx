@@ -17,6 +17,7 @@ import { Button } from "./Button";
 import { FormField, FormInput } from "./FormField";
 import { KeybindingsSettings } from "./KeybindingsSettings";
 import { Modal } from "./Modal";
+import { NotificationSettings } from "./NotificationSettings";
 import { Tab } from "./Tab";
 
 const ACCENT_LABELS: Record<Accent, string> = {
@@ -31,7 +32,7 @@ const ACCENT_LABELS: Record<Accent, string> = {
   pink: "Pink",
 };
 
-type SettingsTab = "general" | "appearance" | "shortcuts" | "developer";
+type SettingsTab = "general" | "appearance" | "notifications" | "shortcuts" | "developer";
 
 export function AppSettings({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
@@ -127,6 +128,11 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
           active={tab === "appearance"}
           onClick={() => setTab("appearance")}
           label="appearance"
+        />
+        <Tab
+          active={tab === "notifications"}
+          onClick={() => setTab("notifications")}
+          label="notifications"
         />
         <Tab active={tab === "shortcuts"} onClick={() => setTab("shortcuts")} label="shortcuts" />
         {devToolbarEnabled && (
@@ -239,6 +245,7 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
             </div>
           </fieldset>
         )}
+        {tab === "notifications" && <NotificationSettings />}
         {tab === "shortcuts" && <KeybindingsSettings />}
         {tab === "developer" && devToolbarEnabled && (
           <fieldset className="flex flex-col gap-2">

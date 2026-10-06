@@ -94,7 +94,11 @@ export function PtyTerminal({ sessionId, kind, mountTarget }: Props) {
         if (!m?.width || !m.height) return;
         const cols = Math.max(1, Math.floor(host.clientWidth / m.width));
         const rows = Math.max(1, Math.floor(host.clientHeight / m.height));
+        const shrunk = rows < term.rows;
         if (cols !== term.cols || rows !== term.rows) term.resize(cols, rows);
+        // Losing rows (the mobile soft keyboard opening) must leave the live
+        // prompt in view, not strand the viewport up in scrollback.
+        if (shrunk) term.scrollToBottom();
         const canvas = host.querySelector("canvas");
         if (canvas) {
           canvas.style.width = "100%";

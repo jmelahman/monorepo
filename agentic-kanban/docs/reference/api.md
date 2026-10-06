@@ -196,6 +196,42 @@ A deploy has a `status` (`queued`, `building`, `ready`, `failed`, or `evicted`) 
 | `PUT /api/previews/retention`                     | Updates the limits. They're applied at the next hourly cleanup. |
 | `POST /api/previews/gc`                           | Runs cleanup now. Returns what was removed and `freed_bytes`. |
 
+## Push notifications
+
+See [Mobile](/guide/mobile#notifications). A subscription is one browser's registration with its push service, identified by its `endpoint` URL.
+
+### `GET /api/push/vapid-key`
+
+Returns `{ "public_key": "<base64url>" }`, the key a browser passes to `pushManager.subscribe` as `applicationServerKey`. The server generates the key pair on first use and keeps it in its database.
+
+### `PUT /api/push/subscription`
+
+Saves a subscription, or replaces the one with the same `endpoint`. The body is the browser's `PushSubscription.toJSON()` plus the events to notify for:
+
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": { "p256dh": "...", "auth": "..." },
+  "events": ["awaiting_perm", "finished", "error"]
+}
+```
+
+`endpoint` must be an `https` URL of at most 2048 characters, and `keys` must be the browser's own subscription keys. `events` can contain `awaiting_perm`, `finished`, and `error`. Returns `{ "endpoint", "events" }`.
+
+The server keeps at most 50 subscriptions. A new one past that returns `409`; updating an existing one still works.
+
+When sending, the server only connects to public addresses and doesn't follow redirects, so an endpoint that points into the server's own network is never contacted.
+
+### `DELETE /api/push/subscription`
+
+Removes a subscription. Body: `{ "endpoint": "<url>" }`. Returns `204`, also when the subscription doesn't exist.
+
+The server also removes a subscription when its push service reports it as gone.
+
+### `POST /api/push/test`
+
+Sends a test notification to one subscription. Body: `{ "endpoint": "<url>" }`. Returns `204`, `404` if the subscription isn't saved, or `502` if the push service rejected it.
+
 ## Config
 
 Reads and writes the [configuration](/guide/configuration) files. `global` is your user config and `local` is a board's `.kanban.toml`. Keys use dots, such as `sync.allow_rebase`.

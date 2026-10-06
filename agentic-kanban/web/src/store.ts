@@ -109,6 +109,12 @@ export const activeTicketStore = new ScalarStore<number | null>(null);
 // Holds the target column id; Columns reset it to null after reacting.
 export const addTicketRequestStore = new ScalarStore<number | null>(null);
 
+// Set when something outside the tree (a tapped notification, a deep link)
+// asks for a ticket's session to be shown. App switches to the overview and
+// the mounted Overview opens the ticket, then resets this to null.
+export type OpenTicketRequest = { boardId: number; ticketId: number };
+export const openTicketRequestStore = new ScalarStore<OpenTicketRequest | null>(null);
+
 // Per-ticket DOM slots that the global TerminalsRoot portals PtyTerminals
 // into. Keyed by ticket id so the single PtyTerminal that exists per session
 // lands in whichever SessionView currently owns the visible slot for that

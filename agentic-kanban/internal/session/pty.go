@@ -14,15 +14,15 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: checkSameOrigin,
+	CheckOrigin: CheckSameOrigin,
 }
 
-// checkSameOrigin rejects WebSocket upgrades whose Origin header is missing,
+// CheckSameOrigin rejects WebSocket upgrades whose Origin header is missing,
 // unparseable, or points at a host other than the one serving the request.
 // This blocks cross-site WebSocket hijacking (CWE-346) of the session PTY and
 // shell endpoints, which would otherwise hand an attacker page an interactive
 // shell inside the session container.
-func checkSameOrigin(r *http.Request) bool {
+func CheckSameOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return false

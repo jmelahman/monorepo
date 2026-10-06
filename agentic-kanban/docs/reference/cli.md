@@ -76,6 +76,19 @@ kanban serve [flags]
 | `--claude-config`    | `true`                               | Mount your `~/.claude` into the bundled session image. Overrides `[devcontainer].claude_config` when set. Env: `KANBAN_CLAUDE_CONFIG`. |
 | `--in-memory`        | `false`                              | Use a temporary database that's deleted on shutdown. For testing only. |
 
+## `web`
+
+```sh
+kanban web --backend URL [--addr ADDR]
+```
+
+Serves the web UI from this machine and forwards its API calls and terminal connections to a `kanban serve` running somewhere else. It keeps no data of its own and doesn't need Docker. See [UI on a different machine](/guide/mobile#ui-on-a-different-machine).
+
+| Flag        | Default | Description |
+| ----------- | ------- | ----------- |
+| `--backend` | none    | Base URL of the kanban server to forward to, for example `http://devbox:7474`. Required. Env: `KANBAN_BACKEND_URL`. |
+| `--addr`    | `:7474` | Address to listen on. |
+
 ## `mcp`
 
 ```sh
@@ -370,6 +383,7 @@ kanban env unset playground MY_API_KEY
 | Variable               | Equivalent flag         |
 | ---------------------- | ----------------------- |
 | `KANBAN_URL`           | `--server`              |
+| `KANBAN_BACKEND_URL`   | `web --backend`         |
 | `KANBAN_CONFIG`        | `serve --config`        |
 | `KANBAN_DATA_DIR`      | `serve --data-dir`      |
 | `KANBAN_WORKTREES_DIR` | `serve --worktrees-dir` |

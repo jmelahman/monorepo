@@ -18,6 +18,8 @@ var expectedTables = []string{
 	"columns",
 	"hook_configs",
 	"port_allocations",
+	"push_subscriptions",
+	"push_vapid",
 	"sessions",
 	"task_runs",
 	"tickets",

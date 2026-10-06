@@ -642,7 +642,7 @@ export function SessionView({
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div data-session-view className="flex h-full min-h-0 flex-col">
       <div
         ref={headerRef}
         className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm"
