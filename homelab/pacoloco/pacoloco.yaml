@@ -7,6 +7,6 @@ repos:
       - http://mirror.sfo12.us.leaseweb.net/archlinux
       - http://arch.hu.fo/archlinux
 prefetch:
-  cron: 0 0 3 * * * *
+  cron: 0 0 * * * * *
   ttl_unaccessed_in_days: 30
   ttl_unupdated_in_days: 300

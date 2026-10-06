@@ -22,12 +22,8 @@ services:
       - ./nginx/:/etc/nginx/:ro
     depends_on:
       - audiobookshelf
-      - buildbuddy
-      - docker-status
       - pihole
-      - proxpi
       - pacoloco
-      - glances
 
   certbot:
     image: certbot/certbot
@@ -35,27 +31,6 @@ services:
     volumes:
       - ./certbot/www/:/var/www/certbot/:rw
       - ./certbot/conf/:/etc/letsencrypt/:rw
-
-  buildbuddy:
-    image: gcr.io/flame-public/buildbuddy-app-onprem
-    container_name: buildbuddy
-    restart: unless-stopped
-    expose:
-      - 1985
-      - 8080
-    ports:
-      - "1985:1985"
-    volumes:
-      - buildbuddy_data:/var/lib/buildbudy
-
-  docker-status:
-    image: lahmanja/docker-status
-    container_name: docker-status
-    restart: unless-stopped
-    expose:
-      - 9090
-    volumes:
-      - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock
 
   jellyfin:
     image: jellyfin/jellyfin
@@ -81,41 +56,17 @@ services:
       - "53:53/udp"
       - "8081:80/tcp"
     environment:
-      TZ: 'US/Pacific'
-      FTLCONF_dns_listeningMode: 'all'
-      FTLCONF_dns_upstreams: '1.1.1.2;1.0.0.2'
+      TZ: "US/Pacific"
+      FTLCONF_dns_listeningMode: "all"
+      FTLCONF_dns_upstreams: "1.1.1.2;1.0.0.2"
+      # Point every nginx server_name at the docker host
+      FTLCONF_dns_hosts: "${HOMELAB_IP:?set HOMELAB_IP in homelab/.env} cache.pacman.home;${HOMELAB_IP} shelf.home;${HOMELAB_IP} video.home"
       FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD:?set PIHOLE_PASSWORD in homelab/.env}
     volumes:
-      - './etc-pihole:/etc/pihole'
+      - "./etc-pihole:/etc/pihole"
     cap_add:
       - SYS_NICE
       - SYS_TIME
-
-  registry:
-    image: registry:2
-    container_name: registry
-    restart: unless-stopped
-    environment:
-      REGISTRY_HTTP_HEADERS_X_CONTENT_TYPE_OPTIONS: nosniff
-      REGISTRY_AUTH: htpasswd
-      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
-      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-    expose:
-      - 5000
-    volumes:
-      - registry_data:/var/lib/registry
-      - ./auth:/auth
-
-  proxpi:
-    image: epicwink/proxpi
-    container_name: proxpi
-    restart: unless-stopped
-    environment:
-      PROXPI_CACHE_DIR: /var/cache/proxpi
-    expose:
-      - 5000
-    volumes:
-      - proxpi_data:/var/cache/proxpi
 
   pacoloco:
     image: ghcr.io/anatol/pacoloco
@@ -129,47 +80,6 @@ services:
       - pacoloco_data:/var/cache/pacoloco
       - ./pacoloco/pacoloco.yaml:/etc/pacoloco.yaml
 
-  glances:
-    image: nicolargo/glances
-    container_name: glances
-    restart: unless-stopped
-    expose:
-      - 61208
-    environment:
-      - GLANCES_OPT=-w
-    volumes:
-      - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro
-      - /etc/os-release:/etc/os-release:ro
-    pid: "host"
-
-  llama:
-    image: ghcr.io/ggml-org/llama.cpp:server
-    container_name: llama
-    restart: unless-stopped
-    ports:
-      - "8012:8080"
-    volumes:
-      - llama_models:/models
-    entrypoint:
-      - sh
-      - -c
-      - |
-        if [ ! -f /models/Qwen3-0.6B-Q8_0.gguf ] || ! head -c 4 /models/Qwen3-0.6B-Q8_0.gguf | grep -q "GGUF"; then
-          rm -f /models/Qwen3-0.6B-Q8_0.gguf
-          echo "Downloading Qwen3-0.6B model..." &&
-          curl -fL -o /models/Qwen3-0.6B-Q8_0.gguf \
-            "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf"
-        fi &&
-        /app/llama-server \
-          --model /models/Qwen3-0.6B-Q8_0.gguf \
-          --host 0.0.0.0 \
-          --port 8080 \
-          --ctx-size 2048
-
 volumes:
-  registry_data:
-  buildbuddy_data:
   jellyfin_data:
-  proxpi_data:
   pacoloco_data:
-  llama_models:
