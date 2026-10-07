@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ITheme, Terminal as GhosttyTerminal } from "ghostty-web";
 import { APPEARANCE_EVENT } from "@/hooks/useThemeMode";
+import { attachSoftKeyboardInput } from "@/terminalInput";
 
 // ghostty-web is a ~600 KB WASM module. Both importing it (which pulls the WASM
 // chunk) and init() (which compiles it) used to run at module-eval of this
@@ -69,6 +70,11 @@ export function PtyTerminal({ sessionId, kind, mountTarget }: Props) {
       });
       termRef.current = term;
       term.open(host);
+      // open() makes the host editable; keep phone keyboards from capitalising
+      // or "correcting" what is typed into it.
+      host.setAttribute("autocapitalize", "off");
+      host.setAttribute("autocorrect", "off");
+      host.spellcheck = false;
 
       // Fit the terminal to fill the host box exactly. Two ghostty quirks
       // otherwise leave a visible margin on the right and bottom:
@@ -142,9 +148,13 @@ export function PtyTerminal({ sessionId, kind, mountTarget }: Props) {
         term.write("\r\n[disconnected]\r\n");
       };
 
-      const dataDisp = term.onData((data) => {
+      const sendInput = (data: string) => {
         if (ws.readyState === WebSocket.OPEN) ws.send(data);
-      });
+      };
+      const dataDisp = term.onData(sendInput);
+      // ghostty only types from keydown, which phone keyboards don't use.
+      // See REGRESSIONS.md: "Soft keyboards don't type through keydown".
+      const detachSoftKeyboard = attachSoftKeyboardInput(host, sendInput);
       const resizeDisp = term.onResize(() => {
         if (ws.readyState === WebSocket.OPEN) sendResize();
       });
@@ -170,6 +180,7 @@ export function PtyTerminal({ sessionId, kind, mountTarget }: Props) {
         observer.disconnect();
         window.removeEventListener(APPEARANCE_EVENT, onAppearance);
         dataDisp.dispose();
+        detachSoftKeyboard();
         resizeDisp.dispose();
         // Drop handlers before close() — the close event fires async and
         // would otherwise call term.write() on the disposed terminal.

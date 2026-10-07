@@ -53,6 +53,22 @@ height), never `inset-0`/`h-screen`/`100vh`. Headless Chromium has no soft
 keyboard: `mobile-keyboard.spec.ts` fakes `visualViewport`, so changes here
 still need a check on a real phone.
 
+### Soft keyboards don't type through keydown
+
+ghostty-web types from `keydown` and looks keys up by `KeyboardEvent.code`.
+Android keyboards report every key as keyCode 229 with an empty `code` and
+deliver text through composition and `beforeinput` events; ghostty cancels
+`beforeinput` and only forwards a composition once it ends. On a phone that
+meant a word appeared after the next space at best, and the space, Enter and
+Backspace never reached the PTY. `attachSoftKeyboardInput`
+(`web/src/terminalInput.ts`) handles those events in the capture phase on the
+terminal host and streams the word being composed as "erase what changed,
+type the rest". It relies on ghostty cancelling the `keydown`s it does handle
+(so no `beforeinput` follows and hardware keys aren't doubled) and on hiding
+the composition events from ghostty (or the word is sent twice) — re-check
+both when bumping ghostty-web. Headless Chromium has no soft keyboard and
+synthetic events only approximate one, so changes here need a real phone.
+
 ### Status hooks repeat, so push notifications key off the transition
 
 The agent hooks `PATCH /api/sessions/{id}/status` more often than the
