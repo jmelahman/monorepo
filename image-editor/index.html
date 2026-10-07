@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Image Editor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="toolbar">
+    <div class="group">
+      <button type="button" id="new" title="New canvas">New</button>
+      <button type="button" id="open" title="Open image (Ctrl+O)">Open</button>
+      <button type="button" id="save" title="Save as PNG (Ctrl+S)">Save</button>
+      <button type="button" id="copy" title="Copy image to clipboard">Copy</button>
+      <input type="file" id="file" accept="image/*" hidden>
+    </div>
+
+    <div class="group">
+      <button type="button" id="undo" class="icon" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+        <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3"/></svg>
+      </button>
+      <button type="button" id="redo" class="icon" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>
+        <svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3"/></svg>
+      </button>
+    </div>
+
+    <div class="group" id="tools" role="radiogroup" aria-label="Tools">
+      <button type="button" class="icon" data-tool="brush" title="Brush (B)" aria-label="Brush">
+        <svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19zM14 7l3 3"/></svg>
+      </button>
+      <button type="button" class="icon" data-tool="eraser" title="Eraser (E)" aria-label="Eraser">
+        <svg viewBox="0 0 24 24"><path d="M8 20l-4-4L14 6l6 6-8 8H8zM9 11l6 6M12 20h8"/></svg>
+      </button>
+      <button type="button" class="icon" data-tool="line" title="Line (L) — hold Shift to snap" aria-label="Line">
+        <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg>
+      </button>
+      <button type="button" class="icon" data-tool="rect" title="Rectangle (R) — hold Shift for a square" aria-label="Rectangle">
+        <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
+      </button>
+      <button type="button" class="icon" data-tool="ellipse" title="Ellipse (O) — hold Shift for a circle" aria-label="Ellipse">
+        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
+      </button>
+      <button type="button" class="icon" data-tool="text" title="Text (T)" aria-label="Text">
+        <svg viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></svg>
+      </button>
+      <button type="button" class="icon" data-tool="fill" title="Fill (G)" aria-label="Fill">
+        <svg viewBox="0 0 24 24"><path d="M11 3l8 8-7 7a2 2 0 01-3 0l-5-5a2 2 0 010-3zM4 12h14M20 15s2 2.5 2 4a2 2 0 01-4 0c0-1.5 2-4 2-4z"/></svg>
+      </button>
+      <button type="button" class="icon" data-tool="eyedropper" title="Pick color (I)" aria-label="Pick color">
+        <svg viewBox="0 0 24 24"><path d="M17 3.5a2.5 2.5 0 013.5 3.5L17 10.5 13.5 7zM14.5 8L5 17.5V20h2.5L17 10.5"/></svg>
+      </button>
+    </div>
+
+    <div class="group">
+      <label title="Color"><span class="sr-only">Color</span><input type="color" id="color" value="#000000"></label>
+      <label data-tools="brush eraser line rect ellipse" title="Stroke size ([ and ])">
+        Size <input type="range" id="size" min="1" max="100" value="6"><output id="size-out">6</output>
+      </label>
+      <label data-tools="rect ellipse"><input type="checkbox" id="filled"> Filled</label>
+      <label data-tools="text">
+        Font
+        <select id="font">
+          <option value="sans-serif">Sans</option>
+          <option value="serif">Serif</option>
+          <option value="monospace">Mono</option>
+          <option value="cursive">Cursive</option>
+        </select>
+      </label>
+      <label data-tools="text">Size <input type="number" id="font-size" min="6" max="400" value="32"></label>
+      <label data-tools="text"><input type="checkbox" id="bold"> Bold</label>
+    </div>
+
+    <div class="group end">
+      <label>
+        Zoom
+        <select id="zoom">
+          <option value="fit">Fit</option>
+          <option value="0.25">25%</option>
+          <option value="0.5">50%</option>
+          <option value="1">100%</option>
+          <option value="2">200%</option>
+          <option value="4">400%</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <main id="workspace">
+    <div id="stage">
+      <canvas id="canvas"></canvas>
+      <canvas id="overlay"></canvas>
+    </div>
+  </main>
+
+  <footer class="status">
+    <span id="dims"></span>
+    <span id="pos"></span>
+    <span id="message"></span>
+  </footer>
+
+  <dialog id="new-dialog">
+    <form method="dialog">
+      <h2>New canvas</h2>
+      <label>Width <input type="number" id="new-width" min="1" max="8192" required></label>
+      <label>Height <input type="number" id="new-height" min="1" max="8192" required></label>
+      <label>
+        Background
+        <select id="new-bg">
+          <option value="#ffffff">White</option>
+          <option value="">Transparent</option>
+        </select>
+      </label>
+      <div class="actions">
+        <button value="cancel" formnovalidate>Cancel</button>
+        <button value="create" class="primary">Create</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
