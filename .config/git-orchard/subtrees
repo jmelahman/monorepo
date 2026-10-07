@@ -176,3 +176,6 @@
 [subtree "dotfiles"]
 	remote = git@github.com:jmelahman/dotfiles.git
 	branch = master
+[subtree "image-editor"]
+	remote = git@github.com:jmelahman/image-editor
+	branch = master
