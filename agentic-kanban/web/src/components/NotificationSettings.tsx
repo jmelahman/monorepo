@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { api, formatApiError, PUSH_EVENTS, type PushEvent } from "@/api/client";
+import { formatApiError, PUSH_EVENTS, type PushEvent } from "@/api/client";
 import {
   currentPushSubscription,
   disablePush,
   enablePush,
   loadPushEvents,
   pushSupport,
+  sendTestPush,
   updatePushEvents,
 } from "@/push";
 import { useToast } from "@/toast";
@@ -110,7 +111,7 @@ export function NotificationSettings() {
           onClick={() =>
             sub &&
             run(async () => {
-              await api.testPush(sub.endpoint);
+              setSub(await sendTestPush(sub));
               push("success", "Test notification sent.");
             })
           }

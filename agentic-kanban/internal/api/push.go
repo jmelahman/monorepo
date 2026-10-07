@@ -149,6 +149,10 @@ func (h *handlers) testPush(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		h.httpError(w, fmt.Errorf("this device is not subscribed"), 404)
+	case errors.Is(err, push.ErrGone):
+		// Like 404, the browser has to subscribe again; the app does so and
+		// retries (web/src/push.ts sendTestPush).
+		h.httpError(w, err, http.StatusGone)
 	case err != nil:
 		h.httpError(w, err, http.StatusBadGateway)
 	default:

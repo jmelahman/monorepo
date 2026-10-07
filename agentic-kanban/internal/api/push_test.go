@@ -175,3 +175,21 @@ func TestSessionStatusPush(t *testing.T) {
 		t.Errorf("push service saw %v, want exactly four deliveries", hits)
 	}
 }
+
+// A subscription the push service has dropped answers 410, not a bare 502:
+// the app renews the subscription on that status.
+func TestPushTest_GoneSubscription(t *testing.T) {
+	e := newEnv(t)
+	fake := pushtest.NewService(t)
+	gone := fake.Subscription(t, "/gone/mine")
+	if err := e.store.UpsertPushSubscription(context.Background(), gone); err != nil {
+		t.Fatal(err)
+	}
+	body := map[string]string{"endpoint": gone.Endpoint}
+	if got := statusOf(t, e.post("/api/push/test", body)); got != 410 {
+		t.Errorf("first test: status = %d, want 410", got)
+	}
+	if got := statusOf(t, e.post("/api/push/test", body)); got != 404 {
+		t.Errorf("after the prune: status = %d, want 404", got)
+	}
+}

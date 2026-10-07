@@ -230,7 +230,7 @@ The server also removes a subscription when its push service reports it as gone.
 
 ### `POST /api/push/test`
 
-Sends a test notification to one subscription. Body: `{ "endpoint": "<url>" }`. Returns `204`, `404` if the subscription isn't saved, or `502` if the push service rejected it.
+Sends a test notification to one subscription. Body: `{ "endpoint": "<url>" }`. Returns `204`, `404` if the subscription isn't saved, `410` if the push service reports it as gone (the server has removed it, and the browser must subscribe again), or `502` with the push service's answer if it refused the message for another reason.
 
 ## Config
 

@@ -356,6 +356,21 @@ under test) calls `gittest.IsolateEnv()` first in its `TestMain`. Tests that
 commit set their own identity on the repo or with `-c`, never through the
 global config.
 
+### A push subscription is tied to one VAPID key
+
+A browser's push subscription only accepts messages signed with the VAPID
+key it was created for, and the browser keeps it across reloads. Put a
+different backend behind the same address (dev server vs. compose, a
+recreated or `--in-memory` database) and the browser still holds the old
+subscription; re-registering it as-is makes every send fail (FCM answers
+403, other services 404/410, which also prunes the row — the "502 then 404"
+on the test button). `subscribe` in `web/src/push.ts` compares
+`sub.options.applicationServerKey` with `/api/push/vapid-key` on every load
+and replaces a mismatched subscription; `sendTestPush` renews on 404/410.
+The server reports the push service's own answer (`push.ErrGone` → 410)
+rather than a generic 502 — keep that detail, it is the only way to tell
+these cases apart from a phone.
+
 ### Proxying `/ws` must preserve `Host`
 
 The PTY and shell WebSockets only upgrade when `Origin` matches `Host`

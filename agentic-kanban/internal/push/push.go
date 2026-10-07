@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -190,83 +191,102 @@ func (s *Service) Send(ctx context.Context, p Payload) (int, error) {
 	return s.deliver(ctx, p, targets)
 }
 
+// ErrGone means the push service no longer knows the subscription: the
+// browser unsubscribed, it expired, or it was made against a different VAPID
+// key. The stored row has been deleted; the browser has to subscribe again.
+var ErrGone = errors.New("push service no longer recognises this subscription")
+
 // SendTo delivers p to one subscription regardless of its event opt-ins.
+// A refusal is returned as an error that says what the push service answered.
 func (s *Service) SendTo(ctx context.Context, endpoint string, p Payload) error {
 	sub, err := s.store.GetPushSubscription(ctx, endpoint)
 	if err != nil {
 		return err
 	}
-	sent, err := s.deliver(ctx, p, []db.PushSubscription{*sub})
+	opts, body, err := s.prepare(ctx, p)
 	if err != nil {
 		return err
 	}
-	if sent == 0 {
-		return errors.New("push service rejected the notification")
-	}
-	return nil
+	return s.deliverOne(ctx, body, *sub, opts)
 }
 
 func (s *Service) deliver(ctx context.Context, p Payload, subs []db.PushSubscription) (int, error) {
 	if len(subs) == 0 {
 		return 0, nil
 	}
-	private, public, err := s.keys(ctx)
+	opts, body, err := s.prepare(ctx, p)
 	if err != nil {
 		return 0, err
-	}
-	body, err := json.Marshal(p)
-	if err != nil {
-		return 0, err
-	}
-	opts := &webpush.Options{
-		HTTPClient:      s.client,
-		Subscriber:      vapidSubject,
-		VAPIDPublicKey:  public,
-		VAPIDPrivateKey: private,
-		TTL:             ttlSeconds,
-		Urgency:         webpush.UrgencyHigh,
 	}
 	var sent atomic.Int32
 	var wg sync.WaitGroup
 	for _, sub := range subs {
 		wg.Go(func() {
-			if s.deliverOne(ctx, body, sub, opts) {
-				sent.Add(1)
+			if err := s.deliverOne(ctx, body, sub, opts); err != nil {
+				log.Printf("push: %v", err)
+				return
 			}
+			sent.Add(1)
 		})
 	}
 	wg.Wait()
 	return int(sent.Load()), nil
 }
 
-// deliverOne sends body to one subscription under its own deadline and
-// reports whether the push service accepted it.
-func (s *Service) deliverOne(ctx context.Context, body []byte, sub db.PushSubscription, opts *webpush.Options) bool {
+func (s *Service) prepare(ctx context.Context, p Payload) (*webpush.Options, []byte, error) {
+	private, public, err := s.keys(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	body, err := json.Marshal(p)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &webpush.Options{
+		HTTPClient:      s.client,
+		Subscriber:      vapidSubject,
+		VAPIDPublicKey:  public,
+		VAPIDPrivateKey: private,
+		TTL:             ttlSeconds,
+		Urgency:         webpush.UrgencyHigh,
+	}, body, nil
+}
+
+// deliverOne sends body to one subscription under its own deadline. The
+// error names the push service's host and what it answered, never the full
+// endpoint (see endpointHost).
+func (s *Service) deliverOne(ctx context.Context, body []byte, sub db.PushSubscription, opts *webpush.Options) error {
 	ctx, cancel := context.WithTimeout(ctx, sendTimeout)
 	defer cancel()
+	host := endpointHost(sub.Endpoint)
 	resp, err := webpush.SendNotificationWithContext(ctx, body, &webpush.Subscription{
 		Endpoint: sub.Endpoint,
 		Keys:     webpush.Keys{P256dh: sub.P256dh, Auth: sub.Auth},
 	}, opts)
 	if err != nil {
-		log.Printf("push: send to %s: %v", endpointHost(sub.Endpoint), err)
-		return false
+		return fmt.Errorf("send to %s: %w", host, err)
 	}
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+	// Push services explain a refusal in a short body (a VAPID key mismatch,
+	// a bad token); it is the only clue to why nothing arrived.
+	detail, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 	resp.Body.Close()
 	switch {
-	case resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone:
-		// The browser unsubscribed or the subscription expired; it will
-		// never accept another message.
-		if err := s.store.DeletePushSubscription(ctx, sub.Endpoint); err != nil {
-			log.Printf("push: prune %s: %v", endpointHost(sub.Endpoint), err)
-		}
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
-		return true
+		return nil
+	case resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone:
+		// It will never accept another message, so stop sending to it.
+		if err := s.store.DeletePushSubscription(ctx, sub.Endpoint); err != nil {
+			log.Printf("push: prune %s: %v", host, err)
+		}
+		return fmt.Errorf("%w: %s answered %d %s", ErrGone, host, resp.StatusCode, oneLine(detail))
 	default:
-		log.Printf("push: %s answered %d", endpointHost(sub.Endpoint), resp.StatusCode)
+		return fmt.Errorf("%s answered %d %s", host, resp.StatusCode, oneLine(detail))
 	}
-	return false
+}
+
+// oneLine makes a push service's response body safe to log and show.
+func oneLine(b []byte) string {
+	return truncate(strings.Join(strings.Fields(strings.ToValidUTF8(string(b), "")), " "), 200)
 }
 
 // NotifySession sends event for a session, describing it by its ticket and

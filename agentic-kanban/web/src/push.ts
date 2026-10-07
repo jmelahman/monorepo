@@ -1,4 +1,4 @@
-import { api, PUSH_EVENTS, type PushEvent } from "@/api/client";
+import { ApiError, api, PUSH_EVENTS, type PushEvent } from "@/api/client";
 import { openTicketRequestStore } from "@/store";
 
 // Why this device can or can't receive notifications. Service workers and
@@ -94,20 +94,60 @@ export async function enablePush(events: PushEvent[]): Promise<PushSubscription>
       ),
     ),
   ]);
+  return subscribe(reg, events, false);
+}
+
+// Whether sub was made for this server's VAPID key. A subscription only
+// accepts messages signed by the key it was created with.
+function madeForKey(sub: PushSubscription, key: Uint8Array): boolean {
+  const used = sub.options.applicationServerKey;
+  if (!used) return false;
+  const bytes = new Uint8Array(used);
+  return bytes.length === key.length && bytes.every((b, i) => b === key[i]);
+}
+
+// Subscribes this browser for the server's current key and stores the result
+// on the server. An existing subscription is kept unless it was made for a
+// different key (another kanban backend behind the same address, or a
+// recreated database) or `fresh` asks for a new one; then it is replaced, as
+// the push service would refuse or drop everything sent to the old one.
+// See REGRESSIONS.md: "A push subscription is tied to one VAPID key".
+async function subscribe(
+  reg: ServiceWorkerRegistration,
+  events: PushEvent[],
+  fresh: boolean,
+): Promise<PushSubscription> {
   const { public_key } = await api.getVapidKey();
-  const options = { userVisibleOnly: true, applicationServerKey: decodeKey(public_key) };
-  let sub: PushSubscription;
-  try {
-    sub = await reg.pushManager.subscribe(options);
-  } catch {
-    // A subscription made against a different server key (another kanban
-    // backend, or a recreated database) blocks a new one until it's dropped.
-    await (await reg.pushManager.getSubscription())?.unsubscribe();
-    sub = await reg.pushManager.subscribe(options);
+  const key = decodeKey(public_key);
+  const existing = await reg.pushManager.getSubscription();
+  if (existing && (fresh || !madeForKey(existing, key))) {
+    await api.deletePushSubscription(existing.endpoint).catch(() => {});
+    await existing.unsubscribe();
   }
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
   await api.putPushSubscription(sub.toJSON(), events);
   savePushEvents(events);
   return sub;
+}
+
+// Sends a test notification to this device and returns the subscription it
+// went to. When the server or the push service has lost track of the
+// subscription, it is renewed and the test retried once, so a stale
+// subscription repairs itself instead of failing until the user toggles
+// notifications off and on.
+export async function sendTestPush(sub: PushSubscription): Promise<PushSubscription> {
+  try {
+    await api.testPush(sub.endpoint);
+    return sub;
+  } catch (err) {
+    if (!(err instanceof ApiError) || (err.status !== 404 && err.status !== 410)) throw err;
+    const reg = await navigator.serviceWorker.ready;
+    // 410: the push service dropped it, so only a new subscription will do.
+    // 404: the server just doesn't have the row.
+    const renewed = await subscribe(reg, loadPushEvents(), err.status === 410);
+    await api.testPush(renewed.endpoint);
+    return renewed;
+  }
 }
 
 export async function updatePushEvents(sub: PushSubscription, events: PushEvent[]): Promise<void> {
@@ -157,12 +197,13 @@ export function installPush(): void {
   });
   void (async () => {
     try {
-      await navigator.serviceWorker.register("/sw.js");
+      const reg = await navigator.serviceWorker.register("/sw.js");
       // Re-register an existing subscription on every load. The upsert is
       // idempotent, and it heals a server that lost the row (database
-      // recreated) while this browser still believes it is subscribed.
-      const sub = await currentPushSubscription();
-      if (sub) await api.putPushSubscription(sub.toJSON(), loadPushEvents());
+      // recreated) or changed its key while this browser still believes it
+      // is subscribed.
+      if (Notification.permission !== "granted") return;
+      if (await reg.pushManager.getSubscription()) await subscribe(reg, loadPushEvents(), false);
     } catch {
       // Best-effort: the app works without notifications.
     }
