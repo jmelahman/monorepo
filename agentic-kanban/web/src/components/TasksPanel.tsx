@@ -6,6 +6,7 @@ import { useToast } from "@/toast";
 import { useCopyFeedback } from "@/hooks/useCopyFeedback";
 import { CheckIcon, CopyIcon } from "@/icons";
 import { Button } from "./Button";
+import { forwardedPortUrl } from "@/forwardedPort";
 
 export function TasksPanel({ session }: { session: Session; boardId: number }) {
   const qc = useQueryClient();
@@ -104,7 +105,7 @@ export function TasksPanel({ session }: { session: Session; boardId: number }) {
                       {port && (
                         <a
                           className="ml-1 text-accent-500"
-                          href={`http://localhost:${port.host_port}`}
+                          href={forwardedPortUrl(port.host_port)}
                           target="_blank"
                           rel="noreferrer"
                         >

@@ -73,7 +73,9 @@ kanban web --backend http://devbox:7474
 
 `kanban web` stores nothing and doesn't need Docker. Boards, sessions and notification subscriptions all stay on the backend. The backend can stay on plain HTTP on your LAN while the machine running `kanban web` provides HTTPS.
 
-Preview URLs and forwarded task ports still point at the backend machine.
+Forwarded task ports (`13000`–`13099`) are opened on the backend machine. Their links use the hostname you opened kanban with, so they work when that name is the backend machine itself: its LAN address, or its Tailscale name or `100.x` address from any device on your tailnet. They don't follow you through `kanban web` on a different machine, because that machine doesn't have the ports. The links are plain HTTP even when kanban itself is on HTTPS.
+
+Preview URLs still point at the backend machine.
 
 ### HTTPS with Tailscale
 

@@ -16,6 +16,7 @@ import { useCopyFeedback } from "@/hooks/useCopyFeedback";
 import { sessionStore, ticketStore, useTicket } from "@/store";
 import { MARKDOWN_COMPONENTS } from "./markdownComponents";
 import { STATUS_LABEL } from "./Ticket";
+import { forwardedPortUrl } from "@/forwardedPort";
 
 export function InfoPanel({ session }: { session: Session }) {
   const ticket = useTicket(session.ticket_id);
@@ -93,7 +94,7 @@ export function InfoPanel({ session }: { session: Session }) {
                 {p.proxy_active ? (
                   <a
                     className="text-accent-500"
-                    href={`http://localhost:${p.host_port}`}
+                    href={forwardedPortUrl(p.host_port)}
                     target="_blank"
                     rel="noreferrer"
                   >
