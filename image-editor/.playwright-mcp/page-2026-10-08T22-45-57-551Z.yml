@@ -1,0 +1,58 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - button "New" [ref=e4] [cursor=pointer]
+      - button "Open" [ref=e5] [cursor=pointer]
+      - button "Save" [ref=e6] [cursor=pointer]
+      - button "Copy" [ref=e7] [cursor=pointer]
+    - generic [ref=e8]:
+      - button "Undo" [disabled] [ref=e9]
+      - button "Redo" [disabled] [ref=e12]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic "Primary color" [ref=e17]:
+          - textbox "Primary color" [ref=e19] [cursor=pointer]: "#000000"
+        - generic "Secondary color" [ref=e20]:
+          - textbox "Secondary color" [ref=e22] [cursor=pointer]: "#ffffff"
+      - button "Swap colors" [ref=e23] [cursor=pointer]
+      - generic "Stroke size ([ and ])" [ref=e26]:
+        - text: Size
+        - slider "Size" [ref=e27]: "6"
+        - status [ref=e28]: "6"
+    - generic [ref=e30]:
+      - text: Zoom
+      - combobox "Zoom" [ref=e31] [cursor=pointer]:
+        - option "Fit" [selected]
+        - option "25%"
+        - option "50%"
+        - option "100%"
+        - option "200%"
+        - option "400%"
+  - generic [ref=e32]:
+    - radiogroup "Tools" [ref=e33]:
+      - radio "Brush" [checked] [ref=e34] [cursor=pointer]
+      - radio "Eraser" [ref=e37] [cursor=pointer]
+      - radio "Line" [ref=e40] [cursor=pointer]
+      - radio "Arrow" [ref=e43] [cursor=pointer]
+      - radio "Rectangle" [ref=e46] [cursor=pointer]
+      - radio "Ellipse" [ref=e49] [cursor=pointer]
+      - radio "Text" [ref=e52] [cursor=pointer]
+      - radio "Fill" [ref=e55] [cursor=pointer]
+      - radio "Pick color" [ref=e58] [cursor=pointer]
+    - main [ref=e61]
+    - complementary "Layers" [ref=e65]:
+      - generic [ref=e66]:
+        - heading "Layers" [level=2] [ref=e67]
+        - button "Collapse layers" [expanded] [ref=e68] [cursor=pointer]
+      - list [ref=e71]:
+        - listitem [ref=e72]:
+          - checkbox "Show Background" [checked] [ref=e73]
+          - button "Background" [pressed] [ref=e74] [cursor=pointer]
+      - generic [ref=e75]:
+        - button "New layer" [ref=e76] [cursor=pointer]
+        - button "Delete layer" [disabled] [ref=e79]
+        - button "Move layer up" [disabled] [ref=e82]
+        - button "Move layer down" [disabled] [ref=e85]
+        - button "Merge down" [disabled] [ref=e88]
+  - contentinfo [ref=e91]:
+    - generic [ref=e92]: 1280 × 720 px

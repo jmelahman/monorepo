@@ -1,6 +1,8 @@
 'use strict';
 
 const MAX_DIM = 8192;
+const MIN_ZOOM = 0.05;
+const MAX_ZOOM = 16;
 const MAX_HISTORY = 50;
 const MAX_HISTORY_BYTES = 256 * 1024 * 1024;
 const LINE_HEIGHT = 1.2;
@@ -30,6 +32,7 @@ const toolOptions = [...document.querySelectorAll('[data-tools]')];
 let tool = 'brush';
 let prevTool = 'brush';
 let zoom = 1;
+let customZoom = null; // <option> for a wheel zoom level that isn't a preset
 let layers = []; // bottom to top; text layers also have { text, box }
 let active = null; // selected layer
 let layerSeq = 0;
@@ -99,6 +102,39 @@ function applyZoom() {
   stage.style.height = `${overlay.height * zoom}px`;
   layerStack.style.imageRendering = zoom > 1 ? 'pixelated' : 'auto';
   if (text) layoutText();
+}
+
+// Zoom to an arbitrary level, keeping the image point under (clientX, clientY) in place.
+function zoomTo(level, clientX, clientY) {
+  level = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, level));
+  const view = workspace.getBoundingClientRect();
+  const cx = Math.min(view.right, Math.max(view.left, clientX));
+  const cy = Math.min(view.bottom, Math.max(view.top, clientY));
+  let rect = stage.getBoundingClientRect();
+  const px = (cx - rect.left) / zoom;
+  const py = (cy - rect.top) / zoom;
+
+  // Stop on a preset when passing over it, so the round levels stay reachable.
+  const presets = [...zoomInput.options].filter((o) => o !== customZoom && o.value !== 'fit');
+  const preset = presets.find((o) => o.value !== String(zoom) && (o.value - zoom) * (o.value - level) <= 0);
+  if (preset) {
+    level = Number(preset.value);
+    customZoom?.remove();
+    customZoom = null;
+  } else {
+    customZoom ??= zoomInput.appendChild(document.createElement('option'));
+    customZoom.value = level;
+    // Extra precision only where rounding would read the same as a preset.
+    const percent = Math.round(level * 100);
+    const clash = presets.some((o) => Math.round(o.value * 100) === percent);
+    customZoom.textContent = `${clash ? (level * 100).toFixed(1) : percent}%`;
+  }
+  zoomInput.value = level;
+  applyZoom();
+
+  rect = stage.getBoundingClientRect();
+  workspace.scrollLeft += rect.left + px * zoom - cx;
+  workspace.scrollTop += rect.top + py * zoom - cy;
 }
 
 // ---------------------------------------------------------------- history
@@ -866,8 +902,31 @@ for (const input of [colorInput, fontInput, fontSizeInput, boldInput]) {
     if (text) layoutText();
   });
 }
-zoomInput.addEventListener('change', applyZoom);
+zoomInput.addEventListener('change', () => {
+  if (zoomInput.value !== customZoom?.value) {
+    customZoom?.remove();
+    customZoom = null;
+  }
+  applyZoom();
+});
 window.addEventListener('resize', applyZoom);
+
+// Ctrl+wheel (and trackpad pinch, which browsers report the same way) zooms
+// the canvas instead of the page; Shift+wheel always pans sideways.
+document.addEventListener('wheel', (e) => {
+  const unit = e.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? 1 : 16;
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    if (newDialog.open || drag) return;
+    const delta = Math.max(-50, Math.min(50, e.deltaY * unit));
+    zoomTo(zoom * Math.exp(-delta * 0.005), e.clientX, e.clientY);
+  } else if (e.shiftKey) {
+    e.preventDefault();
+    if (newDialog.open) return;
+    // Some browsers already turn Shift+wheel into a horizontal delta.
+    workspace.scrollLeft += (e.deltaX || e.deltaY) * unit;
+  }
+}, { passive: false });
 
 $('panel-toggle').addEventListener('click', (e) => {
   const collapsed = document.querySelector('.panel').classList.toggle('collapsed');

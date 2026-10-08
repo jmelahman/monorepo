@@ -24,6 +24,8 @@ dependencies, nothing leaves your machine.
 | `Ctrl+Enter` / `Esc`                | Apply / cancel text                                                    |
 | `Ctrl+Z` / `Ctrl+Shift+Z`           | Undo / redo                                                            |
 | `Ctrl+O` / `Ctrl+S`                 | Open / save                                                            |
+| `Ctrl+Scroll` / pinch               | Zoom the canvas around the cursor                                      |
+| `Shift+Scroll`                      | Scroll the canvas horizontally                                         |
 
 ## Development
 
