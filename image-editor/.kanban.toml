@@ -1,0 +1,6 @@
+[devcontainer]
+image = "ghcr.io/jmelahman/devcontainer:latest"
+
+[[task]]
+label = "Run"
+container_port = 8000
