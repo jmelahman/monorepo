@@ -5,7 +5,7 @@
       "label": "Run",
       "type": "shell",
       "command": "python3",
-      "args": ["-m", "http.server", "8000", "--directory", "${workspaceFolder}"],
+      "args": ["-m", "http.server", "8000"],
       "problemMatcher": [],
       "isBackground": true,
       "group": {
