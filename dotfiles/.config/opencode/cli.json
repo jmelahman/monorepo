@@ -10,5 +10,14 @@
     "scrollbar": false,
     "thinking": "show",
     "markdown": "rendered"
+  },
+  "tabs": {
+    "layout": "horizontal",
+    "indicators": "status",
+    "scope": "cwd",
+    "mode": "on"
+  },
+  "terminal": {
+    "title": false
   }
 }

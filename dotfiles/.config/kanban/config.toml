@@ -1,5 +1,4 @@
 [buildcop]
-# False for now; I'd rather `kanban ticket create` work than have a buildcop.
 enabled = false
 interval = "10m"
 
@@ -39,6 +38,9 @@ TZ = "America/Los_Angeles"
 
 [errors]
 enabled = true
+
+[git]
+sign_commits = true
 
 [merge]
 allow_merge_commit = false

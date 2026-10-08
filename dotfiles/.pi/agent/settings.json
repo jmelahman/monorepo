@@ -4,6 +4,7 @@
   "lastChangelogVersion": "0.85.1",
   "theme": "dark",
   "packages": [
-    "npm:pi-web-access"
+    "npm:pi-web-access",
+    "npm:pi-mcp-adapter"
   ]
 }
