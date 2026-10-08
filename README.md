@@ -44,6 +44,7 @@ These projects are still in active development but may be considered "stable".
 
 - [templates/fullstack-template](https://github.com/jmelahman/fullstack-template)
 - [templates/golang-template](https://github.com/jmelahman/golang-template)
+- [templates/monorepo-template](https://github.com/jmelahman/monorepo-template)
 - [templates/PKGBUILDs-template](https://github.com/jmelahman/PKGBUILDs-template)
 
 ## Subtrees
