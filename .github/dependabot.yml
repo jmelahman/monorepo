@@ -41,6 +41,15 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+      # Every other minor and patch bump lands as one PR, so no
+      # two open PRs rewrite the same lockfile. Majors stay one PR each. A
+      # dependency joins the first group it matches, so react stays above.
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "bun"
     directories:
@@ -66,6 +75,16 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+      # Every other minor and patch bump lands as one PR across the
+      # directories, so no two open PRs rewrite the same bun.lock. Majors
+      # stay one PR each: they are reviewed one at a time anyway. A
+      # dependency joins the first group it matches, so react stays above.
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "docker"
     directories:
