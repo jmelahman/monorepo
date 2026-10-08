@@ -11,7 +11,7 @@
     "build": "web-ext build --source-dir=. --overwrite-dest"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "web-ext": "^10.7.0",
     "zod": "^4.4.3"
   }
