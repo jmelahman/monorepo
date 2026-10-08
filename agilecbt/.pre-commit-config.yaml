@@ -92,27 +92,40 @@ repos:
         types: [shell]
   # END orchard:shell
 
+  # BEGIN orchard:fullstack
+  # Shared by fullstack subtrees: .config/git-orchard/shared/fullstack in the
+  # monorepo. prek installs bun into each hook's own environment, so CI needs
+  # no setup-bun. Biome is the one web/package.json and web/bun.lock name:
+  # bun-install fills web/node_modules whenever web/ changes, and the biome
+  # hook runs web's own `check` script, which finds it there. --bun runs
+  # biome's node launcher under bun. prek builds govulncheck at the pinned
+  # version too, so the hook fails if the scan can't run.
   - repo: local
     hooks:
       - id: govulncheck
         name: govulncheck
-        entry: scripts/govulncheck.sh
-        language: system
+        entry: govulncheck ./...
+        language: golang
+        additional_dependencies:
+          - golang.org/x/vuln/cmd/govulncheck@v1.8.0
         files: ^(go\.mod|go\.sum)$
         pass_filenames: false
-      # prek installs bun and biome into the hook's own environment, so these
-      # need neither bun on PATH nor web/node_modules. Biome runs from web/ so
-      # it picks up web/biome.json as the root config; `bun x --bun` runs its
-      # node launcher under bun. Keep the pin in step with web/package.json.
+      - id: bun-install
+        name: bun install
+        entry: bun install --cwd=web --frozen-lockfile --silent
+        language: bun
+        files: ^web/(.*\.(ts|tsx|js|jsx|json|jsonc)|bun\.lock)$
+        pass_filenames: false
       - id: biome
         name: biome
-        entry: bash -c 'cd web && exec bun x --bun biome check --no-errors-on-unmatched "${@#web/}"' --
+        entry: bun --bun run --cwd=web check
         language: bun
-        additional_dependencies: ["@biomejs/biome@2.5.6"]
         files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc)$
+        pass_filenames: false
       - id: bun-audit
         name: bun audit
         entry: bun audit --cwd=web --audit-level=high
         language: bun
         files: ^web/(package\.json|bun\.lock)$
         pass_filenames: false
+  # END orchard:fullstack

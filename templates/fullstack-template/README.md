@@ -48,7 +48,7 @@ to copy from.
 - PyPI wheels per platform via hatch + `go-bin` + `manygo`
   (`uv tool install <name>` installs the Go binary).
 - prek (pre-commit) hooks: builtin checks, actionlint, ripsecrets,
-  govulncheck (with a documented allowlist wrapper), bun audit, Biome.
+  govulncheck, bun audit, Biome.
 - GitHub Actions: tests + lint + image smoke test, release pipeline, docs
   deploy, zizmor, Dependabot.
 - `.devcontainer/` dev sandbox with an opt-in default-deny network firewall.

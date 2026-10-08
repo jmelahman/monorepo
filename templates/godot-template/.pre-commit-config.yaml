@@ -77,10 +77,11 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
-  # These need Godot and the addons, which .github/ci-setup.sh installs in CI
-  # and scripts/setup.sh installs everywhere else. They run one at a time:
-  # each opens the project, and two Godots importing into one .godot/ at once
-  # is how an import cache gets corrupted.
+  # These need Godot and the addons, which scripts/setup.sh installs. They are
+  # on the manual stage so a run without Godot, like the monorepo's CI, passes
+  # them by: `prek run --all-files --stage manual` runs them. They run one at
+  # a time: each opens the project, and two Godots importing into one .godot/
+  # at once is how an import cache gets corrupted.
   - repo: local
     hooks:
       - id: godot-check
@@ -89,12 +90,14 @@ repos:
         language: system
         files: \.(gd|tscn|tres)$|^project\.godot$
         pass_filenames: false
+        stages: [manual]
       - id: godot-resave
         name: scenes are as the editor would write them
         entry: scripts/resave.sh --check
         language: system
         files: \.(tscn|tres)$|^project\.godot$
         pass_filenames: false
+        stages: [manual]
       - id: godot-test
         name: gdUnit4
         entry: scripts/test.sh

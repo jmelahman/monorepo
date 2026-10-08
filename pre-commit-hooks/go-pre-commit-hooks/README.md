@@ -23,6 +23,7 @@ repos:
       - id: go-work-sync # only in repositories with a go.work
       - id: go-vet
       - id: go-test
+      - id: govulncheck
       - id: go-get
 ```
 
@@ -79,6 +80,27 @@ only:
 (Remember `default_install_hook_types: [pre-commit, pre-push]` so the pre-push
 hook actually gets installed.)
 
+### `govulncheck`
+
+Runs [`govulncheck`](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck)
+`./...` whenever `go.mod` or `go.sum` change, and fails on any known
+vulnerability the code calls into. The scanner is built from this repository's
+`go.mod`, so it needs no separate install and its version moves with `rev`.
+
+`govulncheck` has no way to accept a finding, so an advisory with no upstream
+fix would keep the hook red. To accept one, list its ID in
+`.govulncheckignore` next to `go.mod`, one per line, with `#` comments saying
+why it is safe and what would let you drop it:
+
+```
+# Daemon-side handler; we only use the client. Drop when a fix is released.
+# https://pkg.go.dev/vuln/GO-2026-4887
+GO-2026-4887
+```
+
+Ignored advisories are still printed on every run. A scan that cannot run
+(no network, packages that fail to load) fails the hook.
+
 ### `go-get`
 
 Upgrades dependencies with `go get -u ./...` and fails when `go.mod` or
@@ -95,9 +117,10 @@ next commit touching `go.mod` anyway).
 
 ## Scope
 
-Only tools bundled with the Go toolchain belong here. Third-party tools
-(`goimports`, `gofumpt`, `staticcheck`, `golangci-lint`, ...) have their own
-hook repositories, or can be bolted onto any repo via `additional_dependencies`.
+Only tools the Go team maintains belong here: the ones bundled with the
+toolchain, plus `govulncheck`. Third-party tools (`gofumpt`, `staticcheck`,
+`golangci-lint`, ...) have their own hook repositories, or can be bolted onto
+any repo via `additional_dependencies`.
 
 There is deliberately no `go-build` hook: `go build ./...` writes an
 executable into the working tree when the repository is a single `main`

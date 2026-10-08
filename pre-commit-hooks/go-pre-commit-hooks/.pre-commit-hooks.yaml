@@ -63,6 +63,16 @@
   pass_filenames: false
   minimum_pre_commit_version: 3.0.0
 
+- id: govulncheck
+  name: govulncheck
+  description: Report known vulnerabilities the code calls into; IDs in .govulncheckignore are accepted.
+  entry: govulncheck-hook
+  args: [./...]
+  language: golang
+  types_or: [go-mod, go-sum]
+  pass_filenames: false
+  minimum_pre_commit_version: 3.0.0
+
 # Updaters — manual stage only, so they never fire on a commit. Run on demand:
 #   prek run --all-files --stage manual go-get
 

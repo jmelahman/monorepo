@@ -9,6 +9,10 @@ updates:
       - /*
       - /pre-commit-hooks/*
       - /templates/*
+      # The workflows git orchard sync copies into the subtrees. Bumping the
+      # source in the same PR as its copies keeps the git-orchard-sync hook
+      # passing.
+      - /.config/git-orchard/shared/*
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3

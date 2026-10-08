@@ -1,0 +1,34 @@
+# Advisories the govulncheck hook accepts until upstream patches them.
+#
+# Every ID needs a comment: why it is safe to ignore, an upstream link, and
+# what would let us drop it (usually: a fix lands, or we move off the
+# dependency).
+
+# Moby AuthZ plugin bypass on oversized request bodies.
+# https://pkg.go.dev/vuln/GO-2026-4887 — docker/docker: "Fixed in: N/A".
+# We use docker/docker only as a client; AuthZ plugin code paths are
+# unreachable at runtime (only pulled in via package init()). Drop when
+# docker/docker publishes a fix or we move to github.com/moby/moby/v2.
+GO-2026-4887
+
+# Moby vulnerability with no current fix in docker/docker.
+# https://pkg.go.dev/vuln/GO-2026-4883 — same reasoning as GO-2026-4887.
+GO-2026-4883
+
+# `PUT /containers/{id}/archive` executes container binary on the host.
+# https://pkg.go.dev/vuln/GO-2026-5746 — docker/docker: "Fixed in: N/A".
+# The vulnerable handler is dockerd's archive endpoint (daemon-side); we only
+# use docker/docker as an API client against the daemon, so it's unreachable
+# here (flagged only via transitive package init()). Drop when docker/docker
+# publishes a fix or we move to github.com/moby/moby/v2.
+GO-2026-5746
+
+# docker cp race allows arbitrary empty file creation on the host via symlink
+# swap. https://pkg.go.dev/vuln/GO-2026-5668 — same reasoning as GO-2026-5746
+# (daemon-side handler, we're client-only).
+GO-2026-5668
+
+# docker cp race allows bind mount redirection to a host path.
+# https://pkg.go.dev/vuln/GO-2026-5617 — same reasoning as GO-2026-5746
+# (daemon-side handler, we're client-only).
+GO-2026-5617

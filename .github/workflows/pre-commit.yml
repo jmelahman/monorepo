@@ -38,6 +38,4 @@ jobs:
         uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
         with:
           prek-version: "0.5.4"
-          # godot-template's hooks need a Godot installation, which the workflow
-          # doesn't set up, so the subtree is excluded from CI runs.
-          extra-args: --skip templates/godot-template ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
+          extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}

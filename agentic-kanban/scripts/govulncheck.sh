@@ -39,7 +39,9 @@ IGNORE=(
 
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-govulncheck -format json ./... >"$tmp" 2>/dev/null || true
+# JSON output exits 0 whatever it finds, so a non-zero exit means the scan
+# itself failed.
+govulncheck -format json ./... >"$tmp"
 
 python3 - "$tmp" "${IGNORE[@]}" <<'PY'
 import json, sys
