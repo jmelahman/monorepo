@@ -9,7 +9,7 @@ description: >
 model: sonnet
 metadata:
   author: jmelahman
-  version: "2.4"
+  version: "2.5"
 ---
 
 # Dependabot PRs
@@ -108,15 +108,23 @@ The `prek` line is the PR check. It must pass before pushing.
 
 ## 5. Finish
 
+Wait for the runs on the last merged commit. Run this with a 10-minute
+timeout:
+
 ```bash
-${CLAUDE_SKILL_DIR}/scripts/triage.py --master
+${CLAUDE_SKILL_DIR}/scripts/triage.py --master --wait
 ```
 
-- `Mirror` must be `success` on the last merged commit. If it failed, report
-  it; don't fix it.
-- `Tests` should be `success`. If not, report the failing hook.
-- `Devcontainer` appears only if a Dockerfile it builds changed; it must be
-  `success` too.
+It prints one row per workflow: its result and run id. `not triggered` is
+fine; most workflows only run when certain files change.
+
+If a row is `failure`:
+
+1. Rerun it once: `gh run rerun <run id> --failed`, then run the command
+   above again.
+2. Still `failure`: get the output with
+   `${CLAUDE_SKILL_DIR}/scripts/triage.py --log master` and report it. Don't
+   investigate, fix or revert anything.
 
 Then report:
 
@@ -124,5 +132,5 @@ Then report:
 Merged (N): #A, #B
 Fixed: <commit or PR> — <what>
 Left for you (N): #C — <specific reason>
-master: Mirror <result>, Tests <result>
+master: <workflow> <result>, … — <failing hook, and whether the rerun passed>
 ```
