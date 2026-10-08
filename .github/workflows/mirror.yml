@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - name: Mirror subtrees
-        uses: jmelahman/git-orchard@be22a3f8391fc8c92c1f4f6eb9b844c7fb16f366
+        uses: jmelahman/git-orchard@aec397c8c2fcc93657f7342356dd450f47650562
         with:
           # Created and stored by `git orchard github-app`; the App is
           # installed on the mirror repositories.
