@@ -257,7 +257,7 @@ function renderLayers() {
       const eye = document.createElement('input');
       eye.type = 'checkbox';
       eye.checked = l.visible;
-      eye.title = 'Show layer';
+      eye.title = `Show ${label}`;
       eye.setAttribute('aria-label', `Show ${label}`);
       eye.addEventListener('change', () => {
         commitText();
@@ -303,9 +303,7 @@ function setTool(name) {
     el.hidden = !el.dataset.tools.split(' ').includes(name);
   }
   clearOverlay();
-  setMessage(
-    name === 'text' ? 'Click to place or edit text, drag text to move it. Ctrl+Enter to apply, Esc to cancel.' : '',
-  );
+  setMessage('');
 }
 
 function swapColors() {
@@ -855,6 +853,15 @@ for (const input of [colorInput, fontInput, fontSizeInput, boldInput]) {
 }
 zoomInput.addEventListener('change', applyZoom);
 window.addEventListener('resize', applyZoom);
+
+$('panel-toggle').addEventListener('click', (e) => {
+  const collapsed = document.querySelector('.panel').classList.toggle('collapsed');
+  const label = collapsed ? 'Expand layers' : 'Collapse layers';
+  e.currentTarget.title = label;
+  e.currentTarget.setAttribute('aria-label', label);
+  e.currentTarget.setAttribute('aria-expanded', String(!collapsed));
+  applyZoom();
+});
 
 const TOOL_KEYS = { b: 'brush', e: 'eraser', l: 'line', r: 'rect', o: 'ellipse', t: 'text', g: 'fill', i: 'eyedropper' };
 
