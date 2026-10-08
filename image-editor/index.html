@@ -35,7 +35,7 @@
       <button type="button" id="swap" class="icon" title="Swap colors (X)" aria-label="Swap colors">
         <svg viewBox="0 0 24 24"><path d="M7 4L3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7"/></svg>
       </button>
-      <label data-tools="brush eraser line rect ellipse" title="Stroke size ([ and ])">
+      <label data-tools="brush eraser line arrow rect ellipse" title="Stroke size ([ and ])">
         Size <input type="range" id="size" min="1" max="100" value="6"><output id="size-out">6</output>
       </label>
       <label data-tools="rect ellipse"><input type="checkbox" id="filled"> Filled</label>
@@ -77,6 +77,9 @@
       </button>
       <button type="button" class="icon" data-tool="line" title="Line (L): hold Shift to snap" aria-label="Line">
         <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg>
+      </button>
+      <button type="button" class="icon" data-tool="arrow" title="Arrow (A): hold Shift to snap" aria-label="Arrow">
+        <svg viewBox="0 0 24 24"><path d="M5 19L19 5M11 5h8v8"/></svg>
       </button>
       <button type="button" class="icon" data-tool="rect" title="Rectangle (R): hold Shift for a square" aria-label="Rectangle">
         <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>

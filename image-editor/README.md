@@ -5,7 +5,7 @@ dependencies, nothing leaves your machine.
 
 ## Features
 
-- Brush, eraser, line, rectangle, ellipse, text, fill, and color picker tools
+- Brush, eraser, line, arrow, rectangle, ellipse, text, fill, and color picker tools
 - Primary and secondary colors that swap with one key
 - Layers: add, delete, reorder, hide, and merge down
 - Text stays editable on its own layer: drag to move it, click to edit it
@@ -15,15 +15,15 @@ dependencies, nothing leaves your machine.
 
 ## Shortcuts
 
-| Key                             | Action                                                          |
-| ------------------------------- | --------------------------------------------------------------- |
-| `B` `E` `L` `R` `O` `T` `G` `I` | Brush, eraser, line, rectangle, ellipse, text, fill, pick color |
-| `X`                             | Swap primary and secondary colors                               |
-| `[` / `]`                       | Decrease / increase stroke size                                 |
-| `Shift` (while dragging)        | Snap lines to 45°, constrain to square / circle                 |
-| `Ctrl+Enter` / `Esc`            | Apply / cancel text                                             |
-| `Ctrl+Z` / `Ctrl+Shift+Z`       | Undo / redo                                                     |
-| `Ctrl+O` / `Ctrl+S`             | Open / save                                                     |
+| Key                                 | Action                                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| `B` `E` `L` `A` `R` `O` `T` `G` `I` | Brush, eraser, line, arrow, rectangle, ellipse, text, fill, pick color |
+| `X`                                 | Swap primary and secondary colors                                      |
+| `[` / `]`                           | Decrease / increase stroke size                                        |
+| `Shift` (while dragging)            | Snap lines and arrows to 45°, constrain to square / circle             |
+| `Ctrl+Enter` / `Esc`                | Apply / cancel text                                                    |
+| `Ctrl+Z` / `Ctrl+Shift+Z`           | Undo / redo                                                            |
+| `Ctrl+O` / `Ctrl+S`                 | Open / save                                                            |
 
 ## Development
 

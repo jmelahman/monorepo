@@ -335,7 +335,7 @@ function drawShape(c, a, b, constrain) {
   c.lineCap = 'round';
   c.lineJoin = tool === 'rect' ? 'miter' : 'round';
   c.beginPath();
-  if (tool === 'line') {
+  if (tool === 'line' || tool === 'arrow') {
     if (constrain) {
       const step = Math.PI / 4;
       const angle = Math.round(Math.atan2(dy, dx) / step) * step;
@@ -343,9 +343,24 @@ function drawShape(c, a, b, constrain) {
       dx = Math.cos(angle) * len;
       dy = Math.sin(angle) * len;
     }
+    const len = Math.hypot(dx, dy);
+    // The head scales with the stroke, but never outgrows a short arrow.
+    const head = tool === 'arrow' && len ? Math.min(len, Math.max(10, c.lineWidth * 4)) : 0;
+    const ux = len ? dx / len : 0;
+    const uy = len ? dy / len : 0;
+    const tip = { x: a.x + dx, y: a.y + dy };
+    // The shaft stops at the head's base so its round cap doesn't blunt the tip.
+    const base = { x: tip.x - ux * head, y: tip.y - uy * head };
     c.moveTo(a.x, a.y);
-    c.lineTo(a.x + dx, a.y + dy);
+    c.lineTo(base.x, base.y);
     c.stroke();
+    if (head) {
+      c.beginPath();
+      c.moveTo(tip.x, tip.y);
+      c.lineTo(base.x - uy * head / 2, base.y + ux * head / 2);
+      c.lineTo(base.x + uy * head / 2, base.y - ux * head / 2);
+      c.fill();
+    }
   } else {
     if (constrain) {
       const side = Math.max(Math.abs(dx), Math.abs(dy));
@@ -641,7 +656,7 @@ overlay.addEventListener('pointerdown', (e) => {
     beginPaint();
     drag = { id: e.pointerId, last: p };
     strokeSegment(p, p);
-  } else if (tool === 'line' || tool === 'rect' || tool === 'ellipse') {
+  } else if (tool === 'line' || tool === 'arrow' || tool === 'rect' || tool === 'ellipse') {
     drag = { id: e.pointerId, start: p };
   } else if (tool === 'fill') {
     floodFill(p);
@@ -863,7 +878,7 @@ $('panel-toggle').addEventListener('click', (e) => {
   applyZoom();
 });
 
-const TOOL_KEYS = { b: 'brush', e: 'eraser', l: 'line', r: 'rect', o: 'ellipse', t: 'text', g: 'fill', i: 'eyedropper' };
+const TOOL_KEYS = { b: 'brush', e: 'eraser', l: 'line', a: 'arrow', r: 'rect', o: 'ellipse', t: 'text', g: 'fill', i: 'eyedropper' };
 
 document.addEventListener('keydown', (e) => {
   if (newDialog.open) return;
