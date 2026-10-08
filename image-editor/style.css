@@ -148,6 +148,30 @@ input[type="color"] {
   cursor: pointer;
 }
 
+.colors {
+  position: relative;
+  width: 42px;
+  height: 34px;
+}
+
+.colors label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.colors label + label {
+  top: 8px;
+  left: 16px;
+  z-index: 0;
+}
+
+.colors input[type="color"] {
+  width: 26px;
+  height: 26px;
+}
+
 input[type="range"] {
   width: 110px;
   accent-color: var(--accent);
@@ -167,9 +191,15 @@ input[type="checkbox"] {
   font-variant-numeric: tabular-nums;
 }
 
-#workspace {
+.main {
   flex: 1;
   min-height: 0;
+  display: flex;
+}
+
+#workspace {
+  flex: 1;
+  min-width: 0;
   display: flex;
   overflow: auto;
   padding: 16px;
@@ -195,21 +225,33 @@ input[type="checkbox"] {
   height: 100%;
 }
 
-#canvas {
+#overlay {
   touch-action: none;
   cursor: crosshair;
 }
 
-#canvas[data-tool="text"] {
+#overlay[data-tool="text"] {
   cursor: text;
 }
 
-#overlay {
-  pointer-events: none;
+.text-box {
+  position: absolute;
+}
+
+.text-handle {
+  position: absolute;
+  left: -2px;
+  bottom: calc(100% + 4px);
+  width: 24px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--accent);
+  cursor: move;
+  touch-action: none;
 }
 
 .text-input {
-  position: absolute;
+  display: block;
   min-width: 1em;
   min-height: 1.2em;
   margin: 0;
@@ -221,6 +263,66 @@ input[type="checkbox"] {
   resize: none;
   overflow: hidden;
   white-space: pre;
+}
+
+.panel {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 220px;
+  padding: 8px;
+  overflow: auto;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+}
+
+.panel h2 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#layer-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#layer-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#layer-list button {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-color: transparent;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+#layer-list button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+
+@media (max-width: 640px) {
+  .main {
+    flex-direction: column;
+  }
+
+  .panel {
+    width: auto;
+    max-height: 30%;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
 }
 
 .status {

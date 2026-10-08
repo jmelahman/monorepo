@@ -54,7 +54,13 @@
     </div>
 
     <div class="group">
-      <label title="Color"><span class="sr-only">Color</span><input type="color" id="color" value="#000000"></label>
+      <div class="colors">
+        <label title="Primary color"><span class="sr-only">Primary color</span><input type="color" id="color" value="#000000"></label>
+        <label title="Secondary color"><span class="sr-only">Secondary color</span><input type="color" id="color2" value="#ffffff"></label>
+      </div>
+      <button type="button" id="swap" class="icon" title="Swap colors (X)" aria-label="Swap colors">
+        <svg viewBox="0 0 24 24"><path d="M7 4L3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7"/></svg>
+      </button>
       <label data-tools="brush eraser line rect ellipse" title="Stroke size ([ and ])">
         Size <input type="range" id="size" min="1" max="100" value="6"><output id="size-out">6</output>
       </label>
@@ -87,12 +93,36 @@
     </div>
   </header>
 
-  <main id="workspace">
-    <div id="stage">
-      <canvas id="canvas"></canvas>
-      <canvas id="overlay"></canvas>
-    </div>
-  </main>
+  <div class="main">
+    <main id="workspace">
+      <div id="stage">
+        <div id="layers"></div>
+        <canvas id="overlay"></canvas>
+      </div>
+    </main>
+
+    <aside class="panel" aria-label="Layers">
+      <h2>Layers</h2>
+      <ul id="layer-list"></ul>
+      <div class="group">
+        <button type="button" id="layer-add" class="icon" title="New layer" aria-label="New layer">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button type="button" id="layer-delete" class="icon" title="Delete layer" aria-label="Delete layer">
+          <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>
+        </button>
+        <button type="button" id="layer-up" class="icon" title="Move layer up" aria-label="Move layer up">
+          <svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+        </button>
+        <button type="button" id="layer-down" class="icon" title="Move layer down" aria-label="Move layer down">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+        </button>
+        <button type="button" id="layer-merge" class="icon" title="Merge into the layer below" aria-label="Merge down">
+          <svg viewBox="0 0 24 24"><path d="M12 4v10M7 10l5 5 5-5M5 20h14"/></svg>
+        </button>
+      </div>
+    </aside>
+  </div>
 
   <footer class="status">
     <span id="dims"></span>
