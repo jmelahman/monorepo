@@ -1,6 +1,6 @@
 module github.com/jmelahman/fullstack-template
 
-go 1.26.5
+go 1.27.2
 
 require (
 	github.com/spf13/cobra v1.10.2

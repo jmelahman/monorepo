@@ -1,6 +1,6 @@
 module github.com/jmelahman/go-pre-commit-hooks
 
-go 1.27
+go 1.27.2
 
 require golang.org/x/vuln v1.8.0
 

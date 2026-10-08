@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ARG GO_VERSION=1.26.3
+ARG GO_VERSION=1.27.2
 RUN ARCH="$(dpkg --print-architecture)" \
   && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" | tar -C /usr/local -xz
 ENV PATH="/usr/local/go/bin:/root/go/bin:/home/dev/go/bin:${PATH}" \

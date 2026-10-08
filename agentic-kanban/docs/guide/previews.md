@@ -81,7 +81,7 @@ A manifest can also publish files for download instead of running them, such as 
 ```toml
 [artifacts.cli]
 path  = "."
-image = "golang:1.26-alpine"
+image = "golang:1.27-alpine"
 build = [["go", "build", "-o", "bin/mytool-linux-amd64", "."]]
 files = ["bin/mytool-linux-amd64"]
 ```

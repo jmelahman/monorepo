@@ -1,6 +1,6 @@
 module github.com/jmelahman/kanban
 
-go 1.26.6
+go 1.27.2
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0

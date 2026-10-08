@@ -11,7 +11,7 @@
 // replacement inert here.
 module github.com/jmelahman/check-symlinks/so
 
-go 1.27
+go 1.27.2
 
 require (
 	github.com/jmelahman/check-symlinks v0.0.0

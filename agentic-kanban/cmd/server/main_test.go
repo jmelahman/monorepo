@@ -20,9 +20,13 @@ import (
 )
 
 // TestMain isolates git from the caller's environment and gitconfig; see
-// gittest.IsolateEnv.
+// gittest.IsolateEnv. It hides the developer's kanban user config too, which
+// layers over every test board's .kanban.toml: a [merge] section there would
+// otherwise decide which strategies these tests see. See REGRESSIONS.md: "Tests
+// inherit the developer's kanban user config".
 func TestMain(m *testing.M) {
 	gittest.IsolateEnv()
+	os.Setenv("KANBAN_CONFIG", os.DevNull)
 	os.Exit(m.Run())
 }
 

@@ -1,3 +1,3 @@
 module github.com/jmelahman/typesafe-sdk-go
 
-go 1.27
+go 1.27.2

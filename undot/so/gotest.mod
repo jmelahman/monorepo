@@ -7,7 +7,7 @@
 // and no sum file.
 module github.com/jmelahman/undot/so
 
-go 1.27
+go 1.27.2
 
 require (
 	github.com/jmelahman/undot v0.0.0

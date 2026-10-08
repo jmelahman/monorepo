@@ -356,6 +356,19 @@ under test) calls `gittest.IsolateEnv()` first in its `TestMain`. Tests that
 commit set their own identity on the repo or with `-c`, never through the
 global config.
 
+### Tests inherit the developer's kanban user config
+
+`kanbantoml.Load` layers the user file (`~/.config/kanban/config.toml`) over
+the project's `.kanban.toml`, and the user file wins. A test that writes a
+`.kanban.toml` and reads the merged result passes in CI, where there is no
+user file, and fails on a machine whose owner set the same section, such as a
+`[merge]` that leaves one strategy enabled.
+
+Rule: a test that reads merged config points `$KANBAN_CONFIG` (or
+`$XDG_CONFIG_HOME`) at a throwaway path first. `cmd/server` does it for the
+whole package in `TestMain`. `$KANBAN_CONFIG` takes precedence, so a package
+that sets it there can't also steer the user file through `$XDG_CONFIG_HOME`.
+
 ### A push subscription is tied to one VAPID key
 
 A browser's push subscription only accepts messages signed with the VAPID

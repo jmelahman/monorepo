@@ -1,6 +1,6 @@
 module github.com/jmelahman/work
 
-go 1.26.0
+go 1.27.2
 
 require (
 	github.com/gen2brain/beeep v0.11.2

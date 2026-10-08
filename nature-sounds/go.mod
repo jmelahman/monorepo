@@ -1,6 +1,6 @@
 module github.com/jmelahman/nature-sounds
 
-go 1.26.0
+go 1.27.2
 
 require (
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203

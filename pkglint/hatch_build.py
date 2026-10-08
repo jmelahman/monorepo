@@ -13,7 +13,7 @@ import manygo
 # allows: the same compiler version everywhere, pinned in exactly one place.
 # The static backend pins (hatchling, hatch-vcs, manygo) live in
 # pyproject.toml [build-system].requires.
-GO_BIN_PIN = "go-bin==1.27.1"
+GO_BIN_PIN = "go-bin==1.27.2"
 
 # Where the binary's version string is stamped: not `main`, since main.go is a
 # shim. .goreleaser.yml stamps the same symbol.
