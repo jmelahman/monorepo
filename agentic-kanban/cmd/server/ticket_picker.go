@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 
+	"github.com/jmelahman/kanban/internal/api"
 	"github.com/jmelahman/kanban/internal/client"
 )
 
@@ -22,6 +23,9 @@ type pickerItem struct {
 	Column  string
 	Status  string // session status; "" when the ticket has no session yet
 	Harness string // the session's own harness choice; "" for the default
+	// Strategy is set only on what a picker with a strategy row returns:
+	// the merge strategy picked with ←/→.
+	Strategy string
 }
 
 // loadBoardTickets fetches a board's tickets in board order (columns left to
@@ -30,14 +34,22 @@ type pickerItem struct {
 // board's archived tickets instead of its open ones, for the subcommands
 // (`unarchive`, `delete`) that only ever act on those.
 func loadBoardTickets(ctx context.Context, url, ident string, archived bool) (label string, items []pickerItem, err error) {
+	label, items, _, err = loadBoardPicker(ctx, url, ident, archived)
+	return label, items, err
+}
+
+// loadBoardPicker is loadBoardTickets plus the board's merge strategy
+// options (nil when there is nothing to choose between), read from the same
+// board state so the merge picker costs one fetch.
+func loadBoardPicker(ctx context.Context, url, ident string, archived bool) (label string, items []pickerItem, strategies *strategyOptions, err error) {
 	c := client.New(url, nil)
 	id, err := c.ResolveBoardID(ctx, ident)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	raw, err := c.BoardState(ctx, id)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	var st struct {
 		Board struct {
@@ -55,9 +67,10 @@ func loadBoardTickets(ctx context.Context, url, ident string, archived bool) (la
 			Status   string `json:"status"`
 			Harness  string `json:"harness"`
 		} `json:"sessions"`
+		MergeConfig api.MergeConfig `json:"merge_config"`
 	}
 	if err := json.Unmarshal(raw, &st); err != nil {
-		return "", nil, fmt.Errorf("decode board state: %w", err)
+		return "", nil, nil, fmt.Errorf("decode board state: %w", err)
 	}
 
 	type column struct {
@@ -80,11 +93,11 @@ func loadBoardTickets(ctx context.Context, url, ident string, archived bool) (la
 	if archived {
 		rawArchived, err := c.ListArchived(ctx, id)
 		if err != nil {
-			return "", nil, err
+			return "", nil, nil, err
 		}
 		tickets = nil
 		if err := json.Unmarshal(rawArchived, &tickets); err != nil {
-			return "", nil, fmt.Errorf("decode archived tickets: %w", err)
+			return "", nil, nil, fmt.Errorf("decode archived tickets: %w", err)
 		}
 	}
 	sort.SliceStable(tickets, func(i, j int) bool {
@@ -107,7 +120,8 @@ func loadBoardTickets(ctx context.Context, url, ident string, archived bool) (la
 			Harness: harnesses[t.ID],
 		})
 	}
-	return formatBoardLabel(st.Board.Name, st.Board.Slug), items, nil
+	strategies = newStrategyOptions(st.MergeConfig.EnabledStrategies(), st.MergeConfig.DefaultStrategy)
+	return formatBoardLabel(st.Board.Name, st.Board.Slug), items, strategies, nil
 }
 
 // pickerAction names what a run of the picker stands in for: the heading it
@@ -124,8 +138,10 @@ type pickerAction struct {
 // cancelled (Esc / Ctrl+C). A non-nil harnesses adds a harness row for the
 // highlighted ticket (used by `ticket attach`); chosen[0].Harness is then
 // the harness picked for it — see ticketPicker.chosen. multi lets Tab mark
-// several tickets; without it chosen is always exactly one ticket.
-func promptTicketPicker(action pickerAction, boardLabel string, items []pickerItem, harnesses *harnessOptions, multi bool) (chosen []pickerItem, ok bool, err error) {
+// several tickets; without it chosen is always exactly one ticket. A non-nil
+// strategies adds a merge strategy row instead (used by `ticket merge`);
+// chosen[0].Strategy is then the strategy picked.
+func promptTicketPicker(action pickerAction, boardLabel string, items []pickerItem, harnesses *harnessOptions, strategies *strategyOptions, multi bool) (chosen []pickerItem, ok bool, err error) {
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		return chosen, false, fmt.Errorf("open terminal: %w", err)
@@ -143,6 +159,7 @@ func promptTicketPicker(action pickerAction, boardLabel string, items []pickerIt
 	}()
 	p := newTicketPicker(action, boardLabel, items)
 	p.harnesses = harnesses
+	p.setStrategies(strategies)
 	p.multi = multi
 	return runTicketPicker(screen, p)
 }
@@ -192,6 +209,14 @@ type ticketPicker struct {
 	harnesses *harnessOptions
 	picked    map[int64]int
 
+	// strategies is nil unless the picker offers a merge strategy row;
+	// strategy is the ←/→ choice (index into strategies.list, or
+	// strategyUnset). Unlike the harness it isn't a property of the ticket,
+	// so one choice covers the whole list. A picker has at most one of the
+	// two rows; given both, the harness row wins.
+	strategies *strategyOptions
+	strategy   int
+
 	// multi lets Tab / Shift+Tab mark tickets; marked holds the marked ids,
 	// kept across filter changes so a mark hidden by the filter still counts.
 	multi  bool
@@ -240,6 +265,15 @@ func (p *ticketPicker) visible() []int {
 	return idx
 }
 
+// setStrategies adds the merge strategy row, starting on the board's default
+// (unset when it has none).
+func (p *ticketPicker) setStrategies(o *strategyOptions) {
+	p.strategies = o
+	if o != nil {
+		p.strategy = o.initial()
+	}
+}
+
 // harnessIdx is the harness shown for it: the ←/→ choice, else the
 // session's stored harness, else the default.
 func (p *ticketPicker) harnessIdx(it pickerItem) int {
@@ -271,9 +305,12 @@ func (p *ticketPicker) cycleHarness(delta int) {
 // chosen is the highlighted item as the caller should act on it: with a
 // harness row, Harness is replaced by the ID picked with ←/→, or cleared
 // when the pick matches what the session already launches (nothing to
-// change).
+// change). With a strategy row, Strategy is the one picked.
 func (p *ticketPicker) chosen() pickerItem {
 	it := p.current()
+	if p.strategies != nil && p.strategy != strategyUnset {
+		it.Strategy = p.strategies.list[p.strategy]
+	}
 	if p.harnesses == nil {
 		return it
 	}
@@ -353,6 +390,10 @@ func (p *ticketPicker) submit() {
 		p.errMsg = "no tickets match the filter"
 		return
 	}
+	if p.strategies != nil && p.strategy == strategyUnset {
+		p.errMsg = strategyUnsetError
+		return
+	}
 	p.selected = true
 }
 
@@ -366,8 +407,8 @@ func (p *ticketPicker) submit() {
 //	                             down / up (multi-select pickers only)
 //	Esc / Ctrl+C                 cancel
 //	printable keys               narrow the list; Backspace widens it again
-//	Left / Right                 cycle the harness when there's a harness row,
-//	                             else move in the filter
+//	Left / Right                 cycle the harness or merge strategy when
+//	                             there's a row for one, else move in the filter
 //	Ctrl+B / Ctrl+F, Ctrl+A / Ctrl+E, Ctrl+U / Ctrl+K / Ctrl+W   edit the filter
 func (p *ticketPicker) handleKey(ev *tcell.EventKey) {
 	p.errMsg = ""
@@ -406,10 +447,18 @@ func (p *ticketPicker) handleKey(ev *tcell.EventKey) {
 			p.cycleHarness(-1)
 			return
 		}
+		if p.strategies != nil {
+			p.strategy = p.strategies.cycle(p.strategy, -1)
+			return
+		}
 		p.filter.left()
 	case tcell.KeyRight:
 		if p.harnesses != nil {
 			p.cycleHarness(1)
+			return
+		}
+		if p.strategies != nil {
+			p.strategy = p.strategies.cycle(p.strategy, 1)
 			return
 		}
 		p.filter.right()
@@ -521,8 +570,8 @@ func (p *ticketPicker) render(s tcell.Screen) {
 
 	// List.
 	footer := pickerFooterRows
-	if p.harnesses != nil {
-		footer++ // the harness row, between the list and the help line
+	if p.harnesses != nil || p.strategies != nil {
+		footer++ // the harness / strategy row, between the list and the help line
 	}
 	listH := h - footer - pickerListRow
 	if listH < 1 {
@@ -577,6 +626,14 @@ func (p *ticketPicker) render(s tcell.Screen) {
 			}
 			drawHarnessRow(s, formPad, h-3, width, true, p.harnesses.label(p.harnessIdx(it)), note)
 		}
+	}
+	if p.harnesses == nil && p.strategies != nil {
+		help = "↑↓ move · ←→ strategy · Enter " + p.action.verb + " · type to filter · Esc cancel"
+		note := ""
+		if p.strategy == strategyUnset {
+			note = strategyUnsetNote
+		}
+		drawOptionRow(s, formPad, h-3, width, strategyRowLabel, true, p.strategies.label(p.strategy), note)
 	}
 	putText(s, formPad, h-2, width, base.Dim(true), help)
 	if p.errMsg != "" {

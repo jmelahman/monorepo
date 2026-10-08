@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -938,6 +939,37 @@ func TestLoadBoardTickets(t *testing.T) {
 
 	if _, _, err := loadBoardTickets(t.Context(), srv.URL, "no-such-board", false); err == nil {
 		t.Error("expected an error for an unknown board")
+	}
+}
+
+// TestLoadBoardPickerStrategies covers the merge picker's strategy options as
+// read from a real board state: the project's [merge] config decides which
+// strategies are offered and which one is the default, and a board left with
+// a single strategy offers no row at all.
+func TestLoadBoardPickerStrategies(t *testing.T) {
+	srv, _, board := newKanbanCLITestServer(t)
+	writeConfig := func(body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(board.RepoPath, ".kanban.toml"), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	writeConfig("[merge]\nallow_squash = false\ndefault_strategy = \"rebase\"\n")
+	_, _, strategies, err := loadBoardPicker(t.Context(), srv.URL, board.Slug, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strategies == nil || !slices.Equal(strategies.list, []string{"merge-commit", "rebase"}) || strategies.def != "rebase" {
+		t.Errorf("strategies = %+v, want merge-commit and rebase defaulting to rebase", strategies)
+	}
+
+	writeConfig("[merge]\nallow_squash = false\nallow_rebase = false\n")
+	if _, _, strategies, err = loadBoardPicker(t.Context(), srv.URL, board.Slug, false); err != nil {
+		t.Fatal(err)
+	}
+	if strategies != nil {
+		t.Errorf("one allowed strategy: got %+v, want no row", strategies)
 	}
 }
 

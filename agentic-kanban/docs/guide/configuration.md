@@ -103,9 +103,9 @@ Writes rewrite the whole file, so comments and key order are lost. The same oper
 
 ### Default merge strategy
 
-`[merge].default_strategy` is used when a merge doesn't name a strategy, for example `kanban ticket merge` without `--strategy`. It's also listed first in the merge menu.
+`[merge].default_strategy` is used when a merge doesn't name a strategy, for example `kanban ticket merge 12` without `--strategy`. It's also listed first in the merge menu, and preselected on the **Strategy** row of the `kanban ticket merge` ticket list.
 
-If it's unset and the board allows only one strategy, that one is used. Otherwise the merge is rejected and the error lists the allowed strategies. Setting a default that the same config disables is an error.
+If it's unset and the board allows only one strategy, that one is used. Otherwise the merge is rejected and the error lists the allowed strategies; the `kanban ticket merge` ticket list asks you to choose one instead. Setting a default that the same config disables is an error.
 
 ### Commit messages
 

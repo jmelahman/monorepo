@@ -116,9 +116,14 @@ const harnessRowLabel = "Harness"
 // always shown so the row reads as something ←/→ changes; focus is shown the
 // same way as the form's boxes (bold vs dim).
 func drawHarnessRow(s tcell.Screen, x, y, width int, focused bool, value, note string) {
+	drawOptionRow(s, x, y, width, harnessRowLabel, focused, value, note)
+}
+
+// drawOptionRow is the shared body of the ←/→ rows (harness, merge strategy).
+func drawOptionRow(s tcell.Screen, x, y, width int, label string, focused bool, value, note string) {
 	base := tcell.StyleDefault
-	putText(s, x, y, width, base.Dim(!focused), harnessRowLabel)
-	vx := x + len(harnessRowLabel) + 2
+	putText(s, x, y, width, base.Dim(!focused), label)
+	vx := x + len(label) + 2
 	text := "‹ " + value + " ›"
 	putText(s, vx, y, width-(vx-x), base.Bold(focused).Dim(!focused), text)
 	if note != "" {

@@ -738,7 +738,7 @@ shell in the container is attached instead of the agent.`,
 				id, err = ticketArg(ctx, url, args, boardIdent, action, false)
 			} else {
 				var item pickerItem
-				item, err = pickTicketItem(ctx, url, boardIdent, action, false, true)
+				item, err = pickTicketItem(ctx, url, boardIdent, action, false, pickerWithHarness)
 				id, harnessID = item.ID, item.Harness
 			}
 			if err != nil {
@@ -881,11 +881,21 @@ shell in the container is attached instead of the agent.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
-			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Merge ticket branch", "merge"}, false)
+			action := pickerAction{"Merge ticket branch", "merge"}
+			if len(args) > 0 || mergeStrategy != "" {
+				// Nothing to pick a strategy for: with an explicit id the
+				// server resolves it, and --strategy already decided it.
+				id, err := ticketArg(ctx, url, args, boardIdent, action, false)
+				if err != nil {
+					return err
+				}
+				return runTicketMerge(ctx, url, cmd.OutOrStdout(), id, mergeStrategy)
+			}
+			item, err := pickTicketItem(ctx, url, boardIdent, action, false, pickerWithStrategy)
 			if err != nil {
 				return err
 			}
-			return runTicketMerge(ctx, url, cmd.OutOrStdout(), id, mergeStrategy)
+			return runTicketMerge(ctx, url, cmd.OutOrStdout(), item.ID, item.Strategy)
 		},
 	}
 	mergeCmd.Flags().StringVar(&mergeStrategy, "strategy", "", "Merge strategy: merge-commit, squash, or rebase (default: merge.default_strategy)")
@@ -947,7 +957,7 @@ func ticketArg(ctx context.Context, url string, args []string, boardIdent string
 // archived is set).
 func ticketArgs(ctx context.Context, url string, args []string, boardIdent string, action pickerAction, archived bool) ([]int64, error) {
 	if len(args) == 0 {
-		items, err := pickTicketItems(ctx, url, boardIdent, action, archived, false, true)
+		items, err := pickTicketItems(ctx, url, boardIdent, action, archived, pickerPlain, true)
 		if err != nil {
 			return nil, err
 		}
@@ -974,25 +984,35 @@ func ticketArgs(ctx context.Context, url string, args []string, boardIdent strin
 // The terminal check comes first so nothing is fetched or drawn for a
 // picker that can't be shown.
 func pickTicket(ctx context.Context, url, boardIdent string, action pickerAction, archived bool) (int64, error) {
-	item, err := pickTicketItem(ctx, url, boardIdent, action, archived, false)
+	item, err := pickTicketItem(ctx, url, boardIdent, action, archived, pickerPlain)
 	return item.ID, err
 }
 
 // pickTicketItem is pickTicket returning the whole picked row. withHarness
 // adds the picker's harness row; the item's Harness is then the harness to
 // switch the ticket's session to, or "" to leave it as is.
-func pickTicketItem(ctx context.Context, url, boardIdent string, action pickerAction, archived, withHarness bool) (pickerItem, error) {
-	items, err := pickTicketItems(ctx, url, boardIdent, action, archived, withHarness, false)
+func pickTicketItem(ctx context.Context, url, boardIdent string, action pickerAction, archived bool, extra pickerExtra) (pickerItem, error) {
+	items, err := pickTicketItems(ctx, url, boardIdent, action, archived, extra, false)
 	if err != nil {
 		return pickerItem{}, err
 	}
 	return items[0], nil
 }
 
+// pickerExtra selects the ←/→ row a picker shows under its list, if any.
+type pickerExtra int
+
+const (
+	pickerPlain        pickerExtra = iota
+	pickerWithHarness              // `ticket attach`: the session's harness
+	pickerWithStrategy             // `ticket merge`: the merge strategy
+)
+
 // pickTicketItems is pickTicketItem returning every picked row; multi lets
 // the user mark several with Tab. It always returns at least one item or an
-// error.
-func pickTicketItems(ctx context.Context, url, boardIdent string, action pickerAction, archived, withHarness, multi bool) ([]pickerItem, error) {
+// error. With pickerWithStrategy each item's Strategy is the merge strategy
+// picked, or "" when the board leaves nothing to choose between.
+func pickTicketItems(ctx context.Context, url, boardIdent string, action pickerAction, archived bool, extra pickerExtra, multi bool) ([]pickerItem, error) {
 	if !stdinIsTerminal() {
 		return nil, errors.New("a ticket id is required when not running in an interactive terminal")
 	}
@@ -1000,7 +1020,7 @@ func pickTicketItems(ctx context.Context, url, boardIdent string, action pickerA
 	if err != nil {
 		return nil, err
 	}
-	label, items, err := loadBoardTickets(ctx, url, ident, archived)
+	label, items, strategies, err := loadBoardPicker(ctx, url, ident, archived)
 	if err != nil {
 		return nil, err
 	}
@@ -1012,12 +1032,15 @@ func pickTicketItems(ctx context.Context, url, boardIdent string, action pickerA
 		return nil, fmt.Errorf("board %s has no %s tickets", label, kind)
 	}
 	var opts *harnessOptions
-	if withHarness {
+	if extra == pickerWithHarness {
 		if opts, err = loadHarnessOptions(ctx, url, ident); err != nil {
 			return nil, err
 		}
 	}
-	picked, ok, err := promptTicketPicker(action, label, items, opts, multi)
+	if extra != pickerWithStrategy {
+		strategies = nil
+	}
+	picked, ok, err := promptTicketPicker(action, label, items, opts, strategies, multi)
 	if err != nil {
 		return nil, err
 	}

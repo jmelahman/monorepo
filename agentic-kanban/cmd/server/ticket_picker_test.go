@@ -437,3 +437,63 @@ func TestTicketPickerMultiSelect(t *testing.T) {
 		t.Errorf("Tab in a single-select picker marked %v / moved to #%d", single.marked, single.current().ID)
 	}
 }
+
+// TestTicketPickerStrategyRow covers the merge picker's strategy row: it
+// starts on the board's default (else the first allowed strategy), ←/→ cycle
+// it with wraparound, and Enter returns the pick with the ticket.
+func TestTicketPickerStrategyRow(t *testing.T) {
+	if o := newStrategyOptions([]string{"squash"}, ""); o != nil {
+		t.Errorf("one allowed strategy: got %+v, want no row", o)
+	}
+
+	p := newTicketPicker(pickerAction{"Merge ticket branch", "merge"}, "b", pickerItems())
+	p.setStrategies(newStrategyOptions([]string{"merge-commit", "squash", "rebase"}, ""))
+	// With no default nothing is preselected, and Enter refuses to merge
+	// until a strategy is chosen.
+	p.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if p.selected || p.errMsg != strategyUnsetError {
+		t.Errorf("Enter with no strategy: selected=%v errMsg=%q", p.selected, p.errMsg)
+	}
+	unset := newFormScreen(t, 70, 14)
+	p.render(unset)
+	unset.Show()
+	if text := screenLines(unset); !strings.Contains(text, "Strategy  ‹ not set ›  "+strategyUnsetNote) {
+		t.Errorf("screen missing the unset strategy row:\n%s", text)
+	}
+	p.handleKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if got := p.chosen().Strategy; got != "merge-commit" {
+		t.Errorf("Right from unset: %q, want merge-commit", got)
+	}
+	p.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if got := p.chosen().Strategy; got != "rebase" {
+		t.Errorf("Left from the first: %q, want rebase", got)
+	}
+
+	// A default the board disables is no default at all.
+	p.setStrategies(newStrategyOptions([]string{"merge-commit", "rebase"}, "squash"))
+	if p.strategy != strategyUnset {
+		t.Errorf("disabled default: starts on %d, want unset", p.strategy)
+	}
+	p.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if got := p.chosen().Strategy; got != "rebase" {
+		t.Errorf("Left from unset: %q, want rebase", got)
+	}
+
+	p.setStrategies(newStrategyOptions([]string{"merge-commit", "squash", "rebase"}, "squash"))
+	screen := newFormScreen(t, 70, 14)
+	p.render(screen)
+	screen.Show()
+	text := screenLines(screen)
+	for _, want := range []string{"Strategy  ‹ squash (default) ›", "←→ strategy · Enter merge"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("screen missing %q:\n%s", want, text)
+		}
+	}
+	p.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	p.handleKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	p.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	items := p.chosenItems()
+	if !p.selected || len(items) != 1 || items[0].ID != 12 || items[0].Strategy != "rebase" {
+		t.Errorf("selected=%v items=%+v, want #12 with rebase", p.selected, items)
+	}
+}

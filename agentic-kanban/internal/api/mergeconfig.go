@@ -79,6 +79,18 @@ func (mc MergeConfig) allows(strategy string) bool {
 	return false
 }
 
+// EnabledStrategies lists the merge strategies the board allows, in
+// kanbantoml.MergeStrategies order.
+func (mc MergeConfig) EnabledStrategies() []string {
+	var out []string
+	for _, s := range kanbantoml.MergeStrategies {
+		if mc.allows(s) {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 func (sc SyncConfig) allows(strategy string) bool {
 	switch strategy {
 	case "rebase":

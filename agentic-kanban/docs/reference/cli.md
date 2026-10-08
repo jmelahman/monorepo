@@ -323,7 +323,11 @@ Brings the base branch into the ticket's branch. Defaults to `rebase`.
 
 ### `ticket merge [id] [--strategy merge-commit|squash|rebase]`
 
-Merges the ticket's branch into the base branch. Without `--strategy`, it uses the board's [default strategy](/guide/configuration#default-merge-strategy), or the only allowed one. Otherwise `--strategy` is required. For a merge commit, use `merge-commit`, not `merge`.
+Merges the ticket's branch into the base branch. For a merge commit, use `merge-commit`, not `merge`.
+
+Without a ticket ID or `--strategy`, the ticket list has a **Strategy** row when the board allows more than one strategy: use `←`/`→` to choose among them. It starts on the board's [default strategy](/guide/configuration#default-merge-strategy). If none is set, you have to choose one before `Enter` merges. A board that allows a single strategy has no row and merges with that one.
+
+With a ticket ID and no `--strategy`, it uses the board's default strategy, or the only allowed one. Otherwise `--strategy` is required.
 
 The base branch must be checked out in the repo with no uncommitted changes to tracked files.
 
