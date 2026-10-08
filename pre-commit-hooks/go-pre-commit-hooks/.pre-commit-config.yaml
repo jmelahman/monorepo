@@ -44,11 +44,12 @@ repos:
   # Dogfood the released hooks. Pinned to a tag, so this exercises the last
   # release, not the working tree — bump rev after tagging.
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: c843811864d03fc517b10d29199efe6167ecfc72  # frozen: v1.3.0
+    rev: 930c98e97ba2dba5a652e00d6b9c02e39ecf76ab  # frozen: v1.3.1
     hooks:
       - id: gofmt
       - id: go-fix
       - id: go-mod-tidy
       - id: go-vet
       - id: go-test
+      - id: govulncheck
       - id: go-get

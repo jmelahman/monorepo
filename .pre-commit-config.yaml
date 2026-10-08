@@ -72,7 +72,7 @@ repos:
   # module root, so they belong in each module's own config, where prek's
   # workspace mode runs them from that directory.
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: c843811864d03fc517b10d29199efe6167ecfc72 # frozen: v1.3.0
+    rev: 930c98e97ba2dba5a652e00d6b9c02e39ecf76ab # frozen: v1.3.1
     hooks:
       - id: gofmt
         args: [-s]

@@ -1,0 +1,16 @@
+# Advisories the govulncheck hook accepts until upstream patches them.
+#
+# Every ID needs a comment: why it is safe to ignore, an upstream link, and
+# what would let us drop it (usually: a fix lands, or we move off the
+# dependency).
+
+# Moby AuthZ plugin bypass on oversized request bodies.
+# https://pkg.go.dev/vuln/GO-2026-4887 — docker/docker: "Fixed in: N/A".
+# The server uses docker/docker only as an API client; the AuthZ plugin code
+# is daemon-side and reached only through package init(). Drop when
+# docker/docker publishes a fix or we move to github.com/moby/moby/v2.
+GO-2026-4887
+
+# Moby off-by-one error in plugin privilege validation.
+# https://pkg.go.dev/vuln/GO-2026-4883 — same reasoning as GO-2026-4887.
+GO-2026-4883

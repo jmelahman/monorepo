@@ -51,13 +51,14 @@ repos:
   # Shared by Go subtrees: .config/git-orchard/shared/go in the monorepo. The
   # module-scoped hooks run from this directory, the module root.
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: c843811864d03fc517b10d29199efe6167ecfc72  # frozen: v1.3.0
+    rev: 930c98e97ba2dba5a652e00d6b9c02e39ecf76ab  # frozen: v1.3.1
     hooks:
       - id: gofmt
         args: [-s]
       - id: go-mod-tidy
       - id: go-vet
       - id: go-test
+      - id: govulncheck
       - id: go-get
 
   - repo: https://github.com/golangci/golangci-lint
@@ -98,18 +99,9 @@ repos:
   # no setup-bun. Biome is the one web/package.json and web/bun.lock name:
   # bun-install fills web/node_modules whenever web/ changes, and the biome
   # hook runs web's own `check` script, which finds it there. --bun runs
-  # biome's node launcher under bun. prek builds govulncheck at the pinned
-  # version too, so the hook fails if the scan can't run.
+  # biome's node launcher under bun.
   - repo: local
     hooks:
-      - id: govulncheck
-        name: govulncheck
-        entry: govulncheck ./...
-        language: golang
-        additional_dependencies:
-          - golang.org/x/vuln/cmd/govulncheck@v1.8.0
-        files: ^(go\.mod|go\.sum)$
-        pass_filenames: false
       - id: bun-install
         name: bun install
         entry: bun install --cwd=web --frozen-lockfile --silent
