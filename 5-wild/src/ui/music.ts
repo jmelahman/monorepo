@@ -56,7 +56,7 @@ type Track = {
 /** In the order the switch steps through them. The first is the default. */
 const TRACKS: readonly Track[] = [
   { id: "promises", title: "promises", url: PROMISES_URL, level: 0.17 },
-  { id: "forget-me-not", title: "Forget-me-not", url: FORGET_ME_NOT_URL, level: 0.1 },
+  { id: "forget-me-not", title: "Forget Me Not", url: FORGET_ME_NOT_URL, level: 0.1 },
 ]
 
 const DEFAULT_TRACK = TRACKS[0] as Track
