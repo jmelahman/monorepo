@@ -35,6 +35,7 @@ import (
 	"github.com/jmelahman/kanban/internal/previews"
 	"github.com/jmelahman/kanban/internal/secrets"
 	"github.com/jmelahman/kanban/internal/session"
+	"github.com/jmelahman/kanban/web"
 )
 
 // version is populated at build time via -ldflags -X (see Dockerfile /
@@ -257,6 +258,7 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 
 	errCfg := errreport.ResolveConfig("")
 	reporter := errreport.New(store, errCfg)
+	reporter.SetSourceMaps(web.DistFS())
 	if errCfg.Enabled {
 		log.Printf("error-reporting enabled, board=%q", errCfg.BoardName)
 	}

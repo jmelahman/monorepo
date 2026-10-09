@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"regexp"
 	"runtime"
@@ -45,6 +46,9 @@ type Config struct {
 type Reporter struct {
 	store *db.Store
 	cfg   Config
+	// symbols rewrites browser stacks using the built frontend's source maps.
+	// Nil when no frontend is embedded.
+	symbols *symbolicator
 
 	mu        sync.Mutex
 	boardID   int64 // 0 until ensureBoard succeeds; cached afterwards
@@ -58,6 +62,16 @@ func New(store *db.Store, cfg Config) *Reporter {
 		cfg.BoardName = "Errors"
 	}
 	return &Reporter{store: store, cfg: cfg}
+}
+
+// SetSourceMaps points the reporter at the built frontend so minified browser
+// stack frames are rewritten to original source locations before a ticket is
+// filed. Call once at startup, before the reporter is in use; nil disables it.
+func (r *Reporter) SetSourceMaps(fsys fs.FS) {
+	if r == nil {
+		return
+	}
+	r.symbols = newSymbolicator(fsys)
 }
 
 // Report files (or updates) a ticket for the given error.
@@ -75,6 +89,11 @@ func (r *Reporter) Report(ctx context.Context, source, title, stack string, meta
 	if r == nil || !r.cfg.Enabled {
 		return
 	}
+	// Symbolicate before fingerprinting: raw frames carry the bundle's content
+	// hash, so the same bug would otherwise get a new ticket on every build.
+	// Done ahead of the re-entrancy guard because decoding a map is slow and
+	// reports arriving while the guard is held are dropped.
+	stack = r.symbols.symbolicate(stack)
 	r.mu.Lock()
 	if r.reporting {
 		r.mu.Unlock()
@@ -203,6 +222,11 @@ func computeFingerprint(source, title, stack string) string {
 	return hex.EncodeToString(h.Sum(nil))[:16]
 }
 
+// browserFrameRE captures the location of a browser stack frame, in either
+// the V8 form ("at fn (loc:1:2)", "at loc:1:2") or the SpiderMonkey /
+// JavaScriptCore form ("fn@loc:1:2"). Go frames carry no column and don't match.
+var browserFrameRE = regexp.MustCompile(`^(?:.*@|at (?:.* \()?)(\S+:\d+:\d+)\)?$`)
+
 // topStackFrames extracts up to n source-location lines from a debug.Stack()
 // or runtime.CallersFrames-rendered trace, skipping goroutine headers and
 // runtime/* frames so the fingerprint stays stable when wrappers change.
@@ -228,6 +252,11 @@ func topStackFrames(stack string, n int) []string {
 		// drown out the user code at the top.
 		if strings.Contains(ln, "/runtime/") || strings.HasPrefix(ln, "runtime.") {
 			continue
+		}
+		// A browser frame's function name is whatever the minifier picked
+		// for this build; only its location identifies the frame.
+		if m := browserFrameRE.FindStringSubmatch(ln); m != nil {
+			ln = m[1]
 		}
 		out = append(out, ln)
 		if len(out) >= n {

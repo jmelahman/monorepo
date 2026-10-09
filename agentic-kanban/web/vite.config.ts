@@ -13,6 +13,8 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    // The server reads these maps to symbolicate frontend error tickets.
+    // See REGRESSIONS.md: "Error tickets are only symbolicated while the build embeds source maps".
     sourcemap: true,
     rollupOptions: {
       output: {

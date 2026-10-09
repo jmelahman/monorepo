@@ -12,6 +12,16 @@ import (
 //go:embed all:dist
 var distFS embed.FS
 
+// DistFS returns the embedded frontend build (bundles plus their source
+// maps), or nil if it can't be opened.
+func DistFS() fs.FS {
+	sub, err := fs.Sub(distFS, "dist")
+	if err != nil {
+		return nil
+	}
+	return sub
+}
+
 // Handler returns the embedded frontend, falling back to index.html for SPA routes.
 func Handler() http.Handler {
 	sub, err := fs.Sub(distFS, "dist")

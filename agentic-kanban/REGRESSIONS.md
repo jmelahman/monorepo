@@ -396,3 +396,19 @@ of the UI, which is plain same-origin HTTP, keeps working.
 Rule: anything proxying to kanban forwards the browser's `Host` unchanged.
 `kanban web` does this in `newWebHandler`. Never fix a rejected upgrade by
 loosening `CheckSameOrigin`.
+
+### Error tickets are only symbolicated while the build embeds source maps
+
+`internal/errreport` rewrites browser stack frames to `src/…:line:col` by
+reading `assets/<bundle>.js.map` out of the embedded `web/dist`
+(`web.DistFS()`). Nothing fails when a map is missing — the frame just stays
+minified — so symbolication disappears silently if `build.sourcemap` in
+`web/vite.config.ts` becomes `false`, a build step strips `*.map` from
+`web/dist`, or the bundles move out from under the URL path the browser
+reports (serving the app under a path prefix).
+
+Rule: keep `sourcemap: true` and the maps beside their bundles in `web/dist`.
+After touching the Vite output layout or the embed, file a frontend error
+against an embedded build and check the ticket shows `src/` paths. The dedup
+fingerprint hashes only each browser frame's location, never its minified
+function name, which changes per build.

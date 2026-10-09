@@ -3,6 +3,7 @@
 package web
 
 import (
+	"io/fs"
 	"net/http"
 	"strings"
 )
@@ -18,3 +19,6 @@ func Handler() http.Handler {
 		http.Error(w, "frontend not built (rebuild with -tags embed)", http.StatusServiceUnavailable)
 	})
 }
+
+// DistFS returns nil when the frontend is not embedded.
+func DistFS() fs.FS { return nil }

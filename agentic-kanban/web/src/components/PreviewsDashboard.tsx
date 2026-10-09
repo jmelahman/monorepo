@@ -542,9 +542,11 @@ export function PreviewsDashboard() {
     // flashing the skeleton and dropping the pager.
     placeholderData: keepPreviousData,
     // Poll fast while anything is in flight (a build, a cold start) so state
-    // flips surface promptly; idle otherwise.
+    // flips surface promptly; idle otherwise. `deploys?.` because this runs
+    // inside a React effect: a response of another shape (a tab and server
+    // from different builds) would otherwise throw to the error boundary.
     refetchInterval: (query) =>
-      query.state.data?.deploys.some(
+      query.state.data?.deploys?.some(
         (p) =>
           p.status === "queued" ||
           p.status === "building" ||

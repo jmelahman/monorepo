@@ -70,7 +70,7 @@ repo_path = "/workspace"
 branch    = "master"
 ```
 
-Two more sections are mainly for people working on kanban itself: `[errors]` files server errors as tickets on a board, and `[dev_toolbar]` adds a frontend performance widget to the app settings. Both are off by default.
+Two more sections are mainly for people working on kanban itself: `[errors]` files server errors as tickets on a board, and `[dev_toolbar]` adds a frontend performance widget to the app settings. Both are off by default. Tickets filed for frontend errors show original source locations (`src/components/Foo.tsx:12:3`) when the server was built with the frontend embedded; frames from a tab still running an older build stay as the browser reported them.
 
 ## How the files merge
 
