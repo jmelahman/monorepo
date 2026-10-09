@@ -47,6 +47,16 @@ Look for the algorithmic and architectural wins, not micro-optimizations.
 - Backend: synchronous work that belongs in a queue, missing indexes implied by query patterns (flag for verification — don't claim without schema evidence), connection-per-request patterns where pooling exists.
 - Build/CI: slow CI from missing caching, redundant pipeline steps, test suites that could parallelize.
 
+### Measuring
+
+A performance or "slow test" finding carries a number and the command that produced it. This is a recipe for finding where time goes, enough to rank findings; it is not a profiling method, and a finding that needs CPU or allocation profiles gets an "investigate" plan.
+
+- Before running anything, apply the Phase 1 check on what the suite touches.
+- Wall clock per project: `hyperfine --warmup 1 --runs 5 '<test command>'` (check `command -v hyperfine`; ask the user for their preferred tool if it is missing). Defeat result caches, or the second run measures nothing: `go test -count=1`, `turbo --force`.
+- Per-package and per-test breakdown, to find what the total is made of: `go test -count=1 -json ./...` (read the `Elapsed` field of `pass` events), `pytest --durations=20`, `vitest --reporter=verbose`, `jest --verbose`.
+- Then read the slowest tests. Time spent waiting (sleeps, timeouts allowed to expire, rate limiters, retry backoff) is a finding with a cheap fix: make the wait configurable and shorten it in tests. Time spent doing real work (a real build, real git operations) is usually what the test is worth, and is recorded as measured and left alone.
+- Record machine facts with the numbers (core count, what was disabled), and state the expected saving in the finding so the plan's done criteria can check it.
+
 ## 4. Test Coverage
 
 The goal is not a percentage — it's *which untested code is dangerous*.
@@ -55,6 +65,7 @@ The goal is not a percentage — it's *which untested code is dangerous*.
 - Modules with high churn (git log) + no tests = top refactor risk; flag as "characterization tests first" candidates.
 - Existing test quality: tests that assert nothing meaningful, heavy mocking that tests the mocks, snapshot tests nobody reads, flaky patterns (real timers, real network, order dependence).
 - Missing test layers: unit-only suites with zero integration coverage on API boundaries, or the inverse (slow E2E for what a unit test would catch).
+- Slow tests: measure them (see "Measuring" under Performance) and weigh time against what the test proves. A slow test with little utility is a finding; a slow test that is the only end-to-end cover for a critical path is not.
 - Verification infrastructure: is there a one-command way to know the codebase works? If not, that's finding #1 and a prerequisite plan for any risky change.
 
 ## 5. Tech Debt & Architecture
@@ -112,7 +123,7 @@ Every finding, from every category and every subagent, comes back in this shape:
 ```markdown
 ### [CATEGORY-NN] Short imperative title
 
-- **Evidence**: `path/file.ts:123` — one-sentence description of what's there. (Repeat per location; 2–5 strongest locations, note "and ~N similar sites" if widespread.)
+- **Evidence**: `path/file.ts:123` — one-sentence description of what's there. (Repeat per location; 2–5 strongest locations, note "and ~N similar sites" if widespread — and give the exact command that produced N.)
 - **Impact**: What goes wrong / what's being paid because of this. Concrete: "every order-list render issues 1+N queries", not "suboptimal".
 - **Effort**: S (hours) / M (a day-ish) / L (multi-day) — for the *fix*, including tests.
 - **Risk**: What the fix could break; LOW/MED/HIGH plus one line why.
