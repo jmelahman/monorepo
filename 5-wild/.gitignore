@@ -40,6 +40,10 @@ plans/
 # still gets caught.
 !public/og.png
 !public/apple-touch-icon.png
+# The icons public/manifest.webmanifest names for an installed site, likewise.
+!public/icon-192.png
+!public/icon-512.png
+!public/icon-maskable-512.png
 # The listing screenshots, captured from a scripted playthrough rather than
 # rendered, which is why they are committed and not generated: reproducing them
 # means driving the app to a shop, a pack and a boss again, and the upload form

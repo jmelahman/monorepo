@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process"
 
 import { defineConfig } from "vitest/config"
 
+import { offline } from "./tools/offline"
+
 /**
  * The release this bundle belongs to: the newest `v*` tag at or behind HEAD,
  * without its `v`.
@@ -59,6 +61,8 @@ function git(...args: string[]): string | undefined {
 }
 
 export default defineConfig({
+  // Writes dist/sw.js, the one file in dist/ that is not Rollup's or public/'s.
+  plugins: [offline()],
   define: {
     __BUILD_VERSION__: JSON.stringify(version()),
     __BUILD_COMMIT__: JSON.stringify(commit()),

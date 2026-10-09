@@ -3,6 +3,7 @@ import type { WordSource } from "./engine"
 import { App, loadRunLang, loadSave } from "./ui/app"
 import { startBackground } from "./ui/fx/background"
 import { type Lang, loadLang, S, setLang } from "./ui/lang"
+import { installOffline } from "./ui/offline"
 import { readSeedParam } from "./ui/seed"
 import { spectate } from "./ui/spectate"
 import { initLook } from "./ui/theme"
@@ -46,6 +47,10 @@ initLook()
 // After the look, because the background follows the skin class it sets, and
 // creates nothing unless that look has a moving one.
 startBackground()
+
+// Nothing below waits on it: it registers once the page has loaded, and a
+// browser that refuses is a browser that plays the site as it always did.
+installOffline()
 
 /**
  * `?watch=<host>` opens the game as a spectator on the benchmark feed rather

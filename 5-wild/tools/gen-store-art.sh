@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Renders the Play Store listing graphics from assets/*.svg into assets/store/,
-# and the two link-preview images the site serves from public/.
+# and the link-preview images and install icons the site serves from public/.
 #
 # Separate from gen-icons.sh because the two have different audiences and
 # different failure modes. That script feeds Gradle: its output is a build input,
@@ -59,9 +59,19 @@ find "$out" -name '*.png' -size +1M -printf 'warning: %p is %s bytes\n'
 # SVG for og:image. apple-touch-icon is the full-bleed store mark at the 180 iOS
 # asks for, and doubles as the icon Slack falls back to when it skips the SVG
 # favicon, which it usually does.
+#
+# The last three are the icons public/manifest.webmanifest names, which are what
+# a browser draws on the home screen when the site is installed from it. 192 and
+# 512 are the two sizes Chrome will not offer the install without. Those two are
+# icon.svg, radius baked in, for a launcher that draws the square as it comes;
+# the maskable one is the full-bleed store mark, for a launcher that cuts its
+# own shape, and the digit sits inside the 40% radius such a mask may crop to.
 web="
 assets/og.svg:og:1200:630
 assets/icon-store.svg:apple-touch-icon:180:180
+assets/icon.svg:icon-192:192:192
+assets/icon.svg:icon-512:512:512
+assets/icon-store.svg:icon-maskable-512:512:512
 "
 
 for job in $web; do

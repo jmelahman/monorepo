@@ -37,6 +37,15 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <!--
+      What makes the site installable: Chrome offers "Install app" for a page
+      on https that links a manifest with a name, a start_url, a standalone
+      display and a 192 and a 512 icon, and for nothing less. A service worker
+      is not on that list any more; the one src/ui/offline.ts registers is there
+      to play without a network, installed or not. The same tag ships inside
+      the APK and the desktop build, where a WebView reads it as nothing.
+    -->
+    <link rel="manifest" href="./manifest.webmanifest" />
     <title>5 Wild</title>
   </head>
   <body>

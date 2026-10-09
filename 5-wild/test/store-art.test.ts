@@ -2,6 +2,8 @@ import { readFileSync, statSync } from "node:fs"
 
 import { describe, expect, it } from "vitest"
 
+import { BACKDROP } from "../src/ui/theme"
+
 /*
  * The Play listing graphics are committed PNGs rendered by tools/gen-store-art.sh,
  * and these assertions are the reason they can be trusted without re-running it.
@@ -82,5 +84,78 @@ describe("link preview art", () => {
     // iOS rounds it itself, the same as Play, so the full-bleed mark is right.
     expect(pngSize("public/apple-touch-icon.png")).toEqual({ width: 180, height: 180 })
     expect(pngColorType("public/apple-touch-icon.png")).toBe(2)
+  })
+})
+
+describe("install art", () => {
+  /*
+   * public/manifest.webmanifest is what makes Chrome offer to install the site,
+   * and every way of getting it wrong is silent: the menu entry is simply not
+   * there, on a phone, with the reason three screens deep in a desktop
+   * devtools panel. So the conditions Chrome checks are checked here.
+   */
+  const manifest = JSON.parse(readFileSync("public/manifest.webmanifest", "utf8")) as {
+    start_url: string
+    scope: string
+    display: string
+    background_color: string
+    theme_color: string
+    icons: { src: string; sizes: string; purpose: string }[]
+  }
+
+  it("is linked from the page", () => {
+    expect(readFileSync("index.html", "utf8")).toContain(
+      '<link rel="manifest" href="./manifest.webmanifest" />',
+    )
+  })
+
+  it("opens in a window of its own", () => {
+    // `browser`, the default, is the one value that is not installable.
+    expect(manifest.display).toBe("standalone")
+  })
+
+  it("names nothing by an absolute path", () => {
+    // The same reason vite's `base` is "./": a path from the root is right at
+    // 5-wild.com and wrong anywhere the bundle is served from a directory.
+    // These resolve against the manifest's own URL, which sits beside the page.
+    expect(manifest.start_url).toBe("./")
+    expect(manifest.scope).toBe("./")
+    // And no `id`, which is the one member that cannot be relative: it is read
+    // against the origin whatever it says, so "./" there is the root again.
+    // Left out, the install is identified by `start_url`, which is right.
+    expect(manifest).not.toHaveProperty("id")
+    for (const icon of manifest.icons) expect(icon.src).not.toMatch(/^\/|:/)
+  })
+
+  it("has every icon it lists, at the size it lists", () => {
+    for (const icon of manifest.icons) {
+      const [width, height] = icon.sizes.split("x").map(Number)
+      expect(pngSize(`public/${icon.src}`)).toEqual({ width, height })
+    }
+  })
+
+  it("lists the two sizes Chrome will not install without", () => {
+    const any = manifest.icons.filter((icon) => icon.purpose === "any").map((icon) => icon.sizes)
+    expect(any).toContain("192x192")
+    expect(any).toContain("512x512")
+  })
+
+  it("hands a masking launcher the full-bleed mark and no other", () => {
+    // The same proof as the listing icon's, in both directions: a maskable icon
+    // with clear corners is cut to a shape with notches in it, and a full-bleed
+    // one drawn unmasked is a square tile among rounded ones.
+    for (const icon of manifest.icons) {
+      expect(pngColorType(`public/${icon.src}`)).toBe(icon.purpose === "maskable" ? 2 : 6)
+    }
+  })
+
+  it("launches on the backdrop the page paints", () => {
+    // The splash an installed site opens on is `background_color`, drawn before
+    // the page exists, the same position Android's `launchBackground` is in.
+    // A manifest holds one colour where the game has two tones, so a light
+    // player gets one dark frame; it is the dark one because three of the four
+    // looks are. `theme_color` only lasts until index.html's own meta is read.
+    expect(manifest.background_color).toBe(BACKDROP.dark)
+    expect(manifest.theme_color).toBe(BACKDROP.dark)
   })
 })
