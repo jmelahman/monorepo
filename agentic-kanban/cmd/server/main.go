@@ -259,6 +259,9 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 	errCfg := errreport.ResolveConfig("")
 	reporter := errreport.New(store, errCfg)
 	reporter.SetSourceMaps(web.DistFS())
+	if err := reporter.AdoptBoard(context.Background()); err != nil {
+		log.Printf("errreport: %v", err)
+	}
 	if errCfg.Enabled {
 		log.Printf("error-reporting enabled, board=%q", errCfg.BoardName)
 	}

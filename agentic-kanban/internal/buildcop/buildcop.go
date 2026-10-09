@@ -432,6 +432,7 @@ func (p *Poller) loadOrCreateBoard(ctx context.Context, cfg BoardConfig) (boardC
 			Name:       cfg.Name,
 			Slug:       cfg.Slug,
 			RepoPath:   cfg.RepoPath,
+			Kind:       db.BoardKindBuildCop,
 			BaseBranch: defaultBaseBranch(cfg.Branch),
 		}
 		if err := p.store.CreateBoardRaw(ctx, b); err != nil {
@@ -454,6 +455,13 @@ func (p *Poller) loadOrCreateBoard(ctx context.Context, cfg BoardConfig) (boardC
 	}
 	if err != nil {
 		return boardCache{}, fmt.Errorf("lookup board: %w", err)
+	}
+	// Stamp boards created before the kind column existed. The kind only
+	// steers board inference; failing to stamp it must not cost the sync.
+	if board.Kind != db.BoardKindBuildCop {
+		if err := p.store.SetBoardKind(ctx, board.ID, db.BoardKindBuildCop); err != nil {
+			log.Printf("buildcop: mark build cop board %s: %v", cfg.Slug, err)
+		}
 	}
 	cols, err := p.store.ListColumns(ctx, board.ID)
 	if err != nil {

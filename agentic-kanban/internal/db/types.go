@@ -10,7 +10,11 @@ type Board struct {
 	// repo is still checked out and mounted, but the agent works from this
 	// subdirectory. Repo-relative, slash-separated, "" for whole-repo boards.
 	// Requires RepoPath and an empty MountPath.
-	ProjectDir     string `json:"project_dir"`
+	ProjectDir string `json:"project_dir"`
+	// Kind is "" for an ordinary board, or one of the BoardKind* values for a
+	// board the server maintains for its own purpose. Clients inferring a
+	// board from a directory only consider ordinary boards.
+	Kind           string `json:"kind"`
 	WorktreeRoot   string `json:"worktree_root"`
 	BaseBranch     string `json:"base_branch"`
 	BranchPrefix   string `json:"branch_prefix"`
@@ -19,6 +23,13 @@ type Board struct {
 	CreatedAt      int64  `json:"created_at"`
 	Position       int    `json:"position"`
 }
+
+// Board kinds. An owner (errreport, buildcop) stamps its kind on the board it
+// creates, and on an existing board it finds by slug.
+const (
+	BoardKindErrors   = "errors"
+	BoardKindBuildCop = "buildcop"
+)
 
 type Column struct {
 	ID       int64  `json:"id"`

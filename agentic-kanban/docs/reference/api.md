@@ -60,7 +60,7 @@ Lists a board's archived tickets.
 
 ### `GET /api/boards`
 
-Lists boards in display order.
+Lists boards in display order. Each board has a `kind`: `""` for an ordinary board, `"errors"` for the board error reports are filed on, and `"buildcop"` for a Build Cop board. The server sets it; it can't be changed through the API.
 
 ### `GET /api/boards/{id}`
 

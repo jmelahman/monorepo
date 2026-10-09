@@ -180,7 +180,7 @@ func toolDefinitions() []map[string]any {
 	return []map[string]any{
 		{
 			"name":        "list_boards",
-			"description": "List all kanban boards as {id, name, slug}.",
+			"description": "List all kanban boards as {id, name, slug, repo_path, project_dir}, plus kind (errors, buildcop) on boards kanban maintains itself.",
 			"inputSchema": map[string]any{
 				"type":       "object",
 				"properties": map[string]any{},

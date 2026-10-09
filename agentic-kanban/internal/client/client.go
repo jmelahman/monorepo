@@ -41,6 +41,10 @@ type Board struct {
 	// for a whole-repo board. Board auto-detection uses it to pick between
 	// several boards sharing one monorepo repo_path.
 	ProjectDir string `json:"project_dir"`
+	// Kind is "" for an ordinary board, otherwise what the server maintains
+	// the board for ("errors", "buildcop"). Board auto-detection only picks
+	// ordinary boards.
+	Kind string `json:"kind,omitempty"`
 }
 
 // Ticket mirrors the subset of fields callers need from ticket responses.
@@ -188,6 +192,7 @@ func (c *Client) ListBoards(ctx context.Context) ([]Board, error) {
 		_ = json.Unmarshal(b["slug"], &s.Slug)
 		_ = json.Unmarshal(b["repo_path"], &s.RepoPath)
 		_ = json.Unmarshal(b["project_dir"], &s.ProjectDir)
+		_ = json.Unmarshal(b["kind"], &s.Kind)
 		out = append(out, s)
 	}
 	return out, nil

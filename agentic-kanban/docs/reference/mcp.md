@@ -37,7 +37,7 @@ Read tools return JSON. Tools that change something return `"ok"` unless noted. 
 
 | Tool              | Arguments  | Description |
 | ----------------- | ---------- | ----------- |
-| `list_boards`     |            | Returns `[{ id, name, slug }]`. |
+| `list_boards`     |            | Returns `[{ id, name, slug, repo_path, project_dir }]`, plus `kind` (`errors` or `buildcop`) on boards kanban maintains itself. |
 | `get_board`       | `board`    | Returns one board. |
 | `board_state`     | `board`    | Returns the board, its columns, tickets, sessions, and merge and sync settings. |
 | `delete_board`    | `board`    | Stops every session on the board and deletes it. |

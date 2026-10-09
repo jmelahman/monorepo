@@ -388,6 +388,56 @@ func TestResolveBoardIdent(t *testing.T) {
 	})
 }
 
+// TestResolveBoardIdent_SkipsKindedBoards: errors and Build Cop boards share
+// the project's repo, and must neither make a bare command ambiguous nor be
+// picked by one.
+func TestResolveBoardIdent_SkipsKindedBoards(t *testing.T) {
+	srv, store, board := newKanbanCLITestServer(t)
+
+	kinded := []*db.Board{
+		{Name: "Errors", Slug: "errors", Kind: db.BoardKindErrors, RepoPath: board.RepoPath, BaseBranch: "main"},
+		{Name: "Build Cop", Slug: "build-cop", Kind: db.BoardKindBuildCop, RepoPath: board.RepoPath, BaseBranch: "main"},
+	}
+	for _, b := range kinded {
+		if err := store.CreateBoard(context.Background(), b); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Chdir(board.RepoPath)
+
+	got, err := resolveBoardIdent(t.Context(), srv.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := strconv.FormatInt(board.ID, 10); got != want {
+		t.Errorf("ident = %q, want %q (the ordinary board)", got, want)
+	}
+
+	// Still reachable when named.
+	got, err = resolveBoardIdent(t.Context(), srv.URL, []string{"errors"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "errors" {
+		t.Errorf("ident = %q, want errors", got)
+	}
+
+	// With the ordinary board gone nothing is inferred, and the error names
+	// the boards that were passed over.
+	if err := store.DeleteBoard(context.Background(), board.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, err = resolveBoardIdent(t.Context(), srv.URL, nil)
+	if err == nil {
+		t.Fatal("expected error when only kinded boards match")
+	}
+	for _, b := range kinded {
+		if !strings.Contains(err.Error(), b.Slug) {
+			t.Errorf("error should name %s: %v", b.Slug, err)
+		}
+	}
+}
+
 // TestResolveBoardIdent_ProjectDir is the end-to-end half of
 // TestBoardsForPrefix: two boards on one monorepo repo_path must still
 // auto-detect, chosen by where in the repo the command runs.

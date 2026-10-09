@@ -133,6 +133,18 @@ func migrate(db *sql.DB) error {
 			return err
 		}
 	}
+	// No backfill here: which existing boards are errors/Build Cop boards is
+	// a matter of config, so their owners stamp the ones they still manage
+	// (errreport at startup, buildcop on its first poll).
+	hasColumn, err = tableHasColumn(db, "boards", "kind")
+	if err != nil {
+		return fmt.Errorf("inspect boards: %w", err)
+	}
+	if !hasColumn {
+		if _, err := db.Exec(`ALTER TABLE boards ADD COLUMN kind TEXT`); err != nil {
+			return fmt.Errorf("add boards.kind: %w", err)
+		}
+	}
 	hasColumn, err = tableHasColumn(db, "sessions", "workspace_folder")
 	if err != nil {
 		return fmt.Errorf("inspect sessions: %w", err)

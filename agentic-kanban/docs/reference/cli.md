@@ -55,7 +55,7 @@ Every command except `serve` and `mcp` connects to the server at `--server`, whi
 
 ### Finding the board
 
-Commands that take an optional board or ticket ID work out the board from your current directory, using the git repo you're in. If several boards use the same repo, kanban picks the one whose [project directory](/guide/monorepos) best matches where you are. If it can't decide, pass the ID or `--board`.
+Commands that take an optional board or ticket ID work out the board from your current directory, using the git repo you're in. If several boards use the same repo, kanban picks the one whose [project directory](/guide/monorepos) best matches where you are. Boards that kanban maintains itself (the [error reports](/guide/configuration) board and Build Cop boards) are never picked this way, so reach them with their ID or slug. If it can't decide, pass the ID or `--board`.
 
 Commands that change or delete a board always need an explicit ID.
 
@@ -101,7 +101,7 @@ Runs the MCP server over stdio. It needs `kanban serve` to be running. See the [
 
 ### `board list`
 
-Prints every board as an `ID SLUG NAME` table.
+Prints every board as an `ID SLUG NAME KIND` table. `KIND` is blank for ordinary boards, and `errors` or `buildcop` for boards kanban maintains itself.
 
 ### `board create`
 

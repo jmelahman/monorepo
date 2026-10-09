@@ -222,3 +222,71 @@ func TestReporter_CustomBoardName(t *testing.T) {
 		t.Fatalf("expected custom board name: %v", err)
 	}
 }
+
+// TestReporter_BoardKind covers both ways the errors board gets its kind: at
+// creation, and by adoption of a board that predates the kind column.
+func TestReporter_BoardKind(t *testing.T) {
+	ctx := context.Background()
+	kindOf := func(t *testing.T, store *db.Store) string {
+		t.Helper()
+		b, err := store.GetBoardBySlug(ctx, "errors")
+		if err != nil {
+			t.Fatalf("GetBoardBySlug: %v", err)
+		}
+		return b.Kind
+	}
+	legacy := func(t *testing.T) *db.Store {
+		t.Helper()
+		store := newStore(t)
+		if err := store.CreateBoard(ctx, &db.Board{Name: "Errors", Slug: "errors", BaseBranch: "main"}); err != nil {
+			t.Fatalf("CreateBoard: %v", err)
+		}
+		return store
+	}
+
+	t.Run("created with kind", func(t *testing.T) {
+		store := newStore(t)
+		errreport.New(store, errreport.Config{Enabled: true}).Report(ctx, "panic", "boom", "stack", nil)
+		if got := kindOf(t, store); got != db.BoardKindErrors {
+			t.Errorf("kind = %q; want %q", got, db.BoardKindErrors)
+		}
+	})
+
+	t.Run("adopted at startup", func(t *testing.T) {
+		store := legacy(t)
+		if err := errreport.New(store, errreport.Config{Enabled: true}).AdoptBoard(ctx); err != nil {
+			t.Fatalf("AdoptBoard: %v", err)
+		}
+		if got := kindOf(t, store); got != db.BoardKindErrors {
+			t.Errorf("kind = %q; want %q", got, db.BoardKindErrors)
+		}
+	})
+
+	t.Run("adopted on first report", func(t *testing.T) {
+		store := legacy(t)
+		errreport.New(store, errreport.Config{Enabled: true}).Report(ctx, "panic", "boom", "stack", nil)
+		if got := kindOf(t, store); got != db.BoardKindErrors {
+			t.Errorf("kind = %q; want %q", got, db.BoardKindErrors)
+		}
+	})
+
+	t.Run("disabled reporter leaves a same-named board alone", func(t *testing.T) {
+		store := legacy(t)
+		if err := errreport.New(store, errreport.Config{}).AdoptBoard(ctx); err != nil {
+			t.Fatalf("AdoptBoard: %v", err)
+		}
+		if got := kindOf(t, store); got != "" {
+			t.Errorf("kind = %q; want ordinary", got)
+		}
+	})
+
+	t.Run("adoption never creates the board", func(t *testing.T) {
+		store := newStore(t)
+		if err := errreport.New(store, errreport.Config{Enabled: true}).AdoptBoard(ctx); err != nil {
+			t.Fatalf("AdoptBoard: %v", err)
+		}
+		if _, err := store.GetBoardBySlug(ctx, "errors"); err == nil {
+			t.Error("AdoptBoard created the errors board")
+		}
+	})
+}

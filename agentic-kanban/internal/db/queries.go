@@ -31,8 +31,8 @@ func (s *Store) CreateBoardRaw(ctx context.Context, b *Board) error {
 	}
 	b.Position = int(maxPos.Int64) + 1
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO boards (name, slug, repo_path, mount_path, project_dir, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		b.Name, b.Slug, nullIfEmpty(b.RepoPath), nullIfEmpty(b.MountPath), nullIfEmpty(b.ProjectDir), nullIfEmpty(b.WorktreeRoot), b.BaseBranch, nullIfEmpty(b.BranchPrefix), nullIfEmpty(b.GitAuthorName), nullIfEmpty(b.GitAuthorEmail), b.Position,
+		`INSERT INTO boards (name, slug, repo_path, mount_path, project_dir, kind, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		b.Name, b.Slug, nullIfEmpty(b.RepoPath), nullIfEmpty(b.MountPath), nullIfEmpty(b.ProjectDir), nullIfEmpty(b.Kind), nullIfEmpty(b.WorktreeRoot), b.BaseBranch, nullIfEmpty(b.BranchPrefix), nullIfEmpty(b.GitAuthorName), nullIfEmpty(b.GitAuthorEmail), b.Position,
 	)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (s *Store) createDefaultColumns(ctx context.Context, boardID int64) error {
 }
 
 func (s *Store) ListBoards(ctx context.Context) ([]Board, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, slug, repo_path, mount_path, project_dir, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards ORDER BY position, id`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, slug, repo_path, mount_path, project_dir, kind, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards ORDER BY position, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +96,17 @@ func (s *Store) UpdateBoard(ctx context.Context, b *Board) error {
 		`UPDATE boards SET name=?, repo_path=?, mount_path=?, project_dir=?, worktree_root=?, base_branch=?, branch_prefix=?, git_author_name=?, git_author_email=? WHERE id=?`,
 		b.Name, nullIfEmpty(b.RepoPath), nullIfEmpty(b.MountPath), nullIfEmpty(b.ProjectDir), nullIfEmpty(b.WorktreeRoot), b.BaseBranch, nullIfEmpty(b.BranchPrefix), nullIfEmpty(b.GitAuthorName), nullIfEmpty(b.GitAuthorEmail), b.ID,
 	)
+	if err != nil {
+		return err
+	}
+	return affectedOrNotFound(res)
+}
+
+// SetBoardKind stamps a board's kind. Kept apart from UpdateBoard so a user
+// edit can never change it; only the board's owner (errreport, buildcop)
+// calls this.
+func (s *Store) SetBoardKind(ctx context.Context, id int64, kind string) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE boards SET kind=? WHERE id=?`, nullIfEmpty(kind), id)
 	if err != nil {
 		return err
 	}
@@ -172,7 +183,7 @@ func (s *Store) DeleteBoard(ctx context.Context, id int64) error {
 
 func (s *Store) GetBoard(ctx context.Context, id int64) (*Board, error) {
 	b, err := scanBoard(s.db.QueryRowContext(ctx,
-		`SELECT id, name, slug, repo_path, mount_path, project_dir, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards WHERE id=?`, id))
+		`SELECT id, name, slug, repo_path, mount_path, project_dir, kind, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards WHERE id=?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -181,7 +192,7 @@ func (s *Store) GetBoard(ctx context.Context, id int64) (*Board, error) {
 
 func (s *Store) GetBoardBySlug(ctx context.Context, slug string) (*Board, error) {
 	b, err := scanBoard(s.db.QueryRowContext(ctx,
-		`SELECT id, name, slug, repo_path, mount_path, project_dir, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards WHERE slug=?`, slug))
+		`SELECT id, name, slug, repo_path, mount_path, project_dir, kind, worktree_root, base_branch, branch_prefix, git_author_name, git_author_email, created_at, position FROM boards WHERE slug=?`, slug))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -953,13 +964,14 @@ func affectedOrNotFound(res sql.Result) error {
 
 func scanBoard(sc scanner) (*Board, error) {
 	var b Board
-	var repo, mount, projectDir, worktreeRoot, branchPrefix, gitAuthorName, gitAuthorEmail sql.NullString
-	if err := sc.Scan(&b.ID, &b.Name, &b.Slug, &repo, &mount, &projectDir, &worktreeRoot, &b.BaseBranch, &branchPrefix, &gitAuthorName, &gitAuthorEmail, &b.CreatedAt, &b.Position); err != nil {
+	var repo, mount, projectDir, kind, worktreeRoot, branchPrefix, gitAuthorName, gitAuthorEmail sql.NullString
+	if err := sc.Scan(&b.ID, &b.Name, &b.Slug, &repo, &mount, &projectDir, &kind, &worktreeRoot, &b.BaseBranch, &branchPrefix, &gitAuthorName, &gitAuthorEmail, &b.CreatedAt, &b.Position); err != nil {
 		return nil, err
 	}
 	b.RepoPath = repo.String
 	b.MountPath = mount.String
 	b.ProjectDir = projectDir.String
+	b.Kind = kind.String
 	b.WorktreeRoot = worktreeRoot.String
 	b.BranchPrefix = branchPrefix.String
 	b.GitAuthorName = gitAuthorName.String

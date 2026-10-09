@@ -219,9 +219,11 @@ func runBoardList(ctx context.Context, url string, out io.Writer) error {
 		return err
 	}
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tSLUG\tNAME")
+	// KIND is last, and blank for ordinary boards, so it explains why a
+	// board is skipped by inference without disturbing the leading columns.
+	fmt.Fprintln(tw, "ID\tSLUG\tNAME\tKIND")
 	for _, b := range boards {
-		fmt.Fprintf(tw, "%d\t%s\t%s\n", b.ID, b.Slug, b.Name)
+		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\n", b.ID, b.Slug, b.Name, b.Kind)
 	}
 	return tw.Flush()
 }
@@ -447,7 +449,10 @@ func gitRevParse(flag string) (string, error) {
 // board matching the current directory. Matching is two-stage — the git repo
 // containing the cwd, then the most specific project_dir that contains it.
 // Zero or several matching boards is an error, never a guess — boards may
-// legitimately share a repo (e.g. Build Cop boards).
+// legitimately share a repo. Only ordinary boards are candidates: a board with
+// a kind (errors, Build Cop) can sit on the same repo as the project's real
+// board and is never the one a bare command means, so it is only reachable
+// by id or slug.
 func resolveBoardIdent(ctx context.Context, url string, args []string) (string, error) {
 	if len(args) > 0 {
 		return args[0], nil
@@ -461,10 +466,16 @@ func resolveBoardIdent(ctx context.Context, url string, args []string) (string, 
 		return "", err
 	}
 	var repoMatches []client.Board
+	var special []string
 	for _, b := range boards {
-		if b.RepoPath != "" && samePath(b.RepoPath, repo) {
-			repoMatches = append(repoMatches, b)
+		if b.RepoPath == "" || !samePath(b.RepoPath, repo) {
+			continue
 		}
+		if b.Kind != "" {
+			special = append(special, b.Slug)
+			continue
+		}
+		repoMatches = append(repoMatches, b)
 	}
 	// Best-effort: an unreadable prefix reads as the repo root, which selects
 	// the whole-repo board. cwdRepoRoot already succeeded, so the only way to
@@ -479,6 +490,9 @@ func resolveBoardIdent(ctx context.Context, url string, args []string) (string, 
 	case 0:
 		if len(repoMatches) > 0 {
 			return "", fmt.Errorf("no board covers %s within repo %s; pass an id or slug", cwdDescription(prefix), repo)
+		}
+		if len(special) > 0 {
+			return "", fmt.Errorf("no ordinary board has repo path %s (%s are never inferred); pass an id or slug", repo, strings.Join(special, ", "))
 		}
 		return "", fmt.Errorf("no board has repo path %s; pass an id or slug", repo)
 	default:

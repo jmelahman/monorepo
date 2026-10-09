@@ -11,6 +11,11 @@ CREATE TABLE IF NOT EXISTS boards (
   -- host path and is meant for mounting a *parent* of the repo. Added by
   -- migrate() on older databases.
   project_dir TEXT,
+  -- kind marks a board the server maintains for its own purpose ('errors',
+  -- 'buildcop'); NULL for an ordinary board. Set when the board is created or
+  -- adopted by its owner, never by the user. Added by migrate() on older
+  -- databases.
+  kind TEXT,
   worktree_root TEXT,
   base_branch TEXT NOT NULL DEFAULT 'main',
   branch_prefix TEXT,

@@ -171,6 +171,7 @@ func (r *Reporter) ensureBoard(ctx context.Context) (int64, int64, error) {
 		board = &db.Board{
 			Name:       r.cfg.BoardName,
 			Slug:       boardSlug,
+			Kind:       db.BoardKindErrors,
 			BaseBranch: "main",
 		}
 		if err := r.store.CreateBoardRaw(ctx, board); err != nil {
@@ -193,6 +194,11 @@ func (r *Reporter) ensureBoard(ctx context.Context) (int64, int64, error) {
 	if err != nil {
 		return 0, 0, fmt.Errorf("lookup board: %w", err)
 	}
+	// The kind only steers board inference; failing to stamp it must not
+	// cost the report.
+	if err := r.stampKind(ctx, board); err != nil {
+		log.Printf("errreport: %v", err)
+	}
 
 	cols, err := r.store.ListColumns(ctx, board.ID)
 	if err != nil {
@@ -204,6 +210,36 @@ func (r *Reporter) ensureBoard(ctx context.Context) (int64, int64, error) {
 	r.boardID = board.ID
 	r.newColID = cols[0].ID
 	return r.boardID, r.newColID, nil
+}
+
+// AdoptBoard stamps the errors kind on an existing errors board that predates
+// the kind column, so it stops competing with the project's own board in
+// directory-based board inference before the first error is ever reported.
+// Call once at startup. A no-op when disabled or when the board doesn't
+// exist yet — it never creates one.
+func (r *Reporter) AdoptBoard(ctx context.Context) error {
+	if r == nil || !r.cfg.Enabled {
+		return nil
+	}
+	board, err := r.store.GetBoardBySlug(ctx, slug.Make(r.cfg.BoardName, "errors"))
+	if errors.Is(err, db.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("lookup board: %w", err)
+	}
+	return r.stampKind(ctx, board)
+}
+
+func (r *Reporter) stampKind(ctx context.Context, board *db.Board) error {
+	if board.Kind == db.BoardKindErrors {
+		return nil
+	}
+	if err := r.store.SetBoardKind(ctx, board.ID, db.BoardKindErrors); err != nil {
+		return fmt.Errorf("mark errors board: %w", err)
+	}
+	board.Kind = db.BoardKindErrors
+	return nil
 }
 
 // computeFingerprint hashes source + title + the first 3 non-runtime stack

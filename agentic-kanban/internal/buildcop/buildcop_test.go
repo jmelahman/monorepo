@@ -616,3 +616,29 @@ func TestReconcileLeavesWontFixTickets(t *testing.T) {
 		}
 	}
 }
+
+// TestEnsureBoardKind covers both ways a Build Cop board gets its kind: at
+// creation, and when loading a board that predates the kind column.
+func TestEnsureBoardKind(t *testing.T) {
+	ctx := context.Background()
+	cfg := testBoardCfg()
+	for _, legacy := range []bool{false, true} {
+		s := newStore(t)
+		if legacy {
+			b := &db.Board{Name: cfg.Name, Slug: cfg.Slug, RepoPath: cfg.RepoPath, BaseBranch: "main"}
+			if err := s.CreateBoardRaw(ctx, b); err != nil {
+				t.Fatalf("CreateBoardRaw: %v", err)
+			}
+		}
+		if _, err := NewPoller(s, nil, Config{}, 0).ensureBoard(ctx, cfg); err != nil {
+			t.Fatalf("ensureBoard: %v", err)
+		}
+		b, err := s.GetBoardBySlug(ctx, cfg.Slug)
+		if err != nil {
+			t.Fatalf("GetBoardBySlug: %v", err)
+		}
+		if b.Kind != db.BoardKindBuildCop {
+			t.Errorf("legacy=%v: kind = %q; want %q", legacy, b.Kind, db.BoardKindBuildCop)
+		}
+	}
+}
