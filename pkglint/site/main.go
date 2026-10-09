@@ -802,7 +802,8 @@ func extract(tarPath, dir string) error {
 }
 
 // throttle spaces out requests so the AUR's rate limiting stays happy. It is
-// the default for any host not named in throttles, the test servers included.
+// the default for any host not named in throttles. The test servers fall
+// under it too, so TestMain shortens it.
 var throttle = time.NewTicker(500 * time.Millisecond)
 
 // throttles paces the hosts with their own limits. GitLab allows an
