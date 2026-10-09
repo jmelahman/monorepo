@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 
 import { describe, expect, it } from "vitest"
 
-import { precached } from "../tools/offline"
+import { isTrack, precached } from "../tools/offline"
 
 /*
  * The list the service worker is built from. What the worker does with it is
@@ -56,6 +56,14 @@ describe("offline precache", () => {
  * it leaves alone is plain logic, and the costly mistake in it is silent: a
  * navigation that matches nothing is a blank page with no network.
  */
+describe("offline tracks", () => {
+  it("tells a recording from a sound effect by where it came from", () => {
+    // Both are hashed .ogg files in dist/assets, and only one of them is 2.6MB.
+    expect(isTrack("src/ui/tracks/promises.ogg")).toBe(true)
+    expect(isTrack("src/ui/sounds/key.ogg")).toBe(false)
+  })
+})
+
 describe("offline worker", () => {
   const files = ["assets/index-abc.js", "index.html", "privacy/index.html", "words/en/answers.txt"]
   const origin = "https://5-wild.com"
@@ -70,19 +78,21 @@ describe("offline worker", () => {
       },
     }
     // A cache that holds nothing, so either strategy falls through to the network.
-    const caches = { open: async () => ({ match: async () => undefined }) }
+    const caches = { open: async () => ({ match: async () => undefined, put: async () => {} }) }
     const fetch = async () => new Response("")
-    new Function("self", "caches", "fetch", "VERSION", "FILES", "SUMS", source)(
+    new Function("self", "caches", "fetch", "VERSION", "FILES", "SUMS", "TRACKS", source)(
       scope,
       caches,
       fetch,
       "test",
       files,
       {},
+      ["assets/promises-abc.ogg"],
     )
     let answered = false
     listeners.fetch?.({
       request: { url, method },
+      waitUntil: () => {},
       respondWith: () => {
         answered = true
       },
@@ -103,6 +113,10 @@ describe("offline worker", () => {
   it("answers for the bundle and the word lists", () => {
     expect(answers(`${origin}/assets/index-abc.js`)).toBe(true)
     expect(answers(`${origin}/words/en/answers.txt`)).toBe(true)
+  })
+
+  it("answers for a recording, which it holds once played", () => {
+    expect(answers(`${origin}/assets/promises-abc.ogg`)).toBe(true)
   })
 
   it("leaves alone what it does not hold", () => {

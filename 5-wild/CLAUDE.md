@@ -56,7 +56,8 @@ on them and the AppImage carries its own.
 The site installs from `public/manifest.webmanifest` and plays offline from a
 service worker, `src/sw.js`, which only the site registers and which
 `tools/offline.ts` stamps into `dist/sw.js` at build. Its cache is one build,
-whole: only `install` writes it. Nothing in Node runs it, so a change there is
+whole: only `install` writes it, and the music is kept apart, as it is played.
+Nothing in Node runs it, so a change there is
 checked in a real browser, offline.
 
 ## Language

@@ -5,8 +5,8 @@ import { join, relative, resolve } from "node:path"
 import type { Plugin } from "vite"
 
 /**
- * Writes dist/sw.js: `src/sw.js` under the list of files it is to hold and the
- * hashes it holds them to. See that file for what it does with both.
+ * Writes dist/sw.js: `src/sw.js` under the list of files it is to hold, the
+ * hashes it holds them to, and the recordings it holds only once played. See that file for what it does with both.
  *
  * It is forty lines here rather than vite-plugin-pwa because the list is the
  * only thing a build has to contribute. The worker's behaviour is the part
@@ -43,6 +43,10 @@ function walk(dir: string, from = dir): string[] {
   })
 }
 
+/** Whether a source file is one of the recordings in `src/ui/tracks/`. */
+export const isTrack = (source: string): boolean =>
+  source.replaceAll("\\", "/").includes("src/ui/tracks/")
+
 /** Hex SHA-256, which is also how the worker spells what it downloaded. */
 const sum = (bytes: string | Uint8Array): string => createHash("sha256").update(bytes).digest("hex")
 
@@ -57,8 +61,15 @@ export function offline(): Plugin {
       outDir = resolve(config.root, config.build.outDir)
     },
     // After the write, by which point public/ has been copied in as well.
-    writeBundle() {
-      const files = precached(walk(outDir))
+    writeBundle(_options, bundle) {
+      // The recordings, which the worker keeps as they are played and not with
+      // the build; see its header. Told by where they came from, since in
+      // dist/ a track is one more hashed .ogg among the sound effects.
+      const tracks = Object.values(bundle)
+        .filter((file) => file.type === "asset" && file.originalFileNames.some(isTrack))
+        .map((file) => file.fileName)
+        .sort()
+      const files = precached(walk(outDir)).filter((file) => !tracks.includes(file))
       // From the root and not the working directory, the same as `outDir`, so
       // a build run from the monorepo above finds it.
       const worker = readFileSync(resolve(root, "src/sw.js"), "utf8")
@@ -73,12 +84,13 @@ export function offline(): Plugin {
       // that comes out byte-identical is a deploy no browser will notice. The
       // worker's own text goes in too, so a change to how it caches starts a
       // cache of its own instead of writing over the one in use.
-      const version = sum(worker + JSON.stringify([files, sums])).slice(0, 12)
+      const version = sum(worker + JSON.stringify([files, sums, tracks])).slice(0, 12)
       writeFileSync(
         join(outDir, "sw.js"),
         `const VERSION = ${JSON.stringify(version)}\n` +
           `const FILES = ${JSON.stringify(files)}\n` +
           `const SUMS = ${JSON.stringify(sums)}\n` +
+          `const TRACKS = ${JSON.stringify(tracks)}\n` +
           worker,
       )
     },

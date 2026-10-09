@@ -69,7 +69,7 @@ QWERTZ.
 **Web:** <https://5-wild.com>. Your browser can install it from there: **Install
 app** in Chrome's menu, or **Share → Add to Home Screen** in Safari. Installed
 or not, once it has loaded it keeps a copy on the device and plays with no
-network.
+network. A music track is kept once you have played it.
 
 **Android:** [download the APK](https://github.com/jmelahman/5-wild/releases/latest/download/5-wild.apk)
 straight from your phone's browser, with no store account and no cable. The first
