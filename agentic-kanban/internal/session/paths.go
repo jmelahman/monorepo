@@ -30,21 +30,14 @@ type ResolvedPaths struct {
 	ProjectDir string
 }
 
-// ResolvePaths layers session-level overrides over board-level defaults. When
-// MountPath is unset on both, it falls back to the session's worktree (today's
-// behavior: mount the worktree at /workspace) and finally to the repo path.
+// ResolvePaths derives a session's paths from its board. When the board has
+// no MountPath, it falls back to the session's worktree (mount the worktree at
+// /workspace) and finally to the repo path.
 func ResolvePaths(board *db.Board, sess *db.Session) ResolvedPaths {
 	repo := ""
-	if sess != nil && sess.RepoPath != "" {
-		repo = sess.RepoPath
-	} else if board != nil {
-		repo = board.RepoPath
-	}
-
 	mount := ""
-	if sess != nil && sess.MountPath != "" {
-		mount = sess.MountPath
-	} else if board != nil {
+	if board != nil {
+		repo = board.RepoPath
 		mount = board.MountPath
 	}
 

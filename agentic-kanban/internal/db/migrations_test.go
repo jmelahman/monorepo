@@ -201,6 +201,11 @@ func TestMigrate_LegacyDatabaseStillUpgrades(t *testing.T) {
 	if _, err := store.DB().Exec(`PRAGMA user_version = 0`); err != nil {
 		t.Fatalf("reset user_version: %v", err)
 	}
+	// It also still has the columns the numbered migrations drop; without
+	// them the reopen fails in "drop sessions path overrides".
+	if _, err := store.DB().Exec(`ALTER TABLE sessions ADD COLUMN mount_path TEXT; ALTER TABLE sessions ADD COLUMN repo_path TEXT`); err != nil {
+		t.Fatalf("restore dropped session columns: %v", err)
+	}
 	if err := store.Close(); err != nil {
 		t.Fatalf("close: %v", err)
 	}
@@ -286,5 +291,84 @@ func TestMigrate_ConcurrentOpensApplyOnce(t *testing.T) {
 				t.Errorf("user_version = %d, want %d", got, baselineVersion+1)
 			}
 		})
+	}
+}
+
+// TestMigrate_DropsSessionPathOverrides checks the columns are gone from a
+// fresh database and that every session query still agrees with the table.
+func TestMigrate_DropsSessionPathOverrides(t *testing.T) {
+	store, err := Open(filepath.Join(t.TempDir(), "kanban.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	ctx := t.Context()
+
+	rows, err := store.DB().Query(`SELECT name FROM pragma_table_info('sessions')`)
+	if err != nil {
+		t.Fatalf("read sessions columns: %v", err)
+	}
+	cols := map[string]bool{}
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			t.Fatalf("scan column name: %v", err)
+		}
+		cols[name] = true
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate sessions columns: %v", err)
+	}
+	_ = rows.Close()
+	for _, gone := range []string{"mount_path", "repo_path"} {
+		if cols[gone] {
+			t.Errorf("sessions.%s still present after migrate", gone)
+		}
+	}
+	for _, kept := range []string{"worktree_path", "workspace_folder"} {
+		if !cols[kept] {
+			t.Errorf("sessions.%s missing after migrate", kept)
+		}
+	}
+
+	b := &Board{Name: "Drop", Slug: "drop", BaseBranch: "main", RepoPath: "/tmp/x"}
+	if err := store.CreateBoard(ctx, b); err != nil {
+		t.Fatalf("CreateBoard: %v", err)
+	}
+	columns, err := store.ListColumns(ctx, b.ID)
+	if err != nil {
+		t.Fatalf("ListColumns: %v", err)
+	}
+	tk := &Ticket{BoardID: b.ID, ColumnID: columns[0].ID, Title: "t", Slug: "t"}
+	if err := store.CreateTicket(ctx, tk); err != nil {
+		t.Fatalf("CreateTicket: %v", err)
+	}
+	sess := &Session{
+		TicketID:     tk.ID,
+		WorktreePath: "/tmp/wt",
+		BranchName:   "kanban/old",
+		Status:       SessionStatusStopped,
+	}
+	if err := store.UpsertSession(ctx, sess); err != nil {
+		t.Fatalf("UpsertSession (insert): %v", err)
+	}
+	sess.BranchName = "kanban/new"
+	if err := store.UpsertSession(ctx, sess); err != nil {
+		t.Fatalf("UpsertSession (update): %v", err)
+	}
+
+	got, err := store.GetSession(ctx, sess.ID)
+	if err != nil {
+		t.Fatalf("GetSession: %v", err)
+	}
+	if got.BranchName != "kanban/new" {
+		t.Errorf("GetSession branch_name = %q; want %q", got.BranchName, "kanban/new")
+	}
+	got, err = store.GetSessionByTicket(ctx, tk.ID)
+	if err != nil {
+		t.Fatalf("GetSessionByTicket: %v", err)
+	}
+	if got.BranchName != "kanban/new" {
+		t.Errorf("GetSessionByTicket branch_name = %q; want %q", got.BranchName, "kanban/new")
 	}
 }

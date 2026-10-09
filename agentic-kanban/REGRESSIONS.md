@@ -443,6 +443,11 @@ Rules:
 - A test that simulates a pre-versioning database (dropping a column so the
   legacy path re-adds it) must also run `PRAGMA user_version = 0`, or the
   reopen skips the legacy path.
+- Such a test starts from a fully migrated database, so it must also put
+  back whatever the numbered migrations removed (today
+  `sessions.mount_path` and `sessions.repo_path`). Otherwise the reopen
+  replays every migration against a schema that is already past it and a
+  `DROP COLUMN` fails with "no such column".
 - `PRAGMA foreign_keys` can't be changed inside a transaction. A migration
   that rebuilds a table other tables reference needs explicit design (the
   runner would have to toggle it around the transaction), not a plain `apply`

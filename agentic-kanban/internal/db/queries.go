@@ -484,9 +484,9 @@ func (s *Store) DeleteAllArchivedTickets(ctx context.Context, boardID int64) (in
 func (s *Store) UpsertSession(ctx context.Context, sess *Session) error {
 	if sess.ID == 0 {
 		res, err := s.db.ExecContext(ctx,
-			`INSERT INTO sessions (ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, mount_path, repo_path, claude_session_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			sess.TicketID, sess.WorktreePath, sess.BranchName, sess.ContainerID, sess.ContainerName, sess.Status, sess.StartedAt, sess.StoppedAt, nullIfEmpty(sess.PRState), sess.PRNumber, nullIfEmpty(sess.PRURL), nullIfEmpty(sess.PRTitle), nullIfEmpty(sess.MountPath), nullIfEmpty(sess.RepoPath), nullIfEmpty(sess.ClaudeSessionID),
+			`INSERT INTO sessions (ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, claude_session_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			sess.TicketID, sess.WorktreePath, sess.BranchName, sess.ContainerID, sess.ContainerName, sess.Status, sess.StartedAt, sess.StoppedAt, nullIfEmpty(sess.PRState), sess.PRNumber, nullIfEmpty(sess.PRURL), nullIfEmpty(sess.PRTitle), nullIfEmpty(sess.ClaudeSessionID),
 		)
 		if err != nil {
 			return err
@@ -499,8 +499,8 @@ func (s *Store) UpsertSession(ctx context.Context, sess *Session) error {
 		return nil
 	}
 	_, err := s.db.ExecContext(ctx,
-		`UPDATE sessions SET worktree_path=?, branch_name=?, container_id=?, container_name=?, status=?, started_at=?, stopped_at=?, pr_state=?, pr_number=?, pr_url=?, pr_title=?, mount_path=?, repo_path=?, claude_session_id=? WHERE id=?`,
-		sess.WorktreePath, sess.BranchName, sess.ContainerID, sess.ContainerName, sess.Status, sess.StartedAt, sess.StoppedAt, nullIfEmpty(sess.PRState), sess.PRNumber, nullIfEmpty(sess.PRURL), nullIfEmpty(sess.PRTitle), nullIfEmpty(sess.MountPath), nullIfEmpty(sess.RepoPath), nullIfEmpty(sess.ClaudeSessionID), sess.ID,
+		`UPDATE sessions SET worktree_path=?, branch_name=?, container_id=?, container_name=?, status=?, started_at=?, stopped_at=?, pr_state=?, pr_number=?, pr_url=?, pr_title=?, claude_session_id=? WHERE id=?`,
+		sess.WorktreePath, sess.BranchName, sess.ContainerID, sess.ContainerName, sess.Status, sess.StartedAt, sess.StoppedAt, nullIfEmpty(sess.PRState), sess.PRNumber, nullIfEmpty(sess.PRURL), nullIfEmpty(sess.PRTitle), nullIfEmpty(sess.ClaudeSessionID), sess.ID,
 	)
 	return err
 }
@@ -604,7 +604,7 @@ func (s *Store) RepointSessionBranch(ctx context.Context, id int64, branch strin
 
 func (s *Store) GetSession(ctx context.Context, id int64) (*Session, error) {
 	sess, err := scanSession(s.db.QueryRowContext(ctx,
-		`SELECT id, ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, mount_path, repo_path, claude_session_id, harness, workspace_folder FROM sessions WHERE id=?`, id))
+		`SELECT id, ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, claude_session_id, harness, workspace_folder FROM sessions WHERE id=?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -613,7 +613,7 @@ func (s *Store) GetSession(ctx context.Context, id int64) (*Session, error) {
 
 func (s *Store) GetSessionByTicket(ctx context.Context, ticketID int64) (*Session, error) {
 	sess, err := scanSession(s.db.QueryRowContext(ctx,
-		`SELECT id, ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, mount_path, repo_path, claude_session_id, harness, workspace_folder FROM sessions WHERE ticket_id=?`, ticketID))
+		`SELECT id, ticket_id, worktree_path, branch_name, container_id, container_name, status, started_at, stopped_at, pr_state, pr_number, pr_url, pr_title, claude_session_id, harness, workspace_folder FROM sessions WHERE ticket_id=?`, ticketID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -622,7 +622,7 @@ func (s *Store) GetSessionByTicket(ctx context.Context, ticketID int64) (*Sessio
 
 func (s *Store) ListSessionsByBoard(ctx context.Context, boardID int64) ([]Session, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT s.id, s.ticket_id, s.worktree_path, s.branch_name, s.container_id, s.container_name, s.status, s.started_at, s.stopped_at, s.pr_state, s.pr_number, s.pr_url, s.pr_title, s.mount_path, s.repo_path, s.claude_session_id, s.harness, s.workspace_folder
+		`SELECT s.id, s.ticket_id, s.worktree_path, s.branch_name, s.container_id, s.container_name, s.status, s.started_at, s.stopped_at, s.pr_state, s.pr_number, s.pr_url, s.pr_title, s.claude_session_id, s.harness, s.workspace_folder
          FROM sessions s JOIN tickets t ON t.id=s.ticket_id WHERE t.board_id=?`, boardID)
 	if err != nil {
 		return nil, err
@@ -995,15 +995,13 @@ func scanBoard(sc scanner) (*Board, error) {
 
 func scanSession(sc scanner) (*Session, error) {
 	var sess Session
-	var prState, mount, repo, prURL, prTitle, claudeSessionID, harness, workspaceFolder sql.NullString
-	if err := sc.Scan(&sess.ID, &sess.TicketID, &sess.WorktreePath, &sess.BranchName, &sess.ContainerID, &sess.ContainerName, &sess.Status, &sess.StartedAt, &sess.StoppedAt, &prState, &sess.PRNumber, &prURL, &prTitle, &mount, &repo, &claudeSessionID, &harness, &workspaceFolder); err != nil {
+	var prState, prURL, prTitle, claudeSessionID, harness, workspaceFolder sql.NullString
+	if err := sc.Scan(&sess.ID, &sess.TicketID, &sess.WorktreePath, &sess.BranchName, &sess.ContainerID, &sess.ContainerName, &sess.Status, &sess.StartedAt, &sess.StoppedAt, &prState, &sess.PRNumber, &prURL, &prTitle, &claudeSessionID, &harness, &workspaceFolder); err != nil {
 		return nil, err
 	}
 	sess.PRState = prState.String
 	sess.PRURL = prURL.String
 	sess.PRTitle = prTitle.String
-	sess.MountPath = mount.String
-	sess.RepoPath = repo.String
 	sess.ClaudeSessionID = claudeSessionID.String
 	sess.Harness = harness.String
 	sess.WorkspaceFolder = workspaceFolder.String

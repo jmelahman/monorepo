@@ -164,12 +164,6 @@ func (info ticketInfo) sections() []infoSection {
 	}})
 
 	workspace := []infoField{plain("Branch", s.BranchName), plain("Worktree", s.WorktreePath)}
-	switch {
-	case s.RepoPath != "":
-		workspace = append(workspace, plain("Repo", s.RepoPath))
-	case s.MountPath != "":
-		workspace = append(workspace, plain("Mount", s.MountPath))
-	}
 	out = append(out, infoSection{title: "Workspace", fields: workspace})
 
 	if s.PRNumber != nil && s.PRURL != "" {

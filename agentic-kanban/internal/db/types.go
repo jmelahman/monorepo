@@ -65,8 +65,6 @@ type Session struct {
 	PRNumber      *int64  `json:"pr_number,omitempty"`
 	PRURL         string  `json:"pr_url,omitempty"`
 	PRTitle       string  `json:"pr_title,omitempty"`
-	MountPath     string  `json:"mount_path,omitempty"`
-	RepoPath      string  `json:"repo_path,omitempty"`
 	// ClaudeSessionID is the UUID of the most recent Claude Code session
 	// captured via its SessionStart hook. When non-empty, `claude` is
 	// relaunched with `--resume <uuid>` so the conversation survives

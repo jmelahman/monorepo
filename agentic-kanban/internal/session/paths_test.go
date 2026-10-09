@@ -138,16 +138,6 @@ func TestResolvePaths(t *testing.T) {
 			t.Errorf("ProjectRoot = %q; want %q", got, "/wt")
 		}
 	})
-
-	t.Run("session overrides board", func(t *testing.T) {
-		p := ResolvePaths(&db.Board{RepoPath: "/board-repo", MountPath: "/board-mnt"}, &db.Session{RepoPath: repo, MountPath: "/sess-mnt"})
-		if p.RepoPath != repo {
-			t.Errorf("RepoPath = %q; want %q", p.RepoPath, repo)
-		}
-		if p.MountPath != "/sess-mnt" {
-			t.Errorf("MountPath = %q; want %q", p.MountPath, "/sess-mnt")
-		}
-	})
 }
 
 func TestResolvedPaths_ProjectRoot(t *testing.T) {

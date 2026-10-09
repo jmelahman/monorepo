@@ -422,6 +422,11 @@ func TestMigrateAddsSessionHarness(t *testing.T) {
 	if _, err := store.DB().Exec(`PRAGMA user_version = 0`); err != nil {
 		t.Fatalf("reset user_version: %v", err)
 	}
+	// It also still has the columns the numbered migrations drop; without
+	// them the reopen fails in "drop sessions path overrides".
+	if _, err := store.DB().Exec(`ALTER TABLE sessions ADD COLUMN mount_path TEXT; ALTER TABLE sessions ADD COLUMN repo_path TEXT`); err != nil {
+		t.Fatalf("restore dropped session columns: %v", err)
+	}
 	_ = store.Close()
 
 	store, err = db.Open(path)

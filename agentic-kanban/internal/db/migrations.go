@@ -25,7 +25,20 @@ type migration struct {
 // that has shipped, because databases record how many entries they have run,
 // not which ones.
 // See REGRESSIONS.md: "Schema changes go in the numbered migration list".
-var migrations = []migration{}
+var migrations = []migration{
+	{name: "drop sessions path overrides", apply: dropSessionPathOverrides},
+}
+
+// dropSessionPathOverrides removes sessions.mount_path and sessions.repo_path,
+// per-session overrides of the board's paths that nothing ever assigned.
+func dropSessionPathOverrides(tx *sql.Tx) error {
+	for _, col := range []string{"mount_path", "repo_path"} {
+		if _, err := tx.Exec(`ALTER TABLE sessions DROP COLUMN ` + col); err != nil {
+			return fmt.Errorf("drop sessions.%s: %w", col, err)
+		}
+	}
+	return nil
+}
 
 // schemaVersion is the version a fully migrated database reports.
 func schemaVersion() int { return baselineVersion + len(migrations) }

@@ -1399,15 +1399,12 @@ func (h *handlers) prDetail(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, fmt.Errorf("session has no pull request"), 404)
 		return
 	}
-	repoPath := sess.RepoPath
-	if repoPath == "" {
-		board, err := h.boardForSession(r.Context(), sess)
-		if err != nil {
-			h.httpError(w, err, 500)
-			return
-		}
-		repoPath = board.RepoPath
+	board, err := h.boardForSession(r.Context(), sess)
+	if err != nil {
+		h.httpError(w, err, 500)
+		return
 	}
+	repoPath := board.RepoPath
 	if repoPath == "" {
 		h.httpError(w, fmt.Errorf("no repo path for session"), 400)
 		return

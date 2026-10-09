@@ -39,7 +39,6 @@ func fullTicketInfo() ticketInfo {
 			PRNumber:        ptrInt(451),
 			PRURL:           "https://github.com/acme/demo/pull/451",
 			PRTitle:         "Fix login for plus-addressed emails",
-			RepoPath:        "/home/dev/code/demo",
 			ClaudeSessionID: "1f0e5a2c-0000-4000-8000-abcdefabcdef",
 		},
 		Ports: []client.Port{
