@@ -53,9 +53,8 @@
 	syntax-theme = Coldark-Dark
 	hyperlinks = true
 	side-by-side = true
-	wrap-max-lines = 0
-  width = 240
-  pager = less -RS
+	wrap-max-lines = unlimited
+	pager = less -R
 	tabs = 2
 	blame-palette = "#000000 #111111 #222222"
 	file-style = omit
