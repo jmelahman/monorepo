@@ -970,18 +970,12 @@ func TestPorts(t *testing.T) {
 // ---------- Plans ----------
 
 func TestSessionPlans(t *testing.T) {
-	// Point XDG_CONFIG_HOME at a temp dir with a kanban config that uses a
-	// relative plans dir, so the resolution is rooted at the session worktree.
-	cfgHome := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", cfgHome)
-	if err := os.MkdirAll(filepath.Join(cfgHome, "kanban"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(
-		filepath.Join(cfgHome, "kanban", "config.toml"),
-		[]byte("[plans]\ndir = \"./plans\"\n"),
-		0o644,
-	); err != nil {
+	// Point KANBAN_CONFIG at a kanban config that uses a relative plans dir,
+	// so the resolution is rooted at the session worktree. XDG_CONFIG_HOME
+	// can't steer it: TestMain sets KANBAN_CONFIG, which takes precedence.
+	userCfg := filepath.Join(t.TempDir(), "config.toml")
+	t.Setenv("KANBAN_CONFIG", userCfg)
+	if err := os.WriteFile(userCfg, []byte("[plans]\ndir = \"./plans\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

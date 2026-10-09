@@ -10,21 +10,15 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/jmelahman/kanban/internal/api"
 	"github.com/jmelahman/kanban/internal/client"
-	"github.com/jmelahman/kanban/internal/config"
 	"github.com/jmelahman/kanban/internal/db"
-	"github.com/jmelahman/kanban/internal/docker"
-	"github.com/jmelahman/kanban/internal/hooks"
-	"github.com/jmelahman/kanban/internal/secrets"
-	"github.com/jmelahman/kanban/internal/session"
+	"github.com/jmelahman/kanban/internal/kanbantest"
 )
 
 func TestRunBoardList(t *testing.T) {
@@ -663,66 +657,24 @@ func TestRunEnvLifecycle(t *testing.T) {
 
 func newKanbanCLITestServer(t *testing.T) (*httptest.Server, *db.Store, *db.Board) {
 	t.Helper()
-	dir := t.TempDir()
-	repoPath := filepath.Join(dir, "repo")
-	mustGit(t, "", "init", "-q", "-b", "main", repoPath)
-	mustGit(t, repoPath, "config", "user.email", "test@example.com")
-	mustGit(t, repoPath, "config", "user.name", "Test")
-	mustGit(t, repoPath, "commit", "--allow-empty", "-q", "-m", "init")
-
-	store, err := db.Open(filepath.Join(dir, "kanban.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { store.Close() })
-
-	envKey, err := secrets.NewRandomKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	box, err := secrets.NewBox(envKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	store.SetEnvCipher(box)
-
-	dockerCli, err := docker.NewClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { dockerCli.Close() })
-
-	cfg := &config.Config{DataDir: dir, PortRangeStart: 13000, PortRangeEnd: 13099}
-	hookRunner := hooks.NewRunner(store)
-	sessionMgr := session.NewManager(store, dockerCli, hookRunner)
-	handler := api.NewMux(api.Deps{
-		Store: store, Docker: dockerCli, Sessions: sessionMgr, Hooks: hookRunner, Config: cfg,
-	})
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
+	env := kanbantest.New(t)
 
 	board := &db.Board{
 		Name:         "CLI Board",
 		Slug:         "cli-board",
-		RepoPath:     repoPath,
-		WorktreeRoot: filepath.Join(dir, "worktrees", "cli"),
+		RepoPath:     env.RepoPath,
+		WorktreeRoot: filepath.Join(env.Dir, "worktrees", "cli"),
 		BaseBranch:   "main",
 	}
-	if err := store.CreateBoard(context.Background(), board); err != nil {
+	if err := env.Store.CreateBoard(context.Background(), board); err != nil {
 		t.Fatal(err)
 	}
-	return srv, store, board
+	return env.Server, env.Store, board
 }
 
 func mustGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", args...)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
-	}
+	kanbantest.MustGit(t, dir, args...)
 }
 
 // TestTicketCreateCommand exercises the cobra wiring of `ticket create`

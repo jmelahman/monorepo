@@ -15,18 +15,14 @@ import (
 	"github.com/jmelahman/local-preview/orchestrator"
 
 	"github.com/jmelahman/kanban/internal/config"
-	"github.com/jmelahman/kanban/internal/gittest"
+	"github.com/jmelahman/kanban/internal/kanbantest"
 	"github.com/jmelahman/kanban/internal/previews"
 )
 
-// TestMain isolates git from the caller's environment and gitconfig; see
-// gittest.IsolateEnv. It hides the developer's kanban user config too, which
-// layers over every test board's .kanban.toml: a [merge] section there would
-// otherwise decide which strategies these tests see. See REGRESSIONS.md: "Tests
-// inherit the developer's kanban user config".
+// TestMain isolates git, the kanban user config and docker from the caller's
+// machine; see kanbantest.IsolateEnv.
 func TestMain(m *testing.M) {
-	gittest.IsolateEnv()
-	os.Setenv("KANBAN_CONFIG", os.DevNull)
+	kanbantest.IsolateEnv()
 	os.Exit(m.Run())
 }
 
