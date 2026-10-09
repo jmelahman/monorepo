@@ -47,6 +47,62 @@ test.describe("Overview / BoardTree", () => {
     await overview.boardNode(seed.board.id).expectExpanded();
   });
 
+  test("tree filter cycles all → tickets → running and persists", async ({ page, seed }) => {
+    const overview = new OverviewPage(page);
+    await overview.goto();
+
+    const state = await api.boardState(seed.board.id);
+    const node = overview.boardNode(seed.board.id);
+    const treeTicket = overview.treeTicket(seed.ticket.id);
+    await overview.sidebar.expectTreeFilter("all");
+    await node.expectColumnCount(state.columns.length);
+
+    // "tickets": only Backlog holds the seeded ticket, so the empty columns
+    // go but the row and its board stay.
+    await overview.sidebar.cycleTreeFilterTo("tickets");
+    await node.expectColumnCount(1);
+    await treeTicket.expectVisible();
+    await node.expectTotalTickets(1);
+
+    // "running": the seeded ticket has no session, so its board has no match
+    // and is hidden along with the row.
+    await overview.sidebar.cycleTreeFilterTo("running");
+    await treeTicket.expectHidden();
+    await node.expectHidden();
+
+    await overview.reload();
+    await overview.sidebar.expectTreeFilter("running");
+    await overview.boardNode(seed.board.id).expectHidden();
+
+    await overview.sidebar.cycleTreeFilterTo("all");
+    await overview.boardNode(seed.board.id).expectColumnCount(state.columns.length);
+    await overview.boardNode(seed.board.id).expectTotalTickets(1);
+  });
+
+  test("open filter keeps only tickets with a panel and hides other boards", async ({ page, seed }) => {
+    const other = await seed.addTicket("not opened");
+    const overview = new OverviewPage(page);
+    await overview.goto();
+
+    const node = overview.boardNode(seed.board.id);
+    await overview.treeTicket(seed.ticket.id).click();
+    await overview.panel(seed.ticket.id).expectMounted();
+
+    await overview.sidebar.toggleOpenFilter();
+    await overview.sidebar.expectOpenFilter(true);
+    await overview.treeTicket(seed.ticket.id).expectVisible();
+    await overview.treeTicket(other.id).expectHidden();
+    await node.expectTotalTickets(1);
+
+    // Closing the last open panel leaves the board with no match.
+    await overview.panel(seed.ticket.id).close();
+    await node.expectHidden();
+    await expect(overview.sidebar.noMatches).toBeVisible();
+
+    await overview.sidebar.toggleOpenFilter();
+    await node.expectTotalTickets(2);
+  });
+
   test("clicking a ticket opens a single panel and marks the row active", async ({ page, seed }) => {
     const overview = new OverviewPage(page);
     await overview.goto();

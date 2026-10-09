@@ -12,27 +12,87 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api, type Board } from "@/api/client";
 import { queryKeys } from "@/api/keys";
 import { useBoardSubscription } from "@/hooks/useBoardSubscription";
 import { useTicketDnd } from "@/hooks/useTicketDnd";
-import { fetchBoardStructure, useSession, useTicket } from "@/store";
+import { fetchBoardStructure, sessionStore, useSession, useTicket } from "@/store";
 import type { BoardStructure } from "@/store";
 import { STATUS_BG, STATUS_BG_NONE } from "@/components/Ticket";
 import { Button } from "@/components/Button";
-import { loadCollapsedBoards, writeCollapsedBoards } from "./storage";
+import { ActivityIcon, FoldIcon, ListIcon, PanelIcon } from "@/icons";
+import {
+  loadCollapsedBoards,
+  loadOpenOnly,
+  loadTreeFilter,
+  TREE_FILTERS,
+  type TreeFilter,
+  writeCollapsedBoards,
+  writeOpenOnly,
+  writeTreeFilter,
+} from "./storage";
 
 export type OpenTicketFn = (boardId: number, ticketId: number) => void;
+
+const TREE_FILTER_LABEL: Record<TreeFilter, string> = {
+  all: "Showing everything",
+  tickets: "Hiding empty columns and boards",
+  running: "Showing only running tickets",
+};
+
+// Statuses that count as "running" for the sidebar filter. Mirrors the
+// `running` total in SessionSummary: stopped, stopping and error are excluded.
+const RUNNING_STATUSES: ReadonlySet<string> = new Set([
+  "working",
+  "awaiting_perm",
+  "idle",
+  "starting",
+]);
+
+// Ticket ids, across every loaded board, whose session is running. Subscribes
+// to each session, but the snapshot is a joined id string so the tree only
+// re-renders when the running set itself changes — not on every status flip
+// between e.g. working and idle.
+function useRunningTicketIds(
+  structures: readonly (BoardStructure | undefined)[],
+): ReadonlySet<number> {
+  const sessionEntries = structures.flatMap((st) =>
+    st ? Object.entries(st.sessionIdByTicket) : [],
+  );
+  const sessionKey = sessionEntries.map(([, sid]) => sid).join(",");
+  const subscribe = useCallback(
+    (cb: () => void) => {
+      const unsubs = sessionKey
+        ? sessionKey.split(",").map((sid) => sessionStore.subscribe(Number(sid), cb))
+        : [];
+      return () => {
+        for (const unsub of unsubs) unsub();
+      };
+    },
+    [sessionKey],
+  );
+  const key = useSyncExternalStore(subscribe, () =>
+    sessionEntries
+      .filter(([, sid]) => RUNNING_STATUSES.has(sessionStore.get(sid)?.status ?? ""))
+      .map(([ticketId]) => ticketId)
+      .join(","),
+  );
+  return useMemo(() => new Set(key ? key.split(",").map(Number) : []), [key]);
+}
 
 export function BoardTree({
   onOpenTicket,
   openTicketIds,
   onCollapseSidebar,
+  hasPanels = false,
 }: {
   onOpenTicket: OpenTicketFn;
   openTicketIds: ReadonlySet<number>;
   onCollapseSidebar?: () => void;
+  // True when tickets open as panels beside the tree (desktop). Enables the
+  // "open only" filter, which is meaningless when a ticket replaces the tree.
+  hasPanels?: boolean;
 }) {
   const qc = useQueryClient();
   const boardsQ = useQuery({ queryKey: queryKeys.boards, queryFn: api.listBoards });
@@ -83,9 +143,73 @@ export function BoardTree({
       return next;
     });
 
+  const [treeFilter, setTreeFilter] = useState<TreeFilter>(loadTreeFilter);
+  const nextTreeFilter = TREE_FILTERS[(TREE_FILTERS.indexOf(treeFilter) + 1) % TREE_FILTERS.length];
+  const cycleTreeFilter = () => {
+    writeTreeFilter(nextTreeFilter);
+    setTreeFilter(nextTreeFilter);
+  };
+  const [openOnlyState, setOpenOnlyState] = useState(loadOpenOnly);
+  const openOnly = hasPanels && openOnlyState;
+  const setOpenOnly = (on: boolean) => {
+    writeOpenOnly(on);
+    setOpenOnlyState(on);
+  };
+
+  // The tree filter and the open filter stack: "running" + open means a
+  // ticket must be both. "tickets" adds no predicate of its own — it only
+  // switches on the compact layout (empty columns and boards dropped) that
+  // every other filter implies.
+  const runningIds = useRunningTicketIds(structures.map((q) => q.data));
+  const runningOnly = treeFilter === "running";
+  const filtering = treeFilter !== "all" || openOnly;
+  const matches = (ticketId: number) =>
+    (!runningOnly || runningIds.has(ticketId)) && (!openOnly || openTicketIds.has(ticketId));
+  const boardMatches = (st: BoardStructure) =>
+    Object.values(st.ticketIdsByColumn).some((ids) => ids.some(matches));
+  // A board whose structure hasn't loaded (or failed to) can't be judged, so
+  // it stays listed rather than vanishing; the empty message likewise waits
+  // until every board has answered, so a persisted filter doesn't flash it.
+  const boardHidden = (st: BoardStructure | undefined) =>
+    filtering && st != null && !boardMatches(st);
+  const toggleCls = (on: boolean) =>
+    `rounded p-1 ${
+      on
+        ? "bg-accent-500/15 text-accent-500 ring-1 ring-inset ring-accent-500/40"
+        : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+    }`;
+
   const header = (
     <div className="sticky top-0 z-(--z-raised) flex items-center border-b border-border bg-bg px-3 py-2">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Boards</h2>
+      <button
+        type="button"
+        onClick={cycleTreeFilter}
+        title={`${TREE_FILTER_LABEL[treeFilter]} — click for ${TREE_FILTER_LABEL[nextTreeFilter].toLowerCase()}`}
+        aria-label={`Ticket filter: ${TREE_FILTER_LABEL[treeFilter].toLowerCase()}`}
+        data-tree-filter={treeFilter}
+        className={`ml-auto ${toggleCls(treeFilter !== "all")}`}
+      >
+        {treeFilter === "running" ? (
+          <ActivityIcon size={12} />
+        ) : treeFilter === "tickets" ? (
+          <FoldIcon size={12} />
+        ) : (
+          <ListIcon size={12} />
+        )}
+      </button>
+      {hasPanels && (
+        <button
+          type="button"
+          onClick={() => setOpenOnly(!openOnly)}
+          title={openOnly ? "Show all tickets" : "Show only tickets open in a panel"}
+          aria-label="Filter by open"
+          aria-pressed={openOnly}
+          className={`ml-1 ${toggleCls(openOnly)}`}
+        >
+          <PanelIcon size={12} />
+        </button>
+      )}
       {onCollapseSidebar && (
         <button
           type="button"
@@ -93,7 +217,7 @@ export function BoardTree({
           title="Hide boards sidebar"
           aria-label="Hide boards sidebar"
           aria-expanded={true}
-          className="ml-auto rounded px-1 text-fg-muted hover:bg-surface-2 hover:text-fg"
+          className="ml-1 rounded px-1 text-fg-muted hover:bg-surface-2 hover:text-fg"
         >
           <span aria-hidden>◀</span>
         </button>
@@ -134,6 +258,8 @@ export function BoardTree({
               boardName={b.name}
               structure={structures[i]?.data}
               collapsed={collapsed.has(b.id)}
+              matches={filtering ? matches : null}
+              hidden={boardHidden(structures[i]?.data)}
               onToggle={() => toggle(b.id)}
               onOpenTicket={onOpenTicket}
               openTicketIds={openTicketIds}
@@ -141,6 +267,9 @@ export function BoardTree({
           ))}
         </SortableContext>
       </DndContext>
+      {structures.every((q) => boardHidden(q.data)) && (
+        <p className="p-3 text-sm text-fg-muted">No tickets match the current filter.</p>
+      )}
     </div>
   );
 }
@@ -150,6 +279,8 @@ function BoardNode({
   boardName,
   structure,
   collapsed,
+  matches,
+  hidden,
   onToggle,
   onOpenTicket,
   openTicketIds,
@@ -158,6 +289,9 @@ function BoardNode({
   boardName: string;
   structure: BoardStructure | undefined;
   collapsed: boolean;
+  // Ticket predicate while a sidebar filter is on; null when unfiltered.
+  matches: ((ticketId: number) => boolean) | null;
+  hidden: boolean;
   onToggle: () => void;
   onOpenTicket: OpenTicketFn;
   openTicketIds: ReadonlySet<number>;
@@ -199,12 +333,20 @@ function BoardNode({
     structure,
   );
 
+  const visibleIds = (ids: number[]) => (matches ? ids.filter(matches) : ids);
+
   const totalTickets = structure
-    ? Object.values(structure.ticketIdsByColumn).reduce((n, ids) => n + ids.length, 0)
+    ? Object.values(structure.ticketIdsByColumn).reduce((n, ids) => n + visibleIds(ids).length, 0)
     : 0;
 
   const draggingSessionId =
     draggingId != null && structure ? (structure.sessionIdByTicket[draggingId] ?? null) : null;
+
+  // Filtered-out boards render nothing but stay mounted: the subscription
+  // above is what brings a board back when one of its sessions starts. A
+  // board with an add-ticket form open stays put so the draft isn't lost
+  // when its last matching ticket drops out mid-typing.
+  if (hidden && addingColumnId == null) return null;
 
   return (
     <div
@@ -249,8 +391,10 @@ function BoardNode({
         >
           <div className="pb-1">
             {structure.columns.map((c) => {
-              const ids = structure.ticketIdsByColumn[c.id] ?? [];
+              const ids = visibleIds(structure.ticketIdsByColumn[c.id] ?? []);
               const isAdding = addingColumnId === c.id;
+              // Filtered view stays compact: drop columns with no matches.
+              if (matches && ids.length === 0 && !isAdding) return null;
               return (
                 <ColumnSection
                   key={c.id}

@@ -8,6 +8,8 @@ import { expect, type Locator, type Page } from "@playwright/test";
 const STORAGE_KEYS = [
   "overview.panels",
   "overview.tree.collapsed",
+  "overview.tree.filter",
+  "overview.tree.openOnly",
   "overview.sidebar.width",
   "overview.sidebar.collapsed",
 ];
@@ -118,12 +120,43 @@ export class Sidebar {
   readonly resizer: Locator;
   readonly hideButton: Locator;
   readonly showButton: Locator;
+  readonly treeFilter: Locator;
+  readonly openFilter: Locator;
+  readonly noMatches: Locator;
 
   constructor(private readonly page: Page) {
     this.aside = page.locator("aside").filter({ has: page.getByRole("heading", { name: "Boards" }) });
     this.resizer = page.getByRole("separator", { name: "Resize sidebar" });
     this.hideButton = page.getByRole("button", { name: "Hide boards sidebar" });
     this.showButton = page.getByRole("button", { name: "Show boards sidebar" });
+    this.treeFilter = page.locator("button[data-tree-filter]");
+    this.openFilter = page.getByRole("button", { name: "Filter by open" });
+    this.noMatches = page.getByText("No tickets match the current filter.");
+  }
+
+  // One button cycles all → tickets → running → all. Each step asserts the
+  // state it landed on so a dropped click fails here, not three lines later.
+  async cycleTreeFilterTo(mode: "all" | "tickets" | "running") {
+    const order = ["all", "tickets", "running"] as const;
+    const current = await this.treeFilter.getAttribute("data-tree-filter");
+    let i = order.findIndex((m) => m === current);
+    while (order[i] !== mode) {
+      await this.treeFilter.click();
+      i = (i + 1) % order.length;
+      await this.expectTreeFilter(order[i]);
+    }
+  }
+
+  async expectTreeFilter(mode: "all" | "tickets" | "running") {
+    await expect(this.treeFilter).toHaveAttribute("data-tree-filter", mode);
+  }
+
+  async toggleOpenFilter() {
+    await this.openFilter.click();
+  }
+
+  async expectOpenFilter(on: boolean) {
+    await expect(this.openFilter).toHaveAttribute("aria-pressed", String(on));
   }
 
   async expectVisible() {
@@ -204,6 +237,10 @@ export class BoardTreeNode {
     await expect(this.root).toBeVisible();
   }
 
+  async expectHidden() {
+    await expect(this.root).toHaveCount(0);
+  }
+
   async toggle() {
     await this.toggleButton.click();
   }
@@ -217,6 +254,10 @@ export class BoardTreeNode {
 
   async expectExpanded() {
     await expect(this.root.locator("h3").first()).toBeVisible();
+  }
+
+  async expectColumnCount(n: number) {
+    await expect(this.root.locator("[data-tree-column]")).toHaveCount(n);
   }
 
   column(columnId: number, columnName: string): TreeColumn {
@@ -270,6 +311,10 @@ export class TreeTicket {
 
   async expectVisible() {
     await expect(this.root).toBeVisible();
+  }
+
+  async expectHidden() {
+    await expect(this.root).toHaveCount(0);
   }
 
   async expectActive() {

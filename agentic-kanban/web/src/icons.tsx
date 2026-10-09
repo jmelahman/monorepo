@@ -78,6 +78,46 @@ export function XIcon(props: IconProps) {
   );
 }
 
+export function ActivityIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  );
+}
+
+export function PanelIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+    </svg>
+  );
+}
+
+export function ListIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <line x1="9" y1="6" x2="20" y2="6" />
+      <line x1="9" y1="12" x2="20" y2="12" />
+      <line x1="9" y1="18" x2="20" y2="18" />
+      <circle cx="4.5" cy="6" r="1" fill="currentColor" />
+      <circle cx="4.5" cy="12" r="1" fill="currentColor" />
+      <circle cx="4.5" cy="18" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function FoldIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <polyline points="7 3 12 8 17 3" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <polyline points="7 21 12 16 17 21" />
+    </svg>
+  );
+}
+
 export function PlusIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>

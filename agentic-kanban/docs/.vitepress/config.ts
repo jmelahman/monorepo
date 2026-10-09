@@ -41,6 +41,7 @@ export default defineConfig({
             { text: 'Install', link: '/guide/install' },
             { text: 'Quickstart', link: '/guide/quickstart' },
             { text: 'Configuration', link: '/guide/configuration' },
+            { text: 'Overview', link: '/guide/overview' },
             { text: 'Monorepos', link: '/guide/monorepos' },
             { text: 'Previews', link: '/guide/previews' },
             { text: 'Mobile', link: '/guide/mobile' },

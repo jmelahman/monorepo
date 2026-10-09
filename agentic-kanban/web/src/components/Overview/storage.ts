@@ -6,6 +6,8 @@ import { isSlotKey, type SlotKey } from "./tile";
 
 const PANELS_KEY = "overview.panels";
 const COLLAPSED_KEY = "overview.tree.collapsed";
+const TREE_FILTER_KEY = "overview.tree.filter";
+const OPEN_ONLY_KEY = "overview.tree.openOnly";
 
 export type PersistedPanel = {
   ticketId: number;
@@ -90,6 +92,48 @@ export function loadCollapsedBoards(): Set<number> {
 export function writeCollapsedBoards(set: Set<number>): void {
   try {
     localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...set]));
+  } catch {
+    // ignore
+  }
+}
+
+function loadFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(key: string, on: boolean): void {
+  try {
+    localStorage.setItem(key, on ? "1" : "0");
+  } catch {
+    // ignore
+  }
+}
+
+export const loadOpenOnly = (): boolean => loadFlag(OPEN_ONLY_KEY);
+export const writeOpenOnly = (on: boolean): void => writeFlag(OPEN_ONLY_KEY, on);
+
+// Sidebar ticket filter, in the order its button cycles. Each step is stricter
+// than the last: everything → only columns/boards that hold tickets → only
+// tickets with a running session.
+export const TREE_FILTERS = ["all", "tickets", "running"] as const;
+export type TreeFilter = (typeof TREE_FILTERS)[number];
+
+export function loadTreeFilter(): TreeFilter {
+  try {
+    const raw = localStorage.getItem(TREE_FILTER_KEY);
+    return TREE_FILTERS.find((f) => f === raw) ?? "all";
+  } catch {
+    return "all";
+  }
+}
+
+export function writeTreeFilter(filter: TreeFilter): void {
+  try {
+    localStorage.setItem(TREE_FILTER_KEY, filter);
   } catch {
     // ignore
   }

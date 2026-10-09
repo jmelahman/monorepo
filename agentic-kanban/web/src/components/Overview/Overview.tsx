@@ -138,6 +138,7 @@ function DesktopOverview() {
               onOpenTicket={onOpenTicket}
               openTicketIds={openTicketIds}
               onCollapseSidebar={toggleCollapsed}
+              hasPanels
             />
           </aside>
           {/* biome-ignore lint/a11y/useSemanticElements: HTML has no semantic resizer; role="separator" is the canonical ARIA pattern. */}
