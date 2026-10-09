@@ -7,9 +7,22 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	sqlite "modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 )
 
 var ErrNotFound = errors.New("not found")
+
+// IsUniqueViolation reports whether err is SQLite rejecting a write because
+// it would duplicate a UNIQUE column or column set. It checks the driver's
+// result code, not the message, so it survives schema renames and driver
+// upgrades. A PRIMARY KEY conflict has its own result code and is not
+// reported here.
+func IsUniqueViolation(err error) bool {
+	var se *sqlite.Error
+	return errors.As(err, &se) && se.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE
+}
 
 // Boards
 
@@ -252,7 +265,8 @@ func (s *Store) CreateTicket(ctx context.Context, t *Ticket) error {
 			t.BoardID, t.ColumnID, t.Title, t.Slug, t.Body, t.Position, nullIfEmpty(t.Fingerprint),
 		)
 		if err != nil {
-			if strings.Contains(err.Error(), "tickets.board_id, tickets.slug") {
+			// tickets' only UNIQUE constraint is (board_id, slug): the slug is taken.
+			if IsUniqueViolation(err) {
 				continue
 			}
 			return err

@@ -132,7 +132,7 @@ func (h *handlers) createBoard(w http.ResponseWriter, r *http.Request) {
 		GitAuthorEmail: strings.TrimSpace(req.GitAuthorEmail),
 	}
 	if err := h.store.CreateBoard(r.Context(), board); err != nil {
-		if isUniqueViolation(err) {
+		if db.IsUniqueViolation(err) {
 			h.httpError(w, fmt.Errorf("a board named %q already exists", req.Name), http.StatusConflict)
 			return
 		}
@@ -1912,10 +1912,6 @@ func (h *handlers) fsCheck(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"state": state})
-}
-
-func isUniqueViolation(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
 
 // Plans

@@ -158,6 +158,45 @@ func TestBoards_Lifecycle(t *testing.T) {
 	})
 }
 
+func TestCreateBoard_DuplicateNameConflicts(t *testing.T) {
+	e := newEnv(t)
+	body := map[string]any{
+		"name":        "Twice",
+		"repo_path":   e.repoPath,
+		"base_branch": "main",
+	}
+
+	resp := e.post("/api/boards", body)
+	assertStatus(t, resp, 201)
+	resp.Body.Close()
+
+	resp = e.post("/api/boards", body)
+	assertStatus(t, resp, 409)
+	if got := readBody(t, resp); !strings.Contains(string(got), "already exists") {
+		t.Errorf("409 body = %s; want it to mention %q", got, "already exists")
+	}
+}
+
+func TestCreateTicket_DuplicateTitleGetsSlugSuffix(t *testing.T) {
+	e := newEnv(t)
+	board := e.seedBoard("B")
+	cols, err := e.store.ListColumns(t.Context(), board.ID)
+	if err != nil || len(cols) == 0 {
+		t.Fatalf("ListColumns: cols=%v err=%v", cols, err)
+	}
+
+	for _, want := range []string{"same-title", "same-title-2", "same-title-3"} {
+		resp := e.post(fmt.Sprintf("/api/boards/%d/tickets", board.ID), map[string]any{
+			"column_id": cols[0].ID,
+			"title":     "Same title",
+		})
+		assertStatus(t, resp, 201)
+		if tk := decodeJSON[db.Ticket](t, resp); tk.Slug != want {
+			t.Errorf("slug = %q; want %q", tk.Slug, want)
+		}
+	}
+}
+
 // ---------- Tickets ----------
 
 func TestTickets_Lifecycle(t *testing.T) {
