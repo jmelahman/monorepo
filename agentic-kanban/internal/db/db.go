@@ -80,10 +80,6 @@ func Open(path string) (*Store, error) {
 		db.SetMaxOpenConns(8)
 		db.SetMaxIdleConns(4)
 	}
-	if _, err := db.Exec(schemaSQL); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("apply schema: %w", err)
-	}
 	if err := migrate(db); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
@@ -91,10 +87,14 @@ func Open(path string) (*Store, error) {
 	return &Store{db: db}, nil
 }
 
-// migrate applies idempotent schema changes to existing databases that
-// CREATE TABLE IF NOT EXISTS in schema.sql cannot reach. Each step must
-// be safe to re-run on an already-migrated DB.
-func migrate(db *sql.DB) error {
+// legacyMigrate is the upgrade path from before migrations were numbered: it
+// adds the columns that CREATE TABLE IF NOT EXISTS in schema.sql cannot reach
+// on a database that already had the table. It runs only on databases whose
+// user_version is 0, and together with schema.sql it defines version 1.
+//
+// It is frozen. New schema changes go in the migrations list in
+// migrations.go, not here.
+func legacyMigrate(db *sql.DB) error {
 	hasColumn, err := tableHasColumn(db, "boards", "position")
 	if err != nil {
 		return fmt.Errorf("inspect boards: %w", err)

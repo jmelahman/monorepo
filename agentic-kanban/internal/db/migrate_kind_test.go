@@ -22,6 +22,11 @@ func TestMigrate_AddsBoardKind(t *testing.T) {
 	if _, err := store.DB().ExecContext(ctx, `ALTER TABLE boards DROP COLUMN kind`); err != nil {
 		t.Fatalf("drop kind (simulating an older schema): %v", err)
 	}
+	// A database from before migrations were numbered reports version 0,
+	// which is what sends Open down the legacy path that re-adds the column.
+	if _, err := store.DB().ExecContext(ctx, `PRAGMA user_version = 0`); err != nil {
+		t.Fatalf("reset user_version: %v", err)
+	}
 	if _, err := store.DB().ExecContext(ctx,
 		`INSERT INTO boards (name, slug, base_branch, created_at, position) VALUES ('Errors', 'errors', 'main', 0, 0)`,
 	); err != nil {

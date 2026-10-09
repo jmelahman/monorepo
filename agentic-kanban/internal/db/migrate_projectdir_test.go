@@ -75,6 +75,11 @@ func TestMigrate_BackfillProjectDir(t *testing.T) {
 	if _, err := store.DB().ExecContext(ctx, `ALTER TABLE boards DROP COLUMN project_dir`); err != nil {
 		t.Fatalf("drop project_dir (simulating an older schema): %v", err)
 	}
+	// A database from before migrations were numbered reports version 0,
+	// which is what sends Open down the legacy path that re-adds the column.
+	if _, err := store.DB().ExecContext(ctx, `PRAGMA user_version = 0`); err != nil {
+		t.Fatalf("reset user_version: %v", err)
+	}
 	for i, b := range boards {
 		if _, err := store.DB().ExecContext(ctx,
 			`INSERT INTO boards (name, slug, repo_path, mount_path, base_branch, created_at, position)

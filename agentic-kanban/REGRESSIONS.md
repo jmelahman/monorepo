@@ -419,3 +419,31 @@ After touching the Vite output layout or the embed, file a frontend error
 against an embedded build and check the ticket shows `src/` paths. The dedup
 fingerprint hashes only each browser frame's location, never its minified
 function name, which changes per build.
+
+### Schema changes go in the numbered migration list
+
+The database records its schema version in `PRAGMA user_version`.
+`internal/db/schema.sql` plus `legacyMigrate` are the frozen version-1
+baseline and run only on a database at version 0 (a new file, or one from
+before migrations were numbered). Editing either one changes nothing for
+every database that already exists, so a column added there is simply
+missing in production while fresh test databases have it.
+
+Rules:
+
+- A schema change is one entry appended to `migrations` in
+  `internal/db/migrations.go`. It runs once per database, in a transaction
+  that also bumps `user_version`.
+- `TestMigrate_BaselineSchemaIsFrozen` pins `schema.sql` by hash so an edit
+  fails CI. Don't update the hash to make it pass. `legacyMigrate` has no
+  such guard; leave it alone all the same.
+- The list is append-only. A database stores only a count of the entries it
+  has run, not which ones, so reordering, editing or deleting a shipped entry
+  silently skips or misapplies it.
+- A test that simulates a pre-versioning database (dropping a column so the
+  legacy path re-adds it) must also run `PRAGMA user_version = 0`, or the
+  reopen skips the legacy path.
+- `PRAGMA foreign_keys` can't be changed inside a transaction. A migration
+  that rebuilds a table other tables reference needs explicit design (the
+  runner would have to toggle it around the transaction), not a plain `apply`
+  function.

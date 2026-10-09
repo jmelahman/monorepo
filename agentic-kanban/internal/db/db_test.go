@@ -417,6 +417,11 @@ func TestMigrateAddsSessionHarness(t *testing.T) {
 	if _, err := store.DB().Exec(`ALTER TABLE sessions DROP COLUMN harness`); err != nil {
 		t.Fatalf("drop harness: %v", err)
 	}
+	// A database from before migrations were numbered reports version 0,
+	// which is what sends Open down the legacy path that re-adds the column.
+	if _, err := store.DB().Exec(`PRAGMA user_version = 0`); err != nil {
+		t.Fatalf("reset user_version: %v", err)
+	}
 	_ = store.Close()
 
 	store, err = db.Open(path)
