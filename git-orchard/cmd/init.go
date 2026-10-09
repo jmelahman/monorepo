@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -38,7 +39,7 @@ tools/foo to github.com:owner/foo.git. Edit the manifest afterwards for any
 upstream that is named differently.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInit(opts)
+			return runInit(cmd.OutOrStdout(), cmd.ErrOrStderr(), opts)
 		},
 	}
 
@@ -48,7 +49,7 @@ upstream that is named differently.`,
 	return cmd
 }
 
-func runInit(opts *InitOptions) error {
+func runInit(stdout, stderr io.Writer, opts *InitOptions) error {
 	o, err := openOrchard()
 	if err != nil {
 		return err
@@ -91,10 +92,10 @@ func runInit(opts *InitOptions) error {
 		if err := config.Add(o.Repo, o.Config.Manifest, s); err != nil {
 			return err
 		}
-		fmt.Printf("%s\t%s\n", s.Prefix, s.Remote)
+		_, _ = fmt.Fprintf(stdout, "%s\t%s\n", s.Prefix, s.Remote)
 	}
 	if len(prefixes) == 0 {
-		fmt.Fprintln(os.Stderr, "No new subtrees found in git history.")
+		_, _ = fmt.Fprintln(stderr, "No new subtrees found in git history.")
 	}
 	return nil
 }

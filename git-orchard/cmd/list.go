@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -25,9 +25,9 @@ func NewListCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.UseHistory {
-				return listSubtreesFromHistory()
+				return listSubtreesFromHistory(cmd.OutOrStdout())
 			}
-			return listSubtreesFromConfig()
+			return listSubtreesFromConfig(cmd.OutOrStdout())
 		},
 	}
 
@@ -36,19 +36,19 @@ func NewListCommand() *cobra.Command {
 	return cmd
 }
 
-func listSubtreesFromConfig() error {
+func listSubtreesFromConfig(stdout io.Writer) error {
 	o, err := openOrchard()
 	if err != nil {
 		return err
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
 	for _, s := range o.Config.Subtrees {
 		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", s.Prefix, s.Remote, s.Branch)
 	}
 	return w.Flush()
 }
 
-func listSubtreesFromHistory() error {
+func listSubtreesFromHistory(stdout io.Writer) error {
 	reader := history.NewGitHistoryReader()
 	subtreeMap, err := reader.GetSubtreesFromHistory()
 	if err != nil {
@@ -56,16 +56,16 @@ func listSubtreesFromHistory() error {
 	}
 
 	if len(subtreeMap) == 0 {
-		fmt.Println("No subtree merges found in git history.")
+		_, _ = fmt.Fprintln(stdout, "No subtree merges found in git history.")
 		return nil
 	}
 
-	fmt.Printf("Found %d subtree(s) from git history:\n\n", len(subtreeMap))
+	_, _ = fmt.Fprintf(stdout, "Found %d subtree(s) from git history:\n\n", len(subtreeMap))
 	for _, info := range subtreeMap {
-		fmt.Printf("Prefix: %s\n", info.Prefix)
-		fmt.Printf("  Last commit: %s\n", info.LastCommit)
-		fmt.Printf("  Last message: %s\n", info.LastMessage)
-		fmt.Println()
+		_, _ = fmt.Fprintf(stdout, "Prefix: %s\n", info.Prefix)
+		_, _ = fmt.Fprintf(stdout, "  Last commit: %s\n", info.LastCommit)
+		_, _ = fmt.Fprintf(stdout, "  Last message: %s\n", info.LastMessage)
+		_, _ = fmt.Fprintln(stdout)
 	}
 	return nil
 }

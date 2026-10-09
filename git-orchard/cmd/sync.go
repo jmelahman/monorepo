@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -47,7 +48,7 @@ replaced; otherwise the profile owns the whole file.
 Like a formatter, sync exits 1 when it changes anything, so it works as a
 pre-commit hook. --check reports the differences without writing them.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSync(opts, args)
+			return runSync(cmd.OutOrStdout(), cmd.ErrOrStderr(), opts, args)
 		},
 	}
 
@@ -56,7 +57,7 @@ pre-commit hook. --check reports the differences without writing them.`,
 	return cmd
 }
 
-func runSync(opts *SyncOptions, prefixes []string) error {
+func runSync(stdout, stderr io.Writer, opts *SyncOptions, prefixes []string) error {
 	o, err := openOrchard()
 	if err != nil {
 		return err
@@ -74,24 +75,24 @@ func runSync(opts *SyncOptions, prefixes []string) error {
 	}
 	if opts.Check {
 		for _, c := range changes {
-			if err := printDiff(c); err != nil {
+			if err := printDiff(stdout, c); err != nil {
 				return err
 			}
 		}
-		fmt.Fprintf(os.Stderr, "%d shared file(s) out of date; run git orchard sync\n", len(changes))
+		_, _ = fmt.Fprintf(stderr, "%d shared file(s) out of date; run git orchard sync\n", len(changes))
 		return ErrOutOfDate
 	}
 	if err := share.Apply(o.Repo.Dir, changes); err != nil {
 		return err
 	}
 	for _, c := range changes {
-		fmt.Fprintf(os.Stderr, "Updated %s\n", c.Path)
+		_, _ = fmt.Fprintf(stderr, "Updated %s\n", c.Path)
 	}
 	return ErrOutOfDate
 }
 
-// printDiff shows c as a unified diff on stdout, labeled with its path.
-func printDiff(c share.Change) error {
+// printDiff writes c as a unified diff to stdout, labeled with its path.
+func printDiff(stdout io.Writer, c share.Change) error {
 	dir, err := os.MkdirTemp("", "git-orchard-sync-")
 	if err != nil {
 		return err
@@ -111,7 +112,7 @@ func printDiff(c share.Change) error {
 	}
 	// Relative to dir, the paths read as a/<path> and b/<path>; git diff
 	// exits 1 when they differ, which they do.
-	err = git.Repo{Dir: dir}.RunTo(os.Stdout, "--no-pager", "diff", "--no-index", "--no-prefix", "--", old, updated)
+	err = git.Repo{Dir: dir}.RunTo(stdout, "--no-pager", "diff", "--no-index", "--no-prefix", "--", old, updated)
 	if err != nil && git.ExitCode(err) != 1 {
 		return err
 	}

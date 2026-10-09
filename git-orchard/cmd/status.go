@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"runtime"
 
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ Each subtree's upstream branch is fetched (to refs/orchard/upstream/<prefix>)
 and compared with the subtree's split of --rev: "ahead" commits are ones a
 push would publish, "behind" ones a pull would bring in.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStatus(opts, args)
+			return runStatus(cmd.OutOrStdout(), opts, args)
 		},
 	}
 
@@ -38,7 +39,7 @@ push would publish, "behind" ones a pull would bring in.`,
 	return cmd
 }
 
-func runStatus(opts *StatusOptions, prefixes []string) error {
+func runStatus(stdout io.Writer, opts *StatusOptions, prefixes []string) error {
 	o, err := openOrchard()
 	if err != nil {
 		return err
@@ -73,9 +74,9 @@ func runStatus(opts *StatusOptions, prefixes []string) error {
 		<-done[i]
 		if err := results[i].err; err != nil {
 			failed++
-			fmt.Printf("%-*s  error: %v\n", width, s.Prefix, err)
+			_, _ = fmt.Fprintf(stdout, "%-*s  error: %v\n", width, s.Prefix, err)
 		} else {
-			fmt.Printf("%-*s  %s\n", width, s.Prefix, results[i].status)
+			_, _ = fmt.Fprintf(stdout, "%-*s  %s\n", width, s.Prefix, results[i].status)
 		}
 	}
 	if failed > 0 {

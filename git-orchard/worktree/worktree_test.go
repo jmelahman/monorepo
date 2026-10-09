@@ -2,37 +2,13 @@ package worktree
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/jmelahman/git-orchard/git"
+	"github.com/jmelahman/git-orchard/internal/gittest"
 )
-
-func isolateGit(t *testing.T) {
-	// git exports these to hooks, e.g. GIT_INDEX_FILE to the pre-commit hook
-	// that runs these tests, and they'd point every git command here at the
-	// repository being committed to.
-	out, err := exec.Command("git", "rev-parse", "--local-env-vars").Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, k := range strings.Fields(string(out)) {
-		t.Setenv(k, "")
-		if err := os.Unsetenv(k); err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"} {
-		t.Setenv(k, "Test")
-	}
-	for _, k := range []string{"GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
-		t.Setenv(k, "test@example.com")
-	}
-}
 
 func run(t *testing.T, repo git.Repo, args ...string) string {
 	t.Helper()
@@ -54,7 +30,7 @@ func write(t *testing.T, path, content string) {
 // hook, and a worktree of it on branch feature.
 func newWorktree(t *testing.T) (main, wt git.Repo) {
 	t.Helper()
-	isolateGit(t)
+	gittest.Isolate(t)
 	dir := t.TempDir()
 	main = git.Repo{Dir: filepath.Join(dir, "main")}
 	wt = git.Repo{Dir: filepath.Join(dir, "feature")}

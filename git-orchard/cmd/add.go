@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -43,7 +43,7 @@ git@github.com:owner/foo.git.`,
 			} else if prefix = RepoName(remote); prefix == "" {
 				return fmt.Errorf("can't guess a prefix from %s; pass one", remote)
 			}
-			return runAdd(opts, config.Subtree{Prefix: config.Clean(prefix), Remote: remote, Branch: opts.Branch})
+			return runAdd(cmd.ErrOrStderr(), opts, config.Subtree{Prefix: config.Clean(prefix), Remote: remote, Branch: opts.Branch})
 		},
 	}
 
@@ -54,7 +54,7 @@ git@github.com:owner/foo.git.`,
 	return cmd
 }
 
-func runAdd(opts *AddOptions, s config.Subtree) error {
+func runAdd(stderr io.Writer, opts *AddOptions, s config.Subtree) error {
 	o, err := openOrchard()
 	if err != nil {
 		return err
@@ -65,7 +65,7 @@ func runAdd(opts *AddOptions, s config.Subtree) error {
 	if err := o.Add(s, opts.Message); err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "Added %s to %s; commit it to finish.\n", s.Prefix, o.Config.Manifest)
+	_, _ = fmt.Fprintf(stderr, "Added %s to %s; commit it to finish.\n", s.Prefix, o.Config.Manifest)
 	return nil
 }
 
