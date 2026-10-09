@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jmelahman/local-preview/internal/gittest"
 	"github.com/jmelahman/local-preview/internal/retain"
 )
 
@@ -118,8 +119,8 @@ func TestGCEndpointEvictsByPolicy(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "srv", "main.txt"), []byte("backend-v2"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "v2")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "v2")
 	secondID, secondBe, _ := deployRef(t, mux, "main")
 	if firstBe == secondBe {
 		t.Fatalf("fixture commits share be_hash %q; the test needs distinct artifacts", firstBe)

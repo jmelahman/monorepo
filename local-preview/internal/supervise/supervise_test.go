@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/jmelahman/local-preview/internal/db"
 	"github.com/jmelahman/local-preview/internal/gitrepo"
+	"github.com/jmelahman/local-preview/internal/gittest"
 	"github.com/jmelahman/local-preview/internal/manifest"
 	"github.com/jmelahman/local-preview/internal/store"
 )
@@ -655,25 +655,11 @@ func TestInitTimeout(t *testing.T) {
 
 // --- lineage fork tests ---
 
-func runTestGit(t *testing.T, dir string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@example.com",
-		"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@example.com")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-	return strings.TrimSpace(string(out))
-}
-
 func commit(t *testing.T, dir, msg string) string {
 	t.Helper()
-	runTestGit(t, dir, "add", "-A")
-	runTestGit(t, dir, "commit", "-qm", msg)
-	return runTestGit(t, dir, "rev-parse", "HEAD")
+	gittest.Run(t, dir, "add", "-A")
+	gittest.Run(t, dir, "commit", "-qm", msg)
+	return gittest.Run(t, dir, "rev-parse", "HEAD")
 }
 
 // waitStatus polls Status until want or the deadline.
@@ -738,7 +724,7 @@ func TestForkOrInitStateDir(t *testing.T) {
 
 	// Source repo: c1 then c2.
 	src := t.TempDir()
-	runTestGit(t, src, "init", "-q", "-b", "main")
+	gittest.Run(t, src, "init", "-q", "-b", "main")
 	if err := os.WriteFile(filepath.Join(src, "f.txt"), []byte("1"), 0o644); err != nil {
 		t.Fatal(err)
 	}

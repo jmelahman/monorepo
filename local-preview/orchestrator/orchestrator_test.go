@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jmelahman/local-preview/internal/db"
+	"github.com/jmelahman/local-preview/internal/gittest"
 )
 
 const fixtureManifest = `
@@ -29,20 +30,6 @@ build       = [["true"]]
 run         = ["./never-started"]
 health_path = "/api/health"
 `
-
-func runTestGit(t *testing.T, dir string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@example.com",
-		"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@example.com")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-	return strings.TrimSpace(string(out))
-}
 
 func newSourceRepo(t *testing.T) string {
 	t.Helper()
@@ -61,9 +48,9 @@ func newSourceRepo(t *testing.T) string {
 			t.Fatal(err)
 		}
 	}
-	runTestGit(t, dir, "init", "-q", "-b", "main")
-	runTestGit(t, dir, "add", "-A")
-	runTestGit(t, dir, "commit", "-qm", "initial")
+	gittest.Run(t, dir, "init", "-q", "-b", "main")
+	gittest.Run(t, dir, "add", "-A")
+	gittest.Run(t, dir, "commit", "-qm", "initial")
 	return dir
 }
 
@@ -245,8 +232,8 @@ func TestProjectDirScopesManifestAndBuildPaths(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "add project manifest")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "add project manifest")
 
 	runner := &recordingRunner{}
 	o, err := New(Options{DataDir: filepath.Join(t.TempDir(), "previews"), Runner: runner})
@@ -370,8 +357,8 @@ func TestProjectDirChangeRebuildsReadyDeploy(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "add project manifest")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "add project manifest")
 
 	runner := &recordingRunner{}
 	o, err := New(Options{DataDir: filepath.Join(t.TempDir(), "previews"), Runner: runner})

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jmelahman/local-preview/internal/gittest"
 )
 
 const testWebhookSecret = "hook-secret"
@@ -44,7 +46,7 @@ func pushPayload(source, ref, after string, deleted bool) string {
 func TestWebhookPushDeploys(t *testing.T) {
 	mux, _ := newTestMux(t)
 	src := newSourceRepo(t)
-	sha := runTestGit(t, src, "rev-parse", "HEAD")
+	sha := gittest.Run(t, src, "rev-parse", "HEAD")
 	registerRepo(t, mux, "demo", src)
 
 	rec := deliver(t, mux, "push", pushPayload(src, "refs/heads/main", sha, false), true)
@@ -147,7 +149,7 @@ func TestWebhookIgnoresNonDeployEvents(t *testing.T) {
 func TestWebhookBranchFilter(t *testing.T) {
 	mux, _ := newTestMux(t)
 	src := newSourceRepo(t)
-	sha := runTestGit(t, src, "rev-parse", "HEAD")
+	sha := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	// The filter governs webhooks even with watch off: exclude main, allow
 	// everything else.

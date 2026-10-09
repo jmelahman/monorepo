@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/jmelahman/local-preview/internal/db"
+	"github.com/jmelahman/local-preview/internal/gittest"
 )
 
 // tarGzBytes builds an in-memory gzip-compressed tar from name→content.
@@ -69,7 +70,7 @@ func appendArtifactSection(t *testing.T, src string) {
 		t.Fatal(err)
 	}
 	f.Close()
-	runTestGit(t, src, "commit", "-qam", "declare cli artifact")
+	gittest.Run(t, src, "commit", "-qam", "declare cli artifact")
 }
 
 // A prebuilt frontend uploaded for a commit lands in the exact content-address
@@ -177,7 +178,7 @@ func TestUploadSideRejectedForArtifactsOnlyManifest(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "preview.toml"), []byte(fixtureArtifactSection), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "artifacts-only manifest")
+	gittest.Run(t, src, "commit", "-qam", "artifacts-only manifest")
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 
 	for _, side := range []string{SideFrontend, SideBackend} {
@@ -233,10 +234,10 @@ func TestUploadFrontendSharedAcrossCommits(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "backend", "note.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "backend-only change")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "backend-only change")
 
-	b := e.deployAndWait(t, runTestGit(t, src, "rev-parse", "HEAD"))
+	b := e.deployAndWait(t, gittest.Run(t, src, "rev-parse", "HEAD"))
 	if b.FeHash != res.Hash {
 		t.Fatalf("backend-only commit changed fe hash %s → %s; uploaded frontend not shared", res.Hash, b.FeHash)
 	}

@@ -3,7 +3,6 @@ package clone
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/jmelahman/local-preview/internal/db"
 	"github.com/jmelahman/local-preview/internal/gitrepo"
+	"github.com/jmelahman/local-preview/internal/gittest"
 )
 
 func newSourceRepo(t *testing.T) string {
@@ -19,20 +19,9 @@ func newSourceRepo(t *testing.T) string {
 	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("hi"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	for _, args := range [][]string{
-		{"init", "-q", "-b", "main"},
-		{"add", "-A"},
-		{"commit", "-qm", "initial"},
-	} {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@example.com",
-			"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@example.com")
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
+	gittest.Run(t, dir, "init", "-q", "-b", "main")
+	gittest.Run(t, dir, "add", "-A")
+	gittest.Run(t, dir, "commit", "-qm", "initial")
 	return dir
 }
 

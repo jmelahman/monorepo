@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/jmelahman/local-preview/internal/config"
 	"github.com/jmelahman/local-preview/internal/db"
 	"github.com/jmelahman/local-preview/internal/gitrepo"
+	"github.com/jmelahman/local-preview/internal/gittest"
 	"github.com/jmelahman/local-preview/internal/retain"
 	"github.com/jmelahman/local-preview/internal/store"
 	"github.com/jmelahman/local-preview/internal/supervise"
@@ -36,20 +36,6 @@ build       = [["true"]]
 run         = ["./never-started"]
 health_path = "/api/health"
 `
-
-func runTestGit(t *testing.T, dir string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@example.com",
-		"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@example.com")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-	return strings.TrimSpace(string(out))
-}
 
 // newSourceRepo builds a minimal deployable repo (trivial build commands).
 func newSourceRepo(t *testing.T) string {
@@ -69,9 +55,9 @@ func newSourceRepo(t *testing.T) string {
 			t.Fatal(err)
 		}
 	}
-	runTestGit(t, dir, "init", "-q", "-b", "main")
-	runTestGit(t, dir, "add", "-A")
-	runTestGit(t, dir, "commit", "-qm", "initial")
+	gittest.Run(t, dir, "init", "-q", "-b", "main")
+	gittest.Run(t, dir, "add", "-A")
+	gittest.Run(t, dir, "commit", "-qm", "initial")
 	return dir
 }
 
@@ -434,7 +420,7 @@ files = ["mycli"]
 	if err := os.WriteFile(filepath.Join(src, "preview.toml"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "add artifact")
+	gittest.Run(t, src, "commit", "-qam", "add artifact")
 
 	registerRepo(t, mux, "demo", src)
 	if rec := doJSON(t, mux, "POST", "/api/deploys", `{"repo":"demo","ref":"main"}`); rec.Code != http.StatusAccepted {
@@ -929,7 +915,7 @@ func TestDeleteDeployKeepsSharedArtifacts(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "web", "index.html"), []byte("<html>v2</html>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "frontend tweak")
+	gittest.Run(t, src, "commit", "-qam", "frontend tweak")
 	second := deployAndWait(t, mux, "main")
 
 	if second.BeHash != first.BeHash {

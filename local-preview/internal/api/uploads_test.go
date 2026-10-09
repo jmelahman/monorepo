@@ -17,6 +17,7 @@ import (
 
 	"github.com/jmelahman/local-preview/internal/db"
 	"github.com/jmelahman/local-preview/internal/githuboidc"
+	"github.com/jmelahman/local-preview/internal/gittest"
 )
 
 func tarGz(t *testing.T, files map[string]string) []byte {
@@ -74,7 +75,7 @@ files = ["mycli"]
 	if err := os.WriteFile(filepath.Join(src, "preview.toml"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "declare artifact")
+	gittest.Run(t, src, "commit", "-qam", "declare artifact")
 	registerRepo(t, mux, "demo", src)
 
 	// Frontend upload primes the content store.

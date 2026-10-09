@@ -3,40 +3,25 @@ package watch
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/jmelahman/local-preview/internal/build"
 	"github.com/jmelahman/local-preview/internal/db"
 	"github.com/jmelahman/local-preview/internal/gitrepo"
+	"github.com/jmelahman/local-preview/internal/gittest"
 	"github.com/jmelahman/local-preview/internal/store"
 	"github.com/jmelahman/local-preview/internal/supervise"
 )
-
-func runTestGit(t *testing.T, dir string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@example.com",
-		"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@example.com")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-	return strings.TrimSpace(string(out))
-}
 
 func commitFile(t *testing.T, dir, name, content, msg string) string {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, dir, "add", "-A")
-	runTestGit(t, dir, "commit", "-qm", msg)
-	return runTestGit(t, dir, "rev-parse", "HEAD")
+	gittest.Run(t, dir, "add", "-A")
+	gittest.Run(t, dir, "commit", "-qm", msg)
+	return gittest.Run(t, dir, "rev-parse", "HEAD")
 }
 
 // newWatchFixture builds a source repo with a main branch, registers it
@@ -53,7 +38,7 @@ func newWatchFixture(t *testing.T, branches string) (*Watcher, db.Repo, string) 
 func newWatchFixtureOpts(t *testing.T, branches string, backfill bool) (*Watcher, db.Repo, string) {
 	t.Helper()
 	src := t.TempDir()
-	runTestGit(t, src, "init", "-q", "-b", "main")
+	gittest.Run(t, src, "init", "-q", "-b", "main")
 	commitFile(t, src, "a.txt", "one", "initial")
 
 	database, err := db.Open(":memory:")
@@ -116,7 +101,7 @@ func TestPollDeploysNewBranchTips(t *testing.T) {
 	}
 
 	// A new commit on a new branch deploys once the poller sees it.
-	runTestGit(t, src, "checkout", "-qb", "feature")
+	gittest.Run(t, src, "checkout", "-qb", "feature")
 	sha := commitFile(t, src, "b.txt", "two", "feature work")
 	w.PollAll(ctx)
 	got := deploysByBranch(t, w)
@@ -145,10 +130,10 @@ func TestPollEvictsDeletedBranchDeploys(t *testing.T) {
 	ctx := context.Background()
 
 	// main plus an unmerged feature branch each get a (queued) deploy.
-	runTestGit(t, src, "checkout", "-qb", "feature")
+	gittest.Run(t, src, "checkout", "-qb", "feature")
 	featSHA := commitFile(t, src, "b.txt", "two", "feature work")
-	runTestGit(t, src, "checkout", "-q", "main")
-	mainSHA := runTestGit(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "checkout", "-q", "main")
+	mainSHA := gittest.Run(t, src, "rev-parse", "HEAD")
 	w.PollAll(ctx)
 	if rows, _ := w.db.ListDeploys(db.DeployFilter{}); len(rows) != 2 {
 		t.Fatalf("deploy count = %d, want 2", len(rows))
@@ -156,7 +141,7 @@ func TestPollEvictsDeletedBranchDeploys(t *testing.T) {
 
 	// Deleting the unmerged branch evicts its deploy on the next poll; the
 	// main deploy is untouched because its commit is still a live tip.
-	runTestGit(t, src, "branch", "-D", "feature")
+	gittest.Run(t, src, "branch", "-D", "feature")
 	w.PollAll(ctx)
 
 	feat, err := w.db.GetDeployBySHA(repo.ID, featSHA)
@@ -215,11 +200,11 @@ func TestQuietPollEvictsNewUnreachableDeploy(t *testing.T) {
 
 	// A branch is deployed, then deleted: its commit stays in the mirror's
 	// object store but is unreachable, and its deploy row is evicted.
-	runTestGit(t, src, "checkout", "-qb", "feature")
+	gittest.Run(t, src, "checkout", "-qb", "feature")
 	featSHA := commitFile(t, src, "b.txt", "two", "feature work")
-	runTestGit(t, src, "checkout", "-q", "main")
+	gittest.Run(t, src, "checkout", "-q", "main")
 	w.PollAll(ctx)
-	runTestGit(t, src, "branch", "-D", "feature")
+	gittest.Run(t, src, "branch", "-D", "feature")
 	w.PollAll(ctx)
 
 	// A fresh deploy row for that dead commit, created with no ref change —
@@ -247,8 +232,8 @@ func TestQuietPollEvictsNewUnreachableDeploy(t *testing.T) {
 
 func TestPollHonorsBranchFilter(t *testing.T) {
 	w, _, src := newWatchFixture(t, "main,release/*")
-	runTestGit(t, src, "branch", "release/1.0")
-	runTestGit(t, src, "checkout", "-qb", "scratch")
+	gittest.Run(t, src, "branch", "release/1.0")
+	gittest.Run(t, src, "checkout", "-qb", "scratch")
 	commitFile(t, src, "s.txt", "x", "scratch work")
 
 	w.PollAll(context.Background())
@@ -268,9 +253,9 @@ func TestPollBaselinesExistingTips(t *testing.T) {
 	ctx := context.Background()
 
 	// Branches that predate watching are recorded, not deployed.
-	runTestGit(t, src, "checkout", "-qb", "old-feature")
+	gittest.Run(t, src, "checkout", "-qb", "old-feature")
 	commitFile(t, src, "b.txt", "two", "old work")
-	runTestGit(t, src, "checkout", "-q", "main")
+	gittest.Run(t, src, "checkout", "-q", "main")
 	w.PollAll(ctx)
 	if rows, _ := w.db.ListDeploys(db.DeployFilter{}); len(rows) != 0 {
 		t.Fatalf("baseline poll deployed %d row(s): %+v", len(rows), rows)

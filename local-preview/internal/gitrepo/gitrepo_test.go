@@ -4,25 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
-)
 
-func runTestGit(t *testing.T, dir string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@example.com",
-		"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@example.com")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-	return strings.TrimSpace(string(out))
-}
+	"github.com/jmelahman/local-preview/internal/gittest"
+)
 
 func writeFile(t *testing.T, dir, name, content string) {
 	t.Helper()
@@ -40,11 +27,11 @@ func writeFile(t *testing.T, dir, name, content string) {
 func newSourceRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	runTestGit(t, dir, "init", "-q", "-b", "main")
+	gittest.Run(t, dir, "init", "-q", "-b", "main")
 	writeFile(t, dir, "web/index.html", "<html>v1</html>")
 	writeFile(t, dir, "main.go", "package main")
-	runTestGit(t, dir, "add", "-A")
-	runTestGit(t, dir, "commit", "-q", "-m", "initial")
+	gittest.Run(t, dir, "add", "-A")
+	gittest.Run(t, dir, "commit", "-q", "-m", "initial")
 	return dir
 }
 
@@ -71,7 +58,7 @@ func TestAddResolveFetch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	head := runTestGit(t, src, "rev-parse", "HEAD")
+	head := gittest.Run(t, src, "rev-parse", "HEAD")
 	sha, err := repo.ResolveRef(ctx, "main")
 	if err != nil {
 		t.Fatal(err)
@@ -82,8 +69,8 @@ func TestAddResolveFetch(t *testing.T) {
 
 	// A commit made after the clone resolves via the fetch-and-retry path.
 	writeFile(t, src, "web/index.html", "<html>v2</html>")
-	runTestGit(t, src, "commit", "-qam", "v2")
-	newHead := runTestGit(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "commit", "-qam", "v2")
+	newHead := gittest.Run(t, src, "rev-parse", "HEAD")
 	sha, err = repo.ResolveRef(ctx, newHead)
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +101,7 @@ func TestFetchReportsRefChanges(t *testing.T) {
 	}
 
 	writeFile(t, src, "web/index.html", "<html>v2</html>")
-	runTestGit(t, src, "commit", "-qam", "v2")
+	gittest.Run(t, src, "commit", "-qam", "v2")
 	if changed, err := repo.Fetch(ctx); err != nil || !changed {
 		t.Fatalf("fetch after new commit: changed=%v err=%v, want true", changed, err)
 	}
@@ -122,11 +109,11 @@ func TestFetchReportsRefChanges(t *testing.T) {
 		t.Fatalf("fetch after syncing: changed=%v err=%v, want false", changed, err)
 	}
 
-	runTestGit(t, src, "branch", "scrap")
+	gittest.Run(t, src, "branch", "scrap")
 	if changed, err := repo.Fetch(ctx); err != nil || !changed {
 		t.Fatalf("fetch after new branch: changed=%v err=%v, want true", changed, err)
 	}
-	runTestGit(t, src, "branch", "-D", "scrap")
+	gittest.Run(t, src, "branch", "-D", "scrap")
 	if changed, err := repo.Fetch(ctx); err != nil || !changed {
 		t.Fatalf("fetch after branch deletion: changed=%v err=%v, want true", changed, err)
 	}
@@ -155,7 +142,7 @@ func TestAddReplacesLeftoverMirror(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := runTestGit(t, src2, "rev-parse", "HEAD"); sha != want {
+	if want := gittest.Run(t, src2, "rev-parse", "HEAD"); sha != want {
 		t.Fatalf("mirror still tracks old source: main = %s, want %s", sha, want)
 	}
 
@@ -182,11 +169,11 @@ func TestAddReplacesLeftoverMirror(t *testing.T) {
 func TestCommitMetaAndBranches(t *testing.T) {
 	ctx := context.Background()
 	src := newSourceRepo(t)
-	first := runTestGit(t, src, "rev-parse", "HEAD")
+	first := gittest.Run(t, src, "rev-parse", "HEAD")
 	writeFile(t, src, "a.txt", "a")
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "second")
-	head := runTestGit(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "second")
+	head := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	mgr := NewManager(filepath.Join(t.TempDir(), "repos"))
 	repo, err := mgr.Add(ctx, "demo", src, nil)
@@ -232,21 +219,21 @@ func TestCommitMetaAndBranches(t *testing.T) {
 func TestUnreachableSHAs(t *testing.T) {
 	ctx := context.Background()
 	src := newSourceRepo(t)
-	base := runTestGit(t, src, "rev-parse", "HEAD")
+	base := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	// A second commit advances main; base is now an ancestor of the tip.
 	writeFile(t, src, "a.txt", "a")
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "second")
-	mainTip := runTestGit(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "second")
+	mainTip := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	// An unmerged feature branch off base.
-	runTestGit(t, src, "checkout", "-qb", "feature", base)
+	gittest.Run(t, src, "checkout", "-qb", "feature", base)
 	writeFile(t, src, "f.txt", "f")
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "feature work")
-	featTip := runTestGit(t, src, "rev-parse", "HEAD")
-	runTestGit(t, src, "checkout", "-q", "main")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "feature work")
+	featTip := gittest.Run(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "checkout", "-q", "main")
 
 	mgr := NewManager(filepath.Join(t.TempDir(), "repos"))
 	repo, err := mgr.Add(ctx, "demo", src, nil)
@@ -375,13 +362,13 @@ func TestArchiveRejectsEscapingSymlinks(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			src := t.TempDir()
-			runTestGit(t, src, "init", "-q", "-b", "main")
+			gittest.Run(t, src, "init", "-q", "-b", "main")
 			writeFile(t, src, "real.txt", "safe content")
 			if err := os.Symlink(tc.linkTarget, filepath.Join(src, "leak")); err != nil {
 				t.Fatal(err)
 			}
-			runTestGit(t, src, "add", "-A")
-			runTestGit(t, src, "commit", "-q", "-m", "symlink")
+			gittest.Run(t, src, "add", "-A")
+			gittest.Run(t, src, "commit", "-q", "-m", "symlink")
 
 			mgr := NewManager(filepath.Join(t.TempDir(), "repos"))
 			repo, err := mgr.Add(ctx, "demo", src, nil)
@@ -423,7 +410,7 @@ func TestArchiveRejectsEscapingSymlinks(t *testing.T) {
 func TestLsTreeMatchesGit(t *testing.T) {
 	ctx := context.Background()
 	src := t.TempDir()
-	runTestGit(t, src, "init", "-q", "-b", "main")
+	gittest.Run(t, src, "init", "-q", "-b", "main")
 	writeFile(t, src, "a.txt", "file")
 	writeFile(t, src, "a-b", "dash sorts before dot")
 	writeFile(t, src, "a/nested.txt", "dir sorts after both")
@@ -434,8 +421,8 @@ func TestLsTreeMatchesGit(t *testing.T) {
 	if err := os.Symlink("a.txt", filepath.Join(src, "link")); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-q", "-m", "tree shapes")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-q", "-m", "tree shapes")
 
 	mgr := NewManager(filepath.Join(t.TempDir(), "repos"))
 	repo, err := mgr.Add(ctx, "demo", src, nil)
@@ -455,7 +442,7 @@ func TestLsTreeMatchesGit(t *testing.T) {
 	for _, e := range entries {
 		got = append(got, fmt.Sprintf("%s %s %s\t%s", e.Mode, e.Type, e.OID, e.Path))
 	}
-	want := strings.Split(runTestGit(t, src, "ls-tree", "-r", "--full-tree", sha), "\n")
+	want := strings.Split(gittest.Run(t, src, "ls-tree", "-r", "--full-tree", sha), "\n")
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("LsTree diverges from git ls-tree -r:\ngot:\n%s\nwant:\n%s",
 			strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -468,11 +455,11 @@ func TestAddFromLinkedWorktree(t *testing.T) {
 	ctx := context.Background()
 	src := newSourceRepo(t)
 	wt := filepath.Join(t.TempDir(), "wt")
-	runTestGit(t, src, "worktree", "add", "-q", "-b", "feature", wt)
+	gittest.Run(t, src, "worktree", "add", "-q", "-b", "feature", wt)
 	writeFile(t, wt, "feature.txt", "from the worktree")
-	runTestGit(t, wt, "add", "-A")
-	runTestGit(t, wt, "commit", "-q", "-m", "feature commit")
-	featureHead := runTestGit(t, wt, "rev-parse", "HEAD")
+	gittest.Run(t, wt, "add", "-A")
+	gittest.Run(t, wt, "commit", "-q", "-m", "feature commit")
+	featureHead := gittest.Run(t, wt, "rev-parse", "HEAD")
 
 	mgr := NewManager(filepath.Join(t.TempDir(), "repos"))
 	repo, err := mgr.Add(ctx, "demo", wt, nil)
@@ -491,22 +478,22 @@ func TestAddFromLinkedWorktree(t *testing.T) {
 func TestFirstParentAncestry(t *testing.T) {
 	ctx := context.Background()
 	src := newSourceRepo(t)
-	c1 := runTestGit(t, src, "rev-parse", "HEAD")
+	c1 := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	writeFile(t, src, "a.txt", "a")
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "c2")
-	c2 := runTestGit(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "c2")
+	c2 := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	// Merge a side branch so first-parent order is observable.
-	runTestGit(t, src, "checkout", "-qb", "side", c1)
+	gittest.Run(t, src, "checkout", "-qb", "side", c1)
 	writeFile(t, src, "b.txt", "b")
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "side")
-	side := runTestGit(t, src, "rev-parse", "HEAD")
-	runTestGit(t, src, "checkout", "-q", "main")
-	runTestGit(t, src, "merge", "-q", "--no-ff", "-m", "merge side", "side")
-	merge := runTestGit(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "side")
+	side := gittest.Run(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "checkout", "-q", "main")
+	gittest.Run(t, src, "merge", "-q", "--no-ff", "-m", "merge side", "side")
+	merge := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	mgr := NewManager(filepath.Join(t.TempDir(), "repos"))
 	repo, err := mgr.Add(ctx, "demo", src, nil)

@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -15,23 +14,10 @@ import (
 
 	"github.com/jmelahman/local-preview/internal/db"
 	"github.com/jmelahman/local-preview/internal/gitrepo"
+	"github.com/jmelahman/local-preview/internal/gittest"
 	"github.com/jmelahman/local-preview/internal/store"
 	"github.com/jmelahman/local-preview/internal/supervise"
 )
-
-func runTestGit(t *testing.T, dir string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@example.com",
-		"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@example.com")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-	return strings.TrimSpace(string(out))
-}
 
 func copyTree(t *testing.T, src, dst string) {
 	t.Helper()
@@ -60,9 +46,9 @@ func newFixtureRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	copyTree(t, "testdata/fixture-repo", dir)
-	runTestGit(t, dir, "init", "-q", "-b", "main")
-	runTestGit(t, dir, "add", "-A")
-	runTestGit(t, dir, "commit", "-qm", "initial")
+	gittest.Run(t, dir, "init", "-q", "-b", "main")
+	gittest.Run(t, dir, "add", "-A")
+	gittest.Run(t, dir, "commit", "-qm", "initial")
 	return dir
 }
 
@@ -223,8 +209,8 @@ func TestVerticalSlice(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "web", "src", "index.html"), []byte("<html>v2</html>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "fe change")
-	shaB := runTestGit(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "commit", "-qam", "fe change")
+	shaB := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	b := e.deployAndWait(t, shaB)
 	if b.Ref != "" || b.Branch != "main" {
@@ -253,8 +239,8 @@ func TestVerticalSlice(t *testing.T) {
 	if err := os.WriteFile(mainGo, []byte(strings.Replace(string(code), `"ok"`, `"ok-v2"`, 1)), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "be change")
-	shaC := runTestGit(t, src, "rev-parse", "HEAD")
+	gittest.Run(t, src, "commit", "-qam", "be change")
+	shaC := gittest.Run(t, src, "rev-parse", "HEAD")
 
 	c := e.deployAndWait(t, shaC)
 	if c.FeHash != b.FeHash {
@@ -299,7 +285,7 @@ func TestFailedBuildSurfacesInLog(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "preview.toml"), []byte(broken), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "break build")
+	gittest.Run(t, src, "commit", "-qam", "break build")
 
 	e := newEnv(t, src)
 	row, err := e.q.RequestDeploy(context.Background(), "demo", "main", false, "")
@@ -357,7 +343,7 @@ func TestProcessModeFrontendBuild(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "preview.toml"), []byte(proc), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "frontend as process")
+	gittest.Run(t, src, "commit", "-qam", "frontend as process")
 
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 	d := e.deployAndWait(t, "main")
@@ -396,7 +382,7 @@ func TestArtifactBuildAndReuse(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.Close()
-	runTestGit(t, src, "commit", "-qam", "declare cli artifact")
+	gittest.Run(t, src, "commit", "-qam", "declare cli artifact")
 
 	e := newEnv(t, src)
 	a := e.deployAndWait(t, "main")
@@ -429,8 +415,8 @@ func TestArtifactBuildAndReuse(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "web", "src", "index.html"), []byte("<html>v2</html>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "fe change")
-	b := e.deployAndWait(t, runTestGit(t, src, "rev-parse", "HEAD"))
+	gittest.Run(t, src, "commit", "-qam", "fe change")
+	b := e.deployAndWait(t, gittest.Run(t, src, "rev-parse", "HEAD"))
 	if b.Artifacts["cli"].Hash != ref.Hash {
 		t.Fatalf("frontend-only commit changed the artifact hash: %s → %s", ref.Hash, b.Artifacts["cli"].Hash)
 	}
@@ -443,9 +429,9 @@ func TestArtifactBuildAndReuse(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "backend", "note.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "be change")
-	c := e.deployAndWait(t, runTestGit(t, src, "rev-parse", "HEAD"))
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "be change")
+	c := e.deployAndWait(t, gittest.Run(t, src, "rev-parse", "HEAD"))
 	if c.Artifacts["cli"].Hash == ref.Hash {
 		t.Fatal("partition change did not change the artifact hash")
 	}
@@ -476,7 +462,7 @@ files = ["bin/fixture-cli"]
 		t.Fatal(err)
 	}
 	f.Close()
-	runTestGit(t, src, "commit", "-qam", "declare gated artifact")
+	gittest.Run(t, src, "commit", "-qam", "declare gated artifact")
 
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 	d := e.deployAndWait(t, "main")
@@ -522,7 +508,7 @@ func TestArtifactBuildFailureLeavesDeployReady(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.Close()
-	runTestGit(t, src, "commit", "-qam", "declare bogus artifact file")
+	gittest.Run(t, src, "commit", "-qam", "declare bogus artifact file")
 
 	e := newEnv(t, src)
 	d := e.deployAndWait(t, "main")
@@ -553,8 +539,8 @@ func removeCommittedManifest(t *testing.T, src string) []byte {
 	if err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "rm", "-q", "preview.toml")
-	runTestGit(t, src, "commit", "-qm", "drop preview.toml")
+	gittest.Run(t, src, "rm", "-q", "preview.toml")
+	gittest.Run(t, src, "commit", "-qm", "drop preview.toml")
 	return content
 }
 
@@ -568,8 +554,8 @@ func TestKanbanTableManifest(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, ".kanban.toml"), []byte(kanban), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "add", ".kanban.toml")
-	runTestGit(t, src, "commit", "-qm", "host manifest in .kanban.toml")
+	gittest.Run(t, src, "add", ".kanban.toml")
+	gittest.Run(t, src, "commit", "-qm", "host manifest in .kanban.toml")
 
 	e := newEnv(t, src, func(q *Queue) {
 		q.SetManifestRefs([]ManifestRef{
@@ -689,9 +675,9 @@ func TestDevcontainerDefaultDiscovery(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, ".devcontainer", "devcontainer.json"), []byte(devcJSON), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "add devcontainer")
-	b := e.deployAndWait(t, runTestGit(t, src, "rev-parse", "HEAD"))
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "add devcontainer")
+	b := e.deployAndWait(t, gittest.Run(t, src, "rev-parse", "HEAD"))
 	if b.FeHash == base.FeHash || b.BeHash == base.BeHash {
 		t.Fatalf("devcontainer did not feed the hashes: fe %s→%s be %s→%s",
 			base.FeHash, b.FeHash, base.BeHash, b.BeHash)
@@ -730,8 +716,8 @@ func TestDevcontainerDefaultDiscovery(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "preview.toml"), append([]byte("devcontainer = false\n"), toml...), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "commit", "-qam", "opt out of devcontainer")
-	c := e.deployAndWait(t, runTestGit(t, src, "rev-parse", "HEAD"))
+	gittest.Run(t, src, "commit", "-qam", "opt out of devcontainer")
+	c := e.deployAndWait(t, gittest.Run(t, src, "rev-parse", "HEAD"))
 	if c.FeHash != base.FeHash || c.BeHash != base.BeHash {
 		t.Fatalf("opt-out did not restore hashes: fe %s vs %s, be %s vs %s",
 			c.FeHash, base.FeHash, c.BeHash, base.BeHash)
@@ -750,8 +736,8 @@ func TestDevcontainerUnusableNote(t *testing.T) {
 		[]byte(`{"build": {"dockerfile": "Dockerfile"}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runTestGit(t, src, "add", "-A")
-	runTestGit(t, src, "commit", "-qm", "dockerfile devcontainer")
+	gittest.Run(t, src, "add", "-A")
+	gittest.Run(t, src, "commit", "-qm", "dockerfile devcontainer")
 
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 	d := e.deployAndWait(t, "main")
