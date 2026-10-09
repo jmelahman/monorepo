@@ -64,6 +64,12 @@ const REVEAL_MARGIN = "1200px 0px";
 // you can fan it open a bit at a time (shift-click still expands the whole gap).
 const EXPAND_CONTEXT_LINES = 10;
 
+// Soft-wrap long lines instead of the library's default per-pane horizontal
+// scroll. In split view each side is only half the panel wide, and its
+// scrollbar is a thin, hover-only bar at the bottom of the file — usually far
+// off-screen — so long lines were effectively unreachable without a trackpad.
+const DIFF_OVERFLOW = "wrap";
+
 // Re-skin @pierre/diffs to match the app. The library renders into shadow DOM
 // and themes itself through `--diffs-*` custom properties; this CSS is injected
 // into its top-priority `unsafe` layer. Custom properties inherit across the
@@ -1120,6 +1126,7 @@ function DiffFileEntry({
       selectedLines={selection}
       options={{
         diffStyle: "split",
+        overflow: DIFF_OVERFLOW,
         theme,
         themeType,
         stickyHeader: true,
@@ -1189,6 +1196,7 @@ function FileBlob({
       file={{ name: file.name, contents: q.data.contents }}
       className={viewed ? "diff-collapsed" : undefined}
       options={{
+        overflow: DIFF_OVERFLOW,
         theme,
         themeType,
         stickyHeader: true,
