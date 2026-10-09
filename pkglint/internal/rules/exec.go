@@ -67,7 +67,9 @@ var execRules = []Rule{
 		Name:     "obfuscated-payload",
 		Severity: Warn,
 		Doc: "Long hex-escape sequences or large base64-looking literals embedded in a build " +
-			"script are how encoded payloads look at rest. Flagged for human review.",
+			"script are how encoded payloads look at rest. Flagged for human review. " +
+			"Variables nested so that they expand to tens of mebibytes are reported here too: past that " +
+			"point pkglint stops expanding, and what depends on them goes unanalyzed.",
 		Check: checkObfuscatedLiterals,
 	},
 	{
@@ -788,7 +790,7 @@ func checkEval(ctx *Context) []Finding {
 		sev := Error
 		msg := "eval assembles and executes code at build time, defeating static review"
 		for _, w := range c.Call.Args[1:] {
-			if wordContainsCommand(w, downloaders) {
+			if ctx.wordRunsCommand(w, downloaders) {
 				sev = Critical
 				msg = "eval executes the output of a network download"
 			}
@@ -940,7 +942,7 @@ func checkDownloadExec(ctx *Context) []Finding {
 	for _, c := range ctx.Commands() {
 		if shellSinks[c.Name] || c.Name == "source" || c.Name == "." {
 			for _, w := range c.Call.Args[1:] {
-				if wordContainsCommand(w, downloaders) {
+				if ctx.wordRunsCommand(w, downloaders) {
 					out = append(out, c.finding("PB304", Critical,
 						"%s executes the output of a network download", c.Name))
 					break
@@ -960,21 +962,16 @@ func (ctx *Context) checkPipeInto(sources map[string]bool, qualify func(Command)
 		u := &units[i]
 		for _, segs := range pipelines(u.File) {
 			last := segs[len(segs)-1]
-			sinkName := stmtCommandName(last, ctx.vars)
-			if !shellSinks[sinkName] {
+			sinkCmd, ok := ctx.commandAt(last)
+			if !ok || !shellSinks[sinkCmd.Name] || !sinkExecutesStdin(sinkCmd) {
 				continue
 			}
-			if call, ok := last.Cmd.(*syntax.CallExpr); ok &&
-				!sinkExecutesStdin(ctx.newCommand(u, "", last, call)) {
-				continue
-			}
-			sink := sinkName
+			sink := sinkCmd.Name
 			for _, seg := range segs[:len(segs)-1] {
-				call, ok := seg.Cmd.(*syntax.CallExpr)
-				if !ok || len(call.Args) == 0 {
+				c, ok := ctx.commandAt(seg)
+				if !ok {
 					continue
 				}
-				c := ctx.newCommand(u, "", seg, call)
 				if sources[c.Name] && qualify(c) {
 					out = append(out, findingAt(id, Critical, u.Path, seg.Pos(), format, sink))
 					break

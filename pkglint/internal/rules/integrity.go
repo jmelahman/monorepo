@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -489,7 +490,7 @@ func checkWeakChecksums(ctx *Context) []Finding {
 // enough to satisfy PB102. The fixer shares it so that what clears the rule
 // and what the fix aims to produce cannot drift apart.
 func hasStrongSum(sums map[string][]string) bool {
-	for _, algo := range []string{"sha224", "sha256", "sha384", "sha512", "b2"} {
+	for _, algo := range pkgbuild.StrongSumAlgos {
 		if len(sums[algo]) > 0 {
 			return true
 		}
@@ -563,7 +564,7 @@ func (ctx *Context) tracksTip(vcs string) bool {
 
 func checkVCSPins(ctx *Context) []Finding {
 	var out []Finding
-	for _, e := range ctx.Pkg.Sources() {
+	for _, e := range slices.Concat(ctx.Pkg.Sources(), ctx.Pkg.ConditionalSources()) {
 		if e.VCS == "" {
 			continue
 		}
@@ -615,7 +616,7 @@ func insecureProto(e pkgbuild.SourceEntry) (string, bool) {
 // against the very attacker insecure transport lets in.
 func strongSumFor(p *pkgbuild.Package, e pkgbuild.SourceEntry) bool {
 	sums := p.Checksums(e.Arch)
-	for _, algo := range []string{"sha224", "sha256", "sha384", "sha512", "b2"} {
+	for _, algo := range pkgbuild.StrongSumAlgos {
 		vals := sums[algo]
 		if e.Index >= len(vals) {
 			continue
@@ -629,11 +630,28 @@ func strongSumFor(p *pkgbuild.Package, e pkgbuild.SourceEntry) bool {
 
 func checkInsecureTransport(ctx *Context) []Finding {
 	var out []Finding
-	for _, e := range ctx.Pkg.Sources() {
+	for _, e := range slices.Concat(ctx.Pkg.Sources(), ctx.Pkg.ConditionalSources()) {
 		if e.Local || isSignatureSource(e) { // signature transport is PB112's concern
 			continue
 		}
 		if proto, insecure := insecureProto(e); insecure {
+			if e.Conditional {
+				if e.CondStrongSum {
+					out = append(out, findingAt("PB104", Warn, ctx.Pkg.PKGBUILD.Path, e.Pos,
+						"source %q, set inside top-level control flow, is fetched over unencrypted %s://; "+
+							"the digest pinned beside it in the same block still verifies it, so this costs "+
+							"availability rather than integrity", e.Raw, proto))
+					continue
+				}
+				// No digest is assigned beside it in the same block, so which
+				// checksum pairs with it depends on the branch makepkg takes;
+				// neither "verified" nor "nothing verifying" can be claimed,
+				// and the transport is plaintext on any branch.
+				out = append(out, findingAt("PB104", Warn, ctx.Pkg.PKGBUILD.Path, e.Pos,
+					"source %q, set inside top-level control flow, is fetched over unencrypted %s://; "+
+						"pkglint cannot tell which checksum, if any, covers it", e.Raw, proto))
+				continue
+			}
 			if strongSumFor(ctx.Pkg, e) {
 				out = append(out, findingAt("PB104", Warn, ctx.Pkg.PKGBUILD.Path, e.Pos,
 					"source %q is fetched over unencrypted %s://; the pinned digest still verifies it, "+

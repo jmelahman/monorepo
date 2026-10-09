@@ -638,6 +638,9 @@ func TestBuildRefusesBuildfileArgs(t *testing.T) {
 		{"build", "--makepkg-arg=-p", "--makepkg-arg=PKGBUILD.evil", "testdata/clean"},
 		{"build", "testdata/clean", "--", "--dir=/elsewhere"},
 		{"build", "testdata/clean", "--", "-sp", "PKGBUILD.evil"},
+		{"build", "testdata/clean", "--", "--di=/elsewhere"},
+		{"build", "testdata/clean", "--", "--d", "/elsewhere"},
+		{"build", "testdata/clean", "--", "--dir", "/elsewhere"},
 	} {
 		seen := stubExec(t, []string{"makepkg"}, dropArchive("goodpkg-2.1.0-1-any.pkg.tar"))
 		var buf bytes.Buffer
@@ -1018,5 +1021,60 @@ func TestBuildFixRefusedBuildFixesNothing(t *testing.T) {
 	}
 	if string(after) != src {
 		t.Errorf("a refused build rewrote the PKGBUILD:\n%s", after)
+	}
+}
+
+// TestBuildPinsBuildfile: makepkg takes its build file name from BUILDFILE, and
+// the child inherits the caller's environment, so the last assignment must be
+// the PKGBUILD that was linted.
+func TestBuildPinsBuildfile(t *testing.T) {
+	t.Setenv("BUILDFILE", "PKGBUILD.evil")
+	var env []string
+	drop := dropArchive("goodpkg-2.1.0-1-any.pkg.tar")
+	stubExec(t, []string{"makepkg"}, func(cmd *exec.Cmd) error {
+		env = cmd.Env
+		return drop(cmd)
+	})
+	var buf bytes.Buffer
+	run([]string{"build", "testdata/clean"}, &buf)
+	last := ""
+	for _, e := range env {
+		if strings.HasPrefix(e, "BUILDFILE=") {
+			last = e
+		}
+	}
+	if last != "BUILDFILE=PKGBUILD" {
+		t.Errorf("last BUILDFILE entry = %q, want BUILDFILE=PKGBUILD\n%s", last, buf.String())
+	}
+}
+
+func TestCheckMakepkgArgsAllowsOtherLongOptions(t *testing.T) {
+	if err := checkMakepkgArgs([]string{"--nocheck", "--skippgpcheck", "--", "--needed"}); err != nil {
+		t.Errorf("legitimate options refused: %v", err)
+	}
+}
+
+// Under json or sarif stdout is one document; the fix lines must not follow it.
+func TestBuildFixKeepsJSONValid(t *testing.T) {
+	for _, format := range []string{"json", "sarif"} {
+		t.Run(format, func(t *testing.T) {
+			dir := glibcBuild(t)
+
+			var buf bytes.Buffer
+			if code := run([]string{"build", "--fail-on=never", "--format=" + format, "--fix", dir}, &buf); code != 0 {
+				t.Fatalf("got exit %d, want 0\n%s", code, buf.String())
+			}
+			var v any
+			if err := json.Unmarshal(buf.Bytes(), &v); err != nil {
+				t.Fatalf("stdout is not one JSON document: %v\n%s", err, buf.String())
+			}
+			fixed, err := os.ReadFile(filepath.Join(dir, "PKGBUILD"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(fixed), "depends=('glibc')") {
+				t.Errorf("PKGBUILD was not fixed:\n%s", fixed)
+			}
+		})
 	}
 }

@@ -1,6 +1,7 @@
 package pkgbuild
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -704,6 +705,9 @@ func TestLoadRefusesNonRegularSources(t *testing.T) {
 	if len(pkg.Scriptlets) != 0 {
 		t.Errorf("Scriptlets = %+v, want none (non-regular scriptlet must be skipped)", pkg.Scriptlets)
 	}
+	if len(pkg.ScriptletErrors) != 1 {
+		t.Errorf("ScriptletErrors = %+v, want one (a non-regular scriptlet is present but unread, and must be reported)", pkg.ScriptletErrors)
+	}
 
 	// The PKGBUILD itself: a non-regular file is a load error, not a hang.
 	other := t.TempDir()
@@ -743,5 +747,158 @@ func TestLoadRefusesOversizedSources(t *testing.T) {
 	}
 	if pkg.SrcInfo != nil {
 		t.Errorf("SrcInfo = %+v, want nil (oversized .SRCINFO must be skipped)", pkg.SrcInfo)
+	}
+}
+
+// TestLoadRecordsOversizedScriptlet pins that a scriptlet too large to read
+// is surfaced as a ScriptletError instead of vanishing: padding the file
+// must not be a way to switch every scriptlet rule off.
+func TestLoadRecordsOversizedScriptlet(t *testing.T) {
+	defer restoreMaxSourceFile(t, 64)()
+	dir := t.TempDir()
+	files := map[string]string{
+		"PKGBUILD":     "pkgname=demo\npkgver=1\ninstall=demo.install\n",
+		"demo.install": "post_install() {\n  true\n}\n" + strings.Repeat("# pad\n", 32),
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pkg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if len(pkg.ScriptletErrors) != 1 {
+		t.Fatalf("ScriptletErrors = %+v, want one entry", pkg.ScriptletErrors)
+	}
+	if msg := pkg.ScriptletErrors[0].Err; strings.Contains(msg, dir) {
+		t.Errorf("message %q leaks the directory; want the basename only", msg)
+	}
+}
+
+// TestLoadMissingScriptletIsNotAnError pins that a scriptlet that does not
+// exist is left to PB107 rather than recorded as unreadable.
+func TestLoadMissingScriptletIsNotAnError(t *testing.T) {
+	dir := t.TempDir()
+	content := "pkgname=demo\npkgver=1\ninstall=gone.install\n"
+	if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if len(pkg.ScriptletErrors) != 0 {
+		t.Errorf("ScriptletErrors = %+v, want none for a missing scriptlet", pkg.ScriptletErrors)
+	}
+}
+
+// TestExpandIsBounded pins that a chain of scalars each referencing the last
+// many times cannot multiply into gigabytes: five levels of 40 references is
+// 40^5 copies of the seed, from a file of a few hundred bytes.
+func TestExpandIsBounded(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("pkgname=demo\npkgver=1\n_a0=xxxxxxxxxx\n")
+	for i := 1; i <= 5; i++ {
+		fmt.Fprintf(&b, "_a%d=\"%s\"\n", i, strings.Repeat(fmt.Sprintf("$_a%d", i-1), 40))
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(b.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	got := pkg.Expand("$_a5")
+	if len(got) > 2*expandMax {
+		t.Fatalf("Expand grew to %d bytes, want at most %d", len(got), 2*expandMax)
+	}
+	// Ordinary expansion is unaffected.
+	if s := pkg.Expand("$pkgname-$pkgver"); s != "demo-1" {
+		t.Errorf("Expand = %q, want demo-1", s)
+	}
+}
+
+// TestExpandTotalIsBounded pins that the per-call cap is not the only bound:
+// many calls together stop at expandTotalMax, and an ordinary package never
+// notices.
+func TestExpandTotalIsBounded(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("pkgname=demo\npkgver=1\n_a0=xxxxxxxxxx\n")
+	for i := 1; i <= 5; i++ {
+		fmt.Fprintf(&b, "_a%d=\"%s\"\n", i, strings.Repeat(fmt.Sprintf("$_a%d", i-1), 40))
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(b.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	total, last := 0, ""
+	for range 200 {
+		last = pkg.Expand("$_a5")
+		total += len(last)
+	}
+	if total > expandTotalMax+2*expandMax {
+		t.Errorf("200 Expand calls produced %d bytes, want at most %d", total, expandTotalMax+2*expandMax)
+	}
+	if last != "$_a5" {
+		t.Errorf("last Expand = %d bytes, want the reference left unexpanded", len(last))
+	}
+	if !pkg.ExpandExhausted() {
+		t.Error("ExpandExhausted = false, want true")
+	}
+
+	dir2 := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir2, "PKGBUILD"), []byte("pkgname=demo\npkgver=1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := Load(dir2)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	for range 10000 {
+		if s := ok.Expand("$pkgname-$pkgver"); s != "demo-1" {
+			t.Fatalf("Expand = %q, want demo-1", s)
+		}
+	}
+	if ok.ExpandExhausted() {
+		t.Error("ordinary package reported as exhausted")
+	}
+}
+
+func TestUnitAssignsTo(t *testing.T) {
+	pkg := loadPKGBUILD(t, `pkgname=demo
+pkgver=1
+a=1
+prepare() {
+  local a
+}
+build() {
+  a=2
+}
+package() {
+  FOO=1 a=3 make
+}
+`)
+	sites := pkg.PKGBUILD.AssignsTo("a")
+	if len(sites) != 4 {
+		t.Fatalf("got %d sites, want 4", len(sites))
+	}
+	wantFn := []string{"", "build", "package", "prepare"}
+	for i, s := range sites {
+		if s.Fn != wantFn[i] {
+			t.Errorf("site %d Fn = %q, want %q", i, s.Fn, wantFn[i])
+		}
+	}
+	if c := sites[2].Call; c == nil || len(c.Args) != 1 {
+		t.Errorf("package site Call = %v, want a command with one arg", c)
+	}
+	if sites[3].Call != nil {
+		t.Errorf("local site has Call, want nil")
 	}
 }

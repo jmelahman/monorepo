@@ -10,9 +10,12 @@ import (
 // mutation starts from realistic input instead of noise.
 func seedCorpus(f *testing.F) {
 	f.Helper()
-	matches, err := filepath.Glob(filepath.Join("..", "..", "testdata", "*", "PKGBUILD"))
+	matches, err := filepath.Glob(filepath.Join("..", "cli", "testdata", "*", "PKGBUILD"))
 	if err != nil {
 		f.Fatal(err)
+	}
+	if len(matches) == 0 {
+		f.Fatal("no fixture PKGBUILDs matched; the seed glob has gone stale")
 	}
 	for _, m := range matches {
 		data, err := os.ReadFile(m)
@@ -32,6 +35,8 @@ func seedCorpus(f *testing.F) {
 func FuzzParseUnit(f *testing.F) {
 	seedCorpus(f)
 	f.Add([]byte("pkgname=demo\npkgver=1\nbuild() {\n  make\n}\n"))
+	// A reference chain that multiplies; Expand's budget must refuse it.
+	f.Add([]byte("a=xxxxxxxx\nb=\"$a$a$a$a$a$a$a$a\"\nc=\"$b$b$b$b$b$b$b$b\"\nd=\"$c$c$c$c$c$c$c$c\"\ne=\"$d$d$d$d$d$d$d$d\"\nsource=(\"$e\")\n"))
 	// A syntax error up front forces rescueParse to salvage what it can.
 	f.Add([]byte("case ,, if do done \x00\nsource=('a')\nsha256sums=('SKIP')\n"))
 	// Whole-array reference expansion, including a doubling chain the

@@ -16,7 +16,7 @@ import (
 func benchCorpus(b *testing.B) []string {
 	root := os.Getenv("PKGLINT_BENCH_CORPUS")
 	if root == "" {
-		root = filepath.Join("..", "..", "testdata")
+		root = filepath.Join("..", "cli", "testdata")
 	}
 	entries, err := os.ReadDir(root)
 	if err != nil {

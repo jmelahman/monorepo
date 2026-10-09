@@ -155,20 +155,11 @@ func pipelines(u *syntax.File) [][]*syntax.Stmt {
 	return out
 }
 
-// stmtCommandName resolves the command name of a pipeline segment,
-// unwrapping simple wrappers like sudo or env.
-func stmtCommandName(stmt *syntax.Stmt, vars map[string]string) string {
-	call, ok := stmt.Cmd.(*syntax.CallExpr)
-	if !ok || len(call.Args) == 0 {
-		return ""
-	}
-	c := (&Context{vars: vars}).newCommand(nil, "", stmt, call)
-	return c.Name
-}
-
-// wordContainsCommand reports whether the word embeds a command substitution
-// (or process substitution) that invokes one of names.
-func wordContainsCommand(w *syntax.Word, names map[string]bool) bool {
+// wordRunsCommand reports whether the word embeds a command substitution (or
+// process substitution) that runs one of names. Each statement is read as the
+// Command the context resolved for it, so a wrapper, an escaped name or a name
+// held in a variable is seen through here exactly as it is everywhere else.
+func (ctx *Context) wordRunsCommand(w *syntax.Word, names map[string]bool) bool {
 	found := false
 	syntax.Walk(w, func(node syntax.Node) bool {
 		var stmts []*syntax.Stmt
@@ -182,9 +173,14 @@ func wordContainsCommand(w *syntax.Word, names map[string]bool) bool {
 		}
 		for _, s := range stmts {
 			syntax.Walk(s, func(n syntax.Node) bool {
+				if st, ok := n.(*syntax.Stmt); ok {
+					if c, ok := ctx.commandAt(st); ok && names[c.Name] {
+						found = true
+					}
+				}
 				if call, ok := n.(*syntax.CallExpr); ok && len(call.Args) > 0 {
 					name, _ := renderPlain(call.Args[0])
-					if names[basename(name)] {
+					if names[basename(unescapeName(name))] {
 						found = true
 					}
 				}
@@ -219,4 +215,23 @@ func renderPlain(w *syntax.Word) (string, bool) {
 		}
 	}
 	return b.String(), dyn
+}
+
+// unescapeName drops the backslashes bash removes from an unquoted word before
+// it looks the command up: `c\url` runs curl. RenderWord keeps a literal's
+// text as written, so without this the name every rule compares against is
+// one no table contains. It cannot tell `c\url` from `'c\url'`, a quoted
+// spelling of a file nobody has; reading that one as curl is the safe error.
+func unescapeName(s string) string {
+	if !strings.Contains(s, `\`) {
+		return s
+	}
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) {
+			i++
+		}
+		b.WriteByte(s[i])
+	}
+	return b.String()
 }

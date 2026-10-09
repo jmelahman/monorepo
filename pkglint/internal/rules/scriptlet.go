@@ -37,7 +37,7 @@ var scriptletRules = []Rule{
 		ID:       "PB503",
 		Name:     "unparseable-scriptlet",
 		Severity: Error,
-		Doc: "An install scriptlet pkglint cannot parse is analyzed by no rule, yet its code " +
+		Doc: "An install scriptlet pkglint cannot read or parse is analyzed by no rule, yet its code " +
 			"still runs as root at install time. A parse failure usually means the file is malformed " +
 			"or deliberately obfuscated to defeat static analysis; either way it must be reviewed by hand.",
 		Check: checkScriptletParseError,
@@ -88,7 +88,7 @@ func checkScriptletParseError(ctx *Context) []Finding {
 			Path:     se.Path,
 			Line:     1,
 			Col:      1,
-			Message:  fmt.Sprintf("install scriptlet could not be parsed and was not analyzed: %s", se.Err),
+			Message:  fmt.Sprintf("install scriptlet could not be read or parsed and was not analyzed: %s", se.Err),
 		})
 	}
 	return out

@@ -152,7 +152,7 @@ type reportOpts struct {
 func addReportFlags(fs *pflag.FlagSet, o *reportOpts) {
 	fs.StringVar(&o.format, "format", "text", "output format: text, json, or sarif")
 	fs.StringVar(&o.color, "color", "auto", "colorize text output: auto, always, or never")
-	fs.StringVar(&o.failOn, "fail-on", "warn", "exit non-zero when a finding is at or above this severity (info, warn, error, critical, or never)")
+	fs.StringVar(&o.failOn, "fail-on", "warn", "exit non-zero when a finding is at or above this severity (info, warn, error, critical, or never); a package that cannot be loaded always fails")
 	fs.StringVar(&o.ignore, "ignore", "", "comma-separated rule IDs to disable, e.g. PB105,PB206")
 	fs.StringVar(&o.only, "select", "", "comma-separated rule IDs to check, running no others (--ignore still subtracts from them), e.g. PB101,PB304")
 	fs.BoolVar(&o.verbose, "verbose", false, "text output: list packages with no findings individually instead of only in the summary")
@@ -326,7 +326,16 @@ func renderReports(stdout io.Writer, reports []report.PackageReport, o reportOpt
 		return 2
 	}
 
+	// --fail-on grades findings; it says nothing about whether the command
+	// did its job. A package that could not be loaded — or, from `build`, a
+	// refusal, a makepkg failure or a missing runtime — was never graded, and
+	// fails the run even under --fail-on=never.
 	if o.failOn == "never" {
+		for _, r := range reports {
+			if r.Err != "" {
+				return 1
+			}
+		}
 		return 0
 	}
 	sev, err := rules.ParseSeverity(o.failOn)
@@ -397,7 +406,7 @@ func (m rewriteMode) run(paths []string, diff bool, stdout io.Writer) int {
 	rc := 0
 	for _, path := range paths {
 		if pkgfile.IsPackagePath(path) {
-			fmt.Fprintf(stdout, m.refuse, rel(path))
+			fmt.Fprintf(stdout, m.refuse, report.Sanitize(rel(path)))
 			continue
 		}
 		pkg, err := pkgbuild.Load(path)
@@ -406,6 +415,7 @@ func (m rewriteMode) run(paths []string, diff bool, stdout io.Writer) int {
 			rc = 2
 			continue
 		}
+		name := report.Sanitize(rel(path))
 		applied, ok := applyFixResults(stdout, m.transform(pkg), diff)
 		if !ok {
 			rc = 2
@@ -415,11 +425,11 @@ func (m rewriteMode) run(paths []string, diff bool, stdout io.Writer) int {
 		}
 		switch {
 		case applied == 0:
-			fmt.Fprintf(stdout, m.none, rel(path))
+			fmt.Fprintf(stdout, m.none, name)
 		case diff:
-			fmt.Fprintf(stdout, m.dryRun, rel(path), applied)
+			fmt.Fprintf(stdout, m.dryRun, name, applied)
 		default:
-			fmt.Fprintf(stdout, m.applied, rel(path), applied)
+			fmt.Fprintf(stdout, m.applied, name, applied)
 		}
 	}
 	return rc
@@ -442,7 +452,7 @@ func applyFixResults(stdout io.Writer, results []rules.FixResult, diff bool) (ap
 		}
 		for _, e := range r.Applied {
 			applied++
-			fmt.Fprintf(stdout, "%s:%d: [%s] %s\n", rel(e.Path), e.Line, e.RuleID, e.Desc)
+			fmt.Fprintf(stdout, "%s:%d: [%s] %s\n", report.Sanitize(rel(e.Path)), e.Line, e.RuleID, report.Sanitize(e.Desc))
 			if diff {
 				fmt.Fprint(stdout, editHunk(r.Original, e))
 			}
@@ -495,7 +505,7 @@ func runFix(paths []string, ignore map[string]bool, level rules.FixLevel, diff, 
 				}
 			}
 			for _, s := range manualSuggestions(residual, ignore) {
-				fmt.Fprintf(stdout, "%s: %s\n", rel(path), s)
+				fmt.Fprintf(stdout, "%s: %s\n", report.Sanitize(rel(path)), report.Sanitize(s))
 			}
 		},
 		none:    "%s: no auto-fixable findings\n",
@@ -603,6 +613,15 @@ func allowedGitURL(url string) bool {
 	return ok && gitTransports[strings.ToLower(scheme)]
 }
 
+// lsRemoteArgs is the ls-remote invocation for ref. The second pattern asks
+// for the peeled line: for an annotated tag, refs/tags/v1 is the tag object
+// and only refs/tags/v1^{} is the commit makepkg checks out, and ls-remote
+// lists it only when a pattern matches it. The ref stays last, and "--" ends
+// the options so neither the URL nor a ref can be read as one.
+func lsRemoteArgs(url, ref string) []string {
+	return []string{"ls-remote", "--", url, ref + "^{}", ref}
+}
+
 // resolveGitRef resolves a git tag or branch name on a remote to its commit
 // hash via `git ls-remote` — the only network access the fix path performs.
 func resolveGitRef(rawurl, ref string) (string, error) {
@@ -617,29 +636,70 @@ func resolveGitRef(rawurl, ref string) (string, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", "ls-remote", url, ref)
+	cmd := exec.CommandContext(ctx, "git", lsRemoteArgs(url, ref)...)
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0") // never block on credentials
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
-	var sha string
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	sha, err := pickRef(string(out), ref)
+	if err != nil {
+		if strings.HasSuffix(err.Error(), "not found") {
+			return "", fmt.Errorf("ref %q not found on %s", ref, url)
+		}
+		return "", err
+	}
+	return sha, nil
+}
+
+// pickRef chooses the commit for ref out of `git ls-remote` output. ls-remote
+// matches its pattern against the tail of every ref, so a request for v1 also
+// lists refs/heads/feature/v1 and refs/tags/release/v1; taking the first line
+// pinned whichever of them sorted first, and anyone able to push a branch
+// could choose which. Only the ref itself counts: the tag (its peeled commit
+// when annotated), the branch, HEAD, or a fully qualified name. A tag and a
+// branch that share the name but not the commit is refused rather than
+// guessed, since the fragment kind (#tag= or #branch=) is not known here.
+func pickRef(out, ref string) (string, error) {
+	var exact, exactPeeled, tag, tagPeeled, head string
+	for _, line := range strings.Split(out, "\n") {
 		f := strings.Fields(line)
 		if len(f) < 2 {
 			continue
 		}
-		if strings.HasSuffix(f[1], "^{}") { // peeled commit of an annotated tag
-			return f[0], nil
-		}
-		if sha == "" {
-			sha = f[0]
+		switch f[1] {
+		case "refs/tags/" + ref + "^{}":
+			tagPeeled = f[0]
+		case "refs/tags/" + ref:
+			tag = f[0]
+		case "refs/heads/" + ref:
+			head = f[0]
+		case ref + "^{}":
+			exactPeeled = f[0]
+		case ref:
+			exact = f[0]
 		}
 	}
-	if sha == "" {
-		return "", fmt.Errorf("ref %q not found on %s", ref, url)
+	if exactPeeled != "" {
+		return exactPeeled, nil
 	}
-	return sha, nil
+	if exact != "" {
+		return exact, nil
+	}
+	tagSHA := tag
+	if tagPeeled != "" {
+		tagSHA = tagPeeled
+	}
+	if tagSHA != "" && head != "" && tagSHA != head {
+		return "", fmt.Errorf("ref %q is ambiguous: both a tag and a branch, at different commits", ref)
+	}
+	if tagSHA != "" {
+		return tagSHA, nil
+	}
+	if head != "" {
+		return head, nil
+	}
+	return "", fmt.Errorf("ref %q not found", ref)
 }
 
 // probeTimeout bounds one https probe end to end, redirects included. A host
@@ -826,13 +886,24 @@ func editHunk(orig []byte, e rules.Edit) string {
 	var b strings.Builder
 	for _, l := range strings.Split(before, "\n") {
 		if l != "" {
-			fmt.Fprintf(&b, "    - %s\n", l)
+			fmt.Fprintf(&b, "    - %s\n", hunkLine(l))
 		}
 	}
 	for _, l := range strings.Split(after, "\n") {
 		if l != "" {
-			fmt.Fprintf(&b, "    + %s\n", l)
+			fmt.Fprintf(&b, "    + %s\n", hunkLine(l))
 		}
 	}
 	return b.String()
+}
+
+// hunkLine escapes one line of PKGBUILD text for display. Tabs are kept —
+// they are the file's indentation, and Sanitize would fold each to a space —
+// and everything else that could drive the terminal is escaped.
+func hunkLine(l string) string {
+	parts := strings.Split(l, "\t")
+	for i, p := range parts {
+		parts[i] = report.Sanitize(p)
+	}
+	return strings.Join(parts, "\t")
 }

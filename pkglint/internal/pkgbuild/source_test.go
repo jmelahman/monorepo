@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -714,6 +715,106 @@ sha256sums=('aaaa')
 		srcs := pkg.Sources()
 		if got := pkg.SumsFor(srcs[1]); len(got) != 0 {
 			t.Errorf("SumsFor(index 1) = %v, want none", got)
+		}
+	})
+}
+
+func TestConditionalSources(t *testing.T) {
+	t.Run("reads arrays inside an if without touching Sources", func(t *testing.T) {
+		pkg := loadPKGBUILD(t, `pkgname=demo
+arch=('x86_64')
+if true; then
+  source=("http://example.com/x.tar.gz" "git+http://example.com/r.git")
+  sha256sums=('SKIP' 'SKIP')
+fi
+`)
+		got := pkg.ConditionalSources()
+		if len(got) != 2 {
+			t.Fatalf("got %d entries, want 2: %+v", len(got), got)
+		}
+		for i, proto := range []string{"http", "git+http"} {
+			if !got[i].Conditional || got[i].ElemIndex != -1 || got[i].Proto != proto {
+				t.Errorf("entry %d = %+v, want Conditional, ElemIndex -1, Proto %q", i, got[i], proto)
+			}
+		}
+		if s := pkg.Sources(); len(s) != 0 {
+			t.Errorf("Sources() = %+v, want empty", s)
+		}
+	})
+	t.Run("ignores function bodies, subshells and scoped commands", func(t *testing.T) {
+		pkg := loadPKGBUILD(t, `pkgname=demo
+arch=('x86_64')
+build() {
+  source=("http://example.com/a.tar.gz")
+}
+( source=("http://example.com/b.tar.gz") )
+source=("http://example.com/c.tar.gz") make
+`)
+		if got := pkg.ConditionalSources(); len(got) != 0 {
+			t.Errorf("got %+v, want none", got)
+		}
+	})
+	t.Run("skips an arch suffix no arch declares", func(t *testing.T) {
+		pkg := loadPKGBUILD(t, `pkgname=demo
+arch=('x86_64')
+if true; then
+  source_riscv64=("http://example.com/r.tar.gz")
+  source_x86_64=("http://example.com/x.tar.gz")
+fi
+`)
+		got := pkg.ConditionalSources()
+		if len(got) != 1 || got[0].Arch != "x86_64" {
+			t.Errorf("got %+v, want only the x86_64 entry", got)
+		}
+	})
+}
+
+func TestConditionalSourcesStrongSum(t *testing.T) {
+	h := strings.Repeat("a", 64)
+	cases := []struct {
+		name string
+		body string
+		want []bool
+	}{
+		{"digest beside source", `source=("http://e.org/a.tgz"); sha256sums=('` + h + `')`, []bool{true}},
+		{"SKIP entry", `source=("http://e.org/a.tgz" "http://e.org/b.tgz"); sha256sums=('` + h + `' 'SKIP')`, []bool{true, false}},
+		{"no sums", `source=("http://e.org/a.tgz")`, []bool{false}},
+		{"weak sum", `source=("http://e.org/a.tgz"); md5sums=('d41d8cd98f00b204e9800998ecf8427e')`, []bool{false}},
+		{"lengths differ", `source=("http://e.org/a.tgz" "http://e.org/b.tgz"); sha256sums=('` + h + `')`, []bool{false, false}},
+		{"dynamic sums", `source=("http://e.org/a.tgz"); sha256sums=("$(cat sum)")`, []bool{false}},
+		{"suffix differs", `source_x86_64=("http://e.org/a.tgz"); sha256sums=('` + h + `')`, []bool{false}},
+		{"suffix matches", `source_x86_64=("http://e.org/a.tgz"); sha256sums_x86_64=('` + h + `')`, []bool{true}},
+		{"append both", `source+=("http://e.org/a.tgz"); sha256sums+=('` + h + `')`, []bool{true}},
+		{"append differs", `source+=("http://e.org/a.tgz"); sha256sums=('` + h + `')`, []bool{false}},
+		{"brace expansion", `source=("http://e.org/a{,b}.tgz"); sha256sums=('` + h + `' '` + h + `')`, []bool{true, true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			pkg := loadPKGBUILD(t, "pkgname=demo\narch=('x86_64')\ncase \"$CARCH\" in\n  x86_64) "+tc.body+" ;;\nesac\n")
+			var got []bool
+			for _, e := range pkg.ConditionalSources() {
+				got = append(got, e.CondStrongSum)
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("CondStrongSum = %v, want %v", got, tc.want)
+			}
+		})
+	}
+	t.Run("sibling top-level sums", func(t *testing.T) {
+		pkg := loadPKGBUILD(t, "pkgname=demo\narch=('x86_64')\nif true; then\n  source=(\"http://e.org/a.tgz\")\nfi\nsha256sums=('"+h+"')\n")
+		got := pkg.ConditionalSources()
+		if len(got) != 1 || got[0].CondStrongSum {
+			t.Errorf("got %+v, want one entry without CondStrongSum", got)
+		}
+	})
+	t.Run("if, else and loop bodies", func(t *testing.T) {
+		pkg := loadPKGBUILD(t, "pkgname=demo\narch=('x86_64')\nif a; then\n  source=(\"http://e.org/a.tgz\"); sha256sums=('"+h+"')\nelif b; then\n  source=(\"http://e.org/b.tgz\"); sha256sums=('"+h+"')\nelse\n  source=(\"http://e.org/c.tgz\")\nfi\nfor x in 1; do source=(\"http://e.org/d.tgz\"); sha256sums=('"+h+"'); done\n")
+		var got []bool
+		for _, e := range pkg.ConditionalSources() {
+			got = append(got, e.CondStrongSum)
+		}
+		if want := []bool{true, true, false, true}; !slices.Equal(got, want) {
+			t.Errorf("CondStrongSum = %v, want %v", got, want)
 		}
 	})
 }

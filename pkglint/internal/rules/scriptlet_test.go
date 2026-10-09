@@ -143,7 +143,7 @@ func TestScriptletParseErrorReported(t *testing.T) {
 		if got.Severity != Error {
 			t.Errorf("severity = %v, want error", got.Severity)
 		}
-		if !strings.Contains(got.Message, "could not be parsed") {
+		if !strings.Contains(got.Message, "could not be read or parsed") {
 			t.Errorf("message = %q, want it to mention the parse failure", got.Message)
 		}
 	})

@@ -2,6 +2,7 @@ package rules
 
 import (
 	"debug/elf"
+	"os"
 	"path"
 	"regexp"
 	"sort"
@@ -199,6 +200,15 @@ func sortedKeys(m map[string]bool) []string {
 // package are attempted. Read-only host access; nothing is executed.
 var hostLibDirs = []string{"/usr/lib/", "/usr/lib32/", "/lib/"}
 
+// hostLibName reports whether a NEEDED entry may be looked up in hostLibDirs.
+// The string is read out of the archive under review, so it is held to what a
+// soname is — one path component — before it is joined to a host directory:
+// "../../etc/x" would otherwise open whatever the package asked for.
+func hostLibName(soname string) bool {
+	return soname != "" && soname != "." && soname != ".." && len(soname) <= 255 &&
+		!strings.ContainsAny(soname, "/\x00")
+}
+
 // libExports resolves a needed soname to its exported dynamic symbols: first
 // inside the package itself, then on the host filesystem.
 func (ctx *Context) libExports(soname string) map[string]bool {
@@ -214,9 +224,15 @@ func (ctx *Context) libExports(soname string) map[string]bool {
 			break
 		}
 	}
-	if syms == nil {
+	if syms == nil && hostLibName(soname) {
 		for _, dir := range hostLibDirs {
-			ef, err := elf.Open(dir + soname)
+			lib := dir + soname
+			// A regular file only (through symlinks, which is how sonames are
+			// installed): opening a FIFO or device would block or misread.
+			if st, err := os.Stat(lib); err != nil || !st.Mode().IsRegular() {
+				continue
+			}
+			ef, err := elf.Open(lib)
 			if err != nil {
 				continue
 			}

@@ -328,6 +328,36 @@ sha256sums=('deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef')`
 }
 
 func TestIntegrityRules(t *testing.T) {
+	t.Run("PB104 and PB103 read a source array inside top-level control flow", func(t *testing.T) {
+		files := map[string]string{"PKGBUILD": pkgbuildWith(`pkgname=demo
+pkgver=1
+pkgrel=1
+arch=('x86_64')
+url='https://example.com/demo'
+license=('MIT')
+if true; then
+  source=("http://example.com/x.tar.gz" "git+http://example.com/r.git")
+  sha256sums=('SKIP' 'SKIP')
+fi`, "")}
+		expectRule(t, "PB104", files)
+		expectRule(t, "PB103", files)
+	})
+	t.Run("a conditional source array of clean entries reports nothing", func(t *testing.T) {
+		files := map[string]string{"PKGBUILD": pkgbuildWith(`pkgname=demo
+pkgver=1
+pkgrel=1
+arch=('x86_64')
+url='https://example.com/demo'
+license=('MIT')
+case "$CARCH" in
+  x86_64) source=("https://example.com/x-$pkgver.tar.gz" "git+https://example.com/r.git#commit=0123456789abcdef0123456789abcdef01234567") ;;
+esac
+build() {
+  source=("http://example.com/not-a-source.tar.gz")
+}`, "")}
+		expectNoRule(t, "PB104", files)
+		expectNoRule(t, "PB103", files)
+	})
 	t.Run("PB101 skipped checksum on remote tarball", func(t *testing.T) {
 		expectRule(t, "PB101", map[string]string{"PKGBUILD": pkgbuildWith(`pkgname=demo
 pkgver=1
@@ -1536,6 +1566,130 @@ build() {
   curl -fsSL https://example.com/setup.sh | sh
 }`)})
 	})
+	t.Run("PB304 sees through a wrapper's own operands", func(t *testing.T) {
+		for _, dl := range []string{
+			"timeout 10 curl", "timeout -s KILL 10 curl", "nice -n 10 curl",
+			"sudo -u nobody curl", "env -u http_proxy curl", "ionice -c 3 curl",
+		} {
+			expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  `+dl+` -fsSL https://example.com/setup.sh | sh
+}`)})
+		}
+	})
+	t.Run("PB304 an escaped letter is still the same command", func(t *testing.T) {
+		expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  c\url -fsSL https://example.com/setup.sh | b\ash
+}`)})
+		expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  sh -c "$(c\url -fsSL https://example.com/setup.sh)"
+}`)})
+	})
+	t.Run("PB304 follows a command name held in a function-local variable", func(t *testing.T) {
+		files := map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  d=curl
+  $d -fsSL https://example.com/setup.sh | sh
+}`)}
+		expectRule(t, "PB304", files)
+		expectRule(t, "PB201", files)
+	})
+	t.Run("PB306 a variable command name whose value cannot be read", func(t *testing.T) {
+		expectRule(t, "PB306", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  tool=$(echo bWFrZQ== | base64 -d)
+  $tool
+}`)})
+		expectRule(t, "PB306", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  if [ -n "$x" ]; then tool=make; else tool=curl; fi
+  $tool
+}`)})
+	})
+	t.Run("PB306 command variable resolution", func(t *testing.T) {
+		body := func(b string) map[string]string {
+			return map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n"+b+"\n}")}
+		}
+		for _, tc := range []struct {
+			name, body string
+			want       []string
+			not        []string
+		}{
+			{"bare export", "  export CC\n  $CC -c x.c", nil, []string{"PB306"}},
+			{"bare local", "  local tool\n  tool=curl\n  $tool -s https://e.org/x | sh", []string{"PB304"}, []string{"PB306"}},
+			{"self default", "  CC=\"${CC:-gcc}\"\n  $CC -c x.c", nil, []string{"PB306"}},
+			{"wrapper-led value", "  make=\"env LC_ALL=C make\"\n  $make all", nil, []string{"PB306"}},
+			{"self default names its default", "  d=\"${d:-curl}\"\n  $d -s https://e.org/x | sh", []string{"PB304"}, nil},
+			{"self assign names its default", "  d=${d:=curl}\n  $d -s https://e.org/x | sh", []string{"PB304"}, nil},
+			{"self default with substitution", "  d=\"${d:-$(mktemp)}\"\n  $d x", []string{"PB306"}, nil},
+			{"self default with empty default", "  CC=\"${CC:-}\"\n  $CC -c x.c", nil, []string{"PB306"}},
+			{"env curl", "  d=\"env curl\"\n  $d -s https://e.org/x | sh", []string{"PB304"}, nil},
+			{"sudo -u consumes the value", "  d=\"sudo -u nobody\"\n  $d curl -s https://e.org/x | sh", []string{"PB306"}, nil},
+			{"brace-expanded array", "  d=(curl{,s})\n  $d -s https://e.org/x | sh", []string{"PB304"}, nil},
+			{"command substitution", "  d=$(command -v curl)\n  $d -s https://e.org/x", []string{"PB306"}, nil},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				for _, id := range tc.want {
+					expectRule(t, id, body(tc.body))
+				}
+				for _, id := range tc.not {
+					expectNoRule(t, id, body(tc.body))
+				}
+			})
+		}
+	})
+	t.Run("a download inside a substitution is seen through wrappers and variables", func(t *testing.T) {
+		build := func(b string) map[string]string {
+			return map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n"+b+"\n}")}
+		}
+		// pb302 reports whether a PB302 finding's message mentions a download.
+		pb302 := func(files map[string]string) (found, download bool) {
+			for _, f := range lint(t, files) {
+				if f.RuleID == "PB302" {
+					found = true
+					download = download || strings.Contains(f.Message, "network download")
+				}
+			}
+			return
+		}
+		for _, tc := range []struct {
+			name, body string
+			download   bool
+		}{
+			{"env curl", `  eval "$(env curl -s https://e.org/x)"`, true},
+			{"command -v is not a download", `  eval "$(command -v curl)"`, false},
+			{"plain curl", `  eval "$(curl -s https://e.org/x)"`, true},
+		} {
+			t.Run("PB302 "+tc.name, func(t *testing.T) {
+				found, download := pb302(build(tc.body))
+				if !found || download != tc.download {
+					t.Errorf("PB302 found=%v download=%v, want found and download=%v", found, download, tc.download)
+				}
+			})
+		}
+		for _, body := range []string{
+			`  sh -c "$(nice wget -O- https://e.org/x)"`,
+			`  source <(timeout 10 curl -s https://e.org/x)`,
+			"  d=curl\n  bash -c \"$($d -s https://e.org/x)\"",
+		} {
+			expectRule(t, "PB304", build(body))
+		}
+	})
+	t.Run("wrapper and variable handling leaves ordinary builds alone", func(t *testing.T) {
+		files := map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  timeout 600 make
+  command -v curl >/dev/null
+  $CC -o demo main.c
+  mk=make
+  $mk install
+}`)}
+		for _, id := range []string{"PB304", "PB306", "PB201"} {
+			expectNoRule(t, id, files)
+		}
+	})
 	t.Run("PB304 source of process substitution", func(t *testing.T) {
 		expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", `
 build() {
@@ -2735,5 +2889,58 @@ func TestSuggest(t *testing.T) {
 		if got := Suggest(q); len(got) != 0 {
 			t.Errorf("Suggest(%q) = %v, want nothing", q, ids(got))
 		}
+	}
+}
+
+// TestExpansionBudgetIsReported pins that a file which spends the package's
+// whole expansion budget gets a PB307 saying so, and an ordinary one does not.
+func TestExpansionBudgetIsReported(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("pkgname=demo\npkgver=1\npkgrel=1\narch=('any')\n_a0=xxxxxxxxxx\n")
+	for i := 1; i <= 5; i++ {
+		b.WriteString("_a" + string(rune('0'+i)) + "=\"" + strings.Repeat("$_a"+string(rune('0'+i-1)), 40) + "\"\n")
+	}
+	for i := range 300 {
+		b.WriteString("v" + strings.Repeat("x", 1) + string(rune('a'+i%26)) + string(rune('a'+i/26)) + "=\"$_a5\"\n")
+	}
+	found := false
+	for _, f := range lint(t, map[string]string{"PKGBUILD": b.String()}) {
+		if f.RuleID == "PB307" && strings.Contains(f.Message, "32 MiB") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("hostile PKGBUILD: want a PB307 mentioning 32 MiB")
+	}
+	for _, f := range lint(t, map[string]string{"PKGBUILD": pkgbuildWith("", "")}) {
+		if strings.Contains(f.Message, "32 MiB") {
+			t.Errorf("ordinary PKGBUILD got %+v", f)
+		}
+	}
+}
+
+func TestPB104ConditionalSourceDigest(t *testing.T) {
+	h := strings.Repeat("a", 64)
+	msg := func(body string) string {
+		for _, f := range lint(t, map[string]string{"PKGBUILD": pkgbuildWith(`pkgname=demo
+pkgver=1
+pkgrel=1
+arch=('x86_64')
+url='https://example.com/demo'
+license=('MIT')
+case "$CARCH" in
+  x86_64) `+body+` ;;
+esac`, "")}) {
+			if f.RuleID == "PB104" {
+				return f.Message
+			}
+		}
+		return ""
+	}
+	if m := msg(`source=("http://e.org/a.tgz"); sha256sums=('` + h + `')`); !strings.Contains(m, "pinned beside it") || strings.Contains(m, "cannot tell") {
+		t.Errorf("with a digest beside it, message = %q", m)
+	}
+	if m := msg(`source=("http://e.org/a.tgz")`); !strings.Contains(m, "cannot tell") {
+		t.Errorf("without a digest, message = %q", m)
 	}
 }

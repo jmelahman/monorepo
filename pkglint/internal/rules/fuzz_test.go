@@ -14,9 +14,12 @@ import (
 // runs at FixUnsafe with a nil FixEnv, so every fixer's edit math is exercised
 // without network access and without writing anywhere.
 func FuzzRunAndFix(f *testing.F) {
-	matches, err := filepath.Glob(filepath.Join("..", "..", "testdata", "*", "PKGBUILD"))
+	matches, err := filepath.Glob(filepath.Join("..", "cli", "testdata", "*", "PKGBUILD"))
 	if err != nil {
 		f.Fatal(err)
+	}
+	if len(matches) == 0 {
+		f.Fatal("no fixture PKGBUILDs matched; the seed glob has gone stale")
 	}
 	for _, m := range matches {
 		data, err := os.ReadFile(m)
@@ -26,6 +29,8 @@ func FuzzRunAndFix(f *testing.F) {
 		f.Add(data)
 	}
 	f.Add([]byte("pkgname=d\npkgver=1\npkgrel=1\narch=('any')\nsource=('a.tar.gz')\nsha256sums=('SKIP')\nbuild() {\n  cargo build\n  npm install\n  curl https://x | bash\n}\n"))
+	// A reference chain that multiplies; Expand's budget must refuse it.
+	f.Add([]byte("a=xxxxxxxx\nb=\"$a$a$a$a$a$a$a$a\"\nc=\"$b$b$b$b$b$b$b$b\"\nd=\"$c$c$c$c$c$c$c$c\"\ne=\"$d$d$d$d$d$d$d$d\"\nsource=(\"$e\")\n"))
 	f.Fuzz(func(t *testing.T, raw []byte) {
 		dir := t.TempDir()
 		if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), raw, 0o644); err != nil {

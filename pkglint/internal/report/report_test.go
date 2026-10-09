@@ -329,8 +329,8 @@ func TestSanitize(t *testing.T) {
 		{"unicode ok: é ✓", "unicode ok: é ✓"}, // non-control runes untouched
 	}
 	for _, c := range cases {
-		if got := sanitize(c.in); got != c.want {
-			t.Errorf("sanitize(%q) = %q, want %q", c.in, got, c.want)
+		if got := Sanitize(c.in); got != c.want {
+			t.Errorf("Sanitize(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
 }

@@ -69,14 +69,7 @@ func packageFor(id, side, snippet string) map[string]string {
 // prefixed "REVIEW:" marks a mismatch the suite found between an example and
 // its rule, parked here pending a maintainer decision rather than papered over
 // by editing the example or weakening the assertion.
-var knownGaps = map[string]string{
-	"PB306": "REVIEW: Bad invokes `$runner`, a plain parameter expansion, and pkglint reports " +
-		"nothing at all (findings map is empty). checkDynamicCommands only fires for ${!indirect} " +
-		"names and for names RenderWord marks dynamic (command substitution, arithmetic); a bare " +
-		"$var command name sets Name=\"\" but leaves Dynamic false, so both switch arms are skipped. " +
-		"Either the example must invoke the substitution directly or the rule must cover unresolved " +
-		"$var command names — a maintainer call, so the example is not edited here.",
-}
+var knownGaps = map[string]string{}
 
 func TestExamplesTripTheirRule(t *testing.T) {
 	for _, r := range Registry() {

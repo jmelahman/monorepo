@@ -32,6 +32,20 @@ type SourceEntry struct {
 	// no written element of its own (padded in by an indexed write). Use
 	// Index to pair with checksums, ElemIndex to address the source text.
 	ElemIndex int
+
+	// Conditional marks an entry read from an assignment inside top-level
+	// control flow (see ConditionalSources). Which branch makepkg takes is
+	// unknown, so Index says nothing about which checksum pairs with it and
+	// ElemIndex is -1: such an entry can be judged on its own text only.
+	Conditional bool
+
+	// CondStrongSum is set on a Conditional entry when the statement list
+	// that assigns it — the same branch, arm or loop body — also assigns a
+	// collision-resistant sums array that lines up with it and holds a real
+	// digest at this entry's position. Whichever way the control flow goes,
+	// that source and that digest arrive together. It is the one pairing a
+	// Conditional entry can have that is knowable.
+	CondStrongSum bool
 }
 
 var vcsProtos = map[string]bool{"git": true, "hg": true, "svn": true, "bzr": true, "fossil": true}
@@ -93,6 +107,212 @@ func (p *Package) computeSources() []SourceEntry {
 		}
 	}
 	return out
+}
+
+// conditionalSourcesMax caps how many entries ConditionalSources returns; a
+// hostile file must not turn nested loops of assignments into an unbounded
+// list. No real PKGBUILD has a hundredth of this.
+const conditionalSourcesMax = 4096
+
+// ConditionalSources parses the source arrays that top-level control flow
+// assigns — `if …; then source=(…); fi`, a `case "$CARCH"` arm, a `for`
+// body. Sources() leaves these out on purpose: which branch runs is not
+// knowable without executing the file, so they cannot be merged into the
+// array or paired with checksums. But every one of them is something
+// makepkg may download, and whether its URL is plaintext or its VCS ref is
+// unpinned does not depend on the branch. Entries carry Conditional=true
+// and ElemIndex=-1; do not pair them by Index.
+func (p *Package) ConditionalSources() []SourceEntry {
+	p.condSourcesOnce.Do(func() { p.condSources = p.computeConditionalSources() })
+	return p.condSources
+}
+
+// computeConditionalSources walks the same statements, with the same
+// exclusions, as markConditionalAssigns. Scalar assignments (source="x") and
+// array-reference elements are skipped; that is acceptable.
+func (p *Package) computeConditionalSources() []SourceEntry {
+	arches := p.declaredArches()
+	var out []SourceEntry
+	for _, stmt := range p.PKGBUILD.TopLevel {
+		switch stmt.Cmd.(type) {
+		case *syntax.CallExpr, *syntax.DeclClause:
+			continue // unconditional, and already recorded in Vars
+		}
+		strong := map[*syntax.Assign][]bool{}
+		syntax.Walk(stmt, func(n syntax.Node) bool {
+			switch x := n.(type) {
+			case *syntax.FuncDecl, *syntax.Subshell, *syntax.CmdSubst, *syntax.ProcSubst:
+				return false
+			case *syntax.CallExpr:
+				return len(x.Args) == 0
+			case *syntax.IfClause:
+				p.pairStrongSums(x.Then, strong)
+			case *syntax.CaseItem:
+				p.pairStrongSums(x.Stmts, strong)
+			case *syntax.ForClause:
+				p.pairStrongSums(x.Do, strong)
+			case *syntax.WhileClause:
+				p.pairStrongSums(x.Do, strong)
+			case *syntax.Block:
+				p.pairStrongSums(x.Stmts, strong)
+			}
+			return true
+		})
+		syntax.Walk(stmt, func(n syntax.Node) bool {
+			if len(out) >= conditionalSourcesMax {
+				return false
+			}
+			switch x := n.(type) {
+			case *syntax.FuncDecl, *syntax.Subshell, *syntax.CmdSubst, *syntax.ProcSubst:
+				return false
+			case *syntax.CallExpr:
+				return len(x.Args) == 0
+			case *syntax.Assign:
+				if x.Name == nil || x.Index != nil || x.Array == nil {
+					return true
+				}
+				var arch string
+				name := x.Name.Value
+				switch {
+				case name == "source":
+				case strings.HasPrefix(name, "source_"):
+					arch = strings.TrimPrefix(name, "source_")
+					if arches != nil && !arches[arch] {
+						return true
+					}
+				default:
+					return true
+				}
+				i := 0
+				for _, el := range x.Array.Elems {
+					if el.Value == nil {
+						continue
+					}
+					raw, _ := RenderWord(el.Value, nil)
+					for _, expanded := range ExpandBraces(p.Expand(raw)) {
+						if len(out) >= conditionalSourcesMax {
+							return false
+						}
+						e := parseSourceEntry(raw, expanded)
+						e.Index = 0
+						e.ElemIndex = -1
+						e.Arch = arch
+						e.Pos = el.Value.Pos()
+						e.Conditional = true
+						e.CondStrongSum = i < len(strong[x]) && strong[x][i]
+						i++
+						out = append(out, e)
+					}
+				}
+			}
+			return true
+		})
+	}
+	return out
+}
+
+// pairStrongSums looks at one statement list (a branch, case arm or loop
+// body) and, for each source array it assigns on its own, records in strong
+// which expanded entries have a real strong digest assigned in that same list:
+// same arch suffix, same append flag, a fully static array of equal expanded
+// length. A name assigned more than once in the list is ambiguous and skipped.
+func (p *Package) pairStrongSums(list []*syntax.Stmt, strong map[*syntax.Assign][]bool) {
+	arches := p.declaredArches()
+	assigns := map[string]*syntax.Assign{}
+	dup := map[string]bool{}
+	for _, st := range list {
+		call, ok := st.Cmd.(*syntax.CallExpr)
+		if !ok || len(call.Args) != 0 {
+			continue
+		}
+		for _, a := range call.Assigns {
+			if a.Name == nil || a.Index != nil || a.Array == nil {
+				continue
+			}
+			if _, seen := assigns[a.Name.Value]; seen {
+				dup[a.Name.Value] = true
+			}
+			assigns[a.Name.Value] = a
+		}
+	}
+	// expand returns the expanded values of an array, or ok=false when any
+	// element is dynamic or still holds a reference.
+	expand := func(a *syntax.Assign, limit int) (vals []string, ok bool) {
+		for _, el := range a.Array.Elems {
+			if el.Value == nil {
+				continue
+			}
+			raw, dynamic := RenderWord(el.Value, nil)
+			if dynamic {
+				return nil, false
+			}
+			exp := p.Expand(raw)
+			if strings.Contains(exp, "$") {
+				return nil, false
+			}
+			vals = append(vals, ExpandBraces(exp)...)
+			if len(vals) > limit {
+				return nil, false
+			}
+		}
+		return vals, true
+	}
+	for name, a := range assigns {
+		var suffix string
+		switch {
+		case name == "source":
+		case strings.HasPrefix(name, "source_"):
+			suffix = strings.TrimPrefix(name, "source_")
+			if arches != nil && !arches[suffix] {
+				continue
+			}
+			suffix = "_" + suffix
+		default:
+			continue
+		}
+		if dup[name] {
+			continue
+		}
+		// The source count must match the existing loop's, which expands
+		// dynamic elements as written rather than refusing them.
+		n := 0
+		for _, el := range a.Array.Elems {
+			if el.Value == nil {
+				continue
+			}
+			raw, _ := RenderWord(el.Value, nil)
+			n += len(ExpandBraces(p.Expand(raw)))
+			if n > conditionalSourcesMax {
+				break
+			}
+		}
+		if n > conditionalSourcesMax {
+			continue
+		}
+		var marks []bool
+		for _, algo := range StrongSumAlgos {
+			sname := algo + "sums" + suffix
+			sa := assigns[sname]
+			if sa == nil || dup[sname] || sa.Append != a.Append {
+				continue
+			}
+			vals, ok := expand(sa, n)
+			if !ok || len(vals) != n {
+				continue
+			}
+			if marks == nil {
+				marks = make([]bool, n)
+			}
+			for i, v := range vals {
+				if v != "" && !strings.EqualFold(v, "SKIP") {
+					marks[i] = true
+				}
+			}
+		}
+		if marks != nil {
+			strong[a] = marks
+		}
+	}
 }
 
 // declaredArches returns the architectures arch=() names, or nil when the
@@ -275,6 +495,9 @@ func (e SourceEntry) Host() string {
 
 // checksum algorithms recognized by makepkg, weakest first.
 var sumAlgos = []string{"ck", "md5", "sha1", "sha224", "sha256", "sha384", "sha512", "b2"}
+
+// StrongSumAlgos are the collision-resistant members of sumAlgos.
+var StrongSumAlgos = []string{"sha224", "sha256", "sha384", "sha512", "b2"}
 
 // Checksums returns algo -> values for the sums arrays matching arch
 // ("" for the base arrays). Brace groups expand to one value each, matching

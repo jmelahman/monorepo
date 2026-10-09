@@ -84,10 +84,10 @@ func NewError(path string, loadErr error) PackageReport {
 	return r
 }
 
-// sanitize renders untrusted text safe for a terminal by escaping control
+// Sanitize renders untrusted text safe for a terminal by escaping control
 // characters, so PKGBUILD-derived content (paths, messages) cannot inject ANSI
 // escapes, carriage returns, or title-setting sequences into the report.
-func sanitize(s string) string {
+func Sanitize(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	for _, r := range s {
@@ -186,10 +186,10 @@ func RenderText(w io.Writer, reports []PackageReport, color, verbose bool) {
 		printed++
 		if r.Err != "" {
 			fmt.Fprintf(w, "%s: %s %s\n",
-				s.wrap(ansiBold, sanitize(r.Name)), s.wrap(ansiBoldRed, "error:"), sanitize(r.Err))
+				s.wrap(ansiBold, Sanitize(r.Name)), s.wrap(ansiBoldRed, "error:"), Sanitize(r.Err))
 			continue
 		}
-		fmt.Fprintf(w, "%s: grade %s", s.wrap(ansiBold, sanitize(r.Name)), s.grade(r.Grade))
+		fmt.Fprintf(w, "%s: grade %s", s.wrap(ansiBold, Sanitize(r.Name)), s.grade(r.Grade))
 		if len(r.Findings) == 0 {
 			fmt.Fprintf(w, ", no findings\n")
 			continue
@@ -199,11 +199,11 @@ func RenderText(w io.Writer, reports []PackageReport, color, verbose bool) {
 			if f.Line == 0 {
 				// Package-archive findings locate a member, not a line.
 				fmt.Fprintf(w, "  %s: %s %s %s\n",
-					sanitize(f.Path), s.severity(f.Severity), s.wrap(ansiDim, "["+f.RuleID+"]"), sanitize(f.Message))
+					Sanitize(f.Path), s.severity(f.Severity), s.wrap(ansiDim, "["+f.RuleID+"]"), Sanitize(f.Message))
 				continue
 			}
 			fmt.Fprintf(w, "  %s:%d:%d: %s %s %s\n",
-				sanitize(f.Path), f.Line, f.Col, s.severity(f.Severity), s.wrap(ansiDim, "["+f.RuleID+"]"), sanitize(f.Message))
+				Sanitize(f.Path), f.Line, f.Col, s.severity(f.Severity), s.wrap(ansiDim, "["+f.RuleID+"]"), Sanitize(f.Message))
 		}
 	}
 	if printed > 0 {

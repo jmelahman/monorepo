@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -410,7 +412,14 @@ func fakeGit(t *testing.T) func() []string {
 	sentinel := filepath.Join(dir, "invocations")
 	script := "#!/bin/sh\n" +
 		`echo "prompt=$GIT_TERMINAL_PROMPT $*" >> "$PKGLINT_TEST_GIT_SENTINEL"` + "\n" +
-		`printf '%s\trefs/tags/v1\n' 0123456789abcdef0123456789abcdef01234567` + "\n"
+		"for a; do ref=$a; done\n" +
+		`if [ -n "$PKGLINT_TEST_GIT_OUTPUT" ]; then` + "\n" +
+		`  printf '%s' "$PKGLINT_TEST_GIT_OUTPUT"` + "\n" +
+		`elif [ "$ref" = HEAD ]; then` + "\n" +
+		`  printf '%s\tHEAD\n' 0123456789abcdef0123456789abcdef01234567` + "\n" +
+		"else\n" +
+		`  printf '%s\trefs/tags/%s\n' 0123456789abcdef0123456789abcdef01234567 "$ref"` + "\n" +
+		"fi\n"
 	if err := os.WriteFile(filepath.Join(dir, "git"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -1069,5 +1078,140 @@ func TestUnknownRuleError(t *testing.T) {
 	}
 	if err := unknownRuleError("PB9999"); err == nil || strings.Contains(err.Error(), "did you mean") {
 		t.Errorf("an argument matching nothing should not invent suggestions, got %v", err)
+	}
+}
+
+func TestResolveGitRefMatchesExactRef(t *testing.T) {
+	A, B, C := strings.Repeat("a", 40), strings.Repeat("b", 40), strings.Repeat("c", 40)
+	const url = "https://example.com/demo.git"
+	lines := func(l ...string) string { return strings.Join(l, "\n") + "\n" }
+	tests := []struct {
+		name, out, ref, want, wantErr string
+	}{
+		{"branch with tag name sorts first", lines(A+"\trefs/heads/feature/v1", B+"\trefs/tags/v1"), "v1", B, ""},
+		{"only a lookalike", lines(A + "\trefs/heads/feature/v1"), "v1", "", "not found"},
+		{"peeled tag", lines(A+"\trefs/tags/release/v1", B+"\trefs/tags/v1", C+"\trefs/tags/v1^{}"), "v1", C, ""},
+		{"peeled other tag ignored", lines(A+"\trefs/tags/release/v1^{}", B+"\trefs/tags/v1"), "v1", B, ""},
+		{"branch", lines(A + "\trefs/heads/main"), "main", A, ""},
+		{"ambiguous", lines(A+"\trefs/heads/v1", B+"\trefs/tags/v1"), "v1", "", "ambiguous"},
+		{"same commit", lines(A+"\trefs/heads/v1", A+"\trefs/tags/v1"), "v1", A, ""},
+		{"HEAD", lines(A+"\tHEAD", B+"\trefs/heads/HEAD"), "HEAD", A, ""},
+		{"fully qualified", lines(A + "\trefs/tags/v1"), "refs/tags/v1", A, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeGit(t)
+			t.Setenv("PKGLINT_TEST_GIT_OUTPUT", tt.out)
+			got, err := resolveGitRef(url, tt.ref)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("resolveGitRef = %q, %v, want error containing %q", got, err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil || got != tt.want {
+				t.Fatalf("resolveGitRef = %q, %v, want %q", got, err, tt.want)
+			}
+		})
+	}
+}
+
+func TestEditHunkEscapesControlCharacters(t *testing.T) {
+	got := editHunk([]byte("\tpkgdesc=\"a\x1b[2Kb\rc\"\n"), rules.Edit{Start: 0, End: 0, New: "\x1b]0;t\x07"})
+	for _, bad := range []string{"\x1b", "\r", "\x07"} {
+		if strings.Contains(got, bad) {
+			t.Errorf("hunk contains %q: %q", bad, got)
+		}
+	}
+	if !strings.HasPrefix(got, "    - \t") {
+		t.Errorf("hunk lost the tab indentation: %q", got)
+	}
+}
+
+func TestApplyFixResultsEscapesControlCharacters(t *testing.T) {
+	r := rules.FixResult{
+		Path: "PKGBUILD", Original: []byte("a=1\n"), Fixed: []byte("a=2\n"),
+		Applied: []rules.Edit{{Path: "dir\x1b[31m/PKGBUILD", Line: 1, RuleID: "PB000", Desc: "replaced \x1b[2J thing", Start: 2, End: 3, New: "2"}},
+	}
+	var buf bytes.Buffer
+	applyFixResults(&buf, []rules.FixResult{r}, true)
+	if strings.Contains(buf.String(), "\x1b") {
+		t.Errorf("output contains an escape byte: %q", buf.String())
+	}
+	if !strings.Contains(buf.String(), "[PB000]") {
+		t.Errorf("output lost the finding: %q", buf.String())
+	}
+}
+
+// --fail-on grades findings; a path that could not be loaded was not graded.
+func TestFailOnNeverStillFailsUnloadable(t *testing.T) {
+	var buf bytes.Buffer
+	missing := filepath.Join(t.TempDir(), "nope")
+	if code := run([]string{"--fail-on=never", missing}, &buf); code != 1 {
+		t.Fatalf("got exit %d, want 1\n%s", code, buf.String())
+	}
+}
+
+// The threshold path already treats a load failure as a failure.
+func TestFailOnCriticalFailsUnloadable(t *testing.T) {
+	var buf bytes.Buffer
+	missing := filepath.Join(t.TempDir(), "nope")
+	if code := run([]string{"--fail-on=critical", missing}, &buf); code != 1 {
+		t.Fatalf("got exit %d, want 1\n%s", code, buf.String())
+	}
+}
+
+func TestLsRemoteArgs(t *testing.T) {
+	got := lsRemoteArgs("https://example.com/d.git", "v1")
+	want := []string{"ls-remote", "--", "https://example.com/d.git", "v1^{}", "v1"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("lsRemoteArgs = %q, want %q", got, want)
+	}
+}
+
+func TestResolveGitRefAsksForPeeledTag(t *testing.T) {
+	calls := fakeGit(t)
+	if _, err := resolveGitRef("https://example.com/d.git", "v1"); err != nil {
+		t.Fatal(err)
+	}
+	got := calls()
+	if len(got) != 1 || !strings.HasSuffix(got[0], " ls-remote -- https://example.com/d.git v1^{} v1") {
+		t.Errorf("invocations = %q", got)
+	}
+}
+
+func TestResolveGitRefAnnotatedTagRealGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	dir := t.TempDir()
+	env := append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@e",
+		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@e")
+	git := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = env
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("git %v: %v", args, err)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	git("init", "-q", ".")
+	git("commit", "-q", "--allow-empty", "-m", "m")
+	git("tag", "-a", "v1", "-m", "t")
+	out := git(lsRemoteArgs(dir, "v1")...)
+	got, err := pickRef(out, "v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := git("rev-parse", "v1^{commit}"); got != want {
+		t.Errorf("pickRef = %s, want commit %s", got, want)
+	}
+	if tag := git("rev-parse", "v1"); got == tag {
+		t.Errorf("pickRef returned the tag object %s", tag)
 	}
 }

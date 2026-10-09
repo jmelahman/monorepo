@@ -280,6 +280,60 @@ func TestScanAllRescansOnRuleChange(t *testing.T) {
 	}
 }
 
+// TestScanAllRelintKeepsDrift pins that re-linting the same snapshot because
+// the rules changed keeps the drift notes computed when it was new, while a
+// real snapshot change does not carry stale notes across.
+func TestScanAllRelintKeepsDrift(t *testing.T) {
+	cache := t.TempDir()
+	dir := filepath.Join(cache, "snapshots", "demo@1000")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	pkgbuild := "pkgname=demo\npkgver=1.0\npkgrel=1\npkgdesc='A demonstration tool'\n" +
+		"arch=('any')\nurl='https://example.com'\nlicense=('MIT')\n"
+	if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(pkgbuild), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	seed := []metaPackage{{PackageBase: "demo", LastModified: 1000}}
+	notes := []string{"checksum changed for an unchanged URL"}
+
+	t.Run("same snapshot", func(t *testing.T) {
+		prev := map[string]stateRecord{"demo": {
+			Base: "demo", LastModified: 1000, Grade: "F",
+			Drift: notes,
+			Rules: "0000000000000000", // not the current registry
+		}}
+		results, next := scanAll(seed, cache, 1, 0, prev, time.Time{}, nil)
+		if len(results) != 1 {
+			t.Fatalf("expected one result, got %d", len(results))
+		}
+		if !slices.Equal(results[0].Drift, notes) {
+			t.Errorf("result drift = %v, want %v", results[0].Drift, notes)
+		}
+		if !slices.Equal(next["demo"].Drift, notes) {
+			t.Errorf("state drift = %v, want %v", next["demo"].Drift, notes)
+		}
+		if got := next["demo"].Rules; got != rulesFingerprint() {
+			t.Errorf("record carries fingerprint %q, want the current registry's", got)
+		}
+	})
+
+	t.Run("snapshot changed", func(t *testing.T) {
+		prev := map[string]stateRecord{"demo": {
+			Base: "demo", LastModified: 900, Grade: "F",
+			Drift: notes,
+			Rules: "0000000000000000",
+		}}
+		results, next := scanAll(seed, cache, 1, 0, prev, time.Time{}, nil)
+		if len(results) != 1 {
+			t.Fatalf("expected one result, got %d", len(results))
+		}
+		if len(results[0].Drift) != 0 || len(next["demo"].Drift) != 0 {
+			t.Errorf("stale notes carried across a snapshot change: %v / %v", results[0].Drift, next["demo"].Drift)
+		}
+	})
+}
+
 // TestScanAllBudget pins how a bounded run divides the corpus. Bases past the
 // budget must not be fetched, must keep their last known grade if they have
 // one, and must keep their old LastModified so a later run picks them up.
@@ -846,6 +900,70 @@ func TestExtractRefusesTooManyFiles(t *testing.T) {
 	err := extract(tarGz(t, entries), filepath.Join(t.TempDir(), "out"))
 	if err == nil || !strings.Contains(err.Error(), "too many files") {
 		t.Errorf("extract of %d files: err = %v, want too-many-files", maxSnapshotFiles+1, err)
+	}
+}
+
+// TestExtractRefusesOversizedFile pins that a file over the cap fails the
+// extraction rather than being cut short and graded as though it were whole.
+func TestExtractRefusesOversizedFile(t *testing.T) {
+	type entry = struct {
+		name string
+		body []byte
+		link bool
+	}
+	over := []entry{{name: "demo/PKGBUILD", body: bytes.Repeat([]byte("#"), maxSnapshotFile+1)}}
+	err := extract(tarGz(t, over), filepath.Join(t.TempDir(), "out"))
+	if err == nil || !strings.Contains(err.Error(), "larger than") {
+		t.Errorf("extract of an over-cap file: err = %v, want larger-than", err)
+	}
+
+	exact := []entry{{name: "demo/PKGBUILD", body: bytes.Repeat([]byte("#"), maxSnapshotFile)}}
+	out := filepath.Join(t.TempDir(), "out")
+	if err := extract(tarGz(t, exact), out); err != nil {
+		t.Fatalf("extract of an exactly-at-cap file: %v", err)
+	}
+	fi, err := os.Stat(filepath.Join(out, "PKGBUILD"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Size() != maxSnapshotFile {
+		t.Errorf("written size = %d, want %d", fi.Size(), maxSnapshotFile)
+	}
+}
+
+// TestExtractSkipsOversizedUnreadFile pins that an over-cap file pkglint never
+// reads is left out, while an over-cap file it does read still fails the scan.
+func TestExtractSkipsOversizedUnreadFile(t *testing.T) {
+	type entry = struct {
+		name string
+		body []byte
+		link bool
+	}
+	big := bytes.Repeat([]byte("#"), maxSnapshotFile+1)
+	out := filepath.Join(t.TempDir(), "out")
+	err := extract(tarGz(t, []entry{
+		{name: "demo/big.patch", body: big},
+		{name: "demo/PKGBUILD", body: []byte("pkgname=demo\n")},
+		{name: "demo/small.patch", body: []byte("x")},
+	}), out)
+	if err != nil {
+		t.Fatalf("extract with an unread over-cap file: %v", err)
+	}
+	for name, want := range map[string]string{"PKGBUILD": "pkgname=demo\n", "small.patch": "x"} {
+		got, err := os.ReadFile(filepath.Join(out, name))
+		if err != nil || string(got) != want {
+			t.Errorf("%s = %q, %v; want %q", name, got, err, want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(out, "big.patch")); !os.IsNotExist(err) {
+		t.Errorf("big.patch should not exist, stat err = %v", err)
+	}
+
+	for _, name := range []string{"demo/.SRCINFO", "demo/demo.install", "demo/PKGBUILD"} {
+		err := extract(tarGz(t, []entry{{name: name, body: big}}), filepath.Join(t.TempDir(), "out"))
+		if err == nil || !strings.Contains(err.Error(), "larger than") {
+			t.Errorf("extract of over-cap %s: err = %v, want larger-than", name, err)
+		}
 	}
 }
 

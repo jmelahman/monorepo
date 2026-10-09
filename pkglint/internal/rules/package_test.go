@@ -852,3 +852,58 @@ func TestPackageEscalatingRulesReachBothEnds(t *testing.T) {
 		})
 	}
 }
+
+// TestPackageOversizedInstallIsReported pins that an .INSTALL too large for
+// the archive reader to retain is a PB503 blind spot, not silence.
+func TestPackageOversizedInstallIsReported(t *testing.T) {
+	big := bytes.Repeat([]byte("# pad\n"), 200000) // over the 1 MiB retain cap
+	got := ruleIDs(pkgLint(t, nil, pkgtest.Info("demo", "any"),
+		pkgtest.Member{Name: ".INSTALL", Data: big}))
+	if got["PB503"] != 1 {
+		t.Errorf("oversized .INSTALL: PB503 = %d, want 1 (%v)", got["PB503"], got)
+	}
+	got = ruleIDs(pkgLint(t, nil, pkgtest.Info("demo", "any"),
+		pkgtest.Member{Name: ".INSTALL", Data: []byte("post_install() {\n  true\n}\n")}))
+	if got["PB503"] != 0 {
+		t.Errorf("small .INSTALL: PB503 = %d, want 0 (%v)", got["PB503"], got)
+	}
+}
+
+// TestNeededSonameCannotLeaveLibDirs pins that a DT_NEEDED entry is looked up
+// as a file name inside the host library directories and nowhere else: the
+// string comes out of the archive under review.
+func TestNeededSonameCannotLeaveLibDirs(t *testing.T) {
+	root := t.TempDir()
+	libdir := filepath.Join(root, "lib") + string(filepath.Separator)
+	if err := os.Mkdir(libdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	outside := pkgtest.ELF(hardened(pkgtest.ELFOpts{Soname: "libsecret.so", Defined: []string{"secret_fn"}}))
+	if err := os.WriteFile(filepath.Join(root, "libsecret.so"), outside, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	saved := hostLibDirs
+	hostLibDirs = []string{libdir}
+	t.Cleanup(func() { hostLibDirs = saved })
+
+	// Resolved, the library would export nothing the binary uses: one PB810.
+	// Refused, it is "could not resolve": no verdict.
+	bin := pkgtest.ELF(hardened(pkgtest.ELFOpts{Needed: []string{"../libsecret.so"}, Undefined: []string{"somethingelse"}}))
+	if got := ruleIDs(pkgLint(t, nil, pkgtest.Info("demo", "x86_64"),
+		pkgtest.Member{Name: "usr/bin/demo", Data: bin, Mode: 0o755}))["PB810"]; got != 0 {
+		t.Errorf("a NEEDED entry with a path separator was opened on the host: got %d PB810", got)
+	}
+}
+
+func TestHostLibName(t *testing.T) {
+	for _, s := range []string{"libc.so.6", "libstdc++.so.6", "ld-linux-x86-64.so.2"} {
+		if !hostLibName(s) {
+			t.Errorf("hostLibName(%q) = false, want true", s)
+		}
+	}
+	for _, s := range []string{"", ".", "..", "../x", "/etc/passwd", "a/b", "a\x00b", strings.Repeat("a", 256)} {
+		if hostLibName(s) {
+			t.Errorf("hostLibName(%q) = true, want false", s)
+		}
+	}
+}

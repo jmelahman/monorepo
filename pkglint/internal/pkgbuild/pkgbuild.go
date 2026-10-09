@@ -7,14 +7,18 @@ package pkgbuild
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -93,10 +97,65 @@ type Unit struct {
 	Scriptlet bool
 	Functions map[string]*syntax.FuncDecl
 	TopLevel  []*syntax.Stmt // top-level statements that are not function declarations
+
+	assigns map[string][]AssignSite // built by parseUnit; see AssignsTo
+}
+
+// AssignSite is one assignment in a unit and where it sits.
+type AssignSite struct {
+	Assign *syntax.Assign
+	Fn     string           // the Functions entry whose body holds it; "" for TopLevel
+	Call   *syntax.CallExpr // the command whose Assigns list holds it; nil under declare/local/export
+}
+
+// AssignsTo returns every assignment to name in the unit: TopLevel statements
+// in order, then each function in name order, each walked pre-order. Rules ask
+// "what does this name hold here" once per command, and walking the file for
+// each of them made a PKGBUILD of N commands cost N walks.
+func (u *Unit) AssignsTo(name string) []AssignSite {
+	if u.assigns == nil {
+		return indexAssigns(u)[name] // a Unit not built by parseUnit
+	}
+	return u.assigns[name]
+}
+
+func indexAssigns(u *Unit) map[string][]AssignSite {
+	idx := map[string][]AssignSite{}
+	walk := func(n syntax.Node, fn string) {
+		if n == nil {
+			return
+		}
+		owner := map[*syntax.Assign]*syntax.CallExpr{}
+		syntax.Walk(n, func(node syntax.Node) bool {
+			switch x := node.(type) {
+			case *syntax.CallExpr:
+				for _, as := range x.Assigns {
+					owner[as] = x
+				}
+			case *syntax.Assign:
+				if x.Name != nil {
+					idx[x.Name.Value] = append(idx[x.Name.Value], AssignSite{x, fn, owner[x]})
+				}
+			}
+			return true
+		})
+	}
+	for _, stmt := range u.TopLevel {
+		walk(stmt, "")
+	}
+	names := make([]string, 0, len(u.Functions))
+	for n := range u.Functions {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		walk(u.Functions[n].Body, n)
+	}
+	return idx
 }
 
 // ScriptletError records an install scriptlet that was present but could not
-// be parsed. Such a file is analyzed by no rule yet still runs as root at
+// be read or parsed. Such a file is analyzed by no rule yet still runs as root at
 // install time, so it must be surfaced rather than silently skipped.
 type ScriptletError struct {
 	Path string
@@ -108,7 +167,7 @@ type Package struct {
 	Dir        string
 	PKGBUILD   Unit
 	Scriptlets []Unit
-	// ScriptletErrors holds scriptlets that were read but failed to parse.
+	// ScriptletErrors holds scriptlets that were present but could not be read or parsed.
 	ScriptletErrors []ScriptletError
 	Vars            map[string]*Var
 	SrcInfo         *SrcInfo // nil when no .SRCINFO is present
@@ -138,8 +197,15 @@ type Package struct {
 	sources []SourceEntry
 	arches  map[string]bool
 
+	condSources []SourceEntry
+
 	sourcesOnce sync.Once
 	archesOnce  sync.Once
+
+	condSourcesOnce sync.Once
+
+	// expandSpent counts the bytes Expand has spliced in, across every call.
+	expandSpent atomic.Int64
 }
 
 // newParser returns a fresh parser per parse: syntax.Parser is not safe for
@@ -222,7 +288,15 @@ func Load(path string) (*Package, error) {
 		p := filepath.Join(dir, name)
 		data, err := readSourceFile(p)
 		if err != nil {
-			continue // missing scriptlet is reported by a rule
+			if errors.Is(err, fs.ErrNotExist) {
+				continue // missing scriptlet is reported by a rule
+			}
+			// Present but unreadable — over maxSourceFile, or not a regular
+			// file. It still runs as root at install time, so it is the same
+			// blind spot as a parse failure. Basename only, as below.
+			msg := strings.ReplaceAll(err.Error(), p, name)
+			pkg.ScriptletErrors = append(pkg.ScriptletErrors, ScriptletError{Path: p, Err: msg})
+			continue
 		}
 		// Record the scriptlet's directives before parsing it. parseSuppressions
 		// is a plain byte scan that needs no bash AST, and a scriptlet that fails
@@ -282,6 +356,7 @@ func parseUnit(path string, raw []byte, scriptlet bool) (Unit, error) {
 		}
 		u.TopLevel = append(u.TopLevel, stmt)
 	}
+	u.assigns = indexAssigns(&u)
 	return u, nil
 }
 
@@ -574,45 +649,86 @@ func (p *Package) Scalar(name string) (string, bool) {
 
 var varRef = regexp.MustCompile(`\$(\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z_][A-Za-z0-9_]*)`)
 
+// expandMax caps how many bytes of variable values one Expand call may splice
+// in. References multiply — a scalar naming another forty times, five levels
+// deep, is 40^5 copies from a few hundred bytes of PKGBUILD — so a hostile file
+// could otherwise turn one lookup into gigabytes. Past the cap the remaining
+// references are left as written, which rules already read as "value unknown";
+// no real PKGBUILD value comes within orders of magnitude of it.
+const expandMax = 1 << 20
+
+// expandTotalMax caps what every Expand call on one package may splice in
+// between them. expandMax bounds one lookup; without this a file still chose
+// its own cost, one mebibyte per line that names a nested variable. A real
+// PKGBUILD's whole lint stays orders of magnitude under it.
+const expandTotalMax = 32 << 20
+
+// ExpandExhausted reports whether the package used up expandTotalMax, after
+// which references were left unexpanded and rules read those values as unknown.
+func (p *Package) ExpandExhausted() bool { return p.expandSpent.Load() >= expandTotalMax }
+
 // Expand substitutes $name / ${name} references using known top-level
 // variables. An unsubscripted reference to an array expands to its first
 // element ($arr means ${arr[0]} in bash), which split PKGBUILDs rely on:
 // pkgname=(a b); source=(${pkgname}.service) fetches a.service. Unknown
 // references are left as-is.
 func (p *Package) Expand(s string) string {
+	if p.expandSpent.Load() >= expandTotalMax {
+		return s
+	}
+	budget := expandMax
+	spent := 0
+	defer func() { p.expandSpent.Add(int64(spent)) }()
 	for range 5 {
 		if !strings.Contains(s, "$") {
 			break
 		}
 		out := varRef.ReplaceAllStringFunc(s, func(m string) string {
-			name := strings.Trim(m[1:], "{}")
-			v, ok := p.Vars[name]
+			repl, ok := p.expandRef(m)
 			if !ok {
 				return m
 			}
-			if v.Array {
-				if len(v.Values) == 0 {
-					return ""
-				}
-				// "$pkgname" is "${pkgname[0]}" in bash, and bash brace-expands
-				// an array assignment before indexing it: with
-				// pkgname=(demo{,-vf}) element zero is "demo", not
-				// "demo{,-vf}". Splicing the written form instead leaves braces
-				// in the result that a later expansion re-expands, turning one
-				// source into two.
-				return ExpandBraces(v.Values[0])[0]
+			if budget -= len(repl); budget < 0 {
+				return m // over the cap: leave the reference unexpanded
 			}
-			if len(v.Values) == 1 {
-				return v.Values[0]
-			}
-			return m
+			spent += len(repl)
+			return repl
 		})
 		if out == s {
 			break
 		}
 		s = out
+		if budget < 0 {
+			break
+		}
 	}
 	return s
+}
+
+// expandRef resolves one $name / ${name} match to its value; ok is false when
+// the reference is unknown and must be left as written.
+func (p *Package) expandRef(m string) (repl string, ok bool) {
+	name := strings.Trim(m[1:], "{}")
+	v, found := p.Vars[name]
+	if !found {
+		return "", false
+	}
+	if v.Array {
+		if len(v.Values) == 0 {
+			return "", true
+		}
+		// "$pkgname" is "${pkgname[0]}" in bash, and bash brace-expands
+		// an array assignment before indexing it: with
+		// pkgname=(demo{,-vf}) element zero is "demo", not
+		// "demo{,-vf}". Splicing the written form instead leaves braces
+		// in the result that a later expansion re-expands, turning one
+		// source into two.
+		return ExpandBraces(v.Values[0])[0], true
+	}
+	if len(v.Values) == 1 {
+		return v.Values[0], true
+	}
+	return "", false
 }
 
 // ValidInstallName reports whether an install= value names a plain file in

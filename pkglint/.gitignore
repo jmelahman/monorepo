@@ -1,4 +1,5 @@
 /pkglint
+/site/site
 /public/
 /.cache/
 /dist/

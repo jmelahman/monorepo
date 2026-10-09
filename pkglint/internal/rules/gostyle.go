@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
@@ -106,55 +105,30 @@ func scanAssignments(u *pkgbuild.Unit, name, fn string, at int, own *syntax.Call
 			ownAssigns[as] = true
 		}
 	}
-	// A subtree contributes every assignment to name except another command's
-	// environment prefix. syntax.Walk is pre-order, so a CallExpr is seen
-	// before its own assignments and can disown them first.
-	scan := func(n syntax.Node, before int) {
-		if n == nil {
-			return
+	for _, site := range u.AssignsTo(name) {
+		if ce := site.Call; ce != nil && ce != own && (!standalone || len(ce.Args) != 0) {
+			continue // another command's environment prefix
 		}
-		foreign := map[*syntax.Assign]bool{}
-		syntax.Walk(n, func(node syntax.Node) bool {
-			if ce, ok := node.(*syntax.CallExpr); ok && ce != own && (!standalone || len(ce.Args) != 0) {
-				for _, as := range ce.Assigns {
-					foreign[as] = true
-				}
-				return true
-			}
-			as, ok := node.(*syntax.Assign)
-			if !ok || as.Name == nil || as.Name.Value != name || foreign[as] {
-				return true
-			}
-			if before >= 0 && off(as.Pos()) >= before && !ownAssigns[as] {
-				return true
-			}
-			visit(as)
-			return true
-		})
-	}
-	// Top-level code runs in full before any function does — unless the
-	// caller is itself top-level, where only the lines above it have run.
-	topLimit := -1
-	if fn == "" {
-		topLimit = at
-	}
-	for _, stmt := range u.TopLevel {
-		scan(stmt, topLimit)
-	}
-	names := make([]string, 0, len(u.Functions))
-	for n := range u.Functions {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	for _, n := range names {
+		before := -1
 		switch {
-		case n == fn:
-			scan(u.Functions[n].Body, at)
-		case visible[n], !makepkgPhase(n):
+		case site.Fn == "":
+			// Top-level code runs in full before any function does — unless
+			// the caller is itself top-level, where only the lines above it have run.
+			if fn == "" {
+				before = at
+			}
+		case site.Fn == fn:
+			before = at
+		case visible[site.Fn], !makepkgPhase(site.Fn):
 			// A helper the PKGBUILD calls itself has no fixed place in the
 			// order, so assume it can run before c and count its assignments.
-			scan(u.Functions[n].Body, -1)
+		default:
+			continue
 		}
+		if before >= 0 && off(site.Assign.Pos()) >= before && !ownAssigns[site.Assign] {
+			continue
+		}
+		visit(site.Assign)
 	}
 }
 

@@ -698,6 +698,13 @@ func scanOne(m metaPackage, cache string, prev map[string]stateRecord) (siteResu
 	// as a first scan.
 	prior, _ := priorRecord(prev, m)
 	res.Drift = driftNotes(prior.Fingerprint, cur)
+	if prior.LastModified == m.LastModified {
+		// The same snapshot, scanned again because the rules changed: there
+		// is no earlier snapshot in hand to compare it with, and what it
+		// drifted from when it was new is already on record. Recomputing
+		// would store "nothing" over that.
+		res.Drift = prior.Drift
+	}
 	res.Findings = rules.Run(pkg, nil)
 	if res.Findings == nil {
 		res.Findings = []rules.Finding{}
@@ -752,6 +759,12 @@ func fetchSnapshot(m metaPackage, cache string) (string, error) {
 	return dir, nil
 }
 
+// lintedSnapshotFile reports whether pkglint reads a snapshot member of this
+// name: the PKGBUILD, its .SRCINFO, and install scriptlets.
+func lintedSnapshotFile(name string) bool {
+	return name == "PKGBUILD" || name == ".SRCINFO" || strings.HasSuffix(name, ".install")
+}
+
 // extract unpacks regular files from the snapshot tarball, flattening the
 // single top-level directory and refusing anything odd.
 func extract(tarPath, dir string) error {
@@ -787,6 +800,18 @@ func extract(tarPath, dir string) error {
 		// hostile paths cannot escape the target directory.
 		name := filepath.Base(filepath.Clean(hdr.Name))
 		if name == "." || name == ".." || strings.HasPrefix(name, "/") {
+			continue
+		}
+		if hdr.Size > maxSnapshotFile {
+			// A linted file is refused, not cut short: truncated to the cap
+			// it would be graded as though it were whole. Anything else —
+			// a vendored patch, a bundled archive — is never read, so it is
+			// left out and the PKGBUILD beside it still gets its grade. A
+			// scriptlet under another name that is left out this way reads
+			// as a missing install file, which a rule reports.
+			if lintedSnapshotFile(name) {
+				return fmt.Errorf("snapshot file %q is larger than %d bytes", name, maxSnapshotFile)
+			}
 			continue
 		}
 		out, err := os.Create(filepath.Join(dir, name))

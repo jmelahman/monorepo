@@ -168,17 +168,31 @@ spell that one 'pkglint ./build'.`,
 	return cmd
 }
 
+// isDirOption reports whether a is --dir under any spelling makepkg accepts:
+// its option parser takes an unambiguous prefix of a long option, so --di and
+// --d mean --dir too, with the value attached by = or as the next word.
+func isDirOption(a string) bool {
+	name, ok := strings.CutPrefix(a, "--")
+	if !ok {
+		return false
+	}
+	name, _, _ = strings.Cut(name, "=")
+	return name != "" && strings.HasPrefix("dir", name)
+}
+
 // checkMakepkgArgs refuses the makepkg options that would point the build at
 // something pkglint never linted: -p names a different buildfile and -D/--dir
 // a different directory, either of which turns a gated build of one PKGBUILD
 // into an ungated build of another. They are the only two options in makepkg's
 // short set that take a path, so a bundled cluster like -sp is caught too.
+// --dir is refused under any abbreviation (--di, --d), which makepkg's option
+// parser accepts.
 func checkMakepkgArgs(args []string) error {
 	for _, a := range args {
 		bad := ""
 		switch {
-		case a == "--dir" || strings.HasPrefix(a, "--dir="):
-			bad = "--dir"
+		case isDirOption(a):
+			bad = a
 		case len(a) > 1 && a[0] == '-' && !strings.HasPrefix(a, "--") && strings.ContainsAny(a, "pD"):
 			bad = a
 		}
@@ -271,27 +285,22 @@ func runBuild(paths []string, ro reportOpts, bo buildOpts, stdout io.Writer) int
 	}
 
 	code := renderReports(stdout, reports, ro)
-	// After the reports, so nothing lands in the middle of a JSON or SARIF
-	// document, and so the findings a fix answers are on screen above it.
-	if applied, ok := applyFixResults(stdout, b.fixes, bo.diff); !ok {
+	// After the reports, so the findings a fix answers are on screen above it.
+	// The fix lines are for a person. Under json or sarif, stdout is one
+	// document and anything after it makes it unparseable, so they go to
+	// stderr there.
+	fixOut := stdout
+	if ro.format != "text" {
+		fixOut = os.Stderr
+	}
+	if applied, ok := applyFixResults(fixOut, b.fixes, bo.diff); !ok {
 		return 2
 	} else if applied > 0 {
 		verb := "applied"
 		if bo.diff {
 			verb = "would apply"
 		}
-		fmt.Fprintf(stdout, "%s %d fix(es) to the PKGBUILD from what the build produced\n", verb, applied)
-	}
-	// --fail-on grades findings; it says nothing about whether the command
-	// did its job. A refusal, a makepkg failure, or a missing runtime is an
-	// operational failure and fails the run even under --fail-on=never, which
-	// would otherwise report "makepkg exited 4" and exit 0.
-	if code == 0 {
-		for _, r := range reports {
-			if r.Err != "" {
-				return 1
-			}
-		}
+		fmt.Fprintf(fixOut, "%s %d fix(es) to the PKGBUILD from what the build produced\n", verb, applied)
 	}
 	return code
 }
@@ -513,13 +522,16 @@ func (b *builder) makepkg(ctx context.Context, dir string, d buildDirs) error {
 	// assignment wins in the child, and makepkg re-reads all five from the
 	// environment after sourcing makepkg.conf. SRCPKGDEST is redirected too —
 	// it defaults to the package directory, which `-- -S` would then write a
-	// source tarball into.
+	// source tarball into. BUILDFILE is pinned too: the gate linted PKGBUILD,
+	// so that is the only file the child may be told to build, whatever the
+	// caller's environment says.
 	cmd.Env = append(os.Environ(),
 		"PKGDEST="+d.pkgdest,
 		"BUILDDIR="+d.builddir,
 		"LOGDEST="+d.logdest,
 		"SRCDEST="+d.srcdest,
 		"SRCPKGDEST="+d.srcpkgdest,
+		"BUILDFILE=PKGBUILD",
 	)
 	if err := runStreamed(cmd); err != nil {
 		return describe(ctx, "makepkg", err)
@@ -608,6 +620,7 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, mak
 		"-e", "SRCDEST=/tmp/src",
 		"-e", "LOGDEST=/tmp/log",
 		"-e", "SRCPKGDEST=/tmp/srcpkg",
+		"-e", "BUILDFILE=PKGBUILD",
 		image, "makepkg",
 	}, makepkgArgs...)...)
 	// The id on stdout is not needed and must not reach pkglint's own stdout,

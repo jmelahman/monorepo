@@ -172,6 +172,8 @@ type Context struct {
 	// finding; see Context.suppressionUsage.
 	suppUsed map[suppKey]bool
 
+	byStmt map[*syntax.Stmt]int // lazily built index of cmds by statement
+
 	pkgFacts *packageFacts // lazily computed facts shared by package rules
 }
 
@@ -409,6 +411,177 @@ func assignedIn(u *pkgbuild.Unit, fn string, includeLocals bool) map[string]bool
 	return out
 }
 
+// wrapperValueFlags lists, per wrapper, the options that take their value as
+// the next word. Skipping only the flag left the value standing where the
+// command should be: `nice -n 10 curl` resolved to a command called "10".
+// Only the separate-word spelling needs listing; `-n10` and `--signal=KILL`
+// are one word and already skipped as flags.
+var wrapperValueFlags = map[string]map[string]bool{
+	"timeout": {"-s": true, "--signal": true, "-k": true, "--kill-after": true},
+	"nice":    {"-n": true, "--adjustment": true},
+	"ionice":  {"-c": true, "--class": true, "-n": true, "--classdata": true},
+	"stdbuf":  {"-i": true, "-o": true, "-e": true},
+	"env":     {"-u": true, "--unset": true, "-C": true, "--chdir": true},
+	"exec":    {"-a": true},
+	"sudo": {"-u": true, "-g": true, "-h": true, "-p": true, "-C": true, "-D": true,
+		"-R": true, "-T": true, "-U": true, "-r": true, "-t": true},
+	"doas": {"-u": true, "-C": true},
+}
+
+// wrapperOperands is how many positional words a wrapper consumes before the
+// command it runs: timeout's duration.
+var wrapperOperands = map[string]int{"timeout": 1}
+
+type varState int
+
+const (
+	varUnassigned varState = iota // the file never assigns it: $CC, $MAKE
+	varResolved                   // every assignment in scope names one command
+	varOpaque                     // assigned, but dynamically or inconsistently
+)
+
+// commandVarValue resolves a command name written as nothing but a variable
+// reference — `$d`, `"${d}"` — from the assignments in scope. varsFor drops a
+// name its function assigns, rightly, since the file-level value is stale
+// there; but that left `d=curl; $d … | sh` with no name for any rule to
+// match and nothing reporting that it had none.
+//
+// A name the file never assigns is the environment's ($CC, $MAKE) and stays
+// as it was. One every assignment agrees on resolves to that command. Anything
+// else — a command substitution, two branches naming different tools — is a
+// command pkglint cannot name, which PB306 exists to say.
+//
+// Some assignments say nothing about the name and are skipped: a declaration
+// with no value (`export CC`, `local tool`) and a self-default with an empty
+// default (`CC="${CC:-}"`). A self-default with a word (`d="${d:-curl}"`)
+// names that word, since it is what runs when the environment is silent. A
+// wrapper-led value (`env LC_ALL=C make`) names the command its options lead
+// to; array first elements are brace-expanded as everywhere else.
+func (ctx *Context) commandVarValue(u *pkgbuild.Unit, fn string, stmt *syntax.Stmt, call *syntax.CallExpr, w *syntax.Word) (string, varState) {
+	ref := varRefName(w)
+	if ref == "" || u == nil {
+		return "", varUnassigned
+	}
+	at := -1
+	if stmt != nil {
+		at = off(stmt.Pos())
+	}
+	// commandVarMaxAssigns: a name assigned more often than this is not one
+	// pkglint will reconcile; it also keeps N assignments × N uses from being
+	// quadratic again.
+	const commandVarMaxAssigns = 64
+	if len(u.AssignsTo(ref)) > commandVarMaxAssigns {
+		return "", varOpaque
+	}
+	state, value := varUnassigned, ""
+	scanAssignments(u, ref, fn, at, call, true, func(as *syntax.Assign) {
+		if state == varOpaque {
+			return
+		}
+		if as.Naked {
+			return // a declaration with no value neither names a command nor hides one
+		}
+		var selfDef *syntax.Word
+		if as.Value != nil {
+			if def, ok := selfDefaultWord(as.Value, ref); ok {
+				if def == nil || len(def.Parts) == 0 {
+					return // `${CC:-}`: nothing to name, the environment's as before
+				}
+				selfDef = def
+			}
+		}
+		var first *syntax.Word
+		switch {
+		case as.Append || as.Index != nil:
+		case selfDef != nil:
+			first = selfDef // what runs whenever the environment is silent
+		case as.Value != nil:
+			first = as.Value
+		case as.Array != nil && len(as.Array.Elems) > 0:
+			first = as.Array.Elems[0].Value
+		}
+		if first == nil {
+			state = varOpaque
+			return
+		}
+		s, d := pkgbuild.RenderWord(first, nil)
+		if !d && as.Value == nil && selfDef == nil {
+			s = pkgbuild.ExpandBraces(s)[0]
+		}
+		fields := strings.Fields(s)
+		if d || hasVarRef(s) || len(fields) == 0 {
+			state = varOpaque
+			return
+		}
+		name, ok := nameInFields(fields)
+		if !ok {
+			state = varOpaque
+			return
+		}
+		if state == varResolved && name != value {
+			state = varOpaque
+			return
+		}
+		state, value = varResolved, name
+	})
+	return value, state
+}
+
+// selfDefaultWord recognises w as exactly `${name:-…}` (or `-`, `=`, `:=`),
+// optionally double-quoted, and returns its default word (nil when empty). Such
+// a line keeps whatever the environment supplied and otherwise runs the
+// default, so it names its default; with no default it says nothing, like a
+// name the file never assigns.
+func selfDefaultWord(w *syntax.Word, name string) (def *syntax.Word, ok bool) {
+	if w == nil || len(w.Parts) != 1 {
+		return nil, false
+	}
+	part := w.Parts[0]
+	if dq, ok := part.(*syntax.DblQuoted); ok {
+		if len(dq.Parts) != 1 {
+			return nil, false
+		}
+		part = dq.Parts[0]
+	}
+	pe, ok := part.(*syntax.ParamExp)
+	if !ok || pe.Param == nil || pe.Param.Value != name || pe.Exp == nil {
+		return nil, false
+	}
+	switch pe.Exp.Op {
+	case syntax.DefaultUnset, syntax.DefaultUnsetOrNull, syntax.AssignUnset, syntax.AssignUnsetOrNull:
+		return pe.Exp.Word, true
+	}
+	return nil, false
+}
+
+// nameInFields returns the command a value's words run: the first word, or
+// for a wrapper-led value (`env LC_ALL=C make`) the word its options lead
+// to. ok is false when the wrapper's options use up the value, which leaves
+// the command among the caller's own arguments.
+func nameInFields(fields []string) (name string, ok bool) {
+	for len(fields) > 0 {
+		base := basename(unescapeName(fields[0]))
+		if !wrappers[base] || len(fields) == 1 {
+			return fields[0], true // a lone wrapper is skipped by newCommand's own loop
+		}
+		fields = fields[1:]
+		for len(fields) > 0 && (hasPrefixAny(fields[0], "-") || isAssignWord(fields[0])) {
+			w := fields[0]
+			if base == "command" && commandLooksUp(w) {
+				return "command", true
+			}
+			fields = fields[1:]
+			if wrapperValueFlags[base][w] && len(fields) > 0 {
+				fields = fields[1:]
+			}
+		}
+		for n := wrapperOperands[base]; n > 0 && len(fields) > 0; n-- {
+			fields = fields[1:]
+		}
+	}
+	return "", false
+}
+
 func (ctx *Context) newCommand(u *pkgbuild.Unit, fn string, stmt *syntax.Stmt, call *syntax.CallExpr) Command {
 	cmd := Command{Unit: u, Fn: fn, Stmt: stmt, Call: call}
 	vars := ctx.varsFor(u, fn)
@@ -418,13 +591,20 @@ func (ctx *Context) newCommand(u *pkgbuild.Unit, fn string, stmt *syntax.Stmt, c
 		if cmd.RawName == "" {
 			cmd.RawName = name
 		}
+		if !dyn && hasVarRef(name) {
+			if resolved, state := ctx.commandVarValue(u, fn, stmt, call, args[0]); state == varResolved {
+				name = resolved
+			} else if state == varOpaque {
+				dyn = true // assigned, but to nothing readable: PB306's case
+			}
+		}
 		if dyn || hasVarRef(name) {
 			cmd.Dynamic = dyn
 			cmd.Name = ""
 			args = args[1:]
 			break
 		}
-		base := basename(name)
+		base := basename(unescapeName(name))
 		if wrappers[base] {
 			args = args[1:]
 			lookup := false
@@ -434,9 +614,15 @@ func (ctx *Context) newCommand(u *pkgbuild.Unit, fn string, stmt *syntax.Stmt, c
 				if !d && (hasPrefixAny(s, "-") || isAssignWord(s)) {
 					lookup = lookup || (base == "command" && commandLooksUp(s))
 					args = args[1:]
+					if wrapperValueFlags[base][s] && len(args) > 0 {
+						args = args[1:]
+					}
 					continue
 				}
 				break
+			}
+			for n := wrapperOperands[base]; n > 0 && len(args) > 0; n-- {
+				args = args[1:]
 			}
 			if lookup {
 				// `command -v cc` prints where cc would be found and runs
@@ -470,6 +656,26 @@ func (ctx *Context) definesFunc(c Command, name string) bool {
 
 // Commands returns every command; optional filters restrict the results.
 func (ctx *Context) Commands() []Command { return ctx.cmds }
+
+// commandAt returns the Command collected for stmt. Rules that walk the
+// syntax tree themselves must use it rather than resolve the statement
+// again: only collect knows which function a statement belongs to, and a
+// name resolved without that is resolved against the wrong variables.
+func (ctx *Context) commandAt(stmt *syntax.Stmt) (Command, bool) {
+	if ctx.byStmt == nil {
+		ctx.byStmt = make(map[*syntax.Stmt]int, len(ctx.cmds))
+		for i, c := range ctx.cmds {
+			if _, dup := ctx.byStmt[c.Stmt]; !dup {
+				ctx.byStmt[c.Stmt] = i
+			}
+		}
+	}
+	i, ok := ctx.byStmt[stmt]
+	if !ok {
+		return Command{}, false
+	}
+	return ctx.cmds[i], true
+}
 
 // CommandsNamed returns commands with a resolved name in names.
 func (ctx *Context) CommandsNamed(names ...string) []Command {
@@ -648,6 +854,13 @@ func Run(pkg *pkgbuild.Package, ignore map[string]bool) []Finding {
 			out = append(out, f)
 		}
 	}
+	// Past the expansion budget, references stay unexpanded and every rule
+	// that reads them goes quiet — which a file could arrange on purpose. Say so.
+	if pkg.ExpandExhausted() && !ignore["PB307"] && !pkg.Suppressed("PB307", pkg.PKGBUILD.Path, 1) {
+		out = append(out, Finding{RuleID: "PB307", Severity: Warn, Path: pkg.PKGBUILD.Path, Line: 1, Col: 1,
+			Message: "variable references in this PKGBUILD expand to more than 32 MiB; pkglint stopped " +
+				"expanding them, so values that depend on them were not analyzed"})
+	}
 	return sortDedupe(out)
 }
 
@@ -673,7 +886,7 @@ func RunPackage(pf *pkgfile.Package, db *alpmdb.DB, ignore map[string]bool) []Fi
 // persistence, obfuscation, hook redundancy) a package directory gets.
 func runPackageScriptlet(pf *pkgfile.Package, ignore map[string]bool) []Finding {
 	install := pf.Entry(".INSTALL")
-	if install == nil || len(install.Data) == 0 {
+	if install == nil || (len(install.Data) == 0 && install.Size == 0) {
 		return nil
 	}
 	const path = ".INSTALL"
@@ -687,9 +900,15 @@ func runPackageScriptlet(pf *pkgfile.Package, ignore map[string]bool) []Finding 
 		empty.Scriptlet = false
 		pseudo.PKGBUILD = empty
 	}
-	if unit, err := pkgbuild.ParseScriptlet(path, install.Data); err != nil {
+	switch unit, err := pkgbuild.ParseScriptlet(path, install.Data); {
+	case len(install.Data) == 0:
+		// The archive reader keeps a member's bytes only up to its cap; a
+		// larger .INSTALL was never read, and no rule has seen it.
+		pseudo.ScriptletErrors = []pkgbuild.ScriptletError{{Path: path,
+			Err: fmt.Sprintf("%d bytes is too large to analyze", install.Size)}}
+	case err != nil:
 		pseudo.ScriptletErrors = []pkgbuild.ScriptletError{{Path: path, Err: err.Error()}}
-	} else {
+	default:
 		pseudo.Scriptlets = []pkgbuild.Unit{unit}
 	}
 	ctx := NewContext(pseudo)
