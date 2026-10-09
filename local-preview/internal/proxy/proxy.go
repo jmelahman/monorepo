@@ -35,10 +35,10 @@ import (
 	"github.com/jmelahman/local-preview/internal/supervise"
 )
 
-// coldStartWait is how long a request waits for a backend before returning
+// defaultColdStartWait is how long a request waits for a backend before returning
 // the interim "starting" response. The start itself continues in the
 // background either way.
-const coldStartWait = 1500 * time.Millisecond
+const defaultColdStartWait = 1500 * time.Millisecond
 
 // cacheTTL bounds staleness of the routing cache; interim status pages poll
 // on the same order, so transitions surface promptly.
@@ -99,6 +99,11 @@ type Router struct {
 	backends  Backends
 	domain    string
 	dashboard http.Handler
+
+	// coldStartWait is how long a request waits for a backend (or a frontend
+	// to hydrate) before answering with the interim page. A field so tests of
+	// the interim path need not wait out the real one.
+	coldStartWait time.Duration
 
 	// authEnabled gates preview subdomains behind the SSO login; when off the
 	// Router behaves exactly as before. authBaseURL is the dashboard origin the
@@ -165,6 +170,8 @@ func New(database *db.Store, files *store.Store, backends Backends, domain strin
 		domain:    strings.ToLower(domain),
 		dashboard: dashboard,
 		cache:     make(map[string]cacheEntry),
+
+		coldStartWait: defaultColdStartWait,
 	}
 }
 
@@ -644,7 +651,7 @@ func (rt *Router) proxyFrontend(w http.ResponseWriter, r *http.Request, e cacheE
 // ensureAndProxy cold-starts the keyed process if needed (bounded wait; the
 // start continues in the background) and reverse-proxies to it.
 func (rt *Router) ensureAndProxy(w http.ResponseWriter, r *http.Request, e cacheEntry, repoName string, k supervise.Key, what string) {
-	ctx, cancel := context.WithTimeout(r.Context(), coldStartWait)
+	ctx, cancel := context.WithTimeout(r.Context(), rt.coldStartWait)
 	defer cancel()
 	addr, err := rt.backends.EnsureRunning(ctx, k, repoName)
 	if err != nil {
@@ -835,7 +842,7 @@ func (rt *Router) serveStatic(w http.ResponseWriter, r *http.Request, repoName, 
 	// today's behavior exactly: local disk is authoritative, so skip the dance.)
 	if rt.files.ArtifactTier() != nil {
 		if !rt.files.HasFrontend(repoName, feHash) {
-			ctx, cancel := context.WithTimeout(r.Context(), coldStartWait)
+			ctx, cancel := context.WithTimeout(r.Context(), rt.coldStartWait)
 			defer cancel()
 			if err := rt.files.Hydrate(ctx, repoName, "fe", feHash); err != nil {
 				switch {

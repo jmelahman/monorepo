@@ -74,6 +74,13 @@ func newTestEnv(t *testing.T) *testEnv {
 	return &testEnv{router: router, db: database, files: files, repoID: repo.ID, fake: fake}
 }
 
+// slowBackend makes the fake backend outlive the request's patience, and
+// shortens that patience so the test does not wait out the real one.
+func (e *testEnv) slowBackend() {
+	e.fake.slow = true
+	e.router.coldStartWait = 20 * time.Millisecond
+}
+
 // readyDeploy publishes a frontend artifact and inserts a ready deploy row.
 func (e *testEnv) readyDeploy(t *testing.T, sha string) db.Deploy {
 	t.Helper()
@@ -259,7 +266,7 @@ func TestColdStartAndCrash(t *testing.T) {
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
 
 	// Still starting: JSON callers get 503 + Retry-After.
-	e.fake.slow = true
+	e.slowBackend()
 	code, body, hdr := doReq(t, e.router, host, "/api/x", false)
 	if code != 503 || hdr.Get("Retry-After") == "" || !strings.Contains(body, "Starting") {
 		t.Fatalf("cold start: %d %q %v", code, body, hdr)
@@ -309,7 +316,7 @@ func TestNoWorkerIsInterimNotFailure(t *testing.T) {
 	// A worker joined and the process is cold-starting: the same poll now
 	// lands in the "starting" state — the page transitions in place.
 	e.fake.err = nil
-	e.fake.slow = true
+	e.slowBackend()
 	code, _, hdr = doPoll(t, e.router, host, "/api/x", 0, 0)
 	if code != 503 || hdr.Get("X-Preview-Interim") != "starting" {
 		t.Fatalf("transition to starting: %d %v", code, hdr)
@@ -356,7 +363,7 @@ func TestInterimPoll(t *testing.T) {
 
 	// Still starting: JSON with the interim marker and the log slice from the
 	// echoed cursor.
-	e.fake.slow = true
+	e.slowBackend()
 	code, body, hdr := doPoll(t, e.router, host, "/api/x", 3, 100)
 	if code != 503 || hdr.Get("X-Preview-Interim") != "starting" {
 		t.Fatalf("starting poll: %d %v", code, hdr)
@@ -468,7 +475,7 @@ func TestColdStartBrowserGetsPollerPage(t *testing.T) {
 	e := newTestEnv(t)
 	d := e.readyDeploy(t, shaOne)
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
-	e.fake.slow = true
+	e.slowBackend()
 
 	code, body, hdr := doReq(t, e.router, host, "/api/x", true)
 	if code != 503 || hdr.Get("X-Preview-Interim") != "starting" ||
@@ -508,7 +515,7 @@ func TestStartingFrontendNarratesBlockingBackend(t *testing.T) {
 	e.router.SetProcStatus(ps)
 	logs := &fakeRunLogs{}
 	e.router.SetRunLogs(logs)
-	e.fake.slow = true
+	e.slowBackend()
 
 	// Backend not running: the frontend's cold start is narrated as the
 	// backend, and the poll streams the backend's run log.
@@ -864,7 +871,7 @@ func TestInterimAndErrorPagesAreUncacheable(t *testing.T) {
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
 
 	// Interim HTML page (browser, still starting).
-	e.fake.slow = true
+	e.slowBackend()
 	req := httptest.NewRequest("GET", "http://"+host+"/api/x", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
