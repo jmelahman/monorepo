@@ -351,6 +351,13 @@ the wrong index. The developer's `~/.gitconfig` leaks in too. A global
 fails outside a configured repo. A global `commit.gpgsign` breaks commits the
 same way. Both fail dozens of unrelated tests at once, on one machine only.
 
+Hiding the gitconfig does not hide `~/.config/git/ignore` or
+`~/.config/git/attributes`: git reads those by default whenever
+`core.excludesFile` and `core.attributesFile` are unset. A global ignore of
+`**/.claude/settings.local.json` made `git add -A` skip the session's agent
+settings, so every merge test's "session files" commit had nothing to commit.
+`IsolateEnv` pins both keys to the null device through `GIT_CONFIG_COUNT`.
+
 Rule: every package whose tests run git (directly, or through the server
 under test) calls `gittest.IsolateEnv()` first in its `TestMain`. Tests that
 commit set their own identity on the repo or with `-c`, never through the

@@ -18,10 +18,21 @@ import "os"
 // or similar would do the same. Tests set any identity they need on the repo
 // or with -c. See REGRESSIONS.md: "Tests inherit the caller's git environment
 // and gitconfig".
+//
+// Hiding the gitconfig is not enough for ignore and attribute rules: with
+// core.excludesFile unset git still reads $XDG_CONFIG_HOME/git/ignore (or
+// ~/.config/git/ignore), and likewise git/attributes. A developer who ignores
+// **/.claude/settings.local.json there leaves the session's agent settings
+// invisible to `git add -A`, so both are pinned to the null device.
 func IsolateEnv() {
 	for _, k := range []string{"GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY", "GIT_COMMON_DIR"} {
 		os.Unsetenv(k)
 	}
 	os.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
 	os.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	os.Setenv("GIT_CONFIG_COUNT", "2")
+	os.Setenv("GIT_CONFIG_KEY_0", "core.excludesFile")
+	os.Setenv("GIT_CONFIG_VALUE_0", os.DevNull)
+	os.Setenv("GIT_CONFIG_KEY_1", "core.attributesFile")
+	os.Setenv("GIT_CONFIG_VALUE_1", os.DevNull)
 }
