@@ -4,13 +4,27 @@
 version: "2"
 
 linters:
+  enable:
+    - forbidigo
   settings:
     errcheck:
       exclude-functions:
         # Deferred after Commit, where it returns sql.ErrTxDone.
         - (*database/sql.Tx).Rollback
+    forbidigo:
+      forbid:
+        # Only *_integration_test.go is checked; see exclusions below. A fake
+        # for a real external edge goes in a *test helper package, whose
+        # qualified name (pushtest.NewService) this does not match.
+        - pattern: ^(new|New)?([fF]ake|[mM]ock|[sS]tub)([A-Z_]\w*)?$
+          msg: integration tests use real collaborators; an edge fake belongs in a *test helper package
   exclusions:
     presets:
       # Errors conventionally left unchecked: Close, fmt.Fprint*, os.Remove*,
       # and the like.
       - std-error-handling
+    rules:
+      # forbidigo is here for the integration-test rule alone.
+      - path-except: _integration_test\.go$
+        linters:
+          - forbidigo

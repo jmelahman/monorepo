@@ -58,6 +58,13 @@ launch starts from zero and shutdown discards everything.
 ## Tests / typecheck / lint
 
 - Go: `go test ./...`
+- Integration tests are files named `*_integration_test.go`: they drive the
+  real handler, database, git repo and filesystem, and lint (`forbidigo`)
+  rejects any `fake*`/`mock*`/`stub*` identifier in them. A fake for a real
+  external edge (an LLM API, GitHub, Docker) goes in a `*test` helper package.
+  Not caught by lint, but equally off-limits there: overriding a package-level
+  seam variable. Prefer an integration test for new behaviour; a plain
+  `_test.go` is for logic that is pure enough not to need one.
 - Frontend types: `cd web && bun run typecheck`
 - Frontend lint/format (Biome): `cd web && bun run check` (`check:fix` to
   auto-apply safe fixes). The `prek` `biome` hook runs the same check on
