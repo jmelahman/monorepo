@@ -98,7 +98,11 @@ export function startFeed(port = FEED_PORT): Feed {
 
 /* ------------------------------------------------------------------ replay */
 
-function replay(path: string, port: number): void {
+/**
+ * Returns the feed so a caller that is not a person at a terminal can close it:
+ * `tools/bench/record.ts` replays one episode after another on the same port.
+ */
+export function replay(path: string, port: number): Feed {
   const episode = JSON.parse(readFileSync(path, "utf8")) as Episode
   if (episode.content !== CONTENT_VERSION) {
     log(
@@ -123,6 +127,7 @@ function replay(path: string, port: number): void {
     feed.publish({ type: "step", run: 1, n: n + 1, step })
   feed.publish({ type: "end", run: 1, result: episode.result })
   log(`replaying ${episode.steps.length} steps of seed ${episode.seed}; Ctrl-C to stop`)
+  return feed
 }
 
 if (import.meta.main) {

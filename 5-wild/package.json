@@ -23,7 +23,10 @@
     "bench:baseline": "bun tools/bench/baseline.ts",
     "bench:report": "bun tools/bench/report.ts",
     "bench:export": "bun tools/bench/export.ts",
-    "bench:replay": "bun tools/bench/feed.ts --replay"
+    "bench:replay": "bun tools/bench/feed.ts --replay",
+    "bench:opencode": "bun tools/bench/opencode.ts",
+    "bench:record": "bun tools/bench/record.ts",
+    "bench:upload": "bun tools/bench/upload.ts"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.0",
@@ -36,6 +39,7 @@
     "@biomejs/biome": "^2.5.14",
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.0.0",
+    "playwright-core": "^1.64.0",
     "typescript": "^7.0.2",
     "vite": "^8.0.0",
     "vitest": "^5.0.1"

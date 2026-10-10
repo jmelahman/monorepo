@@ -458,6 +458,59 @@ tool wants, and `--json` is the summaries with the runs beneath them. Run the
 report on the commit the bundles were played on: a bundle made elsewhere
 replays only against the engine that dealt it.
 
+**OpenCode** is the one harness the repo drives itself, because a suite across
+a subscription's worth of models is forty sessions nobody wants to start by
+hand:
+
+```sh
+bun run bench:opencode --models opencode-go/kimi-k3,opencode-go/glm-5.3   # as `opencode models` spells them
+bun run bench:opencode --models opencode-go/kimi-k3 --runs 3 --parallel 1
+```
+
+Each model is filed as `<model> / <provider>` and plays from an empty directory
+under the system's temp folder, with a config that allows the `5wild` server
+and denies every other tool, so the word lists are out of reach rather than
+merely out of bounds. The briefing it is sent is
+`.agents/skills/benchmark/SKILL.md`, the same text a model driven by hand
+reads. A session that stops before `RUN ENDED` is started again and handed the
+same run, up to `--attempts` times; a seed still unfinished after that stops
+the label there. What OpenCode printed, tokens and cost included, is kept in
+`bench/logs/<label>/`. Play on a clean tree: the episode records the commit,
+and `-dirty` is not a commit anyone can check out. See the head of
+`tools/bench/opencode.ts` for why each of those is so.
+
+**A video** of a finished run is the spectator with a headless browser
+watching:
+
+```sh
+bunx playwright-core install chromium-headless-shell    # once
+bun run bench:record bench/results/<label>/seed-3-a0.json
+bun run bench:record bench/results/*/seed-3-a0.json --size 540x960 --skin tabletop
+```
+
+It writes `bench/videos/<label>-seed-N-aA.mp4` (a silent WebM without `ffmpeg`),
+with the game's own sound unless `--silent`, at the game's own ×2 speed unless
+`--speed` says otherwise. It films this
+checkout's engine playing the episode's steps, so it refuses an episode from
+another `CONTENT_VERSION` and fails on one that diverges, and a video is
+therefore as much a replay check as `bench:report` is.
+
+**Uploading** them is `bench:upload`, because a run's film is tens of megabytes
+and belongs in no repo:
+
+```sh
+bun run bench:upload --login                      # once, in a browser
+bun run bench:upload bench/videos/*.mp4 --dry     # the titles it would write
+bun run bench:upload bench/videos/*.mp4           # unlisted unless --privacy
+```
+
+It wants an OAuth client of type "Desktop app", from a Google Cloud project
+with the YouTube Data API v3 enabled, saved as
+`~/.config/5wild-bench/youtube-client.json`; the token `--login` earns is kept
+beside it, outside the checkout. Titles and descriptions come from the episode
+a video was filmed from, and `bench/videos/uploaded.json` remembers what went
+up as which id, so a second run sends only what is new.
+
 The spectator is `?watch=<feed>` on any build. The host publishes the seed and
 then every accepted step over server-sent events on port 7777, and the tab deals
 the same run from the same seed and plays the steps through the ordinary `App`,
