@@ -122,13 +122,13 @@ const BY_USE = "etaoinsrhldcumfpgwybvkxjqz"
  * rerolling with exactly Steel money in hand would walk away from a Glass.
  */
 const RARE_MODS: readonly ModId[] = ["steel", "glass"]
-const RARE_PRICE = Math.max(...RARE_MODS.map((id) => MODIFIER_BY_ID.get(id)?.choiceCost ?? 0))
+const RARE_PRICE = Math.max(...RARE_MODS.map((id) => MODIFIER_BY_ID.get(id)?.cost ?? 0))
 
 /** What it costs to walk out of a shop holding a Wild. */
-const WILD_PRICE = MODIFIER_BY_ID.get("wild")?.choiceCost ?? 0
+const WILD_PRICE = MODIFIER_BY_ID.get("wild")?.cost ?? 0
 
 /** What it costs to walk out of a shop holding an Anchor. */
-const ANCHOR_PRICE = MODIFIER_BY_ID.get("anchor")?.choiceCost ?? 0
+const ANCHOR_PRICE = MODIFIER_BY_ID.get("anchor")?.cost ?? 0
 
 /**
  * How many of a word's tiles would land green *on a letter carrying `mod`*.

@@ -848,8 +848,8 @@ export const de: Strings = {
           "Für den Rest des Durchlaufs an einen einzigen Buchstaben geklebt. Nur einer je " +
           "Buchstabe, und die Tastatur trägt das Zeichen. Ein ×Mult-Buchstabe multipliziert, " +
           "was das Wort bis zu seiner Stelle gebracht hat, sodass er spät im Wort mehr wert ist " +
-          "als früh. Der Ladenpreis kauft die Karte und lässt dich den Buchstaben wählen; ein " +
-          "Booster gibt sie zum genannten Preis aus, mit schon gewähltem Buchstaben.",
+          "als früh. Der Preis kauft die Karte im Laden und lässt dich den Buchstaben wählen; ein " +
+          "Booster gibt sie mit schon gewähltem Buchstaben aus.",
       },
       upgrades: {
         title: "Buchstaben-Aufwertungen",

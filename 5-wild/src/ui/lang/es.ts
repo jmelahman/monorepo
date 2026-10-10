@@ -830,8 +830,8 @@ export const es: Strings = {
           "Pegados a una sola letra durante el resto de la partida. Uno por letra a la vez, y " +
           "el teclado lleva la marca. Una letra ×mult multiplica lo que la palabra ha puntuado " +
           "hasta donde ella está, así que vale más al final de una palabra que al principio. El " +
-          "precio de la tienda compra la carta y te deja elegir la letra; un sobre la reparte " +
-          "por el precio de al lado, con la letra ya elegida.",
+          "precio compra la carta en la tienda y te deja elegir la letra; un sobre la reparte " +
+          "con la letra ya elegida.",
       },
       upgrades: {
         title: "Mejoras de letra",

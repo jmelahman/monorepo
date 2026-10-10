@@ -3485,7 +3485,7 @@ export function codexView(on: Handlers): HTMLElement {
             mod.letters
               ? copy.modTextOnly(card.text, [...mod.letters].join(" ").toUpperCase())
               : copy.modText(card.text),
-            `${money(mod.choiceCost)} / ${money(mod.cost)}`,
+            money(mod.cost),
             cardArt("mod", mod.id),
           )
         }),

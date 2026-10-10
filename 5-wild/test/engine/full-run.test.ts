@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Action, RunState } from "../../src/engine"
 import { getBoss, reduce, roundTargets, STAGES, startRun } from "../../src/engine"
+import { placeMod } from "../golden/scenarios"
 import { realWords } from "../helpers/words"
 
 const words = realWords
@@ -102,6 +103,18 @@ function playRun(seed: number): {
       continue
     }
     if (state.phase === "shop") {
+      // Forced, not strategy: an unaimed modifier holds the shop until it has a
+      // letter, `next_round` included, so a bot that never places one sits here
+      // until the cap. This one did not place for as long as modifiers have been
+      // sold unaimed and passed on luck, since none of the seeds below ever met
+      // one as the first thing on a shelf it could afford. Gold coming down from
+      // $9 to $6 put one in seed 1's first shop, with $7 in hand.
+      if (state.placing) {
+        const placed = placeMod(state)
+        if (!placed) break
+        state = apply(state, placed)
+        continue
+      }
       const index = state.shop?.items.findIndex((item) => item && item.cost <= state.gold) ?? -1
       if (index < 0) {
         state = apply(state, [{ type: "next_round" }])

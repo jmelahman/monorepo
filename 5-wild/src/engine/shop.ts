@@ -194,7 +194,7 @@ export function placeableLetters(state: RunState, modifier: Modifier): string[] 
  * buy it immediately" and "Steel Q, walk past". Selling the card and letting the
  * player aim it turns the slot into a decision about their own vocabulary, which
  * is the decision this layer was always supposed to be asking for. It costs more
- * because it is worth more; see `Modifier.choiceCost`.
+ * because it is worth more; see `Modifier.cost`.
  */
 function rollMod(state: RunState, rng: Rng, taken: Taken): ShopItem | null {
   // Filtering the bag rather than the catalog keeps the other cards' weights in
@@ -204,7 +204,7 @@ function rollMod(state: RunState, rng: Rng, taken: Taken): ShopItem | null {
   const modifier = MODIFIER_BY_ID.get(pick(rng, bag))
   if (!modifier) return null
   if (placeableLetters(state, modifier).length === 0) return null
-  return { kind: "mod", id: modifier.id, cost: modifier.choiceCost }
+  return { kind: "mod", id: modifier.id, cost: modifier.cost }
 }
 
 /**

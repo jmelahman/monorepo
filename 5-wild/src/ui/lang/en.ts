@@ -895,8 +895,8 @@ export const en: Strings = {
           "Stuck to a single letter for the rest of the run. One at a time per letter, " +
           "and the keyboard wears the mark. A ×mult letter multiplies what the word has " +
           "scored up to where it sits, so it is worth more late in a word than early. " +
-          "The shop price buys the card and lets you pick the letter; a pack deals it " +
-          "for the price beside it, letter already chosen.",
+          "The price buys the card in the shop and lets you pick the letter; a pack deals " +
+          "it with the letter already chosen.",
       },
       upgrades: {
         title: "Letter upgrades",

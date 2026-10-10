@@ -850,9 +850,9 @@ export const fr: Strings = {
         blurb:
           "Collés à une seule lettre pour le reste de la partie. Un seul à la fois par lettre, " +
           "et le clavier en porte la marque. Une lettre ×mult multiplie ce que le mot a rapporté " +
-          "jusqu'à sa position, si bien qu'elle vaut plus tard dans un mot que tôt. Le prix en " +
-          "boutique achète la carte et vous laisse choisir la lettre\u00A0; un booster la " +
-          "distribue au prix indiqué, la lettre déjà choisie.",
+          "jusqu'à sa position, si bien qu'elle vaut plus tard dans un mot que tôt. Le prix " +
+          "achète la carte en boutique et vous laisse choisir la lettre\u00A0; un booster la " +
+          "distribue avec la lettre déjà choisie.",
       },
       upgrades: {
         title: "Améliorations de lettre",

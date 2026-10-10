@@ -125,7 +125,7 @@ describe("the shop layout", () => {
     }
   })
 
-  it("sells modifiers with no letter on them, at the choice price", () => {
+  it("sells modifiers with no letter on them, at the card's price", () => {
     // Which letter a modifier sits on is most of what it is worth, so the shop
     // sells the card and lets the player aim it. The pack is the half that still
     // deals pairings; see packs.test.ts.
@@ -135,7 +135,7 @@ describe("the shop layout", () => {
       if (item?.kind !== "mod") continue
       offered++
       expect(item.letter).toBeUndefined()
-      expect(item.cost).toBe(MODIFIER_BY_ID.get(item.id)?.choiceCost)
+      expect(item.cost).toBe(MODIFIER_BY_ID.get(item.id)?.cost)
     }
     expect(offered).toBeGreaterThan(0)
   })
@@ -236,7 +236,7 @@ function selling(state: RunState, id: ModId): RunState {
   if (!modifier) throw new Error(`no modifier ${id}`)
   return {
     ...state,
-    shop: { items: [{ kind: "mod", id, cost: modifier.choiceCost }], rerolls: 0 },
+    shop: { items: [{ kind: "mod", id, cost: modifier.cost }], rerolls: 0 },
   }
 }
 

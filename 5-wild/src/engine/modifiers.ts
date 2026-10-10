@@ -62,26 +62,30 @@ export type Modifier = {
   pip: string
   rarity: Rarity
   /**
-   * What it costs on a letter somebody else picked: the price a pack quotes,
-   * and the one the shop used to charge back when it rolled the pairing too.
-   */
-  cost: number
-  /**
    * What the shop charges to sell it unattached, for the player to point at a
    * letter of their own choosing.
    *
-   * Dearer than `cost`, and it has to be: a rolled Chip is worth 0.96 chips a
+   * Priced for the choice, and it has to be: a rolled Chip is worth 0.96 chips a
    * gold averaged over the alphabet, and Chip on E is worth 2.65. Choice is most
    * of this card's value, so the shop that hands it over has to charge for it.
    * Not the full 2.8× though, since a rolled pairing you did not like was never
    * bought, so what the premium is really buying is the visits where the letter
    * slot used to be dead, and those were already worth nothing.
    *
-   * Set per card rather than derived, because the spread is not uniform: Echo
-   * only ever goes on six letters, so choosing among them is worth less than
-   * choosing among 26, and Anchor's whole value is which letter it lands on.
+   * Set per card rather than derived from a rate, because the spread is not
+   * uniform: Echo only ever goes on six letters, so choosing among them is worth
+   * less than choosing among 26, and Anchor's whole value is which letter it
+   * lands on.
+   *
+   * There were two prices here until v39, this one as `choiceCost` and a lower
+   * `cost` for a pairing the shop had rolled itself. The shop stopped rolling
+   * pairings and the lower one lived on only as the struck-through figure on a
+   * pack's card, charged to nobody, where it read as a price and got argued
+   * with as one: Gold's was the $6 its payout was once balanced against while
+   * the shelf asked $9. A pack quotes this now, which is what the card would
+   * have carried in the stock.
    */
-  choiceCost: number
+  cost: number
   /**
    * The letters this may be sold on, when it cannot go on just any of them.
    * Absent means the whole alphabet, which is the ordinary case.
@@ -137,8 +141,7 @@ export const MODIFIERS: readonly Modifier[] = [
     id: "chip",
     pip: "+20",
     rarity: "common",
-    cost: 4,
-    choiceCost: 6,
+    cost: 6,
     // Flat, and flat is the point: it is worth the same on Q as on E, so it is
     // the one modifier that makes a cheap probing letter worth typing.
     onTile: (ctx) => ctx.addChips(20),
@@ -147,8 +150,7 @@ export const MODIFIERS: readonly Modifier[] = [
     id: "mult",
     pip: "+8",
     rarity: "common",
-    cost: 5,
-    choiceCost: 8,
+    cost: 8,
     // +4 made this the worst card on the shelf at either end of a run, which is
     // not what the other common is for. Over 8,333 recorded guesses Chip on E
     // paid 202 points a guess for $6 and Mult on E paid 55 for $8, or 34 a gold
@@ -170,7 +172,6 @@ export const MODIFIERS: readonly Modifier[] = [
     pip: "$1",
     rarity: "uncommon",
     cost: 6,
-    choiceCost: 9,
     // Income priced against Scavenger, which pays $1 a yellow from a relic slot.
     // This takes no slot and fires on any color, but only on one letter, so
     // what it is really worth is decided by the letter the shop offered.
@@ -180,14 +181,28 @@ export const MODIFIERS: readonly Modifier[] = [
     // payout took that to $6.1: about what the card costs, so the money is now
     // in the letter rather than in the card. Wins over 5,000 seeds went 144 to
     // 134 (solver) and 227 to 221 (`bun run builds --policy builder`).
+    //
+    // That $6 was the figure a pack's card quoted, though, which nobody paid: a
+    // pick is free once the pack is bought, and the shop was charging $9. So the
+    // halving left the card a loss on the shelf. Over 5,000 solver runs at v38 a
+    // run that bought it there paid $11.87 for its copies and collected $7.15,
+    // and the bot, which takes any modifier it can afford, could afford this one
+    // on 15% of the shelves that dealt it. At $6 that is $8.90 paid for $7.86 and
+    // 37% of shelves; the builder reads $8.99 for $8.18. Still a dollar short, on
+    // a bot whose runs end a mean stage 4.3 and so stop collecting there: the
+    // letter and the run's length decide the rest, which is the bet the card is
+    // meant to be. $5 was the first price that paid outright, $7.70 for $8.20,
+    // and a card that returns its cost to a bot dying on stage four is free to
+    // anyone who lives longer. Wins did not move with any of it: 98, 97, 95, 99
+    // at $9, $7, $6, $5 (solver) and 178, 165, 161, 187 (builder), a spread that
+    // turns around at the cheapest price and so is the seeds talking.
     onTile: (ctx) => ctx.addGold(1),
   },
   {
     id: "wild",
     pip: "★",
     rarity: "uncommon",
-    cost: 6,
-    choiceCost: 9,
+    cost: 9,
     // Color is this game's suit, and a wild card is the one the suit does not
     // decide. It used to read that as "always counts as green", which capped it
     // at +3 mult and only on a tile that had missed: 12 points a guess against
@@ -239,8 +254,7 @@ export const MODIFIERS: readonly Modifier[] = [
     id: "lucky",
     pip: "?",
     rarity: "uncommon",
-    cost: 6,
-    choiceCost: 9,
+    cost: 9,
     // Expects +5 mult a tile against Mult's flat +4 for a gold less, so the
     // premium is entirely for the variance, which is the trade Balatro's Lucky
     // card offers too. It is the only modifier whose value you cannot read off
@@ -254,8 +268,7 @@ export const MODIFIERS: readonly Modifier[] = [
     id: "echo",
     pip: "↺",
     rarity: "uncommon",
-    cost: 5,
-    choiceCost: 7,
+    cost: 7,
     // Fires on every copy, so a doubled letter collects +120 across the word.
     // Pays a player for the shape the Twinned category and Anagrammer already
     // reward, which is the point: a modifier that only pays inside a build can
@@ -276,8 +289,7 @@ export const MODIFIERS: readonly Modifier[] = [
     id: "anchor",
     pip: "⚓",
     rarity: "rare",
-    cost: 8,
-    choiceCost: 12,
+    cost: 12,
     // Wild's opposite number, deliberately: Wild pays most on the guess that
     // went worst, this pays only on the letter you have already nailed. Both
     // sides of the color line are now purchasable.
@@ -313,8 +325,7 @@ export const MODIFIERS: readonly Modifier[] = [
     id: "steel",
     pip: "×2",
     rarity: "rare",
-    cost: 8,
-    choiceCost: 12,
+    cost: 12,
     // ×1.5 was the same card as Mult, sold a tier up and for half again the
     // price. Installed on the same board across 19,315 recorded guesses, steel
     // paid 165 points a guess on E against +4 mult's 164, 52 against 52 on S,
@@ -335,8 +346,7 @@ export const MODIFIERS: readonly Modifier[] = [
     id: "glass",
     pip: "×3",
     rarity: "rare",
-    cost: 9,
-    choiceCost: 13,
+    cost: 13,
     // The risky half of the rare pair, and it has to out-pay the safe half by
     // enough that the letter is worth gambling. Sweeping the factor over the
     // same 19,315 guesses read 165 / 346 / 543 / 757 / 1237 points on E for
