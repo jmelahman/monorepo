@@ -27,9 +27,13 @@ Experienced with: Git, Docker, Bazel, Buildkite, AWS, Ansible, Terraform, Github
 
 <hr/>
 
-+---------------------------------------------------------------------------------------+-----------------------+
-| **Software Engineer - Platform** *&mdash; Applied Intuition, Inc., Mountain View, CA* |  Nov 2020 - Jul 2025  |
-+---------------------------------------------------------------------------------------+-----------------------+
+<table>
+  <colgroup><col style="width: 78%"><col style="width: 21%"></colgroup>
+  <tr>
+    <td><strong>Software Engineer - Platform</strong> <em>&mdash; Applied Intuition, Inc., Mountain View, CA</em></td>
+    <td>Nov 2020 - Jul 2025</td>
+  </tr>
+</table>
 
 - Re-architected packaging and releasing of microservices as part of a migration from a monolithic
 application, reducing feature lead times by weeks and deployment times by hours.
@@ -38,9 +42,13 @@ eliminating p99 wait times in CI, and supporting 10× operational growth over 3 
 - Led internal DevTools efforts (static typing, linting, formatting, code coverage),
 reducing production failures by an estimated 30%.
 
-+---------------------------------------------------------------------------------------+-----------------------+
-| **Quality Assurance Engineer** *&mdash; Applied Intuition, Inc., Mountain View, CA*   |  Apr 2019 - Nov 2020  |
-+---------------------------------------------------------------------------------------+-----------------------+
+<table>
+  <colgroup><col style="width: 78%"><col style="width: 21%"></colgroup>
+  <tr>
+    <td><strong>Quality Assurance Engineer</strong> <em>&mdash; Applied Intuition, Inc., Mountain View, CA</em></td>
+    <td>Apr 2019 - Nov 2020</td>
+  </tr>
+</table>
 
 - Migrated from Selenium to Playwright, reducing end-to-end test runtimes by 60% and
 false positives by 20% while maintaining coverage.
@@ -49,9 +57,13 @@ reducing CI p50 time by 20 minutes and reducing total compute cost by 40%.
 - Owned CI/CD infrastructure including on-prem and cloud (Azure, AWS EC2) servers,
 test selection and orchestration, build health, and data pipelines.
 
-+---------------------------------------------------------------------------------------+-----------------------+
-| **Software Quality Operations** *&mdash; Waymo LLC, Mountain View, CA*                |  Jun 2017 - Apr 2019  |
-+---------------------------------------------------------------------------------------+-----------------------+
+<table>
+  <colgroup><col style="width: 78%"><col style="width: 21%"></colgroup>
+  <tr>
+    <td><strong>Software Quality Operations</strong> <em>&mdash; Waymo LLC, Mountain View, CA</em></td>
+    <td>Jun 2017 - Apr 2019</td>
+  </tr>
+</table>
 
 - Investigated simulator crashes and test failures as first-pass triage.
 - Created custom Google Sheets integrations with Apps Script and Dremel SQL,
@@ -61,9 +73,12 @@ saving a day of manual effort per week.
 
 <hr/>
 
-+---------------------------------------------------------------------------------------+-----------------------+
-| **Bachelor of Science in Applied Physics** *&mdash; Ohio University, Athens, OH*      |  Aug 2014 - Apr 2017  |
-| <br> **Minor in Mathematics**                                                         |                       |
-+---------------------------------------------------------------------------------------+-----------------------+
+<table>
+  <colgroup><col style="width: 78%"><col style="width: 21%"></colgroup>
+  <tr>
+    <td><strong>Bachelor of Science in Applied Physics</strong> <em>&mdash; Ohio University, Athens, OH</em> <br> <strong>Minor in Mathematics</strong></td>
+    <td>Aug 2014 - Apr 2017</td>
+  </tr>
+</table>
 
 </section>

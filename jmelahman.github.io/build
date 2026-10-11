@@ -14,22 +14,18 @@ SKIP_CSS="${SKIP_CSS:-}"
 pushd "$DIR" >/dev/null || exit
 
 # Compile HTML
+pages=()
 for md in **/*.md; do
 	if [ "$(basename "$md")" == "README.md" ]; then
 		continue
 	fi
-	pandoc \
-		"$md" \
-		-o "${md%.md}.html" \
-		--template=template.html \
-		--variable=header=true
+	pages+=("$md")
 done
+uv run scripts/render.py --variable=header=true "${pages[@]}"
 
 if [ -z "$SKIP_FEED" ]; then
-	python3 scripts/build-feed.py | pandoc \
+	python3 scripts/build-feed.py | uv run scripts/render.py \
 		-o feed/index.html \
-		--template=template.html \
-		--from markdown+raw_html \
 		--variable=header=true \
 		--variable=title-prefix=Feed \
 		--variable=nav_feed=true

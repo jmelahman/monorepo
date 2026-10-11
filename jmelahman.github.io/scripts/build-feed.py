@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Fetch the configured RSS/Atom feeds and emit the rendered feed body on stdout.
 
-The output is piped into pandoc by ./build. Pandoc only needs the body; the
-chrome (head, nav, footer) comes from template.html.
+The output is piped into scripts/render.py by ./build, which only needs the
+body; the chrome (head, nav, footer) comes from template.html.
 """
 
 from __future__ import annotations

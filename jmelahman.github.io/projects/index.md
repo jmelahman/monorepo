@@ -47,6 +47,7 @@ the archive.
 
 <div class="terminal">
 <div class="terminal-bar"><i></i><i></i><i></i><span>pkglint</span></div>
+
 <pre><code><span class="muted">$</span> pkglint ~/pkgbuilds/somepkg
 somepkg: <span class="grade">grade F</span>, 3 finding(s)
   <span class="muted">PKGBUILD:16:3:</span> <span class="sev-critical">critical</span> [PB304] a network download is piped straight into bash and executed
