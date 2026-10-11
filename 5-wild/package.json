@@ -26,7 +26,8 @@
     "bench:replay": "bun tools/bench/feed.ts --replay",
     "bench:opencode": "bun tools/bench/opencode.ts",
     "bench:record": "bun tools/bench/record.ts",
-    "bench:upload": "bun tools/bench/upload.ts"
+    "bench:upload": "bun tools/bench/upload.ts",
+    "bench:charts": "bun tools/bench/charts.ts"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.0",

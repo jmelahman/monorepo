@@ -2,7 +2,7 @@
  * The suite, played by OpenCode, one model after another.
  *
  *   bun tools/bench/opencode.ts --models opencode-go/kimi-k3,opencode-go/glm-5.3
- *       [--runs <n>] [--parallel <n>] [--attempts <n>] [--timeout <minutes>] [--suite <path>]
+ *       [--runs <n>] [--parallel <n>] [--attempts <n>] [--timeout <minutes>] [--suite <path>] [--tag <text>]
  *
  * The models are spelled as `opencode models` prints them. Each is filed under
  * the label `<model> / <provider>`, so `opencode-go/kimi-k3` is
@@ -83,11 +83,17 @@ const runs = Number(flag("--runs") ?? suite.seeds.length)
 const parallel = Math.max(1, Number(flag("--parallel") ?? 2))
 const attempts = Math.max(1, Number(flag("--attempts") ?? 6))
 const timeoutMs = Number(flag("--timeout") ?? 90) * 60_000
+// The host deals one run per label: one `in-progress.json`, and `nextSeed`
+// hands out the first seed not yet filed. So one model cannot play two of its
+// seeds at once under one label, and a tag is the way round that: each driver
+// gets a one-seed suite and its own tagged label, and the episodes are moved
+// into the untagged directory, their `label` corrected, once they are filed.
+const tag = flag("--tag")
 
 if (!models.length || models.some((model) => !model.includes("/"))) {
   console.error(
     "usage: bun tools/bench/opencode.ts --models <provider/model>[,...] " +
-      "[--runs n] [--parallel n] [--attempts n] [--timeout minutes] [--suite path]\n" +
+      "[--runs n] [--parallel n] [--attempts n] [--timeout minutes] [--suite path] [--tag text]\n" +
       "       models are spelled as `opencode models` lists them",
   )
   process.exit(2)
@@ -96,7 +102,7 @@ if (!models.length || models.some((model) => !model.includes("/"))) {
 /** `opencode-go/kimi-k3` is the label `kimi-k3 / opencode-go`. */
 const labelOf = (model: string): string => {
   const at = model.indexOf("/")
-  return `${model.slice(at + 1)} / ${model.slice(0, at)}`
+  return `${model.slice(at + 1)} / ${model.slice(0, at)}${tag ? ` ${tag}` : ""}`
 }
 
 /** The skill, less its front matter, which is addressed to a skill loader and not to a player. */
@@ -126,6 +132,52 @@ const messageFor = (label: string): string =>
   ].join("\n")
 
 /**
+ * A model on this machine, which OpenCode has never heard of and has to be
+ * told about: `ollama/<name>` is Ollama's OpenAI-compatible endpoint on its
+ * default port, and every other provider gets nothing from here.
+ *
+ * The context is the part that is not a formality. Ollama loads a model at
+ * 4,096 tokens unless told otherwise, the rules alone are most of that, and
+ * what it does with the overflow is drop the start of the conversation without
+ * saying so: a model that has silently lost the rules is not a weak player, it
+ * is a different experiment. The OpenAI endpoint has no field for `num_ctx`, so
+ * the window is baked into the model instead (`FROM gemma4:26b` and
+ * `PARAMETER num_ctx 65536`, created as `gemma4:26b-64k`), the name says so, and
+ * the same figure is declared here so that OpenCode compacts before Ollama
+ * truncates.
+ *
+ * And thinking is off, which is a choice about what is measured and not a
+ * default. Gemma 4 26B with it on guessed CRANE and STORY in ten seconds each
+ * and then thought about its third guess for fifteen minutes without making
+ * it; asked the same board directly, it spent 2,500 tokens and ended on "Wait,
+ * let me re-re-check WORLD", back at the checklist it had opened with. Nothing
+ * caps that, and a cap would only end the session with no move made and deal
+ * the same board to the next one. `reasoning_effort: "none"` is the spelling
+ * Ollama's OpenAI endpoint honours; `think: false`, its native one, is ignored
+ * there and the model thinks anyway.
+ */
+function local(model: string): object {
+  if (!model.startsWith("ollama/")) return {}
+  const id = model.slice("ollama/".length)
+  return {
+    provider: {
+      ollama: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Ollama",
+        options: { baseURL: "http://localhost:11434/v1" },
+        models: {
+          [id]: {
+            name: id,
+            limit: { context: 65536, output: 8192 },
+            options: { reasoningEffort: "none" },
+          },
+        },
+      },
+    },
+  }
+}
+
+/**
  * The directory a model plays from: outside the repo, holding nothing but the
  * config. Deny by default and allow by name, rather than listing what to deny,
  * so a tool a later OpenCode adds is refused without anyone here hearing about
@@ -145,7 +197,7 @@ const messageFor = (label: string): string =>
  * put a loop around `act` and play a round in one call. That is the harness,
  * it is the same for every model on it, and it is why the label names it.
  */
-function sandbox(label: string): string {
+function sandbox(label: string, model: string): string {
   const dir = join(tmpdir(), "5wild-bench", slug(label))
   mkdirSync(dir, { recursive: true })
   const host = ["bun", join(ROOT, "tools/bench/mcp.ts"), "--no-feed", "--label", label]
@@ -155,6 +207,7 @@ function sandbox(label: string): string {
     permission: { "*": "deny", execute: "allow", "5wild*": "allow", external_directory: "deny" },
     share: "disabled",
     autoupdate: false,
+    ...local(model),
   }
   writeFileSync(join(dir, "opencode.json"), `${JSON.stringify(config, null, 2)}\n`)
   return dir
@@ -238,7 +291,7 @@ function serve(label: string, dir: string, logPath: string): Promise<Server | nu
  * gives for `node:http`: nothing in `tools/bench` needs a particular runtime yet.
  */
 function session(model: string, label: string, dir: string, server: Server, logPath: string) {
-  return new Promise<void>((done) => {
+  return new Promise<{ limited: boolean }>((done) => {
     const out = createWriteStream(logPath)
     const child = spawn(
       "opencode",
@@ -256,8 +309,11 @@ function session(model: string, label: string, dir: string, server: Server, logP
     // (no credit, a free tier closed to `run`) ends the session in two seconds,
     // and without this the only sign is a label that used up its attempts.
     let said = false
+    let limited = false
     child.stdout.on("data", (chunk: Buffer) => {
-      const error = said ? null : /"type":"error".*?"message":"([^"]*)"/.exec(String(chunk))
+      const text = String(chunk)
+      if (text.includes('"type":"provider.quota"')) limited = true
+      const error = said ? null : /"type":"error".*?"message":"([^"]*)"/.exec(text)
       if (!error) return
       said = true
       log(`${label}: ${error[1]}`)
@@ -268,17 +324,19 @@ function session(model: string, label: string, dir: string, server: Server, logP
     const finish = (note?: string) => {
       clearTimeout(timer)
       if (note) log(`${label}: ${note}`)
-      out.end(() => done())
+      out.end(() => done({ limited }))
     }
     child.on("error", (error) => finish(error.message))
     child.on("close", () => finish())
   })
 }
 
+const LIMIT_WAIT_MS = 15 * 60_000
+
 /** One model, through as many of its remaining suite seeds as `--runs` allows. */
 async function play(model: string): Promise<void> {
   const label = labelOf(model)
-  const dir = sandbox(label)
+  const dir = sandbox(label, model)
   const logs = join(ROOT, "bench", "logs", slug(label))
   mkdirSync(logs, { recursive: true })
   const server = await serve(label, dir, join(logs, "server.log"))
@@ -297,8 +355,25 @@ async function play(model: string): Promise<void> {
         const resumed = existsSync(liveFile(label))
         log(`${label}: seed ${seed}, session ${attempt}${resumed ? " (resuming)" : ""}`)
         const stamp = new Date().toISOString().replace(/[:.]/g, "-")
-        await session(model, label, dir, server, join(logs, `seed-${seed}-${stamp}.jsonl`))
+        const { limited } = await session(
+          model,
+          label,
+          dir,
+          server,
+          join(logs, `seed-${seed}-${stamp}.jsonl`),
+        )
         done = played(label, seed, suite.ascension)
+        // The plan's window, not the model's fault and not a session: counted
+        // as one, seven models spent all six attempts in ninety seconds of
+        // 429s and every label stopped with its run half played. The run is
+        // saved, so the only thing to do is wait. The window is five hours and
+        // the reply does not say how much of it is left, so this asks again
+        // every quarter of an hour, which costs a refusal and nothing else.
+        if (limited && !done) {
+          log(`${label}: the plan's usage limit; trying again in ${LIMIT_WAIT_MS / 60_000} minutes`)
+          await new Promise((wake) => setTimeout(wake, LIMIT_WAIT_MS))
+          attempt--
+        }
       }
       if (!done) {
         log(`${label}: seed ${seed} unfinished after ${attempts} sessions; stopping this label`)

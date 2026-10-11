@@ -1,7 +1,7 @@
 /**
  * A finished episode, as a video of the real game playing it.
  *
- *   bun tools/bench/record.ts <episode.json>... [--out bench/videos] [--size 1280x720]
+ *   bun tools/bench/record.ts <episode.json>... [--out bench/videos] [--size 1920x1080]
  *       [--speed 1|2|3] [--skin smoke|tabletop|classic-dark|classic-light] [--webm]
  *       [--silent]
  *
@@ -72,7 +72,7 @@ const files = args.filter(
 )
 
 const out = resolve(flag("--out") ?? join(ROOT, "bench", "videos"))
-const [width, height] = (flag("--size") ?? "1280x720").split("x").map(Number)
+const [width, height] = (flag("--size") ?? "1920x1080").split("x").map(Number)
 const speed = flag("--speed") ?? "2"
 const skin = flag("--skin") ?? "smoke"
 const keepWebm = args.includes("--webm")

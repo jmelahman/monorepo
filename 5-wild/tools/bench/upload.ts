@@ -3,6 +3,7 @@
  *
  *   bun tools/bench/upload.ts --login
  *   bun tools/bench/upload.ts <video.mp4>... [--privacy unlisted|private|public] [--dry]
+ *   bun tools/bench/upload.ts --retitle <video.mp4>... [--dry]
  *
  * The videos are not source and do not belong in a repo, this one or the
  * blog's: a run is tens of megabytes and a suite is twenty of them per model.
@@ -23,9 +24,21 @@
  * generated clients to make them, and a dependency this tool would be the only
  * user of.
  *
- * The scope asked for is `youtube.upload` and nothing wider. That token can add
- * a video to the channel and cannot list, edit or delete what is already on it,
- * which is the right size for a file a script reads unattended.
+ * The scope asked for is `youtube.force-ssl`, which is wider than this file
+ * wants and the narrowest that does the job. It began as `youtube.upload`, a
+ * token that can add a video and cannot touch what is already on the channel,
+ * which was the right size for a file a script reads unattended. Then the first
+ * fifteen films went up by hand with titles typed by hand, and `--retitle`
+ * needs `videos.update`, which Google grants under no scope smaller than the
+ * one that also allows deleting. So the token in `~/.config` can now do harm
+ * this file never asks of it; treat it accordingly. A token from before the
+ * change is refused on `--retitle` with a 403 and wants one more `--login`.
+ *
+ * `--retitle` rewrites the title and description of films already up, from the
+ * same `describe` an upload uses, so the words on a film and the episode behind
+ * it cannot drift. It finds a film by the ledger and sends nothing else: not
+ * the bytes, not the privacy. A film uploaded by hand has no ledger line until
+ * one is written for it, file name to id, which is all the ledger is.
  *
  * Unlisted unless told otherwise: an upload is the one thing in `tools/bench`
  * that leaves the machine, so the default is the one that can be embedded and
@@ -49,6 +62,7 @@ import { homedir } from "node:os"
 import { basename, dirname, join } from "node:path"
 import type { Episode } from "../../src/bench/session"
 import { RESULTS, ROOT } from "./host"
+import { NAMES } from "./names"
 
 const log = (...parts: unknown[]) => console.error("[upload]", ...parts)
 
@@ -61,17 +75,19 @@ const files = args.filter((arg, at) => !arg.startsWith("--") && args[at - 1] !==
 const privacy = flag("--privacy") ?? "unlisted"
 const dry = args.includes("--dry")
 const login = args.includes("--login")
+const retitle = args.includes("--retitle")
 
 const HOME = join(homedir(), ".config", "5wild-bench")
 const CLIENT = join(HOME, "youtube-client.json")
 const TOKEN = join(HOME, "youtube-token.json")
 const LEDGER = join(ROOT, "bench", "videos", "uploaded.json")
-const SCOPE = "https://www.googleapis.com/auth/youtube.upload"
+const SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 
 if ((!login && !files.length) || !["unlisted", "private", "public"].includes(privacy)) {
   console.error(
     "usage: bun tools/bench/upload.ts --login\n" +
-      "       bun tools/bench/upload.ts <video.mp4>... [--privacy unlisted|private|public] [--dry]",
+      "       bun tools/bench/upload.ts <video.mp4>... [--privacy unlisted|private|public] [--dry]\n" +
+      "       bun tools/bench/upload.ts --retitle <video.mp4>... [--dry]",
   )
   process.exit(2)
 }
@@ -200,24 +216,57 @@ function describe(video: string): { title: string; description: string } | null 
   if (!existsSync(path)) return null
   const episode = JSON.parse(readFileSync(path, "utf8")) as Episode
   const { result } = episode
-  const model = episode.label.split(" / ")[0]
-  const outcome = result.won ? "won the run" : `died in stage ${result.stage}`
+  const [id = "", harness = ""] = episode.label.split(" / ")
+  const model = NAMES[id] ?? id
+  // OpenRouter is a provider and not a harness: its models are driven by
+  // `tools/bench/opencode.ts` like the Go plan's, so only the Claude Code
+  // labels are anything else.
+  const where = harness.includes("claude-code") ? "Claude Code" : "OpenCode"
+  const outcome = result.won ? "Wins the run" : `Dies in stage ${result.stage}`
+  // The result is in the title because the list of films is the table: a
+  // viewer choosing between fifteen thumbnails of the same board has nothing
+  // else to choose by.
+  const scored = result.won ? "win" : `${result.roundsCleared}/24 rounds`
   return {
     // YouTube's limit is 100 characters and no label here comes near it.
-    title: `${model} plays 5 Wild: seed ${episode.seed}, ascension ${episode.ascension}`,
+    title: `${model} plays 5 Wild: ${scored} (seed ${episode.seed}, ascension ${episode.ascension})`,
     description: [
-      `${episode.label} playing 5 Wild, a roguelike word game, as a benchmark.`,
+      `${model}, running in ${where}, plays 5 Wild as a benchmark.`,
       "",
-      `Seed ${episode.seed}, ascension ${episode.ascension}: ${outcome}, ` +
-        `${result.roundsCleared} rounds cleared, score ${result.score.toLocaleString("en-US")}, ` +
+      `Seed ${episode.seed}, ascension ${episode.ascension}. ${outcome}: ` +
+        `${result.roundsCleared} of 24 rounds cleared, score ${result.score.toLocaleString("en-US")}, ` +
         `${result.guesses} guesses.`,
       "",
-      "The model plays through four text tools and sees only what the game tells it. " +
-        "This is the real game replaying its moves at a faster animation speed, not a live capture.",
+      "5 Wild is a roguelike word game: guess the five-letter word, but every guess is also a " +
+        "hand you score. The model plays through four text tools (rules, new run, observe, act) " +
+        "and sees only what the game tells it. No word list, no solver, no memory of earlier runs.",
       "",
-      `Build ${episode.commit}, content ${episode.content}.`,
+      "This is the real game replaying the model's recorded moves at x2 speed, not a live capture.",
+      "",
+      "Play it: https://5-wild.com",
+      "Source and benchmark: https://github.com/jmelahman/5-wild",
     ].join("\n"),
   }
+}
+
+/**
+ * The title and description of a film already up, and nothing else about it.
+ * `videos.update` replaces the whole `snippet` it is given, and a snippet with
+ * no `categoryId` is a 400 rather than a snippet that keeps its category, so
+ * the category is sent again though it has not changed.
+ */
+async function rename(video: string, id: string, bearer: string): Promise<void> {
+  const about = describe(video)
+  if (!about) throw new Error("no episode behind this name")
+  const res = await fetch("https://www.googleapis.com/youtube/v3/videos?part=snippet", {
+    method: "PUT",
+    headers: {
+      authorization: `Bearer ${bearer}`,
+      "content-type": "application/json; charset=UTF-8",
+    },
+    body: JSON.stringify({ id, snippet: { ...about, categoryId: "20" } }),
+  })
+  if (!res.ok) throw new Error(`update: ${res.status} ${await res.text()}`)
 }
 
 /**
@@ -278,6 +327,30 @@ let failed = 0
 
 for (const video of files) {
   const name = basename(video)
+  if (retitle) {
+    const id = ledger[name]
+    const about = describe(video)
+    if (!id || !about) {
+      log(`${name}: ${id ? "no episode in bench/results for it" : "not in the ledger"}; skipped`)
+      failed++
+      continue
+    }
+    if (dry) {
+      console.error(
+        `\n${name} (https://youtu.be/${id})\n  ${about.title}\n\n${about.description}\n`,
+      )
+      continue
+    }
+    try {
+      bearer ||= await access()
+      await rename(video, id, bearer)
+      log(`${name}: retitled, https://youtu.be/${id}`)
+    } catch (error) {
+      log(`${name}: ${error instanceof Error ? error.message : error}`)
+      failed++
+    }
+    continue
+  }
   if (ledger[name]) {
     log(`${name}: already up, https://youtu.be/${ledger[name]}`)
     continue
