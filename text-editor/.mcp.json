@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "bunx",
+      "args": [
+        "@playwright/mcp",
+        "--headless",
+        "--isolated",
+        "--browser",
+        "chromium"
+      ]
+    }
+  }
+}

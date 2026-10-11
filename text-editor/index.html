@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Markdown Editor</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="toolbar">
+    <div class="group">
+      <button type="button" id="new" title="New document">New</button>
+      <button type="button" id="open" title="Open file (Ctrl+O)">Open</button>
+      <button type="button" id="save" title="Save as Markdown (Ctrl+S)">Save</button>
+      <button type="button" id="export" title="Export as an HTML page">Export</button>
+      <button type="button" id="copy" title="Copy as rich text">Copy</button>
+      <input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
+    </div>
+
+    <div class="group">
+      <button type="button" id="undo" class="icon" title="Undo (Ctrl+Z)" aria-label="Undo">
+        <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3"/></svg>
+      </button>
+      <button type="button" id="redo" class="icon" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
+        <svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3"/></svg>
+      </button>
+    </div>
+
+    <div class="group">
+      <label title="Block style">
+        <span class="sr-only">Block style</span>
+        <select id="heading">
+          <option value="0">Paragraph</option>
+          <option value="1">Heading 1</option>
+          <option value="2">Heading 2</option>
+          <option value="3">Heading 3</option>
+          <option value="4">Heading 4</option>
+          <option value="5">Heading 5</option>
+          <option value="6">Heading 6</option>
+        </select>
+      </label>
+      <button type="button" class="icon" data-format="bold" title="Bold (Ctrl+B)" aria-label="Bold">
+        <svg viewBox="0 0 24 24"><path d="M7 5h6a3.5 3.5 0 010 7H7zM7 12h7a3.5 3.5 0 010 7H7z"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="italic" title="Italic (Ctrl+I)" aria-label="Italic">
+        <svg viewBox="0 0 24 24"><path d="M10 5h7M7 19h7M14 5l-4 14"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="strike" title="Strikethrough" aria-label="Strikethrough">
+        <svg viewBox="0 0 24 24"><path d="M4 12h16M16.5 8c0-1.8-1.8-3-4.5-3S7.5 6.2 7.5 8c0 1.2.8 2.2 2.2 2.8M7.5 16c0 1.8 1.8 3 4.5 3s4.5-1.2 4.5-3c0-.7-.3-1.4-.8-1.9"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="code" title="Code: a block when the selection spans lines" aria-label="Code">
+        <svg viewBox="0 0 24 24"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="link" title="Link (Ctrl+K)" aria-label="Link">
+        <svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3A4 4 0 0013 5.3l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="quote" title="Quote" aria-label="Quote">
+        <svg viewBox="0 0 24 24"><path d="M5 6v12M10 8h9M10 12h9M10 16h6"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="ul" title="Bulleted list" aria-label="Bulleted list">
+        <svg viewBox="0 0 24 24"><path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="ol" title="Numbered list" aria-label="Numbered list">
+        <svg viewBox="0 0 24 24"><path d="M10 7h10M10 12h10M10 17h10M4 5.5L5.5 4.5v4M4 14.5h2.5L4 18h2.5"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="task" title="Task list" aria-label="Task list">
+        <svg viewBox="0 0 24 24"><path d="M4 5h6v6H4zM5.5 8l1.2 1.2L8.6 7M13 8h7M4 14h6v6H4zM13 17h7"/></svg>
+      </button>
+    </div>
+
+    <div class="group end" id="views" role="radiogroup" aria-label="View">
+      <button type="button" role="radio" data-view="edit" title="Source only">Edit</button>
+      <button type="button" role="radio" data-view="split" title="Source and preview side by side">Split</button>
+      <button type="button" role="radio" data-view="preview" title="Preview only">Preview</button>
+    </div>
+  </header>
+
+  <main class="main" id="workspace">
+    <textarea id="editor" aria-label="Markdown source" spellcheck="true" autocapitalize="sentences" placeholder="Write some Markdown…"></textarea>
+    <section id="preview" aria-label="Preview">
+      <article id="doc" class="prose"></article>
+    </section>
+  </main>
+
+  <footer class="status">
+    <span id="name"></span>
+    <span id="pos"></span>
+    <span id="count"></span>
+    <span id="message"></span>
+  </footer>
+
+  <dialog id="discard-dialog">
+    <form method="dialog">
+      <h2>Unsaved changes</h2>
+      <p>Discard the changes to <span id="discard-name"></span>?</p>
+      <div class="actions">
+        <button value="cancel">Cancel</button>
+        <button value="discard" class="primary">Discard</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

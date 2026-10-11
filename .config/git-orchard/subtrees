@@ -179,3 +179,6 @@
 [subtree "image-editor"]
 	remote = git@github.com:jmelahman/image-editor
 	branch = master
+[subtree "text-editor"]
+	remote = git@github.com:jmelahman/text-editor
+	branch = master
