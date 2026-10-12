@@ -3,8 +3,14 @@
 const DRAFT_KEY = 'text-editor:draft';
 const MODE_KEY = 'text-editor:mode';
 const THEME_KEY = 'text-editor:theme'; // also read by theme.js
+const FOLDER_KEY = 'text-editor:folder';
+const FILES_URL = '/files/'; // a folder of the server's, where it offers one
+const DEVICE = Symbol('device'); // chosen over the server's files
 const SETTLE_DELAY = 300;
+const UNTITLED = 'untitled.md';
 const RECENT_MAX = 8;
+const REVISION_MAX = 50;
+const REVISION_DELAY = 3 * 60 * 1000;
 const FILE_TYPES = [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } }];
 
 const WELCOME = [
@@ -40,9 +46,11 @@ const fileInput = $('file');
 const discardDialog = $('discard-dialog');
 const linkDialog = $('link-dialog');
 const richDialog = $('rich-dialog');
+const nameDialog = $('name-dialog');
+const filesDialog = $('files-dialog');
 const bubble = $('bubble');
-const recentButton = $('recent-button');
 const recentMenu = $('recent-menu');
+const revisionsMenu = $('revisions-menu');
 const menus = [...document.querySelectorAll('.menu')];
 const root = document.documentElement;
 const formatButtons = [...document.querySelectorAll('[data-format]')];
@@ -52,11 +60,20 @@ const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 
 let editor = null; // toastui.Editor; rebuilt for every document
 let mode = 'wysiwyg'; // the mode asked for, which a document can overrule
-let fileName = 'untitled.md';
+let fileName = UNTITLED;
 let fileHandle = null; // File System Access handle, where the browser has one
+let filePath = null; // where the file is among the server's, when it is one of them
+let served = false; // whether the server has files to open and save in place
 let savedText = ''; // Markdown as last opened or saved; null when unknown
 let settleTimer = 0;
-let recent = []; // handles of the files last opened or saved, newest first
+// The files last opened or saved, newest first: each a name with the handle
+// to read it again, or with its text where the browser has no handles.
+let recent = [];
+let revisions = [];
+let keptText = ''; // Markdown as it was before any change, or as last kept as a revision
+let revisionTimer = 0;
+let revisionQueue = Promise.resolve(); // revisions are stored one at a time
+let heldSelection = null; // where the caret was when the editor lost the focus
 let selecting = false; // a pointer is down in the document
 let bubbleFrame = 0;
 let htmlSources = new Map(); // an HTML block as rich mode holds it -> as it was written
@@ -212,7 +229,12 @@ function svgView(node) {
 }
 
 const renderers = (tags, renderer) => Object.fromEntries([...tags].map((tag) => [tag, renderer(tag)]));
-const HTML_RENDERERS = { htmlBlock: renderers(HTML_BLOCKS, htmlBlock), htmlInline: renderers(HTML_INLINES, htmlInline) };
+const HTML_RENDERERS = {
+  htmlBlock: renderers(HTML_BLOCKS, htmlBlock),
+  htmlInline: renderers(HTML_INLINES, htmlInline),
+  // The end of a line within a paragraph is a space, where the editor makes it a break.
+  softbreak: () => ({ type: 'html', content: '\n' }),
+};
 
 // The editor rebuilds a block's opening tag and trims around its contents.
 // A block cannot be edited in rich mode, so write back what was read.
@@ -244,9 +266,28 @@ function flattenPasted(html) {
 
 // Always in Markdown mode, where any document can be shown and the parsed
 // tree is there to check before going on to rich mode.
+// The editor takes every line for a paragraph of its own in rich mode, and a
+// blank line for an empty one. Its conversions are replaced here with what
+// Markdown means: lines run on into one paragraph, and a blank line ends it.
+// A break forced within a paragraph has no place in rich mode, and starts a
+// new paragraph there rather than being dropped.
+function plainParagraphs({ toWwConvertors, toMdConvertors }) {
+  toWwConvertors.paragraph = (state, node, { entering }, attrs) => {
+    if (entering) state.openNode(state.schema.nodes.paragraph, attrs);
+    else state.closeNode();
+  };
+  toWwConvertors.linebreak = toWwConvertors.softbreak;
+  toWwConvertors.softbreak = (state) => state.addText(' ');
+  toMdConvertors.nodeTypeConvertors.paragraph = (state, { node }) => {
+    state.convertInline(node);
+    if (!state.stopNewline && node.childCount) state.closeBlock(node);
+  };
+}
+
 function buildEditor(text) {
   editor?.destroy();
   editor = null; // events fire while the next one is still being built
+  heldSelection = null;
   editor = new toastui.Editor({
     el: $('editor'),
     height: '100%',
@@ -265,8 +306,9 @@ function buildEditor(text) {
     frontMatter: true,
     events: { change: onChange, caretChange: updateHeading },
   });
+  plainParagraphs(editor.convertor);
   editor.eventEmitter.listen('changeToolbarState', ({ toolbarState }) => {
-    for (const b of bubble.querySelectorAll('[data-format]')) {
+    for (const b of formatButtons) {
       const state = toolbarState[TOOLBAR_STATES[b.dataset.format] ?? b.dataset.format];
       b.setAttribute('aria-pressed', String(!!state?.active));
     }
@@ -373,7 +415,16 @@ function updateHeading() {
   headingInput.value = level;
 }
 
+// Firefox moves the caret to the start of an editor that is handed the focus
+// back, so the selection is noted on the way out and put back here.
+function focusEditor() {
+  editor.focus();
+  if (heldSelection) editor.setSelection(...heldSelection);
+  heldSelection = null;
+}
+
 function exec(command, payload) {
+  focusEditor();
   editor.exec(command, payload);
   editor.focus();
 }
@@ -420,7 +471,7 @@ linkDialog.addEventListener('close', () => {
     const linkUrl = $('link-url').value.trim();
     exec('addLink', { linkUrl, linkText: $('link-text').value || linkUrl });
   } else {
-    editor.focus();
+    focusEditor();
   }
 });
 
@@ -510,7 +561,7 @@ function flashMessage(msg) {
 
 function updateStatus(text = editor.getMarkdown()) {
   const modified = text !== savedText;
-  $('name').textContent = `${fileName}${modified ? ' •' : ''}`;
+  $('name').textContent = `${filePath ?? fileName}${modified ? ' •' : ''}`;
   document.title = `${modified ? '• ' : ''}${fileName} · Markdown Editor`;
   $('count').textContent = `${text.match(/\S+/g)?.length ?? 0} words · ${text.length} chars`;
 }
@@ -519,7 +570,7 @@ function updateStatus(text = editor.getMarkdown()) {
 
 function saveDraft(text = editor.getMarkdown()) {
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ name: fileName, text, saved: text === savedText }));
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ name: fileName, path: filePath, text, saved: text === savedText }));
   } catch {
     // Storage can be full or disabled; the draft is only a convenience.
   }
@@ -541,6 +592,7 @@ function settle() {
   const text = editor.getMarkdown();
   updateStatus(text);
   saveDraft(text);
+  trackRevision(text);
 }
 
 function onChange() {
@@ -549,12 +601,15 @@ function onChange() {
 
 // Replace the whole document. The editor is rebuilt so that its undo history
 // can never bring one file's text back under another file's name.
-function setDocument(text, name, handle = null) {
+function setDocument(text, name, handle = null, path = null) {
+  keepRevision();
   createEditor(text);
   fileName = name;
   fileHandle = handle;
+  filePath = path;
   // As the editor writes it back, which is not always how it was typed.
   savedText = editor.getMarkdown();
+  keptText = savedText;
   settle();
   setMessage(modeNote());
 }
@@ -576,8 +631,9 @@ const isText = (file) => !file.type || file.type.startsWith('text/') || /\.(?:md
 async function loadFile(file, handle = null) {
   if (!isText(file)) return setMessage(`${file.name} is not a text file.`);
   try {
-    setDocument(await file.text(), file.name, handle);
-    if (handle) remember(handle);
+    const text = await file.text();
+    setDocument(text, file.name, handle);
+    remember(file.name, handle, text);
   } catch {
     setMessage(`Could not open ${file.name || 'file'}.`);
   }
@@ -585,6 +641,10 @@ async function loadFile(file, handle = null) {
 
 async function openFile() {
   if (!(await confirmDiscard())) return;
+  if (served) {
+    const path = await browse(false);
+    if (path !== DEVICE) return path ? openServed(path) : focusEditor();
+  }
   if (!window.showOpenFilePicker) return fileInput.click();
   try {
     const [handle] = await window.showOpenFilePicker({ types: FILE_TYPES });
@@ -594,21 +654,24 @@ async function openFile() {
   }
 }
 
-async function openRecent(handle) {
+async function openRecent(entry) {
+  const { name, handle } = entry;
   if (!(await confirmDiscard())) return;
+  if (entry.path) return openServed(entry.path);
+  if (!handle) return setDocument(entry.text, name);
   try {
     // Access to a file ends with the visit, and is asked for again here.
-    if (await handle.requestPermission({ mode: 'read' }) !== 'granted') return setMessage(`Not allowed to open ${handle.name}.`);
+    if (await handle.requestPermission({ mode: 'read' }) !== 'granted') return setMessage(`Not allowed to open ${name}.`);
     await loadFile(await handle.getFile(), handle);
   } catch (err) {
-    if (err.name !== 'NotFoundError') return setMessage(`Could not open ${handle.name}.`);
-    setMessage(`${handle.name} is no longer there.`);
-    storeRecent(recent.filter((h) => h !== handle));
+    if (err.name !== 'NotFoundError') return setMessage(`Could not open ${name}.`);
+    setMessage(`${name} is no longer there.`);
+    storeRecent(recent.filter((r) => r !== entry));
   }
 }
 
 async function newFile() {
-  if (await confirmDiscard()) setDocument('', 'untitled.md');
+  if (await confirmDiscard()) setDocument('', UNTITLED);
   editor.focus();
 }
 
@@ -621,36 +684,210 @@ function download(text, name, type) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Writes back to the opened file where the browser allows it, and falls back
-// to a download elsewhere. `saveAs` always asks for a new location.
+// Stands in for the browser's save dialog where it has none to offer.
+// Resolves to the name to save under, or null.
+function askName() {
+  const input = $('save-name');
+  input.value = fileName;
+  nameDialog.returnValue = '';
+  nameDialog.showModal();
+  input.setSelectionRange(0, fileName.replace(/\.\w+$/, '').length);
+  return new Promise((resolve) => {
+    nameDialog.addEventListener('close', () => {
+      const name = input.value.trim();
+      resolve(nameDialog.returnValue === 'save' && name ? name : null);
+    }, { once: true });
+  });
+}
+
+// Not a submit button, so that Enter in the field saves.
+$('name-cancel').addEventListener('click', () => nameDialog.close('cancel'));
+
+// Writes back to the opened file where the server or the browser allows it,
+// and falls back to a download elsewhere. `saveAs` always asks where to, as
+// does a document that has not been named yet.
 async function save(saveAs = false) {
   const text = editor.getMarkdown();
+  const contents = text.endsWith('\n') ? text : `${text}\n`;
+  let path = saveAs ? null : filePath;
   try {
-    if ((saveAs || !fileHandle) && window.showSaveFilePicker) {
-      fileHandle = await window.showSaveFilePicker({ suggestedName: fileName, types: FILE_TYPES });
+    if (served && (saveAs || (!filePath && !fileHandle))) {
+      path = await browse(true);
+      if (!path) return focusEditor();
+      if (path === DEVICE) [path, saveAs] = [null, true];
     }
-    const contents = text.endsWith('\n') ? text : `${text}\n`;
-    if (fileHandle) {
-      const writable = await fileHandle.createWritable();
-      await writable.write(contents);
-      await writable.close();
-      fileName = fileHandle.name;
-      remember(fileHandle);
+    if (path) {
+      await writeServed(path, contents);
+      fileHandle = null;
+      fileName = baseName(path);
     } else {
-      download(contents, fileName, 'text/markdown');
+      if ((saveAs || !fileHandle) && window.showSaveFilePicker) {
+        fileHandle = await window.showSaveFilePicker({ suggestedName: fileName, types: FILE_TYPES });
+      } else if (saveAs || (!fileHandle && fileName === UNTITLED)) {
+        const name = await askName();
+        if (!name) return focusEditor();
+        fileName = /\.\w+$/.test(name) ? name : `${name}.md`;
+      }
+      if (fileHandle) {
+        const writable = await fileHandle.createWritable();
+        await writable.write(contents);
+        await writable.close();
+        fileName = fileHandle.name;
+      } else {
+        download(contents, fileName, 'text/markdown');
+      }
     }
+    filePath = path;
+    remember(fileName, fileHandle, contents, filePath);
     savedText = text;
     settle();
-    flashMessage(`Saved ${fileName}.`);
+    keepRevision(text);
+    flashMessage(`Saved ${filePath ?? fileName}.`);
   } catch (err) {
-    if (err.name !== 'AbortError') setMessage(`Could not save ${fileName}.`);
+    if (err.name !== 'AbortError') setMessage(`Could not save ${path ?? fileName}.`);
+  }
+}
+
+// ---------------------------------------------------------------- server
+
+// The server can offer a folder of its own under FILES_URL: a listing in JSON
+// for each folder in it, and Markdown files that can be read and written back.
+// Files are then opened and saved there, which works in every browser.
+
+const isMarkdown = (name) => /\.(?:md|markdown|txt)$/i.test(name);
+const baseName = (path) => path.slice(path.lastIndexOf('/') + 1);
+const fileUrl = (path) => FILES_URL + path.split('/').map(encodeURIComponent).join('/');
+
+// The folders and Markdown files in a folder, which is '' or ends in a slash.
+async function listFolder(folder) {
+  const response = await fetch(fileUrl(folder), { cache: 'no-store' });
+  if (!response.ok) throw new Error(response.statusText);
+  return (await response.json())
+    .filter(({ name, type }) => !name.startsWith('.') && (type === 'directory' || isMarkdown(name)))
+    .sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'directory' ? -1 : 1));
+}
+
+async function readServed(path) {
+  const response = await fetch(fileUrl(path), { cache: 'no-store' });
+  if (!response.ok) throw new Error(response.statusText);
+  return response.text();
+}
+
+async function writeServed(path, text) {
+  const response = await fetch(fileUrl(path), { method: 'PUT', body: text });
+  if (!response.ok) throw new Error(response.statusText);
+}
+
+async function openServed(path) {
+  try {
+    const text = await readServed(path);
+    setDocument(text, baseName(path), null, path);
+    remember(fileName, null, text, path);
+  } catch {
+    setMessage(`Could not open ${path}.`);
+  }
+  editor.focus();
+}
+
+// Shows a folder of the server's in the dialog. One that cannot be listed is
+// left alone, or gives way to the top one where it was only remembered.
+async function showFolder(folder, saving, remembered = false) {
+  let entries;
+  try {
+    entries = await listFolder(folder);
+  } catch {
+    if (remembered && folder) showFolder('', saving);
+    return;
+  }
+  filesDialog.dataset.folder = folder;
+  $('files-path').textContent = `/${folder}`;
+  const up = folder && { name: '..', type: 'directory', to: folder.replace(/[^/]+\/$/, '') };
+  const items = [...(up ? [up] : []), ...entries].map((entry) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    const isFolder = entry.type === 'directory';
+    item.textContent = isFolder ? `${entry.name}/` : entry.name;
+    item.addEventListener('click', () => {
+      if (isFolder) showFolder(entry.to ?? `${folder}${entry.name}/`, saving);
+      else if (saving) $('files-name').value = entry.name;
+      else filesDialog.close(`${folder}${entry.name}`);
+    });
+    return item;
+  });
+  $('files-list').replaceChildren(...items);
+  if (!saving) items[0]?.focus();
+}
+
+// Resolves to the path chosen among the server's files, to DEVICE when the
+// browser's own way of opening or saving was asked for instead, or to null.
+function browse(saving) {
+  const input = $('files-name');
+  let folder = filePath?.slice(0, filePath.lastIndexOf('/') + 1);
+  try {
+    folder ??= localStorage.getItem(FOLDER_KEY) ?? '';
+  } catch {
+    folder ??= '';
+  }
+  $('files-title').textContent = saving ? 'Save as' : 'Open';
+  $('files-name-label').hidden = !saving;
+  $('files-save').hidden = !saving;
+  input.required = saving;
+  input.value = fileName;
+  $('files-list').replaceChildren();
+  filesDialog.returnValue = '';
+  filesDialog.showModal();
+  if (saving) input.setSelectionRange(0, fileName.replace(/\.\w+$/, '').length);
+  showFolder(folder, saving, true);
+  return new Promise((resolve) => {
+    filesDialog.addEventListener('close', () => {
+      const { returnValue } = filesDialog;
+      const name = input.value.trim().replaceAll('/', '');
+      folder = filesDialog.dataset.folder ?? '';
+      if (returnValue === 'device') return resolve(DEVICE);
+      if (!returnValue || (saving && !name)) return resolve(null);
+      try {
+        localStorage.setItem(FOLDER_KEY, folder);
+      } catch {
+        // Storage is disabled; the folder just won't be remembered.
+      }
+      // The server only takes Markdown.
+      resolve(saving ? `${folder}${isMarkdown(name) ? name : `${name}.md`}` : returnValue);
+    }, { once: true });
+  });
+}
+
+$('files-cancel').addEventListener('click', () => filesDialog.close(''));
+$('files-device').addEventListener('click', () => filesDialog.close('device'));
+
+// A file of the server's is shown as it is there now, whatever the draft
+// held. Changes that had not been saved are kept as a revision instead.
+async function initServed(draft) {
+  try {
+    await listFolder('');
+    served = true;
+  } catch {
+    return; // the server has no files to offer
+  }
+  if (typeof draft?.path !== 'string') return;
+  try {
+    const text = await readServed(draft.path);
+    if (!draft.saved) addRevision(draft.text);
+    setDocument(text, baseName(draft.path), null, draft.path);
+    if (!draft.saved && draft.text.trim() !== text.trim()) {
+      setMessage('Reloaded from disk. The changes that were not saved are under Revisions in the File menu.');
+    }
+  } catch {
+    // Gone, perhaps. The draft stays, to be saved back there.
+    filePath = draft.path;
+    updateStatus();
   }
 }
 
 // ---------------------------------------------------------------- recent
 
-// IndexedDB, as it is the only storage able to hold a file handle.
-function recentStore(mode) {
+// IndexedDB, as it is the only storage able to hold a file handle, and one
+// with the room for revisions.
+function stateStore(mode) {
   return new Promise((resolve, reject) => {
     const open = indexedDB.open('text-editor', 1);
     open.onupgradeneeded = () => open.result.createObjectStore('state');
@@ -664,50 +901,129 @@ const settled = (request) => new Promise((resolve, reject) => {
   request.onerror = () => reject(request.error);
 });
 
-function showRecent() {
-  const clear = document.createElement('button');
-  clear.textContent = 'Clear list';
-  clear.addEventListener('click', () => storeRecent([]));
-  const items = recent.map((handle) => {
+// Fills a menu within the File menu, which is left out while it would be empty.
+function listMenu(menu, entries, label, open, clear) {
+  const last = document.createElement('button');
+  last.textContent = 'Clear list';
+  last.addEventListener('click', clear);
+  const items = entries.map((entry) => {
     const item = document.createElement('button');
-    item.textContent = handle.name;
-    item.addEventListener('click', () => openRecent(handle));
+    item.textContent = label(entry);
+    item.addEventListener('click', () => open(entry));
     return item;
   });
-  for (const item of [...items, clear]) {
+  for (const item of [...items, last]) {
     item.type = 'button';
     item.role = 'menuitem';
   }
-  recentButton.hidden = !recent.length;
-  recentMenu.replaceChildren(...items, document.createElement('hr'), clear);
+  $(menu.getAttribute('aria-labelledby')).hidden = !entries.length;
+  menu.replaceChildren(...items, document.createElement('hr'), last);
+}
+
+function showRecent() {
+  listMenu(recentMenu, recent, (entry) => entry.path ?? entry.name, openRecent, () => storeRecent([]));
 }
 
 async function loadRecent() {
   try {
-    recent = (await settled((await recentStore('readonly')).get('recent'))) ?? [];
+    recent = (await settled((await stateStore('readonly')).get('recent'))) ?? [];
   } catch {
     // Storage can be disabled; there is just no list then.
   }
   showRecent();
 }
 
-async function storeRecent(handles) {
-  recent = handles;
+async function storeRecent(entries) {
+  recent = entries;
   showRecent();
   try {
-    await settled((await recentStore('readwrite')).put(recent, 'recent'));
+    await settled((await stateStore('readwrite')).put(recent, 'recent'));
   } catch {
     // The list just won't be remembered.
   }
 }
 
-async function remember(handle) {
+// A file is the same as one in the list when its path or its handle says so,
+// or, with only a copy to go on, when it has the same name.
+async function remember(name, handle, text, path = null) {
   try {
-    const same = await Promise.all(recent.map((h) => h.isSameEntry(handle)));
-    await storeRecent([handle, ...recent.filter((_, i) => !same[i])].slice(0, RECENT_MAX));
+    const same = await Promise.all(recent.map((r) => {
+      if (path || r.path) return r.path === path;
+      return handle && r.handle ? r.handle.isSameEntry(handle) : !handle && !r.handle && r.name === name;
+    }));
+    const entry = path ? { name, path } : handle ? { name, handle } : { name, text };
+    await storeRecent([entry, ...recent.filter((_, i) => !same[i])].slice(0, RECENT_MAX));
   } catch {
     // A handle that cannot be compared is not worth keeping.
   }
+}
+
+// ---------------------------------------------------------------- revisions
+
+function revisionLabel({ name, time }) {
+  const date = new Date(time);
+  const day = date.toDateString() === new Date().toDateString() ? {} : { day: 'numeric', month: 'short' };
+  return `${date.toLocaleString(undefined, { ...day, hour: '2-digit', minute: '2-digit' })} · ${name}`;
+}
+
+function showRevisions() {
+  listMenu(revisionsMenu, revisions, revisionLabel, restoreRevision, () => changeRevisions(() => []));
+}
+
+async function loadRevisions() {
+  try {
+    revisions = (await settled((await stateStore('readonly')).get('revisions'))) ?? [];
+  } catch {
+    // Storage can be disabled; there are just no revisions then.
+  }
+  showRevisions();
+}
+
+// Read and written in one go, as another tab may be keeping revisions too.
+function changeRevisions(change) {
+  revisionQueue = revisionQueue.then(async () => {
+    try {
+      const store = await stateStore('readwrite');
+      revisions = change((await settled(store.get('revisions'))) ?? []);
+      await settled(store.put(revisions, 'revisions'));
+    } catch {
+      // The revision just won't be kept.
+    }
+    showRevisions();
+  });
+}
+
+function addRevision(text) {
+  if (!text.trim()) return;
+  const entry = { name: fileName, text, time: Date.now() };
+  changeRevisions((list) => (list[0]?.text === text ? list : [entry, ...list].slice(0, REVISION_MAX)));
+}
+
+// Keeps the document as it is now, after the one it was changed from.
+function keepRevision(text = editor.getMarkdown()) {
+  clearTimeout(revisionTimer);
+  revisionTimer = 0;
+  if (text === keptText) return;
+  addRevision(keptText);
+  addRevision(text);
+  keptText = text;
+}
+
+// A document that goes on changing is kept every few minutes. What it was
+// before the first change is kept at once, in case the page is gone by then.
+function trackRevision(text) {
+  if (text === keptText || revisionTimer) return;
+  addRevision(keptText);
+  revisionTimer = setTimeout(keepRevision, REVISION_DELAY);
+}
+
+// The document being replaced becomes a revision itself, so nothing is lost.
+function restoreRevision({ name, text }) {
+  const [handle, path, saved] = name === fileName ? [fileHandle, filePath, savedText] : [null, null, null];
+  setDocument(text, name, handle, path);
+  savedText = saved;
+  settle();
+  editor.focus();
 }
 
 // ---------------------------------------------------------------- export
@@ -818,6 +1134,7 @@ for (const b of modeButtons) {
   b.addEventListener('click', async () => {
     await setMode(b.dataset.mode);
     updateHeading();
+    heldSelection = null;
     editor.focus();
   });
 }
@@ -861,19 +1178,30 @@ for (const menu of menus) {
     e.stopPropagation();
   });
 }
-// Another tab may have opened files since.
+// Another tab may have opened files or kept revisions since.
 $('file-menu').addEventListener('beforetoggle', (e) => {
-  if (e.newState === 'open') loadRecent();
+  if (e.newState !== 'open') return;
+  loadRecent();
+  loadRevisions();
 });
 
-// Keeps the selection in the document when a button of the bar is pressed.
-bubble.addEventListener('mousedown', (e) => {
-  if (e.target.closest('button')) e.preventDefault();
-});
+// Keeps the selection in the document when a formatting button is pressed.
+for (const bar of [bubble, $('insert')]) {
+  bar.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button')) e.preventDefault();
+  });
+}
 workspace.addEventListener('pointerdown', () => {
+  heldSelection = null;
   selecting = true;
   scheduleBubble();
 });
+workspace.addEventListener('keydown', () => {
+  heldSelection = null;
+}, true);
+workspace.addEventListener('focusout', () => {
+  if (editor) heldSelection = editor.getSelection();
+}, true);
 for (const type of ['pointerup', 'pointercancel']) {
   document.addEventListener(type, () => {
     selecting = false;
@@ -899,7 +1227,7 @@ darkScheme.addEventListener('change', applyTheme);
 // Capturing, as the editor would otherwise take Ctrl+S for strikethrough.
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') bubble.hidden = true;
-  if (discardDialog.open || linkDialog.open || richDialog.open || e.altKey || !(e.ctrlKey || e.metaKey)) return;
+  if (discardDialog.open || linkDialog.open || richDialog.open || nameDialog.open || filesDialog.open || e.altKey || !(e.ctrlKey || e.metaKey)) return;
   const key = e.key.toLowerCase();
   const action = { s: () => save(e.shiftKey), o: openFile, k: insertLink }[key];
   if (!action || (key !== 's' && e.shiftKey)) return;
@@ -937,9 +1265,12 @@ window.addEventListener('pagehide', () => {
   if (modeButtons.some((b) => b.dataset.mode === stored)) mode = stored;
   applyTheme();
   loadRecent();
+  loadRevisions();
   createEditor(draft ? draft.text : WELCOME);
+  keptText = editor.getMarkdown();
   setMessage(modeNote());
   if (draft?.name) fileName = String(draft.name);
   savedText = !draft || draft.saved ? editor.getMarkdown() : null;
   updateStatus();
+  initServed(draft);
 }

@@ -27,9 +27,23 @@ export const MEASURED: Record<string, Measured> = {
   "z-ai-glm-5.3-flash-openrouter@a10": { cents: 4.6, seconds: 121 },
   "deepseek-deepseek-v4.1-flash-openrouter@a10": { cents: 3.1, seconds: 105 },
   "google-gemini-3.8-flash-openrouter@a10": { cents: 7.3, seconds: 55 },
+  // $4.30 and 26,692 active seconds over 70 rounds. The seconds are the model
+  // and not the queue: its reasoning grows with every guess of a round, from
+  // about 2,000 tokens on the first to 10,000 on the last, at some 35 a second.
+  "xiaomi-mimo-v2.6-pro-openrouter@a10": { cents: 6.1, seconds: 381 },
+  // Two providers under one label. The Go plan's monthly limit ran out with
+  // four of the five runs 7 to 10 rounds in, and they were finished through
+  // OpenRouter from the saved moves, so this is $2.53 at Go's list price and
+  // $1.05 billed by OpenRouter: $3.58 and 12,353 active seconds over 61 rounds.
+  "deepseek-v4-pro-opencode-go@a10": { cents: 5.9, seconds: 203 },
   "google-gemini-3.8-flash-openrouter@a0": { cents: 8.4, seconds: 32 },
   "gpt-6-luna-opencode-go@a0": { cents: 0.6, seconds: 41 },
   "claude-haiku-5-5-opencode-go@a0": { cents: 0.4, seconds: 20 },
+  // $1.31 and 4,063 active seconds over 33 rounds, and 4¢ a round against Luna's
+  // 0.6 is not the model's price: 23 of the 33 rounds are in two of the runs,
+  // and a late round is a long shop and a long context. Seed 5 was finished
+  // through OpenRouter when the Go plan's limit ran out, which was $0.28 of it.
+  "minimax-m3-opencode-go@a0": { cents: 4.0, seconds: 123 },
   // The two free previews: no `cents`, since a 0¢ bar would read as a price and
   // it is a promotion. Step 5 logged 30,452 active seconds over 67 rounds and
   // Nemotron 13,095 over 47.

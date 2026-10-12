@@ -202,6 +202,16 @@ function play(player: Player, episode: Episode, video: string | undefined): void
   player.runs.push(run)
 }
 
+/**
+ * The two rungs the post compares, and the only two drawn. A suite filed at any
+ * other is an experiment about one rule, not a third class of player: GPT-6.1
+ * Sol replayed its five seeds at ascension 9 to price the solve rule alone, and
+ * the first run of this tool after it filed put an "Ascension 9" heading with
+ * one row under it on every chart in the post. That finding is a paragraph and
+ * a table the post writes by hand.
+ */
+const CHARTED = [0, 10]
+
 const ledger: Record<string, string> = existsSync(LEDGER)
   ? JSON.parse(readFileSync(LEDGER, "utf8"))
   : {}
@@ -214,6 +224,7 @@ for (const dir of readdirSync(RESULTS).sort()) {
     const match = /^seed-(\d+)-a(\d+)\.json$/.exec(name)
     if (!match) continue
     const ascension = Number(match[2])
+    if (!CHARTED.includes(ascension)) continue
     filed.set(ascension, [...(filed.get(ascension) ?? []), Number(match[1])])
   }
   for (const [ascension, seeds] of filed) {

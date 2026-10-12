@@ -23,17 +23,25 @@
         <hr>
         <button type="button" role="menuitem" id="save">Save <kbd>Ctrl+S</kbd></button>
         <button type="button" role="menuitem" id="save-as">Save as… <kbd>Ctrl+Shift+S</kbd></button>
+        <button type="button" role="menuitem" id="revisions-button" popovertarget="revisions-menu" aria-haspopup="menu" hidden>Revisions <span aria-hidden="true">›</span></button>
+        <div id="revisions-menu" class="menu" role="menu" aria-labelledby="revisions-button" popover></div>
         <hr>
         <button type="button" role="menuitem" id="export">Export as HTML</button>
         <button type="button" role="menuitem" id="copy">Copy as rich text</button>
       </div>
       <input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
-      <button type="button" id="insert-button" popovertarget="insert-menu" aria-haspopup="menu">Insert</button>
-      <div id="insert-menu" class="menu" role="menu" aria-labelledby="insert-button" popover>
-        <button type="button" role="menuitem" data-format="table">Table</button>
-        <button type="button" role="menuitem" data-format="codeBlock">Code block</button>
-        <button type="button" role="menuitem" data-format="hr">Divider</button>
-      </div>
+    </div>
+
+    <div class="group" id="insert" role="group" aria-label="Insert">
+      <button type="button" class="icon" data-format="table" title="Table: right-click a cell to add or remove rows and columns" aria-label="Table">
+        <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M4 14.5h16M10 5v14"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="codeBlock" title="Code block" aria-label="Code block">
+        <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM10 9.5L7.5 12l2.5 2.5M14 9.5l2.5 2.5-2.5 2.5"/></svg>
+      </button>
+      <button type="button" class="icon" data-format="hr" title="Divider" aria-label="Divider">
+        <svg viewBox="0 0 24 24"><path d="M4 12h16M8 7h8M8 17h8"/></svg>
+      </button>
     </div>
 
     <div class="group end" id="modes" role="radiogroup" aria-label="Editing mode">
@@ -123,6 +131,31 @@
       <div class="actions">
         <button value="cancel">Cancel</button>
         <button value="switch" class="primary">Switch</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="name-dialog">
+    <form method="dialog">
+      <h2>Save as</h2>
+      <label>Name <input type="text" id="save-name" required></label>
+      <div class="actions">
+        <button type="button" id="name-cancel">Cancel</button>
+        <button value="save" class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="files-dialog">
+    <form method="dialog">
+      <h2 id="files-title">Open</h2>
+      <p id="files-path"></p>
+      <div id="files-list" class="files"></div>
+      <label id="files-name-label">Name <input type="text" id="files-name"></label>
+      <div class="actions">
+        <button type="button" id="files-device" title="Use this device's files instead">This device…</button>
+        <button type="button" id="files-cancel">Cancel</button>
+        <button value="save" class="primary" id="files-save">Save</button>
       </div>
     </form>
   </dialog>

@@ -9,6 +9,7 @@
 | `/`               | `dashboard/`, linking to the rest        |
 | `/draw`           | `../image-editor`, from the working tree |
 | `/write`          | `../text-editor`, from the working tree  |
+| `/files`          | `..`, the monorepo, for `/write` to save |
 | `/audiobookshelf` | audiobookshelf                           |
 | `/video`          | jellyfin                                 |
 | `/pihole/admin`   | pihole                                   |
@@ -26,6 +27,14 @@ docker restart jellyfin
 ```
 
 audiobookshelf only supports `/audiobookshelf`, and needs no configuration.
+
+### Files
+
+The editor at `/write` opens and saves Markdown in this repository through
+`/files`, which works in browsers that cannot write to a file themselves.
+nginx lists the folders there, and reads and writes nothing but `.md`,
+`.markdown`, and `.txt`; anything under a dot directory is refused. Anyone
+who can reach the dashboard can read and overwrite those files.
 
 ### Organizing
 

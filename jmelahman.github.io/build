@@ -36,6 +36,26 @@ if [ -z "$SKIP_CSS" ]; then
 	./css/minify
 fi
 
+# Posts that have moved leave a page behind that forwards to the new address.
+redirect() {
+	cat >"$BLOG_DIR/$1.html" <<EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Moved</title>
+  <link rel="canonical" href="$SITE_URL/$BLOG_DIR/$2.html">
+  <meta http-equiv="refresh" content="0; url=$2.html">
+</head>
+<body>
+  <p>This post has moved to <a href="$2.html">$2.html</a>.</p>
+</body>
+</html>
+EOF
+}
+redirect 1 my-git-workflow
+redirect 2 packaging-go-with-uv
+
 # Start RSS feed
 RSS_PATH="rss.xml"
 {

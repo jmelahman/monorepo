@@ -24,6 +24,8 @@ services:
       - ./dashboard/data/:/srv/dashboard/data/
       - ../image-editor/:/srv/draw/:ro
       - ../text-editor/:/srv/write/:ro
+      # Markdown the editor opens and saves in place
+      - ../:/srv/files/
     depends_on:
       - audiobookshelf
       - jellyfin

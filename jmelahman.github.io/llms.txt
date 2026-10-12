@@ -27,8 +27,8 @@ Contact: [jamison@lahman.dev](mailto:jamison@lahman.dev) · [GitHub](https://git
 
 ## Blog
 
-- [Using `uv` to package Go applications](https://jamison.lahman.dev/blog/2.md) (2025-08-12): Distributing Go binaries through PyPI with uv
-- [My Git Workflow](https://jamison.lahman.dev/blog/1.md) (2025-07-22, work in progress): Git aliases, configuration, and workflow
+- [Using `uv` to package Go applications](https://jamison.lahman.dev/blog/packaging-go-with-uv.md) (2025-08-12): Distributing Go binaries through PyPI with uv
+- [My Git Workflow](https://jamison.lahman.dev/blog/my-git-workflow.md) (2025-07-22, work in progress): Git aliases, configuration, and workflow
 
 ## Optional
 

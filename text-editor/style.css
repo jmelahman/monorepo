@@ -296,11 +296,14 @@ button.icon svg {
   border-color: transparent;
 }
 
-#recent-menu {
+#recent-menu,
+#revisions-menu {
   max-width: min(22rem, calc(100vw - 1rem));
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
 }
 
-#recent-menu button {
+:is(#recent-menu, #revisions-menu) button {
   display: block;
   overflow: hidden;
   text-align: left;
@@ -594,7 +597,10 @@ button.primary:hover:not(:disabled) {
   color: var(--accent);
 }
 
+/* The editor's own choice of fonts for code is not monospace everywhere. */
 #editor .toastui-editor-md-container :is(.toastui-editor-md-code, .toastui-editor-md-code-block) {
+  font-family: inherit;
+  letter-spacing: 0;
   color: var(--chalk);
 }
 
@@ -726,6 +732,50 @@ dialog input {
   background: var(--ink-2);
   color: var(--chalk);
   font: 400 0.8125rem/1 var(--mono);
+}
+
+#files-path {
+  color: var(--dim);
+  font: 400 0.8125rem/1.4 var(--mono);
+}
+
+/* The folders and files of the server's to choose from. */
+.files {
+  display: grid;
+  align-content: start;
+  height: min(18rem, 45vh);
+  margin-top: 0.5rem;
+  padding: 0.25rem;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.files button {
+  display: block;
+  overflow: hidden;
+  border-color: transparent;
+  color: var(--chalk);
+  font: 400 0.8125rem/1 var(--sans);
+  letter-spacing: 0;
+  text-align: left;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.files button:hover,
+.files button:focus-visible {
+  outline: 0;
+  background: var(--accent-soft);
+}
+
+.files button:active {
+  transform: none;
+}
+
+#files-device {
+  margin-right: auto;
 }
 
 dialog .actions {
