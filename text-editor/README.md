@@ -13,6 +13,7 @@ and nothing leaves your machine.
 - Markdown typed in rich mode is converted as you go: `## `, `* `, `> `, `` ``` ``
 - Open a file from disk or by drag-and-drop; dropped or pasted images are embedded
 - Save back to the opened file where the browser supports it, or download a copy
+- Reopen recent files from the File menu, in browsers that can save back to a file
 - Export a standalone HTML page, or copy the document as rich text
 - The current document is kept as a draft in the browser and restored on the next visit
 - Light and dark themes, following the system until one is chosen

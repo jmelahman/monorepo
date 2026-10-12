@@ -18,6 +18,8 @@
       <div id="file-menu" class="menu" role="menu" aria-labelledby="file-button" popover>
         <button type="button" role="menuitem" id="new">New</button>
         <button type="button" role="menuitem" id="open">Open… <kbd>Ctrl+O</kbd></button>
+        <button type="button" role="menuitem" id="recent-button" popovertarget="recent-menu" aria-haspopup="menu" hidden>Open recent <span aria-hidden="true">›</span></button>
+        <div id="recent-menu" class="menu" role="menu" aria-labelledby="recent-button" popover></div>
         <hr>
         <button type="button" role="menuitem" id="save">Save <kbd>Ctrl+S</kbd></button>
         <button type="button" role="menuitem" id="save-as">Save as… <kbd>Ctrl+Shift+S</kbd></button>

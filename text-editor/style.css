@@ -292,6 +292,22 @@ button.icon svg {
   background: var(--accent-soft);
 }
 
+.menu button[aria-expanded="true"] {
+  border-color: transparent;
+}
+
+#recent-menu {
+  max-width: min(22rem, calc(100vw - 1rem));
+}
+
+#recent-menu button {
+  display: block;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .menu button:active:not(:disabled) {
   transform: none;
 }

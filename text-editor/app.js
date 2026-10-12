@@ -4,6 +4,7 @@ const DRAFT_KEY = 'text-editor:draft';
 const MODE_KEY = 'text-editor:mode';
 const THEME_KEY = 'text-editor:theme'; // also read by theme.js
 const SETTLE_DELAY = 300;
+const RECENT_MAX = 8;
 const FILE_TYPES = [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } }];
 
 const WELCOME = [
@@ -40,6 +41,8 @@ const discardDialog = $('discard-dialog');
 const linkDialog = $('link-dialog');
 const richDialog = $('rich-dialog');
 const bubble = $('bubble');
+const recentButton = $('recent-button');
+const recentMenu = $('recent-menu');
 const menus = [...document.querySelectorAll('.menu')];
 const root = document.documentElement;
 const formatButtons = [...document.querySelectorAll('[data-format]')];
@@ -53,6 +56,7 @@ let fileName = 'untitled.md';
 let fileHandle = null; // File System Access handle, where the browser has one
 let savedText = ''; // Markdown as last opened or saved; null when unknown
 let settleTimer = 0;
+let recent = []; // handles of the files last opened or saved, newest first
 let selecting = false; // a pointer is down in the document
 let bubbleFrame = 0;
 let htmlSources = new Map(); // an HTML block as rich mode holds it -> as it was written
@@ -573,6 +577,7 @@ async function loadFile(file, handle = null) {
   if (!isText(file)) return setMessage(`${file.name} is not a text file.`);
   try {
     setDocument(await file.text(), file.name, handle);
+    if (handle) remember(handle);
   } catch {
     setMessage(`Could not open ${file.name || 'file'}.`);
   }
@@ -586,6 +591,19 @@ async function openFile() {
     await loadFile(await handle.getFile(), handle);
   } catch (err) {
     if (err.name !== 'AbortError') setMessage('Could not open the file.');
+  }
+}
+
+async function openRecent(handle) {
+  if (!(await confirmDiscard())) return;
+  try {
+    // Access to a file ends with the visit, and is asked for again here.
+    if (await handle.requestPermission({ mode: 'read' }) !== 'granted') return setMessage(`Not allowed to open ${handle.name}.`);
+    await loadFile(await handle.getFile(), handle);
+  } catch (err) {
+    if (err.name !== 'NotFoundError') return setMessage(`Could not open ${handle.name}.`);
+    setMessage(`${handle.name} is no longer there.`);
+    storeRecent(recent.filter((h) => h !== handle));
   }
 }
 
@@ -617,6 +635,7 @@ async function save(saveAs = false) {
       await writable.write(contents);
       await writable.close();
       fileName = fileHandle.name;
+      remember(fileHandle);
     } else {
       download(contents, fileName, 'text/markdown');
     }
@@ -627,6 +646,71 @@ async function save(saveAs = false) {
     if (err.name !== 'AbortError') setMessage(`Could not save ${fileName}.`);
   }
 }
+
+// ---------------------------------------------------------------- recent
+
+// IndexedDB, as it is the only storage able to hold a file handle.
+function recentStore(mode) {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open('text-editor', 1);
+    open.onupgradeneeded = () => open.result.createObjectStore('state');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => resolve(open.result.transaction('state', mode).objectStore('state'));
+  });
+}
+
+const settled = (request) => new Promise((resolve, reject) => {
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+
+function showRecent() {
+  const clear = document.createElement('button');
+  clear.textContent = 'Clear list';
+  clear.addEventListener('click', () => storeRecent([]));
+  const items = recent.map((handle) => {
+    const item = document.createElement('button');
+    item.textContent = handle.name;
+    item.addEventListener('click', () => openRecent(handle));
+    return item;
+  });
+  for (const item of [...items, clear]) {
+    item.type = 'button';
+    item.role = 'menuitem';
+  }
+  recentButton.hidden = !recent.length;
+  recentMenu.replaceChildren(...items, document.createElement('hr'), clear);
+}
+
+async function loadRecent() {
+  try {
+    recent = (await settled((await recentStore('readonly')).get('recent'))) ?? [];
+  } catch {
+    // Storage can be disabled; there is just no list then.
+  }
+  showRecent();
+}
+
+async function storeRecent(handles) {
+  recent = handles;
+  showRecent();
+  try {
+    await settled((await recentStore('readwrite')).put(recent, 'recent'));
+  } catch {
+    // The list just won't be remembered.
+  }
+}
+
+async function remember(handle) {
+  try {
+    const same = await Promise.all(recent.map((h) => h.isSameEntry(handle)));
+    await storeRecent([handle, ...recent.filter((_, i) => !same[i])].slice(0, RECENT_MAX));
+  } catch {
+    // A handle that cannot be compared is not worth keeping.
+  }
+}
+
+// ---------------------------------------------------------------- export
 
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -738,32 +822,49 @@ for (const b of modeButtons) {
   });
 }
 
-// A menu sits in the top layer, so it is placed by hand under its button,
-// before it is shown.
+// A menu sits in the top layer, so it is placed by hand before it is shown:
+// under its button, or beside it for a menu within a menu that has the room.
 for (const menu of menus) {
   const button = $(menu.getAttribute('aria-labelledby'));
+  const parent = button.closest('.menu');
   menu.addEventListener('beforetoggle', (e) => {
     const open = e.newState === 'open';
     button.setAttribute('aria-expanded', String(open));
     if (!open) return;
-    const { left, bottom } = button.getBoundingClientRect();
-    menu.style.left = `${left}px`;
-    menu.style.top = `${bottom + 4}px`;
+    const { left, right, top, bottom } = button.getBoundingClientRect();
+    const beside = parent && right + parent.offsetWidth < innerWidth;
+    menu.style.left = `${beside ? right + 4 : left}px`;
+    menu.style.top = `${beside ? top - 5 : bottom + 4}px`;
   });
   menu.addEventListener('toggle', (e) => {
     if (e.newState === 'open') menu.querySelector('button').focus();
   });
   menu.addEventListener('click', (e) => {
-    if (e.target.closest('button')) menu.hidePopover();
+    const item = e.target.closest('button');
+    if (item && !item.popoverTargetElement) menu.hidePopover();
   });
   menu.addEventListener('keydown', (e) => {
+    const active = document.activeElement;
     const step = { ArrowDown: 1, ArrowUp: -1 }[e.key];
-    if (!step) return;
+    if (step) {
+      const items = [...menu.querySelectorAll(':scope > button:not([hidden])')];
+      items[(items.indexOf(active) + step + items.length) % items.length].focus();
+    } else if (e.key === 'ArrowRight' && active.popoverTargetElement) {
+      active.popoverTargetElement.showPopover();
+    } else if (e.key === 'ArrowLeft' && parent) {
+      menu.hidePopover();
+      button.focus();
+    } else {
+      return;
+    }
     e.preventDefault();
-    const items = [...menu.querySelectorAll('button')];
-    items[(items.indexOf(document.activeElement) + step + items.length) % items.length].focus();
+    e.stopPropagation();
   });
 }
+// Another tab may have opened files since.
+$('file-menu').addEventListener('beforetoggle', (e) => {
+  if (e.newState === 'open') loadRecent();
+});
 
 // Keeps the selection in the document when a button of the bar is pressed.
 bubble.addEventListener('mousedown', (e) => {
@@ -835,6 +936,7 @@ window.addEventListener('pagehide', () => {
   }
   if (modeButtons.some((b) => b.dataset.mode === stored)) mode = stored;
   applyTheme();
+  loadRecent();
   createEditor(draft ? draft.text : WELCOME);
   setMessage(modeNote());
   if (draft?.name) fileName = String(draft.name);
