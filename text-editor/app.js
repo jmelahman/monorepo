@@ -386,6 +386,10 @@ function enterRich() {
 function showMode() {
   const shown = editor.isWysiwygMode() ? 'wysiwyg' : 'markdown';
   for (const b of modeButtons) b.setAttribute('aria-checked', String(b.dataset.mode === shown));
+  // Firefox marks only so many misspellings on a page, and the editor out of
+  // sight can use them all up: in Markdown, the source of an SVG is full of them.
+  editor.wwEditor.view.dom.spellcheck = shown === 'wysiwyg';
+  editor.mdEditor.view.dom.spellcheck = shown === 'markdown';
 }
 
 // Why a document that was to open in rich mode did not.

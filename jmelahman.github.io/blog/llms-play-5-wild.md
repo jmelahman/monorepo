@@ -7,11 +7,9 @@ nav_blog: true
 
 # 5 Wild Bench, a word-game roguelike LLM benchmark
 
-[5 Wild](https://5-wild.com) is a free-to-play word-guessing roguelike I made combining [Wordle](https://www.nytimes.com/games/wordle) with [Balatro](https://www.playbalatro.com/)'s scoring and shop mechanics. I had fourteen LLMs play it, five runs each.
+[5 Wild](https://5-wild.com) is a free-to-play word-guessing roguelike I made combining [Wordle](https://www.nytimes.com/games/wordle) with [Balatro](https://www.playbalatro.com/)'s scoring and shop mechanics. I had fourteen LLMs play five runs each and evaluated their results.
 
-The idea came from [RuneScape Bench](https://maxbittker.github.io/runebench/) and Anthropic's [Project Vend](https://www.anthropic.com/research/project-vend-1). Both put a model inside an economy, where every action has a cost, a reward and an opportunity cost, and spending now has to be weighed against investing for later. I find that kind of benchmark interesting, and useful for what it shows about how a model behaves as an agent. 5 Wild has the same shape: gold spent to get through this round is gold that cannot go into the build that has to clear the later ones.
-
-There is more than one way to play it, and the models found several. The stronger models were more consistent, adapted to each run, and played for the run's economy rather than the current round.
+Two of my favorite LLM benchmarks are [RuneScape Bench](https://maxbittker.github.io/runebench/) and Anthropic's [Project Vend](https://www.anthropic.com/research/project-vend-1). I like the idea of a gamified benchmarks versus some abstracted, acedemic test that I haven't conceptualized. I don't care much if a model scores a perfect SAT if they can't execute on a long-context problem involving adapting to conditions as they unfold and evaluating immediate benefits versus long-term goals. To me, that is table-stakes for any type of agentic use-case.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 468" role="img" aria-labelledby="results-title" font-family="inherit">
 <title id="results-title">Final score of each model, where higher is better: the median of five runs as a bar, and each run as a dot.</title>
@@ -202,7 +200,7 @@ There is more than one way to play it, and the models found several. The stronge
 <text x="34" y="462" font-size="11" fill="#8a8878">↑ higher is better · final score, log scale · median of five runs<tspan class="run"> · ● a run that won   ○ a run that lost</tspan></text>
 </svg>
 
-Each dot is one run and links to a video of it.
+Each dot represents the score of one run and clicking opens its video replay.
 
 A run is 24 rounds; clearing all 24 wins. Nine models played the hardest difficulty, which is meant for a skilled Wordle player to win about 40% of the time. Seven played the easiest, which an average Wordle player should win most of the time. Sonnet and Gemini 3.8 Flash played both.
 
