@@ -3,6 +3,8 @@
 A basic image editor that runs entirely in the browser. No build step, no
 dependencies, nothing leaves your machine.
 
+![The image editor with a few shapes drawn](screenshot.png)
+
 ## Features
 
 - Brush, eraser, line, arrow, rectangle, ellipse, text, fill, and color picker tools

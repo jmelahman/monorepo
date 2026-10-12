@@ -1,43 +1,58 @@
 # Home Lab
 
-## Create
+## Dashboard
 
-If the certs don't yet exist, `nginx` will complain about the server with SSL enabled.
-To avoid this, comment out all servers which have SSL enabled in `nginx/nginx.conf`.
+`nginx` serves a dashboard at `/` and every app under a path of its own:
 
-Additionally, make the directories required for the ACME challenge,
+| Address           | Serves                                   |
+| ----------------- | ---------------------------------------- |
+| `/`               | `dashboard/`, linking to the rest        |
+| `/draw`           | `../image-editor`, from the working tree |
+| `/write`          | `../text-editor`, from the working tree  |
+| `/audiobookshelf` | audiobookshelf                           |
+| `/video`          | jellyfin                                 |
+| `/pihole/admin`   | pihole                                   |
 
-```shell
-mkdir -p certbot/www/.well-known/acme-challenge/
-```
+These answer on any name or address that reaches the host, other than the
+`.home` names, which still go straight to their own service.
 
-Restart nginx for the changes to take effect,
-
-```shell
-docker compose restart nginx
-```
-
-Finally, create the certs,
-
-```shell
-docker compose run --rm  certbot certonly --webroot --webroot-path /var/www/certbot/ -d lahman.dev,registry.lahman.dev,www.lahman.dev
-```
-
-_Note: If the first attempt fails, pass `--dry-run` to avoid being rate-limited._
-
-## Renew
+Two of the services have to be told about their path. For pihole that is
+`FTLCONF_webserver_paths_prefix` in `docker-compose.yml`. For jellyfin it is
+the Base URL under Dashboard > Networking, or,
 
 ```shell
-docker compose run --rm certbot renew
+docker exec jellyfin sed -i 's|<BaseUrl />|<BaseUrl>/video</BaseUrl>|' /config/config/network.xml
+docker restart jellyfin
 ```
 
-_Note: If the first attempt fails, pass `--dry-run` to avoid being rate-limited._
+audiobookshelf only supports `/audiobookshelf`, and needs no configuration.
 
-## Add Domains
+### Organizing
 
-Re-run the [Create](#create) command and select the Expand option.
-Then, restart the nginx server with,
+Choose **Edit** on the dashboard to add, remove, rename, and rearrange apps and
+groups; cards can be dragged between groups. An address is a path (`/draw/`),
+a port on this host (`:8443`), or a full URL.
+
+**Done** writes the layout to `dashboard/data/apps.json`, so it is the same on
+every device and can be committed. nginx accepts a `PUT` for that one file
+from anyone who can reach the dashboard.
+
+## Tailscale
+
+[Tailscale Serve](https://tailscale.com/kb/1312/serve) publishes the above to
+the tailnet over HTTPS, which the browser apps need for saving in place and
+for clipboard access.
 
 ```shell
-docker compose restart nginx
+sudo ./serve.sh
 ```
+
+`agentic-kanban` only works at the root of a host, so it is published on
+port 8443 instead of a path. The configuration is kept by `tailscaled` and
+survives restarts. To inspect it,
+
+```shell
+tailscale serve status
+```
+
+Port 443 must be left free for Tailscale, so `nginx` only listens on 80.

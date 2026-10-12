@@ -1,0 +1,50 @@
+{
+  "groups": [
+    {
+      "name": "Apps",
+      "apps": [
+        {
+          "name": "Kanban",
+          "description": "Agent tickets and sessions",
+          "url": ":8443",
+          "icon": "kanban"
+        },
+        {
+          "name": "Write",
+          "description": "Markdown editor",
+          "url": "/write/",
+          "icon": "write"
+        },
+        {
+          "name": "Draw",
+          "description": "Image editor",
+          "url": "/draw/",
+          "icon": "draw"
+        }
+      ]
+    },
+    {
+      "name": "Services",
+      "apps": [
+        {
+          "name": "Audiobookshelf",
+          "description": "Audiobooks and podcasts",
+          "url": "/audiobookshelf/",
+          "icon": "headphones"
+        },
+        {
+          "name": "Jellyfin",
+          "description": "Video library",
+          "url": "/video/",
+          "icon": "video"
+        },
+        {
+          "name": "Pi-hole",
+          "description": "DNS and ad blocking",
+          "url": "/pihole/admin/",
+          "icon": "shield"
+        }
+      ]
+    }
+  ]
+}

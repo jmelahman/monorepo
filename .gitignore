@@ -29,7 +29,6 @@ dist/
 # Homelab data (docker-compose volumes)
 homelab/audiobooks/
 homelab/auth/
-homelab/certbot/
 homelab/config/
 homelab/etc-pihole/
 homelab/metadata/

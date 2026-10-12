@@ -50,8 +50,9 @@
   --cond: "Plex Cond", "Plex Sans", system-ui, sans-serif;
 }
 
+/* Light when the system is, unless dark was chosen; and when chosen. */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="dark"]) {
     color-scheme: light;
     --ink: #fafafa;
     --ink-2: #f1f1f3;
@@ -63,6 +64,19 @@
     --accent-soft: rgb(192 39 45 / 0.09);
     --on-accent: #fafafa;
   }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #fafafa;
+  --ink-2: #f1f1f3;
+  --rule: #dcdce1;
+  --rule-soft: #e8e8ec;
+  --chalk: #18181b;
+  --dim: #57575f;
+  --accent: #c0272d;
+  --accent-soft: rgb(192 39 45 / 0.09);
+  --on-accent: #fafafa;
 }
 
 * {
@@ -108,7 +122,7 @@ dialog h2 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 0.5rem;
+  gap: 0.25rem 0.375rem;
 }
 
 .toolbar > .group + .group {
@@ -194,13 +208,115 @@ button.icon svg {
   stroke-linejoin: round;
 }
 
-button[aria-checked="true"] {
+/* The theme button shows the one it switches to. */
+#theme .sun,
+:root.dark #theme .moon {
+  display: none;
+}
+
+:root.dark #theme .sun {
+  display: block;
+}
+
+.menu {
+  position: fixed;
+  inset: auto;
+  min-width: 13rem;
+  margin: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--chalk);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.3);
+}
+
+/* The formatting bar, shown over the selected text. */
+.bubble {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  max-width: calc(100vw - 1rem);
+  padding: 0.25rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--ink);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.3);
+}
+
+.bubble > .group + .group {
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--rule);
+}
+
+.bubble button,
+.bubble select {
+  border-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    column-gap: 0.375rem;
+  }
+
+  .toolbar > .group + .group {
+    padding-left: 0.375rem;
+  }
+
+  /* The bar wraps here, which leaves its second group at the left edge. */
+  .bubble > .group + .group {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+.menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  width: 100%;
+  border-color: transparent;
+  font: 400 0.8125rem/1 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--chalk);
+}
+
+.menu button:hover:not(:disabled),
+.menu button:focus-visible {
+  border-color: transparent;
+  outline: 0;
+  background: var(--accent-soft);
+}
+
+.menu button:active:not(:disabled) {
+  transform: none;
+}
+
+.menu kbd {
+  color: var(--dim);
+  font: 400 0.6875rem/1 var(--mono);
+}
+
+.menu hr {
+  margin: 0.25rem 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+button[aria-expanded="true"],
+button[aria-checked="true"],
+button[aria-pressed="true"] {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--chalk);
 }
 
-button[aria-checked="true"]:hover:not(:disabled) {
+button[aria-checked="true"]:hover:not(:disabled),
+button[aria-pressed="true"]:hover:not(:disabled) {
   border-color: var(--accent);
 }
 
@@ -222,14 +338,9 @@ button.primary:hover:not(:disabled) {
 }
 
 .main {
-  --pane: 100%;
   flex: 1;
   min-height: 0;
   display: flex;
-}
-
-.main[data-view="split"] {
-  --pane: 50%;
 }
 
 .main.dragover {
@@ -237,203 +348,285 @@ button.primary:hover:not(:disabled) {
   outline-offset: -8px;
 }
 
-/* Side padding grows with the pane so lines keep a readable measure. */
-#editor,
-#preview {
-  flex: 1 1 0;
+#editor {
+  flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 1.5rem max(1.25rem, calc((var(--pane) - 46rem) / 2));
-  overflow: auto;
 }
 
-.main[data-view="edit"] #preview,
-.main[data-view="preview"] #editor {
+/* The vendored editor, restyled to match. Its toolbar is replaced by ours. */
+#editor .toastui-editor-defaultUI {
+  border: 0;
+  border-radius: 0;
+  font-family: var(--sans);
+}
+
+#editor .toastui-editor-toolbar {
   display: none;
 }
 
-#editor {
-  display: block;
-  margin: 0;
-  border: 0;
-  outline: 0;
+#editor :is(.toastui-editor-main, .toastui-editor-md-container, .toastui-editor-ww-container, .toastui-editor-md-preview) {
   background: var(--ink);
-  color: var(--chalk);
-  font: 400 0.875rem/1.65 var(--mono);
-  tab-size: 4;
-  resize: none;
 }
 
-#editor::placeholder {
-  color: var(--dim);
-}
-
-#preview {
+#editor .toastui-editor-ww-container,
+#editor .toastui-editor-md-preview {
   background: var(--ink-2);
 }
 
-.main[data-view="split"] #preview {
-  border-left: 1px solid var(--rule);
+#editor .toastui-editor-md-splitter {
+  background: var(--rule);
 }
 
-@media (max-width: 640px) {
-  .main[data-view="split"] {
-    --pane: 100%;
-    flex-direction: column;
-  }
-
-  .main[data-view="split"] #preview {
-    border-top: 1px solid var(--rule);
-    border-left: 0;
-  }
+/* Side padding grows with the pane so lines keep a readable measure. */
+#editor .toastui-editor-ww-container .ProseMirror {
+  padding: 1.5rem max(1.25rem, calc((100% - 46rem) / 2));
 }
 
-.prose {
-  font-size: 1rem;
-  line-height: 1.65;
+#editor .toastui-editor-md-container .ProseMirror,
+#editor .toastui-editor-md-preview {
+  padding: 1.5rem 1.25rem;
+}
+
+#editor .toastui-editor-md-container .ProseMirror {
+  height: 100%;
+  color: var(--chalk);
+  font: 400 0.875rem/1.65 var(--mono);
+}
+
+#editor .toastui-editor-md-preview .toastui-editor-contents {
+  padding: 0;
+}
+
+#editor .toastui-editor-contents {
+  color: var(--chalk);
+  font: 400 1rem/1.65 var(--sans);
   overflow-wrap: break-word;
 }
 
-.prose > :first-child {
-  margin-top: 0;
-}
-
-.prose > :last-child {
-  margin-bottom: 0;
-}
-
-.prose :is(h1, h2, h3, h4, h5, h6) {
+#editor .toastui-editor-contents :is(h1, h2, h3, h4, h5, h6) {
   margin: 1.6em 0 0.6em;
+  padding: 0;
+  border: 0;
+  color: var(--chalk);
   font-weight: 600;
   line-height: 1.25;
 }
 
-.prose h1 {
+#editor .toastui-editor-contents > :first-child {
+  margin-top: 0;
+}
+
+#editor .toastui-editor-contents h1 {
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--rule);
   font-size: 1.875rem;
 }
 
-.prose h2 {
+#editor .toastui-editor-contents h2 {
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--rule-soft);
   font-size: 1.5rem;
 }
 
-.prose h3 {
+#editor .toastui-editor-contents h3 {
   font-size: 1.25rem;
 }
 
-.prose h4 {
+#editor .toastui-editor-contents h4 {
   font-size: 1.0625rem;
 }
 
-.prose h5 {
+#editor .toastui-editor-contents h5 {
   font-size: 0.9375rem;
 }
 
-.prose h6 {
+#editor .toastui-editor-contents h6 {
   color: var(--dim);
   font-size: 0.875rem;
 }
 
-.prose :is(p, ul, ol, dl, blockquote, pre, table, details) {
+#editor .toastui-editor-contents :is(p, li, td, th, del) {
+  color: var(--chalk);
+}
+
+#editor .toastui-editor-contents :is(p, ul, ol, blockquote, pre, table) {
   margin: 0 0 1em;
 }
 
-.prose :is(ul, ol) {
-  padding-left: 1.75em;
-}
-
-.prose li > :is(ul, ol) {
+#editor .toastui-editor-contents li > :is(p, ul, ol) {
   margin-bottom: 0;
 }
 
-.prose li > p {
-  margin-bottom: 0.5em;
-}
-
-.prose li:has(> input[type="checkbox"], > p:first-child > input[type="checkbox"]) {
-  list-style: none;
-}
-
-.prose li input[type="checkbox"] {
-  margin: 0 0.5em 0 -1.4em;
-  accent-color: var(--accent);
-  vertical-align: -0.1em;
-}
-
-.prose a {
-  color: var(--accent);
-  text-underline-offset: 0.15em;
-}
-
-.prose blockquote {
-  padding-left: 1rem;
-  border-left: 3px solid var(--rule);
+#editor .toastui-editor-contents :is(ul, ol) > li::before {
   color: var(--dim);
 }
 
-.prose blockquote > :last-child {
-  margin-bottom: 0;
+#editor .toastui-editor-contents ul > li:not(.task-list-item)::before {
+  margin-top: 0.7em;
+  background: var(--dim);
 }
 
-.prose :is(code, kbd, samp) {
+#editor .toastui-editor-contents .task-list-item::before {
+  border: 1px solid var(--dim);
+  border-radius: 3px;
+  background: transparent;
+}
+
+#editor .toastui-editor-contents .task-list-item.checked::before {
+  border-color: var(--accent);
+  background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M4 9.5l3.2 3L14 5.5' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+#editor .toastui-editor-contents a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+#editor .toastui-editor-contents blockquote {
+  padding: 0 0 0 1rem;
+  border-left: 3px solid var(--rule);
+}
+
+#editor .toastui-editor-contents blockquote :is(p, li) {
+  color: var(--dim);
+}
+
+#editor .toastui-editor-contents code {
   padding: 0.1em 0.3em;
   border: 1px solid var(--rule);
   border-radius: 3px;
   background: var(--ink);
+  color: var(--chalk);
   font: 400 0.875em var(--mono);
+  letter-spacing: 0;
 }
 
-.prose pre {
+#editor .toastui-editor-contents pre {
   padding: 0.875rem 1rem;
-  overflow: auto;
   border: 1px solid var(--rule);
   border-radius: 3px;
   background: var(--ink);
-  line-height: 1.5;
 }
 
-.prose pre code {
+#editor .toastui-editor-contents pre code {
   padding: 0;
   border: 0;
   background: none;
   font-size: 0.8125rem;
+  line-height: 1.5;
 }
 
-.prose hr {
+#editor .toastui-editor-contents hr {
   margin: 2em 0;
   border: 0;
   border-top: 1px solid var(--rule);
 }
 
-.prose img {
+#editor .toastui-editor-contents img {
   max-width: 100%;
   height: auto;
 }
 
-.prose table {
-  display: block;
-  width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
+#editor .toastui-editor-contents table {
+  border: 1px solid var(--rule);
   border-collapse: collapse;
+  color: var(--chalk);
   font-variant-numeric: tabular-nums;
 }
 
-.prose :is(th, td) {
+#editor .toastui-editor-contents :is(th, td) {
   padding: 0.375rem 0.75rem;
   border: 1px solid var(--rule);
 }
 
-.prose th {
+#editor .toastui-editor-contents th {
   background: var(--ink);
+  color: var(--chalk);
   font-weight: 600;
 }
 
-.prose summary {
-  cursor: pointer;
+#editor .toastui-editor-contents :is(th, td) p {
+  margin: 0;
+  color: inherit;
+}
+
+#editor .toastui-editor-contents .toastui-editor-cell-selected {
+  background: var(--accent-soft);
+}
+
+#editor .ProseMirror ::selection {
+  background: var(--accent-soft);
+}
+
+/* Markdown source highlighting. */
+#editor .toastui-editor-md-container :is(.toastui-editor-md-heading, .toastui-editor-md-strong) {
+  color: var(--chalk);
+  font-weight: 600;
+}
+
+#editor .toastui-editor-md-container .toastui-editor-md-heading {
+  font-size: inherit;
+}
+
+#editor .toastui-editor-md-container :is(.toastui-editor-md-delimiter, .toastui-editor-md-meta, .toastui-editor-md-block-quote, .toastui-editor-md-thematic-break, .toastui-editor-md-table .toastui-editor-md-delimiter) {
+  color: var(--dim);
+}
+
+#editor .toastui-editor-md-container :is(.toastui-editor-md-link, .toastui-editor-md-list-item-style) {
+  color: var(--accent);
+}
+
+#editor .toastui-editor-md-container :is(.toastui-editor-md-code, .toastui-editor-md-code-block) {
+  color: var(--chalk);
+}
+
+#editor .toastui-editor-md-container .toastui-editor-md-code {
+  background: var(--accent-soft);
+}
+
+#editor .toastui-editor-md-container .toastui-editor-md-code-block-line-background {
+  background: var(--ink-2);
+}
+
+/* Popups: the cell menu and the code block language box. */
+#editor :is(.toastui-editor-context-menu, .toastui-editor-ww-code-block-language) {
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--ink);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
+  color: var(--chalk);
+  font-family: var(--sans);
+}
+
+#editor .toastui-editor-context-menu .menu-item {
+  color: var(--chalk);
+}
+
+#editor .toastui-editor-context-menu .menu-item:hover {
+  background: var(--accent-soft);
+}
+
+#editor .toastui-editor-context-menu .menu-group {
+  border-color: var(--rule);
+}
+
+#editor .toastui-editor-ww-code-block-language input {
+  background: transparent;
+  color: var(--chalk);
+  font-family: var(--mono);
+}
+
+@media (max-width: 640px) {
+  #editor .toastui-editor-md-container:not(.toastui-editor-md-tab-style) .toastui-editor-md-preview,
+  #editor .toastui-editor-md-splitter {
+    display: none;
+  }
+
+  #editor .toastui-editor-md-container .toastui-editor {
+    width: 100%;
+  }
 }
 
 .status {
@@ -499,6 +692,26 @@ dialog p {
   overflow-wrap: anywhere;
 }
 
+dialog label {
+  display: grid;
+  gap: 0.375rem;
+  margin-top: 0.875rem;
+  color: var(--dim);
+  font: 600 0.6875rem/1 var(--cond);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+dialog input {
+  height: var(--control);
+  padding: 0 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--ink-2);
+  color: var(--chalk);
+  font: 400 0.8125rem/1 var(--mono);
+}
+
 dialog .actions {
   display: flex;
   justify-content: flex-end;
@@ -524,4 +737,26 @@ dialog .actions {
   height: 1px;
   overflow: hidden;
   clip-path: inset(50%);
+}
+
+/* A block of raw HTML, which rich mode shows but does not edit. */
+#editor .toastui-editor-contents .html-block {
+  margin: 1em 0;
+  border-radius: 3px;
+  outline: 1px dashed var(--rule);
+  outline-offset: 0.25rem;
+  cursor: default;
+}
+
+#editor .toastui-editor-contents .html-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+}
+
+#editor .toastui-editor-contents svg {
+  max-width: 100%;
+}
+
+#editor .toastui-editor-contents svg:not([width]) {
+  width: 100%;
+  height: auto;
 }

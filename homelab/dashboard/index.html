@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Home Lab</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%230a0a0c'/%3E%3Crect x='6' y='6' width='9' height='9' rx='1' fill='%23f4635e'/%3E%3Crect x='17' y='6' width='9' height='9' rx='1' fill='%234a4a54'/%3E%3Crect x='6' y='17' width='9' height='9' rx='1' fill='%234a4a54'/%3E%3Crect x='17' y='17' width='9' height='9' rx='1' fill='%234a4a54'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="toolbar">
+    <h1>Home Lab</h1>
+    <span id="host"></span>
+    <span id="message"></span>
+    <div class="group">
+      <button type="button" id="add-group" title="Add a group" hidden>Add group</button>
+      <button type="button" id="cancel" title="Discard the changes" hidden>Cancel</button>
+      <button type="button" id="done" class="primary" title="Save the changes" hidden>Done</button>
+      <button type="button" id="edit" title="Add, remove, and rearrange apps">Edit</button>
+    </div>
+  </header>
+
+  <main id="groups"></main>
+
+  <dialog id="app-dialog">
+    <form method="dialog">
+      <h2 id="app-title">App</h2>
+      <label>Name <input type="text" id="app-name" maxlength="60" required></label>
+      <label>Description <input type="text" id="app-description" maxlength="120"></label>
+      <label>Address <input type="text" id="app-url" maxlength="500" placeholder="/path/, :8443, or https://…" required></label>
+      <label>Icon <select id="app-icon"></select></label>
+      <div class="actions">
+        <button type="button" id="app-cancel">Cancel</button>
+        <button value="save" class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

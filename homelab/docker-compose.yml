@@ -17,20 +17,18 @@ services:
     restart: unless-stopped
     ports:
       - 80:80
-      - 443:443
     volumes:
       - ./nginx/:/etc/nginx/:ro
+      - ./dashboard/:/srv/dashboard/:ro
+      # Written by the dashboard when its layout is edited
+      - ./dashboard/data/:/srv/dashboard/data/
+      - ../image-editor/:/srv/draw/:ro
+      - ../text-editor/:/srv/write/:ro
     depends_on:
       - audiobookshelf
+      - jellyfin
       - pihole
       - pacoloco
-
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - ./certbot/www/:/var/www/certbot/:rw
-      - ./certbot/conf/:/etc/letsencrypt/:rw
 
   jellyfin:
     image: jellyfin/jellyfin
@@ -61,6 +59,8 @@ services:
       FTLCONF_dns_upstreams: "1.1.1.2;1.0.0.2"
       # Point every nginx server_name at the docker host
       FTLCONF_dns_hosts: "${HOMELAB_IP:?set HOMELAB_IP in homelab/.env} cache.pacman.home;${HOMELAB_IP} shelf.home;${HOMELAB_IP} video.home"
+      # Served by nginx at /pihole/admin/
+      FTLCONF_webserver_paths_prefix: "/pihole"
       FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD:?set PIHOLE_PASSWORD in homelab/.env}
     volumes:
       - "./etc-pihole:/etc/pihole"
