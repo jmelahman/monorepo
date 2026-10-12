@@ -177,8 +177,8 @@
 	remote = git@github.com:jmelahman/dotfiles.git
 	branch = master
 [subtree "image-editor"]
-	remote = git@github.com:jmelahman/image-editor
+	remote = git@github.com:jmelahman/draw
 	branch = master
 [subtree "text-editor"]
-	remote = git@github.com:jmelahman/text-editor
+	remote = git@github.com:jmelahman/write
 	branch = master
