@@ -7,9 +7,11 @@ nav_blog: true
 
 # 5 Wild Bench, a word-game roguelike LLM benchmark
 
-[5 Wild](https://5-wild.com) is a free-to-play word-guessing roguelike I made combining [Wordle](https://www.nytimes.com/games/wordle) with [Balatro](https://www.playbalatro.com/)'s scoring and shop mechanics. I had fourteen LLMs play five runs each and evaluated their results.
+[5 Wild](https://5-wild.com) is a free-to-play word-guessing roguelike I made combining [Wordle](https://www.nytimes.com/games/wordle) with [Balatro](https://www.playbalatro.com/)'s scoring and shop mechanics.
 
-Two of my favorite LLM benchmarks are [RuneScape Bench](https://maxbittker.github.io/runebench/) and Anthropic's [Project Vend](https://www.anthropic.com/research/project-vend-1). I like the idea of a gamified benchmarks versus some abstracted, academic test that I haven't conceptualized. I don't care much if a model scores a perfect SAT if they can't execute on a long-context problem, adapting to conditions as they evolve and evaluating immediate solutions versus long-term objectives.
+I had fourteen LLMs play five runs. One run involves solving 24 Wordle boards. The nine largest models played the hardest difficulty which a skilled Wordle × Balatro player should win about 30% of the time. Seven played the easiest, which the average Balatro player should win most of the time.
+
+Two of my favorite LLM benchmarks are the [RuneScape Bench](https://maxbittker.github.io/runebench/) and Anthropic's [Project Vend](https://www.anthropic.com/research/project-vend-1). I like the idea of a gamified benchmark versus some abstract, academic test that I haven't conceptualized. I don't care much if a model scores a perfect SAT if they can't execute on a long-horizon task, adapting to conditions as they change, and evaluating immediate options against long-term objectives.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 468" role="img" aria-labelledby="results-title" font-family="inherit">
 <title id="results-title">Final score of each model, where higher is better: the median of five runs as a bar, and each run as a dot.</title>
@@ -200,9 +202,7 @@ Two of my favorite LLM benchmarks are [RuneScape Bench](https://maxbittker.githu
 <text x="34" y="462" font-size="11" fill="#8a8878">↑ higher is better · final score, log scale · median of five runs<tspan class="run"> · ● a run that won   ○ a run that lost</tspan></text>
 </svg>
 
-Each dot represents a run and clicking opens its replay in YouTube.
-
-A run is 24 rounds, 1 word to guess per round. Nine models played the hardest difficulty, which is meant for a skilled Wordle player to win about 40% of the time. Seven played the easiest, which an average Wordle player should win most of the time. Sonnet and Gemini 3.8 Flash played both.
+Each dot represents a run and clicking one opens its replay in YouTube.
 
 <figure style="margin:1em 0">
 <iframe src="https://www.youtube-nocookie.com/embed/iayM2a_q9eg?start=100" title="Claude Opus 5.5 winning a run of 5 Wild at ascension 10" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0"></iframe>
@@ -210,57 +210,99 @@ A run is 24 rounds, 1 word to guess per round. Nine models played the hardest di
 
 ## What stood out
 
-* **Each model had its own style.** Haiku opened with CRANE 23 times. Luna opened with high-scoring words like JAZZY. Sonnet won one base-game run by [playing TAXIS 26 times](#the-strategies-they-found). Opus won three times with three different builds. Gemini opened with CRANE in 100 of its 120 rounds; Sol never settled on an opener and spread its first guesses over CRANE, SLATE, IRATE, STARE and a dozen more.
-* **The stronger models were consistent.** Opus cleared 24, 24, 24, 23 and 2 rounds; Sonnet, on the same difficulty, 15, 17, 20, 22 and 24. Luna ranged from 2 to 23 and Haiku from 2 to 14. Gemini won all five of its runs on the easiest difficulty, with scores between 2.5 and 5.1 million. Sol was the exception among the larger models: 17, 17, 8, 2 and one win.
-* **They adapted.** Ascension 10 bans repeated words and requires solving every round. Sonnet's median was 20 rounds there and 22 on the base game. Gemini did not carry over: it won all five runs on the base game and none at ascension 10, where its median was 8 rounds.
-* **They played the economy, not the round.** Opus and Sonnet found the word about equally fast, in 3.6 and 3.9 guesses. Five of their six losses came with the word solved and the score short. Opus earned 8.9 gold a round to Sonnet's 6.7 and rerolled the shop 18 times to Sonnet's once. Gemini rerolled 31 times across its five wins. The cheaper models at ascension 10 barely touched any of it: Opus earned 125 gold in interest over its five runs, GPT-6.1 Sol 10, DeepSeek V4.1 Flash 7 and GLM 5.3 Flash 3.
-* **Finding the word and scoring are separate skills.** DeepSeek V4.1 Flash found the word in 4.2 guesses a round and still lost four of its five runs with the word solved and the score short. MiMo-V2.6-Pro and DeepSeek V4 Pro solved every round they played and lost all ten runs the same way. DeepSeek V4 Pro was the closest to Opus on paper, at 3.7 guesses and 8.2 gold a round, and never rerolled the shop once. GLM 5.3 Flash and GPT-6.1 Sol went the other way: three losses each with the word unsolved, several of them with two to four times the round's target already banked. Step 5 Preview played for points on the base game, with AMAZE 20 times and JAZZY 19, and solved 35 of its 67 rounds. All five of its runs ended just short of the target, between 86% and 98% of it.
+* **There does seem to be some signal.** Opus 5.5 is clearly a special model with the strongest performances consistently. Gemini 3.8 Flash won all five of its runs on the easiest difficulty while struggling with the stricter rules imposed on the harder difficulty while Sonnet 5.5 stayed adaptive. Sol seemed to underperform compared to expectations but it struggled uniquely with solving rounds and performed closer to expectations on easier difficulties where failing to solve rounds is forgiven more.
+* **Each model had its own style.** Gemini opened with CRANE in 100 of its 120 rounds on ascension 0 helping it win 5/5 runs. At ascension 10, CRANE can only be played once a run and Gemini's ability falls apart. Opus won three times with three different builds and was able to convert successful guesses into income-generating purchases. Luna leaned into the game's scoring mechanic opening with high-scoring words like JAZZY, FUZZY, and EERIE and had the most diverse use of word shapes. Sonnet won one run by [playing TAXIS 26 guesses in a row](#the-strategies-they-found). Sol had the highest rate of DISTINCT words allowing it to solve rounds at a high rate without necessarily translating that into points.
+* **Forcing a win condition was not effective.** The most effective style was that which combined many and avoided over-indexing on any particular scoring lever. Opus 5.5's wins aren't noticeably distinct on paper and nothing, save guessing ability and economy, really stands out as a clear indicator for how it won. While other models clearly preferred one of a handful of dimensions such as letter rarity, word shape, or buying and selling from the shop, the winning solution seems to take what is given, find the best micro-optimizations, and diversify. In other words, investing in insurance, economy, and scaling over immediate returns.
+* **Neither solving nor economy alone won.** Opus 5.5 had the lowest average number of guesses per round allowing it to increase its income and supercharge its scoring engine. The biggest contrast with Sonnet was its inability to convert points into income causing its scoring engine to die out in the later rounds. Every model with a low economy died out in the mid to late game. Conversely, GLM 5.3 Flash and DeepSeek v4 Pro generated plenty of economy but failed to translate it into ways to score points.
+
+<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 456" role="img" aria-labelledby="guesses-title" font-family="inherit">
+<title id="guesses-title">Guesses per cleared round for each model. Lower is better; six is the limit.</title>
+<text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
+<text x="0.0" y="35.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
+<rect x="215" y="24" width="240.0" height="14" rx="2" fill="#8c0000"><title>Claude Opus 5.5: 3.59 guesses per cleared round, solved 97 of 97 cleared rounds</title></rect>
+<text x="463.0" y="35.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.59 · solved 97 of 97</text>
+<text x="0.0" y="59.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
+<rect x="215" y="48" width="262.1" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: 3.92 guesses per cleared round, solved 97 of 98 cleared rounds</title></rect>
+<text x="485.1" y="59.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.92 · solved 97 of 98</text>
+<text x="0.0" y="83.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
+<rect x="215" y="72" width="251.9" height="14" rx="2" fill="#8c0000"><title>GPT-6 Sol: 3.76 guesses per cleared round, solved 68 of 68 cleared rounds</title></rect>
+<text x="474.9" y="83.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.76 · solved 68 of 68</text>
+<text x="0.0" y="107.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
+<rect x="215" y="96" width="268.6" height="14" rx="2" fill="#8c0000"><title>MiMo-V2.6-Pro: 4.02 guesses per cleared round, solved 65 of 65 cleared rounds</title></rect>
+<text x="491.6" y="107.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.02 · solved 65 of 65</text>
+<text x="0.0" y="131.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
+<rect x="215" y="120" width="275.2" height="14" rx="2" fill="#8c0000"><title>DeepSeek V4.1 Flash: 4.11 guesses per cleared round, solved 62 of 62 cleared rounds</title></rect>
+<text x="498.2" y="131.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.11 · solved 62 of 62</text>
+<text x="0.0" y="155.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
+<rect x="215" y="144" width="256.4" height="14" rx="2" fill="#8c0000"><title>GPT-6.1 Sol: 3.83 guesses per cleared round, solved 60 of 60 cleared rounds</title></rect>
+<text x="479.4" y="155.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.83 · solved 60 of 60</text>
+<text x="0.0" y="179.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
+<rect x="215" y="168" width="247.3" height="14" rx="2" fill="#8c0000"><title>DeepSeek V4 Pro: 3.70 guesses per cleared round, solved 56 of 56 cleared rounds</title></rect>
+<text x="470.3" y="179.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.70 · solved 56 of 56</text>
+<text x="0.0" y="203.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
+<rect x="215" y="192" width="268.8" height="14" rx="2" fill="#8c0000"><title>GLM 5.3 Flash: 4.02 guesses per cleared round, solved 55 of 55 cleared rounds</title></rect>
+<text x="491.8" y="203.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.02 · solved 55 of 55</text>
+<text x="0.0" y="227.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
+<rect x="215" y="216" width="256.1" height="14" rx="2" fill="#8c0000"><title>Gemini 3.8 Flash: 3.83 guesses per cleared round, solved 58 of 58 cleared rounds</title></rect>
+<text x="479.1" y="227.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.83 · solved 58 of 58</text>
+<text x="0.0" y="258.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
+<text x="0.0" y="279.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
+<rect x="215" y="268" width="255.9" height="14" rx="2" fill="#8c0000"><title>Gemini 3.8 Flash: 3.83 guesses per cleared round, solved 114 of 120 cleared rounds</title></rect>
+<text x="478.9" y="279.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.83 · solved 114 of 120</text>
+<text x="0.0" y="303.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
+<rect x="215" y="292" width="267.6" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: 4.00 guesses per cleared round, solved 90 of 102 cleared rounds</title></rect>
+<text x="490.6" y="303.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.00 · solved 90 of 102</text>
+<text x="0.0" y="327.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
+<rect x="215" y="316" width="355.0" height="14" rx="2" fill="#8c0000"><title>Step 5 Preview: 5.31 guesses per cleared round, solved 35 of 62 cleared rounds</title></rect>
+<text x="578.0" y="327.0" font-size="12" fill="#2c2c2c" text-anchor="start">5.31 · solved 35 of 62</text>
+<text x="0.0" y="351.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
+<rect x="215" y="340" width="314.4" height="14" rx="2" fill="#8c0000"><title>GPT-6 Luna: 4.70 guesses per cleared round, solved 64 of 70 cleared rounds</title></rect>
+<text x="537.4" y="351.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.70 · solved 64 of 70</text>
+<text x="0.0" y="375.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
+<rect x="215" y="364" width="284.7" height="14" rx="2" fill="#8c0000"><title>Claude Haiku 5.5: 4.26 guesses per cleared round, solved 38 of 43 cleared rounds</title></rect>
+<text x="507.7" y="375.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.26 · solved 38 of 43</text>
+<text x="0.0" y="399.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
+<rect x="215" y="388" width="301.0" height="14" rx="2" fill="#8c0000"><title>Nemotron 3 Ultra: 4.50 guesses per cleared round, solved 36 of 42 cleared rounds</title></rect>
+<text x="524.0" y="399.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.50 · solved 36 of 42</text>
+<text x="0.0" y="423.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
+<rect x="215" y="412" width="298.7" height="14" rx="2" fill="#8c0000"><title>MiniMax M3: 4.46 guesses per cleared round, solved 28 of 28 cleared rounds</title></rect>
+<text x="521.7" y="423.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.46 · solved 28 of 28</text>
+<text x="215.0" y="450.0" font-size="11" fill="#8a8878" text-anchor="start">guesses per cleared round (lower is better, six is the limit) · rounds solved of rounds cleared</text>
+</svg>
+
+Average guesses per cleared round, where lower is better and six is the limit. "Solved" counts the rounds cleared by finding the word, as opposed to reaching the target without it.
 
 ## The game
 
-From Wordle it takes the board: six guesses at a five-letter word, with green, yellow and gray tiles after each. From Balatro it takes everything around the board. A guess is a hand: its letters are worth points, rare ones far more than common ones, a green tile multiplies them and a gray one does nothing, and the round has a target score to reach. Between rounds a shop sells relics, which are Balatro's jokers: each one changes what a guess is worth, and a run is won by finding a handful that work together. A run is eight stages of three rounds, the third of each against a boss that changes a rule.
+5 Wild takes its board from Wordle. You get six guesses to find a five-letter word, with green, yellow and gray tiles hinting at the solution. Everything around the board comes from Balatro. Each guess scores points and each round has a target score to beat. Less common letters are worth more (like Scrabble), a green tile multiplies them, and a gray tile does nothing. Between rounds, a shop sells relics (Balatro's jokers) which change how a guess scores, and winning a run usually means finding a handful that work well together. A run is eight stages of three rounds each, and the third round of every stage is a boss that changes one of the rules.
 
-The two halves pull against each other, which is what makes it a decent test of a model. A guess that narrows the answer is made of cheap, common letters and scores almost nothing. A guess that scores well tells you very little. On the base game, solving the word is not even the goal; clearing the round's target is, and the target grows much faster than a good vocabulary does.
+The two halves compete with each other, which I think is what makes it an interesting benchmark. Guesses that narrow down the answer tend to use common letters and score very few points, while guesses that score well tend to reveal very little. On ascension 0, solving the word isn't even required. Only beating the round's target is, and the targets scale much faster than strong guesses alone can keep up with.
 
-Ascensions stack, Slay the Spire style: level ten plays every rule below it. The ones that matter here:
+Difficulty levels are called ascensions and they stack like Slay the Spire's, so ascension 10 plays with every rule from the levels below it. These are the rules that matter most here.
 
 * Every guess must reuse the letters you have found, in the places you found them
-* No word twice in the whole run
-* Four relic slots rather than five, and every round pays less
-* Reaching the target is not enough; you have to solve the word
+* No word can be played twice in the whole run
+* There are four relic slots instead of five, and every round pays less
+* Reaching the target is not enough, you have to solve the word
 
 ## The setup
 
-The game's engine is a pure function of a seed and a list of actions, so a benchmark was mostly a matter of putting a door on it. That door is an [MCP](https://modelcontextprotocol.io/) server with four tools:
+The game's engine is deterministic given a seed and a list of actions, so building the benchmark was mostly a matter of exposing it to a model. I did that with an [MCP](https://modelcontextprotocol.io/) server that has four tools.
 
 * `rules`: the whole briefing, once
 * `new_run`: deal the next seed
 * `observe`: read the board
 * `act`: one command (`guess crane`, `buy 2`, `collect`, `next`)
 
-The model gets those four tools and nothing else. No shell, no files, no web, no subagents, so no solver and no peeking at the word list. Nothing carries over from one seed to the next.
+The models only get those four tools. There is no shell, file access, web search or subagents, so they can't write a solver or look up the word list. Nothing carries over from one run to the next either.
 
-Every model plays the same five seeds. A seed fixes the answers and the bosses, so everyone faces the same words in the same order, on either ascension. Shops start identical and drift apart as soon as two players buy differently.
+Every model plays the same five seeds. A seed fixes the bosses and how the answers are drawn, so every model starts from the same run. The answers can drift apart later, since a word with a broken letter can't be the answer and, at ascension 10, neither can a word the model has already played. The shops start out identical but diverge as soon as two models buy differently.
 
-Nothing in it is specific to one vendor. Any harness that can connect an MCP server can play, and every run is saved as its list of moves, which is where every chart and video below comes from.
-
-## Caveats
-
-Five seeds is a small sample. I would not rank two models whose medians are within a few rounds of each other, and "three of five" is a long way from a win rate.
-
-The Claude models ran through Claude Code and the others through [OpenCode](https://opencode.ai/), so the harness differs as well as the model. Luna, Haiku, Step 5 Preview and MiniMax M3 ran on OpenCode's Go plan, and the rest through [OpenRouter](https://openrouter.ai/). DeepSeek V4 Pro used both: the Go plan's limit ran out with four of its runs 7 to 10 rounds in, and they were finished through OpenRouter from the saved moves, as was MiniMax M3's last run. Both were held to the same four tools.
-
-Thinking effort was not held equal either. I did not set it, so each model ran at whatever its harness defaulted to: Opus at medium and Sonnet at high in Claude Code, and the OpenCode models at OpenCode's defaults. Opus beat Sonnet with less of it.
-
-Only Sonnet and Gemini 3.8 Flash played both ascensions, so there is no Opus on the base game and no Luna at ascension 10 above.
-
-The benchmark lives in the game's repository under `tools/bench/`, and every result here was played on v0.10.4.
+Nothing about it is specific to a vendor, and any harness that can connect to an MCP server can play. Each run is saved as its list of moves, which is where all of the charts and videos in this post come from.
 
 ## The strategies they found
 
-A few of the play styles in more detail.
-
-**Sonnet burned half the alphabet and played TAXIS 26 times.** On seed 5 of the base game it bought Pyromaniac, which breaks a random letter out of the alphabet every round, and Scorched Earth, which pays for every letter broken. By round 20, twelve letters were gone, and it had spent its upgrades on T, A, I and S. TAXIS is those four upgraded letters around an X, which is worth eight times a common letter. From there it stopped solving:
+**Sonnet broke half the alphabet and played TAXIS 26 times in a row.** On seed 5 of its ascension 0 playthrough, it bought Pyromaniac, which breaks a random letter every round making it unplayable, and Scorched Earth, which scales with the number of broken letters. By round 20, twelve letters were gone, and it had paid to upgrade the letters T, A, I and S. TAXIS is those four upgraded letters around an X, which is worth eight times a common letter. From there it stopped solving:
 
 ```
 round 21   taxis taxis taxis taxis taxis taxis
@@ -269,13 +311,15 @@ round 23   taxis taxis taxis taxis taxis taxis
 round 24   taxis taxis taxis          (won)
 ```
 
-The ascensions take this away: no word twice in a round from ascension 2, no word twice in a run from ascension 9, and at ascension 10 the target is not enough without the solve.
+It chose to lose battles in an effort to win the war — exactly the kind of thing this benchmark aims to showcase. Later ascensions prevent this strategy by requiring uniqueness between guesses.
 
-**Luna opened with JAZZY.** A normal opener is CRANE or SLATE: common letters, lots of information, almost no points. Luna's most-played words were EERIE (15 times), CRANE (13), JAZZY (11) and FUZZY (6), with QUEER and EJECT behind them. Every one of those but CRANE repeats a letter, and in three of its five runs Luna was holding Twins, which multiplies any guess with a doubled letter by 2.5. JAZZY is also about the most expensive five letters in the game, 33 points against 5 for AROSE. It traded the information of a first guess for points.
+**Luna opened with JAZZY.** Instead of playing typical, information-rich Wordle openers like CRANE or STARE, Luna's most-played words were EERIE (15 times), CRANE (13), JAZZY (11) and FUZZY (6), with QUEER and EJECT behind them. Every one of those but CRANE [repeats a letter](#word-shapes), and in three of its five runs it purchased the Twins relic, which multiplies a guess if it contains a given letter twice. JAZZY is also one of the most rewarding words in the game (less common letters score more points like Scrabble), 33 points against 5 for AROSE. It leaned fully into the game's mechanic of trading information to solve rounds in exchange for points.
 
-**Opus and Sonnet at ascension 10 had to do it the hard way.** With no word allowed twice in a run, neither could lean on a favourite. Opus opened with SLATE once in every run and CRANE once in every run, and then had to find an opener for each of the other rounds; across five runs, 305 of its 358 guesses were different words. Opus solved every round it cleared and Sonnet all but one, because they had to.
+**Rhyme traps ended runs that had plenty of points.** Since every guess at ascension 10 must reuse the green letters already found, a model that finds four of them early can be left guessing the fifth one word at a time. On seed 1, the answer in round 12 was WOUND. GPT-6.1 Sol played POUND, FOUND, BOUND and HOUND, DeepSeek V4 Pro played POUND, BOUND, HOUND and MOUND, and both lost with more than double the points they needed. Gemini only escaped on its fifth guess after BOUND, ROUND, SOUND and FOUND. The same thing happened with MATED (HATED, FATED, GATED), FAKER (MAKER, BAKER) and GUMMY (RUMMY, DUMMY, TUMMY). Of the 39 losses at ascension 10, 13 ended with enough points but the word unsolved. Opus never saw WOUND. It was playing the same Pyromaniac and Scorched Earth build as Sonnet's TAXIS run, W and N were among its twelve broken letters, and the game dealt it YEAST instead, which it solved in three guesses.
 
-On the base game, the most-played words show how far a favourite can carry a run:
+**Gemini opened with CRANE 100 times.** At ascension 0, nothing stops a model from playing the same word every round, and Gemini 3.8 Flash opened with CRANE in 100 of its 120 rounds. CRANE is a typical Wordle opener that scores very few points, but it gave Gemini the same head start on every answer, and it went on to solve 114 of the 120 rounds and win all five runs. At ascension 10, where a word can only be played once per run, it played CRANE and STARE in the first two rounds of every run and then had to find a new opener for each round after that. It lost all five of those runs, three of them before round 10.
+
+At ascension 0, the most-played words show how far a favorite can carry a run.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 502" role="img" aria-labelledby="words-title" font-family="inherit">
 <title id="words-title">The five most-played words for each model across its five runs.</title>
@@ -465,7 +509,166 @@ On the base game, the most-played words show how far a favourite can carry a run
 <text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">each model's five most-played words and how many times it played them, over five runs</text>
 </svg>
 
-The shape of the words is the other way to look at it, and it works at ascension 10 too, where there are no favourites to count. Every guess scores as one of five shapes, and relics and levels pay for particular ones. Most of every model's guesses were plain words with no repeated letter. A fifth of the game's answers repeat a letter, and only Luna, with its JAZZY and EERIE, played doubles at anything like that rate: 16 percent, against 4 to 8 for the rest.
+## Cost and speed
+
+A full Opus run cost about $4 and took 11 minutes at an average of $0.21 and 34s per round. For a relatively complex and complete task, I think it is fairly cost and time efficient. Each run is able to run in parallel with one another.
+
+<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 466" role="img" aria-labelledby="value-title" font-family="inherit">
+<title id="value-title">Median final score against cost per round played, for each model at ascension 10. Score is on a logarithmic scale.</title>
+<text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
+<circle cx="204" cy="10" r="5.5" fill="#8a8878" stroke="#fbfaef" stroke-width="2" paint-order="stroke"/>
+<text x="214.0" y="14.0" font-size="11" fill="#8a8878" text-anchor="start">won a run</text>
+<circle cx="288.4" cy="10" r="5.5" fill="#fbfaef" stroke="#8a8878" stroke-width="2.5"/>
+<text x="298.4" y="14.0" font-size="11" fill="#8a8878" text-anchor="start">won none</text>
+<text x="0.0" y="34.0" font-size="11" fill="#8a8878" text-anchor="start">median final score of 5 runs, on a log scale</text>
+<line x1="40" x2="720" y1="350.6" y2="350.6" stroke="#e3e1cf"/>
+<text x="34.0" y="354.6" font-size="11" fill="#8a8878" text-anchor="end">100K</text>
+<line x1="40" x2="720" y1="165.5" y2="165.5" stroke="#e3e1cf"/>
+<text x="34.0" y="169.5" font-size="11" fill="#8a8878" text-anchor="end">1.0M</text>
+<line x1="52.0" x2="52.0" y1="44" y2="424" stroke="#e3e1cf"/>
+<text x="52.0" y="440.0" font-size="11" fill="#8a8878" text-anchor="middle">0¢</text>
+<line x1="211.2" x2="211.2" y1="44" y2="424" stroke="#e3e1cf"/>
+<text x="211.2" y="440.0" font-size="11" fill="#8a8878" text-anchor="middle">5¢</text>
+<line x1="370.4" x2="370.4" y1="44" y2="424" stroke="#e3e1cf"/>
+<text x="370.4" y="440.0" font-size="11" fill="#8a8878" text-anchor="middle">10¢</text>
+<line x1="529.7" x2="529.7" y1="44" y2="424" stroke="#e3e1cf"/>
+<text x="529.7" y="440.0" font-size="11" fill="#8a8878" text-anchor="middle">15¢</text>
+<line x1="688.9" x2="688.9" y1="44" y2="424" stroke="#e3e1cf"/>
+<text x="688.9" y="440.0" font-size="11" fill="#8a8878" text-anchor="middle">20¢</text>
+<line x1="40" x2="40" y1="44" y2="424" stroke="#8a8878"/>
+<line x1="40" x2="720" y1="424" y2="424" stroke="#8a8878"/>
+<text x="380.0" y="458.0" font-size="11" fill="#8a8878" text-anchor="middle">US cents per round played</text>
+<circle cx="708.0" cy="65.1" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Claude Opus 5.5, ascension 10: median 3,489,091 points, at 20.6¢ and 34 s a round, won 3 of 5</title></circle>
+<circle cx="481.9" cy="203.9" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Claude Sonnet 5.5, ascension 10: median 620,789 points, at 13.5¢ and 17 s a round, won 1 of 5</title></circle>
+<circle cx="341.8" cy="249.6" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>GPT-6 Sol, ascension 10: median 351,490 points, at 9.1¢ and 20 s a round, won 1 of 5</title></circle>
+<circle cx="246.3" cy="269.2" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiMo-V2.6-Pro, ascension 10: median 275,474 points, at 6.1¢ and 381 s a round, won 0 of 5</title></circle>
+<circle cx="150.7" cy="273.2" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4.1 Flash, ascension 10: median 262,140 points, at 3.1¢ and 105 s a round, won 0 of 5</title></circle>
+<circle cx="188.9" cy="311.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6.1 Sol, ascension 10: median 163,688 points, at 4.3¢ and 19 s a round, won 0 of 5</title></circle>
+<circle cx="239.9" cy="347.1" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4 Pro, ascension 10: median 104,477 points, at 5.9¢ and 203 s a round, won 0 of 5</title></circle>
+<circle cx="198.5" cy="355.1" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>GLM 5.3 Flash, ascension 10: median 94,582 points, at 4.6¢ and 121 s a round, won 1 of 5</title></circle>
+<circle cx="284.5" cy="402.9" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Gemini 3.8 Flash, ascension 10: median 52,176 points, at 7.3¢ and 55 s a round, won 0 of 5</title></circle>
+<g stroke="#fbfaef" stroke-width="3" paint-order="stroke">
+<text x="698.0" y="69.1" font-size="12" fill="#2c2c2c" text-anchor="end">Claude Opus 5.5</text>
+<text x="491.9" y="207.9" font-size="12" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
+<text x="351.8" y="253.6" font-size="12" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
+<text x="256.3" y="273.2" font-size="12" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
+<text x="150.7" y="262.2" font-size="12" fill="#2c2c2c" text-anchor="middle">DeepSeek V4.1 Flash</text>
+<text x="198.9" y="315.0" font-size="12" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
+<text x="249.9" y="351.1" font-size="12" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
+<text x="188.5" y="359.1" font-size="12" fill="#2c2c2c" text-anchor="end">GLM 5.3 Flash</text>
+<text x="294.5" y="406.9" font-size="12" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
+</g>
+</svg>
+
+*Note, the Claude figures are Claude Code's API prices while the rest are OpenRouter's prices.*
+
+<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 456" role="img" aria-labelledby="speed-title" font-family="inherit">
+<title id="speed-title">Seconds of play per round for each model, coloured by the provider that served it.</title>
+<text x="656.2" y="14.0" font-size="11" fill="#8a8878" text-anchor="start">OpenCode Go</text>
+<rect x="640.2" y="4" width="11" height="11" rx="2" fill="#b59f3b"/>
+<text x="566.2" y="14.0" font-size="11" fill="#8a8878" text-anchor="start">OpenRouter</text>
+<rect x="550.2" y="4" width="11" height="11" rx="2" fill="#2f6f8f"/>
+<text x="470.4" y="14.0" font-size="11" fill="#8a8878" text-anchor="start">Claude Code</text>
+<rect x="454.4" y="4" width="11" height="11" rx="2" fill="#8c0000"/>
+<text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
+<text x="0.0" y="35.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
+<rect x="215" y="24" width="26.5" height="14" rx="2" fill="#8c0000"><title>Claude Opus 5.5, through Claude Code: 34 s per round</title></rect>
+<text x="249.5" y="35.0" font-size="12" fill="#2c2c2c" text-anchor="start">34 s</text>
+<text x="0.0" y="59.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
+<rect x="215" y="48" width="13.3" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5, through Claude Code: 17 s per round</title></rect>
+<text x="236.3" y="59.0" font-size="12" fill="#2c2c2c" text-anchor="start">17 s</text>
+<text x="0.0" y="83.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
+<rect x="215" y="72" width="15.6" height="14" rx="2" fill="#2f6f8f"><title>GPT-6 Sol, through OpenRouter: 20 s per round</title></rect>
+<text x="238.6" y="83.0" font-size="12" fill="#2c2c2c" text-anchor="start">20 s</text>
+<text x="0.0" y="107.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
+<rect x="215" y="96" width="297.3" height="14" rx="2" fill="#2f6f8f"><title>MiMo-V2.6-Pro, through OpenRouter: 381 s per round</title></rect>
+<text x="520.3" y="107.0" font-size="12" fill="#2c2c2c" text-anchor="start">381 s</text>
+<text x="0.0" y="131.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
+<rect x="215" y="120" width="81.9" height="14" rx="2" fill="#2f6f8f"><title>DeepSeek V4.1 Flash, through OpenRouter: 105 s per round</title></rect>
+<text x="304.9" y="131.0" font-size="12" fill="#2c2c2c" text-anchor="start">105 s</text>
+<text x="0.0" y="155.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
+<rect x="215" y="144" width="14.8" height="14" rx="2" fill="#2f6f8f"><title>GPT-6.1 Sol, through OpenRouter: 19 s per round</title></rect>
+<text x="237.8" y="155.0" font-size="12" fill="#2c2c2c" text-anchor="start">19 s</text>
+<text x="0.0" y="179.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
+<rect x="215" y="168" width="158.4" height="14" rx="2" fill="#b59f3b"><title>DeepSeek V4 Pro, through OpenCode Go: 203 s per round</title></rect>
+<text x="381.4" y="179.0" font-size="12" fill="#2c2c2c" text-anchor="start">203 s</text>
+<text x="0.0" y="203.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
+<rect x="215" y="192" width="94.4" height="14" rx="2" fill="#2f6f8f"><title>GLM 5.3 Flash, through OpenRouter: 121 s per round</title></rect>
+<text x="317.4" y="203.0" font-size="12" fill="#2c2c2c" text-anchor="start">121 s</text>
+<text x="0.0" y="227.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
+<rect x="215" y="216" width="42.9" height="14" rx="2" fill="#2f6f8f"><title>Gemini 3.8 Flash, through OpenRouter: 55 s per round</title></rect>
+<text x="265.9" y="227.0" font-size="12" fill="#2c2c2c" text-anchor="start">55 s</text>
+<text x="0.0" y="258.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
+<text x="0.0" y="279.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
+<rect x="215" y="268" width="25.0" height="14" rx="2" fill="#2f6f8f"><title>Gemini 3.8 Flash, through OpenRouter: 32 s per round</title></rect>
+<text x="248.0" y="279.0" font-size="12" fill="#2c2c2c" text-anchor="start">32 s</text>
+<text x="0.0" y="303.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
+<rect x="215" y="292" width="21.1" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5, through Claude Code: 27 s per round</title></rect>
+<text x="244.1" y="303.0" font-size="12" fill="#2c2c2c" text-anchor="start">27 s</text>
+<text x="0.0" y="327.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
+<rect x="215" y="316" width="355.0" height="14" rx="2" fill="#b59f3b"><title>Step 5 Preview, through OpenCode Go: 455 s per round</title></rect>
+<text x="578.0" y="327.0" font-size="12" fill="#2c2c2c" text-anchor="start">455 s</text>
+<text x="0.0" y="351.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
+<rect x="215" y="340" width="32.0" height="14" rx="2" fill="#b59f3b"><title>GPT-6 Luna, through OpenCode Go: 41 s per round</title></rect>
+<text x="255.0" y="351.0" font-size="12" fill="#2c2c2c" text-anchor="start">41 s</text>
+<text x="0.0" y="375.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
+<rect x="215" y="364" width="15.6" height="14" rx="2" fill="#b59f3b"><title>Claude Haiku 5.5, through OpenCode Go: 20 s per round</title></rect>
+<text x="238.6" y="375.0" font-size="12" fill="#2c2c2c" text-anchor="start">20 s</text>
+<text x="0.0" y="399.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
+<rect x="215" y="388" width="217.7" height="14" rx="2" fill="#2f6f8f"><title>Nemotron 3 Ultra, through OpenRouter: 279 s per round</title></rect>
+<text x="440.7" y="399.0" font-size="12" fill="#2c2c2c" text-anchor="start">279 s</text>
+<text x="0.0" y="423.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
+<rect x="215" y="412" width="96.0" height="14" rx="2" fill="#b59f3b"><title>MiniMax M3, through OpenCode Go: 123 s per round</title></rect>
+<text x="319.0" y="423.0" font-size="12" fill="#2c2c2c" text-anchor="start">123 s</text>
+<text x="215.0" y="450.0" font-size="11" fill="#8a8878" text-anchor="start">seconds per round played, shop included, waits excluded</text>
+</svg>
+
+## What it says about the game
+
+I built this benchmark in part to balance the game. Balancing has been the hardest (and time-consuming) part of development by far. Solver bots with golden runs only assess difficulty at a cursory level. I'm also not too sure what range of ability to expect for players. I vaguely recall Balatro being incredibly difficult at first and the skill (and difficulty) distribution of solving the word puzzles is probably fairly variable.
+
+It is fortunate the models were characteristically unique as that provides more variation in play styles to review.
+
+**Opus plays like a strong human, and wins about as often as one should.** Ascension 10 is meant for a skilled player to win about 30% of the time and Opus was in the ballpark winning 3 of 5 runs. Though Opus's 3.59 guesses per solve isn't abnormally high by Wordle standards, ascension 10's requirement that each word be unique throughout the entire run adds about +1 expected average guess compared to the player's Wordle average, making Opus a considerably strong guesser.
+
+**It did not win the same way twice.** Its four runs that reached the last round were with different builds:
+
+| Seed | Result | Built around |
+| ---- | ------ | ------------ |
+| 1 | won | Pyromaniac and Scorched Earth: destroy letters and constrains guesses |
+| 2 | won | Snowball, Indelible and The Vault: scales with correct guesses |
+| 5 | won | Keystone, Snowball and Thesaurus: scales with word shape |
+| 3 | 23 of 24 | Force of Habit: scales with word shape |
+
+Across the five runs it held 23 different relics. Its words were as varied, 305 different ones in 358 guesses. No one build carries the game, and most seeds can win with optimal strategy from what is offered and solid guesses.
+
+**A rare-letter build can win, but only just.** GLM 5.3 Flash's one win came on seed 5, where it twice bought the etching that upgrades J, Q, X and Z and then used one of those letters in 25 of its 100 guesses, with words like KUDZU, KAZOO, FRIZZ and XENIA. I designed that upgrade for farming points with words you don't expect to be the answer, which is hard to afford when every round has to be solved. It still worked, though its 1.7 million points was the lowest score of the six wins at ascension 10.
+
+**Letter upgrades don't replace relics.** DeepSeek V4 Pro spent about half of its gold on letter upgrades, against a third for Opus. On seed 4 it went further and sold three of its four relics after round 14 to pay for a letter modifier, a shape level and an alphabet pack. It solved the next round's word in four guesses and still lost, about 3,600 points short of the target.
+
+**The difficulty is spread across the run, not saved for the end.** Opus, the strongest player, failed 1 run in the early game (seed 4, the [36-second loss](https://www.youtube.com/watch?v=a2fVOav6bKg), where it solved LOLLY in round 3 but came up 146 points short of the target, and which also ended Sol's run after 2 rounds). Sonnet, a slightly weaker player, lost at ascension 10 in rounds 16, 18, 21 and 23 across stages 6, 7 and 8, on bosses and non-bosses alike. Most runs fail uniformly in stages 1-2 and 5-8; stages 3-4 are acceptably tame as relics are strong early and target points haven't yet scaled.
+
+**Ascension 0 can be very forgiving.** Gemini showed that common strategies, e.g. guessing CRANE over 100 times, is viable for new players that may be learning the game's mechanics while ascension 10 requires strong, consistent guesses and optimized builds around them which is to be expected by weathered players. Moreover, Step 5 Preview consistently reached round 16 of 24 while only solving half of their rounds.
+
+**Ascension 10 punishes poor solving, but solving alone doesn't win.** Ascension 9 is ascension 10 without its final rule: every round must be solved correctly. GPT-6.1 Sol lost 3 runs on ascension 10 because it failed to solve the word. I had it play the same five seeds one level down.
+
+| Seed | Ascension 10 | Ascension 9 |
+| ---- | ------------ | ----------- |
+| 1 | 11 rounds, 164 thousand | won, 4.5 million |
+| 2 | 8 rounds, 55 thousand | won, 2.1 million |
+| 3 | 21 rounds, 637 thousand | 20 rounds, 1.6 million |
+| 4 | 2 rounds, 2 thousand | 2 rounds, 2 thousand |
+| 5 | 18 rounds, 1.1 million | won, 4.7 million |
+
+It won three of five, and its median score went from 164 thousand to 2.1 million.
+
+DeepSeek V4.1 Flash and GLM 5.3 Flash lost most of their runs at ascension 10 with the word unsolved. On the same seeds at ascension 9, they had nearly the identical performance indicating they would have likely failed on ascension 10 for points even with strong guesses. This suggests fewer guesses per round and early game gold generation matter most, since more gold allows builds to improve enough to beat later round point targets.
+
+To strictly evaluate model performance, ascension 9 may be a better assessment to prevent rounds with unlucky guesses from tanking scores (though it is interesting solving rounds isn't necessarily a given for these SOTA models, too).
+
+### Word shapes
+
+Every guess scores as one of five shapes, and certain relics and shape levels reward specific ones. About a fifth of the game's answers repeat a letter. Luna (with its JAZZY and EERIE openers) repeated one in 40% of its guesses, about twice that rate, while Opus and Sonnet did in 16% and 11% of theirs at ascension 10. Most of every model's guesses were plain words without a repeated letter.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 534" role="img" aria-labelledby="shapes-title" font-family="inherit">
 <title id="shapes-title">Share of each model's guesses in each of the five word shapes, beside the share of the game's answers in each shape.</title>
@@ -666,307 +869,9 @@ The shape of the words is the other way to look at it, and it works at ascension
 <text x="215.0" y="528.0" font-size="11" fill="#8a8878" text-anchor="start">share of guesses in each word shape · a guess scores as the first shape on this list it matches</text>
 </svg>
 
-Guesses per cleared round:
-
-<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 456" role="img" aria-labelledby="guesses-title" font-family="inherit">
-<title id="guesses-title">Guesses per cleared round for each model. Lower is better; six is the limit.</title>
-<text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
-<text x="0.0" y="35.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
-<rect x="215" y="24" width="240.0" height="14" rx="2" fill="#8c0000"><title>Claude Opus 5.5: 3.59 guesses per cleared round, solved 97 of 97 cleared rounds</title></rect>
-<text x="463.0" y="35.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.59 · solved 97 of 97</text>
-<text x="0.0" y="59.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="215" y="48" width="262.1" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: 3.92 guesses per cleared round, solved 97 of 98 cleared rounds</title></rect>
-<text x="485.1" y="59.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.92 · solved 97 of 98</text>
-<text x="0.0" y="83.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
-<rect x="215" y="72" width="251.9" height="14" rx="2" fill="#8c0000"><title>GPT-6 Sol: 3.76 guesses per cleared round, solved 68 of 68 cleared rounds</title></rect>
-<text x="474.9" y="83.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.76 · solved 68 of 68</text>
-<text x="0.0" y="107.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
-<rect x="215" y="96" width="268.6" height="14" rx="2" fill="#8c0000"><title>MiMo-V2.6-Pro: 4.02 guesses per cleared round, solved 65 of 65 cleared rounds</title></rect>
-<text x="491.6" y="107.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.02 · solved 65 of 65</text>
-<text x="0.0" y="131.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
-<rect x="215" y="120" width="275.2" height="14" rx="2" fill="#8c0000"><title>DeepSeek V4.1 Flash: 4.11 guesses per cleared round, solved 62 of 62 cleared rounds</title></rect>
-<text x="498.2" y="131.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.11 · solved 62 of 62</text>
-<text x="0.0" y="155.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
-<rect x="215" y="144" width="256.4" height="14" rx="2" fill="#8c0000"><title>GPT-6.1 Sol: 3.83 guesses per cleared round, solved 60 of 60 cleared rounds</title></rect>
-<text x="479.4" y="155.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.83 · solved 60 of 60</text>
-<text x="0.0" y="179.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
-<rect x="215" y="168" width="247.3" height="14" rx="2" fill="#8c0000"><title>DeepSeek V4 Pro: 3.70 guesses per cleared round, solved 56 of 56 cleared rounds</title></rect>
-<text x="470.3" y="179.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.70 · solved 56 of 56</text>
-<text x="0.0" y="203.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
-<rect x="215" y="192" width="268.8" height="14" rx="2" fill="#8c0000"><title>GLM 5.3 Flash: 4.02 guesses per cleared round, solved 55 of 55 cleared rounds</title></rect>
-<text x="491.8" y="203.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.02 · solved 55 of 55</text>
-<text x="0.0" y="227.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="215" y="216" width="256.1" height="14" rx="2" fill="#8c0000"><title>Gemini 3.8 Flash: 3.83 guesses per cleared round, solved 58 of 58 cleared rounds</title></rect>
-<text x="479.1" y="227.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.83 · solved 58 of 58</text>
-<text x="0.0" y="258.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
-<text x="0.0" y="279.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="215" y="268" width="255.9" height="14" rx="2" fill="#8c0000"><title>Gemini 3.8 Flash: 3.83 guesses per cleared round, solved 114 of 120 cleared rounds</title></rect>
-<text x="478.9" y="279.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.83 · solved 114 of 120</text>
-<text x="0.0" y="303.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="215" y="292" width="267.6" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: 4.00 guesses per cleared round, solved 90 of 102 cleared rounds</title></rect>
-<text x="490.6" y="303.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.00 · solved 90 of 102</text>
-<text x="0.0" y="327.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
-<rect x="215" y="316" width="355.0" height="14" rx="2" fill="#8c0000"><title>Step 5 Preview: 5.31 guesses per cleared round, solved 35 of 62 cleared rounds</title></rect>
-<text x="578.0" y="327.0" font-size="12" fill="#2c2c2c" text-anchor="start">5.31 · solved 35 of 62</text>
-<text x="0.0" y="351.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
-<rect x="215" y="340" width="314.4" height="14" rx="2" fill="#8c0000"><title>GPT-6 Luna: 4.70 guesses per cleared round, solved 64 of 70 cleared rounds</title></rect>
-<text x="537.4" y="351.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.70 · solved 64 of 70</text>
-<text x="0.0" y="375.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
-<rect x="215" y="364" width="284.7" height="14" rx="2" fill="#8c0000"><title>Claude Haiku 5.5: 4.26 guesses per cleared round, solved 38 of 43 cleared rounds</title></rect>
-<text x="507.7" y="375.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.26 · solved 38 of 43</text>
-<text x="0.0" y="399.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
-<rect x="215" y="388" width="301.0" height="14" rx="2" fill="#8c0000"><title>Nemotron 3 Ultra: 4.50 guesses per cleared round, solved 36 of 42 cleared rounds</title></rect>
-<text x="524.0" y="399.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.50 · solved 36 of 42</text>
-<text x="0.0" y="423.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
-<rect x="215" y="412" width="298.7" height="14" rx="2" fill="#8c0000"><title>MiniMax M3: 4.46 guesses per cleared round, solved 28 of 28 cleared rounds</title></rect>
-<text x="521.7" y="423.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.46 · solved 28 of 28</text>
-<text x="215.0" y="450.0" font-size="11" fill="#8a8878" text-anchor="start">guesses per cleared round (lower is better, six is the limit) · rounds solved of rounds cleared</text>
-</svg>
-
-"Rounds solved" is how many of the rounds a player cleared it cleared by finding the word, rather than by reaching the target without it. Sonnet's base-game figure carries the TAXIS rounds, which took all six guesses on purpose.
-
-## More from the runs
-
-Every run is a list of moves, so it can be replayed and measured any way that seems interesting.
-
-### How rounds ended
-
-Wordle's own chart, one per model: how many rounds were solved in each number of guesses, how many were cleared on score without solving, and how many were lost. Opus solved 45 of its 99 rounds in three guesses.
-
-<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 502" role="img" aria-labelledby="dist-title" font-family="inherit">
-<title id="dist-title">How each model's rounds ended: solved in one to six guesses, cleared without solving, or lost.</title>
-<text x="246.6" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">1</text>
-<text x="309.7" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">2</text>
-<text x="372.8" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">3</text>
-<text x="435.9" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">4</text>
-<text x="499.1" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">5</text>
-<text x="562.2" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">6</text>
-<text x="625.3" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">no solve</text>
-<text x="688.4" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">lost</text>
-<text x="0.0" y="28.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
-<text x="0.0" y="51.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
-<rect x="279.1" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.16"><title>Claude Opus 5.5: 8 of 99 rounds, 2</title></rect>
-<text x="309.7" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8</text>
-<rect x="342.3" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.91"><title>Claude Opus 5.5: 45 of 99 rounds, 3</title></rect>
-<text x="372.8" y="51.0" font-size="11" fill="#ffffff" text-anchor="middle">45</text>
-<rect x="405.4" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.61"><title>Claude Opus 5.5: 30 of 99 rounds, 4</title></rect>
-<text x="435.9" y="51.0" font-size="11" fill="#ffffff" text-anchor="middle">30</text>
-<rect x="468.5" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>Claude Opus 5.5: 7 of 99 rounds, 5</title></rect>
-<text x="499.1" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7</text>
-<rect x="531.6" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>Claude Opus 5.5: 7 of 99 rounds, 6</title></rect>
-<text x="562.2" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7</text>
-<rect x="657.9" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Claude Opus 5.5: 2 of 99 rounds, lost</title></rect>
-<text x="688.4" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2</text>
-<text x="0.0" y="77.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="279.1" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>Claude Sonnet 5.5: 4 of 102 rounds, 2</title></rect>
-<text x="309.7" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4</text>
-<rect x="342.3" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.53"><title>Claude Sonnet 5.5: 27 of 102 rounds, 3</title></rect>
-<text x="372.8" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">27</text>
-<rect x="405.4" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.88"><title>Claude Sonnet 5.5: 45 of 102 rounds, 4</title></rect>
-<text x="435.9" y="77.0" font-size="11" fill="#ffffff" text-anchor="middle">45</text>
-<rect x="468.5" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.29"><title>Claude Sonnet 5.5: 15 of 102 rounds, 5</title></rect>
-<text x="499.1" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">15</text>
-<rect x="531.6" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.12"><title>Claude Sonnet 5.5: 6 of 102 rounds, 6</title></rect>
-<text x="562.2" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6</text>
-<rect x="594.8" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Claude Sonnet 5.5: 1 of 102 rounds, no solve</title></rect>
-<text x="625.3" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1</text>
-<rect x="657.9" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>Claude Sonnet 5.5: 4 of 102 rounds, lost</title></rect>
-<text x="688.4" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4</text>
-<text x="0.0" y="103.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
-<rect x="279.1" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>GPT-6 Sol: 3 of 72 rounds, 2</title></rect>
-<text x="309.7" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3</text>
-<rect x="342.3" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.69"><title>GPT-6 Sol: 25 of 72 rounds, 3</title></rect>
-<text x="372.8" y="103.0" font-size="11" fill="#ffffff" text-anchor="middle">25</text>
-<rect x="405.4" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.72"><title>GPT-6 Sol: 26 of 72 rounds, 4</title></rect>
-<text x="435.9" y="103.0" font-size="11" fill="#ffffff" text-anchor="middle">26</text>
-<rect x="468.5" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.36"><title>GPT-6 Sol: 13 of 72 rounds, 5</title></rect>
-<text x="499.1" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">13</text>
-<rect x="531.6" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>GPT-6 Sol: 1 of 72 rounds, 6</title></rect>
-<text x="562.2" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1</text>
-<rect x="657.9" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.11"><title>GPT-6 Sol: 4 of 72 rounds, lost</title></rect>
-<text x="688.4" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4</text>
-<text x="0.0" y="129.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
-<rect x="279.1" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>MiMo-V2.6-Pro: 1 of 70 rounds, 2</title></rect>
-<text x="309.7" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1</text>
-<rect x="342.3" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.60"><title>MiMo-V2.6-Pro: 21 of 70 rounds, 3</title></rect>
-<text x="372.8" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">21</text>
-<rect x="405.4" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.77"><title>MiMo-V2.6-Pro: 27 of 70 rounds, 4</title></rect>
-<text x="435.9" y="129.0" font-size="11" fill="#ffffff" text-anchor="middle">27</text>
-<rect x="468.5" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.23"><title>MiMo-V2.6-Pro: 8 of 70 rounds, 5</title></rect>
-<text x="499.1" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8</text>
-<rect x="531.6" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.23"><title>MiMo-V2.6-Pro: 8 of 70 rounds, 6</title></rect>
-<text x="562.2" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8</text>
-<rect x="657.9" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>MiMo-V2.6-Pro: 5 of 70 rounds, lost</title></rect>
-<text x="688.4" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="155.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
-<rect x="279.1" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.09"><title>DeepSeek V4.1 Flash: 3 of 67 rounds, 2</title></rect>
-<text x="309.7" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3</text>
-<rect x="342.3" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>DeepSeek V4.1 Flash: 13 of 67 rounds, 3</title></rect>
-<text x="372.8" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">13</text>
-<rect x="405.4" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.75"><title>DeepSeek V4.1 Flash: 25 of 67 rounds, 4</title></rect>
-<text x="435.9" y="155.0" font-size="11" fill="#ffffff" text-anchor="middle">25</text>
-<rect x="468.5" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.48"><title>DeepSeek V4.1 Flash: 16 of 67 rounds, 5</title></rect>
-<text x="499.1" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">16</text>
-<rect x="531.6" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>DeepSeek V4.1 Flash: 5 of 67 rounds, 6</title></rect>
-<text x="562.2" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<rect x="657.9" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>DeepSeek V4.1 Flash: 5 of 67 rounds, lost</title></rect>
-<text x="688.4" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="181.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
-<rect x="279.1" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>GPT-6.1 Sol: 2 of 65 rounds, 2</title></rect>
-<text x="309.7" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2</text>
-<rect x="342.3" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.58"><title>GPT-6.1 Sol: 19 of 65 rounds, 3</title></rect>
-<text x="372.8" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">19</text>
-<rect x="405.4" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.86"><title>GPT-6.1 Sol: 28 of 65 rounds, 4</title></rect>
-<text x="435.9" y="181.0" font-size="11" fill="#ffffff" text-anchor="middle">28</text>
-<rect x="468.5" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.28"><title>GPT-6.1 Sol: 9 of 65 rounds, 5</title></rect>
-<text x="499.1" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9</text>
-<rect x="531.6" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>GPT-6.1 Sol: 2 of 65 rounds, 6</title></rect>
-<text x="562.2" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2</text>
-<rect x="657.9" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>GPT-6.1 Sol: 5 of 65 rounds, lost</title></rect>
-<text x="688.4" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="207.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
-<rect x="279.1" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.16"><title>DeepSeek V4 Pro: 5 of 61 rounds, 2</title></rect>
-<text x="309.7" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<rect x="342.3" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.62"><title>DeepSeek V4 Pro: 19 of 61 rounds, 3</title></rect>
-<text x="372.8" y="207.0" font-size="11" fill="#ffffff" text-anchor="middle">19</text>
-<rect x="405.4" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.69"><title>DeepSeek V4 Pro: 21 of 61 rounds, 4</title></rect>
-<text x="435.9" y="207.0" font-size="11" fill="#ffffff" text-anchor="middle">21</text>
-<rect x="468.5" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>DeepSeek V4 Pro: 10 of 61 rounds, 5</title></rect>
-<text x="499.1" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">10</text>
-<rect x="531.6" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>DeepSeek V4 Pro: 1 of 61 rounds, 6</title></rect>
-<text x="562.2" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1</text>
-<rect x="657.9" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.16"><title>DeepSeek V4 Pro: 5 of 61 rounds, lost</title></rect>
-<text x="688.4" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="233.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
-<rect x="279.1" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.07"><title>GLM 5.3 Flash: 2 of 59 rounds, 2</title></rect>
-<text x="309.7" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2</text>
-<rect x="342.3" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.68"><title>GLM 5.3 Flash: 20 of 59 rounds, 3</title></rect>
-<text x="372.8" y="233.0" font-size="11" fill="#ffffff" text-anchor="middle">20</text>
-<rect x="405.4" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.44"><title>GLM 5.3 Flash: 13 of 59 rounds, 4</title></rect>
-<text x="435.9" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">13</text>
-<rect x="468.5" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.51"><title>GLM 5.3 Flash: 15 of 59 rounds, 5</title></rect>
-<text x="499.1" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">15</text>
-<rect x="531.6" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.17"><title>GLM 5.3 Flash: 5 of 59 rounds, 6</title></rect>
-<text x="562.2" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<rect x="657.9" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>GLM 5.3 Flash: 4 of 59 rounds, lost</title></rect>
-<text x="688.4" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4</text>
-<text x="0.0" y="259.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="216.0" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Gemini 3.8 Flash: 1 of 63 rounds, 1</title></rect>
-<text x="246.6" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1</text>
-<rect x="279.1" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.10"><title>Gemini 3.8 Flash: 3 of 63 rounds, 2</title></rect>
-<text x="309.7" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3</text>
-<rect x="342.3" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.54"><title>Gemini 3.8 Flash: 17 of 63 rounds, 3</title></rect>
-<text x="372.8" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">17</text>
-<rect x="405.4" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.73"><title>Gemini 3.8 Flash: 23 of 63 rounds, 4</title></rect>
-<text x="435.9" y="259.0" font-size="11" fill="#ffffff" text-anchor="middle">23</text>
-<rect x="468.5" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.38"><title>Gemini 3.8 Flash: 12 of 63 rounds, 5</title></rect>
-<text x="499.1" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">12</text>
-<rect x="531.6" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Gemini 3.8 Flash: 2 of 63 rounds, 6</title></rect>
-<text x="562.2" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2</text>
-<rect x="657.9" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.16"><title>Gemini 3.8 Flash: 5 of 63 rounds, lost</title></rect>
-<text x="688.4" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="290.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
-<text x="0.0" y="313.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="279.1" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>Gemini 3.8 Flash: 5 of 120 rounds, 2</title></rect>
-<text x="309.7" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<rect x="342.3" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.70"><title>Gemini 3.8 Flash: 42 of 120 rounds, 3</title></rect>
-<text x="372.8" y="313.0" font-size="11" fill="#ffffff" text-anchor="middle">42</text>
-<rect x="405.4" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.73"><title>Gemini 3.8 Flash: 44 of 120 rounds, 4</title></rect>
-<text x="435.9" y="313.0" font-size="11" fill="#ffffff" text-anchor="middle">44</text>
-<rect x="468.5" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>Gemini 3.8 Flash: 20 of 120 rounds, 5</title></rect>
-<text x="499.1" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">20</text>
-<rect x="531.6" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Gemini 3.8 Flash: 3 of 120 rounds, 6</title></rect>
-<text x="562.2" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3</text>
-<rect x="594.8" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.10"><title>Gemini 3.8 Flash: 6 of 120 rounds, no solve</title></rect>
-<text x="625.3" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6</text>
-<text x="0.0" y="339.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="279.1" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.13"><title>Claude Sonnet 5.5: 7 of 106 rounds, 2</title></rect>
-<text x="309.7" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7</text>
-<rect x="342.3" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.53"><title>Claude Sonnet 5.5: 28 of 106 rounds, 3</title></rect>
-<text x="372.8" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">28</text>
-<rect x="405.4" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.66"><title>Claude Sonnet 5.5: 35 of 106 rounds, 4</title></rect>
-<text x="435.9" y="339.0" font-size="11" fill="#ffffff" text-anchor="middle">35</text>
-<rect x="468.5" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>Claude Sonnet 5.5: 14 of 106 rounds, 5</title></rect>
-<text x="499.1" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">14</text>
-<rect x="531.6" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.11"><title>Claude Sonnet 5.5: 6 of 106 rounds, 6</title></rect>
-<text x="562.2" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6</text>
-<rect x="594.8" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.23"><title>Claude Sonnet 5.5: 12 of 106 rounds, no solve</title></rect>
-<text x="625.3" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">12</text>
-<rect x="657.9" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>Claude Sonnet 5.5: 4 of 106 rounds, lost</title></rect>
-<text x="688.4" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4</text>
-<text x="0.0" y="365.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
-<rect x="342.3" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Step 5 Preview: 2 of 67 rounds, 3</title></rect>
-<text x="372.8" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2</text>
-<rect x="405.4" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>Step 5 Preview: 11 of 67 rounds, 4</title></rect>
-<text x="435.9" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">11</text>
-<rect x="468.5" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>Step 5 Preview: 13 of 67 rounds, 5</title></rect>
-<text x="499.1" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">13</text>
-<rect x="531.6" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>Step 5 Preview: 9 of 67 rounds, 6</title></rect>
-<text x="562.2" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9</text>
-<rect x="594.8" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.81"><title>Step 5 Preview: 27 of 67 rounds, no solve</title></rect>
-<text x="625.3" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">27</text>
-<rect x="657.9" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>Step 5 Preview: 5 of 67 rounds, lost</title></rect>
-<text x="688.4" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="391.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
-<rect x="342.3" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>GPT-6 Luna: 7 of 75 rounds, 3</title></rect>
-<text x="372.8" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7</text>
-<rect x="405.4" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.59"><title>GPT-6 Luna: 22 of 75 rounds, 4</title></rect>
-<text x="435.9" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">22</text>
-<rect x="468.5" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.64"><title>GPT-6 Luna: 24 of 75 rounds, 5</title></rect>
-<text x="499.1" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">24</text>
-<rect x="531.6" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.29"><title>GPT-6 Luna: 11 of 75 rounds, 6</title></rect>
-<text x="562.2" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">11</text>
-<rect x="594.8" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.16"><title>GPT-6 Luna: 6 of 75 rounds, no solve</title></rect>
-<text x="625.3" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6</text>
-<rect x="657.9" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.13"><title>GPT-6 Luna: 5 of 75 rounds, lost</title></rect>
-<text x="688.4" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="417.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
-<rect x="279.1" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.13"><title>Claude Haiku 5.5: 3 of 48 rounds, 2</title></rect>
-<text x="309.7" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3</text>
-<rect x="342.3" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.46"><title>Claude Haiku 5.5: 11 of 48 rounds, 3</title></rect>
-<text x="372.8" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">11</text>
-<rect x="405.4" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.38"><title>Claude Haiku 5.5: 9 of 48 rounds, 4</title></rect>
-<text x="435.9" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9</text>
-<rect x="468.5" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.42"><title>Claude Haiku 5.5: 10 of 48 rounds, 5</title></rect>
-<text x="499.1" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">10</text>
-<rect x="531.6" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>Claude Haiku 5.5: 5 of 48 rounds, 6</title></rect>
-<text x="562.2" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<rect x="594.8" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>Claude Haiku 5.5: 5 of 48 rounds, no solve</title></rect>
-<text x="625.3" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<rect x="657.9" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>Claude Haiku 5.5: 5 of 48 rounds, lost</title></rect>
-<text x="688.4" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="443.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
-<rect x="279.1" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Nemotron 3 Ultra: 1 of 47 rounds, 2</title></rect>
-<text x="309.7" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1</text>
-<rect x="342.3" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>Nemotron 3 Ultra: 10 of 47 rounds, 3</title></rect>
-<text x="372.8" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">10</text>
-<rect x="405.4" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.34"><title>Nemotron 3 Ultra: 8 of 47 rounds, 4</title></rect>
-<text x="435.9" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8</text>
-<rect x="468.5" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.55"><title>Nemotron 3 Ultra: 13 of 47 rounds, 5</title></rect>
-<text x="499.1" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">13</text>
-<rect x="531.6" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.17"><title>Nemotron 3 Ultra: 4 of 47 rounds, 6</title></rect>
-<text x="562.2" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4</text>
-<rect x="594.8" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>Nemotron 3 Ultra: 6 of 47 rounds, no solve</title></rect>
-<text x="625.3" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6</text>
-<rect x="657.9" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>Nemotron 3 Ultra: 5 of 47 rounds, lost</title></rect>
-<text x="688.4" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="0.0" y="469.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
-<rect x="342.3" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.30"><title>MiniMax M3: 5 of 33 rounds, 3</title></rect>
-<text x="372.8" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<rect x="405.4" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.55"><title>MiniMax M3: 9 of 33 rounds, 4</title></rect>
-<text x="435.9" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9</text>
-<rect x="468.5" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.61"><title>MiniMax M3: 10 of 33 rounds, 5</title></rect>
-<text x="499.1" y="469.0" font-size="11" fill="#ffffff" text-anchor="middle">10</text>
-<rect x="531.6" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.24"><title>MiniMax M3: 4 of 33 rounds, 6</title></rect>
-<text x="562.2" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4</text>
-<rect x="657.9" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.30"><title>MiniMax M3: 5 of 33 rounds, lost</title></rect>
-<text x="688.4" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5</text>
-<text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">rounds by how they ended: solved in that many guesses, cleared on score without solving, or lost</text>
-</svg>
-
 ### Relics
 
-The game has 47 relics, and between them the 25 runs held 43. Each row is a relic and each column a model, with the number of its five runs that held it. No relic is in every run: the most common, Indelible, was held in 11 of 25, and only Collector, First Draft and Green Thumb were picked up by all five players. Luna tried the most, 32, partly because it sells seven of them back every run.
+The game has 47 relics, and all but 2 were purchased across all runs. Only 1 model bought the same relic in all 5 of their runs.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 1126" role="img" aria-labelledby="relics-title" font-family="inherit">
 <title id="relics-title">Every relic in the game against every model, with the number of its five runs the model held it in.</title>
@@ -2140,166 +2045,168 @@ The game has 47 relics, and between them the 25 runs held 43. Each row is a reli
 <text x="0.0" y="1120.0" font-size="11" fill="#8a8878" text-anchor="start">runs, of 5, in which the model held the relic · blank is never · all 47 relics, most-held first</text>
 </svg>
 
-### In the shop
+### The Shop and Economy
 
-Opus is the only model that rerolls the shop to speak of, 3.6 times a run. Luna sells seven relics a run, more than twice anyone else.
+Run performance is strongly correlated with income and shop usage. On one hand, better runs imply more money to spend, but it's clear: no run lasts without utilizing the shop efficiently.
+
+Conversely, overselling, e.g. GPT-6 Luna, and poor purchasing strategies, e.g. GLM 5.3 Flash with 2.8 consumables while only reaching stage 5 or DeepSeek v4 Pro with the second most purchases per stage but focusing on economy instead of points, are inversely correlated with performance.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 502" role="img" aria-labelledby="shop-title" font-family="inherit">
-<title id="shop-title">Shop actions per run for each model: purchases, relics sold, rerolls and consumables used.</title>
+<title id="shop-title">Shop actions per stage played for each model: purchases, relics sold, rerolls and consumables used.</title>
 <text x="278.1" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">Purchases</text>
 <text x="404.4" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">Relics sold</text>
 <text x="530.6" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">Rerolls</text>
 <text x="656.9" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">Consumables used</text>
 <text x="0.0" y="28.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
 <text x="0.0" y="51.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
-<rect x="216.0" y="36" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.61"><title>Claude Opus 5.5: 25.6 purchases per run</title></rect>
-<text x="278.1" y="51.0" font-size="11" fill="#ffffff" text-anchor="middle">25.6</text>
-<rect x="342.3" y="36" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.34"><title>Claude Opus 5.5: 2.8 relics sold per run</title></rect>
-<text x="404.4" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.8</text>
-<rect x="468.5" y="36" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.49"><title>Claude Opus 5.5: 3.6 rerolls per run</title></rect>
-<text x="530.6" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.6</text>
-<rect x="594.8" y="36" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>Claude Opus 5.5: 4.0 consumables used per run</title></rect>
-<text x="656.9" y="51.0" font-size="11" fill="#ffffff" text-anchor="middle">4.0</text>
+<rect x="216.0" y="36" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.75"><title>Claude Opus 5.5: 3.88 purchases per stage, 128 over 99 rounds</title></rect>
+<text x="278.1" y="51.0" font-size="11" fill="#ffffff" text-anchor="middle">3.88</text>
+<rect x="342.3" y="36" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>Claude Opus 5.5: 0.42 relics sold per stage, 14 over 99 rounds</title></rect>
+<text x="404.4" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.42</text>
+<rect x="468.5" y="36" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.60"><title>Claude Opus 5.5: 0.55 rerolls per stage, 18 over 99 rounds</title></rect>
+<text x="530.6" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.55</text>
+<rect x="594.8" y="36" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.72"><title>Claude Opus 5.5: 0.61 consumables used per stage, 20 over 99 rounds</title></rect>
+<text x="656.9" y="51.0" font-size="11" fill="#ffffff" text-anchor="middle">0.61</text>
 <text x="0.0" y="77.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="216.0" y="62" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.51"><title>Claude Sonnet 5.5: 21.4 purchases per run</title></rect>
-<text x="278.1" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">21.4</text>
-<rect x="342.3" y="62" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.34"><title>Claude Sonnet 5.5: 2.8 relics sold per run</title></rect>
-<text x="404.4" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.8</text>
-<rect x="468.5" y="62" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Claude Sonnet 5.5: 0.2 rerolls per run</title></rect>
-<text x="530.6" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.2</text>
-<rect x="594.8" y="62" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.64"><title>Claude Sonnet 5.5: 3.0 consumables used per run</title></rect>
-<text x="656.9" y="77.0" font-size="11" fill="#ffffff" text-anchor="middle">3.0</text>
+<rect x="216.0" y="62" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.60"><title>Claude Sonnet 5.5: 3.15 purchases per stage, 107 over 102 rounds</title></rect>
+<text x="278.1" y="77.0" font-size="11" fill="#ffffff" text-anchor="middle">3.15</text>
+<rect x="342.3" y="62" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.25"><title>Claude Sonnet 5.5: 0.41 relics sold per stage, 14 over 102 rounds</title></rect>
+<text x="404.4" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.41</text>
+<rect x="468.5" y="62" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Claude Sonnet 5.5: 0.03 rerolls per stage, 1 over 102 rounds</title></rect>
+<text x="530.6" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.03</text>
+<rect x="594.8" y="62" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>Claude Sonnet 5.5: 0.44 consumables used per stage, 15 over 102 rounds</title></rect>
+<text x="656.9" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.44</text>
 <text x="0.0" y="103.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
-<rect x="216.0" y="88" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>GPT-6 Sol: 14.6 purchases per run</title></rect>
-<text x="278.1" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">14.6</text>
-<rect x="342.3" y="88" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.07"><title>GPT-6 Sol: 0.6 relics sold per run</title></rect>
-<text x="404.4" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.6</text>
-<rect x="468.5" y="88" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.38"><title>GPT-6 Sol: 2.8 rerolls per run</title></rect>
-<text x="530.6" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.8</text>
-<rect x="594.8" y="88" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.72"><title>GPT-6 Sol: 3.4 consumables used per run</title></rect>
-<text x="656.9" y="103.0" font-size="11" fill="#ffffff" text-anchor="middle">3.4</text>
+<rect x="216.0" y="88" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.58"><title>GPT-6 Sol: 3.04 purchases per stage, 73 over 72 rounds</title></rect>
+<text x="278.1" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.04</text>
+<rect x="342.3" y="88" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>GPT-6 Sol: 0.13 relics sold per stage, 3 over 72 rounds</title></rect>
+<text x="404.4" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.13</text>
+<rect x="468.5" y="88" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.64"><title>GPT-6 Sol: 0.58 rerolls per stage, 14 over 72 rounds</title></rect>
+<text x="530.6" y="103.0" font-size="11" fill="#ffffff" text-anchor="middle">0.58</text>
+<rect x="594.8" y="88" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.84"><title>GPT-6 Sol: 0.71 consumables used per stage, 17 over 72 rounds</title></rect>
+<text x="656.9" y="103.0" font-size="11" fill="#ffffff" text-anchor="middle">0.71</text>
 <text x="0.0" y="129.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
-<rect x="216.0" y="114" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.30"><title>MiMo-V2.6-Pro: 12.4 purchases per run</title></rect>
-<text x="278.1" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">12.4</text>
-<rect x="342.3" y="114" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.22"><title>MiMo-V2.6-Pro: 1.8 relics sold per run</title></rect>
-<text x="404.4" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.8</text>
-<rect x="468.5" y="114" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.11"><title>MiMo-V2.6-Pro: 0.8 rerolls per run</title></rect>
-<text x="530.6" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.8</text>
-<rect x="594.8" y="114" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.47"><title>MiMo-V2.6-Pro: 2.2 consumables used per run</title></rect>
-<text x="656.9" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.2</text>
+<rect x="216.0" y="114" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.51"><title>MiMo-V2.6-Pro: 2.66 purchases per stage, 62 over 70 rounds</title></rect>
+<text x="278.1" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.66</text>
+<rect x="342.3" y="114" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.23"><title>MiMo-V2.6-Pro: 0.39 relics sold per stage, 9 over 70 rounds</title></rect>
+<text x="404.4" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.39</text>
+<rect x="468.5" y="114" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>MiMo-V2.6-Pro: 0.17 rerolls per stage, 4 over 70 rounds</title></rect>
+<text x="530.6" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.17</text>
+<rect x="594.8" y="114" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.56"><title>MiMo-V2.6-Pro: 0.47 consumables used per stage, 11 over 70 rounds</title></rect>
+<text x="656.9" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.47</text>
 <text x="0.0" y="155.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
-<rect x="216.0" y="140" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>DeepSeek V4.1 Flash: 11.4 purchases per run</title></rect>
-<text x="278.1" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">11.4</text>
-<rect x="342.3" y="140" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>DeepSeek V4.1 Flash: 1.2 relics sold per run</title></rect>
-<text x="404.4" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.2</text>
-<rect x="468.5" y="140" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>DeepSeek V4.1 Flash: 0.4 rerolls per run</title></rect>
-<text x="530.6" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.4</text>
-<rect x="594.8" y="140" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.47"><title>DeepSeek V4.1 Flash: 2.2 consumables used per run</title></rect>
-<text x="656.9" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.2</text>
+<rect x="216.0" y="140" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.49"><title>DeepSeek V4.1 Flash: 2.55 purchases per stage, 57 over 67 rounds</title></rect>
+<text x="278.1" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.55</text>
+<rect x="342.3" y="140" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.16"><title>DeepSeek V4.1 Flash: 0.27 relics sold per stage, 6 over 67 rounds</title></rect>
+<text x="404.4" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.27</text>
+<rect x="468.5" y="140" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.10"><title>DeepSeek V4.1 Flash: 0.09 rerolls per stage, 2 over 67 rounds</title></rect>
+<text x="530.6" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.09</text>
+<rect x="594.8" y="140" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.58"><title>DeepSeek V4.1 Flash: 0.49 consumables used per stage, 11 over 67 rounds</title></rect>
+<text x="656.9" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.49</text>
 <text x="0.0" y="181.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
-<rect x="216.0" y="166" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.28"><title>GPT-6.1 Sol: 11.6 purchases per run</title></rect>
-<text x="278.1" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">11.6</text>
-<rect x="342.3" y="166" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>GPT-6.1 Sol: 2.2 relics sold per run</title></rect>
-<text x="404.4" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.2</text>
-<rect x="468.5" y="166" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>GPT-6.1 Sol: 1.0 rerolls per run</title></rect>
-<text x="530.6" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.0</text>
-<rect x="594.8" y="166" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.34"><title>GPT-6.1 Sol: 1.6 consumables used per run</title></rect>
-<text x="656.9" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.6</text>
+<rect x="216.0" y="166" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.51"><title>GPT-6.1 Sol: 2.68 purchases per stage, 58 over 65 rounds</title></rect>
+<text x="278.1" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.68</text>
+<rect x="342.3" y="166" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.31"><title>GPT-6.1 Sol: 0.51 relics sold per stage, 11 over 65 rounds</title></rect>
+<text x="404.4" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.51</text>
+<rect x="468.5" y="166" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.25"><title>GPT-6.1 Sol: 0.23 rerolls per stage, 5 over 65 rounds</title></rect>
+<text x="530.6" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.23</text>
+<rect x="594.8" y="166" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.44"><title>GPT-6.1 Sol: 0.37 consumables used per stage, 8 over 65 rounds</title></rect>
+<text x="656.9" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.37</text>
 <text x="0.0" y="207.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
-<rect x="216.0" y="192" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.37"><title>DeepSeek V4 Pro: 15.4 purchases per run</title></rect>
-<text x="278.1" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">15.4</text>
-<rect x="342.3" y="192" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.32"><title>DeepSeek V4 Pro: 2.6 relics sold per run</title></rect>
-<text x="404.4" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.6</text>
-<rect x="468.5" y="192" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>DeepSeek V4 Pro: 0.0 rerolls per run</title></rect>
-<text x="530.6" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.0</text>
-<rect x="594.8" y="192" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.34"><title>DeepSeek V4 Pro: 1.6 consumables used per run</title></rect>
-<text x="656.9" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.6</text>
+<rect x="216.0" y="192" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.73"><title>DeepSeek V4 Pro: 3.79 purchases per stage, 77 over 61 rounds</title></rect>
+<text x="278.1" y="207.0" font-size="11" fill="#ffffff" text-anchor="middle">3.79</text>
+<rect x="342.3" y="192" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>DeepSeek V4 Pro: 0.64 relics sold per stage, 13 over 61 rounds</title></rect>
+<text x="404.4" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.64</text>
+<rect x="468.5" y="192" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>DeepSeek V4 Pro: 0.00 rerolls per stage, 0 over 61 rounds</title></rect>
+<text x="530.6" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.00</text>
+<rect x="594.8" y="192" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.46"><title>DeepSeek V4 Pro: 0.39 consumables used per stage, 8 over 61 rounds</title></rect>
+<text x="656.9" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.39</text>
 <text x="0.0" y="233.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
-<rect x="216.0" y="218" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>GLM 5.3 Flash: 11.4 purchases per run</title></rect>
-<text x="278.1" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">11.4</text>
-<rect x="342.3" y="218" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>GLM 5.3 Flash: 2.2 relics sold per run</title></rect>
-<text x="404.4" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.2</text>
-<rect x="468.5" y="218" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>GLM 5.3 Flash: 0.2 rerolls per run</title></rect>
-<text x="530.6" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.2</text>
-<rect x="594.8" y="218" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.59"><title>GLM 5.3 Flash: 2.8 consumables used per run</title></rect>
-<text x="656.9" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.8</text>
+<rect x="216.0" y="218" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.56"><title>GLM 5.3 Flash: 2.90 purchases per stage, 57 over 59 rounds</title></rect>
+<text x="278.1" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.90</text>
+<rect x="342.3" y="218" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.34"><title>GLM 5.3 Flash: 0.56 relics sold per stage, 11 over 59 rounds</title></rect>
+<text x="404.4" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.56</text>
+<rect x="468.5" y="218" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>GLM 5.3 Flash: 0.05 rerolls per stage, 1 over 59 rounds</title></rect>
+<text x="530.6" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.05</text>
+<rect x="594.8" y="218" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.84"><title>GLM 5.3 Flash: 0.71 consumables used per stage, 14 over 59 rounds</title></rect>
+<text x="656.9" y="233.0" font-size="11" fill="#ffffff" text-anchor="middle">0.71</text>
 <text x="0.0" y="259.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="216.0" y="244" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.28"><title>Gemini 3.8 Flash: 11.8 purchases per run</title></rect>
-<text x="278.1" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">11.8</text>
-<rect x="342.3" y="244" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.07"><title>Gemini 3.8 Flash: 0.6 relics sold per run</title></rect>
-<text x="404.4" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.6</text>
-<rect x="468.5" y="244" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>Gemini 3.8 Flash: 0.6 rerolls per run</title></rect>
-<text x="530.6" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.6</text>
-<rect x="594.8" y="244" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.30"><title>Gemini 3.8 Flash: 1.4 consumables used per run</title></rect>
-<text x="656.9" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.4</text>
+<rect x="216.0" y="244" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.54"><title>Gemini 3.8 Flash: 2.81 purchases per stage, 59 over 63 rounds</title></rect>
+<text x="278.1" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.81</text>
+<rect x="342.3" y="244" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.09"><title>Gemini 3.8 Flash: 0.14 relics sold per stage, 3 over 63 rounds</title></rect>
+<text x="404.4" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.14</text>
+<rect x="468.5" y="244" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.16"><title>Gemini 3.8 Flash: 0.14 rerolls per stage, 3 over 63 rounds</title></rect>
+<text x="530.6" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.14</text>
+<rect x="594.8" y="244" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>Gemini 3.8 Flash: 0.33 consumables used per stage, 7 over 63 rounds</title></rect>
+<text x="656.9" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.33</text>
 <text x="0.0" y="290.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
 <text x="0.0" y="313.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="216.0" y="298" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>Gemini 3.8 Flash: 35.4 purchases per run</title></rect>
-<text x="278.1" y="313.0" font-size="11" fill="#ffffff" text-anchor="middle">35.4</text>
-<rect x="342.3" y="298" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Gemini 3.8 Flash: 0.4 relics sold per run</title></rect>
-<text x="404.4" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.4</text>
-<rect x="468.5" y="298" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>Gemini 3.8 Flash: 6.2 rerolls per run</title></rect>
-<text x="530.6" y="313.0" font-size="11" fill="#ffffff" text-anchor="middle">6.2</text>
-<rect x="594.8" y="298" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.68"><title>Gemini 3.8 Flash: 3.2 consumables used per run</title></rect>
-<text x="656.9" y="313.0" font-size="11" fill="#ffffff" text-anchor="middle">3.2</text>
+<rect x="216.0" y="298" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>Gemini 3.8 Flash: 4.42 purchases per stage, 177 over 120 rounds</title></rect>
+<text x="278.1" y="313.0" font-size="11" fill="#ffffff" text-anchor="middle">4.42</text>
+<rect x="342.3" y="298" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Gemini 3.8 Flash: 0.05 relics sold per stage, 2 over 120 rounds</title></rect>
+<text x="404.4" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.05</text>
+<rect x="468.5" y="298" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>Gemini 3.8 Flash: 0.78 rerolls per stage, 31 over 120 rounds</title></rect>
+<text x="530.6" y="313.0" font-size="11" fill="#ffffff" text-anchor="middle">0.78</text>
+<rect x="594.8" y="298" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.47"><title>Gemini 3.8 Flash: 0.40 consumables used per stage, 16 over 120 rounds</title></rect>
+<text x="656.9" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.40</text>
 <text x="0.0" y="339.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="216.0" y="324" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.55"><title>Claude Sonnet 5.5: 23.0 purchases per run</title></rect>
-<text x="278.1" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">23.0</text>
-<rect x="342.3" y="324" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.22"><title>Claude Sonnet 5.5: 1.8 relics sold per run</title></rect>
-<text x="404.4" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.8</text>
-<rect x="468.5" y="324" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Claude Sonnet 5.5: 0.0 rerolls per run</title></rect>
-<text x="530.6" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.0</text>
-<rect x="594.8" y="324" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.38"><title>Claude Sonnet 5.5: 1.8 consumables used per run</title></rect>
-<text x="656.9" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.8</text>
+<rect x="216.0" y="324" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.63"><title>Claude Sonnet 5.5: 3.25 purchases per stage, 115 over 106 rounds</title></rect>
+<text x="278.1" y="339.0" font-size="11" fill="#ffffff" text-anchor="middle">3.25</text>
+<rect x="342.3" y="324" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>Claude Sonnet 5.5: 0.25 relics sold per stage, 9 over 106 rounds</title></rect>
+<text x="404.4" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.25</text>
+<rect x="468.5" y="324" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Claude Sonnet 5.5: 0.00 rerolls per stage, 0 over 106 rounds</title></rect>
+<text x="530.6" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.00</text>
+<rect x="594.8" y="324" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.30"><title>Claude Sonnet 5.5: 0.25 consumables used per stage, 9 over 106 rounds</title></rect>
+<text x="656.9" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.25</text>
 <text x="0.0" y="365.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
-<rect x="216.0" y="350" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.31"><title>Step 5 Preview: 13.0 purchases per run</title></rect>
-<text x="278.1" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">13.0</text>
-<rect x="342.3" y="350" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.29"><title>Step 5 Preview: 2.4 relics sold per run</title></rect>
-<text x="404.4" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.4</text>
-<rect x="468.5" y="350" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>Step 5 Preview: 1.0 rerolls per run</title></rect>
-<text x="530.6" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.0</text>
-<rect x="594.8" y="350" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.68"><title>Step 5 Preview: 3.2 consumables used per run</title></rect>
-<text x="656.9" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">3.2</text>
+<rect x="216.0" y="350" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.56"><title>Step 5 Preview: 2.91 purchases per stage, 65 over 67 rounds</title></rect>
+<text x="278.1" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.91</text>
+<rect x="342.3" y="350" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>Step 5 Preview: 0.54 relics sold per stage, 12 over 67 rounds</title></rect>
+<text x="404.4" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.54</text>
+<rect x="468.5" y="350" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.25"><title>Step 5 Preview: 0.22 rerolls per stage, 5 over 67 rounds</title></rect>
+<text x="530.6" y="365.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.22</text>
+<rect x="594.8" y="350" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>Step 5 Preview: 0.72 consumables used per stage, 16 over 67 rounds</title></rect>
+<text x="656.9" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">0.72</text>
 <text x="0.0" y="391.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
-<rect x="216.0" y="376" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>GPT-6 Luna: 17.8 purchases per run</title></rect>
-<text x="278.1" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">17.8</text>
-<rect x="342.3" y="376" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>GPT-6 Luna: 7.0 relics sold per run</title></rect>
-<text x="404.4" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">7.0</text>
-<rect x="468.5" y="376" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>GPT-6 Luna: 0.4 rerolls per run</title></rect>
-<text x="530.6" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.4</text>
-<rect x="594.8" y="376" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.77"><title>GPT-6 Luna: 3.6 consumables used per run</title></rect>
-<text x="656.9" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">3.6</text>
+<rect x="216.0" y="376" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.68"><title>GPT-6 Luna: 3.56 purchases per stage, 89 over 75 rounds</title></rect>
+<text x="278.1" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">3.56</text>
+<rect x="342.3" y="376" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>GPT-6 Luna: 1.40 relics sold per stage, 35 over 75 rounds</title></rect>
+<text x="404.4" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">1.40</text>
+<rect x="468.5" y="376" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.09"><title>GPT-6 Luna: 0.08 rerolls per stage, 2 over 75 rounds</title></rect>
+<text x="530.6" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.08</text>
+<rect x="594.8" y="376" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.85"><title>GPT-6 Luna: 0.72 consumables used per stage, 18 over 75 rounds</title></rect>
+<text x="656.9" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">0.72</text>
 <text x="0.0" y="417.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
-<rect x="216.0" y="402" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.22"><title>Claude Haiku 5.5: 9.0 purchases per run</title></rect>
-<text x="278.1" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9.0</text>
-<rect x="342.3" y="402" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.12"><title>Claude Haiku 5.5: 1.0 relics sold per run</title></rect>
-<text x="404.4" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.0</text>
-<rect x="468.5" y="402" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Claude Haiku 5.5: 0.0 rerolls per run</title></rect>
-<text x="530.6" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.0</text>
-<rect x="594.8" y="402" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>Claude Haiku 5.5: 1.2 consumables used per run</title></rect>
-<text x="656.9" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.2</text>
+<rect x="216.0" y="402" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.54"><title>Claude Haiku 5.5: 2.81 purchases per stage, 45 over 48 rounds</title></rect>
+<text x="278.1" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.81</text>
+<rect x="342.3" y="402" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>Claude Haiku 5.5: 0.31 relics sold per stage, 5 over 48 rounds</title></rect>
+<text x="404.4" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.31</text>
+<rect x="468.5" y="402" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Claude Haiku 5.5: 0.00 rerolls per stage, 0 over 48 rounds</title></rect>
+<text x="530.6" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.00</text>
+<rect x="594.8" y="402" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.44"><title>Claude Haiku 5.5: 0.38 consumables used per stage, 6 over 48 rounds</title></rect>
+<text x="656.9" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.38</text>
 <text x="0.0" y="443.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
-<rect x="216.0" y="428" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>Nemotron 3 Ultra: 11.2 purchases per run</title></rect>
-<text x="278.1" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">11.2</text>
-<rect x="342.3" y="428" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.22"><title>Nemotron 3 Ultra: 1.8 relics sold per run</title></rect>
-<text x="404.4" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.8</text>
-<rect x="468.5" y="428" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Nemotron 3 Ultra: 0.0 rerolls per run</title></rect>
-<text x="530.6" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.0</text>
-<rect x="594.8" y="428" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.42"><title>Nemotron 3 Ultra: 2.0 consumables used per run</title></rect>
-<text x="656.9" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.0</text>
+<rect x="216.0" y="428" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.69"><title>Nemotron 3 Ultra: 3.57 purchases per stage, 56 over 47 rounds</title></rect>
+<text x="278.1" y="443.0" font-size="11" fill="#ffffff" text-anchor="middle">3.57</text>
+<rect x="342.3" y="428" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>Nemotron 3 Ultra: 0.57 relics sold per stage, 9 over 47 rounds</title></rect>
+<text x="404.4" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.57</text>
+<rect x="468.5" y="428" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Nemotron 3 Ultra: 0.00 rerolls per stage, 0 over 47 rounds</title></rect>
+<text x="530.6" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.00</text>
+<rect x="594.8" y="428" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.75"><title>Nemotron 3 Ultra: 0.64 consumables used per stage, 10 over 47 rounds</title></rect>
+<text x="656.9" y="443.0" font-size="11" fill="#ffffff" text-anchor="middle">0.64</text>
 <text x="0.0" y="469.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
-<rect x="216.0" y="454" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.13"><title>MiniMax M3: 5.4 purchases per run</title></rect>
-<text x="278.1" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.4</text>
-<rect x="342.3" y="454" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.12"><title>MiniMax M3: 1.0 relics sold per run</title></rect>
-<text x="404.4" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.0</text>
-<rect x="468.5" y="454" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>MiniMax M3: 0.4 rerolls per run</title></rect>
-<text x="530.6" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.4</text>
-<rect x="594.8" y="454" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>MiniMax M3: 1.0 consumables used per run</title></rect>
-<text x="656.9" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">1.0</text>
-<text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">per run, averaged over 5 runs · each column shaded against its own highest</text>
+<rect x="216.0" y="454" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.47"><title>MiniMax M3: 2.45 purchases per stage, 27 over 33 rounds</title></rect>
+<text x="278.1" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">2.45</text>
+<rect x="342.3" y="454" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.28"><title>MiniMax M3: 0.45 relics sold per stage, 5 over 33 rounds</title></rect>
+<text x="404.4" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.45</text>
+<rect x="468.5" y="454" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.20"><title>MiniMax M3: 0.18 rerolls per stage, 2 over 33 rounds</title></rect>
+<text x="530.6" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.18</text>
+<rect x="594.8" y="454" width="124.3" height="22" rx="2" fill="#8c0000" fill-opacity="0.54"><title>MiniMax M3: 0.45 consumables used per stage, 5 over 33 rounds</title></rect>
+<text x="656.9" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.45</text>
+<text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">per stage of three rounds played, over 5 runs · each column shaded against its own highest</text>
 </svg>
 
-Opus also has the most to spend. It earned 8.9 gold a round against Sonnet's 6.7 on the same difficulty, and most of the gap is gold paid by the guesses themselves: 1.8 a round against 0.3. It ended its runs with about 7 gold left, having spent the rest. The round payout is smaller at ascension 10, about 3 gold a round against 4, so the ascension 0 rows start ahead.
+While earning gold does not ensure victory, earning less than $6 per round effectively disqualifies a run.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 594" role="img" aria-labelledby="gold-title" font-family="inherit">
 <title id="gold-title">Gold earned per round cleared by each model, split by source, with gold spent beside it.</title>
@@ -2511,661 +2418,13 @@ Opus also has the most to spend. It earned 8.9 gold a round against Sonnet's 6.7
 <text x="215.0" y="588.0" font-size="11" fill="#8a8878" text-anchor="start">gold earned per round cleared, by where it came from</text>
 </svg>
 
-### Guesses and gold by stage
+## Caveats
 
-The two are linked: every guess left unused pays gold when the round is cleared. Opus's income peaks in stages 4 and 5, at 11 to 12 gold a round, while Sonnet's on the same difficulty never passes 8.
+The Claude models ran through Claude Code and the others through [OpenCode](https://opencode.ai/), so the harness differs as well as the model. Luna, Haiku, DeepSeek V4 Pro, Step 5 Preview and MiniMax M3 ran on OpenCode's Go plan, and the rest through [OpenRouter](https://openrouter.ai/).
 
-<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 1014" role="img" aria-labelledby="stages-title" font-family="inherit">
-<title id="stages-title">Guesses per cleared round and gold earned per cleared round in each of the eight stages, for each model.</title>
-<text x="0.0" y="12.0" font-size="13" fill="#2c2c2c" text-anchor="start" font-weight="700">Guesses</text>
-<text x="246.6" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 1</text>
-<text x="309.7" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 2</text>
-<text x="372.8" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 3</text>
-<text x="435.9" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 4</text>
-<text x="499.1" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 5</text>
-<text x="562.2" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 6</text>
-<text x="625.3" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 7</text>
-<text x="688.4" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 8</text>
-<text x="0.0" y="28.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
-<text x="0.0" y="51.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
-<rect x="216.0" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>Claude Opus 5.5, stage 1: 3.64 guesses per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.6</text>
-<rect x="279.1" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>Claude Opus 5.5, stage 2: 3.42 guesses per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.4</text>
-<rect x="342.3" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.36"><title>Claude Opus 5.5, stage 3: 3.75 guesses per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.8</text>
-<rect x="405.4" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.31"><title>Claude Opus 5.5, stage 4: 3.58 guesses per cleared round over 12 rounds</title></rect>
-<text x="435.9" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.6</text>
-<rect x="468.5" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.36"><title>Claude Opus 5.5, stage 5: 3.75 guesses per cleared round over 12 rounds</title></rect>
-<text x="499.1" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.8</text>
-<rect x="531.6" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.29"><title>Claude Opus 5.5, stage 6: 3.50 guesses per cleared round over 12 rounds</title></rect>
-<text x="562.2" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.5</text>
-<rect x="594.8" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.31"><title>Claude Opus 5.5, stage 7: 3.58 guesses per cleared round over 12 rounds</title></rect>
-<text x="625.3" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.6</text>
-<rect x="657.9" y="36" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>Claude Opus 5.5, stage 8: 3.45 guesses per cleared round over 11 rounds</title></rect>
-<text x="688.4" y="51.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.5</text>
-<text x="0.0" y="77.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="216.0" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.54"><title>Claude Sonnet 5.5, stage 1: 4.40 guesses per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.4</text>
-<rect x="279.1" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>Claude Sonnet 5.5, stage 2: 3.40 guesses per cleared round over 15 rounds</title></rect>
-<text x="309.7" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.4</text>
-<rect x="342.3" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.45"><title>Claude Sonnet 5.5, stage 3: 4.07 guesses per cleared round over 15 rounds</title></rect>
-<text x="372.8" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.1</text>
-<rect x="405.4" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>Claude Sonnet 5.5, stage 4: 3.87 guesses per cleared round over 15 rounds</title></rect>
-<text x="435.9" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.9</text>
-<rect x="468.5" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>Claude Sonnet 5.5, stage 5: 3.73 guesses per cleared round over 15 rounds</title></rect>
-<text x="499.1" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="531.6" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.38"><title>Claude Sonnet 5.5, stage 6: 3.82 guesses per cleared round over 11 rounds</title></rect>
-<text x="562.2" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.8</text>
-<rect x="594.8" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.54"><title>Claude Sonnet 5.5, stage 7: 4.38 guesses per cleared round over 8 rounds</title></rect>
-<text x="625.3" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.4</text>
-<rect x="657.9" y="62" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.36"><title>Claude Sonnet 5.5, stage 8: 3.75 guesses per cleared round over 4 rounds</title></rect>
-<text x="688.4" y="77.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.8</text>
-<text x="0.0" y="103.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
-<rect x="216.0" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>GPT-6 Sol, stage 1: 3.71 guesses per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="279.1" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.31"><title>GPT-6 Sol, stage 2: 3.58 guesses per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.6</text>
-<rect x="342.3" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.48"><title>GPT-6 Sol, stage 3: 4.18 guesses per cleared round over 11 rounds</title></rect>
-<text x="372.8" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.2</text>
-<rect x="405.4" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>GPT-6 Sol, stage 4: 3.67 guesses per cleared round over 9 rounds</title></rect>
-<text x="435.9" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="468.5" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>GPT-6 Sol, stage 5: 4.00 guesses per cleared round over 9 rounds</title></rect>
-<text x="499.1" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<rect x="531.6" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>GPT-6 Sol, stage 6: 3.43 guesses per cleared round over 7 rounds</title></rect>
-<text x="562.2" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.4</text>
-<rect x="594.8" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>GPT-6 Sol, stage 7: 4.33 guesses per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="657.9" y="88" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>GPT-6 Sol, stage 8: 3.00 guesses per cleared round over 3 rounds</title></rect>
-<text x="688.4" y="103.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.0</text>
-<text x="0.0" y="129.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
-<rect x="216.0" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.45"><title>MiMo-V2.6-Pro, stage 1: 4.07 guesses per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.1</text>
-<rect x="279.1" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>MiMo-V2.6-Pro, stage 2: 3.71 guesses per cleared round over 14 rounds</title></rect>
-<text x="309.7" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="342.3" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.45"><title>MiMo-V2.6-Pro, stage 3: 4.08 guesses per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.1</text>
-<rect x="405.4" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.51"><title>MiMo-V2.6-Pro, stage 4: 4.27 guesses per cleared round over 11 rounds</title></rect>
-<text x="435.9" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="468.5" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>MiMo-V2.6-Pro, stage 5: 3.86 guesses per cleared round over 7 rounds</title></rect>
-<text x="499.1" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.9</text>
-<rect x="531.6" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>MiMo-V2.6-Pro, stage 6: 4.33 guesses per cleared round over 3 rounds</title></rect>
-<text x="562.2" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="594.8" y="114" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>MiMo-V2.6-Pro, stage 7: 4.00 guesses per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="129.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<text x="0.0" y="155.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
-<rect x="216.0" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.53"><title>DeepSeek V4.1 Flash, stage 1: 4.36 guesses per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.4</text>
-<rect x="279.1" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.38"><title>DeepSeek V4.1 Flash, stage 2: 3.83 guesses per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.8</text>
-<rect x="342.3" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>DeepSeek V4.1 Flash, stage 3: 4.33 guesses per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="405.4" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.56"><title>DeepSeek V4.1 Flash, stage 4: 4.45 guesses per cleared round over 11 rounds</title></rect>
-<text x="435.9" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.5</text>
-<rect x="468.5" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.40"><title>DeepSeek V4.1 Flash, stage 5: 3.89 guesses per cleared round over 9 rounds</title></rect>
-<text x="499.1" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.9</text>
-<rect x="531.6" y="140" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>DeepSeek V4.1 Flash, stage 6: 3.00 guesses per cleared round over 4 rounds</title></rect>
-<text x="562.2" y="155.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.0</text>
-<text x="0.0" y="181.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
-<rect x="216.0" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>GPT-6.1 Sol, stage 1: 3.86 guesses per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.9</text>
-<rect x="279.1" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>GPT-6.1 Sol, stage 2: 3.67 guesses per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="342.3" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.45"><title>GPT-6.1 Sol, stage 3: 4.09 guesses per cleared round over 11 rounds</title></rect>
-<text x="372.8" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.1</text>
-<rect x="405.4" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.36"><title>GPT-6.1 Sol, stage 4: 3.75 guesses per cleared round over 8 rounds</title></rect>
-<text x="435.9" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.8</text>
-<rect x="468.5" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>GPT-6.1 Sol, stage 5: 3.67 guesses per cleared round over 6 rounds</title></rect>
-<text x="499.1" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="531.6" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.29"><title>GPT-6.1 Sol, stage 6: 3.50 guesses per cleared round over 6 rounds</title></rect>
-<text x="562.2" y="181.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.5</text>
-<rect x="594.8" y="166" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.62"><title>GPT-6.1 Sol, stage 7: 4.67 guesses per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="181.0" font-size="11" fill="#ffffff" text-anchor="middle">4.7</text>
-<text x="0.0" y="207.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
-<rect x="216.0" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>DeepSeek V4 Pro, stage 1: 3.73 guesses per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="279.1" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>DeepSeek V4 Pro, stage 2: 3.42 guesses per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.4</text>
-<rect x="342.3" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>DeepSeek V4 Pro, stage 3: 4.00 guesses per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<rect x="405.4" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>DeepSeek V4 Pro, stage 4: 3.40 guesses per cleared round over 10 rounds</title></rect>
-<text x="435.9" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.4</text>
-<rect x="468.5" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>DeepSeek V4 Pro, stage 5: 4.00 guesses per cleared round over 5 rounds</title></rect>
-<text x="499.1" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<rect x="531.6" y="192" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>DeepSeek V4 Pro, stage 6: 4.00 guesses per cleared round over 2 rounds</title></rect>
-<text x="562.2" y="207.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<text x="0.0" y="233.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
-<rect x="216.0" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.45"><title>GLM 5.3 Flash, stage 1: 4.07 guesses per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.1</text>
-<rect x="279.1" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>GLM 5.3 Flash, stage 2: 4.00 guesses per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<rect x="342.3" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>GLM 5.3 Flash, stage 3: 3.45 guesses per cleared round over 11 rounds</title></rect>
-<text x="372.8" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.5</text>
-<rect x="405.4" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>GLM 5.3 Flash, stage 4: 4.33 guesses per cleared round over 6 rounds</title></rect>
-<text x="435.9" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="468.5" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.71"><title>GLM 5.3 Flash, stage 5: 5.00 guesses per cleared round over 3 rounds</title></rect>
-<text x="499.1" y="233.0" font-size="11" fill="#ffffff" text-anchor="middle">5.0</text>
-<rect x="531.6" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>GLM 5.3 Flash, stage 6: 3.67 guesses per cleared round over 3 rounds</title></rect>
-<text x="562.2" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="594.8" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.62"><title>GLM 5.3 Flash, stage 7: 4.67 guesses per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="233.0" font-size="11" fill="#ffffff" text-anchor="middle">4.7</text>
-<rect x="657.9" y="218" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>GLM 5.3 Flash, stage 8: 4.00 guesses per cleared round over 3 rounds</title></rect>
-<text x="688.4" y="233.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<text x="0.0" y="259.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="216.0" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>Gemini 3.8 Flash, stage 1: 3.73 guesses per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="279.1" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>Gemini 3.8 Flash, stage 2: 3.71 guesses per cleared round over 14 rounds</title></rect>
-<text x="309.7" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="342.3" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.46"><title>Gemini 3.8 Flash, stage 3: 4.10 guesses per cleared round over 10 rounds</title></rect>
-<text x="372.8" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.1</text>
-<rect x="405.4" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>Gemini 3.8 Flash, stage 4: 4.00 guesses per cleared round over 6 rounds</title></rect>
-<text x="435.9" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<rect x="468.5" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.24"><title>Gemini 3.8 Flash, stage 5: 3.33 guesses per cleared round over 6 rounds</title></rect>
-<text x="499.1" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.3</text>
-<rect x="531.6" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.54"><title>Gemini 3.8 Flash, stage 6: 4.40 guesses per cleared round over 5 rounds</title></rect>
-<text x="562.2" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.4</text>
-<rect x="594.8" y="244" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.29"><title>Gemini 3.8 Flash, stage 7: 3.50 guesses per cleared round over 2 rounds</title></rect>
-<text x="625.3" y="259.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.5</text>
-<text x="0.0" y="290.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
-<text x="0.0" y="313.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="216.0" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.37"><title>Gemini 3.8 Flash, stage 1: 3.80 guesses per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.8</text>
-<rect x="279.1" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.45"><title>Gemini 3.8 Flash, stage 2: 4.07 guesses per cleared round over 15 rounds</title></rect>
-<text x="309.7" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.1</text>
-<rect x="342.3" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.30"><title>Gemini 3.8 Flash, stage 3: 3.53 guesses per cleared round over 15 rounds</title></rect>
-<text x="372.8" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.5</text>
-<rect x="405.4" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.47"><title>Gemini 3.8 Flash, stage 4: 4.13 guesses per cleared round over 15 rounds</title></rect>
-<text x="435.9" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.1</text>
-<rect x="468.5" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.31"><title>Gemini 3.8 Flash, stage 5: 3.60 guesses per cleared round over 15 rounds</title></rect>
-<text x="499.1" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.6</text>
-<rect x="531.6" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.41"><title>Gemini 3.8 Flash, stage 6: 3.93 guesses per cleared round over 15 rounds</title></rect>
-<text x="562.2" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.9</text>
-<rect x="594.8" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>Gemini 3.8 Flash, stage 7: 3.87 guesses per cleared round over 15 rounds</title></rect>
-<text x="625.3" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.9</text>
-<rect x="657.9" y="298" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>Gemini 3.8 Flash, stage 8: 3.67 guesses per cleared round over 15 rounds</title></rect>
-<text x="688.4" y="313.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<text x="0.0" y="339.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="216.0" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>Claude Sonnet 5.5, stage 1: 4.33 guesses per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="279.1" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>Claude Sonnet 5.5, stage 2: 4.33 guesses per cleared round over 15 rounds</title></rect>
-<text x="309.7" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="342.3" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.49"><title>Claude Sonnet 5.5, stage 3: 4.20 guesses per cleared round over 15 rounds</title></rect>
-<text x="372.8" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.2</text>
-<rect x="405.4" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>Claude Sonnet 5.5, stage 4: 3.67 guesses per cleared round over 15 rounds</title></rect>
-<text x="435.9" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="468.5" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>Claude Sonnet 5.5, stage 5: 3.86 guesses per cleared round over 14 rounds</title></rect>
-<text x="499.1" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.9</text>
-<rect x="531.6" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.17"><title>Claude Sonnet 5.5, stage 6: 3.08 guesses per cleared round over 12 rounds</title></rect>
-<text x="562.2" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.1</text>
-<rect x="594.8" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.49"><title>Claude Sonnet 5.5, stage 7: 4.20 guesses per cleared round over 10 rounds</title></rect>
-<text x="625.3" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.2</text>
-<rect x="657.9" y="324" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.57"><title>Claude Sonnet 5.5, stage 8: 4.50 guesses per cleared round over 6 rounds</title></rect>
-<text x="688.4" y="339.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.5</text>
-<text x="0.0" y="365.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
-<rect x="216.0" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.74"><title>Step 5 Preview, stage 1: 5.08 guesses per cleared round over 13 rounds</title></rect>
-<text x="246.6" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">5.1</text>
-<rect x="279.1" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.79"><title>Step 5 Preview, stage 2: 5.25 guesses per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">5.3</text>
-<rect x="342.3" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.79"><title>Step 5 Preview, stage 3: 5.25 guesses per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">5.3</text>
-<rect x="405.4" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.81"><title>Step 5 Preview, stage 4: 5.33 guesses per cleared round over 12 rounds</title></rect>
-<text x="435.9" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">5.3</text>
-<rect x="468.5" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.87"><title>Step 5 Preview, stage 5: 5.55 guesses per cleared round over 11 rounds</title></rect>
-<text x="499.1" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">5.5</text>
-<rect x="531.6" y="350" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="1.00"><title>Step 5 Preview, stage 6: 6.00 guesses per cleared round over 2 rounds</title></rect>
-<text x="562.2" y="365.0" font-size="11" fill="#ffffff" text-anchor="middle">6.0</text>
-<text x="0.0" y="391.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
-<rect x="216.0" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.53"><title>GPT-6 Luna, stage 1: 4.36 guesses per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.4</text>
-<rect x="279.1" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.64"><title>GPT-6 Luna, stage 2: 4.75 guesses per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">4.8</text>
-<rect x="342.3" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.69"><title>GPT-6 Luna, stage 3: 4.92 guesses per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">4.9</text>
-<rect x="405.4" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.55"><title>GPT-6 Luna, stage 4: 4.42 guesses per cleared round over 12 rounds</title></rect>
-<text x="435.9" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.4</text>
-<rect x="468.5" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.75"><title>GPT-6 Luna, stage 5: 5.11 guesses per cleared round over 9 rounds</title></rect>
-<text x="499.1" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">5.1</text>
-<rect x="531.6" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.67"><title>GPT-6 Luna, stage 6: 4.83 guesses per cleared round over 6 rounds</title></rect>
-<text x="562.2" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">4.8</text>
-<rect x="594.8" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.81"><title>GPT-6 Luna, stage 7: 5.33 guesses per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="391.0" font-size="11" fill="#ffffff" text-anchor="middle">5.3</text>
-<rect x="657.9" y="376" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>GPT-6 Luna, stage 8: 4.00 guesses per cleared round over 2 rounds</title></rect>
-<text x="688.4" y="391.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<text x="0.0" y="417.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
-<rect x="216.0" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.60"><title>Claude Haiku 5.5, stage 1: 4.62 guesses per cleared round over 13 rounds</title></rect>
-<text x="246.6" y="417.0" font-size="11" fill="#ffffff" text-anchor="middle">4.6</text>
-<rect x="279.1" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.56"><title>Claude Haiku 5.5, stage 2: 4.44 guesses per cleared round over 9 rounds</title></rect>
-<text x="309.7" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.4</text>
-<rect x="342.3" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>Claude Haiku 5.5, stage 3: 3.67 guesses per cleared round over 9 rounds</title></rect>
-<text x="372.8" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.7</text>
-<rect x="405.4" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>Claude Haiku 5.5, stage 4: 4.00 guesses per cleared round over 8 rounds</title></rect>
-<text x="435.9" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<rect x="468.5" y="402" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.57"><title>Claude Haiku 5.5, stage 5: 4.50 guesses per cleared round over 4 rounds</title></rect>
-<text x="499.1" y="417.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.5</text>
-<text x="0.0" y="443.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
-<rect x="216.0" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>Nemotron 3 Ultra, stage 1: 4.31 guesses per cleared round over 13 rounds</title></rect>
-<text x="246.6" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="279.1" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.63"><title>Nemotron 3 Ultra, stage 2: 4.71 guesses per cleared round over 7 rounds</title></rect>
-<text x="309.7" y="443.0" font-size="11" fill="#ffffff" text-anchor="middle">4.7</text>
-<rect x="342.3" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.38"><title>Nemotron 3 Ultra, stage 3: 3.83 guesses per cleared round over 6 rounds</title></rect>
-<text x="372.8" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.8</text>
-<rect x="405.4" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.71"><title>Nemotron 3 Ultra, stage 4: 5.00 guesses per cleared round over 5 rounds</title></rect>
-<text x="435.9" y="443.0" font-size="11" fill="#ffffff" text-anchor="middle">5.0</text>
-<rect x="468.5" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.90"><title>Nemotron 3 Ultra, stage 5: 5.67 guesses per cleared round over 3 rounds</title></rect>
-<text x="499.1" y="443.0" font-size="11" fill="#ffffff" text-anchor="middle">5.7</text>
-<rect x="531.6" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>Nemotron 3 Ultra, stage 6: 4.00 guesses per cleared round over 3 rounds</title></rect>
-<text x="562.2" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<rect x="594.8" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>Nemotron 3 Ultra, stage 7: 4.00 guesses per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="443.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<rect x="657.9" y="428" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.86"><title>Nemotron 3 Ultra, stage 8: 5.50 guesses per cleared round over 2 rounds</title></rect>
-<text x="688.4" y="443.0" font-size="11" fill="#ffffff" text-anchor="middle">5.5</text>
-<text x="0.0" y="469.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
-<rect x="216.0" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.61"><title>MiniMax M3, stage 1: 4.63 guesses per cleared round over 8 rounds</title></rect>
-<text x="246.6" y="469.0" font-size="11" fill="#ffffff" text-anchor="middle">4.6</text>
-<rect x="279.1" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>MiniMax M3, stage 2: 4.33 guesses per cleared round over 6 rounds</title></rect>
-<text x="309.7" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="342.3" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.57"><title>MiniMax M3, stage 3: 4.50 guesses per cleared round over 6 rounds</title></rect>
-<text x="372.8" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.5</text>
-<rect x="405.4" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.49"><title>MiniMax M3, stage 4: 4.20 guesses per cleared round over 5 rounds</title></rect>
-<text x="435.9" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.2</text>
-<rect x="468.5" y="454" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.62"><title>MiniMax M3, stage 5: 4.67 guesses per cleared round over 3 rounds</title></rect>
-<text x="499.1" y="469.0" font-size="11" fill="#ffffff" text-anchor="middle">4.7</text>
-<text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">guesses per cleared round in each stage · blank where no run got that far</text>
-<text x="0.0" y="524.0" font-size="13" fill="#2c2c2c" text-anchor="start" font-weight="700">Gold</text>
-<text x="246.6" y="524.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 1</text>
-<text x="309.7" y="524.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 2</text>
-<text x="372.8" y="524.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 3</text>
-<text x="435.9" y="524.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 4</text>
-<text x="499.1" y="524.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 5</text>
-<text x="562.2" y="524.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 6</text>
-<text x="625.3" y="524.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 7</text>
-<text x="688.4" y="524.0" font-size="11" fill="#8a8878" text-anchor="middle">stage 8</text>
-<text x="0.0" y="540.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
-<text x="0.0" y="563.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
-<rect x="216.0" y="548" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.18"><title>Claude Opus 5.5, stage 1: 5.6 gold earned per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="563.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.6</text>
-<rect x="279.1" y="548" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.34"><title>Claude Opus 5.5, stage 2: 7.1 gold earned per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="563.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.1</text>
-<rect x="342.3" y="548" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.44"><title>Claude Opus 5.5, stage 3: 8.0 gold earned per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="563.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.0</text>
-<rect x="405.4" y="548" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.75"><title>Claude Opus 5.5, stage 4: 10.8 gold earned per cleared round over 12 rounds</title></rect>
-<text x="435.9" y="563.0" font-size="11" fill="#ffffff" text-anchor="middle">10.8</text>
-<rect x="468.5" y="548" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.94"><title>Claude Opus 5.5, stage 5: 12.4 gold earned per cleared round over 12 rounds</title></rect>
-<text x="499.1" y="563.0" font-size="11" fill="#ffffff" text-anchor="middle">12.4</text>
-<rect x="531.6" y="548" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.69"><title>Claude Opus 5.5, stage 6: 10.2 gold earned per cleared round over 12 rounds</title></rect>
-<text x="562.2" y="563.0" font-size="11" fill="#ffffff" text-anchor="middle">10.2</text>
-<rect x="594.8" y="548" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.59"><title>Claude Opus 5.5, stage 7: 9.3 gold earned per cleared round over 12 rounds</title></rect>
-<text x="625.3" y="563.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9.3</text>
-<rect x="657.9" y="548" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.52"><title>Claude Opus 5.5, stage 8: 8.6 gold earned per cleared round over 11 rounds</title></rect>
-<text x="688.4" y="563.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.6</text>
-<text x="0.0" y="589.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="216.0" y="574" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>Claude Sonnet 5.5, stage 1: 4.7 gold earned per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="589.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.7</text>
-<rect x="279.1" y="574" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>Claude Sonnet 5.5, stage 2: 6.3 gold earned per cleared round over 15 rounds</title></rect>
-<text x="309.7" y="589.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.3</text>
-<rect x="342.3" y="574" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>Claude Sonnet 5.5, stage 3: 7.5 gold earned per cleared round over 15 rounds</title></rect>
-<text x="372.8" y="589.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.5</text>
-<rect x="405.4" y="574" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.42"><title>Claude Sonnet 5.5, stage 4: 7.8 gold earned per cleared round over 15 rounds</title></rect>
-<text x="435.9" y="589.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.8</text>
-<rect x="468.5" y="574" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>Claude Sonnet 5.5, stage 5: 7.5 gold earned per cleared round over 15 rounds</title></rect>
-<text x="499.1" y="589.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.5</text>
-<rect x="531.6" y="574" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>Claude Sonnet 5.5, stage 6: 7.0 gold earned per cleared round over 11 rounds</title></rect>
-<text x="562.2" y="589.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.0</text>
-<rect x="594.8" y="574" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.29"><title>Claude Sonnet 5.5, stage 7: 6.6 gold earned per cleared round over 8 rounds</title></rect>
-<text x="625.3" y="589.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.6</text>
-<rect x="657.9" y="574" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.17"><title>Claude Sonnet 5.5, stage 8: 5.5 gold earned per cleared round over 4 rounds</title></rect>
-<text x="688.4" y="589.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.5</text>
-<text x="0.0" y="615.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
-<rect x="216.0" y="600" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.13"><title>GPT-6 Sol, stage 1: 5.2 gold earned per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="615.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.2</text>
-<rect x="279.1" y="600" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.17"><title>GPT-6 Sol, stage 2: 5.5 gold earned per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="615.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.5</text>
-<rect x="342.3" y="600" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.16"><title>GPT-6 Sol, stage 3: 5.5 gold earned per cleared round over 11 rounds</title></rect>
-<text x="372.8" y="615.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.5</text>
-<rect x="405.4" y="600" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.35"><title>GPT-6 Sol, stage 4: 7.1 gold earned per cleared round over 9 rounds</title></rect>
-<text x="435.9" y="615.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.1</text>
-<rect x="468.5" y="600" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.58"><title>GPT-6 Sol, stage 5: 9.2 gold earned per cleared round over 9 rounds</title></rect>
-<text x="499.1" y="615.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9.2</text>
-<rect x="531.6" y="600" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.40"><title>GPT-6 Sol, stage 6: 7.6 gold earned per cleared round over 7 rounds</title></rect>
-<text x="562.2" y="615.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.6</text>
-<rect x="594.8" y="600" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.96"><title>GPT-6 Sol, stage 7: 12.7 gold earned per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="615.0" font-size="11" fill="#ffffff" text-anchor="middle">12.7</text>
-<rect x="657.9" y="600" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.44"><title>GPT-6 Sol, stage 8: 8.0 gold earned per cleared round over 3 rounds</title></rect>
-<text x="688.4" y="615.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.0</text>
-<text x="0.0" y="641.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
-<rect x="216.0" y="626" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.13"><title>MiMo-V2.6-Pro, stage 1: 5.1 gold earned per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="641.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.1</text>
-<rect x="279.1" y="626" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>MiMo-V2.6-Pro, stage 2: 5.4 gold earned per cleared round over 14 rounds</title></rect>
-<text x="309.7" y="641.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.4</text>
-<rect x="342.3" y="626" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.22"><title>MiMo-V2.6-Pro, stage 3: 6.0 gold earned per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="641.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.0</text>
-<rect x="405.4" y="626" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.09"><title>MiMo-V2.6-Pro, stage 4: 4.8 gold earned per cleared round over 11 rounds</title></rect>
-<text x="435.9" y="641.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.8</text>
-<rect x="468.5" y="626" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>MiMo-V2.6-Pro, stage 5: 5.9 gold earned per cleared round over 7 rounds</title></rect>
-<text x="499.1" y="641.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.9</text>
-<rect x="531.6" y="626" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>MiMo-V2.6-Pro, stage 6: 5.7 gold earned per cleared round over 3 rounds</title></rect>
-<text x="562.2" y="641.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.7</text>
-<rect x="594.8" y="626" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>MiMo-V2.6-Pro, stage 7: 5.7 gold earned per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="641.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.7</text>
-<text x="0.0" y="667.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
-<rect x="216.0" y="652" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>DeepSeek V4.1 Flash, stage 1: 4.6 gold earned per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="667.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.6</text>
-<rect x="279.1" y="652" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>DeepSeek V4.1 Flash, stage 2: 5.3 gold earned per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="667.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.3</text>
-<rect x="342.3" y="652" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>DeepSeek V4.1 Flash, stage 3: 5.3 gold earned per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="667.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.3</text>
-<rect x="405.4" y="652" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.11"><title>DeepSeek V4.1 Flash, stage 4: 5.0 gold earned per cleared round over 11 rounds</title></rect>
-<text x="435.9" y="667.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.0</text>
-<rect x="468.5" y="652" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>DeepSeek V4.1 Flash, stage 5: 5.7 gold earned per cleared round over 9 rounds</title></rect>
-<text x="499.1" y="667.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.7</text>
-<rect x="531.6" y="652" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.17"><title>DeepSeek V4.1 Flash, stage 6: 5.5 gold earned per cleared round over 4 rounds</title></rect>
-<text x="562.2" y="667.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.5</text>
-<text x="0.0" y="693.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
-<rect x="216.0" y="678" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>GPT-6.1 Sol, stage 1: 5.9 gold earned per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="693.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.9</text>
-<rect x="279.1" y="678" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>GPT-6.1 Sol, stage 2: 5.8 gold earned per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="693.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.8</text>
-<rect x="342.3" y="678" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.40"><title>GPT-6.1 Sol, stage 3: 7.6 gold earned per cleared round over 11 rounds</title></rect>
-<text x="372.8" y="693.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.6</text>
-<rect x="405.4" y="678" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.14"><title>GPT-6.1 Sol, stage 4: 5.3 gold earned per cleared round over 8 rounds</title></rect>
-<text x="435.9" y="693.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.3</text>
-<rect x="468.5" y="678" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.39"><title>GPT-6.1 Sol, stage 5: 7.5 gold earned per cleared round over 6 rounds</title></rect>
-<text x="499.1" y="693.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.5</text>
-<rect x="531.6" y="678" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>GPT-6.1 Sol, stage 6: 7.0 gold earned per cleared round over 6 rounds</title></rect>
-<text x="562.2" y="693.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.0</text>
-<rect x="594.8" y="678" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.30"><title>GPT-6.1 Sol, stage 7: 6.7 gold earned per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="693.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.7</text>
-<text x="0.0" y="719.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
-<rect x="216.0" y="704" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.17"><title>DeepSeek V4 Pro, stage 1: 5.5 gold earned per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="719.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.5</text>
-<rect x="279.1" y="704" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.43"><title>DeepSeek V4 Pro, stage 2: 7.8 gold earned per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="719.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.8</text>
-<rect x="342.3" y="704" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.55"><title>DeepSeek V4 Pro, stage 3: 8.9 gold earned per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="719.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.9</text>
-<rect x="405.4" y="704" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.76"><title>DeepSeek V4 Pro, stage 4: 10.8 gold earned per cleared round over 10 rounds</title></rect>
-<text x="435.9" y="719.0" font-size="11" fill="#ffffff" text-anchor="middle">10.8</text>
-<rect x="468.5" y="704" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.44"><title>DeepSeek V4 Pro, stage 5: 8.0 gold earned per cleared round over 5 rounds</title></rect>
-<text x="499.1" y="719.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.0</text>
-<rect x="531.6" y="704" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.89"><title>DeepSeek V4 Pro, stage 6: 12.0 gold earned per cleared round over 2 rounds</title></rect>
-<text x="562.2" y="719.0" font-size="11" fill="#ffffff" text-anchor="middle">12.0</text>
-<text x="0.0" y="745.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
-<rect x="216.0" y="730" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.12"><title>GLM 5.3 Flash, stage 1: 5.1 gold earned per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="745.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.1</text>
-<rect x="279.1" y="730" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.13"><title>GLM 5.3 Flash, stage 2: 5.2 gold earned per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="745.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.2</text>
-<rect x="342.3" y="730" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.33"><title>GLM 5.3 Flash, stage 3: 7.0 gold earned per cleared round over 11 rounds</title></rect>
-<text x="372.8" y="745.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.0</text>
-<rect x="405.4" y="730" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.17"><title>GLM 5.3 Flash, stage 4: 5.5 gold earned per cleared round over 6 rounds</title></rect>
-<text x="435.9" y="745.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.5</text>
-<rect x="468.5" y="730" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.07"><title>GLM 5.3 Flash, stage 5: 4.7 gold earned per cleared round over 3 rounds</title></rect>
-<text x="499.1" y="745.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.7</text>
-<rect x="531.6" y="730" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.07"><title>GLM 5.3 Flash, stage 6: 4.7 gold earned per cleared round over 3 rounds</title></rect>
-<text x="562.2" y="745.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.7</text>
-<rect x="594.8" y="730" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>GLM 5.3 Flash, stage 7: 4.3 gold earned per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="745.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.3</text>
-<rect x="657.9" y="730" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>GLM 5.3 Flash, stage 8: 4.0 gold earned per cleared round over 3 rounds</title></rect>
-<text x="688.4" y="745.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.0</text>
-<text x="0.0" y="771.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="216.0" y="756" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>Gemini 3.8 Flash, stage 1: 5.9 gold earned per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="771.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.9</text>
-<rect x="279.1" y="756" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.32"><title>Gemini 3.8 Flash, stage 2: 6.9 gold earned per cleared round over 14 rounds</title></rect>
-<text x="309.7" y="771.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.9</text>
-<rect x="342.3" y="756" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.48"><title>Gemini 3.8 Flash, stage 3: 8.3 gold earned per cleared round over 10 rounds</title></rect>
-<text x="372.8" y="771.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.3</text>
-<rect x="405.4" y="756" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.41"><title>Gemini 3.8 Flash, stage 4: 7.7 gold earned per cleared round over 6 rounds</title></rect>
-<text x="435.9" y="771.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.7</text>
-<rect x="468.5" y="756" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.57"><title>Gemini 3.8 Flash, stage 5: 9.2 gold earned per cleared round over 6 rounds</title></rect>
-<text x="499.1" y="771.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9.2</text>
-<rect x="531.6" y="756" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.36"><title>Gemini 3.8 Flash, stage 6: 7.2 gold earned per cleared round over 5 rounds</title></rect>
-<text x="562.2" y="771.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.2</text>
-<rect x="594.8" y="756" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.50"><title>Gemini 3.8 Flash, stage 7: 8.5 gold earned per cleared round over 2 rounds</title></rect>
-<text x="625.3" y="771.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.5</text>
-<text x="0.0" y="802.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
-<text x="0.0" y="825.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="216.0" y="810" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.44"><title>Gemini 3.8 Flash, stage 1: 7.9 gold earned per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="825.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.9</text>
-<rect x="279.1" y="810" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.72"><title>Gemini 3.8 Flash, stage 2: 10.5 gold earned per cleared round over 15 rounds</title></rect>
-<text x="309.7" y="825.0" font-size="11" fill="#ffffff" text-anchor="middle">10.5</text>
-<rect x="342.3" y="810" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="1.00"><title>Gemini 3.8 Flash, stage 3: 13.3 gold earned per cleared round over 15 rounds</title></rect>
-<text x="372.8" y="825.0" font-size="11" fill="#ffffff" text-anchor="middle">13.3</text>
-<rect x="405.4" y="810" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.96"><title>Gemini 3.8 Flash, stage 4: 12.6 gold earned per cleared round over 15 rounds</title></rect>
-<text x="435.9" y="825.0" font-size="11" fill="#ffffff" text-anchor="middle">12.6</text>
-<rect x="468.5" y="810" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="1.00"><title>Gemini 3.8 Flash, stage 5: 13.5 gold earned per cleared round over 15 rounds</title></rect>
-<text x="499.1" y="825.0" font-size="11" fill="#ffffff" text-anchor="middle">13.5</text>
-<rect x="531.6" y="810" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="1.00"><title>Gemini 3.8 Flash, stage 6: 14.0 gold earned per cleared round over 15 rounds</title></rect>
-<text x="562.2" y="825.0" font-size="11" fill="#ffffff" text-anchor="middle">14.0</text>
-<rect x="594.8" y="810" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.92"><title>Gemini 3.8 Flash, stage 7: 12.3 gold earned per cleared round over 15 rounds</title></rect>
-<text x="625.3" y="825.0" font-size="11" fill="#ffffff" text-anchor="middle">12.3</text>
-<rect x="657.9" y="810" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="1.00"><title>Gemini 3.8 Flash, stage 8: 13.1 gold earned per cleared round over 15 rounds</title></rect>
-<text x="688.4" y="825.0" font-size="11" fill="#ffffff" text-anchor="middle">13.1</text>
-<text x="0.0" y="851.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="216.0" y="836" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>Claude Sonnet 5.5, stage 1: 5.7 gold earned per cleared round over 15 rounds</title></rect>
-<text x="246.6" y="851.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.7</text>
-<rect x="279.1" y="836" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.20"><title>Claude Sonnet 5.5, stage 2: 5.8 gold earned per cleared round over 15 rounds</title></rect>
-<text x="309.7" y="851.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.8</text>
-<rect x="342.3" y="836" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.24"><title>Claude Sonnet 5.5, stage 3: 6.1 gold earned per cleared round over 15 rounds</title></rect>
-<text x="372.8" y="851.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.1</text>
-<rect x="405.4" y="836" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.47"><title>Claude Sonnet 5.5, stage 4: 8.2 gold earned per cleared round over 15 rounds</title></rect>
-<text x="435.9" y="851.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.2</text>
-<rect x="468.5" y="836" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.68"><title>Claude Sonnet 5.5, stage 5: 10.1 gold earned per cleared round over 14 rounds</title></rect>
-<text x="499.1" y="851.0" font-size="11" fill="#ffffff" text-anchor="middle">10.1</text>
-<rect x="531.6" y="836" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.69"><title>Claude Sonnet 5.5, stage 6: 10.3 gold earned per cleared round over 12 rounds</title></rect>
-<text x="562.2" y="851.0" font-size="11" fill="#ffffff" text-anchor="middle">10.3</text>
-<rect x="594.8" y="836" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.77"><title>Claude Sonnet 5.5, stage 7: 10.9 gold earned per cleared round over 10 rounds</title></rect>
-<text x="625.3" y="851.0" font-size="11" fill="#ffffff" text-anchor="middle">10.9</text>
-<rect x="657.9" y="836" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.76"><title>Claude Sonnet 5.5, stage 8: 10.8 gold earned per cleared round over 6 rounds</title></rect>
-<text x="688.4" y="851.0" font-size="11" fill="#ffffff" text-anchor="middle">10.8</text>
-<text x="0.0" y="877.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
-<rect x="216.0" y="862" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.10"><title>Step 5 Preview, stage 1: 4.9 gold earned per cleared round over 13 rounds</title></rect>
-<text x="246.6" y="877.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.9</text>
-<rect x="279.1" y="862" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.08"><title>Step 5 Preview, stage 2: 4.8 gold earned per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="877.0" font-size="11" fill="#2c2c2c" text-anchor="middle">4.8</text>
-<rect x="342.3" y="862" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.20"><title>Step 5 Preview, stage 3: 5.8 gold earned per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="877.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.8</text>
-<rect x="405.4" y="862" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.13"><title>Step 5 Preview, stage 4: 5.2 gold earned per cleared round over 12 rounds</title></rect>
-<text x="435.9" y="877.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.2</text>
-<rect x="468.5" y="862" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>Step 5 Preview, stage 5: 5.9 gold earned per cleared round over 11 rounds</title></rect>
-<text x="499.1" y="877.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.9</text>
-<rect x="531.6" y="862" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.06"><title>Step 5 Preview, stage 6: 3.5 gold earned per cleared round over 2 rounds</title></rect>
-<text x="562.2" y="877.0" font-size="11" fill="#2c2c2c" text-anchor="middle">3.5</text>
-<text x="0.0" y="903.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
-<rect x="216.0" y="888" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.19"><title>GPT-6 Luna, stage 1: 5.7 gold earned per cleared round over 14 rounds</title></rect>
-<text x="246.6" y="903.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.7</text>
-<rect x="279.1" y="888" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>GPT-6 Luna, stage 2: 5.9 gold earned per cleared round over 12 rounds</title></rect>
-<text x="309.7" y="903.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.9</text>
-<rect x="342.3" y="888" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.40"><title>GPT-6 Luna, stage 3: 7.6 gold earned per cleared round over 12 rounds</title></rect>
-<text x="372.8" y="903.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.6</text>
-<rect x="405.4" y="888" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.41"><title>GPT-6 Luna, stage 4: 7.7 gold earned per cleared round over 12 rounds</title></rect>
-<text x="435.9" y="903.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.7</text>
-<rect x="468.5" y="888" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.56"><title>GPT-6 Luna, stage 5: 9.0 gold earned per cleared round over 9 rounds</title></rect>
-<text x="499.1" y="903.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9.0</text>
-<rect x="531.6" y="888" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.48"><title>GPT-6 Luna, stage 6: 8.3 gold earned per cleared round over 6 rounds</title></rect>
-<text x="562.2" y="903.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.3</text>
-<rect x="594.8" y="888" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.70"><title>GPT-6 Luna, stage 7: 10.3 gold earned per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="903.0" font-size="11" fill="#ffffff" text-anchor="middle">10.3</text>
-<rect x="657.9" y="888" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.89"><title>GPT-6 Luna, stage 8: 12.0 gold earned per cleared round over 2 rounds</title></rect>
-<text x="688.4" y="903.0" font-size="11" fill="#ffffff" text-anchor="middle">12.0</text>
-<text x="0.0" y="929.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
-<rect x="216.0" y="914" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.15"><title>Claude Haiku 5.5, stage 1: 5.3 gold earned per cleared round over 13 rounds</title></rect>
-<text x="246.6" y="929.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.3</text>
-<rect x="279.1" y="914" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.25"><title>Claude Haiku 5.5, stage 2: 6.2 gold earned per cleared round over 9 rounds</title></rect>
-<text x="309.7" y="929.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.2</text>
-<rect x="342.3" y="914" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.30"><title>Claude Haiku 5.5, stage 3: 6.7 gold earned per cleared round over 9 rounds</title></rect>
-<text x="372.8" y="929.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.7</text>
-<rect x="405.4" y="914" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.38"><title>Claude Haiku 5.5, stage 4: 7.4 gold earned per cleared round over 8 rounds</title></rect>
-<text x="435.9" y="929.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.4</text>
-<rect x="468.5" y="914" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.56"><title>Claude Haiku 5.5, stage 5: 9.0 gold earned per cleared round over 4 rounds</title></rect>
-<text x="499.1" y="929.0" font-size="11" fill="#2c2c2c" text-anchor="middle">9.0</text>
-<text x="0.0" y="955.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
-<rect x="216.0" y="940" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.21"><title>Nemotron 3 Ultra, stage 1: 5.8 gold earned per cleared round over 13 rounds</title></rect>
-<text x="246.6" y="955.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.8</text>
-<rect x="279.1" y="940" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.27"><title>Nemotron 3 Ultra, stage 2: 6.4 gold earned per cleared round over 7 rounds</title></rect>
-<text x="309.7" y="955.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.4</text>
-<rect x="342.3" y="940" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.44"><title>Nemotron 3 Ultra, stage 3: 8.0 gold earned per cleared round over 6 rounds</title></rect>
-<text x="372.8" y="955.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.0</text>
-<rect x="405.4" y="940" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.36"><title>Nemotron 3 Ultra, stage 4: 7.2 gold earned per cleared round over 5 rounds</title></rect>
-<text x="435.9" y="955.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.2</text>
-<rect x="468.5" y="940" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.48"><title>Nemotron 3 Ultra, stage 5: 8.3 gold earned per cleared round over 3 rounds</title></rect>
-<text x="499.1" y="955.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.3</text>
-<rect x="531.6" y="940" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.63"><title>Nemotron 3 Ultra, stage 6: 9.7 gold earned per cleared round over 3 rounds</title></rect>
-<text x="562.2" y="955.0" font-size="11" fill="#ffffff" text-anchor="middle">9.7</text>
-<rect x="594.8" y="940" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.41"><title>Nemotron 3 Ultra, stage 7: 7.7 gold earned per cleared round over 3 rounds</title></rect>
-<text x="625.3" y="955.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.7</text>
-<rect x="657.9" y="940" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.50"><title>Nemotron 3 Ultra, stage 8: 8.5 gold earned per cleared round over 2 rounds</title></rect>
-<text x="688.4" y="955.0" font-size="11" fill="#2c2c2c" text-anchor="middle">8.5</text>
-<text x="0.0" y="981.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
-<rect x="216.0" y="966" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.22"><title>MiniMax M3, stage 1: 6.0 gold earned per cleared round over 8 rounds</title></rect>
-<text x="246.6" y="981.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.0</text>
-<rect x="279.1" y="966" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.20"><title>MiniMax M3, stage 2: 5.8 gold earned per cleared round over 6 rounds</title></rect>
-<text x="309.7" y="981.0" font-size="11" fill="#2c2c2c" text-anchor="middle">5.8</text>
-<rect x="342.3" y="966" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.41"><title>MiniMax M3, stage 3: 7.7 gold earned per cleared round over 6 rounds</title></rect>
-<text x="372.8" y="981.0" font-size="11" fill="#2c2c2c" text-anchor="middle">7.7</text>
-<rect x="405.4" y="966" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.60"><title>MiniMax M3, stage 4: 9.4 gold earned per cleared round over 5 rounds</title></rect>
-<text x="435.9" y="981.0" font-size="11" fill="#ffffff" text-anchor="middle">9.4</text>
-<rect x="468.5" y="966" width="61.1" height="22" rx="2" fill="#8c0000" fill-opacity="0.26"><title>MiniMax M3, stage 5: 6.3 gold earned per cleared round over 3 rounds</title></rect>
-<text x="499.1" y="981.0" font-size="11" fill="#2c2c2c" text-anchor="middle">6.3</text>
-<text x="215.0" y="1008.0" font-size="11" fill="#8a8878" text-anchor="start">gold earned per cleared round in each stage, from every source</text>
-</svg>
+Thinking effort was not held equal either. I did not set it, so each model ran at whatever its harness defaulted to: Opus at medium and Sonnet at high in Claude Code, and the OpenCode models at OpenCode's defaults. Increasing thinking for Opus and Sonnet seemed to have marginal effect either way.
 
-## Cost and speed
-
-A run of Opus at ascension 10 cost about four dollars and took about eleven minutes. Runs are not all the same length, though, so the fair unit is the round: every round a model played, the one it died on included.
-
-<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 384" role="img" aria-labelledby="cost-title" font-family="inherit">
-<title id="cost-title">Cost per round played, in US cents, for each model that was priced.</title>
-<text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
-<text x="0.0" y="35.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
-<rect x="215" y="24" width="355.0" height="14" rx="2" fill="#8c0000"><title>Claude Opus 5.5: 20.6 cents per round</title></rect>
-<text x="578.0" y="35.0" font-size="12" fill="#2c2c2c" text-anchor="start">20.6¢</text>
-<text x="0.0" y="59.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="215" y="48" width="232.6" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: 13.5 cents per round</title></rect>
-<text x="455.6" y="59.0" font-size="12" fill="#2c2c2c" text-anchor="start">13.5¢</text>
-<text x="0.0" y="83.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
-<rect x="215" y="72" width="156.8" height="14" rx="2" fill="#8c0000"><title>GPT-6 Sol: 9.1 cents per round</title></rect>
-<text x="379.8" y="83.0" font-size="12" fill="#2c2c2c" text-anchor="start">9.1¢</text>
-<text x="0.0" y="107.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
-<rect x="215" y="96" width="105.1" height="14" rx="2" fill="#8c0000"><title>MiMo-V2.6-Pro: 6.1 cents per round</title></rect>
-<text x="328.1" y="107.0" font-size="12" fill="#2c2c2c" text-anchor="start">6.1¢</text>
-<text x="0.0" y="131.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
-<rect x="215" y="120" width="53.4" height="14" rx="2" fill="#8c0000"><title>DeepSeek V4.1 Flash: 3.1 cents per round</title></rect>
-<text x="276.4" y="131.0" font-size="12" fill="#2c2c2c" text-anchor="start">3.1¢</text>
-<text x="0.0" y="155.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
-<rect x="215" y="144" width="74.1" height="14" rx="2" fill="#8c0000"><title>GPT-6.1 Sol: 4.3 cents per round</title></rect>
-<text x="297.1" y="155.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.3¢</text>
-<text x="0.0" y="179.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
-<rect x="215" y="168" width="101.7" height="14" rx="2" fill="#8c0000"><title>DeepSeek V4 Pro: 5.9 cents per round</title></rect>
-<text x="324.7" y="179.0" font-size="12" fill="#2c2c2c" text-anchor="start">5.9¢</text>
-<text x="0.0" y="203.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
-<rect x="215" y="192" width="79.3" height="14" rx="2" fill="#8c0000"><title>GLM 5.3 Flash: 4.6 cents per round</title></rect>
-<text x="302.3" y="203.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.6¢</text>
-<text x="0.0" y="227.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="215" y="216" width="125.8" height="14" rx="2" fill="#8c0000"><title>Gemini 3.8 Flash: 7.3 cents per round</title></rect>
-<text x="348.8" y="227.0" font-size="12" fill="#2c2c2c" text-anchor="start">7.3¢</text>
-<text x="0.0" y="258.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
-<text x="0.0" y="279.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="215" y="268" width="144.8" height="14" rx="2" fill="#8c0000"><title>Gemini 3.8 Flash: 8.4 cents per round</title></rect>
-<text x="367.8" y="279.0" font-size="12" fill="#2c2c2c" text-anchor="start">8.4¢</text>
-<text x="0.0" y="303.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
-<rect x="215" y="292" width="10.3" height="14" rx="2" fill="#8c0000"><title>GPT-6 Luna: 0.6 cents per round</title></rect>
-<text x="233.3" y="303.0" font-size="12" fill="#2c2c2c" text-anchor="start">0.6¢</text>
-<text x="0.0" y="327.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
-<rect x="215" y="316" width="6.9" height="14" rx="2" fill="#8c0000"><title>Claude Haiku 5.5: 0.4 cents per round</title></rect>
-<text x="229.9" y="327.0" font-size="12" fill="#2c2c2c" text-anchor="start">0.4¢</text>
-<text x="0.0" y="351.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
-<rect x="215" y="340" width="68.9" height="14" rx="2" fill="#8c0000"><title>MiniMax M3: 4.0 cents per round</title></rect>
-<text x="291.9" y="351.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.0¢</text>
-<text x="215.0" y="378.0" font-size="11" fill="#8a8878" text-anchor="start">US cents per round played</text>
-</svg>
-
-<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 456" role="img" aria-labelledby="speed-title" font-family="inherit">
-<title id="speed-title">Seconds of play per round for each model.</title>
-<text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
-<text x="0.0" y="35.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
-<rect x="215" y="24" width="26.5" height="14" rx="2" fill="#8c0000"><title>Claude Opus 5.5: 34 s per round</title></rect>
-<text x="249.5" y="35.0" font-size="12" fill="#2c2c2c" text-anchor="start">34 s</text>
-<text x="0.0" y="59.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="215" y="48" width="13.3" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: 17 s per round</title></rect>
-<text x="236.3" y="59.0" font-size="12" fill="#2c2c2c" text-anchor="start">17 s</text>
-<text x="0.0" y="83.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
-<rect x="215" y="72" width="15.6" height="14" rx="2" fill="#8c0000"><title>GPT-6 Sol: 20 s per round</title></rect>
-<text x="238.6" y="83.0" font-size="12" fill="#2c2c2c" text-anchor="start">20 s</text>
-<text x="0.0" y="107.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
-<rect x="215" y="96" width="297.3" height="14" rx="2" fill="#8c0000"><title>MiMo-V2.6-Pro: 381 s per round</title></rect>
-<text x="520.3" y="107.0" font-size="12" fill="#2c2c2c" text-anchor="start">381 s</text>
-<text x="0.0" y="131.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
-<rect x="215" y="120" width="81.9" height="14" rx="2" fill="#8c0000"><title>DeepSeek V4.1 Flash: 105 s per round</title></rect>
-<text x="304.9" y="131.0" font-size="12" fill="#2c2c2c" text-anchor="start">105 s</text>
-<text x="0.0" y="155.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
-<rect x="215" y="144" width="14.8" height="14" rx="2" fill="#8c0000"><title>GPT-6.1 Sol: 19 s per round</title></rect>
-<text x="237.8" y="155.0" font-size="12" fill="#2c2c2c" text-anchor="start">19 s</text>
-<text x="0.0" y="179.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
-<rect x="215" y="168" width="158.4" height="14" rx="2" fill="#8c0000"><title>DeepSeek V4 Pro: 203 s per round</title></rect>
-<text x="381.4" y="179.0" font-size="12" fill="#2c2c2c" text-anchor="start">203 s</text>
-<text x="0.0" y="203.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
-<rect x="215" y="192" width="94.4" height="14" rx="2" fill="#8c0000"><title>GLM 5.3 Flash: 121 s per round</title></rect>
-<text x="317.4" y="203.0" font-size="12" fill="#2c2c2c" text-anchor="start">121 s</text>
-<text x="0.0" y="227.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="215" y="216" width="42.9" height="14" rx="2" fill="#8c0000"><title>Gemini 3.8 Flash: 55 s per round</title></rect>
-<text x="265.9" y="227.0" font-size="12" fill="#2c2c2c" text-anchor="start">55 s</text>
-<text x="0.0" y="258.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
-<text x="0.0" y="279.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<rect x="215" y="268" width="25.0" height="14" rx="2" fill="#8c0000"><title>Gemini 3.8 Flash: 32 s per round</title></rect>
-<text x="248.0" y="279.0" font-size="12" fill="#2c2c2c" text-anchor="start">32 s</text>
-<text x="0.0" y="303.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<rect x="215" y="292" width="21.1" height="14" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: ~27 s per round</title></rect>
-<text x="244.1" y="303.0" font-size="12" fill="#2c2c2c" text-anchor="start">~27 s</text>
-<text x="0.0" y="327.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
-<rect x="215" y="316" width="355.0" height="14" rx="2" fill="#8c0000"><title>Step 5 Preview: 455 s per round</title></rect>
-<text x="578.0" y="327.0" font-size="12" fill="#2c2c2c" text-anchor="start">455 s</text>
-<text x="0.0" y="351.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
-<rect x="215" y="340" width="32.0" height="14" rx="2" fill="#8c0000"><title>GPT-6 Luna: 41 s per round</title></rect>
-<text x="255.0" y="351.0" font-size="12" fill="#2c2c2c" text-anchor="start">41 s</text>
-<text x="0.0" y="375.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
-<rect x="215" y="364" width="15.6" height="14" rx="2" fill="#8c0000"><title>Claude Haiku 5.5: 20 s per round</title></rect>
-<text x="238.6" y="375.0" font-size="12" fill="#2c2c2c" text-anchor="start">20 s</text>
-<text x="0.0" y="399.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
-<rect x="215" y="388" width="217.7" height="14" rx="2" fill="#8c0000"><title>Nemotron 3 Ultra: 279 s per round</title></rect>
-<text x="440.7" y="399.0" font-size="12" fill="#2c2c2c" text-anchor="start">279 s</text>
-<text x="0.0" y="423.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
-<rect x="215" y="412" width="96.0" height="14" rx="2" fill="#8c0000"><title>MiniMax M3: 123 s per round</title></rect>
-<text x="319.0" y="423.0" font-size="12" fill="#2c2c2c" text-anchor="start">123 s</text>
-<text x="215.0" y="450.0" font-size="11" fill="#8a8878" text-anchor="start">seconds per round played, shop included, waits excluded · ~ from wall time, not measured</text>
-</svg>
-
-The cost bars are not one price list. The Claude figures are what Claude Code reported at API list prices, the Luna and Haiku figures are what OpenCode logged for its Go plan, which is far cheaper per token, and the Sol and Gemini figures are what OpenCode logged at OpenRouter's prices. Read them within a harness, not across. Sonnet plays a round in half the time Opus takes, and Haiku in half the time Luna takes.
-
-## What it says about the game
-
-I built the benchmark in part to balance the game. A model that plays cold, on fixed seeds, is a playtester I can run on demand, and these results are a rough check on where the difficulty sits.
-
-**Opus plays like a strong human, and wins about as often as one should.** Ascension 10 is meant for a skilled player to win about 40% of the time. Opus won three of five, which at five seeds is in that neighbourhood.
-
-**It did not win the same way twice.** Its three wins were three different builds, and the run that fell one round short was a fourth:
-
-| Seed | Result | Built around |
-| ---- | ------ | ------------ |
-| 1 | won | Pyromaniac and Scorched Earth: burn the alphabet, get paid per letter burned |
-| 2 | won | Snowball, Indelible and The Vault: a multiplier that grows with every green tile |
-| 5 | won | Keystone, Snowball and Thesaurus: multipliers stacked on the middle tile and on shape levels |
-| 3 | 23 of 24 | Force of Habit: keep playing words of the same shape |
-
-Across the five runs it held 23 different relics. Its words were as varied, 305 different ones in 358 guesses: no one build is carrying the game, and a player good enough to read the shop can win with what the shop offers. Sonnet is the contrast. It took Greedy Grammarian, which pays for gray tiles, in four of its five runs.
-
-**The difficulty is spread across the run, not saved for the end.** Sonnet is a slightly weaker player than Opus, and where it died is the useful part. Its four losses at ascension 10 came at rounds 16, 18, 21 and 23, in stages 6, 7 and 8, on bosses and ordinary rounds alike. If every loss came in the final round, the first twenty-three would be a formality. They are not: each round past the midpoint is a real chance to lose.
-
-**The last rule is the sharpest.** Ascension 9 is ascension 10 without its final rule: a round that reaches its target with the word unfound is survived, though it pays no gold. GPT-6.1 Sol did not win at ascension 10, so I had it play the same five seeds one level down.
-
-| Seed | Ascension 10 | Ascension 9 |
-| ---- | ------------ | ----------- |
-| 1 | 11 rounds, 164 thousand | won, 4.5 million |
-| 2 | 8 rounds, 55 thousand | won, 2.1 million |
-| 3 | 21 rounds, 637 thousand | 20 rounds, 1.6 million |
-| 4 | 2 rounds, 2 thousand | 2 rounds, 2 thousand |
-| 5 | 18 rounds, 1.1 million | won, 4.7 million |
-
-It won three of five, and its median score went from 164 thousand to 2.1 million. Across those three wins it failed to find the word in 3 of 72 rounds. At ascension 10 any one of those ends the run. Its builds could carry a run to the end; the occasional word it could not find is what stopped them. Five seeds a side cannot size the gap, though. Seed 5 won at ascension 9 with every word solved, and the same seed at ascension 10 died after 18 rounds.
-
-Lifting the rule did nothing for a model that was not losing to it. DeepSeek V4.1 Flash lost four of its five runs at ascension 10 with the word solved and the score short. On the same seeds at ascension 9 it cleared 7, 17, 14, 5 and 4 rounds, against 11, 17, 16, 2 and 16. GLM 5.3 Flash came out about even: 14, 23, 4, 2 and 8 rounds, against 11, 10, 8, 2 and a win. On seed 2 it survived three rounds with the word unfound and reached the last stage. The seed it had won at ascension 10 ended after 8 rounds. The rule only costs a player whose build is already strong enough to win, and of these three that was one.
+The benchmark lives in the game's repository under [`tools/bench/`](https://github.com/jmelahman/5-wild/tree/master/tools/bench#readme), and every result here was played on v0.10.4.
 
 ## Watch them play
 
@@ -3178,135 +2437,23 @@ Every run is recorded as its list of moves, so any of them can be replayed throu
 * [Sol, ascension 10, seed 5](https://www.youtube.com/watch?v=ey_7Feq_gns): its one win, 4.4 million points
 * [Luna, ascension 0, seed 3](https://www.youtube.com/watch?v=5zj1K5oiwkE): JAZZY, QUEER and EERIE to the final round
 
-Playlists of all five seeds: [Opus, ascension 10](https://www.youtube.com/playlist?list=PLNpeJ3c8LSSI), [Sonnet, ascension 10](https://www.youtube.com/playlist?list=PLPbdCMsQ0cyw), [Sonnet, ascension 0](https://www.youtube.com/playlist?list=PLZIqSWoqu3A8), [Sol, ascension 10](https://www.youtube.com/playlist?list=PLbGZ69vm1-0M), [Gemini, ascension 10](https://www.youtube.com/playlist?list=PLKtGosf5vcbQ), [GPT-6.1 Sol, ascension 10](https://www.youtube.com/playlist?list=PLZnD_aFf73II), [GLM 5.3 Flash, ascension 10](https://www.youtube.com/playlist?list=PLDzRfb6K_o6M), [DeepSeek V4.1 Flash, ascension 10](https://www.youtube.com/playlist?list=PLZmqrZmb2p4g), [MiMo-V2.6-Pro, ascension 10](https://www.youtube.com/playlist?list=PLeDG6SXiQnNo), [DeepSeek V4 Pro, ascension 10](https://www.youtube.com/playlist?list=PLKbSnPmJE0kU), [Gemini, ascension 0](https://www.youtube.com/playlist?list=PLQcOUbLko88Y), [Luna, ascension 0](https://www.youtube.com/playlist?list=PLARlXXTMTM3Y), [Haiku, ascension 0](https://www.youtube.com/playlist?list=PLKEUYwl-L6-o), [Step 5 Preview, ascension 0](https://www.youtube.com/playlist?list=PLM9YnyAIwvoc) and [Nemotron 3 Ultra, ascension 0](https://www.youtube.com/playlist?list=PLPU68aAT2rX0).
+Playlists of all five runs per model, Ascension 10:
 
-Every run by final score. Each dot is a run and links to its video.
+* [Opus 5.5](https://www.youtube.com/playlist?list=PLNpeJ3c8LSSI)
+* [Sonnet 5.5](https://www.youtube.com/playlist?list=PLPbdCMsQ0cyw)
+* [GPT-6 Sol](https://www.youtube.com/playlist?list=PLbGZ69vm1-0M)
+* [GPT-6.1 Sol](https://www.youtube.com/playlist?list=PLZnD_aFf73II)
+* [GLM 5.3 Flash](https://www.youtube.com/playlist?list=PLDzRfb6K_o6M)
+* [DeepSeek V4.1 Flash](https://www.youtube.com/playlist?list=PLZmqrZmb2p4g)
+* [MiMo-V2.6-Pro](https://www.youtube.com/playlist?list=PLeDG6SXiQnNo)
+* [DeepSeek V4 Pro](https://www.youtube.com/playlist?list=PLKbSnPmJE0kU)
+* [Gemini 3.8](https://www.youtube.com/playlist?list=PLKtGosf5vcbQ)
 
-<svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 538" role="img" aria-labelledby="score-title" font-family="inherit">
-<title id="score-title">Final score of each of five runs for each model, on a log scale.</title>
-<line x1="215.0" x2="215.0" y1="6" y2="504" stroke="#e3e1cf"/>
-<text x="215.0" y="516.0" font-size="11" fill="#8a8878" text-anchor="middle">1K</text>
-<line x1="336.3" x2="336.3" y1="6" y2="504" stroke="#e3e1cf"/>
-<text x="336.3" y="516.0" font-size="11" fill="#8a8878" text-anchor="middle">10K</text>
-<line x1="457.5" x2="457.5" y1="6" y2="504" stroke="#e3e1cf"/>
-<text x="457.5" y="516.0" font-size="11" fill="#8a8878" text-anchor="middle">100K</text>
-<line x1="578.8" x2="578.8" y1="6" y2="504" stroke="#e3e1cf"/>
-<text x="578.8" y="516.0" font-size="11" fill="#8a8878" text-anchor="middle">1M</text>
-<line x1="700.0" x2="700.0" y1="6" y2="504" stroke="#e3e1cf"/>
-<text x="700.0" y="516.0" font-size="11" fill="#8a8878" text-anchor="middle">10M</text>
-<text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
-<text x="0.0" y="40.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Opus 5.5</text>
-<line x1="215" x2="700" y1="36" y2="36" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=adrTWq4DkTw"><circle cx="650.1" cy="36.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Claude Opus 5.5, seed 1: 3,873,095 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=vwdLLUmtw48"><circle cx="644.6" cy="36.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Claude Opus 5.5, seed 2: 3,489,091 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=qTJvwRW1SEg"><circle cx="599.9" cy="36.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Opus 5.5, seed 3: 1,492,971 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=a2fVOav6bKg"><circle cx="259.9" cy="36.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Opus 5.5, seed 4: 2,348 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=iayM2a_q9eg"><circle cx="677.7" cy="36.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Claude Opus 5.5, seed 5: 6,551,698 points (watch)</title></circle></a>
-<text x="0.0" y="68.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<line x1="215" x2="700" y1="64" y2="64" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=yrusditZPE4"><circle cx="504.0" cy="64.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Sonnet 5.5, seed 1: 241,878 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=GrOcnkQdwDU"><circle cx="533.7" cy="64.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Sonnet 5.5, seed 2: 425,178 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=UH9l_1GaPm0"><circle cx="553.6" cy="64.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Sonnet 5.5, seed 3: 620,789 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=p6WOduxnL5A"><circle cx="589.8" cy="64.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Sonnet 5.5, seed 4: 1,232,555 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=U8igROuMQtQ"><circle cx="641.0" cy="64.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Claude Sonnet 5.5, seed 5: 3,264,282 points (watch)</title></circle></a>
-<text x="0.0" y="96.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
-<line x1="215" x2="700" y1="92" y2="92" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=Jbg0F-wpENg"><circle cx="523.7" cy="92.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Sol, seed 1: 351,490 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=y8eHdJXrx2E"><circle cx="536.0" cy="92.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Sol, seed 2: 443,748 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=aK1txCGgeyo"><circle cx="409.9" cy="92.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Sol, seed 3: 40,532 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=kPTtJhUeqk8"><circle cx="257.1" cy="92.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Sol, seed 4: 2,224 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=ey_7Feq_gns"><circle cx="656.6" cy="92.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>GPT-6 Sol, seed 5: 4,388,081 points (watch)</title></circle></a>
-<text x="0.0" y="124.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
-<line x1="215" x2="700" y1="120" y2="120" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=PVj7my88Uqs"><circle cx="563.7" cy="120.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiMo-V2.6-Pro, seed 1: 751,730 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=1vtdj-A3FOU"><circle cx="382.5" cy="120.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiMo-V2.6-Pro, seed 2: 24,078 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=ZdRVXAKdwT0"><circle cx="455.8" cy="120.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiMo-V2.6-Pro, seed 3: 96,733 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=vD9t4aaMHwk"><circle cx="526.8" cy="120.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiMo-V2.6-Pro, seed 4: 372,866 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=pwt9r1NLz1k"><circle cx="510.9" cy="120.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiMo-V2.6-Pro, seed 5: 275,474 points (watch)</title></circle></a>
-<text x="0.0" y="152.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
-<line x1="215" x2="700" y1="148" y2="148" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=yDI7jf9qUkE"><circle cx="430.0" cy="148.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4.1 Flash, seed 1: 59,266 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=K5uVfhW6PdA"><circle cx="523.5" cy="148.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4.1 Flash, seed 2: 350,065 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=0Lq3hE_nVW0"><circle cx="511.3" cy="148.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4.1 Flash, seed 3: 277,886 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=Z3mdoXoRwkA"><circle cx="258.4" cy="148.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4.1 Flash, seed 4: 2,279 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=9hojXwaQMQI"><circle cx="508.2" cy="148.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4.1 Flash, seed 5: 262,140 points (watch)</title></circle></a>
-<text x="0.0" y="180.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
-<line x1="215" x2="700" y1="176" y2="176" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=erikjgW8lt4"><circle cx="483.4" cy="176.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6.1 Sol, seed 1: 163,688 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=53FE_meAP1g"><circle cx="426.4" cy="176.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6.1 Sol, seed 2: 55,385 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=jD37Wuu29Lg"><circle cx="555.0" cy="176.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6.1 Sol, seed 3: 637,062 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=nDLUAjcKKEs"><circle cx="244.4" cy="176.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6.1 Sol, seed 4: 1,749 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=AR95WKHPWTo"><circle cx="584.6" cy="176.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6.1 Sol, seed 5: 1,118,355 points (watch)</title></circle></a>
-<text x="0.0" y="208.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
-<line x1="215" x2="700" y1="204" y2="204" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=g97u_BuKtfI"><circle cx="459.8" cy="204.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4 Pro, seed 1: 104,477 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=Oql4Mgik6Ps"><circle cx="450.1" cy="204.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4 Pro, seed 2: 86,925 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=W_zHf3ygGWs"><circle cx="311.9" cy="204.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4 Pro, seed 3: 6,298 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=rEKWM1S5Qmo"><circle cx="492.3" cy="204.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4 Pro, seed 4: 193,611 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=RlobHTVNY_U"><circle cx="525.6" cy="204.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>DeepSeek V4 Pro, seed 5: 364,607 points (watch)</title></circle></a>
-<text x="0.0" y="236.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
-<line x1="215" x2="700" y1="232" y2="232" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=U4_qGKCounw"><circle cx="468.9" cy="232.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GLM 5.3 Flash, seed 1: 124,271 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=NuywloorlgE"><circle cx="452.8" cy="232.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GLM 5.3 Flash, seed 2: 91,395 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=YRuqONkt800"><circle cx="454.6" cy="232.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GLM 5.3 Flash, seed 3: 94,582 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=8ySYrb62vkE"><circle cx="241.7" cy="232.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GLM 5.3 Flash, seed 4: 1,661 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=hBWIqTIDLE0"><circle cx="607.8" cy="232.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>GLM 5.3 Flash, seed 5: 1,734,821 points (watch)</title></circle></a>
-<text x="0.0" y="264.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<line x1="215" x2="700" y1="260" y2="260" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=0R70-cRIg6g"><circle cx="515.7" cy="260.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Gemini 3.8 Flash, seed 1: 302,122 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=VWbtI_bBIJI"><circle cx="377.0" cy="260.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Gemini 3.8 Flash, seed 2: 21,680 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=pyWffPw-YWw"><circle cx="423.2" cy="260.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Gemini 3.8 Flash, seed 3: 52,176 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=jx_FDosJzD4"><circle cx="568.9" cy="260.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Gemini 3.8 Flash, seed 4: 828,777 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=Xs2nELVIfV4"><circle cx="388.7" cy="260.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Gemini 3.8 Flash, seed 5: 27,068 points (watch)</title></circle></a>
-<text x="0.0" y="294.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
-<text x="0.0" y="320.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
-<line x1="215" x2="700" y1="316" y2="316" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=49SKHzw9LDM"><circle cx="654.3" cy="316.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Gemini 3.8 Flash, seed 1: 4,198,512 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=R2jsTuhsbXU"><circle cx="664.2" cy="316.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Gemini 3.8 Flash, seed 2: 5,069,690 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=DuzftCWhnjY"><circle cx="627.3" cy="316.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Gemini 3.8 Flash, seed 3: 2,514,385 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=mOlavEqeURk"><circle cx="639.9" cy="316.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Gemini 3.8 Flash, seed 4: 3,193,387 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=nJocTunBu2o"><circle cx="649.1" cy="316.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Gemini 3.8 Flash, seed 5: 3,805,591 points (watch)</title></circle></a>
-<text x="0.0" y="348.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
-<line x1="215" x2="700" y1="344" y2="344" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=T5hgQKiSg1w"><circle cx="578.3" cy="344.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Sonnet 5.5, seed 1: 991,301 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=tqtyQ6L5mvw"><circle cx="623.8" cy="344.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Sonnet 5.5, seed 2: 2,352,722 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=y2chT1UjSYs"><circle cx="559.7" cy="344.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Sonnet 5.5, seed 3: 697,070 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=RlzB8TtLrtc"><circle cx="499.2" cy="344.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Sonnet 5.5, seed 4: 220,820 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=Zp8Y4W7u8hE"><circle cx="609.0" cy="344.0" r="5.5" fill="#8c0000" stroke="#fbfaef" stroke-width="2" paint-order="stroke"><title>Claude Sonnet 5.5, seed 5: 1,777,015 points (watch)</title></circle></a>
-<text x="0.0" y="376.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
-<line x1="215" x2="700" y1="372" y2="372" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=E4CgtemAkD8"><circle cx="504.0" cy="372.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Step 5 Preview, seed 1: 241,668 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=kAo7-11T-YA"><circle cx="511.8" cy="372.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Step 5 Preview, seed 2: 280,571 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=MGGPMgselgs"><circle cx="473.0" cy="372.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Step 5 Preview, seed 3: 134,164 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=AUelOBa-WTI"><circle cx="215.0" cy="372.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Step 5 Preview, seed 4: 990 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=vy6FkmqC4rE"><circle cx="503.0" cy="372.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Step 5 Preview, seed 5: 237,290 points (watch)</title></circle></a>
-<text x="0.0" y="404.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
-<line x1="215" x2="700" y1="400" y2="400" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=zzGGdhAlKUg"><circle cx="486.8" cy="400.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Luna, seed 1: 174,437 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=2Y5m6Y5lT_k"><circle cx="490.2" cy="400.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Luna, seed 2: 186,222 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=5zj1K5oiwkE"><circle cx="605.2" cy="400.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Luna, seed 3: 1,652,069 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=C3l3Dze_Ols"><circle cx="254.5" cy="400.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Luna, seed 4: 2,116 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=tIKdDAuWXis"><circle cx="551.7" cy="400.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>GPT-6 Luna, seed 5: 598,395 points (watch)</title></circle></a>
-<text x="0.0" y="432.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
-<line x1="215" x2="700" y1="428" y2="428" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=-nUz-qL6yNY"><circle cx="501.7" cy="428.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Haiku 5.5, seed 1: 231,696 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=G2O1qn5KZr8"><circle cx="456.1" cy="428.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Haiku 5.5, seed 2: 97,385 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=Ytxe7EFLmwQ"><circle cx="492.1" cy="428.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Haiku 5.5, seed 3: 193,064 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=bH6YjQL5pG4"><circle cx="221.4" cy="428.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Haiku 5.5, seed 4: 1,130 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=64A30oLI-ZM"><circle cx="238.7" cy="428.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Claude Haiku 5.5, seed 5: 1,568 points (watch)</title></circle></a>
-<text x="0.0" y="460.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
-<line x1="215" x2="700" y1="456" y2="456" stroke="#e3e1cf"/>
-<a href="https://www.youtube.com/watch?v=m7tC_lDiXxQ"><circle cx="226.0" cy="456.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Nemotron 3 Ultra, seed 1: 1,232 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=WofXv42yKPU"><circle cx="598.7" cy="456.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Nemotron 3 Ultra, seed 2: 1,460,912 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=fBCMfZwrqaI"><circle cx="464.3" cy="456.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Nemotron 3 Ultra, seed 3: 113,743 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=3Pmo7xsy2s0"><circle cx="243.9" cy="456.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Nemotron 3 Ultra, seed 4: 1,732 points (watch)</title></circle></a>
-<a href="https://www.youtube.com/watch?v=etKycxsho6E"><circle cx="298.2" cy="456.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>Nemotron 3 Ultra, seed 5: 4,851 points (watch)</title></circle></a>
-<text x="0.0" y="488.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
-<line x1="215" x2="700" y1="484" y2="484" stroke="#e3e1cf"/>
-<circle cx="215.0" cy="484.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiniMax M3, seed 1: 0 points</title></circle>
-<circle cx="449.9" cy="484.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiniMax M3, seed 2: 86,634 points</title></circle>
-<circle cx="215.0" cy="484.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiniMax M3, seed 3: 0 points</title></circle>
-<circle cx="253.5" cy="484.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiniMax M3, seed 4: 2,079 points</title></circle>
-<circle cx="504.3" cy="484.0" r="5.5" fill="#fbfaef" stroke="#8c0000" stroke-width="2.5"><title>MiniMax M3, seed 5: 243,319 points</title></circle>
-<text x="215.0" y="532.0" font-size="11" fill="#8a8878" text-anchor="start">final score of each run, log scale · ● won   ○ lost</text>
-</svg>
+Ascension 0:
+
+* [Gemini 3.8](https://www.youtube.com/playlist?list=PLQcOUbLko88Y)
+* [Sonnet 5.5](https://www.youtube.com/playlist?list=PLZIqSWoqu3A8)
+* [GPT-6 Luna](https://www.youtube.com/playlist?list=PLARlXXTMTM3Y)
+* [Haiku 5.5](https://www.youtube.com/playlist?list=PLKEUYwl-L6-o)
+* [Step 5 Preview](https://www.youtube.com/playlist?list=PLM9YnyAIwvoc)
+* [Nemotron 3 Ultra](https://www.youtube.com/playlist?list=PLPU68aAT2rX0)

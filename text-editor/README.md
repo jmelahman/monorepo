@@ -85,3 +85,12 @@ Open `index.html` in a browser, or serve the directory:
 ```sh
 python -m http.server
 ```
+
+The tests run in a browser, against the page itself, as there is no other
+place the editor exists. With Node and Firefox or Chromium installed:
+
+```sh
+node test/run.mjs
+```
+
+Or open `/test/` on the server above to run them in a browser of your own.

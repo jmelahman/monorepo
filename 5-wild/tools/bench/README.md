@@ -296,9 +296,9 @@ module both can import.
 
 `names.ts` and `measured.ts` are the two tables kept by hand, and a new model
 wants a line in each. One absent from `names.ts` is titled by its id. One
-absent from `measured.ts` gets no cost bar and a speed estimated from wall time,
-and `bench:charts` names both kinds on its way out. The figures in `measured.ts`
-were read out of `bench/logs/` by hand; nothing computes them.
+absent from `measured.ts` is left off the cost chart and has its speed
+estimated from wall time, and `bench:charts` names both kinds on its way out. The figures in
+`measured.ts` were read out of `bench/logs/` by hand; nothing computes them.
 
 ## What is written where
 

@@ -238,9 +238,22 @@ const HTML_RENDERERS = {
 
 // The editor rebuilds a block's opening tag and trims around its contents.
 // A block cannot be edited in rich mode, so write back what was read.
+// One that was cut and pasted comes back without its source, and the editor
+// would write its contents on the line of the opening tag, which Markdown
+// reads as a paragraph the next time and not as a block. So the tag goes on
+// a line of its own, with no blank line after it to end the block early.
 function htmlToMarkdown({ node }, { origin }) {
-  const source = node.attrs.htmlBlock && htmlSources.get(`${node.type.name}\n${node.attrs.childrenHTML}`);
-  return source ? { text: source } : origin();
+  if (!node.attrs.htmlBlock) return origin();
+  const tag = node.type.name;
+  const source = htmlSources.get(`${tag}\n${node.attrs.childrenHTML}`);
+  if (source) return { text: source };
+  const attrs = Object.entries(node.attrs.htmlAttrs).map(([name, value]) => {
+    // The class is the one the editor draws a block with, not the document's.
+    if (name === 'class') value = value.split(/\s+/).filter((c) => c && c !== 'html-block').join(' ');
+    return name === 'class' && !value ? '' : ` ${name}="${value.replace(/"/g, '&quot;')}"`;
+  });
+  const children = node.attrs.childrenHTML.replace(/\n\s*\n/g, '\n').trim();
+  return { text: `<${tag}${attrs.join('')}>\n${children}\n</${tag}>` };
 }
 
 // Pasted pages are made of these tags; take the text, not frozen blocks.

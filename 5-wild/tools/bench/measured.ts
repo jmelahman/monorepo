@@ -13,9 +13,11 @@
  * gap over five minutes dropped as a wait, and both are divided by rounds
  * played. They are keyed `<results directory>@a<ascension>`.
  *
- * A label absent from here gets no cost bar, and its speed is the median over
- * its runs of `wallMs` per round, which the one interrupted run in five does
- * not move. `charts.ts` says which labels it fell back for.
+ * A label with no `cents` is left off the cost chart, and one with no
+ * `seconds` gets the median over its runs of `wallMs` per round, which the one
+ * interrupted run in five does not move. `charts.ts` names both kinds on its
+ * way out. A `cents` of 0 is a different thing from none: it is a model that
+ * was played for free, and it is drawn, at nothing.
  */
 export type Measured = { cents?: number; seconds?: number }
 
@@ -44,9 +46,19 @@ export const MEASURED: Record<string, Measured> = {
   // and a late round is a long shop and a long context. Seed 5 was finished
   // through OpenRouter when the Go plan's limit ran out, which was $0.28 of it.
   "minimax-m3-opencode-go@a0": { cents: 4.0, seconds: 123 },
-  // The two free previews: no `cents`, since a 0¢ bar would read as a price and
-  // it is a promotion. Step 5 logged 30,452 active seconds over 67 rounds and
-  // Nemotron 13,095 over 47.
-  "step-5-preview-free-opencode-go@a0": { seconds: 455 },
-  "nvidia-nemotron-3-ultra-550b-a55b-free-openrouter@a0": { seconds: 279 },
+  // Played by five Claude Code subagents, which leave no harness log and no
+  // reported cost, so this one is rebuilt from their transcripts and is the
+  // softest figure here. 62.7M tokens of cache read and 0.8M of five-minute
+  // cache write are $14.55 at the rates the ascension 10 log's own total
+  // implies ($0.20 and $2.50 a million). A transcript undercounts output, so
+  // that is taken at ascension 10's 1,404 tokens a round, $1.49 more: $16.04
+  // and 2,881 active seconds over 106 rounds. The floor, with no output at
+  // all, is 13.7¢.
+  "claude-sonnet-5-5-claude-code-subagent@a0": { cents: 15.1, seconds: 27 },
+  // The two free previews, at 0¢ because that is what they were played for. It
+  // is a promotion and not a price, and they had no `cents` at all while cost
+  // was a chart of bars, where a bar of no length says nothing. Step 5 logged
+  // 30,452 active seconds over 67 rounds and Nemotron 13,095 over 47.
+  "step-5-preview-free-opencode-go@a0": { cents: 0, seconds: 455 },
+  "nvidia-nemotron-3-ultra-550b-a55b-free-openrouter@a0": { cents: 0, seconds: 279 },
 }

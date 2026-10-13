@@ -21,9 +21,10 @@
  *
  * Every chart is rows under ascension headings, or a grid of them, because
  * that is the one layout that survives a roster that keeps growing: a row
- * costs height, and a page has that. The lead chart is the exception, bars
+ * costs height, and a page has that. The lead chart is one exception, bars
  * side by side as a leaderboard is expected to be, and it narrows its bars
- * rather than wrapping them.
+ * rather than wrapping them. The scatter of cost against score is the other,
+ * and what a growing roster costs it is at `scatter`.
  *
  * Everything but cost and speed is read by replaying the episode against the
  * engine, the way `verify` does, so no chart can disagree with the film of the
@@ -44,7 +45,7 @@ import { RELICS } from "../../src/engine/relics"
 import { en } from "../../src/ui/lang/en"
 import { RESULTS, ROOT } from "./host"
 import { MEASURED } from "./measured"
-import { modelName } from "./names"
+import { modelName, providerName } from "./names"
 import { wordsFor } from "./words"
 
 const args = process.argv.slice(2)
@@ -104,6 +105,8 @@ type Player = {
   name: string
   /** One word, for a column header: Opus, Sol, Gemini. */
   short: string
+  /** Who served it: Claude Code, OpenCode Go, OpenRouter. */
+  provider: string
   dir: string
   ascension: number
   runs: Run[]
@@ -241,6 +244,7 @@ for (const dir of readdirSync(RESULTS).sort()) {
     const player: Player = {
       name,
       short: name.replace(/^(Claude|GPT-[\d.]+) /, "").split(" ")[0] ?? name,
+      provider: providerName(read(1).label),
       dir,
       ascension,
       runs: [],
@@ -335,12 +339,18 @@ function svg(id: string, title: string, height: number, body: string[]): string 
   ].join("\n")
 }
 
-/** A won run is a filled dot and a lost one a ring, on every chart that has dots. */
+/**
+ * A win is a filled dot and anything short of one a ring, on every chart that
+ * has dots. The colour is the accent on all of them; it is an argument for
+ * the key of the scatter, whose two sample dots are nobody's and are grey.
+ */
+const paint = (won: boolean, colour: string = ACC) =>
+  won
+    ? `fill="${colour}" stroke="${BG}" stroke-width="2" paint-order="stroke"`
+    : `fill="${BG}" stroke="${colour}" stroke-width="2.5"`
+
 function dot(cx: number, cy: number, run: Run, tip: string): string {
-  const paint = run.won
-    ? `fill="${ACC}" stroke="${BG}" stroke-width="2" paint-order="stroke"`
-    : `fill="${BG}" stroke="${ACC}" stroke-width="2.5"`
-  const circle = `<circle cx="${fix(cx)}" cy="${fix(cy)}" r="5.5" ${paint}><title>${esc(tip)}${run.video ? " (watch)" : ""}</title></circle>`
+  const circle = `<circle cx="${fix(cx)}" cy="${fix(cy)}" r="5.5" ${paint(run.won)}><title>${esc(tip)}${run.video ? " (watch)" : ""}</title></circle>`
   return run.video ? `<a href="${WATCH}${run.video}">${circle}</a>` : circle
 }
 
@@ -374,20 +384,39 @@ function rows(
   return y
 }
 
-type Bar = { value: number; label: string; tip: string }
-function bars(id: string, title: string, note: string, of: (player: Player) => Bar | null): string {
+type Bar = { value: number; label: string; tip: string; fill?: string }
+/**
+ * A bar a player, lying down. `key` is for a chart whose bars are not all the
+ * accent: what each colour means, written on the first heading's line from
+ * the right edge inward, where a heading never reaches.
+ */
+function bars(
+  id: string,
+  title: string,
+  note: string,
+  of: (player: Player) => Bar | null,
+  key: readonly (readonly [label: string, fill: string])[] = [],
+): string {
   const all = everyone.map(of).filter((bar) => bar !== null)
   const max = Math.max(...all.map((bar) => bar.value), 1e-9)
   // Room on the right for the value written after the longest bar.
   const scale = (W - 150 - L) / max
   const body: string[] = []
+  let keyX = W
+  for (const [label, fill] of [...key].reverse()) {
+    keyX -= label.length * 5.8
+    body.push(text(keyX, 14, label, { size: 11, fill: MUTED }))
+    keyX -= 16
+    body.push(`<rect x="${fix(keyX)}" y="4" width="11" height="11" rx="2" fill="${fill}"/>`)
+    keyX -= 16
+  }
   const bottom = rows(body, 0, 24, (player, y) => {
     const bar = of(player)
     if (!bar) return false
     const width = Math.max(2, bar.value * scale)
     body.push(text(0, y + 13, player.name, { size: 13 }))
     body.push(
-      `<rect x="${L}" y="${y + 2}" width="${fix(width)}" height="14" rx="2" fill="${ACC}"><title>${esc(bar.tip)}</title></rect>`,
+      `<rect x="${L}" y="${y + 2}" width="${fix(width)}" height="14" rx="2" fill="${bar.fill ?? ACC}"><title>${esc(bar.tip)}</title></rect>`,
     )
     body.push(text(L + width + 8, y + 13, bar.label))
     return true
@@ -847,7 +876,14 @@ charts["guesses-title"] = bars(
     ["Rerolls", "reroll"],
     ["Consumables used", "use_consumable"],
   ] as const
-  const per = (player: Player, kind: string) => (player.actions[kind] ?? 0) / SEEDS
+  // Per stage and not per run, which it was: a run is as long as the player
+  // is good, so per run Opus's 25.6 purchases against GLM's 9.4 said mostly
+  // that Opus saw more shops, which the leaderboard had said already. A stage
+  // is three rounds played, pooled over the runs, so a run that died a round
+  // into its fifth has four and a third of them and not five: the shop comes
+  // after a round, and a stage barely entered was barely shopped in.
+  const stages = (player: Player) => Math.max(rounds(player).length, 1) / 3
+  const per = (player: Player, kind: string) => (player.actions[kind] ?? 0) / stages(player)
   const height = grid(
     body,
     0,
@@ -855,20 +891,22 @@ charts["guesses-title"] = bars(
     (player, j) => {
       const [label, kind] = kinds[j] ?? kinds[0]
       const value = per(player, kind)
-      // Each column against its own busiest player: purchases run to thirty
-      // a run and sales to three, and one scale would blank the second.
+      // Each column against its own busiest player: purchases run to four
+      // a stage and rerolls to under one, and one scale would blank the second.
       const most = Math.max(...everyone.map((other) => per(other, kind)), 1e-9)
+      // Two places: a reroll every dozen stages is 0.08, and at one it is 0.1
+      // beside a player's 0.1 that rerolls half as often again.
       return {
-        label: value.toFixed(1),
+        label: value.toFixed(2),
         shade: (value / most) * 0.85,
-        tip: `${player.name}: ${value.toFixed(1)} ${label.toLowerCase()} per run`,
+        tip: `${player.name}: ${value.toFixed(2)} ${label.toLowerCase()} per stage, ${player.actions[kind] ?? 0} over ${rounds(player).length} rounds`,
       }
     },
-    `per run, averaged over ${SEEDS} runs · each column shaded against its own highest`,
+    `per stage of three rounds played, over ${SEEDS} runs · each column shaded against its own highest`,
   )
   charts["shop-title"] = svg(
     "shop-title",
-    "Shop actions per run for each model: purchases, relics sold, rerolls and consumables used.",
+    "Shop actions per stage played for each model: purchases, relics sold, rerolls and consumables used.",
     height,
     body,
   )
@@ -1001,33 +1039,236 @@ const seconds = (player: Player) => {
   estimated.push(`${player.name} a${player.ascension}`)
   return Math.round(median(player.runs.map((run) => run.wallMs / 1000 / played(run))))
 }
-charts["cost-title"] = bars(
-  "cost-title",
-  "Cost per round played, in US cents, for each model that was priced.",
-  "US cents per round played",
-  (player) => {
-    const cents = MEASURED[key(player)]?.cents
-    if (cents === undefined) return null
-    return {
-      value: cents,
-      label: `${cents.toFixed(1)}¢`,
-      tip: `${player.name}: ${cents.toFixed(1)} cents per round`,
-    }
-  },
-)
 const speeds = new Map(everyone.map((player) => [player, seconds(player)]))
 // A speed nobody measured is marked as one, since the note under the chart
 // promises the waits are out and wall time cannot promise that.
 const guessed = (player: Player) => MEASURED[key(player)]?.seconds === undefined
+
+/**
+ * Cost against score, a dot a player, and the one chart here that is neither
+ * rows nor a grid. It was two charts of bars, cents a round and seconds a
+ * round, and then one of cost against speed, and none of them asked what a
+ * reader of a price list asks, which is what the money buys. Up is the median
+ * final score, the number the players are ranked by (see `groups`), so the
+ * chart is the leaderboard with the bill beside it. Speed is in each dot's
+ * tooltip, and has the chart after this one to itself.
+ *
+ * Score is on a log scale, as on the leaderboard and for its reason: on a
+ * linear one every player that lost its median run is a dot on the floor.
+ * Cost was too, and is linear now. A log axis made Haiku's 0.4 cents and
+ * Luna's 0.6 look as far apart as Sonnet's 13.5 and Opus's 20.6, which is
+ * true as a ratio and not as money, and it has no zero, so the two models
+ * played for free stood in a column of their own across a break in the axis.
+ * On a linear one a cent is a cent's width and free is where the axis starts.
+ *
+ * Only the hardest ascension played is on it. Both were, in two colours, and
+ * the two do not share a scale whatever the axis says: a score at ascension 0
+ * is made under easier rules than one at ascension 10, so a dot was above or
+ * below dots of its own colour only, and the picture invited the one
+ * comparison it could not support. The easier ascension's costs are still in
+ * `measured.ts`, and its speeds are on the chart after this one.
+ *
+ * A dot is filled if the player won any of its runs and a ring if it won none,
+ * which is the convention of `dot` moved up from a run to a player, because a
+ * cost is measured once per label and there is no run to hang it on.
+ *
+ * A model played for free is at 0¢. A player with no cost at all is not on the
+ * chart: nobody knows where it goes, and zero is a claim. It is named on the
+ * way out.
+ *
+ * The names are placed, not just written beside the dots, since two models a
+ * few percent apart on both axes are a dot's width apart on the page. Each takes
+ * whichever of ten places round its dot lands on the fewest dots and names.
+ * That can still be beaten by a crowd, and a rerun with a new model on it is
+ * worth a look at `--preview` for that reason.
+ */
+function scatter(): string {
+  const TOP = 44
+  const BOTTOM = 424
+  /** The frame, and zero a dot's width inside it so a free model is not on the line. */
+  const LEFT = 40
+  const ZERO = LEFT + 12
+  const cents = (player: Player) => MEASURED[key(player)]?.cents
+  /** `groups` is hardest first. */
+  const shown = groups[0]
+  const priced = (shown?.players ?? []).filter((player) => cents(player) !== undefined)
+
+  // Cost, linear from nothing: a tick every 1, 2 or 5 of whichever power of ten
+  // gives no more than six of them.
+  const dearest = Math.max(...priced.map((player) => cents(player) ?? 0), 1e-9)
+  const every =
+    [1, 2, 5]
+      .flatMap((step) => [0.01, 0.1, 1, 10, 100].map((power) => step * power))
+      .sort((a, b) => a - b)
+      .find((step) => dearest / step <= 6) ?? dearest
+  const x = {
+    ticks: Array.from({ length: Math.floor(dearest / every) + 1 }, (_, i) =>
+      Number((i * every).toPrecision(6)),
+    ),
+    at: (value: number) => ZERO + (value / dearest) * (W - 12 - ZERO),
+  }
+  // Score, logarithmic: a third of the way to the next value past the data on
+  // each side, so no dot sits on the frame, and a tick a decade.
+  const score = (player: Player) => median(player.runs.map((run) => run.score))
+  const seen = priced.map((player) => Math.max(score(player), 1))
+  const lo = Math.log(Math.min(...seen) / 1.3)
+  const hi = Math.log(Math.max(...seen) * 1.3)
+  const y = {
+    ticks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      .map((decade) => 10 ** decade)
+      .filter((tick) => Math.log(tick) >= lo && Math.log(tick) <= hi),
+    at: (value: number) =>
+      BOTTOM - ((Math.log(Math.max(value, 1)) - lo) / (hi - lo)) * (BOTTOM - TOP),
+  }
+
+  const body: string[] = []
+  // The heading the other charts give an ascension, and the key beside it.
+  if (shown) body.push(text(0, 14, shown.title, { fill: ACC, bold: true }))
+  let keyX = (shown?.title.length ?? 0) * 7.2 + 18
+  const legend = (label: string, won: boolean) => {
+    body.push(`<circle cx="${keyX + 6}" cy="10" r="5.5" ${paint(won, MUTED)}/>`)
+    body.push(text(keyX + 16, 14, label, { fill: MUTED, size: 11 }))
+    keyX += 16 + label.length * 5.6 + 18
+  }
+  legend("won a run", true)
+  legend("won none", false)
+
+  body.push(
+    text(0, 34, `median final score of ${SEEDS} runs, on a log scale`, {
+      size: 11,
+      fill: MUTED,
+    }),
+  )
+  for (const tick of y.ticks) {
+    body.push(
+      `<line x1="${LEFT}" x2="${W}" y1="${fix(y.at(tick))}" y2="${fix(y.at(tick))}" stroke="${GRID}"/>`,
+    )
+    body.push(text(LEFT - 6, y.at(tick) + 4, short(tick), { size: 11, fill: MUTED, anchor: "end" }))
+  }
+  for (const tick of x.ticks) {
+    body.push(
+      `<line x1="${fix(x.at(tick))}" x2="${fix(x.at(tick))}" y1="${TOP}" y2="${BOTTOM}" stroke="${GRID}"/>`,
+    )
+    body.push(
+      text(x.at(tick), BOTTOM + 16, `${tick}¢`, { size: 11, fill: MUTED, anchor: "middle" }),
+    )
+  }
+  body.push(
+    `<line x1="${LEFT}" x2="${LEFT}" y1="${TOP}" y2="${BOTTOM}" stroke="${MUTED}"/>`,
+    `<line x1="${LEFT}" x2="${W}" y1="${BOTTOM}" y2="${BOTTOM}" stroke="${MUTED}"/>`,
+  )
+  body.push(
+    text((LEFT + W) / 2, BOTTOM + 34, "US cents per round played", {
+      size: 11,
+      fill: MUTED,
+      anchor: "middle",
+    }),
+  )
+
+  type Box = { x0: number; y0: number; x1: number; y1: number }
+  const hit = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1
+  const points = priced.map((player) => {
+    const price = cents(player) ?? 0
+    return { player, price, cx: x.at(price), cy: y.at(score(player)) }
+  })
+  // Georgia at 12px, near enough: the page's own face is not known here.
+  const width = (player: Player) => player.name.length * 5.7
+  const options = ({ player, cx, cy }: (typeof points)[number]) => {
+    const w = width(player)
+    return [
+      { anchor: "start", tx: cx + 10, ty: cy + 4, x0: cx + 10 },
+      { anchor: "end", tx: cx - 10, ty: cy + 4, x0: cx - 10 - w },
+      { anchor: "middle", tx: cx, ty: cy - 11, x0: cx - w / 2 },
+      { anchor: "middle", tx: cx, ty: cy + 19, x0: cx - w / 2 },
+      { anchor: "start", tx: cx + 7, ty: cy - 8, x0: cx + 7 },
+      { anchor: "start", tx: cx + 7, ty: cy + 16, x0: cx + 7 },
+      { anchor: "end", tx: cx - 7, ty: cy - 8, x0: cx - 7 - w },
+      { anchor: "end", tx: cx - 7, ty: cy + 16, x0: cx - 7 - w },
+      // A line further off, for a dot hemmed in on every side at arm's length.
+      { anchor: "middle", tx: cx, ty: cy - 24, x0: cx - w / 2 },
+      { anchor: "middle", tx: cx, ty: cy + 32, x0: cx - w / 2 },
+    ].map((place) => ({
+      ...place,
+      box: { x0: place.x0, y0: place.ty - 10, x1: place.x0 + w, y1: place.ty + 3 },
+    }))
+  }
+  type Place = ReturnType<typeof options>[number]
+  const dots: Box[] = points.map(({ cx, cy }) => ({
+    x0: cx - 7,
+    y0: cy - 7,
+    x1: cx + 7,
+    y1: cy + 7,
+  }))
+  const chosen: (Place | undefined)[] = points.map(() => undefined)
+  // A name across a dot hides a player and a name across a name hides only
+  // letters, so the first costs more. Three passes, each name moved with every
+  // other where the last pass left it: the first is the greedy one, and the
+  // later two let a name that took the obvious place give it up to a
+  // neighbour that had nowhere else.
+  for (let pass = 0; pass < 3; pass++)
+    points.forEach((point, i) => {
+      const others = chosen.flatMap((place, j) => (place && j !== i ? [place.box] : []))
+      const cost = ({ box }: Place) =>
+        (box.x0 < LEFT + 2 || box.x1 > W || box.y0 < TOP || box.y1 > BOTTOM ? 100 : 0) +
+        5 * dots.filter((other) => hit(box, other)).length +
+        2 * others.filter((other) => hit(box, other)).length
+      chosen[i] = options(point).reduce((a, b) => (cost(b) < cost(a) ? b : a))
+    })
+  const names: string[] = []
+  points.forEach(({ player, price, cx, cy }, i) => {
+    const place = chosen[i]
+    if (place) names.push(text(place.tx, place.ty, player.name, { anchor: place.anchor }))
+    const pace = `${guessed(player) ? "~" : ""}${speeds.get(player) ?? 0} s`
+    const tip = `${player.name}, ascension ${player.ascension}: median ${comma(score(player))} points, at ${price ? `${price.toFixed(1)}¢` : "no cost"} and ${pace} a round, won ${wins(player)} of ${SEEDS}`
+    body.push(
+      `<circle cx="${fix(cx)}" cy="${fix(cy)}" r="5.5" ${paint(wins(player) > 0)}><title>${esc(tip)}</title></circle>`,
+    )
+  })
+  // Over the grid, which would otherwise rule a line through every name on a
+  // tick: the page's colour as an outline, under the ink.
+  body.push(`<g stroke="${BG}" stroke-width="3" paint-order="stroke">`, ...names, "</g>")
+  return svg(
+    "value-title",
+    `Median final score against cost per round played, for each model at ascension ${shown?.ascension ?? 0}. Score is on a logarithmic scale.`,
+    BOTTOM + 42,
+    body,
+  )
+}
+charts["value-title"] = scatter()
+
+/**
+ * Seconds a round, as the bars it has always been. They stood up for a day, in
+ * the leaderboard's layout, when cost left for the scatter and this was the
+ * one chart of the pair still a list. Standing, the six players under 35
+ * seconds were bars a few pixels tall beside one of 455, and their names
+ * wrapped under them; lying down the name is on the bar's own line and the
+ * number at its end.
+ *
+ * A bar is coloured by who served the model, since that is half of what it
+ * measures: a slow bar is a slow model or a slow queue, and the six longest
+ * here came through two providers and none through the third. The colours are
+ * the post's own, dealt in the order the providers first appear, so the accent
+ * goes to whoever served the top of the leaderboard.
+ */
+const providers = [...new Set(everyone.map((player) => player.provider))]
+const hue = (provider: string) =>
+  [ACC, "#2f6f8f", "#b59f3b", "#538d4e", "#6b4c8a", "#787c7e"][providers.indexOf(provider) % 6] ??
+  ACC
 charts["speed-title"] = bars(
   "speed-title",
-  "Seconds of play per round for each model.",
+  "Seconds of play per round for each model, coloured by the provider that served it.",
   `seconds per round played, shop included, waits excluded${everyone.some(guessed) ? " · ~ from wall time, not measured" : ""}`,
   (player) => {
     const value = speeds.get(player) ?? 0
     const label = `${guessed(player) ? "~" : ""}${value} s`
-    return { value, label, tip: `${player.name}: ${label} per round` }
+    return {
+      value,
+      label,
+      tip: `${player.name}, through ${player.provider}: ${label} per round`,
+      fill: hue(player.provider),
+    }
   },
+  providers.map((provider) => [provider, hue(provider)] as const),
 )
 
 // ---------------------------------------------------------------------------

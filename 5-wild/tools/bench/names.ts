@@ -34,3 +34,23 @@ export const modelName = (label: string): string => {
   const id = label.split(" / ")[0] ?? label
   return NAMES[id] ?? id
 }
+
+/**
+ * Who served the model, which is the other half of a label and the half that
+ * decides what a round cost and how long it queued. Keyed by the label's own
+ * spelling, and one absent from here is shown as that. The subagent runs are
+ * Claude Code's too: the label tells them apart because the harness differed,
+ * and the provider did not.
+ */
+export const PROVIDERS: Record<string, string> = {
+  "claude-code": "Claude Code",
+  "claude-code-subagent": "Claude Code",
+  "opencode-go": "OpenCode Go",
+  openrouter: "OpenRouter",
+}
+
+/** The provider a label names: `gpt-6-luna / opencode-go` is OpenCode Go. */
+export const providerName = (label: string): string => {
+  const id = label.split(" / ")[1] ?? ""
+  return PROVIDERS[id] ?? id
+}
