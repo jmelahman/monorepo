@@ -9,7 +9,7 @@ nav_blog: true
 
 [5 Wild](https://5-wild.com) is a free-to-play word-guessing roguelike I made combining [Wordle](https://www.nytimes.com/games/wordle) with [Balatro](https://www.playbalatro.com/)'s scoring and shop mechanics. I had fourteen LLMs play five runs each and evaluated their results.
 
-Two of my favorite LLM benchmarks are [RuneScape Bench](https://maxbittker.github.io/runebench/) and Anthropic's [Project Vend](https://www.anthropic.com/research/project-vend-1). I like the idea of a gamified benchmarks versus some abstracted, acedemic test that I haven't conceptualized. I don't care much if a model scores a perfect SAT if they can't execute on a long-context problem involving adapting to conditions as they unfold and evaluating immediate benefits versus long-term goals. To me, that is table-stakes for any type of agentic use-case.
+Two of my favorite LLM benchmarks are [RuneScape Bench](https://maxbittker.github.io/runebench/) and Anthropic's [Project Vend](https://www.anthropic.com/research/project-vend-1). I like the idea of a gamified benchmarks versus some abstracted, academic test that I haven't conceptualized. I don't care much if a model scores a perfect SAT if they can't execute on a long-context problem, adapting to conditions as they evolve and evaluating immediate solutions versus long-term objectives.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 468" role="img" aria-labelledby="results-title" font-family="inherit">
 <title id="results-title">Final score of each model, where higher is better: the median of five runs as a bar, and each run as a dot.</title>
@@ -200,9 +200,9 @@ Two of my favorite LLM benchmarks are [RuneScape Bench](https://maxbittker.githu
 <text x="34" y="462" font-size="11" fill="#8a8878">↑ higher is better · final score, log scale · median of five runs<tspan class="run"> · ● a run that won   ○ a run that lost</tspan></text>
 </svg>
 
-Each dot represents the score of one run and clicking opens its video replay.
+Each dot represents a run and clicking opens its replay in YouTube.
 
-A run is 24 rounds; clearing all 24 wins. Nine models played the hardest difficulty, which is meant for a skilled Wordle player to win about 40% of the time. Seven played the easiest, which an average Wordle player should win most of the time. Sonnet and Gemini 3.8 Flash played both.
+A run is 24 rounds, 1 word to guess per round. Nine models played the hardest difficulty, which is meant for a skilled Wordle player to win about 40% of the time. Seven played the easiest, which an average Wordle player should win most of the time. Sonnet and Gemini 3.8 Flash played both.
 
 <figure style="margin:1em 0">
 <iframe src="https://www.youtube-nocookie.com/embed/iayM2a_q9eg?start=100" title="Claude Opus 5.5 winning a run of 5 Wild at ascension 10" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0"></iframe>
