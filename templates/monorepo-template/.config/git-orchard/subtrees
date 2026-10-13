@@ -1,0 +1,11 @@
+# Subtrees and the repositories they mirror, read by git-orchard
+# (https://github.com/jmelahman/git-orchard). Pushes to master publish each
+# changed subtree to its remote; see .github/workflows/mirror.yml.
+#
+# Add one with `git orchard add <prefix> <remote>`, then list the profiles in
+# .config/git-orchard/shared that it uses:
+#
+# [subtree "hello"]
+# 	remote = git@github.com:you/hello.git
+# 	branch = master
+# 	shared = base

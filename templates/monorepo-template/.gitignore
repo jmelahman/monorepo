@@ -1,0 +1,6 @@
+# env file
+.env
+
+# Local planning artifacts
+plans/
+.claude/settings.local.json

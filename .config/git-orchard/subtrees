@@ -153,6 +153,10 @@
 	branch = master
 	shared = base
 	shared = go
+[subtree "templates/monorepo-template"]
+	remote = git@github.com:jmelahman/monorepo-template.git
+	branch = master
+	shared = base
 [subtree "typesafe-sdk-go"]
 	remote = git@github.com:jmelahman/typesafe-sdk-go.git
 	branch = master

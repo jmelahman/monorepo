@@ -50,6 +50,19 @@ repos:
         files: (^|/)(pyproject\.toml|hatch_build\.py|subtrees)$
         pass_filenames: false
 
+  # monorepo-template ships this monorepo's base profile as its starter
+  # profile; keep that copy identical to the real one.
+  - repo: local
+    hooks:
+      - id: monorepo-template-base
+        name: monorepo-template-base
+        entry: >-
+          bash -c 'rm -rf templates/monorepo-template/.config/git-orchard/shared/base &&
+          cp -r .config/git-orchard/shared/base templates/monorepo-template/.config/git-orchard/shared/base'
+        language: system
+        files: ^(templates/monorepo-template/)?\.config/git-orchard/shared/base/
+        pass_filenames: false
+
   # Copies the profiles in .config/git-orchard/shared into the subtrees that
   # list them in .config/git-orchard/subtrees, so each mirror carries its own
   # complete config.
