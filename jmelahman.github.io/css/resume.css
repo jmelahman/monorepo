@@ -4,6 +4,9 @@
 html {
   background-color: #FFF;
 }
+body {
+  line-height: normal;
+}
 hr {
   border-width: 1px;
 }

@@ -14,6 +14,7 @@ body {
   padding: 50px;
   margin: 0 auto;
   max-width: 80ch; /* This is ~70ch without border-box sizing */
+  line-height: 1.5;
   hyphens: auto;
   overflow-wrap: break-word;
   text-rendering: optimizeLegibility;
