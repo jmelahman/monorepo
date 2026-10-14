@@ -308,12 +308,12 @@ Nothing about the setup is specific to the harness, and anything that can connec
 
 **Sonnet broke half the alphabet and played TAXIS 26 times in a row.** On seed 5 of its ascension 0 playthrough, it bought Pyromaniac, which breaks a random letter every round, making it unplayable, and Scorched Earth, which scales with the number of broken letters. By round 20, twelve letters were gone, and it had upgraded letters T, A, I and S. TAXIS is those four upgraded letters around an X, a rare, high-value letter. From there it stopped solving:
 
-| Round | Guesses                             |
-| ----- | ----------------------------------- |
-| 21    | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
-| 22    | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
-| 23    | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
-| 24    | TAXIS TAXIS TAXIS (won)             |
+| Round | Guesses |
+| ----- | ------- |
+| 21 | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
+| 22 | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
+| 23 | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
+| 24 | TAXIS TAXIS TAXIS (won) |
 
 It chose to lose rounds in order to win the game — exactly the kind of thing this benchmark intends to capture. Later ascensions prevent this strategy by requiring uniqueness between guesses.
 
@@ -514,11 +514,11 @@ At ascension 0, the most-played words show how far a favorite can carry a run.
 </svg>
 </figure>
 
-**Rhyme traps ended runs that had plenty of points.** Since every guess at ascension 10 must reuse the green letters found, a model that finds four of them early can be left guessing the fifth one word at a time. On seed 1, the answer in round 12 was WOUND. GPT-6.1 Sol played POUND, FOUND, BOUND and HOUND; DeepSeek V4 Pro played POUND, BOUND, HOUND and MOUND; and both lost with more than double the points they needed. Of the 39 losses at ascension 10, 13 ended with enough points but the word unsolved.
+**Rhyme traps ended runs that had plenty of points.** Since every guess at ascension 10 must reuse the green letters found, a model that finds four early can be left guessing the fifth one word at a time. On seed 1, the answer in round 12 was WOUND. GPT-6.1 Sol played POUND, FOUND, BOUND and HOUND; DeepSeek V4 Pro played POUND, BOUND, HOUND and MOUND; and both lost with more than double the points they needed. Of the 39 losses at ascension 10, 13 ended with enough points but the word unsolved.
 
-Opus, on the other hand, never saw WOUND. This is a very much intended consequence of the game. It played the same Pyromaniac and Scorched Earth build as Sonnet's TAXIS run, and W and N were among the broken letters. On ascension 10, improving your likelihood .
+Opus, on the other hand, never saw WOUND. This is very much an intended mechanic of the game. It played the same Pyromaniac and Scorched Earth build as Sonnet's TAXIS run, and W and N were among the broken letters which avoided the WOUND answer. On ascension 10, improving your chances of solving is as important as scoring points.
 
-This probably indicates that a more general measure of model performance with this benchmark would use ascension 9 to avoid RNG from these traps (but that would also be no fun).
+This likely indicates a more general measure of model performance from this benchmark would use ascension 9 to avoid RNG associated with these traps (but that would also be no fun).
 
 ## Cost and speed
 
