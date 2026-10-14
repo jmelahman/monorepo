@@ -797,6 +797,9 @@ charts["guesses-title"] = bars(
   const header = (player: Player) => `${player.short} A${player.ascension}`
   const top = 14 + Math.ceil(Math.max(...everyone.map((player) => header(player).length)) * 4.6)
   const row = 20
+  // The chart's name, in the corner the slanted names leave empty. Above the
+  // chart it would sit where those names are pointing.
+  body.push(text(0, top - 10, "Relics held by model", { size: 14, fill: ACC, bold: true }))
   for (let block = 0; block < blocks; block++) {
     const x0 = block * (W / blocks)
     everyone.forEach((player, i) => {
@@ -946,13 +949,7 @@ charts["guesses-title"] = bars(
         )
       at += width
     }
-    body.push(text(at + 8, y + 10, `${earned(player).toFixed(1)} earned`, { size: 11 }))
-    body.push(
-      text(at + 8, y + 22, `${(player.gold.spent / per).toFixed(1)} spent`, {
-        size: 11,
-        fill: MUTED,
-      }),
-    )
+    body.push(text(at + 8, y + 14, `${earned(player).toFixed(1)} earned`, { size: 11 }))
     return true
   })
   const ticks: string[] = []
@@ -977,7 +974,7 @@ charts["guesses-title"] = bars(
   )
   charts["gold-title"] = svg(
     "gold-title",
-    "Gold earned per round cleared by each model, split by source, with gold spent beside it.",
+    "Gold earned per round cleared by each model, split by source.",
     bottom + 34,
     body,
   )
@@ -1256,7 +1253,7 @@ const hue = (provider: string) =>
   ACC
 charts["speed-title"] = bars(
   "speed-title",
-  "Seconds of play per round for each model, coloured by the provider that served it.",
+  "Seconds of play per round for each model, colored by the provider that served it.",
   `seconds per round played, shop included, waits excluded${everyone.some(guessed) ? " · ~ from wall time, not measured" : ""}`,
   (player) => {
     const value = speeds.get(player) ?? 0

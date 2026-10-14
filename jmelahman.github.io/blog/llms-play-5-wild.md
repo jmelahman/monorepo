@@ -1,7 +1,7 @@
 ---
 og-title: "5 Wild Bench, a word-game roguelike LLM benchmark"
 title-prefix: "Blog"
-date: 2026-10-10
+date: 2026-10-14
 nav_blog: true
 ---
 
@@ -9,10 +9,12 @@ nav_blog: true
 
 [5 Wild](https://5-wild.com) is a free-to-play word-guessing roguelike I made combining [Wordle](https://www.nytimes.com/games/wordle) with [Balatro](https://www.playbalatro.com/)'s scoring and shop mechanics.
 
-I had fourteen LLMs play five runs. One run involves solving 24 Wordle boards. The nine largest models played the hardest difficulty which a skilled Wordle × Balatro player should win about 30% of the time. Seven played the easiest, which the average Balatro player should win most of the time.
+I had fourteen LLMs play five runs. One run involves solving 24 Wordle boards. The nine largest models played the hardest difficulty, which a skilled Wordle × Balatro player should win about 30% of the time. Seven played the easiest, which the average Balatro player should win most of the time.
 
-Two of my favorite LLM benchmarks are the [RuneScape Bench](https://maxbittker.github.io/runebench/) and Anthropic's [Project Vend](https://www.anthropic.com/research/project-vend-1). I like the idea of a gamified benchmark versus some abstract, academic test that I haven't conceptualized. I don't care much if a model scores a perfect SAT if they can't execute on a long-horizon task, adapting to conditions as they change, and evaluating immediate options against long-term objectives.
+Two of my favorite LLM benchmarks are the [RuneScape Bench](https://maxbittker.github.io/runebench/) and Anthropic's [Project Vend](https://www.anthropic.com/research/project-vend-1). I like the idea of a gamified benchmark versus some abstract, academic test that I haven't conceptualized. I don't care much if a model scores a perfect SAT if it can't execute on a long-horizon task, adapting to conditions as they change and evaluating immediate options against long-term objectives.
 
+<figure style="margin:1em 0">
+<figcaption style="text-align:center;font-weight:700;color:#8c0000;margin-bottom:-0.5em">Final score by model</figcaption>
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 468" role="img" aria-labelledby="results-title" font-family="inherit">
 <title id="results-title">Final score of each model, where higher is better: the median of five runs as a bar, and each run as a dot.</title>
 <style>svg:has(.runs-shown:not(:checked)) .run{display:none}</style>
@@ -201,8 +203,9 @@ Two of my favorite LLM benchmarks are the [RuneScape Bench](https://maxbittker.g
 <text x="671.0" y="440.0" font-size="11.5" fill="#2c2c2c" text-anchor="middle">M3</text>
 <text x="34" y="462" font-size="11" fill="#8a8878">↑ higher is better · final score, log scale · median of five runs<tspan class="run"> · ● a run that won   ○ a run that lost</tspan></text>
 </svg>
+</figure>
 
-Each dot represents a run and clicking one opens its replay in YouTube.
+Each dot represents a run and clicking one opens its replay on YouTube.
 
 <figure style="margin:1em 0">
 <iframe src="https://www.youtube-nocookie.com/embed/iayM2a_q9eg?start=100" title="Claude Opus 5.5 winning a run of 5 Wild at ascension 10" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0"></iframe>
@@ -210,11 +213,13 @@ Each dot represents a run and clicking one opens its replay in YouTube.
 
 ## What stood out
 
-* **There seems to be some signal.** Opus 5.5 is clearly a special model with the strongest performance consistently. Gemini 3.8 Flash won all five of its runs on the easiest difficulty while struggling with the stricter rules imposed at higher difficulties while Sonnet 5.5 was able to adapt. Sol seemed to underperform compared to expectations but it struggled uniquely with solving rounds and performed closer to expectations on easier difficulties where failing to solve rounds is forgiven more.
-* **Each model had its own style.** Gemini opened with CRANE in 100 of its 120 rounds on ascension 0 helping it to win 5/5 runs. At ascension 10, CRANE can only be played once a run and Gemini's ability fell apart. Opus won three times with three different builds and was able to convert successful guesses into income generating builds. Luna leaned into the game's scoring mechanic opening with high-scoring words like JAZZY, FUZZY, and EERIE and had the most diverse use of word shapes. Sonnet won one run by [playing TAXIS 26 guesses in a row](#the-strategies-they-found). Sol had the highest rate of DISTINCT words allowing it to solve rounds at a high rate without necessarily translating that into points.
-* **Forcing a win condition was not effective.** The most effective style was that which combined many and avoided over-indexing on any particular scoring lever. Opus 5.5's wins aren't noticeably distinct on paper and nothing, save guessing ability and economy, really stands out as a clear indicator for how it won. While other models clearly preferred one of a handful of dimensions such as letter rarity, word shape, or buying and selling from the shop, the winning solution seems to take what is given, find the best micro-optimizations, and diversify. In other words, investing in insurance, economy, and scaling over immediate returns.
-* **Neither solving nor economy alone won.** Opus 5.5 had the lowest average number of guesses per round allowing it to increase its income and supercharge its scoring engine. The biggest contrast with Sonnet was its inability to convert points into income causing its scoring engine to die out in the later rounds. Every model with a low economy died out in the mid to late game. Conversely, GLM 5.3 Flash and DeepSeek v4 Pro generated plenty of economy but failed to convert it into scoring points.
+* **There seems to be some signal.** Opus 5.5 is clearly a special model with consistently the strongest performance. Gemini 3.8 Flash won all five of its runs on the easiest difficulty but struggled with the stricter rules imposed at higher difficulties, whereas Sonnet 5.5 was able to adapt. Sol seemed to underperform compared to expectations, but it struggled uniquely with solving rounds and performed closer to expectations on easier difficulties where failing to solve rounds is forgiven more.
+* **Each model had its own style.** Gemini opened with CRANE in 100 of its 120 rounds on ascension 0, helping it to win 5/5 runs. At ascension 10, CRANE can only be played once a run and Gemini's ability fell apart. Opus won three times with three different builds and was able to convert successful guesses into income-generating builds. Luna leaned into the game's scoring mechanic, opening with high-scoring words like JAZZY, FUZZY, and EERIE and had the most diverse use of word shapes. Sonnet won one run by [playing TAXIS 26 guesses in a row](#the-strategies-they-found). Sol had the highest rate of DISTINCT words, allowing it to solve rounds at a high rate without necessarily translating that into points.
+* **Forcing a win condition was not effective.** The most effective style was that which combined many scoring levers and avoided over-indexing on any particular one. Opus 5.5's wins aren't noticeably distinct on paper and nothing, save guessing ability and economy, really stands out as a clear indicator for how it won. While other models clearly preferred one of a handful of dimensions such as letter rarity, word shape, or buying and selling from the shop, the winning solution seems to take what is given, find the best micro-optimizations, and diversify. In other words, it invests in insurance, economy, and scaling over immediate returns.
+* **Neither solving nor economy alone won.** Opus 5.5 had the lowest average number of guesses per round, allowing it to increase its income and supercharge its scoring engine. The biggest contrast with Sonnet was Sonnet's inability to convert points into income, causing its scoring engine to die out in the later rounds. Every model with a low economy died out in the mid-to-late game. Conversely, GLM 5.3 Flash and DeepSeek V4 Pro generated plenty of economy but failed to convert it into scoring points.
 
+<figure style="margin:1em 0">
+<figcaption style="text-align:center;font-weight:700;color:#8c0000;margin-bottom:-0.5em">Guesses per round</figcaption>
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 456" role="img" aria-labelledby="guesses-title" font-family="inherit">
 <title id="guesses-title">Guesses per cleared round for each model. Lower is better; six is the limit.</title>
 <text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
@@ -269,12 +274,11 @@ Each dot represents a run and clicking one opens its replay in YouTube.
 <text x="521.7" y="423.0" font-size="12" fill="#2c2c2c" text-anchor="start">4.46 · solved 28 of 28</text>
 <text x="215.0" y="450.0" font-size="11" fill="#8a8878" text-anchor="start">guesses per cleared round (lower is better, six is the limit) · rounds solved of rounds cleared</text>
 </svg>
-
-Average guesses per cleared round, where lower is better and six is the limit. "Solved" counts the rounds cleared by finding the word, as opposed to reaching the target without it; at ascension 10, this is expected to match as solving each round is required.
+</figure>
 
 ## The game
 
-5 Wild takes its board from Wordle. You get six guesses to find a five-letter word, with green, yellow and gray tiles hinting at the solution. Everything around the board comes from Balatro. Each guess scores points and each round has a target score to beat. Less common letters are worth more (like Scrabble), a green tile multiplies them, and a gray tile does nothing. Similar to Balatro's poker hands, each word has a "shape" which describes its composition. For example, if each letter is unique, that word's shape is DISTINCT but if a letter repeats, such as the P's in HAPPY, its shape is TWINNED. Rarer shapes yield more points. Between rounds, a shop sells relics (Balatro's jokers) which change how a guess scores. A run is eight stages of three rounds each, and the third round of every stage is a boss that changes one of the rules.
+5 Wild takes its board from Wordle. You get six guesses to find a five-letter word, with green, yellow and gray tiles hinting at the solution. Everything around the board comes from Balatro. Each guess scores points and each round has a target score to beat. Less common letters are worth more (like Scrabble), a green tile multiplies them, and a gray tile does nothing. Similar to Balatro's poker hands, each word has a "shape" which describes its composition. For example, if each letter is unique, that word's shape is DISTINCT, but if a letter repeats, such as the P's in HAPPY, its shape is TWINNED. Rarer shapes yield more points. Between rounds, a shop sells relics (Balatro's jokers) which change how a guess scores. A run is eight stages of three rounds each, and the third round of every stage is a boss that changes one of the rules.
 
 The game is a constant push-and-pull between using guesses to score points and solving the round. Solving the round greatly increases the final score, and solving early yields even more. Many of the relics scale around guesses, so spending guesses trying to scale your build may result in missing out on points.
 
@@ -282,43 +286,45 @@ Difficulty levels are called ascensions and they stack like Slay the Spire's, so
 
 * Every guess must reuse the letters you've found (Wordle's hard mode)
 * No word can be played twice in the same run
-* Income is reduced, relics slots are reduced by 1, and target points scale faster
+* Income is reduced, relic slots are reduced by 1, and target points scale faster
 * Every round must be solved correctly while reaching the point target goal
 
 ## The setup
 
 The game's engine is deterministic given a seed and a list of actions. I originally built a spectator mode for the game so I could livestream agents playing via an [MCP](https://modelcontextprotocol.io/) server for QA. The MCP has four tools.
 
-* `rules`: a how to play guide for agent
+* `rules`: a how-to-play guide for agents
 * `new_run`: start a run for a given seed
 * `observe`: read the board state
 * `act`: one command (`guess crane`, `buy 2`, `collect`, `next`)
 
-There is no shell, file access, web search or subagents, so agents can't write a solver or look up the word list. Each run is indepenedent of one another.
+There is no shell, file access, web search or subagents, so agents can't write a solver or look up the word list. Each run is independent of the others.
 
-Every model plays the same five seeds. The answers and shop options start the same but eventually drift out of necessity; that way purchased relics don't re-appear in the shop, answers stay unique from previous guesses, and broken letters don't soft-lock answers.
+Every model plays the same five seeds. The answers and shop options start the same but eventually drift out of necessity; that way purchased relics don't reappear in the shop, answers stay unique from previous guesses, and broken letters don't soft-lock answers.
 
-Nothing about the setup is specific to the harness, and anything that can connect to the MCP server can play. Each run is saved as its list of moves which are used to replay the run and exported as a video.
+Nothing about the setup is specific to the harness, and anything that can connect to the MCP server can play. Each run is saved as its list of moves, which is used to replay the run and export it as a video.
 
 ## The strategies they found
 
-**Sonnet broke half the alphabet and played TAXIS 26 times in a row.** On seed 5 of its ascension 0 playthrough, it bought Pyromaniac, which breaks a random letter every round making it unplayable, and Scorched Earth, which scales with the number of broken letters. By round 20, twelve letters were gone, and it had upgraded letters T, A, I and S. TAXIS is those four upgraded letters around an X, a rare, high-valued letter. From there it stopped solving:
+**Sonnet broke half the alphabet and played TAXIS 26 times in a row.** On seed 5 of its ascension 0 playthrough, it bought Pyromaniac, which breaks a random letter every round, making it unplayable, and Scorched Earth, which scales with the number of broken letters. By round 20, twelve letters were gone, and it had upgraded letters T, A, I and S. TAXIS is those four upgraded letters around an X, a rare, high-value letter. From there it stopped solving:
 
-```
-round 21   taxis taxis taxis taxis taxis taxis
-round 22   taxis taxis taxis taxis taxis taxis
-round 23   taxis taxis taxis taxis taxis taxis
-round 24   taxis taxis taxis          (won)
-```
+| Round | Guesses                             |
+| ----- | ----------------------------------- |
+| 21    | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
+| 22    | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
+| 23    | TAXIS TAXIS TAXIS TAXIS TAXIS TAXIS |
+| 24    | TAXIS TAXIS TAXIS (won)             |
 
 It chose to lose rounds in order to win the game — exactly the kind of thing this benchmark intends to capture. Later ascensions prevent this strategy by requiring uniqueness between guesses.
 
-**Luna opened with JAZZY.** Instead of playing common, information-rich Wordle openers like CRANE or STARE, Luna's most-played words were EERIE (15 times), CRANE (13), JAZZY (11) and FUZZY (6), with QUEER and EJECT also seeing high usage. Every one of those but CRANE [repeats a letter](#word-shapes), and in three of its five runs purchased the Twins relic, which multiplies guesses containing a given letter twice. JAZZY is also one of the most rewarding words in the game, scoring 33 base points against 5 for AROSE. It leaned fully into the game's mechanic of trading information to solve rounds in exchange for points.
+**Luna opened with JAZZY.** Instead of playing common, information-rich Wordle openers like CRANE or STARE, Luna's most-played words were EERIE (15 times), CRANE (13), JAZZY (11) and FUZZY (6), with QUEER and EJECT also seeing high usage. Every one of those but CRANE [repeats a letter](#word-shapes), and in three of its five runs it purchased the Twins relic, which multiplies guesses containing a given letter twice. JAZZY is also one of the most rewarding words in the game, scoring 33 base points against 5 for AROSE. It leaned fully into the game's mechanic of trading information to solve rounds in exchange for points.
 
 **Gemini opened with CRANE 100 times.** At ascension 0, nothing stops a model from playing the same word every round, and Gemini 3.8 Flash opened with CRANE in 100 of its 120 rounds. CRANE is a typical Wordle opener that scores very few points, but it gave Gemini the same head start on every answer, and it went on to solve 114 of the 120 rounds and win all five runs. At ascension 10, where a word can only be played once per run, it played CRANE and STARE in the first two rounds of every run and then had to find a new opener for each round after that. It lost all five of those runs, three of them before round 10.
 
 At ascension 0, the most-played words show how far a favorite can carry a run.
 
+<figure style="margin:1em 0">
+<figcaption style="text-align:center;font-weight:700;color:#8c0000;margin-bottom:-0.5em">Most-played words by model</figcaption>
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 502" role="img" aria-labelledby="words-title" font-family="inherit">
 <title id="words-title">The five most-played words for each model across its five runs.</title>
 <text x="265.5" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">most played</text>
@@ -506,17 +512,20 @@ At ascension 0, the most-played words show how far a favorite can carry a run.
 <text x="669.5" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">DIZZY 2</text>
 <text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">each model's five most-played words and how many times it played them, over five runs</text>
 </svg>
+</figure>
 
-**Rhyme traps ended runs that had plenty of points.** Since every guess at ascension 10 must reuse the green letters found, a model that finds four of them early can be left guessing the fifth one word at a time. On seed 1, the answer in round 12 was WOUND. GPT-6.1 Sol played POUND, FOUND, BOUND and HOUND, DeepSeek V4 Pro played POUND, BOUND, HOUND and MOUND, and both lost with more than double the points they needed. Of the 39 losses at ascension 10, 13 ended with enough points but the word unsolved.
+**Rhyme traps ended runs that had plenty of points.** Since every guess at ascension 10 must reuse the green letters found, a model that finds four of them early can be left guessing the fifth one word at a time. On seed 1, the answer in round 12 was WOUND. GPT-6.1 Sol played POUND, FOUND, BOUND and HOUND; DeepSeek V4 Pro played POUND, BOUND, HOUND and MOUND; and both lost with more than double the points they needed. Of the 39 losses at ascension 10, 13 ended with enough points but the word unsolved.
 
-Opus other the other hand never saw WOUND. This is a very intended consequence of the game. It played the same Pyromaniac and Scorched Earth build as Sonnet's TAXIS run, and W and N were among the broken letters. On ascension 10, improving your likelihood .
+Opus, on the other hand, never saw WOUND. This is a very much intended consequence of the game. It played the same Pyromaniac and Scorched Earth build as Sonnet's TAXIS run, and W and N were among the broken letters. On ascension 10, improving your likelihood .
 
-This does probably indicate a more generic representative of model performance with this benchmark would use ascension 9 to avoid RNG from these traps (but that would also be no fun).
+This probably indicates that a more general measure of model performance with this benchmark would use ascension 9 to avoid RNG from these traps (but that would also be no fun).
 
 ## Cost and speed
 
 A full Opus run cost about $4 and took 11 minutes at an average of $0.21 and 34s per round. For a relatively complex task, I think it is fairly cost and time efficient. A large majority of tokens were cached between turns. Each run is able to run in parallel with one another.
 
+<figure style="margin:1em 0">
+<figcaption style="text-align:center;font-weight:700;color:#8c0000;margin-bottom:-0.5em">Score against cost per round</figcaption>
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 466" role="img" aria-labelledby="value-title" font-family="inherit">
 <title id="value-title">Median final score against cost per round played, for each model at ascension 10. Score is on a logarithmic scale.</title>
 <text x="0.0" y="14.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 10, the hardest</text>
@@ -563,11 +572,14 @@ A full Opus run cost about $4 and took 11 minutes at an average of $0.21 and 34s
 <text x="294.5" y="406.9" font-size="12" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
 </g>
 </svg>
+</figure>
 
-*Note, the Claude figures are Claude Code's API prices while the rest are OpenRouter's prices.*
+*Note: the Claude figures are Claude Code's API prices, while the rest are OpenRouter's prices.*
 
+<figure style="margin:1em 0">
+<figcaption style="text-align:center;font-weight:700;color:#8c0000;margin-bottom:-0.5em">Seconds per round</figcaption>
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 456" role="img" aria-labelledby="speed-title" font-family="inherit">
-<title id="speed-title">Seconds of play per round for each model, coloured by the provider that served it.</title>
+<title id="speed-title">Seconds of play per round for each model, colored by the provider that served it.</title>
 <text x="656.2" y="14.0" font-size="11" fill="#8a8878" text-anchor="start">OpenCode Go</text>
 <rect x="640.2" y="4" width="11" height="11" rx="2" fill="#b59f3b"/>
 <text x="566.2" y="14.0" font-size="11" fill="#8a8878" text-anchor="start">OpenRouter</text>
@@ -626,25 +638,26 @@ A full Opus run cost about $4 and took 11 minutes at an average of $0.21 and 34s
 <text x="319.0" y="423.0" font-size="12" fill="#2c2c2c" text-anchor="start">123 s</text>
 <text x="215.0" y="450.0" font-size="11" fill="#8a8878" text-anchor="start">seconds per round played, shop included, waits excluded</text>
 </svg>
+</figure>
 
 ## What it says about the game
 
-I built this benchmark in part to balance the game. Balancing has been the hardest (and time-consuming) part of development by far. Solver bots with golden runs only assess difficulty at a cursory level. I'm also not too sure what range of ability to expect for players. I vaguely recall Balatro being incredibly difficult at first and the skill (and difficulty) distribution of solving the word puzzles is probably fairly variable.
+I built this benchmark in part to balance the game. Balancing has been the hardest (and most time-consuming) part of development by far. Solver bots with golden runs only assess difficulty at a cursory level. I'm also not too sure what range of ability to expect for players. I vaguely recall Balatro being incredibly difficult at first, and the skill (and difficulty) distribution of solving the word puzzles is probably fairly variable.
 
-It is fortunate the models were characteristically unique as that provides more variation in play styles to review.
+It is fortunate the models were characteristically unique, as that provides more variation in play styles to review.
 
-**Opus plays like a strong human, and wins about as often as one should.** Ascension 10 is meant for a skilled player to win about 30% of the time and Opus was in the ballpark winning 3 of 5 runs. Though Opus's 3.59 guesses per solve isn't abnormally high by Wordle standards, ascension 10's requirement that each word be unique throughout the entire run adds about +1 expected average guess compared to the player's Wordle average, making Opus a considerably strong guesser.
+**Opus plays like a strong human, and wins about as often as one should.** Ascension 10 is meant for a skilled player to win about 30% of the time and Opus was in the ballpark, winning 3 of 5 runs. Though Opus's 3.59 guesses per solve isn't abnormally high by Wordle standards, ascension 10's requirement that each word be unique throughout the entire run adds about one expected guess compared to the player's Wordle average, making Opus a remarkably strong guesser.
 
-**It did not win the same way twice.** Its four runs that reached the last round were with different builds:
+**It did not win the same way twice.** Its four runs that reached the last round each used a different build:
 
 | Seed | Result | Built around |
 | ---- | ------ | ------------ |
-| 1 | won | Pyromaniac and Scorched Earth: destroy letters and constrains guesses |
-| 2 | won | Snowball, Indelible and The Vault: scales with correct guesses |
-| 5 | won | Keystone, Snowball and Thesaurus: scales with word shape |
+| 1 | won | Pyromaniac and Scorched Earth: destroys letters and constrains guesses |
+| 2 | won | Snowball, Indelible and The Vault: scale with correct guesses |
+| 5 | won | Keystone, Snowball and Thesaurus: scale with word shape |
 | 3 | 23 of 24 | Force of Habit: scales with word shape |
 
-Across the five runs it held 23 different relics. Its words were as varied, 305 different ones in 358 guesses. No one build carries the game, and most seeds can win with optimal strategy from what is offered and solid guesses.
+Across the five runs it held 23 different relics. Its words were just as varied: 305 different ones in 358 guesses. No one build carries the game, and most seeds can be won with optimal strategy from what is offered and solid guesses.
 
 **A rare-letter build can win, but only just.** GLM 5.3 Flash's one win came on seed 5, where it twice bought the etching that upgrades J, Q, X and Z and then used one of those letters in 25 of its 100 guesses, with words like KUDZU, KAZOO, FRIZZ and XENIA. I designed that upgrade for farming points with words you don't expect to be the answer, which is hard to afford when every round has to be solved. It still worked, though its 1.7 million points was the lowest score of the six wins at ascension 10.
 
@@ -652,7 +665,7 @@ Across the five runs it held 23 different relics. Its words were as varied, 305 
 
 **The difficulty is spread across the run, not saved for the end.** Opus, the strongest player, failed 1 run in the early game (seed 4, the [36-second loss](https://www.youtube.com/watch?v=a2fVOav6bKg), where it solved LOLLY in round 3 but came up 146 points short of the target, and which also ended Sol's run after 2 rounds). Sonnet, a slightly weaker player, lost at ascension 10 in rounds 16, 18, 21 and 23 across stages 6, 7 and 8, on bosses and non-bosses alike. Most runs fail uniformly in stages 1-2 and 5-8; stages 3-4 are acceptably tame as relics are strong early and target points haven't yet scaled.
 
-**Ascension 0 can be very forgiving.** Gemini showed that common strategies, e.g. guessing CRANE over 100 times, is viable for new players that may be learning the game's mechanics while ascension 10 requires strong, consistent guesses and optimized builds around them which is to be expected by weathered players. Moreover, Step 5 Preview consistently reached round 16 of 24 while only solving half of their rounds.
+**Ascension 0 can be very forgiving.** Gemini showed that common strategies, e.g. guessing CRANE over 100 times, are viable for new players who may be learning the game's mechanics, while ascension 10 requires strong, consistent guesses and optimized builds around them, which is to be expected of seasoned players. Moreover, Step 5 Preview consistently reached round 16 of 24 while only solving half of its rounds.
 
 **Ascension 10 punishes poor solving, but solving alone doesn't win.** Ascension 9 is ascension 10 without its final rule: every round must be solved correctly. GPT-6.1 Sol lost 3 runs on ascension 10 because it failed to solve the word. I had it play the same five seeds one level down.
 
@@ -666,14 +679,16 @@ Across the five runs it held 23 different relics. Its words were as varied, 305 
 
 It won three of five, and its median score went from 164 thousand to 2.1 million.
 
-DeepSeek V4.1 Flash and GLM 5.3 Flash lost most of their runs at ascension 10 with the word unsolved. On the same seeds at ascension 9, they had nearly the identical performance indicating they would have likely failed on ascension 10 for points even with strong guesses. This suggests fewer guesses per round and early game gold generation matter most, since more gold allows builds to improve enough to beat later round point targets.
+DeepSeek V4.1 Flash and GLM 5.3 Flash lost most of their runs at ascension 10 with the word unsolved. On the same seeds at ascension 9, they had nearly identical performance, indicating they would have likely failed on ascension 10 for points even with strong guesses. This suggests fewer guesses per round and early-game gold generation matter most, since more gold allows builds to improve enough to beat later-round point targets.
 
-To strictly evaluate model performance, ascension 9 may be a better assessment to prevent rounds with unlucky guesses from tanking scores (though it is interesting solving rounds isn't necessarily a given for these SOTA models, too).
+To strictly evaluate model performance, ascension 9 may be a better assessment to prevent rounds with unlucky guesses from tanking scores (though it is interesting that solving rounds isn't necessarily a given for these SOTA models).
 
 ### Word shapes
 
-Every guess scores as one of five shapes, and certain relics and shape levels reward specific ones. About a fifth of the game's answers repeat a letter. Luna (with its JAZZY and EERIE openers) repeated one in 40% of its guesses, about twice that rate, while Opus and Sonnet did in 16% and 11% of theirs at ascension 10. Most of every model's guesses were plain words without a repeated letter.
+Every guess scores as one of five shapes, and certain relics and shape levels reward specific ones. About a fifth of the game's answers repeat a letter. Luna (with its JAZZY and EERIE openers) repeated one in 40% of its guesses, about twice that rate, while Opus and Sonnet did so in 16% and 11% of theirs at ascension 10. Most of every model's guesses were plain words without a repeated letter.
 
+<figure style="margin:1em 0">
+<figcaption style="text-align:center;font-weight:700;color:#8c0000;margin-bottom:-0.5em">Word shapes by model</figcaption>
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 534" role="img" aria-labelledby="shapes-title" font-family="inherit">
 <title id="shapes-title">Share of each model's guesses in each of the five word shapes, beside the share of the game's answers in each shape.</title>
 <text x="265.5" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">Alphabetical</text>
@@ -872,15 +887,17 @@ Every guess scores as one of five shapes, and certain relics and shape levels re
 <text x="669.5" y="501.0" font-size="11" fill="#2c2c2c" text-anchor="middle">53%</text>
 <text x="215.0" y="528.0" font-size="11" fill="#8a8878" text-anchor="start">share of guesses in each word shape · a guess scores as the first shape on this list it matches</text>
 </svg>
+</figure>
 
 From a balancing perspective, I think this can be improved to reward riskier and more creative guessing.
 
 ### Relics
 
-The game has 47 relics, and all but 2 were purchased across all runs. Only 1 model bought the same relic in all 5 of their runs.
+The game has 47 relics, and all but 2 were purchased across all runs. Only 1 model bought the same relic in all 5 of its runs.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 1126" role="img" aria-labelledby="relics-title" font-family="inherit">
 <title id="relics-title">Every relic in the game against every model, with the number of its five runs the model held it in.</title>
+<text x="0.0" y="110.0" font-size="14" fill="#8c0000" text-anchor="start" font-weight="700">Relics held by model</text>
 <text x="157.5" y="112" font-size="11" fill="#8a8878" transform="rotate(-50 157.5 112)">Opus A10</text>
 <text x="192.5" y="112" font-size="11" fill="#8a8878" transform="rotate(-50 192.5 112)">Sonnet A10</text>
 <text x="227.5" y="112" font-size="11" fill="#8a8878" transform="rotate(-50 227.5 112)">GPT-6 Sol A10</text>
@@ -2051,12 +2068,14 @@ The game has 47 relics, and all but 2 were purchased across all runs. Only 1 mod
 <text x="0.0" y="1120.0" font-size="11" fill="#8a8878" text-anchor="start">runs, of 5, in which the model held the relic · blank is never · all 47 relics, most-held first</text>
 </svg>
 
-### The Shop and Economy
+### The shop and economy
 
 Run performance is strongly correlated with income and shop usage. On one hand, better runs imply more money to spend, but it's clear: no run lasts without utilizing the shop efficiently.
 
-Conversely, overselling, e.g. GPT-6 Luna, and poor purchasing strategies, e.g. GLM 5.3 Flash with 2.8 consumables while only reaching stage 5 or DeepSeek v4 Pro with the second most purchases per stage but focusing on economy instead of points, are inversely correlated with performance.
+Conversely, overselling, e.g. GPT-6 Luna, and poor purchasing strategies, e.g. GLM 5.3 Flash with 2.8 consumables while only reaching stage 5 or DeepSeek V4 Pro with the second-most purchases per stage but focusing on economy instead of points, are inversely correlated with performance.
 
+<figure style="margin:1em 0">
+<figcaption style="text-align:center;font-weight:700;color:#8c0000;margin-bottom:-0.5em">Shop actions per stage</figcaption>
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 502" role="img" aria-labelledby="shop-title" font-family="inherit">
 <title id="shop-title">Shop actions per stage played for each model: purchases, relics sold, rerolls and consumables used.</title>
 <text x="278.1" y="12.0" font-size="11" fill="#8a8878" text-anchor="middle">Purchases</text>
@@ -2211,11 +2230,14 @@ Conversely, overselling, e.g. GPT-6 Luna, and poor purchasing strategies, e.g. G
 <text x="656.9" y="469.0" font-size="11" fill="#2c2c2c" text-anchor="middle">0.45</text>
 <text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">per stage of three rounds played, over 5 runs · each column shaded against its own highest</text>
 </svg>
+</figure>
 
 While earning gold does not ensure victory, earning less than $6 per round effectively disqualified a run.
 
+<figure style="margin:1em 0">
+<figcaption style="text-align:center;font-weight:700;color:#8c0000;margin-bottom:-0.5em">Gold earned per round</figcaption>
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 594" role="img" aria-labelledby="gold-title" font-family="inherit">
-<title id="gold-title">Gold earned per round cleared by each model, split by source, with gold spent beside it.</title>
+<title id="gold-title">Gold earned per round cleared by each model, split by source.</title>
 <rect x="0.0" y="4" width="12" height="12" rx="2" fill="#787c7e"/>
 <text x="17.0" y="14.0" font-size="12" fill="#2c2c2c" text-anchor="start">round payout</text>
 <rect x="114.2" y="4" width="12" height="12" rx="2" fill="#538d4e"/>
@@ -2254,8 +2276,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <text x="440.4" y="60.0" font-size="11" fill="#ffffff" text-anchor="middle">1.8</text>
 <rect x="468.8" y="46" width="10.5" height="20" rx="2" fill="#2f6f8f"><title>Claude Opus 5.5: 0.41 gold a round from sales</title></rect>
 <rect x="481.3" y="46" width="4.3" height="20" rx="2" fill="#6b4c8a"><title>Claude Opus 5.5: 0.21 gold a round from relic payouts</title></rect>
-<text x="494.6" y="56.0" font-size="11" fill="#2c2c2c" text-anchor="start">8.9 earned</text>
-<text x="494.6" y="68.0" font-size="11" fill="#8a8878" text-anchor="start">8.8 spent</text>
+<text x="494.6" y="60.0" font-size="11" fill="#2c2c2c" text-anchor="start">8.9 earned</text>
 <text x="0.0" y="91.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
 <rect x="216.0" y="76" width="85.7" height="20" rx="2" fill="#787c7e"><title>Claude Sonnet 5.5: 2.89 gold a round from round payout</title></rect>
 <text x="258.9" y="90.0" font-size="11" fill="#ffffff" text-anchor="middle">2.9</text>
@@ -2266,8 +2287,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <rect x="395.5" y="76" width="6.4" height="20" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: 0.28 gold a round from scoring</title></rect>
 <rect x="403.9" y="76" width="7.6" height="20" rx="2" fill="#2f6f8f"><title>Claude Sonnet 5.5: 0.32 gold a round from sales</title></rect>
 <rect x="413.5" y="76" width="5.4" height="20" rx="2" fill="#6b4c8a"><title>Claude Sonnet 5.5: 0.24 gold a round from relic payouts</title></rect>
-<text x="427.9" y="86.0" font-size="11" fill="#2c2c2c" text-anchor="start">6.7 earned</text>
-<text x="427.9" y="98.0" font-size="11" fill="#8a8878" text-anchor="start">6.7 spent</text>
+<text x="427.9" y="90.0" font-size="11" fill="#2c2c2c" text-anchor="start">6.7 earned</text>
 <text x="0.0" y="121.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Sol</text>
 <rect x="216.0" y="106" width="87.4" height="20" rx="2" fill="#787c7e"><title>GPT-6 Sol: 2.94 gold a round from round payout</title></rect>
 <text x="259.7" y="120.0" font-size="11" fill="#ffffff" text-anchor="middle">2.9</text>
@@ -2277,8 +2297,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <rect x="382.7" y="106" width="33.3" height="20" rx="2" fill="#8c0000"><title>GPT-6 Sol: 1.16 gold a round from scoring</title></rect>
 <text x="399.3" y="120.0" font-size="11" fill="#ffffff" text-anchor="middle">1.2</text>
 <rect x="418.0" y="106" width="2.0" height="20" rx="2" fill="#2f6f8f"><title>GPT-6 Sol: 0.13 gold a round from sales</title></rect>
-<text x="429.0" y="116.0" font-size="11" fill="#2c2c2c" text-anchor="start">6.8 earned</text>
-<text x="429.0" y="128.0" font-size="11" fill="#8a8878" text-anchor="start">6.8 spent</text>
+<text x="429.0" y="120.0" font-size="11" fill="#2c2c2c" text-anchor="start">6.8 earned</text>
 <text x="0.0" y="151.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiMo-V2.6-Pro</text>
 <rect x="216.0" y="136" width="85.9" height="20" rx="2" fill="#787c7e"><title>MiMo-V2.6-Pro: 2.89 gold a round from round payout</title></rect>
 <text x="258.9" y="150.0" font-size="11" fill="#ffffff" text-anchor="middle">2.9</text>
@@ -2288,8 +2307,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <rect x="363.7" y="136" width="2.2" height="20" rx="2" fill="#8c0000"><title>MiMo-V2.6-Pro: 0.14 gold a round from scoring</title></rect>
 <rect x="367.9" y="136" width="9.7" height="20" rx="2" fill="#2f6f8f"><title>MiMo-V2.6-Pro: 0.38 gold a round from sales</title></rect>
 <rect x="379.6" y="136" width="1.0" height="20" rx="2" fill="#6b4c8a"><title>MiMo-V2.6-Pro: 0.03 gold a round from relic payouts</title></rect>
-<text x="387.5" y="146.0" font-size="11" fill="#2c2c2c" text-anchor="start">5.4 earned</text>
-<text x="387.5" y="158.0" font-size="11" fill="#8a8878" text-anchor="start">5.4 spent</text>
+<text x="387.5" y="150.0" font-size="11" fill="#2c2c2c" text-anchor="start">5.4 earned</text>
 <text x="0.0" y="181.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4.1 Flash</text>
 <rect x="216.0" y="166" width="86.7" height="20" rx="2" fill="#787c7e"><title>DeepSeek V4.1 Flash: 2.92 gold a round from round payout</title></rect>
 <text x="259.4" y="180.0" font-size="11" fill="#ffffff" text-anchor="middle">2.9</text>
@@ -2297,8 +2315,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <text x="331.9" y="180.0" font-size="11" fill="#ffffff" text-anchor="middle">1.9</text>
 <rect x="361.1" y="166" width="1.4" height="20" rx="2" fill="#b59f3b"><title>DeepSeek V4.1 Flash: 0.11 gold a round from interest</title></rect>
 <rect x="364.5" y="166" width="5.8" height="20" rx="2" fill="#2f6f8f"><title>DeepSeek V4.1 Flash: 0.26 gold a round from sales</title></rect>
-<text x="379.3" y="176.0" font-size="11" fill="#2c2c2c" text-anchor="start">5.1 earned</text>
-<text x="379.3" y="188.0" font-size="11" fill="#8a8878" text-anchor="start">5.1 spent</text>
+<text x="379.3" y="180.0" font-size="11" fill="#2c2c2c" text-anchor="start">5.1 earned</text>
 <text x="0.0" y="211.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6.1 Sol</text>
 <rect x="216.0" y="196" width="87.6" height="20" rx="2" fill="#787c7e"><title>GPT-6.1 Sol: 2.95 gold a round from round payout</title></rect>
 <text x="259.8" y="210.0" font-size="11" fill="#ffffff" text-anchor="middle">3.0</text>
@@ -2307,8 +2324,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <rect x="369.4" y="196" width="3.1" height="20" rx="2" fill="#b59f3b"><title>GPT-6.1 Sol: 0.17 gold a round from interest</title></rect>
 <rect x="374.5" y="196" width="21.3" height="20" rx="2" fill="#8c0000"><title>GPT-6.1 Sol: 0.77 gold a round from scoring</title></rect>
 <rect x="397.8" y="196" width="11.7" height="20" rx="2" fill="#2f6f8f"><title>GPT-6.1 Sol: 0.45 gold a round from sales</title></rect>
-<text x="418.5" y="206.0" font-size="11" fill="#2c2c2c" text-anchor="start">6.4 earned</text>
-<text x="418.5" y="218.0" font-size="11" fill="#8a8878" text-anchor="start">6.0 spent</text>
+<text x="418.5" y="210.0" font-size="11" fill="#2c2c2c" text-anchor="start">6.4 earned</text>
 <text x="0.0" y="241.0" font-size="13" fill="#2c2c2c" text-anchor="start">DeepSeek V4 Pro</text>
 <rect x="216.0" y="226" width="87.0" height="20" rx="2" fill="#787c7e"><title>DeepSeek V4 Pro: 2.93 gold a round from round payout</title></rect>
 <text x="259.5" y="240.0" font-size="11" fill="#ffffff" text-anchor="middle">2.9</text>
@@ -2319,8 +2335,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <text x="409.2" y="240.0" font-size="11" fill="#ffffff" text-anchor="middle">1.5</text>
 <rect x="433.6" y="226" width="17.0" height="20" rx="2" fill="#2f6f8f"><title>DeepSeek V4 Pro: 0.63 gold a round from sales</title></rect>
 <rect x="452.6" y="226" width="8.9" height="20" rx="2" fill="#6b4c8a"><title>DeepSeek V4 Pro: 0.36 gold a round from relic payouts</title></rect>
-<text x="470.4" y="236.0" font-size="11" fill="#2c2c2c" text-anchor="start">8.1 earned</text>
-<text x="470.4" y="248.0" font-size="11" fill="#8a8878" text-anchor="start">7.7 spent</text>
+<text x="470.4" y="240.0" font-size="11" fill="#2c2c2c" text-anchor="start">8.1 earned</text>
 <text x="0.0" y="271.0" font-size="13" fill="#2c2c2c" text-anchor="start">GLM 5.3 Flash</text>
 <rect x="216.0" y="256" width="86.9" height="20" rx="2" fill="#787c7e"><title>GLM 5.3 Flash: 2.93 gold a round from round payout</title></rect>
 <text x="259.5" y="270.0" font-size="11" fill="#ffffff" text-anchor="middle">2.9</text>
@@ -2329,8 +2344,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <rect x="362.4" y="256" width="1.0" height="20" rx="2" fill="#b59f3b"><title>GLM 5.3 Flash: 0.05 gold a round from interest</title></rect>
 <rect x="364.1" y="256" width="1.0" height="20" rx="2" fill="#8c0000"><title>GLM 5.3 Flash: 0.07 gold a round from scoring</title></rect>
 <rect x="366.3" y="256" width="11.3" height="20" rx="2" fill="#2f6f8f"><title>GLM 5.3 Flash: 0.44 gold a round from sales</title></rect>
-<text x="386.5" y="266.0" font-size="11" fill="#2c2c2c" text-anchor="start">5.4 earned</text>
-<text x="386.5" y="278.0" font-size="11" fill="#8a8878" text-anchor="start">5.2 spent</text>
+<text x="386.5" y="270.0" font-size="11" fill="#2c2c2c" text-anchor="start">5.4 earned</text>
 <text x="0.0" y="301.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
 <rect x="216.0" y="286" width="86.5" height="20" rx="2" fill="#787c7e"><title>Gemini 3.8 Flash: 2.91 gold a round from round payout</title></rect>
 <text x="259.3" y="300.0" font-size="11" fill="#ffffff" text-anchor="middle">2.9</text>
@@ -2342,8 +2356,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <text x="413.8" y="300.0" font-size="11" fill="#ffffff" text-anchor="middle">1.0</text>
 <rect x="430.3" y="286" width="1.1" height="20" rx="2" fill="#2f6f8f"><title>Gemini 3.8 Flash: 0.10 gold a round from sales</title></rect>
 <rect x="433.4" y="286" width="1.1" height="20" rx="2" fill="#6b4c8a"><title>Gemini 3.8 Flash: 0.10 gold a round from relic payouts</title></rect>
-<text x="443.6" y="296.0" font-size="11" fill="#2c2c2c" text-anchor="start">7.3 earned</text>
-<text x="443.6" y="308.0" font-size="11" fill="#8a8878" text-anchor="start">6.1 spent</text>
+<text x="443.6" y="300.0" font-size="11" fill="#2c2c2c" text-anchor="start">7.3 earned</text>
 <text x="0.0" y="336.0" font-size="12" fill="#8c0000" text-anchor="start" font-weight="700">Ascension 0, the easiest</text>
 <text x="0.0" y="359.0" font-size="13" fill="#2c2c2c" text-anchor="start">Gemini 3.8 Flash</text>
 <rect x="216.0" y="344" width="119.5" height="20" rx="2" fill="#787c7e"><title>Gemini 3.8 Flash: 4.00 gold a round from round payout</title></rect>
@@ -2356,8 +2369,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <text x="539.0" y="358.0" font-size="11" fill="#ffffff" text-anchor="middle">2.4</text>
 <rect x="577.1" y="344" width="1.0" height="20" rx="2" fill="#2f6f8f"><title>Gemini 3.8 Flash: 0.03 gold a round from sales</title></rect>
 <rect x="578.1" y="344" width="5.1" height="20" rx="2" fill="#6b4c8a"><title>Gemini 3.8 Flash: 0.23 gold a round from relic payouts</title></rect>
-<text x="592.2" y="354.0" font-size="11" fill="#2c2c2c" text-anchor="start">12.2 earned</text>
-<text x="592.2" y="366.0" font-size="11" fill="#8a8878" text-anchor="start">9.7 spent</text>
+<text x="592.2" y="358.0" font-size="11" fill="#2c2c2c" text-anchor="start">12.2 earned</text>
 <text x="0.0" y="389.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Sonnet 5.5</text>
 <rect x="216.0" y="374" width="117.5" height="20" rx="2" fill="#787c7e"><title>Claude Sonnet 5.5: 3.93 gold a round from round payout</title></rect>
 <text x="274.7" y="388.0" font-size="11" fill="#ffffff" text-anchor="middle">3.9</text>
@@ -2367,16 +2379,14 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <text x="412.2" y="388.0" font-size="11" fill="#ffffff" text-anchor="middle">1.4</text>
 <rect x="434.7" y="374" width="18.6" height="20" rx="2" fill="#8c0000"><title>Claude Sonnet 5.5: 0.68 gold a round from scoring</title></rect>
 <rect x="455.2" y="374" width="5.1" height="20" rx="2" fill="#2f6f8f"><title>Claude Sonnet 5.5: 0.24 gold a round from sales</title></rect>
-<text x="469.4" y="384.0" font-size="11" fill="#2c2c2c" text-anchor="start">8.1 earned</text>
-<text x="469.4" y="396.0" font-size="11" fill="#8a8878" text-anchor="start">7.3 spent</text>
+<text x="469.4" y="388.0" font-size="11" fill="#2c2c2c" text-anchor="start">8.1 earned</text>
 <text x="0.0" y="419.0" font-size="13" fill="#2c2c2c" text-anchor="start">Step 5 Preview</text>
 <rect x="216.0" y="404" width="118.1" height="20" rx="2" fill="#787c7e"><title>Step 5 Preview: 3.95 gold a round from round payout</title></rect>
 <text x="275.0" y="418.0" font-size="11" fill="#ffffff" text-anchor="middle">4.0</text>
 <rect x="336.1" y="404" width="18.1" height="20" rx="2" fill="#538d4e"><title>Step 5 Preview: 0.66 gold a round from unused guesses</title></rect>
 <rect x="356.2" y="404" width="2.9" height="20" rx="2" fill="#b59f3b"><title>Step 5 Preview: 0.16 gold a round from interest</title></rect>
 <rect x="361.1" y="404" width="12.2" height="20" rx="2" fill="#2f6f8f"><title>Step 5 Preview: 0.47 gold a round from sales</title></rect>
-<text x="382.3" y="414.0" font-size="11" fill="#2c2c2c" text-anchor="start">5.2 earned</text>
-<text x="382.3" y="426.0" font-size="11" fill="#8a8878" text-anchor="start">5.2 spent</text>
+<text x="382.3" y="418.0" font-size="11" fill="#2c2c2c" text-anchor="start">5.2 earned</text>
 <text x="0.0" y="449.0" font-size="13" fill="#2c2c2c" text-anchor="start">GPT-6 Luna</text>
 <rect x="216.0" y="434" width="117.8" height="20" rx="2" fill="#787c7e"><title>GPT-6 Luna: 3.94 gold a round from round payout</title></rect>
 <text x="274.9" y="448.0" font-size="11" fill="#ffffff" text-anchor="middle">3.9</text>
@@ -2387,8 +2397,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <rect x="400.5" y="434" width="36.6" height="20" rx="2" fill="#2f6f8f"><title>GPT-6 Luna: 1.27 gold a round from sales</title></rect>
 <text x="418.8" y="448.0" font-size="11" fill="#ffffff" text-anchor="middle">1.3</text>
 <rect x="439.1" y="434" width="1.0" height="20" rx="2" fill="#6b4c8a"><title>GPT-6 Luna: 0.09 gold a round from relic payouts</title></rect>
-<text x="448.7" y="444.0" font-size="11" fill="#2c2c2c" text-anchor="start">7.4 earned</text>
-<text x="448.7" y="456.0" font-size="11" fill="#8a8878" text-anchor="start">6.6 spent</text>
+<text x="448.7" y="448.0" font-size="11" fill="#2c2c2c" text-anchor="start">7.4 earned</text>
 <text x="0.0" y="479.0" font-size="13" fill="#2c2c2c" text-anchor="start">Claude Haiku 5.5</text>
 <rect x="216.0" y="464" width="116.0" height="20" rx="2" fill="#787c7e"><title>Claude Haiku 5.5: 3.88 gold a round from round payout</title></rect>
 <text x="274.0" y="478.0" font-size="11" fill="#ffffff" text-anchor="middle">3.9</text>
@@ -2397,8 +2406,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <rect x="385.6" y="464" width="17.1" height="20" rx="2" fill="#b59f3b"><title>Claude Haiku 5.5: 0.63 gold a round from interest</title></rect>
 <rect x="404.7" y="464" width="1.0" height="20" rx="2" fill="#8c0000"><title>Claude Haiku 5.5: 0.05 gold a round from scoring</title></rect>
 <rect x="406.1" y="464" width="5.8" height="20" rx="2" fill="#2f6f8f"><title>Claude Haiku 5.5: 0.26 gold a round from sales</title></rect>
-<text x="420.9" y="474.0" font-size="11" fill="#2c2c2c" text-anchor="start">6.5 earned</text>
-<text x="420.9" y="486.0" font-size="11" fill="#8a8878" text-anchor="start">5.4 spent</text>
+<text x="420.9" y="478.0" font-size="11" fill="#2c2c2c" text-anchor="start">6.5 earned</text>
 <text x="0.0" y="509.0" font-size="13" fill="#2c2c2c" text-anchor="start">Nemotron 3 Ultra</text>
 <rect x="216.0" y="494" width="115.9" height="20" rx="2" fill="#787c7e"><title>Nemotron 3 Ultra: 3.88 gold a round from round payout</title></rect>
 <text x="274.0" y="508.0" font-size="11" fill="#ffffff" text-anchor="middle">3.9</text>
@@ -2408,8 +2416,7 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <rect x="392.5" y="494" width="16.8" height="20" rx="2" fill="#8c0000"><title>Nemotron 3 Ultra: 0.62 gold a round from scoring</title></rect>
 <rect x="411.3" y="494" width="11.7" height="20" rx="2" fill="#2f6f8f"><title>Nemotron 3 Ultra: 0.45 gold a round from sales</title></rect>
 <rect x="425.1" y="494" width="5.2" height="20" rx="2" fill="#6b4c8a"><title>Nemotron 3 Ultra: 0.24 gold a round from relic payouts</title></rect>
-<text x="439.3" y="504.0" font-size="11" fill="#2c2c2c" text-anchor="start">7.1 earned</text>
-<text x="439.3" y="516.0" font-size="11" fill="#8a8878" text-anchor="start">7.2 spent</text>
+<text x="439.3" y="508.0" font-size="11" fill="#2c2c2c" text-anchor="start">7.1 earned</text>
 <text x="0.0" y="539.0" font-size="13" fill="#2c2c2c" text-anchor="start">MiniMax M3</text>
 <rect x="216.0" y="524" width="117.4" height="20" rx="2" fill="#787c7e"><title>MiniMax M3: 3.93 gold a round from round payout</title></rect>
 <text x="274.7" y="538.0" font-size="11" fill="#ffffff" text-anchor="middle">3.9</text>
@@ -2419,16 +2426,16 @@ While earning gold does not ensure victory, earning less than $6 per round effec
 <text x="394.1" y="538.0" font-size="11" fill="#ffffff" text-anchor="middle">0.9</text>
 <rect x="408.1" y="524" width="2.3" height="20" rx="2" fill="#8c0000"><title>MiniMax M3: 0.14 gold a round from scoring</title></rect>
 <rect x="412.4" y="524" width="13.2" height="20" rx="2" fill="#2f6f8f"><title>MiniMax M3: 0.50 gold a round from sales</title></rect>
-<text x="434.6" y="534.0" font-size="11" fill="#2c2c2c" text-anchor="start">7.0 earned</text>
-<text x="434.6" y="546.0" font-size="11" fill="#8a8878" text-anchor="start">5.1 spent</text>
+<text x="434.6" y="538.0" font-size="11" fill="#2c2c2c" text-anchor="start">7.0 earned</text>
 <text x="215.0" y="588.0" font-size="11" fill="#8a8878" text-anchor="start">gold earned per round cleared, by where it came from</text>
 </svg>
+</figure>
 
 ## Caveats
 
 The Claude models ran through Claude Code and the others through [OpenCode](https://opencode.ai/), so the harness differs as well as the model. Luna, Haiku, DeepSeek V4 Pro, Step 5 Preview and MiniMax M3 ran on OpenCode's Go plan, and the rest through [OpenRouter](https://openrouter.ai/).
 
-Thinking effort was not held equal either. I did not set it, so each model ran at whatever its harness defaulted to: Opus at medium and Sonnet at high in Claude Code, and the OpenCode models at OpenCode's defaults. Increasing thinking for Opus and Sonnet seemed to have marginal effect either way.
+Thinking effort was not held equal either. I did not set it, so each model ran at whatever its harness defaulted to: Opus at medium and Sonnet at high in Claude Code, and the OpenCode models at OpenCode's defaults. Increasing thinking for Opus and Sonnet seemed to have a marginal effect either way.
 
 The benchmark lives in the game's repository under [`tools/bench/`](https://github.com/jmelahman/5-wild/tree/master/tools/bench#readme), and every result here was played on v0.10.4.
 
@@ -2443,7 +2450,7 @@ Every run is recorded as its list of moves, so any of them can be replayed throu
 * [Sol, ascension 10, seed 5](https://www.youtube.com/watch?v=ey_7Feq_gns): its one win, 4.4 million points
 * [Luna, ascension 0, seed 3](https://www.youtube.com/watch?v=5zj1K5oiwkE): JAZZY, QUEER and EERIE to the final round
 
-Playlists of all five runs per model, Ascension 10:
+Playlists of all five runs per model, ascension 10:
 
 * [Opus 5.5](https://www.youtube.com/playlist?list=PLNpeJ3c8LSSI)
 * [Sonnet 5.5](https://www.youtube.com/playlist?list=PLPbdCMsQ0cyw)
