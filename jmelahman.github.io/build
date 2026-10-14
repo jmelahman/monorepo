@@ -7,16 +7,15 @@ DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 SITE_URL="https://jamison.lahman.dev"
 BLOG_DIR="blog"
 
-# Opt-outs for the slow steps, used by ./serve for quick local previews.
+# Opt-out for the slow step, used by ./serve for quick local previews.
 SKIP_FEED="${SKIP_FEED:-}"
-SKIP_CSS="${SKIP_CSS:-}"
 
 pushd "$DIR" >/dev/null || exit
 
 # Compile HTML
 pages=()
 for md in **/*.md; do
-	if [ "$(basename "$md")" == "README.md" ]; then
+	if [ "$(basename "$md")" == "README.md" ] || [ "$(basename "$md")" == "CLAUDE.md" ]; then
 		continue
 	fi
 	pages+=("$md")
@@ -29,11 +28,6 @@ if [ -z "$SKIP_FEED" ]; then
 		--variable=header=true \
 		--variable=title-prefix=Feed \
 		--variable=nav_feed=true
-fi
-
-# Minify CSS
-if [ -z "$SKIP_CSS" ]; then
-	./css/minify
 fi
 
 # Posts that have moved leave a page behind that forwards to the new address.
@@ -73,6 +67,7 @@ EOF
 	for md in "$BLOG_DIR"/*.md; do
 		filename=$(basename "$md" .md)
 		[ "$filename" = "index" ] && continue
+		[ "$filename" = "CLAUDE" ] && continue
 
 		title=$(sed -n 's/^#\s[ ]*//p' "$md")
 		date=$(sed -n 's/^date:[ ]*//p' "$md")
