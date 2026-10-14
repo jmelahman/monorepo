@@ -210,10 +210,10 @@ Each dot represents a run and clicking one opens its replay in YouTube.
 
 ## What stood out
 
-* **There does seem to be some signal.** Opus 5.5 is clearly a special model with the strongest performances consistently. Gemini 3.8 Flash won all five of its runs on the easiest difficulty while struggling with the stricter rules imposed on the harder difficulty while Sonnet 5.5 stayed adaptive. Sol seemed to underperform compared to expectations but it struggled uniquely with solving rounds and performed closer to expectations on easier difficulties where failing to solve rounds is forgiven more.
-* **Each model had its own style.** Gemini opened with CRANE in 100 of its 120 rounds on ascension 0 helping it win 5/5 runs. At ascension 10, CRANE can only be played once a run and Gemini's ability falls apart. Opus won three times with three different builds and was able to convert successful guesses into income-generating purchases. Luna leaned into the game's scoring mechanic opening with high-scoring words like JAZZY, FUZZY, and EERIE and had the most diverse use of word shapes. Sonnet won one run by [playing TAXIS 26 guesses in a row](#the-strategies-they-found). Sol had the highest rate of DISTINCT words allowing it to solve rounds at a high rate without necessarily translating that into points.
+* **There seems to be some signal.** Opus 5.5 is clearly a special model with the strongest performance consistently. Gemini 3.8 Flash won all five of its runs on the easiest difficulty while struggling with the stricter rules imposed at higher difficulties while Sonnet 5.5 was able to adapt. Sol seemed to underperform compared to expectations but it struggled uniquely with solving rounds and performed closer to expectations on easier difficulties where failing to solve rounds is forgiven more.
+* **Each model had its own style.** Gemini opened with CRANE in 100 of its 120 rounds on ascension 0 helping it to win 5/5 runs. At ascension 10, CRANE can only be played once a run and Gemini's ability fell apart. Opus won three times with three different builds and was able to convert successful guesses into income generating builds. Luna leaned into the game's scoring mechanic opening with high-scoring words like JAZZY, FUZZY, and EERIE and had the most diverse use of word shapes. Sonnet won one run by [playing TAXIS 26 guesses in a row](#the-strategies-they-found). Sol had the highest rate of DISTINCT words allowing it to solve rounds at a high rate without necessarily translating that into points.
 * **Forcing a win condition was not effective.** The most effective style was that which combined many and avoided over-indexing on any particular scoring lever. Opus 5.5's wins aren't noticeably distinct on paper and nothing, save guessing ability and economy, really stands out as a clear indicator for how it won. While other models clearly preferred one of a handful of dimensions such as letter rarity, word shape, or buying and selling from the shop, the winning solution seems to take what is given, find the best micro-optimizations, and diversify. In other words, investing in insurance, economy, and scaling over immediate returns.
-* **Neither solving nor economy alone won.** Opus 5.5 had the lowest average number of guesses per round allowing it to increase its income and supercharge its scoring engine. The biggest contrast with Sonnet was its inability to convert points into income causing its scoring engine to die out in the later rounds. Every model with a low economy died out in the mid to late game. Conversely, GLM 5.3 Flash and DeepSeek v4 Pro generated plenty of economy but failed to translate it into ways to score points.
+* **Neither solving nor economy alone won.** Opus 5.5 had the lowest average number of guesses per round allowing it to increase its income and supercharge its scoring engine. The biggest contrast with Sonnet was its inability to convert points into income causing its scoring engine to die out in the later rounds. Every model with a low economy died out in the mid to late game. Conversely, GLM 5.3 Flash and DeepSeek v4 Pro generated plenty of economy but failed to convert it into scoring points.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 456" role="img" aria-labelledby="guesses-title" font-family="inherit">
 <title id="guesses-title">Guesses per cleared round for each model. Lower is better; six is the limit.</title>
@@ -270,39 +270,39 @@ Each dot represents a run and clicking one opens its replay in YouTube.
 <text x="215.0" y="450.0" font-size="11" fill="#8a8878" text-anchor="start">guesses per cleared round (lower is better, six is the limit) · rounds solved of rounds cleared</text>
 </svg>
 
-Average guesses per cleared round, where lower is better and six is the limit. "Solved" counts the rounds cleared by finding the word, as opposed to reaching the target without it.
+Average guesses per cleared round, where lower is better and six is the limit. "Solved" counts the rounds cleared by finding the word, as opposed to reaching the target without it; at ascension 10, this is expected to match as solving each round is required.
 
 ## The game
 
-5 Wild takes its board from Wordle. You get six guesses to find a five-letter word, with green, yellow and gray tiles hinting at the solution. Everything around the board comes from Balatro. Each guess scores points and each round has a target score to beat. Less common letters are worth more (like Scrabble), a green tile multiplies them, and a gray tile does nothing. Between rounds, a shop sells relics (Balatro's jokers) which change how a guess scores, and winning a run usually means finding a handful that work well together. A run is eight stages of three rounds each, and the third round of every stage is a boss that changes one of the rules.
+5 Wild takes its board from Wordle. You get six guesses to find a five-letter word, with green, yellow and gray tiles hinting at the solution. Everything around the board comes from Balatro. Each guess scores points and each round has a target score to beat. Less common letters are worth more (like Scrabble), a green tile multiplies them, and a gray tile does nothing. Similar to Balatro's poker hands, each word has a "shape" which describes its composition. For example, if each letter is unique, that word's shape is DISTINCT but if a letter repeats, such as the P's in HAPPY, its shape is TWINNED. Rarer shapes yield more points. Between rounds, a shop sells relics (Balatro's jokers) which change how a guess scores. A run is eight stages of three rounds each, and the third round of every stage is a boss that changes one of the rules.
 
-The two halves compete with each other, which I think is what makes it an interesting benchmark. Guesses that narrow down the answer tend to use common letters and score very few points, while guesses that score well tend to reveal very little. On ascension 0, solving the word isn't even required. Only beating the round's target is, and the targets scale much faster than strong guesses alone can keep up with.
+The game is a constant push-and-pull between using guesses to score points and solving the round. Solving the round greatly increases the final score, and solving early yields even more. Many of the relics scale around guesses, so spending guesses trying to scale your build may result in missing out on points.
 
-Difficulty levels are called ascensions and they stack like Slay the Spire's, so ascension 10 plays with every rule from the levels below it. These are the rules that matter most here.
+Difficulty levels are called ascensions and they stack like Slay the Spire's, so ascension 10 plays with every rule below it. These are the rules that matter most here.
 
-* Every guess must reuse the letters you have found, in the places you found them
-* No word can be played twice in the whole run
-* There are four relic slots instead of five, and every round pays less
-* Reaching the target is not enough, you have to solve the word
+* Every guess must reuse the letters you've found (Wordle's hard mode)
+* No word can be played twice in the same run
+* Income is reduced, relics slots are reduced by 1, and target points scale faster
+* Every round must be solved correctly while reaching the point target goal
 
 ## The setup
 
-The game's engine is deterministic given a seed and a list of actions, so building the benchmark was mostly a matter of exposing it to a model. I did that with an [MCP](https://modelcontextprotocol.io/) server that has four tools.
+The game's engine is deterministic given a seed and a list of actions. I originally built a spectator mode for the game so I could livestream agents playing via an [MCP](https://modelcontextprotocol.io/) server for QA. The MCP has four tools.
 
-* `rules`: the whole briefing, once
-* `new_run`: deal the next seed
-* `observe`: read the board
+* `rules`: a how to play guide for agent
+* `new_run`: start a run for a given seed
+* `observe`: read the board state
 * `act`: one command (`guess crane`, `buy 2`, `collect`, `next`)
 
-The models only get those four tools. There is no shell, file access, web search or subagents, so they can't write a solver or look up the word list. Nothing carries over from one run to the next either.
+There is no shell, file access, web search or subagents, so agents can't write a solver or look up the word list. Each run is indepenedent of one another.
 
-Every model plays the same five seeds. A seed fixes the bosses and how the answers are drawn, so every model starts from the same run. The answers can drift apart later, since a word with a broken letter can't be the answer and, at ascension 10, neither can a word the model has already played. The shops start out identical but diverge as soon as two models buy differently.
+Every model plays the same five seeds. The answers and shop options start the same but eventually drift out of necessity; that way purchased relics don't re-appear in the shop, answers stay unique from previous guesses, and broken letters don't soft-lock answers.
 
-Nothing about it is specific to a vendor, and any harness that can connect to an MCP server can play. Each run is saved as its list of moves, which is where all of the charts and videos in this post come from.
+Nothing about the setup is specific to the harness, and anything that can connect to the MCP server can play. Each run is saved as its list of moves which are used to replay the run and exported as a video.
 
 ## The strategies they found
 
-**Sonnet broke half the alphabet and played TAXIS 26 times in a row.** On seed 5 of its ascension 0 playthrough, it bought Pyromaniac, which breaks a random letter every round making it unplayable, and Scorched Earth, which scales with the number of broken letters. By round 20, twelve letters were gone, and it had paid to upgrade the letters T, A, I and S. TAXIS is those four upgraded letters around an X, which is worth eight times a common letter. From there it stopped solving:
+**Sonnet broke half the alphabet and played TAXIS 26 times in a row.** On seed 5 of its ascension 0 playthrough, it bought Pyromaniac, which breaks a random letter every round making it unplayable, and Scorched Earth, which scales with the number of broken letters. By round 20, twelve letters were gone, and it had upgraded letters T, A, I and S. TAXIS is those four upgraded letters around an X, a rare, high-valued letter. From there it stopped solving:
 
 ```
 round 21   taxis taxis taxis taxis taxis taxis
@@ -311,11 +311,9 @@ round 23   taxis taxis taxis taxis taxis taxis
 round 24   taxis taxis taxis          (won)
 ```
 
-It chose to lose battles in an effort to win the war — exactly the kind of thing this benchmark aims to showcase. Later ascensions prevent this strategy by requiring uniqueness between guesses.
+It chose to lose rounds in order to win the game — exactly the kind of thing this benchmark intends to capture. Later ascensions prevent this strategy by requiring uniqueness between guesses.
 
-**Luna opened with JAZZY.** Instead of playing typical, information-rich Wordle openers like CRANE or STARE, Luna's most-played words were EERIE (15 times), CRANE (13), JAZZY (11) and FUZZY (6), with QUEER and EJECT behind them. Every one of those but CRANE [repeats a letter](#word-shapes), and in three of its five runs it purchased the Twins relic, which multiplies a guess if it contains a given letter twice. JAZZY is also one of the most rewarding words in the game (less common letters score more points like Scrabble), 33 points against 5 for AROSE. It leaned fully into the game's mechanic of trading information to solve rounds in exchange for points.
-
-**Rhyme traps ended runs that had plenty of points.** Since every guess at ascension 10 must reuse the green letters already found, a model that finds four of them early can be left guessing the fifth one word at a time. On seed 1, the answer in round 12 was WOUND. GPT-6.1 Sol played POUND, FOUND, BOUND and HOUND, DeepSeek V4 Pro played POUND, BOUND, HOUND and MOUND, and both lost with more than double the points they needed. Gemini only escaped on its fifth guess after BOUND, ROUND, SOUND and FOUND. The same thing happened with MATED (HATED, FATED, GATED), FAKER (MAKER, BAKER) and GUMMY (RUMMY, DUMMY, TUMMY). Of the 39 losses at ascension 10, 13 ended with enough points but the word unsolved. Opus never saw WOUND. It was playing the same Pyromaniac and Scorched Earth build as Sonnet's TAXIS run, W and N were among its twelve broken letters, and the game dealt it YEAST instead, which it solved in three guesses.
+**Luna opened with JAZZY.** Instead of playing common, information-rich Wordle openers like CRANE or STARE, Luna's most-played words were EERIE (15 times), CRANE (13), JAZZY (11) and FUZZY (6), with QUEER and EJECT also seeing high usage. Every one of those but CRANE [repeats a letter](#word-shapes), and in three of its five runs purchased the Twins relic, which multiplies guesses containing a given letter twice. JAZZY is also one of the most rewarding words in the game, scoring 33 base points against 5 for AROSE. It leaned fully into the game's mechanic of trading information to solve rounds in exchange for points.
 
 **Gemini opened with CRANE 100 times.** At ascension 0, nothing stops a model from playing the same word every round, and Gemini 3.8 Flash opened with CRANE in 100 of its 120 rounds. CRANE is a typical Wordle opener that scores very few points, but it gave Gemini the same head start on every answer, and it went on to solve 114 of the 120 rounds and win all five runs. At ascension 10, where a word can only be played once per run, it played CRANE and STARE in the first two rounds of every run and then had to find a new opener for each round after that. It lost all five of those runs, three of them before round 10.
 
@@ -509,9 +507,15 @@ At ascension 0, the most-played words show how far a favorite can carry a run.
 <text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">each model's five most-played words and how many times it played them, over five runs</text>
 </svg>
 
+**Rhyme traps ended runs that had plenty of points.** Since every guess at ascension 10 must reuse the green letters found, a model that finds four of them early can be left guessing the fifth one word at a time. On seed 1, the answer in round 12 was WOUND. GPT-6.1 Sol played POUND, FOUND, BOUND and HOUND, DeepSeek V4 Pro played POUND, BOUND, HOUND and MOUND, and both lost with more than double the points they needed. Of the 39 losses at ascension 10, 13 ended with enough points but the word unsolved.
+
+Opus other the other hand never saw WOUND. This is a very intended consequence of the game. It played the same Pyromaniac and Scorched Earth build as Sonnet's TAXIS run, and W and N were among the broken letters. On ascension 10, improving your likelihood .
+
+This does probably indicate a more generic representative of model performance with this benchmark would use ascension 9 to avoid RNG from these traps (but that would also be no fun).
+
 ## Cost and speed
 
-A full Opus run cost about $4 and took 11 minutes at an average of $0.21 and 34s per round. For a relatively complex and complete task, I think it is fairly cost and time efficient. Each run is able to run in parallel with one another.
+A full Opus run cost about $4 and took 11 minutes at an average of $0.21 and 34s per round. For a relatively complex task, I think it is fairly cost and time efficient. A large majority of tokens were cached between turns. Each run is able to run in parallel with one another.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 466" role="img" aria-labelledby="value-title" font-family="inherit">
 <title id="value-title">Median final score against cost per round played, for each model at ascension 10. Score is on a logarithmic scale.</title>
@@ -868,6 +872,8 @@ Every guess scores as one of five shapes, and certain relics and shape levels re
 <text x="669.5" y="501.0" font-size="11" fill="#2c2c2c" text-anchor="middle">53%</text>
 <text x="215.0" y="528.0" font-size="11" fill="#8a8878" text-anchor="start">share of guesses in each word shape · a guess scores as the first shape on this list it matches</text>
 </svg>
+
+From a balancing perspective, I think this can be improved to reward riskier and more creative guessing.
 
 ### Relics
 
@@ -2206,7 +2212,7 @@ Conversely, overselling, e.g. GPT-6 Luna, and poor purchasing strategies, e.g. G
 <text x="215.0" y="496.0" font-size="11" fill="#8a8878" text-anchor="start">per stage of three rounds played, over 5 runs · each column shaded against its own highest</text>
 </svg>
 
-While earning gold does not ensure victory, earning less than $6 per round effectively disqualifies a run.
+While earning gold does not ensure victory, earning less than $6 per round effectively disqualified a run.
 
 <svg class="results" style="width:100%;height:auto;margin:1em 0" viewBox="0 0 720 594" role="img" aria-labelledby="gold-title" font-family="inherit">
 <title id="gold-title">Gold earned per round cleared by each model, split by source, with gold spent beside it.</title>
