@@ -9,7 +9,7 @@
     "docs:preview": "vitepress preview --port 5176 --host"
   },
   "devDependencies": {
-    "vitepress": "^2.0.0-alpha.19",
+    "vitepress": "^2.0.0-alpha.20",
     "vitepress-plugin-llms": "^1.14.0"
   }
 }
