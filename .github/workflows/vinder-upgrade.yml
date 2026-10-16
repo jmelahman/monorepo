@@ -38,10 +38,9 @@ jobs:
       # Builds vinder from its own source at this ref, runs `upgrade --all`
       # and `audit --all` (advisories go in the PR rather than failing it),
       # and opens the PR as the App `vinder github-app` created: one opened
-      # with GITHUB_TOKEN would not trigger the pre-commit checks. Keep it on
-      # the release the pre-commit hooks pin, in .pre-commit-config.yaml.
+      # with GITHUB_TOKEN would not trigger the pre-commit checks.
       - name: Upgrade
-        uses: jmelahman/vinder@v0.1.4
+        uses: jmelahman/vinder@af20f0cf99117955cbc40bde61fe04f08e5cc8f8 # v0.1.4
         with:
           app-client-id: ${{ vars.VINDER_APP_CLIENT_ID }}
           app-private-key: ${{ secrets.VINDER_APP_PRIVATE_KEY }}

@@ -60,24 +60,22 @@ repos:
 
   # Vendored npm dependencies: every vendor/ matches its lockfile, projects
   # agree on versions, and what is vendored has no unignored advisories.
-  # vinder is the npm release; .github/workflows/vinder-upgrade.yml uses the
-  # same release's action, so bump both together. check installs with each
-  # project's package manager: `language: bun` has prek provision the one
-  # text-editor uses.
+  # vinder runs from its source here, so a change to it is exercised on the
+  # projects in the same commit. check installs with each project's package
+  # manager: `language: bun` has prek provision the one text-editor uses, and
+  # go comes from PATH.
   - repo: local
     hooks:
       - id: vinder-check
         name: vinder check
-        entry: vinder check --all
+        entry: go run ./vinder check --all
         language: bun
-        additional_dependencies: ["vinder@0.1.3"]
         always_run: true
         pass_filenames: false
       - id: vinder-audit
         name: vinder audit
-        entry: vinder audit --all
+        entry: go run ./vinder audit --all
         language: bun
-        additional_dependencies: ["vinder@0.1.3"]
         files: (^|/)vinder\.(json|toml)$
         pass_filenames: false
 
