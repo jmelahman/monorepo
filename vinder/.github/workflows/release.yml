@@ -77,10 +77,10 @@ jobs:
       - run: |
           node .github/npm/pack.mjs
           mkdir -p dist/npm-tarballs/platforms
-          for dir in dist/npm/platforms/*/; do
+          for dir in ./dist/npm/platforms/*/; do
             npm pack "$dir" --pack-destination dist/npm-tarballs/platforms
           done
-          npm pack dist/npm/main --pack-destination dist/npm-tarballs
+          npm pack ./dist/npm/main --pack-destination dist/npm-tarballs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: npm-tarballs
@@ -108,14 +108,20 @@ jobs:
       # maintainer to approve on npmjs.com, are skipped, so a failed run can
       # be re-run. Trusted publishing needs no token, but can only be set up
       # for a package that exists: until it is, NPM_TOKEN publishes.
+      # The ./ keeps npm from taking dist/<name>.tgz for a GitHub repository.
       - run: |
-          for tgz in dist/platforms/*.tgz dist/*.tgz; do
+          for tgz in ./dist/platforms/*.tgz ./dist/*.tgz; do
             spec=$(tar -xOzf "$tgz" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0)); p.name + "@" + p.version')
+            # npm refuses to make a prerelease latest unless told to.
+            tag=latest
+            if [[ ${spec##*@} == *-* ]]; then
+              tag=next
+            fi
             if npm view "$spec" version > /dev/null 2>&1; then
               echo "$spec is already published"
               continue
             fi
-            if ! out=$(npm publish "$tgz" --provenance --access public 2>&1); then
+            if ! out=$(npm publish "$tgz" --provenance --access public --tag "$tag" 2>&1); then
               echo "$out"
               if grep -q "previously staged" <<< "$out"; then
                 echo "::warning::$spec is staged; approve it on npmjs.com"
