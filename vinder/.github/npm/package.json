@@ -1,0 +1,7 @@
+{
+  "description": "Vendor npm dependencies into a no-build project: bundle them with esbuild, check the result is current, and audit it against OSV.",
+  "license": "MIT",
+  "keywords": ["vendor", "esbuild", "bundle", "osv", "audit", "pre-commit"],
+  "homepage": "https://github.com/jmelahman/vinder#readme",
+  "bugs": "https://github.com/jmelahman/vinder/issues"
+}

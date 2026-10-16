@@ -1,0 +1,68 @@
+{
+  "deps": {
+    "toastui-editor": {
+      "package": "@toast-ui/editor",
+      "version": "3.2.2",
+      "files": [
+        "LICENSE",
+        "toastui-editor-all.min.js",
+        "toastui-editor-dark.min.css",
+        "toastui-editor.min.css"
+      ],
+      "includes": [
+        {
+          "name": "@toast-ui/editor",
+          "version": "3.2.2"
+        },
+        {
+          "name": "dompurify",
+          "version": "2.3.3"
+        },
+        {
+          "name": "orderedmap",
+          "version": "2.1.1"
+        },
+        {
+          "name": "prosemirror-commands",
+          "version": "1.7.2"
+        },
+        {
+          "name": "prosemirror-history",
+          "version": "1.5.1"
+        },
+        {
+          "name": "prosemirror-inputrules",
+          "version": "1.5.1"
+        },
+        {
+          "name": "prosemirror-keymap",
+          "version": "1.2.3"
+        },
+        {
+          "name": "prosemirror-model",
+          "version": "1.19.0"
+        },
+        {
+          "name": "prosemirror-state",
+          "version": "1.4.4"
+        },
+        {
+          "name": "prosemirror-transform",
+          "version": "1.12.2"
+        },
+        {
+          "name": "prosemirror-view",
+          "version": "1.42.6"
+        },
+        {
+          "name": "rope-sequence",
+          "version": "1.3.4"
+        },
+        {
+          "name": "w3c-keyname",
+          "version": "2.2.8"
+        }
+      ]
+    }
+  }
+}

@@ -26,6 +26,9 @@ profile.cov
 go.work
 go.work.sum
 
+# build artifact
+/vinder
+
 # env file
 .env
 

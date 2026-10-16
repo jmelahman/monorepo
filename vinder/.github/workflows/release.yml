@@ -1,8 +1,6 @@
 name: Release
 
 # Tag and push to release: `git tag v1.2.3 && git push origin v1.2.3`.
-# Library-only repo? Delete this workflow and .goreleaser.yaml — a Go module
-# is "released" by the tag alone.
 on:
   push:
     tags:
@@ -11,43 +9,114 @@ on:
 permissions: {}
 
 jobs:
-  audit:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
-        with:
-          go-version: stable
-          # No cache: this job runs on a release tag, and a poisoned build
-          # cache is a supply-chain hazard for artifacts published from it.
-          cache: false
-      - name: govulncheck
-        run: scripts/modules.sh go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
-
+  # BEGIN orchard:goreleaser
+  # Shared by Go subtrees released with GoReleaser:
+  # .config/git-orchard/shared/goreleaser in the monorepo
+  # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+  # copies it here.
   goreleaser:
-    needs: audit
     runs-on: ubuntu-latest
     environment:
       name: release
     permissions:
-      contents: write # Creates the GitHub release.
+      contents: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
         with:
           persist-credentials: false
-          fetch-depth: 0 # GoReleaser builds the changelog from history.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+          fetch-depth: 0
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
         with:
           go-version: stable
           cache: false
-      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94
+      # What this subtree's build needs beyond Go, e.g. system packages.
+      - name: Set up the subtree
+        if: hashFiles('.github/ci-setup.sh') != ''
+        run: .github/ci-setup.sh
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
         with:
           distribution: goreleaser
           version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # END orchard:goreleaser
+  # BEGIN orchard:npm
+  # Shared by Go subtrees published to npm:
+  # .config/git-orchard/shared/npm in the monorepo
+  # (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+  # copies it here.
+  # .github/npm/pack.mjs explains the packages.
+  build-npm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
+        with:
+          go-version: stable
+          cache: false
+      - name: Set up the subtree
+        if: hashFiles('.github/ci-setup.sh') != ''
+        run: .github/ci-setup.sh
+      # The binaries the GitHub release ships, from the same .goreleaser.yaml.
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: build --clean
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+          package-manager-cache: false
+      # Packed here, since artifacts drop the binaries' executable bits.
+      - run: |
+          node .github/npm/pack.mjs
+          mkdir -p dist/npm-tarballs/platforms
+          for dir in dist/npm/platforms/*/; do
+            npm pack "$dir" --pack-destination dist/npm-tarballs/platforms
+          done
+          npm pack dist/npm/main --pack-destination dist/npm-tarballs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: npm-tarballs
+          path: dist/npm-tarballs
+          if-no-files-found: error
+  publish-npm:
+    needs: build-npm
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: npm-tarballs
+          path: dist
+      # The platform packages go first, so the main package never names one
+      # that isn't there, and versions already published are skipped, so a
+      # failed run can be re-run. Trusted publishing needs no token, but can
+      # only be set up for a package that exists: until it is, NPM_TOKEN
+      # publishes.
+      - run: |
+          for tgz in dist/platforms/*.tgz dist/*.tgz; do
+            spec=$(tar -xOzf "$tgz" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0)); p.name + "@" + p.version')
+            if npm view "$spec" version > /dev/null 2>&1; then
+              echo "$spec is already published"
+              continue
+            fi
+            npm publish "$tgz" --provenance --access public
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  # END orchard:npm

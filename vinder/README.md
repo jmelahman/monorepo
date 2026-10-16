@@ -1,144 +1,224 @@
-# golang-template
+# vinder
 
-[![Test status](https://github.com/jmelahman/golang-template/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/golang-template/actions/workflows/test.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/golang-template.svg)](https://pkg.go.dev/github.com/jmelahman/golang-template)
+Vendored npm dependencies for projects that have no build step.
 
-A template repository for a Go application, a Go SDK, or a repo that grows
-into several of both. The tooling is the point; the sample package is a
-deliberately tiny greeter so every layer — public API, functional options,
-sentinel error, table test, runnable example, CLI, release — has one worked
-example to copy from.
+A project that serves third-party browser code from a committed `vendor/`
+directory usually has no record of where that code came from, so nothing
+can tell it is out of date or vulnerable. vinder makes `vendor/` a generated
+artifact: package.json and its lockfile pin the versions, `vinder.toml` says
+what goes into `vendor/`, and vinder regenerates it, checks it, and audits
+it against [OSV](https://osv.dev). The project still runs straight from its
+files; node_modules exists only while vinder runs.
 
-The root is `main.go` plus configuration; the rest is `greeter/` (the
-importable package) and `internal/`. Keeping `main` at the root is what
-makes `go install github.com/you/repo@latest` work and names the binary
-after the repo — add `cmd/<name>/` only when there is a second binary.
-
-## What's included
-
-**Checks, everywhere the same**
-
-| Tool                                                             | Local (prek) | CI                               |
-| ---------------------------------------------------------------- | ------------ | -------------------------------- |
-| `gofmt -s`, `go fix`, `go mod tidy`, `go vet`                    | pre-commit   | `pre-commit` job                 |
-| `go test -race`                                                  | pre-push     | `test` job                       |
-| [golangci-lint](https://golangci-lint.run) (v2, `.golangci.yml`) | pre-commit   | `pre-commit` job                 |
-| [aligo](https://github.com/essentialkaos/aligo) struct alignment | pre-commit   | `pre-commit` job                 |
-| [govulncheck](https://go.dev/blog/govulncheck)                   | pre-push     | `test` job, and again on release |
-| [actionlint](https://github.com/rhysd/actionlint)                | pre-commit   | `pre-commit` job                 |
-| [zizmor](https://docs.zizmor.sh) workflow audit                  | pre-commit   | `pre-commit` job                 |
-
-CI is two jobs. `test` builds and tests; `pre-commit` runs the hooks above
-through [prek](https://prek.j178.dev), at the versions `.pre-commit-config.yaml`
-pins — so the linters run once, from one definition, instead of being
-re-declared as workflow steps with a second set of version pins.
-
-The Go toolchain hooks come from
-[jmelahman/go-pre-commit-hooks](https://github.com/jmelahman/go-pre-commit-hooks),
-and the third-party tools are `language: golang` (or, for zizmor,
-`language: python`) hooks with pinned `additional_dependencies`. Nothing in `.pre-commit-config.yaml` needs a
-system install: the hook framework provisions Go and every tool. Clone,
-`prek install`, commit.
-
-**Monorepo-friendly test running**
-
-One script, `scripts/modules.sh`. With no arguments it prints every Go
-module in the repo — the `use` directives of `go.work` when there is a
-workspace, otherwise every `go.mod` in the tree. With arguments it runs that
-command in each of them:
+## Install
 
 ```sh
-scripts/modules.sh                # .
-scripts/modules.sh go test ./...  # in every module, reporting the first failure
+go install github.com/jmelahman/vinder@latest
+# or, from npm, as a prebuilt binary
+bun add -d vinder       # npm install -D vinder, pnpm add -D vinder
 ```
 
-That loop is what makes the lint hooks and the CI steps multi-module-correct.
-It is not optional dressing: Go's own `./...` does not span a workspace.
-From a workspace root that is not itself a module, `go vet ./...` and
-`go test ./...` fail outright (`directory prefix . does not contain modules
-listed in go.work`), and from a module root they silently skip the nested
-modules. Per-module invocation is the only thing that covers everything.
+The npm package runs the binary for the platform from an optional
+dependency (`vinder-linux-x64` and so on), the way esbuild does, so it needs
+no install script and works with bun and pnpm, which skip them.
 
-A repo with one `go.mod` gets a list of one and behaves like a plain
-single-module repo, so nothing here needs to be unwound if you never add a
-second module.
+vinder bundles with [esbuild](https://esbuild.github.io), which is built
+in, and installs with the project's own package manager, which has to be on
+`PATH`. It supports bun, npm, [Nub](https://nubjs.com), pnpm and Yarn, and
+picks one the way corepack does: the `packageManager` field of package.json
+(or `devEngines.packageManager`), and otherwise whichever lockfile is
+present. Lockfiles from two package managers and no `packageManager` field
+is an error rather than a guess.
 
-**Release**
+## Usage
 
-`.goreleaser.yaml` builds the root package for linux/darwin/windows × amd64/arm64
-and stamps the version into `internal/version` with ldflags; `release.yml`
-runs it on a `v*.*.*` tag after a govulncheck audit.
+```sh
+vinder sync            # install, regenerate vendor/, update the lockfile
+vinder check           # fail if vendor/ differs from what the lockfile makes
+vinder check --all     # ...in any project, or if two vendor different versions
+vinder audit           # report OSV advisories for everything vendored
+vinder audit --all     # every project in the git repository
+vinder sync --align --all  # move projects onto one version of each shared package
+vinder upgrade --all   # bump to latest, re-resolve, align; prints a PR body
+```
 
-## Using this template
+Each command takes project directories as arguments (the current directory
+by default) or `--all`, which finds every `vinder.toml` in the enclosing git
+repository, skipping `node_modules` and hidden directories.
 
-1. Create a repo from this template (GitHub → "Use this template").
-2. Find-and-replace `github.com/jmelahman/golang-template` with your module
-   path (`go.mod`, the imports in `main.go` and `greeter/`,
-   `.goreleaser.yaml`). The binary takes its name from the module path, and
-   the CLI's usage text from the binary, so there is nothing else to rename.
-3. Pick a shape:
-   - **SDK / library**: delete `main.go`, `main_test.go`, `internal/version/`,
-     `.goreleaser.yaml` and `.github/workflows/release.yml`. Tagging is the
-     release. Keep the package comment and `example_test.go` — they are what
-     pkg.go.dev shows.
-   - **Application**: keep them, and configure a `release` environment in
-     the repo settings.
+- **sync** installs in the project without running lifecycle scripts
+  (`--ignore-scripts`, or `YARN_ENABLE_SCRIPTS=false` for Yarn 2+), builds
+  and copies every output, and writes `vendor/vinder.json`. It replaces only
+  the directories it owns (one per `[deps.<key>]`) and the manifest, and
+  removes the directory of a key that has been dropped from the config.
+  Anything else in `vendor/` is left alone.
+- **check** does the same from the lockfile alone (`--frozen-lockfile`,
+  `npm ci` or `yarn install --immutable`) into a temporary directory and
+  lists every file that is `modified`, `missing` or `extra`.
+  It exits 1 if there are any, so it catches hand edits, a config change
+  that was never synced, and a package.json bump without a lockfile update.
+  Given several projects (or `--all`), it also compares their manifests
+  and exits 1 if one package, vendored or bundled in, appears at more than
+  one version, listing which projects have which. Each project keeps its
+  own package.json and lockfile, so it still installs on its own; this is
+  what keeps them in step.
+- **audit** reads only the manifests, so it needs no install. It sends one
+  OSV batch query for every package in them and exits 1 if any has an
+  advisory that is not ignored.
+- **sync --align** syncs, then settles every package `check` would call
+  skewed. It picks the highest version vendored anywhere that satisfies
+  every range asked of the package: by each project's package.json and
+  overrides, and by every vendored package that depends on it. A project on
+  another version is moved to it, by its dependency spec if the package is
+  a direct dependency (keeping `^` or `~`), and otherwise by an override
+  (`overrides` for npm, bun and nub, `pnpm.overrides`, or Yarn's
+  `resolutions`), which `vinder.json` records under `aligned` as vinder's.
+  The changed projects are synced again. A package no one version satisfies
+  is reported and left alone.
+- **upgrade** is Dependabot for vendored dependencies. It raises each
+  direct dependency with a plain spec (`1.2.3`, `^1.2.3`, `~1.2.3`) to the
+  registry's latest release (`--registry`, npmjs.org by default), drops the
+  overrides an earlier alignment added, deletes the lockfile so every
+  transitive dependency resolves to the newest release its ranges allow,
+  syncs, and aligns. Ranges, tags and `file:`/git specs are left alone, as
+  are overrides you wrote. It prints what changed as Markdown. If a step
+  fails, package.json and the lockfile are put back.
 
-   The CLI uses the standard library's `flag`, so the template has no
-   third-party dependencies and no `go.sum`. That is the right default for
-   one command with a few flags. Reach for
-   [cobra](https://github.com/spf13/cobra) when you actually need
-   subcommands, shell completion or generated man pages — it costs six
-   modules (a markdown renderer among them) and about 1.2 MB of binary.
-   `run(args, stdout, stderr) error` maps onto cobra's `RunE` plus
-   `SetOut`/`SetErr`, so the switch stays confined to `main.go` and
-   `main_test.go` keeps working.
+### Scheduled upgrades
 
-4. Rename `greeter/` to your package (the directory name and the `package`
-   clause should match, so plain imports read well), replace this README with
-   your own, and update `LICENSE` with your name (or swap in a different
-   license).
-5. `prek install && prek run --all-files`.
+Dependabot can bump package.json and the lockfile but can't regenerate
+`vendor/`, so its PRs fail `vinder check`. Run `upgrade` from a workflow
+instead:
 
-### Growing into a monorepo
-
-Add the module, commit `go.work` and `go.work.sum` (the `.gitignore` entries
-are there for single-module repos — drop them), and add a `gomod` block to
-`.github/dependabot.yml` for the new directory. CI picks the module up on its
-own.
-
-Three hooks shell out to the toolchain from the repo root — `go-mod-tidy`,
-`go-vet` and `go-test` — and assume a `go.mod` there. None of them spans a
-workspace (see above), so replace each with a local hook that loops:
+A pull request opened with `GITHUB_TOKEN` doesn't trigger CI, so the
+workflow opens it as a GitHub App. `vinder github-app` creates one: it opens
+GitHub on an App manifest (contents and pull requests write), takes the
+credentials back, and stores the client ID as the `VINDER_APP_CLIENT_ID`
+variable and the private key as the `VINDER_APP_PRIVATE_KEY` secret of the
+repository (`--repo`, the `origin` remote by default) with `gh`. Then
+install the App on the repository from the page it prints. `--org` creates
+it under an organization, and `--no-secrets` writes the key to a file and
+prints the `gh` commands instead.
 
 ```yaml
-- id: go-mod-tidy
-  name: go mod tidy
-  entry: scripts/modules.sh go mod tidy
-  language: golang
-  types_or: [go, go-mod, go-sum]
-  pass_filenames: false
+on:
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2 # or the projects' package managers
+      - run: bunx vinder@latest upgrade --all > "$RUNNER_TEMP/body.md"
+      - uses: actions/create-github-app-token@v3
+        id: app
+        with:
+          client-id: ${{ vars.VINDER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.VINDER_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ steps.app.outputs.token }}
+          branch: vinder/upgrade
+          title: Upgrade vendored npm dependencies
+          body-path: ${{ runner.temp }}/body.md
 ```
+
+Leave the vinder projects out of `dependabot.yml`.
+
+### pre-commit
+
+To enforce this on commit with [pre-commit](https://pre-commit.com) or
+[prek](https://prek.j178.dev):
+
+```yaml
+repos:
+  - repo: https://github.com/jmelahman/vinder
+    rev: v0.1.0
+    hooks:
+      - id: vinder-check
+      - id: vinder-audit
+```
+
+`vinder-check` runs `check --all` on every commit; with the package
+manager's cache warm it takes a fraction of a second. `vinder-audit` runs
+`audit --all` only when a `vinder.json` or `vinder.toml` changes, since it
+goes to the network; run it on a schedule in CI to hear about new
+advisories. Both need the projects' package managers on `PATH`.
+`vinder-check-system` and `vinder-audit-system` use a vinder already on
+`PATH` instead of building one.
+
+## Configuration
+
+`vinder.toml` sits next to the project's package.json:
+
+```toml
+# out = "vendor"   # the default
+
+[deps.toastui-editor]                 # -> vendor/toastui-editor/
+package = "@toast-ui/editor"          # the package being vendored
+embeds  = ["dompurify@2.3.3"]         # code it inlines, for the audit
+
+[deps.toastui-editor.bundle]          # output = entry, built by esbuild
+"toastui-editor-all.min.js" = "./vendor.src/toastui-editor.js"
+"toastui-editor.min.css"    = "@toast-ui/editor/dist/toastui-editor.css"
+
+[deps.toastui-editor.copy]            # output = source, copied as is
+LICENSE = "./vendor.src/toastui-editor.LICENSE"
+
+[deps.toastui-editor.ignore]          # advisory ID or name@version = reason
+"dompurify@2.3.3" = "never runs: app.js replaces the sanitizer"
+```
+
+- A source or entry starting with `./` is a file in the project, and
+  anything else a path in `node_modules`.
+- `bundle` outputs are minified by esbuild for the browser: `.js` as an
+  IIFE, `.mjs` as an ES module, `.css` with its imports inlined and the
+  images and fonts its `url()`s name copied beside it under a content hash.
+  License comments are kept, at the end of the file. Bundling is how a
+  dependency gets smaller: the entry imports only what the project uses,
+  and the rest is tree-shaken away. An entry that should set a global does
+  so itself (`window.toastui = { Editor }`).
+- To change a dependency's code, patch it with the package manager
+  (`bun patch`, `pnpm patch`, `nub patch`, `yarn patch`, or
+  [patch-package](https://github.com/ds300/patch-package) with npm, which
+  needs its postinstall script run by hand as vinder skips scripts). The
+  patch is applied on install, so the change survives upgrades or
+  fails loudly when it no longer applies. Don't edit `vendor/`: `check`
+  will flag it.
+- `overrides` in package.json pins a transitive dependency, for instance
+  one a newer release broke.
+
+### What the audit covers
+
+`vendor/vinder.json` records, for each dependency, the packages whose code
+is actually in its files: the package itself, every package esbuild's metafile
+says a bundle pulled in, and `embeds`. A package that is in the lockfile but
+tree-shaken out of every bundle is not audited, because none of its code
+ships.
+
+`embeds` exists because some packages inline other packages in their own
+dist files, and no lockfile can see that. `@toast-ui/editor`, for example,
+ships its own copy of DOMPurify 2.3.3 whatever version the lockfile resolves.
+Finding these takes reading the dist files: version strings and license
+banners are the usual clues.
+
+An `ignore` entry needs a reason. A `name@version` key covers every
+advisory for that version, including ones published later. An ID covers
+just that advisory.
 
 ## Develop
 
 ```sh
-go test ./...                             # or scripts/modules.sh go test ./...
-go run . -greeting Howdy gopher           # HOWDY, GOPHER! with -shout
-prek run --all-files                      # everything CI runs, minus pre-push hooks
+go test -race ./...                        # under each package manager on PATH
+prek run --all-files                       # lint, as CI runs it
 prek run --all-files --hook-stage pre-push
 ```
-
-Tool versions live in `.pre-commit-config.yaml` (`additional_dependencies`),
-which CI reuses — the one exception is govulncheck, pinned again in
-`test.yml` and `release.yml` because those run it outside the hooks. Bump
-those three together; Dependabot sees none of them.
-
-Tool provenance: the Go tools pin a version and let the module checksum
-database verify the bytes; actionlint and zizmor come from their upstream
-hook repos pinned to a git SHA, which is a hash by construction. What a SHA
-pin does _not_ cover is the wheel zizmor's hook installs from PyPI — that is
-resolved by version, like any other Python dependency. Pinning those five
-per-platform wheels by `#sha256` is possible and this template used to do
-it, but it has to be redone by hand on every bump and nothing warns you when
-it drifts; upstream's repo is bumped by `prek auto-update` instead.

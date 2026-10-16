@@ -58,6 +58,27 @@ repos:
     hooks:
       - id: git-orchard-sync
 
+  # Vendored npm dependencies: every vendor/ matches its lockfile, projects
+  # agree on versions, and what is vendored has no unignored advisories. Run
+  # from source (go.work) rather than vinder's .pre-commit-hooks.yaml so the
+  # monorepo always enforces the vinder it contains. check installs with each
+  # project's package manager: `language: bun` has prek provision the one
+  # text-editor uses, and go still comes from PATH.
+  - repo: local
+    hooks:
+      - id: vinder-check
+        name: vinder check
+        entry: go run ./vinder check --all
+        language: bun
+        always_run: true
+        pass_filenames: false
+      - id: vinder-audit
+        name: vinder audit
+        entry: go run ./vinder audit --all
+        language: system
+        files: (^|/)vinder\.(json|toml)$
+        pass_filenames: false
+
   - repo: https://github.com/sirwart/ripsecrets
     rev: 7d94620933e79b8acaa0cd9e60e9864b07673d86 # frozen: v0.1.11
     hooks:

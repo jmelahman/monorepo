@@ -1,3 +1,4 @@
 # Local planning artifacts
 plans/
 .playwright-mcp/
+node_modules/

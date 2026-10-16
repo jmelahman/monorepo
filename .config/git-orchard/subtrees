@@ -182,3 +182,8 @@
 [subtree "text-editor"]
 	remote = git@github.com:jmelahman/write
 	branch = master
+[subtree "vinder"]
+	remote = git@github.com:jmelahman/vinder.git
+	branch = master
+	shared = goreleaser
+	shared = npm

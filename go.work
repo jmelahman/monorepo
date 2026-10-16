@@ -19,5 +19,6 @@ use (
 	./templates/fullstack-template
 	./templates/golang-template
 	./typesafe-sdk-go
+	./vinder
 	./work
 )

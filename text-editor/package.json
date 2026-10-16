@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "dependencies": {
+    "@toast-ui/editor": "3.2.2"
+  },
+  "overrides": {
+    "prosemirror-model": "1.19.0"
+  }
+}

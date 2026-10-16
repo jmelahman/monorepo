@@ -1,0 +1,19 @@
+# Vendored with vinder (../vinder): package.json pins the versions, this file
+# says what goes into vendor/. Regenerate with `vinder sync`.
+
+[deps.toastui-editor]
+package = "@toast-ui/editor"
+# Every toastui build inlines its own copy of DOMPurify, invisible to bun.lock.
+embeds = ["dompurify@2.3.3"]
+
+[deps.toastui-editor.ignore]
+"dompurify@2.3.3" = "never runs: app.js replaces the bundled sanitizer with customHTMLSanitizer"
+
+[deps.toastui-editor.bundle]
+"toastui-editor-all.min.js" = "./vendor.src/toastui-editor.js"
+"toastui-editor.min.css" = "@toast-ui/editor/dist/toastui-editor.css"
+"toastui-editor-dark.min.css" = "@toast-ui/editor/dist/theme/toastui-editor-dark.css"
+
+[deps.toastui-editor.copy]
+# The npm package ships no license file; this is the one from its repository.
+LICENSE = "./vendor.src/toastui-editor.LICENSE"

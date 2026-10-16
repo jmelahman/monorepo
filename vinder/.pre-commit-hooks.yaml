@@ -1,0 +1,54 @@
+# Hooks this repo exposes to other repos, so a project that vendors with
+# vinder can enforce it on commit:
+#
+#   repos:
+#     - repo: https://github.com/jmelahman/vinder
+#       rev: v0.1.0
+#       hooks:
+#         - id: vinder-check
+#         - id: vinder-audit
+#
+# Both need the projects' package managers on PATH; bundling is built in.
+# They take every project in the git repository (`--all`), so check also
+# catches version skew between them.
+
+- id: vinder-check
+  name: vinder check
+  description: Fail if a vendor directory differs from what its lockfile generates, or projects vendor different versions of a package.
+  entry: vinder check --all
+  language: golang
+  # A vendor directory and its sources can sit anywhere the config says, so
+  # rather than guess which paths matter this runs on every commit. With the
+  # package manager's cache warm it takes a fraction of a second; a cold
+  # cache fetches from the registry once.
+  always_run: true
+  pass_filenames: false
+  minimum_pre_commit_version: "3.0.0"
+
+- id: vinder-audit
+  name: vinder audit
+  description: Fail if a vendored package has an OSV advisory that vinder.toml does not ignore.
+  entry: vinder audit --all
+  language: golang
+  # Queries api.osv.dev, so it runs only when what is vendored, or what is
+  # ignored, changes. New advisories against an unchanged tree are for CI to
+  # find: run `vinder audit --all` on a schedule.
+  files: (^|/)vinder\.(json|toml)$
+  pass_filenames: false
+  minimum_pre_commit_version: "3.0.0"
+
+- id: vinder-check-system
+  name: vinder check (from PATH)
+  description: Same as vinder-check, using a vinder binary already installed on PATH.
+  entry: vinder check --all
+  language: system
+  always_run: true
+  pass_filenames: false
+
+- id: vinder-audit-system
+  name: vinder audit (from PATH)
+  description: Same as vinder-audit, using a vinder binary already installed on PATH.
+  entry: vinder audit --all
+  language: system
+  files: (^|/)vinder\.(json|toml)$
+  pass_filenames: false
