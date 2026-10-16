@@ -12,7 +12,11 @@
 //   node .github/npm/pack.mjs
 //
 // writes dist/npm/platforms/<name>-<os>-<cpu>/ and dist/npm/main/, to be
-// published in that order. The package name is GoReleaser's project name.
+// published in that order. The package name is GoReleaser's project name,
+// and the platform packages are @<owner>/<name>-<os>-<cpu>, scoped to the
+// GitHub repository's owner like @esbuild/linux-x64: nobody installs them
+// directly, so they stay out of npm's global namespace. GITHUB_REPOSITORY
+// (owner/repo), which Actions sets, names the owner.
 // Fields in .github/npm/package.json (description, keywords, homepage, ...)
 // are merged into the main package's package.json.
 
@@ -42,9 +46,13 @@ if (names.size !== 1) {
 const [bin] = names;
 
 // Provenance requires repository.url to match the repository publishing.
-const repository = process.env.GITHUB_REPOSITORY
-  ? { type: "git", url: `git+https://github.com/${process.env.GITHUB_REPOSITORY}.git` }
-  : undefined;
+const repo = process.env.GITHUB_REPOSITORY ?? "";
+const [owner] = repo.split("/");
+if (!owner) {
+  throw new Error("GITHUB_REPOSITORY is not set; set it to the repository's owner/name");
+}
+const scope = `@${owner.toLowerCase()}`;
+const repository = { type: "git", url: `git+https://github.com/${repo}.git` };
 const overlay = existsSync(".github/npm/package.json") ? readJSON(".github/npm/package.json") : {};
 const license = overlay.license;
 const extras = ["LICENSE", "README.md"].filter((f) => existsSync(f));
@@ -59,13 +67,13 @@ for (const a of binaries) {
     console.warn(`skipping ${a.goos}/${a.goarch}: no npm equivalent`);
     continue;
   }
-  const pkg = `${name}-${os}-${cpu}`;
+  const pkg = `${scope}/${name}-${os}-${cpu}`;
   if (platforms[`${os}-${cpu}`]) {
     throw new Error(`two binaries for ${os}-${cpu}`);
   }
   platforms[`${os}-${cpu}`] = pkg;
 
-  const dir = join(out, "platforms", pkg);
+  const dir = join(out, "platforms", `${name}-${os}-${cpu}`);
   mkdirSync(join(dir, "bin"), { recursive: true });
   const exe = join(dir, "bin", bin + (os === "win32" ? ".exe" : ""));
   copyFileSync(a.path, exe);
@@ -76,7 +84,7 @@ for (const a of binaries) {
     version,
     description: `The ${os}-${cpu} binary for ${name}.`,
     ...(license && { license }),
-    ...(repository && { repository }),
+    repository,
     os: [os],
     cpu: [cpu],
     // Yarn's Plug'n'Play would otherwise leave the binary in a zip, where
@@ -127,7 +135,7 @@ writeJSON(join(main, "package.json"), {
   name,
   version,
   ...overlay,
-  ...(repository && { repository }),
+  repository,
   bin: { [bin]: `bin/${bin}.js` },
   optionalDependencies: Object.fromEntries(Object.values(platforms).sort().map((p) => [p, version])),
 });

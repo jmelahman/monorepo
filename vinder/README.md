@@ -19,8 +19,8 @@ bun add -d vinder       # npm install -D vinder, pnpm add -D vinder
 ```
 
 The npm package runs the binary for the platform from an optional
-dependency (`vinder-linux-x64` and so on), the way esbuild does, so it needs
-no install script and works with bun and pnpm, which skip them.
+dependency (`@jmelahman/vinder-linux-x64` and so on), the way esbuild does,
+so it needs no install script and works with bun and pnpm, which skip them.
 
 vinder bundles with [esbuild](https://esbuild.github.io), which is built
 in, and installs with the project's own package manager, which has to be on

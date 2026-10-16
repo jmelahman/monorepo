@@ -104,10 +104,10 @@ jobs:
           name: npm-tarballs
           path: dist
       # The platform packages go first, so the main package never names one
-      # that isn't there, and versions already published are skipped, so a
-      # failed run can be re-run. Trusted publishing needs no token, but can
-      # only be set up for a package that exists: until it is, NPM_TOKEN
-      # publishes.
+      # that isn't there, and versions already published, or staged for a
+      # maintainer to approve on npmjs.com, are skipped, so a failed run can
+      # be re-run. Trusted publishing needs no token, but can only be set up
+      # for a package that exists: until it is, NPM_TOKEN publishes.
       - run: |
           for tgz in dist/platforms/*.tgz dist/*.tgz; do
             spec=$(tar -xOzf "$tgz" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0)); p.name + "@" + p.version')
@@ -115,7 +115,15 @@ jobs:
               echo "$spec is already published"
               continue
             fi
-            npm publish "$tgz" --provenance --access public
+            if ! out=$(npm publish "$tgz" --provenance --access public 2>&1); then
+              echo "$out"
+              if grep -q "previously staged" <<< "$out"; then
+                echo "::warning::$spec is staged; approve it on npmjs.com"
+                continue
+              fi
+              exit 1
+            fi
+            echo "$out"
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
