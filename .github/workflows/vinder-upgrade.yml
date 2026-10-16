@@ -29,48 +29,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
-        with:
-          go-version-file: go.work
-          cache-dependency-path: go.work.sum
       # Each project's own package manager installs its dependencies; bun is
       # text-editor's. A project on another one needs it set up here too.
       - name: Set up Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.4.3"
+      # Builds vinder from its own source at this ref, runs `upgrade --all`
+      # and `audit --all` (advisories go in the PR rather than failing it),
+      # and opens the PR as the App `vinder github-app` created: one opened
+      # with GITHUB_TOKEN would not trigger the pre-commit checks. Keep it on
+      # the release the pre-commit hooks pin, in .pre-commit-config.yaml.
       - name: Upgrade
-        run: go run ./vinder upgrade --all > "$RUNNER_TEMP/body.md"
-      # An advisory against what the upgrade landed on goes in the PR
-      # rather than stopping it; the PR is where it gets fixed.
-      - name: Audit
-        run: |
-          if ! go run ./vinder audit --all > "$RUNNER_TEMP/audit.txt" 2>&1; then
-            {
-              printf '\n### Audit\n\n```\n'
-              cat "$RUNNER_TEMP/audit.txt"
-              printf '```\n'
-            } >> "$RUNNER_TEMP/body.md"
-          fi
-      # A PR opened with GITHUB_TOKEN does not trigger other workflows, so
-      # the pre-commit checks would never run on it; one opened as an App
-      # does. `vinder github-app` creates the App and stores these.
-      - id: app
-        name: Mint App token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        uses: jmelahman/vinder@v0.1.4
         with:
-          client-id: ${{ vars.VINDER_APP_CLIENT_ID }}
-          private-key: ${{ secrets.VINDER_APP_PRIVATE_KEY }}
-          permission-contents: write
-          permission-pull-requests: write
-      - name: Open pull request
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          token: ${{ steps.app.outputs.token }}
-          branch: vinder/upgrade
-          delete-branch: true
-          title: Upgrade vendored npm dependencies
-          commit-message: Upgrade vendored npm dependencies
-          body-path: ${{ runner.temp }}/body.md
-          labels: dependencies
+          app-client-id: ${{ vars.VINDER_APP_CLIENT_ID }}
+          app-private-key: ${{ secrets.VINDER_APP_PRIVATE_KEY }}

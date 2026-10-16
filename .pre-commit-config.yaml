@@ -59,23 +59,25 @@ repos:
       - id: git-orchard-sync
 
   # Vendored npm dependencies: every vendor/ matches its lockfile, projects
-  # agree on versions, and what is vendored has no unignored advisories. Run
-  # from source (go.work) rather than vinder's .pre-commit-hooks.yaml so the
-  # monorepo always enforces the vinder it contains. check installs with each
+  # agree on versions, and what is vendored has no unignored advisories.
+  # vinder is the npm release; .github/workflows/vinder-upgrade.yml uses the
+  # same release's action, so bump both together. check installs with each
   # project's package manager: `language: bun` has prek provision the one
-  # text-editor uses, and go still comes from PATH.
+  # text-editor uses.
   - repo: local
     hooks:
       - id: vinder-check
         name: vinder check
-        entry: go run ./vinder check --all
+        entry: vinder check --all
         language: bun
+        additional_dependencies: ["vinder@0.1.3"]
         always_run: true
         pass_filenames: false
       - id: vinder-audit
         name: vinder audit
-        entry: go run ./vinder audit --all
-        language: system
+        entry: vinder audit --all
+        language: bun
+        additional_dependencies: ["vinder@0.1.3"]
         files: (^|/)vinder\.(json|toml)$
         pass_filenames: false
 

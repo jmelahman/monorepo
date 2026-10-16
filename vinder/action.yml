@@ -1,0 +1,140 @@
+name: vinder upgrade
+description: Dependabot for vendored npm dependencies. Upgrade them with vinder, regenerate vendor/, and open a pull request.
+author: jmelahman
+branding:
+  icon: package
+  color: blue
+
+inputs:
+  app-client-id:
+    description: >-
+      Client ID of a GitHub App installed on this repository, as created by
+      `vinder github-app`. The action mints a token from it, so the pull
+      request triggers the repository's other workflows, which one opened
+      with GITHUB_TOKEN does not.
+    required: false
+  app-private-key:
+    description: Private key of the App.
+    required: false
+  token:
+    description: >-
+      Instead of an App, a token that can push a branch and open pull
+      requests, e.g. a fine-grained token with "Contents" and "Pull requests"
+      read and write.
+    required: false
+  directories:
+    description: >-
+      Whitespace-separated project directories to upgrade. Empty upgrades
+      every project in the repository (`--all`).
+    required: false
+    default: ""
+  audit:
+    description: >-
+      Run `vinder audit` after upgrading and append any advisories to the
+      pull request rather than failing.
+    required: false
+    default: "true"
+  branch:
+    description: Branch the pull request is opened from.
+    required: false
+    default: vinder/upgrade
+  title:
+    description: Title of the pull request, and its commit message.
+    required: false
+    default: Upgrade vendored npm dependencies
+  labels:
+    description: Comma- or newline-separated labels for the pull request.
+    required: false
+    default: dependencies
+
+outputs:
+  pull-request-number:
+    description: Number of the pull request opened or updated, if any.
+    value: ${{ steps.pr.outputs.pull-request-number }}
+  pull-request-url:
+    description: URL of the pull request opened or updated, if any.
+    value: ${{ steps.pr.outputs.pull-request-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check inputs
+      shell: bash
+      run: |
+        if [ -n "$TOKEN" ] && [ -n "$APP_CLIENT_ID$APP_PRIVATE_KEY" ]; then
+          echo "::error::pass either token or app-client-id and app-private-key, not both"
+          exit 1
+        fi
+        if [ -z "$TOKEN" ] && { [ -z "$APP_CLIENT_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; }; then
+          echo "::error::pass app-client-id and app-private-key (see vinder github-app), or token"
+          exit 1
+        fi
+      env:
+        TOKEN: ${{ inputs.token }}
+        APP_CLIENT_ID: ${{ inputs.app-client-id }}
+        APP_PRIVATE_KEY: ${{ inputs.app-private-key }}
+
+    # Built from the action's own source, so the CLI is always the version
+    # the action is pinned to.
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+        cache: false
+    - name: Build vinder
+      shell: bash
+      run: go build -C "$GITHUB_ACTION_PATH" -o "$RUNNER_TEMP/vinder" .
+      env:
+        GOWORK: "off"
+        GOFLAGS: -mod=readonly
+
+    # The projects' package managers install their dependencies, so they
+    # have to be set up before this action.
+    - name: Upgrade
+      shell: bash
+      run: |
+        read -ra dirs <<< "$DIRECTORIES"
+        if [ "${#dirs[@]}" -eq 0 ]; then
+          dirs=(--all)
+        fi
+        "$RUNNER_TEMP/vinder" upgrade "${dirs[@]}" > "$RUNNER_TEMP/vinder-body.md"
+      env:
+        DIRECTORIES: ${{ inputs.directories }}
+    # An advisory against what the upgrade landed on goes in the pull
+    # request rather than stopping it; the pull request is where it gets
+    # fixed.
+    - name: Audit
+      if: ${{ inputs.audit == 'true' }}
+      shell: bash
+      run: |
+        read -ra dirs <<< "$DIRECTORIES"
+        if [ "${#dirs[@]}" -eq 0 ]; then
+          dirs=(--all)
+        fi
+        if ! "$RUNNER_TEMP/vinder" audit "${dirs[@]}" > "$RUNNER_TEMP/vinder-audit.txt" 2>&1; then
+          {
+            printf '\n### Audit\n\n```\n'
+            cat "$RUNNER_TEMP/vinder-audit.txt"
+            printf '```\n'
+          } >> "$RUNNER_TEMP/vinder-body.md"
+        fi
+      env:
+        DIRECTORIES: ${{ inputs.directories }}
+
+    - id: app
+      if: ${{ inputs.app-client-id != '' }}
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+      with:
+        client-id: ${{ inputs.app-client-id }}
+        private-key: ${{ inputs.app-private-key }}
+        permission-contents: write
+        permission-pull-requests: write
+    - id: pr
+      uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1
+      with:
+        token: ${{ steps.app.outputs.token || inputs.token }}
+        branch: ${{ inputs.branch }}
+        delete-branch: true
+        title: ${{ inputs.title }}
+        commit-message: ${{ inputs.title }}
+        body-path: ${{ runner.temp }}/vinder-body.md
+        labels: ${{ inputs.labels }}

@@ -87,11 +87,13 @@ repository, skipping `node_modules` and hidden directories.
 ### Scheduled upgrades
 
 Dependabot can bump package.json and the lockfile but can't regenerate
-`vendor/`, so its PRs fail `vinder check`. Run `upgrade` from a workflow
-instead:
+`vendor/`, so its PRs fail `vinder check`. The vinder GitHub Action does
+its job instead: it builds vinder from its own source, runs `upgrade`, runs
+`audit` and adds any advisories to the PR body rather than failing, and
+opens or updates the pull request.
 
 A pull request opened with `GITHUB_TOKEN` doesn't trigger CI, so the
-workflow opens it as a GitHub App. `vinder github-app` creates one: it opens
+action opens it as a GitHub App. `vinder github-app` creates one: it opens
 GitHub on an App manifest (contents and pull requests write), takes the
 credentials back, and stores the client ID as the `VINDER_APP_CLIENT_ID`
 variable and the private key as the `VINDER_APP_PRIVATE_KEY` secret of the
@@ -116,23 +118,19 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2 # or the projects' package managers
-      - run: bunx vinder@latest upgrade --all > "$RUNNER_TEMP/body.md"
-      - uses: actions/create-github-app-token@v3
-        id: app
+      - uses: jmelahman/vinder@v0.1.4
         with:
-          client-id: ${{ vars.VINDER_APP_CLIENT_ID }}
-          private-key: ${{ secrets.VINDER_APP_PRIVATE_KEY }}
-          permission-contents: write
-          permission-pull-requests: write
-      - uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ steps.app.outputs.token }}
-          branch: vinder/upgrade
-          title: Upgrade vendored npm dependencies
-          body-path: ${{ runner.temp }}/body.md
+          app-client-id: ${{ vars.VINDER_APP_CLIENT_ID }}
+          app-private-key: ${{ secrets.VINDER_APP_PRIVATE_KEY }}
 ```
 
-Leave the vinder projects out of `dependabot.yml`.
+The projects' package managers have to be set up first. `token` takes the
+place of the App with a token that can push and open pull requests;
+`directories` limits the upgrade to some projects (every one by default);
+`audit: false` skips the audit; and `branch`, `title` and `labels` shape the
+pull request (`vinder/upgrade`, "Upgrade vendored npm dependencies",
+`dependencies`). The `pull-request-number` and `pull-request-url` outputs
+name what it opened. Leave the vinder projects out of `dependabot.yml`.
 
 ### pre-commit
 

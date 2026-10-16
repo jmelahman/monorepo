@@ -34,6 +34,8 @@ against OSV. README.md documents the config and commands.
 - `internal/osv/` — the OSV batch query client.
 - `githubapp.go`, `internal/githubapp/` — `vinder github-app`: creates the
   GitHub App the scheduled upgrade workflow opens PRs as, from a manifest.
+- `action.yml` — the GitHub Action for scheduled upgrades: builds vinder
+  from the action's source, runs upgrade and audit, opens the PR.
 - `.github/npm/package.json` — fields for the npm package. The packing
   script beside it and the release jobs are git-orchard's shared `npm`
   profile; edit those in the monorepo.
