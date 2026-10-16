@@ -32,7 +32,7 @@ jobs:
           go-version-file: go.work
           cache-dependency-path: go.work.sum
       - name: Run prek hooks
-        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
+        uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204
         with:
           prek-version: "0.5.4"
           extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
