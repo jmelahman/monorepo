@@ -79,6 +79,11 @@ func (p *Project) Upgrade(ctx context.Context, latest func(ctx context.Context, 
 	}
 
 	aligned, err := p.aligned(pm)
+	if errors.Is(err, ErrBadManifest) {
+		// Upgrade regenerates the manifest; without it, the aligned
+		// overrides count as the project's own.
+		aligned, err = nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

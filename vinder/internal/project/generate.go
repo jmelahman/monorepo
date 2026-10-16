@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -42,6 +43,11 @@ type Manifest struct {
 	Aligned map[string]string `json:"aligned,omitempty"`
 }
 
+// ErrBadManifest is returned by ReadManifest for a vinder.json that does not
+// parse, such as one left with merge conflict markers. Sync and upgrade
+// regenerate it; everything else fails on it.
+var ErrBadManifest = errors.New("invalid " + ManifestFile + "; run vinder sync to regenerate it")
+
 // ReadManifest reads a vinder.json.
 func ReadManifest(file string) (*Manifest, error) {
 	data, err := os.ReadFile(file)
@@ -50,7 +56,7 @@ func ReadManifest(file string) (*Manifest, error) {
 	}
 	var m Manifest
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
+		return nil, fmt.Errorf("%s: %w: %w", file, ErrBadManifest, err)
 	}
 	return &m, nil
 }
@@ -65,6 +71,11 @@ func (p *Project) Generate(ctx context.Context, dest string, frozen bool) (*Mani
 		return nil, err
 	}
 	aligned, err := p.aligned(pm)
+	if errors.Is(err, ErrBadManifest) && !frozen {
+		// The manifest being regenerated is what records the alignment;
+		// without it, the aligned overrides count as the project's own.
+		aligned, err = nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +97,10 @@ func (p *Project) Generate(ctx context.Context, dest string, frozen bool) (*Mani
 		dep := p.Config.Deps[key]
 		depDir := filepath.Join(dest, key)
 		top, err := readPackage(filepath.Join(p.Dir, "node_modules", filepath.FromSlash(dep.Package)))
-		if err != nil || top == nil {
+		if err != nil {
+			return nil, fmt.Errorf("deps.%s: %w", key, err)
+		}
+		if top == nil {
 			return nil, fmt.Errorf("deps.%s: package %s is not installed; is it in package.json?", key, dep.Package)
 		}
 		p.addRequires(top)
@@ -103,7 +117,7 @@ func (p *Project) Generate(ctx context.Context, dest string, frozen bool) (*Mani
 				if err != nil {
 					return nil, err
 				}
-				if owner != nil {
+				if owner != nil && !includes[owner.Package] {
 					p.addRequires(owner)
 					includes[owner.Package] = true
 				}
@@ -137,7 +151,10 @@ func (p *Project) Generate(ctx context.Context, dest string, frozen bool) (*Mani
 			includes[pkg] = true
 		}
 
+		// A bundle can emit an asset that another bundle, or a copy,
+		// also writes.
 		sort.Strings(files)
+		files = slices.Compact(files)
 		m.Deps[key] = Entry{Package: top.Name, Version: top.Version, Files: files, Includes: sortedPackages(includes)}
 	}
 

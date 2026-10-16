@@ -41,6 +41,8 @@ ignore = { "dompurify@2.3.3" = "never called" }
 		{name: "escaping output", config: "[deps.x]\npackage = \"x\"\ncopy = { \"../a\" = \"x/a\" }\n", wantErr: project.ErrBadConfig},
 		{name: "escaping source", config: "[deps.x]\npackage = \"x\"\ncopy = { a = \"./../a\" }\n", wantErr: project.ErrBadConfig},
 		{name: "escaping out", config: "out = \"../v\"\n[deps.x]\npackage = \"x\"\ncopy = { a = \"x/a\" }\n", wantErr: project.ErrBadConfig},
+		{name: "root out", config: "out = \".\"\n[deps.src]\npackage = \"x\"\ncopy = { a = \"x/a\" }\n", wantErr: project.ErrBadConfig},
+		{name: "root out via ..", config: "out = \"src/..\"\n[deps.src]\npackage = \"x\"\ncopy = { a = \"x/a\" }\n", wantErr: project.ErrBadConfig},
 		{name: "bad bundle extension", config: "[deps.x]\npackage = \"x\"\nbundle = { a.txt = \"x/a\" }\n", wantErr: project.ErrBadConfig},
 		{name: "output both bundled and copied", config: "[deps.x]\npackage = \"x\"\nbundle = { \"a.js\" = \"x/a\" }\ncopy = { \"a.js\" = \"x/a\" }\n", wantErr: project.ErrBadConfig},
 		{name: "bad embed", config: "[deps.x]\npackage = \"x\"\ncopy = { a = \"x/a\" }\nembeds = [\"dompurify\"]\n", wantErr: project.ErrBadConfig},

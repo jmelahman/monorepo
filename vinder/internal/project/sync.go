@@ -50,7 +50,11 @@ func (p *Project) Sync(ctx context.Context) error {
 			return err
 		}
 	}
-	return os.Rename(filepath.Join(gen, ManifestFile), filepath.Join(out, ManifestFile))
+	if err := os.Rename(filepath.Join(gen, ManifestFile), filepath.Join(out, ManifestFile)); err != nil {
+		return err
+	}
+	p.synced = true
+	return nil
 }
 
 // Check regenerates the vendor tree from the locked versions and compares it
@@ -116,7 +120,9 @@ func (p *Project) Check(ctx context.Context) ([]string, error) {
 }
 
 // staleKeys are the keys in the manifest on disk that the config no longer
-// has.
+// has. Keys that do not name a directory under the output directory are
+// dropped: the manifest is a committed file, and sync removes what this
+// returns.
 func (p *Project) staleKeys() []string {
 	old, err := ReadManifest(filepath.Join(p.OutDir(), ManifestFile))
 	if err != nil {
@@ -124,7 +130,7 @@ func (p *Project) staleKeys() []string {
 	}
 	var stale []string
 	for key := range old.Deps {
-		if _, ok := p.Config.Deps[key]; !ok {
+		if _, ok := p.Config.Deps[key]; !ok && validKey(key) {
 			stale = append(stale, key)
 		}
 	}

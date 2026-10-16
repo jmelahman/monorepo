@@ -65,6 +65,9 @@ type Project struct {
 	pm     *PackageManager
 	Config Config
 	Dir    string
+	// synced is set once Sync has run, leaving the vendor tree on disk and
+	// requires current.
+	synced bool
 }
 
 // Load reads and validates the vinder.toml in dir.
@@ -115,15 +118,23 @@ func (p *Project) Keys() []string {
 	return keys
 }
 
+// validKey reports whether key names a directory directly under the output
+// directory, which is all vinder may create or remove there.
+func validKey(key string) bool {
+	return key != "" && key != "." && key != ".." && !strings.ContainsAny(key, `/\`) && key != ManifestFile
+}
+
 func (c *Config) validate() error {
-	if !filepath.IsLocal(filepath.FromSlash(c.Out)) {
-		return fmt.Errorf("out %q must be a path inside the project", c.Out)
+	// vinder replaces <out>/<key>/ wholesale, so out must be a directory
+	// of its own rather than the project root.
+	if !filepath.IsLocal(filepath.FromSlash(c.Out)) || path.Clean(c.Out) == "." {
+		return fmt.Errorf("out %q must be a directory inside the project", c.Out)
 	}
 	if len(c.Deps) == 0 {
 		return errors.New("no [deps] entries")
 	}
 	for key, dep := range c.Deps {
-		if key == "" || key == "." || key == ".." || strings.ContainsAny(key, `/\`) || key == ManifestFile {
+		if !validKey(key) {
 			return fmt.Errorf("deps.%s: key must be a plain directory name", key)
 		}
 		if dep.Package == "" {

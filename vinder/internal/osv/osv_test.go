@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/jmelahman/vinder/internal/osv"
@@ -65,5 +66,67 @@ func TestQueryBatch(t *testing.T) {
 				t.Errorf("request queries = %+v", q)
 			}
 		})
+	}
+}
+
+func TestQueryBatchSplitsAndPages(t *testing.T) {
+	t.Parallel()
+
+	// Every query's first page names its package and points at a second
+	// page; the second names the package again.
+	var sizes []int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Queries []struct {
+				Package struct {
+					Name string `json:"name"`
+				} `json:"package"`
+				PageToken string `json:"page_token"`
+			} `json:"queries"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("decoding request: %v", err)
+		}
+		sizes = append(sizes, len(req.Queries))
+		type vuln struct {
+			ID string `json:"id"`
+		}
+		type result struct {
+			NextPageToken string `json:"next_page_token,omitempty"`
+			Vulns         []vuln `json:"vulns"`
+		}
+		var res struct {
+			Results []result `json:"results"`
+		}
+		for _, q := range req.Queries {
+			if q.PageToken == "" {
+				res.Results = append(res.Results, result{NextPageToken: "p2", Vulns: []vuln{{q.Package.Name + "-1"}}})
+			} else {
+				res.Results = append(res.Results, result{Vulns: []vuln{{q.Package.Name + "-2"}}})
+			}
+		}
+		if err := json.NewEncoder(w).Encode(res); err != nil {
+			t.Error(err)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	pkgs := make([]osv.Package, 1500)
+	for i := range pkgs {
+		pkgs[i] = osv.Package{Name: strconv.Itoa(i), Version: "1.0.0"}
+	}
+	ids, err := (&osv.Client{URL: srv.URL}).QueryBatch(context.Background(), pkgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 1000 first pages, then the other 500 first pages with the first
+	// 500 second pages, then the last 1000 second pages.
+	if want := []int{1000, 1000, 1000}; !reflect.DeepEqual(sizes, want) {
+		t.Errorf("batch sizes = %v, want %v", sizes, want)
+	}
+	for i, got := range ids {
+		if want := []string{strconv.Itoa(i) + "-1", strconv.Itoa(i) + "-2"}; !reflect.DeepEqual(got, want) {
+			t.Fatalf("ids[%d] = %q, want %q", i, got, want)
+		}
 	}
 }

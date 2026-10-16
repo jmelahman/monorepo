@@ -80,7 +80,7 @@ func (f *File) Strings(path ...string) map[string]string {
 // SetString sets the string at path, creating the objects along it as
 // needed. A new key goes at the end of its object.
 func (f *File) SetString(value string, path ...string) error {
-	raw, err := json.Marshal(value)
+	raw, err := marshalString(value)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func (o *object) marshal() ([]byte, error) {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		key, err := json.Marshal(k)
+		key, err := marshalString(k)
 		if err != nil {
 			return nil, err
 		}
@@ -220,6 +220,18 @@ func (o *object) marshal() ([]byte, error) {
 	}
 	b.WriteByte('}')
 	return b.Bytes(), nil
+}
+
+// marshalString encodes s as a JSON string as a person would write it:
+// json.Marshal escapes <, > and &, which version ranges are full of.
+func marshalString(s string) ([]byte, error) {
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(s); err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(b.Bytes(), []byte("\n")), nil
 }
 
 func parseObject(data []byte) (*object, error) {

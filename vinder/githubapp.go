@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"runtime"
 	"strings"
 
@@ -90,8 +89,6 @@ func runGitHubApp(ctx context.Context, stderr io.Writer, name, org, repo, keyFil
 		}
 	}
 
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
-	defer stop()
 	creds, err := githubapp.Create(ctx, githubapp.Options{
 		Name: name,
 		Org:  org,
@@ -108,15 +105,21 @@ func runGitHubApp(ctx context.Context, stderr io.Writer, name, org, repo, keyFil
 	}
 	fmt.Fprintf(stderr, "Created %s (client ID %s).\n", creds.HTMLURL, creds.ClientID)
 
+	// GitHub shows the private key only once, so if gh can't store it, it
+	// still goes to a file before the error is returned.
+	var ghErr error
 	if storeWithGH {
-		if err := gh(ctx, stderr, "", "variable", "set", appClientIDVariable, "--repo", repo, "--body", creds.ClientID); err != nil {
-			return err
+		ghErr = gh(ctx, stderr, "", "variable", "set", appClientIDVariable, "--repo", repo, "--body", creds.ClientID)
+		if ghErr == nil {
+			ghErr = gh(ctx, stderr, creds.PEM, "secret", "set", appPrivateKeySecret, "--repo", repo)
 		}
-		if err := gh(ctx, stderr, creds.PEM, "secret", "set", appPrivateKeySecret, "--repo", repo); err != nil {
-			return err
+		if ghErr == nil {
+			fmt.Fprintf(stderr, "Stored %s and %s on %s.\n", appClientIDVariable, appPrivateKeySecret, repo)
+		} else {
+			fmt.Fprintf(stderr, "Couldn't store the credentials with gh: %v\n", ghErr)
 		}
-		fmt.Fprintf(stderr, "Stored %s and %s on %s.\n", appClientIDVariable, appPrivateKeySecret, repo)
-	} else {
+	}
+	if !storeWithGH || ghErr != nil {
 		if keyFile == "" {
 			keyFile = creds.Slug + ".private-key.pem"
 		}
@@ -133,7 +136,7 @@ func runGitHubApp(ctx context.Context, stderr io.Writer, name, org, repo, keyFil
 	}
 
 	fmt.Fprintf(stderr, "Install the App on the repository the workflow runs in, if you haven't yet: %s\n", creds.InstallURL())
-	return nil
+	return ghErr
 }
 
 // gh runs the GitHub CLI with stdin as its input.

@@ -8,14 +8,19 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // DefaultURL is the public npm registry.
 const DefaultURL = "https://registry.npmjs.org"
 
+// defaultHTTP bounds a request, so a stalled registry fails the upgrade
+// rather than hanging it.
+var defaultHTTP = &http.Client{Timeout: time.Minute}
+
 // Client queries an npm registry.
 type Client struct {
-	// HTTP defaults to http.DefaultClient.
+	// HTTP defaults to a client with a one-minute timeout.
 	HTTP *http.Client
 	// URL defaults to DefaultURL.
 	URL string
@@ -36,7 +41,7 @@ func (c *Client) Latest(ctx context.Context, name string) (string, error) {
 	req.Header.Set("Accept", "application/vnd.npm.install-v1+json")
 	httpc := c.HTTP
 	if httpc == nil {
-		httpc = http.DefaultClient
+		httpc = defaultHTTP
 	}
 	resp, err := httpc.Do(req)
 	if err != nil {

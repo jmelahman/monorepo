@@ -285,3 +285,36 @@ func TestSyncRemovesStaleKeys(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestSyncIgnoresUnsafeManifestKeys(t *testing.T) {
+	t.Parallel()
+
+	app := newApp(t, "")
+	syncApp(t, app)
+	write(t, filepath.Join(app, "keep/file"), "mine")
+	write(t, filepath.Join(app, "vendor", project.ManifestFile), `{"deps": {"": {}, ".": {}, "..": {}, "../keep": {}}}`)
+	syncApp(t, app)
+
+	for _, file := range []string{"keep/file", "package.json", "vendor/a/a.js"} {
+		if _, err := os.Stat(filepath.Join(app, file)); err != nil {
+			t.Errorf("%s after sync with unsafe manifest keys: %v", file, err)
+		}
+	}
+}
+
+func TestSyncRegeneratesBadManifest(t *testing.T) {
+	t.Parallel()
+
+	app := newApp(t, "")
+	p := syncApp(t, app)
+	manifest := filepath.Join(app, "vendor", project.ManifestFile)
+	write(t, manifest, "<<<<<<< HEAD\n{}\n=======\n{}\n>>>>>>> branch\n")
+
+	if _, err := p.Check(context.Background()); !errors.Is(err, project.ErrBadManifest) {
+		t.Errorf("Check() error = %v, want %v", err, project.ErrBadManifest)
+	}
+	syncApp(t, app)
+	if _, err := project.ReadManifest(manifest); err != nil {
+		t.Errorf("manifest after sync: %v", err)
+	}
+}

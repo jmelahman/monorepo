@@ -100,7 +100,8 @@ type Alignment struct {
 }
 
 // Align brings projects onto one version of every package more than one of
-// them vendors. It syncs each project, and for each package vendored at
+// them vendors. It syncs each project that has not been synced already,
+// as upgrade's have, and for each package vendored at
 // several versions picks the highest of them that satisfies every range
 // asked of it, in every project. A project on another version is moved to
 // it: by its dependency spec if the package is a direct dependency, and
@@ -108,6 +109,9 @@ type Alignment struct {
 // projects it changed are synced again.
 func Align(ctx context.Context, projects []*Project) ([]Alignment, error) {
 	for _, p := range projects {
+		if p.synced {
+			continue
+		}
 		if err := p.Sync(ctx); err != nil {
 			return nil, fmt.Errorf("%s: %w", p.Dir, err)
 		}
@@ -136,7 +140,7 @@ func Align(ctx context.Context, projects []*Project) ([]Alignment, error) {
 			}
 			for _, dir := range s.Versions[version] {
 				p := byDir[dir]
-				if err := p.pin(s.Name, target); err != nil {
+				if err := p.pin(s.Name, version, target); err != nil {
 					return nil, fmt.Errorf("%s: %w", p.Dir, err)
 				}
 				changed[p] = true
@@ -157,7 +161,9 @@ func Align(ctx context.Context, projects []*Project) ([]Alignment, error) {
 }
 
 // pickVersion returns the highest of the versions in s that every range
-// asked of the package satisfies, in every project vendoring it, or "".
+// asked of the package satisfies, in every project vendoring it, or "". A
+// declared embed is code inlined in another package's files, which no spec
+// or override can move, so it counts as an exact requirement.
 func pickVersion(s Skew, byDir map[string]*Project) string {
 	var candidates []*semver.Version
 	for v := range s.Versions {
@@ -177,6 +183,17 @@ func pickVersion(s Skew, byDir map[string]*Project) string {
 					constraints = append(constraints, c)
 				}
 			}
+			for _, dep := range byDir[dir].Config.Deps {
+				for _, e := range dep.Embeds {
+					pkg, _ := parseNameVersion(e) // validated by Load
+					if pkg.Name != s.Name {
+						continue
+					}
+					if c, err := semver.NewConstraint("=" + pkg.Version); err == nil {
+						constraints = append(constraints, c)
+					}
+				}
+			}
 		}
 	}
 	for _, v := range candidates {
@@ -187,10 +204,12 @@ func pickVersion(s Skew, byDir map[string]*Project) string {
 	return ""
 }
 
-// pin moves the project to version of name: through its dependency spec if
-// it is a direct dependency, keeping the spec's ^ or ~, and otherwise with
-// an override recorded in the manifest as vinder's.
-func (p *Project) pin(name, version string) error {
+// pin moves the project from one version of name to another: through its
+// dependency spec if it is a direct dependency, keeping the spec's ^ or ~
+// unless the range would still admit from, which the lockfile would then
+// keep; and otherwise with an override recorded in the manifest as
+// vinder's.
+func (p *Project) pin(name, from, version string) error {
 	pm, err := p.packageManager()
 	if err != nil {
 		return err
@@ -207,6 +226,13 @@ func (p *Project) pin(name, version string) error {
 		prefix := ""
 		if m := plainSpec.FindStringSubmatch(spec); m != nil {
 			prefix = m[1]
+		}
+		if prefix != "" {
+			c, err := semver.NewConstraint(prefix + version)
+			v, verr := semver.NewVersion(from)
+			if err == nil && verr == nil && c.Check(v) {
+				prefix = ""
+			}
 		}
 		if err := pj.SetString(prefix+version, field, name); err != nil {
 			return err

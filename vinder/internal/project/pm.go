@@ -87,10 +87,8 @@ func DetectPackageManager(dir string) (PackageManager, error) {
 			if pm.Name != name {
 				continue
 			}
-			if name == "yarn" && version != "" {
-				pm.berry = !strings.HasPrefix(version, "1.")
-			} else if name == "yarn" {
-				pm.berry = exists(filepath.Join(dir, ".yarnrc.yml"))
+			if name == "yarn" {
+				pm.berry = yarnBerry(dir, version)
 			}
 			return pm, nil
 		}
@@ -117,6 +115,19 @@ func DetectPackageManager(dir string) (PackageManager, error) {
 		names[i] = pm.Name
 	}
 	return PackageManager{}, fmt.Errorf("%w (%s)", ErrAmbiguousPackageManager, strings.Join(names, ", "))
+}
+
+// yarnBerry reports whether the Yarn a project declares at version, an
+// exact version or a range such as "^1.22.0", is Yarn 2 or later. With no
+// major version to go on, a .yarnrc.yml decides it: Yarn 1 does not read
+// one.
+func yarnBerry(dir, version string) bool {
+	version = strings.TrimLeft(version, "^~>=<v ")
+	major := version[:len(version)-len(strings.TrimLeft(version, "0123456789"))]
+	if major == "" {
+		return exists(filepath.Join(dir, ".yarnrc.yml"))
+	}
+	return major != "1" && major != "0"
 }
 
 // lockfile returns the name of the package manager's lockfile in dir, or
@@ -152,6 +163,11 @@ func (pm PackageManager) install(ctx context.Context, dir string, frozen bool) e
 			args = append(args, "--immutable")
 		}
 		env = []string{"YARN_ENABLE_SCRIPTS=false", "YARN_NODE_LINKER=node-modules"}
+		if !frozen {
+			// Yarn 2+ makes installs immutable by default on CI, where the
+			// upgrade action runs.
+			env = append(env, "YARN_ENABLE_IMMUTABLE_INSTALLS=false")
+		}
 	default:
 		// bun, nub, pnpm and Yarn 1 spell it the same way.
 		args = []string{"install", "--ignore-scripts"}

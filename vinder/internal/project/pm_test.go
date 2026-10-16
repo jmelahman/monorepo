@@ -12,10 +12,11 @@ func TestDetectPackageManager(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		files   map[string]string
-		wantErr error
-		name    string
-		want    string
+		files     map[string]string
+		wantErr   error
+		name      string
+		want      string
+		wantBerry bool
 	}{
 		{
 			name:  "packageManager field",
@@ -39,6 +40,31 @@ func TestDetectPackageManager(t *testing.T) {
 			name:  "devEngines list takes the first",
 			files: map[string]string{"package.json": `{"devEngines": {"packageManager": [{"name": "yarn"}, {"name": "npm"}]}}`},
 			want:  "yarn",
+		},
+		{
+			name:  "yarn 1 range",
+			files: map[string]string{"package.json": `{"devEngines": {"packageManager": {"name": "yarn", "version": "^1.22.0"}}}`},
+			want:  "yarn",
+		},
+		{
+			name:  "yarn 1 major",
+			files: map[string]string{"package.json": `{"devEngines": {"packageManager": {"name": "yarn", "version": ">=1"}}}`},
+			want:  "yarn",
+		},
+		{
+			name:      "yarn berry",
+			files:     map[string]string{"package.json": `{"packageManager": "yarn@4.5.0+sha512.abc"}`},
+			want:      "yarn",
+			wantBerry: true,
+		},
+		{
+			name: "yarn wildcard falls back to yarnrc",
+			files: map[string]string{
+				"package.json": `{"devEngines": {"packageManager": {"name": "yarn", "version": "*"}}}`,
+				".yarnrc.yml":  "",
+			},
+			want:      "yarn",
+			wantBerry: true,
 		},
 		{
 			name:  "bun lockfile",
@@ -91,6 +117,9 @@ func TestDetectPackageManager(t *testing.T) {
 			}
 			if pm.Name != tt.want {
 				t.Errorf("DetectPackageManager() = %q, want %q", pm.Name, tt.want)
+			}
+			if pm.Berry() != tt.wantBerry {
+				t.Errorf("DetectPackageManager().Berry() = %v, want %v", pm.Berry(), tt.wantBerry)
 			}
 		})
 	}

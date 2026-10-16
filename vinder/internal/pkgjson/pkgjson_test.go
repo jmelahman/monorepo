@@ -57,6 +57,23 @@ func TestEdit(t *testing.T) {
 `,
 		},
 		{
+			name: "set leaves <, > and & unescaped",
+			edit: func(f *pkgjson.File) error { return f.SetString(">=7.5.2 <8", "overrides", "semver@<7.5.2") },
+			want: `{
+    "name": "app",
+    "dependencies": {
+        "b": "^1.0.0",
+        "a": "2.0.0"
+    },
+    "overrides": {
+        "x": "1.0.0",
+        "semver@<7.5.2": ">=7.5.2 <8"
+    },
+    "private": true
+}
+`,
+		},
+		{
 			name: "set creates objects at the end",
 			edit: func(f *pkgjson.File) error { return f.SetString("3.0.0", "pnpm", "overrides", "y") },
 			want: `{

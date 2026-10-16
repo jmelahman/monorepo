@@ -10,9 +10,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -52,7 +54,12 @@ func run(args []string, stdout, stderr io.Writer) error {
 	root.SetArgs(args)
 	root.SetOut(stdout)
 	root.SetErr(stderr)
-	return root.ExecuteContext(context.Background())
+	// Cancelling, rather than dying on the signal, lets the commands run
+	// their cleanup: upgrade restores package.json and the lockfile, and
+	// sync and check remove their temporary directories.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return root.ExecuteContext(ctx)
 }
 
 func newRootCmd() *cobra.Command {
@@ -122,8 +129,10 @@ a pull request.`,
 			}
 			before := make([]*project.Manifest, len(projects))
 			for i, p := range projects {
+				// upgrade regenerates a manifest that doesn't parse, and
+				// reports everything in it as new.
 				m, err := project.ReadManifest(filepath.Join(p.OutDir(), project.ManifestFile))
-				if err != nil && !errors.Is(err, os.ErrNotExist) {
+				if err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, project.ErrBadManifest) {
 					return err
 				}
 				before[i] = m

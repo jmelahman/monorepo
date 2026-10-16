@@ -92,7 +92,9 @@ runs:
     - name: Upgrade
       shell: bash
       run: |
-        read -ra dirs <<< "$DIRECTORIES"
+        # -d "" reads past newlines, for a list given as a YAML block;
+        # read then exits 1 at the end of input.
+        read -ra dirs -d "" <<< "$DIRECTORIES" || true
         if [ "${#dirs[@]}" -eq 0 ]; then
           dirs=(--all)
         fi
@@ -106,7 +108,9 @@ runs:
       if: ${{ inputs.audit == 'true' }}
       shell: bash
       run: |
-        read -ra dirs <<< "$DIRECTORIES"
+        # -d "" reads past newlines, for a list given as a YAML block;
+        # read then exits 1 at the end of input.
+        read -ra dirs -d "" <<< "$DIRECTORIES" || true
         if [ "${#dirs[@]}" -eq 0 ]; then
           dirs=(--all)
         fi

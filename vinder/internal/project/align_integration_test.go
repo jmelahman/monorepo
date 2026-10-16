@@ -177,3 +177,80 @@ func TestAlignAndUpgrade(t *testing.T) {
 		})
 	}
 }
+
+// TestAlignDowngradesDirectDependency aligns a project whose caret range
+// locked a newer version than another project's exact spec allows.
+func TestAlignDowngradesDirectDependency(t *testing.T) {
+	t.Parallel()
+
+	for _, pm := range packageManagers(t) {
+		t.Run(pm, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+
+			srv := registrytest.New(t, lib("1.0.0", "^1.0.0"), lib("1.1.0", "^1.0.0"), dep("1.0.0"))
+			p1 := syncApp(t, registryApp(t, pm, srv, "^1.0.0"))
+			p2 := syncApp(t, registryApp(t, pm, srv, "1.0.0"))
+
+			got, err := project.Align(ctx, []*project.Project{p1, p2})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := []project.Alignment{{Name: "lib", Version: "1.0.0", Moved: map[string]string{p1.Dir: "1.1.0"}}}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("Align() = %+v, want %+v", got, want)
+			}
+			pj, err := pkgjson.Read(filepath.Join(p1.Dir, "package.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			// ^1.0.0 would let the lockfile keep 1.1.0.
+			if got, _ := pj.String("dependencies", "lib"); got != "1.0.0" {
+				t.Errorf("package.json dependencies.lib = %q, want 1.0.0", got)
+			}
+			if skews, err := project.FindSkew([]*project.Project{p1, p2}); err != nil || len(skews) > 0 {
+				t.Errorf("FindSkew() after Align = %+v, %v; want none", skews, err)
+			}
+			assertCurrent(t, p1)
+		})
+	}
+}
+
+// TestAlignLeavesEmbeds leaves projects that embed different versions of a
+// package as they are: no spec or override reaches inlined code.
+func TestAlignLeavesEmbeds(t *testing.T) {
+	t.Parallel()
+
+	pm := packageManagers(t)[0]
+	srv := registrytest.New(t, lib("1.0.0", "^1.0.0"), dep("1.0.0"))
+	var projects []*project.Project
+	for _, version := range []string{"0.5.0", "0.6.0"} {
+		app := registryApp(t, pm, srv, "^1.0.0")
+		config := filepath.Join(app, project.ConfigFile)
+		data, err := os.ReadFile(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		write(t, config, string(data)+"embeds = [\"inner@"+version+"\"]\n")
+		projects = append(projects, syncApp(t, app))
+	}
+	pjBefore, err := os.ReadFile(filepath.Join(projects[0].Dir, "package.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := project.Align(context.Background(), projects)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []project.Alignment{{Name: "inner", Moved: map[string]string{}}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Align() = %+v, want %+v", got, want)
+	}
+	pjAfter, err := os.ReadFile(filepath.Join(projects[0].Dir, "package.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(pjAfter) != string(pjBefore) {
+		t.Errorf("package.json after Align:\n%s\nwant unchanged:\n%s", pjAfter, pjBefore)
+	}
+}
