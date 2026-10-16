@@ -10,7 +10,6 @@ use (
 	./cycle-lights
 	./docker-status
 	./git-orchard
-	./jview
 	./local-preview
 	./nature-sounds
 	./pkglint
