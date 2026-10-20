@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
 	"syscall"
 	"time"
@@ -216,6 +217,7 @@ func newCurator(cfg config.Config, reg *tools.Registry, addr string) (*curator.C
 		SafetyAPIKey:    cfg.SafetyAPIKey,
 		MCPURL:          curator.SelfMCPURL(addr),
 		Secret:          cfg.Secret,
+		WorkDir:         filepath.Join(cfg.DataDir, "claude-code"),
 	})
 	if err != nil {
 		return nil, err

@@ -33,6 +33,9 @@ type Config struct {
 	// over its own /mcp endpoint; see ClaudeCode.
 	MCPURL string
 	Secret string
+	// WorkDir is where the claude-code backend keeps check-ins' sessions;
+	// empty sends every turn the whole transcript.
+	WorkDir string
 }
 
 // classifierFor builds the crisis classifier for a coach configuration.
@@ -150,6 +153,7 @@ func (c *Curator) reload() error {
 			ReasoningEffort: cfg.ReasoningEffort,
 			MCPURL:          cfg.MCPURL,
 			Secret:          cfg.Secret,
+			WorkDir:         cfg.WorkDir,
 		}
 	default:
 		backend = &OpenAI{

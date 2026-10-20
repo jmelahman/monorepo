@@ -99,8 +99,13 @@ Or choose **Claude Code** in Settings → AI model.
   the app through its [MCP endpoint](#connecting-claude-code-over-mcp) on the
   server's `--addr`, with `AGILECBT_SECRET` as the bearer token when it's set.
   Changes show up as undoable chips like any other coach change.
-- Each turn starts a fresh `claude` process and sends the conversation so far
-  as a transcript, so a reply takes a few seconds longer than with an API.
+- Each turn starts a `claude` process, so a reply takes a few seconds longer
+  than with an API. A check-in's turns continue one Claude Code session
+  (`--resume`), so the conversation so far comes from Anthropic's prompt
+  cache and isn't sent again. Claude Code keeps those sessions under
+  `~/.claude/projects`, filed under the `claude-code` folder of the data
+  directory. After a restart or a settings change, the next turn starts a
+  new session and sends the conversation so far as a transcript.
 - The crisis classifier's `safety_model` still needs an OpenAI-compatible
   `safety_base_url`; without one the phrase list runs alone.
 - `agilecbt eval` doesn't support this backend.

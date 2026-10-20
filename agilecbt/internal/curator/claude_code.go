@@ -15,6 +15,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/jmelahman/agilecbt/internal/db"
 )
 
 // mcpServerName is what the coach's tools are registered as in Claude Code,
@@ -29,6 +32,12 @@ var ClaudeModels = []string{"opus", "sonnet", "haiku", "fable"}
 // replies count against the signed-in Claude subscription rather than an
 // API key. Each turn is one non-interactive run with Claude Code's own tools
 // off; the coach's tools reach the app over its MCP endpoint.
+//
+// With a WorkDir, a check-in's turns continue one Claude Code session
+// (--resume), so earlier turns come from the prompt cache. Without one, or
+// whenever the session no longer matches the stored history (a restart, a
+// failed turn, a settings change), the turn starts a new session with the
+// history as a transcript.
 type ClaudeCode struct {
 	// Command is the claude binary (default "claude" on $PATH).
 	Command string
@@ -42,8 +51,22 @@ type ClaudeCode struct {
 	MCPURL string
 	// Secret is sent to MCPURL as a bearer token when set.
 	Secret string
+	// WorkDir is where Claude Code runs and so where it files its sessions
+	// (under ~/.claude/projects). Empty turns sessions off.
+	WorkDir string
 	// OnToolCall, when set, observes every tool call the model makes.
 	OnToolCall func(ToolCall)
+
+	mu sync.Mutex
+	// sessions maps a check-in to its Claude Code session.
+	sessions map[int64]claudeSession
+}
+
+type claudeSession struct {
+	id string
+	// messages is how many stored messages the session has seen. A turn
+	// resumes it only when the history is exactly that long.
+	messages int
 }
 
 // Name implements Backend.
@@ -102,58 +125,127 @@ func (c *ClaudeCode) Status(ctx context.Context) (bool, string) {
 	return true, fmt.Sprintf("%s via Claude Code (%s)", cmp.Or(c.model(), "default model"), via)
 }
 
-// Turn implements Backend. Claude Code can't be handed earlier assistant
-// turns, so the history goes into the prompt as a transcript.
+// Turn implements Backend.
 func (c *ClaudeCode) Turn(ctx context.Context, req TurnRequest, onText func(string)) (TurnResult, error) {
-	var p strings.Builder
-	if len(req.History) > 0 {
-		p.WriteString("The conversation so far:\n\n<transcript>\n")
-		for _, m := range req.History {
-			if m.Role == "user" || m.Role == "assistant" {
-				fmt.Fprintf(&p, "<%s>\n%s\n</%s>\n", m.Role, m.Text, m.Role)
-			}
+	var history []db.Message
+	for _, m := range req.History {
+		if m.Role == "user" || m.Role == "assistant" {
+			history = append(history, m)
 		}
-		p.WriteString("</transcript>\n\nReply to the user's new message:\n\n")
 	}
-	p.WriteString(req.User)
-	mcpURL := ""
+	o := claudeRun{system: req.System, onText: onText}
 	if !req.NoTools && c.MCPURL != "" {
-		mcpURL = c.MCPURL
+		o.mcpURL = c.MCPURL
 		if req.CheckinID != 0 {
 			// Attribute tool calls to this check-in, as undoable chips.
-			mcpURL += "?checkin=" + strconv.FormatInt(req.CheckinID, 10)
+			o.mcpURL += "?checkin=" + strconv.FormatInt(req.CheckinID, 10)
 		}
 	}
-	text, err := c.run(ctx, req.System, p.String(), mcpURL, onText)
+	keep := c.WorkDir != "" && req.CheckinID != 0
+	if keep {
+		o.persist = true
+		if sess, ok := c.session(req.CheckinID); ok && sess.messages == len(history) {
+			o.resume, o.prompt = sess.id, req.User
+		}
+	}
+	if o.resume == "" {
+		o.prompt = transcript(history, req.User)
+	}
+	text, id, err := c.run(ctx, o)
+	if o.resume != "" && err != nil && text == "" && strings.Contains(err.Error(), "No conversation found") {
+		// Claude Code lost the session; start over from the transcript.
+		o.resume, o.prompt = "", transcript(history, req.User)
+		text, id, err = c.run(ctx, o)
+	}
+	if keep {
+		c.mu.Lock()
+		if err != nil || id == "" {
+			delete(c.sessions, req.CheckinID)
+		} else {
+			if c.sessions == nil {
+				c.sessions = map[int64]claudeSession{}
+			}
+			// The app stores this turn's message and reply next.
+			c.sessions[req.CheckinID] = claudeSession{id: id, messages: len(history) + 2}
+		}
+		c.mu.Unlock()
+	}
 	return TurnResult{Text: text}, err
+}
+
+func (c *ClaudeCode) session(checkinID int64) (claudeSession, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	s, ok := c.sessions[checkinID]
+	return s, ok
+}
+
+// transcript puts earlier messages into the prompt, for a new session.
+func transcript(history []db.Message, user string) string {
+	if len(history) == 0 {
+		return user
+	}
+	var p strings.Builder
+	p.WriteString("The conversation so far:\n\n<transcript>\n")
+	for _, m := range history {
+		fmt.Fprintf(&p, "<%s>\n%s\n</%s>\n", m.Role, m.Text, m.Role)
+	}
+	p.WriteString("</transcript>\n\nReply to the user's new message:\n\n")
+	p.WriteString(user)
+	return p.String()
 }
 
 // Complete implements Backend.
 func (c *ClaudeCode) Complete(ctx context.Context, system, user string) (string, error) {
-	return c.run(ctx, system, user, "", func(string) {})
+	text, _, err := c.run(ctx, claudeRun{system: system, prompt: user, onText: func(string) {}})
+	return text, err
+}
+
+// claudeRun is one `claude -p` call.
+type claudeRun struct {
+	system, prompt string
+	// mcpURL gives the model the app's tools when set.
+	mcpURL string
+	// persist saves the session in WorkDir; resume continues that session.
+	persist bool
+	resume  string
+	onText  func(string)
 }
 
 // run is one `claude -p` call: the prompt goes in on stdin and the reply
-// streams back as stream-json events.
-func (c *ClaudeCode) run(ctx context.Context, system, prompt, mcpURL string, onText func(string)) (string, error) {
-	// A scratch working directory keeps Claude Code from picking up a
-	// CLAUDE.md, and holds the system prompt and the MCP config, which has
-	// the secret, out of the process list.
+// streams back as stream-json events. It returns the session id.
+func (c *ClaudeCode) run(ctx context.Context, o claudeRun) (text, sessionID string, err error) {
+	// A scratch directory holds the system prompt and the MCP config, which
+	// has the secret, out of the process list. Claude Code runs there too
+	// unless the session is kept, which keeps it from picking up a CLAUDE.md.
 	dir, err := os.MkdirTemp("", "agilecbt-claude-")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer os.RemoveAll(dir)
 	sysFile := filepath.Join(dir, "system.md")
-	if err := os.WriteFile(sysFile, []byte(system), 0o600); err != nil {
-		return "", err
+	if err := os.WriteFile(sysFile, []byte(o.system), 0o600); err != nil {
+		return "", "", err
 	}
 	args := []string{
 		"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
 		"--system-prompt-file", sysFile,
-		// No built-in tools, user/project settings, or saved sessions.
-		"--tools", "", "--setting-sources", "", "--no-session-persistence",
+		// No built-in tools, user/project settings, or account MCP servers.
+		"--tools", "", "--setting-sources", "",
 		"--strict-mcp-config", "--permission-mode", "dontAsk",
+	}
+	cwd := dir
+	switch {
+	case o.persist:
+		if err := os.MkdirAll(c.WorkDir, 0o700); err != nil {
+			return "", "", err
+		}
+		cwd = c.WorkDir
+		if o.resume != "" {
+			args = append(args, "--resume", o.resume)
+		}
+	default:
+		args = append(args, "--no-session-persistence")
 	}
 	if m := c.model(); m != "" {
 		args = append(args, "--model", m)
@@ -161,35 +253,35 @@ func (c *ClaudeCode) run(ctx context.Context, system, prompt, mcpURL string, onT
 	if e := c.effort(); e != "" {
 		args = append(args, "--effort", e)
 	}
-	if mcpURL != "" {
-		server := map[string]any{"type": "http", "url": mcpURL}
+	if o.mcpURL != "" {
+		server := map[string]any{"type": "http", "url": o.mcpURL}
 		if c.Secret != "" {
 			server["headers"] = map[string]string{"Authorization": "Bearer " + c.Secret}
 		}
 		b, err := json.Marshal(map[string]any{"mcpServers": map[string]any{mcpServerName: server}})
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		mcpFile := filepath.Join(dir, "mcp.json")
 		if err := os.WriteFile(mcpFile, b, 0o600); err != nil {
-			return "", err
+			return "", "", err
 		}
 		args = append(args, "--mcp-config", mcpFile, "--allowedTools", "mcp__"+mcpServerName)
 	}
 
 	cmd := exec.CommandContext(ctx, c.command(), args...)
-	cmd.Dir = dir
-	cmd.Stdin = strings.NewReader(prompt)
+	cmd.Dir = cwd
+	cmd.Stdin = strings.NewReader(o.prompt)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if err := cmd.Start(); err != nil {
-		return "", fmt.Errorf("start Claude Code: %w", err)
+		return "", "", fmt.Errorf("start Claude Code: %w", err)
 	}
-	s := newClaudeStream(onText, c.OnToolCall)
+	s := newClaudeStream(o.onText, c.OnToolCall)
 	sc := bufio.NewScanner(stdout)
 	sc.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
 	for sc.Scan() {
@@ -197,24 +289,27 @@ func (c *ClaudeCode) run(ctx context.Context, system, prompt, mcpURL string, onT
 	}
 	scanErr := sc.Err()
 	waitErr := cmd.Wait()
-	text := strings.TrimSpace(s.text.String())
+	text = strings.TrimSpace(s.text.String())
 	switch {
 	case ctx.Err() != nil:
-		return text, ctx.Err()
-	case s.resultErr != "":
-		return text, errors.New("Claude Code: " + s.resultErr)
-	case !s.gotResult:
+		return text, "", ctx.Err()
+	case s.resultErr != "" || !s.gotResult:
 		detail := strings.TrimSpace(stderr.String())
 		if err := cmp.Or(waitErr, scanErr); detail == "" && err != nil {
 			detail = err.Error()
 		}
-		detail = cmp.Or(detail, "exited without a reply")
-		return text, errors.New("Claude Code: " + lastLine(detail))
+		if s.gotResult {
+			detail = cmp.Or(lastLine(detail), s.resultErr)
+			if !strings.Contains(detail, s.resultErr) {
+				detail = s.resultErr + ": " + detail
+			}
+		}
+		return text, "", errors.New("Claude Code: " + lastLine(cmp.Or(detail, "exited without a reply")))
 	}
 	if text == "" {
 		text = strings.TrimSpace(s.result)
 	}
-	return text, nil
+	return text, s.sessionID, nil
 }
 
 func lastLine(s string) string {
@@ -236,6 +331,7 @@ type claudeStream struct {
 	gotResult bool
 	result    string
 	resultErr string
+	sessionID string
 }
 
 func newClaudeStream(onText func(string), onToolCall func(ToolCall)) *claudeStream {
@@ -267,9 +363,10 @@ type claudeEvent struct {
 	Message struct {
 		Content []claudeBlock `json:"content"`
 	} `json:"message"`
-	Result  string   `json:"result"`
-	IsError bool     `json:"is_error"`
-	Errors  []string `json:"errors"`
+	SessionID string   `json:"session_id"`
+	Result    string   `json:"result"`
+	IsError   bool     `json:"is_error"`
+	Errors    []string `json:"errors"`
 }
 
 func (s *claudeStream) handle(line []byte) {
@@ -312,6 +409,7 @@ func (s *claudeStream) handle(line []byte) {
 		}
 	case "result":
 		s.gotResult = true
+		s.sessionID = ev.SessionID
 		s.result = ev.Result
 		if ev.IsError || ev.Subtype != "success" {
 			s.resultErr = cmp.Or(strings.Join(ev.Errors, "; "), ev.Result, ev.Subtype)
