@@ -88,7 +88,19 @@ func TestResolveDefaults(t *testing.T) {
 
 func TestResolveRejectsUnknownLLM(t *testing.T) {
 	t.Setenv("AGILECBT_LLM", "bogus")
-	if _, _, err := resolve(nil); err == nil || !strings.Contains(err.Error(), "want openai or none") {
+	if _, _, err := resolve(nil); err == nil || !strings.Contains(err.Error(), "want openai, claude-code, or none") {
 		t.Fatalf("err = %v, want unknown llm", err)
+	}
+}
+
+func TestResolveClaudeCodeKeepsModelEmpty(t *testing.T) {
+	t.Setenv("AGILECBT_LLM", "claude-code")
+	t.Setenv("AGILECBT_MODEL", "")
+	c, _, err := resolve(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.LLM != LLMClaudeCode || c.Model != "" {
+		t.Fatalf("got %+v, want claude-code with Claude Code's default model", c)
 	}
 }

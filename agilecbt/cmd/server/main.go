@@ -118,7 +118,7 @@ func run(addr, dataDirOverride string, inMemory bool) error {
 	a.ConfigCrisisResources = cfg.CrisisResources
 	reg := tools.New(a)
 	build := Build()
-	cur, err := newCurator(cfg, reg)
+	cur, err := newCurator(cfg, reg, addr)
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func logRequests(h http.Handler) http.Handler {
 // newCurator builds the in-app curator. Its model settings start from the
 // config and can be changed in Settings → Coach, including turning it on or
 // off.
-func newCurator(cfg config.Config, reg *tools.Registry) (*curator.Curator, error) {
+func newCurator(cfg config.Config, reg *tools.Registry, addr string) (*curator.Curator, error) {
 	cur, err := curator.NewConfigured(reg, curator.Config{
 		LLM:             cfg.LLM,
 		BaseURL:         cfg.BaseURL,
@@ -214,24 +214,31 @@ func newCurator(cfg config.Config, reg *tools.Registry) (*curator.Curator, error
 		SafetyModel:     cfg.SafetyModel,
 		SafetyBaseURL:   cfg.SafetyBaseURL,
 		SafetyAPIKey:    cfg.SafetyAPIKey,
+		MCPURL:          curator.SelfMCPURL(addr),
+		Secret:          cfg.Secret,
 	})
 	if err != nil {
 		return nil, err
 	}
-	if eff := cur.Effective(); eff.LLM == config.LLMNone {
+	eff := cur.Effective()
+	switch eff.LLM {
+	case config.LLMNone:
 		log.Printf("AI coach is turned off")
-	} else {
+		return cur, nil
+	case config.LLMClaudeCode:
+		log.Printf("AI coach: Claude Code (claude -p), tools via %s", eff.MCPURL)
+	default:
 		log.Printf("AI coach: %s at %s", eff.Model, eff.BaseURL)
-		switch cfg.SafetyModel {
-		case "":
-			log.Printf("crisis classifier: phrase list only (set safety_model to add a model)")
-		default:
-			at := cfg.SafetyBaseURL
-			if at == "" {
-				at = eff.BaseURL
-			}
-			log.Printf("crisis classifier: phrase list + %s at %s", cfg.SafetyModel, at)
+	}
+	switch {
+	case cfg.SafetyModel == "" || (eff.LLM == config.LLMClaudeCode && cfg.SafetyBaseURL == ""):
+		log.Printf("crisis classifier: phrase list only (set safety_model to add a model)")
+	default:
+		at := cfg.SafetyBaseURL
+		if at == "" {
+			at = eff.BaseURL
 		}
+		log.Printf("crisis classifier: phrase list + %s at %s", cfg.SafetyModel, at)
 	}
 	return cur, nil
 }

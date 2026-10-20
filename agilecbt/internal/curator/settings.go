@@ -16,7 +16,7 @@ import (
 
 // Config is the coach's model configuration.
 type Config struct {
-	// LLM is "openai" or "none".
+	// LLM is "openai", "claude-code", or "none".
 	LLM             string
 	BaseURL         string
 	APIKey          string
@@ -29,11 +29,20 @@ type Config struct {
 	SafetyModel   string
 	SafetyBaseURL string
 	SafetyAPIKey  string
+	// MCPURL and Secret let the claude-code backend call the app's tools
+	// over its own /mcp endpoint; see ClaudeCode.
+	MCPURL string
+	Secret string
 }
 
 // classifierFor builds the crisis classifier for a coach configuration.
 func (c *Curator) classifierFor(cfg Config) *safety.Classifier {
 	if cfg.LLM == llmNone || cfg.SafetyModel == "" {
+		return &safety.Classifier{}
+	}
+	if cfg.LLM == llmClaudeCode && cfg.SafetyBaseURL == "" {
+		// The classifier needs an OpenAI-compatible API, and the coach's
+		// base_url isn't in use.
 		return &safety.Classifier{}
 	}
 	base, coachKey := cfg.BaseURL, cfg.APIKey
@@ -52,8 +61,9 @@ func (c *Curator) classifierFor(cfg Config) *safety.Classifier {
 }
 
 const (
-	llmOpenAI = "openai"
-	llmNone   = "none"
+	llmOpenAI     = "openai"
+	llmClaudeCode = "claude-code"
+	llmNone       = "none"
 )
 
 // overrideKeys maps LLMSettings.Overrides / PATCH fields to settings rows.
@@ -132,7 +142,16 @@ func (c *Curator) reload() error {
 		return err
 	}
 	var backend Backend
-	if cfg.LLM != llmNone {
+	switch cfg.LLM {
+	case llmNone:
+	case llmClaudeCode:
+		backend = &ClaudeCode{
+			Model:           cfg.Model,
+			ReasoningEffort: cfg.ReasoningEffort,
+			MCPURL:          cfg.MCPURL,
+			Secret:          cfg.Secret,
+		}
+	default:
 		backend = &OpenAI{
 			BaseURL:         cfg.BaseURL,
 			APIKey:          cfg.APIKey,
@@ -191,8 +210,8 @@ func (c *Curator) UpdateLLM(patch map[string]*string) (api.LLMSettings, error) {
 		s := strings.TrimSpace(*v)
 		switch field {
 		case "llm":
-			if s != llmOpenAI && s != llmNone {
-				return api.LLMSettings{}, fmt.Errorf("%w: llm must be openai or none", db.ErrInvalid)
+			if s != llmOpenAI && s != llmClaudeCode && s != llmNone {
+				return api.LLMSettings{}, fmt.Errorf("%w: llm must be openai, claude-code, or none", db.ErrInvalid)
 			}
 		case "base_url":
 			s = strings.TrimRight(s, "/")
@@ -266,9 +285,11 @@ func (c *Curator) UpdateLLM(patch map[string]*string) (api.LLMSettings, error) {
 
 // Models implements api.Curator.
 func (c *Curator) Models(ctx context.Context) ([]string, error) {
-	o, ok := c.current().(*OpenAI)
-	if !ok {
-		return []string{}, nil
+	switch b := c.current().(type) {
+	case *OpenAI:
+		return b.Models(ctx)
+	case *ClaudeCode:
+		return ClaudeModels, nil
 	}
-	return o.Models(ctx)
+	return []string{}, nil
 }

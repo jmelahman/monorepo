@@ -243,3 +243,25 @@ test("the coach's model is set in Settings", async ({ page }) => {
   await expect(dialog.getByText("Ready", { exact: true })).toBeVisible();
   await expect(model).toHaveValue("");
 });
+
+test("Claude Code can be picked as the coach's backend", async ({ page }) => {
+  await page.goto("/?settings=model");
+  const dialog = page.getByRole("dialog");
+  const backend = dialog.getByRole("combobox", { name: "AI coach" });
+  await expect(backend).toHaveValue("openai");
+  await backend.selectOption("claude-code");
+  // No URL or key: it uses the account Claude Code is signed in to.
+  await expect(dialog.getByLabel("API URL")).toHaveCount(0);
+  await expect(dialog.getByLabel("API key")).toHaveCount(0);
+  const model = dialog.getByRole("combobox", { name: "Model", exact: true });
+  await expect(model).toHaveAttribute("placeholder", "Claude Code's default");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  // Whether it's ready depends on the machine's `claude`; the choice sticks.
+  await expect(dialog.getByRole("button", { name: "Reset to config" })).toBeVisible();
+  await page.reload();
+  await expect(dialog.getByRole("combobox", { name: "AI coach" })).toHaveValue("claude-code");
+
+  await dialog.getByRole("button", { name: "Reset to config" }).click();
+  await expect(dialog.getByRole("combobox", { name: "AI coach" })).toHaveValue("openai");
+  await expect(dialog.getByText("Ready", { exact: true })).toBeVisible();
+});

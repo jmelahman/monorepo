@@ -306,7 +306,7 @@ itself is never returned.
 
 ### `PATCH /api/llm`
 
-Takes any of `llm` (`openai` or `none`), `base_url`, `model`,
+Takes any of `llm` (`openai`, `claude-code`, or `none`), `base_url`, `model`,
 `reasoning_effort` (`none`, `minimal`, `low`, `medium`, `high`, or `""`),
 and `api_key`, and returns the same shape as `GET`.
 
@@ -328,7 +328,8 @@ Invalid values return `400`.
 
 Returns the model ids the server lists (`GET {base_url}/models`), sorted. The
 list is `[]` when the coach is off, or when the server can't be reached or
-doesn't list its models.
+doesn't list its models. With `llm: "claude-code"` it's Claude Code's model
+aliases (`opus`, `sonnet`, `haiku`, `fable`).
 
 ## AI actions
 

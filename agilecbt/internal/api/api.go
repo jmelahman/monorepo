@@ -33,7 +33,7 @@ type LLMStatus struct {
 // LLMFields is one layer of the coach's model settings. The API key itself
 // never leaves the server.
 type LLMFields struct {
-	// LLM is "openai" or "none" (coach off).
+	// LLM is "openai", "claude-code", or "none" (coach off).
 	LLM     string `json:"llm"`
 	BaseURL string `json:"base_url"`
 	Model   string `json:"model"`

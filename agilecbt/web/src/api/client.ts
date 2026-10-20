@@ -170,7 +170,7 @@ export interface Health {
 }
 
 export interface LLMFields {
-  llm: "openai" | "none";
+  llm: "openai" | "claude-code" | "none";
   base_url: string;
   model: string;
   /** Sent as reasoning_effort; "" leaves it out. */

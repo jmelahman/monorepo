@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
-import { api, type Health, type LLMPatch, type LLMSettings, type Note } from "@/api/client";
+import {
+  api,
+  type Health,
+  type LLMFields,
+  type LLMPatch,
+  type LLMSettings,
+  type Note,
+} from "@/api/client";
 import { Button, Dialog, ErrorText, inputClass, Markdownish, SectionTitle } from "@/components/ui";
 import {
   loadTheme,
@@ -146,21 +153,33 @@ const efforts = [
 
 const effortLabel = (v: string) => efforts.find((e) => e.value === v)?.label ?? v;
 
+const backends: { value: LLMFields["llm"]; label: string }[] = [
+  { value: "openai", label: "OpenAI-compatible API" },
+  { value: "claude-code", label: "Claude Code (your Claude subscription)" },
+  { value: "none", label: "Off" },
+];
+
+// Model aliases Claude Code accepts; anything else uses its default.
+const claudeModels = ["opus", "sonnet", "haiku", "fable"];
+const isClaudeModel = (m: string) => claudeModels.includes(m) || m.startsWith("claude-");
+
 // ModelForm edits the settings saved in the app. Blank fields fall back to
 // config.toml / the environment, shown as placeholders.
 function ModelForm({ settings: s }: { settings: LLMSettings }) {
   const qc = useQueryClient();
   const d = s.defaults;
-  const [on, setOn] = useState((s.overrides.llm ?? d.llm) !== "none");
+  const [llm, setLLM] = useState<LLMFields["llm"]>(
+    (s.overrides.llm as LLMFields["llm"] | undefined) ?? d.llm,
+  );
   const [baseURL, setBaseURL] = useState(s.overrides.base_url ?? "");
   const [model, setModel] = useState(s.overrides.model ?? "");
   // null follows the default.
   const [effort, setEffort] = useState<string | null>(s.overrides.reasoning_effort ?? null);
   const [key, setKey] = useState("");
   const models = useQuery({
-    queryKey: ["llm-models", s.effective.base_url, s.effective.api_key_set],
+    queryKey: ["llm-models", s.effective.llm, s.effective.base_url, s.effective.api_key_set],
     queryFn: api.llmModels,
-    enabled: s.effective.llm !== "none",
+    enabled: s.effective.llm === "openai",
     staleTime: 60_000,
   });
   const save = useMutation({
@@ -171,7 +190,7 @@ function ModelForm({ settings: s }: { settings: LLMSettings }) {
     },
   });
 
-  const llm = on ? "openai" : "none";
+  const claude = llm === "claude-code";
   const patch: LLMPatch = {
     llm: llm === d.llm ? null : llm,
     base_url: baseURL.trim() || null,
@@ -202,75 +221,106 @@ function ModelForm({ settings: s }: { settings: LLMSettings }) {
         save.mutate(key.trim() ? { ...patch, api_key: key.trim() } : patch);
       }}
     >
-      <label className="flex items-center gap-2">
-        <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
-        <span className="font-medium">Use an AI coach</span>
-      </label>
-      {on && (
+      <Field
+        id="llm-backend"
+        label="AI coach"
+        hint={
+          claude
+            ? "Runs `claude -p` on this server, using the account Claude Code is signed in to."
+            : undefined
+        }
+      >
+        <select
+          id="llm-backend"
+          aria-describedby={claude ? "llm-backend-hint" : undefined}
+          value={llm}
+          onChange={(e) => setLLM(e.target.value as LLMFields["llm"])}
+          className={`${selectClass} w-full py-2`}
+        >
+          {backends.map((b) => (
+            <option key={b.value} value={b.value}>
+              {b.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {llm !== "none" && (
         <>
-          <Field
-            id="llm-base-url"
-            label="API URL"
-            hint="Any OpenAI-compatible API, such as Ollama or OpenRouter."
-          >
-            <input
+          {!claude && (
+            <Field
               id="llm-base-url"
-              aria-describedby="llm-base-url-hint"
-              value={baseURL}
-              onChange={(e) => setBaseURL(e.target.value)}
-              placeholder={d.base_url}
-              list="llm-base-urls"
-              inputMode="url"
-              spellCheck={false}
-              className={inputClass}
-            />
-            <datalist id="llm-base-urls">
-              <option value="http://localhost:11434/v1">Ollama on this machine</option>
-              <option value="https://openrouter.ai/api/v1">OpenRouter</option>
-            </datalist>
-          </Field>
-          <Field id="llm-model" label="Model">
+              label="API URL"
+              hint="Any OpenAI-compatible API, such as Ollama or OpenRouter."
+            >
+              <input
+                id="llm-base-url"
+                aria-describedby="llm-base-url-hint"
+                value={baseURL}
+                onChange={(e) => setBaseURL(e.target.value)}
+                placeholder={d.base_url}
+                list="llm-base-urls"
+                inputMode="url"
+                spellCheck={false}
+                className={inputClass}
+              />
+              <datalist id="llm-base-urls">
+                <option value="http://localhost:11434/v1">Ollama on this machine</option>
+                <option value="https://openrouter.ai/api/v1">OpenRouter</option>
+              </datalist>
+            </Field>
+          )}
+          <Field
+            id="llm-model"
+            label="Model"
+            hint={claude ? "opus, sonnet, haiku, fable, or a claude-… model id." : undefined}
+          >
             <input
               id="llm-model"
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              placeholder={d.model}
+              placeholder={claude && !isClaudeModel(d.model) ? "Claude Code's default" : d.model}
               list="llm-models"
               spellCheck={false}
               className={inputClass}
             />
             <datalist id="llm-models">
-              {models.data?.map((m) => (
+              {(claude ? claudeModels : models.data)?.map((m) => (
                 <option key={m} value={m} />
               ))}
             </datalist>
           </Field>
-          <Field id="llm-api-key" label="API key">
-            <div className="flex gap-2">
-              <input
-                id="llm-api-key"
-                type="password"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                placeholder={keyHint}
-                autoComplete="off"
-                className={inputClass}
-              />
-              {s.api_key_saved && (
-                <Button
-                  variant="ghost"
-                  onClick={() => save.mutate({ api_key: null })}
-                  disabled={save.isPending}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-          </Field>
+          {!claude && (
+            <Field id="llm-api-key" label="API key">
+              <div className="flex gap-2">
+                <input
+                  id="llm-api-key"
+                  type="password"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                  placeholder={keyHint}
+                  autoComplete="off"
+                  className={inputClass}
+                />
+                {s.api_key_saved && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => save.mutate({ api_key: null })}
+                    disabled={save.isPending}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </Field>
+          )}
           <Field
             id="llm-effort"
             label="Thinking"
-            hint="Off keeps replies quick on models like Qwen3."
+            hint={
+              claude
+                ? "Claude Code's effort level. Off and Low both run at low."
+                : "Off keeps replies quick on models like Qwen3."
+            }
           >
             <select
               id="llm-effort"

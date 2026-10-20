@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -128,5 +129,27 @@ func TestConfiguredModelsAndStatus(t *testing.T) {
 	}
 	if st := cur.Status(context.Background()); st.Available || !strings.Contains(st.Detail, "ollama pull c") {
 		t.Fatalf("status after change: %+v", st)
+	}
+}
+
+func TestConfiguredClaudeCode(t *testing.T) {
+	reg := newRegistry(t)
+	cur, err := NewConfigured(reg, Config{LLM: "openai", BaseURL: "http://ollama:11434/v1", Model: "qwen", MCPURL: "http://127.0.0.1:8080/mcp", Secret: "s"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cur.UpdateLLM(map[string]*string{"llm": ptr("claude-code"), "model": ptr("haiku")}); err != nil {
+		t.Fatal(err)
+	}
+	b, ok := cur.current().(*ClaudeCode)
+	if !ok || b.Model != "haiku" || b.MCPURL != "http://127.0.0.1:8080/mcp" || b.Secret != "s" {
+		t.Fatalf("backend = %#v", cur.current())
+	}
+	models, err := cur.Models(context.Background())
+	if err != nil || !slices.Contains(models, "opus") {
+		t.Fatalf("models = %v, %v", models, err)
+	}
+	if _, err := cur.UpdateLLM(map[string]*string{"llm": ptr("anthropic")}); !errors.Is(err, db.ErrInvalid) {
+		t.Fatalf("err = %v", err)
 	}
 }

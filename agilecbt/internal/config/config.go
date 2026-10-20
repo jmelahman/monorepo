@@ -23,7 +23,10 @@ const (
 	// LLMOpenAI is any OpenAI-compatible chat completions API: Ollama's /v1,
 	// OpenRouter, llama.cpp, vLLM, OpenAI itself.
 	LLMOpenAI = "openai"
-	LLMNone   = "none"
+	// LLMClaudeCode runs the Claude Code CLI (`claude -p`) on the signed-in
+	// Claude subscription.
+	LLMClaudeCode = "claude-code"
+	LLMNone       = "none"
 )
 
 // Defaults for the OpenAI-compatible backend: a local Ollama.
@@ -171,9 +174,9 @@ func resolve(files []string) (Config, string, error) {
 		c.LLM = LLMOpenAI
 	}
 	switch c.LLM {
-	case LLMOpenAI, LLMNone:
+	case LLMOpenAI, LLMClaudeCode, LLMNone:
 	default:
-		return Config{}, "", fmt.Errorf("llm %q: want openai or none", c.LLM)
+		return Config{}, "", fmt.Errorf("llm %q: want openai, claude-code, or none", c.LLM)
 	}
 	c.CrisisResources = strings.TrimSpace(c.CrisisResources)
 	c.SafetyModel = strings.TrimSpace(c.SafetyModel)
@@ -182,7 +185,8 @@ func resolve(files []string) (Config, string, error) {
 	if c.BaseURL == "" {
 		c.BaseURL = DefaultBaseURL
 	}
-	if c.Model == "" {
+	// Claude Code picks its own default model.
+	if c.Model == "" && c.LLM != LLMClaudeCode {
 		c.Model = DefaultModel
 	}
 	return c, dataDir, nil

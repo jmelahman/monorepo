@@ -17,7 +17,7 @@ flags override everything. The server logs each file it reads. Every key is
 optional:
 
 ```toml
-llm = "openai"                          # AGILECBT_LLM
+llm = "openai"                          # AGILECBT_LLM: openai, claude-code, none
 base_url = "http://ollama:11434/v1"     # AGILECBT_LLM_BASE_URL
 api_key = "…"                           # AGILECBT_LLM_API_KEY
 model = "gemma4:26b"                   # AGILECBT_MODEL
@@ -85,10 +85,10 @@ The SQLite database lives in the data directory, resolved in order:
 | Variable | Used by | Description |
 | --- | --- | --- |
 | `AGILECBT_SECRET` | server, CLI | Shared secret. When set, the web UI asks for it and API/MCP clients send it as `Authorization: Bearer`. Unset means no auth |
-| `AGILECBT_LLM` | server | AI coach: `openai` (default, any OpenAI-compatible API) or `none` |
+| `AGILECBT_LLM` | server | AI coach: `openai` (default, any OpenAI-compatible API), `claude-code` (the Claude Code CLI on your Claude subscription; see [Claude Code](/guide/ai#claude-code-your-claude-subscription)), or `none` |
 | `AGILECBT_LLM_BASE_URL` | server | API root before `/chat/completions` (default `http://localhost:11434/v1`, a local Ollama) |
 | `AGILECBT_LLM_API_KEY` | server | Bearer token for the API, e.g. an OpenRouter key |
-| `AGILECBT_MODEL` | server | Model id (default `gemma4:26b`) |
+| `AGILECBT_MODEL` | server | Model id (default `gemma4:26b`; with `claude-code`, Claude Code's default) |
 | `AGILECBT_LLM_REASONING_EFFORT` | server | Sent as `reasoning_effort` (default `none`, thinking off); empty leaves it out |
 | `AGILECBT_DATA_DIR` | server | Data directory override |
 | `AGILECBT_CRISIS_RESOURCES` | server | Crisis lines the coach shares; see [Crisis resources](#crisis-resources) |
@@ -124,8 +124,8 @@ check-in the Today screen offers. It's stored in the database, and can also be
 set with `PATCH /api/settings`.
 
 The **AI model** tab shows whether the coach's model is reachable. It lets you
-turn the coach on or off and change the API URL, model, API key, and thinking
-level. Values saved there override `config.toml` and the environment, and
+pick the backend (an OpenAI-compatible API, Claude Code, or off) and change
+the API URL, model, API key, and thinking level. Values saved there override `config.toml` and the environment, and
 take effect immediately. **Reset to config** clears them. A saved API key is
 never shown again. It's only sent to the URL it was saved for, and it's left
 out of exports. The same settings are available at

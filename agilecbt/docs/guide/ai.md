@@ -7,7 +7,10 @@ AgileCBT has one set of AI tools, and two ways to use them:
   data entry for your values, goals, and steps; and "Draft with AI" on the Retro page.
 - **MCP**: `/mcp` exposes the same tools to Claude Code, Claude Desktop, or any
   MCP client, so you can say "plan my week" from wherever you already talk to
-  Claude. This is how to use your Claude subscription with the app.
+  Claude.
+
+To use your Claude subscription for the in-app coach too, pick the
+[Claude Code backend](#claude-code-your-claude-subscription).
 
 Either way, the AI can only act through these tools, and every change it makes
 is logged and can be undone.
@@ -22,10 +25,10 @@ needs to support tool calling.
 
 | Key (`config.toml`) | Environment | Default |
 | --- | --- | --- |
-| `llm` | `AGILECBT_LLM` | `openai`; `none` turns the coach off |
+| `llm` | `AGILECBT_LLM` | `openai`; `claude-code` uses [Claude Code](#claude-code-your-claude-subscription); `none` turns the coach off |
 | `base_url` | `AGILECBT_LLM_BASE_URL` | `http://localhost:11434/v1` (a local Ollama) |
 | `api_key` | `AGILECBT_LLM_API_KEY` | none; sent as `Authorization: Bearer` when set |
-| `model` | `AGILECBT_MODEL` | `gemma4:26b` |
+| `model` | `AGILECBT_MODEL` | `gemma4:26b` (with `claude-code`: Claude Code's default) |
 | `reasoning_effort` | `AGILECBT_LLM_REASONING_EFFORT` | `none`; set it to `""` to leave it out of requests |
 
 These are the defaults. **Settings → AI model** can override any of them from
@@ -71,6 +74,38 @@ AGILECBT_LLM_API_KEY=sk-or-… agilecbt serve
 
 Your check-ins go to OpenRouter and the model's provider, so read their
 privacy terms first.
+
+### Claude Code (your Claude subscription)
+
+`llm = "claude-code"` runs each coach turn through the
+[Claude Code](https://code.claude.com) CLI (`claude -p`). Replies count
+against the Claude Pro or Max plan Claude Code is signed in to, with no API
+key. The server needs `claude` on its `PATH`, signed in:
+
+```sh
+claude            # log in once
+AGILECBT_LLM=claude-code agilecbt serve
+```
+
+Or choose **Claude Code** in Settings → AI model.
+
+- `model` takes a Claude Code alias (`opus`, `sonnet`, `haiku`, `fable`) or a
+  `claude-…` model id. Any other value, such as an Ollama model, uses Claude
+  Code's default.
+- `reasoning_effort` becomes Claude Code's `--effort`: `low`, `medium` or
+  `high`. `none` and `minimal` run at `low`, and `""` leaves it to Claude Code.
+- `base_url` and `api_key` are ignored.
+- Claude Code's own tools (shell, files, web) are off. The coach's tools reach
+  the app through its [MCP endpoint](#connecting-claude-code-over-mcp) on the
+  server's `--addr`, with `AGILECBT_SECRET` as the bearer token when it's set.
+  Changes show up as undoable chips like any other coach change.
+- Each turn starts a fresh `claude` process and sends the conversation so far
+  as a transcript, so a reply takes a few seconds longer than with an API.
+- The crisis classifier's `safety_model` still needs an OpenAI-compatible
+  `safety_base_url`; without one the phrase list runs alone.
+- `agilecbt eval` doesn't support this backend.
+
+Your check-ins go to Anthropic under your Claude account's terms.
 
 ## Connecting Claude Code over MCP
 
