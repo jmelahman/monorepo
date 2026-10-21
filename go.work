@@ -12,6 +12,7 @@ use (
 	./git-orchard
 	./local-preview
 	./nature-sounds
+	./notebook
 	./pkglint
 	./pre-commit-hooks/go-pre-commit-hooks
 	./smart-lights

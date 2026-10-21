@@ -1,0 +1,36 @@
+{
+  "deps": {
+    "kokoro": {
+      "package": "kokoro-js",
+      "version": "1.2.1",
+      "files": [
+        "LICENSE",
+        "kokoro.mjs",
+        "ort-wasm-simd-threaded.jsep.mjs",
+        "ort-wasm-simd-threaded.jsep.wasm"
+      ],
+      "includes": [
+        {
+          "name": "@huggingface/transformers",
+          "version": "3.8.1"
+        },
+        {
+          "name": "kokoro-js",
+          "version": "1.2.1"
+        },
+        {
+          "name": "onnxruntime-common",
+          "version": "1.21.0"
+        },
+        {
+          "name": "onnxruntime-web",
+          "version": "1.22.0-dev.20250409-89f8206ba4"
+        },
+        {
+          "name": "phonemizer",
+          "version": "1.2.1"
+        }
+      ]
+    }
+  }
+}

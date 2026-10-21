@@ -1,0 +1,15 @@
+# Vendored with vinder (../vinder): package.json pins the versions, this file
+# says what goes into web/vendor/. Regenerate with `vinder sync`.
+out = "web/vendor"
+
+[deps.kokoro]
+package = "kokoro-js"
+
+[deps.kokoro.bundle]
+"kokoro.mjs" = "./vendor.src/kokoro.js"
+
+[deps.kokoro.copy]
+# transformers.js loads the ONNX runtime from these at run time.
+"ort-wasm-simd-threaded.jsep.mjs" = "@huggingface/transformers/dist/ort-wasm-simd-threaded.jsep.mjs"
+"ort-wasm-simd-threaded.jsep.wasm" = "@huggingface/transformers/dist/ort-wasm-simd-threaded.jsep.wasm"
+LICENSE = "kokoro-js/LICENSE"
