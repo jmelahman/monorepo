@@ -22,6 +22,8 @@ type App struct {
 	// ConfigCrisisResources is crisis_resources from config.toml (or
 	// $AGILECBT_CRISIS_RESOURCES); see CrisisResources.
 	ConfigCrisisResources string
+	// OnDelete, when set, hears about every entity undo deletes.
+	OnDelete func(entity string, id int64)
 }
 
 // New returns an App using the local wall clock.
@@ -287,6 +289,9 @@ func (a *App) Undo(actionID int64) (db.Action, error) {
 		err = a.deleteEntity(act.Entity, act.EntityID)
 		if err == db.ErrNotFound {
 			err = nil // already gone
+		}
+		if err == nil && a.OnDelete != nil {
+			a.OnDelete(act.Entity, act.EntityID)
 		}
 	} else {
 		err = a.restoreEntity(act.Entity, []byte(*act.BeforeJSON))

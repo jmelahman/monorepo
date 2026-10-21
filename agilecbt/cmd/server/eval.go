@@ -441,6 +441,11 @@ func evalModels(f evalFlags, cfg config.Config) ([]eval.Model, error) {
 		if base.Name == "" || cfg.LLM == config.LLMNone {
 			return nil, errors.New("no model: pass --model or --matrix, or configure the coach")
 		}
+		// Eval talks to an OpenAI-compatible endpoint; a Claude Code coach
+		// has none, and its model name means nothing to base_url.
+		if cfg.LLM == config.LLMClaudeCode {
+			return nil, errors.New("the coach runs on Claude Code, which eval can't drive: pass --model or --matrix")
+		}
 		models = append(models, base)
 	}
 	return models, nil

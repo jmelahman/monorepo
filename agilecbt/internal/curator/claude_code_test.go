@@ -189,7 +189,7 @@ func TestClaudeCodeResumesSessions(t *testing.T) {
 	if !strings.Contains(args, "--resume\ns-1\n") {
 		t.Fatalf("second turn args = %q", args)
 	}
-	if stdin := readFile(t, filepath.Join(dir, "stdin")); stdin != "what now?" {
+	if stdin := readFile(t, filepath.Join(dir, "stdin")); !strings.HasSuffix(stdin, "\n\nwhat now?") || strings.Contains(stdin, "<transcript>") {
 		t.Fatalf("second turn prompt = %q", stdin)
 	}
 
@@ -198,6 +198,15 @@ func TestClaudeCodeResumesSessions(t *testing.T) {
 	turn(history[:2], "again")
 	if args := readFile(t, filepath.Join(dir, "args")); strings.Contains(args, "--resume") {
 		t.Fatalf("mismatched history resumed: %q", args)
+	}
+
+	// So does history of the right length that isn't what the session saw,
+	// such as a deleted check-in imported again under the same id.
+	turn(opener, "tired")
+	other := append(slices.Clone(opener), db.Message{Role: "user", Text: "someone else"}, db.Message{Role: "assistant", Text: "Hello."})
+	turn(other, "what now?")
+	if args := readFile(t, filepath.Join(dir, "args")); strings.Contains(args, "--resume") {
+		t.Fatalf("different history resumed: %q", args)
 	}
 
 	// Without a check-in or a WorkDir, nothing is kept.
@@ -216,8 +225,8 @@ func TestClaudeCodeLostSessionRetriesFresh(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := &ClaudeCode{Command: cmd, WorkDir: t.TempDir()}
-	c.sessions = map[int64]claudeSession{5: {id: "gone", messages: 2}}
-	history := []db.Message{{Role: "assistant", Text: "Hi"}, {Role: "user", Text: "hey"}}
+	history := []db.Message{{Role: "assistant", Text: "Hi"}, {Role: "user", Text: "hey"}, {Role: "assistant", Text: "Hello."}}
+	c.sessions = map[int64]claudeSession{5: {id: "gone", messages: 3, prompt: "hey", seen: digest([]db.Message{history[0], history[2]})}}
 	res, err := c.Turn(context.Background(), TurnRequest{CheckinID: 5, History: history, User: "still there?"}, func(string) {})
 	if err != nil {
 		t.Fatal(err)
@@ -231,8 +240,94 @@ func TestClaudeCodeLostSessionRetriesFresh(t *testing.T) {
 	if stdin := readFile(t, filepath.Join(dir, "stdin")); !strings.Contains(stdin, "<user>\nhey\n</user>") {
 		t.Fatalf("retry prompt = %q", stdin)
 	}
-	if s, _ := c.session(5); s.id != "s-2" || s.messages != 4 {
+	if s, _ := c.session(5); s.id != "s-2" || s.messages != 5 {
 		t.Fatalf("session = %+v", s)
+	}
+}
+
+func TestClaudeCodeCrisisTurnStartsFresh(t *testing.T) {
+	cmd, dir := scriptedClaude(t, `{"type":"result","subtype":"success","result":"I'm here.","session_id":"s-9"}`)
+	work := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	sessions := sessionDir(work)
+	if err := os.MkdirAll(sessions, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	old := filepath.Join(sessions, "s-1.jsonl")
+	if err := os.WriteFile(old, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c := &ClaudeCode{Command: cmd, WorkDir: work, MCPURL: "http://127.0.0.1:8080/mcp"}
+	history := []db.Message{{Role: "assistant", Text: "Hi"}, {Role: "user", Text: "hey"}, {Role: "assistant", Text: "Hello."}}
+	c.sessions = map[int64]claudeSession{5: {id: "s-1", messages: 3, prompt: "hey", seen: digest([]db.Message{history[0], history[2]})}}
+	if _, err := c.Turn(context.Background(), TurnRequest{CheckinID: 5, History: history, User: "help", NoTools: true}, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	args := readFile(t, filepath.Join(dir, "args"))
+	if strings.Contains(args, "--resume") || !strings.Contains(args, "--no-session-persistence") || strings.Contains(args, "--mcp-config") {
+		t.Fatalf("crisis turn args = %q", args)
+	}
+	if stdin := readFile(t, filepath.Join(dir, "stdin")); !strings.Contains(stdin, "<user>\nhey\n</user>") {
+		t.Fatalf("crisis turn prompt = %q", stdin)
+	}
+	if _, ok := c.session(5); ok {
+		t.Fatal("crisis turn kept a session")
+	}
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Fatalf("the replaced session's transcript is still on disk: %v", err)
+	}
+}
+
+func TestClaudeCodeForgetAndPrune(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	work := filepath.Join(t.TempDir(), "claude-code")
+	sessions := sessionDir(work)
+	if !strings.HasSuffix(sessions, strings.ReplaceAll(work, "/", "-")) {
+		t.Fatalf("sessionDir = %q", sessions)
+	}
+	if err := os.MkdirAll(filepath.Join(sessions, "s-1"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"s-1.jsonl", "s-2.jsonl"} {
+		if err := os.WriteFile(filepath.Join(sessions, f), []byte("{}"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c := &ClaudeCode{WorkDir: work, sessions: map[int64]claudeSession{7: {id: "s-1"}}}
+	c.Forget(7)
+	if _, err := os.Stat(filepath.Join(sessions, "s-1.jsonl")); !os.IsNotExist(err) {
+		t.Fatal("Forget left the transcript")
+	}
+	if _, err := os.Stat(filepath.Join(sessions, "s-2.jsonl")); err != nil {
+		t.Fatal("Forget removed another session's transcript")
+	}
+	PruneClaudeSessions(work)
+	if _, err := os.Stat(sessions); !os.IsNotExist(err) {
+		t.Fatal("PruneClaudeSessions left transcripts")
+	}
+}
+
+func TestClaudeEnv(t *testing.T) {
+	got := claudeEnv([]string{
+		"PATH=/bin", "HOME=/home/me", "CLAUDECODE=1", "CLAUDE_EFFORT=max", "CLAUDE_CODE_SESSION_ID=abc",
+		"CLAUDE_CODE_MESSAGING_TOKEN=t", "ANTHROPIC_API_KEY=sk", "CLAUDE_CODE_OAUTH_TOKEN=o",
+		"CLAUDE_CODE_USE_BEDROCK=1", "CLAUDE_CONFIG_DIR=/c",
+	})
+	want := []string{"PATH=/bin", "HOME=/home/me", "CLAUDE_CODE_OAUTH_TOKEN=o", "CLAUDE_CODE_USE_BEDROCK=1", "CLAUDE_CONFIG_DIR=/c"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("claudeEnv = %q, want %q", got, want)
+	}
+}
+
+func TestClaudeCodeResultOnlyReplyStreams(t *testing.T) {
+	cmd, _ := scriptedClaude(t, `{"type":"result","subtype":"success","result":"Only here.","session_id":"s-1"}`)
+	var streamed strings.Builder
+	res, err := (&ClaudeCode{Command: cmd}).Turn(context.Background(), TurnRequest{User: "hi"}, func(d string) { streamed.WriteString(d) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Text != "Only here." || streamed.String() != "Only here." {
+		t.Fatalf("text = %q, streamed = %q", res.Text, streamed.String())
 	}
 }
 

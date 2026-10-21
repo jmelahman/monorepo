@@ -38,20 +38,33 @@ type Config struct {
 	WorkDir string
 }
 
-// classifierFor builds the crisis classifier for a coach configuration.
-func (c *Curator) classifierFor(cfg Config) *safety.Classifier {
+// SafetyEndpoint is where a coach configuration's crisis classifier model
+// runs, or "" when there's no model and only the phrase list is used.
+func SafetyEndpoint(cfg Config) string {
 	if cfg.LLM == llmNone || cfg.SafetyModel == "" {
-		return &safety.Classifier{}
+		return ""
 	}
-	if cfg.LLM == llmClaudeCode && cfg.SafetyBaseURL == "" {
+	if cfg.SafetyBaseURL != "" {
+		return cfg.SafetyBaseURL
+	}
+	if cfg.LLM == llmClaudeCode {
 		// The classifier needs an OpenAI-compatible API, and the coach's
 		// base_url isn't in use.
+		return ""
+	}
+	return cfg.BaseURL
+}
+
+// classifierFor builds the crisis classifier for a coach configuration.
+func (c *Curator) classifierFor(cfg Config) *safety.Classifier {
+	base := SafetyEndpoint(cfg)
+	if base == "" {
 		return &safety.Classifier{}
 	}
-	base, coachKey := cfg.BaseURL, cfg.APIKey
-	if cfg.SafetyBaseURL != "" && cfg.SafetyBaseURL != cfg.BaseURL {
+	coachKey := cfg.APIKey
+	if base != cfg.BaseURL {
 		// Never send the coach's key to another endpoint.
-		base, coachKey = cfg.SafetyBaseURL, ""
+		coachKey = ""
 	}
 	o := &OpenAI{
 		BaseURL:         base,

@@ -5,17 +5,23 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jmelahman/agilecbt/internal/db"
 )
@@ -23,6 +29,10 @@ import (
 // mcpServerName is what the coach's tools are registered as in Claude Code,
 // which names them mcp__<server>__<tool>.
 const mcpServerName = "agilecbt"
+
+// maxTurns bounds one reply's tool rounds, as maxToolRounds does for the
+// OpenAI backend, so a failing tool can't loop against the plan's limits.
+const maxTurns = 12
 
 // ClaudeModels are the model aliases Claude Code accepts, offered in
 // Settings → Coach.
@@ -37,7 +47,11 @@ var ClaudeModels = []string{"opus", "sonnet", "haiku", "fable"}
 // (--resume), so earlier turns come from the prompt cache. Without one, or
 // whenever the session no longer matches the stored history (a restart, a
 // failed turn, a settings change), the turn starts a new session with the
-// history as a transcript.
+// history as a transcript. Crisis turns always start fresh and aren't kept.
+//
+// Claude Code saves each session's transcript under ~/.claude/projects;
+// ClaudeCode deletes a session's file once it's replaced or its check-in is
+// deleted, and PruneClaudeSessions clears the rest when the server starts.
 type ClaudeCode struct {
 	// Command is the claude binary (default "claude" on $PATH).
 	Command string
@@ -65,8 +79,21 @@ type ClaudeCode struct {
 type claudeSession struct {
 	id string
 	// messages is how many stored messages the session has seen. A turn
-	// resumes it only when the history is exactly that long.
+	// resumes it only when the history is exactly that long and is what
+	// the session saw: earlier messages and the reply hash to seen, and the
+	// stored user message ends the prompt it was sent.
 	messages int
+	seen     string
+	prompt   string
+}
+
+// continues says whether history is what the session has seen.
+func (s claudeSession) continues(history []db.Message) bool {
+	n := len(history)
+	if n != s.messages || n < 2 || history[n-2].Role != "user" || !strings.HasSuffix(s.prompt, history[n-2].Text) {
+		return false
+	}
+	return s.seen == digest(append(history[:n-2:n-2], history[n-1]))
 }
 
 // Name implements Backend.
@@ -141,11 +168,17 @@ func (c *ClaudeCode) Turn(ctx context.Context, req TurnRequest, onText func(stri
 			o.mcpURL += "?checkin=" + strconv.FormatInt(req.CheckinID, 10)
 		}
 	}
-	keep := c.WorkDir != "" && req.CheckinID != 0
+	// A crisis turn has no tools, so it can't continue a session whose
+	// history has tool calls; it starts fresh and isn't kept, which also
+	// keeps its safety directive out of later turns.
+	keep := c.WorkDir != "" && req.CheckinID != 0 && !req.NoTools
+	prev, hadPrev := c.session(req.CheckinID)
 	if keep {
 		o.persist = true
-		if sess, ok := c.session(req.CheckinID); ok && sess.messages == len(history) {
-			o.resume, o.prompt = sess.id, req.User
+		if hadPrev && prev.continues(history) {
+			// Each turn brings a fresh context block; the session still has
+			// the old ones.
+			o.resume, o.prompt = prev.id, "(This message's <context> replaces any earlier one.)\n\n"+req.User
 		}
 	}
 	if o.resume == "" {
@@ -157,20 +190,81 @@ func (c *ClaudeCode) Turn(ctx context.Context, req TurnRequest, onText func(stri
 		o.resume, o.prompt = "", transcript(history, req.User)
 		text, id, err = c.run(ctx, o)
 	}
-	if keep {
+	if hadPrev && (!keep || err != nil || id != prev.id) {
+		c.Forget(req.CheckinID)
+	}
+	if keep && err == nil && id != "" {
 		c.mu.Lock()
-		if err != nil || id == "" {
-			delete(c.sessions, req.CheckinID)
-		} else {
-			if c.sessions == nil {
-				c.sessions = map[int64]claudeSession{}
-			}
-			// The app stores this turn's message and reply next.
-			c.sessions[req.CheckinID] = claudeSession{id: id, messages: len(history) + 2}
+		if c.sessions == nil {
+			c.sessions = map[int64]claudeSession{}
 		}
+		// The app stores this turn's message and reply next.
+		seen := digest(append(slices.Clone(history), db.Message{Role: "assistant", Text: text}))
+		c.sessions[req.CheckinID] = claudeSession{id: id, messages: len(history) + 2, seen: seen, prompt: req.User}
 		c.mu.Unlock()
+	} else if keep && id != "" {
+		c.removeSession(id)
 	}
 	return TurnResult{Text: text}, err
+}
+
+// Forget drops a check-in's session and deletes its transcript from disk.
+func (c *ClaudeCode) Forget(checkinID int64) {
+	c.mu.Lock()
+	s, ok := c.sessions[checkinID]
+	delete(c.sessions, checkinID)
+	c.mu.Unlock()
+	if ok {
+		c.removeSession(s.id)
+	}
+}
+
+func (c *ClaudeCode) removeSession(id string) {
+	if dir := sessionDir(c.WorkDir); dir != "" && id != "" && !strings.ContainsAny(id, `/\.`) {
+		os.Remove(filepath.Join(dir, id+".jsonl"))
+		os.RemoveAll(filepath.Join(dir, id))
+	}
+}
+
+// PruneClaudeSessions deletes the transcripts Claude Code kept for sessions
+// run in workDir. Sessions are only resumed within one server run, so at
+// startup every one of them is stale.
+func PruneClaudeSessions(workDir string) {
+	if dir := sessionDir(workDir); dir != "" {
+		os.RemoveAll(dir)
+	}
+}
+
+var nonAlnum = regexp.MustCompile(`[^a-zA-Z0-9]`)
+
+// sessionDir is where Claude Code files sessions run in workDir: its
+// projects folder, named after the path with every other character a dash.
+func sessionDir(workDir string) string {
+	if workDir == "" {
+		return ""
+	}
+	abs, err := filepath.Abs(workDir)
+	if err != nil {
+		return ""
+	}
+	config := os.Getenv("CLAUDE_CONFIG_DIR")
+	if config == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		config = filepath.Join(home, ".claude")
+	}
+	return filepath.Join(config, "projects", nonAlnum.ReplaceAllString(abs, "-"))
+}
+
+// digest identifies a run of messages.
+func digest(msgs []db.Message) string {
+	h := sha256.New()
+	for _, m := range msgs {
+		fmt.Fprintf(h, "%s\x00%d\x00%s\x00", m.Role, len(m.Text), m.Text)
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (c *ClaudeCode) session(checkinID int64) (claudeSession, bool) {
@@ -233,6 +327,7 @@ func (c *ClaudeCode) run(ctx context.Context, o claudeRun) (text, sessionID stri
 		// No built-in tools, user/project settings, or account MCP servers.
 		"--tools", "", "--setting-sources", "",
 		"--strict-mcp-config", "--permission-mode", "dontAsk",
+		"--max-turns", strconv.Itoa(maxTurns),
 	}
 	cwd := dir
 	switch {
@@ -271,6 +366,10 @@ func (c *ClaudeCode) run(ctx context.Context, o claudeRun) (text, sessionID stri
 
 	cmd := exec.CommandContext(ctx, c.command(), args...)
 	cmd.Dir = cwd
+	cmd.Env = claudeEnv(os.Environ())
+	// Don't wait forever on a child that keeps stdout open after claude
+	// exits.
+	cmd.WaitDelay = 5 * time.Second
 	cmd.Stdin = strings.NewReader(o.prompt)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -288,6 +387,10 @@ func (c *ClaudeCode) run(ctx context.Context, o claudeRun) (text, sessionID stri
 		s.handle(sc.Bytes())
 	}
 	scanErr := sc.Err()
+	if scanErr != nil {
+		// Keep claude from blocking on a full pipe so Wait can return.
+		_, _ = io.Copy(io.Discard, stdout)
+	}
 	waitErr := cmd.Wait()
 	text = strings.TrimSpace(s.text.String())
 	switch {
@@ -307,9 +410,32 @@ func (c *ClaudeCode) run(ctx context.Context, o claudeRun) (text, sessionID stri
 		return text, "", errors.New("Claude Code: " + lastLine(cmp.Or(detail, "exited without a reply")))
 	}
 	if text == "" {
+		// No partial messages arrived; the reply is only in the result.
 		text = strings.TrimSpace(s.result)
+		if text != "" {
+			o.onText(text)
+		}
 	}
 	return text, s.sessionID, nil
+}
+
+// claudeEnv is the server's environment without what would tie claude to
+// a Claude Code session the server was started from, or bill an API key
+// instead of the signed-in subscription.
+func claudeEnv(environ []string) []string {
+	var env []string
+	for _, kv := range environ {
+		name, _, _ := strings.Cut(kv, "=")
+		switch {
+		case name == "CLAUDECODE", name == "CLAUDE_PID", name == "CLAUDE_EFFORT",
+			name == "ANTHROPIC_API_KEY", name == "ANTHROPIC_AUTH_TOKEN":
+			continue
+		case strings.HasPrefix(name, "CLAUDE_CODE_") && name != "CLAUDE_CODE_OAUTH_TOKEN" && !strings.HasPrefix(name, "CLAUDE_CODE_USE_"):
+			continue
+		}
+		env = append(env, kv)
+	}
+	return env
 }
 
 func lastLine(s string) string {

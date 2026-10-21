@@ -97,6 +97,14 @@ func (c *Curator) classifier() *safety.Classifier {
 	return c.safety
 }
 
+// Forget drops what the backend keeps of a deleted check-in's
+// conversation.
+func (c *Curator) Forget(checkinID int64) {
+	if cc, ok := c.current().(*ClaudeCode); ok {
+		cc.Forget(checkinID)
+	}
+}
+
 func (c *Curator) current() Backend {
 	c.mu.Lock()
 	defer c.mu.Unlock()

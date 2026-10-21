@@ -12,39 +12,54 @@ IMAGE="${AGILECBT_DEV_IMAGE:-ghcr.io/jmelahman/devcontainer:latest}"
 if [[ -z ${AGILECBT_IN_DEVCONTAINER:-} ]]; then
 	# Host network keeps the ports on the host's localhost and lets the repo
 	# config reach the host's Ollama at localhost:11434 unchanged.
-	data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/agilecbt"
+	data_dir="${AGILECBT_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/agilecbt}"
 	gomod_dir="${GOMODCACHE:-$HOME/go/pkg/mod}"
 	cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
-	mkdir -p "$data_dir" "$gomod_dir" "$cache_dir"
-	# Root, not the image's dev user: rootless Docker maps container root to
-	# the host user, so files written to the checkout (web/node_modules) stay
-	# theirs.
+	mkdir -p "$data_dir" "$gomod_dir" "$cache_dir" "$HOME/.claude"
+	# Docker would create a missing file mount as a root-owned directory.
+	[[ -e $HOME/.claude.json ]] || echo '{}' >"$HOME/.claude.json"
+	# Files written to the checkout (web/node_modules) and the mounted
+	# folders must stay the host user's. Rootless Docker maps container root
+	# to the host user; rootful Docker needs the host user's own uid.
+	if docker info -f '{{.SecurityOptions}}' 2>/dev/null | grep -q rootless; then
+		user=root
+	else
+		user="$(id -u):$(id -g)"
+	fi
+	# A scratch home that whichever user runs can write to, with the host's
+	# state mounted into it.
+	home=/home/host
 	args=(
 		--rm --init
 		--name agilecbt-dev
-		--user root
+		--user "$user"
 		--network host
-		-e GOPATH=/root/go
-		-e BUN_INSTALL_CACHE_DIR=/root/.cache/bun/install
+		--tmpfs "$home:exec,mode=1777"
+		-e HOME="$home"
+		-e GOPATH="$home/go"
+		-e BUN_INSTALL_CACHE_DIR="$home/.cache/bun/install"
 		-e AGILECBT_IN_DEVCONTAINER=1
 		-v "$PWD:/workspace"
 		-w /workspace
-		-v "$gomod_dir:/root/go/pkg/mod"
-		-v "$cache_dir:/root/.cache"
+		-v "$gomod_dir:$home/go/pkg/mod"
+		-v "$cache_dir:$home/.cache"
 		# Keep the on-disk DB where a host-run server would put it.
-		-v "$data_dir:/root/.local/share/agilecbt"
+		-v "$data_dir:$home/.local/share/agilecbt"
 		# Claude Code's login and state, for `docker exec -it agilecbt-dev claude`.
-		-v "$HOME/.claude:/root/.claude"
-		-v "$HOME/.claude.json:/root/.claude.json"
+		-v "$HOME/.claude:$home/.claude"
+		-v "$HOME/.claude.json:$home/.claude.json"
 	)
 	if [[ -d "$HOME/.config/agilecbt" ]]; then
-		args+=(-v "$HOME/.config/agilecbt:/root/.config/agilecbt:ro")
+		args+=(-v "$HOME/.config/agilecbt:$home/.config/agilecbt:ro")
 	fi
-	for var in AGILECBT_LLM_BASE_URL AGILECBT_MODEL AGILECBT_LLM_API_KEY; do
-		if [[ -n ${!var:-} ]]; then
-			args+=(-e "$var")
-		fi
-	done
+	# Every AGILECBT_* setting, except the ones that only make sense on the
+	# host (the data dir is mounted where the server looks by default).
+	while IFS= read -r var; do
+		case $var in
+		AGILECBT_DATA_DIR | AGILECBT_DEV_IMAGE | AGILECBT_IN_DEVCONTAINER) ;;
+		*) args+=(-e "$var") ;;
+		esac
+	done < <(compgen -e | grep '^AGILECBT_' || true)
 	if [[ -t 0 && -t 1 ]]; then
 		args+=(-it)
 	fi

@@ -119,9 +119,14 @@ func run(addr, dataDirOverride string, inMemory bool) error {
 	a.ConfigCrisisResources = cfg.CrisisResources
 	reg := tools.New(a)
 	build := Build()
-	cur, err := newCurator(cfg, reg, addr)
+	cur, err := newCurator(cfg, reg, addr, inMemory)
 	if err != nil {
 		return err
+	}
+	a.OnDelete = func(entity string, id int64) {
+		if entity == app.EntityCheckin {
+			cur.Forget(id)
+		}
 	}
 	if cfg.Secret == "" {
 		if isLoopback(addr) {
@@ -205,7 +210,14 @@ func logRequests(h http.Handler) http.Handler {
 // newCurator builds the in-app curator. Its model settings start from the
 // config and can be changed in Settings → Coach, including turning it on or
 // off.
-func newCurator(cfg config.Config, reg *tools.Registry, addr string) (*curator.Curator, error) {
+func newCurator(cfg config.Config, reg *tools.Registry, addr string, inMemory bool) (*curator.Curator, error) {
+	// Claude Code keeps each session's transcript on disk. Sessions only
+	// last one run, so earlier ones go; an in-memory run keeps none.
+	workDir := filepath.Join(cfg.DataDir, "claude-code")
+	curator.PruneClaudeSessions(workDir)
+	if inMemory {
+		workDir = ""
+	}
 	cur, err := curator.NewConfigured(reg, curator.Config{
 		LLM:             cfg.LLM,
 		BaseURL:         cfg.BaseURL,
@@ -217,7 +229,7 @@ func newCurator(cfg config.Config, reg *tools.Registry, addr string) (*curator.C
 		SafetyAPIKey:    cfg.SafetyAPIKey,
 		MCPURL:          curator.SelfMCPURL(addr),
 		Secret:          cfg.Secret,
-		WorkDir:         filepath.Join(cfg.DataDir, "claude-code"),
+		WorkDir:         workDir,
 	})
 	if err != nil {
 		return nil, err
@@ -232,15 +244,13 @@ func newCurator(cfg config.Config, reg *tools.Registry, addr string) (*curator.C
 	default:
 		log.Printf("AI coach: %s at %s", eff.Model, eff.BaseURL)
 	}
-	switch {
-	case cfg.SafetyModel == "" || (eff.LLM == config.LLMClaudeCode && cfg.SafetyBaseURL == ""):
-		log.Printf("crisis classifier: phrase list only (set safety_model to add a model)")
+	switch at := curator.SafetyEndpoint(eff); {
+	case at != "":
+		log.Printf("crisis classifier: phrase list + %s at %s", eff.SafetyModel, at)
+	case eff.SafetyModel != "" && eff.LLM == config.LLMClaudeCode:
+		log.Printf("crisis classifier: phrase list only (Claude Code can't run safety_model; set safety_base_url)")
 	default:
-		at := cfg.SafetyBaseURL
-		if at == "" {
-			at = eff.BaseURL
-		}
-		log.Printf("crisis classifier: phrase list + %s at %s", cfg.SafetyModel, at)
+		log.Printf("crisis classifier: phrase list only (set safety_model to add a model)")
 	}
 	return cur, nil
 }
