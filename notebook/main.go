@@ -33,8 +33,17 @@ var embedded embed.FS
 
 type hostList []string
 
-func (h *hostList) String() string     { return strings.Join(*h, ",") }
-func (h *hostList) Set(v string) error { *h = append(*h, v); return nil }
+func (h *hostList) String() string { return strings.Join(*h, ",") }
+
+// Set adds a name, or several separated by commas.
+func (h *hostList) Set(v string) error {
+	for name := range strings.SplitSeq(v, ",") {
+		if name = strings.TrimSpace(name); name != "" {
+			*h = append(*h, name)
+		}
+	}
+	return nil
+}
 
 func main() {
 	if len(os.Args) < 2 || os.Args[1] != "serve" {
@@ -51,7 +60,7 @@ func main() {
 	effort := fl.String("effort", "", "default effort: low, medium, high, xhigh or max")
 	state := fl.String("state", defaultState(), "where Claude Code sessions run, so they can be resumed")
 	var hosts hostList
-	fl.Var(&hosts, "host", "a host name the page is reached at besides localhost (repeatable)")
+	fl.Var(&hosts, "host", "host names the page is reached at besides localhost, separated by commas (repeatable)")
 	_ = fl.Parse(os.Args[2:]) // ExitOnError
 	if *ttsURL != "" {
 		if u, err := url.Parse(*ttsURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {

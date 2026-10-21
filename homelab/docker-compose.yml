@@ -11,6 +11,24 @@ services:
       - ./podcasts:/podcasts
     restart: unless-stopped
 
+  notebook:
+    image: notebook:local
+    build: ../notebook
+    container_name: notebook
+    restart: unless-stopped
+    expose:
+      - 8090
+    # The names the dashboard is reached at; the notebook refuses others.
+    command: ["--host", "${HOMELAB_IP},${NOTEBOOK_HOSTS:-}"]
+    volumes:
+      # Claude Code's login, shared with the host's
+      - ~/.claude:/root/.claude
+      - ~/.claude.json:/root/.claude.json
+      - ./podcasts:/podcasts
+      - notebook_state:/state
+      # The voice model, downloaded on first use
+      - notebook_cache:/root/.cache/notebook
+
   nginx:
     image: nginx
     container_name: nginx
@@ -27,6 +45,7 @@ services:
       # Markdown the editor opens and saves in place
       - ../:/srv/files/
     depends_on:
+      - notebook
       - audiobookshelf
       - jellyfin
       - pihole
@@ -85,3 +104,5 @@ services:
 volumes:
   jellyfin_data:
   pacoloco_data:
+  notebook_state:
+  notebook_cache:

@@ -10,6 +10,7 @@
 | `/draw`           | `../image-editor`, from the working tree |
 | `/write`          | `../text-editor`, from the working tree  |
 | `/files`          | `..`, the monorepo, for `/write` to save |
+| `/notebook`       | notebook, built from `../notebook`       |
 | `/audiobookshelf` | audiobookshelf                           |
 | `/video`          | jellyfin                                 |
 | `/pihole/admin`   | pihole                                   |
@@ -35,6 +36,29 @@ The editor at `/write` opens and saves Markdown in this repository through
 nginx lists the folders there, and reads and writes nothing but `.md`,
 `.markdown`, and `.txt`; anything under a dot directory is refused. Anyone
 who can reach the dashboard can read and overwrite those files.
+
+### Notebook
+
+The notebook at `/notebook` turns sources into podcast episodes with Claude
+Code, signed in with the host's login: the container shares `~/.claude` and
+`~/.claude.json`, so sign in on the host first. It only answers to
+`HOMELAB_IP` and the names in `NOTEBOOK_HOSTS`, such as the tailnet name, in
+`.env`:
+
+```shell
+NOTEBOOK_HOSTS=onix,onix.example.ts.net
+```
+
+The image is built from `../notebook`, with the version of Claude Code pinned
+in its Dockerfile. After a change to either,
+
+```shell
+docker compose up -d --build notebook
+```
+
+Episodes are published to `podcasts/`; to see them, add a Podcast library on
+`/podcasts` in audiobookshelf once. Anyone who can reach the dashboard can use
+the notebook, and through it Claude on your subscription.
 
 ### Organizing
 

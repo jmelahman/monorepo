@@ -10,6 +10,12 @@
           "icon": "kanban"
         },
         {
+          "name": "Notebook",
+          "description": "Sources into podcast episodes",
+          "url": "/notebook/",
+          "icon": "book"
+        },
+        {
           "name": "Write",
           "description": "Markdown editor",
           "url": "/write/",

@@ -167,11 +167,12 @@ async function checkStatus() {
   }
   const { claude, publish, tts, models } = state.status;
   s.className = `status ${claude.ok ? 'ok' : 'bad'}`;
-  s.textContent = claude.detail;
+  // The details are long for the toolbar; they're in the tooltip.
+  s.textContent = claude.ok ? 'Claude' : 'Claude unavailable';
   s.title = [`Claude: ${claude.detail}`, `Publishing: ${publish.detail}`, `Voices: ${tts.detail}`].join('\n');
 
   const chosen = load(MODEL_KEY, '');
-  $('model').replaceChildren(el('option', { value: '', textContent: 'Default' }), ...models.map((m) => el('option', { value: m, textContent: m[0].toUpperCase() + m.slice(1) })));
+  $('model').replaceChildren(el('option', { value: '', textContent: 'Default model' }), ...models.map((m) => el('option', { value: m, textContent: m[0].toUpperCase() + m.slice(1) })));
   $('model').value = models.includes(chosen) ? chosen : '';
 
   const server = $('engine').querySelector('[value=server]');
@@ -746,7 +747,7 @@ async function synthesize() {
       if (stopSynth) throw new DOMException('stopped', 'AbortError');
       const { samples } = await jobs[i];
       if (i + AHEAD < lines.length) launch(i + AHEAD);
-      clips.push({ samples, speaker: line.speaker, segment: line.segment });
+      clips.push({ samples, speaker: line.speaker, segment: line.segment, line });
       live?.add(clips.at(-1));
     }
     const { track, starts } = assemble(clips);
@@ -785,6 +786,15 @@ class Live {
     this.at = 0;
     this.prev = null;
     this.sources = new Set();
+    this.heard = []; // {at, line}, in the order they play
+    this.timer = setInterval(follow, 250);
+  }
+
+  /** The line being heard now, if any. */
+  current() {
+    const t = this.ctx.currentTime;
+    if (t >= this.at) return null;
+    return this.heard.findLast((h) => h.at <= t)?.line ?? null;
   }
 
   add(clip) {
@@ -797,6 +807,7 @@ class Live {
     // If making the audio fell behind, carry on from now.
     const at = Math.max(this.at + gap(this.prev, clip), this.ctx.currentTime + 0.05);
     src.start(at);
+    this.heard.push({ at, line: clip.line });
     src.onended = () => this.sources.delete(src);
     this.sources.add(src);
     this.at = at + buffer.duration;
@@ -804,6 +815,7 @@ class Live {
   }
 
   stop() {
+    clearInterval(this.timer);
     for (const src of this.sources) src.stop();
     this.ctx.close();
   }
@@ -815,6 +827,7 @@ function stopLive() {
   live?.stop();
   live = null;
   $('synth-listen').textContent = 'Listen now';
+  follow();
 }
 
 function formatTime(s) {
@@ -861,16 +874,33 @@ async function playLine(line) {
 }
 
 /** Marks the line being heard. */
-function follow() {
+/** The line being heard: listening along, or on the player. */
+function heard() {
+  if (live) return live.current();
   const a = state.audio;
-  const items = [...$('script').querySelectorAll('.line')];
+  if (!a?.starts || a.episode !== state.episode || $('audio').paused) return null;
+  const i = a.starts.findLastIndex((s) => s <= $('audio').currentTime);
+  return i < 0 ? null : a.lines[i];
+}
+
+let followed = null;
+
+/** Marks the line being heard and, in full screen, brings it into view. */
+function follow() {
+  const line = heard();
+  const items = $('script').querySelectorAll('.line');
   items.forEach((li) => li.classList.remove('playing'));
-  if (!a?.starts || a.episode !== state.episode || $('audio').paused) return;
-  const t = $('audio').currentTime;
-  const i = a.starts.findLastIndex((s) => s <= t);
-  if (i < 0) return;
-  const li = items[state.episode.lines.indexOf(a.lines[i])];
+  const li = line && items[state.episode?.lines.indexOf(line)];
   li?.classList.add('playing');
+  // Only when it moves on, and not while a line is being edited.
+  const editing = $('script').contains(document.activeElement);
+  if (li && line !== followed && document.fullscreenElement === $('episode') && !editing) {
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // A line too tall to center is shown from its start, under the player.
+    const tall = li.offsetHeight > innerHeight * 0.6;
+    li.scrollIntoView({ block: tall ? 'start' : 'center', behavior: smooth ? 'smooth' : 'auto' });
+  }
+  followed = line;
 }
 
 function fileName(ep) {
@@ -917,6 +947,16 @@ $('theme').addEventListener('click', () => {
 darkScheme.addEventListener('change', applyTheme);
 
 $('model').addEventListener('change', () => save(MODEL_KEY, model()));
+
+// The menu opens below its button, kept on screen.
+function placeMenu() {
+  const b = $('notebook-button').getBoundingClientRect();
+  const m = $('notebook-menu');
+  m.style.top = `${b.bottom + 4}px`;
+  m.style.left = `${Math.max(4, Math.min(b.left, innerWidth - m.offsetWidth - 4))}px`;
+}
+$('notebook-menu').addEventListener('toggle', (e) => e.newState === 'open' && placeMenu());
+window.addEventListener('resize', () => $('notebook-menu').matches(':popover-open') && placeMenu());
 
 $('new-notebook').addEventListener('click', async () => {
   $('notebook-menu').hidePopover();
@@ -1064,6 +1104,21 @@ $('save-audio').addEventListener('click', () => {
   a.click();
 });
 $('publish').addEventListener('click', publish);
+// Full screen is for listening: the script follows along.
+$('fullscreen').hidden = !document.fullscreenEnabled;
+$('fullscreen').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else $('episode').requestFullscreen().catch((err) => toast(`Couldn't go full screen: ${err.message}`));
+});
+document.addEventListener('fullscreenchange', () => {
+  $('fullscreen').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+  followed = null;
+  follow();
+});
+// Sticky things sit below the ones above them, however tall those get.
+for (const [name, target] of [['--toolbar', document.querySelector('.toolbar')], ['--player', document.querySelector('.player')]]) {
+  new ResizeObserver(([e]) => document.documentElement.style.setProperty(name, `${e.borderBoxSize[0].blockSize}px`)).observe(target);
+}
 for (const ev of ['timeupdate', 'pause', 'play', 'seeked']) $('audio').addEventListener(ev, follow);
 
 window.addEventListener('beforeunload', (e) => {

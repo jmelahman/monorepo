@@ -304,6 +304,7 @@ button.small {
 
 button.small.icon {
   width: 1.625rem;
+  padding: 0;
 }
 
 button.small.icon svg {
@@ -371,7 +372,7 @@ button.small.icon svg {
   border-top: 1px solid var(--rule);
 }
 
-/* Layout: one column, sources then the episode. */
+/* Layout: one column, sources then the episode; see below for wide screens. */
 
 main {
   display: flex;
@@ -393,6 +394,70 @@ main {
 .pane + .pane {
   padding-top: 1.5rem;
   border-top: 1px solid var(--rule);
+}
+
+/* Wide screens: sources beside the episode, filling the window. The page
+   doesn't scroll; each pane does, and within the episode the script. */
+@media (min-width: 1100px) {
+  main {
+    display: grid;
+    grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 2rem;
+    max-width: 88rem;
+    padding-inline: 1.5rem;
+  }
+
+  .pane + .pane {
+    padding-top: 0;
+    border-top: 0;
+    padding-left: 2rem;
+    border-left: 1px solid var(--rule);
+  }
+}
+
+@media (min-width: 1100px) and (min-height: 560px) {
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  main {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    padding-bottom: 1.25rem;
+  }
+
+  .pane {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #sources {
+    padding-right: 0.25rem;
+  }
+
+  /* When the settings leave little room, the episode pane scrolls. */
+  #episode:not([hidden]) {
+    flex: 1;
+    min-height: 24rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #episode .script {
+    flex: 1;
+    min-height: 10rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-block: 0.25rem;
+    border-block: 1px solid var(--rule);
+  }
 }
 
 .row {
@@ -624,11 +689,82 @@ progress {
   font: 600 1.05rem/1.3 var(--sans);
 }
 
+/* The description grows with what's written, within reason. */
+#episode-description {
+  field-sizing: content;
+  min-height: calc(4lh + 0.9rem);
+  max-height: calc(12lh + 0.9rem);
+  line-height: 1.5;
+}
+
 .player {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   margin: 0.5rem 0;
+}
+
+/* Full screen: the episode alone, scrolling within itself. */
+#episode:fullscreen {
+  overflow-y: auto;
+  /* No top padding: the pinned player would leave a strip above it. */
+  padding: 0 max(1rem, calc((100vw - 90rem) / 2)) 3rem;
+  background: var(--ink);
+}
+
+#episode:fullscreen > :first-child {
+  margin-top: 1.5rem;
+}
+
+/* There the script is part of the scroll, under a pinned player. */
+#episode:fullscreen .player {
+  position: sticky;
+  /* A pixel past the edge, so no sliver shows above it when zoomed. */
+  top: -1px;
+  z-index: 5;
+  margin: 0;
+  padding-block: calc(0.75rem + 1px) 0.5rem;
+  background: var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+
+#episode:fullscreen .script {
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+  border: 0;
+}
+
+#episode:fullscreen > * {
+  flex: none;
+}
+
+/* Read from a distance: larger text, scaled with the screen. */
+#episode:fullscreen .episode-title {
+  font-size: clamp(2rem, 1.6rem + 1.5vw, 2.75rem);
+}
+
+#episode:fullscreen #episode-description {
+  font-size: clamp(1.5rem, 1.25rem + 0.75vw, 1.875rem);
+}
+
+#episode:fullscreen .script {
+  gap: 1rem;
+}
+
+#episode:fullscreen .script .line {
+  grid-template-columns: minmax(6rem, 12vw) 1fr auto;
+  scroll-margin-top: calc(var(--player, 4rem) + 1rem);
+}
+
+#episode:fullscreen .script .who {
+  font-size: clamp(1.375rem, 1.1rem + 0.75vw, 1.75rem);
+  padding-top: 0.6rem;
+}
+
+#episode:fullscreen .script .text {
+  font-size: clamp(1.75rem, 1.3rem + 1.4vw, 2.5rem);
+  line-height: 1.5;
 }
 
 audio {
