@@ -1,9 +1,14 @@
 package ble
 
 import (
+	"errors"
 	"fmt"
+
 	"tinygo.org/x/bluetooth"
 )
+
+// MaxBrightness is the highest level accepted by SetBrightness.
+const MaxBrightness = 15
 
 type Device struct {
 	adapter   *bluetooth.Adapter
@@ -18,6 +23,10 @@ type ScanResult struct {
 }
 
 var (
+	// ServiceUUID is the Generic Access service (0x1800), not a vendor service.
+	// The lights advertise it, but so do other devices, so a match is only a
+	// candidate: ConnectAndDiscover rejects devices without the write
+	// characteristic.
 	ServiceUUID = bluetooth.NewUUID([16]byte{
 		0x00, 0x00, 0x18, 0x00, 0x00, 0x00,
 		0x10, 0x00, 0x80, 0x00, 0x00, 0x80,
@@ -66,16 +75,27 @@ func ConnectAndDiscover(adapter *bluetooth.Adapter, address bluetooth.Address) (
 		return nil, err
 	}
 
-	dev, err := adapter.Connect(address, bluetooth.ConnectionParams{})
-	if err != nil {
-		return nil, err
-	}
-
-	d := &Device{dev: &dev, adapter: adapter, address: address}
-	if err := d.discover(); err != nil {
+	d := &Device{adapter: adapter, address: address}
+	if err := d.connect(); err != nil {
 		return nil, err
 	}
 	return d, nil
+}
+
+// connect opens a connection and discovers the write characteristic,
+// disconnecting again if the device turns out not to be usable.
+func (d *Device) connect() error {
+	dev, err := d.adapter.Connect(d.address, bluetooth.ConnectionParams{})
+	if err != nil {
+		return err
+	}
+	d.dev = &dev
+	d.writeChar = nil
+	if err := d.discover(); err != nil {
+		_ = dev.Disconnect()
+		return err
+	}
+	return nil
 }
 
 func (d *Device) discover() error {
@@ -83,8 +103,15 @@ func (d *Device) discover() error {
 	if err != nil {
 		return err
 	}
+	// Some services may refuse characteristic discovery; only report those
+	// errors if the write characteristic isn't found elsewhere.
+	var errs []error
 	for _, s := range svcs {
-		chs, _ := s.DiscoverCharacteristics(nil)
+		chs, err := s.DiscoverCharacteristics(nil)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
 		for _, ch := range chs {
 			if ch.UUID() == writeCharUUID {
 				d.writeChar = &ch
@@ -92,65 +119,53 @@ func (d *Device) discover() error {
 			}
 		}
 	}
-	return nil
+	return fmt.Errorf("write characteristic %s not found: %w", writeCharUUID, errors.Join(errs...))
 }
 
-func (d *Device) Connect() error {
-	if err := d.adapter.Enable(); err != nil {
-		return err
-	}
+// Disconnect closes the connection to the device.
+func (d *Device) Disconnect() error {
+	return d.dev.Disconnect()
+}
 
-	dev, err := d.adapter.Connect(d.address, bluetooth.ConnectionParams{})
-	if err != nil {
-		return err
+// write sends cmd, reconnecting first if the connection has dropped.
+func (d *Device) write(cmd []byte) error {
+	connected, err := d.dev.Connected()
+	if err != nil || !connected || d.writeChar == nil {
+		if err := d.connect(); err != nil {
+			return fmt.Errorf("reconnect: %w", err)
+		}
 	}
-	d.dev = &dev
-	return nil
+	_, err = d.writeChar.WriteWithoutResponse(cmd)
+	return err
+}
+
+// command frames a payload as: 0xA0, op, total length, payload, CRC16 (LE).
+func command(op byte, payload ...byte) []byte {
+	cmd := append([]byte{0xA0, op, byte(3 + len(payload))}, payload...)
+	crc := crc16Modbus(cmd)
+	return append(cmd, byte(crc&0xFF), byte(crc>>8))
 }
 
 // Power toggles the LED power state.
 func (d *Device) Power(on bool) error {
-	if d.writeChar == nil {
-		return fmt.Errorf("write characteristic undiscovered")
-	}
-
-	if err := d.Connect(); err != nil {
-		return err
-	}
-
-	cmd := []byte{0xA0, 0x11, 0x04}
+	var state byte
 	if on {
-		cmd = append(cmd, 0x01, 0xB1, 0x21) // on
-	} else {
-		cmd = append(cmd, 0x00, 0x70, 0xE1) // off
+		state = 0x01
 	}
-	_, err := d.writeChar.WriteWithoutResponse(cmd)
-	return err
+	return d.write(command(0x11, state))
 }
 
-func getLevelHex(level int) []byte {
-	baseHex := [][]byte{
-		{0x01, 0x10, 0xE1}, {0x0C, 0xD1, 0x24}, {0x14, 0xD1, 0x2E}, {0x16, 0x50, 0xEF},
-		{0x1B, 0x91, 0x2A}, {0x1E, 0x51, 0x29}, {0x22, 0x51, 0x38}, {0x29, 0x10, 0xFF},
-		{0x2A, 0x50, 0xFE}, {0x32, 0x50, 0xF4}, {0x3D, 0x10, 0xF0}, {0x49, 0x10, 0xD7},
-		{0x4E, 0x51, 0x15}, {0x58, 0xD0, 0xDB}, {0x5A, 0x51, 0x1A}, {0x64, 0xD0, 0xCA},
-	}
-
-	return baseHex[level]
+// brightnessLevels maps levels 0..MaxBrightness to the device's values.
+var brightnessLevels = [MaxBrightness + 1]byte{
+	0x01, 0x0C, 0x14, 0x16, 0x1B, 0x1E, 0x22, 0x29,
+	0x2A, 0x32, 0x3D, 0x49, 0x4E, 0x58, 0x5A, 0x64,
 }
 
 func (d *Device) SetBrightness(level int) error {
-	if d.writeChar == nil {
-		return fmt.Errorf("write characteristic undiscovered")
+	if level < 0 || level > MaxBrightness {
+		return fmt.Errorf("brightness %d out of range [0, %d]", level, MaxBrightness)
 	}
-
-	if err := d.Connect(); err != nil {
-		return err
-	}
-
-	cmd := append([]byte{0xA0, 0x13, 0x04}, getLevelHex(level)...)
-	_, err := d.writeChar.WriteWithoutResponse(cmd)
-	return err
+	return d.write(command(0x13, brightnessLevels[level]))
 }
 
 func crc16Modbus(data []byte) uint16 {
@@ -169,18 +184,5 @@ func crc16Modbus(data []byte) uint16 {
 }
 
 func (d *Device) SetRGB(r, g, b int32) error {
-	if d.writeChar == nil {
-		return fmt.Errorf("write characteristic undiscovered")
-	}
-
-	if err := d.Connect(); err != nil {
-		return err
-	}
-
-	cmd := []byte{0xA0, 0x15, 0x06, byte(r & 0xFF), byte(g & 0xFF), byte(b & 0xFF)}
-	crc := crc16Modbus(cmd)
-	cmd = append(cmd, byte(crc&0xFF), byte(crc>>8))
-
-	_, err := d.writeChar.WriteWithoutResponse(cmd)
-	return err
+	return d.write(command(0x15, byte(r&0xFF), byte(g&0xFF), byte(b&0xFF)))
 }
