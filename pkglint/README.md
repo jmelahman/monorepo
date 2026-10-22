@@ -145,7 +145,7 @@ computed from what is left _after_ fixing.
 | PB103                                    | Pin a mutable VCS tag or branch to the commit it names right now (via `git ls-remote`)                                                                              |
 | PB205, PB916                             | Delete Go verification-disabling env settings; insert `-modcacherw` so the module cache stays removable                                                             |
 | PB705, PB708                             | Strip a leading slash from `backup` entries; wrap a scalar list field (`depends=foo`) in an array                                                                   |
-| PB711, PB933, PB944, PB952, PB954, PB979 | Declare in `makedepends` a build tool the build already invokes: the VCS client a source needs, `python-build`/`python-installer`, `rust`, `cmake`, `meson`, `npm`  |
+| PB711, PB933, PB944, PB952, PB954, PB979 | Declare in `makedepends` a build tool the build already invokes: the VCS client a source needs, `python-build`/`python-installer`, `cargo`, `cmake`, `meson`, `npm`  |
 | PB904, PB912, PB918, PB919               | Delete dependency metadata the rule proves does nothing: a `makedepends`/`optdepends` entry already in `depends`, a package naming itself in `provides`/`conflicts` |
 | PB913                                    | Remove stale ignore directives                                                                                                                                      |
 

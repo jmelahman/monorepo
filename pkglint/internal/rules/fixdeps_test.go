@@ -49,7 +49,7 @@ func TestFixToolMakedepends(t *testing.T) {
 	// The four rules share one fixer; what differs is the tool each watches
 	// for and the package that closes the gap.
 	tools := []struct{ id, body, want string }{
-		{"PB944", "build() {\n  cargo build --release\n}", "makedepends=('rust')"},
+		{"PB944", "build() {\n  cargo build --release\n}", "makedepends=('cargo')"},
 		{"PB952", "build() {\n  cmake -B build -S .\n}", "makedepends=('cmake')"},
 		{"PB954", "build() {\n  meson setup build\n}", "makedepends=('meson')"},
 		{"PB979", "build() {\n  npm ci\n}", "makedepends=('npm')"},
@@ -75,6 +75,22 @@ func TestFixToolMakedepends(t *testing.T) {
 		got := fixDeps(t, "PB952", depsFixture("demo", `makedepends=("git")`, "",
 			"build() {\n  cmake -B build -S .\n}"), FixSafe)
 		mustContain(t, got, `makedepends=("git" "cmake")`)
+	})
+
+	t.Run("an unquoted array gets an unquoted entry", func(t *testing.T) {
+		got := fixDeps(t, "PB952", depsFixture("demo", "makedepends=(git)", "",
+			"build() {\n  cmake -B build -S .\n}"), FixSafe)
+		mustContain(t, got, "makedepends=(git cmake)")
+		mustClear(t, "PB952", got)
+	})
+
+	t.Run("an entry the shell would misread stays quoted", func(t *testing.T) {
+		if bareArrayEntries([]string{"python>=3.12"}) {
+			t.Error("a version constraint's > is a redirection unquoted")
+		}
+		if !bareArrayEntries([]string{"lib32-gcc-libs", "qt6-base", "gtk+3", "python3.12"}) {
+			t.Error("plain package names need no quotes")
+		}
 	})
 
 	t.Run("one element per line stays one element per line", func(t *testing.T) {
@@ -398,6 +414,57 @@ package() {
 	})
 }
 
+func TestFixFollowsFileQuoting(t *testing.T) {
+	// header renders a metadata block whose plain elements are written with q.
+	// The source is double-quoted in every variant: its $pkgver forces the
+	// quotes, so it must not count toward the file's convention.
+	header := func(q string) string {
+		return "pkgname=demo\npkgver=1.0.0\npkgrel=1\narch=(" + q + "x86_64" + q + ")\n" +
+			"license=(" + q + "MIT" + q + ")\n" + `source=("https://example.com/demo-$pkgver.tar.gz")` + "\n" +
+			"sha256sums=(" + q + "SKIP" + q + ")"
+	}
+	cargo := "build() {\n  cargo build --release\n}"
+
+	for _, c := range []struct{ name, q, want string }{
+		{"a bare file gets a bare array", "", "makedepends=(cargo)"},
+		{"a double-quoted file gets double quotes", `"`, `makedepends=("cargo")`},
+		{"a single-quoted file keeps single quotes", "'", "makedepends=('cargo')"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got := fixDeps(t, "PB944", pkgbuildWith(header(c.q), cargo), FixSafe)
+			mustContain(t, got, c.want+"\n")
+			mustClear(t, "PB944", got)
+		})
+	}
+
+	t.Run("an empty array matches the file", func(t *testing.T) {
+		got := fixDeps(t, "PB944", pkgbuildWith(header("")+"\nmakedepends=()", cargo), FixSafe)
+		mustContain(t, got, "makedepends=(cargo)")
+	})
+
+	t.Run("the majority decides", func(t *testing.T) {
+		// arch and license bare, sha256sums quoted: two to one.
+		src := strings.Replace(pkgbuildWith(header(""), cargo), "sha256sums=(SKIP)", "sha256sums=('SKIP')", 1)
+		mustContain(t, fixDeps(t, "PB944", src, FixSafe), "makedepends=(cargo)")
+	})
+
+	t.Run("a tie goes to single quotes", func(t *testing.T) {
+		src := strings.Replace(pkgbuildWith(header(""), cargo), "arch=(x86_64)", `arch=("x86_64")`, 1)
+		src = strings.Replace(src, "sha256sums=(SKIP)", "sha256sums=('SKIP')", 1)
+		mustContain(t, fixDeps(t, "PB944", src, FixSafe), "makedepends=('cargo')")
+	})
+
+	t.Run("a merged entry that cannot go bare quotes its array", func(t *testing.T) {
+		e := Edit{createQuote: quoteBare, createTail: "\n", creates: []arrayCreate{
+			{Field: "makedepends", Entries: []string{"cargo", "python>=3.12"}},
+			{Field: "checkdepends", Entries: []string{"python-pytest"}},
+		}}
+		if want := "\nmakedepends=('cargo' 'python>=3.12')\ncheckdepends=(python-pytest)\n"; createdArraysText(e) != want {
+			t.Errorf("got %q, want %q", createdArraysText(e), want)
+		}
+	})
+}
+
 func TestMergedArrayCreations(t *testing.T) {
 	t.Run("two rules creating one array write one assignment", func(t *testing.T) {
 		src := depsFixture("demo", "", "", `
@@ -409,7 +476,7 @@ build() {
 		if n := countSubstring(got, "makedepends="); n != 1 {
 			t.Errorf("want exactly one makedepends assignment, got %d:\n%s", n, got)
 		}
-		mustContain(t, got, "makedepends=('rust' 'npm')")
+		mustContain(t, got, "makedepends=('cargo' 'npm')")
 		mustClear(t, "PB944", got)
 		mustClear(t, "PB979", got)
 	})

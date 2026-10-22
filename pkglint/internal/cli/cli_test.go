@@ -300,7 +300,7 @@ func TestFixWritesInPlace(t *testing.T) {
 	if n := strings.Count(string(fixed), "makedepends="); n != 1 {
 		t.Errorf("want exactly one makedepends assignment, got %d:\n%s", n, fixed)
 	}
-	if !strings.Contains(string(fixed), "makedepends=('rust' 'npm')") {
+	if !strings.Contains(string(fixed), "makedepends=('cargo' 'npm')") {
 		t.Errorf("both build tools should be declared together:\n%s", fixed)
 	}
 	fi, err := os.Stat(filepath.Join(dir, "PKGBUILD"))

@@ -85,6 +85,7 @@ type Edit struct {
 	// array into one assignment. Empty on every other edit.
 	creates                []arrayCreate
 	createHead, createTail string
+	createQuote            quoteStyle
 }
 
 // FixEnv carries capabilities a fixer needs but must not perform itself (for
@@ -523,6 +524,71 @@ func rewritableArray(pkg *pkgbuild.Package, name string) *pkgbuild.Var {
 	return v
 }
 
+// quoteStyle is how a PKGBUILD writes plain array elements. The zero value is
+// single quotes, the guidelines' template and the fallback when the file does
+// not say.
+type quoteStyle int
+
+const (
+	quoteSingle quoteStyle = iota
+	quoteDouble
+	quoteBare
+)
+
+// quoteFor is the quote entries are written with under q: bare only when every
+// entry survives bare, single quotes otherwise.
+func (q quoteStyle) quoteFor(entries []string) string {
+	switch {
+	case q == quoteDouble:
+		return `"`
+	case q == quoteBare && bareArrayEntries(entries):
+		return ""
+	}
+	return "'"
+}
+
+// arrayQuoteStyle is the convention the file's own top-level arrays follow,
+// by majority vote of their elements, ties going to single quotes. Only an
+// element that could have been written any of the three ways votes: one
+// carrying an expansion or a `>` had its quoting forced, and says nothing
+// about taste.
+func arrayQuoteStyle(pkg *pkgbuild.Package) quoteStyle {
+	var votes [3]int
+	for _, v := range pkg.Vars {
+		if v.Assign == nil || v.Assign.Array == nil {
+			continue
+		}
+		for _, el := range v.Assign.Array.Elems {
+			if el.Value == nil || len(el.Value.Parts) != 1 {
+				continue
+			}
+			switch p := el.Value.Parts[0].(type) {
+			case *syntax.Lit:
+				if bareArrayEntries([]string{p.Value}) {
+					votes[quoteBare]++
+				}
+			case *syntax.SglQuoted:
+				if !p.Dollar && bareArrayEntries([]string{p.Value}) {
+					votes[quoteSingle]++
+				}
+			case *syntax.DblQuoted:
+				if len(p.Parts) == 1 {
+					if lit, ok := p.Parts[0].(*syntax.Lit); ok && bareArrayEntries([]string{lit.Value}) {
+						votes[quoteDouble]++
+					}
+				}
+			}
+		}
+	}
+	best := quoteSingle
+	for _, q := range []quoteStyle{quoteDouble, quoteBare} {
+		if votes[q] > votes[best] {
+			best = q
+		}
+	}
+	return best
+}
+
 // arrayEntryText quotes entries for an array literal, joined by sep.
 func arrayEntryText(entries []string, quote, sep string) string {
 	parts := make([]string, len(entries))
@@ -548,6 +614,22 @@ func validArrayEntries(entries []string) bool {
 	for _, e := range entries {
 		if e == "" || strings.ContainsAny(e, "'\"$ \t\n") {
 			return false
+		}
+	}
+	return true
+}
+
+// bareArrayEntries reports whether every entry is a plain package name that
+// needs no quoting to survive as one array element.
+func bareArrayEntries(entries []string) bool {
+	for _, e := range entries {
+		if e == "" {
+			return false
+		}
+		for _, r := range e {
+			if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("@._+-", r)) {
+				return false
+			}
 		}
 	}
 	return true
@@ -579,8 +661,9 @@ func addArrayElemsEdit(ctx *Context, field string, entries []string, desc string
 		if rparen <= 0 || rparen > len(u.Raw) {
 			return Edit{}, false
 		}
+		// Nothing in the array to match, so match the file.
 		return Edit{Path: u.Path, Start: rparen, End: rparen,
-			New: arrayEntryText(entries, "'", " "), Line: int(v.Pos.Line()), Desc: desc}, true
+			New: arrayEntryText(entries, arrayQuoteStyle(ctx.Pkg).quoteFor(entries), " "), Line: int(v.Pos.Line()), Desc: desc}, true
 	}
 	last := elems[len(elems)-1]
 	if last.Value == nil || last.Index != nil {
@@ -593,15 +676,20 @@ func addArrayElemsEdit(ctx *Context, field string, entries []string, desc string
 	// One element per line stays one element per line: an array written that
 	// way is usually long enough that appending on the closing line would run
 	// past anyone's column limit.
-	quote, sep := "'", " "
-	if c := u.Raw[from]; c == '"' {
-		quote = `"`
+	// So does the quoting of the element before it, which is closer to hand
+	// than the file's convention.
+	style, sep := quoteBare, " "
+	switch u.Raw[from] {
+	case '\'':
+		style = quoteSingle
+	case '"':
+		style = quoteDouble
 	}
 	if bytes.ContainsRune(u.Raw[at:rparen], '\n') {
 		sep = "\n" + lineIndent(u.Raw, from)
 	}
 	return Edit{Path: u.Path, Start: at, End: at,
-		New: sep + arrayEntryText(entries, quote, sep), Line: int(last.Value.Pos().Line()), Desc: desc}, true
+		New: sep + arrayEntryText(entries, style.quoteFor(entries), sep), Line: int(last.Value.Pos().Line()), Desc: desc}, true
 }
 
 // arrayCreate is one `field=(entries…)` assignment a creating edit writes. It
@@ -652,7 +740,7 @@ func newArraysEdit(ctx *Context, fields []string, entries []string, desc string)
 		at++
 	}
 	e := Edit{Path: u.Path, Start: at, End: at + 1, Line: lineOf(u.Raw, at), Desc: desc,
-		creates: creates, createTail: "\n"}
+		creates: creates, createTail: "\n", createQuote: arrayQuoteStyle(ctx.Pkg)}
 	if at >= len(u.Raw) {
 		// The anchor is the last line and the file has no trailing newline:
 		// claim its final byte and write it back, so this edit still holds
@@ -664,12 +752,14 @@ func newArraysEdit(ctx *Context, fields []string, entries []string, desc string)
 }
 
 // createdArraysText renders an array-creating edit's replacement: the assigned
-// arrays, wrapped in the text of the anchor byte the edit claimed.
+// arrays, wrapped in the text of the anchor byte the edit claimed. The quote
+// is picked per array at render time, because a merge can add an entry that
+// cannot go bare to an array that could.
 func createdArraysText(e Edit) string {
 	var b strings.Builder
 	b.WriteString(e.createHead)
 	for _, c := range e.creates {
-		b.WriteString("\n" + c.Field + "=(" + arrayEntryText(c.Entries, "'", " ") + ")")
+		b.WriteString("\n" + c.Field + "=(" + arrayEntryText(c.Entries, e.createQuote.quoteFor(c.Entries), " ") + ")")
 	}
 	b.WriteString(e.createTail)
 	return b.String()

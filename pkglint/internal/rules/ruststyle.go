@@ -237,8 +237,10 @@ func cargoHasProfile(c Command) bool {
 
 // --- PB944: rust toolchain missing from makedepends --------------------------
 
-// rustToolchainPackages are the packages that put cargo on $PATH.
-var rustToolchainPackages = []string{"rust", "rustup"}
+// rustToolchainPackages are the names that put cargo on $PATH. cargo itself
+// is the one the Rust package guidelines say to depend on: it is a virtual
+// that rust and rustup both provide, so resolving it always brings rustc too.
+var rustToolchainPackages = []string{"cargo", "cargo-nightly", "rust", "rustup"}
 
 func rustMakedependsGap(ctx *Context) (Command, bool) {
 	return toolMakedependsGap(ctx, buildToolCommands(ctx, "cargo"), rustToolchainPackages...)
@@ -251,5 +253,5 @@ func checkRustMakedepends(ctx *Context) []Finding {
 	}
 	// One finding per PKGBUILD: the remedy is one makedepends entry.
 	return []Finding{c.finding("PB944", Info,
-		"cargo is used but neither rust nor rustup is in makedepends; a clean build environment cannot run this build")}
+		"cargo is used but not in makedepends; a clean build environment cannot run this build")}
 }
