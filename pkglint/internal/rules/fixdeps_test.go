@@ -443,14 +443,21 @@ func TestFixFollowsFileQuoting(t *testing.T) {
 	})
 
 	t.Run("the majority decides", func(t *testing.T) {
-		// arch and license bare, sha256sums quoted: two to one.
-		src := strings.Replace(pkgbuildWith(header(""), cargo), "sha256sums=(SKIP)", "sha256sums=('SKIP')", 1)
+		// arch and license bare, depends quoted: two to one.
+		src := pkgbuildWith(header("")+"\ndepends=('glibc')", cargo)
+		mustContain(t, fixDeps(t, "PB944", src, FixSafe), "makedepends=(cargo)")
+	})
+
+	t.Run("checksums do not vote", func(t *testing.T) {
+		// Three quoted digests would outvote two bare fields if they counted.
+		src := strings.Replace(pkgbuildWith(header(""), cargo), "sha256sums=(SKIP)",
+			"sha256sums=('SKIP' 'SKIP' 'SKIP')\nb2sums_x86_64=('SKIP')", 1)
 		mustContain(t, fixDeps(t, "PB944", src, FixSafe), "makedepends=(cargo)")
 	})
 
 	t.Run("a tie goes to single quotes", func(t *testing.T) {
+		// One double-quoted field against one bare: neither convention wins.
 		src := strings.Replace(pkgbuildWith(header(""), cargo), "arch=(x86_64)", `arch=("x86_64")`, 1)
-		src = strings.Replace(src, "sha256sums=(SKIP)", "sha256sums=('SKIP')", 1)
 		mustContain(t, fixDeps(t, "PB944", src, FixSafe), "makedepends=('cargo')")
 	})
 

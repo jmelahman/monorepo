@@ -551,11 +551,16 @@ func (q quoteStyle) quoteFor(entries []string) string {
 // by majority vote of their elements, ties going to single quotes. Only an
 // element that could have been written any of the three ways votes: one
 // carrying an expansion or a `>` had its quoting forced, and says nothing
-// about taste.
+// about taste. Nor do the checksum arrays: their digests are bare-safe but
+// written however updpkgsums or the upstream template spelled them, and with
+// one per source they would outvote the dependency arrays a fix writes into.
 func arrayQuoteStyle(pkg *pkgbuild.Package) quoteStyle {
 	var votes [3]int
 	for _, v := range pkg.Vars {
 		if v.Assign == nil || v.Assign.Array == nil {
+			continue
+		}
+		if field, _, _ := strings.Cut(v.Name, "_"); slices.Contains(hashAlgoSums, field) {
 			continue
 		}
 		for _, el := range v.Assign.Array.Elems {
@@ -580,11 +585,17 @@ func arrayQuoteStyle(pkg *pkgbuild.Package) quoteStyle {
 			}
 		}
 	}
-	best := quoteSingle
+	best, tied := quoteSingle, false
 	for _, q := range []quoteStyle{quoteDouble, quoteBare} {
-		if votes[q] > votes[best] {
-			best = q
+		switch {
+		case votes[q] > votes[best]:
+			best, tied = q, false
+		case votes[q] == votes[best]:
+			tied = true
 		}
+	}
+	if tied {
+		return quoteSingle
 	}
 	return best
 }
