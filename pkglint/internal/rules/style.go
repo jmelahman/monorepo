@@ -383,16 +383,16 @@ var styleRules = []Rule{
 		ID:       "PB944",
 		Name:     "rust-missing-makedepends",
 		Severity: Info,
-		Doc: "cargo is not part of the base build environment: without rust (or rustup) in " +
-			"makedepends the build fails in any clean chroot. rustup satisfies the dependency " +
-			"for maintainers who manage toolchains themselves, so either spelling counts. The " +
-			"auto-fix declares rust.",
+		Doc: "cargo is not part of the base build environment: without it in makedepends " +
+			"the build fails in any clean chroot. The Rust package guidelines say to depend " +
+			"on cargo directly — rust and rustup both provide it — so cargo, cargo-nightly, " +
+			"rust and rustup all count. The auto-fix declares cargo.",
 		Check: checkRustMakedepends,
 		// Declaring a tool the build already invokes restores a requirement the
 		// clean chroot was going to enforce anyway: a package that could not
 		// build before can build after, and nothing else moves.
 		FixLevel: FixSafe,
-		Fix:      fixToolMakedepends(rustMakedependsGap, "cargo", "rust"),
+		Fix:      fixToolMakedepends(rustMakedependsGap, "cargo", "cargo"),
 	},
 	{
 		ID:       "PB950",

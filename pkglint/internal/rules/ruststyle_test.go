@@ -257,6 +257,17 @@ build() {
   cargo build --release --locked
 }`)})
 	})
+	t.Run("PB944 cargo in makedepends satisfies it", func(t *testing.T) {
+		// What the Rust package guidelines prescribe: cargo is a virtual that
+		// rust and rustup both provide.
+		for _, dep := range []string{"cargo", "cargo-nightly", "'cargo>=1.80'"} {
+			expectNoRule(t, "PB944", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=(`+dep+`)
+build() {
+  cargo build --release --frozen
+}`)})
+		}
+	})
 	t.Run("PB944 rustup counts too", func(t *testing.T) {
 		expectNoRule(t, "PB944", map[string]string{"PKGBUILD": pkgbuildWith("", `
 makedepends=('rustup')

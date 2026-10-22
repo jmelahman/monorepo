@@ -130,6 +130,19 @@ func (s styler) wrap(code, text string) string {
 	return code + text + ansiReset
 }
 
+// ruleTag is a finding's "[PB944]", which on a color terminal is also an
+// OSC 8 hyperlink to the rule's reference page. Terminals that do not know
+// OSC 8 drop it and show the plain tag; a rule outside the registry gets no
+// link, so only registry data is ever written into the escape sequence.
+func (s styler) ruleTag(id string) string {
+	tag := s.wrap(ansiDim, "["+id+"]")
+	r, ok := rules.RuleByID(id)
+	if !bool(s) || !ok {
+		return tag
+	}
+	return "\x1b]8;;" + r.URL() + "\x1b\\" + tag + "\x1b]8;;\x1b\\"
+}
+
 func (s styler) severity(sev rules.Severity) string {
 	var code string
 	switch sev {
@@ -199,11 +212,11 @@ func RenderText(w io.Writer, reports []PackageReport, color, verbose bool) {
 			if f.Line == 0 {
 				// Package-archive findings locate a member, not a line.
 				fmt.Fprintf(w, "  %s: %s %s %s\n",
-					Sanitize(f.Path), s.severity(f.Severity), s.wrap(ansiDim, "["+f.RuleID+"]"), Sanitize(f.Message))
+					Sanitize(f.Path), s.severity(f.Severity), s.ruleTag(f.RuleID), Sanitize(f.Message))
 				continue
 			}
 			fmt.Fprintf(w, "  %s:%d:%d: %s %s %s\n",
-				Sanitize(f.Path), f.Line, f.Col, s.severity(f.Severity), s.wrap(ansiDim, "["+f.RuleID+"]"), Sanitize(f.Message))
+				Sanitize(f.Path), f.Line, f.Col, s.severity(f.Severity), s.ruleTag(f.RuleID), Sanitize(f.Message))
 		}
 	}
 	if printed > 0 {
@@ -350,6 +363,7 @@ type sarifRule struct {
 	Name             string         `json:"name,omitempty"`
 	ShortDescription sarifText      `json:"shortDescription"`
 	FullDescription  sarifText      `json:"fullDescription"`
+	HelpURI          string         `json:"helpUri,omitempty"`
 	Properties       map[string]any `json:"properties,omitempty"`
 }
 
@@ -425,6 +439,7 @@ func RenderSARIF(w io.Writer, reports []PackageReport) error {
 			Name:             r.Name,
 			ShortDescription: sarifText{Text: r.Name},
 			FullDescription:  sarifText{Text: r.Doc},
+			HelpURI:          r.URL(),
 		}
 	}
 
@@ -588,6 +603,18 @@ func RenderRuleDetail(w io.Writer, r rules.Rule, color bool) {
 		renderRuleSection(w, s, ansiBold, "Auto-fix", wrapWords(fix, rulesWidth-len(ruleIndent)))
 	}
 	renderRuleSection(w, s, ansiBold, "Suppress", suppressLines(r))
+	renderRuleSection(w, s, ansiBold, "Reference", referenceLines(r))
+}
+
+// referenceLines is the Reference block: the rule's published page, then the
+// upstream documents it cites. URLs are never wrapped — a broken one is not a
+// link any more.
+func referenceLines(r rules.Rule) []string {
+	lines := []string{r.URL()}
+	for _, ref := range r.Refs {
+		lines = append(lines, "", ref.Title, ref.URL)
+	}
+	return lines
 }
 
 // suppressLines is the Suppress block: the directive that silences one

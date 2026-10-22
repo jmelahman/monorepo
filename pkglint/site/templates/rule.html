@@ -42,6 +42,19 @@
   </div>
 </section>
 
+{{if .Rule.Refs}}
+<section class="row">
+  <div class="tag">Upstream</div>
+  <div>
+    <p>This rule enforces:</p>
+    <ul class="refs">
+      {{range .Rule.Refs}}<li><a href="{{.URL}}">{{.Title}}</a></li>
+      {{end}}
+    </ul>
+  </div>
+</section>
+{{end}}
+
 <section class="row">
   <div class="tag">Suppress</div>
   <div>

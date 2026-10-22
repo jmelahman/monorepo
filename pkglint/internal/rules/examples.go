@@ -611,7 +611,7 @@ build() {
 		Bad: `build() {
   cargo build --release --locked
 }`,
-		Good: `makedepends=('rust')
+		Good: `makedepends=('cargo')
 build() {
   cargo build --release --locked
 }`,

@@ -6,7 +6,7 @@ import (
 )
 
 // PB930–PB934 lint the Arch Python package guidelines
-// (https://wiki.archlinux.org/title/Python_package_guidelines): no tox, no
+// (https://manual.archlinux.page/package-guidelines/python/): no tox, no
 // lint/coverage plugins gating the test suite, no pre-built wheels as
 // sources, and the python-build + python-installer flow with its tools
 // declared in makedepends. The hermeticity side of Python packaging — pip

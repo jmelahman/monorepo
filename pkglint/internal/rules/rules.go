@@ -134,6 +134,28 @@ type Rule struct {
 	// alternative. Attached from the examples table in Registry().
 	Bad  string
 	Good string
+
+	// Refs are the upstream documents the rule enforces — a section of the
+	// Arch package guidelines, a man page — shown on the rule's reference
+	// page. Empty when the rule is pkglint's own policy: a citation claims
+	// the document says what the rule says, so a rule nothing upstream backs
+	// goes without one. Attached from the refs table in Registry().
+	Refs []Ref
+}
+
+// Ref is one upstream document a rule cites.
+type Ref struct {
+	Title string // e.g. "Rust package guidelines"
+	URL   string
+}
+
+// ReferenceURL is where the report card site publishes the rule reference:
+// one page per rule, which every surface that names a rule links to.
+const ReferenceURL = "https://jamison.lahman.dev/pkglint/rules/"
+
+// URL is the rule's page in the published rule reference.
+func (r Rule) URL() string {
+	return ReferenceURL + r.ID + ".html"
 }
 
 // Context carries the package under analysis plus precomputed command
@@ -814,6 +836,7 @@ func buildRegistry() {
 			out[i].Bad = ex.Bad
 			out[i].Good = ex.Good
 		}
+		out[i].Refs = refs[out[i].ID]
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	registryAll = out
