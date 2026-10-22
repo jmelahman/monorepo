@@ -39,7 +39,7 @@ printed; don't re-derive it.
 
 | Bucket | Meaning | Do |
 |---|---|---|
-| `MERGE NOW` | green patch or minor bump | step 2 |
+| `MERGE NOW` | green patch, minor or digest-only bump (same tag, new sha256) | step 2 |
 | `NEXT WAVE` | green, but shares a file with a `MERGE NOW` PR | step 2 |
 | `ASK FIRST` | green, but major, 0.x minor, or no version found | ask, then step 2 |
 | `RED` | check failed; the row names the hook | step 3 |

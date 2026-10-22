@@ -29,7 +29,11 @@ VERSIONS = re.compile(r" from (\S+) to (\S+)")
 # One line per dependency in the body of a grouped PR.
 GROUPED = re.compile(r"^Updates `[^`]+` from (\S+) to (\S+)", re.MULTILINE)
 # Worst first.
-JUMPS = ["unknown", "major", "0.x-minor", "minor", "patch"]
+JUMPS = ["unknown", "major", "0.x-minor", "minor", "patch", "digest"]
+# A pinned image or action SHA, abbreviated as in the PR body.
+DIGEST = re.compile(r"[0-9a-f]{7,64}")
+# Jumps that merge without asking.
+SAFE = ("patch", "minor", "digest")
 # GitHub's own dependency jobs say nothing about the tree.
 NOT_CHECKS = ("Dependabot Updates", "Dependency Graph")
 # How long --wait polls before it prints what it has, in seconds. It stays
@@ -48,12 +52,16 @@ def gh(*args: str) -> str:
 def jump(pr: dict) -> str:
     """The worst semver distance among the bumps a PR makes."""
     pairs = VERSIONS.findall(pr["title"]) or GROUPED.findall(pr["body"])
-    # Digest and action-SHA bumps name no versions anywhere.
+    # A bump that names nothing at all is "unknown" and gets asked about.
     found = [distance(old, new) for old, new in pairs] or ["unknown"]
     return min(found, key=JUMPS.index)
 
 
 def distance(old_version: str, new_version: str) -> str:
+    # The tag is unchanged when only the digest moves; the PR body names the
+    # digests instead of versions.
+    if all(DIGEST.fullmatch(v.strip("`")) for v in (old_version, new_version)):
+        return "digest"
     old, new = (re.findall(r"\d+", v)[:3] for v in (old_version, new_version))
     if not old or not new:
         return "unknown"
@@ -210,7 +218,7 @@ def plan(prs: list[dict]) -> None:
     for pr in prs:
         if pr["state"] != "green":
             continue
-        if pr["jump"] not in ("patch", "minor"):
+        if pr["jump"] not in SAFE:
             ask.append(pr)
         elif pr["paths"] & taken:
             later.append(pr)
