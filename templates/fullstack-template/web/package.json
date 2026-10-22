@@ -20,8 +20,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.1",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
