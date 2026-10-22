@@ -535,11 +535,14 @@ const (
 	quoteBare
 )
 
-// quoteFor is the quote entries are written with under q: bare only when every
-// entry survives bare, single quotes otherwise.
+// quoteFor is the quote entries are written with under q, single quotes
+// unless every entry survives the other spelling. Bare entries must not split
+// or redirect; double-quoted ones must not carry a backtick or a backslash,
+// which validArrayEntries lets through because single quotes make both
+// literal and double quotes do not.
 func (q quoteStyle) quoteFor(entries []string) string {
 	switch {
-	case q == quoteDouble:
+	case q == quoteDouble && !slices.ContainsFunc(entries, func(e string) bool { return strings.ContainsAny(e, "`\\") }):
 		return `"`
 	case q == quoteBare && bareArrayEntries(entries):
 		return ""

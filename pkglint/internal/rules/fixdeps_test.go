@@ -470,6 +470,18 @@ func TestFixFollowsFileQuoting(t *testing.T) {
 			t.Errorf("got %q, want %q", createdArraysText(e), want)
 		}
 	})
+
+	t.Run("an entry double quotes would rewrite stays single-quoted", func(t *testing.T) {
+		for entry, want := range map[string]string{
+			"python>=3.12": `"`,
+			"a`b":          "'",
+			`a\b`:          "'",
+		} {
+			if got := quoteDouble.quoteFor([]string{"cargo", entry}); got != want {
+				t.Errorf("quoteDouble.quoteFor(%q) = %q, want %q", entry, got, want)
+			}
+		}
+	})
 }
 
 func TestMergedArrayCreations(t *testing.T) {
