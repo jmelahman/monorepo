@@ -54,19 +54,17 @@ var refs = map[string][]Ref{
 	"PB101": {refGeneralSources},
 	"PB103": {refGeneralSources},
 	"PB104": {refGeneralSources},
-	"PB110": {refGeneralEtiquette},
 	"PB111": {refGeneralSources},
 	"PB112": {refGeneralSources},
 	"PB905": {refGeneralSources},
 	"PB911": {refGeneralSources},
 
-	// Build hermeticity and the package() stage.
+	// Build hermeticity.
 	"PB203": {
 		guideline("rust", "Rust package guidelines", "Prepare", "prepare"),
 		refRustBuild,
 	},
 	"PB204": {guideline("go", "Go package guidelines", "Upstream project with Go modules", "upstream-project-with-go-modules")},
-	"PB404": {pkgbuildMan("package() function", "PACKAGING_FUNCTIONS")},
 
 	// makepkg's own syntax.
 	"PB701": {refGeneralNaming, pkgbuildMan("pkgname", manDirectives)},
@@ -76,7 +74,6 @@ var refs = map[string][]Ref{
 	"PB705": {pkgbuildMan("backup", manDirectives)},
 	"PB706": {pkgbuildMan("options", manDirectives)},
 	"PB707": {pkgbuildMan("provides", manDirectives)},
-	"PB708": {pkgbuildMan("options and directives", manDirectives)},
 	"PB709": {pkgbuildMan("package splitting", "PACKAGE_SPLITTING")},
 	"PB711": {refVcsDeps},
 
