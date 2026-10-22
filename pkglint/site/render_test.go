@@ -170,6 +170,25 @@ func TestRenderLinkPreview(t *testing.T) {
 		t.Fatalf("renderSite: %v", err)
 	}
 
+	// pkglint links every finding to the rule's page here; the two must name
+	// the same address.
+	if want := baseURL + "rules/"; rules.ReferenceURL != want {
+		t.Errorf("rules.ReferenceURL = %q, but the site publishes the rule reference at %q", rules.ReferenceURL, want)
+	}
+	b, err := os.ReadFile(filepath.Join(out, "rules", "PB944.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pb944, _ := rules.RuleByID("PB944")
+	if len(pb944.Refs) == 0 {
+		t.Fatal("PB944 cites no upstream document")
+	}
+	for _, ref := range pb944.Refs {
+		if want := `<a href="` + ref.URL + `">` + ref.Title + `</a>`; !strings.Contains(string(b), want) {
+			t.Errorf("PB944's page does not cite %s", want)
+		}
+	}
+
 	// Every page carries the card image and the card type; the canonical URL is
 	// the page's own, which is what pins a preview to one address when the same
 	// page is reachable as both /rules/ and /rules/index.html.

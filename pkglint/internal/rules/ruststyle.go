@@ -6,7 +6,7 @@ import (
 )
 
 // PB940–PB942, PB944 lint the Arch Rust package guidelines
-// (https://wiki.archlinux.org/title/Rust_package_guidelines): release builds,
+// (https://manual.archlinux.page/package-guidelines/rust/): release builds,
 // debug-assertion-preserving tests, --no-track installs, and the toolchain
 // declared in makedepends. Lockfile enforcement (--locked/--frozen, including
 // on `cargo fetch` in prepare()) is hermeticity and already PB203's.

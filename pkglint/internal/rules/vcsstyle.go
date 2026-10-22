@@ -8,7 +8,7 @@ import (
 )
 
 // PB960–PB963 lint the Arch VCS package guidelines
-// (https://wiki.archlinux.org/title/VCS_package_guidelines): a pkgver()
+// (https://manual.archlinux.page/package-guidelines/vcs/): a pkgver()
 // function so the version tracks the checkout, provides/conflicts on the
 // release counterpart, a stable checkout folder name, and a -git suffix that
 // actually means what it promises. The security half of VCS packaging —

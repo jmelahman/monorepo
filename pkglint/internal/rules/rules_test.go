@@ -2944,3 +2944,35 @@ esac`, "")}) {
 		t.Errorf("without a digest, message = %q", m)
 	}
 }
+
+// TestRefsAreWellFormed holds the citation table to what a reader following a
+// link needs: an entry belongs to a rule that exists, names what it points at,
+// and points at an Arch document by a section anchor rather than a whole page.
+// Whether the section says what the rule says is the review refs.go asks for;
+// this only keeps a typo'd ID or a stray host from slipping through it.
+func TestRefsAreWellFormed(t *testing.T) {
+	for id, rs := range refs {
+		if _, ok := RuleByID(id); !ok {
+			t.Errorf("refs cites %s, which is not a rule", id)
+		}
+		if len(rs) == 0 {
+			t.Errorf("refs has an empty entry for %s; drop it", id)
+		}
+		for _, r := range rs {
+			if r.Title == "" {
+				t.Errorf("%s cites %s without a title", id, r.URL)
+			}
+			if !strings.HasPrefix(r.URL, manualGuidelines) && !strings.HasPrefix(r.URL, manPKGBUILD+"#") {
+				t.Errorf("%s cites %s, outside the Arch manual and man pages", id, r.URL)
+			}
+			if _, anchor, _ := strings.Cut(r.URL, "#"); anchor == "" {
+				t.Errorf("%s cites %s without a section anchor", id, r.URL)
+			}
+		}
+	}
+	// buildRegistry attaches the table; a rule that has an entry must carry it.
+	r, _ := RuleByID("PB944")
+	if !reflect.DeepEqual(r.Refs, refs["PB944"]) {
+		t.Errorf("PB944.Refs = %v, want refs[PB944]", r.Refs)
+	}
+}

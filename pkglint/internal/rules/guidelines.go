@@ -1,7 +1,7 @@
 package rules
 
 // PB918–PB922 lint the main page of the Arch package guidelines
-// (https://wiki.archlinux.org/title/Arch_package_guidelines): redundant
+// (https://manual.archlinux.page/package-guidelines/): redundant
 // self-provides/self-conflicts, pre-SPDX license identifiers, and installs
 // into the directories the guidelines reserve (/usr/local for the
 // administrator, /usr/libexec unused on Arch). PB921/PB922 are the static

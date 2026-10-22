@@ -3,8 +3,8 @@ package rules
 import "strings"
 
 // PB950–PB955 lint the Arch CMake and Meson package guidelines
-// (https://wiki.archlinux.org/title/CMake_package_guidelines,
-// https://wiki.archlinux.org/title/Meson_package_guidelines): the /usr
+// (https://manual.archlinux.page/package-guidelines/cmake/,
+// https://manual.archlinux.page/package-guidelines/meson/): the /usr
 // prefix, CMake's flag-clobbering Release build type, the build tools
 // declared in makedepends, and meson's compile wrapper instead of bare
 // ninja. Redirecting the install step into $pkgdir is PB404's.

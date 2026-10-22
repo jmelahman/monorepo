@@ -215,11 +215,17 @@ func TestRenderTextFixSummary(t *testing.T) {
 	}
 }
 
-// stripSGR removes ANSI SGR sequences (ESC [ … m), the only escapes the
-// styler emits.
+// stripSGR removes ANSI SGR sequences (ESC [ … m) and the OSC 8 hyperlinks
+// around rule tags (ESC ] 8 ; ; url ESC \), the only escapes the styler emits.
 func stripSGR(s string) string {
 	var b strings.Builder
 	for i := 0; i < len(s); i++ {
+		if strings.HasPrefix(s[i:], "\x1b]8;;") {
+			if end := strings.Index(s[i:], "\x1b\\"); end >= 0 {
+				i += end + 1
+				continue
+			}
+		}
 		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
 			j := i + 2
 			for j < len(s) && (s[j] == ';' || (s[j] >= '0' && s[j] <= '9')) {
@@ -291,9 +297,11 @@ func TestRenderTextColor(t *testing.T) {
 
 	out := colored.String()
 	for _, want := range []string{
-		"\x1b[33mwarn\x1b[0m",     // severity with a line
-		"\x1b[31merror\x1b[0m",    // severity without a line (archive path)
-		"\x1b[2m[PB204]\x1b[0m",   // dim rule ID, brackets included
+		"\x1b[33mwarn\x1b[0m",   // severity with a line
+		"\x1b[31merror\x1b[0m",  // severity without a line (archive path)
+		"\x1b[2m[PB204]\x1b[0m", // dim rule ID, brackets included
+		// ... and a hyperlink to the rule's page around it
+		"\x1b]8;;" + rules.ReferenceURL + "PB204.html\x1b\\\x1b[2m[PB204]\x1b[0m\x1b]8;;\x1b\\",
 		"\x1b[31mD\x1b[0m",        // grade
 		"\x1b[1;31merror:\x1b[0m", // load-error marker
 	} {
@@ -679,6 +687,7 @@ func TestRenderRuleDetail(t *testing.T) {
 		Doc:  strings.Repeat("word ", 40),
 		Bad:  "source=('" + strings.Repeat("x", 90) + "')\nsha256sums=('SKIP')",
 		Good: "sha256sums=('9f86')",
+		Refs: []rules.Ref{{Title: "Upstream doc", URL: "https://example.com/doc"}},
 	}
 	var buf bytes.Buffer
 	RenderRuleDetail(&buf, r, false)
@@ -695,6 +704,7 @@ func TestRenderRuleDetail(t *testing.T) {
 		"\n  Applies to\n      the PKGBUILD and the install scriptlets committed beside it.\n",
 		"'pkglint --fix' rewrites this in place",
 		"\n  Suppress\n      # pkglint: ignore=PB1\n\n",
+		"\n  Reference\n      " + rules.ReferenceURL + "PB1.html\n\n      Upstream doc\n      https://example.com/doc\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
@@ -744,5 +754,16 @@ func TestRenderRuleDetailPackageScope(t *testing.T) {
 	}
 	if strings.Contains(out, "Auto-fix") {
 		t.Errorf("rule with no fix should not offer one:\n%s", out)
+	}
+}
+
+// TestRenderSARIFHelpURI pins the link GitHub code scanning shows beside each
+// alert: every rule's published reference page.
+func TestRenderSARIFHelpURI(t *testing.T) {
+	log, _, _ := renderSARIF(t, nil)
+	for _, r := range log.Runs[0].Tool.Driver.Rules {
+		if want := rules.ReferenceURL + r.ID + ".html"; r.HelpURI != want {
+			t.Errorf("%s helpUri = %q, want %q", r.ID, r.HelpURI, want)
+		}
 	}
 }

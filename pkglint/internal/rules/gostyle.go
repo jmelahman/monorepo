@@ -8,7 +8,7 @@ import (
 )
 
 // PB914–PB917 lint the build-flag conventions of the Arch Linux Go package
-// guidelines (https://wiki.archlinux.org/title/Go_package_guidelines): PIE
+// guidelines (https://manual.archlinux.page/package-guidelines/go/): PIE
 // hardening, reproducible paths, a writable module cache, and toolchain flags
 // reaching cgo. The guidelines' module-download and verification advice is
 // hermeticity and already covered by PB204/PB205; `-mod=readonly` is not
