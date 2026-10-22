@@ -19,20 +19,20 @@
     "test:e2e:install": "playwright install chromium"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.104.1",
+    "@tanstack/react-query": "^5.104.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@playwright/test": "^1.64.0",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.0",
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "tailwindcss": "^4.3.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.3"
+    "vite": "^8.3.4"
   }
 }
