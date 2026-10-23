@@ -81,6 +81,42 @@ Four hook ids are available:
 
 Tune any of them with `args:`, e.g. `args: [--ignore, PB105, --fail-on, critical]`.
 
+**AUR helper (yay ≥ 13)**
+
+yay's `AURPreInstall` hook runs once per AUR package base after its PKGBUILD is
+downloaded and before the diff/edit menus or any build. Add this to
+`~/.config/yay/init.lua` to lint each one there:
+
+```lua
+-- pkglint: lint each AUR PKGBUILD before yay shows menus or builds anything.
+-- PKGLINT_FAIL_ON overrides the threshold per run (info|warn|error|critical).
+local function shquote(s) return "'" .. s:gsub("'", [['\'']]) .. "'" end
+
+yay.create_autocmd("AURPreInstall", {
+  desc = "pkglint: refuse packages with static findings at or above the threshold",
+  callback = function(event)
+    local fail_on = os.getenv("PKGLINT_FAIL_ON") or "error"
+    -- --no-inline-ignores: the maintainer's "# pkglint: ignore=" doesn't get to
+    -- hide findings from the person installing the package.
+    local status = os.execute("pkglint --no-inline-ignores --fail-on "
+      .. shquote(fail_on) .. " " .. shquote(event.data.dir))
+    if status == 0 then return end
+    io.write(event.match .. ": pkglint reported findings. Continue anyway? [Y/n] ")
+    io.flush()
+    -- Enter continues; "n" or no terminal to read from (EOF) refuses.
+    local answer = io.read("*l")
+    if answer == nil or answer:match("^%s*[nN]") then
+      yay.abort("refused by pkglint")
+    end
+  end,
+})
+```
+
+pkglint exits non-zero when a finding reaches `--fail-on` or the PKGBUILD cannot
+be parsed, so either one asks before the install continues: Enter goes on, `n` stops it, and
+without a terminal to ask on it stops. This is the static analysis only — it never runs
+the PKGBUILD. The built-package rules still need [`pkglint build`](#build-and-validate).
+
 ## Usage
 
 ```shell
