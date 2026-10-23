@@ -31,7 +31,9 @@ var scriptletRules = []Rule{
 		Doc: "Files a package ships belong in package(), tracked and removed by pacman. A " +
 			"scriptlet that edits crontabs, systemd units, shell profiles or autostart entries, or " +
 			"creates login-capable users, is installing untracked persistence — a classic backdoor " +
-			"pattern.",
+			"pattern. So is one that sets a password non-interactively (chpasswd, `passwd` fed on " +
+			"stdin), puts an account in wheel, or edits sshd_config: that is a way back in, the shape " +
+			"of the x11-qemu-validation incident of September 2026.",
 		Check: checkScriptletPersistence,
 	},
 	{
@@ -187,7 +189,7 @@ var persistencePathHints = []string{
 	"/etc/cron", "/var/spool/cron", "/etc/systemd/system", "/usr/lib/systemd/system",
 	"/etc/profile", "/etc/bash.bashrc", "/etc/zsh", ".bashrc", ".zshrc", ".profile",
 	".config/autostart", "/etc/xdg/autostart", "/etc/ld.so.preload", "/etc/rc.local",
-	"/etc/sudoers", "authorized_keys",
+	"/etc/sudoers", "authorized_keys", "/etc/ssh/sshd_config",
 }
 
 // persistenceWriters are commands whose arguments name a file they create or
@@ -225,8 +227,94 @@ func sedInPlace(c Command) bool {
 	return false
 }
 
+// stdinFed returns the scriptlet statements whose stdin is something the
+// scriptlet itself supplies: the reading end of a pipe, or a here-string or
+// here-document.
+func stdinFed(units []pkgbuild.Unit) map[*syntax.Stmt]bool {
+	fed := map[*syntax.Stmt]bool{}
+	for _, u := range units {
+		syntax.Walk(u.File, func(n syntax.Node) bool {
+			switch n := n.(type) {
+			case *syntax.BinaryCmd:
+				if n.Op == syntax.Pipe || n.Op == syntax.PipeAll {
+					fed[n.Y] = true
+				}
+			case *syntax.Stmt:
+				for _, r := range n.Redirs {
+					if feedsStdin(r) && r.Op != syntax.RdrIn {
+						fed[n] = true
+					}
+				}
+			}
+			return true
+		})
+	}
+	return fed
+}
+
+// addsToWheel reports whether a useradd or usermod puts the account in wheel,
+// the group sudo and polkit treat as administrators: a -G/--groups list (or
+// -aG) naming it.
+func addsToWheel(c Command) bool {
+	const valueFlags = "bcdefgkKpsuR" // options whose value ends a cluster before G
+	for i, a := range c.Args {
+		var list string
+		switch {
+		case a == "--groups" && i+1 < len(c.Args):
+			list = c.Args[i+1]
+		case strings.HasPrefix(a, "--groups="):
+			list = strings.TrimPrefix(a, "--groups=")
+		case len(a) > 1 && a[0] == '-' && a[1] != '-':
+			for j := 1; j < len(a); j++ {
+				if a[j] == 'G' {
+					list = a[j+1:]
+					if list == "" && i+1 < len(c.Args) {
+						list = c.Args[i+1]
+					}
+					break
+				}
+				if strings.IndexByte(valueFlags, a[j]) >= 0 {
+					break
+				}
+			}
+		}
+		if slices.Contains(strings.Split(list, ","), "wheel") {
+			return true
+		}
+	}
+	return false
+}
+
+// gpasswdAddsToWheel reports whether a gpasswd adds a member to wheel, or
+// sets wheel's member list (-a/--add, -M/--members), wherever the group
+// operand falls among the options; or whether a groupmems adds one to the
+// group its -g names.
+func gpasswdAddsToWheel(c Command) bool {
+	adds, group := false, ""
+	for i := 0; i < len(c.Args); i++ {
+		switch a := c.Args[i]; a {
+		case "-a", "--add", "-M", "--members":
+			adds = true
+			i++
+		case "-g", "--group":
+			if i+1 < len(c.Args) {
+				group = c.Args[i+1]
+			}
+			i++
+		case "-d", "--delete", "-A", "--administrators", "-Q", "--root", "-R", "--chroot":
+			i++
+		default:
+			if c.Name == "gpasswd" && !strings.HasPrefix(a, "-") {
+				group = a
+			}
+		}
+	}
+	return adds && group == "wheel"
+}
+
 func checkScriptletPersistence(ctx *Context) []Finding {
 	var out []Finding
+	var fed map[*syntax.Stmt]bool
 	for _, c := range ctx.Commands() {
 		if !c.Unit.Scriptlet {
 			continue
@@ -235,7 +323,30 @@ func checkScriptletPersistence(ctx *Context) []Finding {
 		case "crontab":
 			out = append(out, c.finding("PB502", Critical, "scriptlet installs a crontab"))
 			continue
+		case "chpasswd":
+			out = append(out, c.finding("PB502", Critical,
+				"scriptlet sets account passwords with chpasswd: a password the package chose is a way in"))
+			continue
+		case "passwd":
+			if fed == nil {
+				fed = stdinFed(ctx.Pkg.Scriptlets)
+			}
+			if fed[c.Stmt] || c.HasArg("--stdin") {
+				out = append(out, c.finding("PB502", Critical,
+					"scriptlet sets a password by feeding passwd its input: a password the package chose is a way in"))
+			}
+			continue
+		case "gpasswd", "groupmems":
+			if gpasswdAddsToWheel(c) {
+				out = append(out, c.finding("PB502", Critical,
+					"scriptlet adds an account to wheel, the group sudo and polkit treat as administrators"))
+			}
+			continue
 		case "useradd", "usermod":
+			if addsToWheel(c) {
+				out = append(out, c.finding("PB502", Critical,
+					"scriptlet puts an account in wheel, the group sudo and polkit treat as administrators"))
+			}
 			for i, a := range c.Args {
 				if a == "-s" && i+1 < len(c.Args) {
 					shell := c.Args[i+1]
@@ -292,6 +403,10 @@ func checkScriptletPersistence(ctx *Context) []Finding {
 			r, ok := node.(*syntax.Redirect)
 			if !ok || r.Word == nil {
 				return true
+			}
+			switch r.Op {
+			case syntax.RdrIn, syntax.DplIn, syntax.Hdoc, syntax.DashHdoc, syntax.WordHdoc:
+				return true // `grep -q PermitRootLogin < /etc/ssh/sshd_config` only reads it
 			}
 			target, _ := pkgbuild.RenderWord(r.Word, ctx.vars)
 			for _, hint := range persistencePathHints {

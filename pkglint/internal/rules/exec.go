@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jmelahman/pkglint/internal/pkgbuild"
 	"mvdan.cc/sh/v3/syntax"
 )
 
@@ -92,6 +93,160 @@ var execRules = []Rule{
 			"ASCII shell; these controls have no legitimate place in it.",
 		Check: checkHiddenUnicode,
 	},
+	{
+		ID:       "PB310",
+		Name:     "anonymized-fetch",
+		Severity: Error, MaxSeverity: Critical, // critical from a scriptlet, which runs as root
+		Doc: "Nothing a package legitimately needs is fetched over Tor or through a SOCKS proxy: " +
+			"upstreams publish on the open web, and a checksummed source= entry is verified however " +
+			"it arrived. Routing a fetch through torsocks or proxychains, curl's --socks5/-x socks…, " +
+			"an ALL_PROXY=socks… environment, or to a .onion host hides where the payload comes " +
+			"from and lets its server tell a victim's request from a reviewer's. This is the " +
+			"xsnow/xsnow-bin incident of August 2026, whose build() pulled a second stage through " +
+			"torsocks; generic network access is PB201 and PB501.",
+		Check: checkAnonymizedFetch,
+	},
+}
+
+// proxyLaunchers run a command with its traffic sent through Tor or a SOCKS
+// proxy. They are also wrappers, so the command they launch is still seen.
+var proxyLaunchers = map[string]bool{"torsocks": true, "proxychains": true, "proxychains4": true, "tsocks": true}
+
+// onionHost matches a Tor onion-service address: 16 base32 characters for
+// the retired v2 form, 56 for v3.
+var onionHost = regexp.MustCompile(`(?i)\b(?:[a-z2-7]{56}|[a-z2-7]{16})\.onion\b`)
+
+// anonymizes reports whether a proxy setting points at SOCKS or an onion host.
+func anonymizes(v string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(v)), "socks") || onionHost.MatchString(v)
+}
+
+// curlValueFlags are the short curl options that take a value, which ends a
+// flag cluster: in `-fsSLx socks5h://…` the x's value is the next word.
+const curlValueFlags = "AbcCdDeEFHKmoPQrtTuUwxXyYz"
+
+// curlAnonymizes reports whether a curl command line sends its request
+// through SOCKS or Tor: any --socks* option, or a --proxy, --preproxy or -x
+// whose value does.
+func curlAnonymizes(args []string) bool {
+	for i, a := range args {
+		next := func() string {
+			if i+1 < len(args) {
+				return args[i+1]
+			}
+			return ""
+		}
+		if strings.HasPrefix(a, "--") {
+			name, val, has := strings.Cut(a, "=")
+			if strings.HasPrefix(name, "--socks") {
+				return true
+			}
+			if name == "--proxy" || name == "--preproxy" {
+				if !has {
+					val = next()
+				}
+				if anonymizes(val) {
+					return true
+				}
+			}
+			continue
+		}
+		if len(a) < 2 || a[0] != '-' {
+			continue
+		}
+		for j := 1; j < len(a); j++ {
+			if a[j] == 'x' {
+				val := a[j+1:]
+				if val == "" {
+					val = next()
+				}
+				if anonymizes(val) {
+					return true
+				}
+				break
+			}
+			if strings.IndexByte(curlValueFlags, a[j]) >= 0 {
+				break // the rest of the cluster is this option's value
+			}
+		}
+	}
+	return false
+}
+
+// proxyEnvVars are the environment variables curl, wget, git and most HTTP
+// libraries read a proxy from.
+var proxyEnvVars = map[string]bool{"all_proxy": true, "http_proxy": true, "https_proxy": true, "ftp_proxy": true}
+
+func checkAnonymizedFetch(ctx *Context) []Finding {
+	var out []Finding
+	sevFor := func(u bool) Severity {
+		if u {
+			return Critical
+		}
+		return Error
+	}
+	for _, c := range ctx.Commands() {
+		sev := sevFor(c.Unit.Scriptlet)
+		vars := ctx.varsFor(c.Unit, c.Fn)
+		wrapper, prev := "", ""
+		for _, w := range c.Call.Args[:len(c.Call.Args)-len(c.Args)] {
+			s, _ := pkgbuild.RenderWord(w, vars)
+			if wrapperValueFlags[wrapper][prev] {
+				prev = s // `sudo -u torsocks`: a user name, not a launcher
+				continue
+			}
+			base := basename(unescapeName(s))
+			if proxyLaunchers[base] {
+				out = append(out, c.finding("PB310", sev,
+					"%s routes this command's traffic through Tor or a SOCKS proxy, hiding where what it fetches comes from", base))
+				break
+			}
+			if wrappers[base] {
+				wrapper = base
+			}
+			prev = s
+		}
+		if c.Name == "curl" && curlAnonymizes(c.Args) {
+			out = append(out, c.finding("PB310", sev, "curl is told to fetch through SOCKS or Tor, hiding where the download comes from"))
+		}
+		// `env ALL_PROXY=socks5h://… curl`, `wget -e https_proxy=socks5h://…`:
+		// the same setting as an assignment, spelled as an argument.
+		for _, a := range c.Call.Args[1:] {
+			s, _ := pkgbuild.RenderWord(a, vars)
+			if name, v, ok := strings.Cut(s, "="); ok && proxyEnvVars[strings.ToLower(name)] && anonymizes(v) {
+				out = append(out, c.finding("PB310", sev, "%s sends this command's traffic through SOCKS or Tor, hiding where downloads come from", name))
+				break
+			}
+		}
+		if slices.ContainsFunc(c.Args, onionHost.MatchString) {
+			out = append(out, c.finding("PB310", sev, "%s names a Tor onion service; nothing a package needs is hosted on one", c.RawName))
+		}
+	}
+	units := ctx.Pkg.Units()
+	for i := range units {
+		u := &units[i]
+		if u.File == nil {
+			continue
+		}
+		syntax.Walk(u.File, func(n syntax.Node) bool {
+			as, ok := n.(*syntax.Assign)
+			if !ok || as.Name == nil || as.Value == nil || !proxyEnvVars[strings.ToLower(as.Name.Value)] {
+				return true
+			}
+			if v, _ := pkgbuild.RenderWord(as.Value, ctx.vars); anonymizes(v) {
+				out = append(out, findingAt("PB310", sevFor(u.Scriptlet), u.Path, as.Pos(),
+					"%s sends this environment's traffic through SOCKS or Tor, hiding where downloads come from", as.Name.Value))
+			}
+			return true
+		})
+	}
+	for _, e := range slices.Concat(ctx.Pkg.Sources(), ctx.Pkg.ConditionalSources()) {
+		if !e.Local && onionHost.MatchString(e.URL) {
+			out = append(out, findingAt("PB310", Error, ctx.Pkg.PKGBUILD.Path, e.Pos,
+				"source entry %q is fetched from a Tor onion service", e.Raw))
+		}
+	}
+	return out
 }
 
 // criticalMakepkgFuncs are libmakepkg/makepkg internal functions whose behavior

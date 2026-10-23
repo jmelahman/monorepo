@@ -254,6 +254,13 @@ package() { make DESTDIR="$pkgdir" install; }`,
   make install   # plain ASCII, renders exactly as it executes
 }`,
 	},
+	"PB310": {
+		Bad: `build() {
+  torsocks curl -fsSLO https://example.com/stage2.tar.gz
+}`,
+		Good: `source=("https://example.com/stage2-$pkgver.tar.gz")
+sha256sums=('...')`,
+	},
 	"PB401": {
 		Bad: `package() {
   install -Dm644 foo.conf /etc/foo.conf   # writes to the live filesystem

