@@ -34,16 +34,42 @@ func init() { allRules = registry }
 var (
 	knownIDsOnce sync.Once
 	knownIDs     map[string]bool
+	// packageIDs maps each package-scope rule ID to whether it is fixable.
+	packageIDs map[string]bool
 )
 
 func knownRuleIDs() map[string]bool {
 	knownIDsOnce.Do(func() {
 		knownIDs = make(map[string]bool, len(allRules()))
+		packageIDs = map[string]bool{}
 		for _, r := range allRules() {
 			knownIDs[r.ID] = true
+			if r.Scope == ScopePackage {
+				packageIDs[r.ID] = r.FixLevel.Fixable()
+			}
 		}
 	})
 	return knownIDs
+}
+
+// declinesPackageFix reports whether id names a package-scope rule whose fixer
+// writes into the PKGBUILD. Its finding lives in the built archive, so no lint
+// of the PKGBUILD alone can show the directive matching anything — but the
+// directive is what declines that fix under `pkglint build --fix`, so it is
+// live by construction and never stale.
+//
+// It reads the registry through knownRuleIDs rather than RuleByID, which PB913
+// cannot reference without an initialization cycle (see allRules).
+func declinesPackageFix(id string) bool {
+	knownRuleIDs()
+	return packageIDs[id]
+}
+
+// isPackageRule reports whether id names a package-scope rule.
+func isPackageRule(id string) bool {
+	knownRuleIDs()
+	_, ok := packageIDs[id]
+	return ok
 }
 
 // suppKey names one rule ID of one inline-ignore directive.
@@ -161,11 +187,12 @@ func ignoreDirectives(u *pkgbuild.Unit) []ignoreDirective {
 
 // staleDirectiveIDs splits a directive's rule IDs into the ones still earning
 // their suppression and the stale ones: IDs that are not pkglint rules at all,
-// or that match no finding on the directive's own or next line.
+// or that match no finding on the directive's own or next line. An ID that
+// declines a package-scope fix is never stale (see declinesPackageFix).
 func (ctx *Context) staleDirectiveIDs(path string, d ignoreDirective) (kept, stale []string) {
 	known := knownRuleIDs()
 	for _, id := range d.ids {
-		if known[id] && ctx.suppressionUsage()[suppKey{path, d.line, id}] {
+		if known[id] && (declinesPackageFix(id) || ctx.suppressionUsage()[suppKey{path, d.line, id}]) {
 			kept = append(kept, id)
 		} else {
 			stale = append(stale, id)
@@ -201,6 +228,15 @@ func checkStaleIgnores(ctx *Context) []Finding {
 					out = append(out, Finding{RuleID: staleIgnoreID, Severity: Warn,
 						Path: u.Path, Line: d.line, Col: d.col,
 						Message: fmt.Sprintf("ignore directive names %s, which is not a pkglint rule; it suppresses nothing", id)})
+					continue
+				}
+				if declinesPackageFix(id) {
+					continue
+				}
+				if isPackageRule(id) {
+					out = append(out, Finding{RuleID: staleIgnoreID, Severity: Warn,
+						Path: u.Path, Line: d.line, Col: d.col,
+						Message: fmt.Sprintf("ignore directive for %s cannot suppress anything: that rule reports against the built archive, not a PKGBUILD line; use --ignore %s", id, id)})
 					continue
 				}
 				if !ctx.suppressionUsage()[suppKey{u.Path, d.line, id}] {

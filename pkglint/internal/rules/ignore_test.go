@@ -50,6 +50,23 @@ build() {
 		}
 	})
 
+	t.Run("directive declining a package-scope fix is not stale", func(t *testing.T) {
+		expectNoRule(t, "PB913", map[string]string{"PKGBUILD": pkgbuildWith("", "\ndepends=('glibc')  # pkglint: ignore=PB809\n")})
+	})
+
+	t.Run("directive naming a non-fixable package-scope rule explains why it is stale", func(t *testing.T) {
+		files := map[string]string{"PKGBUILD": pkgbuildWith("", "\ndepends=('glibc')  # pkglint: ignore=PB803\n")}
+		var got string
+		for _, f := range lint(t, files) {
+			if f.RuleID == "PB913" {
+				got = f.Message
+			}
+		}
+		if !strings.Contains(got, "PB803") || !strings.Contains(got, "--ignore") {
+			t.Errorf("expected a PB913 finding pointing at --ignore, got %q", got)
+		}
+	})
+
 	t.Run("partially stale directive is flagged once, for the stale ID", func(t *testing.T) {
 		files := map[string]string{"PKGBUILD": pkgbuildWith("", `
 build() {
@@ -133,6 +150,19 @@ build() {
   go build -o demo .
 }`, FixSafe, nil)
 		mustContain(t, got, "# pkglint: ignore=PB204\n")
+		mustNotContain(t, got, "PB203")
+	})
+
+	t.Run("directive declining a package-scope fix survives --fix", func(t *testing.T) {
+		files := map[string]string{"PKGBUILD": pkgbuildWith("", "\ndepends=('glibc')  # pkglint: ignore=PB809\n")}
+		if got := fixOnly(t, files, FixSafe, nil, "PB913")["PKGBUILD"]; got != "" {
+			t.Errorf("expected the PB809 directive to be left alone, got:\n%s", got)
+		}
+	})
+
+	t.Run("only the stale ID is pruned beside a package-fix decline", func(t *testing.T) {
+		got := fixPKGBUILD(t, "\ndepends=('glibc')  # pkglint: ignore=PB809,PB203\n", FixSafe, nil)
+		mustContain(t, got, "depends=('glibc')  # pkglint: ignore=PB809\n")
 		mustNotContain(t, got, "PB203")
 	})
 
