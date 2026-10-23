@@ -30,9 +30,10 @@ A rule is named by ID or by short name, in any case: 'pkglint explain PB101',
 same page. 'pkglint --rules' lists every rule. Note that 'pkglint explain' names
 this command even when ./explain is a package directory; spell that one
 'pkglint ./explain'.`,
-		Args:          cobra.ArbitraryArgs,
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Args:              cobra.ArbitraryArgs,
+		ValidArgsFunction: completeRules,
+		SilenceUsage:      true,
+		SilenceErrors:     true,
 		RunE: func(_ *cobra.Command, args []string) error {
 			// cobra's own arity error ("requires at least 1 arg(s)") says
 			// nothing about what an argument is; a rule ID is not guessable.
@@ -65,6 +66,31 @@ this command even when ./explain is a package directory; spell that one
 	}
 	cmd.Flags().StringVar(&color, "color", "auto", "colorize output: auto, always, or never")
 	return cmd
+}
+
+// completeRules offers the rules `explain` can still be given, accepting what
+// Lookup accepts: an ID in any case, or a name. A rule is offered by ID, the
+// way findings print it, unless the word typed so far can only be the start of
+// its name. Rules already on the command line are left out.
+func completeRules(_ *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	named := make(map[string]bool, len(args))
+	for _, arg := range args {
+		if r, ok := rules.Lookup(arg); ok {
+			named[r.ID] = true
+		}
+	}
+	q := strings.ToLower(toComplete)
+	var out []cobra.Completion
+	for _, r := range rules.Registry() {
+		switch {
+		case named[r.ID]:
+		case strings.HasPrefix(strings.ToLower(r.ID), q):
+			out = append(out, cobra.CompletionWithDesc(r.ID, r.Name))
+		case strings.HasPrefix(r.Name, q):
+			out = append(out, cobra.CompletionWithDesc(r.Name, r.ID))
+		}
+	}
+	return out, cobra.ShellCompDirectiveNoFileComp
 }
 
 // unknownRuleError reports an argument the registry has no rule for, offering

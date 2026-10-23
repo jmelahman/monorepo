@@ -1069,6 +1069,45 @@ func TestExplainCommand(t *testing.T) {
 	}
 }
 
+// TestExplainCompletion covers the rules `explain` offers on Tab, through the
+// hidden __complete command shells call: IDs matched in any case, names when
+// only a name fits, rules already given left out, and never files.
+func TestExplainCompletion(t *testing.T) {
+	complete := func(args ...string) []string {
+		t.Helper()
+		var buf bytes.Buffer
+		if code := run(append([]string{"__complete", "explain"}, args...), &buf); code != 0 {
+			t.Fatalf("__complete explain %v: exit %d, want 0", args, code)
+		}
+		lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+		if last := lines[len(lines)-1]; last != ":4" {
+			t.Errorf("__complete explain %v: directive %q, want :4 (no file completion)", args, last)
+		}
+		return lines[:len(lines)-1]
+	}
+
+	if got := complete(""); len(got) != len(rules.Registry()) {
+		t.Errorf("empty word offered %d rules, want all %d", len(got), len(rules.Registry()))
+	}
+	for q, want := range map[string]string{
+		"PB101":         "PB101\tskipped-checksum",
+		"pb101":         "PB101\tskipped-checksum",
+		"skipped-check": "skipped-checksum\tPB101",
+	} {
+		if got := complete(q); len(got) != 1 || got[0] != want {
+			t.Errorf("%q offered %q, want [%q]", q, got, want)
+		}
+	}
+	for _, line := range complete("PB101", "PB10") {
+		if strings.HasPrefix(line, "PB101\t") {
+			t.Errorf("PB101 offered again after being named: %q", line)
+		}
+	}
+	if got := complete("nonsense"); len(got) != 0 {
+		t.Errorf("nonsense offered %q, want nothing", got)
+	}
+}
+
 // TestUnknownRuleError covers the suggestions offered for an argument that
 // names no rule: near matches when there are any, and no invented ones when
 // there are not. The message goes to stderr, so it is exercised directly.
