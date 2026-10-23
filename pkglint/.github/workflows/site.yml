@@ -39,6 +39,11 @@ jobs:
           else
             echo "No prior state on the site branch; scanning from empty."
           fi
+          # The feed history rides beside the state. Without it the feed
+          # restarts empty: nothing is lost but the entries already shown.
+          if [ -f .site/data/feed.jsonl ]; then
+            cp .site/data/feed.jsonl data/feed.jsonl
+          fi
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
         with:
           go-version-file: go.mod
@@ -93,6 +98,7 @@ jobs:
           -budget 8000
           -deadline 1h
           -state data/state.jsonl
+          -feed data/feed.jsonl
           -out docs
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
@@ -102,6 +108,8 @@ jobs:
           path: |
             docs
             data/state.jsonl
+            data/feed.jsonl
+            data/official.txt
           name: report-card-docs
           retention-days: 1
           if-no-files-found: error

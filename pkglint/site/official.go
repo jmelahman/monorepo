@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -48,7 +49,7 @@ var (
 
 	// officialSnapshotURL is a release tag's archive: project, tag, project,
 	// tag. A project that does not exist answers this with a 200 and a sign-in
-	// page rather than a 404, which is why downloadOnce refuses HTML.
+	// page rather than a 404, which is why fetchTo refuses HTML.
 	officialSnapshotURL = gitlabPackages + "%s/-/archive/%s/%s-%s.tar.gz"
 )
 
@@ -99,7 +100,7 @@ func loadOfficial(cache string, repos []string) ([]metaPackage, error) {
 	for _, repo := range repos {
 		p := filepath.Join(cache, repo+".db")
 		if !fresh(p) {
-			if err := download(fmt.Sprintf(syncDBURL, repo, repo), p); err != nil {
+			if err := refresh(fmt.Sprintf(syncDBURL, repo, repo), p); err != nil {
 				return nil, fmt.Errorf("download %s sync database: %w", repo, err)
 			}
 		}
@@ -412,6 +413,55 @@ func (r siteResult) PageURL() string {
 		return "https://archlinux.org/pkgbase/" + r.Base + "/"
 	}
 	return "https://aur.archlinux.org/pkgbase/" + r.Base
+}
+
+// saveOfficialBases writes the official repositories' package bases, one a
+// line, sorted. The poll reads it back (loadOfficialBases) to leave the AUR
+// copy of an official base alone without downloading the sync databases
+// every half hour — including bases the state has no record of yet because
+// the official fill has not reached them.
+func saveOfficialBases(path string, official []metaPackage) error {
+	set := map[string]bool{}
+	for _, m := range official {
+		if safeBase(m.PackageBase) {
+			set[m.PackageBase] = true
+		}
+	}
+	bases := slices.Sorted(maps.Keys(set))
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+	}
+	return os.WriteFile(path, []byte(strings.Join(bases, "\n")+"\n"), 0o644)
+}
+
+// loadOfficialBases reads saveOfficialBases's list. A missing file is an
+// empty list: the poll then falls back on the state's official records.
+func loadOfficialBases(path string) (map[string]bool, error) {
+	b, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return map[string]bool{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	set := map[string]bool{}
+	for n, line := range strings.Split(strings.TrimSuffix(string(b), "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		if !safeBase(line) {
+			return nil, fmt.Errorf("%s:%d: unsafe package base %q", path, n+1, line)
+		}
+		set[line] = true
+	}
+	return set, nil
+}
+
+// ReportURL is this base's report card on the site.
+func (r siteResult) ReportURL() string {
+	return baseURL + "package/" + r.Name + ".html"
 }
 
 // SourceURL is where the PKGBUILD this page grades is kept.

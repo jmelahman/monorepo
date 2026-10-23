@@ -677,7 +677,7 @@ func TestRunEndToEndOfficialOffline(t *testing.T) {
 	defer restoreArchwebSearchURL(t, "http://127.0.0.1:1/search?page=%d")()
 	defer restoreGetBackoff(t, nil)()
 
-	if err := run(out, cache, statePath, "", []string{"core"}, 1, 0, 0, 1, 5, 0); err != nil {
+	if err := run(out, cache, statePath, filepath.Join(filepath.Dir(statePath), "feed.jsonl"), filepath.Join(filepath.Dir(statePath), "official.txt"), "", []string{"core"}, 1, 0, 0, 1, 5, 0); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	results, err := os.ReadFile(filepath.Join(out, "results.json"))

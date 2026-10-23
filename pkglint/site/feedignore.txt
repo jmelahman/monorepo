@@ -1,0 +1,19 @@
+# Findings triaged out of feed.xml (site/feed.go). One per line:
+#
+#   base  rule  severity  reason
+#
+# base is an exact package base, never a pattern: a pattern would let anyone
+# upload a new base into its reach. severity is the worst one judged harmless;
+# the same rule firing worse on that base is fed again. The reason is for the
+# next triager and is required.
+#
+# The site's own report cards are unaffected: this only quiets the feed.
+
+# The split-package idiom: eval "package_$_p() { $(declare -f ...) }" defines
+# each package_*() from a template function. Read 2026-10-23.
+linux-cachyos                 PB302  error  split-package eval template
+linux-lqx                     PB302  error  split-package eval template
+linux-xanmod-linux-bin-x64v3  PB302  error  split-package eval template
+firefox-esr                   PB302  error  per-locale package_*() via eval
+# Restores a saved `shopt -p nullglob` state.
+beeper-bin                    PB302  error  eval "$_oldnull" restores shopt state

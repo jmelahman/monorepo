@@ -168,7 +168,7 @@ func writeSitemap(out string, results []siteResult, registry []rules.Rule) error
 		if !safeBase(r.Name) {
 			continue
 		}
-		urls = append(urls, baseURL+"package/"+r.Name+".html")
+		urls = append(urls, r.ReportURL())
 	}
 
 	var files []string

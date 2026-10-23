@@ -56,8 +56,8 @@ git's `ext::` "run this command" transport out. Keep it that way.)
 No generated output lives on master. `.github/workflows/site.yml` rebuilds the
 site nightly — or on demand: `gh workflow run site.yml` — and force-pushes the
 `site` branch as a single root commit holding `docs/`, which Pages serves from
-that branch's `/docs`, beside the `data/state.jsonl` that produced it. Keep it
-that way: 48 nightly `docs/` snapshots on master are what made a 2MB source
+that branch's `/docs`, beside the `data/state.jsonl` that produced it and the
+`data/feed.jsonl` feed history. Keep it that way: 48 nightly `docs/` snapshots on master are what made a 2MB source
 tree a 157MB clone, and a branch that is always one commit deep cannot repeat
 it. `docs/` and `data/` are gitignored so a local run cannot re-add them.
 
@@ -67,7 +67,7 @@ repositories (`-repos`, default `core,extra,multilib`; `site/official.go`) are
 indexed from the pacman sync databases and each PKGBUILD tree is fetched as
 its release tag's archive from gitlab.archlinux.org, whose project names and
 tags follow devtools' rules (`gitlabProject`, `gitlabTag`) — a wrong name gets
-a 200 sign-in page, which is why `downloadOnce` refuses HTML. The site's
+a 200 sign-in page, which is why `fetchTo` refuses HTML. The site's
 namespace is flat: a base in both gets one page, graded from the official
 PKGBUILD, and the AUR copy is logged as shadowed. State records carry `repo`;
 blank means AUR, and a record only counts as prior for a base from the same
@@ -91,3 +91,29 @@ for an official package) plus a rule registry fingerprint, so registry changes
 re-lint the corpus automatically over a few nightly runs. Changing rule *logic*
 without changing the registry shape needs a `stateEpoch` bump in
 `site/state.go`.
+
+`feed.xml` (`site/feed.go`) is an Atom feed of bases whose latest change
+introduced a critical finding, an error from `feedErrorRules`, or provenance
+drift, or that the scanner refused — for triaging uploads as they land. A base emits only when its
+LastModified moved, or when it is first seen within 48h of changing, so
+registry/epoch re-lints and the corpus filling in never flood it. Findings are
+counted per rule, path and message, not line, and a finding that climbs in
+severity is new; against a prior record from another registry only criticals
+are fed. What triage clears goes in
+`site/feedignore.txt`: exact bases only, never patterns, capped at the
+severity judged. Entries carry PKGBUILD text: keep them `type="text"` and
+passed through `visible`.
+
+Between nightly runs `.github/workflows/feed.yml` (:15 and :45, same
+concurrency group, off the hour so a poll never replaces a pending nightly)
+runs `go run ./site -poll-aur`: the AUR's recently-modified RSS, one RPC
+`info` call, a scan of the bases that moved, and only `feed.xml` rendered.
+It skips official bases by the state's records and by `data/official.txt`,
+which the nightly writes from the sync databases so the poll never downloads
+them.
+`scripts/publish-feed.sh` patches the site commit with git plumbing — blobless
+depth-one fetch, three blobs swapped in the index, a new parentless commit,
+`--force-with-lease` against the commit the scan read (it stands down if the
+branch moved). It fetches the three files' old blobs on purpose: `push --thin`
+fails without them, and they turn the 40MB `state.jsonl` into a delta of a few
+hundred bytes. Never let it touch `docs/` blobs.

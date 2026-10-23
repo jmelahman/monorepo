@@ -1,0 +1,102 @@
+name: Security feed
+
+# Between the nightly site runs, keep feed.xml current. Every half hour this
+# reads the AUR's recently-modified list (its last ~100 changes, about ninety
+# minutes' worth), scans the bases that moved since the state last saw them,
+# and patches the site branch with the new feed and state — nothing else
+# re-renders; report cards catch up at night. See site/poll.go and
+# scripts/publish-feed.sh.
+
+on:
+  schedule:
+    # Off the hour on purpose. The group below holds at most one pending run
+    # and a newer one replaces it, so a poll queued while the nightly run
+    # (09:00) was still waiting for a slot would cancel it. At :15 and :45
+    # the nightly has always started by the time the next poll arrives.
+    - cron: "15,45 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: report-card-site # shared with site.yml: one writer of the site branch at a time
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      site: ${{ steps.site.outputs.sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false # no push token while parsing untrusted PKGBUILDs
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: site
+          sparse-checkout: data
+          path: .site
+          persist-credentials: false
+      # The commit the state came from, so the publish job can refuse to
+      # overwrite a site branch that moved on in the meantime.
+      - id: site
+        run: echo "sha=$(git -C .site rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Restore scan state
+        run: |
+          mkdir -p data
+          cp .site/data/state.jsonl data/state.jsonl
+          # The nightly's list of official bases, so the poll leaves their
+          # AUR namesakes alone. The publish below carries it over untouched.
+          for f in feed.jsonl official.txt; do
+            if [ -f ".site/data/$f" ]; then
+              cp ".site/data/$f" "data/$f"
+            fi
+          done
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+      - run: >
+          go run ./site
+          -poll-aur
+          -state data/state.jsonl
+          -feed data/feed.jsonl
+          -official data/official.txt
+          -out docs
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          path: |
+            docs/feed.xml
+            data/state.jsonl
+            data/feed.jsonl
+          name: report-card-feed
+          retention-days: 1
+          if-no-files-found: error
+
+  publish:
+    needs: scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          sparse-checkout: scripts
+          persist-credentials: false
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        with:
+          name: report-card-feed
+          path: out
+      # The commit ID comes from the job that parsed PKGBUILDs, so it goes in
+      # through the environment, never the script text, and the script holds
+      # it to a commit ID's shape.
+      - name: Patch the site branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SITE_SHA: ${{ needs.scan.outputs.site }}
+        run: >
+          scripts/publish-feed.sh
+          "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          "$SITE_SHA"
+          out

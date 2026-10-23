@@ -12,6 +12,7 @@
 {{/* Declaring the icon is also how the /favicon.ico request is avoided: without
      a link the browser asks for one on every page and takes a 404. */}}
 <link rel="icon" href="{{.Root}}assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" type="application/atom+xml" title="pkglint: new security findings" href="{{.Root}}feed.xml">
 {{/* Link previews — X, Slack, Discord, iMessage — read Open Graph out of the
      head and will not resolve a relative URL, so the page and its card image
      are spelled out against the published origin. twitter:card is the only
@@ -41,6 +42,7 @@
     <nav>
       <a href="{{.Root}}rules/index.html">Rules</a>
       <a href="{{.Root}}results.json">JSON</a>
+      <a href="{{.Root}}feed.xml" title="Packages whose latest change introduced a security finding">Feed</a>
       <a href="https://github.com/jmelahman/pkglint">Source</a>
     </nav>
   </div>

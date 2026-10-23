@@ -448,7 +448,7 @@ func TestScanAllCheckpoint(t *testing.T) {
 	}
 
 	var calls int
-	scanAll(seed, cache, 1, 0, map[string]stateRecord{}, time.Time{}, func(st map[string]stateRecord) {
+	scanAll(seed, cache, 1, 0, map[string]stateRecord{}, time.Time{}, func(_ []siteResult, st map[string]stateRecord) {
 		calls++
 		if _, ok := st["one"]; !ok {
 			t.Errorf("checkpoint %d is missing the finished base: %v", calls, st)
@@ -710,7 +710,7 @@ func TestRunEndToEndOffline(t *testing.T) {
 	}
 
 	// top=1 pulls demo in regardless of its (ancient) LastModified.
-	if err := run(out, cache, statePath, "", nil, 1, 0, 0, 1, 5, 0); err != nil {
+	if err := run(out, cache, statePath, filepath.Join(filepath.Dir(statePath), "feed.jsonl"), filepath.Join(filepath.Dir(statePath), "official.txt"), "", nil, 1, 0, 0, 1, 5, 0); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -726,6 +726,8 @@ func TestRunEndToEndOffline(t *testing.T) {
 	for _, p := range []string{
 		filepath.Join(out, ".nojekyll"),
 		filepath.Join(out, "badge", "demo.svg"),
+		filepath.Join(out, "feed.xml"),
+		filepath.Join(tmp, "feed.jsonl"),
 	} {
 		if _, err := os.Stat(p); err != nil {
 			t.Errorf("expected output %s: %v", p, err)
@@ -1227,5 +1229,98 @@ func TestExtractIgnoresNestedFiles(t *testing.T) {
 				t.Errorf("nested x.install was extracted, stat err = %v", err)
 			}
 		})
+	}
+}
+
+// TestRefreshConditional walks refresh through a first fetch, a 304 that
+// keeps the copy and re-dates it, a changed file, and a server that stops
+// sending validators.
+func TestRefreshConditional(t *testing.T) {
+	body, etag := "v1", `"a"`
+	var conditional []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conditional = append(conditional, r.Header.Get("If-None-Match")+"|"+r.Header.Get("If-Modified-Since"))
+		if etag != "" && r.Header.Get("If-None-Match") == etag {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		if etag != "" {
+			w.Header().Set("ETag", etag)
+			w.Header().Set("Last-Modified", "Fri, 23 Oct 2026 12:00:00 GMT")
+		}
+		w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	path := filepath.Join(t.TempDir(), "x.db")
+	read := func() string {
+		t.Helper()
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	if err := refresh(srv.URL, path); err != nil || read() != "v1" {
+		t.Fatalf("first refresh: %v, %q", err, read())
+	}
+
+	old := time.Now().Add(-48 * time.Hour)
+	if err := os.Chtimes(path, old, old); err != nil {
+		t.Fatal(err)
+	}
+	if err := refresh(srv.URL, path); err != nil || read() != "v1" {
+		t.Fatalf("304 refresh: %v, %q", err, read())
+	}
+	if !fresh(path) {
+		t.Error("a 304 left the copy stale")
+	}
+
+	body, etag = "v2", `"b"`
+	if err := refresh(srv.URL, path); err != nil || read() != "v2" {
+		t.Fatalf("changed refresh: %v, %q", err, read())
+	}
+
+	etag = ""
+	body = "v3"
+	if err := refresh(srv.URL, path); err != nil || read() != "v3" {
+		t.Fatalf("unvalidated refresh: %v, %q", err, read())
+	}
+	if _, err := os.Stat(path + ".validators"); !os.IsNotExist(err) {
+		t.Errorf("validators outlived a response without any (stat: %v)", err)
+	}
+	if err := refresh(srv.URL, path); err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{"|", `"a"|Fri, 23 Oct 2026 12:00:00 GMT`, `"a"|Fri, 23 Oct 2026 12:00:00 GMT`, `"b"|Fri, 23 Oct 2026 12:00:00 GMT`, "|"}
+	if !slices.Equal(conditional, want) {
+		t.Errorf("request validators = %q, want %q", conditional, want)
+	}
+}
+
+// TestRefreshEmptyBodyRetries holds refresh to download's one retry of an
+// empty 200.
+func TestRefreshEmptyBodyRetries(t *testing.T) {
+	prev := emptyBodyBackoff
+	emptyBodyBackoff = []time.Duration{0}
+	defer func() { emptyBodyBackoff = prev }()
+	var n atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if n.Add(1) > 1 {
+			w.Write([]byte("ok"))
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "x.db")
+	if err := refresh(srv.URL, path); err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte("<html>"))
+	})
+	if err := refresh(srv.URL, path); err == nil {
+		t.Error("refresh accepted an HTML page")
 	}
 }

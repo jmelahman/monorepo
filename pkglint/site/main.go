@@ -137,6 +137,8 @@ func main() {
 	out := flag.String("out", "public", "output directory for the generated site")
 	cache := flag.String("cache", ".cache", "cache directory for downloads")
 	state := flag.String("state", "data/state.jsonl", "checked-in scan state; bases unchanged since it was written are not refetched")
+	feed := flag.String("feed", "data/feed.jsonl", "security feed history, rendered to feed.xml")
+	officialList := flag.String("official", "data/official.txt", "official repositories' package bases: written by a full run, read by -poll-aur")
 	maintainer := flag.String("maintainer", "", "always include the AUR packages this user maintains or co-maintains")
 	reposFlag := flag.String("repos", "core,extra,multilib", "official repositories to include in full, comma-separated (empty = AUR only)")
 	top := flag.Int("top", 0, "also include the top-N packages by votes (0 = none)")
@@ -145,18 +147,26 @@ func main() {
 	deadline := flag.Duration("deadline", 0, "wall-clock cap on this run; fetches not started by then wait for a later run (0 = none)")
 	jobs := flag.Int("jobs", 2, "concurrent snapshot fetches")
 	limit := flag.Int("limit", 0, "hard cap on packages scanned (0 = no cap), for smoke tests")
+	poll := flag.Bool("poll-aur", false, "scan only the AUR's recently modified packages and write only feed.xml (see poll.go)")
 	flag.Parse()
+
+	if *poll {
+		if err := pollAUR(*out, *cache, *state, *feed, *officialList); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
 	repos, err := parseRepos(*reposFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := run(*out, *cache, *state, *maintainer, repos, *top, *since, *budget, *jobs, *limit, *deadline); err != nil {
+	if err := run(*out, *cache, *state, *feed, *officialList, *maintainer, repos, *top, *since, *budget, *jobs, *limit, *deadline); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(out, cache, statePath, maintainer string, repos []string, top, since, budget, jobs, limit int, deadline time.Duration) error {
+func run(out, cache, statePath, feedPath, officialPath, maintainer string, repos []string, top, since, budget, jobs, limit int, deadline time.Duration) error {
 	// The deadline covers the whole run, metadata download included, because
 	// what it protects is the CI job's hard kill limit, which does too.
 	var stopAt time.Time
@@ -183,6 +193,11 @@ func run(out, cache, statePath, maintainer string, repos []string, top, since, b
 	if err != nil {
 		return err
 	}
+	if len(repos) > 0 {
+		if err := saveOfficialBases(officialPath, official); err != nil {
+			return err
+		}
+	}
 
 	seed := selectSeed(meta, official, maintainer, top, since, time.Now())
 	if limit > 0 && len(seed) > limit {
@@ -198,13 +213,26 @@ func run(out, cache, statePath, maintainer string, repos []string, top, since, b
 	// far pairs with the snapshots already in the cache, so a rerun re-lints
 	// from disk instead of refetching. Its errors are logged, not fatal — a
 	// failed checkpoint costs redundant work later, not correctness now.
-	results, state := scanAll(seed, cache, jobs, budget, prev, stopAt, func(st map[string]stateRecord) {
+	//
+	// The feed is updated before every state save, the checkpoints included:
+	// its entries are derived from the state being replaced, so a saved state
+	// with its feed unwritten would lose them for good, where the other order
+	// merely re-emits them, and mergeFeed keeps the first sighting. A
+	// checkpoint whose feed update fails does not save the state.
+	results, state := scanAll(seed, cache, jobs, budget, prev, stopAt, func(fetched []siteResult, st map[string]stateRecord) {
+		if err := updateFeed(out, feedPath, fetched, prev, st, time.Now()); err != nil {
+			log.Printf("checkpoint: %v", err)
+			return
+		}
 		if err := saveState(statePath, st); err != nil {
 			log.Printf("checkpoint: %v", err)
 			return
 		}
 		log.Printf("checkpoint: %d state records saved", len(st))
 	})
+	if err := updateFeed(out, feedPath, results, prev, state, time.Now()); err != nil {
+		return err
+	}
 	if err := saveState(statePath, state); err != nil {
 		return err
 	}
@@ -313,7 +341,7 @@ func fresh(path string) bool {
 func loadMeta(cache string) ([]metaPackage, error) {
 	path := filepath.Join(cache, "packages-meta-ext-v1.json.gz")
 	if !fresh(path) {
-		if err := download(metaURL, path); err != nil {
+		if err := refresh(metaURL, path); err != nil {
 			return nil, fmt.Errorf("download metadata dump: %w", err)
 		}
 	}
@@ -505,14 +533,15 @@ const progressEvery = 100
 // reproducibly.
 //
 // The fetches run in batches of scanBatch; after each interior batch the
-// accumulated state is handed to checkpoint (if non-nil), so a run that dies
-// mid-corpus leaves state on disk matching the snapshots it already paid for.
+// accumulated state is handed to checkpoint (if non-nil), with the results
+// fetched so far, so a run that dies mid-corpus leaves state on disk matching
+// the snapshots it already paid for.
 // A non-zero deadline is checked between batches: once past it, every
 // unfetched base is treated exactly as if it were past the budget, so the run
 // still renders, saves state, and exits cleanly with hours of CI headroom
 // intact. Batch granularity means the run can overshoot the deadline by one
 // batch — minutes, against the hours the flag exists to protect.
-func scanAll(seed []metaPackage, cache string, jobs, budget int, prev map[string]stateRecord, deadline time.Time, checkpoint func(map[string]stateRecord)) ([]siteResult, map[string]stateRecord) {
+func scanAll(seed []metaPackage, cache string, jobs, budget int, prev map[string]stateRecord, deadline time.Time, checkpoint func([]siteResult, map[string]stateRecord)) ([]siteResult, map[string]stateRecord) {
 	results := make([]siteResult, len(seed))
 	keep := make([]bool, len(seed))
 	var todo []int
@@ -558,6 +587,7 @@ func scanAll(seed []metaPackage, cache string, jobs, budget int, prev map[string
 	next := make(map[string]stateRecord, len(prev)+len(seed))
 	maps.Copy(next, prev)
 	states := make([]*stateRecord, len(seed))
+	var fetched []siteResult
 
 	start := time.Now()
 	var done, failed atomic.Int64
@@ -607,12 +637,13 @@ func scanAll(seed []metaPackage, cache string, jobs, budget int, prev map[string
 		for _, i := range batch {
 			if st := states[i]; st != nil {
 				next[seed[i].PackageBase] = *st
+				fetched = append(fetched, results[i])
 			}
 		}
 		// The final batch is covered by the caller's own save, so only
 		// interior checkpoints are worth a write.
 		if checkpoint != nil && len(todo) > 0 {
-			checkpoint(next)
+			checkpoint(fetched, next)
 		}
 	}
 
@@ -942,37 +973,98 @@ var errEmptyBody = errors.New("empty response body")
 var emptyBodyBackoff = []time.Duration{2 * time.Second, 15 * time.Second}
 
 func download(url, path string) error {
+	_, err := fetchRetrying(url, path, nil)
+	return err
+}
+
+// fetchRetrying is fetchTo with an empty body retried on emptyBodyBackoff.
+func fetchRetrying(url, path string, h http.Header) (*validators, error) {
 	for attempt := 0; ; attempt++ {
-		err := downloadOnce(url, path)
+		got, err := fetchTo(url, path, h)
 		if !errors.Is(err, errEmptyBody) || attempt >= len(emptyBodyBackoff) {
-			return err
+			return got, err
 		}
 		log.Printf("%v; retrying in %s", err, emptyBodyBackoff[attempt])
 		time.Sleep(emptyBodyBackoff[attempt])
 	}
 }
 
-func downloadOnce(url, path string) error {
-	resp, err := get(url)
+// validators are what a server said identifies a download's content, kept
+// beside it in path+".validators" so the next fetch can ask whether it has
+// changed.
+type validators struct {
+	ETag         string `json:"etag,omitempty"`
+	LastModified string `json:"last_modified,omitempty"`
+}
+
+// refresh is download for a file fetched again in place — the metadata dump,
+// the sync databases — rather than once under a name that pins its content
+// as a snapshot's does. It asks with the validators of the copy already on
+// disk, and a 304 costs a header instead of the file: it only touches the
+// copy, so fresh counts it as fetched now.
+func refresh(url, path string) error {
+	var have validators
+	if _, err := os.Stat(path); err == nil {
+		if b, err := os.ReadFile(path + ".validators"); err == nil {
+			// Ours, but a corrupt file only costs the full download.
+			_ = json.Unmarshal(b, &have)
+		}
+	}
+	h := http.Header{}
+	if have.ETag != "" {
+		h.Set("If-None-Match", have.ETag)
+	}
+	if have.LastModified != "" {
+		h.Set("If-Modified-Since", have.LastModified)
+	}
+	got, err := fetchRetrying(url, path, h)
 	if err != nil {
 		return err
 	}
+	if got == nil { // 304
+		now := time.Now()
+		return os.Chtimes(path, now, now)
+	}
+	if *got == (validators{}) {
+		if err := os.Remove(path + ".validators"); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+	}
+	b, err := json.Marshal(got)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path+".validators", b, 0o644)
+}
+
+// fetchTo GETs url into path with the extra request headers h. It returns the
+// response's validators, or nil for a 304 — which only a conditional h can
+// draw, and which leaves path alone.
+func fetchTo(url, path string, h http.Header) (*validators, error) {
+	resp, err := getWith(url, h)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotModified {
+		return nil, nil
+	}
 	// Nothing this pipeline fetches is a web page. GitLab answers a request
 	// for a project that does not exist — or that a visitor may not see —
 	// with a 200 and its sign-in page, and the AUR's cgit has an error page
 	// of its own; either would otherwise be handed to the tar reader as a
 	// snapshot and fail there with a message that says nothing.
 	if ct := resp.Header.Get("Content-Type"); strings.HasPrefix(ct, "text/html") {
-		return fmt.Errorf("GET %s: got an HTML page (%s) instead of a file", url, ct)
+		return nil, fmt.Errorf("GET %s: got an HTML page (%s) instead of a file", url, ct)
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+		return nil, err
 	}
 	tmp := path + ".tmp"
 	f, err := os.Create(tmp)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Read one byte past the ceiling so an over-long body is detected rather
 	// than silently truncated into a "successful" download.
@@ -986,12 +1078,15 @@ func downloadOnce(url, path string) error {
 	if err != nil {
 		f.Close()
 		os.Remove(tmp)
-		return err
+		return nil, err
 	}
 	if err := f.Close(); err != nil {
-		return err
+		return nil, err
 	}
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		return nil, err
+	}
+	return &validators{ETag: resp.Header.Get("ETag"), LastModified: resp.Header.Get("Last-Modified")}, nil
 }
 
 // getJSON is a throttled GET decoded as JSON, its body bounded as any other
@@ -1016,6 +1111,12 @@ var getBackoff = []time.Duration{2 * time.Second, 5 * time.Second, 15 * time.Sec
 // get issues a throttled GET, retrying transient failures (429s and
 // transport hiccups) with growing backoff and honoring Retry-After.
 func get(url string) (*http.Response, error) {
+	return getWith(url, nil)
+}
+
+// getWith is get with extra request headers. When h makes the request
+// conditional, a 304 is returned like a 200, for the caller to tell apart.
+func getWith(url string, h http.Header) (*http.Response, error) {
 	client := &http.Client{Timeout: 60 * time.Second}
 	tick := throttleFor(url)
 	var lastErr error
@@ -1025,12 +1126,17 @@ func get(url string) (*http.Response, error) {
 		if err != nil {
 			return nil, err
 		}
+		for k, vs := range h {
+			req.Header[k] = vs
+		}
 		req.Header.Set("User-Agent", userAgent)
 		resp, err := client.Do(req)
 		switch {
 		case err != nil:
 			lastErr = err
 		case resp.StatusCode == http.StatusOK:
+			return resp, nil
+		case resp.StatusCode == http.StatusNotModified && len(h) > 0:
 			return resp, nil
 		case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
 			lastErr = fmt.Errorf("GET %s: %s", url, resp.Status)
