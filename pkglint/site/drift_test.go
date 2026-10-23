@@ -68,6 +68,47 @@ func TestDriftNotes(t *testing.T) {
 			t.Errorf("expected no drift for a version bump, got %v", notes)
 		}
 	})
+	t.Run("checksum change with a pkgrel bump is drift", func(t *testing.T) {
+		prev := stateFor(t, driftBase, 100)
+		rebuilt := strings.Replace(strings.Replace(driftBase,
+			"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+			"2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae", 1),
+			"pkgrel=1", "pkgrel=2", 1)
+		if notes := driftNotes(prev, stateFor(t, rebuilt, 200)); len(notes) != 1 {
+			t.Errorf("expected checksum drift note, got %v", notes)
+		}
+	})
+	// A rolling URL, and one whose version the parser cannot see, read the
+	// same across a release: neither is drift once pkgver moves.
+	for name, src := range map[string]string{
+		"rolling URL":         "https://example.com/releases/download/nightly/demo.tar.gz",
+		"unresolved version":  "https://example.com/demo-${_ver}.tar.gz",
+		"variable-run-on URL": "https://example.com/demo_$pkgver_amd64.deb",
+	} {
+		t.Run(name+" across a version bump is not drift", func(t *testing.T) {
+			pb := strings.Replace(driftBase, "https://example.com/demo-1.0.0.tar.gz", src, 1)
+			prev := stateFor(t, pb, 100)
+			bumped := strings.Replace(strings.Replace(pb,
+				"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+				"2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae", 1),
+				"pkgver=1.0.0", "pkgver=1.1.0", 1)
+			cur := stateFor(t, bumped, 200)
+			if len(prev.Sums) != 1 || len(cur.Sums) != 1 {
+				t.Fatalf("fingerprints lost the source: %v / %v", prev.Sums, cur.Sums)
+			}
+			if notes := driftNotes(prev, cur); notes != nil {
+				t.Errorf("expected no drift, got %v", notes)
+			}
+		})
+	}
+	t.Run("an unknown pkgver is not compared", func(t *testing.T) {
+		prev, cur := stateFor(t, driftBase, 100), stateFor(t, driftBase, 200)
+		prev.Pkgver, cur.Pkgver = "", ""
+		cur.Sums["https://example.com/demo-1.0.0.tar.gz"]["sha256"] = "00"
+		if notes := driftNotes(prev, cur); notes != nil {
+			t.Errorf("expected no drift, got %v", notes)
+		}
+	})
 	t.Run("commit pin moving without a pkgver change is drift", func(t *testing.T) {
 		vcs := `pkgname=demo
 pkgver=1.0.0

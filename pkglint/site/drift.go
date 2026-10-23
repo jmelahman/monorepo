@@ -56,12 +56,24 @@ func extractState(pkg *pkgbuild.Package, lastModified int64) sourceState {
 }
 
 // driftNotes compares two fingerprints of the same package base from
-// different snapshots and describes suspicious movement. It only speaks when
-// the comparison is apples-to-apples: the same URL, or the same repo at an
-// unchanged pkgver — a bumped release legitimately changes everything else.
+// different snapshots and describes suspicious movement. It only speaks at
+// an unchanged pkgver, where the comparison is apples-to-apples: a bumped
+// release legitimately changes everything else.
+//
+// That holds for checksums under a URL that did not change, too. A URL can
+// look unchanged across a release without being so — a rolling one
+// (releases/download/nightly/…) serves each new build at the same address,
+// and one whose version comes from a variable the parser cannot resolve
+// (`$pkgver_amd64`, a function-set `_ver`) loses the version from its text —
+// and both would otherwise raise a note on every upload. The case the note
+// exists for, an artifact swapped out under a release already reviewed,
+// keeps its pkgver, a pkgrel bump included.
 func driftNotes(prev, cur sourceState) []string {
 	if prev.LastModified == 0 || prev.LastModified == cur.LastModified {
 		return nil // first sighting, or the very same snapshot
+	}
+	if prev.Pkgver == "" || prev.Pkgver != cur.Pkgver {
+		return nil // a release, or a version that cannot be compared
 	}
 	var notes []string
 	for url, sums := range cur.Sums {
@@ -77,13 +89,11 @@ func driftNotes(prev, cur sourceState) []string {
 			}
 		}
 	}
-	if prev.Pkgver != "" && prev.Pkgver == cur.Pkgver {
-		for url, pin := range cur.Pins {
-			if ppin, ok := prev.Pins[url]; ok && ppin != pin {
-				notes = append(notes, fmt.Sprintf(
-					"pinned commit for %s moved (%s → %s) without a pkgver change",
-					url, shortDigest(ppin), shortDigest(pin)))
-			}
+	for url, pin := range cur.Pins {
+		if ppin, ok := prev.Pins[url]; ok && ppin != pin {
+			notes = append(notes, fmt.Sprintf(
+				"pinned commit for %s moved (%s → %s) without a pkgver change",
+				url, shortDigest(ppin), shortDigest(pin)))
 		}
 	}
 	sort.Strings(notes)
