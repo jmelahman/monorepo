@@ -777,7 +777,7 @@ var scriptInterpreters = map[string]bool{
 var interpreterValueFlags = map[string]map[string]bool{
 	"python": {"-W": true, "-X": true},
 	"ruby":   {"-I": true, "-r": true, "-E": true, "-C": true},
-	"node":   {"-r": true, "--require": true, "--import": true, "--loader": true, "--experimental-loader": true, "-C": true, "--conditions": true},
+	"node":   {"-r": true, "--require": true, "--import": true, "--loader": true, "--experimental-loader": true, "-C": true, "--conditions": true, "--input-type": true},
 }
 
 // sinkExecutesStdin reports whether a pipeline's terminating interpreter treats
@@ -794,7 +794,7 @@ func sinkExecutesStdin(c Command, interp string) bool {
 		if a == "-" {
 			return true // read the program from stdin
 		}
-		if valueFlags[a] {
+		if valueFlags[a] || clusterEndsInValueFlag(a, valueFlags) {
 			i++ // the switch's value, not a program
 			continue
 		}
@@ -809,6 +809,16 @@ func sinkExecutesStdin(c Command, interp string) bool {
 		return stdinEvalRe.MatchString(a)
 	}
 	return true // bare interpreter: stdin is the script
+}
+
+// clusterEndsInValueFlag reports whether a is a run of single-letter switches
+// whose last one takes the next word as its value: python3 -uW ignore reads
+// "ignore" as -W's value exactly as python3 -u -W ignore does.
+func clusterEndsInValueFlag(a string, valueFlags map[string]bool) bool {
+	if len(a) < 3 || a[0] != '-' || a[1] == '-' {
+		return false
+	}
+	return valueFlags["-"+a[len(a)-1:]]
 }
 
 // stdinEvalRe matches the evaluator names an inline interpreter program would
@@ -983,13 +993,30 @@ func checkDownloadExec(ctx *Context) []Finding {
 		}
 		// A redirect only counts when stdin is what runs: a shell, a bare
 		// interpreter, or source/. naming /dev/stdin.
-		viaStdin := !sink || sinkExecutesStdin(c, interp)
+		viaStdin := sourcesStdin(c)
+		if sink {
+			viaStdin = sinkExecutesStdin(c, interp)
+		}
 		if ctx.argsRunDownload(c) || (viaStdin && ctx.stdinRunsDownload(c.Stmt)) {
 			out = append(out, c.finding("PB304", Critical,
 				"%s executes the output of a network download", c.Name))
 		}
 	}
 	return out
+}
+
+// sourcesStdin reports whether a source or . command reads its script from
+// stdin. Otherwise it reads the file it names, and a redirect only hands that
+// script its input.
+func sourcesStdin(c Command) bool {
+	if len(c.Args) == 0 {
+		return false
+	}
+	switch c.Args[0] {
+	case "/dev/stdin", "/dev/fd/0", "/proc/self/fd/0":
+		return true
+	}
+	return false
 }
 
 // argsRunDownload reports whether one of c's arguments substitutes in the
@@ -1013,7 +1040,13 @@ func (ctx *Context) stdinRunsDownload(stmt *syntax.Stmt) bool {
 			continue
 		}
 		switch r.Op {
-		case syntax.RdrIn, syntax.WordHdoc:
+		case syntax.RdrIn:
+			// Only < <(curl …) feeds the download in: < "$(curl …)" opens
+			// the file curl's output names.
+			if r.Word != nil && isProcSubst(r.Word) && ctx.wordRunsCommand(r.Word, downloaders) {
+				return true
+			}
+		case syntax.WordHdoc:
 			if r.Word != nil && ctx.wordRunsCommand(r.Word, downloaders) {
 				return true
 			}
@@ -1024,6 +1057,15 @@ func (ctx *Context) stdinRunsDownload(stmt *syntax.Stmt) bool {
 		}
 	}
 	return false
+}
+
+// isProcSubst reports whether w is a single process substitution, <(…).
+func isProcSubst(w *syntax.Word) bool {
+	if len(w.Parts) != 1 {
+		return false
+	}
+	_, ok := w.Parts[0].(*syntax.ProcSubst)
+	return ok
 }
 
 // feedsStdin reports whether r replaces its command's stdin: an input
