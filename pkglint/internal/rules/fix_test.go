@@ -1118,6 +1118,87 @@ build() {
 		mustContain(t, got, "patch -p1 < ../fix.patch\n  cd \"$pkgname\" || exit\n  go mod download -modcacherw\n}")
 		relintClean(t, got)
 	})
+	t.Run("a prepare() already in build's directory needs no cd", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+prepare() {
+  cd "$pkgname"
+  patch -p1 < ../fix.patch
+}
+build() {
+  cd "$pkgname"
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "patch -p1 < ../fix.patch\n  go mod download -modcacherw\n}")
+		relintClean(t, got)
+	})
+	t.Run("a prepare() in another directory returns to $srcdir first", func(t *testing.T) {
+		// The dms-shell shape: prepare() works in the checkout, the module
+		// is a subdirectory only build() enters.
+		got := fixPKGBUILD(t, `
+prepare() {
+  cd "$pkgname"
+  git submodule update --recursive
+}
+build() {
+  cd "$pkgname/core"
+  go build -o demo ./cmd/demo
+}`, FixUnsafe, nil)
+		mustContain(t, got, "git submodule update --recursive\n  cd \"$srcdir\"\n  cd \"$pkgname/core\"\n  go mod download -modcacherw\n}")
+		relintClean(t, got)
+	})
+	t.Run("a prepare() cd is undone for a build at $srcdir's root", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+prepare() {
+  cd "$pkgname"
+  patch -p1 < ../fix.patch
+}
+build() {
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "patch -p1 < ../fix.patch\n  cd \"$srcdir\"\n  go mod download -modcacherw\n}")
+		relintClean(t, got)
+	})
+	t.Run("a prepare() cd beside an uncopyable build cd still reaches the module", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+prepare() {
+  cd "$pkgname"
+  patch -p1 < ../fix.patch
+}
+build() {
+  cd "$pkgname/core" && make generate
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "patch -p1 < ../fix.patch\n  cd \"$srcdir\"\n  cd \"$pkgname/core\"\n  go mod download -modcacherw\n}")
+		relintClean(t, got)
+	})
+	for _, tc := range []struct{ name, prepare string }{
+		{"in a subshell", "  (cd \"$pkgname\" && patch -p1 < ../fix.patch)\n"},
+		{"in a conditional", "  if [[ -d \"$pkgname\" ]]; then\n    cd \"$pkgname\"\n  fi\n"},
+		{"in a pipeline", "  cd \"$pkgname\" | true\n"},
+	} {
+		t.Run("a prepare() cd "+tc.name+" may not have happened", func(t *testing.T) {
+			got := fixPKGBUILD(t, "\nprepare() {\n"+tc.prepare+`}
+build() {
+  cd "$pkgname"
+  go build -o demo .
+}`, FixUnsafe, nil)
+			mustContain(t, got, "  cd \"$srcdir\"\n  cd \"$pkgname\"\n  go mod download -modcacherw\n}")
+			relintClean(t, got)
+		})
+	}
+	t.Run("a guarded prepare() cd counts as top level", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+prepare() {
+  cd "$pkgname" || exit
+  patch -p1 < ../fix.patch
+}
+build() {
+  cd "$pkgname"
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "patch -p1 < ../fix.patch\n  go mod download -modcacherw\n}")
+		relintClean(t, got)
+	})
 	t.Run("a vendored build needs no edit", func(t *testing.T) {
 		got := fixPKGBUILD(t, `
 build() {
@@ -1125,13 +1206,13 @@ build() {
 }`, FixUnsafe, nil)
 		mustNotContain(t, got, "go mod download") // vendored: PB204 stays out
 	})
-	t.Run("a cd sharing its line with another command is not copied", func(t *testing.T) {
+	t.Run("a cd sharing its line with another command is copied alone", func(t *testing.T) {
 		got := fixPKGBUILD(t, `
 build() {
   cd "$pkgname" && make generate
   go build -o demo .
 }`, FixUnsafe, nil)
-		mustContain(t, got, "prepare() {\n  go mod download -modcacherw\n}")
+		mustContain(t, got, "prepare() {\n  cd \"$pkgname\"\n  go mod download -modcacherw\n}")
 		mustNotContain(t, got, "make generate\n  go mod download")
 		relintClean(t, got)
 	})
@@ -1324,59 +1405,37 @@ build() {
 	mustNotContain(t, got, "uv run make --frozen")
 }
 
-func TestFixSetuid(t *testing.T) {
-	got := fixPKGBUILD(t, `
+// A setuid mode in a PKGBUILD is deliberate (sudo, nvidia-modprobe), so PB403
+// reports it and no fix level rewrites it.
+// A configure that hands one language Arch's flags is still reported, but a
+// language whose only -O is Release's would build at -O0 under None.
+func TestFixCMakeBuildTypeKeepsOwnFlags(t *testing.T) {
+	src := pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fno-exceptions" -DCMAKE_CXX_FLAGS="$CXXFLAGS"
+}`)
+	expectRule(t, "PB951", map[string]string{"PKGBUILD": src})
+	if got, ok := fixAll(t, map[string]string{"PKGBUILD": src}, FixUnsafe, nil)["PKGBUILD"]; ok {
+		mustContain(t, got, "-DCMAKE_BUILD_TYPE=Release")
+	}
+}
+
+func TestSetuidNeverFixed(t *testing.T) {
+	src := pkgbuildWith("", `
 package() {
   chmod 4755 "$pkgdir/usr/bin/demo"
-}`, FixUnsafe, nil)
-	mustContain(t, got, "chmod 0755")
-	mustNotContain(t, got, "chmod 4755")
-}
-
-func TestFixSetuidInstallMode(t *testing.T) {
-	got := fixPKGBUILD(t, `
-package() {
-  install -Dm4755 demo "$pkgdir/usr/bin/demo"
-}`, FixUnsafe, nil)
-	mustContain(t, got, "install -Dm0755")
-	mustNotContain(t, got, "4755")
-}
-
-// Modes whose leading digit is not 4/2/6 still carry the setuid/setgid bit, so
-// the fixer must strip it there too.
-func TestFixSetuidOctalModes(t *testing.T) {
-	t.Run("leading-zero chmod mode", func(t *testing.T) {
-		got := fixPKGBUILD(t, `
-package() {
-  chmod 04755 "$pkgdir/usr/bin/demo"
-}`, FixUnsafe, nil)
-		mustContain(t, got, `chmod 0755 "$pkgdir/usr/bin/demo"`)
-		mustNotContain(t, got, "04755")
-	})
-	t.Run("setuid plus sticky keeps the sticky bit", func(t *testing.T) {
-		got := fixPKGBUILD(t, `
-package() {
-  chmod 7755 "$pkgdir/usr/bin/demo"
-}`, FixUnsafe, nil)
-		mustContain(t, got, `chmod 1755 "$pkgdir/usr/bin/demo"`)
-	})
-	t.Run("leading-zero install mode", func(t *testing.T) {
-		got := fixPKGBUILD(t, `
-package() {
-  install -m 02755 demo "$pkgdir/usr/bin/demo"
-}`, FixUnsafe, nil)
-		mustContain(t, got, `install -m 0755 demo "$pkgdir/usr/bin/demo"`)
-		mustNotContain(t, got, "02755")
-	})
-	t.Run("ordinary mode is left alone", func(t *testing.T) {
-		got := fixAll(t, map[string]string{"PKGBUILD": pkgbuildWith("", `
-package() {
-  chmod 0755 "$pkgdir/usr/bin/demo"
-}`)}, FixUnsafe, nil)
-		if _, ok := got["PKGBUILD"]; ok {
-			t.Errorf("expected no edit for a non-setuid mode, got:\n%s", got["PKGBUILD"])
+  install -Dm4755 demo "$pkgdir/usr/bin/demo2"
+}`)
+	if got, ok := fixAll(t, map[string]string{"PKGBUILD": src}, FixUnsafe, nil)["PKGBUILD"]; ok && got != src {
+		mustContain(t, got, "chmod 4755")
+		mustContain(t, got, "install -Dm4755")
+	}
+	for _, r := range Registry() {
+		if r.ID == "PB403" && (r.Fix != nil || r.FixLevel != FixNone) {
+			t.Errorf("PB403 has a fixer (level %v); a setuid mode must not be rewritten", r.FixLevel)
 		}
-	})
+	}
 }
 
 func TestFixBackupSlash(t *testing.T) {

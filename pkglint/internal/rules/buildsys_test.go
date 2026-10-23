@@ -1,6 +1,11 @@
 package rules
 
-import "testing"
+import (
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+)
 
 func TestCMakeGuidelineRules(t *testing.T) {
 	t.Run("PB950 configure without a prefix", func(t *testing.T) {
@@ -43,6 +48,22 @@ build() {
   cmake -B build -S . -DCMAKE_INSTALL_PREFIX:PATH=/usr
 }`)})
 	})
+	t.Run("PB950 a staging prefix decides the install location", func(t *testing.T) {
+		// The wasi-libc++ shape.
+		expectNoRule(t, "PB950", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_STAGING_PREFIX=/usr/share/wasi-sysroot
+}`)})
+	})
+	t.Run("PB950 cmake's --install-prefix flag counts", func(t *testing.T) {
+		expectNoRule(t, "PB950", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -S . --install-prefix /usr
+  cmake -B build2 -S . --install-prefix=/usr
+}`)})
+	})
 	t.Run("PB950 a splatted flag array may carry the prefix", func(t *testing.T) {
 		// The octopi shape: the flags live in a local array.
 		expectNoRule(t, "PB950", map[string]string{"PKGBUILD": pkgbuildWith("", `
@@ -81,6 +102,101 @@ makedepends=('cmake')
 build() {
   cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE:STRING=Release
 }`)})
+	})
+	t.Run("PB951 explicitly emptied flags leave Release the only -O", func(t *testing.T) {
+		// The llvm device-runtime shape: cmake never reads $CFLAGS here.
+		expectNoRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS= -DCMAKE_CXX_FLAGS=
+}`)})
+	})
+	t.Run("PB951 a hand-written C flag list leaves Release the only -O", func(t *testing.T) {
+		expectNoRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS="-fno-exceptions --sysroot=/usr/share/wasi-sysroot"
+}`)})
+	})
+	t.Run("PB951 explicit flags that carry $CFLAGS still lose -O2", func(t *testing.T) {
+		expectRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="${CFLAGS} -fPIC"
+}`)})
+	})
+	t.Run("PB951 a variable built from $CFLAGS still loses -O2", func(t *testing.T) {
+		// The lib32-llvm shape.
+		expectRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  local LIB32_CFLAGS="$CFLAGS -m32"
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$LIB32_CFLAGS"
+}`)})
+	})
+	t.Run("PB951 a variable built without $CFLAGS leaves Release the only -O", func(t *testing.T) {
+		expectNoRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  local _cflags="-fno-exceptions"
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$_cflags"
+}`)})
+	})
+	t.Run("PB951 a variable it cannot follow may carry $CFLAGS", func(t *testing.T) {
+		expectRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$MYSTERY_FLAGS"
+}`)})
+	})
+	for _, tc := range []struct{ name, body string }{
+		{"a substituted $CFLAGS", `  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="${CFLAGS/-O2/-O3}"`},
+		{"a defaulted $CXXFLAGS", `  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${CXXFLAGS:-} -DFOO"`},
+		{"a variable substituting $CFLAGS", `  local _f="${CFLAGS/-O2/-O3}"
+  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$_f"`},
+		{"an array holding $CFLAGS", `  local _f=("$CFLAGS" -m32)
+  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="${_f[*]}"`},
+		{"a command substitution", `  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$(get_flags)"`},
+		{"C++ flags from $CXXFLAGS beside hand-written C flags", `  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-O0" -DCMAKE_CXX_FLAGS="$CXXFLAGS"`},
+	} {
+		t.Run("PB951 sees Arch's flags through "+tc.name, func(t *testing.T) {
+			expectRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", "\nmakedepends=('cmake')\nbuild() {\n"+tc.body+"\n}")})
+		})
+	}
+	t.Run("PB951 sees a top-level CFLAGS the file extends", func(t *testing.T) {
+		// Rendering substitutes top-level assignments; the reference must be
+		// read from the source word or it vanishes.
+		expectRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith(`CFLAGS+=" -fPIC"`, `
+makedepends=('cmake')
+build() {
+  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$CFLAGS"
+}`)})
+	})
+	for _, tc := range []struct{ name, body string }{
+		{"a list built up from literals", `  local _flags="-a"
+  _flags="$_flags -b"
+  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$_flags"`},
+		{"makepkg's path variables", `  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-I$srcdir/include --sysroot=${srcdir}/sysroot"`},
+	} {
+		t.Run("PB951 hand-written flags through "+tc.name, func(t *testing.T) {
+			expectNoRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", "\nmakedepends=('cmake')\nbuild() {\n"+tc.body+"\n}")})
+		})
+	}
+	t.Run("PB951 a wide variable chain is read in linear time", func(t *testing.T) {
+		// Each variable references the next many times; following every
+		// reference anew is exponential in the chain's depth.
+		var b strings.Builder
+		b.WriteString("\nmakedepends=('cmake')\nbuild() {\n  local _v0=\"-x\"\n")
+		for i := 1; i <= 8; i++ {
+			fmt.Fprintf(&b, "  local _v%d=\"%s\"\n", i, strings.Repeat(fmt.Sprintf("$_v%d ", i-1), 100))
+		}
+		b.WriteString("  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=\"$_v8\"\n}")
+		start := time.Now()
+		expectNoRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", b.String())})
+		if d := time.Since(start); d > 5*time.Second {
+			t.Errorf("took %v", d)
+		}
 	})
 	t.Run("PB951 None is the guideline", func(t *testing.T) {
 		expectNoRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `

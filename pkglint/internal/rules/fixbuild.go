@@ -57,6 +57,9 @@ func fixCMakePrefix(ctx *Context, _ *FixEnv) []Edit {
 func fixCMakeBuildType(ctx *Context, _ *FixEnv) []Edit {
 	var edits []Edit
 	for _, c := range cmakeReleaseConfigures(ctx) {
+		if cmakeOwnFlags(c) {
+			continue // a language whose only -O is Release's; None is -O0
+		}
 		_, i, ok := cmakeDefineAt(c, "CMAKE_BUILD_TYPE")
 		if !ok || i >= len(c.ArgWord) {
 			continue

@@ -1749,11 +1749,7 @@ func goModDownloadEdit(ctx *Context, c Command) (Edit, bool) {
 			return Edit{}, false // a one-line prepare(); nowhere to put a new line
 		}
 		var b strings.Builder
-		// prepare() may do its work at $srcdir's root; without a cd of its
-		// own the download must still land in the module the build compiles.
-		if !fnHasCommand(ctx, u, "prepare", "cd") {
-			b.WriteString(cdLine(ctx, u, c.Fn))
-		}
+		b.WriteString(prepareCd(ctx, u, block, c.Fn, indent))
 		b.WriteString(indent + download(at))
 		return Edit{
 			Path: u.Path, Start: at, End: at, New: b.String(), Line: line,
@@ -1768,7 +1764,9 @@ func goModDownloadEdit(ctx *Context, c Command) (Edit, bool) {
 	at := lineStart(u.Raw, off(fd.Pos()))
 	var b strings.Builder
 	b.WriteString("prepare() {\n")
-	b.WriteString(cdLine(ctx, u, c.Fn))
+	if cds := fnCommands(ctx, u, c.Fn, "cd"); len(cds) > 0 {
+		b.WriteString(cdLine(cds[0], indent))
+	}
 	b.WriteString(indent + download(at))
 	b.WriteString("}\n\n")
 	return Edit{
@@ -1777,40 +1775,98 @@ func goModDownloadEdit(ctx *Context, c Command) (Edit, bool) {
 	}, true
 }
 
-// cdLine returns fn's opening cd statement as a full source line — indent and
-// any `|| exit` guard included — or "" when fn has none or its cd shares the
-// line with another command. prepare() must land in the directory the build
-// step runs in, and copying the exact line is how it provably does.
-func cdLine(ctx *Context, u *pkgbuild.Unit, fn string) string {
-	for _, c := range ctx.Commands() {
-		if c.Unit != u || c.Fn != fn || c.Name != "cd" {
-			continue
-		}
-		start := lineStart(u.Raw, off(c.Stmt.Pos()))
-		end := off(c.Stmt.End())
-		for end < len(u.Raw) && u.Raw[end] != '\n' {
-			end++
-		}
-		line := string(u.Raw[start:end])
-		rest := line[off(c.Stmt.End())-start:]
-		if rest != "" && !cdGuardRe.MatchString(rest) {
-			return ""
-		}
-		return line + "\n"
+// cdLine returns cd as a full source line — indent and any `|| exit` guard
+// included — or "" for the zero Command (fn has no cd). prepare() must land
+// in the directory the build step runs in, and copying the exact line is how
+// it provably does. A cd that shares its line with another command
+// (`cd "$pkgname" && make generate`) is rewritten alone, from its words as
+// written, so the neighbor is not run twice.
+func cdLine(cd Command, indent string) string {
+	if cd.Stmt == nil {
+		return ""
 	}
-	return ""
+	u := cd.Unit
+	start := lineStart(u.Raw, off(cd.Stmt.Pos()))
+	end := off(cd.Stmt.End())
+	for end < len(u.Raw) && u.Raw[end] != '\n' {
+		end++
+	}
+	line := string(u.Raw[start:end])
+	if rest := line[off(cd.Stmt.End())-start:]; rest != "" && !cdGuardRe.MatchString(rest) {
+		return indent + "cd " + cdTarget(cd) + "\n"
+	}
+	return line + "\n"
+}
+
+// prepareCd returns the lines that take the end of an existing prepare() to
+// the directory fn compiles in, so a download appended there lands in the
+// module the build reads. A prepare() that never changes directory works at
+// $srcdir's root, where fn's opening cd is the one to copy. One whose only
+// directory change is an unconditional, top-level cd naming the same place
+// as fn's needs nothing. Anywhere else — dms-shell's prepare() cds into the
+// checkout while build() compiles in its core/ subdirectory, or the cd sits
+// in a subshell or an if and may not have happened — the download first
+// returns to $srcdir, where makepkg starts every phase and so where fn's own
+// cd is relative to.
+func prepareCd(ctx *Context, u *pkgbuild.Unit, prepare *syntax.Block, fn, indent string) string {
+	var build Command
+	if cds := fnCommands(ctx, u, fn, "cd"); len(cds) > 0 {
+		build = cds[0]
+	}
+	moves := fnCommands(ctx, u, "prepare", "cd", "pushd", "popd")
+	switch {
+	case len(moves) == 0:
+		return cdLine(build, indent)
+	case len(moves) == 1 && moves[0].Name == "cd" && build.Stmt != nil &&
+		topLevelStmt(prepare, moves[0].Stmt) && cdTarget(moves[0]) == cdTarget(build):
+		return ""
+	}
+	return indent + "cd \"$srcdir\"\n" + cdLine(build, indent)
+}
+
+// topLevelStmt reports whether s always runs when block does, in the shell
+// that runs block: it is one of block's statements, or the left-hand side of
+// one's && / || chain. A pipeline, subshell or conditional runs it elsewhere
+// or not at all, and a cd there says nothing about the directory afterwards.
+func topLevelStmt(block *syntax.Block, s *syntax.Stmt) bool {
+	for _, x := range block.Stmts {
+		for x != nil {
+			if x == s {
+				return true
+			}
+			bin, ok := x.Cmd.(*syntax.BinaryCmd)
+			if !ok || (bin.Op != syntax.AndStmt && bin.Op != syntax.OrStmt) {
+				break
+			}
+			x = bin.X
+		}
+	}
+	return false
+}
+
+// cdTarget is a cd's argument words as written, so two cds compare equal
+// only when they name their directory the same way.
+func cdTarget(c Command) string {
+	var parts []string
+	for _, w := range c.ArgWord {
+		parts = append(parts, string(c.Unit.Raw[off(w.Pos()):off(w.End())]))
+	}
+	return strings.Join(parts, " ")
 }
 
 // cdGuardRe matches the failure guard a cd is allowed to share its line with.
 var cdGuardRe = regexp.MustCompile(`^\s*\|\|\s*(exit|return)\b[^|&;]*$`)
 
-func fnHasCommand(ctx *Context, u *pkgbuild.Unit, fn, name string) bool {
+// fnCommands returns the invocations of the named commands in u's function
+// fn, in source order.
+func fnCommands(ctx *Context, u *pkgbuild.Unit, fn string, names ...string) []Command {
+	var out []Command
 	for _, c := range ctx.Commands() {
-		if c.Unit == u && c.Fn == fn && c.Name == name {
-			return true
+		if c.Unit == u && c.Fn == fn && slices.Contains(names, c.Name) {
+			out = append(out, c)
 		}
 	}
-	return false
+	return out
 }
 
 // lineStart returns the offset of the first byte of the line containing o.
@@ -2244,61 +2300,6 @@ func fixNpmCI(ctx *Context, _ *FixEnv) []Edit {
 		})
 	}
 	return append(edits, fixLockfileFlags(ctx, "PB206")...)
-}
-
-// --- PB403: drop setuid/setgid mode bits -----------------------------------
-
-func fixSetuid(ctx *Context, _ *FixEnv) []Edit {
-	var edits []Edit
-	for _, c := range ctx.CommandsNamed("chmod") {
-		for _, a := range c.Args {
-			if !setuidNumericMode(a) {
-				continue
-			}
-			w := wordByValue(c, a)
-			if w == nil {
-				break
-			}
-			cleaned := clearSetuidBits(a)
-			if cleaned == a {
-				break
-			}
-			edits = append(edits, Edit{
-				Path:  c.Unit.Path,
-				Start: off(w.Pos()),
-				End:   off(w.End()),
-				New:   cleaned,
-				Line:  int(c.Stmt.Pos().Line()),
-				Desc:  fmt.Sprintf("drop setuid/setgid bit: chmod %s → %s", a, cleaned),
-			})
-			break
-		}
-	}
-	for _, c := range ctx.CommandsNamed("install") {
-		mode, w, replacement := installModeArg(c)
-		if !setuidNumericMode(mode) || w == nil || replacement == mode {
-			continue
-		}
-		orig, _ := pkgbuild.RenderWord(w, nil)
-		edits = append(edits, Edit{
-			Path:  c.Unit.Path,
-			Start: off(w.Pos()),
-			End:   off(w.End()),
-			New:   replacement,
-			Line:  int(c.Stmt.Pos().Line()),
-			Desc:  fmt.Sprintf("drop setuid/setgid bit: install %s → %s", orig, replacement),
-		})
-	}
-	return edits
-}
-
-func clearSetuidBits(mode string) string {
-	v, err := strconv.ParseInt(mode, 8, 32)
-	if err != nil {
-		return mode
-	}
-	v &^= 0o6000 // clear setuid and setgid, keep sticky and permission bits
-	return fmt.Sprintf("%04o", v)
 }
 
 // --- PB902: prefix a custom variable with an underscore ---------------------

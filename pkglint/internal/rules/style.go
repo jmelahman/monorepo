@@ -401,7 +401,9 @@ var styleRules = []Rule{
 		Doc: "CMake's install prefix defaults to /usr/local, which Arch packages must not touch " +
 			"(PB921/PB820 flag the resulting files); the CMake package guidelines configure with " +
 			"-DCMAKE_INSTALL_PREFIX=/usr. A PKGBUILD that sets another prefix explicitly (/opt " +
-			"for a self-contained tree) has made a decision and is left alone.",
+			"for a self-contained tree) — through CMAKE_INSTALL_PREFIX, cmake's --install-prefix, " +
+			"or a CMAKE_STAGING_PREFIX that decides where the install step writes — has made a " +
+			"decision and is left alone.",
 		Check: checkCMakePrefix,
 		// The prefix moves every installed file, so a package() that copies
 		// out of the build tree by hardcoded path has to be checked against
@@ -417,7 +419,12 @@ var styleRules = []Rule{
 			"silently overriding Arch's chosen -O2 and fortify settings. The CMake package " +
 			"guidelines build with -DCMAKE_BUILD_TYPE=None so the distribution's CFLAGS are what " +
 			"actually compile the code. The auto-fix rewrites the value to None, leaving the rest " +
-			"of the argument — a -D prefix, a :STRING type, the quoting — as written.",
+			"of the argument — a -D prefix, a :STRING type, the quoting — as written. cmake reads " +
+			"$CFLAGS/$CXXFLAGS only when CMAKE_C_FLAGS/CMAKE_CXX_FLAGS are not defined on the " +
+			"command line, so a configure that defines them to its own flags (an empty value, or " +
+			"a hand-written list) is left alone: there Release is the only -O, and None would " +
+			"build unoptimized. When one language gets Arch's flags and another its own, the " +
+			"finding stands but the fix does not rewrite it.",
 		Check: checkCMakeBuildType,
 		// None is a different compile: -O2 without -DNDEBUG keeps assertions
 		// in, so a project that only passes its tests with them compiled out

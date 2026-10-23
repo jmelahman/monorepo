@@ -1,6 +1,10 @@
 package rules
 
-import "strings"
+import (
+	"strings"
+
+	"mvdan.cc/sh/v3/syntax"
+)
 
 // PB950–PB955 lint the Arch CMake and Meson package guidelines
 // (https://manual.archlinux.page/package-guidelines/cmake/,
@@ -151,9 +155,21 @@ func cmakeUnprefixedConfigures(ctx *Context) []Command {
 		// second configure without it builds bundled deps or a test tree that
 		// installs nothing (neovim's cmake.deps), not the shipped artifacts.
 		// A splatted flag array may carry the prefix invisibly, so it stands
-		// the whole rule down too.
-		if _, ok := cmakeDefine(c, "CMAKE_INSTALL_PREFIX"); ok || hasArraySplat(c) {
+		// the whole rule down too. CMAKE_STAGING_PREFIX is where
+		// `cmake --install` writes when it is set (wasi-libc++ installs into
+		// /usr/share/wasi-sysroot that way), so it is the same decision.
+		if hasArraySplat(c) {
 			return nil
+		}
+		for _, name := range []string{"CMAKE_INSTALL_PREFIX", "CMAKE_STAGING_PREFIX"} {
+			if _, ok := cmakeDefine(c, name); ok {
+				return nil
+			}
+		}
+		for _, a := range c.Args {
+			if a == "--install-prefix" || strings.HasPrefix(a, "--install-prefix=") {
+				return nil // cmake 3.21's spelling of CMAKE_INSTALL_PREFIX
+			}
 		}
 		configures = append(configures, c)
 	}
@@ -172,19 +188,137 @@ func checkCMakePrefix(ctx *Context) []Finding {
 // --- PB951: CMAKE_BUILD_TYPE=Release clobbers Arch's flags -------------------
 
 // cmakeReleaseConfigures returns the cmake configure steps that ask for the
-// Release build type: the commands PB951 reports, and the ones its fix
-// rewrites to None.
+// Release build type: the commands PB951 reports. The ones its fix rewrites to
+// None are a subset, see cmakeOwnFlags.
+//
+// cmake seeds CMAKE_C_FLAGS/CMAKE_CXX_FLAGS from $CFLAGS/$CXXFLAGS only when
+// the command line does not define them, so a configure that defines every
+// one it sets to its own flags — llvm's device runtimes pass an empty
+// `-DCMAKE_C_FLAGS=`, wasi-compiler-rt a hand-written list — never sees Arch's
+// -O2, and Release's -O3 is not overriding anything. Such a configure is left
+// out. One that hands at least one language Arch's flags is still reported.
 func cmakeReleaseConfigures(ctx *Context) []Command {
 	var out []Command
 	for _, c := range buildToolCommands(ctx, "cmake") {
 		if !cmakeConfigures(c) {
 			continue
 		}
-		if v, ok := cmakeDefine(c, "CMAKE_BUILD_TYPE"); ok && v == "Release" {
-			out = append(out, c)
+		v, ok := cmakeDefine(c, "CMAKE_BUILD_TYPE")
+		if !ok || v != "Release" {
+			continue
 		}
+		own, arch := cmakeFlagSources(c)
+		if own && !arch {
+			continue
+		}
+		out = append(out, c)
 	}
 	return out
+}
+
+// cmakeOwnFlags reports whether any language's flags in c are the
+// PKGBUILD's own rather than Arch's. Release is that language's only -O, so
+// None would build it unoptimized: the configure may still be reported for
+// the other language, but its build type is not one to rewrite.
+func cmakeOwnFlags(c Command) bool {
+	own, _ := cmakeFlagSources(c)
+	return own
+}
+
+// cmakeFlagSources sorts the configure's CMAKE_C_FLAGS/CMAKE_CXX_FLAGS
+// defines: own when one is defined to flags that do not carry makepkg's,
+// arch when one does. A language left undefined is neither — it gets Arch's
+// flags from the environment, but whether the project compiles that language
+// at all is not something the command line says.
+func cmakeFlagSources(c Command) (own, arch bool) {
+	for _, d := range []struct{ define, env string }{
+		{"CMAKE_C_FLAGS", "CFLAGS"},
+		{"CMAKE_CXX_FLAGS", "CXXFLAGS"},
+	} {
+		_, i, ok := cmakeDefineAt(c, d.define)
+		if !ok || i >= len(c.ArgWord) {
+			continue
+		}
+		if carriesEnvFlags(c, c.ArgWord[i], d.env, map[string]bool{}) {
+			arch = true
+		} else {
+			own = true
+		}
+	}
+	return own, arch
+}
+
+// makepkgPathVars are the variables makepkg defines that name a package or a
+// directory: they turn up in hand-written flags (-I$srcdir/include,
+// --sysroot=…) but never hold CFLAGS.
+var makepkgPathVars = map[string]bool{
+	"srcdir": true, "pkgdir": true, "startdir": true, "pkgname": true,
+	"pkgbase": true, "pkgver": true, "pkgrel": true, "epoch": true,
+	"CARCH": true, "CHOST": true,
+}
+
+// carriesEnvFlags reports whether w may expand to the value of $env: it
+// references env itself (in any form — `${CFLAGS/-O2/-O3}` is still Arch's
+// flags), or a variable the PKGBUILD builds from it (lib32-llvm's
+// `LIB32_CFLAGS="$CFLAGS -m32"`), or something pkglint cannot read — a
+// command substitution, or a variable the file never assigns.
+//
+// It reads the source word, not the rendered argument: rendering substitutes
+// top-level assignments, so a file's own `CFLAGS+=" -fPIC"` would otherwise
+// erase the very reference this looks for. seen holds the variables already
+// followed; each is read once, which bounds the work by the file's size and
+// makes `_flags="$_flags -b"` mean what it says — the earlier value, which is
+// already being read.
+func carriesEnvFlags(c Command, w *syntax.Word, env string, seen map[string]bool) bool {
+	carries := false
+	syntax.Walk(w, func(n syntax.Node) bool {
+		if carries {
+			return false
+		}
+		switch x := n.(type) {
+		case *syntax.CmdSubst, *syntax.ProcSubst:
+			carries = true
+		case *syntax.ParamExp:
+			if x.Param == nil {
+				carries = true
+				break
+			}
+			name := x.Param.Value
+			switch {
+			case name == env || x.Excl:
+				carries = true
+			case makepkgPathVars[name] || seen[name]:
+			default:
+				seen[name] = true
+				carries = !assignedOwnFlags(c, name, env, seen)
+			}
+		}
+		return !carries
+	})
+	return carries
+}
+
+// assignedOwnFlags reports whether the file assigns name, in c's scope, and
+// none of those assignments carry $env.
+func assignedOwnFlags(c Command, name, env string, seen map[string]bool) bool {
+	found, carries := false, false
+	scanAssignments(c.Unit, name, c.Fn, off(c.Stmt.Pos()), c.Call, true, func(as *syntax.Assign) {
+		found = true
+		if carries {
+			return
+		}
+		if as.Value != nil && carriesEnvFlags(c, as.Value, env, seen) {
+			carries = true
+		}
+		if as.Array != nil {
+			for _, el := range as.Array.Elems {
+				if el.Value != nil && carriesEnvFlags(c, el.Value, env, seen) {
+					carries = true
+				}
+			}
+		}
+	})
+	return found && !carries
 }
 
 func checkCMakeBuildType(ctx *Context) []Finding {

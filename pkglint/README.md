@@ -26,7 +26,7 @@ $ pkglint ~/pkgbuilds/somepkg
 somepkg: grade F, 3 finding(s)
   PKGBUILD:16:3: critical [PB304] a network download is piped straight into bash and executed
   PKGBUILD:11:1: error [PB101] remote source "http://..." has no checksum (SKIP): the download is never verified
-  PKGBUILD:24:3: warn [PB403] chmod 4755 creates a setuid/setgid file
+  PKGBUILD:11:1: error [PB104] source "http://..." is fetched over unencrypted http:// with nothing verifying what arrives
 
 1 package linted: 1 with findings
 1 finding(s) fixable with --unsafe-fix
@@ -160,7 +160,6 @@ computed from what is left _after_ fixing.
 | PB950, PB951, PB953, PB980 | Point a build system at Arch's layout: `-DCMAKE_INSTALL_PREFIX=/usr`, `-DCMAKE_BUILD_TYPE=None`, `--prefix=/usr` on `meson setup`, and an npm `--cache` inside `$srcdir` instead of the invoking user's `~/.npm`                                                                                                   |
 | PB961, PB973, PB981        | Add installed-runtime metadata the guidelines require: the `provides`/`conflicts` pair a `-git` package owes its release counterpart (written together or not at all), `dkms`, `java-runtime`                                                                                                                      |
 | PB931, PB971, PB974        | Delete a declared dependency the rule calls unnecessary: a pytest lint plugin from `checkdepends`, every `depends` entry of a font package, a `-dkms` package's pinned `linux*-headers`                                                                                                                            |
-| PB403                      | Drop setuid/setgid mode bits                                                                                                                                                                                                                                                                                       |
 | PB902                      | Prefix a custom variable with an underscore (`pyname` → `_pyname`), declaration and every reference at once                                                                                                                                                                                                        |
 
 #### PB102 checksums

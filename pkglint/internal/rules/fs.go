@@ -36,11 +36,10 @@ var fsRules = []Rule{
 		Doc: "chmod u+s/g+s (or 4xxx/2xxx modes), and `install -m` with such a mode, create " +
 			"setuid/setgid binaries, and `setcap` grants file capabilities (cap_setuid, cap_net_raw, " +
 			"…) — the capability-based equivalent of setuid. Each is a privilege boundary that " +
-			"deserves explicit review whenever a package ships one. The auto-fix drops setuid/setgid " +
-			"mode bits; capability grants are never rewritten automatically.",
-		Check:    checkSetuid,
-		FixLevel: FixUnsafe,
-		Fix:      fixSetuid,
+			"deserves explicit review whenever a package ships one. There is no auto-fix: a setuid " +
+			"mode in a PKGBUILD is a deliberate choice (sudo, nvidia-modprobe), and clearing it " +
+			"ships a binary that cannot do its job.",
+		Check: checkSetuid,
 	},
 	{
 		ID:       "PB404",
@@ -246,10 +245,10 @@ func checkPrivilegeEscalation(ctx *Context) []Finding {
 }
 
 // setuidNumericMode reports whether a numeric chmod/install mode sets the
-// setuid or setgid bit. It parses the octal value and tests the 0o6000 mask —
-// the same mask clearSetuidBits removes — rather than inspecting the leading
-// digit, so 04755, 2755, and 7755 are all caught. Non-octal arguments,
-// including symbolic modes like u+s, return false and are handled separately.
+// setuid or setgid bit. It parses the octal value and tests the 0o6000 mask
+// rather than inspecting the leading digit, so 04755, 2755, and 7755 are all
+// caught. Non-octal arguments, including symbolic modes like u+s, return
+// false and are handled separately.
 func setuidNumericMode(mode string) bool {
 	if mode == "" || mode[0] == '+' || mode[0] == '-' {
 		return false // a sign is never part of a mode, but ParseInt would accept one
@@ -275,7 +274,7 @@ func checkSetuid(ctx *Context) []Finding {
 		}
 	}
 	for _, c := range ctx.CommandsNamed("install") {
-		if mode, _, _ := installModeArg(c); setuidNumericMode(mode) {
+		if mode := installModeArg(c); setuidNumericMode(mode) {
 			out = append(out, c.finding("PB403", Warn,
 				"install with mode %s creates a setuid/setgid file", mode))
 		}
@@ -307,28 +306,24 @@ func checkSetuid(ctx *Context) []Finding {
 	return out
 }
 
-// installModeArg finds the numeric mode an `install` command applies, returning
-// the mode digits, the argument word carrying it, and the full replacement for
-// that word with the setuid/setgid bits cleared.
-func installModeArg(c Command) (mode string, word *syntax.Word, replacement string) {
+// installModeArg finds the numeric mode an `install` command applies.
+func installModeArg(c Command) string {
 	for i := 0; i < len(c.Args); i++ {
 		a := c.Args[i]
 		switch {
 		case strings.HasPrefix(a, "--mode="):
-			m := strings.TrimPrefix(a, "--mode=")
-			return m, wordByValue(c, a), "--mode=" + clearSetuidBits(m)
+			return strings.TrimPrefix(a, "--mode=")
 		case a == "--mode" || a == "-m":
 			if i+1 < len(c.Args) {
-				m := c.Args[i+1]
-				return m, wordByValue(c, m), clearSetuidBits(m)
+				return c.Args[i+1]
 			}
 		default:
 			if m := shortFlagMode(a); m != "" {
-				return m, wordByValue(c, a), strings.TrimSuffix(a, m) + clearSetuidBits(m)
+				return m
 			}
 		}
 	}
-	return "", nil, ""
+	return ""
 }
 
 // shortFlagMode extracts the mode digits from an install short-flag cluster
