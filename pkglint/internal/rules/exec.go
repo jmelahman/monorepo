@@ -738,6 +738,22 @@ var shellSinks = map[string]bool{
 	"python": true, "python3": true, "python2": true, "perl": true, "ruby": true, "node": true,
 }
 
+// sinkName maps a command name onto its shellSinks key: python3.12 and
+// perl5.38 are the same interpreters as python and perl, installed under their
+// versioned names, so a version suffix must not take a pipe out of the rule's
+// reach. Only a trailing run of digits and dots is trimmed, and the result has
+// to be a sink in its own right, so make4 stays an ordinary command.
+func sinkName(name string) (string, bool) {
+	if shellSinks[name] {
+		return name, true
+	}
+	trimmed := strings.TrimRight(name, "0123456789.")
+	if trimmed != "" && trimmed != name && shellSinks[trimmed] {
+		return trimmed, true
+	}
+	return "", false
+}
+
 var downloaders = map[string]bool{"curl": true, "wget": true, "fetch": true, "aria2c": true, "axel": true}
 
 // scriptInterpreters are the shellSinks that run a program named on their own
@@ -751,16 +767,36 @@ var scriptInterpreters = map[string]bool{
 	"perl": true, "ruby": true, "node": true,
 }
 
+// interpreterValueFlags are the switches that consume the next word, so that
+// word is the switch's value and not the program. Without this,
+// `python3 -W ignore -` reads "ignore" as a script name and misses the "-".
+// It is keyed on the name with any version suffix trimmed, so python2,
+// python3 and python3.12 share the python entry. Perl attaches its switches'
+// values (-Mstrict, -I/dir) and needs none; -c, -e and -m are absent on
+// purpose, since the word after them is a program and is read as one.
+var interpreterValueFlags = map[string]map[string]bool{
+	"python": {"-W": true, "-X": true},
+	"ruby":   {"-I": true, "-r": true, "-E": true, "-C": true},
+	"node":   {"-r": true, "--require": true, "--import": true, "--loader": true, "--experimental-loader": true, "-C": true, "--conditions": true},
+}
+
 // sinkExecutesStdin reports whether a pipeline's terminating interpreter treats
 // what it reads as code. Shells always do. A scriptInterpreter only does so
-// when given no program of its own, or an explicit "-" naming stdin.
-func sinkExecutesStdin(c Command) bool {
-	if !scriptInterpreters[c.Name] {
+// when given no program of its own, or an explicit "-" naming stdin. interp
+// is c's name as sinkName normalized it.
+func sinkExecutesStdin(c Command, interp string) bool {
+	if !scriptInterpreters[interp] {
 		return true // a shell: stdin is the script
 	}
-	for _, a := range c.Args {
+	valueFlags := interpreterValueFlags[strings.TrimRight(interp, "0123456789.")]
+	for i := 0; i < len(c.Args); i++ {
+		a := c.Args[i]
 		if a == "-" {
 			return true // read the program from stdin
+		}
+		if valueFlags[a] {
+			i++ // the switch's value, not a program
+			continue
 		}
 		if strings.HasPrefix(a, "-") {
 			continue // a flag; -c/-e/-m carry their program in the next word
@@ -937,18 +973,105 @@ func checkDownloadExec(ctx *Context) []Finding {
 	out := ctx.checkPipeInto(downloaders, func(Command) bool { return true },
 		"PB304", "a network download is piped straight into %s and executed")
 
-	// eval "$(curl ...)" is handled by PB302; here: sh -c "$(curl ...)" and
-	// source <(curl ...).
+	// eval "$(curl ...)" is handled by PB302; here: sh -c "$(curl ...)",
+	// source <(curl ...), and the same download handed over on stdin instead,
+	// bash < <(curl ...) or bash <<< "$(curl ...)".
 	for _, c := range ctx.Commands() {
-		if shellSinks[c.Name] || c.Name == "source" || c.Name == "." {
-			for _, w := range c.Call.Args[1:] {
-				if ctx.wordRunsCommand(w, downloaders) {
-					out = append(out, c.finding("PB304", Critical,
-						"%s executes the output of a network download", c.Name))
-					break
-				}
+		interp, sink := sinkName(c.Name)
+		if !sink && c.Name != "source" && c.Name != "." {
+			continue
+		}
+		// A redirect only counts when stdin is what runs: a shell, a bare
+		// interpreter, or source/. naming /dev/stdin.
+		viaStdin := !sink || sinkExecutesStdin(c, interp)
+		if ctx.argsRunDownload(c) || (viaStdin && ctx.stdinRunsDownload(c.Stmt)) {
+			out = append(out, c.finding("PB304", Critical,
+				"%s executes the output of a network download", c.Name))
+		}
+	}
+	return out
+}
+
+// argsRunDownload reports whether one of c's arguments substitutes in the
+// output of a downloader.
+func (ctx *Context) argsRunDownload(c Command) bool {
+	for _, w := range c.Call.Args[1:] {
+		if ctx.wordRunsCommand(w, downloaders) {
+			return true
+		}
+	}
+	return false
+}
+
+// stdinRunsDownload reports whether stmt's stdin is redirected from a
+// downloader's output: a process substitution after <, or a here-string or
+// unquoted here-document that expands a command substitution. A quoted
+// here-document is not expanded by bash, and its body holds only literals.
+func (ctx *Context) stdinRunsDownload(stmt *syntax.Stmt) bool {
+	for _, r := range stmt.Redirs {
+		if !feedsStdin(r) {
+			continue
+		}
+		switch r.Op {
+		case syntax.RdrIn, syntax.WordHdoc:
+			if r.Word != nil && ctx.wordRunsCommand(r.Word, downloaders) {
+				return true
+			}
+		case syntax.Hdoc, syntax.DashHdoc:
+			if r.Hdoc != nil && ctx.wordRunsCommand(r.Hdoc, downloaders) {
+				return true
 			}
 		}
+	}
+	return false
+}
+
+// feedsStdin reports whether r replaces its command's stdin: an input
+// redirect or here-document on the default descriptor or an explicit 0.
+func feedsStdin(r *syntax.Redirect) bool {
+	if r.N != nil && r.N.Value != "0" {
+		return false
+	}
+	switch r.Op {
+	case syntax.RdrIn, syntax.WordHdoc, syntax.Hdoc, syntax.DashHdoc:
+		return true
+	}
+	return false
+}
+
+// pipeSinks returns the commands that read a pipeline's final segment's
+// stdin as code: the segment itself, or the commands directly inside a
+// subshell or brace group that ends the pipe (`curl … | (bash)`), since
+// those inherit the group's stdin. An && or || list inside the group is
+// followed too (`curl … | (cd /tmp && bash)`). Nested pipelines,
+// substitutions and other compound commands are not: the inner command's
+// stdin is not the outer pipe there. A statement that redirects its own
+// stdin no longer reads the pipe, so it and everything under it is skipped.
+func (ctx *Context) pipeSinks(last *syntax.Stmt) []Command {
+	if slices.ContainsFunc(last.Redirs, feedsStdin) {
+		return nil
+	}
+	switch x := last.Cmd.(type) {
+	case *syntax.CallExpr:
+		if c, ok := ctx.commandAt(last); ok {
+			return []Command{c}
+		}
+	case *syntax.Subshell:
+		return ctx.groupSinks(x.Stmts)
+	case *syntax.Block:
+		return ctx.groupSinks(x.Stmts)
+	case *syntax.BinaryCmd:
+		if x.Op == syntax.AndStmt || x.Op == syntax.OrStmt {
+			return append(ctx.pipeSinks(x.X), ctx.pipeSinks(x.Y)...)
+		}
+	}
+	return nil
+}
+
+func (ctx *Context) groupSinks(stmts []*syntax.Stmt) []Command {
+	var out []Command
+	for _, s := range stmts {
+		out = append(out, ctx.pipeSinks(s)...)
 	}
 	return out
 }
@@ -961,12 +1084,16 @@ func (ctx *Context) checkPipeInto(sources map[string]bool, qualify func(Command)
 	for i := range units {
 		u := &units[i]
 		for _, segs := range pipelines(u.File) {
-			last := segs[len(segs)-1]
-			sinkCmd, ok := ctx.commandAt(last)
-			if !ok || !shellSinks[sinkCmd.Name] || !sinkExecutesStdin(sinkCmd) {
+			sink := ""
+			for _, c := range ctx.pipeSinks(segs[len(segs)-1]) {
+				if interp, ok := sinkName(c.Name); ok && sinkExecutesStdin(c, interp) {
+					sink = c.Name
+					break
+				}
+			}
+			if sink == "" {
 				continue
 			}
-			sink := sinkCmd.Name
 			for _, seg := range segs[:len(segs)-1] {
 				c, ok := ctx.commandAt(seg)
 				if !ok {

