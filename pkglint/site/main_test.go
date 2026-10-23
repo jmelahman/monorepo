@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jmelahman/pkglint/internal/pkgbuild"
 	"github.com/jmelahman/pkglint/internal/rules"
 )
 
@@ -1046,5 +1047,146 @@ func TestGetRetriesTransientStatus(t *testing.T) {
 	}
 	if n := hits.Load(); n != 3 {
 		t.Errorf("server saw %d requests, want 3", n)
+	}
+}
+
+// TestScanAllRecordsDeterministicFailure pins that a snapshot refused for
+// what it contains is a verdict on that version: it is persisted as "?" with
+// the reason, the prior grade (earned by a different PKGBUILD) is not shown,
+// and the next run reuses the record instead of fetching it again.
+func TestScanAllRecordsDeterministicFailure(t *testing.T) {
+	type entry = struct {
+		name string
+		body []byte
+		link bool
+	}
+	unparseable := "pkgname=demo\nif then\n"
+	{
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(unparseable), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pkgbuild.Load(dir); err == nil {
+			t.Fatalf("fixture %q loads; pick a body that fails to parse", unparseable)
+		}
+	}
+	tooMany := []entry{{name: "demo/PKGBUILD", body: []byte("pkgname=demo\n")}}
+	for i := 0; i < maxSnapshotFiles+1; i++ {
+		tooMany = append(tooMany, entry{name: fmt.Sprintf("demo/f%d", i), body: []byte("x")})
+	}
+	for _, tt := range []struct {
+		name    string
+		entries []entry
+		parse   bool
+	}{
+		{"too many files", tooMany, false},
+		{"oversized PKGBUILD", []entry{{name: "demo/PKGBUILD", body: bytes.Repeat([]byte("#"), maxSnapshotFile+1)}}, false},
+		{"unparseable PKGBUILD", []entry{{name: "demo/PKGBUILD", body: []byte(unparseable)}}, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := os.ReadFile(tarGz(t, tt.entries))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var hits atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				hits.Add(1)
+				w.Write(body)
+			}))
+			defer srv.Close()
+			defer restoreSnapshotURL(t, srv.URL+"/%s.tar.gz")()
+
+			cache := t.TempDir()
+			seed := []metaPackage{{PackageBase: "demo", Version: "2.0-1", LastModified: 2000}}
+			prev := map[string]stateRecord{"demo": {Base: "demo", LastModified: 1000, Grade: "A", Rules: rulesFingerprint()}}
+			results, next := scanAll(seed, cache, 1, 0, prev, time.Time{}, nil)
+			if len(results) != 1 {
+				t.Fatalf("expected one result, got %d", len(results))
+			}
+			r := results[0]
+			if r.Grade != "?" || r.Err == "" {
+				t.Errorf("refused snapshot shown as %q (err %q), want \"?\" with a reason", r.Grade, r.Err)
+			}
+			if tt.parse && !strings.HasPrefix(r.Err, "parse ") {
+				t.Errorf("err = %q, want a parse failure", r.Err)
+			}
+			rec := next["demo"]
+			if rec.LastModified != 2000 || rec.Err == "" || rec.Rules != rulesFingerprint() || rec.Grade != "?" {
+				t.Errorf("refusal not persisted as a verdict on the new snapshot: %+v", rec)
+			}
+
+			before := hits.Load()
+			again, _ := scanAll(seed, cache, 1, 0, next, time.Time{}, nil)
+			if n := hits.Load() - before; n != 0 {
+				t.Errorf("second run fetched %d times, want the persisted refusal reused", n)
+			}
+			if again[0].Grade != "?" || again[0].Err != r.Err {
+				t.Errorf("second run = %q (err %q), want \"?\" (err %q)", again[0].Grade, again[0].Err, r.Err)
+			}
+		})
+	}
+}
+
+// TestScanAllRetriesTransientExtractFailure pins that a truncated download,
+// which also fails inside extract, is not mistaken for a refused snapshot:
+// the prior grade stays and nothing is persisted.
+func TestScanAllRetriesTransientExtractFailure(t *testing.T) {
+	type entry = struct {
+		name string
+		body []byte
+		link bool
+	}
+	good, err := os.ReadFile(tarGz(t, []entry{{name: "demo/PKGBUILD", body: []byte("pkgname=demo\n")}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	truncated := good[:len(good)/2]
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write(truncated)
+	}))
+	defer srv.Close()
+	defer restoreSnapshotURL(t, srv.URL+"/%s.tar.gz")()
+
+	seed := []metaPackage{{PackageBase: "demo", Version: "2.0-1", LastModified: 2000}}
+	prev := map[string]stateRecord{"demo": {Base: "demo", LastModified: 1000, Grade: "A", Rules: rulesFingerprint()}}
+	results, next := scanAll(seed, t.TempDir(), 1, 0, prev, time.Time{}, nil)
+	if results[0].Grade != "A" || results[0].Err != "" {
+		t.Errorf("truncated download replaced the prior grade: %+v", results[0])
+	}
+	if next["demo"].LastModified != 1000 {
+		t.Errorf("transient failure was persisted: %+v", next["demo"])
+	}
+}
+
+// TestExtractIgnoresNestedFiles pins that only files directly under the
+// snapshot's top directory are extracted: flattening let sub/PKGBUILD shadow
+// the real one depending on tarball order.
+func TestExtractIgnoresNestedFiles(t *testing.T) {
+	type entry = struct {
+		name string
+		body []byte
+		link bool
+	}
+	top := entry{name: "demo/PKGBUILD", body: []byte("pkgname=demo\n")}
+	nested := []entry{
+		{name: "demo/sub/PKGBUILD", body: []byte("pkgname=evil\n")},
+		{name: "demo/sub/x.install", body: []byte("post_install() { :; }\n")},
+	}
+	for name, entries := range map[string][]entry{
+		"top first":    append([]entry{top}, nested...),
+		"nested first": append(slices.Clone(nested), top),
+	} {
+		t.Run(name, func(t *testing.T) {
+			out := filepath.Join(t.TempDir(), "out")
+			if err := extract(tarGz(t, entries), out); err != nil {
+				t.Fatal(err)
+			}
+			if b, err := os.ReadFile(filepath.Join(out, "PKGBUILD")); err != nil || string(b) != "pkgname=demo\n" {
+				t.Errorf("PKGBUILD = %q (%v), want the top-level one", b, err)
+			}
+			if _, err := os.Stat(filepath.Join(out, "x.install")); !os.IsNotExist(err) {
+				t.Errorf("nested x.install was extracted, stat err = %v", err)
+			}
+		})
 	}
 }

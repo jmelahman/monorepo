@@ -28,6 +28,7 @@ import (
 	"net/http"
 	neturl "net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -520,15 +521,17 @@ func scanAll(seed []metaPackage, cache string, jobs, budget int, prev map[string
 	for i, m := range seed {
 		rec, ok := priorRecord(prev, m)
 		switch {
-		// A record carrying an error is not fresh: the failure may have been a
-		// transient fetch, and a base that is genuinely gone leaves the
-		// metadata dump and so never reaches this loop again. A record from an
-		// older rule registry is not fresh either — the PKGBUILD may be
+		// A record carrying an error is fresh like any other: only a snapshot
+		// refused for what it contains is ever persisted (see scanOne), so the
+		// error is a verdict on that exact snapshot under those rules, and is
+		// re-examined when either changes. Records written by older code, which
+		// could persist other failures, are invalidated by stateEpoch. A record
+		// from an older rule registry is not fresh — the PKGBUILD may be
 		// unchanged, but what pkglint would say about it is not; it re-lints
 		// (usually from the snapshot cache) under the budget like any other
 		// stale base, so a registry change refreshes the corpus over a few
 		// nights instead of serving old findings forever.
-		case ok && rec.Err == "" && rec.LastModified == m.LastModified && rec.Rules == rulesFingerprint():
+		case ok && rec.LastModified == m.LastModified && rec.Rules == rulesFingerprint():
 			results[i], keep[i] = resultFrom(m, rec), true
 			reused++
 		case budget > 0 && len(todo) >= budget:
@@ -677,18 +680,54 @@ func scanFailed(m metaPackage, prev map[string]stateRecord, res siteResult, err 
 	return res, nil, err
 }
 
+// scanRefused shapes the result of a base whose snapshot was refused for what
+// it contains, and persists it. Unlike scanFailed it never falls back to the
+// previous record: that grade was earned by a different PKGBUILD, and showing
+// it would let a version nobody can grade keep the last one's badge forever.
+// The record is keyed on this LastModified and the rule fingerprint, so the
+// base is not fetched again until it changes upstream or the rules do.
+func scanRefused(m metaPackage, res siteResult, err error) (siteResult, *stateRecord, error) {
+	res.Grade, res.Err = "?", err.Error()
+	return res, &stateRecord{
+		Base:         m.PackageBase,
+		Repo:         m.repo(),
+		LastModified: m.LastModified,
+		Grade:        res.Grade,
+		Findings:     []rules.Finding{},
+		Err:          res.Err,
+		Rules:        rulesFingerprint(),
+	}, err
+}
+
+// isParseFailure reports whether a pkgbuild.Load error is the PKGBUILD itself
+// failing to parse. It keys on the "parse " prefix parseUnit writes
+// (internal/pkgbuild), as render.go's scanError does; any other Load error —
+// a stat or a non-regular file — is about the environment, not the snapshot.
+func isParseFailure(err error) bool {
+	return strings.HasPrefix(err.Error(), "parse ")
+}
+
 func scanOne(m metaPackage, cache string, prev map[string]stateRecord) (siteResult, *stateRecord, error) {
 	res := newResult(m)
-	// A failed scan is recorded but not persisted: writing it would pin the
-	// record to this LastModified and stop the next run from retrying.
+	// A transient failure is recorded but not persisted: writing it would pin
+	// the record to this LastModified and stop the next run from retrying. A
+	// deterministic one — a refused snapshot, a PKGBUILD that does not parse —
+	// is persisted: the same bytes would fail the same way every night, and
+	// the prior grade describes a different PKGBUILD.
 	dir, err := fetchSnapshot(m, cache)
 	if err != nil {
 		log.Printf("scan %s: %v", m.PackageBase, err)
+		if errors.Is(err, errSnapshotRefused) {
+			return scanRefused(m, res, err)
+		}
 		return scanFailed(m, prev, res, err)
 	}
 	pkg, err := pkgbuild.Load(dir)
 	if err != nil {
 		log.Printf("scan %s: %v", m.PackageBase, err)
+		if isParseFailure(err) {
+			return scanRefused(m, res, err)
+		}
 		return scanFailed(m, prev, res, err)
 	}
 	cur := extractState(pkg, m.LastModified)
@@ -765,8 +804,30 @@ func lintedSnapshotFile(name string) bool {
 	return name == "PKGBUILD" || name == ".SRCINFO" || strings.HasSuffix(name, ".install")
 }
 
-// extract unpacks regular files from the snapshot tarball, flattening the
-// single top-level directory and refusing anything odd.
+// errSnapshotRefused marks a snapshot refused for what it contains — too many
+// files, or a linted file over the size cap. Unlike a failed or truncated
+// download, fetching it again yields the same bytes and the same refusal, so
+// the refusal is a verdict on that version and is recorded like a grade.
+var errSnapshotRefused = errors.New("snapshot refused")
+
+// topLevelName returns the file name of a tar entry directly under the
+// snapshot's single top directory ("<top>/<name>"), or false for anything
+// else.
+func topLevelName(name string) (string, bool) {
+	top, file, ok := strings.Cut(path.Clean(name), "/")
+	if !ok || strings.Contains(file, "/") {
+		return "", false
+	}
+	for _, part := range []string{top, file} {
+		if part == "" || part == "." || part == ".." {
+			return "", false
+		}
+	}
+	return file, true
+}
+
+// extract unpacks the regular files directly under the snapshot tarball's
+// single top-level directory, refusing anything odd.
 func extract(tarPath, dir string) error {
 	f, err := os.Open(tarPath)
 	if err != nil {
@@ -793,12 +854,19 @@ func extract(tarPath, dir string) error {
 		if hdr.Typeflag != tar.TypeReg {
 			continue
 		}
-		if count++; count > maxSnapshotFiles {
-			return fmt.Errorf("snapshot has too many files")
+		// Entries look like "<top>/PKGBUILD". Nested files are skipped, and
+		// do not count toward the cap: pkglint only reads files next to the
+		// PKGBUILD, and flattening them let sub/PKGBUILD shadow the real one.
+		top, ok := topLevelName(hdr.Name)
+		if !ok {
+			continue
 		}
-		// Entries look like "<base>/PKGBUILD"; keep only the basename so
-		// hostile paths cannot escape the target directory.
-		name := filepath.Base(filepath.Clean(hdr.Name))
+		if count++; count > maxSnapshotFiles {
+			return fmt.Errorf("%w: snapshot has too many files", errSnapshotRefused)
+		}
+		// Keep only the basename as a second line of defense, so hostile
+		// paths cannot escape the target directory.
+		name := filepath.Base(filepath.Clean(top))
 		if name == "." || name == ".." || strings.HasPrefix(name, "/") {
 			continue
 		}
@@ -810,7 +878,7 @@ func extract(tarPath, dir string) error {
 			// scriptlet under another name that is left out this way reads
 			// as a missing install file, which a rule reports.
 			if lintedSnapshotFile(name) {
-				return fmt.Errorf("snapshot file %q is larger than %d bytes", name, maxSnapshotFile)
+				return fmt.Errorf("%w: snapshot file %q is larger than %d bytes", errSnapshotRefused, name, maxSnapshotFile)
 			}
 			continue
 		}
