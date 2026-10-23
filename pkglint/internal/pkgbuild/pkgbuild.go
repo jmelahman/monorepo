@@ -164,7 +164,10 @@ type ScriptletError struct {
 
 // Package is a fully loaded package directory.
 type Package struct {
-	Dir        string
+	Dir string
+	// loadPath is the argument Load was given, so Reload resolves the same
+	// files the same way.
+	loadPath   string
 	PKGBUILD   Unit
 	Scriptlets []Unit
 	// ScriptletErrors holds scriptlets that were present but could not be read or parsed.
@@ -271,6 +274,36 @@ func readSourceFile(path string) ([]byte, error) {
 // Load reads the PKGBUILD at path (a file or a directory containing one),
 // plus any install scriptlets referenced by install= or living next to it.
 func Load(path string) (*Package, error) {
+	return load(path, nil)
+}
+
+// Reload parses the package again with contents standing in for the files it
+// names, keyed by unit path; every other file is read from disk as Load reads
+// it. It is how a multi-round fix sees its own previous round's output without
+// writing it: under --diff nothing reaches the disk, yet the next round still
+// has to lint what the last one produced.
+//
+// A package whose inline directives were disregarded (Suppressions set to nil)
+// stays that way, since the caller made that choice about the package rather
+// than about one parse of it.
+func (p *Package) Reload(contents map[string][]byte) (*Package, error) {
+	next, err := load(p.loadPath, contents)
+	if err != nil {
+		return nil, err
+	}
+	if p.Suppressions == nil {
+		next.Suppressions = nil
+	}
+	return next, nil
+}
+
+func load(path string, contents map[string][]byte) (*Package, error) {
+	read := func(p string) ([]byte, error) {
+		if data, ok := contents[p]; ok {
+			return data, nil
+		}
+		return readSourceFile(p)
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -282,7 +315,7 @@ func Load(path string) (*Package, error) {
 	}
 	pkgPath := filepath.Join(dir, file)
 
-	raw, err := readSourceFile(pkgPath)
+	raw, err := read(pkgPath)
 	if err != nil {
 		return nil, err
 	}
@@ -293,6 +326,7 @@ func Load(path string) (*Package, error) {
 
 	pkg := &Package{
 		Dir:      dir,
+		loadPath: path,
 		PKGBUILD: unit,
 		Vars:     map[string]*Var{},
 		// Keyed by unit.Path (== pkgPath), the same string findings on the
@@ -307,7 +341,7 @@ func Load(path string) (*Package, error) {
 
 	for _, name := range pkg.installFiles() {
 		p := filepath.Join(dir, name)
-		data, err := readSourceFile(p)
+		data, err := read(p)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				continue // missing scriptlet is reported by a rule

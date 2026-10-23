@@ -902,3 +902,51 @@ package() {
 		t.Errorf("local site has Call, want nil")
 	}
 }
+
+// Reload parses the given bytes in place of the files they name, leaves the
+// disk alone, and keeps a choice to disregard inline directives.
+func TestReload(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "PKGBUILD")
+	orig := "pkgname=demo\n# pkglint: ignore=PB000\npkgver=1\n"
+	if err := os.WriteFile(path, []byte(orig), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	next, err := pkg.Reload(map[string][]byte{pkg.PKGBUILD.Path: []byte("pkgname=other\n# pkglint: ignore=PB000\npkgver=2\n")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := next.Scalar("pkgname"); got != "other" {
+		t.Errorf("pkgname = %q, want the stand-in's", got)
+	}
+	if next.Dir != pkg.Dir || next.PKGBUILD.Path != pkg.PKGBUILD.Path {
+		t.Errorf("reload resolved different paths: %q %q", next.Dir, next.PKGBUILD.Path)
+	}
+	if !next.Suppressed("PB000", next.PKGBUILD.Path, 3) {
+		t.Error("the stand-in's own directive was not honored")
+	}
+	if disk, _ := os.ReadFile(path); string(disk) != orig {
+		t.Errorf("reload wrote to disk: %q", disk)
+	}
+
+	pkg.Suppressions = nil
+	next, err = pkg.Reload(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.Suppressions != nil {
+		t.Error("reload re-enabled directives the caller disregarded")
+	}
+	if got, _ := next.Scalar("pkgname"); got != "demo" {
+		t.Errorf("pkgname = %q, want the file's", got)
+	}
+
+	if _, err := pkg.Reload(map[string][]byte{pkg.PKGBUILD.Path: []byte("build() {\n")}); err == nil {
+		t.Error("a stand-in that does not parse loaded")
+	}
+}

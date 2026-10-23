@@ -125,7 +125,8 @@ suppressed.
 ### Auto-fixing
 
 `--fix` rewrites what it can and prints every change; `--diff` previews without
-writing. Fixes come in two tiers: safe fixes preserve behavior or restore a
+writing. It re-lints its own output and fixes again until nothing changes, so a
+second run has nothing left to do. Fixes come in two tiers: safe fixes preserve behavior or restore a
 security default; unsafe fixes are mechanical but change what the build does,
 so review them.
 

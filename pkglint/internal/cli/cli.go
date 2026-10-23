@@ -443,12 +443,22 @@ func (m rewriteMode) run(paths []string, diff bool, stdout io.Writer) int {
 // stderr and leaves the rest of the results to be applied.
 //
 // Both rewriting paths go through it: `--fix`/`--add-ignores`, which transform
-// a PKGBUILD in one pass, and `build --fix`, which transforms it from what the
+// a PKGBUILD from its own text, and `build --fix`, which transforms it from what the
 // build produced. Keeping the printing and the writing in one place is what
 // makes the two read identically.
+//
+// A unit can appear once per fix round (see rules.Fix). Every round's edits
+// are printed against that round's own text, and only the last round's is
+// written, so the file is replaced once with where the rounds ended.
 func applyFixResults(stdout io.Writer, results []rules.FixResult, diff bool) (applied int, ok bool) {
 	ok = true
-	for _, r := range results {
+	final := map[string]int{}
+	for i, r := range results {
+		if r.Changed() {
+			final[r.Path] = i
+		}
+	}
+	for i, r := range results {
 		if !r.Changed() {
 			continue
 		}
@@ -459,7 +469,7 @@ func applyFixResults(stdout io.Writer, results []rules.FixResult, diff bool) (ap
 				fmt.Fprint(stdout, editHunk(r.Original, e))
 			}
 		}
-		if diff {
+		if diff || final[r.Path] != i {
 			continue
 		}
 		if err := writeFixed(r.Path, r.Fixed); err != nil {

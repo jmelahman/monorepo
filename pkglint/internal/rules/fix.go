@@ -218,10 +218,86 @@ func dropGroups(edits []Edit, groups map[string]bool) []Edit {
 	return out
 }
 
-// Fix computes and applies auto-fixes for a package at the given level,
-// returning one FixResult per unit that had edits applied.
+// maxFixRounds bounds how many times Fix re-lints its own output. Real
+// packages settle in two rounds; the cap is for a pair of fixers that would
+// undo each other, which must stop rather than spin.
+const maxFixRounds = 8
+
+// Fix computes and applies auto-fixes for a package at the given level.
+//
+// Every fixer in a round works from the same parse, so an edit that overlaps
+// another one is dropped (ApplyEdits) and a fixer whose rewrite only becomes
+// possible after another's cannot see it. Fix therefore re-parses what a round
+// produced and fixes again, until a round changes nothing: a single --fix
+// leaves the file where a second one would, which is what keeps the fix hook
+// from rewriting the same file on two commits in a row.
+//
+// The result holds one FixResult per unit per round that changed it, in round
+// order. Each one's Applied edits are offsets into its own Original, so they
+// render against it; the last result for a path is that unit's final content.
 func Fix(pkg *pkgbuild.Package, ignore map[string]bool, level FixLevel, env *FixEnv) []FixResult {
-	return applyByUnit(pkg, CollectEdits(NewContext(pkg), ignore, level, env))
+	env = memoizeEnv(env)
+	var all []FixResult
+	for round := 0; round < maxFixRounds; round++ {
+		results := applyByUnit(pkg, CollectEdits(NewContext(pkg), ignore, level, env))
+		contents := map[string][]byte{}
+		for _, r := range results {
+			if r.Changed() {
+				all = append(all, r)
+				contents[r.Path] = r.Fixed
+			}
+		}
+		if len(contents) == 0 {
+			break
+		}
+		next, err := pkg.Reload(contents)
+		if err != nil {
+			// What the round wrote no longer loads. It stands, since the
+			// round's own edits were each checked; nothing is built on it.
+			break
+		}
+		pkg = next
+	}
+	return all
+}
+
+// memoizeEnv wraps env's capabilities so that each question is asked once per
+// Fix: a later round re-runs the fixers whose edit an earlier round declined,
+// and a probe that timed out, or a ref that did not resolve, would otherwise
+// be retried once per round.
+func memoizeEnv(env *FixEnv) *FixEnv {
+	if env == nil {
+		return nil
+	}
+	out := *env
+	if f := env.ResolveRef; f != nil {
+		type answer struct {
+			hash string
+			err  error
+		}
+		seen := map[[2]string]answer{}
+		out.ResolveRef = func(url, ref string) (string, error) {
+			k := [2]string{url, ref}
+			a, ok := seen[k]
+			if !ok {
+				a.hash, a.err = f(url, ref)
+				seen[k] = a
+			}
+			return a.hash, a.err
+		}
+	}
+	if f := env.ProbeHTTPS; f != nil {
+		seen := map[string]error{}
+		out.ProbeHTTPS = func(url string) error {
+			err, ok := seen[url]
+			if !ok {
+				err = f(url)
+				seen[url] = err
+			}
+			return err
+		}
+	}
+	return &out
 }
 
 // FixPackage computes and applies the package-scope auto-fixes for pkg from the

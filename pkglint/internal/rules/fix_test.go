@@ -1963,12 +1963,7 @@ func TestApplyEditsGroupDropFreesOverlap(t *testing.T) {
 	}
 }
 
-// PB103 rewrites a whole source element, PB902 rewrites a variable reference
-// inside one. When they collide the rename must lose as a unit: applying its
-// other edits would leave the element referring to a variable the file no
-// longer sets.
-func TestFixRenameYieldsToOverlappingEdit(t *testing.T) {
-	got := fixAll(t, map[string]string{"PKGBUILD": `pkgname=demo
+const renameCollision = `pkgname=demo
 pkgver=1.0.0
 pkgrel=1
 arch=('x86_64')
@@ -1980,11 +1975,144 @@ sha256sums=('SKIP')
 build() {
   echo "$tagname"
 }
-`}, FixUnsafe, &FixEnv{ResolveRef: fakeResolve})["PKGBUILD"]
-	mustContain(t, got, "#commit=0123456789abcdef")
-	mustContain(t, got, "tagname=v$pkgver")
-	mustContain(t, got, `echo "$tagname"`)
-	mustNotContain(t, got, "_tagname")
+`
+
+// fixRounds runs Fix over files and returns each round's output for the
+// PKGBUILD, in order.
+func fixRounds(t *testing.T, files map[string]string, level FixLevel, env *FixEnv) []string {
+	t.Helper()
+	dir := t.TempDir()
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pkg, err := pkgbuild.Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	var out []string
+	for _, r := range Fix(pkg, nil, level, env) {
+		if filepath.Base(r.Path) == "PKGBUILD" {
+			out = append(out, string(r.Fixed))
+		}
+	}
+	return out
+}
+
+// PB103 rewrites a whole source element, PB902 rewrites a variable reference
+// inside one. When they collide the rename must lose as a unit within the
+// round: applying its other edits would leave the element referring to a
+// variable the file no longer sets. The next round, with the element pinned,
+// renames every site at once.
+func TestFixRenameYieldsToOverlappingEdit(t *testing.T) {
+	rounds := fixRounds(t, map[string]string{"PKGBUILD": renameCollision}, FixUnsafe, &FixEnv{ResolveRef: fakeResolve})
+	if len(rounds) != 2 {
+		t.Fatalf("expected 2 rounds, got %d: %q", len(rounds), rounds)
+	}
+	first, last := rounds[0], rounds[1]
+	mustContain(t, first, "#commit=0123456789abcdef")
+	mustContain(t, first, "tagname=v$pkgver")
+	mustContain(t, first, `echo "$tagname"`)
+	mustNotContain(t, first, "_tagname")
+
+	mustContain(t, last, "#commit=0123456789abcdef")
+	mustContain(t, last, "_tagname=v$pkgver")
+	mustContain(t, last, `echo "$_tagname"`)
+	mustNotContain(t, last, "\ntagname=")
+	mustNotContain(t, last, "$tagname")
+}
+
+// One Fix leaves nothing for a second one: the fix hook must not rewrite the
+// same file on two commits in a row.
+func TestFixConverges(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "PKGBUILD")
+	if err := os.WriteFile(path, []byte(renameCollision), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	env := &FixEnv{ResolveRef: fakeResolve}
+	apply := func() bool {
+		pkg, err := pkgbuild.Load(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		changed := false
+		for _, r := range Fix(pkg, nil, FixUnsafe, env) {
+			changed = true
+			if err := os.WriteFile(r.Path, r.Fixed, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return changed
+	}
+	if !apply() {
+		t.Fatal("first run made no changes")
+	}
+	if apply() {
+		t.Error("second run changed the file; the first should have converged")
+	}
+}
+
+// A capability is asked each question once per Fix, however many rounds re-run
+// the fixer it declined: a refused probe is a network round trip, often a
+// timeout.
+func TestFixAsksEachProbeOnce(t *testing.T) {
+	src := strings.Replace(renameCollision,
+		`source=("git+https://example.com/demo.git#tag=$tagname")
+sha256sums=('SKIP')`,
+		`source=("git+https://example.com/demo.git#tag=$tagname" "http://example.com/extra.tar.gz")
+sha256sums=('SKIP' 'SKIP')`, 1)
+	probes := map[string]int{}
+	env := &FixEnv{
+		ResolveRef: fakeResolve,
+		ProbeHTTPS: func(url string) error {
+			probes[url]++
+			return fmt.Errorf("refused")
+		},
+	}
+	if rounds := fixRounds(t, map[string]string{"PKGBUILD": src}, FixUnsafe, env); len(rounds) < 2 {
+		t.Fatalf("fixture needs a second round to test anything, got %d", len(rounds))
+	}
+	if len(probes) == 0 {
+		t.Fatal("the http source was never probed")
+	}
+	for url, n := range probes {
+		if n != 1 {
+			t.Errorf("probed %s %d times", url, n)
+		}
+	}
+}
+
+func TestMemoizeEnvNil(t *testing.T) {
+	if memoizeEnv(nil) != nil {
+		t.Error("a nil env must stay nil")
+	}
+}
+
+// Two fixers that undo each other must stop at the round cap rather than spin.
+func TestFixStopsAtRoundCap(t *testing.T) {
+	flip := Rule{ID: "PB000", Scope: ScopePKGBUILD, FixLevel: FixSafe, Check: func(*Context) []Finding { return nil },
+		Fix: func(ctx *Context, _ *FixEnv) []Edit {
+			raw := ctx.Pkg.PKGBUILD.Raw
+			i := strings.Index(string(raw), "pkgrel=")
+			if i < 0 {
+				return nil
+			}
+			next := "2"
+			if raw[i+len("pkgrel=")] == '2' {
+				next = "1"
+			}
+			return []Edit{{Path: ctx.Pkg.PKGBUILD.Path, Start: i + len("pkgrel="), End: i + len("pkgrel=") + 1, New: next, Line: 1}}
+		}}
+	registry()
+	saved := registryAll
+	registryAll = []Rule{flip}
+	t.Cleanup(func() { registryAll = saved })
+
+	if got := len(fixRounds(t, map[string]string{"PKGBUILD": renameCollision}, FixSafe, nil)); got != maxFixRounds {
+		t.Errorf("expected %d rounds, got %d", maxFixRounds, got)
+	}
 }
 
 // Arrays reach their name through more spellings than a scalar does — an

@@ -1219,6 +1219,39 @@ func TestApplyFixResultsEscapesControlCharacters(t *testing.T) {
 	}
 }
 
+// A unit fixed over several rounds prints every round's edits and is written
+// once, with the last round's text.
+func TestApplyFixResultsWritesFinalRound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "PKGBUILD")
+	if err := os.WriteFile(path, []byte("a=1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	results := []rules.FixResult{
+		{Path: path, Original: []byte("a=1\n"), Fixed: []byte("a=2\n"),
+			Applied: []rules.Edit{{Path: path, Line: 1, RuleID: "PB000", Desc: "first", Start: 2, End: 3, New: "2"}}},
+		{Path: path, Original: []byte("a=2\n"), Fixed: []byte("a=3\n"),
+			Applied: []rules.Edit{{Path: path, Line: 1, RuleID: "PB000", Desc: "second", Start: 2, End: 3, New: "3"}}},
+	}
+	var buf bytes.Buffer
+	applied, ok := applyFixResults(&buf, results, true)
+	if !ok || applied != 2 {
+		t.Fatalf("applied=%d ok=%v", applied, ok)
+	}
+	if got := buf.String(); !strings.Contains(got, "- a=1\n    + a=2") || !strings.Contains(got, "- a=2\n    + a=3") {
+		t.Errorf("each round's hunk should render against its own text:\n%s", got)
+	}
+	if disk, _ := os.ReadFile(path); string(disk) != "a=1\n" {
+		t.Errorf("--diff wrote the file: %q", disk)
+	}
+
+	if _, ok := applyFixResults(&bytes.Buffer{}, results, false); !ok {
+		t.Fatal("write failed")
+	}
+	if disk, _ := os.ReadFile(path); string(disk) != "a=3\n" {
+		t.Errorf("file = %q, want the last round's", disk)
+	}
+}
+
 // --fail-on grades findings; a path that could not be loaded was not graded.
 func TestFailOnNeverStillFailsUnloadable(t *testing.T) {
 	var buf bytes.Buffer
