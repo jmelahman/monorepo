@@ -2,10 +2,14 @@ package pkgfile
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"debug/elf"
+	"io"
 	"io/fs"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -114,6 +118,77 @@ func TestClassifyELF(t *testing.T) {
 	}
 	if !i.Exported["demo_init"] {
 		t.Errorf("exported = %v", i.Exported)
+	}
+}
+
+// A large ELF member is buffered once, at its declared size. io.ReadAll's
+// doubling plus the append that re-attached the magic bytes cost about three
+// times the member, which a run of zeros makes cheap to send.
+func TestClassifyELFAllocatesOnce(t *testing.T) {
+	obj := pkgtest.ELF(pkgtest.ELFOpts{})
+	obj = append(obj, make([]byte, 16<<20-len(obj))...)
+	tarBytes := pkgtest.Tar(pkgtest.Info("demo", "x86_64"),
+		pkgtest.Member{Name: "usr/bin/demo", Data: obj, Mode: 0o755})
+
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	pkg, err := Read(bytes.NewReader(tarBytes), "demo-1-1-x86_64.pkg.tar")
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if delta := after.TotalAlloc - before.TotalAlloc; delta >= uint64(2*len(obj)) {
+		t.Errorf("Read allocated %d bytes for a %d-byte ELF member, want < %d", delta, len(obj), 2*len(obj))
+	}
+	if e := pkg.Entry("usr/bin/demo"); e == nil || !e.IsELF || e.ELF == nil {
+		t.Errorf("padded ELF member not classified: %+v", e)
+	}
+}
+
+// A member cut short by the end of the archive is an error from the tar
+// reader, never a panic in the exact-size read.
+func TestClassifyTruncatedELF(t *testing.T) {
+	obj := pkgtest.ELF(pkgtest.ELFOpts{})
+	obj = append(obj, make([]byte, 16<<20-len(obj))...)
+	tarBytes := pkgtest.Tar(pkgtest.Info("demo", "x86_64"),
+		pkgtest.Member{Name: "usr/bin/demo", Data: obj, Mode: 0o755})
+	if _, err := Read(bytes.NewReader(tarBytes[:len(tarBytes)/2]), "demo-1-1-x86_64.pkg.tar"); err == nil {
+		t.Error("Read of a truncated archive succeeded, want an error")
+	}
+}
+
+// A .PKGINFO past its bound refuses the archive: grading on a truncated
+// prefix would drop every depend = line after the cut without a word.
+func TestReadRefusesOversizedPkgInfo(t *testing.T) {
+	data := pkgtest.Tar(pkgtest.Info("demo", "x86_64", "pkgdesc = "+strings.Repeat("x", 1<<20)))
+	if _, err := Read(bytes.NewReader(data), "demo-1-1-x86_64.pkg.tar"); err == nil ||
+		!strings.Contains(err.Error(), ".PKGINFO larger than") {
+		t.Errorf("Read error = %v, want a .PKGINFO size refusal", err)
+	}
+}
+
+// The zstd window bound is pinned, not tightened: this passes against the
+// library default too, and exists so a dependency bump that moves the default
+// shows up here. Each frame is a bare header (single-segment off, so the
+// window descriptor byte applies) and an empty last raw block.
+func TestDecompressZstdWindowBound(t *testing.T) {
+	frame := func(windowDesc byte) []byte {
+		return []byte{0x28, 0xb5, 0x2f, 0xfd, 0x00, windowDesc, 0x01, 0x00, 0x00}
+	}
+	drain := func(b []byte) error {
+		r, err := decompress(bufio.NewReader(bytes.NewReader(b)))
+		if err != nil {
+			return err
+		}
+		_, err = io.ReadAll(r)
+		return err
+	}
+	if err := drain(frame(0x98)); err != nil { // 512 MiB
+		t.Errorf("512 MiB window: %v, want accepted", err)
+	}
+	if err := drain(frame(0xA0)); err == nil || !strings.Contains(err.Error(), "window size exceeded") { // 1 GiB
+		t.Errorf("1 GiB window: %v, want a window size refusal", err)
 	}
 }
 

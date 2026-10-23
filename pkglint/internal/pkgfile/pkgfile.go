@@ -27,6 +27,21 @@ import (
 // Members over the cap keep IsELF from the magic bytes but get no ELF facts.
 const maxELFSize = 512 << 20
 
+// maxPkgInfoSize bounds .PKGINFO. Real ones are a few KB. Past this the
+// archive is refused rather than graded on a truncated prefix.
+const maxPkgInfoSize = 1 << 20
+
+// maxMTreeArchiveSize bounds the (usually gzipped) .MTREE member as stored.
+// Past this the archive is refused; parseMTree separately bounds what the
+// member expands to.
+const maxMTreeArchiveSize = 64 << 20
+
+// maxZstdWindow bounds the zstd decoder's window and memory. It is the
+// library's own default today, made explicit so a dependency bump cannot
+// silently raise it. Not lower: pacman/libarchive accept windowLog up to 31,
+// and a tighter cap would reject real `--long` packages.
+const maxZstdWindow = 512 << 20
+
 // Entry is one member of the package archive.
 type Entry struct {
 	Name     string // path inside the package, as stored (no leading slash)
@@ -150,17 +165,24 @@ func Read(r io.Reader, name string) (*Package, error) {
 		}
 		switch clean {
 		case ".PKGINFO":
-			data, err := io.ReadAll(io.LimitReader(tr, 1<<20))
+			data, err := io.ReadAll(io.LimitReader(tr, maxPkgInfoSize+1))
 			if err != nil {
 				return nil, fmt.Errorf("%s: reading .PKGINFO: %w", name, err)
+			}
+			if len(data) > maxPkgInfoSize {
+				return nil, fmt.Errorf("%s: .PKGINFO larger than %d bytes", name, maxPkgInfoSize)
 			}
 			pkg.Info = parsePkgInfo(data)
 			sawPkginfo = true
 		case ".MTREE":
-			data, err := io.ReadAll(io.LimitReader(tr, 64<<20))
-			if err == nil {
-				pkg.MTree = parseMTree(data)
+			data, err := io.ReadAll(io.LimitReader(tr, maxMTreeArchiveSize+1))
+			if err != nil {
+				return nil, fmt.Errorf("%s: reading .MTREE: %w", name, err)
 			}
+			if len(data) > maxMTreeArchiveSize {
+				return nil, fmt.Errorf("%s: .MTREE larger than %d bytes", name, maxMTreeArchiveSize)
+			}
+			pkg.MTree = parseMTree(data)
 		default:
 			if hdr.Typeflag == tar.TypeReg {
 				classify(&e, tr)
@@ -231,12 +253,18 @@ func classify(e *Entry, r io.Reader) {
 	switch {
 	case bytes.HasPrefix(head, []byte("\x7fELF")):
 		e.IsELF = true
-		if e.Size <= maxELFSize {
-			rest, err := io.ReadAll(r)
-			if err != nil {
+		// The lower bound refuses a corrupt header declaring fewer bytes
+		// than the magic already read.
+		if e.Size >= int64(len(head)) && e.Size <= maxELFSize {
+			// One allocation of the declared size, filled in place: ReadAll's
+			// doubling plus the append copy peaked near 3x a large member.
+			// A fresh large allocation is not touched until written, so a
+			// header that over-declares costs address space, not memory.
+			data := make([]byte, e.Size)
+			copy(data, head)
+			if _, err := io.ReadFull(r, data[len(head):]); err != nil {
 				return
 			}
-			data := append(head, rest...)
 			e.ELF = inspectELF(data)
 		}
 	case bytes.HasPrefix(head, []byte("!<ar")):
@@ -298,12 +326,18 @@ func decompress(br *bufio.Reader) (io.Reader, error) {
 	}
 	switch {
 	case bytes.HasPrefix(head, []byte{0x28, 0xb5, 0x2f, 0xfd}):
-		zr, err := zstd.NewReader(br, zstd.WithDecoderConcurrency(1))
+		zr, err := zstd.NewReader(br, zstd.WithDecoderConcurrency(1),
+			zstd.WithDecoderMaxWindow(maxZstdWindow), zstd.WithDecoderMaxMemory(maxZstdWindow))
 		if err != nil {
 			return nil, err
 		}
 		return zr.IOReadCloser(), nil
 	case bytes.HasPrefix(head, []byte{0xfd, '7', 'z', 'X', 'Z', 0x00}):
+		// Residual risk: ulikunitz/xz sizes the LZMA2 dictionary from each
+		// block header (ReaderConfig.DictCap is a floor, not a ceiling) and
+		// offers no cap. Memory grows with output up to that size — up to
+		// ~4 GiB from a few hundred KB of input. pacman has produced .zst
+		// since 2020, so .xz input is legacy.
 		return xz.NewReader(br)
 	case bytes.HasPrefix(head, []byte{0x1f, 0x8b}):
 		return gzip.NewReader(br)

@@ -17,8 +17,10 @@ import (
 	"crypto/sha1" //nolint:gosec
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
@@ -567,9 +569,15 @@ func localDigest(dir, filename string) (rules.Digests, error) {
 		dirs = append(dirs, d)
 	}
 	for _, d := range dirs {
-		f, err := os.Open(filepath.Join(d, filename))
-		if err != nil {
+		// OpenRegular, not os.Open: a FIFO would block the open and a device
+		// like /dev/zero would hash forever. A candidate that exists but is
+		// refused stops the search rather than falling through to $SRCDEST.
+		f, err := pkgbuild.OpenRegular(filepath.Join(d, filename))
+		if errors.Is(err, fs.ErrNotExist) {
 			continue
+		}
+		if err != nil {
+			return rules.Digests{}, err
 		}
 		digests, err := hashAll(f)
 		_ = f.Close()

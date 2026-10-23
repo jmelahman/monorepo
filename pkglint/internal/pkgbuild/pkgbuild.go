@@ -220,23 +220,44 @@ func newParser() *syntax.Parser {
 // fails to load instead of hanging the linter. A var so tests can lower it.
 var maxSourceFile int64 = 8 << 20
 
-// readSourceFile reads one of the package's own files, refusing anything that
-// is not a regular file (a device, a FIFO, a directory) and anything past
-// maxSourceFile. Symlinks to regular files are followed; the check is on what
-// the name resolves to.
-func readSourceFile(path string) ([]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	fi, err := f.Stat()
+// OpenRegular opens path for reading only if it resolves to a regular file.
+// The type is checked with Stat *before* the open: opening a FIFO blocks
+// until a writer appears, so checking the open file afterwards would hang on
+// exactly the input the check exists to refuse. The open file is re-checked
+// against the Stat result so a swap between the two calls is refused, not
+// followed.
+//
+// This is the one way to open a file the package directory names; a bare
+// os.Open on a path built from PKGBUILD text reintroduces the hang.
+func OpenRegular(path string) (*os.File, error) {
+	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 	if !fi.Mode().IsRegular() {
 		return nil, fmt.Errorf("%s: not a regular file", path)
 	}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	if got, err := f.Stat(); err != nil || !os.SameFile(fi, got) {
+		_ = f.Close()
+		return nil, fmt.Errorf("%s: changed while opening", path)
+	}
+	return f, nil
+}
+
+// readSourceFile reads one of the package's own files, refusing (through
+// OpenRegular) anything that is not a regular file (a device, a FIFO, a
+// directory) and anything past maxSourceFile. Symlinks to regular files are
+// followed; the check is on what the name resolves to.
+func readSourceFile(path string) ([]byte, error) {
+	f, err := OpenRegular(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 	data, err := io.ReadAll(io.LimitReader(f, maxSourceFile+1))
 	if err != nil {
 		return nil, err

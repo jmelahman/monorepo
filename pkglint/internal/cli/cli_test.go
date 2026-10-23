@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -555,6 +556,42 @@ func TestLocalDigestHashesTheFile(t *testing.T) {
 	}
 	if got != want {
 		t.Errorf("localDigest = %+v, want %+v", got, want)
+	}
+}
+
+// A source that resolves to a device (here /dev/null; /dev/zero would hash
+// forever) is refused, not hashed.
+func TestLocalDigestRefusesDevice(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks are not portable on windows")
+	}
+	dir := t.TempDir()
+	if err := os.Symlink("/dev/null", filepath.Join(dir, "demo.tar.gz")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := localDigest(dir, "demo.tar.gz"); err == nil ||
+		!strings.Contains(err.Error(), "not a regular file") {
+		t.Errorf("localDigest of a device = %v, want a not-a-regular-file refusal", err)
+	}
+}
+
+// A refused candidate in the package directory is a refusal, not a miss: it
+// must not fall through to a same-named file in $SRCDEST.
+func TestLocalDigestDeviceDoesNotFallThrough(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks are not portable on windows")
+	}
+	dir := t.TempDir()
+	if err := os.Symlink("/dev/null", filepath.Join(dir, "demo.tar.gz")); err != nil {
+		t.Fatal(err)
+	}
+	cache := t.TempDir()
+	if err := os.WriteFile(filepath.Join(cache, "demo.tar.gz"), []byte("hello pkglint\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SRCDEST", cache)
+	if got, err := localDigest(dir, "demo.tar.gz"); err == nil {
+		t.Errorf("localDigest = %+v, want an error rather than the $SRCDEST digest", got)
 	}
 }
 
