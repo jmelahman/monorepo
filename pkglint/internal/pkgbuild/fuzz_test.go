@@ -3,6 +3,8 @@ package pkgbuild
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -69,5 +71,22 @@ func FuzzParseSrcInfo(f *testing.F) {
 	f.Add([]byte("pkgbase = demo\n\tpkgver = 1\n\tsource = https://example.com/x.tar.gz\n\tsha256sums = SKIP\npkgname = demo\n"))
 	f.Fuzz(func(t *testing.T, raw []byte) {
 		_ = ParseSrcInfo(raw)
+	})
+}
+
+// varRefPattern is the regexp replaceVarRefs replaced; it stays here as the
+// specification the scanner is checked against.
+var varRefPattern = regexp.MustCompile(`\$(\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z_][A-Za-z0-9_]*)`)
+
+// FuzzReplaceVarRefs holds replaceVarRefs to exactly the regexp's matches.
+func FuzzReplaceVarRefs(f *testing.F) {
+	for _, s := range []string{"", "$", "$$a", "${a}", "${a", "${1}", "$1a", "a$b-${c_1}d$", "${a}}${{b}", "$_x9${_}"} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, s string) {
+		mark := func(m string) string { return "<" + strings.ToUpper(m) + ">" }
+		if got, want := replaceVarRefs(s, mark), varRefPattern.ReplaceAllStringFunc(s, mark); got != want {
+			t.Errorf("replaceVarRefs(%q) = %q, want %q", s, got, want)
+		}
 	})
 }

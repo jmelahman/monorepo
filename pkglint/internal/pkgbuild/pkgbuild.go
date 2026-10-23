@@ -668,7 +668,60 @@ func (p *Package) Scalar(name string) (string, bool) {
 	return p.Expand(v.Values[0]), true
 }
 
-var varRef = regexp.MustCompile(`\$(\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z_][A-Za-z0-9_]*)`)
+// replaceVarRefs calls f on every $name / ${name} reference in s, left to
+// right, and splices in what it returns: what the regexp
+// \$(\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z_][A-Za-z0-9_]*) would match. It is
+// hand-rolled because Expand runs it over up to expandTotalMax bytes, and the
+// regexp engine was most of that cost (FuzzReplaceVarRefs pins the two
+// together).
+func replaceVarRefs(s string, f func(string) string) string {
+	var b strings.Builder
+	last := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] != '$' {
+			continue
+		}
+		end := varRefEnd(s, i)
+		if end < 0 {
+			continue
+		}
+		b.WriteString(s[last:i])
+		b.WriteString(f(s[i:end]))
+		last = end
+		i = end - 1
+	}
+	if last == 0 {
+		return s
+	}
+	b.WriteString(s[last:])
+	return b.String()
+}
+
+// varRefEnd returns the end of the reference starting at the '$' at s[i], or
+// -1 when none does.
+func varRefEnd(s string, i int) int {
+	j := i + 1
+	braced := j < len(s) && s[j] == '{'
+	if braced {
+		j++
+	}
+	if j >= len(s) || !isNameStart(s[j]) {
+		return -1
+	}
+	for j++; j < len(s) && (isNameStart(s[j]) || s[j] >= '0' && s[j] <= '9'); j++ {
+	}
+	if !braced {
+		return j
+	}
+	if j < len(s) && s[j] == '}' {
+		return j + 1
+	}
+	return -1
+}
+
+func isNameStart(c byte) bool {
+	return c == '_' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'
+}
 
 // expandMax caps how many bytes of variable values one Expand call may splice
 // in. References multiply — a scalar naming another forty times, five levels
@@ -704,7 +757,7 @@ func (p *Package) Expand(s string) string {
 		if !strings.Contains(s, "$") {
 			break
 		}
-		out := varRef.ReplaceAllStringFunc(s, func(m string) string {
+		out := replaceVarRefs(s, func(m string) string {
 			repl, ok := p.expandRef(m)
 			if !ok {
 				return m
