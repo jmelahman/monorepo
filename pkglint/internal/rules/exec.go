@@ -734,20 +734,32 @@ func checkTopLevelExec(ctx *Context) []Finding {
 }
 
 var shellSinks = map[string]bool{
-	"sh": true, "bash": true, "zsh": true, "dash": true, "ksh": true,
+	"sh": true, "bash": true, "zsh": true, "dash": true, "ksh": true, "ash": true,
 	"python": true, "python3": true, "python2": true, "perl": true, "ruby": true, "node": true,
+	"deno": true, "bun": true,
 }
+
+// interpreterAliases are other builds of a shellSinks interpreter, installed
+// under their own names: pypy is python, nodejs is Debian's node, cperl is a
+// perl fork. They are matched after the version suffix is trimmed, so pypy3
+// is pypy too.
+var interpreterAliases = map[string]string{"pypy": "python", "nodejs": "node", "cperl": "perl"}
 
 // sinkName maps a command name onto its shellSinks key: python3.12 and
 // perl5.38 are the same interpreters as python and perl, installed under their
 // versioned names, so a version suffix must not take a pipe out of the rule's
-// reach. Only a trailing run of digits and dots is trimmed, and the result has
-// to be a sink in its own right, so make4 stays an ordinary command.
+// reach. Only a trailing run of digits and dots is trimmed, after a -dbg
+// build suffix, and the result has to be a sink or an alias of one in its own
+// right, so make4 stays an ordinary command.
 func sinkName(name string) (string, bool) {
+	name = strings.TrimSuffix(name, "-dbg")
 	if shellSinks[name] {
 		return name, true
 	}
 	trimmed := strings.TrimRight(name, "0123456789.")
+	if alias, ok := interpreterAliases[trimmed]; ok {
+		return alias, true
+	}
 	if trimmed != "" && trimmed != name && shellSinks[trimmed] {
 		return trimmed, true
 	}
@@ -755,6 +767,69 @@ func sinkName(name string) (string, bool) {
 }
 
 var downloaders = map[string]bool{"curl": true, "wget": true, "fetch": true, "aria2c": true, "axel": true}
+
+// isDownload reports whether c fetches from the network: a downloader, or a
+// scriptInterpreter whose inline program does the fetching itself —
+// `python3 -c '…urlopen(…)…' | bash` is `curl … | bash` with the downloader
+// spelled in Python.
+func isDownload(c Command) bool {
+	return downloaders[c.Name] || inlineProgramFetches(c)
+}
+
+// inlineProgramFlags are the switches that hand an interpreter its program on
+// the command line, keyed like interpreterValueFlags. deno takes its inline
+// program as the eval subcommand instead.
+var inlineProgramFlags = map[string]map[string]bool{
+	"python": {"-c": true},
+	"perl":   {"-e": true, "-E": true},
+	"ruby":   {"-e": true},
+	"node":   {"-e": true, "--eval": true, "-p": true, "--print": true},
+	"bun":    {"-e": true, "--eval": true, "-p": true, "--print": true},
+}
+
+// fetchAPIRe matches the network APIs an inline program would fetch with,
+// across the scriptInterpreters' languages: urllib/requests/http.client,
+// LWP/HTTP::Tiny, open-uri/Net::HTTP, fetch()/https.get. Like stdinEvalRe it
+// is a conservative literal match, and it is read over every argument, so a
+// module loaded by switch (perl -MLWP::Simple, ruby -ropen-uri) counts; the
+// Perl module names carry no leading \b for that reason, since -MLWP has none.
+var fetchAPIRe = regexp.MustCompile(`\b(urlopen|urlretrieve|urllib2|urllib\.request|requests\.(get|post|request|Session)|http\.client|httpx|open-uri|URI\.open|Net::HTTP|net/http|https?\.(get|request)|axios|undici|node-fetch)\b|\bfetch\s*\(|LWP::|HTTP::Tiny|\brequire\(\s*["']https?["']`)
+
+// inlineProgramFetches reports whether c is a scriptInterpreter handed an
+// inline program that names a network API. A program on disk is not read:
+// only the command line is under review here.
+func inlineProgramFetches(c Command) bool {
+	interp, ok := sinkName(c.Name)
+	if !ok || !scriptInterpreters[interp] || !hasInlineProgram(c, interp) {
+		return false
+	}
+	return fetchAPIRe.MatchString(strings.Join(c.Args, " "))
+}
+
+func hasInlineProgram(c Command, interp string) bool {
+	if interp == "deno" {
+		i := firstOperand(c.Args)
+		return i >= 0 && c.Args[i] == "eval"
+	}
+	flags := inlineProgramFlags[strings.TrimRight(interp, "0123456789.")]
+	for _, a := range c.Args {
+		if flags[a] || clusterEndsInValueFlag(a, flags) {
+			return true
+		}
+	}
+	return false
+}
+
+// firstOperand returns the index of the first argument that is not a switch,
+// or -1. A lone "-" is an operand: it names stdin.
+func firstOperand(args []string) int {
+	for i, a := range args {
+		if a == "-" || !strings.HasPrefix(a, "-") {
+			return i
+		}
+	}
+	return -1
+}
 
 // scriptInterpreters are the shellSinks that run a program named on their own
 // command line. A shell executes stdin by default — `curl … | sh` runs what it
@@ -764,7 +839,7 @@ var downloaders = map[string]bool{"curl": true, "wget": true, "fetch": true, "ar
 // pkgver() helper that fetches a registry's JSON and prints one field.
 var scriptInterpreters = map[string]bool{
 	"python": true, "python3": true, "python2": true,
-	"perl": true, "ruby": true, "node": true,
+	"perl": true, "ruby": true, "node": true, "deno": true, "bun": true,
 }
 
 // interpreterValueFlags are the switches that consume the next word, so that
@@ -778,19 +853,43 @@ var interpreterValueFlags = map[string]map[string]bool{
 	"python": {"-W": true, "-X": true},
 	"ruby":   {"-I": true, "-r": true, "-E": true, "-C": true},
 	"node":   {"-r": true, "--require": true, "--import": true, "--loader": true, "--experimental-loader": true, "-C": true, "--conditions": true, "--input-type": true},
+	"deno":   {"-c": true, "--config": true, "--import-map": true, "--location": true, "--cert": true, "--seed": true, "--env-file": true},
+	"bun":    {"-r": true, "--preload": true, "--cwd": true, "-c": true, "--config": true, "--env-file": true, "--tsconfig-override": true},
 }
 
 // sinkExecutesStdin reports whether a pipeline's terminating interpreter treats
 // what it reads as code. Shells always do. A scriptInterpreter only does so
 // when given no program of its own, or an explicit "-" naming stdin. interp
 // is c's name as sinkName normalized it.
+//
+// deno and bun put a subcommand first. `deno run -` and `bun -` (or
+// `bun run -`) run stdin, and so does a bare deno, which is its REPL; any
+// other deno subcommand (fmt, lint, test) treats stdin as data, and a bare
+// bun only prints its help.
 func sinkExecutesStdin(c Command, interp string) bool {
 	if !scriptInterpreters[interp] {
 		return true // a shell: stdin is the script
 	}
+	args, bare := c.Args, true
+	switch interp {
+	case "deno":
+		i := firstOperand(args)
+		if i < 0 {
+			return true
+		}
+		if args[i] != "run" && args[i] != "eval" {
+			return false
+		}
+		args = args[i+1:]
+	case "bun":
+		if i := firstOperand(args); i >= 0 && args[i] == "run" {
+			args = args[i+1:]
+		}
+		bare = false
+	}
 	valueFlags := interpreterValueFlags[strings.TrimRight(interp, "0123456789.")]
-	for i := 0; i < len(c.Args); i++ {
-		a := c.Args[i]
+	for i := 0; i < len(args); i++ {
+		a := args[i]
 		if a == "-" {
 			return true // read the program from stdin
 		}
@@ -808,7 +907,7 @@ func sinkExecutesStdin(c Command, interp string) bool {
 		// under-reporting costs the finding this rule exists for.
 		return stdinEvalRe.MatchString(a)
 	}
-	return true // bare interpreter: stdin is the script
+	return bare // bare interpreter: stdin is the script
 }
 
 // clusterEndsInValueFlag reports whether a is a run of single-letter switches
@@ -836,7 +935,7 @@ func checkEval(ctx *Context) []Finding {
 		sev := Error
 		msg := "eval assembles and executes code at build time, defeating static review"
 		for _, w := range c.Call.Args[1:] {
-			if ctx.wordRunsCommand(w, downloaders) {
+			if ctx.wordRuns(w, isDownload) {
 				sev = Critical
 				msg = "eval executes the output of a network download"
 			}
@@ -964,7 +1063,10 @@ func literalWord(w *syntax.Word, inner bool) (string, bool) {
 }
 
 func checkDecodeExec(ctx *Context) []Finding {
-	return ctx.checkPipeInto(decoders, func(c Command) bool {
+	return ctx.checkPipeInto(func(c Command) bool {
+		if !decoders[c.Name] {
+			return false
+		}
 		// openssl only decodes with `enc -d` / base64 -d style flags.
 		if c.Name == "openssl" {
 			return c.Subcommand() == "enc" || c.Subcommand() == "base64"
@@ -980,8 +1082,7 @@ func checkDecodeExec(ctx *Context) []Finding {
 }
 
 func checkDownloadExec(ctx *Context) []Finding {
-	out := ctx.checkPipeInto(downloaders, func(Command) bool { return true },
-		"PB304", "a network download is piped straight into %s and executed")
+	out := ctx.checkPipeInto(isDownload, "PB304", "a network download is piped straight into %s and executed")
 
 	// eval "$(curl ...)" is handled by PB302; here: sh -c "$(curl ...)",
 	// source <(curl ...), and the same download handed over on stdin instead,
@@ -989,6 +1090,14 @@ func checkDownloadExec(ctx *Context) []Finding {
 	for _, c := range ctx.Commands() {
 		interp, sink := sinkName(c.Name)
 		if !sink && c.Name != "source" && c.Name != "." {
+			// run < <(curl …), with run() { bash; }: the body's readers
+			// inherit the redirected stdin.
+			if ctx.stdinRunsDownload(c.Stmt) {
+				if inner := stdinExecutor(ctx.funcSinks(c, nil)); inner != "" {
+					out = append(out, c.finding("PB304", Critical,
+						"%s executes the output of a network download", inner))
+				}
+			}
 			continue
 		}
 		// A redirect only counts when stdin is what runs: a shell, a bare
@@ -1023,7 +1132,7 @@ func sourcesStdin(c Command) bool {
 // output of a downloader.
 func (ctx *Context) argsRunDownload(c Command) bool {
 	for _, w := range c.Call.Args[1:] {
-		if ctx.wordRunsCommand(w, downloaders) {
+		if ctx.wordRuns(w, isDownload) {
 			return true
 		}
 	}
@@ -1043,15 +1152,15 @@ func (ctx *Context) stdinRunsDownload(stmt *syntax.Stmt) bool {
 		case syntax.RdrIn:
 			// Only < <(curl …) feeds the download in: < "$(curl …)" opens
 			// the file curl's output names.
-			if r.Word != nil && isProcSubst(r.Word) && ctx.wordRunsCommand(r.Word, downloaders) {
+			if r.Word != nil && isProcSubst(r.Word) && ctx.wordRuns(r.Word, isDownload) {
 				return true
 			}
 		case syntax.WordHdoc:
-			if r.Word != nil && ctx.wordRunsCommand(r.Word, downloaders) {
+			if r.Word != nil && ctx.wordRuns(r.Word, isDownload) {
 				return true
 			}
 		case syntax.Hdoc, syntax.DashHdoc:
-			if r.Hdoc != nil && ctx.wordRunsCommand(r.Hdoc, downloaders) {
+			if r.Hdoc != nil && ctx.wordRuns(r.Hdoc, isDownload) {
 				return true
 			}
 		}
@@ -1089,50 +1198,81 @@ func feedsStdin(r *syntax.Redirect) bool {
 // substitutions and other compound commands are not: the inner command's
 // stdin is not the outer pipe there. A statement that redirects its own
 // stdin no longer reads the pipe, so it and everything under it is skipped.
-func (ctx *Context) pipeSinks(last *syntax.Stmt) []Command {
+//
+// A call to a function the file declares is followed into the body, whose
+// top-level statements inherit the call's stdin exactly as a group's do:
+// `curl … | run` with `run() { bash; }` is `curl … | { bash; }`. seen holds
+// the declarations already entered, so a recursive function ends the walk.
+func (ctx *Context) pipeSinks(last *syntax.Stmt, seen map[*syntax.FuncDecl]bool) []Command {
 	if slices.ContainsFunc(last.Redirs, feedsStdin) {
 		return nil
 	}
 	switch x := last.Cmd.(type) {
 	case *syntax.CallExpr:
 		if c, ok := ctx.commandAt(last); ok {
-			return []Command{c}
+			return append([]Command{c}, ctx.funcSinks(c, seen)...)
 		}
 	case *syntax.Subshell:
-		return ctx.groupSinks(x.Stmts)
+		return ctx.groupSinks(x.Stmts, seen)
 	case *syntax.Block:
-		return ctx.groupSinks(x.Stmts)
+		return ctx.groupSinks(x.Stmts, seen)
 	case *syntax.BinaryCmd:
 		if x.Op == syntax.AndStmt || x.Op == syntax.OrStmt {
-			return append(ctx.pipeSinks(x.X), ctx.pipeSinks(x.Y)...)
+			return append(ctx.pipeSinks(x.X, seen), ctx.pipeSinks(x.Y, seen)...)
 		}
 	}
 	return nil
 }
 
-func (ctx *Context) groupSinks(stmts []*syntax.Stmt) []Command {
+func (ctx *Context) groupSinks(stmts []*syntax.Stmt, seen map[*syntax.FuncDecl]bool) []Command {
 	var out []Command
 	for _, s := range stmts {
-		out = append(out, ctx.pipeSinks(s)...)
+		out = append(out, ctx.pipeSinks(s, seen)...)
 	}
 	return out
 }
 
-// checkPipeInto flags pipelines where a command from sources (passing
-// qualify) ends up in an interpreter sink.
-func (ctx *Context) checkPipeInto(sources map[string]bool, qualify func(Command) bool, id, format string) []Finding {
+// funcSinks returns the stdin readers in the bodies of every declaration of
+// the function c calls: which one bash runs depends on which was declared
+// last at run time, so all of them are read.
+func (ctx *Context) funcSinks(c Command, seen map[*syntax.FuncDecl]bool) []Command {
+	if c.Unit == nil {
+		return nil
+	}
+	var out []Command
+	for _, fd := range ctx.allFuncDecls[c.Unit.Path+"\x00"+c.Name] {
+		if seen[fd] {
+			continue
+		}
+		if seen == nil {
+			seen = map[*syntax.FuncDecl]bool{}
+		}
+		seen[fd] = true
+		out = append(out, ctx.pipeSinks(fd.Body, seen)...)
+	}
+	return out
+}
+
+// stdinExecutor returns the name of the first of sinks that executes what it
+// reads on stdin, or "".
+func stdinExecutor(sinks []Command) string {
+	for _, c := range sinks {
+		if interp, ok := sinkName(c.Name); ok && sinkExecutesStdin(c, interp) {
+			return c.Name
+		}
+	}
+	return ""
+}
+
+// checkPipeInto flags pipelines where a command passing source ends up in an
+// interpreter sink.
+func (ctx *Context) checkPipeInto(source func(Command) bool, id, format string) []Finding {
 	var out []Finding
 	units := ctx.Pkg.Units()
 	for i := range units {
 		u := &units[i]
 		for _, segs := range pipelines(u.File) {
-			sink := ""
-			for _, c := range ctx.pipeSinks(segs[len(segs)-1]) {
-				if interp, ok := sinkName(c.Name); ok && sinkExecutesStdin(c, interp) {
-					sink = c.Name
-					break
-				}
-			}
+			sink := stdinExecutor(ctx.pipeSinks(segs[len(segs)-1], nil))
 			if sink == "" {
 				continue
 			}
@@ -1141,7 +1281,7 @@ func (ctx *Context) checkPipeInto(sources map[string]bool, qualify func(Command)
 				if !ok {
 					continue
 				}
-				if sources[c.Name] && qualify(c) {
+				if source(c) {
 					out = append(out, findingAt(id, Critical, u.Path, seg.Pos(), format, sink))
 					break
 				}

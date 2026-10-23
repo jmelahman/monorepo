@@ -160,6 +160,13 @@ func pipelines(u *syntax.File) [][]*syntax.Stmt {
 // Command the context resolved for it, so a wrapper, an escaped name or a name
 // held in a variable is seen through here exactly as it is everywhere else.
 func (ctx *Context) wordRunsCommand(w *syntax.Word, names map[string]bool) bool {
+	return ctx.wordRuns(w, func(c Command) bool { return names[c.Name] })
+}
+
+// wordRuns is wordRunsCommand with a predicate over the resolved Command in
+// place of a set of names. A statement the context did not resolve is offered
+// as a Command carrying only its plain name.
+func (ctx *Context) wordRuns(w *syntax.Word, match func(Command) bool) bool {
 	found := false
 	syntax.Walk(w, func(node syntax.Node) bool {
 		var stmts []*syntax.Stmt
@@ -174,13 +181,13 @@ func (ctx *Context) wordRunsCommand(w *syntax.Word, names map[string]bool) bool 
 		for _, s := range stmts {
 			syntax.Walk(s, func(n syntax.Node) bool {
 				if st, ok := n.(*syntax.Stmt); ok {
-					if c, ok := ctx.commandAt(st); ok && names[c.Name] {
+					if c, ok := ctx.commandAt(st); ok && match(c) {
 						found = true
 					}
 				}
 				if call, ok := n.(*syntax.CallExpr); ok && len(call.Args) > 0 {
 					name, _ := renderPlain(call.Args[0])
-					if names[basename(unescapeName(name))] {
+					if match(Command{Name: basename(unescapeName(name))}) {
 						found = true
 					}
 				}

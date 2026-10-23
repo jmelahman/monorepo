@@ -187,6 +187,10 @@ type Context struct {
 	// attribution, so its own body would look empty here, and an empty body
 	// reads as harmless.
 	funcDecls map[string]*syntax.FuncDecl
+	// allFuncDecls holds every declaration of each name, nested ones
+	// included, for the rules that follow a call into whatever body it may
+	// run, whatever the commands inside are attributed to.
+	allFuncDecls map[string][]*syntax.FuncDecl
 	// pureFn caches the verdict funcPurity computed for every declaration in
 	// funcDecls.
 	pureFn map[string]bool
@@ -217,7 +221,8 @@ type Command struct {
 // NewContext precomputes shared state for rules.
 func NewContext(pkg *pkgbuild.Package) *Context {
 	ctx := &Context{Pkg: pkg, vars: map[string]string{}, fnVars: map[string]map[string]string{},
-		localFuncs: map[string]bool{}, funcDecls: map[string]*syntax.FuncDecl{}}
+		localFuncs: map[string]bool{}, funcDecls: map[string]*syntax.FuncDecl{},
+		allFuncDecls: map[string][]*syntax.FuncDecl{}}
 	for name, v := range pkg.Vars {
 		// Scalars render to exactly one value; for arrays, bash expands an
 		// unsubscripted $name to the first element (and an empty array to "").
@@ -238,6 +243,7 @@ func NewContext(pkg *pkgbuild.Package) *Context {
 		for _, name := range names {
 			ctx.localFuncs[u.Path+"\x00"+name] = true
 			ctx.funcDecls[u.Path+"\x00"+name] = u.Functions[name]
+			ctx.allFuncDecls[u.Path+"\x00"+name] = append(ctx.allFuncDecls[u.Path+"\x00"+name], u.Functions[name])
 			ctx.collect(u, name, u.Functions[name].Body)
 		}
 		for _, stmt := range u.TopLevel {
@@ -260,6 +266,7 @@ func (ctx *Context) collect(u *pkgbuild.Unit, fn string, root *syntax.Stmt) {
 		// code that runs on source.
 		if fd, ok := node.(*syntax.FuncDecl); ok && fd.Name != nil {
 			ctx.localFuncs[u.Path+"\x00"+fd.Name.Value] = true
+			ctx.allFuncDecls[u.Path+"\x00"+fd.Name.Value] = append(ctx.allFuncDecls[u.Path+"\x00"+fd.Name.Value], fd)
 			if fn == "" {
 				ctx.funcDecls[u.Path+"\x00"+fd.Name.Value] = fd
 				ctx.collect(u, fd.Name.Value, fd.Body)
@@ -290,6 +297,18 @@ var wrappers = map[string]bool{
 	"env": true, "nice": true, "ionice": true, "nohup": true, "timeout": true,
 	"stdbuf": true, "eatmydata": true, "setsid": true, "command": true,
 	"exec": true, "builtin": true, "sudo": true, "doas": true,
+	// busybox runs the applet its first argument names, so `busybox wget`
+	// is wget. It takes no options ahead of an applet: a leading switch
+	// (--install, --list) is busybox's own and runs none; see busyboxSelf.
+	"busybox": true,
+}
+
+// busyboxSelf reports whether a busybox command line runs busybox itself rather
+// than an applet: nothing follows it, or the next word is one of its own
+// switches. Skipping those as wrapper flags would leave `busybox --install -s
+// /bin` naming a command "bin".
+func busyboxSelf(base string, next []string) bool {
+	return base == "busybox" && (len(next) == 0 || strings.HasPrefix(next[0], "-"))
 }
 
 // commandLooksUp reports whether a flag word passed to `command` selects one of
@@ -586,6 +605,9 @@ func nameInFields(fields []string) (name string, ok bool) {
 		if !wrappers[base] || len(fields) == 1 {
 			return fields[0], true // a lone wrapper is skipped by newCommand's own loop
 		}
+		if busyboxSelf(base, fields[1:]) {
+			return fields[0], true
+		}
 		fields = fields[1:]
 		for len(fields) > 0 && (hasPrefixAny(fields[0], "-") || isAssignWord(fields[0])) {
 			w := fields[0]
@@ -627,6 +649,18 @@ func (ctx *Context) newCommand(u *pkgbuild.Unit, fn string, stmt *syntax.Stmt, c
 			break
 		}
 		base := basename(unescapeName(name))
+		if wrappers[base] && base == "busybox" {
+			var next []string
+			if len(args) > 1 {
+				s, _ := pkgbuild.RenderWord(args[1], vars)
+				next = []string{s}
+			}
+			if busyboxSelf(base, next) {
+				cmd.Name = base
+				args = args[1:]
+				break
+			}
+		}
 		if wrappers[base] {
 			args = args[1:]
 			lookup := false
