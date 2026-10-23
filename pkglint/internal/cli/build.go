@@ -180,26 +180,76 @@ func isDirOption(a string) bool {
 	return name != "" && strings.HasPrefix("dir", name)
 }
 
-// checkMakepkgArgs refuses the makepkg options that would point the build at
-// something pkglint never linted: -p names a different buildfile and -D/--dir
+// isConfigOption reports whether a is --config under any spelling makepkg
+// accepts (--co, --conf, --config=…). makepkg sources that file as bash
+// before it reads the PKGBUILD, so it is code the gate never saw. This also
+// matches --c, which makepkg itself rejects as ambiguous (check, clean,
+// cleanbuild, config); refusing it here as well is harmless, not a bug.
+func isConfigOption(a string) bool {
+	name, ok := strings.CutPrefix(a, "--")
+	if !ok {
+		return false
+	}
+	name, _, _ = strings.Cut(name, "=")
+	return name != "" && strings.HasPrefix("config", name)
+}
+
+// gatedBuildVars are the makepkg variables pkglint pins for the build: the
+// buildfile, so makepkg builds the file that was gated, and the output
+// directories, so the archive lands where pkglint collects it. makepkg turns
+// any leftover NAME=value or NAME+=value word into an export that runs after
+// its config is loaded and before BUILDFILE is defaulted, so one such word
+// would quietly undo the pin.
+var gatedBuildVars = map[string]bool{
+	"BUILDFILE": true, "BUILDSCRIPT": true,
+	"PKGDEST": true, "BUILDDIR": true, "LOGDEST": true, "SRCDEST": true, "SRCPKGDEST": true,
+}
+
+// envOverride returns the variable a makepkg argument would export, or "". It
+// mirrors makepkg's own test, [_[:alpha:]]*([[:alnum:]_])?(+)=*: a name of
+// underscores, ASCII letters and digits not starting with a digit, then an
+// optional +, then =.
+func envOverride(a string) string {
+	isAlpha := func(c byte) bool { return c == '_' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' }
+	if a == "" || !isAlpha(a[0]) {
+		return ""
+	}
+	i := 1
+	for i < len(a) && (isAlpha(a[i]) || '0' <= a[i] && a[i] <= '9') {
+		i++
+	}
+	name, rest := a[:i], strings.TrimPrefix(a[i:], "+")
+	if !strings.HasPrefix(rest, "=") {
+		return ""
+	}
+	return name
+}
+
+// checkMakepkgArgs refuses the makepkg arguments that would point the build at
+// something pkglint never linted. -p names a different buildfile and -D/--dir
 // a different directory, either of which turns a gated build of one PKGBUILD
-// into an ungated build of another. They are the only two options in makepkg's
+// into an ungated build of another; they are the only two options in makepkg's
 // short set that take a path, so a bundled cluster like -sp is caught too.
-// --dir is refused under any abbreviation (--di, --d), which makepkg's option
-// parser accepts.
+// --config names a makepkg.conf, which makepkg sources as bash before it ever
+// reads the PKGBUILD. And a positional BUILDFILE= word, or one naming an
+// output directory, overrides the environment pkglint pins for the build.
+// The long options are refused under any abbreviation (--di, --co), which
+// makepkg's option parser accepts.
 func checkMakepkgArgs(args []string) error {
 	for _, a := range args {
-		bad := ""
 		switch {
-		case isDirOption(a):
-			bad = a
-		case len(a) > 1 && a[0] == '-' && !strings.HasPrefix(a, "--") && strings.ContainsAny(a, "pD"):
-			bad = a
-		}
-		if bad != "" {
+		case isDirOption(a), len(a) > 1 && a[0] == '-' && !strings.HasPrefix(a, "--") && strings.ContainsAny(a, "pD"):
 			return fmt.Errorf(
 				"makepkg argument %s selects a buildfile or directory other than the one pkglint linted, "+
-					"which would run an unreviewed PKGBUILD; name that path to `pkglint build` instead", bad)
+					"which would run an unreviewed PKGBUILD; name that path to `pkglint build` instead", a)
+		case isConfigOption(a):
+			return fmt.Errorf(
+				"makepkg argument %s loads a makepkg.conf, which makepkg sources as bash before building; "+
+					"pkglint never linted it", a)
+		case gatedBuildVars[envOverride(a)]:
+			return fmt.Errorf(
+				"makepkg argument %s overrides %s, which pkglint pins so the gated PKGBUILD is the one built "+
+					"and its archive is collected; export SRCDEST/BUILDDIR to relocate those instead", a, envOverride(a))
 		}
 	}
 	return nil

@@ -216,7 +216,9 @@ Because that gate decides whether to run code, the PKGBUILD gets no say in it:
   execute is taken on the unsuppressed findings.
 - A file argument must be a `PKGBUILD`, since `makepkg` builds the `PKGBUILD`
   in its working directory regardless of which file pkglint linted.
-- `makepkg`'s `-p` and `-D`/`--dir` are rejected, for the same reason.
+- `makepkg`'s `-p`, `-D`/`--dir` and `--config`, and `BUILDFILE=` or
+  output-directory (`PKGDEST=`, `BUILDDIR=`, …) words, are rejected, for the
+  same reason. `--config` names a file makepkg sources as code.
 
 Because `build` is a verb, a package directory named `./build` is spelled
 `pkglint ./build`.

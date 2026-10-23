@@ -631,7 +631,9 @@ func TestBuildRefusesUnbuiltFile(t *testing.T) {
 }
 
 // TestBuildRefusesBuildfileArgs covers the third route to the same place:
-// makepkg's own -p/-D repoint the build at a file pkglint never saw.
+// makepkg's own -p/-D repoint the build at a file pkglint never saw, --config
+// hands it a makepkg.conf to source, and a positional BUILDFILE= or
+// output-directory word undoes the variables pkglint pins.
 func TestBuildRefusesBuildfileArgs(t *testing.T) {
 	for _, tc := range [][]string{
 		{"build", "testdata/clean", "--", "-p", "PKGBUILD.evil"},
@@ -641,6 +643,18 @@ func TestBuildRefusesBuildfileArgs(t *testing.T) {
 		{"build", "testdata/clean", "--", "--di=/elsewhere"},
 		{"build", "testdata/clean", "--", "--d", "/elsewhere"},
 		{"build", "testdata/clean", "--", "--dir", "/elsewhere"},
+		{"build", "testdata/clean", "--", "--config", "/tmp/evil.conf"},
+		{"build", "testdata/clean", "--", "--config=/tmp/evil.conf"},
+		{"build", "testdata/clean", "--", "--conf=/tmp/evil.conf"},
+		{"build", "testdata/clean", "--", "--co", "/tmp/evil.conf"},
+		{"build", "--makepkg-arg=--config", "--makepkg-arg=/tmp/evil.conf", "testdata/clean"},
+		{"build", "testdata/clean", "--", "BUILDFILE=PKGBUILD.evil"},
+		{"build", "testdata/clean", "--", "BUILDFILE+=.evil"},
+		{"build", "testdata/clean", "--", "-s", "BUILDFILE=PKGBUILD.evil"},
+		{"build", "testdata/clean", "--", "BUILDSCRIPT=PKGBUILD.evil"},
+		{"build", "testdata/clean", "--", "PKGDEST=/elsewhere"},
+		{"build", "testdata/clean", "--", "BUILDDIR=/elsewhere"},
+		{"build", "--makepkg-arg=SRCDEST=/elsewhere", "testdata/clean"},
 	} {
 		seen := stubExec(t, []string{"makepkg"}, dropArchive("goodpkg-2.1.0-1-any.pkg.tar"))
 		var buf bytes.Buffer
@@ -1051,6 +1065,15 @@ func TestBuildPinsBuildfile(t *testing.T) {
 func TestCheckMakepkgArgsAllowsOtherLongOptions(t *testing.T) {
 	if err := checkMakepkgArgs([]string{"--nocheck", "--skippgpcheck", "--", "--needed"}); err != nil {
 		t.Errorf("legitimate options refused: %v", err)
+	}
+}
+
+// --check and --clean share --config's leading c, and CC=/CFLAGS+= are the
+// build variables makepkg documents passing this way; none of them may be
+// caught by the --config or pinned-variable refusals.
+func TestCheckMakepkgArgsAllowsBuildVariables(t *testing.T) {
+	if err := checkMakepkgArgs([]string{"CC=clang", "CFLAGS+= -g", "--check", "--clean", "MAKEFLAGS=-j4"}); err != nil {
+		t.Errorf("legitimate arguments refused: %v", err)
 	}
 }
 

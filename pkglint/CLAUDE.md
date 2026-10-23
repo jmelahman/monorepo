@@ -12,8 +12,9 @@ get the artifact the PB8xx rules inspect: a separately named verb `pkglint
 The gate is the whole justification, so nothing in the analyzed input may weaken
 it: it reads the findings with the file's own `# pkglint: ignore=` directives
 disregarded, a file argument must be the `PKGBUILD` makepkg will actually build,
-and makepkg's `-p`/`-D` are refused. A new way to reach `runCmd` has to answer
-"could a PKGBUILD talk its way through this?" first.
+and makepkg's `-p`/`-D`/`--config` and positional `BUILDFILE=`/output-directory
+overrides are refused. A new way to reach `runCmd` has to answer "could a
+PKGBUILD talk its way through this?" first.
 
 `pkglint build --fix` is the one place a fix reads two files: a PB8xx finding
 comes out of the archive and the remedy is a line of the PKGBUILD. The archive
