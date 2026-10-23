@@ -689,12 +689,18 @@ func checkSourceDomains(ctx *Context) []Finding {
 	if urlHost == "" {
 		return nil
 	}
+	if _, _, lookalike := hostLookalike(urlHost); lookalike {
+		return nil // nothing is "related" to a look-alike; PB309 reports it
+	}
 	var out []Finding
 	for _, e := range ctx.Pkg.Sources() {
 		h := e.Host()
 		// A file:// source has no host: `file://courbi.ttf` is a local file.
 		if h == "" || e.Proto == "file" || sameSite(h, urlHost) {
 			continue
+		}
+		if _, _, lookalike := hostLookalike(hostOf(e.URL)); lookalike {
+			continue // PB309 names what is wrong with it
 		}
 		known := false
 		for _, k := range wellKnownHosts {

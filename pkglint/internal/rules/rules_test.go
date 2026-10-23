@@ -1655,6 +1655,69 @@ build() {
 			})
 		}
 	})
+	t.Run("PB309 look-alike hosts", func(t *testing.T) {
+		pkg := func(url, src string) map[string]string {
+			return map[string]string{"PKGBUILD": pkgbuildWith("pkgname=demo\npkgver=1\npkgrel=1\narch=('x86_64')\n"+
+				"url='"+url+"'\nlicense=('MIT')\nsource=(\""+src+"\")\n"+
+				"sha256sums=('deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef')",
+				"# 日本語 in a comment\npkgdesc='Ünïcode tool'")}
+		}
+		severities := func(files map[string]string) (pb309 []Severity, pb105 int) {
+			for _, f := range lint(t, files) {
+				switch f.RuleID {
+				case "PB309":
+					pb309 = append(pb309, f.Severity)
+				case "PB105":
+					pb105++
+				}
+			}
+			return
+		}
+		const gh = "https://github.com/example/demo"
+		for _, tc := range []struct {
+			name, url, src string
+			want           Severity
+		}{
+			// The pkg-unicode-homograph shape: a Cyrillic і in the source host.
+			{"cyrillic in a source host", gh, "https://gіthub.com/example/demo/archive/v1.tar.gz", Error},
+			{"cyrillic in the url host", "https://gіthub.com/example/demo", gh + "/archive/v1.tar.gz", Error},
+			{"behind name::, VCS, user@ and port", gh, "demo::git+https://me@gіthub.com:443/example/demo.git", Error},
+			{"greek omicron", "https://gοogle.com/demo", gh + "/archive/v1.tar.gz", Error},
+			{"fullwidth", "https://ｇｉｔｈｕｂ.com/example/demo", gh + "/archive/v1.tar.gz", Error},
+			{"zero-width space", "https://git\u200bhub.com/example/demo", gh + "/archive/v1.tar.gz", Error},
+			{"wholly cyrillic", "https://пример.рф/demo", "https://пример.рф/demo-1.tar.gz", Warn},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				got, pb105 := severities(pkg(tc.url, tc.src))
+				if !slices.Contains(got, tc.want) {
+					t.Errorf("PB309 %v, want %v", got, tc.want)
+				}
+				if pb105 != 0 {
+					t.Errorf("PB105 also reported %d times; PB309 already names the host", pb105)
+				}
+			})
+		}
+		// The pkg-unicode-fp shapes: non-ASCII outside a host is not judged.
+		for _, tc := range [][2]string{
+			{"https://café.example/demo", "https://café.example/demo-1.tar.gz"},
+			{"https://example.com/démo", "https://example.com/files/日本語-1.tar.gz"},
+		} {
+			if got, _ := severities(pkg(tc[0], tc[1])); len(got) != 0 {
+				t.Errorf("%s: PB309 %v, want none", tc[0], got)
+			}
+		}
+		// A look-alike host covers the characters in it, not the rest of its
+		// line: an override beside it is still the Error it always was.
+		t.Run("override beside a look-alike host", func(t *testing.T) {
+			var bidi bool
+			for _, f := range lint(t, pkg(gh, "https://пример.рф/demo-1.tar.gz\u202e#")) {
+				bidi = bidi || f.RuleID == "PB309" && strings.Contains(f.Message, "bidirectional")
+			}
+			if !bidi {
+				t.Error("bidi override beside a look-alike host went unreported")
+			}
+		})
+	})
 	t.Run("PB310 anonymized fetches", func(t *testing.T) {
 		build := func(line string) map[string]string {
 			return map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n  "+line+"\n}")}

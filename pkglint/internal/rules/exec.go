@@ -1,9 +1,11 @@
 package rules
 
 import (
+	"fmt"
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
 	"mvdan.cc/sh/v3/syntax"
@@ -87,10 +89,14 @@ var execRules = []Rule{
 	{
 		ID:       "PB309",
 		Name:     "hidden-unicode",
-		Severity: Warn, MaxSeverity: Error, // error for bidi controls, which reorder what you read
+		Severity: Warn, MaxSeverity: Error, // error for bidi controls and mixed-script hosts
 		Doc: "Bidirectional-override and invisible/zero-width characters can make the rendered source " +
 			"differ from what the shell executes (the \"Trojan Source\" class of attacks). A PKGBUILD is " +
-			"ASCII shell; these controls have no legitimate place in it.",
+			"ASCII shell; these controls have no legitimate place in it. The same goes for the host of " +
+			"url= or a source: a label that mixes Latin with Cyrillic, Greek or Armenian look-alikes " +
+			"(gіthub.com with a Cyrillic і), fullwidth letters, or an invisible character is a homograph " +
+			"of a name the reader trusts, and is an error; a label written wholly in another script is " +
+			"reported for review. Non-ASCII text in a URL's path, pkgdesc or a comment is not judged.",
 		Check: checkHiddenUnicode,
 	},
 	{
@@ -315,8 +321,90 @@ func hasNonASCII(b []byte) bool {
 	return false
 }
 
+// confusableScripts are the scripts with letters that render like Latin ones.
+var confusableScripts = []struct {
+	name  string
+	table *unicode.RangeTable
+}{{"Cyrillic", unicode.Cyrillic}, {"Greek", unicode.Greek}, {"Armenian", unicode.Armenian}}
+
+// isFullwidth reports whether r is a fullwidth form of an ASCII character,
+// which IDNA folds back to that character: ｇｉｔｈｕｂ.com is github.com.
+func isFullwidth(r rune) bool { return r >= 0xFF01 && r <= 0xFF5E }
+
+// hostLookalike judges one host for PB309: an error for a label mixing Latin
+// with a confusable script, a fullwidth form, or an invisible or bidi
+// character; a warning for a label written in another script altogether.
+func hostLookalike(host string) (Severity, string, bool) {
+	warn := ""
+	for label := range strings.SplitSeq(host, ".") {
+		if !hasNonASCII([]byte(label)) {
+			continue
+		}
+		latin, other := false, ""
+		for _, r := range label {
+			switch {
+			case bidiControls[r] != "" || invisibleChars[r] != "" || unicode.Is(unicode.Cf, r):
+				return Error, fmt.Sprintf("contains the invisible character U+%04X", r), true
+			case isFullwidth(r):
+				return Error, fmt.Sprintf("spells %q with fullwidth letters, which resolve to ASCII ones", label), true
+			case r < 0x80 && unicode.IsLetter(r), unicode.Is(unicode.Latin, r):
+				latin = true
+			case unicode.IsLetter(r) && other == "":
+				other = "non-Latin"
+				for _, sc := range confusableScripts {
+					if unicode.Is(sc.table, r) {
+						other = sc.name
+					}
+				}
+			}
+		}
+		if latin && other != "" && other != "non-Latin" {
+			return Error, fmt.Sprintf("mixes Latin and %s letters in %q, a look-alike of an ASCII name", other, label), true
+		}
+		if !latin && other != "" && warn == "" {
+			warn = fmt.Sprintf("is written in %s letters (%q); check it is the project's real domain", other, label)
+		}
+	}
+	if warn != "" {
+		return Warn, warn, true
+	}
+	return 0, "", false
+}
+
+// lookalikeHosts reports PB309 for the url= host and every source host.
+func lookalikeHosts(ctx *Context, hosts map[int][]string) []Finding {
+	var out []Finding
+	report := func(what, host string, pos syntax.Pos) {
+		if sev, why, ok := hostLookalike(host); ok {
+			out = append(out, findingAt("PB309", sev, ctx.Pkg.PKGBUILD.Path, pos, "%s host %q %s", what, host, why))
+			if hosts != nil {
+				hosts[int(pos.Line())] = append(hosts[int(pos.Line())], host)
+			}
+		}
+	}
+	if v := ctx.Pkg.Vars["url"]; v != nil {
+		if u, ok := ctx.Pkg.Scalar("url"); ok {
+			report("url", hostOf(u), v.Pos)
+		}
+	}
+	for _, e := range slices.Concat(ctx.Pkg.Sources(), ctx.Pkg.ConditionalSources()) {
+		if !e.Local {
+			report("source", hostOf(e.URL), e.Pos)
+		}
+	}
+	return out
+}
+
 func checkHiddenUnicode(ctx *Context) []Finding {
 	var out []Finding
+	// A host already reported says more than the line-level finding would
+	// about the characters in it — but only about those: the rest of its line
+	// is still scanned, so an override beside a look-alike host keeps its own
+	// finding.
+	hostLines := map[int][]string{}
+	if hasNonASCII(ctx.Pkg.PKGBUILD.Raw) {
+		out = lookalikeHosts(ctx, hostLines)
+	}
 	units := ctx.Pkg.Units()
 	for i := range units {
 		u := &units[i]
@@ -329,6 +417,11 @@ func checkHiddenUnicode(ctx *Context) []Finding {
 			continue
 		}
 		for lineNo, line := range strings.Split(string(u.Raw), "\n") {
+			if u.Path == ctx.Pkg.PKGBUILD.Path {
+				for _, h := range hostLines[lineNo+1] {
+					line = strings.ReplaceAll(line, h, "")
+				}
+			}
 			for _, r := range line {
 				if name, ok := bidiControls[r]; ok {
 					out = append(out, Finding{RuleID: "PB309", Severity: Error,

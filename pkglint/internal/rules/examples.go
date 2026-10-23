@@ -246,11 +246,13 @@ build() { make; }
 package() { make DESTDIR="$pkgdir" install; }`,
 	},
 	"PB309": {
-		Bad: "build() {\n" +
+		Bad: "source=(\"https://gіthub.com/example/foo/archive/v$pkgver.tar.gz\")   # a Cyrillic і\n" +
+			"build() {\n" +
 			"  # the RLO below reverses how the rest of the line renders\n" +
 			"  make ‮install\n" +
 			"}",
-		Good: `build() {
+		Good: `source=("https://github.com/example/foo/archive/v$pkgver.tar.gz")
+build() {
   make install   # plain ASCII, renders exactly as it executes
 }`,
 	},
