@@ -249,6 +249,14 @@ sha256sums=('SKIP')`, "")},
 				"demo.install": "post_install() {\n  curl --socks5-hostname 127.0.0.1:9050 https://example.com/x\n}\n",
 			},
 		},
+		"PB115": {
+			low:  map[string]string{"PKGBUILD": pkgbuildWith("", "source=('https://example.com/other.tar.gz')")},
+			high: map[string]string{"PKGBUILD": pkgbuildWith("", "source=('optimizer')\nsource=('https://example.com/other.tar.gz')")},
+		},
+		"PB116": {
+			low:  map[string]string{"PKGBUILD": pkgbuildWith("", ""), "helper": "\x7fELF\x02\x01\x01\x00"},
+			high: map[string]string{"PKGBUILD": pkgbuildWith("", "build() {\n  ./helper\n}"), "helper": "\x7fELF\x02\x01\x01\x00"},
+		},
 		"PB502": {
 			low: map[string]string{
 				"PKGBUILD":     pkgbuildWith("", "install=demo.install"),
@@ -853,6 +861,125 @@ source=("git+https://example.com/demo.git?signed#tag=v1")
 sha256sums=('SKIP')
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')`, "")})
 	})
+}
+
+func TestDuplicateSourceAssignment(t *testing.T) {
+	const hdr = "pkgname=demo\npkgver=1\npkgrel=1\narch=('x86_64' 'aarch64')\nurl='https://example.com'\nlicense=('MIT')"
+	// pb115 returns the severities PB115 reports for a PKGBUILD body.
+	pb115 := func(body string) []Severity {
+		var got []Severity
+		for _, f := range lint(t, map[string]string{"PKGBUILD": pkgbuildWith(hdr, body+"\nsha256sums=('SKIP')")}) {
+			if f.RuleID == "PB115" {
+				got = append(got, f.Severity)
+			}
+		}
+		return got
+	}
+	for _, tc := range []struct {
+		name, body string
+		want       []Severity
+	}{
+		// The storageexplorer-bin shape: a local decoy above the real array.
+		{"local decoy overwritten", "source=('optimizer')\nsource=('https://example.com/x.tar.gz')", []Severity{Error}},
+		{"url overwritten", "source=('https://example.com/a.tar.gz')\nsource=('https://example.com/b.tar.gz')", []Severity{Warn}},
+		{"earlier += then =", "source+=('local.patch')\nsource=('https://example.com/x.tar.gz')", []Severity{Error}},
+		{"arch array", "source_x86_64=('a.bin')\nsource_x86_64=('https://example.com/b.tar.gz')", []Severity{Error}},
+		{"twice in one branch", "if [[ $_git ]]; then\n  source=('a')\n  source=('https://example.com/b.tar.gz')\nfi", []Severity{Error}},
+		{"later += extends", "source=('https://example.com/x.tar.gz')\nsource+=('fix.patch')", nil},
+		{"self-reference extends", "source=('https://example.com/x.tar.gz')\nsource=(\"${source[@]}\" fix.patch)", nil},
+		{"arch self-reference extends", "source_x86_64=('https://example.com/x.tar.gz')\nsource_x86_64=(fix.patch $source_x86_64)", nil},
+		{"nested branch still judged", "if [[ $a ]]; then\n  if [[ $b ]]; then\n    source=('a')\n    source=('https://example.com/b.tar.gz')\n  fi\nfi", []Severity{Error}},
+		{"branches are alternatives", "if [[ $_git ]]; then\n  source=('git+https://example.com/x.git')\nelse\n  source=('https://example.com/x.tar.gz')\nfi", nil},
+		{"case arms are alternatives", "case $_flavor in\n  a) source=('a.patch') ;;\n  *) source=('https://example.com/x.tar.gz') ;;\nesac", nil},
+		{"different arrays", "source=('https://example.com/x.tar.gz')\nsource_aarch64=('https://example.com/y.tar.gz')", nil},
+		{"undeclared arch is not a source array", "source_riscv64=('a')\nsource_riscv64=('b')", nil},
+		{"function bodies do not count", "build() {\n  source=(a)\n  source=(b)\n}", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := pb115(tc.body); !slices.Equal(got, tc.want) {
+				t.Errorf("PB115 %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCommittedBinary(t *testing.T) {
+	const elf = "\x7fELF\x02\x01\x01\x00 the rest of a binary"
+	pb116 := func(files map[string]string) []Severity {
+		var got []Severity
+		for _, f := range lint(t, files) {
+			if f.RuleID == "PB116" {
+				got = append(got, f.Severity)
+			}
+		}
+		return got
+	}
+	for _, tc := range []struct {
+		name  string
+		files map[string]string
+		want  []Severity
+	}{
+		{"committed", map[string]string{"PKGBUILD": pkgbuildWith("", ""), "helper": elf}, []Severity{Error}},
+		{"committed as a local source", map[string]string{"PKGBUILD": pkgbuildWith("", "source+=('helper')\nsha256sums+=('SKIP')"), "helper": elf}, []Severity{Error}},
+		{"run by path", map[string]string{"PKGBUILD": pkgbuildWith("", "build() {\n  ./helper-bin --setup\n}"), "helper-bin": elf}, []Severity{Critical}},
+		{"run from srcdir", map[string]string{"PKGBUILD": pkgbuildWith("", "build() {\n  \"$srcdir/helper\"\n}"), "helper": elf}, []Severity{Critical}},
+		{"a -bin package's download", map[string]string{"PKGBUILD": pkgbuildWith("", "source+=('tool::https://example.com/tool-linux')\nsha256sums+=('SKIP')"), "tool": elf}, nil},
+		{"named for a URL's basename", map[string]string{"PKGBUILD": pkgbuildWith("", "source+=('https://example.com/tool-linux')\nsha256sums+=('SKIP')"), "tool-linux": elf}, nil},
+		{"not ELF", map[string]string{"PKGBUILD": pkgbuildWith("", ""), "notes": "ELF, but no magic", "tiny": "\x7fE"}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := pb116(tc.files); !slices.Equal(got, tc.want) {
+				t.Errorf("PB116 %v, want %v", got, tc.want)
+			}
+		})
+	}
+	t.Run("symlinks are not followed", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(pkgbuildWith("", "")), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		target := filepath.Join(t.TempDir(), "real")
+		if err := os.WriteFile(target, []byte(elf), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, filepath.Join(dir, "helper")); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(filepath.Join(dir, "src"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "src", "built"), []byte(elf), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		pkg, err := pkgbuild.Load(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ids := ruleIDs(Run(pkg, nil)); ids["PB116"] != 0 {
+			t.Errorf("PB116 followed a symlink or descended into src/: %v", ids)
+		}
+	})
+}
+
+func TestSkippedChecksumOnOpenReviewPatch(t *testing.T) {
+	for url, want := range map[string]bool{
+		"https://gitlab.com/a/b/-/merge_requests/12.patch": true,
+		"https://github.com/a/b/pull/7.diff":               true,
+		"https://gitea.example.com/a/b/pulls/7.patch":      true,
+		"https://github.com/a/b/commit/3f2b1a0c.patch":     false,
+	} {
+		var msg string
+		for _, f := range lint(t, map[string]string{"PKGBUILD": pkgbuildWith("", "source+=('"+url+"')\nsha256sums+=('SKIP')")}) {
+			if f.RuleID == "PB101" && strings.Contains(f.Message, url) {
+				msg = f.Message
+			}
+		}
+		if msg == "" {
+			t.Errorf("%s: no PB101", url)
+		} else if got := strings.Contains(msg, "force-pushed"); got != want {
+			t.Errorf("%s: names the force-push risk %v, want %v: %s", url, got, want, msg)
+		}
+	}
 }
 
 func TestHermeticRules(t *testing.T) {

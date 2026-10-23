@@ -89,6 +89,22 @@ validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')   # verifies nothing`,
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' 'SKIP')
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')`,
 	},
+	"PB115": {
+		Bad: `source=('optimizer')   # what a reviewer reads first
+sha256sums=('SKIP')
+source=("https://example.com/foo-$pkgver.tar.gz")   # what makepkg builds
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Good: `source=("https://example.com/foo-$pkgver.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+	},
+	"PB116": {
+		Bad: `# helper, an ELF binary, is committed to the AUR repository beside this file
+build() {
+  ./helper --prepare
+}`,
+		Good: `source=("https://example.com/helper-$pkgver.tar.gz")   # built from source, checksummed
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+	},
 	"PB201": {
 		Bad: `build() {
   curl -O https://example.com/extra-asset.bin

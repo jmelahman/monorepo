@@ -33,6 +33,11 @@ var exampleExtras = map[string]struct{ bad, good map[string]string }{
 		// the scriptlet does ship next to it, so put it there.
 		good: map[string]string{"foo.install": "# nothing to do at install time\n"},
 	},
+	"PB116": {
+		// Bad says helper is an ELF binary committed beside the PKGBUILD; put
+		// one there.
+		bad: map[string]string{"helper": "\x7fELF\x02\x01\x01\x00"},
+	},
 	"PB601": {
 		// Bad quotes the stale .SRCINFO inline ("pkgver = 1.3.0"); write it out
 		// so the drift is real. Good is the regeneration command, so its

@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -9,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
+	"mvdan.cc/sh/v3/syntax"
 )
 
 // PB1xx: source integrity.
@@ -174,6 +177,222 @@ var integrityRules = []Rule{
 			"paste or a digest computed with a different algorithm than the array names.",
 		Check: checkMalformedChecksums,
 	},
+	{
+		ID:       "PB115",
+		Name:     "duplicate-source-assignment",
+		Severity: Warn, MaxSeverity: Error, // error when the overwritten array named a local file
+		Doc: "A second plain `source=` replaces the first: makepkg only ever reads the last one, " +
+			"and so does every checksum. A reviewer reading from the top, though, sees the first — " +
+			"which is how storageexplorer-bin staged a decoy `source=('optimizer')` above the array " +
+			"that really built it. Write one array, and extend it with `+=`. Assignments in different " +
+			"branches of a top-level `if` or `case` are alternatives, not overwrites, and are not reported.",
+		Check: checkDuplicateSourceAssignment,
+	},
+	{
+		ID:       "PB116",
+		Name:     "committed-binary",
+		Severity: Error, MaxSeverity: Critical, // critical when the PKGBUILD runs it
+		Doc: "An ELF executable committed next to the PKGBUILD is code nobody can review: it has no " +
+			"upstream, no checksum against anything published, and no source. A `-bin` package's " +
+			"binaries are downloaded through source= and are not reported; one sitting in the AUR " +
+			"repository itself is, and running it from build() or package() is critical.",
+		Check: checkCommittedBinary,
+	},
+}
+
+// sourceArrayName reports whether name is an array makepkg fetches: source,
+// or source_<arch> for a declared architecture.
+func (ctx *Context) sourceArrayName(name string) bool {
+	if name == "source" {
+		return true
+	}
+	arch, ok := strings.CutPrefix(name, "source_")
+	if !ok {
+		return false
+	}
+	v := ctx.Pkg.Vars["arch"]
+	return v != nil && slices.ContainsFunc(v.Values, func(a string) bool { return ctx.Pkg.Expand(a) == arch })
+}
+
+// localSourceElem returns the local file an array element names, or "" for a
+// URL or anything pkglint cannot read.
+func (ctx *Context) localSourceElem(w *syntax.Word) string {
+	s, dyn := pkgbuild.RenderWord(w, ctx.vars)
+	if dyn || hasVarRef(s) {
+		return ""
+	}
+	if _, after, ok := strings.Cut(s, "::"); ok {
+		s = after
+	}
+	if s == "" || strings.Contains(s, "://") {
+		return ""
+	}
+	return s
+}
+
+// refersTo reports whether the assignment's value expands name itself.
+func refersTo(as *syntax.Assign, name string) bool {
+	found := false
+	syntax.Walk(as, func(n syntax.Node) bool {
+		if pe, ok := n.(*syntax.ParamExp); ok && pe.Param != nil && pe.Param.Value == name && n != as.Name {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+func checkDuplicateSourceAssignment(ctx *Context) []Finding {
+	f := ctx.Pkg.PKGBUILD.File
+	if f == nil {
+		return nil
+	}
+	var out []Finding
+	// Each statement list is judged on its own: two branches of an `if` are
+	// alternatives, and only assignments sharing one list overwrite each other.
+	scan := func(stmts []*syntax.Stmt) {
+		type prior struct {
+			line  uint
+			local string
+		}
+		seen := map[string]*prior{}
+		for _, st := range stmts {
+			var assigns []*syntax.Assign
+			switch x := st.Cmd.(type) {
+			case *syntax.CallExpr:
+				if len(x.Args) == 0 {
+					assigns = x.Assigns
+				}
+			case *syntax.DeclClause:
+				assigns = x.Args
+			}
+			for _, as := range assigns {
+				if as.Name == nil || as.Naked || as.Index != nil || !ctx.sourceArrayName(as.Name.Value) {
+					continue
+				}
+				name := as.Name.Value
+				local := ""
+				if as.Array != nil {
+					for _, el := range as.Array.Elems {
+						if local = ctx.localSourceElem(el.Value); local != "" {
+							break
+						}
+					}
+				} else if as.Value != nil {
+					local = ctx.localSourceElem(as.Value)
+				}
+				p := seen[name]
+				if as.Append || refersTo(as, name) {
+					// `source=("${source[@]}" x.patch)` keeps what it replaces.
+					if p == nil {
+						p = &prior{line: as.Pos().Line()}
+						seen[name] = p
+					}
+					if p.local == "" {
+						p.local = local
+					}
+					continue
+				}
+				if p != nil {
+					sev, msg := Warn, "%s= replaces the array assigned on line %d; makepkg only ever reads this one, a reviewer reads that one first"
+					args := []any{name, p.line}
+					if p.local != "" {
+						sev = Error
+						msg += ", and the overwritten array named the local file %q, a decoy that never builds anything"
+						args = append(args, p.local)
+					}
+					out = append(out, findingAt("PB115", sev, ctx.Pkg.PKGBUILD.Path, as.Pos(), msg, args...))
+				}
+				seen[name] = &prior{line: as.Pos().Line(), local: local}
+			}
+		}
+	}
+	scan(f.Stmts)
+	syntax.Walk(f, func(n syntax.Node) bool {
+		switch x := n.(type) {
+		case *syntax.FuncDecl, *syntax.Subshell, *syntax.CmdSubst, *syntax.ProcSubst:
+			return false // nothing assigned there reaches makepkg's metadata
+		case *syntax.IfClause:
+			scan(x.Then)
+		case *syntax.CaseItem:
+			scan(x.Stmts)
+		case *syntax.Block:
+			scan(x.Stmts)
+		case *syntax.ForClause:
+			scan(x.Do)
+		case *syntax.WhileClause:
+			scan(x.Do)
+		}
+		return true
+	})
+	return out
+}
+
+// elfMagic opens every ELF file.
+var elfMagic = []byte{0x7f, 'E', 'L', 'F'}
+
+func checkCommittedBinary(ctx *Context) []Finding {
+	if ctx.Pkg.Dir == "" {
+		return nil
+	}
+	entries, err := os.ReadDir(ctx.Pkg.Dir)
+	if err != nil {
+		return nil
+	}
+	fetched := map[string]bool{}
+	for _, e := range slices.Concat(ctx.Pkg.Sources(), ctx.Pkg.ConditionalSources()) {
+		if !e.Local {
+			fetched[effectiveFilename(e)] = true
+		}
+	}
+	var out []Finding
+	for _, de := range entries {
+		name := de.Name()
+		// ReadDir's type comes from lstat, so a symlink is never a regular
+		// file here and nothing it points at is opened.
+		if !de.Type().IsRegular() || fetched[name] || !startsWithELF(filepath.Join(ctx.Pkg.Dir, name)) {
+			continue
+		}
+		if c, ok := ctx.runsLocalFile(name); ok {
+			out = append(out, c.finding("PB116", Critical,
+				"%s runs %q, an ELF executable committed beside the PKGBUILD with no source anyone can review", c.RawName, name))
+			continue
+		}
+		out = append(out, varFinding(ctx, "PB116", Error, []string{"source", "pkgname"},
+			"%q is an ELF executable committed beside the PKGBUILD, not fetched through source=: there is no source to review", name))
+	}
+	return out
+}
+
+// startsWithELF reports whether the regular file at path begins with the ELF
+// magic. Only those four bytes are read, and a path that is not a regular
+// file by lstat is not opened at all.
+func startsWithELF(path string) bool {
+	fi, err := os.Lstat(path)
+	if err != nil || !fi.Mode().IsRegular() || fi.Size() < int64(len(elfMagic)) {
+		return false
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	head := make([]byte, len(elfMagic))
+	if _, err := io.ReadFull(f, head); err != nil {
+		return false
+	}
+	return bytes.Equal(head, elfMagic)
+}
+
+// runsLocalFile returns a PKGBUILD command that executes name by path —
+// `./helper`, `"$srcdir/helper"` — rather than looking a command up on PATH.
+func (ctx *Context) runsLocalFile(name string) (Command, bool) {
+	for _, c := range ctx.Commands() {
+		if !c.Unit.Scriptlet && strings.Contains(c.RawName, "/") && basename(unescapeName(c.RawName)) == name {
+			return c, true
+		}
+	}
+	return Command{}, false
 }
 
 // signatureExts are the filename extensions makepkg's check_pgpsigs treats as
@@ -430,6 +649,10 @@ func checkChecksumCounts(ctx *Context) []Finding {
 
 func isSkip(s string) bool { return strings.EqualFold(s, "SKIP") }
 
+// openReviewPatch matches the diff of a GitLab merge request or a GitHub or
+// Gitea pull request, which follows the branch as it is pushed.
+var openReviewPatch = regexp.MustCompile(`/(?:-/merge_requests|pulls?)/\d+\.(?:patch|diff)(?:[?#]|$)`)
+
 func checkSkippedChecksums(ctx *Context) []Finding {
 	// Filenames covered by a detached signature: those artifacts are verified
 	// by the signature (SKIP is the convention), and the signature file itself
@@ -460,8 +683,12 @@ func checkSkippedChecksums(ctx *Context) []Finding {
 			}
 		}
 		if len(sums) == 0 || allSkip {
-			out = append(out, findingAt("PB101", Error, ctx.Pkg.PKGBUILD.Path, e.Pos,
-				"remote source %q has no checksum (SKIP): the download is never verified", e.Raw))
+			msg := "remote source %q has no checksum (SKIP): the download is never verified"
+			if openReviewPatch.MatchString(e.URL) {
+				msg += "; it is an open merge or pull request's diff, which can be force-pushed after review, " +
+					"so pin the merged commit's /commit/<sha>.patch and checksum that instead"
+			}
+			out = append(out, findingAt("PB101", Error, ctx.Pkg.PKGBUILD.Path, e.Pos, msg, e.Raw))
 		}
 	}
 	return out
