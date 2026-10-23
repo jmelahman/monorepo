@@ -52,17 +52,18 @@ _ollama_models() {
 	_wanted models expl 'model' compadd -a models
 }
 
-# Ollama doesn't ship a completion script, but as a Cobra CLI it still answers
-# the hidden `__complete` command. Wrap it, following Cobra's own zsh script:
-# the last output line is ":<directive>", a bitmask of ShellCompDirective flags.
-_ollama() {
+# Every Cobra CLI answers the hidden `__complete` command, even one that ships no
+# completion script or disables the `completion` subcommand (pkglint). Wrap it,
+# following Cobra's own zsh script: the last output line is ":<directive>", a
+# bitmask of ShellCompDirective flags.
+_cobra() {
 	local -a lines completions
 	local -i directive
 	local line
 
 	# The last word is the (possibly empty) one being completed. Cobra needs the
 	# empty string to be passed explicitly, hence the (@) and the quotes.
-	lines=("${(@f)$(ollama __complete "${(@)words[2,CURRENT]}" 2>/dev/null)}")
+	lines=("${(@f)$($service __complete "${(@)words[2,CURRENT]}" 2>/dev/null)}")
 	((${#lines} > 0)) || return 1
 	directive=${lines[-1]#:}
 	lines=("${(@)lines[1,-2]}")
@@ -93,16 +94,25 @@ _ollama() {
 	((directive & 32)) && describe_flags+=(-V) # ShellCompDirectiveKeepOrder
 
 	if ((${#completions} > 0)); then
-		_describe "${describe_flags[@]}" 'ollama' completions "${compadd_opts[@]}" && return 0
+		_describe "${describe_flags[@]}" "$service" completions "${compadd_opts[@]}" && return 0
 	fi
 
-	_ollama_models && return 0
+	[[ $service == ollama ]] && _ollama_models && return 0
 
 	# ShellCompDirectiveNoFileComp: don't fall back to files
 	((directive & 4)) && return 1
 	_files
 }
-compdef _ollama ollama
+
+# Cobra CLIs to complete through `_cobra`. One already covered by a script on
+# $fpath (packaged, or tracked in ~/.zsh/completions) keeps that script.
+() {
+	local tool
+	for tool in ollama pkglint git-orchard kanban work cycle cycle-lights vinder \
+		local-preview nature-sounds agilecbt connections-ssh; do
+		(($+commands[$tool])) && ((! $+_comps[$tool])) && compdef _cobra $tool
+	done
+}
 
 # Options
 setopt autocd       # cd into directories without typing 'cd'
