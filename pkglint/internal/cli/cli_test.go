@@ -1224,7 +1224,16 @@ func TestResolveGitRefAnnotatedTagRealGit(t *testing.T) {
 		t.Skip("git not installed")
 	}
 	dir := t.TempDir()
-	env := append(os.Environ(),
+	// Under a git hook the environment carries GIT_DIR, GIT_INDEX_FILE and
+	// friends pointing at the repository being committed to; inherited, they
+	// would aim this scratch repository's commit and tag at the real one.
+	var env []string
+	for _, kv := range os.Environ() {
+		if !strings.HasPrefix(kv, "GIT_") {
+			env = append(env, kv)
+		}
+	}
+	env = append(env,
 		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
 		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@e",
 		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@e")

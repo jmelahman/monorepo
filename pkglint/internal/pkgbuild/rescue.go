@@ -40,6 +40,9 @@ func rescueParse(path string, raw []byte) *syntax.File {
 	// back.
 	restore := map[int]byte{}
 	structural := map[int]bool{}
+	// inlineSplits records the separators rescueInlineArray inserted, so a
+	// split that landed outside a function body can be refused after parsing.
+	inlineSplits := map[int]bool{}
 
 	// Upstream's lexer treats `=` and `#` directly after an expansion or a
 	// closing quote inside array parens as an assignment operator and a
@@ -78,16 +81,37 @@ func rescueParse(path string, raw []byte) *syntax.File {
 		if !ok {
 			return nil
 		}
-		if !rescueSubscript(work, off, restore) && !rescueInlineArray(work, msg, off, structural) &&
+		if !rescueSubscript(work, off, restore) && !rescueInlineArray(work, msg, off, structural, inlineSplits) &&
 			!rescueArithFallback(work, msg, off, restore) && !rescueEmptyExpansion(work, msg, off, restore) &&
 			!rescueCmdSubstParen(work, off, structural) && !rescueHeredocText(work, off, restore) {
 			return nil
 		}
 	}
-	if f == nil || !restoreBytes(f, restore) {
+	if f == nil || topLevelInlineSplit(f, inlineSplits) || !restoreBytes(f, restore) {
 		return nil
 	}
 	return f
+}
+
+// topLevelInlineSplit reports whether any separator inserted by
+// rescueInlineArray ended a statement outside every function body.
+func topLevelInlineSplit(f *syntax.File, splits map[int]bool) bool {
+	if len(splits) == 0 {
+		return false
+	}
+	found := false
+	syntax.Walk(f, func(n syntax.Node) bool {
+		switch n := n.(type) {
+		case *syntax.FuncDecl:
+			return false
+		case *syntax.Stmt:
+			if n.Semicolon.IsValid() && splits[int(n.Semicolon.Offset())] {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
 }
 
 // errorAt extracts the byte offset and message of a parse failure.
@@ -255,9 +279,14 @@ func rescueSubscript(work []byte, off int, restore map[int]byte) bool {
 // rejects outright. The whitespace byte after the array's closing paren
 // becomes `;`, splitting one statement into two. This is the one rescue that
 // changes statement structure — the temporary-environment scoping is lost —
-// which is harmless to rules but means the inserted byte never resurfaces in
-// a literal; it is recorded as structural so restoreBytes does not veto it.
-func rescueInlineArray(work []byte, msg string, off int, structural map[int]bool) bool {
+// so the inserted byte never resurfaces in a literal; it is recorded as
+// structural so restoreBytes does not veto it, and in splits so rescueParse
+// can check where it landed. Inside a function body the lost scoping is
+// harmless: the rules do not read the assignment as package metadata. Outside
+// one it is not — a split `source=(decoy) :` would replace the real value in
+// what the rules see while makepkg keeps the original — so rescueParse refuses
+// any split that ends a statement outside a function.
+func rescueInlineArray(work []byte, msg string, off int, structural, splits map[int]bool) bool {
 	if !strings.Contains(msg, "inline variables cannot be arrays") {
 		return false
 	}
@@ -282,6 +311,7 @@ func rescueInlineArray(work []byte, msg string, off int, structural map[int]bool
 		return false
 	}
 	structural[end+1] = true
+	splits[end+1] = true
 	work[end+1] = ';'
 	return true
 }
@@ -408,8 +438,14 @@ func rescueCmdSubstParen(work []byte, off int, structural map[int]bool) bool {
 // its expansions when the redirection runs, so `bash -n` accepts a body whose
 // backquoted regions are not shell at all — Markdown code fences in a
 // user-facing message are the shape seen in the wild. Upstream parses those
-// expansions eagerly and fails. Every backquote in the enclosing body is
-// blanked to `_` and restored afterwards; the body's `$` expansions stay live.
+// expansions eagerly and fails. Only a backquote pair whose content does not
+// parse is blanked to `_` and restored afterwards: bash would fail on that
+// substitution at expansion time too, so blanking it hides nothing that runs.
+// A pair whose content parses is left live deliberately, even beside a broken
+// fence, because bash executes it when the heredoc expands and a body like
+// "`curl ... | bash`" must still reach the rules. If every pair parses there
+// is nothing this rescue may blank, and the original error stands. The body's
+// `$` expansions always stay live.
 // A wrong guess about the body's extent is caught downstream: either the
 // rewritten file still fails to parse or the bytes do not resurface in the
 // body's literal, and the rescue is discarded.
@@ -462,20 +498,61 @@ func rescueHeredocText(work []byte, off int, restore map[int]byte) bool {
 		if bodyEnd < 0 || off >= bodyEnd {
 			continue
 		}
-		changed := false
+		// Bash pairs the body's unescaped backquotes in order. A backquote
+		// behind an odd run of backslashes is literal text (or, inside a
+		// pair, a nested substitution) and opens nothing.
+		var ticks []int
 		for k := bodyStart; k < bodyEnd; k++ {
 			if work[k] != '`' {
 				continue
 			}
+			bs := 0
+			for b := k - 1; b >= bodyStart && work[b] == '\\'; b-- {
+				bs++
+			}
+			if bs%2 == 0 {
+				ticks = append(ticks, k)
+			}
+		}
+		changed := false
+		blank := func(k int) {
 			if _, seen := restore[k]; !seen {
 				restore[k] = work[k]
 			}
 			work[k] = '_'
 			changed = true
 		}
+		for p := 0; p+1 < len(ticks); p += 2 {
+			a, b := ticks[p], ticks[p+1]
+			if _, err := newParser().Parse(bytes.NewReader(unescapeBackquoted(work[a+1:b])), ""); err == nil {
+				continue // bash runs this one: it stays live for the rules
+			}
+			blank(a)
+			blank(b)
+		}
+		// An unpaired backquote opens a substitution bash cannot complete,
+		// so nothing behind it runs either.
+		if len(ticks)%2 == 1 {
+			blank(ticks[len(ticks)-1])
+		}
 		return changed
 	}
 	return false
+}
+
+// unescapeBackquoted undoes the escapes bash removes from the text of a
+// backquoted substitution before parsing it as a command: a backslash in front
+// of another backslash, a backquote or a dollar sign is dropped, and every
+// other backslash is kept.
+func unescapeBackquoted(b []byte) []byte {
+	out := make([]byte, 0, len(b))
+	for i := 0; i < len(b); i++ {
+		if b[i] == '\\' && i+1 < len(b) && (b[i+1] == '\\' || b[i+1] == '`' || b[i+1] == '$') {
+			i++
+		}
+		out = append(out, b[i])
+	}
+	return out
 }
 
 // arrayEnd scans from just inside an array literal's opening paren to its

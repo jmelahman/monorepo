@@ -741,17 +741,26 @@ fi
 			t.Errorf("Sources() = %+v, want empty", s)
 		}
 	})
-	t.Run("ignores function bodies, subshells and scoped commands", func(t *testing.T) {
+	t.Run("ignores function bodies and subshells", func(t *testing.T) {
 		pkg := loadPKGBUILD(t, `pkgname=demo
 arch=('x86_64')
 build() {
   source=("http://example.com/a.tar.gz")
 }
 ( source=("http://example.com/b.tar.gz") )
-source=("http://example.com/c.tar.gz") make
 `)
 		if got := pkg.ConditionalSources(); len(got) != 0 {
 			t.Errorf("got %+v, want none", got)
+		}
+	})
+	// A top-level `source=(...) cmd` scopes the array to cmd's temporary
+	// environment, which upstream cannot parse. The rescue refuses to split
+	// it outside a function, since the split would record a decoy as the
+	// real source=, so the file reports its parse error instead.
+	t.Run("scoped top-level command is a parse error", func(t *testing.T) {
+		src := "pkgname=demo\narch=('x86_64')\nsource=(\"http://example.com/c.tar.gz\") make\n"
+		if _, err := parseUnit("PKGBUILD", []byte(src), false); err == nil {
+			t.Fatalf("parseUnit accepted %q; want the original parse error", src)
 		}
 	})
 	t.Run("skips an arch suffix no arch declares", func(t *testing.T) {
