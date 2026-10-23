@@ -686,8 +686,16 @@ func scanFailed(m metaPackage, prev map[string]stateRecord, res siteResult, err 
 // it would let a version nobody can grade keep the last one's badge forever.
 // The record is keyed on this LastModified and the rule fingerprint, so the
 // base is not fetched again until it changes upstream or the rules do.
-func scanRefused(m metaPackage, res siteResult, err error) (siteResult, *stateRecord, error) {
-	res.Grade, res.Err = "?", err.Error()
+//
+// The prior record's fingerprint is carried forward: a version nobody can
+// grade has no sources to compare, so the last graded one stays the baseline
+// the next good version's drift is measured against. A zero fingerprint here
+// would read as a first sighting and let one unparseable push launder a
+// checksum change. The cache prefix is cut from the reason, which is
+// published in state.jsonl; scanError still strips the rest for display.
+func scanRefused(m metaPackage, cache string, prev map[string]stateRecord, res siteResult, err error) (siteResult, *stateRecord, error) {
+	res.Grade, res.Err = "?", strings.ReplaceAll(err.Error(), cache+string(filepath.Separator), "")
+	prior, _ := priorRecord(prev, m)
 	return res, &stateRecord{
 		Base:         m.PackageBase,
 		Repo:         m.repo(),
@@ -695,6 +703,7 @@ func scanRefused(m metaPackage, res siteResult, err error) (siteResult, *stateRe
 		Grade:        res.Grade,
 		Findings:     []rules.Finding{},
 		Err:          res.Err,
+		Fingerprint:  prior.Fingerprint,
 		Rules:        rulesFingerprint(),
 	}, err
 }
@@ -718,7 +727,7 @@ func scanOne(m metaPackage, cache string, prev map[string]stateRecord) (siteResu
 	if err != nil {
 		log.Printf("scan %s: %v", m.PackageBase, err)
 		if errors.Is(err, errSnapshotRefused) {
-			return scanRefused(m, res, err)
+			return scanRefused(m, cache, prev, res, err)
 		}
 		return scanFailed(m, prev, res, err)
 	}
@@ -726,7 +735,7 @@ func scanOne(m metaPackage, cache string, prev map[string]stateRecord) (siteResu
 	if err != nil {
 		log.Printf("scan %s: %v", m.PackageBase, err)
 		if isParseFailure(err) {
-			return scanRefused(m, res, err)
+			return scanRefused(m, cache, prev, res, err)
 		}
 		return scanFailed(m, prev, res, err)
 	}

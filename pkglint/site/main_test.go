@@ -1114,6 +1114,9 @@ func TestScanAllRecordsDeterministicFailure(t *testing.T) {
 			if rec.LastModified != 2000 || rec.Err == "" || rec.Rules != rulesFingerprint() || rec.Grade != "?" {
 				t.Errorf("refusal not persisted as a verdict on the new snapshot: %+v", rec)
 			}
+			if strings.Contains(rec.Err, cache) {
+				t.Errorf("persisted err %q names the cache directory", rec.Err)
+			}
 
 			before := hits.Load()
 			again, _ := scanAll(seed, cache, 1, 0, next, time.Time{}, nil)
@@ -1124,6 +1127,42 @@ func TestScanAllRecordsDeterministicFailure(t *testing.T) {
 				t.Errorf("second run = %q (err %q), want \"?\" (err %q)", again[0].Grade, again[0].Err, r.Err)
 			}
 		})
+	}
+}
+
+// TestScanOneDriftSurvivesRefusedVersion pins that an ungradeable version
+// between two good ones does not reset the drift baseline: the checksum
+// change from v1 to v3 is still reported when v2 failed to parse.
+func TestScanOneDriftSurvivesRefusedVersion(t *testing.T) {
+	cache := t.TempDir()
+	write := func(lm int64, body string) {
+		t.Helper()
+		dir := filepath.Join(cache, "snapshots", fmt.Sprintf("demo@%d", lm))
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	good := func(sum string) string {
+		return "pkgname=demo\npkgver=1.0\npkgrel=1\narch=('any')\n" +
+			"source=('https://example.com/demo-1.0.tar.gz')\nsha256sums=('" + strings.Repeat(sum, 64) + "')\n"
+	}
+	write(1000, good("a"))
+	write(2000, "pkgname=demo\nif then\n")
+	write(3000, good("b"))
+
+	prev := map[string]stateRecord{}
+	for _, lm := range []int64{1000, 2000, 3000} {
+		res, rec, _ := scanOne(metaPackage{PackageBase: "demo", LastModified: lm}, cache, prev)
+		if rec == nil {
+			t.Fatalf("version %d was not persisted", lm)
+		}
+		prev["demo"] = *rec
+		if lm == 3000 && len(res.Drift) == 0 {
+			t.Errorf("checksum change across a refused version reported no drift")
+		}
 	}
 }
 
