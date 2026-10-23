@@ -1064,6 +1064,9 @@ func literalWord(w *syntax.Word, inner bool) (string, bool) {
 
 func checkDecodeExec(ctx *Context) []Finding {
 	return ctx.checkPipeInto(func(c Command) bool {
+		if c.Name == "printf" || c.Name == "echo" {
+			return printsEscapedText(c)
+		}
 		if !decoders[c.Name] {
 			return false
 		}
@@ -1079,6 +1082,72 @@ func checkDecodeExec(ctx *Context) []Finding {
 		}
 		return true
 	}, "PB303", "decoded data is piped into %s: embedded payload execution")
+}
+
+// printsEscapedText reports whether a printf, or an echo -e, spells text
+// out in byte escapes: `printf '\x62\x75\x6e' | bash` is base64 by other means.
+// Only an escape that decodes to a letter or digit counts — the ESC of a
+// colour code (`\033[1m`) is not text anyone needed to hide.
+func printsEscapedText(c Command) bool {
+	args := c.Args
+	echo := c.Name == "echo"
+	if echo {
+		interp := false
+		for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' &&
+			strings.Trim(args[0][1:], "neE") == "" {
+			// The last -e or -E wins; a cluster with neither (-n) leaves it be.
+			if e, E := strings.LastIndexByte(args[0], 'e'), strings.LastIndexByte(args[0], 'E'); e != E {
+				interp = e > E
+			}
+			args = args[1:]
+		}
+		if !interp {
+			return false
+		}
+	}
+	return slices.ContainsFunc(args, func(a string) bool { return escapeDecodesAlnum(a, echo) })
+}
+
+// escapeDecodesAlnum reports whether s holds a \xHH, \uHHHH, \UHHHHHHHH or
+// octal escape, as printf (\NNN) or echo -e (\0NNN) reads one, naming a
+// letter or digit.
+func escapeDecodesAlnum(s string, echo bool) bool {
+	isAlnum := func(b int) bool {
+		return b >= '0' && b <= '9' || b >= 'A' && b <= 'Z' || b >= 'a' && b <= 'z'
+	}
+	for i := 0; i+1 < len(s); i++ {
+		if s[i] != '\\' {
+			continue
+		}
+		j, base, width := i+1, 8, 3
+		switch {
+		case s[j] == '\\':
+			i++ // an escaped backslash: what follows is literal
+			continue
+		case s[j] == 'x':
+			j, base, width = j+1, 16, 2
+		case s[j] == 'u':
+			j, base, width = j+1, 16, 4
+		case s[j] == 'U':
+			j, base, width = j+1, 16, 8
+		case echo && s[j] == '0':
+			j++ // echo -e's octal escapes carry a leading 0
+		case echo || s[j] < '0' || s[j] > '7':
+			continue
+		}
+		v, n := 0, 0
+		for ; n < width && j+n < len(s); n++ {
+			d := strings.IndexByte("0123456789abcdef", s[j+n]|0x20)
+			if d < 0 || d >= base {
+				break
+			}
+			v = v*base + d
+		}
+		if n > 0 && isAlnum(v) {
+			return true
+		}
+	}
+	return false
 }
 
 func checkDownloadExec(ctx *Context) []Finding {

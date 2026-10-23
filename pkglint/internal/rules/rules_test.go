@@ -1648,6 +1648,46 @@ build() {
 			})
 		}
 	})
+	t.Run("PB303 printf and echo -e spelling text in escapes", func(t *testing.T) {
+		build := func(line string) map[string]string {
+			return map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n  "+line+"\n}")}
+		}
+		for _, line := range []string{
+			`printf '\x62\x75\x6e' | bash`, // the pkg-printf shape
+			`printf "\142\165\156" | sh`,
+			`echo -e '\x62\x61\x73\x68' | sh`,
+			`echo -ne '\0142' | sh`,
+			`echo -e -n '\x63\x75\x72\x6c' | sh`, // a later -n leaves -e in force
+			`printf '\u0063\u0075\u0072\u006c' | sh`,
+			`echo -e '\U00000062' | sh`,
+		} {
+			for _, f := range lint(t, build(line)) {
+				if f.RuleID == "PB303" && f.Severity != Critical {
+					t.Errorf("%s: PB303 at %v, want critical", line, f.Severity)
+				}
+			}
+			expectRule(t, "PB303", build(line))
+		}
+		for _, line := range []string{
+			`printf '\033[1m%s\033[0m\n' hi | bash`, // a colour code decodes to no text
+			`echo '\x62' | sh`,                      // without -e echo prints the backslash
+			`echo -E '\x62' | sh`,
+			`echo -e -E '\x62' | sh`,
+			`printf '%s\n' 'echo hi' | bash`,
+			`printf '\\x62' | sh`, // an escaped backslash, then literal text
+		} {
+			expectNoRule(t, "PB303", build(line))
+		}
+	})
+	t.Run("PB201 ssh opens a connection", func(t *testing.T) {
+		build := func(line string) map[string]string {
+			return map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n  "+line+"\n}")}
+		}
+		expectRule(t, "PB201", build("ssh git@example.com info"))
+		expectRule(t, "PB201", build("ssh -oVisualHostKey=yes example.com"))
+		expectNoRule(t, "PB201", build("ssh -V"))
+		expectNoRule(t, "PB201", build("ssh -G example.com"))
+	})
 	t.Run("proxy launchers are wrappers", func(t *testing.T) {
 		for _, line := range []string{
 			"torsocks wget https://e.org/x",
@@ -2362,6 +2402,47 @@ func TestScriptletRules(t *testing.T) {
   useradd -r -s /bin/bash demo
 }`,
 		})
+	})
+	t.Run("PB501 ssh to the AUR remote names the self-propagation signature", func(t *testing.T) {
+		fs := lint(t, map[string]string{
+			"PKGBUILD":     base,
+			"demo.install": "post_install() {\n  ssh aur@aur.archlinux.org list-repos\n}",
+		})
+		found := false
+		for _, f := range fs {
+			found = found || f.RuleID == "PB501" && strings.Contains(f.Message, "self-propagating")
+		}
+		if !found {
+			t.Errorf("want a PB501 naming the AUR remote, got %v", ruleIDs(fs))
+		}
+	})
+	t.Run("PB505 pacman changing packages from a scriptlet", func(t *testing.T) {
+		scriptlet := func(line string) map[string]string {
+			return map[string]string{"PKGBUILD": base, "demo.install": "post_install() {\n  " + line + "\n}"}
+		}
+		for _, line := range []string{
+			"pacman -S --noconfirm python-requests",
+			"pacman -Syu",
+			"pacman -U /tmp/x.pkg.tar.zst",
+			"pacman -Rns demo-old",
+			"pacman --sync foo",
+			"pacman -D --asdeps foo",
+			"pacman -Sy --info foo",
+		} {
+			expectRule(t, "PB505", scriptlet(line))
+		}
+		for _, line := range []string{
+			"pacman -Qq demo-old",
+			"pacman -T 'libfoo>=2'",
+			"pacman -Si foo",
+			"pacman -Ss foo",
+			"pacman -Sp foo",
+			"pacman -F /usr/bin/foo",
+		} {
+			expectNoRule(t, "PB505", scriptlet(line))
+		}
+		// A build's pacman call is someone else's rule.
+		expectNoRule(t, "PB505", map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n  pacman -S foo\n}")})
 	})
 	t.Run("clean scriptlet fine", func(t *testing.T) {
 		ids := ruleIDs(lint(t, map[string]string{

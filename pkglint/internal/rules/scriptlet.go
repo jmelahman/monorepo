@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
@@ -52,6 +53,73 @@ var scriptletRules = []Rule{
 			"whole scriptlet can be deleted.",
 		Check: checkHookCoveredCommands,
 	},
+	{
+		ID:       "PB505",
+		Name:     "pacman-in-scriptlet",
+		Severity: Error,
+		Doc: "A scriptlet runs inside the pacman transaction that is installing its package, with " +
+			"the database lock held, so a `pacman -S`, `-U` or `-R` from it cannot do what it says: " +
+			"it fails on the lock, or, run detached until the lock clears, installs or removes " +
+			"packages the user never saw in the transaction summary. Dependencies belong in " +
+			"depends=; read-only queries (`pacman -Q`) are fine.",
+		Check: checkScriptletPacman,
+	},
+}
+
+func checkScriptletPacman(ctx *Context) []Finding {
+	var out []Finding
+	for _, c := range ctx.Commands() {
+		if !c.Unit.Scriptlet || c.Name != "pacman" || !pacmanChangesPackages(c) {
+			continue
+		}
+		out = append(out, c.finding("PB505", Error,
+			"pacman changes packages from inside an install scriptlet, whose own transaction holds the lock: "+
+				"this fails, or installs or removes packages outside the transaction the user approved"))
+	}
+	return out
+}
+
+// pacmanChangesPackages reports whether a pacman invocation installs, upgrades
+// or removes packages, or otherwise writes the database (-D, -Sc). Sync
+// operations that only read — search, info, list, groups — do not, unless they
+// also refresh or upgrade.
+func pacmanChangesPackages(c Command) bool {
+	if pacmanQueries(c) {
+		return false
+	}
+	var changes, sync, syncReads, refreshes bool
+	for _, a := range c.Args {
+		if len(a) < 2 || a[0] != '-' {
+			continue
+		}
+		if a[1] == '-' {
+			name, _, _ := strings.Cut(a, "=")
+			switch name {
+			case "--sync":
+				sync = true
+			case "--upgrade", "--remove", "--database":
+				changes = true
+			case "--search", "--info", "--list", "--groups":
+				syncReads = true
+			case "--refresh", "--sysupgrade":
+				refreshes = true
+			}
+			continue
+		}
+		for _, r := range a[1:] {
+			switch r {
+			case 'S':
+				sync = true
+			case 'U', 'R', 'D':
+				changes = true
+			case 's', 'i', 'l', 'g':
+				syncReads = true
+			case 'y', 'u':
+				refreshes = true
+			}
+		}
+	}
+	return changes || (sync && (!syncReads || refreshes))
 }
 
 // hookCoveredCommands are commands pacman's stock alpm hooks (or hooks shipped
@@ -104,8 +172,13 @@ func checkScriptletNetwork(ctx *Context) []Finding {
 		if !ok || !fetches(c) {
 			continue
 		}
-		out = append(out, c.finding("PB501", Critical,
-			"%s accesses the network from an install scriptlet running as root", c.Name))
+		msg := "%s accesses the network from an install scriptlet running as root"
+		if slices.ContainsFunc(c.Args, func(a string) bool { return strings.Contains(a, "aur@aur.archlinux.org") }) {
+			// Credentials for the AUR's git remote are how a compromised
+			// package pushes itself into the packages its victim maintains.
+			msg += ", reaching the AUR's own git remote (aur@aur.archlinux.org): the signature of a self-propagating package"
+		}
+		out = append(out, c.finding("PB501", Critical, msg, c.Name))
 	}
 	return out
 }

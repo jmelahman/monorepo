@@ -143,11 +143,34 @@ var hermeticRules = []Rule{
 	},
 }
 
+// sshConnects reports whether an ssh invocation opens a connection: all but
+// `ssh -V`, which prints a version, and `ssh -G`, which prints the resolved
+// configuration and exits.
+func sshConnects(c Command) bool {
+	for _, a := range c.Args {
+		if !strings.HasPrefix(a, "-") || a == "--" {
+			break
+		}
+		for _, r := range a[1:] {
+			if r == 'V' || r == 'G' {
+				return false
+			}
+			if strings.ContainsRune(sshValueFlags, r) {
+				break // the rest of the cluster is this option's value: -oVisualHostKey=yes
+			}
+		}
+	}
+	return true
+}
+
+// sshValueFlags are the ssh options that take a value.
+const sshValueFlags = "BbcDEeFIiJLlmOopQRSWw"
+
 // networkCommands maps command names to a function deciding whether the
 // specific invocation touches the network.
 var networkCommands = map[string]func(Command) bool{
 	"curl": always, "wget": always, "aria2c": always, "axel": always,
-	"scp": always, "sftp": always, "rsync": rsyncRemote,
+	"scp": always, "sftp": always, "ssh": sshConnects, "rsync": rsyncRemote,
 	"git": func(c Command) bool {
 		switch c.Subcommand() {
 		case "clone", "fetch", "pull", "ls-remote", "submodule", "remote":

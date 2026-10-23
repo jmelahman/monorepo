@@ -195,6 +195,7 @@ build() {
 	"PB303": {
 		Bad: `build() {
   echo "$payload" | base64 -d | bash
+  printf '\x63\x75\x72\x6c' | sh   # the same thing, spelled in escapes
 }`,
 		Good: `build() {
   make   # ship readable source, never decode-and-run an embedded blob
@@ -409,6 +410,12 @@ sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`
 		Good: `post_install() {
   echo "run 'demo --setup' once to finish configuration"
 }`,
+	},
+	"PB505": {
+		Bad: `post_install() {
+  pacman -S --noconfirm --asdeps python-requests
+}`,
+		Good: `depends=('python-requests')   # pacman resolves it in the same transaction`,
 	},
 	"PB901": {
 		Bad:  `source=("https://example.com/demo-$pkgver-x86_64.tar.gz")`,
