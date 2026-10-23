@@ -301,6 +301,9 @@ var wrappers = map[string]bool{
 	// is wget. It takes no options ahead of an applet: a leading switch
 	// (--install, --list) is busybox's own and runs none; see busyboxSelf.
 	"busybox": true,
+	// Proxy launchers run their command with its traffic redirected, so
+	// `torsocks wget` is wget; PB310 reports the launcher itself.
+	"torsocks": true, "proxychains": true, "proxychains4": true, "tsocks": true,
 }
 
 // busyboxSelf reports whether a busybox command line runs busybox itself rather
@@ -467,6 +470,9 @@ var wrapperValueFlags = map[string]map[string]bool{
 	"sudo": {"-u": true, "-g": true, "-h": true, "-p": true, "-C": true, "-D": true,
 		"-R": true, "-T": true, "-U": true, "-r": true, "-t": true},
 	"doas": {"-u": true, "-C": true},
+	"torsocks": {"-u": true, "--user": true, "-p": true, "--pass": true,
+		"-a": true, "--address": true, "-P": true, "--port": true},
+	"proxychains": {"-f": true}, "proxychains4": {"-f": true},
 }
 
 // wrapperOperands is how many positional words a wrapper consumes before the
@@ -498,15 +504,80 @@ const (
 // names that word, since it is what runs when the environment is silent. A
 // wrapper-led value (`env LC_ALL=C make`) names the command its options lead
 // to; array first elements are brace-expanded as everywhere else.
+//
+// A name spelled from several pieces — `$a$b`, `${c}rl` — resolves piece by
+// piece and joins: `a=bu; b=n; $a$b` is bun. Each piece must be one word; one
+// assigned to something unreadable makes the whole name PB306's, and one the
+// file never assigns leaves it the environment's, as a lone `$CC` would. A
+// word with a literal `/` is a path to a file the build runs, so an
+// unreadable piece of it leaves the name as unresolved as before.
 func (ctx *Context) commandVarValue(u *pkgbuild.Unit, fn string, stmt *syntax.Stmt, call *syntax.CallExpr, w *syntax.Word) (string, varState) {
-	ref := varRefName(w)
-	if ref == "" || u == nil {
+	if u == nil {
 		return "", varUnassigned
 	}
 	at := -1
 	if stmt != nil {
 		at = off(stmt.Pos())
 	}
+	ref := varRefName(w)
+	if ref == "" {
+		return ctx.compositeVarValue(u, fn, at, call, w)
+	}
+	return varValue(u, ref, fn, at, call, nameInFields)
+}
+
+// compositeVarValue is commandVarValue for a word of several parts.
+func (ctx *Context) compositeVarValue(u *pkgbuild.Unit, fn string, at int, call *syntax.CallExpr, w *syntax.Word) (string, varState) {
+	if w == nil {
+		return "", varUnassigned
+	}
+	vars := ctx.varsFor(u, fn)
+	oneWord := func(fields []string) (string, bool) { return fields[0], len(fields) == 1 }
+	var parts []syntax.WordPart
+	for _, p := range w.Parts {
+		if dq, ok := p.(*syntax.DblQuoted); ok {
+			parts = append(parts, dq.Parts...)
+		} else {
+			parts = append(parts, p)
+		}
+	}
+	var b strings.Builder
+	state, path := varResolved, false
+	for _, p := range parts {
+		pw := &syntax.Word{Parts: []syntax.WordPart{p}}
+		s, d := pkgbuild.RenderWord(pw, vars)
+		if !d && !hasVarRef(s) {
+			b.WriteString(s)
+			path = path || strings.Contains(s, "/")
+			continue
+		}
+		st := varOpaque
+		var v string
+		if ref := varRefName(pw); !d && ref != "" {
+			v, st = varValue(u, ref, fn, at, call, oneWord)
+		}
+		switch {
+		case st == varOpaque:
+			state = varOpaque
+		case st == varUnassigned && state == varResolved:
+			state = varUnassigned // keep looking: a later piece may still be opaque
+		}
+		b.WriteString(v)
+	}
+	if state == varOpaque && path {
+		// `"$_stage0/bin/llvm-profdata"`, `./setup_${ver}.run`: a path is a
+		// file the build runs, not a tool pkglint failed to name.
+		return "", varUnassigned
+	}
+	if state != varResolved {
+		return "", state
+	}
+	return b.String(), varResolved
+}
+
+// varValue resolves ref from the assignments in scope at position at, taking
+// from each assignment's words the one pick names.
+func varValue(u *pkgbuild.Unit, ref, fn string, at int, call *syntax.CallExpr, pick func([]string) (string, bool)) (string, varState) {
 	// commandVarMaxAssigns: a name assigned more often than this is not one
 	// pkglint will reconcile; it also keeps N assignments × N uses from being
 	// quadratic again.
@@ -554,7 +625,7 @@ func (ctx *Context) commandVarValue(u *pkgbuild.Unit, fn string, stmt *syntax.St
 			state = varOpaque
 			return
 		}
-		name, ok := nameInFields(fields)
+		name, ok := pick(fields)
 		if !ok {
 			state = varOpaque
 			return

