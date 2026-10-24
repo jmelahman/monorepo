@@ -22,6 +22,9 @@ as the caller's uid; that user gets no sudo, NOPASSWD or passwd entry, ever.
 `pacman -Syu --needed --noconfirm -- <deps>` as root first, with the names from
 the static parse (`rules.SyncDeps`, never `--printsrcinfo`/.SRCINFO), each
 checked by `validDepName`; a list that needs running the PKGBUILD is an error.
+The CARCH is the container's `uname -m`, through `containerArches`; an unknown
+machine refuses the sync rather than guessing. An argument `splitSyncdeps`
+cannot read (an unknown short cluster) is refused, not passed on.
 
 `pkglint build --fix` is the one place a fix reads two files: a PB8xx finding
 comes out of the archive and the remedy is a line of the PKGBUILD. The archive

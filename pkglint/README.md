@@ -188,7 +188,13 @@ How the build is isolated, and what you can change:
   happens under `$TMPDIR`. Set `$SRCDEST` or `$BUILDDIR` to move either.
 - Dependencies are not installed and nothing is signed, so the hook never prompts
   for a password. Pass `-- -s` (or `--makepkg-arg=-s` in pre-commit `args:`) to
-  install dependencies.
+  install dependencies. In a container, pkglint intercepts `-s`: makepkg gets no
+  sudo there. pkglint reads the dependency lists from the PKGBUILD statically
+  and installs them as root with `pacman -Syu` before the package directory is
+  copied in. It refuses a PKGBUILD whose lists cannot be read without running
+  it, for example lists built by a command substitution, `eval`, `source`, or
+  conditional assignment. For those, use an image with the dependencies
+  already installed.
 - Without `makepkg` on the host, or with `--docker`/`--image`, the build runs in a
   container (`$PKGLINT_BUILD_IMAGE`, `$PKGLINT_BUILD_RUNNER` = `docker` or
   `podman`). The container is a convenience, not a sandbox. The PKGBUILD's code

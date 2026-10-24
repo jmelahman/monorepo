@@ -49,7 +49,10 @@
   # can prompt for a password is a hook that hangs); opt in with
   # `args: [--makepkg-arg=-s]`. A bare `--` cannot be used in `args:` — it
   # would swallow the filenames pre-commit appends. To build in a container
-  # instead of on the host: `args: [--image, archlinux:base-devel]`.
+  # instead of on the host: `args: [--image, archlinux:base-devel]`. There,
+  # -s is intercepted: pkglint reads the dependency lists statically and
+  # installs them itself as root, and it refuses a PKGBUILD whose lists are
+  # dynamic. For one of those, use an image with the dependencies baked in.
   minimum_pre_commit_version: "3.0.0"
 
 - id: pkglint-system
