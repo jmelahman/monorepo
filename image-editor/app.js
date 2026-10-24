@@ -33,7 +33,7 @@ let tool = 'brush';
 let prevTool = 'brush';
 let zoom = 1;
 let customZoom = null; // <option> for a wheel zoom level that isn't a preset
-let layers = []; // bottom to top; text layers also have { text, box }
+let layers = []; // bottom to top; text layers also have { text, box }, vector layers { vector }
 let active = null; // selected layer
 let layerSeq = 0;
 let drag = null; // in-progress stroke, shape or text move
@@ -151,8 +151,8 @@ function snapshot() {
     h: overlay.height,
     active: active.id,
     layers: layers.map((l) => {
-      if (!l.text) l.saved ??= l.ctx.getImageData(0, 0, overlay.width, overlay.height);
-      return { id: l.id, name: l.name, visible: l.visible, text: l.text, image: l.saved };
+      if (!l.text && !l.vector) l.saved ??= l.ctx.getImageData(0, 0, overlay.width, overlay.height);
+      return { id: l.id, name: l.name, visible: l.visible, text: l.text, vector: l.vector, image: l.saved };
     }),
   };
 }
@@ -167,7 +167,8 @@ function restore(state) {
     if (!resized && image && prev?.saved === image) return Object.assign(prev, props);
     const layer = makeLayer({ ...props, saved: image });
     if (image) layer.ctx.putImageData(image, 0, 0);
-    else renderText(layer);
+    else if (layer.text) renderText(layer);
+    else renderVector(layer);
     return layer;
   });
   active = layers.find((l) => l.id === state.active);
@@ -205,11 +206,50 @@ function redo() {
 
 // ---------------------------------------------------------------- layers
 
-function makeLayer({ id = ++layerSeq, name = `Layer ${id}`, visible = true, text = null, saved = null } = {}) {
+function makeLayer({ id = ++layerSeq, name = `Layer ${id}`, visible = true, text = null, vector = null, saved = null } = {}) {
   const el = document.createElement('canvas');
   el.width = overlay.width;
   el.height = overlay.height;
-  return { id, name, visible, text, saved, canvas: el, ctx: el.getContext('2d') };
+  return { id, name, visible, text, vector, saved, canvas: el, ctx: el.getContext('2d') };
+}
+
+// Draw a vector layer from its `vector`, { img, x, y, w, h }. Like `text`, it
+// is replaced rather than mutated, and the SVG is redrawn at whatever size it
+// has, so scaling it never blurs it.
+function renderVector(layer) {
+  const { img, x, y, w, h } = layer.vector;
+  layer.ctx.clearRect(0, 0, overlay.width, overlay.height);
+  layer.ctx.drawImage(img, x, y, w, h);
+}
+
+// Scale the whole image. Text and vector layers are redrawn at the new size;
+// painted layers can only be resampled.
+function resizeImage(w, h) {
+  commitText();
+  const sx = w / overlay.width;
+  const sy = h / overlay.height;
+  if (sx === 1 && sy === 1) return;
+  pushUndo();
+  const old = layers;
+  setCanvasSize(w, h);
+  layers = old.map((l) => {
+    const layer = makeLayer({ id: l.id, name: l.name, visible: l.visible });
+    if (l.text) {
+      // Text can't stretch, so a change of proportions follows the height.
+      layer.text = { ...l.text, x: l.text.x * sx, y: l.text.y * sy, size: l.text.size * sy };
+      renderText(layer);
+    } else if (l.vector) {
+      const v = l.vector;
+      layer.vector = { ...v, x: v.x * sx, y: v.y * sy, w: v.w * sx, h: v.h * sy };
+      renderVector(layer);
+    } else {
+      layer.ctx.imageSmoothingQuality = 'high';
+      layer.ctx.drawImage(l.canvas, 0, 0, w, h);
+    }
+    return layer;
+  });
+  active = layers.find((l) => l.id === active.id);
+  renderLayers();
 }
 
 // Adds a layer above the active one and selects it.
@@ -255,19 +295,21 @@ function mergeDown() {
   const upper = active;
   const lower = layers[layers.indexOf(active) - 1];
   pushUndo(lower);
-  // A text layer's canvas already holds its pixels, so dropping `text` rasterizes it.
+  // A text or vector layer's canvas already holds its pixels, so dropping
+  // `text` or `vector` rasterizes it.
   lower.text = null;
+  lower.vector = null;
   lower.ctx.drawImage(upper.canvas, 0, 0);
   active = lower;
   removeLayer(upper);
 }
 
-// Start drawing on the active layer. Text stays editable, so painting over a
-// text layer goes on a new layer above it.
+// Start drawing on the active layer. Text and vector images stay editable, so
+// painting over one goes on a new layer above it.
 function beginPaint() {
-  const onText = active.text;
-  pushUndo(onText ? null : active);
-  if (onText) insertLayer(makeLayer());
+  const kept = active.text || active.vector;
+  pushUndo(kept ? null : active);
+  if (kept) insertLayer(makeLayer());
   return active.ctx;
 }
 
@@ -682,11 +724,14 @@ overlay.addEventListener('pointerdown', (e) => {
     const layer = textLayerAt(p);
     if (!layer) return;
     drag = { id: e.pointerId, layer, from: p, origin: layer.text };
-  } else if (tool !== 'eyedropper' && !active.visible && !active.text) {
+  } else if (tool !== 'eyedropper' && !active.visible && !active.text && !active.vector) {
     flashMessage('The selected layer is hidden.');
     return;
   } else if (tool === 'eraser' && active.text) {
     flashMessage('Text can\u2019t be erased. Merge it down first, or clear the text to delete it.');
+    return;
+  } else if (tool === 'eraser' && active.vector) {
+    flashMessage('A vector image can\u2019t be erased. Merge it down first to paint on its pixels.');
     return;
   } else if (tool === 'brush' || tool === 'eraser') {
     beginPaint();
@@ -786,28 +831,55 @@ function newCanvas(w, h, background) {
   }
 }
 
+// An SVG with only a viewBox may report no size at all (Firefox). Give it
+// 512px on its longer side, in the viewBox's proportions.
+async function svgSize(file) {
+  const svg = new DOMParser().parseFromString(await file.text(), 'image/svg+xml').documentElement;
+  const [, , vw, vh] = (svg.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
+  const [w, h] = vw > 0 && vh > 0 ? [vw, vh] : [1, 1];
+  const k = 512 / Math.max(w, h);
+  return { w: w * k, h: h * k };
+}
+
+// An SVG opens as a vector layer, which draws from its <img> for as long as
+// the layer or its history lasts, so its object URL is never revoked.
 async function loadImage(file, name = file.name) {
   const url = URL.createObjectURL(file);
+  // A downloaded blob keeps the whole Content-Type, such as "; charset=utf-8".
+  const vector = file.type.split(';')[0].trim() === 'image/svg+xml';
+  let kept = false;
   try {
     const img = new Image();
     img.src = url;
     await img.decode();
-    const scale = Math.min(1, MAX_DIM / img.naturalWidth, MAX_DIM / img.naturalHeight);
-    const w = Math.max(1, Math.round(img.naturalWidth * scale));
-    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+    let nw = img.naturalWidth;
+    let nh = img.naturalHeight;
+    if (vector && !(nw && nh)) ({ w: nw, h: nh } = await svgSize(file));
+    const scale = Math.min(1, MAX_DIM / nw, MAX_DIM / nh);
+    const w = Math.max(1, Math.round(nw * scale));
+    const h = Math.max(1, Math.round(nh * scale));
     newCanvas(w, h, '');
-    active.ctx.drawImage(img, 0, 0, w, h);
-    setMessage(scale < 1 ? `Image scaled down to fit ${MAX_DIM}px.` : '');
+    if (vector) {
+      active.vector = { img, x: 0, y: 0, w, h };
+      active.name = name?.split('/').pop() || 'Vector image';
+      renderVector(active);
+      renderLayers();
+      kept = true;
+      setMessage('Opened as a vector image: File › Image size… scales it without losing quality.');
+    } else {
+      active.ctx.drawImage(img, 0, 0, w, h);
+      setMessage(scale < 1 ? `Image scaled down to fit ${MAX_DIM}px.` : '');
+    }
   } catch {
     setMessage(`Could not open ${name || 'image'}.`);
   } finally {
-    URL.revokeObjectURL(url);
+    if (!kept) URL.revokeObjectURL(url);
   }
 }
 
 // The image is downloaded rather than loaded straight into an <img>, which
 // would taint the canvas and block saving. Either way the site has to allow
-// other pages to read it (CORS).
+// other pages to read it (CORS), and the browser must not block the request.
 async function openUrl(address) {
   setMessage(`Opening ${address}…`);
   let blob;
@@ -819,7 +891,8 @@ async function openUrl(address) {
     }
     blob = await res.blob();
   } catch {
-    setMessage(`Could not download ${address}. The site may not allow other pages to load its images.`);
+    // The browser hides why a request failed, so name the usual suspects.
+    setMessage(`Could not download ${address}. The site may not allow other pages to load its images, or the browser (tracking protection, an extension) blocked it.`);
     return;
   }
   await loadImage(blob, address);
@@ -941,6 +1014,32 @@ urlDialog.addEventListener('close', () => {
   if (urlDialog.returnValue === 'open') openUrl($('url-input').value.trim());
 });
 
+const resizeDialog = $('resize-dialog');
+const resizeWidth = $('resize-width');
+const resizeHeight = $('resize-height');
+$('resize').addEventListener('click', () => {
+  resizeWidth.value = overlay.width;
+  resizeHeight.value = overlay.height;
+  resizeDialog.returnValue = '';
+  resizeDialog.showModal();
+  resizeWidth.select();
+});
+// With proportions kept, each side follows the other.
+for (const [input, other, ratio] of [
+  [resizeWidth, resizeHeight, () => overlay.height / overlay.width],
+  [resizeHeight, resizeWidth, () => overlay.width / overlay.height],
+]) {
+  input.addEventListener('input', () => {
+    if (!$('resize-keep').checked || !input.value) return;
+    other.value = Math.min(MAX_DIM, Math.max(1, Math.round(input.value * ratio())));
+  });
+}
+// Not a submit button, so that Enter in a field resizes.
+$('resize-cancel').addEventListener('click', () => resizeDialog.close('cancel'));
+resizeDialog.addEventListener('close', () => {
+  if (resizeDialog.returnValue === 'resize') resizeImage(Number(resizeWidth.value), Number(resizeHeight.value));
+});
+
 const dialogOpen = () => Boolean(document.querySelector('dialog[open]'));
 
 const newDialog = $('new-dialog');
@@ -950,6 +1049,8 @@ $('new').addEventListener('click', () => {
   newDialog.returnValue = '';
   newDialog.showModal();
 });
+// Not a submit button, so that Enter in a field creates the canvas.
+$('new-cancel').addEventListener('click', () => newDialog.close('cancel'));
 newDialog.addEventListener('close', () => {
   if (newDialog.returnValue !== 'create') return;
   newCanvas(Number($('new-width').value), Number($('new-height').value), $('new-bg').value);

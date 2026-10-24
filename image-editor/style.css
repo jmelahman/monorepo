@@ -255,7 +255,8 @@ button.icon svg {
   border-top: 1px solid var(--rule);
 }
 
-button[aria-expanded="true"] {
+/* Only a menu's button stays lit while it is open, not the panel toggle. */
+button[aria-haspopup="menu"][aria-expanded="true"] {
   border-color: var(--dim);
   color: var(--chalk);
 }

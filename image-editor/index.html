@@ -17,6 +17,8 @@
         <button type="button" role="menuitem" id="open">Open… <kbd>Ctrl+O</kbd></button>
         <button type="button" role="menuitem" id="open-url">Open from URL…</button>
         <hr>
+        <button type="button" role="menuitem" id="resize">Image size…</button>
+        <hr>
         <button type="button" role="menuitem" id="save">Save as PNG <kbd>Ctrl+S</kbd></button>
         <button type="button" role="menuitem" id="copy">Copy to clipboard</button>
       </div>
@@ -157,8 +159,21 @@
         </select>
       </label>
       <div class="actions">
-        <button value="cancel" formnovalidate>Cancel</button>
+        <button type="button" id="new-cancel">Cancel</button>
         <button value="create" class="primary">Create</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="resize-dialog">
+    <form method="dialog">
+      <h2>Image size</h2>
+      <label>Width <input type="number" id="resize-width" min="1" max="8192" required></label>
+      <label>Height <input type="number" id="resize-height" min="1" max="8192" required></label>
+      <label>Keep proportions <input type="checkbox" id="resize-keep" checked></label>
+      <div class="actions">
+        <button type="button" id="resize-cancel">Cancel</button>
+        <button value="resize" class="primary">Resize</button>
       </div>
     </form>
   </dialog>
