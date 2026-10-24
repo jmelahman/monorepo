@@ -57,7 +57,7 @@ Prebuilt binaries for Linux and macOS (amd64 and arm64) are attached to every
 ```yaml
 repos:
   - repo: https://github.com/jmelahman/pkglint
-    rev: a3b3651b15d3c2b04b2548a39925643a625d5f4e # frozen: v1.6.1
+    rev: 18319ffe6c6ea34d19fe0660ac2e99578cb883f0 # frozen: v1.7.0
     hooks:
       - id: pkglint
 ```
