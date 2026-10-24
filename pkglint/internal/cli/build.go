@@ -17,10 +17,12 @@ package cli
 // refused.
 
 import (
+	"archive/tar"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -546,6 +548,133 @@ func prepareDirs(root string, host bool) (buildDirs, error) {
 // uid it ends up running as, without the image needing a builder account.
 const containerPkgdest = "/tmp/out"
 
+// containerBuildDir is where the copied-in package directory lives inside the
+// container, and makepkg's working directory there.
+const containerBuildDir = "/build"
+
+// copyTreeIn copies the package directory at abs into the running container
+// as containerBuildDir, before makepkg starts. The archive is streamed to
+// `<runner> cp -` on its stdin and extracted at the container's root, which
+// exists in every image; the archive carries /build itself, with the mode and
+// owner packTree chose.
+func copyTreeIn(ctx context.Context, runner, name, abs string) error {
+	// The directory the user named is followed if it is itself a symlink, as
+	// a mount of it would have been; only links inside it are kept as links.
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return err
+	}
+	pr, pw := io.Pipe()
+	packed := make(chan error, 1)
+	go func() {
+		err := packTree(resolved, pw)
+		pw.CloseWithError(err)
+		packed <- err
+	}()
+	cp := exec.CommandContext(ctx, runner, "cp", "-", name+":/")
+	cp.Stdin = pr
+	runErr := runStreamed(cp)
+	// A command that stopped reading — or, under test, never started — would
+	// otherwise leave the packer blocked on a write nobody takes.
+	_ = pr.Close()
+	if err := <-packed; err != nil && !errors.Is(err, io.ErrClosedPipe) {
+		return fmt.Errorf("copying %s into the container: %w", abs, err)
+	}
+	if runErr != nil {
+		return describe(ctx, runner+" cp", runErr)
+	}
+	return nil
+}
+
+// packTree writes dir as a tar rooted at containerBuildDir, normalized so that
+// what makepkg sees is what a read-only mount would have shown it and nothing
+// more:
+//
+//   - Every entry has its write bits gone (directories 0555, files 0444, or
+//     0555 if the host copy had any execute bit), whatever the host modes
+//     were, so makepkg can read all of it and its writability check on the
+//     buildfile fails: a pkgver() package's PKGBUILD is not rewritten, as the
+//     host path's holdBuildFile arranges. The entries say uid 0, which docker
+//     keeps; podman chowns a copy to the container's user instead, which
+//     leaves the PKGBUILD's code able to chmod its own copy back — harmless,
+//     since that copy is all it can reach, and makepkg itself never does.
+//   - Symlinks are stored as symlinks, never followed. A link to ~/.ssh in the
+//     package directory pointed at the container's own filesystem when this
+//     was a mount; following it here would copy the host's keys in for the
+//     PKGBUILD to read.
+//   - Anything that is neither a directory, a regular file nor a symlink (a
+//     FIFO, a socket, a device) is left out: reading a FIFO blocks until a
+//     writer appears, and a device can be unbounded.
+func packTree(dir string, w io.Writer) error {
+	tw := tar.NewWriter(w)
+	root := strings.TrimPrefix(containerBuildDir, "/")
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		name := root
+		if rel != "." {
+			name = root + "/" + filepath.ToSlash(rel)
+		}
+		// Lstat, which WalkDir's Info is: the entry itself, not what a
+		// symlink points at.
+		fi, err := d.Info()
+		if err != nil {
+			return err
+		}
+		hdr := &tar.Header{Name: name, ModTime: fi.ModTime(), Uid: 0, Gid: 0}
+		switch mode := fi.Mode(); {
+		case mode.IsDir():
+			hdr.Typeflag, hdr.Name, hdr.Mode = tar.TypeDir, name+"/", 0o555
+			return tw.WriteHeader(hdr)
+		case mode&fs.ModeSymlink != 0:
+			target, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			hdr.Typeflag, hdr.Linkname, hdr.Mode = tar.TypeSymlink, target, 0o777
+			return tw.WriteHeader(hdr)
+		case mode.IsRegular():
+			return packFile(tw, hdr, path, fi)
+		default:
+			return nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+	return tw.Close()
+}
+
+// packFile appends the regular file at path, which fi (an Lstat) described.
+// The open file is checked against fi, as pkgbuild.OpenRegular does, so a swap
+// to a symlink or another file between the walk and the open is refused rather
+// than followed; and exactly the size written in the header is copied, so a
+// file that grows meanwhile cannot desynchronize the archive.
+func packFile(tw *tar.Writer, hdr *tar.Header, path string, fi fs.FileInfo) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if got, err := f.Stat(); err != nil || !os.SameFile(fi, got) {
+		return fmt.Errorf("%s: changed while copying", path)
+	}
+	hdr.Typeflag, hdr.Size, hdr.Mode = tar.TypeReg, fi.Size(), 0o444
+	if fi.Mode()&0o111 != 0 {
+		hdr.Mode = 0o555
+	}
+	if err := tw.WriteHeader(hdr); err != nil {
+		return err
+	}
+	_, err = io.CopyN(tw, f, hdr.Size)
+	return err
+}
+
 // makepkg builds the package in dir, leaving the archives in d.pkgdest. -s is
 // deliberately absent from the default arguments: syncing dependencies needs
 // root, and a commit hook that can prompt for a password is a commit hook that
@@ -597,8 +726,8 @@ func (b *builder) makepkg(ctx context.Context, dir string, d buildDirs) error {
 // offers no way to decline (--holdver is parsed and unused, and update_pkgver
 // is reached whenever the function exists); it does check whether the buildfile
 // is writable and warns instead when it is not. That is exactly what the
-// container path already gets from its read-only mount, so this gives the host
-// path the same answer.
+// container path already gets from its read-only copy (packTree), so this
+// gives the host path the same answer.
 func holdBuildFile(dir string) (func(), error) {
 	path := filepath.Join(dir, "PKGBUILD")
 	fi, err := os.Stat(path)
@@ -626,6 +755,27 @@ func holdBuildFile(dir string) (func(), error) {
 // maps to the container's root and every other container uid maps to a
 // subordinate uid that owns nothing on the host — and makepkg, which refuses
 // to run as root, can only be the latter.
+//
+// The package directory goes in by copy too, not by bind mount. A read-only
+// bind mount was the obvious way to leave the tree as it was found, but a
+// rootless docker daemon cannot copy out of a container that has one: `cp`
+// mounts the container's filesystem with its bind mounts and remounts each
+// read-only one read-only again, which a daemon inside a user namespace is
+// not permitted to do to a host mount (EPERM on the remount), so every
+// archive was built and then stranded. Copying in mounts nothing of the
+// host's, which keeps the tree untouched trivially — makepkg never has a path
+// to it — and the copy is a tar pkglint writes itself (packTree), so what the
+// in-container /build holds, and with which modes, is pkglint's choice rather
+// than the runtime's.
+//
+// Every copy happens while the container is running, which is why its main
+// process is an idle `sleep` and makepkg is an `exec` into it rather than the
+// container's own command. Copying into or out of a stopped container makes
+// the daemon mount its filesystem for the occasion, and the same rootless
+// docker fails the second such mount of a container with EBUSY — a created
+// container copied into, run, and copied out of again lost its archives the
+// same way the read-only mount did. A running container's filesystem is
+// already mounted, and copies use that.
 func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, makepkgArgs []string) error {
 	// --user hands the container the caller's uid, and makepkg refuses to run
 	// as root; as root there is no uid to pass that would work. Say so, rather
@@ -637,15 +787,11 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, mak
 	if err != nil {
 		return err
 	}
-	// --mount takes a comma-separated key=value list, so a comma in the path
-	// would be read as the start of another option.
-	if strings.ContainsRune(abs, ',') {
-		return fmt.Errorf("cannot bind-mount %q into a container: the path contains a comma", abs)
-	}
 	// The container is addressed by a name chosen up front rather than by the
 	// id `create` prints: the name is known before anything runs, so the
 	// removal below is registered first and holds even if create fails part
-	// way or its output cannot be read.
+	// way or its output cannot be read. --force also stops the idle main
+	// process, and with it anything an interrupted makepkg left behind.
 	name := fmt.Sprintf("pkglint-build-%d-%d", os.Getpid(), time.Now().UnixNano())
 	defer func() {
 		// Not CommandContext: on an interrupted build the context is already
@@ -655,32 +801,40 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, mak
 		_ = runCmd(rm)
 	}()
 
-	// The package directory is mounted read-only: with everything makepkg
-	// writes redirected, it needs nothing writable there, and the mount
-	// enforces "the tree is left as it was found" instead of asserting it.
-	create := exec.CommandContext(ctx, runner, append([]string{
+	// Nothing of the host's is mounted. --user and the environment are the
+	// container's defaults, so the makepkg exec below inherits both. The
+	// working directory is not: podman refuses to start a container whose -w
+	// does not exist yet, and /build only exists once it is copied in.
+	create := exec.CommandContext(ctx, runner,
 		"create",
 		"--name", name,
 		"--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 		"-e", "HOME=/tmp",
-		"--mount", "type=bind,source=" + abs + ",target=/build,readonly",
-		"-w", "/build",
-		"-e", "PKGDEST=" + containerPkgdest,
+		"-e", "PKGDEST="+containerPkgdest,
 		"-e", "BUILDDIR=/tmp/build",
 		"-e", "SRCDEST=/tmp/src",
 		"-e", "LOGDEST=/tmp/log",
 		"-e", "SRCPKGDEST=/tmp/srcpkg",
 		"-e", "BUILDFILE=PKGBUILD",
-		image, "makepkg",
-	}, makepkgArgs...)...)
+		image, "sleep", "infinity",
+	)
 	// The id on stdout is not needed and must not reach pkglint's own stdout,
-	// which carries the --format json/sarif document.
+	// which carries the --format json/sarif document. `start` prints the name.
 	create.Stdout, create.Stderr = io.Discard, os.Stderr
 	if err := runCmd(create); err != nil {
 		return describe(ctx, runner+" create", err)
 	}
+	start := exec.CommandContext(ctx, runner, "start", name)
+	start.Stdout, start.Stderr = io.Discard, os.Stderr
+	if err := runCmd(start); err != nil {
+		return describe(ctx, runner+" start", err)
+	}
+	if err := copyTreeIn(ctx, runner, name, abs); err != nil {
+		return err
+	}
 
-	if err := runStreamed(exec.CommandContext(ctx, runner, "start", "--attach", name)); err != nil {
+	run := exec.CommandContext(ctx, runner, append([]string{"exec", "-w", containerBuildDir, name, "makepkg"}, makepkgArgs...)...)
+	if err := runStreamed(run); err != nil {
 		return describe(ctx, "makepkg", err)
 	}
 	cp := exec.CommandContext(ctx, runner, "cp", name+":"+containerPkgdest+"/.", pkgdest)

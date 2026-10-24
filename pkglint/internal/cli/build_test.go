@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"archive/tar"
 	"bytes"
 	"debug/elf"
 	"encoding/json"
 	"errors"
+	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -118,6 +121,28 @@ func dropArchive(names ...string) func(*exec.Cmd) error {
 	}
 }
 
+// stubContainer stubs the process seams for a container build: `cp -` (the
+// package directory going in) has its tar captured, and the copy back out
+// plays the extraction by dropping an archive into its destination. Every
+// other step succeeds without doing anything.
+func stubContainer(t *testing.T, installed []string) (*[]*exec.Cmd, *[]byte) {
+	t.Helper()
+	drop := dropArchive("goodpkg-2.1.0-1-any.pkg.tar")
+	var in []byte
+	seen := stubExec(t, installed, func(cmd *exec.Cmd) error {
+		if cmd.Args[1] != "cp" {
+			return nil
+		}
+		if cmd.Args[2] == "-" {
+			var err error
+			in, err = io.ReadAll(cmd.Stdin)
+			return err
+		}
+		return drop(&exec.Cmd{Env: []string{"PKGDEST=" + cmd.Args[len(cmd.Args)-1]}})
+	})
+	return seen, &in
+}
+
 // TestBuildHostCommand pins the host invocation: makepkg runs in the package
 // directory, never installs dependencies on its own, and is redirected away
 // from the package directory for everything it writes.
@@ -192,7 +217,7 @@ func TestBuildBuilddirEnv(t *testing.T) {
 // rewrite its pkgver= and pkgrel= in place, editing the file the user is about
 // to commit and building something other than what the gate reviewed. The host
 // build makes it unwritable for the duration — what the container path gets
-// from its read-only mount — and puts the mode back afterwards.
+// from its read-only copy — and puts the mode back afterwards.
 func TestBuildHoldsBuildFile(t *testing.T) {
 	dir := t.TempDir()
 	src, err := os.ReadFile("testdata/clean/PKGBUILD")
@@ -248,9 +273,9 @@ func TestBuildMakepkgArgs(t *testing.T) {
 }
 
 // TestBuildContainerCommand covers the container path: forced with --docker
-// even though makepkg is installed, image-agnostic, mounting the package
-// directory read-only so "the tree is left alone" is enforced rather than
-// asserted, and getting the archives back out by copy rather than by a
+// even though makepkg is installed, image-agnostic, copying the package
+// directory in rather than mounting it so "the tree is left alone" holds by
+// construction, and getting the archives back out by copy rather than by a
 // writable bind mount — the copy is client-side, so it works whatever uid the
 // build ran as inside the container.
 func TestBuildContainerCommand(t *testing.T) {
@@ -298,18 +323,11 @@ func TestBuildContainerCommand(t *testing.T) {
 				t.Setenv("PKGLINT_BUILD_RUNNER", tc.runner)
 			}
 			t.Setenv("PKGLINT_BUILD_IMAGE", "archlinux:base-devel")
-			drop := dropArchive("goodpkg-2.1.0-1-any.pkg.tar")
-			seen := stubExec(t, tc.installed, func(cmd *exec.Cmd) error {
-				if cmd.Args[1] == "cp" {
-					// Stand in for the extraction, into its destination.
-					return drop(&exec.Cmd{Env: []string{"PKGDEST=" + cmd.Args[len(cmd.Args)-1]}})
-				}
-				return nil
-			})
+			seen, _ := stubContainer(t, tc.installed)
 
 			var buf bytes.Buffer
-			args := append([]string{"build", "--fail-on=never"}, tc.args...)
-			if code := run(append(args, "testdata/clean"), &buf); code != 0 {
+			cliArgs := append([]string{"build", "--fail-on=never"}, tc.args...)
+			if code := run(append(cliArgs, "testdata/clean"), &buf); code != 0 {
 				t.Fatalf("got exit %d, want 0\n%s", code, buf.String())
 			}
 
@@ -317,43 +335,201 @@ func TestBuildContainerCommand(t *testing.T) {
 			if got := filepath.Base(create.Path); got != tc.wantRun {
 				t.Errorf("ran %q, want %q", create.Path, tc.wantRun)
 			}
-			abs, _ := filepath.Abs("testdata/clean")
 			joined := strings.Join(create.Args, " ")
 			for _, want := range []string{
-				"--user", "-e HOME=/tmp", "-w /build",
-				// --mount, not -v: its key=value list has no ambiguity with a
-				// path containing a colon.
-				"--mount type=bind,source=" + abs + ",target=/build,readonly",
+				"--user", "-e HOME=/tmp",
 				"-e PKGDEST=/tmp/out", "-e BUILDDIR=/tmp/build", "-e SRCDEST=/tmp/src",
-				"archlinux:base-devel makepkg -f --noconfirm --cleanbuild --nosign",
+				"archlinux:base-devel sleep infinity",
 			} {
 				if !strings.Contains(joined, want) {
 					t.Errorf("missing %q in: %s", want, joined)
 				}
 			}
-			// Exactly one mount, and it is the read-only source tree: every
-			// destination makepkg writes to stays inside the container.
-			if n := strings.Count(joined, " --mount ") + strings.Count(joined, " -v "); n != 1 {
-				t.Errorf("%d bind mounts, want only the read-only package directory: %s", n, joined)
+			// No mounts at all: the package directory is copied in, so there
+			// is no host path makepkg could write to, and nothing a rootless
+			// daemon has to remount read-only to copy the archives back out.
+			if n := strings.Count(joined, " --mount ") + strings.Count(joined, " -v "); n != 0 {
+				t.Errorf("%d bind mounts, want none: %s", n, joined)
 			}
 
 			// The container is addressed by a name chosen before `create`
 			// runs, not by the id it prints, so the removal below is
 			// registered first and survives a create that fails part way.
+			// Every copy happens while it runs: copying a stopped container
+			// twice fails under rootless docker.
 			name := flagValue(t, create, "--name")
-			start := step(t, *seen, "start")
-			if want := []string{tc.wantRun, "start", "--attach", name}; !slices.Equal(start.Args, want) {
-				t.Errorf("start = %q, want %q", start.Args, want)
+			want := [][]string{
+				create.Args,
+				{tc.wantRun, "start", name},
+				{tc.wantRun, "cp", "-", name + ":/"},
+				{tc.wantRun, "exec", "-w", "/build", name, "makepkg", "-f", "--noconfirm", "--cleanbuild", "--nosign"},
+				{tc.wantRun, "cp", name + ":/tmp/out/.", ""},
+				// The container is not started with --rm, so it has to be removed.
+				{tc.wantRun, "rm", "--force", name},
 			}
-			cp := step(t, *seen, "cp")
-			if got := cp.Args[2]; got != name+":/tmp/out/." {
-				t.Errorf("copied from %q, want %q", got, name+":/tmp/out/.")
+			got := args(*seen)
+			if len(got) == len(want) {
+				// The copy-out destination is a fresh temporary directory.
+				want[4][3] = got[4][3]
 			}
-			// The container is not started with --rm, so it has to be removed.
-			rm := step(t, *seen, "rm")
-			if want := []string{tc.wantRun, "rm", "--force", name}; !slices.Equal(rm.Args, want) {
-				t.Errorf("rm = %q, want %q", rm.Args, want)
+			if !slices.EqualFunc(got, want, slices.Equal) {
+				t.Errorf("commands =\n%q\nwant\n%q", got, want)
 			}
+		})
+	}
+}
+
+// readTar indexes an archive's headers by name, failing the test on a
+// malformed one.
+func readTar(t *testing.T, data []byte) map[string]*tar.Header {
+	t.Helper()
+	out := map[string]*tar.Header{}
+	tr := tar.NewReader(bytes.NewReader(data))
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return out
+		}
+		if err != nil {
+			t.Fatalf("reading the copied-in tar: %v", err)
+		}
+		out[hdr.Name] = hdr
+	}
+}
+
+// TestBuildContainerCopiesTree pins what the container is given in place of a
+// mount: the package directory under /build, unwritable to makepkg whatever
+// the host modes, with symlinks kept as links — following one would copy
+// whatever it points at on the host in for the PKGBUILD to read — and the
+// host tree itself untouched.
+func TestBuildContainerCopiesTree(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("the container path refuses to run as root: makepkg would too")
+	}
+	dir := t.TempDir()
+	src, err := os.ReadFile("testdata/clean/PKGBUILD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret := filepath.Join(t.TempDir(), "id_ed25519")
+	for _, f := range []struct {
+		path string
+		data string
+		mode os.FileMode
+	}{
+		{filepath.Join(dir, "PKGBUILD"), string(src), 0o644},
+		{filepath.Join(dir, "helper.sh"), "#!/bin/sh\n", 0o700},
+		{filepath.Join(dir, "patches", "fix.patch"), "--- a\n+++ b\n", 0o600},
+		{secret, "PRIVATE KEY", 0o600},
+	} {
+		if err := os.MkdirAll(filepath.Dir(f.path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(f.path, []byte(f.data), f.mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(secret, filepath.Join(dir, "key")); err != nil {
+		t.Fatal(err)
+	}
+	seen, in := stubContainer(t, []string{"docker"})
+
+	var buf bytes.Buffer
+	if code := run([]string{"build", "--fail-on=never", "--image", "archlinux:base-devel", dir}, &buf); code != 0 {
+		t.Fatalf("got exit %d, want 0\n%s", code, buf.String())
+	}
+	step(t, *seen, "exec")
+	entries := readTar(t, *in)
+	for name, want := range map[string]struct {
+		typ  byte
+		mode int64
+	}{
+		"build/":                  {tar.TypeDir, 0o555},
+		"build/PKGBUILD":          {tar.TypeReg, 0o444},
+		"build/helper.sh":         {tar.TypeReg, 0o555},
+		"build/patches/":          {tar.TypeDir, 0o555},
+		"build/patches/fix.patch": {tar.TypeReg, 0o444},
+		"build/key":               {tar.TypeSymlink, 0o777},
+	} {
+		hdr := entries[name]
+		if hdr == nil {
+			t.Errorf("no %s in the copied tree: %v", name, slices.Sorted(maps.Keys(entries)))
+			continue
+		}
+		if hdr.Typeflag != want.typ || hdr.Mode != want.mode || hdr.Uid != 0 || hdr.Gid != 0 {
+			t.Errorf("%s: type %c mode %04o owner %d:%d, want type %c mode %04o owner 0:0",
+				name, hdr.Typeflag, hdr.Mode, hdr.Uid, hdr.Gid, want.typ, want.mode)
+		}
+	}
+	if got := entries["build/key"]; got != nil && got.Linkname != secret {
+		t.Errorf("symlink copied as %q, want the link itself (-> %s)", got.Linkname, secret)
+	}
+	if bytes.Contains(*in, []byte("PRIVATE KEY")) {
+		t.Error("the symlink was followed: its target's contents went into the container")
+	}
+	if len(entries) != 6 {
+		t.Errorf("copied %d entries, want 6: %v", len(entries), slices.Sorted(maps.Keys(entries)))
+	}
+	// The host copy keeps its modes: normalizing happens in the archive only.
+	if fi, err := os.Stat(filepath.Join(dir, "PKGBUILD")); err != nil || fi.Mode().Perm() != 0o644 {
+		t.Errorf("host PKGBUILD changed: %v %v", fi.Mode(), err)
+	}
+}
+
+// TestBuildContainerCopyFailures covers both ways getting the tree in can
+// fail: a file pkglint cannot read, which names the file rather than whatever
+// the runtime made of a truncated archive, and the runtime's own refusal. In
+// both, makepkg is never reached and the container is still removed.
+func TestBuildContainerCopyFailures(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("the container path refuses to run as root, and root reads a mode-0 file anyway")
+	}
+	src, err := os.ReadFile("testdata/clean/PKGBUILD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name       string
+		unreadable bool
+		cpErr      error
+		want       string
+	}{
+		{name: "unreadable file", unreadable: true, want: "copying "},
+		{name: "runtime refuses", cpErr: errors.New("exit status 1"), want: "docker cp: exit status 1"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), src, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if tc.unreadable {
+				if err := os.WriteFile(filepath.Join(dir, "secret"), []byte("x"), 0); err != nil {
+					t.Fatal(err)
+				}
+			}
+			seen := stubExec(t, []string{"docker"}, func(cmd *exec.Cmd) error {
+				if cmd.Args[1] == "cp" && cmd.Args[2] == "-" {
+					if _, err := io.ReadAll(cmd.Stdin); err != nil && tc.cpErr == nil {
+						return errors.New("exit status 1")
+					}
+					return tc.cpErr
+				}
+				return nil
+			})
+
+			var buf bytes.Buffer
+			if code := run([]string{"build", "--fail-on=never", "--image", "archlinux:base-devel", dir}, &buf); code != 1 {
+				t.Fatalf("got exit %d, want 1\n%s", code, buf.String())
+			}
+			if !strings.Contains(buf.String(), tc.want) {
+				t.Errorf("output lacks %q:\n%s", tc.want, buf.String())
+			}
+			for _, cmd := range *seen {
+				if cmd.Args[1] == "exec" {
+					t.Errorf("makepkg ran after a failed copy: %q", cmd.Args)
+				}
+			}
+			step(t, *seen, "rm")
 		})
 	}
 }
@@ -380,6 +556,51 @@ func TestBuildContainerCleansUpOnFailure(t *testing.T) {
 	rm := step(t, *seen, "rm")
 	if want := []string{"docker", "rm", "--force", flagValue(t, create, "--name")}; !slices.Equal(rm.Args, want) {
 		t.Errorf("rm = %q, want %q", rm.Args, want)
+	}
+}
+
+// TestBuildContainerStepFailures covers a failure at each step after create:
+// each one is reported by the step's name, stops the steps after it, and
+// still removes the container.
+func TestBuildContainerStepFailures(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("the container path refuses to run as root: makepkg would too")
+	}
+	for _, tc := range []struct {
+		fail  func(args []string) bool
+		want  string
+		after string
+	}{
+		{func(a []string) bool { return a[1] == "start" }, "docker start: exit status 1", "cp"},
+		{func(a []string) bool { return a[1] == "exec" }, "makepkg: exit status 1", ""},
+		{func(a []string) bool { return a[1] == "cp" && a[2] != "-" }, "docker cp: exit status 1", ""},
+	} {
+		t.Run(tc.want, func(t *testing.T) {
+			var ran []string
+			stubExec(t, []string{"docker"}, func(cmd *exec.Cmd) error {
+				ran = append(ran, cmd.Args[1])
+				if cmd.Args[1] == "cp" && cmd.Args[2] == "-" {
+					_, _ = io.Copy(io.Discard, cmd.Stdin)
+				}
+				if tc.fail(cmd.Args) {
+					return errors.New("exit status 1")
+				}
+				return nil
+			})
+			var buf bytes.Buffer
+			if code := run([]string{"build", "--fail-on=never", "--image", "archlinux:base-devel", "testdata/clean"}, &buf); code != 1 {
+				t.Fatalf("got exit %d, want 1\n%s", code, buf.String())
+			}
+			if !strings.Contains(buf.String(), tc.want) {
+				t.Errorf("output lacks %q:\n%s", tc.want, buf.String())
+			}
+			if tc.after != "" && slices.Contains(ran, tc.after) {
+				t.Errorf("%s ran after the failure: %q", tc.after, ran)
+			}
+			if ran[len(ran)-1] != "rm" {
+				t.Errorf("the container was not removed last: %q", ran)
+			}
+		})
 	}
 }
 
