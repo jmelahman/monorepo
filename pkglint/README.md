@@ -2,25 +2,6 @@
 
 A security-focused linter for Arch Linux packages.
 
-pkglint statically analyzes PKGBUILDs and their install scriptlets, **without ever
-sourcing them**, and reports findings about source integrity, build hermeticity, code
-execution, and persistence patterns, condensed into a letter grade per package. It
-parses a real bash AST ([mvdan.cc/sh](https://github.com/mvdan/sh)), so the quoting and
-line-continuation tricks that slip past regex-based scanners don't work here.
-
-It also reproduces makepkg's own build-breaking metadata checks, so a PKGBUILD that would
-fail to build is caught (and, where the fix is mechanical, rewritten) before you run
-makepkg.
-
-Built packages (`*.pkg.tar.zst` and friends) are inputs too: pkglint inspects the archive
-the way namcap does (ELF hardening, stripping, dependencies inferred from linked
-libraries and shebangs, packaged `.INSTALL` scriptlets, filesystem hygiene) while
-**never executing anything from the package** (ELF files are parsed, not loaded; no `ldd`).
-
-The [AUR Report Card](https://jamison.lahman.dev/pkglint/) runs pkglint nightly
-over the official repositories and the AUR's most-voted and recently updated
-packages, with a page per package and per rule.
-
 ```shell
 $ pkglint ~/pkgbuilds/somepkg
 somepkg: grade F, 3 finding(s)
@@ -32,9 +13,22 @@ somepkg: grade F, 3 finding(s)
 1 finding(s) fixable with --unsafe-fix
 ```
 
-Packages with nothing to report are only counted in the closing summary line
-(`--verbose` lists them individually). The line after it tallies the findings a
-fix run will attempt, split by the flag that applies them.
+- **Never runs the package.** PKGBUILDs are parsed into a real bash syntax tree, not
+  sourced, so quoting and line-continuation tricks that fool regex scanners don't work.
+  Built packages are inspected without loading or executing anything in them.
+- **Checks what matters for trust:** unverified sources, builds that fetch undeclared
+  code, download-and-execute, writes outside the package, and persistence in install
+  scripts.
+- **Covers namcap and makepkg too:** namcap's PKGBUILD and built-package checks, plus
+  makepkg's own build-breaking metadata errors, all in one report.
+- **Fixes what it can.** `--fix` applies the safe rewrites, and `--unsafe-fix` applies
+  the ones that change build behavior.
+
+Each package gets a letter grade from A to F. The grade is a hygiene score for how
+reviewable and reproducible the PKGBUILD is. It is not a malware verdict.
+
+The [AUR Report Card](https://jamison.lahman.dev/pkglint/) runs pkglint nightly over
+the official repositories and the AUR's most popular and recently updated packages.
 
 ## Install
 
@@ -58,9 +52,10 @@ go install github.com/jmelahman/pkglint@latest
 
 **GitHub Releases**
 
-Prebuilt binaries for Linux and macOS (amd64 and arm64) are attached to every [release](https://github.com/jmelahman/pkglint/releases/latest).
+Prebuilt binaries for Linux and macOS (amd64 and arm64) are attached to every
+[release](https://github.com/jmelahman/pkglint/releases/latest).
 
-**Commit hook**
+**pre-commit hook**
 
 ```yaml
 repos:
@@ -68,24 +63,30 @@ repos:
     rev: a3b3651b15d3c2b04b2548a39925643a625d5f4e # frozen: v1.6.1
     hooks:
       - id: pkglint
-      - id: pkglint-build
 ```
 
-Four hook ids are available:
+<details>
+<summary>Other hook ids and arguments</summary>
 
-- `pkglint` builds from source with the Go toolchain.
-- `pkglint-system` runs whatever `pkglint` is already on `$PATH`.
-- `pkglint-fix` applies the safe auto-fixes in place (offline by default).
-- `pkglint-build` builds each PKGBUILD and lints the package it produces (see
-  [Build and validate](#build-and-validate)).
+| Hook id          | Runs                                                                      |
+| ---------------- | ------------------------------------------------------------------------- |
+| `pkglint`        | pkglint, built from source                                                |
+| `pkglint-system` | the `pkglint` already on `$PATH`                                          |
+| `pkglint-fix`    | the safe auto-fixes, in place                                             |
+| `pkglint-build`  | a full build, then lints the result ([manual stage](#build-and-validate)) |
 
-Tune any of them with `args:`, e.g. `args: [--ignore, PB105, --fail-on, critical]`.
+Pass flags with `args:`, e.g. `args: [--ignore, PB105, --fail-on, critical]`.
 
-**AUR helper (yay ≥ 13)**
+</details>
 
-yay's `AURPreInstall` hook runs once per AUR package base after its PKGBUILD is
-downloaded and before the diff/edit menus or any build. Add this to
-`~/.config/yay/init.lua` to lint each one there:
+**yay hook (yay ≥ 13)**
+
+To lint every AUR package before yay builds it, add the snippet below to
+`~/.config/yay/init.lua`. It runs after each PKGBUILD is downloaded, before the
+diff/edit menus or any build, and asks before continuing if pkglint finds anything.
+
+<details>
+<summary><code>init.lua</code> snippet</summary>
 
 ```lua
 -- pkglint: lint each AUR PKGBUILD before yay shows menus or builds anything.
@@ -112,218 +113,107 @@ yay.create_autocmd("AURPreInstall", {
 })
 ```
 
+</details>
+
 ## Usage
 
 ```shell
-pkglint [flags] [path ...]     # paths are package dirs, PKGBUILD files,
-                               # or built packages (*.pkg.tar.*) (default: .)
+pkglint [flags] [path ...]     # package dirs, PKGBUILD files, or *.pkg.tar.* (default: .)
 
-  --format text|json|sarif     # output format (sarif = SARIF 2.1.0, for code scanning)
+  --format text|json|sarif     # output format (sarif for code scanning)
   --fail-on SEVERITY           # exit 1 at or above: info, warn (default), error, critical, never
-                               # (a path that cannot be loaded exits 1 even with never)
   --ignore PB105,PB206         # disable rules
-  --select PB101,PB304         # check only these rules (--ignore still subtracts from them)
-  --color auto|always|never    # colorize text output (auto = only on a terminal; honors NO_COLOR)
-  --verbose                    # list packages with no findings individually, not just in the summary
-  --rules                      # list every rule with its documentation
+  --select PB101,PB304         # check only these rules
   --fix                        # apply safe auto-fixes in place
-  --unsafe-fix                 # also apply behavior-changing fixes (implies --fix)
-  --diff                       # with --fix/--unsafe-fix/--add-ignores: show changes instead of writing
-  --offline                    # with --fix: skip fixes needing network (VCS ref resolution, https probing)
-  --add-ignores                # insert ignore directives suppressing every current finding
+  --unsafe-fix                 # also apply behavior-changing fixes
+  --diff                       # with a fix flag: show changes instead of writing them
+  --offline                    # with --fix: skip fixes that need the network
+  --add-ignores                # suppress every current finding with an inline directive
   --no-inline-ignores          # disregard ignore directives (audit an untrusted package)
+  --verbose                    # also list packages with no findings
+  --color auto|always|never
 
-pkglint explain PB101 ...      # print one rule's documentation, example, and
-                               # how to fix or suppress it (ID or name, any case)
+pkglint explain PB101          # one rule's docs, an example, and how to fix or suppress it
+pkglint --rules                # every rule
 ```
 
-Suppress a reviewed, intentional finding inline:
+### Suppressing findings
 
 ```bash
 # pkglint: ignore=PB204
 go build -o "$pkgname" .
 ```
 
-The directive covers its own line and the line below it, in the file it appears
-in only. `--add-ignores` writes one for every finding still reported, so a
-package can adopt pkglint before fixing everything it flags; `--diff` previews
-the insertions. A directive that no longer matches a finding is itself flagged
-(PB913, `stale-ignore-directive`) and deleted by `--fix`, so a fixed issue
-cannot leave behind a comment that would silence its return. When reviewing a
-package you don't trust, `--no-inline-ignores` reports whatever the maintainer
-suppressed.
+A directive covers its own line and the next. To adopt pkglint on an existing package
+without fixing everything at once, run `--add-ignores` once. Directives that stop
+matching a finding are flagged and removed by `--fix`, so a fixed problem can't stay
+silenced if it comes back.
 
 ### Auto-fixing
 
-`--fix` rewrites what it can and prints every change; `--diff` previews without
-writing. It re-lints its own output and fixes again until nothing changes, so a
-second run has nothing left to do. Fixes come in two tiers: safe fixes preserve behavior or restore a
-security default; unsafe fixes are mechanical but change what the build does,
-so review them.
+`--fix` rewrites what it can and prints every change. Run it with `--diff` to preview.
+Safe fixes keep the build's behavior or restore a security default. Unsafe fixes, such
+as upgrading `http://` to `https://` or adding `--locked` to `cargo`, change what the
+build does, so review them. A fix that can't see the whole picture is skipped rather
+than half-applied. For findings without a mechanical fix, pkglint prints a hint like
+`updpkgsums` or `makepkg --printsrcinfo` instead.
 
-Every fix stands down where it cannot see the whole picture (a flag arriving
-through an expansion, an array it cannot re-render faithfully, a rename it
-cannot prove complete) rather than leave a half-applied edit. An inline
-`# pkglint: ignore=` on a finding's line also suppresses its fix. Findings whose
-remediation isn't a mechanical rewrite print a one-line suggestion instead
-(`updpkgsums` for checksums, `makepkg --printsrcinfo` for a stale `.SRCINFO`),
-computed from what is left _after_ fixing.
-
-#### Safe: `--fix`
-
-| Rules                                    | What it does                                                                                                                                                        |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PB102                                    | Add `sha256sums` beside a weak `md5sums`/`sha1sums`, computed from sources already on disk (see [PB102 checksums](#pb102-checksums))                                |
-| PB103                                    | Pin a mutable VCS tag or branch to the commit it names right now (via `git ls-remote`)                                                                              |
-| PB205, PB916                             | Delete Go verification-disabling env settings; insert `-modcacherw` so the module cache stays removable                                                             |
-| PB705, PB708                             | Strip a leading slash from `backup` entries; wrap a scalar list field (`depends=foo`) in an array                                                                   |
-| PB711, PB933, PB944, PB952, PB954, PB979 | Declare in `makedepends` a build tool the build already invokes: the VCS client a source needs, `python-build`/`python-installer`, `cargo`, `cmake`, `meson`, `npm` |
-| PB904, PB912, PB918, PB919               | Delete dependency metadata the rule proves does nothing: a `makedepends`/`optdepends` entry already in `depends`, a package naming itself in `provides`/`conflicts` |
-| PB913                                    | Remove stale ignore directives                                                                                                                                      |
-
-#### Unsafe: `--unsafe-fix`
-
-| Rules                      | What it does                                                                                                                                                                                                                                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| PB104, PB112               | Upgrade an insecure source transport (`http://`/`ftp://` → `https://`, bare `git://` → `git+https://`), signature sources included. Applied only once a headers-only request (or `git ls-remote`) shows the https URL answers; an answering URL can still serve different bytes, so rebuild after                  |
-| PB203, PB204, PB206–PB209  | Pin a build to its lockfile: `--locked` on `cargo` (fails the build if no `Cargo.lock` ships), a `go mod download` prepare() step, `npm install`→`ci`, `yarn install --immutable`, `--frozen-lockfile` on `pnpm`/`bun install`, `--no-scripts` on `composer install`, `--frozen` on `bundle install` and `uv sync` |
-| PB914, PB915, PB917        | Restore Arch's Go build flags: insert `-buildmode=pie` and `-trimpath`, and export `CGO_CFLAGS`/`CGO_LDFLAGS` so the hardening flags reach C code                                                                                                                                                                  |
-| PB940, PB941, PB942        | Cargo profile and install flags: drop `--release` from `cargo test`/`cargo check` so the suite runs with debug assertions and overflow checks on, insert it into a build() `cargo build` so the package ships the optimized profile, append `--no-track` to `cargo install`                                        |
-| PB950, PB951, PB953, PB980 | Point a build system at Arch's layout: `-DCMAKE_INSTALL_PREFIX=/usr`, `-DCMAKE_BUILD_TYPE=None`, `--prefix=/usr` on `meson setup`, and an npm `--cache` inside `$srcdir` instead of the invoking user's `~/.npm`                                                                                                   |
-| PB961, PB973, PB981        | Add installed-runtime metadata the guidelines require: the `provides`/`conflicts` pair a `-git` package owes its release counterpart (written together or not at all), `dkms`, `java-runtime`                                                                                                                      |
-| PB931, PB971, PB974        | Delete a declared dependency the rule calls unnecessary: a pytest lint plugin from `checkdepends`, every `depends` entry of a font package, a `-dkms` package's pinned `linux*-headers`                                                                                                                            |
-| PB902                      | Prefix a custom variable with an underscore (`pyname` → `_pyname`), declaration and every reference at once                                                                                                                                                                                                        |
-
-#### PB102 checksums
-
-The PB102 fix hashes sources **already downloaded** into the package directory
-or `$SRCDEST` (pkglint never fetches a source) and writes a digest only after
-re-computing the existing `md5`/`sha1` from the same bytes and finding it
-matches, so the new `sha256sums` covers exactly what the weak digest already
-vouched for. Sources that aren't present or a digest that doesn't match leave
-the finding standing, and `updpkgsums` remains the way to close it. The weak
-array is kept; the edit is purely additive.
-
-#### From the build: `pkglint build --fix`
-
-| Rules | What it does                                                                                                                                       |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PB809 | Add to `depends` the package that owns a library the built binaries link and nothing in `depends` reaches (`usr/bin/demo` → `libc.so.6` → `glibc`) |
-
-The built-package rules judge an artifact, so their fixes live on the one
-command that has both: `pkglint build --fix` lints the PKGBUILD, builds it,
-lints the archive, and writes the answer back into the PKGBUILD it built
-(`--diff` previews, `--unsafe-fix` widens the tier as it does elsewhere). It
-only touches a PKGBUILD that declares exactly one package, since a split
-PKGBUILD's `depends` belongs to each `package_<name>()` rather than to the
-file, and only the `error` gaps: a library reached transitively or through an
-`optdepends` is a judgment the maintainer makes. The
-[build gate](#build-and-validate) runs first, as always: a build that is
-refused produces no archive and fixes nothing. The
-PKGBUILD-scope fixes above stay with `pkglint --fix`.
+`pkglint --rules` and the [rule reference](https://jamison.lahman.dev/pkglint/rules/)
+show which rules each flag fixes.
 
 ### Build and validate
 
-The built-package rules need a built package. `pkglint build` produces one:
+The built-package rules (PB8xx) need a built package:
 
 ```shell
-$ pkglint build ~/pkgbuilds/somepkg
+pkglint build ~/pkgbuilds/somepkg
 ```
 
-It lints the PKGBUILD, hands the package to `makepkg`, and then lints the
-archive that comes out. `pkglint-build` is the same thing as a hook; it is
-`stages: [manual]` because a full build has no business running on every commit.
+This lints the PKGBUILD, runs `makepkg`, and then lints the archive it produces.
+`pkglint build --fix` also fixes PKGBUILD issues found only in the build output, such
+as a linked library missing from `depends`.
 
-This is the one pkglint command that executes a PKGBUILD, because that is what
-`makepkg` does. It is a separately named verb that `pkglint <path>` never
-reaches, and it **refuses to build a package whose static findings reach
-`--fail-on`**, always refusing on a critical finding no matter what `--fail-on`
-says. `--force` overrides that; the findings still count toward the exit code.
+This is the only pkglint command that runs PKGBUILD code. It **refuses to build when
+the static findings reach `--fail-on`**, and always on a critical one. `--force`
+overrides the refusal. Nothing in the PKGBUILD can talk its way past that check.
 
-Because that gate decides whether to run code, the PKGBUILD gets no say in it:
+How the build is isolated, and what you can change:
 
-- The gate **disregards the file's own `# pkglint: ignore=` directives**: a
-  `curl | bash` with an `ignore=PB304` above it is still a `curl | bash`. The
-  report printed beside the refusal still honors them; only the decision to
-  execute is taken on the unsuppressed findings.
-- A file argument must be a `PKGBUILD`, since `makepkg` builds the `PKGBUILD`
-  in its working directory regardless of which file pkglint linted.
-- `makepkg`'s `-p`, `-D`/`--dir` and `--config`, and `BUILDFILE=` or
-  output-directory (`PKGDEST=`, `BUILDDIR=`, …) words, are rejected, for the
-  same reason. `--config` names a file makepkg sources as code.
-
-Because `build` is a verb, a package directory named `./build` is spelled
-`pkglint ./build`.
-
-The packaging tree is left exactly as it was found: `makepkg` writes into a
-temporary `PKGDEST`, and the `PKGBUILD` is held read-only so a `pkgver()`
-package cannot rewrite the file that was gated. `--keep <dir>` moves the
-archives out. Sources are cached in `${XDG_CACHE_HOME:-~/.cache}/pkglint/sources`
-and the build tree goes under `$TMPDIR`; export `$SRCDEST` or `$BUILDDIR` to
-relocate either. Dependencies are **not** synced, since that needs root and a
-hook that prompts for a password is a hook that hangs. Pass `-- -s` (or
-`--makepkg-arg=-s`, the form that survives pre-commit's `args:`) to opt in.
-`--nosign` is passed for the same reason.
-
-Without `makepkg` on the host, or with `--docker` or an explicit `--image`,
-the build runs in a container. Name the image with `--image` or
-`$PKGLINT_BUILD_IMAGE` and pick the runtime with `$PKGLINT_BUILD_RUNNER`
-(`docker` by default, else `podman`). The package directory is bind-mounted
-read-only and the archives come back out with `<runner> cp`, owned by you. The
-image is your trust decision, and the container is a convenience, not a
-sandbox: the PKGBUILD's own code still runs. `-- -s` inside one needs an
-image with passwordless `sudo pacman`, which stock `archlinux:base-devel` lacks.
+- The gate ignores the file's own `# pkglint: ignore=` directives. A `curl | bash`
+  with `ignore=PB304` above it is still refused. The printed report still honors
+  them.
+- `makepkg` flags and words that would build or source a different file (`-p`,
+  `-D`, `--config`, `BUILDFILE=`, `PKGDEST=`, `BUILDDIR=`, …) are rejected, and a
+  file argument must be the `PKGBUILD` itself.
+- The packaging tree is left untouched: archives go to a temporary `PKGDEST` (use
+  `--keep <dir>` to keep them), and the `PKGBUILD` is read-only during the build.
+- Sources are cached in `${XDG_CACHE_HOME:-~/.cache}/pkglint/sources` and the build
+  happens under `$TMPDIR`. Set `$SRCDEST` or `$BUILDDIR` to move either.
+- Dependencies are not installed and nothing is signed, so the hook never prompts
+  for a password. Pass `-- -s` (or `--makepkg-arg=-s` in pre-commit `args:`) to
+  install dependencies.
+- Without `makepkg` on the host, or with `--docker`/`--image`, the build runs in a
+  container (`$PKGLINT_BUILD_IMAGE`, `$PKGLINT_BUILD_RUNNER` = `docker` or
+  `podman`). The container is a convenience, not a sandbox. The PKGBUILD's code
+  still runs, and you are trusting the image.
+- To lint a directory named `build`, write `pkglint ./build`.
 
 ## Rules
 
-| Group         | Rules       | What they catch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Integrity     | PB101–PB116 | SKIP/weak/malformed checksums, unpinned VCS sources, unencrypted transports, source/url domain and forge-owner mismatches, DLAGENTS and other makepkg.conf overrides, checksum-count mismatches, missing install scripts, PGP signatures without pinned keys, insecure signature transport, unused validpgpkeys, a `source=` overwritten by a later one, ELF binaries committed beside the PKGBUILD                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Hermeticity   | PB201–PB210 | network access outside `prepare()`, `pip`/`uv pip` without `--require-hashes`, unlocked `cargo`/npm/yarn/pnpm/bun/composer/bundler/uv/poetry installs, implicit Go module downloads and mutable `@latest` refs, disabled checksum databases, packages fetched by name from a registry (`npm install axios`, `npx`, `pip install requests`, `gem install`, `cargo install` and a dozen more) with nothing verifying what arrives                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Execution     | PB301–PB310 | top-level code, `eval`, decode-and-execute, download-and-execute (including `eval "$(curl ...)"` and `source <(wget ...)` variants), `/dev/tcp`, unresolvable command names, embedded payloads, makepkg-internal function overrides, hidden bidi/zero-width characters and look-alike hosts, fetches routed through Tor or a SOCKS proxy                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Filesystem    | PB401–PB405 | writes outside `$srcdir`/`$pkgdir`, privilege escalation, setuid files and setcap capability grants, install steps that skip `$pkgdir`, writes to pacman/dynamic-linker/sudoers config                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| Scriptlets    | PB501–PB505 | network access and persistence (crontabs, systemd units, shell profiles, sshd config, login-capable or wheel accounts, preset passwords) in `.install` files running as root, unparseable scriptlets, commands pacman hooks already run, pacman installing or removing packages mid-transaction                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Consistency   | PB601–PB603 | PKGBUILD / .SRCINFO drift, network access in `pkgver()`, provides/replaces/conflicts claims on core system packages                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Correctness   | PB701–PB711 | makepkg build-breakers: invalid pkgname/pkgver/pkgrel/epoch, backup leading slash, unknown `options`, `provides` comparison operators, scalar-vs-array field types, schema variables set inside `package()`, missing/duplicate/mixed `arch`, VCS sources without their client in makedepends                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Built package | PB801–PB842 | everything namcap checks in a `.pkg.tar.*`: ELF hardening (executable stacks, text relocations, missing RELRO, non-PIE executables, insecure RPATH/RUNPATH), unstripped binaries, missing/unused library and interpreter dependencies (resolved through pacman's database, statically, with no `ldd`), stale soname declarations, pkg-config requirements, FHS layout, permissions and ownership, dangling symlinks and cross-directory hardlinks, `.la`/`perllocal.pod`/info `dir`/MIME-cache landmines, stale python bytecode, systemd/D-Bus units under `/etc`, missing license and backup files, plus the full scriptlet analysis over the packaged `.INSTALL`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Style         | PB901–PB984 | namcap's PKGBUILD conventions (hardcoded architectures, custom variables without `_` prefix, `$startdir`, redundant makedepends, missing Maintainer/pkgdesc/url/license, pre-SPDX license identifiers, stale ignore directives, …) plus the published [Arch package guidelines](https://manual.archlinux.page/package-guidelines/) and the per-ecosystem guidelines: [Go](https://manual.archlinux.page/package-guidelines/go/), [Python](https://manual.archlinux.page/package-guidelines/python/), [Rust](https://manual.archlinux.page/package-guidelines/rust/), [CMake](https://manual.archlinux.page/package-guidelines/cmake/)/[Meson](https://manual.archlinux.page/package-guidelines/meson/), [VCS](https://manual.archlinux.page/package-guidelines/vcs/), [fonts](https://manual.archlinux.page/package-guidelines/font/), [DKMS](https://manual.archlinux.page/package-guidelines/dkms/), [lib32](https://manual.archlinux.page/package-guidelines/32-bit/), [MinGW](https://manual.archlinux.page/package-guidelines/mingw/), [Node.js](https://manual.archlinux.page/package-guidelines/nodejs/), [Java](https://manual.archlinux.page/package-guidelines/java/), [CLR](https://manual.archlinux.page/package-guidelines/clr/), [Haskell](https://manual.archlinux.page/package-guidelines/haskell/) and [PHP](https://manual.archlinux.page/package-guidelines/php/) |
+| Rules       | Category      | Asks                                                                  |
+| ----------- | ------------- | --------------------------------------------------------------------- |
+| PB101–PB116 | Integrity     | Is every source verified, pinned, and fetched over a secure transport? |
+| PB201–PB210 | Hermeticity   | Does the build download anything it didn't declare and lock?          |
+| PB301–PB310 | Execution     | Does it `eval`, decode-and-run, or pipe a download into a shell?      |
+| PB401–PB405 | Filesystem    | Does it write outside the package, escalate privileges, or set setuid? |
+| PB501–PB505 | Scriptlets    | Do the root-run `.install` scripts reach the network or persist?      |
+| PB601–PB603 | Consistency   | Does `.SRCINFO` match? Does it claim to replace core packages?        |
+| PB701–PB711 | Correctness   | Would makepkg reject it?                                              |
+| PB801–PB842 | Built package | Is the binary hardened and stripped, with all its dependencies declared? |
+| PB901–PB984 | Style         | Does it follow namcap and the Arch packaging guidelines?             |
 
-`pkglint --rules` prints the full documentation for each, with its severity and
-the flag that auto-fixes it. `pkglint explain PB101` (or `pkglint explain
-skipped-checksum`) prints one rule's page: documentation, a flagged snippet
-beside the preferred spelling, and how to fix or suppress it. The
-[rule reference](https://jamison.lahman.dev/pkglint/rules/) publishes the same
-pages.
-
-### Relationship to namcap
-
-pkglint covers namcap's rule set, both the PKGBUILD checks and the built-package
-checks, with a few deliberate differences:
-
-- Nothing from the analyzed package is ever executed. namcap runs `ldd -r -u` on
-  packaged binaries; pkglint compares dynamic symbol tables instead.
-- Findings the lint host cannot verify are reported as info, not as hard errors.
-- Everything lands in the same graded, suppressible, JSON/SARIF-capable report the
-  PKGBUILD rules use.
-- Dependency inference reads pacman's local database directly and skips just those
-  rules on non-Arch hosts.
-
-### Grading
-
-The first row that matches sets the grade:
-
-| Grade | When                      |
-| ----- | ------------------------- |
-| **F** | any critical finding      |
-| **D** | any error                 |
-| **C** | 3 or more warnings        |
-| **B** | 1 or 2 warnings           |
-| **A** | no warnings, info at most |
-
-A grade is a **static hygiene score, not a malware verdict**: it measures how reviewable
-and reproducible a PKGBUILD is. A low grade means "worth reviewing", never "malicious",
-and a high grade is not an endorsement. Static analysis cannot catch a malicious upstream
-release pinned with a perfectly valid checksum.
+Run `pkglint explain <rule>` or see the
+[rule reference](https://jamison.lahman.dev/pkglint/rules/) for each rule's details.
 
 ## License
 
