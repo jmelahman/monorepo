@@ -354,7 +354,11 @@ func TestBuildContainerCommand(t *testing.T) {
 			for _, want := range []string{
 				"--user", "-e HOME=/tmp",
 				"-e PKGDEST=/tmp/out", "-e BUILDDIR=/tmp/build", "-e SRCDEST=/tmp/src",
-				"archlinux:base-devel sleep infinity",
+				// Labelled, and idle for a bounded time: a pkglint killed
+				// before its removal runs leaves a container that stops by
+				// itself and can be found.
+				"--label pkglint.build=1",
+				"archlinux:base-devel sleep 86400",
 			} {
 				if !strings.Contains(joined, want) {
 					t.Errorf("missing %q in: %s", want, joined)

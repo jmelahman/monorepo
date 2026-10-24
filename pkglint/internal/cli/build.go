@@ -957,6 +957,8 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, pla
 	// removal below is registered first and holds even if create fails part
 	// way or its output cannot be read. --force also stops the idle main
 	// process, and with it anything an interrupted makepkg left behind.
+	// SIGINT and SIGTERM cancel ctx (runBuild's NotifyContext) rather than
+	// killing pkglint, so an interrupted build unwinds through this defer.
 	name := fmt.Sprintf("pkglint-build-%d-%d", os.Getpid(), time.Now().UnixNano())
 	defer func() {
 		// Not CommandContext: on an interrupted build the context is already
@@ -970,9 +972,15 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, pla
 	// container's defaults, so the makepkg exec below inherits both. The
 	// working directory is not: podman refuses to start a container whose -w
 	// does not exist yet, and /build only exists once it is copied in.
+	//
+	// What the defer cannot cover — pkglint killed outright — is bounded
+	// instead: the idle main process exits after containerLifetime, which
+	// stops the container and anything still running in it, and the label
+	// finds the leftovers (`docker ps -a --filter label=pkglint.build`).
 	create := exec.CommandContext(ctx, runner,
 		"create",
 		"--name", name,
+		"--label", containerLabel,
 		"--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 		"-e", "HOME=/tmp",
 		"-e", "PKGDEST="+containerPkgdest,
@@ -981,7 +989,7 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, pla
 		"-e", "LOGDEST=/tmp/log",
 		"-e", "SRCPKGDEST=/tmp/srcpkg",
 		"-e", "BUILDFILE=PKGBUILD",
-		image, "sleep", "infinity",
+		image, "sleep", containerLifetime,
 	)
 	// The id on stdout is not needed and must not reach pkglint's own stdout,
 	// which carries the --format json/sarif document. `start` prints the name.
@@ -1013,6 +1021,14 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, pla
 	}
 	return nil
 }
+
+// containerLabel marks every container pkglint creates, and containerLifetime
+// bounds how long one outlives a pkglint that was killed before removing it.
+// A day is longer than any build pkglint's users run as a hook.
+const (
+	containerLabel    = "pkglint.build=1"
+	containerLifetime = "86400"
+)
 
 // syncDeps installs plan's dependencies in the running container, as root.
 // The CARCH comes from the container itself, not from the host pkglint was
