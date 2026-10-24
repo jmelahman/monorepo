@@ -185,7 +185,8 @@ var styleRules = []Rule{
 		Doc: "go writes its module cache read-only, so after a build that fetched modules, " +
 			"cleaning $srcdir (or $GOPATH under it) fails until someone chmods the tree. The Arch " +
 			"Go packaging guidelines pass -modcacherw on every module-aware command to keep the " +
-			"cache removable.",
+			"cache removable. A command run with GO111MODULE=off builds from GOPATH, writes no " +
+			"module cache, and is not reported: go rejects the flag there.",
 		Check: checkGoModcacheRW,
 		// -modcacherw only loosens permissions on cache files; it cannot
 		// change what gets built, so the rewrite is safe.

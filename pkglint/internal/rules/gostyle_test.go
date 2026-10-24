@@ -121,6 +121,37 @@ build() {
   export GO111MODULE=on
   go build -trimpath -buildmode=pie -o demo .
 }`)})
+		// Last as makepkg runs it, not as the file is sorted: build() runs
+		// after prepare(), so its "on" wins.
+		expectRule(t, "PB916", map[string]string{"PKGBUILD": pkgbuildWith("", `
+prepare() {
+  export GO111MODULE=off
+}
+build() {
+  export GO111MODULE=on
+  go build -trimpath -buildmode=pie -o demo .
+}`)})
+		// An empty value is module mode's default, not off.
+		expectRule(t, "PB916", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  export GO111MODULE=off
+  GO111MODULE= go build -trimpath -buildmode=pie -o demo .
+}`)})
+		// env's NAME=value words reach go as arguments, not assignments.
+		expectNoRule(t, "PB916", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  env GO111MODULE=off go build -trimpath -buildmode=pie -o demo .
+}`)})
+		expectRule(t, "PB916", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  export GO111MODULE=off
+  env GO111MODULE=on go build -trimpath -buildmode=pie -o demo .
+}`)})
+		expectNoRule(t, "PB916", map[string]string{"PKGBUILD": pkgbuildWith("", `
+prepare() {
+  export GO111MODULE=off
+  go mod download
+}`)})
 	})
 
 	t.Run("GOFLAGS is scoped to the phases that can still see it", func(t *testing.T) {
@@ -277,6 +308,30 @@ build() {
   GO111MODULE=off go build -v -trimpath -buildmode=pie -o demo .
 }`, FixSafe, nil)
 		mustNotContain(t, got, "-modcacherw")
+	})
+
+	t.Run("beside a GOPATH-mode build the flag goes on the command, not the shared GOFLAGS", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+build() {
+  export GOFLAGS="-buildmode=pie -trimpath"
+  GO111MODULE=off go build -o legacy ./legacy
+  go build -o modern ./modern
+}`, FixSafe, nil)
+		mustContain(t, got, `export GOFLAGS="-buildmode=pie -trimpath"`+"\n")
+		mustContain(t, got, "GO111MODULE=off go build -o legacy ./legacy")
+		mustContain(t, got, "go build -modcacherw -o modern ./modern")
+	})
+
+	t.Run("nor into a flags array the GOPATH-mode build also spreads", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+build() {
+  local flags=(-buildmode=pie -trimpath)
+  GO111MODULE=off go build "${flags[@]}" -o legacy ./legacy
+  go build "${flags[@]}" -o modern ./modern
+}`, FixSafe, nil)
+		mustContain(t, got, "local flags=(-buildmode=pie -trimpath)")
+		mustContain(t, got, `GO111MODULE=off go build "${flags[@]}" -o legacy ./legacy`)
+		mustContain(t, got, "-modcacherw")
 	})
 
 	t.Run("GOFLAGS coverage suppresses the insertion", func(t *testing.T) {

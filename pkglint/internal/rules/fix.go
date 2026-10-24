@@ -1999,7 +1999,10 @@ func goFlagSlot(words []string, flag string) int {
 // onto the command, or on the command itself — as a continuation line of its
 // own when that is how the command lays its flags out. One edit covers every
 // command that shares the assignment.
-func goFlagEdits(ctx *Context, cmds []Command, flagPrefix, flag string) []Edit {
+//
+// With shared false every edit goes on the command line, for a flag a shared
+// home would also hand to commands that must not get it.
+func goFlagEdits(ctx *Context, cmds []Command, flagPrefix, flag string, shared bool) []Edit {
 	var edits []Edit
 	seen := map[int]bool{}
 	for _, c := range cmds {
@@ -2007,6 +2010,9 @@ func goFlagEdits(ctx *Context, cmds []Command, flagPrefix, flag string) []Edit {
 			continue
 		}
 		edit, ok := goFlagEdit(c, flag)
+		if !shared {
+			edit, ok = goFlagIntoCommand(c, flag)
+		}
 		if !ok || seen[edit.Start] {
 			continue
 		}
@@ -2249,15 +2255,17 @@ func goFlagIntoCommand(c Command, flag string) (Edit, bool) {
 }
 
 func fixGoPIE(ctx *Context, _ *FixEnv) []Edit {
-	return goFlagEdits(ctx, goBuildCommands(ctx), "-buildmode", "-buildmode=pie")
+	return goFlagEdits(ctx, goBuildCommands(ctx), "-buildmode", "-buildmode=pie", true)
 }
 
 func fixGoTrimpath(ctx *Context, _ *FixEnv) []Edit {
-	return goFlagEdits(ctx, goBuildCommands(ctx), "-trimpath", "-trimpath")
+	return goFlagEdits(ctx, goBuildCommands(ctx), "-trimpath", "-trimpath", true)
 }
 
 func fixGoModcacheRW(ctx *Context, _ *FixEnv) []Edit {
-	return goFlagEdits(ctx, goModuleCommands(ctx), "-modcacherw", "-modcacherw")
+	// go rejects -modcacherw with module mode off, so beside a GOPATH-mode
+	// command a GOFLAGS export or flags array the two share cannot carry it.
+	return goFlagEdits(ctx, goModuleCommands(ctx), "-modcacherw", "-modcacherw", !anyGoModulesOff(ctx))
 }
 
 // --- PB205: re-enable Go module verification -------------------------------

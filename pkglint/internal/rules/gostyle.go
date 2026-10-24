@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"path"
 	"strings"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
@@ -260,13 +261,107 @@ func secondSubcommand(c Command) string {
 	return ""
 }
 
-// goModulesOff reports whether module mode is switched off for c: the last
-// GO111MODULE in scope says "off", so go builds from the GOPATH tree, never
-// touches the module cache, and rejects module-only flags such as -modcacherw
-// outright ("build flag -modcacherw only valid when using modules").
+// goModulesOff reports whether module mode is switched off for c, so go
+// builds from the GOPATH tree, never touches the module cache, and rejects
+// module-only flags such as -modcacherw outright ("build flag -modcacherw only
+// valid when using modules"). What decides is the GO111MODULE that takes
+// effect last as makepkg runs things: top-level code, then the phases in
+// order, each function's assignments by position, then c's own prefix, then
+// an `env GO111MODULE=…` wrapper word, which is closer to go than either. An
+// empty value is module mode's default, not off. Assignments made only under
+// a branch or in a subshell still count, as they do for every variable here.
 func goModulesOff(ctx *Context, c Command) bool {
-	modes := assignmentsTo(ctx, "GO111MODULE", c)
-	return len(modes) > 0 && modes[len(modes)-1] == "off"
+	if mode, ok := goEnvWrapperMode(c); ok {
+		return mode == "off"
+	}
+	at := -1
+	if c.Stmt != nil {
+		at = off(c.Stmt.Pos())
+	}
+	visible := map[*syntax.Assign]bool{}
+	exported := exportedInScope(c.Unit, "GO111MODULE", c.Fn, at, c.Call)
+	scanAssignments(c.Unit, "GO111MODULE", c.Fn, at, c.Call, exported, func(as *syntax.Assign) {
+		visible[as] = true
+	})
+	own := map[*syntax.Assign]bool{}
+	if c.Call != nil {
+		for _, as := range c.Call.Assigns {
+			own[as] = true
+		}
+	}
+	var last *syntax.Assign
+	lastRank, lastOff := -1, -1
+	for _, site := range c.Unit.AssignsTo("GO111MODULE") {
+		if !visible[site.Assign] {
+			continue
+		}
+		rank := phaseRank(site.Fn)
+		if own[site.Assign] {
+			rank = len(buildPhases) + 2
+		}
+		pos := off(site.Assign.Pos())
+		if rank > lastRank || rank == lastRank && pos > lastOff {
+			last, lastRank, lastOff = site.Assign, rank, pos
+		}
+	}
+	if last == nil || last.Value == nil {
+		return false
+	}
+	mode, _ := renderPlain(last.Value)
+	return mode == "off"
+}
+
+// phaseRank orders where an assignment sits by when makepkg runs it: top-level
+// code first, then prepare, build, check, and the package functions. A helper
+// the PKGBUILD calls itself has no fixed place, so it ranks with the top level,
+// where any phase's own assignment overrides it.
+func phaseRank(fn string) int {
+	if fn == "package" || strings.HasPrefix(fn, "package_") {
+		return len(buildPhases) + 1
+	}
+	for i, p := range buildPhases {
+		if fn == p {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+// goEnvWrapperMode reads GO111MODULE from an `env NAME=value … go` wrapper in
+// front of c: those words reach go as env's arguments, not as shell
+// assignments, so assignmentsTo never sees them.
+func goEnvWrapperMode(c Command) (string, bool) {
+	if c.Call == nil {
+		return "", false
+	}
+	mode, found, inEnv := "", false, false
+	for _, w := range c.Call.Args {
+		s, dyn := renderPlain(w)
+		if dyn {
+			continue
+		}
+		switch {
+		case path.Base(s) == "env":
+			inEnv = true
+		case inEnv && strings.HasPrefix(s, "GO111MODULE="):
+			mode, found = strings.TrimPrefix(s, "GO111MODULE="), true
+		case s == c.Name || path.Base(s) == c.Name:
+			return mode, found
+		}
+	}
+	return mode, found
+}
+
+// anyGoModulesOff reports whether some go command in the file runs with
+// module mode off, which makes a GOFLAGS export or flags array shared with it
+// the wrong home for a module-only flag.
+func anyGoModulesOff(ctx *Context) bool {
+	for _, c := range ctx.CommandsNamed("go") {
+		if !c.Unit.Scriptlet && c.Fn != "" && goModulesOff(ctx, c) {
+			return true
+		}
+	}
+	return false
 }
 
 // goModuleCommands returns every go invocation that writes the module cache,
@@ -275,17 +370,23 @@ func goModulesOff(ctx *Context, c Command) bool {
 func goModuleCommands(ctx *Context) []Command {
 	var out []Command
 	for _, c := range ctx.CommandsNamed("go") {
-		if c.Unit.Scriptlet || c.Fn == "" || goModulesOff(ctx, c) {
+		if c.Unit.Scriptlet || c.Fn == "" {
 			continue
 		}
+		writes := false
 		switch c.Subcommand() {
 		case "build", "install", "test", "run", "get":
-			out = append(out, c)
+			writes = true
 		case "mod":
 			switch secondSubcommand(c) {
 			case "download", "tidy", "vendor":
-				out = append(out, c)
+				writes = true
 			}
+		}
+		// Checked last: it walks the file, and most go commands are not
+		// cache writers to begin with.
+		if writes && !goModulesOff(ctx, c) {
+			out = append(out, c)
 		}
 	}
 	return out
