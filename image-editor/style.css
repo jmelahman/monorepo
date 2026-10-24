@@ -207,6 +207,59 @@ button.icon svg {
   stroke-linejoin: round;
 }
 
+.menu {
+  position: fixed;
+  inset: auto;
+  min-width: 13rem;
+  margin: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--chalk);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.3);
+}
+
+.menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  width: 100%;
+  border-color: transparent;
+  font: 400 0.8125rem/1 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--chalk);
+}
+
+.menu button:hover:not(:disabled),
+.menu button:focus-visible {
+  border-color: transparent;
+  outline: 0;
+  background: var(--accent-soft);
+}
+
+.menu button:active:not(:disabled) {
+  transform: none;
+}
+
+.menu kbd {
+  color: var(--dim);
+  font: 400 0.6875rem/1 var(--mono);
+}
+
+.menu hr {
+  margin: 0.25rem 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+button[aria-expanded="true"] {
+  border-color: var(--dim);
+  color: var(--chalk);
+}
+
 #tools {
   flex: none;
   display: flex;
@@ -567,6 +620,24 @@ dialog label {
 dialog input[type="number"],
 dialog select {
   width: 8.5rem;
+}
+
+dialog label.stacked {
+  display: grid;
+  gap: 0.375rem;
+}
+
+dialog input[type="url"] {
+  width: min(28rem, 75vw);
+  height: var(--control);
+  padding: 0 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--ink-2);
+  color: var(--chalk);
+  font: 400 0.8125rem/1 var(--mono);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 dialog .actions {

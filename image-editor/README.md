@@ -11,7 +11,7 @@ dependencies, nothing leaves your machine.
 - Primary and secondary colors that swap with one key
 - Layers: add, delete, reorder, hide, and merge down
 - Text stays editable on its own layer: drag to move it, click to edit it
-- Open an image from disk, by drag-and-drop, or by pasting from the clipboard
+- Open an image from disk, from a URL, by drag-and-drop, or by pasting from the clipboard
 - Save as PNG or copy to the clipboard
 - Undo / redo, zoom, mouse / touch / pen input
 

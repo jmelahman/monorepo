@@ -786,7 +786,7 @@ function newCanvas(w, h, background) {
   }
 }
 
-async function loadImage(file) {
+async function loadImage(file, name = file.name) {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
@@ -799,10 +799,30 @@ async function loadImage(file) {
     active.ctx.drawImage(img, 0, 0, w, h);
     setMessage(scale < 1 ? `Image scaled down to fit ${MAX_DIM}px.` : '');
   } catch {
-    setMessage(`Could not open ${file.name || 'image'}.`);
+    setMessage(`Could not open ${name || 'image'}.`);
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+// The image is downloaded rather than loaded straight into an <img>, which
+// would taint the canvas and block saving. Either way the site has to allow
+// other pages to read it (CORS).
+async function openUrl(address) {
+  setMessage(`Opening ${address}…`);
+  let blob;
+  try {
+    const res = await fetch(address);
+    if (!res.ok) {
+      setMessage(`Could not open ${address}: the server answered ${res.status}.`);
+      return;
+    }
+    blob = await res.blob();
+  } catch {
+    setMessage(`Could not download ${address}. The site may not allow other pages to load its images.`);
+    return;
+  }
+  await loadImage(blob, address);
 }
 
 const toBlob = () => new Promise((resolve) => composite().toBlob(resolve, 'image/png'));
@@ -882,6 +902,47 @@ $('layer-up').addEventListener('click', () => moveLayer(1));
 $('layer-down').addEventListener('click', () => moveLayer(-1));
 $('layer-merge').addEventListener('click', mergeDown);
 
+// A menu sits in the top layer, so it is placed by hand under its button
+// before it is shown.
+for (const menu of document.querySelectorAll('.menu')) {
+  const button = $(menu.getAttribute('aria-labelledby'));
+  menu.addEventListener('beforetoggle', (e) => {
+    const open = e.newState === 'open';
+    button.setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    const { left, bottom } = button.getBoundingClientRect();
+    menu.style.left = `${left}px`;
+    menu.style.top = `${bottom + 4}px`;
+  });
+  menu.addEventListener('toggle', (e) => {
+    if (e.newState === 'open') menu.querySelector('button').focus();
+  });
+  menu.addEventListener('click', (e) => {
+    if (e.target.closest('button')) menu.hidePopover();
+  });
+  menu.addEventListener('keydown', (e) => {
+    const step = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+    if (!step) return;
+    const items = [...menu.querySelectorAll(':scope > button:not([hidden])')];
+    items[(items.indexOf(document.activeElement) + step + items.length) % items.length].focus();
+    e.preventDefault();
+  });
+}
+
+const urlDialog = $('url-dialog');
+$('open-url').addEventListener('click', () => {
+  urlDialog.returnValue = '';
+  urlDialog.showModal();
+  $('url-input').select();
+});
+// Not a submit button, so that Enter in the field opens the image.
+$('url-cancel').addEventListener('click', () => urlDialog.close('cancel'));
+urlDialog.addEventListener('close', () => {
+  if (urlDialog.returnValue === 'open') openUrl($('url-input').value.trim());
+});
+
+const dialogOpen = () => Boolean(document.querySelector('dialog[open]'));
+
 const newDialog = $('new-dialog');
 $('new').addEventListener('click', () => {
   $('new-width').value = overlay.width;
@@ -917,12 +978,12 @@ document.addEventListener('wheel', (e) => {
   const unit = e.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? 1 : 16;
   if (e.ctrlKey || e.metaKey) {
     e.preventDefault();
-    if (newDialog.open || drag) return;
+    if (dialogOpen() || drag) return;
     const delta = Math.max(-50, Math.min(50, e.deltaY * unit));
     zoomTo(zoom * Math.exp(-delta * 0.005), e.clientX, e.clientY);
   } else if (e.shiftKey) {
     e.preventDefault();
-    if (newDialog.open) return;
+    if (dialogOpen()) return;
     // Some browsers already turn Shift+wheel into a horizontal delta.
     workspace.scrollLeft += (e.deltaX || e.deltaY) * unit;
   }
@@ -940,7 +1001,7 @@ $('panel-toggle').addEventListener('click', (e) => {
 const TOOL_KEYS = { b: 'brush', e: 'eraser', l: 'line', a: 'arrow', r: 'rect', o: 'ellipse', t: 'text', g: 'fill', i: 'eyedropper' };
 
 document.addEventListener('keydown', (e) => {
-  if (newDialog.open) return;
+  if (dialogOpen()) return;
   const key = e.key.toLowerCase();
   const typing = e.target.matches?.('textarea, select, input:not([type="range"], [type="checkbox"], [type="color"])');
 
@@ -961,7 +1022,8 @@ document.addEventListener('keydown', (e) => {
     }
     return;
   }
-  if (typing || e.altKey) return;
+  // Letters in an open menu are for the menu, not the tools.
+  if (typing || e.altKey || e.target.closest?.('.menu')) return;
 
   if (TOOL_KEYS[key]) {
     setTool(TOOL_KEYS[key]);

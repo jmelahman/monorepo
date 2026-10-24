@@ -11,10 +11,15 @@
 <body>
   <header class="toolbar">
     <div class="group">
-      <button type="button" id="new" title="New canvas">New</button>
-      <button type="button" id="open" title="Open image (Ctrl+O)">Open</button>
-      <button type="button" id="save" title="Save as PNG (Ctrl+S)">Save</button>
-      <button type="button" id="copy" title="Copy image to clipboard">Copy</button>
+      <button type="button" id="file-button" popovertarget="file-menu" aria-haspopup="menu">File</button>
+      <div id="file-menu" class="menu" role="menu" aria-labelledby="file-button" popover>
+        <button type="button" role="menuitem" id="new">New…</button>
+        <button type="button" role="menuitem" id="open">Open… <kbd>Ctrl+O</kbd></button>
+        <button type="button" role="menuitem" id="open-url">Open from URL…</button>
+        <hr>
+        <button type="button" role="menuitem" id="save">Save as PNG <kbd>Ctrl+S</kbd></button>
+        <button type="button" role="menuitem" id="copy">Copy to clipboard</button>
+      </div>
       <input type="file" id="file" accept="image/*" hidden>
     </div>
 
@@ -154,6 +159,17 @@
       <div class="actions">
         <button value="cancel" formnovalidate>Cancel</button>
         <button value="create" class="primary">Create</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="url-dialog">
+    <form method="dialog">
+      <h2>Open from URL</h2>
+      <label class="stacked">Address <input type="url" id="url-input" placeholder="https://" required></label>
+      <div class="actions">
+        <button type="button" id="url-cancel">Cancel</button>
+        <button value="open" class="primary">Open</button>
       </div>
     </form>
   </dialog>
