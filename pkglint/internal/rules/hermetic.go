@@ -580,8 +580,7 @@ func goCommandVendored(ctx *Context, c Command) bool {
 	if goFlagAddressed(goFlags(ctx, c), c, "-mod=vendor") {
 		return true
 	}
-	modes := assignmentsTo(ctx, "GO111MODULE", c)
-	return len(modes) > 0 && modes[len(modes)-1] == "off"
+	return goModulesOff(ctx, c)
 }
 
 // isVendorArchive reports whether a source looks like a bundled vendored-deps

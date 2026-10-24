@@ -103,6 +103,26 @@ prepare() {
 }`)})
 	})
 
+	t.Run("GOPATH mode has no module cache, and go rejects the flag there", func(t *testing.T) {
+		expectNoRule(t, "PB916", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  GO111MODULE=off go build -trimpath -buildmode=pie -o demo .
+}`)})
+		expectNoRule(t, "PB916", map[string]string{"PKGBUILD": pkgbuildWith("", `
+export GO111MODULE=off
+
+build() {
+  go build -trimpath -buildmode=pie -o demo .
+}`)})
+		// Only the last word counts: switched back on, the cache is written.
+		expectRule(t, "PB916", map[string]string{"PKGBUILD": pkgbuildWith("", `
+build() {
+  export GO111MODULE=off
+  export GO111MODULE=on
+  go build -trimpath -buildmode=pie -o demo .
+}`)})
+	})
+
 	t.Run("GOFLAGS is scoped to the phases that can still see it", func(t *testing.T) {
 		// build() exports GOFLAGS long after prepare() has finished, so the
 		// download ran against a read-only cache regardless.
@@ -248,6 +268,15 @@ build() {
 }`, FixSafe, nil)
 		mustContain(t, got, "go mod download -modcacherw")
 		mustNotContain(t, got, "build -buildmode")
+	})
+
+	t.Run("the fix leaves a GOPATH-mode build alone", func(t *testing.T) {
+		// cgasm: `go build -modcacherw` under GO111MODULE=off fails the build.
+		got := fixPKGBUILD(t, `
+build() {
+  GO111MODULE=off go build -v -trimpath -buildmode=pie -o demo .
+}`, FixSafe, nil)
+		mustNotContain(t, got, "-modcacherw")
 	})
 
 	t.Run("GOFLAGS coverage suppresses the insertion", func(t *testing.T) {

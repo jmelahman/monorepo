@@ -260,13 +260,22 @@ func secondSubcommand(c Command) string {
 	return ""
 }
 
+// goModulesOff reports whether module mode is switched off for c: the last
+// GO111MODULE in scope says "off", so go builds from the GOPATH tree, never
+// touches the module cache, and rejects module-only flags such as -modcacherw
+// outright ("build flag -modcacherw only valid when using modules").
+func goModulesOff(ctx *Context, c Command) bool {
+	modes := assignmentsTo(ctx, "GO111MODULE", c)
+	return len(modes) > 0 && modes[len(modes)-1] == "off"
+}
+
 // goModuleCommands returns every go invocation that writes the module cache,
 // in any function of the PKGBUILD — prepare() is exactly where the guidelines
-// put `go mod download`.
+// put `go mod download`. A command running with modules off writes no cache.
 func goModuleCommands(ctx *Context) []Command {
 	var out []Command
 	for _, c := range ctx.CommandsNamed("go") {
-		if c.Unit.Scriptlet || c.Fn == "" {
+		if c.Unit.Scriptlet || c.Fn == "" || goModulesOff(ctx, c) {
 			continue
 		}
 		switch c.Subcommand() {
