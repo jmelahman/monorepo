@@ -865,7 +865,7 @@ async function loadImage(file, name = file.name) {
       renderVector(active);
       renderLayers();
       kept = true;
-      setMessage('Opened as a vector image: File › Image size… scales it without losing quality.');
+      setMessage('Opened as a vector image.');
     } else {
       active.ctx.drawImage(img, 0, 0, w, h);
       setMessage(scale < 1 ? `Image scaled down to fit ${MAX_DIM}px.` : '');
