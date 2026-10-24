@@ -18,6 +18,7 @@ package cli
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -27,7 +28,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -269,41 +269,75 @@ func checkMakepkgArgs(args []string) error {
 // -s as surely as -s does.
 const makepkgFlagShorts = "AcCdefFghiLmorRsSV"
 
+// longPrefix reports whether a is --opt or an abbreviation of it at least min
+// letters long: makepkg's parser takes any unambiguous prefix, and min is the
+// shortest one that is unambiguous among its long options.
+func longPrefix(a, opt string, min int) bool {
+	name, ok := strings.CutPrefix(a, "--")
+	return ok && len(name) >= min && strings.HasPrefix(opt, name)
+}
+
+// syncRequest is what a container build reads off makepkg's arguments.
+type syncRequest struct {
+	rest []string // the arguments with every -s removed
+	sync bool
+	run  rules.RunCheck
+}
+
 // splitSyncdeps removes makepkg's -s/--syncdeps from args, in every spelling
 // makepkg's parser accepts — -s, a cluster holding s, --syncdeps or any
-// unambiguous prefix of it down to --sy — and reports whether it was there.
-// The value of --key is skipped, not read, and nothing after a bare -- is an
-// option.
-func splitSyncdeps(args []string) ([]string, bool) {
-	var rest []string
-	sync := false
+// unambiguous prefix of it down to --sy — and records whether it was there,
+// and the last of --check/--nocheck, which decides whether checkdepends are
+// needed. The value of --key is skipped, not read, and nothing after a bare
+// -- is an option.
+//
+// A single-dash word that is not a cluster of makepkg's no-value short
+// options is refused rather than passed on: makepkg would read it some way
+// this function does not, and whether it asks for -s is then a guess. (-p and
+// -D, the two that take values, were refused before this by checkMakepkgArgs.)
+func splitSyncdeps(args []string) (syncRequest, error) {
+	var r syncRequest
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
 		case a == "--":
-			return append(rest, args[i:]...), sync
+			r.rest = append(r.rest, args[i:]...)
+			return r, nil
+		case longPrefix(a, "syncdeps", 2):
+			r.sync = true
+			continue
+		case longPrefix(a, "check", 2):
+			r.run = rules.CheckForced
+		case longPrefix(a, "nocheck", 4):
+			r.run = rules.CheckSkipped
+		case longPrefix(a, "key", 1):
+			r.rest = append(r.rest, a)
+			if i+1 < len(args) {
+				i++
+				r.rest = append(r.rest, args[i])
+			}
+			continue
 		case strings.HasPrefix(a, "--"):
-			name := a[2:]
-			if len(name) >= 2 && strings.HasPrefix("syncdeps", name) {
-				sync = true
+		case len(a) > 1 && a[0] == '-':
+			if strings.Trim(a[1:], makepkgFlagShorts) != "" {
+				return syncRequest{}, fmt.Errorf("makepkg argument %s is not a cluster of makepkg's short options, so whether it asks for -s cannot be told; spell the options out separately", a)
+			}
+			if strings.Contains(a, "s") {
+				r.sync = true
+				if kept := strings.ReplaceAll(a, "s", ""); kept != "-" {
+					r.rest = append(r.rest, kept)
+				}
 				continue
 			}
-			rest = append(rest, a)
-			if name != "" && strings.HasPrefix("key", name) && i+1 < len(args) {
-				i++
-				rest = append(rest, args[i])
-			}
-		case len(a) > 1 && a[0] == '-' && strings.Trim(a[1:], makepkgFlagShorts) == "" && strings.Contains(a, "s"):
-			sync = true
-			if kept := strings.ReplaceAll(a, "s", ""); kept != "-" {
-				rest = append(rest, kept)
-			}
-		default:
-			rest = append(rest, a)
 		}
+		r.rest = append(r.rest, a)
 	}
-	return rest, sync
+	return r, nil
 }
+
+// syncPlan computes the dependencies to install once the container's CARCH
+// is known; nil when makepkg was not asked for -s.
+type syncPlan func(carch string) ([]string, error)
 
 // containerSyncdeps turns a request for makepkg -s into one pkglint can carry
 // out in a container. makepkg would sync dependencies with sudo, which the
@@ -316,39 +350,36 @@ func splitSyncdeps(args []string) ([]string, bool) {
 //
 // makepkg still checks the dependencies itself once it runs, so anything this
 // list misses fails the build with makepkg's own "missing dependencies".
-func containerSyncdeps(pkg *pkgbuild.Package, args []string) ([]string, []string, error) {
-	rest, sync := splitSyncdeps(args)
-	if !sync {
-		return args, nil, nil
-	}
-	carch, err := containerCARCH()
+func containerSyncdeps(pkg *pkgbuild.Package, args []string) ([]string, syncPlan, error) {
+	req, err := splitSyncdeps(args)
 	if err != nil {
 		return nil, nil, err
 	}
-	deps, err := rules.SyncDeps(pkg, carch, rules.CheckDefault)
-	if err != nil {
-		return nil, nil, fmt.Errorf("cannot sync dependencies for a container build: %w", err)
+	if !req.sync {
+		return args, nil, nil
 	}
-	for _, d := range deps {
-		if !validDepName(d) {
-			return nil, nil, fmt.Errorf("cannot sync dependencies for a container build: %q is not a valid package name", d)
+	plan := func(carch string) ([]string, error) {
+		deps, err := rules.SyncDeps(pkg, carch, req.run)
+		if err != nil {
+			return nil, fmt.Errorf("cannot sync dependencies for a container build: %w", err)
 		}
+		for _, d := range deps {
+			if !validDepName(d) {
+				return nil, fmt.Errorf("cannot sync dependencies for a container build: %q is not a valid package name", d)
+			}
+		}
+		return deps, nil
 	}
-	return rest, deps, nil
+	return req.rest, plan, nil
 }
 
-// containerCARCH is the CARCH makepkg will see in the container, which runs
-// on the host's architecture.
-func containerCARCH() (string, error) {
-	switch runtime.GOARCH {
-	case "amd64":
-		return "x86_64", nil
-	case "arm64":
-		return "aarch64", nil
-	case "riscv64":
-		return "riscv64", nil
-	}
-	return "", fmt.Errorf("cannot sync dependencies for a container build: no known CARCH for %s", runtime.GOARCH)
+// containerArches maps what `uname -m` prints in the container to the CARCH
+// makepkg uses there. Anything else is refused: the CARCH picks which
+// depends_$CARCH arrays are installed, and a guess installs the wrong ones.
+var containerArches = map[string]string{
+	"x86_64":  "x86_64",
+	"aarch64": "aarch64",
+	"riscv64": "riscv64",
 }
 
 // validDepName is makepkg's rule for a package name (rules.NameProblem, the
@@ -811,11 +842,11 @@ func (b *builder) makepkg(ctx context.Context, pkg *pkgbuild.Package, dir string
 	// meant to be run from.
 	args := append([]string{"-f", "--noconfirm", "--cleanbuild", "--nosign"}, b.bo.makepkgArgs...)
 	if b.runner != "" {
-		args, deps, err := containerSyncdeps(pkg, args)
+		args, plan, err := containerSyncdeps(pkg, args)
 		if err != nil {
 			return err
 		}
-		return containerBuild(ctx, b.runner, b.image, dir, d.pkgdest, deps, args)
+		return containerBuild(ctx, b.runner, b.image, dir, d.pkgdest, plan, args)
 	}
 	restore, err := holdBuildFile(dir)
 	if err != nil {
@@ -905,11 +936,12 @@ func holdBuildFile(dir string) (func(), error) {
 // same way the read-only mount did. A running container's filesystem is
 // already mounted, and copies use that.
 //
-// deps, when there are any, are installed first by pacman as root in the same
+// plan, when makepkg was asked for -s, names the dependencies once the
+// container's CARCH is known; they are installed by pacman as root in the same
 // container — the one step that is not the caller's uid — before the package
 // directory is even copied in. Nothing of the PKGBUILD's runs in that step;
-// it sees only names containerSyncdeps has already validated.
-func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, deps, makepkgArgs []string) error {
+// it sees only names containerSyncdeps has validated.
+func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, plan syncPlan, makepkgArgs []string) error {
 	// --user hands the container the caller's uid, and makepkg refuses to run
 	// as root; as root there is no uid to pass that would work. Say so, rather
 	// than spending a container start to arrive at "makepkg exited 1".
@@ -962,17 +994,9 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, dep
 	if err := runCmd(start); err != nil {
 		return describe(ctx, runner+" start", err)
 	}
-	if len(deps) > 0 {
-		// -Syu, not -S: installing against a freshly synced database without
-		// upgrading is a partial upgrade, which Arch does not support. The
-		// `--` keeps every name an operand, though validDepName has already
-		// refused anything starting with a dash.
-		sync := exec.CommandContext(ctx, runner, append([]string{
-			"exec", "--user", "0:0", name,
-			"pacman", "-Syu", "--needed", "--noconfirm", "--",
-		}, deps...)...)
-		if err := runStreamed(sync); err != nil {
-			return describe(ctx, "pacman", err)
+	if plan != nil {
+		if err := syncDeps(ctx, runner, name, plan); err != nil {
+			return err
 		}
 	}
 	if err := copyTreeIn(ctx, runner, name, abs); err != nil {
@@ -988,6 +1012,50 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, dep
 		return describe(ctx, runner+" cp", err)
 	}
 	return nil
+}
+
+// syncDeps installs plan's dependencies in the running container, as root.
+// The CARCH comes from the container itself, not from the host pkglint was
+// built for: an emulated image's depends_$CARCH are the ones that matter.
+func syncDeps(ctx context.Context, runner, name string, plan syncPlan) error {
+	var out bytes.Buffer
+	uname := exec.CommandContext(ctx, runner, "exec", name, "uname", "-m")
+	uname.Stdout, uname.Stderr = &out, os.Stderr
+	if err := runCmd(uname); err != nil {
+		return describe(ctx, runner+" exec uname", err)
+	}
+	machine := strings.TrimSuffix(out.String(), "\n")
+	carch, ok := containerArches[machine]
+	if !ok {
+		return fmt.Errorf("cannot sync dependencies for a container build: the container's machine %q is not one pkglint knows the CARCH of", printableMachine(machine))
+	}
+	deps, err := plan(carch)
+	if err != nil {
+		return err
+	}
+	if len(deps) == 0 {
+		return nil
+	}
+	// -Syu, not -Sy: syncing the database without upgrading is a partial
+	// upgrade, which Arch does not support. The `--` keeps every name an
+	// operand, though validDepName has already refused anything starting
+	// with a dash.
+	sync := exec.CommandContext(ctx, runner, append([]string{
+		"exec", "--user", "0:0", name,
+		"pacman", "-Syu", "--needed", "--noconfirm", "--",
+	}, deps...)...)
+	if err := runStreamed(sync); err != nil {
+		return describe(ctx, "pacman", err)
+	}
+	return nil
+}
+
+// printableMachine bounds what an image's `uname -m` can put in an error.
+func printableMachine(s string) string {
+	if len(s) > 64 {
+		s = s[:64] + "…"
+	}
+	return s
 }
 
 // runStreamed runs a command with its output on pkglint's stderr, never

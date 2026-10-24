@@ -126,11 +126,25 @@ func dropArchive(names ...string) func(*exec.Cmd) error {
 // package directory going in) has its tar captured, and the copy back out
 // plays the extraction by dropping an archive into its destination. Every
 // other step succeeds without doing anything.
+// answerUname plays the container's `uname -m` for a stub, printing machine,
+// so what a test sees never depends on the host it runs on. It reports
+// whether cmd was that exec.
+func answerUname(cmd *exec.Cmd, machine string) bool {
+	if len(cmd.Args) < 2 || cmd.Args[1] != "exec" || !slices.Contains(cmd.Args, "uname") {
+		return false
+	}
+	_, _ = io.WriteString(cmd.Stdout, machine)
+	return true
+}
+
 func stubContainer(t *testing.T, installed []string) (*[]*exec.Cmd, *[]byte) {
 	t.Helper()
 	drop := dropArchive("goodpkg-2.1.0-1-any.pkg.tar")
 	var in []byte
 	seen := stubExec(t, installed, func(cmd *exec.Cmd) error {
+		if answerUname(cmd, "x86_64\n") {
+			return nil
+		}
 		if cmd.Args[1] != "cp" {
 			return nil
 		}

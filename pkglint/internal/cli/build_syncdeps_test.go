@@ -3,18 +3,22 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/jmelahman/pkglint/internal/rules"
 )
 
 func TestSplitSyncdeps(t *testing.T) {
 	for _, tc := range []struct {
 		in, want []string
 		sync     bool
+		run      rules.RunCheck
 	}{
 		{in: []string{"-f", "--noconfirm"}, want: []string{"-f", "--noconfirm"}},
 		{in: []string{"-f", "-s"}, want: []string{"-f"}, sync: true},
@@ -27,9 +31,6 @@ func TestSplitSyncdeps(t *testing.T) {
 		{in: []string{"-sf"}, want: []string{"-f"}, sync: true},
 		{in: []string{"-fsc"}, want: []string{"-fc"}, sync: true},
 		{in: []string{"-ss"}, want: nil, sync: true},
-		// A word with a letter outside the no-value short set is not a
-		// cluster makepkg would read as holding -s.
-		{in: []string{"-sx"}, want: []string{"-sx"}},
 		{in: []string{"--key", "-s"}, want: []string{"--key", "-s"}},
 		{in: []string{"--ke", "-s", "-s"}, want: []string{"--ke", "-s"}, sync: true},
 		{in: []string{"--key=-s"}, want: []string{"--key=-s"}},
@@ -37,10 +38,35 @@ func TestSplitSyncdeps(t *testing.T) {
 		{in: []string{"-s", "--", "-s"}, want: []string{"--", "-s"}, sync: true},
 		{in: []string{"-", "s"}, want: []string{"-", "s"}},
 		{in: []string{"--syncdeps=x"}, want: []string{"--syncdeps=x"}},
+		// The last of --check and --nocheck, in any unambiguous spelling,
+		// decides whether checkdepends are wanted; both stay for makepkg.
+		{in: []string{"-s", "--check"}, want: []string{"--check"}, sync: true, run: rules.CheckForced},
+		{in: []string{"-s", "--ch"}, want: []string{"--ch"}, sync: true, run: rules.CheckForced},
+		{in: []string{"-s", "--nocheck"}, want: []string{"--nocheck"}, sync: true, run: rules.CheckSkipped},
+		{in: []string{"--noch", "-s"}, want: []string{"--noch"}, sync: true, run: rules.CheckSkipped},
+		{in: []string{"--nocheck", "--check"}, want: []string{"--nocheck", "--check"}, run: rules.CheckForced},
+		{in: []string{"--check", "--nocheck"}, want: []string{"--check", "--nocheck"}, run: rules.CheckSkipped},
+		// --c and --no are ambiguous to makepkg; nothing is read off them.
+		{in: []string{"--c", "--no"}, want: []string{"--c", "--no"}},
 	} {
-		got, sync := splitSyncdeps(tc.in)
-		if !slices.Equal(got, tc.want) || sync != tc.sync {
-			t.Errorf("splitSyncdeps(%q) = %q, %v; want %q, %v", tc.in, got, sync, tc.want, tc.sync)
+		got, err := splitSyncdeps(tc.in)
+		if err != nil {
+			t.Errorf("splitSyncdeps(%q): %v", tc.in, err)
+			continue
+		}
+		if !slices.Equal(got.rest, tc.want) || got.sync != tc.sync || got.run != tc.run {
+			t.Errorf("splitSyncdeps(%q) = %q, %v, %v; want %q, %v, %v", tc.in, got.rest, got.sync, got.run, tc.want, tc.sync, tc.run)
+		}
+	}
+}
+
+// TestSplitSyncdepsRefusesUnknownShorts: a single-dash word that is not a
+// cluster of makepkg's no-value short options cannot be told to hold -s or
+// not, so it fails closed instead of being passed on.
+func TestSplitSyncdepsRefusesUnknownShorts(t *testing.T) {
+	for _, in := range []string{"-sx", "-x", "-fz", "-s=1", "-ñ"} {
+		if got, err := splitSyncdeps([]string{"-f", in}); err == nil || !strings.Contains(err.Error(), in) {
+			t.Errorf("splitSyncdeps(%q) = %q, %v; want an error naming it", in, got.rest, err)
 		}
 	}
 }
@@ -81,6 +107,7 @@ func TestBuildContainerSyncdeps(t *testing.T) {
 	want := [][]string{
 		create.Args,
 		{"docker", "start", name},
+		{"docker", "exec", name, "uname", "-m"},
 		{"docker", "exec", "--user", "0:0", name, "pacman", "-Syu", "--needed", "--noconfirm", "--", "go"},
 		{"docker", "cp", "-", name + ":/"},
 		{"docker", "exec", "-w", "/build", name, "makepkg", "-f", "--noconfirm", "--cleanbuild", "--nosign", "-C"},
@@ -89,7 +116,7 @@ func TestBuildContainerSyncdeps(t *testing.T) {
 	}
 	got := args(*seen)
 	if len(got) == len(want) {
-		want[5][3] = got[5][3]
+		want[6][3] = got[6][3]
 	}
 	if !slices.EqualFunc(got, want, slices.Equal) {
 		t.Errorf("commands =\n%q\nwant\n%q", got, want)
@@ -153,7 +180,9 @@ func syncdepsPackage(t *testing.T, old, line string) string {
 // not hand to pacman: names makepkg itself would reject, which include every
 // way to smuggle an option, and lists that cannot be known without running
 // the PKGBUILD. --force takes the static gate out of the way, so what refuses
-// is this step; either way nothing runs as root and makepkg never starts.
+// is this step. It runs once the container says its CARCH, and the container
+// is still removed; nothing runs as root, nothing is copied in, and makepkg
+// never starts.
 func TestBuildContainerSyncdepsRefuses(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("the container path refuses to run as root: makepkg would too")
@@ -162,6 +191,8 @@ func TestBuildContainerSyncdepsRefuses(t *testing.T) {
 		{`makedepends=('-oops')`, `"-oops" is not a valid package name`},
 		{`makedepends=('--overwrite=*')`, `"--overwrite" is not a valid package name`},
 		{`makedepends=('$(evil)')`, "not statically known"},
+		{"makedepends=(go)\neval 'makedepends+=(jq)'", "runs eval"},
+		{"_py=python\n[[ -e /x ]] && _py=python2\nmakedepends=(\"$_py\")", "_py is assigned under top-level control flow"},
 		{`makedepends=("$(curl -s example.com/deps)")`, "not statically known"},
 		{`makedepends=('go jq')`, "contains whitespace"},
 		{`makedepends=('x"y')`, `"x\"y" is not a valid package name`},
@@ -179,9 +210,7 @@ func TestBuildContainerSyncdepsRefuses(t *testing.T) {
 			if !strings.Contains(buf.String(), tc.want) {
 				t.Errorf("output lacks %q:\n%s", tc.want, buf.String())
 			}
-			if len(*seen) != 0 {
-				t.Errorf("ran %q", args(*seen))
-			}
+			assertNoSync(t, *seen)
 		})
 	}
 }
@@ -195,6 +224,7 @@ func TestBuildContainerSyncdepsPacmanFails(t *testing.T) {
 	var ran [][]string
 	stubExec(t, []string{"docker"}, func(cmd *exec.Cmd) error {
 		ran = append(ran, cmd.Args)
+		answerUname(cmd, "x86_64\n")
 		if slices.Contains(cmd.Args, "pacman") {
 			return errors.New("exit status 1")
 		}
@@ -215,4 +245,160 @@ func TestBuildContainerSyncdepsPacmanFails(t *testing.T) {
 	if last := ran[len(ran)-1]; last[1] != "rm" {
 		t.Errorf("the container was not removed last: %q", ran)
 	}
+}
+
+// assertNoSync checks that a refused sync stopped the build before anything
+// ran as root, the tree was copied in, or makepkg started, and that the
+// container was still removed.
+func assertNoSync(t *testing.T, seen []*exec.Cmd) {
+	t.Helper()
+	ran := args(seen)
+	for _, a := range ran {
+		if slices.Contains(a, "pacman") || slices.Contains(a, "makepkg") || slices.Contains(a, "0:0") || a[1] == "cp" {
+			t.Errorf("ran %q", a)
+		}
+	}
+	if len(ran) == 0 || ran[len(ran)-1][1] != "rm" {
+		t.Errorf("the container was not removed last: %q", ran)
+	}
+}
+
+// TestBuildContainerSyncdepsCarch: the CARCH whose depends_$CARCH are
+// installed is the container's, as its `uname -m` says, never the host's.
+func TestBuildContainerSyncdepsCarch(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("the container path refuses to run as root: makepkg would too")
+	}
+	dir := syncdepsPackage(t, "makedepends=('go')", "makedepends=(go)\nmakedepends_x86_64=(nasm)\nmakedepends_aarch64=(armstuff)")
+	for _, tc := range []struct {
+		machine string
+		want    []string
+	}{
+		{"x86_64\n", []string{"go", "nasm"}},
+		{"aarch64\n", []string{"go", "armstuff"}},
+	} {
+		t.Run(tc.machine, func(t *testing.T) {
+			seen := stubExec(t, []string{"docker"}, func(cmd *exec.Cmd) error {
+				if answerUname(cmd, tc.machine) {
+					return nil
+				}
+				if cmd.Args[1] == "cp" && cmd.Args[2] == "-" {
+					_, err := io.Copy(io.Discard, cmd.Stdin)
+					return err
+				}
+				if cmd.Args[1] == "cp" {
+					return dropArchive("goodpkg-2.1.0-1-any.pkg.tar")(&exec.Cmd{Env: []string{"PKGDEST=" + cmd.Args[len(cmd.Args)-1]}})
+				}
+				return nil
+			})
+			var buf bytes.Buffer
+			// --force: the arch=() line names only x86_64, which is not what
+			// this case is about.
+			if code := run([]string{"build", "--force", "--fail-on=never", "--image", "archlinux:base-devel", dir, "--", "-s"}, &buf); code != 0 {
+				t.Fatalf("got exit %d, want 0\n%s", code, buf.String())
+			}
+			pacman := running(t, *seen, "pacman")
+			if got := pacman.Args[len(pacman.Args)-len(tc.want):]; !slices.Equal(got, tc.want) {
+				t.Errorf("installed %q, want %q", pacman.Args, tc.want)
+			}
+		})
+	}
+}
+
+// TestBuildContainerSyncdepsUnknownArch: a machine pkglint does not know the
+// CARCH of, or a uname that fails, refuses the sync rather than guessing.
+func TestBuildContainerSyncdepsUnknownArch(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("the container path refuses to run as root: makepkg would too")
+	}
+	for _, tc := range []struct {
+		name, machine string
+		fail          bool
+		want          string
+	}{
+		{name: "armv7l", machine: "armv7l\n", want: `machine "armv7l" is not one pkglint knows`},
+		{name: "empty", machine: "", want: `machine "" is not one`},
+		{name: "two lines", machine: "x86_64\nx86_64\n", want: "is not one pkglint knows"},
+		{name: "uname fails", fail: true, want: "docker exec uname: exit status 1"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			seen := stubExec(t, []string{"docker"}, func(cmd *exec.Cmd) error {
+				if slices.Contains(cmd.Args, "uname") {
+					if tc.fail {
+						return errors.New("exit status 1")
+					}
+					answerUname(cmd, tc.machine)
+				}
+				return nil
+			})
+			var buf bytes.Buffer
+			if code := run([]string{"build", "--fail-on=never", "--image", "archlinux:base-devel", "testdata/clean", "--", "-s"}, &buf); code != 1 {
+				t.Fatalf("got exit %d, want 1\n%s", code, buf.String())
+			}
+			if !strings.Contains(buf.String(), tc.want) {
+				t.Errorf("output lacks %q:\n%s", tc.want, buf.String())
+			}
+			assertNoSync(t, *seen)
+		})
+	}
+}
+
+// TestBuildContainerSyncdepsRefusesArgs: makepkg arguments whose -s cannot be
+// told are refused before any container exists.
+func TestBuildContainerSyncdepsRefusesArgs(t *testing.T) {
+	seen, _ := stubContainer(t, []string{"docker"})
+	var buf bytes.Buffer
+	if code := run([]string{"build", "--fail-on=never", "--image", "archlinux:base-devel", "testdata/clean", "--", "-sx"}, &buf); code != 1 {
+		t.Fatalf("got exit %d, want 1\n%s", code, buf.String())
+	}
+	if !strings.Contains(buf.String(), "-sx is not a cluster") {
+		t.Errorf("output lacks the refusal:\n%s", buf.String())
+	}
+	if len(*seen) != 0 {
+		t.Errorf("ran %q", args(*seen))
+	}
+}
+
+// TestBuildContainerSyncdepsNocheck: --nocheck leaves checkdepends out of
+// what pacman installs, as makepkg itself would.
+func TestBuildContainerSyncdepsNocheck(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("the container path refuses to run as root: makepkg would too")
+	}
+	dir := syncdepsPackage(t, "makedepends=('go')", "makedepends=(go)\ncheckdepends=(python-pytest)\ncheck() { :; }")
+	for _, tc := range []struct {
+		arg  string
+		want []string
+	}{
+		{"--check", []string{"go", "python-pytest"}},
+		{"--nocheck", []string{"go"}},
+	} {
+		t.Run(tc.arg, func(t *testing.T) {
+			seen, _ := stubContainer(t, []string{"docker"})
+			var buf bytes.Buffer
+			if code := run([]string{"build", "--force", "--fail-on=never", "--image", "archlinux:base-devel", dir, "--", "-s", tc.arg}, &buf); code != 0 {
+				t.Fatalf("got exit %d, want 0\n%s", code, buf.String())
+			}
+			pacman := running(t, *seen, "pacman")
+			if got := pacman.Args[len(pacman.Args)-len(tc.want):]; !slices.Equal(got, tc.want) || pacman.Args[len(pacman.Args)-len(tc.want)-1] != "--" {
+				t.Errorf("installed %q, want %q", pacman.Args, tc.want)
+			}
+			if makepkg := running(t, *seen, "makepkg"); !slices.Contains(makepkg.Args, tc.arg) {
+				t.Errorf("makepkg lost %s: %q", tc.arg, makepkg.Args)
+			}
+		})
+	}
+}
+
+// running returns the first command that runs program, wherever in its
+// arguments the container runner put it.
+func running(t *testing.T, seen []*exec.Cmd, program string) *exec.Cmd {
+	t.Helper()
+	for _, cmd := range seen {
+		if slices.Contains(cmd.Args, program) {
+			return cmd
+		}
+	}
+	t.Fatalf("no %s in %q", program, args(seen))
+	return nil
 }
