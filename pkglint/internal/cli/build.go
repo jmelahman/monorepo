@@ -687,11 +687,18 @@ func copyTreeIn(ctx context.Context, runner, name, abs string) error {
 	// A command that stopped reading — or, under test, never started — would
 	// otherwise leave the packer blocked on a write nobody takes.
 	_ = pr.Close()
-	if err := <-packed; err != nil && !errors.Is(err, io.ErrClosedPipe) {
-		return fmt.Errorf("copying %s into the container: %w", abs, err)
+	packErr := <-packed
+	if packErr != nil && !errors.Is(packErr, io.ErrClosedPipe) {
+		return fmt.Errorf("copying %s into the container: %w", abs, packErr)
 	}
 	if runErr != nil {
 		return describe(ctx, runner+" cp", runErr)
+	}
+	// A closed pipe with a cp that still exited 0 means cp stopped reading
+	// before the archive ended: the container holds part of the tree, and
+	// makepkg would build from it.
+	if packErr != nil {
+		return fmt.Errorf("copying %s into the container: %s cp stopped reading before the whole package directory was copied in", abs, runner)
 	}
 	return nil
 }
@@ -715,6 +722,11 @@ func copyTreeIn(ctx context.Context, runner, name, abs string) error {
 //   - Anything that is neither a directory, a regular file nor a symlink (a
 //     FIFO, a socket, a device) is left out: reading a FIFO blocks until a
 //     writer appears, and a device can be unbounded.
+//   - The top-level src/ and pkg/ are left out, whatever they are: they are
+//     makepkg's own work directories from an earlier host build, and a stale
+//     src/ changes what a build without -C extracts over. .git is left out
+//     too; it is the repository's history, not the package, and nothing of it
+//     is the PKGBUILD's to read.
 func packTree(dir string, w io.Writer) error {
 	tw := tar.NewWriter(w)
 	root := strings.TrimPrefix(containerBuildDir, "/")
@@ -725,6 +737,12 @@ func packTree(dir string, w io.Writer) error {
 		rel, err := filepath.Rel(dir, path)
 		if err != nil {
 			return err
+		}
+		if skipTopLevel[rel] {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
 		}
 		name := root
 		if rel != "." {
@@ -760,13 +778,18 @@ func packTree(dir string, w io.Writer) error {
 	return tw.Close()
 }
 
+// skipTopLevel names the package directory's entries packTree leaves out.
+var skipTopLevel = map[string]bool{"src": true, "pkg": true, ".git": true}
+
 // packFile appends the regular file at path, which fi (an Lstat) described.
-// The open file is checked against fi, as pkgbuild.OpenRegular does, so a swap
-// to a symlink or another file between the walk and the open is refused rather
-// than followed; and exactly the size written in the header is copied, so a
-// file that grows meanwhile cannot desynchronize the archive.
+// It opens through pkgbuild.OpenRegular, so a FIFO swapped in after the walk
+// is refused rather than blocking the copy, and the open file is checked
+// against fi as well, so a swap to a symlink — even one to a regular file —
+// or to another file is refused rather than followed. Exactly the size
+// written in the header is copied, so a file that grows meanwhile cannot
+// desynchronize the archive.
 func packFile(tw *tar.Writer, hdr *tar.Header, path string, fi fs.FileInfo) error {
-	f, err := os.Open(path)
+	f, err := pkgbuild.OpenRegular(path)
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -228,7 +229,9 @@ var maxSourceFile int64 = 8 << 20
 // until a writer appears, so checking the open file afterwards would hang on
 // exactly the input the check exists to refuse. The open file is re-checked
 // against the Stat result so a swap between the two calls is refused, not
-// followed.
+// followed. The open itself is non-blocking, so a FIFO swapped in between the
+// two calls is opened at once and refused by that re-check rather than
+// hanging the open; O_NONBLOCK changes nothing for a regular file's reads.
 //
 // This is the one way to open a file the package directory names; a bare
 // os.Open on a path built from PKGBUILD text reintroduces the hang.
@@ -240,7 +243,7 @@ func OpenRegular(path string) (*os.File, error) {
 	if !fi.Mode().IsRegular() {
 		return nil, fmt.Errorf("%s: not a regular file", path)
 	}
-	f, err := os.Open(path)
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
 	}

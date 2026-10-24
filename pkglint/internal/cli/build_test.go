@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"maps"
 	"os"
 	"os/exec"
@@ -491,11 +492,15 @@ func TestBuildContainerCopyFailures(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		unreadable bool
+		unread     bool
 		cpErr      error
 		want       string
 	}{
 		{name: "unreadable file", unreadable: true, want: "copying "},
 		{name: "runtime refuses", cpErr: errors.New("exit status 1"), want: "docker cp: exit status 1"},
+		// A cp that exits 0 without reading the whole archive left part of
+		// the tree in the container; that is a failure, not a success.
+		{name: "runtime stops reading", unread: true, want: "docker cp stopped reading before the whole package directory was copied in"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
@@ -509,6 +514,9 @@ func TestBuildContainerCopyFailures(t *testing.T) {
 			}
 			seen := stubExec(t, []string{"docker"}, func(cmd *exec.Cmd) error {
 				if cmd.Args[1] == "cp" && cmd.Args[2] == "-" {
+					if tc.unread {
+						return nil
+					}
 					if _, err := io.ReadAll(cmd.Stdin); err != nil && tc.cpErr == nil {
 						return errors.New("exit status 1")
 					}
@@ -1320,5 +1328,96 @@ func TestBuildFixKeepsJSONValid(t *testing.T) {
 				t.Errorf("PKGBUILD was not fixed:\n%s", fixed)
 			}
 		})
+	}
+}
+
+// TestPackTreeSkipsWorkDirs: makepkg's own src/ and pkg/ from an earlier host
+// build, and the repository's .git, stay out of the container whatever they
+// are; the same names deeper down are the package's and are copied.
+func TestPackTreeSkipsWorkDirs(t *testing.T) {
+	dir := t.TempDir()
+	for _, f := range []string{"PKGBUILD", "src/stale.o", "pkg/foo/usr/bin/foo", ".git/config", "patches/src/keep.patch", "patches/.git"} {
+		path := filepath.Join(dir, filepath.FromSlash(f))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A top-level pkg that is a file, or a symlink, is left out all the same.
+	sub := t.TempDir()
+	if err := os.WriteFile(filepath.Join(sub, "PKGBUILD"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "pkg"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/", filepath.Join(sub, "src")); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		dir        string
+		kept, gone []string
+	}{
+		{dir, []string{"build/PKGBUILD", "build/patches/src/keep.patch", "build/patches/.git"}, []string{"build/src/", "build/src/stale.o", "build/pkg/", "build/.git/", "build/.git/config"}},
+		{sub, []string{"build/PKGBUILD"}, []string{"build/pkg", "build/src"}},
+	} {
+		var buf bytes.Buffer
+		if err := packTree(tc.dir, &buf); err != nil {
+			t.Fatal(err)
+		}
+		entries := readTar(t, buf.Bytes())
+		for _, name := range tc.kept {
+			if entries[name] == nil {
+				t.Errorf("%s was left out", name)
+			}
+		}
+		for _, name := range tc.gone {
+			if entries[name] != nil {
+				t.Errorf("%s was copied in", name)
+			}
+		}
+	}
+}
+
+// TestPackFileRefusesSwap: a file that is not the one the walk saw by the time
+// it is opened — another file, or a symlink even to a regular file — is
+// refused rather than copied.
+func TestPackFileRefusesSwap(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "PKGBUILD")
+	other := filepath.Join(dir, "other")
+	for _, p := range []string{path, other} {
+		if err := os.WriteFile(p, []byte("pkgname=x\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	link := filepath.Join(dir, "link")
+	if err := os.Symlink("PKGBUILD", link); err != nil {
+		t.Fatal(err)
+	}
+	walked, err := os.Lstat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	linkInfo, err := os.Lstat(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, path string
+		fi         fs.FileInfo
+	}{
+		{"another file", other, walked},
+		{"a symlink to a regular file", link, linkInfo},
+	} {
+		err := packFile(tar.NewWriter(io.Discard), &tar.Header{Name: "build/x"}, tc.path, tc.fi)
+		if err == nil || !strings.Contains(err.Error(), "changed while copying") {
+			t.Errorf("%s: packFile = %v, want a changed-while-copying refusal", tc.name, err)
+		}
+	}
+	if err := packFile(tar.NewWriter(io.Discard), &tar.Header{Name: "build/PKGBUILD"}, path, walked); err != nil {
+		t.Errorf("the unchanged file: %v", err)
 	}
 }

@@ -3,7 +3,9 @@
 package cli
 
 import (
+	"archive/tar"
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,5 +63,35 @@ func TestPackTreeSkipsFIFOWithoutBlocking(t *testing.T) {
 	}
 	if entries["build/PKGBUILD"] == nil {
 		t.Error("the PKGBUILD beside the FIFO was not copied in")
+	}
+}
+
+// A file the walk saw as regular and that is a FIFO by the time it is opened
+// is refused, not opened: the open goes through pkgbuild.OpenRegular.
+func TestPackFileRefusesFIFOSwap(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "PKGBUILD")
+	if err := os.WriteFile(path, []byte("pkgname=x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Lstat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- packFile(tar.NewWriter(io.Discard), &tar.Header{Name: "build/PKGBUILD"}, path, fi) }()
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "not a regular file") {
+			t.Errorf("packFile of a swapped-in FIFO = %v, want a not-a-regular-file refusal", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("packFile blocked on a swapped-in FIFO")
 	}
 }
