@@ -24,9 +24,6 @@ somepkg: grade F, 3 finding(s)
 - **Fixes what it can.** `--fix` applies the safe rewrites, and `--unsafe-fix` applies
   the ones that change build behavior.
 
-Each package gets a letter grade from A to F. The grade is a hygiene score for how
-reviewable and reproducible the PKGBUILD is. It is not a malware verdict.
-
 The [AUR Report Card](https://jamison.lahman.dev/pkglint/) runs pkglint nightly over
 the official repositories and the AUR's most popular and recently updated packages.
 
@@ -200,17 +197,17 @@ How the build is isolated, and what you can change:
 
 ## Rules
 
-| Rules       | Category      | Asks                                                                  |
-| ----------- | ------------- | --------------------------------------------------------------------- |
-| PB101–PB116 | Integrity     | Is every source verified, pinned, and fetched over a secure transport? |
-| PB201–PB210 | Hermeticity   | Does the build download anything it didn't declare and lock?          |
-| PB301–PB310 | Execution     | Does it `eval`, decode-and-run, or pipe a download into a shell?      |
-| PB401–PB405 | Filesystem    | Does it write outside the package, escalate privileges, or set setuid? |
-| PB501–PB505 | Scriptlets    | Do the root-run `.install` scripts reach the network or persist?      |
-| PB601–PB603 | Consistency   | Does `.SRCINFO` match? Does it claim to replace core packages?        |
-| PB701–PB711 | Correctness   | Would makepkg reject it?                                              |
+| Rules       | Category      | Asks                                                                     |
+| ----------- | ------------- | ------------------------------------------------------------------------ |
+| PB101–PB116 | Integrity     | Is every source verified, pinned, and fetched over a secure transport?   |
+| PB201–PB210 | Hermeticity   | Does the build download anything it didn't declare and lock?             |
+| PB301–PB310 | Execution     | Does it `eval`, decode-and-run, or pipe a download into a shell?         |
+| PB401–PB405 | Filesystem    | Does it write outside the package, escalate privileges, or set setuid?   |
+| PB501–PB505 | Scriptlets    | Do the root-run `.install` scripts reach the network or persist?         |
+| PB601–PB603 | Consistency   | Does `.SRCINFO` match? Does it claim to replace core packages?           |
+| PB701–PB711 | Correctness   | Would makepkg reject it?                                                 |
 | PB801–PB842 | Built package | Is the binary hardened and stripped, with all its dependencies declared? |
-| PB901–PB984 | Style         | Does it follow namcap and the Arch packaging guidelines?             |
+| PB901–PB984 | Style         | Does it follow namcap and the Arch packaging guidelines?                 |
 
 Run `pkglint explain <rule>` or see the
 [rule reference](https://jamison.lahman.dev/pkglint/rules/) for each rule's details.
