@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -118,6 +119,11 @@ was found; sources are cached in ${XDG_CACHE_HOME:-~/.cache}/pkglint/sources
 between runs, and $SRCDEST or $BUILDDIR moves either elsewhere (a container
 build is a clean room and downloads its own). Dependencies are not synced by
 default, since that needs root — pass '-- -s' (or '--makepkg-arg=-s') to opt in.
+In a container, -s is not handed to makepkg (its user has no sudo, by design):
+pkglint reads depends, makedepends and checkdepends (and their _$CARCH
+variants) from its own parse of the PKGBUILD and installs them with pacman as
+root before the PKGBUILD is copied in. A dependency list that cannot be read
+without running the PKGBUILD is an error, not a guess.
 
 --fix writes back what the build taught it: the built-package rules see things
 no reading of the PKGBUILD can (which libraries the binaries actually link),
@@ -255,6 +261,110 @@ func checkMakepkgArgs(args []string) error {
 		}
 	}
 	return nil
+}
+
+// makepkgFlagShorts are makepkg's short options that take no value: its
+// OPT_SHORT, AcCdD:efFghiLmop:rRsSV, without D and p. A single-dash word made
+// only of these is a cluster makepkg reads letter by letter, so -fsc asks for
+// -s as surely as -s does.
+const makepkgFlagShorts = "AcCdefFghiLmorRsSV"
+
+// splitSyncdeps removes makepkg's -s/--syncdeps from args, in every spelling
+// makepkg's parser accepts — -s, a cluster holding s, --syncdeps or any
+// unambiguous prefix of it down to --sy — and reports whether it was there.
+// The value of --key is skipped, not read, and nothing after a bare -- is an
+// option.
+func splitSyncdeps(args []string) ([]string, bool) {
+	var rest []string
+	sync := false
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "--":
+			return append(rest, args[i:]...), sync
+		case strings.HasPrefix(a, "--"):
+			name := a[2:]
+			if len(name) >= 2 && strings.HasPrefix("syncdeps", name) {
+				sync = true
+				continue
+			}
+			rest = append(rest, a)
+			if name != "" && strings.HasPrefix("key", name) && i+1 < len(args) {
+				i++
+				rest = append(rest, args[i])
+			}
+		case len(a) > 1 && a[0] == '-' && strings.Trim(a[1:], makepkgFlagShorts) == "" && strings.Contains(a, "s"):
+			sync = true
+			if kept := strings.ReplaceAll(a, "s", ""); kept != "-" {
+				rest = append(rest, kept)
+			}
+		default:
+			rest = append(rest, a)
+		}
+	}
+	return rest, sync
+}
+
+// containerSyncdeps turns a request for makepkg -s into one pkglint can carry
+// out in a container. makepkg would sync dependencies with sudo, which the
+// container's user does not have and must not be given: a PKGBUILD whose
+// builder can become root can become root. So -s is taken off makepkg's
+// arguments and pkglint installs the dependencies itself, as root, before the
+// PKGBUILD is in the container at all. Their names come from the static parse
+// (rules.SyncDeps), never from running the PKGBUILD or from a .SRCINFO beside
+// it, and every name is checked before it goes near a command line.
+//
+// makepkg still checks the dependencies itself once it runs, so anything this
+// list misses fails the build with makepkg's own "missing dependencies".
+func containerSyncdeps(pkg *pkgbuild.Package, args []string) ([]string, []string, error) {
+	rest, sync := splitSyncdeps(args)
+	if !sync {
+		return args, nil, nil
+	}
+	carch, err := containerCARCH()
+	if err != nil {
+		return nil, nil, err
+	}
+	deps, err := rules.SyncDeps(pkg, carch)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot sync dependencies for a container build: %w", err)
+	}
+	for _, d := range deps {
+		if !validDepName(d) {
+			return nil, nil, fmt.Errorf("cannot sync dependencies for a container build: %q is not a valid package name", d)
+		}
+	}
+	return rest, deps, nil
+}
+
+// containerCARCH is the CARCH makepkg will see in the container, which runs
+// on the host's architecture.
+func containerCARCH() (string, error) {
+	switch runtime.GOARCH {
+	case "amd64":
+		return "x86_64", nil
+	case "arm64":
+		return "aarch64", nil
+	case "riscv64":
+		return "riscv64", nil
+	}
+	return "", fmt.Errorf("cannot sync dependencies for a container build: no known CARCH for %s", runtime.GOARCH)
+}
+
+// validDepName is makepkg's own rule for a package name (lint_one_pkgname):
+// ASCII letters, digits and @._+- only, not starting with - or . — which also
+// keeps every name an operand to pacman, never an option.
+func validDepName(name string) bool {
+	if name == "" || name[0] == '-' || name[0] == '.' {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' || strings.IndexByte("@._+-", c) >= 0) {
+			return false
+		}
+	}
+	return true
 }
 
 // checkBuildAmbiguity catches `pkglint *` in a tree that holds a ./build
@@ -430,7 +540,7 @@ func (b *builder) build(ctx context.Context, path string) []report.PackageReport
 	if err != nil {
 		return append(out, report.NewError(dir, err))
 	}
-	if err := b.makepkg(ctx, dir, dirs); err != nil {
+	if err := b.makepkg(ctx, pkg, dir, dirs); err != nil {
 		return append(out, report.NewError(dir, err))
 	}
 
@@ -679,7 +789,7 @@ func packFile(tw *tar.Writer, hdr *tar.Header, path string, fi fs.FileInfo) erro
 // deliberately absent from the default arguments: syncing dependencies needs
 // root, and a commit hook that can prompt for a password is a commit hook that
 // hangs.
-func (b *builder) makepkg(ctx context.Context, dir string, d buildDirs) error {
+func (b *builder) makepkg(ctx context.Context, pkg *pkgbuild.Package, dir string, d buildDirs) error {
 	// --nosign because the artifact is inspected and thrown away: signing it
 	// is pointless, and a maintainer with `sign` in BUILDENV cannot turn that
 	// off from the environment (makepkg.conf marks BUILDENV readonly), so a
@@ -687,7 +797,11 @@ func (b *builder) makepkg(ctx context.Context, dir string, d buildDirs) error {
 	// meant to be run from.
 	args := append([]string{"-f", "--noconfirm", "--cleanbuild", "--nosign"}, b.bo.makepkgArgs...)
 	if b.runner != "" {
-		return containerBuild(ctx, b.runner, b.image, dir, d.pkgdest, args)
+		args, deps, err := containerSyncdeps(pkg, args)
+		if err != nil {
+			return err
+		}
+		return containerBuild(ctx, b.runner, b.image, dir, d.pkgdest, deps, args)
 	}
 	restore, err := holdBuildFile(dir)
 	if err != nil {
@@ -776,7 +890,12 @@ func holdBuildFile(dir string) (func(), error) {
 // container copied into, run, and copied out of again lost its archives the
 // same way the read-only mount did. A running container's filesystem is
 // already mounted, and copies use that.
-func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, makepkgArgs []string) error {
+//
+// deps, when there are any, are installed first by pacman as root in the same
+// container — the one step that is not the caller's uid — before the package
+// directory is even copied in. Nothing of the PKGBUILD's runs in that step;
+// it sees only names containerSyncdeps has already validated.
+func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, deps, makepkgArgs []string) error {
 	// --user hands the container the caller's uid, and makepkg refuses to run
 	// as root; as root there is no uid to pass that would work. Say so, rather
 	// than spending a container start to arrive at "makepkg exited 1".
@@ -828,6 +947,19 @@ func containerBuild(ctx context.Context, runner, image, dir, pkgdest string, mak
 	start.Stdout, start.Stderr = io.Discard, os.Stderr
 	if err := runCmd(start); err != nil {
 		return describe(ctx, runner+" start", err)
+	}
+	if len(deps) > 0 {
+		// -Syu, not -S: installing against a freshly synced database without
+		// upgrading is a partial upgrade, which Arch does not support. The
+		// `--` keeps every name an operand, though validDepName has already
+		// refused anything starting with a dash.
+		sync := exec.CommandContext(ctx, runner, append([]string{
+			"exec", "--user", "0:0", name,
+			"pacman", "-Syu", "--needed", "--noconfirm", "--",
+		}, deps...)...)
+		if err := runStreamed(sync); err != nil {
+			return describe(ctx, "pacman", err)
+		}
 	}
 	if err := copyTreeIn(ctx, runner, name, abs); err != nil {
 		return err

@@ -16,6 +16,13 @@ and makepkg's `-p`/`-D`/`--config` and positional `BUILDFILE=`/output-directory
 overrides are refused. A new way to reach `runCmd` has to answer "could a
 PKGBUILD talk its way through this?" first.
 
+A container build copies the package tree in (no bind mounts) and runs makepkg
+as the caller's uid; that user gets no sudo, NOPASSWD or passwd entry, ever.
+`-- -s` there is stripped from makepkg's arguments and pkglint itself runs
+`pacman -Syu --needed --noconfirm -- <deps>` as root first, with the names from
+the static parse (`rules.SyncDeps`, never `--printsrcinfo`/.SRCINFO), each
+checked by `validDepName`; a list that needs running the PKGBUILD is an error.
+
 `pkglint build --fix` is the one place a fix reads two files: a PB8xx finding
 comes out of the archive and the remedy is a line of the PKGBUILD. The archive
 never supplies text — the owner names written come from the pacman local
