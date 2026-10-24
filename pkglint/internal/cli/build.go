@@ -325,7 +325,7 @@ func containerSyncdeps(pkg *pkgbuild.Package, args []string) ([]string, []string
 	if err != nil {
 		return nil, nil, err
 	}
-	deps, err := rules.SyncDeps(pkg, carch)
+	deps, err := rules.SyncDeps(pkg, carch, rules.CheckDefault)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot sync dependencies for a container build: %w", err)
 	}
@@ -351,20 +351,11 @@ func containerCARCH() (string, error) {
 	return "", fmt.Errorf("cannot sync dependencies for a container build: no known CARCH for %s", runtime.GOARCH)
 }
 
-// validDepName is makepkg's own rule for a package name (lint_one_pkgname):
-// ASCII letters, digits and @._+- only, not starting with - or . — which also
-// keeps every name an operand to pacman, never an option.
+// validDepName is makepkg's rule for a package name (rules.NameProblem, the
+// one PB701 applies), plus the property this caller relies on itself: no
+// name can start with a dash, so none is ever an option to pacman.
 func validDepName(name string) bool {
-	if name == "" || name[0] == '-' || name[0] == '.' {
-		return false
-	}
-	for i := 0; i < len(name); i++ {
-		c := name[i]
-		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' || strings.IndexByte("@._+-", c) >= 0) {
-			return false
-		}
-	}
-	return true
+	return rules.NameProblem(name) == "" && !strings.HasPrefix(name, "-")
 }
 
 // checkBuildAmbiguity catches `pkglint *` in a tree that holds a ./build
