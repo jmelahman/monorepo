@@ -1,0 +1,11 @@
+[package]
+name = "rewriting-with-result"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Not needed by the starter; the chapter introduces both, so they are fetched
+# for trying out offline.
+[dependencies]
+anyhow = "1.0.104"
+thiserror = "2.0.18"

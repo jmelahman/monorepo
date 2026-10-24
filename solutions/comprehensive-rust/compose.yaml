@@ -1,0 +1,15 @@
+# A shell with the toolchain and every exercise's crates:
+#
+#   docker compose up -d --build
+#   docker compose exec rust zsh
+services:
+  rust:
+    build: .
+    # Rootless Docker maps container root to you, so files written to the
+    # mounted workspace stay yours. The image's `dev` user maps to a subuid.
+    user: root
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: sleep infinity
+    init: true

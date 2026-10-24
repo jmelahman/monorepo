@@ -1,0 +1,5 @@
+# Matches the toolchain baked into .devcontainer/Dockerfile, so rustup never
+# needs the network to resolve it. Bump both together.
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt", "rust-src", "rust-analyzer", "rust-docs"]

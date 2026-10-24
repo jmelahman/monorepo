@@ -1,0 +1,10 @@
+[package]
+name = "link-checker"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+reqwest = { version = "0.13.1", features = ["blocking"] }
+scraper = "0.25.0"
+thiserror = "2.0.18"

@@ -1,0 +1,7 @@
+# For the Dockerfile: only the manifests, so `cargo fetch` can bake
+# the dependencies in and editing a solution never rebuilds the image.
+*
+!Cargo.toml
+!Cargo.lock
+!rust-toolchain.toml
+!exercises/*/Cargo.toml
