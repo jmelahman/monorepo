@@ -131,7 +131,7 @@ type Rule struct {
 
 	// Bad and Good are illustrative PKGBUILD snippets shown on the report
 	// card site: Bad is a construct the rule flags, Good the preferred
-	// alternative. Attached from the examples table in Registry().
+	// alternative.
 	Bad  string
 	Good string
 
@@ -139,7 +139,7 @@ type Rule struct {
 	// Arch package guidelines, a man page — shown on the rule's reference
 	// page. Empty when the rule is pkglint's own policy: a citation claims
 	// the document says what the rule says, so a rule nothing upstream backs
-	// goes without one. Attached from the refs table in Registry().
+	// goes without one.
 	Refs []Ref
 }
 
@@ -158,6 +158,10 @@ func (r Rule) URL() string {
 	return ReferenceURL + r.ID + ".html"
 }
 
+// fnKey names a function within one file of the package: Path is the unit's
+// path, Name the function (empty for top-level code where a Fn is keyed).
+type fnKey struct{ path, name string }
+
 // Context carries the package under analysis plus precomputed command
 // information shared by rules. A rule run has exactly one of Pkg (a PKGBUILD
 // package directory) and File (a built package archive) to work from — which
@@ -174,26 +178,26 @@ type Context struct {
 	// function name. Two things make a function's view differ from the file's:
 	// makepkg rebinds pkgname inside package_<name>(), and a function that
 	// assigns a name of its own leaves the top-level value stale.
-	fnVars map[string]map[string]string
+	fnVars map[fnKey]map[string]string
 	// localFuncs is the set of function names the file itself declares, keyed
 	// by unit path, including those nested inside a compound statement — which
 	// Unit.Functions does not carry. Rules that exempt a command by name need
 	// it: the exemption has to lapse when the PKGBUILD supplies the body.
-	localFuncs map[string]bool
+	localFuncs map[fnKey]bool
 	// funcDecls holds the bodies behind localFuncs, for the rules that judge a
 	// call by what the function does rather than by its name. Only the
 	// declarations whose commands collect() attributes to the function itself
 	// are recorded: one nested inside another function keeps the enclosing
 	// attribution, so its own body would look empty here, and an empty body
 	// reads as harmless.
-	funcDecls map[string]*syntax.FuncDecl
+	funcDecls map[fnKey]*syntax.FuncDecl
 	// allFuncDecls holds every declaration of each name, nested ones
 	// included, for the rules that follow a call into whatever body it may
 	// run, whatever the commands inside are attributed to.
-	allFuncDecls map[string][]*syntax.FuncDecl
+	allFuncDecls map[fnKey][]*syntax.FuncDecl
 	// pureFn caches the verdict funcPurity computed for every declaration in
 	// funcDecls.
-	pureFn map[string]bool
+	pureFn map[fnKey]bool
 	// suppUsed caches which inline-ignore directives actually suppress a
 	// finding; see Context.suppressionUsage.
 	suppUsed map[suppKey]bool
@@ -220,9 +224,9 @@ type Command struct {
 
 // NewContext precomputes shared state for rules.
 func NewContext(pkg *pkgbuild.Package) *Context {
-	ctx := &Context{Pkg: pkg, vars: map[string]string{}, fnVars: map[string]map[string]string{},
-		localFuncs: map[string]bool{}, funcDecls: map[string]*syntax.FuncDecl{},
-		allFuncDecls: map[string][]*syntax.FuncDecl{}}
+	ctx := &Context{Pkg: pkg, vars: map[string]string{}, fnVars: map[fnKey]map[string]string{},
+		localFuncs: map[fnKey]bool{}, funcDecls: map[fnKey]*syntax.FuncDecl{},
+		allFuncDecls: map[fnKey][]*syntax.FuncDecl{}}
 	for name, v := range pkg.Vars {
 		// Scalars render to exactly one value; for arrays, bash expands an
 		// unsubscripted $name to the first element (and an empty array to "").
@@ -241,9 +245,9 @@ func NewContext(pkg *pkgbuild.Package) *Context {
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			ctx.localFuncs[u.Path+"\x00"+name] = true
-			ctx.funcDecls[u.Path+"\x00"+name] = u.Functions[name]
-			ctx.allFuncDecls[u.Path+"\x00"+name] = append(ctx.allFuncDecls[u.Path+"\x00"+name], u.Functions[name])
+			ctx.localFuncs[fnKey{u.Path, name}] = true
+			ctx.funcDecls[fnKey{u.Path, name}] = u.Functions[name]
+			ctx.allFuncDecls[fnKey{u.Path, name}] = append(ctx.allFuncDecls[fnKey{u.Path, name}], u.Functions[name])
 			ctx.collect(u, name, u.Functions[name].Body)
 		}
 		for _, stmt := range u.TopLevel {
@@ -265,10 +269,10 @@ func (ctx *Context) collect(u *pkgbuild.Unit, fn string, root *syntax.Stmt) {
 		// top-level `if` would be "" and make every one of them look like
 		// code that runs on source.
 		if fd, ok := node.(*syntax.FuncDecl); ok && fd.Name != nil {
-			ctx.localFuncs[u.Path+"\x00"+fd.Name.Value] = true
-			ctx.allFuncDecls[u.Path+"\x00"+fd.Name.Value] = append(ctx.allFuncDecls[u.Path+"\x00"+fd.Name.Value], fd)
+			ctx.localFuncs[fnKey{u.Path, fd.Name.Value}] = true
+			ctx.allFuncDecls[fnKey{u.Path, fd.Name.Value}] = append(ctx.allFuncDecls[fnKey{u.Path, fd.Name.Value}], fd)
 			if fn == "" {
-				ctx.funcDecls[u.Path+"\x00"+fd.Name.Value] = fd
+				ctx.funcDecls[fnKey{u.Path, fd.Name.Value}] = fd
 				ctx.collect(u, fd.Name.Value, fd.Body)
 				return false
 			}
@@ -345,7 +349,7 @@ func (ctx *Context) varsFor(u *pkgbuild.Unit, fn string) map[string]string {
 	if fn == "" {
 		return ctx.vars // top-level code: the file-level values are the live ones
 	}
-	key := u.Path + "\x00" + fn
+	key := fnKey{u.Path, fn}
 	if m, ok := ctx.fnVars[key]; ok {
 		return m
 	}
@@ -778,7 +782,7 @@ func (ctx *Context) newCommand(u *pkgbuild.Unit, fn string, stmt *syntax.Stmt, c
 // definesFunc reports whether the unit the command came from declares a
 // function of that name, at any nesting depth.
 func (ctx *Context) definesFunc(c Command, name string) bool {
-	return ctx.localFuncs[c.Unit.Path+"\x00"+name]
+	return ctx.localFuncs[fnKey{c.Unit.Path, name}]
 }
 
 // Commands returns every command; optional filters restrict the results.
@@ -935,13 +939,6 @@ func buildRegistry() {
 	var out []Rule
 	for _, group := range all {
 		out = append(out, group...)
-	}
-	for i := range out {
-		if ex, ok := examples[out[i].ID]; ok {
-			out[i].Bad = ex.Bad
-			out[i].Good = ex.Good
-		}
-		out[i].Refs = refs[out[i].ID]
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	registryAll = out

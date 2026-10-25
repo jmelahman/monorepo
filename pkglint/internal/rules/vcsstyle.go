@@ -49,7 +49,7 @@ func checkVCSPkgverFn(ctx *Context) []Finding {
 	// localFuncs rather than Unit.Functions: the release-or-git idiom declares
 	// pkgver() inside a top-level `if`, and it still runs when makepkg calls
 	// the phase.
-	if ctx.localFuncs[ctx.Pkg.PKGBUILD.Path+"\x00"+"pkgver"] {
+	if ctx.localFuncs[fnKey{ctx.Pkg.PKGBUILD.Path, "pkgver"}] {
 		return nil
 	}
 	// A pinned VCS source anywhere means versions advance by bumping the pin

@@ -136,7 +136,7 @@ func checkLib32M32(ctx *Context) []Finding {
 	}
 	// A lib32 package that repackages upstream 32-bit binaries compiles
 	// nothing, so only PKGBUILDs with a build() are held to the flag.
-	if !ctx.localFuncs[ctx.Pkg.PKGBUILD.Path+"\x00"+"build"] {
+	if !ctx.localFuncs[fnKey{ctx.Pkg.PKGBUILD.Path, "build"}] {
 		return nil
 	}
 	// Any -m32 spelling counts — a CFLAGS/CXXFLAGS/LDFLAGS assignment, a

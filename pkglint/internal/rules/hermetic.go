@@ -23,6 +23,15 @@ var hermeticRules = []Rule{
 			"state at build time. Move fetching to prepare() (or better, the source array) where " +
 			"artifacts are pinned by lockfiles or checksums.",
 		Check: checkNetworkInBuild,
+		Bad: `build() {
+  curl -O https://example.com/extra-asset.bin
+  make
+}`,
+		Good: `source=("https://example.com/extra-asset.bin")
+sha256sums=('...')
+build() {
+  make   # the asset is fetched and checksummed via source=
+}`,
 	},
 	{
 		ID:       "PB202",
@@ -32,6 +41,12 @@ var hermeticRules = []Rule{
 			"With hash-pinned requirements, pip verifies every downloaded artifact against a digest " +
 			"recorded in the requirements file.",
 		Check: checkPipHashes,
+		Bad: `build() {
+  pip install -r requirements.txt
+}`,
+		Good: `build() {
+  pip install --require-hashes -r requirements.txt
+}`,
 	},
 	{
 		ID:       "PB203",
@@ -49,6 +64,13 @@ var hermeticRules = []Rule{
 		// are unsafe.
 		FixLevel: FixUnsafe,
 		Fix:      fixCargoLocked,
+		Bad: `build() {
+  cargo build --release
+}`,
+		Good: `build() {
+  cargo build --release --frozen
+}`,
+		Refs: []Ref{guideline("rust", "Rust package guidelines", "Prepare", "prepare"), refRustBuild},
 	},
 	{
 		ID:       "PB204",
@@ -62,6 +84,16 @@ var hermeticRules = []Rule{
 		Check:    checkGoDownloads,
 		FixLevel: FixUnsafe,
 		Fix:      fixGoDownloads,
+		Bad: `build() {
+  go build -o foo .
+}`,
+		Good: `prepare() {
+  go mod download
+}
+build() {
+  go build -o foo .
+}`,
+		Refs: []Ref{guideline("go", "Go package guidelines", "Upstream project with Go modules", "upstream-project-with-go-modules")},
 	},
 	{
 		ID:       "PB205",
@@ -73,6 +105,12 @@ var hermeticRules = []Rule{
 		Check:    checkGoEnvWeakening,
 		FixLevel: FixSafe,
 		Fix:      fixGoEnvWeakening,
+		Bad: `build() {
+  GOFLAGS=-insecure GOSUMDB=off go build .
+}`,
+		Good: `build() {
+  go build -mod=vendor .   # keep checksum and sumdb verification on
+}`,
 	},
 	{
 		ID:       "PB206",
@@ -84,6 +122,12 @@ var hermeticRules = []Rule{
 		Check:    checkNpmCI,
 		FixLevel: FixUnsafe,
 		Fix:      fixNpmCI,
+		Bad: `build() {
+  npm install
+}`,
+		Good: `build() {
+  npm ci   # installs exactly what package-lock.json pins
+}`,
 	},
 	{
 		ID:       "PB207",
@@ -97,6 +141,12 @@ var hermeticRules = []Rule{
 		Check:    checkComposer,
 		FixLevel: FixUnsafe,
 		Fix:      lockfileFixer("PB207"),
+		Bad: `build() {
+  composer install   # runs hook scripts and plugins while fetching
+}`,
+		Good: `build() {
+  composer install --no-scripts   # fetch exactly the lock, run nothing
+}`,
 	},
 	{
 		ID:       "PB208",
@@ -109,6 +159,12 @@ var hermeticRules = []Rule{
 		Check:    checkBundler,
 		FixLevel: FixUnsafe,
 		Fix:      lockfileFixer("PB208"),
+		Bad: `build() {
+  bundle install   # rewrites Gemfile.lock if it drifts from the Gemfile
+}`,
+		Good: `build() {
+  bundle install --frozen   # exactly what Gemfile.lock pins
+}`,
 	},
 	{
 		ID:       "PB209",
@@ -121,6 +177,12 @@ var hermeticRules = []Rule{
 		Check:    checkUvPoetry,
 		FixLevel: FixUnsafe,
 		Fix:      lockfileFixer("PB209"),
+		Bad: `build() {
+  uv sync   # may re-resolve and rewrite uv.lock
+}`,
+		Good: `build() {
+  uv sync --frozen   # the committed lock is authoritative
+}`,
 	},
 	{
 		ID:       "PB210",
@@ -140,6 +202,13 @@ var hermeticRules = []Rule{
 			"at Warn rather than Error; so is a package word pkglint cannot read (`npm install $_deps`), " +
 			"which could name anything.",
 		Check: checkAdhocInstall,
+		Bad: `prepare() {
+  npm install axios uuid   # whatever the registry serves today, postinstall scripts and all
+}`,
+		Good: `makedepends=(npm)
+build() {
+  npm ci   # the project's own package.json, pinned by its lockfile
+}`,
 	},
 }
 

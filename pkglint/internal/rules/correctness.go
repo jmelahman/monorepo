@@ -70,6 +70,9 @@ var correctnessRules = []Rule{
 			"([A-Za-z0-9@._+-]), must be ASCII, and must not start with a hyphen or dot. makepkg " +
 			"refuses to build a package whose name breaks these rules.",
 		Check: checkPkgName,
+		Bad:   `pkgname=foo:bar   # ':' is not allowed by makepkg`,
+		Good:  `pkgname=foo-bar`,
+		Refs:  []Ref{refGeneralNaming, pkgbuildMan("pkgname", manDirectives)},
 	},
 	{
 		ID:       "PB702",
@@ -80,6 +83,9 @@ var correctnessRules = []Rule{
 			"so makepkg rejects them. makepkg lints the literal value before any pkgver() function " +
 			"runs, so even VCS packages need a valid placeholder.",
 		Check: checkPkgVer,
+		Bad:   `pkgver=1.2.3-beta   # '-' separates pkgver from pkgrel and is not allowed here`,
+		Good:  `pkgver=1.2.3.beta`,
+		Refs:  []Ref{refGeneralVersioning, pkgbuildMan("pkgver", manDirectives)},
 	},
 	{
 		ID:       "PB703",
@@ -87,6 +93,9 @@ var correctnessRules = []Rule{
 		Severity: Error,
 		Doc:      "pkgrel must be of the form 'integer[.integer]' (e.g. 1 or 1.5). makepkg errors otherwise.",
 		Check:    checkPkgRel,
+		Bad:      `pkgrel=1a   # pkgrel must be an integer, optionally with a .minor suffix`,
+		Good:     `pkgrel=1`,
+		Refs:     []Ref{refGeneralVersioning, pkgbuildMan("pkgrel", manDirectives)},
 	},
 	{
 		ID:       "PB704",
@@ -94,6 +103,9 @@ var correctnessRules = []Rule{
 		Severity: Error,
 		Doc:      "epoch, when set, must be a non-negative integer; makepkg refuses any other value.",
 		Check:    checkEpoch,
+		Bad:      `epoch=1.0   # epoch must be a non-negative integer`,
+		Good:     `epoch=1`,
+		Refs:     []Ref{pkgbuildMan("epoch", manDirectives)},
 	},
 	{
 		ID:       "PB705",
@@ -104,6 +116,9 @@ var correctnessRules = []Rule{
 		Check:    checkBackupSlash,
 		FixLevel: FixSafe,
 		Fix:      fixBackupSlash,
+		Bad:      `backup=('/etc/foo.conf')   # backup paths are relative to /`,
+		Good:     `backup=('etc/foo.conf')`,
+		Refs:     []Ref{pkgbuildMan("backup", manDirectives)},
 	},
 	{
 		ID:       "PB706",
@@ -113,6 +128,9 @@ var correctnessRules = []Rule{
 			"staticlibs, emptydirs, …), each optionally prefixed with '!'. An unrecognized entry is " +
 			"usually a typo that silently does nothing; makepkg flags it as an error.",
 		Check: checkUnknownOptions,
+		Bad:   `options=('!striped')   # typo: not a known makepkg option`,
+		Good:  `options=('!strip')`,
+		Refs:  []Ref{pkgbuildMan("options", manDirectives)},
 	},
 	{
 		ID:       "PB707",
@@ -121,6 +139,9 @@ var correctnessRules = []Rule{
 		Doc: "provides entries may pin an exact version with '=' but must not use '<' or '>' " +
 			"comparisons — a provide is a concrete capability, not a range. makepkg errors on comparison operators.",
 		Check: checkProvidesComparison,
+		Bad:   `provides=('libfoo<2')   # a provide is a concrete capability, not a range`,
+		Good:  `provides=('libfoo=1.9')`,
+		Refs:  []Ref{pkgbuildMan("provides", manDirectives)},
 	},
 	{
 		ID:       "PB708",
@@ -132,6 +153,8 @@ var correctnessRules = []Rule{
 		Check:    checkVariableTypes,
 		FixLevel: FixSafe,
 		Fix:      fixVariableTypes,
+		Bad:      `depends=gtk3   # list fields must be arrays`,
+		Good:     `depends=('gtk3')`,
 	},
 	{
 		ID:       "PB709",
@@ -141,6 +164,16 @@ var correctnessRules = []Rule{
 			"optdepends, provides, backup, install, …). Setting pkgver, source, makedepends, or the " +
 			"checksums there is an error: those are resolved before packaging runs.",
 		Check: checkPackageFunctionVars,
+		Bad: `package() {
+  makedepends=('go')   # makedepends can't be overridden per-package
+  make DESTDIR="$pkgdir" install
+}`,
+		Good: `makedepends=('go')
+package() {
+  depends=('glibc')   # only packaging metadata may be set here
+  make DESTDIR="$pkgdir" install
+}`,
+		Refs: []Ref{pkgbuildMan("package splitting", "PACKAGE_SPLITTING")},
 	},
 	{
 		ID:       "PB710",
@@ -150,6 +183,8 @@ var correctnessRules = []Rule{
 			"must not repeat a value, and each entry may only contain [A-Za-z0-9_]. makepkg rejects " +
 			"a PKGBUILD that violates any of these.",
 		Check: checkArch,
+		Bad:   `arch=('any' 'x86_64')   # 'any' cannot be combined with concrete architectures`,
+		Good:  `arch=('x86_64')`,
 	},
 	{
 		ID:       "PB711",
@@ -165,6 +200,11 @@ var correctnessRules = []Rule{
 		// enforce anyway.
 		FixLevel: FixSafe,
 		Fix:      fixVCSMakedepends,
+		Bad: `source=("git+https://github.com/example/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
+# nothing installs git, so a clean chroot build fails at the fetch step`,
+		Good: `makedepends=('git')
+source=("git+https://github.com/example/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
+		Refs: []Ref{refVcsDeps},
 	},
 }
 

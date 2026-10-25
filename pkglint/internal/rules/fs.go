@@ -19,6 +19,12 @@ var fsRules = []Rule{
 			"system paths either corrupt the builder's machine or hint at persistence being " +
 			"installed outside the package manager's tracking.",
 		Check: checkWritesOutside,
+		Bad: `package() {
+  install -Dm644 foo.conf /etc/foo.conf   # writes to the live filesystem
+}`,
+		Good: `package() {
+  install -Dm644 foo.conf "$pkgdir/etc/foo.conf"
+}`,
 	},
 	{
 		ID:       "PB402",
@@ -28,6 +34,12 @@ var fsRules = []Rule{
 			"commands as root on the build machine. Anything needing privileges belongs in the " +
 			"package's install step, executed and tracked by pacman.",
 		Check: checkPrivilegeEscalation,
+		Bad: `build() {
+  sudo make install
+}`,
+		Good: `build() {
+  make   # never escalate privileges during a build
+}`,
 	},
 	{
 		ID:       "PB403",
@@ -40,6 +52,12 @@ var fsRules = []Rule{
 			"mode in a PKGBUILD is a deliberate choice (sudo, nvidia-modprobe), and clearing it " +
 			"ships a binary that cannot do its job.",
 		Check: checkSetuid,
+		Bad: `package() {
+  install -Dm4755 foo "$pkgdir/usr/bin/foo"   # setuid root
+}`,
+		Good: `package() {
+  install -Dm755 foo "$pkgdir/usr/bin/foo"
+}`,
 	},
 	{
 		ID:       "PB404",
@@ -50,6 +68,12 @@ var fsRules = []Rule{
 			"into the builder's live filesystem instead of the staging directory — untracked by pacman " +
 			"and often run with escalated privileges.",
 		Check: checkInstallDestdir,
+		Bad: `package() {
+  make install   # writes into the builder's live filesystem
+}`,
+		Good: `package() {
+  make DESTDIR="$pkgdir" install
+}`,
 	},
 	{
 		ID:       "PB405",
@@ -60,6 +84,12 @@ var fsRules = []Rule{
 			"system's trust and privilege boundaries. In a PKGBUILD or scriptlet this is a persistence " +
 			"and privilege-escalation vector.",
 		Check: checkSensitiveWrites,
+		Bad: `post_install() {
+  echo 'SigLevel = Never' >> /etc/pacman.conf   # disables signature checks system-wide
+}`,
+		Good: `post_install() {
+  echo "If you maintain a custom repo, add it to /etc/pacman.conf yourself."
+}`,
 	},
 }
 

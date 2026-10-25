@@ -26,6 +26,11 @@ var integrityRules = []Rule{
 			"Detached signature files and the artifacts they verify are exempt — there the PGP " +
 			"machinery does the verifying, and PB111 flags it when that machinery is unanchored.",
 		Check: checkSkippedChecksums,
+		Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
+sha256sums=('SKIP')`,
+		Good: `source=("https://example.com/foo-$pkgver.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Refs: []Ref{refGeneralSources},
 	},
 	{
 		ID:       "PB102",
@@ -41,6 +46,10 @@ var integrityRules = []Rule{
 		Check:    checkWeakChecksums,
 		FixLevel: FixSafe,
 		Fix:      fixWeakChecksums,
+		Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
+md5sums=('d41d8cd98f00b204e9800998ecf8427e')`,
+		Good: `source=("https://example.com/foo-$pkgver.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
 	},
 	{
 		ID:       "PB103",
@@ -56,6 +65,9 @@ var integrityRules = []Rule{
 		Check:    checkVCSPins,
 		FixLevel: FixSafe,
 		Fix:      fixVCSPins,
+		Bad:      `source=("git+https://github.com/example/foo.git#tag=v1.2.3")`,
+		Good:     `source=("git+https://github.com/example/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
+		Refs:     []Ref{refGeneralSources},
 	},
 	{
 		ID:          "PB104",
@@ -76,6 +88,9 @@ var integrityRules = []Rule{
 		Check:    checkInsecureTransport,
 		FixLevel: FixUnsafe,
 		Fix:      fixInsecureTransport,
+		Bad:      `source=("http://example.com/foo-$pkgver.tar.gz")`,
+		Good:     `source=("https://example.com/foo-$pkgver.tar.gz")`,
+		Refs:     []Ref{refGeneralSources},
 	},
 	{
 		ID:       "PB105",
@@ -85,6 +100,10 @@ var integrityRules = []Rule{
 			"look: repackaged or 'mirrored' artifacts are a common way to slip in modified binaries. " +
 			"Often legitimate (CDNs, release mirrors) — hence only informational.",
 		Check: checkSourceDomains,
+		Bad: `url="https://example.com"
+source=("https://cdn.unrelated.example/foo-$pkgver.tar.gz")`,
+		Good: `url="https://example.com"
+source=("https://example.com/releases/foo-$pkgver.tar.gz")`,
 	},
 	{
 		ID:       "PB106",
@@ -94,6 +113,9 @@ var integrityRules = []Rule{
 			"run before any checksum is verified. Legitimate uses exist but are rare enough that " +
 			"every override deserves review.",
 		Check: checkDLAgents,
+		Bad:   `DLAGENTS=('https::/usr/bin/curl -fsSL -- %u')`,
+		Good: `# Rely on makepkg's built-in download agents; do not override DLAGENTS.
+source=("https://example.com/foo-$pkgver.tar.gz")`,
 	},
 	{
 		ID:       "PB107",
@@ -102,6 +124,8 @@ var integrityRules = []Rule{
 		Doc: "The PKGBUILD references an install scriptlet that is not present next to it, so its " +
 			"contents cannot be reviewed or linted.",
 		Check: checkMissingInstall,
+		Bad:   `install="foo.install"   # ...but no foo.install is committed alongside the PKGBUILD`,
+		Good:  `install="foo.install"   # foo.install ships in the same directory as the PKGBUILD`,
 	},
 	{
 		ID:       "PB108",
@@ -113,6 +137,10 @@ var integrityRules = []Rule{
 			"BUILDENV/INTEGRITY_CHECK can silently disable verification. Like DLAGENTS (PB106), these " +
 			"belong in makepkg.conf, never in a package.",
 		Check: checkMakepkgConfOverride,
+		Bad: `VCSCLIENTS=('git::/tmp/evil-git')   # makepkg runs this to fetch git sources
+source=("git+https://github.com/example/foo.git")`,
+		Good: `# Leave makepkg.conf variables to makepkg.conf; declare only package fields here.
+source=("git+https://github.com/example/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
 	},
 	{
 		ID:       "PB109",
@@ -123,6 +151,10 @@ var integrityRules = []Rule{
 			"account in the path, which a host-only comparison (PB105) misses. Often a legitimate fork " +
 			"or mirror — hence a warning, not an error.",
 		Check: checkForgeOwner,
+		Bad: `url="https://github.com/upstream/foo"
+source=("git+https://github.com/somebodyelse/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
+		Good: `url="https://github.com/upstream/foo"
+source=("git+https://github.com/upstream/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
 	},
 	{
 		ID:       "PB110",
@@ -132,6 +164,11 @@ var integrityRules = []Rule{
 			"wrong length means some sources are unverified (or verified against the wrong digest). " +
 			"makepkg errors on this; regenerate with updpkgsums.",
 		Check: checkChecksumCounts,
+		Bad: `source=("a.tar.gz" "b.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Good: `source=("a.tar.gz" "b.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08'
+            '2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae')`,
 	},
 	{
 		ID:       "PB111",
@@ -143,6 +180,15 @@ var integrityRules = []Rule{
 			"maintainer-pinned fingerprint, so the strongest verification the PKGBUILD declares is " +
 			"never actually anchored. Pin the upstream signing key's full fingerprint in validpgpkeys.",
 		Check: checkSignatureKeys,
+		Bad: `source=("https://example.com/foo-$pkgver.tar.gz"
+        "https://example.com/foo-$pkgver.tar.gz.sig")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' 'SKIP')
+# validpgpkeys is never set: any key in the builder's keyring passes`,
+		Good: `source=("https://example.com/foo-$pkgver.tar.gz"
+        "https://example.com/foo-$pkgver.tar.gz.sig")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' 'SKIP')
+validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')   # upstream's release key`,
+		Refs: []Ref{refGeneralSources},
 	},
 	{
 		ID:       "PB112",
@@ -157,6 +203,11 @@ var integrityRules = []Rule{
 		Check:    checkSignatureTransport,
 		FixLevel: FixUnsafe,
 		Fix:      fixInsecureSignatureTransport,
+		Bad: `source=("https://example.com/foo-$pkgver.tar.gz"
+        "http://example.com/foo-$pkgver.tar.gz.sig")   # signature over plain http`,
+		Good: `source=("https://example.com/foo-$pkgver.tar.gz"
+        "https://example.com/foo-$pkgver.tar.gz.sig")`,
+		Refs: []Ref{refGeneralSources},
 	},
 	{
 		ID:       "PB113",
@@ -167,6 +218,13 @@ var integrityRules = []Rule{
 			"keys. Either dead configuration or a signature source was dropped — confusing at review " +
 			"time either way.",
 		Check: checkUnusedPGPKeys,
+		Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')
+validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')   # verifies nothing`,
+		Good: `source=("https://example.com/foo-$pkgver.tar.gz"
+        "https://example.com/foo-$pkgver.tar.gz.sig")   # now the key has something to check
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' 'SKIP')
+validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')`,
 	},
 	{
 		ID:       "PB114",
@@ -176,6 +234,10 @@ var integrityRules = []Rule{
 			"never match any download, so verification is guaranteed to fail — usually a truncated " +
 			"paste or a digest computed with a different algorithm than the array names.",
 		Check: checkMalformedChecksums,
+		Bad: `source=("https://example.com/demo-$pkgver.tar.gz")
+sha256sums=('deadbeef')   # 8 characters can never be a sha256 digest`,
+		Good: `source=("https://example.com/demo-$pkgver.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
 	},
 	{
 		ID:       "PB115",
@@ -187,6 +249,12 @@ var integrityRules = []Rule{
 			"that really built it. Write one array, and extend it with `+=`. Assignments in different " +
 			"branches of a top-level `if` or `case` are alternatives, not overwrites, and are not reported.",
 		Check: checkDuplicateSourceAssignment,
+		Bad: `source=('optimizer')   # what a reviewer reads first
+sha256sums=('SKIP')
+source=("https://example.com/foo-$pkgver.tar.gz")   # what makepkg builds
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Good: `source=("https://example.com/foo-$pkgver.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
 	},
 	{
 		ID:       "PB116",
@@ -197,6 +265,12 @@ var integrityRules = []Rule{
 			"binaries are downloaded through source= and are not reported; one sitting in the AUR " +
 			"repository itself is, and running it from build() or package() is critical.",
 		Check: checkCommittedBinary,
+		Bad: `# helper, an ELF binary, is committed to the AUR repository beside this file
+build() {
+  ./helper --prepare
+}`,
+		Good: `source=("https://example.com/helper-$pkgver.tar.gz")   # built from source, checksummed
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
 	},
 }
 

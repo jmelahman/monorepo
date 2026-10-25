@@ -25,6 +25,8 @@ var styleRules = []Rule{
 			"that dispatch on $CARCH and names of foreign cross-compilation targets " +
 			"(x86_64-w64-mingw32, arm-none-eabi-gcc), which are not the host at all.",
 		Check: checkSpecificHostArch,
+		Bad:   `source=("https://example.com/demo-$pkgver-x86_64.tar.gz")`,
+		Good:  `source=("https://example.com/demo-$pkgver-$CARCH.tar.gz")`,
 	},
 	{
 		ID:       "PB902",
@@ -36,6 +38,9 @@ var styleRules = []Rule{
 		Check:    checkUnprefixedCustomVars,
 		FixLevel: FixUnsafe,
 		Fix:      fixUnprefixedCustomVars,
+		Bad:      `gitcommit='3f2b1a0'   # could collide with a future makepkg field`,
+		Good:     `_gitcommit='3f2b1a0'`,
+		Refs:     []Ref{refGeneralEtiquette},
 	},
 	{
 		ID:       "PB903",
@@ -45,6 +50,12 @@ var styleRules = []Rule{
 			"existed. Paths built from it ($startdir/pkg, $startdir/src) break under makepkg's " +
 			"BUILDDIR/PKGDEST redirection; use $srcdir and $pkgdir, which are always correct.",
 		Check: checkStartdirReference,
+		Bad: `package() {
+  install -Dm755 demo "$startdir/pkg/usr/bin/demo"
+}`,
+		Good: `package() {
+  install -Dm755 demo "$pkgdir/usr/bin/demo"
+}`,
 	},
 	{
 		ID:       "PB904",
@@ -60,6 +71,10 @@ var styleRules = []Rule{
 		// version constraint asks for something different.
 		FixLevel: FixSafe,
 		Fix:      fixRedundantMakedepends,
+		Bad: `depends=('libfoo')
+makedepends=('libfoo' 'cmake')   # libfoo is installed at build time already`,
+		Good: `depends=('libfoo')
+makedepends=('cmake')`,
 	},
 	{
 		ID:       "PB905",
@@ -69,6 +84,9 @@ var styleRules = []Rule{
 			"dl.sf.net, …) break when that mirror retires. downloads.sourceforge.net picks a " +
 			"working mirror automatically and is the form Arch packaging guidelines ask for.",
 		Check: checkSourceforgeMirror,
+		Bad:   `source=("https://heanet.dl.sourceforge.net/project/demo/demo-$pkgver.tar.gz")`,
+		Good:  `source=("https://downloads.sourceforge.net/project/demo/demo-$pkgver.tar.gz")`,
+		Refs:  []Ref{refGeneralSources},
 	},
 	{
 		ID:       "PB906",
@@ -78,6 +96,9 @@ var styleRules = []Rule{
 			"repeating the name inside the description wastes the one line that should say what " +
 			"the software does.",
 		Check: checkPkgnameInDesc,
+		Bad:   `pkgdesc='The demo package'`,
+		Good:  `pkgdesc='Fast demonstration tool for benchmarks'`,
+		Refs:  []Ref{refGeneralEtiquette},
 	},
 	{
 		ID:       "PB907",
@@ -87,6 +108,15 @@ var styleRules = []Rule{
 			"API: they vanish when the PKGBUILD is parsed by anything other than makepkg itself " +
 			"and their behavior changes between pacman releases. Use echo or printf.",
 		Check: checkMakepkgInternalFunctions,
+		Bad: `build() {
+  msg "building demo"
+  make
+}`,
+		Good: `build() {
+  echo "building demo"
+  make
+}`,
+		Refs: []Ref{refGeneralEtiquette},
 	},
 	{
 		ID:       "PB908",
@@ -96,6 +126,9 @@ var styleRules = []Rule{
 			"PKGBUILD so users know who to contact and whether the package is orphaned. Namcap " +
 			"checks for the same tag.",
 		Check: checkMaintainerComment,
+		Bad: `# Contributor: Somebody Else <somebody@example.com>
+# ...but no '# Maintainer:' line anywhere in the file`,
+		Good: `# Maintainer: Sam Coder <sam@example.com>`,
 	},
 	{
 		ID:       "PB909",
@@ -105,6 +138,9 @@ var styleRules = []Rule{
 			"(python, not Python). makepkg accepts uppercase, so this only surfaces in repo " +
 			"tooling and user confusion later — rename now, keep the case in pkgdesc.",
 		Check: checkUppercasePkgname,
+		Bad:   `pkgname=Demo-Tool`,
+		Good:  `pkgname=demo-tool`,
+		Refs:  []Ref{refGeneralNaming},
 	},
 	{
 		ID:       "PB910",
@@ -114,6 +150,8 @@ var styleRules = []Rule{
 			"packaging standards: without them pacman -Qi shows blanks and the package's legal " +
 			"status is undeclared. Split packages may set them per package function instead.",
 		Check: checkMissingMetadata,
+		Bad:   `pkgdesc=''   # empty — and url= is never set at all`,
+		Good:  `url='https://github.com/example/demo'`,
 	},
 	{
 		ID:       "PB911",
@@ -123,6 +161,9 @@ var styleRules = []Rule{
 			"with every other package doing the same in a shared SRCDEST cache, silently reusing " +
 			"the wrong tarball. Rename it: \"$pkgname-$pkgver.tar.gz::https://…/v1.2.3.tar.gz\".",
 		Check: checkNonUniqueSourceName,
+		Bad:   `source=("https://github.com/example/demo/archive/v$pkgver.tar.gz")   # saves as v1.0.0.tar.gz`,
+		Good:  `source=("$pkgname-$pkgver.tar.gz::https://github.com/example/demo/archive/v$pkgver.tar.gz")`,
+		Refs:  []Ref{refGeneralSources},
 	},
 	{
 		ID:       "PB912",
@@ -138,6 +179,10 @@ var styleRules = []Rule{
 		// never offered.
 		FixLevel: FixSafe,
 		Fix:      fixDuplicatedOptdepends,
+		Bad: `depends=('ffmpeg')
+optdepends=('ffmpeg: video export')   # already a hard dependency`,
+		Good: `optdepends=('ffmpeg: video export')`,
+		Refs: []Ref{refGeneralEtiquette},
 	},
 	{
 		ID:       "PB913",
@@ -152,6 +197,13 @@ var styleRules = []Rule{
 		Check:    checkStaleIgnores,
 		FixLevel: FixSafe,
 		Fix:      fixStaleIgnores,
+		Bad: `build() {
+  # pkglint: ignore=PB203
+  cargo build --locked --release   # --locked is present, so nothing suppresses
+}`,
+		Good: `build() {
+  cargo build --locked --release
+}`,
 	},
 	{
 		ID:       "PB914",
@@ -166,6 +218,14 @@ var styleRules = []Rule{
 		// should sign off on, like the other build-command rewrites.
 		FixLevel: FixUnsafe,
 		Fix:      fixGoPIE,
+		Bad: `build() {
+  go build -o demo .
+}`,
+		Good: `build() {
+  export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+  go build -o demo .
+}`,
+		Refs: []Ref{refGoFlags, guideline("security", "Security package guidelines", "Golang", "golang")},
 	},
 	{
 		ID:       "PB915",
@@ -177,6 +237,13 @@ var styleRules = []Rule{
 		Check:    checkGoTrimpath,
 		FixLevel: FixUnsafe,
 		Fix:      fixGoTrimpath,
+		Bad: `build() {
+  go build -buildmode=pie -o demo .   # $srcdir paths end up inside the binary
+}`,
+		Good: `build() {
+  go build -buildmode=pie -trimpath -o demo .
+}`,
+		Refs: []Ref{refGoFlags},
 	},
 	{
 		ID:       "PB916",
@@ -192,6 +259,13 @@ var styleRules = []Rule{
 		// change what gets built, so the rewrite is safe.
 		FixLevel: FixSafe,
 		Fix:      fixGoModcacheRW,
+		Bad: `prepare() {
+  go mod download
+}`,
+		Good: `prepare() {
+  go mod download -modcacherw
+}`,
+		Refs: []Ref{refGoFlags},
 	},
 	{
 		ID:       "PB917",
@@ -208,6 +282,16 @@ var styleRules = []Rule{
 		// without them now fails, and that failure is a human's to read.
 		FixLevel: FixUnsafe,
 		Fix:      fixGoCgoFlags,
+		Bad: `build() {
+  export GOFLAGS="-buildmode=pie -trimpath -modcacherw"
+  go build -o demo .
+}`,
+		Good: `build() {
+  export CGO_CFLAGS="$CFLAGS" CGO_LDFLAGS="$LDFLAGS"
+  export GOFLAGS="-buildmode=pie -trimpath -modcacherw"
+  go build -o demo .
+}`,
+		Refs: []Ref{refGoFlags},
 	},
 	{
 		ID:       "PB918",
@@ -223,6 +307,9 @@ var styleRules = []Rule{
 		// deleting the entry cannot change what the package satisfies.
 		FixLevel: FixSafe,
 		Fix:      fixSelfProvides,
+		Bad:      `provides=("$pkgname")   # a package always provides itself`,
+		Good:     `provides=('demo-cli')   # a capability other packages can depend on`,
+		Refs:     []Ref{refGeneralRelations},
 	},
 	{
 		ID:       "PB919",
@@ -237,6 +324,9 @@ var styleRules = []Rule{
 		// says, so the entry has no effect to preserve.
 		FixLevel: FixSafe,
 		Fix:      fixSelfConflicts,
+		Bad:      `conflicts=("$pkgname")   # a package can never conflict with itself`,
+		Good:     `conflicts=('demo-legacy')   # the package this one actually displaces`,
+		Refs:     []Ref{refGeneralRelations},
 	},
 	{
 		ID:       "PB920",
@@ -247,6 +337,9 @@ var styleRules = []Rule{
 			"neither, and license-audit tooling parses only the SPDX form. Only known-legacy " +
 			"spellings are flagged, so a valid-but-uncommon SPDX identifier never is.",
 		Check: checkNonSPDXLicense,
+		Bad:   `license=('GPL')   # which GPL? or-later or only?`,
+		Good:  `license=('GPL-2.0-or-later')`,
+		Refs:  []Ref{refGeneralLicense},
 	},
 	{
 		ID:       "PB921",
@@ -257,6 +350,13 @@ var styleRules = []Rule{
 			"PKGBUILD-side complement of PB820, which flags the same files in the built archive. " +
 			"Install under /usr (usually /usr/bin, /usr/lib, /usr/share) instead.",
 		Check: checkUsrLocalInstall,
+		Bad: `package() {
+  install -Dm755 demo "$pkgdir/usr/local/bin/demo"
+}`,
+		Good: `package() {
+  install -Dm755 demo "$pkgdir/usr/bin/demo"
+}`,
+		Refs: []Ref{refGeneralEtiquette},
 	},
 	{
 		ID:       "PB922",
@@ -267,6 +367,13 @@ var styleRules = []Rule{
 			"systems often default libexecdir to /usr/libexec, so the fix is usually " +
 			"--libexecdir=/usr/lib on configure rather than moving files by hand.",
 		Check: checkUsrLibexecInstall,
+		Bad: `package() {
+  install -Dm755 helper "$pkgdir/usr/libexec/demo/helper"
+}`,
+		Good: `package() {
+  install -Dm755 helper "$pkgdir/usr/lib/demo/helper"
+}`,
+		Refs: []Ref{refGeneralEtiquette},
 	},
 	{
 		ID:       "PB930",
@@ -278,6 +385,15 @@ var styleRules = []Rule{
 			"check(). The Arch Python package guidelines forbid it; invoke pytest (or upstream's " +
 			"runner) directly.",
 		Check: checkPythonTox,
+		Bad: `checkdepends=('python-tox')
+check() {
+  tox
+}`,
+		Good: `checkdepends=('python-pytest')
+check() {
+  pytest
+}`,
+		Refs: []Ref{refPyCheck},
 	},
 	{
 		ID:       "PB931",
@@ -293,6 +409,9 @@ var styleRules = []Rule{
 		// environment: check() runs with one less package installed.
 		FixLevel: FixUnsafe,
 		Fix:      fixPythonLintCheckdepends,
+		Bad:      `checkdepends=('python-pytest' 'python-pytest-cov')`,
+		Good:     `checkdepends=('python-pytest')`,
+		Refs:     []Ref{refPyCheck},
 	},
 	{
 		ID:       "PB932",
@@ -303,6 +422,11 @@ var styleRules = []Rule{
 			"ships. The Arch Python package guidelines require building from the source " +
 			"distribution except where no sdist exists at all.",
 		Check: checkPythonWheelSource,
+		Bad: `source=("https://files.pythonhosted.org/packages/py3/d/demo/demo-1.0-py3-none-any.whl")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Good: `source=("https://files.pythonhosted.org/packages/source/d/demo/demo-1.0.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Refs: []Ref{refPyPEP517},
 	},
 	{
 		ID:       "PB933",
@@ -315,6 +439,14 @@ var styleRules = []Rule{
 		Check:    checkPythonBuildBackend,
 		FixLevel: FixSafe,
 		Fix:      fixPythonBuildBackend,
+		Bad: `build() {
+  python -m build --wheel --no-isolation
+}`,
+		Good: `makedepends=('python-build' 'python-installer')
+build() {
+  python -m build --wheel --no-isolation
+}`,
+		Refs: []Ref{refPyPEP517},
 	},
 	{
 		ID:       "PB934",
@@ -325,6 +457,14 @@ var styleRules = []Rule{
 			"breaks outright on modern setuptools. The Arch Python package guidelines build with " +
 			"`python -m build` and stage with `python -m installer`.",
 		Check: checkPythonSetupPy,
+		Bad: `build() {
+  python setup.py build
+}`,
+		Good: `makedepends=('python-build' 'python-installer')
+build() {
+  python -m build --wheel --no-isolation
+}`,
+		Refs: []Ref{guideline("python", "Python package guidelines", "setuptools or distutils", "setuptools-or-distutils")},
 	},
 	{
 		ID:       "PB940",
@@ -342,6 +482,13 @@ var styleRules = []Rule{
 		// out now fails. That failure is the point, but it is a human's call.
 		FixLevel: FixUnsafe,
 		Fix:      fixCargoCheckRelease,
+		Bad: `check() {
+  cargo test --release --locked
+}`,
+		Good: `check() {
+  cargo test --locked
+}`,
+		Refs: []Ref{guideline("rust", "Rust package guidelines", "Check", "check")},
 	},
 	{
 		ID:       "PB941",
@@ -360,6 +507,13 @@ var styleRules = []Rule{
 		// itself is now operating on paths that are not there.
 		FixLevel: FixUnsafe,
 		Fix:      fixCargoInstallTracked,
+		Bad: `package() {
+  cargo install --locked --root "$pkgdir/usr" --path .
+}`,
+		Good: `package() {
+  cargo install --locked --no-track --root "$pkgdir/usr" --path .
+}`,
+		Refs: []Ref{guideline("rust", "Rust package guidelines", "Notes about using cargo install", "notes-about-using-cargo-install")},
 	},
 	{
 		ID:       "PB942",
@@ -379,6 +533,13 @@ var styleRules = []Rule{
 		// the artifact has to be checked against the new path.
 		FixLevel: FixUnsafe,
 		Fix:      fixCargoBuildRelease,
+		Bad: `build() {
+  cargo build --locked
+}`,
+		Good: `build() {
+  cargo build --release --locked
+}`,
+		Refs: []Ref{refRustBuild},
 	},
 	{
 		ID:       "PB944",
@@ -394,6 +555,14 @@ var styleRules = []Rule{
 		// build before can build after, and nothing else moves.
 		FixLevel: FixSafe,
 		Fix:      fixToolMakedepends(rustMakedependsGap, "cargo", "cargo"),
+		Bad: `build() {
+  cargo build --release --locked
+}`,
+		Good: `makedepends=('cargo')
+build() {
+  cargo build --release --locked
+}`,
+		Refs: []Ref{guideline("rust", "Rust package guidelines", "Depends", "depends")},
 	},
 	{
 		ID:       "PB950",
@@ -411,6 +580,17 @@ var styleRules = []Rule{
 		// the new layout.
 		FixLevel: FixUnsafe,
 		Fix:      fixCMakePrefix,
+		Bad: `makedepends=('cmake')
+build() {
+  cmake -B build -S .   # prefix silently defaults to /usr/local
+  cmake --build build
+}`,
+		Good: `makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=None
+  cmake --build build
+}`,
+		Refs: []Ref{guideline("cmake", "CMake package guidelines", "Prefix and library install directories", "prefix-and-library-install-directories")},
 	},
 	{
 		ID:       "PB951",
@@ -432,6 +612,17 @@ var styleRules = []Rule{
 		// now fails. That failure is the point, but it is a human's call.
 		FixLevel: FixUnsafe,
 		Fix:      fixCMakeBuildType,
+		Bad: `makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+  cmake --build build
+}`,
+		Good: `makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=None
+  cmake --build build
+}`,
+		Refs: []Ref{guideline("cmake", "CMake package guidelines", "CMake can automatically override the default compiler optimization flag", "cmake-can-automatically-override-the-default-compiler-optimization-flag")},
 	},
 	{
 		ID:       "PB952",
@@ -444,6 +635,15 @@ var styleRules = []Rule{
 		// As with PB944: restoring a build requirement, not changing the build.
 		FixLevel: FixSafe,
 		Fix:      fixToolMakedepends(cmakeMakedependsGap, "cmake", "cmake"),
+		Bad: `build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=None
+  cmake --build build
+}`,
+		Good: `makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=None
+  cmake --build build
+}`,
 	},
 	{
 		ID:       "PB953",
@@ -456,6 +656,15 @@ var styleRules = []Rule{
 		// As with PB950, the prefix moves every installed file.
 		FixLevel: FixUnsafe,
 		Fix:      fixMesonPrefix,
+		Bad: `makedepends=('meson')
+build() {
+  meson setup build   # prefix silently defaults to /usr/local
+}`,
+		Good: `makedepends=('meson')
+build() {
+  meson setup build --prefix=/usr
+}`,
+		Refs: []Ref{guideline("meson", "Meson package guidelines", "Using meson binary directly", "using-meson-binary-directly")},
 	},
 	{
 		ID:       "PB954",
@@ -468,6 +677,14 @@ var styleRules = []Rule{
 		// As with PB944: restoring a build requirement, not changing the build.
 		FixLevel: FixSafe,
 		Fix:      fixToolMakedepends(mesonMakedependsGap, "meson", "meson"),
+		Bad: `build() {
+  meson setup build --prefix=/usr
+}`,
+		Good: `makedepends=('meson')
+build() {
+  meson setup build --prefix=/usr
+}`,
+		Refs: []Ref{guideline("meson", "Meson package guidelines", "Requirements", "requirements")},
 	},
 	{
 		ID:       "PB955",
@@ -478,6 +695,17 @@ var styleRules = []Rule{
 			"quietly when the backend or its options change. The Meson package guidelines use the " +
 			"meson wrappers for compile, test and install.",
 		Check: checkMesonNinjaDirect,
+		Bad: `makedepends=('meson')
+build() {
+  meson setup build --prefix=/usr
+  ninja -C build
+}`,
+		Good: `makedepends=('meson')
+build() {
+  meson setup build --prefix=/usr
+  meson compile -C build
+}`,
+		Refs: []Ref{guideline("meson", "Meson package guidelines", "build()", "build")},
 	},
 	{
 		ID:       "PB960",
@@ -489,6 +717,21 @@ var styleRules = []Rule{
 			"The VCS package guidelines derive pkgver from the checkout (git describe, revision " +
 			"counts).",
 		Check: checkVCSPkgverFn,
+		Bad: `pkgname=demo-git
+makedepends=('git')
+source=("git+https://example.com/demo.git")
+sha256sums=('SKIP')
+# no pkgver(): every build ships pkgver=1.0.0 whatever the checkout holds`,
+		Good: `pkgname=demo-git
+makedepends=('git')
+source=("git+https://example.com/demo.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd demo
+  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}`,
+		Refs: []Ref{guideline("vcs", "VCS package guidelines", "The pkgver() function", "the-pkgver-function")},
 	},
 	{
 		ID:       "PB961",
@@ -505,6 +748,27 @@ var styleRules = []Rule{
 		// on it resolve to this build instead.
 		FixLevel: FixUnsafe,
 		Fix:      fixVCSProvidesConflicts,
+		Bad: `pkgname=demo-git
+makedepends=('git')
+source=("git+https://example.com/demo.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd demo
+  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}`,
+		Good: `pkgname=demo-git
+provides=('demo')
+conflicts=('demo')
+makedepends=('git')
+source=("git+https://example.com/demo.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd demo
+  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}`,
+		Refs: []Ref{refVcsDeps},
 	},
 	{
 		ID:       "PB962",
@@ -515,6 +779,11 @@ var styleRules = []Rule{
 			"the folder on every version bump, so each build abandons the cache and re-clones the " +
 			"entire repository.",
 		Check: checkVCSPkgverInFolder,
+		Bad: `source=("$pkgname-$pkgver::git+https://example.com/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
+sha256sums=('SKIP')`,
+		Good: `source=("$pkgname::git+https://example.com/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
+sha256sums=('SKIP')`,
+		Refs: []Ref{guideline("vcs", "VCS package guidelines", "VCS sources", "vcs-sources")},
 	},
 	{
 		ID:       "PB963",
@@ -526,6 +795,21 @@ var styleRules = []Rule{
 			"wearing a -git name — either way users and AUR helpers are misled about what " +
 			"updates mean.",
 		Check: checkVCSSuffixMismatch,
+		Bad: `pkgname=demo-git   # ...but the source is a release tarball
+source=("https://example.com/demo-1.0.0.tar.gz")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Good: `pkgname=demo-git
+provides=('demo')
+conflicts=('demo')
+makedepends=('git')
+source=("git+https://example.com/demo.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd demo
+  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}`,
+		Refs: []Ref{guideline("vcs", "VCS package guidelines", "Package naming", "package-naming")},
 	},
 	{
 		ID:       "PB970",
@@ -535,6 +819,11 @@ var styleRules = []Rule{
 			"guidelines require arch=('any') on ttf-/otf- packages. A concrete architecture " +
 			"makes pacman rebuild and re-download the same bytes per architecture for nothing.",
 		Check: checkFontArch,
+		Bad: `pkgname=ttf-demo   # font files are the same bytes on every machine
+# arch=('x86_64') from above stays in effect`,
+		Good: `pkgname=ttf-demo
+arch=('any')`,
+		Refs: []Ref{guideline("font", "Font package guidelines", "Architecture", "architecture")},
 	},
 	{
 		ID:       "PB971",
@@ -550,6 +839,12 @@ var styleRules = []Rule{
 		// its .install scriptlet stops doing so.
 		FixLevel: FixUnsafe,
 		Fix:      fixFontDepends,
+		Bad: `pkgname=ttf-demo
+arch=('any')
+depends=('fontconfig')   # fontconfig finds installed fonts on its own`,
+		Good: `pkgname=ttf-demo
+arch=('any')`,
+		Refs: []Ref{guideline("font", "Font package guidelines", "Dependencies", "dependencies")},
 	},
 	{
 		ID:       "PB972",
@@ -560,6 +855,11 @@ var styleRules = []Rule{
 			"checksum eventually fails on every user's machine at once. Fetch the versioned " +
 			"release artifact from the font's own repository instead.",
 		Check: checkFontUnstableSource,
+		Bad: `source=("https://fonts.google.com/download?family=Demo")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Good: `source=("https://github.com/example/demo-font/releases/download/v1.0/demo-v1.0.zip")
+sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
+		Refs: []Ref{guideline("font", "Font package guidelines", "Source", "source")},
 	},
 	{
 		ID:       "PB973",
@@ -573,6 +873,11 @@ var styleRules = []Rule{
 		// after the fix pacman pulls dkms onto every user's machine.
 		FixLevel: FixUnsafe,
 		Fix:      fixDkmsDepends,
+		Bad: `pkgname=demo-dkms
+# depends=(): the module sources ship, but nothing will ever build them`,
+		Good: `pkgname=demo-dkms
+depends=('dkms')`,
+		Refs: []Ref{refDkmsDeps},
 	},
 	{
 		ID:       "PB974",
@@ -588,6 +893,11 @@ var styleRules = []Rule{
 		// an .install scriptlet building against them, say — loses them.
 		FixLevel: FixUnsafe,
 		Fix:      fixDkmsKernelHeaders,
+		Bad: `pkgname=demo-dkms
+depends=('dkms' 'linux-headers')   # pins the stock kernel's headers`,
+		Good: `pkgname=demo-dkms
+depends=('dkms')   # dkms pulls the right headers for every installed kernel`,
+		Refs: []Ref{refDkmsDeps},
 	},
 	{
 		ID:       "PB975",
@@ -597,6 +907,11 @@ var styleRules = []Rule{
 			"distinguishes the multilib build from its 64-bit sibling; the 32-bit package " +
 			"guidelines end pkgdesc with \"(32-bit)\".",
 		Check: checkLib32Pkgdesc,
+		Bad: `pkgname=lib32-demo
+pkgdesc='Demonstration library'`,
+		Good: `pkgname=lib32-demo
+pkgdesc='Demonstration library (32-bit)'`,
+		Refs: []Ref{guideline("32-bit", "32-bit package guidelines", "Package naming", "package-naming")},
 	},
 	{
 		ID:       "PB976",
@@ -607,6 +922,20 @@ var styleRules = []Rule{
 			"objects and the lib32- package ships the wrong ABI. Repackaging PKGBUILDs with no " +
 			"build() are exempt — they compile nothing.",
 		Check: checkLib32M32,
+		Bad: `pkgname=lib32-demo
+pkgdesc='Demonstration library (32-bit)'
+build() {
+  ./configure --libdir=/usr/lib32
+  make
+}`,
+		Good: `pkgname=lib32-demo
+pkgdesc='Demonstration library (32-bit)'
+build() {
+  export CFLAGS="$CFLAGS -m32" CXXFLAGS="$CXXFLAGS -m32" LDFLAGS="$LDFLAGS -m32"
+  ./configure --libdir=/usr/lib32
+  make
+}`,
+		Refs: []Ref{guideline("32-bit", "32-bit package guidelines", "lib32", "lib32")},
 	},
 	{
 		ID:       "PB977",
@@ -617,6 +946,12 @@ var styleRules = []Rule{
 			"static/import libraries makepkg would delete, and Arch's CFLAGS target the host ABI. " +
 			"The MinGW package guidelines therefore require options=(!strip staticlibs !buildflags).",
 		Check: checkMingwOptions,
+		Bad: `pkgname=mingw-w64-demo
+pkgdesc='Demonstration library (mingw-w64)'`,
+		Good: `pkgname=mingw-w64-demo
+pkgdesc='Demonstration library (mingw-w64)'
+options=('!strip' 'staticlibs' '!buildflags')`,
+		Refs: []Ref{refMingwPkg},
 	},
 	{
 		ID:       "PB978",
@@ -626,6 +961,13 @@ var styleRules = []Rule{
 			"the cross build from the native one; the MinGW package guidelines end pkgdesc with " +
 			"\"(mingw-w64)\".",
 		Check: checkMingwPkgdesc,
+		Bad: `pkgname=mingw-w64-demo
+pkgdesc='Demonstration library'
+options=('!strip' 'staticlibs' '!buildflags')`,
+		Good: `pkgname=mingw-w64-demo
+pkgdesc='Demonstration library (mingw-w64)'
+options=('!strip' 'staticlibs' '!buildflags')`,
+		Refs: []Ref{refMingwPkg},
 	},
 	{
 		ID:       "PB979",
@@ -638,6 +980,14 @@ var styleRules = []Rule{
 		// As with PB944: restoring a build requirement, not changing the build.
 		FixLevel: FixSafe,
 		Fix:      fixToolMakedepends(npmMakedependsGap, "npm", "npm"),
+		Bad: `prepare() {
+  npm ci --cache "$srcdir/npm-cache"
+}`,
+		Good: `makedepends=('npm')
+prepare() {
+  npm ci --cache "$srcdir/npm-cache"
+}`,
+		Refs: []Ref{guideline("nodejs", "Node.js package guidelines", "Using npm", "using-npm")},
 	},
 	{
 		ID:       "PB980",
@@ -654,6 +1004,15 @@ var styleRules = []Rule{
 		// network at all — behaves differently afterwards.
 		FixLevel: FixUnsafe,
 		Fix:      fixNpmUserCache,
+		Bad: `makedepends=('npm')
+prepare() {
+  npm ci   # tarballs land in the build user's ~/.npm
+}`,
+		Good: `makedepends=('npm')
+prepare() {
+  npm ci --cache "$srcdir/npm-cache"
+}`,
+		Refs: []Ref{guideline("nodejs", "Node.js package guidelines", "Setting temporary cache", "setting-temporary-cache")},
 	},
 	{
 		ID:       "PB981",
@@ -670,6 +1029,14 @@ var styleRules = []Rule{
 		// state.
 		FixLevel: FixUnsafe,
 		Fix:      fixJavaRuntimeDependency,
+		Bad: `package() {
+  install -Dm644 demo.jar "$pkgdir/usr/share/java/demo/demo.jar"
+}   # nothing in depends provides a JVM to run it`,
+		Good: `depends=('java-runtime')
+package() {
+  install -Dm644 demo.jar "$pkgdir/usr/share/java/demo/demo.jar"
+}`,
+		Refs: []Ref{guideline("java", "Java package guidelines", "Dependencies", "dependencies")},
 	},
 	{
 		ID:       "PB982",
@@ -680,6 +1047,17 @@ var styleRules = []Rule{
 			"and options=('!strip') on mono/.NET packages; a package missing either ships " +
 			"per-arch duplicates or broken assemblies.",
 		Check: checkCLRMetadata,
+		Bad: `depends=('mono')
+build() {
+  xbuild demo.sln   # CIL assemblies, but arch/options say native binary
+}`,
+		Good: `depends=('mono')
+arch=('any')
+options=('!strip')
+build() {
+  xbuild demo.sln
+}`,
+		Refs: []Ref{guideline("clr", "CLR package guidelines", "Packaging gotchas", "packaging-gotchas")},
 	},
 	{
 		ID:       "PB983",
@@ -690,6 +1068,11 @@ var styleRules = []Rule{
 			"ships x86_64 objects to every architecture. The Haskell package guidelines list the " +
 			"real architectures.",
 		Check: checkHaskellArch,
+		Bad: `pkgname=haskell-demo
+arch=('any')   # GHC output is native code with a baked-in ABI hash`,
+		Good: `pkgname=haskell-demo
+arch=('x86_64')`,
+		Refs: []Ref{guideline("haskell", "Haskell package guidelines", "Architecture", "architecture")},
 	},
 	{
 		ID:       "PB984",
@@ -700,6 +1083,17 @@ var styleRules = []Rule{
 			"php- packages that build a native extension (phpize/configure/make) are " +
 			"architecture-specific and exempt.",
 		Check: checkPhpArch,
+		Bad: `pkgname=php-demo
+# arch=('x86_64') from above, but nothing here compiles anything
+package() {
+  install -Dm644 demo.php "$pkgdir/usr/share/webapps/demo/demo.php"
+}`,
+		Good: `pkgname=php-demo
+arch=('any')
+package() {
+  install -Dm644 demo.php "$pkgdir/usr/share/webapps/demo/demo.php"
+}`,
+		Refs: []Ref{guideline("php", "PHP package guidelines", "Architecture", "architecture"), refGeneralArch},
 	},
 }
 

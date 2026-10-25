@@ -3438,20 +3438,23 @@ esac`, "")}) {
 	}
 }
 
-// TestRefsAreWellFormed holds the citation table to what a reader following a
-// link needs: an entry belongs to a rule that exists, names what it points at,
-// and points at an Arch document by a section anchor rather than a whole page.
-// Whether the section says what the rule says is the review refs.go asks for;
-// this only keeps a typo'd ID or a stray host from slipping through it.
+// TestRefsAreWellFormed holds the citations to what a reader following a link
+// needs: an entry names what it points at, and points at an Arch document by a
+// section anchor rather than a whole page. Whether the section says what the
+// rule says is the review refs.go asks for; this only keeps a stray host or a
+// missing anchor from slipping through it.
 func TestRefsAreWellFormed(t *testing.T) {
-	for id, rs := range refs {
-		if _, ok := RuleByID(id); !ok {
-			t.Errorf("refs cites %s, which is not a rule", id)
+	// A rule that cites upstream keeps its citation: Refs are written inline
+	// now, so a stray edit could drop them with nothing else noticing.
+	if r, _ := RuleByID("PB944"); len(r.Refs) == 0 {
+		t.Error("PB944 lost its upstream citations")
+	}
+	for _, rule := range Registry() {
+		id := rule.ID
+		if rule.Refs != nil && len(rule.Refs) == 0 {
+			t.Errorf("%s has an empty Refs; drop the field", id)
 		}
-		if len(rs) == 0 {
-			t.Errorf("refs has an empty entry for %s; drop it", id)
-		}
-		for _, r := range rs {
+		for _, r := range rule.Refs {
 			if r.Title == "" {
 				t.Errorf("%s cites %s without a title", id, r.URL)
 			}
@@ -3462,10 +3465,5 @@ func TestRefsAreWellFormed(t *testing.T) {
 				t.Errorf("%s cites %s without a section anchor", id, r.URL)
 			}
 		}
-	}
-	// buildRegistry attaches the table; a rule that has an entry must carry it.
-	r, _ := RuleByID("PB944")
-	if !reflect.DeepEqual(r.Refs, refs["PB944"]) {
-		t.Errorf("PB944.Refs = %v, want refs[PB944]", r.Refs)
 	}
 }
