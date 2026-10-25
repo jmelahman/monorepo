@@ -47,6 +47,6 @@ jobs:
             docker logs app-smoke >&2 || true
             exit 1
           fi
-          curl -sf -m 5 http://127.0.0.1:8080/api/items >/dev/null
+          curl -sf -m 5 http://127.0.0.1:8080/api/goals >/dev/null
       - if: always()
         run: docker rm -f app-smoke >/dev/null 2>&1 || true
