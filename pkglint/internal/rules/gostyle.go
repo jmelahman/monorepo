@@ -142,6 +142,19 @@ func exportedInScope(u *pkgbuild.Unit, name, fn string, at int, own *syntax.Call
 	if u == nil || u.File == nil {
 		return false
 	}
+	// An exported assignment sits under a declare/export clause, which the
+	// unit's index records with no Call. Most files never export the name, so
+	// skip the walk unless one might.
+	var inDecl bool
+	for _, site := range u.AssignsTo(name) {
+		if site.Call == nil {
+			inDecl = true
+			break
+		}
+	}
+	if !inDecl {
+		return false
+	}
 	exports := map[*syntax.Assign]bool{}
 	syntax.Walk(u.File, func(n syntax.Node) bool {
 		if dc, ok := n.(*syntax.DeclClause); ok && declExports(dc) {

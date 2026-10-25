@@ -1084,6 +1084,101 @@ build() {
 		mustContain(t, got, "go build -buildmode=pie -trimpath -modcacherw -o demo .") // PB204 adds no -mod flag here
 		relintClean(t, got)
 	})
+	t.Run("copies the cache exports build sets into prepare", func(t *testing.T) {
+		// Without them the download lands in ~/go/pkg/mod and the build,
+		// reading $srcdir/pkg/mod, fetches everything again.
+		got := fixPKGBUILD(t, `
+prepare() {
+  cd "$pkgname"
+}
+
+build() {
+  cd "$pkgname"
+  export GOPATH="${srcdir}"
+  export GOMODCACHE="${srcdir}/mod"
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "prepare() {\n  cd \"$pkgname\"\n  export GOPATH=\"${srcdir}\"\n  export GOMODCACHE=\"${srcdir}/mod\"\n  go mod download -modcacherw\n}")
+		relintClean(t, got)
+	})
+	t.Run("a fresh prepare gets the exports too", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+build() {
+  export GOPATH="${srcdir}"
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "prepare() {\n  export GOPATH=\"${srcdir}\"\n  go mod download -modcacherw\n}")
+	})
+	t.Run("a cache location that cannot be copied faithfully leaves the finding", func(t *testing.T) {
+		for _, body := range []string{
+			"  _d=\"$PWD/x\"\n  export GOPATH=\"$_d\"",          // reads a variable build() sets
+			"  export GOPATH=\"$(mktemp -d)\"",                  // runs a command
+			"  if [ -n \"$x\" ]; then export GOPATH=a; fi",      // conditional
+			"  GOPATH=\"${srcdir}\" go build -o demo . && true", // prefix only
+		} {
+			got := fixPKGBUILD(t, "\nbuild() {\n"+body+"\n  go build -o demo .\n}", FixUnsafe, nil)
+			mustNotContain(t, got, "go mod download")
+		}
+	})
+	t.Run("a cache location prepare shares still gets the download", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+prepare() {
+  export GOPATH="${srcdir}"
+  cd "$pkgname"
+}
+
+build() {
+  export GOPATH="${srcdir}"
+  cd "$pkgname"
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "go mod download -modcacherw")
+		if n := strings.Count(got, "export GOPATH="); n != 2 {
+			t.Errorf("want the shared export left alone (2 total), got %d:\n%s", n, got)
+		}
+	})
+	t.Run("an export that refers to one copied before it", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+build() {
+  export GOPATH="$srcdir/go"
+  export GOMODCACHE="$GOPATH/pkg/mod"
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "prepare() {\n  export GOPATH=\"$srcdir/go\"\n  export GOMODCACHE=\"$GOPATH/pkg/mod\"\n  go mod download")
+	})
+	t.Run("an unexported shell variable is not copied", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+build() {
+  GOPATH="${srcdir}"
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "prepare() {\n  go mod download")
+		mustNotContain(t, got, "export GOPATH")
+	})
+	t.Run("another command's prefix does not stop the fix", func(t *testing.T) {
+		got := fixPKGBUILD(t, `
+build() {
+  GOPATH="${srcdir}" go vet ./...
+  go build -o demo .
+}`, FixUnsafe, nil)
+		mustContain(t, got, "go mod download")
+		mustNotContain(t, got, "export GOPATH")
+	})
+	t.Run("a prepare that already runs go or disagrees leaves the finding", func(t *testing.T) {
+		for _, pre := range []string{"  go generate ./...", "  export GOPATH=/elsewhere"} {
+			got := fixPKGBUILD(t, "\nprepare() {\n"+pre+"\n}\n\nbuild() {\n  export GOPATH=\"${srcdir}\"\n  go build -o demo .\n}", FixUnsafe, nil)
+			mustNotContain(t, got, "go mod download")
+		}
+	})
+	t.Run("a helper or += assignment leaves the finding", func(t *testing.T) {
+		for _, src := range []string{
+			"\n_env() {\n  export GOPATH=\"${srcdir}\"\n}\n\nbuild() {\n  _env\n  go build -o demo .\n}",
+			"\nbuild() {\n  export GOPATH+=\"${srcdir}\"\n  go build -o demo .\n}",
+			"\nbuild() {\n  export GOPATH=\"$((1+1))\"\n  go build -o demo .\n}",
+		} {
+			mustNotContain(t, fixPKGBUILD(t, src, FixUnsafe, nil), "go mod download")
+		}
+	})
 	t.Run("a build without a cd gets a bare download", func(t *testing.T) {
 		got := fixPKGBUILD(t, `
 build() {

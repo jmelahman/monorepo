@@ -211,9 +211,38 @@ func cmakeReleaseConfigures(ctx *Context) []Command {
 		if own && !arch {
 			continue
 		}
+		if cmakeDefinesReleaseFlags(c) {
+			continue
+		}
 		out = append(out, c)
 	}
 	return out
+}
+
+// cmakeDefinesReleaseFlags reports whether c replaces the Release
+// configuration's own flags (CMAKE_C_FLAGS_RELEASE and friends) with
+// makepkg's. That swaps the -O3 -DNDEBUG Release would add for $CFLAGS, so the
+// build type is how the PKGBUILD chooses the flags — c3c sets them to
+// "$CFLAGS" — and None would leave them unused. A Release flags define that
+// is something else (cmake's own "-O3 -DNDEBUG", a hand-written list) keeps
+// the finding: Arch's -O2 is still overridden. As with cmakeFlagSources, a
+// language the configure does not mention is left out of the question.
+func cmakeDefinesReleaseFlags(c Command) bool {
+	found := false
+	for _, d := range []struct{ define, env string }{
+		{"CMAKE_C_FLAGS_RELEASE", "CFLAGS"},
+		{"CMAKE_CXX_FLAGS_RELEASE", "CXXFLAGS"},
+	} {
+		_, i, ok := cmakeDefineAt(c, d.define)
+		if !ok || i >= len(c.ArgWord) {
+			continue
+		}
+		if !carriesEnvFlags(c, c.ArgWord[i], d.env, map[string]bool{}) {
+			return false
+		}
+		found = true
+	}
+	return found
 }
 
 // cmakeOwnFlags reports whether any language's flags in c are the

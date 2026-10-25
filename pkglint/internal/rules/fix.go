@@ -1799,8 +1799,17 @@ func fixGoDownloads(ctx *Context, _ *FixEnv) []Edit {
 // function if the PKGBUILD has one, writing a fresh one directly above c's
 // function otherwise. The download gets -modcacherw (unless GOFLAGS already
 // carries it) so the cache the fix creates stays removable, as PB916 asks.
+//
+// GOPATH and GOMODCACHE decide where the download lands, so the ones build()
+// sets are written into prepare() ahead of it (goCacheExports); a download
+// into the default ~/go/pkg/mod would clear the finding for a build that reads
+// $srcdir/pkg/mod. When they cannot be copied faithfully the edit is withheld.
 func goModDownloadEdit(ctx *Context, c Command) (Edit, bool) {
 	u := c.Unit
+	exports, ok := goCacheExports(ctx, u, c)
+	if !ok {
+		return Edit{}, false
+	}
 	indent := lineIndent(u.Raw, off(c.Stmt.Pos()))
 	line := int(c.Stmt.Pos().Line())
 	// GOFLAGS is only read from prepare()'s own environment, so an export
@@ -1825,6 +1834,7 @@ func goModDownloadEdit(ctx *Context, c Command) (Edit, bool) {
 			return Edit{}, false // a one-line prepare(); nowhere to put a new line
 		}
 		var b strings.Builder
+		b.WriteString(exports.lines(indent))
 		b.WriteString(prepareCd(ctx, u, block, c.Fn, indent))
 		b.WriteString(indent + download(at))
 		return Edit{
@@ -1840,6 +1850,7 @@ func goModDownloadEdit(ctx *Context, c Command) (Edit, bool) {
 	at := lineStart(u.Raw, off(fd.Pos()))
 	var b strings.Builder
 	b.WriteString("prepare() {\n")
+	b.WriteString(exports.lines(indent))
 	if cds := fnCommands(ctx, u, c.Fn, "cd"); len(cds) > 0 {
 		b.WriteString(cdLine(cds[0], indent))
 	}
@@ -1849,6 +1860,143 @@ func goModDownloadEdit(ctx *Context, c Command) (Edit, bool) {
 		Path: u.Path, Start: at, End: at, New: b.String(), Line: line,
 		Desc: "add prepare() with `go mod download` so " + c.Fn + "() needn't fetch",
 	}, true
+}
+
+// cacheExports are the `export NAME=value` lines build() needs repeated in
+// prepare(), the value text exactly as written.
+type cacheExports []string
+
+func (e cacheExports) lines(indent string) string {
+	var b strings.Builder
+	for _, l := range e {
+		b.WriteString(indent + l + "\n")
+	}
+	return b.String()
+}
+
+// cacheVars are the variables that say where Go keeps its module cache.
+var cacheVars = []string{"GOPATH", "GOMODCACHE"}
+
+// makepkgVars are defined before any phase runs and mean the same in every one.
+var makepkgVars = map[string]bool{
+	"srcdir": true, "pkgdir": true, "startdir": true,
+	"pkgname": true, "pkgbase": true, "pkgver": true, "pkgrel": true,
+}
+
+// goCacheExports returns the cache-location exports c's function sets that
+// prepare() would not already have. ok is false when one cannot be copied
+// without guessing: it is set by a command prefix, a helper function, a
+// conditional or subshell, or with +=; or its value runs a command or reads a
+// variable the function itself sets, which prepare() would not have. It is
+// also false when prepare() already runs go commands or sets the variable to
+// something else, since the exports go at the end of it.
+func goCacheExports(ctx *Context, u *pkgbuild.Unit, c Command) (cacheExports, bool) {
+	fd := u.Functions[c.Fn]
+	if fd == nil {
+		return nil, true
+	}
+	block, _ := fd.Body.Cmd.(*syntax.Block)
+	at := -1
+	if c.Stmt != nil {
+		at = off(c.Stmt.Pos())
+	}
+	var out cacheExports
+	queued := map[string]bool{}
+	for _, name := range cacheVars {
+		have := assignmentsInScope(u, name, "prepare", -1, nil)
+		for _, site := range u.AssignsTo(name) {
+			switch {
+			case site.Fn == "" || site.Fn == "prepare":
+				continue // prepare() has it too
+			case site.Fn != c.Fn:
+				if makepkgPhase(site.Fn) {
+					continue // a different phase; c never sees it before prepare
+				}
+				return nil, false // a helper: no telling when it runs
+			case c.Call != nil && site.Call == c.Call:
+				return nil, false // GOPATH=… go build: a prefix has no export to copy
+			case site.Call != nil:
+				continue // another command's prefix never reaches c
+			case off(site.Assign.Pos()) >= at:
+				continue // not yet set when c runs
+			}
+			as := site.Assign
+			if block == nil || as.Append || as.Value == nil || as.Array != nil || as.Index != nil ||
+				!topLevelAssign(block, as) || !copyableValue(u, c.Fn, as.Value, queued) {
+				return nil, false
+			}
+			if !exportedInScope(u, name, c.Fn, at, nil) {
+				continue // a shell variable go never sees
+			}
+			rendered, _ := renderPlain(as.Value)
+			if slices.Contains(have, rendered) {
+				continue
+			}
+			if len(have) > 0 {
+				return nil, false // prepare() sets it differently; the download would follow neither
+			}
+			out = append(out, "export "+name+"="+string(u.Raw[off(as.Value.Pos()):off(as.Value.End())]))
+			queued[name] = true
+		}
+	}
+	if len(out) > 0 {
+		// The exports are written at the end of prepare(), so a go command
+		// already in it would run before them.
+		if len(fnCommands(ctx, u, "prepare", "go")) > 0 {
+			return nil, false
+		}
+	}
+	return out, true
+}
+
+// topLevelAssign reports whether as is the whole of a statement directly in
+// block — `export NAME=v` or a bare `NAME=v` — so running it again elsewhere
+// repeats exactly what it did.
+func topLevelAssign(block *syntax.Block, as *syntax.Assign) bool {
+	for _, st := range block.Stmts {
+		switch cmd := st.Cmd.(type) {
+		case *syntax.DeclClause:
+			if declExports(cmd) && len(cmd.Args) == 1 && cmd.Args[0] == as {
+				return true
+			}
+		case *syntax.CallExpr:
+			if len(cmd.Args) == 0 && len(cmd.Assigns) == 1 && cmd.Assigns[0] == as {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// copyableValue reports whether w means the same in prepare() as in fn: no
+// command substitution or arithmetic, and every variable is one makepkg
+// defines, one already copied (queued), or one the file sets at top level and
+// fn leaves alone.
+func copyableValue(u *pkgbuild.Unit, fn string, w *syntax.Word, queued map[string]bool) bool {
+	ok := true
+	syntax.Walk(w, func(n syntax.Node) bool {
+		switch x := n.(type) {
+		case *syntax.CmdSubst, *syntax.ArithmExp, *syntax.ProcSubst:
+			ok = false
+		case *syntax.ParamExp:
+			name := x.Param.Value
+			if makepkgVars[name] || queued[name] {
+				break
+			}
+			top := false
+			for _, site := range u.AssignsTo(name) {
+				switch site.Fn {
+				case "":
+					top = true
+				case fn:
+					ok = false
+				}
+			}
+			ok = ok && top
+		}
+		return ok
+	})
+	return ok
 }
 
 // cdLine returns cd as a full source line — indent and any `|| exit` guard

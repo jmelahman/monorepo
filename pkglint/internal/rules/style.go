@@ -1,8 +1,10 @@
 package rules
 
 import (
+	"maps"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
 	"mvdan.cc/sh/v3/syntax"
@@ -907,6 +909,28 @@ func archSuffixed(name string) bool {
 // knownPKGBUILDVars is every variable name makepkg itself reads, i.e. the ones
 // a PKGBUILD may set without an underscore prefix.
 func knownPKGBUILDVars(ctx *Context) map[string]bool {
+	known := staticKnownVars()
+	// An arch= entry outside hostArchNames is the only thing that varies per
+	// package; copy the shared set only then. Callers must not modify the
+	// result.
+	for _, a := range concreteArches(ctx) {
+		if hostArchSet[a] {
+			continue
+		}
+		known = maps.Clone(known)
+		for _, a := range concreteArches(ctx) {
+			for _, n := range schemaArchArrayVars {
+				known[n+"_"+a] = true
+			}
+		}
+		break
+	}
+	return known
+}
+
+// staticKnownVars is the part of knownPKGBUILDVars that no package changes,
+// built once.
+var staticKnownVars = sync.OnceValue(func() map[string]bool {
 	known := map[string]bool{"pkgname": true, "pkgbase": true}
 	for _, n := range schemaArrayVars {
 		known[n] = true
@@ -917,15 +941,13 @@ func knownPKGBUILDVars(ctx *Context) map[string]bool {
 	// Every host architecture, not only the ones arch= lists: makepkg reads
 	// depends_i686 whenever CARCH is i686, so renaming it would silently drop
 	// the array.
-	for _, arches := range [][]string{hostArchNames, concreteArches(ctx)} {
-		for _, a := range arches {
-			for _, n := range schemaArchArrayVars {
-				known[n+"_"+a] = true
-			}
+	for _, a := range hostArchNames {
+		for _, n := range schemaArchArrayVars {
+			known[n+"_"+a] = true
 		}
 	}
 	return known
-}
+})
 
 // unprefixedCustomVars returns the variables PB902 flags, keyed by name. The
 // fixer shares it so what gets renamed is exactly what got reported.

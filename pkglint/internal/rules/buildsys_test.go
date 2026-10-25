@@ -119,6 +119,20 @@ build() {
     -DCMAKE_C_FLAGS="-fno-exceptions --sysroot=/usr/share/wasi-sysroot"
 }`)})
 	})
+	t.Run("PB951 Release flags defined by the configure are the PKGBUILD's choice", func(t *testing.T) {
+		expectNoRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE="$CFLAGS" -DCMAKE_CXX_FLAGS_RELEASE="$CXXFLAGS"
+}`)})
+	})
+	t.Run("PB951 Release flags defined to something else still override Arch's", func(t *testing.T) {
+		expectRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
+makedepends=('cmake')
+build() {
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG"
+}`)})
+	})
 	t.Run("PB951 explicit flags that carry $CFLAGS still lose -O2", func(t *testing.T) {
 		expectRule(t, "PB951", map[string]string{"PKGBUILD": pkgbuildWith("", `
 makedepends=('cmake')
