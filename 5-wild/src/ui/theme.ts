@@ -5,6 +5,7 @@ import {
   currentSkin,
   loadLegacyTone,
   loadSkin,
+  readSkin,
   resolveSkin,
   SKINS,
   type Skin,
@@ -61,6 +62,14 @@ const prefersLight = (): boolean =>
   typeof matchMedia === "function" && matchMedia(LIGHT_QUERY).matches
 
 /**
+ * The unpicked look this build was told to ship, or null to follow the device.
+ * Set by `VITE_DEFAULT_SKIN=smoke bun run build`, which is how the itch zip is
+ * built; read through `readSkin` so a misspelt value builds the ordinary game
+ * rather than a page with no skin class on it.
+ */
+const BUILD_DEFAULT = readSkin(import.meta.env.VITE_DEFAULT_SKIN ?? null)
+
+/**
  * `ThemePlugin.java`, which hands the tone to Android so the next launch window
  * is drawn in it. The page can only theme itself once it exists, and the launch
  * is over by then.
@@ -87,6 +96,7 @@ function apply(): void {
     legacy,
     table: document.documentElement.classList.contains("table"),
     prefersLight: prefersLight(),
+    fallback: BUILD_DEFAULT,
   })
   const root = document.documentElement
   // One class at a time: clear every look's, then set this one's.

@@ -85,6 +85,20 @@ describe("skin", () => {
       }
     })
 
+    it("takes a build's default over the device, and nothing else", () => {
+      for (const table of [false, true]) {
+        for (const prefersLight of [false, true]) {
+          expect(stand({ fallback: "smoke", table, prefersLight })).toBe("smoke")
+          expect(stand({ fallback: "smoke", legacy: "light", table, prefersLight })).toBe(
+            "classic-light",
+          )
+          expect(stand({ fallback: "smoke", picked: "tabletop", table, prefersLight })).toBe(
+            "tabletop",
+          )
+        }
+      }
+    })
+
     it("is overruled by a pick, on every layout and whatever the device says", () => {
       for (const picked of SKINS) {
         for (const table of [false, true]) {

@@ -90,6 +90,14 @@ export type Standing = {
   table: boolean
   /** What the device says, for the one case that asks it. */
   prefersLight: boolean
+  /**
+   * The look a build ships unpicked, standing in for following the device.
+   * Absent everywhere but a build given `VITE_DEFAULT_SKIN`, which is the itch
+   * zip: a page embedded in someone else's storefront is the one place a
+   * player meets the game with no dial-turning behind them, and Smoke is the
+   * look it is shown in there. See `initLook`.
+   */
+  fallback?: Skin | null
 }
 
 /**
@@ -108,11 +116,16 @@ export type Standing = {
  * Only the un-migrated default reads `prefersLight`, and it is not stored:
  * writing it down would stop following the device as soon as its preference
  * changed, and a window resize would not be the player's choice.
+ *
+ * A build's `fallback` replaces only that last case. It sits below the legacy
+ * mapping because an old pick is still the player's word, and below a pick
+ * because it is applied and never written, so the dial behaves as it always has.
  */
-export function resolveSkin({ picked, legacy, table, prefersLight }: Standing): Skin {
+export function resolveSkin({ picked, legacy, table, prefersLight, fallback }: Standing): Skin {
   if (picked) return picked
   if (legacy === "light") return "classic-light"
   if (legacy === "dark") return table ? "smoke" : "classic-dark"
+  if (fallback) return fallback
   return prefersLight ? "classic-light" : "classic-dark"
 }
 
