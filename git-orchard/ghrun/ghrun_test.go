@@ -145,3 +145,9 @@ func equal(a, b []string) bool {
 	}
 	return true
 }
+
+func TestPrintable(t *testing.T) {
+	if got, want := Printable("a\x1b[2J\tb\nc ✓"), "a�[2J b c ✓"; got != want {
+		t.Errorf("Printable = %q, want %q", got, want)
+	}
+}

@@ -59,6 +59,7 @@ git orchard release tools/foo          # tag the next version, e.g. tools/foo/v1
 git orchard release tools/foo v2.0.0   # or a version of your choosing
 git orchard sync [prefix...]            # copy shared files into subtrees
 git orchard detach [worktree]           # turn a linked worktree into a standalone clone
+git orchard ci [prefix...]              # GitHub Actions status of the monorepo and each subtree
 ```
 
 Without a version, `release` picks one after the latest release, much as [tag](https://github.com/jmelahman/tag) does: the patch version incremented (`--minor` and `--major` increment those instead), or a pre-release's stable release; `--suffix rc` picks the next release candidate, e.g. `v1.2.4-rc`, then `v1.2.4-rc.1`.
@@ -74,7 +75,28 @@ An upstream with commits the monorepo doesn't have rejects the push until they'r
 `detach` gives a worktree made with `git worktree add` its own `.git` directory, with the repository's refs, config, hooks and excludes, and the worktree's HEAD and index, so uncommitted changes carry over; objects are hardlinked where possible, as for a local clone.
 It then drops the worktree from the original repository, and refuses one that is locked, has submodules, or is mid-merge, rebase, cherry-pick, revert or bisect.
 
-git-orchard only runs `git`, so credentials, SSH config and `url.<base>.insteadOf` rewrites apply as usual.
+Besides `gh`, for `ci` and `release --watch`, git-orchard only runs `git`, so credentials, SSH config and `url.<base>.insteadOf` rewrites apply as usual.
+
+## CI
+
+`ci` shows the latest run of each workflow on each subtree's upstream branch, and, unless prefixes are given, on the monorepo's own default branch as the prefix `.`.
+Deleted and disabled workflows, and pull requests' runs, are left out.
+It asks the [GitHub CLI](https://cli.github.com), `gh`, so that must be signed in.
+
+```shell
+git orchard ci                          # every run, with the failed ones in red
+git orchard ci --failed                 # only the failed runs
+git orchard ci --watch                  # refresh every minute until interrupted
+git orchard ci --json                   # for scripts
+git orchard ci --failed --logs | claude -p "triage these CI failures"
+```
+
+`--logs` adds each failed run's logs as Markdown, cut down to the step that failed in each failed job (at most `--lines` of its last lines, 150 by default), without the setup and verbose logging GitHub's log viewer collapses.
+`ci` exits 1 if any run failed, even if it couldn't check some repository; 2 if it couldn't check some repository and nothing failed; and 130 if interrupted. So a script can ask only when something failed:
+
+```shell
+logs=$(git orchard ci --failed --logs); [ $? = 1 ] && claude -p "triage these CI failures" <<<"$logs"
+```
 
 ## Shared files
 

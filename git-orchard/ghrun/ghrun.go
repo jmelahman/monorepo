@@ -1,5 +1,6 @@
-// Package ghrun follows the GitHub Actions runs a tag push triggers, through
-// the gh CLI, which brings its own authentication.
+// Package ghrun follows GitHub Actions runs through the gh CLI, which brings
+// its own authentication: the runs a tag push triggers, and the latest run of
+// each workflow on a branch.
 //
 // Runs are found rather than named: a tag push's runs have event "push", the
 // tag as their head branch and the tagged commit as their head SHA, whatever
@@ -10,7 +11,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -20,14 +20,21 @@ import (
 
 // Run is a workflow run, as gh run list --json describes it.
 type Run struct {
-	ID         int64  `json:"databaseId"`
-	Workflow   string `json:"workflowName"`
-	HeadBranch string `json:"headBranch"`
-	HeadSHA    string `json:"headSha"`
-	Status     string `json:"status"`
-	Conclusion string `json:"conclusion"`
-	URL        string `json:"url"`
+	ID         int64     `json:"databaseId"`
+	WorkflowID int64     `json:"workflowDatabaseId"`
+	Workflow   string    `json:"workflowName"`
+	HeadBranch string    `json:"headBranch"`
+	HeadSHA    string    `json:"headSha"`
+	Status     string    `json:"status"`
+	Conclusion string    `json:"conclusion"`
+	URL        string    `json:"url"`
+	Event      string    `json:"event"`
+	Title      string    `json:"displayTitle"`
+	CreatedAt  time.Time `json:"createdAt"`
 }
+
+// runFields are the fields of Run, for gh run list --json.
+const runFields = "databaseId,workflowDatabaseId,workflowName,headBranch,headSha,status,conclusion,url,event,displayTitle,createdAt"
 
 // Done reports whether the run has finished.
 func (r Run) Done() bool {
@@ -38,6 +45,19 @@ func (r Run) Done() bool {
 func (r Run) OK() bool {
 	switch r.Conclusion {
 	case "success", "skipped", "neutral":
+		return true
+	}
+	return false
+}
+
+// Failed reports whether a finished run failed. Runs cancelled (usually by
+// a newer run), waiting for approval (action_required) or gone stale didn't.
+func (r Run) Failed() bool {
+	if !r.Done() {
+		return false
+	}
+	switch r.Conclusion {
+	case "failure", "timed_out", "startup_failure":
 		return true
 	}
 	return false
@@ -56,31 +76,91 @@ type Lister func(ctx context.Context, repo, sha string) ([]Run, error)
 
 // GH is the Lister that runs gh run list.
 func GH(ctx context.Context, repo, sha string) ([]Run, error) {
-	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, "gh", "run", "list", "--repo", repo, "--event", "push", "--commit", sha,
-		"--limit", "100", "--json", "databaseId,workflowName,headBranch,headSha,status,conclusion,url")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		return nil, fmt.Errorf("gh run list --repo %s: %w: %s", repo, err, strings.TrimSpace(stderr.String()))
+	return listRuns(ctx, repo, "--event", "push", "--commit", sha, "--limit", "100")
+}
+
+func listRuns(ctx context.Context, repo string, args ...string) ([]Run, error) {
+	args = append([]string{"run", "list", "--repo", repo}, args...)
+	stdout, err := gh(ctx, append(args, "--json", runFields)...)
+	if err != nil {
+		return nil, err
 	}
 	var runs []Run
-	if err := json.Unmarshal(stdout.Bytes(), &runs); err != nil {
+	if err := json.Unmarshal(stdout, &runs); err != nil {
 		return nil, fmt.Errorf("gh run list --repo %s: %w", repo, err)
 	}
 	return runs, nil
 }
 
-// CheckGH fails unless gh is installed and signed in to github.com.
-func CheckGH() error {
+// transient matches gh's errors that trying again might get past: dropped
+// connections and the API's server errors.
+var transient = regexp.MustCompile(`(?i)\bEOF\b|connection reset|timed? ?out|TLS handshake|HTTP 5\d\d`)
+
+// gh runs the gh CLI and returns its output, or an error carrying its stderr.
+// The commands only read, so a transient failure is tried again once.
+func gh(ctx context.Context, args ...string) ([]byte, error) {
+	var err error
+	for attempt := range 2 {
+		if attempt > 0 {
+			if err := Sleep(ctx, time.Second); err != nil {
+				return nil, err
+			}
+		}
+		var stdout, stderr bytes.Buffer
+		cmd := exec.CommandContext(ctx, "gh", args...)
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err = cmd.Run(); err == nil {
+			return stdout.Bytes(), nil
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		msg := strings.TrimSpace(stderr.String())
+		err = fmt.Errorf("gh %s %s: %w: %s", args[0], args[1], err, msg)
+		if !transient.MatchString(msg) {
+			break
+		}
+	}
+	return nil, err
+}
+
+// DefaultBranch returns repo's default branch.
+func DefaultBranch(ctx context.Context, repo string) (string, error) {
+	out, err := gh(ctx, "repo", "view", repo, "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
+	if err != nil {
+		return "", err
+	}
+	branch := strings.TrimSpace(string(out))
+	if branch == "" {
+		return "", fmt.Errorf("gh repo view %s: no default branch", repo)
+	}
+	return branch, nil
+}
+
+// Printable replaces s's control characters, which text from GitHub, like a
+// commit's title, could use to rewrite a terminal: tabs and line breaks with
+// a space, and others with U+FFFD.
+func Printable(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r == '\t' || r == '\n' || r == '\r':
+			return ' '
+		case r < 0x20 || (r >= 0x7f && r < 0xa0):
+			return '\ufffd'
+		}
+		return r
+	}, s)
+}
+
+// CheckGH fails unless gh is installed and signed in to github.com; what
+// names what needs it, e.g. "--watch".
+func CheckGH(what string) error {
 	if _, err := exec.LookPath("gh"); err != nil {
-		return errors.New("--watch needs the GitHub CLI, gh (https://cli.github.com)")
+		return fmt.Errorf("%s needs the GitHub CLI, gh (https://cli.github.com)", what)
 	}
 	if err := exec.Command("gh", "auth", "status", "--hostname", "github.com").Run(); err != nil {
-		return errors.New("--watch needs gh signed in to github.com; run gh auth login")
+		return fmt.Errorf("%s needs gh signed in to github.com; run gh auth login", what)
 	}
 	return nil
 }

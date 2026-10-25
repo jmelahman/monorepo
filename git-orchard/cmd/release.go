@@ -122,7 +122,7 @@ func runRelease(opts *ReleaseOptions, prefix, version string) error {
 		if opts.Remote == "" && !opts.Upstream {
 			return errors.New("--watch needs the release published, to --remote or with --upstream")
 		}
-		if err := ghrun.CheckGH(); err != nil {
+		if err := ghrun.CheckGH("--watch"); err != nil {
 			return err
 		}
 	}

@@ -29,7 +29,7 @@ Each subtree's upstream branch is fetched (to refs/orchard/upstream/<prefix>)
 and compared with the subtree's split of --rev: "ahead" commits are ones a
 push would publish, "behind" ones a pull would bring in.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStatus(cmd.OutOrStdout(), opts, args)
+			return runStatus(cmd.OutOrStdout(), cmd.ErrOrStderr(), opts, args)
 		},
 	}
 
@@ -39,7 +39,7 @@ push would publish, "behind" ones a pull would bring in.`,
 	return cmd
 }
 
-func runStatus(stdout io.Writer, opts *StatusOptions, prefixes []string) error {
+func runStatus(stdout, stderr io.Writer, opts *StatusOptions, prefixes []string) error {
 	o, err := openOrchard()
 	if err != nil {
 		return err
@@ -51,7 +51,8 @@ func runStatus(stdout io.Writer, opts *StatusOptions, prefixes []string) error {
 
 	// Compare subtrees in parallel, but print in manifest order, each line as
 	// soon as it and those above it are ready, since each can take a while;
-	// so align by hand rather than with a tabwriter.
+	// so align by hand rather than with a tabwriter. On a terminal, a line
+	// below says which are still under way.
 	width := 0
 	for _, s := range subtrees {
 		width = max(width, len(s.Prefix))
@@ -65,8 +66,12 @@ func runStatus(stdout io.Writer, opts *StatusOptions, prefixes []string) error {
 	for i := range done {
 		done[i] = make(chan struct{})
 	}
+	p := newProgress(stderr, "Comparing subtrees", len(subtrees))
+	defer p.Stop()
 	go orchard.Each(len(subtrees), opts.Jobs, func(i int) {
+		p.Begin(subtrees[i].Prefix)
 		results[i].status, results[i].err = o.Status(subtrees[i], opts.Rev)
+		p.End(subtrees[i].Prefix)
 		close(done[i])
 	})
 	failed := 0
@@ -74,9 +79,9 @@ func runStatus(stdout io.Writer, opts *StatusOptions, prefixes []string) error {
 		<-done[i]
 		if err := results[i].err; err != nil {
 			failed++
-			_, _ = fmt.Fprintf(stdout, "%-*s  error: %v\n", width, s.Prefix, err)
+			p.Println(stdout, fmt.Sprintf("%-*s  error: %v", width, s.Prefix, err))
 		} else {
-			_, _ = fmt.Fprintf(stdout, "%-*s  %s\n", width, s.Prefix, results[i].status)
+			p.Println(stdout, fmt.Sprintf("%-*s  %s", width, s.Prefix, results[i].status))
 		}
 	}
 	if failed > 0 {

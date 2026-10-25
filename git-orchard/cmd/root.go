@@ -51,6 +51,7 @@ The same keys in git's own configuration override it.`,
 
 	// Add subcommands
 	cmd.AddCommand(NewAddCommand())
+	cmd.AddCommand(NewCICommand())
 	cmd.AddCommand(NewDetachCommand())
 	cmd.AddCommand(NewGitHubAppCommand())
 	cmd.AddCommand(NewInitCommand())

@@ -5,6 +5,7 @@ go 1.27.2
 require (
 	github.com/sirupsen/logrus v1.10.2
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/term v0.46.0
 )
 
 require (
