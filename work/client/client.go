@@ -42,14 +42,14 @@ type SystemdConfig struct {
 func getSystemdConfig() (*SystemdConfig, error) {
 	execPath, err := os.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get executable path: %v", err)
+		return nil, fmt.Errorf("failed to get executable path: %w", err)
 	}
 
 	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfigHome == "" {
 		xdgConfigHome, err = os.UserConfigDir()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get user config dir: %v", err)
+			return nil, fmt.Errorf("failed to get user config dir: %w", err)
 		}
 	}
 
@@ -114,7 +114,7 @@ WantedBy=timers.target
 func HandleInstall(uninstall bool) (err error) {
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
-		return fmt.Errorf("failed to connect to session bus: %v", err)
+		return fmt.Errorf("failed to connect to session bus: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, conn.Close())
@@ -132,7 +132,7 @@ func HandleInstall(uninstall bool) (err error) {
 	}
 
 	if err := os.MkdirAll(config.SystemdUserConfigDir, 0755); err != nil {
-		return fmt.Errorf("failed to create systemd user config dir: %v", err)
+		return fmt.Errorf("failed to create systemd user config dir: %w", err)
 	}
 
 	if err := installService(obj, config.SystemdUserConfigDir, config.StopService); err != nil {
@@ -177,7 +177,7 @@ func uninstallServices(obj dbus.BusObject) error {
 func installService(obj dbus.BusObject, configDir string, service systemd.ServiceConfig) error {
 	servicePath := filepath.Join(configDir, service.Name)
 	if err := os.WriteFile(servicePath, []byte(service.Content), 0644); err != nil {
-		return fmt.Errorf("failed to write service file %s: %v", service.Name, err)
+		return fmt.Errorf("failed to write service file %s: %w", service.Name, err)
 	}
 	if err := systemd.ReloadDaemon(obj); err != nil {
 		return err
@@ -202,12 +202,12 @@ func installService(obj dbus.BusObject, configDir string, service systemd.Servic
 func (tm *TaskManager) StopCurrentTask() error {
 	latestTask, err := tm.dal.GetLatestTask()
 	if err != nil {
-		return fmt.Errorf("failed to get latest task: %v", err)
+		return fmt.Errorf("failed to get latest task: %w", err)
 	}
 
 	if latestTask.End.IsZero() {
 		if err := tm.dal.EndTask(latestTask.ID); err != nil {
-			return fmt.Errorf("failed to end task: %v", err)
+			return fmt.Errorf("failed to end task: %w", err)
 		}
 	}
 	return nil
@@ -216,7 +216,7 @@ func (tm *TaskManager) StopCurrentTask() error {
 func (tm *TaskManager) ListTasks(limit int) error {
 	tasks, err := tm.dal.ListTasks(0, limit)
 	if err != nil {
-		return fmt.Errorf("failed to list tasks: %v", err)
+		return fmt.Errorf("failed to list tasks: %w", err)
 	}
 
 	tm.reporter.PrintTaskRows(tasks)
@@ -253,7 +253,7 @@ func (tm *TaskManager) calculateStats(tasks []types.Task) (map[string]types.DayS
 func (tm *TaskManager) GenerateReport() error {
 	tasks, err := tm.dal.ListTasks(0, 5)
 	if err != nil {
-		return fmt.Errorf("failed to list tasks: %v", err)
+		return fmt.Errorf("failed to list tasks: %w", err)
 	}
 
 	stats, weekTotal := tm.calculateStats(tasks)
@@ -264,7 +264,7 @@ func (tm *TaskManager) GenerateReport() error {
 func (tm *TaskManager) GetStatus(quiet bool, notify bool) error {
 	task, err := tm.dal.GetLatestTask()
 	if err != nil {
-		return fmt.Errorf("failed to get latest task: %v", err)
+		return fmt.Errorf("failed to get latest task: %w", err)
 	}
 
 	if task.ID == 0 || !task.End.IsZero() {
@@ -285,7 +285,7 @@ func (tm *TaskManager) GetStatus(quiet bool, notify bool) error {
 func (tm *TaskManager) handleNoActiveTasks(quiet bool, notify bool) error {
 	if notify {
 		if err := beeep.Notify("Work Reminder", "No active tasks.", "assets/information.png"); err != nil {
-			return fmt.Errorf("failed to send notification: %v", err)
+			return fmt.Errorf("failed to send notification: %w", err)
 		}
 	}
 
@@ -312,12 +312,12 @@ func (tm *TaskManager) CreateTask(chore bool, nonWork bool, toil bool, descripti
 
 	latestTask, err := tm.dal.GetLatestTask()
 	if err != nil {
-		return fmt.Errorf("failed to get latest task: %v", err)
+		return fmt.Errorf("failed to get latest task: %w", err)
 	}
 
 	if latestTask.End.IsZero() {
 		if err := tm.dal.EndTask(latestTask.ID); err != nil {
-			return fmt.Errorf("failed to end previous task: %v", err)
+			return fmt.Errorf("failed to end previous task: %w", err)
 		}
 	}
 
@@ -330,7 +330,7 @@ func (tm *TaskManager) CreateTask(chore bool, nonWork bool, toil bool, descripti
 	}
 
 	if err := tm.dal.CreateTask(newTask); err != nil {
-		return fmt.Errorf("failed to create task: %v", err)
+		return fmt.Errorf("failed to create task: %w", err)
 	}
 	return nil
 }

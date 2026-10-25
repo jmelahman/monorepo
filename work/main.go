@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -113,7 +114,7 @@ func newTaskCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if (toil && nonWork) || (toil && chore) || (nonWork && chore) {
-				return fmt.Errorf("task should have at most one classification")
+				return errors.New("task should have at most one classification")
 			}
 			return client.NewTaskManager(databasePath).CreateTask(chore, nonWork, toil, strings.Join(args, " "))
 		},

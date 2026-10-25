@@ -25,7 +25,7 @@ type TaskStatus struct {
 func NewWorkAPI(databasePath string) (*WorkAPI, error) {
 	dal, err := database.NewWorkDAL(databasePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize DAL: %v", err)
+		return nil, fmt.Errorf("failed to initialize DAL: %w", err)
 	}
 	return &WorkAPI{dal: dal}, nil
 }
@@ -34,7 +34,7 @@ func NewWorkAPI(databasePath string) (*WorkAPI, error) {
 func (api *WorkAPI) GetCurrentStatus() (*TaskStatus, error) {
 	task, err := api.dal.GetLatestTask()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get latest task: %v", err)
+		return nil, fmt.Errorf("failed to get latest task: %w", err)
 	}
 
 	status := &TaskStatus{

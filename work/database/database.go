@@ -93,7 +93,7 @@ func (dal *WorkDAL) CreateTask(task types.Task) error {
 func (dal *WorkDAL) EndTask(id int) error {
 	_, err := dal.db.Exec(`UPDATE task SET end=? WHERE id=?`, time.Now().Format(time.UnixDate), id)
 	if err != nil {
-		return fmt.Errorf("error closing previous task: %v", err)
+		return fmt.Errorf("error closing previous task: %w", err)
 	}
 	return nil
 }
@@ -111,7 +111,7 @@ func (dal *WorkDAL) GetLatestTask() (types.Task, error) {
 
 func (dal *WorkDAL) ListTasks(limit int, days int) (tasks []types.Task, err error) {
 	query := `SELECT id, description, classification, start, end FROM task`
-	args := []interface{}{}
+	args := []any{}
 
 	if days > 0 {
 		query += ` WHERE start > datetime('now', '-' || ? || ' days')`
@@ -147,11 +147,11 @@ func (dal *WorkDAL) ListTasks(limit int, days int) (tasks []types.Task, err erro
 		}
 		startTime, err := time.Parse(time.UnixDate, start)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse start time: %v", err)
+			return nil, fmt.Errorf("failed to parse start time: %w", err)
 		}
 		endTime, err := time.Parse(time.UnixDate, end)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse end time: %v", err)
+			return nil, fmt.Errorf("failed to parse end time: %w", err)
 		}
 		tasks = append(
 			tasks,
