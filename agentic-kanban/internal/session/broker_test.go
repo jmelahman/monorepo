@@ -3,6 +3,7 @@ package session
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"net"
 	"testing"
@@ -58,7 +59,7 @@ func TestCloseAgentUnless(t *testing.T) {
 		if !agent.closed {
 			t.Error("agent broker not shut down")
 		}
-		if _, err := exec.Read(make([]byte, 1)); err != io.EOF {
+		if _, err := exec.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
 			t.Errorf("exec connection read = %v; want EOF after close", err)
 		}
 		if s.get(1, "shell") != shell || shell.closed {

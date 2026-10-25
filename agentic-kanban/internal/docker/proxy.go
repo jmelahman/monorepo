@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -45,16 +46,12 @@ func (p *PortProxy) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	p.cancel = cancel
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		<-ctx.Done()
 		_ = ln.Close()
-	}()
+	})
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
@@ -66,7 +63,7 @@ func (p *PortProxy) Start(ctx context.Context) error {
 			}
 			go p.handle(ctx, conn)
 		}
-	}()
+	})
 	return nil
 }
 
@@ -130,7 +127,7 @@ func (m *ProxyManager) Open(hostPort int, containerID string, containerPort int)
 		return fmt.Errorf("proxy on host port %d already running", hostPort)
 	}
 	if containerID == "" {
-		return fmt.Errorf("container not running")
+		return errors.New("container not running")
 	}
 	p := NewPortProxy(m.client, hostPort, containerID, containerPort)
 	if err := p.Start(m.ctx); err != nil {

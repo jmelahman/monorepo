@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -59,7 +60,7 @@ func AddWorktree(repoPath, branch, worktreePath, base string) error {
 	if base != "" {
 		args = append(args, base)
 	}
-	err := run("git", args...)
+	err := run(args...)
 	metrics.ObserveGitCommand("worktree_add", start, err)
 	return err
 }
@@ -113,7 +114,7 @@ func revParse(repoPath, ref string) (string, error) {
 // worktree.
 func AddWorktreeFromExisting(repoPath, branch, worktreePath string) error {
 	start := time.Now()
-	err := run("git", "-C", repoPath, "worktree", "add", "--lock", "--reason", lockReason, worktreePath, branch)
+	err := run("-C", repoPath, "worktree", "add", "--lock", "--reason", lockReason, worktreePath, branch)
 	metrics.ObserveGitCommand("worktree_add", start, err)
 	return err
 }
@@ -125,7 +126,7 @@ func LockWorktree(worktreePath string) error {
 	if IsWorktreeLocked(worktreePath) {
 		return nil
 	}
-	return run("git", "-C", worktreePath, "worktree", "lock", "--reason", lockReason, worktreePath)
+	return run("-C", worktreePath, "worktree", "lock", "--reason", lockReason, worktreePath)
 }
 
 // IsWorktreeLocked reports whether the worktree at worktreePath has a lock
@@ -143,14 +144,14 @@ func IsWorktreeLocked(worktreePath string) bool {
 // (every one kanban creates) are removed too; a single --force refuses them.
 func RemoveWorktree(repoPath, worktreePath string) error {
 	start := time.Now()
-	err := run("git", "-C", repoPath, "worktree", "remove", "--force", "--force", worktreePath)
+	err := run("-C", repoPath, "worktree", "remove", "--force", "--force", worktreePath)
 	metrics.ObserveGitCommand("worktree_remove", start, err)
 	return err
 }
 
 // DeleteBranch deletes a local branch.
 func DeleteBranch(repoPath, branch string) error {
-	return run("git", "-C", repoPath, "branch", "-D", branch)
+	return run("-C", repoPath, "branch", "-D", branch)
 }
 
 // Rebase rebases the current branch in worktreePath onto ref.
@@ -176,7 +177,7 @@ func MergeNoFF(repoPath, branch string, id Identity) error {
 // then creates a single commit with message. When id is set, its name/email
 // override the commit author/committer.
 func MergeSquash(repoPath, branch, message string, id Identity) error {
-	if err := run("git", "-C", repoPath, "merge", "--squash", branch); err != nil {
+	if err := run("-C", repoPath, "merge", "--squash", branch); err != nil {
 		return err
 	}
 	args := append([]string{}, id.configArgs()...)
@@ -187,7 +188,7 @@ func MergeSquash(repoPath, branch, message string, id Identity) error {
 // MergeFFOnly fast-forwards the currently checked-out branch in repoPath to
 // branch. Fails if a fast-forward isn't possible.
 func MergeFFOnly(repoPath, branch string) error {
-	return run("git", "-C", repoPath, "merge", "--ff-only", branch)
+	return run("-C", repoPath, "merge", "--ff-only", branch)
 }
 
 // DefaultBranch returns the repo's default branch name. It prefers what
@@ -213,7 +214,7 @@ func CurrentBranch(repoPath string) (string, error) {
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
 		// Non-zero exit on detached HEAD; surface as empty string, not error.
-		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 1 {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok && ee.ExitCode() == 1 {
 			return "", nil
 		}
 		return "", err
@@ -239,7 +240,7 @@ func ResetHard(repoPath, ref string) {
 
 // AddAll stages every change in the worktree.
 func AddAll(worktreePath string) error {
-	return run("git", "-C", worktreePath, "add", "-A")
+	return run("-C", worktreePath, "add", "-A")
 }
 
 // Commit creates a commit with the given message in the worktree. When id is
@@ -548,18 +549,18 @@ func signerArgs(dir string) []string {
 func runCommitting(dir string, args ...string) error {
 	full := append([]string{}, signerArgs(dir)...)
 	full = append(full, "-C", dir)
-	return run("git", append(full, args...)...)
+	return run(append(full, args...)...)
 }
 
-func run(name string, args ...string) error {
-	if name == "git" && !signCommits.Load() {
+func run(args ...string) error {
+	if !signCommits.Load() {
 		args = append(append([]string{}, noSignArgs...), args...)
 	}
-	cmd := exec.Command(name, args...)
+	cmd := exec.Command("git", args...)
 	var errb bytes.Buffer
 	cmd.Stderr = &errb
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, errb.String())
+		return fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, errb.String())
 	}
 	return nil
 }

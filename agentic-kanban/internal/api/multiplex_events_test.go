@@ -22,7 +22,7 @@ func TestBoardsEvents_Multiplexes(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, "GET",
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		fmt.Sprintf("%s/api/events?boards=%d,%d", e.srv.URL, b1.ID, b2.ID), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +32,7 @@ func TestBoardsEvents_Multiplexes(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d; want 200", resp.StatusCode)
 	}
 	conn := &sseConn{resp: resp, cancel: cancel, r: bufio.NewReader(resp.Body)}
@@ -54,12 +54,20 @@ func TestBoardsEvents_Multiplexes(t *testing.T) {
 		if !ok {
 			t.Fatalf("event missing board_id: %#v", ev.Data)
 		}
-		bid := int64(bidRaw.(float64))
+		bidF, ok := bidRaw.(float64)
+		if !ok {
+			t.Fatalf("board_id is not a number: %#v", bidRaw)
+		}
+		bid := int64(bidF)
 		payload, _ := ev.Data["data"].(map[string]any)
 		if payload == nil {
 			t.Fatalf("event has no data payload: %#v", ev.Data)
 		}
-		got[bid] = payload["title"].(string)
+		title, ok := payload["title"].(string)
+		if !ok {
+			t.Fatalf("event title is not a string: %#v", payload["title"])
+		}
+		got[bid] = title
 	}
 	if got[b1.ID] != "renamed-1" {
 		t.Errorf("board %d title = %q; want renamed-1", b1.ID, got[b1.ID])
@@ -86,7 +94,7 @@ func TestBoardsEvents_RejectsBadInput(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer resp.Body.Close()
-			if resp.StatusCode != 400 {
+			if resp.StatusCode != http.StatusBadRequest {
 				t.Fatalf("status = %d; want 400", resp.StatusCode)
 			}
 		})

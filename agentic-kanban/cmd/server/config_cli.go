@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -131,7 +132,7 @@ func configCmd() *cobra.Command {
 // to the merged effective view; writes require an explicit scope.
 func resolveConfigScope(local, global, forWrite bool) (string, error) {
 	if local && global {
-		return "", fmt.Errorf("--local and --global are mutually exclusive")
+		return "", errors.New("--local and --global are mutually exclusive")
 	}
 	if local {
 		return "local", nil
@@ -140,7 +141,7 @@ func resolveConfigScope(local, global, forWrite bool) (string, error) {
 		return "global", nil
 	}
 	if forWrite {
-		return "", fmt.Errorf("specify --global or --local (with --board)")
+		return "", errors.New("specify --global or --local (with --board)")
 	}
 	return "effective", nil
 }

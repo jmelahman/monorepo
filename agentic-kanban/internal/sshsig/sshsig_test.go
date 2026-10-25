@@ -52,7 +52,7 @@ func testAgent(t *testing.T) (ed, rs ssh.PublicKey) {
 		}
 	}
 	// A short path: t.TempDir() can exceed the 108-byte sun_path limit.
-	dir, err := os.MkdirTemp("", "sshsig")
+	dir, err := os.MkdirTemp("", "sshsig") //nolint:usetesting // t.TempDir() paths can exceed the unix socket path limit
 	if err != nil {
 		t.Fatal(err)
 	}

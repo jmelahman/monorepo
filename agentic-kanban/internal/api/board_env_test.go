@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -96,7 +97,7 @@ func TestBoardEnv_Validation(t *testing.T) {
 	}
 	for _, tc := range cases {
 		resp := e.patch(path, tc.body)
-		if resp.StatusCode != 400 {
+		if resp.StatusCode != http.StatusBadRequest {
 			body := readBody(t, resp)
 			t.Fatalf("%s: status = %d; want 400. body: %s", tc.name, resp.StatusCode, body)
 		}

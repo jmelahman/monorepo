@@ -40,7 +40,7 @@ func TestReporter_SymbolicatesBrowserStack(t *testing.T) {
 	}, "\n")
 	r.Report(context.Background(), "boundary", "boom", stack, nil)
 
-	board := boardSlug(t, store, "errors")
+	board := boardSlug(t, store)
 	tickets, err := store.ListTickets(context.Background(), board.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -81,7 +81,7 @@ func TestReporter_SymbolicatedStackDedupsAcrossBuilds(t *testing.T) {
 	})
 	r.Report(context.Background(), "boundary", "boom", "g@http://localhost:7474/assets/index-xyz.js:1:25", nil)
 
-	board := boardSlug(t, store, "errors")
+	board := boardSlug(t, store)
 	tickets, err := store.ListTickets(context.Background(), board.ID)
 	if err != nil {
 		t.Fatal(err)

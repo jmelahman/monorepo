@@ -353,7 +353,9 @@ func (p *Poller) listPRs(ctx context.Context, repoPath string) ([]ghPR, error) {
 		pageURL := next
 		var cached prCacheEntry
 		if v, ok := p.prCache.Load(pageURL); ok {
-			cached = v.(prCacheEntry)
+			if c, ok := v.(prCacheEntry); ok {
+				cached = c
+			}
 		}
 
 		req, err := http.NewRequestWithContext(cctx, http.MethodGet, pageURL, nil)
@@ -487,7 +489,9 @@ func Token(host string) string {
 		key = "github.com"
 	}
 	if v, ok := ghTokenCache.Load(key); ok {
-		return v.(string)
+		if tok, ok := v.(string); ok {
+			return tok
+		}
 	}
 	tok := ""
 	if _, err := ghTokenLookPath("gh"); err == nil {
@@ -508,7 +512,7 @@ func ParseNextLink(h string) string {
 	if h == "" {
 		return ""
 	}
-	for _, part := range strings.Split(h, ",") {
+	for part := range strings.SplitSeq(h, ",") {
 		seg := strings.TrimSpace(part)
 		end := strings.Index(seg, ">")
 		if end < 0 || !strings.HasPrefix(seg, "<") {

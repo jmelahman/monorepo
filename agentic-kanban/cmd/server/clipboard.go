@@ -92,7 +92,7 @@ var nativeCopy = func(text string) error {
 // firstLine returns the first non-blank line of s, or fallback when s has
 // none — command stderr is usually one useful line followed by noise.
 func firstLine(s, fallback string) string {
-	for _, line := range strings.Split(s, "\n") {
+	for line := range strings.SplitSeq(s, "\n") {
 		if t := strings.TrimSpace(line); t != "" {
 			return t
 		}

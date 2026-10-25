@@ -551,54 +551,69 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 
 	// unmarshal args into a single big shape; tools only read the fields
 	// they care about.
-	var a struct {
-		Board          string            `json:"board"`
-		Name           string            `json:"name"`
-		RepoPath       string            `json:"repo_path"`
-		MountPath      string            `json:"mount_path"`
-		ProjectDir     string            `json:"project_dir"`
-		WorktreeRoot   string            `json:"worktree_root"`
-		BaseBranch     string            `json:"base_branch"`
-		BranchPrefix   string            `json:"branch_prefix"`
-		GitAuthorName  string            `json:"git_author_name"`
-		GitAuthorEmail string            `json:"git_author_email"`
-		NamePtr        *string           `json:"-"`
-		Title          string            `json:"title"`
-		Body           string            `json:"body"`
-		Column         string            `json:"column"`
-		Ticket         int64             `json:"ticket"`
-		ColumnID       int64             `json:"column_id"`
-		Position       int               `json:"position"`
-		Strategy       string            `json:"strategy"`
-		Session        int64             `json:"session"`
-		Key            string            `json:"key"`
-		Value          json.RawMessage   `json:"value"`
-		Scope          string            `json:"scope"`
-		Vars           map[string]string `json:"vars"`
-		Keys           []string          `json:"keys"`
-	}
+	var a toolArgs
+
 	if len(p.Arguments) > 0 {
 		if err := json.Unmarshal(p.Arguments, &a); err != nil {
 			return nil, fmt.Errorf("invalid arguments: %w", err)
 		}
+		_ = json.Unmarshal(p.Arguments, &a.present)
 	}
 
-	// raw is also re-decoded for tools whose patch semantics need
-	// "field present?" detection (update_board, update_ticket).
-	var rawArgs map[string]json.RawMessage
-	if len(p.Arguments) > 0 {
-		_ = json.Unmarshal(p.Arguments, &rawArgs)
+	for _, tool := range []func(context.Context, string, toolArgs) (map[string]any, bool){
+		s.boardTool, s.boardDataTool, s.ticketTool, s.sessionTool, s.configTool,
+	} {
+		if res, ok := tool(ctx, p.Name, a); ok {
+			return res, nil
+		}
 	}
-	hasField := func(k string) bool { _, ok := rawArgs[k]; return ok }
+	return nil, fmt.Errorf("unknown tool: %s", p.Name)
+}
 
-	switch p.Name {
+// toolArgs is the union of every tool's arguments; tools only read the
+// fields they care about.
+type toolArgs struct {
+	Board          string            `json:"board"`
+	Name           string            `json:"name"`
+	RepoPath       string            `json:"repo_path"`
+	MountPath      string            `json:"mount_path"`
+	ProjectDir     string            `json:"project_dir"`
+	WorktreeRoot   string            `json:"worktree_root"`
+	BaseBranch     string            `json:"base_branch"`
+	BranchPrefix   string            `json:"branch_prefix"`
+	GitAuthorName  string            `json:"git_author_name"`
+	GitAuthorEmail string            `json:"git_author_email"`
+	NamePtr        *string           `json:"-"`
+	Title          string            `json:"title"`
+	Body           string            `json:"body"`
+	Column         string            `json:"column"`
+	Ticket         int64             `json:"ticket"`
+	ColumnID       int64             `json:"column_id"`
+	Position       int               `json:"position"`
+	Strategy       string            `json:"strategy"`
+	Session        int64             `json:"session"`
+	Key            string            `json:"key"`
+	Value          json.RawMessage   `json:"value"`
+	Scope          string            `json:"scope"`
+	Vars           map[string]string `json:"vars"`
+	Keys           []string          `json:"keys"`
+	// present is the raw argument object, for tools whose patch semantics
+	// need "field present?" detection (update_board, update_ticket).
+	present map[string]json.RawMessage `json:"-"`
+}
+
+func (a toolArgs) hasField(k string) bool { _, ok := a.present[k]; return ok }
+
+// boardTool runs the board and board-state tools; handled is false for any other name.
+func (s *server) boardTool(ctx context.Context, name string, a toolArgs) (res map[string]any, handled bool) {
+	switch name {
 	case "list_boards":
 		boards, err := s.client.ListBoards(ctx)
 		if err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
 		buf, _ := json.Marshal(boards)
-		return textResult(string(buf)), nil
+		return textResult(string(buf)), true
 
 	case "create_board":
 		raw, err := s.client.CreateBoard(ctx, client.CreateBoardArgs{
@@ -612,112 +627,124 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 			GitAuthorName:  a.GitAuthorName,
 			GitAuthorEmail: a.GitAuthorEmail,
 		})
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "get_board":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		raw, err := s.client.GetBoard(ctx, id)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "update_board":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		patch := client.UpdateBoardArgs{}
-		if hasField("name") {
+		if a.hasField("name") {
 			patch.Name = &a.Name
 		}
-		if hasField("repo_path") {
+		if a.hasField("repo_path") {
 			patch.RepoPath = &a.RepoPath
 		}
-		if hasField("mount_path") {
+		if a.hasField("mount_path") {
 			patch.MountPath = &a.MountPath
 		}
-		if hasField("project_dir") {
+		if a.hasField("project_dir") {
 			patch.ProjectDir = &a.ProjectDir
 		}
-		if hasField("worktree_root") {
+		if a.hasField("worktree_root") {
 			patch.WorktreeRoot = &a.WorktreeRoot
 		}
-		if hasField("base_branch") {
+		if a.hasField("base_branch") {
 			patch.BaseBranch = &a.BaseBranch
 		}
-		if hasField("branch_prefix") {
+		if a.hasField("branch_prefix") {
 			patch.BranchPrefix = &a.BranchPrefix
 		}
-		if hasField("git_author_name") {
+		if a.hasField("git_author_name") {
 			patch.GitAuthorName = &a.GitAuthorName
 		}
-		if hasField("git_author_email") {
+		if a.hasField("git_author_email") {
 			patch.GitAuthorEmail = &a.GitAuthorEmail
 		}
 		raw, err := s.client.UpdateBoard(ctx, id, patch)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "delete_board":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		if err := s.client.DeleteBoard(ctx, id); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "board_state":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		raw, err := s.client.BoardState(ctx, id)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
+	}
+	return nil, false
+}
 
+// boardDataTool runs the board env and archived-ticket tools; handled is false for any other name.
+func (s *server) boardDataTool(ctx context.Context, name string, a toolArgs) (res map[string]any, handled bool) {
+	switch name {
 	case "list_board_env":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		raw, err := s.client.ListBoardEnv(ctx, id)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "set_board_env":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		raw, err := s.client.PatchBoardEnv(ctx, id, client.PatchBoardEnvArgs{Set: a.Vars})
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "unset_board_env":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		raw, err := s.client.PatchBoardEnv(ctx, id, client.PatchBoardEnvArgs{Unset: a.Keys})
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "list_archived":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		raw, err := s.client.ListArchived(ctx, id)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "delete_archived":
 		id, errRes := s.boardID(ctx, a.Board)
 		if errRes != nil {
-			return errRes, nil
+			return errRes, true
 		}
 		if err := s.client.DeleteArchived(ctx, id); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
+	}
+	return nil, false
+}
 
+// ticketTool runs the ticket tools; handled is false for any other name.
+func (s *server) ticketTool(ctx context.Context, name string, a toolArgs) (res map[string]any, handled bool) {
+	switch name {
 	case "create_ticket":
 		raw, err := s.client.CreateTicket(ctx, client.CreateTicketArgs{
 			Board:  a.Board,
@@ -725,50 +752,50 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 			Body:   a.Body,
 			Column: a.Column,
 		})
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "update_ticket":
 		patch := client.UpdateTicketArgs{}
-		if hasField("title") {
+		if a.hasField("title") {
 			patch.Title = &a.Title
 		}
-		if hasField("body") {
+		if a.hasField("body") {
 			patch.Body = &a.Body
 		}
 		raw, err := s.client.UpdateTicket(ctx, a.Ticket, patch)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "move_ticket":
 		if err := s.client.MoveTicket(ctx, a.Ticket, client.MoveTicketArgs{
 			ColumnID: a.ColumnID, Position: a.Position,
 		}); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "archive_ticket":
 		if err := s.client.ArchiveTicket(ctx, a.Ticket); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "unarchive_ticket":
 		if err := s.client.UnarchiveTicket(ctx, a.Ticket); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "delete_ticket":
 		if err := s.client.DeleteTicket(ctx, a.Ticket); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "done_ticket":
 		if err := s.client.DoneTicket(ctx, a.Ticket); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "sync_ticket":
 		strategy := a.Strategy
@@ -776,61 +803,73 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 			strategy = "rebase"
 		}
 		if err := s.client.SyncTicket(ctx, a.Ticket, strategy); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "merge_ticket":
 		if err := s.client.MergeTicket(ctx, a.Ticket, a.Strategy); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "archive_column_tickets":
 		if err := s.client.ArchiveColumnTickets(ctx, a.ColumnID); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
+	}
+	return nil, false
+}
 
+// sessionTool runs the session tools; handled is false for any other name.
+func (s *server) sessionTool(ctx context.Context, name string, a toolArgs) (res map[string]any, handled bool) {
+	switch name {
 	case "ensure_session":
 		raw, err := s.client.EnsureSession(ctx, a.Ticket)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "start_session":
 		raw, err := s.client.StartSession(ctx, a.Session)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "stop_session":
 		if err := s.client.StopSession(ctx, a.Session); err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
-		return textResult("ok"), nil
+		return textResult("ok"), true
 
 	case "restart_session":
 		raw, err := s.client.RestartSession(ctx, a.Session)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
+	}
+	return nil, false
+}
 
+// configTool runs the config tools; handled is false for any other name.
+func (s *server) configTool(ctx context.Context, name string, a toolArgs) (res map[string]any, handled bool) {
+	switch name {
 	case "list_config":
 		raw, err := s.client.Config(ctx, a.Scope, a.Board)
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "get_config":
 		raw, err := s.client.Config(ctx, a.Scope, a.Board)
 		if err != nil {
-			return errorResult(err.Error()), nil
+			return errorResult(err.Error()), true
 		}
 		v, ok := configValueFor(raw, a.Key)
 		if !ok {
-			return errorResult(fmt.Sprintf("no value set for %q", a.Key)), nil
+			return errorResult(fmt.Sprintf("no value set for %q", a.Key)), true
 		}
 		buf, _ := json.Marshal(map[string]any{"key": a.Key, "value": v})
-		return textResult(string(buf)), nil
+		return textResult(string(buf)), true
 
 	case "set_config":
 		var v any
 		if len(a.Value) > 0 {
 			if err := json.Unmarshal(a.Value, &v); err != nil {
-				return errorResult("invalid value: " + err.Error()), nil
+				return errorResult("invalid value: " + err.Error()), true
 			}
 		}
 		raw, err := s.client.ConfigPatch(ctx, client.ConfigPatchArgs{
@@ -838,7 +877,7 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 			Board: a.Board,
 			Set:   map[string]any{a.Key: v},
 		})
-		return rawOrError(raw, err), nil
+		return rawOrError(raw, err), true
 
 	case "unset_config":
 		raw, err := s.client.ConfigPatch(ctx, client.ConfigPatchArgs{
@@ -846,11 +885,9 @@ func (s *server) callTool(ctx context.Context, params json.RawMessage) (map[stri
 			Board: a.Board,
 			Unset: []string{a.Key},
 		})
-		return rawOrError(raw, err), nil
-
-	default:
-		return nil, fmt.Errorf("unknown tool: %s", p.Name)
+		return rawOrError(raw, err), true
 	}
+	return nil, false
 }
 
 // configValueFor extracts a single key's value from a GET /api/config

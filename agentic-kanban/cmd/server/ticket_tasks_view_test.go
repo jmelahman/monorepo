@@ -31,11 +31,11 @@ func TestSanitizeOutputLine(t *testing.T) {
 func tasksViewRows() []taskRow {
 	zero := 0
 	return []taskRow{
-		{Task: client.Task{Label: "Web", ContainerPort: 5173, HasPort: true}, URL: "http://localhost:13001",
+		{Label: "Web", ContainerPort: 5173, HasPort: true, URL: "http://localhost:13001",
 			LastRun: &client.TaskRun{ID: 5, TaskLabel: "Web", Status: "running"}},
-		{Task: client.Task{Label: "Tests"},
+		{Label: "Tests",
 			LastRun: &client.TaskRun{ID: 4, TaskLabel: "Tests", Status: "exited", ExitCode: &zero}},
-		{Task: client.Task{Label: "Docs", ContainerPort: 5175, HasPort: true}},
+		{Label: "Docs", ContainerPort: 5175, HasPort: true},
 	}
 }
 

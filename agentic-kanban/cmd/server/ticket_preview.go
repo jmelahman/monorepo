@@ -41,7 +41,7 @@ previews guide.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, *serverURL)
-			id, err := ticketArg(ctx, url, args, *boardIdent, pickerAction{"Preview ticket branch", "preview"}, false)
+			id, err := ticketArg(ctx, url, args, *boardIdent, pickerAction{"Preview ticket branch", "preview"})
 			if err != nil {
 				return err
 			}

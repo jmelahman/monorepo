@@ -24,9 +24,8 @@ func TestMergeSquash_IdentityInjected(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	for _, k := range []string{"EMAIL", "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"} {
 		if _, ok := os.LookupEnv(k); ok {
-			old := os.Getenv(k)
+			t.Setenv(k, "") // registers restoring the original on cleanup
 			os.Unsetenv(k)
-			t.Cleanup(func() { os.Setenv(k, old) })
 		}
 	}
 

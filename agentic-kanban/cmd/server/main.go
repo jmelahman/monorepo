@@ -351,7 +351,7 @@ func (s *statusRecorder) Flush() {
 func (s *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	hj, ok := s.ResponseWriter.(http.Hijacker)
 	if !ok {
-		return nil, nil, fmt.Errorf("hijack not supported")
+		return nil, nil, errors.New("hijack not supported")
 	}
 	return hj.Hijack()
 }
@@ -460,7 +460,7 @@ func buildAPIBase(selfName, addr string) string {
 	if host == "" {
 		host = "host.docker.internal"
 	}
-	return fmt.Sprintf("http://%s:%s", host, port)
+	return "http://" + net.JoinHostPort(host, port)
 }
 
 // recoverPanics is the outermost middleware. It catches panics from any

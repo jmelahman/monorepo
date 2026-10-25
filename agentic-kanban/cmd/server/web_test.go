@@ -112,7 +112,7 @@ func TestWebStreamsWithoutBuffering(t *testing.T) {
 			front := newProxiedBackend(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", contentType)
 				_, _ = io.WriteString(w, "data: first\n\n")
-				w.(http.Flusher).Flush()
+				_ = http.NewResponseController(w).Flush()
 				select {
 				case <-release:
 				case <-r.Context().Done():

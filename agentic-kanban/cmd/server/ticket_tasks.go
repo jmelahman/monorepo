@@ -70,7 +70,7 @@ running; stop it later with --stop LABEL.`,
 			}
 			ctx := cmd.Context()
 			url := resolveURL(cmd, *serverURL)
-			id, err := ticketArg(ctx, url, args, *boardIdent, pickerAction{"Ticket tasks", "select"}, false)
+			id, err := ticketArg(ctx, url, args, *boardIdent, pickerAction{"Ticket tasks", "select"})
 			if err != nil {
 				return err
 			}

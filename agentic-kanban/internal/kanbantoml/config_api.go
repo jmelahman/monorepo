@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -120,7 +121,7 @@ func validateInterval(v any) error {
 		return fmt.Errorf("invalid duration %q: %w", s, err)
 	}
 	if d < time.Second {
-		return fmt.Errorf("interval must be at least 1s")
+		return errors.New("interval must be at least 1s")
 	}
 	return nil
 }
@@ -132,10 +133,8 @@ var MergeStrategies = []string{"merge-commit", "squash", "rebase"}
 
 func validateMergeStrategy(v any) error {
 	s, _ := v.(string)
-	for _, valid := range MergeStrategies {
-		if s == valid {
-			return nil
-		}
+	if slices.Contains(MergeStrategies, s) {
+		return nil
 	}
 	return fmt.Errorf("merge.default_strategy must be one of %s", strings.Join(MergeStrategies, ", "))
 }
@@ -276,6 +275,18 @@ func CoerceCLIValue(key, raw string) (any, error) {
 // sub-keys (devcontainer.container_env.FOO) are not resolved here — callers
 // index the returned map themselves.
 func GetValue(f File, key string) (any, bool) {
+	for _, get := range []func(File, string) (any, bool){
+		getCoreValue, getRepoValue, getDevcontainerValue, getServiceValue,
+	} {
+		if v, ok := get(f, key); ok {
+			return v, true
+		}
+	}
+	return nil, false
+}
+
+// getCoreValue resolves the harness/sync/merge keys for GetValue.
+func getCoreValue(f File, key string) (any, bool) {
 	switch key {
 	case "harness.id":
 		if f.Harness != nil && f.Harness.ID != nil {
@@ -309,6 +320,13 @@ func GetValue(f File, key string) (any, bool) {
 		if f.Merge != nil && f.Merge.DefaultStrategy != nil {
 			return *f.Merge.DefaultStrategy, true
 		}
+	}
+	return nil, false
+}
+
+// getRepoValue resolves the github/worktrees/git/plans/branches keys for GetValue.
+func getRepoValue(f File, key string) (any, bool) {
+	switch key {
 	case "github.auto_move":
 		if f.GitHub != nil && f.GitHub.AutoMove != nil {
 			return *f.GitHub.AutoMove, true
@@ -345,6 +363,13 @@ func GetValue(f File, key string) (any, bool) {
 		if f.Branches != nil && f.Branches.Prefix != nil {
 			return *f.Branches.Prefix, true
 		}
+	}
+	return nil, false
+}
+
+// getDevcontainerValue resolves the devcontainer keys for GetValue.
+func getDevcontainerValue(f File, key string) (any, bool) {
+	switch key {
 	case "devcontainer.image":
 		if f.Devcontainer != nil && f.Devcontainer.Image != nil {
 			return *f.Devcontainer.Image, true
@@ -369,6 +394,13 @@ func GetValue(f File, key string) (any, bool) {
 		if f.Devcontainer != nil && f.Devcontainer.ClaudeConfig != nil {
 			return *f.Devcontainer.ClaudeConfig, true
 		}
+	}
+	return nil, false
+}
+
+// getServiceValue resolves the errors/buildcop/dev_toolbar/task keys for GetValue.
+func getServiceValue(f File, key string) (any, bool) {
+	switch key {
 	case "errors.enabled":
 		if f.Errors != nil && f.Errors.Enabled != nil {
 			return *f.Errors.Enabled, true
@@ -421,7 +453,7 @@ func LoadLayers(repoPath string) (project, user File) {
 // /api/config) never clobber each other.
 func EditFile(path string, sets map[string]any, unsets []string) error {
 	if strings.TrimSpace(path) == "" {
-		return fmt.Errorf("config file path is empty")
+		return errors.New("config file path is empty")
 	}
 	path = filepath.Clean(path)
 
@@ -521,7 +553,11 @@ var fileMutexes sync.Map // path -> *sync.Mutex
 
 func fileMutex(path string) *sync.Mutex {
 	m, _ := fileMutexes.LoadOrStore(path, &sync.Mutex{})
-	return m.(*sync.Mutex)
+	mu, ok := m.(*sync.Mutex)
+	if !ok {
+		mu = &sync.Mutex{}
+	}
+	return mu
 }
 
 func isJSONNull(raw json.RawMessage) bool {

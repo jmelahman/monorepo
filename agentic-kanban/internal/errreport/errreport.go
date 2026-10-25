@@ -271,8 +271,8 @@ func topStackFrames(stack string, n int) []string {
 		return nil
 	}
 	out := make([]string, 0, n)
-	lines := strings.Split(stack, "\n")
-	for _, ln := range lines {
+	lines := strings.SplitSeq(stack, "\n")
+	for ln := range lines {
 		ln = strings.TrimSpace(ln)
 		if ln == "" || strings.HasPrefix(ln, "goroutine ") {
 			continue
@@ -372,7 +372,7 @@ func formatBody(source, stack string, meta map[string]string) string {
 }
 
 func appendOccurrence(body string, t time.Time) string {
-	suffix := fmt.Sprintf("\n\n---\nSeen again at %s", t.Format(time.RFC3339))
+	suffix := "\n\n---\nSeen again at " + t.Format(time.RFC3339)
 	return body + suffix
 }
 

@@ -174,7 +174,7 @@ func TestPostErrors_LogLineSurvivesEmbeddedNewline(t *testing.T) {
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
 
-	for _, line := range strings.Split(strings.TrimSpace(logBuf.String()), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(logBuf.String()), "\n") {
 		if strings.Contains(line, "client error") && !strings.Contains(line, `"first line\nsecond line"`) {
 			t.Fatalf("summary line did not %%q-escape embedded newline:\n%s", line)
 		}
@@ -208,7 +208,7 @@ func TestPostErrors_DedupOnSecondPost(t *testing.T) {
 		"stack":   "a.ts:1\n b.ts:2",
 		"source":  "boundary",
 	}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		resp := postJSON(t, env.srv.URL+"/api/errors", body)
 		resp.Body.Close()
 	}

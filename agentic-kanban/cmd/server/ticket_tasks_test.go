@@ -30,7 +30,7 @@ type fakeTasksAPI struct {
 	onOutput    func(w http.ResponseWriter, r *http.Request)
 }
 
-func (f *fakeTasksAPI) handler(t *testing.T) http.Handler {
+func (f *fakeTasksAPI) handler() http.Handler {
 	mux := http.NewServeMux()
 	writeJSON := func(w http.ResponseWriter, code int, v any) {
 		w.Header().Set("Content-Type", "application/json")
@@ -98,7 +98,7 @@ func (f *fakeTasksAPI) handler(t *testing.T) http.Handler {
 		f.mu.Lock()
 		f.stopped = append(f.stopped, id)
 		f.mu.Unlock()
-		w.WriteHeader(204)
+		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("GET /api/task-runs/{id}/output", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
@@ -153,7 +153,7 @@ func runTasksCmd(t *testing.T, srvURL string, args ...string) (stdout, stderr st
 
 func newFakeTasksServer(t *testing.T, f *fakeTasksAPI) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(f.handler(t))
+	srv := httptest.NewServer(f.handler())
 	t.Cleanup(srv.Close)
 	return srv
 }

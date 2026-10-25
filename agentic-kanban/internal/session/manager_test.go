@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -171,12 +172,7 @@ func TestApplyKanbanDevcontainerOverrides_BuiltInDockerSocket(t *testing.T) {
 		t.Fatal("DockerSocketMount returned empty despite seeded XDG socket")
 	}
 	hasSocket := func(cfg *docker.DevcontainerConfig) bool {
-		for _, m := range cfg.Mounts {
-			if m == expectedMount {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(cfg.Mounts, expectedMount)
 	}
 	boolPtr := func(b bool) *bool { return &b }
 
@@ -653,7 +649,7 @@ func TestEndPTYScript(t *testing.T) {
 		t.Errorf("script output = %q; want just the signalled pid %s", got, want)
 	}
 	var exitErr *exec.ExitError
-	if err := target.Wait(); !errors.As(err, &exitErr) || exitErr.Sys().(syscall.WaitStatus).Signal() != syscall.SIGHUP {
+	if err := target.Wait(); !errors.As(err, &exitErr) || !killedBySignal(exitErr, syscall.SIGHUP) {
 		t.Errorf("target exit = %v; want killed by SIGHUP", err)
 	}
 	if err := bystander.Process.Signal(syscall.Signal(0)); err != nil {
@@ -840,4 +836,10 @@ func TestApplyKanbanDevcontainerOverrides_Image(t *testing.T) {
 			t.Errorf("image = %q; want repo/declared:1", cfg.Image)
 		}
 	})
+}
+
+// killedBySignal reports whether exitErr records death by sig.
+func killedBySignal(exitErr *exec.ExitError, sig syscall.Signal) bool {
+	ws, ok := exitErr.Sys().(syscall.WaitStatus)
+	return ok && ws.Signal() == sig
 }

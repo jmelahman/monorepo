@@ -19,9 +19,9 @@ import (
 // need the orchestrator and a manifest) and lets every lookup through to the
 // real server. GET /api/previews/7 answers each of polls in turn, repeating
 // the last.
-func previewStub(t *testing.T, real string, created string, polls []string, logs string) (*httptest.Server, *string) {
+func previewStub(t *testing.T, realURL string, created string, polls []string, logs string) (*httptest.Server, *string) {
 	t.Helper()
-	target, _ := url.Parse(real)
+	target, _ := url.Parse(realURL)
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	var deployed string
 	var n atomic.Int32

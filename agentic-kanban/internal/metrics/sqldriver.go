@@ -234,7 +234,7 @@ func fingerprint(q string) (op, target string) {
 
 func splitWord(s string) (head, tail string) {
 	s = strings.TrimLeft(s, " \t\r\n(")
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		switch s[i] {
 		case ' ', '\t', '\r', '\n', '(', ',', ';':
 			return s[:i], s[i:]

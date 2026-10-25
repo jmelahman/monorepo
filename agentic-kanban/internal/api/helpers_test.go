@@ -239,7 +239,7 @@ type sseConn struct {
 func (e *testEnv) subscribeBoardEvents(boardID int64) *sseConn {
 	e.t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	req, err := http.NewRequestWithContext(ctx, "GET",
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		fmt.Sprintf("%s/api/boards/%d/events", e.srv.URL, boardID), nil)
 	if err != nil {
 		cancel()

@@ -3,6 +3,7 @@
 package tasks
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"strconv"
@@ -47,7 +48,12 @@ func TestStopScriptKillsTaggedTree(t *testing.T) {
 	go func() { done <- task.Wait() }()
 	select {
 	case err := <-done:
-		if ee, ok := err.(*exec.ExitError); !ok || ee.Sys().(syscall.WaitStatus).Signal() != syscall.SIGTERM {
+		var ws syscall.WaitStatus
+		ee, ok := errors.AsType[*exec.ExitError](err)
+		if ok {
+			ws, ok = ee.Sys().(syscall.WaitStatus)
+		}
+		if !ok || ws.Signal() != syscall.SIGTERM {
 			t.Errorf("task shell: got %v, want SIGTERM", err)
 		}
 	case <-time.After(5 * time.Second):

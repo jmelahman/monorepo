@@ -11,9 +11,6 @@ import (
 	"github.com/jmelahman/kanban/internal/client"
 )
 
-func ptrStr(s string) *string { return &s }
-func ptrInt(i int64) *int64   { return &i }
-
 // fullTicketInfo exercises every section: a body, a running session with a
 // Claude id and a container, a PR, and a port.
 func fullTicketInfo() ticketInfo {
@@ -31,12 +28,12 @@ func fullTicketInfo() ticketInfo {
 			ID: 7, TicketID: 42,
 			WorktreePath:    "/home/dev/worktrees/demo/fix-the-login-bug",
 			BranchName:      "kanban/demo/fix-the-login-bug",
-			ContainerID:     ptrStr("0123456789abcdef0123"),
-			ContainerName:   ptrStr("kanban-demo-fix-the-login-bug"),
+			ContainerID:     new("0123456789abcdef0123"),
+			ContainerName:   new("kanban-demo-fix-the-login-bug"),
 			Status:          "working",
-			StartedAt:       ptrInt(1750000100),
+			StartedAt:       new(int64(1750000100)),
 			PRState:         "open",
-			PRNumber:        ptrInt(451),
+			PRNumber:        new(int64(451)),
 			PRURL:           "https://github.com/acme/demo/pull/451",
 			PRTitle:         "Fix login for plus-addressed emails",
 			ClaudeSessionID: "1f0e5a2c-0000-4000-8000-abcdefabcdef",
@@ -65,7 +62,7 @@ func fieldByLabel(t *testing.T, info ticketInfo, label string) infoField {
 
 func TestTicketInfoSections(t *testing.T) {
 	info := fullTicketInfo()
-	var titles []string
+	titles := make([]string, 0, len(info.sections()))
 	for _, sec := range info.sections() {
 		titles = append(titles, sec.title)
 	}
@@ -110,7 +107,7 @@ func TestTicketInfoSectionsWithoutSession(t *testing.T) {
 	info := fullTicketInfo()
 	info.Session, info.Ports = nil, nil
 	info.Ticket.Body = ""
-	var titles []string
+	titles := make([]string, 0, len(info.sections()))
 	for _, sec := range info.sections() {
 		titles = append(titles, sec.title)
 	}
@@ -195,13 +192,13 @@ func TestTicketInfoViewSkipsPlaceholders(t *testing.T) {
 	info.Ports = nil
 	v := newTicketInfoView(info)
 
-	for i := 0; i < len(v.fields)+2; i++ {
+	for i := range len(v.fields) + 2 {
 		if got := v.current(); got.copy == "" {
 			t.Fatalf("highlight landed on placeholder %+v after %d moves", got, i)
 		}
 		v.handleKey(screen, formKey(tcell.KeyDown))
 	}
-	for i := 0; i < len(v.fields)+2; i++ {
+	for range len(v.fields) + 2 {
 		if got := v.current(); got.copy == "" {
 			t.Fatalf("highlight landed on placeholder %+v moving back", got)
 		}
@@ -272,7 +269,7 @@ func TestTicketInfoViewScrollsToSelection(t *testing.T) {
 	screen := newFormScreen(t, 60, 12)
 	stubNativeCopy(t)
 	v := newTicketInfoView(fullTicketInfo())
-	for i := 0; i < len(v.fields); i++ {
+	for i := range len(v.fields) {
 		v.render(screen)
 		screen.Show()
 		label := v.current().label
@@ -281,7 +278,7 @@ func TestTicketInfoViewScrollsToSelection(t *testing.T) {
 		}
 		v.handleKey(screen, formKey(tcell.KeyDown))
 	}
-	for i := 0; i < len(v.fields); i++ {
+	for range len(v.fields) {
 		v.handleKey(screen, formKey(tcell.KeyUp))
 		v.render(screen)
 		screen.Show()
@@ -339,7 +336,7 @@ func TestWriteTicketInfo(t *testing.T) {
 // hasPlainRow reports whether the plain output has a "<label>   <value>"
 // line, without pinning the test to the padding writeTicketInfo computes.
 func hasPlainRow(out, label, value string) bool {
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		f := strings.TrimSpace(line)
 		if rest, ok := strings.CutPrefix(f, label+" "); ok && strings.TrimSpace(rest) == value {
 			return true

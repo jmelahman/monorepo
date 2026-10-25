@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -51,10 +52,10 @@ func (b *EventBus) subscribe(boardID int64) (chan event, func()) {
 }
 
 func (h *handlers) boardEvents(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		h.httpError(w, fmt.Errorf("streaming unsupported"), 500)
+		h.httpError(w, errors.New("streaming unsupported"), 500)
 		return
 	}
 	writeSSEHeaders(w)
@@ -102,12 +103,12 @@ const maxMultiplexBoards = 200
 func (h *handlers) boardsEvents(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		h.httpError(w, fmt.Errorf("streaming unsupported"), 500)
+		h.httpError(w, errors.New("streaming unsupported"), 500)
 		return
 	}
 	raw := r.URL.Query().Get("boards")
 	if raw == "" {
-		h.httpError(w, fmt.Errorf("boards query parameter required"), 400)
+		h.httpError(w, errors.New("boards query parameter required"), 400)
 		return
 	}
 	parts := strings.Split(raw, ",")
@@ -134,7 +135,7 @@ func (h *handlers) boardsEvents(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, id)
 	}
 	if len(ids) == 0 {
-		h.httpError(w, fmt.Errorf("boards query parameter required"), 400)
+		h.httpError(w, errors.New("boards query parameter required"), 400)
 		return
 	}
 

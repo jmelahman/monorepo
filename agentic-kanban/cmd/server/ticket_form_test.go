@@ -219,8 +219,8 @@ func newFormScreen(t *testing.T, w, h int) tcell.SimulationScreen {
 func screenText(s tcell.SimulationScreen) string {
 	cells, w, h := s.GetContents()
 	var sb strings.Builder
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
+	for y := range h {
+		for x := range w {
 			c := cells[y*w+x]
 			if len(c.Runes) == 0 {
 				continue
@@ -283,7 +283,7 @@ func TestTicketFormRender(t *testing.T) {
 func TestTicketFormBodyScrolls(t *testing.T) {
 	screen := newFormScreen(t, 30, minFormHeight) // body box is 3 rows: 1 text row
 	f := newTicketForm("b", "t", "")
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		formType(f, string(rune('a'+i)))
 		f.handleKey(formKey(tcell.KeyEnter))
 	}
@@ -298,7 +298,7 @@ func TestTicketFormBodyScrolls(t *testing.T) {
 		t.Errorf("first body line should have scrolled away:\n%s", text)
 	}
 	f.handleKey(formKey(tcell.KeyCtrlA))
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		f.handleKey(formKey(tcell.KeyUp))
 	}
 	f.render(screen)

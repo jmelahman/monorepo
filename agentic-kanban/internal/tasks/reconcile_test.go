@@ -40,12 +40,11 @@ func newOrphanEnv(t *testing.T, containerID string) (*Runner, *db.Store, *db.Ses
 
 // seedRun inserts a running row the way an earlier server process would
 // have left it: in the DB, but not watched by this runner.
-func seedRun(t *testing.T, store *db.Store, sess *db.Session, execID string) *db.TaskRun {
+func seedRun(t *testing.T, store *db.Store, sess *db.Session) *db.TaskRun {
 	t.Helper()
 	tr := &db.TaskRun{SessionID: sess.ID, TaskLabel: "web", Command: "npm run dev", Status: db.TaskRunStatusRunning}
-	if execID != "" {
-		tr.ExecID = &execID
-	}
+	execID := "exec-1"
+	tr.ExecID = &execID
 	if err := store.CreateTaskRun(t.Context(), tr); err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +83,7 @@ func TestReconcileOrphanedRuns(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r, store, sess := newOrphanEnv(t, tc.container)
 			r.execState = func(context.Context, string) (bool, *int, error) { return tc.running, tc.code, tc.err }
-			tr := seedRun(t, store, sess, "exec-1")
+			tr := seedRun(t, store, sess)
 			if err := r.Reconcile(t.Context(), sess); err != nil {
 				t.Fatal(err)
 			}
@@ -101,7 +100,7 @@ func TestReconcileOrphanedRuns(t *testing.T) {
 			t.Error("inspected a run this process is watching")
 			return false, nil, nil
 		}
-		tr := seedRun(t, store, sess, "exec-1")
+		tr := seedRun(t, store, sess)
 		r.live[tr.ID] = true
 		if err := r.Reconcile(t.Context(), sess); err != nil {
 			t.Fatal(err)
@@ -119,7 +118,7 @@ func TestStopOrphanedRun(t *testing.T) {
 		r, store, sess := newOrphanEnv(t, "c1")
 		var stopped []int64
 		r.stopExec = func(_ context.Context, _ string, id int64) error { stopped = append(stopped, id); return nil }
-		tr := seedRun(t, store, sess, "exec-1")
+		tr := seedRun(t, store, sess)
 		if err := r.Stop(t.Context(), sess, tr); err != nil {
 			t.Fatal(err)
 		}
@@ -134,7 +133,7 @@ func TestStopOrphanedRun(t *testing.T) {
 	t.Run("live_run_waits_for_its_goroutine", func(t *testing.T) {
 		r, store, sess := newOrphanEnv(t, "c1")
 		r.stopExec = func(context.Context, string, int64) error { return nil }
-		tr := seedRun(t, store, sess, "exec-1")
+		tr := seedRun(t, store, sess)
 		r.live[tr.ID] = true
 		if err := r.Stop(t.Context(), sess, tr); err != nil {
 			t.Fatal(err)
@@ -150,7 +149,7 @@ func TestStopOrphanedRun(t *testing.T) {
 			t.Error("ran the stop script without a container")
 			return nil
 		}
-		tr := seedRun(t, store, sess, "exec-1")
+		tr := seedRun(t, store, sess)
 		if err := r.Stop(t.Context(), sess, tr); err != nil {
 			t.Fatal(err)
 		}
@@ -163,7 +162,7 @@ func TestStopOrphanedRun(t *testing.T) {
 		r, store, sess := newOrphanEnv(t, "c1")
 		r.stopExec = func(context.Context, string, int64) error { return errors.New("no such container") }
 		r.containerRunning = func(context.Context, string) (bool, error) { return false, nil }
-		tr := seedRun(t, store, sess, "exec-1")
+		tr := seedRun(t, store, sess)
 		if err := r.Stop(t.Context(), sess, tr); err != nil {
 			t.Fatal(err)
 		}
@@ -176,7 +175,7 @@ func TestStopOrphanedRun(t *testing.T) {
 		r, store, sess := newOrphanEnv(t, "c1")
 		r.stopExec = func(context.Context, string, int64) error { return errors.New("no such container") }
 		r.containerRunning = func(context.Context, string) (bool, error) { return false, nil }
-		tr := seedRun(t, store, sess, "exec-1")
+		tr := seedRun(t, store, sess)
 		r.live[tr.ID] = true
 		if err := r.Stop(t.Context(), sess, tr); err == nil {
 			t.Error("Stop succeeded for a live run whose stop script failed")
@@ -187,7 +186,7 @@ func TestStopOrphanedRun(t *testing.T) {
 		r, store, sess := newOrphanEnv(t, "c1")
 		r.stopExec = func(context.Context, string, int64) error { return errors.New("exec failed") }
 		r.containerRunning = func(context.Context, string) (bool, error) { return true, nil }
-		tr := seedRun(t, store, sess, "exec-1")
+		tr := seedRun(t, store, sess)
 		if err := r.Stop(t.Context(), sess, tr); err == nil {
 			t.Error("Stop succeeded despite the stop script failing")
 		}

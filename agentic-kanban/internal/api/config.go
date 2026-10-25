@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -129,7 +130,7 @@ func (h *handlers) guardKey(key string, v any) (int, error) {
 		}
 	case "worktrees.root":
 		if h.config.HasWorktreesDirOverride() {
-			return http.StatusConflict, fmt.Errorf("worktrees root is locked by --worktrees-dir or $KANBAN_WORKTREES_DIR")
+			return http.StatusConflict, errors.New("worktrees root is locked by --worktrees-dir or $KANBAN_WORKTREES_DIR")
 		}
 	}
 	return 0, nil
@@ -162,7 +163,7 @@ func (h *handlers) configTargetPath(ctx context.Context, scope, boardIdent strin
 // repo on disk.
 func (h *handlers) localRepoPath(ctx context.Context, boardIdent string) (string, int, error) {
 	if boardIdent == "" {
-		return "", 400, fmt.Errorf("board is required for local scope")
+		return "", 400, errors.New("board is required for local scope")
 	}
 	board, err := h.resolveBoardIdent(ctx, boardIdent)
 	if err != nil {
@@ -190,9 +191,9 @@ func (h *handlers) configView(ctx context.Context, scope, boardIdent string) (co
 				repoPath = rp
 			}
 		}
-		project, user := kanbantoml.LoadLayers(repoPath)
+		_, user := kanbantoml.LoadLayers(repoPath)
 		merged := kanbantoml.Load(repoPath)
-		return configResp{Scope: scope, Board: boardIdent, Entries: h.effectiveEntries(merged, project, user)}, 0, nil
+		return configResp{Scope: scope, Board: boardIdent, Entries: h.effectiveEntries(merged, user)}, 0, nil
 	case "global":
 		_, user := kanbantoml.LoadLayers("")
 		return configResp{Scope: scope, Entries: layerEntries(user, "global")}, 0, nil
@@ -210,7 +211,7 @@ func (h *handlers) configView(ctx context.Context, scope, boardIdent string) (co
 
 // effectiveEntries lists every schema key (set or not) with its merged value
 // and originating layer, followed by the read-only runtime settings.
-func (h *handlers) effectiveEntries(merged, project, user kanbantoml.File) []configEntry {
+func (h *handlers) effectiveEntries(merged, user kanbantoml.File) []configEntry {
 	entries := make([]configEntry, 0, len(kanbantoml.Schema())+4)
 	for _, spec := range kanbantoml.Schema() {
 		val, set := kanbantoml.GetValue(merged, spec.Key)

@@ -220,7 +220,7 @@ func loadSourceMap(fsys fs.FS, mapPath string, wanted map[int]bool) *sourceMap {
 		nfields = 0
 	}
 	value, shift := 0, uint(0)
-	for i := 0; i < len(doc.Mappings); i++ {
+	for i := range len(doc.Mappings) {
 		c := doc.Mappings[i]
 		switch c {
 		case ',':

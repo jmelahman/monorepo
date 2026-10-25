@@ -529,7 +529,7 @@ func (v *tasksView) scrollOutput(delta int) {
 //	Esc / q / Ctrl+C                    close (tasks keep running)
 func (v *tasksView) handleKey(s tcell.Screen, ev *tcell.EventKey) *tasksAction {
 	v.msg, v.errMsg = "", ""
-	switch ev.Key() {
+	switch ev.Key() { //nolint:exhaustive // tcell.Key is an open keycode space; unlisted keys are deliberately ignored
 	case tcell.KeyEscape, tcell.KeyCtrlC:
 		v.closed = true
 	case tcell.KeyEnter, tcell.KeyCtrlJ:
@@ -676,7 +676,7 @@ func (v *tasksView) renderList(s tcell.Screen, x, y, width, height int) {
 		style := base
 		if i == v.cursor {
 			style = style.Reverse(true)
-			for cx := 0; cx < width; cx++ {
+			for cx := range width {
 				s.SetContent(x+cx, yy, ' ', nil, style)
 			}
 			putText(s, x, yy, 1, style, "▸")

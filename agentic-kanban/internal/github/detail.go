@@ -83,10 +83,7 @@ func FetchPRDetail(ctx context.Context, repoPath string, prNumber int64) (PRDeta
 	}()
 	go func() {
 		defer wg.Done()
-		c, err := fetchChecks(cctx, client, apiBase, tok, owner, repo, pull.Head.SHA)
-		if err == nil {
-			checks = c
-		}
+		checks = fetchChecks(cctx, client, apiBase, tok, owner, repo, pull.Head.SHA)
 	}()
 	wg.Wait()
 
@@ -190,9 +187,9 @@ type ghCombinedStatus struct {
 	Statuses []ghStatus `json:"statuses"`
 }
 
-func fetchChecks(ctx context.Context, client *http.Client, apiBase, tok, owner, repo, sha string) (PRChecks, error) {
+func fetchChecks(ctx context.Context, client *http.Client, apiBase, tok, owner, repo, sha string) PRChecks {
 	if sha == "" {
-		return PRChecks{}, nil
+		return PRChecks{}
 	}
 	runsURL := fmt.Sprintf("%s/repos/%s/%s/commits/%s/check-runs?per_page=100",
 		apiBase, url.PathEscape(owner), url.PathEscape(repo), url.PathEscape(sha))
@@ -249,7 +246,7 @@ func fetchChecks(ctx context.Context, client *http.Client, apiBase, tok, owner, 
 	}
 	out.Total = out.Success + out.Failure + out.Pending
 	sort.Slice(out.Failing, func(i, j int) bool { return out.Failing[i].Name < out.Failing[j].Name })
-	return out, nil
+	return out
 }
 
 func classifyCheckRun(r ghCheckRun) string {

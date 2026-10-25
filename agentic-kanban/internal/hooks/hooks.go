@@ -51,7 +51,7 @@ func (r *Runner) fire(boardID *int64, event string, vars map[string]string) {
 	}
 
 	env := os.Environ()
-	env = append(env, fmt.Sprintf("KANBAN_EVENT=%s", event))
+	env = append(env, "KANBAN_EVENT="+event)
 	for k, v := range vars {
 		env = append(env, fmt.Sprintf("KANBAN_%s=%s", strings.ToUpper(k), v))
 	}

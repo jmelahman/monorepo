@@ -20,7 +20,7 @@ func TestTicketTasksRunCtrlCStops(t *testing.T) {
 	f.onOutput = func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprint(w, "data: serving\n\n")
-		w.(http.Flusher).Flush()
+		_ = http.NewResponseController(w).Flush()
 		if err := syscall.Kill(syscall.Getpid(), syscall.SIGINT); err != nil {
 			t.Error(err)
 		}

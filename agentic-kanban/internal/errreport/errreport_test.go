@@ -19,11 +19,11 @@ func newStore(t *testing.T) *db.Store {
 	return s
 }
 
-// boardSlug mirrors errreport's slugify rule; used in tests to look up the
-// auto-created errors board without exposing the package's helper.
-func boardSlug(t *testing.T, s *db.Store, name string) *db.Board {
+// boardSlug looks up the auto-created errors board by its slug; used in tests
+// without exposing the package's slugify helper.
+func boardSlug(t *testing.T, s *db.Store) *db.Board {
 	t.Helper()
-	candidate := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
+	candidate := "errors"
 	b, err := s.GetBoardBySlug(context.Background(), candidate)
 	if err != nil {
 		t.Fatalf("GetBoardBySlug(%q): %v", candidate, err)
@@ -61,7 +61,7 @@ func TestReporter_CreatesFreshTicket(t *testing.T) {
 	r := errreport.New(store, errreport.Config{Enabled: true, BoardName: "Errors"})
 	r.Report(context.Background(), "panic", "nil pointer dereference", "main.go:42\nfoo.go:10", map[string]string{"path": "/api/x"})
 
-	board := boardSlug(t, store, "errors")
+	board := boardSlug(t, store)
 	cols, err := store.ListColumns(context.Background(), board.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestReporter_DeduplicatesOnSecondOccurrence(t *testing.T) {
 	r.Report(context.Background(), "panic", "boom", stack, nil)
 	r.Report(context.Background(), "panic", "boom", stack, nil)
 
-	board := boardSlug(t, store, "errors")
+	board := boardSlug(t, store)
 	tickets, err := store.ListTickets(context.Background(), board.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -123,7 +123,7 @@ func TestReporter_RecurrenceBumpsToNew(t *testing.T) {
 	ctx := context.Background()
 	r.Report(ctx, "panic", "boom", stack, nil)
 
-	board := boardSlug(t, store, "errors")
+	board := boardSlug(t, store)
 	cols, err := store.ListColumns(ctx, board.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -167,7 +167,7 @@ func TestReporter_IgnoresArchivedTicket(t *testing.T) {
 	stack := "main.go:42\nfoo.go:10"
 	r.Report(context.Background(), "panic", "boom", stack, nil)
 
-	board := boardSlug(t, store, "errors")
+	board := boardSlug(t, store)
 	tickets, _ := store.ListTickets(context.Background(), board.ID)
 	if len(tickets) != 1 {
 		t.Fatalf("setup: expected 1 ticket, got %d", len(tickets))

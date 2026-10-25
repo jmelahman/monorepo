@@ -193,7 +193,7 @@ func (f *ticketForm) submit() {
 func (f *ticketForm) handleKey(ev *tcell.EventKey) {
 	f.errMsg = ""
 	buf := f.focused()
-	switch ev.Key() {
+	switch ev.Key() { //nolint:exhaustive // tcell.Key is an open keycode space; unlisted keys are deliberately ignored
 	case tcell.KeyEscape, tcell.KeyCtrlC:
 		f.cancelled = true
 		return
@@ -215,7 +215,7 @@ func (f *ticketForm) handleKey(ev *tcell.EventKey) {
 		f.handleHarnessKey(ev)
 		return
 	}
-	switch ev.Key() {
+	switch ev.Key() { //nolint:exhaustive // tcell.Key is an open keycode space; unlisted keys are deliberately ignored
 	case tcell.KeyEnter, tcell.KeyCtrlJ:
 		if f.focus == focusTitle {
 			if !f.pasting {
@@ -266,7 +266,7 @@ func (f *ticketForm) handleKey(ev *tcell.EventKey) {
 // cycle the harness, ↑/↓ and Enter leave the row, anything else is ignored
 // (there's nothing to type into).
 func (f *ticketForm) handleHarnessKey(ev *tcell.EventKey) {
-	switch ev.Key() {
+	switch ev.Key() { //nolint:exhaustive // tcell.Key is an open keycode space; unlisted keys are deliberately ignored
 	case tcell.KeyLeft:
 		f.harnessIdx = f.harnesses.cycle(f.harnessIdx, -1)
 	case tcell.KeyRight:
@@ -296,7 +296,7 @@ func newTextBuffer(initial string, multiline bool) *textBuffer {
 		initial = strings.ReplaceAll(initial, "\n", " ")
 	}
 	b := &textBuffer{multiline: multiline}
-	for _, l := range strings.Split(initial, "\n") {
+	for l := range strings.SplitSeq(initial, "\n") {
 		b.lines = append(b.lines, []rune(l))
 	}
 	b.row = len(b.lines) - 1
@@ -481,10 +481,7 @@ func (f *ticketForm) render(s tcell.Screen) {
 	label = base.Dim(f.focus != focusBody)
 	putText(s, formPad, bodyLabelRow+bodyShift, boxW, label, "Description (optional, markdown)")
 	bodyTop := bodyBoxRow + bodyShift
-	bodyH := h - formFooterRows - bodyTop
-	if bodyH < minBodyBoxHeight {
-		bodyH = minBodyBoxHeight
-	}
+	bodyH := max(h-formFooterRows-bodyTop, minBodyBoxHeight)
 	drawBox(s, boxX, bodyTop, boxW, bodyH, f.focus == focusBody)
 	bx, by := f.renderBody(s, boxX+1, bodyTop+1, inner, bodyH-2)
 	if f.focus == focusBody {

@@ -284,8 +284,7 @@ func attachSession(
 			}
 			return false, fmt.Errorf("read stdin: %w", err)
 		case err := <-remoteDone:
-			var ce *websocket.CloseError
-			if errors.As(err, &ce) {
+			if _, ok := errors.AsType[*websocket.CloseError](err); ok {
 				// Any close — clean or the abrupt 1006 the broker produces
 				// after "[session ended]" — means the remote process is gone.
 				return false, nil
@@ -341,7 +340,7 @@ func parseDetachKeys(spec string) ([]byte, error) {
 		return nil, errors.New("detach keys: empty sequence")
 	}
 	var seq []byte
-	for _, item := range strings.Split(spec, ",") {
+	for item := range strings.SplitSeq(spec, ",") {
 		item = strings.TrimSpace(item)
 		switch {
 		case strings.HasPrefix(strings.ToLower(item), "ctrl-"):

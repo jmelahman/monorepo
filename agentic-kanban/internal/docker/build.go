@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -57,7 +58,7 @@ func (c *Client) EnsureBuildImage(ctx context.Context, cfg *DevcontainerConfig, 
 // always removed.
 func (c *Client) RunBuildStep(ctx context.Context, step BuildStep, out io.Writer) error {
 	if len(step.Argv) == 0 {
-		return fmt.Errorf("build step has empty argv")
+		return errors.New("build step has empty argv")
 	}
 	// When kanban itself runs in a container the daemon still interprets
 	// bind sources as host paths.
@@ -72,8 +73,8 @@ func (c *Client) RunBuildStep(ctx context.Context, step BuildStep, out io.Writer
 			Image: step.Image,
 			// Entrypoint is set explicitly so image entrypoints can't wrap the
 			// step's argv.
-			Entrypoint: []string(step.Argv[:1]),
-			Cmd:        []string(step.Argv[1:]),
+			Entrypoint: step.Argv[:1],
+			Cmd:        step.Argv[1:],
 			WorkingDir: path.Join(buildMountTarget, filepath.ToSlash(step.Dir)),
 			Env:        step.Env,
 			User:       step.User,
@@ -88,7 +89,7 @@ func (c *Client) RunBuildStep(ctx context.Context, step BuildStep, out io.Writer
 	defer func() {
 		rmCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		c.cli.ContainerRemove(rmCtx, created.ID, client.ContainerRemoveOptions{Force: true}) //nolint:errcheck
+		c.cli.ContainerRemove(rmCtx, created.ID, client.ContainerRemoveOptions{Force: true}) //nolint:errcheck // best-effort cleanup of the build step container
 	}()
 
 	attach, err := c.cli.ContainerAttach(ctx, created.ID, client.ContainerAttachOptions{

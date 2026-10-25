@@ -413,7 +413,7 @@ func (p *ticketPicker) submit() {
 func (p *ticketPicker) handleKey(ev *tcell.EventKey) {
 	p.errMsg = ""
 	before := p.filter.String()
-	switch ev.Key() {
+	switch ev.Key() { //nolint:exhaustive // tcell.Key is an open keycode space; unlisted keys are deliberately ignored
 	case tcell.KeyEscape, tcell.KeyCtrlC:
 		p.cancelled = true
 	case tcell.KeyEnter, tcell.KeyCtrlJ:
@@ -573,10 +573,7 @@ func (p *ticketPicker) render(s tcell.Screen) {
 	if p.harnesses != nil || p.strategies != nil {
 		footer++ // the harness / strategy row, between the list and the help line
 	}
-	listH := h - footer - pickerListRow
-	if listH < 1 {
-		listH = 1
-	}
+	listH := max(h-footer-pickerListRow, 1)
 	p.pageRows = listH
 	rows, cursorRow := p.rows()
 	if len(rows) == 0 {
@@ -649,7 +646,7 @@ func (p *ticketPicker) renderItem(s tcell.Screen, x, y, width, idWidth int, it p
 	style := tcell.StyleDefault
 	if highlighted {
 		style = style.Reverse(true).Bold(true)
-		for i := 0; i < width; i++ {
+		for i := range width {
 			s.SetContent(x+i, y, ' ', nil, style)
 		}
 	}

@@ -264,9 +264,7 @@ func TestMigrate_ConcurrentOpensApplyOnce(t *testing.T) {
 			start := make(chan struct{})
 			var wg sync.WaitGroup
 			for i := range openers {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+				wg.Go(func() {
 					<-start
 					store, err := Open(path)
 					if err != nil {
@@ -274,7 +272,7 @@ func TestMigrate_ConcurrentOpensApplyOnce(t *testing.T) {
 						return
 					}
 					errs[i] = store.Close()
-				}()
+				})
 			}
 			close(start)
 			wg.Wait()

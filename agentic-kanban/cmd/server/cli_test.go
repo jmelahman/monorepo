@@ -644,7 +644,7 @@ func TestRunTicketsEachDelete(t *testing.T) {
 func TestRunColumnArchiveAll(t *testing.T) {
 	srv, store, board := newKanbanCLITestServer(t)
 	cols, _ := store.ListColumns(t.Context(), board.ID)
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		tk := &db.Ticket{BoardID: board.ID, ColumnID: cols[0].ID, Title: "t", Slug: "t"}
 		if err := store.CreateTicket(t.Context(), tk); err != nil {
 			t.Fatal(err)
@@ -986,15 +986,15 @@ func TestTicketArg(t *testing.T) {
 	t.Cleanup(func() { stdinIsTerminal = restore })
 
 	// An unreachable server proves nothing was fetched for an explicit id.
-	id, err := ticketArg(t.Context(), "http://127.0.0.1:1", []string{"42"}, board.Slug, attachAction, false)
+	id, err := ticketArg(t.Context(), "http://127.0.0.1:1", []string{"42"}, board.Slug, attachAction)
 	if err != nil || id != 42 {
 		t.Errorf("ticketArg(42) = %d, %v", id, err)
 	}
-	if _, err := ticketArg(t.Context(), srv.URL, []string{"abc"}, board.Slug, attachAction, false); err == nil ||
+	if _, err := ticketArg(t.Context(), srv.URL, []string{"abc"}, board.Slug, attachAction); err == nil ||
 		!strings.Contains(err.Error(), "ticket id") {
 		t.Errorf("bad id: err = %v", err)
 	}
-	if _, err := ticketArg(t.Context(), srv.URL, nil, board.Slug, attachAction, false); err == nil ||
+	if _, err := ticketArg(t.Context(), srv.URL, nil, board.Slug, attachAction); err == nil ||
 		!strings.Contains(err.Error(), "interactive terminal") {
 		t.Errorf("no id without a tty: err = %v", err)
 	}
@@ -1197,8 +1197,8 @@ func TestRunTicketRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	var restarted string
-	real, _ := url.Parse(srv.URL)
-	proxy := httputil.NewSingleHostReverseProxy(real)
+	target, _ := url.Parse(srv.URL)
+	proxy := httputil.NewSingleHostReverseProxy(target)
 	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/restart") {
 			restarted = r.URL.Path

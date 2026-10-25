@@ -409,7 +409,7 @@ func (v *ticketInfoView) copyCurrent(s tcell.Screen) {
 //	Esc / q / Ctrl+C                    close
 func (v *ticketInfoView) handleKey(s tcell.Screen, ev *tcell.EventKey) {
 	v.msg, v.errMsg = "", ""
-	switch ev.Key() {
+	switch ev.Key() { //nolint:exhaustive // tcell.Key is an open keycode space; unlisted keys are deliberately ignored
 	case tcell.KeyEscape, tcell.KeyCtrlC:
 		v.closed = true
 	case tcell.KeyEnter, tcell.KeyCtrlJ:
@@ -554,7 +554,7 @@ func (v *ticketInfoView) render(s tcell.Screen) {
 			style := base
 			if row.field == v.cursor {
 				style = style.Reverse(true)
-				for x := 0; x < width; x++ {
+				for x := range width {
 					s.SetContent(formPad+x, y, ' ', nil, style)
 				}
 			}
@@ -580,13 +580,13 @@ func wrapText(text string, width int) []string {
 		width = 1
 	}
 	var out []string
-	for _, para := range strings.Split(text, "\n") {
+	for para := range strings.SplitSeq(text, "\n") {
 		if para == "" {
 			out = append(out, "")
 			continue
 		}
 		line := ""
-		for _, word := range strings.Fields(para) {
+		for word := range strings.FieldsSeq(para) {
 			switch {
 			case line == "":
 				line = word

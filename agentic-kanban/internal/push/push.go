@@ -107,7 +107,12 @@ func New(store *db.Store) *Service {
 // redirects are not followed. With an HTTPS proxy configured the proxy does
 // the dialling, so only the redirect rule applies.
 func newClient() *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	var transport *http.Transport
+	if dt, ok := http.DefaultTransport.(*http.Transport); ok {
+		transport = dt.Clone()
+	} else {
+		transport = &http.Transport{}
+	}
 	if os.Getenv("HTTPS_PROXY") == "" && os.Getenv("https_proxy") == "" {
 		transport.Proxy = nil
 		transport.DialContext = (&net.Dialer{

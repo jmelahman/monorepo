@@ -61,14 +61,14 @@ func (b *Box) Encrypt(plaintext string) (string, error) {
 func (b *Box) Decrypt(value string) (string, error) {
 	raw, ok := strings.CutPrefix(value, v1Prefix)
 	if !ok {
-		return "", fmt.Errorf("secrets: unknown ciphertext format")
+		return "", errors.New("secrets: unknown ciphertext format")
 	}
 	sealed, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
 		return "", fmt.Errorf("secrets: decode: %w", err)
 	}
 	if len(sealed) < b.aead.NonceSize() {
-		return "", fmt.Errorf("secrets: ciphertext too short")
+		return "", errors.New("secrets: ciphertext too short")
 	}
 	nonce, ct := sealed[:b.aead.NonceSize()], sealed[b.aead.NonceSize():]
 	plaintext, err := b.aead.Open(nil, nonce, ct, nil)

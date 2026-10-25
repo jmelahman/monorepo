@@ -77,7 +77,7 @@ func stripTrailingCommas(data []byte) []byte {
 	out := make([]byte, 0, len(data))
 	inString := false
 	escape := false
-	for i := 0; i < len(data); i++ {
+	for i := range data {
 		c := data[i]
 		if inString {
 			out = append(out, c)

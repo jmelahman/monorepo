@@ -50,11 +50,11 @@ const (
 // may connect is enforced when sending (push.newClient), after DNS.
 func validPushEndpoint(endpoint string) error {
 	if len(endpoint) > maxPushEndpointLen {
-		return fmt.Errorf("endpoint is too long")
+		return errors.New("endpoint is too long")
 	}
 	u, err := url.Parse(endpoint)
 	if err != nil || u.Scheme != "https" || u.Host == "" {
-		return fmt.Errorf("endpoint must be an https URL")
+		return errors.New("endpoint must be an https URL")
 	}
 	return nil
 }
@@ -84,7 +84,7 @@ func (h *handlers) putPushSubscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !validPushKey(req.Keys.P256dh, 65) || !validPushKey(req.Keys.Auth, 16) {
-		h.httpError(w, fmt.Errorf("keys.p256dh and keys.auth must be the browser's subscription keys"), 400)
+		h.httpError(w, errors.New("keys.p256dh and keys.auth must be the browser's subscription keys"), 400)
 		return
 	}
 	events := []string{}
@@ -122,14 +122,14 @@ func (h *handlers) putPushSubscription(w http.ResponseWriter, r *http.Request) {
 func (h *handlers) deletePushSubscription(w http.ResponseWriter, r *http.Request) {
 	req, err := decodeBody[pushEndpointReq](r)
 	if err != nil || req.Endpoint == "" {
-		h.httpError(w, fmt.Errorf("endpoint is required"), 400)
+		h.httpError(w, errors.New("endpoint is required"), 400)
 		return
 	}
 	if err := h.store.DeletePushSubscription(r.Context(), req.Endpoint); err != nil {
 		h.httpError(w, err, 500)
 		return
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // testPush sends a sample notification to the calling device only, so the
@@ -137,7 +137,7 @@ func (h *handlers) deletePushSubscription(w http.ResponseWriter, r *http.Request
 func (h *handlers) testPush(w http.ResponseWriter, r *http.Request) {
 	req, err := decodeBody[pushEndpointReq](r)
 	if err != nil || req.Endpoint == "" {
-		h.httpError(w, fmt.Errorf("endpoint is required"), 400)
+		h.httpError(w, errors.New("endpoint is required"), 400)
 		return
 	}
 	err = h.push.SendTo(r.Context(), req.Endpoint, push.Payload{
@@ -148,7 +148,7 @@ func (h *handlers) testPush(w http.ResponseWriter, r *http.Request) {
 	})
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
-		h.httpError(w, fmt.Errorf("this device is not subscribed"), 404)
+		h.httpError(w, errors.New("this device is not subscribed"), 404)
 	case errors.Is(err, push.ErrGone):
 		// Like 404, the browser has to subscribe again; the app does so and
 		// retries (web/src/push.ts sendTestPush).
@@ -156,6 +156,6 @@ func (h *handlers) testPush(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		h.httpError(w, err, http.StatusBadGateway)
 	default:
-		w.WriteHeader(204)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -56,9 +57,7 @@ func TestCreateBoard_ProjectDirValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := newEnv(t)
 			body := map[string]any{"name": fmt.Sprintf("Board %d", i)}
-			for k, v := range tc.body {
-				body[k] = v
-			}
+			maps.Copy(body, tc.body)
 			resp := e.post("/api/boards", body)
 			assertStatus(t, resp, tc.wantStatus)
 			if tc.wantErrIn != "" {

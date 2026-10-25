@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,17 +20,17 @@ func TestHealth(t *testing.T) {
 	e := newEnv(t)
 	resp := e.get("/api/health")
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 && resp.StatusCode != 503 {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d; want 200 or 503", resp.StatusCode)
 	}
 	var body map[string]string
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp.StatusCode == 200 && body["status"] != "ok" {
+	if resp.StatusCode == http.StatusOK && body["status"] != "ok" {
 		t.Errorf("status field = %q; want 'ok'", body["status"])
 	}
-	if resp.StatusCode == 503 && body["docker"] == "" && body["db"] == "" {
+	if resp.StatusCode == http.StatusServiceUnavailable && body["docker"] == "" && body["db"] == "" {
 		t.Errorf("503 should report a docker or db error reason")
 	}
 }
@@ -42,7 +43,7 @@ func TestHealth_FailsWhenDBClosed(t *testing.T) {
 	}
 	resp := e.get("/api/health")
 	defer resp.Body.Close()
-	if resp.StatusCode != 503 {
+	if resp.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d; want 503", resp.StatusCode)
 	}
 	var body map[string]string
@@ -1072,7 +1073,7 @@ func TestSessionPlans(t *testing.T) {
 		resp := e.get(fmt.Sprintf("/api/sessions/%d/plans/..%%2Fescape.md", sess.ID))
 		// Path normalization in Go's mux may turn this into a different route
 		// or leave it; either way the handler must reject it.
-		if resp.StatusCode == 200 {
+		if resp.StatusCode == http.StatusOK {
 			t.Errorf("expected non-200 for traversal attempt")
 		}
 	})
@@ -1129,7 +1130,7 @@ func TestSessionFile(t *testing.T) {
 
 	t.Run("rejects_traversal", func(t *testing.T) {
 		resp := e.get(fmt.Sprintf("/api/sessions/%d/file?path=..%%2F..%%2Fsecret", sess.ID))
-		if resp.StatusCode == 200 {
+		if resp.StatusCode == http.StatusOK {
 			t.Errorf("expected non-200 for traversal attempt")
 		}
 	})

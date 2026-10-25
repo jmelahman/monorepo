@@ -134,7 +134,7 @@ func TestTicketPickerFilter(t *testing.T) {
 	if p.errMsg != "no tickets match the filter" {
 		t.Errorf("errMsg = %q", p.errMsg)
 	}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		p.handleKey(formKey(tcell.KeyBackspace2))
 	}
 	if p.errMsg != "" {

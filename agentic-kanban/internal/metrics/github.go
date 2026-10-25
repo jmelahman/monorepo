@@ -76,8 +76,7 @@ func normalizeGitHubPath(p string) string {
 	switch {
 	case len(segs) >= 3 && segs[0] == "repos":
 		// /repos/:owner/:repo[/...]
-		out := []string{"", "repos", ":owner", ":repo"}
-		out = append(out, segs[3:]...)
+		out := append([]string{"", "repos", ":owner", ":repo"}, segs[3:]...)
 		// Numeric ids inside the remainder become :id (e.g. pulls/123/files).
 		for i := 4; i < len(out); i++ {
 			if isNumeric(out[i]) {
@@ -91,8 +90,7 @@ func normalizeGitHubPath(p string) string {
 		// used /repos/{owner}/{repo}/.... Collapse onto the same label so
 		// /repos/:owner/:repo/pulls and its paginated follow-ups share one
 		// series in the counter — otherwise we'd grow one label per repo.
-		out := []string{"", "repos", ":owner", ":repo"}
-		out = append(out, segs[2:]...)
+		out := append([]string{"", "repos", ":owner", ":repo"}, segs[2:]...)
 		for i := 4; i < len(out); i++ {
 			if isNumeric(out[i]) {
 				out[i] = ":id"

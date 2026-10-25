@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"bufio"
-	"fmt"
+	"errors"
 	"net"
 	"net/http"
 	"strconv"
@@ -60,7 +60,7 @@ func (m *metricsRecorder) Flush() {
 func (m *metricsRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	hj, ok := m.ResponseWriter.(http.Hijacker)
 	if !ok {
-		return nil, nil, fmt.Errorf("hijack not supported")
+		return nil, nil, errors.New("hijack not supported")
 	}
 	return hj.Hijack()
 }

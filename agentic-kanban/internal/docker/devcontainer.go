@@ -673,7 +673,7 @@ func resolveSourceGitDir(repoPath string) (string, bool) {
 
 func parseMountString(s string) (mount.Mount, error) {
 	m := mount.Mount{Type: mount.TypeBind}
-	for _, part := range strings.Split(s, ",") {
+	for part := range strings.SplitSeq(s, ",") {
 		kv := strings.SplitN(part, "=", 2)
 		if len(kv) != 2 {
 			continue
@@ -696,10 +696,10 @@ func parseMountString(s string) (mount.Mount, error) {
 		}
 	}
 	if m.Target == "" {
-		return m, fmt.Errorf("mount missing target")
+		return m, errors.New("mount missing target")
 	}
 	if m.Type == mount.TypeBind && m.Source == "" {
-		return m, fmt.Errorf("bind mount has empty source (an unset ${localEnv:VAR} likely substituted to empty)")
+		return m, errors.New("bind mount has empty source (an unset ${localEnv:VAR} likely substituted to empty)")
 	}
 	return m, nil
 }

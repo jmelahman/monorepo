@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -121,10 +122,10 @@ func ValidateProjectDir(projectDir, repoPath, mountPath string) (string, error) 
 		return "", nil
 	}
 	if strings.TrimSpace(repoPath) == "" {
-		return "", fmt.Errorf("project_dir requires repo_path: it names a subdirectory of the repository")
+		return "", errors.New("project_dir requires repo_path: it names a subdirectory of the repository")
 	}
 	if strings.TrimSpace(mountPath) != "" {
-		return "", fmt.Errorf("project_dir and mount_path are mutually exclusive: mount_path binds the main checkout, so a project_dir under it would bypass the per-ticket worktree")
+		return "", errors.New("project_dir and mount_path are mutually exclusive: mount_path binds the main checkout, so a project_dir under it would bypass the per-ticket worktree")
 	}
 	return normalized, nil
 }

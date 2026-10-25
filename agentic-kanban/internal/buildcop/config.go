@@ -1,7 +1,6 @@
 package buildcop
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -116,5 +115,5 @@ func defaultName(branch string) string {
 	if branch == "" || branch == "*" {
 		return "Build Cop: all branches"
 	}
-	return fmt.Sprintf("Build Cop: %s", branch)
+	return "Build Cop: " + branch
 }

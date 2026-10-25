@@ -49,10 +49,7 @@ func (r *ringBuffer) Write(p []byte) {
 	}
 	for len(p) > 0 {
 		space := len(r.buf) - r.head
-		n := len(p)
-		if n > space {
-			n = space
-		}
+		n := min(len(p), space)
 		copy(r.buf[r.head:], p[:n])
 		r.head = (r.head + n) % len(r.buf)
 		if r.n < len(r.buf) {

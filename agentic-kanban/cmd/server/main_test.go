@@ -42,7 +42,7 @@ func TestPreviewBaseURLOverridesDomain(t *testing.T) {
 			t.Errorf("write response: %v", err)
 		}
 	}))
-	req := httptest.NewRequest("GET", "http://abc1234-demo.preview.example.com/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://abc1234-demo.preview.example.com/", nil)
 	req.Host = "abc1234-demo.preview.example.com"
 	resp := httptest.NewRecorder()
 	handler.ServeHTTP(resp, req)

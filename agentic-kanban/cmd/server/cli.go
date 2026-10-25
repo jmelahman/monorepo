@@ -213,6 +213,176 @@ Explicit flags always win; inference only fills in what you omit.`,
 	return parent
 }
 
+// ticketCreateCmd builds `kanban ticket create`.
+func ticketCreateCmd(serverURLp, boardIdentp *string) *cobra.Command {
+	var (
+		tcTitle, tcBody, tcColumn, tcDetachKeys, tcHarness string
+		tcJSON, tcAttach                                   bool
+	)
+	create := &cobra.Command{
+		Use:   "create",
+		Short: "Create a ticket, interactively when run without --title, and drop into its agent",
+		Long: `Create a ticket on a board.
+
+Without --board the board is inferred from the git repo containing the
+current directory (an error if zero or several boards use that repo).
+
+Without --title, a terminal form asks for a title and an optional
+description; on submit the ticket is created, its session is started, and
+your terminal attaches to the agent running inside the devcontainer (see
+"kanban ticket attach"). The form's Harness row picks which agent CLI the
+session launches: Tab to it and use Left/Right to cycle. With --title the
+command is non-interactive and only prints the created ticket unless
+--attach is also given; --harness picks the agent there.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			serverURL, boardIdent := *serverURLp, *boardIdentp
+			ctx := cmd.Context()
+			url := resolveURL(cmd, serverURL)
+			out := cmd.OutOrStdout()
+
+			board, err := resolveBoardIdent(ctx, url, boardArgs(boardIdent))
+			if err != nil {
+				return err
+			}
+
+			interactive := strings.TrimSpace(tcTitle) == ""
+			attach := tcAttach
+			if !cmd.Flags().Changed("attach") {
+				attach = interactive
+			}
+			// Both the form and the attach need a real terminal; say so
+			// before creating anything rather than half-way through.
+			if interactive && !stdinIsTerminal() {
+				return errors.New("--title is required when not running in an interactive terminal")
+			}
+			if attach && !stdinIsTerminal() {
+				return errors.New("--attach needs an interactive terminal on stdin and stdout")
+			}
+			if tcHarness != "" && !attach {
+				return errors.New("--harness needs --attach: the harness is picked when the ticket's session starts")
+			}
+			if err := validateHarnessFlag(ctx, url, tcHarness); err != nil {
+				return err
+			}
+			a := client.CreateTicketArgs{Board: board, Title: tcTitle, Body: tcBody, Column: tcColumn}
+			harnessID := tcHarness
+			if interactive {
+				label, err := boardLabel(ctx, url, board)
+				if err != nil {
+					return err
+				}
+				// The harness row only means something when we go on to
+				// start the session and attach to its agent.
+				var opts *harnessOptions
+				if attach {
+					if opts, err = loadHarnessOptions(ctx, url, board); err != nil {
+						return err
+					}
+				}
+				res, ok, err := promptTicketForm(label, tcBody, opts, tcHarness)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return errors.New("cancelled; no ticket created")
+				}
+				a.Title, a.Body = res.Title, res.Body
+				harnessID = formHarness(opts, tcHarness, res.Harness)
+			}
+
+			id, err := runTicketCreate(ctx, url, out, a, tcJSON)
+			if err != nil {
+				return err
+			}
+			if !attach {
+				return nil
+			}
+			return runTicketAttach(ctx, url, out, id, "agent", tcDetachKeys, harnessID)
+		},
+	}
+	create.Flags().StringVar(&tcTitle, "title", "", "Ticket title (omit to be prompted)")
+	create.Flags().StringVar(&tcBody, "body", "", "Ticket body / description (pre-fills the prompt when --title is omitted)")
+	create.Flags().StringVar(&tcColumn, "column", "", "Column name or id (default: leftmost column)")
+	create.Flags().BoolVar(&tcJSON, "json", false, "Print the full ticket JSON instead of a one-line summary")
+	create.Flags().BoolVar(&tcAttach, "attach", false, "Start the ticket's session and attach to its agent after creating (default: true when prompted, false with --title)")
+	create.Flags().StringVar(&tcDetachKeys, "detach-keys", defaultDetachKeys, "Key sequence that detaches from the agent, docker-style (e.g. ctrl-p,ctrl-q or ctrl-])")
+	create.Flags().StringVar(&tcHarness, "harness", "", "Agent harness for the ticket's session, e.g. claude, pi or opencode (default: the user/project harness; needs --attach)")
+	return create
+}
+
+// ticketAttachCmd builds `kanban ticket attach`.
+func ticketAttachCmd(serverURLp, boardIdentp *string) *cobra.Command {
+	var (
+		taDetachKeys, taHarness string
+		taShell                 bool
+	)
+	attach := &cobra.Command{
+		Use:   "attach [id]",
+		Short: "Attach your terminal to a ticket's agent (starting its session if needed)",
+		Long: `Attach the current terminal to the agent running in a ticket's session
+container, the same PTY the web UI shows. The session is created and
+started first if it isn't running. Input is forwarded as typed; the
+terminal size follows your window.
+
+Without an id, the board's open tickets are listed for you to pick from:
+the board is inferred from the git repo containing the current directory
+(an error if zero or several boards use that repo) unless --board names
+one. Typing narrows the list; Enter attaches, Esc cancels. Left/Right
+cycle the agent harness for the highlighted ticket.
+
+Picking a different harness (in the list, or with --harness) stores it on
+the ticket's session. If its agent is already running under another
+harness, that agent is stopped (hung up, then killed if it lingers) and the
+new one launched; the container, worktree and shell are left alone.
+
+Detaching (default ctrl-p,ctrl-q) leaves the agent running — reattach any
+time, or keep using it from the web UI. With --shell an interactive login
+shell in the container is attached instead of the agent.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			serverURL, boardIdent := *serverURLp, *boardIdentp
+			ctx := cmd.Context()
+			url := resolveURL(cmd, serverURL)
+			// A bad --detach-keys would only fail after the list; reject it
+			// before anything is fetched or drawn.
+			if _, err := parseDetachKeys(taDetachKeys); err != nil {
+				return err
+			}
+			if taShell && taHarness != "" {
+				return errors.New("--harness picks the agent; it can't be combined with --shell")
+			}
+			if err := validateHarnessFlag(ctx, url, taHarness); err != nil {
+				return err
+			}
+			action := pickerAction{"Attach to ticket", "attach"}
+			harnessID := taHarness
+			var id int64
+			var err error
+			if len(args) > 0 || taShell || taHarness != "" {
+				// Nothing to pick a harness for: an explicit id, the shell,
+				// or --harness already decided it.
+				id, err = ticketArg(ctx, url, args, boardIdent, action)
+			} else {
+				var item pickerItem
+				item, err = pickTicketItem(ctx, url, boardIdent, action, false, pickerWithHarness)
+				id, harnessID = item.ID, item.Harness
+			}
+			if err != nil {
+				return err
+			}
+			kind := "agent"
+			if taShell {
+				kind = "shell"
+			}
+			return runTicketAttach(ctx, url, cmd.OutOrStdout(), id, kind, taDetachKeys, harnessID)
+		},
+	}
+	attach.Flags().BoolVar(&taShell, "shell", false, "Attach an interactive shell in the session container instead of the agent")
+	attach.Flags().StringVar(&taDetachKeys, "detach-keys", defaultDetachKeys, "Key sequence that detaches, docker-style (e.g. ctrl-p,ctrl-q or ctrl-])")
+	attach.Flags().StringVar(&taHarness, "harness", "", "Switch the ticket's agent to this harness, e.g. claude, pi or opencode (restarts a running agent on another harness)")
+	return attach
+}
+
 func runBoardList(ctx context.Context, url string, out io.Writer) error {
 	boards, err := client.New(url, nil).ListBoards(ctx)
 	if err != nil {
@@ -385,7 +555,7 @@ func inferBoardCreateArgs(a client.CreateBoardArgs) (client.CreateBoardArgs, err
 	}
 	if strings.TrimSpace(a.Name) == "" {
 		if a.RepoPath == "" {
-			return a, fmt.Errorf("--name required when --mount-path is set without --repo-path")
+			return a, errors.New("--name required when --mount-path is set without --repo-path")
 		}
 		// A subproject board is about the subproject, not the monorepo.
 		if a.ProjectDir != "" {
@@ -524,7 +694,7 @@ func boardsForPrefix(boards []client.Board, prefix string) []client.Board {
 		}
 		switch n := len(dir); {
 		case n > best:
-			best, matches = n, []client.Board{b}
+			best, matches = n, []client.Board{b} //nolint:prealloc // reset on every new best match; the final size is not known up front
 		case n == best:
 			matches = append(matches, b)
 		}
@@ -585,97 +755,7 @@ pipes the id is required.`,
 	parent.PersistentFlags().StringVar(&boardIdent, "board", "",
 		"Board id or slug (default: the board for the repo in the current directory)")
 
-	var (
-		tcTitle, tcBody, tcColumn, tcDetachKeys, tcHarness string
-		tcJSON, tcAttach                                   bool
-	)
-	create := &cobra.Command{
-		Use:   "create",
-		Short: "Create a ticket, interactively when run without --title, and drop into its agent",
-		Long: `Create a ticket on a board.
-
-Without --board the board is inferred from the git repo containing the
-current directory (an error if zero or several boards use that repo).
-
-Without --title, a terminal form asks for a title and an optional
-description; on submit the ticket is created, its session is started, and
-your terminal attaches to the agent running inside the devcontainer (see
-"kanban ticket attach"). The form's Harness row picks which agent CLI the
-session launches: Tab to it and use Left/Right to cycle. With --title the
-command is non-interactive and only prints the created ticket unless
---attach is also given; --harness picks the agent there.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			url := resolveURL(cmd, serverURL)
-			out := cmd.OutOrStdout()
-
-			board, err := resolveBoardIdent(ctx, url, boardArgs(boardIdent))
-			if err != nil {
-				return err
-			}
-
-			interactive := strings.TrimSpace(tcTitle) == ""
-			attach := tcAttach
-			if !cmd.Flags().Changed("attach") {
-				attach = interactive
-			}
-			// Both the form and the attach need a real terminal; say so
-			// before creating anything rather than half-way through.
-			if interactive && !stdinIsTerminal() {
-				return errors.New("--title is required when not running in an interactive terminal")
-			}
-			if attach && !stdinIsTerminal() {
-				return errors.New("--attach needs an interactive terminal on stdin and stdout")
-			}
-			if tcHarness != "" && !attach {
-				return errors.New("--harness needs --attach: the harness is picked when the ticket's session starts")
-			}
-			if err := validateHarnessFlag(ctx, url, tcHarness); err != nil {
-				return err
-			}
-			a := client.CreateTicketArgs{Board: board, Title: tcTitle, Body: tcBody, Column: tcColumn}
-			harnessID := tcHarness
-			if interactive {
-				label, err := boardLabel(ctx, url, board)
-				if err != nil {
-					return err
-				}
-				// The harness row only means something when we go on to
-				// start the session and attach to its agent.
-				var opts *harnessOptions
-				if attach {
-					if opts, err = loadHarnessOptions(ctx, url, board); err != nil {
-						return err
-					}
-				}
-				res, ok, err := promptTicketForm(label, tcBody, opts, tcHarness)
-				if err != nil {
-					return err
-				}
-				if !ok {
-					return errors.New("cancelled; no ticket created")
-				}
-				a.Title, a.Body = res.Title, res.Body
-				harnessID = formHarness(opts, tcHarness, res.Harness)
-			}
-
-			id, err := runTicketCreate(ctx, url, out, a, tcJSON)
-			if err != nil {
-				return err
-			}
-			if !attach {
-				return nil
-			}
-			return runTicketAttach(ctx, url, out, id, "agent", tcDetachKeys, harnessID)
-		},
-	}
-	create.Flags().StringVar(&tcTitle, "title", "", "Ticket title (omit to be prompted)")
-	create.Flags().StringVar(&tcBody, "body", "", "Ticket body / description (pre-fills the prompt when --title is omitted)")
-	create.Flags().StringVar(&tcColumn, "column", "", "Column name or id (default: leftmost column)")
-	create.Flags().BoolVar(&tcJSON, "json", false, "Print the full ticket JSON instead of a one-line summary")
-	create.Flags().BoolVar(&tcAttach, "attach", false, "Start the ticket's session and attach to its agent after creating (default: true when prompted, false with --title)")
-	create.Flags().StringVar(&tcDetachKeys, "detach-keys", defaultDetachKeys, "Key sequence that detaches from the agent, docker-style (e.g. ctrl-p,ctrl-q or ctrl-])")
-	create.Flags().StringVar(&tcHarness, "harness", "", "Agent harness for the ticket's session, e.g. claude, pi or opencode (default: the user/project harness; needs --attach)")
+	create := ticketCreateCmd(&serverURL, &boardIdent)
 
 	var tiJSON bool
 	info := &cobra.Command{
@@ -693,7 +773,7 @@ closes. Piped or redirected it prints the same fields as plain text, and
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
-			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Ticket info", "show"}, false)
+			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Ticket info", "show"})
 			if err != nil {
 				return err
 			}
@@ -702,72 +782,7 @@ closes. Piped or redirected it prints the same fields as plain text, and
 	}
 	info.Flags().BoolVar(&tiJSON, "json", false, "Print the ticket's info as JSON instead of opening the viewer")
 
-	var (
-		taDetachKeys, taHarness string
-		taShell                 bool
-	)
-	attach := &cobra.Command{
-		Use:   "attach [id]",
-		Short: "Attach your terminal to a ticket's agent (starting its session if needed)",
-		Long: `Attach the current terminal to the agent running in a ticket's session
-container, the same PTY the web UI shows. The session is created and
-started first if it isn't running. Input is forwarded as typed; the
-terminal size follows your window.
-
-Without an id, the board's open tickets are listed for you to pick from:
-the board is inferred from the git repo containing the current directory
-(an error if zero or several boards use that repo) unless --board names
-one. Typing narrows the list; Enter attaches, Esc cancels. Left/Right
-cycle the agent harness for the highlighted ticket.
-
-Picking a different harness (in the list, or with --harness) stores it on
-the ticket's session. If its agent is already running under another
-harness, that agent is stopped (hung up, then killed if it lingers) and the
-new one launched; the container, worktree and shell are left alone.
-
-Detaching (default ctrl-p,ctrl-q) leaves the agent running — reattach any
-time, or keep using it from the web UI. With --shell an interactive login
-shell in the container is attached instead of the agent.`,
-		Args: cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			url := resolveURL(cmd, serverURL)
-			// A bad --detach-keys would only fail after the list; reject it
-			// before anything is fetched or drawn.
-			if _, err := parseDetachKeys(taDetachKeys); err != nil {
-				return err
-			}
-			if taShell && taHarness != "" {
-				return errors.New("--harness picks the agent; it can't be combined with --shell")
-			}
-			if err := validateHarnessFlag(ctx, url, taHarness); err != nil {
-				return err
-			}
-			action := pickerAction{"Attach to ticket", "attach"}
-			id, harnessID := int64(0), taHarness
-			var err error
-			if len(args) > 0 || taShell || taHarness != "" {
-				// Nothing to pick a harness for: an explicit id, the shell,
-				// or --harness already decided it.
-				id, err = ticketArg(ctx, url, args, boardIdent, action, false)
-			} else {
-				var item pickerItem
-				item, err = pickTicketItem(ctx, url, boardIdent, action, false, pickerWithHarness)
-				id, harnessID = item.ID, item.Harness
-			}
-			if err != nil {
-				return err
-			}
-			kind := "agent"
-			if taShell {
-				kind = "shell"
-			}
-			return runTicketAttach(ctx, url, cmd.OutOrStdout(), id, kind, taDetachKeys, harnessID)
-		},
-	}
-	attach.Flags().BoolVar(&taShell, "shell", false, "Attach an interactive shell in the session container instead of the agent")
-	attach.Flags().StringVar(&taDetachKeys, "detach-keys", defaultDetachKeys, "Key sequence that detaches, docker-style (e.g. ctrl-p,ctrl-q or ctrl-])")
-	attach.Flags().StringVar(&taHarness, "harness", "", "Switch the ticket's agent to this harness, e.g. claude, pi or opencode (restarts a running agent on another harness)")
+	attach := ticketAttachCmd(&serverURL, &boardIdent)
 
 	var (
 		tuTitle, tuBody string
@@ -780,7 +795,7 @@ shell in the container is attached instead of the agent.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
-			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Update ticket", "update"}, false)
+			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Update ticket", "update"})
 			if err != nil {
 				return err
 			}
@@ -809,7 +824,7 @@ shell in the container is attached instead of the agent.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
-			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Move ticket", "move"}, false)
+			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Move ticket", "move"})
 			if err != nil {
 				return err
 			}
@@ -859,7 +874,7 @@ shell in the container is attached instead of the agent.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
-			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Sync ticket branch", "sync"}, false)
+			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Sync ticket branch", "sync"})
 			if err != nil {
 				return err
 			}
@@ -878,7 +893,7 @@ shell in the container is attached instead of the agent.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
-			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Restart ticket container", "restart"}, false)
+			id, err := ticketArg(ctx, url, args, boardIdent, pickerAction{"Restart ticket container", "restart"})
 			if err != nil {
 				return err
 			}
@@ -899,7 +914,7 @@ shell in the container is attached instead of the agent.`,
 			if len(args) > 0 || mergeStrategy != "" {
 				// Nothing to pick a strategy for: with an explicit id the
 				// server resolves it, and --strategy already decided it.
-				id, err := ticketArg(ctx, url, args, boardIdent, action, false)
+				id, err := ticketArg(ctx, url, args, boardIdent, action)
 				if err != nil {
 					return err
 				}
@@ -958,11 +973,11 @@ func boardLabel(ctx context.Context, url, ident string) (string, error) {
 // ticketArg resolves the optional ticket id every `kanban ticket`
 // subcommand accepts: the explicit argument when given, otherwise the
 // ticket the user picks out of the board's list.
-func ticketArg(ctx context.Context, url string, args []string, boardIdent string, action pickerAction, archived bool) (int64, error) {
+func ticketArg(ctx context.Context, url string, args []string, boardIdent string, action pickerAction) (int64, error) {
 	if len(args) > 0 {
 		return parseInt64(args[0], "ticket id")
 	}
-	return pickTicket(ctx, url, boardIdent, action, archived)
+	return pickTicket(ctx, url, boardIdent, action, false)
 }
 
 // ticketArgs is ticketArg for subcommands that act on several tickets: every

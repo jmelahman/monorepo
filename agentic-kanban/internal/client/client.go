@@ -199,10 +199,10 @@ func (c *Client) ListBoards(ctx context.Context) ([]Board, error) {
 // CreateBoard calls POST /api/boards and returns the raw board JSON.
 func (c *Client) CreateBoard(ctx context.Context, a CreateBoardArgs) (json.RawMessage, error) {
 	if strings.TrimSpace(a.Name) == "" {
-		return nil, fmt.Errorf("name required")
+		return nil, errors.New("name required")
 	}
 	if a.RepoPath == "" && a.MountPath == "" {
-		return nil, fmt.Errorf("repo-path or mount-path required")
+		return nil, errors.New("repo-path or mount-path required")
 	}
 	return c.do(ctx, http.MethodPost, "/api/boards", a, http.StatusCreated)
 }
@@ -240,7 +240,7 @@ func (c *Client) ListBoardEnv(ctx context.Context, id int64) (json.RawMessage, e
 // env vars. Returns the updated key list.
 func (c *Client) PatchBoardEnv(ctx context.Context, id int64, a PatchBoardEnvArgs) (json.RawMessage, error) {
 	if len(a.Set) == 0 && len(a.Unset) == 0 {
-		return nil, fmt.Errorf("nothing to set or unset")
+		return nil, errors.New("nothing to set or unset")
 	}
 	return c.do(ctx, http.MethodPatch, "/api/boards/"+strconv.FormatInt(id, 10)+"/env", a, http.StatusOK)
 }
@@ -267,10 +267,10 @@ func (c *Client) DeleteArchived(ctx context.Context, id int64) error {
 // agent) and CLI (which re-prints) can use it.
 func (c *Client) CreateTicket(ctx context.Context, a CreateTicketArgs) (json.RawMessage, error) {
 	if a.Board == "" {
-		return nil, fmt.Errorf("board required")
+		return nil, errors.New("board required")
 	}
 	if a.Title == "" {
-		return nil, fmt.Errorf("title required")
+		return nil, errors.New("title required")
 	}
 	body := map[string]any{"title": a.Title}
 	if a.Body != "" {
@@ -596,10 +596,10 @@ func (c *Client) Config(ctx context.Context, scope, board string) (json.RawMessa
 // ConfigPatch calls PATCH /api/config and returns the refreshed config view.
 func (c *Client) ConfigPatch(ctx context.Context, a ConfigPatchArgs) (json.RawMessage, error) {
 	if a.Scope == "" {
-		return nil, fmt.Errorf("scope required (local or global)")
+		return nil, errors.New("scope required (local or global)")
 	}
 	if len(a.Set) == 0 && len(a.Unset) == 0 {
-		return nil, fmt.Errorf("nothing to set or unset")
+		return nil, errors.New("nothing to set or unset")
 	}
 	return c.do(ctx, http.MethodPatch, "/api/config", a, http.StatusOK)
 }
@@ -610,7 +610,7 @@ func (c *Client) ConfigPatch(ctx context.Context, a ConfigPatchArgs) (json.RawMe
 // accept slugs without each doing their own lookup.
 func (c *Client) ResolveBoardID(ctx context.Context, ident string) (int64, error) {
 	if ident == "" {
-		return 0, fmt.Errorf("board identifier required")
+		return 0, errors.New("board identifier required")
 	}
 	if id, err := strconv.ParseInt(ident, 10, 64); err == nil {
 		return id, nil

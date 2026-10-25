@@ -96,11 +96,11 @@ func (h *handlers) createBoard(w http.ResponseWriter, r *http.Request) {
 	req.RepoPath = strings.TrimSpace(req.RepoPath)
 	req.MountPath = strings.TrimSpace(req.MountPath)
 	if req.Name == "" {
-		h.httpError(w, fmt.Errorf("name required"), 400)
+		h.httpError(w, errors.New("name required"), 400)
 		return
 	}
 	if req.RepoPath == "" && req.MountPath == "" {
-		h.httpError(w, fmt.Errorf("at least one of repo_path or mount_path required"), 400)
+		h.httpError(w, errors.New("at least one of repo_path or mount_path required"), 400)
 		return
 	}
 	projectDir, err := session.ValidateProjectDir(req.ProjectDir, req.RepoPath, req.MountPath)
@@ -155,7 +155,7 @@ type updateBoardReq struct {
 }
 
 func (h *handlers) updateBoard(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	board, err := h.store.GetBoard(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -169,7 +169,7 @@ func (h *handlers) updateBoard(w http.ResponseWriter, r *http.Request) {
 	if req.Name != nil {
 		name := strings.TrimSpace(*req.Name)
 		if name == "" {
-			h.httpError(w, fmt.Errorf("name cannot be empty"), 400)
+			h.httpError(w, errors.New("name cannot be empty"), 400)
 			return
 		}
 		board.Name = name
@@ -181,7 +181,7 @@ func (h *handlers) updateBoard(w http.ResponseWriter, r *http.Request) {
 		board.MountPath = strings.TrimSpace(*req.MountPath)
 	}
 	if board.RepoPath == "" && board.MountPath == "" {
-		h.httpError(w, fmt.Errorf("at least one of repo_path or mount_path required"), 400)
+		h.httpError(w, errors.New("at least one of repo_path or mount_path required"), 400)
 		return
 	}
 	if req.ProjectDir != nil {
@@ -202,7 +202,7 @@ func (h *handlers) updateBoard(w http.ResponseWriter, r *http.Request) {
 	if req.BaseBranch != nil {
 		base := strings.TrimSpace(*req.BaseBranch)
 		if base == "" {
-			h.httpError(w, fmt.Errorf("base_branch cannot be empty"), 400)
+			h.httpError(w, errors.New("base_branch cannot be empty"), 400)
 			return
 		}
 		board.BaseBranch = base
@@ -228,7 +228,7 @@ type moveBoardReq struct {
 }
 
 func (h *handlers) moveBoard(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	req, err := decodeBody[moveBoardReq](r)
 	if err != nil {
 		h.httpError(w, err, 400)
@@ -242,11 +242,11 @@ func (h *handlers) moveBoard(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 500)
 		return
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handlers) deleteBoard(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	board, err := h.store.GetBoard(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -275,11 +275,11 @@ func (h *handlers) deleteBoard(w http.ResponseWriter, r *http.Request) {
 			log.Printf("delete board %d: delete preview repo: %v", id, err)
 		}
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handlers) getBoard(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	board, err := h.store.GetBoard(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -308,7 +308,7 @@ type patchBoardEnvReq struct {
 }
 
 func (h *handlers) listBoardEnv(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	if _, err := h.store.GetBoard(r.Context(), id); err != nil {
 		h.httpError(w, err, 404)
 		return
@@ -322,7 +322,7 @@ func (h *handlers) listBoardEnv(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) patchBoardEnv(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	if _, err := h.store.GetBoard(r.Context(), id); err != nil {
 		h.httpError(w, err, 404)
 		return
@@ -333,7 +333,7 @@ func (h *handlers) patchBoardEnv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(req.Set) == 0 && len(req.Unset) == 0 {
-		h.httpError(w, fmt.Errorf("nothing to set or unset"), 400)
+		h.httpError(w, errors.New("nothing to set or unset"), 400)
 		return
 	}
 	for key := range req.Set {
@@ -388,7 +388,7 @@ type boardStateResp struct {
 }
 
 func (h *handlers) boardState(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	board, err := h.store.GetBoard(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -440,7 +440,7 @@ func (h *handlers) createTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Title == "" {
-		h.httpError(w, fmt.Errorf("title required"), 400)
+		h.httpError(w, errors.New("title required"), 400)
 		return
 	}
 	columnID, err := h.resolveColumn(r.Context(), board.ID, req.ColumnID, req.Column)
@@ -461,7 +461,7 @@ func (h *handlers) createTicket(w http.ResponseWriter, r *http.Request) {
 	}
 	h.bus.Publish(board.ID, "ticket_created", t)
 	h.hooks.Fire(&board.ID, hooks.EventTicketCreated, map[string]string{
-		"ticket_id": fmt.Sprintf("%d", t.ID),
+		"ticket_id": strconv.FormatInt(t.ID, 10),
 		"board":     board.Name,
 	})
 	writeJSON(w, 201, t)
@@ -471,7 +471,7 @@ func (h *handlers) createTicket(w http.ResponseWriter, r *http.Request) {
 // needs no board context, so callers holding only a ticket id (the CLI's
 // `ticket info <id>`) can find the board it lives on.
 func (h *handlers) getTicket(w http.ResponseWriter, r *http.Request) {
-	t, err := h.store.GetTicket(r.Context(), pathID(r, "id"))
+	t, err := h.store.GetTicket(r.Context(), pathID(r))
 	if err != nil {
 		h.httpError(w, err, 404)
 		return
@@ -485,7 +485,7 @@ type updateTicketReq struct {
 }
 
 func (h *handlers) updateTicket(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	t, err := h.store.GetTicket(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -499,7 +499,7 @@ func (h *handlers) updateTicket(w http.ResponseWriter, r *http.Request) {
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
 		if title == "" {
-			h.httpError(w, fmt.Errorf("title cannot be empty"), 400)
+			h.httpError(w, errors.New("title cannot be empty"), 400)
 			return
 		}
 		t.Title = title
@@ -520,7 +520,7 @@ func (h *handlers) updateTicket(w http.ResponseWriter, r *http.Request) {
 // so programmatic callers don't need to pre-resolve IDs.
 func (h *handlers) resolveBoardIdent(ctx context.Context, ident string) (*db.Board, error) {
 	if ident == "" {
-		return nil, fmt.Errorf("board identifier required")
+		return nil, errors.New("board identifier required")
 	}
 	if id, err := strconv.ParseInt(ident, 10, 64); err == nil {
 		if b, err := h.store.GetBoard(ctx, id); err == nil {
@@ -538,7 +538,7 @@ func (h *handlers) resolveColumn(ctx context.Context, boardID int64, columnID in
 		return 0, err
 	}
 	if len(cols) == 0 {
-		return 0, fmt.Errorf("board has no columns")
+		return 0, errors.New("board has no columns")
 	}
 	if columnID > 0 {
 		for _, c := range cols {
@@ -572,7 +572,7 @@ type moveTicketReq struct {
 }
 
 func (h *handlers) moveTicket(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	req, err := decodeBody[moveTicketReq](r)
 	if err != nil {
 		h.httpError(w, err, 400)
@@ -586,11 +586,11 @@ func (h *handlers) moveTicket(w http.ResponseWriter, r *http.Request) {
 	if t != nil {
 		h.bus.Publish(t.BoardID, "ticket_moved", t)
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handlers) archiveTicket(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	t, err := h.store.GetTicket(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -602,18 +602,18 @@ func (h *handlers) archiveTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.publishTicketArchived(t)
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handlers) unarchiveTicket(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	t, err := h.store.GetTicket(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
 		return
 	}
 	if t.ArchivedAt == nil {
-		h.httpError(w, fmt.Errorf("ticket is not archived"), 400)
+		h.httpError(w, errors.New("ticket is not archived"), 400)
 		return
 	}
 	if err := h.store.UnarchiveTicket(r.Context(), id); err != nil {
@@ -624,11 +624,11 @@ func (h *handlers) unarchiveTicket(w http.ResponseWriter, r *http.Request) {
 	if updated != nil {
 		h.bus.Publish(updated.BoardID, "ticket_unarchived", updated)
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handlers) listArchivedTickets(w http.ResponseWriter, r *http.Request) {
-	boardID := pathID(r, "id")
+	boardID := pathID(r)
 	tickets, err := h.store.ListArchivedTickets(r.Context(), boardID)
 	if err != nil {
 		h.httpError(w, err, 500)
@@ -638,14 +638,14 @@ func (h *handlers) listArchivedTickets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) deleteTicket(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	t, err := h.store.GetTicket(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
 		return
 	}
 	if t.ArchivedAt == nil {
-		h.httpError(w, fmt.Errorf("ticket must be archived before deletion"), 400)
+		h.httpError(w, errors.New("ticket must be archived before deletion"), 400)
 		return
 	}
 	h.destroySessionForTicket(r.Context(), id)
@@ -654,14 +654,14 @@ func (h *handlers) deleteTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.bus.Publish(t.BoardID, "ticket_deleted", t)
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // archiveColumnTickets archives every non-archived ticket in a column. Mirrors
 // archiveTicket per-ticket: stops any running session, archives, then publishes
 // a ticket_archived SSE + EventTicketArchived hook for each ticket affected.
 func (h *handlers) archiveColumnTickets(w http.ResponseWriter, r *http.Request) {
-	columnID := pathID(r, "id")
+	columnID := pathID(r)
 	tickets, err := h.store.ListTicketsInColumn(r.Context(), columnID)
 	if err != nil {
 		h.httpError(w, err, 500)
@@ -677,14 +677,14 @@ func (h *handlers) archiveColumnTickets(w http.ResponseWriter, r *http.Request) 
 	for i := range tickets {
 		h.publishTicketArchived(&tickets[i])
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // deleteAllArchived permanently deletes every archived ticket on a board.
 // Mirrors deleteTicket per-ticket: destroys any associated session, deletes
 // the ticket, then publishes a ticket_deleted SSE for each.
 func (h *handlers) deleteAllArchived(w http.ResponseWriter, r *http.Request) {
-	boardID := pathID(r, "id")
+	boardID := pathID(r)
 	tickets, err := h.store.ListArchivedTickets(r.Context(), boardID)
 	if err != nil {
 		h.httpError(w, err, 500)
@@ -701,7 +701,7 @@ func (h *handlers) deleteAllArchived(w http.ResponseWriter, r *http.Request) {
 		t := tickets[i]
 		h.bus.Publish(boardID, "ticket_deleted", &t)
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type strategyReq struct {
@@ -712,7 +712,7 @@ func (h *handlers) syncTicket(w http.ResponseWriter, r *http.Request) {
 	h.ticketStrategyAction(w, r,
 		[]string{"rebase", "merge"},
 		func(string) string { return "rebase" },
-		func(repo, strat string) bool { return loadSyncConfig(repo).allows(strat) },
+		func(repo, strategy string) bool { return loadSyncConfig(repo).allows(strategy) },
 		h.sessions.Sync,
 		true,
 	)
@@ -722,7 +722,7 @@ func (h *handlers) mergeTicket(w http.ResponseWriter, r *http.Request) {
 	h.ticketStrategyAction(w, r,
 		kanbantoml.MergeStrategies,
 		func(repo string) string { return loadMergeConfig(repo).DefaultStrategy },
-		func(repo, strat string) bool { return loadMergeConfig(repo).allows(strat) },
+		func(repo, strategy string) bool { return loadMergeConfig(repo).allows(strategy) },
 		h.sessions.Merge,
 		false,
 	)
@@ -738,7 +738,7 @@ func (h *handlers) ticketStrategyAction(
 	action func(ctx context.Context, sessID int64, strategy string) error,
 	publishOnSuccess bool,
 ) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	req, err := decodeBody[strategyReq](r)
 	if err != nil {
 		h.httpError(w, err, 400)
@@ -759,7 +759,7 @@ func (h *handlers) ticketStrategyAction(
 		}
 	}
 	if len(enabled) == 0 {
-		h.httpError(w, fmt.Errorf("every strategy is disabled for this board"), 400)
+		h.httpError(w, errors.New("every strategy is disabled for this board"), 400)
 		return
 	}
 	explicit := req.Strategy != ""
@@ -794,7 +794,7 @@ func (h *handlers) ticketStrategyAction(
 	}
 	sess, err := h.store.GetSessionByTicket(r.Context(), id)
 	if err != nil || sess == nil {
-		h.httpError(w, fmt.Errorf("no session for ticket"), 404)
+		h.httpError(w, errors.New("no session for ticket"), 404)
 		return
 	}
 	if err := action(r.Context(), sess.ID, req.Strategy); err != nil {
@@ -804,7 +804,7 @@ func (h *handlers) ticketStrategyAction(
 	if publishOnSuccess {
 		h.publishSessionUpdated(r.Context(), sess.ID)
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // joinStrategies renders an allowed-strategy slice as English ("a or b",
@@ -823,7 +823,7 @@ func joinStrategies(s []string) string {
 }
 
 func (h *handlers) doneTicket(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	t, err := h.store.GetTicket(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -835,7 +835,7 @@ func (h *handlers) doneTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(cols) == 0 {
-		h.httpError(w, fmt.Errorf("board has no columns"), 409)
+		h.httpError(w, errors.New("board has no columns"), 409)
 		return
 	}
 	doneCol := cols[len(cols)-1]
@@ -856,13 +856,13 @@ func (h *handlers) doneTicket(w http.ResponseWriter, r *http.Request) {
 	if updated, _ := h.store.GetTicket(r.Context(), id); updated != nil {
 		h.bus.Publish(updated.BoardID, "ticket_moved", updated)
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Sessions
 
 func (h *handlers) ensureSession(w http.ResponseWriter, r *http.Request) {
-	ticketID := pathID(r, "id")
+	ticketID := pathID(r)
 	t, board, code, err := h.ticketBoard(r.Context(), ticketID)
 	if err != nil {
 		h.httpError(w, err, code)
@@ -889,7 +889,7 @@ func (h *handlers) sessionStartOrRestart(
 	w http.ResponseWriter, r *http.Request,
 	action func(context.Context, int64, docker.PullProgressFunc) (*db.Session, error),
 ) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := action(r.Context(), id, h.makePullProgressCb(r.Context(), id))
 	if err != nil {
 		h.httpError(w, err, 500)
@@ -926,13 +926,13 @@ func (h *handlers) makePullProgressCb(ctx context.Context, sessionID int64) dock
 }
 
 func (h *handlers) stopSession(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	if err := h.sessions.Stop(r.Context(), id); err != nil {
 		h.httpError(w, err, 500)
 		return
 	}
 	h.publishSessionUpdated(r.Context(), id)
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // stopSessionForTicket best-effort stops any session attached to ticketID.
@@ -959,7 +959,7 @@ func (h *handlers) destroySessionForTicket(ctx context.Context, ticketID int64) 
 func (h *handlers) publishTicketArchived(t *db.Ticket) {
 	h.bus.Publish(t.BoardID, "ticket_archived", t)
 	h.hooks.Fire(&t.BoardID, hooks.EventTicketArchived, map[string]string{
-		"ticket_id": fmt.Sprintf("%d", t.ID),
+		"ticket_id": strconv.FormatInt(t.ID, 10),
 	})
 }
 
@@ -1022,7 +1022,7 @@ type updateSessionStatusReq struct {
 // Other statuses (stopped/starting/error) are owned by the session manager and
 // rejected here.
 func (h *handlers) updateSessionStatus(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	req, err := decodeBody[updateSessionStatusReq](r)
 	if err != nil {
 		h.httpError(w, err, 400)
@@ -1037,7 +1037,7 @@ func (h *handlers) updateSessionStatus(w http.ResponseWriter, r *http.Request) {
 	case db.SessionStatusAwaitingPerm:
 		hookEvent = hooks.EventSessionAwaitingPerm
 	default:
-		h.httpError(w, fmt.Errorf("status must be working, idle, or awaiting_perm"), 400)
+		h.httpError(w, errors.New("status must be working, idle, or awaiting_perm"), 400)
 		return
 	}
 	sess, err := h.store.GetSession(r.Context(), id)
@@ -1069,8 +1069,8 @@ func (h *handlers) updateSessionStatus(w http.ResponseWriter, r *http.Request) {
 	if t, _ := h.store.GetTicket(r.Context(), sess.TicketID); t != nil {
 		boardID := t.BoardID
 		h.hooks.Fire(&boardID, hookEvent, map[string]string{
-			"session_id": fmt.Sprintf("%d", sess.ID),
-			"ticket_id":  fmt.Sprintf("%d", sess.TicketID),
+			"session_id": strconv.FormatInt(sess.ID, 10),
+			"ticket_id":  strconv.FormatInt(sess.TicketID, 10),
 		})
 	}
 	// An idle transition means the agent finished a burst of work — the
@@ -1078,7 +1078,7 @@ func (h *handlers) updateSessionStatus(w http.ResponseWriter, r *http.Request) {
 	if req.Status == db.SessionStatusIdle {
 		h.maybeAutoDeployPreview(sess)
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type updateClaudeSessionIDReq struct {
@@ -1098,7 +1098,7 @@ var claudeSessionIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-
 // container/Kanban restarts. Same trust model as updateSessionStatus — the
 // session is identified by URL path, no auth.
 func (h *handlers) updateClaudeSessionID(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	req, err := decodeBody[updateClaudeSessionIDReq](r)
 	if err != nil {
 		h.httpError(w, err, 400)
@@ -1106,7 +1106,7 @@ func (h *handlers) updateClaudeSessionID(w http.ResponseWriter, r *http.Request)
 	}
 	uuid := strings.TrimSpace(req.ClaudeSessionID)
 	if !claudeSessionIDPattern.MatchString(uuid) {
-		h.httpError(w, fmt.Errorf("claude_session_id must be a UUID"), 400)
+		h.httpError(w, errors.New("claude_session_id must be a UUID"), 400)
 		return
 	}
 	if err := h.store.UpdateClaudeSessionID(r.Context(), id, uuid); err != nil {
@@ -1122,7 +1122,7 @@ func (h *handlers) updateClaudeSessionID(w http.ResponseWriter, r *http.Request)
 	// stores seeded from a stale boardState fetch keep displaying the
 	// pre-UUID session and the "resume" plumbing looks broken to users.
 	h.publishSessionUpdated(r.Context(), id)
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type updateSessionBranchReq struct {
@@ -1138,7 +1138,7 @@ type updateSessionBranchReq struct {
 // clears the cached pr_* fields so the stale old-branch PR disappears and the
 // poller repopulates fresh data for the new branch on its next tick.
 func (h *handlers) updateSessionBranch(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	req, err := decodeBody[updateSessionBranchReq](r)
 	if err != nil {
 		h.httpError(w, err, 400)
@@ -1146,14 +1146,14 @@ func (h *handlers) updateSessionBranch(w http.ResponseWriter, r *http.Request) {
 	}
 	branch := strings.TrimSpace(req.BranchName)
 	if branch == "" {
-		h.httpError(w, fmt.Errorf("branch_name cannot be empty"), 400)
+		h.httpError(w, errors.New("branch_name cannot be empty"), 400)
 		return
 	}
 	// Lightweight format guard. We don't require the branch to exist locally or
 	// remotely (the agent may not have pushed yet), but reject values git would
 	// never accept as a ref name so a typo can't wedge the poller's matching.
 	if strings.ContainsAny(branch, " \t") || strings.HasPrefix(branch, "-") || strings.Contains(branch, "..") {
-		h.httpError(w, fmt.Errorf("branch_name is not a valid branch name"), 400)
+		h.httpError(w, errors.New("branch_name is not a valid branch name"), 400)
 		return
 	}
 	sess, err := h.store.GetSession(r.Context(), id)
@@ -1200,7 +1200,7 @@ type discoverTasksResp struct {
 }
 
 func (h *handlers) discoverTasks(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -1224,7 +1224,7 @@ func (h *handlers) discoverTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) listTaskRuns(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	// Close out runs a previous server process left marked running, so the
 	// list doesn't report a task that's long gone.
 	if sess, err := h.store.GetSession(r.Context(), id); err != nil {
@@ -1247,7 +1247,7 @@ type createTaskRunReq struct {
 }
 
 func (h *handlers) createTaskRun(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -1289,7 +1289,7 @@ func (h *handlers) createTaskRun(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) stopTaskRun(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	tr, err := h.store.GetTaskRun(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -1304,14 +1304,14 @@ func (h *handlers) stopTaskRun(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 500)
 		return
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handlers) taskRunOutput(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		h.httpError(w, fmt.Errorf("streaming unsupported"), 500)
+		h.httpError(w, errors.New("streaming unsupported"), 500)
 		return
 	}
 	writeSSEHeaders(w)
@@ -1338,7 +1338,7 @@ func (h *handlers) taskRunOutput(w http.ResponseWriter, r *http.Request) {
 // Ports
 
 func (h *handlers) listPorts(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	ports, err := h.store.ListPorts(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 500)
@@ -1353,7 +1353,7 @@ type createPortReq struct {
 }
 
 func (h *handlers) createPort(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -1365,7 +1365,7 @@ func (h *handlers) createPort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.ContainerPort <= 0 {
-		h.httpError(w, fmt.Errorf("container_port required"), 400)
+		h.httpError(w, errors.New("container_port required"), 400)
 		return
 	}
 	if err := h.ensurePortProxy(r.Context(), sess, req.Label, req.ContainerPort); err != nil {
@@ -1377,7 +1377,7 @@ func (h *handlers) createPort(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) deletePort(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	if p, err := h.store.GetPort(r.Context(), id); err == nil && p.ProxyActive {
 		h.sessions.Proxies().Close(p.HostPort)
 	}
@@ -1385,18 +1385,18 @@ func (h *handlers) deletePort(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 500)
 		return
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handlers) prDetail(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
 		return
 	}
 	if sess.PRNumber == nil || *sess.PRNumber == 0 {
-		h.httpError(w, fmt.Errorf("session has no pull request"), 404)
+		h.httpError(w, errors.New("session has no pull request"), 404)
 		return
 	}
 	board, err := h.boardForSession(r.Context(), sess)
@@ -1406,7 +1406,7 @@ func (h *handlers) prDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	repoPath := board.RepoPath
 	if repoPath == "" {
-		h.httpError(w, fmt.Errorf("no repo path for session"), 400)
+		h.httpError(w, errors.New("no repo path for session"), 400)
 		return
 	}
 	detail, err := gh.FetchPRDetail(r.Context(), repoPath, *sess.PRNumber)
@@ -1442,7 +1442,7 @@ func (h *handlers) ensurePortProxy(ctx context.Context, sess *db.Session, label 
 
 func (h *handlers) startProxy(ctx context.Context, sess *db.Session, p db.PortAllocation) error {
 	if sess.ContainerID == nil || *sess.ContainerID == "" {
-		return fmt.Errorf("session not running")
+		return errors.New("session not running")
 	}
 	if err := h.sessions.Proxies().Open(p.HostPort, *sess.ContainerID, p.ContainerPort); err != nil {
 		return err
@@ -1456,10 +1456,10 @@ func (h *handlers) startProxy(ctx context.Context, sess *db.Session, p db.PortAl
 		boardID = &board.ID
 	}
 	h.hooks.Fire(boardID, hooks.EventPortExposed, map[string]string{
-		"session_id":     fmt.Sprintf("%d", sess.ID),
+		"session_id":     strconv.FormatInt(sess.ID, 10),
 		"label":          p.Label,
-		"container_port": fmt.Sprintf("%d", p.ContainerPort),
-		"host_port":      fmt.Sprintf("%d", p.HostPort),
+		"container_port": strconv.Itoa(p.ContainerPort),
+		"host_port":      strconv.Itoa(p.HostPort),
 	})
 	return nil
 }
@@ -1500,7 +1500,7 @@ func (h *handlers) ticketBoard(ctx context.Context, id int64) (*db.Ticket, *db.B
 // PTY
 
 func (h *handlers) wsPTY(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -1574,7 +1574,7 @@ func claudeTranscriptExists(uuid string) bool {
 }
 
 func (h *handlers) wsShell(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -1643,7 +1643,7 @@ func (h *handlers) updateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.WorktreesRoot != nil {
 		if h.config.HasWorktreesDirOverride() {
-			h.httpError(w, fmt.Errorf("worktrees root is locked by --worktrees-dir or $KANBAN_WORKTREES_DIR"), http.StatusConflict)
+			h.httpError(w, errors.New("worktrees root is locked by --worktrees-dir or $KANBAN_WORKTREES_DIR"), http.StatusConflict)
 			return
 		}
 		root := strings.TrimSpace(*req.WorktreesRoot)
@@ -1685,7 +1685,7 @@ func (h *handlers) listHarnesses(w http.ResponseWriter, r *http.Request) {
 	if raw := r.URL.Query().Get("board"); raw != "" {
 		id, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			h.httpError(w, fmt.Errorf("board must be a numeric id"), 400)
+			h.httpError(w, errors.New("board must be a numeric id"), 400)
 			return
 		}
 		board, err := h.store.GetBoard(r.Context(), id)
@@ -1712,7 +1712,7 @@ type updateSessionHarnessReq struct {
 // so the next attach starts the new harness; the container, worktree and
 // shell stay up.
 func (h *handlers) updateSessionHarness(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	req, err := decodeBody[updateSessionHarnessReq](r)
 	if err != nil {
 		h.httpError(w, err, 400)
@@ -1760,8 +1760,8 @@ func (h *handlers) updateSessionHarness(w http.ResponseWriter, r *http.Request) 
 
 // helpers
 
-func pathID(r *http.Request, name string) int64 {
-	v := r.PathValue(name)
+func pathID(r *http.Request) int64 {
+	v := r.PathValue("id")
 	id, _ := strconv.ParseInt(v, 10, 64)
 	return id
 }
@@ -1879,11 +1879,11 @@ func logClientError(source string, req reportFrontendErrorReq) {
 	log.Printf("client error: source=%s url=%s ua=%q message=%q\n%s", source, url, ua, msg, stack)
 }
 
-func truncate(s string, max int) string {
-	if len(s) <= max {
+func truncate(s string, limit int) string {
+	if len(s) <= limit {
 		return s
 	}
-	return s[:max] + "...[truncated]"
+	return s[:limit] + "...[truncated]"
 }
 
 // fsCheck reports whether a host path is visible to the kanban server and, if
@@ -1893,7 +1893,7 @@ func truncate(s string, max int) string {
 func (h *handlers) fsCheck(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSpace(r.URL.Query().Get("path"))
 	if path == "" {
-		h.httpError(w, fmt.Errorf("path required"), 400)
+		h.httpError(w, errors.New("path required"), 400)
 		return
 	}
 	state := "unknown"
@@ -1947,7 +1947,7 @@ type planMeta struct {
 // empty list — the frontend uses an empty response as its "hide the tab"
 // signal, so 404-on-missing-dir would be hostile.
 func (h *handlers) listSessionPlans(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -1985,10 +1985,10 @@ func (h *handlers) listSessionPlans(w http.ResponseWriter, r *http.Request) {
 // names containing path separators or `..` so the handler can never
 // escape resolvePlansDir.
 func (h *handlers) getSessionPlan(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	name := r.PathValue("name")
 	if name == "" || strings.ContainsAny(name, `/\`) || strings.Contains(name, "..") {
-		h.httpError(w, fmt.Errorf("invalid plan name"), 400)
+		h.httpError(w, errors.New("invalid plan name"), 400)
 		return
 	}
 	sess, err := h.store.GetSession(r.Context(), id)
@@ -2000,14 +2000,14 @@ func (h *handlers) getSessionPlan(w http.ResponseWriter, r *http.Request) {
 	data, err := os.ReadFile(full)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			h.httpError(w, fmt.Errorf("plan not found"), 404)
+			h.httpError(w, errors.New("plan not found"), 404)
 			return
 		}
 		h.httpError(w, err, 500)
 		return
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
 }
 
@@ -2022,7 +2022,7 @@ type sessionDiff struct {
 // worktree returns an empty patch rather than an error so the frontend can
 // render a "no changes" state.
 func (h *handlers) getSessionDiff(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -2056,10 +2056,10 @@ type sessionFile struct {
 // just the hunks. The `path` query parameter must name a file inside the
 // worktree; anything missing or outside it returns 404.
 func (h *handlers) getSessionFile(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		h.httpError(w, fmt.Errorf("path query parameter is required"), 400)
+		h.httpError(w, errors.New("path query parameter is required"), 400)
 		return
 	}
 	sess, err := h.store.GetSession(r.Context(), id)
@@ -2068,7 +2068,7 @@ func (h *handlers) getSessionFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if sess.WorktreePath == "" {
-		h.httpError(w, fmt.Errorf("session has no worktree"), 404)
+		h.httpError(w, errors.New("session has no worktree"), 404)
 		return
 	}
 	contents, err := git.ReadWorktreeFile(sess.WorktreePath, path)
@@ -2095,10 +2095,10 @@ type sessionFileDiff struct {
 // an empty `new_contents` a deleted one. Only when *both* are empty (the path is
 // in neither tree) is it a 404.
 func (h *handlers) getSessionFileDiff(w http.ResponseWriter, r *http.Request) {
-	id := pathID(r, "id")
+	id := pathID(r)
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		h.httpError(w, fmt.Errorf("path query parameter is required"), 400)
+		h.httpError(w, errors.New("path query parameter is required"), 400)
 		return
 	}
 	oldPath := r.URL.Query().Get("old_path")
@@ -2111,7 +2111,7 @@ func (h *handlers) getSessionFileDiff(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if sess.WorktreePath == "" {
-		h.httpError(w, fmt.Errorf("session has no worktree"), 404)
+		h.httpError(w, errors.New("session has no worktree"), 404)
 		return
 	}
 	board, err := h.boardForSession(r.Context(), sess)

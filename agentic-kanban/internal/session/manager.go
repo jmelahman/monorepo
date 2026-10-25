@@ -2,10 +2,13 @@ package session
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -293,7 +296,7 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 		// board var collides (patchBoardEnv rejects the prefix, but rows may
 		// predate that check or come from other writers).
 		ExtraEnv: mergeEnv(boardEnv, map[string]string{
-			"KANBAN_SESSION_ID": fmt.Sprintf("%d", sess.ID),
+			"KANBAN_SESSION_ID": strconv.FormatInt(sess.ID, 10),
 			"KANBAN_API_URL":    m.apiBase,
 		}),
 		AttachNetwork:  docker.KanbanNetworkName,
@@ -325,8 +328,8 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 		boardID = &board.ID
 	}
 	m.hooks.Fire(boardID, hooks.EventSessionStarted, map[string]string{
-		"session_id": fmt.Sprintf("%d", sess.ID),
-		"ticket_id":  fmt.Sprintf("%d", sess.TicketID),
+		"session_id": strconv.FormatInt(sess.ID, 10),
+		"ticket_id":  strconv.FormatInt(sess.TicketID, 10),
 	})
 
 	return sess, nil
@@ -374,12 +377,8 @@ func resolveBranchPrefix(board *db.Board, repoPath string) string {
 // precedence is: container_env < board env vars < KANBAN_* system vars.
 func mergeEnv(base, protect map[string]string) map[string]string {
 	out := make(map[string]string, len(base)+len(protect))
-	for k, v := range base {
-		out[k] = v
-	}
-	for k, v := range protect {
-		out[k] = v
-	}
+	maps.Copy(out, base)
+	maps.Copy(out, protect)
 	return out
 }
 
@@ -419,9 +418,7 @@ func applyKanbanDevcontainerOverrides(cfg *docker.DevcontainerConfig, dev *kanba
 	if len(dev.ContainerEnv) > 0 && cfg.ContainerEnv == nil {
 		cfg.ContainerEnv = map[string]string{}
 	}
-	for k, v := range dev.ContainerEnv {
-		cfg.ContainerEnv[k] = v
-	}
+	maps.Copy(cfg.ContainerEnv, dev.ContainerEnv)
 }
 
 // Reconcile squares a session row with the docker daemon. The row's status
@@ -488,8 +485,12 @@ func (m *Manager) Reconcile(ctx context.Context, sess *db.Session) (*db.Session,
 }
 
 func (m *Manager) userStopping(sessionID int64) bool {
-	n, ok := m.userStops.Load(sessionID)
-	return ok && n.(*atomic.Int32).Load() > 0
+	v, ok := m.userStops.Load(sessionID)
+	if !ok {
+		return false
+	}
+	n, ok := v.(*atomic.Int32)
+	return ok && n.Load() > 0
 }
 
 // endPTYTimeout bounds how long a harness switch waits for the old agent to
@@ -565,9 +566,13 @@ func (m *Manager) execEndPTY(ctx context.Context, containerID, marker string) er
 
 // Stop tears down the devcontainer; worktree is preserved.
 func (m *Manager) Stop(ctx context.Context, sessionID int64) error {
-	n, _ := m.userStops.LoadOrStore(sessionID, new(atomic.Int32))
-	n.(*atomic.Int32).Add(1)
-	defer n.(*atomic.Int32).Add(-1)
+	v, _ := m.userStops.LoadOrStore(sessionID, new(atomic.Int32))
+	n, ok := v.(*atomic.Int32)
+	if !ok {
+		n = new(atomic.Int32)
+	}
+	n.Add(1)
+	defer n.Add(-1)
 	return m.stop(ctx, sessionID)
 }
 
@@ -613,7 +618,7 @@ func (m *Manager) stop(ctx context.Context, sessionID int64) error {
 		boardID = &board.ID
 	}
 	m.hooks.Fire(boardID, hooks.EventSessionStopped, map[string]string{
-		"session_id": fmt.Sprintf("%d", sess.ID),
+		"session_id": strconv.FormatInt(sess.ID, 10),
 	})
 	return nil
 }
@@ -664,17 +669,17 @@ func (m *Manager) Sync(ctx context.Context, sessionID int64, strategy string) er
 	}
 	paths := ResolvePaths(board, sess)
 	if !paths.HasRepo {
-		return fmt.Errorf("session has no associated repository")
+		return errors.New("session has no associated repository")
 	}
 	if sess.WorktreePath == "" {
-		return fmt.Errorf("session has no worktree")
+		return errors.New("session has no worktree")
 	}
 	clean, err := git.IsClean(sess.WorktreePath)
 	if err != nil {
 		return fmt.Errorf("check worktree clean: %w", err)
 	}
 	if !clean {
-		return fmt.Errorf("worktree has uncommitted changes; commit or stash before syncing")
+		return errors.New("worktree has uncommitted changes; commit or stash before syncing")
 	}
 	switch strategy {
 	case "rebase":
@@ -708,10 +713,10 @@ func (m *Manager) Merge(ctx context.Context, sessionID int64, strategy string) e
 	}
 	paths := ResolvePaths(board, sess)
 	if !paths.HasRepo {
-		return fmt.Errorf("session has no associated repository")
+		return errors.New("session has no associated repository")
 	}
 	if sess.WorktreePath == "" || sess.BranchName == "" {
-		return fmt.Errorf("session has no worktree")
+		return errors.New("session has no worktree")
 	}
 	ticket, err := m.store.GetTicket(ctx, sess.TicketID)
 	if err != nil {
@@ -745,7 +750,7 @@ func (m *Manager) Merge(ctx context.Context, sessionID int64, strategy string) e
 	if clean, err := git.IsCleanTracked(paths.RepoPath); err != nil {
 		return fmt.Errorf("check source repo clean: %w", err)
 	} else if !clean {
-		return fmt.Errorf("source repo has uncommitted changes; commit or stash before merging")
+		return errors.New("source repo has uncommitted changes; commit or stash before merging")
 	}
 	cur, err := git.CurrentBranch(paths.RepoPath)
 	if err != nil {
@@ -793,7 +798,7 @@ func (m *Manager) Merge(ctx context.Context, sessionID int64, strategy string) e
 // harness has no template, or the script fails.
 func (m *Manager) generateCommitMessage(ctx context.Context, sess *db.Session, h harness.Harness, ticketTitle string) (string, error) {
 	if sess.ContainerID == nil || *sess.ContainerID == "" {
-		return "", fmt.Errorf("container not running")
+		return "", errors.New("container not running")
 	}
 	prompt := fmt.Sprintf(
 		"Write a one-line git commit message in imperative mood for the staged diff piped via stdin. The change is for the ticket %q. Output only the commit message text - no preamble, no quotes, no markdown, no code fences.",
@@ -818,7 +823,7 @@ func (m *Manager) generateCommitMessage(ctx context.Context, sess *db.Session, h
 	}
 	msg = strings.Trim(msg, "\"' \t")
 	if msg == "" {
-		return "", fmt.Errorf("empty message")
+		return "", errors.New("empty message")
 	}
 	return msg, nil
 }

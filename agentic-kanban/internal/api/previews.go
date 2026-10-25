@@ -31,10 +31,10 @@ import (
 // error response and returns ok=false on failure.
 func (h *handlers) previewContext(w http.ResponseWriter, r *http.Request) (sess *db.Session, repoName string, paths session.ResolvedPaths, ok bool) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return nil, "", session.ResolvedPaths{}, false
 	}
-	id := pathID(r, "id")
+	id := pathID(r)
 	sess, err := h.store.GetSession(r.Context(), id)
 	if err != nil {
 		h.httpError(w, err, 404)
@@ -47,11 +47,11 @@ func (h *handlers) previewContext(w http.ResponseWriter, r *http.Request) (sess 
 	}
 	paths = session.ResolvePaths(board, sess)
 	if !paths.HasRepo {
-		h.httpError(w, fmt.Errorf("board has no git repo to deploy"), 400)
+		h.httpError(w, errors.New("board has no git repo to deploy"), 400)
 		return nil, "", session.ResolvedPaths{}, false
 	}
 	if sess.BranchName == "" {
-		h.httpError(w, fmt.Errorf("session has no branch to deploy"), 400)
+		h.httpError(w, errors.New("session has no branch to deploy"), 400)
 		return nil, "", session.ResolvedPaths{}, false
 	}
 	return sess, previews.RepoName(board), paths, true
@@ -178,13 +178,13 @@ func previewPageParams(r *http.Request) (limit, offset int, maxID int64, err err
 	if raw := r.URL.Query().Get("offset"); raw != "" {
 		offset, err = strconv.Atoi(raw)
 		if err != nil || offset < 0 {
-			return 0, 0, 0, fmt.Errorf("offset must be a non-negative integer")
+			return 0, 0, 0, errors.New("offset must be a non-negative integer")
 		}
 	}
 	if raw := r.URL.Query().Get("max_id"); raw != "" {
 		maxID, err = strconv.ParseInt(raw, 10, 64)
 		if err != nil || maxID < 1 {
-			return 0, 0, 0, fmt.Errorf("max_id must be a positive deploy ID")
+			return 0, 0, 0, errors.New("max_id must be a positive deploy ID")
 		}
 	}
 	return limit, offset, maxID, nil
@@ -194,12 +194,12 @@ func previewPageParams(r *http.Request) (limit, offset int, maxID int64, err err
 // modal polls, so it follows its deploy even after the row pages away.
 func (h *handlers) getPreview(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
-	d, err := h.previews.Deploy(pathID(r, "id"))
+	d, err := h.previews.Deploy(pathID(r))
 	if errors.Is(err, orchestrator.ErrNotFound) {
-		h.httpError(w, fmt.Errorf("preview not found"), 404)
+		h.httpError(w, errors.New("preview not found"), 404)
 		return
 	}
 	if err != nil {
@@ -227,7 +227,7 @@ func (h *handlers) getPreview(w http.ResponseWriter, r *http.Request) {
 // a snapshot so new deploys don't shift rows between them.
 func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
 	limit, offset, maxID, err := previewPageParams(r)
@@ -247,7 +247,7 @@ func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 	if boardFilter != "" {
 		boardID, err = strconv.ParseInt(boardFilter, 10, 64)
 		if err != nil || boardID < 1 {
-			h.httpError(w, fmt.Errorf("board must be a positive board ID"), 400)
+			h.httpError(w, errors.New("board must be a positive board ID"), 400)
 			return
 		}
 	}
@@ -261,7 +261,7 @@ func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !foundBoard {
-		h.httpError(w, fmt.Errorf("board not found"), 404)
+		h.httpError(w, errors.New("board not found"), 404)
 		return
 	}
 	page, err := h.previews.DeploysPage(orchestrator.DeployQuery{
@@ -287,10 +287,10 @@ func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 // needs to deploy anything the repo has — a base branch, a tag, a SHA.
 func (h *handlers) createBoardPreview(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
-	board, err := h.store.GetBoard(r.Context(), pathID(r, "id"))
+	board, err := h.store.GetBoard(r.Context(), pathID(r))
 	if err != nil {
 		h.httpError(w, err, 404)
 		return
@@ -307,12 +307,12 @@ func (h *handlers) createBoardPreview(w http.ResponseWriter, r *http.Request) {
 		ref = board.BaseBranch
 	}
 	if ref == "" {
-		h.httpError(w, fmt.Errorf("ref required (board has no base branch)"), 400)
+		h.httpError(w, errors.New("ref required (board has no base branch)"), 400)
 		return
 	}
 	paths := session.ResolvePaths(board, nil)
 	if !paths.HasRepo {
-		h.httpError(w, fmt.Errorf("board has no git repo to deploy"), 400)
+		h.httpError(w, errors.New("board has no git repo to deploy"), 400)
 		return
 	}
 	name := previews.RepoName(board)
@@ -336,12 +336,12 @@ func (h *handlers) createBoardPreview(w http.ResponseWriter, r *http.Request) {
 // are content-addressed and immutable, hence the long-lived cache header.
 func (h *handlers) previewArtifact(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
 	name := r.PathValue("artifact")
 	file := r.PathValue("file")
-	path, err := h.previews.ArtifactFilePath(pathID(r, "id"), name, file)
+	path, err := h.previews.ArtifactFilePath(pathID(r), name, file)
 	if errors.Is(err, orchestrator.ErrNotFound) {
 		h.httpError(w, fmt.Errorf("artifact %q file %q not found", name, file), 404)
 		return
@@ -362,19 +362,19 @@ func (h *handlers) previewArtifact(w http.ResponseWriter, r *http.Request) {
 // deploys built to the same output stop with it.
 func (h *handlers) stopPreview(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
-	err := h.previews.StopDeploy(pathID(r, "id"))
+	err := h.previews.StopDeploy(pathID(r))
 	if errors.Is(err, orchestrator.ErrNotFound) {
-		h.httpError(w, fmt.Errorf("preview not found"), 404)
+		h.httpError(w, errors.New("preview not found"), 404)
 		return
 	}
 	if err != nil {
 		h.httpError(w, err, 500)
 		return
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // deletePreview removes a deploy and reclaims the artifacts and process
@@ -382,19 +382,19 @@ func (h *handlers) stopPreview(w http.ResponseWriter, r *http.Request) {
 // deploy (previews are content-addressed per side) are kept.
 func (h *handlers) deletePreview(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
-	err := h.previews.DeleteDeploy(pathID(r, "id"))
+	err := h.previews.DeleteDeploy(pathID(r))
 	if errors.Is(err, orchestrator.ErrNotFound) {
-		h.httpError(w, fmt.Errorf("preview not found"), 404)
+		h.httpError(w, errors.New("preview not found"), 404)
 		return
 	}
 	if err != nil {
 		h.httpError(w, err, 500)
 		return
 	}
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // storageRepo is one repo's slice of the storage report, resolved back to
@@ -431,7 +431,7 @@ type storageReport struct {
 // poll.
 func (h *handlers) previewStorage(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
 	rep, err := h.previews.Storage()
@@ -481,7 +481,7 @@ func (h *handlers) previewStorage(w http.ResponseWriter, r *http.Request) {
 // deploys are kept.
 func (h *handlers) previewRetention(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
 	policy, err := h.previews.RetentionPolicy()
@@ -498,7 +498,7 @@ func (h *handlers) previewRetention(w http.ResponseWriter, r *http.Request) {
 // unlimited; both at 0 disables eviction.
 func (h *handlers) updatePreviewRetention(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
 	policy, err := decodeBody[orchestrator.RetentionPolicy](r)
@@ -507,7 +507,7 @@ func (h *handlers) updatePreviewRetention(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if policy.MaxDeploysPerRepo < 0 || policy.MaxAgeDays < 0 {
-		h.httpError(w, fmt.Errorf("retention limits must be >= 0 (0 = unlimited)"), 400)
+		h.httpError(w, errors.New("retention limits must be >= 0 (0 = unlimited)"), 400)
 		return
 	}
 	if err := h.previews.SetRetentionPolicy(policy); err != nil {
@@ -522,7 +522,7 @@ func (h *handlers) updatePreviewRetention(w http.ResponseWriter, r *http.Request
 // leftovers, so it always has something to do.
 func (h *handlers) collectPreviewGarbage(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
 	res, err := h.previews.CollectGarbage()
@@ -536,12 +536,12 @@ func (h *handlers) collectPreviewGarbage(w http.ResponseWriter, r *http.Request)
 // previewLogs returns the build-log snapshot for one preview deploy.
 func (h *handlers) previewLogs(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
-		h.httpError(w, fmt.Errorf("preview orchestrator unavailable (see server logs)"), 503)
+		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
 		return
 	}
-	logs, err := h.previews.DeployLogs(pathID(r, "id"))
+	logs, err := h.previews.DeployLogs(pathID(r))
 	if errors.Is(err, orchestrator.ErrNotFound) {
-		h.httpError(w, fmt.Errorf("preview not found"), 404)
+		h.httpError(w, errors.New("preview not found"), 404)
 		return
 	}
 	if err != nil {

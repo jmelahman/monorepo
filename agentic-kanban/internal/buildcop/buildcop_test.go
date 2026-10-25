@@ -281,11 +281,11 @@ func TestTitleForFlaky(t *testing.T) {
 	}
 }
 
-// runAttempt returns a run with a specific attempt number and conclusion.
-func runAttempt(id int64, workflow string, m, attempt int, conclusion string) ghRun {
-	r := runAt(id, workflow, m)
+// runAttempt returns a successful minute-1 run with a specific attempt number.
+func runAttempt(id int64, attempt int) ghRun {
+	r := runAt(id, "CI", 1)
 	r.RunAttempt = attempt
-	r.Conclusion = conclusion
+	r.Conclusion = "success"
 	return r
 }
 
@@ -293,7 +293,7 @@ func TestAggregateFlaky(t *testing.T) {
 	// One run that succeeded on attempt 2; on attempt 1 the "lint" job
 	// failed. Expect FlakyRetries=1, Failures=0, GreenStreak=0 (flake breaks
 	// green streak), LastFlakyURL matching the failed prior-attempt job.
-	runs := []ghRun{runAttempt(10, "CI", 1, 2, "success")}
+	runs := []ghRun{runAttempt(10, 2)}
 	jobsByRun := map[int64][]ghJob{
 		10: {jobAt("lint", "success", "")},
 	}
@@ -325,7 +325,7 @@ func TestAggregateFlaky(t *testing.T) {
 func TestAggregateFlakyDedupePerRun(t *testing.T) {
 	// One run, attempt 3 succeeded; attempts 1 and 2 both failed "lint".
 	// That's a single flaky commit — FlakyRetries should be 1, not 2.
-	runs := []ghRun{runAttempt(12, "CI", 1, 3, "success")}
+	runs := []ghRun{runAttempt(12, 3)}
 	jobsByRun := map[int64][]ghJob{
 		12: {jobAt("lint", "success", "")},
 	}
@@ -345,7 +345,7 @@ func TestAggregateFlakyDedupePerRun(t *testing.T) {
 func TestAggregateFlakyJobRemoved(t *testing.T) {
 	// Prior attempt failed a job that no longer exists in the current
 	// attempt (renamed or removed between attempts). Do not credit a flake.
-	runs := []ghRun{runAttempt(11, "CI", 1, 2, "success")}
+	runs := []ghRun{runAttempt(11, 2)}
 	jobsByRun := map[int64][]ghJob{
 		11: {jobAt("test", "success", "")},
 	}
@@ -366,7 +366,7 @@ func TestAggregateFlakyRequiresCurrentAttemptSuccess(t *testing.T) {
 	// Workflow run reports success (e.g. via continue-on-error), but the
 	// specific job failed in both attempts. That's a real failure, not a
 	// flake — FlakyRetries must not be credited.
-	runs := []ghRun{runAttempt(13, "CI", 1, 2, "success")}
+	runs := []ghRun{runAttempt(13, 2)}
 	jobsByRun := map[int64][]ghJob{
 		// lint kept failing on the retry; only accessory job succeeded.
 		13: {
@@ -390,7 +390,7 @@ func TestAggregateFlakyRequiresCurrentAttemptSuccess(t *testing.T) {
 func TestAggregateFlakyIgnoresSkippedOnRetry(t *testing.T) {
 	// Prior attempt failed the job; the retry skipped it (e.g. a conditional
 	// dependency changed). Not a pass-on-retry — do not credit a flake.
-	runs := []ghRun{runAttempt(14, "CI", 1, 2, "success")}
+	runs := []ghRun{runAttempt(14, 2)}
 	jobsByRun := map[int64][]ghJob{
 		14: {jobAt("lint", "skipped", "")},
 	}

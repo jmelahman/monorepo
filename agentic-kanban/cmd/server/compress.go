@@ -3,7 +3,7 @@ package server
 import (
 	"bufio"
 	"compress/gzip"
-	"fmt"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -39,7 +39,7 @@ func compressResponses(next http.Handler) http.Handler {
 }
 
 func clientAcceptsGzip(r *http.Request) bool {
-	for _, part := range strings.Split(r.Header.Get("Accept-Encoding"), ",") {
+	for part := range strings.SplitSeq(r.Header.Get("Accept-Encoding"), ",") {
 		if strings.EqualFold(strings.TrimSpace(strings.SplitN(part, ";", 2)[0]), "gzip") {
 			return true
 		}
@@ -90,6 +90,7 @@ func (g *gzipWriter) Write(p []byte) (int, error) {
 		return g.ResponseWriter.Write(p)
 	case modeGzip:
 		return g.gz.Write(p)
+	case modeUndecided:
 	}
 	// Undecided: buffer until threshold or handler completion.
 	if len(g.buf)+len(p) < gzipMinBytes {
@@ -124,7 +125,11 @@ func (g *gzipWriter) startGzip() {
 	h := g.Header()
 	h.Set("Content-Encoding", "gzip")
 	h.Del("Content-Length") // encoded length differs
-	g.gz = gzipPool.Get().(*gzip.Writer)
+	gz, ok := gzipPool.Get().(*gzip.Writer)
+	if !ok {
+		gz = gzip.NewWriter(io.Discard)
+	}
+	g.gz = gz
 	g.gz.Reset(g.ResponseWriter)
 	g.ResponseWriter.WriteHeader(g.status)
 }
@@ -142,6 +147,7 @@ func (g *gzipWriter) finish() {
 		_ = g.gz.Close()
 		gzipPool.Put(g.gz)
 		g.gz = nil
+	case modePassthrough:
 	case modeUndecided:
 		// Small response: flush buffered bytes plain.
 		g.mode = modePassthrough
@@ -178,7 +184,7 @@ func (g *gzipWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	g.mode = modePassthrough
 	hj, ok := g.ResponseWriter.(http.Hijacker)
 	if !ok {
-		return nil, nil, fmt.Errorf("hijack not supported")
+		return nil, nil, errors.New("hijack not supported")
 	}
 	return hj.Hijack()
 }

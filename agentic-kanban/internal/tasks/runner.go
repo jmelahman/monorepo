@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -345,15 +346,15 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 
 		boardID := boardIDForSession(context.Background(), r.store, sess.ID)
 		r.hooks.Fire(boardID, hooks.EventTaskExited, map[string]string{
-			"session_id": fmt.Sprintf("%d", sess.ID),
+			"session_id": strconv.FormatInt(sess.ID, 10),
 			"task_label": task.Label,
-			"exit_code":  fmt.Sprintf("%d", exitCode),
+			"exit_code":  strconv.Itoa(exitCode),
 		})
 	}()
 
 	boardID := boardIDForSession(ctx, r.store, sess.ID)
 	r.hooks.Fire(boardID, hooks.EventTaskStarted, map[string]string{
-		"session_id": fmt.Sprintf("%d", sess.ID),
+		"session_id": strconv.FormatInt(sess.ID, 10),
 		"task_label": task.Label,
 	})
 	return tr, nil
@@ -407,6 +408,7 @@ while [ "$grew" = 1 ]; do
     case "$all" in *" $p "*) continue ;; esac
     case "$all" in *" $pp "*) all="$all$p "; grew=1 ;; esac
   done
+  # next pass, until no new descendant turns up
 done
 kill -TERM $all 2>/dev/null
 exit 0`, taskRunMarker(id))
