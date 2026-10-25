@@ -28,7 +28,7 @@ import (
 	"github.com/jmelahman/notebook/internal/speech"
 )
 
-//go:embed web
+//go:embed web design
 var embedded embed.FS
 
 type hostList []string
@@ -68,14 +68,21 @@ func main() {
 		}
 	}
 
-	web, err := fs.Sub(embedded, "web")
+	page, err := fs.Sub(embedded, "web")
+	if err != nil {
+		fail(err)
+	}
+	design, err := fs.Sub(embedded, "design")
 	if err != nil {
 		fail(err)
 	}
 	var tags *etags
 	if *webDir != "" {
-		web = os.DirFS(*webDir)
-	} else {
+		page = os.DirFS(*webDir)
+		design = os.DirFS(filepath.Join(*webDir, "..", "design"))
+	}
+	web := withDesign{page: page, design: design}
+	if *webDir == "" {
 		tags = &etags{fsys: web}
 	}
 	srv := &api.Server{
@@ -139,6 +146,23 @@ func defaultCache() string {
 		return filepath.Join(d, "notebook")
 	}
 	return filepath.Join(os.TempDir(), "notebook")
+}
+
+// withDesign serves the page with the shared fonts and tokens under design/.
+// They sit beside web/ rather than in it because the monorepo syncs the same
+// design/ into every project that uses them (.config/git-orchard/shared/design).
+type withDesign struct {
+	page, design fs.FS
+}
+
+func (w withDesign) Open(name string) (fs.File, error) {
+	if name == "design" {
+		return w.design.Open(".")
+	}
+	if rest, ok := strings.CutPrefix(name, "design/"); ok {
+		return w.design.Open(rest)
+	}
+	return w.page.Open(name)
 }
 
 // etags tags the built-in files by their content. An embed.FS has no

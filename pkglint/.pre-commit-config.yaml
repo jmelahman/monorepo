@@ -1,5 +1,5 @@
 # bundled OFL text is upstream's verbatim (the whitespace hooks rewrite it).
-exclude: ^internal/cli/testdata/|^site/assets/fonts/
+exclude: ^internal/cli/testdata/
 
 hide_status: [passed, skipped]
 

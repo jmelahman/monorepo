@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -500,5 +501,45 @@ func TestRenderSingleRepositoryHasNoBreakdown(t *testing.T) {
 	// A result with no repository is an AUR one, and says so in the column.
 	if !strings.Contains(string(b), `data-repo="aur"`) {
 		t.Error("index.html does not default an unlabelled result to the AUR")
+	}
+}
+
+// TestRenderSharedDesign covers the fonts and tokens shared with the other
+// frontends (design/). They live outside assets/, so a page that drops the
+// link, or a face design.css names that never reaches the output, still
+// renders: only in the fallback font, and without the base colors.
+func TestRenderSharedDesign(t *testing.T) {
+	out := t.TempDir()
+	for _, sub := range []string{"rules", "package", "badge"} {
+		if err := os.MkdirAll(filepath.Join(out, sub), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := renderSite(out, nil); err != nil {
+		t.Fatalf("renderSite: %v", err)
+	}
+
+	css, err := os.ReadFile(filepath.Join(out, "design", "design.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	urls := regexp.MustCompile(`url\(([^)]+)\)`).FindAllStringSubmatch(string(css), -1)
+	if len(urls) == 0 {
+		t.Fatal("design.css declares no font faces")
+	}
+	for _, m := range urls {
+		if _, err := os.Stat(filepath.Join(out, "design", filepath.FromSlash(m[1]))); err != nil {
+			t.Errorf("design.css loads %s, which is not in the output: %v", m[1], err)
+		}
+	}
+
+	b, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(b)
+	design, site := strings.Index(page, `design/design.css?v=`), strings.Index(page, `assets/site.css?v=`)
+	if design < 0 || site < 0 || design > site {
+		t.Errorf("index.html should link design/design.css before assets/site.css (at %d and %d)", design, site)
 	}
 }

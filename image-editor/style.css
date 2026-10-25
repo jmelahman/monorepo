@@ -1,72 +1,20 @@
-@font-face {
-  font-family: "Plex Cond";
-  src: url(fonts/plex-cond-600.woff2) format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Plex Sans";
-  src: url(fonts/plex-sans-var.woff2) format("woff2");
-  font-weight: 100 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Plex Mono";
-  src: url(fonts/plex-mono-400.woff2) format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Plex Mono";
-  src: url(fonts/plex-mono-600.woff2) format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
+/* Fonts and the shared tokens come from design/design.css. */
 
 :root {
-  color-scheme: dark;
-  --ink: #0a0a0c;
-  --ink-2: #141417;
-  --rule: #2b2b32;
-  --rule-soft: #1f1f24;
-  --chalk: #f4f4f5;
-  --dim: #9797a2;
-  --accent: #f4635e;
-  --accent-soft: rgb(244 99 94 / 0.15);
-  --on-accent: #0a0a0c;
   --check-a: #8a8a92;
   --check-b: #6e6e76;
-
-  --control: 2.125rem;
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-
-  --mono: "Plex Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
-  --sans: "Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --cond: "Plex Cond", "Plex Sans", system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --ink: #fafafa;
-    --ink-2: #f1f1f3;
-    --rule: #dcdce1;
-    --rule-soft: #e8e8ec;
-    --chalk: #18181b;
-    --dim: #57575f;
-    --accent: #c0272d;
-    --accent-soft: rgb(192 39 45 / 0.09);
-    --on-accent: #fafafa;
+  :root:not([data-theme="dark"]) {
     --check-a: #fdfdfe;
     --check-b: #d9d9de;
   }
+}
+
+:root[data-theme="light"] {
+  --check-a: #fdfdfe;
+  --check-b: #d9d9de;
 }
 
 * {

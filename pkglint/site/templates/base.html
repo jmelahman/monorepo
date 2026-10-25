@@ -8,6 +8,7 @@
      font-display:swap, and Chromium reports same-origin font preloads as
      unused even when they are the only fetch. A false warning on every page
      costs more here than the millisecond it buys. */}}
+<link rel="stylesheet" href="{{.Root}}design/design.css?v={{.Ver}}">
 <link rel="stylesheet" href="{{.Root}}assets/site.css?v={{.Ver}}">
 {{/* Declaring the icon is also how the /favicon.ico request is avoided: without
      a link the browser asks for one on every page and takes a 404. */}}

@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmelahman/pkglint/design"
 	"github.com/jmelahman/pkglint/internal/rules"
 )
 
@@ -398,29 +399,36 @@ func renderSite(out string, results []siteResult) error {
 	return nil
 }
 
-// copyAssets writes the embedded stylesheet, script, and fonts under out and
-// returns a short content hash of the two text assets, used to bust caches.
+// copyAssets writes the embedded stylesheets, script, and fonts under out,
+// the site's own under assets/ and the shared ones under design/, and returns
+// a short content hash of the text assets, used to bust caches.
 func copyAssets(out string) (string, error) {
 	sum := sha256.New()
-	err := fs.WalkDir(assetFS, "assets", func(p string, d fs.DirEntry, err error) error {
+	for _, src := range []struct {
+		fsys     fs.FS
+		root, to string // walk root in fsys, and the directory under out it lands in
+	}{{assetFS, "assets", "assets"}, {design.FS, ".", "design"}} {
+		err := fs.WalkDir(src.fsys, src.root, func(p string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			rel, _ := filepath.Rel(src.root, p)
+			dst := filepath.Join(out, src.to, filepath.FromSlash(rel))
+			if d.IsDir() {
+				return os.MkdirAll(dst, 0o755)
+			}
+			b, err := fs.ReadFile(src.fsys, p)
+			if err != nil {
+				return err
+			}
+			if strings.HasSuffix(p, ".css") || strings.HasSuffix(p, ".js") {
+				sum.Write(b)
+			}
+			return os.WriteFile(dst, b, 0o644)
+		})
 		if err != nil {
-			return err
+			return "", err
 		}
-		dst := filepath.Join(out, filepath.FromSlash(p))
-		if d.IsDir() {
-			return os.MkdirAll(dst, 0o755)
-		}
-		b, err := assetFS.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		if strings.HasSuffix(p, ".css") || strings.HasSuffix(p, ".js") {
-			sum.Write(b)
-		}
-		return os.WriteFile(dst, b, 0o644)
-	})
-	if err != nil {
-		return "", err
 	}
 	return hex.EncodeToString(sum.Sum(nil))[:8], nil
 }

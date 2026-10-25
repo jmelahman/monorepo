@@ -14,8 +14,7 @@ exclude: |
     .*/testdata/.*|
     .*/test/fixtures/.*|
     .*\.min\.(css|js)|
-    pkglint/site/assets/fonts/.*|
-    notebook/web/(vendor|fonts)/.*|
+    notebook/web/vendor/.*|
     5-wild/src/ui/tracks/.*\.ogg
   )$
 

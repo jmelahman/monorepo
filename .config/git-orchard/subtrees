@@ -104,10 +104,15 @@
 	shared = goreleaser
 	shared = manygo
 	shared = pybuild
+[subtree "notebook"]
+	remote = git@github.com:jmelahman/notebook.git
+	branch = master
+	shared = design
 [subtree "pkglint"]
 	remote = git@github.com:jmelahman/pkglint.git
 	branch = master
 	shared = base
+	shared = design
 	shared = pybuild
 [subtree "pre-commit-hooks/go-pre-commit-hooks"]
 	remote = git@github.com:jmelahman/go-pre-commit-hooks.git
@@ -174,9 +179,11 @@
 [subtree "image-editor"]
 	remote = git@github.com:jmelahman/draw
 	branch = master
+	shared = design
 [subtree "text-editor"]
 	remote = git@github.com:jmelahman/write
 	branch = master
+	shared = design
 [subtree "vinder"]
 	remote = git@github.com:jmelahman/vinder.git
 	branch = master

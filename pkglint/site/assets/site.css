@@ -4,46 +4,13 @@
    margin gutter for annotations, a title block for the scan record, and color
    used only as fill (never as text) so the grade ramp survives both themes. */
 
-/* ── type ─────────────────────────────────────────────────────────────── */
-@font-face {
-  font-family: "Plex Cond";
-  src: url(fonts/plex-cond-600.woff2) format("woff2");
-  font-weight: 600; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: "Plex Cond";
-  src: url(fonts/plex-cond-700.woff2) format("woff2");
-  font-weight: 700; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: "Plex Sans";
-  src: url(fonts/plex-sans-var.woff2) format("woff2");
-  font-weight: 100 700; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: "Plex Mono";
-  src: url(fonts/plex-mono-400.woff2) format("woff2");
-  font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: "Plex Mono";
-  src: url(fonts/plex-mono-600.woff2) format("woff2");
-  font-weight: 600; font-style: normal; font-display: swap;
-}
-
 /* ── tokens ───────────────────────────────────────────────────────────── */
+/* Fonts and the shared tokens come from design/design.css: --ink (charcoal
+   ground), --ink-2 (row hover, quiet bands), --rule (hairlines), --chalk
+   (primary text), --dim (secondary text, 6.9:1 on the light ground), and
+   --accent (red, lifted off the charcoal to 6.4:1, dropped for a light one). */
 :root {
-  color-scheme: dark;
-
-  --ink: #0a0a0c;          /* charcoal ground */
-  --ink-2: #141417;        /* row hover, quiet bands */
   --panel: #17171a;        /* cards, code */
-  --rule: #2b2b32;         /* hairlines */
-  --rule-soft: #1f1f24;
-  --chalk: #f4f4f5;        /* primary text */
-  --dim: #9797a2;          /* secondary text */
-  --accent: #f4635e;       /* red, lifted off the charcoal to 6.4:1 */
-  --accent-soft: rgba(244, 99, 94, 0.15);
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
 
   /* Grade ramp: the report-card ramp everyone already knows, green through red,
@@ -76,26 +43,18 @@
   --gutter: 6.5rem;
   --gap: 1.75rem;
   --measure: 40rem;
-
-  --mono: "Plex Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
-  --sans: "Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --cond: "Plex Cond", "Plex Sans", system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --ink: #fafafa;
-    --ink-2: #f1f1f3;
+  :root:not([data-theme="dark"]) {
     --panel: #ffffff;
-    --rule: #dcdce1;
-    --rule-soft: #e8e8ec;
-    --chalk: #18181b;
-    --dim: #57575f;          /* 6.9:1 on --ink */
-    --accent: #c0272d;       /* the same red, dropped for a light ground */
-    --accent-soft: rgba(192, 39, 45, 0.09);
     --shadow: 0 1px 0 rgba(9, 9, 11, 0.04);
   }
+}
+
+:root[data-theme="light"] {
+  --panel: #ffffff;
+  --shadow: 0 1px 0 rgba(9, 9, 11, 0.04);
 }
 
 /* ── base ─────────────────────────────────────────────────────────────── */
@@ -198,7 +157,7 @@ main { max-width: 78rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
 .eyebrow a:hover { color: var(--chalk); }
 
 h1 {
-  font: 700 clamp(2.25rem, 6vw, 3.5rem)/0.98 var(--cond);
+  font: 600 clamp(2.25rem, 6vw, 3.5rem)/0.98 var(--cond);
   letter-spacing: 0.005em; text-transform: uppercase;
   margin: 0 0 0.75rem;
 }

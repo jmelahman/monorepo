@@ -7,12 +7,13 @@
      committed PNG rather than something the generator draws, because X and the
      other preview readers will not take the SVG this site is otherwise built
      from. Rendered at exactly 1200x630 (the 1.91:1 summary_large_image size)
-     and checked in; regenerate it after a change here with:
+     and checked in; regenerate it after a change here, from the pkglint root
+     so the fonts in design/ are in reach, with:
 
-       python3 -m http.server 8000 --directory site
-       # then screenshot http://localhost:8000/og-card.html at 1200x630, e.g.
+       python3 -m http.server 8000
+       # then screenshot http://localhost:8000/site/og-card.html at 1200x630, e.g.
        npx playwright screenshot --viewport-size=1200,630 \
-         http://localhost:8000/og-card.html site/assets/og.png
+         http://localhost:8000/site/og-card.html site/assets/og.png
 
      The tokens below are copied from site.css rather than linked to it: this
      page is a fixed-size drawing, not a responsive page, and a stylesheet
@@ -20,27 +21,22 @@
 <style>
 @font-face {
   font-family: "Plex Cond";
-  src: url(assets/fonts/plex-cond-700.woff2) format("woff2");
-  font-weight: 700; font-style: normal;
-}
-@font-face {
-  font-family: "Plex Cond";
-  src: url(assets/fonts/plex-cond-600.woff2) format("woff2");
+  src: url(../design/fonts/plex-cond-600.woff2) format("woff2");
   font-weight: 600; font-style: normal;
 }
 @font-face {
   font-family: "Plex Sans";
-  src: url(assets/fonts/plex-sans-var.woff2) format("woff2");
+  src: url(../design/fonts/plex-sans-var.woff2) format("woff2");
   font-weight: 100 700; font-style: normal;
 }
 @font-face {
   font-family: "Plex Mono";
-  src: url(assets/fonts/plex-mono-600.woff2) format("woff2");
+  src: url(../design/fonts/plex-mono-600.woff2) format("woff2");
   font-weight: 600; font-style: normal;
 }
 @font-face {
   font-family: "Plex Mono";
-  src: url(assets/fonts/plex-mono-400.woff2) format("woff2");
+  src: url(../design/fonts/plex-mono-400.woff2) format("woff2");
   font-weight: 400; font-style: normal;
 }
 
@@ -83,7 +79,7 @@ body {
 .body { flex: 1; min-height: 0; padding: 56px 64px 0; }
 h1 {
   margin: 0 0 26px;
-  font: 700 98px/0.92 var(--cond);
+  font: 600 98px/0.92 var(--cond);
   letter-spacing: 0.005em; text-transform: uppercase;
 }
 .lede { margin: 0; max-width: 900px; font-size: 26px; line-height: 1.45; }
