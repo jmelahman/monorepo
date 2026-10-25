@@ -14,14 +14,14 @@ import (
 func GetContainerHealth(url *string) (containers []ContainerHealth, err error) {
 	resp, err := http.Get(*url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get status: %v", err)
+		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, resp.Body.Close())
 	}()
 
 	if err := json.NewDecoder(resp.Body).Decode(&containers); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %v", err)
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 	return containers, nil
 }
@@ -29,7 +29,7 @@ func GetContainerHealth(url *string) (containers []ContainerHealth, err error) {
 func GetDockerStatus(url *string) (string, error) {
 	containers, err := GetContainerHealth(url)
 	if err != nil {
-		return "", fmt.Errorf("failed to get container health: %v", err)
+		return "", fmt.Errorf("failed to get container health: %w", err)
 	}
 
 	// Build the text content with colors using tabwriter
