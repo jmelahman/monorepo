@@ -242,7 +242,10 @@ func verifyAnswerShape(name string, question Question, answer Answer) []string {
 	var problems []string
 	switch q := question.(type) {
 	case ChoiceQuestion:
-		a := answer.(ChoiceAnswer)
+		a, ok := answer.(ChoiceAnswer)
+		if !ok {
+			return append(problems, fmt.Sprintf("answer %q is not a choice answer", name))
+		}
 		if _, ok := q.Criteria[a.Choice]; !ok {
 			problems = append(problems, fmt.Sprintf(
 				"answer %q selected %q, which is not one of its choices", name, a.Choice))
@@ -255,7 +258,10 @@ func verifyAnswerShape(name string, question Question, answer Answer) []string {
 				name, strings.Join(quoteAll(got), ", "), strings.Join(quoteAll(want), ", ")))
 		}
 	case ScoreQuestion:
-		a := answer.(ScoreAnswer)
+		a, ok := answer.(ScoreAnswer)
+		if !ok {
+			return append(problems, fmt.Sprintf("answer %q is not a score answer", name))
+		}
 		want := make([]int, len(q.Criteria))
 		for i := range q.Criteria {
 			want[i] = i

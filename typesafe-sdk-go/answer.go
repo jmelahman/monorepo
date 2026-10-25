@@ -3,6 +3,7 @@ package typesafe
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"math"
 )
 
@@ -103,6 +104,12 @@ func (as *Answers) UnmarshalJSON(data []byte) error {
 
 	out := make(Answers, len(raw))
 	for name, item := range raw {
+		// A JSON null answer decodes to a nil Answer rather than an empty
+		// unknown one, so a caller sees "no answer" instead of a zero-valued one.
+		if string(bytes.TrimSpace(item)) == "null" {
+			out[name] = nil
+			continue
+		}
 		answer, err := unmarshalAnswer(item)
 		if err != nil {
 			return errf("answers.%s: %v", name, jsonMessage(err))
@@ -114,12 +121,6 @@ func (as *Answers) UnmarshalJSON(data []byte) error {
 }
 
 func unmarshalAnswer(data []byte) (Answer, error) {
-	// A JSON null answer decodes to a nil Answer rather than an empty unknown
-	// one, so a caller sees "no answer" instead of a zero-valued one.
-	if string(bytes.TrimSpace(data)) == "null" {
-		return nil, nil
-	}
-
 	var probe struct {
 		Type Kind `json:"type"`
 	}
@@ -153,7 +154,7 @@ func unmarshalAnswer(data []byte) (Answer, error) {
 // jsonMessage strips the "typesafe: " prefix a nested SDK error would add, so a
 // wrapped message does not repeat it.
 func jsonMessage(err error) string {
-	if e, ok := err.(*Error); ok {
+	if e, ok := errors.AsType[*Error](err); ok {
 		return e.Message
 	}
 	return err.Error()

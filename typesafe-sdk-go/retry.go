@@ -2,6 +2,7 @@ package typesafe
 
 import (
 	"context"
+	"maps"
 	"math/rand/v2"
 	"net/http"
 	"strconv"
@@ -125,9 +126,7 @@ func (p RetryPolicy) retriesStatus(code int) bool { return p.Statuses[code] }
 // an in-flight request.
 func (p RetryPolicy) clone() RetryPolicy {
 	statuses := make(map[int]bool, len(p.Statuses))
-	for code, on := range p.Statuses {
-		statuses[code] = on
-	}
+	maps.Copy(statuses, p.Statuses)
 	p.Statuses = statuses
 	return p
 }

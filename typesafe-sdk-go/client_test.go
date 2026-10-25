@@ -155,7 +155,7 @@ func TestSystemOne(t *testing.T) {
 	if sent["state"] != "Buy now!" {
 		t.Errorf("sent state = %v, want the request state", sent["state"])
 	}
-	if req := s.request(0); req.URL.Path != systemOnePath || req.Method != "POST" {
+	if req := s.request(0); req.URL.Path != systemOnePath || req.Method != http.MethodPost {
 		t.Errorf("sent %s %s, want POST %s", req.Method, req.URL.Path, systemOnePath)
 	}
 }
@@ -239,8 +239,7 @@ func TestGivesUpAfterMaxRetries(t *testing.T) {
 	c, _ := testClient(t, s.URL)
 
 	_, err := c.SystemOne(t.Context(), simpleRequest())
-	var serverErr *InternalServerError
-	if !errors.As(err, &serverErr) {
+	if _, ok := errors.AsType[*InternalServerError](err); !ok {
 		t.Fatalf("SystemOne = %T (%v), want *InternalServerError", err, err)
 	}
 	if !strings.Contains(err.Error(), "still boom") {
@@ -259,8 +258,7 @@ func TestDoesNotRetryClientErrors(t *testing.T) {
 	c, _ := testClient(t, s.URL)
 
 	_, err := c.SystemOne(t.Context(), simpleRequest())
-	var validationErr *UnprocessableEntityError
-	if !errors.As(err, &validationErr) {
+	if _, ok := errors.AsType[*UnprocessableEntityError](err); !ok {
 		t.Fatalf("SystemOne = %T (%v), want *UnprocessableEntityError", err, err)
 	}
 	if !strings.Contains(err.Error(), "questions.spam: field required") {
@@ -341,8 +339,7 @@ func TestConnectionErrorIsTyped(t *testing.T) {
 		WithHTTPClient(&http.Client{Transport: stub}), WithRetry(RetryPolicy{}))
 
 	_, err := c.SystemOne(t.Context(), simpleRequest())
-	var connErr *ConnectionError
-	if !errors.As(err, &connErr) {
+	if _, ok := errors.AsType[*ConnectionError](err); !ok {
 		t.Fatalf("SystemOne = %T (%v), want *ConnectionError", err, err)
 	}
 	if !errors.Is(err, io.ErrUnexpectedEOF) {
@@ -407,8 +404,7 @@ func TestDeadlineShorterThanBackoffSurfacesTheAPIError(t *testing.T) {
 	defer cancel()
 
 	_, err := c.SystemOne(ctx, simpleRequest())
-	var serverErr *InternalServerError
-	if !errors.As(err, &serverErr) {
+	if _, ok := errors.AsType[*InternalServerError](err); !ok {
 		t.Fatalf("SystemOne = %T (%v), want *InternalServerError", err, err)
 	}
 	if len(*delays) != 0 {
@@ -517,7 +513,7 @@ func TestListModels(t *testing.T) {
 	}
 
 	req := s.request(0)
-	if req.Method != "GET" || req.URL.Path != modelsPath {
+	if req.Method != http.MethodGet || req.URL.Path != modelsPath {
 		t.Errorf("sent %s %s, want GET %s", req.Method, req.URL.Path, modelsPath)
 	}
 	// A bodyless request must not claim a JSON body.
@@ -568,8 +564,7 @@ func TestCancellationDuringBackoffIsReported(t *testing.T) {
 		t.Errorf("SystemOne = %v, want it to wrap context.Canceled", err)
 	}
 	// The error that prompted the retry is worth keeping too.
-	var serverErr *InternalServerError
-	if !errors.As(err, &serverErr) {
+	if _, ok := errors.AsType[*InternalServerError](err); !ok {
 		t.Errorf("SystemOne = %v, want it to also carry the server error", err)
 	}
 }

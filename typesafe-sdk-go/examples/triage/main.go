@@ -64,8 +64,7 @@ func main() {
 		},
 	})
 	if err != nil {
-		var apiErr *typesafe.APIError
-		if errors.As(err, &apiErr) {
+		if apiErr, ok := errors.AsType[*typesafe.APIError](err); ok {
 			log.Fatalf("the API returned %d: %s (request_id=%s)", apiErr.StatusCode, apiErr.Message, apiErr.RequestID)
 		}
 		log.Fatal(err)

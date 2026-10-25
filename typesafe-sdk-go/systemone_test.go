@@ -52,7 +52,7 @@ func TestVerifyAnswers(t *testing.T) {
 	}, {
 		name: "choice outside the criteria",
 		mutil: func(_ Questions, a Answers) {
-			c := a["tone"].(ChoiceAnswer)
+			c, _ := a["tone"].(ChoiceAnswer)
 			c.Choice = "bored"
 			a["tone"] = c
 		},
@@ -60,7 +60,7 @@ func TestVerifyAnswers(t *testing.T) {
 	}, {
 		name: "choice probabilities diverge",
 		mutil: func(_ Questions, a Answers) {
-			c := a["tone"].(ChoiceAnswer)
+			c, _ := a["tone"].(ChoiceAnswer)
 			c.Probabilities = map[string]float64{"angry": 1}
 			a["tone"] = c
 		},
@@ -68,7 +68,7 @@ func TestVerifyAnswers(t *testing.T) {
 	}, {
 		name: "score probabilities diverge",
 		mutil: func(_ Questions, a Answers) {
-			s := a["heat"].(ScoreAnswer)
+			s, _ := a["heat"].(ScoreAnswer)
 			s.Probabilities = map[int]float64{0: 0.2, 1: 0.7, 2: 0.1}
 			a["heat"] = s
 		},
@@ -120,8 +120,7 @@ func TestTypedGetters(t *testing.T) {
 
 	// A typo names the answers that do exist.
 	_, err = res.Noul("spma")
-	var missing *NoAnswerError
-	if !errors.As(err, &missing) {
+	if _, ok := errors.AsType[*NoAnswerError](err); !ok {
 		t.Fatalf("Noul(spma) = %T, want *NoAnswerError", err)
 	}
 	if !strings.Contains(err.Error(), `"spam"`) {
@@ -157,7 +156,7 @@ func TestVerifyRejectsOutOfRangeScore(t *testing.T) {
 	// caught here rather than panicking in caller code.
 	for _, score := range []float64{-0.6, 2.0, 7.5} {
 		qs, as := questions(), answers()
-		s := as["heat"].(ScoreAnswer)
+		s, _ := as["heat"].(ScoreAnswer)
 		s.Score = score
 		as["heat"] = s
 

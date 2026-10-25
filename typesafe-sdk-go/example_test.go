@@ -197,8 +197,7 @@ func ExampleWithRetry() {
 		Questions: typesafe.Questions{"ok": typesafe.Noul("Is this fine?")},
 	}, typesafe.WithRequestTimeout(5*time.Second))
 	if err != nil {
-		var rateLimit *typesafe.RateLimitError
-		if errors.As(err, &rateLimit) {
+		if rateLimit, ok := errors.AsType[*typesafe.RateLimitError](err); ok {
 			fmt.Println("rate limited; retry after", rateLimit.RetryAfter)
 		}
 	}

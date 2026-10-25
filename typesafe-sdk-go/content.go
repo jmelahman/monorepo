@@ -3,6 +3,7 @@ package typesafe
 import (
 	"encoding/json"
 	"reflect"
+	"slices"
 )
 
 // Content is a JSON value the API accepts wherever text, a JSON object, or a JSON
@@ -33,6 +34,15 @@ type nullContent struct{}
 
 func (nullContent) MarshalJSON() ([]byte, error) { return []byte("null"), nil }
 
+// scalarKinds are the reflect kinds that marshal as a bare JSON boolean or
+// number, which the API has no field for.
+var scalarKinds = []reflect.Kind{
+	reflect.Bool,
+	reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+	reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+	reflect.Float32, reflect.Float64,
+}
+
 // validateContent reports whether c is a shape the API accepts. It rejects the
 // two JSON types the API has no field for, rather than letting them reach the
 // server as a 422.
@@ -44,11 +54,7 @@ func validateContent(path string, c Content) error {
 	if _, ok := c.(json.Number); ok {
 		return errf("%s must be a string, object, or array, got %T", path, c)
 	}
-	switch reflect.ValueOf(c).Kind() {
-	case reflect.Bool,
-		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Float32, reflect.Float64:
+	if slices.Contains(scalarKinds, reflect.ValueOf(c).Kind()) {
 		return errf("%s must be a string, object, or array, got %T", path, c)
 	}
 	return nil

@@ -46,6 +46,8 @@ func (l LogLevel) slogLevel() slog.Level {
 		return slog.LevelInfo
 	case LogWarn:
 		return slog.LevelWarn
+	case LogError, LogOff:
+		return slog.LevelError
 	default:
 		return slog.LevelError
 	}

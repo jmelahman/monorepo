@@ -119,8 +119,7 @@ func TestSystemOneBatchRetriesConcurrently(t *testing.T) {
 
 	reqs := []SystemOneRequest{simpleRequest(), simpleRequest(), simpleRequest(), simpleRequest()}
 	for i, r := range c.SystemOneBatch(t.Context(), reqs, len(reqs)) {
-		var serverErr *InternalServerError
-		if !errors.As(r.Err, &serverErr) {
+		if _, ok := errors.AsType[*InternalServerError](r.Err); !ok {
 			t.Errorf("results[%d].Err = %v, want *InternalServerError", i, r.Err)
 		}
 	}

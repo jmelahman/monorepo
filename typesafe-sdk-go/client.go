@@ -318,16 +318,13 @@ func joinContextError(lastErr, ctxErr error) error {
 
 // shouldRetry reports whether an attempt's error is one the policy retries.
 func (c *Client) shouldRetry(p RetryPolicy, err error) bool {
-	var apiErr *APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[*APIError](err); ok {
 		return p.retriesStatus(apiErr.StatusCode)
 	}
-	var timeoutErr *TimeoutError
-	if errors.As(err, &timeoutErr) {
+	if _, ok := errors.AsType[*TimeoutError](err); ok {
 		return p.RetryTimeouts
 	}
-	var connErr *ConnectionError
-	if errors.As(err, &connErr) {
+	if _, ok := errors.AsType[*ConnectionError](err); ok {
 		return p.RetryConnectionErrors
 	}
 	return false

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -207,7 +208,7 @@ func formatValidationErrors(items []any) string {
 				}
 				segments = append(segments, s)
 			case float64:
-				segments = append(segments, fmt.Sprintf("%d", int(s)))
+				segments = append(segments, strconv.Itoa(int(s)))
 			}
 		}
 		switch {
