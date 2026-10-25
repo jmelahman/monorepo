@@ -226,18 +226,32 @@ resource "github_repository_vulnerability_alerts" "repo" {
   enabled    = each.value.security
 }
 
+# Security updates are only managed where they are on: turning a repository's
+# alerts off turns its updates off too, and GitHub then refuses to change them.
+locals {
+  secured_repositories = { for name, repo in local.repositories : name => repo if repo.security }
+}
+
 import {
-  for_each = local.repositories
-  to       = github_repository_dependabot_security_updates.repo[each.key]
+  for_each = local.secured_repositories
+  to       = github_repository_dependabot_security_updates.secured[each.key]
   id       = each.key
 }
 
-resource "github_repository_dependabot_security_updates" "repo" {
-  for_each = local.repositories
+resource "github_repository_dependabot_security_updates" "secured" {
+  for_each = local.secured_repositories
 
   # Security updates need the alerts they act on.
   repository = github_repository_vulnerability_alerts.repo[each.key].repository
-  enabled    = each.value.security
+  enabled    = true
+}
+
+removed {
+  from = github_repository_dependabot_security_updates.repo
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 # Released versions are permanent: the Go checksum database and release assets
