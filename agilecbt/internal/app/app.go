@@ -6,6 +6,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -91,7 +92,7 @@ func (a *App) TodaySnapshot() (Snapshot, error) {
 		switch {
 		case err == nil:
 			*dst = &c
-		case err != db.ErrNotFound:
+		case !errors.Is(err, db.ErrNotFound):
 			return Snapshot{}, err
 		}
 	}
@@ -122,8 +123,8 @@ type DayMood struct {
 	Anxiety *int   `json:"anxiety"`
 }
 
-// MoodHistory returns one entry per day for the last days days (including
-// today), oldest first. Days without a check-in have nil readings. When a day
+// MoodHistory returns one entry per calendar day over the most recent `days`
+// (including today), oldest first. Days without a check-in have nil readings. When a day
 // has several check-ins, the latest non-nil value of each metric wins.
 func (a *App) MoodHistory(days int) ([]DayMood, error) {
 	if days <= 0 {
@@ -209,7 +210,7 @@ func (a *App) ReviewWeek(weekID int64) (WeekReview, error) {
 	}
 	if retro, err := a.Store.GetRetro(weekID); err == nil {
 		r.Retro = &retro
-	} else if err != db.ErrNotFound {
+	} else if !errors.Is(err, db.ErrNotFound) {
 		return WeekReview{}, err
 	}
 	return r, nil
@@ -265,7 +266,7 @@ func (a *App) Record(ctx context.Context, tool, summary, entity string, id int64
 
 func optJSON(v any) (*string, error) {
 	if v == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil means "no JSON" (SQL NULL), not a failure
 	}
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -287,7 +288,7 @@ func (a *App) Undo(actionID int64) (db.Action, error) {
 	}
 	if act.BeforeJSON == nil {
 		err = a.deleteEntity(act.Entity, act.EntityID)
-		if err == db.ErrNotFound {
+		if errors.Is(err, db.ErrNotFound) {
 			err = nil // already gone
 		}
 		if err == nil && a.OnDelete != nil {

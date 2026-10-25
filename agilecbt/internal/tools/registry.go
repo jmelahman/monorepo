@@ -73,7 +73,7 @@ func (r *Registry) Call(ctx context.Context, name string, in json.RawMessage) (a
 	}
 	var args map[string]any
 	if err := json.Unmarshal(in, &args); err != nil {
-		return nil, fmt.Errorf("arguments must be a JSON object: %v", err)
+		return nil, fmt.Errorf("arguments must be a JSON object: %w", err)
 	}
 	for _, req := range t.required {
 		if v, ok := args[req]; !ok || v == nil {
@@ -120,7 +120,7 @@ func define[In any](name, desc string, mutates bool, props []prop, run func(cont
 			dec := json.NewDecoder(bytes.NewReader(raw))
 			dec.DisallowUnknownFields()
 			if err := dec.Decode(&in); err != nil {
-				return nil, fmt.Errorf("%w: arguments: %v", db.ErrInvalid, err)
+				return nil, fmt.Errorf("%w: arguments: %w", db.ErrInvalid, err)
 			}
 			return run(ctx, a, in)
 		},

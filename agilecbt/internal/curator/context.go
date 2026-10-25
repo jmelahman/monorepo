@@ -2,9 +2,11 @@ package curator
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/jmelahman/agilecbt/internal/app"
 	"github.com/jmelahman/agilecbt/internal/db"
 )
 
@@ -51,30 +53,44 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 
 	var b strings.Builder
 	b.WriteString("<context>\n")
-	fmt.Fprintf(&b, "Now: %s, %s. ", now.Format("Monday"), now.Format("2006-01-02 15:04"))
+	c.writeHeader(&b, checkin, snap, now, roadmap)
+	writeLanes(&b, snap, goalTitle)
+	writeMood(&b, mood)
+	if err := c.writeGoals(&b, goals, values, goalTitle, valueName, roadmap); err != nil {
+		return "", err
+	}
+	writeNotes(&b, notes)
+	b.WriteString("</context>")
+	return b.String(), nil
+}
+
+func (c *Curator) writeHeader(b *strings.Builder, checkin db.Checkin, snap app.Snapshot, now time.Time, roadmap bool) {
+	fmt.Fprintf(b, "Now: %s, %s. ", now.Format("Monday"), now.Format("2006-01-02 15:04"))
 	if roadmap {
 		b.WriteString("This is a roadmap conversation from the Roadmap page, not a check-in.\n")
-		if m, err := a.Store.LatestCheckin(snap.Date, "", ""); err == nil {
-			fmt.Fprintf(&b, "Today's check-in: %s\n", readings(m.Mood, m.Energy, m.Anxiety))
+		if m, err := c.app.Store.LatestCheckin(snap.Date, "", ""); err == nil {
+			fmt.Fprintf(b, "Today's check-in: %s\n", readings(m.Mood, m.Energy, m.Anxiety))
 		}
 	} else {
-		fmt.Fprintf(&b, "This is a %s check-in", checkin.Kind)
+		fmt.Fprintf(b, "This is a %s check-in", checkin.Kind)
 		if checkin.Date != snap.Date {
-			fmt.Fprintf(&b, " dated %s", checkin.Date)
+			fmt.Fprintf(b, " dated %s", checkin.Date)
 		}
 		b.WriteString(".\n")
-		fmt.Fprintf(&b, "How they're arriving: %s", readings(checkin.Mood, checkin.Energy, checkin.Anxiety))
+		fmt.Fprintf(b, "How they're arriving: %s", readings(checkin.Mood, checkin.Energy, checkin.Anxiety))
 		if checkin.Note != "" {
-			fmt.Fprintf(&b, ". Their note: %q", checkin.Note)
+			fmt.Fprintf(b, ". Their note: %q", checkin.Note)
 		}
 		b.WriteString("\n")
 	}
+}
 
-	fmt.Fprintf(&b, "\nThis week (starting %s)", snap.Week.StartDate)
+func writeLanes(b *strings.Builder, snap app.Snapshot, goalTitle map[int64]string) {
+	fmt.Fprintf(b, "\nThis week (starting %s)", snap.Week.StartDate)
 	// An unset intention isn't mentioned: small models took it as a cue to
 	// push setting one, even over what the person came for.
 	if snap.Week.Intention != "" {
-		fmt.Fprintf(&b, ", intention: %q", snap.Week.Intention)
+		fmt.Fprintf(b, ", intention: %q", snap.Week.Intention)
 	}
 	b.WriteString(".\n")
 
@@ -83,7 +99,7 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 		b.WriteString("  (empty)\n")
 	}
 	for _, st := range snap.Today {
-		fmt.Fprintf(&b, "  %s", stepLine(st.Step, goalTitle))
+		fmt.Fprintf(b, "  %s", stepLine(st.Step, goalTitle))
 		if st.CarriedOver {
 			b.WriteString(" (from an earlier day)")
 		}
@@ -94,36 +110,40 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 		b.WriteString("  (empty)\n")
 	}
 	for _, st := range snap.WeekSteps {
-		fmt.Fprintf(&b, "  %s\n", stepLine(st, goalTitle))
+		fmt.Fprintf(b, "  %s\n", stepLine(st, goalTitle))
 	}
 	if len(snap.DoneToday) > 0 {
 		b.WriteString("Done today:\n")
 		for _, st := range snap.DoneToday {
-			fmt.Fprintf(&b, "  %s", stepLine(st, goalTitle))
+			fmt.Fprintf(b, "  %s", stepLine(st, goalTitle))
 			if st.Mastery != nil || st.Pleasure != nil {
-				fmt.Fprintf(&b, " mastery %s, pleasure %s", intOr(st.Mastery), intOr(st.Pleasure))
+				fmt.Fprintf(b, " mastery %s, pleasure %s", intOr(st.Mastery), intOr(st.Pleasure))
 			}
 			b.WriteString("\n")
 		}
 	}
+}
 
+func writeMood(b *strings.Builder, mood []app.DayMood) {
 	b.WriteString("\nLast 7 days (mood/energy/anxiety, 0-10):\n")
 	for _, d := range mood {
 		day, _ := time.Parse(time.DateOnly, d.Date)
-		fmt.Fprintf(&b, "  %s %s: %s/%s/%s\n", day.Format("Mon"), d.Date, intOr(d.Mood), intOr(d.Energy), intOr(d.Anxiety))
+		fmt.Fprintf(b, "  %s %s: %s/%s/%s\n", day.Format("Mon"), d.Date, intOr(d.Mood), intOr(d.Energy), intOr(d.Anxiety))
 	}
+}
 
+func (c *Curator) writeGoals(b *strings.Builder, goals []db.Goal, values []db.Value, goalTitle, valueName map[int64]string, roadmap bool) error {
 	if roadmap {
-		someday, err := a.Store.ListSteps(db.StepFilter{Lanes: []string{db.LaneSomeday}})
+		someday, err := c.app.Store.ListSteps(db.StepFilter{Lanes: []string{db.LaneSomeday}})
 		if err != nil {
-			return "", err
+			return err
 		}
 		b.WriteString("Someday lane:\n")
 		if len(someday) == 0 {
 			b.WriteString("  (empty)\n")
 		}
 		for _, st := range someday {
-			fmt.Fprintf(&b, "  %s\n", stepLine(st, goalTitle))
+			fmt.Fprintf(b, "  %s\n", stepLine(st, goalTitle))
 		}
 		b.WriteString("\nGoals:\n")
 	} else {
@@ -136,15 +156,15 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 		b.WriteString("  (none yet)\n")
 	}
 	for _, g := range goals {
-		fmt.Fprintf(&b, "  [goal %d] %s", g.ID, g.Title)
+		fmt.Fprintf(b, "  [goal %d] %s", g.ID, g.Title)
 		if roadmap && g.Status != db.GoalActive {
-			fmt.Fprintf(&b, " (%s)", g.Status)
+			fmt.Fprintf(b, " (%s)", g.Status)
 		}
 		if g.ValueID != nil {
-			fmt.Fprintf(&b, " (value: %s)", valueName[*g.ValueID])
+			fmt.Fprintf(b, " (value: %s)", valueName[*g.ValueID])
 		}
 		if g.Why != "" {
-			fmt.Fprintf(&b, ". Why: %s", g.Why)
+			fmt.Fprintf(b, ". Why: %s", g.Why)
 		}
 		b.WriteString("\n")
 	}
@@ -156,18 +176,19 @@ func (c *Curator) buildContext(checkin db.Checkin) (string, error) {
 				names[i] += fmt.Sprintf(" (%s)", v.Description)
 			}
 		}
-		fmt.Fprintf(&b, "Values: %s\n", strings.Join(names, ", "))
+		fmt.Fprintf(b, "Values: %s\n", strings.Join(names, ", "))
 	}
+	return nil
+}
 
+func writeNotes(b *strings.Builder, notes []db.Note) {
 	b.WriteString("\nWhat you remember about them:\n")
 	if len(notes) == 0 {
 		b.WriteString("  (nothing yet)\n")
 	}
 	for _, n := range notes {
-		fmt.Fprintf(&b, "  [note %d] %s\n", n.ID, n.Text)
+		fmt.Fprintf(b, "  [note %d] %s\n", n.ID, n.Text)
 	}
-	b.WriteString("</context>")
-	return b.String(), nil
 }
 
 func stepLine(st db.Step, goalTitle map[int64]string) string {
@@ -191,5 +212,5 @@ func intOr(p *int) string {
 	if p == nil {
 		return "–"
 	}
-	return fmt.Sprint(*p)
+	return strconv.Itoa(*p)
 }

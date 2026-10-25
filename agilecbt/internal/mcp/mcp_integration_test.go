@@ -73,7 +73,11 @@ func TestMCPRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	text := p.Messages[0].Content.(*sdk.TextContent).Text
+	tc, ok := p.Messages[0].Content.(*sdk.TextContent)
+	if !ok {
+		t.Fatalf("prompt content is %T, want *sdk.TextContent", p.Messages[0].Content)
+	}
+	text := tc.Text
 	if !strings.Contains(text, "evening check-in") || !strings.Contains(text, "988") {
 		t.Fatalf("prompt: %.200s", text)
 	}

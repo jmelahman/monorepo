@@ -191,7 +191,7 @@ func (r *ClassifierReport) Print(w io.Writer) {
 	combined := score(r.Verdicts, ClassifierVerdict.Combined)
 	if r.Model != "" {
 		errs := 0
-		var lat []time.Duration
+		lat := make([]time.Duration, 0, len(r.Verdicts))
 		for _, v := range r.Verdicts {
 			if v.Err != nil {
 				errs++

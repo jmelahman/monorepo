@@ -12,8 +12,6 @@ import (
 	"github.com/jmelahman/agilecbt/internal/db"
 )
 
-func ptr(s string) *string { return &s }
-
 func TestConfiguredOverridesAndKeyBinding(t *testing.T) {
 	reg := newRegistry(t)
 	a := reg.App()
@@ -28,7 +26,7 @@ func TestConfiguredOverridesAndKeyBinding(t *testing.T) {
 
 	// Moving to another URL drops the configured key rather than sending
 	// it there.
-	s, err := cur.UpdateLLM(map[string]*string{"base_url": ptr("https://openrouter.ai/api/v1/"), "model": ptr("anthropic/claude-sonnet-5")})
+	s, err := cur.UpdateLLM(map[string]*string{"base_url": new("https://openrouter.ai/api/v1/"), "model": new("anthropic/claude-sonnet-5")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +38,7 @@ func TestConfiguredOverridesAndKeyBinding(t *testing.T) {
 	}
 
 	// A saved key is bound to the URL in effect when it was saved.
-	if s, err = cur.UpdateLLM(map[string]*string{"api_key": ptr("sk-or-1")}); err != nil {
+	if s, err = cur.UpdateLLM(map[string]*string{"api_key": new("sk-or-1")}); err != nil {
 		t.Fatal(err)
 	}
 	if !s.APIKeySaved || cur.Effective().APIKey != "sk-or-1" {
@@ -49,14 +47,14 @@ func TestConfiguredOverridesAndKeyBinding(t *testing.T) {
 	if raw, _ := json.Marshal(s); strings.Contains(string(raw), "sk-or-1") {
 		t.Fatalf("key leaked in settings: %s", raw)
 	}
-	if s, err = cur.UpdateLLM(map[string]*string{"base_url": ptr("http://evil.example/v1")}); err != nil {
+	if s, err = cur.UpdateLLM(map[string]*string{"base_url": new("http://evil.example/v1")}); err != nil {
 		t.Fatal(err)
 	}
 	if s.APIKeySaved || cur.Effective().APIKey != "" {
 		t.Fatalf("key followed the url: %+v", s)
 	}
 	// A key sent with a new URL is bound to that URL.
-	if s, err = cur.UpdateLLM(map[string]*string{"base_url": ptr("https://b.example/v1"), "api_key": ptr("sk-b")}); err != nil {
+	if s, err = cur.UpdateLLM(map[string]*string{"base_url": new("https://b.example/v1"), "api_key": new("sk-b")}); err != nil {
 		t.Fatal(err)
 	}
 	if !s.APIKeySaved || cur.Effective().APIKey != "sk-b" {
@@ -76,7 +74,7 @@ func TestConfiguredOverridesAndKeyBinding(t *testing.T) {
 
 	// Null reverts to the config, restoring its key; "" keeps
 	// reasoning_effort out of requests.
-	if s, err = cur.UpdateLLM(map[string]*string{"base_url": nil, "model": nil, "reasoning_effort": ptr("")}); err != nil {
+	if _, err = cur.UpdateLLM(map[string]*string{"base_url": nil, "model": nil, "reasoning_effort": new("")}); err != nil {
 		t.Fatal(err)
 	}
 	if eff := cur.Effective(); eff.BaseURL != defaults.BaseURL || eff.APIKey != "config-key" || eff.Model != "qwen" || eff.ReasoningEffort != "" {
@@ -84,7 +82,7 @@ func TestConfiguredOverridesAndKeyBinding(t *testing.T) {
 	}
 
 	// Turning the coach off takes effect immediately.
-	if _, err = cur.UpdateLLM(map[string]*string{"llm": ptr("none")}); err != nil {
+	if _, err = cur.UpdateLLM(map[string]*string{"llm": new("none")}); err != nil {
 		t.Fatal(err)
 	}
 	if st := cur.Status(context.Background()); st.Backend != "none" || st.Available {
@@ -96,10 +94,10 @@ func TestConfiguredOverridesAndKeyBinding(t *testing.T) {
 	}
 
 	for _, bad := range []map[string]*string{
-		{"llm": ptr("bogus")},
-		{"base_url": ptr("ftp://x")},
-		{"reasoning_effort": ptr("max")},
-		{"secret": ptr("x")},
+		{"llm": new("bogus")},
+		{"base_url": new("ftp://x")},
+		{"reasoning_effort": new("max")},
+		{"secret": new("x")},
 		{"secret": nil},
 	} {
 		if _, err := cur.UpdateLLM(bad); !errors.Is(err, db.ErrInvalid) {
@@ -124,7 +122,7 @@ func TestConfiguredModelsAndStatus(t *testing.T) {
 		t.Fatalf("status: %+v", st)
 	}
 	// Changing the model re-probes instead of serving the cached status.
-	if _, err := cur.UpdateLLM(map[string]*string{"model": ptr("c")}); err != nil {
+	if _, err := cur.UpdateLLM(map[string]*string{"model": new("c")}); err != nil {
 		t.Fatal(err)
 	}
 	if st := cur.Status(context.Background()); st.Available || !strings.Contains(st.Detail, "ollama pull c") {
@@ -138,7 +136,7 @@ func TestConfiguredClaudeCode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := cur.UpdateLLM(map[string]*string{"llm": ptr("claude-code"), "model": ptr("haiku")}); err != nil {
+	if _, err := cur.UpdateLLM(map[string]*string{"llm": new("claude-code"), "model": new("haiku")}); err != nil {
 		t.Fatal(err)
 	}
 	b, ok := cur.current().(*ClaudeCode)
@@ -149,7 +147,7 @@ func TestConfiguredClaudeCode(t *testing.T) {
 	if err != nil || !slices.Contains(models, "opus") {
 		t.Fatalf("models = %v, %v", models, err)
 	}
-	if _, err := cur.UpdateLLM(map[string]*string{"llm": ptr("anthropic")}); !errors.Is(err, db.ErrInvalid) {
+	if _, err := cur.UpdateLLM(map[string]*string{"llm": new("anthropic")}); !errors.Is(err, db.ErrInvalid) {
 		t.Fatalf("err = %v", err)
 	}
 }

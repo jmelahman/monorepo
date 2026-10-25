@@ -139,18 +139,18 @@ func ok[T any](v T, err error) (any, error) {
 // errUnavailable means the AI coach can't be reached right now.
 var errUnavailable = errors.New("the AI coach is unavailable")
 
-// errBadRequest marks request-shape problems (bad JSON, bad ids).
-type errBadRequest struct{ msg string }
+// badRequestError marks request-shape problems (bad JSON, bad ids).
+type badRequestError struct{ msg string }
 
-func (e errBadRequest) Error() string { return e.msg }
+func (e badRequestError) Error() string { return e.msg }
 
 func badRequest(format string, args ...any) error {
-	return errBadRequest{fmt.Sprintf(format, args...)}
+	return badRequestError{fmt.Sprintf(format, args...)}
 }
 
 // fail maps domain errors to HTTP statuses.
 func fail(w http.ResponseWriter, r *http.Request, err error) {
-	var br errBadRequest
+	var br badRequestError
 	switch {
 	case errors.As(err, &br):
 		httpError(w, http.StatusBadRequest, br.msg)

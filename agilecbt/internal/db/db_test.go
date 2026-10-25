@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -15,8 +16,6 @@ func openTest(t *testing.T) *Store {
 	t.Cleanup(func() { store.Close() })
 	return store
 }
-
-func ptr[T any](v T) *T { return &v }
 
 func TestMigrationsIdempotent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "test.db")
@@ -52,28 +51,28 @@ func TestMemoryStoresAreIsolated(t *testing.T) {
 
 func TestValueGoalStep(t *testing.T) {
 	s := openTest(t)
-	v, err := s.CreateValue(ValuePatch{Name: ptr("Health")})
+	v, err := s.CreateValue(ValuePatch{Name: new("Health")})
 	if err != nil {
 		t.Fatal(err)
 	}
-	g, err := s.CreateGoal(GoalPatch{ValueID: &v.ID, Title: ptr("Move my body")})
+	g, err := s.CreateGoal(GoalPatch{ValueID: &v.ID, Title: new("Move my body")})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if g.Status != GoalActive || *g.ValueID != v.ID {
 		t.Fatalf("unexpected goal: %+v", g)
 	}
-	if _, err := s.CreateGoal(GoalPatch{Title: ptr("x"), ValueID: ptr(int64(999))}); !errors.Is(err, ErrInvalid) {
+	if _, err := s.CreateGoal(GoalPatch{Title: new("x"), ValueID: new(int64(999))}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid for unknown value, got %v", err)
 	}
-	st, err := s.CreateStep("", StepPatch{GoalID: &g.ID, Title: ptr("10-min walk"), EnergyCost: ptr(2)})
+	st, err := s.CreateStep("", StepPatch{GoalID: &g.ID, Title: new("10-min walk"), EnergyCost: new(2)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if st.Lane != LaneSomeday || st.EnergyCost != 2 {
 		t.Fatalf("unexpected step: %+v", st)
 	}
-	if _, err := s.CreateStep(LaneToday, StepPatch{Title: ptr("x"), EnergyCost: ptr(4)}); !errors.Is(err, ErrInvalid) {
+	if _, err := s.CreateStep(LaneToday, StepPatch{Title: new("x"), EnergyCost: new(4)}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid for energy 4, got %v", err)
 	}
 
@@ -92,16 +91,16 @@ func TestValueGoalStep(t *testing.T) {
 
 func TestMoveStepOrdering(t *testing.T) {
 	s := openTest(t)
-	var ids []int64
+	ids := make([]int64, 0, 3)
 	for _, title := range []string{"a", "b", "c"} {
-		st, err := s.CreateStep(LaneToday, StepPatch{Title: ptr(title)})
+		st, err := s.CreateStep(LaneToday, StepPatch{Title: new(title)})
 		if err != nil {
 			t.Fatal(err)
 		}
 		ids = append(ids, st.ID)
 	}
 	// Move c to the top.
-	if _, err := s.MoveStep(ids[2], LaneToday, ptr(0)); err != nil {
+	if _, err := s.MoveStep(ids[2], LaneToday, new(0)); err != nil {
 		t.Fatal(err)
 	}
 	got := titles(t, s, LaneToday)
@@ -110,7 +109,7 @@ func TestMoveStepOrdering(t *testing.T) {
 	}
 
 	// Complete a: lands in done with completed_at and ratings.
-	done, err := s.CompleteStep(ids[0], ptr(6), ptr(4))
+	done, err := s.CompleteStep(ids[0], new(6), new(4))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,26 +139,23 @@ func titles(t *testing.T, s *Store, lane string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := ""
+	names := make([]string, len(steps))
 	for i, st := range steps {
-		if i > 0 {
-			out += ","
-		}
-		out += st.Title
+		names[i] = st.Title
 	}
-	return out
+	return strings.Join(names, ",")
 }
 
 func TestCheckinsAndMessages(t *testing.T) {
 	s := openTest(t)
-	c, err := s.CreateCheckin(CheckinPatch{Date: ptr("2026-09-25"), Mood: ptr(4), Energy: ptr(3)})
+	c, err := s.CreateCheckin(CheckinPatch{Date: new("2026-09-25"), Mood: new(4), Energy: new(3)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if c.Kind != KindMorning || *c.Mood != 4 || c.Anxiety != nil {
 		t.Fatalf("unexpected checkin: %+v", c)
 	}
-	if _, err := s.CreateCheckin(CheckinPatch{Date: ptr("2026-09-25"), Mood: ptr(11)}); !errors.Is(err, ErrInvalid) {
+	if _, err := s.CreateCheckin(CheckinPatch{Date: new("2026-09-25"), Mood: new(11)}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid for mood 11, got %v", err)
 	}
 	latest, err := s.LatestCheckin("2026-09-25", KindMorning, "")
@@ -186,9 +182,9 @@ func TestCheckinsAndMessages(t *testing.T) {
 func TestThoughtRecordRoundTrip(t *testing.T) {
 	s := openTest(t)
 	tr, err := s.CreateThoughtRecord(ThoughtRecordPatch{
-		Situation:        ptr("Friend didn't text back"),
+		Situation:        new("Friend didn't text back"),
 		Emotions:         &[]Emotion{{Name: "anxious", Intensity: 70}, {Name: " "}},
-		AutomaticThought: ptr("They're mad at me"),
+		AutomaticThought: new("They're mad at me"),
 		Distortions:      &[]string{"mind_reading"},
 	})
 	if err != nil {
@@ -215,11 +211,10 @@ func TestWeekAndRetro(t *testing.T) {
 	if _, err := s.GetRetro(w.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected no retro yet, got %v", err)
 	}
-	r, err := s.UpsertRetro(w.ID, RetroPatch{WentWell: ptr("walked 3x")})
-	if err != nil {
+	if _, err := s.UpsertRetro(w.ID, RetroPatch{WentWell: new("walked 3x")}); err != nil {
 		t.Fatal(err)
 	}
-	r, err = s.UpsertRetro(w.ID, RetroPatch{TryNext: ptr("walk after lunch")})
+	r, err := s.UpsertRetro(w.ID, RetroPatch{TryNext: new("walk after lunch")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +243,7 @@ func TestPutRestoresDeletedRow(t *testing.T) {
 
 func TestMoveToSameLaneRecommits(t *testing.T) {
 	s := openTest(t)
-	st, err := s.CreateStep(LaneToday, StepPatch{Title: ptr("stretch")})
+	st, err := s.CreateStep(LaneToday, StepPatch{Title: new("stretch")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +252,7 @@ func TestMoveToSameLaneRecommits(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Reordering within a lane keeps the original commitment time...
-	got, err := s.MoveStep(st.ID, LaneToday, ptr(0))
+	got, err := s.MoveStep(st.ID, LaneToday, new(0))
 	if err != nil {
 		t.Fatal(err)
 	}

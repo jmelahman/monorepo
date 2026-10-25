@@ -169,7 +169,8 @@ func TestClaudeCodeResumesSessions(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	opener := []db.Message{{Role: "assistant", Text: "How are you arriving?"}}
+	opener := make([]db.Message, 1, 3)
+	opener[0] = db.Message{Role: "assistant", Text: "How are you arriving?"}
 	turn(opener, "tired")
 	args := readFile(t, filepath.Join(dir, "args"))
 	if strings.Contains(args, "--resume") || strings.Contains(args, "--no-session-persistence") {

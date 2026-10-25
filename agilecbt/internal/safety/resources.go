@@ -38,7 +38,7 @@ func Markers(resources string) []string {
 	if len(out) > 0 {
 		return out
 	}
-	for _, l := range strings.Split(resources, "\n") {
+	for l := range strings.SplitSeq(resources, "\n") {
 		add(strings.ToLower(strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(l), "-*• "))))
 	}
 	return out

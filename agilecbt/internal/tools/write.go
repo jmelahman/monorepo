@@ -11,25 +11,12 @@ import (
 )
 
 func writeTools() []Tool {
-	emotionItems := map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"name":      map[string]any{"type": "string"},
-			"intensity": map[string]any{"type": "integer", "minimum": 0, "maximum": 100},
-		},
-		"required": []string{"name", "intensity"},
-	}
-	thoughtProps := []prop{
-		str("situation", "What happened: where, when, who."),
-		array("emotions", "Feelings and how intense they were (0-100).", emotionItems),
-		str("automatic_thought", "The thought that went through their mind, in their words."),
-		array("distortions", "Thinking traps spotted, e.g. all_or_nothing, catastrophizing, mind_reading, fortune_telling, should_statements, labeling, personalization, overgeneralization, mental_filter, discounting_positives, emotional_reasoning.", map[string]any{"type": "string"}),
-		str("evidence_for", "Facts supporting the thought."),
-		str("evidence_against", "Facts that don't fit the thought."),
-		str("balanced_thought", "A more balanced alternative the user finds believable."),
-		array("rerated_emotions", "The same emotions re-rated after reflection.", emotionItems),
-	}
+	tools := planningTools()
+	tools = append(tools, reflectionTools()...)
+	return append(tools, memoryTools()...)
+}
 
+func planningTools() []Tool {
 	return []Tool{
 		define("create_value",
 			"Add a life value (an area that matters to the user, like Health or Creativity).",
@@ -206,7 +193,29 @@ func writeTools() []Tool {
 				}
 				return st, record(ctx, a, "let_go_step", fmt.Sprintf("Let go of %q", st.Title), app.EntityStep, st.ID, before, st)
 			}),
+	}
+}
 
+func reflectionTools() []Tool {
+	emotionItems := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"name":      map[string]any{"type": "string"},
+			"intensity": map[string]any{"type": "integer", "minimum": 0, "maximum": 100},
+		},
+		"required": []string{"name", "intensity"},
+	}
+	thoughtProps := []prop{
+		str("situation", "What happened: where, when, who."),
+		array("emotions", "Feelings and how intense they were (0-100).", emotionItems),
+		str("automatic_thought", "The thought that went through their mind, in their words."),
+		array("distortions", "Thinking traps spotted, e.g. all_or_nothing, catastrophizing, mind_reading, fortune_telling, should_statements, labeling, personalization, overgeneralization, mental_filter, discounting_positives, emotional_reasoning.", map[string]any{"type": "string"}),
+		str("evidence_for", "Facts supporting the thought."),
+		str("evidence_against", "Facts that don't fit the thought."),
+		str("balanced_thought", "A more balanced alternative the user finds believable."),
+		array("rerated_emotions", "The same emotions re-rated after reflection.", emotionItems),
+	}
+	return []Tool{
 		define("record_checkin",
 			"Record how the user is arriving: mood, energy, anxiety (0-10), a short note in their words, and/or a one-line summary of the check-in. Call it whenever they tell you these numbers. Updates the current check-in; outside a check-in it starts a new one for today.",
 			true, []prop{
@@ -325,7 +334,11 @@ func writeTools() []Tool {
 				}
 				return r, record(ctx, a, "save_retro_draft", "Updated the retro draft", app.EntityRetro, r.ID, before, r)
 			}),
+	}
+}
 
+func memoryTools() []Tool {
+	return []Tool{
 		define("remember",
 			"Remember a lasting fact about the user for future check-ins: what helps, what makes things harder, a preference (e.g. 'walks help most before noon'). Call it when they mention one. Keep it short. The user can see and edit these.",
 			true, []prop{str("text", "").req()},
@@ -337,7 +350,7 @@ func writeTools() []Tool {
 				if err != nil {
 					return nil, err
 				}
-				return n, record(ctx, a, "remember", fmt.Sprintf("Remembered: %s", n.Text), app.EntityNote, n.ID, nil, n)
+				return n, record(ctx, a, "remember", "Remembered: "+n.Text, app.EntityNote, n.ID, nil, n)
 			}),
 
 		define("forget",
@@ -354,7 +367,7 @@ func writeTools() []Tool {
 				if err := a.Store.DeleteNote(in.ID); err != nil {
 					return nil, err
 				}
-				return map[string]string{"status": "forgotten"}, record(ctx, a, "forget", fmt.Sprintf("Forgot: %s", n.Text), app.EntityNote, n.ID, n, nil)
+				return map[string]string{"status": "forgotten"}, record(ctx, a, "forget", "Forgot: "+n.Text, app.EntityNote, n.ID, n, nil)
 			}),
 	}
 }

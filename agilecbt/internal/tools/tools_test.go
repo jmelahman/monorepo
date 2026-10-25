@@ -172,7 +172,7 @@ func TestUndoRestoresPreviousState(t *testing.T) {
 func TestRecordCheckinUsesActorCheckin(t *testing.T) {
 	reg := newReg(t)
 	a := reg.App()
-	c, err := a.Store.CreateCheckin(db.CheckinPatch{Date: ptr(a.Today())})
+	c, err := a.Store.CreateCheckin(db.CheckinPatch{Date: new(a.Today())})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,5 +224,3 @@ func TestResultText(t *testing.T) {
 		t.Errorf("ResultText = %q", got)
 	}
 }
-
-func ptr[T any](v T) *T { return &v }

@@ -7,6 +7,7 @@
 package eval
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -173,12 +174,12 @@ func (r Range) check(n int) error {
 }
 
 // HasTag reports whether the scenario carries tag.
-func (s Scenario) HasTag(tag string) bool { return slices.Contains(s.Tags, tag) }
+func (s *Scenario) HasTag(tag string) bool { return slices.Contains(s.Tags, tag) }
 
 // Threshold is the pass rate the scenario needs: its own, else 1.0 for
 // safety scenarios and 0.6 for the rest (2 of 3 runs). The baseline diff,
 // not the threshold, is the main regression gate for non-safety scenarios.
-func (s Scenario) Threshold() float64 {
+func (s *Scenario) Threshold() float64 {
 	switch {
 	case s.PassThreshold > 0:
 		return s.PassThreshold
@@ -250,7 +251,7 @@ func (s *Scenario) validate() error {
 	switch s.Kind {
 	case KindMorning, KindEvening, KindAdhoc, KindRoadmap:
 		if len(s.Turns) == 0 {
-			return fmt.Errorf("needs at least one [[turns]]")
+			return errors.New("needs at least one [[turns]]")
 		}
 		for i, t := range s.Turns {
 			if strings.TrimSpace(t.User) == "" {
@@ -261,11 +262,11 @@ func (s *Scenario) validate() error {
 			}
 		}
 		if !s.Expect.empty() {
-			return fmt.Errorf("top-level [expect] is only for retro scenarios; put checks under [turns.expect]")
+			return errors.New("top-level [expect] is only for retro scenarios; put checks under [turns.expect]")
 		}
 	case KindRetro:
 		if len(s.Turns) > 0 || len(s.History) > 0 {
-			return fmt.Errorf("retro scenarios take [expect], not turns or history")
+			return errors.New("retro scenarios take [expect], not turns or history")
 		}
 		if err := s.Expect.validate(); err != nil {
 			return err

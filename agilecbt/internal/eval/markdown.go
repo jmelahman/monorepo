@@ -59,7 +59,7 @@ func WriteMarkdown(w io.Writer, pages []Page) error {
 		b.WriteString("\n")
 	}
 
-	var runs []string
+	runs := make([]string, 0, len(pages))
 	for _, p := range pages {
 		r := p.Report
 		n := 0

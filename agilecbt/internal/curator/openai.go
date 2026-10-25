@@ -188,7 +188,7 @@ func (o *OpenAI) tools() []oaiTool {
 	if list == nil {
 		list = o.Registry.List()
 	}
-	var out []oaiTool
+	out := make([]oaiTool, 0, len(list))
 	for _, t := range list {
 		var ot oaiTool
 		ot.Type = "function"

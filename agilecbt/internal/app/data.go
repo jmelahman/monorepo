@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -131,7 +132,7 @@ func (a *App) Export() (Dump, error) {
 		for _, w := range d.Weeks {
 			if r, err := s.GetRetro(w.ID); err == nil {
 				d.Retros = append(d.Retros, r)
-			} else if err != db.ErrNotFound {
+			} else if !errors.Is(err, db.ErrNotFound) {
 				return err
 			}
 		}

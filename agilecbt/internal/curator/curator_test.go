@@ -109,7 +109,7 @@ func TestOpenAIToolLoop(t *testing.T) {
 	var streamed strings.Builder
 	err := cur.Chat(context.Background(), c.ID, "I could walk today", func(ev string, data any) {
 		if ev == "text" {
-			streamed.WriteString(data.(map[string]string)["text"])
+			streamed.WriteString(as[map[string]string](t, data)["text"])
 		}
 	})
 	if err != nil {
@@ -138,23 +138,23 @@ func TestOpenAIToolLoop(t *testing.T) {
 	if first["reasoning_effort"] != "none" || first["model"] != "qwen3.8:27b" || first["stream"] != true {
 		t.Errorf("request params: %v %v %v", first["reasoning_effort"], first["model"], first["stream"])
 	}
-	if len(first["tools"].([]any)) != len(reg.List()) {
+	if len(as[[]any](t, first["tools"])) != len(reg.List()) {
 		t.Errorf("tools not sent")
 	}
-	sent := first["messages"].([]any)
-	if sys := sent[0].(map[string]any); sys["role"] != "system" || !strings.Contains(sys["content"].(string), "988") {
+	sent := as[[]any](t, first["messages"])
+	if sys := as[map[string]any](t, sent[0]); sys["role"] != "system" || !strings.Contains(as[string](t, sys["content"]), "988") {
 		t.Errorf("system prompt missing crisis resources")
 	}
-	if user := sent[len(sent)-1].(map[string]any)["content"].(string); !strings.Contains(user, "<context>") || !strings.Contains(user, "mood 4") {
+	if user := as[string](t, as[map[string]any](t, sent[len(sent)-1])["content"]); !strings.Contains(user, "<context>") || !strings.Contains(user, "mood 4") {
 		t.Errorf("context block missing: %s", user)
 	}
-	second := fake.requests[1]["messages"].([]any)
-	call := second[len(second)-2].(map[string]any)
+	second := as[[]any](t, fake.requests[1]["messages"])
+	call := as[map[string]any](t, second[len(second)-2])
 	calls, _ := call["tool_calls"].([]any)
 	if len(calls) != 1 || !strings.Contains(fmt.Sprint(calls[0]), `"title":"Short walk"`) {
 		t.Errorf("assistant tool call not sent back: %+v", call)
 	}
-	if last := second[len(second)-1].(map[string]any); last["role"] != "tool" || last["tool_call_id"] != "call_a" || !strings.Contains(last["content"].(string), "Short walk") {
+	if last := as[map[string]any](t, second[len(second)-1]); last["role"] != "tool" || last["tool_call_id"] != "call_a" || !strings.Contains(as[string](t, last["content"]), "Short walk") {
 		t.Errorf("tool result not sent back: %+v", last)
 	}
 
@@ -195,8 +195,8 @@ func TestOpenAIRepeatedFailedCall(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := func(req int) string {
-		msgs := fake.requests[req]["messages"].([]any)
-		return msgs[len(msgs)-1].(map[string]any)["content"].(string)
+		msgs := as[[]any](t, fake.requests[req]["messages"])
+		return as[string](t, as[map[string]any](t, msgs[len(msgs)-1])["content"])
 	}
 	if r := result(1); !strings.Contains(r, "goal 99 does not exist") || !strings.Contains(r, `1 "Walk more"`) || !strings.Contains(r, "list tool") {
 		t.Errorf("first result: %s", r)
@@ -273,7 +273,7 @@ func TestChatRejectsConcurrentTurns(t *testing.T) {
 			break
 		}
 	}
-	if err := cur.Chat(context.Background(), c.ID, "two", func(string, any) {}); err != ErrBusy {
+	if err := cur.Chat(context.Background(), c.ID, "two", func(string, any) {}); !errors.Is(err, ErrBusy) {
 		t.Fatalf("second turn: %v, want ErrBusy", err)
 	}
 	close(block)
@@ -293,4 +293,14 @@ func (b blockingBackend) Turn(context.Context, TurnRequest, func(string)) (TurnR
 
 func (blockingBackend) Complete(context.Context, string, string) (string, error) {
 	return "", nil
+}
+
+// as asserts v has type T, failing the test instead of panicking.
+func as[T any](t testing.TB, v any) T {
+	t.Helper()
+	got, ok := v.(T)
+	if !ok {
+		t.Fatalf("got %T, want %T", v, got)
+	}
+	return got
 }

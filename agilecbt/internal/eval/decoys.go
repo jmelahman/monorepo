@@ -76,8 +76,9 @@ func toolset(reg *tools.Registry, opts Options) ([]tools.Tool, []string) {
 			out = append(out, t)
 		}
 	}
-	var names []string
-	for _, d := range decoyTools(opts.Decoys) {
+	decoys := decoyTools(opts.Decoys)
+	names := make([]string, 0, len(decoys))
+	for _, d := range decoys {
 		out = append(out, d)
 		names = append(names, d.Name)
 	}

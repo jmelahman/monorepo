@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -57,7 +58,7 @@ func (f *safetyFlags) register(fl *pflag.FlagSet) {
 
 // resolve returns the classifier model, or nil for the phrase list alone.
 // Like the app, a different base URL never gets the coach's key.
-func (f safetyFlags) resolve(cfg config.Config) *eval.Model {
+func (f *safetyFlags) resolve(cfg config.Config) *eval.Model {
 	if f.model == "" {
 		return nil
 	}
@@ -260,37 +261,15 @@ func runEval(cmd *cobra.Command, f evalFlags) error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
-	filtered := len(f.tags) > 0 || len(f.only) > 0 || len(f.tools) > 0
-	if f.updateBaseline && (filtered || slices.ContainsFunc(f.decoys, func(n int) bool { return n != 0 })) {
-		return errors.New("--update-baseline needs the full scenario set and tool list; drop --tag, --only, --tools and --decoy-tools")
-	}
-	if f.noSafety && f.safety.model != "" {
-		return errors.New("--no-safety and --safety-model don't mix")
-	}
-	if f.updateBaseline && (f.noSafety || f.safety.model != "") {
-		// Baselines track the app's default classifier setup.
-		return errors.New("--update-baseline records the default crisis classifier; drop --no-safety and --safety-model")
-	}
-	if f.updateBaseline && (f.promptFile != "" || f.retroFile != "") {
-		// Baselines track the shipped prompts; land the draft first.
-		return errors.New("--update-baseline records the built-in prompts; drop --prompt and --retro-prompt")
-	}
-	for _, n := range f.decoys {
-		if n < 0 || n > eval.MaxDecoys() {
-			return fmt.Errorf("--decoy-tools %d: want 0 to %d", n, eval.MaxDecoys())
-		}
+	if err := validateEvalFlags(f); err != nil {
+		return err
 	}
 
 	scenarios, err := eval.LoadScenarios(f.scenarios)
 	if err != nil {
 		return err
 	}
-	scenarios = slices.DeleteFunc(scenarios, func(s eval.Scenario) bool {
-		if len(f.only) > 0 && !slices.Contains(f.only, s.ID) {
-			return true
-		}
-		return len(f.tags) > 0 && !slices.ContainsFunc(f.tags, s.HasTag)
-	})
+	scenarios = filterScenarios(scenarios, f)
 	if len(scenarios) == 0 {
 		return errors.New("no scenarios match --tag/--only")
 	}
@@ -299,35 +278,9 @@ func runEval(cmd *cobra.Command, f evalFlags) error {
 	if err != nil {
 		return err
 	}
-	opts := eval.Options{Tools: f.tools, Runs: f.runs, Parallel: f.parallel, TurnTimeout: f.turnTimeout, Progress: errOut,
-		NoSafety: f.noSafety, SafetyModel: f.safety.resolve(cfg)}
-	if f.promptFile != "" {
-		if opts.Prompt, err = readPrompt(f.promptFile); err != nil {
-			return err
-		}
-		if !strings.Contains(opts.Prompt, prompt.CrisisPlaceholder) {
-			// Without it the model never sees the crisis lines, and every
-			// safety scenario fails for a reason that isn't the prompt's.
-			return fmt.Errorf("%s has no %s placeholder for the crisis resources", f.promptFile, prompt.CrisisPlaceholder)
-		}
-	}
-	if f.retroFile != "" {
-		if opts.RetroPrompt, err = readPrompt(f.retroFile); err != nil {
-			return err
-		}
-	}
-	if f.judgeModel != "" {
-		j := &curator.OpenAI{BaseURL: f.judgeBaseURL, APIKey: f.judgeAPIKey, Model: f.judgeModel}
-		if j.BaseURL == "" {
-			j.BaseURL = cfg.BaseURL
-		}
-		if j.APIKey == "" {
-			j.APIKey = os.Getenv("AGILECBT_EVAL_JUDGE_API_KEY")
-		}
-		if j.APIKey == "" && j.BaseURL == cfg.BaseURL {
-			j.APIKey = cfg.APIKey
-		}
-		opts.Judge = &eval.Judge{Backend: j}
+	opts, err := evalOptions(f, cfg, errOut)
+	if err != nil {
+		return err
 	}
 
 	var reports []*eval.Report
@@ -395,6 +348,78 @@ func runEval(cmd *cobra.Command, f evalFlags) error {
 		return fmt.Errorf("%d problem(s):\n  %s", len(problems), strings.Join(problems, "\n  "))
 	}
 	return nil
+}
+
+// validateEvalFlags rejects flag combinations that can't produce a
+// meaningful run or baseline.
+func validateEvalFlags(f evalFlags) error {
+	filtered := len(f.tags) > 0 || len(f.only) > 0 || len(f.tools) > 0
+	if f.updateBaseline && (filtered || slices.ContainsFunc(f.decoys, func(n int) bool { return n != 0 })) {
+		return errors.New("--update-baseline needs the full scenario set and tool list; drop --tag, --only, --tools and --decoy-tools")
+	}
+	if f.noSafety && f.safety.model != "" {
+		return errors.New("--no-safety and --safety-model don't mix")
+	}
+	if f.updateBaseline && (f.noSafety || f.safety.model != "") {
+		// Baselines track the app's default classifier setup.
+		return errors.New("--update-baseline records the default crisis classifier; drop --no-safety and --safety-model")
+	}
+	if f.updateBaseline && (f.promptFile != "" || f.retroFile != "") {
+		// Baselines track the shipped prompts; land the draft first.
+		return errors.New("--update-baseline records the built-in prompts; drop --prompt and --retro-prompt")
+	}
+	for _, n := range f.decoys {
+		if n < 0 || n > eval.MaxDecoys() {
+			return fmt.Errorf("--decoy-tools %d: want 0 to %d", n, eval.MaxDecoys())
+		}
+	}
+	return nil
+}
+
+// filterScenarios applies --only and --tag.
+func filterScenarios(scenarios []eval.Scenario, f evalFlags) []eval.Scenario {
+	return slices.DeleteFunc(scenarios, func(s eval.Scenario) bool {
+		if len(f.only) > 0 && !slices.Contains(f.only, s.ID) {
+			return true
+		}
+		return len(f.tags) > 0 && !slices.ContainsFunc(f.tags, s.HasTag)
+	})
+}
+
+// evalOptions builds the run options: prompts, judge and safety classifier.
+func evalOptions(f evalFlags, cfg config.Config, errOut io.Writer) (eval.Options, error) {
+	var err error
+	opts := eval.Options{Tools: f.tools, Runs: f.runs, Parallel: f.parallel, TurnTimeout: f.turnTimeout, Progress: errOut,
+		NoSafety: f.noSafety, SafetyModel: f.safety.resolve(cfg)}
+	if f.promptFile != "" {
+		if opts.Prompt, err = readPrompt(f.promptFile); err != nil {
+			return opts, err
+		}
+		if !strings.Contains(opts.Prompt, prompt.CrisisPlaceholder) {
+			// Without it the model never sees the crisis lines, and every
+			// safety scenario fails for a reason that isn't the prompt's.
+			return opts, fmt.Errorf("%s has no %s placeholder for the crisis resources", f.promptFile, prompt.CrisisPlaceholder)
+		}
+	}
+	if f.retroFile != "" {
+		if opts.RetroPrompt, err = readPrompt(f.retroFile); err != nil {
+			return opts, err
+		}
+	}
+	if f.judgeModel != "" {
+		j := &curator.OpenAI{BaseURL: f.judgeBaseURL, APIKey: f.judgeAPIKey, Model: f.judgeModel}
+		if j.BaseURL == "" {
+			j.BaseURL = cfg.BaseURL
+		}
+		if j.APIKey == "" {
+			j.APIKey = os.Getenv("AGILECBT_EVAL_JUDGE_API_KEY")
+		}
+		if j.APIKey == "" && j.BaseURL == cfg.BaseURL {
+			j.APIKey = cfg.APIKey
+		}
+		opts.Judge = &eval.Judge{Backend: j}
+	}
+	return opts, nil
 }
 
 // evalModels resolves which models to benchmark. Each inherits the

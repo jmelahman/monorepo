@@ -140,7 +140,7 @@ func TestAuth(t *testing.T) {
 	if len(cookies) != 1 || !cookies[0].HttpOnly || strings.Contains(cookies[0].Value, "s3cret") {
 		t.Fatalf("bad session cookie: %+v", cookies)
 	}
-	req := httptest.NewRequest("GET", "/api/today", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/today", nil)
 	req.AddCookie(cookies[0])
 	rec = httptest.NewRecorder()
 	h.h.ServeHTTP(rec, req)
@@ -289,7 +289,7 @@ func TestChatActionsAndUndo(t *testing.T) {
 		t.Fatalf("chat: %d %s", rec.Code, rec.Header())
 	}
 	events := readSSE(t, rec.Body.String())
-	var names []string
+	names := make([]string, 0, len(events))
 	var action db.Action
 	for _, e := range events {
 		names = append(names, e.name)

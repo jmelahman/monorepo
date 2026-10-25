@@ -17,6 +17,8 @@ func Directive(r Result, resources string) string {
 		focus = "They may want to seriously hurt someone. Respond with care, not judgment, and check on safety right now, theirs and the other person's."
 	case SelfHarm:
 		focus = "They may be hurting themselves. Ask directly whether they are safe right now."
+	case Suicide, None:
+		fallthrough
 	default:
 		focus = "They may be thinking about suicide, even if it was phrased as a joke or in passing. Ask directly whether they are safe right now."
 	}
@@ -31,6 +33,8 @@ Crisis resources:
 func Fallback(r Result, resources string) string {
 	lead := "I'm really glad you told me, and I'm taking it seriously. Are you safe right now?"
 	switch r.Category {
+	case None, Suicide, SelfHarm:
+		// keep the default lead
 	case InDanger:
 		lead = "If you're in danger right now, call your local emergency number (911 in the US, 999 in the UK, 112 in Europe) or get somewhere safe first. Are you safe right now?"
 	case HarmOthers:

@@ -195,7 +195,7 @@ func (c *Curator) Chat(ctx context.Context, checkinID int64, text string, emit f
 	var meta string
 	if flag.Flagged() {
 		// The person must get the crisis resources whatever the model did.
-		extra := ""
+		var extra string
 		if strings.TrimSpace(reply) == "" {
 			extra = safety.Fallback(flag, resources)
 		} else {

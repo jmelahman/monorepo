@@ -569,7 +569,7 @@ func (d Deps) listModels(r *http.Request) (any, error) {
 	ids, err := d.Curator.Models(r.Context())
 	if err != nil {
 		// The status line already explains why; offer no suggestions.
-		return []string{}, nil
+		return []string{}, nil //nolint:nilerr // a failed model list degrades to an empty one; the status line explains why
 	}
 	return ids, nil
 }

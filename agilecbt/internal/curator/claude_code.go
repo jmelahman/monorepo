@@ -104,10 +104,8 @@ func (c *ClaudeCode) command() string { return cmp.Or(c.Command, "claude") }
 // model returns the --model to pass, or "" for Claude Code's default.
 func (c *ClaudeCode) model() string {
 	m := strings.TrimSpace(c.Model)
-	for _, alias := range ClaudeModels {
-		if m == alias {
-			return m
-		}
+	if slices.Contains(ClaudeModels, m) {
+		return m
 	}
 	if strings.HasPrefix(m, "claude-") {
 		return m
@@ -423,7 +421,7 @@ func (c *ClaudeCode) run(ctx context.Context, o claudeRun) (text, sessionID stri
 // a Claude Code session the server was started from, or bill an API key
 // instead of the signed-in subscription.
 func claudeEnv(environ []string) []string {
-	var env []string
+	env := make([]string, 0, len(environ))
 	for _, kv := range environ {
 		name, _, _ := strings.Cut(kv, "=")
 		switch {
@@ -439,8 +437,8 @@ func claudeEnv(environ []string) []string {
 }
 
 func lastLine(s string) string {
-	if i := strings.LastIndexByte(s, '\n'); i >= 0 {
-		return s[i+1:]
+	if _, after, ok := strings.CutLast(s, "\n"); ok {
+		return after
 	}
 	return s
 }

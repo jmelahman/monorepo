@@ -46,9 +46,9 @@ func TestChatCrisisTurn(t *testing.T) {
 			err := cur.Chat(context.Background(), c.ID, "I've been thinking about killing myself", func(ev string, data any) {
 				switch ev {
 				case "safety":
-					flagged = append(flagged, data.(safety.Result))
+					flagged = append(flagged, as[safety.Result](t, data))
 				case "text":
-					streamed.WriteString(data.(map[string]string)["text"])
+					streamed.WriteString(as[map[string]string](t, data)["text"])
 				}
 			})
 			if err != nil {
@@ -61,8 +61,8 @@ func TestChatCrisisTurn(t *testing.T) {
 			if _, ok := req["tools"]; ok {
 				t.Errorf("crisis turn sent tools")
 			}
-			sent := req["messages"].([]any)
-			if user := sent[len(sent)-1].(map[string]any)["content"].(string); !strings.Contains(user, "[Safety check") {
+			sent := as[[]any](t, req["messages"])
+			if user := as[string](t, as[map[string]any](t, sent[len(sent)-1])["content"]); !strings.Contains(user, "[Safety check") {
 				t.Errorf("user turn missing the safety directive:\n%s", user)
 			}
 			msgs, err := a.Store.ListMessages(c.ID)
@@ -144,7 +144,7 @@ func TestClassifierFor(t *testing.T) {
 				}
 				return
 			}
-			o := cl.LLM.(*OpenAI)
+			o := as[*OpenAI](t, cl.LLM)
 			if o.BaseURL != tc.wantURL || o.APIKey != tc.wantKey || o.Model != tc.wantModel {
 				t.Errorf("classifier = %s %q %s, want %s %q %s", o.BaseURL, o.APIKey, o.Model, tc.wantURL, tc.wantKey, tc.wantModel)
 			}
