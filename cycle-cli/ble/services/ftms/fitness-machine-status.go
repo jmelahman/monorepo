@@ -1,6 +1,7 @@
 package ftms
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -12,7 +13,7 @@ type FitnessMachineStatus struct {
 
 func ParseFitnessMachineStatus(data []byte) (*FitnessMachineStatus, error) {
 	if len(data) < 1 {
-		return nil, fmt.Errorf("data too short to contain status")
+		return nil, errors.New("data too short to contain status")
 	}
 
 	opcode := data[0]

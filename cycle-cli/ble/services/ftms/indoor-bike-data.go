@@ -68,82 +68,49 @@ func ParseIndoorBikeData(data []byte) (*IndoorBikeData, error) {
 		return v, nil
 	}
 
-	if flags&(1<<0) != 0 {
-		if v, err := readU16(); err == nil {
-			d.InstantaneousSpeed = &v
+	// Fields are optional and appear in flag-bit order; a short read leaves
+	// the field nil.
+	readInto16 := func(bit uint, dst **uint16) {
+		if flags&(1<<bit) != 0 {
+			if v, err := readU16(); err == nil {
+				*dst = &v
+			}
+		}
+	}
+	readIntoS16 := func(bit uint, dst **int16) {
+		if flags&(1<<bit) != 0 {
+			if v, err := readS16(); err == nil {
+				*dst = &v
+			}
+		}
+	}
+	readInto8 := func(bit uint, dst **uint8) {
+		if flags&(1<<bit) != 0 {
+			if v, err := readU8(); err == nil {
+				*dst = &v
+			}
 		}
 	}
 
-	if flags&(1<<1) != 0 {
-		if v, err := readU16(); err == nil {
-			d.AverageSpeed = &v
-		}
-	}
-	if flags&(1<<2) != 0 {
-		if v, err := readU16(); err == nil {
-			d.InstantaneousCadence = &v
-		}
-	}
-	if flags&(1<<3) != 0 {
-		if v, err := readU16(); err == nil {
-			d.AverageCadence = &v
-		}
-	}
+	readInto16(0, &d.InstantaneousSpeed)
+	readInto16(1, &d.AverageSpeed)
+	readInto16(2, &d.InstantaneousCadence)
+	readInto16(3, &d.AverageCadence)
 	if flags&(1<<4) != 0 {
 		if v, err := readU24(); err == nil {
 			d.TotalDistance = &v
 		}
 	}
-	if flags&(1<<5) != 0 {
-		if v, err := readS16(); err == nil {
-			d.ResistanceLevel = &v
-		}
-	}
-	if flags&(1<<6) != 0 {
-		if v, err := readS16(); err == nil {
-			d.InstantaneousPower = &v
-		}
-	}
-	if flags&(1<<7) != 0 {
-		if v, err := readS16(); err == nil {
-			d.AveragePower = &v
-		}
-	}
-	if flags&(1<<8) != 0 {
-		if v, err := readU16(); err == nil {
-			d.TotalEnergy = &v
-		}
-	}
-	if flags&(1<<9) != 0 {
-		if v, err := readU16(); err == nil {
-			d.EnergyPerHour = &v
-		}
-	}
-	if flags&(1<<10) != 0 {
-		if v, err := readU8(); err == nil {
-			d.EnergyPerMinute = &v
-		}
-	}
-	if flags&(1<<11) != 0 {
-		if v, err := readU8(); err == nil {
-			d.HeartRate = &v
-		}
-	}
-	if flags&(1<<12) != 0 {
-		if v, err := readU8(); err == nil {
-			d.MetabolicEquivalent = &v
-		}
-	}
-	if flags&(1<<13) != 0 {
-		if v, err := readU16(); err == nil {
-			d.ElapsedTime = &v
-		}
-	}
-	if flags&(1<<14) != 0 {
-		if v, err := readU16(); err == nil {
-			d.RemainingTime = &v
-		}
-	}
+	readIntoS16(5, &d.ResistanceLevel)
+	readIntoS16(6, &d.InstantaneousPower)
+	readIntoS16(7, &d.AveragePower)
+	readInto16(8, &d.TotalEnergy)
+	readInto16(9, &d.EnergyPerHour)
+	readInto8(10, &d.EnergyPerMinute)
+	readInto8(11, &d.HeartRate)
+	readInto8(12, &d.MetabolicEquivalent)
+	readInto16(13, &d.ElapsedTime)
+	readInto16(14, &d.RemainingTime)
 
 	return d, nil
 }

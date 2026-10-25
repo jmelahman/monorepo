@@ -31,13 +31,7 @@ var RootCmd = &cobra.Command{
 
 // handleResistanceChange adjusts the resistance level and updates UI or logs accordingly.
 func handleResistanceChange(state ble.Telemetry, currentLevel *int, change int, appUI *ui.UI, headless bool) {
-	newLevel := *currentLevel + change
-	if newLevel < 0 {
-		newLevel = 0
-	}
-	if newLevel > 100 {
-		newLevel = 100
-	}
+	newLevel := min(max(*currentLevel+change, 0), 100)
 
 	if newLevel != *currentLevel {
 		*currentLevel = newLevel
@@ -80,6 +74,50 @@ func init() {
 	RootCmd.Flags().StringP("unit", "u", "imperial", "Unit system (metric or imperial)")
 	RootCmd.Flags().BoolP("headless", "H", false, "Run in headless mode without UI")
 	RootCmd.Flags().IntP("ftp", "f", 230, "Functional Threshold Power (FTP) in watts")
+}
+
+// printHeadlessTelemetry writes one status line for headless mode.
+func printHeadlessTelemetry(data ble.Telemetry, unitSystem string, startTime time.Time) {
+	speedUnit := "km/h"
+	distanceUnit := "km"
+	if unitSystem == imperialSystemName {
+		speedUnit = "mph"
+		distanceUnit = "mi"
+	}
+
+	// Calculate duration
+	elapsed := time.Since(startTime)
+	totalSeconds := int(elapsed.Seconds())
+	var durationStr string
+	if totalSeconds >= 3600 {
+		hours := totalSeconds / 3600
+		minutes := (totalSeconds % 3600) / 60
+		seconds := totalSeconds % 60
+		durationStr = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	} else {
+		minutes := totalSeconds / 60
+		seconds := totalSeconds % 60
+		durationStr = fmt.Sprintf("%02d:%02d", minutes, seconds)
+	}
+
+	fmt.Printf("Power: %4dW, Cadence: %3drpm, Speed: %5.1f%s, Distance: %5.1f%s, Duration: %s\r",
+		data.Power, data.Cadence, data.Speed, speedUnit,
+		data.Distance, distanceUnit, durationStr)
+}
+
+// reportInitialResistance applies the requested resistance and reports the result.
+func reportInitialResistance(state ble.Telemetry, resistanceLevel int, headless bool, appUI *ui.UI) {
+	err := ble.SetResistance(state, int8(resistanceLevel))
+	switch {
+	case err != nil && !headless:
+		appUI.UpdateStatus(fmt.Sprintf("❌ Failed to set resistance: %v", err))
+	case err != nil:
+		log.Errorf("❌ Failed to set resistance: %v", err)
+	case !headless:
+		appUI.UpdateStatus(fmt.Sprintf("✅ Resistance set to %d%%", resistanceLevel))
+	default:
+		log.Infof("✅ Resistance set to %d%%", resistanceLevel)
+	}
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -183,7 +221,6 @@ func run(cmd *cobra.Command, args []string) {
 			}
 			return event
 		})
-
 	} else { // Headless mode
 		var oldState *term.State
 		var errTerm error
@@ -224,31 +261,7 @@ func run(cmd *cobra.Command, args []string) {
 		if !headlessMode {
 			appUI.UpdateTelemetry(data)
 		} else {
-			speedUnit := "km/h"
-			distanceUnit := "km"
-			if unitSystem == imperialSystemName {
-				speedUnit = "mph"
-				distanceUnit = "mi"
-			}
-
-			// Calculate duration
-			elapsed := time.Since(startTime)
-			totalSeconds := int(elapsed.Seconds())
-			var durationStr string
-			if totalSeconds >= 3600 {
-				hours := totalSeconds / 3600
-				minutes := (totalSeconds % 3600) / 60
-				seconds := totalSeconds % 60
-				durationStr = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-			} else {
-				minutes := totalSeconds / 60
-				seconds := totalSeconds % 60
-				durationStr = fmt.Sprintf("%02d:%02d", minutes, seconds)
-			}
-
-			fmt.Printf("Power: %4dW, Cadence: %3drpm, Speed: %5.1f%s, Distance: %5.1f%s, Duration: %s\r",
-				data.Power, data.Cadence, data.Speed, speedUnit,
-				data.Distance, distanceUnit, durationStr)
+			printHeadlessTelemetry(data, unitSystem, startTime)
 		}
 	})
 	if err != nil {
@@ -261,20 +274,7 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if resistanceLevel != 0 {
-		err := ble.SetResistance(state, int8(resistanceLevel))
-		if err != nil {
-			if !headlessMode {
-				appUI.UpdateStatus(fmt.Sprintf("❌ Failed to set resistance: %v", err))
-			} else {
-				log.Errorf("❌ Failed to set resistance: %v", err)
-			}
-		} else {
-			if !headlessMode {
-				appUI.UpdateStatus(fmt.Sprintf("✅ Resistance set to %d%%", resistanceLevel))
-			} else {
-				log.Infof("✅ Resistance set to %d%%", resistanceLevel)
-			}
-		}
+		reportInitialResistance(state, resistanceLevel, headlessMode, appUI)
 	}
 
 	if !headlessMode {

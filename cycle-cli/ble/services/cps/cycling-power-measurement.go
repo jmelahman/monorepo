@@ -104,19 +104,19 @@ func ParseCyclingPowerMeasurement(data []byte) (*CyclingPowerMeasurement, error)
 	}
 
 	if flags&(1<<6) != 0 {
-		if min, err := readS16(); err == nil {
-			if max, err := readS16(); err == nil {
-				cpm.ExtremeForceMin = &min
-				cpm.ExtremeForceMax = &max
+		if lo, err := readS16(); err == nil {
+			if hi, err := readS16(); err == nil {
+				cpm.ExtremeForceMin = &lo
+				cpm.ExtremeForceMax = &hi
 			}
 		}
 	}
 
 	if flags&(1<<7) != 0 {
-		if min, err := readS16(); err == nil {
-			if max, err := readS16(); err == nil {
-				cpm.ExtremeTorqueMin = &min
-				cpm.ExtremeTorqueMax = &max
+		if lo, err := readS16(); err == nil {
+			if hi, err := readS16(); err == nil {
+				cpm.ExtremeTorqueMin = &lo
+				cpm.ExtremeTorqueMax = &hi
 			}
 		}
 	}
@@ -124,8 +124,8 @@ func ParseCyclingPowerMeasurement(data []byte) (*CyclingPowerMeasurement, error)
 	if flags&(1<<8) != 0 {
 		if angleBytes, err := readU16(); err == nil {
 			// upper 12 bits = max angle, lower 12 bits = min angle
-			maxAngle := uint16((angleBytes >> 12) & 0x0FFF)
-			minAngle := uint16(angleBytes & 0x0FFF)
+			maxAngle := (angleBytes >> 12) & 0x0FFF
+			minAngle := angleBytes & 0x0FFF
 			cpm.ExtremeAngles = &[2]uint16{minAngle, maxAngle}
 		}
 	}

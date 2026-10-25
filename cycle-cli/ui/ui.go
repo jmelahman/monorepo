@@ -136,7 +136,7 @@ func (ui *UI) UpdateStatus(text string) {
 func (ui *UI) UpdateTelemetry(data ble.Telemetry) {
 	ui.app.QueueUpdateDraw(func() {
 		// Update power
-		powerStr := ""
+		var powerStr string
 		if ui.ftp > 0 {
 			powerPercentage := float64(data.Power) / float64(ui.ftp) * 100.0
 			var color string
