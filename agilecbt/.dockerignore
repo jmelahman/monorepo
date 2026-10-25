@@ -6,6 +6,7 @@ compose.yaml
 Dockerfile
 README.md
 **/*.md
+!internal/prompt/*.md
 web/node_modules
 web/dist
 docs/node_modules
