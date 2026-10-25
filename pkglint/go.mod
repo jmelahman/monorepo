@@ -1,6 +1,6 @@
 module github.com/jmelahman/pkglint
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/jmelahman/typesafe-sdk-go v0.2.0

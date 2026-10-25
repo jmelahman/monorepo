@@ -4,7 +4,7 @@
 # so cgo), ffmpeg to publish, and Claude Code, signed in by mounting the
 # host's ~/.claude (see homelab/docker-compose.yml).
 
-FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS go
+FROM golang:1.27.3@sha256:f20d83a83e18dbd2a4714b8ffd4b30b287b6243962dd75608e86abcc63ba4efc AS go
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

@@ -1,6 +1,6 @@
 module github.com/jmelahman/cycle-lights
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/jmelahman/cycle-cli v0.0.2

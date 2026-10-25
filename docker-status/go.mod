@@ -1,6 +1,6 @@
 module github.com/jmelahman/docker-status
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/docker/docker v28.5.2+incompatible
