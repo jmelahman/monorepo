@@ -4,8 +4,53 @@
 version: "2"
 
 linters:
+  # The standard set (errcheck, govet, ineffassign, staticcheck, unused) plus
+  # the linters below. The golangci-lint hook fails a commit on any finding, in
+  # every project this file reaches, so a linter goes in only once those
+  # projects are clean under it; the list at the bottom of this file is what
+  # was left out and why.
   enable:
+    - asasalint # []any passed on as a single any
+    - bidichk # bidirectional-text characters in source
+    - copyloopvar # loop-variable copies Go 1.22 made redundant
+    - dupword # "the the" in comments and strings
+    - durationcheck # time.Duration multiplied by time.Duration
+    - errname # ErrFoo for sentinels, FooError for error types
+    - errorlint # errors.Is/As and %w over ==, type assertions and %v
+    - exhaustive # switch over an enum missing a case
+    - exptostd # golang.org/x/exp helpers the standard library now has
+    - fatcontext # a context nested in a loop or closure
     - forbidigo
+    - forcetypeassert # x.(T) without the ok form
+    - gocognit
+    - gocyclo
+    - iface # redundant or identical interfaces
+    - intrange # for i := range n
+    - makezero # append to a slice made with a non-zero length
+    - mirror # bytes/strings twins (WriteString for WriteByte etc.)
+    - misspell
+    - modernize # newer-Go idioms: min/max, slices, maps, any
+    - nakedret
+    - nestif
+    - nilerr # returns nil where an error was just checked
+    - nilnil # return nil, nil
+    - nolintlint # a //nolint that suppresses nothing, or names no reason
+    - nosprintfhostport # Sprintf("%s:%d") for an address; net.JoinHostPort
+    - perfsprint # Sprintf where strconv or concatenation is enough
+    - prealloc # append in a loop over a known length
+    - predeclared # shadowing len, new, error and the like
+    - protogetter
+    - reassign # reassigning another package's exported variable
+    - recvcheck # mixed value and pointer receivers
+    - sloglint
+    - spancheck
+    - unconvert # conversion to the type it already has
+    - unparam # parameters that never vary or are never used
+    - usestdlibvars # http.StatusOK over 200
+    - usetesting # t.TempDir, t.Setenv over os.*
+    - wastedassign # assignments whose value is never read
+    - whitespace # leading and trailing blank lines in blocks
+    - zerologlint
   settings:
     errcheck:
       exclude-functions:
@@ -18,6 +63,26 @@ linters:
         # qualified name (pushtest.NewService) this does not match.
         - pattern: ^(new|New)?([fF]ake|[mM]ock|[sS]tub)([A-Z_]\w*)?$
           msg: integration tests use real collaborators; an edge fake belongs in a *test helper package
+    # Complexity ceilings, not targets. They sit just above the worst non-test
+    # function in the subtrees that share this file, so they stop a function
+    # from getting worse without failing anything that exists. Lower them as
+    # the worst offenders are split up: a ratchet, never raised.
+    gocognit:
+      min-complexity: 180
+    gocyclo:
+      min-complexity: 34
+    nestif:
+      min-complexity: 25
+    misspell:
+      # Words misspell "corrects" into a different word: local-preview's
+      # containered (run in a container) is not contained, and git-orchard's
+      # hardlinked objects are not hardline ones.
+      ignore-rules:
+        - containered
+        - hardlinked
+    nolintlint:
+      require-specific: true
+      require-explanation: true
   exclusions:
     presets:
       # Errors conventionally left unchecked: Close, fmt.Fprint*, os.Remove*,
@@ -28,3 +93,18 @@ linters:
       - path-except: _integration_test\.go$
         linters:
           - forbidigo
+      # Table-driven tests and their setup are long and branchy by design;
+      # complexity is judged on the code they test.
+      - path: _test\.go$
+        linters:
+          - gocognit
+          - gocyclo
+          - nestif
+
+# Not enabled: they are noise at this scale rather than findings to fix (counts
+# across 17 projects when this was written). gosec 1037 (mostly test fixtures
+# and subprocess use that is the point of the tool), noinlineerr 2402 (style:
+# forbids `if err := f(); err != nil`), revive 400, canonicalheader 23,
+# thelper 26, embeddedstructfieldcheck 44, errchkjson 37, musttag 7, and the
+# context group noctx 208, contextcheck 298, bodyclose 215. Enable one in a
+# single project's own copy first if it is wanted there.
