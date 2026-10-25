@@ -914,9 +914,14 @@ func knownPKGBUILDVars(ctx *Context) map[string]bool {
 	for _, n := range schemaStringVars {
 		known[n] = true
 	}
-	for _, a := range concreteArches(ctx) {
-		for _, n := range schemaArchArrayVars {
-			known[n+"_"+a] = true
+	// Every host architecture, not only the ones arch= lists: makepkg reads
+	// depends_i686 whenever CARCH is i686, so renaming it would silently drop
+	// the array.
+	for _, arches := range [][]string{hostArchNames, concreteArches(ctx)} {
+		for _, a := range arches {
+			for _, n := range schemaArchArrayVars {
+				known[n+"_"+a] = true
+			}
 		}
 	}
 	return known

@@ -85,6 +85,8 @@ func TestUnprefixedCustomVars(t *testing.T) {
 		{"uppercase names are PB108's concern", "MYDIR='/tmp'\n", 0},
 		{"schema fields are known", "makedepends=('cmake')\nnoextract=('demo.bin')\n", 0},
 		{"arch-suffixed schema fields are known", "depends_x86_64=('glibc')\n", 0},
+		{"arch-suffixed fields for an arch outside arch= are still makepkg's", "depends_i686=('glibc')\nmakedepends_aarch64=('cmake')\n", 0},
+		{"an unknown architecture suffix is a custom variable", "depends_vax=('glibc')\n", 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := styleLint(t, tc.snippet)["PB902"]; got != tc.want {
