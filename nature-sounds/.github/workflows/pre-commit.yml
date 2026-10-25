@@ -22,9 +22,16 @@ jobs:
           persist-credentials: false
           # A pull request's hooks run on its diff from the base commit.
           fetch-depth: 0
-      # What this subtree's hooks need from the system, e.g. apt packages. Not
-      # Go: prek downloads one when the runner's is older than a hook's pinned
-      # `language_version`, or the minimum it infers from the hook repo's go.mod.
+      # Go hooks build with the Go on PATH and GOTOOLCHAIN=local, and prek
+      # only replaces a Go older than the hook's minimum, not the subtree's go
+      # directive: so the runner's older patch release would fail go.mod.
+      - name: Set up Go
+        if: hashFiles('go.mod') != ''
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+          cache: false
+      # What else this subtree's hooks need from the system, e.g. apt packages.
       - name: Set up the subtree
         if: hashFiles('.github/ci-setup.sh') != ''
         run: .github/ci-setup.sh
