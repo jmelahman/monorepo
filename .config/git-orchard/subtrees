@@ -181,5 +181,6 @@
 	remote = git@github.com:jmelahman/vinder.git
 	branch = master
 	shared = base
+	shared = go
 	shared = goreleaser
 	shared = npm
