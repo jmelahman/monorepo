@@ -3444,13 +3444,37 @@ esac`, "")}) {
 // rule says is the review refs.go asks for; this only keeps a stray host or a
 // missing anchor from slipping through it.
 func TestRefsAreWellFormed(t *testing.T) {
-	// A rule that cites upstream keeps its citation: Refs are written inline
-	// now, so a stray edit could drop them with nothing else noticing.
-	if r, _ := RuleByID("PB944"); len(r.Refs) == 0 {
-		t.Error("PB944 lost its upstream citations")
+	// A rule that cites upstream keeps its citations: Refs are written inline
+	// now, scattered over a dozen files, so this pins how many each rule
+	// carries. Adding or dropping one means updating the count here.
+	cites := map[string]int{
+		"PB101": 1, "PB103": 1, "PB104": 1, "PB111": 1, "PB112": 1,
+		"PB203": 2, "PB204": 1,
+		"PB701": 2, "PB702": 2, "PB703": 2, "PB704": 1, "PB705": 1, "PB706": 1,
+		"PB707": 1, "PB709": 1, "PB711": 1,
+		"PB801": 1, "PB802": 1, "PB803": 1, "PB805": 1, "PB806": 1, "PB808": 1,
+		"PB809": 1, "PB811": 1, "PB812": 1, "PB820": 1, "PB831": 1, "PB842": 1,
+		"PB902": 1, "PB905": 1, "PB906": 1, "PB907": 1, "PB909": 1, "PB911": 1,
+		"PB912": 1, "PB914": 2, "PB915": 1, "PB916": 1, "PB917": 1, "PB918": 1,
+		"PB919": 1, "PB920": 1, "PB921": 1, "PB922": 1,
+		"PB930": 1, "PB931": 1, "PB932": 1, "PB933": 1, "PB934": 1,
+		"PB940": 1, "PB941": 1, "PB942": 1, "PB944": 1,
+		"PB950": 1, "PB951": 1, "PB953": 1, "PB954": 1, "PB955": 1,
+		"PB960": 1, "PB961": 1, "PB962": 1, "PB963": 1,
+		"PB970": 1, "PB971": 1, "PB972": 1, "PB973": 1, "PB974": 1, "PB975": 1,
+		"PB976": 1, "PB977": 1, "PB978": 1, "PB979": 1, "PB980": 1, "PB981": 1,
+		"PB982": 1, "PB983": 1, "PB984": 2,
+	}
+	for id := range cites {
+		if _, ok := RuleByID(id); !ok {
+			t.Errorf("cites pins %s, which is not a rule", id)
+		}
 	}
 	for _, rule := range Registry() {
 		id := rule.ID
+		if got, want := len(rule.Refs), cites[id]; got != want {
+			t.Errorf("%s carries %d Refs, want %d", id, got, want)
+		}
 		if rule.Refs != nil && len(rule.Refs) == 0 {
 			t.Errorf("%s has an empty Refs; drop the field", id)
 		}

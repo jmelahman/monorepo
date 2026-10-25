@@ -398,8 +398,37 @@ sha256sums=('deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef')
 	}
 }
 
-// TestLocalDigestFilenameGuard is localDigest's counterpart to the scheme
-// guard above. The name it is handed comes from a source=() entry — the part
+// TestFixEnvNetworkSeams pins the --fix wiring to internal/netprobe: --offline
+// leaves both network hooks unset, and online the probe identifies itself as
+// pkglint/<version>. The guards themselves are tested in netprobe.
+func TestFixEnvNetworkSeams(t *testing.T) {
+	if env := fixEnv(true); env.ResolveRef != nil || env.ProbeHTTPS != nil {
+		t.Error("--offline: fixEnv set a network hook")
+	}
+
+	var gotURL, gotRef, gotProbe, gotUA string
+	oldResolve, oldProbe := resolveGitRef, probeHTTPS
+	t.Cleanup(func() { resolveGitRef, probeHTTPS = oldResolve, oldProbe })
+	resolveGitRef = func(u, ref string) (string, error) { gotURL, gotRef = u, ref; return "sha", nil }
+	probeHTTPS = func(u, ua string) error { gotProbe, gotUA = u, ua; return nil }
+
+	env := fixEnv(false)
+	if env.ResolveRef == nil || env.ProbeHTTPS == nil || env.LocalDigest == nil {
+		t.Fatal("online: fixEnv left a hook unset")
+	}
+	if sha, err := env.ResolveRef("git+https://example.com/x.git", "v1"); sha != "sha" || err != nil || gotURL != "git+https://example.com/x.git" || gotRef != "v1" {
+		t.Errorf("ResolveRef did not pass through: sha=%q err=%v url=%q ref=%q", sha, err, gotURL, gotRef)
+	}
+	if err := env.ProbeHTTPS("https://example.com/a.tgz"); err != nil || gotProbe != "https://example.com/a.tgz" {
+		t.Errorf("ProbeHTTPS did not pass through: err=%v url=%q", err, gotProbe)
+	}
+	if want := "pkglint/" + version; gotUA != want {
+		t.Errorf("probe User-Agent = %q, want %q", gotUA, want)
+	}
+}
+
+// TestLocalDigestFilenameGuard is localDigest's counterpart to netprobe's
+// scheme guard. The name it is handed comes from a source=() entry — the part
 // before `::` is written by whoever wrote the PKGBUILD — so anything that is
 // not a bare filename must be refused before it is joined to a directory.
 // Without this, `../../.ssh/id_ed25519::https://…` would have the fixer hash a

@@ -11,7 +11,7 @@ import (
 
 // Fixes for the rules whose remedy is one entry in a dependency array: a build
 // tool the build already runs but nothing declares, or metadata the rule's own
-// message calls dead. The array primitives they build on live in fix.go; every
+// message calls dead. The array primitives they build on live in fixprim.go; every
 // fixer here walks the same selector its check does, so a rule that stands
 // down takes its fix with it.
 //

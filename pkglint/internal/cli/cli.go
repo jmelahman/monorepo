@@ -38,6 +38,13 @@ import (
 
 var version = "dev"
 
+// The network seams --fix reaches through; tests swap them so none performs
+// real I/O.
+var (
+	resolveGitRef = netprobe.ResolveGitRef
+	probeHTTPS    = netprobe.ProbeHTTPS
+)
+
 // Main runs pkglint against the process arguments and returns the exit code
 // its callers pass to os.Exit.
 func Main() int {
@@ -474,18 +481,24 @@ func applyFixResults(stdout io.Writer, results []rules.FixResult, diff bool) (ap
 	return applied, ok
 }
 
+// fixEnv is what --fix may reach outside the PKGBUILD. LocalDigest is not
+// gated on --offline: it only reads files that are already on disk, so there
+// is no network access for --offline to skip.
+func fixEnv(offline bool) *rules.FixEnv {
+	env := &rules.FixEnv{LocalDigest: localDigest}
+	if !offline {
+		env.ResolveRef = resolveGitRef
+		env.ProbeHTTPS = func(u string) error { return probeHTTPS(u, "pkglint/"+version) }
+	}
+	return env
+}
+
 // runFix applies auto-fixes at the given level, writing files in place (or,
 // with diff, printing the changes it would make). It also nudges toward the
 // manual follow-ups for findings that can't be rewritten mechanically.
 // noInline disregards inline-ignore directives, so suppressed fixes apply too.
 func runFix(paths []string, ignore map[string]bool, level rules.FixLevel, diff, offline, noInline bool, stdout io.Writer) int {
-	// LocalDigest is not gated on --offline: it only reads files that are
-	// already on disk, so there is no network access for --offline to skip.
-	env := &rules.FixEnv{LocalDigest: localDigest}
-	if !offline {
-		env.ResolveRef = netprobe.ResolveGitRef
-		env.ProbeHTTPS = func(u string) error { return netprobe.ProbeHTTPS(u, "pkglint/"+version) }
-	}
+	env := fixEnv(offline)
 	return rewriteMode{
 		refuse: "%s: built packages have no auto-fixable findings; fix the PKGBUILD and rebuild\n",
 		transform: func(pkg *pkgbuild.Package) []rules.FixResult {

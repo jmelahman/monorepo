@@ -158,8 +158,8 @@ func (r Rule) URL() string {
 	return ReferenceURL + r.ID + ".html"
 }
 
-// fnKey names a function within one file of the package: Path is the unit's
-// path, Name the function (empty for top-level code where a Fn is keyed).
+// fnKey names a function within one file of the package: path is the unit's
+// path, name the function's.
 type fnKey struct{ path, name string }
 
 // Context carries the package under analysis plus precomputed command

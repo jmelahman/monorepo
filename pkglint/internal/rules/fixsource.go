@@ -24,14 +24,14 @@ func fixVCSPins(ctx *Context, env *FixEnv) []Edit {
 	// rewriting the shared text would pin every URL in the group to it.
 	perElem := map[elemID]int{}
 	for _, e := range ctx.Pkg.Sources() {
-		perElem[elemKey(e.Arch, e.ElemIndex)]++
+		perElem[elemID{e.Arch, e.ElemIndex}]++
 	}
 	var edits []Edit
 	for _, e := range ctx.Pkg.Sources() {
 		if e.VCS != "git" {
 			continue // only git refs are resolvable with `git ls-remote`
 		}
-		if perElem[elemKey(e.Arch, e.ElemIndex)] > 1 {
+		if perElem[elemID{e.Arch, e.ElemIndex}] > 1 {
 			continue
 		}
 		if _, ok := e.Fragment["commit"]; ok {
@@ -54,7 +54,7 @@ func fixVCSPins(ctx *Context, env *FixEnv) []Edit {
 		} else {
 			continue // no named ref to resolve into a commit deterministically
 		}
-		w := elems[elemKey(e.Arch, e.ElemIndex)]
+		w := elems[elemID{e.Arch, e.ElemIndex}]
 		if w == nil {
 			continue
 		}
@@ -99,12 +99,12 @@ func shortSHA(s string) string {
 	return s
 }
 
+// elemID names one element of a source-like array: the arch suffix ("" for
+// the plain array) and its index within that array.
 type elemID struct {
 	arch string
 	idx  int
 }
-
-func elemKey(arch string, idx int) elemID { return elemID{arch, idx} }
 
 // sourceElems maps each written source-array element to its AST word, keyed by
 // arch and SourceEntry.ElemIndex so a finding can be matched back to the text
@@ -136,7 +136,7 @@ func sourceElems(u *pkgbuild.Unit) map[elemID]*syntax.Word {
 			// past the end, as the merged Values then do.
 			if idx, ok := pkgbuild.AssignIndex(as); ok {
 				if !as.Append {
-					out[elemKey(arch, idx)] = as.Value
+					out[elemID{arch, idx}] = as.Value
 				}
 				if idx >= next[arch] {
 					next[arch] = idx + 1
@@ -146,14 +146,14 @@ func sourceElems(u *pkgbuild.Unit) map[elemID]*syntax.Word {
 		}
 		if !as.Append {
 			for i := range next[arch] {
-				delete(out, elemKey(arch, i))
+				delete(out, elemID{arch, i})
 			}
 			next[arch] = 0
 		}
 		switch {
 		case as.Array != nil:
 			for _, el := range as.Array.Elems {
-				out[elemKey(arch, next[arch])] = el.Value
+				out[elemID{arch, next[arch]}] = el.Value
 				next[arch]++
 			}
 		case as.Value != nil:
@@ -309,7 +309,7 @@ func insecureTransportEdits(ctx *Context, env *FixEnv, signatures bool) []Edit {
 		if e.Local {
 			continue
 		}
-		k := elemKey(e.Arch, e.ElemIndex)
+		k := elemID{e.Arch, e.ElemIndex}
 		if _, ok := groups[k]; !ok {
 			order = append(order, k)
 		}

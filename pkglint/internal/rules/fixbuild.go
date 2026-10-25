@@ -9,7 +9,7 @@ import (
 // Fixes for the build-system and language-toolchain rules: the ones whose
 // remedy is a flag the invocation is missing, a flag value it got wrong, or
 // the block of exports a toolchain needs to see Arch's own build flags. The
-// edit machinery they build on lives in fix.go; the checks they pair with are
+// edit machinery they build on lives in fixprim.go; the checks they pair with are
 // in buildsys.go, ruststyle.go, gostyle.go and naming.go, and every fixer here
 // walks the same command selector its check does so the two cannot drift.
 //
