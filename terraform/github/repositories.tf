@@ -30,6 +30,9 @@ locals {
     squash_merge_commit_message = "PR_BODY"
     merge_commit_title          = "MERGE_MESSAGE"
     merge_commit_message        = "PR_TITLE"
+    # Dependabot and secret scanning. Mirrors' alerts would duplicate the
+    # monorepo's, where their code is actually developed.
+    security = false
   }
 
   # Per-repository settings, merged over the defaults.
@@ -150,6 +153,7 @@ locals {
       description  = "If I'm doing anything interesting, it's here."
       homepage_url = "https://jamison.lahman.dev/projects"
       topics       = ["automation", "golang", "monorepo", "monorepo-tooling", "python", "tooling"]
+      security     = true
     }
   }
 
@@ -190,6 +194,15 @@ resource "github_repository" "repo" {
   merge_commit_title          = each.value.merge_commit_title
   merge_commit_message        = each.value.merge_commit_message
 
+  security_and_analysis {
+    secret_scanning {
+      status = each.value.security ? "enabled" : "disabled"
+    }
+    secret_scanning_push_protection {
+      status = each.value.security ? "enabled" : "disabled"
+    }
+  }
+
   # Removing a subtree should never delete its repository.
   archive_on_destroy = true
 
@@ -198,4 +211,31 @@ resource "github_repository" "repo" {
     # Only meaningful when a repository is created from a template.
     ignore_changes = [template]
   }
+}
+
+import {
+  for_each = local.repositories
+  to       = github_repository_vulnerability_alerts.repo[each.key]
+  id       = each.key
+}
+
+resource "github_repository_vulnerability_alerts" "repo" {
+  for_each = local.repositories
+
+  repository = github_repository.repo[each.key].name
+  enabled    = each.value.security
+}
+
+import {
+  for_each = local.repositories
+  to       = github_repository_dependabot_security_updates.repo[each.key]
+  id       = each.key
+}
+
+resource "github_repository_dependabot_security_updates" "repo" {
+  for_each = local.repositories
+
+  # Security updates need the alerts they act on.
+  repository = github_repository_vulnerability_alerts.repo[each.key].repository
+  enabled    = each.value.security
 }
