@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -48,7 +49,7 @@ upstream as <name>, e.g. connections/v1.2.3 as v1.2.3.`,
   git orchard push --tag connections/v1.2.3`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Tag != "" && (len(args) > 0 || opts.ChangedSince != "") {
-				return fmt.Errorf("--tag takes neither prefixes nor --changed-since")
+				return errors.New("--tag takes neither prefixes nor --changed-since")
 			}
 			return runPush(opts, args)
 		},

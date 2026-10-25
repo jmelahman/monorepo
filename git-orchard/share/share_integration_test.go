@@ -114,7 +114,7 @@ func TestPlanAndApply(t *testing.T) {
 	write(t, root, "b/.pre-commit-config.yaml", "repos:\n  # BEGIN orchard:base\n  - base\n  # END orchard:base\n")
 
 	changes := sync(t, root, a, b)
-	var paths []string
+	paths := make([]string, 0, len(changes))
 	for _, c := range changes {
 		paths = append(paths, c.Path)
 	}

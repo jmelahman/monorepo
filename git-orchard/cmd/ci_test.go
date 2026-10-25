@@ -16,11 +16,11 @@ import (
 var now = time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
 
 func ciRunOf(workflow, status, conclusion string, ago time.Duration) ciRun {
-	return ciRun{Run: ghrun.Run{
+	return ciRun{
 		ID: 1, Workflow: workflow, Status: status, Conclusion: conclusion,
 		HeadSHA: "0123456789abcdef", Title: "Fix the thing", URL: "https://example.com/" + workflow,
 		CreatedAt: now.Add(-ago),
-	}}
+	}
 }
 
 func ciResults() []ciResult {
@@ -117,7 +117,7 @@ func TestCIError(t *testing.T) {
 
 func TestFilterCI(t *testing.T) {
 	got := filterCI(ciResults(), true)
-	var prefixes []string
+	prefixes := make([]string, 0, len(got))
 	for _, r := range got {
 		prefixes = append(prefixes, r.Prefix)
 		// JSON has [], not null, for a repository with nothing failed.

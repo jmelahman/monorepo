@@ -107,7 +107,7 @@ func (o *Options) defaults() {
 }
 
 // NewAppURL is where the manifest is posted.
-func (o Options) NewAppURL() string {
+func (o *Options) NewAppURL() string {
 	if o.Org != "" {
 		return fmt.Sprintf("%s/organizations/%s/settings/apps/new", o.WebURL, url.PathEscape(o.Org))
 	}

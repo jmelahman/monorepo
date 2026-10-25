@@ -19,7 +19,7 @@ func Isolate(t testing.TB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, k := range strings.Fields(string(out)) {
+	for k := range strings.FieldsSeq(string(out)) {
 		t.Setenv(k, "")
 		if err := os.Unsetenv(k); err != nil {
 			t.Fatal(err)

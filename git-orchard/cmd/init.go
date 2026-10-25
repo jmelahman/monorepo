@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -59,7 +60,7 @@ func runInit(stdout, stderr io.Writer, opts *InitOptions) error {
 	if template == "" {
 		origin, err := o.Repo.Output("config", "--get", "remote.origin.url")
 		if err != nil {
-			return fmt.Errorf("no --remote given and no origin to derive it from")
+			return errors.New("no --remote given and no origin to derive it from")
 		}
 		template = RemoteTemplate(origin)
 	}

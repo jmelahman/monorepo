@@ -87,8 +87,7 @@ func (e *Error) Unwrap() error { return e.Err }
 // ExitCode is the exit status of the git invocation behind err, or -1 if err
 // is not one.
 func ExitCode(err error) int {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		return exitErr.ExitCode()
 	}
 	return -1

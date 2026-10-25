@@ -24,8 +24,9 @@ func TestLatestPerWorkflow(t *testing.T) {
 		// A deleted workflow, which gh workflow list leaves out.
 		{ID: 40, WorkflowID: 4, Workflow: "Gone", Event: "push", CreatedAt: at(5)},
 	}
-	var got []int64
-	for _, r := range LatestPerWorkflow(workflows, runs) {
+	latest := LatestPerWorkflow(workflows, runs)
+	got := make([]int64, 0, len(latest))
+	for _, r := range latest {
 		got = append(got, r.ID)
 	}
 	if want := []int64{20, 11}; !slices.Equal(got, want) {

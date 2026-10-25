@@ -212,11 +212,9 @@ func (v Version) Next(inc Increment, suffix string, existing []Version) Version 
 // Predecessor is the version expected immediately before v, or false if v is
 // the first possible version:
 //
-//	v1.2.3-rc.2 → v1.2.3-rc.1
-//	v1.2.3-rc.1 → v1.2.3-rc
-//	v1.2.3-rc   → v1.2.2
-//	v1.1.0      → v1.0.0
-//	v1.0.0      → v0.0.0
+// Examples: v1.2.3-rc.2 is preceded by v1.2.3-rc.1, which is preceded by
+// v1.2.3-rc, which is preceded by v1.2.2. Likewise v1.1.0 is preceded by
+// v1.0.0, which is preceded by v0.0.0.
 func (v Version) Predecessor() (Version, bool) {
 	if v.PreReleaseNum > 0 {
 		v.PreReleaseNum--

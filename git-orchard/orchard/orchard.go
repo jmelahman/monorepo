@@ -46,7 +46,7 @@ func (o *Orchard) ChangedSince(subtrees []config.Subtree, since, rev string) ([]
 		return subtrees, nil
 	}
 	if _, err := o.Repo.Output("rev-parse", "--verify", "--quiet", since+"^{commit}"); err != nil {
-		return subtrees, nil
+		return subtrees, nil //nolint:nilerr // an unknown since deliberately means every subtree
 	}
 	out, err := o.Repo.Output("diff", "--name-only", "--no-renames", since, rev)
 	if err != nil {
@@ -94,7 +94,7 @@ func (o *Orchard) fetchSplits(s config.Subtree, rev string) error {
 	if err != nil {
 		return err
 	}
-	for _, split := range strings.Fields(out) {
+	for split := range strings.FieldsSeq(out) {
 		if _, err := o.Repo.Output("cat-file", "-e", split+"^{commit}"); err != nil {
 			return o.fetchUpstream(s)
 		}
@@ -198,7 +198,7 @@ func (o *Orchard) lsRemote(remote, ref string) (oid, commit string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		value, name, _ := strings.Cut(line, "\t")
 		switch name {
 		case ref:
@@ -400,7 +400,7 @@ func (o *Orchard) NextVersion(s config.Subtree, opts NextOptions) (version strin
 	}
 	// A pre-release can still be promoted, or followed by another name's.
 	var existing *semver.Version
-	for _, tag := range strings.Fields(at) {
+	for tag := range strings.FieldsSeq(at) {
 		v, err := semver.Parse(strings.TrimPrefix(tag, s.Prefix+"/"))
 		if err == nil && v.Prefix == "" && (v.Stable() || v.PreRelease == opts.Suffix) &&
 			(existing == nil || semver.Compare(v, *existing) > 0) {
@@ -493,7 +493,7 @@ func (o *Orchard) remoteTags(remote string) ([]string, error) {
 		return nil, err
 	}
 	var tags []string
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		if _, ref, ok := strings.Cut(line, "\t"); ok {
 			tags = append(tags, strings.TrimPrefix(ref, "refs/tags/"))
 		}

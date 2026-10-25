@@ -183,7 +183,7 @@ func newBuilder() *builder {
 // apply merges `git config --null` output ("key\nvalue\0" per entry, or
 // "key\0" for a key with no value) into b.
 func (b *builder) apply(entries string) error {
-	for _, entry := range strings.Split(entries, "\x00") {
+	for entry := range strings.SplitSeq(entries, "\x00") {
 		if entry == "" {
 			continue
 		}
