@@ -72,6 +72,14 @@ git orchard release connections --minor  # or --major, --suffix rc, or an explic
 
 New Go modules also go in `go.work`.
 
+The subtrees' repositories (and the monorepo's own) are configured by [`terraform/github`](terraform/github), which reads the same `subtrees` file.
+Its state is kept in an R2 bucket; see [`backend.tf`](terraform/github/backend.tf) for the `r2` AWS profile it expects.
+
+```shell
+cd terraform/github
+GITHUB_TOKEN=$(gh auth token) terraform plan
+```
+
 # Tooling
 
 ## Upgrading
