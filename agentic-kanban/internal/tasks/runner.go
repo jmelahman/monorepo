@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 
 	"github.com/jmelahman/kanban/internal/db"
 	"github.com/jmelahman/kanban/internal/docker"
@@ -280,7 +280,7 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 	// Stop finds the run's processes by this marker; see stopScript.
 	env = append(env, taskRunMarker(tr.ID))
 
-	resp, err := r.docker.Raw().ContainerExecCreate(ctx, *sess.ContainerID, container.ExecOptions{
+	resp, err := r.docker.Raw().ExecCreate(ctx, *sess.ContainerID, client.ExecCreateOptions{
 		Cmd:          []string{"sh", "-c", full},
 		AttachStdout: true,
 		AttachStderr: true,
@@ -299,7 +299,7 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 	}
 	tr.ExecID = &resp.ID
 
-	att, err := r.docker.Raw().ContainerExecAttach(ctx, resp.ID, container.ExecStartOptions{})
+	att, err := r.docker.Raw().ExecAttach(ctx, resp.ID, client.ExecAttachOptions{})
 	if err != nil {
 		r.abandon(ctx, tr.ID)
 		return nil, err
@@ -332,7 +332,7 @@ func (r *Runner) Start(ctx context.Context, sess *db.Session, task VSCodeTask) (
 				break
 			}
 		}
-		inspect, ierr := r.docker.Raw().ContainerExecInspect(context.Background(), resp.ID)
+		inspect, ierr := r.docker.Raw().ExecInspect(context.Background(), resp.ID, client.ExecInspectOptions{})
 		exitCode := 0
 		if ierr == nil {
 			exitCode = inspect.ExitCode

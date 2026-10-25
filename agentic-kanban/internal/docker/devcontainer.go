@@ -18,15 +18,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/build"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/jsonstream"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/jsonmessage"
 
 	"github.com/jmelahman/kanban/internal/jsonc"
 )
@@ -495,7 +493,12 @@ func (c *Client) Spawn(ctx context.Context, cfg *DevcontainerConfig, opts SpawnO
 		return nil, err
 	}
 
-	created, err := c.cli.ContainerCreate(ctx, containerCfg, hostCfg, netCfg, nil, opts.ContainerName)
+	created, err := c.cli.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config:           containerCfg,
+		HostConfig:       hostCfg,
+		NetworkingConfig: netCfg,
+		Name:             opts.ContainerName,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create container: %w", err)
 	}
@@ -504,7 +507,7 @@ func (c *Client) Spawn(ctx context.Context, cfg *DevcontainerConfig, opts SpawnO
 			return nil, fmt.Errorf("attach network %s: %w", opts.AttachNetwork, err)
 		}
 	}
-	if err := c.cli.ContainerStart(ctx, created.ID, container.StartOptions{}); err != nil {
+	if _, err := c.cli.ContainerStart(ctx, created.ID, client.ContainerStartOptions{}); err != nil {
 		return nil, fmt.Errorf("start container: %w", err)
 	}
 
@@ -581,9 +584,9 @@ func buildContainerConfig(cfg *DevcontainerConfig, opts SpawnOptions, layout wor
 	// The kanban server's PortProxy bridges traffic via `docker exec ... socat`,
 	// so the host-side binding lives on the kanban container itself (which
 	// reserves the entire configured port range).
-	exposed := nat.PortSet{}
+	exposed := network.PortSet{}
 	for _, p := range opts.Ports {
-		port, err := nat.NewPort("tcp", fmt.Sprintf("%d", p.ContainerPort))
+		port, err := network.ParsePort(fmt.Sprintf("%d/tcp", p.ContainerPort))
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -706,7 +709,7 @@ func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, build
 		if _, err := c.cli.ImageInspect(ctx, cfg.Image); err == nil {
 			return cfg.Image, nil
 		}
-		rc, err := c.cli.ImagePull(ctx, cfg.Image, image.PullOptions{})
+		rc, err := c.cli.ImagePull(ctx, cfg.Image, client.ImagePullOptions{})
 		if err != nil {
 			return "", fmt.Errorf("pull image %q: %w", cfg.Image, err)
 		}
@@ -741,7 +744,7 @@ func (c *Client) ensureImage(ctx context.Context, cfg *DevcontainerConfig, build
 		buildArgs[k] = &val
 	}
 
-	resp, err := c.cli.ImageBuild(ctx, bytes.NewReader(tarball), build.ImageBuildOptions{
+	resp, err := c.cli.ImageBuild(ctx, bytes.NewReader(tarball), client.ImageBuildOptions{
 		Tags:       []string{tag},
 		Dockerfile: filepath.Base(dockerfilePath),
 		BuildArgs:  buildArgs,
@@ -925,7 +928,7 @@ func buildBuildContext(contextDir, dockerfilePath string) ([]byte, error) {
 
 // Exec creates and starts an exec; non-attached, returns exec ID.
 func (c *Client) Exec(ctx context.Context, containerID string, cmd []string, workDir string, env []string) (string, error) {
-	resp, err := c.cli.ContainerExecCreate(ctx, containerID, container.ExecOptions{
+	resp, err := c.cli.ExecCreate(ctx, containerID, client.ExecCreateOptions{
 		Cmd:          cmd,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -935,7 +938,7 @@ func (c *Client) Exec(ctx context.Context, containerID string, cmd []string, wor
 	if err != nil {
 		return "", err
 	}
-	if err := c.cli.ContainerExecStart(ctx, resp.ID, container.ExecStartOptions{}); err != nil {
+	if _, err := c.cli.ExecStart(ctx, resp.ID, client.ExecStartOptions{}); err != nil {
 		return "", err
 	}
 	return resp.ID, nil
@@ -944,7 +947,7 @@ func (c *Client) Exec(ctx context.Context, containerID string, cmd []string, wor
 // ExecRun runs a command synchronously, returning the combined output.
 // Returns an error if the exec exits with a non-zero status.
 func (c *Client) ExecRun(ctx context.Context, containerID string, cmd []string) (string, error) {
-	resp, err := c.cli.ContainerExecCreate(ctx, containerID, container.ExecOptions{
+	resp, err := c.cli.ExecCreate(ctx, containerID, client.ExecCreateOptions{
 		Cmd:          cmd,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -952,7 +955,7 @@ func (c *Client) ExecRun(ctx context.Context, containerID string, cmd []string) 
 	if err != nil {
 		return "", err
 	}
-	att, err := c.cli.ContainerExecAttach(ctx, resp.ID, container.ExecStartOptions{})
+	att, err := c.cli.ExecAttach(ctx, resp.ID, client.ExecAttachOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -960,7 +963,7 @@ func (c *Client) ExecRun(ctx context.Context, containerID string, cmd []string) 
 	var stdout, stderr bytes.Buffer
 	_, _ = stdcopy.StdCopy(&stdout, &stderr, att.Reader)
 	out := stdout.String() + stderr.String()
-	inspect, err := c.cli.ContainerExecInspect(ctx, resp.ID)
+	inspect, err := c.cli.ExecInspect(ctx, resp.ID, client.ExecInspectOptions{})
 	if err != nil {
 		return out, err
 	}
@@ -973,40 +976,43 @@ func (c *Client) ExecRun(ctx context.Context, containerID string, cmd []string) 
 // ExecAttachTTY creates a TTY exec and attaches stdio; the caller pipes IO.
 type AttachedExec struct {
 	ID   string
-	Conn types.HijackedResponse
+	Conn client.HijackedResponse
 }
 
 func (c *Client) ExecAttachTTY(ctx context.Context, containerID string, cmd []string, workDir string, env []string) (*AttachedExec, error) {
-	resp, err := c.cli.ContainerExecCreate(ctx, containerID, container.ExecOptions{
+	resp, err := c.cli.ExecCreate(ctx, containerID, client.ExecCreateOptions{
 		Cmd:          cmd,
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          true,
+		TTY:          true,
 		WorkingDir:   workDir,
 		Env:          env,
 	})
 	if err != nil {
 		return nil, err
 	}
-	att, err := c.cli.ContainerExecAttach(ctx, resp.ID, container.ExecStartOptions{Tty: true})
+	att, err := c.cli.ExecAttach(ctx, resp.ID, client.ExecAttachOptions{TTY: true})
 	if err != nil {
 		return nil, err
 	}
-	return &AttachedExec{ID: resp.ID, Conn: att}, nil
+	return &AttachedExec{ID: resp.ID, Conn: att.HijackedResponse}, nil
 }
 
 func (c *Client) ResizeExec(ctx context.Context, execID string, cols, rows uint) error {
-	return c.cli.ContainerExecResize(ctx, execID, container.ResizeOptions{Width: cols, Height: rows})
+	_, err := c.cli.ExecResize(ctx, execID, client.ExecResizeOptions{Width: cols, Height: rows})
+	return err
 }
 
 func (c *Client) StopContainer(ctx context.Context, id string, timeout time.Duration) error {
 	t := int(timeout.Seconds())
-	return c.cli.ContainerStop(ctx, id, container.StopOptions{Timeout: &t})
+	_, err := c.cli.ContainerStop(ctx, id, client.ContainerStopOptions{Timeout: &t})
+	return err
 }
 
 func (c *Client) RemoveContainer(ctx context.Context, id string) error {
-	return c.cli.ContainerRemove(ctx, id, container.RemoveOptions{Force: true})
+	_, err := c.cli.ContainerRemove(ctx, id, client.ContainerRemoveOptions{Force: true})
+	return err
 }
 
 // isLayerStatus reports whether a Docker pull status string identifies a
@@ -1050,7 +1056,7 @@ func streamPullProgress(rc io.Reader, imageRef string, onProgress PullProgressFu
 		})
 	}
 	for {
-		var msg jsonmessage.JSONMessage
+		var msg jsonstream.Message
 		if err := dec.Decode(&msg); err != nil {
 			if errors.Is(err, io.EOF) {
 				break

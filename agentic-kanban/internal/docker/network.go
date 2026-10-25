@@ -2,12 +2,11 @@ package docker
 
 import (
 	"context"
-	"net"
 	"os"
 	"strings"
 
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/client"
 )
 
 // KanbanNetworkName is the docker network shared by the kanban server and all
@@ -17,12 +16,12 @@ const KanbanNetworkName = "kanban"
 
 // EnsureNetwork creates the named bridge network if it does not already exist.
 func (c *Client) EnsureNetwork(ctx context.Context, name string) error {
-	if _, err := c.cli.NetworkInspect(ctx, name, network.InspectOptions{}); err == nil {
+	if _, err := c.cli.NetworkInspect(ctx, name, client.NetworkInspectOptions{}); err == nil {
 		return nil
 	} else if !cerrdefs.IsNotFound(err) {
 		return err
 	}
-	if _, err := c.cli.NetworkCreate(ctx, name, network.CreateOptions{Driver: "bridge"}); err != nil {
+	if _, err := c.cli.NetworkCreate(ctx, name, client.NetworkCreateOptions{Driver: "bridge"}); err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			return nil
 		}
@@ -39,11 +38,11 @@ func (c *Client) SelfContainerName(ctx context.Context) string {
 	if err != nil || hostname == "" {
 		return ""
 	}
-	insp, err := c.cli.ContainerInspect(ctx, hostname)
+	res, err := c.cli.ContainerInspect(ctx, hostname, client.ContainerInspectOptions{})
 	if err != nil {
 		return ""
 	}
-	return strings.TrimPrefix(insp.Name, "/")
+	return strings.TrimPrefix(res.Container.Name, "/")
 }
 
 // NetworkGatewayIPv4 returns the IPv4 gateway of the named network, or "" if
@@ -54,16 +53,13 @@ func (c *Client) SelfContainerName(ctx context.Context) string {
 // devcontainer egress firewalls; the attached network's own gateway is on a
 // subnet the firewall already allow-lists.
 func (c *Client) NetworkGatewayIPv4(ctx context.Context, name string) string {
-	insp, err := c.cli.NetworkInspect(ctx, name, network.InspectOptions{})
+	res, err := c.cli.NetworkInspect(ctx, name, client.NetworkInspectOptions{})
 	if err != nil {
 		return ""
 	}
-	for _, cfg := range insp.IPAM.Config {
-		if cfg.Gateway == "" {
-			continue
-		}
-		if ip := net.ParseIP(cfg.Gateway); ip != nil && ip.To4() != nil {
-			return ip.To4().String()
+	for _, cfg := range res.Network.IPAM.Config {
+		if ip := cfg.Gateway.Unmap(); ip.Is4() {
+			return ip.String()
 		}
 	}
 	return ""
@@ -72,7 +68,7 @@ func (c *Client) NetworkGatewayIPv4(ctx context.Context, name string) string {
 // ConnectContainer attaches a container to the given network. A no-op if the
 // container is already attached.
 func (c *Client) ConnectContainer(ctx context.Context, networkName, containerID string) error {
-	err := c.cli.NetworkConnect(ctx, networkName, containerID, nil)
+	_, err := c.cli.NetworkConnect(ctx, networkName, client.NetworkConnectOptions{Container: containerID})
 	if err == nil {
 		return nil
 	}

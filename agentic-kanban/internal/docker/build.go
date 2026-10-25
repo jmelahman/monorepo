@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/strslice"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 )
 
 // Preview builds: one-shot containers that run a single build step against a
@@ -67,28 +67,31 @@ func (c *Client) RunBuildStep(ctx context.Context, step BuildStep, out io.Writer
 		binds = append(binds, m.Source+":"+m.Target)
 	}
 
-	created, err := c.cli.ContainerCreate(ctx, &container.Config{
-		Image: step.Image,
-		// Entrypoint is set explicitly so image entrypoints can't wrap the
-		// step's argv.
-		Entrypoint: strslice.StrSlice(step.Argv[:1]),
-		Cmd:        strslice.StrSlice(step.Argv[1:]),
-		WorkingDir: path.Join(buildMountTarget, filepath.ToSlash(step.Dir)),
-		Env:        step.Env,
-		User:       step.User,
-	}, &container.HostConfig{
-		Binds: binds,
-	}, nil, nil, "")
+	created, err := c.cli.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config: &container.Config{
+			Image: step.Image,
+			// Entrypoint is set explicitly so image entrypoints can't wrap the
+			// step's argv.
+			Entrypoint: []string(step.Argv[:1]),
+			Cmd:        []string(step.Argv[1:]),
+			WorkingDir: path.Join(buildMountTarget, filepath.ToSlash(step.Dir)),
+			Env:        step.Env,
+			User:       step.User,
+		},
+		HostConfig: &container.HostConfig{
+			Binds: binds,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("create build container: %w", err)
 	}
 	defer func() {
 		rmCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		c.cli.ContainerRemove(rmCtx, created.ID, container.RemoveOptions{Force: true}) //nolint:errcheck
+		c.cli.ContainerRemove(rmCtx, created.ID, client.ContainerRemoveOptions{Force: true}) //nolint:errcheck
 	}()
 
-	attach, err := c.cli.ContainerAttach(ctx, created.ID, container.AttachOptions{
+	attach, err := c.cli.ContainerAttach(ctx, created.ID, client.ContainerAttachOptions{
 		Stream: true, Stdout: true, Stderr: true,
 	})
 	if err != nil {
@@ -96,7 +99,7 @@ func (c *Client) RunBuildStep(ctx context.Context, step BuildStep, out io.Writer
 	}
 	defer attach.Close()
 
-	if err := c.cli.ContainerStart(ctx, created.ID, container.StartOptions{}); err != nil {
+	if _, err := c.cli.ContainerStart(ctx, created.ID, client.ContainerStartOptions{}); err != nil {
 		return fmt.Errorf("start build container: %w", err)
 	}
 
@@ -106,11 +109,11 @@ func (c *Client) RunBuildStep(ctx context.Context, step BuildStep, out io.Writer
 		_, _ = stdcopy.StdCopy(out, out, attach.Reader)
 	}()
 
-	waitCh, errCh := c.cli.ContainerWait(ctx, created.ID, container.WaitConditionNotRunning)
+	wait := c.cli.ContainerWait(ctx, created.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
 	select {
-	case err := <-errCh:
+	case err := <-wait.Error:
 		return fmt.Errorf("wait for build container: %w", err)
-	case res := <-waitCh:
+	case res := <-wait.Result:
 		<-copied
 		if res.StatusCode != 0 {
 			return fmt.Errorf("exited with status %d", res.StatusCode)

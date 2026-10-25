@@ -7,8 +7,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/gorilla/websocket"
+	"github.com/moby/moby/client"
 
 	"github.com/jmelahman/kanban/internal/docker"
 )
@@ -22,7 +22,7 @@ func addFakeBroker(t *testing.T, s *brokerSet, sessionID int64, kind, harnessID 
 	t.Cleanup(func() { ours.Close(); theirs.Close() })
 	b := &sessionPTY{
 		key:         brokerKey{sessionID: sessionID, kind: kind},
-		attached:    &docker.AttachedExec{ID: "exec-" + kind, Conn: types.HijackedResponse{Conn: ours, Reader: bufio.NewReader(ours)}},
+		attached:    &docker.AttachedExec{ID: "exec-" + kind, Conn: client.HijackedResponse{Conn: ours, Reader: bufio.NewReader(ours)}},
 		set:         s,
 		containerID: "c0ffee",
 		harness:     harnessID,

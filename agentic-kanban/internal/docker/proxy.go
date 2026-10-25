@@ -8,8 +8,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 )
 
 // PortProxy listens on a host port and forwards each connection through a
@@ -70,11 +70,11 @@ func (p *PortProxy) Start(ctx context.Context) error {
 	return nil
 }
 
-func (p *PortProxy) handle(ctx context.Context, client net.Conn) {
-	defer client.Close()
+func (p *PortProxy) handle(ctx context.Context, conn net.Conn) {
+	defer conn.Close()
 
 	cmd := []string{"socat", "-", fmt.Sprintf("TCP:127.0.0.1:%d", p.ContainerPort)}
-	resp, err := p.client.cli.ContainerExecCreate(ctx, p.ContainerID, container.ExecOptions{
+	resp, err := p.client.cli.ExecCreate(ctx, p.ContainerID, client.ExecCreateOptions{
 		Cmd:          cmd,
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -84,7 +84,7 @@ func (p *PortProxy) handle(ctx context.Context, client net.Conn) {
 		log.Printf("proxy %d exec create: %v", p.HostPort, err)
 		return
 	}
-	att, err := p.client.cli.ContainerExecAttach(ctx, resp.ID, container.ExecStartOptions{})
+	att, err := p.client.cli.ExecAttach(ctx, resp.ID, client.ExecAttachOptions{})
 	if err != nil {
 		log.Printf("proxy %d exec attach: %v", p.HostPort, err)
 		return
@@ -93,12 +93,12 @@ func (p *PortProxy) handle(ctx context.Context, client net.Conn) {
 
 	done := make(chan struct{}, 2)
 	go func() {
-		_, _ = io.Copy(att.Conn, client)
+		_, _ = io.Copy(att.Conn, conn)
 		_ = att.CloseWrite()
 		done <- struct{}{}
 	}()
 	go func() {
-		_, _ = stdcopy.StdCopy(client, io.Discard, att.Reader)
+		_, _ = stdcopy.StdCopy(conn, io.Discard, att.Reader)
 		done <- struct{}{}
 	}()
 	<-done
