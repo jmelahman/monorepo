@@ -354,6 +354,7 @@ const (
 	red    = "31"
 	green  = "32"
 	yellow = "33"
+	cyan   = "36"
 	dim    = "2"
 	bold   = "1"
 )

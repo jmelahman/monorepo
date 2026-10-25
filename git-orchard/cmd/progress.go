@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/term"
 )
@@ -128,19 +129,32 @@ func (p *progress) clear() {
 	_, _ = fmt.Fprint(p.w, "\r\x1b[K")
 }
 
-// draw rewrites the progress line; p.mu must be held.
+// draw rewrites the progress line; p.mu must be held. It's colored unless
+// NO_COLOR is set: the spinner cyan, the label bold, and the elapsed time and
+// what's under way dim.
 func (p *progress) draw() {
-	line := fmt.Sprintf("%s %s %d/%d (%ds)", spinner[p.frame%len(spinner)], p.label, p.done, p.total,
-		int(time.Since(p.start).Seconds()))
+	spin := spinner[p.frame%len(spinner)]
+	count := fmt.Sprintf(" %d/%d ", p.done, p.total)
+	elapsed := fmt.Sprintf("(%ds)", int(time.Since(p.start).Seconds()))
+	running := ""
 	if len(p.running) > 0 {
-		line += ": " + strings.Join(p.running, ", ")
+		running = ": " + strings.Join(p.running, ", ")
 	}
 	// Past the terminal's width the line would wrap, and \r wouldn't return
 	// to its start. The last column is left free too, since some terminals
 	// wrap on reaching it.
-	if r, w := []rune(line), p.width()-1; len(r) > w {
-		line = string(r[:w-1]) + "…"
+	w := p.width() - 1
+	head := spin + " " + p.label + count + elapsed
+	if r, n := []rune(head+running), utf8.RuneCountInString(head); len(r) > w {
+		if n >= w {
+			// Too narrow even for the counts: plain, cut short.
+			p.clear()
+			_, _ = fmt.Fprint(p.w, string(r[:w-1])+"…")
+			return
+		}
+		running = string(r[n:w-1]) + "…"
 	}
+	c := painter(os.Getenv("NO_COLOR") == "")
 	p.clear()
-	_, _ = fmt.Fprint(p.w, line)
+	_, _ = fmt.Fprint(p.w, c.paint(cyan, spin)+" "+c.paint(bold, p.label)+count+c.paint(dim, elapsed+running))
 }
