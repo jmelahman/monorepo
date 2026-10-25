@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,7 +19,8 @@ func setUp() {
 func expectOutcome(t *testing.T, files []string, expectedCode int) {
 	cmd := exec.Command("./check-symlinks", files...)
 	output, err := cmd.CombinedOutput()
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		if exitErr.ExitCode() != expectedCode {
 			t.Errorf("Test failed with case: %v\nExpected exit code: %d\nActual exit code: %d\nOutput: %s", files, expectedCode, exitErr.ExitCode(), output)
 		}

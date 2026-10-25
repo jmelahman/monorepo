@@ -47,7 +47,7 @@ func Run(args []string) int {
 	fs.IntVar(&threads, "threads", 0, "number of worker threads (0 = one per CPU)")
 	fs.BoolVar(&showVersion, "version", false, "print the version and exit")
 	if err := fs.Parse(args[1:]); err != nil {
-		if err == flag.ErrHelp {
+		if err == flag.ErrHelp { //nolint:errorlint // Solod subset has no errors package; sentinel is compared directly
 			return 0
 		}
 		return 2
@@ -107,10 +107,10 @@ func Run(args []string) int {
 		work(&st)
 	} else {
 		ths := make([]conc.Thread, threads)
-		for i := 0; i < threads; i++ {
+		for i := 0; i < threads; i++ { //nolint:intrange // Solod subset may not translate range-over-int
 			ths[i] = conc.Go(workEntry, &st)
 		}
-		for i := 0; i < threads; i++ {
+		for i := 0; i < threads; i++ { //nolint:intrange // Solod subset may not translate range-over-int
 			ths[i].Wait()
 		}
 	}

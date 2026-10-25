@@ -32,7 +32,7 @@ type state struct {
 
 // workEntry adapts work to the conc.Go thread signature.
 func workEntry(arg any) any {
-	st := arg.(*state)
+	st := arg.(*state) //nolint:forcetypeassert // Solod subset: arg is always *state from conc.Go; no comma-ok translation
 	work(st)
 	return nil
 }
@@ -101,7 +101,7 @@ func readDir(st *state, dir string, buf []byte) {
 			continue
 		}
 		_, serr := os.Stat(p)
-		if serr == os.ErrNotExist {
+		if serr == os.ErrNotExist { //nolint:errorlint // Solod subset has no errors package; sentinel is compared directly
 			report(st, p)
 		}
 	}
@@ -123,7 +123,7 @@ func checkOne(st *state, p string) {
 		return
 	}
 	_, serr := os.Stat(p)
-	if serr == os.ErrNotExist {
+	if serr == os.ErrNotExist { //nolint:errorlint // Solod subset has no errors package; sentinel is compared directly
 		report(st, p)
 	}
 }
