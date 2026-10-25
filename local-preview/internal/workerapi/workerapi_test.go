@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 		// Stands in for an init step whose effect lives in an external
 		// service (the per-preview database): it creates the file the run
 		// command below refuses to start without.
-		os.WriteFile(os.Args[i+1], []byte("x"), 0o644) //nolint:errcheck
+		os.WriteFile(os.Args[i+1], []byte("x"), 0o644) //nolint:errcheck // best-effort; failure is not actionable here
 		return
 	}
 	if i := slices.Index(os.Args, "--helper-server"); i >= 0 && i+1 < len(os.Args) {
@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 		http.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		})
-		http.ListenAndServe("127.0.0.1:"+os.Args[i+1], nil) //nolint:errcheck
+		http.ListenAndServe("127.0.0.1:"+os.Args[i+1], nil) //nolint:errcheck // best-effort; failure is not actionable here
 		return
 	}
 	os.Exit(m.Run())
@@ -552,7 +552,7 @@ func TestExecErrorArrivesAsFrame(t *testing.T) {
 	defer done()
 
 	caller, cli := net.Pipe()
-	go c.Exec(context.Background(), supervise.BackendKey(1, "h"), supervise.ExecOptions{Cmd: []string{"sh"}}, cli) //nolint:errcheck
+	go c.Exec(context.Background(), supervise.BackendKey(1, "h"), supervise.ExecOptions{Cmd: []string{"sh"}}, cli) //nolint:errcheck // best-effort; failure is not actionable here
 	f, err := execstream.ReadFrame(caller)
 	if err != nil || f.Type != execstream.FrameError || string(f.Payload) != "preview process is not running" {
 		t.Fatalf("frame = %+v, %v; want FrameError with the detail", f, err)

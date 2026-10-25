@@ -44,7 +44,7 @@ func installHookIn(t *testing.T, dir string, dryRun bool) (string, error) {
 	t.Helper()
 	t.Chdir(dir)
 	var out strings.Builder
-	err := runInstallHook(t.Context(), &out, dryRun)
+	err := runInstallHook(&out, dryRun)
 	return out.String(), err
 }
 

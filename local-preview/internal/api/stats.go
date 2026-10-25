@@ -90,9 +90,9 @@ func startupPercentiles(durs []float64) startupStats {
 		return st
 	}
 	sort.Float64s(durs)
-	st.P50Seconds = ptr(percentile(durs, 0.50))
-	st.P90Seconds = ptr(percentile(durs, 0.90))
-	st.P99Seconds = ptr(percentile(durs, 0.99))
+	st.P50Seconds = new(percentile(durs, 0.50))
+	st.P90Seconds = new(percentile(durs, 0.90))
+	st.P99Seconds = new(percentile(durs, 0.99))
 	return st
 }
 
@@ -108,5 +108,3 @@ func percentile(sorted []float64, p float64) float64 {
 	}
 	return sorted[rank]
 }
-
-func ptr(f float64) *float64 { return &f }

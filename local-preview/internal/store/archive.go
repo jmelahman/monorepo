@@ -153,7 +153,7 @@ func extractTarStream(r io.Reader, destDir string, maxBytes int64, payloadLinks 
 		}
 	}
 	if !seen {
-		return total, fmt.Errorf("archive contained no files")
+		return total, errors.New("archive contained no files")
 	}
 	return total, nil
 }
@@ -162,7 +162,7 @@ func extractTarStream(r io.Reader, destDir string, maxBytes int64, payloadLinks 
 // escapes so a crafted archive can't write outside the extraction root.
 func safeJoin(root, name string) (string, error) {
 	if name == "" {
-		return "", fmt.Errorf("empty path in archive")
+		return "", errors.New("empty path in archive")
 	}
 	if filepath.IsAbs(name) || strings.HasPrefix(name, "/") {
 		return "", fmt.Errorf("absolute path %q in archive", name)

@@ -104,13 +104,13 @@ func credsFor(cfg Config) *credentials.Credentials {
 // would silently drop every artifact.
 func New(cfg Config) (*Tier, error) {
 	if cfg.Endpoint == "" || cfg.Bucket == "" {
-		return nil, fmt.Errorf("s3 tier: endpoint and bucket are required")
+		return nil, errors.New("s3 tier: endpoint and bucket are required")
 	}
 	// Half a keypair is a typo, not a request to fall back to the environment.
 	// Silently ignoring it would authenticate as something the operator did not
 	// ask for — or, with no ambient identity, fail with an opaque 403.
 	if (cfg.AccessKey == "") != (cfg.SecretKey == "") {
-		return nil, fmt.Errorf("s3 tier: access key and secret key must be set together (leave both empty to use the ambient AWS environment)")
+		return nil, errors.New("s3 tier: access key and secret key must be set together (leave both empty to use the ambient AWS environment)")
 	}
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
 		Creds:  credsFor(cfg),

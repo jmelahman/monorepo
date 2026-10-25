@@ -39,9 +39,9 @@ func tarGzBytes(t *testing.T, files map[string]string) []byte {
 	return buf.Bytes()
 }
 
-func upload(t *testing.T, e *env, ref, side, name string, body []byte, overwrite bool) (UploadResult, error) {
+func upload(t *testing.T, e *env, side, name string, body []byte, overwrite bool) (UploadResult, error) {
 	t.Helper()
-	return e.q.Upload(context.Background(), "demo", ref, side, name, bytes.NewReader(body), overwrite)
+	return e.q.Upload(context.Background(), "demo", "main", side, name, bytes.NewReader(body), overwrite)
 }
 
 func readFile(t *testing.T, path string) string {
@@ -80,7 +80,7 @@ func TestUploadFrontendServedWithoutBuild(t *testing.T) {
 	src := newFixtureRepo(t)
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 
-	res, err := upload(t, e, "main", SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "UPLOADED"}), false)
+	res, err := upload(t, e, SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "UPLOADED"}), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestUploadBackendServedWithoutBuild(t *testing.T) {
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 
 	body := tarGzBytes(t, map[string]string{"bin/fixture-server": "#!/bin/sh\n", "marker": "BACKEND-UPLOAD"})
-	res, err := upload(t, e, "main", SideBackend, "", body, false)
+	res, err := upload(t, e, SideBackend, "", body, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestUploadArtifactServedWithoutBuild(t *testing.T) {
 	appendArtifactSection(t, src)
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 
-	res, err := upload(t, e, "main", SideArtifact, "cli", tarGzBytes(t, map[string]string{"bin/fixture-cli": "UPLOADED-CLI"}), false)
+	res, err := upload(t, e, SideArtifact, "cli", tarGzBytes(t, map[string]string{"bin/fixture-cli": "UPLOADED-CLI"}), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,11 +162,11 @@ func TestUploadArtifactErrors(t *testing.T) {
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 
 	// A name the manifest doesn't declare as an artifact.
-	if _, err := upload(t, e, "main", SideArtifact, "ghost", tarGzBytes(t, map[string]string{"x": "y"}), false); !errors.Is(err, ErrNoSuchArtifact) {
+	if _, err := upload(t, e, SideArtifact, "ghost", tarGzBytes(t, map[string]string{"x": "y"}), false); !errors.Is(err, ErrNoSuchArtifact) {
 		t.Fatalf("unknown artifact err = %v, want ErrNoSuchArtifact", err)
 	}
 	// A tar missing the declared file.
-	if _, err := upload(t, e, "main", SideArtifact, "cli", tarGzBytes(t, map[string]string{"wrong-name": "z"}), false); err == nil {
+	if _, err := upload(t, e, SideArtifact, "cli", tarGzBytes(t, map[string]string{"wrong-name": "z"}), false); err == nil {
 		t.Fatal("expected an error when the declared file is absent from the upload")
 	}
 }
@@ -182,7 +182,7 @@ func TestUploadSideRejectedForArtifactsOnlyManifest(t *testing.T) {
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 
 	for _, side := range []string{SideFrontend, SideBackend} {
-		_, err := upload(t, e, "main", side, "", tarGzBytes(t, map[string]string{"x": "y"}), false)
+		_, err := upload(t, e, side, "", tarGzBytes(t, map[string]string{"x": "y"}), false)
 		if err == nil || !strings.Contains(err.Error(), "only downloadable artifacts") {
 			t.Fatalf("%s upload err = %v, want artifacts-only error", side, err)
 		}
@@ -194,13 +194,13 @@ func TestUploadIdempotentAndOverwrite(t *testing.T) {
 	src := newFixtureRepo(t)
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 
-	first, err := upload(t, e, "main", SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "V1"}), false)
+	first, err := upload(t, e, SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "V1"}), false)
 	if err != nil || !first.Published {
 		t.Fatalf("first upload = %+v, err %v", first, err)
 	}
 	path := filepath.Join(e.files.FrontendDir("demo", first.Hash), "index.html")
 
-	second, err := upload(t, e, "main", SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "V2"}), false)
+	second, err := upload(t, e, SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "V2"}), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestUploadIdempotentAndOverwrite(t *testing.T) {
 		t.Fatalf("no-op upload changed content to %q", got)
 	}
 
-	third, err := upload(t, e, "main", SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "V2"}), true)
+	third, err := upload(t, e, SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "V2"}), true)
 	if err != nil || !third.Published {
 		t.Fatalf("overwrite upload = %+v, err %v", third, err)
 	}
@@ -226,7 +226,7 @@ func TestUploadFrontendSharedAcrossCommits(t *testing.T) {
 	src := newFixtureRepo(t)
 	e := newEnv(t, src, func(q *Queue) { q.SetAutoStart(false) })
 
-	res, err := upload(t, e, "main", SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "SHARED"}), false)
+	res, err := upload(t, e, SideFrontend, "", tarGzBytes(t, map[string]string{"index.html": "SHARED"}), false)
 	if err != nil {
 		t.Fatal(err)
 	}

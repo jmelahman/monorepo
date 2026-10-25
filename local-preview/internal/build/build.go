@@ -379,7 +379,7 @@ func (q *Queue) process(ctx context.Context, id int64) {
 	rebuild := q.takeRebuild(id)
 	if err := q.buildDeploy(ctx, row, rebuild); err != nil {
 		log.Printf("build: deploy %d (%s@%s) failed: %v", id, row.RepoName, row.ShortSHA, err)
-		if err := q.db.SetDeployFailed(id, truncate(err.Error(), 500)); err != nil {
+		if err := q.db.SetDeployFailed(id, truncate(err.Error())); err != nil {
 			log.Printf("build: deploy %d: mark failed: %v", id, err)
 		}
 		return
@@ -392,14 +392,14 @@ func (q *Queue) process(ctx context.Context, id int64) {
 	built, err := q.db.GetDeployByID(id)
 	if err != nil {
 		log.Printf("build: deploy %d: reload before ready: %v", id, err)
-		if err := q.db.SetDeployFailed(id, truncate(err.Error(), 500)); err != nil {
+		if err := q.db.SetDeployFailed(id, truncate(err.Error())); err != nil {
 			log.Printf("build: deploy %d: mark failed: %v", id, err)
 		}
 		return
 	}
 	if err := q.ensureDurable(built.RepoName, built.FeHash, built.BeHash); err != nil {
 		log.Printf("build: deploy %d (%s@%s) persist: %v", id, built.RepoName, built.ShortSHA, err)
-		if err := q.db.SetDeployFailed(id, truncate("persist to durable tier: "+err.Error(), 500)); err != nil {
+		if err := q.db.SetDeployFailed(id, truncate("persist to durable tier: "+err.Error())); err != nil {
 			log.Printf("build: deploy %d: mark failed: %v", id, err)
 		}
 		return
@@ -687,7 +687,7 @@ func (q *Queue) buildArtifacts(ctx context.Context, row db.DeployRow, rebuild bo
 		}
 		log.Printf("build: deploy %d (%s@%s) artifacts.%s failed: %v",
 			row.ID, row.RepoName, row.ShortSHA, name, err)
-		if err := q.db.SetDeployArtifactStatus(row.ID, name, db.ArtifactFailed, truncate(err.Error(), 500)); err != nil {
+		if err := q.db.SetDeployArtifactStatus(row.ID, name, db.ArtifactFailed, truncate(err.Error())); err != nil {
 			log.Printf("build: mark artifacts.%s failed for deploy %d: %v", name, row.ID, err)
 		}
 	}
@@ -718,7 +718,7 @@ func (q *Queue) buildArtifacts(ctx context.Context, row db.DeployRow, rebuild bo
 		}
 		spec, ok := m.Artifacts[name]
 		if !ok {
-			fail(name, fmt.Errorf("artifact is no longer declared by the manifest"))
+			fail(name, errors.New("artifact is no longer declared by the manifest"))
 			continue
 		}
 		if scratch == "" {
@@ -1060,7 +1060,8 @@ func looksLikeSHA(ref string) bool {
 	return true
 }
 
-func truncate(s string, n int) string {
+func truncate(s string) string {
+	const n = 500
 	if len(s) <= n {
 		return s
 	}

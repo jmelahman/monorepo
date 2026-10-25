@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -67,14 +66,14 @@ func installHookCmd() *cobra.Command {
 			"If the repo uses the pre-commit framework, a .pre-commit-config.yaml\n" +
 			"stanza subscribing to the published hook is printed instead.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInstallHook(cmd.Context(), cmd.OutOrStdout(), dryRun)
+			return runInstallHook(cmd.OutOrStdout(), dryRun)
 		},
 	}
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print what would be written without writing it")
 	return cmd
 }
 
-func runInstallHook(ctx context.Context, out io.Writer, dryRun bool) error {
+func runInstallHook(out io.Writer, dryRun bool) error {
 	top, err := findWorktreeRoot(".")
 	if err != nil {
 		return fmt.Errorf("not inside a git working tree: %w", err)

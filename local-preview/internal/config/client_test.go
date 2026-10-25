@@ -7,14 +7,13 @@ import (
 	"testing"
 )
 
-func writeConfig(t *testing.T, contents string) string {
+func writeConfig(t *testing.T, contents string) {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("PREVIEW_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, clientConfigName), []byte(contents), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	return dir
 }
 
 func TestLoadClientConfig(t *testing.T) {

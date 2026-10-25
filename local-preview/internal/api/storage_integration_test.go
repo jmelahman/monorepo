@@ -47,7 +47,7 @@ func TestRetentionEndpoints(t *testing.T) {
 func TestStorageEndpoint(t *testing.T) {
 	mux, _ := newTestMux(t)
 	src := newSourceRepo(t)
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 
 	rec := doJSON(t, mux, "GET", "/api/storage", "")
 	if rec.Code != http.StatusOK {
@@ -75,8 +75,8 @@ func TestStorageEndpoint(t *testing.T) {
 }
 
 // deployRef requests a deploy of ref and waits until it is ready, returning
-// its id, be_hash, and fe_hash.
-func deployRef(t *testing.T, mux *http.ServeMux, ref string) (id int64, beHash, feHash string) {
+// its id and be_hash.
+func deployRef(t *testing.T, mux *http.ServeMux, ref string) (id int64, beHash string) {
 	t.Helper()
 	rec := doJSON(t, mux, "POST", "/api/deploys", `{"repo":"demo","ref":"`+ref+`"}`)
 	if rec.Code != http.StatusAccepted {
@@ -86,7 +86,6 @@ func deployRef(t *testing.T, mux *http.ServeMux, ref string) (id int64, beHash, 
 		ID     int64  `json:"id"`
 		Status string `json:"status"`
 		BeHash string `json:"be_hash"`
-		FeHash string `json:"fe_hash"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &d); err != nil {
 		t.Fatal(err)
@@ -103,14 +102,14 @@ func deployRef(t *testing.T, mux *http.ServeMux, ref string) (id int64, beHash, 
 			t.Fatal(err)
 		}
 	}
-	return d.ID, d.BeHash, d.FeHash
+	return d.ID, d.BeHash
 }
 
 func TestGCEndpointEvictsByPolicy(t *testing.T) {
 	mux, root := newTestMux(t)
 	src := newSourceRepo(t)
-	registerRepo(t, mux, "demo", src)
-	firstID, firstBe, _ := deployRef(t, mux, "main")
+	registerRepo(t, mux, src)
+	firstID, firstBe := deployRef(t, mux, "main")
 
 	// A second commit changing both sides produces fresh artifact hashes.
 	if err := os.WriteFile(filepath.Join(src, "web", "index.html"), []byte("<html>v2</html>"), 0o644); err != nil {
@@ -121,7 +120,7 @@ func TestGCEndpointEvictsByPolicy(t *testing.T) {
 	}
 	gittest.Run(t, src, "add", "-A")
 	gittest.Run(t, src, "commit", "-qm", "v2")
-	secondID, secondBe, _ := deployRef(t, mux, "main")
+	secondID, secondBe := deployRef(t, mux, "main")
 	if firstBe == secondBe {
 		t.Fatalf("fixture commits share be_hash %q; the test needs distinct artifacts", firstBe)
 	}

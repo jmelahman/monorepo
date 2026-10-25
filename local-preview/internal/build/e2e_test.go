@@ -128,7 +128,7 @@ func (e *env) deployAndWait(t *testing.T, ref string) db.DeployRow {
 // waitArtifact polls until the deploy's named artifact reaches a terminal
 // build status — artifacts build on after the deploy turns ready — and
 // returns its ref.
-func (e *env) waitArtifact(t *testing.T, id int64, name string) db.ArtifactRef {
+func (e *env) waitArtifact(t *testing.T, id int64) db.ArtifactRef {
 	t.Helper()
 	deadline := time.Now().Add(90 * time.Second)
 	for {
@@ -136,12 +136,12 @@ func (e *env) waitArtifact(t *testing.T, id int64, name string) db.ArtifactRef {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ref, ok := row.Artifacts[name]
+		ref, ok := row.Artifacts["cli"]
 		if ok && (ref.Status == db.ArtifactReady || ref.Status == db.ArtifactFailed) {
 			return ref
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("artifact %s did not finish; ref=%+v", name, ref)
+			t.Fatalf("artifact cli did not finish; ref=%+v", ref)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -171,7 +171,7 @@ func httpGet(t *testing.T, port int, path string) string {
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("GET %s: %d %s", path, resp.StatusCode, b)
 	}
 	return string(b)
@@ -390,7 +390,7 @@ func TestArtifactBuildAndReuse(t *testing.T) {
 	if !ok || ref.Hash == "" || ref.LogPath == "" {
 		t.Fatalf("deploy artifacts = %+v", a.Artifacts)
 	}
-	if ref = e.waitArtifact(t, a.ID, "cli"); ref.Status != db.ArtifactReady {
+	if ref = e.waitArtifact(t, a.ID); ref.Status != db.ArtifactReady {
 		t.Fatalf("artifact ref = %+v", ref)
 	}
 	if !e.files.HasArtifact("demo", ref.Hash) {
@@ -435,7 +435,7 @@ func TestArtifactBuildAndReuse(t *testing.T) {
 	if c.Artifacts["cli"].Hash == ref.Hash {
 		t.Fatal("partition change did not change the artifact hash")
 	}
-	e.waitArtifact(t, c.ID, "cli")
+	e.waitArtifact(t, c.ID)
 	if !e.files.HasArtifact("demo", c.Artifacts["cli"].Hash) {
 		t.Fatal("rebuilt artifact not published")
 	}
@@ -483,7 +483,7 @@ files = ["bin/fixture-cli"]
 	if err := os.WriteFile(gate, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got := e.waitArtifact(t, d.ID, "cli")
+	got := e.waitArtifact(t, d.ID)
 	if got.Status != db.ArtifactReady || got.Error != "" {
 		t.Fatalf("artifact ref = %+v", got)
 	}
@@ -512,7 +512,7 @@ func TestArtifactBuildFailureLeavesDeployReady(t *testing.T) {
 
 	e := newEnv(t, src)
 	d := e.deployAndWait(t, "main")
-	ref := e.waitArtifact(t, d.ID, "cli")
+	ref := e.waitArtifact(t, d.ID)
 	if ref.Status != db.ArtifactFailed {
 		t.Fatalf("artifact ref = %+v, want status failed", ref)
 	}

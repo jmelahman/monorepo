@@ -53,13 +53,13 @@ type UploadFile struct {
 // not overwrite is a no-op (Published=false).
 func (q *Queue) Upload(ctx context.Context, repoName, ref, side, name string, body io.Reader, overwrite bool) (UploadResult, error) {
 	if side == SideArtifact && name == "" {
-		return UploadResult{}, fmt.Errorf("an artifact name is required")
+		return UploadResult{}, errors.New("an artifact name is required")
 	}
 	_, gr, sha, err := q.resolveRepoRef(ctx, repoName, ref)
 	if err != nil {
 		return UploadResult{}, err
 	}
-	row := db.DeployRow{Deploy: db.Deploy{SHA: sha, ShortSHA: shortSHA(sha)}, RepoName: repoName}
+	row := db.DeployRow{SHA: sha, ShortSHA: shortSHA(sha), RepoName: repoName}
 	m, projectDir, err := q.loadManifest(ctx, gr, row)
 	if err != nil {
 		return UploadResult{}, err

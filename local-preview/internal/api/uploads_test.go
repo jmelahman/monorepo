@@ -44,7 +44,7 @@ func tarGz(t *testing.T, files map[string]string) []byte {
 
 func doUpload(t *testing.T, mux *http.ServeMux, path string, body []byte) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest("POST", path, bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/octet-stream")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -76,7 +76,7 @@ files = ["mycli"]
 		t.Fatal(err)
 	}
 	gittest.Run(t, src, "commit", "-qam", "declare artifact")
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 
 	// Frontend upload primes the content store.
 	fe := tarGz(t, map[string]string{"index.html": "UPLOADED"})
@@ -180,7 +180,7 @@ func TestUploadRejectsOversized(t *testing.T) {
 		deps, _ := newTestDeps(t)
 		deps.MaxUploadBytes = 10 // any real tar.gz exceeds this on the wire
 		mux := NewMux(deps)
-		registerRepo(t, mux, "demo", newSourceRepo(t))
+		registerRepo(t, mux, newSourceRepo(t))
 		fe := tarGz(t, map[string]string{"index.html": "hello world"})
 		rec := doUpload(t, mux, "/api/repos/demo/uploads/frontend?ref=main", fe)
 		if rec.Code != http.StatusRequestEntityTooLarge {
@@ -193,7 +193,7 @@ func TestUploadRejectsOversized(t *testing.T) {
 		deps.MaxUploadBytes = 10 << 20      // wire cap far above the compressed body
 		deps.Files.SetMaxExtractBytes(1024) // but the decompressed tree may not exceed 1 KiB
 		mux := NewMux(deps)
-		registerRepo(t, mux, "demo", newSourceRepo(t))
+		registerRepo(t, mux, newSourceRepo(t))
 		// ~64 KiB of highly-compressible content: tiny on the wire, well past the cap decompressed.
 		fe := tarGz(t, map[string]string{"index.html": strings.Repeat("A", 64<<10)})
 		rec := doUpload(t, mux, "/api/repos/demo/uploads/frontend?ref=main", fe)
@@ -214,14 +214,12 @@ func (f fakeVerifier) Verify(context.Context, string) (githuboidc.Claims, error)
 	return f.claims, f.err
 }
 
-// doUploadTok is doUpload with an optional bearer token.
-func doUploadTok(t *testing.T, mux *http.ServeMux, path, token string, body []byte) *httptest.ResponseRecorder {
+// doUploadTok is doUpload with a bearer token.
+func doUploadTok(t *testing.T, mux *http.ServeMux, path string, body []byte) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest("POST", path, bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/octet-stream")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
+	req.Header.Set("Authorization", "Bearer some.jwt.token")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	return rec
@@ -243,7 +241,7 @@ func TestUploadOIDCAuth(t *testing.T) {
 
 	t.Run("missing token is 401", func(t *testing.T) {
 		mux, _ := newAuthMux(t, fakeVerifier{claims: githuboidc.Claims{Repository: "acme/app"}})
-		registerRepo(t, mux, "demo", newSourceRepo(t))
+		registerRepo(t, mux, newSourceRepo(t))
 		rec := doUpload(t, mux, "/api/repos/demo/uploads/frontend?ref=main", fe)
 		if rec.Code != http.StatusUnauthorized {
 			t.Fatalf("got %d, want 401 (%s)", rec.Code, rec.Body)
@@ -255,8 +253,8 @@ func TestUploadOIDCAuth(t *testing.T) {
 
 	t.Run("invalid token is 403", func(t *testing.T) {
 		mux, _ := newAuthMux(t, fakeVerifier{err: errors.New("bad signature")})
-		registerRepo(t, mux, "demo", newSourceRepo(t))
-		rec := doUploadTok(t, mux, "/api/repos/demo/uploads/frontend?ref=main", "some.jwt.token", fe)
+		registerRepo(t, mux, newSourceRepo(t))
+		rec := doUploadTok(t, mux, "/api/repos/demo/uploads/frontend?ref=main", fe)
 		if rec.Code != http.StatusForbidden {
 			t.Fatalf("got %d, want 403 (%s)", rec.Code, rec.Body)
 		}
@@ -264,7 +262,7 @@ func TestUploadOIDCAuth(t *testing.T) {
 
 	t.Run("unknown repo is 404 for an authenticated caller", func(t *testing.T) {
 		mux, _ := newAuthMux(t, fakeVerifier{claims: githuboidc.Claims{Repository: "acme/app"}})
-		rec := doUploadTok(t, mux, "/api/repos/nope/uploads/frontend?ref=main", "some.jwt.token", fe)
+		rec := doUploadTok(t, mux, "/api/repos/nope/uploads/frontend?ref=main", fe)
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("got %d, want 404 (%s)", rec.Code, rec.Body)
 		}
@@ -273,7 +271,7 @@ func TestUploadOIDCAuth(t *testing.T) {
 	t.Run("token for a different repo is 403", func(t *testing.T) {
 		mux, deps := newAuthMux(t, fakeVerifier{claims: githuboidc.Claims{Repository: "attacker/app"}})
 		mustCreateGitHubRepo(t, deps, "demo", "https://github.com/acme/app")
-		rec := doUploadTok(t, mux, "/api/repos/demo/uploads/frontend?ref=main", "some.jwt.token", fe)
+		rec := doUploadTok(t, mux, "/api/repos/demo/uploads/frontend?ref=main", fe)
 		if rec.Code != http.StatusForbidden {
 			t.Fatalf("got %d, want 403 (%s)", rec.Code, rec.Body)
 		}
@@ -286,7 +284,7 @@ func TestUploadOIDCAuth(t *testing.T) {
 		// enough to prove the token authorized the request — the happy-path
 		// publish is covered by TestUploadEndpoints.
 		mustCreateGitHubRepo(t, deps, "demo", "https://github.com/acme/app")
-		rec := doUploadTok(t, mux, "/api/repos/demo/uploads/frontend?ref=main", "some.jwt.token", fe)
+		rec := doUploadTok(t, mux, "/api/repos/demo/uploads/frontend?ref=main", fe)
 		if rec.Code == http.StatusUnauthorized || rec.Code == http.StatusForbidden {
 			t.Fatalf("gate blocked a matching token: %d (%s)", rec.Code, rec.Body)
 		}

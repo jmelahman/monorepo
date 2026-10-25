@@ -16,6 +16,7 @@ package proxy
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -81,7 +82,8 @@ func isPoll(r *http.Request) bool { return r.Header.Get(pollHeader) != "" }
 // interimResponse answers a request that can't be served yet: JSON for the
 // page's poller, the old Retry-After JSON for API callers, the poller page
 // for browsers.
-func (rt *Router) interimResponse(w http.ResponseWriter, r *http.Request, status int, it interim) {
+func (rt *Router) interimResponse(w http.ResponseWriter, r *http.Request, it interim) {
+	const status = http.StatusServiceUnavailable
 	if isPoll(r) {
 		rt.pollJSON(w, r, status, it)
 		return
@@ -175,7 +177,7 @@ func tailFile(path string, viewAttempt, reqAttempt int, offset int64) supervise.
 
 	buf := make([]byte, min(size-start, buildLogChunkBytes))
 	n, err := f.ReadAt(buf, start)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return chunk
 	}
 	chunk.Content = string(buf[:n])

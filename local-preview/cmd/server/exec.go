@@ -55,7 +55,7 @@ func execCmd() *cobra.Command {
 				}
 			}
 			if tty && !stdinTerm {
-				return fmt.Errorf("--tty requires stdin to be a terminal")
+				return errors.New("--tty requires stdin to be a terminal")
 			}
 			url, err := resolveURL(cmd, serverURL)
 			if err != nil {
@@ -83,8 +83,7 @@ func execCmd() *cobra.Command {
 			}
 			err = runExecSession(conn, interactive, tty, cmd.OutOrStdout(), cmd.ErrOrStderr())
 			conn.Close()
-			var ee execstream.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[execstream.ExitError](err); ok {
 				// Propagate the command's own exit status, silently — a
 				// non-zero exit is the command's result, not a CLI failure.
 				os.Exit(ee.Code)
@@ -137,7 +136,7 @@ func runExecSession(conn net.Conn, interactive, tty bool, stdout, stderr io.Writ
 		if err != nil {
 			return fmt.Errorf("raw terminal: %w", err)
 		}
-		defer term.Restore(int(os.Stdin.Fd()), oldState) //nolint:errcheck
+		defer term.Restore(int(os.Stdin.Fd()), oldState) //nolint:errcheck // best-effort; failure is not actionable here
 		// Track terminal size by polling — portable where SIGWINCH isn't, and
 		// a 1s lag on a resize is imperceptible next to the redraw itself.
 		go func() {
@@ -146,7 +145,7 @@ func runExecSession(conn net.Conn, interactive, tty bool, stdout, stderr io.Writ
 				if cols, rows, err := term.GetSize(int(os.Stdin.Fd())); err == nil &&
 					(cols != lastCols || rows != lastRows) {
 					lastCols, lastRows = cols, rows
-					fw.WriteFrame(execstream.FrameResize, execstream.ResizePayload(uint16(cols), uint16(rows))) //nolint:errcheck
+					fw.WriteFrame(execstream.FrameResize, execstream.ResizePayload(uint16(cols), uint16(rows))) //nolint:errcheck // best-effort; failure is not actionable here
 				}
 				select {
 				case <-done:
@@ -167,7 +166,7 @@ func runExecSession(conn net.Conn, interactive, tty bool, stdout, stderr io.Writ
 					}
 				}
 				if rerr != nil {
-					fw.WriteFrame(execstream.FrameStdinEOF, nil) //nolint:errcheck
+					fw.WriteFrame(execstream.FrameStdinEOF, nil) //nolint:errcheck // best-effort; failure is not actionable here
 					return
 				}
 			}
@@ -179,7 +178,7 @@ func runExecSession(conn net.Conn, interactive, tty bool, stdout, stderr io.Writ
 			case <-done:
 				return
 			case <-time.After(execPingInterval):
-				fw.WriteFrame(execstream.FramePing, nil) //nolint:errcheck
+				fw.WriteFrame(execstream.FramePing, nil) //nolint:errcheck // best-effort; failure is not actionable here
 			}
 		}
 	}()
@@ -191,9 +190,9 @@ func runExecSession(conn net.Conn, interactive, tty bool, stdout, stderr io.Writ
 		}
 		switch f.Type {
 		case execstream.FrameStdout:
-			stdout.Write(f.Payload) //nolint:errcheck
+			stdout.Write(f.Payload)
 		case execstream.FrameStderr:
-			stderr.Write(f.Payload) //nolint:errcheck
+			stderr.Write(f.Payload)
 		case execstream.FrameExit:
 			code := 0
 			if len(f.Payload) == 1 {

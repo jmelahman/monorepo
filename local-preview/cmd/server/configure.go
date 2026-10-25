@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -37,17 +38,17 @@ func configureCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out := cmd.OutOrStdout()
 			if show && unset {
-				return fmt.Errorf("--show and --unset are mutually exclusive")
+				return errors.New("--show and --unset are mutually exclusive")
 			}
 			if show {
 				if len(args) == 1 {
-					return fmt.Errorf("--show takes no URL")
+					return errors.New("--show takes no URL")
 				}
 				return runConfigureShow(out)
 			}
 			if unset {
 				if len(args) == 1 {
-					return fmt.Errorf("--unset takes no URL")
+					return errors.New("--unset takes no URL")
 				}
 				return runConfigureUnset(out)
 			}
@@ -191,7 +192,7 @@ func promptServer(in io.Reader, out io.Writer, current string) (string, error) {
 	fmt.Fprintf(out, "Server URL [%s]: ", current)
 	line, err := bufio.NewReader(in).ReadString('\n')
 	if line == "" && err != nil {
-		return "", fmt.Errorf("no server URL given; pass one as an argument: preview configure <url>")
+		return "", errors.New("no server URL given; pass one as an argument: preview configure <url>")
 	}
 	if answer := strings.TrimSpace(line); answer != "" {
 		return answer, nil

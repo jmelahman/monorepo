@@ -47,7 +47,7 @@ func SocketPath() (string, error) {
 			return p, nil
 		}
 	}
-	return "", fmt.Errorf("no docker socket found")
+	return "", errors.New("no docker socket found")
 }
 
 // Connect dials the daemon, verifies it responds, and probes rootless mode.
@@ -186,7 +186,7 @@ type Step struct {
 // combined output to out. Non-zero exits are errors.
 func (c *Client) RunStep(ctx context.Context, step Step, out io.Writer) error {
 	if len(step.Cmd) == 0 {
-		return fmt.Errorf("empty command")
+		return errors.New("empty command")
 	}
 	if err := c.EnsureImage(ctx, step.Image, out); err != nil {
 		return err
@@ -216,7 +216,7 @@ func (c *Client) RunStep(ctx context.Context, step Step, out io.Writer) error {
 	defer func() {
 		rmCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		c.raw(rmCtx, "DELETE", "/containers/"+container.ID+"?force=1", nil) //nolint:errcheck
+		c.raw(rmCtx, "DELETE", "/containers/"+container.ID+"?force=1", nil) //nolint:errcheck // best-effort; failure is not actionable here
 	}()
 
 	for _, name := range step.Networks {

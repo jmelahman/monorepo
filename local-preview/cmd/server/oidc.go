@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -41,7 +42,7 @@ func githubActionsToken(ctx context.Context, audience string) (string, error) {
 	reqURL := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
 	reqTok := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
 	if reqURL == "" || reqTok == "" {
-		return "", fmt.Errorf("no GitHub Actions OIDC token available: " +
+		return "", errors.New("no GitHub Actions OIDC token available: " +
 			"ACTIONS_ID_TOKEN_REQUEST_URL is unset — add `permissions: id-token: write` to the job")
 	}
 	u, err := url.Parse(reqURL)
@@ -78,7 +79,7 @@ func githubActionsToken(ctx context.Context, audience string) (string, error) {
 		return "", fmt.Errorf("decode OIDC token response: %w", err)
 	}
 	if out.Value == "" {
-		return "", fmt.Errorf("OIDC token response contained no token")
+		return "", errors.New("OIDC token response contained no token")
 	}
 	return out.Value, nil
 }

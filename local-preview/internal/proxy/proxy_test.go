@@ -120,7 +120,7 @@ func (e *testEnv) readyDeploy(t *testing.T, sha string) db.Deploy {
 
 func doReq(t *testing.T, router *Router, host, path string, browser bool) (int, string, http.Header) {
 	t.Helper()
-	req := httptest.NewRequest("GET", "http://"+host+path, nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+path, nil)
 	req.Host = host
 	if browser {
 		req.Header.Set("Accept", "text/html,application/xhtml+xml")
@@ -339,7 +339,7 @@ func (f *fakeRunLogs) RunLog(repo, side, hash string, attempt int, offset int64)
 
 func doPoll(t *testing.T, router *Router, host, path string, attempt int, offset int64) (int, string, http.Header) {
 	t.Helper()
-	req := httptest.NewRequest("GET", "http://"+host+path, nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+path, nil)
 	req.Host = host
 	req.Header.Set("X-Preview-Poll", "1")
 	req.Header.Set("X-Preview-Log-Attempt", strconv.Itoa(attempt))
@@ -660,7 +660,7 @@ func TestPreviewAuthRedirectsWhenUnauthenticated(t *testing.T) {
 	e.router.SetPreviewAuth(true, "http://localhost:8080", false)
 
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	rec := httptest.NewRecorder()
@@ -691,7 +691,7 @@ func TestPreviewAuthValidCookieServes(t *testing.T) {
 	}
 
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	req.AddCookie(&http.Cookie{Name: previewGrantCookieName, Value: raw})
@@ -720,7 +720,7 @@ func TestPreviewAuthRedeemsCode(t *testing.T) {
 	}
 
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/?preview_auth="+code, nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/?preview_auth="+code, nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	rec := httptest.NewRecorder()
@@ -768,7 +768,7 @@ func TestPreviewGrantCookieStrippedFromBackend(t *testing.T) {
 	}
 
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/api/things", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/api/things", nil)
 	req.Host = host
 	req.AddCookie(&http.Cookie{Name: previewGrantCookieName, Value: raw})
 	req.AddCookie(&http.Cookie{Name: "keep", Value: "me"})
@@ -806,7 +806,7 @@ func TestReservedUpstream(t *testing.T) {
 
 	host := "app.preview.localhost:8080"
 	// A path that is neither /api nor a preview asset still reaches the upstream.
-	req := httptest.NewRequest("GET", "http://"+host+"/auth/oauth/callback?x=1", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/auth/oauth/callback?x=1", nil)
 	req.Host = host
 	req.AddCookie(&http.Cookie{Name: previewGrantCookieName, Value: "secret"})
 	req.AddCookie(&http.Cookie{Name: "fastapiusersauth", Value: "keep"})
@@ -849,7 +849,7 @@ func TestReservedUpstreamBehindAuth(t *testing.T) {
 	e.router.SetPreviewAuth(true, "http://localhost:8080", false)
 
 	host := "app.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/", nil)
 	req.Host = host
 	rec := httptest.NewRecorder()
 	e.router.ServeHTTP(rec, req)
@@ -872,7 +872,7 @@ func TestInterimAndErrorPagesAreUncacheable(t *testing.T) {
 
 	// Interim HTML page (browser, still starting).
 	e.slowBackend()
-	req := httptest.NewRequest("GET", "http://"+host+"/api/x", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/api/x", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	rec := httptest.NewRecorder()
@@ -888,7 +888,7 @@ func TestInterimAndErrorPagesAreUncacheable(t *testing.T) {
 	}
 
 	// Error page (unknown preview).
-	req = httptest.NewRequest("GET", "http://nope-demo.preview.localhost:8080/", nil)
+	req = httptest.NewRequest(http.MethodGet, "http://nope-demo.preview.localhost:8080/", nil)
 	req.Host = "nope-demo.preview.localhost:8080"
 	req.Header.Set("Accept", "text/html")
 	rec = httptest.NewRecorder()
@@ -908,7 +908,7 @@ func TestOnyxAuthBouncesPreviewWithoutSession(t *testing.T) {
 	e.router.SetOnyxAuth("app", "")
 
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/chat", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/chat", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	rec := httptest.NewRecorder()
@@ -940,7 +940,7 @@ func TestOnyxAuthPassesWithSession(t *testing.T) {
 	e.router.SetOnyxAuth("app", "")
 
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	req.AddCookie(&http.Cookie{Name: "fastapiusersauth", Value: "jwt"})
@@ -963,7 +963,7 @@ func TestOnyxAuthInterceptsLoginPage(t *testing.T) {
 	e.router.SetOnyxAuth("app", "")
 
 	host := d.ShortSHA + "-demo.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/auth/login", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/auth/login", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	req.AddCookie(&http.Cookie{Name: "fastapiusersauth", Value: "stale"})
@@ -1010,7 +1010,7 @@ func TestOnyxAuthPostLoginHandoff(t *testing.T) {
 
 	host := "app.preview.localhost:8080"
 	ret := "http://1a2b3c4-demo.preview.localhost:8080/chat"
-	req := httptest.NewRequest("GET", "http://"+host+"/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	req.AddCookie(&http.Cookie{Name: "fastapiusersauth", Value: "jwt"})
@@ -1059,7 +1059,7 @@ func TestOnyxAuthRejectsForeignReturn(t *testing.T) {
 	e.router.SetOnyxAuth("app", "")
 
 	host := "app.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/", nil)
 	req.Host = host
 	req.Header.Set("Accept", "text/html")
 	req.AddCookie(&http.Cookie{Name: "fastapiusersauth", Value: "jwt"})
@@ -1091,7 +1091,7 @@ func TestOnyxAuthCookieDomainRewrite(t *testing.T) {
 	e.router.SetOnyxAuth("app", "")
 
 	host := "app.preview.localhost:8080"
-	req := httptest.NewRequest("GET", "http://"+host+"/api/auth/oauth/callback", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://"+host+"/api/auth/oauth/callback", nil)
 	req.Host = host
 	rec := httptest.NewRecorder()
 	e.router.ServeHTTP(rec, req)

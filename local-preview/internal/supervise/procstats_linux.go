@@ -62,11 +62,11 @@ func sampleProcessGroup(pgid int) (ticks, rssBytes uint64, err error) {
 
 // statFields splits /proc/<pid>/stat after the parenthesized comm field.
 func statFields(s string) []string {
-	i := strings.LastIndexByte(s, ')')
-	if i < 0 {
+	_, after, ok := strings.CutLast(s, ")")
+	if !ok {
 		return nil
 	}
-	return strings.Fields(s[i+1:])
+	return strings.Fields(after)
 }
 
 // hostMemTotal is the machine's total memory — the "limit" a host process

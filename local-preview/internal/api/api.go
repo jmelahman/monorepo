@@ -686,7 +686,7 @@ func (d Deps) handleArtifactDownload(w http.ResponseWriter, r *http.Request) {
 		httpError(w, http.StatusConflict, "artifact is still building")
 		return
 	case db.ArtifactFailed:
-		httpError(w, http.StatusConflict, fmt.Sprintf("artifact build failed: %s", ref.Error))
+		httpError(w, http.StatusConflict, "artifact build failed: "+ref.Error)
 		return
 	}
 	// Path values are decoded, so a segment can smuggle separators
@@ -886,8 +886,7 @@ const maxJSONBody = 1 << 20
 func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBody)
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		var maxErr *http.MaxBytesError
-		if errors.As(err, &maxErr) {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 			httpError(w, http.StatusRequestEntityTooLarge, "request body too large")
 			return false
 		}

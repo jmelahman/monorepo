@@ -28,19 +28,15 @@ type fakeBackend struct {
 	configuredMin []int
 }
 
-// lastConfigured returns the most recent MaxWarm and MinWarm pushes (-1 =
-// never pushed).
-func (f *fakeBackend) lastConfigured() (maxWarm, minWarm int) {
+// lastConfigured returns the most recent MinWarm push (-1 = never pushed).
+func (f *fakeBackend) lastConfigured() (minWarm int) {
 	f.cfgMu.Lock()
 	defer f.cfgMu.Unlock()
-	maxWarm, minWarm = -1, -1
-	if n := len(f.configured); n > 0 {
-		maxWarm = f.configured[n-1]
-	}
+	minWarm = -1
 	if n := len(f.configuredMin); n > 0 {
 		minWarm = f.configuredMin[n-1]
 	}
-	return maxWarm, minWarm
+	return minWarm
 }
 
 func (f *fakeBackend) EnsureRunning(_ context.Context, k supervise.Key, _ string) (string, error) {
@@ -143,7 +139,7 @@ func TestPrefersWorkerWithFreeCapacity(t *testing.T) {
 		"free": {Running: 1, MaxWarm: 10},
 		"full": {Running: 10, MaxWarm: 10},
 	})
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if w := r.place(supervise.BackendKey(int64(i), "h")); w.id != "free" {
 			t.Fatalf("placed on %s, want the only worker with capacity", w.id)
 		}
@@ -333,8 +329,7 @@ func TestHeartbeatShipsEventsToSink(t *testing.T) {
 		default:
 		}
 	})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	r.StartHeartbeats(ctx, 10*time.Millisecond)
 	select {
 	case evs := <-got:
@@ -424,14 +419,13 @@ func TestHeartbeatLoopPushesMinWarmQuotas(t *testing.T) {
 	}
 	r.SetMinWarm(2)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	r.StartHeartbeats(ctx, 10*time.Millisecond)
 
 	deadline := time.After(2 * time.Second)
 	for {
-		_, w1Min := bes["w1"].lastConfigured()
-		_, w2Min := bes["w2"].lastConfigured()
+		w1Min := bes["w1"].lastConfigured()
+		w2Min := bes["w2"].lastConfigured()
 		if w1Min == 1 && w2Min == 1 { // top-2: a (w1), b (w2)
 			return
 		}

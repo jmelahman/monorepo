@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
 	// The container image (alpine) ships no zoneinfo; embed Go's so a
 	// --min-warm-window naming an IANA zone resolves everywhere the binary
 	// runs.
@@ -221,20 +222,7 @@ const (
 )
 
 func run(opts serveOptions) error {
-	if opts.addr == ":8080" { // still the compiled default
-		if v := os.Getenv("PREVIEW_ADDR"); v != "" {
-			opts.addr = v
-		}
-	}
-	if opts.githubSecret == "" {
-		opts.githubSecret = os.Getenv("PREVIEW_GITHUB_WEBHOOK_SECRET")
-	}
-	if opts.githubOIDCAud == "" {
-		opts.githubOIDCAud = os.Getenv("PREVIEW_GITHUB_OIDC_AUDIENCE")
-	}
-	if iss := os.Getenv("PREVIEW_GITHUB_OIDC_ISSUER"); iss != "" && opts.githubOIDCIssuer == githuboidc.DefaultIssuer {
-		opts.githubOIDCIssuer = iss
-	}
+	applyServeEnv(&opts)
 	// Configuring an audience turns on OIDC auth for the upload endpoints; a
 	// nil verifier leaves them unauthenticated, as before.
 	var uploadAuth api.UploadVerifier
@@ -243,95 +231,12 @@ func run(opts serveOptions) error {
 		log.Printf("upload endpoints require GitHub Actions OIDC (issuer %s, audience %s)",
 			opts.githubOIDCIssuer, opts.githubOIDCAud)
 	}
-	envDefault(&opts.ssoClientID, "PREVIEW_SSO_GITHUB_CLIENT_ID")
-	envDefault(&opts.ssoClientSecret, "PREVIEW_SSO_GITHUB_CLIENT_SECRET")
-	envDefault(&opts.ssoCallbackURL, "PREVIEW_SSO_CALLBACK_URL")
-	envDefault(&opts.ssoAllowedOrg, "PREVIEW_SSO_ALLOWED_ORG")
-	envDefault(&opts.ssoAllowedTeam, "PREVIEW_SSO_ALLOWED_TEAM")
-	envDefault(&opts.ssoAllowedLogins, "PREVIEW_SSO_ALLOWED_LOGINS")
-	envDefault(&opts.ssoAllowedEmails, "PREVIEW_SSO_ALLOWED_EMAILS")
-	if len(opts.reservedUpstreams) == 0 {
-		if v := os.Getenv("PREVIEW_RESERVED_UPSTREAMS"); v != "" {
-			opts.reservedUpstreams = strings.Split(v, ",")
-		}
-	}
 	reserved, err := parseReservedUpstreams(opts.reservedUpstreams)
 	if err != nil {
 		return err
 	}
-	envDefault(&opts.onyxAuthUpstream, "PREVIEW_ONYX_AUTH_UPSTREAM")
-	envDefault(&opts.onyxAuthCookie, "PREVIEW_ONYX_AUTH_COOKIE")
-	if opts.onyxAuthUpstream != "" {
-		if _, ok := reserved[strings.ToLower(opts.onyxAuthUpstream)]; !ok {
-			return fmt.Errorf("--onyx-auth-upstream %q must also be a --reserved-upstream label", opts.onyxAuthUpstream)
-		}
-	}
-	envDefault(&opts.s3Endpoint, "PREVIEW_S3_ENDPOINT")
-	envDefault(&opts.s3Bucket, "PREVIEW_S3_BUCKET")
-	envDefault(&opts.s3Prefix, "PREVIEW_S3_PREFIX")
-	envDefault(&opts.s3Region, "PREVIEW_S3_REGION")
-	// Deliberately no AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY fallback here.
-	// Those two are only half of an AWS identity — temporary credentials also
-	// carry AWS_SESSION_TOKEN — so lifting the pair into an explicit keypair
-	// would build a signature the service rejects, and would shadow the
-	// instance role the deployed server actually authenticates as. Left unset,
-	// the tier resolves the whole environment itself (see s3store.credsFor).
-	envDefault(&opts.s3AccessKey, "PREVIEW_S3_ACCESS_KEY")
-	envDefault(&opts.s3SecretKey, "PREVIEW_S3_SECRET_KEY")
-	envDefaultInt64(&opts.cacheMaxArtifactBytes, "PREVIEW_CACHE_MAX_ARTIFACT_BYTES")
-	envOverrideInt64(&opts.maxUploadBytes, "PREVIEW_MAX_UPLOAD_BYTES", defaultMaxUploadBytes)
-	envDefault(&opts.minWarmWindow, "PREVIEW_MIN_WARM_WINDOW")
-	envDefault(&opts.workerSecret, "PREVIEW_WORKER_SECRET")
-	envDefault(&opts.workerEndpoint, "PREVIEW_WORKER_ENDPOINT")
-	envDefault(&opts.workerEndpoints, "PREVIEW_WORKER_ENDPOINTS")
-	envDefault(&opts.controlListen, "PREVIEW_CONTROL_LISTEN")
-	envDefault(&opts.controlEndpoint, "PREVIEW_CONTROL_ENDPOINT")
-	envDefault(&opts.workerAdvertise, "PREVIEW_WORKER_ADVERTISE")
-	envDefault(&opts.workerInstanceID, "PREVIEW_WORKER_INSTANCE_ID")
-	envDefault(&opts.asgName, "PREVIEW_WORKER_ASG_NAME")
-	if opts.awsRegion == "" {
-		opts.awsRegion = os.Getenv("AWS_REGION")
-	}
-	if opts.maxWarmPerGB == 0 {
-		if v := os.Getenv("PREVIEW_MAX_WARM_PER_GB"); v != "" {
-			if f, e := strconv.ParseFloat(v, 64); e == nil {
-				opts.maxWarmPerGB = f
-			}
-		}
-	}
-	if opts.maxWarmReserveGB == 1 { // still the compiled default
-		if v := os.Getenv("PREVIEW_MAX_WARM_RESERVE_GB"); v != "" {
-			if f, e := strconv.ParseFloat(v, 64); e == nil {
-				opts.maxWarmReserveGB = f
-			}
-		}
-	}
-	switch opts.role {
-	case "all", "control", "worker":
-	default:
-		return fmt.Errorf("--role must be one of all|control|worker, got %q", opts.role)
-	}
-	if opts.role == "control" && len(workerEndpoints(opts)) > 0 && opts.workerSecret == "" {
-		return fmt.Errorf("--role=control with worker endpoints requires --worker-secret")
-	}
-	if opts.workerListen != "" && opts.workerSecret == "" {
-		return fmt.Errorf("--worker-listen requires --worker-secret (the worker API is a remote-code-execution surface)")
-	}
-	if opts.controlListen != "" {
-		if opts.role != "control" {
-			return fmt.Errorf("--control-listen is a control-node flag; got --role=%q", opts.role)
-		}
-		if opts.workerSecret == "" {
-			return fmt.Errorf("--control-listen requires --worker-secret (worker registration steers preview traffic)")
-		}
-	}
-	if opts.controlEndpoint != "" {
-		if opts.role != "worker" && opts.role != "all" {
-			return fmt.Errorf("--control-endpoint is a worker-node flag; got --role=%q", opts.role)
-		}
-		if opts.workerSecret == "" {
-			return fmt.Errorf("--control-endpoint requires --worker-secret")
-		}
+	if err := validateServeOptions(opts, reserved); err != nil {
+		return err
 	}
 	// Setting the client ID turns on interactive SSO for the dashboard, API,
 	// and previews; leaving it unset keeps the historical open behavior.
@@ -379,51 +284,7 @@ func run(opts serveOptions) error {
 	gitMgr := gitrepo.NewManager(cfg.ReposDir())
 	super := supervise.New(database, files, cfg.LogsDir())
 	super.ReclaimOrphans()
-	// Memory-calibrated warm cap: when --max-warm-per-gb is set, derive the boot
-	// --max-warm from this machine's RAM so one launch template can serve a
-	// mixed-instances fleet of differently sized workers. This only sets the
-	// boot default; a dashboard-saved setting still overrides below.
-	if opts.maxWarmPerGB > 0 {
-		if mem, merr := readMemTotalBytes(); merr != nil {
-			log.Printf("warm calibration: reading memory failed (%v); keeping --max-warm %d", merr, opts.maxWarm)
-		} else {
-			n := warmFromMemory(mem, opts.maxWarmPerGB, opts.maxWarmReserveGB)
-			log.Printf("warm calibration: %d warm slots from %.1f GiB RAM (%.2f/GiB, %.1f GiB reserved); --max-warm %d superseded",
-				n, float64(mem)/(1<<30), opts.maxWarmPerGB, opts.maxWarmReserveGB, opts.maxWarm)
-			opts.maxWarm = n
-		}
-	}
-	// The warm cap: the --max-warm flag is the boot default, overridden by the
-	// dashboard-saved setting when one exists (the setting survives restarts
-	// and, via the fleet's reconcile loop, worker reboots).
-	effectiveMaxWarm := opts.maxWarm
-	warmOverridden := false
-	if v, err := database.GetSetting(warmSettingKey); err == nil {
-		if n, perr := strconv.Atoi(v); perr == nil && n >= 0 {
-			effectiveMaxWarm, warmOverridden = n, true
-		}
-	}
-	super.SetMaxWarm(effectiveMaxWarm)
-	if warmOverridden {
-		log.Printf("warm cap: %d (dashboard setting; --max-warm %d overridden)", effectiveMaxWarm, opts.maxWarm)
-	}
-	minWarm, minWarmSet := 0, false
-	if v, err := database.GetSetting(minWarmSettingKey); err == nil {
-		if n, perr := strconv.Atoi(v); perr == nil && n >= 0 {
-			minWarm, minWarmSet = n, true
-			super.SetMinWarm(n)
-		}
-	}
-	idleOverrideSec, idleOverridden := 0, false
-	if v, err := database.GetSetting(idleSettingKey); err == nil {
-		if n, perr := strconv.Atoi(v); perr == nil && n >= 0 {
-			idleOverrideSec, idleOverridden = n, true
-			super.SetIdleOverride(time.Duration(n) * time.Second)
-			if n > 0 {
-				log.Printf("idle timeout: %ds (dashboard setting; manifest idle_timeout overridden)", n)
-			}
-		}
-	}
+	warm := applyWarmSettings(&opts, database, super)
 	super.StartReaper(workCtx)
 	queue := build.NewQueue(database, gitMgr, files, super, cfg.LogsDir(), nil)
 	queue.SetManifestRefs([]build.ManifestRef{
@@ -501,6 +362,299 @@ func run(opts serveOptions) error {
 	// remote worker over the internal API instead. Both satisfy proxy.Backends.
 	// The fleet registry is built before the API deps because it is also the
 	// dashboard's runtime view (status/stats/run logs live on the workers).
+	fs, err := setupFleet(workCtx, opts, database, super, queue, warm)
+	if err != nil {
+		return err
+	}
+	backends, runtime, reg, registrar := fs.backends, fs.runtime, fs.reg, fs.registrar
+
+	deps := api.Deps{
+		Store:               database,
+		Build:               api.BuildInfo(Build()),
+		Config:              cfg,
+		Git:                 gitMgr,
+		Queue:               queue,
+		Super:               super,
+		Runtime:             runtime,
+		Cloner:              cloner,
+		Watcher:             watcher,
+		Files:               files,
+		Sweeper:             sweeper,
+		DBPath:              dbPath,
+		GitHubWebhookSecret: opts.githubSecret,
+		UploadAuth:          uploadAuth,
+		MaxUploadBytes:      opts.maxUploadBytes,
+		SSO:                 sso,
+		DashboardOrigin:     dashboardOrigin,
+		CookiesSecure:       cookiesSecure,
+		FleetStats:          fleetStatsFn(reg),
+		WarmPolicy:          warmPolicyGetter(super),
+		SetWarmPolicy:       warmPolicySetter(database, super, reg),
+	}
+	apex := api.AuthMiddleware(deps, api.NewMux(deps))
+	router := proxy.New(database, files, backends, cfg.Preview.Domain, apex)
+	// Interim "starting" pages stream the run log from wherever the process
+	// runs — the local manager, or the fleet view on a control node — and
+	// consult process status so a frontend blocked on its backend's init is
+	// narrated as the backend (the side actually doing the work).
+	router.SetRunLogs(runtime)
+	router.SetProcStatus(runtime)
+	if sso != nil {
+		router.SetPreviewAuth(true, dashboardOrigin, cookiesSecure)
+		startSessionGC(workCtx, database)
+	}
+	if len(reserved) > 0 {
+		router.SetReservedUpstreams(reserved)
+		for label, addr := range reserved {
+			log.Printf("reserved upstream: %s.%s -> %s", label, cfg.Preview.Domain, addr)
+		}
+	}
+	if opts.onyxAuthUpstream != "" {
+		router.SetOnyxAuth(opts.onyxAuthUpstream, opts.onyxAuthCookie)
+		log.Printf("onyx SSO: previews log in via %s.%s (cookie %q)",
+			strings.ToLower(opts.onyxAuthUpstream), cfg.Preview.Domain,
+			cmp.Or(opts.onyxAuthCookie, "fastapiusersauth"))
+	}
+
+	workerSrv := startWorkerServer(opts, super)
+	controlSrv := startControlServer(opts, reg, registrar)
+	if err := startSelfRegistration(workCtx, opts); err != nil {
+		return err
+	}
+
+	srv := &http.Server{
+		Addr:              opts.addr,
+		Handler:           recoverPanics(logRequests(compressResponses(router))),
+		ReadHeaderTimeout: 10 * time.Second,
+		// Bound request-read and idle-keepalive so a slow-body or idle client
+		// can't hold connections open indefinitely. No WriteTimeout: the proxy
+		// streams long-lived preview responses and the cold-start flow relies on
+		// Retry-After, both of which a blanket write deadline would truncate;
+		// per-request deadlines live in the proxy (ensureAndProxy) instead.
+		ReadTimeout: 60 * time.Second,
+		IdleTimeout: 120 * time.Second,
+	}
+
+	go func() {
+		log.Printf("listening on %s (previews at %s)", opts.addr, cfg.Preview.URL("<sha>", "<repo>"))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+	log.Println("shutting down")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err = srv.Shutdown(ctx)
+	if workerSrv != nil {
+		workerSrv.Shutdown(ctx) //nolint:errcheck // best-effort; failure is not actionable here
+	}
+	if controlSrv != nil {
+		controlSrv.Shutdown(ctx) //nolint:errcheck // best-effort; failure is not actionable here
+	}
+	// Cancelling workCtx signals the self-registration loop to send a
+	// best-effort deregister before the process exits.
+	stopWork()
+	// Drain in-flight artifact uploads before stopping processes: the build
+	// workers have stopped enqueuing (their context is cancelled), so this only
+	// waits on uploads already started.
+	queue.Stop()
+	super.StopAll()
+	return err
+}
+
+// applyServeEnv fills the serve options still at their defaults from the
+// PREVIEW_* environment.
+func applyServeEnv(opts *serveOptions) {
+	if opts.addr == ":8080" { // still the compiled default
+		if v := os.Getenv("PREVIEW_ADDR"); v != "" {
+			opts.addr = v
+		}
+	}
+	if opts.githubSecret == "" {
+		opts.githubSecret = os.Getenv("PREVIEW_GITHUB_WEBHOOK_SECRET")
+	}
+	if opts.githubOIDCAud == "" {
+		opts.githubOIDCAud = os.Getenv("PREVIEW_GITHUB_OIDC_AUDIENCE")
+	}
+	if iss := os.Getenv("PREVIEW_GITHUB_OIDC_ISSUER"); iss != "" && opts.githubOIDCIssuer == githuboidc.DefaultIssuer {
+		opts.githubOIDCIssuer = iss
+	}
+	envDefault(&opts.ssoClientID, "PREVIEW_SSO_GITHUB_CLIENT_ID")
+	envDefault(&opts.ssoClientSecret, "PREVIEW_SSO_GITHUB_CLIENT_SECRET")
+	envDefault(&opts.ssoCallbackURL, "PREVIEW_SSO_CALLBACK_URL")
+	envDefault(&opts.ssoAllowedOrg, "PREVIEW_SSO_ALLOWED_ORG")
+	envDefault(&opts.ssoAllowedTeam, "PREVIEW_SSO_ALLOWED_TEAM")
+	envDefault(&opts.ssoAllowedLogins, "PREVIEW_SSO_ALLOWED_LOGINS")
+	envDefault(&opts.ssoAllowedEmails, "PREVIEW_SSO_ALLOWED_EMAILS")
+	if len(opts.reservedUpstreams) == 0 {
+		if v := os.Getenv("PREVIEW_RESERVED_UPSTREAMS"); v != "" {
+			opts.reservedUpstreams = strings.Split(v, ",")
+		}
+	}
+	envDefault(&opts.onyxAuthUpstream, "PREVIEW_ONYX_AUTH_UPSTREAM")
+	envDefault(&opts.onyxAuthCookie, "PREVIEW_ONYX_AUTH_COOKIE")
+	envDefault(&opts.s3Endpoint, "PREVIEW_S3_ENDPOINT")
+	envDefault(&opts.s3Bucket, "PREVIEW_S3_BUCKET")
+	envDefault(&opts.s3Prefix, "PREVIEW_S3_PREFIX")
+	envDefault(&opts.s3Region, "PREVIEW_S3_REGION")
+	// Deliberately no AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY fallback here.
+	// Those two are only half of an AWS identity — temporary credentials also
+	// carry AWS_SESSION_TOKEN — so lifting the pair into an explicit keypair
+	// would build a signature the service rejects, and would shadow the
+	// instance role the deployed server actually authenticates as. Left unset,
+	// the tier resolves the whole environment itself (see s3store.credsFor).
+	envDefault(&opts.s3AccessKey, "PREVIEW_S3_ACCESS_KEY")
+	envDefault(&opts.s3SecretKey, "PREVIEW_S3_SECRET_KEY")
+	envDefaultInt64(&opts.cacheMaxArtifactBytes, "PREVIEW_CACHE_MAX_ARTIFACT_BYTES")
+	envOverrideInt64(&opts.maxUploadBytes, "PREVIEW_MAX_UPLOAD_BYTES", defaultMaxUploadBytes)
+	envDefault(&opts.minWarmWindow, "PREVIEW_MIN_WARM_WINDOW")
+	envDefault(&opts.workerSecret, "PREVIEW_WORKER_SECRET")
+	envDefault(&opts.workerEndpoint, "PREVIEW_WORKER_ENDPOINT")
+	envDefault(&opts.workerEndpoints, "PREVIEW_WORKER_ENDPOINTS")
+	envDefault(&opts.controlListen, "PREVIEW_CONTROL_LISTEN")
+	envDefault(&opts.controlEndpoint, "PREVIEW_CONTROL_ENDPOINT")
+	envDefault(&opts.workerAdvertise, "PREVIEW_WORKER_ADVERTISE")
+	envDefault(&opts.workerInstanceID, "PREVIEW_WORKER_INSTANCE_ID")
+	envDefault(&opts.asgName, "PREVIEW_WORKER_ASG_NAME")
+	if opts.awsRegion == "" {
+		opts.awsRegion = os.Getenv("AWS_REGION")
+	}
+	if opts.maxWarmPerGB == 0 {
+		if v := os.Getenv("PREVIEW_MAX_WARM_PER_GB"); v != "" {
+			if f, e := strconv.ParseFloat(v, 64); e == nil {
+				opts.maxWarmPerGB = f
+			}
+		}
+	}
+	if opts.maxWarmReserveGB == 1 { // still the compiled default
+		if v := os.Getenv("PREVIEW_MAX_WARM_RESERVE_GB"); v != "" {
+			if f, e := strconv.ParseFloat(v, 64); e == nil {
+				opts.maxWarmReserveGB = f
+			}
+		}
+	}
+}
+
+// validateServeOptions rejects inconsistent serve flag combinations.
+func validateServeOptions(opts serveOptions, reserved map[string]string) error {
+	if opts.onyxAuthUpstream != "" {
+		if _, ok := reserved[strings.ToLower(opts.onyxAuthUpstream)]; !ok {
+			return fmt.Errorf("--onyx-auth-upstream %q must also be a --reserved-upstream label", opts.onyxAuthUpstream)
+		}
+	}
+	switch opts.role {
+	case "all", "control", "worker":
+	default:
+		return fmt.Errorf("--role must be one of all|control|worker, got %q", opts.role)
+	}
+	if opts.role == "control" && len(workerEndpoints(opts)) > 0 && opts.workerSecret == "" {
+		return errors.New("--role=control with worker endpoints requires --worker-secret")
+	}
+	if opts.workerListen != "" && opts.workerSecret == "" {
+		return errors.New("--worker-listen requires --worker-secret (the worker API is a remote-code-execution surface)")
+	}
+	if opts.controlListen != "" {
+		if opts.role != "control" {
+			return fmt.Errorf("--control-listen is a control-node flag; got --role=%q", opts.role)
+		}
+		if opts.workerSecret == "" {
+			return errors.New("--control-listen requires --worker-secret (worker registration steers preview traffic)")
+		}
+	}
+	if opts.controlEndpoint != "" {
+		if opts.role != "worker" && opts.role != "all" {
+			return fmt.Errorf("--control-endpoint is a worker-node flag; got --role=%q", opts.role)
+		}
+		if opts.workerSecret == "" {
+			return errors.New("--control-endpoint requires --worker-secret")
+		}
+	}
+	return nil
+}
+
+// warmSettings is the warm policy resolved at boot: which values the
+// dashboard's saved settings overrode.
+type warmSettings struct {
+	maxWarm         int
+	maxWarmSet      bool
+	minWarm         int
+	minWarmSet      bool
+	idleOverrideSec int
+	idleOverridden  bool
+}
+
+// applyWarmSettings calibrates the boot warm cap, applies any dashboard-saved
+// warm policy to the supervisor and reports what it found.
+func applyWarmSettings(opts *serveOptions, database *db.Store, super *supervise.Manager) warmSettings {
+	// Memory-calibrated warm cap: when --max-warm-per-gb is set, derive the boot
+	// --max-warm from this machine's RAM so one launch template can serve a
+	// mixed-instances fleet of differently sized workers. This only sets the
+	// boot default; a dashboard-saved setting still overrides below.
+	if opts.maxWarmPerGB > 0 {
+		if mem, merr := readMemTotalBytes(); merr != nil {
+			log.Printf("warm calibration: reading memory failed (%v); keeping --max-warm %d", merr, opts.maxWarm)
+		} else {
+			n := warmFromMemory(mem, opts.maxWarmPerGB, opts.maxWarmReserveGB)
+			log.Printf("warm calibration: %d warm slots from %.1f GiB RAM (%.2f/GiB, %.1f GiB reserved); --max-warm %d superseded",
+				n, float64(mem)/(1<<30), opts.maxWarmPerGB, opts.maxWarmReserveGB, opts.maxWarm)
+			opts.maxWarm = n
+		}
+	}
+	// The warm cap: the --max-warm flag is the boot default, overridden by the
+	// dashboard-saved setting when one exists (the setting survives restarts
+	// and, via the fleet's reconcile loop, worker reboots).
+	effectiveMaxWarm := opts.maxWarm
+	warmOverridden := false
+	if v, err := database.GetSetting(warmSettingKey); err == nil {
+		if n, perr := strconv.Atoi(v); perr == nil && n >= 0 {
+			effectiveMaxWarm, warmOverridden = n, true
+		}
+	}
+	super.SetMaxWarm(effectiveMaxWarm)
+	if warmOverridden {
+		log.Printf("warm cap: %d (dashboard setting; --max-warm %d overridden)", effectiveMaxWarm, opts.maxWarm)
+	}
+	minWarm, minWarmSet := 0, false
+	if v, err := database.GetSetting(minWarmSettingKey); err == nil {
+		if n, perr := strconv.Atoi(v); perr == nil && n >= 0 {
+			minWarm, minWarmSet = n, true
+			super.SetMinWarm(n)
+		}
+	}
+	idleOverrideSec, idleOverridden := 0, false
+	if v, err := database.GetSetting(idleSettingKey); err == nil {
+		if n, perr := strconv.Atoi(v); perr == nil && n >= 0 {
+			idleOverrideSec, idleOverridden = n, true
+			super.SetIdleOverride(time.Duration(n) * time.Second)
+			if n > 0 {
+				log.Printf("idle timeout: %ds (dashboard setting; manifest idle_timeout overridden)", n)
+			}
+		}
+	}
+	return warmSettings{
+		maxWarm: effectiveMaxWarm, maxWarmSet: warmOverridden,
+		minWarm: minWarm, minWarmSet: minWarmSet,
+		idleOverrideSec: idleOverrideSec, idleOverridden: idleOverridden,
+	}
+}
+
+// fleetSetup is the serving transport chosen at boot: local by default, the
+// worker fleet on a control node that has one.
+type fleetSetup struct {
+	backends  proxy.Backends
+	runtime   api.RuntimeView
+	reg       *fleet.Registry
+	registrar workerRegistrar
+}
+
+// setupFleet builds the worker fleet when this control node routes to workers
+// at all, and otherwise leaves the local transport in place.
+func setupFleet(workCtx context.Context, opts serveOptions, database *db.Store, super *supervise.Manager, queue *build.Queue, warm warmSettings) (fleetSetup, error) {
 	var backends proxy.Backends = supervise.LocalBackends{M: super}
 	var runtime api.RuntimeView = super
 	var reg *fleet.Registry
@@ -516,7 +670,7 @@ func run(opts serveOptions) error {
 			if opts.minWarmWindow != "" {
 				active, werr := fleet.ParseMinWarmWindow(opts.minWarmWindow)
 				if werr != nil {
-					return werr
+					return fleetSetup{}, werr
 				}
 				reg.SetMinWarmWindow(active)
 				log.Printf("min-warm floor active %s; outside it the floor is 0 and the fleet drains", opts.minWarmWindow)
@@ -531,14 +685,14 @@ func run(opts serveOptions) error {
 				// only meaningful for autoscaled, self-registering nodes.
 				_ = registrar.Register(ep, host, "")
 			}
-			if warmOverridden {
-				reg.SetMaxWarm(effectiveMaxWarm)
+			if warm.maxWarmSet {
+				reg.SetMaxWarm(warm.maxWarm)
 			}
-			if minWarmSet {
-				reg.SetMinWarm(minWarm)
+			if warm.minWarmSet {
+				reg.SetMinWarm(warm.minWarm)
 			}
-			if idleOverridden {
-				reg.SetIdleOverride(time.Duration(idleOverrideSec) * time.Second)
+			if warm.idleOverridden {
+				reg.SetIdleOverride(time.Duration(warm.idleOverrideSec) * time.Second)
 			}
 			// Worker-shipped process events land in the control's own trail:
 			// they're recorded where the process runs (a worker's ephemeral
@@ -579,86 +733,50 @@ func run(opts serveOptions) error {
 			log.Printf("role=control with no --worker-endpoint(s) or --control-listen: previews will serve locally")
 		}
 	}
+	return fleetSetup{backends: backends, runtime: runtime, reg: reg, registrar: registrar}, nil
+}
 
-	deps := api.Deps{
-		Store:               database,
-		Build:               api.BuildInfo(Build()),
-		Config:              cfg,
-		Git:                 gitMgr,
-		Queue:               queue,
-		Super:               super,
-		Runtime:             runtime,
-		Cloner:              cloner,
-		Watcher:             watcher,
-		Files:               files,
-		Sweeper:             sweeper,
-		DBPath:              dbPath,
-		GitHubWebhookSecret: opts.githubSecret,
-		UploadAuth:          uploadAuth,
-		MaxUploadBytes:      opts.maxUploadBytes,
-		SSO:                 sso,
-		DashboardOrigin:     dashboardOrigin,
-		CookiesSecure:       cookiesSecure,
-		FleetStats:          fleetStatsFn(reg),
-		WarmPolicy: func() api.WarmPolicy {
-			return api.WarmPolicy{
-				MaxWarm:            super.MaxWarm(),
-				MinWarm:            super.MinWarm(),
-				IdleTimeoutSeconds: int(super.IdleOverride() / time.Second),
-			}
-		},
-		SetWarmPolicy: func(p api.WarmPolicy) error {
-			if err := database.SetSetting(warmSettingKey, strconv.Itoa(p.MaxWarm)); err != nil {
-				return err
-			}
-			if err := database.SetSetting(minWarmSettingKey, strconv.Itoa(p.MinWarm)); err != nil {
-				return err
-			}
-			if err := database.SetSetting(idleSettingKey, strconv.Itoa(p.IdleTimeoutSeconds)); err != nil {
-				return err
-			}
-			idle := time.Duration(p.IdleTimeoutSeconds) * time.Second
-			super.SetMaxWarm(p.MaxWarm)
-			super.SetMinWarm(p.MinWarm)
-			super.SetIdleOverride(idle)
-			if reg != nil {
-				// Workers pick these up on the next heartbeat.
-				reg.SetMaxWarm(p.MaxWarm)
-				reg.SetMinWarm(p.MinWarm)
-				reg.SetIdleOverride(idle)
-			}
-			return nil
-		},
-	}
-	apex := api.AuthMiddleware(deps, api.NewMux(deps))
-	router := proxy.New(database, files, backends, cfg.Preview.Domain, apex)
-	// Interim "starting" pages stream the run log from wherever the process
-	// runs — the local manager, or the fleet view on a control node — and
-	// consult process status so a frontend blocked on its backend's init is
-	// narrated as the backend (the side actually doing the work).
-	router.SetRunLogs(runtime)
-	router.SetProcStatus(runtime)
-	if sso != nil {
-		router.SetPreviewAuth(true, dashboardOrigin, cookiesSecure)
-		startSessionGC(workCtx, database)
-	}
-	if len(reserved) > 0 {
-		router.SetReservedUpstreams(reserved)
-		for label, addr := range reserved {
-			log.Printf("reserved upstream: %s.%s -> %s", label, cfg.Preview.Domain, addr)
+// warmPolicyGetter reports the supervisor's live warm policy.
+func warmPolicyGetter(super *supervise.Manager) func() api.WarmPolicy {
+	return func() api.WarmPolicy {
+		return api.WarmPolicy{
+			MaxWarm:            super.MaxWarm(),
+			MinWarm:            super.MinWarm(),
+			IdleTimeoutSeconds: int(super.IdleOverride() / time.Second),
 		}
 	}
-	if opts.onyxAuthUpstream != "" {
-		router.SetOnyxAuth(opts.onyxAuthUpstream, opts.onyxAuthCookie)
-		log.Printf("onyx SSO: previews log in via %s.%s (cookie %q)",
-			strings.ToLower(opts.onyxAuthUpstream), cfg.Preview.Domain,
-			cmp.Or(opts.onyxAuthCookie, "fastapiusersauth"))
-	}
+}
 
-	// Expose the internal worker API when configured (worker/all roles). It is a
-	// remote-code-execution surface — private listener, shared-secret only,
-	// never ALB-reachable.
-	var workerSrv *http.Server
+// warmPolicySetter persists a new warm policy and applies it to the local
+// supervisor and, on a control node, the fleet.
+func warmPolicySetter(database *db.Store, super *supervise.Manager, reg *fleet.Registry) func(api.WarmPolicy) error {
+	return func(p api.WarmPolicy) error {
+		if err := database.SetSetting(warmSettingKey, strconv.Itoa(p.MaxWarm)); err != nil {
+			return err
+		}
+		if err := database.SetSetting(minWarmSettingKey, strconv.Itoa(p.MinWarm)); err != nil {
+			return err
+		}
+		if err := database.SetSetting(idleSettingKey, strconv.Itoa(p.IdleTimeoutSeconds)); err != nil {
+			return err
+		}
+		idle := time.Duration(p.IdleTimeoutSeconds) * time.Second
+		super.SetMaxWarm(p.MaxWarm)
+		super.SetMinWarm(p.MinWarm)
+		super.SetIdleOverride(idle)
+		if reg != nil {
+			// Workers pick these up on the next heartbeat.
+			reg.SetMaxWarm(p.MaxWarm)
+			reg.SetMinWarm(p.MinWarm)
+			reg.SetIdleOverride(idle)
+		}
+		return nil
+	}
+}
+
+// setPublishIPForWorker makes a worker's containered preview ports reachable
+// by the control node.
+func setPublishIPForWorker(opts serveOptions, super *supervise.Manager) {
 	if opts.role == "worker" {
 		// Container ports publish loopback-only by default, which the control
 		// node's proxy can never dial. Publish them additionally on the address
@@ -672,6 +790,14 @@ func run(opts serveOptions) error {
 		super.SetPublishIP(publishIP)
 		log.Printf("role=worker: containered preview ports publish on %s", publishIP)
 	}
+}
+
+// startWorkerServer exposes the internal worker API when configured (worker
+// and all roles). It is a remote-code-execution surface — private listener,
+// shared-secret only, never ALB-reachable.
+func startWorkerServer(opts serveOptions, super *supervise.Manager) *http.Server {
+	var workerSrv *http.Server
+	setPublishIPForWorker(opts, super)
 	if opts.workerListen != "" && (opts.role == "worker" || opts.role == "all") {
 		if isPublicBind(opts.workerListen) {
 			log.Printf("WARNING: --worker-listen %q binds all interfaces — the worker API starts arbitrary processes and must be firewalled to the control node only (private subnet / security group)",
@@ -695,10 +821,13 @@ func run(opts serveOptions) error {
 			}
 		}()
 	}
+	return workerSrv
+}
 
-	// Control node: accept worker self-registration. Same RCE-adjacent trust
-	// model as the worker API — private listener, shared-secret only, never
-	// ALB-reachable. Only started when the fleet registry exists.
+// startControlServer accepts worker self-registration on a control node. Same
+// RCE-adjacent trust model as the worker API — private listener, shared-secret
+// only, never ALB-reachable. Only started when the fleet registry exists.
+func startControlServer(opts serveOptions, reg *fleet.Registry, registrar workerRegistrar) *http.Server {
 	var controlSrv *http.Server
 	if opts.controlListen != "" && reg != nil {
 		if isPublicBind(opts.controlListen) {
@@ -719,9 +848,13 @@ func run(opts serveOptions) error {
 			}
 		}()
 	}
+	return controlSrv
+}
 
-	// Worker node: self-register with the control node so an autoscaled worker
-	// the control node was never configured with joins the fleet on boot.
+// startSelfRegistration makes a worker register itself with the control node,
+// so an autoscaled worker the control node was never configured with joins the
+// fleet on boot.
+func startSelfRegistration(workCtx context.Context, opts serveOptions) error {
 	if opts.controlEndpoint != "" && (opts.role == "worker" || opts.role == "all") {
 		advertise, err := deriveAdvertise(opts)
 		if err != nil {
@@ -731,50 +864,7 @@ func run(opts serveOptions) error {
 		startWorkerRegistration(workCtx, cc, advertise, hostOf(advertise), opts.workerInstanceID)
 		log.Printf("role=worker: self-registering with control at %s (advertising %s, instance %q)", opts.controlEndpoint, advertise, opts.workerInstanceID)
 	}
-
-	srv := &http.Server{
-		Addr:              opts.addr,
-		Handler:           recoverPanics(logRequests(compressResponses(router))),
-		ReadHeaderTimeout: 10 * time.Second,
-		// Bound request-read and idle-keepalive so a slow-body or idle client
-		// can't hold connections open indefinitely. No WriteTimeout: the proxy
-		// streams long-lived preview responses and the cold-start flow relies on
-		// Retry-After, both of which a blanket write deadline would truncate;
-		// per-request deadlines live in the proxy (ensureAndProxy) instead.
-		ReadTimeout: 60 * time.Second,
-		IdleTimeout: 120 * time.Second,
-	}
-
-	go func() {
-		log.Printf("listening on %s (previews at %s)", opts.addr, cfg.Preview.URL("<sha>", "<repo>"))
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("listen: %v", err)
-		}
-	}()
-
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
-	log.Println("shutting down")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	err = srv.Shutdown(ctx)
-	if workerSrv != nil {
-		workerSrv.Shutdown(ctx) //nolint:errcheck
-	}
-	if controlSrv != nil {
-		controlSrv.Shutdown(ctx) //nolint:errcheck
-	}
-	// Cancelling workCtx signals the self-registration loop to send a
-	// best-effort deregister before the process exits.
-	stopWork()
-	// Drain in-flight artifact uploads before stopping processes: the build
-	// workers have stopped enqueuing (their context is cancelled), so this only
-	// waits on uploads already started.
-	queue.Stop()
-	super.StopAll()
-	return err
+	return nil
 }
 
 type statusRecorder struct {
@@ -801,7 +891,7 @@ func (s *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if hj, ok := s.ResponseWriter.(http.Hijacker); ok {
 		return hj.Hijack()
 	}
-	return nil, nil, fmt.Errorf("hijack not supported")
+	return nil, nil, errors.New("hijack not supported")
 }
 
 func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
@@ -967,7 +1057,7 @@ func workerEndpoints(opts serveOptions) []string {
 		out = append(out, s)
 	}
 	add(opts.workerEndpoint)
-	for _, e := range strings.Split(opts.workerEndpoints, ",") {
+	for e := range strings.SplitSeq(opts.workerEndpoints, ",") {
 		add(e)
 	}
 	return out

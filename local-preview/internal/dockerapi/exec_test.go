@@ -21,7 +21,7 @@ func fakeEngine(t *testing.T) string {
 	t.Helper()
 	// Not t.TempDir(): unix socket paths have a ~104-byte cap and deep test
 	// dirs can exceed it.
-	dir, err := os.MkdirTemp("", "dsock")
+	dir, err := os.MkdirTemp("", "dsock") //nolint:usetesting // t.TempDir() paths can exceed the unix socket length cap
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,28 +34,33 @@ func fakeEngine(t *testing.T) string {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /_ping", func(w http.ResponseWriter, r *http.Request) {})
 	mux.HandleFunc("GET /info", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{"SecurityOptions": []string{}}) //nolint:errcheck
+		json.NewEncoder(w).Encode(map[string]any{"SecurityOptions": []string{}}) //nolint:errcheck // best-effort; failure is not actionable here
 	})
 	mux.HandleFunc("POST /containers/{id}/exec", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Cmd []string
 			Tty bool
 		}
-		json.NewDecoder(r.Body).Decode(&req) //nolint:errcheck
+		json.NewDecoder(r.Body).Decode(&req) //nolint:errcheck // best-effort; failure is not actionable here
 		if len(req.Cmd) == 0 {
 			http.Error(w, `{"message":"no command"}`, http.StatusBadRequest)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]string{"Id": "e1"}) //nolint:errcheck
+		json.NewEncoder(w).Encode(map[string]string{"Id": "e1"}) //nolint:errcheck // best-effort; failure is not actionable here
 	})
 	mux.HandleFunc("POST /exec/e1/start", func(w http.ResponseWriter, r *http.Request) {
-		conn, _, err := w.(http.Hijacker).Hijack()
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			t.Errorf("response writer is not a Hijacker")
+			return
+		}
+		conn, _, err := hj.Hijack()
 		if err != nil {
 			t.Errorf("hijack: %v", err)
 			return
 		}
 		defer conn.Close()
-		conn.Write([]byte("HTTP/1.1 101 UPGRADED\r\nContent-Type: application/vnd.docker.raw-stream\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")) //nolint:errcheck
+		conn.Write([]byte("HTTP/1.1 101 UPGRADED\r\nContent-Type: application/vnd.docker.raw-stream\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")) //nolint:errcheck // best-effort; failure is not actionable here
 		buf := make([]byte, 64)
 		n, err := conn.Read(buf)
 		if err != nil {
@@ -64,14 +69,14 @@ func fakeEngine(t *testing.T) string {
 		var hdr [8]byte
 		hdr[0] = 1 // stdout
 		binary.BigEndian.PutUint32(hdr[4:], uint32(n))
-		conn.Write(hdr[:])  //nolint:errcheck
-		conn.Write(buf[:n]) //nolint:errcheck
+		conn.Write(hdr[:])  //nolint:errcheck // best-effort; failure is not actionable here
+		conn.Write(buf[:n]) //nolint:errcheck // best-effort; failure is not actionable here
 	})
 	mux.HandleFunc("GET /exec/e1/json", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{"Running": false, "ExitCode": 5}) //nolint:errcheck
+		json.NewEncoder(w).Encode(map[string]any{"Running": false, "ExitCode": 5}) //nolint:errcheck // best-effort; failure is not actionable here
 	})
 	srv := &http.Server{Handler: mux}
-	go srv.Serve(ln) //nolint:errcheck
+	go srv.Serve(ln) //nolint:errcheck // best-effort; failure is not actionable here
 	t.Cleanup(func() { srv.Close() })
 	return sock
 }

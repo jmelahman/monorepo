@@ -9,6 +9,7 @@ package supervise
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -44,7 +45,7 @@ const execExitPoll = 2 * time.Second
 // the caller to report.
 func (m *Manager) Exec(ctx context.Context, k Key, opts ExecOptions, stream io.ReadWriter) error {
 	if len(opts.Cmd) == 0 {
-		return fmt.Errorf("empty command")
+		return errors.New("empty command")
 	}
 	m.mu.Lock()
 	p := m.procs[k]
@@ -53,7 +54,7 @@ func (m *Manager) Exec(ctx context.Context, k Key, opts ExecOptions, stream io.R
 		return fmt.Errorf("preview process is not running (status %q) — open the preview to start it, then retry", m.Status(k))
 	}
 	if p.containerID == "" {
-		return fmt.Errorf("this preview runs as a host process, not a container — exec needs a container runtime (a manifest run_image or a devcontainer)")
+		return errors.New("this preview runs as a host process, not a container — exec needs a container runtime (a manifest run_image or a devcontainer)")
 	}
 
 	setupCtx, cancel := context.WithTimeout(ctx, execSetupTimeout)

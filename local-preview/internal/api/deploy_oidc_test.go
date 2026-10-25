@@ -13,18 +13,16 @@ import (
 	"github.com/jmelahman/local-preview/internal/githubsso"
 )
 
-// deployBody builds a POST /api/deploys request body for repo and ref.
-func deployBody(repo, ref string) []byte {
-	return []byte(`{"repo":"` + repo + `","ref":"` + ref + `"}`)
+// deployBody builds a POST /api/deploys request body for repo at ref main.
+func deployBody(repo string) []byte {
+	return []byte(`{"repo":"` + repo + `","ref":"main"}`)
 }
 
-// doDeploy posts a deploy request through h with an optional bearer token.
-func doDeploy(h http.Handler, token string, body []byte) *httptest.ResponseRecorder {
-	req := httptest.NewRequest("POST", "/api/deploys", bytes.NewReader(body))
+// doDeploy posts a deploy request through h with a bearer token.
+func doDeploy(h http.Handler, body []byte) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/api/deploys", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
+	req.Header.Set("Authorization", "Bearer some.jwt.token")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
@@ -80,7 +78,7 @@ func TestDeployOIDCNotConfigured(t *testing.T) {
 	d := ssoDeps(t) // UploadAuth left nil
 	h := AuthMiddleware(d, okHandler())
 
-	rec := doDeploy(h, "some.jwt.token", deployBody("demo", "main"))
+	rec := doDeploy(h, deployBody("demo"))
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("got %d, want 401 (%s)", rec.Code, rec.Body)
 	}
@@ -94,7 +92,7 @@ func TestDeployOIDCUnverifiable(t *testing.T) {
 	d.UploadAuth = fakeVerifier{err: errors.New("bad signature")}
 	h := AuthMiddleware(d, okHandler())
 
-	rec := doDeploy(h, "some.jwt.token", deployBody("demo", "main"))
+	rec := doDeploy(h, deployBody("demo"))
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("got %d, want 401 (%s)", rec.Code, rec.Body)
 	}
@@ -125,7 +123,7 @@ func TestDeployOIDCRepoBinding(t *testing.T) {
 
 	t.Run("token for the same repo is accepted", func(t *testing.T) {
 		h := newMux(t, "acme/app")
-		rec := doDeploy(h, "some.jwt.token", deployBody("demo", "main"))
+		rec := doDeploy(h, deployBody("demo"))
 		// Past the auth gate. The deploy itself may still fail on the ref,
 		// which is not what this test is about — only a 401/403/404 would mean
 		// the gate turned it away.
@@ -136,7 +134,7 @@ func TestDeployOIDCRepoBinding(t *testing.T) {
 
 	t.Run("token for another repo is refused", func(t *testing.T) {
 		h := newMux(t, "evil/other")
-		rec := doDeploy(h, "some.jwt.token", deployBody("demo", "main"))
+		rec := doDeploy(h, deployBody("demo"))
 		if rec.Code != http.StatusForbidden {
 			t.Fatalf("got %d, want 403 (%s)", rec.Code, rec.Body)
 		}
@@ -160,7 +158,7 @@ func TestDeployOIDCRepoBinding(t *testing.T) {
 		}
 		h := AuthMiddleware(deps, NewMux(deps))
 
-		req := httptest.NewRequest("GET", "/api/deploys/"+strconv.FormatInt(dep.ID, 10), nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/deploys/"+strconv.FormatInt(dep.ID, 10), nil)
 		req.Header.Set("Authorization", "Bearer some.jwt.token")
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
@@ -172,7 +170,7 @@ func TestDeployOIDCRepoBinding(t *testing.T) {
 
 	t.Run("unregistered repo is 404, not a probe", func(t *testing.T) {
 		h := newMux(t, "acme/app")
-		rec := doDeploy(h, "some.jwt.token", deployBody("nosuch", "main"))
+		rec := doDeploy(h, deployBody("nosuch"))
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("got %d, want 404 (%s)", rec.Code, rec.Body)
 		}

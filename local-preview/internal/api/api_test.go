@@ -147,7 +147,8 @@ type repoResp struct {
 
 // waitRepoStatus polls the repo until its background clone reaches want
 // (ready or failed).
-func waitRepoStatus(t *testing.T, mux *http.ServeMux, name, want string) repoResp {
+func waitRepoStatus(t *testing.T, mux *http.ServeMux, want string) repoResp {
+	const name = "demo"
 	t.Helper()
 	deadline := time.Now().Add(30 * time.Second)
 	for {
@@ -171,13 +172,14 @@ func waitRepoStatus(t *testing.T, mux *http.ServeMux, name, want string) repoRes
 
 // registerRepo registers a repo and waits out the background clone — the
 // old synchronous flow, for tests that just need a deployable repo.
-func registerRepo(t *testing.T, mux *http.ServeMux, name, src string) {
+func registerRepo(t *testing.T, mux *http.ServeMux, src string) {
 	t.Helper()
+	const name = "demo"
 	body := `{"name":` + jsonQuote(name) + `,"source":` + jsonQuote(src) + `}`
 	if rec := doJSON(t, mux, "POST", "/api/repos", body); rec.Code != http.StatusAccepted {
 		t.Fatalf("create repo: %d %s", rec.Code, rec.Body)
 	}
-	waitRepoStatus(t, mux, name, "ready")
+	waitRepoStatus(t, mux, "ready")
 }
 
 func TestHealth(t *testing.T) {
@@ -217,7 +219,7 @@ func TestRepoEndpoints(t *testing.T) {
 	if created.Status != "cloning" {
 		t.Fatalf("created status = %q, want cloning", created.Status)
 	}
-	waitRepoStatus(t, mux, "demo", "ready")
+	waitRepoStatus(t, mux, "ready")
 
 	for body, want := range map[string]int{
 		`{"name":"demo","source":` + jsonQuote(src) + `}`: http.StatusConflict,
@@ -266,7 +268,7 @@ func TestRepoCloneFailure(t *testing.T) {
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("create repo: %d %s", rec.Code, rec.Body)
 	}
-	repo := waitRepoStatus(t, mux, "demo", "failed")
+	repo := waitRepoStatus(t, mux, "failed")
 	if repo.Error == "" {
 		t.Error("failed repo has no error message")
 	}
@@ -282,7 +284,7 @@ func TestRepoCloneFailure(t *testing.T) {
 	if rec := doJSON(t, mux, "DELETE", "/api/repos/demo", ""); rec.Code != http.StatusNoContent {
 		t.Fatalf("delete failed repo: %d %s", rec.Code, rec.Body)
 	}
-	registerRepo(t, mux, "demo", newSourceRepo(t))
+	registerRepo(t, mux, newSourceRepo(t))
 }
 
 // A deleted repo must be re-registrable even when its mirror clone survived
@@ -291,7 +293,7 @@ func TestRepoDeleteThenRecreate(t *testing.T) {
 	mux, root := newTestMux(t)
 	src := newSourceRepo(t)
 
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 	if rec := doJSON(t, mux, "DELETE", "/api/repos/demo", ""); rec.Code != http.StatusNoContent {
 		t.Fatalf("delete repo: %d %s", rec.Code, rec.Body)
 	}
@@ -299,13 +301,13 @@ func TestRepoDeleteThenRecreate(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "repos", "demo.git", "refs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 }
 
 func TestDeployEndpoints(t *testing.T) {
 	mux, _ := newTestMux(t)
 	src := newSourceRepo(t)
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 
 	rec := doJSON(t, mux, "POST", "/api/deploys", `{"repo":"demo","ref":"main"}`)
 	if rec.Code != http.StatusAccepted {
@@ -422,7 +424,7 @@ files = ["mycli"]
 	}
 	gittest.Run(t, src, "commit", "-qam", "add artifact")
 
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 	if rec := doJSON(t, mux, "POST", "/api/deploys", `{"repo":"demo","ref":"main"}`); rec.Code != http.StatusAccepted {
 		t.Fatalf("create deploy: %d %s", rec.Code, rec.Body)
 	}
@@ -506,7 +508,7 @@ files = ["mycli"]
 func TestCrashedProcessSurfaces(t *testing.T) {
 	mux, _, super := newTestMuxSuper(t)
 	src := newSourceRepo(t)
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 	if rec := doJSON(t, mux, "POST", "/api/deploys", `{"repo":"demo","ref":"main"}`); rec.Code != http.StatusAccepted {
 		t.Fatalf("create deploy: %d %s", rec.Code, rec.Body)
 	}
@@ -635,7 +637,7 @@ func listDeployIDs(t *testing.T, mux *http.ServeMux, status string) ([]int64, in
 func TestObservabilityEndpoints(t *testing.T) {
 	mux, root := newTestMux(t)
 	src := newSourceRepo(t)
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 	if rec := doJSON(t, mux, "POST", "/api/deploys", `{"repo":"demo","ref":"main"}`); rec.Code != http.StatusAccepted {
 		t.Fatalf("create deploy: %d %s", rec.Code, rec.Body)
 	}
@@ -767,7 +769,7 @@ func TestObservabilityEndpoints(t *testing.T) {
 func TestDeleteRepo(t *testing.T) {
 	mux, root := newTestMux(t)
 	src := newSourceRepo(t)
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 	// Build one deploy to ready so there are artifacts, state, and logs to
 	// remove.
 	if rec := doJSON(t, mux, "POST", "/api/deploys", `{"repo":"demo","ref":"main"}`); rec.Code != http.StatusAccepted {
@@ -816,7 +818,7 @@ func TestDeleteRepo(t *testing.T) {
 		t.Fatalf("delete missing repo: %d", rec.Code)
 	}
 	// The name is immediately reusable.
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 }
 
 // testDeploy captures the deploy fields the stop/delete tests assert on.
@@ -857,7 +859,7 @@ func deployAndWait(t *testing.T, mux *http.ServeMux, ref string) testDeploy {
 func TestStopAndDeleteDeploy(t *testing.T) {
 	mux, root := newTestMux(t)
 	src := newSourceRepo(t)
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 	d := deployAndWait(t, mux, "main")
 
 	beDir := filepath.Join(root, "artifacts", "demo", "be", d.BeHash)
@@ -907,7 +909,7 @@ func TestStopAndDeleteDeploy(t *testing.T) {
 func TestDeleteDeployKeepsSharedArtifacts(t *testing.T) {
 	mux, root := newTestMux(t)
 	src := newSourceRepo(t)
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 	first := deployAndWait(t, mux, "main")
 
 	// A frontend-only change keeps the backend partition — and its hash —
@@ -969,7 +971,7 @@ func TestRepoWatchEndpoints(t *testing.T) {
 		t.Fatalf("created repo watch fields: %s", rec.Body)
 	}
 	// Let the background clone land so teardown doesn't race it.
-	waitRepoStatus(t, mux, "demo", "ready")
+	waitRepoStatus(t, mux, "ready")
 
 	// Disable watching without touching the stored branch filter.
 	rec = doJSON(t, mux, "PATCH", "/api/repos/demo", `{"watch":false}`)

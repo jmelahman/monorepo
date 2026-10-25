@@ -8,6 +8,7 @@ package retain
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -44,10 +45,10 @@ func (p Policy) Enabled() bool { return p.MaxDeploysPerRepo > 0 || p.MaxAgeDays 
 // Validate rejects nonsensical limits.
 func (p Policy) Validate() error {
 	if p.MaxDeploysPerRepo < 0 {
-		return fmt.Errorf("max_deploys_per_repo must be >= 0 (0 = unlimited)")
+		return errors.New("max_deploys_per_repo must be >= 0 (0 = unlimited)")
 	}
 	if p.MaxAgeDays < 0 {
-		return fmt.Errorf("max_age_days must be >= 0 (0 = unlimited)")
+		return errors.New("max_age_days must be >= 0 (0 = unlimited)")
 	}
 	return nil
 }
@@ -56,7 +57,7 @@ func (p Policy) Validate() error {
 // (disabled) policy.
 func LoadPolicy(database *db.Store) (Policy, error) {
 	raw, err := database.GetSetting(SettingKey)
-	if err == db.ErrNotFound {
+	if errors.Is(err, db.ErrNotFound) {
 		return Policy{}, nil
 	}
 	if err != nil {

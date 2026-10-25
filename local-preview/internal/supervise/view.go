@@ -9,6 +9,7 @@ package supervise
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -79,7 +80,7 @@ func (m *Manager) RunLog(repoName, side, hash string, attempt int, offset int64)
 
 	buf := make([]byte, min(size-start, runLogChunkBytes))
 	n, err := f.ReadAt(buf, start)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return chunk, err
 	}
 	chunk.Content = string(buf[:n])
@@ -101,7 +102,7 @@ type ProcReport struct {
 	// the control node ranks fleet-wide to hand each worker its share of the
 	// min-warm floor. Zero for crashed records and from workers that predate
 	// the field, which ranks them least-recent.
-	LastTouch time.Time `json:"last_touch,omitempty"`
+	LastTouch time.Time `json:"last_touch,omitzero"`
 }
 
 // Report returns every key with live state on this node: tracked processes

@@ -17,7 +17,7 @@ import (
 // tags because it crosses the worker wire verbatim (workerapi report).
 type ProcessStats struct {
 	Runtime     string    `json:"runtime,omitempty"` // "host" or "container"
-	StartedAt   time.Time `json:"started_at,omitempty"`
+	StartedAt   time.Time `json:"started_at,omitzero"`
 	CPUPercent  *float64  `json:"cpu_percent,omitempty"` // % of one core, docker-stats convention; nil until a second sample exists
 	MemoryBytes uint64    `json:"memory_bytes,omitempty"`
 	// MemoryLimitBytes is the cgroup limit for containers (host total when

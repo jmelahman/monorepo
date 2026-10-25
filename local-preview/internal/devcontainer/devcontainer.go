@@ -104,7 +104,7 @@ func volumeMount(entry json.RawMessage, lookupEnv func(string) (string, bool)) (
 	var s string
 	switch {
 	case json.Unmarshal(entry, &s) == nil:
-		for _, part := range strings.Split(s, ",") {
+		for part := range strings.SplitSeq(s, ",") {
 			k, v, ok := strings.Cut(part, "=")
 			if !ok {
 				continue

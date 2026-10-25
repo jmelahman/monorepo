@@ -198,7 +198,7 @@ func TestEmbeddedLifecycle(t *testing.T) {
 	})
 	handler := o.WrapHost(fallback)
 
-	req := httptest.NewRequest("GET", "http://x/", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://x/", nil)
 	req.Host = d.ShortSHA + "-demo.preview.localhost:8080"
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -206,7 +206,7 @@ func TestEmbeddedLifecycle(t *testing.T) {
 		t.Fatalf("preview host: %d %q", rec.Code, rec.Body.String())
 	}
 
-	req = httptest.NewRequest("GET", "http://x/anything", nil)
+	req = httptest.NewRequest(http.MethodGet, "http://x/anything", nil)
 	req.Host = "localhost:8080"
 	rec = httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -327,7 +327,7 @@ func TestPreviewBaseURLOption(t *testing.T) {
 	}
 	t.Cleanup(func() { o.Close() })
 
-	got := o.previewURL(db.DeployRow{Deploy: db.Deploy{ShortSHA: "abc1234"}, RepoName: "demo"})
+	got := o.previewURL(db.DeployRow{ShortSHA: "abc1234", RepoName: "demo"})
 	if want := "https://abc1234-demo.preview.example.com/"; got != want {
 		t.Errorf("previewURL = %q, want %q", got, want)
 	}

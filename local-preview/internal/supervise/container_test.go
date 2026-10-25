@@ -45,13 +45,12 @@ func dockerOrSkip(t *testing.T, probeDir string) *dockerapi.Client {
 // so the test can observe env expansion from outside.
 func (f *fixture) provisionContainer(t *testing.T, beHash string, env map[string]string) {
 	t.Helper()
-	f.provisionContainerCfg(t, beHash, backendRunConfig{Backend: manifest.Backend{
+	f.provisionContainerCfg(t, beHash, backendRunConfig{
 		Run:          []string{"sh", "-c", "env > env.txt && exec busybox httpd -f -p 0.0.0.0:{port} -h ."},
 		RunImage:     "busybox:1",
 		Env:          env,
 		HealthPath:   "/health.txt",
-		StartTimeout: manifest.Duration(60 * time.Second),
-	}})
+		StartTimeout: manifest.Duration(60 * time.Second)})
 }
 
 // provisionContainerCfg publishes a backend artifact (with a served
@@ -178,14 +177,13 @@ func TestContainerFrontendBackendPair(t *testing.T) {
 	if err := f.files.PublishFrontend("demo", feHash, scratch, false); err != nil {
 		t.Fatal(err)
 	}
-	cfg := frontendRunConfig{Frontend: manifest.Frontend{
+	cfg := frontendRunConfig{
 		Run: []string{"sh", "-c",
 			"wget -qO backend.txt \"$INTERNAL_URL/health.txt\" && env > env.txt && exec busybox httpd -f -p 0.0.0.0:{port} -h ."},
 		RunImage:     "busybox:1",
 		Env:          map[string]string{"INTERNAL_URL": "{backend_url}"},
 		HealthPath:   "/index.html",
-		StartTimeout: manifest.Duration(60 * time.Second),
-	}}
+		StartTimeout: manifest.Duration(60 * time.Second)}
 	raw, err := json.Marshal(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -275,16 +273,14 @@ func TestDevcontainerRuntimeBackend(t *testing.T) {
 
 	const beHash = "be-devc-0000000"
 	f.provisionContainerCfg(t, beHash, backendRunConfig{
-		Backend: manifest.Backend{
-			// The start never turns healthy unless the volume is mounted.
-			// Checked via /proc/mounts rather than a write: on a rootful
-			// daemon the container runs as the host uid, and a fresh named
-			// volume is root-owned.
-			Run: []string{"sh", "-c",
-				"env > env.txt && grep -q ' /devc-cache ' /proc/mounts && exec busybox httpd -f -p 0.0.0.0:{port} -h ."},
-			HealthPath:   "/health.txt",
-			StartTimeout: manifest.Duration(60 * time.Second),
-		},
+		// The start never turns healthy unless the volume is mounted.
+		// Checked via /proc/mounts rather than a write: on a rootful
+		// daemon the container runs as the host uid, and a fresh named
+		// volume is root-owned.
+		Run: []string{"sh", "-c",
+			"env > env.txt && grep -q ' /devc-cache ' /proc/mounts && exec busybox httpd -f -p 0.0.0.0:{port} -h ."},
+		HealthPath:   "/health.txt",
+		StartTimeout: manifest.Duration(60 * time.Second),
 		Devcontainer: &devcontainer.Config{
 			Image:  "busybox:1",
 			Mounts: []devcontainer.Mount{{Source: "local-preview-test-devc", Target: "/devc-cache"}},
@@ -319,11 +315,9 @@ func TestDevcontainerRuntimeFallsBackToHost(t *testing.T) {
 
 	const beHash = "be-devc-host-00"
 	f.provisionRunCfg(t, beHash, backendRunConfig{
-		Backend: manifest.Backend{
-			Run:          serverArgv(t),
-			HealthPath:   "/api/health",
-			StartTimeout: manifest.Duration(10 * time.Second),
-		},
+		Run:          serverArgv(t),
+		HealthPath:   "/api/health",
+		StartTimeout: manifest.Duration(10 * time.Second),
 		Devcontainer: &devcontainer.Config{Image: "busybox:1"},
 	})
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -59,5 +60,5 @@ func readMemTotalBytes() (int64, error) {
 	if err := sc.Err(); err != nil {
 		return 0, err
 	}
-	return 0, fmt.Errorf("meminfo: no MemTotal line")
+	return 0, errors.New("meminfo: no MemTotal line")
 }

@@ -98,10 +98,11 @@ const hasFeProcessExpr = `EXISTS(SELECT 1 FROM frontend_artifacts fa
 func scanDeploy(row interface{ Scan(...any) error }, extra ...any) (Deploy, error) {
 	var d Deploy
 	var artifacts string
-	dest := []any{&d.ID, &d.RepoID, &d.SHA, &d.ShortSHA, &d.Ref, &d.Branch,
+	dest := make([]any, 0, 20+len(extra))
+	dest = append(dest, &d.ID, &d.RepoID, &d.SHA, &d.ShortSHA, &d.Ref, &d.Branch,
 		&d.AuthorName, &d.AuthorEmail, &d.FeHash, &d.BeHash, &artifacts,
 		&d.Status, &d.Error, &d.AttemptCount, &d.FeBuildLogPath, &d.BeBuildLogPath,
-		&d.CreatedAt, &d.UpdatedAt, &d.CreatedBy, &d.ProjectDir}
+		&d.CreatedAt, &d.UpdatedAt, &d.CreatedBy, &d.ProjectDir)
 	dest = append(dest, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return Deploy{}, err

@@ -23,7 +23,7 @@ func fakeDaemon(t *testing.T, mux *http.ServeMux) {
 		fmt.Fprint(w, `{"SecurityOptions":[]}`)
 	})
 	srv := &http.Server{Handler: mux}
-	go srv.Serve(ln) //nolint:errcheck
+	go srv.Serve(ln) //nolint:errcheck // best-effort; failure is not actionable here
 	t.Cleanup(func() { srv.Close() })
 	t.Setenv("DOCKER_HOST", "unix://"+sock)
 }

@@ -303,7 +303,7 @@ func (r Repo) ResolveRef(ctx context.Context, ref string) (string, error) {
 		return sha, nil
 	}
 	if _, ferr := r.Fetch(ctx); ferr != nil {
-		return "", fmt.Errorf("resolve %q: %w (fetch failed: %v)", ref, err, ferr)
+		return "", fmt.Errorf("resolve %q: %w (fetch failed: %w)", ref, err, ferr)
 	}
 	sha, err = r.revParse(ctx, ref)
 	if err != nil {
@@ -571,7 +571,7 @@ func (r Repo) LsTree(_ context.Context, sha, sub string) ([]TreeEntry, error) {
 	var entries []TreeEntry
 	for {
 		name, entry, err := walker.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -647,7 +647,7 @@ func (r Repo) Archive(ctx context.Context, sha, dest string) error {
 	defer walker.Close()
 	for {
 		name, entry, err := walker.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		if err != nil {
@@ -662,6 +662,8 @@ func (r Repo) Archive(ctx context.Context, sha, dest string) error {
 			err = os.MkdirAll(target, 0o755)
 		case filemode.Symlink:
 			err = extractSymlink(repo, entry.Hash, root, target)
+		case filemode.Empty, filemode.Regular, filemode.Deprecated, filemode.Executable:
+			fallthrough
 		default:
 			err = extractBlob(repo, entry.Hash, target, entry.Mode)
 		}

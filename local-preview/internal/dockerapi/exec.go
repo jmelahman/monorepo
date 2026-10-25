@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -38,7 +39,7 @@ type ExecSpec struct {
 // ExecCreate registers an exec instance in the container and returns its id.
 func (c *Client) ExecCreate(ctx context.Context, containerID string, spec ExecSpec) (string, error) {
 	if len(spec.Cmd) == 0 {
-		return "", fmt.Errorf("empty command")
+		return "", errors.New("empty command")
 	}
 	body, err := json.Marshal(map[string]any{
 		"AttachStdin":  spec.Stdin,

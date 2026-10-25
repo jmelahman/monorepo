@@ -236,7 +236,7 @@ func (w *Watcher) reconcile(ctx context.Context, repo db.Repo, tips []gitrepo.Br
 // empty entries.
 func SplitPatterns(s string) []string {
 	var out []string
-	for _, p := range strings.Split(s, ",") {
+	for p := range strings.SplitSeq(s, ",") {
 		if p = strings.TrimSpace(p); p != "" {
 			out = append(out, p)
 		}
@@ -254,7 +254,7 @@ func ValidatePatterns(s string) (string, error) {
 		if glob == "" { // bare "!"
 			return "", fmt.Errorf("invalid branch pattern %q", p)
 		}
-		for _, seg := range strings.Split(glob, "/") {
+		for seg := range strings.SplitSeq(glob, "/") {
 			if seg == "**" {
 				continue
 			}

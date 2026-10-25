@@ -21,7 +21,7 @@ const testWebhookSecret = "hook-secret"
 // header, sha256 HMAC signature.
 func deliver(t *testing.T, mux *http.ServeMux, event, body string, sign bool) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest("POST", "/api/webhooks/github", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/webhooks/github", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", event)
 	if sign {
@@ -47,7 +47,7 @@ func TestWebhookPushDeploys(t *testing.T) {
 	mux, _ := newTestMux(t)
 	src := newSourceRepo(t)
 	sha := gittest.Run(t, src, "rev-parse", "HEAD")
-	registerRepo(t, mux, "demo", src)
+	registerRepo(t, mux, src)
 
 	rec := deliver(t, mux, "push", pushPayload(src, "refs/heads/main", sha, false), true)
 	if rec.Code != http.StatusAccepted {
@@ -102,7 +102,7 @@ func TestWebhookRejectsBadSignatures(t *testing.T) {
 		t.Fatalf("unsigned: %d, want 403", rec.Code)
 	}
 
-	req := httptest.NewRequest("POST", "/api/webhooks/github", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/webhooks/github", strings.NewReader(body))
 	req.Header.Set("X-GitHub-Event", "push")
 	req.Header.Set("X-Hub-Signature-256", "sha256="+strings.Repeat("00", 32))
 	rec := httptest.NewRecorder()
@@ -158,7 +158,7 @@ func TestWebhookBranchFilter(t *testing.T) {
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("create repo: %d %s", rec.Code, rec.Body)
 	}
-	waitRepoStatus(t, mux, "demo", "ready")
+	waitRepoStatus(t, mux, "ready")
 
 	// An excluded branch is acknowledged but not deployed.
 	rec = deliver(t, mux, "push", pushPayload(src, "refs/heads/main", sha, false), true)

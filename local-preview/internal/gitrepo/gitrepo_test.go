@@ -299,7 +299,7 @@ func TestLsTreeReadFileArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var paths []string
+	paths := make([]string, 0, len(entries))
 	for _, e := range entries {
 		if e.Type != "blob" || e.OID == "" || e.Mode == "" {
 			t.Fatalf("bad entry: %+v", e)
@@ -438,7 +438,7 @@ func TestLsTreeMatchesGit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got []string
+	got := make([]string, 0, len(entries))
 	for _, e := range entries {
 		got = append(got, fmt.Sprintf("%s %s %s\t%s", e.Mode, e.Type, e.OID, e.Path))
 	}

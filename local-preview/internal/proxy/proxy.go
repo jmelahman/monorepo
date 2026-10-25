@@ -569,7 +569,7 @@ func (rt *Router) servePreview(w http.ResponseWriter, r *http.Request, e cacheEn
 	repoName := e.repoName
 	switch d.Status {
 	case db.DeployQueued, db.DeployBuilding:
-		rt.interimResponse(w, r, http.StatusServiceUnavailable, rt.buildingInterim(d, repoName))
+		rt.interimResponse(w, r, rt.buildingInterim(d, repoName))
 	case db.DeployFailed:
 		rt.errorPage(w, r, http.StatusBadGateway, "Build failed",
 			fmt.Sprintf("Deploy %s failed: %s (full logs: preview deploy logs %d)", d.ShortSHA, d.Error, d.ID))
@@ -668,7 +668,7 @@ func (rt *Router) ensureAndProxy(w http.ResponseWriter, r *http.Request, e cache
 				rt.procStatus.Status(supervise.BackendKey(k.RepoID, k.Peer)) != supervise.StatusRunning {
 				side, hash, subject = string(supervise.SideBackend), k.Peer, "backend"
 			}
-			rt.interimResponse(w, r, http.StatusServiceUnavailable, interim{
+			rt.interimResponse(w, r, interim{
 				state: "starting", title: "Starting " + subject + "…",
 				detail: "The preview " + subject + " is starting.",
 				repo:   repoName, side: side, hash: hash,
@@ -683,7 +683,7 @@ func (rt *Router) ensureAndProxy(w http.ResponseWriter, r *http.Request, e cache
 			// signal alive while the node boots) until a worker joins — at
 			// which point the poll lands in the cold-start path above and the
 			// same page becomes the "starting" screen, then loads the preview.
-			rt.interimResponse(w, r, http.StatusServiceUnavailable, interim{
+			rt.interimResponse(w, r, interim{
 				state: "waking", title: "Waking the preview fleet…",
 				detail: "No preview server is running, so one is being launched for this request — " +
 					"usually two to four minutes. The preview loads automatically once it's up.",
@@ -851,7 +851,7 @@ func (rt *Router) serveStatic(w http.ResponseWriter, r *http.Request, repoName, 
 						"The preview frontend is missing from durable storage. Redeploy to rebuild it.")
 				case ctx.Err() != nil && r.Context().Err() == nil:
 					// Still landing — tell the client to come back shortly.
-					rt.interimResponse(w, r, http.StatusServiceUnavailable, interim{
+					rt.interimResponse(w, r, interim{
 						state: "hydrating", title: "Loading preview…",
 						detail: "The preview frontend is being restored from durable storage.",
 					})

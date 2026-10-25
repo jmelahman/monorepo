@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -157,7 +158,7 @@ func triggerDeploy(ctx context.Context, c *client.Client, out io.Writer, repoNam
 	}
 	fmt.Fprintf(out, "deploy %d %s: %s\n", d.ID, d.Status, d.Error)
 	fmt.Fprintf(out, "full logs: preview deploy logs %d\n", d.ID)
-	return fmt.Errorf("deploy did not become ready")
+	return errors.New("deploy did not become ready")
 }
 
 // openUploadBody streams the upload body: a directory is tarred (its contents,

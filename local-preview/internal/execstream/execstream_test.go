@@ -2,6 +2,7 @@ package execstream
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 )
@@ -31,7 +32,7 @@ func TestFrameRoundTrip(t *testing.T) {
 	if err != nil || f.Type != FrameExit || len(f.Payload) != 1 || f.Payload[0] != 7 {
 		t.Fatalf("frame = %+v, %v", f, err)
 	}
-	if _, err := ReadFrame(&buf); err != io.EOF {
+	if _, err := ReadFrame(&buf); !errors.Is(err, io.EOF) {
 		t.Fatalf("err = %v, want EOF", err)
 	}
 }

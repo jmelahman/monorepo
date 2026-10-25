@@ -11,15 +11,10 @@ import (
 
 // doCompressed drives compressResponses with an Accept-Encoding: gzip
 // request against handler and returns the recorded response.
-func doCompressed(t *testing.T, handler http.HandlerFunc, header http.Header) *httptest.ResponseRecorder {
+func doCompressed(t *testing.T, handler http.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Accept-Encoding", "gzip")
-	for k, vs := range header {
-		for _, v := range vs {
-			req.Header.Add(k, v)
-		}
-	}
 	rec := httptest.NewRecorder()
 	compressResponses(handler).ServeHTTP(rec, req)
 	return rec
@@ -44,7 +39,7 @@ func TestCompressLargeResponse(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, body)
-	}, nil)
+	})
 	if got := rec.Header().Get("Content-Encoding"); got != "gzip" {
 		t.Fatalf("Content-Encoding = %q, want gzip", got)
 	}
@@ -62,7 +57,7 @@ func TestCompressLargeResponse(t *testing.T) {
 func TestSmallResponseStaysPlain(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, `{"status":"ok"}`)
-	}, nil)
+	})
 	if got := rec.Header().Get("Content-Encoding"); got != "" {
 		t.Fatalf("Content-Encoding = %q, want none", got)
 	}
@@ -78,7 +73,7 @@ func TestThresholdSpansWrites(t *testing.T) {
 		for range 100 {
 			_, _ = io.WriteString(w, strings.Repeat("x", 32))
 		}
-	}, nil)
+	})
 	if got := rec.Header().Get("Content-Encoding"); got != "gzip" {
 		t.Fatalf("Content-Encoding = %q, want gzip", got)
 	}
@@ -88,7 +83,7 @@ func TestThresholdSpansWrites(t *testing.T) {
 }
 
 func TestClientWithoutGzipGetsPlain(t *testing.T) {
-	req := httptest.NewRequest("GET", "/", nil) // no Accept-Encoding
+	req := httptest.NewRequest(http.MethodGet, "/", nil) // no Accept-Encoding
 	rec := httptest.NewRecorder()
 	compressResponses(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, strings.Repeat("y", 4096))
@@ -121,7 +116,7 @@ func TestPassthroughs(t *testing.T) {
 			_, _ = io.WriteString(w, big)
 		},
 	} {
-		rec := doCompressed(t, handler, nil)
+		rec := doCompressed(t, handler)
 		if got := rec.Header().Get("Content-Encoding"); strings.Contains(got, "gzip") {
 			t.Errorf("%s: Content-Encoding = %q, must not gzip", name, got)
 		}
@@ -137,9 +132,11 @@ func TestPassthroughs(t *testing.T) {
 func TestFlushCommitsPlain(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, "tick\n")
-		w.(http.Flusher).Flush()
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
 		_, _ = io.WriteString(w, strings.Repeat("tock\n", 1000))
-	}, nil)
+	})
 	if got := rec.Header().Get("Content-Encoding"); got != "" {
 		t.Fatalf("Content-Encoding = %q, want none after early flush", got)
 	}
@@ -153,7 +150,7 @@ func TestCompressDropsIdentityHeaders(t *testing.T) {
 		w.Header().Set("Accept-Ranges", "bytes")
 		w.Header().Set("Content-Length", "4096")
 		_, _ = io.WriteString(w, strings.Repeat("w", 4096))
-	}, nil)
+	})
 	if got := rec.Header().Get("Accept-Ranges"); got != "" {
 		t.Errorf("Accept-Ranges = %q, want dropped on gzipped response", got)
 	}
@@ -166,7 +163,7 @@ func TestStatusCodePreserved(t *testing.T) {
 	rec := doCompressed(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = io.WriteString(w, strings.Repeat("missing ", 512))
-	}, nil)
+	})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
 	}

@@ -278,7 +278,7 @@ func (a runnerAdapter) Run(ctx context.Context, spec build.RunSpec, output io.Wr
 // and launches the build workers.
 func New(opts Options) (*Orchestrator, error) {
 	if opts.DataDir == "" {
-		return nil, fmt.Errorf("orchestrator: DataDir is required")
+		return nil, errors.New("orchestrator: DataDir is required")
 	}
 	previewBase, err := config.ResolvePreviewBase(opts.PreviewDomain, opts.PreviewBaseURL, opts.Addr)
 	if err != nil {

@@ -87,7 +87,7 @@ func (s *Store) Hydrate(ctx context.Context, repo, side, hash string) error {
 		defer cancel()
 		// A sibling may have landed it while we waited on the singleflight.
 		if s.hasSide(repo, side, hash) {
-			return nil, nil
+			return nil, nil //nolint:nilnil // singleflight value is unused; only the error matters
 		}
 		rc, want, found, err := s.tier.Open(fctx, repo, side, hash)
 		if err != nil {
@@ -129,7 +129,7 @@ func (s *Store) Hydrate(ctx context.Context, repo, side, hash string) error {
 			return nil, fmt.Errorf("hydrate %s %s/%s: publish: %w", repo, side, hash, err)
 		}
 		s.NoteAccess(repo, side, hash)
-		return nil, nil
+		return nil, nil //nolint:nilnil // singleflight value is unused; only the error matters
 	})
 	select {
 	case res := <-ch:

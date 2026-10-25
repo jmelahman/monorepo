@@ -93,7 +93,7 @@ func runHelperServer(portStr, stateDir string) {
 		_ = os.WriteFile(countFile, []byte(strconv.Itoa(n)), 0o644)
 		fmt.Fprintf(w, "%d", n)
 	})
-	http.ListenAndServe("127.0.0.1:"+portStr, mux) //nolint:errcheck
+	http.ListenAndServe("127.0.0.1:"+portStr, mux) //nolint:errcheck // best-effort; failure is not actionable here
 }
 
 type fixture struct {
@@ -300,10 +300,10 @@ func TestStartDeployWarmStartsBothSides(t *testing.T) {
 	f.provision(t, "be-warm", serverArgv(t))
 	f.provisionFrontend(t, "fe-warm", []string{testExe(t), "--helper-server", "{port}", "."})
 
-	row := db.DeployRow{RepoName: "demo"}
-	row.RepoID = f.repoID
-	row.BeHash = "be-warm"
-	row.FeHash = "fe-warm"
+	row := db.DeployRow{RepoName: "demo",
+		RepoID: f.repoID,
+		BeHash: "be-warm",
+		FeHash: "fe-warm"}
 	if err := f.m.StartDeploy(context.Background(), row); err != nil {
 		t.Fatal(err)
 	}
@@ -315,10 +315,10 @@ func TestStartDeployWarmStartsBothSides(t *testing.T) {
 	}
 
 	// Static frontend: FeHash set but no artifact row → only the backend runs.
-	static := db.DeployRow{RepoName: "demo"}
-	static.RepoID = f.repoID
-	static.BeHash = "be-warm"
-	static.FeHash = "fe-static"
+	static := db.DeployRow{RepoName: "demo",
+		RepoID: f.repoID,
+		BeHash: "be-warm",
+		FeHash: "fe-static"}
 	if err := f.m.StartDeploy(context.Background(), static); err != nil {
 		t.Fatal(err)
 	}
@@ -958,8 +958,9 @@ func TestDrainEventsBuffersAndResets(t *testing.T) {
 // drainedEvents collects the event names buffered since the last drain.
 func (f *fixture) drainedEvents(t *testing.T) []string {
 	t.Helper()
-	var names []string
-	for _, e := range f.m.DrainEvents() {
+	evs := f.m.DrainEvents()
+	names := make([]string, 0, len(evs))
+	for _, e := range evs {
 		names = append(names, e.Event)
 	}
 	return names

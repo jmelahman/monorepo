@@ -407,7 +407,7 @@ func (m *Manager) EnsureRunning(ctx context.Context, k Key, repoName string) (in
 		m.mu.Lock()
 		if m.stopping {
 			m.mu.Unlock()
-			return 0, fmt.Errorf("supervisor is shutting down")
+			return 0, errors.New("supervisor is shutting down")
 		}
 		p := m.procs[k]
 		if p == nil {
@@ -723,9 +723,9 @@ func (m *Manager) loadRunSpec(k Key, repoName string) (runSpec, error) {
 			fromWire:     fromWire,
 		}, nil
 	}
-	ws := WireSpec{}
+	var ws WireSpec
 	fromWire := false
-	stateDir := ""
+	var stateDir string
 	if art, err := m.db.GetBackendArtifact(k.RepoID, k.Hash); err == nil {
 		ws = WireSpec{RunConfig: art.RunConfig, InitDone: art.InitDoneAt != ""}
 		stateDir = art.StateDir
@@ -916,7 +916,7 @@ func (m *Manager) start(k Key, p *process) {
 	backendURL := ""
 	if k.Side == SideFrontend && envReferences(spec.env, "{backend_url}") {
 		if k.Peer == "" {
-			fail("start_attempt", fmt.Errorf("{backend_url} referenced but deploy has no backend"))
+			fail("start_attempt", errors.New("{backend_url} referenced but deploy has no backend"))
 			return
 		}
 		bePort, err := m.EnsureRunning(context.Background(), BackendKey(k.RepoID, k.Peer), p.repoName)
@@ -1272,7 +1272,7 @@ func (m *Manager) awaitHealthy(p *process, healthPath string, timeout time.Durat
 	for {
 		select {
 		case <-p.done:
-			return fmt.Errorf("process exited during startup (see run log)")
+			return errors.New("process exited during startup (see run log)")
 		case <-deadline:
 			return fmt.Errorf("process did not become healthy within %s", timeout)
 		case <-tick.C:
@@ -1358,7 +1358,7 @@ func (m *Manager) stopLocked(k Key, reason string) {
 		defer cancel()
 		if cli, err := m.docker(ctx); err == nil {
 			// The daemon owns the SIGTERM→SIGKILL grace window.
-			cli.StopContainer(ctx, p.containerID, int(stopGrace/time.Second)) //nolint:errcheck
+			cli.StopContainer(ctx, p.containerID, int(stopGrace/time.Second)) //nolint:errcheck // best-effort; failure is not actionable here
 		}
 		select {
 		case <-p.done:
@@ -1369,7 +1369,7 @@ func (m *Manager) stopLocked(k Key, reason string) {
 	case p.cmd != nil && p.cmd.Process != nil:
 		p.intentional = true
 		pid := p.cmd.Process.Pid
-		terminateGroup(pid) //nolint:errcheck
+		terminateGroup(pid) //nolint:errcheck // best-effort; failure is not actionable here
 		select {
 		case <-p.done:
 		case <-time.After(stopGrace):
@@ -1389,12 +1389,12 @@ func (m *Manager) killProcess(p *process) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if cli, err := m.docker(ctx); err == nil {
-			cli.RemoveContainer(ctx, p.containerID, true) //nolint:errcheck
+			cli.RemoveContainer(ctx, p.containerID, true) //nolint:errcheck // best-effort; failure is not actionable here
 		}
 		return
 	}
 	if p.cmd != nil && p.cmd.Process != nil {
-		killGroup(p.cmd.Process.Pid) //nolint:errcheck
+		killGroup(p.cmd.Process.Pid) //nolint:errcheck // best-effort; failure is not actionable here
 	}
 }
 
@@ -1593,9 +1593,9 @@ func (m *Manager) ReclaimOrphans() {
 	if err == nil {
 		for _, r := range records {
 			if pgid, err := processGroupOf(r.PID); err == nil && pgid == r.PGID {
-				terminateGroup(r.PGID) //nolint:errcheck
+				terminateGroup(r.PGID) //nolint:errcheck // best-effort; failure is not actionable here
 				time.Sleep(200 * time.Millisecond)
-				killGroup(r.PGID) //nolint:errcheck
+				killGroup(r.PGID) //nolint:errcheck // best-effort; failure is not actionable here
 				m.recordEvent(r.RepoID, r.BeHash, "exited", "reclaimed orphan after unclean shutdown")
 			}
 			if err := m.db.DeleteProcessRecord(r.RepoID, r.BeHash); err != nil {
@@ -1628,13 +1628,13 @@ func (m *Manager) removeLabeled(label, value string) {
 	}
 	if cs, err := cli.ListContainersByLabel(ctx, label, value); err == nil {
 		for _, c := range cs {
-			cli.RemoveContainer(ctx, c.ID, true) //nolint:errcheck
+			cli.RemoveContainer(ctx, c.ID, true) //nolint:errcheck // best-effort; failure is not actionable here
 		}
 	}
 	if ns, err := cli.ListNetworksByLabel(ctx, label, value); err == nil {
 		m.netMu.Lock()
 		for _, n := range ns {
-			cli.RemoveNetwork(ctx, n.ID) //nolint:errcheck
+			cli.RemoveNetwork(ctx, n.ID) //nolint:errcheck // best-effort; failure is not actionable here
 		}
 		m.netMu.Unlock()
 	}
@@ -1653,7 +1653,7 @@ func (m *Manager) releaseNetwork(ctx context.Context, cli *dockerapi.Client, id 
 	}
 	m.netMu.Lock()
 	defer m.netMu.Unlock()
-	cli.RemoveNetwork(ctx, id) //nolint:errcheck
+	cli.RemoveNetwork(ctx, id) //nolint:errcheck // best-effort; failure is not actionable here
 }
 
 // ForkOrInitStateDir provisions the state directory for a newly built
@@ -1743,9 +1743,12 @@ func probeFreePort() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("probe free port: %w", err)
 	}
-	port := l.Addr().(*net.TCPAddr).Port
+	addr, ok := l.Addr().(*net.TCPAddr)
 	l.Close()
-	return port, nil
+	if !ok {
+		return 0, fmt.Errorf("probe free port: unexpected address type %T", l.Addr())
+	}
+	return addr.Port, nil
 }
 
 // templateArgv substitutes {port} and {state_dir} in each argv element.

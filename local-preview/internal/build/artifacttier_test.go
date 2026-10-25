@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -108,10 +109,10 @@ func (f *fakeTier) Open(_ context.Context, repo, side, hash string) (io.ReadClos
 	return io.NopCloser(bytes.NewReader(b)), 0, true, nil
 }
 
-func (f *fakeTier) has(repo, side, hash string) bool {
+func (f *fakeTier) has(side, hash string) bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	_, ok := f.blobs[fkey(repo, side, hash)]
+	_, ok := f.blobs[fkey("demo", side, hash)]
 	return ok
 }
 
@@ -172,7 +173,7 @@ func TestHydrateSkipsRebuild(t *testing.T) {
 
 	// The fe and be sides persist to the tier asynchronously after publish.
 	waitUntil(t, "both sides persisted", func() bool {
-		return tier.has("demo", "fe", row.FeHash) && tier.has("demo", "be", row.BeHash)
+		return tier.has("fe", row.FeHash) && tier.has("be", row.BeHash)
 	})
 
 	// Evict the deploy the way retention does: mark the row, delete local files.
@@ -214,16 +215,10 @@ func TestPersistTargetsContentAddresses(t *testing.T) {
 	})
 	row := e.deployAndWait(t, "main")
 	waitUntil(t, "both sides persisted", func() bool {
-		return tier.has("demo", "fe", row.FeHash) && tier.has("demo", "be", row.BeHash)
+		return tier.has("fe", row.FeHash) && tier.has("be", row.BeHash)
 	})
 	for _, want := range []string{fkey("demo", "fe", row.FeHash), fkey("demo", "be", row.BeHash)} {
-		found := false
-		for _, k := range tier.savedKeys() {
-			if k == want {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(tier.savedKeys(), want)
 		if !found {
 			t.Fatalf("expected persist of %q; saved=%v", want, tier.savedKeys())
 		}
@@ -247,10 +242,10 @@ func TestReadyImpliesDurable(t *testing.T) {
 	// deployAndWait returns the instant the row flips to ready; both sides must
 	// already be durable at that moment, with no waitUntil masking a race.
 	row := e.deployAndWait(t, "main")
-	if !tier.has("demo", "fe", row.FeHash) {
+	if !tier.has("fe", row.FeHash) {
 		t.Error("frontend not durable at ready")
 	}
-	if !tier.has("demo", "be", row.BeHash) {
+	if !tier.has("be", row.BeHash) {
 		t.Error("backend not durable at ready")
 	}
 }
@@ -308,11 +303,11 @@ func TestUploadPersistsToTier(t *testing.T) {
 		q.SetArtifactTier(tier)
 	})
 	body := tarGzBytes(t, map[string]string{"marker": "UPLOADED"})
-	res, err := upload(t, e, "main", SideBackend, "", body, false)
+	res, err := upload(t, e, SideBackend, "", body, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	waitUntil(t, "uploaded backend persisted", func() bool {
-		return tier.has("demo", "be", res.Hash)
+		return tier.has("be", res.Hash)
 	})
 }

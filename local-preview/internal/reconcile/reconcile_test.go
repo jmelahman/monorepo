@@ -74,7 +74,7 @@ func newStore(t *testing.T) *store.Store {
 func publishFE(t *testing.T, s *store.Store, repo, hash string, nFiles int) {
 	t.Helper()
 	src := t.TempDir()
-	for i := 0; i < nFiles; i++ {
+	for i := range nFiles {
 		if err := os.WriteFile(filepath.Join(src, "f"+string(rune('a'+i))), []byte("x"), 0o644); err != nil {
 			t.Fatal(err)
 		}

@@ -9,6 +9,7 @@ package fleet
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -165,7 +166,7 @@ func (r *Registry) RunLog(repoName, side, hash string, attempt int, offset int64
 func (r *Registry) Exec(ctx context.Context, k supervise.Key, opts supervise.ExecOptions, stream io.ReadWriter) error {
 	e, ok := r.report(ctx)[k]
 	if !ok {
-		return fmt.Errorf("preview process is not running on any worker — open the preview to start it, then retry")
+		return errors.New("preview process is not running on any worker — open the preview to start it, then retry")
 	}
 	return e.worker.be.Exec(ctx, k, opts, stream)
 }

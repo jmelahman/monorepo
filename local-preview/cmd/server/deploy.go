@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -77,7 +78,7 @@ func deployCmd() *cobra.Command {
 		Short: "Show one deploy",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := parseInt64(args[0], "deploy id")
+			id, err := parseInt64(args[0])
 			if err != nil {
 				return err
 			}
@@ -104,7 +105,7 @@ func deployCmd() *cobra.Command {
 		Short: "Print a deploy's build logs, or its process run log with --run",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := parseInt64(args[0], "deploy id")
+			id, err := parseInt64(args[0])
 			if err != nil {
 				return err
 			}
@@ -118,7 +119,7 @@ func deployCmd() *cobra.Command {
 			}
 			if !runLog {
 				if follow || cmd.Flags().Changed("side") {
-					return fmt.Errorf("--follow and --side apply to the run log; add --run")
+					return errors.New("--follow and --side apply to the run log; add --run")
 				}
 				text, err := c.GetDeployLogs(cmd.Context(), id)
 				if err != nil {
@@ -139,7 +140,7 @@ func deployCmd() *cobra.Command {
 		Short: "Show live CPU/memory of a deploy's processes",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := parseInt64(args[0], "deploy id")
+			id, err := parseInt64(args[0])
 			if err != nil {
 				return err
 			}
@@ -159,7 +160,7 @@ func deployCmd() *cobra.Command {
 			"sibling deploy on the same hash stops too.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := parseInt64(args[0], "deploy id")
+			id, err := parseInt64(args[0])
 			if err != nil {
 				return err
 			}
@@ -188,7 +189,7 @@ func deployCmd() *cobra.Command {
 			"still references. Its short-sha subdomain is freed.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := parseInt64(args[0], "deploy id")
+			id, err := parseInt64(args[0])
 			if err != nil {
 				return err
 			}
@@ -367,7 +368,7 @@ func runDeploy(ctx context.Context, url string, out io.Writer, repoName, ref str
 	default:
 		fmt.Fprintf(out, "deploy %d %s: %s\n", d.ID, d.Status, d.Error)
 		fmt.Fprintf(out, "full logs: preview deploy logs %d\n", d.ID)
-		return fmt.Errorf("deploy did not become ready")
+		return errors.New("deploy did not become ready")
 	}
 }
 
@@ -536,10 +537,10 @@ func printDeployJSON(out io.Writer, d client.Deploy) error {
 }
 
 // parseInt64 wraps strconv.ParseInt with a descriptive error.
-func parseInt64(s, label string) (int64, error) {
+func parseInt64(s string) (int64, error) {
 	id, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("invalid %s %q: %w", label, s, err)
+		return 0, fmt.Errorf("invalid deploy id %q: %w", s, err)
 	}
 	return id, nil
 }

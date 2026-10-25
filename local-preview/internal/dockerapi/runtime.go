@@ -45,15 +45,18 @@ type ContainerSpec struct {
 // CreateContainer creates (but does not start) a container.
 func (c *Client) CreateContainer(ctx context.Context, spec ContainerSpec) (string, error) {
 	portKey := fmt.Sprintf("%d/tcp", spec.Port)
-	bindings := []map[string]string{{"HostIp": "127.0.0.1", "HostPort": strconv.Itoa(spec.Port)}}
+	hostPort := strconv.Itoa(spec.Port)
+	loopback := map[string]string{"HostIp": "127.0.0.1", "HostPort": hostPort}
+	var bindings []map[string]string
 	switch spec.PublishIP {
 	case "", "127.0.0.1":
 		// Loopback only — the single-node default.
+		bindings = []map[string]string{loopback}
 	case "0.0.0.0":
 		// All interfaces subsumes loopback; listing both would collide.
-		bindings = []map[string]string{{"HostIp": "0.0.0.0", "HostPort": strconv.Itoa(spec.Port)}}
+		bindings = []map[string]string{{"HostIp": "0.0.0.0", "HostPort": hostPort}}
 	default:
-		bindings = append(bindings, map[string]string{"HostIp": spec.PublishIP, "HostPort": strconv.Itoa(spec.Port)})
+		bindings = []map[string]string{loopback, {"HostIp": spec.PublishIP, "HostPort": hostPort}}
 	}
 	body := map[string]any{
 		"Image":        spec.Image,
@@ -127,7 +130,7 @@ func (c *Client) RemoveContainer(ctx context.Context, id string, force bool) err
 // RemoveContainerByName force-removes a container by name, ignoring
 // not-found. Used to clear a stale namesake before re-creating.
 func (c *Client) RemoveContainerByName(ctx context.Context, name string) {
-	c.raw(ctx, "DELETE", "/containers/"+url.PathEscape(name)+"?force=1", nil) //nolint:errcheck
+	c.raw(ctx, "DELETE", "/containers/"+url.PathEscape(name)+"?force=1", nil) //nolint:errcheck // best-effort; failure is not actionable here
 }
 
 // WaitContainer blocks until the container exits and returns its status

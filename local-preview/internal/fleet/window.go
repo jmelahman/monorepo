@@ -83,7 +83,7 @@ func parseDays(s string) (map[time.Weekday]bool, error) {
 			}
 		}
 	}
-	for _, name := range strings.Split(s, ",") {
+	for name := range strings.SplitSeq(s, ",") {
 		d, ok := weekdays[strings.ToLower(name)]
 		if !ok {
 			return nil, fmt.Errorf("bad day %q", name)

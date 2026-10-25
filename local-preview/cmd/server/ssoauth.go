@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -57,17 +58,17 @@ func envOverrideInt64(p *int64, key string, def int64) {
 // than a silently-open instance.
 func buildSSO(opts serveOptions) (*githubsso.Provider, string, bool, error) {
 	if opts.ssoClientSecret == "" {
-		return nil, "", false, fmt.Errorf("--sso-github-client-id set without --sso-github-client-secret")
+		return nil, "", false, errors.New("--sso-github-client-id set without --sso-github-client-secret")
 	}
 	if opts.ssoCallbackURL == "" {
-		return nil, "", false, fmt.Errorf("--sso-github-client-id set without --sso-callback-url")
+		return nil, "", false, errors.New("--sso-github-client-id set without --sso-callback-url")
 	}
 	u, err := url.Parse(opts.ssoCallbackURL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return nil, "", false, fmt.Errorf("invalid --sso-callback-url %q: want e.g. https://host/api/auth/callback", opts.ssoCallbackURL)
 	}
 	if opts.ssoAllowedTeam != "" && opts.ssoAllowedOrg == "" {
-		return nil, "", false, fmt.Errorf("--sso-allowed-team requires --sso-allowed-org")
+		return nil, "", false, errors.New("--sso-allowed-team requires --sso-allowed-org")
 	}
 	allow := githubsso.Allowlist{
 		Logins: splitSet(opts.ssoAllowedLogins),
@@ -76,8 +77,7 @@ func buildSSO(opts serveOptions) (*githubsso.Provider, string, bool, error) {
 		Team:   opts.ssoAllowedTeam,
 	}
 	if allow.Empty() {
-		return nil, "", false, fmt.Errorf(
-			"SSO needs an allowlist: set --sso-allowed-org, --sso-allowed-logins, or --sso-allowed-emails")
+		return nil, "", false, errors.New("SSO needs an allowlist: set --sso-allowed-org, --sso-allowed-logins, or --sso-allowed-emails")
 	}
 	provider := githubsso.New(githubsso.Config{
 		ClientID:     opts.ssoClientID,
@@ -96,7 +96,7 @@ func buildSSO(opts serveOptions) (*githubsso.Provider, string, bool, error) {
 // when empty.
 func splitSet(csv string) map[string]bool {
 	out := map[string]bool{}
-	for _, p := range strings.Split(csv, ",") {
+	for p := range strings.SplitSeq(csv, ",") {
 		if p = strings.TrimSpace(p); p != "" {
 			out[strings.ToLower(p)] = true
 		}

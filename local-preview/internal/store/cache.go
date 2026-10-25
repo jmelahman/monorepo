@@ -178,7 +178,7 @@ func (s *Store) ResidentSide(repo, side, hash string) (dir string, bytes int64, 
 	}
 	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // unreadable entries are skipped; sizing is best-effort
 		}
 		if d.Type().IsRegular() {
 			if info, err := d.Info(); err == nil {
@@ -214,7 +214,7 @@ func dirSizeOf(root string) int64 {
 	var total int64
 	_ = filepath.WalkDir(root, func(_ string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // unreadable entries are skipped; sizing is best-effort
 		}
 		if d.Type().IsRegular() {
 			if info, err := d.Info(); err == nil {

@@ -83,8 +83,8 @@ func TestStartWithRetry(t *testing.T) {
 
 	// Any other failure is terminal on the first attempt.
 	calls = 0
-	boom := fmt.Errorf("start backend: exec format error")
-	if err := startWithRetry(ctx, 5, time.Millisecond, func() error { calls++; return boom }); err != boom || calls != 1 {
+	boom := errors.New("start backend: exec format error")
+	if err := startWithRetry(ctx, 5, time.Millisecond, func() error { calls++; return boom }); !errors.Is(err, boom) || calls != 1 {
 		t.Fatalf("non-ErrNoWorker: err=%v calls=%d, want boom after 1", err, calls)
 	}
 

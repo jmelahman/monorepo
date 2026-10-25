@@ -74,9 +74,9 @@ func (m *Manager) startContainer(k Key, p *process, spec runSpec, rt runtimeEnv,
 	// abort tears down a container that never started and gives the deploy
 	// network back (refused, harmlessly, while the peer still holds it).
 	abort := func(id string, err error) error {
-		cli.RemoveContainer(ctx, id, true) //nolint:errcheck
+		cli.RemoveContainer(ctx, id, true) //nolint:errcheck // best-effort; failure is not actionable here
 		if networkID != "" {
-			cli.RemoveNetwork(ctx, networkID) //nolint:errcheck
+			cli.RemoveNetwork(ctx, networkID) //nolint:errcheck // best-effort; failure is not actionable here
 		}
 		return err
 	}
@@ -142,7 +142,7 @@ func (m *Manager) startContainer(k Key, p *process, spec runSpec, rt runtimeEnv,
 	logsDone := make(chan struct{})
 	go func() {
 		defer close(logsDone)
-		cli.StreamLogs(context.Background(), id, logFile) //nolint:errcheck
+		cli.StreamLogs(context.Background(), id, logFile) //nolint:errcheck // best-effort; failure is not actionable here
 	}()
 
 	// Reaper: the container analogue of cmd.Wait.
@@ -154,7 +154,7 @@ func (m *Manager) startContainer(k Key, p *process, spec runSpec, rt runtimeEnv,
 		}
 		logFile.Close()
 		rmCtx, rmCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		cli.RemoveContainer(rmCtx, id, true) //nolint:errcheck
+		cli.RemoveContainer(rmCtx, id, true) //nolint:errcheck // best-effort; failure is not actionable here
 		// Last one out: the peer side's endpoint, if still up, makes the
 		// daemon refuse and the network outlives this container instead.
 		m.releaseNetwork(rmCtx, cli, networkID)

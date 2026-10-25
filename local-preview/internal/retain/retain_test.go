@@ -105,8 +105,8 @@ func (f *fixture) setPolicy(p Policy) {
 
 func TestSweepCountLimit(t *testing.T) {
 	f := newFixture(t)
-	var deploys []db.Deploy
-	for i := 0; i < 5; i++ {
+	deploys := make([]db.Deploy, 0, 5)
+	for i := range 5 {
 		deploys = append(deploys, f.addDeploy(db.DeployReady, fmt.Sprintf("be%d", i)))
 	}
 	f.setPolicy(Policy{MaxDeploysPerRepo: 2})
@@ -128,7 +128,7 @@ func TestSweepCountLimit(t *testing.T) {
 			t.Errorf("deploy %d: status %s, want %s", d.ID, status[d.ID], want)
 		}
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if f.files.HasBackend(f.repo.Name, fmt.Sprintf("be%d", i)) {
 			t.Errorf("evicted artifact be%d still on disk", i)
 		}

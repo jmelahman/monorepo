@@ -31,8 +31,9 @@ func stageDir(t *testing.T, s *Store, content string) string {
 	return dir
 }
 
-func readArtifact(t *testing.T, s *Store, repo, hash string) string {
+func readArtifact(t *testing.T, s *Store, hash string) string {
 	t.Helper()
+	const repo = "demo"
 	b, err := os.ReadFile(filepath.Join(s.FrontendDir(repo, hash), "file.txt"))
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +50,7 @@ func TestPublishIdempotentAndOverwrite(t *testing.T) {
 	if err := s.PublishFrontend("demo", "h1", stageDir(t, s, "v1"), false); err != nil {
 		t.Fatal(err)
 	}
-	if !s.HasFrontend("demo", "h1") || readArtifact(t, s, "demo", "h1") != "v1" {
+	if !s.HasFrontend("demo", "h1") || readArtifact(t, s, "h1") != "v1" {
 		t.Fatal("publish did not land")
 	}
 
@@ -57,7 +58,7 @@ func TestPublishIdempotentAndOverwrite(t *testing.T) {
 	if err := s.PublishFrontend("demo", "h1", stageDir(t, s, "v2"), false); err != nil {
 		t.Fatal(err)
 	}
-	if readArtifact(t, s, "demo", "h1") != "v1" {
+	if readArtifact(t, s, "h1") != "v1" {
 		t.Fatal("non-overwrite publish replaced content")
 	}
 
@@ -65,7 +66,7 @@ func TestPublishIdempotentAndOverwrite(t *testing.T) {
 	if err := s.PublishFrontend("demo", "h1", stageDir(t, s, "v3"), true); err != nil {
 		t.Fatal(err)
 	}
-	if readArtifact(t, s, "demo", "h1") != "v3" {
+	if readArtifact(t, s, "h1") != "v3" {
 		t.Fatal("overwrite publish kept old content")
 	}
 }
@@ -87,7 +88,7 @@ func TestPublishConcurrentSameHash(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if readArtifact(t, s, "demo", "h") != "same" {
+	if readArtifact(t, s, "h") != "same" {
 		t.Fatal("artifact missing after concurrent publish")
 	}
 }

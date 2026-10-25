@@ -77,21 +77,21 @@ type Manifest struct {
 }
 
 // DevcontainerEnabled reports whether devcontainer discovery applies.
-func (m Manifest) DevcontainerEnabled() bool {
+func (m *Manifest) DevcontainerEnabled() bool {
 	return m.Devcontainer == nil || *m.Devcontainer
 }
 
 // ArtifactsOnly reports whether the manifest declares downloadable outputs
 // without a frontend/backend preview. Such deploys become ready after their
 // artifact hashes are resolved; the artifacts then build as usual.
-func (m Manifest) ArtifactsOnly() bool {
+func (m *Manifest) ArtifactsOnly() bool {
 	return len(m.Artifacts) > 0 && !m.hasRuntimeConfig()
 }
 
 // hasRuntimeConfig reports whether any [frontend] or [backend] field is set.
 // It compares against the zero value rather than listing fields, so a field
 // added later can't silently turn a runtime manifest into an artifacts-only one.
-func (m Manifest) hasRuntimeConfig() bool {
+func (m *Manifest) hasRuntimeConfig() bool {
 	return !reflect.ValueOf(m.Frontend).IsZero() || !reflect.ValueOf(m.Backend).IsZero()
 }
 
@@ -248,7 +248,7 @@ func (m *Manifest) normalize() error {
 		if len(m.Frontend.Run) > 0 {
 			// Process-mode frontend: a server, not a static bundle.
 			if m.Frontend.Run[0] == "" {
-				return fmt.Errorf("frontend.run must be a non-empty argv array")
+				return errors.New("frontend.run must be a non-empty argv array")
 			}
 			if !strings.HasPrefix(m.Frontend.HealthPath, "/") {
 				return fmt.Errorf("frontend.health_path is required with frontend.run and must start with %q", "/")
@@ -281,7 +281,7 @@ func (m *Manifest) normalize() error {
 			}
 		}
 		if len(m.Backend.Run) == 0 || m.Backend.Run[0] == "" {
-			return fmt.Errorf("backend.run is required")
+			return errors.New("backend.run is required")
 		}
 		if !strings.HasPrefix(m.Backend.HealthPath, "/") {
 			return fmt.Errorf("backend.health_path must start with %q", "/")
@@ -318,10 +318,10 @@ func (m *Manifest) normalize() error {
 	}
 	if envReferences(m.Frontend.Env, "{backend_url}") {
 		if len(m.Frontend.Run) == 0 {
-			return fmt.Errorf("frontend.env: {backend_url} requires frontend.run")
+			return errors.New("frontend.env: {backend_url} requires frontend.run")
 		}
 		if (m.Frontend.RunImage == "") != (m.Backend.RunImage == "") {
-			return fmt.Errorf("frontend.env: {backend_url} requires both sides on the same runtime (both run_image or neither)")
+			return errors.New("frontend.env: {backend_url} requires both sides on the same runtime (both run_image or neither)")
 		}
 	}
 	return nil

@@ -8,8 +8,9 @@ import (
 
 // publishSideBytes publishes a frontend artifact whose single file is n bytes,
 // returning nothing — the test reads sizes back via ResidentArtifactBytes.
-func publishSideBytes(t *testing.T, s *Store, repo, hash string, n int) {
+func publishSideBytes(t *testing.T, s *Store, hash string, n int) {
 	t.Helper()
+	const repo = "demo"
 	src := t.TempDir()
 	writeTree(t, src, map[string]string{"blob": strings.Repeat("x", n)})
 	if err := s.PublishFrontend(repo, hash, src, false); err != nil {
@@ -19,7 +20,7 @@ func publishSideBytes(t *testing.T, s *Store, repo, hash string, n int) {
 
 func TestEvictNoopWithoutTier(t *testing.T) {
 	s := newStore(t)
-	publishSideBytes(t, s, "demo", "a", 1000)
+	publishSideBytes(t, s, "a", 1000)
 	// No tier: local disk is the only copy, so eviction must never touch it,
 	// even far over budget.
 	freed, err := s.EvictCacheToWatermark(0, 0, nil)
@@ -34,8 +35,8 @@ func TestEvictNoopWithoutTier(t *testing.T) {
 func TestEvictColdestFirst(t *testing.T) {
 	s := newStore(t)
 	s.SetArtifactTier(&fakeTier{})
-	publishSideBytes(t, s, "demo", "cold", 1000)
-	publishSideBytes(t, s, "demo", "hot", 10)
+	publishSideBytes(t, s, "cold", 1000)
+	publishSideBytes(t, s, "hot", 10)
 	s.NoteAccess("demo", "fe", "hot") // make hot the most-recently-used
 
 	if got := s.ResidentArtifactBytes(); got != 1010 {
@@ -61,7 +62,7 @@ func TestEvictColdestFirst(t *testing.T) {
 func TestEvictRespectsMinAge(t *testing.T) {
 	s := newStore(t)
 	s.SetArtifactTier(&fakeTier{})
-	publishSideBytes(t, s, "demo", "fresh", 1000)
+	publishSideBytes(t, s, "fresh", 1000)
 	// Everything is freshly published; a large minAge protects it all.
 	freed, err := s.EvictCacheToWatermark(0, time.Hour, nil)
 	if err != nil {
@@ -75,7 +76,7 @@ func TestEvictRespectsMinAge(t *testing.T) {
 func TestEvictRespectsProtect(t *testing.T) {
 	s := newStore(t)
 	s.SetArtifactTier(&fakeTier{})
-	publishSideBytes(t, s, "demo", "pinned", 1000)
+	publishSideBytes(t, s, "pinned", 1000)
 	protect := func(repo, side, hash string) bool { return hash == "pinned" }
 	freed, err := s.EvictCacheToWatermark(0, 0, protect)
 	if err != nil {

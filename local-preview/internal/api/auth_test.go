@@ -69,7 +69,7 @@ func findCookie(cookies []*http.Cookie, name string) *http.Cookie {
 
 func TestMeAnonymousWhenSSOOff(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Deps{}.handleAuthMe(rec, httptest.NewRequest("GET", "/api/auth/me", nil))
+	Deps{}.handleAuthMe(rec, httptest.NewRequest(http.MethodGet, "/api/auth/me", nil))
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"anonymous":true`) {
 		t.Fatalf("want 200 anonymous, got %d %s", rec.Code, rec.Body.String())
 	}
@@ -78,7 +78,7 @@ func TestMeAnonymousWhenSSOOff(t *testing.T) {
 func TestMiddlewareNoopWhenSSOOff(t *testing.T) {
 	h := AuthMiddleware(Deps{}, okHandler())
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/deploys", nil))
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/deploys", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("want passthrough 200, got %d", rec.Code)
 	}
@@ -87,7 +87,7 @@ func TestMiddlewareNoopWhenSSOOff(t *testing.T) {
 func TestMiddlewareRequiresAuth(t *testing.T) {
 	h := AuthMiddleware(ssoDeps(t), okHandler())
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("GET", "/api/deploys", nil))
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/deploys", nil))
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("want 401, got %d", rec.Code)
 	}
@@ -100,7 +100,7 @@ func TestMiddlewareBearerSkipsOriginCheck(t *testing.T) {
 	h := AuthMiddleware(ssoDeps(t), okHandler())
 	// A hostile Origin on a state-changing request must NOT matter for a
 	// bearer token: PATs aren't attached by browsers, so they're CSRF-immune.
-	req := httptest.NewRequest("POST", "/api/deploys", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/deploys", nil)
 	req.Header.Set("Authorization", "Bearer goodtoken")
 	req.Header.Set("Origin", "https://evil.example.com")
 	rec := httptest.NewRecorder()
@@ -112,7 +112,7 @@ func TestMiddlewareBearerSkipsOriginCheck(t *testing.T) {
 
 func TestMiddlewareRejectsBadBearer(t *testing.T) {
 	h := AuthMiddleware(ssoDeps(t), okHandler())
-	req := httptest.NewRequest("GET", "/api/deploys", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/deploys", nil)
 	req.Header.Set("Authorization", "Bearer wrong")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
@@ -134,7 +134,7 @@ func TestMiddlewareSessionOriginCheck(t *testing.T) {
 	h := AuthMiddleware(d, okHandler())
 
 	// GET needs no Origin.
-	get := httptest.NewRequest("GET", "/api/deploys", nil)
+	get := httptest.NewRequest(http.MethodGet, "/api/deploys", nil)
 	get.AddCookie(cookie)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, get)
@@ -143,7 +143,7 @@ func TestMiddlewareSessionOriginCheck(t *testing.T) {
 	}
 
 	// State-changing request with a foreign Origin is rejected.
-	bad := httptest.NewRequest("POST", "/api/deploys", nil)
+	bad := httptest.NewRequest(http.MethodPost, "/api/deploys", nil)
 	bad.AddCookie(cookie)
 	bad.Header.Set("Origin", "https://evil.example.com")
 	rec = httptest.NewRecorder()
@@ -153,7 +153,7 @@ func TestMiddlewareSessionOriginCheck(t *testing.T) {
 	}
 
 	// Same request from the dashboard origin is allowed.
-	good := httptest.NewRequest("POST", "/api/deploys", nil)
+	good := httptest.NewRequest(http.MethodPost, "/api/deploys", nil)
 	good.AddCookie(cookie)
 	good.Header.Set("Origin", d.DashboardOrigin)
 	rec = httptest.NewRecorder()
@@ -187,7 +187,7 @@ func TestMiddlewareExemptPaths(t *testing.T) {
 func TestCallbackHappyPath(t *testing.T) {
 	d := ssoDeps(t)
 	state, cookie := loginState(t, d)
-	req := httptest.NewRequest("GET", "/api/auth/callback?state="+url.QueryEscape(state)+"&code=abc", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/callback?state="+url.QueryEscape(state)+"&code=abc", nil)
 	req.AddCookie(cookie)
 	rec := httptest.NewRecorder()
 	d.handleAuthCallback(rec, req)
@@ -202,7 +202,7 @@ func TestCallbackHappyPath(t *testing.T) {
 func TestCallbackRejectsBadState(t *testing.T) {
 	d := ssoDeps(t)
 	_, cookie := loginState(t, d)
-	req := httptest.NewRequest("GET", "/api/auth/callback?state=WRONG&code=abc", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/callback?state=WRONG&code=abc", nil)
 	req.AddCookie(cookie)
 	rec := httptest.NewRecorder()
 	d.handleAuthCallback(rec, req)
@@ -215,7 +215,7 @@ func TestCallbackNotAllowed(t *testing.T) {
 	d := ssoDeps(t)
 	d.SSO = fakeSSO{exchangeErr: githubsso.ErrNotAllowed}
 	state, cookie := loginState(t, d)
-	req := httptest.NewRequest("GET", "/api/auth/callback?state="+url.QueryEscape(state)+"&code=abc", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/callback?state="+url.QueryEscape(state)+"&code=abc", nil)
 	req.AddCookie(cookie)
 	rec := httptest.NewRecorder()
 	d.handleAuthCallback(rec, req)
@@ -228,7 +228,7 @@ func TestCallbackNotAllowed(t *testing.T) {
 func loginState(t *testing.T, d Deps) (string, *http.Cookie) {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	d.handleAuthLogin(rec, httptest.NewRequest("GET", "/api/auth/login", nil))
+	d.handleAuthLogin(rec, httptest.NewRequest(http.MethodGet, "/api/auth/login", nil))
 	if rec.Code != http.StatusFound {
 		t.Fatalf("login want 302, got %d", rec.Code)
 	}

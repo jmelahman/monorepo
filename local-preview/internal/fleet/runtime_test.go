@@ -110,8 +110,7 @@ func TestHeartbeatReconcilesMaxWarm(t *testing.T) {
 	r.SetMaxWarm(5)
 	r.SetIdleOverride(90 * time.Second)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	r.StartHeartbeats(ctx, 50*time.Millisecond)
 
 	select {

@@ -67,18 +67,18 @@ type fakeTier struct {
 	mu    sync.Mutex
 	blobs map[string][]byte
 	wants map[string]int64 // per-key expected content bytes (0 = unchecked)
-	opens int32            // count of Open calls, to observe singleflight dedup
+	opens atomic.Int32     // count of Open calls, to observe singleflight dedup
 }
 
 func fkey(repo, side, hash string) string { return repo + "/" + side + "/" + hash }
 
-func (f *fakeTier) put(repo, side, hash string, blob []byte) {
+func (f *fakeTier) put(side, hash string, blob []byte) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.blobs == nil {
 		f.blobs = map[string][]byte{}
 	}
-	f.blobs[fkey(repo, side, hash)] = blob
+	f.blobs[fkey("demo", side, hash)] = blob
 }
 
 func (f *fakeTier) Save(_ context.Context, repo, side, hash, srcDir string) error {
@@ -86,7 +86,7 @@ func (f *fakeTier) Save(_ context.Context, repo, side, hash, srcDir string) erro
 }
 
 func (f *fakeTier) Open(_ context.Context, repo, side, hash string) (io.ReadCloser, int64, bool, error) {
-	atomic.AddInt32(&f.opens, 1)
+	f.opens.Add(1)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	b, ok := f.blobs[fkey(repo, side, hash)]
@@ -127,7 +127,7 @@ func TestHydrateVerifiesContentBytes(t *testing.T) {
 	s := newStore(t)
 	tier := &fakeTier{wants: map[string]int64{fkey("demo", "fe", "good"): 6}} // "hello" + "x"
 	s.SetArtifactTier(tier)
-	tier.put("demo", "fe", "good", blob)
+	tier.put("fe", "good", blob)
 	if err := s.Hydrate(context.Background(), "demo", "fe", "good"); err != nil {
 		t.Fatalf("hydrate with exact content-byte size: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestHydrateVerifiesContentBytes(t *testing.T) {
 	s2 := newStore(t)
 	tier2 := &fakeTier{wants: map[string]int64{fkey("demo", "fe", "bad"): 999}}
 	s2.SetArtifactTier(tier2)
-	tier2.put("demo", "fe", "bad", blob)
+	tier2.put("fe", "bad", blob)
 	err := s2.Hydrate(context.Background(), "demo", "fe", "bad")
 	if err == nil || !strings.Contains(err.Error(), "integrity check failed") {
 		t.Fatalf("hydrate with wrong size = %v, want integrity failure", err)
@@ -153,7 +153,7 @@ func TestHydrateFillsMissingSide(t *testing.T) {
 	// Stage a source tree, tar it into the fake tier as fe/abc.
 	src := t.TempDir()
 	writeTree(t, src, map[string]string{"index.html": "hello", "assets/app.js": "x"})
-	tier.put("demo", "fe", "abc", tarDirRaw(t, src))
+	tier.put("fe", "abc", tarDirRaw(t, src))
 
 	if s.HasFrontend("demo", "abc") {
 		t.Fatal("precondition: should not be resident yet")
@@ -259,15 +259,13 @@ func TestHydrateConcurrentDedup(t *testing.T) {
 	s.SetArtifactTier(tier)
 	src := t.TempDir()
 	writeTree(t, src, map[string]string{"f": "data"})
-	tier.put("demo", "be", "abc", tarDirRaw(t, src))
+	tier.put("be", "abc", tarDirRaw(t, src))
 
 	var wg sync.WaitGroup
 	for range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = s.Hydrate(context.Background(), "demo", "be", "abc")
-		}()
+		})
 	}
 	wg.Wait()
 	if !s.HasBackend("demo", "abc") {
@@ -275,7 +273,7 @@ func TestHydrateConcurrentDedup(t *testing.T) {
 	}
 	// singleflight should have collapsed the concurrent fetches to far fewer
 	// than 8 opens (typically 1); assert it did not fan out to one per caller.
-	if n := atomic.LoadInt32(&tier.opens); n >= 8 {
+	if n := tier.opens.Load(); n >= 8 {
 		t.Fatalf("expected deduplicated opens, got %d", n)
 	}
 }
