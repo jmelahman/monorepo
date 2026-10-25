@@ -87,7 +87,7 @@ func rescueParse(path string, raw []byte) *syntax.File {
 			return nil
 		}
 	}
-	if f == nil || topLevelInlineSplit(f, inlineSplits) || !restoreBytes(f, restore) {
+	if f == nil || topLevelInlineSplit(f, inlineSplits) || !restoreBytes(f, work, restore) {
 		return nil
 	}
 	return f
@@ -606,8 +606,9 @@ func arrayEnd(work []byte, i int) int {
 // rescued AST and reports whether every one of them was found. A byte that
 // does not resurface became lexical structure instead of text, meaning the
 // rewrite was not the spelling-only change it is required to be; the caller
-// must then discard the rescue.
-func restoreBytes(f *syntax.File, restore map[int]byte) bool {
+// must then discard the rescue. work is the rewritten source f was parsed
+// from.
+func restoreBytes(f *syntax.File, work []byte, restore map[int]byte) bool {
 	if len(restore) == 0 {
 		return true
 	}
@@ -631,11 +632,14 @@ func restoreBytes(f *syntax.File, restore map[int]byte) bool {
 	syntax.Walk(f, func(n syntax.Node) bool {
 		switch x := n.(type) {
 		case *syntax.Lit:
-			// A literal spanning an escaped newline stores more bytes than its
-			// value; offsets inside it cannot be mapped, so leave it to the
-			// final completeness check to reject the rescue.
-			if int(x.End().Offset())-int(x.ValuePos.Offset()) == len(x.Value) {
-				x.Value = patch(x.Value, int(x.ValuePos.Offset()))
+			// Patch only a literal whose value is its source bytes verbatim. One
+			// spanning an escaped newline is not, and its offsets cannot be
+			// mapped, so it is left to the final completeness check to reject
+			// the rescue. The span upstream reports cannot decide this: a
+			// heredoc body's last literal ends past the terminator line.
+			start := int(x.ValuePos.Offset())
+			if start+len(x.Value) <= len(work) && string(work[start:start+len(x.Value)]) == x.Value {
+				x.Value = patch(x.Value, start)
 			}
 		case *syntax.SglQuoted:
 			x.Value = patch(x.Value, int(x.Right.Offset())-len(x.Value))

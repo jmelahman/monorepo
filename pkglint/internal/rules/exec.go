@@ -841,7 +841,7 @@ func wordIsLiteral(w *syntax.Word) bool {
 // --print says what it would do without doing it. Everything else either
 // changes the system or, with -y/-u, refreshes over the network.
 func pacmanQueries(c Command) bool {
-	var reads, writes, refreshes, prints bool
+	var reads, query, writes, refreshes, upgrades, prints bool
 	for _, a := range c.Args {
 		if len(a) < 2 || a[0] != '-' {
 			continue
@@ -849,12 +849,16 @@ func pacmanQueries(c Command) bool {
 		if a[1] == '-' {
 			name, _, _ := strings.Cut(a, "=")
 			switch name {
-			case "--query", "--deptest", "--files", "--version", "--help":
+			case "--query":
+				reads, query = true, true
+			case "--deptest", "--files", "--version", "--help":
 				reads = true
 			case "--upgrade", "--remove", "--database":
 				writes = true
-			case "--refresh", "--sysupgrade":
+			case "--refresh":
 				refreshes = true
+			case "--sysupgrade", "--upgrades":
+				upgrades = true
 			case "--print", "--print-format":
 				prints = true
 			}
@@ -862,16 +866,25 @@ func pacmanQueries(c Command) bool {
 		}
 		for _, r := range a[1:] {
 			switch r {
-			case 'Q', 'T', 'F', 'V', 'h':
+			case 'Q':
+				reads, query = true, true
+			case 'T', 'F', 'V', 'h':
 				reads = true
 			case 'U', 'R', 'D':
 				writes = true
-			case 'y', 'u':
+			case 'y':
 				refreshes = true
+			case 'u':
+				upgrades = true
 			case 'p':
 				prints = true
 			}
 		}
+	}
+	// -u is --sysupgrade to -S but --upgrades to -Q, which only lists what the
+	// local databases say is out of date.
+	if upgrades && !query {
+		refreshes = true
 	}
 	if writes || refreshes {
 		return false

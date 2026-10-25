@@ -8,6 +8,7 @@ import (
 	"debug/elf"
 	"io"
 	"io/fs"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/jmelahman/pkglint/internal/pkgfile/pkgtest"
 	"github.com/klauspost/compress/zstd"
+	"github.com/ulikunitz/xz"
 )
 
 func read(t *testing.T, data []byte) *Package {
@@ -64,6 +66,32 @@ func TestReadZstdArchive(t *testing.T) {
 	pkg := read(t, zst.Bytes())
 	if pkg.Info.Name != "demo" || len(pkg.Info.Depends) != 1 {
 		t.Errorf("zstd archive parsed wrong: %+v", pkg.Info)
+	}
+}
+
+// The legacy formats still sit in pacman caches and on mirrors' archives.
+// stdlib has no bzip2 writer, so that one is a checked-in fixture.
+func TestReadLegacyCompressions(t *testing.T) {
+	var xzBuf bytes.Buffer
+	xw, err := xz.NewWriter(&xzBuf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := xw.Write(pkgtest.Tar(pkgtest.Info("demo", "x86_64", "depend = zlib"))); err != nil {
+		t.Fatal(err)
+	}
+	if err := xw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	bz, err := os.ReadFile("testdata/demo-1.0-1-x86_64.pkg.tar.bz2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, data := range map[string][]byte{"xz": xzBuf.Bytes(), "bzip2": bz} {
+		pkg := read(t, data)
+		if pkg.Info.Name != "demo" || len(pkg.Info.Depends) != 1 || pkg.Info.Depends[0] != "zlib" {
+			t.Errorf("%s archive parsed wrong: %+v", name, pkg.Info)
+		}
 	}
 }
 
@@ -210,7 +238,22 @@ func TestClassifyScriptsAndArchives(t *testing.T) {
 		pkgtest.Member{Name: "usr/bin/tool", Data: []byte("#!/usr/bin/python3\nprint('hi')\n"), Mode: 0o755},
 		pkgtest.Member{Name: "usr/bin/tool2", Data: []byte("#!/usr/bin/env -S bash -e\necho hi\n"), Mode: 0o755},
 		pkgtest.Member{Name: "usr/lib/libdemo.a", Data: []byte("!<arch>\nrest"), Mode: 0o644},
+		// No newline at all: the interpreter line runs to end of file.
+		pkgtest.Member{Name: "usr/bin/tool3", Data: []byte("#!/usr/bin/perl -w"), Mode: 0o755},
+		// A line longer than the first read still yields its interpreter.
+		pkgtest.Member{Name: "usr/bin/tool4", Data: []byte("#!/usr/bin/env " + strings.Repeat("A=1 ", 100) + "ruby\nputs 1\n"), Mode: 0o755},
+		// The scriptlet is retained whole; its shebang is read from that copy.
+		pkgtest.Member{Name: ".INSTALL", Data: []byte("#!/bin/bash\npost_install() { :; }\n"), Mode: 0o644},
 	))
+	if got := pkg.Entry("usr/bin/tool3").Interpreter(); got != "perl" {
+		t.Errorf("unterminated shebang interpreter = %q, want perl", got)
+	}
+	if got := pkg.Entry("usr/bin/tool4").Interpreter(); got != "ruby" {
+		t.Errorf("long shebang interpreter = %q, want ruby", got)
+	}
+	if e := pkg.Entry(".INSTALL"); !e.IsScript || e.Interpreter() != "bash" || len(e.Data) == 0 {
+		t.Errorf(".INSTALL: IsScript %v, interpreter %q, %d bytes retained", e.IsScript, e.Interpreter(), len(e.Data))
+	}
 	if got := pkg.Entry("usr/bin/tool").Interpreter(); got != "python3" {
 		t.Errorf("interpreter = %q, want python3", got)
 	}
@@ -225,10 +268,20 @@ func TestClassifyScriptsAndArchives(t *testing.T) {
 func TestModeBits(t *testing.T) {
 	pkg := read(t, pkgtest.Tar(pkgtest.Info("demo", "x86_64"),
 		pkgtest.Member{Name: "usr/bin/suid", Data: []byte("x"), Mode: 0o4755},
+		pkgtest.Member{Name: "usr/bin/sgid", Data: []byte("x"), Mode: 0o2755},
+		pkgtest.Member{Name: "var/spool/demo/", Type: tar.TypeDir, Mode: 0o1777},
 		pkgtest.Member{Name: "usr/share/", Type: tar.TypeDir, Mode: 0o777},
 	))
-	if e := pkg.Entry("usr/bin/suid"); e.Mode&fs.ModeSetuid == 0 || e.Mode.Perm() != 0o755 {
-		t.Errorf("setuid mode lost: %v", e.Mode)
+	for name, want := range map[string]fs.FileMode{
+		"usr/bin/suid":   fs.ModeSetuid | 0o755,
+		"usr/bin/sgid":   fs.ModeSetgid | 0o755,
+		"var/spool/demo": fs.ModeSticky | 0o777,
+	} {
+		if e := pkg.Entry(name); e == nil {
+			t.Errorf("%s: missing", name)
+		} else if e.Mode != want {
+			t.Errorf("%s: mode %v, want %v", name, e.Mode, want)
+		}
 	}
 	if e := pkg.Entry("usr/share"); e == nil || !e.IsDir() {
 		t.Error("directory entry not normalized (trailing slash)")

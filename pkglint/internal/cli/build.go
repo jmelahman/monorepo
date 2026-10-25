@@ -1221,5 +1221,8 @@ func moveFile(src, dst string) error {
 		os.Remove(tmp.Name())
 		return err
 	}
+	// The copy is complete under dst; drop the original rather than hold a
+	// second copy of the archive in the (often tmpfs) build tree.
+	os.Remove(src)
 	return nil
 }

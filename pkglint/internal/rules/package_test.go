@@ -46,9 +46,11 @@ func pkgLint(t *testing.T, db *alpmdb.DB, info string, members ...pkgtest.Member
 // pkgDB builds a small installed-package database:
 //
 //	glibc            ships usr/lib/libc.so.6
-//	libpng           ships usr/lib/libpng16.so.16 and its pkgconfig file, depends on glibc
+//	libpng           ships usr/lib/libpng16.so.16 and its pkgconfig file, depends on glibc,
+//	                 and usr/lib/libpng/libpng-private.so off the library path
 //	middle           depends on libpng (for transitive-satisfaction tests)
 //	python           ships usr/bin/python3, provides python3
+//	pytool           depends on python (for transitive interpreter tests)
 //	dconf, unusedpkg exist so provides/unneeded lookups resolve
 func pkgDB(t *testing.T) *alpmdb.DB {
 	t.Helper()
@@ -68,11 +70,14 @@ func pkgDB(t *testing.T) *alpmdb.DB {
 	write("glibc-2.38-1", "%NAME%\nglibc\n\n%VERSION%\n2.38-1\n\n%PROVIDES%\nlibc.so=6-64\n",
 		"%FILES%\nusr/\nusr/lib/\nusr/lib/libc.so.6\n")
 	write("libpng-1.6-1", "%NAME%\nlibpng\n\n%VERSION%\n1.6-1\n\n%DEPENDS%\nglibc\n\n%PROVIDES%\nlibpng16.so=16-64\n",
-		"%FILES%\nusr/\nusr/lib/\nusr/lib/libpng16.so.16\nusr/lib/pkgconfig/\nusr/lib/pkgconfig/libpng.pc\n")
+		"%FILES%\nusr/\nusr/lib/\nusr/lib/libpng16.so.16\nusr/lib/pkgconfig/\nusr/lib/pkgconfig/libpng.pc\n"+
+			"usr/lib/libpng/\nusr/lib/libpng/libpng-private.so\n")
 	write("middle-1.0-1", "%NAME%\nmiddle\n\n%VERSION%\n1.0-1\n\n%DEPENDS%\nlibpng\n",
 		"%FILES%\nusr/\nusr/share/\nusr/share/middle/\nusr/share/middle/data\n")
 	write("python-3.12-1", "%NAME%\npython\n\n%VERSION%\n3.12-1\n\n%DEPENDS%\nglibc\n\n%PROVIDES%\npython3\n",
 		"%FILES%\nusr/\nusr/bin/\nusr/bin/python3\n")
+	write("pytool-1.0-1", "%NAME%\npytool\n\n%VERSION%\n1.0-1\n\n%DEPENDS%\npython\n",
+		"%FILES%\nusr/\nusr/share/\nusr/share/pytool/\nusr/share/pytool/data\n")
 	write("dconf-0.40-1", "%NAME%\ndconf\n\n%VERSION%\n0.40-1\n",
 		"%FILES%\nusr/\nusr/bin/\nusr/bin/dconf\n")
 	write("unusedpkg-1.0-1", "%NAME%\nunusedpkg\n\n%VERSION%\n1.0-1\n",
@@ -268,6 +273,28 @@ func TestMissingLibraryDependency(t *testing.T) {
 	if got := ruleIDs(self)["PB809"]; got != 0 {
 		t.Errorf("self-shipped library: want no PB809, got %d", got)
 	}
+	// A library off the library path is found through the binary's RUNPATH,
+	// owned by whichever installed package ships that path; both $ORIGIN
+	// spellings resolve against the binary's own directory.
+	for _, runpath := range []string{"/usr/lib/libpng", "$ORIGIN/../lib/libpng", "${ORIGIN}/../lib/libpng"} {
+		private := func(deps string) []Finding {
+			var fs []Finding
+			for _, f := range pkgLint(t, db, pkgtest.Info("demo", "x86_64", deps),
+				pkgtest.Member{Name: "usr/bin/demo", Mode: 0o755,
+					Data: pkgtest.ELF(hardened(pkgtest.ELFOpts{Needed: []string{"libpng-private.so"}, Runpath: runpath, Undefined: []string{"x"}}))}) {
+				if f.RuleID == "PB809" {
+					fs = append(fs, f)
+				}
+			}
+			return fs
+		}
+		if fs := private("depend = libpng"); len(fs) != 0 {
+			t.Errorf("RUNPATH %s, libpng declared: want no PB809, got %+v", runpath, fs)
+		}
+		if fs := private("depend = glibc"); len(fs) != 1 || fs[0].Severity != Error || !strings.Contains(fs[0].Message, `"libpng"`) {
+			t.Errorf("RUNPATH %s, libpng undeclared: want one error naming libpng, got %+v", runpath, fs)
+		}
+	}
 	// Unknown soname: cannot be verified.
 	orphan := pkgLint(t, db, pkgtest.Info("demo", "x86_64"),
 		pkgtest.Member{Name: "usr/bin/demo", Mode: 0o755,
@@ -340,32 +367,54 @@ func TestSonameDeclarations(t *testing.T) {
 func TestShebangDeps(t *testing.T) {
 	db := pkgDB(t)
 	script := pkgtest.Member{Name: "usr/bin/tool", Data: []byte("#!/usr/bin/python3\nprint()\n"), Mode: 0o755}
-	if got := ruleIDs(pkgLint(t, db, pkgtest.Info("demo", "any"), script))["PB812"]; got != 1 {
-		t.Errorf("missing interpreter dep: want 1 PB812, got %d", got)
+	find := func(deps string, members ...pkgtest.Member) []Finding {
+		var fs []Finding
+		for _, f := range pkgLint(t, db, pkgtest.Info("demo", "any", deps), members...) {
+			if f.RuleID == "PB812" {
+				fs = append(fs, f)
+			}
+		}
+		return fs
 	}
-	if got := ruleIDs(pkgLint(t, db, pkgtest.Info("demo", "any", "depend = python"), script))["PB812"]; got != 0 {
-		t.Errorf("declared interpreter dep: want no PB812, got %d", got)
-	}
-	// The provides name works too.
-	if got := ruleIDs(pkgLint(t, db, pkgtest.Info("demo", "any", "depend = python3"), script))["PB812"]; got != 0 {
-		t.Errorf("provides-satisfied interpreter: want no PB812, got %d", got)
+	for _, tc := range []struct {
+		name, deps string
+		want       Severity // -1: no finding
+		msg        string
+	}{
+		{"declared", "depend = python", -1, ""},
+		{"by its provides name", "depend = python3", -1, ""},
+		{"missing", "depend = glibc", Error, "not reachable from depends; add it"},
+		{"reached through another dependency", "depend = pytool", Warn, "reached only transitively"},
+		{"only optional", "optdepend = python: the tool", Warn, "only an optdepends"},
+		{"unverifiable closure", "depend = not-installed-here", Info, "may be incomplete"},
+	} {
+		fs := find(tc.deps, script)
+		switch {
+		case tc.want < 0 && len(fs) != 0:
+			t.Errorf("%s: want no PB812, got %+v", tc.name, fs)
+		case tc.want >= 0 && (len(fs) != 1 || fs[0].Severity != tc.want || fs[0].Path != "usr/bin/tool" ||
+			!strings.Contains(fs[0].Message, tc.msg)):
+			t.Errorf("%s: want one %v PB812 on usr/bin/tool saying %q, got %+v", tc.name, tc.want, tc.msg, fs)
+		}
 	}
 	// Unresolvable interpreters are informational.
 	odd := pkgtest.Member{Name: "usr/bin/o", Data: []byte("#!/usr/bin/oddball\n"), Mode: 0o755}
-	fs := pkgLint(t, db, pkgtest.Info("demo", "any"), odd)
-	found := false
-	for _, f := range fs {
-		if f.RuleID == "PB812" && f.Severity == Info {
-			found = true
+	if fs := find("", odd); len(fs) != 1 || fs[0].Severity != Info {
+		t.Errorf("unresolvable interpreter: want one info PB812, got %+v", fs)
+	}
+	// Not reported: sh and bash, an interpreter the package ships itself, and
+	// examples under the documentation tree, which are not run in place.
+	for name, members := range map[string][]pkgtest.Member{
+		"sh script": {{Name: "usr/bin/s", Data: []byte("#!/bin/sh\n"), Mode: 0o755}},
+		"own interpreter": {
+			{Name: "opt/demo/bin/tool", Data: []byte("#!/opt/demo/bin/python3\n"), Mode: 0o755},
+			{Name: "opt/demo/bin/python3", Data: []byte("x"), Mode: 0o755},
+		},
+		"documentation example": {{Name: "usr/share/doc/demo/example.py", Data: []byte("#!/usr/bin/python3\n"), Mode: 0o755}},
+	} {
+		if fs := find("", members...); len(fs) != 0 {
+			t.Errorf("%s: want no PB812, got %+v", name, fs)
 		}
-	}
-	if !found {
-		t.Errorf("unresolvable interpreter: want an info PB812, got %+v", fs)
-	}
-	// sh and bash are never reported.
-	shScript := pkgtest.Member{Name: "usr/bin/s", Data: []byte("#!/bin/sh\n"), Mode: 0o755}
-	if got := ruleIDs(pkgLint(t, db, pkgtest.Info("demo", "any"), shScript))["PB812"]; got != 0 {
-		t.Errorf("sh script: want no PB812, got %d", got)
 	}
 }
 
@@ -445,58 +494,76 @@ func TestPackageMetadata(t *testing.T) {
 	}
 }
 
+// pkgVerdict is what one rule says about one archive member.
+type pkgVerdict struct {
+	sev Severity
+	msg string // substring of the message
+}
+
+// expectPkgVerdicts checks rule id's findings member by member: each member
+// in want gets exactly that one finding, and every other member none.
+func expectPkgVerdicts(t *testing.T, id string, fs []Finding, want map[string]pkgVerdict) {
+	t.Helper()
+	got := map[string][]Finding{}
+	for _, f := range fs {
+		if f.RuleID == id {
+			got[f.Path] = append(got[f.Path], f)
+		}
+	}
+	for path, w := range want {
+		if g := got[path]; len(g) != 1 || g[0].Severity != w.sev || !strings.Contains(g[0].Message, w.msg) {
+			t.Errorf("%s on %s: want one %v saying %q, got %+v", id, path, w.sev, w.msg, g)
+		}
+	}
+	for path, g := range got {
+		if _, ok := want[path]; !ok {
+			t.Errorf("%s on %s: want none, got %+v", id, path, g)
+		}
+	}
+}
+
 func TestFilesystemLayout(t *testing.T) {
 	fs := pkgLint(t, nil, pkgtest.Info("demo", "any"),
 		pkgtest.Member{Name: "tmp/demo.state", Data: []byte("x")},
 		pkgtest.Member{Name: "usr/local/bin/demo", Data: []byte("x")},
 		pkgtest.Member{Name: "usr/man/man1/demo.1", Data: []byte("x")},
+		pkgtest.Member{Name: "usr/info/demo.info", Data: []byte("x")},
 		pkgtest.Member{Name: "opt/demo/man/demo.1", Data: []byte("x")},
+		pkgtest.Member{Name: "opt/demo/info/demo.info", Data: []byte("x")},
+		pkgtest.Member{Name: "usr/lib/ruby/site_ruby/3.3.0/demo.rb", Data: []byte("x")},
 		pkgtest.Member{Name: "usr/share/demo/man/demo.1", Data: []byte("x")}, // exempt tree
 		pkgtest.Member{Name: "usr/share/man/man1/demo.1.gz", Data: []byte("x")},
 		pkgtest.Member{Name: "etc/demo.conf", Data: []byte("x")},
 	)
-	var errs, warns, infos int
-	for _, f := range fs {
-		if f.RuleID != "PB820" {
-			continue
-		}
-		switch f.Severity {
-		case Error:
-			errs++
-		case Warn:
-			warns++
-		case Info:
-			infos++
-		}
-	}
-	// tmp/demo.state error; usr/man error; usr/local warn; man-component info.
-	if errs != 2 || warns != 1 || infos != 1 {
-		t.Errorf("got %d/%d/%d error/warn/info PB820, want 2/1/1: %+v", errs, warns, infos, fs)
-	}
+	expectPkgVerdicts(t, "PB820", fs, map[string]pkgVerdict{
+		"tmp/demo.state":                       {Error, "temporary/runtime directory"},
+		"usr/local/bin/demo":                   {Warn, "outside the standard FHS directories"},
+		"usr/man/man1/demo.1":                  {Error, "not the pre-FHS usr/man"},
+		"usr/info/demo.info":                   {Error, "not the pre-FHS usr/info"},
+		"opt/demo/man/demo.1":                  {Info, "'man' component"},
+		"opt/demo/info/demo.info":              {Info, "'info' component"},
+		"usr/lib/ruby/site_ruby/3.3.0/demo.rb": {Warn, "site_ruby is for locally-built ruby code"},
+	})
 }
 
 func TestFilePermissions(t *testing.T) {
 	fs := pkgLint(t, nil, pkgtest.Info("demo", "any"),
-		pkgtest.Member{Name: "usr/bin/fine", Data: []byte("x"), Mode: 0o755},            // fine
-		pkgtest.Member{Name: "usr/bin/evil", Data: []byte("x"), Mode: 0o777},            // world-writable
-		pkgtest.Member{Name: "usr/bin/suid", Data: []byte("x"), Mode: 0o4755},           // setuid
-		pkgtest.Member{Name: "usr/share/secret", Data: []byte("x"), Mode: 0o640},        // not world-readable
-		pkgtest.Member{Name: "usr/lib/libdemo.a", Data: []byte("!<arch>"), Mode: 0o755}, // wrong static-lib mode
+		pkgtest.Member{Name: "usr/bin/fine", Data: []byte("x"), Mode: 0o755},
+		pkgtest.Member{Name: "usr/bin/evil", Data: []byte("x"), Mode: 0o777},
+		pkgtest.Member{Name: "usr/bin/suid", Data: []byte("x"), Mode: 0o4755},
+		pkgtest.Member{Name: "usr/bin/sgid", Data: []byte("x"), Mode: 0o2755},
+		pkgtest.Member{Name: "usr/share/secret", Data: []byte("x"), Mode: 0o640},
+		pkgtest.Member{Name: "usr/share/demo/", Type: '5', Mode: 0o754},
+		pkgtest.Member{Name: "usr/lib/libdemo.a", Data: []byte("!<arch>"), Mode: 0o755},
 	)
-	var errs, warns int
-	for _, f := range fs {
-		if f.RuleID != "PB821" {
-			continue
-		}
-		if f.Severity == Error {
-			errs++
-		} else {
-			warns++
-		}
-	}
-	if errs != 1 || warns != 3 {
-		t.Errorf("got %d errors / %d warns for PB821, want 1/3: %+v", errs, warns, fs)
-	}
+	expectPkgVerdicts(t, "PB821", fs, map[string]pkgVerdict{
+		"usr/bin/evil":      {Error, "world-writable (777)"},
+		"usr/bin/suid":      {Warn, "setuid/setgid"},
+		"usr/bin/sgid":      {Warn, "setuid/setgid"},
+		"usr/share/secret":  {Warn, "not world-readable (640)"},
+		"usr/share/demo":    {Warn, "not world-executable (754)"},
+		"usr/lib/libdemo.a": {Warn, "static library with mode 755"},
+	})
 }
 
 func TestFileOwnership(t *testing.T) {
@@ -589,6 +656,36 @@ func TestSingleFileLandmines(t *testing.T) {
 	} {
 		if got[id] != want {
 			t.Errorf("got %d %s findings, want %d", got[id], id, want)
+		}
+	}
+}
+
+// A package finding names the archive member it is about: that path is all a
+// reader has to go on, since an archive has no lines.
+func TestPackageFindingsNameTheMember(t *testing.T) {
+	want := map[string]string{
+		"PB827": "usr/lib/libdemo.la",
+		"PB828": "usr/lib/perl5/perllocal.pod",
+		"PB837": "usr/share/doc/demo/.doctrees/environment.pickle",
+		"PB838": "usr/share/applications/mimeinfo.cache",
+	}
+	var members []pkgtest.Member
+	for _, name := range want {
+		members = append(members, pkgtest.Member{Name: name, Data: []byte("x")})
+	}
+	members = append(members, pkgtest.Member{Name: "usr/share/doc/demo/README", Data: []byte("x")})
+	seen := map[string]bool{}
+	for _, f := range pkgLint(t, nil, pkgtest.Info("demo", "any"), members...) {
+		if path, ok := want[f.RuleID]; ok {
+			seen[f.RuleID] = true
+			if f.Path != path {
+				t.Errorf("%s: Path = %q, want %q", f.RuleID, f.Path, path)
+			}
+		}
+	}
+	for id := range want {
+		if !seen[id] {
+			t.Errorf("%s did not fire", id)
 		}
 	}
 }

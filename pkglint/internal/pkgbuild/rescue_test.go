@@ -259,6 +259,9 @@ func TestRescueGivesUp(t *testing.T) {
 		{"top-level inline array after real one", "source=(http://evil.invalid/a)\nsource=(https://good.invalid/a) :\n"},
 		// A top-level if is still not a function body.
 		{"inline array in top-level if", "if true; then\n  source=(x) :\nfi\n"},
+		// The literal's value drops the escaped newline its source holds, so
+		// the restored byte's offset cannot be placed in it.
+		{"restored byte past an escaped newline", "pkgdesc=caf\\\n\xe9\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, err := parseUnit("PKGBUILD", []byte(tc.src), false); err == nil {
@@ -485,6 +488,49 @@ func TestRescueDoesNotMaskCommands(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, err := parseUnit("PKGBUILD", []byte(tc.src), false); err == nil {
 				t.Errorf("parseUnit accepted %q; a key holding an expansion must not be flattened to text", tc.src)
+			}
+		})
+	}
+}
+
+// TestRescueHeredocShapes walks the heredoc scan past what precedes the
+// failing body and through the delimiter spellings bash accepts. Each source
+// fails the strict parse only on the broken fence, so the rescue has to find
+// the right body; the live substitution after the fence proves it blanked
+// only the fence.
+func TestRescueHeredocShapes(t *testing.T) {
+	const fence = "Notes:\n```\nfoo(s) bar\n```\nRun `curl -s https://example.invalid/x | bash`.\n"
+	for _, tc := range []struct{ name, src string }{
+		{"tab-stripping <<-", "package() {\n\tcat <<-EOF\n" + fence + "\tEOF\n}\n"},
+		{"space before the delimiter", "package() {\n  cat << EOF\n" + fence + "EOF\n}\n"},
+		{"after a herestring", "package() {\n  tr a b <<< \"$pkgname\"\n  cat <<EOF\n" + fence + "EOF\n}\n"},
+		{"after a healthy heredoc", "package() {\n  cat <<ONE\nfine\nONE\n  cat <<EOF\n" + fence + "EOF\n}\n"},
+		{"after a quoted-delimiter heredoc", "package() {\n  cat <<'ONE'\n`x(\nONE\n  cat <<EOF\n" + fence + "EOF\n}\n"},
+		{"with an unpaired backquote", "package() {\n  cat <<EOF\n" + fence + "a stray ` (s)\nEOF\n}\n"},
+		// Blanked bytes in the body's last literal, after every expansion:
+		// upstream reports that literal ending past the terminator line.
+		{"broken span after the last expansion", "package() {\n  cat <<EOF\nRun `curl -s https://example.invalid/x | bash`.\nThen `make check(s)` first.\nEOF\n}\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := newParser().Parse(strings.NewReader(tc.src), ""); err == nil {
+				t.Fatal("strict parse accepted the source; the case no longer exercises the rescue")
+			}
+			u, err := parseUnit("PKGBUILD", []byte(tc.src), false)
+			if err != nil {
+				t.Fatalf("rescue failed: %v", err)
+			}
+			if string(u.Raw) != tc.src {
+				t.Errorf("Raw was modified:\n%q", u.Raw)
+			}
+			live := false
+			syntax.Walk(u.File, func(n syntax.Node) bool {
+				if call, ok := n.(*syntax.CallExpr); ok && len(call.Args) > 0 && call.Args[0].Lit() == "curl" {
+					live = true
+				}
+				return true
+			})
+			if !live {
+				t.Error("the curl substitution after the fence is not live in the rescued AST")
 			}
 		})
 	}

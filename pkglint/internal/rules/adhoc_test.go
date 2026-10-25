@@ -347,6 +347,37 @@ func TestNetworkCommandsCoverInstallers(t *testing.T) {
 		"python -m pip install x":             true,
 		"python3 -m pip install --no-index x": false,
 		"python -m venv x":                    false,
+		// The VCS clients fetch only on the subcommands that talk to a remote.
+		"git clone https://example.com/x":  true,
+		"git log":                          false,
+		"svn checkout svn://example.com/x": true,
+		"svn co svn://example.com/x":       true,
+		"svn update":                       true,
+		"svn export svn://example.com/x":   true,
+		"svn info":                         false,
+		"svn log":                          false,
+		"hg clone https://example.com/x":   true,
+		"hg pull":                          true,
+		"hg log":                           false,
+		"hg update":                        false,
+		// pip and uv pip exempt --no-index, and --no-deps when every operand is
+		// local: the project itself, a path, or a wheel.
+		"pip install x":                        true,
+		"pip download x":                       true,
+		"pip list":                             false,
+		"pip install --no-index x":             false,
+		"pip install --no-deps .":              false,
+		"pip install --no-deps dist/x.whl":     false,
+		"pip install --no-deps x":              true,
+		"uv pip install x":                     true,
+		"uv pip download x":                    true,
+		"uv pip list":                          false,
+		"uv pip install --no-index x":          false,
+		"uv pip install --no-deps .":           false,
+		`uv pip install --no-deps "$srcdir"/x`: false,
+		"uv pip install --no-deps dist/x.whl":  false,
+		"uv pip install --no-deps x":           true,
+		"uv pip install --offline x":           false,
 		// rsync is a local copy unless an operand names a host.
 		`rsync -rtl "${srcdir}/opt/jbr" "${pkgdir}/opt"`: false,
 		"rsync -aL out/ out_new/":                        false,
@@ -364,6 +395,28 @@ func TestNetworkCommandsCoverInstallers(t *testing.T) {
 			ids := ruleIDs(lint(t, files))
 			if got := ids["PB201"] > 0; got != want {
 				t.Errorf("PB201 for %q: got %v, want %v (%v)", cmd, got, want, ids)
+			}
+		})
+	}
+}
+
+// PB201 leaves go to PB204, so the go entry is read through PB602, which
+// takes networkCommands as it is.
+func TestNetworkCommandsGo(t *testing.T) {
+	cases := map[string]bool{
+		"go get example.com/x":            true,
+		"go mod download":                 true,
+		"go install example.com/x@v1.2.3": true,
+		"go install ./cmd/x":              false,
+		"go build ./...":                  false,
+		"go version":                      false,
+	}
+	for cmd, want := range cases {
+		t.Run(cmd, func(t *testing.T) {
+			files := map[string]string{"PKGBUILD": pkgbuildWith("", "pkgver() {\n  "+cmd+"\n}")}
+			ids := ruleIDs(lint(t, files))
+			if got := ids["PB602"] > 0; got != want {
+				t.Errorf("PB602 for %q: got %v, want %v (%v)", cmd, got, want, ids)
 			}
 		})
 	}

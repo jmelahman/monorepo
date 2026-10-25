@@ -3,6 +3,7 @@ package cli
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"debug/elf"
 	"encoding/json"
 	"errors"
@@ -14,9 +15,11 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/jmelahman/pkglint/internal/pkgfile/pkgtest"
+	"github.com/jmelahman/pkglint/internal/rules"
 )
 
 // TestMain clears makepkg's destinations and pkglint's runtime selection out
@@ -1437,5 +1440,74 @@ func TestPackFileRefusesSwap(t *testing.T) {
 	}
 	if err := packFile(tar.NewWriter(io.Discard), &tar.Header{Name: "build/PKGBUILD"}, path, walked); err != nil {
 		t.Errorf("the unchanged file: %v", err)
+	}
+}
+
+// The gate only loosens as far as --fail-on says: "never" and anything
+// unparseable leave it at critical rather than opening it.
+func TestRefusalGate(t *testing.T) {
+	for failOn, want := range map[string]rules.Severity{
+		"never":    rules.Critical,
+		"bogus":    rules.Critical,
+		"":         rules.Critical,
+		"error":    rules.Error,
+		"info":     rules.Info,
+		"critical": rules.Critical,
+	} {
+		if got := refusalGate(failOn); got != want {
+			t.Errorf("refusalGate(%q) = %v, want %v", failOn, got, want)
+		}
+	}
+}
+
+func TestDescribe(t *testing.T) {
+	exitErr := exec.Command("sh", "-c", "exit 3").Run()
+	if got := describe(context.Background(), "makepkg", exitErr).Error(); got != "makepkg exited 3" {
+		t.Errorf("exit status: got %q", got)
+	}
+	if got := describe(context.Background(), "makepkg", exec.ErrNotFound).Error(); !strings.HasPrefix(got, "makepkg: ") {
+		t.Errorf("other error: got %q", got)
+	}
+	// A cancelled build's exit status is the signal that killed it, not
+	// anything makepkg decided.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if got := describe(ctx, "makepkg", exitErr).Error(); got != "makepkg: interrupted" {
+		t.Errorf("cancelled: got %q", got)
+	}
+}
+
+// moveFile's copy fallback runs when --keep is on another filesystem than the
+// build tree; it must land the whole file under dst and leave no temporary.
+func TestMoveFileAcrossFilesystems(t *testing.T) {
+	src, dst := t.TempDir(), "/dev/shm"
+	var a, b syscall.Stat_t
+	if syscall.Stat(src, &a) != nil || syscall.Stat(dst, &b) != nil || a.Dev == b.Dev {
+		t.Skip("no second filesystem to move across")
+	}
+	dst, err := os.MkdirTemp(dst, "pkglint-test-")
+	if err != nil {
+		t.Skip(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dst) })
+	data := bytes.Repeat([]byte("pkg"), 1<<16)
+	from, to := filepath.Join(src, "demo-1.0-1-x86_64.pkg.tar.zst"), filepath.Join(dst, "demo-1.0-1-x86_64.pkg.tar.zst")
+	if err := os.WriteFile(from, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := moveFile(from, to); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(to); err != nil || !bytes.Equal(got, data) {
+		t.Fatalf("moved file differs (err %v)", err)
+	}
+	if fi, _ := os.Stat(to); fi.Mode().Perm() != 0o644 {
+		t.Errorf("mode = %v, want 0644", fi.Mode().Perm())
+	}
+	if _, err := os.Stat(from); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("source still present: %v", err)
+	}
+	if entries, _ := os.ReadDir(dst); len(entries) != 1 {
+		t.Errorf("destination holds %d entries, want just the archive", len(entries))
 	}
 }

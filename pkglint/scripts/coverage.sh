@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # A ratchet, not a target: raise it as gaps close, never lower it.
-floor=93.0
+floor=93.5
 
 out="$(mktemp)"
 trap 'rm -f "$out"' EXIT
