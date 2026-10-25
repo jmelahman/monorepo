@@ -37,29 +37,29 @@ func (p *Player) PlaySound(dataDir string, sound sounds.Sound) error {
 		err := download.FileWithProgress(sound.Url, soundPath)
 		if err != nil {
 			if err := os.Remove(soundPath); err != nil {
-				return fmt.Errorf("error removing sound file: %v", err)
+				return fmt.Errorf("error removing sound file: %w", err)
 			}
-			return fmt.Errorf("error downloading sound: %v", err)
+			return fmt.Errorf("error downloading sound: %w", err)
 		}
 		file, err = os.Open(soundPath)
 		if err != nil {
-			return fmt.Errorf("error opening file: %v", err)
+			return fmt.Errorf("error opening file: %w", err)
 		}
 	} else if err != nil {
-		return fmt.Errorf("error opening file: %v", err)
+		return fmt.Errorf("error opening file: %w", err)
 	}
 
 	stream, _, err := mp3.Decode(file)
 	if err != nil {
 		if err := os.Remove(file.Name()); err != nil {
-			return fmt.Errorf("error removing file: %v", err)
+			return fmt.Errorf("error removing file: %w", err)
 		}
-		return fmt.Errorf("error decoding file: %v", err)
+		return fmt.Errorf("error decoding file: %w", err)
 	}
 
 	loopStream, err := beep.Loop2(stream)
 	if err != nil {
-		return fmt.Errorf("error creating loop stream: %v", err)
+		return fmt.Errorf("error creating loop stream: %w", err)
 	}
 
 	p.ctrl = &beep.Ctrl{Streamer: loopStream, Paused: false}

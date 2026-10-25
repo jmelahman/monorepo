@@ -1,6 +1,7 @@
 package picker
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"
@@ -43,9 +44,9 @@ func ListPicker(items []sounds.Sound) (int, error) {
 		event := screen.PollEvent()
 		switch ev := event.(type) {
 		case *tcell.EventKey:
-			switch ev.Key() {
+			switch ev.Key() { //nolint:exhaustive // only Escape/Enter/Up/Down are bound; tcell.Key has ~170 values
 			case tcell.KeyEscape:
-				return -1, fmt.Errorf("selection canceled")
+				return -1, errors.New("selection canceled")
 			case tcell.KeyEnter:
 				return selectedIndex, nil
 			case tcell.KeyUp:
