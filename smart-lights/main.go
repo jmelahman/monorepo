@@ -92,7 +92,6 @@ func (s *scanner) run(
 	dropdown *tview.DropDown,
 	onSelect func(bluetooth.Address),
 	report func(string, ...any)) {
-
 	for {
 		// Returns once ble.StopScanning is called.
 		err := ble.ScanForDevices(adapter, func(result ble.ScanResult) {
