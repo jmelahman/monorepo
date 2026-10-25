@@ -34,7 +34,10 @@ database — and the fixers re-check the pairing themselves
 properties on any fix added to `internal/rules/fixpkg.go`.
 
 (`--fix` does start `git ls-remote` to resolve a VCS ref — a subprocess, not the
-input: the URL passes `allowedGitURL`'s scheme allowlist, which exists to keep
+input — and probes https URLs; both live in `internal/netprobe`, the only
+network access `--fix` performs (`pkglint build` is the exception: makepkg
+fetches the sources, and the sync runs pacman). The git URL passes
+`allowedGitURL`'s scheme allowlist, which exists to keep
 git's `ext::` "run this command" transport out. Keep it that way.)
 
 - The command lives in `internal/cli`; the module root is a one-line `main`
