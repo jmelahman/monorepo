@@ -496,6 +496,9 @@ func fixVariableTypes(ctx *Context, _ *FixEnv) []Edit {
 		if hasVarRef(firstValue(v.Values)) {
 			continue
 		}
+		if !sameInArray(raw, v.Assign.Value) {
+			continue
+		}
 		vs, ve := off(v.Assign.Value.Pos()), off(v.Assign.Value.End())
 		if vs < 0 || ve > len(raw) || vs > ve {
 			continue
@@ -507,6 +510,56 @@ func fixVariableTypes(ctx *Context, _ *FixEnv) []Edit {
 		})
 	}
 	return edits
+}
+
+// sameInArray reports whether w, moved verbatim from `name=w` to `name=(w)`,
+// still expands to the one string it assigned. An assignment's value is
+// exempt from expansions an array element is not: unquoted, `{a,b}` becomes
+// two elements, `*` whatever the directory holds, and `~` a home directory
+// either way but not always the same one. Quoted text and plain literals are
+// the shapes that mean the same in both places.
+//
+// That is a prediction, so the wrapped text is then parsed back: it must be
+// one element rendering to the value the scalar had. Whatever else bash and
+// mvdan/sh read differently inside parentheses — `#` opening a comment, a
+// leading `=` the parser refuses — fails there rather than in a list here.
+func sameInArray(raw []byte, w *syntax.Word) bool {
+	for _, p := range w.Parts {
+		switch p := p.(type) {
+		case *syntax.SglQuoted:
+		case *syntax.DblQuoted:
+			for _, q := range p.Parts {
+				if _, ok := q.(*syntax.Lit); !ok {
+					return false
+				}
+			}
+		case *syntax.Lit:
+			if strings.ContainsAny(p.Value, "{}*?[]~!()") {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	want, dyn := renderPlain(w)
+	if dyn {
+		return false
+	}
+	text := "x=(" + string(raw[off(w.Pos()):off(w.End())]) + ")\n"
+	f, err := syntax.NewParser(syntax.Variant(syntax.LangBash)).Parse(strings.NewReader(text), "")
+	if err != nil || len(f.Stmts) != 1 {
+		return false
+	}
+	call, _ := f.Stmts[0].Cmd.(*syntax.CallExpr)
+	if call == nil || len(call.Args) != 0 || len(call.Assigns) != 1 || call.Assigns[0].Array == nil {
+		return false
+	}
+	elems := call.Assigns[0].Array.Elems
+	if len(elems) != 1 || elems[0].Index != nil || elems[0].Value == nil {
+		return false
+	}
+	got, dyn := renderPlain(elems[0].Value)
+	return !dyn && got == want
 }
 
 // --- PB709: schema variables set inside package functions -------------------

@@ -219,6 +219,13 @@ func newParser() *syntax.Parser {
 	return syntax.NewParser(syntax.KeepComments(true), syntax.Variant(syntax.LangBash))
 }
 
+// ParsesStrictly reports whether raw is bash the parser accepts as written,
+// with no rescue: what bash itself would accept, as far as pkglint can say.
+func ParsesStrictly(raw []byte) bool {
+	_, err := newParser().Parse(bytes.NewReader(raw), "")
+	return err == nil
+}
+
 // maxSourceFile bounds a PKGBUILD, .SRCINFO, or install scriptlet. The
 // largest real PKGBUILDs in the AUR are well under 1 MiB; the ceiling exists
 // so a checkout that points one of these names at a device or a huge file

@@ -2090,7 +2090,8 @@ func TestMemoizeEnvNil(t *testing.T) {
 	}
 }
 
-// Two fixers that undo each other must stop at the round cap rather than spin.
+// Two fixers that undo each other must stop at the round cap rather than spin,
+// and write nothing: every round they took is the oscillation's output.
 func TestFixStopsAtRoundCap(t *testing.T) {
 	flip := Rule{ID: "PB000", Scope: ScopePKGBUILD, FixLevel: FixSafe, Check: func(*Context) []Finding { return nil },
 		Fix: func(ctx *Context, _ *FixEnv) []Edit {
@@ -2110,8 +2111,8 @@ func TestFixStopsAtRoundCap(t *testing.T) {
 	registryAll = []Rule{flip}
 	t.Cleanup(func() { registryAll = saved })
 
-	if got := len(fixRounds(t, map[string]string{"PKGBUILD": renameCollision}, FixSafe, nil)); got != maxFixRounds {
-		t.Errorf("expected %d rounds, got %d", maxFixRounds, got)
+	if got := fixRounds(t, map[string]string{"PKGBUILD": renameCollision}, FixSafe, nil); len(got) != 0 {
+		t.Errorf("a fix that never converges applied %d round(s); want none", len(got))
 	}
 }
 
@@ -2210,4 +2211,90 @@ build() {
 		mustContain(t, got, "go build -buildmode=pie -trimpath -modcacherw -o demo .")
 		mustContain(t, got, `export GOFLAGS="-buildmode=pie"`)
 	})
+}
+
+// fixRound applies one round of fixes to a PKGBUILD and returns the result,
+// beneath Fix's guards: Fix drops a round that stops parsing or never
+// converges, which would hide the fixer bug these tests are about.
+func fixRound(t *testing.T, src string, level FixLevel) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg, err := pkgbuild.Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	for _, r := range applyByUnit(pkg, CollectEdits(NewContext(pkg), nil, level, contractFixEnv())) {
+		if filepath.Base(r.Path) == "PKGBUILD" {
+			return string(r.Fixed)
+		}
+	}
+	return src
+}
+
+// A fixer moves text into a new context — a value into parentheses, a line
+// next to another statement, a statement out from between its neighbours —
+// and the shapes here are where the text means something else there. Each
+// was found by FuzzRunAndFix; the fixed file must still parse and must not
+// hold the misreading.
+func TestFixesKeepTheirTextsMeaning(t *testing.T) {
+	const head = "pkgname=demo\npkgver=1\npkgrel=1\narch=('x86_64')\n"
+	for _, tc := range []struct {
+		name, src string
+		absent    []string // what the misplaced edit used to write
+		present   []string
+	}{
+		{"PB708 leaves a brace expansion scalar", head + "depends={gtk3,glib2}\n",
+			[]string{"({gtk3"}, []string{"depends={gtk3,glib2}"}},
+		{"PB708 leaves a glob scalar", head + "depends=gtk*\n",
+			[]string{"(gtk*)"}, nil},
+		{"PB708 leaves a value that would turn into a comment", head + "depends=#\n",
+			[]string{"(#)"}, nil},
+		{"PB708 still wraps a plain word", head + "depends=gtk3\n",
+			nil, []string{"depends=(gtk3)"}},
+		{"PB944 does not write into a function opened on the anchor line",
+			head + "url=https://example.com; build() {\n  cargo build --release --locked\n}\npackage() { :; }\n",
+			[]string{"makedepends"}, nil},
+		{"PB204 copies only the cd from a body opened on the header line",
+			head + "makedepends=(go)\nbuild() { cd \"$pkgname-$pkgver\"\n  go build -buildmode=pie -trimpath -modcacherw -o demo .\n}\npackage() { :; }\n",
+			[]string{"prepare() {\nbuild()"}, []string{"prepare() {\n  cd \"$pkgname-$pkgver\"\n"}},
+		{"PB971 takes the separator with the statement it removes",
+			"pkgname=ttf-demo\npkgver=1\npkgrel=1\narch=('any')\ndepends=('fontconfig'); license=('OFL-1.1')\npackage() { :; }\n",
+			[]string{"; license"}, []string{"\nlicense=('OFL-1.1')"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if !pkgbuild.ParsesStrictly([]byte(tc.src)) {
+				t.Fatalf("fixture does not parse:\n%s", tc.src)
+			}
+			got := fixRound(t, tc.src, FixUnsafe)
+			if !pkgbuild.ParsesStrictly([]byte(got)) {
+				t.Fatalf("the fix broke the parse:\n%s", got)
+			}
+			for _, s := range tc.absent {
+				mustNotContain(t, got, s)
+			}
+			for _, s := range tc.present {
+				mustContain(t, got, s)
+			}
+		})
+	}
+}
+
+// Fix's own guards, for the fixer bug no test has found yet: a round that
+// turns parsing bash into bash that does not parse is not applied.
+func TestFixDropsARoundThatBreaksTheParse(t *testing.T) {
+	breaker := Rule{ID: "PB000", Scope: ScopePKGBUILD, FixLevel: FixSafe, Check: func(*Context) []Finding { return nil },
+		Fix: func(ctx *Context, _ *FixEnv) []Edit {
+			return []Edit{{Path: ctx.Pkg.PKGBUILD.Path, Start: 0, End: 0, New: "(", Line: 1}}
+		}}
+	registry()
+	saved := registryAll
+	registryAll = []Rule{breaker}
+	t.Cleanup(func() { registryAll = saved })
+
+	if got := fixRounds(t, map[string]string{"PKGBUILD": renameCollision}, FixSafe, nil); len(got) != 0 {
+		t.Errorf("a round that broke the parse was applied:\n%s", got[0])
+	}
 }

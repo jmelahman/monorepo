@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("A000000=0 pkgver=0 a0000000=('''')&0(){ cargo 0000\n}")

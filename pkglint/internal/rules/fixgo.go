@@ -86,6 +86,9 @@ func goModDownloadEdit(ctx *Context, c Command) (Edit, bool) {
 		return Edit{}, false
 	}
 	at := lineStart(u.Raw, off(fd.Pos()))
+	if strings.TrimLeft(string(u.Raw[at:off(fd.Pos())]), " \t") != "" {
+		return Edit{}, false // the function shares its line; its start is not top level
+	}
 	var b strings.Builder
 	b.WriteString("prepare() {\n")
 	if cds := fnCommands(ctx, u, c.Fn, "cd"); len(cds) > 0 {
@@ -116,7 +119,11 @@ func cdLine(cd Command, indent string) string {
 		end++
 	}
 	line := string(u.Raw[start:end])
-	if rest := line[off(cd.Stmt.End())-start:]; rest != "" && !cdGuardRe.MatchString(rest) {
+	// Only the cd itself is copied when the line holds more than it and a
+	// guard: `build() { cd src` would otherwise put build()'s opening inside
+	// the prepare() being written.
+	lead := line[:off(cd.Stmt.Pos())-start]
+	if rest := line[off(cd.Stmt.End())-start:]; strings.TrimLeft(lead, " \t") != "" || rest != "" && !cdGuardRe.MatchString(rest) {
 		return indent + "cd " + cdTarget(cd) + "\n"
 	}
 	return line + "\n"
@@ -522,6 +529,14 @@ func fixGoEnvWeakening(ctx *Context, _ *FixEnv) []Edit {
 	var edits []Edit
 	// Inline command prefixes: `GOSUMDB=off go build ...`.
 	for _, c := range ctx.Commands() {
+		// The prefix is what keeps the word after it from being read as a
+		// reserved word: `GOFLAGS=… !` runs a command named `!`, and with the
+		// prefix gone it negates nothing, which bash refuses.
+		if len(c.Call.Args) > 0 {
+			if lit := c.Call.Args[0].Lit(); syntax.IsKeyword(lit) || lit == "{" || lit == "}" {
+				continue
+			}
+		}
 		for _, as := range c.Call.Assigns {
 			if isGoWeakeningAssign(as) {
 				edits = append(edits, removeAssignEdit(c.Unit, as))
@@ -573,7 +588,10 @@ func assignStmtEdits(u *pkgbuild.Unit, stmt *syntax.Stmt, assigns []*syntax.Assi
 		return nil
 	}
 	if len(bad) == len(assigns) {
-		return []Edit{removeStmtLine(u, stmt, bad[0].Name.Value)}
+		if e, ok := removeStmtLine(u, stmt, bad[0].Name.Value); ok {
+			return []Edit{e}
+		}
+		return nil
 	}
 	edits := make([]Edit, 0, len(bad))
 	for _, as := range bad {
@@ -597,8 +615,11 @@ func removeAssignEdit(u *pkgbuild.Unit, as *syntax.Assign) Edit {
 	}
 }
 
-func removeStmtLine(u *pkgbuild.Unit, stmt *syntax.Stmt, name string) Edit {
-	start, end := lineCut(u.Raw, off(stmt.Pos()), off(stmt.End()))
+func removeStmtLine(u *pkgbuild.Unit, stmt *syntax.Stmt, name string) (Edit, bool) {
+	start, end, ok := lineCut(u.Raw, off(stmt.Pos()), off(stmt.End()))
+	if !ok {
+		return Edit{}, false
+	}
 	return Edit{
 		Path:  u.Path,
 		Start: start,
@@ -606,5 +627,5 @@ func removeStmtLine(u *pkgbuild.Unit, stmt *syntax.Stmt, name string) Edit {
 		New:   "",
 		Line:  int(stmt.Pos().Line()),
 		Desc:  fmt.Sprintf("remove %s assignment (re-enables Go module verification)", name),
-	}
+	}, true
 }

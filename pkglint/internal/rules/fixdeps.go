@@ -212,6 +212,12 @@ func fixVCSProvidesConflicts(ctx *Context, _ *FixEnv) []Edit {
 	var bases []string
 	seen := map[string]bool{}
 	for _, g := range gaps {
+		// The counterpart's name is derived from pkgname, which PB701 may
+		// already be rejecting: writing a name makepkg refuses into two
+		// arrays answers one finding with two more.
+		if pkgbuild.NameProblem(g.Base) != "" {
+			return nil
+		}
 		if !seen[g.Base] {
 			seen[g.Base] = true
 			bases = append(bases, g.Base)

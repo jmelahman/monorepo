@@ -397,10 +397,12 @@ func newArraysEdit(ctx *Context, fields []string, entries []string, desc string)
 	if at <= 0 || at > len(u.Raw) {
 		return Edit{}, false
 	}
-	// Past anything else on the anchor's closing line — a trailing comment
-	// belongs to the line it was written on, not to the new assignment.
-	for at < len(u.Raw) && u.Raw[at] != '\n' {
-		at++
+	// Past the rest of the anchor's closing line — a trailing comment belongs
+	// to the line it was written on, not to the new assignment. Anything else
+	// there declines the fix: `url=…; build() {` would put the assignment
+	// inside the function, where it declares nothing and the finding stands.
+	if at = endOfTrailer(u.Raw, at); at < 0 {
+		return Edit{}, false
 	}
 	e := Edit{Path: u.Path, Start: at, End: at + 1, Line: lineOf(u.Raw, at), Desc: desc,
 		creates: creates, createTail: "\n", createQuote: arrayQuoteStyle(ctx.Pkg)}
@@ -566,7 +568,10 @@ func removeArrayElemEdits(u *pkgbuild.Unit, v *pkgbuild.Var, words []*syntax.Wor
 		return nil
 	}
 	if len(drop) == len(v.Assign.Array.Elems) {
-		start, end := lineCut(u.Raw, off(v.Assign.Pos()), off(v.Assign.End()))
+		start, end, ok := lineCut(u.Raw, off(v.Assign.Pos()), off(v.Assign.End()))
+		if !ok {
+			return nil
+		}
 		return []Edit{{Path: u.Path, Start: start, End: end, New: "",
 			Line: int(v.Assign.Pos().Line()), Desc: desc}}
 	}
@@ -613,21 +618,71 @@ func arrayElemCut(raw []byte, start, end int) (int, int) {
 
 // lineCut widens a byte range to the whole line, newline included, when only
 // indentation precedes it — so deleting a statement does not leave the blank
-// line it stood on. Anything sharing the line keeps it.
-func lineCut(raw []byte, start, end int) (int, int) {
+// line it stood on. Anything sharing the line keeps it, and a `;` or `&`
+// that ended the deleted statement goes with it: `depends=(x); b=1` leaves
+// `b=1`, not a line opening on a separator bash refuses.
+//
+// It reports false when what surrounds the range would not survive losing it
+// — an operator that needs an operand, like the `&&` of `a && x=1` or the
+// `|` of `x=1 | b` — and the caller then has no edit to make.
+func lineCut(raw []byte, start, end int) (int, int, bool) {
+	blank := func(c byte) bool { return c == ' ' || c == '\t' }
 	ls := start
-	for ls > 0 && (raw[ls-1] == ' ' || raw[ls-1] == '\t') {
+	for ls > 0 && blank(raw[ls-1]) {
 		ls--
 	}
+	if ls > 0 && (raw[ls-1] == '|' || raw[ls-1] == '&' && ls > 1 && raw[ls-2] == '&') {
+		return 0, 0, false
+	}
+	e := end
+	for e < len(raw) && blank(raw[e]) {
+		e++
+	}
+	if e < len(raw) && (raw[e] == ';' || raw[e] == '&' || raw[e] == '|') {
+		if e+1 < len(raw) && (raw[e+1] == raw[e] || raw[e] == '|' || raw[e+1] == '>' || raw[e+1] == '|') {
+			return 0, 0, false // &&, ||, ;;, |, &>, ;| — an operator, not a terminator
+		}
+		e++
+		for e < len(raw) && blank(raw[e]) {
+			e++
+		}
+		end = e
+	}
 	if ls != 0 && raw[ls-1] != '\n' {
-		return start, end
+		return start, end, true
 	}
 	start = ls
-	for end < len(raw) && (raw[end] == ' ' || raw[end] == '\t') {
+	for end < len(raw) && blank(raw[end]) {
 		end++
 	}
 	if end < len(raw) && raw[end] == '\n' {
 		end++
 	}
-	return start, end
+	return start, end, true
+}
+
+// endOfTrailer returns the offset of the newline (or end of file) closing the
+// line that a statement ending at i is on, provided all that follows it there
+// is blanks, one `;` and a comment. Otherwise it returns -1: another statement
+// shares the line, and the line's end is no longer known to be top level.
+func endOfTrailer(raw []byte, i int) int {
+	skipBlanks := func() {
+		for i < len(raw) && (raw[i] == ' ' || raw[i] == '\t') {
+			i++
+		}
+	}
+	skipBlanks()
+	if i < len(raw) && raw[i] == ';' {
+		i++
+		skipBlanks()
+	}
+	if i < len(raw) && raw[i] == '#' {
+		for i < len(raw) && raw[i] != '\n' {
+			i++
+		}
+	}
+	if i < len(raw) && raw[i] != '\n' {
+		return -1
+	}
+	return i
 }

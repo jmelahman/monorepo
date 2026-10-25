@@ -214,8 +214,9 @@ func dropGroups(edits []Edit, groups map[string]bool) []Edit {
 }
 
 // maxFixRounds bounds how many times Fix re-lints its own output. Real
-// packages settle in two rounds; the cap is for a pair of fixers that would
-// undo each other, which must stop rather than spin.
+// packages settle in two rounds; reaching the cap means a fixer whose edit
+// does not clear its own finding, or two that undo each other, and Fix then
+// applies nothing at all: the rounds already taken are that same bug's output.
 const maxFixRounds = 8
 
 // Fix computes and applies auto-fixes for a package at the given level.
@@ -233,11 +234,19 @@ const maxFixRounds = 8
 func Fix(pkg *pkgbuild.Package, ignore map[string]bool, level FixLevel, env *FixEnv) []FixResult {
 	env = memoizeEnv(env)
 	var all []FixResult
-	for round := 0; round < maxFixRounds; round++ {
+	for round := 0; ; round++ {
+		if round == maxFixRounds {
+			return nil
+		}
 		results := applyByUnit(pkg, CollectEdits(NewContext(pkg), ignore, level, env))
+		kept := len(all)
 		contents := map[string][]byte{}
 		for _, r := range results {
-			if r.Changed() {
+			// Whatever the edits were, a file bash accepted must still be
+			// one it accepts. A fixer that breaks that has a bug, and its
+			// unit keeps this round's input rather than a PKGBUILD makepkg
+			// cannot source.
+			if r.Changed() && (!pkgbuild.ParsesStrictly(r.Original) || pkgbuild.ParsesStrictly(r.Fixed)) {
 				all = append(all, r)
 				contents[r.Path] = r.Fixed
 			}
@@ -247,8 +256,10 @@ func Fix(pkg *pkgbuild.Package, ignore map[string]bool, level FixLevel, env *Fix
 		}
 		next, err := pkg.Reload(contents)
 		if err != nil {
-			// What the round wrote no longer loads. It stands, since the
-			// round's own edits were each checked; nothing is built on it.
+			// What the round wrote no longer loads, even by rescue: a fixer
+			// misplaced an edit, and the round is dropped whole, since which
+			// one did it is not knowable from here.
+			all = all[:kept]
 			break
 		}
 		pkg = next
