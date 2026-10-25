@@ -1027,7 +1027,19 @@ var sumHexLengths = map[string]int{
 	"md5": 32, "sha1": 40, "sha224": 56, "sha256": 64, "sha384": 96, "sha512": 128, "b2": 128,
 }
 
-var hexRe = regexp.MustCompile(`^[0-9a-fA-F]+$`)
+// isHex reports whether s is a non-empty string of hex digits.
+func isHex(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F') {
+			return false
+		}
+	}
+	return true
+}
 
 func checkMalformedChecksums(ctx *Context) []Finding {
 	var out []Finding
@@ -1049,7 +1061,7 @@ func checkMalformedChecksums(ctx *Context) []Finding {
 					out = append(out, findingAt("PB114", Error, ctx.Pkg.PKGBUILD.Path, e.Pos,
 						"%s entry %q is %d characters, but a %s digest is %d hex characters; this can never verify",
 						name, val, len(val), algo, want))
-				case !hexRe.MatchString(val):
+				case !isHex(val):
 					out = append(out, findingAt("PB114", Error, ctx.Pkg.PKGBUILD.Path, e.Pos,
 						"%s entry %q contains non-hex characters; this can never verify", name, val))
 				}

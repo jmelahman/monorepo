@@ -122,9 +122,25 @@ var proxyLaunchers = map[string]bool{"torsocks": true, "proxychains": true, "pro
 // the retired v2 form, 56 for v3.
 var onionHost = regexp.MustCompile(`(?i)\b(?:[a-z2-7]{56}|[a-z2-7]{16})\.onion\b`)
 
+// hasOnionHost is onionHost.MatchString behind a cheap test: every match ends
+// in ".onion", which almost no argument or URL contains, so the regexp only
+// runs for the few that do.
+func hasOnionHost(s string) bool {
+	for rest := s; ; {
+		i := strings.IndexByte(rest, '.')
+		if i < 0 || len(rest)-i < len(".onion") {
+			return false
+		}
+		if strings.EqualFold(rest[i:i+len(".onion")], ".onion") {
+			return onionHost.MatchString(s)
+		}
+		rest = rest[i+1:]
+	}
+}
+
 // anonymizes reports whether a proxy setting points at SOCKS or an onion host.
 func anonymizes(v string) bool {
-	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(v)), "socks") || onionHost.MatchString(v)
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(v)), "socks") || hasOnionHost(v)
 }
 
 // curlValueFlags are the short curl options that take a value, which ends a
@@ -224,7 +240,7 @@ func checkAnonymizedFetch(ctx *Context) []Finding {
 				break
 			}
 		}
-		if slices.ContainsFunc(c.Args, onionHost.MatchString) {
+		if slices.ContainsFunc(c.Args, hasOnionHost) {
 			out = append(out, c.finding("PB310", sev, "%s names a Tor onion service; nothing a package needs is hosted on one", c.RawName))
 		}
 	}
@@ -247,7 +263,7 @@ func checkAnonymizedFetch(ctx *Context) []Finding {
 		})
 	}
 	for _, e := range slices.Concat(ctx.Pkg.Sources(), ctx.Pkg.ConditionalSources()) {
-		if !e.Local && onionHost.MatchString(e.URL) {
+		if !e.Local && hasOnionHost(e.URL) {
 			out = append(out, findingAt("PB310", Error, ctx.Pkg.PKGBUILD.Path, e.Pos,
 				"source entry %q is fetched from a Tor onion service", e.Raw))
 		}
@@ -1681,12 +1697,13 @@ func checkObfuscatedLiterals(ctx *Context) []Finding {
 	for i := range units {
 		u := &units[i]
 		for lineNo, line := range strings.Split(string(u.Raw), "\n") {
-			if slices.ContainsFunc(hexRunRe.FindAllString(line, -1), variedBytes) {
+			// `\x` starts every hex run; most lines have none.
+			if strings.Contains(line, `\x`) && slices.ContainsFunc(hexRunRe.FindAllString(line, -1), variedBytes) {
 				out = append(out, Finding{RuleID: "PB307", Severity: Warn,
 					Message: "long hex-escape run looks like an encoded payload",
 					Path:    u.Path, Line: lineNo + 1, Col: 1})
 			}
-			if m := base64BlobRe.FindString(line); m != "" && !looksLikeDigestContext(line) {
+			if m := base64Blob(line); m != "" && !looksLikeDigestContext(line, m) {
 				out = append(out, Finding{RuleID: "PB307", Severity: Warn,
 					Message: "large base64-like literal embedded in build script",
 					Path:    u.Path, Line: lineNo + 1, Col: 1})
@@ -1706,11 +1723,41 @@ func variedBytes(run string) bool {
 
 // looksLikeDigestContext avoids flagging checksum arrays: hex digests are
 // subsets of the base64 alphabet.
-func looksLikeDigestContext(line string) bool {
+func looksLikeDigestContext(line, blob string) bool {
 	trimmed := strings.TrimSpace(line)
 	if strings.Contains(trimmed, "sums") {
 		return true
 	}
-	m := base64BlobRe.FindString(line)
-	return regexp.MustCompile(`^[0-9a-fA-F]+$`).MatchString(m)
+	return isHex(blob)
+}
+
+// base64Blob returns what base64BlobRe.FindString does — the leftmost run of
+// 120 or more base64 characters with up to two trailing '=' — without the
+// regexp, which spent most of its time on lines too short or too punctuated to
+// hold one.
+func base64Blob(line string) string {
+	if len(line) < 120 {
+		return ""
+	}
+	isB64 := func(c byte) bool {
+		return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '+' || c == '/'
+	}
+	start := -1
+	for i := 0; i <= len(line); i++ {
+		if i < len(line) && isB64(line[i]) {
+			if start < 0 {
+				start = i
+			}
+			continue
+		}
+		if start >= 0 && i-start >= 120 {
+			end := i
+			for n := 0; n < 2 && end < len(line) && line[end] == '='; n++ {
+				end++
+			}
+			return line[start:end]
+		}
+		start = -1
+	}
+	return ""
 }
