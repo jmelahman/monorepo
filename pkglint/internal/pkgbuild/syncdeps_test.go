@@ -1,27 +1,10 @@
-package rules
+package pkgbuild
 
 import (
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/jmelahman/pkglint/internal/pkgbuild"
 )
-
-func loadPKGBUILD(t *testing.T, src string) *pkgbuild.Package {
-	t.Helper()
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "PKGBUILD"), []byte(src), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	pkg, err := pkgbuild.Load(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return pkg
-}
 
 const syncHeader = "pkgname=foo\npkgver=1\npkgrel=1\narch=(x86_64)\n"
 
@@ -140,18 +123,5 @@ func TestSyncDepsRefusesDynamic(t *testing.T) {
 				t.Errorf("error %q lacks %q", err, tc.want)
 			}
 		})
-	}
-}
-
-func TestNameProblem(t *testing.T) {
-	for _, name := range []string{"go", "lib32-glibc", "gtk+", "foo@bar", "python-foo_bar"} {
-		if p := NameProblem(name); p != "" {
-			t.Errorf("NameProblem(%q) = %q, want none", name, p)
-		}
-	}
-	for _, name := range []string{"", "-oops", ".x", "a b", "ñ", "x;y"} {
-		if NameProblem(name) == "" {
-			t.Errorf("NameProblem(%q) found nothing", name)
-		}
 	}
 }

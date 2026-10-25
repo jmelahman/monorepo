@@ -104,7 +104,7 @@ archives (default: .)`,
 				if unsafeFix {
 					level = rules.FixUnsafe
 				}
-				code = runFix(paths, opts.disabled(), level, diff, offline, noInline, stdout)
+				code = runFix(paths, opts.disabled(), fixOpts{level: level, diff: diff, offline: offline, noInline: noInline}, stdout)
 				return nil
 			}
 			code = lint(paths, opts, noInline, stdout)
@@ -493,19 +493,27 @@ func fixEnv(offline bool) *rules.FixEnv {
 	return env
 }
 
+// fixOpts are the --fix flags: the level to apply, whether to print rather
+// than write (diff), whether to skip fixes needing the network (offline), and
+// whether to disregard inline-ignore directives so suppressed fixes apply too
+// (noInline).
+type fixOpts struct {
+	level                   rules.FixLevel
+	diff, offline, noInline bool
+}
+
 // runFix applies auto-fixes at the given level, writing files in place (or,
 // with diff, printing the changes it would make). It also nudges toward the
 // manual follow-ups for findings that can't be rewritten mechanically.
-// noInline disregards inline-ignore directives, so suppressed fixes apply too.
-func runFix(paths []string, ignore map[string]bool, level rules.FixLevel, diff, offline, noInline bool, stdout io.Writer) int {
-	env := fixEnv(offline)
+func runFix(paths []string, ignore map[string]bool, o fixOpts, stdout io.Writer) int {
+	env := fixEnv(o.offline)
 	return rewriteMode{
 		refuse: "%s: built packages have no auto-fixable findings; fix the PKGBUILD and rebuild\n",
 		transform: func(pkg *pkgbuild.Package) []rules.FixResult {
-			if noInline {
+			if o.noInline {
 				pkg.Suppressions = nil
 			}
-			return rules.Fix(pkg, ignore, level, env)
+			return rules.Fix(pkg, ignore, o.level, env)
 		},
 		after: func(path string, pkg *pkgbuild.Package, applied int) {
 			// Nudge on what is *left*. Some fixes only sometimes apply — PB102's
@@ -515,9 +523,9 @@ func runFix(paths []string, ignore map[string]bool, level rules.FixLevel, diff, 
 			// the only account of the remaining findings that cannot drift from
 			// the file; with --diff nothing was written, so the original stands.
 			residual := pkg
-			if !diff && applied > 0 {
+			if !o.diff && applied > 0 {
 				if reloaded, err := pkgbuild.Load(path); err == nil {
-					if noInline {
+					if o.noInline {
 						reloaded.Suppressions = nil
 					}
 					residual = reloaded
@@ -530,7 +538,7 @@ func runFix(paths []string, ignore map[string]bool, level rules.FixLevel, diff, 
 		none:    "%s: no auto-fixable findings\n",
 		dryRun:  "%s: %d fix(es) would be applied (dry run)\n",
 		applied: "%s: applied %d fix(es)\n",
-	}.run(paths, diff, stdout)
+	}.run(paths, o.diff, stdout)
 }
 
 // runAddIgnores inserts inline-ignore directives suppressing every finding the

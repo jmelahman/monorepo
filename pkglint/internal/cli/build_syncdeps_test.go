@@ -11,14 +11,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jmelahman/pkglint/internal/rules"
+	"github.com/jmelahman/pkglint/internal/pkgbuild"
 )
 
 func TestSplitSyncdeps(t *testing.T) {
 	for _, tc := range []struct {
 		in, want []string
 		sync     bool
-		run      rules.RunCheck
+		run      pkgbuild.RunCheck
 	}{
 		{in: []string{"-f", "--noconfirm"}, want: []string{"-f", "--noconfirm"}},
 		{in: []string{"-f", "-s"}, want: []string{"-f"}, sync: true},
@@ -40,12 +40,12 @@ func TestSplitSyncdeps(t *testing.T) {
 		{in: []string{"--syncdeps=x"}, want: []string{"--syncdeps=x"}},
 		// The last of --check and --nocheck, in any unambiguous spelling,
 		// decides whether checkdepends are wanted; both stay for makepkg.
-		{in: []string{"-s", "--check"}, want: []string{"--check"}, sync: true, run: rules.CheckForced},
-		{in: []string{"-s", "--ch"}, want: []string{"--ch"}, sync: true, run: rules.CheckForced},
-		{in: []string{"-s", "--nocheck"}, want: []string{"--nocheck"}, sync: true, run: rules.CheckSkipped},
-		{in: []string{"--noch", "-s"}, want: []string{"--noch"}, sync: true, run: rules.CheckSkipped},
-		{in: []string{"--nocheck", "--check"}, want: []string{"--nocheck", "--check"}, run: rules.CheckForced},
-		{in: []string{"--check", "--nocheck"}, want: []string{"--check", "--nocheck"}, run: rules.CheckSkipped},
+		{in: []string{"-s", "--check"}, want: []string{"--check"}, sync: true, run: pkgbuild.CheckForced},
+		{in: []string{"-s", "--ch"}, want: []string{"--ch"}, sync: true, run: pkgbuild.CheckForced},
+		{in: []string{"-s", "--nocheck"}, want: []string{"--nocheck"}, sync: true, run: pkgbuild.CheckSkipped},
+		{in: []string{"--noch", "-s"}, want: []string{"--noch"}, sync: true, run: pkgbuild.CheckSkipped},
+		{in: []string{"--nocheck", "--check"}, want: []string{"--nocheck", "--check"}, run: pkgbuild.CheckForced},
+		{in: []string{"--check", "--nocheck"}, want: []string{"--check", "--nocheck"}, run: pkgbuild.CheckSkipped},
 		// --c and --no are ambiguous to makepkg; nothing is read off them.
 		{in: []string{"--c", "--no"}, want: []string{"--c", "--no"}},
 	} {

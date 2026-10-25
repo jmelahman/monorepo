@@ -61,151 +61,153 @@ var validOptions = map[string]bool{
 	"buildflags": true, "makeflags": true, "lto": true, "ccache": true, "distcc": true,
 }
 
-var correctnessRules = []Rule{
-	{
-		ID:       "PB701",
-		Name:     "invalid-pkgname",
-		Severity: Error,
-		Doc: "pkgname and pkgbase may only contain the characters makepkg allows " +
-			"([A-Za-z0-9@._+-]), must be ASCII, and must not start with a hyphen or dot. makepkg " +
-			"refuses to build a package whose name breaks these rules.",
-		Check: checkPkgName,
-		Bad:   `pkgname=foo:bar   # ':' is not allowed by makepkg`,
-		Good:  `pkgname=foo-bar`,
-		Refs:  []Ref{refGeneralNaming, pkgbuildMan("pkgname", manDirectives)},
-	},
-	{
-		ID:       "PB702",
-		Name:     "invalid-pkgver",
-		Severity: Error,
-		Doc: "pkgver must not be empty and may not contain colons, forward slashes, hyphens or " +
-			"whitespace — those characters have meaning in pacman's version syntax (epoch:, -pkgrel), " +
-			"so makepkg rejects them. makepkg lints the literal value before any pkgver() function " +
-			"runs, so even VCS packages need a valid placeholder.",
-		Check: checkPkgVer,
-		Bad:   `pkgver=1.2.3-beta   # '-' separates pkgver from pkgrel and is not allowed here`,
-		Good:  `pkgver=1.2.3.beta`,
-		Refs:  []Ref{refGeneralVersioning, pkgbuildMan("pkgver", manDirectives)},
-	},
-	{
-		ID:       "PB703",
-		Name:     "invalid-pkgrel",
-		Severity: Error,
-		Doc:      "pkgrel must be of the form 'integer[.integer]' (e.g. 1 or 1.5). makepkg errors otherwise.",
-		Check:    checkPkgRel,
-		Bad:      `pkgrel=1a   # pkgrel must be an integer, optionally with a .minor suffix`,
-		Good:     `pkgrel=1`,
-		Refs:     []Ref{refGeneralVersioning, pkgbuildMan("pkgrel", manDirectives)},
-	},
-	{
-		ID:       "PB704",
-		Name:     "invalid-epoch",
-		Severity: Error,
-		Doc:      "epoch, when set, must be a non-negative integer; makepkg refuses any other value.",
-		Check:    checkEpoch,
-		Bad:      `epoch=1.0   # epoch must be a non-negative integer`,
-		Good:     `epoch=1`,
-		Refs:     []Ref{pkgbuildMan("epoch", manDirectives)},
-	},
-	{
-		ID:       "PB705",
-		Name:     "backup-leading-slash",
-		Severity: Error,
-		Doc: "backup entries are paths relative to the filesystem root, so a leading slash is an " +
-			"error makepkg rejects. Drop it: `etc/foo.conf`, not `/etc/foo.conf`.",
-		Check:    checkBackupSlash,
-		FixLevel: FixSafe,
-		Fix:      fixBackupSlash,
-		Bad:      `backup=('/etc/foo.conf')   # backup paths are relative to /`,
-		Good:     `backup=('etc/foo.conf')`,
-		Refs:     []Ref{pkgbuildMan("backup", manDirectives)},
-	},
-	{
-		ID:       "PB706",
-		Name:     "unknown-option",
-		Severity: Error,
-		Doc: "The options array only accepts makepkg's known toggles (strip, debug, lto, " +
-			"staticlibs, emptydirs, …), each optionally prefixed with '!'. An unrecognized entry is " +
-			"usually a typo that silently does nothing; makepkg flags it as an error.",
-		Check: checkUnknownOptions,
-		Bad:   `options=('!striped')   # typo: not a known makepkg option`,
-		Good:  `options=('!strip')`,
-		Refs:  []Ref{pkgbuildMan("options", manDirectives)},
-	},
-	{
-		ID:       "PB707",
-		Name:     "provides-comparison",
-		Severity: Error,
-		Doc: "provides entries may pin an exact version with '=' but must not use '<' or '>' " +
-			"comparisons — a provide is a concrete capability, not a range. makepkg errors on comparison operators.",
-		Check: checkProvidesComparison,
-		Bad:   `provides=('libfoo<2')   # a provide is a concrete capability, not a range`,
-		Good:  `provides=('libfoo=1.9')`,
-		Refs:  []Ref{pkgbuildMan("provides", manDirectives)},
-	},
-	{
-		ID:       "PB708",
-		Name:     "variable-type",
-		Severity: Error,
-		Doc: "makepkg requires list fields (depends, source, sums, license, options, …) to be " +
-			"arrays and scalar fields (pkgver, url, pkgdesc, …) to be plain strings. A bare " +
-			"`depends=foo` builds by luck at best and errors under makepkg; wrap it: `depends=(foo)`.",
-		Check:    checkVariableTypes,
-		FixLevel: FixSafe,
-		Fix:      fixVariableTypes,
-		Bad:      `depends=gtk3   # list fields must be arrays`,
-		Good:     `depends=('gtk3')`,
-	},
-	{
-		ID:       "PB709",
-		Name:     "package-function-variable",
-		Severity: Error,
-		Doc: "A package_*() function may only override packaging metadata (pkgdesc, depends, " +
-			"optdepends, provides, backup, install, …). Setting pkgver, source, makedepends, or the " +
-			"checksums there is an error: those are resolved before packaging runs.",
-		Check: checkPackageFunctionVars,
-		Bad: `package() {
+func correctnessRules() []Rule {
+	return []Rule{
+		{
+			ID:       "PB701",
+			Name:     "invalid-pkgname",
+			Severity: Error,
+			Doc: "pkgname and pkgbase may only contain the characters makepkg allows " +
+				"([A-Za-z0-9@._+-]), must be ASCII, and must not start with a hyphen or dot. makepkg " +
+				"refuses to build a package whose name breaks these rules.",
+			Check: checkPkgName,
+			Bad:   `pkgname=foo:bar   # ':' is not allowed by makepkg`,
+			Good:  `pkgname=foo-bar`,
+			Refs:  []Ref{refGeneralNaming, pkgbuildMan("pkgname", manDirectives)},
+		},
+		{
+			ID:       "PB702",
+			Name:     "invalid-pkgver",
+			Severity: Error,
+			Doc: "pkgver must not be empty and may not contain colons, forward slashes, hyphens or " +
+				"whitespace — those characters have meaning in pacman's version syntax (epoch:, -pkgrel), " +
+				"so makepkg rejects them. makepkg lints the literal value before any pkgver() function " +
+				"runs, so even VCS packages need a valid placeholder.",
+			Check: checkPkgVer,
+			Bad:   `pkgver=1.2.3-beta   # '-' separates pkgver from pkgrel and is not allowed here`,
+			Good:  `pkgver=1.2.3.beta`,
+			Refs:  []Ref{refGeneralVersioning, pkgbuildMan("pkgver", manDirectives)},
+		},
+		{
+			ID:       "PB703",
+			Name:     "invalid-pkgrel",
+			Severity: Error,
+			Doc:      "pkgrel must be of the form 'integer[.integer]' (e.g. 1 or 1.5). makepkg errors otherwise.",
+			Check:    checkPkgRel,
+			Bad:      `pkgrel=1a   # pkgrel must be an integer, optionally with a .minor suffix`,
+			Good:     `pkgrel=1`,
+			Refs:     []Ref{refGeneralVersioning, pkgbuildMan("pkgrel", manDirectives)},
+		},
+		{
+			ID:       "PB704",
+			Name:     "invalid-epoch",
+			Severity: Error,
+			Doc:      "epoch, when set, must be a non-negative integer; makepkg refuses any other value.",
+			Check:    checkEpoch,
+			Bad:      `epoch=1.0   # epoch must be a non-negative integer`,
+			Good:     `epoch=1`,
+			Refs:     []Ref{pkgbuildMan("epoch", manDirectives)},
+		},
+		{
+			ID:       "PB705",
+			Name:     "backup-leading-slash",
+			Severity: Error,
+			Doc: "backup entries are paths relative to the filesystem root, so a leading slash is an " +
+				"error makepkg rejects. Drop it: `etc/foo.conf`, not `/etc/foo.conf`.",
+			Check:    checkBackupSlash,
+			FixLevel: FixSafe,
+			Fix:      fixBackupSlash,
+			Bad:      `backup=('/etc/foo.conf')   # backup paths are relative to /`,
+			Good:     `backup=('etc/foo.conf')`,
+			Refs:     []Ref{pkgbuildMan("backup", manDirectives)},
+		},
+		{
+			ID:       "PB706",
+			Name:     "unknown-option",
+			Severity: Error,
+			Doc: "The options array only accepts makepkg's known toggles (strip, debug, lto, " +
+				"staticlibs, emptydirs, …), each optionally prefixed with '!'. An unrecognized entry is " +
+				"usually a typo that silently does nothing; makepkg flags it as an error.",
+			Check: checkUnknownOptions,
+			Bad:   `options=('!striped')   # typo: not a known makepkg option`,
+			Good:  `options=('!strip')`,
+			Refs:  []Ref{pkgbuildMan("options", manDirectives)},
+		},
+		{
+			ID:       "PB707",
+			Name:     "provides-comparison",
+			Severity: Error,
+			Doc: "provides entries may pin an exact version with '=' but must not use '<' or '>' " +
+				"comparisons — a provide is a concrete capability, not a range. makepkg errors on comparison operators.",
+			Check: checkProvidesComparison,
+			Bad:   `provides=('libfoo<2')   # a provide is a concrete capability, not a range`,
+			Good:  `provides=('libfoo=1.9')`,
+			Refs:  []Ref{pkgbuildMan("provides", manDirectives)},
+		},
+		{
+			ID:       "PB708",
+			Name:     "variable-type",
+			Severity: Error,
+			Doc: "makepkg requires list fields (depends, source, sums, license, options, …) to be " +
+				"arrays and scalar fields (pkgver, url, pkgdesc, …) to be plain strings. A bare " +
+				"`depends=foo` builds by luck at best and errors under makepkg; wrap it: `depends=(foo)`.",
+			Check:    checkVariableTypes,
+			FixLevel: FixSafe,
+			Fix:      fixVariableTypes,
+			Bad:      `depends=gtk3   # list fields must be arrays`,
+			Good:     `depends=('gtk3')`,
+		},
+		{
+			ID:       "PB709",
+			Name:     "package-function-variable",
+			Severity: Error,
+			Doc: "A package_*() function may only override packaging metadata (pkgdesc, depends, " +
+				"optdepends, provides, backup, install, …). Setting pkgver, source, makedepends, or the " +
+				"checksums there is an error: those are resolved before packaging runs.",
+			Check: checkPackageFunctionVars,
+			Bad: `package() {
   makedepends=('go')   # makedepends can't be overridden per-package
   make DESTDIR="$pkgdir" install
 }`,
-		Good: `makedepends=('go')
+			Good: `makedepends=('go')
 package() {
   depends=('glibc')   # only packaging metadata may be set here
   make DESTDIR="$pkgdir" install
 }`,
-		Refs: []Ref{pkgbuildMan("package splitting", "PACKAGE_SPLITTING")},
-	},
-	{
-		ID:       "PB710",
-		Name:     "invalid-arch",
-		Severity: Error,
-		Doc: "arch must be set and non-empty, must not combine 'any' with concrete architectures, " +
-			"must not repeat a value, and each entry may only contain [A-Za-z0-9_]. makepkg rejects " +
-			"a PKGBUILD that violates any of these.",
-		Check: checkArch,
-		Bad:   `arch=('any' 'x86_64')   # 'any' cannot be combined with concrete architectures`,
-		Good:  `arch=('x86_64')`,
-	},
-	{
-		ID:       "PB711",
-		Name:     "missing-vcs-makedepends",
-		Severity: Warn,
-		Doc: "A VCS source (git+…, hg+…) is fetched by the corresponding client, which makepkg " +
-			"does not install for you: without the tool in makedepends the build fails on any " +
-			"machine that doesn't happen to have it — which is every clean chroot. The auto-fix " +
-			"adds the client to makedepends.",
-		Check: checkVCSMakedepends,
-		// Declaring a tool the sources already need changes nothing about what
-		// is built: it restores a requirement the clean chroot was going to
-		// enforce anyway.
-		FixLevel: FixSafe,
-		Fix:      fixVCSMakedepends,
-		Bad: `source=("git+https://github.com/example/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
+			Refs: []Ref{pkgbuildMan("package splitting", "PACKAGE_SPLITTING")},
+		},
+		{
+			ID:       "PB710",
+			Name:     "invalid-arch",
+			Severity: Error,
+			Doc: "arch must be set and non-empty, must not combine 'any' with concrete architectures, " +
+				"must not repeat a value, and each entry may only contain [A-Za-z0-9_]. makepkg rejects " +
+				"a PKGBUILD that violates any of these.",
+			Check: checkArch,
+			Bad:   `arch=('any' 'x86_64')   # 'any' cannot be combined with concrete architectures`,
+			Good:  `arch=('x86_64')`,
+		},
+		{
+			ID:       "PB711",
+			Name:     "missing-vcs-makedepends",
+			Severity: Warn,
+			Doc: "A VCS source (git+…, hg+…) is fetched by the corresponding client, which makepkg " +
+				"does not install for you: without the tool in makedepends the build fails on any " +
+				"machine that doesn't happen to have it — which is every clean chroot. The auto-fix " +
+				"adds the client to makedepends.",
+			Check: checkVCSMakedepends,
+			// Declaring a tool the sources already need changes nothing about what
+			// is built: it restores a requirement the clean chroot was going to
+			// enforce anyway.
+			FixLevel: FixSafe,
+			Fix:      fixVCSMakedepends,
+			Bad: `source=("git+https://github.com/example/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
 # nothing installs git, so a clean chroot build fails at the fetch step`,
-		Good: `makedepends=('git')
+			Good: `makedepends=('git')
 source=("git+https://github.com/example/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
-		Refs: []Ref{refVcsDeps},
-	},
+			Refs: []Ref{refVcsDeps},
+		},
+	}
 }
 
 // --- shared helpers --------------------------------------------------------
@@ -226,87 +228,7 @@ func isASCII(s string) bool {
 	return true
 }
 
-// staticVal resolves rendered against known scalars and reports whether the
-// result is fully static — no command substitution (NUL marker) and no
-// unresolved $ references. Rules skip values they cannot see statically.
-func staticVal(pkg *pkgbuild.Package, rendered string) (string, bool) {
-	s := pkg.Expand(rendered)
-	if strings.ContainsRune(s, 0) || strings.Contains(s, "$") {
-		return "", false
-	}
-	return s, true
-}
-
-// varElem is one element of a variable assignment with its source position.
-type varElem struct {
-	Value string
-	Word  *syntax.Word
-	Pos   syntax.Pos
-}
-
-// varElems yields the elements of v: each array element, or the single scalar
-// value. Returns nil for empty assignments.
-//
-// The values come from v.Values rather than v.Assign, which is only the *first*
-// assignment: bash keeps appending, so `arch=(); arch+=('x86_64')` is a
-// one-element array and reading the literal alone would call it empty. Values a
-// later assignment or an indexed write contributed have no source text of their
-// own and carry a nil Word with the array's position; callers that rewrite text
-// must skip those, and every caller here reports rather than rewrites.
-//
-// Array elements are brace-expanded, because that is what makepkg's bash does
-// before any rule gets to see them: `pkgname=({,python-}open3d)` really is two
-// packages, and `sha256sums=(SKIP{,,,})` really is four checksums. An element
-// that expands to several values yields one varElem per value, all sharing the
-// written element's Word and Pos — so callers that edit source text must
-// deduplicate by Word. Scalar assignments are left alone: bash does not
-// brace-expand those.
-func varElems(v *pkgbuild.Var) []varElem {
-	if v == nil {
-		return nil
-	}
-	out := make([]varElem, 0, len(v.Values))
-	for i, s := range v.Values {
-		word, pos := v.ElemWord(i)
-		if !v.Array {
-			out = append(out, varElem{Value: s, Word: word, Pos: pos})
-			continue
-		}
-		for _, exp := range pkgbuild.ExpandBraces(s) {
-			out = append(out, varElem{Value: exp, Word: word, Pos: pos})
-		}
-	}
-	return out
-}
-
 // --- PB701: pkgname / pkgbase characters -----------------------------------
-
-var pkgnameBadChars = regexp.MustCompile(`[^A-Za-z0-9@._+-]`)
-
-func nameProblem(name string) string {
-	switch {
-	case name == "":
-		return "must not be empty"
-	case strings.HasPrefix(name, "-"):
-		return "must not start with a hyphen"
-	case strings.HasPrefix(name, "."):
-		return "must not start with a dot"
-	case !isASCII(name):
-		return "may only contain ASCII characters"
-	}
-	if bad := pkgnameBadChars.FindAllString(name, -1); len(bad) > 0 {
-		seen := map[string]bool{}
-		var uniq []string
-		for _, c := range bad {
-			if !seen[c] {
-				seen[c] = true
-				uniq = append(uniq, c)
-			}
-		}
-		return "contains invalid characters: " + strings.Join(uniq, "")
-	}
-	return ""
-}
 
 func checkPkgName(ctx *Context) []Finding {
 	var out []Finding
@@ -316,12 +238,12 @@ func checkPkgName(ctx *Context) []Finding {
 		if v == nil {
 			continue
 		}
-		for _, e := range varElems(v) {
-			val, ok := staticVal(ctx.Pkg, e.Value)
+		for _, e := range v.Elems() {
+			val, ok := ctx.Pkg.StaticValue(e.Value)
 			if !ok {
 				continue
 			}
-			if prob := nameProblem(val); prob != "" {
+			if prob := pkgbuild.NameProblem(val); prob != "" {
 				out = append(out, findingAt("PB701", Error, path, e.Pos, "%s %q %s", field, val, prob))
 			}
 		}
@@ -344,7 +266,7 @@ func checkPkgVer(ctx *Context) []Finding {
 	if v == nil || v.Array { // array type is PB708's concern
 		return nil
 	}
-	val, ok := staticVal(ctx.Pkg, firstValue(v.Values))
+	val, ok := ctx.Pkg.StaticValue(firstValue(v.Values))
 	if !ok {
 		return nil
 	}
@@ -368,7 +290,7 @@ func checkPkgRel(ctx *Context) []Finding {
 	if v == nil || v.Array {
 		return nil
 	}
-	val, ok := staticVal(ctx.Pkg, firstValue(v.Values))
+	val, ok := ctx.Pkg.StaticValue(firstValue(v.Values))
 	if !ok {
 		return nil
 	}
@@ -387,7 +309,7 @@ func checkEpoch(ctx *Context) []Finding {
 	if v == nil || v.Array {
 		return nil
 	}
-	val, ok := staticVal(ctx.Pkg, firstValue(v.Values))
+	val, ok := ctx.Pkg.StaticValue(firstValue(v.Values))
 	if !ok || val == "" { // unset/empty epoch is valid (the default)
 		return nil
 	}
@@ -406,8 +328,8 @@ func checkBackupSlash(ctx *Context) []Finding {
 		return nil
 	}
 	var out []Finding
-	for _, e := range varElems(v) {
-		val, ok := staticVal(ctx.Pkg, e.Value)
+	for _, e := range v.Elems() {
+		val, ok := ctx.Pkg.StaticValue(e.Value)
 		if !ok || !strings.HasPrefix(val, "/") {
 			continue
 		}
@@ -425,11 +347,11 @@ func fixBackupSlash(ctx *Context, _ *FixEnv) []Edit {
 	raw := ctx.Pkg.PKGBUILD.Raw
 	path := ctx.Pkg.PKGBUILD.Path
 	var edits []Edit
-	// A brace group yields one varElem per expansion sharing a single Word, and
+	// A brace group yields one Elem per expansion sharing a single Word, and
 	// the edit below is computed from that Word's text — so emit at most one
 	// edit per written element or the same byte range would be patched twice.
 	patched := map[*syntax.Word]bool{}
-	for _, e := range varElems(v) {
+	for _, e := range v.Elems() {
 		// Only fix var-free literals, so the leading '/' is literally present in Raw.
 		if strings.ContainsRune(e.Value, 0) || strings.Contains(e.Value, "$") || !strings.HasPrefix(e.Value, "/") {
 			continue
@@ -471,8 +393,8 @@ func checkUnknownOptions(ctx *Context) []Finding {
 		return nil
 	}
 	var out []Finding
-	for _, e := range varElems(v) {
-		val, ok := staticVal(ctx.Pkg, e.Value)
+	for _, e := range v.Elems() {
+		val, ok := ctx.Pkg.StaticValue(e.Value)
 		if !ok || val == "" {
 			continue
 		}
@@ -497,8 +419,8 @@ func checkProvidesComparison(ctx *Context) []Finding {
 		return nil
 	}
 	var out []Finding
-	for _, e := range varElems(v) {
-		val, ok := staticVal(ctx.Pkg, e.Value)
+	for _, e := range v.Elems() {
+		val, ok := ctx.Pkg.StaticValue(e.Value)
 		if !ok {
 			continue
 		}
@@ -515,8 +437,8 @@ func checkProvidesComparison(ctx *Context) []Finding {
 // concreteArches returns the statically-known arch values other than "any".
 func concreteArches(ctx *Context) []string {
 	var out []string
-	for _, e := range varElems(ctx.Pkg.Vars["arch"]) {
-		if val, ok := staticVal(ctx.Pkg, e.Value); ok && val != "" && val != "any" {
+	for _, e := range ctx.Pkg.Vars["arch"].Elems() {
+		if val, ok := ctx.Pkg.StaticValue(e.Value); ok && val != "" && val != "any" {
 			out = append(out, val)
 		}
 	}
@@ -653,10 +575,10 @@ func checkArch(ctx *Context) []Finding {
 	}
 	var out []Finding
 	seen := map[string]bool{}
-	elems := varElems(v)
+	elems := v.Elems()
 	anyCount := 0
 	for _, e := range elems {
-		val, ok := staticVal(ctx.Pkg, e.Value)
+		val, ok := ctx.Pkg.StaticValue(e.Value)
 		if !ok {
 			continue // present but not statically validatable
 		}

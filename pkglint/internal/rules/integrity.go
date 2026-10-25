@@ -15,263 +15,265 @@ import (
 )
 
 // PB1xx: source integrity.
-var integrityRules = []Rule{
-	{
-		ID:       "PB101",
-		Name:     "skipped-checksum",
-		Severity: Error,
-		Doc: "Every remote, non-VCS source should carry a real checksum. `SKIP` means makepkg " +
-			"performs no integrity verification at all: if the upstream file or the connection is " +
-			"tampered with, nothing notices. Pin the artifact with a sha256 or stronger digest. " +
-			"Detached signature files and the artifacts they verify are exempt — there the PGP " +
-			"machinery does the verifying, and PB111 flags it when that machinery is unanchored.",
-		Check: checkSkippedChecksums,
-		Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
+func integrityRules() []Rule {
+	return []Rule{
+		{
+			ID:       "PB101",
+			Name:     "skipped-checksum",
+			Severity: Error,
+			Doc: "Every remote, non-VCS source should carry a real checksum. `SKIP` means makepkg " +
+				"performs no integrity verification at all: if the upstream file or the connection is " +
+				"tampered with, nothing notices. Pin the artifact with a sha256 or stronger digest. " +
+				"Detached signature files and the artifacts they verify are exempt — there the PGP " +
+				"machinery does the verifying, and PB111 flags it when that machinery is unanchored.",
+			Check: checkSkippedChecksums,
+			Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
 sha256sums=('SKIP')`,
-		Good: `source=("https://example.com/foo-$pkgver.tar.gz")
+			Good: `source=("https://example.com/foo-$pkgver.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-		Refs: []Ref{refGeneralSources},
-	},
-	{
-		ID:       "PB102",
-		Name:     "weak-checksum",
-		Severity: Warn,
-		Doc: "md5 and sha1 are broken for collision resistance. When they are the only digests " +
-			"present, an attacker able to produce collisions can substitute the source artifact. " +
-			"Add sha256sums, sha512sums or b2sums. --fix adds them for sources already downloaded " +
-			"into the package directory or makepkg's source cache, and only after re-checking the " +
-			"weak digest against those same bytes; it never downloads a source to do so, so a " +
-			"package whose sources are not present keeps the finding and `updpkgsums` remains the " +
-			"way to close it.",
-		Check:    checkWeakChecksums,
-		FixLevel: FixSafe,
-		Fix:      fixWeakChecksums,
-		Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
+			Refs: []Ref{refGeneralSources},
+		},
+		{
+			ID:       "PB102",
+			Name:     "weak-checksum",
+			Severity: Warn,
+			Doc: "md5 and sha1 are broken for collision resistance. When they are the only digests " +
+				"present, an attacker able to produce collisions can substitute the source artifact. " +
+				"Add sha256sums, sha512sums or b2sums. --fix adds them for sources already downloaded " +
+				"into the package directory or makepkg's source cache, and only after re-checking the " +
+				"weak digest against those same bytes; it never downloads a source to do so, so a " +
+				"package whose sources are not present keeps the finding and `updpkgsums` remains the " +
+				"way to close it.",
+			Check:    checkWeakChecksums,
+			FixLevel: FixSafe,
+			Fix:      fixWeakChecksums,
+			Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
 md5sums=('d41d8cd98f00b204e9800998ecf8427e')`,
-		Good: `source=("https://example.com/foo-$pkgver.tar.gz")
+			Good: `source=("https://example.com/foo-$pkgver.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-	},
-	{
-		ID:       "PB103",
-		Name:     "unpinned-vcs-source",
-		Severity: Warn,
-		Doc: "A VCS source without `#commit=` pins to a mutable reference: branches move and tags " +
-			"can be re-pointed by anyone with push access (or a compromised forge account). Pinning " +
-			"the exact commit hash makes the fetched tree tamper-evident. Packages named for the VCS " +
-			"they track (`foo-git`, `foo-hg`, …) are exempt while they follow a branch: building " +
-			"whatever upstream's tip points at today is what such a package is for, and pinning it " +
-			"would make it a different package. A mutable `#tag=` is still reported there — a tag is " +
-			"not the tip, and it can be re-pointed.",
-		Check:    checkVCSPins,
-		FixLevel: FixSafe,
-		Fix:      fixVCSPins,
-		Bad:      `source=("git+https://github.com/example/foo.git#tag=v1.2.3")`,
-		Good:     `source=("git+https://github.com/example/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
-		Refs:     []Ref{refGeneralSources},
-	},
-	{
-		ID:          "PB104",
-		Name:        "insecure-transport",
-		Severity:    Warn,
-		MaxSeverity: Error,
-		Doc: "Sources fetched over http://, git:// or ftp:// can be modified in transit. Pinned to a " +
-			"strong digest the download is still verified, so an attacker in the path can break the " +
-			"build but not change what it produces — a warning. With SKIP, a weak sum, or no sum at " +
-			"all — which includes every git:// clone — nothing checks what arrives, and it is a " +
-			"working man-in-the-middle vector: an error. Use https:// (or git+https://) either way. " +
-			"Signature files fetched insecurely are PB112's concern. --unsafe-fix rewrites the " +
-			"scheme (http and ftp to https, bare git:// to git+https://), but only after checking that " +
-			"the https URL answers — a headers-only request, or `git ls-remote` for a git remote — so " +
-			"a host that does not serve it keeps the finding instead of getting a broken build. It stays " +
-			"unsafe because reachable is not identical: only the checksum can say the https URL serves " +
-			"the same bytes, so rebuild after applying it. --offline skips it.",
-		Check:    checkInsecureTransport,
-		FixLevel: FixUnsafe,
-		Fix:      fixInsecureTransport,
-		Bad:      `source=("http://example.com/foo-$pkgver.tar.gz")`,
-		Good:     `source=("https://example.com/foo-$pkgver.tar.gz")`,
-		Refs:     []Ref{refGeneralSources},
-	},
-	{
-		ID:       "PB105",
-		Name:     "source-url-mismatch",
-		Severity: Info,
-		Doc: "A source hosted on a different domain than the project's `url` is worth a second " +
-			"look: repackaged or 'mirrored' artifacts are a common way to slip in modified binaries. " +
-			"Often legitimate (CDNs, release mirrors) — hence only informational.",
-		Check: checkSourceDomains,
-		Bad: `url="https://example.com"
+		},
+		{
+			ID:       "PB103",
+			Name:     "unpinned-vcs-source",
+			Severity: Warn,
+			Doc: "A VCS source without `#commit=` pins to a mutable reference: branches move and tags " +
+				"can be re-pointed by anyone with push access (or a compromised forge account). Pinning " +
+				"the exact commit hash makes the fetched tree tamper-evident. Packages named for the VCS " +
+				"they track (`foo-git`, `foo-hg`, …) are exempt while they follow a branch: building " +
+				"whatever upstream's tip points at today is what such a package is for, and pinning it " +
+				"would make it a different package. A mutable `#tag=` is still reported there — a tag is " +
+				"not the tip, and it can be re-pointed.",
+			Check:    checkVCSPins,
+			FixLevel: FixSafe,
+			Fix:      fixVCSPins,
+			Bad:      `source=("git+https://github.com/example/foo.git#tag=v1.2.3")`,
+			Good:     `source=("git+https://github.com/example/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
+			Refs:     []Ref{refGeneralSources},
+		},
+		{
+			ID:          "PB104",
+			Name:        "insecure-transport",
+			Severity:    Warn,
+			MaxSeverity: Error,
+			Doc: "Sources fetched over http://, git:// or ftp:// can be modified in transit. Pinned to a " +
+				"strong digest the download is still verified, so an attacker in the path can break the " +
+				"build but not change what it produces — a warning. With SKIP, a weak sum, or no sum at " +
+				"all — which includes every git:// clone — nothing checks what arrives, and it is a " +
+				"working man-in-the-middle vector: an error. Use https:// (or git+https://) either way. " +
+				"Signature files fetched insecurely are PB112's concern. --unsafe-fix rewrites the " +
+				"scheme (http and ftp to https, bare git:// to git+https://), but only after checking that " +
+				"the https URL answers — a headers-only request, or `git ls-remote` for a git remote — so " +
+				"a host that does not serve it keeps the finding instead of getting a broken build. It stays " +
+				"unsafe because reachable is not identical: only the checksum can say the https URL serves " +
+				"the same bytes, so rebuild after applying it. --offline skips it.",
+			Check:    checkInsecureTransport,
+			FixLevel: FixUnsafe,
+			Fix:      fixInsecureTransport,
+			Bad:      `source=("http://example.com/foo-$pkgver.tar.gz")`,
+			Good:     `source=("https://example.com/foo-$pkgver.tar.gz")`,
+			Refs:     []Ref{refGeneralSources},
+		},
+		{
+			ID:       "PB105",
+			Name:     "source-url-mismatch",
+			Severity: Info,
+			Doc: "A source hosted on a different domain than the project's `url` is worth a second " +
+				"look: repackaged or 'mirrored' artifacts are a common way to slip in modified binaries. " +
+				"Often legitimate (CDNs, release mirrors) — hence only informational.",
+			Check: checkSourceDomains,
+			Bad: `url="https://example.com"
 source=("https://cdn.unrelated.example/foo-$pkgver.tar.gz")`,
-		Good: `url="https://example.com"
+			Good: `url="https://example.com"
 source=("https://example.com/releases/foo-$pkgver.tar.gz")`,
-	},
-	{
-		ID:       "PB106",
-		Name:     "dlagents-override",
-		Severity: Warn,
-		Doc: "Overriding DLAGENTS replaces makepkg's download logic with arbitrary commands, which " +
-			"run before any checksum is verified. Legitimate uses exist but are rare enough that " +
-			"every override deserves review.",
-		Check: checkDLAgents,
-		Bad:   `DLAGENTS=('https::/usr/bin/curl -fsSL -- %u')`,
-		Good: `# Rely on makepkg's built-in download agents; do not override DLAGENTS.
+		},
+		{
+			ID:       "PB106",
+			Name:     "dlagents-override",
+			Severity: Warn,
+			Doc: "Overriding DLAGENTS replaces makepkg's download logic with arbitrary commands, which " +
+				"run before any checksum is verified. Legitimate uses exist but are rare enough that " +
+				"every override deserves review.",
+			Check: checkDLAgents,
+			Bad:   `DLAGENTS=('https::/usr/bin/curl -fsSL -- %u')`,
+			Good: `# Rely on makepkg's built-in download agents; do not override DLAGENTS.
 source=("https://example.com/foo-$pkgver.tar.gz")`,
-	},
-	{
-		ID:       "PB107",
-		Name:     "missing-install-script",
-		Severity: Warn,
-		Doc: "The PKGBUILD references an install scriptlet that is not present next to it, so its " +
-			"contents cannot be reviewed or linted.",
-		Check: checkMissingInstall,
-		Bad:   `install="foo.install"   # ...but no foo.install is committed alongside the PKGBUILD`,
-		Good:  `install="foo.install"   # foo.install ships in the same directory as the PKGBUILD`,
-	},
-	{
-		ID:       "PB108",
-		Name:     "makepkg-config-override",
-		Severity: Warn, MaxSeverity: Critical, // critical for the variables makepkg executes
-		Doc: "Assigning a makepkg.conf variable at the top level reconfigures makepkg itself. " +
-			"VCSCLIENTS and the COMPRESS* arrays are executed as commands, so overriding them injects " +
-			"code into the fetch and packaging steps; PACKAGER/GPGKEY spoof package identity and " +
-			"BUILDENV/INTEGRITY_CHECK can silently disable verification. Like DLAGENTS (PB106), these " +
-			"belong in makepkg.conf, never in a package.",
-		Check: checkMakepkgConfOverride,
-		Bad: `VCSCLIENTS=('git::/tmp/evil-git')   # makepkg runs this to fetch git sources
+		},
+		{
+			ID:       "PB107",
+			Name:     "missing-install-script",
+			Severity: Warn,
+			Doc: "The PKGBUILD references an install scriptlet that is not present next to it, so its " +
+				"contents cannot be reviewed or linted.",
+			Check: checkMissingInstall,
+			Bad:   `install="foo.install"   # ...but no foo.install is committed alongside the PKGBUILD`,
+			Good:  `install="foo.install"   # foo.install ships in the same directory as the PKGBUILD`,
+		},
+		{
+			ID:       "PB108",
+			Name:     "makepkg-config-override",
+			Severity: Warn, MaxSeverity: Critical, // critical for the variables makepkg executes
+			Doc: "Assigning a makepkg.conf variable at the top level reconfigures makepkg itself. " +
+				"VCSCLIENTS and the COMPRESS* arrays are executed as commands, so overriding them injects " +
+				"code into the fetch and packaging steps; PACKAGER/GPGKEY spoof package identity and " +
+				"BUILDENV/INTEGRITY_CHECK can silently disable verification. Like DLAGENTS (PB106), these " +
+				"belong in makepkg.conf, never in a package.",
+			Check: checkMakepkgConfOverride,
+			Bad: `VCSCLIENTS=('git::/tmp/evil-git')   # makepkg runs this to fetch git sources
 source=("git+https://github.com/example/foo.git")`,
-		Good: `# Leave makepkg.conf variables to makepkg.conf; declare only package fields here.
+			Good: `# Leave makepkg.conf variables to makepkg.conf; declare only package fields here.
 source=("git+https://github.com/example/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
-	},
-	{
-		ID:       "PB109",
-		Name:     "forge-owner-mismatch",
-		Severity: Warn,
-		Doc: "A source hosted on the same forge as the project url but under a different owner is a " +
-			"common repackaging vector: recent AUR compromises kept github.com and changed only the " +
-			"account in the path, which a host-only comparison (PB105) misses. Often a legitimate fork " +
-			"or mirror — hence a warning, not an error.",
-		Check: checkForgeOwner,
-		Bad: `url="https://github.com/upstream/foo"
+		},
+		{
+			ID:       "PB109",
+			Name:     "forge-owner-mismatch",
+			Severity: Warn,
+			Doc: "A source hosted on the same forge as the project url but under a different owner is a " +
+				"common repackaging vector: recent AUR compromises kept github.com and changed only the " +
+				"account in the path, which a host-only comparison (PB105) misses. Often a legitimate fork " +
+				"or mirror — hence a warning, not an error.",
+			Check: checkForgeOwner,
+			Bad: `url="https://github.com/upstream/foo"
 source=("git+https://github.com/somebodyelse/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
-		Good: `url="https://github.com/upstream/foo"
+			Good: `url="https://github.com/upstream/foo"
 source=("git+https://github.com/upstream/foo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")`,
-	},
-	{
-		ID:       "PB110",
-		Name:     "checksum-count-mismatch",
-		Severity: Error,
-		Doc: "makepkg pairs each source with the checksum at the same index, so a sums array of the " +
-			"wrong length means some sources are unverified (or verified against the wrong digest). " +
-			"makepkg errors on this; regenerate with updpkgsums.",
-		Check: checkChecksumCounts,
-		Bad: `source=("a.tar.gz" "b.tar.gz")
+		},
+		{
+			ID:       "PB110",
+			Name:     "checksum-count-mismatch",
+			Severity: Error,
+			Doc: "makepkg pairs each source with the checksum at the same index, so a sums array of the " +
+				"wrong length means some sources are unverified (or verified against the wrong digest). " +
+				"makepkg errors on this; regenerate with updpkgsums.",
+			Check: checkChecksumCounts,
+			Bad: `source=("a.tar.gz" "b.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-		Good: `source=("a.tar.gz" "b.tar.gz")
+			Good: `source=("a.tar.gz" "b.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08'
             '2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae')`,
-	},
-	{
-		ID:       "PB111",
-		Name:     "signature-without-key",
-		Severity: Error,
-		Doc: "A detached signature (.sig/.asc) or a ?signed VCS source is only as strong as the key " +
-			"it is checked against. With validpgpkeys empty, makepkg accepts any key already present " +
-			"in the builder's keyring — whatever the user was last told to import — instead of a " +
-			"maintainer-pinned fingerprint, so the strongest verification the PKGBUILD declares is " +
-			"never actually anchored. Pin the upstream signing key's full fingerprint in validpgpkeys.",
-		Check: checkSignatureKeys,
-		Bad: `source=("https://example.com/foo-$pkgver.tar.gz"
+		},
+		{
+			ID:       "PB111",
+			Name:     "signature-without-key",
+			Severity: Error,
+			Doc: "A detached signature (.sig/.asc) or a ?signed VCS source is only as strong as the key " +
+				"it is checked against. With validpgpkeys empty, makepkg accepts any key already present " +
+				"in the builder's keyring — whatever the user was last told to import — instead of a " +
+				"maintainer-pinned fingerprint, so the strongest verification the PKGBUILD declares is " +
+				"never actually anchored. Pin the upstream signing key's full fingerprint in validpgpkeys.",
+			Check: checkSignatureKeys,
+			Bad: `source=("https://example.com/foo-$pkgver.tar.gz"
         "https://example.com/foo-$pkgver.tar.gz.sig")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' 'SKIP')
 # validpgpkeys is never set: any key in the builder's keyring passes`,
-		Good: `source=("https://example.com/foo-$pkgver.tar.gz"
+			Good: `source=("https://example.com/foo-$pkgver.tar.gz"
         "https://example.com/foo-$pkgver.tar.gz.sig")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' 'SKIP')
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')   # upstream's release key`,
-		Refs: []Ref{refGeneralSources},
-	},
-	{
-		ID:       "PB112",
-		Name:     "insecure-signature-transport",
-		Severity: Warn,
-		Doc: "This signature file is fetched over an unencrypted transport. With validpgpkeys pinned " +
-			"the signature still verifies cryptographically — hence a warning where PB104 errors for " +
-			"ordinary sources — but a man-in-the-middle can strip or swap the file to break builds, " +
-			"and combined with an unpinned key (PB111) it is a working bypass. Use https://. " +
-			"--unsafe-fix rewrites the scheme once it has confirmed the https URL answers, with " +
-			"PB104's caveat: a reachable signature is not necessarily the same signature.",
-		Check:    checkSignatureTransport,
-		FixLevel: FixUnsafe,
-		Fix:      fixInsecureSignatureTransport,
-		Bad: `source=("https://example.com/foo-$pkgver.tar.gz"
+			Refs: []Ref{refGeneralSources},
+		},
+		{
+			ID:       "PB112",
+			Name:     "insecure-signature-transport",
+			Severity: Warn,
+			Doc: "This signature file is fetched over an unencrypted transport. With validpgpkeys pinned " +
+				"the signature still verifies cryptographically — hence a warning where PB104 errors for " +
+				"ordinary sources — but a man-in-the-middle can strip or swap the file to break builds, " +
+				"and combined with an unpinned key (PB111) it is a working bypass. Use https://. " +
+				"--unsafe-fix rewrites the scheme once it has confirmed the https URL answers, with " +
+				"PB104's caveat: a reachable signature is not necessarily the same signature.",
+			Check:    checkSignatureTransport,
+			FixLevel: FixUnsafe,
+			Fix:      fixInsecureSignatureTransport,
+			Bad: `source=("https://example.com/foo-$pkgver.tar.gz"
         "http://example.com/foo-$pkgver.tar.gz.sig")   # signature over plain http`,
-		Good: `source=("https://example.com/foo-$pkgver.tar.gz"
+			Good: `source=("https://example.com/foo-$pkgver.tar.gz"
         "https://example.com/foo-$pkgver.tar.gz.sig")`,
-		Refs: []Ref{refGeneralSources},
-	},
-	{
-		ID:       "PB113",
-		Name:     "unused-validpgpkeys",
-		Severity: Info,
-		Doc: "validpgpkeys pins signing keys, but no source carries a detached signature (.sig/.asc) " +
-			"and no VCS source requests ?signed verification, so nothing is ever checked against the " +
-			"keys. Either dead configuration or a signature source was dropped — confusing at review " +
-			"time either way.",
-		Check: checkUnusedPGPKeys,
-		Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
+			Refs: []Ref{refGeneralSources},
+		},
+		{
+			ID:       "PB113",
+			Name:     "unused-validpgpkeys",
+			Severity: Info,
+			Doc: "validpgpkeys pins signing keys, but no source carries a detached signature (.sig/.asc) " +
+				"and no VCS source requests ?signed verification, so nothing is ever checked against the " +
+				"keys. Either dead configuration or a signature source was dropped — confusing at review " +
+				"time either way.",
+			Check: checkUnusedPGPKeys,
+			Bad: `source=("https://example.com/foo-$pkgver.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')   # verifies nothing`,
-		Good: `source=("https://example.com/foo-$pkgver.tar.gz"
+			Good: `source=("https://example.com/foo-$pkgver.tar.gz"
         "https://example.com/foo-$pkgver.tar.gz.sig")   # now the key has something to check
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' 'SKIP')
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886')`,
-	},
-	{
-		ID:       "PB114",
-		Name:     "malformed-checksum",
-		Severity: Error,
-		Doc: "A checksum with the wrong length for its algorithm or with non-hex characters can " +
-			"never match any download, so verification is guaranteed to fail — usually a truncated " +
-			"paste or a digest computed with a different algorithm than the array names.",
-		Check: checkMalformedChecksums,
-		Bad: `source=("https://example.com/demo-$pkgver.tar.gz")
+		},
+		{
+			ID:       "PB114",
+			Name:     "malformed-checksum",
+			Severity: Error,
+			Doc: "A checksum with the wrong length for its algorithm or with non-hex characters can " +
+				"never match any download, so verification is guaranteed to fail — usually a truncated " +
+				"paste or a digest computed with a different algorithm than the array names.",
+			Check: checkMalformedChecksums,
+			Bad: `source=("https://example.com/demo-$pkgver.tar.gz")
 sha256sums=('deadbeef')   # 8 characters can never be a sha256 digest`,
-		Good: `source=("https://example.com/demo-$pkgver.tar.gz")
+			Good: `source=("https://example.com/demo-$pkgver.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-	},
-	{
-		ID:       "PB115",
-		Name:     "duplicate-source-assignment",
-		Severity: Warn, MaxSeverity: Error, // error when the overwritten array named a local file
-		Doc: "A second plain `source=` replaces the first: makepkg only ever reads the last one, " +
-			"and so does every checksum. A reviewer reading from the top, though, sees the first — " +
-			"which is how storageexplorer-bin staged a decoy `source=('optimizer')` above the array " +
-			"that really built it. Write one array, and extend it with `+=`. Assignments in different " +
-			"branches of a top-level `if` or `case` are alternatives, not overwrites, and are not reported.",
-		Check: checkDuplicateSourceAssignment,
-		Bad: `source=('optimizer')   # what a reviewer reads first
+		},
+		{
+			ID:       "PB115",
+			Name:     "duplicate-source-assignment",
+			Severity: Warn, MaxSeverity: Error, // error when the overwritten array named a local file
+			Doc: "A second plain `source=` replaces the first: makepkg only ever reads the last one, " +
+				"and so does every checksum. A reviewer reading from the top, though, sees the first — " +
+				"which is how storageexplorer-bin staged a decoy `source=('optimizer')` above the array " +
+				"that really built it. Write one array, and extend it with `+=`. Assignments in different " +
+				"branches of a top-level `if` or `case` are alternatives, not overwrites, and are not reported.",
+			Check: checkDuplicateSourceAssignment,
+			Bad: `source=('optimizer')   # what a reviewer reads first
 sha256sums=('SKIP')
 source=("https://example.com/foo-$pkgver.tar.gz")   # what makepkg builds
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-		Good: `source=("https://example.com/foo-$pkgver.tar.gz")
+			Good: `source=("https://example.com/foo-$pkgver.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-	},
-	{
-		ID:       "PB116",
-		Name:     "committed-binary",
-		Severity: Error, MaxSeverity: Critical, // critical when the PKGBUILD runs it
-		Doc: "An ELF executable committed next to the PKGBUILD is code nobody can review: it has no " +
-			"upstream, no checksum against anything published, and no source. A `-bin` package's " +
-			"binaries are downloaded through source= and are not reported; one sitting in the AUR " +
-			"repository itself is, and running it from build() or package() is critical.",
-		Check: checkCommittedBinary,
-		Bad: `# helper, an ELF binary, is committed to the AUR repository beside this file
+		},
+		{
+			ID:       "PB116",
+			Name:     "committed-binary",
+			Severity: Error, MaxSeverity: Critical, // critical when the PKGBUILD runs it
+			Doc: "An ELF executable committed next to the PKGBUILD is code nobody can review: it has no " +
+				"upstream, no checksum against anything published, and no source. A `-bin` package's " +
+				"binaries are downloaded through source= and are not reported; one sitting in the AUR " +
+				"repository itself is, and running it from build() or package() is critical.",
+			Check: checkCommittedBinary,
+			Bad: `# helper, an ELF binary, is committed to the AUR repository beside this file
 build() {
   ./helper --prepare
 }`,
-		Good: `source=("https://example.com/helper-$pkgver.tar.gz")   # built from source, checksummed
+			Good: `source=("https://example.com/helper-$pkgver.tar.gz")   # built from source, checksummed
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-	},
+		},
+	}
 }
 
 // sourceArrayName reports whether name is an array makepkg fetches: source,
@@ -854,7 +856,7 @@ func (ctx *Context) tracksTip(vcs string) bool {
 		return false
 	}
 	for _, field := range []string{"pkgbase", "pkgname"} {
-		for _, e := range varElems(ctx.Pkg.Vars[field]) {
+		for _, e := range ctx.Pkg.Vars[field].Elems() {
 			if strings.HasSuffix(ctx.Pkg.Expand(e.Value), suffix) {
 				return true
 			}
@@ -1125,8 +1127,8 @@ func checkMalformedChecksums(ctx *Context) []Finding {
 			}
 		}
 		for _, name := range names {
-			for _, e := range varElems(ctx.Pkg.Vars[name]) {
-				val, ok := staticVal(ctx.Pkg, e.Value)
+			for _, e := range ctx.Pkg.Vars[name].Elems() {
+				val, ok := ctx.Pkg.StaticValue(e.Value)
 				if !ok || val == "" || isSkip(val) {
 					continue
 				}

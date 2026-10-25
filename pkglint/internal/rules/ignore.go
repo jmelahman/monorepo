@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
 	"mvdan.cc/sh/v3/syntax"
@@ -18,58 +17,20 @@ import (
 
 const staleIgnoreID = "PB913"
 
-// allRules is bound to the registry accessor in init rather than called
-// directly: the PB913 check runs every registered rule, and referencing the
-// registry from styleRules' own initializer would be an initialization cycle.
-// The indirection through a variable is what breaks it — the dependency
-// analysis follows function references out of an initializer, but stops at a
-// variable whose own initializer is empty.
-var allRules func() []Rule
-
-func init() { allRules = registry }
-
-// knownRuleIDs is the set of registered rule IDs. PB913 asks for it once per
-// package, so it is built once and shared read-only; callers must not write to
-// what they get back.
-var (
-	knownIDsOnce sync.Once
-	knownIDs     map[string]bool
-	// packageIDs maps each package-scope rule ID to whether it is fixable.
-	packageIDs map[string]bool
-)
-
-func knownRuleIDs() map[string]bool {
-	knownIDsOnce.Do(func() {
-		knownIDs = make(map[string]bool, len(allRules()))
-		packageIDs = map[string]bool{}
-		for _, r := range allRules() {
-			knownIDs[r.ID] = true
-			if r.Scope == ScopePackage {
-				packageIDs[r.ID] = r.FixLevel.Fixable()
-			}
-		}
-	})
-	return knownIDs
-}
-
 // declinesPackageFix reports whether id names a package-scope rule whose fixer
 // writes into the PKGBUILD. Its finding lives in the built archive, so no lint
 // of the PKGBUILD alone can show the directive matching anything — but the
 // directive is what declines that fix under `pkglint build --fix`, so it is
 // live by construction and never stale.
-//
-// It reads the registry through knownRuleIDs rather than RuleByID, which PB913
-// cannot reference without an initialization cycle (see allRules).
 func declinesPackageFix(id string) bool {
-	knownRuleIDs()
-	return packageIDs[id]
+	r, ok := RuleByID(id)
+	return ok && r.Scope == ScopePackage && r.FixLevel.Fixable()
 }
 
 // isPackageRule reports whether id names a package-scope rule.
 func isPackageRule(id string) bool {
-	knownRuleIDs()
-	_, ok := packageIDs[id]
-	return ok
+	r, ok := RuleByID(id)
+	return ok && r.Scope == ScopePackage
 }
 
 // suppKey names one rule ID of one inline-ignore directive.
@@ -97,8 +58,8 @@ func (ctx *Context) suppressionUsage() map[suppKey]bool {
 	}
 	ctx.suppUsed = map[suppKey]bool{}
 	named := suppressedIDs(ctx.Pkg)
-	for _, rule := range allRules() {
-		if rule.Scope != ScopePKGBUILD || rule.ID == staleIgnoreID || !named[rule.ID] {
+	for rule := range rulesIn(ScopePKGBUILD, nil) {
+		if rule.ID == staleIgnoreID || !named[rule.ID] {
 			continue
 		}
 		for _, f := range rule.Check(ctx) {
@@ -190,9 +151,8 @@ func ignoreDirectives(u *pkgbuild.Unit) []ignoreDirective {
 // or that match no finding on the directive's own or next line. An ID that
 // declines a package-scope fix is never stale (see declinesPackageFix).
 func (ctx *Context) staleDirectiveIDs(path string, d ignoreDirective) (kept, stale []string) {
-	known := knownRuleIDs()
 	for _, id := range d.ids {
-		if known[id] && (declinesPackageFix(id) || ctx.suppressionUsage()[suppKey{path, d.line, id}]) {
+		if _, known := RuleByID(id); known && (declinesPackageFix(id) || ctx.suppressionUsage()[suppKey{path, d.line, id}]) {
 			kept = append(kept, id)
 		} else {
 			stale = append(stale, id)
@@ -219,12 +179,11 @@ func honoredDirectives(pkg *pkgbuild.Package, u *pkgbuild.Unit) []ignoreDirectiv
 }
 
 func checkStaleIgnores(ctx *Context) []Finding {
-	known := knownRuleIDs()
 	var out []Finding
 	for _, u := range ctx.Pkg.Units() {
 		for _, d := range honoredDirectives(ctx.Pkg, &u) {
 			for _, id := range d.ids {
-				if !known[id] {
+				if _, known := RuleByID(id); !known {
 					out = append(out, Finding{RuleID: staleIgnoreID, Severity: Warn,
 						Path: u.Path, Line: d.line, Col: d.col,
 						Message: fmt.Sprintf("ignore directive names %s, which is not a pkglint rule; it suppresses nothing", id)})

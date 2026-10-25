@@ -1,4 +1,4 @@
-package rules
+package pkgbuild
 
 import (
 	"fmt"
@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"mvdan.cc/sh/v3/syntax"
-
-	"github.com/jmelahman/pkglint/internal/pkgbuild"
 )
 
 // RunCheck is what makepkg's command line says about running check(): the
@@ -19,12 +17,6 @@ const (
 	CheckForced                  // --check
 	CheckSkipped                 // --nocheck
 )
-
-// NameProblem reports what is wrong with name as a package name, by makepkg's
-// own rule (lint_one_pkgname): ASCII letters, digits and @._+- only, neither
-// empty nor starting with - or .; "" when nothing is. PB701 and `pkglint
-// build`'s dependency sync share it, so there is one definition.
-func NameProblem(name string) string { return nameProblem(name) }
 
 // SyncDeps returns the dependency names makepkg -s would ask pacman for when
 // it builds pkg on carch — what `pkglint build` installs in a container on
@@ -51,7 +43,7 @@ func NameProblem(name string) string { return nameProblem(name) }
 // parse's answer is only taken when nothing at the top level could make bash
 // disagree with it (settled), and every field it cannot know is an error
 // naming it, not a skip.
-func SyncDeps(pkg *pkgbuild.Package, carch string, run RunCheck) ([]string, error) {
+func SyncDeps(pkg *Package, carch string, run RunCheck) ([]string, error) {
 	fields := []string{"depends", "makedepends"}
 	_, hasCheck := pkg.PKGBUILD.Functions["check"]
 	wantCheck := hasCheck && run != CheckSkipped
@@ -84,8 +76,8 @@ func SyncDeps(pkg *pkgbuild.Package, carch string, run RunCheck) ([]string, erro
 		if v.CountUnknown {
 			return nil, fmt.Errorf("%s holds an array reference or word-splitting expansion that cannot be resolved without running the PKGBUILD", name)
 		}
-		for _, e := range varElems(v) {
-			val, ok := staticVal(pkg, e.Value)
+		for _, e := range v.Elems() {
+			val, ok := pkg.StaticValue(e.Value)
 			if !ok {
 				return nil, fmt.Errorf("%s entry %q is not statically known (a substitution or an unset variable), so it cannot be resolved without running the PKGBUILD", name, printable(e.Value))
 			}
@@ -110,7 +102,7 @@ func SyncDeps(pkg *pkgbuild.Package, carch string, run RunCheck) ([]string, erro
 
 // optionsSkipCheck reports whether options=() holds !check. The array must
 // be statically known: whether checkdepends are installed hangs on it.
-func optionsSkipCheck(pkg *pkgbuild.Package) (bool, error) {
+func optionsSkipCheck(pkg *Package) (bool, error) {
 	v := pkg.Vars["options"]
 	if v == nil {
 		return false, nil
@@ -118,8 +110,8 @@ func optionsSkipCheck(pkg *pkgbuild.Package) (bool, error) {
 	if v.CountUnknown {
 		return false, fmt.Errorf("options holds an array reference that cannot be resolved without running the PKGBUILD, and decides whether checkdepends are needed")
 	}
-	for _, e := range varElems(v) {
-		val, ok := staticVal(pkg, e.Value)
+	for _, e := range v.Elems() {
+		val, ok := pkg.StaticValue(e.Value)
 		if !ok {
 			return false, fmt.Errorf("options entry %q is not statically known, and decides whether checkdepends are needed", printable(e.Value))
 		}
@@ -154,7 +146,7 @@ func optionsSkipCheck(pkg *pkgbuild.Package) (bool, error) {
 //
 // Function bodies are not walked: makepkg calls them only after resolving
 // dependencies, and nothing at the top level may call them (above).
-func settled(pkg *pkgbuild.Package, fields []string) error {
+func settled(pkg *Package, fields []string) error {
 	u := &pkg.PKGBUILD
 	tracked := map[string]bool{}
 	work := slices.Clone(fields)

@@ -13,716 +13,717 @@ import (
 // deviation from Arch packaging conventions that makes a package harder to
 // maintain, port, or review. Severities are deliberately modest — Warn for
 // things a reviewer would ask to change, Info for pure convention.
-var styleRules = []Rule{
-	{
-		ID:       "PB901",
-		Name:     "specific-host-arch",
-		Severity: Warn,
-		Doc: "Hardcoding an architecture name (x86_64, aarch64, …) in sources, flags or paths " +
-			"ties the PKGBUILD to one machine type; $CARCH expands to the architecture being built " +
-			"for. Assignments to arch=() and to already arch-suffixed fields (source_x86_64=…) are " +
-			"exempt — those are the places an explicit architecture belongs — as are constructs " +
-			"that dispatch on $CARCH and names of foreign cross-compilation targets " +
-			"(x86_64-w64-mingw32, arm-none-eabi-gcc), which are not the host at all.",
-		Check: checkSpecificHostArch,
-		Bad:   `source=("https://example.com/demo-$pkgver-x86_64.tar.gz")`,
-		Good:  `source=("https://example.com/demo-$pkgver-$CARCH.tar.gz")`,
-	},
-	{
-		ID:       "PB902",
-		Name:     "unprefixed-custom-variable",
-		Severity: Warn,
-		Doc: "Custom variables must start with an underscore (_commit, _pyname) so they can never " +
-			"collide with a current or future makepkg field. A bare custom name is silently shipped " +
-			"to any tool that parses PKGBUILD metadata and may change meaning under a newer pacman.",
-		Check:    checkUnprefixedCustomVars,
-		FixLevel: FixUnsafe,
-		Fix:      fixUnprefixedCustomVars,
-		Bad:      `gitcommit='3f2b1a0'   # could collide with a future makepkg field`,
-		Good:     `_gitcommit='3f2b1a0'`,
-		Refs:     []Ref{refGeneralEtiquette},
-	},
-	{
-		ID:       "PB903",
-		Name:     "startdir-reference",
-		Severity: Warn,
-		Doc: "$startdir is a makepkg implementation detail from before $srcdir and $pkgdir " +
-			"existed. Paths built from it ($startdir/pkg, $startdir/src) break under makepkg's " +
-			"BUILDDIR/PKGDEST redirection; use $srcdir and $pkgdir, which are always correct.",
-		Check: checkStartdirReference,
-		Bad: `package() {
+func styleRules() []Rule {
+	return []Rule{
+		{
+			ID:       "PB901",
+			Name:     "specific-host-arch",
+			Severity: Warn,
+			Doc: "Hardcoding an architecture name (x86_64, aarch64, …) in sources, flags or paths " +
+				"ties the PKGBUILD to one machine type; $CARCH expands to the architecture being built " +
+				"for. Assignments to arch=() and to already arch-suffixed fields (source_x86_64=…) are " +
+				"exempt — those are the places an explicit architecture belongs — as are constructs " +
+				"that dispatch on $CARCH and names of foreign cross-compilation targets " +
+				"(x86_64-w64-mingw32, arm-none-eabi-gcc), which are not the host at all.",
+			Check: checkSpecificHostArch,
+			Bad:   `source=("https://example.com/demo-$pkgver-x86_64.tar.gz")`,
+			Good:  `source=("https://example.com/demo-$pkgver-$CARCH.tar.gz")`,
+		},
+		{
+			ID:       "PB902",
+			Name:     "unprefixed-custom-variable",
+			Severity: Warn,
+			Doc: "Custom variables must start with an underscore (_commit, _pyname) so they can never " +
+				"collide with a current or future makepkg field. A bare custom name is silently shipped " +
+				"to any tool that parses PKGBUILD metadata and may change meaning under a newer pacman.",
+			Check:    checkUnprefixedCustomVars,
+			FixLevel: FixUnsafe,
+			Fix:      fixUnprefixedCustomVars,
+			Bad:      `gitcommit='3f2b1a0'   # could collide with a future makepkg field`,
+			Good:     `_gitcommit='3f2b1a0'`,
+			Refs:     []Ref{refGeneralEtiquette},
+		},
+		{
+			ID:       "PB903",
+			Name:     "startdir-reference",
+			Severity: Warn,
+			Doc: "$startdir is a makepkg implementation detail from before $srcdir and $pkgdir " +
+				"existed. Paths built from it ($startdir/pkg, $startdir/src) break under makepkg's " +
+				"BUILDDIR/PKGDEST redirection; use $srcdir and $pkgdir, which are always correct.",
+			Check: checkStartdirReference,
+			Bad: `package() {
   install -Dm755 demo "$startdir/pkg/usr/bin/demo"
 }`,
-		Good: `package() {
+			Good: `package() {
   install -Dm755 demo "$pkgdir/usr/bin/demo"
 }`,
-	},
-	{
-		ID:       "PB904",
-		Name:     "redundant-makedepends",
-		Severity: Warn,
-		Doc: "Everything in depends is installed during the build too, so repeating a package in " +
-			"makedepends adds nothing and misleads readers about the build's real extra " +
-			"requirements. An entry is only kept when its version constraint differs. The " +
-			"auto-fix deletes the makedepends entry.",
-		Check: checkRedundantMakedepends,
-		// The entry provably does nothing: depends already installs the package
-		// at build time, and the rule has already exempted any entry whose
-		// version constraint asks for something different.
-		FixLevel: FixSafe,
-		Fix:      fixRedundantMakedepends,
-		Bad: `depends=('libfoo')
+		},
+		{
+			ID:       "PB904",
+			Name:     "redundant-makedepends",
+			Severity: Warn,
+			Doc: "Everything in depends is installed during the build too, so repeating a package in " +
+				"makedepends adds nothing and misleads readers about the build's real extra " +
+				"requirements. An entry is only kept when its version constraint differs. The " +
+				"auto-fix deletes the makedepends entry.",
+			Check: checkRedundantMakedepends,
+			// The entry provably does nothing: depends already installs the package
+			// at build time, and the rule has already exempted any entry whose
+			// version constraint asks for something different.
+			FixLevel: FixSafe,
+			Fix:      fixRedundantMakedepends,
+			Bad: `depends=('libfoo')
 makedepends=('libfoo' 'cmake')   # libfoo is installed at build time already`,
-		Good: `depends=('libfoo')
+			Good: `depends=('libfoo')
 makedepends=('cmake')`,
-	},
-	{
-		ID:       "PB905",
-		Name:     "sourceforge-mirror-url",
-		Severity: Info,
-		Doc: "SourceForge URLs pinned to a specific mirror (heanet.dl.sourceforge.net, " +
-			"dl.sf.net, …) break when that mirror retires. downloads.sourceforge.net picks a " +
-			"working mirror automatically and is the form Arch packaging guidelines ask for.",
-		Check: checkSourceforgeMirror,
-		Bad:   `source=("https://heanet.dl.sourceforge.net/project/demo/demo-$pkgver.tar.gz")`,
-		Good:  `source=("https://downloads.sourceforge.net/project/demo/demo-$pkgver.tar.gz")`,
-		Refs:  []Ref{refGeneralSources},
-	},
-	{
-		ID:       "PB906",
-		Name:     "pkgname-in-pkgdesc",
-		Severity: Info,
-		Doc: "pkgdesc is displayed next to the package name everywhere pacman shows it, so " +
-			"repeating the name inside the description wastes the one line that should say what " +
-			"the software does.",
-		Check: checkPkgnameInDesc,
-		Bad:   `pkgdesc='The demo package'`,
-		Good:  `pkgdesc='Fast demonstration tool for benchmarks'`,
-		Refs:  []Ref{refGeneralEtiquette},
-	},
-	{
-		ID:       "PB907",
-		Name:     "makepkg-internal-function",
-		Severity: Warn,
-		Doc: "msg, msg2, warning, error and plain are makepkg's private output helpers, not an " +
-			"API: they vanish when the PKGBUILD is parsed by anything other than makepkg itself " +
-			"and their behavior changes between pacman releases. Use echo or printf.",
-		Check: checkMakepkgInternalFunctions,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB905",
+			Name:     "sourceforge-mirror-url",
+			Severity: Info,
+			Doc: "SourceForge URLs pinned to a specific mirror (heanet.dl.sourceforge.net, " +
+				"dl.sf.net, …) break when that mirror retires. downloads.sourceforge.net picks a " +
+				"working mirror automatically and is the form Arch packaging guidelines ask for.",
+			Check: checkSourceforgeMirror,
+			Bad:   `source=("https://heanet.dl.sourceforge.net/project/demo/demo-$pkgver.tar.gz")`,
+			Good:  `source=("https://downloads.sourceforge.net/project/demo/demo-$pkgver.tar.gz")`,
+			Refs:  []Ref{refGeneralSources},
+		},
+		{
+			ID:       "PB906",
+			Name:     "pkgname-in-pkgdesc",
+			Severity: Info,
+			Doc: "pkgdesc is displayed next to the package name everywhere pacman shows it, so " +
+				"repeating the name inside the description wastes the one line that should say what " +
+				"the software does.",
+			Check: checkPkgnameInDesc,
+			Bad:   `pkgdesc='The demo package'`,
+			Good:  `pkgdesc='Fast demonstration tool for benchmarks'`,
+			Refs:  []Ref{refGeneralEtiquette},
+		},
+		{
+			ID:       "PB907",
+			Name:     "makepkg-internal-function",
+			Severity: Warn,
+			Doc: "msg, msg2, warning, error and plain are makepkg's private output helpers, not an " +
+				"API: they vanish when the PKGBUILD is parsed by anything other than makepkg itself " +
+				"and their behavior changes between pacman releases. Use echo or printf.",
+			Check: checkMakepkgInternalFunctions,
+			Bad: `build() {
   msg "building demo"
   make
 }`,
-		Good: `build() {
+			Good: `build() {
   echo "building demo"
   make
 }`,
-		Refs: []Ref{refGeneralEtiquette},
-	},
-	{
-		ID:       "PB908",
-		Name:     "missing-maintainer-comment",
-		Severity: Info,
-		Doc: "AUR convention puts a '# Maintainer: Name <email>' comment at the top of every " +
-			"PKGBUILD so users know who to contact and whether the package is orphaned. Namcap " +
-			"checks for the same tag.",
-		Check: checkMaintainerComment,
-		Bad: `# Contributor: Somebody Else <somebody@example.com>
+			Refs: []Ref{refGeneralEtiquette},
+		},
+		{
+			ID:       "PB908",
+			Name:     "missing-maintainer-comment",
+			Severity: Info,
+			Doc: "AUR convention puts a '# Maintainer: Name <email>' comment at the top of every " +
+				"PKGBUILD so users know who to contact and whether the package is orphaned. Namcap " +
+				"checks for the same tag.",
+			Check: checkMaintainerComment,
+			Bad: `# Contributor: Somebody Else <somebody@example.com>
 # ...but no '# Maintainer:' line anywhere in the file`,
-		Good: `# Maintainer: Sam Coder <sam@example.com>`,
-	},
-	{
-		ID:       "PB909",
-		Name:     "uppercase-pkgname",
-		Severity: Warn,
-		Doc: "Arch package names are lowercase by convention, even when upstream's name is not " +
-			"(python, not Python). makepkg accepts uppercase, so this only surfaces in repo " +
-			"tooling and user confusion later — rename now, keep the case in pkgdesc.",
-		Check: checkUppercasePkgname,
-		Bad:   `pkgname=Demo-Tool`,
-		Good:  `pkgname=demo-tool`,
-		Refs:  []Ref{refGeneralNaming},
-	},
-	{
-		ID:       "PB910",
-		Name:     "missing-metadata",
-		Severity: Warn,
-		Doc: "pkgdesc, url and license are not required by makepkg but are required by Arch " +
-			"packaging standards: without them pacman -Qi shows blanks and the package's legal " +
-			"status is undeclared. Split packages may set them per package function instead.",
-		Check: checkMissingMetadata,
-		Bad:   `pkgdesc=''   # empty — and url= is never set at all`,
-		Good:  `url='https://github.com/example/demo'`,
-	},
-	{
-		ID:       "PB911",
-		Name:     "non-unique-source-name",
-		Severity: Warn,
-		Doc: "A source that downloads to a bare version-numbered file (v1.2.3.tar.gz) collides " +
-			"with every other package doing the same in a shared SRCDEST cache, silently reusing " +
-			"the wrong tarball. Rename it: \"$pkgname-$pkgver.tar.gz::https://…/v1.2.3.tar.gz\".",
-		Check: checkNonUniqueSourceName,
-		Bad:   `source=("https://github.com/example/demo/archive/v$pkgver.tar.gz")   # saves as v1.0.0.tar.gz`,
-		Good:  `source=("$pkgname-$pkgver.tar.gz::https://github.com/example/demo/archive/v$pkgver.tar.gz")`,
-		Refs:  []Ref{refGeneralSources},
-	},
-	{
-		ID:       "PB912",
-		Name:     "duplicated-optdepends",
-		Severity: Warn,
-		Doc: "A package listed in both depends and optdepends is contradictory metadata: the " +
-			"hard dependency always wins, and the optdepends line falsely suggests the feature " +
-			"is optional. Keep exactly one of the two. The auto-fix deletes the optdepends entry, " +
-			"which is the half with nothing behind it.",
-		Check: checkDuplicatedOptdepends,
-		// Nothing installed changes: depends already made the package
-		// mandatory, and the optdepends line was describing a choice pacman
-		// never offered.
-		FixLevel: FixSafe,
-		Fix:      fixDuplicatedOptdepends,
-		Bad: `depends=('ffmpeg')
+			Good: `# Maintainer: Sam Coder <sam@example.com>`,
+		},
+		{
+			ID:       "PB909",
+			Name:     "uppercase-pkgname",
+			Severity: Warn,
+			Doc: "Arch package names are lowercase by convention, even when upstream's name is not " +
+				"(python, not Python). makepkg accepts uppercase, so this only surfaces in repo " +
+				"tooling and user confusion later — rename now, keep the case in pkgdesc.",
+			Check: checkUppercasePkgname,
+			Bad:   `pkgname=Demo-Tool`,
+			Good:  `pkgname=demo-tool`,
+			Refs:  []Ref{refGeneralNaming},
+		},
+		{
+			ID:       "PB910",
+			Name:     "missing-metadata",
+			Severity: Warn,
+			Doc: "pkgdesc, url and license are not required by makepkg but are required by Arch " +
+				"packaging standards: without them pacman -Qi shows blanks and the package's legal " +
+				"status is undeclared. Split packages may set them per package function instead.",
+			Check: checkMissingMetadata,
+			Bad:   `pkgdesc=''   # empty — and url= is never set at all`,
+			Good:  `url='https://github.com/example/demo'`,
+		},
+		{
+			ID:       "PB911",
+			Name:     "non-unique-source-name",
+			Severity: Warn,
+			Doc: "A source that downloads to a bare version-numbered file (v1.2.3.tar.gz) collides " +
+				"with every other package doing the same in a shared SRCDEST cache, silently reusing " +
+				"the wrong tarball. Rename it: \"$pkgname-$pkgver.tar.gz::https://…/v1.2.3.tar.gz\".",
+			Check: checkNonUniqueSourceName,
+			Bad:   `source=("https://github.com/example/demo/archive/v$pkgver.tar.gz")   # saves as v1.0.0.tar.gz`,
+			Good:  `source=("$pkgname-$pkgver.tar.gz::https://github.com/example/demo/archive/v$pkgver.tar.gz")`,
+			Refs:  []Ref{refGeneralSources},
+		},
+		{
+			ID:       "PB912",
+			Name:     "duplicated-optdepends",
+			Severity: Warn,
+			Doc: "A package listed in both depends and optdepends is contradictory metadata: the " +
+				"hard dependency always wins, and the optdepends line falsely suggests the feature " +
+				"is optional. Keep exactly one of the two. The auto-fix deletes the optdepends entry, " +
+				"which is the half with nothing behind it.",
+			Check: checkDuplicatedOptdepends,
+			// Nothing installed changes: depends already made the package
+			// mandatory, and the optdepends line was describing a choice pacman
+			// never offered.
+			FixLevel: FixSafe,
+			Fix:      fixDuplicatedOptdepends,
+			Bad: `depends=('ffmpeg')
 optdepends=('ffmpeg: video export')   # already a hard dependency`,
-		Good: `optdepends=('ffmpeg: video export')`,
-		Refs: []Ref{refGeneralEtiquette},
-	},
-	{
-		ID:       "PB913",
-		Name:     "stale-ignore-directive",
-		Severity: Warn,
-		Doc: "A '# pkglint: ignore=' directive that matches no finding on its own or the next " +
-			"line — the issue was fixed, or the ID was never a pkglint rule — no longer documents " +
-			"a reviewed exception. It misleads reviewers into thinking a finding exists there, and " +
-			"if the flagged construct ever comes back, the leftover directive silences it without " +
-			"anyone re-reviewing. The auto-fix removes the stale IDs, or the whole comment once " +
-			"none remain.",
-		Check:    checkStaleIgnores,
-		FixLevel: FixSafe,
-		Fix:      fixStaleIgnores,
-		Bad: `build() {
+			Good: `optdepends=('ffmpeg: video export')`,
+			Refs: []Ref{refGeneralEtiquette},
+		},
+		{
+			ID:       "PB913",
+			Name:     "stale-ignore-directive",
+			Severity: Warn,
+			Doc: "A '# pkglint: ignore=' directive that matches no finding on its own or the next " +
+				"line — the issue was fixed, or the ID was never a pkglint rule — no longer documents " +
+				"a reviewed exception. It misleads reviewers into thinking a finding exists there, and " +
+				"if the flagged construct ever comes back, the leftover directive silences it without " +
+				"anyone re-reviewing. The auto-fix removes the stale IDs, or the whole comment once " +
+				"none remain.",
+			Check:    checkStaleIgnores,
+			FixLevel: FixSafe,
+			Fix:      fixStaleIgnores,
+			Bad: `build() {
   # pkglint: ignore=PB203
   cargo build --locked --release   # --locked is present, so nothing suppresses
 }`,
-		Good: `build() {
+			Good: `build() {
   cargo build --locked --release
 }`,
-	},
-	{
-		ID:       "PB914",
-		Name:     "go-no-pie",
-		Severity: Warn,
-		Doc: "The Arch Go packaging guidelines build with -buildmode=pie: without it the Go " +
-			"toolchain links a position-dependent executable that ASLR cannot relocate, which " +
-			"PB806 flags on the built package. Set it in GOFLAGS or on the go build command; a " +
-			"PKGBUILD that chooses another -buildmode explicitly is left alone.",
-		Check: checkGoPIE,
-		// Changing the link layout of the shipped binary is behavior a human
-		// should sign off on, like the other build-command rewrites.
-		FixLevel: FixUnsafe,
-		Fix:      fixGoPIE,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB914",
+			Name:     "go-no-pie",
+			Severity: Warn,
+			Doc: "The Arch Go packaging guidelines build with -buildmode=pie: without it the Go " +
+				"toolchain links a position-dependent executable that ASLR cannot relocate, which " +
+				"PB806 flags on the built package. Set it in GOFLAGS or on the go build command; a " +
+				"PKGBUILD that chooses another -buildmode explicitly is left alone.",
+			Check: checkGoPIE,
+			// Changing the link layout of the shipped binary is behavior a human
+			// should sign off on, like the other build-command rewrites.
+			FixLevel: FixUnsafe,
+			Fix:      fixGoPIE,
+			Bad: `build() {
   go build -o demo .
 }`,
-		Good: `build() {
+			Good: `build() {
   export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
   go build -o demo .
 }`,
-		Refs: []Ref{refGoFlags, guideline("security", "Security package guidelines", "Golang", "golang")},
-	},
-	{
-		ID:       "PB915",
-		Name:     "go-no-trimpath",
-		Severity: Warn,
-		Doc: "Without -trimpath, go embeds absolute $srcdir paths in the binary, so two builders " +
-			"never produce the same bytes and the package leaks its build layout. The Arch Go " +
-			"packaging guidelines put -trimpath in GOFLAGS on every build.",
-		Check:    checkGoTrimpath,
-		FixLevel: FixUnsafe,
-		Fix:      fixGoTrimpath,
-		Bad: `build() {
+			Refs: []Ref{refGoFlags, guideline("security", "Security package guidelines", "Golang", "golang")},
+		},
+		{
+			ID:       "PB915",
+			Name:     "go-no-trimpath",
+			Severity: Warn,
+			Doc: "Without -trimpath, go embeds absolute $srcdir paths in the binary, so two builders " +
+				"never produce the same bytes and the package leaks its build layout. The Arch Go " +
+				"packaging guidelines put -trimpath in GOFLAGS on every build.",
+			Check:    checkGoTrimpath,
+			FixLevel: FixUnsafe,
+			Fix:      fixGoTrimpath,
+			Bad: `build() {
   go build -buildmode=pie -o demo .   # $srcdir paths end up inside the binary
 }`,
-		Good: `build() {
+			Good: `build() {
   go build -buildmode=pie -trimpath -o demo .
 }`,
-		Refs: []Ref{refGoFlags},
-	},
-	{
-		ID:       "PB916",
-		Name:     "go-readonly-modcache",
-		Severity: Info,
-		Doc: "go writes its module cache read-only, so after a build that fetched modules, " +
-			"cleaning $srcdir (or $GOPATH under it) fails until someone chmods the tree. The Arch " +
-			"Go packaging guidelines pass -modcacherw on every module-aware command to keep the " +
-			"cache removable. A command run with GO111MODULE=off builds from GOPATH, writes no " +
-			"module cache, and is not reported: go rejects the flag there.",
-		Check: checkGoModcacheRW,
-		// -modcacherw only loosens permissions on cache files; it cannot
-		// change what gets built, so the rewrite is safe.
-		FixLevel: FixSafe,
-		Fix:      fixGoModcacheRW,
-		Bad: `prepare() {
+			Refs: []Ref{refGoFlags},
+		},
+		{
+			ID:       "PB916",
+			Name:     "go-readonly-modcache",
+			Severity: Info,
+			Doc: "go writes its module cache read-only, so after a build that fetched modules, " +
+				"cleaning $srcdir (or $GOPATH under it) fails until someone chmods the tree. The Arch " +
+				"Go packaging guidelines pass -modcacherw on every module-aware command to keep the " +
+				"cache removable. A command run with GO111MODULE=off builds from GOPATH, writes no " +
+				"module cache, and is not reported: go rejects the flag there.",
+			Check: checkGoModcacheRW,
+			// -modcacherw only loosens permissions on cache files; it cannot
+			// change what gets built, so the rewrite is safe.
+			FixLevel: FixSafe,
+			Fix:      fixGoModcacheRW,
+			Bad: `prepare() {
   go mod download
 }`,
-		Good: `prepare() {
+			Good: `prepare() {
   go mod download -modcacherw
 }`,
-		Refs: []Ref{refGoFlags},
-	},
-	{
-		ID:       "PB917",
-		Name:     "go-cgo-flags-dropped",
-		Severity: Info,
-		Doc: "cgo compiles C with CGO_CFLAGS/CGO_LDFLAGS, not the CFLAGS/LDFLAGS makepkg exports, " +
-			"so unless the PKGBUILD forwards them (export CGO_CFLAGS=\"$CFLAGS\", …) Arch's " +
-			"fortify/RELRO hardening never reaches the C parts of a Go build. Pure-Go packages " +
-			"can set CGO_ENABLED=0 instead, which also silences this rule. The fix writes the " +
-			"guidelines' block of CGO_* exports at the top of the function that runs the build.",
-		Check: checkGoCgoFlags,
-		// Forwarding the flags recompiles the C parts with Arch's fortify and
-		// RELRO settings, which is a different compile: code that only built
-		// without them now fails, and that failure is a human's to read.
-		FixLevel: FixUnsafe,
-		Fix:      fixGoCgoFlags,
-		Bad: `build() {
+			Refs: []Ref{refGoFlags},
+		},
+		{
+			ID:       "PB917",
+			Name:     "go-cgo-flags-dropped",
+			Severity: Info,
+			Doc: "cgo compiles C with CGO_CFLAGS/CGO_LDFLAGS, not the CFLAGS/LDFLAGS makepkg exports, " +
+				"so unless the PKGBUILD forwards them (export CGO_CFLAGS=\"$CFLAGS\", …) Arch's " +
+				"fortify/RELRO hardening never reaches the C parts of a Go build. Pure-Go packages " +
+				"can set CGO_ENABLED=0 instead, which also silences this rule. The fix writes the " +
+				"guidelines' block of CGO_* exports at the top of the function that runs the build.",
+			Check: checkGoCgoFlags,
+			// Forwarding the flags recompiles the C parts with Arch's fortify and
+			// RELRO settings, which is a different compile: code that only built
+			// without them now fails, and that failure is a human's to read.
+			FixLevel: FixUnsafe,
+			Fix:      fixGoCgoFlags,
+			Bad: `build() {
   export GOFLAGS="-buildmode=pie -trimpath -modcacherw"
   go build -o demo .
 }`,
-		Good: `build() {
+			Good: `build() {
   export CGO_CFLAGS="$CFLAGS" CGO_LDFLAGS="$LDFLAGS"
   export GOFLAGS="-buildmode=pie -trimpath -modcacherw"
   go build -o demo .
 }`,
-		Refs: []Ref{refGoFlags},
-	},
-	{
-		ID:       "PB918",
-		Name:     "self-provides",
-		Severity: Warn,
-		Doc: "Every package implicitly provides its own name, so listing $pkgname in provides is " +
-			"dead metadata — at best ignored, at worst masking a typo of the capability the entry " +
-			"was meant to declare. The Arch package guidelines say provides is for other " +
-			"capabilities the package supplies (a library soname, a renamed predecessor). The " +
-			"auto-fix deletes the entry, and the whole array with it when nothing else is in it.",
-		Check: checkSelfProvides,
-		// pacman derives the implicit self-provide from pkgname either way, so
-		// deleting the entry cannot change what the package satisfies.
-		FixLevel: FixSafe,
-		Fix:      fixSelfProvides,
-		Bad:      `provides=("$pkgname")   # a package always provides itself`,
-		Good:     `provides=('demo-cli')   # a capability other packages can depend on`,
-		Refs:     []Ref{refGeneralRelations},
-	},
-	{
-		ID:       "PB919",
-		Name:     "self-conflicts",
-		Severity: Warn,
-		Doc: "A package can never conflict with itself — pacman resolves same-name conflicts by " +
-			"upgrading — so listing $pkgname in conflicts is dead metadata that misleads readers " +
-			"about what the package actually displaces. The Arch package guidelines say to drop " +
-			"it, and the auto-fix does — along with the whole array when nothing else is in it.",
-		Check: checkSelfConflicts,
-		// pacman resolves a same-name conflict by upgrading whatever the array
-		// says, so the entry has no effect to preserve.
-		FixLevel: FixSafe,
-		Fix:      fixSelfConflicts,
-		Bad:      `conflicts=("$pkgname")   # a package can never conflict with itself`,
-		Good:     `conflicts=('demo-legacy')   # the package this one actually displaces`,
-		Refs:     []Ref{refGeneralRelations},
-	},
-	{
-		ID:       "PB920",
-		Name:     "non-spdx-license",
-		Severity: Info,
-		Doc: "Arch migrated the license field to SPDX expressions (RFC 16): 'GPL-2.0-or-later' " +
-			"says which GPL and whether later versions qualify, where the legacy 'GPL' said " +
-			"neither, and license-audit tooling parses only the SPDX form. Only known-legacy " +
-			"spellings are flagged, so a valid-but-uncommon SPDX identifier never is.",
-		Check: checkNonSPDXLicense,
-		Bad:   `license=('GPL')   # which GPL? or-later or only?`,
-		Good:  `license=('GPL-2.0-or-later')`,
-		Refs:  []Ref{refGeneralLicense},
-	},
-	{
-		ID:       "PB921",
-		Name:     "usr-local-install",
-		Severity: Warn,
-		Doc: "/usr/local is reserved for software the administrator builds outside the package " +
-			"manager; the Arch package guidelines forbid packages from touching it. This is the " +
-			"PKGBUILD-side complement of PB820, which flags the same files in the built archive. " +
-			"Install under /usr (usually /usr/bin, /usr/lib, /usr/share) instead.",
-		Check: checkUsrLocalInstall,
-		Bad: `package() {
+			Refs: []Ref{refGoFlags},
+		},
+		{
+			ID:       "PB918",
+			Name:     "self-provides",
+			Severity: Warn,
+			Doc: "Every package implicitly provides its own name, so listing $pkgname in provides is " +
+				"dead metadata — at best ignored, at worst masking a typo of the capability the entry " +
+				"was meant to declare. The Arch package guidelines say provides is for other " +
+				"capabilities the package supplies (a library soname, a renamed predecessor). The " +
+				"auto-fix deletes the entry, and the whole array with it when nothing else is in it.",
+			Check: checkSelfProvides,
+			// pacman derives the implicit self-provide from pkgname either way, so
+			// deleting the entry cannot change what the package satisfies.
+			FixLevel: FixSafe,
+			Fix:      fixSelfProvides,
+			Bad:      `provides=("$pkgname")   # a package always provides itself`,
+			Good:     `provides=('demo-cli')   # a capability other packages can depend on`,
+			Refs:     []Ref{refGeneralRelations},
+		},
+		{
+			ID:       "PB919",
+			Name:     "self-conflicts",
+			Severity: Warn,
+			Doc: "A package can never conflict with itself — pacman resolves same-name conflicts by " +
+				"upgrading — so listing $pkgname in conflicts is dead metadata that misleads readers " +
+				"about what the package actually displaces. The Arch package guidelines say to drop " +
+				"it, and the auto-fix does — along with the whole array when nothing else is in it.",
+			Check: checkSelfConflicts,
+			// pacman resolves a same-name conflict by upgrading whatever the array
+			// says, so the entry has no effect to preserve.
+			FixLevel: FixSafe,
+			Fix:      fixSelfConflicts,
+			Bad:      `conflicts=("$pkgname")   # a package can never conflict with itself`,
+			Good:     `conflicts=('demo-legacy')   # the package this one actually displaces`,
+			Refs:     []Ref{refGeneralRelations},
+		},
+		{
+			ID:       "PB920",
+			Name:     "non-spdx-license",
+			Severity: Info,
+			Doc: "Arch migrated the license field to SPDX expressions (RFC 16): 'GPL-2.0-or-later' " +
+				"says which GPL and whether later versions qualify, where the legacy 'GPL' said " +
+				"neither, and license-audit tooling parses only the SPDX form. Only known-legacy " +
+				"spellings are flagged, so a valid-but-uncommon SPDX identifier never is.",
+			Check: checkNonSPDXLicense,
+			Bad:   `license=('GPL')   # which GPL? or-later or only?`,
+			Good:  `license=('GPL-2.0-or-later')`,
+			Refs:  []Ref{refGeneralLicense},
+		},
+		{
+			ID:       "PB921",
+			Name:     "usr-local-install",
+			Severity: Warn,
+			Doc: "/usr/local is reserved for software the administrator builds outside the package " +
+				"manager; the Arch package guidelines forbid packages from touching it. This is the " +
+				"PKGBUILD-side complement of PB820, which flags the same files in the built archive. " +
+				"Install under /usr (usually /usr/bin, /usr/lib, /usr/share) instead.",
+			Check: checkUsrLocalInstall,
+			Bad: `package() {
   install -Dm755 demo "$pkgdir/usr/local/bin/demo"
 }`,
-		Good: `package() {
+			Good: `package() {
   install -Dm755 demo "$pkgdir/usr/bin/demo"
 }`,
-		Refs: []Ref{refGeneralEtiquette},
-	},
-	{
-		ID:       "PB922",
-		Name:     "usr-libexec-install",
-		Severity: Info,
-		Doc: "Arch does not use /usr/libexec: the package guidelines put internal executables " +
-			"that users should not invoke directly in /usr/lib/$pkgname instead. Upstream build " +
-			"systems often default libexecdir to /usr/libexec, so the fix is usually " +
-			"--libexecdir=/usr/lib on configure rather than moving files by hand.",
-		Check: checkUsrLibexecInstall,
-		Bad: `package() {
+			Refs: []Ref{refGeneralEtiquette},
+		},
+		{
+			ID:       "PB922",
+			Name:     "usr-libexec-install",
+			Severity: Info,
+			Doc: "Arch does not use /usr/libexec: the package guidelines put internal executables " +
+				"that users should not invoke directly in /usr/lib/$pkgname instead. Upstream build " +
+				"systems often default libexecdir to /usr/libexec, so the fix is usually " +
+				"--libexecdir=/usr/lib on configure rather than moving files by hand.",
+			Check: checkUsrLibexecInstall,
+			Bad: `package() {
   install -Dm755 helper "$pkgdir/usr/libexec/demo/helper"
 }`,
-		Good: `package() {
+			Good: `package() {
   install -Dm755 helper "$pkgdir/usr/lib/demo/helper"
 }`,
-		Refs: []Ref{refGeneralEtiquette},
-	},
-	{
-		ID:       "PB930",
-		Name:     "python-tox",
-		Severity: Warn,
-		Doc: "tox exists to test against multiple Python versions by building fresh virtualenvs " +
-			"and re-resolving dependencies from PyPI — the opposite of checking that *this* " +
-			"package works against *this* system's packages, and a network dependency inside " +
-			"check(). The Arch Python package guidelines forbid it; invoke pytest (or upstream's " +
-			"runner) directly.",
-		Check: checkPythonTox,
-		Bad: `checkdepends=('python-tox')
+			Refs: []Ref{refGeneralEtiquette},
+		},
+		{
+			ID:       "PB930",
+			Name:     "python-tox",
+			Severity: Warn,
+			Doc: "tox exists to test against multiple Python versions by building fresh virtualenvs " +
+				"and re-resolving dependencies from PyPI — the opposite of checking that *this* " +
+				"package works against *this* system's packages, and a network dependency inside " +
+				"check(). The Arch Python package guidelines forbid it; invoke pytest (or upstream's " +
+				"runner) directly.",
+			Check: checkPythonTox,
+			Bad: `checkdepends=('python-tox')
 check() {
   tox
 }`,
-		Good: `checkdepends=('python-pytest')
+			Good: `checkdepends=('python-pytest')
 check() {
   pytest
 }`,
-		Refs: []Ref{refPyCheck},
-	},
-	{
-		ID:       "PB931",
-		Name:     "python-lint-checkdepends",
-		Severity: Info,
-		Doc: "pytest plugins like pytest-cov, pytest-black or pytest-mypy lint upstream's code " +
-			"style or measure coverage; neither says anything about whether the built package " +
-			"works, and a new linter release starts failing builds that did not change. The Arch " +
-			"Python package guidelines say check() runs tests, not upstream's CI. The auto-fix " +
-			"deletes the entry, unless a command in the file still passes the plugin's flag.",
-		Check: checkPythonLintCheckdepends,
-		// Dropping a declared dependency is a real change to the build
-		// environment: check() runs with one less package installed.
-		FixLevel: FixUnsafe,
-		Fix:      fixPythonLintCheckdepends,
-		Bad:      `checkdepends=('python-pytest' 'python-pytest-cov')`,
-		Good:     `checkdepends=('python-pytest')`,
-		Refs:     []Ref{refPyCheck},
-	},
-	{
-		ID:       "PB932",
-		Name:     "python-prebuilt-wheel",
-		Severity: Warn,
-		Doc: "A .whl source is a pre-built artifact: what lands in the package was compiled by " +
-			"whoever uploaded the wheel, not by this PKGBUILD, so nothing reviewed here is what " +
-			"ships. The Arch Python package guidelines require building from the source " +
-			"distribution except where no sdist exists at all.",
-		Check: checkPythonWheelSource,
-		Bad: `source=("https://files.pythonhosted.org/packages/py3/d/demo/demo-1.0-py3-none-any.whl")
+			Refs: []Ref{refPyCheck},
+		},
+		{
+			ID:       "PB931",
+			Name:     "python-lint-checkdepends",
+			Severity: Info,
+			Doc: "pytest plugins like pytest-cov, pytest-black or pytest-mypy lint upstream's code " +
+				"style or measure coverage; neither says anything about whether the built package " +
+				"works, and a new linter release starts failing builds that did not change. The Arch " +
+				"Python package guidelines say check() runs tests, not upstream's CI. The auto-fix " +
+				"deletes the entry, unless a command in the file still passes the plugin's flag.",
+			Check: checkPythonLintCheckdepends,
+			// Dropping a declared dependency is a real change to the build
+			// environment: check() runs with one less package installed.
+			FixLevel: FixUnsafe,
+			Fix:      fixPythonLintCheckdepends,
+			Bad:      `checkdepends=('python-pytest' 'python-pytest-cov')`,
+			Good:     `checkdepends=('python-pytest')`,
+			Refs:     []Ref{refPyCheck},
+		},
+		{
+			ID:       "PB932",
+			Name:     "python-prebuilt-wheel",
+			Severity: Warn,
+			Doc: "A .whl source is a pre-built artifact: what lands in the package was compiled by " +
+				"whoever uploaded the wheel, not by this PKGBUILD, so nothing reviewed here is what " +
+				"ships. The Arch Python package guidelines require building from the source " +
+				"distribution except where no sdist exists at all.",
+			Check: checkPythonWheelSource,
+			Bad: `source=("https://files.pythonhosted.org/packages/py3/d/demo/demo-1.0-py3-none-any.whl")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-		Good: `source=("https://files.pythonhosted.org/packages/source/d/demo/demo-1.0.tar.gz")
+			Good: `source=("https://files.pythonhosted.org/packages/source/d/demo/demo-1.0.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-		Refs: []Ref{refPyPEP517},
-	},
-	{
-		ID:       "PB933",
-		Name:     "python-missing-build-backend",
-		Severity: Warn,
-		Doc: "`python -m build` and `python -m installer` come from the python-build and " +
-			"python-installer packages, which makepkg does not install for you: without them in " +
-			"makedepends the build fails in any clean chroot, however reliably it works on the " +
-			"maintainer's machine. The auto-fix adds the missing package to makedepends.",
-		Check:    checkPythonBuildBackend,
-		FixLevel: FixSafe,
-		Fix:      fixPythonBuildBackend,
-		Bad: `build() {
+			Refs: []Ref{refPyPEP517},
+		},
+		{
+			ID:       "PB933",
+			Name:     "python-missing-build-backend",
+			Severity: Warn,
+			Doc: "`python -m build` and `python -m installer` come from the python-build and " +
+				"python-installer packages, which makepkg does not install for you: without them in " +
+				"makedepends the build fails in any clean chroot, however reliably it works on the " +
+				"maintainer's machine. The auto-fix adds the missing package to makedepends.",
+			Check:    checkPythonBuildBackend,
+			FixLevel: FixSafe,
+			Fix:      fixPythonBuildBackend,
+			Bad: `build() {
   python -m build --wheel --no-isolation
 }`,
-		Good: `makedepends=('python-build' 'python-installer')
+			Good: `makedepends=('python-build' 'python-installer')
 build() {
   python -m build --wheel --no-isolation
 }`,
-		Refs: []Ref{refPyPEP517},
-	},
-	{
-		ID:       "PB934",
-		Name:     "python-setup-py",
-		Severity: Warn,
-		Doc: "`python setup.py install` runs the distutils flow that setuptools has removed: it " +
-			"bypasses PEP 517 build isolation, writes egg-info metadata pip cannot manage, and " +
-			"breaks outright on modern setuptools. The Arch Python package guidelines build with " +
-			"`python -m build` and stage with `python -m installer`.",
-		Check: checkPythonSetupPy,
-		Bad: `build() {
+			Refs: []Ref{refPyPEP517},
+		},
+		{
+			ID:       "PB934",
+			Name:     "python-setup-py",
+			Severity: Warn,
+			Doc: "`python setup.py install` runs the distutils flow that setuptools has removed: it " +
+				"bypasses PEP 517 build isolation, writes egg-info metadata pip cannot manage, and " +
+				"breaks outright on modern setuptools. The Arch Python package guidelines build with " +
+				"`python -m build` and stage with `python -m installer`.",
+			Check: checkPythonSetupPy,
+			Bad: `build() {
   python setup.py build
 }`,
-		Good: `makedepends=('python-build' 'python-installer')
+			Good: `makedepends=('python-build' 'python-installer')
 build() {
   python -m build --wheel --no-isolation
 }`,
-		Refs: []Ref{guideline("python", "Python package guidelines", "setuptools or distutils", "setuptools-or-distutils")},
-	},
-	{
-		ID:       "PB940",
-		Name:     "cargo-check-release",
-		Severity: Warn,
-		Doc: "--release on cargo test/check (or its short spelling, -r) disables debug assertions " +
-			"and integer-overflow checks — precisely the invariants a test run exists to " +
-			"exercise. The Arch Rust package guidelines run check() without --release; the " +
-			"shipped binary is still built --release in build(). A --release kept in a variable " +
-			"counts as passed wherever the PKGBUILD assigns it, though only one written out in " +
-			"the command itself can be removed automatically.",
-		Check: checkCargoCheckRelease,
-		// Dropping the flag recompiles the crate in the dev profile: the check
-		// gets slower, and a suite that only passed with assertions compiled
-		// out now fails. That failure is the point, but it is a human's call.
-		FixLevel: FixUnsafe,
-		Fix:      fixCargoCheckRelease,
-		Bad: `check() {
+			Refs: []Ref{guideline("python", "Python package guidelines", "setuptools or distutils", "setuptools-or-distutils")},
+		},
+		{
+			ID:       "PB940",
+			Name:     "cargo-check-release",
+			Severity: Warn,
+			Doc: "--release on cargo test/check (or its short spelling, -r) disables debug assertions " +
+				"and integer-overflow checks — precisely the invariants a test run exists to " +
+				"exercise. The Arch Rust package guidelines run check() without --release; the " +
+				"shipped binary is still built --release in build(). A --release kept in a variable " +
+				"counts as passed wherever the PKGBUILD assigns it, though only one written out in " +
+				"the command itself can be removed automatically.",
+			Check: checkCargoCheckRelease,
+			// Dropping the flag recompiles the crate in the dev profile: the check
+			// gets slower, and a suite that only passed with assertions compiled
+			// out now fails. That failure is the point, but it is a human's call.
+			FixLevel: FixUnsafe,
+			Fix:      fixCargoCheckRelease,
+			Bad: `check() {
   cargo test --release --locked
 }`,
-		Good: `check() {
+			Good: `check() {
   cargo test --locked
 }`,
-		Refs: []Ref{guideline("rust", "Rust package guidelines", "Check", "check")},
-	},
-	{
-		ID:       "PB941",
-		Name:     "cargo-install-tracked",
-		Severity: Warn,
-		Doc: "cargo install records what it installed in .crates.toml and .crates2.json under the " +
-			"install root; staged into $pkgdir those files ship in the package, conflict with " +
-			"every other Rust package doing the same, and describe a cargo state directory that " +
-			"does not exist on the user's system. The Rust package guidelines pass --no-track. " +
-			"Flags kept in a variable count as passed wherever the PKGBUILD assigns it; an " +
-			"install whose flags come from outside the file is left alone, since --no-track may " +
-			"be in there. The auto-fix appends --no-track, before any -- separator the command has.",
-		Check: checkCargoInstallTracked,
-		// --no-track changes what cargo install leaves in the install root, so
-		// a package() that went on to delete or rewrite the tracking files
-		// itself is now operating on paths that are not there.
-		FixLevel: FixUnsafe,
-		Fix:      fixCargoInstallTracked,
-		Bad: `package() {
+			Refs: []Ref{guideline("rust", "Rust package guidelines", "Check", "check")},
+		},
+		{
+			ID:       "PB941",
+			Name:     "cargo-install-tracked",
+			Severity: Warn,
+			Doc: "cargo install records what it installed in .crates.toml and .crates2.json under the " +
+				"install root; staged into $pkgdir those files ship in the package, conflict with " +
+				"every other Rust package doing the same, and describe a cargo state directory that " +
+				"does not exist on the user's system. The Rust package guidelines pass --no-track. " +
+				"Flags kept in a variable count as passed wherever the PKGBUILD assigns it; an " +
+				"install whose flags come from outside the file is left alone, since --no-track may " +
+				"be in there. The auto-fix appends --no-track, before any -- separator the command has.",
+			Check: checkCargoInstallTracked,
+			// --no-track changes what cargo install leaves in the install root, so
+			// a package() that went on to delete or rewrite the tracking files
+			// itself is now operating on paths that are not there.
+			FixLevel: FixUnsafe,
+			Fix:      fixCargoInstallTracked,
+			Bad: `package() {
   cargo install --locked --root "$pkgdir/usr" --path .
 }`,
-		Good: `package() {
+			Good: `package() {
   cargo install --locked --no-track --root "$pkgdir/usr" --path .
 }`,
-		Refs: []Ref{guideline("rust", "Rust package guidelines", "Notes about using cargo install", "notes-about-using-cargo-install")},
-	},
-	{
-		ID:       "PB942",
-		Name:     "cargo-build-not-release",
-		Severity: Info,
-		Doc: "cargo builds the unoptimized, debug-assertion-laden dev profile unless told " +
-			"otherwise, so a plain `cargo build` in build() ships a slow binary. The Arch Rust " +
-			"package guidelines build with --release (-r is the same flag); a PKGBUILD that " +
-			"selects another profile explicitly (--profile) has made the call, as has one whose " +
-			"build() runs a release build beside the dev one, and both are left alone. Flags kept " +
-			"in a variable count as passed wherever the PKGBUILD assigns it; a build whose flags " +
-			"come from outside the file is left alone too, since --release may be in there.",
-		Check: checkCargoBuildRelease,
-		// The release profile is a different compile — slower, and a crate that
-		// only builds with debug assertions on now fails — and it moves the
-		// binary from target/debug to target/release, so anything that copies
-		// the artifact has to be checked against the new path.
-		FixLevel: FixUnsafe,
-		Fix:      fixCargoBuildRelease,
-		Bad: `build() {
+			Refs: []Ref{guideline("rust", "Rust package guidelines", "Notes about using cargo install", "notes-about-using-cargo-install")},
+		},
+		{
+			ID:       "PB942",
+			Name:     "cargo-build-not-release",
+			Severity: Info,
+			Doc: "cargo builds the unoptimized, debug-assertion-laden dev profile unless told " +
+				"otherwise, so a plain `cargo build` in build() ships a slow binary. The Arch Rust " +
+				"package guidelines build with --release (-r is the same flag); a PKGBUILD that " +
+				"selects another profile explicitly (--profile) has made the call, as has one whose " +
+				"build() runs a release build beside the dev one, and both are left alone. Flags kept " +
+				"in a variable count as passed wherever the PKGBUILD assigns it; a build whose flags " +
+				"come from outside the file is left alone too, since --release may be in there.",
+			Check: checkCargoBuildRelease,
+			// The release profile is a different compile — slower, and a crate that
+			// only builds with debug assertions on now fails — and it moves the
+			// binary from target/debug to target/release, so anything that copies
+			// the artifact has to be checked against the new path.
+			FixLevel: FixUnsafe,
+			Fix:      fixCargoBuildRelease,
+			Bad: `build() {
   cargo build --locked
 }`,
-		Good: `build() {
+			Good: `build() {
   cargo build --release --locked
 }`,
-		Refs: []Ref{refRustBuild},
-	},
-	{
-		ID:       "PB944",
-		Name:     "rust-missing-makedepends",
-		Severity: Info,
-		Doc: "cargo is not part of the base build environment: without it in makedepends " +
-			"the build fails in any clean chroot. The Rust package guidelines say to depend " +
-			"on cargo directly — rust and rustup both provide it — so cargo, cargo-nightly, " +
-			"rust and rustup all count. The auto-fix declares cargo.",
-		Check: checkRustMakedepends,
-		// Declaring a tool the build already invokes restores a requirement the
-		// clean chroot was going to enforce anyway: a package that could not
-		// build before can build after, and nothing else moves.
-		FixLevel: FixSafe,
-		Fix:      fixToolMakedepends(rustMakedependsGap, "cargo", "cargo"),
-		Bad: `build() {
+			Refs: []Ref{refRustBuild},
+		},
+		{
+			ID:       "PB944",
+			Name:     "rust-missing-makedepends",
+			Severity: Info,
+			Doc: "cargo is not part of the base build environment: without it in makedepends " +
+				"the build fails in any clean chroot. The Rust package guidelines say to depend " +
+				"on cargo directly — rust and rustup both provide it — so cargo, cargo-nightly, " +
+				"rust and rustup all count. The auto-fix declares cargo.",
+			Check: checkRustMakedepends,
+			// Declaring a tool the build already invokes restores a requirement the
+			// clean chroot was going to enforce anyway: a package that could not
+			// build before can build after, and nothing else moves.
+			FixLevel: FixSafe,
+			Fix:      fixToolMakedepends(rustMakedependsGap, "cargo", "cargo"),
+			Bad: `build() {
   cargo build --release --locked
 }`,
-		Good: `makedepends=('cargo')
+			Good: `makedepends=('cargo')
 build() {
   cargo build --release --locked
 }`,
-		Refs: []Ref{guideline("rust", "Rust package guidelines", "Depends", "depends")},
-	},
-	{
-		ID:       "PB950",
-		Name:     "cmake-missing-prefix",
-		Severity: Warn,
-		Doc: "CMake's install prefix defaults to /usr/local, which Arch packages must not touch " +
-			"(PB921/PB820 flag the resulting files); the CMake package guidelines configure with " +
-			"-DCMAKE_INSTALL_PREFIX=/usr. A PKGBUILD that sets another prefix explicitly (/opt " +
-			"for a self-contained tree) — through CMAKE_INSTALL_PREFIX, cmake's --install-prefix, " +
-			"or a CMAKE_STAGING_PREFIX that decides where the install step writes — has made a " +
-			"decision and is left alone.",
-		Check: checkCMakePrefix,
-		// The prefix moves every installed file, so a package() that copies
-		// out of the build tree by hardcoded path has to be checked against
-		// the new layout.
-		FixLevel: FixUnsafe,
-		Fix:      fixCMakePrefix,
-		Bad: `makedepends=('cmake')
+			Refs: []Ref{guideline("rust", "Rust package guidelines", "Depends", "depends")},
+		},
+		{
+			ID:       "PB950",
+			Name:     "cmake-missing-prefix",
+			Severity: Warn,
+			Doc: "CMake's install prefix defaults to /usr/local, which Arch packages must not touch " +
+				"(PB921/PB820 flag the resulting files); the CMake package guidelines configure with " +
+				"-DCMAKE_INSTALL_PREFIX=/usr. A PKGBUILD that sets another prefix explicitly (/opt " +
+				"for a self-contained tree) — through CMAKE_INSTALL_PREFIX, cmake's --install-prefix, " +
+				"or a CMAKE_STAGING_PREFIX that decides where the install step writes — has made a " +
+				"decision and is left alone.",
+			Check: checkCMakePrefix,
+			// The prefix moves every installed file, so a package() that copies
+			// out of the build tree by hardcoded path has to be checked against
+			// the new layout.
+			FixLevel: FixUnsafe,
+			Fix:      fixCMakePrefix,
+			Bad: `makedepends=('cmake')
 build() {
   cmake -B build -S .   # prefix silently defaults to /usr/local
   cmake --build build
 }`,
-		Good: `makedepends=('cmake')
+			Good: `makedepends=('cmake')
 build() {
   cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=None
   cmake --build build
 }`,
-		Refs: []Ref{guideline("cmake", "CMake package guidelines", "Prefix and library install directories", "prefix-and-library-install-directories")},
-	},
-	{
-		ID:       "PB951",
-		Name:     "cmake-build-type-release",
-		Severity: Warn,
-		Doc: "-DCMAKE_BUILD_TYPE=Release appends -O3 -DNDEBUG after the flags makepkg exports, " +
-			"silently overriding Arch's chosen -O2 and fortify settings. The CMake package " +
-			"guidelines build with -DCMAKE_BUILD_TYPE=None so the distribution's CFLAGS are what " +
-			"actually compile the code. The auto-fix rewrites the value to None, leaving the rest " +
-			"of the argument — a -D prefix, a :STRING type, the quoting — as written. cmake reads " +
-			"$CFLAGS/$CXXFLAGS only when CMAKE_C_FLAGS/CMAKE_CXX_FLAGS are not defined on the " +
-			"command line, so a configure that defines them to its own flags (an empty value, or " +
-			"a hand-written list) is left alone: there Release is the only -O, and None would " +
-			"build unoptimized. When one language gets Arch's flags and another its own, the " +
-			"finding stands but the fix does not rewrite it.",
-		Check: checkCMakeBuildType,
-		// None is a different compile: -O2 without -DNDEBUG keeps assertions
-		// in, so a project that only passes its tests with them compiled out
-		// now fails. That failure is the point, but it is a human's call.
-		FixLevel: FixUnsafe,
-		Fix:      fixCMakeBuildType,
-		Bad: `makedepends=('cmake')
+			Refs: []Ref{guideline("cmake", "CMake package guidelines", "Prefix and library install directories", "prefix-and-library-install-directories")},
+		},
+		{
+			ID:       "PB951",
+			Name:     "cmake-build-type-release",
+			Severity: Warn,
+			Doc: "-DCMAKE_BUILD_TYPE=Release appends -O3 -DNDEBUG after the flags makepkg exports, " +
+				"silently overriding Arch's chosen -O2 and fortify settings. The CMake package " +
+				"guidelines build with -DCMAKE_BUILD_TYPE=None so the distribution's CFLAGS are what " +
+				"actually compile the code. The auto-fix rewrites the value to None, leaving the rest " +
+				"of the argument — a -D prefix, a :STRING type, the quoting — as written. cmake reads " +
+				"$CFLAGS/$CXXFLAGS only when CMAKE_C_FLAGS/CMAKE_CXX_FLAGS are not defined on the " +
+				"command line, so a configure that defines them to its own flags (an empty value, or " +
+				"a hand-written list) is left alone: there Release is the only -O, and None would " +
+				"build unoptimized. When one language gets Arch's flags and another its own, the " +
+				"finding stands but the fix does not rewrite it.",
+			Check: checkCMakeBuildType,
+			// None is a different compile: -O2 without -DNDEBUG keeps assertions
+			// in, so a project that only passes its tests with them compiled out
+			// now fails. That failure is the point, but it is a human's call.
+			FixLevel: FixUnsafe,
+			Fix:      fixCMakeBuildType,
+			Bad: `makedepends=('cmake')
 build() {
   cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
   cmake --build build
 }`,
-		Good: `makedepends=('cmake')
+			Good: `makedepends=('cmake')
 build() {
   cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=None
   cmake --build build
 }`,
-		Refs: []Ref{guideline("cmake", "CMake package guidelines", "CMake can automatically override the default compiler optimization flag", "cmake-can-automatically-override-the-default-compiler-optimization-flag")},
-	},
-	{
-		ID:       "PB952",
-		Name:     "cmake-missing-makedepends",
-		Severity: Warn,
-		Doc: "cmake is not part of the base build environment: without it in makedepends the " +
-			"build fails in any clean chroot, however reliably it configures on the maintainer's " +
-			"machine. The auto-fix declares cmake.",
-		Check: checkCMakeMakedepends,
-		// As with PB944: restoring a build requirement, not changing the build.
-		FixLevel: FixSafe,
-		Fix:      fixToolMakedepends(cmakeMakedependsGap, "cmake", "cmake"),
-		Bad: `build() {
+			Refs: []Ref{guideline("cmake", "CMake package guidelines", "CMake can automatically override the default compiler optimization flag", "cmake-can-automatically-override-the-default-compiler-optimization-flag")},
+		},
+		{
+			ID:       "PB952",
+			Name:     "cmake-missing-makedepends",
+			Severity: Warn,
+			Doc: "cmake is not part of the base build environment: without it in makedepends the " +
+				"build fails in any clean chroot, however reliably it configures on the maintainer's " +
+				"machine. The auto-fix declares cmake.",
+			Check: checkCMakeMakedepends,
+			// As with PB944: restoring a build requirement, not changing the build.
+			FixLevel: FixSafe,
+			Fix:      fixToolMakedepends(cmakeMakedependsGap, "cmake", "cmake"),
+			Bad: `build() {
   cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=None
   cmake --build build
 }`,
-		Good: `makedepends=('cmake')
+			Good: `makedepends=('cmake')
 build() {
   cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=None
   cmake --build build
 }`,
-	},
-	{
-		ID:       "PB953",
-		Name:     "meson-missing-prefix",
-		Severity: Warn,
-		Doc: "Meson's install prefix defaults to /usr/local, which Arch packages must not touch; " +
-			"the Meson package guidelines configure with --prefix=/usr, or use arch-meson, which " +
-			"passes the distribution defaults for you.",
-		Check: checkMesonPrefix,
-		// As with PB950, the prefix moves every installed file.
-		FixLevel: FixUnsafe,
-		Fix:      fixMesonPrefix,
-		Bad: `makedepends=('meson')
+		},
+		{
+			ID:       "PB953",
+			Name:     "meson-missing-prefix",
+			Severity: Warn,
+			Doc: "Meson's install prefix defaults to /usr/local, which Arch packages must not touch; " +
+				"the Meson package guidelines configure with --prefix=/usr, or use arch-meson, which " +
+				"passes the distribution defaults for you.",
+			Check: checkMesonPrefix,
+			// As with PB950, the prefix moves every installed file.
+			FixLevel: FixUnsafe,
+			Fix:      fixMesonPrefix,
+			Bad: `makedepends=('meson')
 build() {
   meson setup build   # prefix silently defaults to /usr/local
 }`,
-		Good: `makedepends=('meson')
+			Good: `makedepends=('meson')
 build() {
   meson setup build --prefix=/usr
 }`,
-		Refs: []Ref{guideline("meson", "Meson package guidelines", "Using meson binary directly", "using-meson-binary-directly")},
-	},
-	{
-		ID:       "PB954",
-		Name:     "meson-missing-makedepends",
-		Severity: Warn,
-		Doc: "meson (and the arch-meson wrapper it ships) is not part of the base build " +
-			"environment: without meson in makedepends the build fails in any clean chroot. The " +
-			"auto-fix declares meson, which is also what ships arch-meson.",
-		Check: checkMesonMakedepends,
-		// As with PB944: restoring a build requirement, not changing the build.
-		FixLevel: FixSafe,
-		Fix:      fixToolMakedepends(mesonMakedependsGap, "meson", "meson"),
-		Bad: `build() {
+			Refs: []Ref{guideline("meson", "Meson package guidelines", "Using meson binary directly", "using-meson-binary-directly")},
+		},
+		{
+			ID:       "PB954",
+			Name:     "meson-missing-makedepends",
+			Severity: Warn,
+			Doc: "meson (and the arch-meson wrapper it ships) is not part of the base build " +
+				"environment: without meson in makedepends the build fails in any clean chroot. The " +
+				"auto-fix declares meson, which is also what ships arch-meson.",
+			Check: checkMesonMakedepends,
+			// As with PB944: restoring a build requirement, not changing the build.
+			FixLevel: FixSafe,
+			Fix:      fixToolMakedepends(mesonMakedependsGap, "meson", "meson"),
+			Bad: `build() {
   meson setup build --prefix=/usr
 }`,
-		Good: `makedepends=('meson')
+			Good: `makedepends=('meson')
 build() {
   meson setup build --prefix=/usr
 }`,
-		Refs: []Ref{guideline("meson", "Meson package guidelines", "Requirements", "requirements")},
-	},
-	{
-		ID:       "PB955",
-		Name:     "meson-ninja-direct",
-		Severity: Info,
-		Doc: "In a meson project, `meson compile -C build` wraps ninja with the environment and " +
-			"argument handling meson configured; calling ninja directly bypasses that and breaks " +
-			"quietly when the backend or its options change. The Meson package guidelines use the " +
-			"meson wrappers for compile, test and install.",
-		Check: checkMesonNinjaDirect,
-		Bad: `makedepends=('meson')
+			Refs: []Ref{guideline("meson", "Meson package guidelines", "Requirements", "requirements")},
+		},
+		{
+			ID:       "PB955",
+			Name:     "meson-ninja-direct",
+			Severity: Info,
+			Doc: "In a meson project, `meson compile -C build` wraps ninja with the environment and " +
+				"argument handling meson configured; calling ninja directly bypasses that and breaks " +
+				"quietly when the backend or its options change. The Meson package guidelines use the " +
+				"meson wrappers for compile, test and install.",
+			Check: checkMesonNinjaDirect,
+			Bad: `makedepends=('meson')
 build() {
   meson setup build --prefix=/usr
   ninja -C build
 }`,
-		Good: `makedepends=('meson')
+			Good: `makedepends=('meson')
 build() {
   meson setup build --prefix=/usr
   meson compile -C build
 }`,
-		Refs: []Ref{guideline("meson", "Meson package guidelines", "build()", "build")},
-	},
-	{
-		ID:       "PB960",
-		Name:     "vcs-missing-pkgver-fn",
-		Severity: Warn,
-		Doc: "A VCS source that follows upstream tip fetches new code on every build, but without " +
-			"a pkgver() function the package version is whatever literal pkgver= holds — so two " +
-			"different checkouts build 'the same' version and pacman never offers the upgrade. " +
-			"The VCS package guidelines derive pkgver from the checkout (git describe, revision " +
-			"counts).",
-		Check: checkVCSPkgverFn,
-		Bad: `pkgname=demo-git
+			Refs: []Ref{guideline("meson", "Meson package guidelines", "build()", "build")},
+		},
+		{
+			ID:       "PB960",
+			Name:     "vcs-missing-pkgver-fn",
+			Severity: Warn,
+			Doc: "A VCS source that follows upstream tip fetches new code on every build, but without " +
+				"a pkgver() function the package version is whatever literal pkgver= holds — so two " +
+				"different checkouts build 'the same' version and pacman never offers the upgrade. " +
+				"The VCS package guidelines derive pkgver from the checkout (git describe, revision " +
+				"counts).",
+			Check: checkVCSPkgverFn,
+			Bad: `pkgname=demo-git
 makedepends=('git')
 source=("git+https://example.com/demo.git")
 sha256sums=('SKIP')
 # no pkgver(): every build ships pkgver=1.0.0 whatever the checkout holds`,
-		Good: `pkgname=demo-git
+			Good: `pkgname=demo-git
 makedepends=('git')
 source=("git+https://example.com/demo.git")
 sha256sums=('SKIP')
@@ -731,24 +732,24 @@ pkgver() {
   cd demo
   git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
 }`,
-		Refs: []Ref{guideline("vcs", "VCS package guidelines", "The pkgver() function", "the-pkgver-function")},
-	},
-	{
-		ID:       "PB961",
-		Name:     "vcs-missing-provides-conflicts",
-		Severity: Info,
-		Doc: "A -git (or -svn, -hg, -bzr) package builds the same software as its release " +
-			"counterpart: without provides and conflicts on the base name, pacman happily " +
-			"installs both at once and dependencies on the release name are unsatisfiable by the " +
-			"VCS build. The VCS package guidelines declare both. The auto-fix declares the pair " +
-			"together — either one alone is worse than the finding.",
-		Check: checkVCSProvidesConflicts,
-		// Both fields are installed metadata pacman acts on: after the fix the
-		// release package can no longer be installed alongside, and dependencies
-		// on it resolve to this build instead.
-		FixLevel: FixUnsafe,
-		Fix:      fixVCSProvidesConflicts,
-		Bad: `pkgname=demo-git
+			Refs: []Ref{guideline("vcs", "VCS package guidelines", "The pkgver() function", "the-pkgver-function")},
+		},
+		{
+			ID:       "PB961",
+			Name:     "vcs-missing-provides-conflicts",
+			Severity: Info,
+			Doc: "A -git (or -svn, -hg, -bzr) package builds the same software as its release " +
+				"counterpart: without provides and conflicts on the base name, pacman happily " +
+				"installs both at once and dependencies on the release name are unsatisfiable by the " +
+				"VCS build. The VCS package guidelines declare both. The auto-fix declares the pair " +
+				"together — either one alone is worse than the finding.",
+			Check: checkVCSProvidesConflicts,
+			// Both fields are installed metadata pacman acts on: after the fix the
+			// release package can no longer be installed alongside, and dependencies
+			// on it resolve to this build instead.
+			FixLevel: FixUnsafe,
+			Fix:      fixVCSProvidesConflicts,
+			Bad: `pkgname=demo-git
 makedepends=('git')
 source=("git+https://example.com/demo.git")
 sha256sums=('SKIP')
@@ -757,7 +758,7 @@ pkgver() {
   cd demo
   git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
 }`,
-		Good: `pkgname=demo-git
+			Good: `pkgname=demo-git
 provides=('demo')
 conflicts=('demo')
 makedepends=('git')
@@ -768,37 +769,37 @@ pkgver() {
   cd demo
   git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
 }`,
-		Refs: []Ref{refVcsDeps},
-	},
-	{
-		ID:       "PB962",
-		Name:     "vcs-pkgver-in-folder",
-		Severity: Warn,
-		Doc: "makepkg keeps one persistent clone per checkout folder name and updates it " +
-			"incrementally. With $pkgver in the name:: prefix of a VCS source, pkgver() renames " +
-			"the folder on every version bump, so each build abandons the cache and re-clones the " +
-			"entire repository.",
-		Check: checkVCSPkgverInFolder,
-		Bad: `source=("$pkgname-$pkgver::git+https://example.com/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
+			Refs: []Ref{refVcsDeps},
+		},
+		{
+			ID:       "PB962",
+			Name:     "vcs-pkgver-in-folder",
+			Severity: Warn,
+			Doc: "makepkg keeps one persistent clone per checkout folder name and updates it " +
+				"incrementally. With $pkgver in the name:: prefix of a VCS source, pkgver() renames " +
+				"the folder on every version bump, so each build abandons the cache and re-clones the " +
+				"entire repository.",
+			Check: checkVCSPkgverInFolder,
+			Bad: `source=("$pkgname-$pkgver::git+https://example.com/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
 sha256sums=('SKIP')`,
-		Good: `source=("$pkgname::git+https://example.com/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
+			Good: `source=("$pkgname::git+https://example.com/demo.git#commit=3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a")
 sha256sums=('SKIP')`,
-		Refs: []Ref{guideline("vcs", "VCS package guidelines", "VCS sources", "vcs-sources")},
-	},
-	{
-		ID:       "PB963",
-		Name:     "vcs-suffix-mismatch",
-		Severity: Info,
-		Doc: "The VCS suffixes are a promise about what gets built: a -git package follows " +
-			"upstream's tip. A -git name with no git source builds something else under that " +
-			"promise, and a git source pinned to a fixed commit or tag is a release snapshot " +
-			"wearing a -git name — either way users and AUR helpers are misled about what " +
-			"updates mean.",
-		Check: checkVCSSuffixMismatch,
-		Bad: `pkgname=demo-git   # ...but the source is a release tarball
+			Refs: []Ref{guideline("vcs", "VCS package guidelines", "VCS sources", "vcs-sources")},
+		},
+		{
+			ID:       "PB963",
+			Name:     "vcs-suffix-mismatch",
+			Severity: Info,
+			Doc: "The VCS suffixes are a promise about what gets built: a -git package follows " +
+				"upstream's tip. A -git name with no git source builds something else under that " +
+				"promise, and a git source pinned to a fixed commit or tag is a release snapshot " +
+				"wearing a -git name — either way users and AUR helpers are misled about what " +
+				"updates mean.",
+			Check: checkVCSSuffixMismatch,
+			Bad: `pkgname=demo-git   # ...but the source is a release tarball
 source=("https://example.com/demo-1.0.0.tar.gz")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-		Good: `pkgname=demo-git
+			Good: `pkgname=demo-git
 provides=('demo')
 conflicts=('demo')
 makedepends=('git')
@@ -809,292 +810,293 @@ pkgver() {
   cd demo
   git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
 }`,
-		Refs: []Ref{guideline("vcs", "VCS package guidelines", "Package naming", "package-naming")},
-	},
-	{
-		ID:       "PB970",
-		Name:     "font-package-arch",
-		Severity: Warn,
-		Doc: "Font files render identically on every machine type, so the Arch font package " +
-			"guidelines require arch=('any') on ttf-/otf- packages. A concrete architecture " +
-			"makes pacman rebuild and re-download the same bytes per architecture for nothing.",
-		Check: checkFontArch,
-		Bad: `pkgname=ttf-demo   # font files are the same bytes on every machine
+			Refs: []Ref{guideline("vcs", "VCS package guidelines", "Package naming", "package-naming")},
+		},
+		{
+			ID:       "PB970",
+			Name:     "font-package-arch",
+			Severity: Warn,
+			Doc: "Font files render identically on every machine type, so the Arch font package " +
+				"guidelines require arch=('any') on ttf-/otf- packages. A concrete architecture " +
+				"makes pacman rebuild and re-download the same bytes per architecture for nothing.",
+			Check: checkFontArch,
+			Bad: `pkgname=ttf-demo   # font files are the same bytes on every machine
 # arch=('x86_64') from above stays in effect`,
-		Good: `pkgname=ttf-demo
+			Good: `pkgname=ttf-demo
 arch=('any')`,
-		Refs: []Ref{guideline("font", "Font package guidelines", "Architecture", "architecture")},
-	},
-	{
-		ID:       "PB971",
-		Name:     "font-package-depends",
-		Severity: Info,
-		Doc: "Installed fonts are discovered by fontconfig on its own; a font package needs no " +
-			"dependencies, and the historical fontconfig/xorg-font-utils entries only force " +
-			"unrelated software onto minimal systems. The font package guidelines say to declare " +
-			"none. The auto-fix drops them.",
-		Check: checkFontDepends,
-		// Dropping a declared dependency is a real change to what gets
-		// installed: a font package that was quietly pulling in a renderer for
-		// its .install scriptlet stops doing so.
-		FixLevel: FixUnsafe,
-		Fix:      fixFontDepends,
-		Bad: `pkgname=ttf-demo
+			Refs: []Ref{guideline("font", "Font package guidelines", "Architecture", "architecture")},
+		},
+		{
+			ID:       "PB971",
+			Name:     "font-package-depends",
+			Severity: Info,
+			Doc: "Installed fonts are discovered by fontconfig on its own; a font package needs no " +
+				"dependencies, and the historical fontconfig/xorg-font-utils entries only force " +
+				"unrelated software onto minimal systems. The font package guidelines say to declare " +
+				"none. The auto-fix drops them.",
+			Check: checkFontDepends,
+			// Dropping a declared dependency is a real change to what gets
+			// installed: a font package that was quietly pulling in a renderer for
+			// its .install scriptlet stops doing so.
+			FixLevel: FixUnsafe,
+			Fix:      fixFontDepends,
+			Bad: `pkgname=ttf-demo
 arch=('any')
 depends=('fontconfig')   # fontconfig finds installed fonts on its own`,
-		Good: `pkgname=ttf-demo
+			Good: `pkgname=ttf-demo
 arch=('any')`,
-		Refs: []Ref{guideline("font", "Font package guidelines", "Dependencies", "dependencies")},
-	},
-	{
-		ID:       "PB972",
-		Name:     "font-unstable-source",
-		Severity: Warn,
-		Doc: "fonts.google.com and fontspace.com serve archives generated on demand from the " +
-			"font's current revision: the bytes change without the URL changing, so the pinned " +
-			"checksum eventually fails on every user's machine at once. Fetch the versioned " +
-			"release artifact from the font's own repository instead.",
-		Check: checkFontUnstableSource,
-		Bad: `source=("https://fonts.google.com/download?family=Demo")
+			Refs: []Ref{guideline("font", "Font package guidelines", "Dependencies", "dependencies")},
+		},
+		{
+			ID:       "PB972",
+			Name:     "font-unstable-source",
+			Severity: Warn,
+			Doc: "fonts.google.com and fontspace.com serve archives generated on demand from the " +
+				"font's current revision: the bytes change without the URL changing, so the pinned " +
+				"checksum eventually fails on every user's machine at once. Fetch the versioned " +
+				"release artifact from the font's own repository instead.",
+			Check: checkFontUnstableSource,
+			Bad: `source=("https://fonts.google.com/download?family=Demo")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-		Good: `source=("https://github.com/example/demo-font/releases/download/v1.0/demo-v1.0.zip")
+			Good: `source=("https://github.com/example/demo-font/releases/download/v1.0/demo-v1.0.zip")
 sha256sums=('9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')`,
-		Refs: []Ref{guideline("font", "Font package guidelines", "Source", "source")},
-	},
-	{
-		ID:       "PB973",
-		Name:     "dkms-missing-depends",
-		Severity: Warn,
-		Doc: "A -dkms package installs module sources under /usr/src that only dkms can build, " +
-			"register and rebuild across kernel upgrades; without dkms in depends the package " +
-			"installs sources nothing will ever compile. The auto-fix declares dkms.",
-		Check: checkDkmsDepends,
-		// depends is installed-runtime metadata, not the build environment:
-		// after the fix pacman pulls dkms onto every user's machine.
-		FixLevel: FixUnsafe,
-		Fix:      fixDkmsDepends,
-		Bad: `pkgname=demo-dkms
+			Refs: []Ref{guideline("font", "Font package guidelines", "Source", "source")},
+		},
+		{
+			ID:       "PB973",
+			Name:     "dkms-missing-depends",
+			Severity: Warn,
+			Doc: "A -dkms package installs module sources under /usr/src that only dkms can build, " +
+				"register and rebuild across kernel upgrades; without dkms in depends the package " +
+				"installs sources nothing will ever compile. The auto-fix declares dkms.",
+			Check: checkDkmsDepends,
+			// depends is installed-runtime metadata, not the build environment:
+			// after the fix pacman pulls dkms onto every user's machine.
+			FixLevel: FixUnsafe,
+			Fix:      fixDkmsDepends,
+			Bad: `pkgname=demo-dkms
 # depends=(): the module sources ship, but nothing will ever build them`,
-		Good: `pkgname=demo-dkms
+			Good: `pkgname=demo-dkms
 depends=('dkms')`,
-		Refs: []Ref{refDkmsDeps},
-	},
-	{
-		ID:       "PB974",
-		Name:     "dkms-kernel-headers",
-		Severity: Warn,
-		Doc: "dkms discovers every installed kernel and pulls the matching headers itself, so a " +
-			"-dkms package depending on linux-headers (or any kernel's -headers) pins one kernel " +
-			"flavor: it drags the stock headers onto linux-lts systems and adds nothing on any " +
-			"other. The DKMS package guidelines say to leave headers to dkms. The auto-fix drops " +
-			"the pinned entry.",
-		Check: checkDkmsKernelHeaders,
-		// A package that really did need one kernel's headers at install time —
-		// an .install scriptlet building against them, say — loses them.
-		FixLevel: FixUnsafe,
-		Fix:      fixDkmsKernelHeaders,
-		Bad: `pkgname=demo-dkms
+			Refs: []Ref{refDkmsDeps},
+		},
+		{
+			ID:       "PB974",
+			Name:     "dkms-kernel-headers",
+			Severity: Warn,
+			Doc: "dkms discovers every installed kernel and pulls the matching headers itself, so a " +
+				"-dkms package depending on linux-headers (or any kernel's -headers) pins one kernel " +
+				"flavor: it drags the stock headers onto linux-lts systems and adds nothing on any " +
+				"other. The DKMS package guidelines say to leave headers to dkms. The auto-fix drops " +
+				"the pinned entry.",
+			Check: checkDkmsKernelHeaders,
+			// A package that really did need one kernel's headers at install time —
+			// an .install scriptlet building against them, say — loses them.
+			FixLevel: FixUnsafe,
+			Fix:      fixDkmsKernelHeaders,
+			Bad: `pkgname=demo-dkms
 depends=('dkms' 'linux-headers')   # pins the stock kernel's headers`,
-		Good: `pkgname=demo-dkms
+			Good: `pkgname=demo-dkms
 depends=('dkms')   # dkms pulls the right headers for every installed kernel`,
-		Refs: []Ref{refDkmsDeps},
-	},
-	{
-		ID:       "PB975",
-		Name:     "lib32-pkgdesc-suffix",
-		Severity: Info,
-		Doc: "A lib32- package's one-line description is shown in lists where only it " +
-			"distinguishes the multilib build from its 64-bit sibling; the 32-bit package " +
-			"guidelines end pkgdesc with \"(32-bit)\".",
-		Check: checkLib32Pkgdesc,
-		Bad: `pkgname=lib32-demo
+			Refs: []Ref{refDkmsDeps},
+		},
+		{
+			ID:       "PB975",
+			Name:     "lib32-pkgdesc-suffix",
+			Severity: Info,
+			Doc: "A lib32- package's one-line description is shown in lists where only it " +
+				"distinguishes the multilib build from its 64-bit sibling; the 32-bit package " +
+				"guidelines end pkgdesc with \"(32-bit)\".",
+			Check: checkLib32Pkgdesc,
+			Bad: `pkgname=lib32-demo
 pkgdesc='Demonstration library'`,
-		Good: `pkgname=lib32-demo
+			Good: `pkgname=lib32-demo
 pkgdesc='Demonstration library (32-bit)'`,
-		Refs: []Ref{guideline("32-bit", "32-bit package guidelines", "Package naming", "package-naming")},
-	},
-	{
-		ID:       "PB976",
-		Name:     "lib32-missing-m32",
-		Severity: Warn,
-		Doc: "On x86_64 nothing compiles 32-bit unless the PKGBUILD asks: without -m32 in " +
-			"CFLAGS/CXXFLAGS/LDFLAGS (or an equivalent CC spelling) the build emits 64-bit " +
-			"objects and the lib32- package ships the wrong ABI. Repackaging PKGBUILDs with no " +
-			"build() are exempt — they compile nothing.",
-		Check: checkLib32M32,
-		Bad: `pkgname=lib32-demo
+			Refs: []Ref{guideline("32-bit", "32-bit package guidelines", "Package naming", "package-naming")},
+		},
+		{
+			ID:       "PB976",
+			Name:     "lib32-missing-m32",
+			Severity: Warn,
+			Doc: "On x86_64 nothing compiles 32-bit unless the PKGBUILD asks: without -m32 in " +
+				"CFLAGS/CXXFLAGS/LDFLAGS (or an equivalent CC spelling) the build emits 64-bit " +
+				"objects and the lib32- package ships the wrong ABI. Repackaging PKGBUILDs with no " +
+				"build() are exempt — they compile nothing.",
+			Check: checkLib32M32,
+			Bad: `pkgname=lib32-demo
 pkgdesc='Demonstration library (32-bit)'
 build() {
   ./configure --libdir=/usr/lib32
   make
 }`,
-		Good: `pkgname=lib32-demo
+			Good: `pkgname=lib32-demo
 pkgdesc='Demonstration library (32-bit)'
 build() {
   export CFLAGS="$CFLAGS -m32" CXXFLAGS="$CXXFLAGS -m32" LDFLAGS="$LDFLAGS -m32"
   ./configure --libdir=/usr/lib32
   make
 }`,
-		Refs: []Ref{guideline("32-bit", "32-bit package guidelines", "lib32", "lib32")},
-	},
-	{
-		ID:       "PB977",
-		Name:     "mingw-required-options",
-		Severity: Warn,
-		Doc: "Cross-built Windows binaries must escape the host's toolchain defaults: the build " +
-			"host's strip corrupts PE binaries (mingw-strip differs), Windows linking needs the " +
-			"static/import libraries makepkg would delete, and Arch's CFLAGS target the host ABI. " +
-			"The MinGW package guidelines therefore require options=(!strip staticlibs !buildflags).",
-		Check: checkMingwOptions,
-		Bad: `pkgname=mingw-w64-demo
+			Refs: []Ref{guideline("32-bit", "32-bit package guidelines", "lib32", "lib32")},
+		},
+		{
+			ID:       "PB977",
+			Name:     "mingw-required-options",
+			Severity: Warn,
+			Doc: "Cross-built Windows binaries must escape the host's toolchain defaults: the build " +
+				"host's strip corrupts PE binaries (mingw-strip differs), Windows linking needs the " +
+				"static/import libraries makepkg would delete, and Arch's CFLAGS target the host ABI. " +
+				"The MinGW package guidelines therefore require options=(!strip staticlibs !buildflags).",
+			Check: checkMingwOptions,
+			Bad: `pkgname=mingw-w64-demo
 pkgdesc='Demonstration library (mingw-w64)'`,
-		Good: `pkgname=mingw-w64-demo
+			Good: `pkgname=mingw-w64-demo
 pkgdesc='Demonstration library (mingw-w64)'
 options=('!strip' 'staticlibs' '!buildflags')`,
-		Refs: []Ref{refMingwPkg},
-	},
-	{
-		ID:       "PB978",
-		Name:     "mingw-pkgdesc-suffix",
-		Severity: Info,
-		Doc: "A mingw-w64- package's description is shown in lists where only it distinguishes " +
-			"the cross build from the native one; the MinGW package guidelines end pkgdesc with " +
-			"\"(mingw-w64)\".",
-		Check: checkMingwPkgdesc,
-		Bad: `pkgname=mingw-w64-demo
+			Refs: []Ref{refMingwPkg},
+		},
+		{
+			ID:       "PB978",
+			Name:     "mingw-pkgdesc-suffix",
+			Severity: Info,
+			Doc: "A mingw-w64- package's description is shown in lists where only it distinguishes " +
+				"the cross build from the native one; the MinGW package guidelines end pkgdesc with " +
+				"\"(mingw-w64)\".",
+			Check: checkMingwPkgdesc,
+			Bad: `pkgname=mingw-w64-demo
 pkgdesc='Demonstration library'
 options=('!strip' 'staticlibs' '!buildflags')`,
-		Good: `pkgname=mingw-w64-demo
+			Good: `pkgname=mingw-w64-demo
 pkgdesc='Demonstration library (mingw-w64)'
 options=('!strip' 'staticlibs' '!buildflags')`,
-		Refs: []Ref{refMingwPkg},
-	},
-	{
-		ID:       "PB979",
-		Name:     "npm-missing-makedepends",
-		Severity: Warn,
-		Doc: "npm is not part of the base build environment (and not bundled with the nodejs " +
-			"package): without npm in makedepends the build fails in any clean chroot. The " +
-			"auto-fix declares npm.",
-		Check: checkNpmMakedepends,
-		// As with PB944: restoring a build requirement, not changing the build.
-		FixLevel: FixSafe,
-		Fix:      fixToolMakedepends(npmMakedependsGap, "npm", "npm"),
-		Bad: `prepare() {
+			Refs: []Ref{refMingwPkg},
+		},
+		{
+			ID:       "PB979",
+			Name:     "npm-missing-makedepends",
+			Severity: Warn,
+			Doc: "npm is not part of the base build environment (and not bundled with the nodejs " +
+				"package): without npm in makedepends the build fails in any clean chroot. The " +
+				"auto-fix declares npm.",
+			Check: checkNpmMakedepends,
+			// As with PB944: restoring a build requirement, not changing the build.
+			FixLevel: FixSafe,
+			Fix:      fixToolMakedepends(npmMakedependsGap, "npm", "npm"),
+			Bad: `prepare() {
   npm ci --cache "$srcdir/npm-cache"
 }`,
-		Good: `makedepends=('npm')
+			Good: `makedepends=('npm')
 prepare() {
   npm ci --cache "$srcdir/npm-cache"
 }`,
-		Refs: []Ref{guideline("nodejs", "Node.js package guidelines", "Using npm", "using-npm")},
-	},
-	{
-		ID:       "PB980",
-		Name:     "npm-user-cache",
-		Severity: Info,
-		Doc: "npm writes every downloaded tarball into the invoking user's ~/.npm, so a build " +
-			"leaves root-owned droppings in the builder's home directory that no clean step " +
-			"removes. The Node.js package guidelines pass --cache \"$srcdir/npm-cache\" so the " +
-			"cache dies with the build directory. The auto-fix appends that flag to the npm " +
-			"command.",
-		Check: checkNpmUserCache,
-		// A fresh cache directory means the install refetches everything, so
-		// a build that quietly relied on a warm ~/.npm — or on running with no
-		// network at all — behaves differently afterwards.
-		FixLevel: FixUnsafe,
-		Fix:      fixNpmUserCache,
-		Bad: `makedepends=('npm')
+			Refs: []Ref{guideline("nodejs", "Node.js package guidelines", "Using npm", "using-npm")},
+		},
+		{
+			ID:       "PB980",
+			Name:     "npm-user-cache",
+			Severity: Info,
+			Doc: "npm writes every downloaded tarball into the invoking user's ~/.npm, so a build " +
+				"leaves root-owned droppings in the builder's home directory that no clean step " +
+				"removes. The Node.js package guidelines pass --cache \"$srcdir/npm-cache\" so the " +
+				"cache dies with the build directory. The auto-fix appends that flag to the npm " +
+				"command.",
+			Check: checkNpmUserCache,
+			// A fresh cache directory means the install refetches everything, so
+			// a build that quietly relied on a warm ~/.npm — or on running with no
+			// network at all — behaves differently afterwards.
+			FixLevel: FixUnsafe,
+			Fix:      fixNpmUserCache,
+			Bad: `makedepends=('npm')
 prepare() {
   npm ci   # tarballs land in the build user's ~/.npm
 }`,
-		Good: `makedepends=('npm')
+			Good: `makedepends=('npm')
 prepare() {
   npm ci --cache "$srcdir/npm-cache"
 }`,
-		Refs: []Ref{guideline("nodejs", "Node.js package guidelines", "Setting temporary cache", "setting-temporary-cache")},
-	},
-	{
-		ID:       "PB981",
-		Name:     "java-runtime-dependency",
-		Severity: Info,
-		Doc: "Shipped .jar files and compiled classes run on nothing without a JVM, and pacman " +
-			"cannot know that from the file list. The Java package guidelines depend on the " +
-			"java-runtime virtual (or java-environment when a full JDK is needed) so any " +
-			"installed JVM satisfies it. The auto-fix declares java-runtime.",
-		Check: checkJavaRuntimeDependency,
-		// depends is installed-runtime metadata: after the fix pacman pulls a
-		// JVM onto every user's machine, and a package that in fact needs a full
-		// JDK wants java-environment instead — a distinction the file does not
-		// state.
-		FixLevel: FixUnsafe,
-		Fix:      fixJavaRuntimeDependency,
-		Bad: `package() {
+			Refs: []Ref{guideline("nodejs", "Node.js package guidelines", "Setting temporary cache", "setting-temporary-cache")},
+		},
+		{
+			ID:       "PB981",
+			Name:     "java-runtime-dependency",
+			Severity: Info,
+			Doc: "Shipped .jar files and compiled classes run on nothing without a JVM, and pacman " +
+				"cannot know that from the file list. The Java package guidelines depend on the " +
+				"java-runtime virtual (or java-environment when a full JDK is needed) so any " +
+				"installed JVM satisfies it. The auto-fix declares java-runtime.",
+			Check: checkJavaRuntimeDependency,
+			// depends is installed-runtime metadata: after the fix pacman pulls a
+			// JVM onto every user's machine, and a package that in fact needs a full
+			// JDK wants java-environment instead — a distinction the file does not
+			// state.
+			FixLevel: FixUnsafe,
+			Fix:      fixJavaRuntimeDependency,
+			Bad: `package() {
   install -Dm644 demo.jar "$pkgdir/usr/share/java/demo/demo.jar"
 }   # nothing in depends provides a JVM to run it`,
-		Good: `depends=('java-runtime')
+			Good: `depends=('java-runtime')
 package() {
   install -Dm644 demo.jar "$pkgdir/usr/share/java/demo/demo.jar"
 }`,
-		Refs: []Ref{guideline("java", "Java package guidelines", "Dependencies", "dependencies")},
-	},
-	{
-		ID:       "PB982",
-		Name:     "clr-required-metadata",
-		Severity: Info,
-		Doc: "CLR assemblies are CIL bytecode, identical on every architecture and structured in " +
-			"a way binutils strip corrupts. The CLR package guidelines therefore set arch=('any') " +
-			"and options=('!strip') on mono/.NET packages; a package missing either ships " +
-			"per-arch duplicates or broken assemblies.",
-		Check: checkCLRMetadata,
-		Bad: `depends=('mono')
+			Refs: []Ref{guideline("java", "Java package guidelines", "Dependencies", "dependencies")},
+		},
+		{
+			ID:       "PB982",
+			Name:     "clr-required-metadata",
+			Severity: Info,
+			Doc: "CLR assemblies are CIL bytecode, identical on every architecture and structured in " +
+				"a way binutils strip corrupts. The CLR package guidelines therefore set arch=('any') " +
+				"and options=('!strip') on mono/.NET packages; a package missing either ships " +
+				"per-arch duplicates or broken assemblies.",
+			Check: checkCLRMetadata,
+			Bad: `depends=('mono')
 build() {
   xbuild demo.sln   # CIL assemblies, but arch/options say native binary
 }`,
-		Good: `depends=('mono')
+			Good: `depends=('mono')
 arch=('any')
 options=('!strip')
 build() {
   xbuild demo.sln
 }`,
-		Refs: []Ref{guideline("clr", "CLR package guidelines", "Packaging gotchas", "packaging-gotchas")},
-	},
-	{
-		ID:       "PB983",
-		Name:     "haskell-arch-any",
-		Severity: Warn,
-		Doc: "GHC compiles Haskell libraries to native code with an ABI hash baked into every " +
-			"interface file, so no haskell- package is architecture-independent: arch=('any') " +
-			"ships x86_64 objects to every architecture. The Haskell package guidelines list the " +
-			"real architectures.",
-		Check: checkHaskellArch,
-		Bad: `pkgname=haskell-demo
+			Refs: []Ref{guideline("clr", "CLR package guidelines", "Packaging gotchas", "packaging-gotchas")},
+		},
+		{
+			ID:       "PB983",
+			Name:     "haskell-arch-any",
+			Severity: Warn,
+			Doc: "GHC compiles Haskell libraries to native code with an ABI hash baked into every " +
+				"interface file, so no haskell- package is architecture-independent: arch=('any') " +
+				"ships x86_64 objects to every architecture. The Haskell package guidelines list the " +
+				"real architectures.",
+			Check: checkHaskellArch,
+			Bad: `pkgname=haskell-demo
 arch=('any')   # GHC output is native code with a baked-in ABI hash`,
-		Good: `pkgname=haskell-demo
+			Good: `pkgname=haskell-demo
 arch=('x86_64')`,
-		Refs: []Ref{guideline("haskell", "Haskell package guidelines", "Architecture", "architecture")},
-	},
-	{
-		ID:       "PB984",
-		Name:     "php-arch-any",
-		Severity: Info,
-		Doc: "A pure-PHP package — one whose PKGBUILD compiles nothing — is architecture-" +
-			"independent and should declare arch=('any') so one build serves every machine. " +
-			"php- packages that build a native extension (phpize/configure/make) are " +
-			"architecture-specific and exempt.",
-		Check: checkPhpArch,
-		Bad: `pkgname=php-demo
+			Refs: []Ref{guideline("haskell", "Haskell package guidelines", "Architecture", "architecture")},
+		},
+		{
+			ID:       "PB984",
+			Name:     "php-arch-any",
+			Severity: Info,
+			Doc: "A pure-PHP package — one whose PKGBUILD compiles nothing — is architecture-" +
+				"independent and should declare arch=('any') so one build serves every machine. " +
+				"php- packages that build a native extension (phpize/configure/make) are " +
+				"architecture-specific and exempt.",
+			Check: checkPhpArch,
+			Bad: `pkgname=php-demo
 # arch=('x86_64') from above, but nothing here compiles anything
 package() {
   install -Dm644 demo.php "$pkgdir/usr/share/webapps/demo/demo.php"
 }`,
-		Good: `pkgname=php-demo
+			Good: `pkgname=php-demo
 arch=('any')
 package() {
   install -Dm644 demo.php "$pkgdir/usr/share/webapps/demo/demo.php"
 }`,
-		Refs: []Ref{guideline("php", "PHP package guidelines", "Architecture", "architecture"), refGeneralArch},
-	},
+			Refs: []Ref{guideline("php", "PHP package guidelines", "Architecture", "architecture"), refGeneralArch},
+		},
+	}
 }
 
 // --- PB901: hardcoded host architecture ------------------------------------
@@ -1405,8 +1407,8 @@ func depsFor(ctx *Context, field string) map[string]string {
 		names = append(names, field+"_"+a)
 	}
 	for _, n := range names {
-		for _, e := range varElems(ctx.Pkg.Vars[n]) {
-			if val, ok := staticVal(ctx.Pkg, e.Value); ok && val != "" {
+		for _, e := range ctx.Pkg.Vars[n].Elems() {
+			if val, ok := ctx.Pkg.StaticValue(e.Value); ok && val != "" {
 				out[depName(val)] = val
 			}
 		}
@@ -1473,7 +1475,7 @@ func checkPkgnameInDesc(ctx *Context) []Finding {
 	if v == nil || v.Array {
 		return nil
 	}
-	desc, ok := staticVal(ctx.Pkg, firstValue(v.Values))
+	desc, ok := ctx.Pkg.StaticValue(firstValue(v.Values))
 	if !ok || desc == "" {
 		return nil
 	}
@@ -1481,8 +1483,8 @@ func checkPkgnameInDesc(ctx *Context) []Finding {
 	for _, w := range strings.Fields(strings.ToLower(desc)) {
 		words[w] = true
 	}
-	for _, e := range varElems(ctx.Pkg.Vars["pkgname"]) {
-		name, ok := staticVal(ctx.Pkg, e.Value)
+	for _, e := range ctx.Pkg.Vars["pkgname"].Elems() {
+		name, ok := ctx.Pkg.StaticValue(e.Value)
 		if !ok || name == "" {
 			continue
 		}
@@ -1536,8 +1538,8 @@ func checkMaintainerComment(ctx *Context) []Finding {
 func checkUppercasePkgname(ctx *Context) []Finding {
 	var out []Finding
 	for _, field := range []string{"pkgname", "pkgbase"} {
-		for _, e := range varElems(ctx.Pkg.Vars[field]) {
-			val, ok := staticVal(ctx.Pkg, e.Value)
+		for _, e := range ctx.Pkg.Vars[field].Elems() {
+			val, ok := ctx.Pkg.StaticValue(e.Value)
 			if !ok || val == strings.ToLower(val) {
 				continue
 			}

@@ -94,8 +94,8 @@ func vcsCounterpartGaps(ctx *Context) []vcsCounterpartGap {
 	conflicts := depsFor(ctx, "conflicts")
 	var out []vcsCounterpartGap
 	reported := map[string]bool{}
-	for _, e := range varElems(ctx.Pkg.Vars["pkgname"]) {
-		name, ok := staticVal(ctx.Pkg, e.Value)
+	for _, e := range ctx.Pkg.Vars["pkgname"].Elems() {
+		name, ok := ctx.Pkg.StaticValue(e.Value)
 		if !ok || name == "" || reported[name] {
 			continue
 		}
@@ -161,8 +161,8 @@ func checkVCSSuffixMismatch(ctx *Context) []Finding {
 	// A suffixed name with no source from that VCS: the package builds a
 	// tarball while claiming to follow a repository.
 	reported := map[string]bool{}
-	for _, e := range varElems(ctx.Pkg.Vars["pkgname"]) {
-		name, ok := staticVal(ctx.Pkg, e.Value)
+	for _, e := range ctx.Pkg.Vars["pkgname"].Elems() {
+		name, ok := ctx.Pkg.StaticValue(e.Value)
 		if !ok || reported[name] {
 			continue
 		}

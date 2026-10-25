@@ -10,87 +10,89 @@ import (
 )
 
 // PB4xx: filesystem and privilege hygiene.
-var fsRules = []Rule{
-	{
-		ID:       "PB401",
-		Name:     "write-outside-builddir",
-		Severity: Error,
-		Doc: "A build must only write beneath $srcdir and $pkgdir. Writes to $HOME or absolute " +
-			"system paths either corrupt the builder's machine or hint at persistence being " +
-			"installed outside the package manager's tracking.",
-		Check: checkWritesOutside,
-		Bad: `package() {
+func fsRules() []Rule {
+	return []Rule{
+		{
+			ID:       "PB401",
+			Name:     "write-outside-builddir",
+			Severity: Error,
+			Doc: "A build must only write beneath $srcdir and $pkgdir. Writes to $HOME or absolute " +
+				"system paths either corrupt the builder's machine or hint at persistence being " +
+				"installed outside the package manager's tracking.",
+			Check: checkWritesOutside,
+			Bad: `package() {
   install -Dm644 foo.conf /etc/foo.conf   # writes to the live filesystem
 }`,
-		Good: `package() {
+			Good: `package() {
   install -Dm644 foo.conf "$pkgdir/etc/foo.conf"
 }`,
-	},
-	{
-		ID:       "PB402",
-		Name:     "privilege-escalation",
-		Severity: Error,
-		Doc: "makepkg builds must never escalate: sudo/su/doas/pkexec in a PKGBUILD runs arbitrary " +
-			"commands as root on the build machine. Anything needing privileges belongs in the " +
-			"package's install step, executed and tracked by pacman.",
-		Check: checkPrivilegeEscalation,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB402",
+			Name:     "privilege-escalation",
+			Severity: Error,
+			Doc: "makepkg builds must never escalate: sudo/su/doas/pkexec in a PKGBUILD runs arbitrary " +
+				"commands as root on the build machine. Anything needing privileges belongs in the " +
+				"package's install step, executed and tracked by pacman.",
+			Check: checkPrivilegeEscalation,
+			Bad: `build() {
   sudo make install
 }`,
-		Good: `build() {
+			Good: `build() {
   make   # never escalate privileges during a build
 }`,
-	},
-	{
-		ID:       "PB403",
-		Name:     "setuid-file",
-		Severity: Warn,
-		Doc: "chmod u+s/g+s (or 4xxx/2xxx modes), and `install -m` with such a mode, create " +
-			"setuid/setgid binaries, and `setcap` grants file capabilities (cap_setuid, cap_net_raw, " +
-			"…) — the capability-based equivalent of setuid. Each is a privilege boundary that " +
-			"deserves explicit review whenever a package ships one. There is no auto-fix: a setuid " +
-			"mode in a PKGBUILD is a deliberate choice (sudo, nvidia-modprobe), and clearing it " +
-			"ships a binary that cannot do its job.",
-		Check: checkSetuid,
-		Bad: `package() {
+		},
+		{
+			ID:       "PB403",
+			Name:     "setuid-file",
+			Severity: Warn,
+			Doc: "chmod u+s/g+s (or 4xxx/2xxx modes), and `install -m` with such a mode, create " +
+				"setuid/setgid binaries, and `setcap` grants file capabilities (cap_setuid, cap_net_raw, " +
+				"…) — the capability-based equivalent of setuid. Each is a privilege boundary that " +
+				"deserves explicit review whenever a package ships one. There is no auto-fix: a setuid " +
+				"mode in a PKGBUILD is a deliberate choice (sudo, nvidia-modprobe), and clearing it " +
+				"ships a binary that cannot do its job.",
+			Check: checkSetuid,
+			Bad: `package() {
   install -Dm4755 foo "$pkgdir/usr/bin/foo"   # setuid root
 }`,
-		Good: `package() {
+			Good: `package() {
   install -Dm755 foo "$pkgdir/usr/bin/foo"
 }`,
-	},
-	{
-		ID:       "PB404",
-		Name:     "install-without-destdir",
-		Severity: Error,
-		Doc: "A build system's install step in package() must be redirected into $pkgdir (via " +
-			"DESTDIR, --root, --prefix, or --destdir). Without it, `make install` and friends write " +
-			"into the builder's live filesystem instead of the staging directory — untracked by pacman " +
-			"and often run with escalated privileges.",
-		Check: checkInstallDestdir,
-		Bad: `package() {
+		},
+		{
+			ID:       "PB404",
+			Name:     "install-without-destdir",
+			Severity: Error,
+			Doc: "A build system's install step in package() must be redirected into $pkgdir (via " +
+				"DESTDIR, --root, --prefix, or --destdir). Without it, `make install` and friends write " +
+				"into the builder's live filesystem instead of the staging directory — untracked by pacman " +
+				"and often run with escalated privileges.",
+			Check: checkInstallDestdir,
+			Bad: `package() {
   make install   # writes into the builder's live filesystem
 }`,
-		Good: `package() {
+			Good: `package() {
   make DESTDIR="$pkgdir" install
 }`,
-	},
-	{
-		ID:       "PB405",
-		Name:     "sensitive-file-write",
-		Severity: Critical,
-		Doc: "Writing to pacman's configuration (SigLevel/repos control package trust), the dynamic " +
-			"linker's preload/search config, or sudoers — or running pacman-key — reconfigures the " +
-			"system's trust and privilege boundaries. In a PKGBUILD or scriptlet this is a persistence " +
-			"and privilege-escalation vector.",
-		Check: checkSensitiveWrites,
-		Bad: `post_install() {
+		},
+		{
+			ID:       "PB405",
+			Name:     "sensitive-file-write",
+			Severity: Critical,
+			Doc: "Writing to pacman's configuration (SigLevel/repos control package trust), the dynamic " +
+				"linker's preload/search config, or sudoers — or running pacman-key — reconfigures the " +
+				"system's trust and privilege boundaries. In a PKGBUILD or scriptlet this is a persistence " +
+				"and privilege-escalation vector.",
+			Check: checkSensitiveWrites,
+			Bad: `post_install() {
   echo 'SigLevel = Never' >> /etc/pacman.conf   # disables signature checks system-wide
 }`,
-		Good: `post_install() {
+			Good: `post_install() {
   echo "If you maintain a custom repo, add it to /etc/pacman.conf yourself."
 }`,
-	},
+		},
+	}
 }
 
 // prefixes always acceptable as write targets.

@@ -281,7 +281,7 @@ func longPrefix(a, opt string, min int) bool {
 type syncRequest struct {
 	rest []string // the arguments with every -s removed
 	sync bool
-	run  rules.RunCheck
+	run  pkgbuild.RunCheck
 }
 
 // splitSyncdeps removes makepkg's -s/--syncdeps from args, in every spelling
@@ -307,9 +307,9 @@ func splitSyncdeps(args []string) (syncRequest, error) {
 			r.sync = true
 			continue
 		case longPrefix(a, "check", 2):
-			r.run = rules.CheckForced
+			r.run = pkgbuild.CheckForced
 		case longPrefix(a, "nocheck", 4):
-			r.run = rules.CheckSkipped
+			r.run = pkgbuild.CheckSkipped
 		case longPrefix(a, "key", 1):
 			r.rest = append(r.rest, a)
 			if i+1 < len(args) {
@@ -345,7 +345,7 @@ type syncPlan func(carch string) ([]string, error)
 // builder can become root can become root. So -s is taken off makepkg's
 // arguments and pkglint installs the dependencies itself, as root, before the
 // PKGBUILD is in the container at all. Their names come from the static parse
-// (rules.SyncDeps), never from running the PKGBUILD or from a .SRCINFO beside
+// (pkgbuild.SyncDeps), never from running the PKGBUILD or from a .SRCINFO beside
 // it, and every name is checked before it goes near a command line.
 //
 // makepkg still checks the dependencies itself once it runs, so anything this
@@ -359,7 +359,7 @@ func containerSyncdeps(pkg *pkgbuild.Package, args []string) ([]string, syncPlan
 		return args, nil, nil
 	}
 	plan := func(carch string) ([]string, error) {
-		deps, err := rules.SyncDeps(pkg, carch, req.run)
+		deps, err := pkgbuild.SyncDeps(pkg, carch, req.run)
 		if err != nil {
 			return nil, fmt.Errorf("cannot sync dependencies for a container build: %w", err)
 		}
@@ -382,11 +382,11 @@ var containerArches = map[string]string{
 	"riscv64": "riscv64",
 }
 
-// validDepName is makepkg's rule for a package name (rules.NameProblem, the
+// validDepName is makepkg's rule for a package name (pkgbuild.NameProblem, the
 // one PB701 applies), plus the property this caller relies on itself: no
 // name can start with a dash, so none is ever an option to pacman.
 func validDepName(name string) bool {
-	return rules.NameProblem(name) == "" && !strings.HasPrefix(name, "-")
+	return pkgbuild.NameProblem(name) == "" && !strings.HasPrefix(name, "-")
 }
 
 // checkBuildAmbiguity catches `pkglint *` in a tree that holds a ./build

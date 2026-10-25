@@ -28,7 +28,7 @@ func fixablePackageArchive(ctx *Context) bool {
 	}
 	// Both counts, not just the resolvable one: pkgname=(demo $_extra) has one
 	// statically-known name and still builds two packages.
-	if len(varElems(ctx.Pkg.Vars["pkgname"])) != 1 || ctx.Pkg.ConditionalVars["pkgname"] {
+	if len(ctx.Pkg.Vars["pkgname"].Elems()) != 1 || ctx.Pkg.ConditionalVars["pkgname"] {
 		return false
 	}
 	names := pkgnames(ctx)

@@ -174,8 +174,8 @@ func collectEdits(ctx *Context, ignore map[string]bool, level FixLevel, env *Fix
 	// rest of it would rewrite half a rename, and a directive on a
 	// declaration's line is a maintainer declining that rename entirely.
 	waived := map[string]bool{}
-	for _, rule := range registry() {
-		if rule.Scope != scope || rule.Fix == nil || rule.FixLevel == FixNone || rule.FixLevel > level || ignore[rule.ID] {
+	for rule := range rulesIn(scope, ignore) {
+		if rule.Fix == nil || rule.FixLevel == FixNone || rule.FixLevel > level {
 			continue
 		}
 		for _, e := range rule.Fix(ctx, env) {

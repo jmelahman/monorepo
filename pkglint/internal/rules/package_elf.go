@@ -66,29 +66,11 @@ func checkELFPlacement(ctx *Context) []Finding {
 
 // --- PB803/804/805/806/807: hardening ---------------------------------------
 
-func checkELFExecStack(ctx *Context) []Finding {
-	var out []Finding
-	for i := range ctx.File.Entries {
-		e := &ctx.File.Entries[i]
-		if isHostELF(e) && e.ELF.GnuStackExec {
-			out = append(out, pkgFinding("PB803", Warn, e.Name,
-				"ELF file requests an executable stack (PT_GNU_STACK is RWX); link with -Wl,-z,noexecstack"))
-		}
-	}
-	return out
-}
+var checkELFExecStack = entryRule("PB803", Warn, func(e *pkgfile.Entry) bool { return isHostELF(e) && e.ELF.GnuStackExec },
+	"ELF file requests an executable stack (PT_GNU_STACK is RWX); link with -Wl,-z,noexecstack")
 
-func checkELFTextRel(ctx *Context) []Finding {
-	var out []Finding
-	for i := range ctx.File.Entries {
-		e := &ctx.File.Entries[i]
-		if isHostELF(e) && e.ELF.TextRel {
-			out = append(out, pkgFinding("PB804", Warn, e.Name,
-				"ELF file contains text relocations (DT_TEXTREL); rebuild with -fPIC"))
-		}
-	}
-	return out
-}
+var checkELFTextRel = entryRule("PB804", Warn, func(e *pkgfile.Entry) bool { return isHostELF(e) && e.ELF.TextRel },
+	"ELF file contains text relocations (DT_TEXTREL); rebuild with -fPIC")
 
 // isDebugArtifact mirrors namcap: files with ".debug" in the name are split
 // debug info, which is intentionally unstripped, non-PIE and RELRO-less.

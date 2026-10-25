@@ -12,15 +12,15 @@ import (
 // naming.go). Nearly every guideline rule is conditional on the package being
 // of a kind — named with a prefix, depending on a toolchain, invoking a build
 // system — so the "is this that kind of package" questions live here, built on
-// the same primitives the other rules already use (varElems, staticVal,
+// the same primitives the other rules already use (Var.Elems, StaticValue,
 // depsFor), rather than being re-derived per rule.
 
 // pkgnames returns the statically-known package names this PKGBUILD builds:
 // every pkgname element whose value is resolvable without running the file.
 func pkgnames(ctx *Context) []string {
 	var out []string
-	for _, e := range varElems(ctx.Pkg.Vars["pkgname"]) {
-		if val, ok := staticVal(ctx.Pkg, e.Value); ok && val != "" {
+	for _, e := range ctx.Pkg.Vars["pkgname"].Elems() {
+		if val, ok := ctx.Pkg.StaticValue(e.Value); ok && val != "" {
 			out = append(out, val)
 		}
 	}
@@ -32,8 +32,8 @@ func pkgnames(ctx *Context) []string {
 // exemption does).
 func allPkgNames(ctx *Context) []string {
 	out := pkgnames(ctx)
-	for _, e := range varElems(ctx.Pkg.Vars["pkgbase"]) {
-		if val, ok := staticVal(ctx.Pkg, e.Value); ok && val != "" {
+	for _, e := range ctx.Pkg.Vars["pkgbase"].Elems() {
+		if val, ok := ctx.Pkg.StaticValue(e.Value); ok && val != "" {
 			out = append(out, val)
 		}
 	}
@@ -64,8 +64,8 @@ func namePrefixed(ctx *Context, prefixes ...string) bool {
 
 // archIsAny reports whether the arch array declares "any".
 func archIsAny(ctx *Context) bool {
-	for _, e := range varElems(ctx.Pkg.Vars["arch"]) {
-		if val, ok := staticVal(ctx.Pkg, e.Value); ok && val == "any" {
+	for _, e := range ctx.Pkg.Vars["arch"].Elems() {
+		if val, ok := ctx.Pkg.StaticValue(e.Value); ok && val == "any" {
 			return true
 		}
 	}
@@ -75,8 +75,8 @@ func archIsAny(ctx *Context) bool {
 // optionSet reports whether options=() contains opt (e.g. "!strip"),
 // tolerating the escaped \! spelling as PB706 does.
 func optionSet(ctx *Context, opt string) bool {
-	for _, e := range varElems(ctx.Pkg.Vars["options"]) {
-		if val, ok := staticVal(ctx.Pkg, e.Value); ok && strings.TrimPrefix(val, `\`) == opt {
+	for _, e := range ctx.Pkg.Vars["options"].Elems() {
+		if val, ok := ctx.Pkg.StaticValue(e.Value); ok && strings.TrimPrefix(val, `\`) == opt {
 			return true
 		}
 	}
@@ -90,7 +90,7 @@ func pkgdescValue(ctx *Context) (string, bool) {
 	if v == nil || v.Array {
 		return "", false
 	}
-	return staticVal(ctx.Pkg, firstValue(v.Values))
+	return ctx.Pkg.StaticValue(firstValue(v.Values))
 }
 
 // varFinding reports a finding anchored at the first of fields that is
@@ -152,8 +152,8 @@ func depEntries(ctx *Context, field string) []depEntry {
 	}
 	for _, n := range names {
 		v := ctx.Pkg.Vars[n]
-		for _, e := range varElems(v) {
-			if val, ok := staticVal(ctx.Pkg, e.Value); ok && val != "" {
+		for _, e := range v.Elems() {
+			if val, ok := ctx.Pkg.StaticValue(e.Value); ok && val != "" {
 				out = append(out, depEntry{
 					Name: depName(val), Full: val, Pos: e.Pos, Var: v, Word: e.Word,
 				})

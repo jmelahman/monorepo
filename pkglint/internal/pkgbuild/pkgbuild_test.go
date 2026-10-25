@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -948,5 +949,58 @@ func TestReload(t *testing.T) {
 
 	if _, err := pkg.Reload(map[string][]byte{pkg.PKGBUILD.Path: []byte("build() {\n")}); err == nil {
 		t.Error("a stand-in that does not parse loaded")
+	}
+}
+
+func TestNameProblem(t *testing.T) {
+	for _, name := range []string{"go", "lib32-glibc", "gtk+", "foo@bar", "python-foo_bar"} {
+		if p := NameProblem(name); p != "" {
+			t.Errorf("NameProblem(%q) = %q, want none", name, p)
+		}
+	}
+	for _, name := range []string{"", "-oops", ".x", "a b", "ñ", "x;y"} {
+		if NameProblem(name) == "" {
+			t.Errorf("NameProblem(%q) found nothing", name)
+		}
+	}
+}
+
+func TestElems(t *testing.T) {
+	pkg := loadPKGBUILD(t, "pkgname=({,python-}demo)\narch=()\narch+=('x86_64')\npkgdesc='a {b,c}'\n")
+	vals := func(name string) []string {
+		var out []string
+		for _, e := range pkg.Vars[name].Elems() {
+			out = append(out, e.Value)
+		}
+		return out
+	}
+	if got := vals("pkgname"); !slices.Equal(got, []string{"demo", "python-demo"}) {
+		t.Errorf("brace-expanded array: got %q", got)
+	}
+	if elems := pkg.Vars["pkgname"].Elems(); elems[0].Word == nil || elems[0].Word != elems[1].Word {
+		t.Error("elements of one brace group must share their written Word")
+	}
+	if got := vals("arch"); !slices.Equal(got, []string{"x86_64"}) {
+		t.Errorf("appended array: got %q", got)
+	}
+	if got := vals("pkgdesc"); !slices.Equal(got, []string{"a {b,c}"}) {
+		t.Errorf("scalar must not brace-expand: got %q", got)
+	}
+	if got := pkg.Vars["missing"].Elems(); got != nil {
+		t.Errorf("nil Var: got %v", got)
+	}
+}
+
+func TestStaticValue(t *testing.T) {
+	pkg := loadPKGBUILD(t, "pkgname=demo\npkgver=$(date +%s)\n")
+	for in, want := range map[string]string{"$pkgname-cli": "demo-cli", "plain": "plain"} {
+		if got, ok := pkg.StaticValue(in); !ok || got != want {
+			t.Errorf("StaticValue(%q) = %q, %v; want %q", in, got, ok, want)
+		}
+	}
+	for _, in := range []string{"$pkgver", "$undefined", "$(uname -m)"} {
+		if got, ok := pkg.StaticValue(in); ok {
+			t.Errorf("StaticValue(%q) = %q, want not static", in, got)
+		}
 	}
 }

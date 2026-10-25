@@ -13,203 +13,205 @@ import (
 // PB2xx: hermeticity — network access belongs in the fetch/prepare phase,
 // pinned by hashes, so that build()/package()/check() can eventually run
 // with networking disabled.
-var hermeticRules = []Rule{
-	{
-		ID:       "PB201",
-		Name:     "network-in-build",
-		Severity: Warn,
-		Doc: "Downloads during build(), check() or package() bypass makepkg's checksum " +
-			"verification and make the build non-hermetic: what gets compiled depends on network " +
-			"state at build time. Move fetching to prepare() (or better, the source array) where " +
-			"artifacts are pinned by lockfiles or checksums.",
-		Check: checkNetworkInBuild,
-		Bad: `build() {
+func hermeticRules() []Rule {
+	return []Rule{
+		{
+			ID:       "PB201",
+			Name:     "network-in-build",
+			Severity: Warn,
+			Doc: "Downloads during build(), check() or package() bypass makepkg's checksum " +
+				"verification and make the build non-hermetic: what gets compiled depends on network " +
+				"state at build time. Move fetching to prepare() (or better, the source array) where " +
+				"artifacts are pinned by lockfiles or checksums.",
+			Check: checkNetworkInBuild,
+			Bad: `build() {
   curl -O https://example.com/extra-asset.bin
   make
 }`,
-		Good: `source=("https://example.com/extra-asset.bin")
+			Good: `source=("https://example.com/extra-asset.bin")
 sha256sums=('...')
 build() {
   make   # the asset is fetched and checksummed via source=
 }`,
-	},
-	{
-		ID:       "PB202",
-		Name:     "pip-without-hashes",
-		Severity: Warn,
-		Doc: "`pip install` without --require-hashes will happily fetch whatever the index serves. " +
-			"With hash-pinned requirements, pip verifies every downloaded artifact against a digest " +
-			"recorded in the requirements file.",
-		Check: checkPipHashes,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB202",
+			Name:     "pip-without-hashes",
+			Severity: Warn,
+			Doc: "`pip install` without --require-hashes will happily fetch whatever the index serves. " +
+				"With hash-pinned requirements, pip verifies every downloaded artifact against a digest " +
+				"recorded in the requirements file.",
+			Check: checkPipHashes,
+			Bad: `build() {
   pip install -r requirements.txt
 }`,
-		Good: `build() {
+			Good: `build() {
   pip install --require-hashes -r requirements.txt
 }`,
-	},
-	{
-		ID:       "PB203",
-		Name:     "cargo-unlocked",
-		Severity: Warn,
-		Doc: "cargo without --locked (or --frozen/--offline) may resolve and fetch dependency " +
-			"versions that differ from the committed Cargo.lock, so the built artifact is not " +
-			"reproducible and unreviewed code can enter the build. Flags kept in a variable count " +
-			"as passed wherever the PKGBUILD assigns it; a command whose flags come from outside " +
-			"the file is left alone, since the lockfile flag may be in there.",
-		Check: checkCargoLocked,
-		// --locked hard-fails when the source ships no Cargo.lock (or one out
-		// of sync with Cargo.toml), so the rewrite can break a working build —
-		// the same reason the other lockfile-enforcing fixes (PB206–PB209)
-		// are unsafe.
-		FixLevel: FixUnsafe,
-		Fix:      fixCargoLocked,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB203",
+			Name:     "cargo-unlocked",
+			Severity: Warn,
+			Doc: "cargo without --locked (or --frozen/--offline) may resolve and fetch dependency " +
+				"versions that differ from the committed Cargo.lock, so the built artifact is not " +
+				"reproducible and unreviewed code can enter the build. Flags kept in a variable count " +
+				"as passed wherever the PKGBUILD assigns it; a command whose flags come from outside " +
+				"the file is left alone, since the lockfile flag may be in there.",
+			Check: checkCargoLocked,
+			// --locked hard-fails when the source ships no Cargo.lock (or one out
+			// of sync with Cargo.toml), so the rewrite can break a working build —
+			// the same reason the other lockfile-enforcing fixes (PB206–PB209)
+			// are unsafe.
+			FixLevel: FixUnsafe,
+			Fix:      fixCargoLocked,
+			Bad: `build() {
   cargo build --release
 }`,
-		Good: `build() {
+			Good: `build() {
   cargo build --release --frozen
 }`,
-		Refs: []Ref{guideline("rust", "Rust package guidelines", "Prepare", "prepare"), refRustBuild},
-	},
-	{
-		ID:       "PB204",
-		Name:     "go-implicit-downloads",
-		Severity: Warn,
-		Doc: "`go build` fetches modules on demand unless they were vendored or pre-downloaded. " +
-			"That download happens inside build() with no makepkg-level verification (go.sum " +
-			"verifies content, but resolution still depends on network state). Vendor the modules, " +
-			"or run `go mod download` in prepare(). `go install pkg@latest` is worse still: the ref " +
-			"is mutable, so what gets built depends on whatever upstream published most recently.",
-		Check:    checkGoDownloads,
-		FixLevel: FixUnsafe,
-		Fix:      fixGoDownloads,
-		Bad: `build() {
+			Refs: []Ref{guideline("rust", "Rust package guidelines", "Prepare", "prepare"), refRustBuild},
+		},
+		{
+			ID:       "PB204",
+			Name:     "go-implicit-downloads",
+			Severity: Warn,
+			Doc: "`go build` fetches modules on demand unless they were vendored or pre-downloaded. " +
+				"That download happens inside build() with no makepkg-level verification (go.sum " +
+				"verifies content, but resolution still depends on network state). Vendor the modules, " +
+				"or run `go mod download` in prepare(). `go install pkg@latest` is worse still: the ref " +
+				"is mutable, so what gets built depends on whatever upstream published most recently.",
+			Check:    checkGoDownloads,
+			FixLevel: FixUnsafe,
+			Fix:      fixGoDownloads,
+			Bad: `build() {
   go build -o foo .
 }`,
-		Good: `prepare() {
+			Good: `prepare() {
   go mod download
 }
 build() {
   go build -o foo .
 }`,
-		Refs: []Ref{guideline("go", "Go package guidelines", "Upstream project with Go modules", "upstream-project-with-go-modules")},
-	},
-	{
-		ID:       "PB205",
-		Name:     "go-verification-disabled",
-		Severity: Warn,
-		Doc: "GOFLAGS/GONOSUMCHECK/GOSUMDB/GOINSECURE settings that disable Go's module checksum " +
-			"database or allow insecure transports remove the only integrity verification Go " +
-			"downloads get inside a build.",
-		Check:    checkGoEnvWeakening,
-		FixLevel: FixSafe,
-		Fix:      fixGoEnvWeakening,
-		Bad: `build() {
+			Refs: []Ref{guideline("go", "Go package guidelines", "Upstream project with Go modules", "upstream-project-with-go-modules")},
+		},
+		{
+			ID:       "PB205",
+			Name:     "go-verification-disabled",
+			Severity: Warn,
+			Doc: "GOFLAGS/GONOSUMCHECK/GOSUMDB/GOINSECURE settings that disable Go's module checksum " +
+				"database or allow insecure transports remove the only integrity verification Go " +
+				"downloads get inside a build.",
+			Check:    checkGoEnvWeakening,
+			FixLevel: FixSafe,
+			Fix:      fixGoEnvWeakening,
+			Bad: `build() {
   GOFLAGS=-insecure GOSUMDB=off go build .
 }`,
-		Good: `build() {
+			Good: `build() {
   go build -mod=vendor .   # keep checksum and sumdb verification on
 }`,
-	},
-	{
-		ID:       "PB206",
-		Name:     "npm-install-unlocked",
-		Severity: Info,
-		Doc: "`npm install` may rewrite the dependency tree; `npm ci` (and yarn --immutable, " +
-			"pnpm/bun --frozen-lockfile) installs exactly what the committed lockfile specifies " +
-			"and fails otherwise.",
-		Check:    checkNpmCI,
-		FixLevel: FixUnsafe,
-		Fix:      fixNpmCI,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB206",
+			Name:     "npm-install-unlocked",
+			Severity: Info,
+			Doc: "`npm install` may rewrite the dependency tree; `npm ci` (and yarn --immutable, " +
+				"pnpm/bun --frozen-lockfile) installs exactly what the committed lockfile specifies " +
+				"and fails otherwise.",
+			Check:    checkNpmCI,
+			FixLevel: FixUnsafe,
+			Fix:      fixNpmCI,
+			Bad: `build() {
   npm install
 }`,
-		Good: `build() {
+			Good: `build() {
   npm ci   # installs exactly what package-lock.json pins
 }`,
-	},
-	{
-		ID:       "PB207",
-		Name:     "composer-unlocked",
-		Severity: Warn,
-		Doc: "`composer update` re-resolves and fetches dependency versions, abandoning the " +
-			"committed composer.lock — use `composer install`, which installs exactly what the lock " +
-			"pins. And either way, composer runs hook scripts and plugins from composer.json and the " +
-			"dependency tree during install; pass --no-scripts so fetching packages does not also " +
-			"mean executing them, then run any needed build step explicitly.",
-		Check:    checkComposer,
-		FixLevel: FixUnsafe,
-		Fix:      lockfileFixer("PB207"),
-		Bad: `build() {
+		},
+		{
+			ID:       "PB207",
+			Name:     "composer-unlocked",
+			Severity: Warn,
+			Doc: "`composer update` re-resolves and fetches dependency versions, abandoning the " +
+				"committed composer.lock — use `composer install`, which installs exactly what the lock " +
+				"pins. And either way, composer runs hook scripts and plugins from composer.json and the " +
+				"dependency tree during install; pass --no-scripts so fetching packages does not also " +
+				"mean executing them, then run any needed build step explicitly.",
+			Check:    checkComposer,
+			FixLevel: FixUnsafe,
+			Fix:      lockfileFixer("PB207"),
+			Bad: `build() {
   composer install   # runs hook scripts and plugins while fetching
 }`,
-		Good: `build() {
+			Good: `build() {
   composer install --no-scripts   # fetch exactly the lock, run nothing
 }`,
-	},
-	{
-		ID:       "PB208",
-		Name:     "bundler-unlocked",
-		Severity: Info,
-		Doc: "`bundle install` without --frozen (or deployment mode) silently rewrites Gemfile.lock " +
-			"when it drifts from the Gemfile, fetching versions nobody reviewed; --frozen makes the " +
-			"committed lock authoritative and fails otherwise. (A `gem install` of a named gem has " +
-			"no lockfile at all; that is PB210.)",
-		Check:    checkBundler,
-		FixLevel: FixUnsafe,
-		Fix:      lockfileFixer("PB208"),
-		Bad: `build() {
+		},
+		{
+			ID:       "PB208",
+			Name:     "bundler-unlocked",
+			Severity: Info,
+			Doc: "`bundle install` without --frozen (or deployment mode) silently rewrites Gemfile.lock " +
+				"when it drifts from the Gemfile, fetching versions nobody reviewed; --frozen makes the " +
+				"committed lock authoritative and fails otherwise. (A `gem install` of a named gem has " +
+				"no lockfile at all; that is PB210.)",
+			Check:    checkBundler,
+			FixLevel: FixUnsafe,
+			Fix:      lockfileFixer("PB208"),
+			Bad: `build() {
   bundle install   # rewrites Gemfile.lock if it drifts from the Gemfile
 }`,
-		Good: `build() {
+			Good: `build() {
   bundle install --frozen   # exactly what Gemfile.lock pins
 }`,
-	},
-	{
-		ID:       "PB209",
-		Name:     "uv-poetry-unlocked",
-		Severity: Warn,
-		Doc: "uv and poetry re-resolve dependencies unless told the committed lockfile is " +
-			"authoritative: `uv sync`/`uv run` without --frozen or --locked may rewrite uv.lock, and " +
-			"`poetry update` abandons poetry.lock outright. Pass --frozen, and prefer " +
-			"`poetry install` against the committed lock.",
-		Check:    checkUvPoetry,
-		FixLevel: FixUnsafe,
-		Fix:      lockfileFixer("PB209"),
-		Bad: `build() {
+		},
+		{
+			ID:       "PB209",
+			Name:     "uv-poetry-unlocked",
+			Severity: Warn,
+			Doc: "uv and poetry re-resolve dependencies unless told the committed lockfile is " +
+				"authoritative: `uv sync`/`uv run` without --frozen or --locked may rewrite uv.lock, and " +
+				"`poetry update` abandons poetry.lock outright. Pass --frozen, and prefer " +
+				"`poetry install` against the committed lock.",
+			Check:    checkUvPoetry,
+			FixLevel: FixUnsafe,
+			Fix:      lockfileFixer("PB209"),
+			Bad: `build() {
   uv sync   # may re-resolve and rewrite uv.lock
 }`,
-		Good: `build() {
+			Good: `build() {
   uv sync --frozen   # the committed lock is authoritative
 }`,
-	},
-	{
-		ID:       "PB210",
-		Name:     "adhoc-package-install",
-		Severity: Warn, MaxSeverity: Error, // error unless every package is pinned to an exact version
-		Doc: "A package named on a package manager's command line — `npm install axios`, " +
-			"`pip install requests`, `npx some-tool`, `gem install rails`, `cargo install foo` — is " +
-			"fetched from a registry at build time, or at install time from a scriptlet, with nothing " +
-			"in the PKGBUILD verifying what arrives: the registry serves whatever it has at that moment, " +
-			"makepkg's checksums never see it, and npm, pip, gem, composer and cargo all run code out of " +
-			"the package the moment it lands. This is the shape of the 2025 AUR compromises: a " +
-			"`post_install` or `prepare()` gaining an `npm install` of a few registry packages whose " +
-			"postinstall scripts carried the payload. Install a project's dependencies from its own " +
-			"manifest and lockfile (`npm ci`, `pip install -r` with hashes, `bundle install --frozen`), " +
-			"declare a tool the build needs in makedepends, or build it from a checksummed source= entry. " +
-			"A spec pinned to an exact version or a full commit is at least reproducible, and is reported " +
-			"at Warn rather than Error; so is a package word pkglint cannot read (`npm install $_deps`), " +
-			"which could name anything.",
-		Check: checkAdhocInstall,
-		Bad: `prepare() {
+		},
+		{
+			ID:       "PB210",
+			Name:     "adhoc-package-install",
+			Severity: Warn, MaxSeverity: Error, // error unless every package is pinned to an exact version
+			Doc: "A package named on a package manager's command line — `npm install axios`, " +
+				"`pip install requests`, `npx some-tool`, `gem install rails`, `cargo install foo` — is " +
+				"fetched from a registry at build time, or at install time from a scriptlet, with nothing " +
+				"in the PKGBUILD verifying what arrives: the registry serves whatever it has at that moment, " +
+				"makepkg's checksums never see it, and npm, pip, gem, composer and cargo all run code out of " +
+				"the package the moment it lands. This is the shape of the 2025 AUR compromises: a " +
+				"`post_install` or `prepare()` gaining an `npm install` of a few registry packages whose " +
+				"postinstall scripts carried the payload. Install a project's dependencies from its own " +
+				"manifest and lockfile (`npm ci`, `pip install -r` with hashes, `bundle install --frozen`), " +
+				"declare a tool the build needs in makedepends, or build it from a checksummed source= entry. " +
+				"A spec pinned to an exact version or a full commit is at least reproducible, and is reported " +
+				"at Warn rather than Error; so is a package word pkglint cannot read (`npm install $_deps`), " +
+				"which could name anything.",
+			Check: checkAdhocInstall,
+			Bad: `prepare() {
   npm install axios uuid   # whatever the registry serves today, postinstall scripts and all
 }`,
-		Good: `makedepends=(npm)
+			Good: `makedepends=(npm)
 build() {
   npm ci   # the project's own package.json, pinned by its lockfile
 }`,
-	},
+		},
+	}
 }
 
 // sshConnects reports whether an ssh invocation opens a connection: all but

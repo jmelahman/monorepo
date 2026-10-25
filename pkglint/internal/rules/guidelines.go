@@ -73,8 +73,8 @@ var legacyLicenseIDs = map[string]bool{
 
 func checkNonSPDXLicense(ctx *Context) []Finding {
 	var out []Finding
-	for _, e := range varElems(ctx.Pkg.Vars["license"]) {
-		val, ok := staticVal(ctx.Pkg, e.Value)
+	for _, e := range ctx.Pkg.Vars["license"].Elems() {
+		val, ok := ctx.Pkg.StaticValue(e.Value)
 		if !ok || val == "" {
 			continue
 		}

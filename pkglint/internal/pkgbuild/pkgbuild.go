@@ -20,6 +20,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"unicode"
 
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -278,6 +279,90 @@ func readSourceFile(path string) ([]byte, error) {
 // plus any install scriptlets referenced by install= or living next to it.
 func Load(path string) (*Package, error) {
 	return load(path, nil)
+}
+
+// StaticValue resolves rendered against known scalars and reports whether
+// the result is fully static — no command substitution (NUL marker) and no
+// unresolved $ references. Rules skip values they cannot see statically.
+func (p *Package) StaticValue(rendered string) (string, bool) {
+	s := p.Expand(rendered)
+	if strings.ContainsRune(s, 0) || strings.Contains(s, "$") {
+		return "", false
+	}
+	return s, true
+}
+
+// Elem is one element of a variable assignment with its source position.
+type Elem struct {
+	Value string
+	Word  *syntax.Word
+	Pos   syntax.Pos
+}
+
+// Elems yields the elements of v: each array element, or the single scalar
+// value. Returns nil for empty assignments or a nil v.
+//
+// The values come from v.Values rather than v.Assign, which is only the *first*
+// assignment: bash keeps appending, so `arch=(); arch+=('x86_64')` is a
+// one-element array and reading the literal alone would call it empty. Values a
+// later assignment or an indexed write contributed have no source text of their
+// own and carry a nil Word with the array's position; callers that rewrite text
+// must skip those.
+//
+// Array elements are brace-expanded, because that is what makepkg's bash does
+// before any rule gets to see them: `pkgname=({,python-}open3d)` really is two
+// packages, and `sha256sums=(SKIP{,,,})` really is four checksums. An element
+// that expands to several values yields one Elem per value, all sharing the
+// written element's Word and Pos — so callers that edit source text must
+// deduplicate by Word. Scalar assignments are left alone: bash does not
+// brace-expand those.
+func (v *Var) Elems() []Elem {
+	if v == nil {
+		return nil
+	}
+	out := make([]Elem, 0, len(v.Values))
+	for i, s := range v.Values {
+		word, pos := v.ElemWord(i)
+		if !v.Array {
+			out = append(out, Elem{Value: s, Word: word, Pos: pos})
+			continue
+		}
+		for _, exp := range ExpandBraces(s) {
+			out = append(out, Elem{Value: exp, Word: word, Pos: pos})
+		}
+	}
+	return out
+}
+
+var pkgnameBadChars = regexp.MustCompile(`[^A-Za-z0-9@._+-]`)
+
+// NameProblem reports what is wrong with name as a package name, by makepkg's
+// own rule (lint_one_pkgname): ASCII letters, digits and @._+- only, neither
+// empty nor starting with - or .; "" when nothing is. PB701 and `pkglint
+// build`'s dependency sync share it, so there is one definition.
+func NameProblem(name string) string {
+	switch {
+	case name == "":
+		return "must not be empty"
+	case strings.HasPrefix(name, "-"):
+		return "must not start with a hyphen"
+	case strings.HasPrefix(name, "."):
+		return "must not start with a dot"
+	case strings.ContainsFunc(name, func(r rune) bool { return r > unicode.MaxASCII }):
+		return "may only contain ASCII characters"
+	}
+	if bad := pkgnameBadChars.FindAllString(name, -1); len(bad) > 0 {
+		seen := map[string]bool{}
+		var uniq []string
+		for _, c := range bad {
+			if !seen[c] {
+				seen[c] = true
+				uniq = append(uniq, c)
+			}
+		}
+		return "contains invalid characters: " + strings.Join(uniq, "")
+	}
+	return ""
 }
 
 // Reload parses the package again with contents standing in for the files it

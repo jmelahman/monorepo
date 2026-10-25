@@ -10,54 +10,56 @@ import (
 // metadata while makepkg executes the PKGBUILD — when the two disagree, the
 // user reviewed something other than what runs — and package metadata can
 // also claim identities (provides/replaces) it has no business claiming.
-var consistencyRules = []Rule{
-	{
-		ID:       "PB601",
-		Name:     "srcinfo-mismatch",
-		Severity: Warn,
-		Doc: ".SRCINFO is what the AUR web interface and helpers display; the PKGBUILD is what " +
-			"executes. A mismatch means reviewers saw different metadata than the build uses — " +
-			"sometimes a stale regeneration, sometimes deliberate misdirection.",
-		Check: checkSrcInfoMatch,
-		Bad: `# PKGBUILD says one thing...
+func consistencyRules() []Rule {
+	return []Rule{
+		{
+			ID:       "PB601",
+			Name:     "srcinfo-mismatch",
+			Severity: Warn,
+			Doc: ".SRCINFO is what the AUR web interface and helpers display; the PKGBUILD is what " +
+				"executes. A mismatch means reviewers saw different metadata than the build uses — " +
+				"sometimes a stale regeneration, sometimes deliberate misdirection.",
+			Check: checkSrcInfoMatch,
+			Bad: `# PKGBUILD says one thing...
 pkgver=1.4.0
 # ...but .SRCINFO was never regenerated and still reads:
 #   pkgver = 1.3.0`,
-		Good: `# Regenerate .SRCINFO after every metadata change:
+			Good: `# Regenerate .SRCINFO after every metadata change:
 makepkg --printsrcinfo > .SRCINFO`,
-	},
-	{
-		ID:       "PB602",
-		Name:     "network-in-pkgver",
-		Severity: Warn,
-		Doc: "pkgver() should derive a version from the already-fetched sources (git describe, " +
-			"cat VERSION). Downloading inside pkgver() executes network-dependent code on every " +
-			"makepkg invocation, including ones the user thought were offline.",
-		Check: checkPkgverNetwork,
-		Bad: `pkgver() {
+		},
+		{
+			ID:       "PB602",
+			Name:     "network-in-pkgver",
+			Severity: Warn,
+			Doc: "pkgver() should derive a version from the already-fetched sources (git describe, " +
+				"cat VERSION). Downloading inside pkgver() executes network-dependent code on every " +
+				"makepkg invocation, including ones the user thought were offline.",
+			Check: checkPkgverNetwork,
+			Bad: `pkgver() {
   curl -s https://example.com/latest-version
 }`,
-		Good: `pkgver() {
+			Good: `pkgver() {
   cd "$srcdir/foo"
   git describe --tags | sed 's/^v//;s/-/./g'
 }`,
-	},
-	{
-		ID:       "PB603",
-		Name:     "core-package-claim",
-		Severity: Warn,
-		Doc: "A provides, replaces or conflicts entry naming a core system package hijacks the " +
-			"dependency graph: installing the package silently satisfies dependencies meant for the " +
-			"real pacman/glibc/systemd, or removes the real one outright. Variant packages (foo-git, " +
-			"foo-bin) legitimately provide their parent, so those are exempt — anything else claiming " +
-			"a core identity deserves a hard look.",
-		Check: checkCoreClaims,
-		Bad: `pkgname=fancy-tool
+		},
+		{
+			ID:       "PB603",
+			Name:     "core-package-claim",
+			Severity: Warn,
+			Doc: "A provides, replaces or conflicts entry naming a core system package hijacks the " +
+				"dependency graph: installing the package silently satisfies dependencies meant for the " +
+				"real pacman/glibc/systemd, or removes the real one outright. Variant packages (foo-git, " +
+				"foo-bin) legitimately provide their parent, so those are exempt — anything else claiming " +
+				"a core identity deserves a hard look.",
+			Check: checkCoreClaims,
+			Bad: `pkgname=fancy-tool
 provides=('pacman')    # dependency resolution now treats this package as pacman
 replaces=('systemd')   # sysupgrade swaps systemd out for this package`,
-		Good: `pkgname=pacman-git
+			Good: `pkgname=pacman-git
 provides=("pacman=$pkgver")   # a -git/-bin variant legitimately provides its parent`,
-	},
+		},
+	}
 }
 
 // coreSystemPackages are packages whose identity being claimed via
@@ -97,8 +99,8 @@ func checkCoreClaims(ctx *Context) []Finding {
 	// plus their variant-suffix-stripped forms.
 	own := map[string]bool{}
 	for _, field := range []string{"pkgname", "pkgbase"} {
-		for _, e := range varElems(ctx.Pkg.Vars[field]) {
-			if val, ok := staticVal(ctx.Pkg, e.Value); ok && val != "" {
+		for _, e := range ctx.Pkg.Vars[field].Elems() {
+			if val, ok := ctx.Pkg.StaticValue(e.Value); ok && val != "" {
 				own[val] = true
 				own[stripVariantSuffix(val)] = true
 			}
@@ -116,8 +118,8 @@ func checkCoreClaims(ctx *Context) []Finding {
 		if !ok {
 			continue
 		}
-		for _, e := range varElems(v) {
-			val, ok := staticVal(ctx.Pkg, e.Value)
+		for _, e := range v.Elems() {
+			val, ok := ctx.Pkg.StaticValue(e.Value)
 			if !ok || val == "" {
 				continue
 			}

@@ -20,7 +20,7 @@ A container build copies the package tree in (no bind mounts) and runs makepkg
 as the caller's uid; that user gets no sudo, NOPASSWD or passwd entry, ever.
 `-- -s` there is stripped from makepkg's arguments and pkglint itself runs
 `pacman -Syu --needed --noconfirm -- <deps>` as root first, with the names from
-the static parse (`rules.SyncDeps`, never `--printsrcinfo`/.SRCINFO), each
+the static parse (`pkgbuild.SyncDeps`, never `--printsrcinfo`/.SRCINFO), each
 checked by `validDepName`; a list that needs running the PKGBUILD is an error.
 The CARCH is the container's `uname -m`, through `containerArches`; an unknown
 machine refuses the sync rather than guessing. An argument `splitSyncdeps`

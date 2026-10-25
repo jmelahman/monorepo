@@ -525,7 +525,7 @@ func lineOf(raw []byte, o int) int {
 // whose word cannot be deleted for just one of the names it expands to.
 func wordValueCount(v *pkgbuild.Var, w *syntax.Word) int {
 	n := 0
-	for _, e := range varElems(v) {
+	for _, e := range v.Elems() {
 		if e.Word == w {
 			n++
 		}

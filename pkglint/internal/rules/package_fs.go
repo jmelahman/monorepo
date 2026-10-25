@@ -6,6 +6,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/jmelahman/pkglint/internal/pkgfile"
 )
 
 // --- PB820: FHS layout --------------------------------------------------------
@@ -317,29 +319,11 @@ func checkSymlinks(ctx *Context) []Finding {
 
 // --- PB827/828/829: single-file landmines ---------------------------------------
 
-func checkLibtoolFiles(ctx *Context) []Finding {
-	var out []Finding
-	for i := range ctx.File.Entries {
-		e := &ctx.File.Entries[i]
-		if e.IsFile() && strings.HasSuffix(e.Name, ".la") {
-			out = append(out, pkgFinding("PB827", Warn, e.Name,
-				"libtool archive; delete .la files in package()"))
-		}
-	}
-	return out
-}
+var checkLibtoolFiles = entryRule("PB827", Warn, func(e *pkgfile.Entry) bool { return e.IsFile() && strings.HasSuffix(e.Name, ".la") },
+	"libtool archive; delete .la files in package()")
 
-func checkPerllocal(ctx *Context) []Finding {
-	var out []Finding
-	for i := range ctx.File.Entries {
-		e := &ctx.File.Entries[i]
-		if strings.HasSuffix(e.Name, "perllocal.pod") {
-			out = append(out, pkgFinding("PB828", Error, e.Name,
-				"perllocal.pod is perl's shared install log; every perl package shipping it conflicts with the others"))
-		}
-	}
-	return out
-}
+var checkPerllocal = entryRule("PB828", Error, func(e *pkgfile.Entry) bool { return strings.HasSuffix(e.Name, "perllocal.pod") },
+	"perllocal.pod is perl's shared install log; every perl package shipping it conflicts with the others")
 
 func checkInfoDirFile(ctx *Context) []Finding {
 	if ctx.File.Has("usr/share/info/dir") {
@@ -586,17 +570,8 @@ func checkDocsHeavy(ctx *Context) []Finding {
 
 // --- PB837/838/839: build residue ------------------------------------------------
 
-func checkSphinxCache(ctx *Context) []Finding {
-	var out []Finding
-	for i := range ctx.File.Entries {
-		e := &ctx.File.Entries[i]
-		if e.IsFile() && strings.HasSuffix(e.Name, "environment.pickle") {
-			out = append(out, pkgFinding("PB837", Warn, e.Name,
-				"sphinx-build cache file; exclude the .doctrees directory from the installed docs"))
-		}
-	}
-	return out
-}
+var checkSphinxCache = entryRule("PB837", Warn, func(e *pkgfile.Entry) bool { return e.IsFile() && strings.HasSuffix(e.Name, "environment.pickle") },
+	"sphinx-build cache file; exclude the .doctrees directory from the installed docs")
 
 // mimeCacheFiles are outputs of update-mime-database/update-desktop-database,
 // generated on the user's system by pacman hooks.
@@ -609,31 +584,13 @@ var mimeCacheFiles = map[string]bool{
 	"usr/share/mime/subclasses":             true,
 }
 
-func checkMimeCache(ctx *Context) []Finding {
-	var out []Finding
-	for i := range ctx.File.Entries {
-		e := &ctx.File.Entries[i]
-		if mimeCacheFiles[e.Name] {
-			out = append(out, pkgFinding("PB838", Error, e.Name,
-				"generated MIME database file; pacman's hook rebuilds it, and shipping a copy conflicts with other packages"))
-		}
-	}
-	return out
-}
+var checkMimeCache = entryRule("PB838", Error, func(e *pkgfile.Entry) bool { return mimeCacheFiles[e.Name] },
+	"generated MIME database file; pacman's hook rebuilds it, and shipping a copy conflicts with other packages")
 
 var scrollkeeperRe = regexp.MustCompile(`var.*/scrollkeeper/?$`)
 
-func checkScrollkeeper(ctx *Context) []Finding {
-	var out []Finding
-	for i := range ctx.File.Entries {
-		e := &ctx.File.Entries[i]
-		if scrollkeeperRe.MatchString(e.Name) {
-			out = append(out, pkgFinding("PB839", Warn, e.Name,
-				"scrollkeeper catalog directory; the documentation system it served was retired in 2008"))
-		}
-	}
-	return out
-}
+var checkScrollkeeper = entryRule("PB839", Warn, func(e *pkgfile.Entry) bool { return scrollkeeperRe.MatchString(e.Name) },
+	"scrollkeeper catalog directory; the documentation system it served was retired in 2008")
 
 // --- PB842: jar placement -------------------------------------------------------
 
