@@ -239,3 +239,34 @@ resource "github_repository_dependabot_security_updates" "repo" {
   repository = github_repository_vulnerability_alerts.repo[each.key].repository
   enabled    = each.value.security
 }
+
+# Released versions are permanent: the Go checksum database and release assets
+# pin what a tag pointed to, so a bad release gets a new version instead.
+# Creation stays open for the mirror workflow, which pushes tags without force.
+import {
+  to = github_repository_ruleset.tags["work"]
+  id = "work:2806590"
+}
+
+resource "github_repository_ruleset" "tags" {
+  for_each = local.repositories
+
+  repository  = github_repository.repo[each.key].name
+  name        = "disallow tag clobbering"
+  target      = "tag"
+  enforcement = "active"
+
+  conditions {
+    ref_name {
+      # The monorepo's tags are prefixed with their subtree, e.g. tag/v0.6.1.
+      include = [each.key == "monorepo" ? "refs/tags/**/v*" : "refs/tags/v*"]
+      exclude = []
+    }
+  }
+
+  rules {
+    deletion         = true
+    non_fast_forward = true
+    update           = true
+  }
+}
