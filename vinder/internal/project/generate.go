@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -278,7 +279,7 @@ func (p *Project) addRequires(pkg *installed) {
 func readPackage(dir string) (*installed, error) {
 	data, err := os.ReadFile(filepath.Join(dir, "package.json"))
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return nil, nil //nolint:nilnil // documented: nil package, no error, means there is none
 	}
 	if err != nil {
 		return nil, err
@@ -293,13 +294,11 @@ func readPackage(dir string) (*installed, error) {
 		return nil, fmt.Errorf("%s: %w", filepath.Join(dir, "package.json"), err)
 	}
 	if pj.Name == "" || pj.Version == "" {
-		return nil, nil
+		return nil, nil //nolint:nilnil // documented: nil package, no error, means it names no package
 	}
 	pkg := &installed{Package: pj.Package, Requires: map[string]string{}}
 	for _, deps := range []map[string]string{pj.Dependencies, pj.PeerDependencies, pj.OptionalDependencies} {
-		for name, r := range deps {
-			pkg.Requires[name] = r
-		}
+		maps.Copy(pkg.Requires, deps)
 	}
 	return pkg, nil
 }

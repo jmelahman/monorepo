@@ -53,11 +53,11 @@ func registryApp(t *testing.T, pm string, srv *registrytest.Server, libSpec stri
 	return app
 }
 
-func lib(version, depRange string) registrytest.Package {
+func lib(version string) registrytest.Package {
 	return registrytest.Package{
 		Name:         "lib",
 		Version:      version,
-		Dependencies: map[string]string{"dep": depRange},
+		Dependencies: map[string]string{"dep": "^1.0.0"},
 		Files:        map[string]string{"index.js": "import { d } from \"dep\";\nexport const l = () => \"lib " + version + " \" + d;\n"},
 	}
 }
@@ -101,7 +101,7 @@ func TestAlignAndUpgrade(t *testing.T) {
 			ctx := context.Background()
 
 			// app1 locks dep 1.0.0; 1.1.0 is out by the time app2 locks.
-			srv := registrytest.New(t, lib("1.0.0", "^1.0.0"), dep("1.0.0"))
+			srv := registrytest.New(t, lib("1.0.0"), dep("1.0.0"))
 			p1 := syncApp(t, registryApp(t, pm, srv, "^1.0.0"))
 			srv.Publish(t, dep("1.1.0"))
 			p2 := syncApp(t, registryApp(t, pm, srv, "^1.0.0"))
@@ -135,7 +135,7 @@ func TestAlignAndUpgrade(t *testing.T) {
 
 			// Upgrade bumps lib across a major, drops the alignment's
 			// override, and re-resolves dep to its newest 1.x.
-			srv.Publish(t, lib("2.0.0", "^1.0.0"))
+			srv.Publish(t, lib("2.0.0"))
 			srv.Publish(t, dep("1.2.0"))
 			before := manifest(t, p1)
 			bumps, err := p1.Upgrade(ctx, (&registry.Client{URL: srv.URL}).Latest)
@@ -188,7 +188,7 @@ func TestAlignDowngradesDirectDependency(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
 
-			srv := registrytest.New(t, lib("1.0.0", "^1.0.0"), lib("1.1.0", "^1.0.0"), dep("1.0.0"))
+			srv := registrytest.New(t, lib("1.0.0"), lib("1.1.0"), dep("1.0.0"))
 			p1 := syncApp(t, registryApp(t, pm, srv, "^1.0.0"))
 			p2 := syncApp(t, registryApp(t, pm, srv, "1.0.0"))
 
@@ -222,8 +222,8 @@ func TestAlignLeavesEmbeds(t *testing.T) {
 	t.Parallel()
 
 	pm := packageManagers(t)[0]
-	srv := registrytest.New(t, lib("1.0.0", "^1.0.0"), dep("1.0.0"))
-	var projects []*project.Project
+	srv := registrytest.New(t, lib("1.0.0"), dep("1.0.0"))
+	projects := make([]*project.Project, 0, 2)
 	for _, version := range []string{"0.5.0", "0.6.0"} {
 		app := registryApp(t, pm, srv, "^1.0.0")
 		config := filepath.Join(app, project.ConfigFile)

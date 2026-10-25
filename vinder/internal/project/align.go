@@ -42,7 +42,7 @@ func (pm PackageManager) overridesPath() []string {
 func (p *Project) aligned(pm PackageManager) (map[string]string, error) {
 	old, err := ReadManifest(filepath.Join(p.OutDir(), ManifestFile))
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil map means "no prior alignment"
 	}
 	if err != nil {
 		return nil, err

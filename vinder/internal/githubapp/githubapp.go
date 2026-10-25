@@ -106,7 +106,7 @@ type Options struct {
 	APIURL string
 }
 
-func (o *Options) defaults() {
+func (o Options) withDefaults() Options {
 	if o.WebURL == "" {
 		o.WebURL = "https://github.com"
 	}
@@ -116,11 +116,12 @@ func (o *Options) defaults() {
 	if o.HTTPClient == nil {
 		o.HTTPClient = http.DefaultClient
 	}
+	return o
 }
 
 // NewAppURL is where the manifest is posted.
 func (o Options) NewAppURL() string {
-	o.defaults()
+	o = o.withDefaults()
 	if o.Org != "" {
 		return fmt.Sprintf("%s/organizations/%s/settings/apps/new", o.WebURL, url.PathEscape(o.Org))
 	}
@@ -145,7 +146,7 @@ type result struct {
 // Create runs the manifest flow and returns the new App's credentials. It
 // returns once GitHub redirects back, or when ctx is done.
 func Create(ctx context.Context, opts Options) (Credentials, error) {
-	opts.defaults()
+	opts = opts.withDefaults()
 
 	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", "127.0.0.1:0")
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -62,9 +63,7 @@ func New(t testing.TB, pkgs ...Package) *Server {
 func (s *Server) Publish(t testing.TB, p Package) {
 	t.Helper()
 	files := map[string]string{}
-	for name, content := range p.Files {
-		files[name] = content
-	}
+	maps.Copy(files, p.Files)
 	if _, ok := files["package.json"]; !ok {
 		data, err := json.Marshal(map[string]any{"name": p.Name, "version": p.Version, "main": "index.js", "dependencies": p.Dependencies})
 		if err != nil {

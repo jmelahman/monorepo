@@ -167,7 +167,7 @@ func (o *object) child(key string, create bool) (*object, error) {
 		return child, nil
 	}
 	if !create {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil object with no error means the key is absent and create was not asked for
 	}
 	child := &object{vals: map[string]any{}}
 	o.set(key, child)
