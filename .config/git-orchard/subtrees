@@ -180,5 +180,6 @@
 [subtree "vinder"]
 	remote = git@github.com:jmelahman/vinder.git
 	branch = master
+	shared = base
 	shared = goreleaser
 	shared = npm

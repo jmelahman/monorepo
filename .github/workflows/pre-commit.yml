@@ -35,4 +35,13 @@ jobs:
         uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204
         with:
           prek-version: "0.5.4"
-          extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
+          # The trace log goes to an artifact, below, rather than the job's log.
+          show-verbose-logs: false
+          extra-args: --log-file ${{ runner.temp }}/prek.log ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
+      - name: Upload prek's trace log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: prek-log
+          path: ${{ runner.temp }}/prek.log
+          if-no-files-found: ignore
