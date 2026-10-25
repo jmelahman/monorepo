@@ -156,7 +156,7 @@ func runRelease(opts *ReleaseOptions, prefix, version string) error {
 			question = fmt.Sprintf("%s is already released as %s/%s; publish it again?", opts.Rev, s.Prefix, version)
 		}
 		if !opts.Yes {
-			ok, err := confirm(question)
+			ok, err := confirm(question, true, "pass --yes to release without asking")
 			if err != nil || !ok {
 				return err
 			}
@@ -267,18 +267,26 @@ func watchRepo(ctx context.Context, repo, tag, commit string, opts ghrun.WatchOp
 	return err
 }
 
-// confirm asks a yes/no question on stdin, where an empty answer accepts.
-func confirm(question string) (bool, error) {
-	fmt.Fprintf(os.Stderr, "%s [Y/n] ", question)
+// confirm asks a yes/no question on stdin, where an empty answer is def:
+// yes for what's easily undone, no for what isn't. With no stdin it fails,
+// saying how to skip asking, e.g. "pass --yes to release without asking".
+func confirm(question string, def bool, skip string) (bool, error) {
+	options := "[y/N]"
+	if def {
+		options = "[Y/n]"
+	}
+	fmt.Fprintf(os.Stderr, "%s %s ", question, options)
 	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if errors.Is(err, io.EOF) && answer == "" {
 		fmt.Fprintln(os.Stderr)
-		return false, errors.New("no answer; pass --yes to release without asking")
+		return false, errors.New("no answer; " + skip)
 	} else if err != nil && !errors.Is(err, io.EOF) {
 		return false, err
 	}
 	switch strings.ToLower(strings.TrimSpace(answer)) {
-	case "", "y", "yes":
+	case "":
+		return def, nil
+	case "y", "yes":
 		return true, nil
 	}
 	return false, nil

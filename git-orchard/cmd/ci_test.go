@@ -160,3 +160,45 @@ func TestPrintCILogs(t *testing.T) {
 		t.Errorf("logs include a run that didn't fail:\n%s", out.String())
 	}
 }
+
+func staleResults() []ciResult {
+	stale := ciRunOf("Dependabot Updates", "completed", "failure", 48*time.Hour)
+	stale.Stale = "no .github/dependabot.yml and security updates are off"
+	return []ciResult{{Prefix: "tools/foo", Repo: "o/foo", Branch: "main", Runs: []ciRun{
+		stale,
+		ciRunOf("pre-commit", "completed", "success", 72*time.Hour),
+	}}}
+}
+
+func TestPrintCIStale(t *testing.T) {
+	var out bytes.Buffer
+	printCI(&out, staleResults(), &CIOptions{}, false, now)
+	want := `tools/foo  - stale failure  Dependabot Updates  2d ago  0123456  Fix the thing  https://example.com/Dependabot Updates
+tools/foo  ✓ success        pre-commit          3d ago  0123456  Fix the thing  https://example.com/pre-commit
+
+0 failed, 0 running, 2 run(s) in 1 repositories; 1 stale failed run(s), which --prune-stale deletes
+`
+	if out.String() != want {
+		t.Errorf("got\n%s\nwant\n%s", out.String(), want)
+	}
+}
+
+func TestPrintCIFailedHidesStale(t *testing.T) {
+	var out bytes.Buffer
+	printCI(&out, staleResults(), &CIOptions{Failed: true}, false, now)
+	want := "Nothing failed in 1 repositories; 1 stale failed run(s) hidden, which --prune-stale deletes\n"
+	if out.String() != want {
+		t.Errorf("got\n%s\nwant\n%s", out.String(), want)
+	}
+}
+
+func TestStaleDoesntFail(t *testing.T) {
+	if err := ciError(staleResults()); err != nil {
+		t.Errorf("got %v for only a stale failure", err)
+	}
+	var out bytes.Buffer
+	printCILogs(&out, staleResults())
+	if out.Len() != 0 {
+		t.Errorf("logs include a stale run:\n%s", out.String())
+	}
+}

@@ -97,7 +97,8 @@ func listRuns(ctx context.Context, repo string, args ...string) ([]Run, error) {
 var transient = regexp.MustCompile(`(?i)\bEOF\b|connection reset|timed? ?out|TLS handshake|HTTP 5\d\d`)
 
 // gh runs the gh CLI and returns its output, or an error carrying its stderr.
-// The commands only read, so a transient failure is tried again once.
+// The commands only read, or delete (where a second try finds nothing to
+// delete), so a transient failure is tried again once.
 func gh(ctx context.Context, args ...string) ([]byte, error) {
 	var err error
 	for attempt := range 2 {

@@ -41,6 +41,9 @@ type CIOptions struct {
 	Interval time.Duration
 	Color    string
 	Jobs     int
+	// PruneStale deletes the failed runs of workflows found stale.
+	PruneStale bool
+	Yes        bool
 }
 
 // NewCICommand creates a new ci command
@@ -62,6 +65,12 @@ failed job, as Markdown, for reading or piping elsewhere:
 
   git orchard ci --failed --logs | claude -p "triage these CI failures"
 
+Failed runs of a workflow that won't run again are stale, and don't count as
+failures: so far, Dependabot Updates in a repository with no
+.github/dependabot.yml and security updates off, as in a subtree whose
+dependencies the monorepo updates. --prune-stale deletes them, after asking
+unless --yes.
+
 ci exits 1 if any run failed, even if it couldn't check some repository,
 and 2 if it couldn't check some repository and no run failed.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -77,7 +86,11 @@ and 2 if it couldn't check some repository and no run failed.`,
 	cmd.Flags().DurationVar(&opts.Interval, "interval", time.Minute, "with --watch, the time between refreshes")
 	cmd.Flags().StringVar(&opts.Color, "color", "auto", "color output: auto, always or never")
 	cmd.Flags().IntVarP(&opts.Jobs, "jobs", "j", 16, "repositories to check at once")
+	cmd.Flags().BoolVar(&opts.PruneStale, "prune-stale", false, "delete the failed runs of stale workflows")
+	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "with --prune-stale, delete without asking")
 	cmd.MarkFlagsMutuallyExclusive("watch", "json")
+	cmd.MarkFlagsMutuallyExclusive("watch", "prune-stale")
+	cmd.MarkFlagsMutuallyExclusive("json", "prune-stale")
 	cmd.MarkFlagsMutuallyExclusive("watch", "logs")
 
 	return cmd
@@ -105,6 +118,14 @@ type ciRun struct {
 	ghrun.Run
 	Logs     []ghrun.Excerpt `json:"logs,omitempty"`
 	LogError string          `json:"logError,omitempty"`
+	// Stale is why the run's workflow won't run again, if it won't.
+	Stale string `json:"stale,omitempty"`
+}
+
+// failing reports whether the run failed and that still matters: a stale
+// workflow's failures are history.
+func (r ciRun) failing() bool {
+	return r.Failed() && r.Stale == ""
 }
 
 func runCI(ctx context.Context, stdout, stderr io.Writer, opts *CIOptions, prefixes []string) error {
@@ -152,6 +173,11 @@ func runCI(ctx context.Context, stdout, stderr io.Writer, opts *CIOptions, prefi
 			printCI(stdout, results, opts, color, time.Now())
 			if opts.Logs {
 				printCILogs(stdout, results)
+			}
+		}
+		if opts.PruneStale {
+			if err := pruneStale(ctx, stdout, results, opts.Yes); err != nil {
+				return err
 			}
 		}
 		err := ciError(results)
@@ -240,9 +266,10 @@ func checkCI(ctx context.Context, targets []ciTarget, opts *CIOptions, stderr io
 			if err != nil {
 				r.Error = err.Error()
 			}
+			stale := staleness(ctx, t, runs)
 			for _, run := range runs {
-				cr := ciRun{Run: run}
-				if opts.Logs && run.Failed() {
+				cr := ciRun{Run: run, Stale: stale[run.WorkflowID]}
+				if opts.Logs && cr.failing() {
 					log, err := ghrun.FailedLog(ctx, t.Repo, run.ID)
 					if err != nil {
 						cr.LogError = err.Error()
@@ -258,7 +285,23 @@ func checkCI(ctx context.Context, targets []ciTarget, opts *CIOptions, stderr io
 	return results
 }
 
-// filterCI returns results with only their failed runs if failed is set,
+// staleness returns why each workflow of runs that failed won't run again,
+// by ID, for those found stale. A repository it can't tell about is taken to
+// be live: a failure shown in error beats one hidden.
+func staleness(ctx context.Context, t ciTarget, runs []ghrun.Run) map[int64]string {
+	stale := map[int64]string{}
+	for _, run := range runs {
+		if run.Workflow != ghrun.DependabotWorkflow || !run.Failed() {
+			continue
+		}
+		if why, err := ghrun.DependabotStale(ctx, t.Repo, t.Branch); err == nil && why != "" {
+			stale[run.WorkflowID] = why
+		}
+	}
+	return stale
+}
+
+// filterCI returns results with only their failing runs if failed is set,
 // leaving out those with none and no error.
 func filterCI(results []ciResult, failed bool) []ciResult {
 	if !failed {
@@ -268,7 +311,7 @@ func filterCI(results []ciResult, failed bool) []ciResult {
 	for _, r := range results {
 		runs := []ciRun{}
 		for _, run := range r.Runs {
-			if run.Failed() {
+			if run.failing() {
 				runs = append(runs, run)
 			}
 		}
@@ -280,12 +323,12 @@ func filterCI(results []ciResult, failed bool) []ciResult {
 	return out
 }
 
-// ciError is ErrCIFailed if any run failed, or else an error if some
+// ciError is ErrCIFailed if any run is failing, or else an error if some
 // repository couldn't be checked: a failure is news whatever else happened.
 func ciError(results []ciResult) error {
 	for _, r := range results {
 		for _, run := range r.Runs {
-			if run.Failed() {
+			if run.failing() {
 				return ErrCIFailed
 			}
 		}
@@ -332,8 +375,16 @@ func (p painter) link(url, s string) string {
 	return "\x1b]8;;" + url + "\x1b\\" + s + "\x1b]8;;\x1b\\"
 }
 
-// runStyle returns a run's symbol and color.
-func runStyle(r ghrun.Run) (symbol, code string) {
+// runStyle returns a run's symbol, color and state.
+func runStyle(r ciRun) (symbol, code, state string) {
+	if r.Stale != "" {
+		return "-", dim, "stale " + r.State()
+	}
+	symbol, code = runSymbol(r.Run)
+	return symbol, code, r.State()
+}
+
+func runSymbol(r ghrun.Run) (symbol, code string) {
 	switch {
 	case !r.Done():
 		return "●", yellow
@@ -364,6 +415,15 @@ func printCI(w io.Writer, results []ciResult, opts *CIOptions, color bool, now t
 		rows = append(rows, cells)
 	}
 
+	// Stale runs are counted from all the results, since --failed hides them.
+	stale := 0
+	for _, r := range results {
+		for _, run := range r.Runs {
+			if run.Stale != "" && run.Failed() {
+				stale++
+			}
+		}
+	}
 	failed, running, total := 0, 0, 0
 	for _, r := range shown {
 		prefix := p.paint(bold, r.Prefix)
@@ -377,19 +437,19 @@ func printCI(w io.Writer, results []ciResult, opts *CIOptions, color bool, now t
 		}
 		for _, run := range r.Runs {
 			total++
-			if run.Failed() {
+			if run.failing() {
 				failed++
 			} else if !run.Done() {
 				running++
 			}
-			symbol, code := runStyle(run.Run)
+			symbol, code, state := runStyle(run)
 			sha := run.HeadSHA[:min(7, len(run.HeadSHA))]
 			title := truncate(ghrun.Printable(run.Title), 50)
 			url := run.URL
 			if color {
 				url = ""
 			}
-			add(prefix, p.paint(code, symbol+" "+run.State()), p.link(run.URL, ghrun.Printable(run.Workflow)),
+			add(prefix, p.paint(code, symbol+" "+state), p.link(run.URL, ghrun.Printable(run.Workflow)),
 				p.paint(dim, age(now.Sub(run.CreatedAt))), p.paint(dim, sha), title, url)
 			if color {
 				prefix = "" // once per repository is enough to read
@@ -418,6 +478,15 @@ func printCI(w io.Writer, results []ciResult, opts *CIOptions, color bool, now t
 	if failed == 0 && len(shown) == 0 {
 		summary = p.paint(green, "Nothing failed") + fmt.Sprintf(" in %d repositories", len(results))
 	}
+	if stale > 0 {
+		summary += fmt.Sprintf("; %d stale failed run(s)", stale)
+		if opts.Failed {
+			summary += " hidden"
+		}
+		if !opts.PruneStale {
+			summary += ", which --prune-stale deletes"
+		}
+	}
 	if len(rows) > 0 {
 		_, _ = fmt.Fprintln(w)
 	}
@@ -428,7 +497,7 @@ func printCI(w io.Writer, results []ciResult, opts *CIOptions, color bool, now t
 func printCILogs(w io.Writer, results []ciResult) {
 	for _, r := range results {
 		for _, run := range r.Runs {
-			if !run.Failed() {
+			if !run.failing() {
 				continue
 			}
 			_, _ = fmt.Fprintf(w, "\n## %s: %s (%s)\n\n", r.Prefix, ghrun.Printable(run.Workflow), run.Conclusion)
@@ -512,4 +581,63 @@ func isTerminal(w io.Writer) bool {
 	}
 	fi, err := f.Stat()
 	return err == nil && fi.Mode()&os.ModeCharDevice != 0
+}
+
+// staleWorkflow is a stale workflow of a repository, with its failed runs.
+type staleWorkflow struct {
+	Prefix, Repo, Workflow, Why string
+	Runs                        []ghrun.Run
+}
+
+// pruneStale deletes the failed runs of results' stale workflows, after
+// listing them and, unless yes, asking. It lists every failed run, not just
+// the latest: the one before would take its place.
+func pruneStale(ctx context.Context, w io.Writer, results []ciResult, yes bool) error {
+	var workflows []staleWorkflow
+	total := 0
+	for _, r := range results {
+		for _, run := range r.Runs {
+			if run.Stale == "" || !run.Failed() {
+				continue
+			}
+			runs, err := ghrun.FailedRuns(ctx, r.Repo, run.WorkflowID)
+			if err != nil {
+				return fmt.Errorf("%s: %w", r.Prefix, err)
+			}
+			workflows = append(workflows, staleWorkflow{r.Prefix, r.Repo, run.Workflow, run.Stale, runs})
+			total += len(runs)
+		}
+	}
+	if total == 0 {
+		_, _ = fmt.Fprintln(w, "\nNo stale runs to delete.")
+		return nil
+	}
+
+	_, _ = fmt.Fprintln(w, "\nStale runs:")
+	for _, sw := range workflows {
+		_, _ = fmt.Fprintf(w, "  %s (%s): %d failed %s run(s); %s\n", sw.Prefix, sw.Repo, len(sw.Runs), ghrun.Printable(sw.Workflow), sw.Why)
+	}
+	if !yes {
+		ok, err := confirm(fmt.Sprintf("Delete these %d run(s)? Deleted runs can't be restored.", total), false, "pass --yes to delete without asking")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+	}
+
+	deleted := 0
+	var errs []error
+	for _, sw := range workflows {
+		for _, run := range sw.Runs {
+			if err := ghrun.DeleteRun(ctx, sw.Repo, run.ID); err != nil {
+				errs = append(errs, fmt.Errorf("%s: run %d: %w", sw.Prefix, run.ID, err))
+				continue
+			}
+			deleted++
+		}
+	}
+	_, _ = fmt.Fprintf(w, "Deleted %d of %d stale run(s).\n", deleted, total)
+	return errors.Join(errs...)
 }

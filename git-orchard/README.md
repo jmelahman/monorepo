@@ -89,9 +89,14 @@ git orchard ci --failed                 # only the failed runs
 git orchard ci --watch                  # refresh every minute until interrupted
 git orchard ci --json                   # for scripts
 git orchard ci --failed --logs | claude -p "triage these CI failures"
+git orchard ci --prune-stale            # delete stale workflows' failed runs, after asking
 ```
 
 `--logs` adds each failed run's logs as Markdown, cut down to the step that failed in each failed job (at most `--lines` of its last lines, 150 by default), without the setup and verbose logging GitHub's log viewer collapses.
+A failed run of a workflow that won't run again is stale: it shows dimmed, `--failed` hides it, and it doesn't count as a failure.
+So far that's Dependabot Updates in a repository with no `.github/dependabot.yml` and security updates off, as in a subtree whose dependencies the monorepo updates.
+`--prune-stale` deletes every failed run of such workflows, not just the latest, since the one before would take its place; it lists them and asks first, unless `--yes`.
+`gh` must be able to read the repository's security updates setting, which takes admin access; a repository it can't tell about is taken to be live.
 `ci` exits 1 if any run failed, even if it couldn't check some repository; 2 if it couldn't check some repository and nothing failed; and 130 if interrupted. So a script can ask only when something failed:
 
 ```shell
