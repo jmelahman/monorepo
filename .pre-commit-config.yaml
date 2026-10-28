@@ -37,6 +37,19 @@ repos:
       - id: mixed-line-ending
       - id: trailing-whitespace
 
+  # Rewrites every copy of a pinned version to match its source, per
+  # .config/lockstep/config.toml. Like vinder, it runs from its source, and
+  # before the sync so a rewritten profile reaches the subtrees in the same
+  # pass.
+  - repo: local
+    hooks:
+      - id: lockstep
+        name: lockstep sync
+        entry: go run ./lockstep sync
+        language: system
+        always_run: true
+        pass_filenames: false
+
   # Keeps the shared build-constraints.txt locked to the subtrees' build
   # pins; runs before the sync so the regenerated file reaches them in the
   # same pass.
@@ -52,7 +65,7 @@ repos:
 
   # Copies the profiles in .config/git-orchard/shared into the subtrees that
   # list them in .config/git-orchard/subtrees, so each mirror carries its own
-  # complete config. Keep rev at the git-orchard version in uv.lock, which
+  # complete config. lockstep keeps rev at the version in uv.lock, which
   # tools/bin runs.
   - repo: https://github.com/jmelahman/git-orchard
     rev: c57c8d249b06bd22f6482cc46dca6fe7108daec0 # frozen: v1.3.0

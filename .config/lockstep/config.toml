@@ -1,0 +1,20 @@
+# Versions that are written in more than one place, kept in step by lockstep
+# (https://github.com/jmelahman/lockstep): each pin's source defines it, and
+# `lockstep sync` rewrites every copy to match.
+
+# uv itself: the uv-pre-commit rev, which `prek autoupdate` bumps. Copies are
+# every `uv==` in a hook's additional_dependencies and setup-uv's `version`.
+[pins.uv]
+source = "pre-commit"
+repo = "https://github.com/astral-sh/uv-pre-commit"
+action = "astral-sh/setup-uv"
+
+# The dev tools tools/bin runs from uv.lock, so the hooks and CI match.
+[pins.git-orchard]
+source = "uv.lock"
+repo = "https://github.com/jmelahman/git-orchard"
+
+[pins.prek]
+source = "uv.lock"
+action = "j178/prek-action"
+input = "prek-version"

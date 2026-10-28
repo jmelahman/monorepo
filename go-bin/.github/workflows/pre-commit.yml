@@ -38,7 +38,7 @@ jobs:
       - name: Run prek hooks
         uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
         with:
-          prek-version: "0.5.4"
+          prek-version: "0.5.7"
           # The trace log goes to an artifact, below, rather than the job's log.
           show-verbose-logs: false
           # Pull requests check what they change; pushes check everything.
