@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 430" width="720" height="430" role="img" aria-labelledby="t">
+  <title id="t">git orchard sync copies a shared profile into each subtree; sync --check fails CI when a copy drifts</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8878"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: Inter, Helvetica, Arial, sans-serif; fill: #2c2c2c; font-size: 12px; }
+    .m, .m text { font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 10.5px; }
+    .mu { fill: #8a8878; }
+    .inv { fill: #fbfaef; }
+    .ac { fill: #8c0000; }
+    .ok { fill: #538d4e; }
+    .cap { font-size: 10.5px; letter-spacing: .08em; fill: #8a8878; font-weight: 700; }
+    .panel { fill: #efeee0; stroke: #d9d6c3; stroke-width: 1.5; }
+    .card { fill: #fbfaef; stroke: #d9d6c3; stroke-width: 1.5; }
+    .bad { fill: #fbfaef; stroke: #8c0000; stroke-width: 2; }
+    .block { fill: #efeee0; }
+    .wire { stroke: #b9b6a3; stroke-width: 1.5; fill: none; }
+  </style>
+
+  <!-- Source of truth -->
+  <text class="cap" x="20" y="130">EDIT ONCE</text>
+  <rect class="panel" x="20" y="140" width="270" height="118" rx="8"/>
+  <text class="m ac" x="34" y="162" font-weight="700">shared/go/.pre-commit-config.yaml</text>
+  <g class="m">
+    <text x="34" y="190">- repo: golangci/golangci-lint</text>
+    <text x="34" y="206" xml:space="preserve">  rev: <tspan class="ac" font-weight="700">v2.6.0</tspan>  <tspan class="mu"># was v2.5.0</tspan></text>
+    <text x="34" y="222" xml:space="preserve">  hooks: [golangci-lint]</text>
+  </g>
+  <text class="mu" x="34" y="246" font-size="11">in .config/git-orchard/, in the monorepo</text>
+
+  <text class="m" x="20" y="286" font-size="11" font-weight="700">$ git orchard sync</text>
+  <text class="mu" x="20" y="303" font-size="11">copies it into every subtree with</text>
+  <text class="mu" x="20" y="318" font-size="11"><tspan class="m" font-size="10.5">shared = go</tspan> in the manifest</text>
+
+  <g class="wire">
+    <path d="M290,199 C330,199 320,78 368,78" marker-end="url(#arrow)"/>
+    <path d="M290,199 C330,199 330,199 368,199" marker-end="url(#arrow)"/>
+    <path d="M290,199 C330,199 320,320 368,320" marker-end="url(#arrow)"/>
+  </g>
+
+  <text class="cap" x="370" y="16">EACH SUBTREE CARRIES A FULL COPY</text>
+
+  <!-- In sync -->
+  <rect class="card" x="370" y="26" width="330" height="106" rx="8"/>
+  <text x="384" y="46" font-weight="700">agentic-kanban/</text>
+  <text x="686" y="46" text-anchor="end" font-size="11"><tspan class="ok">✓</tspan> in sync</text>
+  <rect class="block" x="378" y="54" width="314" height="56" rx="4"/>
+  <g class="m">
+    <text class="mu" x="386" y="68"># BEGIN orchard:go</text>
+    <text x="386" y="83">- repo: golangci/golangci-lint</text>
+    <text x="386" y="98" xml:space="preserve">  rev: v2.6.0</text>
+    <text class="mu" x="386" y="125"># END orchard:go · then its own hooks</text>
+  </g>
+
+  <rect class="card" x="370" y="146" width="330" height="106" rx="8"/>
+  <text x="384" y="166" font-weight="700">work/</text>
+  <text x="686" y="166" text-anchor="end" font-size="11"><tspan class="ok">✓</tspan> in sync</text>
+  <rect class="block" x="378" y="174" width="314" height="56" rx="4"/>
+  <g class="m">
+    <text class="mu" x="386" y="188"># BEGIN orchard:go</text>
+    <text x="386" y="203">- repo: golangci/golangci-lint</text>
+    <text x="386" y="218" xml:space="preserve">  rev: v2.6.0</text>
+    <text class="mu" x="386" y="245"># END orchard:go · then its own hooks</text>
+  </g>
+
+  <!-- Drifted -->
+  <rect class="bad" x="370" y="266" width="330" height="106" rx="8"/>
+  <text x="384" y="286" font-weight="700">cycle-cli/</text>
+  <text class="ac" x="686" y="286" text-anchor="end" font-size="11" font-weight="700">✗ drifted</text>
+  <rect class="block" x="378" y="294" width="314" height="56" rx="4"/>
+  <g class="m">
+    <text class="mu" x="386" y="308"># BEGIN orchard:go</text>
+    <text x="386" y="323">- repo: golangci/golangci-lint</text>
+    <text x="386" y="338" xml:space="preserve">  rev: <tspan class="ac" font-weight="700">v2.5.0</tspan>  <tspan class="mu"># hand-edited</tspan></text>
+    <text class="mu" x="386" y="365"># END orchard:go · then its own hooks</text>
+  </g>
+
+  <!-- CI -->
+  <rect x="20" y="388" width="680" height="34" rx="6" fill="#2c2c2c"/>
+  <text class="m inv" x="34" y="409" font-size="11">CI: git-orchard-sync --check → exit 1: cycle-cli/.pre-commit-config.yaml differs from shared/go</text>
+</svg>
