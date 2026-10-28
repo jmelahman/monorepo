@@ -301,3 +301,50 @@ resource "github_repository_ruleset" "tags" {
     update           = true
   }
 }
+
+# The default branch can't be deleted or rewritten. Admins bypass, so pushing
+# straight to it (and `git orchard push --force`) still works; the mirror
+# workflow never forces.
+resource "github_repository_ruleset" "default_branch" {
+  for_each = local.repositories
+
+  repository  = github_repository.repo[each.key].name
+  name        = "protect default branch"
+  target      = "branch"
+  enforcement = "active"
+
+  conditions {
+    ref_name {
+      include = ["~DEFAULT_BRANCH"]
+      exclude = []
+    }
+  }
+
+  bypass_actors {
+    actor_id    = 5 # the admin role
+    actor_type  = "RepositoryRole"
+    bypass_mode = "always"
+  }
+
+  rules {
+    deletion         = true
+    non_fast_forward = true
+
+    # Pull requests into the monorepo need the pre-commit job to pass.
+    dynamic "pull_request" {
+      for_each = each.key == "monorepo" ? [1] : []
+      content {
+        required_approving_review_count = 0
+      }
+    }
+    dynamic "required_status_checks" {
+      for_each = each.key == "monorepo" ? [1] : []
+      content {
+        required_check {
+          context        = "pre-commit"
+          integration_id = 15368 # GitHub Actions
+        }
+      }
+    }
+  }
+}
