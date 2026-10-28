@@ -72,6 +72,10 @@
 	shared = pypi
 	shared = manygo
 	shared = pybuild
+[subtree "github-actions/claude-security-review"]
+	remote = git@github.com:jmelahman/claude-security-review.git
+	branch = master
+	shared = base
 [subtree "go-bin"]
 	remote = git@github.com:jmelahman/go-bin.git
 	branch = master

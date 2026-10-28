@@ -40,6 +40,10 @@ These projects are still in active development but may be considered "stable".
 
 - [pre-commit-hooks/go-pre-commit-hooks](https://github.com/jmelahman/go-pre-commit-hooks)
 
+## GitHub Actions
+
+- [github-actions/claude-security-review](https://github.com/jmelahman/claude-security-review)
+
 ## Templates
 
 - [templates/fullstack-template](https://github.com/jmelahman/fullstack-template)
@@ -79,6 +83,12 @@ Its state is kept in an R2 bucket; see [`backend.tf`](terraform/github/backend.t
 cd terraform/github
 GITHUB_TOKEN=$(gh auth token) terraform plan
 ```
+
+To add a subtree:
+
+1. Add it to `subtrees`: `git orchard add` for an existing repository, or a manifest entry for a directory that starts here.
+2. Give it a description and topics under `overrides` in [`repositories.tf`](terraform/github/repositories.tf), then `terraform apply`. Terraform reads its repositories from the manifest: it adopts the ones that exist and creates the rest.
+3. Give the git-orchard GitHub App access to the repository, or the mirror job can't push to it.
 
 # Tooling
 

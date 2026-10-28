@@ -53,6 +53,10 @@ locals {
     check-symlinks = {
       description = "Check for broken symlinks"
     }
+    claude-security-review = {
+      description = "Claude Code reviews each push for vulnerabilities and files code scanning alerts, on a Claude subscription"
+      topics      = ["claude", "claude-code", "github-actions", "code-scanning", "sarif", "security"]
+    }
     connections = {
       description = "A command-line client for the NYT Connections game"
       topics      = ["cli", "game", "games", "go", "golang", "nyt-games", "nytimes", "tui"]
@@ -161,11 +165,24 @@ locals {
     for name in local.repository_names :
     name => merge(local.defaults, lookup(local.overrides, name, {}))
   }
+
+  # Repositories that already exist are adopted, and the rest created, so a
+  # new subtree needs no `gh repo create`.
+  adopted = {
+    for name, repo in local.repositories : name => repo
+    if contains(data.github_repositories.existing.names, name)
+  }
 }
 
-# The repositories predate this configuration; adopt rather than create them.
+# Search can lag a just-created repository by a few seconds, which would make
+# the apply try to create it again and fail; rerun it.
+data "github_repositories" "existing" {
+  query            = "user:jmelahman fork:true"
+  results_per_page = 100
+}
+
 import {
-  for_each = local.repositories
+  for_each = local.adopted
   to       = github_repository.repo[each.key]
   id       = each.key
 }
@@ -214,7 +231,7 @@ resource "github_repository" "repo" {
 }
 
 import {
-  for_each = local.repositories
+  for_each = local.adopted
   to       = github_repository_vulnerability_alerts.repo[each.key]
   id       = each.key
 }

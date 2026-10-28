@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Claude Code for the security-review workflow.",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.312"
+  }
+}

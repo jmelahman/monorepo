@@ -1,0 +1,201 @@
+name: Claude security review
+description: >
+  Reviews what a push changed for exploitable vulnerabilities with Claude Code,
+  on a Claude subscription, and uploads the findings to GitHub code scanning.
+author: jmelahman
+branding:
+  icon: shield
+  color: orange
+
+inputs:
+  claude-code-oauth-token:
+    description: OAuth token from `claude setup-token`.
+    required: true
+  github-token:
+    description: "Token with `security-events: write`, to read and upload code scanning results."
+    default: ${{ github.token }}
+  model:
+    description: Claude model to review with.
+    default: opus
+  base:
+    description: Commit or ref to review from. Defaults to the commit of the last analysis uploaded.
+    default: ""
+  max-diff-bytes:
+    description: >
+      Bigger diffs (subtree imports, mass renames) are skipped with a warning,
+      not reviewed, so the next run doesn't inherit them.
+    default: "300000"
+  exclude:
+    description: Globs left out of the diff, one per line.
+    default: |
+      **/vendor/**
+      **/*.md
+      **/*.lock
+      **/package-lock.json
+      **/pnpm-lock.yaml
+      **/go.sum
+      **/go.work.sum
+
+outputs:
+  reviewed:
+    description: "`false` when the diff was empty or too big to review."
+    value: ${{ steps.context.outputs.review }}
+  sarif-file:
+    description: The SARIF file uploaded to code scanning.
+    value: ${{ steps.context.outputs.dir }}/results.sarif
+
+runs:
+  using: composite
+  steps:
+    - name: Collect the diff and open alerts
+      id: context
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        ACTION_PATH: ${{ github.action_path }}
+        BASE: ${{ inputs.base }}
+        MAX_DIFF_BYTES: ${{ inputs.max-diff-bytes }}
+        EXCLUDE: ${{ inputs.exclude }}
+      run: |
+        tool=claude-security-review
+        ctx="$RUNNER_TEMP/claude-security-review"
+        mkdir -p "$ctx"
+        echo "dir=$ctx" >> "$GITHUB_OUTPUT"
+
+        # Code scanning answers 404 "no analysis found" until a first upload.
+        # Any other failure must stop the run: treating it as no analyses
+        # would upload without the open alerts and close them all.
+        if ! analyses=$(gh api "repos/$GITHUB_REPOSITORY/code-scanning/analyses?tool_name=$tool&ref=$GITHUB_REF&per_page=1" 2>"$ctx/err"); then
+          grep -q "no analysis found" "$ctx/err" || { cat "$ctx/err" >&2; exit 1; }
+          analyses='[]'
+        fi
+        if [ -z "$BASE" ]; then
+          BASE=$(jq -r '.[0].commit_sha // empty' <<<"$analyses")
+        fi
+        if ! base=$(git rev-parse --verify --quiet HEAD^); then
+          echo "::error::HEAD^ is missing: check out with fetch-depth: 2 or more"
+          exit 1
+        fi
+        if [ -n "$BASE" ]; then
+          # Falling back to HEAD^ would mark the commits in between reviewed.
+          if ! git fetch --no-tags --depth=1 origin "$BASE"; then
+            echo "::error::cannot fetch $BASE; pass a base to review from"
+            exit 1
+          fi
+          base=$(git rev-parse FETCH_HEAD)
+        fi
+        echo "base=$base" >> "$GITHUB_OUTPUT"
+
+        # --no-renames lists a moved file as deleted and added, so alerts at
+        # its old path close. Unquoted paths match the alerts' and the files.
+        spec=(.)
+        while IFS= read -r glob; do
+          [ -n "$glob" ] && spec+=(":(exclude,glob)$glob")
+        done <<<"$EXCLUDE"
+        git -c core.quotePath=false diff --no-ext-diff --no-renames "$base" HEAD -- "${spec[@]}" > "$ctx/diff.patch"
+        git -c core.quotePath=false diff --name-only --no-renames --diff-filter=d "$base" HEAD -- "${spec[@]}" > "$ctx/changed.txt"
+        git -c core.quotePath=false diff --name-only --no-renames --diff-filter=D "$base" HEAD > "$ctx/deleted.txt"
+
+        # Fetched in full: whatever is missing here gets closed by the upload.
+        if [ "$(jq length <<<"$analyses")" -gt 0 ]; then
+          gh api --paginate "repos/$GITHUB_REPOSITORY/code-scanning/alerts?tool_name=$tool&ref=$GITHUB_REF&state=open&per_page=100" \
+            | jq -s 'add // []' > "$ctx/all-alerts.json"
+        else
+          echo '[]' > "$ctx/all-alerts.json"
+        fi
+        python3 "$ACTION_PATH/security_review.py" alerts "$ctx/all-alerts.json" "$ctx/changed.txt" > "$ctx/alerts.json"
+
+        # A skipped range still uploads (no findings, the open alerts carried
+        # forward), so the next run starts after it.
+        range="${base:0:12}..${GITHUB_SHA:0:12}"
+        size=$(wc -c < "$ctx/diff.patch")
+        if [ "$size" -eq 0 ] || [ "$size" -gt "$MAX_DIFF_BYTES" ]; then
+          if [ "$size" -eq 0 ]; then
+            echo "Nothing to review in \`$range\`." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::not reviewing $range: its diff is $size bytes (limit $MAX_DIFF_BYTES)"
+          fi
+          echo '{"structured_output": {"findings": [], "resolved_alerts": []}}' > "$ctx/result.json"
+          echo "review=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "review=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    # Pinned by package-lock.json.
+    - name: Set up Claude Code
+      if: steps.context.outputs.review == 'true'
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: npm ci --prefix "$ACTION_PATH" --no-fund --no-audit
+
+    # --restricted takes away every tool that runs code and confines Read,
+    # Grep and Glob to the checkout and the context directory; --safe-mode
+    # skips the checkout's CLAUDE.md, skills and hooks. The output is
+    # public (code scanning, the step summary), so nothing it can reach may be
+    # secret; the sarif step also refuses anything token-shaped.
+    - name: Review
+      if: steps.context.outputs.review == 'true'
+      shell: bash
+      env:
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+        ACTION_PATH: ${{ github.action_path }}
+        MODEL: ${{ inputs.model }}
+        CTX: ${{ steps.context.outputs.dir }}
+      run: |
+        prompt="$(cat "$ACTION_PATH/prompt.md")
+
+        diff.patch: $CTX/diff.patch
+        alerts.json: $CTX/alerts.json"
+        "$ACTION_PATH/node_modules/.bin/claude" -p "$prompt" \
+          --model "$MODEL" \
+          --restricted \
+          --safe-mode \
+          --strict-mcp-config \
+          --tools Read,Grep,Glob \
+          --add-dir "$CTX" \
+          --no-session-persistence \
+          --output-format json \
+          --json-schema "$(cat "$ACTION_PATH/schema.json")" \
+          > "$CTX/result.json"
+        jq -e '.is_error | not' "$CTX/result.json" > /dev/null
+
+    - name: Record token usage
+      if: always() && steps.context.outputs.review == 'true'
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        CTX: ${{ steps.context.outputs.dir }}
+        BASE: ${{ steps.context.outputs.base }}
+      run: |
+        [ -s "$CTX/result.json" ] || exit 0
+        python3 "$ACTION_PATH/security_review.py" usage \
+          --result "$CTX/result.json" --sha "$GITHUB_SHA" --base "$BASE" --out "$CTX/usage.json"
+
+    # Just the counts: the transcript would show the code Claude read, and a
+    # public repository's artifacts are public.
+    - name: Upload token usage
+      if: always() && steps.context.outputs.review == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: claude-security-review-usage
+        path: ${{ steps.context.outputs.dir }}/usage.json
+        if-no-files-found: ignore
+        retention-days: 90
+
+    - name: Convert findings to SARIF
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        CTX: ${{ steps.context.outputs.dir }}
+      run: |
+        python3 "$ACTION_PATH/security_review.py" sarif \
+          --result "$CTX/result.json" --alerts "$CTX/all-alerts.json" --shown "$CTX/alerts.json" \
+          --deleted "$CTX/deleted.txt" --out "$CTX/results.sarif"
+
+    - name: Upload SARIF
+      uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+      with:
+        sarif_file: ${{ steps.context.outputs.dir }}/results.sarif
+        category: claude-security-review
+        token: ${{ inputs.github-token }}

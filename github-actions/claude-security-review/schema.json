@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["findings", "resolved_alerts"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule_id",
+          "title",
+          "severity",
+          "confidence",
+          "file",
+          "line",
+          "description",
+          "exploit_scenario",
+          "recommendation"
+        ],
+        "properties": {
+          "rule_id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "title": { "type": "string" },
+          "severity": { "enum": ["HIGH", "MEDIUM", "LOW"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "file": { "type": "string" },
+          "line": { "type": "integer", "minimum": 1 },
+          "end_line": { "type": "integer", "minimum": 1 },
+          "cwe": { "type": "string", "pattern": "^CWE-[0-9]+$" },
+          "description": { "type": "string" },
+          "exploit_scenario": { "type": "string" },
+          "recommendation": { "type": "string" }
+        }
+      }
+    },
+    "resolved_alerts": {
+      "type": "array",
+      "items": { "type": "integer" }
+    }
+  }
+}

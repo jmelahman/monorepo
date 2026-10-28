@@ -1,0 +1,50 @@
+name: Security review
+
+# Claude reviews what each push to master changed for exploitable
+# vulnerabilities, and its findings go to code scanning (Security → Code
+# scanning). The action is github-actions/claude-security-review, published
+# as jmelahman/claude-security-review; running it from the checkout tests
+# each change to it here first.
+#
+# Not pull requests: they would run Claude with the subscription token on
+# code anyone can open a PR with.
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Commit or ref to review from (default the last analyzed commit)
+        required: false
+
+permissions: {}
+
+# One run at a time: two uploading at once could close each other's alerts.
+# Only the newest waiting run is kept, which loses nothing, since each run
+# reviews from the last analyzed commit.
+concurrency:
+  group: security-review
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      # Not $/ (zizmor's self-repository), which actionlint can't parse yet;
+      # the checkout above is needed for the diff anyway.
+      - name: Review
+        uses: ./github-actions/claude-security-review # zizmor: ignore[self-repository]
+        with:
+          # Managed by terraform/github/secrets.tf.
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          base: ${{ inputs.base }}
