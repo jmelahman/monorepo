@@ -14,7 +14,7 @@
 	defaultBranch = master
 [core]
 	hooksPath = ~/.githooks
-	pager = delta
+	pager = hunk pager
 	fsmonitor = true
 [user]
 	email = jamison@lahman.dev
@@ -50,19 +50,6 @@
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
-[interactive]
-	diffFilter = delta --color-only
-[delta]
-	syntax-theme = Coldark-Dark
-	hyperlinks = true
-	side-by-side = true
-	wrap-max-lines = unlimited
-	pager = less -R
-	tabs = 2
-	blame-palette = "#000000 #111111 #222222"
-	file-style = omit
-	hunk-header-style = file syntax
-	hunk-header-decoration-style = ul blue
 [difftool]
 	prompt = false
 [diff]
