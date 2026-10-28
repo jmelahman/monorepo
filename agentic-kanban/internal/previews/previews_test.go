@@ -106,3 +106,41 @@ func TestDockerRunner(t *testing.T) {
 		t.Fatalf("stderr missing from output: %q", out.String())
 	}
 }
+
+func TestOnboarded_KanbanConfigLocations(t *testing.T) {
+	t.Setenv(ManifestDirEnv, t.TempDir())
+	cases := []struct {
+		name  string
+		files map[string]string
+		want  bool
+	}{
+		{"nothing", nil, false},
+		{"root", map[string]string{".kanban.toml": "[previews.web]\n"}, true},
+		{"config", map[string]string{".config/kanban/config.toml": "[previews.web]\n"}, true},
+		{"config behind root without table", map[string]string{
+			".kanban.toml":               "[sync]\n",
+			".config/kanban/config.toml": "[previews.web]\n",
+		}, true},
+		{"neither has table", map[string]string{
+			".kanban.toml":               "[sync]\n",
+			".config/kanban/config.toml": "[merge]\n",
+		}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			for name, content := range tc.files {
+				p := filepath.Join(dir, name)
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if got := Onboarded(dir, "repo"); got != tc.want {
+				t.Errorf("Onboarded = %v; want %v", got, tc.want)
+			}
+		})
+	}
+}

@@ -107,7 +107,7 @@ Values are secret and never returned. Changes apply the next time a session star
 
 ### Config
 
-Reads and writes the [configuration](/guide/configuration). `scope` is `global` (your user file), `local` (a board's `.kanban.toml`, which needs `board`), or `effective` (the merged view, for reads only).
+Reads and writes the [configuration](/guide/configuration). `scope` is `global` (your user file), `local` (a board's project file, `.kanban.toml` or `.config/kanban/config.toml`, which needs `board`), or `effective` (the merged view, for reads only).
 
 | Tool           | Arguments                                   | Description |
 | -------------- | ------------------------------------------- | ----------- |

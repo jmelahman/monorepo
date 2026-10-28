@@ -426,3 +426,220 @@ docker_socket = true
 		t.Errorf("image = %v; want project value when user file is absent", d.Image)
 	}
 }
+
+func TestProjectPath_Lookup(t *testing.T) {
+	dotConfig := filepath.Join(".config", "kanban", "config.toml")
+	cases := []struct {
+		name  string
+		files []string // created under the repo; a trailing "/" makes a dir
+		want  string
+	}{
+		{"none", nil, ".kanban.toml"},
+		{"none with .config dir", []string{".config/"}, dotConfig},
+		{"root file", []string{".kanban.toml"}, ".kanban.toml"},
+		{"config file", []string{dotConfig}, dotConfig},
+		{"both prefers root", []string{".kanban.toml", dotConfig}, ".kanban.toml"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := t.TempDir()
+			for _, f := range tc.files {
+				path := filepath.Join(repo, f)
+				if f[len(f)-1] == '/' {
+					if err := os.MkdirAll(path, 0o755); err != nil {
+						t.Fatal(err)
+					}
+					continue
+				}
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, nil, 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if got, want := ProjectPath(repo), filepath.Join(repo, tc.want); got != want {
+				t.Errorf("ProjectPath = %q; want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestLoadFrom_DotConfigProjectFiles(t *testing.T) {
+	withUserConfig(t, "")
+	repo := t.TempDir()
+	sub := filepath.Join(repo, "services", "api")
+	for dir, body := range map[string]string{
+		repo: "[branches]\nprefix = \"root\"\n[plans]\ndir = \"root-plans\"\n",
+		sub:  "[branches]\nprefix = \"sub\"\n",
+	} {
+		cfg := filepath.Join(dir, ".config", "kanban")
+		if err := os.MkdirAll(cfg, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(cfg, "config.toml"), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f := LoadFrom(repo, sub)
+	if f.Branches == nil || f.Branches.Prefix == nil || *f.Branches.Prefix != "sub" {
+		t.Errorf("branches.prefix = %+v; want subproject's \"sub\"", f.Branches)
+	}
+	if f.Plans == nil || f.Plans.Dir == nil || *f.Plans.Dir != "root-plans" {
+		t.Errorf("plans.dir = %+v; want root's \"root-plans\"", f.Plans)
+	}
+}
+
+// An undot-managed repo keeps .kanban.toml as a root symlink into .config/;
+// editing it must update the target, not replace the link with a file.
+func TestEditFile_WritesThroughSymlink(t *testing.T) {
+	repo := t.TempDir()
+	target := filepath.Join(repo, ".config", ".kanban.toml")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("[branches]\nprefix = \"old\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(repo, ".kanban.toml")
+	if err := os.Symlink(filepath.Join(".config", ".kanban.toml"), link); err != nil {
+		t.Fatal(err)
+	}
+
+	path := ProjectPath(repo)
+	if err := EditFile(path, map[string]any{"branches.prefix": "new"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(link); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("root .kanban.toml is no longer a symlink (err=%v)", err)
+	}
+	f := readFileAt(target)
+	if f.Branches == nil || f.Branches.Prefix == nil || *f.Branches.Prefix != "new" {
+		t.Errorf("target branches.prefix = %+v; want \"new\"", f.Branches)
+	}
+
+	// Clearing the last key removes the target file, leaving a dangling link
+	// for undot to manage rather than deleting the link itself.
+	if err := EditFile(path, nil, []string{"branches.prefix"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		t.Errorf("target should be removed when emptied; stat err = %v", err)
+	}
+	if _, err := os.Lstat(link); err != nil {
+		t.Errorf("symlink should survive: %v", err)
+	}
+
+	// The link now dangles. With .config/ present, a later edit must still go
+	// through it — recreating the target — not land in a second file at
+	// .config/kanban/config.toml or replace the link with a plain file.
+	path = ProjectPath(repo)
+	if path != link {
+		t.Fatalf("ProjectPath with dangling link = %q; want %q", path, link)
+	}
+	if err := EditFile(path, map[string]any{"branches.prefix": "again"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(link); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("root .kanban.toml is no longer a symlink (err=%v)", err)
+	}
+	f = readFileAt(target)
+	if f.Branches == nil || f.Branches.Prefix == nil || *f.Branches.Prefix != "again" {
+		t.Errorf("recreated target branches.prefix = %+v; want \"again\"", f.Branches)
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".config", "kanban", "config.toml")); !os.IsNotExist(err) {
+		t.Errorf("no second project file expected; stat err = %v", err)
+	}
+}
+
+func TestProjectFile_Containment(t *testing.T) {
+	outside := t.TempDir()
+	cases := []struct {
+		name    string
+		setup   func(t *testing.T, repo string)
+		wantErr bool
+	}{
+		{"plain file", func(t *testing.T, repo string) {
+			mustWrite(t, filepath.Join(repo, ".kanban.toml"))
+		}, false},
+		{"undot link inside", func(t *testing.T, repo string) {
+			mustWrite(t, filepath.Join(repo, ".config", ".kanban.toml"))
+			mustLink(t, filepath.Join(".config", ".kanban.toml"), filepath.Join(repo, ".kanban.toml"))
+		}, false},
+		{"dangling link inside", func(t *testing.T, repo string) {
+			mustLink(t, filepath.Join(".config", ".kanban.toml"), filepath.Join(repo, ".kanban.toml"))
+		}, false},
+		{"link outside", func(t *testing.T, repo string) {
+			victim := filepath.Join(outside, "victim.toml")
+			mustWrite(t, victim)
+			mustLink(t, victim, filepath.Join(repo, ".kanban.toml"))
+		}, true},
+		{"dangling link outside", func(t *testing.T, repo string) {
+			mustLink(t, filepath.Join(outside, "nope", "x.toml"), filepath.Join(repo, ".kanban.toml"))
+		}, true},
+		{"relative link climbing out", func(t *testing.T, repo string) {
+			mustLink(t, filepath.Join("..", "x.toml"), filepath.Join(repo, ".kanban.toml"))
+		}, true},
+		{".config dir linked outside", func(t *testing.T, repo string) {
+			mustLink(t, outside, filepath.Join(repo, ".config"))
+		}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := t.TempDir()
+			tc.setup(t, repo)
+			path, err := ProjectFile(repo)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("ProjectFile = %q, %v; wantErr %v", path, err, tc.wantErr)
+			}
+		})
+	}
+}
+
+// A repo reached through a symlinked directory still contains its own files.
+func TestProjectFile_RepoBehindSymlink(t *testing.T) {
+	repo := t.TempDir()
+	mustWrite(t, filepath.Join(repo, ".config", ".kanban.toml"))
+	mustLink(t, filepath.Join(".config", ".kanban.toml"), filepath.Join(repo, ".kanban.toml"))
+	alias := filepath.Join(t.TempDir(), "alias")
+	mustLink(t, repo, alias)
+	if _, err := ProjectFile(alias); err != nil {
+		t.Fatalf("ProjectFile via aliased repo: %v", err)
+	}
+}
+
+func TestLoad_IgnoresProjectLinkOutsideRepo(t *testing.T) {
+	withUserConfig(t, "")
+	victim := filepath.Join(t.TempDir(), "victim.toml")
+	if err := os.WriteFile(victim, []byte("[branches]\nprefix = \"leaked\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo := t.TempDir()
+	mustLink(t, victim, filepath.Join(repo, ".kanban.toml"))
+	if f := Load(repo); f.Branches != nil {
+		t.Fatalf("Load read through an escaping link: %+v", f.Branches)
+	}
+	if project, _ := LoadLayers(repo); project.Branches != nil {
+		t.Fatalf("LoadLayers read through an escaping link: %+v", project.Branches)
+	}
+}
+
+func mustWrite(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func mustLink(t *testing.T, target, link string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+}

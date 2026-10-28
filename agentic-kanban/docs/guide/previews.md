@@ -10,7 +10,7 @@ Previews are built by an embedded copy of [local-preview](https://jmelahman.gith
 
 ## Setting up a repo
 
-Add a [`preview.toml`](https://jmelahman.github.io/local-preview/reference/preview-toml) to the repo root that describes how to build and run the app. You can put the same content under a `[previews]` table in `.kanban.toml` instead. If both exist, `preview.toml` wins. Kanban's own `.kanban.toml` is a working example.
+Add a [`preview.toml`](https://jmelahman.github.io/local-preview/reference/preview-toml) to the repo root that describes how to build and run the app. You can put the same content under a `[previews]` table in the project's [kanban config](./configuration) (`.kanban.toml` or `.config/kanban/config.toml`) instead. If both exist, `preview.toml` wins. Kanban's own project config is a working example.
 
 Kanban reads the manifest from the commit being built, so it only applies to commits made after you add it.
 

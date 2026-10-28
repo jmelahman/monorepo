@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -181,4 +182,79 @@ func TestConfig_Errors(t *testing.T) {
 	assertStatus(t, e.patch("/api/config", map[string]any{
 		"scope": "local", "board": "mount-only", "set": map[string]any{"branches.prefix": "x"},
 	}), 422)
+}
+
+// A repo can carry symlinks kanban writes through. Local config edits follow
+// one only while it stays inside the repo (an undot link into .config/),
+// and never write through a planted temp-file name.
+func TestConfig_LocalScopeSymlinks(t *testing.T) {
+	redirectUserConfig(t)
+	e := newEnv(t)
+	b := e.seedBoard("Link Board")
+	set := func() *http.Response {
+		return e.patch("/api/config", map[string]any{
+			"scope": "local",
+			"board": b.Slug,
+			"set":   map[string]any{"branches.prefix": "feat"},
+		})
+	}
+	link := filepath.Join(e.repoPath, ".kanban.toml")
+	victim := filepath.Join(t.TempDir(), "victim.toml")
+	const victimBody = "[branches]\nprefix = \"victim\"\n"
+
+	// Escaping link: refused, outside file untouched, and not read either.
+	if err := os.WriteFile(victim, []byte(victimBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(victim, link); err != nil {
+		t.Fatal(err)
+	}
+	assertStatus(t, set(), 422)
+	if data, _ := os.ReadFile(victim); string(data) != victimBody {
+		t.Fatalf("outside file changed: %q", data)
+	}
+	view := decodeJSON[cfgView](t, e.get("/api/config?scope=local&board="+b.Slug))
+	if _, ok := view.find("branches.prefix"); ok {
+		t.Fatalf("local view read through an escaping link: %+v", view)
+	}
+
+	// Dangling escaping link: refused rather than creating the target.
+	missing := filepath.Join(t.TempDir(), "created.toml")
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(missing, link); err != nil {
+		t.Fatal(err)
+	}
+	assertStatus(t, set(), 422)
+	if _, err := os.Lstat(missing); !os.IsNotExist(err) {
+		t.Fatalf("dangling link target was created: %v", err)
+	}
+
+	// undot-style link into .config/, plus a planted fixed temp name
+	// pointing outside: the write lands in the repo's target and the
+	// outside file is untouched.
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(e.repoPath, ".config", ".kanban.toml")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(".config", ".kanban.toml"), link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(victim, target+".tmp"); err != nil {
+		t.Fatal(err)
+	}
+	assertStatus(t, set(), 200)
+	if data, err := os.ReadFile(target); err != nil || !strings.Contains(string(data), "feat") {
+		t.Fatalf("undot target not written: %q, %v", data, err)
+	}
+	if fi, err := os.Lstat(link); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("root link replaced (err=%v)", err)
+	}
+	if data, _ := os.ReadFile(victim); string(data) != victimBody {
+		t.Fatalf("outside file changed through planted temp link: %q", data)
+	}
 }

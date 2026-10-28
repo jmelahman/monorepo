@@ -437,7 +437,7 @@ func getServiceValue(f File, key string) (any, bool) {
 // separately, without merging, so callers can attribute each effective value
 // to the layer that set it. Either layer may be empty.
 func LoadLayers(repoPath string) (project, user File) {
-	project = readFileAt(ProjectPath(repoPath))
+	project = readProjectAt(repoPath, repoPath)
 	if path, err := UserPath(); err == nil {
 		user = readFileAt(path)
 	}
@@ -456,6 +456,11 @@ func EditFile(path string, sets map[string]any, unsets []string) error {
 		return errors.New("config file path is empty")
 	}
 	path = filepath.Clean(path)
+	// Edit a symlink's target rather than replacing the link: undot keeps
+	// .kanban.toml as a root link into .config/, and the atomic rename (or the
+	// remove of an emptied file) below would otherwise act on the link itself.
+	// See REGRESSIONS.md: "Config writes must follow symlinks".
+	path = resolveLink(path)
 
 	mu := fileMutex(path)
 	mu.Lock()
@@ -537,9 +542,46 @@ func unsetPath(root map[string]any, segs []string) {
 	}
 }
 
+// resolveLink follows path through any symlinks to the file they name, even
+// when that file doesn't exist yet (a dangling link is followed hop by hop).
+// A path that isn't a link, or a loop, comes back as given.
+func resolveLink(path string) string {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		return resolved
+	}
+	cur := path
+	for range 40 {
+		fi, err := os.Lstat(cur)
+		if err != nil || fi.Mode()&os.ModeSymlink == 0 {
+			return cur
+		}
+		dest, err := os.Readlink(cur)
+		if err != nil {
+			return cur
+		}
+		if !filepath.IsAbs(dest) {
+			dest = filepath.Join(filepath.Dir(cur), dest)
+		}
+		cur = filepath.Clean(dest)
+	}
+	return path
+}
+
+// atomicWrite writes data to a fresh temp file beside path and renames it
+// into place. The temp file is created exclusively under a random name: a
+// fixed name like path+".tmp" can be pre-planted as a symlink, and writing
+// through it overwrites whatever it points at. See REGRESSIONS.md: "Project
+// config links must stay inside the repo".
 func atomicWrite(path string, data []byte) error {
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	_, werr := f.Write(data)
+	cerr := f.Close()
+	if err := errors.Join(werr, cerr, os.Chmod(tmp, 0o644)); err != nil {
+		_ = os.Remove(tmp)
 		return err
 	}
 	if err := os.Rename(tmp, path); err != nil {

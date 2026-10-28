@@ -14,7 +14,7 @@ import (
 )
 
 // Config — a generic read/write surface over the layered kanban config
-// (project .kanban.toml + user config.toml). Mirrors `git config`: --global
+// (project config + user config.toml). Mirrors `git config`: --global
 // targets the user file, --local targets a board's project file. The narrower
 // /api/settings endpoint stays for the web Settings UI; both write through
 // kanbantoml.EditFile so they share its per-file lock and atomic write.
@@ -137,7 +137,8 @@ func (h *handlers) guardKey(key string, v any) (int, error) {
 }
 
 // configTargetPath resolves the file a write targets. global -> the user
-// config; local -> the chosen board's project .kanban.toml. Returns an HTTP
+// config; local -> the chosen board's project config
+// (kanbantoml.ProjectPath). Returns an HTTP
 // status alongside the error for the handler to surface.
 func (h *handlers) configTargetPath(ctx context.Context, scope, boardIdent string) (string, int, error) {
 	switch scope {
@@ -152,15 +153,18 @@ func (h *handlers) configTargetPath(ctx context.Context, scope, boardIdent strin
 		if err != nil {
 			return "", status, err
 		}
-		return kanbantoml.ProjectPath(repoPath), 0, nil
+		path, err := kanbantoml.ProjectFile(repoPath)
+		if err != nil {
+			return "", http.StatusUnprocessableEntity, err
+		}
+		return path, 0, nil
 	default:
 		return "", 400, fmt.Errorf("scope must be %q or %q", "local", "global")
 	}
 }
 
-// localRepoPath resolves a board identifier to the repo directory whose
-// .kanban.toml local config lives in, rejecting boards that have no usable
-// repo on disk.
+// localRepoPath resolves a board identifier to the repo directory its
+// project config lives in, rejecting boards that have no usable repo on disk.
 func (h *handlers) localRepoPath(ctx context.Context, boardIdent string) (string, int, error) {
 	if boardIdent == "" {
 		return "", 400, errors.New("board is required for local scope")

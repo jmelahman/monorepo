@@ -234,7 +234,7 @@ Sends a test notification to one subscription. Body: `{ "endpoint": "<url>" }`. 
 
 ## Config
 
-Reads and writes the [configuration](/guide/configuration) files. `global` is your user config and `local` is a board's `.kanban.toml`. Keys use dots, such as `sync.allow_rebase`.
+Reads and writes the [configuration](/guide/configuration) files. `global` is your user config and `local` is a board's project file (`.kanban.toml` or `.config/kanban/config.toml`). A local write returns `422` when that file is a symlink that resolves outside the repo. Keys use dots, such as `sync.allow_rebase`.
 
 ### `GET /api/config?scope=<scope>&board=<id>`
 

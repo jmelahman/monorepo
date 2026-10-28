@@ -1,7 +1,8 @@
 // Package kanbantoml reads `.kanban.toml` from two layers — the user config
 // at $XDG_CONFIG_HOME/kanban/config.toml (falling back to
 // $HOME/.config/kanban/config.toml) and the per-repo file at
-// <repoPath>/.kanban.toml — and merges them with user-wins semantics.
+// <repoPath>/.kanban.toml or <repoPath>/.config/kanban/config.toml — and
+// merges them with user-wins semantics.
 //
 // All scalar fields use *T so an absent key is distinguishable from a zero
 // value: the user file only overrides keys it actually sets. Tasks merge by
@@ -10,6 +11,7 @@
 package kanbantoml
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -175,12 +177,116 @@ func UserPath() (string, error) {
 	return filepath.Join(home, ".config", "kanban", "config.toml"), nil
 }
 
-// ProjectPath returns the per-repo config path. Empty repoPath returns "".
+// The per-repo config locations, relative to the repo (or monorepo
+// subproject) directory. dotConfigProjectFile mirrors the user file's layout
+// for repos that keep their dotfiles under .config/ (e.g. with undot, which
+// then needs `nolink kanban` so it doesn't link the directory back into the
+// root). A .kanban.toml that undot moved to .config/.kanban.toml is still
+// found through its root symlink.
+const (
+	rootProjectFile      = ".kanban.toml"
+	dotConfigProjectFile = ".config/kanban/config.toml"
+)
+
+// ProjectFiles returns the per-repo config locations, relative to the repo
+// directory and slash-separated, in lookup order.
+func ProjectFiles() []string {
+	return []string{rootProjectFile, dotConfigProjectFile}
+}
+
+// ProjectPath returns the per-repo config path: the first of ProjectFiles that
+// exists under repoPath. A dangling symlink counts as existing, so an undot
+// link whose target was emptied away is written through rather than shadowed
+// by a second file. When none exists, it names the file a write should create
+// — the .config/ form if repoPath already has a .config directory, so a repo
+// that tidied its root doesn't grow a new dotfile there, otherwise
+// .kanban.toml. Empty repoPath returns "".
 func ProjectPath(repoPath string) string {
 	if repoPath == "" {
 		return ""
 	}
-	return filepath.Join(repoPath, ".kanban.toml")
+	for _, name := range ProjectFiles() {
+		path := filepath.Join(repoPath, filepath.FromSlash(name))
+		if _, err := os.Lstat(path); err == nil {
+			return path
+		}
+	}
+	if fi, err := os.Stat(filepath.Join(repoPath, ".config")); err == nil && fi.IsDir() {
+		return filepath.Join(repoPath, filepath.FromSlash(dotConfigProjectFile))
+	}
+	return filepath.Join(repoPath, rootProjectFile)
+}
+
+// ProjectFile is ProjectPath for a caller about to write the file: it
+// resolves any symlinks and refuses a result outside repoPath. A repo's
+// contents (upstream commits, or an agent's merged branch) can plant
+// `.kanban.toml -> /anywhere`, and EditFile writes through links. See
+// REGRESSIONS.md: "Project config links must stay inside the repo".
+func ProjectFile(repoPath string) (string, error) {
+	path := ProjectPath(repoPath)
+	if path == "" {
+		return "", nil
+	}
+	return resolveWithin(repoPath, path)
+}
+
+// resolveWithin returns path with every symlink resolved — including a
+// dangling final link, whose target a write would create — and errors when
+// the result isn't inside root (itself resolved, so a repo under a symlinked
+// directory still contains its own files).
+func resolveWithin(root, path string) (string, error) {
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", err
+	}
+	resolved, err := realPath(path)
+	if err != nil {
+		return "", err
+	}
+	if rel, err := filepath.Rel(realRoot, resolved); err != nil || !filepath.IsLocal(rel) {
+		return "", fmt.Errorf("%s resolves to %s, outside %s", path, resolved, root)
+	}
+	return resolved, nil
+}
+
+// realPath is filepath.EvalSymlinks for a path that may not exist yet: it
+// follows a dangling final link, then resolves the deepest existing ancestor
+// so a symlinked parent directory (.config -> elsewhere) is accounted for.
+func realPath(path string) (string, error) {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		return resolved, nil
+	}
+	path, err := filepath.Abs(resolveLink(path))
+	if err != nil {
+		return "", err
+	}
+	missing := ""
+	for dir := path; ; {
+		if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+			return filepath.Join(resolved, missing), nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return path, nil
+		}
+		missing = filepath.Join(filepath.Base(dir), missing)
+		dir = parent
+	}
+}
+
+// readProjectAt reads the project file under dir, treating one whose
+// symlinks lead outside root as absent: a worktree's agent controls its
+// files, and the read happens on the host.
+func readProjectAt(root, dir string) File {
+	path := ProjectPath(dir)
+	if path == "" {
+		return File{}
+	}
+	resolved, err := resolveWithin(root, path)
+	if err != nil {
+		return File{}
+	}
+	return readFileAt(resolved)
 }
 
 // Load reads the user file and the project file (either may be missing or
@@ -200,9 +306,9 @@ func Load(repoPath string) File {
 // [devcontainer] section, say — applying to every subproject that doesn't
 // override them. An empty or repo-root-equal projectPath is a no-op.
 func LoadFrom(repoPath, projectPath string) File {
-	out := readFileAt(ProjectPath(repoPath))
+	out := readProjectAt(repoPath, repoPath)
 	if projectPath != "" && projectPath != repoPath {
-		out = merge(out, readFileAt(ProjectPath(projectPath)))
+		out = merge(out, readProjectAt(repoPath, projectPath))
 	}
 	user := File{}
 	if path, err := UserPath(); err == nil {

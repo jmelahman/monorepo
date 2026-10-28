@@ -405,12 +405,8 @@ func newPreviewOrchestrator(cfg *config.Config, addr string, inMemory bool, dock
 		PreviewBaseURL: baseURL,
 		Runner:         runner,
 		// Repos declare their preview manifest in a dedicated preview.toml
-		// or as a [previews] table in the .kanban.toml they already carry;
-		// preview.toml wins when both exist.
-		ManifestSources: []orchestrator.ManifestSource{
-			{Path: "preview.toml"},
-			{Path: ".kanban.toml", Table: "previews"},
-		},
+		// or as a [previews] table in the kanban config they already carry.
+		ManifestSources: previews.ManifestSources(),
 		// Repos that can't carry a manifest upstream get one on the server,
 		// named for the board slug. Shared with the `preview` CLI's own
 		// manifest dir, so a manifest written for one works in the other.

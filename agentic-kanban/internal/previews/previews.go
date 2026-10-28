@@ -15,6 +15,7 @@ import (
 
 	"github.com/jmelahman/kanban/internal/db"
 	"github.com/jmelahman/kanban/internal/docker"
+	"github.com/jmelahman/kanban/internal/kanbantoml"
 )
 
 // BuildsEnv selects preview build execution: "devcontainer" (default when
@@ -84,8 +85,22 @@ func ManifestDir() string {
 	return filepath.Join(root, "manifests")
 }
 
+// ManifestSources are where a checkout declares its preview manifest, in the
+// order the orchestrator tries them: a dedicated preview.toml, then a
+// [previews] table in the project kanban config (any of
+// kanbantoml.ProjectFiles). preview.toml wins when both exist.
+func ManifestSources() []orchestrator.ManifestSource {
+	files := kanbantoml.ProjectFiles()
+	sources := make([]orchestrator.ManifestSource, 0, 1+len(files))
+	sources = append(sources, orchestrator.ManifestSource{Path: "preview.toml"})
+	for _, name := range files {
+		sources = append(sources, orchestrator.ManifestSource{Path: name, Table: "previews"})
+	}
+	return sources
+}
+
 // Onboarded reports whether a board can be previewed: its checkout carries
-// a manifest — a preview.toml, or a [previews] table in .kanban.toml — or
+// a manifest — a preview.toml, or a [previews] table in its kanban config — or
 // the server holds an out-of-repo manifest for repoName. It's the cheap
 // gate for auto-deploys (the substring probe is a heuristic; the real parse
 // happens at build time, where a malformed manifest fails visibly).
@@ -93,9 +108,14 @@ func Onboarded(worktreeDir, repoName string) bool {
 	if _, err := os.Stat(filepath.Join(worktreeDir, "preview.toml")); err == nil {
 		return true
 	}
-	if b, err := os.ReadFile(filepath.Join(worktreeDir, ".kanban.toml")); err == nil &&
-		strings.Contains(string(b), "[previews") {
-		return true
+	// Every project file is checked, not just kanbantoml.ProjectPath's pick:
+	// the orchestrator's manifest lookup moves past a file without a
+	// [previews] table to the next source, so this has to as well.
+	for _, name := range kanbantoml.ProjectFiles() {
+		if b, err := os.ReadFile(filepath.Join(worktreeDir, filepath.FromSlash(name))); err == nil &&
+			strings.Contains(string(b), "[previews") {
+			return true
+		}
 	}
 	if dir := ManifestDir(); dir != "" && repoName != "" {
 		if _, err := os.Stat(filepath.Join(dir, repoName+".toml")); err == nil {

@@ -357,7 +357,7 @@ These take a session ID, except `ensure`, which takes a ticket ID.
 Reads and changes [configuration](/guide/configuration), like `git config`. Keys use dots, such as `sync.allow_rebase`.
 
 - `--global` uses your user config.
-- `--local --board <id>` uses that board's `.kanban.toml`.
+- `--local --board <id>` uses that board's project file (`.kanban.toml` or `.config/kanban/config.toml`).
 - Without either, `list` and `get` show the merged settings. `set` and `unset` require one.
 
 ```sh

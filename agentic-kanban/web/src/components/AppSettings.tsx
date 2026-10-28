@@ -166,8 +166,9 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
               <span className="text-xs text-fg-muted">
                 Saved to <span className="font-mono">~/.config/kanban/config.toml</span>. Takes
                 effect on the next session attach; running terminals keep their current process.
-                Leave unset to fall back to the repo's{" "}
-                <span className="font-mono">.kanban.toml</span> or the default.
+                Leave unset to fall back to the repo's project config (
+                <span className="font-mono">.kanban.toml</span> or{" "}
+                <span className="font-mono">.config/kanban/config.toml</span>) or the default.
               </span>
             </FormField>
             <FormField label="Worktrees directory">

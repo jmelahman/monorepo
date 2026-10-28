@@ -654,8 +654,9 @@ export function PreviewsDashboard() {
                 </p>
                 <p className="max-w-md text-xs text-fg-muted">
                   A board's repo needs a preview manifest: a <code>preview.toml</code> at its root,
-                  a <code>[previews]</code> table in its <code>.kanban.toml</code>, or a manifest
-                  named for the board slug in the server's manifest directory.
+                  a <code>[previews]</code> table in its <code>.kanban.toml</code> or{" "}
+                  <code>.config/kanban/config.toml</code>, or a manifest named for the board slug in
+                  the server's manifest directory.
                 </p>
                 <Button
                   variant="primary"

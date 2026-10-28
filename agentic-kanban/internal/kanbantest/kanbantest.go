@@ -129,12 +129,9 @@ func New(t testing.TB) *Env {
 		DataDir: filepath.Join(dir, "previews"),
 		Addr:    ":7474",
 		// Mirror production wiring (cmd/server): preview.toml or a
-		// [previews] table in .kanban.toml, then a server-side
+		// [previews] table in the kanban config, then a server-side
 		// <board-slug>.toml for repos that can't carry one.
-		ManifestSources: []orchestrator.ManifestSource{
-			{Path: "preview.toml"},
-			{Path: ".kanban.toml", Table: "previews"},
-		},
+		ManifestSources:  previewsvc.ManifestSources(),
 		LocalManifestDir: manifestDir,
 	})
 	if err != nil {

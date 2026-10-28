@@ -43,7 +43,7 @@ Kanban locks its worktrees so that a `git worktree prune` run inside a container
 | ----------------------------------- | ------------------------------------- |
 | `$KANBAN_DATA_DIR` or XDG data dir  | SQLite database and worktrees         |
 | `$KANBAN_CONFIG` or XDG config dir  | Your user-level `config.toml`         |
-| `<repo>/.kanban.toml`               | Project config, checked into the repo |
+| `<repo>/.kanban.toml` or `<repo>/.config/kanban/config.toml` | Project config, checked into the repo |
 | `<data-dir>/worktrees/<board>/<id>` | Per-ticket worktrees                  |
 
 ## Next steps

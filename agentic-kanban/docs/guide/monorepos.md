@@ -39,7 +39,7 @@ Kanban looks for config in the project directory first:
 | ----------------------------- | --------------------------------------------------------------------------------------------------- |
 | `devcontainer.json`           | The project directory, then the repo root, then `~/.config/kanban`, then the bundled image.          |
 | Dockerfile                    | Next to whichever `devcontainer.json` was used.                                                     |
-| `.kanban.toml`                | Both. The project's file overrides the root's, key by key.                                           |
+| `.kanban.toml` or `.config/kanban/config.toml` | Both. The project's file overrides the root's, key by key.                          |
 | `.vscode/tasks.json`          | The project directory only. Put the matching `[[task]]` port entries in the project's `.kanban.toml`. |
 | Plans directory               | A relative `plans.dir` resolves inside the project directory.                                        |
 

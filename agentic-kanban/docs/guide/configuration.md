@@ -2,12 +2,20 @@
 
 Kanban reads settings from two TOML files that share the same schema:
 
-- **Project**: `<repo>/.kanban.toml`, checked into the repo. It applies to every ticket on that repo's boards.
+- **Project**: `<repo>/.kanban.toml` or `<repo>/.config/kanban/config.toml`, checked into the repo. It applies to every ticket on that repo's boards.
 - **User**: `~/.config/kanban/config.toml` (or `$XDG_CONFIG_HOME/kanban/config.toml`). It holds your personal settings across all repos.
 
-Both are optional. When both set a key, the user file wins. On a [monorepo](./monorepos) board, a `.kanban.toml` in the subproject sits between the two. It overrides the repo root's file and is overridden by yours.
+Both are optional. When both set a key, the user file wins. On a [monorepo](./monorepos) board, a project file in the subproject sits between the two. It overrides the repo root's file and is overridden by yours.
 
 To use a different user file, pass `kanban serve --config <path>` or set `$KANBAN_CONFIG`.
+
+### Keeping the project file out of the repo root
+
+If a repo keeps its dotfiles under `.config/`, put the project file at `.config/kanban/config.toml`. When both locations exist, `.kanban.toml` is used. `kanban config set --local` edits whichever file exists. If neither exists, it creates `.config/kanban/config.toml` when the repo already has a `.config/` directory, and `.kanban.toml` otherwise.
+
+With [undot](https://github.com/jmelahman/undot), add `nolink kanban` to `.config/undot.conf` so undot doesn't link `.config/kanban/` back into the root. Kanban reads that path directly. A `.kanban.toml` that `undot migrate` moved to `.config/.kanban.toml` also works through its root symlink, and kanban edits the linked file without replacing the link.
+
+A project file that is a symlink must resolve to a path inside the repo. Kanban ignores one that points outside the repo, and refuses to write through it, because the repo's contents decide where the link goes.
 
 ## Example
 

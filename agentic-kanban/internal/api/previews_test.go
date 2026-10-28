@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -110,54 +111,68 @@ func TestSessionPreviews(t *testing.T) {
 }
 
 // TestSessionPreviewsViaKanbanToml: the manifest can live as a [previews]
-// table inside .kanban.toml instead of a dedicated preview.toml.
+// table inside the project kanban config instead of a dedicated
+// preview.toml, at either project-file location — including the .config/ one
+// when a root .kanban.toml exists but carries no [previews] table.
 func TestSessionPreviewsViaKanbanToml(t *testing.T) {
-	e := newEnv(t)
 	hosted := "[sync]\nallow_rebase = true\n" +
 		strings.ReplaceAll(previewManifest, "\n[", "\n[previews.")
-	files := map[string]string{
-		".kanban.toml":   hosted,
-		"web/index.html": "<html>via kanban toml</html>",
-		"srv/main.txt":   "backend-ish",
+	cases := map[string]map[string]string{
+		"root":   {".kanban.toml": hosted},
+		"config": {".config/kanban/config.toml": hosted},
+		"config behind root without table": {
+			".kanban.toml":               "[sync]\nallow_merge = true\n",
+			".config/kanban/config.toml": hosted,
+		},
 	}
-	for name, content := range files {
-		p := filepath.Join(e.repoPath, name)
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	mustGit(t, e.repoPath, "add", "-A")
-	mustGit(t, e.repoPath, "commit", "-qm", "onboard via kanban toml")
+	for name, configs := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t)
+			files := map[string]string{
+				"web/index.html": "<html>via kanban toml</html>",
+				"srv/main.txt":   "backend-ish",
+			}
+			maps.Copy(files, configs)
+			for name, content := range files {
+				p := filepath.Join(e.repoPath, name)
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			mustGit(t, e.repoPath, "add", "-A")
+			mustGit(t, e.repoPath, "commit", "-qm", "onboard via kanban toml")
 
-	board := e.seedBoard("Toml Board")
-	ticket := e.seedTicket(board, "Feature")
-	sess := e.seedSession(ticket)
-	mustGit(t, e.repoPath, "branch", sess.BranchName)
+			board := e.seedBoard("Toml Board")
+			ticket := e.seedTicket(board, "Feature")
+			sess := e.seedSession(ticket)
+			mustGit(t, e.repoPath, "branch", sess.BranchName)
 
-	resp := e.post(fmt.Sprintf("/api/sessions/%d/previews", sess.ID), nil)
-	assertStatus(t, resp, 202)
-	deploy := decodeJSON[orchestrator.Deploy](t, resp)
+			resp := e.post(fmt.Sprintf("/api/sessions/%d/previews", sess.ID), nil)
+			assertStatus(t, resp, 202)
+			deploy := decodeJSON[orchestrator.Deploy](t, resp)
 
-	deadline := time.Now().Add(30 * time.Second)
-	for {
-		got, err := e.previews.Deploy(deploy.ID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got.Status == orchestrator.StatusReady {
-			break
-		}
-		if got.Status == orchestrator.StatusFailed {
-			logs, _ := e.previews.DeployLogs(deploy.ID)
-			t.Fatalf("deploy failed: %s\n%s", got.Error, logs)
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("deploy never became ready: %+v", got)
-		}
-		time.Sleep(50 * time.Millisecond)
+			deadline := time.Now().Add(30 * time.Second)
+			for {
+				got, err := e.previews.Deploy(deploy.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.Status == orchestrator.StatusReady {
+					break
+				}
+				if got.Status == orchestrator.StatusFailed {
+					logs, _ := e.previews.DeployLogs(deploy.ID)
+					t.Fatalf("deploy failed: %s\n%s", got.Error, logs)
+				}
+				if time.Now().After(deadline) {
+					t.Fatalf("deploy never became ready: %+v", got)
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+		})
 	}
 }
 

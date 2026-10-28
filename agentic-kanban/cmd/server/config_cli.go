@@ -38,7 +38,8 @@ func configCmd() *cobra.Command {
 		Short: "Read and write kanban configuration",
 		Long: "Manage the layered kanban config. --global targets the user config " +
 			"(~/.config/kanban/config.toml); --local targets a board's project " +
-			".kanban.toml (selected with --board). Keys are dotted, e.g. " +
+			"config, .kanban.toml or .config/kanban/config.toml (selected with " +
+			"--board). Keys are dotted, e.g. " +
 			"sync.allow_rebase or github.draft_column.",
 	}
 	addServerFlag(parent, &serverURL)
@@ -58,7 +59,7 @@ func configCmd() *cobra.Command {
 			return runConfigList(cmd.Context(), resolveURL(cmd, serverURL), cmd.OutOrStdout(), scope, clBoard, clJSON)
 		},
 	}
-	list.Flags().BoolVar(&clLocal, "local", false, "Only the board's project .kanban.toml (needs --board)")
+	list.Flags().BoolVar(&clLocal, "local", false, "Only the board's project config (needs --board)")
 	list.Flags().BoolVar(&clGlobal, "global", false, "Only the user config (~/.config/kanban/config.toml)")
 	list.Flags().StringVar(&clBoard, "board", "", "Board id or slug for the local layer")
 	list.Flags().BoolVar(&clJSON, "json", false, "Print the raw JSON response")
@@ -79,7 +80,7 @@ func configCmd() *cobra.Command {
 			return runConfigGet(cmd.Context(), resolveURL(cmd, serverURL), cmd.OutOrStdout(), args[0], scope, cgBoard, cgJSON)
 		},
 	}
-	get.Flags().BoolVar(&cgLocal, "local", false, "Read from the board's project .kanban.toml (needs --board)")
+	get.Flags().BoolVar(&cgLocal, "local", false, "Read from the board's project config (needs --board)")
 	get.Flags().BoolVar(&cgGlobal, "global", false, "Read from the user config")
 	get.Flags().StringVar(&cgBoard, "board", "", "Board id or slug for the local layer")
 	get.Flags().BoolVar(&cgJSON, "json", false, "Print the full entry JSON instead of the bare value")
@@ -100,7 +101,7 @@ func configCmd() *cobra.Command {
 			return runConfigSet(cmd.Context(), resolveURL(cmd, serverURL), cmd.OutOrStdout(), args[0], args[1], scope, csBoard)
 		},
 	}
-	set.Flags().BoolVar(&csLocal, "local", false, "Write to the board's project .kanban.toml (needs --board)")
+	set.Flags().BoolVar(&csLocal, "local", false, "Write to the board's project config (needs --board)")
 	set.Flags().BoolVar(&csGlobal, "global", false, "Write to the user config")
 	set.Flags().StringVar(&csBoard, "board", "", "Board id or slug for the local layer")
 
@@ -120,7 +121,7 @@ func configCmd() *cobra.Command {
 			return runConfigUnset(cmd.Context(), resolveURL(cmd, serverURL), cmd.OutOrStdout(), args[0], scope, cuBoard)
 		},
 	}
-	unset.Flags().BoolVar(&cuLocal, "local", false, "Remove from the board's project .kanban.toml (needs --board)")
+	unset.Flags().BoolVar(&cuLocal, "local", false, "Remove from the board's project config (needs --board)")
 	unset.Flags().BoolVar(&cuGlobal, "global", false, "Remove from the user config")
 	unset.Flags().StringVar(&cuBoard, "board", "", "Board id or slug for the local layer")
 
