@@ -40,7 +40,7 @@ jobs:
           extra-args: --log-file ${{ runner.temp }}/prek.log ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
       - name: Upload prek's trace log
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: prek-log
           path: ${{ runner.temp }}/prek.log
