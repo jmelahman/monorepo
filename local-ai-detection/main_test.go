@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jmelahman/golang-template/greeter"
+	"github.com/jmelahman/local-ai-detection/greeter"
 )
 
 func TestRun(t *testing.T) {

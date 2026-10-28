@@ -10,6 +10,7 @@ use (
 	./cycle-lights
 	./docker-status
 	./git-orchard
+	./local-ai-detection
 	./local-preview
 	./nature-sounds
 	./notebook

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/jmelahman/golang-template/greeter"
+	"github.com/jmelahman/local-ai-detection/greeter"
 )
 
 // Example functions compile as tests and render on pkg.go.dev, so they
