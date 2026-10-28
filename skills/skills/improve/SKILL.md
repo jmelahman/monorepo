@@ -1,11 +1,11 @@
 ---
 name: improve
-description: Audit a codebase as a read-only advisor and hand off the selected findings as self-contained plans in kanban tickets.
+description: Audit a codebase as a read-only advisor and hand off the selected findings as self-contained plans in kanban tickets, or keep a standing kanban board of one category's findings (e.g. security) that each re-run diffs and updates.
 disable-model-invocation: true
 license: MIT
 metadata:
   author: Jamison Lahman, based on shadcn's improve skill
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # Improve
@@ -17,7 +17,7 @@ The economics of this skill: an expensive, high-ceiling model does the part wher
 ## Hard Rules
 
 1. **Never modify the audited codebase yourself.** No edits, no fixes, no "quick wins while you're in there." The ONLY files you may create or modify there live under `plans/` in the repo root — or under `advisor-plans/` when `plans/` already exists for an unrelated purpose (create the chosen directory if absent). Never merge, push, or commit. The rule protects the audited code; it does not block a direct user request about something else (editing this skill's own files, creating tickets).
-2. **Never run commands that mutate the user's working tree** — no installs, no builds that write artifacts outside standard ignored dirs, no git commits, no formatters. Read, search, and run read-only analysis only (e.g. `tsc --noEmit`, lint in check mode, `npm audit` / `pnpm audit`, the test suite once you know what it touches — see Phase 1). Experiments go in a scratch directory outside the repo: when a plan rests on how a tool behaves (a lint rule, a compiler flag, a CLI's exit code), prove it there before writing the plan. One scoped exception: `kanban ticket create` / `kanban ticket update` in Phase 5, which create tickets and never start a session.
+2. **Never run commands that mutate the user's working tree** — no installs, no builds that write artifacts outside standard ignored dirs, no git commits, no formatters. Read, search, and run read-only analysis only (e.g. `tsc --noEmit`, lint in check mode, `npm audit` / `pnpm audit`, the test suite once you know what it touches — see Phase 1). Experiments go in a scratch directory outside the repo: when a plan rests on how a tool behaves (a lint rule, a compiler flag, a CLI's exit code), prove it there before writing the plan. One scoped exception: the `kanban` ticket commands in Phase 5 and in `track` mode (creating boards and tickets, updating them, moving them between columns), which never start a session.
 3. **Every plan must be fully self-contained.** The executor has not seen this conversation, this codebase survey, or any other plan. If a plan references "the pattern discussed above," it is broken.
 4. **Never reproduce secret values.** If the audit finds credentials, tokens, or `.env` contents, findings and plans reference the `file:line` and credential type only, and recommend rotation. The value itself must never appear in anything you write.
 5. **If the user asks you to implement directly, decline and point at the ticket** — offer to refine its plan instead.
@@ -125,6 +125,7 @@ The user's selection in Phase 3 is the go-ahead. If the `kanban` CLI or its serv
 - `branch` → audit only the current working branch's changes: scope = files changed since the merge-base with the default branch (`git diff --name-only $(git merge-base origin/<default> HEAD)..HEAD`) plus their direct importers/callers. Light recon, all categories, usually no subagents. **Tag every finding `introduced` (by this branch) or `pre-existing` (in touched files)** — the table separates them; don't blame the branch for legacy debt, but do surface what it's building on top of. If on the default branch or zero commits ahead, say so and offer a full audit instead.
 - `next` (or `features`, `roadmap`) → run Recon, then audit only the direction category, in more depth: 4–6 grounded suggestions, each with evidence, trade-offs, and a coarse effort estimate. Selected ones become design/spike plans, not build-everything plans.
 - `plan <description>` → skip the audit; the user already knows what they want. Run Recon, investigate just enough to specify it properly, and write a single plan. If the description is too ambiguous to specify honestly, first try to resolve each ambiguity from the codebase itself; only what's left becomes questions to the user — asked one at a time, each with a recommended answer.
+- `track <category>` (e.g. `track security`) → a repeatable audit of one category whose findings live on a standing kanban board instead of in plans: each run diffs against the board, resolves what's fixed, reopens regressions and adds what's new. Follow [references/tracked-audit.md](references/tracked-audit.md) — read it after Recon. It writes nothing under `plans/`. Composes with `quick` / `deep`.
 - `review-plan <file>` → critique an existing plan in `plans/` against the template's standards and tighten it. If you authored the plan in this same session, also have a fresh-context subagent read it cold and report ambiguities — self-critique misses gaps you mentally fill from context the executor won't have.
 
 ## Tone of the output

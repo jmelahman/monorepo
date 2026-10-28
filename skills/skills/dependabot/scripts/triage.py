@@ -2,10 +2,10 @@
 """Triage the open Dependabot PRs of the current repository.
 
     triage.py                  print every PR with its bucket, then the plan
-    triage.py --log PR         print the failing hooks' output for one PR
-    triage.py --log master     the same, for the last commit on master
-    triage.py --master         print each workflow's run on that commit
-    triage.py --master --wait  the same, once those runs have finished
+    triage.py --log PR         print the failing checks' output for one PR
+    triage.py --log base       the same, for the last commit on the default branch
+    triage.py --base           print each workflow's run on that commit
+    triage.py --base --wait    the same, once those runs have finished
 
 Everything here is read-only: it calls `gh` and prints. The buckets and the
 wave are the mechanical part of the dependabot skill, kept in code so they
@@ -47,6 +47,22 @@ def gh(*args: str) -> str:
     return subprocess.run(  # noqa: S603
         ["gh", *args], check=True, capture_output=True, text=True
     ).stdout
+
+
+def default_branch() -> str:
+    return gh(
+        "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name"
+    ).strip()
+
+
+def merge_flag() -> str:
+    """The `gh pr merge` flag for the first merge method the repository allows."""
+    fields = "squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed"
+    allowed = json.loads(gh("repo", "view", "--json", fields))
+    for field, flag in zip(fields.split(","), ("--squash", "--merge", "--rebase"), strict=True):
+        if allowed.get(field):
+            return flag
+    return "--squash"
 
 
 def jump(pr: dict) -> str:
@@ -93,7 +109,7 @@ def failed_runs(pr: dict) -> list[str]:
 
 
 def failed_log(run_ids: list[str]) -> list[str]:
-    """The failing hooks' own output, without prek's trace."""
+    """The failing checks' own output, without prek's or pre-commit's trace."""
     lines: list[str] = []
     for run_id in run_ids:
         keep = False
@@ -108,7 +124,7 @@ def failed_log(run_ids: list[str]) -> list[str]:
             if NOISE.match(line):
                 continue
             (kept if keep else rest).append(line.rstrip())
-        # A job that isn't prek, like the mirror, has no hook to cut out.
+        # A job that isn't prek or pre-commit has no hook to cut out.
         lines += kept or rest[-30:]
     return lines
 
@@ -122,9 +138,9 @@ def bump(title: str) -> str:
     return re.sub(r" in /.*", "", re.sub(r"^Bump (the )?", "", title))
 
 
-def master_runs() -> list[dict]:
-    """One row per workflow for the last commit on master."""
-    sha = gh("api", "repos/{owner}/{repo}/commits/master", "--jq", ".sha").strip()
+def base_runs(branch: str) -> list[dict]:
+    """One row per workflow for the last commit on the default branch."""
+    sha = gh("api", f"repos/{{owner}}/{{repo}}/commits/{branch}", "--jq", ".sha").strip()
     fields = "databaseId,workflowName,status,conclusion"
     runs = json.loads(gh("run", "list", "--commit", sha, "--limit", "50", "--json", fields))
     latest: dict[str, dict] = {}
@@ -146,10 +162,11 @@ def master_runs() -> list[dict]:
     return rows
 
 
-def master(*, wait: bool) -> None:
+def base(*, wait: bool) -> None:
+    branch = default_branch()
     deadline = time.monotonic() + WAIT
     while True:
-        rows = master_runs()
+        rows = base_runs(branch)
         # Runs take a few seconds to appear after a push.
         started = any(r["id"] for r in rows)
         running = [r for r in rows if r["result"] in UNFINISHED]
@@ -157,12 +174,13 @@ def master(*, wait: bool) -> None:
             break
         time.sleep(POLL)
 
-    print("master", rows[0]["sha"][:8] if rows else "")
+    print(branch, rows[0]["sha"][:8] if rows else "")
+    width = max((len(r["name"]) for r in rows), default=0) + 2
     for r in rows:
         why = ""
         if r["result"] == "failure":
             why = "hook: " + hooks(failed_log([r["id"]]))
-        print(f"{r['name']:14}{r['result']:15}{r['id']:13}{why}".rstrip())
+        print(f"{r['name']:{width}}{r['result']:15}{r['id']:13}{why}".rstrip())
     if wait and (running or not started):
         print("still running: run this command again")
 
@@ -227,6 +245,7 @@ def plan(prs: list[dict]) -> None:
             taken |= pr["paths"]
 
     print()
+    print("MERGE WITH :", f"gh pr merge <pr> {merge_flag()}")
     print("MERGE NOW  :", nums(wave))
     print("NEXT WAVE  :", nums(later), "(rebase after this wave merges)")
     print("ASK FIRST  :", nums(ask), "(major, 0.x minor, or unknown jump)")
@@ -235,10 +254,10 @@ def plan(prs: list[dict]) -> None:
 
 
 def main() -> None:
-    if sys.argv[1:2] == ["--master"]:
-        master(wait="--wait" in sys.argv)
-    elif sys.argv[1:3] == ["--log", "master"]:
-        ids = [r["id"] for r in master_runs() if r["result"] == "failure"]
+    if sys.argv[1:2] == ["--base"]:
+        base(wait="--wait" in sys.argv)
+    elif sys.argv[1:3] == ["--log", "base"]:
+        ids = [r["id"] for r in base_runs(default_branch()) if r["result"] == "failure"]
         print("\n".join(failed_log(ids)) or "no failed run on this commit")
     elif sys.argv[1:2] == ["--log"]:
         want = int(sys.argv[2])

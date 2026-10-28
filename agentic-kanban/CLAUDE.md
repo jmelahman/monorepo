@@ -88,6 +88,24 @@ execs, and more). Before finishing a change, skim its headings and read any
 entry that touches what you changed. When you fix something likely to recur,
 add an entry there and a `See REGRESSIONS.md: "<title>"` comment at the code.
 
+## Security audit hints
+
+`/improve track security` keeps the `agentic-kanban Security` board. Beyond
+its generic checklist, look at:
+
+| Area | What to check | Where |
+|------|---------------|-------|
+| Go source | `fmt.Sprintf` into `database/sql` queries, `os/exec` with request-derived args, path traversal in worktree/repo-path handling, missing `context` timeouts, the `sessions` row multi-writer race (REGRESSIONS.md) | `main.go`, `cmd/server/`, `internal/{api,db,docker,git,github,harness,mcp,session,tasks}/` |
+| Frontend | `dangerouslySetInnerHTML`, secrets in console output or SSE payloads, tokens in `localStorage` | `web/src/api/`, `web/src/storage.ts`, `web/src/components/` |
+| HTTP API | auth, CSRF and body limits on state-changing `/api/*` routes, SSE auth, `Host`-header trust | `internal/api/`, router registrations |
+| MCP server | transport auth on `mcp__kanban__*`, `repo_path`/worktree paths validated against an allowlist, escaping the intended board | `internal/mcp/`, `.mcp.json` |
+| Session containers | root, `--cap-drop`, `no-new-privileges`, read-only rootfs, `~/.claude` forwarded into untrusted sessions (`--claude-config`), host paths leaking via `KANBAN_HOST_WORKSPACE` / `KANBAN_HOST_HOME`, docker socket exposure | `internal/docker/`, `internal/session/`, `.devcontainer/`, `Dockerfile` |
+| Configuration | insecure defaults in `.kanban.toml` and `KANBAN_*` env handling, `--in-memory` discarding the audit trail | `cmd/server/`, `internal/config/`, `internal/kanbantoml/`, `docs/guide/configuration.md` |
+| Network | `http.Server` timeouts, devcontainer firewall allowlist drift | `.devcontainer/`, server setup in `internal/api/` |
+
+Outbound HTTP from the devcontainer is firewalled: audit statically and don't
+paste code into external tools.
+
 ## Documentation upkeep
 
 User-facing changes need a docs update in the same PR:

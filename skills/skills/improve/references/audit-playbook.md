@@ -34,6 +34,10 @@ Review only what is directly supported by code evidence. Keep findings framed as
 - Dependency posture: run the ecosystem's audit command (`npm audit`, `pip-audit`, `cargo audit`) in read-only mode. Report only critical/high advisories that affect reachable runtime code or build/distribution paths; avoid low-signal audit noise.
 - Production configuration: overly broad CORS where credentials are allowed, missing response-hardening headers (e.g. CSP) where sensitive browser surfaces exist, cookies missing appropriate `HttpOnly`/`Secure`/`SameSite` attributes, or debug/verbose behavior enabled in production configuration.
 - Data minimization: PII or sensitive operational data in logs, stack traces returned to clients, or internal error details exposed through API responses.
+- Network exposure: `http.Server`-style listeners without read/write timeouts or body size limits, endpoints that trust the `Host` header (DNS rebinding on local services), local services bound to all interfaces.
+- Containers: processes running as root, capabilities not dropped, `no-new-privileges` unset, writable root filesystems, the Docker socket or host secrets (`~/.ssh`, `~/.claude`, cloud credentials) mounted into containers that run untrusted code.
+- CI/CD: `pull_request_target` or `workflow_run` workflows that check out untrusted code, secrets reachable from fork PRs or echoed into logs, third-party actions pinned by tag instead of SHA, over-broad `permissions:`.
+- Agent and tool surfaces: MCP servers or agent-facing APIs without transport auth, tool arguments (repo paths, worktree paths, shell commands) not validated against an allowlist, ways for an agent to reach beyond the workspace it was given.
 
 ## 3. Performance
 

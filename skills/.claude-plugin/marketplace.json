@@ -9,8 +9,8 @@
     {
       "name": "skills",
       "source": "./",
-      "description": "A collection of Agent Skills, starting with testing guidance distilled from Google's Testing on the Toilet.",
-      "version": "0.1.0",
+      "description": "Agent Skills for testing, codebase audits, and landing Dependabot PRs.",
+      "version": "0.2.0",
       "license": "GPL-3.0-or-later",
       "author": {
         "name": "Jamison Lahman",

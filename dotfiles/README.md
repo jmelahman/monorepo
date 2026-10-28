@@ -17,6 +17,14 @@ GIT_LFS_SKIP_SMUDGE=0 dotfiles checkout --force
 systemctl enable --now --user dot-sync.timer
 ```
 
+## Linking Claude Code skills
+
+User skills live in [jmelahman/skills](https://github.com/jmelahman/skills), at `skills/` in the monorepo checkout:
+
+```shell
+for s in ~/code/monorepo/skills/skills/*/; do ln -sfn "${s%/}" ~/.claude/skills/; done
+```
+
 ## Enabling Git maintenance
 
 The timers run `git maintenance run` on the repositories listed under `[maintenance]` in `.gitconfig`.

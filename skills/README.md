@@ -7,6 +7,8 @@ updated via `git`.
 
 | Skill | Description |
 | --- | --- |
+| [dependabot](skills/dependabot/) | Triages and lands a repository's open Dependabot PRs: merges green ones in conflict-free waves, fixes mechanical CI failures, and tells real regressions from breakage already on the default branch. |
+| [improve](skills/improve/) | Audits a codebase as a read-only advisor and hands off the selected findings as self-contained plans in kanban tickets; `track security` keeps a standing board of findings that each re-run diffs. |
 | [testing](skills/testing/) | Rules for tests that fail only when real behavior breaks, distilled from 75 Google Testing on the Toilet posts: what to test, test doubles, structure, assertions, flakiness, and design for testability. |
 
 ## Install
@@ -16,7 +18,7 @@ updated via `git`.
 ```sh
 git clone git@github.com:jmelahman/skills.git ~/.claude/skills/jmelahman
 cd ~/.claude/skills
-ln -s jmelahman/skills/testing testing
+ln -s jmelahman/skills/testing testing  # and so on for each skill you want
 ```
 
 The clone has no top-level `SKILL.md`, so Claude Code ignores it and picks up only the links.
