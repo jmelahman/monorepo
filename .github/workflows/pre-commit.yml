@@ -32,7 +32,7 @@ jobs:
           go-version-file: go.work
           cache-dependency-path: go.work.sum
       - name: Run prek hooks
-        uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204
+        uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d
         with:
           prek-version: "0.5.4"
           # The trace log goes to an artifact, below, rather than the job's log.
