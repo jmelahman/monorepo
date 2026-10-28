@@ -1,0 +1,52 @@
+# Shared by subtrees whose CI is their pre-commit config:
+# .config/git-orchard/shared/ci in the monorepo
+# (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+# copies it here.
+name: pre-commit
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions: {}
+
+jobs:
+  prek:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          # A pull request's hooks run on its diff from the base commit.
+          fetch-depth: 0
+      # Go hooks build with the Go on PATH and GOTOOLCHAIN=local, and prek
+      # only replaces a Go older than the hook's minimum, not the subtree's go
+      # directive: so the runner's older patch release would fail go.mod.
+      - name: Set up Go
+        if: hashFiles('go.mod') != ''
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+          cache: false
+      # What else this subtree's hooks need from the system, e.g. apt packages.
+      - name: Set up the subtree
+        if: hashFiles('.github/ci-setup.sh') != ''
+        run: .github/ci-setup.sh
+      - name: Run prek hooks
+        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece
+        with:
+          prek-version: "0.5.4"
+          # The trace log goes to an artifact, below, rather than the job's log.
+          show-verbose-logs: false
+          # Pull requests check what they change; pushes check everything.
+          extra-args: --log-file ${{ runner.temp }}/prek.log ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
+      - name: Upload prek's trace log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: prek-log
+          path: ${{ runner.temp }}/prek.log
+          if-no-files-found: ignore
