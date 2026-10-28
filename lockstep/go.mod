@@ -1,3 +1,3 @@
-module github.com/jmelahman/golang-template
+module github.com/jmelahman/lockstep
 
 go 1.27.3

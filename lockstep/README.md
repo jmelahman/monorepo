@@ -1,7 +1,7 @@
 # golang-template
 
-[![Test status](https://github.com/jmelahman/golang-template/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/golang-template/actions/workflows/test.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/golang-template.svg)](https://pkg.go.dev/github.com/jmelahman/golang-template)
+[![Test status](https://github.com/jmelahman/lockstep/actions/workflows/test.yml/badge.svg)](https://github.com/jmelahman/lockstep/actions/workflows/test.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/lockstep.svg)](https://pkg.go.dev/github.com/jmelahman/lockstep)
 
 A template repository for a Go application, a Go SDK, or a repo that grows
 into several of both. The tooling is the point; the sample package is a
@@ -72,7 +72,7 @@ runs it on a `v*.*.*` tag after a govulncheck audit.
 ## Using this template
 
 1. Create a repo from this template (GitHub → "Use this template").
-2. Find-and-replace `github.com/jmelahman/golang-template` with your module
+2. Find-and-replace `github.com/jmelahman/lockstep` with your module
    path (`go.mod`, the imports in `main.go` and `greeter/`,
    `.goreleaser.yaml`). The binary takes its name from the module path, and
    the CLI's usage text from the binary, so there is nothing else to rename.

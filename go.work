@@ -12,6 +12,7 @@ use (
 	./docker-status
 	./git-orchard
 	./local-preview
+	./lockstep
 	./nature-sounds
 	./notebook
 	./pkglint

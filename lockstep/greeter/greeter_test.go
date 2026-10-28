@@ -7,7 +7,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jmelahman/golang-template/greeter"
+	"github.com/jmelahman/lockstep/greeter"
 )
 
 func TestGreet(t *testing.T) {

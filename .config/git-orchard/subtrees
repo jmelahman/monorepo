@@ -200,3 +200,8 @@
 	branch = master
 	shared = base
 	shared = go
+[subtree "lockstep"]
+	remote = git@github.com:jmelahman/lockstep.git
+	branch = master
+	shared = base
+	shared = go

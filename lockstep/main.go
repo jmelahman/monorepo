@@ -1,6 +1,6 @@
 // Command golang-template is the application half of the template: a thin
 // CLI over the greeter package. Living at the module root is what makes
-// `go install github.com/jmelahman/golang-template@latest` work and names
+// `go install github.com/jmelahman/lockstep@latest` work and names
 // the binary after the repo; a second binary would go in cmd/<name>/.
 //
 // Delete this file and main_test.go for a library-only SDK repo (and drop
@@ -16,8 +16,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jmelahman/golang-template/greeter"
-	"github.com/jmelahman/golang-template/internal/version"
+	"github.com/jmelahman/lockstep/greeter"
+	"github.com/jmelahman/lockstep/internal/version"
 )
 
 // Named after whatever the binary is actually called, so usage text and
