@@ -1,6 +1,20 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.13"
+
+[[package]]
+name = "agentic-kanban"
+version = "1.8.2"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/05/1a58c110314679a3ab1fbb3552826910aefaf056c7fd6e105cbe7e7e6dce/agentic_kanban-1.8.2-py3-none-any.whl", hash = "sha256:37efacd966d8537c289567ed573cb49392f0b9eceb78eb26924290c61fd885e1", size = 17142031, upload-time = "2026-10-28T20:04:35.227Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/0f/87b614b942ca00402b1ffddd449c368c582e2a949db986fd7c6ca05a27a1/agentic_kanban-1.8.2-py3-none-macosx_11_0_arm64.whl", hash = "sha256:8cfbf8c0a8d9ff4d8191a91bc39d085fd97cde39f4340de1d810c8721d587512", size = 16669438, upload-time = "2026-10-28T20:04:37.725Z" },
+    { url = "https://files.pythonhosted.org/packages/21/6c/9ee835a6442413fff39c49b77e034e11e572f18a518c79626204d014bfdc/agentic_kanban-1.8.2-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:f748bd3d795f017c71f58f35b470e53858c57bef89086363808429e046a87eed", size = 17207208, upload-time = "2026-10-28T20:04:40.689Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/f7/e43b4ef2b4d907da0be2d06693ebde345efd4a572e186c3f8b44fdb550b7/agentic_kanban-1.8.2-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:3dee785b20d5fd273283f8dd5f265c29d59213bbc42ffb9a1ce045854b5df64a", size = 16123984, upload-time = "2026-10-28T20:04:42.974Z" },
+    { url = "https://files.pythonhosted.org/packages/df/66/2f9d3ebbabfb5691bbd1a09a76988d215147cf6cadcbf23f2669bb0bf533/agentic_kanban-1.8.2-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:ecc287aebb72f1a6afa35bc5d6b936eec0bff1730ee2323ffbd1a96a76f36710", size = 17142048, upload-time = "2026-10-28T20:04:45.132Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/a8/202ab35e059919e427d6dd5e7fbc8e692d4a8333abfe667bf52cf2609316/agentic_kanban-1.8.2-py3-none-win_amd64.whl", hash = "sha256:6a3a055fcbedad5bb905761f51e107577195d6e09eed90f90dd45a096fe07e97", size = 17278504, upload-time = "2026-10-28T20:04:47.353Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/a7/8f8111fdbbec16ddb31ada22027108acb13fe1bef4287e1d1ab55416c580/agentic_kanban-1.8.2-py3-none-win_arm64.whl", hash = "sha256:0ad42df438ed81a08948db7a59a4c9a644dfac37c72b2ba0fc9f66956088f2bd", size = 16151032, upload-time = "2026-10-28T20:04:49.694Z" },
+]
 
 [[package]]
 name = "beautifulsoup4"
@@ -22,6 +36,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
+]
+
+[[package]]
+name = "git-orchard"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/c3/d1ddcbd0d06e801a982223f139ba8e829328a4d5a06b1d1daf143d619764/git_orchard-1.3.0-py3-none-any.whl", hash = "sha256:98a11e158cf39f7dca48f8c00e1a50b1118831ca113aafc591ec14f987e8c44c", size = 4409125, upload-time = "2026-10-25T09:42:31.877Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/bc/6c3bce88cbb4962e59eb4f08b70ed6c6fe5e7e9523be946d81ae8106ec4f/git_orchard-1.3.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:6d24552502d96ea7c431c5e28199ec0f0ecc2ce99ba97ad4fef0043b243aa809", size = 4087564, upload-time = "2026-10-25T09:42:33.505Z" },
+    { url = "https://files.pythonhosted.org/packages/48/d4/ac26970058a974875e7b880c83af1c9840195931a434832e0b35fad92834/git_orchard-1.3.0-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:3512d356893d84d6f13aa22c07334f0a15fcce5737f4f89a32be4967334b6a26", size = 4454152, upload-time = "2026-10-25T09:42:34.902Z" },
+    { url = "https://files.pythonhosted.org/packages/21/76/2a32ea28227d97e51d11fff8f3ecdbcefb383edeb515358bd25f21280c58/git_orchard-1.3.0-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:403d40eabd8cb071e296746751a946dd00b37fae6f21e8466c44d4bbfa452cb6", size = 3941627, upload-time = "2026-10-25T09:42:36.477Z" },
+    { url = "https://files.pythonhosted.org/packages/34/94/88a6894931a969eda76dff40a70ff721392bd2e9f7195909735a31ab76d8/git_orchard-1.3.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:734409bf04614981c9d5edbb391c14f7a9b049b619391255770b7944d8c5865a", size = 4409143, upload-time = "2026-10-25T09:42:37.827Z" },
+    { url = "https://files.pythonhosted.org/packages/96/a5/070c18342a00066afd860d9d08d87e78373505eff01f9f1782ed66fb0351/git_orchard-1.3.0-py3-none-win_amd64.whl", hash = "sha256:34f56a18a0c1af7761a1eabda51bf994224dfb829e639cdd81128817ea587cbf", size = 4520673, upload-time = "2026-10-25T09:42:39.557Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/7f/91b615c347263c4fd2a63837d7945f9f44ca6fa6260e21cadb7c6b76d4d8/git_orchard-1.3.0-py3-none-win_arm64.whl", hash = "sha256:9713e629322586f9eb3c7da592a08871ce6eba7ff2300f4241c37893611d2836", size = 4016376, upload-time = "2026-10-25T09:42:40.872Z" },
 ]
 
 [[package]]
@@ -50,6 +78,18 @@ wheels = [
 ]
 
 [[package]]
+name = "local-preview"
+version = "0.31.5"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/cb/c517d63d12e0b6d82df588765b210a9bf9367fbbb5f2fb1f7e1a238884ca/local_preview-0.31.5-py3-none-any.whl", hash = "sha256:782c2729931d6830216172c52e64da341ad5ad191ab1345fd7210b5673ddbd57", size = 9656136, upload-time = "2026-10-03T00:33:26.64Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/f6/189bd859926b919c314525d836c7d6b0e8cf7955868c1b5b221e1541f9b3/local_preview-0.31.5-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c2a6ab85e1b70bf125102de03d5898848d5a68b0330ff64c403791a8ae1120fc", size = 9097506, upload-time = "2026-10-03T00:33:29.016Z" },
+    { url = "https://files.pythonhosted.org/packages/af/d3/3f2b9638e5c77db129cbcd3b5c83552b2b9342bc7066e22111ae0b8b8f68/local_preview-0.31.5-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:73521d6c6dcf9688f7076249aa4f75899cd00d3795795a9a20b409c88692e80f", size = 9678405, upload-time = "2026-10-03T00:33:31.169Z" },
+    { url = "https://files.pythonhosted.org/packages/97/02/a08931fca0cf5cf311c1a307fdebdd4bfcb30b4edb31324339198dbfd3a0/local_preview-0.31.5-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:d89b56ffc68433a9af53171ce2ec34309afd9fa8a4782ea9beb1cd65487bb81c", size = 8867442, upload-time = "2026-10-03T00:33:33.317Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/68/217361af86925c6c8466d4d272500bcb6d4da63d487ca6b6149c833db07a/local_preview-0.31.5-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:f48d7b11e0a9d8fd8aaade621bfb590d47b2150279909437ebf7e64c10e57cb9", size = 9656155, upload-time = "2026-10-03T00:33:35.526Z" },
+]
+
+[[package]]
 name = "manygo"
 source = { editable = "manygo" }
 
@@ -65,22 +105,30 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
+    { name = "agentic-kanban" },
     { name = "beautifulsoup4" },
+    { name = "git-orchard" },
     { name = "hatchling" },
+    { name = "local-preview" },
     { name = "manygo" },
     { name = "pytest" },
     { name = "pyyaml" },
+    { name = "undot" },
 ]
 
 [package.metadata]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "agentic-kanban", specifier = ">=1.8.2" },
     { name = "beautifulsoup4", specifier = ">=4.13.0" },
+    { name = "git-orchard", specifier = ">=1.3.0" },
     { name = "hatchling", specifier = ">=1.27.0" },
+    { name = "local-preview", specifier = ">=0.31.5" },
     { name = "manygo", editable = "manygo" },
     { name = "pytest", specifier = ">=8.4.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "undot", specifier = ">=0.3.0" },
 ]
 
 [[package]]
@@ -205,4 +253,16 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f6/cc/6253133b5bb138fc3306cebfbda2c520f545d36b5be2c7255cc528bb45d6/typing_extensions-4.16.0.tar.gz", hash = "sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5", size = 113555, upload-time = "2026-07-02T08:40:05.92Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl", hash = "sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8", size = 45571, upload-time = "2026-07-02T08:40:04.659Z" },
+]
+
+[[package]]
+name = "undot"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/16/78ecb742de7399cc33540f81c4b2416751cf51d2af1768e78f54962664e7/undot-0.3.0.tar.gz", hash = "sha256:da90864282ef713cec47289a6f014fb15fe2c09d92eadf73fbb25c185add369a", size = 48487, upload-time = "2026-08-24T02:01:33.803Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b4/31/024f1cf80c2b8d3ab25fbea7627352be27a9c15810722fdec52ef5180548/undot-0.3.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:a960fd58bf305568263780f8a3f51a2338b8bf1e3c00823dbfe8d3d5daddc8da", size = 57790, upload-time = "2026-08-24T02:01:29.258Z" },
+    { url = "https://files.pythonhosted.org/packages/39/dd/02580262a38051b987bf2ad691451be75f0f74402ad5dae1f4398844e432/undot-0.3.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:019d4bac57c1b5a07c7aec7b0a6cbd76fed6329f0f98843fc33b3ca03eb48151", size = 57922, upload-time = "2026-08-24T02:01:30.495Z" },
+    { url = "https://files.pythonhosted.org/packages/24/f2/5d1c6d841c992df0ecc60e8bdccad249a4b850c389fa050631eb844eea8c/undot-0.3.0-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:90a7f1c6b59ab11166b1ae0cdfac1be70bac9973bb817e186bea779b15eeaf7b", size = 132202, upload-time = "2026-08-24T02:01:31.61Z" },
+    { url = "https://files.pythonhosted.org/packages/21/eb/b9406545cee70045be12925b9bb26944bb95b084b015d16137f7fcfc59ea/undot-0.3.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:4972f247461666a48f52cd61c546bc73a1031f24eaa5dca83ab43a235bbe0061", size = 127083, upload-time = "2026-08-24T02:01:32.654Z" },
 ]

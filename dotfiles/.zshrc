@@ -104,6 +104,11 @@ _cobra() {
 	_files
 }
 
+# The monorepo's dev tools, run from its uv.lock. Added before the loop below,
+# which only registers tools already on $PATH. Devcontainers mount this file
+# without the monorepo, hence the check.
+[[ -d ~/code/monorepo/tools/bin ]] && PATH=~/code/monorepo/tools/bin:$PATH
+
 # Cobra CLIs to complete through `_cobra`. One already covered by a script on
 # $fpath (packaged, or tracked in ~/.zsh/completions) keeps that script.
 () {

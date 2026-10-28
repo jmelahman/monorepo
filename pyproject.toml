@@ -6,13 +6,17 @@ authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
 
 [dependency-groups]
 dev = [
+  "agentic-kanban>=1.8.2",
   # Imported by scripts that ty checks: skills/, templates/.
   "beautifulsoup4>=4.13.0",
+  "git-orchard>=1.3.0",
   "hatchling>=1.27.0",
   # The hatch_build.py hooks import it to tag Go wheels.
+  "local-preview>=0.31.5",
   "manygo",
   "pytest>=8.4.0",
   "pyyaml>=6.0.2",
+  "undot>=0.3.0",
 ]
 
 [tool.pytest.ini_options]
