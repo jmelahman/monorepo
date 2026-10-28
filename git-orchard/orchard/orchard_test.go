@@ -302,6 +302,110 @@ func TestNoVerify(t *testing.T) {
 	}
 }
 
+// recordHook makes repo's pre-push hook append each ref it's given and the
+// files pushing it changes, as tools like pre-commit find them from its
+// input, to the returned file.
+func (f *fixture) recordHook(repo git.Repo) string {
+	f.t.Helper()
+	path := filepath.Join(f.git(repo, "rev-parse", "--absolute-git-dir"), "hooks", "pre-push")
+	log := filepath.Join(f.t.TempDir(), "pushed")
+	script := "#!/bin/sh\nwhile read local_ref local_sha remote_ref remote_sha; do\n" +
+		"  echo \"$local_ref $remote_ref:\" $(git diff --name-only $remote_sha $local_sha) >>" + log + "\ndone\n"
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		f.t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		f.t.Fatal(err)
+	}
+	return log
+}
+
+func (f *fixture) hookSaw(log, want string) {
+	f.t.Helper()
+	got, err := os.ReadFile(log)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	if string(got) != want {
+		f.t.Errorf("the hook saw:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestPushHookSeesChangedFiles(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	log := f.recordHook(f.mono)
+
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	f.commit(f.mono, "README", "elsewhere\n", "Outside the subtree")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	f.git(f.mono, "tag", "-a", "-m", "Release", "tools/foo/v1.0.0")
+	if err := f.orchard.PushTag("tools/foo/v1.0.0", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	f.commit(f.mono, "tools/foo/lib.go", "package main\n", "Add lib")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// The tag publishes a commit the upstream already has, so nothing.
+	f.hookSaw(log, "refs/heads/master refs/heads/master: tools/foo/main.go\n"+
+		"refs/tags/tools/foo/v1.0.0 refs/tags/v1.0.0:\n"+
+		"refs/heads/master refs/heads/master: tools/foo/lib.go\n")
+}
+
+func TestPushHookNewBranch(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	s.Branch = "next"
+	log := f.recordHook(f.mono)
+
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	// The upstream has no next to share any of the prefix with.
+	f.hookSaw(log, "refs/heads/master refs/heads/next: tools/foo/README tools/foo/main.go\n")
+}
+
+func TestPushHookNeedsNoIdentity(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	log := f.recordHook(f.mono)
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+
+	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
+		t.Setenv(k, "")
+		if err := os.Unsetenv(k); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.git(f.mono, "config", "user.useConfigOnly", "true")
+	f.git(f.mono, "config", "commit.gpgSign", "true")
+	f.git(f.mono, "config", "gpg.program", "false")
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	f.hookSaw(log, "refs/heads/master refs/heads/master: tools/foo/main.go\n")
+}
+
+func TestReleaseUpstreamHook(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	log := f.recordHook(f.mono)
+
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	if _, err := f.orchard.Release(s, "v1.0.0", ReleaseOptions{Rev: "HEAD", Upstream: true}); err != nil {
+		t.Fatal(err)
+	}
+	// The branch push moves the upstream ref, so the tag that follows it
+	// changes nothing.
+	f.hookSaw(log, "refs/heads/master refs/heads/master: tools/foo/main.go\n"+
+		"refs/tags/tools/foo/v1.0.0 refs/tags/v1.0.0:\n")
+}
+
 func TestRelease(t *testing.T) {
 	f := newFixture(t)
 	s := f.subtree()

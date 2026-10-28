@@ -66,6 +66,7 @@ Without a version, `release` picks one after the latest release, much as [tag](h
 Releases are the `<prefix>/v*` tags in the monorepo and on its remote, and the `v*` tags upstream, so releases from before the subtree count; `--dry-run` prints the pick.
 `release` requires the upstream branch to contain the release already, so the upstream tag lands on its history; `--upstream` pushes the branch and tag there directly instead of leaving it to the action.
 `push`, `pull` and `release` take `--no-verify` to skip git hooks.
+Pushes upstream run the monorepo's pre-push hook on what they change there, at monorepo paths, rather than on the split's commits, so a tool like pre-commit checks only those files instead of the whole repository; a tag the upstream branch already contains changes nothing.
 `push --force` overwrites upstream branches and tags, leased on their value when the push starts so a concurrent update still fails it; the action never forces.
 `release --force` moves an existing tag, unless the upstream already published it at another commit: the Go module proxy and release artifacts won't follow a moved release.
 

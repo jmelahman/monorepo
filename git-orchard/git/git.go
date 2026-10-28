@@ -40,8 +40,17 @@ func (r Repo) command(args ...string) *exec.Cmd {
 // Output runs git and returns its stdout with surrounding whitespace trimmed.
 // On failure, the error carries git's stderr.
 func (r Repo) Output(args ...string) (string, error) {
+	return r.OutputEnv(nil, args...)
+}
+
+// OutputEnv is Output with env added to git's environment, e.g. a
+// GIT_INDEX_FILE to build a tree in.
+func (r Repo) OutputEnv(env []string, args ...string) (string, error) {
 	var stderr bytes.Buffer
 	cmd := r.command(args...)
+	if env != nil {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/jmelahman/git-orchard/config"
 	"github.com/jmelahman/git-orchard/git"
@@ -21,6 +23,11 @@ type Orchard struct {
 	// NoVerify skips the hooks that git commit, merge and push would run,
 	// like their --no-verify.
 	NoVerify bool
+
+	mu sync.Mutex
+	// fetched holds the prefixes whose UpstreamRef this Orchard has fetched
+	// or pushed.
+	fetched map[string]bool
 }
 
 // Open loads the orchard containing dir.
@@ -108,6 +115,9 @@ func (o *Orchard) fetchSplits(s config.Subtree, rev string) error {
 func (o *Orchard) fetchUpstream(s config.Subtree) error {
 	_, err := o.Repo.Output("fetch", "--quiet", "--no-tags", "--no-write-fetch-head", "--no-auto-maintenance",
 		s.Remote, "+refs/heads/"+s.Branch+":"+UpstreamRef(s))
+	if err == nil {
+		o.markFetched(s)
+	}
 	return err
 }
 
@@ -162,7 +172,19 @@ func (o *Orchard) push(s config.Subtree, rev, ref string, opts PushOptions) erro
 	if err != nil {
 		return err
 	}
-	args := o.pushArgs()
+	out := opts.Output
+	if out == nil {
+		out = os.Stderr
+	}
+	verify := !o.NoVerify
+	if verify {
+		ran, err := o.prePush(s, rev, split, ref, out)
+		if err != nil {
+			return err
+		}
+		verify = !ran
+	}
+	args := pushArgs(verify)
 	if opts.DryRun {
 		args = append(args, "--dry-run")
 	}
@@ -173,11 +195,129 @@ func (o *Orchard) push(s config.Subtree, rev, ref string, opts PushOptions) erro
 		}
 		args = append(args, lease)
 	}
-	out := opts.Output
-	if out == nil {
-		out = os.Stderr
+	if err := o.Repo.RunTo(out, append(args, s.Remote, split+":"+ref)...); err != nil {
+		return err
 	}
-	return o.Repo.RunTo(out, append(args, s.Remote, split+":"+ref)...)
+	// Like a remote-tracking branch, the upstream ref follows the push, so
+	// a later push in this run, e.g. release's tag, diffs against it.
+	if ref == "refs/heads/"+s.Branch && !opts.DryRun {
+		if _, err := o.Repo.Output("update-ref", UpstreamRef(s), split); err != nil {
+			return err
+		}
+		o.markFetched(s)
+	}
+	return nil
+}
+
+// prePush runs the monorepo's pre-push hook for pushing split, rev's split of
+// s, to ref upstream, and reports whether it did so in place of git push.
+// Left to git push, the hook would get the split's commits, whose paths are
+// relative to the prefix, and a URL for a remote name, which tools like
+// pre-commit take to mean that nothing has been pushed yet and so check every
+// file. Instead it gets a pair of commits that differ by exactly what the
+// push changes upstream, at their monorepo paths: tip is rev's tree, and base
+// is rev's tree with the prefix as the upstream has it, at the split's merge
+// base with the upstream branch. Neither is referenced, so gc removes them.
+//
+// With no hook there is nothing to run, which also counts as done. A git
+// without git hook list (or failing it otherwise) leaves the hook to git push.
+func (o *Orchard) prePush(s config.Subtree, rev, split, ref string, out io.Writer) (bool, error) {
+	if _, err := o.Repo.Output("hook", "list", "pre-push"); err != nil {
+		return git.ExitCode(err) == 1, nil
+	}
+	upstream, err := o.upstream(s)
+	if err != nil {
+		return false, err
+	}
+	var merged string
+	if upstream != "" {
+		merged, err = o.Repo.Output("merge-base", split, upstream)
+		if err != nil && git.ExitCode(err) != 1 {
+			return false, err
+		}
+	}
+
+	dir, err := os.MkdirTemp("", "git-orchard-")
+	if err != nil {
+		return false, err
+	}
+	defer os.RemoveAll(dir)
+	// With no upstream branch or merge base, the upstream shares none of the
+	// prefix, so base lacks it entirely.
+	index := []string{"GIT_INDEX_FILE=" + filepath.Join(dir, "index")}
+	steps := [][]string{
+		{"read-tree", rev},
+		{"rm", "-r", "--cached", "--quiet", "--ignore-unmatch", "--", ":(literal)" + s.Prefix},
+	}
+	if merged != "" {
+		steps = append(steps, []string{"read-tree", "--prefix=" + s.Prefix + "/", merged})
+	}
+	for _, step := range steps {
+		if _, err := o.Repo.OutputEnv(index, step...); err != nil {
+			return false, err
+		}
+	}
+	tree, err := o.Repo.OutputEnv(index, "write-tree")
+	if err != nil {
+		return false, err
+	}
+	// The commits are the hook's input, not history: they need no identity
+	// of the user's, who may have none, as in CI, nor their signature.
+	ident := []string{
+		"GIT_AUTHOR_NAME=git-orchard", "GIT_AUTHOR_EMAIL=git-orchard",
+		"GIT_COMMITTER_NAME=git-orchard", "GIT_COMMITTER_EMAIL=git-orchard",
+	}
+	commitTree := []string{"-c", "commit.gpgSign=false", "commit-tree", "-m", "git-orchard: " + s.Prefix}
+	base, err := o.Repo.OutputEnv(ident, append(commitTree, tree)...)
+	if err != nil {
+		return false, err
+	}
+	tip, err := o.Repo.OutputEnv(ident, append(commitTree, "-p", base, rev+"^{tree}")...)
+	if err != nil {
+		return false, err
+	}
+
+	// The local ref is what's being pushed, e.g. refs/heads/master for HEAD,
+	// or, like git push's for a commit, the commit.
+	local, err := o.Repo.Output("rev-parse", "--symbolic-full-name", strings.TrimSuffix(rev, "^{commit}"))
+	if err != nil || local == "" {
+		local = tip
+	}
+	stdin := filepath.Join(dir, "stdin")
+	if err := os.WriteFile(stdin, []byte(local+" "+tip+" "+ref+" "+base+"\n"), 0o600); err != nil {
+		return false, err
+	}
+	return true, o.Repo.RunTo(out, "hook", "run", "--to-stdin="+stdin, "pre-push", "--", s.Remote, s.Remote)
+}
+
+// upstream returns UpstreamRef(s), fetched unless it already was by this
+// Orchard, or an empty string if the upstream has no branch yet.
+func (o *Orchard) upstream(s config.Subtree) (string, error) {
+	o.mu.Lock()
+	fetched := o.fetched[s.Prefix]
+	o.mu.Unlock()
+	if fetched {
+		return UpstreamRef(s), nil
+	}
+	err := o.fetchUpstream(s)
+	if err == nil {
+		return UpstreamRef(s), nil
+	}
+	// ls-remote --exit-code exits 2 for a missing ref, unlike for a failure
+	// to reach the remote, which the fetch's error explains better.
+	if _, lsErr := o.Repo.Output("ls-remote", "--exit-code", s.Remote, "refs/heads/"+s.Branch); git.ExitCode(lsErr) == 2 {
+		return "", nil
+	}
+	return "", err
+}
+
+func (o *Orchard) markFetched(s config.Subtree) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.fetched == nil {
+		o.fetched = map[string]bool{}
+	}
+	o.fetched[s.Prefix] = true
 }
 
 // lease is a --force-with-lease on ref's current value on remote. Pushes go
@@ -228,11 +368,12 @@ func (o *Orchard) RemoteURL(remote string) string {
 	return remote
 }
 
-func (o *Orchard) pushArgs() []string {
-	if o.NoVerify {
-		return []string{"push", "--no-verify"}
+// pushArgs starts a git push, which runs the pre-push hook if verify.
+func pushArgs(verify bool) []string {
+	if verify {
+		return []string{"push"}
 	}
-	return []string{"push"}
+	return []string{"push", "--no-verify"}
 }
 
 // hooklessArgs prefixes a git command whose own hooks can't be skipped,
@@ -359,7 +500,7 @@ func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions)
 		}
 	}
 	if opts.Remote != "" {
-		args := o.pushArgs()
+		args := pushArgs(!o.NoVerify)
 		if moving {
 			lease, err := o.lease(opts.Remote, "refs/tags/"+tag)
 			if err != nil {
