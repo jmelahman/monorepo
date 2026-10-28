@@ -58,6 +58,7 @@ git orchard push --tag tools/foo/v1.2.3 # publish as v1.2.3 upstream
 git orchard release tools/foo          # tag the next version, e.g. tools/foo/v1.2.4, and push it to origin
 git orchard release tools/foo v2.0.0   # or a version of your choosing
 git orchard sync [prefix...]            # copy shared files into subtrees
+git orchard mv tools/foo foo            # move a subtree and commit it, with anything staged
 git orchard detach [worktree]           # turn a linked worktree into a standalone clone
 git orchard ci [prefix...]              # GitHub Actions status of the monorepo and each subtree
 ```
@@ -72,6 +73,10 @@ Pushes upstream run the monorepo's pre-push hook on what they change there, at m
 
 `push` splits each subtree out of the monorepo with `git subtree split`, which is deterministic, so the same history always gives the same commits and every push is a fast-forward.
 An upstream with commits the monorepo doesn't have rejects the push until they're pulled in.
+
+`mv` moves a subtree's directory and manifest entry and commits the move, with the same `git-subtree-dir` and `git-subtree-split` trailers a squash has, so splits of the new prefix carry on from the upstream's history instead of starting over.
+Anything already staged goes into the same commit, so stage updates to whatever names the old prefix (a `go.work`, CI paths) first.
+Clones fetch the recorded split from the upstream, so `mv` refuses a subtree with unpushed commits; push them first.
 
 `detach` gives a worktree made with `git worktree add` its own `.git` directory, with the repository's refs, config, hooks and excludes, and the worktree's HEAD and index, so uncommitted changes carry over; objects are hardlinked where possible, as for a local clone.
 It then drops the worktree from the original repository, and refuses one that is locked, has submodules, or is mid-merge, rebase, cherry-pick, revert or bisect.

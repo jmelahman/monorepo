@@ -197,6 +197,30 @@ func TestList(t *testing.T) {
 	}
 }
 
+func TestMv(t *testing.T) {
+	r := withSubtree(t)
+	code, _, stderr := run(t, "mv", "tools/foo/", "foo")
+	if code != 0 {
+		t.Fatalf("exited %d: %s", code, stderr)
+	}
+	if got := r.read("foo/README"); got != "foo\n" {
+		t.Errorf("foo/README is %q, want tools/foo's", got)
+	}
+	if got := r.read(r.manifest()); !strings.Contains(got, `[subtree "foo"]`) || strings.Contains(got, "tools/foo") {
+		t.Errorf("the manifest should list foo in place of tools/foo:\n%s", got)
+	}
+	if got := r.git(r.mono, "log", "-1", "--format=%s"); got != "Move tools/foo to foo" {
+		t.Errorf("HEAD is %q, want the move committed", got)
+	}
+}
+
+func TestMvUnknownPrefix(t *testing.T) {
+	withSubtree(t)
+	if code, _, stderr := run(t, "mv", "tools/bar", "bar"); code == 0 || !strings.Contains(stderr, "not a subtree") {
+		t.Errorf("exited %d with %q, want a failure naming tools/bar as not a subtree", code, stderr)
+	}
+}
+
 func TestListUseHistory(t *testing.T) {
 	withSubtree(t)
 	code, stdout, stderr := run(t, "list", "--use-history")

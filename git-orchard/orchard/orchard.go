@@ -416,6 +416,88 @@ func (o *Orchard) Add(s config.Subtree, message string) error {
 	return config.Add(o.Repo, o.Config.Manifest, s)
 }
 
+// Move moves s to prefix, in the working tree, the manifest and git's own
+// configuration, and commits the move along with anything already staged, so
+// references to the old prefix can be updated in the same commit.
+//
+// The commit carries git-subtree-dir and git-subtree-split trailers, as a
+// squash does, naming the new prefix and the subtree's split, so splits of
+// the new prefix continue the upstream's history and pushes stay
+// fast-forwards. A fresh clone fetches that split from the upstream, so it
+// must be there already: Move refuses a subtree with unpushed commits.
+func (o *Orchard) Move(s config.Subtree, prefix, message string) error {
+	prefix = config.Clean(prefix)
+	if _, ok := o.Config.Lookup(prefix); ok {
+		return fmt.Errorf("%s is already listed in %s", prefix, o.Config.Manifest)
+	}
+	if _, err := os.Lstat(filepath.Join(o.Repo.Dir, prefix)); err == nil {
+		return fmt.Errorf("%s already exists", prefix)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	// The move restages both, so changes there would be committed with it.
+	dirty, err := o.Repo.Output("status", "--porcelain", "--", ":(literal)"+s.Prefix, ":(literal)"+o.Config.Manifest)
+	if err != nil {
+		return err
+	}
+	if dirty != "" {
+		return fmt.Errorf("%s or %s has uncommitted changes; commit or stash them first", s.Prefix, o.Config.Manifest)
+	}
+
+	split, err := o.Split(s, "HEAD")
+	if err != nil {
+		return err
+	}
+	upstream, err := o.upstream(s)
+	if err != nil {
+		return err
+	}
+	if upstream != "" {
+		_, err = o.Repo.Output("merge-base", "--is-ancestor", split, upstream)
+	}
+	if upstream == "" || git.ExitCode(err) == 1 {
+		return fmt.Errorf("%s has commits its upstream lacks; push them first (git orchard push %s), since clones fetch the split from there", s.Prefix, s.Prefix)
+	} else if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(filepath.Join(o.Repo.Dir, prefix)), 0o755); err != nil {
+		return err
+	}
+	if _, err := o.Repo.Output("mv", "--", s.Prefix, prefix); err != nil {
+		return err
+	}
+	from, to := "subtree."+s.Prefix, "subtree."+prefix
+	if _, err := o.Repo.Output("config", "--file", filepath.Join(o.Repo.Dir, o.Config.Manifest), "--rename-section", from, to); err != nil {
+		return err
+	}
+	// An override in git's own configuration follows the subtree too. Exit
+	// status 1 means there is none.
+	_, err = o.Repo.Output("config", "--local", "--get-regexp", "^"+regexp.QuoteMeta(from)+`\.`)
+	if err == nil {
+		_, err = o.Repo.Output("config", "--local", "--rename-section", from, to)
+	}
+	if err != nil && git.ExitCode(err) != 1 {
+		return err
+	}
+	if _, err := o.Repo.Output("add", "--", o.Config.Manifest); err != nil {
+		return err
+	}
+
+	if message == "" {
+		message = "Move " + s.Prefix + " to " + prefix
+	}
+	message += "\n\ngit-subtree-dir: " + prefix + "\ngit-subtree-split: " + split + "\n"
+	args := []string{"commit", "--quiet", "--message=" + message}
+	if o.NoVerify {
+		args = append(args, "--no-verify")
+	}
+	if err := o.Repo.Run(args...); err != nil {
+		return fmt.Errorf("%w; the move is staged: commit it with a message ending in\n\n  git-subtree-dir: %s\n  git-subtree-split: %s", err, prefix, split)
+	}
+	return nil
+}
+
 // ReleaseOptions configure Release.
 type ReleaseOptions struct {
 	// Rev is the monorepo revision to release.

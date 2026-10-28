@@ -651,3 +651,127 @@ func TestNextVersion(t *testing.T) {
 	f.git(f.mono, "tag", "--delete", "tools/foo/v1.4.0")
 	next(semver.Auto, "", "v1.4.1")
 }
+
+// moved moves the fixture's tools/foo, which has one pushed commit, to foo.
+func (f *fixture) moved() {
+	f.t.Helper()
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	if err := f.orchard.Push(f.subtree(), "HEAD", PushOptions{}); err != nil {
+		f.t.Fatal(err)
+	}
+	if err := f.orchard.Move(f.subtree(), "foo", ""); err != nil {
+		f.t.Fatal(err)
+	}
+	f.orchard = f.reopen()
+}
+
+func TestMovePushesContinueUpstreamHistory(t *testing.T) {
+	f := newFixture(t)
+	f.moved()
+	if _, ok := f.orchard.Config.Lookup("tools/foo"); ok {
+		t.Error("the manifest still lists tools/foo")
+	}
+	s, ok := f.orchard.Config.Lookup("foo")
+	if !ok || s.Remote != f.bare {
+		t.Fatalf("the manifest lists foo as %+v, %v; want it with tools/foo's remote", s, ok)
+	}
+	f.commit(f.mono, "foo/lib.go", "package main\n", "Add lib")
+
+	// A split that restarted history at the move would be rejected as a
+	// non-fast-forward.
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.git(git.Repo{Dir: f.bare}, "log", "--format=%s", "master"); got != "Add lib\nAdd main\nStart foo" {
+		t.Errorf("upstream history is %q, want Add lib on top of what it had", got)
+	}
+}
+
+// TestMoveFromFreshClone pushes from a clone that, like CI's checkout, lacks
+// the split the move recorded.
+func TestMoveFromFreshClone(t *testing.T) {
+	f := newFixture(t)
+	f.moved()
+	f.commit(f.mono, "foo/lib.go", "package main\n", "Add lib")
+	clone := git.Repo{Dir: filepath.Join(t.TempDir(), "clone")}
+	f.git(f.mono, "clone", "--quiet", "--no-local", f.mono.Dir, clone.Dir)
+
+	o, err := Open(clone.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, _ := o.Config.Lookup("foo")
+	if err := o.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.git(git.Repo{Dir: f.bare}, "log", "-1", "--format=%s", "master"); got != "Add lib" {
+		t.Errorf("upstream head is %q, want Add lib", got)
+	}
+}
+
+func TestMoveCommitsStagedChanges(t *testing.T) {
+	f := newFixture(t)
+	f.commit(f.mono, "go.work", "use ./tools/foo\n", "Use tools/foo")
+	if err := os.WriteFile(filepath.Join(f.mono.Dir, "go.work"), []byte("use ./foo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f.git(f.mono, "add", "go.work")
+
+	if err := f.orchard.Move(f.subtree(), "foo", ""); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.git(f.mono, "show", "HEAD:go.work"); got != "use ./foo" {
+		t.Errorf("the move committed go.work as %q, want the staged update", got)
+	}
+	if got := f.git(f.mono, "status", "--porcelain"); got != "" {
+		t.Errorf("the move left changes behind:\n%s", got)
+	}
+}
+
+func TestMoveRenamesLocalOverride(t *testing.T) {
+	f := newFixture(t)
+	f.git(f.mono, "config", "subtree.tools/foo.branch", "dev")
+
+	if err := f.orchard.Move(f.subtree(), "foo", ""); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.git(f.mono, "config", "--local", "subtree.foo.branch"); got != "dev" {
+		t.Errorf("subtree.foo.branch is %q, want the override moved from tools/foo", got)
+	}
+}
+
+func TestMoveRefusesUnpushedCommits(t *testing.T) {
+	f := newFixture(t)
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+
+	err := f.orchard.Move(f.subtree(), "foo", "")
+	if err == nil || !strings.Contains(err.Error(), "push them first") {
+		t.Fatalf("Move = %v, want it to ask for a push first", err)
+	}
+	if _, err := os.Stat(filepath.Join(f.mono.Dir, "tools/foo/main.go")); err != nil {
+		t.Errorf("a refused move should leave tools/foo alone: %v", err)
+	}
+}
+
+func TestMoveRefusesUncommittedChanges(t *testing.T) {
+	f := newFixture(t)
+	if err := os.WriteFile(filepath.Join(f.mono.Dir, "tools/foo/README"), []byte("edited\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := f.orchard.Move(f.subtree(), "foo", ""); err == nil {
+		t.Fatal("Move of a subtree with uncommitted changes = nil error, want one")
+	}
+	if _, err := os.Stat(filepath.Join(f.mono.Dir, "foo")); !os.IsNotExist(err) {
+		t.Errorf("a refused move should not create foo: %v", err)
+	}
+}
+
+func TestMoveRefusesExistingPrefix(t *testing.T) {
+	f := newFixture(t)
+	f.commit(f.mono, "foo/README", "taken\n", "Take foo")
+
+	if err := f.orchard.Move(f.subtree(), "foo", ""); err == nil {
+		t.Fatal("Move onto an existing directory = nil error, want one")
+	}
+}
