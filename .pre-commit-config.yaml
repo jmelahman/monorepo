@@ -111,7 +111,7 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 2aeb804518b4373dbf5adb8dddc5466d9a6e6b21 # frozen: 0.12.19
+    rev: eeca16c54e09b4d9a848259e46bae14737944348 # frozen: 0.13.5
     hooks:
       - id: uv-sync
 
@@ -127,7 +127,7 @@ repos:
         name: pytest
         entry: uv run --locked --quiet pytest
         language: python
-        additional_dependencies: [uv==0.9.15]
+        additional_dependencies: [uv==0.13.5]
         types_or: [python, pyi]
         pass_filenames: false
         require_serial: true

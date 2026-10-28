@@ -64,7 +64,7 @@ repos:
         name: pytest
         entry: uv run --locked --quiet pytest
         language: python
-        additional_dependencies: [uv==0.9.15]
+        additional_dependencies: [uv==0.13.5]
         types_or: [python, pyi]
         pass_filenames: false
         require_serial: true
