@@ -29,6 +29,10 @@ npm run start -- --start-url "https://github.com/facebook/react/pull/28000/files
 
 # Package a .zip for AMO
 npm run build
+
+# Upload and sign a listed version on AMO
+# (credentials: https://addons.mozilla.org/en-US/developers/addon/api/key/)
+WEB_EXT_API_KEY=... WEB_EXT_API_SECRET=... npm run sign
 ```
 
 To load it manually instead: open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → select `manifest.json`.

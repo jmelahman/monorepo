@@ -8,11 +8,10 @@
     "test": "node --test test/",
     "lint": "web-ext lint --source-dir=.",
     "start": "web-ext run --source-dir=.",
-    "build": "web-ext build --source-dir=. --overwrite-dest"
+    "build": "web-ext build --source-dir=. --overwrite-dest",
+    "sign": "web-ext sign --source-dir=. --channel=listed"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.0",
-    "web-ext": "^10.8.0",
-    "zod": "^4.4.3"
+    "web-ext": "^10.8.0"
   }
 }
