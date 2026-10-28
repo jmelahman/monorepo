@@ -1,0 +1,7 @@
+- id: lockstep
+  name: lockstep sync
+  description: Rewrite every copy of a pinned version to match its source.
+  entry: lockstep sync
+  language: golang
+  pass_filenames: false
+  always_run: true
