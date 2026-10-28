@@ -195,7 +195,7 @@
 	shared = go
 	shared = goreleaser
 	shared = npm
-[subtree "local-ai-detection"]
+[subtree "ai-detection"]
 	remote = git@github.com:jmelahman/local-ai-detection.git
 	branch = master
 	shared = base
