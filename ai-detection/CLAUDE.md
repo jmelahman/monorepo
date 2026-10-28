@@ -12,7 +12,7 @@ tokens.
 - Tests: `go test ./...`. `binoculars.TestScore` runs the real models and
   skips unless they are already cached; `go run . <<< "some text"` fetches
   them (about 1.4 GB, into `~/.cache/local-ai-detection`).
-- Run the CLI: `go run . [-tokens] [-processor cpu] [file]`.
+- Run the CLI: `go run . [--tokens] [--processor cpu] [file]`.
 - Lint: `prek run --all-files`. It is the same set CI runs; prefer it over
   invoking golangci-lint or govulncheck directly, since the hooks pin
   versions and provision the tools.
@@ -29,8 +29,8 @@ tokens.
   unit-tested with hand-computed logits; `Detector` drives the observer and
   performer contexts in lockstep, batch by batch, since both models' full
   logits at a position are needed together.
-- `main.go` — the CLI. `main` does process plumbing only; everything testable
-  lives in `run(ctx, args, stdin, stdout, stderr)`.
+- `main.go` — the CLI, on Cobra. `main` does process plumbing only;
+  everything testable lives in `run(ctx, args, stdin, stdout, stderr)`.
 - `internal/version/` — ldflags-stamped version with a `runtime/debug`
   fallback.
 

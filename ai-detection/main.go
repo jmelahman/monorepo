@@ -6,13 +6,14 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"text/tabwriter"
+
+	"github.com/spf13/cobra"
 
 	"github.com/jmelahman/local-ai-detection/binoculars"
 	"github.com/jmelahman/local-ai-detection/internal/version"
@@ -28,13 +29,6 @@ func main() {
 	err := run(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr)
 	stop()
 	if err != nil {
-		// -h is a request that was satisfied: flag has already printed the
-		// usage, and exiting non-zero would fail any caller that asks for
-		// help. Real parse errors are reported by flag too, so they only
-		// need the exit status.
-		if errors.Is(err, flag.ErrHelp) {
-			return
-		}
 		fmt.Fprintln(os.Stderr, programName+":", err)
 		os.Exit(1)
 	}
@@ -43,53 +37,61 @@ func main() {
 // run holds everything main does apart from process plumbing, which is what
 // makes it testable — see main_test.go.
 func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	fs := flag.NewFlagSet(programName, flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	fs.Usage = func() {
-		// Nothing to do about a failed write to stderr.
-		_, _ = fmt.Fprintln(stderr, "usage: "+programName+" [flags] [file]\n\nScores file, or standard input, for machine-generated text.")
-		fs.PrintDefaults()
-	}
-	defaultCache, _ := llm.CacheDir()
 	var (
-		showVersion = fs.Bool("version", false, "print the version and exit")
-		showTokens  = fs.Bool("tokens", false, "print every token's surprise and expected surprise")
-		cache       = fs.String("cache", defaultCache, "directory for llama.cpp and the models")
-		processor   = fs.String("processor", "cpu", "llama.cpp build to use: cpu, cuda, vulkan, metal, rocm")
-		threshold   = fs.Float64("threshold", binoculars.Threshold, "scores below this are called machine-generated")
+		showTokens bool
+		cache      string
+		processor  string
+		threshold  float64
 	)
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
+	cmd := &cobra.Command{
+		Use:     programName + " [file]",
+		Short:   "Score text for machine generation, locally",
+		Long:    "Scores file, or standard input, for machine-generated text.",
+		Version: version.Version(),
+		Args:    cobra.MaximumNArgs(1),
+		// Usage is for mistakes in the command line, not for failures
+		// partway through scoring; main prints the error itself.
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if cache == "" {
+				return errors.New("no cache directory: set --cache")
+			}
+			path := ""
+			if len(args) == 1 {
+				path = args[0]
+			}
+			text, err := readInput(cmd.Context(), path, cmd.InOrStdin())
+			if err != nil {
+				return err
+			}
 
-	if *showVersion {
-		_, err := fmt.Fprintln(stdout, version.Version())
-		return err
-	}
-	if fs.NArg() > 1 {
-		fs.Usage()
-		return errors.New("at most one file")
-	}
-	if *cache == "" {
-		return errors.New("no cache directory: set -cache")
-	}
+			d, err := binoculars.Open(cmd.Context(), cache, processor, cmd.ErrOrStderr())
+			if err != nil {
+				return err
+			}
+			defer func() { _ = d.Close() }()
 
-	text, err := readInput(ctx, fs.Arg(0), stdin)
-	if err != nil {
-		return err
+			r, err := d.Score(cmd.Context(), text)
+			if err != nil {
+				return err
+			}
+			return report(cmd.OutOrStdout(), r, threshold, showTokens)
+		},
 	}
+	cmd.SetVersionTemplate("{{.Version}}\n")
+	cmd.SetArgs(args)
+	cmd.SetIn(stdin)
+	cmd.SetOut(stdout)
+	cmd.SetErr(stderr)
 
-	d, err := binoculars.Open(ctx, *cache, *processor, stderr)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = d.Close() }()
+	defaultCache, _ := llm.CacheDir()
+	cmd.Flags().BoolVar(&showTokens, "tokens", false, "print every token's surprise and expected surprise")
+	cmd.Flags().StringVar(&cache, "cache", defaultCache, "directory for llama.cpp and the models")
+	cmd.Flags().StringVar(&processor, "processor", "cpu", "llama.cpp build to use: cpu, cuda, vulkan, metal, rocm")
+	cmd.Flags().Float64Var(&threshold, "threshold", binoculars.Threshold, "scores below this are called machine-generated")
 
-	r, err := d.Score(ctx, text)
-	if err != nil {
-		return err
-	}
-	return report(stdout, r, *threshold, *showTokens)
+	return cmd.ExecuteContext(ctx)
 }
 
 // readInput reads the file at path, or stdin for "" or "-". Reading stdin

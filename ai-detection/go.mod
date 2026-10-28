@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/hashicorp/go-getter v1.8.6
 	github.com/hybridgroup/yzma v1.29.1
+	github.com/spf13/cobra v1.10.2
 )
 
 require (
@@ -54,10 +55,12 @@ require (
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.72 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jupiterrider/ffi v0.8.0 // indirect
 	github.com/klauspost/compress v1.20.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.7.0 // indirect
 	github.com/ulikunitz/xz v0.5.17 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

@@ -10,7 +10,7 @@ pinned by SHA-256, and cached.
 ```console
 $ local-ai-detection essay.txt
 machine (score 0.8701, threshold 0.9015, uncalibrated; log-ppl 1.409, log-x-ppl 1.620)
-$ pbpaste | local-ai-detection -tokens
+$ pbpaste | local-ai-detection --tokens
 ```
 
 ## How it works
@@ -19,7 +19,7 @@ Today it is a zero-shot detector, [Binoculars](https://arxiv.org/abs/2401.12070)
 a language model finds machine-generated text unsurprising, and Binoculars
 divides that surprise by how surprising the text's context makes *any*
 continuation, so a predictable subject alone does not read as machine
-written. Scores well below 1 are machine-like. `-tokens` shows both numbers
+written. Scores well below 1 are machine-like. `--tokens` shows both numbers
 for every token.
 
 The models are Qwen3-0.6B, base and instruction-tuned (about 1.4 GB
@@ -34,10 +34,10 @@ next.
 
 | Flag | Default | |
 | --- | --- | --- |
-| `-cache` | `$XDG_CACHE_HOME/local-ai-detection` | where llama.cpp and the models are kept |
-| `-processor` | `cpu` | llama.cpp build: `cpu`, `cuda`, `vulkan`, `metal`, `rocm` |
-| `-threshold` | `0.9015` | scores below it are called machine-generated |
-| `-tokens` | off | print every token's surprise and expected surprise |
+| `--cache` | `$XDG_CACHE_HOME/local-ai-detection` | where llama.cpp and the models are kept |
+| `--processor` | `cpu` | llama.cpp build: `cpu`, `cuda`, `vulkan`, `metal`, `rocm` |
+| `--threshold` | `0.9015` | scores below it are called machine-generated |
+| `--tokens` | off | print every token's surprise and expected surprise |
 
 ## Packages
 
