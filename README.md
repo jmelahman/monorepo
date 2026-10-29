@@ -1,6 +1,13 @@
 [![CI Status](https://github.com/jmelahman/monorepo/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/pre-commit.yml)
 [![Dependabot](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates)
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="media/skyline-dark.svg">
+  <img src="media/skyline-light.svg" alt="The monorepo skyline: each project drawn as a building, its height the square root of its lines of code and its floors colored by language" width="960">
+</picture>
+
+<sub>Drawn by <code>tools/scripts/skyline.py</code> from the tracked tree; rerun it to rebuild the skyline.</sub>
+
 # Projects
 
 ## Stable Projects
