@@ -19,11 +19,13 @@ These projects are still in active development but may be considered "stable".
 | [local-preview](https://github.com/jmelahman/local-preview)     | [![Test status](https://github.com/jmelahman/local-preview/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/local-preview/actions/workflows/pre-commit.yml)     | [![Deploy status](https://github.com/jmelahman/local-preview/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/local-preview/actions/workflows/release.yml)     |
 | [manygo](https://github.com/jmelahman/manygo)                   | [![Test status](https://github.com/jmelahman/manygo/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/manygo/actions/workflows/pre-commit.yml)                   | [![Deploy status](https://github.com/jmelahman/manygo/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/manygo/actions/workflows/release.yml)                   |
 | [nature-sounds](https://github.com/jmelahman/nature-sounds)     | [![Test status](https://github.com/jmelahman/nature-sounds/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions/workflows/pre-commit.yml)     | [![Deploy status](https://github.com/jmelahman/nature-sounds/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/nature-sounds/actions/workflows/release.yml)     |
+| [pinsync](https://github.com/jmelahman/pinsync)                 | [![Test status](https://github.com/jmelahman/pinsync/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/pinsync/actions/workflows/pre-commit.yml)                 | [![Deploy status](https://github.com/jmelahman/pinsync/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/pinsync/actions/workflows/release.yml)                 |
 | [pkglint](https://github.com/jmelahman/pkglint)                 | [![Test status](https://github.com/jmelahman/pkglint/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/pkglint/actions/workflows/pre-commit.yml)                 | [![Deploy status](https://github.com/jmelahman/pkglint/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/pkglint/actions/workflows/release.yml)                 |
 | [skills](https://github.com/jmelahman/skills)                   | [![Test status](https://github.com/jmelahman/skills/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/skills/actions/workflows/pre-commit.yml)                   |                                                                                                                                                                                      |
 | [tag](https://github.com/jmelahman/tag)                         | [![Test status](https://github.com/jmelahman/tag/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/tag/actions/workflows/pre-commit.yml)                         | [![Deploy status](https://github.com/jmelahman/tag/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/tag/actions/workflows/release.yml)                         |
 | [typesafe-sdk-go](https://github.com/jmelahman/typesafe-sdk-go) | [![Test status](https://github.com/jmelahman/typesafe-sdk-go/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/typesafe-sdk-go/actions/workflows/pre-commit.yml) |                                                                                                                                                                                      |
 | [undot](https://github.com/jmelahman/undot)                     | [![test status](https://github.com/jmelahman/undot/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/work/undo/workflows/pre-commit.yml)                         | [![Deploy status](https://github.com/jmelahman/undot/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/undot/actions/workflows/release.yml)                     |
+| [vinder](https://github.com/jmelahman/vinder)                   | [![Test status](https://github.com/jmelahman/vinder/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/vinder/actions/workflows/pre-commit.yml)                   | [![Deploy status](https://github.com/jmelahman/vinder/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/vinder/actions/workflows/release.yml)                   |
 | [work](https://github.com/jmelahman/work)                       | [![Test status](https://github.com/jmelahman/work/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/work/actions/workflows/pre-commit.yml)                       | [![Deploy status](https://github.com/jmelahman/work/actions/workflows/release.yml/badge.svg)](https://github.com/jmelahman/work/actions/workflows/release.yml)                       |
 
 ## Unfinished Projects
@@ -31,6 +33,11 @@ These projects are still in active development but may be considered "stable".
 - [AgileCBT](https://github.com/jmelahman/AgileCBT)
 - [cycle-cli](https://github.com/jmelahman/cycle-cli)
 - [docker-status](https://github.com/jmelahman/docker-status)
+- [draw](https://github.com/jmelahman/draw)
+- [local-ai-detection](https://github.com/jmelahman/local-ai-detection)
+- [notebook](https://github.com/jmelahman/notebook)
+- [smart-lights](https://github.com/jmelahman/smart-lights)
+- [write](https://github.com/jmelahman/write)
 
 ## Browser Extensions
 
@@ -47,8 +54,14 @@ These projects are still in active development but may be considered "stable".
 ## Templates
 
 - [templates/fullstack-template](https://github.com/jmelahman/fullstack-template)
+- [templates/godot-template](https://github.com/jmelahman/godot-template)
 - [templates/golang-template](https://github.com/jmelahman/golang-template)
 - [templates/PKGBUILDs-template](https://github.com/jmelahman/PKGBUILDs-template)
+
+## Other
+
+- [dotfiles](https://github.com/jmelahman/dotfiles)
+- [jmelahman.github.io](https://github.com/jmelahman/jmelahman.github.io)
 
 ## Subtrees
 
