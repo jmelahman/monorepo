@@ -17,8 +17,44 @@ func sha(n int) string { return strings.Repeat(strconv.FormatInt(int64(n), 16), 
 // own contract — that DeployQuery maps onto the filter and that Total counts
 // the whole match, not the page.
 func TestDeploysPage(t *testing.T) {
+	// Rows are written straight to the store: this exercises listing, and
+	// building six real deploys would cost seconds for no added coverage.
+	// They're written, and moved out of queued, before the orchestrator
+	// starts: its build queue resumes unfinished deploys at startup, and
+	// one it picked up would change status under the assertions.
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "previews.db")
+	store, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo, err := store.CreateRepo("demo", "/src/demo", "/bare/demo", db.RepoReady)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]int64, 6)
+	for i := range ids {
+		// Distinct in every position, so a prefix search picks out exactly one.
+		d, err := store.CreateDeploy(repo.ID, sha(i+1), db.DeployMeta{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids[i] = d.ID
+		set := store.SetDeployReady
+		if i < 4 {
+			set = store.SetDeployEvicted
+		}
+		if err := set(d.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
 	o, err := New(Options{
-		DataDir:           filepath.Join(t.TempDir(), "previews"),
+		DataDir:           filepath.Join(dir, "previews"),
+		DBPath:            dbPath,
 		Addr:              ":8080",
 		Runner:            &recordingRunner{},
 		RetentionInterval: -1,
@@ -27,27 +63,6 @@ func TestDeploysPage(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { o.Close() })
-
-	// Rows are written straight to the store: this exercises listing, and
-	// building six real deploys would cost seconds for no added coverage.
-	repo, err := o.database.CreateRepo("demo", "/src/demo", "/bare/demo", db.RepoReady)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ids := make([]int64, 6)
-	for i := range ids {
-		// Distinct in every position, so a prefix search picks out exactly one.
-		d, err := o.database.CreateDeploy(repo.ID, sha(i+1), db.DeployMeta{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		ids[i] = d.ID
-		if i < 4 {
-			if err := o.database.SetDeployEvicted(d.ID); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
 
 	page, err := o.DeploysPage(DeployQuery{Limit: 2})
 	if err != nil {
@@ -71,7 +86,7 @@ func TestDeploysPage(t *testing.T) {
 
 	// Filtering to live deploys is the point of the status knob: evicted rows
 	// linger as history and would otherwise dominate the listing.
-	live, err := o.DeploysPage(DeployQuery{Status: StatusQueued})
+	live, err := o.DeploysPage(DeployQuery{Status: StatusReady})
 	if err != nil {
 		t.Fatal(err)
 	}
