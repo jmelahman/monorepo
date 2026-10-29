@@ -6,10 +6,6 @@
   <img src="media/skyline-light.svg" alt="The monorepo skyline: each project drawn as a building, its height the square root of its lines of code and its floors colored by language" width="960">
 </picture>
 
-<sub>Drawn by <code>tools/scripts/skyline.py</code> from the tracked tree; rerun it to rebuild the skyline.</sub>
-
-# Projects
-
 ## Stable Projects
 
 These projects are still in active development but may be considered "stable".
