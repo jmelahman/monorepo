@@ -12,9 +12,9 @@ use (
 	./docker-status
 	./git-orchard
 	./local-preview
-	./lockstep
 	./nature-sounds
 	./notebook
+	./pinsync
 	./pkglint
 	./pre-commit-hooks/go-pre-commit-hooks
 	./smart-lights
