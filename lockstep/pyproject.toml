@@ -1,0 +1,53 @@
+[project]
+# lockstep is taken on PyPI; the command is still `lockstep`.
+name = "lockstep-cli"
+description = "Keep every copy of a pinned version in step with the one place that defines it."
+license = { file = "LICENSE" }
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = ["dependencies", "github-actions", "pre-commit", "tooling", "versions"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Go",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/jmelahman/lockstep"
+
+# BEGIN orchard:manygo
+# Shared by Go subtrees built into wheels with manygo:
+# .config/git-orchard/shared/manygo in the monorepo
+# (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+# copies it here.
+[build-system]
+# Pinned exactly; build-constraints.txt (the monorepo's pybuild profile)
+# locks the transitive closure with hashes, and CI passes it to
+# `uv build --build-constraints`. The monorepo's build-constraints hook
+# regenerates it when a pin changes.
+# go-bin must cover the newest `go` directive among these subtrees' go.mod.
+requires = [
+  "go-bin==1.27.3",
+  "hatch-vcs==0.5.0",
+  "hatchling==1.32.0",
+  "manygo==0.3.0"
+]
+build-backend = "hatchling.build"
+# END orchard:manygo
+
+# The sdist carries the sources to build from; the wheel carries only the
+# binary, which the build hook adds.
+[tool.hatch.build.targets.sdist]
+include = ["go.mod", "go.sum", "**/*.go", "hatch_build.py"]
+exclude = ["**/*_test.go"]
+
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+
+[tool.hatch.build.hooks.custom]
+binary_name = "lockstep"
+
+[tool.hatch.version]
+source = "vcs"

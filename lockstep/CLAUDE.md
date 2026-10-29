@@ -27,6 +27,10 @@ that defines it. See README.md for the config and what counts as a copy.
 - `internal/remote/` — resolves a tag to its commit with `git ls-remote`.
 - `internal/version/` — ldflags-stamped version with a `runtime/debug`
   fallback.
+- `pyproject.toml`, `hatch_build.py` — package the binary as the
+  `lockstep-cli` wheel on PyPI (`lockstep` is taken). The `orchard:` blocks
+  here and in `.github/workflows/release.yml`, and `build-constraints.txt`,
+  are copied from the monorepo's shared profiles; edit them there.
 
 ## Conventions
 

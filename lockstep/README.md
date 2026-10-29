@@ -13,9 +13,20 @@ bumper already updates — and rewrites every copy to match.
 
 ## Install
 
+From [PyPI](https://pypi.org/project/lockstep-cli/), as a prebuilt binary:
+
+```sh
+uv tool install lockstep-cli
+```
+
+Or from source:
+
 ```sh
 go install github.com/jmelahman/lockstep@latest
 ```
+
+Binaries for each platform are also attached to every
+[release](https://github.com/jmelahman/lockstep/releases).
 
 ## Configuration
 
