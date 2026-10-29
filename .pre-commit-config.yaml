@@ -38,17 +38,12 @@ repos:
       - id: trailing-whitespace
 
   # Rewrites every copy of a pinned version to match its source, per
-  # .config/pinsync/config.toml. Like vinder, it runs from its source, and
-  # before the sync so a rewritten profile reaches the subtrees in the same
-  # pass.
-  - repo: local
+  # .config/pinsync/config.toml. It runs before the sync so a rewritten
+  # profile reaches the subtrees in the same pass.
+  - repo: https://github.com/jmelahman/pinsync
+    rev: 5af8e925b98099516c7b64101f7993ac1f959f87 # frozen: v0.1.0
     hooks:
       - id: pinsync
-        name: pinsync sync
-        entry: go run ./pinsync sync
-        language: system
-        always_run: true
-        pass_filenames: false
 
   # Keeps the shared build-constraints.txt locked to the subtrees' build
   # pins; runs before the sync so the regenerated file reaches them in the
