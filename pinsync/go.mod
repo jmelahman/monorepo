@@ -1,4 +1,4 @@
-module github.com/jmelahman/lockstep
+module github.com/jmelahman/pinsync
 
 go 1.27.3
 

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jmelahman/lockstep/internal/config"
-	"github.com/jmelahman/lockstep/internal/pins"
+	"github.com/jmelahman/pinsync/internal/config"
+	"github.com/jmelahman/pinsync/internal/pins"
 )
 
 const orchard = "https://github.com/jmelahman/git-orchard"

@@ -1,6 +1,5 @@
 [project]
-# lockstep is taken on PyPI; the command is still `lockstep`.
-name = "lockstep-cli"
+name = "pinsync"
 description = "Keep every copy of a pinned version in step with the one place that defines it."
 license = { file = "LICENSE" }
 authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
@@ -15,7 +14,7 @@ classifiers = [
 dynamic = ["version"]
 
 [project.urls]
-Repository = "https://github.com/jmelahman/lockstep"
+Repository = "https://github.com/jmelahman/pinsync"
 
 # BEGIN orchard:manygo
 # Shared by Go subtrees built into wheels with manygo:
@@ -47,7 +46,7 @@ exclude = ["**/*_test.go"]
 bypass-selection = true
 
 [tool.hatch.build.hooks.custom]
-binary_name = "lockstep"
+binary_name = "pinsync"
 
 [tool.hatch.version]
 source = "vcs"

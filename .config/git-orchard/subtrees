@@ -201,7 +201,7 @@
 	shared = base
 	shared = go
 [subtree "pinsync"]
-	remote = git@github.com:jmelahman/lockstep.git
+	remote = git@github.com:jmelahman/pinsync.git
 	branch = master
 	shared = base
 	shared = go

@@ -1,6 +1,6 @@
-# Versions that are written in more than one place, kept in step by lockstep
-# (https://github.com/jmelahman/lockstep): each pin's source defines it, and
-# `lockstep sync` rewrites every copy to match.
+# Versions that are written in more than one place, kept in step by pinsync
+# (https://github.com/jmelahman/pinsync): each pin's source defines it, and
+# `pinsync sync` rewrites every copy to match.
 
 # uv itself: the uv-pre-commit rev, which `prek autoupdate` bumps. Copies are
 # every `uv==` in a hook's additional_dependencies and setup-uv's `version`.

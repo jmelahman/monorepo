@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jmelahman/lockstep/internal/config"
+	"github.com/jmelahman/pinsync/internal/config"
 )
 
 func TestLoad(t *testing.T) {

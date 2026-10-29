@@ -1,5 +1,5 @@
-// Package config loads a repository's .config/lockstep/config.toml: the pins
-// lockstep keeps in step, where each one's version comes from, and where its
+// Package config loads a repository's .config/pinsync/config.toml: the pins
+// pinsync keeps in step, where each one's version comes from, and where its
 // copies are written.
 package config
 
@@ -15,7 +15,7 @@ import (
 )
 
 // File is the path of the config, relative to the repository root.
-const File = ".config/lockstep/config.toml"
+const File = ".config/pinsync/config.toml"
 
 // The places a pin's version can come from.
 const (

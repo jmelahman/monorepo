@@ -1,4 +1,4 @@
-// Command lockstep keeps every copy of a pinned version — pre-commit hook
+// Command pinsync keeps every copy of a pinned version — pre-commit hook
 // revs and additional_dependencies, GitHub Action inputs — in step with the
 // one place that defines it. See README.md.
 package main
@@ -18,10 +18,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jmelahman/lockstep/internal/config"
-	"github.com/jmelahman/lockstep/internal/pins"
-	"github.com/jmelahman/lockstep/internal/remote"
-	"github.com/jmelahman/lockstep/internal/version"
+	"github.com/jmelahman/pinsync/internal/config"
+	"github.com/jmelahman/pinsync/internal/pins"
+	"github.com/jmelahman/pinsync/internal/remote"
+	"github.com/jmelahman/pinsync/internal/version"
 )
 
 // Named after whatever the binary is actually called, so usage text and
@@ -30,7 +30,7 @@ var programName = filepath.Base(os.Args[0])
 
 var (
 	// errOutOfDate is returned by check when a copy differs from its pin.
-	errOutOfDate = errors.New("pins out of date; run lockstep sync")
+	errOutOfDate = errors.New("pins out of date; run pinsync sync")
 	// errUpdated is returned by sync when it rewrote a copy, so a hook
 	// fails like a formatter does.
 	errUpdated = errors.New("updated pins")

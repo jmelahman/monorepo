@@ -1,6 +1,6 @@
-# lockstep
+# pinsync
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/lockstep.svg)](https://pkg.go.dev/github.com/jmelahman/lockstep)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jmelahman/pinsync.svg)](https://pkg.go.dev/github.com/jmelahman/pinsync)
 
 Keep every copy of a pinned version in step with the one place that defines
 it.
@@ -8,29 +8,29 @@ it.
 A tool's version tends to be written in several places: a pre-commit hook's
 `rev`, `uv==` in another hook's `additional_dependencies`, the `version`
 input of a setup action in CI. Dependency bots bump one of them and the rest
-drift. lockstep gives each pin one source — a lockfile or a hook rev your
+drift. pinsync gives each pin one source — a lockfile or a hook rev your
 bumper already updates — and rewrites every copy to match.
 
 ## Install
 
-From [PyPI](https://pypi.org/project/lockstep-cli/), as a prebuilt binary:
+From [PyPI](https://pypi.org/project/pinsync/), as a prebuilt binary:
 
 ```sh
-uv tool install lockstep-cli
+uv tool install pinsync
 ```
 
 Or from source:
 
 ```sh
-go install github.com/jmelahman/lockstep@latest
+go install github.com/jmelahman/pinsync@latest
 ```
 
 Binaries for each platform are also attached to every
-[release](https://github.com/jmelahman/lockstep/releases).
+[release](https://github.com/jmelahman/pinsync/releases).
 
 ## Configuration
 
-`.config/lockstep/config.toml`, at the root of the git repository:
+`.config/pinsync/config.toml`, at the root of the git repository:
 
 ```toml
 # The version is the uv-pre-commit rev in the root .pre-commit-config.yaml,
@@ -68,7 +68,7 @@ Its copies, in every file git tracks:
 
 - **Hook revs.** The `rev` of `repo` in any `.pre-commit-config.yaml`. A rev
   pinned to a commit needs a `# frozen: <tag>` comment, as `prek autoupdate
-  --freeze` writes; lockstep rewrites both.
+  --freeze` writes; pinsync rewrites both.
 - **Hook dependencies.** `package==version` (Python, by normalized name) and
   `package@version` (Go, npm) in any hook's `additional_dependencies`.
   `package` defaults to the pin's name.
@@ -82,8 +82,8 @@ formatting around it.
 ## Usage
 
 ```sh
-lockstep check   # list the copies that differ from their pin; exit 1 if any
-lockstep sync    # rewrite them; exit 1 if anything changed
+pinsync check   # list the copies that differ from their pin; exit 1 if any
+pinsync sync    # rewrite them; exit 1 if anything changed
 ```
 
 `check` needs no network: it reads a rev's version from its `# frozen:`
@@ -95,10 +95,10 @@ comment. `sync` looks up the commit of a rev's new tag with `git ls-remote`.
 
 ```yaml
 repos:
-  - repo: https://github.com/jmelahman/lockstep
+  - repo: https://github.com/jmelahman/pinsync
     rev: v0.1.0
     hooks:
-      - id: lockstep
+      - id: pinsync
 ```
 
 Run it before anything that copies the files it rewrites, such as

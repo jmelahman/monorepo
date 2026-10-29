@@ -23,7 +23,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"go.yaml.in/yaml/v3"
 
-	"github.com/jmelahman/lockstep/internal/config"
+	"github.com/jmelahman/pinsync/internal/config"
 )
 
 var (

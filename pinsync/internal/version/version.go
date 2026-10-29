@@ -5,7 +5,7 @@ import "runtime/debug"
 
 // version is stamped at build time by GoReleaser:
 //
-//	-ldflags "-X github.com/jmelahman/lockstep/internal/version.version=v1.2.3"
+//	-ldflags "-X github.com/jmelahman/pinsync/internal/version.version=v1.2.3"
 var version string
 
 // Version returns the stamped version, falling back to the module version

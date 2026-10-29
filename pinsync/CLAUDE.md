@@ -1,4 +1,4 @@
-# lockstep — Claude Notes
+# pinsync — Claude Notes
 
 A CLI that keeps every copy of a pinned version (pre-commit hook revs and
 additional_dependencies, GitHub Action inputs) in step with the one place
@@ -8,7 +8,7 @@ that defines it. See README.md for the config and what counts as a copy.
 
 - Tests: `go test -race ./...`.
 - Run the CLI: `go run . check` or `go run . sync`, from inside a git
-  repository with a `.config/lockstep/config.toml`.
+  repository with a `.config/pinsync/config.toml`.
 - Lint: `prek run --all-files`. It is the same set CI runs; prefer it over
   invoking golangci-lint, aligo or zizmor directly, since the hooks pin
   versions and provision the tools.
@@ -27,10 +27,10 @@ that defines it. See README.md for the config and what counts as a copy.
 - `internal/remote/` — resolves a tag to its commit with `git ls-remote`.
 - `internal/version/` — ldflags-stamped version with a `runtime/debug`
   fallback.
-- `pyproject.toml`, `hatch_build.py` — package the binary as the
-  `lockstep-cli` wheel on PyPI (`lockstep` is taken). The `orchard:` blocks
-  here and in `.github/workflows/release.yml`, and `build-constraints.txt`,
-  are copied from the monorepo's shared profiles; edit them there.
+- `pyproject.toml`, `hatch_build.py` — package the binary as a wheel on
+  PyPI. The `orchard:` blocks here and in `.github/workflows/release.yml`,
+  and `build-constraints.txt`, are copied from the monorepo's shared
+  profiles; edit them there.
 
 ## Conventions
 

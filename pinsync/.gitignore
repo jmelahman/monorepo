@@ -43,4 +43,4 @@ plans/
 # Python packaging
 *.egg-info/
 __pycache__/
-/lockstep
+/pinsync

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jmelahman/lockstep/internal/config"
+	"github.com/jmelahman/pinsync/internal/config"
 )
 
 func TestRun(t *testing.T) {

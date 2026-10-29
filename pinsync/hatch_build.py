@@ -17,7 +17,7 @@ class GoBinaryBuildHook(BuildHookInterface):
             build_data["tag"] = "py3-none-" + manygo.get_platform_tag(goos=goos, goarch=goarch)
         binary_name = self.config["binary_name"]
         tag = os.getenv("GITHUB_REF_NAME", "")
-        ldflags = f"-X github.com/jmelahman/lockstep/internal/version.version={tag} -s -w"
+        ldflags = f"-X github.com/jmelahman/pinsync/internal/version.version={tag} -s -w"
 
         if not os.path.exists(binary_name):
             print(f"Building Go binary '{binary_name}'...")

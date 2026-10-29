@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jmelahman/lockstep/internal/remote"
+	"github.com/jmelahman/pinsync/internal/remote"
 )
 
 func TestParse(t *testing.T) {
