@@ -91,6 +91,10 @@ locals {
     notebook = {
       description = "A local NotebookLM: sources to podcast episodes with Claude Code"
     }
+    pinsync = {
+      description = "Keep every copy of a pinned version in step with the one place that defines it"
+      topics      = ["dependencies", "github-actions", "pre-commit", "tooling", "versions"]
+    }
     pkglint = {
       description  = "Linter for Arch Linux PKGBUILDs"
       homepage_url = "http://jamison.lahman.dev/pkglint/"
