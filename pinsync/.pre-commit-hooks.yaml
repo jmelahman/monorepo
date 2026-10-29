@@ -5,3 +5,10 @@
   language: golang
   pass_filenames: false
   always_run: true
+- id: pinsync-check
+  name: pinsync check
+  description: Fail when a copy of a pinned version differs from its source, without rewriting it.
+  entry: pinsync check
+  language: golang
+  pass_filenames: false
+  always_run: true

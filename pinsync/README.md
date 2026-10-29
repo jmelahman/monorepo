@@ -103,3 +103,10 @@ repos:
 
 Run it before anything that copies the files it rewrites, such as
 [git-orchard](https://github.com/jmelahman/git-orchard)'s `git-orchard-sync`.
+
+`pinsync-check` runs `check` instead: it fails without touching anything and
+needs no network, for CI or anywhere a hook shouldn't rewrite files.
+
+```yaml
+      - id: pinsync-check
+```
