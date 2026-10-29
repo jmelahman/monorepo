@@ -201,6 +201,18 @@ pub fn find_larger_versions(current_tag: &str, all_tags: &[String]) -> Result<Ve
     Ok(larger)
 }
 
+/// Returns the highest pre-release number among `all_tags` carrying `suffix`
+/// on the same base version as `version`, or 0 if there are none.
+fn largest_pre_release_num(all_tags: &[String], suffix: &str, version: &Version) -> u64 {
+    all_tags
+        .iter()
+        .filter_map(|existing| parse(existing).ok())
+        .filter(|existing| existing.pre_release == suffix && existing.base() == version.base())
+        .map(|existing| existing.pre_release_num)
+        .max()
+        .unwrap_or(0)
+}
+
 pub fn calculate_next_version(
     tag: &str,
     all_tags: &[String],
@@ -230,19 +242,18 @@ pub fn calculate_next_version(
     } else if version.pre_release != suffix {
         // Switching to a different pre-release identifier on the same base
         // version: continue from the highest existing number for that suffix.
-        // TODO: This should probably only consider tags with HEAD as an ancestor.
-        let largest = all_tags
-            .iter()
-            .filter_map(|existing| parse(existing).ok())
-            .filter(|existing| existing.pre_release == suffix && existing.base() == version.base())
-            .map(|existing| existing.pre_release_num)
-            .max()
-            .unwrap_or(0);
+        // Every tag counts, not only those reachable from HEAD: tag names are
+        // global, so a number taken on another branch is still taken.
+        let largest = largest_pre_release_num(all_tags, suffix, &version);
         if largest > 0 {
             version.pre_release_num = largest + 1;
         }
     } else {
-        version.pre_release_num += 1;
+        // The latest reachable tag may not be the latest with this suffix: a
+        // sibling branch can have moved on to rc.2 while HEAD still sits on
+        // rc.1, so step past whichever is higher.
+        let largest = largest_pre_release_num(all_tags, suffix, &version);
+        version.pre_release_num = version.pre_release_num.max(largest) + 1;
     }
 
     version.pre_release = suffix.to_string();
@@ -536,7 +547,7 @@ mod tests {
             &'static str,
         );
 
-        let cases: [Case; 21] = [
+        let cases: [Case; 22] = [
             (
                 "patch increment",
                 "v1.2.3",
@@ -608,6 +619,14 @@ mod tests {
                 "rc",
                 &[],
                 "v1.2.3-rc.2",
+            ),
+            (
+                "pre-release increment past a number taken on another branch",
+                "v1.2.3-rc.1",
+                [false, false, false],
+                "rc",
+                &["v1.2.3-rc.1", "v1.2.3-rc.2", "v1.2.4-rc.5"],
+                "v1.2.3-rc.3",
             ),
             (
                 "pre-release increment with patch version",
