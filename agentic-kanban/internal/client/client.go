@@ -417,6 +417,11 @@ func (c *Client) PreviewArtifactURL(id int64, artifact, file string) string {
 		url.PathEscape(artifact) + "/" + url.PathEscape(file)
 }
 
+// SessionDiff calls GET /api/sessions/{id}/diff.
+func (c *Client) SessionDiff(ctx context.Context, sessionID int64) (json.RawMessage, error) {
+	return c.do(ctx, http.MethodGet, "/api/sessions/"+strconv.FormatInt(sessionID, 10)+"/diff", nil, http.StatusOK)
+}
+
 // ListPorts calls GET /api/sessions/{id}/ports.
 func (c *Client) ListPorts(ctx context.Context, sessionID int64) ([]Port, error) {
 	raw, err := c.do(ctx, http.MethodGet, "/api/sessions/"+strconv.FormatInt(sessionID, 10)+"/ports", nil, http.StatusOK)

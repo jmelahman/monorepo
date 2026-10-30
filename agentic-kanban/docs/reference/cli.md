@@ -21,6 +21,7 @@ kanban
 │   ├── info           Show a ticket's details
 │   ├── attach         Attach your terminal to a ticket's agent
 │   ├── tasks          List, run, and stop a ticket's tasks
+│   ├── diff           Show a ticket's changes against its base branch
 │   ├── update         Change a ticket's title or description
 │   ├── move           Move a ticket to another column
 │   ├── archive        Archive tickets
@@ -295,6 +296,26 @@ The ticket needs a session; if it has none, `ticket attach` creates one.
 | `--no-wait` | `false`              | Request the deploy and exit without waiting for the build. |
 | `--json`    | `false`              | Print the deploy as JSON instead of a summary. |
 | `--board`   | current repo's board | Board to pick a ticket from. |
+
+### `ticket diff [id]`
+
+```sh
+kanban ticket diff [id] [--plain] [--json]
+```
+
+Shows the same patch as the **Diff** tab: everything since the ticket's branch left the board's base branch, including uncommitted edits and new files. The server computes it, so it also works when the worktree isn't on your machine.
+
+In a terminal, the patch opens in [hunk](https://github.com/modem-dev/hunk) if it's on your `PATH`, otherwise in `$PAGER`, falling back to `less`. When the output is piped, or with `--plain`, it prints the raw patch, ready for `git apply`.
+
+In the pager, and when no pager is installed, control characters in the patch are shown as text, such as `^[` for escape, so file contents can't send commands to your terminal. The raw patch isn't changed, so `--plain` in a terminal doesn't get this protection.
+
+The ticket needs a session with a worktree; if it has none, `ticket attach` creates one.
+
+| Flag      | Default              | Description |
+| --------- | -------------------- | ----------- |
+| `--plain` | `false`              | Print the raw patch instead of opening a viewer. |
+| `--json`  | `false`              | Print the base branch and patch as JSON. |
+| `--board` | current repo's board | Board to pick a ticket from. |
 
 ### `ticket update [id]`
 
