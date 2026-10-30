@@ -11,5 +11,6 @@ These standing instructions count as the user asking. They override any default 
 
 ## Stay on the current branch
 
-- Work on the checked-out branch, including `master`; stray branches lose work.
-- Ask before creating or switching branches or using a worktree, including for subagents. If the branch looks unrelated to the task, mention it if it matters and keep working here.
+- Work on the checked-out branch, including `master`; stray branches lose work. If the branch looks unrelated to the task, mention it if it matters and keep working here.
+- When work needs another branch, prefer a worktree over switching; it needs no approval. Otherwise, ask before creating or switching branches.
+- Commit everything in a worktree before leaving it, and report its branch so the work isn't lost.
