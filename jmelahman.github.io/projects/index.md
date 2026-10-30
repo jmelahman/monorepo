@@ -153,7 +153,7 @@ categories fill in as you solve them.
 <article class="project">
 <div class="project-head">
 <h2 id="nature-sounds"><a href="https://github.com/jmelahman/nature-sounds">nature-sounds</a></h2>
-<div class="chips"><span class="chip">Go</span><span class="chip">CLI</span><span class="chip">MIT</span></div>
+<div class="chips"><span class="chip">Go</span><span class="chip">CLI</span><span class="chip">GPL-3.0</span></div>
 </div>
 
 A lightweight nature sounds player for the command-line.
