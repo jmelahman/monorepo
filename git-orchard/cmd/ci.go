@@ -15,7 +15,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jmelahman/git-orchard/config"
 	"github.com/jmelahman/git-orchard/ghrun"
 	"github.com/jmelahman/git-orchard/orchard"
 )
@@ -27,9 +26,6 @@ var ErrCIFailed = errors.New("CI failed")
 // ErrInterrupted is returned when a signal stopped a command before it
 // finished.
 var ErrInterrupted = errors.New("interrupted")
-
-// monorepoPrefix stands for the monorepo itself among the subtrees.
-const monorepoPrefix = "."
 
 // CIOptions holds options for the ci command
 type CIOptions struct {
@@ -96,37 +92,11 @@ and 2 if it couldn't check some repository and no run failed.`,
 	return cmd
 }
 
-// ciTarget is a repository whose runs to show.
-type ciTarget struct {
-	Prefix string
-	// Repo is OWNER/NAME, or empty if the remote isn't on GitHub.
-	Repo   string
-	Branch string
-	// Error is why the target can't be checked, if it can't.
-	Error string
-}
-
-type ciResult struct {
-	Prefix string  `json:"prefix"`
-	Repo   string  `json:"repo,omitempty"`
-	Branch string  `json:"branch"`
-	Runs   []ciRun `json:"runs"`
-	Error  string  `json:"error,omitempty"`
-}
-
-type ciRun struct {
-	ghrun.Run
-	Logs     []ghrun.Excerpt `json:"logs,omitempty"`
-	LogError string          `json:"logError,omitempty"`
-	// Stale is why the run's workflow won't run again, if it won't.
-	Stale string `json:"stale,omitempty"`
-}
-
-// failing reports whether the run failed and that still matters: a stale
-// workflow's failures are history.
-func (r ciRun) failing() bool {
-	return r.Failed() && r.Stale == ""
-}
+// ciResult and ciRun are what's rendered here.
+type (
+	ciResult = orchard.CIResult
+	ciRun    = orchard.CIRun
+)
 
 func runCI(ctx context.Context, stdout, stderr io.Writer, opts *CIOptions, prefixes []string) error {
 	var color bool
@@ -152,7 +122,7 @@ func runCI(ctx context.Context, stdout, stderr io.Writer, opts *CIOptions, prefi
 	}
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	targets, err := ciTargets(ctx, o, prefixes)
+	targets, err := o.CITargets(ctx, prefixes)
 	if err != nil {
 		return err
 	}
@@ -205,100 +175,18 @@ func runCI(ctx context.Context, stdout, stderr io.Writer, opts *CIOptions, prefi
 	}
 }
 
-// ciTargets returns the repositories at prefixes: every subtree and the
-// monorepo if there are none.
-func ciTargets(ctx context.Context, o *orchard.Orchard, prefixes []string) ([]ciTarget, error) {
-	monorepo := len(prefixes) == 0
-	var rest []string
-	for _, p := range prefixes {
-		if config.Clean(p) == monorepoPrefix {
-			monorepo = true
-		} else {
-			rest = append(rest, p)
-		}
-	}
-	var targets []ciTarget
-	if monorepo {
-		t := ciTarget{Prefix: monorepoPrefix}
-		if owner, name, ok := ghrun.ParseGitHubRepo(o.RemoteURL("origin")); ok {
-			t.Repo = owner + "/" + name
-		}
-		// origin/HEAD is only set by a clone, or git remote set-head.
-		if head, err := o.Repo.Output("symbolic-ref", "--short", "refs/remotes/origin/HEAD"); err == nil {
-			t.Branch = strings.TrimPrefix(head, "origin/")
-		} else if t.Repo != "" {
-			if t.Branch, err = ghrun.DefaultBranch(ctx, t.Repo); err != nil {
-				t.Error = fmt.Sprintf("can't tell origin's default branch: %v", err)
-			}
-		}
-		targets = append(targets, t)
-	}
-	if monorepo && len(rest) == 0 && len(prefixes) > 0 {
-		return targets, nil
-	}
-	subtrees, err := o.Config.Select(rest)
-	if err != nil {
-		return nil, err
-	}
-	for _, s := range subtrees {
-		t := ciTarget{Prefix: s.Prefix, Branch: s.Branch}
-		if owner, name, ok := ghrun.ParseGitHubRepo(s.Remote); ok {
-			t.Repo = owner + "/" + name
-		}
-		targets = append(targets, t)
-	}
-	return targets, nil
-}
-
 // checkCI lists the targets' latest runs, and with --logs the failed ones'
 // logs, counting them off on stderr if it's a terminal.
-func checkCI(ctx context.Context, targets []ciTarget, opts *CIOptions, stderr io.Writer) []ciResult {
-	results := make([]ciResult, len(targets))
+func checkCI(ctx context.Context, targets []orchard.CITarget, opts *CIOptions, stderr io.Writer) []ciResult {
 	p := newProgress(stderr, "Checking CI", len(targets))
 	defer p.Stop()
-	orchard.Each(len(targets), opts.Jobs, func(i int) {
-		t := targets[i]
-		p.Begin(t.Prefix)
-		defer p.End(t.Prefix)
-		r := ciResult{Prefix: t.Prefix, Repo: t.Repo, Branch: t.Branch, Runs: []ciRun{}, Error: t.Error}
-		if t.Repo != "" && t.Error == "" {
-			runs, err := ghrun.Latest(ctx, t.Repo, t.Branch)
-			if err != nil {
-				r.Error = err.Error()
-			}
-			stale := staleness(ctx, t, runs)
-			for _, run := range runs {
-				cr := ciRun{Run: run, Stale: stale[run.WorkflowID]}
-				if opts.Logs && cr.failing() {
-					log, err := ghrun.FailedLog(ctx, t.Repo, run.ID)
-					if err != nil {
-						cr.LogError = err.Error()
-					} else {
-						cr.Logs = ghrun.Excerpts(log, opts.Lines)
-					}
-				}
-				r.Runs = append(r.Runs, cr)
-			}
-		}
-		results[i] = r
+	return orchard.CheckCI(ctx, targets, orchard.CICheckOptions{
+		Jobs:    opts.Jobs,
+		Logs:    opts.Logs,
+		Lines:   opts.Lines,
+		OnStart: p.Begin,
+		OnDone:  p.End,
 	})
-	return results
-}
-
-// staleness returns why each workflow of runs that failed won't run again,
-// by ID, for those found stale. A repository it can't tell about is taken to
-// be live: a failure shown in error beats one hidden.
-func staleness(ctx context.Context, t ciTarget, runs []ghrun.Run) map[int64]string {
-	stale := map[int64]string{}
-	for _, run := range runs {
-		if run.Workflow != ghrun.DependabotWorkflow || !run.Failed() {
-			continue
-		}
-		if why, err := ghrun.DependabotStale(ctx, t.Repo, t.Branch); err == nil && why != "" {
-			stale[run.WorkflowID] = why
-		}
-	}
-	return stale
 }
 
 // filterCI returns results with only their failing runs if failed is set,
@@ -311,7 +199,7 @@ func filterCI(results []ciResult, failed bool) []ciResult {
 	for _, r := range results {
 		runs := []ciRun{}
 		for _, run := range r.Runs {
-			if run.failing() {
+			if run.Failing() {
 				runs = append(runs, run)
 			}
 		}
@@ -328,7 +216,7 @@ func filterCI(results []ciResult, failed bool) []ciResult {
 func ciError(results []ciResult) error {
 	for _, r := range results {
 		for _, run := range r.Runs {
-			if run.failing() {
+			if run.Failing() {
 				return ErrCIFailed
 			}
 		}
@@ -438,7 +326,7 @@ func printCI(w io.Writer, results []ciResult, opts *CIOptions, color bool, now t
 		}
 		for _, run := range r.Runs {
 			total++
-			if run.failing() {
+			if run.Failing() {
 				failed++
 			} else if !run.Done() {
 				running++
@@ -498,7 +386,7 @@ func printCI(w io.Writer, results []ciResult, opts *CIOptions, color bool, now t
 func printCILogs(w io.Writer, results []ciResult) {
 	for _, r := range results {
 		for _, run := range r.Runs {
-			if !run.failing() {
+			if !run.Failing() {
 				continue
 			}
 			_, _ = fmt.Fprintf(w, "\n## %s: %s (%s)\n\n", r.Prefix, ghrun.Printable(run.Workflow), run.Conclusion)
