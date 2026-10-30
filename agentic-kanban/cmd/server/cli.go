@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmelahman/kanban/internal/client"
+	"github.com/jmelahman/kanban/internal/kanbantoml"
 )
 
 // addClientCommands attaches the user-facing CLI subcommand groups
@@ -54,9 +55,10 @@ func boardCmd() *cobra.Command {
 		Short: "Manage kanban boards",
 		Long: `Manage kanban boards.
 
-Subcommands that take an optional board id infer it from the git repo
-containing the current directory. If several boards use that repo, the one
-whose project directory best matches the current directory wins. Subcommands
+Subcommands that take an optional board id use the board.default config key
+when it's set. Otherwise they infer it from the git repo containing the
+current directory. If several boards use that repo, the one whose project
+directory best matches the current directory wins. Subcommands
 that change or delete a board always need an explicit id.`,
 	}
 	addServerFlag(parent, &serverURL)
@@ -112,7 +114,7 @@ Explicit flags always win; inference only fills in what you omit.`,
 	var bgJSON bool
 	get := &cobra.Command{
 		Use:   "get [id]",
-		Short: "Print a single board (defaults to the board for the repo in the current directory)",
+		Short: "Print a single board (defaults to board.default, else the board for the repo in the current directory)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := resolveURL(cmd, serverURL)
@@ -238,8 +240,9 @@ func ticketCreateCmd(serverURLp, boardIdentp *string) *cobra.Command {
   kanban ticket create --board playground --title "Wire CI" --column "In Progress"`,
 		Long: `Create a ticket on a board.
 
-Without --board the board is inferred from the git repo containing the
-current directory (an error if zero or several boards use that repo).
+Without --board the board is the board.default config key, else it is
+inferred from the git repo containing the current directory (an error if
+zero or several boards use that repo).
 
 Without --title, a terminal form asks for a title and an optional
 description; on submit the ticket is created, its session is started, and
@@ -339,10 +342,11 @@ started first if it isn't running. Input is forwarded as typed; the
 terminal size follows your window.
 
 Without an id, the board's open tickets are listed for you to pick from:
-the board is inferred from the git repo containing the current directory
-(an error if zero or several boards use that repo) unless --board names
-one. Typing narrows the list; Enter attaches, Esc cancels. Left/Right
-cycle the agent harness for the highlighted ticket.
+the board is the board.default config key, else it is inferred from the
+git repo containing the current directory (an error if zero or several
+boards use that repo) unless --board names one. Typing narrows the list;
+Enter attaches, Esc cancels. Left/Right cycle the agent harness for the
+highlighted ticket.
 
 Picking a different harness (in the list, or with --harness) stores it on
 the ticket's session. If its agent is already running under another
@@ -616,30 +620,35 @@ func cwdRepoRoot() (string, error) {
 	return top, nil
 }
 
-func gitRevParse(flag string) (string, error) {
-	out, err := exec.Command("git", "rev-parse", flag).Output()
+func gitRevParse(flags ...string) (string, error) {
+	out, err := exec.Command("git", append([]string{"rev-parse"}, flags...)...).Output()
 	if err != nil {
+		joined := strings.Join(flags, " ")
 		var ee *exec.ExitError
 		if errors.As(err, &ee) && len(ee.Stderr) > 0 {
-			return "", fmt.Errorf("git rev-parse %s: %s", flag, strings.TrimSpace(string(ee.Stderr)))
+			return "", fmt.Errorf("git rev-parse %s: %s", joined, strings.TrimSpace(string(ee.Stderr)))
 		}
-		return "", fmt.Errorf("git rev-parse %s: %w", flag, err)
+		return "", fmt.Errorf("git rev-parse %s: %w", joined, err)
 	}
 	return strings.TrimSpace(string(out)), nil
 }
 
 // resolveBoardIdent returns the board identifier for a command whose [id]
-// arg is optional: the explicit arg when given, otherwise the id of the
-// board matching the current directory. Matching is two-stage — the git repo
-// containing the cwd, then the most specific project_dir that contains it.
+// arg is optional: the explicit arg when given, then the board.default config
+// key, otherwise the id of the board matching the current directory. Matching
+// is two-stage — the git repo containing the cwd, then the most specific
+// project_dir that contains it.
 // Zero or several matching boards is an error, never a guess — boards may
 // legitimately share a repo. Only ordinary boards are candidates: a board with
 // a kind (errors, Build Cop) can sit on the same repo as the project's real
 // board and is never the one a bare command means, so it is only reachable
-// by id or slug.
+// by id, slug, or board.default.
 func resolveBoardIdent(ctx context.Context, url string, args []string) (string, error) {
 	if len(args) > 0 {
 		return args[0], nil
+	}
+	if def := configuredDefaultBoard(); def != "" {
+		return resolveDefaultBoard(ctx, url, def)
 	}
 	repo, err := cwdRepoRoot()
 	if err != nil {
@@ -690,6 +699,48 @@ func resolveBoardIdent(ctx context.Context, url string, args []string) (string, 
 		}
 		return "", fmt.Errorf("%d boards use %s (%s); pass an id or slug", len(matches), where, strings.Join(slugs, ", "))
 	}
+}
+
+// resolveDefaultBoard returns the id of the board that board.default names. A
+// value matching no board, or several, is an error rather than a fall through
+// to inference, so a stale value can't silently pick another board. It checks
+// every value against the server, ids included: client.ResolveBoardID passes a
+// number through unchecked and takes the first match on a name.
+func resolveDefaultBoard(ctx context.Context, url, def string) (string, error) {
+	boards, err := client.New(url, nil).ListBoards(ctx)
+	if err != nil {
+		return "", err
+	}
+	var matches []client.Board
+	for _, b := range boards {
+		if strconv.FormatInt(b.ID, 10) == def || b.Slug == def || b.Name == def {
+			matches = append(matches, b)
+		}
+	}
+	switch len(matches) {
+	case 1:
+		return strconv.FormatInt(matches[0].ID, 10), nil
+	case 0:
+		return "", fmt.Errorf("board.default %q matches no board; fix the config or pass an id or slug", def)
+	default:
+		slugs := make([]string, len(matches))
+		for i, b := range matches {
+			slugs[i] = b.Slug
+		}
+		return "", fmt.Errorf("board.default %q matches %d boards (%s); fix the config or pass an id or slug", def, len(matches), strings.Join(slugs, ", "))
+	}
+}
+
+// configuredDefaultBoard returns the board.default that applies to the current
+// directory. It reads the checkout the command runs in, not cwdRepoRoot's main
+// working tree: a linked worktree's own config is the one its branch carries.
+func configuredDefaultBoard() string {
+	out, err := gitRevParse("--show-toplevel", "--show-prefix")
+	if err != nil {
+		return kanbantoml.DefaultBoard("", "")
+	}
+	top, prefix, _ := strings.Cut(out, "\n")
+	return kanbantoml.DefaultBoard(top, filepath.Join(top, filepath.FromSlash(strings.Trim(prefix, "/"))))
 }
 
 // boardsForPrefix narrows same-repo boards to those whose project_dir
@@ -757,8 +808,9 @@ func ticketCmd() *cobra.Command {
 
 Every subcommand takes the ticket id as an optional positional argument.
 Without one, the board's tickets are listed for you to pick from: the
-board is inferred from the git repo containing the current directory (an
-error if zero or several boards use that repo) unless --board names one.
+board is the board.default config key, else it is inferred from the git
+repo containing the current directory (an error if zero or several boards
+use that repo) unless --board names one.
 Typing narrows the list; Enter runs the subcommand on the highlighted
 ticket, Esc cancels. The list needs a real terminal, so in scripts and
 pipes the id is required.`,
@@ -767,7 +819,7 @@ pipes the id is required.`,
 	// --board is persistent so every subcommand's picker can be pointed at a
 	// board from outside its repo with the same flag.
 	parent.PersistentFlags().StringVar(&boardIdent, "board", "",
-		"Board id or slug (default: the board for the repo in the current directory)")
+		"Board id or slug (default: board.default, else the board for the repo in the current directory)")
 
 	create := ticketCreateCmd(&serverURL, &boardIdent)
 

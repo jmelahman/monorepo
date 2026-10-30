@@ -53,7 +53,7 @@ CLI commands that take an optional board, such as `ticket create` and `ticket at
 ~/code/monorepo/services/api/db  -> the services/api board
 ```
 
-If no board matches, or two boards have the same project directory, pass `--board`.
+If no board matches, or two boards have the same project directory, pass `--board` or set a [default board](./configuration#default-board).
 
 ## Boards from older versions
 

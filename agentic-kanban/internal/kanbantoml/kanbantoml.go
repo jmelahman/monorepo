@@ -19,6 +19,7 @@ import (
 )
 
 type File struct {
+	Board        *BoardSection        `toml:"board"`
 	Harness      *HarnessSection      `toml:"harness"`
 	Sync         *SyncSection         `toml:"sync"`
 	Merge        *MergeSection        `toml:"merge"`
@@ -32,6 +33,13 @@ type File struct {
 	BuildCop     *BuildCopSection     `toml:"buildcop"`
 	DevToolbar   *DevToolbarSection   `toml:"dev_toolbar"`
 	Tasks        []TaskEntry          `toml:"task"`
+}
+
+// BoardSection configures which board a CLI command means when it isn't given
+// one. Default is a board id, slug, or name, and takes priority over inferring
+// the board from the current directory.
+type BoardSection struct {
+	Default *string `toml:"default"`
 }
 
 type HarnessSection struct {
@@ -317,6 +325,34 @@ func LoadFrom(repoPath, projectPath string) File {
 	return merge(out, user)
 }
 
+// DefaultBoard returns the board.default that applies to a command run in dir,
+// or "" when none does. The user file wins, then the project file nearest dir,
+// walking up to the repo at root. An empty value in any of them means "no
+// default" and stops the lookup, so a subproject can opt out of its repo root's
+// default and a user can opt out of a checked-in one. The board isn't known yet
+// here, so unlike LoadFrom there's no project_dir to name the subproject layer.
+// An empty root means dir is outside any repo: only the user file applies.
+func DefaultBoard(root, dir string) string {
+	if path, err := UserPath(); err == nil {
+		if b := readFileAt(path).Board; b != nil && b.Default != nil {
+			return *b.Default
+		}
+	}
+	if root == "" {
+		return ""
+	}
+	for {
+		if b := readProjectAt(root, dir).Board; b != nil && b.Default != nil {
+			return *b.Default
+		}
+		parent := filepath.Dir(dir)
+		if dir == root || parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+}
+
 func readFileAt(path string) File {
 	if path == "" {
 		return File{}
@@ -338,6 +374,7 @@ func readFileAt(path string) File {
 func merge(project, user File) File {
 	out := File{}
 
+	out.Board = mergeBoard(project.Board, user.Board)
 	out.Harness = mergeHarness(project.Harness, user.Harness)
 	out.Sync = mergeSync(project.Sync, user.Sync)
 	out.Merge = mergeMerge(project.Merge, user.Merge)
@@ -373,6 +410,12 @@ func mergeSinglePtrField[S any, F comparable](p, u *S, zero F, get func(*S) F, s
 		}
 	}
 	return out
+}
+
+func mergeBoard(p, u *BoardSection) *BoardSection {
+	return mergeSinglePtrField(p, u, (*string)(nil),
+		func(s *BoardSection) *string { return s.Default },
+		func(s *BoardSection, v *string) { s.Default = v })
 }
 
 func mergeWorktrees(p, u *WorktreesSection) *WorktreesSection {

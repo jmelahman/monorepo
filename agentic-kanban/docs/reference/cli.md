@@ -56,7 +56,7 @@ Every command except `serve` and `mcp` connects to the server at `--server`, whi
 
 ### Finding the board
 
-Commands that take an optional board or ticket ID work out the board from your current directory, using the git repo you're in. If several boards use the same repo, kanban picks the one whose [project directory](/guide/monorepos) best matches where you are. Boards that kanban maintains itself (the [error reports](/guide/configuration) board and Build Cop boards) are never picked this way, so reach them with their ID or slug. If it can't decide, pass the ID or `--board`.
+Commands that take an optional board or ticket ID use [`board.default`](/guide/configuration#default-board) when it's set. Otherwise they work out the board from your current directory, using the git repo you're in. If several boards use the same repo, kanban picks the one whose [project directory](/guide/monorepos) best matches where you are. Boards that kanban maintains itself (the [error reports](/guide/configuration) board and Build Cop boards) are never picked this way, so reach them with their ID or slug. If it can't decide, pass the ID or `--board`.
 
 Commands that change or delete a board always need an explicit ID.
 

@@ -42,6 +42,8 @@ type KeySpec struct {
 // schema is the ordered registry of every writable config key. Ordering drives
 // `config list` output; keep it grouped by section.
 var schema = []KeySpec{
+	{Key: "board.default", Kind: KindString},
+
 	{Key: "harness.id", Kind: KindString},
 
 	{Key: "sync.allow_rebase", Kind: KindBool},
@@ -285,9 +287,13 @@ func GetValue(f File, key string) (any, bool) {
 	return nil, false
 }
 
-// getCoreValue resolves the harness/sync/merge keys for GetValue.
+// getCoreValue resolves the board/harness/sync/merge keys for GetValue.
 func getCoreValue(f File, key string) (any, bool) {
 	switch key {
+	case "board.default":
+		if f.Board != nil && f.Board.Default != nil {
+			return *f.Board.Default, true
+		}
 	case "harness.id":
 		if f.Harness != nil && f.Harness.ID != nil {
 			return *f.Harness.ID, true

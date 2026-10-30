@@ -1,3 +1,6 @@
+[board]
+default = "kanban"
+
 [devcontainer]
 image = "ghcr.io/jmelahman/devcontainer:latest"
 

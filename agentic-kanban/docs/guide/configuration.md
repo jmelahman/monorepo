@@ -22,6 +22,9 @@ A project file that is a symlink must resolve to a path inside the repo. Kanban 
 Every key is shown below with its default unless noted.
 
 ```toml
+[board]
+default = "kanban"            # board for CLI commands that aren't given one (unset by default)
+
 [harness]
 id = "claude"                 # default agent: "claude", "pi" or "opencode"
 
@@ -100,6 +103,21 @@ kanban config unset github.draft_column --global
 ```
 
 Writes rewrite the whole file, so comments and key order are lost. The same operations are available over [REST](/reference/api#config) and [MCP](/reference/mcp#config).
+
+## Default board
+
+`[board].default` names the board that CLI commands use when you don't give them one. It takes a board ID, slug, or name, and replaces [working the board out from your current directory](/reference/cli#finding-the-board). Set it when that gets the wrong answer or none, such as when several boards share a directory:
+
+```toml
+[board]
+default = "kanban"
+```
+
+Put it in the project file: a default in your user file applies in every repo, overriding each repo's own. In a monorepo, the project file nearest your current directory wins.
+
+To turn off a default, set `default = ""`. In a subproject, this turns off a default set at the repo root. In your user file, it turns off the defaults in every repo's project files, so commands always use your current directory.
+
+A value that matches no board, or more than one, is an error, and commands don't fall back to the current directory. A board's ID, slug, and name are all checked, so use the slug if two boards share a name. A default can name a board that kanban maintains itself, such as the error reports board. `--board` and an explicit ID always win. The default only affects the CLI: REST and MCP calls still name their board.
 
 ## Agent harness
 
