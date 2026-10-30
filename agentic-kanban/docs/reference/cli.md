@@ -394,7 +394,7 @@ Notes that you mean to release a subtree. `--patch` (the default), `--minor` and
 
 ### `release list`
 
-Prints open reminders, each subtree's state and recent runs, across every repo unless you pass `--repo`. `--json` prints the full API response.
+Prints open reminders, each subtree's state and CI, and recent runs, across every repo unless you pass `--repo`. `--json` prints the full API response.
 
 ### `release run <prefix>`
 

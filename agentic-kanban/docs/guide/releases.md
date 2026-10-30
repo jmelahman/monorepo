@@ -14,6 +14,8 @@ Each subtree has at most one open reminder, so a second thought goes in the same
 
 Each subtree shows how far it is ahead of and behind its upstream, its latest release, and the commits since. This is recomputed every 30 minutes and when you refresh, because checking every subtree can take a while.
 
+It also shows each subtree's latest GitHub Actions runs on its upstream, checked at most every 5 minutes while something is reading the page or `kanban release list`, so an idle server spends none of your API quota. This is for information only: a release doesn't check CI. It needs `gh` on the server, signed in.
+
 ## Releasing
 
 **Release...** fetches, then shows the version and commit that would be released: the tip of the board's base branch on `origin`. Your checkout isn't touched.
@@ -29,3 +31,7 @@ A failed or interrupted release can be run again. A tag it left behind is kept a
 Where the server has a token (`GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token`), git uses it for GitHub remotes through its environment, so it isn't written to disk. Without one, git uses whatever ssh access the server has.
 
 The tagger is the board's git author, falling back to the git identity of the repo.
+
+## From the terminal
+
+[`kanban release`](/reference/cli#release) does the same from a terminal: `kanban release remind tools/foo --minor "has the new flag"` right after a change, and `kanban release` for a view of your reminders.

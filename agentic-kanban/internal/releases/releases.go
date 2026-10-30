@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jmelahman/git-orchard/config"
 	"github.com/jmelahman/git-orchard/orchard"
@@ -56,6 +57,10 @@ type Service struct {
 	projects map[string]Project
 	// refreshing holds the repos with a refresh under way.
 	refreshing map[string]bool
+	// ci is each repo's CI health by prefix, and ciStarted when its latest
+	// check began.
+	ci        map[string]map[string]CIHealth
+	ciStarted map[string]time.Time
 }
 
 // New returns a Service keeping run logs under dataDir. Any run still marked
@@ -74,6 +79,8 @@ func New(store *db.Store, dataDir string) *Service {
 		live:       map[int64]chan struct{}{},
 		projects:   map[string]Project{},
 		refreshing: map[string]bool{},
+		ci:         map[string]map[string]CIHealth{},
+		ciStarted:  map[string]time.Time{},
 	}
 }
 

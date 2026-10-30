@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   api,
   type ReleaseBump,
+  type ReleaseCI,
   type ReleaseProject,
   type ReleaseReminder,
   type ReleaseRun,
@@ -319,6 +320,26 @@ function ReminderCard({
   );
 }
 
+// CICell is information only: a release doesn't check CI.
+function CICell({ ci }: { ci?: ReleaseCI }) {
+  if (!ci || (ci.status === "none" && !ci.error)) return <>—</>;
+  if (ci.status === "failing") {
+    return (
+      <a href={ci.url} target="_blank" rel="noreferrer" className="text-danger hover:underline">
+        failing: {ci.failed?.join(", ")}
+      </a>
+    );
+  }
+  if (ci.error) {
+    return (
+      <span className="text-danger" title={ci.error}>
+        error
+      </span>
+    );
+  }
+  return <span className={ci.status === "running" ? "text-fg-muted" : undefined}>{ci.status}</span>;
+}
+
 function ProjectTable({
   project,
   reminders,
@@ -348,6 +369,7 @@ function ProjectTable({
               <th className="px-3 py-2 font-normal">ahead / behind</th>
               <th className="px-3 py-2 font-normal">latest</th>
               <th className="px-3 py-2 font-normal">unreleased</th>
+              <th className="px-3 py-2 font-normal">ci</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -368,6 +390,9 @@ function ProjectTable({
                     <td className="px-3 py-2">{s.counted ? s.unreleased : "—"}</td>
                   </>
                 )}
+                <td className="px-3 py-2">
+                  <CICell ci={s.ci} />
+                </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
                   {!reminders.some((r) => r.prefix === s.prefix) && (
                     <Button variant="ghost" size="sm" onClick={() => onRemind(s.prefix)}>

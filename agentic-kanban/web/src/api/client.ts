@@ -229,6 +229,13 @@ export type DashboardPreviewPage = {
 /** One board's share of the preview orchestrator's disk usage. */
 export type ReleaseBump = "patch" | "minor" | "major";
 
+export type ReleaseCI = {
+  status: "passing" | "failing" | "running" | "none";
+  failed?: string[];
+  url?: string;
+  error?: string;
+};
+
 export type ReleaseSubtree = {
   prefix: string;
   remote: string;
@@ -239,6 +246,7 @@ export type ReleaseSubtree = {
   // False when the latest release has no tag here to count unreleased from.
   counted: boolean;
   error?: string;
+  ci?: ReleaseCI;
 };
 
 export type ReleaseProject = {

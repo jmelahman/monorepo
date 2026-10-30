@@ -33,6 +33,8 @@ type SubtreeState struct {
 	Unreleased int    `json:"unreleased"`
 	Counted    bool   `json:"counted"`
 	Error      string `json:"error,omitempty"`
+	// CI is nil until the first check of the repo's CI finishes.
+	CI *CIHealth `json:"ci,omitempty"`
 }
 
 // Project is a repo with a git-orchard manifest.
@@ -89,9 +91,19 @@ func (s *Service) Summary(ctx context.Context) (Summary, error) {
 			}
 			s.startRefresh(repo, boards[repo].BaseBranch)
 		}
+		s.startCI(repo)
+		// The cached subtrees are shared, so CI goes on a copy.
+		subtrees := make([]SubtreeState, len(p.Subtrees))
 		s.mu.Lock()
 		p.Refreshing = s.refreshing[repo]
+		for i, sub := range p.Subtrees {
+			if health, ok := s.ci[repo][sub.Prefix]; ok {
+				sub.CI = &health
+			}
+			subtrees[i] = sub
+		}
 		s.mu.Unlock()
+		p.Subtrees = subtrees
 		sum.Projects = append(sum.Projects, p)
 	}
 	return sum, nil

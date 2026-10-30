@@ -18,6 +18,16 @@ type ReleaseSubtree struct {
 	Unreleased int    `json:"unreleased"`
 	Counted    bool   `json:"counted"`
 	Error      string `json:"error,omitempty"`
+	// CI is nil until the first check finishes.
+	CI *ReleaseCI `json:"ci,omitempty"`
+}
+
+// ReleaseCI is the state of a subtree's latest GitHub Actions runs.
+type ReleaseCI struct {
+	Status string   `json:"status"`
+	Failed []string `json:"failed,omitempty"`
+	URL    string   `json:"url,omitempty"`
+	Error  string   `json:"error,omitempty"`
 }
 
 // ReleaseProject is a repo with a git-orchard manifest.

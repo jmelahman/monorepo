@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jmelahman/git-orchard/config"
+	"github.com/jmelahman/git-orchard/ghrun"
 	"github.com/jmelahman/git-orchard/orchard"
 
 	"github.com/jmelahman/kanban/internal/db"
@@ -398,5 +399,57 @@ func TestOutputOfUnknownRun(t *testing.T) {
 	w := newWorld(t)
 	if code, data := w.do("GET", "/api/release-runs/999/output", nil); code != 404 {
 		t.Errorf("%d %s", code, data)
+	}
+}
+
+func TestSummaryCI(t *testing.T) {
+	w := newWorld(t)
+	// These remotes aren't on GitHub, so there's nothing to check and gh isn't
+	// needed.
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		code, data := w.do("GET", "/api/releases", nil)
+		if code != 200 {
+			t.Fatalf("summary: %d %s", code, data)
+		}
+		sum := decode[releases.Summary](t, data)
+		if ci := sum.Projects[0].Subtrees[0].CI; ci != nil {
+			if ci.Status != "none" || ci.Error != "" {
+				t.Errorf("ci = %+v", ci)
+			}
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("CI was never checked")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+func TestHealth(t *testing.T) {
+	passed := ghrun.Run{Workflow: "test", Status: "completed", Conclusion: "success"}
+	failed := ghrun.Run{Workflow: "lint", Status: "completed", Conclusion: "failure", URL: "https://example.com/1"}
+	running := ghrun.Run{Workflow: "e2e", Status: "in_progress"}
+	cancelled := ghrun.Run{Workflow: "old", Status: "completed", Conclusion: "cancelled"}
+	for _, tc := range []struct {
+		name string
+		res  orchard.CIResult
+		want string
+	}{
+		{"nothing", orchard.CIResult{}, "none"},
+		{"passing", orchard.CIResult{Runs: []orchard.CIRun{{Run: passed}}}, "passing"},
+		{"running beats passing", orchard.CIResult{Runs: []orchard.CIRun{{Run: passed}, {Run: running}}}, "running"},
+		{"failing beats running", orchard.CIResult{Runs: []orchard.CIRun{{Run: running}, {Run: failed}}}, "failing"},
+		{"stale failures are history", orchard.CIResult{Runs: []orchard.CIRun{{Run: failed, Stale: "gone"}, {Run: passed}}}, "passing"},
+		{"cancelled isn't passing", orchard.CIResult{Runs: []orchard.CIRun{{Run: cancelled}}}, "none"},
+		{"a failure shows despite an error", orchard.CIResult{Error: "EOF", Runs: []orchard.CIRun{{Run: failed}}}, "failing"},
+	} {
+		if got := releases.Health(tc.res); got.Status != tc.want {
+			t.Errorf("%s: %+v, want %s", tc.name, got, tc.want)
+		}
+	}
+	got := releases.Health(orchard.CIResult{Error: "EOF", Runs: []orchard.CIRun{{Run: failed}}})
+	if len(got.Failed) != 1 || got.Failed[0] != "lint" || got.URL != failed.URL || got.Error != "EOF" {
+		t.Errorf("health = %+v", got)
 	}
 }
