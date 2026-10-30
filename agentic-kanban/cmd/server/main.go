@@ -33,6 +33,7 @@ import (
 	"github.com/jmelahman/kanban/internal/mcp"
 	"github.com/jmelahman/kanban/internal/metrics"
 	"github.com/jmelahman/kanban/internal/previews"
+	"github.com/jmelahman/kanban/internal/releases"
 	"github.com/jmelahman/kanban/internal/secrets"
 	"github.com/jmelahman/kanban/internal/session"
 	"github.com/jmelahman/kanban/web"
@@ -43,6 +44,10 @@ import (
 // string carries tag, distance, short sha, and dirty marker. Falls back to
 // runtime/debug VCS info for dev builds without ldflags.
 var version = ""
+
+// releaseRefreshInterval is how often the Releases tab's state is recomputed;
+// each refresh fetches every upstream.
+const releaseRefreshInterval = 30 * time.Minute
 
 // BuildInfo describes the running binary.
 type BuildInfo struct {
@@ -290,6 +295,10 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 		defer previewOrch.Close()
 	}
 
+	releaseSvc := releases.New(store, cfg.DataDir)
+	defer releaseSvc.Close()
+	releaseSvc.Start(releaseRefreshInterval)
+
 	mux := api.NewMux(api.Deps{
 		Store:    store,
 		Docker:   dockerClient,
@@ -300,6 +309,7 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 		Build:    api.BuildInfo(Build()),
 		Reporter: reporter,
 		Previews: previewOrch,
+		Releases: releaseSvc,
 	})
 
 	// Previews are routed by Host header (<sha>.<repo>.<domain>); every other

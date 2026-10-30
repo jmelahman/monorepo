@@ -185,3 +185,11 @@ is internal and kept out of the published `docs/` site.
   `sessions.repo_path`).
 - `PRAGMA foreign_keys` can't change inside a transaction; rebuilding a
   referenced table needs runner support.
+
+### A release waits for the mirror
+
+- `orchard.Release` refuses a rev whose subtree commits the upstream lacks, and
+  the mirror action publishes them some time after a merge. The preview reports
+  this as `blocked` so the Releases tab can say why before anyone confirms.
+- Don't work around it by setting `ReleaseOptions.Upstream`: the mirror is the
+  intended path, and a server pushing the branch itself would race it.

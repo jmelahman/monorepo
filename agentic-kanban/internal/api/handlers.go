@@ -28,6 +28,7 @@ import (
 	"github.com/jmelahman/kanban/internal/kanbantoml"
 	"github.com/jmelahman/kanban/internal/previews"
 	"github.com/jmelahman/kanban/internal/push"
+	"github.com/jmelahman/kanban/internal/releases"
 	"github.com/jmelahman/kanban/internal/session"
 	"github.com/jmelahman/kanban/internal/slug"
 	"github.com/jmelahman/kanban/internal/tasks"
@@ -45,6 +46,7 @@ type handlers struct {
 	reporter *errreport.Reporter
 	previews *orchestrator.Orchestrator
 	push     *push.Service
+	releases *releases.Service
 }
 
 func (h *handlers) health(w http.ResponseWriter, r *http.Request) {

@@ -44,6 +44,7 @@ export default defineConfig({
             { text: 'Overview', link: '/guide/overview' },
             { text: 'Monorepos', link: '/guide/monorepos' },
             { text: 'Previews', link: '/guide/previews' },
+            { text: 'Releases', link: '/guide/releases' },
             { text: 'Mobile', link: '/guide/mobile' },
             { text: 'Observability', link: '/guide/observability' },
           ],

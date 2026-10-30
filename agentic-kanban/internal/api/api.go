@@ -12,6 +12,7 @@ import (
 	"github.com/jmelahman/kanban/internal/hooks"
 	"github.com/jmelahman/kanban/internal/metrics"
 	"github.com/jmelahman/kanban/internal/push"
+	"github.com/jmelahman/kanban/internal/releases"
 	"github.com/jmelahman/kanban/internal/session"
 	"github.com/jmelahman/kanban/internal/tasks"
 	"github.com/jmelahman/kanban/web"
@@ -37,6 +38,9 @@ type Deps struct {
 	Previews *orchestrator.Orchestrator
 	// Push sends Web Push notifications; nil builds one over Store.
 	Push *push.Service
+	// Releases keeps release reminders and runs; nil means endpoints report
+	// unavailable.
+	Releases *releases.Service
 }
 
 // NewMux assembles the HTTP routes and embedded frontend.
@@ -71,6 +75,7 @@ func NewMux(d Deps) http.Handler {
 		build:    d.Build,
 		reporter: d.Reporter,
 		previews: d.Previews,
+		releases: d.Releases,
 	}
 
 	mux.HandleFunc("GET /health", h.health)
@@ -144,6 +149,15 @@ func NewMux(d Deps) http.Handler {
 	mux.HandleFunc("DELETE /api/previews/{id}", h.deletePreview)
 	mux.HandleFunc("GET /api/previews/{id}/logs", h.previewLogs)
 	mux.HandleFunc("GET /api/previews/{id}/artifacts/{artifact}/{file}", h.previewArtifact)
+
+	mux.HandleFunc("GET /api/releases", h.getReleases)
+	mux.HandleFunc("POST /api/releases/refresh", h.refreshReleases)
+	mux.HandleFunc("GET /api/releases/preview", h.previewRelease)
+	mux.HandleFunc("POST /api/releases/run", h.runRelease)
+	mux.HandleFunc("POST /api/release-reminders", h.createReleaseReminder)
+	mux.HandleFunc("PATCH /api/release-reminders/{id}", h.patchReleaseReminder)
+	mux.HandleFunc("DELETE /api/release-reminders/{id}", h.deleteReleaseReminder)
+	mux.HandleFunc("GET /api/release-runs/{id}/output", h.releaseRunOutput)
 
 	mux.HandleFunc("GET /api/sessions/{id}/pr-detail", h.prDetail)
 

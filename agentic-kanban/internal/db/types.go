@@ -119,6 +119,52 @@ type TaskRun struct {
 	StoppedAt *int64  `json:"stopped_at,omitempty"`
 }
 
+// Release reminder statuses.
+const (
+	ReleaseReminderOpen      = "open"
+	ReleaseReminderReleased  = "released"
+	ReleaseReminderDismissed = "dismissed"
+)
+
+// ReleaseReminder is a note that a subtree of a repo should be released. It
+// tracks nothing and never fires by itself.
+type ReleaseReminder struct {
+	ID        int64  `json:"id"`
+	RepoPath  string `json:"repo_path"`
+	Prefix    string `json:"prefix"`
+	Bump      string `json:"bump"`
+	Suffix    string `json:"suffix"`
+	Note      string `json:"note"`
+	Status    string `json:"status"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
+}
+
+// Release run statuses.
+const (
+	ReleaseRunRunning     = "running"
+	ReleaseRunReleased    = "released"
+	ReleaseRunFailed      = "failed"
+	ReleaseRunInterrupted = "interrupted"
+)
+
+// ReleaseRun is one attempt to release a subtree. Its output is in a log file
+// named for its ID.
+type ReleaseRun struct {
+	ID         int64  `json:"id"`
+	ReminderID *int64 `json:"reminder_id,omitempty"`
+	RepoPath   string `json:"repo_path"`
+	Prefix     string `json:"prefix"`
+	Rev        string `json:"rev"`
+	Version    string `json:"version"`
+	Bump       string `json:"bump"`
+	Suffix     string `json:"suffix"`
+	Status     string `json:"status"`
+	Error      string `json:"error,omitempty"`
+	StartedAt  int64  `json:"started_at"`
+	FinishedAt *int64 `json:"finished_at,omitempty"`
+}
+
 type HookConfig struct {
 	ID      int64  `json:"id"`
 	BoardID *int64 `json:"board_id,omitempty"`

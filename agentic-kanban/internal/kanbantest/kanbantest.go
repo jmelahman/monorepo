@@ -22,6 +22,7 @@ import (
 	"github.com/jmelahman/kanban/internal/hooks"
 	previewsvc "github.com/jmelahman/kanban/internal/previews"
 	"github.com/jmelahman/kanban/internal/push"
+	"github.com/jmelahman/kanban/internal/releases"
 	"github.com/jmelahman/kanban/internal/secrets"
 	"github.com/jmelahman/kanban/internal/session"
 )
@@ -76,6 +77,7 @@ type Env struct {
 	Server      *httptest.Server
 	Sessions    *session.Manager
 	Previews    *orchestrator.Orchestrator
+	Releases    *releases.Service
 }
 
 // New boots the server. Everything is torn down by t.Cleanup.
@@ -144,13 +146,16 @@ func New(t testing.TB) *Env {
 	pushSvc := push.New(store)
 	pushSvc.SetHTTPClient(http.DefaultClient)
 
+	releaseSvc := releases.New(store, dir)
+	t.Cleanup(releaseSvc.Close)
+
 	handler := api.NewMux(api.Deps{
 		Store: store, Docker: dockerCli, Sessions: sessionMgr, Hooks: hookRunner, Config: cfg,
-		Previews: previewOrch, Push: pushSvc,
+		Previews: previewOrch, Push: pushSvc, Releases: releaseSvc,
 	})
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 
 	return &Env{Dir: dir, RepoPath: repoPath, Store: store, Config: cfg, Server: srv, Sessions: sessionMgr,
-		Previews: previewOrch, ManifestDir: manifestDir}
+		Previews: previewOrch, Releases: releaseSvc, ManifestDir: manifestDir}
 }

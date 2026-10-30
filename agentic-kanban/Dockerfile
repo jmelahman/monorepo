@@ -28,7 +28,8 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags embed -tr
       -o /out/kanban .
 
 FROM alpine:3.23@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11
-RUN apk add --no-cache git ca-certificates \
+# git-subtree, openssh-client and github-cli are what releasing runs.
+RUN apk add --no-cache git git-subtree openssh-client github-cli ca-certificates \
     && addgroup -S -g 65532 nonroot \
     && adduser -S -D -u 65532 -G nonroot -h /home/nonroot -s /sbin/nologin nonroot \
     && mkdir -p /home/nonroot \

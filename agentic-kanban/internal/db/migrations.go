@@ -27,6 +27,48 @@ type migration struct {
 // See REGRESSIONS.md: "Schema changes go in the numbered migration list".
 var migrations = []migration{
 	{name: "drop sessions path overrides", apply: dropSessionPathOverrides},
+	{name: "add release reminders and runs", apply: addReleases},
+}
+
+// addReleases creates the release reminders, at most one open per subtree, and
+// the runs that carry them out. A run needs no reminder.
+func addReleases(tx *sql.Tx) error {
+	_, err := tx.Exec(`
+CREATE TABLE IF NOT EXISTS release_reminders (
+  id INTEGER PRIMARY KEY,
+  repo_path TEXT NOT NULL,
+  prefix TEXT NOT NULL,
+  bump TEXT NOT NULL DEFAULT 'patch'
+    CHECK (bump IN ('patch','minor','major')),
+  suffix TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'open'
+    CHECK (status IN ('open','released','dismissed')),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE UNIQUE INDEX IF NOT EXISTS release_reminders_one_open
+  ON release_reminders (repo_path, prefix) WHERE status = 'open';
+CREATE TABLE IF NOT EXISTS release_runs (
+  id INTEGER PRIMARY KEY,
+  reminder_id INTEGER REFERENCES release_reminders(id) ON DELETE SET NULL,
+  repo_path TEXT NOT NULL,
+  prefix TEXT NOT NULL,
+  rev TEXT NOT NULL,
+  version TEXT NOT NULL,
+  bump TEXT NOT NULL DEFAULT 'patch',
+  suffix TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'running'
+    CHECK (status IN ('running','released','failed','interrupted')),
+  error TEXT NOT NULL DEFAULT '',
+  started_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  finished_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS release_runs_started ON release_runs (started_at DESC, id DESC);`)
+	if err != nil {
+		return fmt.Errorf("create release tables: %w", err)
+	}
+	return nil
 }
 
 // dropSessionPathOverrides removes sessions.mount_path and sessions.repo_path,

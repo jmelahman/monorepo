@@ -7,6 +7,7 @@ require (
 	github.com/containerd/errdefs v1.0.0
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/gorilla/websocket v1.5.3
+	github.com/jmelahman/git-orchard v1.3.0
 	github.com/jmelahman/local-preview v0.31.5
 	github.com/moby/moby/api v1.56.1
 	github.com/moby/moby/client v0.6.2
@@ -73,6 +74,7 @@ require (
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
+	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect

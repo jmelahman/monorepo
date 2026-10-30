@@ -89,6 +89,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
+github.com/jmelahman/git-orchard v1.3.0 h1:+5XbkvdJu2pSVGsNqaDxe7tGDTR9VpLxT2F2HU4VxUI=
+github.com/jmelahman/git-orchard v1.3.0/go.mod h1:x47hOTMOcAd8ze+HhB2cIKuUqr+HfQgY22qJ2GNkoLA=
 github.com/jmelahman/local-preview v0.31.5 h1:tVFJE/vrFeV6A7yFpIWEH58lAWLdIurygYQb7DkhmSM=
 github.com/jmelahman/local-preview v0.31.5/go.mod h1:iJwLNYS1Xswkc1p3toZhIlTSHtVkYBTCxVnqRFE6xco=
 github.com/kevinburke/ssh_config v1.6.0 h1:J1FBfmuVosPHf5GRdltRLhPJtJpTlMdKTBjRgTaQBFY=
@@ -167,6 +169,8 @@ github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQD
 github.com/sergi/go-diff v1.4.0 h1:n/SP9D5ad1fORl+llWyN+D6qoUETXNZARKjyY2/KVCw=
 github.com/sergi/go-diff v1.4.0/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
+github.com/sirupsen/logrus v1.10.2 h1:G2SED73/qrAu6YwbdxOD6peLkCBI3z7L+ykJFTXJBBo=
+github.com/sirupsen/logrus v1.10.2/go.mod h1:SLEg8TqYulVKKfIGHldVp2K2aYz2DKSVBq4g/H5bR7Q=
 github.com/skeema/knownhosts v1.3.3 h1:tiFvsjIW+xqP5cqVsod7atn/xm57OY6v9KwxB1xWUyA=
 github.com/skeema/knownhosts v1.3.3/go.mod h1:2y0ntYxeqSNxOw5pfqSVDcRyBt2FqfxhzNDPoKz/ifQ=
 github.com/spf13/cobra v1.10.2 h1:DMTTonx5m65Ic0GOoRY2c16WCbHxOOw6xxezuLaBpcU=

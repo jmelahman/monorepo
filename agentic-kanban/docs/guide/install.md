@@ -107,3 +107,7 @@ kanban serve
 ```
 
 Then open <http://localhost:7474/>.
+
+## Releases
+
+The [Releases](/guide/releases) tab runs `git subtree`, and `gh` to watch what a release publishes. The Docker image includes both. On a bare-metal install, without `git subtree` it can't work, and without `gh` a release is tagged but not watched.

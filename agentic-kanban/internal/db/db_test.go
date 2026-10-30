@@ -20,6 +20,8 @@ var expectedTables = []string{
 	"port_allocations",
 	"push_subscriptions",
 	"push_vapid",
+	"release_reminders",
+	"release_runs",
 	"sessions",
 	"task_runs",
 	"tickets",
