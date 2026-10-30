@@ -121,12 +121,6 @@ uv lock --upgrade-package git-orchard
 uv lock --upgrade-package prek
 ```
 
-### Github Actions
-
-```
-ratchet upgrade $(fd --hidden --type file --extension yml --full-path .github/workflows)
-```
-
 ### Golang
 
 ```shell
