@@ -18,12 +18,26 @@
         <button type="button" role="menuitem" id="open">Open… <kbd>Ctrl+O</kbd></button>
         <button type="button" role="menuitem" id="open-url">Open from URL…</button>
         <hr>
-        <button type="button" role="menuitem" id="resize">Image size…</button>
-        <hr>
         <button type="button" role="menuitem" id="save">Save as PNG <kbd>Ctrl+S</kbd></button>
         <button type="button" role="menuitem" id="copy">Copy to clipboard</button>
       </div>
       <input type="file" id="file" accept="image/*" hidden>
+      <button type="button" id="image-button" popovertarget="image-menu" aria-haspopup="menu">Image</button>
+      <div id="image-menu" class="menu" role="menu" aria-labelledby="image-button" popover>
+        <button type="button" role="menuitem" id="resize">Image size…</button>
+        <button type="button" role="menuitem" id="canvas-size">Canvas size…</button>
+        <hr>
+        <button type="button" role="menuitem" id="rotate-cw">Rotate 90° clockwise</button>
+        <button type="button" role="menuitem" id="rotate-ccw">Rotate 90° counter-clockwise</button>
+        <button type="button" role="menuitem" id="rotate-180">Rotate 180°</button>
+        <button type="button" role="menuitem" id="rotate-angle">Rotate by angle…</button>
+        <hr>
+        <button type="button" role="menuitem" id="flip-h">Flip horizontal</button>
+        <button type="button" role="menuitem" id="flip-v">Flip vertical</button>
+        <hr>
+        <button type="button" role="menuitem" id="trim">Trim edges</button>
+        <button type="button" role="menuitem" id="flatten">Flatten image</button>
+      </div>
     </div>
 
     <div class="group">
@@ -175,6 +189,43 @@
       <div class="actions">
         <button type="button" id="resize-cancel">Cancel</button>
         <button value="resize" class="primary">Resize</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="canvas-dialog">
+    <form method="dialog">
+      <h2>Canvas size</h2>
+      <label>Width <input type="number" id="canvas-width" min="1" max="8192" required></label>
+      <label>Height <input type="number" id="canvas-height" min="1" max="8192" required></label>
+      <fieldset>
+        <legend>Keep image at</legend>
+        <div class="anchor">
+          <input type="radio" name="canvas-anchor" value="0 0" aria-label="Top left">
+          <input type="radio" name="canvas-anchor" value="0.5 0" aria-label="Top">
+          <input type="radio" name="canvas-anchor" value="1 0" aria-label="Top right">
+          <input type="radio" name="canvas-anchor" value="0 0.5" aria-label="Left">
+          <input type="radio" name="canvas-anchor" value="0.5 0.5" aria-label="Center" checked>
+          <input type="radio" name="canvas-anchor" value="1 0.5" aria-label="Right">
+          <input type="radio" name="canvas-anchor" value="0 1" aria-label="Bottom left">
+          <input type="radio" name="canvas-anchor" value="0.5 1" aria-label="Bottom">
+          <input type="radio" name="canvas-anchor" value="1 1" aria-label="Bottom right">
+        </div>
+      </fieldset>
+      <div class="actions">
+        <button type="button" id="canvas-cancel">Cancel</button>
+        <button value="resize" class="primary">Resize</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="rotate-dialog">
+    <form method="dialog">
+      <h2>Rotate by angle</h2>
+      <label>Degrees clockwise <input type="number" id="rotate-degrees" min="-360" max="360" step="any" required></label>
+      <div class="actions">
+        <button type="button" id="rotate-cancel">Cancel</button>
+        <button value="rotate" class="primary">Rotate</button>
       </div>
     </form>
   </dialog>

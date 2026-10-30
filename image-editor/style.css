@@ -51,7 +51,8 @@ body {
 .group label,
 .panel h2,
 dialog h2,
-dialog label {
+dialog label,
+dialog legend {
   font: 600 0.6875rem/1 var(--cond);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -587,6 +588,33 @@ dialog input[type="url"] {
   font: 400 0.8125rem/1 var(--mono);
   letter-spacing: 0;
   text-transform: none;
+}
+
+dialog fieldset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0.5rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+dialog legend {
+  float: left;
+  padding: 0;
+}
+
+.anchor {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 0.25rem;
+}
+
+.anchor input {
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 dialog .actions {

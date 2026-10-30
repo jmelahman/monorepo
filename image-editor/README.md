@@ -11,7 +11,8 @@ dependencies, nothing leaves your machine.
 - Primary and secondary colors that swap with one key
 - Layers: add, delete, reorder, hide, and merge down
 - Text stays editable on its own layer: drag to move it, click to edit it
-- SVGs open as vector layers, so resizing the image keeps them sharp
+- SVGs open as vector layers, so resizing or rotating the image keeps them sharp
+- Image menu: image size, canvas size, rotate, flip, trim edges, and flatten
 - Open an image from disk, from a URL, by drag-and-drop, or by pasting from the clipboard
 - Save as PNG or copy to the clipboard
 - Undo / redo, zoom, mouse / touch / pen input

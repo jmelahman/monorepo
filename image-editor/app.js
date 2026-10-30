@@ -213,43 +213,136 @@ function makeLayer({ id = ++layerSeq, name = `Layer ${id}`, visible = true, text
   return { id, name, visible, text, vector, saved, canvas: el, ctx: el.getContext('2d') };
 }
 
-// Draw a vector layer from its `vector`, { img, x, y, w, h }. Like `text`, it
-// is replaced rather than mutated, and the SVG is redrawn at whatever size it
-// has, so scaling it never blurs it.
+// Draw a vector layer from its `vector`, { img, w, h, matrix }. Like `text`, it
+// is replaced rather than mutated, and the SVG is redrawn through its matrix,
+// so transforming it never blurs it.
 function renderVector(layer) {
-  const { img, x, y, w, h } = layer.vector;
+  const { img, w, h, matrix } = layer.vector;
   layer.ctx.clearRect(0, 0, overlay.width, overlay.height);
-  layer.ctx.drawImage(img, x, y, w, h);
+  layer.ctx.setTransform(matrix);
+  layer.ctx.drawImage(img, 0, 0, w, h);
+  layer.ctx.resetTransform();
 }
 
-// Scale the whole image. Text and vector layers are redrawn at the new size;
-// painted layers can only be resampled.
-function resizeImage(w, h) {
+// Move every layer through the matrix `m` onto a canvas of w × h. Vector layers
+// are redrawn, and text too while it stays upright; painted layers can only be
+// resampled.
+function transformImage(w, h, m) {
   commitText();
-  const sx = w / overlay.width;
-  const sy = h / overlay.height;
-  if (sx === 1 && sy === 1) return;
+  if (m.isIdentity && w === overlay.width && h === overlay.height) return;
   pushUndo();
   const old = layers;
+  const upright = m.b === 0 && m.c === 0 && m.a > 0 && m.d > 0;
   setCanvasSize(w, h);
   layers = old.map((l) => {
     const layer = makeLayer({ id: l.id, name: l.name, visible: l.visible });
-    if (l.text) {
+    if (l.text && upright) {
       // Text can't stretch, so a change of proportions follows the height.
-      layer.text = { ...l.text, x: l.text.x * sx, y: l.text.y * sy, size: l.text.size * sy };
+      layer.text = { ...l.text, x: l.text.x * m.a + m.e, y: l.text.y * m.d + m.f, size: l.text.size * m.d };
       renderText(layer);
     } else if (l.vector) {
-      const v = l.vector;
-      layer.vector = { ...v, x: v.x * sx, y: v.y * sy, w: v.w * sx, h: v.h * sy };
+      layer.vector = { ...l.vector, matrix: m.multiply(l.vector.matrix) };
       renderVector(layer);
     } else {
       layer.ctx.imageSmoothingQuality = 'high';
-      layer.ctx.drawImage(l.canvas, 0, 0, w, h);
+      layer.ctx.setTransform(m);
+      layer.ctx.drawImage(l.canvas, 0, 0);
+      layer.ctx.resetTransform();
     }
     return layer;
   });
   active = layers.find((l) => l.id === active.id);
   renderLayers();
+  if (!upright && old.some((l) => l.text)) {
+    flashMessage('Text can’t be rotated or flipped and stay editable, so it is now pixels. Undo brings it back.');
+  }
+}
+
+function resizeImage(w, h) {
+  transformImage(w, h, new DOMMatrix().scale(w / overlay.width, h / overlay.height));
+}
+
+// Change the canvas around the image; (ax, ay) is the point of the image, from
+// 0 to 1 on each side, that stays put relative to the canvas.
+function resizeCanvas(w, h, ax, ay) {
+  const dx = Math.round((w - overlay.width) * ax);
+  const dy = Math.round((h - overlay.height) * ay);
+  transformImage(w, h, new DOMMatrix().translate(dx, dy));
+}
+
+// Rotate clockwise about the center, growing the canvas to fit the corners.
+function rotateImage(degrees) {
+  const angle = (degrees * Math.PI) / 180;
+  // Rounded so that quarter turns come out exact and stay lossless.
+  const cos = Math.round(Math.cos(angle) * 1e9) / 1e9;
+  const sin = Math.round(Math.sin(angle) * 1e9) / 1e9;
+  const { width, height } = overlay;
+  const w = Math.max(1, Math.ceil(Math.abs(width * cos) + Math.abs(height * sin)));
+  const h = Math.max(1, Math.ceil(Math.abs(width * sin) + Math.abs(height * cos)));
+  if (w > MAX_DIM || h > MAX_DIM) {
+    flashMessage(`Rotated by ${degrees}°, the image would not fit in ${MAX_DIM}px.`);
+    return;
+  }
+  const m = new DOMMatrix()
+    .translate(w / 2, h / 2)
+    .multiply(new DOMMatrix([cos, sin, -sin, cos, 0, 0]))
+    .translate(-width / 2, -height / 2);
+  transformImage(w, h, m);
+}
+
+function flipImage(horizontal) {
+  const { width: w, height: h } = overlay;
+  transformImage(w, h, new DOMMatrix(horizontal ? [-1, 0, 0, 1, w, 0] : [1, 0, 0, -1, 0, h]));
+}
+
+// Crop away the border that matches the top left pixel, whether that is
+// transparency or a solid background.
+function trimImage() {
+  commitText();
+  const { width: w, height: h } = overlay;
+  const d = composite().getContext('2d').getImageData(0, 0, w, h).data;
+  let left = w;
+  let right = -1;
+  let top = h;
+  let bottom = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (
+        Math.abs(d[i] - d[0]) > FILL_TOLERANCE ||
+        Math.abs(d[i + 1] - d[1]) > FILL_TOLERANCE ||
+        Math.abs(d[i + 2] - d[2]) > FILL_TOLERANCE ||
+        Math.abs(d[i + 3] - d[3]) > FILL_TOLERANCE
+      ) {
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = y;
+      }
+    }
+  }
+  const tw = right - left + 1;
+  const th = bottom - top + 1;
+  if (right < 0 || (tw === w && th === h)) {
+    flashMessage('There are no edges to trim.');
+    return;
+  }
+  transformImage(tw, th, new DOMMatrix().translate(-left, -top));
+}
+
+// Hidden layers aren't part of the picture, so they go.
+function flattenImage() {
+  commitText();
+  if (layers.length === 1 && !active.text && !active.vector) {
+    flashMessage('The image is already flat.');
+    return;
+  }
+  const flat = composite();
+  pushUndo();
+  layers = [];
+  active = null;
+  insertLayer(makeLayer({ name: 'Background' }));
+  active.ctx.drawImage(flat, 0, 0);
 }
 
 // Adds a layer above the active one and selects it.
@@ -860,7 +953,7 @@ async function loadImage(file, name = file.name) {
     const h = Math.max(1, Math.round(nh * scale));
     newCanvas(w, h, '');
     if (vector) {
-      active.vector = { img, x: 0, y: 0, w, h };
+      active.vector = { img, w, h, matrix: new DOMMatrix() };
       active.name = name?.split('/').pop() || 'Vector image';
       renderVector(active);
       renderLayers();
@@ -1039,6 +1132,42 @@ $('resize-cancel').addEventListener('click', () => resizeDialog.close('cancel'))
 resizeDialog.addEventListener('close', () => {
   if (resizeDialog.returnValue === 'resize') resizeImage(Number(resizeWidth.value), Number(resizeHeight.value));
 });
+
+const canvasDialog = $('canvas-dialog');
+$('canvas-size').addEventListener('click', () => {
+  $('canvas-width').value = overlay.width;
+  $('canvas-height').value = overlay.height;
+  canvasDialog.returnValue = '';
+  canvasDialog.showModal();
+  $('canvas-width').select();
+});
+// Not a submit button, so that Enter in a field resizes.
+$('canvas-cancel').addEventListener('click', () => canvasDialog.close('cancel'));
+canvasDialog.addEventListener('close', () => {
+  if (canvasDialog.returnValue !== 'resize') return;
+  const [ax, ay] = canvasDialog.querySelector('[name="canvas-anchor"]:checked').value.split(' ').map(Number);
+  resizeCanvas(Number($('canvas-width').value), Number($('canvas-height').value), ax, ay);
+});
+
+const rotateDialog = $('rotate-dialog');
+$('rotate-angle').addEventListener('click', () => {
+  rotateDialog.returnValue = '';
+  rotateDialog.showModal();
+  $('rotate-degrees').select();
+});
+// Not a submit button, so that Enter in the field rotates.
+$('rotate-cancel').addEventListener('click', () => rotateDialog.close('cancel'));
+rotateDialog.addEventListener('close', () => {
+  if (rotateDialog.returnValue === 'rotate') rotateImage(Number($('rotate-degrees').value));
+});
+
+$('rotate-cw').addEventListener('click', () => rotateImage(90));
+$('rotate-ccw').addEventListener('click', () => rotateImage(-90));
+$('rotate-180').addEventListener('click', () => rotateImage(180));
+$('flip-h').addEventListener('click', () => flipImage(true));
+$('flip-v').addEventListener('click', () => flipImage(false));
+$('trim').addEventListener('click', trimImage);
+$('flatten').addEventListener('click', flattenImage);
 
 const dialogOpen = () => Boolean(document.querySelector('dialog[open]'));
 
