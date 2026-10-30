@@ -34,7 +34,7 @@ jobs:
       - name: Run prek hooks
         uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d
         with:
-          prek-version: "0.5.8"
+          prek-version: "0.5.9"
           # The trace log goes to an artifact, below, rather than the job's log.
           show-verbose-logs: false
           extra-args: --log-file ${{ runner.temp }}/prek.log ${{ github.event_name == 'pull_request' && format('--from-ref {0} --to-ref {1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || '--all-files' }}
