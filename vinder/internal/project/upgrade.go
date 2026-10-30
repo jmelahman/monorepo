@@ -20,6 +20,7 @@ import (
 // the lockfile is resolved again from nothing, which moves every transitive
 // dependency to the newest release its ranges allow. Then it syncs. If any
 // of that fails, package.json and the lockfile are put back as they were.
+// latest may return "" for a package with no release to move to.
 func (p *Project) Upgrade(ctx context.Context, latest func(ctx context.Context, name string) (string, error)) (bumps []Change, err error) {
 	pm, err := p.packageManager()
 	if err != nil {

@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 )
@@ -36,6 +37,9 @@ type Package struct {
 	Tags    []string
 	Name    string
 	Version string
+	// Published is the release time, by default long enough ago to pass any
+	// cooldown.
+	Published time.Time
 }
 
 // Server is a registry that serves what has been published to it.
@@ -144,7 +148,12 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(s.packument(name))
+	doc := s.packument(name)
+	// As on the real registry, only the full document has release times.
+	if strings.Contains(r.Header.Get("Accept"), "application/vnd.npm.install-v1+json") {
+		delete(doc, "time")
+	}
+	_ = json.NewEncoder(w).Encode(doc)
 }
 
 // packument is the registry's document for name: every version, and its
@@ -169,6 +178,14 @@ func (s *Server) packument(name string) map[string]any {
 			},
 		}
 		times[p.Version] = "2020-01-01T00:00:00.000Z"
+		if !p.Published.IsZero() {
+			times[p.Version] = p.Published.UTC().Format("2006-01-02T15:04:05.000Z07:00")
+			// Package managers skip reading release times in a document
+			// modified before their cutoff.
+			if times[p.Version] > times["modified"] {
+				times["modified"] = times[p.Version]
+			}
+		}
 		for _, tag := range p.Tags {
 			tags[tag] = p.Version
 		}

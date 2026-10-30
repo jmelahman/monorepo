@@ -28,6 +28,13 @@ inputs:
       every project in the repository (`--all`).
     required: false
     default: ""
+  cooldown-days:
+    description: >-
+      Only move to releases at least this many days old, for direct and
+      transitive dependencies alike. 0 takes the newest. Needs bun 1.3, pnpm
+      10.16 or Yarn 4.10 where those are the projects' package managers.
+    required: false
+    default: "0"
   audit:
     description: >-
       Run `vinder audit` after upgrading and append any advisories to the
@@ -98,9 +105,10 @@ runs:
         if [ "${#dirs[@]}" -eq 0 ]; then
           dirs=(--all)
         fi
-        "$RUNNER_TEMP/vinder" upgrade "${dirs[@]}" > "$RUNNER_TEMP/vinder-body.md"
+        "$RUNNER_TEMP/vinder" upgrade --cooldown-days "$COOLDOWN_DAYS" "${dirs[@]}" > "$RUNNER_TEMP/vinder-body.md"
       env:
         DIRECTORIES: ${{ inputs.directories }}
+        COOLDOWN_DAYS: ${{ inputs.cooldown-days }}
     # An advisory against what the upgrade landed on goes in the pull
     # request rather than stopping it; the pull request is where it gets
     # fixed.

@@ -105,7 +105,11 @@ or `--all`, every `vinder.toml` in the git repository; `add` takes `--dir`.
 - **upgrade** raises each direct dependency with a plain spec (`1.2.3`,
   `^1.2.3`, `~1.2.3`) to its latest release, re-resolves every transitive
   dependency, syncs and aligns. On failure, package.json and the lockfile are
-  put back.
+  put back. `--cooldown-days <n>` holds direct and transitive dependencies to
+  releases at least that old. It fails, rather than move a dependency back, if
+  a spec in package.json allows only younger releases, and on a package manager
+  that can't enforce it: Yarn 1, bun before 1.3, pnpm before 10.16 or Yarn 2+
+  before 4.10.
 
 ### What the audit covers
 
@@ -165,6 +169,7 @@ jobs:
         with:
           app-client-id: ${{ vars.VINDER_APP_CLIENT_ID }}
           app-private-key: ${{ secrets.VINDER_APP_PRIVATE_KEY }}
+          cooldown-days: 7
 ```
 
 A PR opened with `GITHUB_TOKEN` doesn't trigger CI, so the action opens it

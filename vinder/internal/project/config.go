@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -68,6 +69,9 @@ type Project struct {
 	pm     *PackageManager
 	Config Config
 	Dir    string
+	// Cooldown is how old a release must be for Sync to resolve to it. Zero
+	// allows any.
+	Cooldown time.Duration
 	// synced is set once Sync has run, leaving the vendor tree on disk and
 	// requires current.
 	synced bool

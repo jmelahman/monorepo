@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -142,8 +143,9 @@ func newSyncCmd() *cobra.Command {
 
 func newUpgradeCmd() *cobra.Command {
 	var (
-		all         bool
-		registryURL string
+		all          bool
+		registryURL  string
+		cooldownDays int
 	)
 	cmd := &cobra.Command{
 		Use:   "upgrade [dir...]",
@@ -153,8 +155,16 @@ func newUpgradeCmd() *cobra.Command {
 nothing so transitive dependencies move to the newest releases their ranges
 allow, regenerates the vendor directories, and aligns the projects on one
 version of each package they share. It prints what changed as Markdown, for
-a pull request.`,
+a pull request.
+
+With --cooldown-days, direct and transitive dependencies alike only move to
+releases at least that many days old, so there is time for a compromised
+release to be caught and pulled first. It fails if a spec in package.json
+allows only younger releases, and if the package manager can't enforce it.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if cooldownDays < 0 {
+				return errors.New("--cooldown-days must not be negative")
+			}
 			projects, err := loadProjects(all, args)
 			if err != nil {
 				return err
@@ -171,9 +181,20 @@ a pull request.`,
 			}
 
 			reg := &registry.Client{URL: registryURL}
+			latest := reg.Latest
+			if cooldownDays > 0 {
+				cooldown := time.Duration(cooldownDays) * 24 * time.Hour
+				cutoff := time.Now().Add(-cooldown)
+				latest = func(ctx context.Context, name string) (string, error) {
+					return reg.LatestBefore(ctx, name, cutoff)
+				}
+				for _, p := range projects {
+					p.Cooldown = cooldown
+				}
+			}
 			bumps := make([][]project.Change, len(projects))
 			for i, p := range projects {
-				if bumps[i], err = p.Upgrade(cmd.Context(), reg.Latest); err != nil {
+				if bumps[i], err = p.Upgrade(cmd.Context(), latest); err != nil {
 					return fmt.Errorf("%s: %w", display(p.Dir), err)
 				}
 			}
@@ -209,6 +230,7 @@ a pull request.`,
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "every project in the git repository")
 	cmd.Flags().StringVar(&registryURL, "registry", registry.DefaultURL, "npm registry to look up latest releases in")
+	cmd.Flags().IntVar(&cooldownDays, "cooldown-days", 0, "only move to releases at least this many days old")
 	return cmd
 }
 

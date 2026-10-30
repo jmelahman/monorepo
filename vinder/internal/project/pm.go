@@ -10,6 +10,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 var (
@@ -25,7 +28,18 @@ var (
 	// ErrNoPackageManagerBinary is returned when the project's package
 	// manager is not on PATH.
 	ErrNoPackageManagerBinary = errors.New("package manager not found on PATH")
+	// ErrNoCooldown is returned for a cooldown under a package manager that
+	// would not honor it.
+	ErrNoCooldown = errors.New("package manager cannot enforce a cooldown")
 )
+
+// cooldownMinimums are the versions before which these package managers
+// silently ignore a release age setting. Nub and Yarn 2+ refuse one they
+// don't know, and ageGate refuses Yarn 1, which ignores it in every version.
+var cooldownMinimums = map[string]*semver.Version{
+	"bun":  semver.MustParse("1.3.0"),
+	"pnpm": semver.MustParse("10.16.0"),
+}
 
 // PackageManager is the tool that installs a project's node_modules.
 type PackageManager struct {
@@ -141,10 +155,40 @@ func (pm PackageManager) lockfile(dir string) string {
 	return ""
 }
 
+// ageGate returns what makes the package manager, at version, resolve only
+// releases at least age old as of now.
+func (pm PackageManager) ageGate(version string, age time.Duration, now time.Time) (args, env []string, err error) {
+	if pm.Name == "yarn" && !pm.berry {
+		return nil, nil, fmt.Errorf("%w: yarn %s", ErrNoCooldown, version)
+	}
+	if minimum := cooldownMinimums[pm.Name]; minimum != nil {
+		v, err := semver.NewVersion(version)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %s version %q: %w", ErrNoCooldown, pm.Name, version, err)
+		}
+		if v.LessThan(minimum) {
+			return nil, nil, fmt.Errorf("%w: %s %s; it needs %s", ErrNoCooldown, pm.Name, version, minimum)
+		}
+	}
+	minutes := int64(age.Minutes())
+	switch pm.Name {
+	case "bun":
+		return []string{fmt.Sprintf("--minimum-release-age=%d", int64(age.Seconds()))}, nil, nil
+	case "npm":
+		return []string{"--before=" + now.Add(-age).UTC().Format(time.RFC3339)}, nil, nil
+	case "nub":
+		return []string{fmt.Sprintf("--minimum-release-age=%dm", minutes)}, nil, nil
+	case "pnpm":
+		return []string{fmt.Sprintf("--config.minimumReleaseAge=%d", minutes)}, nil, nil
+	}
+	return nil, []string{fmt.Sprintf("YARN_NPM_MINIMAL_AGE_GATE=%dm", minutes)}, nil
+}
+
 // install populates dir/node_modules without running any package's
 // lifecycle scripts. With frozen set it fails rather than change the
-// lockfile.
-func (pm PackageManager) install(ctx context.Context, dir string, frozen bool) error {
+// lockfile. Otherwise a cooldown keeps what it resolves to releases at least
+// that old; a frozen install resolves nothing, so has no need of one.
+func (pm PackageManager) install(ctx context.Context, dir string, frozen bool, cooldown time.Duration) error {
 	bin, err := exec.LookPath(pm.Name)
 	if err != nil {
 		return fmt.Errorf("%w: %s", ErrNoPackageManagerBinary, pm.Name)
@@ -181,6 +225,21 @@ func (pm PackageManager) install(ctx context.Context, dir string, frozen bool) e
 		if pm.Name == "bun" && !frozen {
 			args = append(args, "--no-cache")
 		}
+	}
+
+	if cooldown > 0 && !frozen {
+		version := exec.CommandContext(ctx, bin, "--version")
+		version.Dir = dir
+		out, err := version.Output()
+		if err != nil {
+			return fmt.Errorf("%s --version: %w", pm.Name, err)
+		}
+		gateArgs, gateEnv, err := pm.ageGate(strings.TrimSpace(string(out)), cooldown, time.Now())
+		if err != nil {
+			return err
+		}
+		args = append(args, gateArgs...)
+		env = append(env, gateEnv...)
 	}
 
 	cmd := exec.CommandContext(ctx, bin, args...)

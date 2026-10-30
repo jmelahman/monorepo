@@ -27,6 +27,7 @@ func TestRun(t *testing.T) {
 		{name: "version", args: []string{"--version"}, wantOut: "version"},
 		{name: "unknown command", args: []string{"nope"}, wantAnyErr: true},
 		{name: "all with directories", args: []string{"check", "--all", "x"}, wantAnyErr: true},
+		{name: "negative cooldown", args: []string{"upgrade", "--cooldown-days", "-1"}, wantAnyErr: true},
 		{name: "directory without config", args: []string{"check", t.TempDir()}, wantErr: project.ErrNoConfig},
 	}
 

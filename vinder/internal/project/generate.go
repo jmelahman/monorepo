@@ -84,7 +84,7 @@ func (p *Project) Generate(ctx context.Context, dest string, frozen bool) (*Mani
 	if _, err := os.Stat(nodeModules); errors.Is(err, os.ErrNotExist) {
 		defer os.RemoveAll(nodeModules)
 	}
-	if err := pm.install(ctx, p.Dir, frozen); err != nil {
+	if err := pm.install(ctx, p.Dir, frozen, p.Cooldown); err != nil {
 		return nil, err
 	}
 

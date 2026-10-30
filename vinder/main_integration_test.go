@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/jmelahman/vinder/internal/project"
 	"github.com/jmelahman/vinder/internal/registry/registrytest"
 )
 
@@ -107,5 +110,21 @@ func TestUpgrade(t *testing.T) {
 		if !strings.Contains(stdout.String(), want) {
 			t.Errorf("upgrade printed:\n%s\nwant it to contain:\n%s", stdout.String(), want)
 		}
+	}
+
+	// Too new to take with a cooldown.
+	fresh := lib("3.0.0")
+	fresh.Published = time.Now()
+	srv.Publish(t, fresh)
+	stdout.Reset()
+	err = run([]string{"upgrade", "--registry", srv.URL, "--cooldown-days", "7", app}, &stdout, &stderr)
+	if errors.Is(err, project.ErrNoCooldown) {
+		return
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := stdout.String(); got != "Nothing vendored changed.\n" {
+		t.Errorf("upgrade with a cooldown printed:\n%s", got)
 	}
 }

@@ -17,6 +17,14 @@ import (
 // DefaultURL is the public npm registry.
 const DefaultURL = "https://registry.npmjs.org"
 
+const (
+	// abbreviatedDocument asks for dist-tags and versions, without readmes.
+	abbreviatedDocument = "application/vnd.npm.install-v1+json"
+	// fullDocument asks for everything, which is the only way to get release
+	// times.
+	fullDocument = "application/json"
+)
+
 // defaultHTTP bounds a request, so a stalled registry fails the upgrade
 // rather than hanging it.
 var defaultHTTP = &http.Client{Timeout: time.Minute}
@@ -33,11 +41,25 @@ type Client struct {
 type document struct {
 	DistTags map[string]string          `json:"dist-tags"`
 	Versions map[string]json.RawMessage `json:"versions"`
+	// Time holds each version's release time, in the full document only. It
+	// stays raw because an unpublished package has an object under
+	// "unpublished" in it.
+	Time map[string]json.RawMessage `json:"time"`
+}
+
+// releasedBy reports whether version's release time is known and not after
+// cutoff.
+func (d *document) releasedBy(version string, cutoff time.Time) bool {
+	var released time.Time
+	if err := json.Unmarshal(d.Time[version], &released); err != nil {
+		return false
+	}
+	return !released.After(cutoff)
 }
 
 // Latest returns the version the registry's latest dist-tag points at.
 func (c *Client) Latest(ctx context.Context, name string) (string, error) {
-	doc, err := c.document(ctx, name)
+	doc, err := c.document(ctx, name, abbreviatedDocument)
 	if err != nil {
 		return "", err
 	}
@@ -47,11 +69,50 @@ func (c *Client) Latest(ctx context.Context, name string) (string, error) {
 	return doc.DistTags["latest"], nil
 }
 
+// LatestBefore returns the newest release out by cutoff: the version the
+// latest dist-tag points at if it is, and otherwise the highest stable
+// version below it that is. It returns "" if no release is that old. A
+// registry that gives no release times is an error, since nothing could then
+// be said to be old enough.
+func (c *Client) LatestBefore(ctx context.Context, name string, cutoff time.Time) (string, error) {
+	doc, err := c.document(ctx, name, fullDocument)
+	if err != nil {
+		return "", err
+	}
+	if doc.DistTags["latest"] == "" {
+		return "", fmt.Errorf("%s: no latest dist-tag", name)
+	}
+	if len(doc.Time) == 0 {
+		return "", fmt.Errorf("%s: registry gives no release times", name)
+	}
+	if doc.releasedBy(doc.DistTags["latest"], cutoff) {
+		return doc.DistTags["latest"], nil
+	}
+	latest, err := semver.NewVersion(doc.DistTags["latest"])
+	if err != nil {
+		return "", fmt.Errorf("%s: latest dist-tag: %w", name, err)
+	}
+	var best *semver.Version
+	for version := range doc.Versions {
+		v, err := semver.NewVersion(version)
+		if err != nil || v.Prerelease() != "" || !v.LessThan(latest) || !doc.releasedBy(version, cutoff) {
+			continue
+		}
+		if best == nil || v.GreaterThan(best) {
+			best = v
+		}
+	}
+	if best == nil {
+		return "", nil
+	}
+	return best.Original(), nil
+}
+
 // Resolve returns the version npm would install for spec, a dist-tag or a
 // version range: the one a tag points at, or else latest if it satisfies the
 // range, or else the highest release that does.
 func (c *Client) Resolve(ctx context.Context, name, spec string) (string, error) {
-	doc, err := c.document(ctx, name)
+	doc, err := c.document(ctx, name, abbreviatedDocument)
 	if err != nil {
 		return "", err
 	}
@@ -78,7 +139,7 @@ func (c *Client) Resolve(ctx context.Context, name, spec string) (string, error)
 	return best.Original(), nil
 }
 
-func (c *Client) document(ctx context.Context, name string) (*document, error) {
+func (c *Client) document(ctx context.Context, name, accept string) (*document, error) {
 	base := c.URL
 	if base == "" {
 		base = DefaultURL
@@ -88,8 +149,7 @@ func (c *Client) document(ctx context.Context, name string) (*document, error) {
 	if err != nil {
 		return nil, err
 	}
-	// The abbreviated document: dist-tags and versions, without readmes.
-	req.Header.Set("Accept", "application/vnd.npm.install-v1+json")
+	req.Header.Set("Accept", accept)
 	httpc := c.HTTP
 	if httpc == nil {
 		httpc = defaultHTTP

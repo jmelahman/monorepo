@@ -3,9 +3,9 @@ name: Upgrade vendored dependencies
 # Dependabot for the vinder projects, which Dependabot itself can't serve:
 # it would bump package.json and the lockfile but leave vendor/ stale, and
 # `vinder check` would fail the PR. `vinder upgrade --all` bumps direct
-# dependencies to their latest releases, re-resolves every lockfile so
-# transitive dependencies move too, regenerates vendor/, and aligns the
-# projects on one version of each package they share. The PR body is its
+# dependencies to their latest releases at least a week old, re-resolves every
+# lockfile so transitive dependencies move too, regenerates vendor/, and aligns
+# the projects on one version of each package they share. The PR body is its
 # report.
 on:
   schedule:
@@ -38,9 +38,11 @@ jobs:
       # Builds vinder from its own source at this ref, runs `upgrade --all`
       # and `audit --all` (advisories go in the PR rather than failing it),
       # and opens the PR as the App `vinder github-app` created: one opened
-      # with GITHUB_TOKEN would not trigger the pre-commit checks.
+      # with GITHUB_TOKEN would not trigger the pre-commit checks. The cooldown
+      # matches the one in dependabot.yml.
       - name: Upgrade
-        uses: jmelahman/vinder@af20f0cf99117955cbc40bde61fe04f08e5cc8f8 # v0.1.4
+        uses: ./vinder # zizmor: ignore[self-repository]
         with:
           app-client-id: ${{ vars.VINDER_APP_CLIENT_ID }}
           app-private-key: ${{ secrets.VINDER_APP_PRIVATE_KEY }}
+          cooldown-days: 7

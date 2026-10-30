@@ -3,12 +3,14 @@ package project_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jmelahman/vinder/internal/pkgjson"
 	"github.com/jmelahman/vinder/internal/project"
@@ -47,7 +49,9 @@ func registryApp(t *testing.T, pm string, srv *registrytest.Server, libSpec stri
 	write(t, filepath.Join(app, "package.json"), string(data))
 	write(t, filepath.Join(app, ".npmrc"), "registry="+srv.URL+"/\n")
 	if pm == "yarn" && !strings.HasPrefix(version, "1.") {
-		write(t, filepath.Join(app, ".yarnrc.yml"), "npmRegistryServer: \""+srv.URL+"\"\nunsafeHttpWhitelist: [\"127.0.0.1\"]\n")
+		// Yarn keys cached metadata on the registry's host alone, which every
+		// test server shares, hence the global folder of its own.
+		write(t, filepath.Join(app, ".yarnrc.yml"), "npmRegistryServer: \""+srv.URL+"\"\nunsafeHttpWhitelist: [\"127.0.0.1\"]\nglobalFolder: \""+t.TempDir()+"\"\n")
 	}
 	write(t, filepath.Join(app, project.ConfigFile), "[deps.l]\npackage = \"lib\"\nbundle = { \"l.js\" = \"lib\" }\n")
 	return app
@@ -174,6 +178,80 @@ func TestAlignAndUpgrade(t *testing.T) {
 				t.Errorf("l.js does not bundle dep 1.2.0:\n%s", js)
 			}
 			assertCurrent(t, p1)
+		})
+	}
+}
+
+// TestUpgradeCooldown upgrades past releases younger than the cooldown, for a
+// direct dependency and a transitive one, then fails on a spec that allows
+// nothing else.
+func TestUpgradeCooldown(t *testing.T) {
+	t.Parallel()
+
+	for _, pm := range packageManagers(t) {
+		t.Run(pm, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			fresh := func(p registrytest.Package) registrytest.Package {
+				p.Published = time.Now()
+				return p
+			}
+
+			srv := registrytest.New(t, lib("1.0.0"), dep("1.0.0"))
+			p := syncApp(t, registryApp(t, pm, srv, "^1.0.0"))
+			srv.Publish(t, lib("1.1.0"))
+			srv.Publish(t, fresh(lib("2.0.0")))
+			srv.Publish(t, fresh(dep("1.1.0")))
+
+			p.Cooldown = 7 * 24 * time.Hour
+			cutoff := time.Now().Add(-p.Cooldown)
+			latest := func(ctx context.Context, name string) (string, error) {
+				return (&registry.Client{URL: srv.URL}).LatestBefore(ctx, name, cutoff)
+			}
+			before := manifest(t, p)
+			bumps, err := p.Upgrade(ctx, latest)
+			if errors.Is(err, project.ErrNoCooldown) {
+				t.Skip(err)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := []project.Change{{Name: "lib", From: "1.0.0", To: "1.1.0"}}; !reflect.DeepEqual(bumps, want) {
+				t.Errorf("Upgrade() = %+v, want %+v", bumps, want)
+			}
+			want := []project.Change{{Name: "lib", From: "1.0.0", To: "1.1.0"}}
+			if got := project.Changes(before, manifest(t, p)); !reflect.DeepEqual(got, want) {
+				t.Errorf("Changes() = %+v, want %+v", got, want)
+			}
+			assertCurrent(t, p)
+
+			// A spec only a younger release meets stops the upgrade, and
+			// leaves package.json as it was.
+			pjFile := filepath.Join(p.Dir, "package.json")
+			pj, err := pkgjson.Read(pjFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := pj.SetString("^2.0.0", "dependencies", "lib"); err != nil {
+				t.Fatal(err)
+			}
+			if err := pj.Write(); err != nil {
+				t.Fatal(err)
+			}
+			wantPJ, err := os.ReadFile(pjFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := p.Upgrade(ctx, latest); err == nil {
+				t.Error("Upgrade() with a spec only a younger release meets succeeded")
+			}
+			gotPJ, err := os.ReadFile(pjFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(gotPJ) != string(wantPJ) {
+				t.Errorf("package.json after failed Upgrade:\n%s\nwant:\n%s", gotPJ, wantPJ)
+			}
 		})
 	}
 }
