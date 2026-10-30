@@ -185,6 +185,11 @@ so it carries on if this command is interrupted.`,
 	}
 
 	parent.AddCommand(remind, list, run, logCmd, dismiss)
+	// A failed release or API call isn't a usage error; don't bury any of them
+	// under the flag table.
+	for _, c := range parent.Commands() {
+		c.SilenceUsage = true
+	}
 	return parent
 }
 
@@ -397,7 +402,7 @@ func runReleaseRun(ctx context.Context, c *client.Client, in io.Reader, out io.W
 		return err
 	}
 	if err := c.StreamReleaseRunOutput(ctx, run.ID, func(line string) { fmt.Fprintln(out, line) }); err != nil {
-		return fmt.Errorf("following run %d, which continues on the server: %w", run.ID, err)
+		return fmt.Errorf("lost the log of run %d: %w; if the server is up, the run carries on there, and kanban release log %d follows it", run.ID, err, run.ID)
 	}
 	summary, err = c.ReleaseSummary(ctx)
 	if err != nil {
