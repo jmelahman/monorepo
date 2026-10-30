@@ -12,7 +12,7 @@ export const queryKeys = {
   previewRetention: ["previews", "retention"] as const,
   releases: ["releases"] as const,
   releasePreview: (repo: string, prefix: string, bump: string, suffix: string) =>
-    ["releases", "preview", repo, prefix, bump, suffix] as const,
+    ["release-preview", repo, prefix, bump, suffix] as const,
   prDetail: (sessionId: number) => ["pr-detail", sessionId] as const,
   settings: ["settings"] as const,
   config: (scope = "effective") => ["config", scope] as const,

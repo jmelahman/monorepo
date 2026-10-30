@@ -302,6 +302,8 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 		if err != nil {
 			return fmt.Errorf("release log dir: %w", err)
 		}
+		// Deferred before the service's Close, so it runs after.
+		defer func() { _ = os.RemoveAll(releaseDir) }()
 	}
 	releaseSvc := releases.New(store, releaseDir)
 	defer releaseSvc.Close()

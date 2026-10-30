@@ -48,7 +48,16 @@ type Preview struct {
 func (s *Service) Preview(ctx context.Context, repo, prefix, bump, suffix string) (Preview, error) {
 	ctx, cancel := context.WithTimeout(ctx, previewTimeout)
 	defer cancel()
-	return s.preview(ctx, repo, prefix, bump, suffix)
+	p, err := s.preview(ctx, repo, prefix, bump, suffix)
+	return p, runError(ctx, err)
+}
+
+// runError says when err is ctx ending: git reports that as being killed.
+func runError(ctx context.Context, err error) error {
+	if err != nil && ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return err
 }
 
 func (s *Service) preview(ctx context.Context, repo, prefix, bump, suffix string) (Preview, error) {
@@ -84,12 +93,17 @@ func (s *Service) preview(ctx context.Context, repo, prefix, bump, suffix string
 	return p, nil
 }
 
-// redactErr keeps a git error's meaning without its token, if it has one.
+// gitError is a failure of git, whose text has no token. It doesn't wrap the
+// original, which might.
+type gitError struct{ text string }
+
+func (e gitError) Error() string { return e.text }
+
+func (e gitError) Is(target error) bool { return target == ErrGit }
+
+// redactErr marks a git error as one, keeping its meaning without its token.
 func redactErr(err error) error {
-	if text := redact(err.Error()); text != err.Error() {
-		return errors.New(text)
-	}
-	return err
+	return gitError{text: redact(err.Error())}
 }
 
 // RunRequest pins the release the user confirmed.
@@ -117,8 +131,15 @@ func (s *Service) Run(ctx context.Context, req RunRequest) (*db.ReleaseRun, erro
 	}
 	done := make(chan struct{})
 	s.mu.Lock()
+	// Close may have begun while this prepared, and a WaitGroup can't grow once
+	// it's being waited on.
+	if err := s.ctx.Err(); err != nil {
+		s.mu.Unlock()
+		s.finish(run, err)
+		s.release(req.RepoPath)
+		return nil, fmt.Errorf("%w: the server is stopping", ErrConflict)
+	}
 	s.live[run.ID] = done
-	s.mu.Unlock()
 	s.wg.Go(func() {
 		defer s.release(req.RepoPath)
 		defer func() {
@@ -129,12 +150,16 @@ func (s *Service) Run(ctx context.Context, req RunRequest) (*db.ReleaseRun, erro
 		}()
 		s.execute(run, sub)
 	})
+	s.mu.Unlock()
 	return run, nil
 }
 
 func (s *Service) acquire(repo string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.ctx.Err() != nil {
+		return fmt.Errorf("%w: the server is stopping", ErrConflict)
+	}
 	if s.busy[repo] {
 		return fmt.Errorf("%w: a release is already running in %s", ErrConflict, repo)
 	}
@@ -225,6 +250,7 @@ func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree) {
 	if err == nil {
 		err = release(ctx, run, sub, identityEnv(boards[run.RepoPath]), output)
 	}
+	err = runError(ctx, err)
 	if err != nil {
 		_, _ = fmt.Fprintf(output, "%v\n", err)
 	}

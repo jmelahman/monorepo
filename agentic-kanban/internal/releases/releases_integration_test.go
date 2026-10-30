@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -219,6 +220,13 @@ func TestReminders(t *testing.T) {
 	if got := decode[db.ReleaseReminder](t, data); got.Note != "and Y" || got.Bump != "minor" {
 		t.Errorf("patched %+v", got)
 	}
+	code, data = w.do("PATCH", path, map[string]any{"bump": ""})
+	if code != 200 {
+		t.Fatalf("patch empty bump: %d %s", code, data)
+	}
+	if got := decode[db.ReleaseReminder](t, data); got.Bump != "patch" {
+		t.Errorf("empty bump became %q", got.Bump)
+	}
 
 	if code, data := w.do("DELETE", path, nil); code != 204 {
 		t.Fatalf("dismiss: %d %s", code, data)
@@ -298,6 +306,19 @@ func TestRequestGuards(t *testing.T) {
 	}
 	if code, data := w.do("POST", "/api/releases/run", w.runBody(p), "Content-Type", "text/plain"); code != 403 {
 		t.Errorf("text/plain: %d %s", code, data)
+	}
+	if code, data := w.do("POST", "/api/release-reminders", map[string]any{"repo_path": w.env.RepoPath, "prefix": prefix}, "Content-Type", "text/plain"); code != 403 {
+		t.Errorf("reminder as text/plain: %d %s", code, data)
+	}
+	for _, route := range [][2]string{
+		{"POST", "/api/releases/refresh"},
+		{"POST", "/api/release-reminders"},
+		{"PATCH", "/api/release-reminders/1"},
+		{"DELETE", "/api/release-reminders/1"},
+	} {
+		if code, data := w.do(route[0], route[1], nil, "Sec-Fetch-Site", "cross-site"); code != 403 {
+			t.Errorf("cross-site %s %s: %d %s", route[0], route[1], code, data)
+		}
 	}
 	body := w.runBody(p)
 	body["prefix"] = "tools/nope"
@@ -451,5 +472,65 @@ func TestHealth(t *testing.T) {
 	got := releases.Health(orchard.CIResult{Error: "EOF", Runs: []orchard.CIRun{{Run: failed}}})
 	if len(got.Failed) != 1 || got.Failed[0] != "lint" || got.URL != failed.URL || got.Error != "EOF" {
 		t.Errorf("health = %+v", got)
+	}
+}
+
+// A failing remote is git's fault, not a server bug worth reporting.
+func TestPreviewGitFailure(t *testing.T) {
+	w := newWorld(t)
+	if err := os.RemoveAll(w.origin); err != nil {
+		t.Fatal(err)
+	}
+	q := url.Values{"repo": {w.env.RepoPath}, "prefix": {prefix}}
+	if code, data := w.do("GET", "/api/releases/preview?"+q.Encode(), nil); code != 502 {
+		t.Errorf("preview without origin: %d %s", code, data)
+	}
+}
+
+func TestRunAfterClose(t *testing.T) {
+	w := newWorld(t)
+	p := w.preview()
+	svc := releases.New(w.env.Store, t.TempDir())
+	svc.Close()
+	_, err := svc.Run(context.Background(), releases.RunRequest{RepoPath: w.env.RepoPath, Prefix: prefix, Bump: "minor", Version: p.Version, Rev: p.Rev})
+	if !errors.Is(err, releases.ErrConflict) {
+		t.Errorf("got %v, want ErrConflict", err)
+	}
+	runs, err := w.env.Store.ListReleaseRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, run := range runs {
+		if run.Status == db.ReleaseRunRunning {
+			t.Errorf("left running: %+v", run)
+		}
+	}
+}
+
+// As with git orchard release, the default bump continues a pre-release.
+func TestPreReleaseContinues(t *testing.T) {
+	w := newWorld(t)
+	preview := func() releases.Preview {
+		t.Helper()
+		q := url.Values{"repo": {w.env.RepoPath}, "prefix": {prefix}, "bump": {"patch"}, "suffix": {"rc"}}
+		code, data := w.do("GET", "/api/releases/preview?"+q.Encode(), nil)
+		if code != 200 {
+			t.Fatalf("preview: %d %s", code, data)
+		}
+		return decode[releases.Preview](t, data)
+	}
+	p := preview()
+	if p.Version != "v0.0.1-rc" {
+		t.Fatalf("first pre-release: %+v", p)
+	}
+	code, data := w.do("POST", "/api/releases/run", map[string]any{"repo": w.env.RepoPath, "prefix": prefix, "bump": "patch", "suffix": "rc", "version": p.Version, "rev": p.Rev})
+	if code != 202 {
+		t.Fatalf("run: %d %s", code, data)
+	}
+	w.output(decode[db.ReleaseRun](t, data).ID)
+
+	w.commit("next.go")
+	if got := preview(); got.Version != "v0.0.1-rc.1" {
+		t.Errorf("second pre-release: %+v", got)
 	}
 }

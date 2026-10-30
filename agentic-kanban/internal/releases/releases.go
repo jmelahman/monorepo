@@ -35,6 +35,8 @@ var (
 	// ErrConflict means the release shown to the user is no longer the one
 	// that would happen, or another is under way.
 	ErrConflict = errors.New("release conflict")
+	// ErrGit is git or the network failing, rather than the server or the request.
+	ErrGit = errors.New("git failed")
 )
 
 var suffixRE = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z]*$`)
@@ -87,7 +89,9 @@ func New(store *db.Store, dataDir string) *Service {
 // Close cancels what's under way and waits for it, so runs are recorded as
 // interrupted before the store closes.
 func (s *Service) Close() {
+	s.mu.Lock()
 	s.cancel()
+	s.mu.Unlock()
 	s.wg.Wait()
 }
 
@@ -187,7 +191,7 @@ func (s *Service) lookup(ctx context.Context, repo, prefix string, output io.Wri
 	}
 	o, err := open(ctx, repo, output)
 	if err != nil {
-		return nil, config.Subtree{}, "", err
+		return nil, config.Subtree{}, "", redactErr(err)
 	}
 	sub, ok := o.Config.Lookup(prefix)
 	if !ok {
@@ -208,7 +212,9 @@ func tip(o *orchard.Orchard, base string) (string, error) {
 func increment(bump string) (semver.Increment, error) {
 	switch bump {
 	case "patch", "":
-		return semver.Patch, nil
+		// As git orchard release does by default: with a suffix, this continues
+		// that pre-release, and semver.Patch would skip to the next version.
+		return semver.Auto, nil
 	case "minor":
 		return semver.Minor, nil
 	case "major":
@@ -252,6 +258,9 @@ func (s *Service) AddReminder(ctx context.Context, r *db.ReleaseReminder) error 
 
 // UpdateReminder changes an open reminder.
 func (s *Service) UpdateReminder(ctx context.Context, r *db.ReleaseReminder) error {
+	if r.Bump == "" {
+		r.Bump = "patch"
+	}
 	if err := validate(r.Bump, r.Suffix); err != nil {
 		return err
 	}

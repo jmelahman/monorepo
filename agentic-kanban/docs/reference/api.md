@@ -177,17 +177,17 @@ Lists the session's forwarded ports.
 
 ## Releases
 
-See [Releases](/guide/releases). These endpoints return `503` if the service didn't start.
+See [Releases](/guide/releases). These endpoints return `503` if the service didn't start. Those that change anything refuse a cross-site browser request with `403`, and those with a body require `Content-Type: application/json`.
 
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/releases` | `{ "unavailable", "projects", "reminders", "runs" }`: cached subtree state, open reminders, and recent runs. Starts a refresh of any repo not seen yet. Each subtree has a `ci` of `{ "status", "failed", "url", "error" }` once checked, with `status` one of `passing`, `failing`, `running` or `none`; a check starts if the last began over 5 minutes ago. |
 | `POST /api/releases/refresh` | Recomputes every repo's state in the background. Returns `204`. |
-| `POST /api/release-reminders` | Body: `{ "repo_path", "prefix", "bump", "suffix", "note" }`. `bump` is `patch` (the default), `minor` or `major`. Returns `201`, or `409` if the subtree has an open reminder. |
+| `POST /api/release-reminders` | Body: `{ "repo_path", "prefix", "bump", "suffix", "note" }`. `bump` is `patch` (the default), `minor` or `major`; with a `suffix`, `patch` continues that pre-release. Returns `201`, or `409` if the subtree has an open reminder. |
 | `PATCH /api/release-reminders/{id}` | Changes an open reminder's `bump`, `suffix` or `note`. |
 | `DELETE /api/release-reminders/{id}` | Dismisses an open reminder. Returns `204`. |
-| `GET /api/releases/preview?repo=&prefix=&bump=&suffix=` | Fetches, then returns `{ "version", "rev", "released", "ahead", "behind", "blocked" }`. `blocked` says why it can't be released. |
-| `POST /api/releases/run` | Body: `{ "repo", "prefix", "bump", "suffix", "version", "rev", "reminder_id" }`, with the previewed `version` and `rev`. Returns `202` with the run, or `409` if they're out of date, it's blocked, or the repo has a release running. Requires `Content-Type: application/json`; a cross-site browser request gets `403`. |
+| `GET /api/releases/preview?repo=&prefix=&bump=&suffix=` | Fetches, then returns `{ "version", "rev", "released", "ahead", "behind", "blocked" }`. `blocked` says why it can't be released. Returns `502` if git or the remote fails. |
+| `POST /api/releases/run` | Body: `{ "repo", "prefix", "bump", "suffix", "version", "rev", "reminder_id" }`, with the previewed `version` and `rev`. Returns `202` with the run, or `409` if they're out of date, it's blocked, or the repo has a release running. |
 | `GET /api/release-runs/{id}/output` | Server-sent log of a run, from the start, ending with an `end` event when the run finishes. |
 
 ## Previews

@@ -241,7 +241,10 @@ func (ctl *releaseController) syncStream() {
 		err := ctl.c.StreamReleaseRunOutput(ctx, runID, func(line string) {
 			out.append(line)
 			if ctl.wakePending.CompareAndSwap(false, true) {
-				ctl.post(releasesWake{})
+				// Nothing clears the flag if the wake doesn't arrive.
+				if err := ctl.screen.PostEvent(tcell.NewEventInterrupt(releasesWake{})); err != nil {
+					ctl.wakePending.Store(false)
+				}
 			}
 		})
 		if ctx.Err() != nil {

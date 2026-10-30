@@ -243,6 +243,8 @@ function RunLog({
   useEffect(() => {
     setLines([]);
     const es = new EventSource(`/api/release-runs/${run.id}/output`);
+    // A reconnect replays the log from the start.
+    es.onopen = () => setLines([]);
     es.onmessage = (e) => setLines((prev) => [...prev, e.data]);
     es.addEventListener("end", () => {
       es.close();

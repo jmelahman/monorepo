@@ -390,7 +390,7 @@ With no subcommand in a terminal, `kanban release` opens a view of your open rem
 
 ### `release remind <prefix> [note...]`
 
-Notes that you mean to release a subtree. `--patch` (the default), `--minor` and `--major` set the intended bump, and `--suffix` sets a pre-release suffix such as `rc`. A subtree has one open reminder. Nothing fires by itself.
+Notes that you mean to release a subtree. `--patch` (the default), `--minor` and `--major` set the intended bump, and `--suffix` sets a pre-release suffix such as `rc`; with a suffix, `--patch` continues that pre-release, so `v1.2.3-rc` is followed by `v1.2.3-rc.1`. A subtree has one open reminder. Nothing fires by itself.
 
 ### `release list`
 

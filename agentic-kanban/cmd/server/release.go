@@ -416,8 +416,9 @@ func runReleaseRun(ctx context.Context, c *client.Client, in io.Reader, out io.W
 			return fmt.Errorf("run %d %s: %s", r.ID, r.Status, r.Error)
 		}
 		fmt.Fprintf(out, "released %s %s\n", r.Prefix, r.Version)
+		return nil
 	}
-	return nil
+	return fmt.Errorf("can't tell how run %d ended: it isn't among the recent runs", run.ID)
 }
 
 func shortReleaseRev(rev string) string {

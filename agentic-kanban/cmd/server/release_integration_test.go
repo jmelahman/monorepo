@@ -59,9 +59,17 @@ func newReleaseWorld(t *testing.T) (env *kanbantest.Env, origin string) {
 	}
 	t.Chdir(env.RepoPath)
 
-	restore := stdinIsTerminal
-	stdinIsTerminal = func() bool { return false }
-	t.Cleanup(func() { stdinIsTerminal = restore })
+	// No terminal, whatever ran the tests.
+	stdin, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restore := os.Stdin
+	os.Stdin = stdin
+	t.Cleanup(func() {
+		os.Stdin = restore
+		_ = stdin.Close()
+	})
 	return env, origin
 }
 

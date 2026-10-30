@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"mime"
@@ -11,8 +12,9 @@ import (
 	"github.com/jmelahman/kanban/internal/releases"
 )
 
-// maxReleaseRunBody bounds a release request, which is a few short strings.
-const maxReleaseRunBody = 1 << 14
+// maxReleaseBody bounds a request that changes releases: a few short strings
+// and a note.
+const maxReleaseBody = 1 << 16
 
 // releaseErrorCode maps a releases error to its status.
 func releaseErrorCode(err error) int {
@@ -23,6 +25,8 @@ func releaseErrorCode(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, releases.ErrConflict):
 		return http.StatusConflict
+	case errors.Is(err, releases.ErrGit), errors.Is(err, context.DeadlineExceeded):
+		return http.StatusBadGateway
 	}
 	return http.StatusInternalServerError
 }
@@ -49,7 +53,7 @@ func (h *handlers) getReleases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) refreshReleases(w http.ResponseWriter, r *http.Request) {
-	if !h.releasesReady(w) {
+	if !h.releaseWriteAllowed(w, r, false) {
 		return
 	}
 	if err := h.releases.Refresh(r.Context()); err != nil {
@@ -68,7 +72,7 @@ type releaseReminderReq struct {
 }
 
 func (h *handlers) createReleaseReminder(w http.ResponseWriter, r *http.Request) {
-	if !h.releasesReady(w) {
+	if !h.releaseWriteAllowed(w, r, true) {
 		return
 	}
 	req, err := decodeBody[releaseReminderReq](r)
@@ -91,7 +95,7 @@ type patchReleaseReminderReq struct {
 }
 
 func (h *handlers) patchReleaseReminder(w http.ResponseWriter, r *http.Request) {
-	if !h.releasesReady(w) {
+	if !h.releaseWriteAllowed(w, r, true) {
 		return
 	}
 	req, err := decodeBody[patchReleaseReminderReq](r)
@@ -121,7 +125,7 @@ func (h *handlers) patchReleaseReminder(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *handlers) deleteReleaseReminder(w http.ResponseWriter, r *http.Request) {
-	if !h.releasesReady(w) {
+	if !h.releaseWriteAllowed(w, r, false) {
 		return
 	}
 	if err := h.releases.DismissReminder(r.Context(), pathID(r)); err != nil {
@@ -154,12 +158,15 @@ type runReleaseReq struct {
 	ReminderID *int64 `json:"reminder_id"`
 }
 
-// publishRequestError says why a request that publishes must be refused. The
-// API has no auth, so a page on another site could otherwise post here from
+// releaseWriteError says why a request that changes releases must be refused.
+// The API has no auth, so a page on another site could otherwise post here from
 // the browser of whoever is running it.
-func publishRequestError(r *http.Request) error {
+func releaseWriteError(r *http.Request, hasBody bool) error {
 	if strings.EqualFold(r.Header.Get("Sec-Fetch-Site"), "cross-site") {
-		return errors.New("cross-site requests can't release")
+		return errors.New("cross-site requests can't change releases")
+	}
+	if !hasBody {
+		return nil
 	}
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || media != "application/json" {
@@ -168,15 +175,26 @@ func publishRequestError(r *http.Request) error {
 	return nil
 }
 
-func (h *handlers) runRelease(w http.ResponseWriter, r *http.Request) {
+// releaseWriteAllowed writes an error unless the service is up and the request
+// may change releases, and bounds a body it expects.
+func (h *handlers) releaseWriteAllowed(w http.ResponseWriter, r *http.Request, hasBody bool) bool {
 	if !h.releasesReady(w) {
-		return
+		return false
 	}
-	if err := publishRequestError(r); err != nil {
+	if err := releaseWriteError(r, hasBody); err != nil {
 		h.httpError(w, err, http.StatusForbidden)
+		return false
+	}
+	if hasBody {
+		r.Body = http.MaxBytesReader(w, r.Body, maxReleaseBody)
+	}
+	return true
+}
+
+func (h *handlers) runRelease(w http.ResponseWriter, r *http.Request) {
+	if !h.releaseWriteAllowed(w, r, true) {
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxReleaseRunBody)
 	req, err := decodeBody[runReleaseReq](r)
 	if err != nil {
 		h.httpError(w, err, 400)
