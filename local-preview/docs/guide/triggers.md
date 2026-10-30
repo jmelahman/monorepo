@@ -41,7 +41,7 @@ at the pinned rev — nothing needs to be preinstalled:
 
 Install the stage with `pre-commit install --hook-type post-commit` (prek:
 `prek install --hook-type post-commit`), and bump `rev` with `pre-commit
-autoupdate` (prek: `prek auto-update`, `--bleeding-edge --freeze` to pin an
+autoupdate` (prek: `prek update`, `--bleeding-edge --freeze` to pin an
 untagged sha). Command details in
 [`preview install-hook`](/reference/cli#preview-install-hook).
 

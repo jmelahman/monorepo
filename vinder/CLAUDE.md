@@ -58,4 +58,4 @@ against OSV. README.md documents the config and commands.
   output directory; keep sync and check agreeing on that.
 - Tool versions are pinned in `.pre-commit-config.yaml`; CI runs the hooks
   rather than re-declaring the tools. actionlint and zizmor are `rev`-pinned
-  upstream hook repos, so `prek auto-update` bumps those two.
+  upstream hook repos, so `prek update` bumps those two.

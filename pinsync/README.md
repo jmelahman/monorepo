@@ -34,7 +34,7 @@ Binaries for each platform are also attached to every
 
 ```toml
 # The version is the uv-pre-commit rev in the root .pre-commit-config.yaml,
-# which `prek autoupdate` bumps.
+# which `prek update` bumps.
 [pins.uv]
 source = "pre-commit"
 repo = "https://github.com/astral-sh/uv-pre-commit"
@@ -67,7 +67,7 @@ A pin's source is one of:
 Its copies, in every file git tracks:
 
 - **Hook revs.** The `rev` of `repo` in any `.pre-commit-config.yaml`. A rev
-  pinned to a commit needs a `# frozen: <tag>` comment, as `prek autoupdate
+  pinned to a commit needs a `# frozen: <tag>` comment, as `prek update
   --freeze` writes; pinsync rewrites both.
 - **Hook dependencies.** `package==version` (Python, by normalized name) and
   `package@version` (Go, npm) in any hook's `additional_dependencies`.

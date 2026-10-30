@@ -45,4 +45,4 @@ CLI at the module root that consumes it, and the tooling that checks both.
 - Tool versions are pinned in `.pre-commit-config.yaml`; CI runs the hooks
   rather than re-declaring the tools. govulncheck is the exception, pinned
   again in `test.yml` and `release.yml`. Dependabot sees none of them. actionlint and zizmor are `rev`-pinned
-  upstream hook repos, so `prek auto-update` bumps those two.
+  upstream hook repos, so `prek update` bumps those two.

@@ -141,4 +141,4 @@ pin does _not_ cover is the wheel zizmor's hook installs from PyPI — that is
 resolved by version, like any other Python dependency. Pinning those five
 per-platform wheels by `#sha256` is possible and this template used to do
 it, but it has to be redone by hand on every bump and nothing warns you when
-it drifts; upstream's repo is bumped by `prek auto-update` instead.
+it drifts; upstream's repo is bumped by `prek update` instead.
