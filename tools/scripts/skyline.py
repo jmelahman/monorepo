@@ -269,6 +269,8 @@ def draw(projects: list[Project], mode: str) -> str:
         x = MARGIN + i * (width + GAP)
         height = max(6.0, math.sqrt(project.total) * scale)
         roof = GROUND - height
+        # A <title> on the group is the hover tooltip for everything in the building.
+        out.append(f"<g><title>{escape(project.name)}</title>")
         # Floors split the building's height by each group's share of its lines,
         # largest at the bottom, with a gap of page color between them.
         floors = sorted(project.lines.items(), key=lambda kv: kv[1], reverse=True)
@@ -311,6 +313,7 @@ def draw(projects: list[Project], mode: str) -> str:
             f'font-size="12" text-anchor="end" fill="{theme.ink}">'
             f"{escape(project.name)}</text>"
         )
+        out.append("</g>")
 
     out.append(
         f'<rect x="{MARGIN - 8}" y="{GROUND}" width="{WIDTH - 2 * MARGIN + 16}" height="2" '
