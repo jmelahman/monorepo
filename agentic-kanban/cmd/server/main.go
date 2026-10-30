@@ -295,7 +295,15 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 		defer previewOrch.Close()
 	}
 
-	releaseSvc := releases.New(store, cfg.DataDir)
+	// Run logs are named by run id, so an ephemeral DB's would overwrite real ones.
+	releaseDir := cfg.DataDir
+	if inMemory {
+		releaseDir, err = os.MkdirTemp("", "kanban-releases-")
+		if err != nil {
+			return fmt.Errorf("release log dir: %w", err)
+		}
+	}
+	releaseSvc := releases.New(store, releaseDir)
 	defer releaseSvc.Close()
 	releaseSvc.Start(releaseRefreshInterval)
 

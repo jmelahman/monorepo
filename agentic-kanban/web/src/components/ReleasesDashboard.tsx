@@ -288,7 +288,9 @@ function ReminderCard({
   return (
     <li className="flex flex-col gap-2 rounded border border-border p-3 text-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="font-medium">{reminder.prefix}</span>
+        <span className="font-medium" title={reminder.repo_path}>
+          {reminder.prefix}
+        </span>
         <span className="text-xs text-fg-muted">
           {reminder.bump}
           {reminder.suffix && ` (${reminder.suffix})`}

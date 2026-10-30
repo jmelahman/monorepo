@@ -56,7 +56,7 @@ func (h *handlers) refreshReleases(w http.ResponseWriter, r *http.Request) {
 		h.httpError(w, err, 500)
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type releaseReminderReq struct {
@@ -208,6 +208,7 @@ func (h *handlers) releaseRunOutput(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeSSEHeaders(w)
+	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 	err := h.releases.Follow(r.Context(), id, func(line string) {
 		fmt.Fprintf(w, "data: %s\n\n", line)

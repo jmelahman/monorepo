@@ -3,7 +3,7 @@
 // targets the backend directly so seeding stays out of the UI's render
 // cycle.
 
-const BACKEND = process.env.KANBAN_E2E_BACKEND ?? "http://localhost:7474";
+const BACKEND = process.env.KANBAN_E2E_BACKEND ?? "http://localhost:17474";
 
 export type Board = {
   id: number;
@@ -57,6 +57,8 @@ export const api = {
     mount_path?: string;
     repo_path?: string;
     project_dir?: string;
+    git_author_name?: string;
+    git_author_email?: string;
   }) =>
     request<Board>("/api/boards", { method: "POST", body: JSON.stringify(input) }),
   deleteBoard: (id: number) =>

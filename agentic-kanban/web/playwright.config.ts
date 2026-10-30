@@ -10,7 +10,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // the UI through Chromium. Container session ops are real — first run
 // pulls `lahmanja/kanban-devcontainer:latest` (see global-setup.ts).
 
-const BACKEND_PORT = 7474;
+// Not the app's default 7474: reuseExistingServer would adopt a kanban already
+// running there, and the specs would create boards on its real database.
+const BACKEND_PORT = 17474;
 const FRONTEND_PORT = 5174;
 
 // Container-aware mount root and host-path translation.
@@ -69,7 +71,7 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: "go run . serve --in-memory --claude-config=false",
+      command: `go run . serve --in-memory --claude-config=false --addr=:${BACKEND_PORT}`,
       cwd: "..",
       env: backendEnv,
       url: `http://localhost:${BACKEND_PORT}/api/boards`,

@@ -182,7 +182,7 @@ See [Releases](/guide/releases). These endpoints return `503` if the service did
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/releases` | `{ "unavailable", "projects", "reminders", "runs" }`: cached subtree state, open reminders, and recent runs. Starts a refresh of any repo not seen yet. |
-| `POST /api/releases/refresh` | Recomputes every repo's state in the background. Returns `202`. |
+| `POST /api/releases/refresh` | Recomputes every repo's state in the background. Returns `204`. |
 | `POST /api/release-reminders` | Body: `{ "repo_path", "prefix", "bump", "suffix", "note" }`. `bump` is `patch` (the default), `minor` or `major`. Returns `201`, or `409` if the subtree has an open reminder. |
 | `PATCH /api/release-reminders/{id}` | Changes an open reminder's `bump`, `suffix` or `note`. |
 | `DELETE /api/release-reminders/{id}` | Dismisses an open reminder. Returns `204`. |
