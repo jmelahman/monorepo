@@ -244,6 +244,8 @@ function transformImage(w, h, m) {
       layer.vector = { ...l.vector, matrix: m.multiply(l.vector.matrix) };
       renderVector(layer);
     } else {
+      // Text that becomes pixels stays recognizable in the layer list.
+      if (l.text) layer.name = l.text.value.trim().split('\n')[0];
       layer.ctx.imageSmoothingQuality = 'high';
       layer.ctx.setTransform(m);
       layer.ctx.drawImage(l.canvas, 0, 0);
@@ -338,11 +340,13 @@ function flattenImage() {
     return;
   }
   const flat = composite();
+  const dropped = layers.filter((l) => !l.visible).length;
   pushUndo();
   layers = [];
   active = null;
   insertLayer(makeLayer({ name: 'Background' }));
   active.ctx.drawImage(flat, 0, 0);
+  if (dropped) flashMessage(`Discarded ${dropped} hidden ${dropped === 1 ? 'layer' : 'layers'}. Undo reverses this.`);
 }
 
 // Adds a layer above the active one and selects it.
