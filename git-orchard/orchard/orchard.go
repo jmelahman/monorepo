@@ -670,6 +670,54 @@ func (o *Orchard) NextVersion(s config.Subtree, opts NextOptions) (version strin
 	return latest.Next(inc, opts.Suffix, versions).String(), false, nil
 }
 
+// Unreleased is what a subtree has gained since its latest release.
+type Unreleased struct {
+	// Latest is the latest release, whether or not it's a pre-release; empty
+	// if there are none.
+	Latest string
+	// Commits counts rev's commits touching the subtree since Latest, or all
+	// of them if there's no release.
+	Commits int
+	// Counted is false if Latest has no <prefix>/<version> tag here to count
+	// from, as with an upstream release that predates the subtree.
+	Counted bool
+}
+
+// Unreleased reports what rev of s has gained since its latest release. The
+// releases are as for NextVersion. It doesn't fetch tags, so a release only
+// on remote isn't counted from until they are.
+func (o *Orchard) Unreleased(s config.Subtree, rev, remote string) (Unreleased, error) {
+	versions, err := o.releases(s, remote)
+	if err != nil {
+		return Unreleased{}, err
+	}
+	var latest *semver.Version
+	for i, v := range versions {
+		if latest == nil || semver.Compare(v, *latest) > 0 {
+			latest = &versions[i]
+		}
+	}
+	var u Unreleased
+	revs := rev
+	if latest != nil {
+		u.Latest = latest.String()
+		tag := "refs/tags/" + s.Prefix + "/" + u.Latest
+		if _, err := o.Repo.Output("rev-parse", "--quiet", "--verify", tag+"^{commit}"); err != nil {
+			return u, nil //nolint:nilerr // no such tag is what Counted reports
+		}
+		revs = tag + ".." + rev
+	}
+	out, err := o.Repo.Output("rev-list", "--count", revs, "--", s.Prefix)
+	if err != nil {
+		return u, err
+	}
+	if u.Commits, err = strconv.Atoi(out); err != nil {
+		return u, err
+	}
+	u.Counted = true
+	return u, nil
+}
+
 // releases returns the versions s has been released as.
 func (o *Orchard) releases(s config.Subtree, remote string) ([]semver.Version, error) {
 	local, err := o.Repo.Output("tag", "--list", s.Prefix+"/v*")

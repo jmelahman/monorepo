@@ -185,84 +185,17 @@ func watchRelease(o *orchard.Orchard, s config.Subtree, version, tag string, opt
 	ctx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	defer cancel()
 
-	err := watchRuns(ctx, o, s, version, tag, opts)
+	err := o.WatchRelease(ctx, s, version, tag, orchard.WatchOptions{
+		Remote:   opts.Remote,
+		Upstream: opts.Upstream,
+		List:     ghrun.GH,
+		Output:   os.Stderr,
+	})
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
 		return fmt.Errorf("stopped watching after %s; %s may still be publishing", opts.Timeout, tag)
 	case errors.Is(err, context.Canceled):
 		return fmt.Errorf("stopped watching; %s carries on publishing", tag)
-	}
-	return err
-}
-
-func watchRuns(ctx context.Context, o *orchard.Orchard, s config.Subtree, version, tag string, opts *ReleaseOptions) error {
-	var watch ghrun.WatchOptions
-	watch.Interval = 5 * time.Second
-	watch.Grace = time.Minute
-
-	// With --upstream, the tag is already upstream, so the mirror has
-	// nothing left to publish.
-	if opts.Remote != "" && !opts.Upstream {
-		commit, err := o.Repo.Output("rev-parse", "--verify", "refs/tags/"+tag+"^{commit}")
-		if err != nil {
-			return err
-		}
-		if owner, name, ok := ghrun.ParseGitHubRepo(o.RemoteURL(opts.Remote)); ok {
-			if err := watchRepo(ctx, owner+"/"+name, tag, commit, watch); err != nil {
-				return fmt.Errorf("mirroring %s failed: %w", tag, err)
-			}
-		} else {
-			fmt.Fprintf(os.Stderr, "%s isn't on GitHub; not watching the mirror.\n", opts.Remote)
-		}
-	}
-
-	// The mirror's runs finishing doesn't guarantee the tag is upstream, e.g.
-	// where none ran, so wait for it.
-	deadline := time.Now().Add(watch.Grace)
-	var commit string
-	for {
-		var err error
-		if commit, err = o.UpstreamTag(s, version); err != nil {
-			return err
-		}
-		if commit != "" {
-			break
-		}
-		if time.Now().After(deadline) {
-			return fmt.Errorf("%s's upstream has no tag %s; is the mirror action publishing tags?", s.Prefix, version)
-		}
-		if err := ghrun.Sleep(ctx, watch.Interval); err != nil {
-			return err
-		}
-	}
-
-	owner, name, ok := ghrun.ParseGitHubRepo(s.Remote)
-	if !ok {
-		fmt.Fprintf(os.Stderr, "%s's upstream isn't on GitHub; not watching it.\n", s.Prefix)
-		return nil
-	}
-	if err := watchRepo(ctx, owner+"/"+name, version, commit, watch); err != nil {
-		return fmt.Errorf("releasing %s failed: %w", version, err)
-	}
-	fmt.Fprintf(os.Stderr, "Published %s.\n", tag)
-	return nil
-}
-
-// watchRepo follows the runs the push of tag at commit started in repo,
-// reporting each as its state changes.
-func watchRepo(ctx context.Context, repo, tag, commit string, opts ghrun.WatchOptions) error {
-	fmt.Fprintf(os.Stderr, "Watching %s's runs for %s...\n", repo, tag)
-	seen := map[int64]bool{}
-	runs, err := ghrun.Watch(ctx, ghrun.GH, repo, tag, commit, opts, func(r ghrun.Run) {
-		if !seen[r.ID] {
-			seen[r.ID] = true
-			fmt.Fprintf(os.Stderr, "  %s: %s (%s)\n", r.Workflow, r.State(), r.URL)
-			return
-		}
-		fmt.Fprintf(os.Stderr, "  %s: %s\n", r.Workflow, r.State())
-	})
-	if err == nil && len(runs) == 0 {
-		fmt.Fprintf(os.Stderr, "  No runs started for %s.\n", tag)
 	}
 	return err
 }

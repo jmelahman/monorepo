@@ -6,19 +6,34 @@ package git
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
+// waitDelay is how long a cancelled git gets to exit before its output pipes
+// are closed, since a child such as ssh can outlive it and hold them open.
+const waitDelay = 5 * time.Second
+
 // Repo is a git working tree.
 type Repo struct {
 	Dir string
+	// Env is added to git's environment, e.g. GIT_CONFIG_* to supply
+	// credentials without writing them to disk.
+	Env []string
+	// Log is where Run sends git's output; it defaults to os.Stderr.
+	Log io.Writer
+	// Ctx bounds every git invocation; it defaults to no bound. A value in a
+	// struct, unusually, since an embedder sets it once per operation and
+	// nearly every method of Orchard runs git.
+	Ctx context.Context
 }
 
 // Open returns the repository containing dir.
@@ -32,8 +47,16 @@ func Open(dir string) (Repo, error) {
 
 func (r Repo) command(args ...string) *exec.Cmd {
 	log.Debugf("git %s", strings.Join(args, " "))
-	cmd := exec.Command("git", args...)
+	ctx := r.Ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = r.Dir
+	cmd.WaitDelay = waitDelay
+	if r.Env != nil {
+		cmd.Env = append(os.Environ(), r.Env...)
+	}
 	return cmd
 }
 
@@ -49,7 +72,10 @@ func (r Repo) OutputEnv(env []string, args ...string) (string, error) {
 	var stderr bytes.Buffer
 	cmd := r.command(args...)
 	if env != nil {
-		cmd.Env = append(os.Environ(), env...)
+		if cmd.Env == nil {
+			cmd.Env = os.Environ()
+		}
+		cmd.Env = append(cmd.Env, env...)
 	}
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
@@ -59,9 +85,12 @@ func (r Repo) OutputEnv(env []string, args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// Run runs git with its output going to stderr, for commands whose progress
-// the user should see.
+// Run runs git with its output going to r.Log, or else stderr, for commands
+// whose progress the user should see.
 func (r Repo) Run(args ...string) error {
+	if r.Log != nil {
+		return r.RunTo(r.Log, args...)
+	}
 	return r.RunTo(os.Stderr, args...)
 }
 

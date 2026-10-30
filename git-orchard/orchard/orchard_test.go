@@ -775,3 +775,46 @@ func TestMoveRefusesExistingPrefix(t *testing.T) {
 		t.Fatal("Move onto an existing directory = nil error, want one")
 	}
 }
+
+func TestUnreleased(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+
+	u, err := f.orchard.Unreleased(s, "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Latest != "" || !u.Counted || u.Commits == 0 {
+		t.Errorf("before any release: got %+v", u)
+	}
+
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	if _, err := f.orchard.Release(s, "v1.0.0", ReleaseOptions{Rev: "HEAD", Upstream: true}); err != nil {
+		t.Fatal(err)
+	}
+	f.commit(f.mono, "tools/foo/a.go", "package main\n", "Add a")
+	f.commit(f.mono, "elsewhere", "x\n", "Change something else")
+	f.commit(f.mono, "tools/foo/b.go", "package main\n", "Add b")
+
+	u, err = f.orchard.Unreleased(s, "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (Unreleased{Latest: "v1.0.0", Commits: 2, Counted: true}); u != want {
+		t.Errorf("got %+v, want %+v", u, want)
+	}
+}
+
+func TestUnreleasedUpstreamOnly(t *testing.T) {
+	f := newFixture(t)
+	f.git(f.upstream, "tag", "v0.5.0")
+	f.git(f.upstream, "push", "--quiet", "origin", "v0.5.0")
+
+	u, err := f.orchard.Unreleased(f.subtree(), "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (Unreleased{Latest: "v0.5.0"}); u != want {
+		t.Errorf("got %+v, want %+v", u, want)
+	}
+}
