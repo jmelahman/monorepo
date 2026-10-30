@@ -54,6 +54,16 @@ class GoBinaryBuildHook(BuildHookInterface):
 
         build_data["shared_scripts"] = {binary_name: binary_name}
 
+        # Generate on the build host: GOOS/GOARCH name the wheel's target, and
+        # `go run` can't execute a cross-compiled binary.
+        print("Generating man pages...")
+        host_env = {k: v for k, v in os.environ.items() if k not in ("GOOS", "GOARCH")}
+        subprocess.check_call(
+            ["go", "run", ".", "man", "-o", "man/man1"],
+            env=host_env,
+        )
+        build_data["shared_data"] = {"man/man1": "share/man/man1"}
+
 
 def _resolve_version() -> str:
     """Pick a single human-readable version string for the Go ldflag.
