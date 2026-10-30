@@ -382,6 +382,34 @@ Archives every ticket in the column. Find column IDs with `kanban board state`.
 
 These take a session ID, except `ensure`, which takes a ticket ID.
 
+## `release`
+
+Keep notes on what to release next, and release [git-orchard](/guide/releases) subtrees. These commands work on the git repo containing the current directory unless you pass `--repo`.
+
+With no subcommand in a terminal, `kanban release` opens a view of your open reminders with the log of each one's latest run. Press `r` to release the selected subtree, `d` to dismiss its reminder, and `q` to close. Both ask you to confirm first.
+
+### `release remind <prefix> [note...]`
+
+Notes that you mean to release a subtree. `--patch` (the default), `--minor` and `--major` set the intended bump, and `--suffix` sets a pre-release suffix such as `rc`. A subtree has one open reminder. Nothing fires by itself.
+
+### `release list`
+
+Prints open reminders, each subtree's state and recent runs, across every repo unless you pass `--repo`. `--json` prints the full API response.
+
+### `release run <prefix>`
+
+Shows the version and commit it would release, asks you to confirm, then follows the log and exits non-zero if the release fails. It uses the bump and suffix from the subtree's open reminder unless you pass `--patch`, `--minor`, `--major` or `--suffix`, and closes that reminder when it succeeds. `--yes` skips the confirmation, and without a terminal it's required.
+
+The release runs on the server, so it keeps going if you interrupt this command. Use `release log` to pick it up again.
+
+### `release log <run>`
+
+Follows a run's log from the start until the run finishes.
+
+### `release dismiss <prefix>`
+
+Dismisses the subtree's open reminder.
+
 ## `config`
 
 Reads and changes [configuration](/guide/configuration), like `git config`. Keys use dots, such as `sync.allow_rebase`.

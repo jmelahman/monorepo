@@ -506,7 +506,12 @@ func (c *Client) StopTaskRun(ctx context.Context, id int64) error {
 // output. It returns nil once the run's output ends, or ctx's error if ctx
 // is cancelled first.
 func (c *Client) StreamTaskRunOutput(ctx context.Context, id int64, onLine func(string)) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/task-runs/"+strconv.FormatInt(id, 10)+"/output", nil)
+	return c.streamOutput(ctx, "/api/task-runs/"+strconv.FormatInt(id, 10)+"/output", onLine)
+}
+
+// streamOutput follows a run's SSE output until its "end" event.
+func (c *Client) streamOutput(ctx context.Context, path string, onLine func(string)) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return err
 	}
@@ -543,7 +548,7 @@ func (c *Client) StreamTaskRunOutput(ctx context.Context, id int64, onLine func(
 	if err := sc.Err(); err != nil {
 		return err
 	}
-	return errors.New("task output stream closed before the run ended")
+	return errors.New("output stream closed before the run ended")
 }
 
 // ListHarnesses calls GET /api/harnesses. A non-zero boardID flags the
