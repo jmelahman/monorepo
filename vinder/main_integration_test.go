@@ -10,6 +10,37 @@ import (
 	"github.com/jmelahman/vinder/internal/registry/registrytest"
 )
 
+// TestAdd runs the add command in an empty directory and checks what it
+// prints. Yarn 2+ reads its registry from .yarnrc.yml, which Yarn 1 ignores.
+func TestAdd(t *testing.T) {
+	t.Parallel()
+
+	found := false
+	for _, name := range []string{"bun", "npm", "nub", "pnpm", "yarn"} {
+		_, err := exec.LookPath(name)
+		found = found || err == nil
+	}
+	if !found {
+		t.Skip("no package manager on PATH")
+	}
+	srv := registrytest.New(t, registrytest.Package{Name: "added-lib", Version: "1.0.0", Files: map[string]string{"index.js": "export const l = 1;\n"}})
+	app := t.TempDir()
+	writeFile(t, filepath.Join(app, ".npmrc"), "registry="+srv.URL+"/\n")
+	writeFile(t, filepath.Join(app, ".yarnrc.yml"), "npmRegistryServer: \""+srv.URL+"\"\nunsafeHttpWhitelist: [\"127.0.0.1\"]\n")
+
+	var stdout, stderr bytes.Buffer
+	if err := run([]string{"add", "--dir", app, "--registry", srv.URL, "added-lib"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if want := "added added-lib 1.0.0\n  vendor/added-lib/added-lib.mjs\n"; !strings.HasPrefix(stdout.String(), want) {
+		t.Errorf("add printed:\n%s\nwant it to start with:\n%s", stdout.String(), want)
+	}
+	stdout.Reset()
+	if err := run([]string{"check", app}, &stdout, &stderr); err != nil {
+		t.Errorf("check after add: %v\n%s", err, stdout.String())
+	}
+}
+
 // TestUpgrade runs the upgrade command against a local registry with the
 // first package manager on PATH and checks the report it prints.
 func TestUpgrade(t *testing.T) {

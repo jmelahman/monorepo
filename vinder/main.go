@@ -72,8 +72,40 @@ func newRootCmd() *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
-	root.AddCommand(newSyncCmd(), newCheckCmd(), newAuditCmd(), newUpgradeCmd(), newGitHubAppCmd())
+	root.AddCommand(newAddCmd(), newSyncCmd(), newCheckCmd(), newAuditCmd(), newUpgradeCmd(), newGitHubAppCmd())
 	return root
+}
+
+func newAddCmd() *cobra.Command {
+	var dir, registryURL string
+	cmd := &cobra.Command{
+		Use:   "add <package[@version]>...",
+		Short: "Add packages to package.json and vinder.toml, creating them if needed, and vendor them",
+		Long: `Add depends on each package, gives it a vinder.toml entry that bundles it as
+an ES module, and syncs. A project with neither package.json nor vinder.toml
+gets both, on the first package manager on PATH. To vendor anything other
+than the package's main entry, edit its entry in vinder.toml and run sync.`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			reg := &registry.Client{URL: registryURL}
+			_, additions, err := project.Add(cmd.Context(), dir, args, reg.Resolve)
+			if err != nil {
+				return fmt.Errorf("%s: %w", display(dir), err)
+			}
+			w := cmd.OutOrStdout()
+			for _, a := range additions {
+				fmt.Fprintf(w, "added %s %s\n", a.Name, a.Version)
+				for _, f := range a.Files {
+					fmt.Fprintf(w, "  %s\n", f)
+				}
+			}
+			fmt.Fprintf(w, "\nImport from those files in a <script type=\"module\">, and commit them with\npackage.json, the lockfile and %s.\n", project.ConfigFile)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&dir, "dir", ".", "the project's directory")
+	cmd.Flags().StringVar(&registryURL, "registry", registry.DefaultURL, "npm registry to look up versions in")
+	return cmd
 }
 
 func newSyncCmd() *cobra.Command {

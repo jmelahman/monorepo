@@ -109,7 +109,7 @@ func (p *Project) Generate(ctx context.Context, dest string, frozen bool) (*Mani
 		var files []string
 
 		for _, out := range sortedKeys(dep.Bundle) {
-			outputs, inputs, err := p.bundle(p.sourcePath(dep.Bundle[out]), filepath.Join(depDir, filepath.FromSlash(out)))
+			outputs, inputs, err := p.bundle(p.bundleEntry(dep.Bundle[out]), filepath.Join(depDir, filepath.FromSlash(out)))
 			if err != nil {
 				return nil, fmt.Errorf("deps.%s.bundle %s: %w", key, out, err)
 			}
@@ -217,7 +217,9 @@ func (p *Project) bundle(entry, outFile string) (outputs, inputs []string, err e
 
 	var meta struct {
 		Inputs  map[string]json.RawMessage `json:"inputs"`
-		Outputs map[string]json.RawMessage `json:"outputs"`
+		Outputs map[string]struct {
+			EntryPoint string `json:"entryPoint"`
+		} `json:"outputs"`
 	}
 	if err := json.Unmarshal([]byte(result.Metafile), &meta); err != nil {
 		return nil, nil, fmt.Errorf("esbuild metafile: %w", err)
@@ -231,6 +233,11 @@ func (p *Project) bundle(entry, outFile string) (outputs, inputs []string, err e
 		inputs = append(inputs, filepath.Join(p.Dir, filepath.FromSlash(in)))
 	}
 	for _, o := range sortedKeys(meta.Outputs) {
+		// esbuild writes a stylesheet to whatever name it is given, so a
+		// package whose entry turns out to be one would land in a .mjs.
+		if entry := meta.Outputs[o].EntryPoint; entry != "" && (path.Ext(entry) == ".css") != (path.Ext(outFile) == ".css") {
+			return nil, nil, fmt.Errorf("%s: a stylesheet's output must end in .css, and only a stylesheet's", entry)
+		}
 		outputs = append(outputs, filepath.Join(p.Dir, filepath.FromSlash(o)))
 	}
 	return outputs, inputs, nil

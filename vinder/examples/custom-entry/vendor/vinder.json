@@ -1,0 +1,32 @@
+{
+  "deps": {
+    "marked": {
+      "package": "marked",
+      "version": "18.1.2",
+      "files": [
+        "LICENSE",
+        "marked.js"
+      ],
+      "includes": [
+        {
+          "name": "marked",
+          "version": "18.1.2"
+        }
+      ]
+    },
+    "pico": {
+      "package": "@picocss/pico",
+      "version": "2.1.1",
+      "files": [
+        "LICENSE",
+        "pico.css"
+      ],
+      "includes": [
+        {
+          "name": "@picocss/pico",
+          "version": "2.1.1"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "deps": {
+    "canvas-confetti": {
+      "package": "canvas-confetti",
+      "version": "1.9.4",
+      "files": [
+        "canvas-confetti.mjs"
+      ],
+      "includes": [
+        {
+          "name": "canvas-confetti",
+          "version": "1.9.4"
+        }
+      ]
+    }
+  }
+}

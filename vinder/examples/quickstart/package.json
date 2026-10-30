@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "packageManager": "bun@1.4.3",
+  "dependencies": {
+    "canvas-confetti": "^1.9.4"
+  }
+}

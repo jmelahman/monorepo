@@ -1,0 +1,20 @@
+# What `vinder add` can't work out for itself: a global from an entry of the
+# project's own, a stylesheet from a path inside a package, and licenses.
+
+[deps.marked]
+package = "marked"
+
+[deps.marked.bundle]
+"marked.js" = "./vendor.src/markdown.js"
+
+[deps.marked.copy]
+LICENSE = "marked/LICENSE"
+
+[deps.pico]
+package = "@picocss/pico"
+
+[deps.pico.bundle]
+"pico.css" = "@picocss/pico/css/pico.css"
+
+[deps.pico.copy]
+LICENSE = "@picocss/pico/LICENSE.md"

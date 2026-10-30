@@ -1,0 +1,9 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>vinder quickstart</title>
+<button id="go">Celebrate</button>
+<script type="module">
+  import confetti from "./vendor/canvas-confetti/canvas-confetti.mjs";
+
+  document.getElementById("go").addEventListener("click", () => confetti());
+</script>

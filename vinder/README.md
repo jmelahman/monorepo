@@ -21,6 +21,28 @@ vinder installs with the project's own package manager (bun, npm,
 [Nub](https://nubjs.com), pnpm or Yarn), which has to be on `PATH`. It picks
 one from package.json's `packageManager` field, or else from the lockfile.
 
+## Quick start
+
+```sh
+vinder add canvas-confetti
+```
+
+In a project with neither file, that creates package.json, on the first
+package manager on `PATH`, and `vinder.toml`, then writes the bundle:
+
+```html
+<script type="module">
+  import confetti from "./vendor/canvas-confetti/canvas-confetti.mjs";
+  confetti();
+</script>
+```
+
+Commit package.json, the lockfile, `vinder.toml` and `vendor/`. `add` vendors
+a package's main entry as one ES module. For anything else, such as a global,
+a stylesheet or a license, edit its entry in `vinder.toml` and run `vinder
+sync`. A CommonJS package bundled this way has only a default export. See
+[examples/](examples) for both kinds of project.
+
 ## Configuration
 
 `vinder.toml` sits next to package.json:
@@ -44,7 +66,8 @@ LICENSE = "./vendor.src/toastui-editor.LICENSE"
 ```
 
 - A path starting with `./` is in the project; anything else is in
-  `node_modules`.
+  `node_modules`. A `bundle` entry that is only a package name resolves as an
+  import of it would, through the package's `exports`.
 - `bundle` outputs are minified for the browser: `.js` as an IIFE, `.mjs` as
   an ES module, `.css` with its imports inlined and its images and fonts copied beside it. An entry that
   imports only what the project uses lets esbuild tree-shake the rest; one
@@ -55,6 +78,7 @@ LICENSE = "./vendor.src/toastui-editor.LICENSE"
 ## Usage
 
 ```sh
+vinder add <package>       # depend on a package and vendor it
 vinder sync                # install, regenerate vendor/, update the lockfile
 vinder check               # fail if vendor/ differs from what the lockfile makes
 vinder audit               # fail on OSV advisories for anything vendored
@@ -62,9 +86,16 @@ vinder sync --align --all  # move projects onto one version of each shared packa
 vinder upgrade --all       # bump to latest, re-resolve, align; prints a PR body
 ```
 
-Each command takes project directories (the current one by default) or
-`--all`, every `vinder.toml` in the git repository.
+Each command but `add` takes project directories (the current one by default)
+or `--all`, every `vinder.toml` in the git repository; `add` takes `--dir`.
 
+- **add** takes `name` or `name@version`, with any version npm would take.
+  Without one it keeps a dependency package.json already has, and otherwise
+  asks for `^` the latest release. A tag or a partial version (`@next`, `@1`)
+  goes in as `^` the version it means, so `upgrade` can move it; anything else
+  (`@1.2.3`, `@^1.2.0`, `@npm:other@1`) goes in as written. It refuses to
+  replace a `vendor/<key>` that vinder did not write. If anything fails, package.json, the lockfile and
+  `vinder.toml` are put back.
 - **sync** never runs lifecycle scripts, and replaces only the
   `vendor/<key>/` directories it owns and `vendor/vinder.json`.
 - **check** rebuilds from the lockfile into a temporary directory and lists

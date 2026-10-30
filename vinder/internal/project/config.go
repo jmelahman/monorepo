@@ -21,6 +21,9 @@ const ConfigFile = "vinder.toml"
 // output directory.
 const ManifestFile = "vinder.json"
 
+// defaultOut is the output directory when a vinder.toml sets none.
+const defaultOut = "vendor"
+
 var (
 	// ErrNoConfig is returned by Load for a directory without a vinder.toml.
 	ErrNoConfig = errors.New("no " + ConfigFile)
@@ -92,7 +95,7 @@ func Load(dir string) (*Project, error) {
 		return nil, fmt.Errorf("%s: %w: unknown key %q", filepath.Join(dir, ConfigFile), ErrBadConfig, undecoded[0].String())
 	}
 	if cfg.Out == "" {
-		cfg.Out = "vendor"
+		cfg.Out = defaultOut
 	}
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("%s: %w: %w", filepath.Join(dir, ConfigFile), ErrBadConfig, err)
@@ -202,6 +205,17 @@ func (p *Project) sourcePath(src string) string {
 		return filepath.Join(p.Dir, filepath.FromSlash(rest))
 	}
 	return filepath.Join(p.Dir, "node_modules", filepath.FromSlash(src))
+}
+
+// bundleEntry is the entry point esbuild gets for a bundle source. A bare
+// package name stays one, so that esbuild resolves it as an import would,
+// through the package's exports; as a path, it would read only main and
+// module, and a package with just exports would not resolve.
+func (p *Project) bundleEntry(src string) string {
+	if packageName.MatchString(src) {
+		return src
+	}
+	return p.sourcePath(src)
 }
 
 // Ignored reports whether the audit should leave out advisory id for pkg,

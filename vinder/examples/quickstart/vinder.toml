@@ -1,0 +1,5 @@
+[deps.canvas-confetti]
+package = "canvas-confetti"
+
+[deps.canvas-confetti.bundle]
+"canvas-confetti.mjs" = "canvas-confetti"

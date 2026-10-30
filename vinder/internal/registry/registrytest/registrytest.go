@@ -30,7 +30,10 @@ type Package struct {
 	Dependencies map[string]string
 	// Files are the package's files by path. Unless it has its own, a
 	// package.json naming index.js as main is generated.
-	Files   map[string]string
+	Files map[string]string
+	// Tags are the dist-tags that point at this version. A version with any
+	// is left out when working out latest, unless latest is one of them.
+	Tags    []string
 	Name    string
 	Version string
 }
@@ -144,11 +147,13 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(s.packument(name))
 }
 
-// packument is the registry's document for name: every version, and latest.
+// packument is the registry's document for name: every version, and its
+// dist-tags.
 func (s *Server) packument(name string) map[string]any {
 	versions := map[string]any{}
 	times := map[string]string{"created": "2020-01-01T00:00:00.000Z", "modified": "2020-01-01T00:00:00.000Z"}
 	var latest *semver.Version
+	tags := map[string]string{}
 	for _, p := range s.packages[name] {
 		tgz := s.tarballs[tarballPath(p.Name, p.Version)]
 		sha1sum := sha1.Sum(tgz) //nolint:gosec // npm's shasum field is SHA-1.
@@ -164,13 +169,15 @@ func (s *Server) packument(name string) map[string]any {
 			},
 		}
 		times[p.Version] = "2020-01-01T00:00:00.000Z"
-		if v, err := semver.NewVersion(p.Version); err == nil && (latest == nil || v.GreaterThan(latest)) {
+		for _, tag := range p.Tags {
+			tags[tag] = p.Version
+		}
+		if v, err := semver.NewVersion(p.Version); err == nil && len(p.Tags) == 0 && (latest == nil || v.GreaterThan(latest)) {
 			latest = v
 		}
 	}
-	doc := map[string]any{"name": name, "versions": versions, "time": times, "modified": times["modified"]}
-	if latest != nil {
-		doc["dist-tags"] = map[string]string{"latest": latest.Original()}
+	if _, tagged := tags["latest"]; !tagged && latest != nil {
+		tags["latest"] = latest.Original()
 	}
-	return doc
+	return map[string]any{"name": name, "versions": versions, "dist-tags": tags, "time": times, "modified": times["modified"]}
 }

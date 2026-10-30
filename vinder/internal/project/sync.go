@@ -16,6 +16,10 @@ import (
 // is what pins the versions a check regenerates from.
 var ErrNoLock = errors.New("no lockfile; run vinder sync")
 
+// errSwap marks a Sync that failed after it began changing the output
+// directory, rather than before.
+var errSwap = errors.New("replacing the vendor directory")
+
 // Sync regenerates the project's vendor tree in place, updating the lockfile
 // to match package.json. It replaces each configured <out>/<key>/
 // directory and the manifest, removes the directories of keys the previous
@@ -33,6 +37,15 @@ func (p *Project) Sync(ctx context.Context) error {
 		return err
 	}
 
+	if err := p.swap(gen); err != nil {
+		return fmt.Errorf("%w: %w", errSwap, err)
+	}
+	p.synced = true
+	return nil
+}
+
+// swap moves the tree generated in gen into the output directory.
+func (p *Project) swap(gen string) error {
 	out := p.OutDir()
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
@@ -50,11 +63,7 @@ func (p *Project) Sync(ctx context.Context) error {
 			return err
 		}
 	}
-	if err := os.Rename(filepath.Join(gen, ManifestFile), filepath.Join(out, ManifestFile)); err != nil {
-		return err
-	}
-	p.synced = true
-	return nil
+	return os.Rename(filepath.Join(gen, ManifestFile), filepath.Join(out, ManifestFile))
 }
 
 // Check regenerates the vendor tree from the locked versions and compares it

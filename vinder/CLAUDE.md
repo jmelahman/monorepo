@@ -11,7 +11,8 @@ against OSV. README.md documents the config and commands.
   run real package managers against tarballs they pack themselves, so they
   need no network. `TestSync` runs under every one on PATH (bun, npm, nub,
   pnpm, yarn) and the rest under the first; with none they skip.
-- Run the CLI: `go run . sync|check|audit|upgrade [--all] [dir...]`, `go run . github-app`.
+- Run the CLI: `go run . sync|check|audit|upgrade [--all] [dir...]`,
+  `go run . add <package>...`, `go run . github-app`.
 - Lint: `prek run --all-files`. It is the same set CI runs; prefer it over
   invoking golangci-lint, aligo or zizmor directly, since the hooks pin
   versions and provision the tools.
@@ -26,16 +27,21 @@ against OSV. README.md documents the config and commands.
   package-manager detection and install (`pm.go`), esbuild bundling +
   manifest (`generate.go`), sync, check and discovery
   (`sync.go`), cross-project version skew (`skew.go`), `sync --align`
-  (`align.go`) and `upgrade` (`upgrade.go`). The align/upgrade integration
-  test runs every package manager against a local registry.
+  (`align.go`), `upgrade` (`upgrade.go`) and `add` (`add.go`). The
+  align/upgrade integration test runs every package manager against a local
+  registry.
 - `internal/pkgjson/` — order- and indent-preserving package.json edits.
-- `internal/registry/` — the npm registry's latest dist-tag;
+- `internal/registry/` — the version a dist-tag or range means on the npm
+  registry;
   `registrytest/` serves packages over the registry protocol for tests.
 - `internal/osv/` — the OSV batch query client.
 - `githubapp.go`, `internal/githubapp/` — `vinder github-app`: creates the
   GitHub App the scheduled upgrade workflow opens PRs as, from a manifest.
 - `action.yml` — the GitHub Action for scheduled upgrades: builds vinder
   from the action's source, runs upgrade and audit, opens the PR.
+- `examples/` — real projects with committed `vendor/` trees. The monorepo's
+  `vinder check --all` and upgrade workflow cover them, so they use bun and
+  must not share a package with its other projects, or skew fails the check.
 - `.github/npm/package.json` — fields for the npm package. The packing
   script beside it and the release jobs are git-orchard's shared `npm`
   profile; edit those in the monorepo.

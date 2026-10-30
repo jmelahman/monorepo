@@ -1,0 +1,9 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>vinder custom entry</title>
+<link rel="stylesheet" href="./vendor/pico/pico.css" />
+<script src="./vendor/marked/marked.js"></script>
+<main class="container" id="out"></main>
+<script>
+  document.getElementById("out").innerHTML = renderMarkdown("# Vendored\n\nNo build step, and **no CDN**.");
+</script>
