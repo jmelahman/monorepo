@@ -227,6 +227,76 @@ export type DashboardPreviewPage = {
 };
 
 /** One board's share of the preview orchestrator's disk usage. */
+export type ReleaseBump = "patch" | "minor" | "major";
+
+export type ReleaseSubtree = {
+  prefix: string;
+  remote: string;
+  ahead: number;
+  behind: number;
+  latest: string;
+  unreleased: number;
+  // False when the latest release has no tag here to count unreleased from.
+  counted: boolean;
+  error?: string;
+};
+
+export type ReleaseProject = {
+  repo_path: string;
+  base: string;
+  rev: string;
+  subtrees: ReleaseSubtree[];
+  refreshed_at: number;
+  refreshing: boolean;
+  error?: string;
+};
+
+export type ReleaseReminder = {
+  id: number;
+  repo_path: string;
+  prefix: string;
+  bump: ReleaseBump;
+  suffix: string;
+  note: string;
+  status: "open" | "released" | "dismissed";
+  created_at: number;
+  updated_at: number;
+};
+
+export type ReleaseRun = {
+  id: number;
+  reminder_id?: number;
+  repo_path: string;
+  prefix: string;
+  rev: string;
+  version: string;
+  bump: ReleaseBump;
+  suffix: string;
+  status: "running" | "released" | "failed" | "interrupted";
+  error?: string;
+  started_at: number;
+  finished_at?: number;
+};
+
+export type ReleaseSummary = {
+  unavailable?: string;
+  projects: ReleaseProject[];
+  reminders: ReleaseReminder[];
+  runs: ReleaseRun[];
+};
+
+export type ReleasePreview = {
+  repo_path: string;
+  prefix: string;
+  version: string;
+  rev: string;
+  // The rev already has this version, so releasing finishes publishing it.
+  released: boolean;
+  ahead: number;
+  behind: number;
+  blocked?: string;
+};
+
 export type PreviewStorageRepo = {
   repo: string;
   artifacts_bytes: number;
@@ -467,6 +537,46 @@ export const api = {
   deletePreview: (previewId: number) =>
     request<void>(`/api/previews/${previewId}`, { method: "DELETE" }),
   previewStorage: () => request<PreviewStorage>("/api/previews/storage"),
+  releases: () => request<ReleaseSummary>("/api/releases"),
+  refreshReleases: () => request<void>("/api/releases/refresh", { method: "POST" }),
+  createReleaseReminder: (input: {
+    repo_path: string;
+    prefix: string;
+    bump: ReleaseBump;
+    suffix?: string;
+    note: string;
+  }) =>
+    request<ReleaseReminder>("/api/release-reminders", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateReleaseReminder: (
+    id: number,
+    input: { bump?: ReleaseBump; suffix?: string; note?: string },
+  ) =>
+    request<ReleaseReminder>(`/api/release-reminders/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  dismissReleaseReminder: (id: number) =>
+    request<void>(`/api/release-reminders/${id}`, { method: "DELETE" }),
+  previewRelease: (repo: string, prefix: string, bump: ReleaseBump, suffix: string) => {
+    const params = new URLSearchParams({ repo, prefix, bump, suffix });
+    return request<ReleasePreview>(`/api/releases/preview?${params}`);
+  },
+  runRelease: (input: {
+    repo: string;
+    prefix: string;
+    bump: ReleaseBump;
+    suffix: string;
+    version: string;
+    rev: string;
+    reminder_id?: number;
+  }) =>
+    request<ReleaseRun>("/api/releases/run", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   previewRetention: () => request<RetentionPolicy>("/api/previews/retention"),
   setPreviewRetention: (policy: RetentionPolicy) =>
     request<RetentionPolicy>("/api/previews/retention", {

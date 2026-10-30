@@ -14,6 +14,7 @@ import { useDevToolbarPrefs } from "@/components/devToolbar/preferences";
 import { HeaderMobileMenu } from "@/components/HeaderMobileMenu";
 import { Overview } from "@/components/Overview/Overview";
 import { PreviewsDashboard } from "@/components/PreviewsDashboard";
+import { ReleasesDashboard } from "@/components/ReleasesDashboard";
 import { SessionCounter } from "@/components/SessionCounter";
 import { Tab } from "@/components/Tab";
 import { TerminalsRoot } from "@/components/TerminalsRoot";
@@ -29,7 +30,7 @@ import { useShortcut } from "@/keys/useShortcut";
 import { readActiveBoardId, writeActiveBoardId } from "@/storage";
 
 const VIEW_KEY = "app.view";
-const VIEWS = ["board", "overview", "previews"] as const;
+const VIEWS = ["board", "overview", "previews", "releases"] as const;
 type AppView = (typeof VIEWS)[number];
 
 function loadInitialView(): AppView {
@@ -171,6 +172,7 @@ export default function App() {
           <Tab active={view === "overview"} onClick={() => setView("overview")} label="overview" />
           <Tab active={view === "board"} onClick={() => setView("board")} label="board" />
           <Tab active={view === "previews"} onClick={() => setView("previews")} label="preview" />
+          <Tab active={view === "releases"} onClick={() => setView("releases")} label="release" />
         </nav>
         {view === "board" && (
           <select
@@ -283,6 +285,8 @@ export default function App() {
           <Overview />
         ) : view === "previews" ? (
           <PreviewsDashboard />
+        ) : view === "releases" ? (
+          <ReleasesDashboard />
         ) : activeId != null ? (
           <Board boardId={activeId} />
         ) : noBoards ? (
