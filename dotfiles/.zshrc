@@ -1,8 +1,7 @@
 # Enable completion
 fpath=(~/.zsh/completions $fpath)
-autoload -Uz compinit add-zsh-hook
+autoload -Uz compinit
 compinit
-# add-zsh-hook chpwd auto_activate_venv
 
 # History
 HISTFILE=~/.zsh_history
@@ -212,24 +211,6 @@ activate_default_venv() {
 	[[ -f ~/code/onyx/.venv/bin/activate ]] && source ~/code/onyx/.venv/bin/activate
 }
 
-# Automatically activate a Python virtual environment if one exists
-auto_activate_venv() {
-	# Look for a virtual environment folder in the current directory
-	if [[ -f ".venv/bin/activate" ]]; then
-		# Only activate if not already active
-		if [[ -z $VIRTUAL_ENV || $VIRTUAL_ENV != "$PWD/.venv" ]]; then
-			source .venv/bin/activate
-			# Refresh autocomplete to pick up any new binaries.
-			compinit
-		fi
-	else
-		# Deactivate if leaving a directory with a venv
-		if [[ -n $VIRTUAL_ENV && $VIRTUAL_ENV == "$OLDPWD/.venv" ]]; then
-			deactivate
-			activate_default_venv
-		fi
-	fi
-}
 activate_default_venv
 
 kube_context_info() {
