@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="458" viewBox="0 0 960 458" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
 <title id="title">The monorepo skyline</title>
-<desc id="desc">35 projects, 268,302 lines of code. 5-wild: 55,544; agentic-kanban: 54,600; agilecbt: 17,534; ai-detection: 1,146; check-symlinks: 1,601; connections: 1,054; cycle-cli: 1,176; cycle-lights: 469; docker-status: 166; dotfiles: 755; extensions: 970; git-orchard: 7,205; github-actions: 222; homelab: 595; image-editor: 1,839; jmelahman.github.io: 1,232; local-preview: 40,321; manygo: 109; nature-sounds: 1,148; notebook: 4,265; pinsync: 1,185; pkglint: 52,770; pre-commit-hooks: 221; skills: 695; smart-lights: 442; solutions: 1,278; tag: 1,597; templates: 3,637; terraform: 447; text-editor: 2,580; tools: 334; typesafe-sdk-go: 3,733; undot: 2,197; vinder: 4,392; work: 843</desc>
+<desc id="desc">35 projects, 268,299 lines of code. 5-wild: 55,544; agentic-kanban: 54,600; agilecbt: 17,534; ai-detection: 1,146; check-symlinks: 1,601; connections: 1,054; cycle-cli: 1,176; cycle-lights: 469; docker-status: 166; dotfiles: 755; extensions: 970; git-orchard: 7,205; github-actions: 222; homelab: 595; image-editor: 1,839; jmelahman.github.io: 1,232; local-preview: 40,321; manygo: 109; nature-sounds: 1,148; notebook: 4,265; pinsync: 1,185; pkglint: 52,770; pre-commit-hooks: 221; skills: 695; smart-lights: 442; solutions: 1,278; tag: 1,597; templates: 3,637; terraform: 447; text-editor: 2,580; tools: 331; typesafe-sdk-go: 3,733; undot: 2,197; vinder: 4,392; work: 843</desc>
 <circle cx="249.4" cy="107.8" r="1.07" fill="#f0efec" opacity="0.5"/>
 <circle cx="87.5" cy="121.9" r="1.13" fill="#f0efec" opacity="0.5"/>
 <circle cx="691.1" cy="71.4" r="0.94" fill="#f0efec" opacity="0.5"/>
@@ -75,7 +75,6 @@
 <text x="204" y="70.5" font-size="13" fill="#c3c2b7">Python</text>
 <rect x="264" y="60" width="12" height="12" rx="2" fill="#d55181"/>
 <text x="282" y="70.5" font-size="13" fill="#c3c2b7">Other</text>
-<g><title>5-wild</title>
 <rect x="24.0" y="93.4" width="20.2" height="228.6" fill="#d95926"/>
 <rect x="28.6" y="98.4" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="35.6" y="98.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -128,8 +127,6 @@
 <path d="M24.0,93.4 V92.9 Q24.0,92.4 24.5,92.4 H43.7 Q44.2,92.4 44.2,92.9 V93.4 Z" fill="#d55181"/>
 <text x="34.1" y="86.0" font-size="11" text-anchor="middle" fill="#c3c2b7">55.5k</text>
 <text transform="translate(38.1,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">5-wild</text>
-</g>
-<g><title>agentic-kanban</title>
 <rect x="50.2" y="160.7" width="20.2" height="161.3" fill="#3987e5"/>
 <rect x="54.8" y="163.7" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="61.8" y="163.7" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -179,8 +176,6 @@
 <rect x="54.8" y="145.0" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="61.8" y="145.0" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <text transform="translate(64.3,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">agentic-kanban</text>
-</g>
-<g><title>agilecbt</title>
 <rect x="76.5" y="233.3" width="20.2" height="88.7" fill="#3987e5"/>
 <rect x="81.1" y="236.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="88.1" y="236.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -209,8 +204,6 @@
 <rect x="88.1" y="217.9" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <path d="M76.5,194.9 V194.1 Q76.5,193.2 77.3,193.2 H95.8 Q96.7,193.2 96.7,194.1 V194.9 Z" fill="#d55181"/>
 <text transform="translate(90.6,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">agilecbt</text>
-</g>
-<g><title>ai-detection</title>
 <path d="M102.7,322.0 V293.0 Q102.7,289.0 106.7,289.0 H118.9 Q122.9,289.0 122.9,293.0 V322.0 Z" fill="#3987e5"/>
 <rect x="107.3" y="294.0" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="114.3" y="294.0" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
@@ -219,8 +212,6 @@
 <rect x="107.3" y="312.0" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="114.3" y="312.0" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(116.8,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">ai-detection</text>
-</g>
-<g><title>check-symlinks</title>
 <rect x="128.9" y="290.6" width="20.2" height="31.4" fill="#3987e5"/>
 <rect x="133.5" y="293.6" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="140.5" y="293.6" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -231,8 +222,6 @@
 <rect x="128.9" y="284.1" width="20.2" height="4.6" fill="#c98500"/>
 <path d="M128.9,284.1 V283.5 Q128.9,283.0 129.5,283.0 H148.6 Q149.1,283.0 149.1,283.5 V284.1 Z" fill="#d55181"/>
 <text transform="translate(143.0,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">check-symlinks</text>
-</g>
-<g><title>connections</title>
 <rect x="155.1" y="297.6" width="20.2" height="24.4" fill="#3987e5"/>
 <rect x="159.8" y="300.6" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="166.8" y="300.6" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
@@ -240,35 +229,25 @@
 <rect x="166.8" y="309.6" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <path d="M155.1,295.6 V293.4 Q155.1,291.1 157.4,291.1 H173.1 Q175.4,291.1 175.4,293.4 V295.6 Z" fill="#d55181"/>
 <text transform="translate(169.3,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">connections</text>
-</g>
-<g><title>cycle-cli</title>
 <path d="M181.4,322.0 V293.3 Q181.4,289.3 185.4,289.3 H197.6 Q201.6,289.3 201.6,293.3 V322.0 Z" fill="#3987e5"/>
 <rect x="186.0" y="294.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="193.0" y="294.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="186.0" y="303.3" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="193.0" y="303.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(195.5,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">cycle-cli</text>
-</g>
-<g><title>cycle-lights</title>
 <path d="M207.6,322.0 V304.9 Q207.6,300.9 211.6,300.9 H223.8 Q227.8,300.9 227.8,304.9 V322.0 Z" fill="#3987e5"/>
 <rect x="212.2" y="305.9" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="219.2" y="305.9" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <text transform="translate(221.7,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">cycle-lights</text>
-</g>
-<g><title>docker-status</title>
 <rect x="233.8" y="310.9" width="20.2" height="11.1" fill="#3987e5"/>
 <path d="M233.8,310.9 V310.1 Q233.8,309.4 234.5,309.4 H253.3 Q254.1,309.4 254.1,310.1 V310.9 Z" fill="#d55181"/>
 <text transform="translate(247.9,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">docker-status</text>
-</g>
-<g><title>dotfiles</title>
 <rect x="260.1" y="301.9" width="20.2" height="20.1" fill="#d55181"/>
 <rect x="264.7" y="306.9" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="271.7" y="306.9" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="260.1" y="298.0" width="20.2" height="3.9" fill="#d95926"/>
 <path d="M260.1,298.0 V296.6 Q260.1,295.2 261.5,295.2 H278.9 Q280.3,295.2 280.3,296.6 V298.0 Z" fill="#c98500"/>
 <text transform="translate(274.2,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">dotfiles</text>
-</g>
-<g><title>extensions</title>
 <rect x="286.3" y="294.2" width="20.2" height="27.8" fill="#d95926"/>
 <rect x="290.9" y="299.2" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="297.9" y="299.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -276,8 +255,6 @@
 <rect x="297.9" y="308.2" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <path d="M286.3,294.2 V292.9 Q286.3,291.6 287.6,291.6 H305.2 Q306.5,291.6 306.5,292.9 V294.2 Z" fill="#d55181"/>
 <text transform="translate(300.4,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">extensions</text>
-</g>
-<g><title>git-orchard</title>
 <path d="M312.5,322.0 V243.5 Q312.5,239.5 316.5,239.5 H328.7 Q332.7,239.5 332.7,243.5 V322.0 Z" fill="#3987e5"/>
 <rect x="317.1" y="244.5" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="324.1" y="244.5" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -296,18 +273,12 @@
 <rect x="317.1" y="307.5" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="324.1" y="307.5" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <text transform="translate(326.6,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">git-orchard</text>
-</g>
-<g><title>github-actions</title>
 <path d="M338.7,322.0 V311.5 Q338.7,307.5 342.7,307.5 H355.0 Q359.0,307.5 359.0,311.5 V322.0 Z" fill="#c98500"/>
 <text transform="translate(352.9,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">github-actions</text>
-</g>
-<g><title>homelab</title>
 <path d="M365.0,322.0 V302.7 Q365.0,298.7 369.0,298.7 H381.2 Q385.2,298.7 385.2,302.7 V322.0 Z" fill="#d95926"/>
 <rect x="369.6" y="303.7" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="376.6" y="303.7" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(379.1,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">homelab</text>
-</g>
-<g><title>image-editor</title>
 <path d="M391.2,322.0 V284.1 Q391.2,280.1 395.2,280.1 H407.4 Q411.4,280.1 411.4,284.1 V322.0 Z" fill="#d95926"/>
 <rect x="395.8" y="285.1" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="402.8" y="285.1" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
@@ -316,15 +287,11 @@
 <rect x="395.8" y="303.1" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="402.8" y="303.1" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <text transform="translate(405.3,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">image-editor</text>
-</g>
-<g><title>jmelahman.github.io</title>
 <rect x="417.4" y="304.2" width="20.2" height="17.8" fill="#d95926"/>
 <rect x="422.0" y="307.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="429.0" y="307.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <path d="M417.4,302.2 V291.7 Q417.4,287.7 421.4,287.7 H433.7 Q437.7,287.7 437.7,291.7 V302.2 Z" fill="#c98500"/>
 <text transform="translate(431.5,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">jmelahman.github.io</text>
-</g>
-<g><title>local-preview</title>
 <rect x="443.7" y="154.3" width="20.2" height="167.7" fill="#3987e5"/>
 <rect x="448.3" y="157.3" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="455.3" y="157.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -367,20 +334,14 @@
 <rect x="455.3" y="139.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <path d="M443.7,134.4 V130.3 Q443.7,126.3 447.7,126.3 H459.9 Q463.9,126.3 463.9,130.3 V134.4 Z" fill="#d55181"/>
 <text transform="translate(457.8,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">local-preview</text>
-</g>
-<g><title>manygo</title>
 <path d="M469.9,322.0 V315.8 Q469.9,311.8 473.9,311.8 H486.1 Q490.1,311.8 490.1,315.8 V322.0 Z" fill="#c98500"/>
 <text transform="translate(484.0,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">manygo</text>
-</g>
-<g><title>nature-sounds</title>
 <path d="M496.1,322.0 V293.9 Q496.1,289.9 500.1,289.9 H512.3 Q516.3,289.9 516.3,293.9 V322.0 Z" fill="#3987e5"/>
 <rect x="500.7" y="294.9" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="507.7" y="294.9" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="500.7" y="303.9" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="507.7" y="303.9" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(510.2,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">nature-sounds</text>
-</g>
-<g><title>notebook</title>
 <rect x="522.3" y="286.9" width="20.2" height="35.1" fill="#d95926"/>
 <rect x="527.0" y="289.9" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="534.0" y="289.9" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -394,16 +355,12 @@
 <rect x="527.0" y="272.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="534.0" y="272.3" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <text transform="translate(536.5,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">notebook</text>
-</g>
-<g><title>pinsync</title>
 <path d="M548.6,322.0 V293.2 Q548.6,289.2 552.6,289.2 H564.8 Q568.8,289.2 568.8,293.2 V322.0 Z" fill="#3987e5"/>
 <rect x="553.2" y="294.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="560.2" y="294.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="553.2" y="303.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="560.2" y="303.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(562.7,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">pinsync</text>
-</g>
-<g><title>pkglint</title>
 <rect x="574.8" y="108.7" width="20.2" height="213.3" fill="#3987e5"/>
 <rect x="579.4" y="111.7" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="586.4" y="111.7" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -454,26 +411,18 @@
 <path d="M574.8,106.7 V102.5 Q574.8,98.5 578.8,98.5 H591.0 Q595.0,98.5 595.0,102.5 V106.7 Z" fill="#d95926"/>
 <text x="584.9" y="91.8" font-size="11" text-anchor="middle" fill="#c3c2b7">52.8k</text>
 <text transform="translate(588.9,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">pkglint</text>
-</g>
-<g><title>pre-commit-hooks</title>
 <path d="M601.0,322.0 V311.5 Q601.0,307.5 605.0,307.5 H617.3 Q621.3,307.5 621.3,311.5 V322.0 Z" fill="#3987e5"/>
 <text transform="translate(615.1,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">pre-commit-hooks</text>
-</g>
-<g><title>skills</title>
 <path d="M627.3,322.0 V300.3 Q627.3,296.3 631.3,296.3 H643.5 Q647.5,296.3 647.5,300.3 V322.0 Z" fill="#c98500"/>
 <rect x="631.9" y="301.3" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="638.9" y="301.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="631.9" y="310.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="638.9" y="310.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(641.4,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">skills</text>
-</g>
-<g><title>smart-lights</title>
 <path d="M653.5,322.0 V305.5 Q653.5,301.5 657.5,301.5 H669.7 Q673.7,301.5 673.7,305.5 V322.0 Z" fill="#3987e5"/>
 <rect x="658.1" y="306.5" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="665.1" y="306.5" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <text transform="translate(667.6,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">smart-lights</text>
-</g>
-<g><title>solutions</title>
 <path d="M679.7,322.0 V291.1 Q679.7,287.1 683.7,287.1 H695.9 Q699.9,287.1 699.9,291.1 V322.0 Z" fill="#199e70"/>
 <rect x="684.3" y="292.1" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="691.3" y="292.1" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -482,8 +431,6 @@
 <rect x="684.3" y="310.1" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="691.3" y="310.1" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(693.8,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">solutions</text>
-</g>
-<g><title>tag</title>
 <path d="M705.9,322.0 V287.4 Q705.9,283.4 709.9,283.4 H722.2 Q726.2,283.4 726.2,287.4 V322.0 Z" fill="#199e70"/>
 <rect x="710.6" y="288.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="717.6" y="288.4" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
@@ -492,8 +439,6 @@
 <rect x="710.6" y="306.4" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="717.6" y="306.4" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <text transform="translate(720.1,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">tag</text>
-</g>
-<g><title>templates</title>
 <rect x="732.2" y="295.2" width="20.2" height="26.8" fill="#d55181"/>
 <rect x="736.8" y="298.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="743.8" y="298.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -505,14 +450,10 @@
 <rect x="732.2" y="270.6" width="20.2" height="4.1" fill="#c98500"/>
 <path d="M732.2,268.6 V265.9 Q732.2,263.1 734.9,263.1 H749.7 Q752.4,263.1 752.4,265.9 V268.6 Z" fill="#d95926"/>
 <text transform="translate(746.3,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">templates</text>
-</g>
-<g><title>terraform</title>
 <path d="M758.4,322.0 V305.4 Q758.4,301.4 762.4,301.4 H774.6 Q778.6,301.4 778.6,305.4 V322.0 Z" fill="#d55181"/>
 <rect x="763.0" y="306.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="770.0" y="306.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(772.5,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">terraform</text>
-</g>
-<g><title>text-editor</title>
 <path d="M784.6,322.0 V276.4 Q784.6,272.4 788.6,272.4 H800.9 Q804.9,272.4 804.9,276.4 V322.0 Z" fill="#d95926"/>
 <rect x="789.2" y="277.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="796.2" y="277.4" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
@@ -523,15 +464,11 @@
 <rect x="789.2" y="304.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="796.2" y="304.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(798.7,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">text-editor</text>
-</g>
-<g><title>tools</title>
-<rect x="810.9" y="306.2" width="20.2" height="15.8" fill="#c98500"/>
-<rect x="815.5" y="311.2" width="4" height="5" fill="#0d1117" opacity="0.22"/>
-<rect x="822.5" y="311.2" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
-<path d="M810.9,306.2 V305.2 Q810.9,304.2 811.9,304.2 H830.1 Q831.1,304.2 831.1,305.2 V306.2 Z" fill="#d55181"/>
+<rect x="810.9" y="306.3" width="20.2" height="15.7" fill="#c98500"/>
+<rect x="815.5" y="311.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
+<rect x="822.5" y="311.3" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
+<path d="M810.9,306.3 V305.3 Q810.9,304.2 811.9,304.2 H830.1 Q831.1,304.2 831.1,305.3 V306.3 Z" fill="#d55181"/>
 <text transform="translate(825.0,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">tools</text>
-</g>
-<g><title>typesafe-sdk-go</title>
 <path d="M837.1,322.0 V266.4 Q837.1,262.4 841.1,262.4 H853.3 Q857.3,262.4 857.3,266.4 V322.0 Z" fill="#3987e5"/>
 <rect x="841.7" y="267.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="848.7" y="267.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -544,8 +481,6 @@
 <rect x="841.7" y="303.4" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="848.7" y="303.4" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(851.2,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">typesafe-sdk-go</text>
-</g>
-<g><title>undot</title>
 <rect x="863.3" y="283.3" width="20.2" height="38.7" fill="#3987e5"/>
 <rect x="867.9" y="288.3" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="874.9" y="288.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -557,8 +492,6 @@
 <rect x="863.3" y="277.3" width="20.2" height="2.2" fill="#c98500"/>
 <path d="M863.3,277.3 V276.8 Q863.3,276.3 863.8,276.3 H883.0 Q883.5,276.3 883.5,276.8 V277.3 Z" fill="#d55181"/>
 <text transform="translate(877.4,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">undot</text>
-</g>
-<g><title>vinder</title>
 <rect x="889.5" y="259.3" width="20.2" height="62.7" fill="#3987e5"/>
 <rect x="894.2" y="264.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="901.2" y="264.3" width="4" height="5" fill="#0d1117" opacity="0.22"/>
@@ -574,14 +507,11 @@
 <rect x="901.2" y="309.3" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <path d="M889.5,259.3 V258.3 Q889.5,257.3 890.5,257.3 H908.8 Q909.8,257.3 909.8,258.3 V259.3 Z" fill="#d95926"/>
 <text transform="translate(903.7,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">vinder</text>
-</g>
-<g><title>work</title>
 <path d="M915.8,322.0 V298.6 Q915.8,294.6 919.8,294.6 H932.0 Q936.0,294.6 936.0,298.6 V322.0 Z" fill="#3987e5"/>
 <rect x="920.4" y="299.6" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="927.4" y="299.6" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <rect x="920.4" y="308.6" width="4" height="5" fill="#ffe7a3" opacity="0.85"/>
 <rect x="927.4" y="308.6" width="4" height="5" fill="#0d1117" opacity="0.22"/>
 <text transform="translate(929.9,332) rotate(-90)" font-size="12" text-anchor="end" fill="#f0efec">work</text>
-</g>
 <rect x="16" y="322" width="928" height="2" fill="#30363d"/>
 </svg>
