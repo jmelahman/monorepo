@@ -15,7 +15,7 @@ repos:
       - id: go-get
 
   - repo: https://github.com/golangci/golangci-lint
-    rev: 114493f9b3e7257d29e4130f2b4a4aadefbb6845  # frozen: v2.14.0
+    rev: 25c5369a93aacb8cccea0d46e1569ca4a194564d  # frozen: v2.15.0
     hooks:
       - id: golangci-lint-full
         # prek runs the monorepo's projects at once, and golangci-lint otherwise

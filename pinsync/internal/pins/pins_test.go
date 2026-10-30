@@ -39,6 +39,22 @@ func TestApply(t *testing.T) {
 `,
 		},
 		{
+			name: "bare list of repos, as in a git-orchard profile",
+			pin:  config.Pin{Name: "git-orchard", Package: "git-orchard", Version: "1.3.0", Repo: orchard},
+			input: `  # Spliced under a subtree's repos.
+  - repo: https://github.com/jmelahman/git-orchard
+    rev: 50de16612d3ebcd745b8feb5bb4d3637b732140d  # frozen: v1.1.0
+    hooks:
+      - id: git-orchard-sync
+`,
+			want: `  # Spliced under a subtree's repos.
+  - repo: https://github.com/jmelahman/git-orchard
+    rev: commit-of-v1.3.0  # frozen: v1.3.0
+    hooks:
+      - id: git-orchard-sync
+`,
+		},
+		{
 			name: "go dependency",
 			pin:  config.Pin{Name: "shfmt", Package: "mvdan.cc/sh/v3/cmd/shfmt", Version: "3.15.0"},
 			input: `repos:

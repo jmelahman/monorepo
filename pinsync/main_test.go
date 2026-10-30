@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,24 @@ import (
 
 	"github.com/jmelahman/pinsync/internal/config"
 )
+
+// TestMain clears what a git hook sets for its own repository. git commit -a
+// runs hooks with GIT_INDEX_FILE at that repository's index.lock, and the
+// temporary repositories here would otherwise add their files to it.
+func TestMain(m *testing.M) {
+	out, err := exec.Command("git", "rev-parse", "--local-env-vars").Output()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "git rev-parse --local-env-vars:", err)
+		os.Exit(1)
+	}
+	for name := range strings.FieldsSeq(string(out)) {
+		if err := os.Unsetenv(name); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
+	os.Exit(m.Run())
+}
 
 func TestRun(t *testing.T) {
 	t.Parallel()

@@ -110,15 +110,15 @@ New Go modules also go in `go.work`.
 ### Hooks
 
 ```shell
-prek update --freeze
+prek update --freeze && pinsync sync
 ```
 
-The [pinsync](pinsync) hook then rewrites every copy of a version pinned in [`.config/pinsync/config.toml`](.config/pinsync/config.toml) on the next `prek run`.
-It holds git-orchard's hook rev and prek's CI version at what `uv.lock` locks, so bump those there instead:
+The [pinsync](https://github.com/jmelahman/pinsync) hook ensures all hook copies stay synced.
+
+### Python
 
 ```shell
-uv lock --upgrade-package git-orchard
-uv lock --upgrade-package prek
+uv lock --upgrade
 ```
 
 ### Golang

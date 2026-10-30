@@ -39,13 +39,13 @@ repos:
       - id: actionlint
 
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: fa412071e4f5d44d44f9e365f4676f9df92456a2  # frozen: v1.30.1
+    rev: c92afdf2c6ca336aaa8f39e2bd8d48f62dbd8e1f  # frozen: v1.31.1
     hooks:
       - id: zizmor
   # END orchard:base
 
   - repo: https://github.com/jmelahman/go-pre-commit-hooks
-    rev: c843811864d03fc517b10d29199efe6167ecfc72  # frozen: v1.3.0
+    rev: 930c98e97ba2dba5a652e00d6b9c02e39ecf76ab  # frozen: v1.3.1
     hooks:
       - id: gofmt
       - id: go-mod-tidy

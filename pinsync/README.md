@@ -66,8 +66,9 @@ A pin's source is one of:
 
 Its copies, in every file git tracks:
 
-- **Hook revs.** The `rev` of `repo` in any `.pre-commit-config.yaml`. A rev
-  pinned to a commit needs a `# frozen: <tag>` comment, as `prek update
+- **Hook revs.** The `rev` of `repo` in any `.pre-commit-config.yaml`,
+  including one that is a bare list of repos, such as a git-orchard profile.
+  A rev pinned to a commit needs a `# frozen: <tag>` comment, as `prek update
   --freeze` writes; pinsync rewrites both.
 - **Hook dependencies.** `package==version` (Python, by normalized name) and
   `package@version` (Go, npm) in any hook's `additional_dependencies`.

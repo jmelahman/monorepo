@@ -284,10 +284,16 @@ func (d *document) copyAt(n *yaml.Node, pin string, s span) Copy {
 var frozen = regexp.MustCompile(`#\s*frozen:\s*(\S+)`)
 
 // preCommitCopies returns the copies in a pre-commit config: the revs of
-// pinned hook repos and pinned additional_dependencies.
+// pinned hook repos and pinned additional_dependencies. A config that is a
+// bare list is a fragment of one, such as a git-orchard profile, which is
+// spliced under another config's `repos:`.
 func (d *document) preCommitCopies(pins []config.Pin) ([]Copy, error) {
+	repos := top(d.root)
+	if repos.Kind != yaml.SequenceNode {
+		repos = value(repos, "repos")
+	}
 	var copies []Copy
-	for _, repo := range items(value(top(d.root), "repos")) {
+	for _, repo := range items(repos) {
 		url, rev := value(repo, "repo"), value(repo, "rev")
 		if url != nil && rev != nil {
 			for _, p := range pins {

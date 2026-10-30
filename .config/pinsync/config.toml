@@ -9,6 +9,42 @@ source = "pre-commit"
 repo = "https://github.com/astral-sh/uv-pre-commit"
 action = "astral-sh/setup-uv"
 
+# Hooks in the shared git-orchard profiles. `prek update` bumps the root and
+# the subtrees but not the profiles, which `git orchard sync` would then copy
+# back over the subtrees, so each one follows its root rev.
+[pins.actionlint]
+source = "pre-commit"
+repo = "https://github.com/rhysd/actionlint"
+
+[pins.go-pre-commit-hooks]
+source = "pre-commit"
+repo = "https://github.com/jmelahman/go-pre-commit-hooks"
+
+[pins.ripsecrets]
+source = "pre-commit"
+repo = "https://github.com/sirwart/ripsecrets"
+
+[pins.ruff]
+source = "pre-commit"
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+
+[pins.shellcheck]
+source = "pre-commit"
+repo = "https://github.com/shellcheck-py/shellcheck-py"
+
+[pins.ty]
+source = "pre-commit"
+repo = "https://github.com/astral-sh/ty-pre-commit"
+
+[pins.zizmor]
+source = "pre-commit"
+repo = "https://github.com/zizmorcore/zizmor-pre-commit"
+
+# Not a root hook, so nothing bumps this one: raise it by hand.
+[pins.golangci-lint]
+version = "2.15.0"
+repo = "https://github.com/golangci/golangci-lint"
+
 # The dev tools .venv/bin runs from uv.lock, so the hooks and CI match.
 [pins.git-orchard]
 source = "uv.lock"
