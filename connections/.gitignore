@@ -29,4 +29,6 @@ dist/
 *.egg-info/
 __pycache__
 connections
+/connections-ssh
+/cmd/connections-ssh/connections-ssh
 .aider*

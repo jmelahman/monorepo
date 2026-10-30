@@ -1,6 +1,6 @@
 target "default" {
   context = "."
-  dockerfile = "Dockerfile"
+  dockerfile = "cmd/connections-ssh/Dockerfile"
   cache_from = [
     "docker.io/lahmanja/connections-ssh:latest",
     "registry.home/lahmanja/connections-ssh:latest",

@@ -40,13 +40,6 @@
 	shared = pypi
 	shared = manygo
 	shared = pybuild
-[subtree "connections-ssh"]
-	remote = git@github.com:jmelahman/connections-ssh.git
-	branch = master
-	shared = base
-	shared = go
-	shared = shell
-	shared = goreleaser
 [subtree "cycle-cli"]
 	remote = git@github.com:jmelahman/cycle-cli.git
 	branch = master

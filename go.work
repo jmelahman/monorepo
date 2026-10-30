@@ -6,7 +6,6 @@ use (
 	./ai-detection
 	./check-symlinks
 	./connections
-	./connections-ssh
 	./cycle-cli
 	./cycle-lights
 	./docker-status

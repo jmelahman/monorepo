@@ -6,7 +6,6 @@ resume/preview.png filter=lfs diff=lfs merge=lfs -text
 # that share only a marked block are left out: the rest of them is the
 # subtree's own.
 5-wild/.github/workflows/pre-commit.yml -diff linguist-generated
-connections-ssh/.github/workflows/pre-commit.yml -diff linguist-generated
 connections/.github/workflows/pre-commit.yml -diff linguist-generated
 cycle-cli/.github/workflows/pre-commit.yml -diff linguist-generated
 docker-status/.github/workflows/pre-commit.yml -diff linguist-generated
@@ -26,7 +25,6 @@ templates/fullstack-template/web/biome.json -diff linguist-generated
 agentic-kanban/.golangci.yml -diff linguist-generated
 agilecbt/.golangci.yml -diff linguist-generated
 check-symlinks/.golangci.yml -diff linguist-generated
-connections-ssh/.golangci.yml -diff linguist-generated
 connections/.golangci.yml -diff linguist-generated
 cycle-cli/.golangci.yml -diff linguist-generated
 docker-status/.golangci.yml -diff linguist-generated

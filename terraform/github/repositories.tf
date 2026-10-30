@@ -61,10 +61,6 @@ locals {
       description = "A command-line client for the NYT Connections game"
       topics      = ["cli", "game", "games", "go", "golang", "nyt-games", "nytimes", "tui"]
     }
-    connections-ssh = {
-      description  = "Play NYT Connections in a terminal over SSH"
-      homepage_url = "ssh://connections.lahman.dev"
-    }
     github-token-diff-extension = {
       description = "Firefox extension to estimate the token delta of a given pull request"
     }

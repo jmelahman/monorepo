@@ -38,3 +38,12 @@ go install github.com/jmelahman/connections@latest
 **github:**
 
 Prebuilt packages are available from [Github Releases](https://github.com/jmelahman/connections/releases).
+
+## SSH Server
+
+[`connections-ssh`](https://github.com/jmelahman/connections/tree/master/cmd/connections-ssh) serves the game over SSH.
+It's built and deployed on its own, and none of its code or dependencies end up in the `connections` binary.
+
+```shell
+go build ./cmd/connections-ssh
+```

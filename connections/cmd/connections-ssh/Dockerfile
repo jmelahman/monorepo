@@ -6,7 +6,7 @@ WORKDIR /app
 COPY ./ .
 
 # Statically compile the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -a -installsuffix static .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -a -installsuffix static ./cmd/connections-ssh
 
 # Final stage: distroless image
 FROM scratch
