@@ -48,11 +48,11 @@
         },
         {
           "name": "prosemirror-transform",
-          "version": "1.12.2"
+          "version": "1.12.4"
         },
         {
           "name": "prosemirror-view",
-          "version": "1.42.6"
+          "version": "1.42.8"
         },
         {
           "name": "rope-sequence",
