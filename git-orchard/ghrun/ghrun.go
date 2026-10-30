@@ -270,9 +270,10 @@ func Watch(ctx context.Context, list Lister, repo, tag, sha string, opts WatchOp
 	}
 }
 
-var githubRepo = regexp.MustCompile(`^(?:git@github\.com:|ssh://git@github\.com/|https://github\.com/)([^/]+)/([^/]+?)(?:\.git)?/?$`)
+var githubRepo = regexp.MustCompile(`^(?:git@github\.com:|ssh://git@github\.com/|https://(?:[^/@]+@)?github\.com/)([^/]+)/([^/]+?)(?:\.git)?/?$`)
 
-// ParseGitHubRepo returns the owner and name of a github.com remote URL.
+// ParseGitHubRepo returns the owner and name of a github.com remote URL, which
+// may carry credentials, as one rewritten by url.<base>.insteadOf does.
 func ParseGitHubRepo(url string) (owner, repo string, ok bool) {
 	m := githubRepo.FindStringSubmatch(url)
 	if m == nil {

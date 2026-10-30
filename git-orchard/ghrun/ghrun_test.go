@@ -117,11 +117,14 @@ func TestWatchCanceled(t *testing.T) {
 
 func TestParseGitHubRepo(t *testing.T) {
 	for url, want := range map[string]string{
-		"git@github.com:jmelahman/monorepo.git":                  "jmelahman/monorepo",
-		"https://github.com/jmelahman/monorepo":                  "jmelahman/monorepo",
-		"https://github.com/jmelahman/monorepo.git/":             "jmelahman/monorepo",
-		"ssh://git@github.com/jmelahman/jmelahman.github.io.git": "jmelahman/jmelahman.github.io",
-		"git@gitlab.com:jmelahman/monorepo.git":                  "",
+		"git@github.com:jmelahman/monorepo.git":                           "jmelahman/monorepo",
+		"https://github.com/jmelahman/monorepo":                           "jmelahman/monorepo",
+		"https://github.com/jmelahman/monorepo.git/":                      "jmelahman/monorepo",
+		"ssh://git@github.com/jmelahman/jmelahman.github.io.git":          "jmelahman/jmelahman.github.io",
+		"https://x-access-token:secret@github.com/jmelahman/monorepo.git": "jmelahman/monorepo",
+		"https://secret@github.com/jmelahman/monorepo":                    "jmelahman/monorepo",
+		"https://github.com@evil.example/jmelahman/monorepo":              "",
+		"git@gitlab.com:jmelahman/monorepo.git":                           "",
 	} {
 		owner, repo, ok := ParseGitHubRepo(url)
 		got := ""
