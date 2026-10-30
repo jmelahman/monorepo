@@ -37,6 +37,32 @@ func TestManWritesAPagePerCommand(t *testing.T) {
 	check(root)
 }
 
+func TestManReplacesOnlyKanbanPages(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"kanban-removed-command.1", "kanbanize.1", "git.1", "kanban-notes.txt"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("old"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	root := Root()
+	root.SetArgs([]string{"man", "-o", dir})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("kanban man: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "kanban-removed-command.1")); !os.IsNotExist(err) {
+		t.Errorf("stale page: stat err = %v, want not exist", err)
+	}
+	for _, name := range []string{"kanbanize.1", "git.1", "kanban-notes.txt"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Errorf("%s should be left alone: %v", name, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "kanban.1")); err != nil {
+		t.Errorf("kanban.1 should be regenerated: %v", err)
+	}
+}
+
 func TestManRequiresOutputDir(t *testing.T) {
 	root := Root()
 	root.SetArgs([]string{"man"})

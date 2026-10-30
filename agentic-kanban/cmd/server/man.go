@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -17,7 +19,8 @@ func newManCmd() *cobra.Command {
 		Use:   "man",
 		Short: "Write man pages for every kanban command to a directory",
 		Long: `Write a man page for every kanban command to a directory, creating it if
-needed and overwriting existing pages.
+needed. Pages already there for kanban are replaced, including those for
+commands that no longer exist; other files are left alone.
 
 Pages installed under ~/.local/share/man/man1 are found by man when
 ~/.local/bin is on your PATH. Rerun this after upgrading kanban.`,
@@ -27,6 +30,9 @@ Pages installed under ~/.local/share/man/man1 are found by man when
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := os.MkdirAll(outDir, 0o755); err != nil {
 				return fmt.Errorf("create man page directory: %w", err)
+			}
+			if err := removeManPages(outDir); err != nil {
+				return err
 			}
 			root := cmd.Root()
 			root.DisableAutoGenTag = true
@@ -44,4 +50,24 @@ Pages installed under ~/.local/share/man/man1 are found by man when
 	cmd.Flags().StringVarP(&outDir, "output-dir", "o", "", "Directory to write the pages to (required)")
 	_ = cmd.MarkFlagRequired("output-dir")
 	return cmd
+}
+
+// removeManPages deletes kanban's pages from dir so a renamed or removed
+// command doesn't leave a stale page behind. dir is usually shared with other
+// tools (~/.local/share/man/man1), so it only matches kanban's own page names.
+func removeManPages(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("read man page directory: %w", err)
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || (name != "kanban.1" && (!strings.HasPrefix(name, "kanban-") || !strings.HasSuffix(name, ".1"))) {
+			continue
+		}
+		if err := os.Remove(filepath.Join(dir, name)); err != nil {
+			return fmt.Errorf("remove stale man page: %w", err)
+		}
+	}
+	return nil
 }

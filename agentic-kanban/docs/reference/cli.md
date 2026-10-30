@@ -104,7 +104,7 @@ Runs the MCP server over stdio. It needs `kanban serve` to be running. See the [
 kanban man -o <dir>
 ```
 
-Writes a man page for every command to `<dir>`, creating it if needed and overwriting existing pages. Pages are named after the command, such as `kanban-ticket-attach.1`. See [Man pages](/guide/install#man-pages).
+Writes a man page for every command to `<dir>`, creating it if needed. Pages are named after the command, such as `kanban-ticket-attach.1`. Any `kanban.1` or `kanban-*.1` already in `<dir>` is deleted first, so pages for removed commands don't linger. Other files are left alone. See [Man pages](/guide/install#man-pages).
 
 ## `board`
 
