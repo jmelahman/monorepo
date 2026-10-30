@@ -11,7 +11,7 @@ The square root is deliberate. Lines run from about a hundred to over forty
 thousand, so a linear scale leaves most of the repo as a row of slivers,
 while a log scale flattens pkglint to barely twice the height of connections.
 The square root keeps every building visible and still lets size read as
-size, and the caption says so.
+size, and the y-axis says so.
 
 Counts come from `git ls-files`, so untracked and ignored files never count.
 Anything git attributes as linguist-generated or linguist-vendored is
@@ -104,6 +104,8 @@ GROUND = TOP + TALLEST
 LABELS = 136  # The rotated names hang below the ground line.
 HEIGHT = GROUND + LABELS
 MARGIN = 24
+AXIS = 36  # Room for the y-axis title and tick labels, left of the first building.
+TICK = 50  # Spacing of the y-axis ticks, in √lines.
 GAP = 6
 FLOOR_GAP = 2
 
@@ -227,10 +229,35 @@ def legend(present: list[str], theme: Theme) -> list[str]:
     return out
 
 
+def axis(scale: float, theme: Theme) -> list[str]:
+    """The √lines y-axis: its title, tick labels and a recessive grid behind the buildings."""
+    left = MARGIN + AXIS
+    # Rotated up the axis, since the first building's count sits level with its top.
+    out = [
+        (
+            f'<text transform="translate({MARGIN + 7},{GROUND - TALLEST / 2:.0f}) rotate(-90)" '
+            f'font-size="11" text-anchor="middle" fill="{theme.muted}">√Lines</text>'
+        )
+    ]
+    for tick in range(0, int(TALLEST / scale) + 1, TICK):
+        y = GROUND - tick * scale
+        out.append(
+            f'<text x="{left - 6}" y="{y + 4:.1f}" font-size="11" text-anchor="end" '
+            f'fill="{theme.muted}">{tick}</text>'
+        )
+        if tick:
+            out.append(
+                f'<rect x="{left}" y="{y:.1f}" width="{WIDTH - left - MARGIN}" height="1" '
+                f'fill="{theme.ground}" opacity="0.6"/>'
+            )
+    return out
+
+
 def draw(projects: list[Project], mode: str) -> str:
     theme = THEMES[mode]
     scale = TALLEST / math.sqrt(max(p.total for p in projects))
-    width = (WIDTH - 2 * MARGIN - GAP * (len(projects) - 1)) / len(projects)
+    left = MARGIN + AXIS
+    width = (WIDTH - left - MARGIN - GAP * (len(projects) - 1)) / len(projects)
     # The three tallest carry their count, except beside one already labelled:
     # neighbours stand a building's width apart, narrower than "55.5k".
     labelled: list[int] = []
@@ -259,14 +286,14 @@ def draw(projects: list[Project], mode: str) -> str:
         ),
         (
             f'<text x="{MARGIN}" y="49" font-size="13" fill="{theme.muted}">'
-            f"{len(projects)} projects, {short(total)} lines. Height is √lines, so a building "
-            "twice as tall holds four times the code.</text>"
+            f"{len(projects)} projects, {short(total)} lines.</text>"
         ),
         *legend(present, theme),
+        *axis(scale, theme),
     ]
 
     for i, project in enumerate(projects):
-        x = MARGIN + i * (width + GAP)
+        x = left + i * (width + GAP)
         height = max(6.0, math.sqrt(project.total) * scale)
         roof = GROUND - height
         # Floors split the building's height by each group's share of its lines,
@@ -313,7 +340,7 @@ def draw(projects: list[Project], mode: str) -> str:
         )
 
     out.append(
-        f'<rect x="{MARGIN - 8}" y="{GROUND}" width="{WIDTH - 2 * MARGIN + 16}" height="2" '
+        f'<rect x="{left - 4}" y="{GROUND}" width="{WIDTH - left - MARGIN + 12}" height="2" '
         f'fill="{theme.ground}"/>'
     )
     out.append("</svg>")
