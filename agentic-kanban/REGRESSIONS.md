@@ -130,6 +130,9 @@ is internal and kept out of the published `docs/` site.
 
 - Every package whose tests run git calls `gittest.IsolateEnv()` in
   `TestMain`. It also neuters `~/.config/git/{ignore,attributes}`.
+- It clears all of `git rev-parse --local-env-vars`, not a fixed list. `git
+  commit -a` points `GIT_INDEX_FILE` at the real `index.lock`, so a temp repo's
+  `git add` would write to the commit in progress.
 - Tests that commit set identity on the repo or with `-c`.
 
 ### Tests inherit the developer's kanban user config

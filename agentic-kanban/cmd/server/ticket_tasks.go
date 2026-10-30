@@ -309,7 +309,7 @@ func followTaskRun(ctx context.Context, c *client.Client, out, errOut io.Writer,
 			return fmt.Errorf("stop run #%d: %w", runID, err)
 		}
 		select {
-		case <-done:
+		case <-done: //nolint:errcheck // the run is stopped; a stream error now changes nothing
 		case <-sigs:
 			return fmt.Errorf("gave up waiting for run #%d to exit", runID)
 		case <-time.After(taskStopGrace):

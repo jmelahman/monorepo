@@ -252,7 +252,7 @@ func (c *Client) RunStep(ctx context.Context, step Step, out io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("wait for build container: %w", err)
 	}
-	<-logsDone
+	<-logsDone //nolint:errcheck // the exit status decides the build, not a failed log stream
 	var res struct {
 		StatusCode int `json:"StatusCode"`
 	}

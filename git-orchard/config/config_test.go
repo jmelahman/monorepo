@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/jmelahman/git-orchard/git"
+	"github.com/jmelahman/git-orchard/internal/gittest"
 )
 
 func TestApply(t *testing.T) {
@@ -106,9 +107,8 @@ func TestSelect(t *testing.T) {
 }
 
 func TestLoadAndAdd(t *testing.T) {
+	gittest.Isolate(t)
 	dir := t.TempDir()
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	repo := git.Repo{Dir: dir}
 	if _, err := repo.Output("init", "--quiet"); err != nil {
 		t.Fatal(err)
@@ -147,9 +147,8 @@ func TestLoadAndAdd(t *testing.T) {
 }
 
 func TestLoadConfigDirManifest(t *testing.T) {
+	gittest.Isolate(t)
 	dir := t.TempDir()
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	repo := git.Repo{Dir: dir}
 	if _, err := repo.Output("init", "--quiet"); err != nil {
 		t.Fatal(err)
