@@ -1,6 +1,0 @@
-#!/bin/sh
-# Runs the dev tool this is linked as from the monorepo's uv.lock, so the shell
-# and the pre-commit hooks use the same version. --project leaves the working
-# directory alone, so the tool acts on wherever it was called from.
-root=$(dirname "$(readlink -f "$0")")/../..
-exec uv run --frozen --quiet --project "$root" "$(basename "$0")" "$@"

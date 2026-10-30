@@ -61,7 +61,7 @@ repos:
   # Copies the profiles in .config/git-orchard/shared into the subtrees that
   # list them in .config/git-orchard/subtrees, so each mirror carries its own
   # complete config. pinsync keeps rev at the version in uv.lock, which
-  # tools/bin runs.
+  # .venv/bin runs.
   - repo: https://github.com/jmelahman/git-orchard
     rev: c57c8d249b06bd22f6482cc46dca6fe7108daec0 # frozen: v1.3.0
     hooks:

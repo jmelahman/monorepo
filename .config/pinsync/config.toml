@@ -9,7 +9,7 @@ source = "pre-commit"
 repo = "https://github.com/astral-sh/uv-pre-commit"
 action = "astral-sh/setup-uv"
 
-# The dev tools tools/bin runs from uv.lock, so the hooks and CI match.
+# The dev tools .venv/bin runs from uv.lock, so the hooks and CI match.
 [pins.git-orchard]
 source = "uv.lock"
 repo = "https://github.com/jmelahman/git-orchard"
