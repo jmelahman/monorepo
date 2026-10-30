@@ -1,5 +1,6 @@
 [![CI Status](https://github.com/jmelahman/monorepo/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/pre-commit.yml)
 [![Dependabot](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/dependabot/dependabot-updates)
+[![Vendored Dependencies](https://github.com/jmelahman/monorepo/actions/workflows/vinder-upgrade.yml/badge.svg)](https://github.com/jmelahman/monorepo/actions/workflows/vinder-upgrade.yml)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="media/skyline-dark.svg">
