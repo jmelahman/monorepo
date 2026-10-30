@@ -174,6 +174,9 @@ func (o *Orchard) push(s config.Subtree, rev, ref string, opts PushOptions) erro
 	}
 	out := opts.Output
 	if out == nil {
+		out = o.Repo.Log
+	}
+	if out == nil {
 		out = os.Stderr
 	}
 	verify := !o.NoVerify
