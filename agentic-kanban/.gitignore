@@ -63,3 +63,4 @@ __pycache__/
 
 # release artifacts
 /kanban
+/man/

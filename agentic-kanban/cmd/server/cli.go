@@ -52,6 +52,12 @@ func boardCmd() *cobra.Command {
 	parent := &cobra.Command{
 		Use:   "board",
 		Short: "Manage kanban boards",
+		Long: `Manage kanban boards.
+
+Subcommands that take an optional board id infer it from the git repo
+containing the current directory. If several boards use that repo, the one
+whose project directory best matches the current directory wins. Subcommands
+that change or delete a board always need an explicit id.`,
 	}
 	addServerFlag(parent, &serverURL)
 
@@ -222,6 +228,14 @@ func ticketCreateCmd(serverURLp, boardIdentp *string) *cobra.Command {
 	create := &cobra.Command{
 		Use:   "create",
 		Short: "Create a ticket, interactively when run without --title, and drop into its agent",
+		Example: `  # Describe the task, then work with the agent.
+  kanban ticket create
+
+  # Create it but stay in your shell.
+  kanban ticket create --attach=false
+
+  # From a script.
+  kanban ticket create --board playground --title "Wire CI" --column "In Progress"`,
 		Long: `Create a ticket on a board.
 
 Without --board the board is inferred from the git repo containing the
@@ -769,7 +783,8 @@ On a terminal this opens a full-screen view. Up/Down move between values,
 Enter (or "c" / "y") copies the highlighted one to the clipboard, and Esc
 closes. Piped or redirected it prints the same fields as plain text, and
 --json prints them as a single JSON object.`,
-		Args: cobra.MaximumNArgs(1),
+		Example: `  kanban ticket info 42 --json | jq -r .session.worktree_path`,
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
@@ -840,7 +855,11 @@ closes. Piped or redirected it prints the same fields as plain text, and
 	archive := &cobra.Command{
 		Use:   "archive [id...]",
 		Short: "Archive tickets (--delete to also permanently delete them)",
-		Args:  cobra.ArbitraryArgs,
+		Long: `Archive tickets and stop their sessions. With --delete, permanently delete
+them too. If one ticket fails, the rest are still processed and the command
+exits with an error.`,
+		Example: `  kanban ticket archive 12 14 --delete`,
+		Args:    cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
@@ -870,6 +889,7 @@ closes. Piped or redirected it prints the same fields as plain text, and
 	sync := &cobra.Command{
 		Use:   "sync [id]",
 		Short: "Sync a ticket branch from base (rebase|merge)",
+		Long:  "Bring the base branch into the ticket's branch, by rebasing by default.",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -906,7 +926,14 @@ closes. Piped or redirected it prints the same fields as plain text, and
 	mergeCmd := &cobra.Command{
 		Use:   "merge [id]",
 		Short: "Merge a ticket branch into base (merge-commit|squash|rebase)",
-		Args:  cobra.MaximumNArgs(1),
+		Long: `Merge the ticket's branch into the base branch. The base branch must be
+checked out in the repo with no uncommitted changes to tracked files.
+
+With a ticket id and no --strategy, the board's default strategy is used, or
+its only allowed one; otherwise --strategy is required. Without an id or
+--strategy, the ticket list has a Strategy row when the board allows more
+than one: Left/Right choose among them.`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			url := resolveURL(cmd, serverURL)
@@ -1242,6 +1269,7 @@ func columnCmd() *cobra.Command {
 	parent := &cobra.Command{
 		Use:   "column",
 		Short: "Column-level operations",
+		Long:  `Column-level operations. Find column ids with "kanban board state".`,
 	}
 	addServerFlag(parent, &serverURL)
 
@@ -1277,6 +1305,8 @@ func sessionCmd() *cobra.Command {
 	parent := &cobra.Command{
 		Use:   "session",
 		Short: "Manage agent sessions",
+		Long: `Manage agent sessions. These subcommands take a session id, except ensure,
+which takes a ticket id.`,
 	}
 	addServerFlag(parent, &serverURL)
 
@@ -1389,6 +1419,9 @@ func envCmd() *cobra.Command {
 		Long: "Manage per-board environment variables. They are injected into the board's\n" +
 			"session containers at the next session start/restart. Values are encrypted\n" +
 			"at rest and write-only: they can be set or removed, never read back.",
+		Example: `  kanban env list playground
+  kanban env set playground MY_API_KEY=sk-abc123 OTHER_TOKEN=xyz
+  kanban env unset playground MY_API_KEY`,
 	}
 	addServerFlag(parent, &serverURL)
 

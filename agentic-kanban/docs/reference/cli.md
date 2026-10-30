@@ -6,6 +6,7 @@ The `kanban` binary runs the server and the MCP server. It also has commands for
 kanban
 ├── serve              Start the server
 ├── mcp                Run the MCP server over stdio
+├── man                Write man pages to a directory
 ├── board
 │   ├── list           List boards
 │   ├── create         Create a board
@@ -96,6 +97,14 @@ kanban mcp [--server URL]
 ```
 
 Runs the MCP server over stdio. It needs `kanban serve` to be running. See the [MCP reference](./mcp) for setup and the list of tools.
+
+## `man`
+
+```sh
+kanban man -o <dir>
+```
+
+Writes a man page for every command to `<dir>`, creating it if needed and overwriting existing pages. Pages are named after the command, such as `kanban-ticket-attach.1`. See [Man pages](/guide/install#man-pages).
 
 ## `board`
 

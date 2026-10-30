@@ -41,6 +41,11 @@ func configCmd() *cobra.Command {
 			"config, .kanban.toml or .config/kanban/config.toml (selected with " +
 			"--board). Keys are dotted, e.g. " +
 			"sync.allow_rebase or github.draft_column.",
+		Example: `  kanban config list
+  kanban config get merge.default_strategy
+  kanban config set sync.allow_rebase false --global
+  kanban config set branches.prefix feat --local --board playground
+  kanban config unset github.draft_column --global`,
 	}
 	addServerFlag(parent, &serverURL)
 

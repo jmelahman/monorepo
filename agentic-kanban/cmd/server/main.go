@@ -91,14 +91,32 @@ func Root() *cobra.Command {
 	var claudeConfig bool
 
 	cmd := &cobra.Command{
-		Use:     "kanban",
-		Short:   "Kanban board for managing AI agent sessions",
+		Use:   "kanban",
+		Short: "Kanban board for managing AI agent sessions",
+		Long: `Kanban board for managing AI agent sessions.
+
+Each ticket on a board can run a coding agent in its own devcontainer and git
+worktree. "kanban serve" runs the server and web UI. "kanban mcp" exposes the
+board to agents over the Model Context Protocol. The other commands work with
+a running server from your terminal, using the one at --server.
+
+Environment variables, which an explicitly passed flag overrides:
+
+- KANBAN_URL: --server
+- KANBAN_BACKEND_URL: web --backend
+- KANBAN_CONFIG: serve --config
+- KANBAN_DATA_DIR: serve --data-dir
+- KANBAN_WORKTREES_DIR: serve --worktrees-dir
+- KANBAN_CLAUDE_CONFIG: serve --claude-config`,
 		Version: Build().Version,
 	}
 
 	serve := &cobra.Command{
 		Use:   "serve",
 		Short: "Start the kanban HTTP server",
+		Long: `Start the kanban server, which hosts the web UI and HTTP API and runs agent
+sessions in Docker containers. Open the --addr address in a browser to use
+the UI. The database and worktrees live under --data-dir.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := applyConfigPath(configPath); err != nil {
 				return err
@@ -137,6 +155,7 @@ func Root() *cobra.Command {
 	cmd.AddCommand(mcpCmd)
 
 	cmd.AddCommand(newWebCmd())
+	cmd.AddCommand(newManCmd())
 
 	addClientCommands(cmd)
 
