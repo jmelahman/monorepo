@@ -274,6 +274,8 @@ removed {
 # Released versions are permanent: the Go checksum database and release assets
 # pin what a tag pointed to, so a bad release gets a new version instead.
 # Creation stays open for the mirror workflow, which pushes tags without force.
+# Only full versions are covered: a floating major tag, e.g. the v1 that `uses:
+# jmelahman/git-orchard@v1` resolves, moves with each release.
 import {
   to = github_repository_ruleset.tags["work"]
   id = "work:2806590"
@@ -290,7 +292,7 @@ resource "github_repository_ruleset" "tags" {
   conditions {
     ref_name {
       # The monorepo's tags are prefixed with their subtree, e.g. tag/v0.6.1.
-      include = [each.key == "monorepo" ? "refs/tags/**/v*" : "refs/tags/v*"]
+      include = [each.key == "monorepo" ? "refs/tags/**/v*.*.*" : "refs/tags/v*.*.*"]
       exclude = []
     }
   }
