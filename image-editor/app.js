@@ -265,8 +265,8 @@ function resizeImage(w, h) {
 // Change the canvas around the image; (ax, ay) is the point of the image, from
 // 0 to 1 on each side, that stays put relative to the canvas.
 function resizeCanvas(w, h, ax, ay) {
-  const dx = Math.round((w - overlay.width) * ax);
-  const dy = Math.round((h - overlay.height) * ay);
+  const dx = Math.trunc((w - overlay.width) * ax);
+  const dy = Math.trunc((h - overlay.height) * ay);
   transformImage(w, h, new DOMMatrix().translate(dx, dy));
 }
 
