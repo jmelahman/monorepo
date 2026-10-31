@@ -16,7 +16,7 @@ in `web/`):
 ```toml
 [frontend]
 path  = "web"                    # hash root + build cwd (repo-relative)
-build = [["npm", "ci"], ["npm", "run", "build"]]
+build = [["bun", "install", "--frozen-lockfile"], ["bun", "run", "build"]]
 dist  = "dist"                   # build output, relative to path
 
 [backend]
@@ -290,7 +290,7 @@ same schema under a `[previews]` table in `.kanban.toml`:
 ```toml
 [previews.frontend]
 path  = "web"
-build = [["npm", "ci"], ["npm", "run", "build"]]
+build = [["bun", "install", "--frozen-lockfile"], ["bun", "run", "build"]]
 dist  = "dist"
 
 [previews.backend]
@@ -335,7 +335,7 @@ it feeds the artifact hash: bumping the image rebuilds.
 
 Requires a reachable Docker daemon (`$DOCKER_HOST`, `/var/run/docker.sock`,
 or the rootless per-user socket). If none is reachable, the build logs a
-warning and falls back to host execution. Toolchain caches (npm, Go) are
+warning and falls back to host execution. Toolchain caches (Bun, Go) are
 kept warm on a named volume per image. Embedding applications with their
 own runners (agentic-kanban's devcontainer builds) honor `image` when set —
 an explicit image beats environment discovery. The standalone server does
@@ -359,7 +359,7 @@ What's honored:
   toolchain caches your interactive sandbox already populated. Bind mounts
   reference paths personal to a developer's machine and are dropped.
 - `remoteUser` / `containerUser` — only to derive the `HOME` steps run
-  with, so toolchains (go, npm) resolve their caches onto the mounted
+  with, so toolchains (go, bun) resolve their caches onto the mounted
   volume targets.
 - `${localEnv:VAR}` and `${localEnv:VAR:default}` are expanded against the
   server's environment; entries still referencing other variables

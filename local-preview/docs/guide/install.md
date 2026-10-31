@@ -2,7 +2,7 @@
 
 The server manages git repos in-process (no `git` binary needed) and runs
 your projects' own build commands, so whatever toolchains your targets build
-with — e.g. `go`, `npm` — must be on the `PATH`.
+with — e.g. `go`, `bun` — must be on the `PATH`.
 
 ## PyPI (recommended)
 
@@ -30,7 +30,7 @@ docker run -d --name preview \
 ```
 
 ::: warning
-The published image bundles no build toolchains (`git`, `go`, `npm`, …),
+The published image bundles no build toolchains (`git`, `go`, `bun`, …),
 so on its own it can only build targets whose build commands need nothing
 beyond a shell. Builds for repos that declare an `image` in their manifest
 (see [Build images](../reference/preview-toml.md#build-images)) can instead

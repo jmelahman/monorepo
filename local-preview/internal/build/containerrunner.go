@@ -17,7 +17,7 @@ import (
 // buildMount is where the scratch tree appears inside a build container.
 const buildMount = "/preview-build"
 
-// cacheMount holds per-image toolchain caches (npm's $HOME/.npm, Go's
+// cacheMount holds per-image toolchain caches (Bun's $HOME/.bun, Go's
 // module/build caches) on a named volume so repeat container builds are
 // warm.
 const cacheMount = "/preview-cache"

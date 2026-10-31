@@ -31,7 +31,7 @@ type Config struct {
 	// sandbox already populated them.
 	Mounts []Mount `json:"mounts,omitempty"`
 	// Home is the remote user's home directory, derived from remoteUser /
-	// containerUser. Steps run with HOME set to it so toolchains (go, npm)
+	// containerUser. Steps run with HOME set to it so toolchains (go, bun)
 	// resolve their caches onto the mounted volumes.
 	Home string `json:"home,omitempty"`
 }
