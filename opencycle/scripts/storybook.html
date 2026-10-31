@@ -38,6 +38,7 @@
   <img id="picture" alt="">
   <div id="bar">
     <span id="caption"></span>
+    <span class="meta">←→ shots · ↑↓ chapters</span>
     <button id="compare">Hold to see previous chapter (space)</button>
     <button id="close">Close (esc)</button>
   </div>
@@ -90,13 +91,28 @@
     return older && older.shots[open.at] ? older : null;
   }
 
+  const describe = (chapter, at) => `${chapter.title}: ${chapter.shots[at].label} (${at + 1}/${chapter.shots.length})`;
+
   function show(index, at) {
     open = { index, at };
     const chapter = chapters[index];
     picture.src = path(chapter, chapter.shots[at]);
-    caption.textContent = `${chapter.title}: ${chapter.shots[at].label}`;
+    caption.textContent = describe(chapter, at);
     compare.disabled = !previous();
     view.classList.add("open");
+  }
+
+  // Left and right walk the shots of a chapter, wrapping around.
+  function turn(by) {
+    const count = chapters[open.index].shots.length;
+    show(open.index, (open.at + by + count) % count);
+  }
+
+  // Up and down walk the chapters as they're laid out on the page, newest at the top. Older
+  // chapters can have fewer shots, so this lands on the last one if the same one isn't there.
+  function leaf(by) {
+    const chapter = chapters[open.index + by];
+    if (chapter) show(open.index + by, Math.min(open.at, chapter.shots.length - 1));
   }
 
   function flip(back) {
@@ -104,7 +120,7 @@
     if (!older) return;
     const chapter = back ? older : chapters[open.index];
     picture.src = path(chapter, chapter.shots[open.at]);
-    caption.textContent = `${chapter.title}: ${chapter.shots[open.at].label}`;
+    caption.textContent = describe(chapter, open.at);
   }
 
   function close() {
@@ -119,6 +135,13 @@
     if (!open) return;
     if (event.key === "Escape") close();
     if (event.key === " ") { event.preventDefault(); if (!event.repeat) flip(true); }
+    const move = {
+      ArrowLeft: () => turn(-1),
+      ArrowRight: () => turn(1),
+      ArrowUp: () => leaf(-1),
+      ArrowDown: () => leaf(1),
+    }[event.key];
+    if (move) { event.preventDefault(); move(); }
   });
   addEventListener("keyup", (event) => {
     if (event.key === " ") flip(false);
