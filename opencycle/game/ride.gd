@@ -5,7 +5,8 @@ extends Node3D
 ## [code]--biome=forest|neon[/code], [code]--seed=N[/code],
 ## [code]--replay=res://replays/x.json[/code] and [code]--quality=ship|max[/code] choose
 ## what to show. [code]--scale=0.5[/code] overrides the quality's render scale.
-## [code]--still=out.png[/code] with [code]--at=SECONDS[/code] renders one frame and quits.
+## [code]--still=out.png[/code] with [code]--at=SECONDS[/code] renders one frame and quits,
+## and [code]--look=YAW,PITCH,SIDEWAYS[/code] turns its camera and moves it off the racing line.
 ## [code]--bench=out.json[/code] rides the whole replay as fast as the GPU allows and
 ## reports its frame times, and [code]--rate=4[/code] rides it faster for a quick
 ## read. With Godot's [code]--write-movie[/code] and
@@ -72,6 +73,8 @@ func _ready() -> void:
 	_time = at_seconds
 	_camera.transform = replay.camera_at(route, _time)
 	_send_time()
+	if _still_path and args.has("look"):
+		_look(args["look"])
 	if _bench_path:
 		Engine.max_fps = 0
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -153,6 +156,14 @@ func _write_report() -> void:
 	file.store_string(JSON.stringify(report, "  ") + "\n")
 	file.close()
 	print("ride: %s" % report)
+
+
+## Points a still at something the ride only passes: degrees left and up, metres to the right.
+func _look(spec: String) -> void:
+	var parts := spec.split_floats(",")
+	_camera.translate(Vector3(parts[2], 0.0, 0.0))
+	_camera.rotate_y(deg_to_rad(parts[0]))
+	_camera.rotate_object_local(Vector3.RIGHT, deg_to_rad(parts[1]))
 
 
 func _take_still() -> void:

@@ -11,7 +11,7 @@ const WINDOW: Shader = preload("res://game/brutal_window.gdshader")
 const FINISHES: Array[Array] = [
 	["wood_textured_concrete", 2.4],
 	["ribbed_concrete_wall", 3.0],
-	["preconcrete_wall_001", 4.0],
+	["concrete_wall_007", 3.2],
 	["concrete_slab_wall", 4.0],
 ]
 const AIRCON := "res://assets/polyhaven/exterior_aircon_unit/exterior_aircon_unit_1k.gltf"
@@ -743,12 +743,13 @@ static func _light(
 	var colour := WARM_WASH if warm else COLD_WASH
 	var rake := SpotLight3D.new()
 	rake.light_color = colour
-	rake.light_energy = lerpf(14.0, 26.0, Rng.unit(tower.dice, 921))
+	# A flat fall-off and less power, so what's beside the light doesn't burn out to white.
+	rake.light_energy = lerpf(6.0, 11.0, Rng.unit(tower.dice, 921))
 	rake.light_specular = 0.25
 	rake.light_volumetric_fog_energy = 0.3
 	rake.spot_range = 30.0
 	rake.spot_angle = 74.0
-	rake.spot_attenuation = 0.7
+	rake.spot_attenuation = 0.3
 	rake.shadow_enabled = true
 	var drift := (Rng.unit(tower.dice, 922) - 0.5) * tower.width * 0.5
 	var source := front - outward * (tower.jetty + 1.6) + along * drift + Vector3.UP * 5.9
@@ -757,10 +758,10 @@ static func _light(
 	rake.position = source
 	root.add_child(rake)
 	# A bulkhead over some of the shutters, most of which nobody's replaced.
-	var count := maxi(roundi(tower.width / 9.0), 1)
+	var count := maxi(roundi(tower.width / 6.0), 1)
 	for index: int in count:
 		var dice := Rng.derive(tower.dice, [923, index])
-		if Rng.unit(dice, 0) < 0.45:
+		if Rng.unit(dice, 0) < 0.3:
 			continue
 		var at := ((index + 0.5) / count - 0.5) * tower.width
 		var fitting := front - outward * 0.75 + along * at + Vector3.UP * (BEAM_FROM - 0.05)
@@ -775,17 +776,17 @@ static func _light(
 		)
 		var bulkhead := SpotLight3D.new()
 		bulkhead.light_color = colour
-		bulkhead.light_energy = lerpf(1.5, 3.5, Rng.unit(dice, 1))
+		bulkhead.light_energy = lerpf(3.0, 7.0, Rng.unit(dice, 1))
 		bulkhead.light_specular = 0.3
 		bulkhead.light_volumetric_fog_energy = 0.2
-		bulkhead.spot_range = 8.0
+		bulkhead.spot_range = 9.0
 		bulkhead.spot_angle = 58.0
 		bulkhead.basis = Basis.looking_at(Vector3.DOWN + outward * 0.25, along)
 		bulkhead.position = fitting - Vector3.UP * 0.1
 		root.add_child(bulkhead)
 
 
-static func _scan(texture: String, metres: float, tint: Color) -> StandardMaterial3D:
+static func scan(texture: String, metres: float, tint: Color) -> StandardMaterial3D:
 	var path := "res://assets/polyhaven/%s/%s_%%s_2k.jpg" % [texture, texture]
 	var material := StandardMaterial3D.new()
 	material.albedo_texture = load(path % "diffuse")
@@ -821,9 +822,9 @@ static func _materials() -> Materials:
 		used.concrete.append(material)
 	used.glass = ShaderMaterial.new()
 	used.glass.shader = WINDOW
-	used.metal = _scan("rusty_painted_metal", 2.0, Color(0.75, 0.75, 0.75))
-	used.rust = _scan("rusty_metal_02", 1.5, Color(0.85, 0.8, 0.75))
-	used.corrugated = _scan("rusty_corrugated_iron", 2.5, Color(0.7, 0.68, 0.66))
+	used.metal = scan("rusty_painted_metal", 2.0, Color(0.75, 0.75, 0.75))
+	used.rust = scan("rusty_metal_02", 1.5, Color(0.85, 0.8, 0.75))
+	used.corrugated = scan("rusty_corrugated_iron", 2.5, Color(0.7, 0.68, 0.66))
 	used.lamp = StandardMaterial3D.new()
 	used.lamp.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	used.lamp.vertex_color_use_as_albedo = true

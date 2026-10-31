@@ -14,6 +14,9 @@ const LADDER := "res://assets/polyhaven/ladder_sectioned_01/ladder_sectioned_01_
 const LAMP_HEIGHT := 7.2
 const ARM := 1.9
 const RAIL_HEIGHT := 1.05
+const RAIL_PANEL := 2.0
+const RAIL_FOOT := 0.2
+const BALUSTER_EVERY := 0.14
 const SIDES := 12
 
 
@@ -22,7 +25,9 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	root.name = "Furniture"
 	var kit := CityMesh.new()
 	var steel := _plain(Color(0.2, 0.2, 0.21), 0.5, 0.6)
-	var rail := _plain(Color(0.58, 0.58, 0.55), 0.5, 0.3)
+	var rail := Facades.scan("rusty_painted_metal", 1.1, Color(1.5, 1.6, 1.55))
+	# Paint, not bare metal, which would go black anywhere with nothing to reflect.
+	rail.metallic = 0.0
 	var cable := _plain(Color(0.02, 0.02, 0.02), 0.7, 0.0)
 	var red := _plain(Color(0.72, 0.05, 0.05), 0.45, 0.0)
 	var white := _plain(Color(0.85, 0.85, 0.82), 0.45, 0.0)
@@ -91,22 +96,81 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	return root
 
 
-## A run of painted guard rail along the kerb: posts, a top rail, a mid rail, and a
-## kick plate low down.
+## A run of the street's guard rail along the kerb, close-barred panels between bolted posts.
+## Decades of parking have bent some of them, and some have gone altogether.
 static func _railing(kit: CityMesh, route: Route, railing: Vector3, material: Material) -> void:
 	var offset := (NeonBiome.STREET_HALF + StreetGround.KERB_WIDTH + 0.12) * railing.z
 	var lift := Vector3.UP * StreetGround.KERB_HEIGHT
 	var s := railing.x
+	var index := 0
 	while s < railing.y:
-		var next := minf(s + 2.0, railing.y)
+		var next := minf(s + RAIL_PANEL, railing.y)
 		kit.at(s)
 		var a := route.at(s) + route.right(s) * offset + lift
 		var b := route.at(next) + route.right(next) * offset + lift
-		kit.bar(material, a, a + Vector3.UP * RAIL_HEIGHT, 0.05)
-		kit.bar(material, a + Vector3.UP * RAIL_HEIGHT, b + Vector3.UP * RAIL_HEIGHT, 0.04)
-		kit.bar(material, a + Vector3.UP * 0.62, b + Vector3.UP * 0.62, 0.03)
-		kit.bar(material, a + Vector3.UP * 0.22, b + Vector3.UP * 0.22, 0.03)
+		_rail_post(kit, a, material)
+		var dice := Rng.derive(roundi(railing.x * 10.0 + railing.z), [index])
+		var roll := Rng.unit(dice, 0)
+		if roll > 0.05:
+			var dent := 0.0
+			if roll < 0.16:
+				dent = lerpf(0.08, 0.26, Rng.unit(dice, 1)) * railing.z
+			_rail_panel(kit, a, b, route.right(s), dent, material)
 		s = next
+		index += 1
+	var last := route.at(railing.y) + route.right(railing.y) * offset + lift
+	_rail_post(kit, last, material)
+
+
+static func _rail_post(kit: CityMesh, foot: Vector3, material: Material) -> void:
+	kit.bar(material, foot, foot + Vector3.UP * (RAIL_HEIGHT + 0.03), 0.07)
+	kit.bar(material, foot, foot + Vector3.UP * 0.012, 0.2)
+	kit.bar(
+		material,
+		foot + Vector3.UP * (RAIL_HEIGHT + 0.03),
+		foot + Vector3.UP * (RAIL_HEIGHT + 0.04),
+		0.09
+	)
+	for corner: Vector3 in [
+		Vector3(1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, 1), Vector3(-1, 0, -1)
+	]:
+		var bolt := foot + corner * 0.07
+		kit.bar(material, bolt, bolt + Vector3.UP * 0.03, 0.022)
+
+
+## A panel of bars between two posts, pushed out of true by [param dent] metres at its middle.
+static func _rail_panel(
+	kit: CityMesh, a: Vector3, b: Vector3, across: Vector3, dent: float, material: Material
+) -> void:
+	var pieces := 1 if dent == 0.0 else 6
+	for piece: int in pieces:
+		var from := float(piece) / pieces
+		var to := float(piece + 1) / pieces
+		for rail: Array in [[RAIL_HEIGHT, 0.05], [RAIL_HEIGHT - 0.1, 0.022], [RAIL_FOOT, 0.04]]:
+			var high: float = rail[0]
+			var thick: float = rail[1]
+			kit.bar(
+				material,
+				_rail_point(a, b, across, from, high, dent),
+				_rail_point(a, b, across, to, high, dent),
+				thick
+			)
+	var bars := maxi(roundi(a.distance_to(b) / BALUSTER_EVERY), 1)
+	for bar: int in range(1, bars):
+		var u := float(bar) / bars
+		kit.bar(
+			material,
+			_rail_point(a, b, across, u, RAIL_FOOT, dent),
+			_rail_point(a, b, across, u, RAIL_HEIGHT, dent),
+			0.018
+		)
+
+
+static func _rail_point(
+	a: Vector3, b: Vector3, across: Vector3, u: float, high: float, dent: float
+) -> Vector3:
+	var bulge := across * dent * 4.0 * u * (1.0 - u) * high / RAIL_HEIGHT
+	return a.lerp(b, u) + bulge + Vector3.UP * high
 
 
 static func _lamp(

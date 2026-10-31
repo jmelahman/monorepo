@@ -219,6 +219,38 @@
     "md5": "392f2d8d1816bf4f64a31edd49f9e64f",
     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_wall_004/concrete_wall_004_rough_2k.jpg"
   },
+  "concrete_wall_007/concrete_wall_007_ao_2k.jpg": {
+    "md5": "017eccbce10f7c1910b9bf0616164c84",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_wall_007/concrete_wall_007_ao_2k.jpg"
+  },
+  "concrete_wall_007/concrete_wall_007_diffuse_2k.jpg": {
+    "md5": "0805d124f36cc6c8408b66e4c49b8c50",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_wall_007/concrete_wall_007_diff_2k.jpg"
+  },
+  "concrete_wall_007/concrete_wall_007_nor_gl_2k.jpg": {
+    "md5": "6f85128b9b5704228f865b090561163f",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_wall_007/concrete_wall_007_nor_gl_2k.jpg"
+  },
+  "concrete_wall_007/concrete_wall_007_rough_2k.jpg": {
+    "md5": "6579780dfb9a3ddf22bc883fb1af4cf4",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_wall_007/concrete_wall_007_rough_2k.jpg"
+  },
+  "dirty_concrete/dirty_concrete_ao_2k.jpg": {
+    "md5": "2534adf9bcbf9877f471ef0e5df88319",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dirty_concrete/dirty_concrete_ao_2k.jpg"
+  },
+  "dirty_concrete/dirty_concrete_diffuse_2k.jpg": {
+    "md5": "935b487b6c68388fdbb705f37682cb24",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dirty_concrete/dirty_concrete_diff_2k.jpg"
+  },
+  "dirty_concrete/dirty_concrete_nor_gl_2k.jpg": {
+    "md5": "7ae7d791c6750752441ec50e8ec38189",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dirty_concrete/dirty_concrete_nor_gl_2k.jpg"
+  },
+  "dirty_concrete/dirty_concrete_rough_2k.jpg": {
+    "md5": "dd3e9394c3d3b5dff0fb6ceb793241de",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dirty_concrete/dirty_concrete_rough_2k.jpg"
+  },
   "exterior_aircon_unit/exterior_aircon_unit.bin": {
     "md5": "971c2cfcbc29256d7872eafe74352279",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/exterior_aircon_unit/exterior_aircon_unit.bin"
@@ -675,6 +707,22 @@
     "md5": "d6f0cffc0f834947ebf3b990d6b811d1",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/multi_cleaner_bottle/multi_cleaner_bottle_nor_gl_1k.jpg"
   },
+  "painted_metal_shutter/painted_metal_shutter_ao_2k.jpg": {
+    "md5": "050c25bff15c8ac90202a643f627ce4a",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/painted_metal_shutter/painted_metal_shutter_ao_2k.jpg"
+  },
+  "painted_metal_shutter/painted_metal_shutter_diffuse_2k.jpg": {
+    "md5": "71f3093741ac82b1e4ab10fd25bc367d",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/painted_metal_shutter/painted_metal_shutter_diff_2k.jpg"
+  },
+  "painted_metal_shutter/painted_metal_shutter_nor_gl_2k.jpg": {
+    "md5": "702bd74c66505f8beb45a9a1171cade6",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/painted_metal_shutter/painted_metal_shutter_nor_gl_2k.jpg"
+  },
+  "painted_metal_shutter/painted_metal_shutter_rough_2k.jpg": {
+    "md5": "d1a2f0c99c5e7266f2a977c3f1d41b19",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/painted_metal_shutter/painted_metal_shutter_rough_2k.jpg"
+  },
   "painted_wooden_shelves/painted_wooden_shelves.bin": {
     "md5": "964b327c4effc165624d160cdf2ee96c",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/painted_wooden_shelves/painted_wooden_shelves.bin"
@@ -807,22 +855,6 @@
     "md5": "387f81f09c0754416298398277fb2a6d",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/plastic_monobloc_chair_01/plastic_monobloc_chair_01_nor_gl_1k.jpg"
   },
-  "preconcrete_wall_001/preconcrete_wall_001_ao_2k.jpg": {
-    "md5": "5beb77ea8980806cfc968416bafe00ea",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/preconcrete_wall_001/preconcrete_wall_001_ao_2k.jpg"
-  },
-  "preconcrete_wall_001/preconcrete_wall_001_diffuse_2k.jpg": {
-    "md5": "72135bdf140371e5953c3ee658a36589",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/preconcrete_wall_001/preconcrete_wall_001_diff_2k.jpg"
-  },
-  "preconcrete_wall_001/preconcrete_wall_001_nor_gl_2k.jpg": {
-    "md5": "1565c05c2128f0ba1be4ac41b36f6bb0",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/preconcrete_wall_001/preconcrete_wall_001_nor_gl_2k.jpg"
-  },
-  "preconcrete_wall_001/preconcrete_wall_001_rough_2k.jpg": {
-    "md5": "ac044a27a8bddc38508f6bb90457ea1d",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/preconcrete_wall_001/preconcrete_wall_001_rough_2k.jpg"
-  },
   "propane_tank/propane_tank.bin": {
     "md5": "bb8e4a72c3f655bfa3dec7456a343451",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/propane_tank/propane_tank.bin"
@@ -911,30 +943,6 @@
     "md5": "ed9d8a2c863262f76f881346e8047c6a",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_moss_set_01/rock_moss_set_01_rough_1k.jpg"
   },
-  "rollershutter_door/rollershutter_door.bin": {
-    "md5": "9df2ea3372b84dca7959d81cd5818d29",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rollershutter_door/rollershutter_door.bin"
-  },
-  "rollershutter_door/rollershutter_door_1k.gltf": {
-    "md5": "e8ad4c4ea26db990d32301cd1f7481cf",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rollershutter_door/rollershutter_door_1k.gltf"
-  },
-  "rollershutter_door/textures/rollershutter_door_arm_1k.jpg": {
-    "md5": "5fc759f9776f232e6039ec5f847073df",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rollershutter_door/rollershutter_door_arm_1k.jpg"
-  },
-  "rollershutter_door/textures/rollershutter_door_diff_1k.jpg": {
-    "md5": "2903cbe74c5d9d434951ec8625725458",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rollershutter_door/rollershutter_door_diff_1k.jpg"
-  },
-  "rollershutter_door/textures/rollershutter_door_graffiti_diff_1k.jpg": {
-    "md5": "1985c43406b33a7a874ea78041dd44db",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rollershutter_door/rollershutter_door_graffiti_diff_1k.jpg"
-  },
-  "rollershutter_door/textures/rollershutter_door_nor_gl_1k.jpg": {
-    "md5": "bd6f336490c10bdb6ca1a527981054a3",
-    "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rollershutter_door/rollershutter_door_nor_gl_1k.jpg"
-  },
   "russian_food_cans_01/russian_food_cans_01.bin": {
     "md5": "0abf139e24697f4ae88224df21a4015c",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/russian_food_cans_01/russian_food_cans_01.bin"
@@ -954,6 +962,22 @@
   "russian_food_cans_01/textures/russian_food_cans_01_nor_gl_1k.jpg": {
     "md5": "db6a5bae2597e8970e2ddf7171d4613c",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/russian_food_cans_01/russian_food_cans_01_nor_gl_1k.jpg"
+  },
+  "rusted_shutter/rusted_shutter_ao_2k.jpg": {
+    "md5": "e19b43d05238477f208e973db66e33e2",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusted_shutter/rusted_shutter_ao_2k.jpg"
+  },
+  "rusted_shutter/rusted_shutter_diffuse_2k.jpg": {
+    "md5": "4341169e6373a4792df31a7aece16a0a",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusted_shutter/rusted_shutter_diff_2k.jpg"
+  },
+  "rusted_shutter/rusted_shutter_nor_gl_2k.jpg": {
+    "md5": "e460275cef705d73300d49ec5f70129f",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusted_shutter/rusted_shutter_nor_gl_2k.jpg"
+  },
+  "rusted_shutter/rusted_shutter_rough_2k.jpg": {
+    "md5": "c7211f8d6f8406f569bb0ed1ddb8d3e1",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusted_shutter/rusted_shutter_rough_2k.jpg"
   },
   "rusty_corrugated_iron/rusty_corrugated_iron_ao_2k.jpg": {
     "md5": "1e35d6dca77e778a68ac0adacb936399",
@@ -986,6 +1010,22 @@
   "rusty_metal_02/rusty_metal_02_rough_2k.jpg": {
     "md5": "b3cde2ae9c01ae694d19ea0fa5d38bca",
     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_02/rusty_metal_02_rough_2k.jpg"
+  },
+  "rusty_metal_shutter/rusty_metal_shutter_ao_2k.jpg": {
+    "md5": "79cbce53341e42c20c6f31d595e67476",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_shutter/rusty_metal_shutter_ao_2k.jpg"
+  },
+  "rusty_metal_shutter/rusty_metal_shutter_diffuse_2k.jpg": {
+    "md5": "9a3706ea00590fdbd98fa1dbfc5e8e28",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_shutter/rusty_metal_shutter_diff_2k.jpg"
+  },
+  "rusty_metal_shutter/rusty_metal_shutter_nor_gl_2k.jpg": {
+    "md5": "c6e27a101f9096857ca9fa90c57c420c",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_shutter/rusty_metal_shutter_nor_gl_2k.jpg"
+  },
+  "rusty_metal_shutter/rusty_metal_shutter_rough_2k.jpg": {
+    "md5": "6a58a86b0e45a4efc4a91b7e61bc4533",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_shutter/rusty_metal_shutter_rough_2k.jpg"
   },
   "rusty_painted_metal/rusty_painted_metal_ao_2k.jpg": {
     "md5": "86d421ca2f5a00a39defaed9af57edb0",
@@ -1262,6 +1302,22 @@
   "wooden_display_shelves_01/wooden_display_shelves_01_1k.gltf": {
     "md5": "e807901382c7223238c5c3fd5bad5d8e",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wooden_display_shelves_01/wooden_display_shelves_01_1k.gltf"
+  },
+  "worn_corrugated_iron/worn_corrugated_iron_ao_2k.jpg": {
+    "md5": "52f682ab780e75cf6ee55cabfc85e598",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/worn_corrugated_iron/worn_corrugated_iron_ao_2k.jpg"
+  },
+  "worn_corrugated_iron/worn_corrugated_iron_diffuse_2k.jpg": {
+    "md5": "11cfe299bae991f40a39db04047342de",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/worn_corrugated_iron/worn_corrugated_iron_diff_2k.jpg"
+  },
+  "worn_corrugated_iron/worn_corrugated_iron_nor_gl_2k.jpg": {
+    "md5": "71919451b67bb3248d86c4533c675344",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/worn_corrugated_iron/worn_corrugated_iron_nor_gl_2k.jpg"
+  },
+  "worn_corrugated_iron/worn_corrugated_iron_rough_2k.jpg": {
+    "md5": "59aa43e2bb3d703caf783dcccdc5c280",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/worn_corrugated_iron/worn_corrugated_iron_rough_2k.jpg"
   },
   "worn_metal_rack/textures/worn_metal_rack_arm_1k.jpg": {
     "md5": "32a956dcffe9745b1d95970b0bf58e5a",

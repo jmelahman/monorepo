@@ -18,6 +18,15 @@ const TAIL_LIGHT := Color(1.0, 0.12, 0.06)
 const STRIP := Color(0.16, 0.26, 0.4)
 const HAZARD := Color(1.0, 0.08, 0.03)
 const SHAFT_COLOUR := Color(0.62, 0.8, 1.0)
+const PYLON_WASH := Color(0.7, 0.8, 0.95)
+const PYLON_TINT := Color(0.66, 0.68, 0.72)
+## How far either end of the street the pylons get lights of their own.
+const LIT_BEHIND := 15.0
+const LIT_AHEAD := 45.0
+const FOOT_HIGH := 3.2
+const GUARD_HIGH := 0.95
+const RUNG_EVERY := 0.3
+const LADDER_TOP := 13.0
 
 
 static func build(route: Route, city: Undercity, length: float) -> Node3D:
@@ -37,6 +46,8 @@ static func build(route: Route, city: Undercity, length: float) -> Node3D:
 	var sky := StandardMaterial3D.new()
 	sky.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	sky.vertex_color_use_as_albedo = true
+	var steel := Facades.scan("rusty_painted_metal", 1.2, Color(0.85, 0.85, 0.85))
+	var rust := Facades.scan("rusty_metal_02", 1.0, Color(0.9, 0.85, 0.8))
 	var wall := NeonBiome.STREET_HALF + Street.SIDEWALK
 	_deck(kit, route, length, concrete, sky)
 	for rib: Undercity.Rib in city.ribs:
@@ -45,6 +56,9 @@ static func build(route: Route, city: Undercity, length: float) -> Node3D:
 	for pylon: Undercity.Pylon in city.pylons:
 		kit.at(pylon.s)
 		_pylon(kit, route, pylon, wall, concrete, light)
+		_pylon_fittings(kit, route, pylon, wall, steel, rust)
+		if pylon.s > -LIT_BEHIND and pylon.s < length + LIT_AHEAD:
+			_pylon_lights(kit, root, route, pylon, wall, steel, light)
 	for duct: Undercity.Duct in city.ducts:
 		_duct(kit, route, duct, length, concrete)
 	var traffic := ShaderMaterial.new()
@@ -168,7 +182,7 @@ static func _pylon(
 	var outward := route.right(pylon.s) * pylon.side
 	var basis := Basis(along, Vector3.UP, outward)
 	var ground := route.at(pylon.s)
-	var tint := Color(0.42, 0.44, 0.48)
+	var tint := PYLON_TINT
 	var face := ground + outward * (wall - pylon.depth)
 	var high := Undercity.DECK_HEIGHT
 	kit.block(
@@ -181,9 +195,9 @@ static func _pylon(
 	# A heavy foot and collars every so often, which is what makes it read as enormous.
 	kit.block(
 		concrete,
-		Transform3D(basis, face + outward * pylon.depth * 0.5 + Vector3.UP * 1.6),
-		Vector3(pylon.width + 1.0, 3.2, pylon.depth + 0.9),
-		tint * 0.8,
+		Transform3D(basis, face + outward * pylon.depth * 0.5 + Vector3.UP * FOOT_HIGH * 0.5),
+		Vector3(pylon.width + 1.0, FOOT_HIGH, pylon.depth + 0.9),
+		tint * 0.85,
 		0.14
 	)
 	# Pilasters up its face, for something for the light to catch.
@@ -210,6 +224,117 @@ static func _pylon(
 	for lamp: float in [0.45, 0.8]:
 		var at := face - outward * 0.1 + along * pylon.width * 0.42 + Vector3.UP * high * lamp
 		kit.bar(light, at, at + Vector3.UP * 0.3, 0.14, HAZARD)
+
+
+## What the foot of a pylon has collected: steel plates where it's been hit, faded hazard
+## paint, conduit up its face, and a ladder to something nobody has serviced in years.
+static func _pylon_fittings(
+	kit: CityMesh,
+	route: Route,
+	pylon: Undercity.Pylon,
+	wall: float,
+	steel: Material,
+	rust: Material
+) -> void:
+	var along := route.tangent(pylon.s)
+	var outward := route.right(pylon.s) * pylon.side
+	var basis := Basis(along, Vector3.UP, outward)
+	var ground := route.at(pylon.s)
+	var skin := ground + outward * (wall - pylon.depth - 0.45)
+	var wide := pylon.width + 1.0
+	var dice := Rng.derive(roundi(pylon.s * 10.0), [int(pylon.side), 5])
+	# Guard plate along the foot, with bands of old hazard paint over it.
+	var plate := skin - outward * 0.03 + Vector3.UP * (0.15 + GUARD_HIGH * 0.5)
+	kit.box(rust, Transform3D(basis, plate), Vector3(wide, GUARD_HIGH, 0.05), Color(0.8, 0.8, 0.8))
+	var stripes := roundi(wide / 0.5)
+	for stripe: int in stripes:
+		if stripe % 2 == 1 or Rng.unit(dice, stripe) < 0.2:
+			continue
+		var at := ((stripe + 0.5) / stripes - 0.5) * wide
+		kit.box(
+			steel,
+			Transform3D(basis, plate + along * at - outward * 0.03 + Vector3.UP * 0.3),
+			Vector3(wide / stripes, 0.3, 0.012),
+			Color(1.0, 0.7, 0.12)
+		)
+	# Conduit from the ground up past the first collars, into a box.
+	var runs := 2 + int(Rng.unit(dice, 40) * 3.0)
+	var run_x := (Rng.unit(dice, 41) - 0.5) * (pylon.width - 1.5)
+	var face := ground + outward * (wall - pylon.depth - 0.42)
+	for run: int in runs:
+		var foot := face + along * (run_x + run * 0.14) + Vector3.UP * FOOT_HIGH
+		kit.bar(steel, foot - outward * 0.1, foot + Vector3.UP * 7.5 - outward * 0.1, 0.05)
+	var box_at := face + along * run_x + Vector3.UP * (FOOT_HIGH + 1.4) - outward * 0.18
+	kit.box(steel, Transform3D(basis, box_at), Vector3(0.9, 1.1, 0.3), Color(0.7, 0.72, 0.7))
+	kit.box(
+		rust,
+		Transform3D(basis, box_at - outward * 0.16),
+		Vector3(0.82, 1.02, 0.015),
+		Color(0.85, 0.85, 0.85)
+	)
+	# The ladder, off a pilaster and caged higher up.
+	var ladder_x := along * pylon.width * (-0.16 if Rng.unit(dice, 42) < 0.5 else 0.16)
+	var ladder := face + ladder_x - outward * 0.26
+	for end: float in [-0.22, 0.22]:
+		var rail := ladder + along * end
+		kit.bar(steel, rail + Vector3.UP * FOOT_HIGH, rail + Vector3.UP * LADDER_TOP, 0.045)
+	var rung := FOOT_HIGH + 0.2
+	while rung < LADDER_TOP:
+		var at := ladder + Vector3.UP * rung
+		kit.bar(rust, at - along * 0.22, at + along * 0.22, 0.022)
+		rung += RUNG_EVERY
+
+
+## A lamp on an arm, which pours down over the foot, and a floodlight stood on the foot looking
+## up the shaft, so the pilasters and collars throw long shadows up it.
+static func _pylon_lights(
+	kit: CityMesh,
+	root: Node3D,
+	route: Route,
+	pylon: Undercity.Pylon,
+	wall: float,
+	steel: Material,
+	glow: Material
+) -> void:
+	var along := route.tangent(pylon.s)
+	var outward := route.right(pylon.s) * pylon.side
+	var basis := Basis(along, Vector3.UP, outward)
+	var ground := route.at(pylon.s)
+	var face := ground + outward * (wall - pylon.depth)
+	var mount := face + Vector3.UP * 5.4 + along * pylon.width * 0.3
+	var head := mount - outward * 1.3 - Vector3.UP * 0.2
+	kit.bar(steel, mount, head, 0.06)
+	kit.box(steel, Transform3D(basis, head), Vector3(0.5, 0.1, 0.24), Color(0.5, 0.5, 0.5))
+	kit.box(
+		glow,
+		Transform3D(basis, head - Vector3.UP * 0.06),
+		Vector3(0.42, 0.02, 0.17),
+		Color(1.4, 1.5, 1.6)
+	)
+	var pool := SpotLight3D.new()
+	pool.light_color = PYLON_WASH
+	pool.light_energy = 9.0
+	pool.light_specular = 0.3
+	pool.light_volumetric_fog_energy = 0.3
+	pool.spot_range = 11.0
+	pool.spot_angle = 68.0
+	pool.basis = Basis.looking_at(Vector3.DOWN + outward * 0.55, along)
+	pool.position = head - Vector3.UP * 0.1
+	root.add_child(pool)
+	var flood := SpotLight3D.new()
+	flood.light_color = PYLON_WASH
+	flood.light_energy = 10.0
+	flood.light_specular = 0.2
+	flood.light_volumetric_fog_energy = 0.15
+	flood.spot_range = 24.0
+	flood.spot_angle = 64.0
+	flood.spot_attenuation = 0.5
+	flood.shadow_enabled = true
+	var source := face - outward * 1.0 + Vector3.UP * (FOOT_HIGH + 0.1)
+	flood.basis = Basis.looking_at(face + Vector3.UP * 16.0 - source, along)
+	flood.position = source
+	root.add_child(flood)
+	kit.box(steel, Transform3D(basis, source), Vector3(0.4, 0.16, 0.3), Color(0.4, 0.4, 0.4))
 
 
 ## A long run of duct, following the road, under the deck or along a wall.

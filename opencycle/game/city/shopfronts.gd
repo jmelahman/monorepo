@@ -9,7 +9,6 @@ const SURFACE: Shader = preload("res://game/shop_surface.gdshader")
 const SCREEN: Shader = preload("res://game/screen.gdshader")
 const GOODS_SHEET := "res://assets/baked/goods.webp"
 const SIGN_SHEET := "res://assets/baked/signs.webp"
-const SHUTTER := "res://assets/polyhaven/rollershutter_door/rollershutter_door_1k.gltf"
 const TILE := "res://assets/polyhaven/square_tiled_wall/square_tiled_wall_%s_2k.jpg"
 const PROP := "res://assets/polyhaven/%s/%s_1k.gltf"
 const OPENING := 3.0
@@ -138,7 +137,6 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	kit.commit(root)
 	for prop: Kit in props.values():
 		prop.commit(root, PROP_REACH)
-	_add_shutters(root, route, street)
 	return root
 
 
@@ -180,11 +178,6 @@ static func _materials() -> Dictionary[String, Material]:
 	steel.metallic = 0.6
 	steel.roughness = 0.45
 	fitted["steel"] = steel
-	var fascia := StandardMaterial3D.new()
-	fascia.albedo_color = Color(0.3, 0.3, 0.32)
-	fascia.vertex_color_use_as_albedo = true
-	fascia.roughness = 0.55
-	fitted["fascia"] = fascia
 	var goods := ShaderMaterial.new()
 	goods.shader = GOODS
 	goods.set_shader_parameter("sheet", load(GOODS_SHEET))
@@ -221,7 +214,7 @@ static func _props() -> Dictionary[String, Kit]:
 	return props
 
 
-## The frontage every shop has, and for an open one a room with no front wall behind it.
+## An open shop's room, with no front wall. [StreetWall] builds the frontage every shop has.
 static func _shell(
 	kit: CityMesh, shop: Street.Shop, room: Room, materials: Dictionary[String, Material]
 ) -> void:
@@ -230,30 +223,7 @@ static func _shell(
 	var mouth := room.mouth
 	var half := along * shop.width * 0.5
 	var back := outward * shop.depth
-	var up := Vector3.UP * (Facades.GROUND_FLOOR - StreetGround.KERB_HEIGHT)
-	# The band above the door and the lintel over everything up to the first storey.
 	var inside := Vector3.UP * room.height
-	var fascia_tint := Color.from_hsv(
-		shop.pick, 0.12, lerpf(0.14, 0.3, shop.pick * 3.0 - floorf(shop.pick * 3.0))
-	)
-	kit.quad(
-		materials["fascia"],
-		mouth - half + inside,
-		mouth + half + inside,
-		mouth + half + up,
-		mouth - half + up,
-		-outward,
-		fascia_tint
-	)
-	# A party wall between each pair of shops, as a pillar on the street.
-	kit.box(
-		materials["fascia"],
-		Transform3D(
-			Basis(along, Vector3.UP, outward), mouth + half + inside * 0.5 + outward * 0.05
-		),
-		Vector3(0.3, OPENING, 0.5),
-		Color(0.32, 0.31, 0.3)
-	)
 	if not shop.open:
 		return
 	var trade: Dictionary = TRADES[shop.trade]
@@ -681,43 +651,3 @@ static func _light(route: Route, shop: Street.Shop) -> OmniLight3D:
 		+ Vector3.UP * 2.7
 	)
 	return glow
-
-
-static func _add_shutters(root: Node3D, route: Route, street: Street) -> void:
-	var scene: PackedScene = load(SHUTTER)
-	var node := scene.instantiate()
-	var meshes := node.find_children("*", "MeshInstance3D", true, false)
-	var source := (meshes[0] as MeshInstance3D).mesh
-	node.free()
-	# Shut for years: whatever colour they were, the grime has taken them.
-	var grimy := source.surface_get_material(0).duplicate() as BaseMaterial3D
-	grimy.albedo_color = Color(0.3, 0.32, 0.36)
-	source.surface_set_material(0, grimy)
-	var bounds := source.get_aabb()
-	var placed: Array[Transform3D] = []
-	for shop: Street.Shop in street.shops:
-		if shop.open:
-			continue
-		var along := route.tangent(shop.s)
-		var outward := route.right(shop.s) * shop.side
-		var at := (
-			route.at(shop.s)
-			+ outward * (NeonBiome.STREET_HALF + Street.SIDEWALK + 0.02)
-			+ Vector3.UP * StreetGround.KERB_HEIGHT
-		)
-		var basis := Basis(
-			along * (shop.width / bounds.size.x),
-			Vector3.UP * (OPENING / bounds.size.y),
-			outward * -1.0
-		)
-		var lift := -Vector3.UP * bounds.position.y * basis.y.length()
-		placed.append(Transform3D(basis, at + lift))
-	var multimesh := MultiMesh.new()
-	multimesh.transform_format = MultiMesh.TRANSFORM_3D
-	multimesh.mesh = source
-	multimesh.instance_count = placed.size()
-	for i: int in placed.size():
-		multimesh.set_instance_transform(i, placed[i])
-	var instance := MultiMeshInstance3D.new()
-	instance.multimesh = multimesh
-	root.add_child(instance)

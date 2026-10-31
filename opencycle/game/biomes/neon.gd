@@ -25,6 +25,7 @@ static func build(parent: Node3D, run_seed: int, route: Route, quality: String) 
 	parent.add_child(Landmarks.build(route, skyline))
 	parent.add_child(Overhead.build(route, undercity, LENGTH))
 	parent.add_child(Shopfronts.build(route, street, LENGTH))
+	parent.add_child(StreetWall.build(route, street))
 	parent.add_child(Signage.build(route, street, LENGTH))
 	parent.add_child(Furniture.build(route, street, LENGTH))
 	if CROWD:

@@ -24,8 +24,15 @@ ROOT = Path(__file__).resolve().parent.parent
 BOOK = ROOT / "captures" / "storybook"
 PAGE = Path(__file__).with_suffix(".html")
 BIOME = "neon"
-# Seconds into the ride, and what the camera happens to be looking at then.
-SHOTS = ((4, "Start of the ride"), (14, "Mid street"), (30, "Further along"))
+# Seconds into the ride, what the camera happens to be looking at then, and any turn of the
+# camera (ride.gd's --look) to see what the ride only passes.
+SHOTS = (
+    (4, "Start of the ride", ""),
+    (14, "Mid street", ""),
+    (30, "Further along", ""),
+    (14, "Left wall up close", "62,0,-2"),
+    (30, "Right wall up close", "-58,6,3"),
+)
 RENDER_TIMEOUT = 300
 
 
@@ -37,8 +44,8 @@ def git(*args: str) -> str:
 
 def render(chapter: Path) -> list[dict[str, str]]:
     shots = []
-    for at, label in SHOTS:
-        out = chapter / f"at-{at:02d}.png"
+    for at, label, look in SHOTS:
+        out = chapter / f"at-{at:02d}{'-close' if look else ''}.png"
         command = [
             "godot",
             "--path",
@@ -49,6 +56,7 @@ def render(chapter: Path) -> list[dict[str, str]]:
             f"--biome={BIOME}",
             f"--still={out}",
             f"--at={at}",
+            *([f"--look={look}"] if look else []),
         ]
         run = subprocess.run(
             command, cwd=ROOT, capture_output=True, text=True, timeout=RENDER_TIMEOUT
