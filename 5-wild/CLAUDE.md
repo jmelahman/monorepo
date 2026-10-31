@@ -253,7 +253,7 @@ device's. `MainActivity` paints the WebView from the same resource, which is why
 `capacitor.config.ts` no longer sets `backgroundColor`. `test/ui/theme.test.ts`
 holds both colors to `BACKDROP`. Below Android 12 the launch follows the device.
 
-Tests run in Node with no DOM: there is no jsdom. `test/ui` covers pure logic
+Tests run under Bun with no DOM: there is no jsdom. `test/ui` covers pure logic
 only; rendering and interaction get validated in a real browser instead.
 
 ## Changing balance

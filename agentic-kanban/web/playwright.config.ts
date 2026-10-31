@@ -81,7 +81,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `node_modules/.bin/vite --port ${FRONTEND_PORT} --strictPort`,
+      command: `bun --bun vite --port ${FRONTEND_PORT} --strictPort`,
       cwd: ".",
       env: { KANBAN_BACKEND: `localhost:${BACKEND_PORT}` },
       url: `http://localhost:${FRONTEND_PORT}/`,

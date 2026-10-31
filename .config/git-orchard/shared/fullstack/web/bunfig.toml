@@ -1,3 +1,7 @@
+# Run package binaries on Bun rather than Node.
+[run]
+bun = true
+
 [fmt]
 printWidth = 100
 # What Biome covered: Markdown, YAML, TOML and HTML stay hand-formatted.

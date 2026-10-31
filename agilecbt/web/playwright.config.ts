@@ -24,7 +24,7 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: "node tests/e2e/fake-llm.mjs",
+      command: "bun tests/e2e/fake-llm.mjs",
       cwd: ".",
       env: { FAKE_LLM_PORT: String(FAKE_LLM_PORT) },
       url: `http://127.0.0.1:${FAKE_LLM_PORT}/v1/models`,
@@ -51,7 +51,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `node_modules/.bin/vite --port ${FRONTEND_PORT} --strictPort`,
+      command: `bun --bun vite --port ${FRONTEND_PORT} --strictPort`,
       cwd: ".",
       env: { AGILECBT_BACKEND: `127.0.0.1:${BACKEND_PORT}` },
       url: `http://localhost:${FRONTEND_PORT}/`,
