@@ -23,6 +23,8 @@ static func build(route: Route, skyline: Skyline) -> Node3D:
 	steel.metallic = 0.4
 	var far := ShaderMaterial.new()
 	far.shader = SPIRE
+	var under := Facades.scan("rusty_metal_02", 1.0, Color(0.6, 0.58, 0.56))
+	under.metallic = 0.0
 	var sheet := SignSheet.load_sheet()
 	var picture: Texture2D = load(SIGN_SHEET)
 	for spire: Skyline.Spire in skyline.spires:
@@ -37,9 +39,9 @@ static func build(route: Route, skyline: Skyline) -> Node3D:
 	for span: Skyline.Span in skyline.spans:
 		kit.at(span.s)
 		if span.rail:
-			_rail(kit, root, route, span, steel, neon)
+			_rail(kit, root, route, span, steel, under, neon)
 		else:
-			_bridge(kit, root, route, span, steel, neon)
+			_bridge(kit, root, route, span, steel, under, neon)
 	kit.commit(root)
 	for beam: Skyline.Beam in skyline.beams:
 		root.add_child(_beam(route, beam))
@@ -146,7 +148,13 @@ static func _screen(
 
 
 static func _bridge(
-	kit: CityMesh, root: Node3D, route: Route, span: Skyline.Span, steel: Material, neon: Material
+	kit: CityMesh,
+	root: Node3D,
+	route: Route,
+	span: Skyline.Span,
+	steel: Material,
+	under: Material,
+	neon: Material
 ) -> void:
 	var along := route.tangent(span.s)
 	var across := route.right(span.s)
@@ -175,8 +183,10 @@ static func _bridge(
 			var at := middle + face * side * 1.03 + across * post + Vector3.UP * 0.25
 			kit.box(steel, Transform3D(basis, at), Vector3(0.3, 1.3, 0.08))
 			post += 2.2
-		var edge := middle + face * side + Vector3.UP * -1.42
-		kit.bar(neon, edge - half, edge + half, 0.09, colour)
+		# Tucked up behind the girders, so it can't peek out from under the far side.
+		var edge := middle + face * side + Vector3.UP * -1.2
+		kit.bar(neon, edge - half, edge + half, 0.07, colour)
+	_underside(kit, route, span, middle + Vector3.UP * -1.5, run, depth, under)
 	var glow := OmniLight3D.new()
 	glow.light_color = colour
 	glow.light_energy = 1.5
@@ -186,8 +196,60 @@ static func _bridge(
 	root.add_child(glow)
 
 
+## What a crossing is really held up by: girders the length of it, ribs across them, and the
+## services slung underneath. [param soffit] is the middle of the box's flat bottom.
+static func _underside(
+	kit: CityMesh,
+	route: Route,
+	span: Skyline.Span,
+	soffit: Vector3,
+	run: float,
+	depth: float,
+	under: Material
+) -> void:
+	var along := route.tangent(span.s)
+	var across := route.right(span.s)
+	var basis := Basis(across, Vector3.UP, along)
+	var dice := Rng.derive(int(span.phase * 100000.0), [91])
+	# The lining plate, so the soffit isn't left as a bare flat colour.
+	kit.box(
+		under,
+		Transform3D(basis, soffit - Vector3.UP * 0.02),
+		Vector3(run, 0.04, depth),
+		Color(0.8, 0.8, 0.8)
+	)
+	for side: float in [-1.0, 1.0]:
+		var at := soffit + along * (depth * 0.5 - 0.22) * side - Vector3.UP * 0.32
+		kit.box(under, Transform3D(basis, at), Vector3(run, 0.56, 0.3))
+		kit.box(under, Transform3D(basis, at - Vector3.UP * 0.3), Vector3(run, 0.05, 0.56))
+	var rib := -run * 0.5 + 0.6
+	while rib < run * 0.5:
+		var at := soffit + across * rib - Vector3.UP * 0.14
+		kit.box(under, Transform3D(basis, at), Vector3(0.16, 0.26, depth - 0.5))
+		rib += 1.6
+	# Pipes and a cable tray, down the side that isn't lit the most.
+	for pipe: int in 3:
+		var thick := lerpf(0.06, 0.15, Rng.unit(dice, pipe))
+		var off := along * lerpf(-0.45, 0.45, (pipe + 0.5) / 3.0) * depth * 0.6
+		var low := soffit + off - Vector3.UP * (0.34 + thick)
+		var half := across * run * 0.5
+		kit.bar(under, low - half, low + half, thick, Color(0.5, 0.5, 0.5))
+	var hanger := -run * 0.5 + 1.0
+	while hanger < run * 0.5:
+		var at := soffit + across * hanger
+		kit.bar(under, at - along * depth * 0.3, at - along * depth * 0.3 - Vector3.UP * 0.5, 0.03)
+		kit.bar(under, at + along * depth * 0.3, at + along * depth * 0.3 - Vector3.UP * 0.5, 0.03)
+		hanger += 3.1
+
+
 static func _rail(
-	kit: CityMesh, root: Node3D, route: Route, span: Skyline.Span, steel: Material, neon: Material
+	kit: CityMesh,
+	root: Node3D,
+	route: Route,
+	span: Skyline.Span,
+	steel: Material,
+	under: Material,
+	neon: Material
 ) -> void:
 	var along := route.tangent(span.s)
 	var across := route.right(span.s)
@@ -196,6 +258,7 @@ static func _rail(
 	var run := Train.HALF_RUN * 2.0
 	var depth := Skyline.RAIL_DEPTH
 	kit.box(steel, Transform3D(basis, middle), Vector3(run, 1.8, depth))
+	_underside(kit, route, span, middle + Vector3.UP * -0.9, run, depth, under)
 	var colour := _neon(span.hue)
 	var half := across * Train.HALF_RUN
 	for side: float in [-1.0, 1.0]:

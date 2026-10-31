@@ -6,6 +6,7 @@ extends RefCounted
 const CONCRETE := "res://assets/polyhaven/concrete_wall_004/concrete_wall_004_%s_2k.jpg"
 const BRUTAL: Shader = preload("res://game/brutal.gdshader")
 const TRAFFIC: Shader = preload("res://game/traffic.gdshader")
+const SKYLIGHT: Shader = preload("res://game/skylight.gdshader")
 const STRETCH := 8.0
 const DECK_WIDE := 70.0
 const CONCRETE_METRES := 5.0
@@ -43,9 +44,8 @@ static func build(route: Route, city: Undercity, length: float) -> Node3D:
 	light.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	light.vertex_color_use_as_albedo = true
 	light.albedo_color = Color(1.6, 1.6, 1.6)
-	var sky := StandardMaterial3D.new()
-	sky.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	sky.vertex_color_use_as_albedo = true
+	var sky := ShaderMaterial.new()
+	sky.shader = SKYLIGHT
 	var steel := Facades.scan("rusty_painted_metal", 1.2, Color(0.85, 0.85, 0.85))
 	var rust := Facades.scan("rusty_metal_02", 1.0, Color(0.9, 0.85, 0.8))
 	var wall := NeonBiome.STREET_HALF + Street.SIDEWALK

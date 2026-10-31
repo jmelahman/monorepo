@@ -72,7 +72,7 @@ void fragment() {
 		float keep = 1.0 - smoothstep(0.012, 0.03, fwidth(at.x) + fwidth(at.y));
 		float dip = formwork(at);
 		vec2 pour_cell = floor(at / vec2(2.4, 1.2));
-		surface *= 0.86 + 0.28 * hash(pour_cell + 11.0);
+		surface *= 0.92 + 0.16 * hash(pour_cell + 11.0);
 		surface *= 1.0 - dip * 0.65 * keep;
 		float e = 0.006;
 		vec2 slope = vec2(formwork(at + vec2(e, 0.0)) - dip, formwork(at + vec2(0.0, e)) - dip);
@@ -88,7 +88,9 @@ void fragment() {
 	float runs = noise(vec2(at.x * 2.6, at.y * 0.07));
 	float fine = noise(vec2(at.x * 11.0, at.y * 0.22));
 	float blotch = noise(at * 0.13);
-	float dirt = smoothstep(0.35, 0.8, runs * 0.6 + fine * 0.25 + blotch * 0.3);
+	// Water runs down a wall. A soffit or a ledge just goes blotchy, or it'd stripe like tartan.
+	float streaks = n.y < 0.5 ? runs * 0.6 + fine * 0.25 : noise(at * 0.9) * 0.85;
+	float dirt = smoothstep(0.35, 0.8, streaks + blotch * 0.3);
 	dirt = clamp(dirt * (0.45 + age * 0.75), 0.0, 1.0);
 	// Heaviest right under each ledge, where the water comes off it.
 	if (ledges.x > 0.1 && n.y < 0.5) {
