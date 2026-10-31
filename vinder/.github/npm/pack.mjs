@@ -9,7 +9,7 @@
 // and runs it from a small JS shim. Nothing runs at install time, so it
 // works where install scripts are off: bun, pnpm 10, `--ignore-scripts`.
 //
-//   node .github/npm/pack.mjs
+//   bun .github/npm/pack.mjs
 //
 // writes dist/npm/platforms/<name>-<os>-<cpu>/ and dist/npm/main/, to be
 // published in that order. The package name is GoReleaser's project name,
