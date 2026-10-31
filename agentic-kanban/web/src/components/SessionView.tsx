@@ -372,7 +372,7 @@ export function SessionView({
   // ticket's button stuck in its spinner state. Mutation handles are stable
   // for the lifetime of this component; listing them as deps would re-fire
   // on every render.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
+  // see above.
   useEffect(() => {
     setSyncMenuOpen(false);
     setMergeMenuOpen(false);
@@ -388,7 +388,7 @@ export function SessionView({
 
   // ticketId isn't referenced directly, but switching tickets remounts the
   // header DOM, so we re-measure to recompute the compact threshold.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
+  // see above.
   useLayoutEffect(() => {
     const header = headerRef.current;
     const ghost = headerGhostRef.current;

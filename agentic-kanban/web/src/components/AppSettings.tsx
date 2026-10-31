@@ -75,7 +75,7 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
   }, [settingsQ.data]);
 
   // Re-sync the form to the persisted value each time the modal opens.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only `open` toggles re-sync; the saved value is read at that moment.
+  // only `open` toggles re-sync; the saved value is read at that moment.
   useEffect(() => {
     if (open) {
       setOrientation(savedOrientation);
@@ -329,7 +329,7 @@ function ThemeModeToggle({
       {opts.map((o, i) => {
         const active = o.v === value;
         return (
-          // biome-ignore lint/a11y/useSemanticElements: custom-styled radio toggle; <input type="radio"> can't carry the same visual treatment.
+          // custom-styled radio toggle; <input type="radio"> can't carry the same visual treatment.
           <button
             key={o.v}
             ref={(el) => {

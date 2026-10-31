@@ -10,7 +10,7 @@ export function FormField({
   children: ReactNode;
 }) {
   return (
-    // biome-ignore lint/a11y/noLabelWithoutControl: children slot holds the control at runtime.
+    // children slot holds the control at runtime.
     <label className="flex flex-col gap-1">
       <span className="text-xs text-fg-muted">{label}</span>
       {children}

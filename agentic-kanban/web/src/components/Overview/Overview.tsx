@@ -141,7 +141,7 @@ function DesktopOverview() {
               hasPanels
             />
           </aside>
-          {/* biome-ignore lint/a11y/useSemanticElements: HTML has no semantic resizer; role="separator" is the canonical ARIA pattern. */}
+          {/* HTML has no semantic resizer; role="separator" is the canonical ARIA pattern. */}
           <div
             role="separator"
             aria-orientation="vertical"

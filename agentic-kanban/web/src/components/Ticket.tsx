@@ -62,7 +62,7 @@ function TicketCard({
   const interactiveCls = interactive ? "cursor-pointer hover:bg-surface-3" : "";
   const isInteractive = interactive && !!onClick;
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: role/tabIndex/onKeyDown applied conditionally below.
+    // role/tabIndex/onKeyDown applied conditionally below.
     <div
       ref={innerRef}
       {...dragProps}

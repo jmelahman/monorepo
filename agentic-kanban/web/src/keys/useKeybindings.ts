@@ -39,7 +39,7 @@ export function useKeybindings(): UseKeybindings {
 
   // `tick` is a re-key signal driven by storage/event subscriptions; it isn't
   // read inside, but bumping it is how we force a fresh read of `getBinding`.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
+  // see above.
   const bindings = useMemo(() => {
     const map: Record<ActionId, Binding | null> = {};
     for (const action of ACTIONS) {

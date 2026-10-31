@@ -98,7 +98,7 @@ export function SessionPane({
 
   // height/width are read once as the resize start point; adding them to deps
   // would tear down and re-attach listeners on every mouse move.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
+  // see above.
   useEffect(() => {
     if (!resizing) return;
     let pending: number | null = null;
@@ -161,7 +161,7 @@ export function SessionPane({
   return (
     <aside data-session-pane className={paneClass} style={paneStyle}>
       {!overlay && (
-        // biome-ignore lint/a11y/useSemanticElements: HTML has no semantic resizer; role="separator" is the canonical ARIA pattern.
+        // HTML has no semantic resizer; role="separator" is the canonical ARIA pattern.
         <div
           role="separator"
           aria-orientation={isHorizontal ? "horizontal" : "vertical"}

@@ -223,7 +223,7 @@ function BuildLogModal({ preview, onClose }: { preview: DashboardPreview; onClos
   });
   const ref = useRef<HTMLPreElement>(null);
   const pinned = useRef(true);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: new log content drives the re-scroll.
+  // new log content drives the re-scroll.
   useEffect(() => {
     const el = ref.current;
     if (el && pinned.current) el.scrollTop = el.scrollHeight;

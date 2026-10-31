@@ -195,7 +195,7 @@ function ReminderModal({
         <label className="flex flex-col gap-1">
           <span className="text-fg-muted">Note</span>
           <textarea
-            // biome-ignore lint/a11y/noAutofocus: the note is why the modal opened
+            // the note is why the modal opened
             autoFocus
             rows={3}
             value={note}

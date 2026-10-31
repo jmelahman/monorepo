@@ -17,7 +17,7 @@ export function useClickOutside(
   // callers don't need to memoize a stable array reference. Callers needing
   // dynamic selectors can rebuild the array each render — the join is what
   // determines re-subscription.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
+  // see above.
   useEffect(() => {
     if (!enabled) return;
     const handler = (e: MouseEvent) => {

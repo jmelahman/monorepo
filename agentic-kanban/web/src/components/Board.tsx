@@ -154,14 +154,14 @@ function BoardSkeleton() {
       <span className="sr-only">Loading board</span>
       {ticketCounts.map((n, i) => (
         <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list.
+          // static placeholder list.
           key={i}
           aria-hidden
           className="flex h-full min-w-72 flex-1 flex-col gap-2 rounded border border-border bg-surface p-2"
         >
           <div className="skeleton h-4 w-24 rounded" />
           {Array.from({ length: n }, (_, j) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list.
+            // static placeholder list.
             <div key={j} className="skeleton h-14 rounded" />
           ))}
         </div>

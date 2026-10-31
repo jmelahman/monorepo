@@ -1,5 +1,5 @@
-// biome-ignore-all lint/a11y/useSemanticElements: no native semantic for focus-tracked draggable panels and their drag handles.
-// biome-ignore-all lint/a11y/noNoninteractiveTabindex: panels capture focus to track the active panel among siblings.
+// no native semantic for focus-tracked draggable panels and their drag handles.
+// panels capture focus to track the active panel among siblings.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DraggableEvent } from "react-draggable";
