@@ -1,7 +1,7 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Runs the tests in a headless browser and exits with how they went.
 //
-//   node test/run.mjs
+//   bun test/run.mjs
 //
 // There is nothing to install: this serves the editor from a port of its own,
 // opens test/index.html in a browser that is already on the machine, with a
