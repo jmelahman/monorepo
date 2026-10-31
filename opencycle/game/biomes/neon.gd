@@ -45,7 +45,7 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.tonemap_white = 6.0
 	environment.glow_enabled = true
-	environment.glow_intensity = 0.35
+	environment.glow_intensity = 0.22
 	environment.glow_bloom = 0.02
 	environment.glow_hdr_threshold = 1.1
 	environment.ssr_enabled = true

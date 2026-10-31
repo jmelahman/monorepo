@@ -97,11 +97,11 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 static func _materials() -> Dictionary[String, Material]:
 	var fitted: Dictionary[String, Material] = {}
 	var ceiling := StandardMaterial3D.new()
-	ceiling.albedo_color = Color(0.82, 0.82, 0.8)
+	ceiling.albedo_color = Color(0.5, 0.5, 0.48)
 	ceiling.roughness = 0.8
 	fitted["ceiling"] = ceiling
 	var wall := StandardMaterial3D.new()
-	wall.albedo_color = Color(0.78, 0.77, 0.74)
+	wall.albedo_color = Color(0.52, 0.5, 0.47)
 	wall.roughness = 0.65
 	wall.vertex_color_use_as_albedo = true
 	fitted["wall"] = wall
@@ -112,7 +112,7 @@ static func _materials() -> Dictionary[String, Material]:
 	var tube := StandardMaterial3D.new()
 	tube.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	tube.vertex_color_use_as_albedo = true
-	tube.albedo_color = Color(5.0, 5.0, 5.0)
+	tube.albedo_color = Color(2.2, 2.2, 2.2)
 	fitted["tube"] = tube
 	var shelf := StandardMaterial3D.new()
 	shelf.albedo_color = Color(0.58, 0.58, 0.56)
@@ -377,7 +377,7 @@ static func _light(route: Route, shop: Street.Shop) -> OmniLight3D:
 	var outward := route.right(shop.s) * shop.side
 	var glow := OmniLight3D.new()
 	glow.light_color = TRADES[shop.trade]["light"]
-	glow.light_energy = 2.2 + shop.width * 0.3
+	glow.light_energy = 1.05 + shop.width * 0.14
 	glow.omni_range = 9.0 + shop.width * 0.6
 	glow.omni_attenuation = 1.1
 	glow.position = (
