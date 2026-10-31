@@ -121,13 +121,20 @@ runs:
           echo "review=true" >> "$GITHUB_OUTPUT"
         fi
 
-    # Pinned by package-lock.json.
+    - name: Set up Bun
+      if: steps.context.outputs.review == 'true'
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # zizmor: ignore[cache-poisoning]
+      with:
+        bun-version: "1.4.4"
+        no-cache: true
+
+    # Pinned by bun.lock.
     - name: Set up Claude Code
       if: steps.context.outputs.review == 'true'
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
-      run: npm ci --prefix "$ACTION_PATH" --no-fund --no-audit
+      run: bun install --cwd "$ACTION_PATH" --frozen-lockfile
 
     # --restricted takes away every tool that runs code and confines Read,
     # Grep and Glob to the checkout and the context directory; --safe-mode
