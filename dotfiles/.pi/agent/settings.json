@@ -3,6 +3,7 @@
   "defaultModel": "qwen3.8:27b",
   "lastChangelogVersion": "0.85.1",
   "theme": "dark",
+  "npmCommand": ["bun"],
   "packages": [
     "npm:pi-web-access",
     "npm:pi-mcp-adapter"
