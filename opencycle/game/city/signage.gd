@@ -9,6 +9,8 @@ const BOX_DEPTH := 0.22
 const SPILL_SPACING := 8.0
 const SPILL_BEHIND := 15.0
 const SPILL_AHEAD := 45.0
+const COOL := Color(0.1, 0.8, 1.0)
+const HOT := Color(1.0, 0.15, 0.5)
 
 
 static func build(route: Route, street: Street, length: float) -> Node3D:
@@ -51,7 +53,10 @@ static func _spill(route: Route, hung: Street.Sign, sheet: SignSheet) -> OmniLig
 	var glow := OmniLight3D.new()
 	var colour: Color = pick["glow"]
 	# Average colours of a sign are muddy, while the eye only sees what's saturated.
-	glow.light_color = Color.from_hsv(colour.h, clampf(colour.s * 1.6, 0.6, 0.95), 1.0)
+	var own := Color.from_hsv(colour.h, clampf(colour.s * 1.6, 0.6, 0.95), 1.0)
+	# One side of the street leans cool and the other hot, whatever the signs say: the two
+	# colours playing against each other are what keep a frame from going all one pink.
+	glow.light_color = own.lerp(COOL if hung.side < 0.0 else HOT, 0.45)
 	glow.light_energy = 1.2 + hung.size.x * hung.size.y * 0.2
 	glow.light_specular = 0.5
 	glow.light_volumetric_fog_energy = 1.2

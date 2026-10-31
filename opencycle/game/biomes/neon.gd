@@ -7,6 +7,8 @@ const LENGTH := 200.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
 ## Wide enough to look up: the tall city overhead is half of what's worth seeing.
 const FOV := 68.0
+## Off while the environment is being worked on, to keep the street itself in view.
+const CROWD := false
 
 
 static func build(parent: Node3D, run_seed: int, route: Route, quality: String) -> void:
@@ -22,7 +24,9 @@ static func build(parent: Node3D, run_seed: int, route: Route, quality: String) 
 	parent.add_child(Shopfronts.build(route, street, LENGTH))
 	parent.add_child(Signage.build(route, street, LENGTH))
 	parent.add_child(Furniture.build(route, street, LENGTH))
-	parent.add_child(Pedestrians.build(run_seed, route, street, LENGTH))
+	if CROWD:
+		parent.add_child(Pedestrians.build(run_seed, route, street, LENGTH))
+	parent.add_child(Weather.build(route, street, LENGTH))
 	_environment(parent, best, route)
 
 
@@ -80,6 +84,13 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	world.environment = environment
 	parent.add_child(world)
 	_probes(parent, route)
+	# No moon up there, but the cold light on the upper floors sets off the street's heat.
+	var cold := DirectionalLight3D.new()
+	cold.rotation_degrees = Vector3(-62.0, 35.0, 0.0)
+	cold.light_color = Color(0.25, 0.65, 0.95)
+	cold.light_energy = 0.3
+	cold.light_volumetric_fog_energy = 0.0
+	parent.add_child(cold)
 	var viewport := parent.get_viewport()
 	viewport.use_taa = true
 	if best:

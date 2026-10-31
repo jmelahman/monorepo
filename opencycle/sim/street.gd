@@ -238,7 +238,7 @@ func _hang_signs(cell: int, tower: Tower) -> void:
 	while at < tower.s + tower.width * 0.5 - 0.5:
 		var slot := Rng.derive(cell, [column])
 		var elevation := SIGN_BASE + Rng.unit(slot, 0) * 1.5
-		var stack := 2 + int(Rng.unit(slot, 1) * 5.0)
+		var stack := 1 + int(Rng.unit(slot, 1) * 4.0)
 		for level: int in stack:
 			var unit := Rng.derive(slot, [level, 3])
 			var hung := Sign.new()
