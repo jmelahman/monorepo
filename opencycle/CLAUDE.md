@@ -40,3 +40,21 @@ detail is fixed at build time by distance from the road wherever that is possibl
   hence `run_seed`.
 - `assets/baked/*.webp` are in LFS, because the slices pass the 500 KB commit hook limit.
 - Godot exits 0 on parse errors. `scripts/check.sh` is the verdict.
+- Only source `scripts/env.sh` in a subshell. In the shell that runs `git commit`, it
+  redirects the hook cache and the git-orchard-sync hook fails on `go install`.
+- `shader_type fog` goes on a `ShaderMaterial`. `FogMaterial` has no `shader`.
+- A quad whose vertex shader pins it to the screen needs `cull_disabled`, or it can vanish.
+- Thick air is the neon street's easiest way to look worse: it lifts the blacks and smears
+  the road's mirror, which reads the screen after the fog is drawn. Keep fog thin.
+
+## The neon street
+
+The bar is `docs/realism-standard.md`: it should feel real, with art-directed lighting and
+interesting buildings, not match a photo. Performance is deliberately deferred while the
+look is worked out, and `NeonBiome.CROWD` keeps the pedestrians off to speed up iteration.
+
+`Street` and `Skyline` in `sim/` decide what stands where; `game/city/` builds it, with
+`Landmarks` for the city overhead and `Weather` for mist, steam and rain. Anything animated
+runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on the
+`ride_clock` group. `game/wet_sheen.gdshader` is an additive second pass over the road,
+which mirrors the street by reading the screen.

@@ -2,7 +2,7 @@ shader_type spatial;
 // Rain in front of the camera: fine streaks falling in three layers, each picking up the
 // colour of the street behind it, so it only shows where something's lit. Runs off the
 // ride's clock, so a replay falls the same way every time.
-render_mode unshaded, blend_add, depth_test_disabled, depth_draw_never, shadows_disabled;
+render_mode unshaded, blend_add, cull_disabled, depth_test_disabled, depth_draw_never, shadows_disabled;
 
 global uniform float ride_time;
 
