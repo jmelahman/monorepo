@@ -69,7 +69,6 @@ require("lazy").setup({
               yaml = {
                 schemas = {
                   ["https://json.schemastore.org/github-workflow.json"] = "/.github/workflows/*",
-                  ["https://json.schemastore.org/prettierrc.json"] = "/.prettierrc.{yml,yaml}",
                   kubernetes = "/*.yaml",
                 },
                 format = { enable = true },
@@ -158,14 +157,27 @@ require("lazy").setup({
       "nvimtools/none-ls.nvim",
       config = function()
         local null_ls = require("null-ls")
+        local helpers = require("null-ls.helpers")
         null_ls.setup({
           sources = {
             null_ls.builtins.diagnostics.golangci_lint,
-            null_ls.builtins.formatting.prettier.with({
+            helpers.make_builtin({
+              name = "bun_fmt",
+              method = null_ls.methods.FORMATTING,
               filetypes = {
                 "javascript", "javascriptreact", "typescript", "typescriptreact",
                 "json", "yaml", "html", "css", "scss", "markdown",
               },
+              generator_opts = {
+                command = "bun",
+                args = { "fmt", "--stdin-filepath", "$FILENAME" },
+                to_stdin = true,
+                -- bun fmt reads bunfig.toml from its working directory.
+                cwd = helpers.cache.by_bufnr(function(params)
+                  return require("null-ls.utils").root_pattern("bunfig.toml")(params.bufname)
+                end),
+              },
+              factory = helpers.formatter_factory,
             }),
           },
           on_attach = function(client, bufnr)
