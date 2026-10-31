@@ -1,0 +1,50 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="OpenCycle"
+run/main_scene="res://game/ride.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Dev="*res://core/dev.gd"
+
+[debug]
+
+gdscript/warnings/directory_rules={
+"res://addons": 0,
+"res://addons/agent_bridge": 1
+}
+gdscript/warnings/untyped_declaration=2
+gdscript/warnings/unsafe_property_access=1
+gdscript/warnings/unsafe_method_access=1
+gdscript/warnings/unsafe_cast=1
+gdscript/warnings/unsafe_call_argument=1
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/stretch/mode="viewport"
+window/stretch/aspect="keep"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+
+[importer_defaults]
+
+texture={
+"compress/mode": 2,
+"mipmaps/generate": true
+}

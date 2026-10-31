@@ -1,0 +1,6 @@
+# Every script sources env.sh from beside itself, via
+# "$(dirname "${BASH_SOURCE[0]}")/env.sh". SCRIPTDIR is what lets shellcheck
+# follow that (it drops the dirname and looks in the script's own directory),
+# where it would otherwise stop at the unresolvable path with SC1091.
+source-path=SCRIPTDIR
+external-sources=true
