@@ -5,8 +5,8 @@ extends RefCounted
 
 const LENGTH := 200.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
-## A narrower view than the forest's: a canyon stacks up its signs the way the photos do.
-const FOV := 58.0
+## Wide enough to look up: the tall city overhead is half of what's worth seeing.
+const FOV := 68.0
 
 
 static func build(parent: Node3D, run_seed: int, route: Route, quality: String) -> void:
@@ -14,9 +14,11 @@ static func build(parent: Node3D, run_seed: int, route: Route, quality: String) 
 		"ride_time", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0
 	)
 	var street := Street.generate(run_seed, LENGTH, STREET_HALF)
+	var skyline := Skyline.generate(run_seed, street, route, LENGTH)
 	var best := quality == "max"
 	parent.add_child(StreetGround.build(route, street, LENGTH))
 	parent.add_child(Facades.build(route, street))
+	parent.add_child(Landmarks.build(route, skyline))
 	parent.add_child(Shopfronts.build(route, street, LENGTH))
 	parent.add_child(Signage.build(route, street, LENGTH))
 	parent.add_child(Furniture.build(route, street, LENGTH))
@@ -65,8 +67,9 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	environment.fog_depth_end = 480.0
 	environment.fog_depth_curve = 1.4
 	# Every light in the street shows up in this, which is what makes the street feel deep.
+	RenderingServer.environment_set_volumetric_fog_volume_size(192, 128)
 	environment.volumetric_fog_enabled = true
-	environment.volumetric_fog_density = 0.009
+	environment.volumetric_fog_density = 0.013
 	environment.volumetric_fog_albedo = Color(0.85, 0.85, 0.95)
 	environment.volumetric_fog_anisotropy = 0.35
 	environment.volumetric_fog_length = 140.0

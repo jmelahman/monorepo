@@ -14,8 +14,8 @@ const LAMP_SPACING := 26.0
 const SHOP_MIN := 3.2
 const SHOP_MAX := 7.5
 const SIGN_BASE := 4.6
-## From the wall, past the kerb, and a bit short of the road's middle.
-const MAX_OVERHANG := 7.0
+## From the wall to over the road's edge, leaving the middle open to the sky above it.
+const MAX_OVERHANG := 4.6
 const CLOSED_CHANCE := 0.14
 const FACADES := 4
 ## Trades as [code]tools/bake_signs.gd[/code] names them on the sign sheet.
@@ -249,7 +249,11 @@ func _hang_signs(cell: int, tower: Tower) -> void:
 			hung.tall = Rng.unit(unit, 3) < 0.3
 			# Mostly modest, with the odd enormous one that sets the whole view.
 			var scale := lerpf(1.0, 3.1, pow(Rng.unit(unit, 4), 2.2))
-			hung.size = Vector2(scale, scale * 2.0) if hung.tall else Vector2(scale * 2.0, scale)
+			hung.size = (
+				Vector2(minf(scale, 2.2), scale * 2.0)
+				if hung.tall
+				else Vector2(minf(scale * 2.0, MAX_OVERHANG - 0.5), scale)
+			)
 			hung.elevation = elevation
 			# Standing off the wall a little, with the widest reaching well over the road.
 			hung.overhang = minf(hung.size.x + 0.5 + Rng.unit(unit, 5) * 1.4, MAX_OVERHANG)
