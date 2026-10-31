@@ -15,6 +15,7 @@ const FINISHES: Array[Array] = [
 	["concrete_slab_wall", 4.0],
 ]
 const AIRCON := "res://assets/polyhaven/exterior_aircon_unit/exterior_aircon_unit_1k.gltf"
+const PARTY_WALL_PAST := 4.0
 const GROUND_FLOOR := 4.1
 const BELOW := 8.0
 ## The heavy beam that carries the building over the shops.
@@ -121,6 +122,18 @@ static func _tower(
 		left + back + high,
 		Vector3.UP,
 		tone
+	)
+	# Black all the way back and past both ends. Where the road bends, straight neighbours open
+	# a wedge between them, and the lit windows behind would show through it in bright slivers.
+	var past := along * PARTY_WALL_PAST
+	kit.quad(
+		concrete,
+		left - past + back + low,
+		right + past + back + low,
+		right + past + back + high,
+		left - past + back + high,
+		facing,
+		Color(0.0, 0.0, 0.0, tower.age)
 	)
 
 	var floor_height := tower.storey * 1.15

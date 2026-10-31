@@ -61,7 +61,8 @@ look is worked out, and `NeonBiome.CROWD` keeps the pedestrians off to speed up 
 it, with `Facades` for the brutalist buildings and the close lights that rake up them
 (`game/brutal.gdshader` paints the formwork and the stains), `Landmarks` for bridges and rail, `Overhead` for the deck, its pylons and
 the traffic under it, `StreetWall` for the shop level (lintels, piers, shutters, boarded
-fronts, doors), and `Weather` for mist, steam and rain. Stills take
+fronts, doors), `StreetDressing` for what collects on it (canopies, air conditioners, cable,
+bills, spray, rubbish), and `Weather` for mist, steam and rain. Stills take
 `--look=YAW,PITCH,SIDEWAYS` to inspect a wall up close. Anything animated
 runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on the
 `ride_clock` group. `game/wet_sheen.gdshader` is an additive second pass over the road,

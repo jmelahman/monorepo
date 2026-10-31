@@ -15,6 +15,8 @@ const SHUTTERS: Dictionary[String, float] = {
 	"rusty_metal_shutter": 1.9,
 	"painted_metal_shutter": 2.0,
 }
+## Evens out how dark the scans are, so one isn't just a black hole down here.
+const SCAN_GAIN: Dictionary[String, float] = {"rusted_shutter": 2.4, "rusty_metal_shutter": 1.3}
 const SHEETING := "worn_corrugated_iron"
 const SHEETING_METRES := 2.0
 ## How far a closed front sits behind the face of the wall.
@@ -61,7 +63,7 @@ static func build(route: Route, street: Street) -> Node3D:
 	for index: int in street.shops.size():
 		var shop := street.shops[index]
 		kit.at(shop.s)
-		var front := _front(route, shop, Rng.derive(index, [78]))
+		var front := front_of(route, shop, index)
 		_lintel(kit, front, shop, parts)
 		_pier(kit, front, shop.width * 0.5, parts)
 		_housing(kit, front, shop, parts)
@@ -71,7 +73,8 @@ static func build(route: Route, street: Street) -> Node3D:
 	return root
 
 
-static func _front(route: Route, shop: Street.Shop, dice: int) -> Facades.Tier:
+static func front_of(route: Route, shop: Street.Shop, index: int) -> Facades.Tier:
+	var dice := Rng.derive(index, [78])
 	var outward := route.right(shop.s) * shop.side
 	var front := Facades.Tier.new()
 	front.plane = route.at(shop.s) + outward * (NeonBiome.STREET_HALF + Street.SIDEWALK)
@@ -392,8 +395,8 @@ static func _parts() -> Parts:
 	parts.concrete.set_shader_parameter("occlusion", load(path % "ao"))
 	parts.concrete.set_shader_parameter("tile", CONCRETE_METRES)
 	for scan: String in SHUTTERS:
-		parts.shutters.append(_steel(scan))
-	parts.sheeting = _steel(SHEETING)
+		parts.shutters.append(steel(scan))
+	parts.sheeting = steel(SHEETING)
 	parts.metal = Facades.scan("rusty_painted_metal", 1.2, Color(0.8, 0.8, 0.8))
 	parts.rust = Facades.scan("rusty_metal_02", 1.0, Color(0.9, 0.85, 0.8))
 	parts.leak = StandardMaterial3D.new()
@@ -405,7 +408,7 @@ static func _parts() -> Parts:
 	return parts
 
 
-static func _steel(scan: String) -> ShaderMaterial:
+static func steel(scan: String) -> ShaderMaterial:
 	var path := "res://assets/polyhaven/%s/%s_%%s_2k.jpg" % [scan, scan]
 	var material := ShaderMaterial.new()
 	material.shader = STEEL
@@ -413,4 +416,5 @@ static func _steel(scan: String) -> ShaderMaterial:
 	material.set_shader_parameter("normals", load(path % "nor_gl"))
 	material.set_shader_parameter("rough", load(path % "rough"))
 	material.set_shader_parameter("occlusion", load(path % "ao"))
+	material.set_shader_parameter("gain", SCAN_GAIN.get(scan, 1.0))
 	return material

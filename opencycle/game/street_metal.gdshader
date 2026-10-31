@@ -6,6 +6,7 @@ uniform sampler2D albedo : source_color, filter_linear_mipmap_anisotropic, repea
 uniform sampler2D normals : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D rough : hint_roughness_g, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D occlusion : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform float gain = 1.0;
 
 varying vec3 world;
 
@@ -36,7 +37,7 @@ void fragment() {
 	float foot = smoothstep(1.3, 0.2, world.y - streaks * 0.5);
 	float head = smoothstep(1.4, 2.9, world.y) * smoothstep(0.45, 0.8, streaks * 0.7 + fine * 0.4);
 	float dirt = clamp(foot * 0.85 + head * 0.6, 0.0, 1.0);
-	ALBEDO = scan * COLOR.rgb * 1.15 * mix(1.0, 0.45, dirt);
+	ALBEDO = scan * COLOR.rgb * 1.15 * gain * mix(1.0, 0.45, dirt);
 	ROUGHNESS = mix(texture(rough, UV).g, 0.3, foot * 0.6);
 	METALLIC = 0.1;
 	NORMAL_MAP = texture(normals, UV).xyz;
