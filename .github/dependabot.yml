@@ -27,42 +27,10 @@ updates:
         patterns:
           - "*"
 
-  - package-ecosystem: "npm"
+  - package-ecosystem: "bun"
     directories:
       - /5-wild
       - /github-actions/*
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 3
-    labels:
-      - "dependabot:npm"
-    cooldown:
-      default-days: 7
-    groups:
-      # react and react-dom must be bumped in lockstep — a version skew
-      # trips React error #527 ("Incompatible React versions") at startup.
-      react:
-        patterns:
-          - "react"
-          - "react-dom"
-          - "@types/react"
-          - "@types/react-dom"
-      # Its own PR, so a Claude Code bump gets looked at on its own.
-      claude-code:
-        patterns:
-          - "@anthropic-ai/claude-code"
-      # Every other minor and patch bump lands as one PR, so no
-      # two open PRs rewrite the same lockfile. Majors stay one PR each. A
-      # dependency joins the first group it matches, so the groups above win.
-      minor-and-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-
-  - package-ecosystem: "bun"
-    directories:
       - /agentic-kanban/docs
       - /agentic-kanban/web
       - /agilecbt/docs
@@ -79,12 +47,18 @@ updates:
     cooldown:
       default-days: 7
     groups:
+      # react and react-dom must be bumped in lockstep — a version skew
+      # trips React error #527 ("Incompatible React versions") at startup.
       react:
         patterns:
           - "react"
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+      # Its own PR, so a Claude Code bump gets looked at on its own.
+      claude-code:
+        patterns:
+          - "@anthropic-ai/claude-code"
       # Every other minor and patch bump lands as one PR across the
       # directories, so no two open PRs rewrite the same bun.lock. Majors
       # stay one PR each: they are reviewed one at a time anyway. A
