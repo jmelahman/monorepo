@@ -5,7 +5,7 @@ A containerized development environment.
 ## What's included
 
 - Ubuntu 25.10 base image
-- Node.js 20 (with `vite`, `typescript`, `@typescript/native-preview`)
+- Node.js 20 (with `vite`)
 - Go 1.25 (with `wgo` for live reload)
 - Docker CLI + Compose plugin (talks to the host daemon via mounted socket)
 - Claude Code

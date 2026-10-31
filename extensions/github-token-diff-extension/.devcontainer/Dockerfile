@@ -107,7 +107,7 @@ ARG PI_CODING_AGENT_VERSION=latest
 RUN npm install -g \
     @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
     @mariozechner/pi-coding-agent@${PI_CODING_AGENT_VERSION} \
-    vite typescript @typescript/native-preview \
+    vite \
     playwright @playwright/mcp
 
 # Headless Chromium for Playwright (downloaded at build time so the runtime
