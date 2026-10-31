@@ -28,5 +28,5 @@ features:
   - title: Release automation included
     details: GoReleaser for GitHub releases, multi-arch Docker images, and PyPI wheels built per-platform with a Go build hook — all wired into GitHub Actions.
   - title: Guardrails from day one
-    details: prek (pre-commit) hooks, govulncheck, npm audit, actionlint, zizmor, ripsecrets, and Dependabot are configured out of the box.
+    details: prek (pre-commit) hooks, govulncheck, bun audit, actionlint, zizmor, ripsecrets, and Dependabot are configured out of the box.
 ---
