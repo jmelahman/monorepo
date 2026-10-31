@@ -32,6 +32,7 @@ var _startup_ms := 0
 var _warmup := WARMUP_FRAMES
 var _primitives := 0
 var _draw_calls := 0
+var _uses_ride_time := false
 
 @onready var _camera: Camera3D = %Camera
 
@@ -56,6 +57,7 @@ func _ready() -> void:
 	match biome:
 		"neon":
 			NeonBiome.build(self, run_seed, route, quality)
+			_uses_ride_time = true
 		_:
 			ForestBiome.build(self, run_seed, route, quality)
 	# An even 30 beats a ride that swings between 30 and 60. A bench needs to see the limit.
@@ -68,6 +70,7 @@ func _ready() -> void:
 	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_time = at_seconds
 	_camera.transform = replay.camera_at(route, _time)
+	_send_time_to_shaders()
 	if _bench_path:
 		Engine.max_fps = 0
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -85,6 +88,7 @@ func _process(delta: float) -> void:
 		return
 	_time += delta * _rate
 	_camera.transform = replay.camera_at(route, _time)
+	_send_time_to_shaders()
 	if _bench_path:
 		_frame_times.append(delta)
 		_primitives = maxi(
@@ -103,6 +107,12 @@ func _process(delta: float) -> void:
 		if _bench_path:
 			_write_report()
 		get_tree().quit()
+
+
+## Anything animated on the street runs off the ride's clock, so a replay looks the same.
+func _send_time_to_shaders() -> void:
+	if _uses_ride_time:
+		RenderingServer.global_shader_parameter_set("ride_time", _time)
 
 
 ## Metrics that say whether the ride was smooth, not just fast on average.

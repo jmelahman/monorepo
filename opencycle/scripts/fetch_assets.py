@@ -31,8 +31,30 @@ API = "https://api.polyhaven.com/files/"
 AGENT = "opencycle-asset-fetch"
 
 BAKE_MODELS = ("fir_tree_01", "pine_tree_01")
-MODELS = ("fern_02", "grass_medium_01", "rock_moss_set_01", "boulder_01", "tree_stump_01")
-TEXTURES = ("asphalt_02", "forrest_ground_03", "gravel_road")
+MODELS = (
+    "fern_02",
+    "grass_medium_01",
+    "rock_moss_set_01",
+    "boulder_01",
+    "tree_stump_01",
+    "rollershutter_door",
+    "utility_box_01",
+    "plastic_crate_02",
+    "plastic_monobloc_chair_01",
+    "propane_tank",
+)
+TEXTURES = (
+    "asphalt_02",
+    "forrest_ground_03",
+    "gravel_road",
+    "rectangular_facade_tiles",
+    "square_tiled_wall",
+    "worn_plaster_wall",
+    "concrete_wall_004",
+    "square_concrete_pavers",
+    "patterned_paving",
+    "road_damaged",
+)
 SKIES = ("kloofendal_48d_partly_cloudy_puresky",)
 TEXTURE_MAPS = ("Diffuse", "nor_gl", "Rough", "AO")
 
