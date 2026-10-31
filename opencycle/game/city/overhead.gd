@@ -11,7 +11,7 @@ const CONCRETE_METRES := 5.0
 const SLOT_DEEP := 14.0
 const HEADLIGHT := Color(0.85, 0.93, 1.0)
 const TAIL_LIGHT := Color(1.0, 0.12, 0.06)
-const STRIP := Color(0.35, 0.55, 0.8)
+const STRIP := Color(0.16, 0.26, 0.4)
 const HAZARD := Color(1.0, 0.08, 0.03)
 const SHAFT_COLOUR := Color(0.62, 0.8, 1.0)
 

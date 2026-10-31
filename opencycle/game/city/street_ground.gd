@@ -25,7 +25,7 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	var patch := _road_material(ROAD, Color(0.8, 0.8, 0.82))
 	var paving := _paving()
 	var kerb := _plain(Color(0.42, 0.41, 0.39), 0.75)
-	var yellow := _plain(Color(0.75, 0.56, 0.1), 0.65)
+	var yellow := _plain(Color(0.2, 0.2, 0.19), 0.7)
 	var white := _plain(Color(0.68, 0.68, 0.64), 0.6)
 	var s := start
 	while s < end:

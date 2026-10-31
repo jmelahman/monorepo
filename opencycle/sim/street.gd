@@ -18,30 +18,12 @@ const SIGN_BASE := 4.6
 const MAX_OVERHANG := 4.6
 const CLOSED_CHANCE := 0.78
 ## Most buildings down here have nobody left to advertise.
-const SIGNED_TOWERS := 0.35
+const SIGNED_TOWERS := 0.25
 const FACADES := 4
-## How tall a storey of the street-level block is, which the building kit fixes.
-const BLOCK_STOREY := 3.0
-## The stained concrete and painted-over steel of the old blocks at street level.
-const PAINTS: Array[Color] = [
-	Color(0.2, 0.23, 0.26),
-	Color(0.26, 0.26, 0.27),
-	Color(0.16, 0.2, 0.23),
-	Color(0.3, 0.3, 0.3),
-	Color(0.13, 0.16, 0.19),
-	Color(0.25, 0.18, 0.16),
-]
-## The trim that goes with them, pale or nearly black.
-const TRIMS: Array[Color] = [
-	Color(0.2, 0.21, 0.22), Color(0.08, 0.08, 0.09), Color(0.13, 0.14, 0.16)
-]
-## Which colours of tube a landlord bolts to the front.
-const TUBES: Array[Color] = [
-	Color(0.45, 0.75, 1.0),
-	Color(0.1, 0.85, 1.0),
-	Color(0.55, 0.65, 0.8),
-	Color(1.0, 0.25, 0.08),
-]
+## How many of the brutalist forms [Facades] knows.
+const FORMS := 4
+## How far a building without signs may step out over the pavement as it rises.
+const MAX_JETTY := 1.5
 ## Trades as [code]tools/bake_signs.gd[/code] names them on the sign sheet.
 const TRADES: PackedStringArray = [
 	"pharmacy",
@@ -88,17 +70,9 @@ class Tower:
 	var tiers := 0
 	## Where along the wall air-con units hang, as [bay, storey] grid cells.
 	var units: Array[Vector2i] = []
-	## Storeys of the old block at street level, which the tower rises out of.
-	var block := 0
-	var paint := Color.WHITE
-	var trim := Color.WHITE
-	## Tube along the top of the block, and whether it also runs down the corners.
-	var tube := Color.WHITE
-	var tube_corners := false
-	var fire_escape := false
-	## Which of the kit's window styles, and how they alternate along the front.
-	var windows := 0
-	var rhythm := 1
+	## Which of the forms it takes, and how far its floors step out over the pavement.
+	var form := 0
+	var jetty := 0.0
 	var dice := 0
 
 
@@ -188,7 +162,8 @@ func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
 		tower.tint = Color(pale + warm, pale, pale - warm)
 		tower.tiers = int(Rng.unit(cell, 10) * 3.0)
 		_hang_units(cell, tower)
-		_make_block(cell, tower)
+		tower.form = int(Rng.unit(cell, 11) * FORMS)
+		tower.dice = Rng.derive(cell, [3])
 		towers.append(tower)
 		_fill_with_shops(Rng.derive(cell, [1]), tower, kerb)
 		_hang_signs(Rng.derive(cell, [2]), tower)
@@ -204,19 +179,6 @@ func _hang_units(cell: int, tower: Tower) -> void:
 		for i: int in bays:
 			if Rng.unit(Rng.derive(cell, [i, j]), 0) < chance:
 				tower.units.append(Vector2i(i, j))
-
-
-func _make_block(cell: int, tower: Tower) -> void:
-	var fits := int((tower.height / (tower.tiers + 1)) / BLOCK_STOREY)
-	tower.block = mini(3 + int(Rng.unit(cell, 11) * 5.0), fits)
-	tower.paint = PAINTS[int(Rng.unit(cell, 12) * PAINTS.size())]
-	tower.trim = TRIMS[int(Rng.unit(cell, 13) * TRIMS.size())]
-	tower.tube = TUBES[int(Rng.unit(cell, 14) * TUBES.size())]
-	tower.tube_corners = Rng.unit(cell, 15) < 0.12
-	tower.fire_escape = Rng.unit(cell, 16) < 0.12
-	tower.windows = int(Rng.unit(cell, 17) * 4.0)
-	tower.rhythm = 1 + int(Rng.unit(cell, 18) * 3.0)
-	tower.dice = Rng.derive(cell, [3])
 
 
 func _fill_with_shops(cell: int, tower: Tower, kerb: float) -> void:
@@ -275,6 +237,8 @@ func _spill_onto_pavement(slot: int, shop: Shop, kerb: float) -> void:
 ## here that each one is a landmark, and mostly narrow vertical blades.
 func _hang_signs(cell: int, tower: Tower) -> void:
 	if Rng.unit(cell, 8) > SIGNED_TOWERS:
+		if Rng.unit(cell, 9) < 0.4:
+			tower.jetty = lerpf(0.5, MAX_JETTY, Rng.unit(cell, 10))
 		return
 	var from := tower.s - tower.width * 0.5
 	var at := from + 0.8 + Rng.unit(cell, 0) * 1.5
@@ -282,7 +246,7 @@ func _hang_signs(cell: int, tower: Tower) -> void:
 	while at < tower.s + tower.width * 0.5 - 0.5:
 		var slot := Rng.derive(cell, [column])
 		var elevation := SIGN_BASE + Rng.unit(slot, 0) * 1.5
-		var stack := 1 + int(Rng.unit(slot, 1) * 4.0)
+		var stack := 1 + int(Rng.unit(slot, 1) * 2.0)
 		for level: int in stack:
 			var unit := Rng.derive(slot, [level, 3])
 			var hung := Sign.new()
@@ -292,7 +256,7 @@ func _hang_signs(cell: int, tower: Tower) -> void:
 			hung.pick = Rng.unit(unit, 2)
 			hung.tall = Rng.unit(unit, 3) < 0.75
 			# Mostly modest, with the odd enormous one that sets the whole view.
-			var scale := lerpf(0.8, 2.4, pow(Rng.unit(unit, 4), 2.2))
+			var scale := lerpf(0.8, 1.9, pow(Rng.unit(unit, 4), 2.2))
 			hung.size = (
 				Vector2(minf(scale, 2.2), scale * 2.0)
 				if hung.tall
@@ -301,7 +265,7 @@ func _hang_signs(cell: int, tower: Tower) -> void:
 			hung.elevation = elevation
 			# Standing off the wall a little, with the widest reaching well over the road.
 			hung.overhang = minf(hung.size.x + 0.5 + Rng.unit(unit, 5) * 1.4, MAX_OVERHANG)
-			hung.flicker = pow(Rng.unit(unit, 6), 6.0)
+			hung.flicker = pow(Rng.unit(unit, 6), 3.0)
 			signs.append(hung)
 			elevation += hung.size.y + 0.25 + Rng.unit(unit, 7) * 1.1
 			if elevation + 2.0 > tower.height:
@@ -325,7 +289,7 @@ func _dress_kerb(run_seed: int, side: float, length: float, kerb: float) -> void
 		var roll := Rng.unit(cell, 2)
 		pole.kind = (
 			"no_entry"
-			if roll < 0.25
+			if roll < 0.04
 			else ("post" if roll < 0.6 else ("bin" if roll < 0.8 else "utility"))
 		)
 		pole.s = s + run + 0.4

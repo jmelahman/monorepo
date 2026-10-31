@@ -1,5 +1,10 @@
 # The neon street: what counts as real
 
+The direction is an underworld, not a lively market: rundown brutalist concrete under a
+deck, closer to Altered Carbon, Star Wars' lower levels and Nivalis Nights than to Mong Kok.
+Mostly shut, mostly dark, with a few signs that each count. Where the sections below talk
+about full shops and overlapping signs, this wins.
+
 The goal is a street that **feels** real, not one that could pass for footage. Lighting
 doesn't have to be accurate, but it has to be high fidelity: rich, deliberate and full of
 detail. An interesting building beats a plausible one. This replaces an earlier standard

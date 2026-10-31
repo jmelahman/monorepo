@@ -14,7 +14,7 @@ tooling; the dice game and Steam are gone.
   cannot run Vulkan.
 - Measure it: `scripts/bench.sh forest ship [--rate=4 --scale=0.5]`. `--rate=4` rides four
   times as fast for a quick read; only trust a rate 1 run, the default.
-- Rebake tree cards after changing their source or lighting: `scripts/bake.sh`.
+- Rebake cards after changing their source or lighting: `scripts/bake.sh`.
 
 ## The shape of the thing
 
@@ -44,6 +44,8 @@ detail is fixed at build time by distance from the road wherever that is possibl
   redirects the hook cache and the git-orchard-sync hook fails on `go install`.
 - `shader_type fog` goes on a `ShaderMaterial`. `FogMaterial` has no `shader`.
 - A quad whose vertex shader pins it to the screen needs `cull_disabled`, or it can vanish.
+- The gdformat pre-commit hook fails a commit if it reformats anything. Format first, and
+  check `git log` afterwards.
 - Thick air is the neon street's easiest way to look worse: it lifts the blacks and smears
   the road's mirror, which reads the screen after the fog is drawn. Keep fog thin.
 
@@ -53,8 +55,10 @@ The bar is `docs/realism-standard.md`: it should feel real, with art-directed li
 interesting buildings, not match a photo. Performance is deliberately deferred while the
 look is worked out, and `NeonBiome.CROWD` keeps the pedestrians off to speed up iteration.
 
-`Street` and `Skyline` in `sim/` decide what stands where; `game/city/` builds it, with
-`Landmarks` for the city overhead and `Weather` for mist, steam and rain. Anything animated
+`Street`, `Skyline` and `Undercity` in `sim/` decide what stands where; `game/city/` builds
+it, with `Facades` for the brutalist buildings (`game/brutal.gdshader` paints the stains and
+the pools of light), `Landmarks` for bridges and rail, `Overhead` for the deck, its pylons and
+the traffic under it, and `Weather` for mist, steam and rain. Anything animated
 runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on the
 `ride_clock` group. `game/wet_sheen.gdshader` is an additive second pass over the road,
 which mirrors the street by reading the screen.

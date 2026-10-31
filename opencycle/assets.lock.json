@@ -187,6 +187,22 @@
     "md5": "8b15a90085107867de316844cf03b3d7",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/chinese_stool/chinese_stool_nor_gl_1k.jpg"
   },
+  "concrete_slab_wall/concrete_slab_wall_ao_2k.jpg": {
+    "md5": "420f4fa5aa086c844196c3eace5fac1f",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_slab_wall/concrete_slab_wall_ao_2k.jpg"
+  },
+  "concrete_slab_wall/concrete_slab_wall_diffuse_2k.jpg": {
+    "md5": "c7a28caa508136ab687028bd5322287c",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_slab_wall/concrete_slab_wall_diff_2k.jpg"
+  },
+  "concrete_slab_wall/concrete_slab_wall_nor_gl_2k.jpg": {
+    "md5": "02944efcef3b8e33c21ff61ab81d4a02",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_slab_wall/concrete_slab_wall_nor_gl_2k.jpg"
+  },
+  "concrete_slab_wall/concrete_slab_wall_rough_2k.jpg": {
+    "md5": "8c303d0ba72fd135ee3674d641ff00e9",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_slab_wall/concrete_slab_wall_rough_2k.jpg"
+  },
   "concrete_wall_004/concrete_wall_004_ao_2k.jpg": {
     "md5": "b7bc3ae3bd3ed1d138a35c1a72fe6ce6",
     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/concrete_wall_004/concrete_wall_004_ao_2k.jpg"
@@ -791,6 +807,22 @@
     "md5": "387f81f09c0754416298398277fb2a6d",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/plastic_monobloc_chair_01/plastic_monobloc_chair_01_nor_gl_1k.jpg"
   },
+  "preconcrete_wall_001/preconcrete_wall_001_ao_2k.jpg": {
+    "md5": "5beb77ea8980806cfc968416bafe00ea",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/preconcrete_wall_001/preconcrete_wall_001_ao_2k.jpg"
+  },
+  "preconcrete_wall_001/preconcrete_wall_001_diffuse_2k.jpg": {
+    "md5": "72135bdf140371e5953c3ee658a36589",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/preconcrete_wall_001/preconcrete_wall_001_diff_2k.jpg"
+  },
+  "preconcrete_wall_001/preconcrete_wall_001_nor_gl_2k.jpg": {
+    "md5": "1565c05c2128f0ba1be4ac41b36f6bb0",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/preconcrete_wall_001/preconcrete_wall_001_nor_gl_2k.jpg"
+  },
+  "preconcrete_wall_001/preconcrete_wall_001_rough_2k.jpg": {
+    "md5": "ac044a27a8bddc38508f6bb90457ea1d",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/preconcrete_wall_001/preconcrete_wall_001_rough_2k.jpg"
+  },
   "propane_tank/propane_tank.bin": {
     "md5": "bb8e4a72c3f655bfa3dec7456a343451",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/propane_tank/propane_tank.bin"
@@ -826,6 +858,22 @@
   "rectangular_facade_tiles/rectangular_facade_tiles_rough_2k.jpg": {
     "md5": "2c09c921939b5b6dd72a8e339e83df2f",
     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rectangular_facade_tiles/rectangular_facade_tiles_rough_2k.jpg"
+  },
+  "ribbed_concrete_wall/ribbed_concrete_wall_ao_2k.jpg": {
+    "md5": "701f065b1beff81b6bd22162ea358a79",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/ribbed_concrete_wall/ribbed_concrete_wall_ao_2k.jpg"
+  },
+  "ribbed_concrete_wall/ribbed_concrete_wall_diffuse_2k.jpg": {
+    "md5": "ee080fc90ebb3596e5d72b2671fb9b98",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/ribbed_concrete_wall/ribbed_concrete_wall_diff_2k.jpg"
+  },
+  "ribbed_concrete_wall/ribbed_concrete_wall_nor_gl_2k.jpg": {
+    "md5": "c9b1cd64353e79e3bc0d0133287270bc",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/ribbed_concrete_wall/ribbed_concrete_wall_nor_gl_2k.jpg"
+  },
+  "ribbed_concrete_wall/ribbed_concrete_wall_rough_2k.jpg": {
+    "md5": "464cf1c164ac79a1222ae1901e7f95e6",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/ribbed_concrete_wall/ribbed_concrete_wall_rough_2k.jpg"
   },
   "road_damaged/road_damaged_ao_2k.jpg": {
     "md5": "2fd1bafe15da7f651ca896ed65e0403f",
@@ -1130,6 +1178,22 @@
   "water_manhole_cover/water_manhole_cover_1k.gltf": {
     "md5": "a8efd69493f5919ca44b2e56df448500",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/water_manhole_cover/water_manhole_cover_1k.gltf"
+  },
+  "wood_textured_concrete/wood_textured_concrete_ao_2k.jpg": {
+    "md5": "108c4de87f0a10d6ca47a469c9826d66",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_textured_concrete/wood_textured_concrete_ao_2k.jpg"
+  },
+  "wood_textured_concrete/wood_textured_concrete_diffuse_2k.jpg": {
+    "md5": "1527cc03b1a2a97fe20615b895600829",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_textured_concrete/wood_textured_concrete_diff_2k.jpg"
+  },
+  "wood_textured_concrete/wood_textured_concrete_nor_gl_2k.jpg": {
+    "md5": "6f7dec5b4c5f115ad9b060e774a2cb3b",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_textured_concrete/wood_textured_concrete_nor_gl_2k.jpg"
+  },
+  "wood_textured_concrete/wood_textured_concrete_rough_2k.jpg": {
+    "md5": "000cb49854f6b341eeafa2a88b45fb08",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_textured_concrete/wood_textured_concrete_rough_2k.jpg"
   },
   "wooden_display_shelves_01/textures/wooden_display_shelves_01_arm_1k.jpg": {
     "md5": "526dc6c49a7ce366b61f04ab794107ee",

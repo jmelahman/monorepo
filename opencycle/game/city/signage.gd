@@ -57,7 +57,7 @@ static func _spill(route: Route, hung: Street.Sign, sheet: SignSheet) -> OmniLig
 	# One side of the street leans cool and the other hot, whatever the signs say: the two
 	# colours playing against each other are what keep a frame from going all one pink.
 	glow.light_color = own.lerp(COOL if hung.side < 0.0 else HOT, 0.45)
-	glow.light_energy = 1.2 + hung.size.x * hung.size.y * 0.2
+	glow.light_energy = 0.7 + hung.size.x * hung.size.y * 0.12
 	glow.light_specular = 0.5
 	glow.light_volumetric_fog_energy = 1.2
 	glow.omni_range = 14.0 + hung.size.x * 2.5
@@ -86,7 +86,7 @@ static func _hang(
 	var ground := route.at(hung.s)
 	var pick := sheet.pick(hung.trade, hung.tall, hung.pick)
 	var mapped: Rect2 = pick["uv"]
-	var colour := Color(lerpf(0.75, 1.1, seed_value), hung.flicker, seed_value)
+	var colour := Color(lerpf(0.35, 0.8, seed_value), hung.flicker, seed_value)
 	var y := ground.y + hung.elevation
 	var size := hung.size
 	var top_uv := mapped.position.y
