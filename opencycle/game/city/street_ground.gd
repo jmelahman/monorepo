@@ -7,6 +7,7 @@ extends RefCounted
 const ROAD := "res://assets/polyhaven/asphalt_02/asphalt_02_%s_2k.jpg"
 const PAVING := "res://assets/polyhaven/square_concrete_pavers/square_concrete_pavers_%s_2k.jpg"
 const ROAD_SHADER: Shader = preload("res://game/road.gdshader")
+const SHEEN_SHADER: Shader = preload("res://game/wet_sheen.gdshader")
 const KERB_HEIGHT := 0.15
 const KERB_WIDTH := 0.26
 const PAINT_LIFT := 0.012
@@ -134,7 +135,16 @@ static func _road_material(path: String, shade: Color) -> ShaderMaterial:
 	material.set_shader_parameter("normals", load(path % "nor_gl"))
 	material.set_shader_parameter("rough", load(path % "rough"))
 	material.set_shader_parameter("tint", shade)
+	material.next_pass = _sheen(1.0, 1.0)
 	return material
+
+
+static func _sheen(strength: float, puddles: float) -> ShaderMaterial:
+	var sheen := ShaderMaterial.new()
+	sheen.shader = SHEEN_SHADER
+	sheen.set_shader_parameter("strength", strength)
+	sheen.set_shader_parameter("puddles", puddles)
+	return sheen
 
 
 static func _paving() -> StandardMaterial3D:
@@ -148,6 +158,7 @@ static func _paving() -> StandardMaterial3D:
 	material.roughness = 0.75
 	material.uv1_scale = Vector3(0.5, 0.5, 1.0)
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	material.next_pass = _sheen(0.4, 0.0)
 	return material
 
 

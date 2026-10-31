@@ -1,6 +1,6 @@
 shader_type spatial;
-// The road: asphalt damp from recent rain, darker and glossier in the low spots and along
-// the crown's edge, with puddles where it dips. Damp, not mirrored: reflections break up.
+// The road: black asphalt after rain, darker in the low spots and along the crown's edge,
+// with puddles where it dips. What it reflects comes from game/wet_sheen.gdshader.
 
 uniform sampler2D albedo : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D normals : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -39,9 +39,9 @@ void fragment() {
 	// Tyres wear a sheen down the middle of each lane, and water stands at the edges.
 	float gutter = smoothstep(2.6, 4.0, abs(UV.x));
 	float damp = clamp(broad * 1.2 - 0.25 + gutter * 0.3, 0.0, 1.0) * wetness;
-	float puddle = smoothstep(0.62, 0.68, broad + gutter * 0.14);
-	base *= tint * mix(0.75, 0.38, damp);
-	base = mix(base, base * 0.5, puddle);
+	float puddle = smoothstep(0.6, 0.63, broad);
+	base *= tint * mix(0.5, 0.22, damp);
+	base = mix(base, base * 0.25, puddle);
 	ALBEDO = base;
 	ROUGHNESS = mix(mix(dry, 0.22, damp), 0.035, puddle);
 	SPECULAR = 0.55;

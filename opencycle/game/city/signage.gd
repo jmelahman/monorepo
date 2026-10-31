@@ -51,10 +51,11 @@ static func _spill(route: Route, hung: Street.Sign, sheet: SignSheet) -> OmniLig
 	var glow := OmniLight3D.new()
 	var colour: Color = pick["glow"]
 	# Average colours of a sign are muddy, while the eye only sees what's saturated.
-	glow.light_color = Color.from_hsv(colour.h, minf(colour.s * 1.1, 0.75), 1.0)
-	glow.light_energy = 0.55 + hung.size.x * hung.size.y * 0.1
-	glow.light_specular = 0.25
-	glow.omni_range = 11.0 + hung.size.x * 2.0
+	glow.light_color = Color.from_hsv(colour.h, clampf(colour.s * 1.6, 0.6, 0.95), 1.0)
+	glow.light_energy = 1.2 + hung.size.x * hung.size.y * 0.2
+	glow.light_specular = 0.5
+	glow.light_volumetric_fog_energy = 1.2
+	glow.omni_range = 14.0 + hung.size.x * 2.5
 	glow.omni_attenuation = 1.3
 	glow.position = (
 		route.at(hung.s)

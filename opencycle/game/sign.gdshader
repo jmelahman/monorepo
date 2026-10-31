@@ -5,7 +5,7 @@ shader_type spatial;
 global uniform float ride_time;
 
 uniform sampler2D sheet : source_color, filter_linear_mipmap_anisotropic;
-uniform float brightness = 1.5;
+uniform float brightness = 2.0;
 
 float hash(float p) {
 	return fract(sin(p * 91.3458) * 47453.5453);

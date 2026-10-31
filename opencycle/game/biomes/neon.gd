@@ -1,8 +1,7 @@
 class_name NeonBiome
 extends RefCounted
-## A cyberpunk street at night, built on what Mong Kok actually looks like: bright at
-## street level, damp rather than soaked, with shops full of goods and signs hanging
-## out over the road. docs/realism-standard.md is what it's held to.
+## A cyberpunk street at night: a wet canyon of signs in thick, lit air. The lighting is
+## art-directed, not physically right. docs/realism-standard.md is what it's held to.
 
 const LENGTH := 200.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
@@ -27,10 +26,10 @@ static func build(parent: Node3D, run_seed: int, route: Route, quality: String) 
 
 static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	var sky_material := ProceduralSkyMaterial.new()
-	# City sky: never black, lit from below by everything under it.
-	sky_material.sky_top_color = Color(0.012, 0.014, 0.03)
-	sky_material.sky_horizon_color = Color(0.09, 0.06, 0.09)
-	sky_material.ground_horizon_color = Color(0.05, 0.04, 0.05)
+	# Smog lit from below by everything under it: near black overhead, violet at the horizon.
+	sky_material.sky_top_color = Color(0.008, 0.01, 0.03)
+	sky_material.sky_horizon_color = Color(0.11, 0.035, 0.17)
+	sky_material.ground_horizon_color = Color(0.04, 0.015, 0.06)
 	sky_material.ground_bottom_color = Color(0.0, 0.0, 0.0)
 	sky_material.sun_angle_max = 0.0
 	var sky := Sky.new()
@@ -38,30 +37,42 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
+	# Shadows stay blue, so every warm light in the street has something to stand against.
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.5, 0.48, 0.55)
-	environment.ambient_light_energy = 0.28
+	environment.ambient_light_color = Color(0.25, 0.4, 0.7)
+	environment.ambient_light_energy = 0.1
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.tonemap_white = 6.0
+	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
+	environment.tonemap_white = 7.0
+	environment.adjustment_enabled = true
+	environment.adjustment_contrast = 1.1
+	environment.adjustment_saturation = 1.2
+	# Wide, soft halos: the air is thick, and a sign lights what's around it.
 	environment.glow_enabled = true
-	environment.glow_intensity = 0.22
-	environment.glow_bloom = 0.02
-	environment.glow_hdr_threshold = 1.1
-	environment.ssr_enabled = true
-	environment.ssr_max_steps = 96 if best else 32
-	environment.ssr_depth_tolerance = 0.5
+	environment.glow_intensity = 0.4
+	environment.glow_bloom = 0.0
+	environment.glow_hdr_threshold = 1.3
+	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
+	for level: int in 7:
+		environment.set_glow_level(level, 1.0 if level >= 2 and level <= 5 else 0.0)
 	environment.ssao_enabled = true
 	environment.ssao_radius = 0.8
 	environment.ssao_intensity = 2.0
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	environment.fog_light_color = Color(0.1, 0.08, 0.11)
-	environment.fog_depth_begin = 40.0
-	environment.fog_depth_end = 420.0
-	environment.fog_depth_curve = 1.6
-	environment.volumetric_fog_enabled = best
-	environment.volumetric_fog_density = 0.008
+	environment.fog_light_color = Color(0.05, 0.025, 0.09)
+	environment.fog_depth_begin = 60.0
+	environment.fog_depth_end = 480.0
+	environment.fog_depth_curve = 1.4
+	# Every light in the street shows up in this, which is what makes the street feel deep.
+	environment.volumetric_fog_enabled = true
+	environment.volumetric_fog_density = 0.009
+	environment.volumetric_fog_albedo = Color(0.85, 0.85, 0.95)
+	environment.volumetric_fog_anisotropy = 0.35
+	environment.volumetric_fog_length = 140.0
+	environment.volumetric_fog_detail_spread = 2.0
+	environment.volumetric_fog_ambient_inject = 0.1
+	environment.volumetric_fog_sky_affect = 0.15
 	var world := WorldEnvironment.new()
 	world.environment = environment
 	parent.add_child(world)
@@ -70,9 +81,6 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	viewport.use_taa = true
 	if best:
 		viewport.msaa_3d = Viewport.MSAA_4X
-	else:
-		viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR
-		viewport.scaling_3d_scale = 0.67
 
 
 ## Captures of the signs, so anything glossy shows what is around it. Rendered once at

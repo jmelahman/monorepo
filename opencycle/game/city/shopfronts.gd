@@ -112,7 +112,7 @@ static func _materials() -> Dictionary[String, Material]:
 	var tube := StandardMaterial3D.new()
 	tube.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	tube.vertex_color_use_as_albedo = true
-	tube.albedo_color = Color(2.2, 2.2, 2.2)
+	tube.albedo_color = Color(1.5, 1.5, 1.5)
 	fitted["tube"] = tube
 	var shelf := StandardMaterial3D.new()
 	shelf.albedo_color = Color(0.58, 0.58, 0.56)
@@ -377,7 +377,9 @@ static func _light(route: Route, shop: Street.Shop) -> OmniLight3D:
 	var outward := route.right(shop.s) * shop.side
 	var glow := OmniLight3D.new()
 	glow.light_color = TRADES[shop.trade]["light"]
-	glow.light_energy = 1.05 + shop.width * 0.14
+	glow.light_energy = 0.8 + shop.width * 0.1
+	# A pool of light on the pavement, and not a wall of glowing fog in front of the shop.
+	glow.light_volumetric_fog_energy = 0.12
 	glow.omni_range = 9.0 + shop.width * 0.6
 	glow.omni_attenuation = 1.1
 	glow.position = (
