@@ -11,7 +11,7 @@
  * client would retry forever.
  *
  * It runs under the root `vitest` (so `bun run test` covers it) but lives here
- * rather than in `test/`, because the root `tsc` has no Workers types and
+ * rather than in `test/`, because the root `bun check` has no Workers types and
  * would trip over `D1Database` in the file it imports. D1 is SQLite, so
  * `node:sqlite` stands in for it: same dialect, same `json_extract`, same
  * `INSERT OR IGNORE`.

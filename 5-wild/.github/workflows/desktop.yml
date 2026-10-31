@@ -98,7 +98,7 @@ jobs:
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good
       # The runners ship rustup; this only makes the toolchain explicit.
       - run: rustup toolchain install stable --profile minimal
-      # `bun run build` is `tsc --noEmit && vite build`, into dist/, which
+      # `bun run build` is `bun check --no-script && vite build`, into dist/, which
       # tauri.conf.json embeds as `frontendDist`.
       - run: bun install --frozen-lockfile
       - run: bun run build

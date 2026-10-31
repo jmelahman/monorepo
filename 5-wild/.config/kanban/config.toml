@@ -20,7 +20,7 @@ container_port = 7777
 #
 # The build is content-addressed on `path` minus `exclude`, so a commit that
 # touches only what is excluded reuses the last APK rather than paying for
-# another Gradle run. test/ and tools/ stay in: `tsc` checks both, so they can
+# another Gradle run. test/ and tools/ stay in: `bun check` checks both, so they can
 # fail the build.
 # Schema: https://jmelahman.github.io/local-preview/reference/preview-toml
 [previews.artifacts.apk]

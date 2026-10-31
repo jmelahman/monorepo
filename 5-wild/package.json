@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "bun check --no-script && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --no-script",
     "lint": "biome lint",
     "format": "biome format --write",
     "check": "biome check",
@@ -41,7 +41,6 @@
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.0.0",
     "playwright-core": "^1.64.0",
-    "typescript": "^7.0.2",
     "vite": "^8.0.0",
     "vitest": "^5.0.1"
   }
