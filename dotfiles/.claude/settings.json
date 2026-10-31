@@ -25,10 +25,18 @@
   },
   "model": "opus",
   "enabledPlugins": {
+    "astral@astral-sh": true,
     "gopls-lsp@claude-plugins-official": true,
-    "pyright-lsp@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "astral-sh": {
+      "source": {
+        "source": "github",
+        "repo": "astral-sh/claude-code-plugins"
+      }
+    }
   },
   "effortLevel": "high",
   "modelSettings": {

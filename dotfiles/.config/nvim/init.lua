@@ -25,10 +25,10 @@ require("lazy").setup({
 
         -- Server configurations shared by both old and new APIs.
         local servers = {
-          pyright = {},
           ruff = {
             cmd = { "uv", "tool", "run", "ruff", "server" },
           },
+          ty = {},
           ts_ls = {
             on_attach = function(client)
               client.server_capabilities.documentFormattingProvider = false
