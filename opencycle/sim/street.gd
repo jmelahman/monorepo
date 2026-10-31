@@ -14,6 +14,8 @@ const LAMP_SPACING := 26.0
 const SHOP_MIN := 3.2
 const SHOP_MAX := 7.5
 const SIGN_BASE := 4.6
+## From the wall, past the kerb, and a bit short of the road's middle.
+const MAX_OVERHANG := 7.0
 const CLOSED_CHANCE := 0.14
 const FACADES := 4
 ## Trades as [code]tools/bake_signs.gd[/code] names them on the sign sheet.
@@ -116,6 +118,8 @@ var railings: Array[Vector3] = []
 ## Where the road was dug up and patched, as [s, offset, length, width].
 var patches: Array[Vector4] = []
 var lamps: Array[float] = []
+## Covers set in the road, as [s, offset].
+var covers: Array[Vector2] = []
 
 
 ## A street along the route over [code][0, length][/code].
@@ -243,11 +247,12 @@ func _hang_signs(cell: int, tower: Tower) -> void:
 			hung.trade = TRADES[int(Rng.unit(unit, 1) * TRADES.size())]
 			hung.pick = Rng.unit(unit, 2)
 			hung.tall = Rng.unit(unit, 3) < 0.3
-			var scale := lerpf(1.1, 2.0, pow(Rng.unit(unit, 4), 1.5))
+			# Mostly modest, with the odd enormous one that sets the whole view.
+			var scale := lerpf(1.0, 3.1, pow(Rng.unit(unit, 4), 2.2))
 			hung.size = Vector2(scale, scale * 2.0) if hung.tall else Vector2(scale * 2.0, scale)
 			hung.elevation = elevation
 			# Standing off the wall a little, with the widest reaching well over the road.
-			hung.overhang = hung.size.x + 0.5 + Rng.unit(unit, 5) * 1.4
+			hung.overhang = minf(hung.size.x + 0.5 + Rng.unit(unit, 5) * 1.4, MAX_OVERHANG)
 			hung.flicker = pow(Rng.unit(unit, 6), 6.0)
 			signs.append(hung)
 			elevation += hung.size.y + 0.25 + Rng.unit(unit, 7) * 1.1
@@ -293,5 +298,7 @@ func _dig_up_road(run_seed: int, length: float, kerb: float) -> void:
 		var wide := lerpf(0.7, kerb * 0.9, Rng.unit(cell, 1))
 		var offset := (Rng.unit(cell, 2) * 2.0 - 1.0) * (kerb - wide * 0.5)
 		patches.append(Vector4(s, offset, long, wide))
+		if Rng.unit(cell, 4) < 0.4:
+			covers.append(Vector2(s + long + 0.8, (Rng.unit(cell, 5) * 2.0 - 1.0) * (kerb - 0.8)))
 		s += long + lerpf(1.5, 16.0, Rng.unit(cell, 3))
 		index += 1

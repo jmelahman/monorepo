@@ -10,6 +10,8 @@ const OPENING := 3.0
 const CEILING := 3.0
 const SHELF_DEPTH := 0.42
 const SHELF_RISE := 0.38
+## Past this no box on a shelf is more than a few pixels, and they are most of the triangles.
+const GOODS_RANGE := 80.0
 ## What each trade's goods look like: its colours, how big, and its light.
 const TRADES: Dictionary[String, Dictionary] = {
 	"pharmacy":
@@ -207,6 +209,13 @@ static func _shell(
 		-along,
 		wall_tint
 	)
+	# A trestle at the door for the goods out front.
+	var table := mouth - outward * 0.2 + Vector3.UP * 0.4
+	kit.box(
+		materials["shelf"],
+		Transform3D(Basis(along, Vector3.UP, outward), table),
+		Vector3(shop.width * 0.74, 0.8, 0.62)
+	)
 	# Fluorescent tubes in rows, running back from the street.
 	var light: Color = TRADES[shop.trade]["light"]
 	var rows := maxi(int(shop.width / 1.5), 1)
@@ -360,6 +369,7 @@ static func _add_goods(root: Node3D, goods: Dictionary[int, Array]) -> void:
 		var instance := MultiMeshInstance3D.new()
 		instance.multimesh = multimesh
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		instance.visibility_range_end = GOODS_RANGE
 		root.add_child(instance)
 
 

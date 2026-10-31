@@ -6,9 +6,12 @@ extends RefCounted
 const SHEET := "res://assets/baked/signs.webp"
 const SHADER: Shader = preload("res://game/sign.gdshader")
 const BOX_DEPTH := 0.22
+const SPILL_SPACING := 8.0
+const SPILL_BEHIND := 15.0
+const SPILL_AHEAD := 45.0
 
 
-static func build(route: Route, street: Street) -> Node3D:
+static func build(route: Route, street: Street, length: float) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Signs"
 	var sheet := SignSheet.load_sheet()
@@ -20,12 +23,46 @@ static func build(route: Route, street: Street) -> Node3D:
 	steel.albedo_color = Color(0.11, 0.11, 0.12)
 	steel.roughness = 0.6
 	steel.metallic = 0.5
+	var brightest: Dictionary[Vector2i, Street.Sign] = {}
 	for index: int in street.signs.size():
 		var hung := street.signs[index]
 		kit.at(hung.s)
 		_hang(kit, route, hung, sheet, face, steel, float(index % 251) / 251.0)
+		if hung.overhang > 0.0 and hung.s > -SPILL_BEHIND and hung.s < length + SPILL_AHEAD:
+			var cell := Vector2i(floori(hung.s / SPILL_SPACING), int(hung.side))
+			if cell not in brightest or brightest[cell].size.x < hung.size.x:
+				brightest[cell] = hung
 	kit.commit(root)
+	for cell: Vector2i in brightest:
+		root.add_child(_spill(route, brightest[cell], sheet))
 	return root
+
+
+## The colour a big sign throws on everything near it, which is what ties the signs to
+## the street. One for each short stretch: every sign having its own would cost too much.
+static func _spill(route: Route, hung: Street.Sign, sheet: SignSheet) -> OmniLight3D:
+	var pick := sheet.pick(hung.trade, hung.tall, hung.pick)
+	var outward := route.right(hung.s) * hung.side
+	# Well off the wall, or the wall behind gets a hot spot where the sign should just tint it.
+	var reach := minf(
+		NeonBiome.STREET_HALF + Street.SIDEWALK - hung.overhang + hung.size.x * 0.5,
+		NeonBiome.STREET_HALF
+	)
+	var glow := OmniLight3D.new()
+	var colour: Color = pick["glow"]
+	# Average colours of a sign are muddy, while the eye only sees what's saturated.
+	glow.light_color = Color.from_hsv(colour.h, minf(colour.s * 1.1, 0.75), 1.0)
+	glow.light_energy = 0.55 + hung.size.x * hung.size.y * 0.1
+	glow.light_specular = 0.25
+	glow.omni_range = 11.0 + hung.size.x * 2.0
+	glow.omni_attenuation = 1.3
+	glow.position = (
+		route.at(hung.s)
+		+ outward * reach
+		- route.tangent(hung.s) * 0.8
+		+ Vector3.UP * (hung.elevation + hung.size.y * 0.5)
+	)
+	return glow
 
 
 static func _hang(

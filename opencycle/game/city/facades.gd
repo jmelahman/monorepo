@@ -10,6 +10,7 @@ const FINISHES: Array[Array] = [
 	["worn_plaster_wall", 3.0],
 	["concrete_wall_004", 3.0],
 ]
+const AIRCON := "res://assets/polyhaven/exterior_aircon_unit/exterior_aircon_unit_1k.gltf"
 const GROUND_FLOOR := 4.1
 const BELOW := 8.0
 
@@ -23,9 +24,7 @@ static func build(route: Route, street: Street) -> Node3D:
 		var texture: String = finish[0]
 		var tile: float = finish[1]
 		materials.append(_finish(texture, tile))
-	var units := StandardMaterial3D.new()
-	units.albedo_color = Color(0.62, 0.61, 0.57)
-	units.roughness = 0.6
+	var units: Array[Transform3D] = []
 	var frame := StandardMaterial3D.new()
 	frame.albedo_color = Color(0.1, 0.1, 0.1)
 	frame.roughness = 0.7
@@ -33,6 +32,7 @@ static func build(route: Route, street: Street) -> Node3D:
 		kit.at(tower.s)
 		_tower(kit, route, tower, materials[tower.facade], units, frame)
 	kit.commit(root)
+	Furniture.instances(root, AIRCON, units)
 	return root
 
 
@@ -41,7 +41,7 @@ static func _tower(
 	route: Route,
 	tower: Street.Tower,
 	material: Material,
-	units: Material,
+	units: Array[Transform3D],
 	frame: Material
 ) -> void:
 	var along := route.tangent(tower.s)
@@ -81,12 +81,13 @@ static func _tower(
 		if y + 0.7 > first_top:
 			continue
 		var at := left_end + along * ((unit.x + 0.5) * tower.bay)
-		var place := Vector3(at.x, base.y + y, at.z) - outward * 0.26
-		var basis := Basis(along, Vector3.UP, outward)
-		kit.box(units, Transform3D(basis, place), Vector3(0.82, 0.56, 0.5), Color.WHITE)
+		var place := Vector3(at.x, base.y + y, at.z) - outward * 0.3
+		# A real unit is about a metre wide; rotated to face out from the wall, on a bracket.
+		var basis := Basis(along, Vector3.UP, -outward)
+		units.append(Transform3D(basis, place))
 		kit.box(
 			frame,
-			Transform3D(basis, place - Vector3.UP * 0.3),
+			Transform3D(basis, place - Vector3.UP * 0.04),
 			Vector3(0.9, 0.04, 0.54),
 			Color.WHITE
 		)

@@ -6,6 +6,8 @@ extends RefCounted
 
 const LENGTH := 200.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
+## A narrower view than the forest's: a canyon stacks up its signs the way the photos do.
+const FOV := 58.0
 
 
 static func build(parent: Node3D, run_seed: int, route: Route, quality: String) -> void:
@@ -17,8 +19,9 @@ static func build(parent: Node3D, run_seed: int, route: Route, quality: String) 
 	parent.add_child(StreetGround.build(route, street, LENGTH))
 	parent.add_child(Facades.build(route, street))
 	parent.add_child(Shopfronts.build(route, street, LENGTH))
-	parent.add_child(Signage.build(route, street))
+	parent.add_child(Signage.build(route, street, LENGTH))
 	parent.add_child(Furniture.build(route, street, LENGTH))
+	parent.add_child(Pedestrians.build(run_seed, route, street, LENGTH))
 	_environment(parent, best, route)
 
 

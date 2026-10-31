@@ -7,10 +7,15 @@ source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 cd "$ROOT"
 
 python3 -I scripts/fetch_assets.py --bake-sources
+python3 -I scripts/fetch_people.py
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 "$GODOT" --path "$ROOT" --audio-driver Dummy --resolution 640x360 \
 	-s res://tools/bake_foliage.gd 2>&1 | tee "$log"
+"$GODOT" --path "$ROOT" --audio-driver Dummy --resolution 640x360 \
+	-s res://tools/bake_signs.gd 2>&1 | tee -a "$log"
+"$GODOT" --path "$ROOT" --audio-driver Dummy --resolution 640x360 \
+	-s res://tools/bake_people.gd 2>&1 | tee -a "$log"
 if grep -E "$GODOT_ERROR_PATTERN" "$log" >/dev/null; then
 	echo "bake.sh: Godot reported errors (above)" >&2
 	exit 1

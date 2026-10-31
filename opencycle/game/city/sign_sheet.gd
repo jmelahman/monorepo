@@ -35,6 +35,9 @@ func pick(trade: String, tall: bool, roll: float) -> Dictionary:
 	var w: float = cell["w"]
 	var h: float = cell["h"]
 	var style: String = cell["style"]
+	var glow: String = cell["glow"]
 	# A texel in from the edge, so mipmaps don't bleed the sign next door.
 	var rect := Rect2(x + 2.0, y + 2.0, w - 4.0, h - 4.0)
-	return {"uv": Rect2(rect.position / _size, rect.size / _size), "style": style}
+	return {
+		"uv": Rect2(rect.position / _size, rect.size / _size), "style": style, "glow": Color(glow)
+	}

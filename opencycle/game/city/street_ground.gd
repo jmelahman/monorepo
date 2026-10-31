@@ -140,7 +140,8 @@ static func _road_material(path: String, shade: Color) -> ShaderMaterial:
 static func _paving() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_texture = load(PAVING % "diffuse")
-	material.albedo_color = Color(0.72, 0.7, 0.68)
+	# Taking the texture's warmth out: it reads as terracotta under warm shop light.
+	material.albedo_color = Color(0.55, 0.62, 0.72)
 	material.normal_enabled = true
 	material.normal_texture = load(PAVING % "nor_gl")
 	material.roughness_texture = load(PAVING % "rough")

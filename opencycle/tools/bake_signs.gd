@@ -105,6 +105,9 @@ func _bake() -> void:
 	var meta: Array[Dictionary] = []
 	for cell: Dictionary in cells:
 		var rect: Rect2i = cell["rect"]
+		# What colour this sign throws onto the street around it.
+		var patch := image.get_region(rect)
+		patch.resize(1, 1, Image.INTERPOLATE_BILINEAR)
 		(
 			meta
 			. append(
@@ -116,6 +119,7 @@ func _bake() -> void:
 					"y": rect.position.y,
 					"w": rect.size.x,
 					"h": rect.size.y,
+					"glow": patch.get_pixel(0, 0).to_html(false),
 				}
 			)
 		)
