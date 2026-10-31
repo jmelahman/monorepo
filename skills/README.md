@@ -60,7 +60,7 @@ For Claude Code, Cursor, Copilot, and the other agents [skills.sh](https://skill
 supports:
 
 ```sh
-npx skills add jmelahman/skills
+bunx skills add jmelahman/skills
 ```
 
 ## Checks
