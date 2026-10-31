@@ -1,0 +1,8 @@
+{
+  "appId": "com.jmelahman.fivewild",
+  "appName": "5 Wild",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

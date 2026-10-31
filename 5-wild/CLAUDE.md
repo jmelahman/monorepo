@@ -250,7 +250,7 @@ hands it to `UiModeManager.setApplicationNightMode` (Android 12+), which the
 system persists per app and applies to the starting window, so `launchBackground`
 in `values/` or `values-notnight/` resolves to the player's theme rather than the
 device's. `MainActivity` paints the WebView from the same resource, which is why
-`capacitor.config.ts` no longer sets `backgroundColor`. `test/ui/theme.test.ts`
+`capacitor.config.json` does not sets `backgroundColor`. `test/ui/theme.test.ts`
 holds both colors to `BACKDROP`. Below Android 12 the launch follows the device.
 
 Tests run under Bun with no DOM: there is no jsdom. `test/ui` covers pure logic

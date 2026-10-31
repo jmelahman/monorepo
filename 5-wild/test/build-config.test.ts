@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import capacitor from "../capacitor.config.json"
 import config from "../vite.config"
 
 /*
@@ -14,7 +15,14 @@ describe("vite config", () => {
   })
 
   it("builds into the directory Capacitor copies from", () => {
-    // capacitor.config.ts webDir must match, or `cap sync` ships a stale bundle.
-    expect(config.build?.outDir).toBe("dist")
+    // A stale or missing webDir means `cap sync` ships the wrong bundle or none.
+    expect(config.build?.outDir).toBe(capacitor.webDir)
+  })
+
+  it("keeps the Android install key", () => {
+    // Changing appId later installs a second app beside the first rather than
+    // upgrading it. Java package segments cannot start with a digit, so the id
+    // spells the 5 out.
+    expect(capacitor.appId).toBe("com.jmelahman.fivewild")
   })
 })

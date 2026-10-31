@@ -45,6 +45,17 @@ from `assets/*.svg` by `tools/gen-icons.sh`. The PNGs it writes are committed,
 since Gradle cannot render an SVG and CI has no renderer, so edit the source art,
 run the script, and commit what changes.
 
+## Live reload on a device
+
+Add this to `server` in `capacitor.config.json` with your LAN IP while `bun run dev`
+is running, then re-run `bunx cap sync android`. JSON has no comments, so it lives
+here; don't commit it:
+
+```json
+"url": "http://192.168.1.x:5173",
+"cleartext": true
+```
+
 ## Releasing
 
 The web build is wrapped by Capacitor. Pushing a `v*` tag builds a signed APK,
