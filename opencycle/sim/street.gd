@@ -18,6 +18,31 @@ const SIGN_BASE := 4.6
 const MAX_OVERHANG := 4.6
 const CLOSED_CHANCE := 0.14
 const FACADES := 4
+## How tall a storey of the street-level block is, which the building kit fixes.
+const BLOCK_STOREY := 3.0
+## What the old blocks at street level were painted, a long time ago.
+const PAINTS: Array[Color] = [
+	Color(0.14, 0.34, 0.38),
+	Color(0.42, 0.13, 0.12),
+	Color(0.55, 0.38, 0.13),
+	Color(0.24, 0.27, 0.34),
+	Color(0.42, 0.41, 0.38),
+	Color(0.17, 0.17, 0.4),
+	Color(0.18, 0.3, 0.2),
+	Color(0.38, 0.17, 0.32),
+]
+## The trim that goes with them, pale or nearly black.
+const TRIMS: Array[Color] = [
+	Color(0.62, 0.6, 0.55), Color(0.11, 0.11, 0.12), Color(0.34, 0.3, 0.26)
+]
+## Which colours of tube a landlord bolts to the front.
+const TUBES: Array[Color] = [
+	Color(0.1, 0.85, 1.0),
+	Color(1.0, 0.1, 0.5),
+	Color(1.0, 0.62, 0.12),
+	Color(0.45, 0.25, 1.0),
+	Color(0.2, 1.0, 0.55),
+]
 ## Trades as [code]tools/bake_signs.gd[/code] names them on the sign sheet.
 const TRADES: PackedStringArray = [
 	"pharmacy",
@@ -70,6 +95,18 @@ class Tower:
 	var tiers := 0
 	## Where along the wall air-con units hang, as [bay, storey] grid cells.
 	var units: Array[Vector2i] = []
+	## Storeys of the old block at street level, which the tower rises out of.
+	var block := 0
+	var paint := Color.WHITE
+	var trim := Color.WHITE
+	## Tube along the top of the block, and whether it also runs down the corners.
+	var tube := Color.WHITE
+	var tube_corners := false
+	var fire_escape := false
+	## Which of the kit's window styles, and how they alternate along the front.
+	var windows := 0
+	var rhythm := 1
+	var dice := 0
 
 
 class Shop:
@@ -160,6 +197,7 @@ func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
 		tower.tint = Color(pale + warm, pale, pale - warm)
 		tower.tiers = int(Rng.unit(cell, 10) * 3.0)
 		_hang_units(cell, tower)
+		_make_block(cell, tower)
 		towers.append(tower)
 		_fill_with_shops(Rng.derive(cell, [1]), tower, kerb)
 		_hang_signs(Rng.derive(cell, [2]), tower)
@@ -175,6 +213,19 @@ func _hang_units(cell: int, tower: Tower) -> void:
 		for i: int in bays:
 			if Rng.unit(Rng.derive(cell, [i, j]), 0) < chance:
 				tower.units.append(Vector2i(i, j))
+
+
+func _make_block(cell: int, tower: Tower) -> void:
+	var fits := int((tower.height / (tower.tiers + 1)) / BLOCK_STOREY)
+	tower.block = mini(3 + int(Rng.unit(cell, 11) * 5.0), fits)
+	tower.paint = PAINTS[int(Rng.unit(cell, 12) * PAINTS.size())]
+	tower.trim = TRIMS[int(Rng.unit(cell, 13) * TRIMS.size())]
+	tower.tube = TUBES[int(Rng.unit(cell, 14) * TUBES.size())]
+	tower.tube_corners = Rng.unit(cell, 15) < 0.4
+	tower.fire_escape = Rng.unit(cell, 16) < 0.45
+	tower.windows = int(Rng.unit(cell, 17) * 4.0)
+	tower.rhythm = 1 + int(Rng.unit(cell, 18) * 3.0)
+	tower.dice = Rng.derive(cell, [3])
 
 
 func _fill_with_shops(cell: int, tower: Tower, kerb: float) -> void:
