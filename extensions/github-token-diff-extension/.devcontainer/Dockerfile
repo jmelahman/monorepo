@@ -2,6 +2,7 @@ FROM ubuntu:25.10
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   curl \
+  unzip \
   git \
   sudo \
   ca-certificates \
@@ -20,8 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   openssh-client \
   gh \
   git-delta \
-  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get install -y nodejs \
   && install -m 0755 -d /etc/apt/keyrings \
   && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list \
@@ -88,8 +87,8 @@ RUN chsh -s /bin/zsh root && \
 # Pre-create the dirs that devcontainer.json mounts named volumes onto so the
 # volume inherits dev ownership on first mount (docker copies the target dir's
 # perms into a fresh empty volume). Without this dev hits EACCES on ~/.cache,
-# ~/.local, ~/.npm after a clean rebuild.
-RUN mkdir -p /home/dev/.cache /home/dev/.local /home/dev/.npm \
+# ~/.local, ~/.bun/install/cache after a clean rebuild.
+RUN mkdir -p /home/dev/.cache /home/dev/.local /home/dev/.bun/install/cache \
              /home/dev/.config /home/dev/.ssh /home/dev/go/pkg/mod && \
   chmod 700 /home/dev/.ssh && \
   chown -R dev:dev /home/dev
@@ -104,17 +103,25 @@ WORKDIR /workspace
 # Install agent CLIs (Claude Code, pi)
 ARG CLAUDE_CODE_VERSION=latest
 ARG PI_CODING_AGENT_VERSION=latest
-RUN npm install -g \
+# pi's shebang asks for node, so node is Bun here, as in the oven/bun images.
+ARG BUN_VERSION=1.4.4
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v${BUN_VERSION}" \
+  && ln -s bun /usr/local/bin/node \
+  && BUN_INSTALL_BIN=/usr/local/bin \
+    BUN_INSTALL_GLOBAL_DIR=/usr/local/share/bun-global \
+    BUN_INSTALL_CACHE_DIR=/tmp/bun-cache \
+    bun add -g \
     @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
     @mariozechner/pi-coding-agent@${PI_CODING_AGENT_VERSION} \
     vite \
-    playwright @playwright/mcp
+    playwright @playwright/mcp \
+  && rm -rf /tmp/bun-cache
 
 # Headless Chromium for Playwright (downloaded at build time so the runtime
 # firewall doesn't need to allow the Playwright CDN). Shared path so both the
 # root and dev users can launch it.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN npx playwright install --with-deps chromium \
+RUN playwright install --with-deps chromium \
  && chmod -R a+rX /ms-playwright \
  && mkdir -p /opt/google/chrome \
  && ln -sf "$(find /ms-playwright -maxdepth 3 -type f -name chrome -path '*chrome-linux64*' | head -n1)" /opt/google/chrome/chrome

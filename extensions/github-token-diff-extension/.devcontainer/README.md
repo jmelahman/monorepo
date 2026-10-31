@@ -25,7 +25,7 @@ A containerized development environment.
 ### CLI
 
 ```bash
-npm install -g @devcontainers/cli
+bun add -g @devcontainers/cli
 
 # Start the container
 devcontainer up --workspace-folder .
@@ -44,7 +44,7 @@ The container bind-mounts a few things from the host so it feels like a normal s
 - The host Docker socket — `docker` commands inside the container act on the host daemon
 - `$GH_TOKEN` is forwarded for the `gh` CLI
 
-Named volumes cache the Go module/build directories and `~/.npm` so reinstalls are fast across container rebuilds.
+Named volumes cache the Go module/build directories and Bun's package cache (`~/.bun/install/cache`) so reinstalls are fast across container rebuilds.
 
 ### Remote user
 
@@ -56,7 +56,7 @@ VS Code or `devcontainer up` from:
 - `DEVCONTAINER_REMOTE_USER` (default `dev`) — value of `remoteUser`.
 - `DEVCONTAINER_REMOTE_HOME` (default `/home/dev`) — prefix used as the target
   for every host-home bind (`~/.claude`, `~/.zshrc`, the `~/.cache` /
-  `~/.local` / `~/.npm` named volumes, etc.).
+  `~/.local` / `~/.bun/install/cache` named volumes, etc.).
 
 To run as root instead, export both:
 
