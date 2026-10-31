@@ -1,4 +1,5 @@
-import { access, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 import { api, waitForSession, isAttachable, type Session } from "./fixtures/api";
@@ -36,9 +37,9 @@ test("a project_dir board runs the agent inside the subproject", async ({}, test
 
     // writeClaudeSettings runs during ensure and must land in the agent's cwd,
     // not at the worktree root — the status hooks are wired up from there.
-    await expect(
-      access(join(ensured.worktree_path, PROJECT_DIR, ".claude", "settings.local.json")),
-    ).resolves.toBeUndefined();
+    expect(
+      existsSync(join(ensured.worktree_path, PROJECT_DIR, ".claude", "settings.local.json")),
+    ).toBe(true);
 
     await api.startSession(ensured.id);
     session = await waitForSession(board.id, ensured.id, isAttachable, {
