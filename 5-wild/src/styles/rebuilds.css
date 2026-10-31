@@ -98,7 +98,7 @@
      * which is the usual argument for a nonzero duration, so there is nothing left to
      * keep alive.
      */
-    /* biome-ignore lint/complexity/noImportantStyles: must override every animation shorthand above */
+    /* must override every animation shorthand above */
     animation: none !important;
     /*
      * And `transition: none`, which is the same mistake with a much longer
@@ -137,7 +137,7 @@
      * keeps the `.grid-wrap` box but replaces the `.grid` inside it, so the
      * element being transitioned is new on every render regardless.
      */
-    /* biome-ignore lint/complexity/noImportantStyles: must override every transition shorthand above */
+    /* must override every transition shorthand above */
     transition: none !important;
   }
 

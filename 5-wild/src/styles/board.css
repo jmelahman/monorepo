@@ -57,7 +57,7 @@
      parse the `cq` declaration outright and keeps the plain one, which is the
      whole point of writing them in this order. */
   width: 100%;
-  /* biome-ignore lint/suspicious/noDuplicateProperties: the plain declaration above is the fallback */
+  /* the plain declaration above is the fallback */
   width: min(
     100%,
     calc(100cqh * var(--cols, 5) / var(--rows, 6)),

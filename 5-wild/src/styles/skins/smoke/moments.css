@@ -39,9 +39,9 @@
  */
 :root.skin-smoke .fx-ghost,
 :root.skin-smoke .fx-ghost * {
-  /* biome-ignore lint/complexity/noImportantStyles: a ghost must not replay what the render already played */
+  /* a ghost must not replay what the render already played */
   animation: none !important;
-  /* biome-ignore lint/complexity/noImportantStyles: same */
+  /* same */
   transition: none !important;
 }
 

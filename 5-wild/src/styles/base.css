@@ -225,7 +225,7 @@ body {
    * the same color as the app, so nothing shows.
    */
   height: 100vh;
-  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh above is the fallback */
+  /* the vh above is the fallback */
   height: 100svh;
   overflow: hidden;
   /* Pull-to-refresh and rubber-band scroll both read as bugs inside a game. */
@@ -319,7 +319,7 @@ button {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  /* biome-ignore lint/suspicious/noDuplicateProperties: the vh above is the fallback */
+  /* the vh above is the fallback */
   height: 100svh;
   padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
 }
