@@ -29,12 +29,6 @@ require("lazy").setup({
             cmd = { "uv", "tool", "run", "ruff", "server" },
           },
           ty = {},
-          ts_ls = {
-            on_attach = function(client)
-              client.server_capabilities.documentFormattingProvider = false
-              client.server_capabilities.documentRangeFormattingProvider = false
-            end,
-          },
           gopls = {
             on_attach = function(client)
               if client.server_capabilities.documentFormattingProvider then
