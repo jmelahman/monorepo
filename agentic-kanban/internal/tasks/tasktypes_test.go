@@ -50,14 +50,14 @@ func TestDiscoverTaskTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []VSCodeTask{
-		{Label: "Run", Command: "npm", Args: []string{"run", "dev"}},
+		{Label: "Run", Command: "bun", Args: []string{"run", "dev"}},
 		{Label: "npm: build - web", Command: "pnpm", Args: []string{"run", "build"}, Cwd: "web"},
-		{Label: "Install", Command: "npm", Args: []string{"install"}},
+		{Label: "Install", Command: "bun", Args: []string{"install"}},
 		{Label: "Cwd wins", Command: "yarn", Args: []string{"run", "dev"}, Cwd: "api"},
 		{Label: "Shell", Command: "make", Args: []string{"all"}, Cwd: "sub"},
 		{Label: "Untyped", Command: "echo hi"},
-		{Label: "tsc: watch - tsconfig.json", Command: "npx", Args: []string{"tsc", "-p", "tsconfig.json", "--watch"}},
-		{Label: "Gulp", Command: "npx", Args: []string{"gulp", "default"}},
+		{Label: "tsc: watch - tsconfig.json", Command: "bunx", Args: []string{"tsc", "-p", "tsconfig.json", "--watch"}},
+		{Label: "Gulp", Command: "bunx", Args: []string{"gulp", "default"}},
 		{Label: "Rake", Command: "rake", Args: []string{"spec"}},
 		{Label: "Cargo", Command: "cargo", Args: []string{"build", "--release"}},
 		{Label: "Go", Command: "go", Args: []string{"test", "./..."}},
@@ -83,16 +83,16 @@ func TestDetectPackageManager(t *testing.T) {
 		rel   string
 		want  string
 	}{
-		{name: "nothing falls back to npm", want: "npm"},
+		{name: "nothing falls back to bun", want: "bun"},
 		{name: "bun lockfile", files: map[string]string{"bun.lock": ""}, want: "bun"},
 		{name: "legacy bun lockfile", files: map[string]string{"bun.lockb": ""}, want: "bun"},
 		{name: "yarn lockfile", files: map[string]string{"yarn.lock": ""}, want: "yarn"},
 		{name: "root lockfile found from workspace package", files: map[string]string{"pnpm-lock.yaml": "", "pkgs/a/package.json": "{}"}, rel: "pkgs/a", want: "pnpm"},
 		{name: "package lockfile beats root", files: map[string]string{"pnpm-lock.yaml": "", "web/yarn.lock": ""}, rel: "web", want: "yarn"},
 		{name: "packageManager field", files: map[string]string{"package.json": `{"packageManager": "pnpm@9.1.0"}`}, want: "pnpm"},
-		{name: "unknown packageManager ignored", files: map[string]string{"package.json": `{"packageManager": "foo@1"}`}, want: "npm"},
+		{name: "unknown packageManager ignored", files: map[string]string{"package.json": `{"packageManager": "foo@1"}`}, want: "bun"},
 		{name: "variable path uses root", files: map[string]string{"yarn.lock": ""}, rel: "${workspaceFolder}/web", want: "yarn"},
-		{name: "escaping path stops at root", files: map[string]string{"yarn.lock": ""}, rel: "../..", want: "npm"},
+		{name: "escaping path stops at root", files: map[string]string{"yarn.lock": ""}, rel: "../..", want: "bun"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -102,12 +102,36 @@ func TestDetectPackageManager(t *testing.T) {
 				t.Fatal(err)
 			}
 			// A lockfile outside the worktree must never be picked up.
-			writeFile(t, filepath.Join(parent, "bun.lock"), "")
+			writeFile(t, filepath.Join(parent, "package-lock.json"), "")
 			for name, content := range tc.files {
 				writeFile(t, filepath.Join(root, name), content)
 			}
 			if got := detectPackageManager(root, tc.rel); got != tc.want {
 				t.Errorf("detectPackageManager(%q) = %q; want %q", tc.rel, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestExecRunner(t *testing.T) {
+	cases := []struct {
+		name string
+		file string
+		want string
+	}{
+		{name: "no lockfile", want: "bunx"},
+		{name: "bun", file: "bun.lock", want: "bunx"},
+		{name: "npm", file: "package-lock.json", want: "npx"},
+		{name: "pnpm", file: "pnpm-lock.yaml", want: "npx"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			if tc.file != "" {
+				writeFile(t, filepath.Join(root, tc.file), "")
+			}
+			if got := execRunner(root, ""); got != tc.want {
+				t.Errorf("execRunner = %q; want %q", got, tc.want)
 			}
 		})
 	}

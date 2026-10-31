@@ -14,15 +14,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     ripgrep \
     sudo \
+    unzip \
     zsh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
  && chmod 644 /usr/share/keyrings/githubcli-archive-keyring.gpg \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
       > /etc/apt/sources.list.d/github-cli.list \
- && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
  && apt-get update \
- && apt-get install -y --no-install-recommends gh nodejs \
+ && apt-get install -y --no-install-recommends gh \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -57,10 +57,18 @@ RUN usermod -s /bin/zsh root \
 ARG CLAUDE_CODE_VERSION=latest
 ARG PI_CODING_AGENT_VERSION=latest
 ARG OPENCODE_VERSION=latest
-RUN npm install -g \
+# pi's shebang asks for node, so node is Bun here, as in the oven/bun images.
+ARG BUN_VERSION=1.4.4
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v${BUN_VERSION}" \
+ && ln -s bun /usr/local/bin/node \
+ && BUN_INSTALL_BIN=/usr/local/bin \
+    BUN_INSTALL_GLOBAL_DIR=/usr/local/share/bun-global \
+    BUN_INSTALL_CACHE_DIR=/tmp/bun-cache \
+    bun add -g \
       @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
       @earendil-works/pi-coding-agent@${PI_CODING_AGENT_VERSION} \
-      opencode-ai@${OPENCODE_VERSION}
+      opencode-ai@${OPENCODE_VERSION} \
+ && rm -rf /tmp/bun-cache
 
 COPY github_known_hosts /etc/ssh/ssh_known_hosts
 RUN chmod 644 /etc/ssh/ssh_known_hosts

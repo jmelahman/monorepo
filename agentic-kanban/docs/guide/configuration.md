@@ -193,9 +193,9 @@ Kanban runs the tasks in the repo's `.vscode/tasks.json`. Besides `shell` and `p
 
 | `type`                   | Runs                                                                                    |
 | ------------------------ | --------------------------------------------------------------------------------------- |
-| `npm`                    | `<pm> run <script>` in `path`, where `<pm>` is npm, yarn, pnpm, or bun, detected from the lockfile or `packageManager` field. The `install` script runs `<pm> install` |
-| `typescript`             | `npx tsc -p <tsconfig>`, plus `--watch` when `option` is `watch`                        |
-| `gulp`, `grunt`, `jake`  | `npx <type> <task>`                                                                     |
+| `npm`                    | `<pm> run <script>` in `path`, where `<pm>` is npm, yarn, pnpm, or bun, detected from the lockfile or `packageManager` field, or bun with neither. The `install` script runs `<pm> install` |
+| `typescript`             | `bunx tsc -p <tsconfig>`, plus `--watch` when `option` is `watch`; `npx` if not on Bun  |
+| `gulp`, `grunt`, `jake`  | `bunx <type> <task>`; `npx` if not on Bun                                               |
 | `rake`                   | `rake <task>`                                                                           |
 | `cargo`, `go`, `deno`    | `<type> <command> <args>`                                                               |
 

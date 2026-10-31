@@ -45,13 +45,13 @@ func resolveCommand(t vsTaskRaw, worktreePath string) (command string, args []st
 		if t.Option == "watch" {
 			args = append(args, "--watch")
 		}
-		return "npx", args, cwd, true, nil
+		return execRunner(worktreePath, cwd), args, cwd, true, nil
 	case "gulp", "grunt", "jake":
 		// Node task runners, resolved from node_modules/.bin like VS Code does.
 		if t.Task == "" {
 			return "", nil, "", false, fmt.Errorf("%s task has no task", t.Type)
 		}
-		return "npx", append([]string{t.Type, t.Task}, t.Args...), cwd, true, nil
+		return execRunner(worktreePath, cwd), append([]string{t.Type, t.Task}, t.Args...), cwd, true, nil
 	case "rake":
 		if t.Task == "" {
 			return "", nil, "", false, errors.New("rake task has no task")
@@ -82,7 +82,8 @@ var lockfiles = []struct{ pm, file string }{
 // detectPackageManager picks the package manager for the package.json at
 // worktreePath/rel, walking up to worktreePath so a workspace package finds
 // the monorepo root's lockfile. A lockfile wins over package.json's
-// "packageManager" field; with neither, it falls back to npm.
+// "packageManager" field; with neither, it falls back to bun, which is what the
+// default session image has.
 func detectPackageManager(worktreePath, rel string) string {
 	root := filepath.Clean(worktreePath)
 	dir := root
@@ -99,10 +100,19 @@ func detectPackageManager(worktreePath, rel string) string {
 			return pm
 		}
 		if dir == root || !strings.HasPrefix(dir, root+string(filepath.Separator)) {
-			return "npm"
+			return "bun"
 		}
 		dir = filepath.Dir(dir)
 	}
+}
+
+// execRunner picks what runs a package's own binaries from worktreePath/rel:
+// bunx on a Bun project, and npx on the others, which all have Node.
+func execRunner(worktreePath, rel string) string {
+	if detectPackageManager(worktreePath, rel) == "bun" {
+		return "bunx"
+	}
+	return "npx"
 }
 
 // packageManagerField reads the Corepack "packageManager" field (e.g.
