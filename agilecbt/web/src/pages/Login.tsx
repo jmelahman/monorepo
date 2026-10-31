@@ -28,7 +28,7 @@ export default function Login() {
           value={secret}
           onChange={(e) => setSecret(e.target.value)}
           className={inputClass}
-          // biome-ignore lint/a11y/noAutofocus: the only field on the page
+          // the only field on the page
           autoFocus
         />
         <ErrorText error={login.error} />

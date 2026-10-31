@@ -178,14 +178,14 @@ export function Markdownish({
   return (
     <div className={`space-y-2 ${className}`}>
       {text.split(/\n{2,}/).map((para, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: paragraphs have no identity
+        // paragraphs have no identity
         <p key={i} className="whitespace-pre-wrap">
           {para.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
             part.startsWith("**") && part.endsWith("**") ? (
-              // biome-ignore lint/suspicious/noArrayIndexKey: inline runs have no identity
+              // inline runs have no identity
               <strong key={j}>{part.slice(2, -2)}</strong>
             ) : links ? (
-              // biome-ignore lint/suspicious/noArrayIndexKey: inline runs have no identity
+              // inline runs have no identity
               <Linkified key={j} text={part} />
             ) : (
               part
@@ -203,7 +203,7 @@ const urlPattern = /(https?:\/\/\S*[^\s.,;:!?)'"])/;
 function Linkified({ text }: { text: string }) {
   return text.split(urlPattern).map((part, i) =>
     i % 2 === 1 ? (
-      // biome-ignore lint/suspicious/noArrayIndexKey: inline runs have no identity
+      // inline runs have no identity
       <a key={i} href={part} target="_blank" rel="noreferrer" className="underline">
         {part}
       </a>

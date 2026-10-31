@@ -232,7 +232,7 @@ const dangerButtonClass =
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    // biome-ignore lint/a11y/noLabelWithoutControl: children slot holds the control at runtime.
+    // children slot holds the control at runtime.
     <label className="flex flex-col gap-1">
       <span className="text-xs text-fg-muted">{label}</span>
       {children}
@@ -287,7 +287,7 @@ function Modal({
     dialog.querySelector<HTMLElement>("[data-autofocus]")?.focus();
   }, []);
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click-to-close; Escape is handled natively by <dialog>.
+    // backdrop click-to-close; Escape is handled natively by <dialog>.
     <dialog
       ref={ref}
       onClose={onClose}
@@ -785,7 +785,7 @@ function uptime(iso: string): string {
 function usePinnedScroll(dep: unknown) {
   const ref = useRef<HTMLPreElement>(null);
   const pinned = useRef(true);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dep drives re-scroll on content change.
+  // dep drives re-scroll on content change.
   useEffect(() => {
     const el = ref.current;
     if (el && pinned.current) el.scrollTop = el.scrollHeight;
@@ -1967,7 +1967,7 @@ export default function App() {
   const [offset, setOffset] = useState(0);
   // A narrower filter can leave the current page past the end of the results,
   // so every filter change starts over at the first page.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: resetting on filter change is the point
+  // resetting on filter change is the point
   useEffect(() => setOffset(0), [query, statusFilter]);
 
   const health = useQuery({

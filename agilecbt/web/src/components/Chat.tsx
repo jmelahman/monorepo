@@ -81,7 +81,7 @@ export default function Chat({
   const items = [...shown, ...live];
   const opening = !!greeting && shown.length === 0;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll when the transcript grows
+  // scroll when the transcript grows
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [items.length, live]);

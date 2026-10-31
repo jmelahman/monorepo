@@ -335,7 +335,7 @@ function AddCard({ lane }: { lane: Lane }) {
         placeholder="A small, concrete step…"
         aria-label={`New step in ${lane}`}
         className={inputClass}
-        // biome-ignore lint/a11y/noAutofocus: opened on request
+        // opened on request
         autoFocus
       />
       <div className="flex gap-2">
