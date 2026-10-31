@@ -160,6 +160,23 @@ export default function App() {
   // single banner across N streams would be misleading.
   useBoardSubscription(view === "board" ? activeId : null, setStreamStatus);
 
+  const boardSelect =
+    view === "board" ? (
+      <select
+        aria-label="Board"
+        className="min-w-0 max-w-[40vw] cursor-pointer rounded bg-surface px-2 py-1 text-sm"
+        value={activeId ?? ""}
+        onChange={(e) => setActiveId(e.target.value ? Number(e.target.value) : null)}
+      >
+        <option value="">Select a board</option>
+        {(boardsQ.data ?? []).map((b) => (
+          <option key={b.id} value={b.id}>
+            {b.name}
+          </option>
+        ))}
+      </select>
+    ) : null;
+
   return (
     <div className="flex h-full min-w-0 flex-col">
       <header className="flex flex-nowrap items-center gap-x-3 gap-y-2 border-b border-border py-2 pr-3 sm:flex-wrap md:pl-3">
@@ -174,23 +191,9 @@ export default function App() {
           <Tab active={view === "previews"} onClick={() => setView("previews")} label="preview" />
           <Tab active={view === "releases"} onClick={() => setView("releases")} label="release" />
         </nav>
-        {view === "board" && (
-          <select
-            aria-label="Board"
-            className="min-w-0 max-w-[40vw] cursor-pointer rounded bg-surface px-2 py-1 text-sm"
-            value={activeId ?? ""}
-            onChange={(e) => setActiveId(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">Select a board</option>
-            {(boardsQ.data ?? []).map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        )}
         {isMobile ? (
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            {boardSelect}
             <SessionCounter onActivate={() => setView("overview")} />
             <HeaderMobileMenu
               onNewBoard={() => setCreateBoardOpen(true)}
@@ -202,6 +205,7 @@ export default function App() {
           </div>
         ) : (
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {boardSelect}
             <SessionCounter onActivate={() => setView("overview")} />
             <Button
               variant="neutral"
