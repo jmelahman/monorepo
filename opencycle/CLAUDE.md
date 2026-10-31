@@ -12,6 +12,8 @@ tooling; the dice game and Steam are gone.
 - Look at it: `godot --path . --audio-driver Dummy -- --biome=neon --still=out.png --at=8`,
   then read the PNG. It opens a window on the desktop; use a real display, since Xvfb
   cannot run Vulkan.
+- Keep a record of it: `scripts/storybook.py add "Title" --note "..."` renders the usual shots
+  into `captures/storybook`; `scripts/storybook.py serve` shows them at localhost:8000.
 - Measure it: `scripts/bench.sh forest ship [--rate=4 --scale=0.5]`. `--rate=4` rides four
   times as fast for a quick read; only trust a rate 1 run, the default.
 - Rebake cards after changing their source or lighting: `scripts/bake.sh`.
