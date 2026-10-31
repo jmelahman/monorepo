@@ -58,9 +58,9 @@ void fragment() {
 	float broad = dot(texture(albedo, close * 0.19 + 0.37).rgb, vec3(0.33));
 	float finer = dot(texture(albedo, close * 3.3).rgb, vec3(0.33));
 	scan *= (0.55 + broad * 1.0) * (0.7 + finer * 0.65);
-	scan *= mix(0.55, 1.0, texture(occlusion, close).r);
+	scan *= mix(0.75, 1.0, texture(occlusion, close).r);
 	float grey = dot(scan, vec3(0.3, 0.6, 0.1));
-	vec3 surface = mix(vec3(grey), scan, 0.55) * COLOR.rgb;
+	vec3 surface = mix(vec3(grey), scan, 0.55) * COLOR.rgb * 2.0;
 	float roughness = texture(rough, close).g;
 	vec3 normal_map = texture(normals, close).xyz;
 	vec3 finer_normal = texture(normals, close * 3.3).xyz;

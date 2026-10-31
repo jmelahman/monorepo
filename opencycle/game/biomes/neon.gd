@@ -105,7 +105,7 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 		var bounce := DirectionalLight3D.new()
 		bounce.rotation_degrees = Vector3(24.0, yaw, 0.0)
 		bounce.light_color = Color(0.5, 0.56, 0.68)
-		bounce.light_energy = 0.75
+		bounce.light_energy = 0.4
 		bounce.light_specular = 0.0
 		bounce.light_volumetric_fog_energy = 0.0
 		parent.add_child(bounce)
