@@ -318,7 +318,7 @@ function holdKeys(screen: HTMLElement, state: RunState): Held {
       else setTimeout(() => release(letter), ms(FLIP.half))
     },
     releaseAll() {
-      for (const letter of [...held.keys()]) release(letter)
+      for (const letter of held.keys()) release(letter)
     },
   }
 }

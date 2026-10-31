@@ -338,7 +338,7 @@ export function blindPlayer(policy: Policy): BlindPlayer {
      * Fixing it moves the solver's mean final stage from 4.51 to 4.92 and the
      * farmer's from 3.82 to 4.04.
      */
-    const broken = [...Object.entries(view.letters)]
+    const broken = Object.entries(view.letters)
       .filter(([, entry]) => entry?.destroyed)
       .map(([letter]) => letter)
     if (broken.length) {

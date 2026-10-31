@@ -14,6 +14,7 @@ The same three commands CI runs:
 
 ```sh
 bun run typecheck
+bun run lint          # oxlint
 bun run format:check  # bun fmt
 bun run test          # Vitest
 ```

@@ -238,7 +238,7 @@ describe("the outbox", () => {
     setConsent("on")
     file(run(1), "on")
     const sent: number[] = []
-    let answer = (_: { ok: boolean; status: number }) => {}
+    let answer: (result: { ok: boolean; status: number }) => void = () => {}
     let pending = true
     const send: Send = (body) => {
       sent.push((JSON.parse(body) as Payload).seed)

@@ -249,7 +249,7 @@ export function scoreGuess(params: {
   const bucketFor = (slot: number): Record<string, number> => {
     const existing = grown.get(slot)
     if (existing) return existing
-    const fresh = { ...(state.relics[slot]?.data ?? {}) }
+    const fresh = { ...state.relics[slot]?.data }
     grown.set(slot, fresh)
     return fresh
   }

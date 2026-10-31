@@ -2004,14 +2004,14 @@ export class App {
     // one at a time rather than by `replaceChildren`, which would take the kept
     // node out with the rest and put it back afterwards. A node that leaves the
     // document loses the frame this whole exercise is about.
-    for (const node of [...this.root.children]) if (node !== live) node.remove()
-    for (const node of [...live.childNodes]) if (node !== kept) node.remove()
+    for (const node of Array.from(this.root.children)) if (node !== live) node.remove()
+    for (const node of Array.from(live.childNodes)) if (node !== kept) node.remove()
     // What is left is a screen holding one node, so the new screen is dealt out
     // either side of it, in the order the view put them in. That order is not
     // cosmetic: the wrap is a flex item that claims whatever the items above and
     // below it leave, which is the space the board measures itself against.
     let above = true
-    for (const node of [...view.childNodes]) {
+    for (const node of Array.from(view.childNodes)) {
       if (node === built) above = false
       else if (above) live.insertBefore(node, kept)
       else live.append(node)
