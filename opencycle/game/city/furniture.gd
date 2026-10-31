@@ -24,8 +24,8 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Furniture"
 	var kit := CityMesh.new()
-	var steel := _plain(Color(0.2, 0.2, 0.21), 0.5, 0.6)
-	var rail := Facades.scan("rusty_painted_metal", 1.1, Color(1.5, 1.6, 1.55))
+	var steel := _plain(Color(0.3, 0.31, 0.33), 0.55, 0.05)
+	var rail := Facades.scan("rusty_painted_metal", 1.1, Color(1.15, 1.4, 1.45))
 	# Paint, not bare metal, which would go black anywhere with nothing to reflect.
 	rail.metallic = 0.0
 	var cable := _plain(Color(0.02, 0.02, 0.02), 0.7, 0.0)

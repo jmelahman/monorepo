@@ -36,9 +36,9 @@ void fragment() {
 	float foot = smoothstep(1.3, 0.2, world.y - streaks * 0.5);
 	float head = smoothstep(1.4, 2.9, world.y) * smoothstep(0.45, 0.8, streaks * 0.7 + fine * 0.4);
 	float dirt = clamp(foot * 0.85 + head * 0.6, 0.0, 1.0);
-	ALBEDO = scan * COLOR.rgb * mix(1.0, 0.4, dirt);
+	ALBEDO = scan * COLOR.rgb * 1.15 * mix(1.0, 0.45, dirt);
 	ROUGHNESS = mix(texture(rough, UV).g, 0.3, foot * 0.6);
-	METALLIC = 0.3;
+	METALLIC = 0.1;
 	NORMAL_MAP = texture(normals, UV).xyz;
 	NORMAL_MAP_DEPTH = 1.6;
 }
