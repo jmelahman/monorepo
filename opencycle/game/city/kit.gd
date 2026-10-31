@@ -32,6 +32,10 @@ func restyle(materials: Dictionary[String, Material]) -> void:
 				mesh.surface_set_material(surface, materials[was])
 
 
+func parts() -> Array[String]:
+	return _names
+
+
 func origin(part: String) -> Vector3:
 	return _origins[part]
 

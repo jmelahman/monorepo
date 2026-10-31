@@ -16,6 +16,8 @@ trap 'rm -f "$log"' EXIT
 	-s res://tools/bake_signs.gd 2>&1 | tee -a "$log"
 "$GODOT" --path "$ROOT" --audio-driver Dummy --resolution 640x360 \
 	-s res://tools/bake_people.gd 2>&1 | tee -a "$log"
+"$GODOT" --path "$ROOT" --audio-driver Dummy --resolution 640x360 \
+	-s res://tools/bake_goods.gd 2>&1 | tee -a "$log"
 if grep -E "$GODOT_ERROR_PATTERN" "$log" >/dev/null; then
 	echo "bake.sh: Godot reported errors (above)" >&2
 	exit 1
