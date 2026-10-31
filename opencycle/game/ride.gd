@@ -4,8 +4,8 @@ extends Node3D
 ##
 ## [code]--biome=forest|neon[/code], [code]--seed=N[/code],
 ## [code]--replay=res://replays/x.json[/code] and [code]--quality=ship|max[/code] choose
-## what to show. [code]--still=out.png[/code]
-## with [code]--at=SECONDS[/code] renders one frame and quits.
+## what to show. [code]--scale=0.5[/code] overrides the quality's render scale.
+## [code]--still=out.png[/code] with [code]--at=SECONDS[/code] renders one frame and quits.
 ## [code]--bench=out.json[/code] rides the whole replay as fast as the GPU allows and
 ## reports its frame times, and [code]--rate=4[/code] rides it faster for a quick
 ## read. With Godot's [code]--write-movie[/code] and
@@ -13,6 +13,7 @@ extends Node3D
 ## frame takes, and quits at the end so the movie is finalised.
 
 const WARMUP_FRAMES := 60
+const TARGET_FPS := 30
 const BIOME_REPLAYS: Dictionary[String, String] = {
 	"forest": "res://replays/benchmark.json",
 	"neon": "res://replays/neon.json",
@@ -57,6 +58,12 @@ func _ready() -> void:
 			NeonBiome.build(self, run_seed, route, quality)
 		_:
 			ForestBiome.build(self, run_seed, route, quality)
+	# An even 30 beats a ride that swings between 30 and 60. A bench needs to see the limit.
+	if _bench_path.is_empty():
+		Engine.max_fps = TARGET_FPS
+	if args.has("scale"):
+		var scale_text: String = args["scale"]
+		get_viewport().scaling_3d_scale = scale_text.to_float()
 	_startup_ms = Time.get_ticks_msec() - started
 	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_time = at_seconds
