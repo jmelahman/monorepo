@@ -98,7 +98,6 @@ export function SessionPane({
 
   // height/width are read once as the resize start point; adding them to deps
   // would tear down and re-attach listeners on every mouse move.
-  // see above.
   useEffect(() => {
     if (!resizing) return;
     let pending: number | null = null;
@@ -128,6 +127,7 @@ export function SessionPane({
       document.body.style.cursor = prevCursor;
       document.body.style.userSelect = prevSelect;
     };
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [resizing, isHorizontal]);
 
   useEffect(() => {

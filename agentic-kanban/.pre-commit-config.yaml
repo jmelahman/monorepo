@@ -109,6 +109,12 @@ repos:
         language: bun
         files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc|css)$
         pass_filenames: false
+      - id: oxlint
+        name: oxlint
+        entry: bun --bun run --cwd=web lint
+        language: bun
+        files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc)$
+        pass_filenames: false
       - id: bun-audit
         name: bun audit
         entry: bun audit --cwd=web --audit-level=high

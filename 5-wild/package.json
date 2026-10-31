@@ -7,6 +7,8 @@
     "build": "bun check && vite build",
     "preview": "vite preview",
     "typecheck": "bun check",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "format": "bun fmt",
     "format:check": "bun fmt --check",
     "test": "vitest run",
@@ -37,6 +39,7 @@
   "devDependencies": {
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.0.0",
+    "oxlint": "1.90.0",
     "playwright-core": "^1.64.0",
     "vite": "^8.0.0",
     "vitest": "^5.0.1"

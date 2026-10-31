@@ -8,16 +8,16 @@ extends RefCounted
 ## the pixels it covers, not its triangles.
 
 const CHUNK := 64.0
-const SMALL_CHUNK := 24.0
+const SMALL_CHUNK := 36.0
+const FAR_CHUNK := 128.0
 const BAKED := "res://assets/baked/%s"
 const FOLIAGE: Shader = preload("res://game/foliage.gdshader")
 const TREES: Dictionary[Planting.Kind, String] = {
 	Planting.Kind.FIR: "fir_tree_01",
 	Planting.Kind.PINE: "pine_tree_01",
 }
-const NEAR_TREE_RANGE := 130.0
+const NEAR_TREE_RANGE := 90.0
 const FAR_TREE_RANGE := 2400.0
-const FADE := 14.0
 const SCENES: Dictionary[Planting.Kind, String] = {
 	Planting.Kind.FERN: "res://assets/polyhaven/fern_02/fern_02_1k.gltf",
 	Planting.Kind.GRASS: "res://assets/polyhaven/grass_medium_01/grass_medium_01_1k.gltf",
@@ -26,42 +26,52 @@ const SCENES: Dictionary[Planting.Kind, String] = {
 	Planting.Kind.STUMP: "res://assets/polyhaven/tree_stump_01/tree_stump_01_1k.gltf",
 }
 const RANGES: Dictionary[Planting.Kind, float] = {
-	Planting.Kind.FERN: 55.0,
-	Planting.Kind.GRASS: 32.0,
-	Planting.Kind.ROCK: 120.0,
-	Planting.Kind.BOULDER: 200.0,
-	Planting.Kind.STUMP: 90.0,
+	Planting.Kind.FERN: 38.0,
+	Planting.Kind.GRASS: 22.0,
+	Planting.Kind.ROCK: 60.0,
+	Planting.Kind.BOULDER: 110.0,
+	Planting.Kind.STUMP: 45.0,
 }
 
 
-static func build(plants: Dictionary[Planting.Kind, Array]) -> Node3D:
+static func build(plants: Dictionary[Planting.Kind, Array], route: Route) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Flora"
 	for kind: Planting.Kind in TREES:
-		_add_trees(root, kind, plants[kind])
+		_add_trees(root, kind, plants[kind], route)
 	for kind: Planting.Kind in SCENES:
 		_add_small(root, kind, plants[kind])
 	return root
 
 
-static func _add_trees(root: Node3D, kind: Planting.Kind, transforms: Array) -> void:
+static func _add_trees(root: Node3D, kind: Planting.Kind, transforms: Array, route: Route) -> void:
 	var tree := TREES[kind]
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BAKED % (tree + ".json")))
 	var meta: Dictionary = parsed
 	var slices: int = meta["slices"]
-	var near := _fan(meta, slices, slices, 4, _card(BAKED % (tree + "_slices.webp")))
-	var far_a := _fan(meta, 2, 4, 1, _card(BAKED % (tree + "_impostor.webp")))
-	for chunk: Array in _chunks(transforms, CHUNK):
+	var half_width: float = meta["width"]
+	half_width *= 0.5
+	var near := _fan(meta, slices, slices, 2, _card(BAKED % (tree + "_slices.webp"), half_width))
+	var far := _fan(meta, 2, 4, 1, _card(BAKED % (tree + "_impostor.webp"), half_width))
+	# The rider stays on the road, so a tree far from it only ever needs its far form.
+	var close_by: Array = []
+	var distant_only: Array = []
+	for entry: Variant in transforms:
+		var placed: Transform3D = entry
+		var off_road := absf(route.nearest(placed.origin.x, placed.origin.z).y)
+		(close_by if off_road < NEAR_TREE_RANGE else distant_only).append(placed)
+	for chunk: Array in _chunks(close_by, CHUNK):
 		var close := _instance(near, chunk)
 		close.visibility_range_end = NEAR_TREE_RANGE
-		close.visibility_range_end_margin = FADE
-		close.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		root.add_child(close)
-		var distant := _instance(far_a, chunk)
-		distant.visibility_range_begin = NEAR_TREE_RANGE - FADE
-		distant.visibility_range_begin_margin = FADE
+		var distant := _instance(far, chunk)
+		distant.visibility_range_begin = NEAR_TREE_RANGE
 		distant.visibility_range_end = FAR_TREE_RANGE
-		distant.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		distant.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(distant)
+	for chunk: Array in _chunks(distant_only, FAR_CHUNK):
+		var distant := _instance(far, chunk)
+		distant.visibility_range_end = FAR_TREE_RANGE
 		distant.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(distant)
 
@@ -78,8 +88,6 @@ static func _add_small(root: Node3D, kind: Planting.Kind, transforms: Array) -> 
 		for chunk: Array in _chunks(buckets[m], SMALL_CHUNK):
 			var instance := _instance(meshes[m], chunk)
 			instance.visibility_range_end = RANGES[kind]
-			instance.visibility_range_end_margin = 6.0
-			instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 			if soft:
 				instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			root.add_child(instance)
@@ -154,10 +162,11 @@ static func _fan(
 	return surface.commit()
 
 
-static func _card(path: String) -> ShaderMaterial:
+static func _card(path: String, half_width: float) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = FOLIAGE
 	material.set_shader_parameter("albedo", load(path))
+	material.set_shader_parameter("half_width", half_width)
 	return material
 
 

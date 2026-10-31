@@ -372,7 +372,6 @@ export function SessionView({
   // ticket's button stuck in its spinner state. Mutation handles are stable
   // for the lifetime of this component; listing them as deps would re-fire
   // on every render.
-  // see above.
   useEffect(() => {
     setSyncMenuOpen(false);
     setMergeMenuOpen(false);
@@ -384,11 +383,11 @@ export function SessionView({
     syncMut.reset();
     mergeMut.reset();
     doneMut.reset();
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 
   // ticketId isn't referenced directly, but switching tickets remounts the
   // header DOM, so we re-measure to recompute the compact threshold.
-  // see above.
   useLayoutEffect(() => {
     const header = headerRef.current;
     const ghost = headerGhostRef.current;

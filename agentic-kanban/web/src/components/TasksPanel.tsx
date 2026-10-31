@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Session } from "@/api/client";
 import { queryKeys } from "@/api/keys";
 import { useToast } from "@/toast";
@@ -58,7 +58,7 @@ export function TasksPanel({ session }: { session: Session; boardId: number }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.runs(session.id) }),
   });
 
-  const warnings = tasksQ.data?.warnings ?? [];
+  const warnings = useMemo(() => tasksQ.data?.warnings ?? [], [tasksQ.data?.warnings]);
   const lastWarningKey = useRef<string>("");
   useEffect(() => {
     const key = warnings.join("\n");
@@ -186,7 +186,6 @@ function TaskOutput({ lines }: { lines: string[] }) {
 
   // `lines` isn't referenced inside, but every append produces a new array
   // identity, so listing it as a dep is what triggers the autoscroll.
-  // see above.
   useEffect(() => {
     ref.current?.scrollTo({ top: ref.current.scrollHeight });
   }, [lines]);

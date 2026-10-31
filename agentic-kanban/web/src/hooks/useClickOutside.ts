@@ -17,13 +17,13 @@ export function useClickOutside(
   // callers don't need to memoize a stable array reference. Callers needing
   // dynamic selectors can rebuild the array each render — the join is what
   // determines re-subscription.
-  // see above.
   useEffect(() => {
     if (!enabled) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as Element | null;
       if (!target) return;
       if (ref.current?.contains(target as Node)) return;
+      // oxlint-disable-next-line react-hooks/exhaustive-deps
       for (const sel of exemptSelectors) {
         if (target.closest(sel)) return;
       }
@@ -31,5 +31,6 @@ export function useClickOutside(
     };
     window.addEventListener("mousedown", handler);
     return () => window.removeEventListener("mousedown", handler);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, ref, onOutside, exemptSelectors.join("|")]);
 }

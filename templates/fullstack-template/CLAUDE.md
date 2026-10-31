@@ -51,7 +51,7 @@ zero, and shutting the process down discards everything.
 - Go: `go test ./...`
 - Frontend types: `cd web && bun run typecheck`
 - Frontend format: `cd web && bun run format:check` (`format` to apply). The
-  `prek` `bun-fmt` hook runs the same check. There is no linter.
+  `prek` `bun-fmt` hook runs the same check. Lint: `bun run lint` (`lint:fix` to apply), also the `oxlint` hook.
 - Playwright E2E: `cd web && bun run test:e2e:install && bun run test:e2e`
   (the install step fetches Chromium into `~/.cache` once; the suite boots
   the real backend with `--in-memory` plus the Vite dev server).

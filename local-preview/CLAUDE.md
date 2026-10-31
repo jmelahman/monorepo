@@ -63,7 +63,7 @@ zero, and shutting the process down discards everything.
   `_test.go` is for logic that is pure enough not to need one.
 - Frontend types: `cd web && bun run typecheck`
 - Frontend format: `cd web && bun run format:check` (`format` to apply). The
-  `prek` `bun-fmt` hook runs the same check. There is no linter.
+  `prek` `bun-fmt` hook runs the same check. Lint: `bun run lint` (`lint:fix` to apply), also the `oxlint` hook.
 - Playwright E2E: `cd web && bun run test:e2e` (first run `test:e2e:install`
   for Chromium; boots the real backend with `--in-memory` plus the Vite dev
   server).

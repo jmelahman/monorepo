@@ -19,9 +19,9 @@ const TREE_NEAR_REACH := 180.0
 const FAR_TREE_CELL := 10.0
 const FAR_TREE_SIZE := 1.35
 const TREE_REACH := 620.0
-const FERN_CELL := 1.1
+const FERN_CELL := 1.6
 const FERN_REACH := 34.0
-const GRASS_CELL := 0.55
+const GRASS_CELL := 0.8
 const GRASS_REACH := 11.0
 const ROCK_CELL := 7.0
 const ROCK_REACH := 70.0
@@ -152,14 +152,14 @@ static func _grow_rock(
 	if absf(offset) < Route.HALF_WIDTH + 2.0:
 		return
 	var roll := Rng.unit(cell, 0)
-	if roll > 0.3:
+	if roll > 0.14:
 		return
 	var kind := Kind.ROCK
 	var size := lerpf(0.4, 1.5, Rng.unit(cell, 2))
-	if roll < 0.02:
+	if roll < 0.008:
 		kind = Kind.BOULDER
 		size *= 0.6
-	elif roll < 0.05:
+	elif roll < 0.02:
 		kind = Kind.STUMP
 		size = 1.0
 	plants[kind].append(_placed(cell, terrain, x, z, size))

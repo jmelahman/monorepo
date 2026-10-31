@@ -158,9 +158,9 @@ export function BoardSettings({
   // Listing individual fields keeps the reset confined to the props this form
   // mirrors; depending on `board` would re-fire on every unrelated mutation
   // (timestamps, column counts, etc.) and stomp in-progress edits.
-  // see above.
   useEffect(() => {
     reset(fieldsFromBoard(board));
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [
     reset,
     board.id,

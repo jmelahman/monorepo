@@ -81,6 +81,7 @@ export function AppSettings({ open, onClose }: { open: boolean; onClose: () => v
       setOrientation(savedOrientation);
       setTab("general");
     }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const updateMut = useMutation({

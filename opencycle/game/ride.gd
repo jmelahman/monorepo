@@ -6,7 +6,8 @@ extends Node3D
 ## [code]--quality=ship|max[/code] choose what to show. [code]--still=out.png[/code]
 ## with [code]--at=SECONDS[/code] renders one frame and quits.
 ## [code]--bench=out.json[/code] rides the whole replay as fast as the GPU allows and
-## reports its frame times. With Godot's [code]--write-movie[/code] and
+## reports its frame times, and [code]--rate=4[/code] rides it faster for a quick
+## read. With Godot's [code]--write-movie[/code] and
 ## [code]--fixed-fps[/code], the ride advances one fixed step per frame however long a
 ## frame takes, and quits at the end so the movie is finalised.
 
@@ -17,6 +18,7 @@ var route: Route
 var replay: Replay
 
 var _time := 0.0
+var _rate := 1.0
 var _still_path := ""
 var _bench_path := ""
 var _frame_times := PackedFloat32Array()
@@ -36,6 +38,7 @@ func _ready() -> void:
 	_still_path = args.get("still", "")
 	_bench_path = args.get("bench", "")
 	at_seconds = float(args.get("at", "0"))
+	_rate = float(args.get("rate", "1"))
 	var replay_path: String = args.get("replay", "res://replays/benchmark.json")
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(replay_path))
 	replay = Replay.from_dict(parsed)
@@ -44,7 +47,7 @@ func _ready() -> void:
 	var plants := Planting.generate(run_seed, terrain)
 	add_child(TerrainMesh.build(terrain))
 	add_child(RoadMesh.build(route))
-	add_child(Flora.build(plants))
+	add_child(Flora.build(plants, route))
 	Look.apply(self, quality)
 	_startup_ms = Time.get_ticks_msec() - started
 	print("ride: built in %d ms, %s" % [_startup_ms, _counts(plants)])
@@ -65,7 +68,7 @@ func _process(delta: float) -> void:
 		# has settled is what's being measured, and from the top of the replay.
 		_warmup -= 1
 		return
-	_time += delta
+	_time += delta * _rate
 	_camera.transform = replay.camera_at(route, _time)
 	if _bench_path:
 		_frame_times.append(delta)

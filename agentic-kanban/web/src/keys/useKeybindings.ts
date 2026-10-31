@@ -39,13 +39,13 @@ export function useKeybindings(): UseKeybindings {
 
   // `tick` is a re-key signal driven by storage/event subscriptions; it isn't
   // read inside, but bumping it is how we force a fresh read of `getBinding`.
-  // see above.
   const bindings = useMemo(() => {
     const map: Record<ActionId, Binding | null> = {};
     for (const action of ACTIONS) {
       map[action.id] = getBinding(action.id);
     }
     return map;
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [tick]);
 
   const conflicts = useMemo(() => {

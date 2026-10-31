@@ -101,6 +101,13 @@ repos:
         files: \.(ts|tsx|js|mjs|json)$|^bun\.lock$
         pass_filenames: false
         priority: 1
+      - id: oxlint
+        name: oxlint
+        entry: bun --bun run lint
+        language: bun
+        files: \.(ts|tsx|js|mjs|json)$
+        pass_filenames: false
+        priority: 1
       - id: bun-fmt
         name: bun fmt
         entry: bun fmt --check

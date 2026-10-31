@@ -26,9 +26,9 @@ static func apply(parent: Node3D, quality: String) -> void:
 	else:
 		# Not FSR2: it posterises this sky into flat bands of colour.
 		viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR
-		viewport.scaling_3d_scale = 0.77
+		viewport.scaling_3d_scale = 0.67
 		viewport.use_taa = true
-	RenderingServer.directional_shadow_atlas_set_size(8192 if best else 4096, true)
+	RenderingServer.directional_shadow_atlas_set_size(8192 if best else 2048, true)
 
 
 static func _sun(best: bool) -> DirectionalLight3D:
@@ -37,7 +37,7 @@ static func _sun(best: bool) -> DirectionalLight3D:
 	sun.light_color = Color(1.0, 0.95, 0.86)
 	sun.light_energy = 1.6
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 260.0 if best else 150.0
+	sun.directional_shadow_max_distance = 260.0 if best else 90.0
 	sun.directional_shadow_mode = (
 		DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 		if best
@@ -55,7 +55,7 @@ static func _environment(best: bool) -> Environment:
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.9
+	environment.ambient_light_energy = 0.7
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.tonemap_mode = Environment.TONE_MAPPER_AGX
 	environment.fog_enabled = true
