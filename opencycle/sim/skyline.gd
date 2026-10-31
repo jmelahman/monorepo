@@ -14,8 +14,8 @@ const SCREEN_TOWER := 34.0
 const BANNER_WIDTH := 6.5
 const BRIDGE_DEPTH := 3.2
 const RAIL_DEPTH := 7.0
-## Neon colours as hues: pink, violet, cyan, acid green and amber.
-const HUES: PackedFloat32Array = [0.93, 0.78, 0.52, 0.36, 0.09]
+## Colours as hues: mostly cold blues, with the odd warning red or amber.
+const HUES: PackedFloat32Array = [0.56, 0.52, 0.6, 0.56, 0.02, 0.08]
 
 
 class Spire:
@@ -113,26 +113,26 @@ func _dress_towers(run_seed: int, street: Street, length: float) -> void:
 	for index: int in street.towers.size():
 		var tower := street.towers[index]
 		var cell := Rng.derive(base, [index])
-		if Rng.unit(cell, 0) < 0.45:
+		if Rng.unit(cell, 0) < 0.1:
 			var trim := Trim.new()
 			trim.tower = tower
 			trim.hue = HUES[int(Rng.unit(cell, 1) * HUES.size())]
 			trims.append(trim)
 		if tower.height < SCREEN_TOWER or tower.s < -60.0 or tower.s > length + 120.0:
 			continue
-		if Rng.unit(cell, 2) < 0.5:
+		if Rng.unit(cell, 2) < 0.12:
 			var wall := _screen(Rng.derive(cell, [1]), tower)
 			wall.s = tower.s
-			wall.size = Vector2(tower.width * 0.8, minf(tower.height - 16.0, tower.width * 0.8))
+			wall.size = Vector2(tower.width * 0.8, minf(14.0, tower.width * 0.8))
 			screens.append(wall)
-		if Rng.unit(cell, 3) < 0.55:
+		if Rng.unit(cell, 3) < 0.14:
 			var banner := _screen(Rng.derive(cell, [2]), tower)
 			banner.banner = true
 			banner.s = tower.s + (Rng.unit(cell, 4) - 0.5) * tower.width * 0.6
-			banner.size = Vector2(BANNER_WIDTH, minf(tower.height - 16.0, 26.0))
+			banner.size = Vector2(BANNER_WIDTH, 14.0)
 			screens.append(banner)
 			_clear_signs(street, banner.s, 1.5, banner.elevation, banner.size.y, tower.side)
-		if tower.height > 60.0 and Rng.unit(cell, 5) < 0.5:
+		if tower.height > 60.0 and Rng.unit(cell, 5) < 0.1:
 			var beam := Beam.new()
 			beam.s = tower.s
 			beam.side = tower.side
@@ -165,9 +165,9 @@ func _bridge_the_road(run_seed: int, street: Street, length: float) -> void:
 		# Every third crossing carries the railway, high over the footbridges.
 		span.rail = index % 3 == 1
 		span.height = (
-			lerpf(21.0, 26.0, Rng.unit(cell, 0))
+			lerpf(18.0, 20.0, Rng.unit(cell, 0))
 			if span.rail
-			else lerpf(9.5, 20.0, Rng.unit(cell, 0))
+			else lerpf(9.5, 14.0, Rng.unit(cell, 0))
 		)
 		span.hue = HUES[int(Rng.unit(cell, 1) * HUES.size())]
 		span.phase = Rng.unit(cell, 2)

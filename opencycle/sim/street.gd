@@ -10,70 +10,63 @@ const REACH := 170.0
 const LOT_MIN := 9.0
 const LOT_MAX := 24.0
 const SIDEWALK := 4.0
-const LAMP_SPACING := 26.0
+const LAMP_SPACING := 44.0
 const SHOP_MIN := 3.2
 const SHOP_MAX := 7.5
 const SIGN_BASE := 4.6
 ## From the wall to over the road's edge, leaving the middle open to the sky above it.
 const MAX_OVERHANG := 4.6
-const CLOSED_CHANCE := 0.14
+const CLOSED_CHANCE := 0.78
+## Most buildings down here have nobody left to advertise.
+const SIGNED_TOWERS := 0.35
 const FACADES := 4
 ## How tall a storey of the street-level block is, which the building kit fixes.
 const BLOCK_STOREY := 3.0
-## What the old blocks at street level were painted, a long time ago.
+## The stained concrete and painted-over steel of the old blocks at street level.
 const PAINTS: Array[Color] = [
-	Color(0.14, 0.34, 0.38),
-	Color(0.42, 0.13, 0.12),
-	Color(0.55, 0.38, 0.13),
-	Color(0.24, 0.27, 0.34),
-	Color(0.42, 0.41, 0.38),
-	Color(0.17, 0.17, 0.4),
-	Color(0.18, 0.3, 0.2),
-	Color(0.38, 0.17, 0.32),
+	Color(0.2, 0.23, 0.26),
+	Color(0.26, 0.26, 0.27),
+	Color(0.16, 0.2, 0.23),
+	Color(0.3, 0.3, 0.3),
+	Color(0.13, 0.16, 0.19),
+	Color(0.25, 0.18, 0.16),
 ]
 ## The trim that goes with them, pale or nearly black.
 const TRIMS: Array[Color] = [
-	Color(0.62, 0.6, 0.55), Color(0.11, 0.11, 0.12), Color(0.34, 0.3, 0.26)
+	Color(0.2, 0.21, 0.22), Color(0.08, 0.08, 0.09), Color(0.13, 0.14, 0.16)
 ]
 ## Which colours of tube a landlord bolts to the front.
 const TUBES: Array[Color] = [
+	Color(0.45, 0.75, 1.0),
 	Color(0.1, 0.85, 1.0),
-	Color(1.0, 0.1, 0.5),
-	Color(1.0, 0.62, 0.12),
-	Color(0.45, 0.25, 1.0),
-	Color(0.2, 1.0, 0.55),
+	Color(0.55, 0.65, 0.8),
+	Color(1.0, 0.25, 0.08),
 ]
 ## Trades as [code]tools/bake_signs.gd[/code] names them on the sign sheet.
 const TRADES: PackedStringArray = [
 	"pharmacy",
 	"hotel",
 	"noodle",
-	"cafe",
 	"massage",
 	"electronics",
 	"gold",
 	"exchange",
-	"karaoke",
 	"clinic",
-	"arcade",
-	"hair",
 	"implant",
 	"data",
 	"robotics",
-	"market",
+	"cafe",
 ]
 ## The trades that take a street front; the rest are upstairs, and only have signs.
 const STREET_TRADES: PackedStringArray = [
 	"pharmacy",
 	"noodle",
-	"cafe",
+	"noodle",
 	"electronics",
-	"gold",
-	"exchange",
 	"robotics",
-	"market",
-	"market",
-	"pharmacy",
+	"exchange",
+	"gold",
+	"cafe",
 ]
 
 
@@ -184,10 +177,8 @@ func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
 		tower.width = lerpf(LOT_MIN, LOT_MAX, Rng.unit(cell, 0))
 		tower.s = s + tower.width * 0.5
 		tower.depth = lerpf(14.0, 26.0, Rng.unit(cell, 1))
-		# Mostly old walk-ups and slabs with the odd tall block, so the skyline has a rhythm.
-		tower.height = (
-			lerpf(20.0, 55.0, Rng.unit(cell, 2)) * (2.4 if Rng.unit(cell, 3) > 0.82 else 1.0)
-		)
+		# All of them run up into the deck, so there is no skyline down here.
+		tower.height = lerpf(46.0, 70.0, Rng.unit(cell, 2))
 		tower.facade = int(Rng.unit(cell, 4) * FACADES)
 		tower.bay = lerpf(2.1, 3.4, Rng.unit(cell, 5))
 		tower.storey = lerpf(2.9, 3.5, Rng.unit(cell, 6))
@@ -221,8 +212,8 @@ func _make_block(cell: int, tower: Tower) -> void:
 	tower.paint = PAINTS[int(Rng.unit(cell, 12) * PAINTS.size())]
 	tower.trim = TRIMS[int(Rng.unit(cell, 13) * TRIMS.size())]
 	tower.tube = TUBES[int(Rng.unit(cell, 14) * TUBES.size())]
-	tower.tube_corners = Rng.unit(cell, 15) < 0.4
-	tower.fire_escape = Rng.unit(cell, 16) < 0.45
+	tower.tube_corners = Rng.unit(cell, 15) < 0.12
+	tower.fire_escape = Rng.unit(cell, 16) < 0.12
 	tower.windows = int(Rng.unit(cell, 17) * 4.0)
 	tower.rhythm = 1 + int(Rng.unit(cell, 18) * 3.0)
 	tower.dice = Rng.derive(cell, [3])
@@ -269,7 +260,7 @@ func _add_fascia(slot: int, shop: Shop) -> void:
 
 ## What a shop puts out in front of itself, near its door and leaving a way through.
 func _spill_onto_pavement(slot: int, shop: Shop, kerb: float) -> void:
-	var count := int(Rng.unit(slot, 6) * 3.0)
+	var count := int(Rng.unit(slot, 6) * 1.4)
 	for i: int in count:
 		var prop := Prop.new()
 		var roll := Rng.unit(slot, 10 + i)
@@ -280,9 +271,11 @@ func _spill_onto_pavement(slot: int, shop: Shop, kerb: float) -> void:
 		props.append(prop)
 
 
-## Signs hang in columns from each building, out over the road and facing up it, stacked
-## as high as the building has tenants: most of a street's signs are for upstairs.
+## The odd sign for someone upstairs, out over the road and facing up it. Few enough down
+## here that each one is a landmark, and mostly narrow vertical blades.
 func _hang_signs(cell: int, tower: Tower) -> void:
+	if Rng.unit(cell, 8) > SIGNED_TOWERS:
+		return
 	var from := tower.s - tower.width * 0.5
 	var at := from + 0.8 + Rng.unit(cell, 0) * 1.5
 	var column := 0
@@ -297,9 +290,9 @@ func _hang_signs(cell: int, tower: Tower) -> void:
 			hung.s = at + (Rng.unit(unit, 0) - 0.5) * 0.5
 			hung.trade = TRADES[int(Rng.unit(unit, 1) * TRADES.size())]
 			hung.pick = Rng.unit(unit, 2)
-			hung.tall = Rng.unit(unit, 3) < 0.3
+			hung.tall = Rng.unit(unit, 3) < 0.75
 			# Mostly modest, with the odd enormous one that sets the whole view.
-			var scale := lerpf(1.0, 3.1, pow(Rng.unit(unit, 4), 2.2))
+			var scale := lerpf(0.8, 2.4, pow(Rng.unit(unit, 4), 2.2))
 			hung.size = (
 				Vector2(minf(scale, 2.2), scale * 2.0)
 				if hung.tall

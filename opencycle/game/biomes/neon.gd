@@ -1,7 +1,8 @@
 class_name NeonBiome
 extends RefCounted
-## A cyberpunk street at night: a wet canyon of signs in thick, lit air. The lighting is
-## art-directed, not physically right. docs/realism-standard.md is what it's held to.
+## The bottom of a future city: a wet road under the concrete deck the rest of the city
+## stands on, mostly shuttered, lit by what falls through a slot overhead and the few signs
+## still on. The lighting is art-directed. docs/realism-standard.md is what it's held to.
 
 const LENGTH := 200.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
@@ -20,7 +21,9 @@ static func build(parent: Node3D, run_seed: int, route: Route, quality: String) 
 	var best := quality == "max"
 	parent.add_child(StreetGround.build(route, street, LENGTH))
 	parent.add_child(Facades.build(route, street))
+	var undercity := Undercity.generate(run_seed, street, STREET_HALF, LENGTH)
 	parent.add_child(Landmarks.build(route, skyline))
+	parent.add_child(Overhead.build(route, undercity, LENGTH))
 	parent.add_child(Shopfronts.build(route, street, LENGTH))
 	parent.add_child(Signage.build(route, street, LENGTH))
 	parent.add_child(Furniture.build(route, street, LENGTH))
@@ -32,10 +35,10 @@ static func build(parent: Node3D, run_seed: int, route: Route, quality: String) 
 
 static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	var sky_material := ProceduralSkyMaterial.new()
-	# Smog lit from below by everything under it: near black overhead, violet at the horizon.
-	sky_material.sky_top_color = Color(0.008, 0.01, 0.03)
-	sky_material.sky_horizon_color = Color(0.11, 0.035, 0.17)
-	sky_material.ground_horizon_color = Color(0.04, 0.015, 0.06)
+	# Nothing but dark past the ends of the deck.
+	sky_material.sky_top_color = Color(0.004, 0.006, 0.01)
+	sky_material.sky_horizon_color = Color(0.02, 0.03, 0.045)
+	sky_material.ground_horizon_color = Color(0.01, 0.015, 0.02)
 	sky_material.ground_bottom_color = Color(0.0, 0.0, 0.0)
 	sky_material.sun_angle_max = 0.0
 	var sky := Sky.new()
@@ -46,13 +49,13 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	# Shadows stay blue, so every warm light in the street has something to stand against.
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.25, 0.4, 0.7)
-	environment.ambient_light_energy = 0.1
+	environment.ambient_light_energy = 0.22
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
 	environment.tonemap_white = 7.0
 	environment.adjustment_enabled = true
-	environment.adjustment_contrast = 1.1
-	environment.adjustment_saturation = 1.2
+	environment.adjustment_contrast = 1.15
+	environment.adjustment_saturation = 0.85
 	# Wide, soft halos: the air is thick, and a sign lights what's around it.
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.4
@@ -66,7 +69,7 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	environment.ssao_intensity = 2.0
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	environment.fog_light_color = Color(0.05, 0.025, 0.09)
+	environment.fog_light_color = Color(0.025, 0.04, 0.055)
 	environment.fog_depth_begin = 60.0
 	environment.fog_depth_end = 480.0
 	environment.fog_depth_curve = 1.4
@@ -88,7 +91,7 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	var cold := DirectionalLight3D.new()
 	cold.rotation_degrees = Vector3(-62.0, 35.0, 0.0)
 	cold.light_color = Color(0.25, 0.65, 0.95)
-	cold.light_energy = 0.3
+	cold.light_energy = 0.12
 	cold.light_volumetric_fog_energy = 0.0
 	parent.add_child(cold)
 	var viewport := parent.get_viewport()

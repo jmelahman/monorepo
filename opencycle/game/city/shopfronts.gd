@@ -234,7 +234,7 @@ static func _shell(
 	# The band above the door and the lintel over everything up to the first storey.
 	var inside := Vector3.UP * room.height
 	var fascia_tint := Color.from_hsv(
-		shop.pick, 0.25, lerpf(0.5, 1.0, shop.pick * 3.0 - floorf(shop.pick * 3.0))
+		shop.pick, 0.12, lerpf(0.14, 0.3, shop.pick * 3.0 - floorf(shop.pick * 3.0))
 	)
 	kit.quad(
 		materials["fascia"],
@@ -327,7 +327,7 @@ static func _fit_out(
 	materials: Dictionary[String, Material]
 ) -> void:
 	var plan: String = TRADES[shop.trade]["plan"]
-	if Rng.unit(room.dice, 40) < 0.6:
+	if Rng.unit(room.dice, 40) < 0.1:
 		_awning(kit, room, materials["canvas"], shop.pick)
 	match plan:
 		"shelves":
@@ -689,6 +689,10 @@ static func _add_shutters(root: Node3D, route: Route, street: Street) -> void:
 	var meshes := node.find_children("*", "MeshInstance3D", true, false)
 	var source := (meshes[0] as MeshInstance3D).mesh
 	node.free()
+	# Shut for years: whatever colour they were, the grime has taken them.
+	var grimy := source.surface_get_material(0).duplicate() as BaseMaterial3D
+	grimy.albedo_color = Color(0.3, 0.32, 0.36)
+	source.surface_set_material(0, grimy)
 	var bounds := source.get_aabb()
 	var placed: Array[Transform3D] = []
 	for shop: Street.Shop in street.shops:

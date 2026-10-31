@@ -46,7 +46,7 @@ func test_every_sign_and_shop_has_a_trade_on_the_sign_sheet() -> void:
 		assert_bool(hung.trade in Street.TRADES).is_true()
 
 
-func test_a_street_has_many_trades_and_some_closed_shops() -> void:
+func test_a_street_has_many_trades_and_most_shops_shut() -> void:
 	var street := _street()
 	var trades: Dictionary[String, bool] = {}
 	var closed := 0
@@ -55,8 +55,8 @@ func test_a_street_has_many_trades_and_some_closed_shops() -> void:
 		if not shop.open:
 			closed += 1
 	assert_int(trades.size()).is_greater(5)
-	assert_int(closed).is_greater(0)
-	assert_float(float(closed)).is_less(street.shops.size() / 3.0)
+	assert_float(float(closed)).is_greater(street.shops.size() * 0.6)
+	assert_int(closed).is_less(street.shops.size())
 
 
 func test_hanging_signs_clear_a_tall_vehicle_and_stay_up_their_building() -> void:

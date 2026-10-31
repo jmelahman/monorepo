@@ -31,7 +31,7 @@ func test_a_street_is_busy_with_every_look_and_some_standing() -> void:
 			standing += 1
 	assert_int(crowd.people.size()).is_greater(400)
 	assert_int(looks.size()).is_equal(LOOKS)
-	assert_int(standing).is_greater(20)
+	assert_int(standing).is_greater(5)
 
 
 func test_everyone_stays_on_the_pavement() -> void:

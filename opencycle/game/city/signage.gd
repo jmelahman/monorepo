@@ -10,7 +10,7 @@ const SPILL_SPACING := 8.0
 const SPILL_BEHIND := 15.0
 const SPILL_AHEAD := 45.0
 const COOL := Color(0.1, 0.8, 1.0)
-const HOT := Color(1.0, 0.15, 0.5)
+const HOT := Color(1.0, 0.3, 0.12)
 
 
 static func build(route: Route, street: Street, length: float) -> Node3D:

@@ -165,14 +165,20 @@ static func _bridge(
 			neon,
 			Transform3D(basis, middle + face * side + Vector3.UP * 0.25),
 			Vector3(run - 0.8, 1.1, 0.04),
-			warm * 0.6
+			warm * 0.1
 		)
+		# Posts in front, so it's a row of dim windows and not a bar of light.
+		var post := -run * 0.5
+		while post < run * 0.5:
+			var at := middle + face * side * 1.03 + across * post + Vector3.UP * 0.25
+			kit.box(steel, Transform3D(basis, at), Vector3(0.3, 1.3, 0.08))
+			post += 2.2
 		var edge := middle + face * side + Vector3.UP * -1.42
 		kit.bar(neon, edge - half, edge + half, 0.09, colour)
 	var glow := OmniLight3D.new()
 	glow.light_color = colour
-	glow.light_energy = 3.0
-	glow.light_volumetric_fog_energy = 2.0
+	glow.light_energy = 1.5
+	glow.light_volumetric_fog_energy = 1.0
 	glow.omni_range = 16.0
 	glow.position = middle - Vector3.UP * 2.0
 	root.add_child(glow)
@@ -199,12 +205,12 @@ static func _rail(
 	var row := -3.0
 	while row <= 3.0:
 		var lamp := middle + along * row - Vector3.UP * 0.92
-		kit.bar(neon, lamp - across * 7.0, lamp + across * 7.0, 0.07, Color(0.75, 0.85, 1.0) * 0.8)
+		kit.bar(neon, lamp - across * 7.0, lamp + across * 7.0, 0.07, Color(0.75, 0.85, 1.0) * 0.25)
 		row += 1.5
 	var glow := OmniLight3D.new()
 	glow.light_color = Color(0.7, 0.8, 1.0).lerp(colour, 0.4)
-	glow.light_energy = 6.0
-	glow.light_volumetric_fog_energy = 2.5
+	glow.light_energy = 3.0
+	glow.light_volumetric_fog_energy = 1.2
 	glow.omni_range = 26.0
 	glow.position = middle - Vector3.UP * 3.0
 	root.add_child(glow)

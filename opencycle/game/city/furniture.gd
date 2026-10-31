@@ -130,8 +130,8 @@ static func _lamp(
 
 static func _lamp_light(route: Route, s: float, side: float) -> OmniLight3D:
 	var pool := OmniLight3D.new()
-	pool.light_color = Color(1.0, 0.82, 0.62)
-	pool.light_energy = 1.4
+	pool.light_color = Color(0.7, 0.85, 1.0)
+	pool.light_energy = 1.1
 	pool.omni_range = 14.0
 	var outward := route.right(s) * side
 	pool.position = (
