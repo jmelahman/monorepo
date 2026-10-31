@@ -125,7 +125,9 @@ export class Sidebar {
   readonly noMatches: Locator;
 
   constructor(private readonly page: Page) {
-    this.aside = page.locator("aside").filter({ has: page.getByRole("heading", { name: "Boards" }) });
+    this.aside = page
+      .locator("aside")
+      .filter({ has: page.getByRole("heading", { name: "Boards" }) });
     this.resizer = page.getByRole("separator", { name: "Resize sidebar" });
     this.hideButton = page.getByRole("button", { name: "Hide boards sidebar" });
     this.showButton = page.getByRole("button", { name: "Show boards sidebar" });
@@ -300,7 +302,10 @@ export class TreeTicket {
   readonly root: Locator;
   readonly button: Locator;
 
-  constructor(private readonly page: Page, readonly ticketId: number) {
+  constructor(
+    private readonly page: Page,
+    readonly ticketId: number,
+  ) {
     this.root = page.locator(`[data-tree-ticket="${ticketId}"]`);
     this.button = this.root.locator("button").first();
   }
@@ -353,7 +358,10 @@ export class SessionPanel {
   readonly maximizeButton: Locator;
   readonly restoreButton: Locator;
 
-  constructor(private readonly page: Page, readonly ticketId: number) {
+  constructor(
+    private readonly page: Page,
+    readonly ticketId: number,
+  ) {
     this.root = page.locator(`[data-panel="${ticketId}"]`);
     // The drag handle is the bar at the top of the panel; aria-label is
     // unique within the panel.

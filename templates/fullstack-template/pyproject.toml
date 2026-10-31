@@ -44,6 +44,7 @@ include = [
   "internal/db/schema.sql",
   "web/package.json",
   "web/bun.lock",
+  "web/bunfig.toml",
   "web/index.html",
   "web/tsconfig.json",
   "web/vite.config.ts",

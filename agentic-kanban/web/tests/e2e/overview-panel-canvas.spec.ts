@@ -19,7 +19,10 @@ test.describe("Overview / PanelCanvas", () => {
     await expect(overview.emptyState).toBeHidden();
   });
 
-  test("re-clicking the same row brings the panel to the front without duplicating it", async ({ page, seed }) => {
+  test("re-clicking the same row brings the panel to the front without duplicating it", async ({
+    page,
+    seed,
+  }) => {
     const ticketB = await seed.addTicket("ticket B");
     const overview = new OverviewPage(page);
     await overview.goto();
@@ -30,16 +33,16 @@ test.describe("Overview / PanelCanvas", () => {
 
     // DOM order of [data-panel] mirrors the panels array — the last one
     // sits on top because of natural stacking.
-    const panelsBefore = await overview.panels().evaluateAll((els) =>
-      els.map((el) => Number((el as HTMLElement).dataset.panel)),
-    );
+    const panelsBefore = await overview
+      .panels()
+      .evaluateAll((els) => els.map((el) => Number((el as HTMLElement).dataset.panel)));
     expect(panelsBefore[panelsBefore.length - 1]).toBe(ticketB.id);
 
     await overview.treeTicket(seed.ticket.id).click();
     await overview.expectPanelCount(2);
-    const panelsAfter = await overview.panels().evaluateAll((els) =>
-      els.map((el) => Number((el as HTMLElement).dataset.panel)),
-    );
+    const panelsAfter = await overview
+      .panels()
+      .evaluateAll((els) => els.map((el) => Number((el as HTMLElement).dataset.panel)));
     expect(panelsAfter[panelsAfter.length - 1]).toBe(seed.ticket.id);
   });
 
@@ -86,7 +89,10 @@ test.describe("Overview / PanelCanvas", () => {
     await overview.panel(seed.ticket.id).expectAbsent();
   });
 
-  test("archiving a ticket removes its panel after the board structure refetches", async ({ page, seed }) => {
+  test("archiving a ticket removes its panel after the board structure refetches", async ({
+    page,
+    seed,
+  }) => {
     const ticketB = await seed.addTicket("disposable");
     const overview = new OverviewPage(page);
     await overview.goto();

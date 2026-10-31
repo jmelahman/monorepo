@@ -27,15 +27,7 @@ import type { Rarity, RunState, Tile } from "./state"
  */
 
 export type ModId =
-  | "chip"
-  | "mult"
-  | "gold"
-  | "steel"
-  | "glass"
-  | "wild"
-  | "lucky"
-  | "echo"
-  | "anchor"
+  "chip" | "mult" | "gold" | "steel" | "glass" | "wild" | "lucky" | "echo" | "anchor"
 
 export type ModCtx = ScoreCtx & {
   /**

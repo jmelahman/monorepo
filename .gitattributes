@@ -19,9 +19,9 @@ smart-lights/.github/workflows/pre-commit.yml -diff linguist-generated
 tag/.github/workflows/pre-commit.yml -diff linguist-generated
 typesafe-sdk-go/.github/workflows/pre-commit.yml -diff linguist-generated
 work/.github/workflows/pre-commit.yml -diff linguist-generated
-agilecbt/web/biome.json -diff linguist-generated
-local-preview/web/biome.json -diff linguist-generated
-templates/fullstack-template/web/biome.json -diff linguist-generated
+agilecbt/web/bunfig.toml -diff linguist-generated
+local-preview/web/bunfig.toml -diff linguist-generated
+templates/fullstack-template/web/bunfig.toml -diff linguist-generated
 agentic-kanban/.golangci.yml -diff linguist-generated
 agilecbt/.golangci.yml -diff linguist-generated
 check-symlinks/.golangci.yml -diff linguist-generated

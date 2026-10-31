@@ -35,9 +35,7 @@ export class TicketCard {
   readonly locator: Locator;
 
   constructor(page: Page, title: string) {
-    this.locator = page
-      .locator('[data-ticket-card="true"]')
-      .filter({ hasText: title });
+    this.locator = page.locator('[data-ticket-card="true"]').filter({ hasText: title });
   }
 
   async click() {

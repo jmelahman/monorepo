@@ -79,7 +79,10 @@ test.describe("Overview / BoardTree", () => {
     await overview.boardNode(seed.board.id).expectTotalTickets(1);
   });
 
-  test("open filter keeps only tickets with a panel and hides other boards", async ({ page, seed }) => {
+  test("open filter keeps only tickets with a panel and hides other boards", async ({
+    page,
+    seed,
+  }) => {
     const other = await seed.addTicket("not opened");
     const overview = new OverviewPage(page);
     await overview.goto();
@@ -103,7 +106,10 @@ test.describe("Overview / BoardTree", () => {
     await node.expectTotalTickets(2);
   });
 
-  test("clicking a ticket opens a single panel and marks the row active", async ({ page, seed }) => {
+  test("clicking a ticket opens a single panel and marks the row active", async ({
+    page,
+    seed,
+  }) => {
     const overview = new OverviewPage(page);
     await overview.goto();
     await expect(overview.emptyState).toBeVisible();
@@ -160,7 +166,10 @@ test.describe("Overview / BoardTree", () => {
     await node.expectTotalTickets(2);
   });
 
-  test("dragging a tree ticket onto another column moves it server-side", async ({ page, seed }) => {
+  test("dragging a tree ticket onto another column moves it server-side", async ({
+    page,
+    seed,
+  }) => {
     const overview = new OverviewPage(page);
     await overview.goto();
 
@@ -177,10 +186,13 @@ test.describe("Overview / BoardTree", () => {
     // the new column. Poll the API rather than the DOM — DOM order on the
     // tree is the same outcome but settles a tick later via query refetch.
     await expect
-      .poll(async () => {
-        const fresh = await api.boardState(seed.board.id);
-        return fresh.tickets.find((t) => t.id === seed.ticket.id)?.column_id;
-      }, { timeout: 10_000 })
+      .poll(
+        async () => {
+          const fresh = await api.boardState(seed.board.id);
+          return fresh.tickets.find((t) => t.id === seed.ticket.id)?.column_id;
+        },
+        { timeout: 10_000 },
+      )
       .toBe(inProgress.id);
 
     // And the row should render under the In Progress column in the tree.

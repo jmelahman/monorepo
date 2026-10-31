@@ -49,7 +49,7 @@ wgo run . serve --in-memory
 cd web && bun install && bun run dev
 ```
 
-Tests: `go test ./...` and `cd web && bun run typecheck && bun run check &&
+Tests: `go test ./...` and `cd web && bun run typecheck && bun run format:check &&
 bun run test:e2e`. The E2E suite boots the real backend against a scripted
 fake OpenAI-compatible API (`web/tests/e2e/fake-llm.mjs`). See `CLAUDE.md` for the full
 development reference.

@@ -29,7 +29,7 @@ to copy from.
 **Frontend** (`web/`)
 
 - Vite + React 19 + Tailwind 4 + TanStack Query, typechecked with TypeScript.
-- Biome for lint + format; theme tokens with dark/light support.
+- `bun fmt` for formatting; theme tokens with dark/light support.
 - Playwright E2E suite that boots the real backend (`--in-memory`) and the
   Vite dev server.
 - Production build embedded into the Go binary with `-tags embed`
@@ -48,7 +48,7 @@ to copy from.
 - PyPI wheels per platform via hatch + `go-bin` + `manygo`
   (`uv tool install <name>` installs the Go binary).
 - prek (pre-commit) hooks: builtin checks, actionlint, ripsecrets,
-  govulncheck, bun audit, Biome.
+  govulncheck, bun audit, bun fmt.
 - GitHub Actions: tests + lint + image smoke test, release pipeline, docs
   deploy, zizmor, Dependabot.
 - `.devcontainer/` dev sandbox with an opt-in default-deny network firewall.

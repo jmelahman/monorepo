@@ -48,9 +48,7 @@ export function containerExec(container: string, ...cmd: string[]): string {
     timeout: 30_000,
   });
   if (r.status !== 0) {
-    throw new Error(
-      `docker exec ${container} ${cmd.join(" ")} → ${r.status}: ${r.stderr ?? ""}`,
-    );
+    throw new Error(`docker exec ${container} ${cmd.join(" ")} → ${r.status}: ${r.stderr ?? ""}`);
   }
   return (r.stdout ?? "").trim();
 }

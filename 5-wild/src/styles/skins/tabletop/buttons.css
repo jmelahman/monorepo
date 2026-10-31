@@ -16,7 +16,7 @@
  * hover edge and the focus ring, which are the two ways a button says "this one".
  */
 :root.skin-tabletop
-:is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill, .ladder-step) {
+  :is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill, .ladder-step) {
   background: var(--btn);
   color: var(--fg);
   border: var(--bw) solid var(--line);
@@ -90,12 +90,12 @@
 /* The phone's strips each set an inset bevel on their own selector; put the
    walnut block's slab back over them. */
 :root.skin-tabletop
-:is(
-  .shop-screen .shop-actions > *,
-  .title-more .secondary,
-  .intro-actions .primary,
-  .primary.title-play
-) {
+  :is(
+    .shop-screen .shop-actions > *,
+    .title-more .secondary,
+    .intro-actions .primary,
+    .primary.title-play
+  ) {
   box-shadow:
     var(--top-light),
     0 var(--lip) 0 var(--rack-deep);

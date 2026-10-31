@@ -36,8 +36,8 @@ starts from zero and shutdown discards everything.
   seam variable. Prefer an integration test for new behaviour; a plain
   `_test.go` is for logic that is pure enough not to need one.
 - Frontend types: `cd web && bun run typecheck`
-- Frontend lint/format (Biome): `cd web && bun run check` (`check:fix` to
-  auto-apply safe fixes). The `prek` `biome` hook runs the same check.
+- Frontend format: `cd web && bun run format:check` (`format` to apply). The
+  `prek` `bun-fmt` hook runs the same check. There is no linter.
 - Playwright E2E: `cd web && bun run test:e2e` (first run `test:e2e:install`
   for Chromium). Read
   `web/tests/e2e/README.md` before adding or modifying a spec.

@@ -5,15 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "bun check --no-script && vite build",
+    "build": "bun check && vite build",
     "preview": "vite preview",
-    "typecheck": "bun check --no-script",
-    "lint": "biome lint",
-    "lint:fix": "biome lint --write",
-    "format": "biome format --write",
-    "format:check": "biome format",
-    "check": "biome check",
-    "check:fix": "biome check --write",
+    "typecheck": "bun check",
+    "format": "bun fmt",
+    "format:check": "bun fmt --check",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install chromium"
@@ -24,7 +20,6 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.2",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.0",
     "@types/bun": "^1.4.4",

@@ -77,7 +77,10 @@ test.describe("Overview / Tiling", () => {
     expect(tiled.height).toBeLessThan(canvas.height * 0.55);
   });
 
-  test("dragging a tiled panel back out un-tiles it and restores the float rect", async ({ page, seed }) => {
+  test("dragging a tiled panel back out un-tiles it and restores the float rect", async ({
+    page,
+    seed,
+  }) => {
     const overview = new OverviewPage(page);
     await overview.goto();
     await overview.treeTicket(seed.ticket.id).click();
@@ -101,7 +104,10 @@ test.describe("Overview / Tiling", () => {
     expect(Math.abs(afterFloat.height - beforeFloat.height)).toBeLessThan(2);
   });
 
-  test("double-clicking the drag handle toggles maximize and restores on the second click", async ({ page, seed }) => {
+  test("double-clicking the drag handle toggles maximize and restores on the second click", async ({
+    page,
+    seed,
+  }) => {
     const overview = new OverviewPage(page);
     await overview.goto();
     await overview.treeTicket(seed.ticket.id).click();

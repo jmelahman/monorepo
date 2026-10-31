@@ -60,19 +60,20 @@ export default function Chat({
   const bottom = useRef<HTMLDivElement>(null);
 
   const history: Item[] = [
-    ...(detail.data?.messages ?? []).map(
-      (m): Item => ({
-        kind: "msg",
-        key: `m${m.id}`,
-        role: m.role,
-        text: m.text,
-        at: m.created_at,
-        safety: m.safety,
-      }),
-    ),
-    ...(detail.data?.actions ?? []).map(
-      (a): Item => ({ kind: "action", key: `a${a.id}`, action: a, at: a.created_at }),
-    ),
+    ...(detail.data?.messages ?? []).map((m): Item => ({
+      kind: "msg",
+      key: `m${m.id}`,
+      role: m.role,
+      text: m.text,
+      at: m.created_at,
+      safety: m.safety,
+    })),
+    ...(detail.data?.actions ?? []).map((a): Item => ({
+      kind: "action",
+      key: `a${a.id}`,
+      action: a,
+      at: a.created_at,
+    })),
   ].sort((a, b) => a.at.localeCompare(b.at));
   const shown = frozen ?? history;
   const tail = live[live.length - 1];

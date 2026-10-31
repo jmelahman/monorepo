@@ -14,8 +14,8 @@ The same three commands CI runs:
 
 ```sh
 bun run typecheck
-bun run check      # Biome lint + format
-bun run test       # Vitest
+bun run format:check  # bun fmt
+bun run test          # Vitest
 ```
 
 ## Layout
@@ -147,7 +147,7 @@ git diff test/golden/vectors.json
 That diff is the balance change, stated in points rather than in source. The
 vectors refuse to run against a version they were not recorded at, so forgetting
 the bump fails loudly instead of quietly rewriting the baseline. The JSON is
-excluded from Biome for that reason: the recorder writes one array element per
+excluded from `bun fmt` for that reason: the recorder writes one array element per
 line, which is what makes the diff readable, and the formatter would fold them
 back onto one.
 

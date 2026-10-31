@@ -9,10 +9,7 @@ test.skip(!DOCKER_AVAILABLE, "requires a reachable docker daemon");
 // session-id mix-ups in the broker registry / route handler — a regression
 // that lost output to the wrong terminal would be invisible to single-
 // session tests.
-test("two sessions stream independently without cross-contamination", async ({
-  seed,
-  page,
-}) => {
+test("two sessions stream independently without cross-contamination", async ({ seed, page }) => {
   const ticketA = seed.ticket;
   const ticketB = await seed.addTicket("session ticket B");
 

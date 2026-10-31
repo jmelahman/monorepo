@@ -9,10 +9,7 @@ test.skip(!DOCKER_AVAILABLE, "requires a reachable docker daemon");
 // the auto-ensure + auto-start flow drive the status pill through
 // stopped → starting → idle, terminal mounts, then stop returns it to
 // stopped. Pins down `SessionView.tsx` auto-start + board-SSE consumer.
-test("ticket click ensures, starts, and stops a session via UI", async ({
-  page,
-  seed,
-}) => {
+test("ticket click ensures, starts, and stops a session via UI", async ({ page, seed }) => {
   const board = new BoardPage(page);
 
   const wsOpens: string[] = [];

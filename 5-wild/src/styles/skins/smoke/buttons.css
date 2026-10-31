@@ -37,7 +37,7 @@
  * corner pixels snapped, and a stepped ring is not a thing that glides anyway.
  */
 :root.skin-smoke
-:is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill, .ladder-step) {
+  :is(.primary, .secondary, .danger, .menu-button, .title-dial, .title-pill, .ladder-step) {
   --ring: var(--line);
   --ring-px: linear-gradient(var(--ring), var(--ring));
   background-color: var(--btn);
@@ -139,12 +139,12 @@
    otherwise sit on top of the flat face. Flattened here, the primary keeping
    the one inner edge the design gives it. */
 :root.skin-smoke
-:is(
-  .shop-screen .shop-actions > *,
-  .title-more .secondary,
-  .intro-actions .primary,
-  .primary.title-play
-) {
+  :is(
+    .shop-screen .shop-actions > *,
+    .title-more .secondary,
+    .intro-actions .primary,
+    .primary.title-play
+  ) {
   box-shadow: none;
 }
 
@@ -161,15 +161,15 @@
  * because a key or a card may already wear the accent (or a scored colour).
  */
 :root.skin-smoke
-:is(
-  .key,
-  .relic,
-  .shop-item,
-  .consumable,
-  .decor-toggle,
-  .shapes-line,
-  .dock-line .category
-):focus-visible {
+  :is(
+    .key,
+    .relic,
+    .shop-item,
+    .consumable,
+    .decor-toggle,
+    .shapes-line,
+    .dock-line .category
+  ):focus-visible {
   outline: var(--bw) solid var(--fg);
   outline-offset: calc(var(--bw) * -2);
 }

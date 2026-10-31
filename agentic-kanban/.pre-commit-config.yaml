@@ -96,21 +96,18 @@ repos:
   - repo: local
     hooks:
       # prek installs bun into each hook's own environment, so CI needs no
-      # setup-bun. Biome is the one web/package.json and web/bun.lock name:
-      # bun-install fills web/node_modules whenever web/ changes, and the
-      # biome hook runs web's own `check` script, which finds it there. --bun
-      # runs biome's node launcher under bun.
+      # setup-bun. bun-fmt reads web/bunfig.toml.
       - id: bun-install
         name: bun install
         entry: bun install --cwd=web --frozen-lockfile --silent
         language: bun
         files: ^web/(.*\.(ts|tsx|js|jsx|json|jsonc)|bun\.lock)$
         pass_filenames: false
-      - id: biome
-        name: biome
-        entry: bun --bun run --cwd=web check
+      - id: bun-fmt
+        name: bun fmt
+        entry: bun fmt --cwd=web --check
         language: bun
-        files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc)$
+        files: ^web/.*\.(ts|tsx|js|jsx|json|jsonc|css)$
         pass_filenames: false
       - id: bun-audit
         name: bun audit

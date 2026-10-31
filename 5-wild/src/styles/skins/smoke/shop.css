@@ -314,7 +314,7 @@
   background:
     linear-gradient(var(--foil-edge), var(--foil-edge)) 0 1.0625rem / 100% 0.1875rem no-repeat,
     linear-gradient(var(--foil-edge), var(--foil-edge)) 0 calc(100% - 1.0625rem) / 100% 0.1875rem
-    no-repeat,
+      no-repeat,
     var(--crimp) top / 100% 1.25rem no-repeat,
     var(--crimp) bottom / 100% 1.25rem no-repeat,
     var(--pack);
@@ -334,7 +334,11 @@
   background:
     linear-gradient(var(--back-face), var(--back-face)) center / 2.375rem 2.375rem no-repeat,
     linear-gradient(var(--back-edge), var(--back-edge)) center / 2.625rem 2.625rem no-repeat,
-    repeating-linear-gradient(45deg, var(--back-lattice) 0 0.125rem, transparent 0.125rem 0.5625rem),
+    repeating-linear-gradient(
+      45deg,
+      var(--back-lattice) 0 0.125rem,
+      transparent 0.125rem 0.5625rem
+    ),
     repeating-linear-gradient(
       -45deg,
       var(--back-lattice) 0 0.125rem,

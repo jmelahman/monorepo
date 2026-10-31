@@ -59,10 +59,8 @@ export const api = {
     project_dir?: string;
     git_author_name?: string;
     git_author_email?: string;
-  }) =>
-    request<Board>("/api/boards", { method: "POST", body: JSON.stringify(input) }),
-  deleteBoard: (id: number) =>
-    request<void>(`/api/boards/${id}`, { method: "DELETE" }),
+  }) => request<Board>("/api/boards", { method: "POST", body: JSON.stringify(input) }),
+  deleteBoard: (id: number) => request<void>(`/api/boards/${id}`, { method: "DELETE" }),
   listBoards: () => request<Board[]>("/api/boards"),
   createTicket: (boardId: number, input: { title: string; body?: string }) =>
     request<Ticket>(`/api/boards/${boardId}/tickets`, {
@@ -71,10 +69,8 @@ export const api = {
     }),
   ensureSession: (ticketId: number) =>
     request<Session>(`/api/tickets/${ticketId}/session`, { method: "POST" }),
-  startSession: (id: number) =>
-    request<Session>(`/api/sessions/${id}/start`, { method: "POST" }),
-  stopSession: (id: number) =>
-    request<void>(`/api/sessions/${id}/stop`, { method: "POST" }),
+  startSession: (id: number) => request<Session>(`/api/sessions/${id}/start`, { method: "POST" }),
+  stopSession: (id: number) => request<void>(`/api/sessions/${id}/stop`, { method: "POST" }),
   restartSession: (id: number) =>
     request<Session>(`/api/sessions/${id}/restart`, { method: "POST" }),
   boardState: (id: number) => request<BoardState>(`/api/boards/${id}/state`),

@@ -92,7 +92,7 @@ export function spritePaths(sprite: Sprite): SpritePath[] {
   for (const [key, fill] of fills) {
     let d = ""
     sprite.rows.forEach((row, y) => {
-      for (let x = 0; x < row.length; ) {
+      for (let x = 0; x < row.length;) {
         if (row[x] !== key) {
           x++
           continue

@@ -8,9 +8,7 @@ import { api, type Board, type Ticket } from "./api";
 // suite is running inside a container that needs host-visible bind
 // sources. Outside that case we fall back to tmpdir().
 export function mountRootFromConfig(testInfo: { config: { metadata?: unknown } }): string {
-  const meta = testInfo.config.metadata as
-    | { mountRoot?: string }
-    | undefined;
+  const meta = testInfo.config.metadata as { mountRoot?: string } | undefined;
   return meta?.mountRoot ?? tmpdir();
 }
 

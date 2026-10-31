@@ -1,0 +1,18 @@
+[fmt]
+printWidth = 100
+semi = false
+# What Biome covered: Markdown, YAML, TOML and HTML stay hand-formatted. The
+# vectors keep one array element per line, which makes their diff readable.
+ignorePatterns = [
+  "**/*.md",
+  "**/*.yaml",
+  "**/*.yml",
+  "**/*.toml",
+  "**/*.html",
+  "android/",
+  "public/words/",
+  ".mcp.json",
+  ".vscode/",
+  ".claude/",
+  "test/golden/vectors.json",
+]

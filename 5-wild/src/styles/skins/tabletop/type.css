@@ -55,21 +55,21 @@
 
 /* Labels: small, tracked, upper-case, the way a board's printed rules are. */
 :root.skin-tabletop
-:is(
-  .stage,
-  .stage-asc,
-  .ladder-rule,
-  .row-note,
-  .intro-kind,
-  .track-name,
-  .shop-item-kind,
-  .shapes-line-label,
-  .sheet-heading,
-  .reward-line,
-  .decor-toggle,
-  .relic .sell,
-  .consumable .drop
-) {
+  :is(
+    .stage,
+    .stage-asc,
+    .ladder-rule,
+    .row-note,
+    .intro-kind,
+    .track-name,
+    .shop-item-kind,
+    .shapes-line-label,
+    .sheet-heading,
+    .reward-line,
+    .decor-toggle,
+    .relic .sell,
+    .consumable .drop
+  ) {
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }

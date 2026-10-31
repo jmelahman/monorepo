@@ -10,10 +10,7 @@ test.skip(!DOCKER_AVAILABLE, "requires a reachable docker daemon");
 // immediately replays the ring buffer (broker.go:257) so historical
 // output is visible before any new bytes arrive. Asserts the UI's first
 // shell WS receives our pre-seeded marker.
-test("first UI WS connect replays prior shell output", async ({
-  seed,
-  page,
-}) => {
+test("first UI WS connect replays prior shell output", async ({ seed, page }) => {
   // 1) Start the session and let it become attachable.
   const session = await api.ensureSession(seed.ticket.id);
   await api.startSession(session.id);
@@ -69,8 +66,7 @@ test("first UI WS connect replays prior shell output", async ({
     shellAggregates.set(key, "");
     ws.on("framereceived", (data) => {
       const payload = data.payload;
-      const text =
-        typeof payload === "string" ? payload : dec.decode(new Uint8Array(payload));
+      const text = typeof payload === "string" ? payload : dec.decode(new Uint8Array(payload));
       shellAggregates.set(key, (shellAggregates.get(key) ?? "") + text);
     });
   });

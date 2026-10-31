@@ -197,13 +197,13 @@ describe("boss rounds", () => {
     for (const boss of BOSSES) {
       const hasRule = Boolean(
         boss.maxGuesses ??
-          boss.transform ??
-          boss.validate ??
-          boss.tileChips ??
-          boss.solveBonus ??
-          boss.noModifiers ??
-          boss.voids ??
-          boss.noTimesMult,
+        boss.transform ??
+        boss.validate ??
+        boss.tileChips ??
+        boss.solveBonus ??
+        boss.noModifiers ??
+        boss.voids ??
+        boss.noTimesMult,
       )
       expect(hasRule, `${boss.id} does nothing`).toBe(true)
     }

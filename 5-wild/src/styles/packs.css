@@ -110,16 +110,16 @@
  * the hover's 1.12 instead of the press's 1.35.
  */
 .mouse
-:is(
-  .primary,
-  .secondary,
-  .shop-item,
-  .menu-button,
-  .shapes-line,
-  .ladder-step,
-  .title-pill,
-  .title-dial
-):hover:not(:disabled, [aria-disabled="true"]),
+  :is(
+    .primary,
+    .secondary,
+    .shop-item,
+    .menu-button,
+    .shapes-line,
+    .ladder-step,
+    .title-pill,
+    .title-dial
+  ):hover:not(:disabled, [aria-disabled="true"]),
 .mouse .key:hover:not(.broken, :active) {
   filter: brightness(1.12);
 }

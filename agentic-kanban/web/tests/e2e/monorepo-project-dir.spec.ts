@@ -55,12 +55,8 @@ test("a project_dir board runs the agent inside the subproject", async ({}, test
 
     // The whole repo is checked out, so git resolves from the subproject and
     // reports it as a prefix of the workspace root.
-    expect(containerExec(container, "git", "rev-parse", "--show-toplevel")).toBe(
-      "/workspace",
-    );
-    expect(containerExec(container, "git", "rev-parse", "--show-prefix")).toBe(
-      `${PROJECT_DIR}/`,
-    );
+    expect(containerExec(container, "git", "rev-parse", "--show-toplevel")).toBe("/workspace");
+    expect(containerExec(container, "git", "rev-parse", "--show-prefix")).toBe(`${PROJECT_DIR}/`);
 
     // And it is the ticket's worktree, not the main checkout — the bug that
     // a descendant mount_path silently introduced.
@@ -69,9 +65,7 @@ test("a project_dir board runs the agent inside the subproject", async ({}, test
     );
 
     // Files above the subproject are still present and editable.
-    expect(containerExec(container, "cat", "/workspace/go.work")).toContain(
-      `use ./${PROJECT_DIR}`,
-    );
+    expect(containerExec(container, "cat", "/workspace/go.work")).toContain(`use ./${PROJECT_DIR}`);
   } finally {
     if (session) {
       await api.stopSession(session.id).catch(() => {});

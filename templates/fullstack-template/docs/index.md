@@ -20,7 +20,7 @@ features:
   - title: One small binary
     details: Server, web UI, REST API, and CLI ship in a single self-contained Go binary. No runtime, no node_modules, no sidecar processes — also distributed as a Docker image and a Python wrapper on PyPI.
   - title: Modern frontend toolchain
-    details: Vite + React 19 + Tailwind 4, typechecked with TypeScript, linted and formatted with Biome, and covered by a Playwright E2E suite that boots the real backend.
+    details: Vite + React 19 + Tailwind 4, typechecked with `bun check`, formatted with `bun fmt`, and covered by a Playwright E2E suite that boots the real backend.
   - title: Local SQLite storage
     details: A pure-Go SQLite driver (no CGO) with an idempotent schema. Use --in-memory for ephemeral runs and tests.
   - title: REST + CLI

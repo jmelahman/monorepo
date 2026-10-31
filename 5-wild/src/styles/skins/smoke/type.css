@@ -21,25 +21,25 @@
 /* Labels: the small caps-and-tracking the design puts on anything that names
    a thing rather than says one. */
 :root.skin-smoke
-:is(
-  .stage,
-  .stage-asc,
-  .ladder-rule,
-  .category,
-  .row-note,
-  .intro-kind,
-  .track-name,
-  .shop-item-kind,
-  .shapes-line-label,
-  .sheet-heading,
-  .reward-line,
-  .decor-toggle,
-  .relic .sell,
-  .consumable .drop,
-  .primary,
-  .secondary,
-  .danger
-) {
+  :is(
+    .stage,
+    .stage-asc,
+    .ladder-rule,
+    .category,
+    .row-note,
+    .intro-kind,
+    .track-name,
+    .shop-item-kind,
+    .shapes-line-label,
+    .sheet-heading,
+    .reward-line,
+    .decor-toggle,
+    .relic .sell,
+    .consumable .drop,
+    .primary,
+    .secondary,
+    .danger
+  ) {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }

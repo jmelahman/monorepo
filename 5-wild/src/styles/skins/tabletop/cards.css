@@ -30,16 +30,16 @@
 
 /* Anything bone carries the deep figures, not the room's bright ones. */
 :root.skin-tabletop
-:is(
-  .relic:not(.empty),
-  .shop-item:not(.sold),
-  .consumable:not(.empty),
-  .hud-score,
-  .hud-gold,
-  .key:not(.green, .yellow, .gray, .broken),
-  .tile:not(.green, .yellow, .gray),
-  .decor-toggle:not(.bare)
-) {
+  :is(
+    .relic:not(.empty),
+    .shop-item:not(.sold),
+    .consumable:not(.empty),
+    .hud-score,
+    .hud-gold,
+    .key:not(.green, .yellow, .gray, .broken),
+    .tile:not(.green, .yellow, .gray),
+    .decor-toggle:not(.bare)
+  ) {
   --chips: var(--chips-ink);
   --mult: var(--mult-ink);
   --gold: var(--cash);
@@ -166,6 +166,6 @@
    bone keeps its colour and says "this one" by lifting (and, on a button, by
    the terracotta edge) instead. */
 :root.skin-tabletop.mouse
-:is(.primary, .shop-item, .key):hover:not(:disabled, [aria-disabled="true"], :active) {
+  :is(.primary, .shop-item, .key):hover:not(:disabled, [aria-disabled="true"], :active) {
   filter: none;
 }

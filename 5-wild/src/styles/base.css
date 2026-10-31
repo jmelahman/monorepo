@@ -235,7 +235,11 @@ body {
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
   /* Kills the ~300ms double-tap-zoom delay on keyboard keys. */
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

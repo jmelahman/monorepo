@@ -1,0 +1,4 @@
+[fmt]
+printWidth = 100
+# What Biome covered: Markdown, YAML, TOML and HTML stay hand-formatted.
+ignorePatterns = ["**/*.md", "**/*.yaml", "**/*.yml", "**/*.toml", "**/*.html"]

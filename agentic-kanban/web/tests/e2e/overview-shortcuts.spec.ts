@@ -33,7 +33,10 @@ test.describe("Overview / Shortcuts", () => {
     await panel.expectTile("float");
   });
 
-  test("Ctrl+Alt+ArrowRight moves focus to the panel cascaded to the right", async ({ page, seed }) => {
+  test("Ctrl+Alt+ArrowRight moves focus to the panel cascaded to the right", async ({
+    page,
+    seed,
+  }) => {
     const ticketB = await seed.addTicket("ticket B");
     const overview = new OverviewPage(page);
     await overview.goto();
@@ -60,7 +63,10 @@ test.describe("Overview / Shortcuts", () => {
     await overview.panel(ticketB.id).expectFocused();
   });
 
-  test("Ctrl+Shift+Alt+ArrowLeft tiles the focused panel to the left half", async ({ page, seed }) => {
+  test("Ctrl+Shift+Alt+ArrowLeft tiles the focused panel to the left half", async ({
+    page,
+    seed,
+  }) => {
     const overview = new OverviewPage(page);
     await overview.goto();
     await overview.treeTicket(seed.ticket.id).click();

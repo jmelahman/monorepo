@@ -6,7 +6,10 @@ import { OverviewPage } from "./pages/OverviewPage";
 // `(max-width: 639px)` in Overview.tsx.
 
 test.describe("Overview / Mobile", () => {
-  test("at narrow viewport, only the tree is rendered (no resizer, no canvas)", async ({ page, seed }) => {
+  test("at narrow viewport, only the tree is rendered (no resizer, no canvas)", async ({
+    page,
+    seed,
+  }) => {
     const overview = new OverviewPage(page);
     await overview.setViewport(375, 812);
     await overview.goto();
@@ -20,7 +23,10 @@ test.describe("Overview / Mobile", () => {
     await expect(overview.canvas).toHaveCount(0);
   });
 
-  test("tapping a ticket drills into the SessionView; back returns to the tree", async ({ page, seed }) => {
+  test("tapping a ticket drills into the SessionView; back returns to the tree", async ({
+    page,
+    seed,
+  }) => {
     const overview = new OverviewPage(page);
     await overview.setViewport(375, 812);
     await overview.goto();

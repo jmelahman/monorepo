@@ -10,10 +10,7 @@ test.skip(!DOCKER_AVAILABLE, "requires a reachable docker daemon");
 // This test pins down the server behavior the refactor must keep working:
 // every fresh WS connection receives `ESC c` (RIS) followed by the ring
 // buffer snapshot before any live output. See `broker.go:257`.
-test("shell WS replays ESC c + ring buffer on reconnect", async ({
-  seed,
-  page,
-}) => {
+test("shell WS replays ESC c + ring buffer on reconnect", async ({ seed, page }) => {
   const session = await api.ensureSession(seed.ticket.id);
   await api.startSession(session.id);
   const ready = await waitForSession(seed.board.id, session.id, isAttachable, {

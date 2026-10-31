@@ -3,8 +3,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Vite's dependency-optimizer cache. Machine-local and regenerated on demand;
-# Biome reads this file, so leaving it tracked also fails `bun run check`.
+# Vite's dependency-optimizer cache. Machine-local and regenerated on demand.
 .vite/
 
 # Env files, every one of them, including telemetry/.env with the Cloudflare

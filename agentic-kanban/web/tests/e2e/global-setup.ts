@@ -9,9 +9,7 @@ const IMAGE = process.env.KANBAN_E2E_IMAGE ?? "lahmanja/kanban-devcontainer:late
 
 export default async function globalSetup() {
   if (!DOCKER_AVAILABLE) {
-    process.stdout.write(
-      "[e2e] docker daemon not reachable — session-based specs will skip\n",
-    );
+    process.stdout.write("[e2e] docker daemon not reachable — session-based specs will skip\n");
     return;
   }
 
