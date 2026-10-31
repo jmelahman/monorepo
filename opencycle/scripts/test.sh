@@ -29,7 +29,9 @@ trap 'rm -f "$log"' EXIT
 
 export XVFB=${XVFB:-1}
 status=0
+# GL, not Vulkan: most GPU drivers refuse to present to Xvfb, and sim tests draw nothing.
 with_display "$GODOT" --path "$ROOT" --audio-driver Dummy \
+	--rendering-method gl_compatibility --rendering-driver opengl3 \
 	-s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
 	"${add[@]}" -rd "$reports" -c 2>&1 | tee "$log" || status=$?
 "$GODOT" --headless --path "$ROOT" --quiet -s res://addons/gdUnit4/bin/GdUnitCopyLog.gd \

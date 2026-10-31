@@ -2,8 +2,9 @@ extends Node3D
 ## Builds the world from a seed and flies the camera along a replay. Arguments go
 ## after [code]--[/code]:
 ##
-## [code]--seed=N[/code], [code]--replay=res://replays/x.json[/code],
-## [code]--quality=ship|max[/code] choose what to show. [code]--still=out.png[/code]
+## [code]--biome=forest|neon[/code], [code]--seed=N[/code],
+## [code]--replay=res://replays/x.json[/code] and [code]--quality=ship|max[/code] choose
+## what to show. [code]--still=out.png[/code]
 ## with [code]--at=SECONDS[/code] renders one frame and quits.
 ## [code]--bench=out.json[/code] rides the whole replay as fast as the GPU allows and
 ## reports its frame times, and [code]--rate=4[/code] rides it faster for a quick
@@ -12,6 +13,10 @@ extends Node3D
 ## frame takes, and quits at the end so the movie is finalised.
 
 const WARMUP_FRAMES := 60
+const BIOME_REPLAYS: Dictionary[String, String] = {
+	"forest": "res://replays/benchmark.json",
+	"neon": "res://replays/neon.json",
+}
 
 var at_seconds := 0.0
 var route: Route
@@ -33,24 +38,27 @@ var _draw_calls := 0
 func _ready() -> void:
 	var started := Time.get_ticks_msec()
 	var args := _arguments()
-	var run_seed := int(args.get("seed", "1"))
+	var seed_text: String = args.get("seed", "1")
+	var run_seed := seed_text.to_int()
 	var quality: String = args.get("quality", "ship")
 	_still_path = args.get("still", "")
 	_bench_path = args.get("bench", "")
-	at_seconds = float(args.get("at", "0"))
-	_rate = float(args.get("rate", "1"))
-	var replay_path: String = args.get("replay", "res://replays/benchmark.json")
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(replay_path))
+	var at_text: String = args.get("at", "0")
+	at_seconds = at_text.to_float()
+	var rate_text: String = args.get("rate", "1")
+	_rate = rate_text.to_float()
+	var biome: String = args.get("biome", "forest")
+	var replay_path: String = args.get("replay", BIOME_REPLAYS.get(biome, ""))
+	var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(replay_path))
 	replay = Replay.from_dict(parsed)
 	route = Route.generate(run_seed)
-	var terrain := Terrain.generate(run_seed, route)
-	var plants := Planting.generate(run_seed, terrain)
-	add_child(TerrainMesh.build(terrain))
-	add_child(RoadMesh.build(route))
-	add_child(Flora.build(plants, route))
-	Look.apply(self, quality)
+	match biome:
+		"neon":
+			NeonBiome.build(self, run_seed, route, quality)
+		_:
+			ForestBiome.build(self, run_seed, route, quality)
 	_startup_ms = Time.get_ticks_msec() - started
-	print("ride: built in %d ms, %s" % [_startup_ms, _counts(plants)])
+	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_time = at_seconds
 	_camera.transform = replay.camera_at(route, _time)
 	if _bench_path:
@@ -99,6 +107,7 @@ static func summarise(frame_times: PackedFloat32Array) -> Dictionary:
 		total += t
 	var count := sorted.size()
 	var slowest_percent := 0.0
+	@warning_ignore("integer_division")
 	var tail := maxi(count / 100, 1)
 	for i: int in tail:
 		slowest_percent += sorted[count - 1 - i]
@@ -117,9 +126,10 @@ func _write_report() -> void:
 	report["peak_draw_calls"] = _draw_calls
 	report["render_size"] = str(get_viewport().get_visible_rect().size)
 	report["gpu"] = RenderingServer.get_video_adapter_name()
-	report["peak_video_memory_mb"] = (
-		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED) / 1048576
+	var video_bytes := RenderingServer.get_rendering_info(
+		RenderingServer.RENDERING_INFO_VIDEO_MEM_USED
 	)
+	report["peak_video_memory_mb"] = video_bytes / 1048576.0
 	var file := FileAccess.open(_bench_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(report, "  ") + "\n")
 	file.close()
@@ -138,13 +148,6 @@ func _take_still() -> void:
 
 static func _is_movie() -> bool:
 	return "--write-movie" in OS.get_cmdline_args()
-
-
-static func _counts(plants: Dictionary[Planting.Kind, Array]) -> Dictionary:
-	var counts := {}
-	for kind: Planting.Kind in plants:
-		counts[Planting.Kind.keys()[kind]] = plants[kind].size()
-	return counts
 
 
 static func _arguments() -> Dictionary[String, String]:

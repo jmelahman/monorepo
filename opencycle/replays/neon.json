@@ -1,0 +1,13 @@
+{
+  "speed": [
+    { "at_m": 0, "kmh": 22 },
+    { "at_m": 120, "kmh": 28 },
+    { "at_m": 200, "kmh": 40 }
+  ],
+  "camera": [
+    { "at_m": 0, "lateral": -1.2, "height": 0.0 },
+    { "at_m": 70, "lateral": -1.2, "height": 0.0 },
+    { "at_m": 110, "lateral": 0.8, "height": 0.05 },
+    { "at_m": 200, "lateral": 0.8, "height": 0.0 }
+  ]
+}

@@ -9,6 +9,9 @@ const EYE_HEIGHT := 1.5
 const LOOK_AHEAD := 22.0
 const TABLE_STEP := 0.5
 
+## Metres the ride covers, up to the last [code]speed[/code] entry.
+var length := 0.0
+
 ## Seconds to reach each [constant TABLE_STEP] metres of the route.
 var _times := PackedFloat32Array()
 var _camera: Array[Dictionary] = []
@@ -21,7 +24,9 @@ static func from_dict(data: Dictionary) -> Replay:
 	var speed: Array = data["speed"]
 	var camera: Array = data["camera"]
 	replay._camera.assign(camera)
-	var count := int(Route.LENGTH / TABLE_STEP) + 1
+	var last: Dictionary = speed[-1]
+	replay.length = last["at_m"]
+	var count := int(replay.length / TABLE_STEP) + 1
 	replay._times.resize(count)
 	var elapsed := 0.0
 	for i: int in count:
@@ -39,8 +44,9 @@ func distance_at(t: float) -> float:
 	var low := 0
 	var high := _times.size() - 1
 	if t >= _times[high]:
-		return Route.LENGTH
+		return length
 	while high - low > 1:
+		@warning_ignore("integer_division")
 		var middle := (low + high) / 2
 		if _times[middle] <= t:
 			low = middle

@@ -113,9 +113,9 @@ static func _instance(mesh: Mesh, transforms: Array) -> MultiMeshInstance3D:
 	multimesh.mesh = mesh
 	multimesh.instance_count = transforms.size()
 	for i: int in transforms.size():
-		multimesh.set_instance_transform(i, transforms[i])
-		# A little of each plant's own colour, from where it stands.
 		var placed: Transform3D = transforms[i]
+		multimesh.set_instance_transform(i, placed)
+		# A little of each plant's own colour, from where it stands.
 		var shade := 0.82 + fposmod(placed.origin.x * 12.9898 + placed.origin.z * 78.233, 1.0) * 0.3
 		multimesh.set_instance_color(i, Color(shade, shade, shade * 0.92))
 	var instance := MultiMeshInstance3D.new()
