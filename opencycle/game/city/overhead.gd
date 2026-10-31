@@ -4,10 +4,14 @@ extends RefCounted
 ## the slot of light over the road, and the traffic going by above.
 
 const CONCRETE := "res://assets/polyhaven/concrete_wall_004/concrete_wall_004_%s_2k.jpg"
+const BRUTAL: Shader = preload("res://game/brutal.gdshader")
 const TRAFFIC: Shader = preload("res://game/traffic.gdshader")
 const STRETCH := 8.0
 const DECK_WIDE := 70.0
 const CONCRETE_METRES := 5.0
+## The waffle cast into the deck's underside.
+const COFFER := 5.0
+const COFFER_DROP := 1.1
 const SLOT_DEEP := 14.0
 const HEADLIGHT := Color(0.85, 0.93, 1.0)
 const TAIL_LIGHT := Color(1.0, 0.12, 0.06)
@@ -20,17 +24,12 @@ static func build(route: Route, city: Undercity, length: float) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Overhead"
 	var kit := CityMesh.new()
-	var concrete := StandardMaterial3D.new()
-	concrete.albedo_texture = load(CONCRETE % "diffuse")
-	concrete.normal_enabled = true
-	concrete.normal_texture = load(CONCRETE % "nor_gl")
-	concrete.vertex_color_use_as_albedo = true
-	concrete.roughness = 0.85
-	# Barely lit by the street below, just enough to see how much of it there is.
-	concrete.emission_enabled = true
-	concrete.emission_texture = load(CONCRETE % "diffuse")
-	concrete.emission = Color(0.5, 0.65, 0.85)
-	concrete.emission_energy_multiplier = 0.05
+	var concrete := ShaderMaterial.new()
+	concrete.shader = BRUTAL
+	concrete.set_shader_parameter("albedo", load(CONCRETE % "diffuse"))
+	concrete.set_shader_parameter("normals", load(CONCRETE % "nor_gl"))
+	concrete.set_shader_parameter("rough", load(CONCRETE % "rough"))
+	concrete.set_shader_parameter("tile", CONCRETE_METRES)
 	var light := StandardMaterial3D.new()
 	light.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	light.vertex_color_use_as_albedo = true
@@ -65,7 +64,7 @@ static func _deck(
 ) -> void:
 	var up := Vector3.UP * Undercity.DECK_HEIGHT
 	var tile := 1.0 / CONCRETE_METRES
-	var dark := Color(0.3, 0.32, 0.36)
+	var dark := Color(0.55, 0.58, 0.64)
 	var s := -Undercity.REACH
 	while s < length + Undercity.REACH:
 		kit.at(s)
@@ -83,6 +82,7 @@ static func _deck(
 			kit.quad(concrete, a, b, c, d, -Vector3.UP, dark, tile)
 			var rise := Vector3.UP * SLOT_DEEP
 			kit.quad(concrete, a, d, d + rise, a + rise, across * -side, dark * 1.6, tile)
+		_coffers(kit, here, across, route.tangent(s), slot, concrete, dark)
 		var glow := Color(0.5, 0.72, 0.95)
 		var top := Vector3.UP * SLOT_DEEP
 		kit.quad(
@@ -95,6 +95,34 @@ static func _deck(
 			glow
 		)
 		s = next
+
+
+## Downstand beams both ways under the deck, which catch what light gets up there.
+static func _coffers(
+	kit: CityMesh,
+	centre: Vector3,
+	across: Vector3,
+	along: Vector3,
+	slot: float,
+	concrete: Material,
+	tint: Color
+) -> void:
+	var basis := Basis(across, Vector3.UP, along)
+	var drop := Vector3.UP * COFFER_DROP * 0.5
+	var run := DECK_WIDE - slot
+	for side: float in [-1.0, 1.0]:
+		var outer := centre + across * side * (slot + run * 0.5) - drop
+		var size := Vector3(run, COFFER_DROP, 0.5)
+		var steps := roundi(STRETCH / COFFER)
+		for step: int in steps:
+			var place := Transform3D(basis, outer + along * (step + 0.5) * STRETCH / steps)
+			kit.box(concrete, place, size, tint)
+		var beam := slot + COFFER * 0.5
+		while beam < 30.0:
+			var line := centre + across * side * beam + along * STRETCH * 0.5 - drop
+			var long_way := Vector3(0.5, COFFER_DROP, STRETCH)
+			kit.box(concrete, Transform3D(basis, line), long_way, tint)
+			beam += COFFER
 
 
 static func _rib(
@@ -110,18 +138,18 @@ static func _rib(
 	var basis := Basis(across, Vector3.UP, along)
 	var deck := route.at(rib.s) + Vector3.UP * Undercity.DECK_HEIGHT
 	var middle := deck - Vector3.UP * rib.drop * 0.5
-	kit.box(
+	kit.block(
 		concrete,
 		Transform3D(basis, middle),
 		Vector3((wall + 3.0) * 2.0, rib.drop, rib.long),
-		Color(0.34, 0.36, 0.4),
-		1.0 / CONCRETE_METRES
+		Color(0.6, 0.63, 0.7),
+		0.12
 	)
 	# Haunches down to the walls, so the load has somewhere to go.
 	for side: float in [-1.0, 1.0]:
 		var foot := deck + across * side * wall - Vector3.UP * (rib.drop + 7.0)
 		var root := deck + across * side * (wall - 7.0) - Vector3.UP * rib.drop
-		kit.bar(concrete, foot, root, 0.8, Color(0.14, 0.15, 0.17))
+		kit.bar(concrete, foot, root, 0.8, Color(0.3, 0.32, 0.36))
 	if rib.lit:
 		var low := deck - Vector3.UP * (rib.drop + 0.04)
 		var reach := across * (wall - 1.0)
@@ -140,42 +168,41 @@ static func _pylon(
 	var outward := route.right(pylon.s) * pylon.side
 	var basis := Basis(along, Vector3.UP, outward)
 	var ground := route.at(pylon.s)
-	var tile := 1.0 / CONCRETE_METRES
-	var tint := Color(0.17, 0.18, 0.2)
+	var tint := Color(0.42, 0.44, 0.48)
 	var face := ground + outward * (wall - pylon.depth)
 	var high := Undercity.DECK_HEIGHT
-	kit.box(
+	kit.block(
 		concrete,
 		Transform3D(basis, face + outward * pylon.depth * 0.5 + Vector3.UP * high * 0.5),
 		Vector3(pylon.width, high, pylon.depth),
 		tint,
-		tile
+		0.14
 	)
 	# A heavy foot and collars every so often, which is what makes it read as enormous.
-	kit.box(
+	kit.block(
 		concrete,
 		Transform3D(basis, face + outward * pylon.depth * 0.5 + Vector3.UP * 1.6),
 		Vector3(pylon.width + 1.0, 3.2, pylon.depth + 0.9),
 		tint * 0.8,
-		tile
+		0.14
 	)
 	# Pilasters up its face, for something for the light to catch.
 	for at: float in [-0.32, 0.0, 0.32]:
-		kit.box(
+		kit.block(
 			concrete,
 			Transform3D(basis, face + along * pylon.width * at + Vector3.UP * (high * 0.5 + 1.6)),
 			Vector3(pylon.width * 0.14, high - 3.2, 0.4),
 			tint * 1.25,
-			tile
+			0.06
 		)
 	var collar := 9.0
 	while collar < high:
-		kit.box(
+		kit.block(
 			concrete,
 			Transform3D(basis, face + outward * pylon.depth * 0.5 + Vector3.UP * collar),
 			Vector3(pylon.width + 0.5, 0.7, pylon.depth + 0.5),
 			tint * 0.7,
-			tile
+			0.08
 		)
 		collar += 9.0
 	var front := face - outward * 0.28 + along * pylon.width * 0.16
@@ -196,7 +223,7 @@ static func _duct(
 		var from := route.at(s) + route.right(s) * duct.offset + Vector3.UP * duct.height
 		var next := s + STRETCH
 		var to := route.at(next) + route.right(next) * duct.offset + Vector3.UP * duct.height
-		kit.bar(concrete, from, to, duct.thick, tint)
+		kit.bar(concrete, from, to, duct.thick, tint * 2.0)
 		s = next
 
 
@@ -235,6 +262,7 @@ static func _shaft(route: Route, shaft: Undercity.Shaft) -> SpotLight3D:
 	beam.spot_range = Undercity.DECK_HEIGHT + 20.0
 	beam.spot_angle = 13.0
 	beam.spot_attenuation = 0.6
+	beam.shadow_enabled = true
 	beam.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
 	beam.position = (
 		route.at(shaft.s)

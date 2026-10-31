@@ -97,6 +97,7 @@ func box(
 	size: Vector3,
 	color := Color.WHITE,
 	uv_scale := 1.0,
+	extra := Vector2.ZERO,
 ) -> void:
 	var half := size * 0.5
 	var basis := place.basis
@@ -112,7 +113,9 @@ func box(
 		o - ex + ey + ez,
 		ez,
 		color,
-		uv_scale
+		uv_scale,
+		Vector2.ZERO,
+		extra
 	)
 	quad(
 		material,
@@ -122,7 +125,9 @@ func box(
 		o + ex + ey - ez,
 		-ez,
 		color,
-		uv_scale
+		uv_scale,
+		Vector2.ZERO,
+		extra
 	)
 	quad(
 		material,
@@ -132,7 +137,9 @@ func box(
 		o + ex + ey + ez,
 		ex,
 		color,
-		uv_scale
+		uv_scale,
+		Vector2.ZERO,
+		extra
 	)
 	quad(
 		material,
@@ -142,7 +149,9 @@ func box(
 		o - ex + ey - ez,
 		-ex,
 		color,
-		uv_scale
+		uv_scale,
+		Vector2.ZERO,
+		extra
 	)
 	quad(
 		material,
@@ -152,7 +161,9 @@ func box(
 		o - ex + ey - ez,
 		ey,
 		color,
-		uv_scale
+		uv_scale,
+		Vector2.ZERO,
+		extra
 	)
 	quad(
 		material,
@@ -162,8 +173,82 @@ func box(
 		o - ex - ey + ez,
 		-ey,
 		color,
-		uv_scale
+		uv_scale,
+		Vector2.ZERO,
+		extra
 	)
+
+
+## A box with its edges cut back, for anything big enough to be seen up close: the worn
+## bevel is lighter than the faces, and catches the light the way a real arris does.
+func block(
+	material: Material,
+	place: Transform3D,
+	size: Vector3,
+	color := Color.WHITE,
+	bevel := 0.05,
+	extra := Vector2.ZERO,
+) -> void:
+	var half := size * 0.5
+	var cut := minf(bevel, minf(half.x, minf(half.y, half.z)) * 0.5)
+	var axes: Array[Vector3] = [
+		place.basis.x.normalized(), place.basis.y.normalized(), place.basis.z.normalized()
+	]
+	var flat: Array[Vector2] = [Vector2.ZERO, Vector2.RIGHT, Vector2.ONE, Vector2.UP]
+	var worn := Color(color.r * 1.4, color.g * 1.4, color.b * 1.4, color.a)
+	var locate := func(local: Vector3) -> Vector3:
+		return place.origin + axes[0] * local.x + axes[1] * local.y + axes[2] * local.z
+	for axis: int in 3:
+		var u := (axis + 1) % 3
+		var v := (axis + 2) % 3
+		for sign_a: float in [-1.0, 1.0]:
+			# The face itself, inset by the cut on the other two axes.
+			var corners: Array[Vector3] = []
+			for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+				var local := Vector3.ZERO
+				local[axis] = sign_a * half[axis]
+				local[u] = corner.x * (half[u] - cut)
+				local[v] = corner.y * (half[v] - cut)
+				corners.append(locate.call(local))
+			face(material, corners, flat, axes[axis] * sign_a, color, extra)
+			for sign_b: float in [-1.0, 1.0]:
+				# The bevel along the edge between this axis and the next.
+				var strip: Array[Vector3] = []
+				for point: Vector3 in [
+					Vector3(0.0, -1.0, 1.0),
+					Vector3(0.0, 1.0, 1.0),
+					Vector3(1.0, 1.0, 0.0),
+					Vector3(1.0, -1.0, 0.0)
+				]:
+					var local := Vector3.ZERO
+					local[axis] = sign_a * (half[axis] - cut * point.x)
+					local[u] = sign_b * (half[u] - cut * point.z)
+					local[v] = point.y * (half[v] - cut)
+					strip.append(locate.call(local))
+				var out := axes[axis] * sign_a + axes[u] * sign_b
+				face(material, strip, flat, out, worn, extra)
+				for sign_c: float in [-1.0, 1.0]:
+					if axis != 0:
+						continue
+					# A little triangle at each corner, once each.
+					var a := Vector3(
+						sign_a * half.x, sign_b * (half.y - cut), sign_c * (half.z - cut)
+					)
+					var b := Vector3(
+						sign_a * (half.x - cut), sign_b * half.y, sign_c * (half.z - cut)
+					)
+					var c := Vector3(
+						sign_a * (half.x - cut), sign_b * (half.y - cut), sign_c * half.z
+					)
+					var tip: Vector3 = locate.call(c)
+					face(
+						material,
+						[locate.call(a), locate.call(b), tip, tip],
+						flat,
+						axes[0] * sign_a + axes[1] * sign_b + axes[2] * sign_c,
+						worn,
+						extra
+					)
 
 
 ## A straight bar of square section between two points, for tube, rail, cable and frame.
@@ -201,7 +286,7 @@ func commit(root: Node3D) -> void:
 		mesh.surface_set_material(0, bin.material)
 		var instance := MeshInstance3D.new()
 		instance.mesh = mesh
-		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
 		root.add_child(instance)
 
 

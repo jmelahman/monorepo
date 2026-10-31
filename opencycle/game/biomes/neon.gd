@@ -49,7 +49,7 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	# Shadows stay blue, so every warm light in the street has something to stand against.
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.25, 0.4, 0.7)
-	environment.ambient_light_energy = 0.22
+	environment.ambient_light_energy = 0.4
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
 	environment.tonemap_white = 7.0
@@ -65,8 +65,9 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	for level: int in 7:
 		environment.set_glow_level(level, 1.0 if level >= 2 and level <= 5 else 0.0)
 	environment.ssao_enabled = true
-	environment.ssao_radius = 0.8
-	environment.ssao_intensity = 2.0
+	environment.ssao_radius = 1.8
+	environment.ssao_intensity = 3.5
+	environment.ssao_light_affect = 0.35
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
 	environment.fog_light_color = Color(0.025, 0.04, 0.055)
@@ -90,12 +91,28 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	# No moon up there, but the cold light on the upper floors sets off the street's heat.
 	var cold := DirectionalLight3D.new()
 	cold.rotation_degrees = Vector3(-62.0, 35.0, 0.0)
-	cold.light_color = Color(0.25, 0.65, 0.95)
-	cold.light_energy = 0.12
+	cold.light_color = Color(0.5, 0.68, 0.88)
+	cold.light_energy = 0.45
+	cold.light_specular = 0.15
 	cold.light_volumetric_fog_energy = 0.0
+	# Only gets in through the slots in the deck, and rakes down the walls from there.
+	cold.shadow_enabled = true
+	cold.directional_shadow_max_distance = 200.0
+	cold.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	parent.add_child(cold)
+	# What comes back up off the wet street: no shadows, but it models every ledge and soffit.
+	for yaw: float in [-150.0, 30.0]:
+		var bounce := DirectionalLight3D.new()
+		bounce.rotation_degrees = Vector3(24.0, yaw, 0.0)
+		bounce.light_color = Color(0.5, 0.56, 0.68)
+		bounce.light_energy = 0.75
+		bounce.light_specular = 0.0
+		bounce.light_volumetric_fog_energy = 0.0
+		parent.add_child(bounce)
 	var viewport := parent.get_viewport()
 	viewport.use_taa = true
+	RenderingServer.directional_shadow_atlas_set_size(8192, true)
+	viewport.positional_shadow_atlas_size = 8192
 	if best:
 		viewport.msaa_3d = Viewport.MSAA_4X
 

@@ -75,6 +75,6 @@ func commit(root: Node3D, reach: float) -> void:
 			multimesh.set_instance_custom_data(i, custom)
 		var instance := MultiMeshInstance3D.new()
 		instance.multimesh = multimesh
-		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
 		instance.visibility_range_end = reach
 		root.add_child(instance)

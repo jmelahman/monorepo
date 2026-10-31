@@ -58,8 +58,8 @@ interesting buildings, not match a photo. Performance is deliberately deferred w
 look is worked out, and `NeonBiome.CROWD` keeps the pedestrians off to speed up iteration.
 
 `Street`, `Skyline` and `Undercity` in `sim/` decide what stands where; `game/city/` builds
-it, with `Facades` for the brutalist buildings (`game/brutal.gdshader` paints the stains and
-the pools of light), `Landmarks` for bridges and rail, `Overhead` for the deck, its pylons and
+it, with `Facades` for the brutalist buildings and the close lights that rake up them
+(`game/brutal.gdshader` paints the formwork and the stains), `Landmarks` for bridges and rail, `Overhead` for the deck, its pylons and
 the traffic under it, and `Weather` for mist, steam and rain. Anything animated
 runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on the
 `ride_clock` group. `game/wet_sheen.gdshader` is an additive second pass over the road,

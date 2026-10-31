@@ -50,7 +50,14 @@ def render(chapter: Path) -> list[dict[str, str]]:
             f"--still={out}",
             f"--at={at}",
         ]
-        subprocess.run(command, cwd=ROOT, capture_output=True, timeout=RENDER_TIMEOUT)
+        run = subprocess.run(
+            command, cwd=ROOT, capture_output=True, text=True, timeout=RENDER_TIMEOUT
+        )
+        # A broken shader still renders, as flat untextured faces, and exits 0.
+        broken = sorted({line for line in run.stdout.splitlines() if "SHADER ERROR" in line})
+        broken += sorted({line for line in run.stderr.splitlines() if "SHADER ERROR" in line})
+        if broken:
+            sys.exit("\n".join(broken))
         # Godot exits 0 on parse errors, so only the file says whether it worked.
         if not out.exists():
             sys.exit(f"No still came out for t={at}: run scripts/check.sh")

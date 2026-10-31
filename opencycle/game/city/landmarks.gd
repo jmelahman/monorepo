@@ -159,10 +159,12 @@ static func _bridge(
 	var half := across * run * 0.5
 	var face := along * (depth * 0.5 + 0.03)
 	# A lit gallery along each side, and a line of light under the deck.
-	var dim := Color(0.03, 0.05, 0.07)
+	var gallery := ShaderMaterial.new()
+	gallery.shader = Facades.WINDOW
+	var dim := Color(0.55, 0.75, 0.85, 0.3)
 	for side: float in [-1.0, 1.0]:
 		kit.box(
-			neon,
+			gallery,
 			Transform3D(basis, middle + face * side + Vector3.UP * 0.25),
 			Vector3(run - 0.8, 1.1, 0.04),
 			dim

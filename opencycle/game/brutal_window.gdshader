@@ -25,20 +25,18 @@ void vertex() {
 
 void fragment() {
 	float grime = noise(UV * vec2(3.0, 0.8)) * 0.6 + noise(UV * 17.0) * 0.4;
-	// Thin steel frames, which fade out before they can shimmer.
 	float pixel = fwidth(UV.x) + fwidth(UV.y);
 	float keep = 1.0 - smoothstep(0.02, 0.07, pixel);
-	float bar = smoothstep(0.03, 0.015, abs(fract(UV.x / 1.25) - 0.5) * 1.25) * keep;
 	// Blinds, some of them hanging crooked or partway down.
 	float slats = mix(0.6, 0.35 + 0.65 * smoothstep(0.2, 0.7, abs(fract(UV.y * 9.0) - 0.5) * 2.0), keep);
 	float cell = floor(UV.x / 1.25);
 	float drop = 0.7 + hash(vec2(cell, 3.0)) * 1.5;
 	float blind = mix(1.0, slats * 0.7, smoothstep(0.03, 0.0, UV.y - drop));
 	float dim = 0.75 + 0.25 * noise(UV * 0.9);
-	vec3 glow = pane.rgb * pane.a * blind * dim * (1.0 - bar) * (1.0 - grime * 0.45);
+	vec3 glow = pane.rgb * pane.a * blind * dim * (1.0 - grime * 0.45);
 
-	ALBEDO = mix(vec3(0.018, 0.02, 0.023), vec3(0.06, 0.055, 0.05), bar + grime * 0.35);
-	ROUGHNESS = mix(0.1, 0.6, clamp(bar + grime * 0.6, 0.0, 1.0));
+	ALBEDO = mix(vec3(0.018, 0.02, 0.023), vec3(0.06, 0.055, 0.05), grime * 0.35);
+	ROUGHNESS = mix(0.1, 0.6, clamp(grime * 0.6, 0.0, 1.0));
 	METALLIC = 0.0;
 	SPECULAR = 0.7;
 	EMISSION = glow;

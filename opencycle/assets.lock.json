@@ -955,6 +955,54 @@
     "md5": "db6a5bae2597e8970e2ddf7171d4613c",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/russian_food_cans_01/russian_food_cans_01_nor_gl_1k.jpg"
   },
+  "rusty_corrugated_iron/rusty_corrugated_iron_ao_2k.jpg": {
+    "md5": "1e35d6dca77e778a68ac0adacb936399",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_corrugated_iron/rusty_corrugated_iron_ao_2k.jpg"
+  },
+  "rusty_corrugated_iron/rusty_corrugated_iron_diffuse_2k.jpg": {
+    "md5": "73a2ec580289d7bf27eb0e1c55fda0bc",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_corrugated_iron/rusty_corrugated_iron_diff_2k.jpg"
+  },
+  "rusty_corrugated_iron/rusty_corrugated_iron_nor_gl_2k.jpg": {
+    "md5": "4950f278ab34e7fc275ff96d8196d4c1",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_corrugated_iron/rusty_corrugated_iron_nor_gl_2k.jpg"
+  },
+  "rusty_corrugated_iron/rusty_corrugated_iron_rough_2k.jpg": {
+    "md5": "475973440a6ce1c0086ac4475addd036",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_corrugated_iron/rusty_corrugated_iron_rough_2k.jpg"
+  },
+  "rusty_metal_02/rusty_metal_02_ao_2k.jpg": {
+    "md5": "cbec67d9578455551a9386c4a9409055",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_02/rusty_metal_02_ao_2k.jpg"
+  },
+  "rusty_metal_02/rusty_metal_02_diffuse_2k.jpg": {
+    "md5": "385195f8de0117418d99dc1d06b7ff38",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_02/rusty_metal_02_diff_2k.jpg"
+  },
+  "rusty_metal_02/rusty_metal_02_nor_gl_2k.jpg": {
+    "md5": "9d55427ccd90c8f54293232c87e36933",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_02/rusty_metal_02_nor_gl_2k.jpg"
+  },
+  "rusty_metal_02/rusty_metal_02_rough_2k.jpg": {
+    "md5": "b3cde2ae9c01ae694d19ea0fa5d38bca",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_metal_02/rusty_metal_02_rough_2k.jpg"
+  },
+  "rusty_painted_metal/rusty_painted_metal_ao_2k.jpg": {
+    "md5": "86d421ca2f5a00a39defaed9af57edb0",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_painted_metal/rusty_painted_metal_ao_2k.jpg"
+  },
+  "rusty_painted_metal/rusty_painted_metal_diffuse_2k.jpg": {
+    "md5": "dd4f975d539100c4d31fa91d41e1ea71",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_painted_metal/rusty_painted_metal_diff_2k.jpg"
+  },
+  "rusty_painted_metal/rusty_painted_metal_nor_gl_2k.jpg": {
+    "md5": "f9fe4bf3312f06b0eacd7c57470d6285",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_painted_metal/rusty_painted_metal_nor_gl_2k.jpg"
+  },
+  "rusty_painted_metal/rusty_painted_metal_rough_2k.jpg": {
+    "md5": "a50954dcd81fa03fc917d4b188ff8790",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rusty_painted_metal/rusty_painted_metal_rough_2k.jpg"
+  },
   "small_wooden_table_01/small_wooden_table_01.bin": {
     "md5": "d4384b662a532853084edd70adb16ed5",
     "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/small_wooden_table_01/small_wooden_table_01.bin"
