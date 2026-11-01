@@ -542,10 +542,6 @@ export function ReleasesDashboard() {
   }
   if (!summary) return <p className="p-4 text-sm text-fg-muted">Loading…</p>;
 
-  const neverCount = summary.projects.reduce(
-    (n, p) => n + p.subtrees.filter(neverReleased).length,
-    0,
-  );
   const subtreeOf = (r: ReleaseReminder) =>
     summary.projects
       .find((p) => p.repo_path === r.repo_path)
@@ -562,7 +558,7 @@ export function ReleasesDashboard() {
               checked={hideNever}
               onChange={(e) => setHideNever(e.target.checked)}
             />
-            hide unreleased ({neverCount})
+            hide unreleased
           </label>
           <Button
             variant="neutral"
