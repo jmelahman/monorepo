@@ -169,6 +169,7 @@ static func _sheen(strength: float, puddles: float, reach := 28.0, worn := 0.0) 
 	sheen.set_shader_parameter("puddles", puddles)
 	sheen.set_shader_parameter("reach", reach)
 	sheen.set_shader_parameter("worn", worn)
+	sheen.set_shader_parameter("sky", 0.0 if reach <= TUNNEL_REACH else 1.0)
 	return sheen
 
 

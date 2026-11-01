@@ -14,10 +14,14 @@ uniform float puddles = 1.0;
 uniform float reach = 28.0;
 // Over road paint: as worn as the paint, so bare patches in a line don't mirror twice over.
 uniform float worn = 0.0;
+// Whether there's a slot of sky overhead for the ground to hold. Under a roof there isn't.
+uniform float sky = 1.0;
 
 const int TAPS = 9;
 // What the near road sees straight above it is darker than the top of the frame.
 const float OVERHEAD = 0.6;
+// Wet ground always holds a little of the sky, so an unlit stretch is dark and not a black hole.
+const vec3 SKY_GLEAM = vec3(0.05, 0.08, 0.13);
 
 varying vec3 world;
 
@@ -70,6 +74,7 @@ void fragment() {
 	}
 	seen += textureLod(screen, vec2(clamp(uv.x, 0.0, 1.0), 0.12), 6.0).rgb * beyond * OVERHEAD;
 	seen /= weight;
+	seen += SKY_GLEAM * sky * (0.6 + 0.8 * noise(at * 0.35));
 	float amount = mix(mix(0.16, 0.65, fresnel), mix(0.3, 0.8, fresnel), water);
 	float kept = 1.0;
 	if (worn > 0.0) {

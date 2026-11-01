@@ -13,7 +13,7 @@ const TUBE_RUN := 3.2
 const TUBE_GAP := 1.6
 const TUBE_DEAD := 0.14
 const TUBE := Color(0.72, 1.05, 0.82)
-const TUNNEL_LIGHT := Color(0.88, 1.0, 0.95)
+const TUNNEL_LIGHT := Color(1.0, 1.0, 0.92)
 ## Every so many bays a dim pool between the shadowed spots. The bays with neither have failed
 ## tubes, and the dark between pools is what gives the tunnel length.
 const TUNNEL_POOL_EVERY := 2
