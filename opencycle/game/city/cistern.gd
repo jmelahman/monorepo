@@ -27,8 +27,12 @@ const LIT_EVERY: PackedInt32Array = [2, 3, 4]
 const LIT_ENERGY: PackedFloat32Array = [3.5, 5.0, 8.0]
 const LIT_RANGE: PackedFloat32Array = [20.0, 26.0, 34.0]
 const FILL_EVERY := 2
+const FILL_ENERGY := 3.0
+const FILL_REACH := 22.0
 const SHAFT_EVERY := 3
-const SHAFT_OFFSET := 21.5
+const SHAFT_OFFSET := 15.5
+const GRATING := Color(0.62, 0.86, 1.15)
+const GRATING_SLATS := 7
 const COLD := Color(0.62, 0.8, 1.0)
 const RAIL_POST := 2.8
 
@@ -121,18 +125,25 @@ static func _bay(
 			Vector3(1.0, ROOF - WATER, long * 1.3),
 			STONE * 0.5
 		)
-	if index % FILL_EVERY == 0:
-		root.add_child(_fill(route.at(s) + Vector3.UP * 6.5))
+	# Off to one side of the road and then the other, for the faces the rider is coming to.
+	var fill_side := 1.0 if index % FILL_EVERY == 0 else -1.0
+	root.add_child(_fill(route.at(s) + route.right(s) * fill_side * 5.0 + Vector3.UP * 6.5))
 	if index % SHAFT_EVERY == 2:
 		var side := 1.0 if index % (SHAFT_EVERY * 2) < SHAFT_EVERY else -1.0
 		var under := route.at(middle) + route.right(middle) * side * SHAFT_OFFSET
-		kit.box(
-			parts.glow,
-			Transform3D(basis, under + Vector3.UP * (ROOF - 1.7)),
-			Vector3(6.0, 0.1, 6.0),
-			Color(1.6, 2.2, 2.9)
-		)
+		_grating(kit, basis, under, parts)
 		root.add_child(_shaft(under))
+
+
+## Where the cold comes in: a slatted hole in the roof, set up between the beams.
+static func _grating(kit: CityMesh, basis: Basis, under: Vector3, parts: Quarters.Parts) -> void:
+	var soffit := under + Vector3.UP * (ROOF - 0.03)
+	kit.box(parts.glow, Transform3D(basis, soffit), Vector3(5.0, 0.04, 5.0), GRATING)
+	var dark := Color(0.05, 0.05, 0.055)
+	for slat: int in GRATING_SLATS:
+		var along := lerpf(-2.5, 2.5, float(slat) / (GRATING_SLATS - 1))
+		var at := soffit - Vector3.UP * 0.12 + basis.z * along
+		kit.box(parts.steel, Transform3D(basis, at), Vector3(5.2, 0.2, 0.34), dark)
 
 
 ## The water either side of the causeway, the causeway's edge going down into it, and the rail.
@@ -255,9 +266,9 @@ static func _column_light(at: Vector3, hue: Color, energy: float, reach: float) 
 static func _fill(at: Vector3) -> OmniLight3D:
 	var lamp := OmniLight3D.new()
 	lamp.light_color = Color(1.0, 0.68, 0.38)
-	lamp.light_energy = 1.2
+	lamp.light_energy = FILL_ENERGY
 	lamp.light_volumetric_fog_energy = 0.3
-	lamp.omni_range = 18.0
+	lamp.omni_range = FILL_REACH
 	lamp.position = at
 	return lamp
 
@@ -273,5 +284,5 @@ static func _shaft(under: Vector3) -> SpotLight3D:
 	beam.spot_attenuation = 0.6
 	beam.shadow_enabled = true
 	beam.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
-	beam.position = under + Vector3.UP * (ROOF - 1.9)
+	beam.position = under + Vector3.UP * (ROOF - 0.3)
 	return beam

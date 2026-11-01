@@ -71,6 +71,7 @@ const STAIR_LAMP_EVERY := 16.0
 const MODELLED_TOLERANCE := 0.008
 const MODELLED_REACH := 500.0
 const CLOTH_DIM := 0.3
+const PAPER_LIT := 1.5
 const WASH_CHANCE := 0.5
 const LETTINGS: Array[String] = ["bay_a", "bay_b", "bay_c", "bay_d", "bay_e", "bay_f", "bay_g"]
 
@@ -87,6 +88,8 @@ class Parts:
 	var glow: StandardMaterial3D
 	var pool: StandardMaterial3D
 	var housing: Kit
+	var cloth: StandardMaterial3D
+	var paper: StandardMaterial3D
 
 
 static func build(route: Route, street: Street, section: StreetSection) -> Node3D:
@@ -111,6 +114,8 @@ static func build(route: Route, street: Street, section: StreetSection) -> Node3
 			_plaza(kit, root, route, opening, parts)
 	for stretch: Districts.Stretch in street.districts.of_kind(Districts.Kind.CISTERN):
 		Cistern.build(kit, root, route, stretch, section, parts)
+	for stretch: Districts.Stretch in street.districts.of_kind(Districts.Kind.LANTERNS):
+		LanternRow.build(kit, root, route, stretch, section, parts)
 	kit.commit(root)
 	parts.housing.commit(root, MODELLED_REACH)
 	return root
@@ -130,6 +135,8 @@ static func _parts() -> Parts:
 	parts.glow = StandardMaterial3D.new()
 	parts.glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	parts.glow.vertex_color_use_as_albedo = true
+	parts.paper = parts.glow.duplicate()
+	parts.paper.albedo_color = Color(PAPER_LIT, PAPER_LIT, PAPER_LIT)
 	parts.pool = StandardMaterial3D.new()
 	parts.pool.albedo_color = Color(0.015, 0.02, 0.025)
 	parts.pool.roughness = 0.04
@@ -141,6 +148,7 @@ static func _parts() -> Parts:
 	# Laundry's colours are chosen to read as colours, but it hangs in the same dark as the
 	# concrete, and the concrete comes out far darker than a colour this size.
 	cloth.albedo_color = Color(CLOTH_DIM, CLOTH_DIM, CLOTH_DIM)
+	parts.cloth = cloth
 	var glass := StandardMaterial3D.new()
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	glass.albedo_color = Color(0.04, 0.05, 0.06, 0.28)
