@@ -232,6 +232,11 @@ for_window [app_id=".*"] titlebar_padding 0
 for_window [app_id=".*"] border pixel 1
 for_window [app_id="flameshot"] border pixel 0, floating enable, fullscreen disable, move absolute position 0 0
 
+# Godot: the editor, and games it runs, which carry their own project's name
+assign [app_id="(?i)godot"] workspace number 2
+assign [class="(?i)godot"] workspace number 2
+assign [class="OpenCycle"] workspace number 2
+
 font pango:Inter 10
 
 client.focused #010000 #010000 #FFFFFF #010000
