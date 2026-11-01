@@ -32,8 +32,8 @@ float noise(vec2 p) {
 }
 
 float standing_water(vec2 at) {
-	float broad = noise(at * 0.13) * 0.55 + noise(at * 0.47) * 0.3 + noise(at * 1.9) * 0.15;
-	return smoothstep(0.6, 0.63, broad) * puddles;
+	float broad = noise(at * 0.13) * 0.6 + noise(at * 0.47) * 0.32 + noise(at * 1.9) * 0.08;
+	return smoothstep(0.62, 0.67, broad) * puddles;
 }
 
 void vertex() {
@@ -50,7 +50,7 @@ void fragment() {
 	// Rain landing on still water.
 	vec2 flow = vec2(ride_time * 0.7, ride_time * 0.5);
 	vec2 ripple = vec2(noise(at * 3.0 + flow), noise(at * 3.0 - flow + 17.0)) - 0.5;
-	vec2 tilt = mix(vec2(grain, grain_across) * 0.018, ripple * 0.014, water);
+	vec2 tilt = mix(vec2(grain, grain_across) * 0.009, ripple * 0.006, water);
 	vec3 up = normalize(vec3(tilt.x, 1.0, tilt.y));
 	vec3 incoming = normalize(world - CAMERA_POSITION_WORLD);
 	vec3 bounced = reflect(incoming, up);
@@ -73,7 +73,7 @@ void fragment() {
 		weight += share;
 	}
 	seen /= weight;
-	float amount = mix(mix(0.16, 0.65, fresnel), mix(0.45, 1.0, fresnel), water);
+	float amount = mix(mix(0.16, 0.65, fresnel), mix(0.3, 0.8, fresnel), water);
 	ALBEDO = seen * amount * strength * step(0.0, clip.w);
 	ALPHA = 1.0;
 }

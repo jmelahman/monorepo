@@ -12,7 +12,7 @@ const COLUMN_EVERY := 12.0
 const TUBE_RUN := 3.2
 const TUBE_GAP := 1.6
 const TUBE_DEAD := 0.14
-const TUBE := Color(0.95, 1.4, 1.0)
+const TUBE := Color(0.5, 1.05, 0.62)
 const TUNNEL_LIGHT := Color(0.72, 1.0, 0.8)
 const TUNNEL_LIT_EVERY := 12.0
 const TUNNEL_SHADOW_EVERY := 3
@@ -60,6 +60,7 @@ class Parts:
 	var concrete: ShaderMaterial
 	var steel: StandardMaterial3D
 	var rust: StandardMaterial3D
+	var paint: StandardMaterial3D
 	var iron: StandardMaterial3D
 	var worn: StandardMaterial3D
 	var pavers: StandardMaterial3D
@@ -91,6 +92,8 @@ static func _parts() -> Parts:
 	parts.concrete = Overhead.poured()
 	parts.steel = Facades.scan("rusty_painted_metal", 1.2, Color(0.7, 0.7, 0.72))
 	parts.rust = Facades.scan("rusty_metal_02", 1.0, Color(0.62, 0.56, 0.5))
+	parts.paint = Facades.scan("rusty_painted_metal", 1.0, Color(0.5, 0.42, 0.14))
+	parts.paint.metallic = 0.0
 	parts.iron = Facades.scan("rusty_corrugated_iron", 2.4, Color(0.8, 0.76, 0.72))
 	parts.worn = Facades.scan("worn_corrugated_iron", 2.4, Color(0.62, 0.66, 0.68))
 	parts.pavers = Facades.scan("square_concrete_pavers", 3.0, Color(0.5, 0.54, 0.6))
@@ -173,10 +176,10 @@ static func _tunnel_column(
 	)
 	# Scuffed yellow to knee height: this is how far the cleaning machines hit it.
 	kit.box(
-		parts.steel,
+		parts.paint,
 		Transform3D(basis, foot + Vector3.UP * 0.55),
 		Vector3(0.9, 1.1, 1.6),
-		Color(0.8, 0.6, 0.08)
+		Color.WHITE
 	)
 	# Flaring into the roof, which is the look of a thing holding up a city.
 	var knee := foot + Vector3.UP * (ROOF - 2.2)

@@ -16,6 +16,7 @@ extends Node3D
 
 const WARMUP_FRAMES := 60
 const TARGET_FPS := 30
+const RAIN := 0.65
 const BIOME_REPLAYS: Dictionary[String, String] = {
 	"forest": "res://replays/benchmark.json",
 	"neon": "res://replays/neon.json",
@@ -152,7 +153,9 @@ func _send_time() -> void:
 		RenderingServer.global_shader_parameter_set("ride_time", _time)
 		get_tree().call_group(&"ride_clock", &"set_ride_time", _time)
 		var open := _districts.open_to_the_sky(replay.distance_at(_time))
-		((_rain.mesh as QuadMesh).material as ShaderMaterial).set_shader_parameter("amount", open)
+		((_rain.mesh as QuadMesh).material as ShaderMaterial).set_shader_parameter(
+			"amount", open * RAIN
+		)
 
 
 ## Metrics that say whether the ride was smooth, not just fast on average.

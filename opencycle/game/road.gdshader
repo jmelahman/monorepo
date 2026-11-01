@@ -35,11 +35,11 @@ void fragment() {
 	vec3 normal_map = texture(normals, uv).xyz;
 	float dry = texture(rough, uv).g;
 	vec2 at = world.xz;
-	float broad = noise(at * 0.13) * 0.55 + noise(at * 0.47) * 0.3 + noise(at * 1.9) * 0.15;
+	float broad = noise(at * 0.13) * 0.6 + noise(at * 0.47) * 0.32 + noise(at * 1.9) * 0.08;
 	// Tyres wear a sheen down the middle of each lane, and water stands at the edges.
 	float gutter = smoothstep(2.6, 4.0, abs(UV.x));
 	float damp = clamp(broad * 1.2 - 0.25 + gutter * 0.3, 0.0, 1.0) * wetness;
-	float puddle = smoothstep(0.6, 0.63, broad);
+	float puddle = smoothstep(0.62, 0.67, broad);
 	base *= tint * mix(0.5, 0.22, damp);
 	base = mix(base, base * 0.25, puddle);
 	ALBEDO = base;

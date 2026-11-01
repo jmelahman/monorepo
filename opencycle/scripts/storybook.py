@@ -29,9 +29,11 @@ BIOME = "neon"
 SHOTS = (
     (4, "Start of the ride", ""),
     (14, "Mid street", ""),
-    (30, "Further along", ""),
+    (42, "The underpass", ""),
+    (69, "The works", ""),
+    (90, "The plaza", ""),
+    (87, "The ring in the plaza", "55,8,0"),
     (14, "Left wall up close", "62,0,-2"),
-    (30, "Right wall up close", "-58,6,3"),
 )
 RENDER_TIMEOUT = 300
 
