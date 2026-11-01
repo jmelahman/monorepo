@@ -24,6 +24,9 @@ add=()
 for p in "${paths[@]}"; do add+=(-a "$p"); done
 
 reports=.godot-home/reports
+# gdUnit4 trims its own history past 20 runs by a path it gets wrong, and every delete it
+# fails counts as a script error below. Only the latest report is ever read anyway.
+rm -rf "$reports"
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 
