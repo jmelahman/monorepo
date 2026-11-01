@@ -4,7 +4,7 @@ extends RefCounted
 ## stands on, mostly shuttered, lit by what falls through a slot overhead and the few signs
 ## still on. The lighting is art-directed. docs/realism-standard.md is what it's held to.
 
-const LENGTH := 200.0
+const LENGTH := 1000.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
 ## Wide enough to look up: the tall city overhead is half of what's worth seeing.
 const FOV := 68.0

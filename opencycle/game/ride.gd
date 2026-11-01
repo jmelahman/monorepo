@@ -60,6 +60,7 @@ func _ready() -> void:
 	match biome:
 		"neon":
 			NeonBiome.build(self, run_seed, route, quality)
+			_camera.add_child(Weather.rain())
 			_uses_ride_time = true
 			_camera.fov = NeonBiome.FOV
 		_:

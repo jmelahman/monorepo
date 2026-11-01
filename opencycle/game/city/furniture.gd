@@ -10,6 +10,8 @@ const BAG := "res://assets/polyhaven/trashbag/trashbag_1k.gltf"
 const BIN := "res://assets/polyhaven/metal_trash_can/metal_trash_can_1k.gltf"
 const BIN_SCALE := 0.75
 const COVER := "res://assets/polyhaven/water_manhole_cover/water_manhole_cover_1k.gltf"
+## The scan's frame stands 4 cm proud of its origin, which read as a puck on the road.
+const COVER_SUNK := 0.03
 const LADDER := "res://assets/polyhaven/ladder_sectioned_01/ladder_sectioned_01_1k.gltf"
 const LAMP_HEIGHT := 7.2
 const ARM := 1.9
@@ -86,7 +88,7 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 				var square := Basis(route.tangent(prop.s), Vector3.UP, route.right(prop.s))
 				placed[UTILITY].append(Transform3D(square, ground))
 	for cover: Vector2 in street.covers:
-		var at := route.at(cover.x) + route.right(cover.x) * cover.y + Vector3.UP * 0.01
+		var at := route.at(cover.x) + route.right(cover.x) * cover.y + Vector3.DOWN * COVER_SUNK
 		placed[COVER].append(Transform3D(Basis.IDENTITY, at))
 	kit.commit(root)
 	for path: String in placed:

@@ -36,7 +36,8 @@ void fragment() {
 	float rain = streaks(uv, 90.0, 0.2, 7.0, 0.14) * 0.35
 			+ streaks(uv + 3.0, 160.0, 0.11, 8.0, 0.16) * 0.22
 			+ streaks(uv + 7.0, 280.0, 0.06, 9.0, 0.18) * 0.14;
-	vec3 behind = textureLod(screen, SCREEN_UV, 4.0).rgb;
+	// Capped, or it pours white through a plume of steam.
+	vec3 behind = min(textureLod(screen, SCREEN_UV, 4.0).rgb, vec3(0.3));
 	ALBEDO = (behind + vec3(0.12, 0.14, 0.2)) * rain * strength;
 	ALPHA = 1.0;
 }

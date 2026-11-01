@@ -32,7 +32,6 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 		var cover := street.covers[index]
 		if index % STEAM_EVERY == 0 and cover.x > -20.0 and cover.x < length + 120.0:
 			root.add_child(_steam(route, cover, float(index) * 0.37))
-	root.add_child(_rain())
 	return root
 
 
@@ -50,15 +49,16 @@ static func _steam(route: Route, cover: Vector2, phase: float) -> FogVolume:
 	return volume
 
 
-## A quad its shader pins to the whole screen, so where it stands doesn't matter.
-static func _rain() -> MeshInstance3D:
+## A quad its shader pins to the whole screen. It rides along with the camera, because one
+## left at the start of the route gets culled however large its margin.
+static func rain() -> MeshInstance3D:
 	var quad := QuadMesh.new()
 	quad.size = Vector2(2.0, 2.0)
 	var material := ShaderMaterial.new()
 	material.shader = RAIN
 	quad.material = material
-	var rain := MeshInstance3D.new()
-	rain.mesh = quad
-	rain.extra_cull_margin = 16384.0
-	rain.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	return rain
+	var drops := MeshInstance3D.new()
+	drops.mesh = quad
+	drops.extra_cull_margin = 16384.0
+	drops.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return drops

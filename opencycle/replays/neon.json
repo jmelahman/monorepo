@@ -1,13 +1,57 @@
 {
   "speed": [
-    { "at_m": 0, "kmh": 22 },
-    { "at_m": 120, "kmh": 28 },
-    { "at_m": 200, "kmh": 40 }
+    {
+      "at_m": 0,
+      "kmh": 22
+    },
+    {
+      "at_m": 120,
+      "kmh": 28
+    },
+    {
+      "at_m": 200,
+      "kmh": 30
+    },
+    {
+      "at_m": 1000,
+      "kmh": 30
+    }
   ],
   "camera": [
-    { "at_m": 0, "lateral": -1.2, "height": 0.0 },
-    { "at_m": 70, "lateral": -1.2, "height": 0.0 },
-    { "at_m": 110, "lateral": 0.8, "height": 0.05 },
-    { "at_m": 200, "lateral": 0.8, "height": 0.0 }
+    {
+      "at_m": 0,
+      "lateral": -1.2,
+      "height": 0.0
+    },
+    {
+      "at_m": 70,
+      "lateral": -1.2,
+      "height": 0.0
+    },
+    {
+      "at_m": 110,
+      "lateral": 0.8,
+      "height": 0.05
+    },
+    {
+      "at_m": 200,
+      "lateral": 0.8,
+      "height": 0.0
+    },
+    {
+      "at_m": 420,
+      "lateral": -0.9,
+      "height": 0.0
+    },
+    {
+      "at_m": 700,
+      "lateral": 0.9,
+      "height": 0.0
+    },
+    {
+      "at_m": 1000,
+      "lateral": 0.0,
+      "height": 0.0
+    }
   ]
 }
