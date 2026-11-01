@@ -548,121 +548,123 @@ export function ReleasesDashboard() {
       ?.subtrees.find((s) => s.prefix === r.prefix);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-6 overflow-auto p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Releases</h2>
-        <div className="flex items-center gap-2">
-          <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-            <input
-              type="checkbox"
-              checked={hideNever}
-              onChange={(e) => setHideNever(e.target.checked)}
+    <div className="h-full overflow-y-auto [scrollbar-gutter:stable]">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-3 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide">Releases</h2>
+          <div className="flex items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+              <input
+                type="checkbox"
+                checked={hideNever}
+                onChange={(e) => setHideNever(e.target.checked)}
+              />
+              hide unreleased
+            </label>
+            <Button
+              variant="primary"
+              size="lg"
+              pending={refreshMut.isPending}
+              idleLabel="refresh"
+              pendingLabel="refreshing…"
+              onClick={() => refreshMut.mutate()}
             />
-            hide unreleased
-          </label>
-          <Button
-            variant="neutral"
-            size="lg"
-            pending={refreshMut.isPending}
-            idleLabel="refresh"
-            pendingLabel="refreshing…"
-            onClick={() => refreshMut.mutate()}
-          />
+          </div>
         </div>
-      </div>
-      {summary.unavailable && <p className="text-sm text-danger">{summary.unavailable}</p>}
-      {refreshMut.error && <p className="text-sm text-danger">{String(refreshMut.error)}</p>}
+        {summary.unavailable && <p className="text-sm text-danger">{summary.unavailable}</p>}
+        {refreshMut.error && <p className="text-sm text-danger">{String(refreshMut.error)}</p>}
 
-      {openRun && <RunLog run={openRun} onEnd={onRunEnd} onClose={() => setOpenRun(null)} />}
+        {openRun && <RunLog run={openRun} onEnd={onRunEnd} onClose={() => setOpenRun(null)} />}
 
-      <section className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium">Reminders</h3>
-        {summary.reminders.length === 0 ? (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium">Reminders</h3>
+          {summary.reminders.length === 0 ? (
+            <p className="text-sm text-fg-muted">
+              Nothing to remember. Choose &ldquo;remind me later&rdquo; when releasing a subtree.
+            </p>
+          ) : (
+            <ul className="grid gap-2 md:grid-cols-2">
+              {summary.reminders.map((r) => (
+                <ReminderCard
+                  key={r.id}
+                  reminder={r}
+                  subtree={subtreeOf(r)}
+                  onEdit={() => setReminding({ repo: r.repo_path, prefix: r.prefix, reminder: r })}
+                  onRelease={() =>
+                    setReleasing({
+                      repo: r.repo_path,
+                      prefix: r.prefix,
+                      bump: r.bump,
+                      suffix: r.suffix,
+                      reminderId: r.id,
+                    })
+                  }
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {summary.projects.length === 0 && !summary.unavailable ? (
           <p className="text-sm text-fg-muted">
-            Nothing to remember. Choose &ldquo;remind me later&rdquo; when releasing a subtree.
+            No board's repo has a git-orchard manifest with subtrees.
           </p>
         ) : (
-          <ul className="grid gap-2 md:grid-cols-2">
-            {summary.reminders.map((r) => (
-              <ReminderCard
-                key={r.id}
-                reminder={r}
-                subtree={subtreeOf(r)}
-                onEdit={() => setReminding({ repo: r.repo_path, prefix: r.prefix, reminder: r })}
-                onRelease={() =>
-                  setReleasing({
-                    repo: r.repo_path,
-                    prefix: r.prefix,
-                    bump: r.bump,
-                    suffix: r.suffix,
-                    reminderId: r.id,
-                  })
-                }
-              />
-            ))}
-          </ul>
+          summary.projects.map((p) => (
+            <ProjectTable
+              key={p.repo_path}
+              project={p}
+              hideUnreleased={hideNever}
+              onRelease={(prefix) =>
+                setReleasing({ repo: p.repo_path, prefix, bump: "patch", suffix: "" })
+              }
+            />
+          ))
         )}
-      </section>
 
-      {summary.projects.length === 0 && !summary.unavailable ? (
-        <p className="text-sm text-fg-muted">
-          No board's repo has a git-orchard manifest with subtrees.
-        </p>
-      ) : (
-        summary.projects.map((p) => (
-          <ProjectTable
-            key={p.repo_path}
-            project={p}
-            hideUnreleased={hideNever}
-            onRelease={(prefix) =>
-              setReleasing({ repo: p.repo_path, prefix, bump: "patch", suffix: "" })
+        {summary.runs.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">Recent runs</h3>
+            <RunList
+              runs={summary.runs}
+              onOpen={setOpenRun}
+              onRetry={(run) =>
+                setReleasing({
+                  repo: run.repo_path,
+                  prefix: run.prefix,
+                  bump: run.bump,
+                  suffix: run.suffix,
+                  reminderId: run.reminder_id,
+                })
+              }
+            />
+          </section>
+        )}
+
+        {releasing && (
+          <ReleaseModal
+            target={releasing}
+            onClose={() => setReleasing(null)}
+            onRemind={
+              releasing.reminderId === undefined &&
+              !summary.reminders.some(
+                (r) => r.repo_path === releasing.repo && r.prefix === releasing.prefix,
+              )
+                ? (bump) => {
+                    setReleasing(null);
+                    setReminding({ repo: releasing.repo, prefix: releasing.prefix, bump });
+                  }
+                : undefined
             }
+            onStarted={(run) => {
+              setReleasing(null);
+              setOpenRun(run);
+              qc.invalidateQueries({ queryKey: queryKeys.releases });
+            }}
           />
-        ))
-      )}
-
-      {summary.runs.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Recent runs</h3>
-          <RunList
-            runs={summary.runs}
-            onOpen={setOpenRun}
-            onRetry={(run) =>
-              setReleasing({
-                repo: run.repo_path,
-                prefix: run.prefix,
-                bump: run.bump,
-                suffix: run.suffix,
-                reminderId: run.reminder_id,
-              })
-            }
-          />
-        </section>
-      )}
-
-      {releasing && (
-        <ReleaseModal
-          target={releasing}
-          onClose={() => setReleasing(null)}
-          onRemind={
-            releasing.reminderId === undefined &&
-            !summary.reminders.some(
-              (r) => r.repo_path === releasing.repo && r.prefix === releasing.prefix,
-            )
-              ? (bump) => {
-                  setReleasing(null);
-                  setReminding({ repo: releasing.repo, prefix: releasing.prefix, bump });
-                }
-              : undefined
-          }
-          onStarted={(run) => {
-            setReleasing(null);
-            setOpenRun(run);
-            qc.invalidateQueries({ queryKey: queryKeys.releases });
-          }}
-        />
-      )}
-      {reminding && <ReminderModal {...reminding} onClose={() => setReminding(null)} />}
+        )}
+        {reminding && <ReminderModal {...reminding} onClose={() => setReminding(null)} />}
+      </div>
     </div>
   );
 }
