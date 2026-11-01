@@ -8,7 +8,7 @@ A repo appears here when a board uses it and it has a git-orchard manifest.
 
 A reminder is a note against a subtree, with the bump you intend: "release a minor of git-orchard, it has the new X". It doesn't watch tickets, PRs or commits, and it never fires by itself. You decide when the change is in.
 
-Each subtree has at most one open reminder, so a second thought goes in the same note. A successful release closes it.
+Add one with **remind me later** in a subtree's release dialog. Each subtree has at most one open reminder, so a second thought goes in the same note, with **edit**. A successful release closes it.
 
 ## Subtree state
 
@@ -18,7 +18,7 @@ It also shows each subtree's latest GitHub Actions runs on its upstream, checked
 
 ## Releasing
 
-**Release...** fetches, then shows the version and commit that would be released: the tip of the board's base branch on `origin`. Your checkout isn't touched.
+**release** fetches, then shows the version and commit that would be released: the tip of the board's base branch on `origin`. Your checkout isn't touched.
 
 If the upstream lacks commits from that branch, the mirror hasn't published them yet, and the release is blocked until it has. Confirming sends back what you saw, so if the branch has moved on, the release is refused rather than tagging something you didn't review.
 

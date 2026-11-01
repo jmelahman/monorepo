@@ -62,7 +62,8 @@ class ReleaseProject {
   }
 
   async remind(prefix: string, bump: string, note: string) {
-    await this.row(prefix).getByRole("button", { name: "remind", exact: true }).click();
+    await this.openRelease(prefix);
+    await this.page.getByRole("button", { name: "remind me later" }).click();
     const modal = this.page.getByRole("dialog");
     await modal.getByLabel("Bump").selectOption(bump);
     await modal.getByRole("textbox").fill(note);

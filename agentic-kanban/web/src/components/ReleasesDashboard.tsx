@@ -102,10 +102,13 @@ function ReleaseModal({
   target,
   onClose,
   onStarted,
+  onRemind,
 }: {
   target: ReleaseTarget;
   onClose: () => void;
   onStarted: (run: ReleaseRun) => void;
+  /** Absent where a reminder already exists or this release came from one. */
+  onRemind?: (bump: ReleaseBump) => void;
 }) {
   const [bump, setBump] = useState(target.bump);
   const previewQ = useQuery({
@@ -155,6 +158,17 @@ function ReleaseModal({
         ) : null}
         {error && <p className="text-danger">{String(error)}</p>}
         <div className="flex justify-end gap-2">
+          {onRemind && (
+            <Button
+              variant="ghost"
+              size="lg"
+              className="mr-auto"
+              onClick={() => onRemind(bump)}
+              disabled={runMut.isPending}
+            >
+              remind me later
+            </Button>
+          )}
           <Button variant="neutral" size="lg" onClick={onClose} disabled={runMut.isPending}>
             cancel
           </Button>
@@ -178,15 +192,18 @@ function ReminderModal({
   repo,
   prefix,
   reminder,
+  bump: initialBump,
   onClose,
 }: {
   repo: string;
   prefix: string;
   reminder?: ReleaseReminder;
+  /** What a new reminder starts with, such as the bump just being looked at. */
+  bump?: ReleaseBump;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const [bump, setBump] = useState<ReleaseBump>(reminder?.bump ?? "patch");
+  const [bump, setBump] = useState<ReleaseBump>(reminder?.bump ?? initialBump ?? "patch");
   const [note, setNote] = useState(reminder?.note ?? "");
   const saveMut = useMutation({
     mutationFn: () =>
@@ -369,15 +386,11 @@ function CICell({ ci }: { ci?: ReleaseCI }) {
 
 function ProjectTable({
   project,
-  reminders,
   onRelease,
-  onRemind,
   unreleasedOnly,
 }: {
   project: ReleaseProject;
-  reminders: ReleaseReminder[];
   onRelease: (prefix: string) => void;
-  onRemind: (prefix: string) => void;
   unreleasedOnly: boolean;
 }) {
   const qc = useQueryClient();
@@ -429,11 +442,6 @@ function ProjectTable({
                   <CICell ci={s.ci} />
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
-                  {!reminders.some((r) => r.prefix === s.prefix) && (
-                    <Button variant="ghost" size="sm" onClick={() => onRemind(s.prefix)}>
-                      remind
-                    </Button>
-                  )}
                   <Button
                     variant="neutral"
                     size="sm"
@@ -511,6 +519,7 @@ export function ReleasesDashboard() {
     repo: string;
     prefix: string;
     reminder?: ReleaseReminder;
+    bump?: ReleaseBump;
   } | null>(null);
   const [neverOnly, setNeverOnly] = useState(false);
   const [openRun, setOpenRun] = useState<ReleaseRun | null>(null);
@@ -531,7 +540,6 @@ export function ReleasesDashboard() {
   }
   if (!summary) return <p className="p-4 text-sm text-fg-muted">Loading…</p>;
 
-  const remindersIn = (repo: string) => summary.reminders.filter((r) => r.repo_path === repo);
   const neverCount = summary.projects.reduce(
     (n, p) => n + p.subtrees.filter(neverReleased).length,
     0,
@@ -574,7 +582,7 @@ export function ReleasesDashboard() {
         <h3 className="text-sm font-medium">Reminders</h3>
         {summary.reminders.length === 0 ? (
           <p className="text-sm text-fg-muted">
-            Nothing to remember. Add a reminder from a subtree below.
+            Nothing to remember. Choose &ldquo;remind me later&rdquo; when releasing a subtree.
           </p>
         ) : (
           <ul className="grid gap-2 md:grid-cols-2">
@@ -608,9 +616,7 @@ export function ReleasesDashboard() {
           <ProjectTable
             key={p.repo_path}
             project={p}
-            reminders={remindersIn(p.repo_path)}
             unreleasedOnly={neverOnly}
-            onRemind={(prefix) => setReminding({ repo: p.repo_path, prefix })}
             onRelease={(prefix) =>
               setReleasing({ repo: p.repo_path, prefix, bump: "patch", suffix: "" })
             }
@@ -641,6 +647,17 @@ export function ReleasesDashboard() {
         <ReleaseModal
           target={releasing}
           onClose={() => setReleasing(null)}
+          onRemind={
+            releasing.reminderId === undefined &&
+            !summary.reminders.some(
+              (r) => r.repo_path === releasing.repo && r.prefix === releasing.prefix,
+            )
+              ? (bump) => {
+                  setReleasing(null);
+                  setReminding({ repo: releasing.repo, prefix: releasing.prefix, bump });
+                }
+              : undefined
+          }
           onStarted={(run) => {
             setReleasing(null);
             setOpenRun(run);
