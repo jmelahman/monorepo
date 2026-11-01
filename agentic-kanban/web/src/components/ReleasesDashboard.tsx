@@ -71,6 +71,16 @@ function unreleasedLabel(s: ReleaseSubtree | undefined) {
   return `${s.unreleased} unreleased commit${s.unreleased === 1 ? "" : "s"}`;
 }
 
+function previewOptions(repo: string, prefix: string, bump: ReleaseBump, suffix: string) {
+  return {
+    queryKey: queryKeys.releasePreview(repo, prefix, bump, suffix),
+    queryFn: () => api.previewRelease(repo, prefix, bump, suffix),
+    // A preview is reusable for a while; the server rechecks it when the run starts.
+    gcTime: PREVIEW_CACHE_MS,
+    staleTime: PREVIEW_STALE_MS,
+  };
+}
+
 type ReleaseTarget = {
   repo: string;
   prefix: string;
@@ -94,11 +104,7 @@ function ReleaseModal({
 }) {
   const [bump, setBump] = useState(target.bump);
   const previewQ = useQuery({
-    queryKey: queryKeys.releasePreview(target.repo, target.prefix, bump, target.suffix),
-    queryFn: () => api.previewRelease(target.repo, target.prefix, bump, target.suffix),
-    // A preview is reusable for a while; the server rechecks it when the run starts.
-    gcTime: PREVIEW_CACHE_MS,
-    staleTime: PREVIEW_STALE_MS,
+    ...previewOptions(target.repo, target.prefix, bump, target.suffix),
     retry: false,
   });
   const preview = previewQ.data;
@@ -367,6 +373,10 @@ function ProjectTable({
   onRelease: (prefix: string) => void;
   onRemind: (prefix: string) => void;
 }) {
+  const qc = useQueryClient();
+  // Reaching for the button is the cue to start the fetch the modal will want.
+  const warm = (prefix: string) =>
+    qc.prefetchQuery(previewOptions(project.repo_path, prefix, "patch", ""));
   return (
     <section className="flex flex-col gap-2">
       <h3 className="text-sm font-medium">
@@ -419,6 +429,8 @@ function ProjectTable({
                     variant="neutral"
                     size="sm"
                     className={chip}
+                    onMouseEnter={() => warm(s.prefix)}
+                    onFocus={() => warm(s.prefix)}
                     onClick={() => onRelease(s.prefix)}
                   >
                     release
@@ -497,6 +509,13 @@ export function ReleasesDashboard() {
   });
 
   const summary = summaryQ.data;
+  const reminders = summary?.reminders;
+  // Reminders are what's about to be released, so have their previews ready.
+  useEffect(() => {
+    for (const r of reminders ?? []) {
+      qc.prefetchQuery(previewOptions(r.repo_path, r.prefix, r.bump, r.suffix));
+    }
+  }, [qc, reminders]);
   if (summaryQ.error) {
     return <p className="p-4 text-sm text-danger">{String(summaryQ.error)}</p>;
   }
