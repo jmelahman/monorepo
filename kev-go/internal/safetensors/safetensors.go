@@ -29,6 +29,7 @@ type File struct {
 	f       *os.File
 	data    int64
 	tensors map[string]Info
+	meta    map[string]string
 }
 
 // Open reads the header of the safetensors file at path and checks that every
@@ -69,6 +70,9 @@ func parse(f *os.File) (*File, error) {
 	st := &File{f: f, data: int64(size) + 8, tensors: make(map[string]Info, len(raw))}
 	for name, value := range raw {
 		if name == "__metadata__" {
+			if err := json.Unmarshal(value, &st.meta); err != nil {
+				return nil, fmt.Errorf("metadata: %w", err)
+			}
 			continue
 		}
 		var info Info
@@ -118,6 +122,9 @@ func (st *File) Names() []string {
 	return names
 }
 
+// Metadata returns the header's free-form string metadata.
+func (st *File) Metadata() map[string]string { return st.meta }
+
 // Info returns the description of the named tensor.
 func (st *File) Info(name string) (Info, bool) {
 	info, ok := st.tensors[name]
@@ -135,16 +142,44 @@ func (st *File) Float32s(name string) ([]float32, error) {
 	if _, err := st.f.ReadAt(buf, st.data+int64(info.Offsets[0])); err != nil {
 		return nil, fmt.Errorf("read tensor %s: %w", name, err)
 	}
-	if info.DType == "BF16" {
-		out := make([]float32, len(buf)/2)
-		for i := range out {
-			out[i] = math.Float32frombits(uint32(binary.LittleEndian.Uint16(buf[i*2:])) << 16)
-		}
-		return out, nil
-	}
-	out := make([]float32, len(buf)/4)
-	for i := range out {
-		out[i] = math.Float32frombits(binary.LittleEndian.Uint32(buf[i*4:]))
-	}
+	width, _ := elementSize(info.DType)
+	out := make([]float32, len(buf)/width)
+	decode(out, buf, width)
 	return out, nil
+}
+
+// ReadRow reads row i of the named matrix into dst, whose length must be the
+// row's. It lets a table too big to keep in memory, like an embedding, stay on
+// disk. It's safe for concurrent use.
+func (st *File) ReadRow(name string, i int, dst []float32, buf []byte) ([]byte, error) {
+	info, ok := st.tensors[name]
+	if !ok {
+		return buf, fmt.Errorf("no tensor %s", name)
+	}
+	if len(info.Shape) != 2 || i < 0 || i >= info.Shape[0] || len(dst) != info.Shape[1] {
+		return buf, fmt.Errorf("tensor %s: no row %d of length %d in shape %v", name, i, len(dst), info.Shape)
+	}
+	width, _ := elementSize(info.DType)
+	size := len(dst) * width
+	if cap(buf) < size {
+		buf = make([]byte, size)
+	}
+	buf = buf[:size]
+	if _, err := st.f.ReadAt(buf, st.data+int64(info.Offsets[0])+int64(i*size)); err != nil {
+		return buf, fmt.Errorf("read tensor %s: %w", name, err)
+	}
+	decode(dst, buf, width)
+	return buf, nil
+}
+
+func decode(dst []float32, buf []byte, width int) {
+	if width == 2 {
+		for i := range dst {
+			dst[i] = math.Float32frombits(uint32(binary.LittleEndian.Uint16(buf[i*2:])) << 16)
+		}
+		return
+	}
+	for i := range dst {
+		dst[i] = math.Float32frombits(binary.LittleEndian.Uint32(buf[i*4:]))
+	}
 }

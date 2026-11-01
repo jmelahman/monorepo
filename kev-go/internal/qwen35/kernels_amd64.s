@@ -1,0 +1,89 @@
+#include "textflag.h"
+
+// func dotAVX2(a, b *float32, n int) float32
+TEXT ·dotAVX2(SB), NOSPLIT, $0-28
+	MOVQ a+0(FP), SI
+	MOVQ b+8(FP), DI
+	MOVQ n+16(FP), CX
+	VXORPS Y0, Y0, Y0
+	VXORPS Y1, Y1, Y1
+	VXORPS Y2, Y2, Y2
+	VXORPS Y3, Y3, Y3
+blocks:
+	CMPQ CX, $32
+	JLT singles
+	VMOVUPS (SI), Y4
+	VMOVUPS 32(SI), Y5
+	VMOVUPS 64(SI), Y6
+	VMOVUPS 96(SI), Y7
+	VFMADD231PS (DI), Y4, Y0
+	VFMADD231PS 32(DI), Y5, Y1
+	VFMADD231PS 64(DI), Y6, Y2
+	VFMADD231PS 96(DI), Y7, Y3
+	ADDQ $128, SI
+	ADDQ $128, DI
+	SUBQ $32, CX
+	JMP blocks
+singles:
+	CMPQ CX, $8
+	JLT sum
+	VMOVUPS (SI), Y4
+	VFMADD231PS (DI), Y4, Y0
+	ADDQ $32, SI
+	ADDQ $32, DI
+	SUBQ $8, CX
+	JMP singles
+sum:
+	VADDPS Y1, Y0, Y0
+	VADDPS Y3, Y2, Y2
+	VADDPS Y2, Y0, Y0
+	VEXTRACTF128 $1, Y0, X1
+	VADDPS X1, X0, X0
+	VHADDPS X0, X0, X0
+	VHADDPS X0, X0, X0
+tail:
+	TESTQ CX, CX
+	JEQ done
+	VMOVSS (SI), X4
+	VFMADD231SS (DI), X4, X0
+	ADDQ $4, SI
+	ADDQ $4, DI
+	DECQ CX
+	JMP tail
+done:
+	VZEROUPPER
+	MOVSS X0, ret+24(FP)
+	RET
+
+// func axpyAVX2(alpha float32, x, y *float32, n int)
+TEXT ·axpyAVX2(SB), NOSPLIT, $0-32
+	VBROADCASTSS alpha+0(FP), Y0
+	MOVQ x+8(FP), SI
+	MOVQ y+16(FP), DI
+	MOVQ n+24(FP), CX
+blocks:
+	CMPQ CX, $16
+	JLT singles
+	VMOVUPS (DI), Y1
+	VMOVUPS 32(DI), Y2
+	VFMADD231PS (SI), Y0, Y1
+	VFMADD231PS 32(SI), Y0, Y2
+	VMOVUPS Y1, (DI)
+	VMOVUPS Y2, 32(DI)
+	ADDQ $64, SI
+	ADDQ $64, DI
+	SUBQ $16, CX
+	JMP blocks
+singles:
+	TESTQ CX, CX
+	JEQ done
+	VMOVSS (DI), X1
+	VFMADD231SS (SI), X0, X1
+	VMOVSS X1, (DI)
+	ADDQ $4, SI
+	ADDQ $4, DI
+	DECQ CX
+	JMP singles
+done:
+	VZEROUPPER
+	RET
