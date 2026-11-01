@@ -6,6 +6,9 @@ extends RefCounted
 ## through a slot over the road.
 
 const DECK_HEIGHT := 33.0
+## How far the slot opens either side of the road, over a plaza.
+const OCULUS_HALF := 18.0
+const OCULUS_EASE := 18.0
 const SLOT_HALF := 4.0
 ## How far past the ride's ends the deck carries on.
 const REACH := 240.0
@@ -67,10 +70,12 @@ var ribs: Array[Rib] = []
 var ducts: Array[Duct] = []
 var shafts: Array[Shaft] = []
 var lanes: Array[Lane] = []
+var districts: Districts
 
 
 static func generate(run_seed: int, street: Street, kerb: float, length: float) -> Undercity:
 	var city := Undercity.new()
+	city.districts = street.districts
 	var wall := kerb + Street.SIDEWALK
 	city._raise_pylons(run_seed, street, wall, length)
 	city._frame_deck(run_seed, wall, length)
@@ -91,8 +96,10 @@ func _raise_pylons(run_seed: int, street: Street, wall: float, length: float) ->
 			pylon.side = side
 			pylon.width = lerpf(3.5, 6.0, Rng.unit(cell, 0))
 			pylon.depth = minf(lerpf(2.0, 3.2, Rng.unit(cell, 1)), wall * 0.3)
-			pylons.append(pylon)
-			Skyline._clear_signs(street, s, pylon.width * 0.5 + 1.0, 0.0, DECK_HEIGHT, side)
+			# Nothing to stand against out on a plaza.
+			if districts.kind_at(s) != Districts.Kind.PLAZA:
+				pylons.append(pylon)
+				Skyline._clear_signs(street, s, pylon.width * 0.5 + 1.0, 0.0, DECK_HEIGHT, side)
 			s += lerpf(PYLON_MIN, PYLON_MAX, Rng.unit(cell, 2))
 			index += 1
 
@@ -108,7 +115,8 @@ func _frame_deck(run_seed: int, wall: float, length: float) -> void:
 		rib.drop = lerpf(1.4, 6.5, pow(Rng.unit(cell, 0), 2.0))
 		rib.long = lerpf(1.2, 3.4, Rng.unit(cell, 1))
 		rib.lit = Rng.unit(cell, 2) < 0.5
-		ribs.append(rib)
+		if districts.kind_at(s) != Districts.Kind.PLAZA:
+			ribs.append(rib)
 		s += lerpf(RIB_MIN, RIB_MAX, Rng.unit(cell, 3))
 		index += 1
 	for i: int in DUCTS:
@@ -131,7 +139,9 @@ func _open_slot(run_seed: int, length: float) -> void:
 		shaft.s = s
 		shaft.offset = (Rng.unit(cell, 0) * 2.0 - 1.0) * SLOT_HALF * 0.7
 		shaft.power = lerpf(0.6, 1.0, Rng.unit(cell, 1))
-		shafts.append(shaft)
+		# Under a roof, there'd be nothing to see of it.
+		if districts.kind_at(s) != Districts.Kind.UNDERPASS:
+			shafts.append(shaft)
 		s += lerpf(SHAFT_MIN, SHAFT_MAX, Rng.unit(cell, 2))
 		index += 1
 
@@ -147,3 +157,12 @@ func _open_lanes(run_seed: int, kerb: float) -> void:
 		lane.speed = lerpf(16.0, 34.0, Rng.unit(cell, 2))
 		lane.phase = Rng.unit(cell, 3) * 400.0
 		lanes.append(lane)
+
+
+## How far the slot in the deck reaches either side of the road here.
+func slot_half(s: float) -> float:
+	var open := 0.0
+	for stretch: Districts.Stretch in districts.of_kind(Districts.Kind.PLAZA):
+		var inside := minf(s - stretch.from, stretch.to - s)
+		open = maxf(open, smoothstep(0.0, OCULUS_EASE, inside))
+	return lerpf(SLOT_HALF, OCULUS_HALF, open)

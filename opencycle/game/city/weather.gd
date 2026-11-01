@@ -31,11 +31,11 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	for index: int in street.covers.size():
 		var cover := street.covers[index]
 		if index % STEAM_EVERY == 0 and cover.x > -20.0 and cover.x < length + 120.0:
-			root.add_child(_steam(route, cover, float(index) * 0.37))
+			root.add_child(steam(route, cover, float(index) * 0.37))
 	return root
 
 
-static func _steam(route: Route, cover: Vector2, phase: float) -> FogVolume:
+static func steam(route: Route, cover: Vector2, phase: float) -> FogVolume:
 	var material := ShaderMaterial.new()
 	material.shader = STEAM
 	material.set_shader_parameter("phase", phase)

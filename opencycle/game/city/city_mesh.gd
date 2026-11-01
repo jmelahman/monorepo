@@ -269,6 +269,29 @@ func bar(
 	)
 
 
+## A round length of pipe, for anything a [method bar] would make look like a plank.
+func tube(
+	material: Material,
+	from: Vector3,
+	to: Vector3,
+	radius: float,
+	color := Color.WHITE,
+	sides := 10,
+) -> void:
+	var axis := (to - from).normalized()
+	var side := axis.cross(Vector3.UP)
+	if side.length_squared() < 0.0001:
+		side = axis.cross(Vector3.RIGHT)
+	var across := side.normalized()
+	var other := axis.cross(across).normalized()
+	for index: int in sides:
+		var turn := TAU * index / sides
+		var next := TAU * (index + 1) / sides
+		var a := (across * cos(turn) + other * sin(turn)) * radius
+		var b := (across * cos(next) + other * sin(next)) * radius
+		quad(material, from + a, from + b, to + b, to + a, (a + b).normalized(), color)
+
+
 ## Turns everything added into meshes under [param root].
 func commit(root: Node3D) -> void:
 	for key: Vector2i in _bins:

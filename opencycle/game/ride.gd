@@ -36,6 +36,8 @@ var _warmup := WARMUP_FRAMES
 var _primitives := 0
 var _draw_calls := 0
 var _uses_ride_time := false
+var _rain: MeshInstance3D
+var _districts: Districts
 
 @onready var _camera: Camera3D = %Camera
 
@@ -60,7 +62,9 @@ func _ready() -> void:
 	match biome:
 		"neon":
 			NeonBiome.build(self, run_seed, route, quality)
-			_camera.add_child(Weather.rain())
+			_rain = Weather.rain()
+			_camera.add_child(_rain)
+			_districts = Districts.generate(run_seed, NeonBiome.LENGTH)
 			_uses_ride_time = true
 			_camera.fov = NeonBiome.FOV
 		_:
@@ -147,6 +151,8 @@ func _send_time() -> void:
 	if _uses_ride_time:
 		RenderingServer.global_shader_parameter_set("ride_time", _time)
 		get_tree().call_group(&"ride_clock", &"set_ride_time", _time)
+		var open := _districts.open_to_the_sky(replay.distance_at(_time))
+		((_rain.mesh as QuadMesh).material as ShaderMaterial).set_shader_parameter("amount", open)
 
 
 ## Metrics that say whether the ride was smooth, not just fast on average.

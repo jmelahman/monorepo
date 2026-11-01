@@ -17,6 +17,8 @@ const SIGN_BASE := 4.6
 ## From the wall to over the road's edge, leaving the middle open to the sky above it.
 const MAX_OVERHANG := 4.6
 const CLOSED_CHANCE := 0.78
+const CLOSED_UNDERPASS := 0.9
+const CLOSED_WORKS := 0.95
 ## Most buildings down here have nobody left to advertise.
 const SIGNED_TOWERS := 0.25
 const FACADES := 4
@@ -124,18 +126,23 @@ var patches: Array[Vector4] = []
 var lamps: Array[float] = []
 ## Covers set in the road, as [s, offset].
 var covers: Array[Vector2] = []
+var districts: Districts
+## Where the street stops having a wall, for the plaza: from, to and side.
+var openings: Array[Vector3] = []
 
 
 ## A street along the route over [code][0, length][/code].
 static func generate(run_seed: int, length: float, kerb: float) -> Street:
 	var street := Street.new()
+	street.districts = Districts.generate(run_seed, length)
 	for side: float in [-1.0, 1.0]:
 		street._line_side(run_seed, side, length, kerb)
 		street._dress_kerb(run_seed, side, length, kerb)
 	street._dig_up_road(run_seed, length, kerb)
 	var s := -REACH
 	while s < length + REACH:
-		street.lamps.append(s)
+		if street.districts.kind_at(s) != Districts.Kind.UNDERPASS:
+			street.lamps.append(s)
 		s += LAMP_SPACING
 	return street
 
@@ -150,6 +157,12 @@ func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
 		tower.side = side
 		tower.width = lerpf(LOT_MIN, LOT_MAX, Rng.unit(cell, 0))
 		tower.s = s + tower.width * 0.5
+		# Whole lots come out for the plaza, so its edges fall where the buildings end.
+		if districts.kind_at(tower.s) == Districts.Kind.PLAZA:
+			_leave_open(s, s + tower.width, side)
+			s += tower.width
+			index += 1
+			continue
 		tower.depth = lerpf(14.0, 26.0, Rng.unit(cell, 1))
 		# All of them run up into the deck, so there is no skyline down here.
 		tower.height = lerpf(46.0, 70.0, Rng.unit(cell, 2))
@@ -169,6 +182,14 @@ func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
 		_hang_signs(Rng.derive(cell, [2]), tower)
 		s += tower.width
 		index += 1
+
+
+func _leave_open(from: float, to: float, side: float) -> void:
+	# Vector3 holds these in less precision than they were added up in.
+	if not openings.is_empty() and is_equal_approx(openings[-1].y, from) and openings[-1].z == side:
+		openings[-1] = Vector3(openings[-1].x, to, side)
+	else:
+		openings.append(Vector3(from, to, side))
 
 
 func _hang_units(cell: int, tower: Tower) -> void:
@@ -197,7 +218,7 @@ func _fill_with_shops(cell: int, tower: Tower, kerb: float) -> void:
 		shop.s = from + width * 0.5
 		shop.depth = lerpf(4.5, 8.0, Rng.unit(slot, 1))
 		shop.trade = STREET_TRADES[int(Rng.unit(slot, 2) * STREET_TRADES.size())]
-		shop.open = Rng.unit(slot, 3) > CLOSED_CHANCE
+		shop.open = Rng.unit(slot, 3) > _closed_chance(shop.s)
 		shop.pick = Rng.unit(slot, 4)
 		shops.append(shop)
 		if shop.open:
@@ -205,6 +226,16 @@ func _fill_with_shops(cell: int, tower: Tower, kerb: float) -> void:
 			_spill_onto_pavement(slot, shop, kerb)
 		from += width
 		index += 1
+
+
+func _closed_chance(s: float) -> float:
+	match districts.kind_at(s):
+		Districts.Kind.UNDERPASS:
+			return CLOSED_UNDERPASS
+		Districts.Kind.WORKS:
+			return CLOSED_WORKS
+		_:
+			return CLOSED_CHANCE
 
 
 ## The shop's own name, flat above its door.
@@ -236,7 +267,7 @@ func _spill_onto_pavement(slot: int, shop: Shop, kerb: float) -> void:
 ## The odd sign for someone upstairs, out over the road and facing up it. Few enough down
 ## here that each one is a landmark, and mostly narrow vertical blades.
 func _hang_signs(cell: int, tower: Tower) -> void:
-	if Rng.unit(cell, 8) > SIGNED_TOWERS:
+	if Rng.unit(cell, 8) > SIGNED_TOWERS or districts.kind_at(tower.s) != Districts.Kind.MARKET:
 		if Rng.unit(cell, 9) < 0.4:
 			tower.jetty = lerpf(0.5, MAX_JETTY, Rng.unit(cell, 10))
 		return
@@ -283,7 +314,7 @@ func _dress_kerb(run_seed: int, side: float, length: float, kerb: float) -> void
 	while s < length + REACH:
 		var cell := Rng.derive(base, [index])
 		var run := lerpf(3.0, 14.0, Rng.unit(cell, 0))
-		if Rng.unit(cell, 1) < 0.55:
+		if Rng.unit(cell, 1) < 0.55 and districts.kind_at(s) != Districts.Kind.PLAZA:
 			railings.append(Vector3(s, s + run, side))
 		var pole := Prop.new()
 		var roll := Rng.unit(cell, 2)

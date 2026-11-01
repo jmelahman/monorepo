@@ -14,6 +14,8 @@ const COVER := "res://assets/polyhaven/water_manhole_cover/water_manhole_cover_1
 const COVER_SUNK := 0.03
 const LADDER := "res://assets/polyhaven/ladder_sectioned_01/ladder_sectioned_01_1k.gltf"
 const LAMP_HEIGHT := 7.2
+const LAMP_COLOUR := Color(0.7, 0.85, 1.0)
+const SODIUM := Color(1.0, 0.62, 0.26)
 const ARM := 1.9
 const RAIL_HEIGHT := 1.05
 const RAIL_PANEL := 2.0
@@ -44,9 +46,10 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 		kit.at(s)
 		_lamp(kit, route, s, side, steel, lamp_glow)
 		if s > -15.0 and s < length + 40.0:
-			root.add_child(_lamp_light(route, s, side))
+			var works := street.districts.kind_at(s) == Districts.Kind.WORKS
+			root.add_child(_lamp_light(route, s, side, SODIUM if works else LAMP_COLOUR))
 		side = -side
-	_cables(kit, route, length, cable)
+	_cables(kit, route, street.districts, length, cable)
 	var placed: Dictionary[String, Array] = {}
 	for path: String in [CRATE, UTILITY, STOOL, CARTON, BAG, BIN, COVER, LADDER]:
 		placed[path] = [] as Array[Transform3D]
@@ -194,9 +197,9 @@ static func _lamp(
 	kit.box(glow, Transform3D(basis, tip - Vector3.UP * 0.06), Vector3(0.2, 0.02, 0.5))
 
 
-static func _lamp_light(route: Route, s: float, side: float) -> OmniLight3D:
+static func _lamp_light(route: Route, s: float, side: float, colour: Color) -> OmniLight3D:
 	var pool := OmniLight3D.new()
-	pool.light_color = Color(0.7, 0.85, 1.0)
+	pool.light_color = colour
 	pool.light_energy = 1.1
 	pool.omni_range = 14.0
 	var outward := route.right(s) * side
@@ -209,14 +212,18 @@ static func _lamp_light(route: Route, s: float, side: float) -> OmniLight3D:
 
 
 ## Sagging cables strung across the street between buildings, bundled in twos and threes.
-static func _cables(kit: CityMesh, route: Route, length: float, material: Material) -> void:
+static func _cables(
+	kit: CityMesh, route: Route, districts: Districts, length: float, material: Material
+) -> void:
 	var wall := NeonBiome.STREET_HALF + Street.SIDEWALK
 	var index := 0
 	var s := -Street.REACH * 0.5
 	while s < length + Street.REACH * 0.5:
 		var dice := Rng.derive(index, [88])
 		kit.at(s)
-		var count := 1 + int(Rng.unit(dice, 0) * 3.0)
+		# Only strung where there's a wall each side and room above the road.
+		var strung := districts.kind_at(s) in [Districts.Kind.MARKET, Districts.Kind.WORKS]
+		var count := (1 + int(Rng.unit(dice, 0) * 3.0)) if strung else 0
 		var high := lerpf(8.0, 13.0, Rng.unit(dice, 1))
 		var skew := lerpf(-3.0, 3.0, Rng.unit(dice, 2))
 		for c: int in count:

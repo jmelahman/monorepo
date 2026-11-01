@@ -8,6 +8,8 @@ global uniform float ride_time;
 
 uniform sampler2D screen : hint_screen_texture, filter_linear_mipmap, repeat_disable;
 uniform float strength = 2.2;
+// Taken down under a roof.
+uniform float amount = 1.0;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -38,6 +40,6 @@ void fragment() {
 			+ streaks(uv + 7.0, 280.0, 0.06, 9.0, 0.18) * 0.14;
 	// Capped, or it pours white through a plume of steam.
 	vec3 behind = min(textureLod(screen, SCREEN_UV, 4.0).rgb, vec3(0.3));
-	ALBEDO = (behind + vec3(0.12, 0.14, 0.2)) * rain * strength;
+	ALBEDO = (behind + vec3(0.12, 0.14, 0.2)) * rain * strength * amount;
 	ALPHA = 1.0;
 }
