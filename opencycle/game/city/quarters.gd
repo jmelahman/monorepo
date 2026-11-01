@@ -12,8 +12,10 @@ const COLUMN_EVERY := 12.0
 const TUBE_RUN := 3.2
 const TUBE_GAP := 1.6
 const TUBE_DEAD := 0.14
-const TUBE := Color(0.5, 1.05, 0.62)
-const TUNNEL_LIGHT := Color(0.72, 1.0, 0.8)
+const TUBE := Color(0.72, 1.05, 0.82)
+const TUNNEL_LIGHT := Color(0.82, 1.0, 0.88)
+## Every so many bays a tube has failed, and the dark between pools is what gives the tunnel length.
+const TUNNEL_DARK_EVERY := 2
 const TUNNEL_LIT_EVERY := 12.0
 const TUNNEL_SHADOW_EVERY := 3
 const HAZARD := Color(2.6, 0.12, 0.06)
@@ -227,10 +229,33 @@ static func _tunnel_column(
 		Vector3(0.9, 1.1, 1.6),
 		Color.WHITE
 	)
+	_column_fittings(kit, basis, foot, parts)
 	# Flaring into the roof, which is the look of a thing holding up a city.
 	var knee := foot + Vector3.UP * (ROOF - 2.2)
 	var head := foot + route.right(s) * -side * 1.7 + Vector3.UP * (ROOF - 0.4)
 	kit.bar(parts.concrete, knee, head, 0.55, Color(0.46, 0.48, 0.46))
+
+
+## What's bolted to a column over the years: angle iron on its corners where lorries clip it,
+## steel bands round a repair, and a downpipe with its brackets.
+static func _column_fittings(kit: CityMesh, basis: Basis, foot: Vector3, parts: Parts) -> void:
+	var worn := Color(0.34, 0.32, 0.3)
+	for x: float in [-0.41, 0.41]:
+		for z: float in [-0.76, 0.76]:
+			var corner := foot + basis.x * x + basis.z * z
+			kit.bar(parts.steel, corner, corner + Vector3.UP * 2.6, 0.05, worn)
+	for high: float in [2.7, 3.3, 5.1]:
+		kit.box(
+			parts.steel,
+			Transform3D(basis, foot + Vector3.UP * high),
+			Vector3(0.86, 0.09, 1.56),
+			worn
+		)
+	var pipe := foot + basis.z * 0.5 - basis.x * 0.45
+	kit.tube(parts.steel, pipe, pipe + Vector3.UP * (ROOF - 0.6), 0.055, Color(0.42, 0.4, 0.34), 6)
+	for high: float in [1.4, 3.0, 4.6]:
+		var bracket := pipe + Vector3.UP * high
+		kit.box(parts.steel, Transform3D(basis, bracket), Vector3(0.14, 0.05, 0.14), worn)
 
 
 static func _warning_lamp(
@@ -295,30 +320,32 @@ static func _tunnel_lights(root: Node3D, route: Route, stretch: Districts.Stretc
 			# Only some throw shadows, but the columns' shadows are what give the place depth.
 			var spot := SpotLight3D.new()
 			spot.light_color = TUNNEL_LIGHT
-			spot.light_energy = 9.0
-			spot.light_volumetric_fog_energy = 0.5
-			spot.spot_range = 16.0
+			spot.light_energy = 16.0
+			spot.light_volumetric_fog_energy = 0.08
+			spot.spot_range = 18.0
 			spot.spot_angle = 72.0
 			spot.spot_attenuation = 0.7
 			spot.shadow_enabled = true
 			spot.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
 			spot.position = above
 			root.add_child(spot)
-		else:
+		elif index % TUNNEL_DARK_EVERY == 0:
 			var omni := OmniLight3D.new()
 			omni.light_color = TUNNEL_LIGHT
-			omni.light_energy = 2.2
-			omni.light_volumetric_fog_energy = 0.3
-			omni.omni_range = 13.0
+			omni.light_energy = 2.4
+			omni.light_volumetric_fog_energy = 0.0
+			omni.omni_range = 11.0
 			omni.position = above
 			root.add_child(omni)
 		for side: float in [-1.0, 1.0]:
-			# The tubes don't reach the walls, and this is all that gets to the shutters.
+			# The tubes don't reach the walls, so the shutters get old sodium lamps instead,
+			# whose warmth against the tubes is the only colour down here.
 			var fill := OmniLight3D.new()
-			fill.light_color = TUNNEL_LIGHT
-			fill.light_energy = 0.9
+			var warm := (index + int(side)) % 2 == 0
+			fill.light_color = SODIUM if warm else TUNNEL_LIGHT
+			fill.light_energy = 3.5 if warm else 1.0
 			fill.light_volumetric_fog_energy = 0.0
-			fill.omni_range = 8.0
+			fill.omni_range = 10.0
 			fill.position = route.at(s) + route.right(s) * side * (_wall() - 1.5) + Vector3.UP * 4.0
 			root.add_child(fill)
 		index += 1

@@ -12,6 +12,7 @@ const PAINT_SHADER: Shader = preload("res://game/road_paint.gdshader")
 const KERB_HEIGHT := 0.15
 const KERB_WIDTH := 0.26
 const PAINT_LIFT := 0.012
+const TUNNEL_REACH := 7.0
 
 
 static func build(route: Route, street: Street, length: float) -> Node3D:
@@ -24,6 +25,8 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	var road := _road_material(ROAD, Color(1.0, 1.0, 1.0))
 	# Fresher asphalt of the same kind: darker, and only by a little.
 	var patch := _road_material(ROAD, Color(0.8, 0.8, 0.82))
+	# Dry under the roof, where all it can mirror is the tubes a few metres overhead.
+	var covered := _road_material(ROAD, Color(0.92, 0.92, 0.92), 0.0, TUNNEL_REACH)
 	var paving := _paving()
 	var kerb := _plain(Color(0.42, 0.41, 0.39), 0.75)
 	var yellow := _paint(Vector3(0.3, 0.22, 0.06), 0.55)
@@ -32,7 +35,8 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	while s < end:
 		var next := minf(s + Route.STEP, end)
 		kit.at(s)
-		_strip(kit, route, s, next, -half, half, 0.0, road, 1.0)
+		var under_roof := street.districts.kind_at(s) == Districts.Kind.UNDERPASS
+		_strip(kit, route, s, next, -half, half, 0.0, covered if under_roof else road, 1.0)
 		for side: float in [-1.0, 1.0]:
 			var a := half * side
 			var b := (half + KERB_WIDTH) * side
@@ -129,22 +133,26 @@ static func _arrow(kit: CityMesh, route: Route, s: float, offset: float, paint: 
 	)
 
 
-static func _road_material(path: String, shade: Color) -> ShaderMaterial:
+static func _road_material(
+	path: String, shade: Color, puddles := 1.0, reach := 28.0
+) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = ROAD_SHADER
 	material.set_shader_parameter("albedo", load(path % "diffuse"))
 	material.set_shader_parameter("normals", load(path % "nor_gl"))
 	material.set_shader_parameter("rough", load(path % "rough"))
 	material.set_shader_parameter("tint", shade)
-	material.next_pass = _sheen(1.0, 1.0)
+	material.set_shader_parameter("puddles", puddles)
+	material.next_pass = _sheen(1.0, puddles, reach)
 	return material
 
 
-static func _sheen(strength: float, puddles: float) -> ShaderMaterial:
+static func _sheen(strength: float, puddles: float, reach := 28.0) -> ShaderMaterial:
 	var sheen := ShaderMaterial.new()
 	sheen.shader = SHEEN_SHADER
 	sheen.set_shader_parameter("strength", strength)
 	sheen.set_shader_parameter("puddles", puddles)
+	sheen.set_shader_parameter("reach", reach)
 	return sheen
 
 
