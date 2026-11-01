@@ -76,13 +76,15 @@ class Tier:
 		return Transform3D(basis, point(across, up, out))
 
 
-static func build(route: Route, street: Street) -> Node3D:
+static func build(route: Route, street: Street, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Facades"
 	var kit := CityMesh.new()
-	var materials := _materials()
+	var materials: Materials = Once.made("facades", _materials)
 	var units: Array[Transform3D] = []
 	for tower: Street.Tower in street.towers:
+		if not section.holds(tower.s):
+			continue
 		kit.at(tower.s)
 		_tower(kit, route, tower, materials, units)
 		if tower.s > -LIT_BEHIND and tower.s < NeonBiome.LENGTH + LIT_AHEAD:

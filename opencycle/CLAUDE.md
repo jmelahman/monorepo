@@ -94,3 +94,10 @@ clamped at the route's end, not metres. Anything animated
 runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on the
 `ride_clock` group. `game/wet_sheen.gdshader` is an additive second pass over the road,
 which mirrors the street by reading the screen.
+
+`CityStream` builds the street a section at a time as the rider comes to it, on a worker thread
+during a ride and synchronously for stills and movies. The sim still lays out the whole route, and
+each builder takes a `StreetSection`: it walks everything, keeps its dice in step, and makes only
+what `section.holds(s)`. A long piece goes through `section.takes(from, to)`, which keeps its section
+loaded until the rider is past the far end. Anything shared between sections (materials, kits) goes
+through `Once`, and a `Kit` clears itself on commit so it can serve the next.

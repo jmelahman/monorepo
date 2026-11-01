@@ -13,11 +13,33 @@ const COOL := Color(0.1, 0.8, 1.0)
 const HOT := Color(1.0, 0.3, 0.12)
 
 
-static func build(route: Route, street: Street, length: float) -> Node3D:
+static func build(route: Route, street: Street, length: float, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Signs"
 	var sheet := SignSheet.load_sheet()
 	var kit := CityMesh.new()
+	var used: Dictionary[String, Material] = Once.made("signage", _materials)
+	var face := used["face"]
+	var steel := used["steel"]
+	var brightest: Dictionary[Vector2i, Street.Sign] = {}
+	for index: int in street.signs.size():
+		var hung := street.signs[index]
+		if section.holds(hung.s):
+			kit.at(hung.s)
+			_hang(kit, route, hung, sheet, face, steel, float(index % 251) / 251.0)
+		if hung.overhang > 0.0 and hung.s > -SPILL_BEHIND and hung.s < length + SPILL_AHEAD:
+			var cell := Vector2i(floori(hung.s / SPILL_SPACING), int(hung.side))
+			if cell not in brightest or brightest[cell].size.x < hung.size.x:
+				brightest[cell] = hung
+	kit.commit(root)
+	# Picked from the whole street, so a cell cut in two by a section still gets just the one.
+	for cell: Vector2i in brightest:
+		if section.holds(brightest[cell].s):
+			root.add_child(_spill(route, brightest[cell], sheet))
+	return root
+
+
+static func _materials() -> Dictionary[String, Material]:
 	var face := ShaderMaterial.new()
 	face.shader = SHADER
 	face.set_shader_parameter("sheet", load(SHEET))
@@ -25,19 +47,7 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	steel.albedo_color = Color(0.11, 0.11, 0.12)
 	steel.roughness = 0.6
 	steel.metallic = 0.5
-	var brightest: Dictionary[Vector2i, Street.Sign] = {}
-	for index: int in street.signs.size():
-		var hung := street.signs[index]
-		kit.at(hung.s)
-		_hang(kit, route, hung, sheet, face, steel, float(index % 251) / 251.0)
-		if hung.overhang > 0.0 and hung.s > -SPILL_BEHIND and hung.s < length + SPILL_AHEAD:
-			var cell := Vector2i(floori(hung.s / SPILL_SPACING), int(hung.side))
-			if cell not in brightest or brightest[cell].size.x < hung.size.x:
-				brightest[cell] = hung
-	kit.commit(root)
-	for cell: Vector2i in brightest:
-		root.add_child(_spill(route, brightest[cell], sheet))
-	return root
+	return {"face": face, "steel": steel}
 
 
 ## The colour a big sign throws on everything near it, which is what ties the signs to

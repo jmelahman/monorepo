@@ -9,10 +9,45 @@ const STEEL := Color(0.05, 0.05, 0.06)
 const SIGN_SHEET := "res://assets/baked/signs.webp"
 
 
-static func build(route: Route, skyline: Skyline) -> Node3D:
+static func build(route: Route, skyline: Skyline, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Landmarks"
 	var kit := CityMesh.new()
+	var used: Dictionary[String, Material] = Once.made("landmarks", _materials)
+	var neon := used["neon"]
+	var steel := used["steel"]
+	var far := used["far"]
+	var under := used["under"]
+	var sheet := SignSheet.load_sheet()
+	var picture: Texture2D = load(SIGN_SHEET)
+	for spire: Skyline.Spire in skyline.spires:
+		if section.holds(spire.s):
+			kit.at(spire.s)
+			_spire(kit, route, spire, far, neon)
+	for trim: Skyline.Trim in skyline.trims:
+		if section.holds(trim.tower.s):
+			kit.at(trim.tower.s)
+			_trim(kit, route, trim, neon)
+	for screen: Skyline.Screen in skyline.screens:
+		if section.holds(screen.s):
+			kit.at(screen.s)
+			_screen(kit, route, screen, sheet, picture, steel)
+	for span: Skyline.Span in skyline.spans:
+		if not section.holds(span.s):
+			continue
+		kit.at(span.s)
+		if span.rail:
+			_rail(kit, root, route, span, steel, under, neon)
+		else:
+			_bridge(kit, root, route, span, steel, under, neon)
+	kit.commit(root)
+	for beam: Skyline.Beam in skyline.beams:
+		if section.holds(beam.s):
+			root.add_child(_beam(route, beam))
+	return root
+
+
+static func _materials() -> Dictionary[String, Material]:
 	var neon := StandardMaterial3D.new()
 	neon.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	neon.vertex_color_use_as_albedo = true
@@ -25,27 +60,7 @@ static func build(route: Route, skyline: Skyline) -> Node3D:
 	far.shader = SPIRE
 	var under := Facades.scan("rusty_metal_02", 1.0, Color(0.6, 0.58, 0.56))
 	under.metallic = 0.0
-	var sheet := SignSheet.load_sheet()
-	var picture: Texture2D = load(SIGN_SHEET)
-	for spire: Skyline.Spire in skyline.spires:
-		kit.at(spire.s)
-		_spire(kit, route, spire, far, neon)
-	for trim: Skyline.Trim in skyline.trims:
-		kit.at(trim.tower.s)
-		_trim(kit, route, trim, neon)
-	for screen: Skyline.Screen in skyline.screens:
-		kit.at(screen.s)
-		_screen(kit, route, screen, sheet, picture, steel)
-	for span: Skyline.Span in skyline.spans:
-		kit.at(span.s)
-		if span.rail:
-			_rail(kit, root, route, span, steel, under, neon)
-		else:
-			_bridge(kit, root, route, span, steel, under, neon)
-	kit.commit(root)
-	for beam: Skyline.Beam in skyline.beams:
-		root.add_child(_beam(route, beam))
-	return root
+	return {"neon": neon, "steel": steel, "far": far, "under": under}
 
 
 static func _neon(hue: float) -> Color:

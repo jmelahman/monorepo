@@ -89,21 +89,25 @@ class Parts:
 	var housing: Kit
 
 
-static func build(route: Route, street: Street) -> Node3D:
+static func build(route: Route, street: Street, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Quarters"
 	var kit := CityMesh.new()
-	var parts := _parts()
+	var parts: Parts = Once.made("quarters", _parts)
 	for stretch: Districts.Stretch in street.districts.of_kind(Districts.Kind.UNDERPASS):
-		_underpass(kit, root, route, stretch, parts)
+		if section.takes(stretch.from, stretch.to):
+			_underpass(kit, root, route, stretch, parts)
 	for stretch: Districts.Stretch in street.districts.of_kind(Districts.Kind.WORKS):
-		_works(kit, root, route, stretch, parts)
+		if section.takes(stretch.from, stretch.to):
+			_works(kit, root, route, stretch, parts)
 	var index := 0
 	for gantry: Districts.Gantry in street.districts.gantries:
-		_gantry(kit, root, route, gantry, index, parts)
+		if section.holds(gantry.s):
+			_gantry(kit, root, route, gantry, index, parts)
 		index += 1
 	for opening: Vector3 in street.openings:
-		_plaza(kit, root, route, opening, parts)
+		if section.takes(opening.x, opening.y):
+			_plaza(kit, root, route, opening, parts)
 	kit.commit(root)
 	parts.housing.commit(root, MODELLED_REACH)
 	return root

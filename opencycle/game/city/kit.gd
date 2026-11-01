@@ -105,7 +105,8 @@ func place(part: String, where: Transform3D, color := Color.WHITE, custom := Col
 	_placed[key].append([where, color, custom])
 
 
-## Turns what was placed into draws under [param root], which vanish past [param reach].
+## Turns what was placed into draws under [param root], which vanish past [param reach], and
+## starts over, so one kit can serve every section of the street.
 func commit(root: Node3D, reach: float) -> void:
 	for key: Vector2i in _placed:
 		var list: Array = _placed[key]
@@ -128,3 +129,4 @@ func commit(root: Node3D, reach: float) -> void:
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
 		instance.visibility_range_end = reach
 		root.add_child(instance)
+	_placed.clear()

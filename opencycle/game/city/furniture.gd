@@ -26,38 +26,35 @@ const BALUSTER_EVERY := 0.14
 const SIDES := 12
 
 
-static func build(route: Route, street: Street, length: float) -> Node3D:
+static func build(route: Route, street: Street, length: float, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Furniture"
 	var kit := CityMesh.new()
-	var steel := _plain(Color(0.3, 0.31, 0.33), 0.55, 0.05)
-	var rail := Facades.scan("rusty_painted_metal", 1.1, Color(1.15, 1.4, 1.45))
-	# Paint, not bare metal, which would go black anywhere with nothing to reflect.
-	rail.metallic = 0.0
-	var cable := _plain(Color(0.02, 0.02, 0.02), 0.7, 0.0)
-	var red := _plain(Color(0.72, 0.05, 0.05), 0.45, 0.0)
-	var white := _plain(Color(0.85, 0.85, 0.82), 0.45, 0.0)
-	var boards: Array[ShaderMaterial] = []
-	for symbol: int in SIGN_SYMBOLS:
-		boards.append(_sign_face(symbol))
-	var lamp_glow := StandardMaterial3D.new()
-	lamp_glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	lamp_glow.albedo_color = Color(6.0, 4.6, 2.9)
+	var used: Dictionary[String, Material] = Once.made("furniture", _materials)
+	var steel := used["steel"]
+	var rail := used["rail"]
+	var red := used["red"]
+	var white := used["white"]
+	var boards: Array[ShaderMaterial] = Once.made("furniture_boards", _boards)
 	for railing: Vector3 in street.railings:
-		_railing(kit, route, railing, rail)
+		if section.takes(railing.x, railing.y):
+			_railing(kit, route, railing, rail)
 	var side := 1.0
 	for s: float in street.lamps:
-		kit.at(s)
-		_lamp(kit, route, s, side, steel, lamp_glow)
-		if s > -15.0 and s < length + 40.0:
-			var works := street.districts.kind_at(s) == Districts.Kind.WORKS
-			root.add_child(_lamp_light(route, s, side, SODIUM if works else LAMP_COLOUR))
+		if section.holds(s):
+			kit.at(s)
+			_lamp(kit, route, s, side, steel, used["lamp_glow"])
+			if s > -15.0 and s < length + 40.0:
+				var works := street.districts.kind_at(s) == Districts.Kind.WORKS
+				root.add_child(_lamp_light(route, s, side, SODIUM if works else LAMP_COLOUR))
 		side = -side
-	_cables(kit, route, street.districts, length, cable)
+	_cables(kit, route, street.districts, length, used["cable"], section)
 	var placed: Dictionary[String, Array] = {}
 	for path: String in [CRATE, UTILITY, STOOL, CARTON, BAG, BIN, COVER, LADDER]:
 		placed[path] = [] as Array[Transform3D]
 	for prop: Street.Prop in street.props:
+		if not section.holds(prop.s):
+			continue
 		kit.at(prop.s)
 		var ground := (
 			route.at(prop.s)
@@ -95,6 +92,8 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 				var square := Basis(route.tangent(prop.s), Vector3.UP, route.right(prop.s))
 				placed[UTILITY].append(Transform3D(square, ground))
 	for cover: Vector2 in street.covers:
+		if not section.holds(cover.x):
+			continue
 		var at := route.at(cover.x) + route.right(cover.x) * cover.y + Vector3.DOWN * COVER_SUNK
 		placed[COVER].append(Transform3D(Basis.IDENTITY, at))
 	kit.commit(root)
@@ -103,6 +102,30 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 		list.assign(placed[path])
 		instances(root, path, list)
 	return root
+
+
+static func _materials() -> Dictionary[String, Material]:
+	var rail := Facades.scan("rusty_painted_metal", 1.1, Color(1.15, 1.4, 1.45))
+	# Paint, not bare metal, which would go black anywhere with nothing to reflect.
+	rail.metallic = 0.0
+	var lamp_glow := StandardMaterial3D.new()
+	lamp_glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	lamp_glow.albedo_color = Color(6.0, 4.6, 2.9)
+	return {
+		"steel": _plain(Color(0.3, 0.31, 0.33), 0.55, 0.05),
+		"rail": rail,
+		"cable": _plain(Color(0.02, 0.02, 0.02), 0.7, 0.0),
+		"red": _plain(Color(0.72, 0.05, 0.05), 0.45, 0.0),
+		"white": _plain(Color(0.85, 0.85, 0.82), 0.45, 0.0),
+		"lamp_glow": lamp_glow,
+	}
+
+
+static func _boards() -> Array[ShaderMaterial]:
+	var boards: Array[ShaderMaterial] = []
+	for symbol: int in SIGN_SYMBOLS:
+		boards.append(_sign_face(symbol))
+	return boards
 
 
 ## A run of the street's guard rail along the kerb, close-barred panels between bolted posts.
@@ -217,13 +240,22 @@ static func _lamp_light(route: Route, s: float, side: float, colour: Color) -> O
 
 ## Sagging cables strung across the street between buildings, bundled in twos and threes.
 static func _cables(
-	kit: CityMesh, route: Route, districts: Districts, length: float, material: Material
+	kit: CityMesh,
+	route: Route,
+	districts: Districts,
+	length: float,
+	material: Material,
+	section: StreetSection
 ) -> void:
 	var wall := NeonBiome.STREET_HALF + Street.SIDEWALK
 	var index := 0
 	var s := -Street.REACH * 0.5
 	while s < length + Street.REACH * 0.5:
 		var dice := Rng.derive(index, [88])
+		if not section.holds(s):
+			s += lerpf(7.0, 24.0, Rng.unit(dice, 4))
+			index += 1
+			continue
 		kit.at(s)
 		# Only strung where there's a wall each side and room above the road.
 		var strung := districts.kind_at(s) in [Districts.Kind.MARKET, Districts.Kind.WORKS]

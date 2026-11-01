@@ -16,15 +16,21 @@ var _casts := PackedByteArray()
 
 
 ## Takes on every lamp below [param root] but the sky's, whose reach isn't a matter of distance.
-func gather(root: Node) -> void:
-	_lamps.clear()
-	_casts.clear()
+func add(root: Node) -> void:
 	for node: Node in root.find_children("*", "Light3D", true, false):
 		if node is DirectionalLight3D:
 			continue
 		var lamp := node as Light3D
 		_lamps.append(lamp)
 		_casts.append(1 if lamp.shadow_enabled else 0)
+
+
+## Lets go of the lamps below [param root], which is about to be freed.
+func remove(root: Node) -> void:
+	for index: int in range(_lamps.size() - 1, -1, -1):
+		if root.is_ancestor_of(_lamps[index]):
+			_lamps.remove_at(index)
+			_casts.remove_at(index)
 
 
 func update(rider: Vector3) -> void:

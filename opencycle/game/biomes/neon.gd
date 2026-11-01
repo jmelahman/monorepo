@@ -12,31 +12,44 @@ const FOV := 68.0
 const CROWD := false
 
 
-static func build(parent: Node3D, run_seed: int, route: Route, quality: String) -> void:
+static func build(parent: Node3D, run_seed: int, route: Route, quality: String) -> CityStream:
 	RenderingServer.global_shader_parameter_add(
 		"ride_time", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0
 	)
 	var street := Street.generate(run_seed, LENGTH, STREET_HALF)
 	var skyline := Skyline.generate(run_seed, street, route, LENGTH)
-	var best := quality == "max"
-	parent.add_child(StreetGround.build(route, street, LENGTH))
-	parent.add_child(Facades.build(route, street))
 	var undercity := Undercity.generate(run_seed, street, STREET_HALF, LENGTH)
-	parent.add_child(Landmarks.build(route, skyline))
-	parent.add_child(Overhead.build(route, undercity, LENGTH))
-	parent.add_child(Quarters.build(route, street))
-	parent.add_child(Shopfronts.build(route, street, LENGTH))
-	parent.add_child(StreetWall.build(route, street))
-	parent.add_child(StreetDressing.build(route, street))
-	parent.add_child(Signage.build(route, street, LENGTH))
-	parent.add_child(Furniture.build(route, street, LENGTH))
 	if CROWD:
 		parent.add_child(Pedestrians.build(run_seed, route, street, LENGTH))
-	parent.add_child(Weather.build(route, street, LENGTH))
-	_environment(parent, best, route)
+	_environment(parent, quality == "max")
+	var make := _section.bind(route, street, skyline, undercity)
+	var stream := CityStream.new(make, LENGTH + Skyline.REACH)
+	parent.add_child(stream)
+	return stream
 
 
-static func _environment(parent: Node3D, best: bool, route: Route) -> void:
+## Everything in one stretch of the street. Runs on a worker thread during a ride.
+static func _section(
+	section: StreetSection, route: Route, street: Street, skyline: Skyline, undercity: Undercity
+) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Section%d" % roundi(section.from)
+	root.add_child(StreetGround.build(route, street, LENGTH, section))
+	root.add_child(Facades.build(route, street, section))
+	root.add_child(Landmarks.build(route, skyline, section))
+	root.add_child(Overhead.build(route, undercity, LENGTH, section))
+	root.add_child(Quarters.build(route, street, section))
+	root.add_child(Shopfronts.build(route, street, LENGTH, section))
+	root.add_child(StreetWall.build(route, street, section))
+	root.add_child(StreetDressing.build(route, street, section))
+	root.add_child(Signage.build(route, street, LENGTH, section))
+	root.add_child(Furniture.build(route, street, LENGTH, section))
+	root.add_child(Weather.build(route, street, LENGTH, section))
+	_probes(root, route, section)
+	return root
+
+
+static func _environment(parent: Node3D, best: bool) -> void:
 	var sky_material := ProceduralSkyMaterial.new()
 	# Nothing but dark past the ends of the deck.
 	sky_material.sky_top_color = Color(0.004, 0.006, 0.01)
@@ -90,7 +103,6 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	var world := WorldEnvironment.new()
 	world.environment = environment
 	parent.add_child(world)
-	_probes(parent, route)
 	# No moon up there, but the cold light on the upper floors sets off the street's heat.
 	var cold := DirectionalLight3D.new()
 	cold.rotation_degrees = Vector3(-62.0, 35.0, 0.0)
@@ -122,9 +134,12 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 
 ## Captures of the signs, so anything glossy shows what is around it. Rendered once at
 ## the start: nothing they see moves enough to matter.
-static func _probes(parent: Node3D, route: Route) -> void:
+static func _probes(parent: Node3D, route: Route, section: StreetSection) -> void:
 	var s := 0.0
 	while s < LENGTH + 40.0:
+		if not section.holds(s):
+			s += 36.0
+			continue
 		var probe := ReflectionProbe.new()
 		probe.update_mode = ReflectionProbe.UPDATE_ONCE
 		probe.box_projection = true

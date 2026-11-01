@@ -39,14 +39,16 @@ class Parts:
 	var crates: Array[Transform3D] = []
 
 
-static func build(route: Route, street: Street) -> Node3D:
+static func build(route: Route, street: Street, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "StreetDressing"
 	var kit := CityMesh.new()
-	var parts := _parts()
+	var parts: Parts = Once.made("street_dressing", _parts)
 	var sheet := SignSheet.load_sheet()
 	for index: int in street.shops.size():
 		var shop := street.shops[index]
+		if not section.holds(shop.s):
+			continue
 		kit.at(shop.s)
 		var front := StreetWall.front_of(route, shop, index)
 		var dice := Rng.derive(index, [79])

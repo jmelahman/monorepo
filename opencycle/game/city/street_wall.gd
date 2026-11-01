@@ -57,13 +57,15 @@ class Parts:
 	var dark: StandardMaterial3D
 
 
-static func build(route: Route, street: Street) -> Node3D:
+static func build(route: Route, street: Street, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "StreetWall"
 	var kit := CityMesh.new()
-	var parts := _parts()
+	var parts: Parts = Once.made("street_wall", _parts)
 	for index: int in street.shops.size():
 		var shop := street.shops[index]
+		if not section.holds(shop.s):
+			continue
 		kit.at(shop.s)
 		var front := front_of(route, shop, index)
 		_lintel(kit, front, shop, parts)

@@ -10,6 +10,10 @@ var _cells: Dictionary[String, Array] = {}
 
 
 static func load_sheet() -> SignSheet:
+	return Once.made("sign_sheet", _parsed)
+
+
+static func _parsed() -> SignSheet:
 	var sheet := SignSheet.new()
 	var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(META))
 	var size: float = parsed["sheet"]

@@ -12,14 +12,16 @@ const STEAM_HEIGHT := 9.0
 const STEAM_EVERY := 2
 
 
-static func build(route: Route, street: Street, length: float) -> Node3D:
+static func build(route: Route, street: Street, length: float, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Weather"
-	var mist := ShaderMaterial.new()
-	mist.shader = MIST
+	var mist: ShaderMaterial = Once.made("mist", _mist)
 	var width := (NeonBiome.STREET_HALF + Street.SIDEWALK + 1.0) * 2.0
 	var s := -MIST_STRETCH
 	while s < length + 150.0:
+		if not section.holds(s):
+			s += MIST_STRETCH
+			continue
 		var volume := FogVolume.new()
 		volume.shape = RenderingServer.FOG_VOLUME_SHAPE_BOX
 		volume.size = Vector3(width, MIST_HEIGHT, MIST_STRETCH + 2.0)
@@ -30,9 +32,17 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 		s += MIST_STRETCH
 	for index: int in street.covers.size():
 		var cover := street.covers[index]
+		if not section.holds(cover.x):
+			continue
 		if index % STEAM_EVERY == 0 and cover.x > -20.0 and cover.x < length + 120.0:
 			root.add_child(steam(route, cover, float(index) * 0.37))
 	return root
+
+
+static func _mist() -> ShaderMaterial:
+	var mist := ShaderMaterial.new()
+	mist.shader = MIST
+	return mist
 
 
 static func steam(route: Route, cover: Vector2, phase: float) -> FogVolume:

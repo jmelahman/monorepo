@@ -127,17 +127,19 @@ class Room:
 		return mouth + along * across + outward * into + Vector3.UP * up
 
 
-static func build(route: Route, street: Street, length: float) -> Node3D:
+static func build(route: Route, street: Street, length: float, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Shopfronts"
 	var kit := CityMesh.new()
-	var materials := _materials()
-	var props := _props()
+	var materials: Dictionary[String, Material] = Once.made("shopfronts", _materials)
+	var props: Dictionary[String, Kit] = Once.made("shop_props", _props)
 	var sheet := SignSheet.load_sheet()
 	var cartons: Array[Transform3D] = []
 	var crates: Array[Transform3D] = []
 	for index: int in street.shops.size():
 		var shop := street.shops[index]
+		if not section.holds(shop.s):
+			continue
 		kit.at(shop.s)
 		for prop: Kit in props.values():
 			prop.at(shop.s)

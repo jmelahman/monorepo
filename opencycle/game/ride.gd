@@ -44,6 +44,8 @@ var _primitive_counts := PackedInt32Array()
 var _rain: MeshInstance3D
 var _lamp_reach: LampReach
 var _districts: Districts
+var _stream: CityStream
+var _off := PackedStringArray()
 
 @onready var _camera: Camera3D = %Camera
 
@@ -67,7 +69,7 @@ func _ready() -> void:
 	route = Route.generate(run_seed)
 	match biome:
 		"neon":
-			NeonBiome.build(self, run_seed, route, quality)
+			_stream = NeonBiome.build(self, run_seed, route, quality)
 			_rain = Weather.rain()
 			_camera.add_child(_rain)
 			_districts = Districts.generate(run_seed, NeonBiome.LENGTH)
@@ -85,15 +87,18 @@ func _ready() -> void:
 		get_viewport().scaling_3d_scale = scale_text.to_float()
 	if args.has("off"):
 		var off_text: String = args["off"]
-		_switch_off(off_text.split(","))
-	# After the switches, so a lamp switched out of shadows stays out of them.
-	if _lamp_reach:
-		_lamp_reach.gather(self)
+		_off = off_text.split(",")
+		_switch_off(self)
 	if args.has("reach"):
 		var reach_text: String = args["reach"]
 		var reach := reach_text.split_floats(",")
 		_lamp_reach.shadows_within = reach[0]
 		_lamp_reach.lit_within = reach[1]
+	if _stream:
+		_stream.threaded = _still_path.is_empty() and not _is_movie()
+		_stream.arrived.connect(_on_section_arrived)
+		_stream.left.connect(_lamp_reach.remove)
+		_stream.begin(replay.distance_at(at_seconds))
 	_startup_ms = Time.get_ticks_msec() - started
 	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_time = at_seconds
@@ -109,9 +114,18 @@ func _ready() -> void:
 		_take_still.call_deferred()
 
 
+func _on_section_arrived(section: Node3D) -> void:
+	_switch_off(section)
+	# After the switches, so a lamp switched out of shadows stays out of them.
+	_lamp_reach.add(section)
+
+
 ## Leaves costly features out, to run faster or see what one of them costs.
-func _switch_off(names: PackedStringArray) -> void:
-	for node: Node in find_children("*", "", true, false):
+func _switch_off(root: Node) -> void:
+	var names := _off
+	if names.is_empty():
+		return
+	for node: Node in root.find_children("*", "", true, false):
 		if node is WorldEnvironment:
 			var environment: Environment = (node as WorldEnvironment).environment
 			environment.volumetric_fog_enabled = (
@@ -172,6 +186,7 @@ func _process(delta: float) -> void:
 ## Anything animated on the street runs off the ride's clock, so a replay looks the same.
 func _send_time() -> void:
 	if _uses_ride_time:
+		_stream.update(replay.distance_at(_time))
 		_lamp_reach.update(_camera.global_position)
 		RenderingServer.global_shader_parameter_set("ride_time", _time)
 		get_tree().call_group(&"ride_clock", &"set_ride_time", _time)

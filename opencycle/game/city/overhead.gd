@@ -30,40 +30,58 @@ const RUNG_EVERY := 0.3
 const LADDER_TOP := 13.0
 
 
-static func build(route: Route, city: Undercity, length: float) -> Node3D:
+static func build(route: Route, city: Undercity, length: float, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Overhead"
 	var kit := CityMesh.new()
-	var concrete := poured()
-	var light := StandardMaterial3D.new()
-	light.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	light.vertex_color_use_as_albedo = true
-	light.albedo_color = Color(1.6, 1.6, 1.6)
-	var sky := ShaderMaterial.new()
-	sky.shader = SKYLIGHT
-	var steel := Facades.scan("rusty_painted_metal", 1.2, Color(0.85, 0.85, 0.85))
-	var rust := Facades.scan("rusty_metal_02", 1.0, Color(0.9, 0.85, 0.8))
+	var used: Dictionary[String, Material] = Once.made("overhead", _materials)
+	var concrete := used["concrete"]
+	var light := used["light"]
+	var sky := used["sky"]
+	var steel := used["steel"]
+	var rust := used["rust"]
 	var wall := NeonBiome.STREET_HALF + Street.SIDEWALK
-	_deck(kit, route, city, length, concrete, sky)
+	_deck(kit, route, city, length, concrete, sky, section)
 	for rib: Undercity.Rib in city.ribs:
-		kit.at(rib.s)
-		_rib(kit, route, rib, wall, concrete, light)
+		if section.holds(rib.s):
+			kit.at(rib.s)
+			_rib(kit, route, rib, wall, concrete, light)
 	for pylon: Undercity.Pylon in city.pylons:
+		if not section.holds(pylon.s):
+			continue
 		kit.at(pylon.s)
 		_pylon(kit, route, pylon, wall, concrete, light)
 		_pylon_fittings(kit, route, pylon, wall, steel, rust)
 		if pylon.s > -LIT_BEHIND and pylon.s < length + LIT_AHEAD:
 			_pylon_lights(kit, root, route, pylon, wall, steel, light)
 	for duct: Undercity.Duct in city.ducts:
-		_duct(kit, route, city, duct, length, concrete)
-	var traffic := ShaderMaterial.new()
-	traffic.shader = TRAFFIC
+		_duct(kit, route, city, duct, length, concrete, section)
 	for lane: Undercity.Lane in city.lanes:
-		_lane(kit, route, lane, length, traffic)
+		_lane(kit, route, lane, length, used["traffic"], section)
 	kit.commit(root)
 	for shaft: Undercity.Shaft in city.shafts:
-		root.add_child(_shaft(route, shaft))
+		if section.holds(shaft.s):
+			root.add_child(_shaft(route, shaft))
 	return root
+
+
+static func _materials() -> Dictionary[String, Material]:
+	var light := StandardMaterial3D.new()
+	light.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	light.vertex_color_use_as_albedo = true
+	light.albedo_color = Color(1.6, 1.6, 1.6)
+	var sky := ShaderMaterial.new()
+	sky.shader = SKYLIGHT
+	var traffic := ShaderMaterial.new()
+	traffic.shader = TRAFFIC
+	return {
+		"concrete": poured(),
+		"light": light,
+		"sky": sky,
+		"traffic": traffic,
+		"steel": Facades.scan("rusty_painted_metal", 1.2, Color(0.85, 0.85, 0.85)),
+		"rust": Facades.scan("rusty_metal_02", 1.0, Color(0.9, 0.85, 0.8)),
+	}
 
 
 ## The deck's concrete, which anything else cast from the same pour can share.
@@ -81,15 +99,24 @@ static func poured() -> ShaderMaterial:
 ## The underside of the deck either side of the slot, and far above the slot, the glow of
 ## the levels that still get daylight.
 static func _deck(
-	kit: CityMesh, route: Route, city: Undercity, length: float, concrete: Material, sky: Material
+	kit: CityMesh,
+	route: Route,
+	city: Undercity,
+	length: float,
+	concrete: Material,
+	sky: Material,
+	section: StreetSection
 ) -> void:
 	var up := Vector3.UP * Undercity.DECK_HEIGHT
 	var tile := 1.0 / CONCRETE_METRES
 	var dark := Color(0.55, 0.58, 0.64)
 	var s := -Undercity.REACH
 	while s < length + Undercity.REACH:
-		kit.at(s)
 		var next := s + STRETCH
+		if not section.holds(s):
+			s = next
+			continue
+		kit.at(s)
 		var here := route.at(s) + up
 		var there := route.at(next) + up
 		var across := route.right(s)
@@ -341,14 +368,18 @@ static func _duct(
 	city: Undercity,
 	duct: Undercity.Duct,
 	length: float,
-	concrete: Material
+	concrete: Material,
+	section: StreetSection
 ) -> void:
 	var s := -Undercity.REACH
 	var tint := Color(0.2, 0.2, 0.21)
 	while s < length + Undercity.REACH:
+		var next := s + STRETCH
+		if not section.holds(s):
+			s = next
+			continue
 		kit.at(s)
 		var from := route.at(s) + route.right(s) * duct.offset + Vector3.UP * duct.height
-		var next := s + STRETCH
 		var to := route.at(next) + route.right(next) * duct.offset + Vector3.UP * duct.height
 		# There's no wall out on a plaza for it to run along.
 		if city.districts.kind_at(s) != Districts.Kind.PLAZA:
@@ -358,15 +389,23 @@ static func _duct(
 
 ## One lane as a cross of two long quads, so it reads from below and from the side.
 static func _lane(
-	kit: CityMesh, route: Route, lane: Undercity.Lane, length: float, traffic: Material
+	kit: CityMesh,
+	route: Route,
+	lane: Undercity.Lane,
+	length: float,
+	traffic: Material,
+	section: StreetSection
 ) -> void:
 	var colour := HEADLIGHT if lane.direction < 0.0 else TAIL_LIGHT
 	var extra := Vector2(lane.speed * lane.direction, lane.phase)
 	var half := 0.28
 	var s := -Undercity.REACH
 	while s < length + Undercity.REACH:
-		kit.at(s)
 		var next := s + STRETCH
+		if not section.holds(s):
+			s = next
+			continue
+		kit.at(s)
 		var here := route.at(s) + route.right(s) * lane.offset + Vector3.UP * lane.height
 		var there := route.at(next) + route.right(next) * lane.offset + Vector3.UP * lane.height
 		for across: Vector3 in [route.right(s) * half, Vector3.UP * half]:

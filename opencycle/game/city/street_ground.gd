@@ -18,28 +18,30 @@ const WHITE_PAINT := Vector3(0.46, 0.46, 0.42)
 const PAINT_WORN := 0.55
 
 
-static func build(route: Route, street: Street, length: float) -> Node3D:
+static func build(route: Route, street: Street, length: float, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Ground"
 	var kit := CityMesh.new()
 	var start := -Street.REACH
 	var end := length + Street.REACH
 	var half := NeonBiome.STREET_HALF
-	var road := _road_material(ROAD, Color(1.0, 1.0, 1.0))
-	# Fresher asphalt of the same kind: darker, and only by a little.
-	var patch := _road_material(ROAD, Color(0.8, 0.8, 0.82))
-	var covered_patch := _road_material(ROAD, Color(0.74, 0.74, 0.76), 0.0, TUNNEL_REACH)
-	# Dry under the roof, where all it can mirror is the tubes a few metres overhead.
-	var covered := _road_material(ROAD, Color(0.92, 0.92, 0.92), 0.0, TUNNEL_REACH)
-	var paving := _paving()
-	var kerb := _plain(Color(0.42, 0.41, 0.39), 0.75)
-	var yellow := _paint(YELLOW_PAINT, PAINT_WORN)
-	var white := _paint(WHITE_PAINT, PAINT_WORN)
-	var covered_yellow := _paint(YELLOW_PAINT, PAINT_WORN, TUNNEL_REACH)
-	var covered_white := _paint(WHITE_PAINT, PAINT_WORN, TUNNEL_REACH)
+	var used: Dictionary[String, Material] = Once.made("ground", _materials)
+	var road := used["road"]
+	var patch := used["patch"]
+	var covered_patch := used["covered_patch"]
+	var covered := used["covered"]
+	var paving := used["paving"]
+	var kerb := used["kerb"]
+	var yellow := used["yellow"]
+	var white := used["white"]
+	var covered_yellow := used["covered_yellow"]
+	var covered_white := used["covered_white"]
 	var s := start
 	while s < end:
 		var next := minf(s + Route.STEP, end)
+		if not section.holds(s):
+			s = next
+			continue
 		kit.at(s)
 		var under_roof := street.districts.kind_at(s) == Districts.Kind.UNDERPASS
 		_strip(kit, route, s, next, -half, half, 0.0, covered if under_roof else road, 1.0)
@@ -57,6 +59,8 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 			_strip(kit, route, s, next, inner - 0.05, inner + 0.05, PAINT_LIFT, paint, 1.0)
 		s = next
 	for patched: Vector4 in street.patches:
+		if not section.holds(patched.x):
+			continue
 		kit.at(patched.x)
 		var patched_covered := street.districts.kind_at(patched.x) == Districts.Kind.UNDERPASS
 		_strip(
@@ -72,13 +76,31 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 		)
 	s = start
 	while s < end:
-		kit.at(s)
-		_arrow(kit, route, s, -1.4, _arrow_paint(street, s, white, covered_white))
-		var back := s + 6.0
-		_arrow(kit, route, back, 1.4, _arrow_paint(street, back, white, covered_white))
+		if section.holds(s):
+			kit.at(s)
+			_arrow(kit, route, s, -1.4, _arrow_paint(street, s, white, covered_white))
+			var back := s + 6.0
+			_arrow(kit, route, back, 1.4, _arrow_paint(street, back, white, covered_white))
 		s += 42.0
 	kit.commit(root)
 	return root
+
+
+static func _materials() -> Dictionary[String, Material]:
+	return {
+		"road": _road_material(ROAD, Color(1.0, 1.0, 1.0)),
+		# Fresher asphalt of the same kind: darker, and only by a little.
+		"patch": _road_material(ROAD, Color(0.8, 0.8, 0.82)),
+		"covered_patch": _road_material(ROAD, Color(0.74, 0.74, 0.76), 0.0, TUNNEL_REACH),
+		# Dry under the roof, where all it can mirror is the tubes a few metres overhead.
+		"covered": _road_material(ROAD, Color(0.92, 0.92, 0.92), 0.0, TUNNEL_REACH),
+		"paving": _paving(),
+		"kerb": _plain(Color(0.42, 0.41, 0.39), 0.75),
+		"yellow": _paint(YELLOW_PAINT, PAINT_WORN),
+		"white": _paint(WHITE_PAINT, PAINT_WORN),
+		"covered_yellow": _paint(YELLOW_PAINT, PAINT_WORN, TUNNEL_REACH),
+		"covered_white": _paint(WHITE_PAINT, PAINT_WORN, TUNNEL_REACH),
+	}
 
 
 static func _strip(
@@ -156,9 +178,7 @@ static func _road_material(
 	return material
 
 
-static func _arrow_paint(
-	street: Street, s: float, open: ShaderMaterial, covered: ShaderMaterial
-) -> ShaderMaterial:
+static func _arrow_paint(street: Street, s: float, open: Material, covered: Material) -> Material:
 	return covered if street.districts.kind_at(s) == Districts.Kind.UNDERPASS else open
 
 
