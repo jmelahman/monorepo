@@ -158,8 +158,7 @@ func TestOverlongStateIsRefused(t *testing.T) {
 	m := openModel(t)
 	huge := strings.Repeat("word ", maxState)
 	_, _, err := m.Decide(context.Background(), huge, []Question{{Options: []string{"a"}}})
-	var overflow *OverflowError
-	if !errors.As(err, &overflow) {
+	if _, ok := errors.AsType[*OverflowError](err); !ok {
 		t.Fatalf("err = %v, want an OverflowError", err)
 	}
 }

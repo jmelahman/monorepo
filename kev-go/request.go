@@ -51,7 +51,10 @@ func decodeValue(d *json.Decoder) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		key := k.(string)
+		key, ok := k.(string)
+		if !ok {
+			return nil, fmt.Errorf("object key %v isn't a string", k)
+		}
 		v, err := decodeValue(d)
 		if err != nil {
 			return nil, err
@@ -330,6 +333,7 @@ func (q parsed) answer(p []float64) map[string]any {
 		return map[string]any{"type": "noul", "noul": roundProb(p[1])}
 	case kindChoice:
 		return map[string]any{"type": "choice", "choice": q.keys[firstMax(p)], "confidence": roundProb(choiceConfidence(p)), "probabilities": probs}
+	case kindScore:
 	}
 	var score float64
 	legend := map[string]string{}

@@ -2,6 +2,7 @@ package qwen35
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -78,7 +79,7 @@ func (m *Model) load(w *weights, adapter *Adapter) error {
 	c := m.cfg
 	f, key, info, ok := w.find("embed_tokens.weight")
 	if !ok {
-		return fmt.Errorf("checkpoint has no embed_tokens.weight")
+		return errors.New("checkpoint has no embed_tokens.weight")
 	}
 	if !slices.Equal(info.Shape, []int{c.VocabSize, c.HiddenSize}) {
 		return fmt.Errorf("embed_tokens.weight has shape %v", info.Shape)

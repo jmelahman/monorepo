@@ -5,6 +5,7 @@ package qwen35
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 )
@@ -72,13 +73,13 @@ func (c *Config) check() error {
 	}
 	switch {
 	case c.HiddenSize <= 0 || c.IntermediateSize <= 0 || c.VocabSize <= 0:
-		return fmt.Errorf("missing sizes")
+		return errors.New("missing sizes")
 	case len(c.LayerTypes) != c.NumLayers || c.NumLayers == 0:
 		return fmt.Errorf("%d layer types for %d layers", len(c.LayerTypes), c.NumLayers)
 	case c.HiddenAct != "silu":
 		return fmt.Errorf("unsupported activation %q", c.HiddenAct)
 	case c.AttnBias:
-		return fmt.Errorf("attention_bias isn't supported")
+		return errors.New("attention_bias isn't supported")
 	case c.RopeParams.Type != "default":
 		return fmt.Errorf("unsupported rope type %q", c.RopeParams.Type)
 	case c.NumKVHeads == 0 || c.NumHeads%c.NumKVHeads != 0:

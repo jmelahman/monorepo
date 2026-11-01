@@ -2,6 +2,7 @@ package qwen35
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -177,7 +178,7 @@ func (a *Adapter) merge(workers int, name string, w []float32, out, in int) erro
 
 func (a *Adapter) tokenDeltas(hidden int) (map[int32][]float32, error) {
 	if a == nil || len(a.tokens) == 0 {
-		return nil, nil
+		return map[int32][]float32{}, nil
 	}
 	for _, name := range a.file.Names() {
 		if !strings.HasSuffix(name, "trainable_tokens_delta") || !strings.Contains(name, "embed_tokens") {
@@ -196,5 +197,5 @@ func (a *Adapter) tokenDeltas(hidden int) (map[int32][]float32, error) {
 		}
 		return out, nil
 	}
-	return nil, fmt.Errorf("adapter names trainable tokens but has no embed_tokens delta")
+	return nil, errors.New("adapter names trainable tokens but has no embed_tokens delta")
 }

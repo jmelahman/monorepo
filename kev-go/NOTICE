@@ -1,0 +1,6 @@
+kev-go
+Copyright 2026 Jamison Lahman
+
+The request mapping, row encoding, pointer head and confidence measures are
+ported from Kev (https://github.com/jaredpalmer/kev),
+Copyright 2026 Jared Palmer, licensed under the Apache License, Version 2.0.

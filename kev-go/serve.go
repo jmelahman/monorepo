@@ -89,8 +89,7 @@ func (m *Model) systemOne(w http.ResponseWriter, r *http.Request) {
 	}
 	probs, tokens, err := m.Decide(r.Context(), req.state, questions)
 	if err != nil {
-		var overflow *OverflowError
-		if errors.As(err, &overflow) {
+		if _, ok := errors.AsType[*OverflowError](err); ok {
 			writeError(w, http.StatusUnprocessableEntity, err)
 		} else {
 			writeError(w, http.StatusInternalServerError, err)

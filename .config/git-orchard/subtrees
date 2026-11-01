@@ -78,6 +78,11 @@
 [subtree "jmelahman.github.io"]
 	remote = git@github.com:jmelahman/jmelahman.github.io.git
 	branch = master
+[subtree "kev-go"]
+	remote = git@github.com:jmelahman/kev-go.git
+	branch = master
+	shared = base
+	shared = go
 [subtree "local-preview"]
 	remote = git@github.com:jmelahman/local-preview.git
 	branch = master

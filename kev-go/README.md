@@ -73,3 +73,7 @@ plus a transcription of Kev's encoding, not from running Kev's own server.
 go test ./...                                   # what needs no weights
 KEV_CHECKPOINT=kev-0.8b KEV_BASE=qwen-base go test ./...
 ```
+
+## License
+
+Apache-2.0, the same as Kev, which this ports parts of. See [NOTICE](NOTICE).

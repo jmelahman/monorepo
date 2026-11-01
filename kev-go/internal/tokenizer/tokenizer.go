@@ -278,7 +278,7 @@ func (t *Tokenizer) bpe(ids []int32, piece string) []int32 {
 	}
 	heap.Init(&q)
 	for q.Len() > 0 {
-		p := heap.Pop(&q).(pair)
+		p := heap.Pop(&q).(pair) //nolint:forcetypeassert // only pairs go in
 		l := &syms[p.left]
 		if l.dead || l.id != p.a || l.next < 0 || syms[l.next].id != p.b {
 			continue
@@ -318,15 +318,16 @@ type pair struct {
 
 type pairHeap []pair
 
-func (h pairHeap) Len() int { return len(h) }
-func (h pairHeap) Less(i, j int) bool {
-	if h[i].rank != h[j].rank {
-		return h[i].rank < h[j].rank
+func (h *pairHeap) Len() int { return len(*h) }
+func (h *pairHeap) Less(i, j int) bool {
+	a, b := (*h)[i], (*h)[j]
+	if a.rank != b.rank {
+		return a.rank < b.rank
 	}
-	return h[i].left < h[j].left
+	return a.left < b.left
 }
-func (h pairHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
-func (h *pairHeap) Push(x any)   { *h = append(*h, x.(pair)) }
+func (h *pairHeap) Swap(i, j int) { (*h)[i], (*h)[j] = (*h)[j], (*h)[i] }
+func (h *pairHeap) Push(x any)    { *h = append(*h, x.(pair)) } //nolint:forcetypeassert // only pairs go in
 func (h *pairHeap) Pop() any {
 	old := *h
 	x := old[len(old)-1]
