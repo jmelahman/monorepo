@@ -92,6 +92,7 @@ test.describe("Releases", () => {
     const releases = new ReleasesPage(page);
     await releases.goto();
     const project = releases.project(world.repoPath);
+    await project.showUnreleased();
     await project.expectSubtree(PREFIX);
     const note = `the new thing ${world.board.id}`;
 
@@ -109,11 +110,25 @@ test.describe("Releases", () => {
     expect(git(world.repoPath, "ls-remote", "--tags", world.origin)).toContain(`${PREFIX}/v0.1.0`);
   });
 
+  test("unreleased subtrees stay hidden until asked, and the choice is kept", async ({ page }) => {
+    const releases = new ReleasesPage(page);
+    await releases.goto();
+    const project = releases.project(world.repoPath);
+    await project.expectNothingReleased();
+
+    await project.showUnreleased();
+    await project.expectSubtree(PREFIX);
+
+    await releases.goto();
+    await project.expectSubtree(PREFIX);
+  });
+
   test("commits the mirror hasn't published block the release", async ({ page }) => {
     await change(world, "unmirrored.go");
     const releases = new ReleasesPage(page);
     await releases.goto();
     const project = releases.project(world.repoPath);
+    await project.showUnreleased();
     await project.expectSubtree(PREFIX);
 
     await project.openRelease(PREFIX);

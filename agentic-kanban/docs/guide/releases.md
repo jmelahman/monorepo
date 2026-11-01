@@ -14,6 +14,8 @@ Add one with **remind me later** in a subtree's release dialog. Each subtree has
 
 Each subtree shows how far it is ahead of and behind its upstream, its latest release, and the commits since. This is recomputed at startup, every 30 minutes and when you refresh, because checking every subtree can take a while. The last result is saved, so after a restart the tab shows it right away while the refresh runs.
 
+Subtrees that have never been released are hidden until you tick **show unreleased**. Your browser remembers the choice.
+
 It also shows each subtree's latest GitHub Actions runs on its upstream, checked at most every 5 minutes while something is reading the page or `kanban release list`, so an idle server spends none of your API quota. This is for information only: a release doesn't check CI. It needs `gh` on the server, signed in.
 
 ## Releasing

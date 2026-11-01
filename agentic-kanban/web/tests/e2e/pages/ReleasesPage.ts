@@ -13,7 +13,10 @@ export class ReleasesPage {
   // state yet.
   async goto() {
     await this.page.goto("/");
-    await this.page.getByRole("button", { name: "release", exact: true }).click();
+    await this.page
+      .getByRole("navigation")
+      .getByRole("button", { name: "release", exact: true })
+      .click();
     const refresh = this.page.getByRole("button", { name: "refresh", exact: true });
     await refresh.click();
     await expect(refresh).toBeEnabled();
@@ -53,8 +56,17 @@ class ReleaseProject {
     return this.root.getByRole("row").filter({ hasText: prefix });
   }
 
+  async showUnreleased() {
+    await this.root.getByLabel("show unreleased").check();
+  }
+
   async expectSubtree(prefix: string) {
     await expect(this.row(prefix)).toBeVisible();
+  }
+
+  async expectNothingReleased() {
+    await expect(this.root.getByText("No subtree here has been released yet.")).toBeVisible();
+    await expect(this.root.getByRole("table")).toBeHidden();
   }
 
   async openRelease(prefix: string) {

@@ -10,6 +10,7 @@ import {
   type ReleaseSubtree,
 } from "@/api/client";
 import { queryKeys } from "@/api/keys";
+import { readShowUnreleased, writeShowUnreleased } from "@/storage";
 import { Button } from "./Button";
 import { Modal } from "./Modal";
 
@@ -387,21 +388,23 @@ function CICell({ ci }: { ci?: ReleaseCI }) {
 function ProjectTable({
   project,
   onRelease,
-  hideUnreleased,
-  onHideUnreleased,
+  showUnreleased,
+  onShowUnreleased,
 }: {
   project: ReleaseProject;
   onRelease: (prefix: string) => void;
-  hideUnreleased: boolean;
-  onHideUnreleased: (hide: boolean) => void;
+  showUnreleased: boolean;
+  onShowUnreleased: (show: boolean) => void;
 }) {
   const qc = useQueryClient();
   // Reaching for the button is the cue to start the fetch the modal will want.
   const warm = (prefix: string) =>
     qc.prefetchQuery(previewOptions(project.repo_path, prefix, "patch", ""));
-  const subtrees = hideUnreleased
-    ? project.subtrees.filter((s) => !neverReleased(s))
-    : project.subtrees;
+  // Until its first refresh, a project doesn't know which have been released.
+  const subtrees =
+    showUnreleased || !project.refreshed_at
+      ? project.subtrees
+      : project.subtrees.filter((s) => !neverReleased(s));
   return (
     <section className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -415,15 +418,15 @@ function ProjectTable({
         <label className="flex cursor-pointer items-center gap-1.5 text-sm">
           <input
             type="checkbox"
-            checked={hideUnreleased}
-            onChange={(e) => onHideUnreleased(e.target.checked)}
+            checked={showUnreleased}
+            onChange={(e) => onShowUnreleased(e.target.checked)}
           />
-          hide unreleased
+          show unreleased
         </label>
       </div>
       {project.error && <p className="text-sm text-danger">{project.error}</p>}
       {subtrees.length === 0 ? (
-        <p className="text-sm text-fg-muted">Every subtree here is hidden as unreleased.</p>
+        <p className="text-sm text-fg-muted">No subtree here has been released yet.</p>
       ) : (
         <div className="overflow-x-auto rounded border border-border">
           <table className="w-full text-left text-sm">
@@ -538,7 +541,7 @@ export function ReleasesDashboard() {
     reminder?: ReleaseReminder;
     bump?: ReleaseBump;
   } | null>(null);
-  const [hideNever, setHideNever] = useState(false);
+  const [showUnreleased, setShowUnreleased] = useState(readShowUnreleased);
   const [openRun, setOpenRun] = useState<ReleaseRun | null>(null);
   const [onRunEnd] = useState(() => () => {
     qc.invalidateQueries({ queryKey: queryKeys.releases });
@@ -619,8 +622,11 @@ export function ReleasesDashboard() {
             <ProjectTable
               key={p.repo_path}
               project={p}
-              hideUnreleased={hideNever}
-              onHideUnreleased={setHideNever}
+              showUnreleased={showUnreleased}
+              onShowUnreleased={(show) => {
+                setShowUnreleased(show);
+                writeShowUnreleased(show);
+              }}
               onRelease={(prefix) =>
                 setReleasing({ repo: p.repo_path, prefix, bump: "patch", suffix: "" })
               }

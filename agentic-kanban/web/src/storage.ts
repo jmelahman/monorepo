@@ -19,6 +19,24 @@ export function writeActiveBoardId(id: number): void {
   }
 }
 
+const SHOW_UNRELEASED_KEY = "kanban.releases.showUnreleased";
+
+export function readShowUnreleased(): boolean {
+  try {
+    return localStorage.getItem(SHOW_UNRELEASED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function writeShowUnreleased(show: boolean): void {
+  try {
+    localStorage.setItem(SHOW_UNRELEASED_KEY, String(show));
+  } catch {
+    // ignore quota / disabled storage
+  }
+}
+
 // Per-session remembered tab (e.g. "agent", "diff"). One key per session id,
 // so these must be cleaned up when a session is dropped (archive/delete) or
 // they accumulate forever — see clearSessionTab, called from the store's
