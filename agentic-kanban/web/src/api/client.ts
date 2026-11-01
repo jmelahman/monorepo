@@ -236,6 +236,11 @@ export type ReleaseCI = {
   error?: string;
 };
 
+export type ReleaseAssessment = {
+  // The probability that users would notice the unreleased commits.
+  visible: number;
+};
+
 export type ReleaseSubtree = {
   prefix: string;
   remote: string;
@@ -247,6 +252,8 @@ export type ReleaseSubtree = {
   counted: boolean;
   error?: string;
   ci?: ReleaseCI;
+  // Absent unless assessments are on and these commits have one.
+  assessment?: ReleaseAssessment;
 };
 
 export type ReleaseProject = {
@@ -291,6 +298,8 @@ export type ReleaseSummary = {
   projects: ReleaseProject[];
   reminders: ReleaseReminder[];
   runs: ReleaseRun[];
+  // Absent unless assessments are on.
+  assessment?: { running: boolean; error?: string };
 };
 
 export type ReleasePreview = {

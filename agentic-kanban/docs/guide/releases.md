@@ -18,6 +18,24 @@ Subtrees that have never been released are hidden until you tick **show unreleas
 
 It also shows each subtree's latest GitHub Actions runs on its upstream, checked at most every 5 minutes while something is reading the page or `kanban release list`, so an idle server spends none of your API quota. This is for information only: a release doesn't check CI. It needs `gh` on the server, signed in.
 
+## Assessing unreleased commits
+
+The tab can also estimate how likely users are to notice each subtree's unreleased commits, using a [Kev](https://github.com/jaredpalmer/kev) decision model. This is off by default, and nothing is loaded unless you turn it on.
+
+To turn it on, point the server at a Kev checkpoint:
+
+```sh
+kanban serve --kev-checkpoint /path/to/kev-0.8b --kev-base /path/to/qwen3.5-0.8b-base
+```
+
+The checkpoint needs a `head.safetensors`. Create one with [`tools/convert_head.py`](https://github.com/jmelahman/kev-go/blob/master/tools/convert_head.py). `--kev-base` is the backbone an adapter was trained on, and a full-weight checkpoint doesn't need it.
+
+A **user-visible** column then shows the estimate as a percentage. It's for information only: a release doesn't check it, and it doesn't tell you whether to release. Against one monorepo's release history, Kev-0.8B couldn't predict when a release happened, and its suggested bumps were worse than always choosing patch. It did separate clearly internal commits from user-facing ones, but read the percentage as a hint.
+
+The model reads only the subjects of the newest 60 commits since the latest release, and runs on the server, so nothing is sent elsewhere. Subtrees with no commits since a release aren't assessed, and neither are those never released.
+
+The model loads only when the page or `kanban release list` reads the state and there are commits it hasn't read, and it's closed as soon as it has read them. Kev-0.8B takes about 4 GB of memory and a few seconds per subtree on a 12-core CPU while it runs. Answers are saved, so refreshes and restarts don't load it again for the same commits. Pointing at a different checkpoint path assesses everything again; replacing the files at the same path doesn't.
+
 ## Releasing
 
 **release** fetches, then shows the version and commit that would be released: the tip of the board's base branch on `origin`. Your checkout isn't touched.

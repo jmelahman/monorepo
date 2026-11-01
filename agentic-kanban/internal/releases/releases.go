@@ -64,6 +64,17 @@ type Service struct {
 	// check began.
 	ci        map[string]map[string]CIHealth
 	ciStarted map[string]time.Time
+	// openModel is nil unless assessments were enabled, and modelName names
+	// what it loads.
+	openModel OpenModel
+	modelName string
+	// assessments is the latest for each repo and prefix, assessed holds the
+	// repos with no refresh since their last pass, and assessing means a pass
+	// is under way. assessError is how the latest pass failed.
+	assessments map[string]map[string]db.ReleaseAssessment
+	assessed    map[string]bool
+	assessing   bool
+	assessError string
 }
 
 // New returns a Service keeping run logs under dataDir. Any run still marked
@@ -84,6 +95,7 @@ func New(store *db.Store, dataDir string) *Service {
 		refreshing: map[string]bool{},
 		ci:         map[string]map[string]CIHealth{},
 		ciStarted:  map[string]time.Time{},
+		assessed:   map[string]bool{},
 	}
 	s.loadProjects()
 	return s

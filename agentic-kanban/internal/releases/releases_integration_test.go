@@ -23,6 +23,7 @@ import (
 	"github.com/jmelahman/kanban/internal/db"
 	"github.com/jmelahman/kanban/internal/kanbantest"
 	"github.com/jmelahman/kanban/internal/releases"
+	"github.com/jmelahman/kanban/internal/releases/kevtest"
 )
 
 const prefix = "tools/foo"
@@ -76,12 +77,17 @@ func newWorld(t *testing.T) *world {
 // mirror has yet to publish it.
 func (w *world) commit(name string) {
 	w.t.Helper()
+	w.commitWith(name, "Change "+name)
+}
+
+func (w *world) commitWith(name, subject string) {
+	w.t.Helper()
 	path := filepath.Join(w.env.RepoPath, prefix, name)
 	if err := os.WriteFile(path, []byte("package main\n"), 0o644); err != nil {
 		w.t.Fatal(err)
 	}
 	kanbantest.MustGit(w.t, w.env.RepoPath, "add", "--", path)
-	kanbantest.MustGit(w.t, w.env.RepoPath, "commit", "-q", "-m", "Change "+name)
+	kanbantest.MustGit(w.t, w.env.RepoPath, "commit", "-q", "-m", subject)
 	kanbantest.MustGit(w.t, w.env.RepoPath, "push", "-q", "origin", "main")
 }
 
@@ -636,5 +642,242 @@ func TestPreReleaseContinues(t *testing.T) {
 	w.commit("next.go")
 	if got := preview(); got.Version != "v0.0.1-rc.1" {
 		t.Errorf("second pre-release: %+v", got)
+	}
+}
+
+// tagRelease marks the subtree as released at HEAD, so what follows is unreleased.
+func (w *world) tagRelease() {
+	w.t.Helper()
+	kanbantest.MustGit(w.t, w.env.RepoPath, "tag", prefix+"/v0.1.0")
+	kanbantest.MustGit(w.t, w.env.RepoPath, "push", "-q", "origin", prefix+"/v0.1.0")
+}
+
+// waitSummary reads the summary until done accepts it.
+func (w *world) waitSummary(what string, done func(releases.Summary) bool) releases.Summary {
+	w.t.Helper()
+	deadline := time.Now().Add(time.Minute)
+	for {
+		code, data := w.do("GET", "/api/releases", nil)
+		if code != 200 {
+			w.t.Fatalf("summary: %d %s", code, data)
+		}
+		sum := decode[releases.Summary](w.t, data)
+		if done(sum) {
+			return sum
+		}
+		if time.Now().After(deadline) {
+			w.t.Fatalf("%s: %s", what, data)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// assessedAs reports whether the only subtree is assessed as visible, with no
+// pass under way.
+func assessedAs(visible float64) func(releases.Summary) bool {
+	return func(sum releases.Summary) bool {
+		if len(sum.Projects) != 1 || sum.Assessment == nil || sum.Assessment.Running {
+			return false
+		}
+		a := sum.Projects[0].Subtrees[0].Assessment
+		return a != nil && a.Visible == visible
+	}
+}
+
+// settled reports whether every refresh and pass has finished.
+func settled(sum releases.Summary) bool {
+	if len(sum.Projects) != 1 || sum.Projects[0].Refreshing || sum.Projects[0].RefreshedAt == 0 {
+		return false
+	}
+	return sum.Assessment == nil || !sum.Assessment.Running
+}
+
+// Off is the default: no column, and nothing to load.
+func TestAssessmentIsOffByDefault(t *testing.T) {
+	w := newWorld(t)
+	w.tagRelease()
+	w.commit("a.go")
+	sum := w.waitSummary("no refresh", settled)
+	if sum.Assessment != nil || sum.Projects[0].Subtrees[0].Assessment != nil {
+		t.Errorf("assessed with no model: %+v", sum)
+	}
+}
+
+// The model is loaded only for commits it hasn't read, and let go of after.
+func TestAssessmentLoadsOnlyForNewCommits(t *testing.T) {
+	w := newWorld(t)
+	w.tagRelease()
+	w.commitWith("a.go", "Add the frobnicate flag")
+	loader := &kevtest.Loader{Visible: 0.75}
+	w.env.Releases.EnableAssessment("kev", loader.Open)
+
+	sum := w.waitSummary("no assessment", assessedAs(0.75))
+	if st := sum.Projects[0].Subtrees[0]; st.Unreleased != 1 {
+		t.Errorf("subtree %+v", st)
+	}
+	if !loader.Read("- Add the frobnicate flag") {
+		t.Error("the model didn't read the commit")
+	}
+	if opens, closes := loader.Counts(); opens != 1 || closes != 1 {
+		t.Errorf("opened %d, closed %d", opens, closes)
+	}
+
+	// A refresh that finds the same commits has nothing to ask.
+	if code, data := w.do("POST", "/api/releases/refresh", nil); code != 204 {
+		t.Fatalf("refresh: %d %s", code, data)
+	}
+	w.waitSummary("no refresh", settled)
+	if opens, _ := loader.Counts(); opens != 1 {
+		t.Errorf("reloaded for the same commits: %d opens", opens)
+	}
+
+	// New commits are read again, and the old answer isn't shown for them.
+	w.commitWith("b.go", "Fix the crash on start")
+	loader.Set(0.25)
+	if code, data := w.do("POST", "/api/releases/refresh", nil); code != 204 {
+		t.Fatalf("refresh: %d %s", code, data)
+	}
+	w.waitSummary("no new assessment", assessedAs(0.25))
+	if opens, closes := loader.Counts(); opens != 2 || closes != 2 {
+		t.Errorf("opened %d, closed %d", opens, closes)
+	}
+}
+
+// A release leaves nothing to assess, so the old answer goes and nothing loads.
+func TestAssessmentSkipsWhatHasNoCommits(t *testing.T) {
+	w := newWorld(t)
+	w.tagRelease()
+	loader := &kevtest.Loader{Visible: 0.75}
+	w.env.Releases.EnableAssessment("kev", loader.Open)
+	w.waitSummary("no refresh", settled)
+	// A refresh having finished, a pass may be yet to start: read once more.
+	sum := w.waitSummary("no refresh", settled)
+	if st := sum.Projects[0].Subtrees[0]; st.Unreleased != 0 || st.Assessment != nil {
+		t.Errorf("subtree %+v", st)
+	}
+	if opens, _ := loader.Counts(); opens != 0 {
+		t.Errorf("loaded a model for nothing: %d opens", opens)
+	}
+}
+
+// A restart shows the last answer and doesn't load the model to repeat it.
+func TestAssessmentSurvivesRestart(t *testing.T) {
+	w := newWorld(t)
+	w.tagRelease()
+	w.commitWith("a.go", "Add the frobnicate flag")
+	first := &kevtest.Loader{Visible: 0.75}
+	w.env.Releases.EnableAssessment("kev", first.Open)
+	w.waitSummary("no assessment", assessedAs(0.75))
+	deadline := time.Now().Add(time.Minute)
+	for {
+		saved, err := w.env.Store.ListReleaseProjects(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := saved[w.env.RepoPath]; ok {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("nothing saved")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	restarted := releases.New(w.env.Store, t.TempDir())
+	t.Cleanup(restarted.Close)
+	second := &kevtest.Loader{Visible: 0.1}
+	restarted.EnableAssessment("kev", second.Open)
+	summary := func() releases.Summary {
+		t.Helper()
+		sum, err := restarted.Summary(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return sum
+	}
+	sum := summary()
+	if a := sum.Projects[0].Subtrees[0].Assessment; a == nil || a.Visible != 0.75 {
+		t.Fatalf("restored %+v", sum.Projects[0].Subtrees[0])
+	}
+	for !settled(sum) {
+		if time.Now().After(deadline) {
+			t.Fatal("never settled")
+		}
+		time.Sleep(20 * time.Millisecond)
+		sum = summary()
+	}
+	if opens, _ := second.Counts(); opens != 0 {
+		t.Errorf("loaded a model after a restart: %d opens", opens)
+	}
+
+	// A different checkpoint hasn't given this answer, so it has to.
+	swapped := releases.New(w.env.Store, t.TempDir())
+	t.Cleanup(swapped.Close)
+	third := &kevtest.Loader{Visible: 0.5}
+	swapped.EnableAssessment("smaller-kev", third.Open)
+	for {
+		sum, err := swapped.Summary(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if a := sum.Projects[0].Subtrees[0].Assessment; a != nil && a.Visible == 0.5 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("not assessed again: %+v", sum.Projects[0].Subtrees[0])
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// A checkpoint that won't load is reported, and not retried on every read.
+func TestAssessmentReportsFailure(t *testing.T) {
+	w := newWorld(t)
+	w.tagRelease()
+	w.commit("a.go")
+	loader := &kevtest.Loader{OpenErr: errors.New("no such checkpoint")}
+	w.env.Releases.EnableAssessment("kev", loader.Open)
+	sum := w.waitSummary("no failure", func(sum releases.Summary) bool {
+		return sum.Assessment != nil && sum.Assessment.Error != ""
+	})
+	if !strings.Contains(sum.Assessment.Error, "no such checkpoint") {
+		t.Errorf("error = %q", sum.Assessment.Error)
+	}
+	w.waitSummary("no refresh", settled)
+	if opens, _ := loader.Counts(); opens != 1 {
+		t.Errorf("retried on a read: %d opens", opens)
+	}
+	if st := w.waitSummary("no refresh", settled).Projects[0].Subtrees[0]; st.Assessment != nil {
+		t.Errorf("subtree %+v", st)
+	}
+}
+
+// The real model, if there's one to hand: internal-only commits should read as
+// less visible than a user-facing fix and feature.
+func TestAssessmentWithKev(t *testing.T) {
+	checkpoint := os.Getenv("KEV_CHECKPOINT")
+	if checkpoint == "" {
+		t.Skip("KEV_CHECKPOINT isn't set")
+	}
+	visible := func(subjects ...string) float64 {
+		w := newWorld(t)
+		w.tagRelease()
+		for i, subject := range subjects {
+			w.commitWith(fmt.Sprintf("f%d.go", i), subject)
+		}
+		w.env.Releases.EnableAssessment(checkpoint, releases.OpenKev(checkpoint, os.Getenv("KEV_BASE")))
+		sum := w.waitSummary("no assessment", func(sum releases.Summary) bool {
+			if a := sum.Assessment; a != nil && a.Error != "" {
+				t.Fatal(a.Error)
+			}
+			return len(sum.Projects) == 1 && sum.Projects[0].Subtrees[0].Assessment != nil
+		})
+		return sum.Projects[0].Subtrees[0].Assessment.Visible
+	}
+	internal := visible("ci: bump actions/checkout", "docs: fix typo in README", "chore: run formatter")
+	user := visible("fix: crash when the config file is empty", "feat: add a --json flag to the list command")
+	t.Logf("internal %.3f, user-facing %.3f", internal, user)
+	if internal >= user {
+		t.Errorf("internal %.3f isn't below user-facing %.3f", internal, user)
 	}
 }
