@@ -554,15 +554,14 @@ export function ReleasesDashboard() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Releases</h2>
         <div className="flex items-center gap-2">
-          <Button
-            variant={neverOnly ? "primary" : "neutral"}
-            size="lg"
-            className="rounded-full"
-            aria-pressed={neverOnly}
-            onClick={() => setNeverOnly((v) => !v)}
-          >
+          <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={neverOnly}
+              onChange={(e) => setNeverOnly(e.target.checked)}
+            />
             never released ({neverCount})
-          </Button>
+          </label>
           <Button
             variant="neutral"
             size="lg"
