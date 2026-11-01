@@ -838,6 +838,7 @@ static func _materials() -> Materials:
 		material.set_shader_parameter("rough", load(path % "rough"))
 		material.set_shader_parameter("occlusion", load(path % "ao"))
 		material.set_shader_parameter("tile", tile)
+		material.set_shader_parameter("lattice", Lattice.texture())
 		used.concrete.append(material)
 	used.glass = ShaderMaterial.new()
 	used.glass.shader = WINDOW

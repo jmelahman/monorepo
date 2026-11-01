@@ -74,6 +74,7 @@ static func poured() -> ShaderMaterial:
 	concrete.set_shader_parameter("normals", load(CONCRETE % "nor_gl"))
 	concrete.set_shader_parameter("rough", load(CONCRETE % "rough"))
 	concrete.set_shader_parameter("tile", CONCRETE_METRES)
+	concrete.set_shader_parameter("lattice", Lattice.texture())
 	return concrete
 
 

@@ -425,6 +425,7 @@ static func _parts() -> Parts:
 	parts.concrete.set_shader_parameter("rough", load(path % "rough"))
 	parts.concrete.set_shader_parameter("occlusion", load(path % "ao"))
 	parts.concrete.set_shader_parameter("tile", CONCRETE_METRES)
+	parts.concrete.set_shader_parameter("lattice", Lattice.texture())
 	for scan: String in SHUTTERS:
 		parts.shutters.append(steel(scan))
 	parts.sheeting = steel(SHEETING)

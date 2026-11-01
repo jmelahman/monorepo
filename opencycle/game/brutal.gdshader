@@ -14,6 +14,8 @@ uniform vec3 wash_colour = vec3(0.45, 0.62, 0.8);
 // is a wildly different place in the scan, so it takes its run from the model's axes instead.
 uniform bool modelled = false;
 
+#include "res://game/lattice.gdshaderinc"
+
 varying vec3 world;
 varying vec3 world_normal;
 varying vec2 ledges;
@@ -23,16 +25,6 @@ varying vec2 run_z;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-float noise(vec2 p) {
-	vec2 i = floor(p);
-	vec2 f = fract(p);
-	f = f * f * (3.0 - 2.0 * f);
-	return mix(
-			mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-			mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
-			f.y);
 }
 
 void vertex() {
@@ -82,13 +74,16 @@ void fragment() {
 	// joints. Only on walls, and only while the joint is wider than a pixel or so.
 	if (n.y < 0.5) {
 		float keep = 1.0 - smoothstep(0.012, 0.03, fwidth(at.x) + fwidth(at.y));
-		float dip = formwork(at);
 		vec2 pour_cell = floor(at / vec2(2.4, 1.2));
 		surface *= 0.92 + 0.16 * hash(pour_cell + 11.0);
-		surface *= 1.0 - dip * 0.65 * keep;
-		float e = 0.006;
-		vec2 slope = vec2(formwork(at + vec2(e, 0.0)) - dip, formwork(at + vec2(0.0, e)) - dip);
-		normal_map.xy += slope * 1.2 * keep;
+		if (keep > 0.0) {
+			float dip = formwork(at);
+			surface *= 1.0 - dip * 0.65 * keep;
+			float e = 0.006;
+			vec2 slope = vec2(
+					formwork(at + vec2(e, 0.0)) - dip, formwork(at + vec2(0.0, e)) - dip);
+			normal_map.xy += slope * 1.2 * keep;
+		}
 	}
 
 	// Patches where somebody cast a repair, each a slightly different pour.
