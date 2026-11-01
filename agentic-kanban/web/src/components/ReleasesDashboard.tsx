@@ -388,10 +388,12 @@ function ProjectTable({
   project,
   onRelease,
   hideUnreleased,
+  onHideUnreleased,
 }: {
   project: ReleaseProject;
   onRelease: (prefix: string) => void;
   hideUnreleased: boolean;
+  onHideUnreleased: (hide: boolean) => void;
 }) {
   const qc = useQueryClient();
   // Reaching for the button is the cue to start the fetch the modal will want.
@@ -400,66 +402,79 @@ function ProjectTable({
   const subtrees = hideUnreleased
     ? project.subtrees.filter((s) => !neverReleased(s))
     : project.subtrees;
-  if (subtrees.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-sm font-medium">
-        {project.repo_path}{" "}
-        <span className="font-normal text-fg-muted">
-          {project.base}
-          {project.refreshing && " · refreshing…"}
-        </span>
-      </h3>
-      {project.error && <p className="text-sm text-danger">{project.error}</p>}
-      <div className="overflow-x-auto rounded border border-border">
-        <table className="w-full text-left text-sm">
-          <thead className="text-xs text-fg-muted">
-            <tr>
-              <th className="px-3 py-2 font-normal">subtree</th>
-              <th className="px-3 py-2 font-normal">ahead / behind</th>
-              <th className="px-3 py-2 font-normal">latest</th>
-              <th className="px-3 py-2 font-normal">unreleased</th>
-              <th className="px-3 py-2 font-normal">ci</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {subtrees.map((s) => (
-              <tr key={s.prefix} className="border-t border-border">
-                <td className="px-3 py-2">{s.prefix}</td>
-                {s.error ? (
-                  <td colSpan={3} className="px-3 py-2 text-xs text-danger">
-                    {s.error}
-                  </td>
-                ) : (
-                  <>
-                    <td className="px-3 py-2">
-                      {s.ahead} / {s.behind}
-                    </td>
-                    <td className="px-3 py-2">{s.latest || "—"}</td>
-                    <td className="px-3 py-2">{s.counted ? s.unreleased : "—"}</td>
-                  </>
-                )}
-                <td className="px-3 py-2">
-                  <CICell ci={s.ci} />
-                </td>
-                <td className="px-3 py-2 text-right whitespace-nowrap">
-                  <Button
-                    variant="neutral"
-                    size="sm"
-                    className={chip}
-                    onMouseEnter={() => warm(s.prefix)}
-                    onFocus={() => warm(s.prefix)}
-                    onClick={() => onRelease(s.prefix)}
-                  >
-                    release
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-medium">
+          {project.repo_path}{" "}
+          <span className="font-normal text-fg-muted">
+            {project.base}
+            {project.refreshing && " · refreshing…"}
+          </span>
+        </h3>
+        <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={hideUnreleased}
+            onChange={(e) => onHideUnreleased(e.target.checked)}
+          />
+          hide unreleased
+        </label>
       </div>
+      {project.error && <p className="text-sm text-danger">{project.error}</p>}
+      {subtrees.length === 0 ? (
+        <p className="text-sm text-fg-muted">Every subtree here is hidden as unreleased.</p>
+      ) : (
+        <div className="overflow-x-auto rounded border border-border">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs text-fg-muted">
+              <tr>
+                <th className="px-3 py-2 font-normal">subtree</th>
+                <th className="px-3 py-2 font-normal">ahead / behind</th>
+                <th className="px-3 py-2 font-normal">latest</th>
+                <th className="px-3 py-2 font-normal">unreleased</th>
+                <th className="px-3 py-2 font-normal">ci</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {subtrees.map((s) => (
+                <tr key={s.prefix} className="border-t border-border">
+                  <td className="px-3 py-2">{s.prefix}</td>
+                  {s.error ? (
+                    <td colSpan={3} className="px-3 py-2 text-xs text-danger">
+                      {s.error}
+                    </td>
+                  ) : (
+                    <>
+                      <td className="px-3 py-2">
+                        {s.ahead} / {s.behind}
+                      </td>
+                      <td className="px-3 py-2">{s.latest || "—"}</td>
+                      <td className="px-3 py-2">{s.counted ? s.unreleased : "—"}</td>
+                    </>
+                  )}
+                  <td className="px-3 py-2">
+                    <CICell ci={s.ci} />
+                  </td>
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <Button
+                      variant="neutral"
+                      size="sm"
+                      className={chip}
+                      onMouseEnter={() => warm(s.prefix)}
+                      onFocus={() => warm(s.prefix)}
+                      onClick={() => onRelease(s.prefix)}
+                    >
+                      release
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
@@ -552,24 +567,14 @@ export function ReleasesDashboard() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-3 py-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide">Releases</h2>
-          <div className="flex items-center gap-2">
-            <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-              <input
-                type="checkbox"
-                checked={hideNever}
-                onChange={(e) => setHideNever(e.target.checked)}
-              />
-              hide unreleased
-            </label>
-            <Button
-              variant="primary"
-              size="lg"
-              pending={refreshMut.isPending}
-              idleLabel="refresh"
-              pendingLabel="refreshing…"
-              onClick={() => refreshMut.mutate()}
-            />
-          </div>
+          <Button
+            variant="primary"
+            size="lg"
+            pending={refreshMut.isPending}
+            idleLabel="refresh"
+            pendingLabel="refreshing…"
+            onClick={() => refreshMut.mutate()}
+          />
         </div>
         {summary.unavailable && <p className="text-sm text-danger">{summary.unavailable}</p>}
         {refreshMut.error && <p className="text-sm text-danger">{String(refreshMut.error)}</p>}
@@ -615,6 +620,7 @@ export function ReleasesDashboard() {
               key={p.repo_path}
               project={p}
               hideUnreleased={hideNever}
+              onHideUnreleased={setHideNever}
               onRelease={(prefix) =>
                 setReleasing({ repo: p.repo_path, prefix, bump: "patch", suffix: "" })
               }
