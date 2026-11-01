@@ -59,7 +59,8 @@ static func _spill(route: Route, hung: Street.Sign, sheet: SignSheet) -> OmniLig
 	glow.light_color = own.lerp(COOL if hung.side < 0.0 else HOT, 0.45)
 	glow.light_energy = 0.7 + hung.size.x * hung.size.y * 0.12
 	glow.light_specular = 0.5
-	glow.light_volumetric_fog_energy = 1.2
+	# Any more and riding past fills the whole frame with a flat veil of the sign's colour.
+	glow.light_volumetric_fog_energy = 0.25
 	glow.omni_range = 14.0 + hung.size.x * 2.5
 	glow.omni_attenuation = 1.3
 	glow.position = (

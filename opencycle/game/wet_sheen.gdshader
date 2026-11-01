@@ -16,6 +16,8 @@ uniform float reach = 28.0;
 uniform float worn = 0.0;
 
 const int TAPS = 9;
+// What the near road sees straight above it is darker than the top of the frame.
+const float OVERHEAD = 0.6;
 
 varying vec3 world;
 
@@ -52,18 +54,21 @@ void fragment() {
 	float blur = mix(3.5, 0.5, water);
 	vec3 seen = vec3(0.0);
 	float weight = 0.0;
+	float beyond = 0.0;
 	// A different offset for each pixel, or a small bright light shows up as one rung per tap.
 	float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
 	for (int i = 0; i < TAPS; i++) {
 		float along = (float(i) + jitter) / float(TAPS);
 		vec2 tap = uv + vec2(0.0, (along - 0.3) * spread);
-		// Off the top of the frame there's nothing to read: let the reflection fade out.
+		// Off the top of the frame there's nothing to read, so it takes the overall light up there.
 		float inside = smoothstep(1.0, 0.86, 1.0 - tap.y) * smoothstep(0.0, 0.03, tap.x)
 				* smoothstep(1.0, 0.97, tap.x);
 		float share = 1.0 - abs(along - 0.3);
 		seen += textureLod(screen, clamp(tap, 0.0, 1.0), blur).rgb * inside * share;
+		beyond += (1.0 - inside) * share;
 		weight += share;
 	}
+	seen += textureLod(screen, vec2(clamp(uv.x, 0.0, 1.0), 0.12), 6.0).rgb * beyond * OVERHEAD;
 	seen /= weight;
 	float amount = mix(mix(0.16, 0.65, fresnel), mix(0.3, 0.8, fresnel), water);
 	float kept = 1.0;

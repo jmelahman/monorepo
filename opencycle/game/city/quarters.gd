@@ -13,7 +13,7 @@ const TUBE_RUN := 3.2
 const TUBE_GAP := 1.6
 const TUBE_DEAD := 0.14
 const TUBE := Color(0.72, 1.05, 0.82)
-const TUNNEL_LIGHT := Color(0.82, 1.0, 0.88)
+const TUNNEL_LIGHT := Color(0.88, 1.0, 0.95)
 ## Every so many bays a dim pool between the shadowed spots. The bays with neither have failed
 ## tubes, and the dark between pools is what gives the tunnel length.
 const TUNNEL_POOL_EVERY := 2
@@ -321,7 +321,7 @@ static func _tunnel_lights(root: Node3D, route: Route, stretch: Districts.Stretc
 			# Only some throw shadows, but the columns' shadows are what give the place depth.
 			var spot := SpotLight3D.new()
 			spot.light_color = TUNNEL_LIGHT
-			spot.light_energy = 16.0
+			spot.light_energy = 6.5
 			spot.light_volumetric_fog_energy = 0.08
 			spot.spot_range = 18.0
 			spot.spot_angle = 72.0
@@ -877,7 +877,7 @@ static func _sky_shaft(ground: Vector3) -> SpotLight3D:
 	var beam := SpotLight3D.new()
 	beam.light_color = COLD
 	beam.light_energy = 10.0
-	beam.light_volumetric_fog_energy = 3.5
+	beam.light_volumetric_fog_energy = 1.2
 	beam.light_specular = 0.3
 	beam.spot_range = Undercity.DECK_HEIGHT + 30.0
 	beam.spot_angle = 30.0
