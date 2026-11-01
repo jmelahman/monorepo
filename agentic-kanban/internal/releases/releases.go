@@ -312,6 +312,11 @@ func (s *Service) status(o *orchard.Orchard, repo string, sub config.Subtree, re
 	if err != nil {
 		log.Printf("releases: read split of %s: %v", sub.Prefix, err)
 	}
+	if ok {
+		// No ref holds a split, so git gc prunes it in time.
+		_, err := o.Repo.Output("cat-file", "-e", split+"^{commit}")
+		ok = err == nil
+	}
 	if !ok {
 		if split, err = o.Split(sub, rev); err != nil {
 			return orchard.Status{}, err

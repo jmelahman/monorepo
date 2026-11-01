@@ -286,23 +286,34 @@ func TestSummarySurvivesRestart(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	restarted := releases.New(w.env.Store, t.TempDir())
-	t.Cleanup(restarted.Close)
+	// The state is saved just after the refresh shows.
 	for {
-		sum, err := restarted.Summary(context.Background())
+		saved, err := w.env.Store.ListReleaseProjects(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(sum.Projects) == 1 && sum.Projects[0].RefreshedAt != 0 {
-			if p := sum.Projects[0]; p.Refreshing || len(p.Subtrees) != 1 || p.Subtrees[0].Prefix != prefix || !p.Subtrees[0].Counted {
-				t.Fatalf("restored %+v", p)
-			}
-			return
+		if _, ok := saved[w.env.RepoPath]; ok {
+			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("nothing saved: %+v", sum.Projects)
+			t.Fatal("nothing saved")
 		}
 		time.Sleep(50 * time.Millisecond)
+	}
+
+	// Only the first Summary shows what was saved: it starts a refresh of a
+	// repo it doesn't know, which would fill in the state by itself.
+	restarted := releases.New(w.env.Store, t.TempDir())
+	t.Cleanup(restarted.Close)
+	sum, err := restarted.Summary(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sum.Projects) != 1 {
+		t.Fatalf("restored %+v", sum.Projects)
+	}
+	if p := sum.Projects[0]; p.RefreshedAt == 0 || p.Refreshing || len(p.Subtrees) != 1 || p.Subtrees[0].Prefix != prefix || !p.Subtrees[0].Counted {
+		t.Fatalf("restored %+v", p)
 	}
 }
 
@@ -339,6 +350,39 @@ func TestPreviewReusesSplit(t *testing.T) {
 	w.commit("lag.go")
 	if p := w.preview(); p.Ahead != 1 || p.Blocked == "" {
 		t.Fatalf("after a subtree commit: %+v", p)
+	}
+}
+
+// No ref holds a split, so git gc prunes it while its row stays saved.
+func TestPreviewSplitsAgainAfterPrune(t *testing.T) {
+	w := newWorld(t)
+	w.commit("lag.go")
+	p := w.preview()
+	if p.Ahead != 1 {
+		t.Fatalf("preview %+v", p)
+	}
+
+	o, err := orchard.Open(w.env.RepoPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub, _ := o.Config.Lookup(prefix)
+	change, err := o.LastChange(sub, p.Rev)
+	if err != nil {
+		t.Fatal(err)
+	}
+	split, ok, err := w.env.Store.GetReleaseSplit(context.Background(), w.env.RepoPath, prefix, change)
+	if err != nil || !ok {
+		t.Fatalf("saved split: %v %v", ok, err)
+	}
+	kanbantest.MustGit(t, w.env.RepoPath, "reflog", "expire", "--expire=now", "--all")
+	kanbantest.MustGit(t, w.env.RepoPath, "gc", "-q", "--prune=now")
+	if _, err := o.Repo.Output("cat-file", "-e", split+"^{commit}"); err == nil {
+		t.Fatalf("split %s wasn't pruned", split)
+	}
+
+	if p := w.preview(); p.Ahead != 1 {
+		t.Fatalf("after the prune: %+v", p)
 	}
 }
 
