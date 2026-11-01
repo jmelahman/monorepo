@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 
 	"github.com/jmelahman/kev-go/internal/qwen35"
@@ -47,11 +48,12 @@ type Options struct {
 	// Base is the directory of the backbone an adapter was trained on, named by
 	// the checkpoint's head.safetensors. A full-weight checkpoint needs none.
 	Base string
-	// Workers bounds the CPUs used. Zero uses all of them.
+	// Workers bounds the threads used. Zero uses half the CPUs: on an SMT machine
+	// that's one per core, and using both of a core's threads runs slower.
 	Workers int
 	// PrefixCache is how many tokens of recent states to keep ready, so more
 	// questions about the same state don't read it again. Each token costs about
-	// 25 KB. Zero means 16384, and negative turns it off.
+	// 43 KB. Zero means 8192, and negative turns it off.
 	PrefixCache int
 }
 
@@ -127,13 +129,17 @@ func Open(dir string, opts Options) (*Model, error) {
 	if err != nil {
 		return nil, err
 	}
-	backbone, err := qwen35.Open(base, adapter, opts.Workers)
+	workers := opts.Workers
+	if workers == 0 {
+		workers = max(1, runtime.GOMAXPROCS(0)/2)
+	}
+	backbone, err := qwen35.Open(base, adapter, workers)
 	if err != nil {
 		return nil, err
 	}
 	m := &Model{backbone: backbone, tok: tok, headDim: meta.HeadDim, temperature: meta.Temperature, turn: make(chan struct{}, 1), maxHeld: opts.PrefixCache}
 	if m.maxHeld == 0 {
-		m.maxHeld = 16384
+		m.maxHeld = 8192
 	}
 	d := backbone.HiddenSize()
 	for name, dst := range map[string]*[]float32{"q.weight": &m.qW, "k.weight": &m.kW, "q.bias": &m.qB, "k.bias": &m.kB} {
