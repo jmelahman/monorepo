@@ -64,6 +64,11 @@ function BumpSelect({
   );
 }
 
+// Errored subtrees are unknown, not unreleased.
+function neverReleased(s: ReleaseSubtree) {
+  return !s.error && !s.latest;
+}
+
 function unreleasedLabel(s: ReleaseSubtree | undefined) {
   if (!s) return "";
   if (s.error) return "state unknown";
@@ -367,16 +372,20 @@ function ProjectTable({
   reminders,
   onRelease,
   onRemind,
+  unreleasedOnly,
 }: {
   project: ReleaseProject;
   reminders: ReleaseReminder[];
   onRelease: (prefix: string) => void;
   onRemind: (prefix: string) => void;
+  unreleasedOnly: boolean;
 }) {
   const qc = useQueryClient();
   // Reaching for the button is the cue to start the fetch the modal will want.
   const warm = (prefix: string) =>
     qc.prefetchQuery(previewOptions(project.repo_path, prefix, "patch", ""));
+  const subtrees = unreleasedOnly ? project.subtrees.filter(neverReleased) : project.subtrees;
+  if (subtrees.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
       <h3 className="text-sm font-medium">
@@ -400,7 +409,7 @@ function ProjectTable({
             </tr>
           </thead>
           <tbody>
-            {project.subtrees.map((s) => (
+            {subtrees.map((s) => (
               <tr key={s.prefix} className="border-t border-border">
                 <td className="px-3 py-2">{s.prefix}</td>
                 {s.error ? (
@@ -503,6 +512,7 @@ export function ReleasesDashboard() {
     prefix: string;
     reminder?: ReleaseReminder;
   } | null>(null);
+  const [neverOnly, setNeverOnly] = useState(false);
   const [openRun, setOpenRun] = useState<ReleaseRun | null>(null);
   const [onRunEnd] = useState(() => () => {
     qc.invalidateQueries({ queryKey: queryKeys.releases });
@@ -522,6 +532,10 @@ export function ReleasesDashboard() {
   if (!summary) return <p className="p-4 text-sm text-fg-muted">Loading…</p>;
 
   const remindersIn = (repo: string) => summary.reminders.filter((r) => r.repo_path === repo);
+  const neverCount = summary.projects.reduce(
+    (n, p) => n + p.subtrees.filter(neverReleased).length,
+    0,
+  );
   const subtreeOf = (r: ReleaseReminder) =>
     summary.projects
       .find((p) => p.repo_path === r.repo_path)
@@ -531,14 +545,25 @@ export function ReleasesDashboard() {
     <div className="flex h-full min-h-0 flex-col gap-6 overflow-auto p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Releases</h2>
-        <Button
-          variant="neutral"
-          size="lg"
-          pending={refreshMut.isPending}
-          idleLabel="refresh"
-          pendingLabel="refreshing…"
-          onClick={() => refreshMut.mutate()}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant={neverOnly ? "primary" : "neutral"}
+            size="lg"
+            className="rounded-full"
+            aria-pressed={neverOnly}
+            onClick={() => setNeverOnly((v) => !v)}
+          >
+            never released ({neverCount})
+          </Button>
+          <Button
+            variant="neutral"
+            size="lg"
+            pending={refreshMut.isPending}
+            idleLabel="refresh"
+            pendingLabel="refreshing…"
+            onClick={() => refreshMut.mutate()}
+          />
+        </div>
       </div>
       {summary.unavailable && <p className="text-sm text-danger">{summary.unavailable}</p>}
       {refreshMut.error && <p className="text-sm text-danger">{String(refreshMut.error)}</p>}
@@ -584,6 +609,7 @@ export function ReleasesDashboard() {
             key={p.repo_path}
             project={p}
             reminders={remindersIn(p.repo_path)}
+            unreleasedOnly={neverOnly}
             onRemind={(prefix) => setReminding({ repo: p.repo_path, prefix })}
             onRelease={(prefix) =>
               setReleasing({ repo: p.repo_path, prefix, bump: "patch", suffix: "" })
