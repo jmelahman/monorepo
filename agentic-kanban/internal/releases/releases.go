@@ -4,6 +4,7 @@ package releases
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -63,12 +64,7 @@ type Service struct {
 	// check began.
 	ci        map[string]map[string]CIHealth
 	ciStarted map[string]time.Time
-	// splits holds each subtree's split by the commit that last changed it:
-	// splitting is slow, and an untouched subtree splits the same.
-	splits map[splitKey]string
 }
-
-type splitKey struct{ repo, prefix, change string }
 
 // New returns a Service keeping run logs under dataDir. Any run still marked
 // running was cut off by the last shutdown, so it's marked interrupted.
@@ -77,7 +73,7 @@ func New(store *db.Store, dataDir string) *Service {
 	if err := store.InterruptReleaseRuns(ctx); err != nil {
 		log.Printf("releases: interrupt runs: %v", err)
 	}
-	return &Service{
+	s := &Service{
 		store:      store,
 		logDir:     filepath.Join(dataDir, "release-runs"),
 		ctx:        ctx,
@@ -88,7 +84,26 @@ func New(store *db.Store, dataDir string) *Service {
 		refreshing: map[string]bool{},
 		ci:         map[string]map[string]CIHealth{},
 		ciStarted:  map[string]time.Time{},
-		splits:     map[splitKey]string{},
+	}
+	s.loadProjects()
+	return s
+}
+
+// loadProjects restores each repo's last state, so the tab has something to
+// show while the first refresh after a restart runs.
+func (s *Service) loadProjects() {
+	saved, err := s.store.ListReleaseProjects(s.ctx)
+	if err != nil {
+		log.Printf("releases: load saved state: %v", err)
+		return
+	}
+	for repo, state := range saved {
+		var p Project
+		if err := json.Unmarshal(state, &p); err != nil || p.RepoPath != repo {
+			continue
+		}
+		p.Refreshing = false
+		s.projects[repo] = p
 	}
 }
 
@@ -285,30 +300,25 @@ func (s *Service) DismissReminder(ctx context.Context, id int64) error {
 	return nil
 }
 
-// status is o.Status(sub, rev), reusing the split of a subtree that hasn't
-// changed since it was last split. Only the upstream is fetched then.
+// status is o.Status(sub, rev), reusing the saved split of a subtree that
+// hasn't changed since it was last split, even across restarts. Only the
+// upstream is fetched then.
 func (s *Service) status(o *orchard.Orchard, repo string, sub config.Subtree, rev string) (orchard.Status, error) {
 	change, err := o.LastChange(sub, rev)
 	if err != nil {
 		return orchard.Status{}, err
 	}
-	key := splitKey{repo, sub.Prefix, change}
-	s.mu.Lock()
-	split, ok := s.splits[key]
-	s.mu.Unlock()
+	split, ok, err := s.store.GetReleaseSplit(s.ctx, repo, sub.Prefix, change)
+	if err != nil {
+		log.Printf("releases: read split of %s: %v", sub.Prefix, err)
+	}
 	if !ok {
 		if split, err = o.Split(sub, rev); err != nil {
 			return orchard.Status{}, err
 		}
-		s.mu.Lock()
-		// A subtree's older splits are never asked for again.
-		for k := range s.splits {
-			if k.repo == repo && k.prefix == sub.Prefix {
-				delete(s.splits, k)
-			}
+		if err := s.store.SetReleaseSplit(s.ctx, repo, sub.Prefix, change, split); err != nil {
+			log.Printf("releases: save split of %s: %v", sub.Prefix, err)
 		}
-		s.splits[key] = split
-		s.mu.Unlock()
 	}
 	return o.StatusOf(sub, split)
 }

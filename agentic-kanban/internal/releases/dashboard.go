@@ -2,6 +2,7 @@ package releases
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -126,6 +127,11 @@ func (s *Service) Start(interval time.Duration) {
 	s.wg.Go(func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
+		// What was saved at the last stop may be stale, or for a manifest
+		// that has since changed.
+		if err := s.Refresh(s.ctx); err != nil {
+			log.Printf("releases: refresh: %v", err)
+		}
 		for {
 			select {
 			case <-s.ctx.Done():
@@ -149,12 +155,30 @@ func (s *Service) startRefresh(repo, base string) {
 	s.wg.Go(func() {
 		p, ok := s.compute(repo, base)
 		s.mu.Lock()
-		defer s.mu.Unlock()
 		delete(s.refreshing, repo)
 		if ok {
 			s.projects[repo] = p
 		}
+		s.mu.Unlock()
+		if ok {
+			s.saveProject(p)
+		}
 	})
+}
+
+// saveProject keeps p for the next start. A refresh the server cut short isn't
+// worth keeping over the last complete one.
+func (s *Service) saveProject(p Project) {
+	if s.ctx.Err() != nil {
+		return
+	}
+	state, err := json.Marshal(p)
+	if err == nil {
+		err = s.store.SaveReleaseProject(s.ctx, p.RepoPath, state)
+	}
+	if err != nil {
+		log.Printf("releases: save state of %s: %v", p.RepoPath, err)
+	}
 }
 
 // compute works out a repo's state; false means it has no subtrees.

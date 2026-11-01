@@ -28,6 +28,29 @@ type migration struct {
 var migrations = []migration{
 	{name: "drop sessions path overrides", apply: dropSessionPathOverrides},
 	{name: "add release reminders and runs", apply: addReleases},
+	{name: "add release state", apply: addReleaseState},
+}
+
+// addReleaseState keeps what the Releases tab computes across restarts: each
+// repo's last state, which is slow to recompute, and each subtree's last split.
+func addReleaseState(tx *sql.Tx) error {
+	_, err := tx.Exec(`
+CREATE TABLE IF NOT EXISTS release_projects (
+  repo_path TEXT PRIMARY KEY,
+  state TEXT NOT NULL,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE TABLE IF NOT EXISTS release_splits (
+  repo_path TEXT NOT NULL,
+  prefix TEXT NOT NULL,
+  change TEXT NOT NULL,
+  split TEXT NOT NULL,
+  PRIMARY KEY (repo_path, prefix)
+);`)
+	if err != nil {
+		return fmt.Errorf("create release state tables: %w", err)
+	}
+	return nil
 }
 
 // addReleases creates the release reminders, at most one open per subtree, and

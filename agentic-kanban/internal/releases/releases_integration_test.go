@@ -270,6 +270,42 @@ func TestSummary(t *testing.T) {
 	}
 }
 
+// A restart shows the last state straight away instead of an empty table
+// while the first refresh runs.
+func TestSummarySurvivesRestart(t *testing.T) {
+	w := newWorld(t)
+	deadline := time.Now().Add(time.Minute)
+	for {
+		_, data := w.do("GET", "/api/releases", nil)
+		if sum := decode[releases.Summary](t, data); len(sum.Projects) == 1 && sum.Projects[0].RefreshedAt != 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("no refresh")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	restarted := releases.New(w.env.Store, t.TempDir())
+	t.Cleanup(restarted.Close)
+	for {
+		sum, err := restarted.Summary(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(sum.Projects) == 1 && sum.Projects[0].RefreshedAt != 0 {
+			if p := sum.Projects[0]; p.Refreshing || len(p.Subtrees) != 1 || p.Subtrees[0].Prefix != prefix || !p.Subtrees[0].Counted {
+				t.Fatalf("restored %+v", p)
+			}
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("nothing saved: %+v", sum.Projects)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
 func TestMirrorLagBlocks(t *testing.T) {
 	w := newWorld(t)
 	w.commit("lag.go")

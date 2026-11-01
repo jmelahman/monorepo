@@ -155,3 +155,53 @@ func (s *Store) InterruptReleaseRuns(ctx context.Context) error {
 		ReleaseRunInterrupted, ReleaseRunRunning)
 	return err
 }
+
+// SaveReleaseProject replaces a repo's last computed releases state, which is
+// opaque JSON to the store.
+func (s *Store) SaveReleaseProject(ctx context.Context, repo string, state []byte) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO release_projects (repo_path, state) VALUES (?, ?)
+		 ON CONFLICT (repo_path) DO UPDATE SET state=excluded.state, updated_at=unixepoch()`,
+		repo, string(state))
+	return err
+}
+
+// ListReleaseProjects returns each repo's last saved releases state by path.
+func (s *Store) ListReleaseProjects(ctx context.Context) (map[string][]byte, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT repo_path, state FROM release_projects`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string][]byte{}
+	for rows.Next() {
+		var repo, state string
+		if err := rows.Scan(&repo, &state); err != nil {
+			return nil, err
+		}
+		out[repo] = []byte(state)
+	}
+	return out, rows.Err()
+}
+
+// GetReleaseSplit returns the split saved for a subtree as of the commit that
+// last changed it; false if the saved one is for another commit or none.
+func (s *Store) GetReleaseSplit(ctx context.Context, repo, prefix, change string) (string, bool, error) {
+	var split string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT split FROM release_splits WHERE repo_path=? AND prefix=? AND change=?`,
+		repo, prefix, change).Scan(&split)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	return split, err == nil, err
+}
+
+// SetReleaseSplit saves a subtree's split, replacing any older one.
+func (s *Store) SetReleaseSplit(ctx context.Context, repo, prefix, change, split string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO release_splits (repo_path, prefix, change, split) VALUES (?, ?, ?, ?)
+		 ON CONFLICT (repo_path, prefix) DO UPDATE SET change=excluded.change, split=excluded.split`,
+		repo, prefix, change, split)
+	return err
+}
