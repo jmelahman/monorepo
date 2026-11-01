@@ -510,7 +510,9 @@ type ReleaseOptions struct {
 	// Remote is the monorepo remote to push the tag to, where the mirror
 	// action publishes it upstream. Empty only tags locally.
 	Remote string
-	// Upstream publishes the upstream branch and tag directly as well.
+	// Upstream publishes the upstream branch and tag directly as well. The
+	// release is pushed to the current branch of Remote first, if it isn't
+	// there, so the monorepo never trails what it published.
 	Upstream bool
 	// Force moves an existing tag, provided the upstream hasn't published it
 	// at another commit: consumers of a published release (the Go module
@@ -546,6 +548,12 @@ func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions)
 			return "", fmt.Errorf("tag %s already exists at %.12s; pass --force to move it", tag, tagged)
 		}
 		if err := o.checkUnpublished(s, version, rev); err != nil {
+			return "", err
+		}
+	}
+
+	if opts.Upstream && opts.Remote != "" {
+		if err := o.pushBranch(opts.Remote, commit); err != nil {
 			return "", err
 		}
 	}
@@ -598,6 +606,22 @@ func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions)
 		}
 	}
 	return tag, nil
+}
+
+// pushBranch fast-forwards the current branch on remote to commit, unless
+// remote's copy already has it. A branch that has moved elsewhere rejects the
+// push rather than being rewound.
+func (o *Orchard) pushBranch(remote, commit string) error {
+	branch, err := o.Repo.Output("symbolic-ref", "--quiet", "--short", "HEAD")
+	if err != nil {
+		return fmt.Errorf("pushing the release to %s needs a branch checked out; push it yourself, or release without --upstream", remote)
+	}
+	if _, err := o.Repo.Output("fetch", "--quiet", "--no-tags", remote, branch); err == nil {
+		if _, err := o.Repo.Output("merge-base", "--is-ancestor", commit, "FETCH_HEAD"); err == nil {
+			return nil
+		}
+	}
+	return o.Repo.Run(append(pushArgs(!o.NoVerify), remote, commit+":refs/heads/"+branch)...)
 }
 
 // NextOptions configure NextVersion.

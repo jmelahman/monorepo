@@ -88,7 +88,7 @@ Watching a release that already tags --rev checks on it without retagging.`,
 	cmd.Flags().StringVar(&opts.Rev, "rev", "HEAD", "monorepo revision to release")
 	cmd.Flags().StringVarP(&opts.Message, "message", "m", "", `tag message (default "<prefix> <version>")`)
 	cmd.Flags().StringVar(&opts.Remote, "remote", "origin", "monorepo remote to push the tag to; empty only tags locally")
-	cmd.Flags().BoolVar(&opts.Upstream, "upstream", false, "also push the branch and tag to the upstream directly")
+	cmd.Flags().BoolVar(&opts.Upstream, "upstream", false, "also push the release to the remote's branch, then the branch and tag to the upstream directly")
 	cmd.Flags().BoolVar(&opts.NoVerify, "no-verify", false, "skip the pre-push hook")
 	cmd.Flags().BoolVarP(&opts.Force, "force", "f", false, "move an existing tag that the upstream hasn't published")
 	cmd.Flags().BoolVar(&opts.Major, "major", false, "increment the major version")

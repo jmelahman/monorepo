@@ -463,6 +463,10 @@ func TestRelease(t *testing.T) {
 	if got := f.git(upstream, "rev-parse", "master"); got != f.git(upstream, "rev-parse", "v1.1.0^{commit}") {
 		t.Error("--upstream should publish the branch too")
 	}
+	branch := f.git(f.mono, "symbolic-ref", "--short", "HEAD")
+	if got, want := f.git(git.Repo{Dir: origin}, "rev-parse", branch), f.git(f.mono, "rev-parse", "HEAD"); got != want {
+		t.Errorf("--upstream left origin's %s at %.12s, want %.12s", branch, got, want)
+	}
 
 	// Releasing again changes nothing, even after the upstream moves on.
 	f.commit(f.mono, "tools/foo/next.go", "package main\n", "Add next")

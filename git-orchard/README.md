@@ -65,7 +65,7 @@ git orchard ci [prefix...]              # GitHub Actions status of the monorepo 
 
 Without a version, `release` picks one after the latest release, much as [tag](https://github.com/jmelahman/tag) does: the patch version incremented (`--minor` and `--major` increment those instead), or a pre-release's stable release; `--suffix rc` picks the next release candidate, e.g. `v1.2.4-rc`, then `v1.2.4-rc.1`.
 Releases are the `<prefix>/v*` tags in the monorepo and on its remote, and the `v*` tags upstream, so releases from before the subtree count; `--dry-run` prints the pick.
-`release` requires the upstream branch to contain the release already, so the upstream tag lands on its history; `--upstream` pushes the branch and tag there directly instead of leaving it to the action.
+`release` requires the upstream branch to contain the release already, so the upstream tag lands on its history; `--upstream` pushes the release to the remote's current branch, if it isn't there, and then the branch and tag upstream directly instead of leaving it to the action.
 `push`, `pull` and `release` take `--no-verify` to skip git hooks.
 Pushes upstream run the monorepo's pre-push hook on what they change there, at monorepo paths, rather than on the split's commits, so a tool like pre-commit checks only those files instead of the whole repository; a tag the upstream branch already contains changes nothing.
 `push --force` overwrites upstream branches and tags, leased on their value when the push starts so a concurrent update still fails it; the action never forces.
