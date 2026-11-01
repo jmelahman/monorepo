@@ -53,6 +53,21 @@ detail is fixed at build time by distance from the road wherever that is possibl
 - Thick air is the neon street's easiest way to look worse: it lifts the blacks and smears
   the road's mirror, which reads the screen after the fog is drawn. Keep fog thin.
 
+- After rebuilding a `.glb`, `godot --headless --import` can keep the old import. Delete its
+  files in `.godot/imported/` first, then check the `.scn` is newer than the `.glb`.
+- A Godot still can hang on quit after writing its PNG; wrap it in `timeout`. Rain hides most
+  of a surface, so inspect with `--off=rain`.
+- pre-commit stashes unstaged changes while a commit runs anywhere in this monorepo, so a
+  still taken during one shows the last commit. Commit before a batch of stills.
+
+## Modelled assets
+
+`scripts/blender/` builds meshes headless: `blender -b --python scripts/blender/monolith.py`
+writes `assets/modelled/monolith.glb`, in LFS. `shapes.py` bakes occlusion and room light into
+vertex colours, and `Kit.restyle` swaps in the game's materials by name. Modelled concrete
+uses `modelled` in `game/brutal.gdshader`, because the world-space mapping that suits flat
+walls turns undulating surfaces into crumpled foil.
+
 ## The neon street
 
 The bar is `docs/realism-standard.md`: it should feel real, with art-directed lighting and

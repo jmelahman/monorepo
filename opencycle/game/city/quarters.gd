@@ -40,7 +40,7 @@ const FLOOR_FIRST := 5.0
 const FLOOR_HIGH := 4.2
 const PARAPET := 1.3
 const ROOM_LIT := 0.34
-const GALLERY_LAMP := 0.35
+const GALLERY_LAMP := 0.7
 const BENCH_OFFSET := 8.5
 const BENCH_LONG := 3.4
 const BENCH_EVERY := 11.0
@@ -57,6 +57,8 @@ const MODELLED := "res://assets/modelled/%s.glb"
 ## Thin things go first when a model is coarsened, and a mullion is six centimetres wide.
 const MODELLED_TOLERANCE := 0.008
 const MODELLED_REACH := 500.0
+const CLOTH_DIM := 0.3
+const WASH_EVERY := 2
 const LETTINGS: Array[String] = ["bay_a", "bay_b", "bay_c", "bay_d", "bay_e", "bay_f", "bay_g"]
 
 
@@ -118,13 +120,18 @@ static func _parts() -> Parts:
 	cloth.vertex_color_use_as_albedo = true
 	cloth.roughness = 0.95
 	cloth.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Laundry's colours are chosen to read as colours, but it hangs in the same dark as the
+	# concrete, and the concrete comes out far darker than a colour this size.
+	cloth.albedo_color = Color(CLOTH_DIM, CLOTH_DIM, CLOTH_DIM)
 	var glass := StandardMaterial3D.new()
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	glass.albedo_color = Color(0.04, 0.05, 0.06, 0.28)
 	glass.roughness = 0.08
 	glass.metallic = 0.7
+	var modelled_concrete: ShaderMaterial = parts.concrete.duplicate()
+	modelled_concrete.set_shader_parameter("modelled", true)
 	var materials: Dictionary[String, Material] = {
-		"concrete": parts.concrete,
+		"concrete": modelled_concrete,
 		"steel": parts.steel,
 		"rust": parts.rust,
 		"paint": parts.paint,
@@ -578,13 +585,31 @@ static func _gallery_bay(
 		if storey % 2 == 0 and Rng.unit(dice, 200 + storey) < GALLERY_LAMP:
 			var lamp := OmniLight3D.new()
 			lamp.light_color = UPLIGHT
-			lamp.light_energy = 1.6
+			lamp.light_energy = 4.0
 			lamp.light_volumetric_fog_energy = 0.15
-			lamp.omni_range = 10.0
+			lamp.omni_range = 12.0
 			lamp.position = base + facing * 0.2 + y + Vector3.UP * (FLOOR_HIGH - 1.0)
 			root.add_child(lamp)
 		floor_at += FLOOR_HIGH
 		storey += 1
+	if Rng.unit(dice, 300) < 1.0 / WASH_EVERY:
+		root.add_child(_housing_wash(base + facing * 3.0, Rng.unit(dice, 301) < 0.3))
+
+
+## A lamp on the street level's lintel, shining nearly straight up the front of the housing:
+## only a light this close to the wall throws the shadows of the slabs and piers across it.
+static func _housing_wash(at: Vector3, cold: bool) -> SpotLight3D:
+	var wash := SpotLight3D.new()
+	wash.light_color = COLD if cold else UPLIGHT
+	wash.light_energy = 45.0
+	wash.light_volumetric_fog_energy = 0.1
+	wash.spot_range = Undercity.DECK_HEIGHT
+	wash.spot_angle = 34.0
+	wash.spot_attenuation = 0.8
+	wash.shadow_enabled = true
+	wash.position = at + Vector3.UP * FLOOR_FIRST
+	wash.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+	return wash
 
 
 static func _terrace(
@@ -748,7 +773,7 @@ static func _monolith(
 	parts.monolith.place("monolith", Transform3D(Basis(along, Vector3.UP, facing), foot))
 	# Lamps set in the ground right against it, since only a raking light shows relief.
 	for lamp: Array in [
-		[foot + facing * 6.5 - along * 3.0, 90.0, Color(1.0, 0.6, 0.32)],
+		[foot + facing * 6.5 - along * 3.0, 70.0, Color(1.0, 0.84, 0.68)],
 		[foot + facing * 5.0 + along * 9.0, 60.0, COLD],
 	]:
 		var wash := SpotLight3D.new()

@@ -10,10 +10,16 @@ uniform sampler2D rough : hint_roughness_g, filter_linear_mipmap_anisotropic, re
 uniform sampler2D occlusion : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float tile = 3.0;
 uniform vec3 wash_colour = vec3(0.45, 0.62, 0.8);
+// A modelled surface undulates, and metres from the origin times a slightly different normal
+// is a wildly different place in the scan, so it takes its run from the model's axes instead.
+uniform bool modelled = false;
 
 varying vec3 world;
 varying vec3 world_normal;
 varying vec2 ledges;
+varying vec3 local_normal;
+varying vec2 run_x;
+varying vec2 run_z;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -33,6 +39,9 @@ void vertex() {
 	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize(mat3(MODEL_MATRIX) * NORMAL);
 	ledges = UV2;
+	local_normal = NORMAL;
+	run_x = MODEL_MATRIX[0].xz;
+	run_z = MODEL_MATRIX[2].xz;
 }
 
 // The dip of a joint between formwork panels, and of the tie holes along it. 0 on the face.
@@ -50,6 +59,9 @@ void fragment() {
 	vec3 n = abs(world_normal);
 	// Along the wall whichever way it faces, so an angled one doesn't smear.
 	vec2 run = normalize(vec2(-world_normal.z, world_normal.x) + vec2(0.0001));
+	if (modelled) {
+		run = normalize(abs(local_normal.x) > abs(local_normal.z) ? run_z : run_x);
+	}
 	vec2 at = n.y > 0.5 ? world.xz : vec2(dot(world.xz, run), world.y);
 	float age = COLOR.a;
 	vec2 close = at / tile;
