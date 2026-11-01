@@ -8,3 +8,4 @@
 *.otf binary
 *.webp binary
 assets/baked/*.webp filter=lfs diff=lfs merge=lfs -text
+assets/modelled/*.glb filter=lfs diff=lfs merge=lfs -text

@@ -19,12 +19,12 @@ var _placed: Dictionary[Vector2i, Array] = {}
 var _names: Array[String] = []
 
 
-func _init(path: String) -> void:
+func _init(path: String, tolerance := STREET_TOLERANCE) -> void:
 	var scene: PackedScene = load(path)
 	var node := scene.instantiate()
 	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
 		var part := child as MeshInstance3D
-		_meshes[String(part.name)] = Kit.lean(part.mesh, STREET_TOLERANCE)
+		_meshes[String(part.name)] = Kit.lean(part.mesh, tolerance)
 		_origins[String(part.name)] = part.position
 		_names.append(String(part.name))
 	node.free()

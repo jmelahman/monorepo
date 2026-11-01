@@ -5,7 +5,7 @@ extends Node3D
 ## [code]--biome=forest|neon[/code], [code]--seed=N[/code],
 ## [code]--replay=res://replays/x.json[/code] and [code]--quality=ship|max[/code] choose
 ## what to show. [code]--scale=0.5[/code] overrides the quality's render scale.
-## [code]--off=shadows,aa,fog,ssao,glow,probes[/code] leaves those features out.
+## [code]--off=shadows,aa,fog,ssao,glow,probes,rain[/code] leaves those features out.
 ## [code]--still=out.png[/code] with [code]--at=SECONDS[/code] renders one frame and quits,
 ## and [code]--look=YAW,PITCH,SIDEWAYS[/code] turns its camera and moves it off the racing line.
 ## [code]--bench=out.json[/code] rides the whole replay as fast as the GPU allows and
@@ -108,6 +108,8 @@ func _switch_off(names: PackedStringArray) -> void:
 			(node as Light3D).shadow_enabled = false
 		elif node is ReflectionProbe and "probes" in names:
 			(node as ReflectionProbe).visible = false
+	if "rain" in names and _rain:
+		_rain.visible = false
 	if "aa" in names:
 		get_viewport().use_taa = false
 		get_viewport().msaa_3d = Viewport.MSAA_DISABLED

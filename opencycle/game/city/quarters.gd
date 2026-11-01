@@ -53,6 +53,11 @@ const POOL_WIDE := 7.0
 const SHAFT_EVERY := 36.0
 const COLD := Color(0.62, 0.8, 1.0)
 const UPLIGHT := Color(1.0, 0.72, 0.42)
+const MODELLED := "res://assets/modelled/%s.glb"
+## Thin things go first when a model is coarsened, and a mullion is six centimetres wide.
+const MODELLED_TOLERANCE := 0.008
+const MODELLED_REACH := 500.0
+const LETTINGS: Array[String] = ["bay_a", "bay_b", "bay_c", "bay_d", "bay_e", "bay_f", "bay_g"]
 
 
 class Parts:
@@ -66,6 +71,8 @@ class Parts:
 	var pavers: StandardMaterial3D
 	var glow: StandardMaterial3D
 	var pool: StandardMaterial3D
+	var housing: Kit
+	var monolith: Kit
 
 
 static func build(route: Route, street: Street) -> Node3D:
@@ -84,6 +91,8 @@ static func build(route: Route, street: Street) -> Node3D:
 	for opening: Vector3 in street.openings:
 		_plaza(kit, root, route, opening, parts)
 	kit.commit(root)
+	parts.housing.commit(root, MODELLED_REACH)
+	parts.monolith.commit(root, MODELLED_REACH)
 	return root
 
 
@@ -105,6 +114,30 @@ static func _parts() -> Parts:
 	parts.pool.albedo_color = Color(0.015, 0.02, 0.025)
 	parts.pool.roughness = 0.04
 	parts.pool.metallic = 0.7
+	var cloth := StandardMaterial3D.new()
+	cloth.vertex_color_use_as_albedo = true
+	cloth.roughness = 0.95
+	cloth.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var glass := StandardMaterial3D.new()
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass.albedo_color = Color(0.04, 0.05, 0.06, 0.28)
+	glass.roughness = 0.08
+	glass.metallic = 0.7
+	var materials: Dictionary[String, Material] = {
+		"concrete": parts.concrete,
+		"steel": parts.steel,
+		"rust": parts.rust,
+		"paint": parts.paint,
+		"worn": parts.worn,
+		"glow": parts.glow,
+		"room": parts.glow,
+		"cloth": cloth,
+		"glass": glass,
+	}
+	parts.housing = Kit.new(MODELLED % "housing_bay", MODELLED_TOLERANCE)
+	parts.housing.restyle(materials)
+	parts.monolith = Kit.new(MODELLED % "monolith", MODELLED_TOLERANCE)
+	parts.monolith.restyle(materials)
 	return parts
 
 
@@ -475,26 +508,22 @@ static func _plaza(
 		kit, route, from, to, left, right, StreetGround.KERB_HEIGHT, parts.pavers, 1.0
 	)
 	var middle := (from + to) * 0.5
-	var s := from
-	while s < to:
-		var long := minf(FIN_EVERY, to - s)
-		var at := s + long * 0.5
+	var bays := maxi(roundi((to - from) / FIN_EVERY), 1)
+	var long := (to - from) / bays
+	for bay: int in bays:
+		var at := from + long * (bay + 0.5)
 		kit.at(at)
 		var out := route.right(at) * side
-		_gallery_bay(
-			kit, root, route.at(at) + out * PLAZA_DEPTH, route.tangent(at), -out, long, parts
-		)
-		s += FIN_EVERY
+		_gallery_bay(kit, root, route.at(at) + out * PLAZA_DEPTH, -out, long, parts)
+	var return_bays := maxi(roundi((PLAZA_DEPTH - wall) / FIN_EVERY), 1)
+	var return_long := (PLAZA_DEPTH - wall) / return_bays
 	for end: float in [from, to]:
 		kit.at(end)
 		var inward := route.tangent(end) * (1.0 if end == from else -1.0)
 		var out := route.right(end) * side
-		var x := wall
-		while x < PLAZA_DEPTH:
-			var long := minf(FIN_EVERY, PLAZA_DEPTH - x)
-			var base := route.at(end) + out * (x + long * 0.5)
-			_gallery_bay(kit, root, base, out, inward, long, parts)
-			x += FIN_EVERY
+		for bay: int in return_bays:
+			var base := route.at(end) + out * (wall + return_long * (bay + 0.5))
+			_gallery_bay(kit, root, base, inward, return_long, parts)
 	_terrace(kit, route, from, to, side, parts)
 	var drum := from + DRUM_EVERY * 0.5
 	while drum < to:
@@ -514,73 +543,38 @@ static func _plaza(
 		_monolith(kit, root, route, middle, side, parts)
 
 
-## One bay of the housing around the plaza, floor on floor up to the deck: a deep parapet
-## over a recess, and behind it a strip of rooms with the lights on in some.
+## One bay of the housing around the plaza, floor on floor up to the deck: a street level
+## that's just piers and a blind wall, and over it the modelled storeys, each its own letting.
 static func _gallery_bay(
-	kit: CityMesh,
-	root: Node3D,
-	base: Vector3,
-	along: Vector3,
-	facing: Vector3,
-	wide: float,
-	parts: Parts
+	kit: CityMesh, root: Node3D, base: Vector3, facing: Vector3, wide: float, parts: Parts
 ) -> void:
+	var along := Vector3.UP.cross(facing).normalized()
 	var basis := Basis(along, Vector3.UP, facing)
 	var dice := Rng.derive(int(base.x * 7.0), [94, int(base.z * 7.0)])
 	var tint := Color(0.62, 0.64, 0.68)
-	var deck := Undercity.DECK_HEIGHT
-	# What it's all fixed to, set back behind the galleries.
 	kit.box(
 		parts.concrete,
-		Transform3D(basis, base - facing * RECESS + Vector3.UP * deck * 0.5),
-		Vector3(wide + 0.1, deck, 0.6),
+		Transform3D(basis, base - facing * RECESS + Vector3.UP * FLOOR_FIRST * 0.5),
+		Vector3(wide + 0.1, FLOOR_FIRST, 0.6),
 		tint * 0.5
 	)
-	kit.block(
-		parts.concrete,
-		Transform3D(basis, base + facing * 0.2 + Vector3.UP * deck * 0.5),
-		Vector3(PIER_WIDE, deck, 2.0 + RECESS),
-		tint * 0.85,
-		0.06
-	)
-	var floor_at := FLOOR_FIRST
-	var storey := 0
-	while floor_at + FLOOR_HIGH < deck:
-		var y := Vector3.UP * floor_at
+	for edge: float in [-0.5, 0.5]:
+		var pier := base + along * edge * (wide - PIER_WIDE * 0.5) + facing * 0.2
 		kit.block(
 			parts.concrete,
-			Transform3D(basis, base + facing * 0.65 + y + Vector3.UP * PARAPET * 0.5),
-			Vector3(wide - PIER_WIDE + 0.1, PARAPET, 0.5),
-			tint,
-			0.05
+			Transform3D(basis, pier + Vector3.UP * FLOOR_FIRST * 0.5),
+			Vector3(PIER_WIDE * 0.5, FLOOR_FIRST, 2.0 + RECESS),
+			tint * 0.85,
+			0.06
 		)
-		kit.box(
-			parts.concrete,
-			Transform3D(basis, base - facing * (RECESS * 0.5 - 0.4) + y),
-			Vector3(wide, 0.28, RECESS + 0.8),
-			tint * 0.6
-		)
-		var rooms := 3
-		for room: int in rooms:
-			var lit := Rng.unit(dice, storey * rooms + room)
-			var x := (float(room) + 0.5) / rooms - 0.5
-			var at := base + along * x * (wide - PIER_WIDE) - facing * (RECESS - 0.35) + y
-			var high := FLOOR_HIGH - PARAPET - 0.3
-			var size := Vector3((wide - PIER_WIDE) / rooms - 0.35, high, 0.04)
-			var pane := at + Vector3.UP * (PARAPET + high * 0.5 - 0.3)
-			if lit < ROOM_LIT:
-				var warmth := lerpf(0.75, 1.25, Rng.unit(dice, 100 + storey + room))
-				var glass := Color(0.62 * warmth, 0.36 * warmth, 0.15)
-				kit.box(parts.glow, Transform3D(basis, pane), size, glass)
-			else:
-				kit.box(parts.steel, Transform3D(basis, pane), size, Color(0.08, 0.09, 0.1))
-			kit.bar(
-				parts.steel,
-				at + along * size.x * 0.5,
-				at + along * size.x * 0.5 + Vector3.UP * high,
-				0.06,
-				Color(0.2, 0.2, 0.2)
-			)
+	var fitted := Basis(along * (wide / FIN_EVERY), Vector3.UP, facing)
+	parts.housing.chunk = kit.chunk
+	var floor_at := FLOOR_FIRST
+	var storey := 0
+	while floor_at + FLOOR_HIGH < Undercity.DECK_HEIGHT:
+		var y := Vector3.UP * floor_at
+		var pick := int(Rng.unit(dice, storey) * LETTINGS.size())
+		parts.housing.place(LETTINGS[pick], Transform3D(fitted, base + y))
 		if storey % 2 == 0 and Rng.unit(dice, 200 + storey) < GALLERY_LAMP:
 			var lamp := OmniLight3D.new()
 			lamp.light_color = UPLIGHT
@@ -593,7 +587,6 @@ static func _gallery_bay(
 		storey += 1
 
 
-## A flight of steps the whole width of the far wall, up to a terrace along its foot.
 static func _terrace(
 	kit: CityMesh, route: Route, from: float, to: float, side: float, parts: Parts
 ) -> void:
@@ -747,37 +740,27 @@ static func _monolith(
 ) -> void:
 	kit.at(s)
 	var out := route.right(s) * side
-	var foot := route.at(s) + out * 15.0
-	var high := 24.0
-	var top := foot + Vector3.UP * high - out * 2.2
-	var axis := (top - foot).normalized()
-	# Canted towards the oncoming rider, so its lit face is seen on the way in.
-	var along := (route.tangent(s) + out * 0.7).normalized()
-	var facing := axis.cross(along).normalized()
-	if facing.dot(route.tangent(s)) > 0.0:
-		facing = -facing
-	var basis := Basis(along, axis, facing)
-	var middle := (foot + top) * 0.5
-	kit.block(
-		parts.concrete,
-		Transform3D(basis, middle),
-		Vector3(7.0, high + 2.0, 1.8),
-		Color(0.62, 0.64, 0.68),
-		0.08
-	)
-	kit.box(
-		parts.glow,
-		Transform3D(basis, middle + facing * 0.92),
-		Vector3(0.55, high - 3.0, 0.05),
-		Color(2.6, 1.2, 0.42)
-	)
-	var wash := OmniLight3D.new()
-	wash.light_color = Color(1.0, 0.55, 0.25)
-	wash.light_energy = 7.0
-	wash.light_volumetric_fog_energy = 0.25
-	wash.omni_range = 28.0
-	wash.position = middle + facing * 4.0
-	root.add_child(wash)
+	var foot := route.at(s) + out * 21.0
+	# Turned towards the oncoming rider, so its carved face is seen on the way in.
+	var facing := (-route.tangent(s) * 0.8 - out * 0.6).normalized()
+	var along := Vector3.UP.cross(facing).normalized()
+	parts.monolith.chunk = kit.chunk
+	parts.monolith.place("monolith", Transform3D(Basis(along, Vector3.UP, facing), foot))
+	# Lamps set in the ground right against it, since only a raking light shows relief.
+	for lamp: Array in [
+		[foot + facing * 6.5 - along * 3.0, 90.0, Color(1.0, 0.6, 0.32)],
+		[foot + facing * 5.0 + along * 9.0, 60.0, COLD],
+	]:
+		var wash := SpotLight3D.new()
+		wash.light_color = lamp[2]
+		wash.light_energy = lamp[1]
+		wash.light_volumetric_fog_energy = 0.1
+		wash.spot_range = 50.0
+		wash.spot_angle = 38.0
+		wash.shadow_enabled = true
+		wash.position = lamp[0] + Vector3.UP * 0.5
+		root.add_child(wash)
+		wash.look_at_from_position(wash.position, foot + Vector3.UP * 17.0)
 
 
 ## What daylight reaches down this far, wide enough to stand in.
