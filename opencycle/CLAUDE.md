@@ -59,6 +59,12 @@ detail is fixed at build time by distance from the road wherever that is possibl
   of a surface, so inspect with `--off=rain`.
 - pre-commit stashes unstaged changes while a commit runs anywhere in this monorepo, so a
   still taken during one shows the last commit. Commit before a batch of stills.
+- A new `class_name` isn't known until `godot --headless --path . --import`. Until then a
+  windowed run stalls on the parse error instead of exiting, so a bench just hangs.
+- A function in a `.gdshaderinc` can't name a parameter after a uniform or varying in a shader
+  that includes it ("Redefinition of"). `game/road_wear.gdshaderinc` is shared this way.
+- Other load on the machine slows the GPU, because they share a power budget. A bench slowdown
+  that moves between runs is probably that, not the route.
 
 ## Modelled assets
 
@@ -75,8 +81,7 @@ one's source, prompt and terms. Add to it for every new model.
 ## The neon street
 
 The bar is `docs/realism-standard.md`: it should feel real, with art-directed lighting and
-interesting buildings, not match a photo. Performance is deliberately deferred while the
-look is worked out (`docs/performance.md` has the numbers and the TODO), and `NeonBiome.CROWD` keeps the pedestrians off to speed up iteration.
+interesting buildings, not match a photo. `docs/performance.md` has the numbers and the TODO, `game/city/lamp_reach.gd` limits which lamps are lit and which cast shadows as the rider moves, and `NeonBiome.CROWD` keeps the pedestrians off to speed up iteration.
 
 `Street`, `Skyline` and `Undercity` in `sim/` decide what stands where; `game/city/` builds
 it, with `Facades` for the brutalist buildings and the close lights that rake up them

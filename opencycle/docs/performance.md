@@ -1,29 +1,39 @@
 # Performance: where it stands
 
-Deferred on purpose while the look and the content are worked out. Everything here was
-measured on the neon street, at 1920x1080 on a Radeon 890M, before the route got longer.
+Everything here was measured on the neon street's 1 km route, at 1920x1080 on a Radeon 890M.
 
 ## TODO
 
-- Reach 33 ms a frame on the 890M. It is about 100 to 125 ms now, around 9 fps.
-- Volumetric fog is the first thing to look at: about half the frame.
-- Measure what the 51 shadowed spotlights cost. A run with their shadows off was the
-  cheapest seen, but in a throttled window, so that number can't be trusted.
+- Reach 33 ms a frame on the 890M. The last market stretch is about 58 ms now, around 16 fps.
+- Whole-ride figures at full resolution, on a quiet machine: about 65 to 80 ms over the first
+  300 m and 50 to 60 ms over the last 300 m. The stretch between has no clean full-resolution
+  run yet. At `--scale=0.75` it was 61 to 68 ms.
+- About 31 ms of the frame doesn't change with resolution, so resolution alone can't reach the
+  target. Lamp shadows are about half of that.
 - Check the ride in motion for shimmer on shutters and balusters.
 
 ## Measured
 
-| Left out (`--off=`) | GPU ms, median | Average fps |
+The last market stretch (`--at=112`), one run each:
+
+| Change | GPU ms, median | Saved |
 | --- | --- | --- |
-| nothing | 102, 125 | 9.1, 8.3 |
-| `fog` | 50 | 16.6 |
-| `ssao` | 87 | 10.9 |
-| `glow` | 91 | 10.2 |
+| nothing | 57.7 | |
+| `--off=shadows` | 42.7 | 15 |
+| `--off=ssao` | 51.6 | 6 |
+| `--off=aa` | 51.9 | 6 |
+| `--off=fog` | 56.8 | 1 |
+| `--off=glow` | 58.7 | none |
+| `--scale=0.75` | 47.2 | 10.5 |
+| `--scale=0.5` | 37.7 | 20 |
 
-The two baselines are separate runs, so differences under about 20 ms mean little.
+Before `LampReach` and the thinner fog grid, the same stretch took 101 ms, with lamp shadows
+about 35 ms and fog about 40 ms. `LampReach` keeps shadows on lamps within 35 m of the rider
+and turns lamps off beyond 170 m. Widening it to 50 m cost 5 ms; narrowing the lit range to
+110 m saved nothing. TAA makes lamp shadows redraw every frame; the reason isn't understood.
 
-Scanned props are now capped at a set detail (`Kit.lean`). That took the scene from 10.3M
-to 2.7M triangles and barely moved the frame rate, so triangles aren't what's limiting it.
+Scanned props are capped at a set detail (`Kit.lean`). That took the scene from 10.3M to 2.7M
+triangles and barely moved the frame rate, so triangles aren't what's limiting it.
 
 ## Running faster
 
@@ -45,4 +55,10 @@ env -u DISPLAY XDG_RUNTIME_DIR=/run/user/$UID/och WAYLAND_DISPLAY=wayland-1 \
 	--biome=neon --quality=ship --bench=captures/bench.json
 ```
 
-The report's `gpu_ms_median` is what the GPU spent, whatever the window was doing.
+The report's `gpu_ms_median` is what the GPU spent, whatever the window was doing, and
+`gpu_ms_median_by_stretch` splits it by 100 m of road.
+
+Other work on the machine distorts this badly. The CPU and GPU share a power budget, so a
+process using ten cores took the GPU from 2400 to 1400 MHz, and a stretch from about 65 to
+130 ms. It looks like a slow part of the route, but it moves between runs. Check the machine
+is quiet, and repeat any number that matters.
