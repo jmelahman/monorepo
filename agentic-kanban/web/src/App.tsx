@@ -164,7 +164,7 @@ export default function App() {
     view === "board" ? (
       <select
         aria-label="Board"
-        className="min-w-0 max-w-[40vw] cursor-pointer rounded bg-surface px-2 py-1 text-sm"
+        className="h-7 min-w-0 max-w-[40vw] cursor-pointer rounded bg-surface px-2 text-sm"
         value={activeId ?? ""}
         onChange={(e) => setActiveId(e.target.value ? Number(e.target.value) : null)}
       >

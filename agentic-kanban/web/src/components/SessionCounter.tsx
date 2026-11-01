@@ -57,7 +57,7 @@ export function SessionCounter({ onActivate }: { onActivate?: () => void } = {})
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label={title}
-          className="inline-flex items-center gap-1.5 rounded bg-surface-2 px-2 py-1 text-xs tabular-nums text-fg transition-colors duration-150 hover:bg-surface-3"
+          className="inline-flex h-7 items-center gap-1.5 rounded bg-surface-2 px-2 text-xs tabular-nums text-fg transition-colors duration-150 hover:bg-surface-3"
         >
           <span
             aria-hidden
@@ -112,7 +112,7 @@ export function SessionCounter({ onActivate }: { onActivate?: () => void } = {})
         )}
       </div>
       <div
-        className="mr-2 hidden items-center gap-2.5 text-xs tabular-nums lg:inline-flex"
+        className="mr-2 hidden h-7 items-center gap-2.5 text-xs tabular-nums lg:inline-flex"
         title={title}
       >
         {rows.map((row) => {
