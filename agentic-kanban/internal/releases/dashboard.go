@@ -181,7 +181,7 @@ func (s *Service) compute(repo, base string) (Project, bool) {
 	orchard.Each(len(o.Config.Subtrees), refreshJobs, func(i int) {
 		sub := o.Config.Subtrees[i]
 		st := &p.Subtrees[i]
-		status, err := o.Status(sub, p.Rev)
+		status, err := s.status(o, repo, sub, p.Rev)
 		if err != nil {
 			st.Error = redact(err.Error())
 			return

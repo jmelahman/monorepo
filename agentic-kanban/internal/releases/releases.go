@@ -63,7 +63,12 @@ type Service struct {
 	// check began.
 	ci        map[string]map[string]CIHealth
 	ciStarted map[string]time.Time
+	// splits holds each subtree's split by the commit that last changed it:
+	// splitting is slow, and an untouched subtree splits the same.
+	splits map[splitKey]string
 }
+
+type splitKey struct{ repo, prefix, change string }
 
 // New returns a Service keeping run logs under dataDir. Any run still marked
 // running was cut off by the last shutdown, so it's marked interrupted.
@@ -83,6 +88,7 @@ func New(store *db.Store, dataDir string) *Service {
 		refreshing: map[string]bool{},
 		ci:         map[string]map[string]CIHealth{},
 		ciStarted:  map[string]time.Time{},
+		splits:     map[splitKey]string{},
 	}
 }
 
@@ -277,4 +283,32 @@ func (s *Service) DismissReminder(ctx context.Context, id int64) error {
 		return db.ErrNotFound
 	}
 	return nil
+}
+
+// status is o.Status(sub, rev), reusing the split of a subtree that hasn't
+// changed since it was last split. Only the upstream is fetched then.
+func (s *Service) status(o *orchard.Orchard, repo string, sub config.Subtree, rev string) (orchard.Status, error) {
+	change, err := o.LastChange(sub, rev)
+	if err != nil {
+		return orchard.Status{}, err
+	}
+	key := splitKey{repo, sub.Prefix, change}
+	s.mu.Lock()
+	split, ok := s.splits[key]
+	s.mu.Unlock()
+	if !ok {
+		if split, err = o.Split(sub, rev); err != nil {
+			return orchard.Status{}, err
+		}
+		s.mu.Lock()
+		// A subtree's older splits are never asked for again.
+		for k := range s.splits {
+			if k.repo == repo && k.prefix == sub.Prefix {
+				delete(s.splits, k)
+			}
+		}
+		s.splits[key] = split
+		s.mu.Unlock()
+	}
+	return o.StatusOf(sub, split)
 }

@@ -282,6 +282,30 @@ func TestMirrorLagBlocks(t *testing.T) {
 	}
 }
 
+// A subtree's split is reused until the subtree changes, so the counts must
+// follow the subtree's commits and not be frozen by the cache.
+func TestPreviewReusesSplit(t *testing.T) {
+	w := newWorld(t)
+	if p := w.preview(); p.Ahead != 0 {
+		t.Fatalf("preview %+v", p)
+	}
+	// A commit elsewhere in the repo leaves the subtree as it was.
+	other := filepath.Join(w.env.RepoPath, "elsewhere.txt")
+	if err := os.WriteFile(other, []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	kanbantest.MustGit(t, w.env.RepoPath, "add", "--", other)
+	kanbantest.MustGit(t, w.env.RepoPath, "commit", "-q", "-m", "Change elsewhere")
+	kanbantest.MustGit(t, w.env.RepoPath, "push", "-q", "origin", "main")
+	if p := w.preview(); p.Ahead != 0 {
+		t.Fatalf("after an unrelated commit: %+v", p)
+	}
+	w.commit("lag.go")
+	if p := w.preview(); p.Ahead != 1 || p.Blocked == "" {
+		t.Fatalf("after a subtree commit: %+v", p)
+	}
+}
+
 func TestStaleConfirmation(t *testing.T) {
 	w := newWorld(t)
 	p := w.preview()

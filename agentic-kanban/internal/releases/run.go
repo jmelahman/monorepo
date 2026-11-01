@@ -80,7 +80,7 @@ func (s *Service) preview(ctx context.Context, repo, prefix, bump, suffix string
 	if err != nil {
 		return p, redactErr(err)
 	}
-	status, err := o.Status(sub, p.Rev)
+	status, err := s.status(o, repo, sub, p.Rev)
 	if err != nil {
 		return p, redactErr(err)
 	}

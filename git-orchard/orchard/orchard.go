@@ -816,14 +816,34 @@ func UpstreamRef(s config.Subtree) string {
 	return "refs/orchard/upstream/" + s.Prefix
 }
 
+// LastChange is the newest commit of rev's history to touch s. Splitting rev
+// gives what splitting it does, so it keys a cache of splits and is far
+// cheaper than one.
+func (o *Orchard) LastChange(s config.Subtree, rev string) (string, error) {
+	out, err := o.Repo.Output("rev-list", "-1", rev, "--", s.Prefix)
+	if err != nil {
+		return "", err
+	}
+	if out == "" {
+		return "", fmt.Errorf("%s has no history at %s", s.Prefix, rev)
+	}
+	return out, nil
+}
+
 // Status fetches the upstream branch of s and compares it with rev's split.
 func (o *Orchard) Status(s config.Subtree, rev string) (Status, error) {
-	ref := UpstreamRef(s)
-	if err := o.fetchUpstream(s); err != nil {
-		return Status{}, err
-	}
 	split, err := o.Split(s, rev)
 	if err != nil {
+		return Status{}, err
+	}
+	return o.StatusOf(s, split)
+}
+
+// StatusOf fetches the upstream branch of s and compares it with split, which
+// is a split of s as Split returns.
+func (o *Orchard) StatusOf(s config.Subtree, split string) (Status, error) {
+	ref := UpstreamRef(s)
+	if err := o.fetchUpstream(s); err != nil {
 		return Status{}, err
 	}
 	out, err := o.Repo.Output("rev-list", "--left-right", "--count", split+"..."+ref)
