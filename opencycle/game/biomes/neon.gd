@@ -52,7 +52,7 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	# Shadows stay blue, so every warm light in the street has something to stand against.
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.25, 0.4, 0.7)
-	environment.ambient_light_energy = 0.4
+	environment.ambient_light_energy = 0.5
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
 	environment.tonemap_white = 7.0
