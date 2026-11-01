@@ -110,9 +110,13 @@ static func _tower(
 	var right := front + half
 	var low := Vector3.UP * -BELOW
 	var high := Vector3.UP * tower.height
-	kit.quad(concrete, left + back + low, left + low, left + high, left + back + high, -along, tone)
+	# The ends stop above the shops, whose rooms run straight through where one tower meets the next.
+	var over := Vector3.UP * GROUND_FLOOR
 	kit.quad(
-		concrete, right + low, right + back + low, right + back + high, right + high, along, tone
+		concrete, left + back + over, left + over, left + high, left + back + high, -along, tone
+	)
+	kit.quad(
+		concrete, right + over, right + back + over, right + back + high, right + high, along, tone
 	)
 	kit.quad(
 		concrete,

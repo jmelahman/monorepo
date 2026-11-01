@@ -5,11 +5,10 @@ extends RefCounted
 ## also falls on the pavement, which is most of the light in the street.
 
 const GOODS: Shader = preload("res://game/goods.gdshader")
-const SURFACE: Shader = preload("res://game/shop_surface.gdshader")
+const CANVAS: Shader = preload("res://game/shop_surface.gdshader")
 const SCREEN: Shader = preload("res://game/screen.gdshader")
 const GOODS_SHEET := "res://assets/baked/goods.webp"
 const SIGN_SHEET := "res://assets/baked/signs.webp"
-const TILE := "res://assets/polyhaven/square_tiled_wall/square_tiled_wall_%s_2k.jpg"
 const PROP := "res://assets/polyhaven/%s/%s_1k.gltf"
 const OPENING := 3.0
 const CEILING := 3.0
@@ -28,9 +27,19 @@ const AWNING_OUT := 1.7
 const AWNING_DROP := 0.5
 const AWNING_STRIPE := 0.45
 const VALANCE := 0.2
+## Height of the tile round a room, with old paint on plaster above it.
+const DADO := 1.25
+const PLASTER_METRES := 2.2
+## What the paint fades towards, so a room isn't one clean colour from floor to ceiling.
+const FADED := Color(0.6, 0.58, 0.52)
+const GAP_CHANCE := 0.14
+const PAINT_COATS: Array[Color] = [
+	Color(0.55, 0.55, 0.52), Color(0.32, 0.42, 0.42), Color(0.5, 0.27, 0.2), Color(0.3, 0.3, 0.34)
+]
 ## How each trade fits out its room: "cells" are its rows on the goods sheet, and "plan" is
-## "shelves" for aisles of stock, "eatery" for tables and a counter, "counter" for a room
-## of cases behind glass, and "screens" for a wall of televisions.
+## "shelves" for aisles of stock, "eatery" for tables and a counter, "jeweller" for a
+## room of lit cases, "bureau" for a board of rates behind a grille, and "screens" for a wall of
+## televisions.
 const TRADES: Dictionary[String, Dictionary] = {
 	"pharmacy":
 	{
@@ -67,7 +76,7 @@ const TRADES: Dictionary[String, Dictionary] = {
 	"gold":
 	{
 		"cells": [11],
-		"plan": "counter",
+		"plan": "jeweller",
 		"wall": Color(0.42, 0.03, 0.06),
 		"floor": Color(0.3, 0.2, 0.14),
 		"light": Color(1.0, 0.85, 0.62),
@@ -75,7 +84,7 @@ const TRADES: Dictionary[String, Dictionary] = {
 	"exchange":
 	{
 		"cells": [11, 9],
-		"plan": "counter",
+		"plan": "bureau",
 		"wall": Color(0.03, 0.24, 0.15),
 		"floor": Color(0.26, 0.24, 0.2),
 		"light": Color(1.0, 0.93, 0.8),
@@ -110,6 +119,8 @@ class Room:
 	var cells: Array
 	var light: Color
 	var dice: int
+	var cartons: Array[Transform3D]
+	var crates: Array[Transform3D]
 
 	## A point in the room: across from its centre, in from the street, up from the floor.
 	func point(across: float, into: float, up: float) -> Vector3:
@@ -123,18 +134,25 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	var materials := _materials()
 	var props := _props()
 	var sheet := SignSheet.load_sheet()
+	var cartons: Array[Transform3D] = []
+	var crates: Array[Transform3D] = []
 	for index: int in street.shops.size():
 		var shop := street.shops[index]
 		kit.at(shop.s)
 		for prop: Kit in props.values():
 			prop.at(shop.s)
 		var room := _room(route, shop, index)
+		room.cartons = cartons
+		room.crates = crates
 		_shell(kit, shop, room, materials)
 		if shop.open:
 			_fit_out(kit, props, sheet, shop, room, materials)
 			if shop.s > -12.0 and shop.s < length + 35.0:
 				root.add_child(_light(route, shop))
+				root.add_child(_room_light(room))
 	kit.commit(root)
+	Furniture.instances(root, Furniture.CARTON, cartons)
+	Furniture.instances(root, Furniture.CRATE, crates)
 	for prop: Kit in props.values():
 		prop.commit(root, PROP_REACH)
 	return root
@@ -161,12 +179,14 @@ static func _room(route: Route, shop: Street.Shop, index: int) -> Room:
 
 static func _materials() -> Dictionary[String, Material]:
 	var fitted: Dictionary[String, Material] = {}
-	var tile: Texture2D = load(TILE % "diffuse")
-	var tile_normals: Texture2D = load(TILE % "nor_gl")
-	fitted["wall"] = _surface(tile, tile_normals, 0.75, 0.3, 1.0 / TILE_METRES)
-	fitted["floor"] = _surface(tile, tile_normals, 0.2, 0.18, 0.0)
-	fitted["canvas"] = _surface(null, null, 0.75, 0.8, 0.0)
-	fitted["ceiling"] = _surface(null, null, 0.4, 0.8, 0.0)
+	fitted["tile"] = _lining("rectangular_facade_tiles", TILE_METRES)
+	fitted["plaster"] = _lining("concrete_wall_004", PLASTER_METRES)
+	fitted["paint"] = _lining("rusty_painted_metal", 1.3)
+	fitted["ceiling"] = _lining("dirty_concrete", 2.4)
+	fitted["floor"] = _lining("square_concrete_pavers", 1.8)
+	var canvas := ShaderMaterial.new()
+	canvas.shader = CANVAS
+	fitted["canvas"] = canvas
 	var tube := StandardMaterial3D.new()
 	tube.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	tube.vertex_color_use_as_albedo = true
@@ -175,9 +195,21 @@ static func _materials() -> Dictionary[String, Material]:
 	var steel := StandardMaterial3D.new()
 	steel.albedo_color = Color(0.1, 0.1, 0.11)
 	steel.vertex_color_use_as_albedo = true
-	steel.metallic = 0.6
-	steel.roughness = 0.45
+	steel.metallic = 0.2
+	steel.roughness = 0.5
 	fitted["steel"] = steel
+	var gold := StandardMaterial3D.new()
+	gold.albedo_color = Color(1.0, 0.72, 0.28)
+	gold.roughness = 0.3
+	gold.emission_enabled = true
+	gold.emission = Color(1.0, 0.62, 0.18)
+	gold.emission_energy_multiplier = 0.9
+	fitted["gold"] = gold
+	var menu := StandardMaterial3D.new()
+	menu.albedo_texture = load(SIGN_SHEET)
+	menu.vertex_color_use_as_albedo = true
+	menu.roughness = 0.8
+	fitted["menu"] = menu
 	var goods := ShaderMaterial.new()
 	goods.shader = GOODS
 	goods.set_shader_parameter("sheet", load(GOODS_SHEET))
@@ -185,19 +217,10 @@ static func _materials() -> Dictionary[String, Material]:
 	return fitted
 
 
-static func _surface(
-	texture: Texture2D, normals: Texture2D, glow: float, roughness: float, full_at: float
-) -> ShaderMaterial:
-	var material := ShaderMaterial.new()
-	material.shader = SURFACE
-	if texture:
-		material.set_shader_parameter("surface", texture)
-		material.set_shader_parameter("normals", normals)
-	material.set_shader_parameter("glow", glow)
-	material.set_shader_parameter("roughness", roughness)
-	if full_at > 0.0:
-		material.set_shader_parameter("fall_off", 1.0)
-		material.set_shader_parameter("full_at", full_at * CEILING)
+## A worn scan laid on in world metres and tinted per face, lit only by what's in the room.
+static func _lining(scan: String, metres: float) -> StandardMaterial3D:
+	var material := Facades.scan(scan, metres, Color.WHITE)
+	material.metallic = 0.0
 	return material
 
 
@@ -230,7 +253,6 @@ static func _shell(
 	var shade := lerpf(0.75, 1.1, shop.pick)
 	var wall_tint: Color = trade["wall"] * shade
 	var floor_tint: Color = trade["floor"]
-	var tile := 1.0 / TILE_METRES
 	kit.quad(
 		materials["floor"],
 		mouth - half,
@@ -238,8 +260,7 @@ static func _shell(
 		mouth + half + back,
 		mouth - half + back,
 		Vector3.UP,
-		floor_tint,
-		tile
+		floor_tint
 	)
 	kit.quad(
 		materials["ceiling"],
@@ -248,44 +269,31 @@ static func _shell(
 		mouth + half + inside + back,
 		mouth - half + inside + back,
 		-Vector3.UP,
-		Color(0.55, 0.55, 0.52)
+		Color(0.5, 0.48, 0.45)
 	)
+	_wall(kit, materials, mouth - half + back, mouth + half + back, -outward, wall_tint, room)
+	_wall(kit, materials, mouth - half + back, mouth - half, along, wall_tint, room)
+	_wall(kit, materials, mouth + half, mouth + half + back, -along, wall_tint, room)
+	ShopFittings.services(kit, room, materials)
+
+
+## A wall from a to b: tile to shoulder height, with a rail along it and old paint above.
+static func _wall(
+	kit: CityMesh,
+	materials: Dictionary[String, Material],
+	a: Vector3,
+	b: Vector3,
+	facing: Vector3,
+	tint: Color,
+	room: Room
+) -> void:
+	var dado := Vector3.UP * DADO
+	var head := Vector3.UP * room.height
+	kit.quad(materials["tile"], a, b, b + dado, a + dado, facing, tint)
 	kit.quad(
-		materials["wall"],
-		mouth - half + back,
-		mouth + half + back,
-		mouth + half + back + inside,
-		mouth - half + back + inside,
-		-outward,
-		wall_tint,
-		tile
+		materials["plaster"], a + dado, b + dado, b + head, a + head, facing, tint.lerp(FADED, 0.45)
 	)
-	kit.quad(
-		materials["wall"],
-		mouth - half + back,
-		mouth - half,
-		mouth - half + inside,
-		mouth - half + back + inside,
-		along,
-		wall_tint,
-		tile
-	)
-	kit.quad(
-		materials["wall"],
-		mouth + half,
-		mouth + half + back,
-		mouth + half + back + inside,
-		mouth + half + inside,
-		-along,
-		wall_tint,
-		tile
-	)
-	# Fluorescent tubes in rows, running back from the street.
-	var rows := maxi(int(shop.width / 1.5), 1)
-	for r: int in rows:
-		var offset := along * ((r + 0.5) / rows - 0.5) * shop.width
-		var from := mouth + offset + inside - Vector3.UP * 0.03 + outward * 0.3
-		kit.bar(materials["tube"], from, from + outward * (shop.depth - 0.6), 0.06, room.light)
+	kit.bar(materials["steel"], a + dado + facing * 0.012, b + dado + facing * 0.012, 0.02)
 
 
 static func _fit_out(
@@ -299,6 +307,7 @@ static func _fit_out(
 	var plan: String = TRADES[shop.trade]["plan"]
 	if Rng.unit(room.dice, 40) < 0.1:
 		_awning(kit, room, materials["canvas"], shop.pick)
+	ShopFittings.delivered(room)
 	match plan:
 		"shelves":
 			_wall_shelves(kit, room, materials, true)
@@ -308,13 +317,79 @@ static func _fit_out(
 			_wall_shelves(kit, room, materials, false)
 			_screen_wall(kit, sheet, shop, room, materials)
 			_door_displays(kit, room, materials)
-		"counter":
-			_wall_shelves(kit, room, materials, true)
+		"jeweller":
+			_cases(kit, room, materials)
 			_counter(kit, props, room, materials, room.depth * 0.55, true)
+			ShopFittings.grille(
+				kit, room, materials, room.depth * 0.55 - 0.1, room.width - 0.3, 1.0
+			)
+		"bureau":
+			ShopFittings.rate_board(kit, room, materials)
+			_counter(kit, props, room, materials, room.depth * 0.5, true)
+			ShopFittings.grille(kit, room, materials, room.depth * 0.5 - 0.1, room.width - 0.3, 1.0)
 		"eatery":
-			_wall_shelves(kit, room, materials, false)
+			_eatery_walls(kit, sheet, shop, room, materials)
 			_counter(kit, props, room, materials, room.depth - 1.3, false)
 			_tables(props, room)
+
+
+## Cases round a jeweller's back and sides, from the counter back.
+static func _cases(kit: CityMesh, room: Room, materials: Dictionary[String, Material]) -> void:
+	ShopFittings.jewel_case(
+		kit,
+		room,
+		materials,
+		room.point(0.0, room.depth - 0.03, 0.0),
+		-room.outward,
+		room.width - 0.1,
+		0
+	)
+	var inner := room.width * 0.5 - 0.03
+	var long := room.depth * 0.42
+	for end: float in [-1.0, 1.0]:
+		ShopFittings.jewel_case(
+			kit,
+			room,
+			materials,
+			room.point(end * inner, room.depth - long * 0.5 - 0.45, 0.0),
+			room.along * -end,
+			long,
+			2 + int(end)
+		)
+
+
+## The back of an eatery: its kitchen door and hood, a shelf of bottles, and the menus.
+static func _eatery_walls(
+	kit: CityMesh,
+	sheet: SignSheet,
+	shop: Street.Shop,
+	room: Room,
+	materials: Dictionary[String, Material]
+) -> void:
+	ShopFittings.kitchen(kit, room, materials)
+	_shelf_bay(
+		kit,
+		room,
+		materials,
+		room.point(0.0, room.depth - 0.03, 1.28),
+		-room.outward,
+		room.width * 0.45,
+		1,
+		1
+	)
+	var inner := room.width * 0.5 - 0.005
+	for end: float in [-1.0, 1.0]:
+		ShopFittings.notices(
+			kit,
+			sheet,
+			shop.trade,
+			room,
+			materials["menu"],
+			room.point(end * inner, room.depth * 0.5, 1.75),
+			room.along * -end,
+			room.depth - 0.8,
+			2 + int(end)
+		)
 
 
 ## Boards and uprights down a run of wall, with stock on every board.
@@ -331,10 +406,10 @@ static func _shelf_bay(
 	var run := Vector3.UP.cross(facing).normalized()
 	for row: int in rows:
 		var y := Vector3.UP * (SHELF_FOOT + row * SHELF_RISE)
-		var board := centre + y + facing * SHELF_DEPTH * 0.5
+		var shelf := centre + y + facing * SHELF_DEPTH * 0.5
 		kit.box(
 			materials["steel"],
-			Transform3D(Basis(run, Vector3.UP, facing), board),
+			Transform3D(Basis(run, Vector3.UP, facing), shelf),
 			Vector3(span, 0.03, SHELF_DEPTH),
 			Color(1.0, 1.0, 1.0)
 		)
@@ -348,6 +423,14 @@ static func _shelf_bay(
 			Rng.derive(room.dice, [stream, row])
 		)
 	var top := Vector3.UP * (SHELF_FOOT + rows * SHELF_RISE)
+	var board := centre + top + facing * SHELF_DEPTH * 0.5
+	kit.box(
+		materials["steel"],
+		Transform3D(Basis(run, Vector3.UP, facing), board),
+		Vector3(span, 0.03, SHELF_DEPTH)
+	)
+	if (centre + top).y - room.mouth.y + ShopFittings.CARTON_HIGH < room.height - 0.1:
+		ShopFittings.overstock(room, board, run, span, Rng.derive(room.dice, [stream, 99]))
 	var bays := maxi(roundi(span), 1)
 	for bay: int in bays + 1:
 		var post := centre + run * ((float(bay) / bays - 0.5) * span)
@@ -365,27 +448,37 @@ static func _goods_row(
 	dice: int
 ) -> void:
 	var run := Vector3.UP.cross(facing).normalized()
-	var count := maxi(roundi(span / CARD_WIDTH), 1)
-	var wide := span / count
-	var tall := Vector3.UP * (SHELF_RISE - 0.03)
+	var tall := SHELF_RISE - 0.03
 	var light := room.light
 	for layer: int in 2:
-		var tint := light if layer == 0 else light.darkened(0.45)
-		var at := centre - facing * (0.24 * layer)
-		for i: int in count:
-			var pick := Rng.unit(dice, i * 2 + layer * 50)
-			var left := at + run * ((float(i) - count * 0.5) * wide)
+		var at := centre - facing * (0.24 * layer) - run * span * 0.5
+		var along := 0.0
+		var i := 0
+		while along < span - 0.05:
+			var key := i * 6 + layer * 500
+			var wide := minf(lerpf(0.35, CARD_WIDTH, Rng.unit(dice, key)), span - along)
+			var left := at + run * along
 			var right := left + run * wide
-			var cell: int = room.cells[int(pick * room.cells.size())]
+			along += wide
+			i += 1
+			# The front row has holes in it, where it has sold through to the row behind.
+			if layer == 0 and Rng.unit(dice, key + 1) < GAP_CHANCE:
+				continue
+			var cell: int = room.cells[int(Rng.unit(dice, key + 2) * room.cells.size())]
 			var uv := _card(cell)
-			var low := uv.end.y
-			var high := uv.position.y
-			var corners: Array[Vector3] = [left, right, right + tall, left + tall]
+			var share := wide / CARD_WIDTH
+			var from := uv.position.x + Rng.unit(dice, key + 3) * uv.size.x * (1.0 - share)
+			var to := from + uv.size.x * share
+			var rise := Vector3.UP * tall * lerpf(0.82, 1.0, Rng.unit(dice, key + 4))
+			var tone := lerpf(0.72, 1.05, Rng.unit(dice, key + 5))
+			var tint := (light if layer == 0 else light.darkened(0.45)) * tone
+			tint.a = 1.0
+			var corners: Array[Vector3] = [left, right, right + rise, left + rise]
 			var mapped: Array[Vector2] = [
-				Vector2(uv.position.x, low),
-				Vector2(uv.end.x, low),
-				Vector2(uv.end.x, high),
-				Vector2(uv.position.x, high),
+				Vector2(from, uv.end.y),
+				Vector2(to, uv.end.y),
+				Vector2(to, uv.position.y),
+				Vector2(from, uv.position.y),
 			]
 			kit.face(material, corners, mapped, facing, tint)
 
@@ -449,12 +542,18 @@ static func _door_displays(
 	var high := 0.72
 	for end: float in [-1.0, 1.0]:
 		var across := end * (room.width * 0.5 - wide * 0.5 - 0.1)
+		var basis := Basis(room.along, Vector3.UP, room.outward)
+		var coat := PAINT_COATS[int(Rng.unit(room.dice, 33 + int(end)) * PAINT_COATS.size())]
+		kit.box(
+			materials["paint"],
+			Transform3D(basis, room.point(across, 0.25, 0.09 + (high - 0.09) * 0.5)),
+			Vector3(wide, high - 0.09, 0.6),
+			coat
+		)
 		kit.box(
 			materials["steel"],
-			Transform3D(
-				Basis(room.along, Vector3.UP, room.outward), room.point(across, 0.25, high * 0.5)
-			),
-			Vector3(wide, high, 0.6)
+			Transform3D(basis, room.point(across, 0.27, 0.045)),
+			Vector3(wide - 0.08, 0.09, 0.5)
 		)
 		_goods_row(
 			kit,
@@ -502,13 +601,14 @@ static func _screen_wall(
 			material.set_shader_parameter(
 				"picture", Vector4(rect.position.x, rect.position.y, rect.size.x, rect.size.y)
 			)
-			material.set_shader_parameter("colour_a", Color.from_hsv(roll, 0.8, 1.0))
+			material.set_shader_parameter("colour_a", Color.from_hsv(roll, 0.4, 0.9))
 			material.set_shader_parameter(
-				"colour_b", Color.from_hsv(fmod(roll + 0.4, 1.0), 0.8, 1.0)
+				"colour_b", Color.from_hsv(fmod(roll + 0.1, 1.0), 0.4, 0.9)
 			)
+			material.set_shader_parameter("sweep", 0.0)
 			material.set_shader_parameter("size", Vector2(wide, tall))
 			material.set_shader_parameter("phase", roll)
-			material.set_shader_parameter("brightness", 1.6)
+			material.set_shader_parameter("brightness", 0.85)
 			kit.box(
 				materials["steel"],
 				Transform3D(Basis(room.along, Vector3.UP, room.outward), centre),
@@ -542,25 +642,42 @@ static func _counter(
 ) -> void:
 	var high := 1.0
 	var wide := room.width - 0.3
+	var basis := Basis(room.along, Vector3.UP, room.outward)
+	var coat := Color(0.3, 0.1, 0.09) if glass else Color(0.62, 0.42, 0.28)
+	kit.box(
+		materials["paint"],
+		Transform3D(basis, room.point(0.0, into, 0.12 + (high - 0.12) * 0.5)),
+		Vector3(wide, high - 0.12, 0.6),
+		coat
+	)
 	kit.box(
 		materials["steel"],
-		Transform3D(Basis(room.along, Vector3.UP, room.outward), room.point(0.0, into, high * 0.5)),
-		Vector3(wide, high, 0.6),
-		Color(1.0, 1.0, 1.0) if glass else Color(3.0, 1.6, 0.9)
+		Transform3D(basis, room.point(0.0, into + 0.03, 0.06)),
+		Vector3(wide - 0.04, 0.12, 0.52)
+	)
+	kit.box(
+		materials["paint"],
+		Transform3D(basis, room.point(0.0, into, high + 0.02)),
+		Vector3(wide + 0.06, 0.04, 0.68),
+		Color(0.72, 0.7, 0.66)
 	)
 	if glass:
-		# Lit cases along the front, with what's for sale at eye height behind the glass.
-		var strip := room.point(-wide * 0.5, into - 0.31, 0.92)
-		kit.bar(materials["tube"], strip, strip + room.along * wide, 0.05, room.light)
-		_goods_row(
-			kit,
-			materials["goods"],
-			room,
-			room.point(0.0, into - 0.32, 0.42),
-			-room.outward,
-			wide - 0.1,
-			Rng.derive(room.dice, [50])
+		# A lit case along the front, with what's for sale at eye height behind the glass.
+		var case_glow := Color(0.045, 0.026, 0.012)
+		kit.box(
+			materials["tube"],
+			Transform3D(basis, room.point(0.0, into - 0.305, 0.62)),
+			Vector3(wide - 0.06, 0.52, 0.01),
+			case_glow
 		)
+		for slab: int in maxi(roundi(wide * 9.0), 1):
+			var across := (Rng.unit(room.dice, 500 + slab) - 0.5) * wide * 0.95
+			var up := 0.4 + 0.21 * floorf(Rng.unit(room.dice, 540 + slab) * 3.0)
+			kit.box(
+				materials["gold"],
+				Transform3D(basis, room.point(across, into - 0.33, up)),
+				Vector3(lerpf(0.03, 0.09, Rng.unit(room.dice, 580 + slab)), 0.02, 0.02)
+			)
 	else:
 		for pot: int in 3:
 			var across := (pot - 1.0) * minf(wide * 0.3, 0.9)
@@ -634,6 +751,20 @@ static func _awning(kit: CityMesh, room: Room, canvas: Material, pick: float) ->
 				room.outward * side,
 				colour
 			)
+
+
+## The light that actually gives a room its shape: from the tubes, down the walls and across
+## the floor, darkening towards the corners.
+static func _room_light(room: Room) -> OmniLight3D:
+	var glow := OmniLight3D.new()
+	glow.light_color = room.light
+	glow.light_energy = 2.4
+	glow.light_volumetric_fog_energy = 0.0
+	glow.light_specular = 0.4
+	glow.omni_range = maxf(room.width, room.depth) * 1.15
+	glow.omni_attenuation = 1.0
+	glow.position = room.point(0.0, room.depth * 0.5, room.height - 0.55)
+	return glow
 
 
 static func _light(route: Route, shop: Street.Shop) -> OmniLight3D:

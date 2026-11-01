@@ -243,20 +243,9 @@ static func _pylon_fittings(
 	var skin := ground + outward * (wall - pylon.depth - 0.45)
 	var wide := pylon.width + 1.0
 	var dice := Rng.derive(roundi(pylon.s * 10.0), [int(pylon.side), 5])
-	# Guard plate along the foot, with bands of old hazard paint over it.
+	# Guard plate along the foot.
 	var plate := skin - outward * 0.03 + Vector3.UP * (0.15 + GUARD_HIGH * 0.5)
 	kit.box(rust, Transform3D(basis, plate), Vector3(wide, GUARD_HIGH, 0.05), Color(0.8, 0.8, 0.8))
-	var stripes := roundi(wide / 0.5)
-	for stripe: int in stripes:
-		if stripe % 2 == 1 or Rng.unit(dice, stripe) < 0.2:
-			continue
-		var at := ((stripe + 0.5) / stripes - 0.5) * wide
-		kit.box(
-			steel,
-			Transform3D(basis, plate + along * at - outward * 0.03 + Vector3.UP * 0.3),
-			Vector3(wide / stripes, 0.3, 0.012),
-			Color(1.0, 0.7, 0.12)
-		)
 	# Conduit from the ground up past the first collars, into a box.
 	var runs := 2 + int(Rng.unit(dice, 40) * 3.0)
 	var run_x := (Rng.unit(dice, 41) - 0.5) * (pylon.width - 1.5)

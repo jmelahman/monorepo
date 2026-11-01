@@ -11,6 +11,8 @@ uniform vec3 colour_b : source_color = vec3(0.1, 0.8, 1.0);
 uniform vec2 size = vec2(10.0, 10.0);
 uniform float phase = 0.0;
 uniform float brightness = 2.4;
+// 0 for a shop's televisions, which show pictures and don't run the big wall's stripes.
+uniform float sweep = 1.0;
 
 const float SCENE_SECONDS = 4.5;
 
@@ -30,14 +32,14 @@ void fragment() {
 		// Just the sign's lettering, cut out of the wash.
 		float ink = dot(art, vec3(0.33));
 		shown = wash * (0.25 + smoothstep(0.35, 0.8, ink) * 1.3);
-	} else if (kind > 0.5) {
+	} else if (kind > 0.5 && sweep > 0.5) {
 		float bars = step(0.5, fract((at.x + at.y * 0.35) * 6.0 - t * 0.9));
 		shown = mix(colour_a, colour_b, bars) * (0.5 + 0.5 * wave);
 		shown = mix(shown, art, smoothstep(0.3, 0.7, dot(art, vec3(0.33))));
 	}
 	// One scene wipes on over the last, in a flash of white.
 	float wipe = smoothstep(0.08, 0.0, abs(at.y - (1.0 - into * 12.0)));
-	shown += vec3(1.5) * wipe;
+	shown += vec3(1.5) * wipe * sweep;
 	vec2 led = abs(fract(at * size * 7.0) - 0.5);
 	float dots = smoothstep(0.5, 0.3, max(led.x, led.y));
 	float pixel = max(fwidth(at.x) * size.x, fwidth(at.y) * size.y) * 7.0;

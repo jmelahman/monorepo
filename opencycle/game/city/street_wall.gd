@@ -33,6 +33,8 @@ const DOOR_HIGH := 2.2
 const PROPPED_CHANCE := 0.14
 const DOOR_CHANCE := 0.18
 const BOARDED_CHANCE := 0.14
+const PART_DOWN_CHANCE := 0.45
+const PART_DOWN_LOW := 2.05
 const LEAK := Color(0.42, 0.26, 0.13)
 ## The paint a shutter was given, whichever scan it's on, before the years got at it.
 const PAINTS: Array[Color] = [
@@ -67,7 +69,9 @@ static func build(route: Route, street: Street) -> Node3D:
 		_lintel(kit, front, shop, parts)
 		_pier(kit, front, shop.width * 0.5, parts)
 		_housing(kit, front, shop, parts)
-		if not shop.open:
+		if shop.open:
+			_part_down(kit, front, shop, parts)
+		else:
 			_closed(kit, front, shop, parts)
 	kit.commit(root)
 	return root
@@ -216,6 +220,33 @@ static func _closed(kit: CityMesh, front: Facades.Tier, shop: Street.Shop, parts
 	var metres: float = SHUTTERS.values()[pick]
 	_shutter(kit, front, left, right, foot, top, parts.shutters[pick], metres, paint)
 	_bottom_bar(kit, front, left, right, foot, parts)
+
+
+## An open shop's sill and, on some, a shutter left part way down over the door.
+static func _part_down(kit: CityMesh, front: Facades.Tier, shop: Street.Shop, parts: Parts) -> void:
+	var clear := shop.width - PIER_WIDE - GUIDE * 2.0
+	var kerb := StreetGround.KERB_HEIGHT
+	kit.box(
+		parts.rust,
+		front.place(0.0, kerb + 0.012, RECESS - 0.1),
+		Vector3(clear, 0.024, 0.34),
+		Color(0.5, 0.5, 0.5)
+	)
+	if Rng.unit(front.dice, 10) > PART_DOWN_CHANCE:
+		return
+	var top := Shopfronts.OPENING - HOUSING_HIGH - 0.07
+	var foot := lerpf(PART_DOWN_LOW, top - 0.15, Rng.unit(front.dice, 11))
+	var pick := int(Rng.unit(front.dice, 4) * SHUTTERS.size())
+	var paint := PAINTS[int(Rng.unit(front.dice, 5) * PAINTS.size())]
+	var metres: float = SHUTTERS.values()[pick]
+	var half := clear * 0.5
+	_shutter(kit, front, -half, half, foot, top, parts.shutters[pick], metres, paint)
+	kit.box(
+		parts.rust,
+		front.place(0.0, foot + 0.04, RECESS + 0.02),
+		Vector3(clear, 0.08, 0.05),
+		Color(0.5, 0.5, 0.5)
+	)
 
 
 static func _shutter(
