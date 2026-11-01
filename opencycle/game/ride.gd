@@ -6,6 +6,7 @@ extends Node3D
 ## [code]--replay=res://replays/x.json[/code] and [code]--quality=ship|max[/code] choose
 ## what to show. [code]--scale=0.5[/code] overrides the quality's render scale.
 ## [code]--off=shadows,aa,fog,ssao,glow,probes,rain[/code] leaves those features out.
+## [code]--reach=SHADOWS,LIT[/code] says how far off the street's lamps throw shadows and light.
 ## [code]--still=out.png[/code] with [code]--at=SECONDS[/code] renders one frame and quits,
 ## and [code]--look=YAW,PITCH,SIDEWAYS[/code] turns its camera and moves it off the racing line.
 ## [code]--bench=out.json[/code] rides the whole replay as fast as the GPU allows and
@@ -15,6 +16,7 @@ extends Node3D
 ## frame takes, and quits at the end so the movie is finalised.
 
 const WARMUP_FRAMES := 60
+const BENCH_STRETCH := 100
 const TARGET_FPS := 30
 const RAIN := 0.65
 const BIOME_REPLAYS: Dictionary[String, String] = {
@@ -37,7 +39,10 @@ var _warmup := WARMUP_FRAMES
 var _primitives := 0
 var _draw_calls := 0
 var _uses_ride_time := false
+var _gpu_by_stretch: Dictionary[int, PackedFloat32Array] = {}
+var _primitive_counts := PackedInt32Array()
 var _rain: MeshInstance3D
+var _lamp_reach: LampReach
 var _districts: Districts
 
 @onready var _camera: Camera3D = %Camera
@@ -67,6 +72,8 @@ func _ready() -> void:
 			_camera.add_child(_rain)
 			_districts = Districts.generate(run_seed, NeonBiome.LENGTH)
 			_uses_ride_time = true
+			_lamp_reach = LampReach.new()
+			add_child(_lamp_reach)
 			_camera.fov = NeonBiome.FOV
 		_:
 			ForestBiome.build(self, run_seed, route, quality)
@@ -79,6 +86,14 @@ func _ready() -> void:
 	if args.has("off"):
 		var off_text: String = args["off"]
 		_switch_off(off_text.split(","))
+	# After the switches, so a lamp switched out of shadows stays out of them.
+	if _lamp_reach:
+		_lamp_reach.gather(self)
+	if args.has("reach"):
+		var reach_text: String = args["reach"]
+		var reach := reach_text.split_floats(",")
+		_lamp_reach.shadows_within = reach[0]
+		_lamp_reach.lit_within = reach[1]
 	_startup_ms = Time.get_ticks_msec() - started
 	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_time = at_seconds
@@ -128,15 +143,20 @@ func _process(delta: float) -> void:
 	_send_time()
 	if _bench_path:
 		_frame_times.append(delta)
-		_gpu_times.append(
-			RenderingServer.viewport_get_measured_render_time_gpu(get_viewport().get_viewport_rid())
+		var gpu := RenderingServer.viewport_get_measured_render_time_gpu(
+			get_viewport().get_viewport_rid()
 		)
-		_primitives = maxi(
-			_primitives,
-			RenderingServer.get_rendering_info(
-				RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME
-			)
+		_gpu_times.append(gpu)
+		@warning_ignore("integer_division")
+		var stretch := int(replay.distance_at(_time)) / BENCH_STRETCH * BENCH_STRETCH
+		if stretch not in _gpu_by_stretch:
+			_gpu_by_stretch[stretch] = PackedFloat32Array()
+		_gpu_by_stretch[stretch].append(gpu)
+		var drawn := RenderingServer.get_rendering_info(
+			RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME
 		)
+		_primitive_counts.append(drawn)
+		_primitives = maxi(_primitives, drawn)
 		_draw_calls = maxi(
 			_draw_calls,
 			RenderingServer.get_rendering_info(
@@ -152,6 +172,7 @@ func _process(delta: float) -> void:
 ## Anything animated on the street runs off the ride's clock, so a replay looks the same.
 func _send_time() -> void:
 	if _uses_ride_time:
+		_lamp_reach.update(_camera.global_position)
 		RenderingServer.global_shader_parameter_set("ride_time", _time)
 		get_tree().call_group(&"ride_clock", &"set_ride_time", _time)
 		var open := _districts.open_to_the_sky(replay.distance_at(_time))
@@ -188,6 +209,14 @@ func _write_report() -> void:
 	_gpu_times.sort()
 	report["gpu_ms_median"] = _gpu_times[int(_gpu_times.size() * 0.5)]
 	report["gpu_ms_99th"] = _gpu_times[int(_gpu_times.size() * 0.99)]
+	var by_stretch := {}
+	for stretch: int in _gpu_by_stretch:
+		var times: PackedFloat32Array = _gpu_by_stretch[stretch]
+		times.sort()
+		by_stretch[str(stretch)] = times[int(times.size() * 0.5)]
+	report["gpu_ms_median_by_stretch"] = by_stretch
+	_primitive_counts.sort()
+	report["median_primitives"] = _primitive_counts[int(_primitive_counts.size() * 0.5)]
 	report["startup_ms"] = _startup_ms
 	report["peak_primitives"] = _primitives
 	report["peak_draw_calls"] = _draw_calls

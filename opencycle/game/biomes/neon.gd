@@ -78,12 +78,12 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	environment.fog_depth_end = 480.0
 	environment.fog_depth_curve = 1.4
 	# Every light in the street shows up in this, which is what makes the street feel deep.
-	RenderingServer.environment_set_volumetric_fog_volume_size(192, 128)
+	RenderingServer.environment_set_volumetric_fog_volume_size(128, 64)
 	environment.volumetric_fog_enabled = true
 	environment.volumetric_fog_density = 0.013
 	environment.volumetric_fog_albedo = Color(0.85, 0.85, 0.95)
 	environment.volumetric_fog_anisotropy = 0.35
-	environment.volumetric_fog_length = 140.0
+	environment.volumetric_fog_length = 90.0
 	environment.volumetric_fog_detail_spread = 2.0
 	environment.volumetric_fog_ambient_inject = 0.1
 	environment.volumetric_fog_sky_affect = 0.15
@@ -115,7 +115,7 @@ static func _environment(parent: Node3D, best: bool, route: Route) -> void:
 	var viewport := parent.get_viewport()
 	viewport.use_taa = true
 	RenderingServer.directional_shadow_atlas_set_size(8192, true)
-	viewport.positional_shadow_atlas_size = 8192
+	viewport.positional_shadow_atlas_size = 4096
 	if best:
 		viewport.msaa_3d = Viewport.MSAA_4X
 
