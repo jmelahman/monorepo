@@ -62,11 +62,15 @@ detail is fixed at build time by distance from the road wherever that is possibl
 
 ## Modelled assets
 
-`scripts/blender/` builds meshes headless: `blender -b --python scripts/blender/monolith.py`
-writes `assets/modelled/monolith.glb`, in LFS. `shapes.py` bakes occlusion and room light into
+`scripts/blender/` builds meshes headless: `blender -b --python scripts/blender/housing_bay.py`
+writes `assets/modelled/housing_bay.glb`, in LFS. `shapes.py` bakes occlusion and room light into
 vertex colours, and `Kit.restyle` swaps in the game's materials by name. Modelled concrete
 uses `modelled` in `game/brutal.gdshader`, because the world-space mapping that suits flat
 walls turns undulating surfaces into crumpled foil.
+
+Blender suits repeating city pieces; one-off landmarks come from AI services. `assets/generated/`
+holds those, brought to scale by `scripts/blender/generated.py`, and its README records each
+one's source, prompt and terms. Add to it for every new model.
 
 ## The neon street
 

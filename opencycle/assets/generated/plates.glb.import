@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://csixqxlw6gpca"
-path="res://.godot/imported/monolith.glb-51d5d97e8f2593cef8571b337ff4647b.scn"
+uid="uid://w5kbx2ibqgad"
+path="res://.godot/imported/plates.glb-723e7c0f3b7839cbdd74af1900e47f7b.scn"
 
 [deps]
 
-source_file="res://assets/modelled/monolith.glb"
-dest_files=["res://.godot/imported/monolith.glb-51d5d97e8f2593cef8571b337ff4647b.scn"]
+source_file="res://assets/generated/plates.glb"
+dest_files=["res://.godot/imported/plates.glb-723e7c0f3b7839cbdd74af1900e47f7b.scn"]
 
 [params]
 

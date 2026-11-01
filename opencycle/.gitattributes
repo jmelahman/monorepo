@@ -9,3 +9,5 @@
 *.webp binary
 assets/baked/*.webp filter=lfs diff=lfs merge=lfs -text
 assets/modelled/*.glb filter=lfs diff=lfs merge=lfs -text
+assets/generated/*.glb filter=lfs diff=lfs merge=lfs -text
+assets/generated/*.webp filter=lfs diff=lfs merge=lfs -text

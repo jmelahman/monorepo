@@ -54,6 +54,14 @@ const SHAFT_EVERY := 36.0
 const COLD := Color(0.62, 0.8, 1.0)
 const UPLIGHT := Color(1.0, 0.72, 0.42)
 const MODELLED := "res://assets/modelled/%s.glb"
+const MONOLITH: PackedScene = preload("res://assets/generated/monolith.glb")
+const PLATES: PackedScene = preload("res://assets/generated/plates.glb")
+const MONOLITH_TALL := 31.5
+const PLATES_TALL := 16.0
+const SCULPTURE_OFFSET := 16.0
+const SCULPTURE_IN := 30.0
+const LINTEL_LAMP := 0.5
+const STAIR_LAMP_EVERY := 16.0
 ## Thin things go first when a model is coarsened, and a mullion is six centimetres wide.
 const MODELLED_TOLERANCE := 0.008
 const MODELLED_REACH := 500.0
@@ -74,7 +82,6 @@ class Parts:
 	var glow: StandardMaterial3D
 	var pool: StandardMaterial3D
 	var housing: Kit
-	var monolith: Kit
 
 
 static func build(route: Route, street: Street) -> Node3D:
@@ -94,7 +101,6 @@ static func build(route: Route, street: Street) -> Node3D:
 		_plaza(kit, root, route, opening, parts)
 	kit.commit(root)
 	parts.housing.commit(root, MODELLED_REACH)
-	parts.monolith.commit(root, MODELLED_REACH)
 	return root
 
 
@@ -143,8 +149,6 @@ static func _parts() -> Parts:
 	}
 	parts.housing = Kit.new(MODELLED % "housing_bay", MODELLED_TOLERANCE)
 	parts.housing.restyle(materials)
-	parts.monolith = Kit.new(MODELLED % "monolith", MODELLED_TOLERANCE)
-	parts.monolith.restyle(materials)
 	return parts
 
 
@@ -531,7 +535,7 @@ static func _plaza(
 		for bay: int in return_bays:
 			var base := route.at(end) + out * (wall + return_long * (bay + 0.5))
 			_gallery_bay(kit, root, base, inward, return_long, parts)
-	_terrace(kit, route, from, to, side, parts)
+	_terrace(kit, root, route, from, to, side, parts)
 	var drum := from + DRUM_EVERY * 0.5
 	while drum < to:
 		_drum(kit, root, route, drum, side, parts)
@@ -539,6 +543,7 @@ static func _plaza(
 	_benches(kit, root, route, from, to, side, parts)
 	if side < 0.0:
 		_ring(kit, root, route, middle, side, parts)
+		_sculpture(root, route, to - SCULPTURE_IN, side, PLATES, PLATES_TALL)
 		var shaft := from + SHAFT_EVERY * 0.5
 		var index := 0
 		while shaft < to:
@@ -547,7 +552,7 @@ static func _plaza(
 			shaft += SHAFT_EVERY
 			index += 1
 	else:
-		_monolith(kit, root, route, middle, side, parts)
+		_monolith(kit, root, route, middle, side)
 
 
 ## One bay of the housing around the plaza, floor on floor up to the deck: a street level
@@ -592,8 +597,28 @@ static func _gallery_bay(
 			root.add_child(lamp)
 		floor_at += FLOOR_HIGH
 		storey += 1
+	if Rng.unit(dice, 302) < LINTEL_LAMP:
+		_lintel_lamp(kit, root, base + facing * 1.2, basis, parts)
 	if Rng.unit(dice, 300) < 1.0 / WASH_EVERY:
 		root.add_child(_housing_wash(base + facing * 3.0, Rng.unit(dice, 301) < 0.3))
+
+
+## A caged lamp over the street level, for the stairs and the floor in front of them.
+static func _lintel_lamp(
+	kit: CityMesh, root: Node3D, at: Vector3, basis: Basis, parts: Parts
+) -> void:
+	var high := at + Vector3.UP * (FLOOR_FIRST - 0.5)
+	kit.box(parts.glow, Transform3D(basis, high), Vector3(0.9, 0.08, 0.24), Color(2.2, 1.5, 0.9))
+	var lamp := SpotLight3D.new()
+	lamp.light_color = UPLIGHT
+	lamp.light_energy = 16.0
+	lamp.light_volumetric_fog_energy = 0.15
+	lamp.spot_range = 20.0
+	lamp.spot_angle = 68.0
+	lamp.spot_attenuation = 0.7
+	lamp.position = high - Vector3.UP * 0.1
+	lamp.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	root.add_child(lamp)
 
 
 ## A lamp on the street level's lintel, shining nearly straight up the front of the housing:
@@ -613,7 +638,7 @@ static func _housing_wash(at: Vector3, cold: bool) -> SpotLight3D:
 
 
 static func _terrace(
-	kit: CityMesh, route: Route, from: float, to: float, side: float, parts: Parts
+	kit: CityMesh, root: Node3D, route: Route, from: float, to: float, side: float, parts: Parts
 ) -> void:
 	var middle := (from + to) * 0.5
 	var long := to - from
@@ -632,6 +657,19 @@ static func _terrace(
 			Vector3(deep_each + 0.02, rise, long),
 			Color(0.8, 0.8, 0.8)
 		)
+	var lamp_at := from + STAIR_LAMP_EVERY * 0.5
+	while lamp_at < to:
+		var out := route.right(lamp_at) * side * (stairs_from - 1.5)
+		var lamp := OmniLight3D.new()
+		lamp.light_color = UPLIGHT
+		lamp.light_energy = 3.5
+		lamp.light_volumetric_fog_energy = 0.1
+		lamp.omni_range = 13.0
+		lamp.position = route.at(lamp_at) + out + Vector3.UP * 0.8
+		kit.at(lamp_at)
+		root.add_child(lamp)
+		lamp_at += STAIR_LAMP_EVERY
+	kit.at(middle)
 	var top := route.right(middle) * side * (PLAZA_DEPTH - TERRACE_DEEP * 0.5)
 	kit.box(
 		parts.pavers,
@@ -759,33 +797,49 @@ static func _ring(
 	root.add_child(inside)
 
 
-## A slab leaning out over the plaza with a slit of light down its length.
-static func _monolith(
-	kit: CityMesh, root: Node3D, route: Route, s: float, side: float, parts: Parts
-) -> void:
+## A slab leaning out over the plaza, turned towards the oncoming rider.
+static func _monolith(kit: CityMesh, root: Node3D, route: Route, s: float, side: float) -> void:
 	kit.at(s)
 	var out := route.right(s) * side
-	var foot := route.at(s) + out * 21.0
-	# Turned towards the oncoming rider, so its carved face is seen on the way in.
 	var facing := (-route.tangent(s) * 0.8 - out * 0.6).normalized()
+	_raise(root, MONOLITH, route.at(s) + out * 21.0, facing, MONOLITH_TALL)
+
+
+## A sculpture on the plaza floor, set back from the road and looking at whoever is coming.
+static func _sculpture(
+	root: Node3D, route: Route, s: float, side: float, piece: PackedScene, tall: float
+) -> void:
+	var out := route.right(s) * side
+	var facing := (-route.tangent(s) * 0.7 - out * 0.7).normalized()
+	var foot := route.at(s) + out * SCULPTURE_OFFSET + Vector3.UP * StreetGround.KERB_HEIGHT
+	_raise(root, piece, foot, facing, tall)
+
+
+## Stands a piece on the ground, with lamps set right against it, warm from one side and cold
+## from the other, since only a raking light shows relief.
+static func _raise(
+	root: Node3D, piece: PackedScene, foot: Vector3, facing: Vector3, tall: float
+) -> void:
 	var along := Vector3.UP.cross(facing).normalized()
-	parts.monolith.chunk = kit.chunk
-	parts.monolith.place("monolith", Transform3D(Basis(along, Vector3.UP, facing), foot))
-	# Lamps set in the ground right against it, since only a raking light shows relief.
+	var standing: Node3D = piece.instantiate()
+	standing.transform = Transform3D(Basis(along, Vector3.UP, facing), foot)
+	root.add_child(standing)
+	var size := tall / MONOLITH_TALL
 	for lamp: Array in [
-		[foot + facing * 6.5 - along * 3.0, 70.0, Color(1.0, 0.84, 0.68)],
-		[foot + facing * 5.0 + along * 9.0, 60.0, COLD],
+		[facing * 6.5 - along * 3.0, 70.0, Color(1.0, 0.84, 0.68)],
+		[facing * 5.0 + along * 9.0, 60.0, COLD],
 	]:
 		var wash := SpotLight3D.new()
 		wash.light_color = lamp[2]
-		wash.light_energy = lamp[1]
+		wash.light_energy = lamp[1] * size
 		wash.light_volumetric_fog_energy = 0.1
-		wash.spot_range = 50.0
+		wash.spot_range = 50.0 * sqrt(size)
 		wash.spot_angle = 38.0
 		wash.shadow_enabled = true
-		wash.position = lamp[0] + Vector3.UP * 0.5
+		var offset: Vector3 = lamp[0]
+		wash.position = foot + offset * size + Vector3.UP * 0.5
 		root.add_child(wash)
-		wash.look_at_from_position(wash.position, foot + Vector3.UP * 17.0)
+		wash.look_at_from_position(wash.position, foot + Vector3.UP * tall * 0.54)
 
 
 ## What daylight reaches down this far, wide enough to stand in.
