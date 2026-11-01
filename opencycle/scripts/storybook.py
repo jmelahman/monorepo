@@ -32,10 +32,11 @@ SHOTS = (
     (42, "The underpass", ""),
     (69, "The works", ""),
     (90, "The plaza", ""),
-    (87, "The ring in the plaza", "55,8,0"),
+    (84, "The monolith", "-28,8,0"),
+    (90, "The Cor-Ten sculpture", "25,10,0"),
     (14, "Left wall up close", "62,0,-2"),
 )
-RENDER_TIMEOUT = 300
+RENDER_TIMEOUT = 170
 
 
 def git(*args: str) -> str:
@@ -60,12 +61,16 @@ def render(chapter: Path) -> list[dict[str, str]]:
             f"--at={at}",
             *([f"--look={look}"] if look else []),
         ]
-        run = subprocess.run(
-            command, cwd=ROOT, capture_output=True, text=True, timeout=RENDER_TIMEOUT
-        )
+        try:
+            run = subprocess.run(
+                command, cwd=ROOT, capture_output=True, text=True, timeout=RENDER_TIMEOUT
+            )
+            printed = run.stdout + run.stderr
+        except subprocess.TimeoutExpired as hung:
+            # Godot can hang on quit after writing its still; the check below decides.
+            printed = (hung.stdout or b"").decode() + (hung.stderr or b"").decode()
         # A broken shader still renders, as flat untextured faces, and exits 0.
-        broken = sorted({line for line in run.stdout.splitlines() if "SHADER ERROR" in line})
-        broken += sorted({line for line in run.stderr.splitlines() if "SHADER ERROR" in line})
+        broken = sorted({line for line in printed.splitlines() if "SHADER ERROR" in line})
         if broken:
             sys.exit("\n".join(broken))
         # Godot exits 0 on parse errors, so only the file says whether it worked.
