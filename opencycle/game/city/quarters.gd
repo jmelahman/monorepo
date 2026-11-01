@@ -58,6 +58,8 @@ const MONOLITH: PackedScene = preload("res://assets/generated/monolith.glb")
 const PLATES: PackedScene = preload("res://assets/generated/plates.glb")
 const MONOLITH_TALL := 31.5
 const PLATES_TALL := 16.0
+## Rusted steel drinks light that concrete throws back.
+const PLATES_LIT := 3.5
 const SCULPTURE_OFFSET := 16.0
 const SCULPTURE_IN := 30.0
 const LINTEL_LAMP := 0.5
@@ -543,7 +545,7 @@ static func _plaza(
 	_benches(kit, root, route, from, to, side, parts)
 	if side < 0.0:
 		_ring(kit, root, route, middle, side, parts)
-		_sculpture(root, route, to - SCULPTURE_IN, side, PLATES, PLATES_TALL)
+		_sculpture(root, route, to - SCULPTURE_IN, side, PLATES, PLATES_TALL, PLATES_LIT)
 		var shaft := from + SHAFT_EVERY * 0.5
 		var index := 0
 		while shaft < to:
@@ -807,18 +809,18 @@ static func _monolith(kit: CityMesh, root: Node3D, route: Route, s: float, side:
 
 ## A sculpture on the plaza floor, set back from the road and looking at whoever is coming.
 static func _sculpture(
-	root: Node3D, route: Route, s: float, side: float, piece: PackedScene, tall: float
+	root: Node3D, route: Route, s: float, side: float, piece: PackedScene, tall: float, lit: float
 ) -> void:
 	var out := route.right(s) * side
 	var facing := (-route.tangent(s) * 0.7 - out * 0.7).normalized()
 	var foot := route.at(s) + out * SCULPTURE_OFFSET + Vector3.UP * StreetGround.KERB_HEIGHT
-	_raise(root, piece, foot, facing, tall)
+	_raise(root, piece, foot, facing, tall, lit)
 
 
 ## Stands a piece on the ground, with lamps set right against it, warm from one side and cold
 ## from the other, since only a raking light shows relief.
 static func _raise(
-	root: Node3D, piece: PackedScene, foot: Vector3, facing: Vector3, tall: float
+	root: Node3D, piece: PackedScene, foot: Vector3, facing: Vector3, tall: float, lit := 1.0
 ) -> void:
 	var along := Vector3.UP.cross(facing).normalized()
 	var standing: Node3D = piece.instantiate()
@@ -831,7 +833,7 @@ static func _raise(
 	]:
 		var wash := SpotLight3D.new()
 		wash.light_color = lamp[2]
-		wash.light_energy = lamp[1] * size
+		wash.light_energy = lamp[1] * size * lit
 		wash.light_volumetric_fog_energy = 0.1
 		wash.spot_range = 50.0 * sqrt(size)
 		wash.spot_angle = 38.0

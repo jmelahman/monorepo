@@ -2,6 +2,8 @@ class_name Furniture
 extends RefCounted
 ## What a street accumulates: lamp posts, railings, road signs, bins, crates, cables.
 
+const SIGN_SHADER: Shader = preload("res://game/street_sign.gdshader")
+const SIGN_SYMBOLS: Array[int] = [0, 1, 2]
 const CRATE := "res://assets/polyhaven/plastic_crate_02/plastic_crate_02_1k.gltf"
 const UTILITY := "res://assets/polyhaven/utility_box_01/utility_box_01_1k.gltf"
 const STOOL := "res://assets/polyhaven/plastic_monobloc_chair_01/plastic_monobloc_chair_01_1k.gltf"
@@ -35,7 +37,9 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	var cable := _plain(Color(0.02, 0.02, 0.02), 0.7, 0.0)
 	var red := _plain(Color(0.72, 0.05, 0.05), 0.45, 0.0)
 	var white := _plain(Color(0.85, 0.85, 0.82), 0.45, 0.0)
-	var board := _plain(Color(0.14, 0.26, 0.5), 0.45, 0.0)
+	var boards: Array[ShaderMaterial] = []
+	for symbol: int in SIGN_SYMBOLS:
+		boards.append(_sign_face(symbol))
 	var lamp_glow := StandardMaterial3D.new()
 	lamp_glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	lamp_glow.albedo_color = Color(6.0, 4.6, 2.9)
@@ -82,7 +86,7 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 				)
 				placed[LADDER].append(Transform3D(lean, ground))
 			"post":
-				_post(kit, route, prop, ground, steel, board)
+				_post(kit, route, prop, ground, steel, boards[int(prop.s) % boards.size()])
 			"no_entry":
 				_no_entry(kit, route, prop, ground, steel, red, white)
 			"bin":
@@ -252,8 +256,31 @@ static func _post(
 	board: Material
 ) -> void:
 	kit.bar(steel, ground, ground + Vector3.UP * 3.0, 0.07)
-	var basis := Basis(route.right(prop.s), Vector3.UP, route.tangent(prop.s))
-	kit.box(board, Transform3D(basis, ground + Vector3.UP * 2.7), Vector3(0.6, 0.6, 0.02))
+	kit.bar(steel, ground, ground + Vector3.UP * 0.35, 0.11)
+	var across := route.right(prop.s)
+	var up := Vector3.UP
+	var facing := -route.tangent(prop.s)
+	var basis := Basis(across, up, -facing)
+	var centre := ground + up * 2.7
+	kit.box(steel, Transform3D(basis, centre + facing * 0.06), Vector3(0.62, 0.62, 0.02))
+	for height: float in [-0.2, 0.2]:
+		var band := centre + up * height
+		kit.bar(steel, band, band + facing * 0.06, 0.05)
+	var face := centre + facing * 0.072
+	(
+		kit
+		. face(
+			board,
+			[
+				face - across * 0.3 - up * 0.3,
+				face + across * 0.3 - up * 0.3,
+				face + across * 0.3 + up * 0.3,
+				face - across * 0.3 + up * 0.3,
+			],
+			[Vector2(0.0, 1.0), Vector2(1.0, 1.0), Vector2(1.0, 0.0), Vector2(0.0, 0.0)],
+			facing
+		)
+	)
 
 
 static func _no_entry(
@@ -335,6 +362,13 @@ static func instances(
 			instance.multimesh = multimesh
 			root.add_child(instance)
 	node.free()
+
+
+static func _sign_face(symbol: int) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = SIGN_SHADER
+	material.set_shader_parameter("symbol", symbol)
+	return material
 
 
 static func _plain(colour: Color, roughness: float, metallic: float) -> StandardMaterial3D:

@@ -8,6 +8,7 @@ const ROAD := "res://assets/polyhaven/asphalt_02/asphalt_02_%s_2k.jpg"
 const PAVING := "res://assets/polyhaven/square_concrete_pavers/square_concrete_pavers_%s_2k.jpg"
 const ROAD_SHADER: Shader = preload("res://game/road.gdshader")
 const SHEEN_SHADER: Shader = preload("res://game/wet_sheen.gdshader")
+const PAINT_SHADER: Shader = preload("res://game/road_paint.gdshader")
 const KERB_HEIGHT := 0.15
 const KERB_WIDTH := 0.26
 const PAINT_LIFT := 0.012
@@ -25,8 +26,8 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	var patch := _road_material(ROAD, Color(0.8, 0.8, 0.82))
 	var paving := _paving()
 	var kerb := _plain(Color(0.42, 0.41, 0.39), 0.75)
-	var yellow := _plain(Color(0.2, 0.2, 0.19), 0.7)
-	var white := _plain(Color(0.68, 0.68, 0.64), 0.6)
+	var yellow := _paint(Vector3(0.3, 0.22, 0.06), 0.55)
+	var white := _paint(Vector3(0.46, 0.46, 0.42), 0.55)
 	var s := start
 	while s < end:
 		var next := minf(s + Route.STEP, end)
@@ -145,6 +146,15 @@ static func _sheen(strength: float, puddles: float) -> ShaderMaterial:
 	sheen.set_shader_parameter("strength", strength)
 	sheen.set_shader_parameter("puddles", puddles)
 	return sheen
+
+
+static func _paint(colour: Vector3, worn: float) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = PAINT_SHADER
+	material.set_shader_parameter("paint", colour)
+	material.set_shader_parameter("worn", worn)
+	material.next_pass = _sheen(0.7, 0.0)
+	return material
 
 
 static func _paving() -> StandardMaterial3D:
