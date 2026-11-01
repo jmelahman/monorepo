@@ -23,6 +23,13 @@ const BUMPS: ReleaseBump[] = ["patch", "minor", "major"];
 const POLL_MS = 15_000;
 const POLL_REFRESHING_MS = 3_000;
 
+// A preview fetches, so reopening the modal reuses a recent one. Run refuses a
+// release that has moved on since, so a stale preview can't publish the wrong thing.
+const PREVIEW_STALE_MS = 60_000;
+const PREVIEW_CACHE_MS = 5 * 60_000;
+
+const chip = "rounded-full border border-border";
+
 const runStyles: Record<ReleaseRun["status"], string> = {
   running: "border-warning/30 text-warning",
   released: "border-success/30 text-success",
@@ -89,8 +96,9 @@ function ReleaseModal({
   const previewQ = useQuery({
     queryKey: queryKeys.releasePreview(target.repo, target.prefix, bump, target.suffix),
     queryFn: () => api.previewRelease(target.repo, target.prefix, bump, target.suffix),
-    gcTime: 0,
-    staleTime: 0,
+    // A preview is reusable for a while; the server rechecks it when the run starts.
+    gcTime: PREVIEW_CACHE_MS,
+    staleTime: PREVIEW_STALE_MS,
     retry: false,
   });
   const preview = previewQ.data;
@@ -118,7 +126,7 @@ function ReleaseModal({
           <span className="text-fg-muted">Bump</span>
           <BumpSelect value={bump} onChange={setBump} />
         </div>
-        {previewQ.isFetching ? (
+        {!preview && previewQ.isFetching ? (
           <p className="text-fg-muted">Fetching and working out the version…</p>
         ) : preview ? (
           <>
@@ -142,7 +150,7 @@ function ReleaseModal({
           <Button
             variant="primary"
             size="lg"
-            disabled={!preview || !!preview.blocked || previewQ.isFetching}
+            disabled={!preview || !!preview.blocked}
             pending={runMut.isPending}
             idleLabel="release"
             pendingLabel="releasing…"
@@ -314,8 +322,8 @@ function ReminderCard({
           pendingLabel="dismissing…"
           onClick={() => dismissMut.mutate()}
         />
-        <Button variant="primary" size="sm" onClick={onRelease}>
-          release…
+        <Button variant="primary" size="sm" className={chip} onClick={onRelease}>
+          release
         </Button>
       </div>
     </li>
@@ -339,7 +347,13 @@ function CICell({ ci }: { ci?: ReleaseCI }) {
       </span>
     );
   }
-  return <span className={ci.status === "running" ? "text-fg-muted" : undefined}>{ci.status}</span>;
+  const color =
+    ci.status === "passing"
+      ? "text-success"
+      : ci.status === "running"
+        ? "text-fg-muted"
+        : undefined;
+  return <span className={color}>{ci.status}</span>;
 }
 
 function ProjectTable({
@@ -401,8 +415,13 @@ function ProjectTable({
                       remind
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" onClick={() => onRelease(s.prefix)}>
-                    release…
+                  <Button
+                    variant="neutral"
+                    size="sm"
+                    className={chip}
+                    onClick={() => onRelease(s.prefix)}
+                  >
+                    release
                   </Button>
                 </td>
               </tr>

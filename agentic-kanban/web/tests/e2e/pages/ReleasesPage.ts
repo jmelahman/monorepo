@@ -58,7 +58,7 @@ class ReleaseProject {
   }
 
   async openRelease(prefix: string) {
-    await this.row(prefix).getByRole("button", { name: "release…" }).click();
+    await this.row(prefix).getByRole("button", { name: "release", exact: true }).click();
   }
 
   async remind(prefix: string, bump: string, note: string) {
@@ -83,7 +83,7 @@ class ReleaseReminderCard {
   }
 
   async openRelease() {
-    await this.root.getByRole("button", { name: "release…" }).click();
+    await this.root.getByRole("button", { name: "release", exact: true }).click();
   }
 
   async expectGone() {
