@@ -15,6 +15,8 @@ const FINISHES: Array[Array] = [
 	["concrete_slab_wall", 4.0],
 ]
 const AIRCON := "res://assets/polyhaven/exterior_aircon_unit/exterior_aircon_unit_1k.gltf"
+## Up a tower, a metre's error in a scan's surface is a few pixels.
+const HIGH_TOLERANCE := 0.7
 const PARTY_WALL_PAST := 4.0
 const GROUND_FLOOR := 4.1
 const BELOW := 8.0
@@ -86,7 +88,7 @@ static func build(route: Route, street: Street) -> Node3D:
 		if tower.s > -LIT_BEHIND and tower.s < NeonBiome.LENGTH + LIT_AHEAD:
 			_light(kit, root, route, tower, materials)
 	kit.commit(root)
-	Furniture.instances(root, AIRCON, units)
+	Furniture.instances(root, AIRCON, units, HIGH_TOLERANCE)
 	return root
 
 

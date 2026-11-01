@@ -48,6 +48,8 @@ detail is fixed at build time by distance from the road wherever that is possibl
 - A quad whose vertex shader pins it to the screen needs `cull_disabled`, or it can vanish.
 - The gdformat pre-commit hook fails a commit if it reformats anything. Format first, and
   check `git log` afterwards.
+- A bench in a window on a hidden workspace is throttled, and the numbers mean nothing.
+  `docs/performance.md` says how to bench without that.
 - Thick air is the neon street's easiest way to look worse: it lifts the blacks and smears
   the road's mirror, which reads the screen after the fog is drawn. Keep fog thin.
 
@@ -55,7 +57,7 @@ detail is fixed at build time by distance from the road wherever that is possibl
 
 The bar is `docs/realism-standard.md`: it should feel real, with art-directed lighting and
 interesting buildings, not match a photo. Performance is deliberately deferred while the
-look is worked out, and `NeonBiome.CROWD` keeps the pedestrians off to speed up iteration.
+look is worked out (`docs/performance.md` has the numbers and the TODO), and `NeonBiome.CROWD` keeps the pedestrians off to speed up iteration.
 
 `Street`, `Skyline` and `Undercity` in `sim/` decide what stands where; `game/city/` builds
 it, with `Facades` for the brutalist buildings and the close lights that rake up them

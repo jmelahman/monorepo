@@ -5,6 +5,7 @@ extends Node3D
 ## [code]--biome=forest|neon[/code], [code]--seed=N[/code],
 ## [code]--replay=res://replays/x.json[/code] and [code]--quality=ship|max[/code] choose
 ## what to show. [code]--scale=0.5[/code] overrides the quality's render scale.
+## [code]--off=shadows,aa,fog,ssao,glow,probes[/code] leaves those features out.
 ## [code]--still=out.png[/code] with [code]--at=SECONDS[/code] renders one frame and quits,
 ## and [code]--look=YAW,PITCH,SIDEWAYS[/code] turns its camera and moves it off the racing line.
 ## [code]--bench=out.json[/code] rides the whole replay as fast as the GPU allows and
@@ -28,6 +29,7 @@ var _time := 0.0
 var _rate := 1.0
 var _still_path := ""
 var _bench_path := ""
+var _gpu_times := PackedFloat32Array()
 var _frame_times := PackedFloat32Array()
 var _startup_ms := 0
 var _warmup := WARMUP_FRAMES
@@ -68,6 +70,9 @@ func _ready() -> void:
 	if args.has("scale"):
 		var scale_text: String = args["scale"]
 		get_viewport().scaling_3d_scale = scale_text.to_float()
+	if args.has("off"):
+		var off_text: String = args["off"]
+		_switch_off(off_text.split(","))
 	_startup_ms = Time.get_ticks_msec() - started
 	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_time = at_seconds
@@ -78,8 +83,28 @@ func _ready() -> void:
 	if _bench_path:
 		Engine.max_fps = 0
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	if _still_path:
 		_take_still.call_deferred()
+
+
+## Leaves costly features out, to run faster or see what one of them costs.
+func _switch_off(names: PackedStringArray) -> void:
+	for node: Node in find_children("*", "", true, false):
+		if node is WorldEnvironment:
+			var environment: Environment = (node as WorldEnvironment).environment
+			environment.volumetric_fog_enabled = (
+				environment.volumetric_fog_enabled and "fog" not in names
+			)
+			environment.ssao_enabled = environment.ssao_enabled and "ssao" not in names
+			environment.glow_enabled = environment.glow_enabled and "glow" not in names
+		elif node is Light3D and "shadows" in names:
+			(node as Light3D).shadow_enabled = false
+		elif node is ReflectionProbe and "probes" in names:
+			(node as ReflectionProbe).visible = false
+	if "aa" in names:
+		get_viewport().use_taa = false
+		get_viewport().msaa_3d = Viewport.MSAA_DISABLED
 
 
 func _process(delta: float) -> void:
@@ -95,6 +120,9 @@ func _process(delta: float) -> void:
 	_send_time()
 	if _bench_path:
 		_frame_times.append(delta)
+		_gpu_times.append(
+			RenderingServer.viewport_get_measured_render_time_gpu(get_viewport().get_viewport_rid())
+		)
 		_primitives = maxi(
 			_primitives,
 			RenderingServer.get_rendering_info(
@@ -143,6 +171,11 @@ static func summarise(frame_times: PackedFloat32Array) -> Dictionary:
 
 func _write_report() -> void:
 	var report := summarise(_frame_times)
+	# A window on a workspace nobody is looking at gets throttled, which caps the frame rate
+	# above whatever the GPU could do. This is what the GPU itself spent.
+	_gpu_times.sort()
+	report["gpu_ms_median"] = _gpu_times[int(_gpu_times.size() * 0.5)]
+	report["gpu_ms_99th"] = _gpu_times[int(_gpu_times.size() * 0.99)]
 	report["startup_ms"] = _startup_ms
 	report["peak_primitives"] = _primitives
 	report["peak_draw_calls"] = _draw_calls

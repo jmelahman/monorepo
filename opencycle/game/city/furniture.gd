@@ -296,13 +296,16 @@ static func _within(node: Node3D, top: Node) -> Transform3D:
 	return total
 
 
-static func instances(root: Node3D, path: String, places: Array[Transform3D]) -> void:
+static func instances(
+	root: Node3D, path: String, places: Array[Transform3D], tolerance := Kit.STREET_TOLERANCE
+) -> void:
 	if places.is_empty():
 		return
 	var scene: PackedScene = load(path)
 	var node := scene.instantiate()
 	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
 		var source := child as MeshInstance3D
+		var mesh := Kit.lean(source.mesh, tolerance)
 		var within := _within(source, node)
 		var cells: Dictionary[int, Array] = {}
 		for place: Transform3D in places:
@@ -314,7 +317,7 @@ static func instances(root: Node3D, path: String, places: Array[Transform3D]) ->
 			var list: Array = cells[cell]
 			var multimesh := MultiMesh.new()
 			multimesh.transform_format = MultiMesh.TRANSFORM_3D
-			multimesh.mesh = source.mesh
+			multimesh.mesh = mesh
 			multimesh.instance_count = list.size()
 			for i: int in list.size():
 				var place: Transform3D = list[i]

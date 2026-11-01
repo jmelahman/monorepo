@@ -4,6 +4,14 @@ extends RefCounted
 ## side by side for display, so each part's own position in the file is ignored unless a
 ## caller asks for it. Copies are drawn together per stretch of street, like [CityMesh].
 
+## How far a scan's surface may stray, in metres, seen from the road. A cardboard box comes
+## with 17,000 triangles, and the rider never gets close enough to see any of them.
+const STREET_TOLERANCE := 0.05
+## Shadows are soft and seen second-hand, so they can stray further.
+const SHADOW_SLACK := 4.0
+
+static var _lean: Dictionary[Array, Mesh] = {}
+
 var chunk := 0
 var _meshes: Dictionary[String, Mesh] = {}
 var _origins: Dictionary[String, Vector3] = {}
@@ -16,10 +24,52 @@ func _init(path: String) -> void:
 	var node := scene.instantiate()
 	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
 		var part := child as MeshInstance3D
-		_meshes[String(part.name)] = part.mesh
+		_meshes[String(part.name)] = Kit.lean(part.mesh, STREET_TOLERANCE)
 		_origins[String(part.name)] = part.position
 		_names.append(String(part.name))
 	node.free()
+
+
+## [param mesh], down to the coarsest detail its import made that stays within
+## [param tolerance]. Godot picks a multimesh's detail from the whole stretch of street it
+## covers, so one that passes close to the camera draws every copy at full detail.
+static func lean(mesh: Mesh, tolerance: float) -> Mesh:
+	var key := [mesh.get_rid().get_id(), tolerance]
+	if key not in _lean:
+		var made := _coarsened(mesh, tolerance)
+		made.shadow_mesh = _coarsened(mesh, tolerance * SHADOW_SLACK)
+		_lean[key] = made
+	return _lean[key]
+
+
+static func _coarsened(mesh: Mesh, tolerance: float) -> ArrayMesh:
+	var made := ArrayMesh.new()
+	for surface: int in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(surface)
+		var kept: Dictionary = {}
+		var lods: Array = RenderingServer.mesh_get_surface(mesh.get_rid(), surface).get("lods", [])
+		var positions: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		for lod: Dictionary in lods:
+			var data: PackedByteArray = lod["index_data"]
+			var indices := _indices(data, positions.size())
+			var edge: float = lod["edge_length"]
+			if edge <= tolerance:
+				arrays[Mesh.ARRAY_INDEX] = indices
+			else:
+				kept[edge] = indices
+		made.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], kept)
+		made.surface_set_material(surface, mesh.surface_get_material(surface))
+	return made
+
+
+static func _indices(data: PackedByteArray, vertices: int) -> PackedInt32Array:
+	if vertices > 65535:
+		return data.to_int32_array()
+	var indices := PackedInt32Array()
+	indices.resize(data.size() >> 1)
+	for i: int in indices.size():
+		indices[i] = data.decode_u16(i * 2)
+	return indices
 
 
 ## Swaps the kit's materials, by the name each has in the file, for every part using them.
