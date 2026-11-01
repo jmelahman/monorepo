@@ -7,6 +7,7 @@ const CONCRETE := "res://assets/polyhaven/concrete_wall_004/concrete_wall_004_%s
 const BRUTAL: Shader = preload("res://game/brutal.gdshader")
 const TRAFFIC: Shader = preload("res://game/traffic.gdshader")
 const SKYLIGHT: Shader = preload("res://game/skylight.gdshader")
+const SKYLIGHT_WIDE := 0.4
 const STRETCH := 8.0
 const DECK_WIDE := 70.0
 const CONCRETE_METRES := 5.0
@@ -132,7 +133,9 @@ static func _deck(
 			var rise := Vector3.UP * SLOT_DEEP
 			kit.quad(concrete, a, d, d + rise, a + rise, across * -side, dark * 1.6, tile)
 		_coffers(kit, here, across, route.tangent(s), slot, concrete, dark)
-		var glow := Color(0.5, 0.72, 0.95)
+		# The further it opens, the less of it should be looking back at the rider.
+		var wide := inverse_lerp(Undercity.SLOT_HALF, Undercity.OCULUS_HALF, slot)
+		var glow := Color(0.5, 0.72, 0.95) * lerpf(1.0, SKYLIGHT_WIDE, wide)
 		var top := Vector3.UP * SLOT_DEEP
 		kit.quad(
 			sky,

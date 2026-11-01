@@ -102,11 +102,11 @@ func _raise_spires(run_seed: int, districts: Districts, route: Route, length: fl
 			spire.tiers = 1 + int(Rng.unit(cell, 5) * 3.0)
 			# On a bend a tower meant for the far side can land back on the road.
 			var at := route.at(spire.s) + route.right(spire.s) * spire.offset
-			var roofed := false
+			var hidden := false
 			for along: float in [-0.5, 0.0, 0.5]:
 				var kind := districts.kind_at(spire.s + along * spire.width)
-				roofed = roofed or kind == Districts.Kind.CISTERN
-			if not roofed and absf(route.nearest(at.x, at.z).y) > SPIRE_NEAREST - spire.width * 0.5:
+				hidden = hidden or kind in [Districts.Kind.CISTERN, Districts.Kind.YARD]
+			if not hidden and absf(route.nearest(at.x, at.z).y) > SPIRE_NEAREST - spire.width * 0.5:
 				spires.append(spire)
 		s += SPIRE_SPACING
 		index += 1

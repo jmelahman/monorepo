@@ -34,6 +34,8 @@ void fragment() {
 	bars *= smoothstep(6.1, 5.9, max(frame.x, frame.y));
 	float pane = 0.35 + hash(cell) * 0.65;
 	pane *= step(0.14, hash(cell + 31.0));
+	// Whole frames at a time go dark, or a wide opening is just an even mosaic.
+	pane *= mix(0.12, 1.0, smoothstep(0.35, 0.85, hash(floor(world.xz / 13.0 + 0.5) + 7.0)));
 	float grime = noise(world.xz * 0.7) * 0.6 + noise(world.xz * 3.1) * 0.4;
 	ALBEDO = COLOR.rgb * pane * bars * mix(1.0, 0.25, smoothstep(0.3, 0.75, grime));
 }
