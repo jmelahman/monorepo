@@ -387,17 +387,19 @@ function CICell({ ci }: { ci?: ReleaseCI }) {
 function ProjectTable({
   project,
   onRelease,
-  unreleasedOnly,
+  hideUnreleased,
 }: {
   project: ReleaseProject;
   onRelease: (prefix: string) => void;
-  unreleasedOnly: boolean;
+  hideUnreleased: boolean;
 }) {
   const qc = useQueryClient();
   // Reaching for the button is the cue to start the fetch the modal will want.
   const warm = (prefix: string) =>
     qc.prefetchQuery(previewOptions(project.repo_path, prefix, "patch", ""));
-  const subtrees = unreleasedOnly ? project.subtrees.filter(neverReleased) : project.subtrees;
+  const subtrees = hideUnreleased
+    ? project.subtrees.filter((s) => !neverReleased(s))
+    : project.subtrees;
   if (subtrees.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
@@ -521,7 +523,7 @@ export function ReleasesDashboard() {
     reminder?: ReleaseReminder;
     bump?: ReleaseBump;
   } | null>(null);
-  const [neverOnly, setNeverOnly] = useState(false);
+  const [hideNever, setHideNever] = useState(false);
   const [openRun, setOpenRun] = useState<ReleaseRun | null>(null);
   const [onRunEnd] = useState(() => () => {
     qc.invalidateQueries({ queryKey: queryKeys.releases });
@@ -557,10 +559,10 @@ export function ReleasesDashboard() {
           <label className="flex cursor-pointer items-center gap-1.5 text-sm">
             <input
               type="checkbox"
-              checked={neverOnly}
-              onChange={(e) => setNeverOnly(e.target.checked)}
+              checked={hideNever}
+              onChange={(e) => setHideNever(e.target.checked)}
             />
-            never released ({neverCount})
+            hide unreleased ({neverCount})
           </label>
           <Button
             variant="neutral"
@@ -615,7 +617,7 @@ export function ReleasesDashboard() {
           <ProjectTable
             key={p.repo_path}
             project={p}
-            unreleasedOnly={neverOnly}
+            hideUnreleased={hideNever}
             onRelease={(prefix) =>
               setReleasing({ repo: p.repo_path, prefix, bump: "patch", suffix: "" })
             }
