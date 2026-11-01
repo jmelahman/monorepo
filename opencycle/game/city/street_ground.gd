@@ -43,7 +43,7 @@ static func build(route: Route, street: Street, length: float, section: StreetSe
 			s = next
 			continue
 		kit.at(s)
-		var under_roof := street.districts.kind_at(s) == Districts.Kind.UNDERPASS
+		var under_roof := Districts.roofed(street.districts.kind_at(s))
 		_strip(kit, route, s, next, -half, half, 0.0, covered if under_roof else road, 1.0)
 		for side: float in [-1.0, 1.0]:
 			var a := half * side
@@ -62,7 +62,7 @@ static func build(route: Route, street: Street, length: float, section: StreetSe
 		if not section.holds(patched.x):
 			continue
 		kit.at(patched.x)
-		var patched_covered := street.districts.kind_at(patched.x) == Districts.Kind.UNDERPASS
+		var patched_covered := Districts.roofed(street.districts.kind_at(patched.x))
 		_strip(
 			kit,
 			route,
@@ -179,7 +179,7 @@ static func _road_material(
 
 
 static func _arrow_paint(street: Street, s: float, open: Material, covered: Material) -> Material:
-	return covered if street.districts.kind_at(s) == Districts.Kind.UNDERPASS else open
+	return covered if Districts.roofed(street.districts.kind_at(s)) else open
 
 
 static func _sheen(strength: float, puddles: float, reach := 28.0, worn := 0.0) -> ShaderMaterial:

@@ -13,6 +13,9 @@ const STEP := 2.0
 const HALF_WIDTH := 3.0
 ## Distance over which one grade blends into the next.
 const GRADE_BLEND := 60.0
+## A road longer than [constant LENGTH] rolls gently from there on.
+const ROLL := 0.025
+const ROLL_LONG := 190.0
 ## Grade by distance: a climb, a rolling middle, then a long descent.
 const GRADES: Array[Vector2] = [
 	Vector2(-MARGIN, 0.01),
@@ -30,12 +33,12 @@ var _x_start := 0.0
 var _s_at_x := PackedFloat32Array()
 
 
-static func generate(run_seed: int) -> Route:
+static func generate(run_seed: int, length := LENGTH) -> Route:
 	var route := Route.new()
 	var phases: Array[float] = []
 	for i: int in 3:
 		phases.append(TAU * float(Rng.derive(run_seed, [1, i])) / float(Rng.MASK))
-	var count := int((LENGTH + 2.0 * MARGIN) / STEP) + 1
+	var count := int((length + 2.0 * MARGIN) / STEP) + 1
 	route._points.resize(count)
 	var position := Vector3.ZERO
 	for i: int in count:
@@ -59,7 +62,9 @@ static func _grade_at(s: float) -> float:
 	var grade := GRADES[0].y
 	for knot: Vector2 in GRADES:
 		grade = lerpf(grade, knot.y, smoothstep(knot.x, knot.x + GRADE_BLEND, s))
-	return grade
+	return (
+		grade + ROLL * sin((s - LENGTH) / ROLL_LONG) * smoothstep(LENGTH, LENGTH + GRADE_BLEND, s)
+	)
 
 
 ## The road's centre, [param s] metres from the start of the ride.

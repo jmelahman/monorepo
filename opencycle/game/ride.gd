@@ -66,7 +66,7 @@ func _ready() -> void:
 	var replay_path: String = args.get("replay", BIOME_REPLAYS.get(biome, ""))
 	var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(replay_path))
 	replay = Replay.from_dict(parsed)
-	route = Route.generate(run_seed)
+	route = Route.generate(run_seed, NeonBiome.LENGTH if biome == "neon" else Route.LENGTH)
 	match biome:
 		"neon":
 			_stream = NeonBiome.build(self, run_seed, route, quality)

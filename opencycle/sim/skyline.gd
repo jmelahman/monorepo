@@ -78,13 +78,13 @@ var beams: Array[Beam] = []
 
 static func generate(run_seed: int, street: Street, route: Route, length: float) -> Skyline:
 	var skyline := Skyline.new()
-	skyline._raise_spires(run_seed, route, length)
+	skyline._raise_spires(run_seed, street.districts, route, length)
 	skyline._dress_towers(run_seed, street, length)
 	skyline._bridge_the_road(run_seed, street, length)
 	return skyline
 
 
-func _raise_spires(run_seed: int, route: Route, length: float) -> void:
+func _raise_spires(run_seed: int, districts: Districts, route: Route, length: float) -> void:
 	var base := Rng.derive(run_seed, [50])
 	var index := 0
 	var s := -REACH
@@ -102,7 +102,11 @@ func _raise_spires(run_seed: int, route: Route, length: float) -> void:
 			spire.tiers = 1 + int(Rng.unit(cell, 5) * 3.0)
 			# On a bend a tower meant for the far side can land back on the road.
 			var at := route.at(spire.s) + route.right(spire.s) * spire.offset
-			if absf(route.nearest(at.x, at.z).y) > SPIRE_NEAREST - spire.width * 0.5:
+			var roofed := false
+			for along: float in [-0.5, 0.0, 0.5]:
+				var kind := districts.kind_at(spire.s + along * spire.width)
+				roofed = roofed or kind == Districts.Kind.CISTERN
+			if not roofed and absf(route.nearest(at.x, at.z).y) > SPIRE_NEAREST - spire.width * 0.5:
 				spires.append(spire)
 		s += SPIRE_SPACING
 		index += 1

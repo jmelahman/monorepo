@@ -26,7 +26,7 @@ func test_same_seed_gives_the_same_districts() -> void:
 
 
 func test_the_ride_passes_through_every_kind() -> void:
-	var districts := Districts.generate(4, LENGTH)
+	var districts := Districts.generate(4, NeonBiome.LENGTH)
 	for kind: Districts.Kind in Districts.Kind.values():
 		assert_int(districts.of_kind(kind).size()).is_greater(0)
 

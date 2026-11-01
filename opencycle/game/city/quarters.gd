@@ -106,8 +106,11 @@ static func build(route: Route, street: Street, section: StreetSection) -> Node3
 			_gantry(kit, root, route, gantry, index, parts)
 		index += 1
 	for opening: Vector3 in street.openings:
-		if section.takes(opening.x, opening.y):
+		var kind := street.districts.kind_at((opening.x + opening.y) * 0.5)
+		if kind == Districts.Kind.PLAZA and section.takes(opening.x, opening.y):
 			_plaza(kit, root, route, opening, parts)
+	for stretch: Districts.Stretch in street.districts.of_kind(Districts.Kind.CISTERN):
+		Cistern.build(kit, root, route, stretch, section, parts)
 	kit.commit(root)
 	parts.housing.commit(root, MODELLED_REACH)
 	return root

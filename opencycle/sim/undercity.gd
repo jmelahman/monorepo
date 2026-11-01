@@ -97,7 +97,7 @@ func _raise_pylons(run_seed: int, street: Street, wall: float, length: float) ->
 			pylon.width = lerpf(3.5, 6.0, Rng.unit(cell, 0))
 			pylon.depth = minf(lerpf(2.0, 3.2, Rng.unit(cell, 1)), wall * 0.3)
 			# Nothing to stand against out on a plaza.
-			if districts.kind_at(s) != Districts.Kind.PLAZA:
+			if not Districts.stands_open(districts.kind_at(s)):
 				pylons.append(pylon)
 				Skyline._clear_signs(street, s, pylon.width * 0.5 + 1.0, 0.0, DECK_HEIGHT, side)
 			s += lerpf(PYLON_MIN, PYLON_MAX, Rng.unit(cell, 2))
@@ -115,7 +115,7 @@ func _frame_deck(run_seed: int, wall: float, length: float) -> void:
 		rib.drop = lerpf(1.4, 6.5, pow(Rng.unit(cell, 0), 2.0))
 		rib.long = lerpf(1.2, 3.4, Rng.unit(cell, 1))
 		rib.lit = Rng.unit(cell, 2) < 0.5
-		if districts.kind_at(s) != Districts.Kind.PLAZA:
+		if not Districts.stands_open(districts.kind_at(s)):
 			ribs.append(rib)
 		s += lerpf(RIB_MIN, RIB_MAX, Rng.unit(cell, 3))
 		index += 1
@@ -140,7 +140,7 @@ func _open_slot(run_seed: int, length: float) -> void:
 		shaft.offset = (Rng.unit(cell, 0) * 2.0 - 1.0) * SLOT_HALF * 0.7
 		shaft.power = lerpf(0.6, 1.0, Rng.unit(cell, 1))
 		# Under a roof, there'd be nothing to see of it.
-		if districts.kind_at(s) != Districts.Kind.UNDERPASS:
+		if not Districts.roofed(districts.kind_at(s)):
 			shafts.append(shaft)
 		s += lerpf(SHAFT_MIN, SHAFT_MAX, Rng.unit(cell, 2))
 		index += 1
@@ -162,7 +162,9 @@ func _open_lanes(run_seed: int, kerb: float) -> void:
 ## How far the slot in the deck reaches either side of the road here.
 func slot_half(s: float) -> float:
 	var open := 0.0
-	for stretch: Districts.Stretch in districts.of_kind(Districts.Kind.PLAZA):
+	for stretch: Districts.Stretch in districts.stretches:
+		if stretch.kind not in [Districts.Kind.PLAZA, Districts.Kind.YARD]:
+			continue
 		var inside := minf(s - stretch.from, stretch.to - s)
 		open = maxf(open, smoothstep(0.0, OCULUS_EASE, inside))
 	return lerpf(SLOT_HALF, OCULUS_HALF, open)

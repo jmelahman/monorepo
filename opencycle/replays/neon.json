@@ -13,7 +13,7 @@
       "kmh": 30
     },
     {
-      "at_m": 1000,
+      "at_m": 2000,
       "kmh": 30
     }
   ],
@@ -50,6 +50,31 @@
     },
     {
       "at_m": 1000,
+      "lateral": 0.0,
+      "height": 0.0
+    },
+    {
+      "at_m": 1150,
+      "lateral": -0.8,
+      "height": 0.0
+    },
+    {
+      "at_m": 1400,
+      "lateral": 0.0,
+      "height": 0.0
+    },
+    {
+      "at_m": 1600,
+      "lateral": -0.9,
+      "height": 0.0
+    },
+    {
+      "at_m": 1800,
+      "lateral": 0.7,
+      "height": 0.0
+    },
+    {
+      "at_m": 2000,
       "lateral": 0.0,
       "height": 0.0
     }

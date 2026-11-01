@@ -382,7 +382,7 @@ static func _duct(
 		var from := route.at(s) + route.right(s) * duct.offset + Vector3.UP * duct.height
 		var to := route.at(next) + route.right(next) * duct.offset + Vector3.UP * duct.height
 		# There's no wall out on a plaza for it to run along.
-		if city.districts.kind_at(s) != Districts.Kind.PLAZA:
+		if not Districts.stands_open(city.districts.kind_at(s)):
 			kit.bar(concrete, from, to, duct.thick, tint * 2.0)
 		s = next
 
