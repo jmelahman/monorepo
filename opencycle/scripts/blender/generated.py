@@ -41,8 +41,9 @@ def main(source, out, tall, triangles):
     thing.name = thing.data.name = "generated"
     for image in bpy.data.images:
         print("image", image.name, image.size[0], image.size[1], image.colorspace_settings.name)
-        if image.size[0] > TEXTURE:
-            image.scale(TEXTURE, TEXTURE)
+        longest = max(image.size)
+        if longest > TEXTURE:
+            image.scale(image.size[0] * TEXTURE // longest, image.size[1] * TEXTURE // longest)
     after = sum(len(face.vertices) - 2 for face in thing.data.polygons)
     print(f"triangles {before} -> {after}, fit {fit:.3f}")
     bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", export_image_format="WEBP")

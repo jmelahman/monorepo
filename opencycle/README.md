@@ -21,7 +21,8 @@ Options after `--`: `--biome=forest|neon`, `--seed=N`, `--quality=ship|max`,
 `--replay=res://replays/x.json`, `--still=out.png --at=SECONDS`, `--scale=0.5`.
 
 - `scripts/bench.sh [biome] [quality]`: frame times to `captures/`, on your real GPU
-- `scripts/capture.sh [biome] [quality]`: a fixed 60 fps video through Movie Maker
+- `scripts/capture.sh [biome] [quality] [fps]`: an mp4 at a fixed frame rate, 60 unless given,
+  through Movie Maker and ffmpeg
 - `scripts/test.sh`, `scripts/lint.sh`: tests and static checks
 
 ## Frame rate

@@ -9,6 +9,11 @@ cd "$ROOT"
 biome="${1:-forest}"
 quality="${2:-max}"
 fps="${3:-60}"
+# A render can take half an hour: find out now, not at the end of it.
+command -v ffmpeg >/dev/null || {
+	echo "capture.sh needs ffmpeg" >&2
+	exit 1
+}
 mkdir -p captures
 "$GODOT" --path "$ROOT" --audio-driver Dummy --resolution 1920x1080 --fixed-fps "$fps" \
 	--write-movie "$ROOT/captures/$biome-$quality.avi" -- --biome="$biome" --quality="$quality"

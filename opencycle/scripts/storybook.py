@@ -68,7 +68,9 @@ def render(chapter: Path) -> list[dict[str, str]]:
             printed = run.stdout + run.stderr
         except subprocess.TimeoutExpired as hung:
             # Godot can hang on quit after writing its still; the check below decides.
-            printed = (hung.stdout or b"").decode() + (hung.stderr or b"").decode()
+            printed = (hung.stdout or b"").decode(errors="replace") + (hung.stderr or b"").decode(
+                errors="replace"
+            )
         # A broken shader still renders, as flat untextured faces, and exits 0.
         broken = sorted({line for line in printed.splitlines() if "SHADER ERROR" in line})
         if broken:

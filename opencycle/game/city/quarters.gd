@@ -14,8 +14,9 @@ const TUBE_GAP := 1.6
 const TUBE_DEAD := 0.14
 const TUBE := Color(0.72, 1.05, 0.82)
 const TUNNEL_LIGHT := Color(0.82, 1.0, 0.88)
-## Every so many bays a tube has failed, and the dark between pools is what gives the tunnel length.
-const TUNNEL_DARK_EVERY := 2
+## Every so many bays a dim pool between the shadowed spots. The bays with neither have failed
+## tubes, and the dark between pools is what gives the tunnel length.
+const TUNNEL_POOL_EVERY := 2
 const TUNNEL_LIT_EVERY := 12.0
 const TUNNEL_SHADOW_EVERY := 3
 const HAZARD := Color(2.6, 0.12, 0.06)
@@ -56,8 +57,8 @@ const SHAFT_EVERY := 36.0
 const COLD := Color(0.62, 0.8, 1.0)
 const UPLIGHT := Color(1.0, 0.72, 0.42)
 const MODELLED := "res://assets/modelled/%s.glb"
-const MONOLITH: PackedScene = preload("res://assets/generated/monolith.glb")
-const PLATES: PackedScene = preload("res://assets/generated/plates.glb")
+const MONOLITH := "res://assets/generated/monolith.glb"
+const PLATES := "res://assets/generated/plates.glb"
 const MONOLITH_TALL := 31.5
 const PLATES_TALL := 16.0
 ## Rusted steel drinks light that concrete throws back.
@@ -70,7 +71,7 @@ const STAIR_LAMP_EVERY := 16.0
 const MODELLED_TOLERANCE := 0.008
 const MODELLED_REACH := 500.0
 const CLOTH_DIM := 0.3
-const WASH_EVERY := 2
+const WASH_CHANCE := 0.5
 const LETTINGS: Array[String] = ["bay_a", "bay_b", "bay_c", "bay_d", "bay_e", "bay_f", "bay_g"]
 
 
@@ -329,7 +330,7 @@ static func _tunnel_lights(root: Node3D, route: Route, stretch: Districts.Stretc
 			spot.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
 			spot.position = above
 			root.add_child(spot)
-		elif index % TUNNEL_DARK_EVERY == 0:
+		elif index % TUNNEL_POOL_EVERY == 0:
 			var omni := OmniLight3D.new()
 			omni.light_color = TUNNEL_LIGHT
 			omni.light_energy = 2.4
@@ -341,7 +342,7 @@ static func _tunnel_lights(root: Node3D, route: Route, stretch: Districts.Stretc
 			# The tubes don't reach the walls, so the shutters get old sodium lamps instead,
 			# whose warmth against the tubes is the only colour down here.
 			var fill := OmniLight3D.new()
-			var warm := (index + int(side)) % 2 == 0
+			var warm := (index % 2 == 0) == (side > 0.0)
 			fill.light_color = SODIUM if warm else TUNNEL_LIGHT
 			fill.light_energy = 3.5 if warm else 1.0
 			fill.light_volumetric_fog_energy = 0.0
@@ -572,7 +573,8 @@ static func _plaza(
 	_benches(kit, root, route, from, to, side, parts)
 	if side < 0.0:
 		_ring(kit, root, route, middle, side, parts)
-		_sculpture(root, route, to - SCULPTURE_IN, side, PLATES, PLATES_TALL, PLATES_LIT)
+		var plates: PackedScene = load(PLATES)
+		_sculpture(root, route, to - SCULPTURE_IN, side, plates, PLATES_TALL, PLATES_LIT)
 		var shaft := from + SHAFT_EVERY * 0.5
 		var index := 0
 		while shaft < to:
@@ -581,7 +583,7 @@ static func _plaza(
 			shaft += SHAFT_EVERY
 			index += 1
 	else:
-		_monolith(kit, root, route, middle, side)
+		_monolith(root, route, middle, side)
 
 
 ## One bay of the housing around the plaza, floor on floor up to the deck: a street level
@@ -628,7 +630,7 @@ static func _gallery_bay(
 		storey += 1
 	if Rng.unit(dice, 302) < LINTEL_LAMP:
 		_lintel_lamp(kit, root, base + facing * 1.2, basis, parts)
-	if Rng.unit(dice, 300) < 1.0 / WASH_EVERY:
+	if Rng.unit(dice, 300) < WASH_CHANCE:
 		root.add_child(_housing_wash(base + facing * 3.0, Rng.unit(dice, 301) < 0.3))
 
 
@@ -695,7 +697,6 @@ static func _terrace(
 		lamp.light_volumetric_fog_energy = 0.1
 		lamp.omni_range = 13.0
 		lamp.position = route.at(lamp_at) + out + Vector3.UP * 0.8
-		kit.at(lamp_at)
 		root.add_child(lamp)
 		lamp_at += STAIR_LAMP_EVERY
 	kit.at(middle)
@@ -827,11 +828,11 @@ static func _ring(
 
 
 ## A slab leaning out over the plaza, turned towards the oncoming rider.
-static func _monolith(kit: CityMesh, root: Node3D, route: Route, s: float, side: float) -> void:
-	kit.at(s)
+static func _monolith(root: Node3D, route: Route, s: float, side: float) -> void:
 	var out := route.right(s) * side
 	var facing := (-route.tangent(s) * 0.8 - out * 0.6).normalized()
-	_raise(root, MONOLITH, route.at(s) + out * 21.0, facing, MONOLITH_TALL)
+	var foot := route.at(s) + out * 21.0 + Vector3.UP * StreetGround.KERB_HEIGHT
+	_raise(root, load(MONOLITH) as PackedScene, foot, facing, MONOLITH_TALL)
 
 
 ## A sculpture on the plaza floor, set back from the road and looking at whoever is coming.

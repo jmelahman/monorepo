@@ -12,24 +12,14 @@ uniform float strength = 1.0;
 uniform float puddles = 1.0;
 // How far off the ground what's being reflected stands, roughly: the signs across the road.
 uniform float reach = 28.0;
+// Over road paint: as worn as the paint, so bare patches in a line don't mirror twice over.
+uniform float worn = 0.0;
 
 const int TAPS = 9;
 
 varying vec3 world;
 
-float hash(vec2 p) {
-	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-float noise(vec2 p) {
-	vec2 i = floor(p);
-	vec2 f = fract(p);
-	f = f * f * (3.0 - 2.0 * f);
-	return mix(
-			mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-			mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
-			f.y);
-}
+#include "res://game/road_wear.gdshaderinc"
 
 float standing_water(vec2 at) {
 	float broad = noise(at * 0.13) * 0.6 + noise(at * 0.47) * 0.32 + noise(at * 1.9) * 0.08;
@@ -76,6 +66,11 @@ void fragment() {
 	}
 	seen /= weight;
 	float amount = mix(mix(0.16, 0.65, fresnel), mix(0.3, 0.8, fresnel), water);
-	ALBEDO = seen * amount * strength * step(0.0, clip.w);
+	float kept = 1.0;
+	if (worn > 0.0) {
+		vec2 worn_at = wear_at(at);
+		kept = worn_through(worn_at, wear_grit(worn_at, length(fwidth(at))), worn) ? 0.0 : 1.0;
+	}
+	ALBEDO = seen * amount * strength * kept * step(0.0, clip.w);
 	ALPHA = 1.0;
 }

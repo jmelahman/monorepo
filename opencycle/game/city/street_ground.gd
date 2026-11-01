@@ -13,6 +13,9 @@ const KERB_HEIGHT := 0.15
 const KERB_WIDTH := 0.26
 const PAINT_LIFT := 0.012
 const TUNNEL_REACH := 7.0
+const YELLOW_PAINT := Vector3(0.3, 0.22, 0.06)
+const WHITE_PAINT := Vector3(0.46, 0.46, 0.42)
+const PAINT_WORN := 0.55
 
 
 static func build(route: Route, street: Street, length: float) -> Node3D:
@@ -25,12 +28,15 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 	var road := _road_material(ROAD, Color(1.0, 1.0, 1.0))
 	# Fresher asphalt of the same kind: darker, and only by a little.
 	var patch := _road_material(ROAD, Color(0.8, 0.8, 0.82))
+	var covered_patch := _road_material(ROAD, Color(0.74, 0.74, 0.76), 0.0, TUNNEL_REACH)
 	# Dry under the roof, where all it can mirror is the tubes a few metres overhead.
 	var covered := _road_material(ROAD, Color(0.92, 0.92, 0.92), 0.0, TUNNEL_REACH)
 	var paving := _paving()
 	var kerb := _plain(Color(0.42, 0.41, 0.39), 0.75)
-	var yellow := _paint(Vector3(0.3, 0.22, 0.06), 0.55)
-	var white := _paint(Vector3(0.46, 0.46, 0.42), 0.55)
+	var yellow := _paint(YELLOW_PAINT, PAINT_WORN)
+	var white := _paint(WHITE_PAINT, PAINT_WORN)
+	var covered_yellow := _paint(YELLOW_PAINT, PAINT_WORN, TUNNEL_REACH)
+	var covered_white := _paint(WHITE_PAINT, PAINT_WORN, TUNNEL_REACH)
 	var s := start
 	while s < end:
 		var next := minf(s + Route.STEP, end)
@@ -45,12 +51,14 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 			_strip(kit, route, s, next, b, wall, KERB_HEIGHT, paving, 1.0)
 			_kerb_face(kit, route, s, next, a, kerb, side)
 			var line := (half - 0.28) * side
-			_strip(kit, route, s, next, line - 0.05, line + 0.05, PAINT_LIFT, yellow, 1.0)
+			var paint := covered_yellow if under_roof else yellow
+			_strip(kit, route, s, next, line - 0.05, line + 0.05, PAINT_LIFT, paint, 1.0)
 			var inner := (half - 0.46) * side
-			_strip(kit, route, s, next, inner - 0.05, inner + 0.05, PAINT_LIFT, yellow, 1.0)
+			_strip(kit, route, s, next, inner - 0.05, inner + 0.05, PAINT_LIFT, paint, 1.0)
 		s = next
 	for patched: Vector4 in street.patches:
 		kit.at(patched.x)
+		var patched_covered := street.districts.kind_at(patched.x) == Districts.Kind.UNDERPASS
 		_strip(
 			kit,
 			route,
@@ -59,14 +67,15 @@ static func build(route: Route, street: Street, length: float) -> Node3D:
 			patched.y - patched.w * 0.5,
 			patched.y + patched.w * 0.5,
 			0.006,
-			patch,
+			covered_patch if patched_covered else patch,
 			1.0
 		)
 	s = start
 	while s < end:
 		kit.at(s)
-		_arrow(kit, route, s, -1.4, white)
-		_arrow(kit, route, s + 6.0, 1.4, white)
+		_arrow(kit, route, s, -1.4, _arrow_paint(street, s, white, covered_white))
+		var back := s + 6.0
+		_arrow(kit, route, back, 1.4, _arrow_paint(street, back, white, covered_white))
 		s += 42.0
 	kit.commit(root)
 	return root
@@ -147,21 +156,28 @@ static func _road_material(
 	return material
 
 
-static func _sheen(strength: float, puddles: float, reach := 28.0) -> ShaderMaterial:
+static func _arrow_paint(
+	street: Street, s: float, open: ShaderMaterial, covered: ShaderMaterial
+) -> ShaderMaterial:
+	return covered if street.districts.kind_at(s) == Districts.Kind.UNDERPASS else open
+
+
+static func _sheen(strength: float, puddles: float, reach := 28.0, worn := 0.0) -> ShaderMaterial:
 	var sheen := ShaderMaterial.new()
 	sheen.shader = SHEEN_SHADER
 	sheen.set_shader_parameter("strength", strength)
 	sheen.set_shader_parameter("puddles", puddles)
 	sheen.set_shader_parameter("reach", reach)
+	sheen.set_shader_parameter("worn", worn)
 	return sheen
 
 
-static func _paint(colour: Vector3, worn: float) -> ShaderMaterial:
+static func _paint(colour: Vector3, worn: float, reach := 28.0) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = PAINT_SHADER
 	material.set_shader_parameter("paint", colour)
 	material.set_shader_parameter("worn", worn)
-	material.next_pass = _sheen(0.7, 0.0)
+	material.next_pass = _sheen(0.7, 0.0, reach, worn)
 	return material
 
 
