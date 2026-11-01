@@ -62,8 +62,10 @@ void fragment() {
 	float blur = mix(3.5, 0.5, water);
 	vec3 seen = vec3(0.0);
 	float weight = 0.0;
+	// A different offset for each pixel, or a small bright light shows up as one rung per tap.
+	float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
 	for (int i = 0; i < TAPS; i++) {
-		float along = float(i) / float(TAPS - 1);
+		float along = (float(i) + jitter) / float(TAPS);
 		vec2 tap = uv + vec2(0.0, (along - 0.3) * spread);
 		// Off the top of the frame there's nothing to read: let the reflection fade out.
 		float inside = smoothstep(1.0, 0.86, 1.0 - tap.y) * smoothstep(0.0, 0.03, tap.x)
