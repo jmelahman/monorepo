@@ -26,6 +26,13 @@ const BALUSTER_EVERY := 0.14
 const SIDES := 12
 
 
+## One mesh of a model, and where it sits in that model.
+class Stamp:
+	extends RefCounted
+	var mesh: Mesh
+	var within := Transform3D.IDENTITY
+
+
 static func build(route: Route, street: Street, length: float, section: StreetSection) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Furniture"
@@ -371,31 +378,43 @@ static func instances(
 ) -> void:
 	if places.is_empty():
 		return
-	var scene: PackedScene = load(path)
-	var node := scene.instantiate()
-	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
-		var source := child as MeshInstance3D
-		var mesh := Kit.lean(source.mesh, tolerance)
-		var within := _within(source, node)
-		var cells: Dictionary[int, Array] = {}
-		for place: Transform3D in places:
-			var cell := floori(place.origin.z / CityMesh.CHUNK)
-			if cell not in cells:
-				cells[cell] = []
-			cells[cell].append(place)
+	var cells: Dictionary[int, Array] = {}
+	for place: Transform3D in places:
+		var cell := floori(place.origin.z / CityMesh.CHUNK)
+		if cell not in cells:
+			cells[cell] = []
+		cells[cell].append(place)
+	var key := "stamps %s %f" % [path, tolerance]
+	var stamps: Array[Stamp] = Once.made(key, _stamps.bind(path, tolerance))
+	for stamp: Stamp in stamps:
 		for cell: int in cells:
 			var list: Array = cells[cell]
 			var multimesh := MultiMesh.new()
 			multimesh.transform_format = MultiMesh.TRANSFORM_3D
-			multimesh.mesh = mesh
+			multimesh.mesh = stamp.mesh
 			multimesh.instance_count = list.size()
 			for i: int in list.size():
 				var place: Transform3D = list[i]
-				multimesh.set_instance_transform(i, place * within)
+				multimesh.set_instance_transform(i, place * stamp.within)
 			var instance := MultiMeshInstance3D.new()
 			instance.multimesh = multimesh
 			root.add_child(instance)
+
+
+## The meshes of the model at [param path], made once: loading one and taking its detail down is
+## most of what a section would otherwise cost.
+static func _stamps(path: String, tolerance: float) -> Array[Stamp]:
+	var made: Array[Stamp] = []
+	var scene: PackedScene = load(path)
+	var node := scene.instantiate()
+	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
+		var source := child as MeshInstance3D
+		var stamp := Stamp.new()
+		stamp.mesh = Kit.lean(source.mesh, tolerance)
+		stamp.within = _within(source, node)
+		made.append(stamp)
 	node.free()
+	return made
 
 
 static func _sign_face(symbol: int) -> ShaderMaterial:
