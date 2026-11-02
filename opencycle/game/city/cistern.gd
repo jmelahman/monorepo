@@ -4,11 +4,14 @@ extends RefCounted
 ## each with its one lamp, standing in black water that gives all of it back. Nothing here is
 ## for anyone. The city just needed something to hold itself up, and something to drain into.
 
+const STILL_WATER: Shader = preload("res://game/still_water.gdshader")
 const ROOF := 18.0
 const SLAB := 2.0
 const OUT := 66.0
-const WATER := -0.45
-const PARAPET := 0.32
+const WATER := -0.12
+const PARAPET := 0.26
+## What the road has either side of it out here, in place of a pavement.
+const WALK := 0.7
 const PITCH := 12.0
 const ROWS: PackedFloat32Array = [9.5, 21.5, 33.5, 45.5, 57.5]
 const COLUMN := 1.9
@@ -64,6 +67,11 @@ static func build(
 			_mouth(kit, route, end, parts)
 
 
+## How far out from the road's middle the causeway stops and the water starts.
+static func edge() -> float:
+	return NeonBiome.STREET_HALF + StreetGround.KERB_WIDTH + WALK
+
+
 static func _water_material() -> Material:
 	var water := StandardMaterial3D.new()
 	water.albedo_color = Color(0.0, 0.0, 0.0)
@@ -71,8 +79,8 @@ static func _water_material() -> Material:
 	water.metallic = 0.0
 	# Lamps this close would otherwise leave a pale smear on it instead of a reflection.
 	water.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-	var mirror := StreetGround._sheen(1.0, 1.0, 70.0)
-	mirror.set_shader_parameter("sky", 0.0)
+	var mirror := ShaderMaterial.new()
+	mirror.shader = STILL_WATER
 	water.next_pass = mirror
 	return water
 
@@ -88,7 +96,7 @@ static func _bay(
 ) -> void:
 	var basis := Quarters._frame(route, s)
 	var middle := s + long * 0.5
-	var wall := Quarters._wall()
+	var wall := edge()
 	var ceiling := Vector3.UP * (ROOF + SLAB * 0.5 + 0.02 * (index % 2))
 	kit.box(
 		parts.concrete,
@@ -162,10 +170,10 @@ static func _flank(
 	StreetGround._strip(kit, route, s, next, low, high, WATER, _water, 1.0)
 	var middle := s + long * 0.5
 	var basis := Quarters._frame(route, middle)
-	var edge := route.at(middle) + route.right(middle) * side * (wall + 0.25)
+	var lip := route.at(middle) + route.right(middle) * side * (wall + 0.25)
 	kit.box(
 		parts.concrete,
-		Transform3D(basis, edge + Vector3.UP * ((PARAPET + WATER) * 0.5)),
+		Transform3D(basis, lip + Vector3.UP * ((PARAPET + WATER) * 0.5)),
 		Vector3(0.5, PARAPET - WATER, long * 1.05),
 		STONE * 0.8
 	)
@@ -231,7 +239,7 @@ static func _column(
 ## The wall the hall ends in, with a way through it for the road.
 static func _mouth(kit: CityMesh, route: Route, s: float, parts: Quarters.Parts) -> void:
 	var basis := Quarters._frame(route, s)
-	var wall := Quarters._wall()
+	var wall := edge()
 	var base := route.at(s)
 	for side: float in [-1.0, 1.0]:
 		var middle := (wall + OUT) * 0.5

@@ -330,7 +330,9 @@ func _dress_kerb(run_seed: int, side: float, length: float, kerb: float) -> void
 		pole.s = s + run + 0.4
 		pole.offset = side * (kerb + 0.35 + Rng.unit(cell, 3) * 0.15)
 		pole.turn = 0.0
-		props.append(pole)
+		# The hall's causeway has room beside the road for a sign and nothing else.
+		if pole.kind == "post" or districts.kind_at(pole.s) != Districts.Kind.CISTERN:
+			props.append(pole)
 		s += run + lerpf(1.5, 9.0, Rng.unit(cell, 4))
 		index += 1
 

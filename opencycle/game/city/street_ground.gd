@@ -43,12 +43,14 @@ static func build(route: Route, street: Street, length: float, section: StreetSe
 			s = next
 			continue
 		kit.at(s)
-		var under_roof := Districts.roofed(street.districts.kind_at(s))
+		var kind := street.districts.kind_at(s)
+		var under_roof := Districts.roofed(kind)
+		var pavement := Cistern.edge() if kind == Districts.Kind.CISTERN else half + Street.SIDEWALK
 		_strip(kit, route, s, next, -half, half, 0.0, covered if under_roof else road, 1.0)
 		for side: float in [-1.0, 1.0]:
 			var a := half * side
 			var b := (half + KERB_WIDTH) * side
-			var wall := (half + Street.SIDEWALK) * side
+			var wall := pavement * side
 			_strip(kit, route, s, next, a, b, KERB_HEIGHT, kerb, 1.0)
 			_strip(kit, route, s, next, b, wall, KERB_HEIGHT, paving, 1.0)
 			_kerb_face(kit, route, s, next, a, kerb, side)
