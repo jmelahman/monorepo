@@ -16,6 +16,8 @@ class City:
 var name := ""
 var road: Route
 var districts: Districts
+## Where other roads leave or join this one.
+var forks: Array[Fork] = []
 
 var _dice := 0
 var _order: Array[Array] = []
@@ -36,7 +38,7 @@ func _init(called: String, dice: int, along: Route, order: Array[Array], roads: 
 func city(kerb: float) -> City:
 	if not _city:
 		var made := City.new()
-		made.street = Street.generate(_dice, road.length, kerb, _order)
+		made.street = Street.generate(_dice, road.length, kerb, _order, forks)
 		made.skyline = Skyline.generate(_dice, made.street, road, road.length, _roads)
 		made.undercity = Undercity.generate(_dice, made.street, kerb, road.length)
 		_city = made

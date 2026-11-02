@@ -71,20 +71,22 @@ var ducts: Array[Duct] = []
 var shafts: Array[Shaft] = []
 var lanes: Array[Lane] = []
 var districts: Districts
+var street: Street
 
 
-static func generate(run_seed: int, street: Street, kerb: float, length: float) -> Undercity:
+static func generate(run_seed: int, lots: Street, kerb: float, length: float) -> Undercity:
 	var city := Undercity.new()
-	city.districts = street.districts
+	city.districts = lots.districts
+	city.street = lots
 	var wall := kerb + Street.SIDEWALK
-	city._raise_pylons(run_seed, street, wall, length)
+	city._raise_pylons(run_seed, wall, length)
 	city._frame_deck(run_seed, wall, length)
 	city._open_slot(run_seed, length)
 	city._open_lanes(run_seed, kerb)
 	return city
 
 
-func _raise_pylons(run_seed: int, street: Street, wall: float, length: float) -> void:
+func _raise_pylons(run_seed: int, wall: float, length: float) -> void:
 	for side: float in [-1.0, 1.0]:
 		var base := Rng.derive(run_seed, [60, int(side)])
 		var s := -REACH + Rng.unit(base, 0) * PYLON_MAX
@@ -97,7 +99,11 @@ func _raise_pylons(run_seed: int, street: Street, wall: float, length: float) ->
 			pylon.width = lerpf(3.5, 6.0, Rng.unit(cell, 0))
 			pylon.depth = minf(lerpf(2.0, 3.2, Rng.unit(cell, 1)), wall * 0.3)
 			# Nothing to stand against out on a plaza, and nothing to hold up past the deck's end.
-			if not _unframed(s):
+			var clear := pylon.width * 0.5 + 1.0
+			var on_a_wall := (
+				not street.forked(side, s - clear) and not street.forked(side, s + clear)
+			)
+			if on_a_wall and not _unframed(s):
 				pylons.append(pylon)
 				Skyline._clear_signs(street, s, pylon.width * 0.5 + 1.0, 0.0, DECK_HEIGHT, side)
 			s += lerpf(PYLON_MIN, PYLON_MAX, Rng.unit(cell, 2))
@@ -120,7 +126,7 @@ func _frame_deck(run_seed: int, wall: float, length: float) -> void:
 		rib.drop = lerpf(1.4, 6.5, pow(Rng.unit(cell, 0), 2.0))
 		rib.long = lerpf(1.2, 3.4, Rng.unit(cell, 1))
 		rib.lit = Rng.unit(cell, 2) < 0.5
-		if not _unframed(s):
+		if not _unframed(s) and not street.forked(1.0, s) and not street.forked(-1.0, s):
 			ribs.append(rib)
 		s += lerpf(RIB_MIN, RIB_MAX, Rng.unit(cell, 3))
 		index += 1

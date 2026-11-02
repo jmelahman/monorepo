@@ -33,6 +33,8 @@ const FACADES := 4
 const FORMS := 4
 ## How far a building without signs may step out over the pavement as it rises.
 const MAX_JETTY := 1.5
+const PROW_SIGN := Vector2(2.2, 7.0)
+const PROW_SIGN_BACK := 7.0
 ## Trades as [code]tools/bake_signs.gd[/code] names them on the sign sheet.
 const TRADES: PackedStringArray = [
 	"pharmacy",
@@ -136,24 +138,48 @@ var covers: Array[Vector2] = []
 var districts: Districts
 ## Where the street stops having a wall, for the plaza: from, to and side.
 var openings: Array[Vector3] = []
+var forks: Array[Fork] = []
 
 
 ## A street along the route over [code][0, length][/code].
 static func generate(
-	run_seed: int, length: float, kerb: float, order: Array[Array] = Districts.ORDER
+	run_seed: int,
+	length: float,
+	kerb: float,
+	order: Array[Array] = Districts.ORDER,
+	parting: Array[Fork] = []
 ) -> Street:
 	var street := Street.new()
+	street.forks = parting
 	street.districts = Districts.generate(run_seed, length, order)
 	for side: float in [-1.0, 1.0]:
 		street._line_side(run_seed, side, length, kerb)
 		street._dress_kerb(run_seed, side, length, kerb)
 	street._dig_up_road(run_seed, length, kerb)
+	street._sign_the_prows()
 	var s := -REACH
 	while s < length + REACH:
 		if not Districts.roofed(street.districts.kind_at(s)):
 			street.lamps.append(s)
 		s += LAMP_SPACING
 	return street
+
+
+## Whether another road takes this side of the street at [param s].
+func forked(side: float, s: float) -> bool:
+	for fork: Fork in forks:
+		if fork.side == side and fork.covers(s):
+			return true
+	return false
+
+
+## How far from the road's middle this side's ground goes at [param s], if another road's near.
+func reach(side: float, s: float) -> float:
+	var nearest := INF
+	for fork: Fork in forks:
+		if fork.side == side:
+			nearest = minf(nearest, fork.reach(s))
+	return nearest
 
 
 func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
@@ -166,6 +192,10 @@ func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
 		tower.side = side
 		tower.width = lerpf(LOT_MIN, LOT_MAX, Rng.unit(cell, 0))
 		tower.s = s + tower.width * 0.5
+		if forked(side, s) or forked(side, s + tower.width):
+			s += tower.width
+			index += 1
+			continue
 		# Whole lots come out for the plaza, so its edges fall where the buildings end.
 		if Districts.stands_open(districts.kind_at(tower.s)):
 			_leave_open(s, s + tower.width, side)
@@ -173,6 +203,8 @@ func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
 			index += 1
 			continue
 		tower.depth = lerpf(14.0, 26.0, Rng.unit(cell, 1))
+		for end: float in [s, s + tower.width]:
+			tower.depth = minf(tower.depth, reach(side, end) - Fork.WALL)
 		# All of them run up into the deck, so there is no skyline down here.
 		tower.height = lerpf(46.0, 70.0, Rng.unit(cell, 2))
 		if Districts.sky_open(districts.kind_at(tower.s)):
@@ -333,7 +365,8 @@ func _dress_kerb(run_seed: int, side: float, length: float, kerb: float) -> void
 	while s < length + REACH:
 		var cell := Rng.derive(base, [index])
 		var run := lerpf(3.0, 14.0, Rng.unit(cell, 0))
-		if Rng.unit(cell, 1) < 0.55 and not Districts.stands_open(districts.kind_at(s)):
+		var walled := not forked(side, s) and not forked(side, s + run)
+		if walled and Rng.unit(cell, 1) < 0.55 and not Districts.stands_open(districts.kind_at(s)):
 			railings.append(Vector3(s, s + run, side))
 		var pole := Prop.new()
 		var roll := Rng.unit(cell, 2)
@@ -346,10 +379,26 @@ func _dress_kerb(run_seed: int, side: float, length: float, kerb: float) -> void
 		pole.offset = side * (kerb + 0.35 + Rng.unit(cell, 3) * 0.15)
 		pole.turn = 0.0
 		# The hall's causeway has room beside the road for a sign and nothing else.
-		if pole.kind == "post" or districts.kind_at(pole.s) != Districts.Kind.CISTERN:
+		var fits := pole.kind == "post" or districts.kind_at(pole.s) != Districts.Kind.CISTERN
+		if fits and not forked(side, pole.s):
 			props.append(pole)
 		s += run + lerpf(1.5, 9.0, Rng.unit(cell, 4))
 		index += 1
+
+
+## A building that comes to a point where two roads part has the best site in the street.
+func _sign_the_prows() -> void:
+	for fork: Fork in forks:
+		var hung := Sign.new()
+		hung.side = fork.side
+		hung.s = fork.along(fork.prow + PROW_SIGN_BACK)
+		hung.size = PROW_SIGN
+		hung.elevation = SIGN_BASE + 2.0
+		hung.overhang = minf(hung.size.x + 0.8, MAX_OVERHANG)
+		hung.trade = TRADES[fork.other_name.hash() % TRADES.size()]
+		hung.pick = 0.5
+		hung.tall = true
+		signs.append(hung)
 
 
 func _dig_up_road(run_seed: int, length: float, kerb: float) -> void:

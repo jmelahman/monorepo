@@ -15,6 +15,8 @@ var root: Node3D
 ## Which road of the city this is on, and how far round the course that road starts.
 var segment: CitySegment
 var offset := 0.0
+## Where a road this course doesn't ride stops being built, or below 0 if it doesn't.
+var ends_at := -1.0
 
 
 func _init(start: float, end: float, opening := false) -> void:

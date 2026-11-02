@@ -46,19 +46,23 @@ static func build(route: Route, street: Street, length: float, section: StreetSe
 		var kind := street.districts.kind_at(s)
 		var under_roof := Districts.roofed(kind)
 		var pavement := Cistern.edge() if kind == Districts.Kind.CISTERN else half + Street.SIDEWALK
-		_strip(kit, route, s, next, -half, half, 0.0, covered if under_roof else road, 1.0)
+		var surface := covered if under_roof else road
+		var paint := covered_yellow if under_roof else yellow
 		for side: float in [-1.0, 1.0]:
-			var a := half * side
-			var b := (half + KERB_WIDTH) * side
-			var wall := pavement * side
-			_strip(kit, route, s, next, a, b, KERB_HEIGHT, kerb, 1.0)
-			_strip(kit, route, s, next, b, wall, KERB_HEIGHT, paving, 1.0)
-			_kerb_face(kit, route, s, next, a, kerb, side)
+			var here := street.reach(side, s)
+			var there := street.reach(side, next)
+			_clipped(kit, route, s, next, 0.0, half, side, here, there, surface)
+			# Where another road takes over, this one's edge only starts once they've parted.
+			var inner := half + KERB_WIDTH
+			_clipped(kit, route, s, next, half, inner, side, here, there, kerb, KERB_HEIGHT)
+			_clipped(kit, route, s, next, inner, pavement, side, here, there, paving, KERB_HEIGHT)
+			if minf(here, there) < half:
+				continue
+			_kerb_face(kit, route, s, next, half * side, kerb, side)
 			var line := (half - 0.28) * side
-			var paint := covered_yellow if under_roof else yellow
 			_strip(kit, route, s, next, line - 0.05, line + 0.05, PAINT_LIFT, paint, 1.0)
-			var inner := (half - 0.46) * side
-			_strip(kit, route, s, next, inner - 0.05, inner + 0.05, PAINT_LIFT, paint, 1.0)
+			var second := (half - 0.46) * side
+			_strip(kit, route, s, next, second - 0.05, second + 0.05, PAINT_LIFT, paint, 1.0)
 		s = next
 	for patched: Vector4 in street.patches:
 		if not section.holds(patched.x):
@@ -78,7 +82,8 @@ static func build(route: Route, street: Street, length: float, section: StreetSe
 		)
 	s = start
 	while s < end:
-		if section.holds(s):
+		var apart := minf(street.reach(-1.0, s), street.reach(1.0, s)) > half
+		if apart and section.holds(s):
 			kit.at(s)
 			_arrow(kit, route, s, -1.4, _arrow_paint(street, s, white, covered_white))
 			var back := s + 6.0
@@ -139,6 +144,41 @@ static func _strip(
 			)
 		)
 		s = next
+
+
+## A strip from [param near] to [param far] out on one side, no further than each end reaches.
+static func _clipped(
+	kit: CityMesh,
+	route: Route,
+	from: float,
+	to: float,
+	near: float,
+	far: float,
+	side: float,
+	here: float,
+	there: float,
+	material: Material,
+	lift := 0.0
+) -> void:
+	if near >= here and near >= there:
+		return
+	var up := Vector3.UP * lift
+	var across := route.right(from) * side
+	var onward := route.right(to) * side
+	var a := route.at(from) + across * minf(near, here) + up
+	var b := route.at(from) + across * minf(far, here) + up
+	var c := route.at(to) + onward * minf(far, there) + up
+	var d := route.at(to) + onward * minf(near, there) + up
+	var uvs: Array[Vector2] = [
+		Vector2(side * minf(near, here), from),
+		Vector2(side * minf(far, here), from),
+		Vector2(side * minf(far, there), to),
+		Vector2(side * minf(near, there), to),
+	]
+	if side > 0.0:
+		kit.face(material, [a, b, c, d], uvs, Vector3.UP)
+	else:
+		kit.face(material, [b, a, d, c], [uvs[1], uvs[0], uvs[3], uvs[2]], Vector3.UP)
 
 
 static func _kerb_face(

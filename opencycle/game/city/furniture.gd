@@ -41,14 +41,14 @@ static func build(route: Route, street: Street, length: float, section: StreetSe
 			_railing(kit, route, railing, rail)
 	var side := 1.0
 	for s: float in street.lamps:
-		if section.holds(s):
+		if section.holds(s) and not street.forked(side, s):
 			kit.at(s)
 			_lamp(kit, route, s, side, steel, used["lamp_glow"])
 			if s > -15.0 and s < length + 40.0:
 				var works := street.districts.kind_at(s) == Districts.Kind.WORKS
 				root.add_child(_lamp_light(route, s, side, SODIUM if works else LAMP_COLOUR))
 		side = -side
-	_cables(kit, route, street.districts, length, used["cable"], section)
+	_cables(kit, route, street, length, used["cable"], section)
 	var placed: Dictionary[String, Array] = {}
 	for path: String in [CRATE, UTILITY, STOOL, CARTON, BAG, BIN, COVER, LADDER]:
 		placed[path] = [] as Array[Transform3D]
@@ -242,7 +242,7 @@ static func _lamp_light(route: Route, s: float, side: float, colour: Color) -> O
 static func _cables(
 	kit: CityMesh,
 	route: Route,
-	districts: Districts,
+	street: Street,
 	length: float,
 	material: Material,
 	section: StreetSection
@@ -258,7 +258,9 @@ static func _cables(
 			continue
 		kit.at(s)
 		# Only strung where there's a wall each side and room above the road.
-		var strung := districts.kind_at(s) in [Districts.Kind.MARKET, Districts.Kind.WORKS]
+		var kind := street.districts.kind_at(s)
+		var walled := not street.forked(1.0, s) and not street.forked(-1.0, s)
+		var strung := walled and kind in [Districts.Kind.MARKET, Districts.Kind.WORKS]
 		var count := (1 + int(Rng.unit(dice, 0) * 3.0)) if strung else 0
 		var high := lerpf(8.0, 13.0, Rng.unit(dice, 1))
 		var skew := lerpf(-3.0, 3.0, Rng.unit(dice, 2))

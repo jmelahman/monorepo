@@ -21,6 +21,8 @@ const COURSES: Dictionary[String, Array] = {
 }
 ## Market between everything else, and how much of it. What's left at a road's end is market too.
 const GAP := 60.0
+## The market a road starts with where it's leaving another, which is room for the two to part.
+const FORK_GAP := 150.0
 const SPREAD := 0.1
 
 var segments: Dictionary[String, CitySegment] = {}
@@ -37,12 +39,12 @@ func _init(run_seed: int) -> void:
 	var east := Vector3.RIGHT
 	var undercity: Array = [[Districts.Kind.UNDERPASS, 150.0]]
 	_add(run_seed, "N1", north, 0.0, inner, 0.0, undercity, 250.0)
-	_add(run_seed, "N2", north + east * inner, 0.0, MIDDLE_LONG, 0.0, _open_north())
-	_add(run_seed, "N3", north + east * middle, 0.0, OUTER_LONG, 0.0, _works_north())
-	var hairpin: Array = [[Districts.Kind.WORKS, 210.0], [Districts.Kind.PLAZA, 115.0]]
-	_add(run_seed, "U1", north + east * inner, 0.0, round_a_hairpin, PI, hairpin)
-	var terraces: Array = [[Districts.Kind.RESIDENTIAL, 300.0], [Districts.Kind.RETAIL, 205.0]]
-	_add(run_seed, "U2", north + east * middle, 0.0, round_a_hairpin, PI, terraces)
+	_add(run_seed, "N2", north + east * inner, 0.0, MIDDLE_LONG, 0.0, _open_north(), FORK_GAP)
+	_add(run_seed, "N3", north + east * middle, 0.0, OUTER_LONG, 0.0, _works_north(), FORK_GAP)
+	var hairpin: Array = [[Districts.Kind.WORKS, 170.0], [Districts.Kind.PLAZA, 115.0]]
+	_add(run_seed, "U1", north + east * inner, 0.0, round_a_hairpin, PI, hairpin, FORK_GAP)
+	var terraces: Array = [[Districts.Kind.RESIDENTIAL, 300.0]]
+	_add(run_seed, "U2", north + east * middle, 0.0, round_a_hairpin, PI, terraces, FORK_GAP)
 	var far_end: Array = [
 		[Districts.Kind.LANTERNS, 220.0],
 		[Districts.Kind.PLAZA, 115.0],
@@ -54,13 +56,17 @@ func _init(run_seed: int) -> void:
 	_add(run_seed, "S1", south + east * inner, PI, inner, 0.0, [[Districts.Kind.CISTERN, 260.0]])
 	var home: Array = [[Districts.Kind.LANTERNS, 210.0], [Districts.Kind.YARD, 255.0]]
 	_add(run_seed, "U0", south, PI, round_a_hairpin, PI, home)
+	_fork("N2", "U1", true)
+	_fork("N3", "U2", true)
+	_fork("S2", "U1", false)
+	_fork("S3", "U2", false)
 
 
 func course(which: String) -> Course:
 	var legs: Array[CitySegment] = []
 	for segment: String in COURSES[which]:
 		legs.append(segments[segment])
-	return Course.new(legs)
+	return Course.new(legs, segments)
 
 
 static func _open_north() -> Array:
@@ -69,7 +75,6 @@ static func _open_north() -> Array:
 		[Districts.Kind.RESIDENTIAL, 260.0],
 		[Districts.Kind.PLAZA, 120.0],
 		[Districts.Kind.RETAIL, 260.0],
-		[Districts.Kind.RESIDENTIAL, 280.0],
 		[Districts.Kind.LANTERNS, 200.0],
 	]
 
@@ -135,6 +140,14 @@ func _add(
 	var road := Route.through(dice, start, heading, long, turn)
 	segments[which] = CitySegment.new(which, dice, road, _order(kinds, first_gap), roads)
 	roads.add(road)
+
+
+## Two roads that part at one's start, or come together at its end.
+func _fork(drawn_from: String, with: String, at_start: bool) -> void:
+	var one := segments[drawn_from]
+	var two := segments[with]
+	one.forks.append(Fork.new(one.road, two.road, with, at_start, true))
+	two.forks.append(Fork.new(two.road, one.road, drawn_from, at_start, false))
 
 
 ## What [method Districts.generate] takes, from just what's special about a road.

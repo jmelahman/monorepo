@@ -105,3 +105,67 @@ func test_course_wraps_at_the_finish() -> void:
 	var course := _plan().course("inner")
 	assert_vector(course.at(course.length + 50.0)).is_equal(course.at(50.0))
 	assert_vector(course.at(-50.0)).is_equal(course.at(course.length - 50.0))
+
+
+func _forks(plan: CityPlan) -> Array[Fork]:
+	var forks: Array[Fork] = []
+	for segment: CitySegment in plan.segments.values():
+		forks.append_array(segment.forks)
+	return forks
+
+
+func test_each_junction_is_known_to_both_roads_and_drawn_from_one() -> void:
+	var plan := _plan()
+	var forks := _forks(plan)
+	assert_int(forks.size()).is_equal(8)
+	var drawn := forks.filter(func(fork: Fork) -> bool: return fork.draws)
+	assert_int(drawn.size()).is_equal(4)
+
+
+func test_a_ridden_road_is_never_also_a_road_not_taken_at_its_own_junction() -> void:
+	var plan := _plan()
+	for which: String in CityPlan.COURSES:
+		for leg: Course.Leg in plan.course(which).legs:
+			for fork: Fork in leg.segment.forks:
+				var names: Array = CityPlan.COURSES[which]
+				assert_bool(fork.other_name in names).override_failure_message(which).is_false()
+
+
+func test_roads_part_level_with_room_for_a_building_between_them() -> void:
+	var plan := _plan()
+	for fork: Fork in _forks(plan):
+		var label := "%s to %s" % [fork.along(0.0), fork.other_name]
+		assert_float(fork.wall_here(0.0, 0.0).distance_to(fork.wall_there(0.0, 0.0))).is_greater(
+			Fork.WALL
+		)
+		assert_float(fork.prow).override_failure_message(label).is_between(60.0, 120.0)
+		assert_float(fork.back).override_failure_message(label).is_between(fork.prow, 150.0)
+		for away: float in [0.0, 60.0, fork.back]:
+			var here := fork.wall_here(away, 0.0).y
+			var there := fork.wall_there(away, 0.0).y
+			assert_float(absf(here - there)).override_failure_message(label).is_less(0.01)
+
+
+func test_nothing_stands_in_a_fork_and_towers_past_it_stop_short_of_the_other_road() -> void:
+	var plan := _plan()
+	for segment: CitySegment in plan.segments.values():
+		var street := segment.city(4.0).street
+		for tower: Street.Tower in street.towers:
+			assert_bool(street.forked(tower.side, tower.s)).is_false()
+			var room := street.reach(tower.side, tower.s) - Fork.WALL
+			assert_float(tower.depth).override_failure_message(segment.name).is_less_equal(
+				room + 2.0
+			)
+
+
+func test_roads_are_market_as_far_as_they_are_forked() -> void:
+	var plan := _plan()
+	for segment: CitySegment in plan.segments.values():
+		for fork: Fork in segment.forks:
+			var away := 0.0
+			while away < fork.back:
+				var kind := segment.districts.kind_at(fork.along(away))
+				assert_int(kind).override_failure_message(segment.name).is_equal(
+					Districts.Kind.MARKET
+				)
+				away += 5.0

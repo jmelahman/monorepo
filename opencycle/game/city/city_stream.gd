@@ -12,6 +12,8 @@ const SECTION := CityMesh.CHUNK * 2.0
 const BEHIND := 96.0
 ## Where the distance fog closes in.
 const AHEAD := 480.0
+## How much of a road not taken gets built, where the rider can see down it.
+const NOT_TAKEN := 3
 
 ## Off for stills and movies, which must come out the same however long a build takes.
 var threaded := true
@@ -31,15 +33,47 @@ func _init(build: Callable, course: Course) -> void:
 	_build = build
 	_course = course
 	name = "CityStream"
+	var ridden: Array[String] = []
+	for leg: Course.Leg in course.legs:
+		ridden.append(leg.segment.name)
 	for leg: Course.Leg in course.legs:
 		var from := 0.0
 		while from < leg.segment.road.length:
 			var to := minf(from + SECTION, leg.segment.road.length)
-			var section := StreetSection.new(from, to)
-			section.segment = leg.segment
-			section.offset = leg.offset
-			_sections_of_course.append(section)
+			_plan(leg.segment, from, to, leg.offset)
 			from = to
+		for fork: Fork in leg.segment.forks:
+			if fork.other_name not in ridden:
+				_plan_not_taken(fork, leg)
+	_sections_of_course.sort_custom(
+		func(a: StreetSection, b: StreetSection) -> bool:
+			return a.offset + a.from < b.offset + b.from
+	)
+
+
+func _plan(segment: CitySegment, from: float, to: float, offset: float) -> StreetSection:
+	var section := StreetSection.new(from, to)
+	section.segment = segment
+	section.offset = offset
+	_sections_of_course.append(section)
+	return section
+
+
+## The stretch of [param fork]'s other road by the junction, in step with [param leg].
+func _plan_not_taken(fork: Fork, leg: Course.Leg) -> void:
+	var other: CitySegment = _course.city[fork.other_name]
+	var road := other.road
+	for index: int in NOT_TAKEN:
+		var last := index == NOT_TAKEN - 1
+		var near := index * SECTION
+		var section: StreetSection
+		if fork.at_start:
+			section = _plan(other, near, near + SECTION, leg.offset)
+			section.ends_at = section.to if last else -1.0
+		else:
+			var offset := leg.offset + leg.segment.road.length - road.length
+			section = _plan(other, road.length - near - SECTION, road.length - near, offset)
+			section.ends_at = section.from if last else -1.0
 
 
 ## Builds everything in view of [param s], to have it before the first frame.
@@ -90,6 +124,7 @@ func _section() -> StreetSection:
 	var section := StreetSection.new(plan.from, plan.to, _opening or plan.from == 0.0)
 	section.segment = plan.segment
 	section.offset = plan.offset + _reached(_next)
+	section.ends_at = plan.ends_at
 	_next += 1
 	_opening = false
 	return section

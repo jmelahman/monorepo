@@ -18,6 +18,12 @@ tooling; the dice game and Steam are gone.
   times as fast for a quick read; only trust a rate 1 run, the default.
 - Rebake cards after changing their source or lighting: `scripts/bake.sh`.
 
+## Keeping the expensive work cheap
+
+Use a Sonnet subagent (`Agent` with `model: sonnet`) for work that eats tokens but needs little
+context: QA of stills and clips, comparing batches of renders, and long log or transcript searches.
+Tell it the shots, what to look for and what to report back, and keep design decisions here.
+
 ## The shape of the thing
 
 `sim/` is pure and `tests/sim/test_purity.gd` enforces it. All randomness is
@@ -96,6 +102,8 @@ runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on 
 which mirrors the street by reading the screen.
 
 `CityPlan` lays out the city as two long parallel streets joined by hairpins, and a `Course` (`--course=inner|medium|full`) is a loop of those roads, one `CitySegment` after another. A road is seeded by its own name, so it's the same street on every course; each one has its own `Route`, `Street`, `Skyline` and `Undercity`, in its own distances from 0 to its length, and its own order of districts. A road only knows about itself, apart from the `RoadMap` that keeps towers off the others. Roads are market where they meet, and level, so a seam has nothing much to give it away. `--at` is seconds round the course, so anything aimed at one spot depends on the course.
+
+Four junctions join them: forks at the starts of N2 and N3, merges at the ends of S2 and S3. Each road there holds a `Fork`, keeps its ground and deck to its own side of the bisector, and keeps its lots out of it, so nothing overlaps. `Junctions` builds the wedge building between them, from the one road marked `draws`, and `CityStream` builds `NOT_TAKEN` sections of a road the course doesn't ride, ending in a wall in the fog. Roads run dead level and sway-free for `Route.SWAY_FLAT` at each end, so they part cleanly.
 
 `CityStream` builds the street a section at a time as the rider comes to it, on a worker thread
 during a ride and synchronously for stills and movies. The sim still lays out the whole route, and

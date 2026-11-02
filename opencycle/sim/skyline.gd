@@ -187,7 +187,8 @@ func _bridge_the_road(run_seed: int, street: Street, length: float) -> void:
 		span.hue = HUES[int(Rng.unit(cell, 1) * HUES.size())]
 		span.phase = Rng.unit(cell, 2)
 		# A bridge needs a wall at both ends, and over a tunnel it would just be in its way.
-		if street.districts.kind_at(s) in [Districts.Kind.MARKET, Districts.Kind.WORKS]:
+		var walled := not street.forked(1.0, s) and not street.forked(-1.0, s)
+		if walled and street.districts.kind_at(s) in [Districts.Kind.MARKET, Districts.Kind.WORKS]:
 			spans.append(span)
 			var reach := RAIL_DEPTH if span.rail else BRIDGE_DEPTH
 			for side: float in [-1.0, 1.0]:

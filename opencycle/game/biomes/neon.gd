@@ -39,6 +39,7 @@ static func _section(section: StreetSection) -> Node3D:
 	root.add_child(Signage.build(road, street, length, section))
 	root.add_child(Furniture.build(road, street, length, section))
 	root.add_child(Weather.build(road, street, length, section))
+	root.add_child(Junctions.build(section))
 	_probes(root, road, length, section)
 	return root
 

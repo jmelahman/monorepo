@@ -127,13 +127,14 @@ static func _deck(
 		var slot_next := city.slot_half(next)
 		for side: float in [-1.0, 1.0]:
 			var a := here + across * side * slot
-			var b := here + across * side * DECK_WIDE
-			var c := there + onward * side * DECK_WIDE
+			var b := here + across * side * maxf(_deck_reach(city, side, s), slot)
+			var c := there + onward * side * maxf(_deck_reach(city, side, next), slot_next)
 			var d := there + onward * side * slot_next
 			kit.quad(concrete, a, b, c, d, -Vector3.UP, dark, tile)
 			var rise := Vector3.UP * SLOT_DEEP
 			kit.quad(concrete, a, d, d + rise, a + rise, across * -side, dark * 1.6, tile)
-		_coffers(kit, here, across, route.tangent(s), slot, concrete, dark)
+		var reaches := Vector2(_deck_reach(city, -1.0, s), _deck_reach(city, 1.0, s))
+		_coffers(kit, here, across, route.tangent(s), slot, reaches, concrete, dark)
 		# The further it opens, the less of it should be looking back at the rider.
 		var wide := inverse_lerp(Undercity.SLOT_HALF, Undercity.OCULUS_HALF, slot)
 		var glow := Color(0.5, 0.72, 0.95) * lerpf(1.0, SKYLIGHT_WIDE, wide)
@@ -157,13 +158,17 @@ static func _coffers(
 	across: Vector3,
 	along: Vector3,
 	slot: float,
+	reaches: Vector2,
 	concrete: Material,
 	tint: Color
 ) -> void:
 	var basis := Basis(across, Vector3.UP, along)
 	var drop := Vector3.UP * COFFER_DROP * 0.5
-	var run := DECK_WIDE - slot
 	for side: float in [-1.0, 1.0]:
+		var far := reaches.x if side < 0.0 else reaches.y
+		var run := far - slot
+		if run <= 0.0:
+			continue
 		var outer := centre + across * side * (slot + run * 0.5) - drop
 		var size := Vector3(run, COFFER_DROP, 0.5)
 		var steps := roundi(STRETCH / COFFER)
@@ -171,11 +176,16 @@ static func _coffers(
 			var place := Transform3D(basis, outer + along * (step + 0.5) * STRETCH / steps)
 			kit.box(concrete, place, size, tint)
 		var beam := slot + COFFER * 0.5
-		while beam < 30.0:
+		while beam < minf(30.0, far):
 			var line := centre + across * side * beam + along * STRETCH * 0.5 - drop
 			var long_way := Vector3(0.5, COFFER_DROP, STRETCH)
 			kit.box(concrete, Transform3D(basis, line), long_way, tint)
 			beam += COFFER
+
+
+## How far the deck goes on this side at [param s], which is as far as the next road's deck.
+static func _deck_reach(city: Undercity, side: float, s: float) -> float:
+	return minf(DECK_WIDE, city.street.reach(side, s))
 
 
 static func _rib(
@@ -386,7 +396,7 @@ static func _duct(
 		var from := route.at(s) + route.right(s) * duct.offset + Vector3.UP * duct.height
 		var to := route.at(next) + route.right(next) * duct.offset + Vector3.UP * duct.height
 		# There's no wall out on a plaza for it to run along, and no deck past the deck's end.
-		if not city._unframed(s):
+		if not city._unframed(s) and not city.street.forked(signf(duct.offset), s):
 			kit.bar(concrete, from, to, duct.thick, tint * 2.0)
 		s = next
 

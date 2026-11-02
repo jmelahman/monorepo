@@ -21,6 +21,8 @@ const ROLL_LONG := 190.0
 const SWAY_BIG := Vector2(143.0, 40.0)
 const SWAY_SMALL := Vector2(54.0, 12.0)
 const SWAY_FADE := 300.0
+## Dead level and true for this far from each end, so that roads can fork there.
+const SWAY_FLAT := 170.0
 ## A hairpin has enough bend of its own.
 const SWAY_ON_A_BEND := 0.5
 const HILL_BIG := Vector2(130.0, 5.0)
@@ -148,7 +150,8 @@ static func _traced(
 
 ## 1 along a road's middle and 0 at both ends, flat where it gets there.
 static func _faded(d: float, long: float) -> float:
-	return smoothstep(0.0, SWAY_FADE, d) * smoothstep(0.0, SWAY_FADE, long - d)
+	var from_start := smoothstep(SWAY_FLAT, SWAY_FLAT + SWAY_FADE, d)
+	return from_start * smoothstep(SWAY_FLAT, SWAY_FLAT + SWAY_FADE, long - d)
 
 
 func _find_tangents() -> void:

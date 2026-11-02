@@ -12,9 +12,12 @@ class Leg:
 
 
 var legs: Array[Leg] = []
+## Every road in the city, ridden or not: the plan is gone by the time anyone wants the others.
+var city: Dictionary[String, CitySegment] = {}
 
 
-func _init(segments: Array[CitySegment]) -> void:
+func _init(segments: Array[CitySegment], all_roads: Dictionary[String, CitySegment]) -> void:
+	city = all_roads
 	var total := 0.0
 	for segment: CitySegment in segments:
 		var leg := Leg.new()
