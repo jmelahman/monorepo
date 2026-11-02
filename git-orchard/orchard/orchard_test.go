@@ -406,6 +406,78 @@ func TestReleaseUpstreamHook(t *testing.T) {
 		"refs/tags/tools/foo/v1.0.0 refs/tags/v1.0.0:\n")
 }
 
+func TestReleaseVersionCmd(t *testing.T) {
+	f := newFixture(t)
+	s := f.subtree()
+	s.VersionCmd = `printf '%s\n' "$VERSION" >VERSION`
+	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
+	released := f.git(f.mono, "rev-parse", "HEAD")
+
+	// Anything else in the prefix would end up in the version commit.
+	dirty := filepath.Join(f.mono.Dir, "tools/foo/main.go")
+	if err := os.WriteFile(dirty, []byte("package dirty\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.orchard.Release(s, "v1.0.0", ReleaseOptions{Rev: "HEAD", Upstream: true}); err == nil || !strings.Contains(err.Error(), "uncommitted changes") {
+		t.Fatalf("releasing a dirty prefix: got %v", err)
+	}
+	f.git(f.mono, "checkout", "--quiet", "--", "tools/foo/main.go")
+
+	// The commit it adds can't go on top of a revision that isn't checked out.
+	if _, err := f.orchard.Release(s, "v1.0.0", ReleaseOptions{Rev: "HEAD~1", Upstream: true}); err == nil || !strings.Contains(err.Error(), "check out") {
+		t.Fatalf("releasing a revision that isn't HEAD: got %v", err)
+	}
+
+	// A failing command leaves nothing behind.
+	failing := s
+	failing.VersionCmd = `echo partial >main.go; exit 3`
+	if _, err := f.orchard.Release(failing, "v1.0.0", ReleaseOptions{Rev: "HEAD", Upstream: true}); err == nil || !strings.Contains(err.Error(), "version-cmd") {
+		t.Fatalf("a failing version-cmd: got %v", err)
+	}
+	if got := f.git(f.mono, "status", "--porcelain"); got != "" {
+		t.Errorf("a failing version-cmd left %q", got)
+	}
+	if head := f.git(f.mono, "rev-parse", "HEAD"); head != released {
+		t.Errorf("a failing version-cmd moved HEAD to %s", head)
+	}
+
+	// Without --upstream the release stops for the commit to be published,
+	// and running it again adds no second one.
+	if _, err := f.orchard.Release(s, "v1.0.0", ReleaseOptions{Rev: "HEAD"}); err == nil || !strings.Contains(err.Error(), "lacks") {
+		t.Fatalf("releasing before publishing the version commit: got %v", err)
+	}
+	if got := f.git(f.mono, "log", "-1", "--format=%s"); got != "chore(foo): release v1.0.0" {
+		t.Errorf("the version commit is %q", got)
+	}
+	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	versioned := f.git(f.mono, "rev-parse", "HEAD")
+	tag, err := f.orchard.Release(s, "v1.0.0", ReleaseOptions{Rev: "HEAD"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if head := f.git(f.mono, "rev-parse", "HEAD"); head != versioned {
+		t.Errorf("releasing again added a commit: %s", head)
+	}
+	if got := f.git(f.mono, "show", tag+":tools/foo/VERSION"); got != "v1.0.0" {
+		t.Errorf("%s has VERSION %q", tag, got)
+	}
+
+	// With --upstream one run does it all, and the upstream tag has it too.
+	f.commit(f.mono, "tools/foo/other.go", "package main\n", "Add other")
+	tag, err = f.orchard.Release(s, "v1.1.0", ReleaseOptions{Rev: "HEAD", Upstream: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := f.git(f.mono, "show", tag+":tools/foo/VERSION"); got != "v1.1.0" {
+		t.Errorf("%s has VERSION %q", tag, got)
+	}
+	if got := f.git(git.Repo{Dir: f.bare}, "show", "v1.1.0:VERSION"); got != "v1.1.0" {
+		t.Errorf("the upstream's v1.1.0 has VERSION %q", got)
+	}
+}
+
 func TestRelease(t *testing.T) {
 	f := newFixture(t)
 	s := f.subtree()

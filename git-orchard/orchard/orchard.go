@@ -2,9 +2,12 @@
 package orchard
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -526,7 +529,8 @@ type ReleaseOptions struct {
 //
 // The upstream branch must already contain the release, or the upstream tag
 // would point at a commit outside its history; with opts.Upstream, the
-// branch is published first.
+// branch is published first. A subtree with a VersionCmd gets a commit
+// holding the version first, and that's what's tagged.
 func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions) (string, error) {
 	if version == "" || strings.Contains(version, "/") {
 		return "", fmt.Errorf("version %q must be non-empty and contain no slashes", version)
@@ -550,6 +554,14 @@ func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions)
 		if err := o.checkUnpublished(s, version, rev); err != nil {
 			return "", err
 		}
+	}
+
+	if !resume && s.VersionCmd != "" {
+		commit, err = o.writeVersion(s, version, commit)
+		if err != nil {
+			return "", err
+		}
+		rev = commit
 	}
 
 	if opts.Upstream && opts.Remote != "" {
@@ -606,6 +618,73 @@ func (o *Orchard) Release(s config.Subtree, version string, opts ReleaseOptions)
 		}
 	}
 	return tag, nil
+}
+
+// writeVersion runs s's VersionCmd for version and commits what it changes,
+// returning the commit to release: commit itself if the version was already
+// written, so a release stopped after this is finished by running it again.
+func (o *Orchard) writeVersion(s config.Subtree, version, commit string) (string, error) {
+	head, err := o.Repo.Output("rev-parse", "--verify", "HEAD^{commit}")
+	if err != nil {
+		return "", err
+	}
+	if head != commit {
+		return "", fmt.Errorf("%s has a version-cmd, so its release needs a commit on top of the one released; check out %.12s first", s.Prefix, commit)
+	}
+	// The version commit takes the whole prefix, so it mustn't sweep up
+	// anything else.
+	dirty, err := o.Repo.Output("status", "--porcelain", "--", s.Prefix)
+	if err != nil {
+		return "", err
+	}
+	if dirty != "" {
+		return "", fmt.Errorf("%s has uncommitted changes, which the version commit would include; commit or stash them first:\n%s", s.Prefix, dirty)
+	}
+
+	ctx := o.Repo.Ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	output := o.Repo.Log
+	if output == nil {
+		output = os.Stderr
+	}
+	cmd := exec.CommandContext(ctx, "sh", "-c", s.VersionCmd)
+	cmd.Dir = filepath.Join(o.Repo.Dir, s.Prefix)
+	cmd.Env = append(append(os.Environ(), o.Repo.Env...), "VERSION="+version)
+	cmd.Stdout = output
+	cmd.Stderr = output
+	if err := cmd.Run(); err != nil {
+		return "", o.discardVersion(s, fmt.Errorf("version-cmd of %s: %w", s.Prefix, err))
+	}
+
+	changed, err := o.Repo.Output("status", "--porcelain", "--", s.Prefix)
+	if err != nil {
+		return "", err
+	}
+	if changed == "" {
+		return commit, nil
+	}
+	if _, err := o.Repo.Output("add", "--all", "--", s.Prefix); err != nil {
+		return "", o.discardVersion(s, err)
+	}
+	args := []string{"commit", "--quiet", "--message=chore(" + path.Base(s.Prefix) + "): release " + version}
+	if o.NoVerify {
+		args = append(args, "--no-verify")
+	}
+	if err := o.Repo.Run(append(args, "--", s.Prefix)...); err != nil {
+		return "", o.discardVersion(s, err)
+	}
+	return o.Repo.Output("rev-parse", "--verify", "HEAD^{commit}")
+}
+
+// discardVersion undoes a version-cmd that didn't end in a commit, which is
+// safe since writeVersion starts from a clean prefix, and returns cause.
+func (o *Orchard) discardVersion(s config.Subtree, cause error) error {
+	if _, err := o.Repo.Output("restore", "--source=HEAD", "--staged", "--worktree", "--", s.Prefix); err != nil {
+		return fmt.Errorf("%w; restoring %s also failed: %w", cause, s.Prefix, err)
+	}
+	return cause
 }
 
 // pushBranch fast-forwards the current branch on remote to commit, unless

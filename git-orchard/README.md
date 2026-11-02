@@ -109,6 +109,21 @@ The token must be able to read the repository's security updates setting, which 
 logs=$(git orchard ci --failed --logs); [ $? = 1 ] && claude -p "triage these CI failures" <<<"$logs"
 ```
 
+## Versions in files
+
+Releases are versioned by their tags, but a subtree may also need the version in its files, like `Cargo.toml`.
+Give it a `version-cmd`, which `git orchard release` runs from the subtree with the version in `$VERSION`:
+
+```gitconfig
+[subtree "tools/foo"]
+	remote = git@github.com:owner/foo.git
+	version-cmd = scripts/set-version.sh
+```
+
+What it changes is committed as `chore(foo): release v1.2.4`, and that commit is the one tagged.
+The release must be of `HEAD`, with the subtree clean.
+That commit still has to reach the upstream, so pass `--upstream`, or run `git orchard push tools/foo` and release again.
+
 ## Shared files
 
 Subtrees that are published on their own each need their own copy of config like `.pre-commit-config.yaml` or `.github/dependabot.yml`.
