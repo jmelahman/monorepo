@@ -19,10 +19,10 @@ systemctl enable --now --user dot-sync.timer
 
 ## Linking Claude Code skills
 
-User skills live in [jmelahman/skills](https://github.com/jmelahman/skills), at `skills/` in the monorepo checkout:
+User skills live in [jmelahman/skills](https://github.com/jmelahman/skills), at `skills/` in the monorepo checkout. `.claude/skills/` tracks a symlink to each, which resolves once the monorepo is at `~/code/monorepo`. To add a new skill:
 
 ```shell
-for s in ~/code/monorepo/skills/skills/*/; do ln -sfn "${s%/}" ~/.claude/skills/; done
+ln -s ../../code/monorepo/skills/skills/<name> ~/code/monorepo/dotfiles/.claude/skills/<name>
 ```
 
 ## Enabling Git maintenance
