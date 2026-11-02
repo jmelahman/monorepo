@@ -35,6 +35,11 @@ type Result struct {
 // differs from the bundled copy may hold the user's edits, so it's only
 // replaced with force. Conflicts are found before anything is written, so a
 // refused install changes nothing.
+//
+// skillsDir and linkDir are the caller's to choose, but what's below them isn't
+// trusted: session containers can write to ~/.claude, so a symlink there may
+// have been planted to redirect a write on the host. Install never writes
+// through one, even with force.
 func Install(skillsDir, linkDir string, force bool) ([]Result, error) {
 	if samePath(skillsDir, linkDir) {
 		linkDir = ""
@@ -52,12 +57,12 @@ func Install(skillsDir, linkDir string, force bool) ([]Result, error) {
 		}
 		name := path.Dir(src)
 		dest := filepath.Join(skillsDir, name, "SKILL.md")
-		existing, err := os.ReadFile(dest)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("read installed skill: %w", err)
+		existing, installed, err := readInstalled(dest)
+		if err != nil {
+			return nil, err
 		}
-		unchanged := err == nil && bytes.Equal(existing, content)
-		if err == nil && !unchanged && !force {
+		unchanged := installed && bytes.Equal(existing, content)
+		if installed && !unchanged && !force {
 			return nil, fmt.Errorf("%s already exists and differs from this version of kanban's; pass --force to replace it", dest)
 		}
 		result := Result{Name: name, Path: dest, Unchanged: unchanged}
@@ -76,20 +81,86 @@ func Install(skillsDir, linkDir string, force bool) ([]Result, error) {
 	}
 	for i, r := range results {
 		if !r.Unchanged {
-			if err := os.MkdirAll(filepath.Dir(r.Path), 0o755); err != nil {
-				return nil, fmt.Errorf("create skill directory: %w", err)
-			}
-			if err := os.WriteFile(r.Path, contents[i], 0o644); err != nil {
+			if err := writeSkill(skillsDir, r.Name, contents[i]); err != nil {
 				return nil, fmt.Errorf("write skill: %w", err)
 			}
 		}
 		if r.Link != "" {
-			if err := replaceLink(r.Link, filepath.Dir(r.Path)); err != nil {
-				return nil, err
+			if err := replaceLink(linkDir, r.Name, filepath.Dir(r.Path)); err != nil {
+				return nil, fmt.Errorf("link skill: %w", err)
 			}
 		}
 	}
 	return results, nil
+}
+
+// readInstalled returns the skill installed at dest, if any. Anything other
+// than a real directory holding a regular file is refused rather than followed.
+func readInstalled(dest string) (content []byte, installed bool, err error) {
+	dir := filepath.Dir(dest)
+	info, err := os.Lstat(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("read installed skill: %w", err)
+	}
+	if !info.IsDir() {
+		return nil, false, fmt.Errorf("%s isn't a real directory, so kanban won't write through it; remove it, or pass --dir its real location", dir)
+	}
+	info, err = os.Lstat(dest)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("read installed skill: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, false, fmt.Errorf("%s isn't a regular file, so kanban won't write through it; remove it, or pass --dir its real location", dest)
+	}
+	content, err = os.ReadFile(dest)
+	if err != nil {
+		return nil, false, fmt.Errorf("read installed skill: %w", err)
+	}
+	return content, true, nil
+}
+
+// writeSkill atomically replaces <skillsDir>/<name>/SKILL.md. Going through
+// os.Root means a symlink swapped in after readInstalled's checks still can't
+// send the write outside skillsDir.
+func writeSkill(skillsDir, name string, content []byte) (err error) {
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(skillsDir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	if err := root.MkdirAll(name, 0o755); err != nil {
+		return err
+	}
+	tmp := filepath.Join(name, ".SKILL.md.tmp")
+	if err := root.Remove(tmp); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	f, err := root.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = root.Remove(tmp)
+		}
+	}()
+	if _, err := f.Write(content); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return root.Rename(tmp, filepath.Join(name, "SKILL.md"))
 }
 
 // samePath reports whether two directories are the same, following symlinks,
@@ -130,17 +201,28 @@ func linkNeeded(link, target string, force bool) (bool, error) {
 	return true, nil
 }
 
-// replaceLink points link at target. linkNeeded has already established that
-// anything at link is a symlink.
-func replaceLink(link, target string) error {
-	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
-		return fmt.Errorf("create skill link directory: %w", err)
+// replaceLink atomically points <linkDir>/<name> at target. Renaming over the
+// old link replaces the link itself, never what it points to, and fails on a
+// directory swapped in after linkNeeded's checks.
+func replaceLink(linkDir, name, target string) error {
+	if err := os.MkdirAll(linkDir, 0o755); err != nil {
+		return err
 	}
-	if err := os.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("replace skill link: %w", err)
+	root, err := os.OpenRoot(linkDir)
+	if err != nil {
+		return err
 	}
-	if err := os.Symlink(target, link); err != nil {
-		return fmt.Errorf("link skill: %w", err)
+	defer root.Close()
+	tmp := "." + name + ".tmp"
+	if err := root.Remove(tmp); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	if err := root.Symlink(target, tmp); err != nil {
+		return err
+	}
+	if err := root.Rename(tmp, name); err != nil {
+		_ = root.Remove(tmp)
+		return err
 	}
 	return nil
 }

@@ -124,8 +124,10 @@ Writes each bundled skill to `<dir>/skills/<name>/SKILL.md`, creating directorie
 | Flag            | Default     | Description |
 | --------------- | ----------- | ----------- |
 | `--dir`         | `~/.agents` | Agent directory to install into. A path already ending in `skills` is used as is. |
-| `--force`       | `false`     | Replace an installed skill that differs from this version's, or a link that points elsewhere. Without it, the command fails and changes nothing. It never replaces a real directory. |
+| `--force`       | `false`     | Replace an installed skill that differs from this version's, or a link in `~/.claude/skills` that points elsewhere. Without it, the command fails and changes nothing. It never replaces a real directory or writes through a symlink. |
 | `--link-claude` | `true`      | Symlink each skill into `~/.claude/skills`. Skipped if `~/.claude` doesn't exist. |
+
+The command fails, even with `--force`, if the skill's directory or `SKILL.md` under `--dir` is a symlink.
 
 ## `board`
 

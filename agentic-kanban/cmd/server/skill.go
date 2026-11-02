@@ -33,7 +33,11 @@ that honor disable-model-invocation.
 
 A file that differs from this version's skill is left alone unless you pass
 --force, which also updates it after upgrading kanban. --force also replaces a
-symlink that points elsewhere, but never a real directory.`,
+link in ~/.claude/skills that points elsewhere, but never a real directory.
+
+Installing never writes through a symlink, even with --force: a skill directory
+or SKILL.md that's a symlink is refused, so remove it or pass --dir its real
+location.`,
 		Example: `  kanban skill install
   kanban skill install --dir ~/dotfiles/.agents
   kanban skill install --link-claude=false`,

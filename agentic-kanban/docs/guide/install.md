@@ -114,7 +114,9 @@ Session containers mount `~/.claude` but not the directory the link points to, s
 
 The skill sets `disable-model-invocation`, so in agents that honor it, such as Claude Code, it stays out of the agent's context until you invoke it. Other agents may list its description or load it on their own.
 
-To update the skill after upgrading kanban, run the command again with `--force`. Without `--force`, the command won't replace a file that differs from the bundled skill, so your edits are safe. `--force` also replaces a link that points elsewhere, but never a real directory.
+To update the skill after upgrading kanban, run the command again with `--force`. Without `--force`, the command won't replace a file that differs from the bundled skill, so your edits are safe. `--force` also replaces a link in `~/.claude/skills` that points elsewhere, but never a real directory.
+
+The command never writes through a symlink, even with `--force`. If the skill's directory or `SKILL.md` under `--dir` is a symlink, it stops, so remove the symlink or pass its real location to `--dir`. This matters because session agents can write to `~/.claude`, and could otherwise plant a link that redirects the write to another file on the host.
 
 ## Check that it works
 

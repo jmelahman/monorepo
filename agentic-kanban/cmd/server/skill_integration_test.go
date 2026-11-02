@@ -196,7 +196,8 @@ func TestSkillInstallLinkConflicts(t *testing.T) {
 		if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Symlink(t.TempDir(), link); err != nil {
+		foreign := t.TempDir()
+		if err := os.Symlink(foreign, link); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := runSkillInstall(t); err == nil || !strings.Contains(err.Error(), "--force") {
@@ -208,5 +209,85 @@ func TestSkillInstallLinkConflicts(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(link, "SKILL.md")); err != nil {
 			t.Errorf("reading the skill through the replaced link: %v", err)
 		}
+		if entries, _ := os.ReadDir(foreign); len(entries) != 0 {
+			t.Errorf("--force wrote through the old link: %v", entries)
+		}
 	})
+}
+
+// A session container can write to ~/.claude, so anything below the skills
+// directory may have been planted to redirect the install's write on the host.
+func TestSkillInstallNeverWritesThroughSymlinks(t *testing.T) {
+	for _, args := range [][]string{nil, {"--force"}} {
+		name := "without --force"
+		if args != nil {
+			name = "with --force"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Run("SKILL.md links to a file", func(t *testing.T) {
+				dir := t.TempDir()
+				victim := filepath.Join(t.TempDir(), "bashrc")
+				if err := os.WriteFile(victim, []byte("precious"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				plantSkillFileLink(t, dir, victim)
+				if _, err := runSkillInstall(t, append([]string{"--dir", dir}, args...)...); err == nil {
+					t.Error("install followed the link")
+				}
+				if got, _ := os.ReadFile(victim); string(got) != "precious" {
+					t.Errorf("link target was overwritten with %q", got)
+				}
+			})
+			t.Run("SKILL.md dangles", func(t *testing.T) {
+				dir := t.TempDir()
+				victim := filepath.Join(t.TempDir(), "created")
+				plantSkillFileLink(t, dir, victim)
+				if _, err := runSkillInstall(t, append([]string{"--dir", dir}, args...)...); err == nil {
+					t.Error("install followed the link")
+				}
+				if _, err := os.Lstat(victim); !os.IsNotExist(err) {
+					t.Errorf("link target was created: lstat err = %v", err)
+				}
+			})
+			t.Run("the skill directory links elsewhere", func(t *testing.T) {
+				isolatedHome(t, false)
+				dir := t.TempDir()
+				victim := t.TempDir()
+				link := filepath.Join(dir, "skills", "kanban-init")
+				if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(victim, link); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := runSkillInstall(t, append([]string{"--dir", dir}, args...)...); err == nil {
+					t.Error("install followed the link")
+				}
+				if entries, _ := os.ReadDir(victim); len(entries) != 0 {
+					t.Errorf("link target was written to: %v", entries)
+				}
+			})
+			t.Run("~/.claude is the install dir and already holds the link", func(t *testing.T) {
+				home := isolatedHome(t, true)
+				if _, err := runSkillInstall(t); err != nil {
+					t.Fatalf("first install: %v", err)
+				}
+				if _, err := runSkillInstall(t, append([]string{"--dir", filepath.Join(home, ".claude")}, args...)...); err == nil || !strings.Contains(err.Error(), "real directory") {
+					t.Errorf("install: err = %v, want a refusal", err)
+				}
+			})
+		})
+	}
+}
+
+func plantSkillFileLink(t *testing.T, dir, target string) {
+	t.Helper()
+	isolatedHome(t, false)
+	skillDir := filepath.Join(dir, "skills", "kanban-init")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(skillDir, "SKILL.md")); err != nil {
+		t.Fatal(err)
+	}
 }
