@@ -9,9 +9,9 @@
 # `pre-commit install --hook-type post-checkout ...`.
 - id: undot
   name: undot
-  description: Recreate root symlinks into .config/. Built by the Go toolchain (the default modfile swaps solod.dev for the gocompat implementations); no other dependencies.
+  description: Recreate root symlinks into .config/. Built by the Rust toolchain; no other dependencies.
   entry: undot link
-  language: golang
+  language: rust
   always_run: true
   pass_filenames: false
   stages: [post-checkout, post-merge, post-rewrite, manual]

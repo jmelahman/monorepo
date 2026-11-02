@@ -1,5 +1,4 @@
-default_install_hook_types: [pre-commit, post-checkout, post-merge, post-rewrite]
-# The local Go hooks below get no version inferred, and CI installs no Go, so
+# The local shfmt hook below gets no version inferred, and CI installs no Go, so
 # pin one: prek downloads it when the host's doesn't match.
 default_language_version:
   golang: "1.27"
@@ -70,15 +69,6 @@ repos:
         types: [shell]
   # END orchard:shell
 
-  - repo: https://github.com/jmelahman/undot
-    rev: a0fbe570d4d793047edb8729a405e9aaf4434581  # frozen: v0.3.0
-    hooks:
-      - id: undot
-  # The Go and solod hooks set GOWORK=off: so/ has its own go.mod, and a
-  # go.work further up (a monorepo checkout) would otherwise claim this module.
-  # Every Go hook is `language: golang`, so they all share the Go that
-  # default_language_version selects: `so` has to be built by the same Go
-  # release it runs against.
   - repo: local
     hooks:
       - id: check-version
@@ -87,31 +77,21 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
-      - id: so-build
-        name: build with solod
-        entry: env GOWORK=off so build -o undot ./so
-        language: golang
-        additional_dependencies: [solod.dev/cmd/so@v0.3.0]  # = SOLOD_VERSION
-        files: '(\.go|\.mod|\.sum)$'
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --check
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
         pass_filenames: false
-      - id: go-build
-        name: build with go (gocompat)
-        entry: env GOWORK=off go build -o undot-go .
-        language: golang
-        files: '(\.go|\.mod|\.sum)$'
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets -- -D warnings
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
         pass_filenames: false
-      - id: so-test
-        name: test with solod
-        entry: env GOWORK=off so test ./so
-        language: golang
-        additional_dependencies: [solod.dev/cmd/so@v0.3.0]  # = SOLOD_VERSION
-        files: '(\.go|\.mod|\.sum)$'
-        pass_filenames: false
-      # Runs after so-test on purpose: so-test regenerates so/test/main.go,
-      # which this reads.
-      - id: go-test
-        name: test with go (gocompat)
-        entry: env GOWORK=off go -C so run -modfile=gotest.mod ./test
-        language: golang
-        files: '(\.go|\.mod|\.sum)$'
+      - id: cargo-test
+        name: cargo test
+        entry: cargo test
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
         pass_filenames: false

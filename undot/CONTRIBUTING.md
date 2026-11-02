@@ -1,58 +1,29 @@
 # Contributing
 
-undot is written in [Solod](https://github.com/solod-dev/solod), a strict
-subset of Go that translates to C: release binaries are a few hundred kilobytes,
-start instantly, and have no runtime dependencies.
+undot is written in Rust with no dependencies beyond the standard library: release
+binaries are a few hundred kilobytes, start instantly, and have no runtime dependencies,
+and the pre-commit hook builds from source without touching a package registry.
 
 ## Building and testing
 
-The source is written once, in the Solod subset, and builds with either toolchain:
-
 ```sh
-so build -o undot ./so             # native binary (needs solod + a C compiler)
-so test ./so                             # test suite under solod
-so test -sanitize ./so                   # solod tests under ASan/UBSan
-go build .                               # Go binary via gocompat (needs only Go)
-go -C so run -modfile=gotest.mod ./test  # the same test suite against gocompat
-prek run --all-files                     # all of the above, as defined in .pre-commit-config.yaml
+cargo build --release     # binary at target/release/undot
+cargo test                # unit tests, plus tests/cli.rs driving the real binary
+prek run --all-files      # everything CI runs, as defined in .pre-commit-config.yaml
 ```
-
-Install the solod toolchain with `go install solod.dev/cmd/so@latest`.
-
-## How the two toolchains coexist
-
-- The root module's `go.mod` replaces `solod.dev` with `gocompat/`, a Go-stdlib-backed
-  implementation of the solod APIs this tool uses. The real solod.dev packages are
-  transpiler stubs that only work once translated to C, so this replacement is what
-  makes a plain `go build` — and the pre-commit hook, which pre-commit builds with
-  `go install ./...` — produce a working binary.
-- The nested module `so/` requires the real `solod.dev` and pulls in the same `cli/`
-  package via a directory replace; `so build ./so` and `so test ./so` run there.
-  (Replace directives only apply in the main module, so the root's gocompat
-  replacement is inert during solod builds.)
-
-`go install github.com/jmelahman/undot@version` is refused by Go because of the
-replace directive; that's intentional — use the pre-commit hook, a release binary, or
-`go install ./...` from a checkout.
 
 ## Releasing
 
-Releases are cut by pushing a `v*.*.*` tag. The tag must match `Version` in
-`cli/cli.go` and `hookRev` in `cli/precommit.go` (`scripts/check-version.sh` guards
-this — solod has no ldflags-style stamping, so the constants are the source of
-truth). The workflow then publishes:
+Releases are cut by pushing a `v*.*.*` tag, which must match `version` in `Cargo.toml`
+(`scripts/check-version.sh` guards this, and that `Cargo.lock` and the `rev:` shown in
+`README.md` and `docs/index.html` agree). The hook rev that `undot migrate` writes comes
+from the same version. The workflow then publishes:
 
-- a GitHub release with static binaries via GoReleaser (`scripts/sobuild` swaps
-  `go build` for `so build` + `zig cc`, targeting musl for Linux), and
-- PyPI wheels for linux/macOS × amd64/arm64 plus an sdist, built by the hatch hook
-  in `hatch_build.py` with the same toolchain.
+- a GitHub release with static binaries for linux/macOS × amd64/arm64, targeting musl
+  on Linux, and
+- PyPI wheels for the same platforms plus an sdist, built by
+  [maturin](https://www.maturin.rs). The Linux wheels are tagged both manylinux and
+  musllinux, since a static binary runs on either.
 
-Build dependencies are pinned exactly — directly in `pyproject.toml` and
-`hatch_build.py` (the central pin registry), transitively (with hashes) in the
-generated `build-constraints.txt` that CI passes to `uv build --build-constraints`.
-After changing a pin, regenerate it from the monorepo
-(https://github.com/jmelahman/monorepo) with `tools/scripts/gen-build-constraints.sh`;
-`scripts/check-version.sh` fails when it's stale.
-
-`goreleaser release --snapshot --clean --skip=publish --config .config/.goreleaser.yaml`
-dry-runs the GitHub release artifacts locally.
+The Rust toolchain and maturin are pinned exactly in the workflow, and maturin also in
+`pyproject.toml`; `scripts/check-version.sh` fails if those two disagree.

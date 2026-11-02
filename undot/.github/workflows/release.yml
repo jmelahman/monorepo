@@ -7,6 +7,10 @@ on:
 
 permissions: {}
 
+env:
+  RUSTUP_TOOLCHAIN: "1.95.0"
+  MATURIN_VERSION: "1.16.0"  # = build-system.requires in pyproject.toml
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -17,66 +21,26 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
-        with:
-          go-version: "1.27.3"
-          cache: false
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
           version: "0.13.6"
           enable-cache: false
-      - run: go install "solod.dev/cmd/so@$(sed -n 's/^SOLOD_VERSION = "\(.*\)"$/\1/p' hatch_build.py)"
+      - run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --component clippy,rustfmt
       # The checks live in .pre-commit-config.yaml; run the same hooks a
       # local commit runs.
-      - run: PATH="$(go env GOPATH)/bin:$PATH" uvx prek@0.5.3 run --all-files
-  goreleaser:
+      - run: uvx prek@0.5.3 run --all-files
+  build:
     needs: check
-    runs-on: ubuntu-latest
-    environment:
-      name: release
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
-        with:
-          go-version: "1.27.3"
-          cache: false
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
-        with:
-          version: "0.13.6"
-          enable-cache: false
-      - run: go install "solod.dev/cmd/so@$(sed -n 's/^SOLOD_VERSION = "\(.*\)"$/\1/p' hatch_build.py)"
-      # zig (via the ziglang PyPI package) for scripts/zigcc cross-compiles,
-      # at the version pinned in hatch_build.py.
-      - run: |
-          uv venv "$HOME/.zig"
-          uv pip install -p "$HOME/.zig/bin/python" "$(sed -n 's/^ZIGLANG_PIN = "\(.*\)"$/\1/p' hatch_build.py)"
-          echo "$HOME/.zig/bin" >> "$GITHUB_PATH"
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean --config .config/.goreleaser.yaml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  build-pypi:
-    needs: check
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     strategy:
       matrix:
-        target:
-          - {goos: "linux", goarch: "amd64"}
-          - {goos: "linux", goarch: "arm64"}
-          - {goos: "darwin", goarch: "amd64"}
-          - {goos: "darwin", goarch: "arm64"}
-          - {sdist: true}
+        include:
+          - {os: ubuntu-latest, target: x86_64-unknown-linux-musl, archive: linux_amd64}
+          - {os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, archive: linux_arm64}
+          - {os: macos-latest, target: x86_64-apple-darwin, archive: darwin_amd64}
+          - {os: macos-latest, target: aarch64-apple-darwin, archive: darwin_arm64}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -87,24 +51,77 @@ jobs:
           version: "0.13.6"
           enable-cache: false
       - env:
-          MATRIX_GOOS: ${{ matrix.target.goos }}
-          MATRIX_GOARCH: ${{ matrix.target.goarch }}
-          MATRIX_SDIST: ${{ matrix.target.sdist }}
+          TARGET: ${{ matrix.target }}
+        run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --target "$TARGET"
+      # The check job only covers linux/x86_64; this tests on the runner's own
+      # platform, so macOS and arm get a run before anything is published.
+      - run: cargo test
+      # Linux binaries are static, so they suit glibc and musl systems alike;
+      # tag the wheel for both so that installers on either will pick it.
+      - env:
+          TARGET: ${{ matrix.target }}
         run: |
-          if [ "$MATRIX_SDIST" = "true" ]; then
-            uv build --sdist --build-constraints build-constraints.txt
-          else
-            GOOS="$MATRIX_GOOS" GOARCH="$MATRIX_GOARCH" \
-              uv build --wheel --build-constraints build-constraints.txt
-          fi
+          case "$TARGET" in
+            *-linux-musl) set -- --compatibility manylinux_2_17 musllinux_1_1 ;;
+            *) set -- ;;
+          esac
+          uvx "maturin@$MATURIN_VERSION" build --release --locked --target "$TARGET" --out dist "$@"
+      - env:
+          TARGET: ${{ matrix.target }}
+          ARCHIVE: ${{ matrix.archive }}
+        run: |
+          # Stage the files first so they sit at the root of the archive.
+          mkdir -p archives stage
+          cp README.md LICENSE "target/$TARGET/release/undot" stage/
+          tar -czf "archives/undot_$ARCHIVE.tar.gz" -C stage undot README.md LICENSE
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: dist-${{ matrix.target.goos || 'sdist' }}-${{ matrix.target.goarch || 'source' }}
-          path: |
-            dist/*.whl
-            dist/*.tar.gz
+          name: dist-${{ matrix.target }}
+          path: dist/*.whl
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: archives-${{ matrix.target }}
+          path: archives/*
+  sdist:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - run: uvx "maturin@$MATURIN_VERSION" sdist --out dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: dist-sdist
+          path: dist/*
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: archives-*
+          path: archives
+          merge-multiple: true
+      - run: (cd archives && sha256sum ./*.tar.gz > checksums.txt)
+      # There is no checkout in this job, so tell gh which repository to use.
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes archives/*
   publish-pypi:
-    needs: build-pypi
+    needs: [build, sdist]
     runs-on: ubuntu-latest
     environment:
       name: release

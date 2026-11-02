@@ -130,7 +130,7 @@ src/</code></pre>
 
 <pre><code>uv tool install undot   # or: pip install undot</code></pre>
 
-<p>Small static binaries (~200KB, instant startup) for Linux and macOS, also on
+<p>Small static binaries (~450KB, instant startup) for Linux and macOS, also on
 <a href="https://github.com/jmelahman/undot/releases">GitHub releases</a>.
 The pre-commit hook (below) needs no install at all.</p>
 
@@ -177,9 +177,10 @@ echo 'nolink .goreleaser.yaml' &gt;&gt; .config/undot.conf</code></pre>
 <h2 id="guardrails">Guardrails</h2>
 
 <ul>
-  <li><code>.git*</code> files are never migrated. <code>.github</code> and
-      <code>.pre-commit-config.yaml</code> require <code>--force</code>, because a fresh
-      clone must be able to bootstrap the hook.</li>
+  <li><code>.gitignore</code>, <code>.gitattributes</code>, and <code>.gitmodules</code>
+      are never migrated, and other <code>.git*</code> files only if you name them.
+      <code>.github</code> and <code>.pre-commit-config.yaml</code> require
+      <code>--force</code>, because a fresh clone must be able to bootstrap the hook.</li>
   <li>Caches, secrets, and CI-read configs (<code>.venv</code>, <code>.env</code>,
       <code>.golangci.yml</code>, …) are skipped unless you name them.</li>
   <li>Conflicts are reported, never overwritten. Migrating a tracked <em>file</em>

@@ -26,7 +26,7 @@ Teammates install nothing and notice nothing.
 uv tool install undot   # or: pip install undot
 ```
 
-Small static binaries (~200KB, instant startup) for Linux and macOS, also on
+Small static binaries (~450KB, instant startup) for Linux and macOS, also on
 [GitHub releases](https://github.com/jmelahman/undot/releases).
 The pre-commit hook (below) needs no install at all.
 
@@ -74,8 +74,9 @@ echo 'nolink .goreleaser.yaml' >> .config/undot.conf
 
 ## Guardrails
 
-- `.git*` files are never migrated. `.github` and `.pre-commit-config.yaml` require
-  `--force`, because a fresh clone must be able to bootstrap the hook.
+- `.gitignore`, `.gitattributes`, and `.gitmodules` are never migrated, and other `.git*`
+  files only if you name them. `.github` and `.pre-commit-config.yaml` require `--force`,
+  because a fresh clone must be able to bootstrap the hook.
 - Caches, secrets, and CI-read configs (`.venv`, `.env`, `.golangci.yml`, ...) are
   skipped unless you name them.
 - Conflicts are reported, never overwritten. Migrating a tracked *file* prints the

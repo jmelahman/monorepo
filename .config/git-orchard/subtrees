@@ -165,7 +165,6 @@
 	branch = master
 	shared = base
 	shared = shell
-	shared = pybuild
 [subtree "work"]
 	remote = git@github.com:jmelahman/work.git
 	branch = master

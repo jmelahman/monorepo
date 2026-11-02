@@ -1,0 +1,27 @@
+[package]
+name = "undot"
+version = "0.3.0"
+edition = "2021"
+rust-version = "1.82"
+description = "Declutter a project's root directory by taming configuration file sprawl"
+authors = ["Jamison Lahman <jamison@lahman.dev>"]
+license = "GPL-3.0-only"
+readme = "README.md"
+repository = "https://github.com/jmelahman/undot"
+keywords = ["config", "dotfiles", "git", "pre-commit", "symlink"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "undot"
+path = "src/main.rs"
+
+# Deliberately empty: the binary stays small, and the pre-commit hook, which
+# builds from source on every machine, stays fast and needs no registry access.
+[dependencies]
+
+[profile.release]
+opt-level = "z"
+strip = true
+lto = true
+panic = "abort"
+codegen-units = 1

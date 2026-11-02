@@ -1,54 +1,40 @@
 #!/bin/sh
-# Guards that the version constants agree with each other and, on tag
-# pushes in CI, with the pushed tag. Solod has no ldflags-style version
-# stamping, so the source constants are the single source of truth and
-# releases must be tagged to match.
+# Guards that the version agrees everywhere it is written down and, on tag
+# pushes in CI, with the pushed tag. Cargo.toml is the source of truth:
+# the binary, the wheels, and the rev `undot migrate` writes all come from it.
 set -eu
 cd "$(dirname "$0")/.."
 
-ver=$(sed -n 's/^const Version = "\(.*\)"$/\1/p' cli/cli.go)
-rev=$(sed -n 's/^const hookRev = "\(.*\)"$/\1/p' cli/precommit.go)
+ver=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
 
 if [ -z "$ver" ]; then
-	echo "check-version: cannot find Version in cli/cli.go" >&2
+	echo "check-version: cannot find version in Cargo.toml" >&2
 	exit 1
 fi
-if [ "$rev" != "v$ver" ]; then
-	echo "check-version: hookRev ($rev) != v$ver" >&2
+if ! grep -A 1 '^name = "undot"$' Cargo.lock | grep -q "^version = \"$ver\"$"; then
+	echo "check-version: Cargo.lock does not pin undot $ver; run cargo check" >&2
 	exit 1
 fi
-if ! grep -q "    rev: $rev" cli/precommit.go; then
-	echo "check-version: freshPreCommitConfig rev line does not match $rev" >&2
-	exit 1
-fi
+for f in README.md docs/index.html; do
+	if ! grep -q "^ *rev: v$ver$" "$f"; then
+		echo "check-version: $f does not show rev: v$ver" >&2
+		exit 1
+	fi
+done
 if [ "${GITHUB_REF_TYPE:-}" = "tag" ] && [ "${GITHUB_REF_NAME:-}" != "v$ver" ]; then
 	echo "check-version: tag ${GITHUB_REF_NAME:-?} != v$ver" >&2
 	exit 1
 fi
 
-# The solod pin is centralized in hatch_build.py; the module files must
-# agree with it.
-solod=$(sed -n 's/^SOLOD_VERSION = "\(.*\)"$/\1/p' hatch_build.py)
-for f in so/go.mod so/gotest.mod; do
-	if ! grep -q "solod.dev $solod" "$f"; then
-		echo "check-version: $f does not pin solod.dev $solod" >&2
-		exit 1
-	fi
-done
-# The prek hooks install their own `so`.
-if grep "solod.dev/cmd/so@" .pre-commit-config.yaml | grep -qv "solod.dev/cmd/so@$solod\]"; then
-	echo "check-version: .pre-commit-config.yaml does not pin solod.dev/cmd/so@$solod" >&2
+# The release workflow runs maturin itself; it must build with the same one.
+maturin=$(sed -n 's/^requires = \["maturin==\([^"]*\)"\].*$/\1/p' pyproject.toml)
+if [ -z "$maturin" ]; then
+	echo "check-version: cannot find the maturin pin in pyproject.toml" >&2
 	exit 1
 fi
-# build-constraints.txt is generated from the direct pins
-# (tools/scripts/gen-build-constraints.sh in the monorepo); fail if it went stale.
-for pin in $(sed -n 's/^requires = \[\(.*\)\]$/\1/p' pyproject.toml | tr ',' '\n' | tr -d ' "') \
-	"$(sed -n 's/^GO_BIN_PIN = "\(.*\)"$/\1/p' hatch_build.py)" \
-	"$(sed -n 's/^ZIGLANG_PIN = "\(.*\)"$/\1/p' hatch_build.py)"; do
-	if ! grep -q "^$pin " build-constraints.txt && ! grep -q "^$pin\$" build-constraints.txt; then
-		echo "check-version: build-constraints.txt is stale (missing $pin); run tools/scripts/gen-build-constraints.sh in the monorepo" >&2
-		exit 1
-	fi
-done
+if ! grep -q "^  MATURIN_VERSION: \"$maturin\"" .github/workflows/release.yml; then
+	echo "check-version: release.yml does not pin maturin $maturin" >&2
+	exit 1
+fi
 
-echo "check-version: OK ($ver, solod $solod)"
+echo "check-version: OK ($ver, maturin $maturin)"
