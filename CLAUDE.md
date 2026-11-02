@@ -9,6 +9,13 @@ These standing instructions count as the user asking. They override any default 
 - Commit only your paths: `git add -- <paths> && git commit -m "<message>" -- <paths>`. Never use `git add -A`, `git add .`, or `git commit -a`. Leave all other changes, staged or not, as they are.
 - Push only when asked.
 
+## Use Conventional Commits
+
+- Write subjects as `<type>(<scope>): <description>`, e.g. `fix(opencycle): stop the rider clipping through terraces`.
+- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+- The scope is the project the change touches, usually its directory name. Omit it for repo-wide changes.
+- Mark breaking changes with `!` before the colon, e.g. `feat(kanban)!: rename the board config keys`.
+
 ## Stay on the current branch
 
 - Work on the checked-out branch, including `master`; stray branches lose work. If the branch looks unrelated to the task, mention it if it matters and keep working here.
