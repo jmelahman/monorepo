@@ -10,6 +10,7 @@ import {
   type ReleaseSubtree,
 } from "@/api/client";
 import { queryKeys } from "@/api/keys";
+import { FilterIcon } from "@/icons";
 import {
   type ReleasesFilter,
   readReleasesFilter,
@@ -646,6 +647,7 @@ export function ReleasesDashboard() {
       .find((p) => p.repo_path === r.repo_path)
       ?.subtrees.find((s) => s.prefix === r.prefix);
   const shown = summary.projects.flatMap((p) => p.subtrees.map((s) => isShown(filter, p, s)));
+  const filterLabel = `filter: ${shown.filter(Boolean).length} of ${shown.length} shown`;
 
   return (
     <div className="h-full overflow-y-auto [scrollbar-gutter:stable]">
@@ -666,8 +668,14 @@ export function ReleasesDashboard() {
                   />
                   view all
                 </label>
-                <Button variant="neutral" size="lg" onClick={() => setFiltering(true)}>
-                  filter ({shown.filter(Boolean).length}/{shown.length})
+                <Button
+                  variant="neutral"
+                  size="icon"
+                  aria-label={filterLabel}
+                  title={filterLabel}
+                  onClick={() => setFiltering(true)}
+                >
+                  <FilterIcon />
                 </Button>
               </>
             )}
