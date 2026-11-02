@@ -422,7 +422,7 @@ Shows the version and commit it would release, asks you to confirm, then follows
 
 If the upstream lacks commits, the release waits for the mirror to publish them, unless `--upstream` pushes them and the tag there directly.
 
-The release runs on the server, so it keeps going if you interrupt this command. Use `release log` to pick it up again.
+The release runs on the server, so it keeps going if you interrupt this command. Use `release log` to pick it up again. It may queue behind other releases in the repo, and it's refused if the subtree already has one queued or running.
 
 ### `release log <run>`
 

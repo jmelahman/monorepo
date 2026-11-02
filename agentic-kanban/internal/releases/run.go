@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jmelahman/git-orchard/config"
@@ -23,8 +24,13 @@ import (
 
 const (
 	previewTimeout = 5 * time.Minute
-	// runTimeout bounds a release, including watching what it publishes.
+	// runTimeout bounds a release from when its turn comes, including watching
+	// what it publishes.
 	runTimeout = 30 * time.Minute
+	// releaseJobs bounds the runs tagging in a repo at once: each may run git
+	// subtree split, and reach two remotes. Watching what a tag publishes only
+	// polls GitHub, so it doesn't count.
+	releaseJobs = 4
 	// followInterval is how often a followed log is checked for more output.
 	followInterval = 200 * time.Millisecond
 )
@@ -121,16 +127,18 @@ type RunRequest struct {
 	Upstream bool
 }
 
-// Run starts the release req confirmed, if it's still the one that would
-// happen and nothing else is releasing from the repo. It returns once the run
-// is under way; Follow streams its output.
+// Run queues the release req confirmed, if it's still the one that would happen
+// and the subtree has no other queued or under way: that one's tag would make
+// this version out of date. It returns once the run is queued; Follow streams
+// its output. The confirmed rev is what gets released, however long the wait.
 func (s *Service) Run(ctx context.Context, req RunRequest) (*db.ReleaseRun, error) {
-	if err := s.acquire(req.RepoPath); err != nil {
+	key := subtreeKey{repo: req.RepoPath, prefix: config.Clean(req.Prefix)}
+	if err := s.acquire(key); err != nil {
 		return nil, err
 	}
 	run, sub, err := s.prepare(ctx, req)
 	if err != nil {
-		s.release(req.RepoPath)
+		s.release(key)
 		return nil, err
 	}
 	done := make(chan struct{})
@@ -140,12 +148,12 @@ func (s *Service) Run(ctx context.Context, req RunRequest) (*db.ReleaseRun, erro
 	if err := s.ctx.Err(); err != nil {
 		s.mu.Unlock()
 		s.finish(run, err)
-		s.release(req.RepoPath)
+		s.release(key)
 		return nil, fmt.Errorf("%w: the server is stopping", ErrConflict)
 	}
 	s.live[run.ID] = done
 	s.wg.Go(func() {
-		defer s.release(req.RepoPath)
+		defer s.release(key)
 		defer func() {
 			s.mu.Lock()
 			delete(s.live, run.ID)
@@ -158,23 +166,82 @@ func (s *Service) Run(ctx context.Context, req RunRequest) (*db.ReleaseRun, erro
 	return run, nil
 }
 
-func (s *Service) acquire(repo string) error {
+// subtreeKey names a subtree across repos.
+type subtreeKey struct{ repo, prefix string }
+
+func (s *Service) acquire(key subtreeKey) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ctx.Err() != nil {
 		return fmt.Errorf("%w: the server is stopping", ErrConflict)
 	}
-	if s.busy[repo] {
-		return fmt.Errorf("%w: a release is already running in %s", ErrConflict, repo)
+	if s.busy[key] {
+		return fmt.Errorf("%w: %s already has a release queued or running in %s", ErrConflict, key.prefix, key.repo)
 	}
-	s.busy[repo] = true
+	s.busy[key] = true
 	return nil
 }
 
-func (s *Service) release(repo string) {
+func (s *Service) release(key subtreeKey) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.busy, repo)
+	delete(s.busy, key)
+}
+
+// repoQueue is what a repo's runs take turns on. Each is a semaphore, and
+// channels wake their waiters in order, so runs start in the order they queued.
+type repoQueue struct {
+	jobs chan struct{}
+	// checkout is held by a run whose subtree has a pre-release hook.
+	// See REGRESSIONS.md: "Pre-release hooks share the checkout".
+	checkout chan struct{}
+}
+
+func (s *Service) queue(repo string) *repoQueue {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	q := s.queues[repo]
+	if q == nil {
+		q = &repoQueue{jobs: make(chan struct{}, releaseJobs), checkout: make(chan struct{}, 1)}
+		s.queues[repo] = q
+	}
+	return q
+}
+
+// admit waits for run's turn and marks it running. The returned func gives up
+// the turn, and may be called more than once. A hook's turn comes first, so
+// waiting for it doesn't keep a job from anyone else.
+func (s *Service) admit(run *db.ReleaseRun, sub config.Subtree, output io.Writer) (func(), error) {
+	q := s.queue(run.RepoPath)
+	sems := []chan struct{}{q.jobs}
+	if sub.PreRelease != "" {
+		sems = []chan struct{}{q.checkout, q.jobs}
+	}
+	var held []chan struct{}
+	free := sync.OnceFunc(func() {
+		for _, sem := range held {
+			<-sem
+		}
+	})
+	for _, sem := range sems {
+		select {
+		case sem <- struct{}{}:
+		default:
+			_, _ = fmt.Fprintln(output, "Queued behind other releases in this repo...")
+			select {
+			case sem <- struct{}{}:
+			case <-s.ctx.Done():
+				free()
+				return nil, s.ctx.Err()
+			}
+		}
+		held = append(held, sem)
+	}
+	if err := s.store.StartReleaseRun(s.ctx, run.ID); err != nil {
+		free()
+		return nil, err
+	}
+	return free, nil
 }
 
 // prepare checks req against what would happen now and records the run.
@@ -237,12 +304,9 @@ func (r redactWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// execute releases and records how it went. The server's context is what
-// bounds it: the request that started it is long gone.
+// execute waits for run's turn, releases and records how it went. The server's
+// context is what bounds it: the request that started it is long gone.
 func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree, upstream bool) {
-	ctx, cancel := context.WithTimeout(s.ctx, runTimeout)
-	defer cancel()
-
 	file, err := os.OpenFile(s.logPath(run.ID), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		s.finish(run, err)
@@ -250,9 +314,19 @@ func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree, upstream bool)
 	}
 	defer file.Close()
 	output := redactWriter{w: file}
+	free, err := s.admit(run, sub, output)
+	if err != nil {
+		_, _ = fmt.Fprintf(output, "%v\n", err)
+		s.finish(run, err)
+		return
+	}
+	defer free()
+
+	ctx, cancel := context.WithTimeout(s.ctx, runTimeout)
+	defer cancel()
 	boards, _, err := s.repos(ctx)
 	if err == nil {
-		err = release(ctx, run, sub, upstream, identityEnv(boards[run.RepoPath]), output)
+		err = release(ctx, run, sub, upstream, identityEnv(boards[run.RepoPath]), output, free)
 	}
 	err = runError(ctx, err)
 	if err != nil {
@@ -261,7 +335,9 @@ func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree, upstream bool)
 	s.finish(run, err)
 }
 
-func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, toUpstream bool, identity []string, output io.Writer) error {
+// release tags run and watches what the tag publishes, calling tagged between
+// the two.
+func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, toUpstream bool, identity []string, output io.Writer, tagged func()) error {
 	o, err := open(ctx, run.RepoPath, output)
 	if err != nil {
 		return err
@@ -282,6 +358,7 @@ func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, toUpst
 		return err
 	}
 	_, _ = fmt.Fprintf(output, "Tagged %s.\n", tag)
+	tagged()
 
 	// The tag is out; only the watch is skipped.
 	if github.Token("github.com") == "" {

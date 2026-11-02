@@ -38,7 +38,7 @@ var (
 	// ErrInvalid means a bump or suffix can't be released.
 	ErrInvalid = errors.New("invalid release")
 	// ErrConflict means the release shown to the user is no longer the one
-	// that would happen, or another is under way.
+	// that would happen, or the subtree already has one queued or under way.
 	ErrConflict = errors.New("release conflict")
 	// ErrGit is git or the network failing, rather than the server or the request.
 	ErrGit = errors.New("git failed")
@@ -56,8 +56,10 @@ type Service struct {
 	wg     sync.WaitGroup
 
 	mu sync.Mutex
-	// busy holds the repos with a run under way.
-	busy map[string]bool
+	// busy holds the subtrees with a run queued or under way.
+	busy map[subtreeKey]bool
+	// queues holds what each repo's runs take turns on.
+	queues map[string]*repoQueue
 	// live is closed when the run with that ID has finished writing its log.
 	live map[int64]chan struct{}
 	// projects is what the latest refresh of each repo found.
@@ -83,7 +85,8 @@ func New(store *db.Store, dataDir string) *Service {
 		logDir:     filepath.Join(dataDir, "release-runs"),
 		ctx:        ctx,
 		cancel:     cancel,
-		busy:       map[string]bool{},
+		busy:       map[subtreeKey]bool{},
+		queues:     map[string]*repoQueue{},
 		live:       map[int64]chan struct{}{},
 		projects:   map[string]Project{},
 		refreshing: map[string]bool{},

@@ -30,6 +30,37 @@ var migrations = []migration{
 	{name: "add release reminders and runs", apply: addReleases},
 	{name: "add release state", apply: addReleaseState},
 	{name: "forget release splits", apply: forgetReleaseSplits},
+	{name: "add queued release runs", apply: addQueuedReleaseRuns},
+}
+
+// addQueuedReleaseRuns lets a run wait its turn. SQLite can't change a CHECK, so
+// the table is rebuilt; nothing references it.
+func addQueuedReleaseRuns(tx *sql.Tx) error {
+	_, err := tx.Exec(`
+CREATE TABLE release_runs_new (
+  id INTEGER PRIMARY KEY,
+  reminder_id INTEGER REFERENCES release_reminders(id) ON DELETE SET NULL,
+  repo_path TEXT NOT NULL,
+  prefix TEXT NOT NULL,
+  rev TEXT NOT NULL,
+  version TEXT NOT NULL,
+  bump TEXT NOT NULL DEFAULT 'patch',
+  suffix TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'queued'
+    CHECK (status IN ('queued','running','released','failed','interrupted')),
+  error TEXT NOT NULL DEFAULT '',
+  started_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  finished_at INTEGER
+);
+INSERT INTO release_runs_new (id, reminder_id, repo_path, prefix, rev, version, bump, suffix, status, error, started_at, finished_at)
+  SELECT id, reminder_id, repo_path, prefix, rev, version, bump, suffix, status, error, started_at, finished_at FROM release_runs;
+DROP TABLE release_runs;
+ALTER TABLE release_runs_new RENAME TO release_runs;
+CREATE INDEX release_runs_started ON release_runs (started_at DESC, id DESC);`)
+	if err != nil {
+		return fmt.Errorf("rebuild release runs: %w", err)
+	}
+	return nil
 }
 
 // forgetReleaseSplits drops splits made by the git the image used to have.

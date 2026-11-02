@@ -145,6 +145,7 @@ type ReleaseReminder struct {
 
 // Release run statuses.
 const (
+	ReleaseRunQueued      = "queued"
 	ReleaseRunRunning     = "running"
 	ReleaseRunReleased    = "released"
 	ReleaseRunFailed      = "failed"

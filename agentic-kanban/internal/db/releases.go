@@ -102,7 +102,7 @@ func scanReleaseRun(sc scanner) (*ReleaseRun, error) {
 	return &r, nil
 }
 
-// CreateReleaseRun adds a running run.
+// CreateReleaseRun adds a queued run.
 func (s *Store) CreateReleaseRun(ctx context.Context, r *ReleaseRun) error {
 	row := s.db.QueryRowContext(ctx,
 		`INSERT INTO release_runs (reminder_id, repo_path, prefix, rev, version, bump, suffix) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING `+releaseRunColumns,
@@ -139,20 +139,47 @@ func (s *Store) ListReleaseRuns(ctx context.Context, limit int) ([]ReleaseRun, e
 	return out, rows.Err()
 }
 
-// FinishReleaseRun moves a running run to status.
-func (s *Store) FinishReleaseRun(ctx context.Context, id int64, status, errText string) error {
+// ListLatestReleaseRuns returns each subtree's latest run, however long ago.
+func (s *Store) ListLatestReleaseRuns(ctx context.Context) ([]ReleaseRun, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT `+releaseRunColumns+` FROM release_runs WHERE id IN (SELECT MAX(id) FROM release_runs GROUP BY repo_path, prefix)`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []ReleaseRun{}
+	for rows.Next() {
+		r, err := scanReleaseRun(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *r)
+	}
+	return out, rows.Err()
+}
+
+// StartReleaseRun moves a queued run to running, as of now.
+func (s *Store) StartReleaseRun(ctx context.Context, id int64) error {
 	_, err := s.db.ExecContext(ctx,
-		`UPDATE release_runs SET status=?, error=?, finished_at=unixepoch() WHERE id=? AND status=?`,
-		status, errText, id, ReleaseRunRunning)
+		`UPDATE release_runs SET status=?, started_at=unixepoch() WHERE id=? AND status=?`,
+		ReleaseRunRunning, id, ReleaseRunQueued)
 	return err
 }
 
-// InterruptReleaseRuns marks every running run interrupted. Called at startup,
-// since nothing can still be running them.
+// FinishReleaseRun moves a queued or running run to status.
+func (s *Store) FinishReleaseRun(ctx context.Context, id int64, status, errText string) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE release_runs SET status=?, error=?, finished_at=unixepoch() WHERE id=? AND status IN (?, ?)`,
+		status, errText, id, ReleaseRunQueued, ReleaseRunRunning)
+	return err
+}
+
+// InterruptReleaseRuns marks every queued or running run interrupted. Called at
+// startup, since nothing can still be running them.
 func (s *Store) InterruptReleaseRuns(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx,
-		`UPDATE release_runs SET status=?, finished_at=unixepoch() WHERE status=?`,
-		ReleaseRunInterrupted, ReleaseRunRunning)
+		`UPDATE release_runs SET status=?, finished_at=unixepoch() WHERE status IN (?, ?)`,
+		ReleaseRunInterrupted, ReleaseRunQueued, ReleaseRunRunning)
 	return err
 }
 

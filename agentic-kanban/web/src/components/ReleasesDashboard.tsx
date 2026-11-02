@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   api,
   type ReleaseBump,
@@ -27,7 +27,8 @@ import { Modal } from "./Modal";
 
 const BUMPS: ReleaseBump[] = ["patch", "minor", "major"];
 
-// The summary is cheap and only changes on a refresh or a run.
+// The summary is cheap and only changes on a refresh or a run, so it's polled
+// faster while one is under way.
 const POLL_MS = 15_000;
 const POLL_REFRESHING_MS = 3_000;
 
@@ -39,11 +40,15 @@ const PREVIEW_CACHE_MS = 5 * 60_000;
 const chip = "rounded-full border border-border";
 
 const runStyles: Record<ReleaseRun["status"], string> = {
+  queued: "border-border text-fg-muted",
   running: "border-warning/30 text-warning",
   released: "border-success/30 text-success",
   failed: "border-danger/30 text-danger",
   interrupted: "border-danger/30 text-danger",
 };
+
+// A subtree can't have a second release until its run finishes.
+const isUnderWay = (run?: ReleaseRun) => run?.status === "queued" || run?.status === "running";
 
 const suggestedStyles: Record<NonNullable<ReleaseSubtree["suggested"]>, string> = {
   major: "text-danger",
@@ -361,10 +366,12 @@ function FilterModal({
 function RunLog({
   run,
   onEnd,
+  onRetry,
   onClose,
 }: {
   run: ReleaseRun;
   onEnd: () => void;
+  onRetry: () => void;
   onClose: () => void;
 }) {
   const [lines, setLines] = useState<string[]>([]);
@@ -386,10 +393,20 @@ function RunLog({
         <h3 className="min-w-0 truncate text-sm font-medium">
           {run.prefix} {run.version}
         </h3>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          close
-        </Button>
+        <span className="flex gap-1">
+          {(run.status === "failed" || run.status === "interrupted") && (
+            <Button variant="ghost" size="sm" onClick={onRetry}>
+              retry…
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            close
+          </Button>
+        </span>
       </header>
+      {run.error && (
+        <p className="border-b border-border px-3 py-2 text-xs text-danger">{run.error}</p>
+      )}
       <pre
         data-testid="release-log"
         className="max-h-96 overflow-auto whitespace-pre-wrap break-all p-3 text-xs"
@@ -447,7 +464,13 @@ function ReminderCard({
           pendingLabel="dismissing…"
           onClick={() => dismissMut.mutate()}
         />
-        <Button variant="primary" size="sm" className={chip} onClick={onRelease}>
+        <Button
+          variant="primary"
+          size="sm"
+          className={chip}
+          disabled={isUnderWay(subtree?.run)}
+          onClick={onRelease}
+        >
           release
         </Button>
       </div>
@@ -481,14 +504,32 @@ function CICell({ ci }: { ci?: ReleaseCI }) {
   return <span className={color}>{ci.status}</span>;
 }
 
+// Selecting it shows the run's log. An interrupted run needs what a failed one
+// does, so it reads the same.
+function DeploymentCell({ run, onOpen }: { run?: ReleaseRun; onOpen: (run: ReleaseRun) => void }) {
+  if (!run) return <>—</>;
+  return (
+    <button
+      type="button"
+      title={run.error ? `${run.version}: ${run.error}` : run.version}
+      onClick={() => onOpen(run)}
+      className={`rounded border px-1.5 text-xs hover:bg-surface-2 ${runStyles[run.status]}`}
+    >
+      {run.status === "interrupted" ? "failed" : run.status}
+    </button>
+  );
+}
+
 function ProjectTable({
   project,
   onRelease,
+  onOpenRun,
   filter,
   viewAll,
 }: {
   project: ReleaseProject;
   onRelease: (subtree: ReleaseSubtree) => void;
+  onOpenRun: (run: ReleaseRun) => void;
   filter: ReleasesFilter;
   viewAll: boolean;
 }) {
@@ -527,6 +568,7 @@ function ProjectTable({
                   suggested
                 </th>
                 <th className="px-3 py-2 font-normal">ci</th>
+                <th className="px-3 py-2 font-normal">deployment</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -555,11 +597,15 @@ function ProjectTable({
                   <td className="px-3 py-2">
                     <CICell ci={s.ci} />
                   </td>
+                  <td className="px-3 py-2">
+                    <DeploymentCell run={s.run} onOpen={onOpenRun} />
+                  </td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     <Button
                       variant="neutral"
                       size="sm"
                       className={chip}
+                      disabled={isUnderWay(s.run)}
                       onMouseEnter={() => warm(s)}
                       onFocus={() => warm(s)}
                       onClick={() => onRelease(s)}
@@ -577,53 +623,15 @@ function ProjectTable({
   );
 }
 
-function RunList({
-  runs,
-  onOpen,
-  onRetry,
-}: {
-  runs: ReleaseRun[];
-  onOpen: (run: ReleaseRun) => void;
-  onRetry: (run: ReleaseRun) => void;
-}) {
-  return (
-    <ul className="flex flex-col gap-1 text-sm">
-      {runs.map((run) => (
-        <li key={run.id} className="flex flex-wrap items-center gap-2">
-          <span className={`rounded border px-1.5 text-xs ${runStyles[run.status]}`}>
-            {run.status}
-          </span>
-          <span className="min-w-0 truncate">
-            {run.prefix} {run.version}
-          </span>
-          {run.error && (
-            <span className="min-w-0 truncate text-xs text-danger" title={run.error}>
-              {run.error}
-            </span>
-          )}
-          <span className="ml-auto flex gap-1">
-            {(run.status === "failed" || run.status === "interrupted") && (
-              <Button variant="ghost" size="sm" onClick={() => onRetry(run)}>
-                retry…
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" onClick={() => onOpen(run)}>
-              log
-            </Button>
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export function ReleasesDashboard() {
   const qc = useQueryClient();
   const summaryQ = useQuery({
     queryKey: queryKeys.releases,
     queryFn: api.releases,
     refetchInterval: (q) =>
-      q.state.data?.projects.some((p) => p.refreshing) ? POLL_REFRESHING_MS : POLL_MS,
+      q.state.data?.projects.some((p) => p.refreshing || p.subtrees.some((s) => isUnderWay(s.run)))
+        ? POLL_REFRESHING_MS
+        : POLL_MS,
   });
   const refreshMut = useMutation({
     mutationFn: api.refreshReleases,
@@ -663,6 +671,14 @@ export function ReleasesDashboard() {
       ?.subtrees.find((s) => s.prefix === r.prefix);
   const shown = summary.projects.flatMap((p) => p.subtrees.map((s) => isShown(filter, p, s)));
   const filterLabel = `filter: ${shown.filter(Boolean).length} of ${shown.length} shown`;
+  // openRun is as it was when opened, and the summary knows how it's going since.
+  const liveRun =
+    openRun &&
+    (summary.projects
+      .flatMap((p) => p.subtrees)
+      .map((s) => s.run)
+      .find((run) => run?.id === openRun.id) ??
+      openRun);
 
   return (
     <div className="h-full overflow-y-auto [scrollbar-gutter:stable]">
@@ -707,8 +723,6 @@ export function ReleasesDashboard() {
         {summary.unavailable && <p className="text-sm text-danger">{summary.unavailable}</p>}
         {refreshMut.error && <p className="text-sm text-danger">{String(refreshMut.error)}</p>}
 
-        {openRun && <RunLog run={openRun} onEnd={onRunEnd} onClose={() => setOpenRun(null)} />}
-
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-medium">Reminders</h3>
           {summary.reminders.length === 0 ? (
@@ -744,40 +758,39 @@ export function ReleasesDashboard() {
           </p>
         ) : (
           summary.projects.map((p) => (
-            <ProjectTable
-              key={p.repo_path}
-              project={p}
-              filter={filter}
-              viewAll={viewAll}
-              onRelease={(s) =>
-                setReleasing({
-                  repo: p.repo_path,
-                  prefix: s.prefix,
-                  bump: startingBump(s),
-                  suffix: "",
-                })
-              }
-            />
+            <Fragment key={p.repo_path}>
+              <ProjectTable
+                project={p}
+                filter={filter}
+                viewAll={viewAll}
+                onOpenRun={setOpenRun}
+                onRelease={(s) =>
+                  setReleasing({
+                    repo: p.repo_path,
+                    prefix: s.prefix,
+                    bump: startingBump(s),
+                    suffix: "",
+                  })
+                }
+              />
+              {liveRun?.repo_path === p.repo_path && (
+                <RunLog
+                  run={liveRun}
+                  onEnd={onRunEnd}
+                  onRetry={() =>
+                    setReleasing({
+                      repo: liveRun.repo_path,
+                      prefix: liveRun.prefix,
+                      bump: liveRun.bump,
+                      suffix: liveRun.suffix,
+                      reminderId: liveRun.reminder_id,
+                    })
+                  }
+                  onClose={() => setOpenRun(null)}
+                />
+              )}
+            </Fragment>
           ))
-        )}
-
-        {summary.runs.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium">Recent runs</h3>
-            <RunList
-              runs={summary.runs}
-              onOpen={setOpenRun}
-              onRetry={(run) =>
-                setReleasing({
-                  repo: run.repo_path,
-                  prefix: run.prefix,
-                  bump: run.bump,
-                  suffix: run.suffix,
-                  reminderId: run.reminder_id,
-                })
-              }
-            />
-          </section>
         )}
 
         {releasing && (

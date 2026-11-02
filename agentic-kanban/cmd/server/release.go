@@ -130,7 +130,8 @@ given.`,
 
 Uses the bump and suffix from the subtree's open reminder unless flags say
 otherwise, and closes that reminder on success. The release runs on the server,
-so it carries on if this command is interrupted.
+so it carries on if this command is interrupted. It may queue behind other
+releases in the repo, and a subtree can't have two at once.
 
 A subtree whose upstream lacks commits can't be released until the mirror has
 published them, unless --upstream pushes them and the tag directly.`,

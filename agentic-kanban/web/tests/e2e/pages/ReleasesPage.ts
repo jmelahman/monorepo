@@ -43,10 +43,9 @@ export class ReleasesPage {
     await expect(this.page.getByTestId("release-log")).toContainText(text);
   }
 
-  async expectRun(version: string, status: string) {
-    await expect(this.page.getByRole("listitem").filter({ hasText: version })).toContainText(
-      status,
-    );
+  async closeLog() {
+    await this.page.getByRole("button", { name: "close", exact: true }).click();
+    await expect(this.page.getByTestId("release-log")).toBeHidden();
   }
 }
 
@@ -57,7 +56,9 @@ class ReleaseProject {
     readonly page: Page,
     readonly repoPath: string,
   ) {
-    this.root = page.locator("section").filter({ hasText: repoPath });
+    this.root = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: repoPath }) });
   }
 
   private row(prefix: string) {
@@ -78,6 +79,24 @@ class ReleaseProject {
 
   async expectSuggested(prefix: string, suggestion: string) {
     await expect(this.row(prefix)).toContainText(suggestion);
+  }
+
+  async expectDeployment(prefix: string, status: string) {
+    await expect(this.row(prefix).getByRole("button", { name: status, exact: true })).toBeVisible();
+  }
+
+  async openLog(prefix: string, status: string) {
+    await this.row(prefix).getByRole("button", { name: status, exact: true }).click();
+  }
+
+  // The log is below the table, not above what's being released.
+  async expectLogBelowTable() {
+    const log = this.page.getByTestId("release-log");
+    await expect(async () => {
+      const table = await this.root.getByRole("table").boundingBox();
+      const logBox = await log.boundingBox();
+      expect(logBox?.y).toBeGreaterThan((table?.y ?? 0) + (table?.height ?? 0) - 1);
+    }).toPass();
   }
 
   async expectNothingShown() {

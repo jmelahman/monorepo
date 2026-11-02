@@ -212,6 +212,16 @@ Under rootless Docker, UID 1000 in a container is a subordinate ID on the host, 
   branch the user's checkout is on; the rev is already on origin's base branch,
   so push only the tag there afterwards.
 
+### Pre-release hooks share the checkout
+
+- A release runs in parallel with other subtrees' except for its `pre-release`
+  hook, which runs in the repo's one checkout and commits there. Hold the repo's
+  `checkout` turn from before `orchard.Release` until it returns, or two hooks
+  fight over the index and `HEAD`.
+- Anything else `orchard.Release` touches is the subtree's own: its tag, its
+  upstream ref, and a split cache per process. Check this still holds when
+  changing what a release does in the repo.
+
 ### `git subtree split` differs before git 2.54
 
 - Git before 2.54 skips other subtrees' squash commits when splitting, so it

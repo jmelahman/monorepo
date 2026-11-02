@@ -105,9 +105,14 @@ test.describe("Releases", () => {
     await releases.confirm.release();
 
     await releases.expectLogContains("v0.1.0");
-    await releases.expectRun("v0.1.0", "released");
+    await project.expectDeployment(PREFIX, "released");
+    await project.expectLogBelowTable();
     await reminder.expectGone();
     expect(git(world.repoPath, "ls-remote", "--tags", world.origin)).toContain(`${PREFIX}/v0.1.0`);
+
+    await releases.closeLog();
+    await project.openLog(PREFIX, "released");
+    await releases.expectLogContains("v0.1.0");
   });
 
   test("view all lists unreleased subtrees, and the choice is kept", async ({ page }) => {
@@ -195,7 +200,7 @@ test.describe("Releases", () => {
 
     await releases.confirm.pushToUpstream();
     await releases.confirm.release();
-    await releases.expectRun("v0.0.1", "released");
+    await project.expectDeployment(PREFIX, "released");
     expect(git(world.repoPath, "ls-remote", "--tags", world.upstream)).toContain("v0.0.1");
     expect(git(world.repoPath, "ls-remote", "--tags", world.origin)).toContain(`${PREFIX}/v0.0.1`);
   });

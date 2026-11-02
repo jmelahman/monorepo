@@ -250,6 +250,8 @@ export type ReleaseSubtree = {
   suggested?: ReleaseBump | "none";
   error?: string;
   ci?: ReleaseCI;
+  // The subtree's latest run from here, absent if it has had none.
+  run?: ReleaseRun;
 };
 
 export type ReleaseProject = {
@@ -285,7 +287,7 @@ export type ReleaseRun = {
   version: string;
   bump: ReleaseBump;
   suffix: string;
-  status: "running" | "released" | "failed" | "interrupted";
+  status: "queued" | "running" | "released" | "failed" | "interrupted";
   error?: string;
   started_at: number;
   finished_at?: number;

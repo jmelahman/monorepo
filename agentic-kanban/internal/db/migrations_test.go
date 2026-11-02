@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -368,5 +369,60 @@ func TestMigrate_DropsSessionPathOverrides(t *testing.T) {
 	}
 	if got.BranchName != "kanban/new" {
 		t.Errorf("GetSessionByTicket branch_name = %q; want %q", got.BranchName, "kanban/new")
+	}
+}
+
+// A rebuild of release_runs keeps its rows and starts accepting queued runs.
+func TestMigrateAddsQueuedReleaseRuns(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "kanban.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	conn := store.DB()
+	if _, err := conn.Exec(`
+DROP TABLE release_runs;
+CREATE TABLE release_runs (
+  id INTEGER PRIMARY KEY,
+  reminder_id INTEGER REFERENCES release_reminders(id) ON DELETE SET NULL,
+  repo_path TEXT NOT NULL,
+  prefix TEXT NOT NULL,
+  rev TEXT NOT NULL,
+  version TEXT NOT NULL,
+  bump TEXT NOT NULL DEFAULT 'patch',
+  suffix TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'running'
+    CHECK (status IN ('running','released','failed','interrupted')),
+  error TEXT NOT NULL DEFAULT '',
+  started_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  finished_at INTEGER
+);
+INSERT INTO release_runs (id, repo_path, prefix, rev, version, status, error) VALUES (7, '/r', 'p', 'abc', 'v1', 'failed', 'boom');`); err != nil {
+		t.Fatalf("restore old table: %v", err)
+	}
+	if _, err := conn.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, schemaVersion()-1)); err != nil {
+		t.Fatalf("set user_version: %v", err)
+	}
+	_ = store.Close()
+
+	store, err = Open(path)
+	if err != nil {
+		t.Fatalf("Open (migrate): %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	ctx := t.Context()
+	old, err := store.GetReleaseRun(ctx, 7)
+	if err != nil {
+		t.Fatalf("GetReleaseRun: %v", err)
+	}
+	if old.Status != ReleaseRunFailed || old.Error != "boom" {
+		t.Errorf("kept %+v", old)
+	}
+	run := &ReleaseRun{RepoPath: "/r", Prefix: "p", Rev: "abc", Version: "v2", Bump: "patch"}
+	if err := store.CreateReleaseRun(ctx, run); err != nil {
+		t.Fatalf("CreateReleaseRun: %v", err)
+	}
+	if run.Status != ReleaseRunQueued {
+		t.Errorf("new run is %s", run.Status)
 	}
 }

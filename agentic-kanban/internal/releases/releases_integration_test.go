@@ -756,8 +756,8 @@ func TestRunAfterClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, run := range runs {
-		if run.Status == db.ReleaseRunRunning {
-			t.Errorf("left running: %+v", run)
+		if run.Status == db.ReleaseRunQueued || run.Status == db.ReleaseRunRunning {
+			t.Errorf("left %s: %+v", run.Status, run)
 		}
 	}
 }
@@ -788,4 +788,235 @@ func TestPreReleaseContinues(t *testing.T) {
 	if got := preview(); got.Version != "v0.0.1-rc.1" {
 		t.Errorf("second pre-release: %+v", got)
 	}
+}
+
+// addSubtree adds another subtree like the world's first, whose upstream is in
+// sync, with the given extra manifest lines.
+func (w *world) addSubtree(sub, manifest string) {
+	w.t.Helper()
+	dir := w.t.TempDir()
+	upstream := filepath.Join(dir, "up.git")
+	work := filepath.Join(dir, "work")
+	kanbantest.MustGit(w.t, "", "init", "-q", "--bare", "-b", "master", upstream)
+	kanbantest.MustGit(w.t, "", "init", "-q", "-b", "master", work)
+	if err := os.WriteFile(filepath.Join(work, "README"), []byte(sub+"\n"), 0o644); err != nil {
+		w.t.Fatal(err)
+	}
+	kanbantest.MustGit(w.t, work, "add", "README")
+	kanbantest.MustGit(w.t, work, "-c", "user.name=T", "-c", "user.email=t@example.com", "commit", "-q", "-m", "Start")
+	kanbantest.MustGit(w.t, work, "push", "-q", upstream, "master")
+
+	o, err := orchard.Open(w.env.RepoPath)
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	if err := o.Add(config.Subtree{Prefix: sub, Remote: upstream, Branch: "master"}, ""); err != nil {
+		w.t.Fatal(err)
+	}
+	if manifest != "" {
+		file, err := os.OpenFile(filepath.Join(w.env.RepoPath, o.Config.Manifest), os.O_APPEND|os.O_WRONLY, 0)
+		if err != nil {
+			w.t.Fatal(err)
+		}
+		_, err = fmt.Fprintf(file, "\t%s\n", manifest)
+		if cerr := file.Close(); err == nil {
+			err = cerr
+		}
+		if err != nil {
+			w.t.Fatal(err)
+		}
+	}
+	kanbantest.MustGit(w.t, w.env.RepoPath, "add", o.Config.Manifest)
+	kanbantest.MustGit(w.t, w.env.RepoPath, "commit", "-q", "-m", "List "+sub)
+	kanbantest.MustGit(w.t, w.env.RepoPath, "push", "-q", "origin", "main")
+}
+
+// gate returns a script that waits until the returned func is called, which
+// happens when the test ends at the latest.
+func gate(t *testing.T) (string, func()) {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "open")
+	script := filepath.Join(dir, "wait.sh")
+	body := fmt.Sprintf("#!/bin/sh\ni=0; while [ ! -e %q ] && [ $i -lt 1200 ]; do sleep 0.05; i=$((i+1)); done\n", path)
+	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	open := func() {
+		if err := os.WriteFile(path, nil, 0o644); err != nil {
+			t.Error(err)
+		}
+	}
+	t.Cleanup(open)
+	return script, open
+}
+
+// holdTagPushes makes origin wait on a gate before accepting any push, which
+// is the last thing a release does in the repo.
+func (w *world) holdTagPushes() func() {
+	w.t.Helper()
+	wait, open := gate(w.t)
+	hook := filepath.Join(w.origin, "hooks", "pre-receive")
+	if err := os.WriteFile(hook, []byte("#!/bin/sh\nexec "+wait+"\n"), 0o755); err != nil {
+		w.t.Fatal(err)
+	}
+	return open
+}
+
+func (w *world) startRun(sub string) *db.ReleaseRun {
+	w.t.Helper()
+	q := url.Values{"repo": {w.env.RepoPath}, "prefix": {sub}, "bump": {"patch"}}
+	code, data := w.do("GET", "/api/releases/preview?"+q.Encode(), nil)
+	if code != 200 {
+		w.t.Fatalf("preview %s: %d %s", sub, code, data)
+	}
+	p := decode[releases.Preview](w.t, data)
+	code, data = w.do("POST", "/api/releases/run", map[string]any{"repo": w.env.RepoPath, "prefix": sub, "bump": "patch", "version": p.Version, "rev": p.Rev})
+	if code != 202 {
+		w.t.Fatalf("run %s: %d %s", sub, code, data)
+	}
+	return new(decode[db.ReleaseRun](w.t, data))
+}
+
+// waitForStatuses waits until the runs have these counts of each status.
+func (w *world) waitForStatuses(runs []*db.ReleaseRun, want map[string]int) {
+	w.t.Helper()
+	deadline := time.Now().Add(time.Minute)
+	for {
+		got := map[string]int{}
+		for _, run := range runs {
+			got[w.run(run.ID).Status]++
+		}
+		if fmt.Sprint(got) == fmt.Sprint(want) {
+			return
+		}
+		if time.Now().After(deadline) {
+			w.t.Fatalf("statuses %v, want %v", got, want)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// A repo's subtrees release at once up to a limit, and the rest wait in turn,
+// but a subtree can't have two: the second's version would be out of date.
+func TestRunsQueueAndRunInParallel(t *testing.T) {
+	w := newWorld(t)
+	subs := []string{prefix, "tools/a", "tools/b", "tools/c", "tools/d"}
+	for _, sub := range subs[1:] {
+		w.addSubtree(sub, "")
+	}
+	open := w.holdTagPushes()
+
+	runs := make([]*db.ReleaseRun, len(subs))
+	for i, sub := range subs {
+		runs[i] = w.startRun(sub)
+	}
+	w.waitForStatuses(runs, map[string]int{db.ReleaseRunRunning: 4, db.ReleaseRunQueued: 1})
+
+	if sum := w.settled(); sum.Projects[0].Subtrees[0].Run == nil || sum.Projects[0].Subtrees[0].Run.Status == db.ReleaseRunReleased {
+		t.Errorf("subtree's run in the summary: %+v", sum.Projects[0].Subtrees[0])
+	}
+	q := url.Values{"repo": {w.env.RepoPath}, "prefix": {prefix}, "bump": {"patch"}}
+	_, data := w.do("GET", "/api/releases/preview?"+q.Encode(), nil)
+	p := decode[releases.Preview](t, data)
+	if code, data := w.do("POST", "/api/releases/run", map[string]any{"repo": w.env.RepoPath, "prefix": prefix + "/", "bump": "patch", "version": p.Version, "rev": p.Rev}); code != 409 {
+		t.Errorf("a second release of a queued subtree: %d %s", code, data)
+	}
+
+	open()
+	queued := 0
+	for _, run := range runs {
+		output := w.output(run.ID)
+		if got := w.run(run.ID); got.Status != db.ReleaseRunReleased {
+			t.Errorf("run %+v:\n%s", got, output)
+		}
+		if strings.Contains(output, "Queued behind") {
+			queued++
+		}
+	}
+	if queued != 1 {
+		t.Errorf("%d logs say they queued, want 1", queued)
+	}
+	out, err := exec.Command("git", "-C", w.origin, "tag", "--list").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sub := range subs {
+		if !strings.Contains(string(out), sub+"/v0.0.1") {
+			t.Errorf("origin lacks %s's tag:\n%s", sub, out)
+		}
+	}
+
+	// Having finished, the subtree can be released again.
+	w.commit("next.go")
+	w.change("next2.go")
+	w.output(w.startRun(prefix).ID)
+}
+
+// Pre-release hooks run in the one checkout, so they take turns, without
+// holding up subtrees that have none.
+func TestPreReleaseHooksTakeTurns(t *testing.T) {
+	w := newWorld(t)
+	wait, open := gate(t)
+	w.addSubtree("tools/a", "pre-release = "+wait)
+	w.addSubtree("tools/b", "pre-release = "+wait)
+
+	hooked := []*db.ReleaseRun{w.startRun("tools/a"), w.startRun("tools/b")}
+	w.waitForStatuses(hooked, map[string]int{db.ReleaseRunRunning: 1, db.ReleaseRunQueued: 1})
+
+	plain := w.startRun(prefix)
+	if output := w.output(plain.ID); w.run(plain.ID).Status != db.ReleaseRunReleased {
+		t.Errorf("run without a hook %+v:\n%s", w.run(plain.ID), output)
+	}
+	w.waitForStatuses(hooked, map[string]int{db.ReleaseRunRunning: 1, db.ReleaseRunQueued: 1})
+
+	open()
+	for _, run := range hooked {
+		if output := w.output(run.ID); w.run(run.ID).Status != db.ReleaseRunReleased {
+			t.Errorf("hooked run %+v:\n%s", w.run(run.ID), output)
+		}
+	}
+}
+
+// Stopping the server interrupts what's waiting along with what's running.
+func TestCloseInterruptsQueuedRuns(t *testing.T) {
+	w := newWorld(t)
+	subs := []string{prefix, "tools/a", "tools/b", "tools/c", "tools/d"}
+	for _, sub := range subs[1:] {
+		w.addSubtree(sub, "")
+	}
+	open := w.holdTagPushes()
+
+	svc := releases.New(w.env.Store, t.TempDir())
+	runs := make([]*db.ReleaseRun, len(subs))
+	for i, sub := range subs {
+		p, err := svc.Preview(context.Background(), w.env.RepoPath, sub, "patch", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		runs[i], err = svc.Run(context.Background(), releases.RunRequest{RepoPath: w.env.RepoPath, Prefix: sub, Bump: "patch", Version: p.Version, Rev: p.Rev})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	w.waitForStatuses(runs, map[string]int{db.ReleaseRunRunning: 4, db.ReleaseRunQueued: 1})
+
+	closed := make(chan struct{})
+	go func() {
+		svc.Close()
+		close(closed)
+	}()
+	// Origin's hook outlives the push that started it, and holds its output open.
+	for _, run := range runs {
+		for w.run(run.ID).Status == db.ReleaseRunQueued {
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
+	open()
+	select {
+	case <-closed:
+	case <-time.After(time.Minute):
+		t.Fatal("Close didn't return")
+	}
+	w.waitForStatuses(runs, map[string]int{db.ReleaseRunInterrupted: 5})
 }

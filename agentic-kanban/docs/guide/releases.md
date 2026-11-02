@@ -43,6 +43,10 @@ If the upstream lacks commits from that branch, the mirror hasn't published them
 
 The release pushes the tag `<prefix>/<version>` to `origin`, then follows the GitHub Actions runs that publish it. Pre-push hooks don't run, since only a tag is pushed, for commits already on the base branch.
 
+Releases queue. Up to 4 per repo tag at once, the rest wait in order, and each follows what it publishes without holding up the next. Subtrees with a `pre-release` hook go one at a time, since the hook runs in the repo's checkout. A hook still needs the checkout at the commit being released, so if one hook commits, the next fails until the checkout is back in sync with the branch. A queued release keeps the version and commit you confirmed, even if the branch moves on while it waits. A subtree can't have a second release until its first finishes, because the first would make the version you confirmed out of date. Stopping the server interrupts whatever is queued.
+
+The **deployment** column shows the state of each subtree's latest release from here: queued, running, released or failed, or empty if it hasn't had one. Select it to read that release's log below the table, and to retry it if it failed.
+
 A failed or interrupted release can be run again. A tag it left behind is kept and published again.
 
 ## GitHub access

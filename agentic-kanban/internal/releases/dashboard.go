@@ -44,6 +44,8 @@ type SubtreeState struct {
 	Error     string `json:"error,omitempty"`
 	// CI is nil until the first check of the repo's CI finishes.
 	CI *CIHealth `json:"ci,omitempty"`
+	// Run is the subtree's latest run from here, nil if it has had none.
+	Run *db.ReleaseRun `json:"run,omitempty"`
 }
 
 // Project is a repo with a git-orchard manifest.
@@ -84,6 +86,14 @@ func (s *Service) Summary(ctx context.Context) (Summary, error) {
 	if err != nil {
 		return sum, err
 	}
+	runs, err := s.store.ListLatestReleaseRuns(ctx)
+	if err != nil {
+		return sum, err
+	}
+	latest := make(map[subtreeKey]*db.ReleaseRun, len(runs))
+	for i := range runs {
+		latest[subtreeKey{runs[i].RepoPath, runs[i].Prefix}] = &runs[i]
+	}
 	for _, repo := range order {
 		o, err := orchard.Open(repo)
 		if err != nil || len(o.Config.Subtrees) == 0 {
@@ -101,7 +111,7 @@ func (s *Service) Summary(ctx context.Context) (Summary, error) {
 			s.startRefresh(repo, boards[repo].BaseBranch)
 		}
 		s.startCI(repo)
-		// The cached subtrees are shared, so CI goes on a copy.
+		// The cached subtrees are shared, so CI and runs go on a copy.
 		subtrees := make([]SubtreeState, len(p.Subtrees))
 		s.mu.Lock()
 		p.Refreshing = s.refreshing[repo]
@@ -109,6 +119,7 @@ func (s *Service) Summary(ctx context.Context) (Summary, error) {
 			if health, ok := s.ci[repo][sub.Prefix]; ok {
 				sub.CI = &health
 			}
+			sub.Run = latest[subtreeKey{repo, sub.Prefix}]
 			subtrees[i] = sub
 		}
 		s.mu.Unlock()
