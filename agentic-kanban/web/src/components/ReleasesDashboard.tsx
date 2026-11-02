@@ -338,6 +338,11 @@ function ReminderCard({
         </span>
       </div>
       {reminder.note && <p className="whitespace-pre-wrap">{reminder.note}</p>}
+      {reminder.released_since && (
+        <p className="text-xs text-warning">
+          {reminder.released_since} was released after this was written, so it may be done.
+        </p>
+      )}
       {dismissMut.error && <p className="text-xs text-danger">{String(dismissMut.error)}</p>}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onEdit}>
@@ -356,6 +361,19 @@ function ReminderCard({
         </Button>
       </div>
     </li>
+  );
+}
+
+// SuggestedCell is information only, read from the commit titles: the release
+// dialog doesn't start from it.
+function SuggestedCell({ subtree }: { subtree: ReleaseSubtree }) {
+  const { suggested, unclassified } = subtree;
+  if (!suggested) return <>—</>;
+  return (
+    <span title="The largest bump the titles of the unreleased commits call for. Titles that aren't Conventional Commits count as a patch.">
+      {suggested}
+      {unclassified ? ` (${unclassified} unclassified)` : ""}
+    </span>
   );
 }
 
@@ -436,6 +454,7 @@ function ProjectTable({
                 <th className="px-3 py-2 font-normal">ahead / behind</th>
                 <th className="px-3 py-2 font-normal">latest</th>
                 <th className="px-3 py-2 font-normal">unreleased</th>
+                <th className="px-3 py-2 font-normal">suggested</th>
                 <th className="px-3 py-2 font-normal">ci</th>
                 <th className="px-3 py-2" />
               </tr>
@@ -445,7 +464,7 @@ function ProjectTable({
                 <tr key={s.prefix} className="border-t border-border">
                   <td className="px-3 py-2">{s.prefix}</td>
                   {s.error ? (
-                    <td colSpan={3} className="px-3 py-2 text-xs text-danger">
+                    <td colSpan={4} className="px-3 py-2 text-xs text-danger">
                       {s.error}
                     </td>
                   ) : (
@@ -455,6 +474,9 @@ function ProjectTable({
                       </td>
                       <td className="px-3 py-2">{s.latest || "—"}</td>
                       <td className="px-3 py-2">{s.counted ? s.unreleased : "—"}</td>
+                      <td className="px-3 py-2">
+                        <SuggestedCell subtree={s} />
+                      </td>
                     </>
                   )}
                   <td className="px-3 py-2">

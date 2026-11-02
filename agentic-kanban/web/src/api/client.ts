@@ -245,6 +245,11 @@ export type ReleaseSubtree = {
   unreleased: number;
   // False when the latest release has no tag here to count unreleased from.
   counted: boolean;
+  // The bump the unreleased commits' titles call for, absent unless there are
+  // commits since a release.
+  suggested?: ReleaseBump | "none";
+  // How many of those titles it couldn't read.
+  unclassified?: number;
   error?: string;
   ci?: ReleaseCI;
 };
@@ -269,6 +274,8 @@ export type ReleaseReminder = {
   status: "open" | "released" | "dismissed";
   created_at: number;
   updated_at: number;
+  // The version released since the reminder was last edited.
+  released_since?: string;
 };
 
 export type ReleaseRun = {

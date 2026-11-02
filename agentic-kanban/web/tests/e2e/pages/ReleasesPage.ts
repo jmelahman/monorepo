@@ -64,6 +64,10 @@ class ReleaseProject {
     await expect(this.row(prefix)).toBeVisible();
   }
 
+  async expectSuggested(prefix: string, suggestion: string) {
+    await expect(this.row(prefix)).toContainText(suggestion);
+  }
+
   async expectNothingReleased() {
     await expect(this.root.getByText("No subtree here has been released yet.")).toBeVisible();
     await expect(this.root.getByRole("table")).toBeHidden();
@@ -93,6 +97,10 @@ class ReleaseReminderCard {
 
   async expectBump(bump: string) {
     await expect(this.root).toContainText(bump);
+  }
+
+  async expectReleasedSince(version: string) {
+    await expect(this.root).toContainText(`${version} was released`);
   }
 
   async openRelease() {

@@ -16,8 +16,12 @@ type ReleaseSubtree struct {
 	Behind     int    `json:"behind"`
 	Latest     string `json:"latest"`
 	Unreleased int    `json:"unreleased"`
-	Counted    bool   `json:"counted"`
-	Error      string `json:"error,omitempty"`
+	// Suggested is the bump the unreleased commits' titles call for, and
+	// Unclassified the titles it couldn't read.
+	Suggested    string `json:"suggested,omitempty"`
+	Unclassified int    `json:"unclassified,omitempty"`
+	Counted      bool   `json:"counted"`
+	Error        string `json:"error,omitempty"`
 	// CI is nil until the first check finishes.
 	CI *ReleaseCI `json:"ci,omitempty"`
 }
@@ -49,6 +53,8 @@ type ReleaseReminder struct {
 	Suffix   string `json:"suffix"`
 	Note     string `json:"note"`
 	Status   string `json:"status"`
+	// ReleasedSince is the version released since the reminder was last edited.
+	ReleasedSince string `json:"released_since,omitempty"`
 }
 
 // ReleaseRun is one attempt at a release.

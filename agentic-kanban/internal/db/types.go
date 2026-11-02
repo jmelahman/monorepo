@@ -138,6 +138,9 @@ type ReleaseReminder struct {
 	Status    string `json:"status"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
+	// ReleasedSince is the version released since the reminder was last edited,
+	// if any. It's worked out for the Releases tab, not stored.
+	ReleasedSince string `json:"released_since,omitempty"`
 }
 
 // Release run statuses.

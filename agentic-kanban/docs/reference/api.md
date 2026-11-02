@@ -181,7 +181,7 @@ See [Releases](/guide/releases). These endpoints return `503` if the service did
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /api/releases` | `{ "unavailable", "projects", "reminders", "runs" }`: cached subtree state, open reminders, and recent runs. Starts a refresh of any repo not seen yet. Each subtree has a `ci` of `{ "status", "failed", "url", "error" }` once checked, with `status` one of `passing`, `failing`, `running` or `none`; a check starts if the last began over 5 minutes ago. |
+| `GET /api/releases` | `{ "unavailable", "projects", "reminders", "runs" }`: cached subtree state, open reminders, and recent runs. Starts a refresh of any repo not seen yet. Each subtree has a `ci` of `{ "status", "failed", "url", "error" }` once checked, with `status` one of `passing`, `failing`, `running` or `none`; a check starts if the last began over 5 minutes ago. Each subtree with commits since a release has a `suggested` of `none`, `patch`, `minor` or `major`, read from their titles, and an `unclassified` count of the titles that aren't Conventional Commits. A reminder has a `released_since` version if there's been a release since its last edit. |
 | `POST /api/releases/refresh` | Recomputes every repo's state in the background. Returns `204`. |
 | `POST /api/release-reminders` | Body: `{ "repo_path", "prefix", "bump", "suffix", "note" }`. `bump` is `patch` (the default), `minor` or `major`; with a `suffix`, `patch` continues that pre-release. Returns `201`, or `409` if the subtree has an open reminder. |
 | `PATCH /api/release-reminders/{id}` | Changes an open reminder's `bump`, `suffix` or `note`. |

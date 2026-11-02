@@ -18,9 +18,9 @@ function commit(cwd: string, message: string) {
   git(cwd, "-c", "user.name=e2e", "-c", "user.email=e2e@example.com", "commit", "-m", message);
 }
 
-async function change(world: World, name: string) {
+async function change(world: World, name: string, title = `Change ${name}`) {
   await writeFile(join(world.repoPath, PREFIX, name), "package main\n");
-  commit(world.repoPath, `Change ${name}`);
+  commit(world.repoPath, title);
   git(world.repoPath, "push", "origin", "main");
 }
 
@@ -121,6 +121,39 @@ test.describe("Releases", () => {
 
     await releases.goto();
     await project.expectSubtree(PREFIX);
+  });
+
+  test("a release from elsewhere flags the reminder, and titles suggest the next", async ({
+    page,
+  }) => {
+    const releases = new ReleasesPage(page);
+    await releases.goto();
+    const project = releases.project(world.repoPath);
+    await project.showUnreleased();
+    const note = `the new thing ${world.board.id}`;
+    await project.remind(PREFIX, "minor", note);
+    await releases.reminder(note).expectBump("minor");
+
+    // Times have a resolution of a second, and the tag has to be the later one.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    git(
+      world.repoPath,
+      "-c",
+      "user.name=e2e",
+      "-c",
+      "user.email=e2e@example.com",
+      "tag",
+      "-a",
+      "-m",
+      "v1.0.0",
+      `${PREFIX}/v1.0.0`,
+    );
+    await change(world, "feature.go", "feat(foo): add a feature");
+    await change(world, "stray.go");
+
+    await releases.goto();
+    await releases.reminder(note).expectReleasedSince("v1.0.0");
+    await project.expectSuggested(PREFIX, "minor (1 unclassified)");
   });
 
   test("commits the mirror hasn't published block the release", async ({ page }) => {

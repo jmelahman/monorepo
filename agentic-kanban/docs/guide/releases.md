@@ -10,6 +10,8 @@ A reminder is a note against a subtree, with the bump you intend: "release a min
 
 Add one with **remind me later** in a subtree's release dialog. Each subtree has at most one open reminder, so a second thought goes in the same note, with **edit**. A successful release closes it.
 
+A release made elsewhere, such as with `git orchard release`, can't tell which reminder it covered. So once a subtree's state shows a release newer than a reminder's last edit, the reminder says so, since it may be done. Dismiss it, or edit it to keep it and clear the warning.
+
 ## Subtree state
 
 Each subtree shows how far it is ahead of and behind its upstream, its latest release, and the commits since. This is recomputed at startup, every 30 minutes and when you refresh, because checking every subtree can take a while. The last result is saved, so after a restart the tab shows it right away while the refresh runs.
@@ -17,6 +19,21 @@ Each subtree shows how far it is ahead of and behind its upstream, its latest re
 Subtrees that have never been released are hidden until you tick **show unreleased**. Your browser remembers the choice.
 
 It also shows each subtree's latest GitHub Actions runs on its upstream, checked at most every 5 minutes while something is reading the page or `kanban release list`, so an idle server spends none of your API quota. This is for information only: a release doesn't check CI. It needs a GitHub token on the server (`GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token`).
+
+## Suggested bumps
+
+The **suggested** column reads the titles of each subtree's commits since its latest release as [Conventional Commits](https://www.conventionalcommits.org), and shows the largest bump any of them calls for:
+
+| Title | Suggests |
+| --- | --- |
+| `!` before the colon, on any type: `feat!: ...` | major |
+| `feat: ...` | minor |
+| `fix: ...`, `perf: ...`, `revert: ...` | patch |
+| `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore` | none |
+
+Any other title counts as a patch, and the column says how many there were. Merge commits are ignored, and subtrees never released have no suggestion.
+
+This is for information only: the release dialog still starts at patch, and a release doesn't check it.
 
 ## Releasing
 

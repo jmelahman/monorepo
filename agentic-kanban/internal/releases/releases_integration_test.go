@@ -76,12 +76,17 @@ func newWorld(t *testing.T) *world {
 // mirror has yet to publish it.
 func (w *world) commit(name string) {
 	w.t.Helper()
+	w.commitTitled(name, "Change "+name)
+}
+
+func (w *world) commitTitled(name, title string) {
+	w.t.Helper()
 	path := filepath.Join(w.env.RepoPath, prefix, name)
 	if err := os.WriteFile(path, []byte("package main\n"), 0o644); err != nil {
 		w.t.Fatal(err)
 	}
 	kanbantest.MustGit(w.t, w.env.RepoPath, "add", "--", path)
-	kanbantest.MustGit(w.t, w.env.RepoPath, "commit", "-q", "-m", "Change "+name)
+	kanbantest.MustGit(w.t, w.env.RepoPath, "commit", "-q", "-m", title)
 	kanbantest.MustGit(w.t, w.env.RepoPath, "push", "-q", "origin", "main")
 }
 
@@ -267,6 +272,107 @@ func TestSummary(t *testing.T) {
 	st := p.Subtrees[0]
 	if st.Prefix != prefix || st.Error != "" || st.Ahead != 0 || !st.Counted || st.Unreleased == 0 {
 		t.Errorf("subtree %+v", st)
+	}
+}
+
+// settled returns the summary once no refresh is running.
+func (w *world) settled() releases.Summary {
+	w.t.Helper()
+	deadline := time.Now().Add(time.Minute)
+	for {
+		code, data := w.do("GET", "/api/releases", nil)
+		if code != 200 {
+			w.t.Fatalf("summary: %d %s", code, data)
+		}
+		sum := decode[releases.Summary](w.t, data)
+		if len(sum.Projects) == 1 && sum.Projects[0].RefreshedAt != 0 && !sum.Projects[0].Refreshing {
+			return sum
+		}
+		if time.Now().After(deadline) {
+			w.t.Fatalf("no refresh: %s", data)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// refreshed returns the summary after a refresh that began now.
+func (w *world) refreshed() releases.Summary {
+	w.t.Helper()
+	w.settled()
+	if code, data := w.do("POST", "/api/releases/refresh", nil); code != 204 {
+		w.t.Fatalf("refresh: %d %s", code, data)
+	}
+	return w.settled()
+}
+
+func TestSuggestedBump(t *testing.T) {
+	w := newWorld(t)
+	subtree := func() releases.SubtreeState {
+		t.Helper()
+		return w.refreshed().Projects[0].Subtrees[0]
+	}
+	if st := subtree(); st.Suggested != "" || st.LatestAt != 0 {
+		t.Errorf("never released: %+v", st)
+	}
+
+	kanbantest.MustGit(t, w.env.RepoPath, "tag", prefix+"/v1.0.0")
+	if st := subtree(); st.Suggested != "" || st.LatestAt == 0 {
+		t.Errorf("just released: %+v", st)
+	}
+
+	w.commitTitled("a.go", "chore(foo): tidy")
+	if st := subtree(); st.Suggested != releases.BumpNone {
+		t.Errorf("chore: %+v", st)
+	}
+	w.commitTitled("b.go", "fix(foo): stop it")
+	if st := subtree(); st.Suggested != "patch" {
+		t.Errorf("fix: %+v", st)
+	}
+	w.commitTitled("c.go", "feat(foo): add it")
+	w.commitTitled("d.go", "wip")
+	if st := subtree(); st.Suggested != "minor" || st.Unclassified != 1 {
+		t.Errorf("feat: %+v", st)
+	}
+	w.commitTitled("e.go", "fix(foo)!: change it")
+	if st := subtree(); st.Suggested != "major" {
+		t.Errorf("breaking: %+v", st)
+	}
+
+	// A commit that doesn't touch the subtree says nothing about it.
+	kanbantest.MustGit(t, w.env.RepoPath, "tag", prefix+"/v2.0.0")
+	kanbantest.MustGit(t, w.env.RepoPath, "commit", "-q", "--allow-empty", "-m", "feat: elsewhere")
+	kanbantest.MustGit(t, w.env.RepoPath, "push", "-q", "origin", "main")
+	if st := subtree(); st.Suggested != "" || st.Unreleased != 0 {
+		t.Errorf("elsewhere: %+v", st)
+	}
+}
+
+// A release made outside the tab can't close a reminder, so the reminder says
+// there's been one, until it's edited.
+func TestReminderFlagsReleaseSince(t *testing.T) {
+	w := newWorld(t)
+	code, data := w.do("POST", "/api/release-reminders", map[string]any{"repo_path": w.env.RepoPath, "prefix": prefix, "note": "ship it"})
+	if code != 201 {
+		t.Fatalf("remind: %d %s", code, data)
+	}
+	if r := w.refreshed().Reminders[0]; r.ReleasedSince != "" {
+		t.Errorf("nothing released: %+v", r)
+	}
+
+	kanbantest.MustGit(t, w.env.RepoPath, "tag", prefix+"/v1.0.0")
+	setEdited := func(at time.Time) {
+		t.Helper()
+		if _, err := w.env.Store.DB().Exec(`UPDATE release_reminders SET updated_at=?`, at.Unix()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setEdited(time.Now().Add(-time.Hour))
+	if r := w.refreshed().Reminders[0]; r.ReleasedSince != "v1.0.0" {
+		t.Errorf("released since: %+v", r)
+	}
+	setEdited(time.Now().Add(time.Hour))
+	if r := w.refreshed().Reminders[0]; r.ReleasedSince != "" {
+		t.Errorf("edited since: %+v", r)
 	}
 }
 

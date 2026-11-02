@@ -3,7 +3,10 @@ package releases
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jmelahman/git-orchard/orchard"
@@ -31,9 +34,16 @@ type SubtreeState struct {
 	Latest string `json:"latest"`
 	// Unreleased counts commits since Latest. It's meaningless unless
 	// Counted: an upstream release may have no tag here to count from.
-	Unreleased int    `json:"unreleased"`
-	Counted    bool   `json:"counted"`
-	Error      string `json:"error,omitempty"`
+	Unreleased int  `json:"unreleased"`
+	Counted    bool `json:"counted"`
+	// LatestAt is when Latest was tagged, 0 if it has no tag here.
+	LatestAt int64 `json:"latest_at,omitempty"`
+	// Suggested is the bump the unreleased commits' titles call for, by
+	// SuggestBump, empty unless there are commits since a release. Unclassified
+	// counts the titles it couldn't read.
+	Suggested    string `json:"suggested,omitempty"`
+	Unclassified int    `json:"unclassified,omitempty"`
+	Error        string `json:"error,omitempty"`
 	// CI is nil until the first check of the repo's CI finishes.
 	CI *CIHealth `json:"ci,omitempty"`
 }
@@ -107,7 +117,27 @@ func (s *Service) Summary(ctx context.Context) (Summary, error) {
 		p.Subtrees = subtrees
 		sum.Projects = append(sum.Projects, p)
 	}
+	flagReleasedReminders(sum.Reminders, sum.Projects)
 	return sum, nil
+}
+
+// flagReleasedReminders marks the reminders whose subtree has had a release
+// since they were last edited. A release from here closes its reminder, so these
+// come from elsewhere, like git orchard release, and may have covered the note.
+func flagReleasedReminders(reminders []db.ReleaseReminder, projects []Project) {
+	for i := range reminders {
+		r := &reminders[i]
+		for _, p := range projects {
+			if p.RepoPath != r.RepoPath {
+				continue
+			}
+			for _, sub := range p.Subtrees {
+				if sub.Prefix == r.Prefix && sub.LatestAt > r.UpdatedAt {
+					r.ReleasedSince = sub.Latest
+				}
+			}
+		}
+	}
 }
 
 // Refresh recomputes every repo's state in the background.
@@ -217,6 +247,39 @@ func (s *Service) compute(repo, base string) (Project, bool) {
 			return
 		}
 		st.Latest, st.Unreleased, st.Counted = u.Latest, u.Commits, u.Counted
+		if u.Latest == "" || !u.Counted {
+			return
+		}
+		if err := readSinceRelease(o, sub.Prefix, p.Rev, st); err != nil {
+			st.Error = redact(err.Error())
+		}
 	})
 	return p, true
+}
+
+// readSinceRelease fills in what's read from the tag of st's latest release and
+// the commits to rev since it. Merges are left out: their titles are git's, and
+// the commits they brought in are listed anyway.
+func readSinceRelease(o *orchard.Orchard, prefix, rev string, st *SubtreeState) error {
+	tag := "refs/tags/" + prefix + "/" + st.Latest
+	date, err := o.Repo.Output("for-each-ref", "--format=%(creatordate:unix)", tag)
+	if err != nil {
+		return err
+	}
+	if st.LatestAt, err = strconv.ParseInt(strings.TrimSpace(date), 10, 64); err != nil {
+		return fmt.Errorf("date of %s: %w", tag, err)
+	}
+	if st.Unreleased == 0 {
+		return nil
+	}
+	out, err := o.Repo.Output("log", "--no-merges", "--format=%s", tag+".."+rev, "--", prefix)
+	if err != nil {
+		return err
+	}
+	var subjects []string
+	for line := range strings.Lines(out) {
+		subjects = append(subjects, strings.TrimSpace(line))
+	}
+	st.Suggested, st.Unclassified = SuggestBump(subjects)
+	return nil
 }

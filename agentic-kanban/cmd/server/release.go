@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -289,9 +290,9 @@ func printReleases(out io.Writer, summary client.ReleaseSummary) error {
 		fmt.Fprintln(w, summary.Unavailable)
 	}
 	if len(summary.Reminders) > 0 {
-		fmt.Fprintln(w, "REMINDER\tBUMP\tUNRELEASED\tNOTE")
+		fmt.Fprintln(w, "REMINDER\tBUMP\tUNRELEASED\tRELEASED SINCE\tNOTE")
 		for _, r := range summary.Reminders {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", r.Prefix, reminderBump(r), unreleasedText(findReleaseSubtree(summary, r.RepoPath, r.Prefix)), r.Note)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", r.Prefix, reminderBump(r), unreleasedText(findReleaseSubtree(summary, r.RepoPath, r.Prefix)), cmp.Or(r.ReleasedSince, "-"), r.Note)
 		}
 		fmt.Fprintln(w)
 	}
@@ -305,7 +306,7 @@ func printReleases(out io.Writer, summary client.ReleaseSummary) error {
 			fmt.Fprintln(w, p.Error)
 		}
 		if len(p.Subtrees) > 0 {
-			fmt.Fprintln(w, "SUBTREE\tAHEAD\tBEHIND\tLATEST\tUNRELEASED\tCI")
+			fmt.Fprintln(w, "SUBTREE\tAHEAD\tBEHIND\tLATEST\tUNRELEASED\tSUGGESTED\tCI")
 		}
 		for i := range p.Subtrees {
 			s := &p.Subtrees[i]
@@ -313,7 +314,7 @@ func printReleases(out io.Writer, summary client.ReleaseSummary) error {
 				fmt.Fprintf(w, "%s\t%s\n", s.Prefix, s.Error)
 				continue
 			}
-			fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%s\t%s\n", s.Prefix, s.Ahead, s.Behind, s.Latest, unreleasedText(s), ciText(s.CI))
+			fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%s\t%s\t%s\n", s.Prefix, s.Ahead, s.Behind, s.Latest, unreleasedText(s), suggestedText(s), ciText(s.CI))
 		}
 		fmt.Fprintln(w)
 	}
@@ -338,6 +339,16 @@ func unreleasedText(s *client.ReleaseSubtree) string {
 		return "?"
 	}
 	return strconv.Itoa(s.Unreleased)
+}
+
+func suggestedText(s *client.ReleaseSubtree) string {
+	switch {
+	case s.Suggested == "":
+		return "-"
+	case s.Unclassified > 0:
+		return fmt.Sprintf("%s (%d unclassified)", s.Suggested, s.Unclassified)
+	}
+	return s.Suggested
 }
 
 func ciText(ci *client.ReleaseCI) string {
