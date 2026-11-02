@@ -14,6 +14,8 @@ Browsers only allow installing an app and receiving push notifications on a secu
 
 If you reach kanban at an address like `http://192.168.1.20:7474`, the app works but **Settings → Notifications** explains that it needs a secure connection.
 
+The repo's `compose.yaml` publishes port 7474 on `127.0.0.1` only. To reach it directly over your LAN, change the mapping to `"7474:7474"`. [`tailscale serve`](#https-with-tailscale) and [nginx](#behind-nginx) on the same machine work without that change.
+
 ::: warning Kanban has no login
 Anyone who can reach the server can use it, and a session terminal is a shell in that session's container. Only expose kanban on a network you trust, such as your LAN or a [Tailscale](https://tailscale.com/) tailnet. Don't put it on a public hostname without an authenticating proxy in front.
 :::

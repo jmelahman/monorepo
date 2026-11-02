@@ -26,7 +26,10 @@ services:
     group_add:
       - "${DOCKER_SOCK_GID:-0}"
     ports:
-      - "7474:7474"
+      # Loopback only: kanban has no login, and anyone who reaches it gets a
+      # shell in session containers. Session callbacks use kanban-net, not this
+      # port. Drop the 127.0.0.1 only to reach it from a network you trust.
+      - "127.0.0.1:7474:7474"
       - "13000-13099:13000-13099"
     environment:
       HOME: ${HOME}
