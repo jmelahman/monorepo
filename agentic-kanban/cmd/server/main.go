@@ -164,6 +164,7 @@ the UI. The database and worktrees live under --data-dir.`,
 
 	cmd.AddCommand(newWebCmd())
 	cmd.AddCommand(newManCmd())
+	cmd.AddCommand(newSkillCmd())
 
 	addClientCommands(cmd)
 

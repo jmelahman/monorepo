@@ -41,6 +41,7 @@ include = [
   "go.mod",
   "go.sum",
   "**/*.go",
+  "internal/skills/*/SKILL.md",
   "web/package.json",
   "web/bun.lock",
   "web/bunfig.toml",

@@ -7,6 +7,8 @@ kanban
 ├── serve              Start the server
 ├── mcp                Run the MCP server over stdio
 ├── man                Write man pages to a directory
+├── skill
+│   └── install        Install kanban's agent skills
 ├── board
 │   ├── list           List boards
 │   ├── create         Create a board
@@ -53,7 +55,7 @@ kanban
 
 ## Common flags
 
-Every command except `serve` and `mcp` connects to the server at `--server`, which defaults to `http://localhost:7474`. You can also set it with `$KANBAN_URL`. Commands that print a summary accept `--json` to print the full API response instead.
+Every command except `serve`, `mcp`, `man`, and `skill` connects to the server at `--server`, which defaults to `http://localhost:7474`. You can also set it with `$KANBAN_URL`. Commands that print a summary accept `--json` to print the full API response instead.
 
 ### Finding the board
 
@@ -108,6 +110,21 @@ kanban man -o <dir>
 ```
 
 Writes a man page for every command to `<dir>`, creating it if needed. Pages are named after the command, such as `kanban-ticket-attach.1`. Any `kanban.1` or `kanban-*.1` already in `<dir>` is deleted first, so pages for removed commands don't linger. Other files are left alone. See [Man pages](/guide/install#man-pages).
+
+## `skill`
+
+### `skill install`
+
+```sh
+kanban skill install [--dir <dir>] [--force]
+```
+
+Writes each bundled skill to `<dir>/skills/<name>/SKILL.md`, creating directories as needed. See [Agent skills](/guide/install#agent-skills).
+
+| Flag      | Default     | Description |
+| --------- | ----------- | ----------- |
+| `--dir`   | `~/.agents` | Agent directory to install into, such as `~/.claude`. A path already ending in `skills` is used as is. |
+| `--force` | `false`     | Replace an installed skill that differs from this version's. Without it, the command fails and changes nothing. |
 
 ## `board`
 

@@ -99,6 +99,22 @@ Each command has its own page, such as `man kanban-ticket-attach`. Run the first
 
 GitHub Releases archives also include the pages in `man/man1`.
 
+## Agent skills
+
+Kanban ships a skill that lets your coding agent set a project up for you. `/kanban-init` creates a board for the project, sets its container image, defines its tasks and port mappings, and offers to commit the config.
+
+```sh
+kanban skill install                        # ~/.agents/skills, shared between agents
+kanban skill install --dir ~/.claude        # Claude Code
+kanban skill install --dir ~/dotfiles/.agents
+```
+
+Claude Code doesn't read `~/.agents`, so use `--dir ~/.claude` for it, or link the skill into `~/.claude/skills`.
+
+The skill sets `disable-model-invocation`, so in agents that honor it, such as Claude Code, it stays out of the agent's context until you invoke it. Other agents may list its description or load it on their own.
+
+To update the skill after upgrading kanban, run the command again with `--force`. Without `--force`, the command won't replace a file that differs from the bundled skill, so your edits are safe.
+
 ## Check that it works
 
 ```sh

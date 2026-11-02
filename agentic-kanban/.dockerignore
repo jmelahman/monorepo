@@ -6,6 +6,7 @@ compose.yaml
 Dockerfile
 README.md
 **/*.md
+!internal/skills/*/SKILL.md
 web/node_modules
 web/dist
 **/.DS_Store
