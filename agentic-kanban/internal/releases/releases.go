@@ -50,6 +50,8 @@ var suffixRE = regexp.MustCompile(`^[A-Za-z][0-9A-Za-z]*$`)
 type Service struct {
 	store  *db.Store
 	logDir string
+	// worktreeDir holds the worktrees pre-release hooks run in.
+	worktreeDir string
 	// ctx ends with the server, and runs with it.
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -81,17 +83,18 @@ func New(store *db.Store, dataDir string) *Service {
 		log.Printf("releases: interrupt runs: %v", err)
 	}
 	s := &Service{
-		store:      store,
-		logDir:     filepath.Join(dataDir, "release-runs"),
-		ctx:        ctx,
-		cancel:     cancel,
-		busy:       map[subtreeKey]bool{},
-		queues:     map[string]*repoQueue{},
-		live:       map[int64]chan struct{}{},
-		projects:   map[string]Project{},
-		refreshing: map[string]bool{},
-		ci:         map[string]map[string]CIHealth{},
-		ciStarted:  map[string]time.Time{},
+		store:       store,
+		logDir:      filepath.Join(dataDir, "release-runs"),
+		worktreeDir: filepath.Join(dataDir, "release-worktrees"),
+		ctx:         ctx,
+		cancel:      cancel,
+		busy:        map[subtreeKey]bool{},
+		queues:      map[string]*repoQueue{},
+		live:        map[int64]chan struct{}{},
+		projects:    map[string]Project{},
+		refreshing:  map[string]bool{},
+		ci:          map[string]map[string]CIHealth{},
+		ciStarted:   map[string]time.Time{},
 	}
 	s.loadProjects()
 	return s
@@ -197,15 +200,16 @@ func (s *Service) repos(ctx context.Context) (map[string]db.Board, []string, err
 	return first, order, nil
 }
 
-// identityEnv names the tagger after the board's git author, where it has one:
-// a server may have no git identity, and an annotated tag needs one.
+// identityEnv names the tagger and the author of a hook's commit after the
+// board's git author, where it has one: a server may have no git identity, and
+// an annotated tag or a commit needs one.
 func identityEnv(b db.Board) []string {
 	var env []string
 	if b.GitAuthorName != "" {
-		env = append(env, "GIT_COMMITTER_NAME="+b.GitAuthorName)
+		env = append(env, "GIT_COMMITTER_NAME="+b.GitAuthorName, "GIT_AUTHOR_NAME="+b.GitAuthorName)
 	}
 	if b.GitAuthorEmail != "" {
-		env = append(env, "GIT_COMMITTER_EMAIL="+b.GitAuthorEmail)
+		env = append(env, "GIT_COMMITTER_EMAIL="+b.GitAuthorEmail, "GIT_AUTHOR_EMAIL="+b.GitAuthorEmail)
 	}
 	return env
 }

@@ -3,6 +3,8 @@ package releases
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -31,6 +33,8 @@ const (
 	// subtree split, and reach two remotes. Watching what a tag publishes only
 	// polls GitHub, so it doesn't count.
 	releaseJobs = 4
+	// mirrorInterval is how often a release waiting for the mirror checks on it.
+	mirrorInterval = 5 * time.Second
 	// followInterval is how often a followed log is checked for more output.
 	followInterval = 200 * time.Millisecond
 )
@@ -192,9 +196,10 @@ func (s *Service) release(key subtreeKey) {
 // channels wake their waiters in order, so runs start in the order they queued.
 type repoQueue struct {
 	jobs chan struct{}
-	// checkout is held by a run whose subtree has a pre-release hook.
-	// See REGRESSIONS.md: "Pre-release hooks share the checkout".
-	checkout chan struct{}
+	// hooks is held by a run whose subtree has a pre-release hook, until its
+	// commit is on the base branch: the next hook has to build on it.
+	// See REGRESSIONS.md: "A pre-release hook's commit goes through the base branch".
+	hooks chan struct{}
 }
 
 func (s *Service) queue(repo string) *repoQueue {
@@ -202,7 +207,7 @@ func (s *Service) queue(repo string) *repoQueue {
 	defer s.mu.Unlock()
 	q := s.queues[repo]
 	if q == nil {
-		q = &repoQueue{jobs: make(chan struct{}, releaseJobs), checkout: make(chan struct{}, 1)}
+		q = &repoQueue{jobs: make(chan struct{}, releaseJobs), hooks: make(chan struct{}, 1)}
 		s.queues[repo] = q
 	}
 	return q
@@ -215,7 +220,7 @@ func (s *Service) admit(run *db.ReleaseRun, sub config.Subtree, output io.Writer
 	q := s.queue(run.RepoPath)
 	sems := []chan struct{}{q.jobs}
 	if sub.PreRelease != "" {
-		sems = []chan struct{}{q.checkout, q.jobs}
+		sems = []chan struct{}{q.hooks, q.jobs}
 	}
 	var held []chan struct{}
 	free := sync.OnceFunc(func() {
@@ -326,7 +331,8 @@ func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree, upstream bool)
 	defer cancel()
 	boards, _, err := s.repos(ctx)
 	if err == nil {
-		err = release(ctx, run, sub, upstream, identityEnv(boards[run.RepoPath]), output, free)
+		board := boards[run.RepoPath]
+		err = release(ctx, run, sub, upstream, board.BaseBranch, identityEnv(board), s.hookWorktree(run.RepoPath), output, free)
 	}
 	err = runError(ctx, err)
 	if err != nil {
@@ -335,20 +341,40 @@ func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree, upstream bool)
 	s.finish(run, err)
 }
 
+// hookWorktree is where repo's pre-release hooks run. There's one, since they
+// take turns, and a server stopped mid-hook leaves it for the next to replace.
+func (s *Service) hookWorktree(repo string) string {
+	sum := sha256.Sum256([]byte(repo))
+	return filepath.Join(s.worktreeDir, hex.EncodeToString(sum[:8]))
+}
+
 // release tags run and watches what the tag publishes, calling tagged between
-// the two.
-func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, toUpstream bool, identity []string, output io.Writer, tagged func()) error {
+// the two, and sooner if nothing more needs a turn.
+func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, toUpstream bool, base string, identity []string, worktree string, output io.Writer, tagged func()) error {
 	o, err := open(ctx, run.RepoPath, output)
 	if err != nil {
 		return err
 	}
 	o.Repo.Env = append(o.Repo.Env, identity...)
 	_, _ = fmt.Fprintf(output, "Releasing %s %s at %.12s...\n", sub.Prefix, run.Version, run.Rev)
-	opts := orchard.ReleaseOptions{Rev: run.Rev, Remote: remote}
+	rev := run.Rev
+	if sub.PreRelease != "" {
+		if rev, err = runHook(ctx, o, run, sub, toUpstream, base, worktree, output); err != nil {
+			return err
+		}
+		sub.PreRelease = ""
+		if !toUpstream {
+			tagged()
+			if err := waitForMirror(ctx, run.RepoPath, sub, rev, output); err != nil {
+				return err
+			}
+		}
+	}
+	opts := orchard.ReleaseOptions{Rev: rev, Remote: remote}
 	if toUpstream {
 		// See REGRESSIONS.md: "A release waits for the mirror". With a Remote,
 		// Release would push the rev to whichever branch the checkout is on.
-		opts = orchard.ReleaseOptions{Rev: run.Rev, Upstream: true}
+		opts = orchard.ReleaseOptions{Rev: rev, Upstream: true}
 	}
 	tag, err := o.Release(sub, run.Version, opts)
 	if err == nil && toUpstream {
@@ -372,6 +398,108 @@ func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, toUpst
 		return nil
 	}
 	return o.WatchRelease(ctx, sub, run.Version, tag, orchard.WatchOptions{Remote: remote, Upstream: toUpstream, Output: output})
+}
+
+// runHook runs sub's pre-release hook on the tip of base, in a worktree of its
+// own so the checkout is left alone, and pushes any commit it leads to, before
+// anything is published. It returns the commit to release. On the tip, it can
+// follow another hook's commit; what's released of sub is still what was
+// confirmed. See REGRESSIONS.md: "A pre-release hook's commit goes through the
+// base branch".
+func runHook(ctx context.Context, o *orchard.Orchard, run *db.ReleaseRun, sub config.Subtree, toUpstream bool, base, worktree string, output io.Writer) (string, error) {
+	start, err := tip(o, base)
+	if err != nil {
+		return "", err
+	}
+	changed, err := o.Repo.Output("diff", "--name-only", run.Rev, start, "--", sub.Prefix)
+	if err != nil {
+		return "", err
+	}
+	if changed != "" {
+		return "", fmt.Errorf("%s changed on %s after this release was confirmed; release it again", sub.Prefix, base)
+	}
+	if err := os.MkdirAll(filepath.Dir(worktree), 0o755); err != nil {
+		return "", err
+	}
+	// Removal has to work after ctx ends. Doing it first clears what a server
+	// stopped mid-hook left, where git failing just means there's nothing.
+	cleanup := o.Repo
+	cleanup.Ctx = context.Background()
+	remove := func() {
+		_, _ = cleanup.Output("worktree", "remove", "--force", "--force", worktree)
+		if err := os.RemoveAll(worktree); err != nil {
+			log.Printf("releases: remove %s: %v", worktree, err)
+		}
+	}
+	remove()
+	// See REGRESSIONS.md: "`git worktree prune` from the other side of the
+	// mount orphans worktrees". No hook of the repo's should run for this.
+	if _, err := o.Repo.Output("-c", "core.hooksPath=/dev/null", "worktree", "add", "--quiet", "--lock", "--detach", worktree, start); err != nil {
+		return "", err
+	}
+	defer remove()
+	w, err := open(ctx, worktree, output)
+	if err != nil {
+		return "", err
+	}
+	w.Repo.Env = o.Repo.Env
+
+	// Publish what's already on base first, so the only thing Release can
+	// refuse below is the hook's commit, and any other error is a real one.
+	if toUpstream {
+		status, err := w.Status(sub, start)
+		if err != nil {
+			return "", err
+		}
+		if status.Ahead > 0 {
+			if err := w.Push(sub, start, orchard.PushOptions{}); err != nil {
+				return "", err
+			}
+		}
+	}
+	// With no Remote and no Upstream, this stops short of publishing. It tags
+	// locally if the hook changes nothing, and the Release to come picks that up.
+	_, err = w.Release(sub, run.Version, orchard.ReleaseOptions{Rev: start})
+	head, headErr := w.Repo.Output("rev-parse", "--verify", "HEAD^{commit}")
+	if headErr != nil {
+		return "", headErr
+	}
+	if head == start {
+		return start, err
+	}
+	_, _ = fmt.Fprintf(output, "Pushing the release commit %.12s to %s...\n", head, base)
+	if err := w.Repo.Run("push", "--no-verify", remote, head+":refs/heads/"+base); err != nil {
+		return "", fmt.Errorf("pushing the release commit to %s, with nothing published yet: %w", base, err)
+	}
+	return head, nil
+}
+
+// waitForMirror returns once sub's upstream has rev. Each check is a fresh
+// Orchard, since one fetches an upstream only once.
+func waitForMirror(ctx context.Context, repo string, sub config.Subtree, rev string, output io.Writer) error {
+	waiting := false
+	for {
+		o, err := open(ctx, repo, output)
+		if err != nil {
+			return err
+		}
+		status, err := o.Status(sub, rev)
+		if err != nil {
+			return err
+		}
+		if status.Ahead == 0 {
+			return nil
+		}
+		if !waiting {
+			waiting = true
+			_, _ = fmt.Fprintf(output, "Waiting for the mirror to publish %.12s...\n", rev)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(mirrorInterval):
+		}
+	}
 }
 
 // finish records the outcome. The context may be why it ended, so writes don't

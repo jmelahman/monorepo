@@ -978,6 +978,154 @@ func TestPreReleaseHooksTakeTurns(t *testing.T) {
 	}
 }
 
+// gitOutput runs git and returns what it prints, trimmed.
+func gitOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// setVersion is a pre-release hook that commits, like a version in a Cargo.toml.
+const setVersion = `pre-release = printf '%s\\n' \"$VERSION\" >VERSION`
+
+func (w *world) startUpstreamRun(sub string) *db.ReleaseRun {
+	w.t.Helper()
+	q := url.Values{"repo": {w.env.RepoPath}, "prefix": {sub}, "bump": {"patch"}}
+	code, data := w.do("GET", "/api/releases/preview?"+q.Encode(), nil)
+	if code != 200 {
+		w.t.Fatalf("preview %s: %d %s", sub, code, data)
+	}
+	p := decode[releases.Preview](w.t, data)
+	code, data = w.do("POST", "/api/releases/run", map[string]any{"repo": w.env.RepoPath, "prefix": sub, "bump": "patch", "version": p.Version, "rev": p.Rev, "upstream": true})
+	if code != 202 {
+		w.t.Fatalf("run %s: %d %s", sub, code, data)
+	}
+	return new(decode[db.ReleaseRun](w.t, data))
+}
+
+func (w *world) wantReleased(run *db.ReleaseRun) {
+	w.t.Helper()
+	if output := w.output(run.ID); w.run(run.ID).Status != db.ReleaseRunReleased {
+		w.t.Errorf("run %+v:\n%s", w.run(run.ID), output)
+	}
+}
+
+// Hooks that commit follow one another onto the base branch, and the checkout
+// never sees them, whatever it's up to.
+func TestHookCommitsReachTheBaseBranch(t *testing.T) {
+	w := newWorld(t)
+	w.addSubtree("tools/a", setVersion)
+	w.addSubtree("tools/b", setVersion)
+	repo := w.env.RepoPath
+	kanbantest.MustGit(t, repo, "checkout", "-q", "-b", "elsewhere")
+	if err := os.WriteFile(filepath.Join(repo, "tools/a/README"), []byte("in progress\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	head := gitOutput(t, repo, "rev-parse", "HEAD")
+	status := gitOutput(t, repo, "status", "--porcelain")
+
+	first := []*db.ReleaseRun{w.startUpstreamRun("tools/a"), w.startUpstreamRun("tools/b")}
+	for _, run := range first {
+		w.wantReleased(run)
+	}
+	if got := gitOutput(t, repo, "rev-parse", "HEAD"); got != head {
+		t.Errorf("the checkout moved from %s to %s", head, got)
+	}
+	if got := gitOutput(t, repo, "status", "--porcelain"); got != status {
+		t.Errorf("the checkout's status went from %q to %q", status, got)
+	}
+	for _, sub := range []string{"tools/a", "tools/b"} {
+		if got := gitOutput(t, w.origin, "show", "main:"+sub+"/VERSION"); !strings.Contains(got, "v0.0.1") {
+			t.Errorf("origin's %s has VERSION %q", sub, got)
+		}
+		tag := "refs/tags/" + sub + "/v0.0.1"
+		kanbantest.MustGit(t, w.origin, "merge-base", "--is-ancestor", tag, "main")
+	}
+
+	if got := gitOutput(t, repo, "worktree", "list", "--porcelain"); strings.Count(got, "worktree ") != 1 {
+		t.Errorf("worktrees left behind:\n%s", got)
+	}
+
+	// The next round starts from them, and the upstream takes it.
+	w.wantReleased(w.startUpstreamRun("tools/a"))
+	if got := gitOutput(t, w.origin, "show", "main:tools/a/VERSION"); !strings.Contains(got, "v0.0.2") {
+		t.Errorf("origin's tools/a has VERSION %q", got)
+	}
+}
+
+// Without --upstream, the hook's commit goes to the base branch and the tag
+// waits for the mirror to publish it.
+func TestHookCommitWaitsForTheMirror(t *testing.T) {
+	w := newWorld(t)
+	w.addSubtree("tools/a", setVersion)
+	before := gitOutput(t, w.origin, "rev-parse", "main")
+	run := w.startRun("tools/a")
+
+	deadline := time.Now().Add(time.Minute)
+	for gitOutput(t, w.origin, "rev-parse", "main") == before {
+		if time.Now().After(deadline) {
+			t.Fatalf("the release commit never reached origin:\n%s", w.output(run.ID))
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	const tag = "refs/tags/tools/a/v0.0.1"
+	if got := gitOutput(t, w.origin, "for-each-ref", tag); got != "" {
+		t.Errorf("tagged before the mirror published: %s", got)
+	}
+
+	// The mirror publishes what landed on origin.
+	kanbantest.MustGit(t, w.env.RepoPath, "fetch", "-q", "origin", "main")
+	o, err := orchard.Open(w.env.RepoPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	o.NoVerify = true
+	sub, _ := o.Config.Lookup("tools/a")
+	if err := o.Push(sub, "FETCH_HEAD", orchard.PushOptions{Output: io.Discard}); err != nil {
+		t.Fatal(err)
+	}
+
+	w.wantReleased(run)
+	kanbantest.MustGit(t, w.origin, "merge-base", "--is-ancestor", tag, "main")
+}
+
+// What a hook's release publishes has to be what was confirmed, so a change to
+// the subtree while it waited fails it, and leaves nothing behind.
+func TestHookReleaseRefusesAChangedSubtree(t *testing.T) {
+	w := newWorld(t)
+	wait, open := gate(t)
+	w.addSubtree("tools/a", "pre-release = "+wait)
+	w.addSubtree("tools/b", "pre-release = "+wait)
+	holding := w.startRun("tools/a")
+	queued := w.startRun("tools/b")
+	w.waitForStatuses([]*db.ReleaseRun{holding, queued}, map[string]int{db.ReleaseRunRunning: 1, db.ReleaseRunQueued: 1})
+	if w.run(queued.ID).Status != db.ReleaseRunQueued {
+		holding, queued = queued, holding
+	}
+
+	changed := filepath.Join(w.env.RepoPath, queued.Prefix, "new")
+	if err := os.WriteFile(changed, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	kanbantest.MustGit(t, w.env.RepoPath, "add", "--", changed)
+	kanbantest.MustGit(t, w.env.RepoPath, "commit", "-q", "-m", "Change it")
+	kanbantest.MustGit(t, w.env.RepoPath, "push", "-q", "origin", "main")
+	before := gitOutput(t, w.origin, "rev-parse", "main")
+
+	open()
+	w.wantReleased(holding)
+	w.output(queued.ID)
+	if got := w.run(queued.ID); got.Status != db.ReleaseRunFailed || !strings.Contains(got.Error, "release it again") {
+		t.Errorf("run %+v", got)
+	}
+	if got := gitOutput(t, w.origin, "rev-parse", "main"); got != before {
+		t.Errorf("origin's main moved from %s to %s", before, got)
+	}
+}
+
 // Stopping the server interrupts what's waiting along with what's running.
 func TestCloseInterruptsQueuedRuns(t *testing.T) {
 	w := newWorld(t)

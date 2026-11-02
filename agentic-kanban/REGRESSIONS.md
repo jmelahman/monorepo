@@ -212,13 +212,16 @@ Under rootless Docker, UID 1000 in a container is a subordinate ID on the host, 
   branch the user's checkout is on; the rev is already on origin's base branch,
   so push only the tag there afterwards.
 
-### Pre-release hooks share the checkout
+### A pre-release hook's commit goes through the base branch
 
-- A release runs in parallel with other subtrees' except for its `pre-release`
-  hook, which runs in the repo's one checkout and commits there. Hold the repo's
-  `checkout` turn from before `orchard.Release` until it returns, or two hooks
-  fight over the index and `HEAD`.
-- Anything else `orchard.Release` touches is the subtree's own: its tag, its
+- `orchard.Release` runs a `pre-release` hook at `HEAD` and tags the commit it
+  leaves. Run in the repo's checkout, that strands the commit there: it isn't on
+  `origin`, the next hook fails since `HEAD` isn't the tip, and the next release
+  diverges from what the upstream got.
+- So a hook runs in a throwaway worktree at the tip of the base branch, and its
+  commit is pushed to the base branch before anything is published. Hooks hold
+  the repo's `hooks` turn until then, so each builds on the last.
+- Everything else `orchard.Release` touches is the subtree's own: its tag, its
   upstream ref, and a split cache per process. Check this still holds when
   changing what a release does in the repo.
 
