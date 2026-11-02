@@ -276,7 +276,8 @@ fn stable_base(prefix: &str, latest_tag: &str) -> Option<String> {
     (stable.gt(&current) || stable == current).then_some(stable_tag)
 }
 
-/// Asks whether to push the tag. An empty response accepts.
+/// Asks whether to push the tag. Anything but an explicit yes declines, including
+/// pressing Enter and a closed stdin, as the prompt's capital N promises.
 fn confirm(next_version: &str, remote: &str) -> Result<bool> {
     print!("Push tag '{next_version}' to {remote}? (y/N): ");
     io::stdout().flush()?;
@@ -285,5 +286,5 @@ fn confirm(next_version: &str, remote: &str) -> Result<bool> {
     io::stdin().read_line(&mut response)?;
 
     let response = response.trim().to_lowercase();
-    Ok(matches!(response.as_str(), "" | "y" | "yes"))
+    Ok(matches!(response.as_str(), "y" | "yes"))
 }

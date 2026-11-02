@@ -262,6 +262,15 @@ pub fn create_and_push_tag(tag: &str, remote: &str) -> Result<()> {
         .stderr(Stdio::inherit())
         .status()?;
     if !status.success() {
+        // Otherwise a retry would fail on the leftover tag: "already tagged".
+        let deleted = git(&["tag", "--delete", tag])
+            .stdout(Stdio::null())
+            .stderr(Stdio::inherit())
+            .status()?
+            .success();
+        if !deleted {
+            anyhow::bail!("failed to push tag to {remote}, and local tag {tag} remains");
+        }
         anyhow::bail!("failed to push tag to {remote}");
     }
 

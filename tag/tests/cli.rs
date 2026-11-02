@@ -328,6 +328,46 @@ fn push_creates_and_pushes_the_tag() {
 }
 
 #[test]
+fn a_failed_push_leaves_no_tag_behind() {
+    let repo = Repo::new("failed-push");
+    repo.commit("a").tag("v1.0.0").commit("b");
+    repo.git(&["remote", "add", "origin", "/nonexistent/remote.git"]);
+
+    let (_, code) = repo.tag_cmd(&["--push"]);
+    assert_eq!(code, 1);
+    assert_eq!(repo.tags(), ["v1.0.0"]);
+}
+
+#[test]
+fn the_prompt_pushes_only_on_an_explicit_yes() {
+    use std::io::Write;
+    use std::process::Stdio;
+
+    for (answer, pushed) in [("\n", false), ("", false), ("n\n", false), ("y\n", true)] {
+        let repo = Repo::new("prompt");
+        repo.commit("a").tag("v1.0.0").commit("b").with_remote();
+
+        let mut child = repo
+            .command(EXE)
+            .arg("--no-fetch")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap();
+        let mut stdin = child.stdin.take().unwrap();
+        stdin.write_all(answer.as_bytes()).unwrap();
+        drop(stdin);
+
+        assert!(child.wait().unwrap().success(), "{answer:?}");
+        assert_eq!(
+            repo.tags().contains(&"v1.0.1".to_string()),
+            pushed,
+            "{answer:?}"
+        );
+    }
+}
+
+#[test]
 fn print_only_does_not_create_a_tag() {
     let repo = Repo::new("print-only");
     repo.commit("a").tag("v1.0.0").commit("b");
