@@ -36,8 +36,6 @@ type SubtreeState struct {
 	Error      string `json:"error,omitempty"`
 	// CI is nil until the first check of the repo's CI finishes.
 	CI *CIHealth `json:"ci,omitempty"`
-	// Assessment is nil unless assessments are on and these commits have one.
-	Assessment *Assessment `json:"assessment,omitempty"`
 }
 
 // Project is a repo with a git-orchard manifest.
@@ -58,8 +56,6 @@ type Summary struct {
 	Projects    []Project            `json:"projects"`
 	Reminders   []db.ReleaseReminder `json:"reminders"`
 	Runs        []db.ReleaseRun      `json:"runs"`
-	// Assessment is nil unless assessments are on.
-	Assessment *AssessmentStatus `json:"assessment,omitempty"`
 }
 
 // Summary returns the cached state, starting a refresh of any repo not seen
@@ -97,7 +93,7 @@ func (s *Service) Summary(ctx context.Context) (Summary, error) {
 			s.startRefresh(repo, boards[repo].BaseBranch)
 		}
 		s.startCI(repo)
-		// The cached subtrees are shared, so CI and assessments go on a copy.
+		// The cached subtrees are shared, so CI goes on a copy.
 		subtrees := make([]SubtreeState, len(p.Subtrees))
 		s.mu.Lock()
 		p.Refreshing = s.refreshing[repo]
@@ -105,21 +101,11 @@ func (s *Service) Summary(ctx context.Context) (Summary, error) {
 			if health, ok := s.ci[repo][sub.Prefix]; ok {
 				sub.CI = &health
 			}
-			// One for other commits says nothing about these.
-			if a, ok := s.assessments[repo][sub.Prefix]; ok && a.Latest == sub.Latest && a.Commits == sub.Unreleased {
-				sub.Assessment = &Assessment{Visible: a.Visible}
-			}
 			subtrees[i] = sub
 		}
 		s.mu.Unlock()
 		p.Subtrees = subtrees
 		sum.Projects = append(sum.Projects, p)
-	}
-	s.startAssessment(order)
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.openModel != nil {
-		sum.Assessment = &AssessmentStatus{Running: s.assessing, Error: s.assessError}
 	}
 	return sum, nil
 }
@@ -172,7 +158,6 @@ func (s *Service) startRefresh(repo, base string) {
 		delete(s.refreshing, repo)
 		if ok {
 			s.projects[repo] = p
-			delete(s.assessed, repo)
 		}
 		s.mu.Unlock()
 		if ok {

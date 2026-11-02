@@ -78,8 +78,6 @@ kanban serve [flags]
 | `--port-range-start` | `13000`                              | First host port for forwarding task ports. |
 | `--port-range-end`   | `13099`                              | Last host port for forwarding task ports. |
 | `--claude-config`    | `true`                               | Mount your `~/.claude` into the bundled session image. Overrides `[devcontainer].claude_config` when set. Env: `KANBAN_CLAUDE_CONFIG`. |
-| `--kev-checkpoint`   | none                                 | Kev checkpoint directory. Turns on [assessing unreleased commits](/guide/releases#assessing-unreleased-commits); unset, no model is ever loaded. Env: `KANBAN_KEV_CHECKPOINT`. |
-| `--kev-base`         | none                                 | Directory of the backbone a Kev adapter was trained on. A full-weight checkpoint doesn't need it. Env: `KANBAN_KEV_BASE`. |
 | `--in-memory`        | `false`                              | Use a temporary database that's deleted on shutdown. For testing only. |
 
 ## `web`
@@ -472,7 +470,5 @@ kanban env unset playground MY_API_KEY
 | `KANBAN_DATA_DIR`      | `serve --data-dir`      |
 | `KANBAN_WORKTREES_DIR` | `serve --worktrees-dir` |
 | `KANBAN_CLAUDE_CONFIG` | `serve --claude-config` |
-| `KANBAN_KEV_CHECKPOINT` | `serve --kev-checkpoint` |
-| `KANBAN_KEV_BASE`      | `serve --kev-base`      |
 
 A flag you pass explicitly wins over its environment variable.

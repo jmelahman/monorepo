@@ -20,19 +20,6 @@ type ReleaseSubtree struct {
 	Error      string `json:"error,omitempty"`
 	// CI is nil until the first check finishes.
 	CI *ReleaseCI `json:"ci,omitempty"`
-	// Assessment is nil unless assessments are on and these commits have one.
-	Assessment *ReleaseAssessment `json:"assessment,omitempty"`
-}
-
-// ReleaseAssessment is a model's read of a subtree's unreleased commits.
-type ReleaseAssessment struct {
-	Visible float64 `json:"visible"`
-}
-
-// ReleaseAssessmentStatus says assessments are on, and how the latest pass went.
-type ReleaseAssessmentStatus struct {
-	Running bool   `json:"running"`
-	Error   string `json:"error,omitempty"`
 }
 
 // ReleaseCI is the state of a subtree's latest GitHub Actions runs.
@@ -84,8 +71,6 @@ type ReleaseSummary struct {
 	Projects    []ReleaseProject  `json:"projects"`
 	Reminders   []ReleaseReminder `json:"reminders"`
 	Runs        []ReleaseRun      `json:"runs"`
-	// Assessment is nil unless assessments are on.
-	Assessment *ReleaseAssessmentStatus `json:"assessment,omitempty"`
 }
 
 // ReleasePreview is what a release would do right now.

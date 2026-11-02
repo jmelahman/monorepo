@@ -295,9 +295,6 @@ func printReleases(out io.Writer, summary client.ReleaseSummary) error {
 		}
 		fmt.Fprintln(w)
 	}
-	if a := summary.Assessment; a != nil && a.Error != "" {
-		fmt.Fprintf(w, "assessment failed: %s\n\n", a.Error)
-	}
 	for _, p := range summary.Projects {
 		header := p.RepoPath
 		if p.Refreshing {
@@ -308,11 +305,7 @@ func printReleases(out io.Writer, summary client.ReleaseSummary) error {
 			fmt.Fprintln(w, p.Error)
 		}
 		if len(p.Subtrees) > 0 {
-			columns := "SUBTREE\tAHEAD\tBEHIND\tLATEST\tUNRELEASED\tCI"
-			if summary.Assessment != nil {
-				columns += "\tUSER-VISIBLE"
-			}
-			fmt.Fprintln(w, columns)
+			fmt.Fprintln(w, "SUBTREE\tAHEAD\tBEHIND\tLATEST\tUNRELEASED\tCI")
 		}
 		for i := range p.Subtrees {
 			s := &p.Subtrees[i]
@@ -320,11 +313,7 @@ func printReleases(out io.Writer, summary client.ReleaseSummary) error {
 				fmt.Fprintf(w, "%s\t%s\n", s.Prefix, s.Error)
 				continue
 			}
-			row := fmt.Sprintf("%s\t%d\t%d\t%s\t%s\t%s", s.Prefix, s.Ahead, s.Behind, s.Latest, unreleasedText(s), ciText(s.CI))
-			if summary.Assessment != nil {
-				row += "\t" + assessmentText(s.Assessment)
-			}
-			fmt.Fprintln(w, row)
+			fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%s\t%s\n", s.Prefix, s.Ahead, s.Behind, s.Latest, unreleasedText(s), ciText(s.CI))
 		}
 		fmt.Fprintln(w)
 	}
@@ -349,13 +338,6 @@ func unreleasedText(s *client.ReleaseSubtree) string {
 		return "?"
 	}
 	return strconv.Itoa(s.Unreleased)
-}
-
-func assessmentText(a *client.ReleaseAssessment) string {
-	if a == nil {
-		return "-"
-	}
-	return fmt.Sprintf("%.0f%%", a.Visible*100)
 }
 
 func ciText(ci *client.ReleaseCI) string {

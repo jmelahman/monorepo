@@ -29,26 +29,6 @@ var migrations = []migration{
 	{name: "drop sessions path overrides", apply: dropSessionPathOverrides},
 	{name: "add release reminders and runs", apply: addReleases},
 	{name: "add release state", apply: addReleaseState},
-	{name: "add release assessments", apply: addReleaseAssessments},
-}
-
-// addReleaseAssessments keeps each subtree's latest assessment across restarts,
-// since answering again means loading a large model.
-func addReleaseAssessments(tx *sql.Tx) error {
-	_, err := tx.Exec(`
-CREATE TABLE IF NOT EXISTS release_assessments (
-  repo_path TEXT NOT NULL,
-  prefix TEXT NOT NULL,
-  input TEXT NOT NULL,
-  latest TEXT NOT NULL,
-  commits INTEGER NOT NULL,
-  visible REAL NOT NULL,
-  PRIMARY KEY (repo_path, prefix)
-);`)
-	if err != nil {
-		return fmt.Errorf("create release assessments table: %w", err)
-	}
-	return nil
 }
 
 // addReleaseState keeps what the Releases tab computes across restarts: each

@@ -94,7 +94,6 @@ func Root() *cobra.Command {
 	var portRangeEnd int
 	var inMemory bool
 	var claudeConfig bool
-	var kevCheckpoint, kevBase string
 
 	cmd := &cobra.Command{
 		Use:   "kanban",
@@ -128,7 +127,7 @@ the UI. The database and worktrees live under --data-dir.`,
 				return err
 			}
 			override := resolveClaudeConfigOverride(cmd, claudeConfig)
-			return run(addr, dataDir, worktreesDir, portRangeStart, portRangeEnd, inMemory, override, flagOrEnv(kevCheckpoint, "KANBAN_KEV_CHECKPOINT"), flagOrEnv(kevBase, "KANBAN_KEV_BASE"))
+			return run(addr, dataDir, worktreesDir, portRangeStart, portRangeEnd, inMemory, override)
 		},
 	}
 	serve.Flags().StringVar(&addr, "addr", ":7474", "HTTP listen address")
@@ -138,8 +137,6 @@ the UI. The database and worktrees live under --data-dir.`,
 	serve.Flags().IntVar(&portRangeStart, "port-range-start", 13000, "First host port available for proxy allocation")
 	serve.Flags().IntVar(&portRangeEnd, "port-range-end", 13099, "Last host port available for proxy allocation (inclusive)")
 	serve.Flags().BoolVar(&inMemory, "in-memory", false, "Use an ephemeral in-memory SQLite database; all data is discarded on shutdown")
-	serve.Flags().StringVar(&kevCheckpoint, "kev-checkpoint", "", "Kev checkpoint directory. Set it to assess unreleased commits on the Releases tab; unset, no model is ever loaded. Env: $KANBAN_KEV_CHECKPOINT.")
-	serve.Flags().StringVar(&kevBase, "kev-base", "", "Directory of the backbone a Kev adapter was trained on; a full-weight checkpoint needs none. Env: $KANBAN_KEV_BASE.")
 	serve.Flags().BoolVar(&claudeConfig, "claude-config", true, "Forward host Claude Code config (~/.claude, ~/.claude.json) into built-in session containers. When set explicitly, overrides .kanban.toml [devcontainer].claude_config; otherwise the toml setting wins. Env: $KANBAN_CLAUDE_CONFIG.")
 
 	cmd.AddCommand(serve)
@@ -202,15 +199,7 @@ func resolveClaudeConfigOverride(cmd *cobra.Command, flagVal bool) *bool {
 	return nil
 }
 
-// flagOrEnv returns a flag's value, falling back to its environment variable.
-func flagOrEnv(flagVal, env string) string {
-	if flagVal != "" {
-		return flagVal
-	}
-	return os.Getenv(env)
-}
-
-func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd int, inMemory bool, claudeConfigOverride *bool, kevCheckpoint, kevBase string) error {
+func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd int, inMemory bool, claudeConfigOverride *bool) error {
 	cfg, err := config.Load(dataDirOverride, worktreesDirOverride, portStart, portEnd)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
@@ -319,9 +308,6 @@ func run(addr, dataDirOverride, worktreesDirOverride string, portStart, portEnd 
 	}
 	releaseSvc := releases.New(store, releaseDir)
 	defer releaseSvc.Close()
-	if kevCheckpoint != "" {
-		releaseSvc.EnableAssessment(kevCheckpoint, releases.OpenKev(kevCheckpoint, kevBase))
-	}
 	releaseSvc.Start(releaseRefreshInterval)
 
 	mux := api.NewMux(api.Deps{

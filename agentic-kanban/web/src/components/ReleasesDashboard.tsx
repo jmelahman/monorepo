@@ -385,29 +385,13 @@ function CICell({ ci }: { ci?: ReleaseCI }) {
   return <span className={color}>{ci.status}</span>;
 }
 
-// AssessmentCell is information only, like CI: a release doesn't check it.
-function AssessmentCell({ subtree, running }: { subtree: ReleaseSubtree; running: boolean }) {
-  const { assessment, counted, latest, unreleased } = subtree;
-  if (!assessment) {
-    return <>{running && counted && latest && unreleased > 0 ? "…" : "—"}</>;
-  }
-  return (
-    <span title="Kev's estimate that users would notice these commits, from their subjects. It doesn't say whether to release.">
-      {Math.round(assessment.visible * 100)}%
-    </span>
-  );
-}
-
 function ProjectTable({
   project,
-  assessing,
   onRelease,
   showUnreleased,
   onShowUnreleased,
 }: {
   project: ReleaseProject;
-  // Undefined unless assessments are on, and otherwise whether a pass is running.
-  assessing?: boolean;
   onRelease: (prefix: string) => void;
   showUnreleased: boolean;
   onShowUnreleased: (show: boolean) => void;
@@ -453,7 +437,6 @@ function ProjectTable({
                 <th className="px-3 py-2 font-normal">latest</th>
                 <th className="px-3 py-2 font-normal">unreleased</th>
                 <th className="px-3 py-2 font-normal">ci</th>
-                {assessing !== undefined && <th className="px-3 py-2 font-normal">user-visible</th>}
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -477,11 +460,6 @@ function ProjectTable({
                   <td className="px-3 py-2">
                     <CICell ci={s.ci} />
                   </td>
-                  {assessing !== undefined && (
-                    <td className="px-3 py-2">
-                      <AssessmentCell subtree={s} running={assessing} />
-                    </td>
-                  )}
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     <Button
                       variant="neutral"
@@ -550,9 +528,7 @@ export function ReleasesDashboard() {
     queryKey: queryKeys.releases,
     queryFn: api.releases,
     refetchInterval: (q) =>
-      q.state.data?.assessment?.running || q.state.data?.projects.some((p) => p.refreshing)
-        ? POLL_REFRESHING_MS
-        : POLL_MS,
+      q.state.data?.projects.some((p) => p.refreshing) ? POLL_REFRESHING_MS : POLL_MS,
   });
   const refreshMut = useMutation({
     mutationFn: api.refreshReleases,
@@ -605,9 +581,6 @@ export function ReleasesDashboard() {
         </div>
         {summary.unavailable && <p className="text-sm text-danger">{summary.unavailable}</p>}
         {refreshMut.error && <p className="text-sm text-danger">{String(refreshMut.error)}</p>}
-        {summary.assessment?.error && (
-          <p className="text-sm text-danger">Assessment failed: {summary.assessment.error}</p>
-        )}
 
         {openRun && <RunLog run={openRun} onEnd={onRunEnd} onClose={() => setOpenRun(null)} />}
 
@@ -649,7 +622,6 @@ export function ReleasesDashboard() {
             <ProjectTable
               key={p.repo_path}
               project={p}
-              assessing={summary.assessment?.running}
               showUnreleased={showUnreleased}
               onShowUnreleased={(show) => {
                 setShowUnreleased(show);
