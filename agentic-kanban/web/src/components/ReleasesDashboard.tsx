@@ -683,15 +683,15 @@ export function ReleasesDashboard() {
                   />
                   view all
                 </label>
-                <Button
-                  variant="neutral"
-                  size="icon"
-                  aria-label={filterLabel}
-                  title={filterLabel}
+                <button
+                  type="button"
                   onClick={() => setFiltering(true)}
+                  title={filterLabel}
+                  aria-label={filterLabel}
+                  className="rounded p-1.5 text-fg-muted transition-colors duration-150 hover:bg-surface-2 hover:text-fg"
                 >
-                  <FilterIcon />
-                </Button>
+                  <FilterIcon size={16} />
+                </button>
               </>
             )}
             <Button
