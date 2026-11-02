@@ -129,4 +129,6 @@ Then open <http://localhost:7474/>.
 
 ## Releases
 
-The [Releases](/guide/releases) tab runs `git subtree`, and `gh` to watch what a release publishes. The Docker image includes both. On a bare-metal install, without `git subtree` it can't work, and without `gh` a release is tagged but not watched.
+The [Releases](/guide/releases) tab runs `git subtree`, which the Docker image includes; on a bare-metal install, it can't work without it. To watch what a release publishes, the server needs a GitHub token (`GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token`); without one, a release is tagged but not watched.
+
+Git LFS files need no `git-lfs`: where it isn't installed, as in the Docker image, kanban checks out and stages them itself, using the repository's local LFS objects. It can't download or upload any, so a file whose object isn't on the server stays a pointer in the worktree, and new objects reach the remote when something with `git-lfs` pushes them.

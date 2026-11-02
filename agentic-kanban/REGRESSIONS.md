@@ -105,6 +105,16 @@ is internal and kept out of the published `docs/` site.
 - Remove with `--force --force`; one `--force` refuses a locked worktree.
 - Fix an orphan with `git worktree repair <path>`, never by pruning.
 
+### A mounted `~/.gitconfig` can require git-lfs
+
+- `git lfs install`'s `filter.lfs.required=true` fails every checkout of a
+  repository tracking LFS files where the filter can't run, with exit 128.
+- Don't disable the filter with `-c`: `git add -A` would commit the real files
+  as ordinary blobs. `internal/lfs` stands in for git-lfs instead.
+- Keep `filter.lfs.process` set whenever git-lfs is absent; git ignores
+  `clean` and `smudge` while it's set, and config can't unset it.
+- Anything else setting `GIT_CONFIG_COUNT` must add to it, not replace it.
+
 ### Piping a daemonizing helper's stdio hangs `cmd.Run()`
 
 - When shelling out to anything that may daemonize (`xclip`, `wl-copy`),

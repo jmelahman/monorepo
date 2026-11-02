@@ -16,7 +16,7 @@ Each subtree shows how far it is ahead of and behind its upstream, its latest re
 
 Subtrees that have never been released are hidden until you tick **show unreleased**. Your browser remembers the choice.
 
-It also shows each subtree's latest GitHub Actions runs on its upstream, checked at most every 5 minutes while something is reading the page or `kanban release list`, so an idle server spends none of your API quota. This is for information only: a release doesn't check CI. It needs `gh` on the server, signed in.
+It also shows each subtree's latest GitHub Actions runs on its upstream, checked at most every 5 minutes while something is reading the page or `kanban release list`, so an idle server spends none of your API quota. This is for information only: a release doesn't check CI. It needs a GitHub token on the server (`GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token`).
 
 ## Assessing unreleased commits
 

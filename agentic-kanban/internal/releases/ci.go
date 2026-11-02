@@ -3,10 +3,11 @@ package releases
 import (
 	"context"
 	"log"
-	"os/exec"
 	"time"
 
 	"github.com/jmelahman/git-orchard/orchard"
+
+	"github.com/jmelahman/kanban/internal/github"
 )
 
 const (
@@ -95,10 +96,10 @@ func (s *Service) checkCI(repo string) (map[string]CIHealth, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := exec.LookPath("gh"); err != nil {
+	if github.Token("github.com") == "" {
 		for i := range targets {
 			if targets[i].Repo != "" {
-				targets[i].Error = "gh isn't installed on the server"
+				targets[i].Error = "the server has no GitHub token"
 			}
 		}
 	}

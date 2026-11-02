@@ -28,8 +28,9 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags embed -tr
       -o /out/kanban .
 
 FROM alpine:3.23@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11
-# git-subtree, openssh-client and github-cli are what releasing runs.
-RUN apk add --no-cache git git-subtree openssh-client github-cli ca-certificates \
+# git-subtree and openssh-client are what releasing runs. GitHub's API and LFS
+# files are handled natively, which spares the image gh's 60 MB and git-lfs.
+RUN apk add --no-cache git git-subtree openssh-client ca-certificates \
     && addgroup -S -g 65532 nonroot \
     && adduser -S -D -u 65532 -G nonroot -h /home/nonroot -s /sbin/nologin nonroot \
     && mkdir -p /home/nonroot \

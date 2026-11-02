@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/jmelahman/git-orchard/orchard"
 
 	"github.com/jmelahman/kanban/internal/db"
+	"github.com/jmelahman/kanban/internal/github"
 )
 
 const (
@@ -270,9 +270,10 @@ func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, identi
 	}
 	_, _ = fmt.Fprintf(output, "Tagged %s.\n", tag)
 
-	if _, err := exec.LookPath("gh"); err != nil {
-		_, _ = fmt.Fprintln(output, "gh isn't installed on the server; not watching what the tag publishes.")
-		return nil //nolint:nilerr // the tag is out; only the watch is skipped
+	// The tag is out; only the watch is skipped.
+	if github.Token("github.com") == "" {
+		_, _ = fmt.Fprintln(output, "The server has no GitHub token; not watching what the tag publishes.")
+		return nil
 	}
 	_, _, mirrored := ghrun.ParseGitHubRepo(o.RemoteURL(remote))
 	_, _, upstream := ghrun.ParseGitHubRepo(sub.Remote)

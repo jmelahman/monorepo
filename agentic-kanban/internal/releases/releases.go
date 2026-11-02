@@ -9,19 +9,23 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/jmelahman/git-orchard/config"
+	"github.com/jmelahman/git-orchard/ghrun"
 	"github.com/jmelahman/git-orchard/orchard"
 	"github.com/jmelahman/git-orchard/semver"
 
 	"github.com/jmelahman/kanban/internal/db"
 	"github.com/jmelahman/kanban/internal/github"
+	"github.com/jmelahman/kanban/internal/metrics"
 )
 
 // remote is the monorepo remote releases are tagged on and read from.
@@ -80,6 +84,7 @@ type Service struct {
 // New returns a Service keeping run logs under dataDir. Any run still marked
 // running was cut off by the last shutdown, so it's marked interrupted.
 func New(store *db.Store, dataDir string) *Service {
+	ghrun.SetTransport(metrics.WrapGitHubTransport(nil))
 	ctx, cancel := context.WithCancel(context.Background())
 	if err := store.InterruptReleaseRuns(ctx); err != nil {
 		log.Printf("releases: interrupt runs: %v", err)
@@ -161,12 +166,14 @@ func gitEnv() []string {
 		return nil
 	}
 	key := "url.https://x-access-token:" + token + "@github.com/.insteadOf"
+	// These go after any already in the environment, such as lfs.Install's.
+	n, _ := strconv.Atoi(os.Getenv("GIT_CONFIG_COUNT"))
 	return []string{
-		"GIT_CONFIG_COUNT=2",
-		"GIT_CONFIG_KEY_0=" + key,
-		"GIT_CONFIG_VALUE_0=git@github.com:",
-		"GIT_CONFIG_KEY_1=" + key,
-		"GIT_CONFIG_VALUE_1=https://github.com/",
+		"GIT_CONFIG_COUNT=" + strconv.Itoa(n+2),
+		"GIT_CONFIG_KEY_" + strconv.Itoa(n) + "=" + key,
+		"GIT_CONFIG_VALUE_" + strconv.Itoa(n) + "=git@github.com:",
+		"GIT_CONFIG_KEY_" + strconv.Itoa(n+1) + "=" + key,
+		"GIT_CONFIG_VALUE_" + strconv.Itoa(n+1) + "=https://github.com/",
 	}
 }
 

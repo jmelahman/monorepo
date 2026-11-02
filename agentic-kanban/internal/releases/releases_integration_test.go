@@ -535,8 +535,8 @@ func TestOutputOfUnknownRun(t *testing.T) {
 
 func TestSummaryCI(t *testing.T) {
 	w := newWorld(t)
-	// These remotes aren't on GitHub, so there's nothing to check and gh isn't
-	// needed.
+	// These remotes aren't on GitHub, so there's nothing to check and no token
+	// is needed.
 	deadline := time.Now().Add(30 * time.Second)
 	for {
 		code, data := w.do("GET", "/api/releases", nil)
