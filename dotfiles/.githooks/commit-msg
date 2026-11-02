@@ -1,0 +1,8 @@
+#!/bin/sh
+# Runs a repo's own check of commit messages, in the repos that have one. It
+# isn't a prek hook because prek would run every hook without a stages: at this
+# stage too, in each config of a workspace.
+
+check="$(git rev-parse --show-toplevel)/tools/scripts/check-commit-subject.sh"
+[ -x "$check" ] || exit 0
+exec "$check" "$@"
