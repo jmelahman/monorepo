@@ -29,6 +29,16 @@ var migrations = []migration{
 	{name: "drop sessions path overrides", apply: dropSessionPathOverrides},
 	{name: "add release reminders and runs", apply: addReleases},
 	{name: "add release state", apply: addReleaseState},
+	{name: "forget release splits", apply: forgetReleaseSplits},
+}
+
+// forgetReleaseSplits drops splits made by the git the image used to have.
+// See REGRESSIONS.md: "`git subtree split` differs before git 2.54"
+func forgetReleaseSplits(tx *sql.Tx) error {
+	if _, err := tx.Exec(`DELETE FROM release_splits`); err != nil {
+		return fmt.Errorf("delete release splits: %w", err)
+	}
+	return nil
 }
 
 // addReleaseState keeps what the Releases tab computes across restarts: each

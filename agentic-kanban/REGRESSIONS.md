@@ -211,3 +211,13 @@ Under rootless Docker, UID 1000 in a container is a subordinate ID on the host, 
 - Don't pass `Remote` with it. `Release` would then push the rev to whichever
   branch the user's checkout is on; the rev is already on origin's base branch,
   so push only the tag there afterwards.
+
+### `git subtree split` differs before git 2.54
+
+- Git before 2.54 skips other subtrees' squash commits when splitting, so it
+  gives different hashes than newer git, with no shared history. Upstream
+  branches come from the mirror action's git, so an older split looks diverged
+  and can't be pushed.
+- Keep the image's git at 2.54 or newer: check `apk` when changing the Alpine
+  base. A split saved by an older git stays wrong, so clear `release_splits`
+  if one ever gets saved.

@@ -27,7 +27,8 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags embed -tr
         -X github.com/jmelahman/kanban/internal/docker.BuiltinImage=${KANBAN_DEVCONTAINER_IMAGE}" \
       -o /out/kanban .
 
-FROM alpine:3.23@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11
+# See REGRESSIONS.md: "`git subtree split` differs before git 2.54"
+FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 # git-subtree and openssh-client are what releasing runs. GitHub's API and LFS
 # files are handled natively, which spares the image gh's 60 MB and git-lfs.
 RUN apk add --no-cache git git-subtree openssh-client ca-certificates \
