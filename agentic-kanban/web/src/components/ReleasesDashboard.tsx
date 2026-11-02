@@ -504,7 +504,12 @@ function ProjectTable({
                 <th className="px-3 py-2 font-normal">ahead / behind</th>
                 <th className="px-3 py-2 font-normal">latest</th>
                 <th className="px-3 py-2 font-normal">unreleased</th>
-                <th className="px-3 py-2 font-normal">suggested</th>
+                <th
+                  className="px-3 py-2 font-normal"
+                  title="The largest bump the titles of the unreleased commits call for. Titles that aren't Conventional Commits are skipped."
+                >
+                  suggested
+                </th>
                 <th className="px-3 py-2 font-normal">ci</th>
                 <th className="px-3 py-2" />
               </tr>
@@ -526,7 +531,6 @@ function ProjectTable({
                       <td className="px-3 py-2">{s.counted ? s.unreleased : "—"}</td>
                       <td
                         className={`px-3 py-2 ${s.suggested ? suggestedStyles[s.suggested] : ""}`}
-                        title="The largest bump the titles of the unreleased commits call for. Titles that aren't Conventional Commits are skipped."
                       >
                         {s.suggested ?? "—"}
                       </td>
