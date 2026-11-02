@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "private": true,
   "description": "Desktop client for a running kanban server.",
+  "homepage": "https://github.com/jmelahman/agentic-kanban",
   "license": "GPL-3.0-only",
   "author": "Jamison Lahman <lahmanja@gmail.com>",
   "type": "module",
   "main": "src/main.js",
+  "desktopName": "agentic-kanban.desktop",
   "scripts": {
     "start": "electron .",
     "test": "bun test",
@@ -29,7 +31,9 @@
       ],
       "category": "Development",
       "executableName": "agentic-kanban",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "syncDesktopName": true,
+      "artifactName": "agentic-kanban-${version}-${arch}.${ext}"
     }
   },
   "devDependencies": {
