@@ -16,7 +16,7 @@ A release made elsewhere, such as with `git orchard release`, can't tell which r
 
 Each subtree shows how far it is ahead of and behind its upstream, its latest release, and the commits since. This is recomputed at startup, every 30 minutes and when you refresh, because checking every subtree can take a while. The last result is saved, so after a restart the tab shows it right away while the refresh runs.
 
-Subtrees that have never been released are hidden until you tick **show unreleased**. Your browser remembers the choice.
+**filter** picks which subtrees to list, repo by repo. Subtrees you haven't toggled are listed once they've been released, so a new one turns up by itself after its first release. **view all** lists every subtree whatever the filter says. Your browser remembers both, and neither hides reminders.
 
 It also shows each subtree's latest GitHub Actions runs on its upstream, checked at most every 5 minutes while something is reading the page or `kanban release list`, so an idle server spends none of your API quota. This is for information only: a release doesn't check CI. It needs a GitHub token on the server (`GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token`).
 

@@ -92,7 +92,7 @@ test.describe("Releases", () => {
     const releases = new ReleasesPage(page);
     await releases.goto();
     const project = releases.project(world.repoPath);
-    await project.showUnreleased();
+    await releases.viewAll();
     await project.expectSubtree(PREFIX);
     const note = `the new thing ${world.board.id}`;
 
@@ -110,17 +110,38 @@ test.describe("Releases", () => {
     expect(git(world.repoPath, "ls-remote", "--tags", world.origin)).toContain(`${PREFIX}/v0.1.0`);
   });
 
-  test("unreleased subtrees stay hidden until asked, and the choice is kept", async ({ page }) => {
+  test("view all lists unreleased subtrees, and the choice is kept", async ({ page }) => {
     const releases = new ReleasesPage(page);
     await releases.goto();
     const project = releases.project(world.repoPath);
-    await project.expectNothingReleased();
+    await project.expectNothingShown();
 
-    await project.showUnreleased();
+    await releases.viewAll();
     await project.expectSubtree(PREFIX);
 
     await releases.goto();
     await project.expectSubtree(PREFIX);
+  });
+
+  test("the filter toggles subtrees, is kept, and view all overrides it", async ({ page }) => {
+    const releases = new ReleasesPage(page);
+    await releases.goto();
+    const project = releases.project(world.repoPath);
+    await project.expectNothingShown();
+
+    await project.setFiltered(PREFIX, true);
+    await project.expectSubtree(PREFIX);
+
+    await releases.goto();
+    await project.expectSubtree(PREFIX);
+
+    await project.setFiltered(PREFIX, false);
+    await project.expectNothingShown();
+
+    await releases.viewAll();
+    await project.expectSubtree(PREFIX);
+    await releases.stopViewingAll();
+    await project.expectNothingShown();
   });
 
   test("a release from elsewhere flags the reminder, and titles suggest the next", async ({
@@ -129,7 +150,7 @@ test.describe("Releases", () => {
     const releases = new ReleasesPage(page);
     await releases.goto();
     const project = releases.project(world.repoPath);
-    await project.showUnreleased();
+    await releases.viewAll();
     const note = `the new thing ${world.board.id}`;
     await project.remind(PREFIX, "minor", note);
     await releases.reminder(note).expectBump("minor");
@@ -164,7 +185,7 @@ test.describe("Releases", () => {
     const releases = new ReleasesPage(page);
     await releases.goto();
     const project = releases.project(world.repoPath);
-    await project.showUnreleased();
+    await releases.viewAll();
     await project.expectSubtree(PREFIX);
 
     await project.openRelease(PREFIX);

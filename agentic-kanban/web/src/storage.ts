@@ -19,19 +19,41 @@ export function writeActiveBoardId(id: number): void {
   }
 }
 
-const SHOW_UNRELEASED_KEY = "kanban.releases.showUnreleased";
+const RELEASES_VIEW_ALL_KEY = "kanban.releases.viewAll";
 
-export function readShowUnreleased(): boolean {
+export function readReleasesViewAll(): boolean {
   try {
-    return localStorage.getItem(SHOW_UNRELEASED_KEY) === "true";
+    return localStorage.getItem(RELEASES_VIEW_ALL_KEY) === "true";
   } catch {
     return false;
   }
 }
 
-export function writeShowUnreleased(show: boolean): void {
+export function writeReleasesViewAll(viewAll: boolean): void {
   try {
-    localStorage.setItem(SHOW_UNRELEASED_KEY, String(show));
+    localStorage.setItem(RELEASES_VIEW_ALL_KEY, String(viewAll));
+  } catch {
+    // ignore quota / disabled storage
+  }
+}
+
+const RELEASES_FILTER_KEY = "kanban.releases.filter";
+
+// Only the subtrees toggled by hand, so the rest keep following the default.
+export type ReleasesFilter = Record<string, boolean>;
+
+export function readReleasesFilter(): ReleasesFilter {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(RELEASES_FILTER_KEY) ?? "{}");
+    return parsed && typeof parsed === "object" ? (parsed as ReleasesFilter) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeReleasesFilter(filter: ReleasesFilter): void {
+  try {
+    localStorage.setItem(RELEASES_FILTER_KEY, JSON.stringify(filter));
   } catch {
     // ignore quota / disabled storage
   }

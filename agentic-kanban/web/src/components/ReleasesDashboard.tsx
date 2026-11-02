@@ -10,7 +10,13 @@ import {
   type ReleaseSubtree,
 } from "@/api/client";
 import { queryKeys } from "@/api/keys";
-import { readShowUnreleased, writeShowUnreleased } from "@/storage";
+import {
+  type ReleasesFilter,
+  readReleasesFilter,
+  readReleasesViewAll,
+  writeReleasesFilter,
+  writeReleasesViewAll,
+} from "@/storage";
 import { Button } from "./Button";
 import { Modal } from "./Modal";
 
@@ -75,6 +81,12 @@ function BumpSelect({
 // Errored subtrees are unknown, not unreleased.
 function neverReleased(s: ReleaseSubtree) {
   return !s.error && !s.latest;
+}
+
+// A subtree shows if it's been toggled on, or by default if it's been released.
+// Until its first refresh, a project doesn't know which have been.
+function isShown(filter: ReleasesFilter, project: ReleaseProject, s: ReleaseSubtree) {
+  return filter[`${project.repo_path}:${s.prefix}`] ?? (!project.refreshed_at || !neverReleased(s));
 }
 
 // What a subtree's release dialog starts at. Having to choose a bump means
@@ -279,6 +291,56 @@ function ReminderModal({
   );
 }
 
+/** Toggles apply as they're made, so there's nothing to cancel. */
+function FilterModal({
+  projects,
+  filter,
+  viewAll,
+  onChange,
+  onClose,
+}: {
+  projects: ReleaseProject[];
+  filter: ReleasesFilter;
+  viewAll: boolean;
+  onChange: (filter: ReleasesFilter) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal open onClose={onClose} title="Filter subtrees">
+      <div className="flex flex-col gap-3 p-4 text-sm">
+        {viewAll && (
+          <p className="text-fg-muted">
+            &ldquo;view all&rdquo; is on, so this applies once it&rsquo;s off.
+          </p>
+        )}
+        {projects.map((p) => (
+          <fieldset key={p.repo_path} className="flex flex-col gap-1">
+            <legend className="mb-1 font-medium">{p.repo_path}</legend>
+            {p.subtrees.map((s) => (
+              <label key={s.prefix} className="flex cursor-pointer items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={isShown(filter, p, s)}
+                  onChange={(e) =>
+                    onChange({ ...filter, [`${p.repo_path}:${s.prefix}`]: e.target.checked })
+                  }
+                />
+                {s.prefix}
+                {neverReleased(s) && <span className="text-fg-muted">never released</span>}
+              </label>
+            ))}
+          </fieldset>
+        ))}
+        <div className="flex justify-end">
+          <Button variant="primary" size="lg" onClick={onClose}>
+            done
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /** Streams a run's log, from the start, for as long as it's showing. */
 function RunLog({
   run,
@@ -406,45 +468,33 @@ function CICell({ ci }: { ci?: ReleaseCI }) {
 function ProjectTable({
   project,
   onRelease,
-  showUnreleased,
-  onShowUnreleased,
+  filter,
+  viewAll,
 }: {
   project: ReleaseProject;
   onRelease: (subtree: ReleaseSubtree) => void;
-  showUnreleased: boolean;
-  onShowUnreleased: (show: boolean) => void;
+  filter: ReleasesFilter;
+  viewAll: boolean;
 }) {
   const qc = useQueryClient();
   // Reaching for the button is the cue to start the fetch the modal will want.
   const warm = (s: ReleaseSubtree) =>
     qc.prefetchQuery(previewOptions(project.repo_path, s.prefix, startingBump(s), ""));
-  // Until its first refresh, a project doesn't know which have been released.
-  const subtrees =
-    showUnreleased || !project.refreshed_at
-      ? project.subtrees
-      : project.subtrees.filter((s) => !neverReleased(s));
+  const subtrees = viewAll
+    ? project.subtrees
+    : project.subtrees.filter((s) => isShown(filter, project, s));
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">
-          {project.repo_path}{" "}
-          <span className="font-normal text-fg-muted">
-            {project.base}
-            {project.refreshing && " · refreshing…"}
-          </span>
-        </h3>
-        <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-          <input
-            type="checkbox"
-            checked={showUnreleased}
-            onChange={(e) => onShowUnreleased(e.target.checked)}
-          />
-          show unreleased
-        </label>
-      </div>
+      <h3 className="text-sm font-medium">
+        {project.repo_path}{" "}
+        <span className="font-normal text-fg-muted">
+          {project.base}
+          {project.refreshing && " · refreshing…"}
+        </span>
+      </h3>
       {project.error && <p className="text-sm text-danger">{project.error}</p>}
       {subtrees.length === 0 ? (
-        <p className="text-sm text-fg-muted">No subtree here has been released yet.</p>
+        <p className="text-sm text-fg-muted">No subtree here is selected.</p>
       ) : (
         <div className="overflow-x-auto rounded border border-border">
           <table className="w-full text-left text-sm">
@@ -566,7 +616,9 @@ export function ReleasesDashboard() {
     reminder?: ReleaseReminder;
     bump?: ReleaseBump;
   } | null>(null);
-  const [showUnreleased, setShowUnreleased] = useState(readShowUnreleased);
+  const [viewAll, setViewAll] = useState(readReleasesViewAll);
+  const [filter, setFilter] = useState(readReleasesFilter);
+  const [filtering, setFiltering] = useState(false);
   const [openRun, setOpenRun] = useState<ReleaseRun | null>(null);
   const [onRunEnd] = useState(() => () => {
     qc.invalidateQueries({ queryKey: queryKeys.releases });
@@ -589,20 +641,41 @@ export function ReleasesDashboard() {
     summary.projects
       .find((p) => p.repo_path === r.repo_path)
       ?.subtrees.find((s) => s.prefix === r.prefix);
+  const shown = summary.projects.flatMap((p) => p.subtrees.map((s) => isShown(filter, p, s)));
 
   return (
     <div className="h-full overflow-y-auto [scrollbar-gutter:stable]">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-3 py-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide">Releases</h2>
-          <Button
-            variant="primary"
-            size="lg"
-            pending={refreshMut.isPending}
-            idleLabel="refresh"
-            pendingLabel="refreshing…"
-            onClick={() => refreshMut.mutate()}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            {summary.projects.length > 0 && (
+              <>
+                <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={viewAll}
+                    onChange={(e) => {
+                      setViewAll(e.target.checked);
+                      writeReleasesViewAll(e.target.checked);
+                    }}
+                  />
+                  view all
+                </label>
+                <Button variant="neutral" size="lg" onClick={() => setFiltering(true)}>
+                  filter ({shown.filter(Boolean).length}/{shown.length})
+                </Button>
+              </>
+            )}
+            <Button
+              variant="primary"
+              size="lg"
+              pending={refreshMut.isPending}
+              idleLabel="refresh"
+              pendingLabel="refreshing…"
+              onClick={() => refreshMut.mutate()}
+            />
+          </div>
         </div>
         {summary.unavailable && <p className="text-sm text-danger">{summary.unavailable}</p>}
         {refreshMut.error && <p className="text-sm text-danger">{String(refreshMut.error)}</p>}
@@ -647,11 +720,8 @@ export function ReleasesDashboard() {
             <ProjectTable
               key={p.repo_path}
               project={p}
-              showUnreleased={showUnreleased}
-              onShowUnreleased={(show) => {
-                setShowUnreleased(show);
-                writeShowUnreleased(show);
-              }}
+              filter={filter}
+              viewAll={viewAll}
               onRelease={(s) =>
                 setReleasing({
                   repo: p.repo_path,
@@ -706,6 +776,18 @@ export function ReleasesDashboard() {
           />
         )}
         {reminding && <ReminderModal {...reminding} onClose={() => setReminding(null)} />}
+        {filtering && (
+          <FilterModal
+            projects={summary.projects}
+            filter={filter}
+            viewAll={viewAll}
+            onChange={(next) => {
+              setFilter(next);
+              writeReleasesFilter(next);
+            }}
+            onClose={() => setFiltering(false)}
+          />
+        )}
       </div>
     </div>
   );

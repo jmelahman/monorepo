@@ -23,6 +23,14 @@ export class ReleasesPage {
     await expect(this.page.getByText("Unexpected end of JSON input")).toBeHidden();
   }
 
+  async viewAll() {
+    await this.page.getByLabel("view all").check();
+  }
+
+  async stopViewingAll() {
+    await this.page.getByLabel("view all").uncheck();
+  }
+
   project(repoPath: string) {
     return new ReleaseProject(this.page, repoPath);
   }
@@ -47,7 +55,7 @@ class ReleaseProject {
 
   constructor(
     readonly page: Page,
-    repoPath: string,
+    readonly repoPath: string,
   ) {
     this.root = page.locator("section").filter({ hasText: repoPath });
   }
@@ -56,8 +64,12 @@ class ReleaseProject {
     return this.root.getByRole("row").filter({ hasText: prefix });
   }
 
-  async showUnreleased() {
-    await this.root.getByLabel("show unreleased").check();
+  async setFiltered(prefix: string, shown: boolean) {
+    await this.page.getByRole("button", { name: /^filter/ }).click();
+    const modal = this.page.getByRole("dialog");
+    await modal.getByRole("group", { name: this.repoPath }).getByLabel(prefix).setChecked(shown);
+    await modal.getByRole("button", { name: "done" }).click();
+    await expect(modal).toBeHidden();
   }
 
   async expectSubtree(prefix: string) {
@@ -68,8 +80,8 @@ class ReleaseProject {
     await expect(this.row(prefix)).toContainText(suggestion);
   }
 
-  async expectNothingReleased() {
-    await expect(this.root.getByText("No subtree here has been released yet.")).toBeVisible();
+  async expectNothingShown() {
+    await expect(this.root.getByText("No subtree here is selected.")).toBeVisible();
     await expect(this.root.getByRole("table")).toBeHidden();
   }
 
