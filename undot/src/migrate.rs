@@ -191,7 +191,7 @@ fn migrate(explicit: &[String], dry_run: bool, force: bool) -> Result<usize, Str
         say!("undot: dry run complete; re-run without --dry-run to apply");
         return Ok(0);
     }
-    moved_file_hint(&migrated);
+    moved_file_hint(&migrated, &conf);
     say!(
         "undot: done. Suggested follow-up:\n  \
          git add -A && git commit\n  \
@@ -279,9 +279,10 @@ fn migrate_entry(name: &str, dry_run: bool, explicit: bool, force: bool) -> Resu
 /// path is now an ignored symlink (ignore patterns don't apply to tracked
 /// paths); directories are fine because their tracked paths moved away. Point at
 /// the affected entries.
-fn moved_file_hint(migrated: &[String]) {
+fn moved_file_hint(migrated: &[String], conf: &Conf) {
     let files: Vec<&String> = migrated
         .iter()
+        .filter(|name| !conf.is_nolink(name))
         .filter(|name| fs::symlink_metadata(config_path(name)).is_ok_and(|meta| !meta.is_dir()))
         .collect();
     if files.is_empty() {

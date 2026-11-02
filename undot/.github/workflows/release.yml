@@ -102,7 +102,7 @@ jobs:
           name: dist-sdist
           path: dist/*
   github-release:
-    needs: build
+    needs: [build, sdist]
     runs-on: ubuntu-latest
     environment:
       name: release

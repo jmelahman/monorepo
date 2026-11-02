@@ -122,13 +122,22 @@ fn with_hook(content: &str) -> Result<String, String> {
             out.push('\n');
         }
     }
-    if insert_repo_at.is_none() {
+    match insert_repo_at {
         // No repos: key anywhere; append one at the end.
-        if !content.is_empty() && !content.ends_with('\n') {
-            out.push('\n');
+        None => {
+            if !content.is_empty() && !content.ends_with('\n') {
+                out.push('\n');
+            }
+            out.push_str("repos:\n");
+            out.push_str(&repo_block("  "));
         }
-        out.push_str("repos:\n");
-        out.push_str(&repo_block("  "));
+        // A bare `repos:` ending the file without a newline: the loop never got
+        // that far.
+        Some(i) if i == lines.len() => {
+            out.push('\n');
+            out.push_str(&repo_block(indent));
+        }
+        Some(_) => {}
     }
     Ok(out)
 }
@@ -187,6 +196,12 @@ mod tests {
         let content = "default_install_hook_types: [pre-push]\nrepos:\n";
         let updated = with_hook(content).unwrap();
         assert_eq!(updated.matches("default_install_hook_types").count(), 1);
+    }
+
+    #[test]
+    fn inserts_after_a_final_repos_without_a_newline() {
+        let updated = with_hook("repos:").unwrap();
+        assert!(updated.ends_with(&format!("repos:\n{}", repo_block("  "))));
     }
 
     #[test]
