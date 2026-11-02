@@ -5,6 +5,9 @@
 curl
 unzip
 
+# Turns a Movie Maker render into an mp4.
+ffmpeg
+
 # A display for the tests, screenshots and the agent bridge: Godot's --headless
 # has no renderer and drops input, so these run under Xvfb on Mesa's software
 # GL (llvmpipe) and Vulkan (lavapipe) instead.

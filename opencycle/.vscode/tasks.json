@@ -116,6 +116,20 @@
       "problemMatcher": []
     },
     {
+      "label": "Capture: forest",
+      "detail": "Max quality replay to captures/forest-max.mp4; can take half an hour and opens a window",
+      "type": "shell",
+      "command": "scripts/capture.sh forest",
+      "problemMatcher": []
+    },
+    {
+      "label": "Capture: neon",
+      "detail": "Max quality replay to captures/neon-max.mp4; can take half an hour and opens a window",
+      "type": "shell",
+      "command": "scripts/capture.sh neon",
+      "problemMatcher": []
+    },
+    {
       "label": "Bake",
       "detail": "Rebuilds assets/baked/; downloads 1.4 GB the first time and opens a window",
       "type": "shell",
