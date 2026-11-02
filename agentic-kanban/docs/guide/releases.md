@@ -39,7 +39,7 @@ A subtree's release dialog starts at the suggestion, or at patch when it's none 
 
 **release** fetches, then shows the version and commit that would be released: the tip of the board's base branch on `origin`. Your checkout isn't touched.
 
-If the upstream lacks commits from that branch, the mirror hasn't published them yet, and the release is blocked until it has. Confirming sends back what you saw, so if the branch has moved on, the release is refused rather than tagging something you didn't review.
+If the upstream lacks commits from that branch, the mirror hasn't published them yet, and the release waits until it has, unless you tick the option to push them to the upstream now (`--upstream` on `kanban release run`). That pushes the subtree's branch and tag there directly, so the server's credentials need write access to the upstream. Confirming sends back what you saw, so if the branch has moved on, the release is refused rather than tagging something you didn't review.
 
 The release pushes the tag `<prefix>/<version>` to `origin`, then follows the GitHub Actions runs that publish it. Pre-push hooks don't run, since only a tag is pushed, for commits already on the base branch.
 

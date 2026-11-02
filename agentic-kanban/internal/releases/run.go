@@ -39,7 +39,8 @@ type Preview struct {
 	Released bool `json:"released"`
 	Ahead    int  `json:"ahead"`
 	Behind   int  `json:"behind"`
-	// Blocked says why it can't be released, or is empty if it can.
+	// Blocked says why it can't be released without RunRequest.Upstream, or is
+	// empty if it can.
 	Blocked string `json:"blocked,omitempty"`
 }
 
@@ -88,7 +89,7 @@ func (s *Service) preview(ctx context.Context, repo, prefix, bump, suffix string
 	// See REGRESSIONS.md: "A release waits for the mirror". Orchard.Release
 	// refuses this, so say so before anyone confirms.
 	if status.Ahead > 0 {
-		p.Blocked = fmt.Sprintf("%s's upstream lacks %d commit(s) from %s; wait for the mirror to publish them", sub.Prefix, status.Ahead, base)
+		p.Blocked = fmt.Sprintf("%s's upstream lacks %d commit(s) from %s; wait for the mirror to publish them, or push to the upstream directly", sub.Prefix, status.Ahead, base)
 	}
 	return p, nil
 }
@@ -115,6 +116,9 @@ type RunRequest struct {
 	Version    string
 	Rev        string
 	ReminderID *int64
+	// Upstream pushes the subtree's branch and tag to its upstream directly,
+	// instead of leaving them to the mirror.
+	Upstream bool
 }
 
 // Run starts the release req confirmed, if it's still the one that would
@@ -148,7 +152,7 @@ func (s *Service) Run(ctx context.Context, req RunRequest) (*db.ReleaseRun, erro
 			s.mu.Unlock()
 			close(done)
 		}()
-		s.execute(run, sub)
+		s.execute(run, sub, req.Upstream)
 	})
 	s.mu.Unlock()
 	return run, nil
@@ -188,7 +192,7 @@ func (s *Service) prepare(ctx context.Context, req RunRequest) (*db.ReleaseRun, 
 	if err != nil {
 		return nil, config.Subtree{}, err
 	}
-	if p.Blocked != "" {
+	if p.Blocked != "" && !req.Upstream {
 		return nil, config.Subtree{}, fmt.Errorf("%w: %s", ErrConflict, p.Blocked)
 	}
 	if p.Version != req.Version || p.Rev != req.Rev {
@@ -235,7 +239,7 @@ func (r redactWriter) Write(p []byte) (int, error) {
 
 // execute releases and records how it went. The server's context is what
 // bounds it: the request that started it is long gone.
-func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree) {
+func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree, upstream bool) {
 	ctx, cancel := context.WithTimeout(s.ctx, runTimeout)
 	defer cancel()
 
@@ -248,7 +252,7 @@ func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree) {
 	output := redactWriter{w: file}
 	boards, _, err := s.repos(ctx)
 	if err == nil {
-		err = release(ctx, run, sub, identityEnv(boards[run.RepoPath]), output)
+		err = release(ctx, run, sub, upstream, identityEnv(boards[run.RepoPath]), output)
 	}
 	err = runError(ctx, err)
 	if err != nil {
@@ -257,14 +261,23 @@ func (s *Service) execute(run *db.ReleaseRun, sub config.Subtree) {
 	s.finish(run, err)
 }
 
-func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, identity []string, output io.Writer) error {
+func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, toUpstream bool, identity []string, output io.Writer) error {
 	o, err := open(ctx, run.RepoPath, output)
 	if err != nil {
 		return err
 	}
 	o.Repo.Env = append(o.Repo.Env, identity...)
 	_, _ = fmt.Fprintf(output, "Releasing %s %s at %.12s...\n", sub.Prefix, run.Version, run.Rev)
-	tag, err := o.Release(sub, run.Version, orchard.ReleaseOptions{Rev: run.Rev, Remote: remote})
+	opts := orchard.ReleaseOptions{Rev: run.Rev, Remote: remote}
+	if toUpstream {
+		// See REGRESSIONS.md: "A release waits for the mirror". With a Remote,
+		// Release would push the rev to whichever branch the checkout is on.
+		opts = orchard.ReleaseOptions{Rev: run.Rev, Upstream: true}
+	}
+	tag, err := o.Release(sub, run.Version, opts)
+	if err == nil && toUpstream {
+		err = o.Repo.Run("push", "--no-verify", remote, "refs/tags/"+tag)
+	}
 	if err != nil {
 		return err
 	}
@@ -281,7 +294,7 @@ func release(ctx context.Context, run *db.ReleaseRun, sub config.Subtree, identi
 		_, _ = fmt.Fprintln(output, "Neither the monorepo nor the upstream is on GitHub; nothing to watch.")
 		return nil
 	}
-	return o.WatchRelease(ctx, sub, run.Version, tag, orchard.WatchOptions{Remote: remote, Output: output})
+	return o.WatchRelease(ctx, sub, run.Version, tag, orchard.WatchOptions{Remote: remote, Upstream: toUpstream, Output: output})
 }
 
 // finish records the outcome. The context may be why it ended, so writes don't

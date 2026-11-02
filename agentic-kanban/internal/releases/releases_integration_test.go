@@ -435,6 +435,51 @@ func TestMirrorLagBlocks(t *testing.T) {
 	}
 }
 
+// Asked to, a release pushes what the mirror hasn't. The checkout may be on any
+// branch, and that branch mustn't reach origin.
+func TestRunUpstream(t *testing.T) {
+	w := newWorld(t)
+	w.commit("lag.go")
+	kanbantest.MustGit(t, w.env.RepoPath, "checkout", "-q", "-b", "elsewhere")
+	p := w.preview()
+	if p.Ahead != 1 || p.Blocked == "" {
+		t.Fatalf("preview %+v", p)
+	}
+	body := w.runBody(p)
+	body["upstream"] = true
+	code, data := w.do("POST", "/api/releases/run", body)
+	if code != 202 {
+		t.Fatalf("run: %d %s", code, data)
+	}
+	run := decode[db.ReleaseRun](t, data)
+	output := w.output(run.ID)
+	if got := w.run(run.ID); got.Status != db.ReleaseRunReleased {
+		t.Fatalf("run %+v:\n%s", got, output)
+	}
+
+	refsOf := func(dir string) string {
+		t.Helper()
+		out, err := exec.Command("git", "-C", dir, "for-each-ref", "--format=%(refname)").CombinedOutput()
+		if err != nil {
+			t.Fatalf("for-each-ref: %v\n%s", err, out)
+		}
+		return string(out)
+	}
+	if refs := refsOf(w.upstream); !strings.Contains(refs, "refs/tags/"+p.Version) {
+		t.Errorf("upstream lacks the tag:\n%s", refs)
+	}
+	refs := refsOf(w.origin)
+	if !strings.Contains(refs, "refs/tags/"+prefix+"/"+p.Version) {
+		t.Errorf("origin lacks the tag:\n%s", refs)
+	}
+	if strings.Contains(refs, "elsewhere") {
+		t.Errorf("origin got the checkout's branch:\n%s", refs)
+	}
+	if got := w.preview(); got.Ahead != 0 {
+		t.Errorf("after the release: %+v", got)
+	}
+}
+
 // A subtree's split is reused until the subtree changes, so the counts must
 // follow the subtree's commits and not be frozen by the cache.
 func TestPreviewReusesSplit(t *testing.T) {

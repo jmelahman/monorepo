@@ -585,6 +585,7 @@ export const api = {
     version: string;
     rev: string;
     reminder_id?: number;
+    upstream?: boolean;
   }) =>
     request<ReleaseRun>("/api/releases/run", {
       method: "POST",

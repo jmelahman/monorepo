@@ -156,6 +156,7 @@ type runReleaseReq struct {
 	Version    string `json:"version"`
 	Rev        string `json:"rev"`
 	ReminderID *int64 `json:"reminder_id"`
+	Upstream   bool   `json:"upstream"`
 }
 
 // releaseWriteError says why a request that changes releases must be refused.
@@ -202,7 +203,7 @@ func (h *handlers) runRelease(w http.ResponseWriter, r *http.Request) {
 	}
 	run, err := h.releases.Run(r.Context(), releases.RunRequest{
 		RepoPath: req.Repo, Prefix: req.Prefix, Bump: req.Bump, Suffix: req.Suffix,
-		Version: req.Version, Rev: req.Rev, ReminderID: req.ReminderID,
+		Version: req.Version, Rev: req.Rev, ReminderID: req.ReminderID, Upstream: req.Upstream,
 	})
 	if err != nil {
 		h.httpError(w, err, releaseErrorCode(err))

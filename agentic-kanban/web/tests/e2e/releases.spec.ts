@@ -180,7 +180,9 @@ test.describe("Releases", () => {
     await releases.confirm.expectVersion("v1.1.0");
   });
 
-  test("commits the mirror hasn't published block the release", async ({ page }) => {
+  test("commits the mirror hasn't published block the release until pushed upstream", async ({
+    page,
+  }) => {
     await change(world, "unmirrored.go");
     const releases = new ReleasesPage(page);
     await releases.goto();
@@ -190,5 +192,11 @@ test.describe("Releases", () => {
 
     await project.openRelease(PREFIX);
     await releases.confirm.expectBlocked("wait for the mirror");
+
+    await releases.confirm.pushToUpstream();
+    await releases.confirm.release();
+    await releases.expectRun("v0.0.1", "released");
+    expect(git(world.repoPath, "ls-remote", "--tags", world.upstream)).toContain("v0.0.1");
+    expect(git(world.repoPath, "ls-remote", "--tags", world.origin)).toContain(`${PREFIX}/v0.0.1`);
   });
 });

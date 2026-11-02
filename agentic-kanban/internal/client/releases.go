@@ -108,6 +108,7 @@ type RunReleaseArgs struct {
 	Version    string `json:"version"`
 	Rev        string `json:"rev"`
 	ReminderID *int64 `json:"reminder_id,omitempty"`
+	Upstream   bool   `json:"upstream,omitempty"`
 }
 
 // Releases calls GET /api/releases and returns the raw response.

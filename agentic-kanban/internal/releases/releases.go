@@ -139,8 +139,8 @@ func open(ctx context.Context, repo string, output io.Writer) (*orchard.Orchard,
 	o.Repo.Ctx = ctx //nolint:fatcontext // this Orchard lasts one operation, and ctx bounds it
 	o.Repo.Log = output
 	o.Repo.Env = gitEnv()
-	// Only a tag is pushed, for commits already on the base branch, and a
-	// server has no terminal for a hook to talk to.
+	// Nothing but a tag goes to origin, for commits already on the base branch,
+	// and a server has no terminal for a hook to talk to.
 	o.NoVerify = true
 	return o, nil
 }

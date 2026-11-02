@@ -171,6 +171,13 @@ func TestReleaseRunBlockedByMirror(t *testing.T) {
 	if tags := originTags(t, origin); tags != "" {
 		t.Errorf("tagged anyway: %s", tags)
 	}
+
+	if out, err := releaseCLI(t, env, "", "run", releaseTestPrefix, "--yes", "--upstream"); err != nil {
+		t.Fatalf("run --upstream = %v:\n%s", err, out)
+	}
+	if tags := originTags(t, origin); !strings.Contains(tags, releaseTestPrefix+"/") {
+		t.Errorf("origin tags after --upstream: %q", tags)
+	}
 }
 
 func waitForShown(t *testing.T, s *shownScreen, want string, present bool) {

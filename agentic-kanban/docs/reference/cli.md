@@ -420,6 +420,8 @@ Prints open reminders, each subtree's state and CI, and recent runs, across ever
 
 Shows the version and commit it would release, asks you to confirm, then follows the log and exits non-zero if the release fails. It uses the bump and suffix from the subtree's open reminder unless you pass `--patch`, `--minor`, `--major` or `--suffix`, and closes that reminder when it succeeds. `--yes` skips the confirmation, and without a terminal it's required.
 
+If the upstream lacks commits, the release waits for the mirror to publish them, unless `--upstream` pushes them and the tag there directly.
+
 The release runs on the server, so it keeps going if you interrupt this command. Use `release log` to pick it up again.
 
 ### `release log <run>`

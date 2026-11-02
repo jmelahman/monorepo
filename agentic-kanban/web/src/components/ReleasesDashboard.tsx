@@ -143,6 +143,8 @@ function ReleaseModal({
     retry: false,
   });
   const preview = previewQ.data;
+  // Only offered while the upstream lacks commits, so it can't outlive that.
+  const [upstream, setUpstream] = useState(false);
   const runMut = useMutation({
     mutationFn: () => {
       if (!preview) throw new Error("nothing to release");
@@ -154,6 +156,7 @@ function ReleaseModal({
         version: preview.version,
         rev: preview.rev,
         reminder_id: target.reminderId,
+        upstream: !!preview.blocked && upstream,
       });
     },
     onSuccess: onStarted,
@@ -180,7 +183,19 @@ function ReleaseModal({
                 This commit is already tagged, so this publishes it again.
               </p>
             )}
-            {preview.blocked && <p className="text-danger">{preview.blocked}</p>}
+            {preview.blocked && (
+              <>
+                <p className="text-warning">{preview.blocked}</p>
+                <label className="flex cursor-pointer items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={upstream}
+                    onChange={(e) => setUpstream(e.target.checked)}
+                  />
+                  push the commits and the tag to the upstream now
+                </label>
+              </>
+            )}
           </>
         ) : null}
         {error && <p className="text-danger">{String(error)}</p>}
@@ -202,7 +217,7 @@ function ReleaseModal({
           <Button
             variant="primary"
             size="lg"
-            disabled={!preview || !!preview.blocked}
+            disabled={!preview || (!!preview.blocked && !upstream)}
             pending={runMut.isPending}
             idleLabel="release"
             pendingLabel="releasing…"

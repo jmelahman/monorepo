@@ -205,5 +205,9 @@ Under rootless Docker, UID 1000 in a container is a subordinate ID on the host, 
 - `orchard.Release` refuses a rev whose subtree commits the upstream lacks, and
   the mirror action publishes them some time after a merge. The preview reports
   this as `blocked` so the Releases tab can say why before anyone confirms.
-- Don't work around it by setting `ReleaseOptions.Upstream`: the mirror is the
-  intended path, and a server pushing the branch itself would race it.
+- Only set `ReleaseOptions.Upstream` when the person asked for it, with
+  `upstream` on the run: the mirror is the intended path, and a server pushing
+  the branch itself can race it.
+- Don't pass `Remote` with it. `Release` would then push the rev to whichever
+  branch the user's checkout is on; the rev is already on origin's base branch,
+  so push only the tag there afterwards.

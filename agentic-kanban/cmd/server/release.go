@@ -122,7 +122,7 @@ given.`,
 
 	var runBump releaseBumpFlags
 	var runSuffix string
-	var runYes bool
+	var runYes, runUpstream bool
 	run := &cobra.Command{
 		Use:   "run <prefix>",
 		Short: "Release a subtree and follow its log",
@@ -130,7 +130,10 @@ given.`,
 
 Uses the bump and suffix from the subtree's open reminder unless flags say
 otherwise, and closes that reminder on success. The release runs on the server,
-so it carries on if this command is interrupted.`,
+so it carries on if this command is interrupted.
+
+A subtree whose upstream lacks commits can't be released until the mirror has
+published them, unless --upstream pushes them and the tag directly.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			suffix := (*string)(nil)
@@ -138,13 +141,14 @@ so it carries on if this command is interrupted.`,
 				suffix = &runSuffix
 			}
 			return runReleaseRun(cmd.Context(), client.New(resolveURL(cmd, serverURL), nil), cmd.InOrStdin(), cmd.OutOrStdout(), releaseRunOpts{
-				repo: repo, prefix: cleanPrefix(args[0]), bump: runBump.value(), suffix: suffix, yes: runYes,
+				repo: repo, prefix: cleanPrefix(args[0]), bump: runBump.value(), suffix: suffix, yes: runYes, upstream: runUpstream,
 			})
 		},
 	}
 	runBump.add(run)
 	run.Flags().StringVar(&runSuffix, "suffix", "", "Pre-release suffix, such as rc")
 	run.Flags().BoolVarP(&runYes, "yes", "y", false, "Don't ask for confirmation")
+	run.Flags().BoolVar(&runUpstream, "upstream", false, "Push the subtree's branch and tag to its upstream directly, instead of waiting for the mirror")
 
 	logCmd := &cobra.Command{
 		Use:   "log <run>",
@@ -356,7 +360,7 @@ func ciText(ci *client.ReleaseCI) string {
 type releaseRunOpts struct {
 	repo, prefix, bump string
 	suffix             *string
-	yes                bool
+	yes, upstream      bool
 }
 
 func runReleaseRun(ctx context.Context, c *client.Client, in io.Reader, out io.Writer, opts releaseRunOpts) error {
@@ -367,7 +371,7 @@ func runReleaseRun(ctx context.Context, c *client.Client, in io.Reader, out io.W
 	if err != nil {
 		return err
 	}
-	args := client.RunReleaseArgs{Repo: repo, Prefix: opts.prefix, Bump: "patch"}
+	args := client.RunReleaseArgs{Repo: repo, Prefix: opts.prefix, Bump: "patch", Upstream: opts.upstream}
 	if r := findReleaseReminder(summary, repo, opts.prefix); r != nil {
 		args.Bump, args.Suffix, args.ReminderID = r.Bump, r.Suffix, &r.ID
 	}
@@ -382,8 +386,8 @@ func runReleaseRun(ctx context.Context, c *client.Client, in io.Reader, out io.W
 	if err != nil {
 		return err
 	}
-	if preview.Blocked != "" {
-		return errors.New(preview.Blocked)
+	if preview.Blocked != "" && !opts.upstream {
+		return errors.New(preview.Blocked + " (--upstream)")
 	}
 	args.Version, args.Rev = preview.Version, preview.Rev
 	fmt.Fprintf(out, "%s %s at %s\n", opts.prefix, preview.Version, shortReleaseRev(preview.Rev))

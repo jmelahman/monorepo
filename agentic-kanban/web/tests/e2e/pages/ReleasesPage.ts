@@ -146,6 +146,10 @@ class ReleaseConfirm {
     await expect(this.releaseButton).toBeDisabled();
   }
 
+  async pushToUpstream() {
+    await this.root.getByLabel("to the upstream now").check();
+  }
+
   async release() {
     await this.releaseButton.click();
   }

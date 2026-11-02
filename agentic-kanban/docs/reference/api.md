@@ -186,8 +186,8 @@ See [Releases](/guide/releases). These endpoints return `503` if the service did
 | `POST /api/release-reminders` | Body: `{ "repo_path", "prefix", "bump", "suffix", "note" }`. `bump` is `patch` (the default), `minor` or `major`; with a `suffix`, `patch` continues that pre-release. Returns `201`, or `409` if the subtree has an open reminder. |
 | `PATCH /api/release-reminders/{id}` | Changes an open reminder's `bump`, `suffix` or `note`. |
 | `DELETE /api/release-reminders/{id}` | Dismisses an open reminder. Returns `204`. |
-| `GET /api/releases/preview?repo=&prefix=&bump=&suffix=` | Fetches, then returns `{ "version", "rev", "released", "ahead", "behind", "blocked" }`. `blocked` says why it can't be released. Returns `502` if git or the remote fails. |
-| `POST /api/releases/run` | Body: `{ "repo", "prefix", "bump", "suffix", "version", "rev", "reminder_id" }`, with the previewed `version` and `rev`. Returns `202` with the run, or `409` if they're out of date, it's blocked, or the repo has a release running. |
+| `GET /api/releases/preview?repo=&prefix=&bump=&suffix=` | Fetches, then returns `{ "version", "rev", "released", "ahead", "behind", "blocked" }`. `blocked` says why it can't be released without `upstream`. Returns `502` if git or the remote fails. |
+| `POST /api/releases/run` | Body: `{ "repo", "prefix", "bump", "suffix", "version", "rev", "reminder_id", "upstream" }`, with the previewed `version` and `rev`. `upstream` pushes the subtree's branch and tag to its upstream directly, instead of leaving them to the mirror. Returns `202` with the run, or `409` if they're out of date, it's blocked without `upstream`, or the repo has a release running. |
 | `GET /api/release-runs/{id}/output` | Server-sent log of a run, from the start, ending with an `end` event when the run finishes. |
 
 ## Previews
