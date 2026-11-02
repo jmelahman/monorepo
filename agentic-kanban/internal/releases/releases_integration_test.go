@@ -330,7 +330,7 @@ func TestSuggestedBump(t *testing.T) {
 	}
 	w.commitTitled("c.go", "feat(foo): add it")
 	w.commitTitled("d.go", "wip")
-	if st := subtree(); st.Suggested != "minor" || st.Unclassified != 1 {
+	if st := subtree(); st.Suggested != "minor" {
 		t.Errorf("feat: %+v", st)
 	}
 	w.commitTitled("e.go", "fix(foo)!: change it")

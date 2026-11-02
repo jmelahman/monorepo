@@ -248,8 +248,6 @@ export type ReleaseSubtree = {
   // The bump the unreleased commits' titles call for, absent unless there are
   // commits since a release.
   suggested?: ReleaseBump | "none";
-  // How many of those titles it couldn't read.
-  unclassified?: number;
   error?: string;
   ci?: ReleaseCI;
 };

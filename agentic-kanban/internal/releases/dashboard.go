@@ -39,11 +39,9 @@ type SubtreeState struct {
 	// LatestAt is when Latest was tagged, 0 if it has no tag here.
 	LatestAt int64 `json:"latest_at,omitempty"`
 	// Suggested is the bump the unreleased commits' titles call for, by
-	// SuggestBump, empty unless there are commits since a release. Unclassified
-	// counts the titles it couldn't read.
-	Suggested    string `json:"suggested,omitempty"`
-	Unclassified int    `json:"unclassified,omitempty"`
-	Error        string `json:"error,omitempty"`
+	// SuggestBump, empty unless there are commits since a release.
+	Suggested string `json:"suggested,omitempty"`
+	Error     string `json:"error,omitempty"`
 	// CI is nil until the first check of the repo's CI finishes.
 	CI *CIHealth `json:"ci,omitempty"`
 }
@@ -280,6 +278,6 @@ func readSinceRelease(o *orchard.Orchard, prefix, rev string, st *SubtreeState) 
 	for line := range strings.Lines(out) {
 		subjects = append(subjects, strings.TrimSpace(line))
 	}
-	st.Suggested, st.Unclassified = SuggestBump(subjects)
+	st.Suggested = SuggestBump(subjects)
 	return nil
 }

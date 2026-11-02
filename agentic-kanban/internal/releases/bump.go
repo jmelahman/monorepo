@@ -11,8 +11,7 @@ const BumpNone = "none"
 // bumpOrder ranks the suggestions, least first.
 var bumpOrder = []string{BumpNone, "patch", "minor", "major"}
 
-// typeBumps is what each Conventional Commits type suggests. Keep its types in
-// step with tools/scripts/check-commit-subject.sh in the monorepo.
+// typeBumps is what each Conventional Commits type suggests.
 var typeBumps = map[string]string{
 	"feat":     "minor",
 	"fix":      "patch",
@@ -30,25 +29,25 @@ var typeBumps = map[string]string{
 var conventionalSubject = regexp.MustCompile(`^([a-z]+)(?:\([^()]+\))?(!)?: \S`)
 
 // SuggestBump returns the bump that commits with these subjects call for: the
-// largest any of them does. A subject that isn't a Conventional Commit could be
-// anything, so it counts as a patch, and unclassified says how many there were.
-func SuggestBump(subjects []string) (bump string, unclassified int) {
-	bump = BumpNone
+// largest any of them does. Subjects that aren't Conventional Commits are
+// skipped.
+func SuggestBump(subjects []string) string {
+	bump := BumpNone
 	for _, subject := range subjects {
-		one, ok := "", false
-		if m := conventionalSubject.FindStringSubmatch(subject); m != nil {
-			one, ok = typeBumps[m[1]]
-			if ok && m[2] != "" {
-				one = "major"
-			}
+		m := conventionalSubject.FindStringSubmatch(subject)
+		if m == nil {
+			continue
 		}
+		one, ok := typeBumps[m[1]]
 		if !ok {
-			one = "patch"
-			unclassified++
+			continue
+		}
+		if m[2] != "" {
+			one = "major"
 		}
 		if slices.Index(bumpOrder, one) > slices.Index(bumpOrder, bump) {
 			bump = one
 		}
 	}
-	return bump, unclassified
+	return bump
 }

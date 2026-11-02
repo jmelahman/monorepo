@@ -314,7 +314,7 @@ func printReleases(out io.Writer, summary client.ReleaseSummary) error {
 				fmt.Fprintf(w, "%s\t%s\n", s.Prefix, s.Error)
 				continue
 			}
-			fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%s\t%s\t%s\n", s.Prefix, s.Ahead, s.Behind, s.Latest, unreleasedText(s), suggestedText(s), ciText(s.CI))
+			fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%s\t%s\t%s\n", s.Prefix, s.Ahead, s.Behind, s.Latest, unreleasedText(s), cmp.Or(s.Suggested, "-"), ciText(s.CI))
 		}
 		fmt.Fprintln(w)
 	}
@@ -339,16 +339,6 @@ func unreleasedText(s *client.ReleaseSubtree) string {
 		return "?"
 	}
 	return strconv.Itoa(s.Unreleased)
-}
-
-func suggestedText(s *client.ReleaseSubtree) string {
-	switch {
-	case s.Suggested == "":
-		return "-"
-	case s.Unclassified > 0:
-		return fmt.Sprintf("%s (%d unclassified)", s.Suggested, s.Unclassified)
-	}
-	return s.Suggested
 }
 
 func ciText(ci *client.ReleaseCI) string {

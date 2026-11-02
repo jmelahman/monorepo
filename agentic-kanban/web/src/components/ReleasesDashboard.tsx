@@ -364,19 +364,6 @@ function ReminderCard({
   );
 }
 
-// SuggestedCell is information only, read from the commit titles: the release
-// dialog doesn't start from it.
-function SuggestedCell({ subtree }: { subtree: ReleaseSubtree }) {
-  const { suggested, unclassified } = subtree;
-  if (!suggested) return <>—</>;
-  return (
-    <span title="The largest bump the titles of the unreleased commits call for. Titles that aren't Conventional Commits count as a patch.">
-      {suggested}
-      {unclassified ? ` (${unclassified} unclassified)` : ""}
-    </span>
-  );
-}
-
 // CICell is information only: a release doesn't check CI.
 function CICell({ ci }: { ci?: ReleaseCI }) {
   if (!ci || (ci.status === "none" && !ci.error)) return <>—</>;
@@ -474,8 +461,12 @@ function ProjectTable({
                       </td>
                       <td className="px-3 py-2">{s.latest || "—"}</td>
                       <td className="px-3 py-2">{s.counted ? s.unreleased : "—"}</td>
-                      <td className="px-3 py-2">
-                        <SuggestedCell subtree={s} />
+                      {/* Information only: the release dialog doesn't start from it. */}
+                      <td
+                        className="px-3 py-2"
+                        title="The largest bump the titles of the unreleased commits call for. Titles that aren't Conventional Commits are skipped."
+                      >
+                        {s.suggested ?? "—"}
                       </td>
                     </>
                   )}

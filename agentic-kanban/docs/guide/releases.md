@@ -31,7 +31,7 @@ The **suggested** column reads the titles of each subtree's commits since its la
 | `fix: ...`, `perf: ...`, `revert: ...` | patch |
 | `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore` | none |
 
-Any other title counts as a patch, and the column says how many there were. Merge commits are ignored, and subtrees never released have no suggestion.
+Any other title is skipped, so commits that don't follow the convention can leave the suggestion too low. Merge commits are ignored, and subtrees never released have no suggestion.
 
 This is for information only: the release dialog still starts at patch, and a release doesn't check it.
 

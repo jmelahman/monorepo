@@ -16,12 +16,10 @@ type ReleaseSubtree struct {
 	Behind     int    `json:"behind"`
 	Latest     string `json:"latest"`
 	Unreleased int    `json:"unreleased"`
-	// Suggested is the bump the unreleased commits' titles call for, and
-	// Unclassified the titles it couldn't read.
-	Suggested    string `json:"suggested,omitempty"`
-	Unclassified int    `json:"unclassified,omitempty"`
-	Counted      bool   `json:"counted"`
-	Error        string `json:"error,omitempty"`
+	// Suggested is the bump the unreleased commits' titles call for.
+	Suggested string `json:"suggested,omitempty"`
+	Counted   bool   `json:"counted"`
+	Error     string `json:"error,omitempty"`
 	// CI is nil until the first check finishes.
 	CI *ReleaseCI `json:"ci,omitempty"`
 }
