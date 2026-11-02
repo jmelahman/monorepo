@@ -139,9 +139,11 @@ var openings: Array[Vector3] = []
 
 
 ## A street along the route over [code][0, length][/code].
-static func generate(run_seed: int, length: float, kerb: float) -> Street:
+static func generate(
+	run_seed: int, length: float, kerb: float, order: Array[Array] = Districts.ORDER
+) -> Street:
 	var street := Street.new()
-	street.districts = Districts.generate(run_seed, length)
+	street.districts = Districts.generate(run_seed, length, order)
 	for side: float in [-1.0, 1.0]:
 		street._line_side(run_seed, side, length, kerb)
 		street._dress_kerb(run_seed, side, length, kerb)

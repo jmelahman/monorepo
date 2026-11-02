@@ -76,15 +76,20 @@ var trims: Array[Trim] = []
 var beams: Array[Beam] = []
 
 
-static func generate(run_seed: int, street: Street, route: Route, length: float) -> Skyline:
+## [param roads] is every road a tower could land on; without it, there is only [param route].
+static func generate(
+	run_seed: int, street: Street, route: Route, length: float, roads: RoadMap = null
+) -> Skyline:
 	var skyline := Skyline.new()
-	skyline._raise_spires(run_seed, street.districts, route, length)
+	skyline._raise_spires(run_seed, street.districts, route, length, roads)
 	skyline._dress_towers(run_seed, street, length)
 	skyline._bridge_the_road(run_seed, street, length)
 	return skyline
 
 
-func _raise_spires(run_seed: int, districts: Districts, route: Route, length: float) -> void:
+func _raise_spires(
+	run_seed: int, districts: Districts, route: Route, length: float, roads: RoadMap
+) -> void:
 	var base := Rng.derive(run_seed, [50])
 	var index := 0
 	var s := -REACH
@@ -106,7 +111,13 @@ func _raise_spires(run_seed: int, districts: Districts, route: Route, length: fl
 			for along: float in [-0.5, 0.0, 0.5]:
 				var kind := districts.kind_at(spire.s + along * spire.width)
 				hidden = hidden or kind in [Districts.Kind.CISTERN, Districts.Kind.YARD]
-			if not hidden and absf(route.nearest(at.x, at.z).y) > SPIRE_NEAREST - spire.width * 0.5:
+			var clear := SPIRE_NEAREST - spire.width * 0.5
+			var on_a_road := (
+				roads.near(at.x, at.z, clear)
+				if roads
+				else absf(route.nearest(at.x, at.z).y) <= clear
+			)
+			if not hidden and not on_a_road:
 				spires.append(spire)
 		s += SPIRE_SPACING
 		index += 1

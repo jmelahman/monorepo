@@ -81,7 +81,7 @@ one's source, prompt and terms. Add to it for every new model.
 ## The neon street
 
 The bar is `docs/realism-standard.md`: it should feel real, with art-directed lighting and
-interesting buildings, not match a photo. `docs/performance.md` has the numbers and the TODO, `game/city/lamp_reach.gd` limits which lamps are lit and which cast shadows as the rider moves, and `NeonBiome.CROWD` keeps the pedestrians off to speed up iteration.
+interesting buildings, not match a photo. `docs/performance.md` has the numbers and the TODO, `game/city/lamp_reach.gd` limits which lamps are lit and which cast shadows as the rider moves. Pedestrians aren't built on the courses yet: `Pedestrians` still takes one whole street.
 
 `Street`, `Skyline` and `Undercity` in `sim/` decide what stands where; `game/city/` builds
 it, with `Facades` for the brutalist buildings and the close lights that rake up them
@@ -94,6 +94,8 @@ clamped at the route's end, not metres. Anything animated
 runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on the
 `ride_clock` group. `game/wet_sheen.gdshader` is an additive second pass over the road,
 which mirrors the street by reading the screen.
+
+`CityPlan` lays out the city as two long parallel streets joined by hairpins, and a `Course` (`--course=inner|medium|full`) is a loop of those roads, one `CitySegment` after another. A road is seeded by its own name, so it's the same street on every course; each one has its own `Route`, `Street`, `Skyline` and `Undercity`, in its own distances from 0 to its length, and its own order of districts. A road only knows about itself, apart from the `RoadMap` that keeps towers off the others. Roads are market where they meet, and level, so a seam has nothing much to give it away. `--at` is seconds round the course, so anything aimed at one spot depends on the course.
 
 `CityStream` builds the street a section at a time as the rider comes to it, on a worker thread
 during a ride and synchronously for stills and movies. The sim still lays out the whole route, and

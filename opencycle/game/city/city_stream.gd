@@ -17,7 +17,8 @@ const AHEAD := 480.0
 var threaded := true
 
 var _build: Callable
-var _end := 0.0
+var _course: Course
+var _sections_of_course: Array[StreetSection] = []
 var _next := 0
 var _opening := true
 var _loaded: Array[StreetSection] = []
@@ -25,16 +26,27 @@ var _building: StreetSection
 var _task := -1
 
 
-## [param build] makes a [StreetSection]'s root node; the street stops at [param end].
-func _init(build: Callable, end: float) -> void:
+## [param build] makes a [StreetSection]'s root node, all the way round [param course].
+func _init(build: Callable, course: Course) -> void:
 	_build = build
-	_end = end
+	_course = course
 	name = "CityStream"
+	for leg: Course.Leg in course.legs:
+		var from := 0.0
+		while from < leg.segment.road.length:
+			var to := minf(from + SECTION, leg.segment.road.length)
+			var section := StreetSection.new(from, to)
+			section.segment = leg.segment
+			section.offset = leg.offset
+			_sections_of_course.append(section)
+			from = to
 
 
 ## Builds everything in view of [param s], to have it before the first frame.
 func begin(s: float) -> void:
-	_next = floori((s - BEHIND) / SECTION)
+	_next = -_sections_of_course.size()
+	while _reached(_next) + _course_from(_next) + SECTION <= s - BEHIND:
+		_next += 1
 	while _wanted(s):
 		_arrive(_made(_section()))
 
@@ -58,13 +70,26 @@ func update(s: float) -> void:
 
 
 func _wanted(s: float) -> bool:
-	var from := _next * SECTION
-	return from < s + AHEAD and from < _end
+	return _reached(_next) + _course_from(_next) < s + AHEAD
+
+
+## How far the laps before section [param index] come to. Past the finish is the next lap's start.
+func _reached(index: int) -> float:
+	return floorf(float(index) / _sections_of_course.size()) * _course.length
+
+
+## How far round its own lap section [param index] starts.
+func _course_from(index: int) -> float:
+	var plan := _sections_of_course[posmod(index, _sections_of_course.size())]
+	return plan.offset + plan.from
 
 
 func _section() -> StreetSection:
-	var from := _next * SECTION
-	var section := StreetSection.new(from, from + SECTION, _opening)
+	var plan := _sections_of_course[posmod(_next, _sections_of_course.size())]
+	# Whatever runs into a road from before its start has only its first section to go in.
+	var section := StreetSection.new(plan.from, plan.to, _opening or plan.from == 0.0)
+	section.segment = plan.segment
+	section.offset = plan.offset + _reached(_next)
 	_next += 1
 	_opening = false
 	return section
@@ -84,7 +109,7 @@ func _arrive(section: StreetSection) -> void:
 func _drop_behind(s: float) -> void:
 	for index: int in range(_loaded.size() - 1, -1, -1):
 		var section := _loaded[index]
-		if section.until < s - BEHIND:
+		if section.offset + section.until < s - BEHIND:
 			left.emit(section.root)
 			section.root.queue_free()
 			_loaded.remove_at(index)

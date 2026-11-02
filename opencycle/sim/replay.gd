@@ -18,14 +18,16 @@ var _camera: Array[Dictionary] = []
 
 
 ## Builds a replay from [code]{"speed": [{at_m, kmh}], "camera": [{at_m, lateral,
-## height}]}[/code], each list sorted by [code]at_m[/code].
-static func from_dict(data: Dictionary) -> Replay:
+## height}]}[/code], each list sorted by [code]at_m[/code]. [param ride] is how far to ride, if not
+## to the last of those; the speed then holds at its last value.
+static func from_dict(data: Dictionary, ride := 0.0) -> Replay:
 	var replay := Replay.new()
 	var speed: Array = data["speed"]
 	var camera: Array = data["camera"]
 	replay._camera.assign(camera)
 	var last: Dictionary = speed[-1]
-	replay.length = last["at_m"]
+	var scripted: float = last["at_m"]
+	replay.length = ride if ride > 0.0 else scripted
 	var count := int(replay.length / TABLE_STEP) + 1
 	replay._times.resize(count)
 	var elapsed := 0.0

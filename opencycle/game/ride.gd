@@ -2,7 +2,7 @@ extends Node3D
 ## Builds the world from a seed and flies the camera along a replay. Arguments go
 ## after [code]--[/code]:
 ##
-## [code]--biome=forest|neon[/code], [code]--seed=N[/code],
+## [code]--biome=forest|neon[/code], [code]--seed=N[/code], [code]--course=inner|medium|full[/code],
 ## [code]--replay=res://replays/x.json[/code] and [code]--quality=ship|max[/code] choose
 ## what to show. [code]--scale=0.5[/code] overrides the quality's render scale.
 ## [code]--off=shadows,aa,fog,ssao,glow,probes,rain[/code] leaves those features out.
@@ -43,7 +43,7 @@ var _gpu_by_stretch: Dictionary[int, PackedFloat32Array] = {}
 var _primitive_counts := PackedInt32Array()
 var _rain: MeshInstance3D
 var _lamp_reach: LampReach
-var _districts: Districts
+var _course: Course
 var _stream: CityStream
 var _off := PackedStringArray()
 
@@ -65,19 +65,22 @@ func _ready() -> void:
 	var biome: String = args.get("biome", "forest")
 	var replay_path: String = args.get("replay", BIOME_REPLAYS.get(biome, ""))
 	var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(replay_path))
-	replay = Replay.from_dict(parsed)
-	route = Route.generate(run_seed, NeonBiome.LENGTH if biome == "neon" else Route.LENGTH)
 	match biome:
 		"neon":
-			_stream = NeonBiome.build(self, run_seed, route, quality)
+			var which: String = args.get("course", "inner")
+			_course = CityPlan.new(run_seed).course(which)
+			route = _course
+			replay = Replay.from_dict(parsed, _course.length)
+			_stream = NeonBiome.build(self, _course, quality)
 			_rain = Weather.rain()
 			_camera.add_child(_rain)
-			_districts = Districts.generate(run_seed, NeonBiome.LENGTH)
 			_uses_ride_time = true
 			_lamp_reach = LampReach.new()
 			add_child(_lamp_reach)
 			_camera.fov = NeonBiome.FOV
 		_:
+			route = Route.generate(run_seed)
+			replay = Replay.from_dict(parsed)
 			ForestBiome.build(self, run_seed, route, quality)
 	# An even 30 beats a ride that swings between 30 and 60. A bench needs to see the limit.
 	if _bench_path.is_empty():
@@ -190,7 +193,7 @@ func _send_time() -> void:
 		_lamp_reach.update(_camera.global_position)
 		RenderingServer.global_shader_parameter_set("ride_time", _time)
 		get_tree().call_group(&"ride_clock", &"set_ride_time", _time)
-		var open := _districts.open_to_the_sky(replay.distance_at(_time))
+		var open := _course.open_to_the_sky(replay.distance_at(_time))
 		((_rain.mesh as QuadMesh).material as ShaderMaterial).set_shader_parameter(
 			"amount", open * RAIN
 		)

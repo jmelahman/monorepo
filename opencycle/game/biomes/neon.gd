@@ -5,48 +5,41 @@ extends RefCounted
 ## still on. The lighting is art-directed. docs/realism-standard.md is what it's held to.
 
 const NIGHT_SKY: Shader = preload("res://game/night_sky.gdshader")
-const LENGTH := 2600.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
 ## Wide enough to look up: the tall city overhead is half of what's worth seeing.
 const FOV := 68.0
-## Off while the environment is being worked on, to keep the street itself in view.
-const CROWD := false
 
 
-static func build(parent: Node3D, run_seed: int, route: Route, quality: String) -> CityStream:
+static func build(parent: Node3D, course: Course, quality: String) -> CityStream:
 	RenderingServer.global_shader_parameter_add(
 		"ride_time", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0
 	)
-	var street := Street.generate(run_seed, LENGTH, STREET_HALF)
-	var skyline := Skyline.generate(run_seed, street, route, LENGTH)
-	var undercity := Undercity.generate(run_seed, street, STREET_HALF, LENGTH)
-	if CROWD:
-		parent.add_child(Pedestrians.build(run_seed, route, street, LENGTH))
 	_environment(parent, quality == "max")
-	var make := _section.bind(route, street, skyline, undercity)
-	var stream := CityStream.new(make, LENGTH + Skyline.REACH)
+	var stream := CityStream.new(_section, course)
 	parent.add_child(stream)
 	return stream
 
 
 ## Everything in one stretch of the street. Runs on a worker thread during a ride.
-static func _section(
-	section: StreetSection, route: Route, street: Street, skyline: Skyline, undercity: Undercity
-) -> Node3D:
+static func _section(section: StreetSection) -> Node3D:
+	var road := section.segment.road
+	var length := road.length
+	var city := section.segment.city(STREET_HALF)
+	var street := city.street
 	var root := Node3D.new()
-	root.name = "Section%d" % roundi(section.from)
-	root.add_child(StreetGround.build(route, street, LENGTH, section))
-	root.add_child(Facades.build(route, street, section))
-	root.add_child(Landmarks.build(route, skyline, section))
-	root.add_child(Overhead.build(route, undercity, LENGTH, section))
-	root.add_child(Quarters.build(route, street, section))
-	root.add_child(Shopfronts.build(route, street, LENGTH, section))
-	root.add_child(StreetWall.build(route, street, section))
-	root.add_child(StreetDressing.build(route, street, section))
-	root.add_child(Signage.build(route, street, LENGTH, section))
-	root.add_child(Furniture.build(route, street, LENGTH, section))
-	root.add_child(Weather.build(route, street, LENGTH, section))
-	_probes(root, route, section)
+	root.name = "%s_%d" % [section.segment.name, roundi(section.from)]
+	root.add_child(StreetGround.build(road, street, length, section))
+	root.add_child(Facades.build(road, street, section))
+	root.add_child(Landmarks.build(road, city.skyline, section))
+	root.add_child(Overhead.build(road, city.undercity, length, section))
+	root.add_child(Quarters.build(road, street, section))
+	root.add_child(Shopfronts.build(road, street, length, section))
+	root.add_child(StreetWall.build(road, street, section))
+	root.add_child(StreetDressing.build(road, street, section))
+	root.add_child(Signage.build(road, street, length, section))
+	root.add_child(Furniture.build(road, street, length, section))
+	root.add_child(Weather.build(road, street, length, section))
+	_probes(root, road, length, section)
 	return root
 
 
@@ -132,9 +125,9 @@ static func _environment(parent: Node3D, best: bool) -> void:
 
 ## Captures of the signs, so anything glossy shows what is around it. Rendered once at
 ## the start: nothing they see moves enough to matter.
-static func _probes(parent: Node3D, route: Route, section: StreetSection) -> void:
+static func _probes(parent: Node3D, route: Route, length: float, section: StreetSection) -> void:
 	var s := 0.0
-	while s < LENGTH + 40.0:
+	while s < length:
 		if not section.holds(s):
 			s += 36.0
 			continue

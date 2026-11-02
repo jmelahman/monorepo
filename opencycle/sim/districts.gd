@@ -10,7 +10,8 @@ enum Kind { MARKET, UNDERPASS, WORKS, PLAZA, CISTERN, LANTERNS, YARD, RETAIL, RE
 
 ## How far past the ride's ends things stay as they are.
 const FOREVER := 10000.0
-## In riding order, as a kind and how long it lasts. The market takes up whatever's left.
+## In riding order, as a kind and how long it lasts. The market takes up whatever's left. A road
+## in [CityPlan] has its own; this is every kind in one street, for anything without a plan.
 const ORDER: Array[Array] = [
 	[Kind.MARKET, 230.0, 270.0],
 	[Kind.UNDERPASS, 130.0, 170.0],
@@ -28,6 +29,8 @@ const ORDER: Array[Array] = [
 	[Kind.MARKET, 50.0, 70.0],
 	[Kind.RESIDENTIAL, 240.0, 280.0],
 ]
+## A road always ends in at least this much market, for the next road to carry on from.
+const LAST_MARKET := 40.0
 const GANTRY_MIN := 18.0
 const GANTRY_MAX := 38.0
 const GANTRY_LOW := 6.4
@@ -56,16 +59,16 @@ var stretches: Array[Stretch] = []
 var gantries: Array[Gantry] = []
 
 
-static func generate(run_seed: int, length: float) -> Districts:
+static func generate(run_seed: int, length: float, order: Array[Array] = ORDER) -> Districts:
 	var districts := Districts.new()
 	var base := Rng.derive(run_seed, [70])
 	var s := 0.0
-	for index: int in ORDER.size():
-		var entry: Array = ORDER[index]
+	for index: int in order.size():
+		var entry: Array = order[index]
 		var low: float = entry[1]
 		var high: float = entry[2]
 		var long := lerpf(low, high, Rng.unit(base, index))
-		if s + long > length:
+		if s + long > length - LAST_MARKET:
 			break
 		var kind: Kind = entry[0]
 		districts._add(kind, s, s + long)

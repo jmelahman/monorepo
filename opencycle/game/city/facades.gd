@@ -30,8 +30,6 @@ const DETAIL_TOP := 40.0
 const LIT_CHANCE := 0.12
 const BEVEL := 0.05
 ## How far the lights either end of the street reach back and ahead of the ride.
-const LIT_BEHIND := 15.0
-const LIT_AHEAD := 45.0
 const COLD_WASH := Color(0.52, 0.72, 0.95)
 const WARM_WASH := Color(1.0, 0.74, 0.52)
 const GLASS_FRAME := 0.07
@@ -87,8 +85,7 @@ static func build(route: Route, street: Street, section: StreetSection) -> Node3
 			continue
 		kit.at(tower.s)
 		_tower(kit, route, tower, materials, units)
-		if tower.s > -LIT_BEHIND and tower.s < NeonBiome.LENGTH + LIT_AHEAD:
-			_light(kit, root, route, tower, materials)
+		_light(kit, root, route, tower, materials)
 	kit.commit(root)
 	Furniture.instances(root, AIRCON, units, HIGH_TOLERANCE)
 	return root

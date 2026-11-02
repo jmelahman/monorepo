@@ -2,6 +2,7 @@ extends GdUnitTestSuite
 
 const KERB := 4.0
 const LENGTH := 1000.0
+const WHOLE_RIDE := 2600.0
 
 
 func _street() -> Street:
@@ -26,7 +27,7 @@ func test_same_seed_gives_the_same_districts() -> void:
 
 
 func test_the_ride_passes_through_every_kind() -> void:
-	var districts := Districts.generate(4, NeonBiome.LENGTH)
+	var districts := Districts.generate(4, WHOLE_RIDE)
 	for kind: Districts.Kind in Districts.Kind.values():
 		assert_int(districts.of_kind(kind).size()).is_greater(0)
 
@@ -78,8 +79,8 @@ func test_the_deck_opens_over_the_plaza_alone() -> void:
 
 
 func test_the_deck_stops_over_the_retail_street() -> void:
-	var street := Street.generate(4, NeonBiome.LENGTH, KERB)
-	var city := Undercity.generate(4, street, KERB, NeonBiome.LENGTH)
+	var street := Street.generate(4, WHOLE_RIDE, KERB)
+	var city := Undercity.generate(4, street, KERB, WHOLE_RIDE)
 	var retail := street.districts.of_kind(Districts.Kind.RETAIL)[0]
 	for rib: Undercity.Rib in city.ribs:
 		assert_bool(rib.s >= retail.from and rib.s < retail.to).is_false()
@@ -88,7 +89,7 @@ func test_the_deck_stops_over_the_retail_street() -> void:
 
 
 func test_the_retail_street_is_low_and_open_for_business() -> void:
-	var street := Street.generate(4, NeonBiome.LENGTH, KERB)
+	var street := Street.generate(4, WHOLE_RIDE, KERB)
 	var retail := street.districts.of_kind(Districts.Kind.RETAIL)[0]
 	for tower: Street.Tower in street.towers:
 		if tower.s >= retail.from and tower.s < retail.to:

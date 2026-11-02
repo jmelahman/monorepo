@@ -12,6 +12,9 @@ var first := false
 ## How far along the rider can be and still see something made here.
 var until := 0.0
 var root: Node3D
+## Which road of the city this is on, and how far round the course that road starts.
+var segment: CitySegment
+var offset := 0.0
 
 
 func _init(start: float, end: float, opening := false) -> void:
