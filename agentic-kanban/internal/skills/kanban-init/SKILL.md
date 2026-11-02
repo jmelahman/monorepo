@@ -45,7 +45,8 @@ Use the `kanban` CLI. If only the `mcp__kanban__*` tools are available, use
 Infer what you can. Ask the user only for what you can't, and in one go:
 
 - the container image
-- which tasks to define, and the port each dev server listens on
+- which tasks to define, if the project has any, and the port each dev server
+  listens on
 - any secrets the agent's tools need, by name
 
 Show the plan before changing anything if you had to guess at any of it.
@@ -68,9 +69,10 @@ different paths from yours. Note the slug and `base_branch` in the output.
 Edit the project file directly instead of using `kanban config set --local`,
 which only writes to the repo root's file and drops its comments.
 
-Use the existing file in the directory you're configuring. If there's none, create
-`.config/kanban/config.toml` if that directory has a `.config/`, and `.kanban.toml`
-otherwise.
+Kanban reads `.kanban.toml` and `.config/kanban/config.toml`. If the user named one
+of them, use it. Otherwise use the existing file in the directory you're
+configuring. If there's none, create `.config/kanban/config.toml` if that directory
+has a `.config/`, and `.kanban.toml` otherwise.
 
 Kanban reads each setting from a specific place:
 
@@ -95,16 +97,51 @@ Kanban looks in the project directory, then the repo root, then
 
 - **If there is one**, kanban ignores `[devcontainer].image`, `docker_socket`, and
   `claude_config`. Change `image` in the `devcontainer.json` instead, or ask the
-  user if it uses a `build` section.
+  user if it uses a `build` section. To use `[devcontainer].image`, the file has to
+  go: see below.
 
-The image needs a `dev` (UID 1000) or `root` user and the CLI of the user's agent,
-such as `claude`. A session still starts without that CLI, so step 6 checks for it.
+The image needs the CLI of the user's agent, such as `claude`, and a `dev` or `root`
+user. A session still starts without either the CLI or a login that works, so step
+6 checks both. Kanban runs as `root` if that owns `~/.claude`, and otherwise as
+`dev`, which can only read the credentials if its UID owns them. Under rootless
+Docker, only `root` in the container maps to the host user, so the server needs
+`DEVCONTAINER_REMOTE_USER=root`. That's the user's to set, since it applies to
+every board on the server.
 
 `mounts`, `run_args`, and `[devcontainer.container_env]` work in both cases. Leave
 `docker_socket` off unless the user asks for it: it gives the agent root-level
 access to their machine.
 
+### Replacing a devcontainer.json with an image
+
+Removing the file changes more than the image, and nothing warns about what stops
+working. Before removing it, compare it with this table and tell the user what
+they'd lose. Treat a lost security control, such as a firewall started by
+`postStartCommand`, as a decision for them, not a detail.
+
+| In `devcontainer.json`                       | Without it |
+| -------------------------------------------- | ---------- |
+| `runArgs`, `mounts`, `containerEnv`          | Move to `run_args`, `mounts`, and `[devcontainer.container_env]`. |
+| `postStartCommand`                           | **Stops running.** There's no equivalent, so build the step into the image or find another home for it. |
+| `build`                                      | Lost. Build and publish the image yourself. |
+| `remoteUser`, `containerUser`                | Lost. See the user rules above. |
+| `workspaceMount`, `workspaceFolder`          | Lost. Kanban picks the mount. |
+| `postCreateCommand` and other lifecycle hooks, `features` | Kanban never ran these, so nothing changes. They only ran in other tools, such as VS Code. |
+
+Also tell them that `claude_config` is on by default for an image, so sessions start
+mounting their `~/.claude` read-write unless it's set to `false`.
+
+Other files can depend on the directory too, so check before deleting it, and
+resolve what you find:
+
+```sh
+git grep -n devcontainer -- ':!.devcontainer' ':!.devcontainer.json'
+```
+
 ### Tasks
+
+Tasks are optional. Skip this section if the project has no dev servers or other
+commands worth running from kanban, as with a desktop game.
 
 Kanban runs tasks from `.vscode/tasks.json` in the project directory. Add any
 that are missing, and keep what's already in the file:
@@ -159,20 +196,33 @@ kanban ticket create --board <slug> --title "Check the dev environment" --json
 kanban ticket tasks <id> --run "<label>" --detach
 kanban ticket tasks <id> --json
 kanban ticket info <id> --json
-docker exec <container_name> sh -c 'command -v <agent>; id'
+docker exec <container_name> sh -c 'command -v <agent>; id; test -r "$HOME/.claude/.credentials.json" && echo readable'
 ```
 
-Check each of these:
+If the project has no tasks, start the session through the API instead of
+`--run`, and skip `ticket tasks`. The first call only creates the session, whose
+ID it returns:
+
+```sh
+curl -fsS -X POST "$KANBAN_URL/api/tickets/<id>/session"
+curl -fsS -X POST "$KANBAN_URL/api/sessions/<session id>/start"
+```
+
+`$KANBAN_URL` defaults to `http://localhost:7474`. Check each of these:
 
 - `tasks` lists every task you expect, and `warnings` is empty.
 - Each mapped task has `has_port: true`, and `last_run.status` is `running`.
 - `info` shows `proxy_active: true` for each running task's port. If not, the `--run`
   output says why.
 - The `docker exec` output shows the agent's CLI and the expected user.
+- It also prints `readable`, if the host has `~/.claude/.credentials.json` and
+  `claude_config` is on. If not, every session will ask the agent to log in: see the
+  user rules in step 4. A correct `id` doesn't rule this out.
 
 Clean up with `kanban ticket archive <id> --delete`, which also removes the
 ticket's container, worktree, and branch.
 
 Finish by telling the user the board's slug, the image, each task with its port,
-what you committed, what the test showed or that you skipped it, and anything still
-left for them to do.
+what you committed, what the test showed or that you skipped it, anything that
+stopped working because you removed a `devcontainer.json`, and anything still left
+for them to do.
