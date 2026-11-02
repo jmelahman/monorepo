@@ -28,3 +28,5 @@ libwayland-client0
 libwayland-cursor0
 libwayland-egl1
 libxkbcommon0
+# Wayland's only way to OpenGL; Xvfb gets by on GLX, so only a real window needs it.
+libegl1

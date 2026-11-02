@@ -1,0 +1,11 @@
+[devcontainer]
+# The host's display, GPU and audio, so Play can open a real window.
+mounts = [
+  "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/wayland-1,target=${localEnv:XDG_RUNTIME_DIR}/wayland-1",
+  "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/pulse/native,target=${localEnv:XDG_RUNTIME_DIR}/pulse/native",
+  "type=bind,source=/dev/dri,target=/dev/dri",
+]
+
+[devcontainer.container_env]
+WAYLAND_DISPLAY = "wayland-1"
+XDG_RUNTIME_DIR = "${localEnv:XDG_RUNTIME_DIR}"

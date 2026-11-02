@@ -10,11 +10,6 @@
     "source=${localEnv:HOME}/.claude,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.claude,type=bind",
     "source=${localEnv:HOME}/.claude.json,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.claude.json,type=bind",
     "source=${localEnv:HOME}/.zshrc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.zshrc.host,type=bind,readonly",
-    "source=${localEnv:HOME}/.config/nvim,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/nvim,type=bind,readonly",
-    "source=${localEnv:HOME}/.gitconfig,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.gitconfig,type=bind,readonly",
-    "source=devcontainer-go-mod,target=/home/dev/go/pkg/mod,type=volume",
-    "source=devcontainer-cache,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.cache,type=volume",
-    "source=devcontainer-local,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local,type=volume",
     "source=devcontainer-bun,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.bun/install/cache,type=volume"
   ],
   "containerEnv": {
