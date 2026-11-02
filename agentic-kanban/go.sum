@@ -89,8 +89,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
-github.com/jmelahman/git-orchard v1.5.0 h1:XCpONxNTBHtOLOtbvkqkSE9B/YPbc6tYowx9VlwdrcU=
-github.com/jmelahman/git-orchard v1.5.0/go.mod h1:WO9BbLXDKUySjy+Jxu9ULq4RfgjuaqtpCyPrLuW9nOU=
+github.com/jmelahman/git-orchard v1.6.1 h1:8a03VUXqvVEi9Iyab4iRHYNiRYlocnW2V9Q4jQGR69M=
+github.com/jmelahman/git-orchard v1.6.1/go.mod h1:WO9BbLXDKUySjy+Jxu9ULq4RfgjuaqtpCyPrLuW9nOU=
 github.com/jmelahman/kev-go v0.0.0-20261101074831-6a1fb7a91ea0 h1:lzgFFW3cIGzB4zOVw7rIqrVw5VQ01g+vd9aIuVcbd24=
 github.com/jmelahman/kev-go v0.0.0-20261101074831-6a1fb7a91ea0/go.mod h1:xRVobfDBiGiWJFhBuHoRrTegIsg/weKJfq427kMdJ1s=
 github.com/jmelahman/local-preview v0.31.5 h1:tVFJE/vrFeV6A7yFpIWEH58lAWLdIurygYQb7DkhmSM=

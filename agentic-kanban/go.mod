@@ -7,7 +7,7 @@ require (
 	github.com/containerd/errdefs v1.0.0
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/gorilla/websocket v1.5.3
-	github.com/jmelahman/git-orchard v1.5.0
+	github.com/jmelahman/git-orchard v1.6.1
 	github.com/jmelahman/kev-go v0.0.0-20261101074831-6a1fb7a91ea0
 	github.com/jmelahman/local-preview v0.31.5
 	github.com/moby/moby/api v1.56.1
