@@ -20,8 +20,14 @@ const CLOSED_CHANCE := 0.78
 const CLOSED_UNDERPASS := 0.9
 const CLOSED_WORKS := 0.95
 const CLOSED_LANTERNS := 0.35
+const CLOSED_RETAIL := 0.08
 ## Most buildings down here have nobody left to advertise.
 const SIGNED_TOWERS := 0.25
+const SIGNED_RETAIL := 0.7
+## Out in the open, buildings stop where they like, and hanging signs clear the arcades.
+const RETAIL_LOW := 13.0
+const RETAIL_HIGH := 23.0
+const RETAIL_SIGN_BASE := 6.4
 const FACADES := 4
 ## How many of the brutalist forms [Facades] knows.
 const FORMS := 4
@@ -167,6 +173,8 @@ func _line_side(run_seed: int, side: float, length: float, kerb: float) -> void:
 		tower.depth = lerpf(14.0, 26.0, Rng.unit(cell, 1))
 		# All of them run up into the deck, so there is no skyline down here.
 		tower.height = lerpf(46.0, 70.0, Rng.unit(cell, 2))
+		if Districts.sky_open(districts.kind_at(tower.s)):
+			tower.height = lerpf(RETAIL_LOW, RETAIL_HIGH, Rng.unit(cell, 2))
 		tower.facade = int(Rng.unit(cell, 4) * FACADES)
 		tower.bay = lerpf(2.1, 3.4, Rng.unit(cell, 5))
 		tower.storey = lerpf(2.9, 3.5, Rng.unit(cell, 6))
@@ -237,6 +245,8 @@ func _closed_chance(s: float) -> float:
 			return CLOSED_WORKS
 		Districts.Kind.LANTERNS:
 			return CLOSED_LANTERNS
+		Districts.Kind.RETAIL:
+			return CLOSED_RETAIL
 		_:
 			return CLOSED_CHANCE
 
@@ -270,8 +280,10 @@ func _spill_onto_pavement(slot: int, shop: Shop, kerb: float) -> void:
 ## The odd sign for someone upstairs, out over the road and facing up it. Few enough down
 ## here that each one is a landmark, and mostly narrow vertical blades.
 func _hang_signs(cell: int, tower: Tower) -> void:
-	var signed := districts.kind_at(tower.s) in [Districts.Kind.MARKET, Districts.Kind.LANTERNS]
-	if Rng.unit(cell, 8) > SIGNED_TOWERS or not signed:
+	var kind := districts.kind_at(tower.s)
+	var signed := kind in [Districts.Kind.MARKET, Districts.Kind.LANTERNS, Districts.Kind.RETAIL]
+	var share := SIGNED_RETAIL if kind == Districts.Kind.RETAIL else SIGNED_TOWERS
+	if Rng.unit(cell, 8) > share or not signed:
 		if Rng.unit(cell, 9) < 0.4:
 			tower.jetty = lerpf(0.5, MAX_JETTY, Rng.unit(cell, 10))
 		return
@@ -280,7 +292,8 @@ func _hang_signs(cell: int, tower: Tower) -> void:
 	var column := 0
 	while at < tower.s + tower.width * 0.5 - 0.5:
 		var slot := Rng.derive(cell, [column])
-		var elevation := SIGN_BASE + Rng.unit(slot, 0) * 1.5
+		var lowest := RETAIL_SIGN_BASE if kind == Districts.Kind.RETAIL else SIGN_BASE
+		var elevation := lowest + Rng.unit(slot, 0) * 1.5
 		var stack := 1 + int(Rng.unit(slot, 1) * 2.0)
 		for level: int in stack:
 			var unit := Rng.derive(slot, [level, 3])

@@ -96,12 +96,17 @@ func _raise_pylons(run_seed: int, street: Street, wall: float, length: float) ->
 			pylon.side = side
 			pylon.width = lerpf(3.5, 6.0, Rng.unit(cell, 0))
 			pylon.depth = minf(lerpf(2.0, 3.2, Rng.unit(cell, 1)), wall * 0.3)
-			# Nothing to stand against out on a plaza.
-			if not Districts.stands_open(districts.kind_at(s)):
+			# Nothing to stand against out on a plaza, and nothing to hold up past the deck's end.
+			if not _unframed(s):
 				pylons.append(pylon)
 				Skyline._clear_signs(street, s, pylon.width * 0.5 + 1.0, 0.0, DECK_HEIGHT, side)
 			s += lerpf(PYLON_MIN, PYLON_MAX, Rng.unit(cell, 2))
 			index += 1
+
+
+func _unframed(s: float) -> bool:
+	var kind := districts.kind_at(s)
+	return Districts.stands_open(kind) or Districts.sky_open(kind)
 
 
 func _frame_deck(run_seed: int, wall: float, length: float) -> void:
@@ -115,7 +120,7 @@ func _frame_deck(run_seed: int, wall: float, length: float) -> void:
 		rib.drop = lerpf(1.4, 6.5, pow(Rng.unit(cell, 0), 2.0))
 		rib.long = lerpf(1.2, 3.4, Rng.unit(cell, 1))
 		rib.lit = Rng.unit(cell, 2) < 0.5
-		if not Districts.stands_open(districts.kind_at(s)):
+		if not _unframed(s):
 			ribs.append(rib)
 		s += lerpf(RIB_MIN, RIB_MAX, Rng.unit(cell, 3))
 		index += 1
@@ -140,7 +145,8 @@ func _open_slot(run_seed: int, length: float) -> void:
 		shaft.offset = (Rng.unit(cell, 0) * 2.0 - 1.0) * SLOT_HALF * 0.7
 		shaft.power = lerpf(0.6, 1.0, Rng.unit(cell, 1))
 		# Under a roof, there'd be nothing to see of it.
-		if not Districts.roofed(districts.kind_at(s)):
+		var kind := districts.kind_at(s)
+		if not Districts.roofed(kind) and not Districts.sky_open(kind):
 			shafts.append(shaft)
 		s += lerpf(SHAFT_MIN, SHAFT_MAX, Rng.unit(cell, 2))
 		index += 1

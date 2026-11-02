@@ -4,7 +4,8 @@ extends RefCounted
 ## stands on, mostly shuttered, lit by what falls through a slot overhead and the few signs
 ## still on. The lighting is art-directed. docs/realism-standard.md is what it's held to.
 
-const LENGTH := 2000.0
+const NIGHT_SKY: Shader = preload("res://game/night_sky.gdshader")
+const LENGTH := 2400.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
 ## Wide enough to look up: the tall city overhead is half of what's worth seeing.
 const FOV := 68.0
@@ -50,13 +51,8 @@ static func _section(
 
 
 static func _environment(parent: Node3D, best: bool) -> void:
-	var sky_material := ProceduralSkyMaterial.new()
-	# Nothing but dark past the ends of the deck.
-	sky_material.sky_top_color = Color(0.004, 0.006, 0.01)
-	sky_material.sky_horizon_color = Color(0.02, 0.03, 0.045)
-	sky_material.ground_horizon_color = Color(0.01, 0.015, 0.02)
-	sky_material.ground_bottom_color = Color(0.0, 0.0, 0.0)
-	sky_material.sun_angle_max = 0.0
+	var sky_material := ShaderMaterial.new()
+	sky_material.shader = NIGHT_SKY
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	var environment := Environment.new()
@@ -90,6 +86,8 @@ static func _environment(parent: Node3D, best: bool) -> void:
 	environment.fog_depth_begin = 60.0
 	environment.fog_depth_end = 480.0
 	environment.fog_depth_curve = 1.4
+	# The cloud is further off than any of the fog is meant to be.
+	environment.fog_sky_affect = 0.25
 	# Every light in the street shows up in this, which is what makes the street feel deep.
 	RenderingServer.environment_set_volumetric_fog_volume_size(128, 64)
 	environment.volumetric_fog_enabled = true

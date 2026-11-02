@@ -118,6 +118,9 @@ static func build(route: Route, street: Street, section: StreetSection) -> Node3
 		LanternRow.build(kit, root, route, stretch, section, parts)
 	for stretch: Districts.Stretch in street.districts.of_kind(Districts.Kind.YARD):
 		BreakersYard.build(kit, root, route, stretch, section, parts)
+	for stretch: Districts.Stretch in street.districts.of_kind(Districts.Kind.RETAIL):
+		RetailRow.build(kit, root, route, stretch, section, parts)
+	RetailRow.roofs(kit, route, street, section, parts)
 	kit.commit(root)
 	parts.housing.commit(root, MODELLED_REACH)
 	return root

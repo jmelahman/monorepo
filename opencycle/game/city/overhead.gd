@@ -114,7 +114,8 @@ static func _deck(
 	var s := -Undercity.REACH
 	while s < length + Undercity.REACH:
 		var next := s + STRETCH
-		if not section.holds(s):
+		var overhead := Districts.sky_open(city.districts.kind_at(s + STRETCH * 0.5))
+		if overhead or not section.holds(s):
 			s = next
 			continue
 		kit.at(s)
@@ -384,8 +385,8 @@ static func _duct(
 		kit.at(s)
 		var from := route.at(s) + route.right(s) * duct.offset + Vector3.UP * duct.height
 		var to := route.at(next) + route.right(next) * duct.offset + Vector3.UP * duct.height
-		# There's no wall out on a plaza for it to run along.
-		if not Districts.stands_open(city.districts.kind_at(s)):
+		# There's no wall out on a plaza for it to run along, and no deck past the deck's end.
+		if not city._unframed(s):
 			kit.bar(concrete, from, to, duct.thick, tint * 2.0)
 		s = next
 

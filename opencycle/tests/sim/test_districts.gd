@@ -77,6 +77,26 @@ func test_the_deck_opens_over_the_plaza_alone() -> void:
 	assert_float(city.slot_half(50.0)).is_equal(Undercity.SLOT_HALF)
 
 
+func test_the_deck_stops_over_the_retail_street() -> void:
+	var street := Street.generate(4, NeonBiome.LENGTH, KERB)
+	var city := Undercity.generate(4, street, KERB, NeonBiome.LENGTH)
+	var retail := street.districts.of_kind(Districts.Kind.RETAIL)[0]
+	for rib: Undercity.Rib in city.ribs:
+		assert_bool(rib.s >= retail.from and rib.s < retail.to).is_false()
+	for pylon: Undercity.Pylon in city.pylons:
+		assert_bool(pylon.s >= retail.from and pylon.s < retail.to).is_false()
+
+
+func test_the_retail_street_is_low_and_open_for_business() -> void:
+	var street := Street.generate(4, NeonBiome.LENGTH, KERB)
+	var retail := street.districts.of_kind(Districts.Kind.RETAIL)[0]
+	for tower: Street.Tower in street.towers:
+		if tower.s >= retail.from and tower.s < retail.to:
+			assert_float(tower.height).is_less(Undercity.DECK_HEIGHT + 0.01)
+	var market := _open_share(street, Districts.Kind.MARKET)
+	assert_float(_open_share(street, Districts.Kind.RETAIL)).is_greater(market)
+
+
 func test_rain_stops_under_the_roof() -> void:
 	var districts := Districts.generate(4, LENGTH)
 	var under := districts.of_kind(Districts.Kind.UNDERPASS)[0]

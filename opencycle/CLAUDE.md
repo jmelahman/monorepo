@@ -88,7 +88,7 @@ it, with `Facades` for the brutalist buildings and the close lights that rake up
 (`game/brutal.gdshader` paints the formwork and the stains), `Landmarks` for bridges and rail, `Overhead` for the deck, its pylons and
 the traffic under it, `StreetWall` for the shop level (lintels, piers, shutters, boarded
 fronts, doors), `Shopfronts` and `ShopFittings` for the rooms behind open fronts, `StreetDressing` for what collects on it (canopies, air conditioners, cable,
-bills, spray, rubbish), and `Weather` for mist, steam and rain. `Districts` in `sim/` splits the ride into market, underpass, works and plaza, and `Quarters` builds what's particular to each; a ride too short for a stretch stays market. Stills take
+bills, spray, rubbish), and `Weather` for mist, steam and rain. `Districts` in `sim/` splits the ride into market, underpass, works, plaza, cistern, retail, lanterns and yard, and `Quarters` builds what's particular to each; `Districts.sky_open` marks where the deck stops and `game/night_sky.gdshader` shows; a ride too short for a stretch stays market. Stills take
 `--look=YAW,PITCH,SIDEWAYS` to inspect a wall up close, and `--at` is seconds along the replay,
 clamped at the route's end, not metres. Anything animated
 runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on the
