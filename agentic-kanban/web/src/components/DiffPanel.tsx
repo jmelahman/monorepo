@@ -1288,12 +1288,7 @@ function ViewedToggle({ viewed, onToggle }: { viewed: boolean; onToggle: () => v
       className="flex shrink-0 cursor-pointer select-none items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-fg-muted hover:bg-surface-2 hover:text-fg"
       title={viewed ? "Marked viewed. Click to expand" : "Collapse and mark viewed"}
     >
-      <input
-        type="checkbox"
-        checked={viewed}
-        onChange={onToggle}
-        className="h-3 w-3 accent-[#3fb950]"
-      />
+      <input type="checkbox" checked={viewed} onChange={onToggle} className="h-3 w-3" />
       Viewed
     </label>
   );

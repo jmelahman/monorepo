@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 @layer base {
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-accent-700);
+  }
+
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;

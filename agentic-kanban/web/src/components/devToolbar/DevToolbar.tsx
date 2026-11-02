@@ -107,7 +107,6 @@ export function DevToolbar() {
             >
               <input
                 type="checkbox"
-                className="accent-accent-500"
                 checked={prefs.sections[key]}
                 onChange={() => toggleSection(key)}
               />
