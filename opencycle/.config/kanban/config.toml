@@ -9,3 +9,7 @@ mounts = [
 [devcontainer.container_env]
 WAYLAND_DISPLAY = "wayland-1"
 XDG_RUNTIME_DIR = "${localEnv:XDG_RUNTIME_DIR}"
+
+[[task]]
+label = "Storybook"
+container_port = 8000

@@ -130,6 +130,13 @@
       "problemMatcher": []
     },
     {
+      "label": "Storybook",
+      "detail": "Serves captures/storybook on port 8000, until stopped",
+      "type": "shell",
+      "command": "scripts/storybook.py serve",
+      "problemMatcher": []
+    },
+    {
       "label": "Bake",
       "detail": "Rebuilds assets/baked/; downloads 1.4 GB the first time and opens a window",
       "type": "shell",
