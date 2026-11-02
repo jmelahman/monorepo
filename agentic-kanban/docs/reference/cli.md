@@ -116,15 +116,16 @@ Writes a man page for every command to `<dir>`, creating it if needed. Pages are
 ### `skill install`
 
 ```sh
-kanban skill install [--dir <dir>] [--force]
+kanban skill install [--dir <dir>] [--force] [--link-claude=false]
 ```
 
-Writes each bundled skill to `<dir>/skills/<name>/SKILL.md`, creating directories as needed. See [Agent skills](/guide/install#agent-skills).
+Writes each bundled skill to `<dir>/skills/<name>/SKILL.md`, creating directories as needed, and symlinks it into `~/.claude/skills`. See [Agent skills](/guide/install#agent-skills).
 
-| Flag      | Default     | Description |
-| --------- | ----------- | ----------- |
-| `--dir`   | `~/.agents` | Agent directory to install into, such as `~/.claude`. A path already ending in `skills` is used as is. |
-| `--force` | `false`     | Replace an installed skill that differs from this version's. Without it, the command fails and changes nothing. |
+| Flag            | Default     | Description |
+| --------------- | ----------- | ----------- |
+| `--dir`         | `~/.agents` | Agent directory to install into. A path already ending in `skills` is used as is. |
+| `--force`       | `false`     | Replace an installed skill that differs from this version's, or a link that points elsewhere. Without it, the command fails and changes nothing. It never replaces a real directory. |
+| `--link-claude` | `true`      | Symlink each skill into `~/.claude/skills`. Skipped if `~/.claude` doesn't exist. |
 
 ## `board`
 

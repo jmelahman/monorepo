@@ -104,16 +104,17 @@ GitHub Releases archives also include the pages in `man/man1`.
 Kanban ships a skill that lets your coding agent set a project up for you. `/kanban-init` creates a board for the project, sets its container image, defines its tasks and port mappings, and offers to commit the config.
 
 ```sh
-kanban skill install                        # ~/.agents/skills, shared between agents
-kanban skill install --dir ~/.claude        # Claude Code
-kanban skill install --dir ~/dotfiles/.agents
+kanban skill install                            # ~/.agents/skills, shared between agents
+kanban skill install --dir ~/dotfiles/.agents   # somewhere else
 ```
 
-Claude Code doesn't read `~/.agents`, so use `--dir ~/.claude` for it, or link the skill into `~/.claude/skills`.
+Claude Code doesn't read `~/.agents`, so if `~/.claude` exists, each skill is also symlinked into `~/.claude/skills`. Pass `--link-claude=false` to skip that.
+
+Session containers mount `~/.claude` but not the directory the link points to, so a linked skill isn't available to agents inside a session. To use it there, remove the link and install with `--dir ~/.claude`, which writes a real copy.
 
 The skill sets `disable-model-invocation`, so in agents that honor it, such as Claude Code, it stays out of the agent's context until you invoke it. Other agents may list its description or load it on their own.
 
-To update the skill after upgrading kanban, run the command again with `--force`. Without `--force`, the command won't replace a file that differs from the bundled skill, so your edits are safe.
+To update the skill after upgrading kanban, run the command again with `--force`. Without `--force`, the command won't replace a file that differs from the bundled skill, so your edits are safe. `--force` also replaces a link that points elsewhere, but never a real directory.
 
 ## Check that it works
 
