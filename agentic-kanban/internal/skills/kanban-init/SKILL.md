@@ -1,18 +1,18 @@
 ---
 name: kanban-init
-description: Create an agentic-kanban board for a project and set up its session container image, tasks, and port mappings.
+description: Create an agentic-kanban board for a project and set up its session container image, tasks, and port mappings. Use when adding a project to kanban or configuring the dev environment its ticket sessions run in.
 disable-model-invocation: true
 ---
 
 # Set up a project on agentic-kanban
 
 Create a board for a project and configure the environment its ticket sessions
-run in. Treat anything the user passed when invoking this skill as the answers
-to step 2.
+run in. Treat anything the user passed when invoking this skill, such as
+`/kanban-init services/api ghcr.io/me/devbox:latest`, as answers to step 2.
 
-Use the `kanban` CLI. If it isn't available but the `mcp__kanban__*` tools are,
-use their equivalents: `list_boards`, `create_board`, `update_board`,
-`set_board_env`.
+Use the `kanban` CLI. If only the `mcp__kanban__*` tools are available, use
+`list_boards`, `create_board`, and `update_board`, passing `repo_path` and
+`project_dir` yourself. MCP can't run tasks, so ask the user to run step 6.
 
 ## 1. Look at what's there
 
@@ -23,15 +23,22 @@ use their equivalents: `list_boards`, `create_board`, `update_board`,
    subdirectory the agent should work from. Run `kanban board get <id> --json` on
    any board that looks related. If one already has this repo and project
    directory, update it with `kanban board update` rather than creating another.
+   If the project isn't in a git repo, stop and ask: the rest of this skill
+   relies on committed config, which a `--mount-path` board doesn't have.
 3. Read what the project already has:
    - `.devcontainer/devcontainer.json` or `.devcontainer.json`, in the project
      directory and the repo root
    - `.kanban.toml` or `.config/kanban/config.toml`, in both places
    - `.vscode/tasks.json` in the project directory
    - the project's README and build files, to find its dev server commands
-4. Run `kanban config list --global`. The user's config file overrides the
-   project's, so tell the user about any key there that will override a value
-   you're about to set.
+4. Check which keys the user's config file sets, since they override the
+   project's. List only the names, because values can include secrets:
+
+   ```sh
+   kanban config list --global --json | jq -r '.entries[].key'
+   ```
+
+   Tell the user about any key that will override a value you're about to set.
 
 ## 2. Settle the plan
 
@@ -90,8 +97,8 @@ Kanban looks in the project directory, then the repo root, then
   `claude_config`. Change `image` in the `devcontainer.json` instead, or ask the
   user if it uses a `build` section.
 
-The image needs the CLI of the user's agent installed, and a `dev` (UID 1000) or
-`root` user.
+The image needs a `dev` (UID 1000) or `root` user and the CLI of the user's agent,
+such as `claude`. A session still starts without that CLI, so step 6 checks for it.
 
 `mounts`, `run_args`, and `[devcontainer.container_env]` work in both cases. Leave
 `docker_socket` off unless the user asks for it: it gives the agent root-level
@@ -100,7 +107,7 @@ access to their machine.
 ### Tasks
 
 Kanban runs tasks from `.vscode/tasks.json` in the project directory. Add any
-that are missing:
+that are missing, and keep what's already in the file:
 
 ```json
 {
@@ -113,8 +120,10 @@ that are missing:
 
 Servers must listen on `0.0.0.0` to be reachable from outside the container.
 
-To give a task a URL on the host, map its exact label to the port it listens on
-in the container:
+To give a task a URL on the host, map its label to the port it listens on in the
+container. A label that doesn't match exactly leaves the task with no URL and no
+error, so give every mapped task an explicit `label`. Generated names are hard to
+guess: an `npm` task with a `path` is named `npm: dev - .`, not `npm: dev`.
 
 ```toml
 [[task]]
@@ -124,8 +133,8 @@ container_port = 3000
 
 ### Secrets
 
-Never put a secret in a config file. Have the user run this themselves, so the
-value stays out of this conversation:
+Keep secrets out of the config, which gets committed. Have the user run this
+themselves, so the value stays out of this conversation too:
 
 ```sh
 kanban env set <board> KEY=VALUE
@@ -142,16 +151,28 @@ the user rather than switching branches.
 
 ## 6. Check it and report
 
-Offer to start a throwaway ticket, because this pulls the image and starts a
-container:
+Offer to test it with a throwaway ticket. Ask first, because this pulls the image
+and starts a container:
 
 ```sh
-kanban ticket create --board <slug> --title "Check the dev environment"
+kanban ticket create --board <slug> --title "Check the dev environment" --json
 kanban ticket tasks <id> --run "<label>" --detach
 kanban ticket tasks <id> --json
+kanban ticket info <id> --json
+docker exec <container_name> sh -c 'command -v <agent>; id'
 ```
 
-Clean up with `kanban ticket archive <id> --delete`.
+Check each of these:
+
+- `tasks` lists every task you expect, and `warnings` is empty.
+- Each mapped task has `has_port: true`, and `last_run.status` is `running`.
+- `info` shows `proxy_active: true` for each running task's port. If not, the `--run`
+  output says why.
+- The `docker exec` output shows the agent's CLI and the expected user.
+
+Clean up with `kanban ticket archive <id> --delete`, which also removes the
+ticket's container, worktree, and branch.
 
 Finish by telling the user the board's slug, the image, each task with its port,
-what you committed, and anything still left for them to do.
+what you committed, what the test showed or that you skipped it, and anything still
+left for them to do.
