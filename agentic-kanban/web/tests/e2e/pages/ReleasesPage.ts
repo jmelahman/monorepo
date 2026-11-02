@@ -121,6 +121,10 @@ class ReleaseConfirm {
     this.releaseButton = this.root.getByRole("button", { name: "release", exact: true });
   }
 
+  async expectBump(bump: string) {
+    await expect(this.root.getByLabel("Bump")).toHaveValue(bump);
+  }
+
   async expectVersion(version: string) {
     await expect(this.root).toContainText(version);
   }

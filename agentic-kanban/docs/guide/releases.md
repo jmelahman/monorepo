@@ -33,7 +33,7 @@ The **suggested** column reads the titles of each subtree's commits since its la
 
 Any other title is skipped, so commits that don't follow the convention can leave the suggestion too low. Merge commits are ignored, and subtrees never released have no suggestion.
 
-This is for information only: the release dialog still starts at patch, and a release doesn't check it.
+A subtree's release dialog starts at the suggestion, or at patch when it's none or there isn't one, and you can change it there. A release from a reminder or a retry starts at the bump it was given instead, and a release doesn't check the suggestion.
 
 ## Releasing
 

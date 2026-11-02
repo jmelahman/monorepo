@@ -154,6 +154,9 @@ test.describe("Releases", () => {
     await releases.goto();
     await releases.reminder(note).expectReleasedSince("v1.0.0");
     await project.expectSuggested(PREFIX, "minor");
+    await project.openRelease(PREFIX);
+    await releases.confirm.expectBump("minor");
+    await releases.confirm.expectVersion("v1.1.0");
   });
 
   test("commits the mirror hasn't published block the release", async ({ page }) => {

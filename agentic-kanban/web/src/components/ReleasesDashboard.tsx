@@ -38,6 +38,13 @@ const runStyles: Record<ReleaseRun["status"], string> = {
   interrupted: "border-danger/30 text-danger",
 };
 
+const suggestedStyles: Record<NonNullable<ReleaseSubtree["suggested"]>, string> = {
+  major: "text-danger",
+  minor: "text-warning",
+  patch: "text-success",
+  none: "text-fg-muted",
+};
+
 function shortRev(rev: string) {
   return rev.slice(0, 12);
 }
@@ -68,6 +75,12 @@ function BumpSelect({
 // Errored subtrees are unknown, not unreleased.
 function neverReleased(s: ReleaseSubtree) {
   return !s.error && !s.latest;
+}
+
+// What a subtree's release dialog starts at. Having to choose a bump means
+// there's something to release, so a suggestion of none still starts at patch.
+function startingBump(s: ReleaseSubtree): ReleaseBump {
+  return s.suggested && s.suggested !== "none" ? s.suggested : "patch";
 }
 
 function unreleasedLabel(s: ReleaseSubtree | undefined) {
@@ -397,14 +410,14 @@ function ProjectTable({
   onShowUnreleased,
 }: {
   project: ReleaseProject;
-  onRelease: (prefix: string) => void;
+  onRelease: (subtree: ReleaseSubtree) => void;
   showUnreleased: boolean;
   onShowUnreleased: (show: boolean) => void;
 }) {
   const qc = useQueryClient();
   // Reaching for the button is the cue to start the fetch the modal will want.
-  const warm = (prefix: string) =>
-    qc.prefetchQuery(previewOptions(project.repo_path, prefix, "patch", ""));
+  const warm = (s: ReleaseSubtree) =>
+    qc.prefetchQuery(previewOptions(project.repo_path, s.prefix, startingBump(s), ""));
   // Until its first refresh, a project doesn't know which have been released.
   const subtrees =
     showUnreleased || !project.refreshed_at
@@ -461,9 +474,8 @@ function ProjectTable({
                       </td>
                       <td className="px-3 py-2">{s.latest || "—"}</td>
                       <td className="px-3 py-2">{s.counted ? s.unreleased : "—"}</td>
-                      {/* Information only: the release dialog doesn't start from it. */}
                       <td
-                        className="px-3 py-2"
+                        className={`px-3 py-2 ${s.suggested ? suggestedStyles[s.suggested] : ""}`}
                         title="The largest bump the titles of the unreleased commits call for. Titles that aren't Conventional Commits are skipped."
                       >
                         {s.suggested ?? "—"}
@@ -478,9 +490,9 @@ function ProjectTable({
                       variant="neutral"
                       size="sm"
                       className={chip}
-                      onMouseEnter={() => warm(s.prefix)}
-                      onFocus={() => warm(s.prefix)}
-                      onClick={() => onRelease(s.prefix)}
+                      onMouseEnter={() => warm(s)}
+                      onFocus={() => warm(s)}
+                      onClick={() => onRelease(s)}
                     >
                       release
                     </Button>
@@ -640,8 +652,13 @@ export function ReleasesDashboard() {
                 setShowUnreleased(show);
                 writeShowUnreleased(show);
               }}
-              onRelease={(prefix) =>
-                setReleasing({ repo: p.repo_path, prefix, bump: "patch", suffix: "" })
+              onRelease={(s) =>
+                setReleasing({
+                  repo: p.repo_path,
+                  prefix: s.prefix,
+                  bump: startingBump(s),
+                  suffix: "",
+                })
               }
             />
           ))
