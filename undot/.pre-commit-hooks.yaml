@@ -9,7 +9,7 @@
 # `pre-commit install --hook-type post-checkout ...`.
 - id: undot
   name: undot
-  description: Recreate root symlinks into .config/. Built by the Rust toolchain; no other dependencies.
+  description: Recreate root symlinks into .config/.
   entry: undot link
   language: rust
   always_run: true
