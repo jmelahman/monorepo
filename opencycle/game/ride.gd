@@ -101,7 +101,7 @@ func _ready() -> void:
 		_stream.threaded = _still_path.is_empty() and not _is_movie()
 		_stream.arrived.connect(_on_section_arrived)
 		_stream.left.connect(_lamp_reach.remove)
-		_stream.begin(replay.distance_at(at_seconds))
+		_stream.begin(replay.ridden(at_seconds))
 	_startup_ms = Time.get_ticks_msec() - started
 	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_time = at_seconds
@@ -189,11 +189,11 @@ func _process(delta: float) -> void:
 ## Anything animated on the street runs off the ride's clock, so a replay looks the same.
 func _send_time() -> void:
 	if _uses_ride_time:
-		_stream.update(replay.distance_at(_time))
+		_stream.update(replay.ridden(_time))
 		_lamp_reach.update(_camera.global_position)
 		RenderingServer.global_shader_parameter_set("ride_time", _time)
 		get_tree().call_group(&"ride_clock", &"set_ride_time", _time)
-		var open := _course.open_to_the_sky(replay.distance_at(_time))
+		var open := _course.open_to_the_sky(replay.ridden(_time))
 		((_rain.mesh as QuadMesh).material as ShaderMaterial).set_shader_parameter(
 			"amount", open * RAIN
 		)

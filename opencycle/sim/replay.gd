@@ -8,9 +8,13 @@ extends RefCounted
 const EYE_HEIGHT := 1.5
 const LOOK_AHEAD := 22.0
 const TABLE_STEP := 0.5
+## How long before the end of a lap the script starts going back to how it began.
+const LAP_BLEND := 100.0
 
 ## Metres the ride covers, up to the last [code]speed[/code] entry.
 var length := 0.0
+## Whether a ride goes on past that, round the same loop again.
+var laps := false
 
 ## Seconds to reach each [constant TABLE_STEP] metres of the route.
 var _times := PackedFloat32Array()
@@ -18,16 +22,19 @@ var _camera: Array[Dictionary] = []
 
 
 ## Builds a replay from [code]{"speed": [{at_m, kmh}], "camera": [{at_m, lateral,
-## height}]}[/code], each list sorted by [code]at_m[/code]. [param ride] is how far to ride, if not
-## to the last of those; the speed then holds at its last value.
-static func from_dict(data: Dictionary, ride := 0.0) -> Replay:
+## height}]}[/code], each list sorted by [code]at_m[/code]. [param lap], if given, is the length of
+## a loop to ride round and round: the script is cut to fit and eases back to its start by the end.
+static func from_dict(data: Dictionary, lap := 0.0) -> Replay:
 	var replay := Replay.new()
 	var speed: Array = data["speed"]
 	var camera: Array = data["camera"]
+	if lap > 0.0:
+		speed = _closed(speed, lap)
+		camera = _closed(camera, lap)
+		replay.laps = true
 	replay._camera.assign(camera)
 	var last: Dictionary = speed[-1]
-	var scripted: float = last["at_m"]
-	replay.length = ride if ride > 0.0 else scripted
+	replay.length = last["at_m"]
 	var count := int(replay.length / TABLE_STEP) + 1
 	replay._times.resize(count)
 	var elapsed := 0.0
@@ -39,6 +46,33 @@ static func from_dict(data: Dictionary, ride := 0.0) -> Replay:
 
 func duration() -> float:
 	return _times[-1]
+
+
+static func _closed(knots: Array, lap: float) -> Array:
+	var kept := []
+	var last: Dictionary = knots[0]
+	for entry: Variant in knots:
+		var knot: Dictionary = entry
+		var at: float = knot["at_m"]
+		if at < lap - LAP_BLEND:
+			kept.append(knot)
+			last = knot
+	var held := last.duplicate()
+	held["at_m"] = lap - LAP_BLEND
+	kept.append(held)
+	var start: Dictionary = knots[0]
+	var first := start.duplicate()
+	first["at_m"] = lap
+	kept.append(first)
+	return kept
+
+
+## Metres ridden at [param t] seconds, counting every lap.
+func ridden(t: float) -> float:
+	if not laps:
+		return distance_at(t)
+	var done := floorf(t / duration())
+	return done * length + distance_at(t - done * duration())
 
 
 ## Metres along the route at [param t] seconds. Past the end, it stays at the end.
@@ -59,15 +93,16 @@ func distance_at(t: float) -> float:
 
 ## Where the camera is at [param t] seconds, looking up the road.
 func camera_at(route: Route, t: float) -> Transform3D:
-	var s := distance_at(t)
+	var s := ridden(t)
 	var eye := _point(route, s, EYE_HEIGHT)
 	var target := _point(route, s + LOOK_AHEAD, EYE_HEIGHT)
 	return Transform3D(Basis.IDENTITY, eye).looking_at(target, Vector3.UP)
 
 
 func _point(route: Route, s: float, eye: float) -> Vector3:
-	var lateral := _camera_value(s, "lateral")
-	var height := _camera_value(s, "height")
+	var script_at := fposmod(s, length) if laps else s
+	var lateral := _camera_value(script_at, "lateral")
+	var height := _camera_value(script_at, "height")
 	return route.at(s) + route.right(s) * lateral + Vector3.UP * (eye + height)
 
 

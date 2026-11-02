@@ -90,7 +90,7 @@ the traffic under it, `StreetWall` for the shop level (lintels, piers, shutters,
 fronts, doors), `Shopfronts` and `ShopFittings` for the rooms behind open fronts, `StreetDressing` for what collects on it (canopies, air conditioners, cable,
 bills, spray, rubbish), and `Weather` for mist, steam and rain. `Districts` in `sim/` splits the ride into market, underpass, works, plaza, cistern, retail, lanterns, yard and residential, and `Quarters` builds what's particular to each; `Districts.sky_open` marks where the deck stops and `game/night_sky.gdshader` shows; a ride too short for a stretch stays market. Stills take
 `--look=YAW,PITCH,SIDEWAYS` to inspect a wall up close, and `--at` is seconds along the replay,
-clamped at the route's end, not metres. Anything animated
+which on a course carry on round the loop, not metres. Anything animated
 runs off the ride's clock: the `ride_time` shader global, or `set_ride_time` on the
 `ride_clock` group. `game/wet_sheen.gdshader` is an additive second pass over the road,
 which mirrors the street by reading the screen.
