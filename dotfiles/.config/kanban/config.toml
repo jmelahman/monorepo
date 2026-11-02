@@ -26,6 +26,10 @@ mounts = [
   "type=volume,source=devcontainer-cache,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.cache",
   "type=volume,source=devcontainer-local,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local",
   "type=volume,source=devcontainer-bun,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.bun",
+  # The host's display, GPU and audio, so a session can open a real window.
+  "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/wayland-1,target=/run/user/1000/wayland-1",
+  "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/pulse/native,target=/run/user/1000/pulse/native",
+  "type=bind,source=/dev/dri,target=/dev/dri",
 ]
 run_args = ["--cap-add=SYS_PTRACE", "--network=kanban-net"]
 
@@ -35,6 +39,8 @@ run_args = ["--cap-add=SYS_PTRACE", "--network=kanban-net"]
 AGILECBT_LLM_BASE_URL = "http://ollama:11434/v1"
 COLORTERM = "truecolor"
 TZ = "America/Los_Angeles"
+WAYLAND_DISPLAY = "wayland-1"
+XDG_RUNTIME_DIR = "/run/user/1000"
 
 [errors]
 enabled = true
