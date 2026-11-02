@@ -271,7 +271,11 @@ pub fn create_and_push_tag(tag: &str, remote: &str) -> Result<()> {
         if !deleted {
             anyhow::bail!("failed to push tag to {remote}, and local tag {tag} remains");
         }
-        anyhow::bail!("failed to push tag to {remote}");
+        // A push can fail after the remote accepted it, e.g. a dropped connection.
+        anyhow::bail!(
+            "failed to push tag to {remote}; removed local tag {tag}, \
+             but check whether {remote} received it"
+        );
     }
 
     log::debug!("create_and_push_tag: successfully created and pushed tag {tag}");
