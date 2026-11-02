@@ -308,7 +308,8 @@ func apply_to_world(root: Node) -> void:
 		if not light.has_meta(&"casts"):
 			light.set_meta(&"casts", light.shadow_enabled)
 		if light.get_meta(&"casts"):
-			light.shadow_enabled = shadows > 0
+			# Without its shadow the sky would shine straight through the deck.
+			light.visible = shadows > 0
 			light.directional_shadow_max_distance = SKY_REACH[shadows]
 			light.directional_shadow_mode = (
 				DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS

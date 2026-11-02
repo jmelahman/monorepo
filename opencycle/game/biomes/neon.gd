@@ -9,11 +9,16 @@ const STREET_HALF := Route.HALF_WIDTH + 1.0
 ## Wide enough to look up: the tall city overhead is half of what's worth seeing.
 const FOV := 68.0
 
+## The server keeps its globals from one ride to the next.
+static var _has_ride_time := false
+
 
 static func build(parent: Node3D, course: Course, quality: String) -> CityStream:
-	RenderingServer.global_shader_parameter_add(
-		"ride_time", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0
-	)
+	if not _has_ride_time:
+		RenderingServer.global_shader_parameter_add(
+			"ride_time", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0
+		)
+		_has_ride_time = true
 	_environment(parent, quality == "max")
 	var stream := CityStream.new(_section, course)
 	parent.add_child(stream)
