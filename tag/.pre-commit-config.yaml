@@ -44,6 +44,30 @@ repos:
       - id: zizmor
   # END orchard:base
 
+  # BEGIN orchard:rust
+  # Shared by Rust subtrees: .config/git-orchard/shared/rust in the monorepo.
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --check
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets -- -D warnings
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
+        pass_filenames: false
+      - id: cargo-test
+        name: cargo test
+        entry: cargo test
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
+        pass_filenames: false
+  # END orchard:rust
+
   - repo: https://github.com/jmelahman/tag
     rev: 05c7b0f4da54388f7d31fe43f2ebe8458bbff3f5  # frozen: v0.6.1
     hooks:

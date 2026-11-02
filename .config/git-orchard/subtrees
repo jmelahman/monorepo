@@ -134,6 +134,7 @@
 	remote = git@github.com:jmelahman/tag.git
 	branch = master
 	shared = base
+	shared = rust
 [subtree "templates/PKGBUILDs-template"]
 	remote = git@github.com:jmelahman/PKGBUILDs-template.git
 	branch = master
@@ -165,6 +166,7 @@
 	branch = master
 	shared = base
 	shared = shell
+	shared = rust
 [subtree "work"]
 	remote = git@github.com:jmelahman/work.git
 	branch = master

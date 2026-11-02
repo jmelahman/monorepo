@@ -1,0 +1,21 @@
+  # Shared by Rust subtrees: .config/git-orchard/shared/rust in the monorepo.
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --check
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets -- -D warnings
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
+        pass_filenames: false
+      - id: cargo-test
+        name: cargo test
+        entry: cargo test
+        language: system
+        files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
+        pass_filenames: false

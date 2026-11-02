@@ -77,6 +77,11 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
+
+  # BEGIN orchard:rust
+  # Shared by Rust subtrees: .config/git-orchard/shared/rust in the monorepo.
+  - repo: local
+    hooks:
       - id: cargo-fmt
         name: cargo fmt
         entry: cargo fmt --check
@@ -95,3 +100,4 @@ repos:
         language: system
         files: '(\.rs|Cargo\.toml|Cargo\.lock)$'
         pass_filenames: false
+  # END orchard:rust
