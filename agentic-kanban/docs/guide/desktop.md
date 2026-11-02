@@ -2,12 +2,22 @@
 
 The desktop app opens kanban in its own window on Linux. It's a client for a server that's already running, such as the container from `docker compose up -d`. It doesn't start the server or store boards, and closing it leaves your sessions running.
 
-## Build it
+## Install it
 
 The app isn't part of kanban's releases yet, so build it from the repo. You need [Bun](https://bun.sh/).
 
 ```sh
 cd desktop
+./install.sh
+```
+
+This builds the app and installs it for your user, with no root needed. It puts the app in `~/.local/opt/agentic-kanban`, adds an `agentic-kanban` command in `~/.local/bin`, and adds a launcher entry.
+
+To upgrade, quit the app, pull the commits you want, and run `./install.sh` again. To remove it, run `./install.sh --uninstall`. Both keep your settings.
+
+To work on the app or build packages for other machines:
+
+```sh
 bun install
 bun run start     # run it from source
 bun run package   # build an AppImage and a .deb in desktop/dist/
