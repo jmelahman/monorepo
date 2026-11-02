@@ -248,8 +248,10 @@ func (s *Service) compute(repo, base string) (Project, bool) {
 		if u.Latest == "" || !u.Counted {
 			return
 		}
+		// Best effort: the counts stand without the suggestion and the release
+		// date, so failing to read them shouldn't hide the subtree.
 		if err := readSinceRelease(o, sub.Prefix, p.Rev, st); err != nil {
-			st.Error = redact(err.Error())
+			log.Printf("releases: read %s since %s: %v", sub.Prefix, u.Latest, redact(err.Error()))
 		}
 	})
 	return p, true
