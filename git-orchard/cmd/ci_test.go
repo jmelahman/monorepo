@@ -149,7 +149,7 @@ func TestPrintCILogs(t *testing.T) {
 		"## .: Tests (failure)",
 		"Repository o/mono, branch master, commit 0123456789abcdef: Fix the thing\nhttps://example.com/Tests",
 		"### Job test, step Run go test",
-		"3 earlier lines left out; gh run view 1 --repo o/mono --log-failed has them all.",
+		"3 earlier lines left out; https://example.com/Tests has them all.",
 		"```text\nFAIL\n```",
 	} {
 		if !strings.Contains(out.String(), want) {

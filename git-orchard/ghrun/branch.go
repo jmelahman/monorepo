@@ -1,11 +1,10 @@
 package ghrun
 
 import (
-	"bytes"
 	"cmp"
 	"context"
-	"encoding/json"
-	"fmt"
+	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -13,7 +12,7 @@ import (
 	"sync"
 )
 
-// Workflow is a workflow, as gh workflow list --json describes it.
+// Workflow is a workflow, as the API describes it.
 type Workflow struct {
 	ID    int64  `json:"id"`
 	Name  string `json:"name"`
@@ -29,19 +28,14 @@ type Workflow struct {
 // frequent schedule can crowd a workflow out, so those missing are listed
 // on their own, a few at a time.
 func Latest(ctx context.Context, repo, branch string) ([]Run, error) {
-	out, err := gh(ctx, "workflow", "list", "--repo", repo, "--limit", "100", "--json", "id,name,state")
+	workflows, err := listWorkflows(ctx, repo)
 	if err != nil {
 		return nil, err
 	}
-	// A repository without workflows gets no output, rather than [].
-	if len(bytes.TrimSpace(out)) == 0 {
+	if len(workflows) == 0 {
 		return nil, nil
 	}
-	var workflows []Workflow
-	if err := json.Unmarshal(out, &workflows); err != nil {
-		return nil, fmt.Errorf("gh workflow list --repo %s: %w", repo, err)
-	}
-	runs, err := listRuns(ctx, repo, "--branch", branch, "--limit", "100")
+	runs, err := listRuns(ctx, repo, 0, url.Values{"branch": {branch}}, 100)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +57,7 @@ func Latest(ctx context.Context, repo, branch string) ([]Run, error) {
 		wg.Go(func() {
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			runs, err := listRuns(ctx, repo, "--branch", branch, "--workflow", strconv.FormatInt(w.ID, 10), "--limit", "20")
+			runs, err := listRuns(ctx, repo, w.ID, url.Values{"branch": {branch}}, 20)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -82,11 +76,15 @@ func Latest(ctx context.Context, repo, branch string) ([]Run, error) {
 }
 
 // LatestPerWorkflow returns the newest of runs for each of the active
-// workflows, by workflow name, leaving out pull requests' runs.
+// workflows, by workflow name, leaving out pull requests' runs. The runs take
+// their workflow's name, since a dynamic workflow's runs, like Dependabot's, go
+// by a title of their own.
 func LatestPerWorkflow(workflows []Workflow, runs []Run) []Run {
 	active := map[int64]bool{}
+	names := map[int64]string{}
 	for _, w := range workflows {
 		active[w.ID] = w.State == "active"
+		names[w.ID] = w.Name
 	}
 	latest := map[int64]Run{}
 	for _, r := range runs {
@@ -97,6 +95,7 @@ func LatestPerWorkflow(workflows []Workflow, runs []Run) []Run {
 		if !active[r.WorkflowID] {
 			continue
 		}
+		r.Workflow = names[r.WorkflowID]
 		if l, ok := latest[r.WorkflowID]; !ok || r.CreatedAt.After(l.CreatedAt) {
 			latest[r.WorkflowID] = r
 		}
@@ -109,12 +108,25 @@ func LatestPerWorkflow(workflows []Workflow, runs []Run) []Run {
 	return out
 }
 
-// FailedLog returns the logs of the failed jobs of run id in repo, as gh run
-// view --log-failed prints them: a line per log line, of the job, the step
-// and the timestamped text, separated by tabs.
+// FailedLog returns the logs of the failed jobs of run id in repo: a line per
+// log line, of the job, the step (which job logs don't name, so it's empty) and
+// the timestamped text, separated by tabs.
 func FailedLog(ctx context.Context, repo string, id int64) (string, error) {
-	out, err := gh(ctx, "run", "view", strconv.FormatInt(id, 10), "--repo", repo, "--log-failed")
-	return string(out), err
+	jobs, err := failedJobs(ctx, repo, id)
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	for _, job := range jobs {
+		log, _, err := call(ctx, http.MethodGet, "/repos/"+repo+"/actions/jobs/"+strconv.FormatInt(job.ID, 10)+"/logs")
+		if err != nil {
+			return "", err
+		}
+		for line := range strings.Lines(string(log)) {
+			b.WriteString(job.Name + "\t\t" + strings.TrimRight(line, "\r\n") + "\n")
+		}
+	}
+	return b.String(), nil
 }
 
 // Excerpt is the failing part of one job's log.

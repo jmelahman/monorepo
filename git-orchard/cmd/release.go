@@ -65,7 +65,7 @@ moved release, so publish a new version instead.
 A release that already tags --rev is published again rather than retagged,
 so a release whose publishing failed can be finished by running it again.
 
---watch follows the release through GitHub Actions with gh: the runs the tag
+--watch follows the release through GitHub Actions: the runs the tag
 push triggers on --remote (the mirror action), then, once the tag reaches
 the upstream, the runs it triggers there (e.g. a release workflow). It fails
 if any of them fails. Runs are found by the tag they ran for, so no workflow

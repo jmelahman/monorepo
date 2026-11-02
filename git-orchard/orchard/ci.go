@@ -104,8 +104,8 @@ func (o *Orchard) CITargets(ctx context.Context, prefixes []string) ([]CITarget,
 	return targets, nil
 }
 
-// CheckCI lists the targets' latest runs through gh. A target not on GitHub
-// has no runs, and needs no gh.
+// CheckCI lists the targets' latest runs through GitHub's API. A target not on
+// GitHub has no runs, and needs no token.
 func CheckCI(ctx context.Context, targets []CITarget, opts CICheckOptions) []CIResult {
 	results := make([]CIResult, len(targets))
 	Each(len(targets), opts.Jobs, func(i int) {

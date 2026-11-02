@@ -1,6 +1,5 @@
-// Package ghrun follows GitHub Actions runs through the gh CLI, which brings
-// its own authentication: the runs a tag push triggers, and the latest run of
-// each workflow on a branch.
+// Package ghrun follows GitHub Actions runs through GitHub's REST API: the runs
+// a tag push triggers, and the latest run of each workflow on a branch.
 //
 // Runs are found rather than named: a tag push's runs have event "push", the
 // tag as their head branch and the tagged commit as their head SHA, whatever
@@ -8,17 +7,16 @@
 package ghrun
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"os/exec"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
 )
 
-// Run is a workflow run, as gh run list --json describes it.
+// Run is a workflow run. Its JSON is part of orchard's output.
 type Run struct {
 	ID         int64     `json:"databaseId"`
 	WorkflowID int64     `json:"workflowDatabaseId"`
@@ -32,9 +30,6 @@ type Run struct {
 	Title      string    `json:"displayTitle"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
-
-// runFields are the fields of Run, for gh run list --json.
-const runFields = "databaseId,workflowDatabaseId,workflowName,headBranch,headSha,status,conclusion,url,event,displayTitle,createdAt"
 
 // Done reports whether the run has finished.
 func (r Run) Done() bool {
@@ -53,10 +48,11 @@ func (r Run) OK() bool {
 // Failed reports whether a finished run failed. Runs cancelled (usually by
 // a newer run), waiting for approval (action_required) or gone stale didn't.
 func (r Run) Failed() bool {
-	if !r.Done() {
-		return false
-	}
-	switch r.Conclusion {
+	return r.Done() && failedConclusion(r.Conclusion)
+}
+
+func failedConclusion(conclusion string) bool {
+	switch conclusion {
 	case "failure", "timed_out", "startup_failure":
 		return true
 	}
@@ -74,69 +70,23 @@ func (r Run) State() string {
 // Lister lists the push runs of repo (OWNER/REPO) at sha.
 type Lister func(ctx context.Context, repo, sha string) ([]Run, error)
 
-// GH is the Lister that runs gh run list.
+// GH is the Lister that asks GitHub.
 func GH(ctx context.Context, repo, sha string) ([]Run, error) {
-	return listRuns(ctx, repo, "--event", "push", "--commit", sha, "--limit", "100")
-}
-
-func listRuns(ctx context.Context, repo string, args ...string) ([]Run, error) {
-	args = append([]string{"run", "list", "--repo", repo}, args...)
-	stdout, err := gh(ctx, append(args, "--json", runFields)...)
-	if err != nil {
-		return nil, err
-	}
-	var runs []Run
-	if err := json.Unmarshal(stdout, &runs); err != nil {
-		return nil, fmt.Errorf("gh run list --repo %s: %w", repo, err)
-	}
-	return runs, nil
-}
-
-// transient matches gh's errors that trying again might get past: dropped
-// connections and the API's server errors.
-var transient = regexp.MustCompile(`(?i)\bEOF\b|connection reset|timed? ?out|TLS handshake|HTTP 5\d\d`)
-
-// gh runs the gh CLI and returns its output, or an error carrying its stderr.
-// The commands only read, or delete (where a second try finds nothing to
-// delete), so a transient failure is tried again once.
-func gh(ctx context.Context, args ...string) ([]byte, error) {
-	var err error
-	for attempt := range 2 {
-		if attempt > 0 {
-			if err := Sleep(ctx, time.Second); err != nil {
-				return nil, err
-			}
-		}
-		var stdout, stderr bytes.Buffer
-		cmd := exec.CommandContext(ctx, "gh", args...)
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-		if err = cmd.Run(); err == nil {
-			return stdout.Bytes(), nil
-		}
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		msg := strings.TrimSpace(stderr.String())
-		err = fmt.Errorf("gh %s %s: %w: %s", args[0], args[1], err, msg)
-		if !transient.MatchString(msg) {
-			break
-		}
-	}
-	return nil, err
+	return listRuns(ctx, repo, 0, url.Values{"event": {"push"}, "head_sha": {sha}}, 100)
 }
 
 // DefaultBranch returns repo's default branch.
 func DefaultBranch(ctx context.Context, repo string) (string, error) {
-	out, err := gh(ctx, "repo", "view", repo, "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
-	if err != nil {
+	var r struct {
+		DefaultBranch string `json:"default_branch"`
+	}
+	if _, err := getJSON(ctx, "/repos/"+repo, &r); err != nil {
 		return "", err
 	}
-	branch := strings.TrimSpace(string(out))
-	if branch == "" {
-		return "", fmt.Errorf("gh repo view %s: no default branch", repo)
+	if r.DefaultBranch == "" {
+		return "", fmt.Errorf("GitHub API GET /repos/%s: no default branch", repo)
 	}
-	return branch, nil
+	return r.DefaultBranch, nil
 }
 
 // Printable replaces s's control characters, which text from GitHub, like a
@@ -154,14 +104,11 @@ func Printable(s string) string {
 	}, s)
 }
 
-// CheckGH fails unless gh is installed and signed in to github.com; what
-// names what needs it, e.g. "--watch".
+// CheckGH fails unless there's a token for github.com; what names what needs
+// it, e.g. "--watch".
 func CheckGH(what string) error {
-	if _, err := exec.LookPath("gh"); err != nil {
-		return fmt.Errorf("%s needs the GitHub CLI, gh (https://cli.github.com)", what)
-	}
-	if err := exec.Command("gh", "auth", "status", "--hostname", "github.com").Run(); err != nil {
-		return fmt.Errorf("%s needs gh signed in to github.com; run gh auth login", what)
+	if Token() == "" {
+		return errors.New(what + " needs a GitHub token: set GH_TOKEN or GITHUB_TOKEN, or run gh auth login")
 	}
 	return nil
 }

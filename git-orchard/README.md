@@ -81,13 +81,13 @@ Clones fetch the recorded split from the upstream, so `mv` refuses a subtree wit
 `detach` gives a worktree made with `git worktree add` its own `.git` directory, with the repository's refs, config, hooks and excludes, and the worktree's HEAD and index, so uncommitted changes carry over; objects are hardlinked where possible, as for a local clone.
 It then drops the worktree from the original repository, and refuses one that is locked, has submodules, or is mid-merge, rebase, cherry-pick, revert or bisect.
 
-Besides `gh`, for `ci` and `release --watch`, git-orchard only runs `git`, so credentials, SSH config and `url.<base>.insteadOf` rewrites apply as usual.
+Besides calling GitHub's API, for `ci` and `release --watch`, git-orchard only runs `git`, so credentials, SSH config and `url.<base>.insteadOf` rewrites apply as usual.
 
 ## CI
 
 `ci` shows the latest run of each workflow on each subtree's upstream branch, and, unless prefixes are given, on the monorepo's own default branch as the prefix `.`.
 Deleted and disabled workflows, and pull requests' runs, are left out.
-It asks the [GitHub CLI](https://cli.github.com), `gh`, so that must be signed in.
+It asks GitHub's API, with a token from `GH_TOKEN`, `GITHUB_TOKEN` or, where the [GitHub CLI](https://cli.github.com) is signed in, `gh auth token`.
 
 ```shell
 git orchard ci                          # every run, with the failed ones in red
@@ -102,7 +102,7 @@ git orchard ci --prune-stale            # delete stale workflows' failed runs, a
 A failed run of a workflow that won't run again is stale: it shows dimmed, `--failed` hides it, and it doesn't count as a failure.
 So far that's Dependabot Updates in a repository with no `.github/dependabot.yml` and security updates off, as in a subtree whose dependencies the monorepo updates.
 `--prune-stale` deletes every failed run of such workflows, not just the latest, since the one before would take its place; it lists them and asks first, unless `--yes`.
-`gh` must be able to read the repository's security updates setting, which takes admin access; a repository it can't tell about is taken to be live.
+The token must be able to read the repository's security updates setting, which takes admin access; a repository it can't tell about is taken to be live.
 `ci` exits 1 if any run failed, even if it couldn't check some repository; 2 if it couldn't check some repository and nothing failed; and 130 if interrupted. So a script can ask only when something failed:
 
 ```shell

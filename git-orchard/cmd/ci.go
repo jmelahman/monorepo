@@ -54,7 +54,7 @@ func NewCICommand() *cobra.Command {
 For each subtree on GitHub, the latest run of each workflow on its upstream
 branch; and, unless prefixes are given, the monorepo's own, on origin's
 default branch, as the prefix "." (which can also be given). Runs come from
-the GitHub CLI, gh, signed in.
+GitHub's API, with a token from GH_TOKEN, GITHUB_TOKEN or gh auth token.
 
 --logs adds, for each failed run, the output of the step that failed in each
 failed job, as Markdown, for reading or piping elsewhere:
@@ -405,7 +405,7 @@ func printCILogs(w io.Writer, results []ciResult) {
 				}
 				_, _ = fmt.Fprintln(w)
 				if e.Omitted > 0 {
-					_, _ = fmt.Fprintf(w, "\n%d earlier lines left out; gh run view %d --repo %s --log-failed has them all.\n", e.Omitted, run.ID, r.Repo)
+					_, _ = fmt.Fprintf(w, "\n%d earlier lines left out; %s has them all.\n", e.Omitted, ghrun.Printable(run.URL))
 				}
 				_, _ = fmt.Fprintf(w, "\n```text\n%s\n```\n", strings.Join(e.Lines, "\n"))
 			}
