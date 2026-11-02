@@ -54,7 +54,7 @@ default_install_hook_types:
   [pre-commit, post-checkout, post-merge, post-rewrite]
 repos:
   - repo: https://github.com/jmelahman/undot
-    rev: v0.4.0
+    rev: v0.4.1
     hooks:
       - id: undot
 ```
