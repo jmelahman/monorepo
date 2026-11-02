@@ -79,6 +79,20 @@ export class OverviewPage {
     ).toBeVisible();
   }
 
+  // Stall every board's /state response until the returned function is called,
+  // so a spec can assert on what the tree shows before its structures load.
+  async holdBoardStates(): Promise<() => void> {
+    let release = () => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await this.page.route(/\/api\/boards\/\d+\/state$/, async (route) => {
+      await released;
+      await route.continue();
+    });
+    return release;
+  }
+
   async setViewport(w: number, h: number) {
     await this.page.setViewportSize({ width: w, height: h });
   }
@@ -123,6 +137,8 @@ export class Sidebar {
   readonly treeFilter: Locator;
   readonly openFilter: Locator;
   readonly noMatches: Locator;
+  readonly loading: Locator;
+  readonly newTicketButton: Locator;
 
   constructor(private readonly page: Page) {
     this.aside = page
@@ -134,6 +150,8 @@ export class Sidebar {
     this.treeFilter = page.locator("button[data-tree-filter]");
     this.openFilter = page.getByRole("button", { name: "Filter by open" });
     this.noMatches = page.getByText("No tickets match the current filter.");
+    this.loading = page.getByText("Loading boards…");
+    this.newTicketButton = page.getByRole("button", { name: "New ticket" });
   }
 
   // One button cycles all → tickets → running → all. Each step asserts the
@@ -447,6 +465,13 @@ export class NewTicketModal {
 
   async expectClosed() {
     await expect(this.root).toBeHidden();
+  }
+
+  async create(boardId: number, title: string) {
+    await this.boardSelect.selectOption(String(boardId));
+    await this.titleInput.fill(title);
+    await this.submit.click();
+    await this.expectClosed();
   }
 }
 

@@ -5,6 +5,7 @@ import { fetchBoardStructure, openTicketRequestStore, useScalarStore } from "@/s
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { SessionView } from "@/components/SessionView";
 import { BoardTree } from "./BoardTree";
+import { NewTicketModal } from "./NewTicketModal";
 import { PanelCanvas, type PanelCanvasHandle } from "./PanelCanvas";
 
 const SIDEBAR_WIDTH_KEY = "overview.sidebar.width";
@@ -46,6 +47,7 @@ function DesktopOverview() {
   const onOpenTicket = useCallback((boardId: number, ticketId: number) => {
     handleRef.current?.open(boardId, ticketId);
   }, []);
+  const onNewTicket = useCallback(() => handleRef.current?.newTicket(), []);
 
   // PanelCanvas registers its handle in an effect, and child effects run
   // before this one, so the handle is set by the time a request is seen.
@@ -137,6 +139,7 @@ function DesktopOverview() {
             <BoardTree
               onOpenTicket={onOpenTicket}
               openTicketIds={openTicketIds}
+              onNewTicket={onNewTicket}
               onCollapseSidebar={toggleCollapsed}
               hasPanels
             />
@@ -167,6 +170,7 @@ type MobileTicket = { boardId: number; ticketId: number };
 
 function MobileOverview() {
   const [active, setActive] = useState<MobileTicket | null>(null);
+  const [newTicketOpen, setNewTicketOpen] = useState(false);
   const openRequest = useScalarStore(openTicketRequestStore);
   useEffect(() => {
     if (!openRequest) return;
@@ -189,7 +193,15 @@ function MobileOverview() {
       <BoardTree
         onOpenTicket={(boardId, ticketId) => setActive({ boardId, ticketId })}
         openTicketIds={openIds}
+        onNewTicket={() => setNewTicketOpen(true)}
       />
+      {newTicketOpen && (
+        <NewTicketModal
+          defaultBoardId={null}
+          onClose={() => setNewTicketOpen(false)}
+          onCreated={(ticketId, boardId) => setActive({ boardId, ticketId })}
+        />
+      )}
     </div>
   );
 }

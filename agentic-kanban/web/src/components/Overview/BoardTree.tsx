@@ -21,7 +21,7 @@ import { fetchBoardStructure, sessionStore, useSession, useTicket } from "@/stor
 import type { BoardStructure } from "@/store";
 import { STATUS_BG, STATUS_BG_NONE } from "@/components/Ticket";
 import { Button } from "@/components/Button";
-import { ActivityIcon, FoldIcon, ListIcon, PanelIcon } from "@/icons";
+import { ActivityIcon, FoldIcon, ListIcon, PanelIcon, PlusIcon } from "@/icons";
 import {
   loadCollapsedBoards,
   loadOpenOnly,
@@ -84,11 +84,13 @@ function useRunningTicketIds(
 export function BoardTree({
   onOpenTicket,
   openTicketIds,
+  onNewTicket,
   onCollapseSidebar,
   hasPanels = false,
 }: {
   onOpenTicket: OpenTicketFn;
   openTicketIds: ReadonlySet<number>;
+  onNewTicket: () => void;
   onCollapseSidebar?: () => void;
   // True when tickets open as panels beside the tree (desktop). Enables the
   // "open only" filter, which is meaningless when a ticket replaces the tree.
@@ -167,11 +169,18 @@ export function BoardTree({
     (!runningOnly || runningIds.has(ticketId)) && (!openOnly || openTicketIds.has(ticketId));
   const boardMatches = (st: BoardStructure) =>
     Object.values(st.ticketIdsByColumn).some((ids) => ids.some(matches));
-  // A board whose structure hasn't loaded (or failed to) can't be judged, so
-  // it stays listed rather than vanishing; the empty message likewise waits
-  // until every board has answered, so a persisted filter doesn't flash it.
-  const boardHidden = (st: BoardStructure | undefined) =>
-    filtering && st != null && !boardMatches(st);
+  // While filtering, a board stays out of the tree until it and every board
+  // above it have answered: listing it first would flash boards the filter is
+  // about to drop on load, and revealing it early would shift it when a slower
+  // board above arrives. A board whose fetch failed can't be judged, so it
+  // stays listed rather than vanishing.
+  const firstPending = structures.findIndex((q) => q.isPending);
+  const boardHidden = (index: number) => {
+    if (!filtering) return false;
+    if (firstPending >= 0 && index >= firstPending) return true;
+    const st = structures[index]?.data;
+    return st != null && !boardMatches(st);
+  };
   const toggleCls = (on: boolean) =>
     `rounded p-1 ${
       on
@@ -184,11 +193,21 @@ export function BoardTree({
       <h2 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Boards</h2>
       <button
         type="button"
+        onClick={onNewTicket}
+        disabled={boards.length === 0}
+        title="New ticket"
+        aria-label="New ticket"
+        className={`ml-auto disabled:opacity-50 ${toggleCls(false)}`}
+      >
+        <PlusIcon size={12} />
+      </button>
+      <button
+        type="button"
         onClick={cycleTreeFilter}
         title={`${TREE_FILTER_LABEL[treeFilter]} — click for ${TREE_FILTER_LABEL[nextTreeFilter].toLowerCase()}`}
         aria-label={`Ticket filter: ${TREE_FILTER_LABEL[treeFilter].toLowerCase()}`}
         data-tree-filter={treeFilter}
-        className={`ml-auto ${toggleCls(treeFilter !== "all")}`}
+        className={`ml-1 ${toggleCls(treeFilter !== "all")}`}
       >
         {treeFilter === "running" ? (
           <ActivityIcon size={12} />
@@ -259,7 +278,7 @@ export function BoardTree({
               structure={structures[i]?.data}
               collapsed={collapsed.has(b.id)}
               matches={filtering ? matches : null}
-              hidden={boardHidden(structures[i]?.data)}
+              hidden={boardHidden(i)}
               onToggle={() => toggle(b.id)}
               onOpenTicket={onOpenTicket}
               openTicketIds={openTicketIds}
@@ -267,8 +286,10 @@ export function BoardTree({
           ))}
         </SortableContext>
       </DndContext>
-      {structures.every((q) => boardHidden(q.data)) && (
-        <p className="p-3 text-sm text-fg-muted">No tickets match the current filter.</p>
+      {boards.every((_, i) => boardHidden(i)) && (
+        <p className="p-3 text-sm text-fg-muted">
+          {firstPending >= 0 ? "Loading boards…" : "No tickets match the current filter."}
+        </p>
       )}
     </div>
   );

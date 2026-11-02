@@ -79,6 +79,60 @@ test.describe("Overview / BoardTree", () => {
     await overview.boardNode(seed.board.id).expectTotalTickets(1);
   });
 
+  test("a persisted filter lists no board until its structure has loaded", async ({
+    page,
+    seed,
+  }) => {
+    const emptyBoard = await api.createBoard({
+      name: `e2e-empty-${Date.now()}`,
+      mount_path: seed.mountPath,
+    });
+    try {
+      const overview = new OverviewPage(page);
+      await overview.goto();
+      await overview.sidebar.cycleTreeFilterTo("tickets");
+      await overview.boardNode(emptyBoard.id).expectHidden();
+
+      const release = await overview.holdBoardStates();
+      await overview.reload();
+      await expect(overview.sidebar.loading).toBeVisible();
+      await overview.boardNode(seed.board.id).expectHidden();
+      await overview.boardNode(emptyBoard.id).expectHidden();
+      await expect(overview.sidebar.noMatches).toBeHidden();
+
+      release();
+      await overview.boardNode(seed.board.id).expectVisible();
+      await overview.boardNode(emptyBoard.id).expectHidden();
+      await expect(overview.sidebar.loading).toBeHidden();
+    } finally {
+      await api.deleteBoard(emptyBoard.id);
+    }
+  });
+
+  test("new ticket button creates a ticket and opens its panel", async ({ page, seed }) => {
+    const overview = new OverviewPage(page);
+    await overview.goto();
+
+    await overview.sidebar.newTicketButton.click();
+    await overview.newTicketModal.expectOpen();
+    await overview.newTicketModal.create(seed.board.id, "from header");
+
+    await overview.expectPanelCount(1);
+    await expect(
+      page.locator("[data-tree-ticket]").filter({ hasText: "from header" }),
+    ).toBeVisible();
+  });
+
+  test("new ticket button targets the focused panel's board", async ({ page, seed }) => {
+    const overview = new OverviewPage(page);
+    await overview.goto();
+    await overview.treeTicket(seed.ticket.id).click();
+    await overview.panel(seed.ticket.id).focus();
+
+    await overview.sidebar.newTicketButton.click();
+    await expect(overview.newTicketModal.boardSelect).toHaveValue(String(seed.board.id));
+  });
+
   test("open filter keeps only tickets with a panel and hides other boards", async ({
     page,
     seed,

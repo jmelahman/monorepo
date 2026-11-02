@@ -27,6 +27,7 @@ import { loadPanels, writePanels, type PersistedPanel } from "./storage";
 
 export type PanelCanvasHandle = {
   open: (boardId: number, ticketId: number) => void;
+  newTicket: () => void;
 };
 
 const DEFAULT_W = 640;
@@ -124,8 +125,11 @@ export function PanelCanvas({
     setFocusedTicketId(ticketId);
   }, []);
 
+  const [newTicketOpen, setNewTicketOpen] = useState(false);
+  useShortcut("ticket.create", () => setNewTicketOpen(true));
+
   useEffect(() => {
-    registerHandle({ open });
+    registerHandle({ open, newTicket: () => setNewTicketOpen(true) });
     return () => registerHandle(null);
   }, [open, registerHandle]);
 
@@ -240,9 +244,6 @@ export function PanelCanvas({
     },
     { enabled: focusedTicketId != null },
   );
-
-  const [newTicketOpen, setNewTicketOpen] = useState(false);
-  useShortcut("ticket.create", () => setNewTicketOpen(true));
 
   const handleDragStart = useCallback((ticketId: number) => {
     setDragState({

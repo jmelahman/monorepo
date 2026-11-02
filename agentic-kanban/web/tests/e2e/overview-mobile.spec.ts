@@ -23,6 +23,22 @@ test.describe("Overview / Mobile", () => {
     await expect(overview.canvas).toHaveCount(0);
   });
 
+  test("new ticket button creates a ticket and drills into its session", async ({ page, seed }) => {
+    const overview = new OverviewPage(page);
+    await overview.setViewport(375, 812);
+    await overview.goto();
+
+    await overview.sidebar.newTicketButton.click();
+    await overview.newTicketModal.expectOpen();
+    await overview.newTicketModal.create(seed.board.id, "from mobile header");
+
+    await expect(overview.mobileSession.backButton).toBeVisible();
+    await overview.mobileSession.backButton.click();
+    await expect(
+      page.locator("[data-tree-ticket]").filter({ hasText: "from mobile header" }),
+    ).toBeVisible();
+  });
+
   test("tapping a ticket drills into the SessionView; back returns to the tree", async ({
     page,
     seed,
