@@ -195,7 +195,7 @@ fn migrate(explicit: &[String], dry_run: bool, force: bool) -> Result<usize, Str
     say!(
         "undot: done. Suggested follow-up:\n  \
          git add -A && git commit\n  \
-         pre-commit install  # installs post-checkout/post-merge hooks too"
+         prek install  # installs post-checkout/post-merge hooks too"
     );
     Ok(0)
 }

@@ -167,6 +167,7 @@
 	shared = base
 	shared = shell
 	shared = rust
+	version-cmd = scripts/set-version.sh
 [subtree "work"]
 	remote = git@github.com:jmelahman/work.git
 	branch = master
