@@ -46,7 +46,7 @@ func TestApplyShared(t *testing.T) {
 		"subtree.tag.remote\ngit@github.com:o/tag.git\x00" +
 		"subtree.tag.shared\nbase\x00" +
 		"subtree.tag.shared\ngo\x00" +
-		"subtree.tag.version-cmd\nscripts/set-version.sh\x00"
+		"subtree.tag.pre-release\nscripts/set-version.sh\x00"
 	if err := b.apply(manifest); err != nil {
 		t.Fatal(err)
 	}
@@ -58,8 +58,8 @@ func TestApplyShared(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s, _ := c.Lookup("tag"); s.VersionCmd != "scripts/set-version.sh" {
-		t.Errorf("version-cmd is %q", s.VersionCmd)
+	if s, _ := c.Lookup("tag"); s.PreRelease != "scripts/set-version.sh" {
+		t.Errorf("pre-release is %q", s.PreRelease)
 	}
 	if c.SharedDir != "configs/shared" {
 		t.Errorf("shared dir is %q", c.SharedDir)

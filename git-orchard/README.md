@@ -109,15 +109,15 @@ The token must be able to read the repository's security updates setting, which 
 logs=$(git orchard ci --failed --logs); [ $? = 1 ] && claude -p "triage these CI failures" <<<"$logs"
 ```
 
-## Versions in files
+## Pre-release hook
 
 Releases are versioned by their tags, but a subtree may also need the version in its files, like `Cargo.toml`.
-Give it a `version-cmd`, which `git orchard release` runs from the subtree with the version in `$VERSION`:
+Give it a `pre-release` hook, a shell command that `git orchard release` runs from the subtree with the version in `$VERSION`:
 
 ```gitconfig
 [subtree "tools/foo"]
 	remote = git@github.com:owner/foo.git
-	version-cmd = scripts/set-version.sh
+	pre-release = scripts/set-version.sh
 ```
 
 What it changes is committed as `chore(foo): release v1.2.4`, and that commit is the one tagged.

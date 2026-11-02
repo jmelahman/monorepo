@@ -11,12 +11,12 @@
 //		branch = master
 //		shared = base
 //		shared = go
-//		version-cmd = scripts/set-version.sh
+//		pre-release = scripts/set-version.sh
 //
 // Each shared value names a profile, a directory under orchard.sharedDir
 // (.config/git-orchard/shared by default) whose files sync copies into the
-// subtree. version-cmd writes a release's version into the subtree's files
-// before it's tagged.
+// subtree. pre-release is a hook that release runs before tagging, such as a
+// script writing the version into the subtree's files.
 //
 // The same keys in git's own configuration (e.g. .git/config) override it, so
 // a clone can point a subtree somewhere else without touching the manifest.
@@ -52,9 +52,9 @@ type Subtree struct {
 	Branch string
 	// Shared names the profiles synced into the subtree, in manifest order.
 	Shared []string
-	// VersionCmd is a shell command that release runs in the subtree, with the
+	// PreRelease is a shell command that release runs in the subtree, with the
 	// version in $VERSION, committing what it changes before tagging.
-	VersionCmd string
+	PreRelease string
 }
 
 // Config is the parsed manifest.
@@ -238,8 +238,8 @@ func (b *builder) apply(entries string) error {
 				if !slices.Contains(s.Shared, value) {
 					s.Shared = append(s.Shared, value)
 				}
-			case "version-cmd":
-				s.VersionCmd = value
+			case "pre-release":
+				s.PreRelease = value
 			}
 		}
 	}

@@ -406,14 +406,14 @@ func TestReleaseUpstreamHook(t *testing.T) {
 		"refs/tags/tools/foo/v1.0.0 refs/tags/v1.0.0:\n")
 }
 
-func TestReleaseVersionCmd(t *testing.T) {
+func TestReleasePreRelease(t *testing.T) {
 	f := newFixture(t)
 	s := f.subtree()
-	s.VersionCmd = `printf '%s\n' "$VERSION" >VERSION`
+	s.PreRelease = `printf '%s\n' "$VERSION" >VERSION`
 	f.commit(f.mono, "tools/foo/main.go", "package main\n", "Add main")
 	released := f.git(f.mono, "rev-parse", "HEAD")
 
-	// Anything else in the prefix would end up in the version commit.
+	// Anything else in the prefix would end up in the release commit.
 	dirty := filepath.Join(f.mono.Dir, "tools/foo/main.go")
 	if err := os.WriteFile(dirty, []byte("package dirty\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -428,26 +428,26 @@ func TestReleaseVersionCmd(t *testing.T) {
 		t.Fatalf("releasing a revision that isn't HEAD: got %v", err)
 	}
 
-	// A failing command leaves nothing behind.
+	// A failing hook leaves nothing behind.
 	failing := s
-	failing.VersionCmd = `echo partial >main.go; exit 3`
-	if _, err := f.orchard.Release(failing, "v1.0.0", ReleaseOptions{Rev: "HEAD", Upstream: true}); err == nil || !strings.Contains(err.Error(), "version-cmd") {
-		t.Fatalf("a failing version-cmd: got %v", err)
+	failing.PreRelease = `echo partial >main.go; exit 3`
+	if _, err := f.orchard.Release(failing, "v1.0.0", ReleaseOptions{Rev: "HEAD", Upstream: true}); err == nil || !strings.Contains(err.Error(), "pre-release hook") {
+		t.Fatalf("a failing hook: got %v", err)
 	}
 	if got := f.git(f.mono, "status", "--porcelain"); got != "" {
-		t.Errorf("a failing version-cmd left %q", got)
+		t.Errorf("a failing hook left %q", got)
 	}
 	if head := f.git(f.mono, "rev-parse", "HEAD"); head != released {
-		t.Errorf("a failing version-cmd moved HEAD to %s", head)
+		t.Errorf("a failing hook moved HEAD to %s", head)
 	}
 
 	// Without --upstream the release stops for the commit to be published,
 	// and running it again adds no second one.
 	if _, err := f.orchard.Release(s, "v1.0.0", ReleaseOptions{Rev: "HEAD"}); err == nil || !strings.Contains(err.Error(), "lacks") {
-		t.Fatalf("releasing before publishing the version commit: got %v", err)
+		t.Fatalf("releasing before publishing the release commit: got %v", err)
 	}
 	if got := f.git(f.mono, "log", "-1", "--format=%s"); got != "chore(foo): release v1.0.0" {
-		t.Errorf("the version commit is %q", got)
+		t.Errorf("the release commit is %q", got)
 	}
 	if err := f.orchard.Push(s, "HEAD", PushOptions{}); err != nil {
 		t.Fatal(err)

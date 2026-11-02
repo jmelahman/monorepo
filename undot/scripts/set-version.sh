@@ -1,6 +1,6 @@
 #!/bin/sh
 # Writes $VERSION (e.g. v1.2.3) everywhere the version is written down. Run by
-# `git orchard release`, as this subtree's version-cmd in the monorepo.
+# `git orchard release`, as this subtree's pre-release hook in the monorepo.
 set -eu
 cd "$(dirname "$0")/.."
 

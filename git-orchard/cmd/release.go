@@ -62,11 +62,11 @@ the branch and tag upstream directly, e.g. where no action runs.
 at another commit: the Go module proxy and release artifacts won't follow a
 moved release, so publish a new version instead.
 
-A subtree with a version-cmd in the manifest has it run first, from the
+A subtree with a pre-release hook in the manifest has it run first, from the
 subtree with the version in $VERSION, and what it changes is committed and
 tagged in place of --rev. That needs --rev checked out and the subtree clean.
 The new commit must still reach the upstream, so pass --upstream, or publish
-it and release again; a version already written adds no second commit.
+it and release again; a hook that changes nothing adds no second commit.
 
 A release that already tags --rev is published again rather than retagged,
 so a release whose publishing failed can be finished by running it again.
