@@ -13,9 +13,11 @@ import {
   DatabaseIcon,
   DownloadIcon,
   ExternalLinkIcon,
+  FilterIcon,
   RocketIcon,
   TrashIcon,
 } from "@/icons";
+import { type PreviewsFilter, readPreviewsFilter, writePreviewsFilter } from "@/storage";
 import { Button } from "./Button";
 import { ConfirmModal, Modal } from "./Modal";
 
@@ -505,12 +507,49 @@ function StorageModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function FilterModal({
+  boards,
+  filter,
+  onChange,
+  onClose,
+}: {
+  boards: Board[];
+  filter: PreviewsFilter;
+  onChange: (filter: PreviewsFilter) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal open onClose={onClose} title="Filter boards">
+      <div className="flex flex-col gap-3 p-4 text-sm">
+        <div className="flex flex-col gap-1">
+          {boards.map((b) => (
+            <label key={b.id} className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={filter[b.id] ?? true}
+                onChange={(e) => onChange({ ...filter, [b.id]: e.target.checked })}
+              />
+              {b.name}
+            </label>
+          ))}
+        </div>
+        <div className="flex justify-end">
+          <Button variant="primary" size="lg" onClick={onClose}>
+            done
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function PreviewsDashboard() {
   const [deployOpen, setDeployOpen] = useState(false);
   const [storageOpen, setStorageOpen] = useState(false);
   const [logsId, setLogsId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DashboardPreview | null>(null);
-  const [boardFilter, setBoardFilter] = useState<number | "all">("all");
+  const [filtering, setFiltering] = useState(false);
+  const [filter, setFilter] = useState(readPreviewsFilter);
   const [pageOffset, setPageOffset] = useState(0);
   // Newest deploy id seen on the first page, pinned while browsing older
   // pages so deploys created meanwhile don't shift rows between them. The
@@ -529,15 +568,25 @@ export function PreviewsDashboard() {
   });
 
   const boardsQ = useQuery({ queryKey: queryKeys.boards, queryFn: api.listBoards });
+  const boards = boardsQ.data ?? [];
+  const shownBoards = boards.filter((b) => filter[b.id] ?? true).map((b) => b.id);
+  // With every board shown nothing narrows the list, which keeps the deploys of
+  // boards since deleted.
+  const narrowed = shownBoards.length < boards.length;
+  const filterLabel = `filter: ${shownBoards.length} of ${boards.length} shown`;
   const previewsQ = useQuery({
-    queryKey: [...queryKeys.allPreviews, boardFilter, pageOffset, pageMaxId],
+    queryKey: [...queryKeys.allPreviews, narrowed ? shownBoards : "all", pageOffset, pageMaxId],
     queryFn: () =>
-      api.listAllPreviews({
-        ...(boardFilter === "all" ? {} : { board: boardFilter }),
-        limit: PREVIEW_PAGE_SIZE,
-        offset: pageOffset,
-        maxId: pageMaxId,
-      }),
+      narrowed && shownBoards.length === 0
+        ? { deploys: [], total: 0 }
+        : api.listAllPreviews({
+            ...(narrowed ? { boards: shownBoards } : {}),
+            limit: PREVIEW_PAGE_SIZE,
+            offset: pageOffset,
+            maxId: pageMaxId,
+          }),
+    // The filter means nothing until the boards are known.
+    enabled: !boardsQ.isPending,
     // Keep the current page on screen while the next one loads, rather than
     // flashing the skeleton and dropping the pager.
     placeholderData: keepPreviousData,
@@ -569,7 +618,7 @@ export function PreviewsDashboard() {
     }
   }, [pageOffset, previewsQ.data, previewsQ.isPlaceholderData]);
 
-  const deployableBoards = (boardsQ.data ?? []).filter((b) => b.repo_path);
+  const deployableBoards = boards.filter((b) => b.repo_path);
   const previews = previewsQ.data?.deploys ?? [];
   const total = previewsQ.data?.total ?? 0;
   // Fetched by id so the log modal follows a build to completion even once
@@ -595,23 +644,15 @@ export function PreviewsDashboard() {
             {total > 0 && <span className="text-xs tabular-nums text-fg-muted">{total}</span>}
           </div>
           <div className="flex items-center gap-2">
-            <select
-              value={boardFilter}
-              onChange={(e) => {
-                setBoardFilter(e.target.value === "all" ? "all" : Number(e.target.value));
-                setPageOffset(0);
-                setPageMaxId(undefined);
-              }}
-              className="cursor-pointer rounded bg-surface px-2 py-1 text-sm"
-              aria-label="Filter by board"
+            <button
+              type="button"
+              onClick={() => setFiltering(true)}
+              title={filterLabel}
+              aria-label={filterLabel}
+              className="rounded p-1.5 text-fg-muted transition-colors duration-150 hover:bg-surface-2 hover:text-fg"
             >
-              <option value="all">all boards</option>
-              {(boardsQ.data ?? []).map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+              <FilterIcon size={16} />
+            </button>
             <button
               type="button"
               onClick={() => setStorageOpen(true)}
@@ -650,7 +691,7 @@ export function PreviewsDashboard() {
               <div className="flex flex-col items-center gap-1 px-6 py-16 text-center">
                 <RocketIcon size={32} className="mb-2 text-fg-muted/50" />
                 <p className="text-sm font-medium">
-                  {boardFilter === "all" ? "No deployments yet" : "No deployments for this board"}
+                  {narrowed ? "No deployments for the boards shown" : "No deployments yet"}
                 </p>
                 <p className="max-w-md text-xs text-fg-muted">
                   A board's repo needs a preview manifest: a <code>preview.toml</code> at its root,
@@ -833,6 +874,19 @@ export function PreviewsDashboard() {
         )}
       </div>
       {deployOpen && <DeployModal boards={deployableBoards} onClose={() => setDeployOpen(false)} />}
+      {filtering && (
+        <FilterModal
+          boards={boards}
+          filter={filter}
+          onChange={(next) => {
+            setFilter(next);
+            writePreviewsFilter(next);
+            setPageOffset(0);
+            setPageMaxId(undefined);
+          }}
+          onClose={() => setFiltering(false)}
+        />
+      )}
       {storageOpen && <StorageModal onClose={() => setStorageOpen(false)} />}
       {logsPreview && <BuildLogModal preview={logsPreview} onClose={() => setLogsId(null)} />}
       <ConfirmModal

@@ -59,6 +59,28 @@ export function writeReleasesFilter(filter: ReleasesFilter): void {
   }
 }
 
+const PREVIEWS_FILTER_KEY = "kanban.previews.filter";
+
+// Only the boards toggled by hand, by id, so new boards start out shown.
+export type PreviewsFilter = Record<string, boolean>;
+
+export function readPreviewsFilter(): PreviewsFilter {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(PREVIEWS_FILTER_KEY) ?? "{}");
+    return parsed && typeof parsed === "object" ? (parsed as PreviewsFilter) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writePreviewsFilter(filter: PreviewsFilter): void {
+  try {
+    localStorage.setItem(PREVIEWS_FILTER_KEY, JSON.stringify(filter));
+  } catch {
+    // ignore quota / disabled storage
+  }
+}
+
 // Per-session remembered tab (e.g. "agent", "diff"). One key per session id,
 // so these must be cleaned up when a session is dropped (archive/delete) or
 // they accumulate forever — see clearSessionTab, called from the store's

@@ -524,10 +524,10 @@ export const api = {
     request<Preview>(`/api/sessions/${sessionId}/previews`, { method: "POST" }),
 
   listAllPreviews: (
-    options: { board?: number; limit?: number; offset?: number; maxId?: number } = {},
+    options: { boards?: number[]; limit?: number; offset?: number; maxId?: number } = {},
   ) => {
     const params = new URLSearchParams();
-    if (options.board != null) params.set("board", String(options.board));
+    for (const board of options.boards ?? []) params.append("board", String(board));
     if (options.limit != null) params.set("limit", String(options.limit));
     if (options.offset != null) params.set("offset", String(options.offset));
     if (options.maxId != null) params.set("max_id", String(options.maxId));

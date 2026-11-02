@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -224,7 +226,8 @@ func (h *handlers) getPreview(w http.ResponseWriter, r *http.Request) {
 // listPreviews returns a page of preview deploys across all boards, newest
 // first — the previews dashboard's data source. Pages are bounded because
 // evicted deploys remain in history indefinitely; max_id pins later pages to
-// a snapshot so new deploys don't shift rows between them.
+// a snapshot so new deploys don't shift rows between them. board repeats to
+// narrow to several boards.
 func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 	if h.previews == nil {
 		h.httpError(w, errors.New("preview orchestrator unavailable (see server logs)"), 503)
@@ -241,32 +244,30 @@ func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	byRepo := make(map[string]db.Board, len(boards))
-	boardFilter := r.URL.Query().Get("board")
-	foundBoard := boardFilter == ""
-	var boardID int64
-	if boardFilter != "" {
-		boardID, err = strconv.ParseInt(boardFilter, 10, 64)
+	selected := map[int64]bool{}
+	for _, raw := range r.URL.Query()["board"] {
+		boardID, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil || boardID < 1 {
 			h.httpError(w, errors.New("board must be a positive board ID"), 400)
 			return
 		}
+		selected[boardID] = true
 	}
-	var repoFilter string
+	var repos []string
 	for _, b := range boards {
 		repoName := previews.RepoName(&b)
 		byRepo[repoName] = b
-		if boardFilter != "" && b.ID == boardID {
-			repoFilter = repoName
-			foundBoard = true
+		if selected[b.ID] {
+			repos = append(repos, repoName)
 		}
 	}
-	if !foundBoard {
+	if len(repos) != len(selected) {
 		h.httpError(w, errors.New("board not found"), 404)
 		return
 	}
-	page, err := h.previews.DeploysPage(orchestrator.DeployQuery{
-		Repo: repoFilter, Limit: limit, Offset: offset, MaxID: maxID,
-	})
+	// Boards whose slugs differ only in punctuation share a repo name.
+	slices.Sort(repos)
+	page, err := h.deploysOf(slices.Compact(repos), limit, offset, maxID)
 	if err != nil {
 		h.httpError(w, err, 500)
 		return
@@ -280,6 +281,36 @@ func (h *handlers) listPreviews(w http.ResponseWriter, r *http.Request) {
 		out.Deploys = append(out.Deploys, row)
 	}
 	writeJSON(w, 200, out)
+}
+
+// deploysOf returns a page of the deploys of repos, or of every repo if there
+// are none. The orchestrator narrows to one repo at a time, so several are merged
+// here: the page can't reach past the first offset+limit rows of any of them.
+func (h *handlers) deploysOf(repos []string, limit, offset int, maxID int64) (orchestrator.DeployPage, error) {
+	if len(repos) < 2 {
+		q := orchestrator.DeployQuery{Limit: limit, Offset: offset, MaxID: maxID}
+		if len(repos) == 1 {
+			q.Repo = repos[0]
+		}
+		return h.previews.DeploysPage(q)
+	}
+	merged := orchestrator.DeployPage{Deploys: []orchestrator.Deploy{}}
+	for _, repo := range repos {
+		page, err := h.previews.DeploysPage(orchestrator.DeployQuery{
+			Repo: repo, Limit: offset + limit, MaxID: maxID,
+		})
+		if err != nil {
+			return orchestrator.DeployPage{}, err
+		}
+		merged.Deploys = append(merged.Deploys, page.Deploys...)
+		merged.Total += page.Total
+	}
+	slices.SortFunc(merged.Deploys, func(a, b orchestrator.Deploy) int {
+		return cmp.Compare(b.ID, a.ID)
+	})
+	start := min(offset, len(merged.Deploys))
+	merged.Deploys = merged.Deploys[start:min(start+limit, len(merged.Deploys))]
+	return merged, nil
 }
 
 // createBoardPreview deploys an arbitrary ref of a board's repo. The

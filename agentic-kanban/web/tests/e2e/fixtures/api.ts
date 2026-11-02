@@ -61,6 +61,8 @@ export const api = {
     git_author_email?: string;
   }) => request<Board>("/api/boards", { method: "POST", body: JSON.stringify(input) }),
   deleteBoard: (id: number) => request<void>(`/api/boards/${id}`, { method: "DELETE" }),
+  deployBoard: (id: number) =>
+    request<unknown>(`/api/boards/${id}/previews`, { method: "POST", body: "{}" }),
   listBoards: () => request<Board[]>("/api/boards"),
   createTicket: (boardId: number, input: { title: string; body?: string }) =>
     request<Ticket>(`/api/boards/${boardId}/tickets`, {

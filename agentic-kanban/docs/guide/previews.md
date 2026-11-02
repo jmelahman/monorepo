@@ -42,7 +42,7 @@ Set `KANBAN_PREVIEW_BUILDS=host` to build directly on the kanban host. Kanban al
 
 ## The previews dashboard
 
-Click **preview** in the header to see every deploy across all boards. Each row shows the board, commit, branch, author, and status:
+Click **preview** in the header to see every deploy across all boards. The filter button lets you turn boards off, and this browser remembers your choice. Each row shows the board, commit, branch, author, and status:
 
 | Status                | Meaning                                                  |
 | --------------------- | -------------------------------------------------------- |

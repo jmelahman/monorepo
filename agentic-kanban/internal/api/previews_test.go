@@ -7,6 +7,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -645,6 +646,53 @@ func TestDashboardPreviews(t *testing.T) {
 
 	resp = e.post("/api/boards/999/previews", map[string]string{"ref": "main"})
 	assertStatus(t, resp, 404)
+}
+
+// TestDashboardPreviewsOfSeveralBoards: repeating board merges those boards'
+// deploys, newest first, and pages through the merged list.
+func TestDashboardPreviewsOfSeveralBoards(t *testing.T) {
+	e := newEnv(t)
+	seedPreviewableRepo(t, e)
+	a, b, c := e.seedBoard("Board A"), e.seedBoard("Board B"), e.seedBoard("Board C")
+
+	deploy := func(boardID int64) int64 {
+		t.Helper()
+		resp := e.post(fmt.Sprintf("/api/boards/%d/previews", boardID), map[string]string{})
+		assertStatus(t, resp, 202)
+		id := decodeJSON[orchestrator.Deploy](t, resp).ID
+		awaitTerminal(t, e, id)
+		return id
+	}
+	first, other := deploy(a.ID), deploy(c.ID)
+	second := deploy(b.ID)
+
+	list := func(query string, want int, ids ...int64) {
+		t.Helper()
+		resp := e.get("/api/previews?" + query)
+		assertStatus(t, resp, 200)
+		page := decodeJSON[struct {
+			Deploys []orchestrator.Deploy `json:"deploys"`
+			Total   int                   `json:"total"`
+		}](t, resp)
+		got := make([]int64, 0, len(page.Deploys))
+		for _, d := range page.Deploys {
+			got = append(got, d.ID)
+		}
+		if page.Total != want || !slices.Equal(got, ids) {
+			t.Fatalf("%s: total %d, deploys %v; want total %d, deploys %v", query, page.Total, got, want, ids)
+		}
+	}
+	both := fmt.Sprintf("board=%d&board=%d", a.ID, b.ID)
+	list(both, 2, second, first)
+	list(both+"&limit=1", 2, second)
+	list(both+"&limit=1&offset=1", 2, first)
+	list(both+"&offset=2", 2)
+	list(both+fmt.Sprintf("&max_id=%d", first), 1, first)
+	list(fmt.Sprintf("board=%d&board=%d", a.ID, a.ID), 1, first)
+	list(fmt.Sprintf("board=%d", c.ID), 1, other)
+
+	assertStatus(t, e.get(fmt.Sprintf("/api/previews?board=%d&board=999", a.ID)), 404)
+	assertStatus(t, e.get(fmt.Sprintf("/api/previews?board=%d&board=x", a.ID)), 400)
 }
 
 // TestBoardPreviewWithoutRepo: a board with no linked git repo has nothing
