@@ -40,16 +40,16 @@ wheels = [
 
 [[package]]
 name = "git-orchard"
-version = "1.4.0"
+version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/40/5693c32b4ec3978b45123d9f942c62e6bdb7f4d2dc4c238ae1f8b60d5b2a/git_orchard-1.4.0-py3-none-any.whl", hash = "sha256:e76fb1b409536ee586eb8c1a7a37a4da3190d6f1d116192faff4e1f60325c78d", size = 4447789, upload-time = "2026-10-30T14:30:22.946Z" },
-    { url = "https://files.pythonhosted.org/packages/05/c8/c7fd4c1c266d0b893cf52767e0429d645c1a5b7a0f1cdd8207927e0a5ad1/git_orchard-1.4.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c36b7aabcb3008f63a1a23f84b889f742bdfcedb72479339acd16d94d7c2adb7", size = 4121877, upload-time = "2026-10-30T14:30:24.467Z" },
-    { url = "https://files.pythonhosted.org/packages/1f/7e/2423f713ea130ac57af2192db6fea547c96522239907c379639e0fd3e472/git_orchard-1.4.0-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:5d2adb1e0ce5d52f96f413955a0e6d570c04d1d543a621e0c03bc31dae0d1831", size = 4491664, upload-time = "2026-10-30T14:30:26.202Z" },
-    { url = "https://files.pythonhosted.org/packages/70/ed/036d71663724c1d4656d15e83eaa3764224c986bfec507111f29167462a2/git_orchard-1.4.0-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:c8b30afc60ca2aab94b1a63516f4fe2663d1e42adb57d36e295ddff8c9d6165c", size = 3976337, upload-time = "2026-10-30T14:30:27.594Z" },
-    { url = "https://files.pythonhosted.org/packages/59/0f/024e1768a4923b75a0c8b700675e510dcc647f62700bd48bb4581ece675a/git_orchard-1.4.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:ac5d62b79c173ea75d7db71b818a4cafbfe3f80ab48df229f6f4ca5bd553bb7f", size = 4447806, upload-time = "2026-10-30T14:30:28.948Z" },
-    { url = "https://files.pythonhosted.org/packages/d1/d6/c6b0c070aeae88847eafd8db115ac0919384fbc9bc8b4e905ecfb0a432cb/git_orchard-1.4.0-py3-none-win_amd64.whl", hash = "sha256:911739557327584b6a050d552c8bf58ee9bf294000649619848bcf3775cece2e", size = 4556863, upload-time = "2026-10-30T14:30:30.554Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/4c/0827f578dc069f8ac34486e22d990162e5baa062324e25ed6f5506bd0186/git_orchard-1.4.0-py3-none-win_arm64.whl", hash = "sha256:d61299963ecaebd97cb9e8e72af380dfd147c53c68c198b1d7d632ab989cc95e", size = 4053943, upload-time = "2026-10-30T14:30:31.953Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/2a/d7e3edf34046deff9ff6e2725a0435d5c195047fc31ff9a9972fec8c239e/git_orchard-1.7.0-py3-none-any.whl", hash = "sha256:b72d2d62fa4e9fb7a7ff7be3c3a13551cbab565722fdd7fbf6ffe9150e0dba35", size = 4455315, upload-time = "2026-11-02T14:05:13.009Z" },
+    { url = "https://files.pythonhosted.org/packages/69/52/37fcb105be184d75e620615610bb6f219add058103cbdf97d83fdf4721f6/git_orchard-1.7.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:66ad67c2c6dab9acc9b28eda3f023134635c461e45c04a4423df43f8af3ad5eb", size = 4133252, upload-time = "2026-11-02T14:05:14.955Z" },
+    { url = "https://files.pythonhosted.org/packages/96/4b/7b34a6e9a9f9fc1312eba2b3a6539b65f195949001b59136027e591d973f/git_orchard-1.7.0-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:c77e924a0aac2e6906eed1a15aa57bb1b6eaa51c8ad3152fa51836f5bdf2eb17", size = 4500764, upload-time = "2026-11-02T14:05:16.371Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/32/3b252bbba1d356926f1c64e32f0a8023f77cdac5e6e100ab15f7d4b34545/git_orchard-1.7.0-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:9a74f44a834f89b9f00dfb16380b255b548f0fbe281c2d4c4b0ebf8f9e350cd4", size = 3985050, upload-time = "2026-11-02T14:05:17.699Z" },
+    { url = "https://files.pythonhosted.org/packages/df/cd/7c55fdbf387c06bca449f7c89a5b216cfefd1ce52ea923b9f8971638569a/git_orchard-1.7.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:42f5c08f3458a63e0f3db7b30f942cc405ce5695746043c1c93ba4a1b8e20416", size = 4455335, upload-time = "2026-11-02T14:05:19.243Z" },
+    { url = "https://files.pythonhosted.org/packages/75/0f/73ab383efe192da1bdbe8f0151e2d5424960563d96b6346e560dfe9abbf8/git_orchard-1.7.0-py3-none-win_amd64.whl", hash = "sha256:3e835443903b4a38bd35fb7770b4a2032958cbc7382791da6e6397ac72aeab0c", size = 4567579, upload-time = "2026-11-02T14:05:20.691Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/03/b9e31c52b4851972fc33e38bdda3db820fcf81f18022ed2542a4e16bc4dd/git_orchard-1.7.0-py3-none-win_arm64.whl", hash = "sha256:329be2c460a52281d7bf5700809c177de9f1e6347ea1f27953759c78d874ddd1", size = 4061823, upload-time = "2026-11-02T14:05:22.061Z" },
 ]
 
 [[package]]

@@ -65,7 +65,7 @@ repos:
   # complete config. pinsync keeps rev at the version in uv.lock, which
   # .venv/bin runs.
   - repo: https://github.com/jmelahman/git-orchard
-    rev: 8de4b3b7d35b21a91147cbe1fd9b25fc98173906 # frozen: v1.4.0
+    rev: 095bda1bf9f6dd8656f6fa4bd213ff9e3ab73ee1 # frozen: v1.7.0
     hooks:
       - id: git-orchard-sync
 
