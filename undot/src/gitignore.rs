@@ -10,6 +10,11 @@ const HEADER: &str = "# Symlinks into .config/, recreated by `undot link`.";
 /// Anchored, because the tracked copy lives at .config/name; without a trailing
 /// slash, because a symlink never matches directory-only patterns like `name/`.
 pub fn ensure_gitignore(names: &[String], dry_run: bool) -> Result<(), String> {
+    if let Some(name) = names.iter().find(|name| name.contains('\n')) {
+        return Err(format!(
+            "cannot add {name:?} to {GITIGNORE}: patterns can't contain newlines"
+        ));
+    }
     let old = read_optional(GITIGNORE)?.unwrap_or_default();
     let missing = missing_patterns(&old, names);
     if missing.is_empty() {
@@ -45,7 +50,7 @@ pub fn ensure_gitignore(names: &[String], dry_run: bool) -> Result<(), String> {
 fn missing_patterns(gitignore: &str, names: &[String]) -> Vec<String> {
     let mut missing: Vec<String> = names
         .iter()
-        .map(|name| format!("/{name}"))
+        .map(|name| anchored_pattern(name))
         .filter(|pattern| !has_line(gitignore, pattern))
         .collect();
 
@@ -74,6 +79,19 @@ fn missing_patterns(gitignore: &str, names: &[String]) -> Vec<String> {
     missing
 }
 
+/// The pattern matching exactly the root entry `name`. The leading slash already
+/// defuses a `#` or `!` that starts the name.
+fn anchored_pattern(name: &str) -> String {
+    let mut pattern = String::from("/");
+    for c in name.chars() {
+        if matches!(c, '\\' | '*' | '?' | '[' | ' ') {
+            pattern.push('\\');
+        }
+        pattern.push(c);
+    }
+    pattern
+}
+
 /// Whether a gitignore pattern (leading `!` and `/` already stripped) points
 /// inside one of the managed entries, like `.yarn/cache` does for `.yarn`.
 fn refers_inside_any(pattern: &str, names: &[String]) -> bool {
@@ -84,7 +102,7 @@ fn refers_inside_any(pattern: &str, names: &[String]) -> bool {
     })
 }
 
-/// Whether any line equals `wanted` once trimmed of whitespace.
+/// Whether any line equals `wanted` once both are trimmed of whitespace.
 fn has_line(content: &str, wanted: &str) -> bool {
-    content.lines().any(|line| line.trim() == wanted)
+    content.lines().any(|line| line.trim() == wanted.trim())
 }

@@ -83,24 +83,46 @@ fn run(args: Vec<String>) -> ExitCode {
     let mut entries = Vec::new();
     let mut dry_run = false;
     let mut force = false;
+    let mut help = false;
+    let mut version = false;
+    let mut only_positional = false;
 
     for arg in args {
-        match arg.as_str() {
-            "-n" | "--dry-run" => dry_run = true,
-            "-f" | "--force" => force = true,
-            "-h" | "--help" => command = Some("help".to_string()),
-            "-V" | "--version" => command = Some("version".to_string()),
-            flag if flag.starts_with('-') => {
-                complain!("unknown flag {flag}");
-                return ExitCode::from(EXIT_USAGE);
-            }
-            _ if command.is_none() => command = Some(arg),
-            _ => {
-                let entry = clean_entry_arg(&arg).to_string();
-                if !entries.contains(&entry) {
-                    entries.push(entry);
+        if !only_positional && arg.starts_with('-') {
+            match arg.as_str() {
+                "--" => only_positional = true,
+                "-n" | "--dry-run" => dry_run = true,
+                "-f" | "--force" => force = true,
+                "-h" | "--help" => help = true,
+                "-V" | "--version" => version = true,
+                flag => {
+                    complain!("unknown flag {flag}");
+                    return ExitCode::from(EXIT_USAGE);
                 }
             }
+        } else if command.is_none() {
+            command = Some(arg);
+        } else {
+            let entry = clean_entry_arg(&arg).to_string();
+            if !entries.contains(&entry) {
+                entries.push(entry);
+            }
+        }
+    }
+
+    // These answer wherever they appear, whatever else was asked for.
+    if help {
+        command = Some("help".to_string());
+    } else if version {
+        command = Some("version".to_string());
+    } else if let Some(name) = command.as_deref().filter(|name| *name != "migrate") {
+        if let Some(entry) = entries.first() {
+            complain!("{name} takes no arguments, but got {entry}");
+            return ExitCode::from(EXIT_USAGE);
+        }
+        if force {
+            complain!("--force only applies to migrate");
+            return ExitCode::from(EXIT_USAGE);
         }
     }
 

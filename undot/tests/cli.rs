@@ -673,6 +673,104 @@ fn usage_errors_exit_2() {
 }
 
 #[test]
+fn only_migrate_takes_entries_and_force() {
+    let repo = Repo::new();
+    repo.mkdir(".config/.claude");
+
+    assert_eq!(repo.run(&["link", ".claude"]), 2);
+    assert_eq!(repo.run(&["link", "--force"]), 2);
+    assert_eq!(repo.run(&["version", "extra"]), 2);
+    assert!(!repo.exists(".claude"));
+}
+
+#[test]
+fn double_dash_ends_the_flags() {
+    let repo = Repo::new();
+    repo.write("-weird", "x\n");
+
+    assert_eq!(repo.run(&["migrate", "--", "-weird"]), 0);
+    assert!(repo.is_link_to("-weird", ".config/-weird"));
+}
+
+#[test]
+fn help_wins_wherever_it_appears() {
+    let repo = Repo::new();
+    repo.mkdir(".claude");
+
+    for args in [
+        &["migrate", "-h", ".claude"][..],
+        &["-h", "migrate", ".claude"],
+    ] {
+        assert!(
+            repo.stdout(args).starts_with("undot: declutter"),
+            "{args:?}"
+        );
+    }
+    assert!(repo.is_real_dir(".claude"));
+}
+
+// A real repository, since only git can say whether the patterns work.
+#[test]
+fn gitignore_patterns_match_names_with_special_characters() {
+    let repo = Repo::bare();
+    let names = [
+        ".a b",
+        ".star*",
+        ".brack[et]",
+        ".what?",
+        ".back\\slash",
+        ".trail ",
+    ];
+    assert!(Command::new("git")
+        .args(["init", "-q"])
+        .current_dir(&repo.dir)
+        .status()
+        .unwrap()
+        .success());
+    for name in names {
+        repo.write(name, "x\n");
+    }
+    // Would be wrongly ignored by `/.star*` and `/.what?` if left unescaped.
+    repo.mkdir(".config")
+        .write(".starry", "x\n")
+        .write(".whats", "x\n");
+
+    let args = [&["migrate"][..], &names].concat();
+    assert_eq!(repo.run(&args), 0);
+    let before = repo.read(".gitignore");
+    assert_eq!(repo.run(&args), 0);
+    assert_eq!(repo.read(".gitignore"), before);
+
+    for name in names {
+        assert!(repo.is_link_to(name, &format!(".config/{name}")), "{name}");
+    }
+    let untracked = Command::new("git")
+        .args(["ls-files", "--others", "--exclude-standard", "-z"])
+        .current_dir(&repo.dir)
+        .output()
+        .unwrap();
+    let untracked = String::from_utf8(untracked.stdout).unwrap();
+    let untracked: Vec<&str> = untracked.split('\0').collect();
+    for name in names {
+        assert!(
+            !untracked.contains(&name),
+            "{name} is not ignored: {untracked:?}"
+        );
+    }
+    assert!(untracked.contains(&".starry"), "{untracked:?}");
+    assert!(untracked.contains(&".whats"), "{untracked:?}");
+}
+
+#[test]
+fn newlines_in_names_are_reported_not_written_to_gitignore() {
+    let repo = Repo::new();
+    repo.mkdir(".config").write(".config/.a\nb", "");
+
+    assert_eq!(repo.run(&["migrate"]), 1);
+    assert!(!repo.read(".gitignore").contains(".a"));
+}
+
+#[test]
 fn help_and_version_work_anywhere() {
     let dir = Repo::bare();
     let version = format!("undot {}\n", env!("CARGO_PKG_VERSION"));

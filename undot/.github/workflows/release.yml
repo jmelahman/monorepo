@@ -53,9 +53,16 @@ jobs:
       - env:
           TARGET: ${{ matrix.target }}
         run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --target "$TARGET"
-      # The check job only covers linux/x86_64; this tests on the runner's own
-      # platform, so macOS and arm get a run before anything is published.
-      - run: cargo test
+      # The check job only covers linux/x86_64 with glibc. Linux runners can run
+      # their musl target directly. macos-latest is arm64, so the x86_64-apple-darwin
+      # leg tests the arm64 host instead: that binary is built but never run here.
+      - env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          case "$TARGET" in
+            *-linux-musl) cargo test --locked --target "$TARGET" ;;
+            *) cargo test --locked ;;
+          esac
       # Linux binaries are static, so they suit glibc and musl systems alike;
       # tag the wheel for both so that installers on either will pick it.
       - env:
