@@ -254,7 +254,7 @@ func _process(delta: float) -> void:
 				RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME
 			)
 		)
-	if _time >= replay.duration() and (_bench_path or OS.has_feature("movie") or _is_movie()):
+	if _time >= replay.duration() and (_bench_path or _is_movie()):
 		if _bench_path:
 			_write_report()
 		get_tree().quit()
@@ -343,7 +343,7 @@ func _take_still() -> void:
 
 
 static func _is_movie() -> bool:
-	return "--write-movie" in OS.get_cmdline_args()
+	return OS.has_feature("movie")
 
 
 static func arguments() -> Dictionary[String, String]:

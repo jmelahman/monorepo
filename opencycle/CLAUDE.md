@@ -35,6 +35,18 @@ A biome is a `build(parent, run_seed, route, quality)` in `game/biomes/`, and a 
 `game/ride.gd`. It owns its sky and lights. The rider never leaves the road, so level of
 detail is fixed at build time by distance from the road wherever that is possible.
 
+## The game around the ride
+
+`godot --path .` opens `game/ui/menu.tscn`. Any `--x=y` argument skips it and goes straight to
+`game/ride.gd`, so every still, clip and bench still works as it did. `game/ui/` holds the menu,
+`LoadingScreen`, `Hud`, `PauseMenu`, `VideoPanel` and `CourseMap`, all styled through `UiStyle`.
+
+`VideoOptions` is what the ride spends the GPU on: each option an index into its choices, in
+`OPTIONS`, so the panel knows nothing about what they mean. A player's choices live in
+`user://video.cfg`. Tooling starts from `VideoOptions.new()`, which is High and today's look, and
+never reads that file; `--video=Low|Medium|High` picks another preset and `--off` switches one off.
+Texture detail is mipmap bias and anisotropy: it saves sampling, not video memory.
+
 ## Gotchas, each of which cost time
 
 - FSR2 posterises the HDR sky into bands. `ship` uses FSR1 with TAA.
@@ -56,6 +68,9 @@ detail is fixed at build time by distance from the road wherever that is possibl
   check `git log` afterwards.
 - A bench in a window on a hidden workspace is throttled, and the numbers mean nothing.
   `docs/performance.md` says how to bench without that.
+- `Once` caches across scene reloads, and the server keeps its shader globals: both survive a
+  restart of the ride. A second ride loads far faster for it, and anything registered with the
+  server must not be registered again.
 - Thick air is the neon street's easiest way to look worse: it lifts the blacks and smears
   the road's mirror, which reads the screen after the fog is drawn. Keep fog thin.
 

@@ -5,7 +5,8 @@ Worlds are generated from a seed, and for now they are ridden by deterministic
 replays, with no trainer and no avatars. The renderer reads only a position and a
 camera pose, so a trainer or physics can drive it later.
 
-Two biomes so far: a 1 km conifer forest and a 200 m cyberpunk street.
+So far it's a futuristic city at night, with three nested loops of 2.5, 6.3 and 14.5 km, and a
+1 km conifer forest left over from the first experiments.
 
 ## Run it
 
@@ -13,12 +14,16 @@ Needs Godot 4.7, Git LFS and a Vulkan GPU.
 
 ```sh
 scripts/setup.sh              # addons, CC0 assets, first import
-godot --path .                # ride the forest
-godot --path . -- --biome=neon
+godot --path .                # the menu: pick a loop, then ride
 ```
 
-Options after `--`: `--biome=forest|neon`, `--seed=N`, `--quality=ship|max`,
-`--replay=res://replays/x.json`, `--still=out.png --at=SECONDS`, `--scale=0.5`.
+`Esc` pauses, and `H` hides the HUD. Video options are on the menu and the pause screen, and are
+kept in `user://video.cfg`.
+
+Anything after `--` skips the menu and goes straight to the ride, for tooling: `--biome=forest|neon`,
+`--course=inner|medium|full`, `--seed=N`, `--quality=ship|max`, `--replay=res://replays/x.json`,
+`--still=out.png --at=SECONDS`, `--video=Low|Medium|High`, `--off=shadows,aa,fog,ssao,glow,probes,rain`,
+`--scale=0.5`.
 
 - `scripts/bench.sh [biome] [quality]`: frame times to `captures/`, on your real GPU
 - `scripts/capture.sh [biome] [quality] [fps]`: an mp4 at a fixed frame rate, 60 unless given,
@@ -27,16 +32,9 @@ Options after `--`: `--biome=forest|neon`, `--seed=N`, `--quality=ship|max`,
 
 ## Frame rate
 
-Radeon 890M, 1080p output, `ship` quality, over a whole replay:
-
-| Biome  | Render scale | Average | 1% low | Worst frame | Video memory |
-| ------ | ------------ | ------- | ------ | ----------- | ------------ |
-| Forest | 0.67         | 53 fps  | 32 fps | 38 ms       | 480 MB       |
-| Forest | 0.5          | 57 fps  | 36 fps | 34 ms       | 455 MB       |
-| Street | 0.67         | 67 fps  | 43 fps | 26 ms       | 212 MB       |
-| Street | 0.5          | 78 fps  | 49 fps | 24 ms       | 171 MB       |
-
-Neither holds a steady 60, so a ride is capped at 30 fps.
+Radeon 890M at 1080p, over the inner loop, with a ride capped at 30 fps by default. Low, the default,
+averages 38 fps uncapped, Medium 22 and High about 11. It all still stutters now and then;
+`docs/performance.md` has the detail.
 
 ## Art
 

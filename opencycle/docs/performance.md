@@ -2,8 +2,28 @@
 
 Everything here was measured on the neon street's 1 km route, at 1920x1080 on a Radeon 890M.
 
+## Video presets
+
+The inner loop at rate 1, in a private compositor with little else running (`--video=NAME`). High
+is from a rate 4 run, so it's a rough read; the other two moved only a little between the rates.
+
+| Preset | GPU ms, median | GPU ms, 99th | Average fps | 1% low | Video memory |
+| --- | --- | --- | --- | --- | --- |
+| Low | 19.7 | 59 | 38 | 10 | 1099 MB |
+| Medium | 37.2 | 74 | 22 | 8 | 1140 MB |
+| High, rate 4 | 73 | 163 | 11 | 7 | 1400 MB |
+
+Low is the default, because it's the only one that holds the 30 fps cap on most of the ride. Even
+it dips: its slowest 100 m takes 54 ms, around 400 m along. The 1% low and a worst frame of 150 ms
+hardly change with the preset, so those aren't the GPU's: the main thread is stalling, probably as
+each section arrives, about every 11.5 s. That isn't confirmed yet, and it's the next thing to fix.
+
+Turning shadows off also hides the sky's light, because without its shadow it comes through the
+deck. The figures below are older, from the 1 km route.
+
 ## TODO
 
+- Find what stalls the main thread for 100 ms and more during a ride, on every preset.
 - Reach 33 ms a frame on the 890M. The last market stretch is about 58 ms now, around 16 fps.
 - Whole-ride figures at full resolution, on a quiet machine: about 65 to 80 ms over the first
   300 m and 50 to 60 ms over the last 300 m. The stretch between has no clean full-resolution
@@ -37,8 +57,9 @@ triangles and barely moved the frame rate, so triangles aren't what's limiting i
 
 ## Running faster
 
-`--off=shadows,aa,fog,ssao,glow,probes` leaves any of those out, and `--scale=0.67` renders
-at a lower resolution. Both work on a ride, a still or a bench.
+The video options on the menu and the pause screen are what a player uses. For tooling,
+`--video=Low|Medium|High` picks a preset, `--off=shadows,aa,fog,ssao,glow,probes,rain` leaves any of
+those out, and `--scale=0.67` renders at a lower resolution. All work on a ride, a still or a bench.
 
 ## Measuring
 

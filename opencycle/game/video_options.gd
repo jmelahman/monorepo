@@ -8,7 +8,8 @@ extends RefCounted
 const PATH := "user://video.cfg"
 const SECTION := "video"
 const CUSTOM := "Custom"
-const DEFAULT_PRESET := "Medium"
+## The only one that holds 30 fps on most of a ride on the Radeon 890M this is built on.
+const DEFAULT_PRESET := "Low"
 ## Every option, its choices, and a line about what it does.
 const OPTIONS: Dictionary[String, Dictionary] = {
 	"render_scale":
@@ -172,7 +173,7 @@ func _init() -> void:
 	use_preset("High")
 
 
-## What the player chose last, or a preset that suits a weak GPU if they haven't.
+## What the player chose last, or [constant DEFAULT_PRESET] if they haven't.
 static func saved(path := PATH) -> VideoOptions:
 	var options := VideoOptions.new()
 	options.use_preset(DEFAULT_PRESET)
