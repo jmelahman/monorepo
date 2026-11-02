@@ -1,0 +1,131 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}"
+  },
+  "presentation": {
+    "panel": "shared",
+    "clear": true
+  },
+  "tasks": [
+    {
+      "label": "Play",
+      "detail": "Starts the game with the agent bridge listening",
+      "type": "shell",
+      "command": "scripts/play.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Quit game",
+      "detail": "Stops the game that Play started",
+      "type": "shell",
+      "command": "scripts/bridge.py quit",
+      "problemMatcher": []
+    },
+    {
+      "label": "Screenshot",
+      "detail": "To .godot-home/screenshot.png; uses the running game if there is one",
+      "type": "shell",
+      "command": "scripts/screenshot.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup",
+      "detail": "Godot at the pinned version, the addons, the first import",
+      "type": "shell",
+      "command": "scripts/setup.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: all",
+      "detail": "Every gdUnit4 suite, under Xvfb",
+      "type": "shell",
+      "command": "scripts/test.sh",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: sim",
+      "type": "shell",
+      "command": "scripts/test.sh res://tests/sim",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: game",
+      "type": "shell",
+      "command": "scripts/test.sh res://tests/game",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: core",
+      "type": "shell",
+      "command": "scripts/test.sh res://tests/core",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: watch",
+      "detail": "Every suite in a visible window",
+      "type": "shell",
+      "command": "XVFB=0 scripts/test.sh",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint",
+      "detail": "gdlint, gdformat, check.sh and resave.sh --check",
+      "type": "shell",
+      "command": "scripts/lint.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Format",
+      "detail": "gdformat, in place",
+      "type": "shell",
+      "command": "scripts/format.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Resave scenes",
+      "detail": "After editing a .tscn or .tres by hand; read the diff afterwards",
+      "type": "shell",
+      "command": "scripts/resave.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "All checks",
+      "detail": "Everything, as CI runs it",
+      "type": "shell",
+      "command": "prek run --all-files",
+      "problemMatcher": []
+    },
+    {
+      "label": "Export: all",
+      "detail": "Release builds into build/; needs scripts/setup.sh templates",
+      "type": "shell",
+      "command": "scripts/export.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Export: Linux",
+      "type": "shell",
+      "command": "scripts/export.sh Linux",
+      "problemMatcher": []
+    },
+    {
+      "label": "Export: Windows",
+      "type": "shell",
+      "command": "scripts/export.sh Windows",
+      "problemMatcher": []
+    }
+  ]
+}

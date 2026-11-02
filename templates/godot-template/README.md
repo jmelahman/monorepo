@@ -63,7 +63,9 @@ builds (Steam libraries included), and attaches the zips to a GitHub release.
 
 **A devcontainer** on the
 [monorepo's](https://github.com/jmelahman/monorepo) base image, with Godot,
-Xvfb, Mesa and gdtoolkit baked in at the pins in `scripts/versions.env`.
+Xvfb, Mesa and gdtoolkit baked in at the pins in `scripts/versions.env`. The
+tasks in `.vscode/tasks.json` run in it. Play opens a window when the container
+has the host's Wayland socket, and stays on Xvfb otherwise.
 
 ## Using this template
 
