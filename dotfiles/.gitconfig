@@ -21,6 +21,7 @@
 	name = Jamison Lahman
 [alias]
    mylog = log --author="jamison@lahman.dev" --oneline --graph --pretty='%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'
+   drop = "!f() { [ $# -eq 1 ] || { echo 'usage: git drop <commit>' >&2; return 2; }; c=$(git rev-parse --verify --quiet \"$1\") || { echo \"git drop: unknown commit: $1\" >&2; return 1; }; git merge-base --is-ancestor \"$c\" HEAD || { echo \"git drop: $1 is not an ancestor of HEAD\" >&2; return 1; }; git rebase --rebase-merges --onto \"$c^\" \"$c\"; }; f"
 [gpg]
 	format = ssh
 [gpg "ssh"]
