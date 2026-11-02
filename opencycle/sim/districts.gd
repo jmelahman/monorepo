@@ -3,10 +3,10 @@ extends RefCounted
 ## What the ride passes through, as stretches of the road: the market it starts in, an
 ## underpass with the roof down low, the works, a plaza where the deck opens up, a flooded
 ## cistern crossed on a causeway, a shopping street out in the open, a row of lanterns and gates,
-## and a yard breaking up a hull. A ride that stays one place all the way along is over after its
-## first minute.
+## a yard breaking up a hull, and terraces of flats under the sky. A ride that stays one place all
+## the way along is over after its first minute.
 
-enum Kind { MARKET, UNDERPASS, WORKS, PLAZA, CISTERN, LANTERNS, YARD, RETAIL }
+enum Kind { MARKET, UNDERPASS, WORKS, PLAZA, CISTERN, LANTERNS, YARD, RETAIL, RESIDENTIAL }
 
 ## How far past the ride's ends things stay as they are.
 const FOREVER := 10000.0
@@ -25,6 +25,8 @@ const ORDER: Array[Array] = [
 	[Kind.LANTERNS, 220.0, 260.0],
 	[Kind.MARKET, 60.0, 90.0],
 	[Kind.YARD, 260.0, 300.0],
+	[Kind.MARKET, 50.0, 70.0],
+	[Kind.RESIDENTIAL, 240.0, 280.0],
 ]
 const GANTRY_MIN := 18.0
 const GANTRY_MAX := 38.0
@@ -99,7 +101,7 @@ func _cross_the_works(base: int) -> void:
 
 ## Whether the buildings come out here, leaving the street no walls.
 static func stands_open(kind: Kind) -> bool:
-	return kind in [Kind.PLAZA, Kind.CISTERN, Kind.YARD]
+	return kind in [Kind.PLAZA, Kind.CISTERN, Kind.YARD, Kind.RESIDENTIAL]
 
 
 ## Whether the road has a roof of its own here, under the deck.
@@ -109,7 +111,7 @@ static func roofed(kind: Kind) -> bool:
 
 ## Whether the deck itself stops here, leaving nothing between the street and the weather.
 static func sky_open(kind: Kind) -> bool:
-	return kind == Kind.RETAIL
+	return kind in [Kind.RETAIL, Kind.RESIDENTIAL]
 
 
 func kind_at(s: float) -> Kind:

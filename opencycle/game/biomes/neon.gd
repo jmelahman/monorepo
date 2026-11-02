@@ -5,7 +5,7 @@ extends RefCounted
 ## still on. The lighting is art-directed. docs/realism-standard.md is what it's held to.
 
 const NIGHT_SKY: Shader = preload("res://game/night_sky.gdshader")
-const LENGTH := 2400.0
+const LENGTH := 2600.0
 const STREET_HALF := Route.HALF_WIDTH + 1.0
 ## Wide enough to look up: the tall city overhead is half of what's worth seeing.
 const FOV := 68.0
