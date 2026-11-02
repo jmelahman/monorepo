@@ -4,16 +4,16 @@ requires-python = ">=3.13"
 
 [[package]]
 name = "agentic-kanban"
-version = "1.10.1"
+version = "1.10.2"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ca/4f/ccca8d7398dedf161b93e255c1dd2c3e246cdb91edfa89c5fd1c5969b0d9/agentic_kanban-1.10.1-py3-none-any.whl", hash = "sha256:4aa250cf8f10a3dae0b79c529d86c337993adc965529e459600c5a4865c5be2c", size = 18077813, upload-time = "2026-11-02T12:11:59.159Z" },
-    { url = "https://files.pythonhosted.org/packages/42/d8/ee3a5859c31888c9c802051ee8f9e31819bff92032d26ddc31a7cf95c9ce/agentic_kanban-1.10.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:9024efe3ac1ab20c556c485962a62d3fb8c6b345404a8610c4c76ca88544f1eb", size = 17598400, upload-time = "2026-11-02T12:12:01.575Z" },
-    { url = "https://files.pythonhosted.org/packages/29/59/37836722500d7a77feeb4ef74d6fce01fcdfddf7a8d747aea923013f4475/agentic_kanban-1.10.1-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:bd0f00e7cec6b5992affbff59802e8cd8a2a0c0552997b73944e78e770344515", size = 18146510, upload-time = "2026-11-02T12:12:03.808Z" },
-    { url = "https://files.pythonhosted.org/packages/cc/e4/174a6713f6670282548dd28426f153741c05ad4dd492d5cb3f6c333842c9/agentic_kanban-1.10.1-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:2a1a424a0cc1bf07ac2ba8d1662d072377f18bd5cb132e835033bd135717dc76", size = 17027191, upload-time = "2026-11-02T12:12:05.936Z" },
-    { url = "https://files.pythonhosted.org/packages/c0/c9/ec441c887faf0d21c200ee4d642334a3e7e5e3aa4fab82e1a3bcc36c9268/agentic_kanban-1.10.1-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:f1d1319734b1cdb87836b4a75cd09a16f740cd614ccd24786ef1c295715b3527", size = 18077829, upload-time = "2026-11-02T12:12:08.446Z" },
-    { url = "https://files.pythonhosted.org/packages/fb/06/06a35925e3739af2281ed9e00df2448fbfea8a5258204228b0b481548a6d/agentic_kanban-1.10.1-py3-none-win_amd64.whl", hash = "sha256:4945f34f72803b4c47ef96efbedb67a8becbd01d9b70b56e14d588088aa8fb5f", size = 18222137, upload-time = "2026-11-02T12:12:10.779Z" },
-    { url = "https://files.pythonhosted.org/packages/af/77/3549aa281e381e254937dc775c979e3c44945427775fe2fadf893cbd6702/agentic_kanban-1.10.1-py3-none-win_arm64.whl", hash = "sha256:c9c7186ec1bfc67c2e90e86680b654fbdb13d89a97f13fc28fd5e0cfbbab37b6", size = 17055140, upload-time = "2026-11-02T12:12:13.113Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/ab/77e404583741ce03acbff0160a85e9eb3c6a104135e88d10e0f8aff00dee/agentic_kanban-1.10.2-py3-none-any.whl", hash = "sha256:9d5153d3217ba3e14694d5c94cc2f4d8c5ecca9e390043ecc3344cc71e2d01fa", size = 18078903, upload-time = "2026-11-02T19:04:27.12Z" },
+    { url = "https://files.pythonhosted.org/packages/37/80/054f530564369e12c5fa5e46b250a869479d5a78a6689085ce8aeae6c3b2/agentic_kanban-1.10.2-py3-none-macosx_11_0_arm64.whl", hash = "sha256:63d9856c1c91cd660fd1e902529743fc926f98db2667c87d1025a0a6dde33bd6", size = 17599378, upload-time = "2026-11-02T19:04:30.121Z" },
+    { url = "https://files.pythonhosted.org/packages/52/87/015bacfab4150a4d10c6529bced61515bff16266650d83df759da95518e3/agentic_kanban-1.10.2-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:fbaef33393cfe6b7102b87b671f8f8510e7ae79051d7cc2f5bb9f6a4d5964d78", size = 18147831, upload-time = "2026-11-02T19:04:32.363Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/5a/1b6ebd4b22ef7b0423fb1af5cc7e31a24f320a87abe8d375605fdad177ac/agentic_kanban-1.10.2-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:72b4d607b8402248c9f25d38e011ca87c9da0882da1bde792b023b1192181f6c", size = 17027207, upload-time = "2026-11-02T19:04:35.19Z" },
+    { url = "https://files.pythonhosted.org/packages/00/26/fe40f737ca84262debfe28acca6d4cb0682a4ad0cbd712fbafc6b9f343f7/agentic_kanban-1.10.2-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:ebbbefa55018d56a6b1f3b399d147874f2240c6b30edc8e8fa679b572f14c6e7", size = 18078922, upload-time = "2026-11-02T19:04:37.445Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/e6/889cf49967d14429fca678ca981838330030095335ca829c1a3f8cfd375d/agentic_kanban-1.10.2-py3-none-win_amd64.whl", hash = "sha256:60330d3c2fb61aa1f40753844c0a8e5674ffe9ec9295b2617034115fb229a2a1", size = 18223110, upload-time = "2026-11-02T19:04:39.818Z" },
+    { url = "https://files.pythonhosted.org/packages/05/e7/238b87410901de67bae05575a32c1fc36ecc1be878b91148b13d3c153692/agentic_kanban-1.10.2-py3-none-win_arm64.whl", hash = "sha256:cfef560c00c3b909363303e415fdab234fee0fbed3159b0c5c9b801cc3504823", size = 17056325, upload-time = "2026-11-02T19:04:42.192Z" },
 ]
 
 [[package]]
