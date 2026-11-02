@@ -4,16 +4,16 @@ requires-python = ">=3.13"
 
 [[package]]
 name = "agentic-kanban"
-version = "1.9.0"
+version = "1.10.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8d/bd/cb504c5158a5647bd3fe3133d1d8316349e45ea2c1f625a4b0f3889fd5dd/agentic_kanban-1.9.0-py3-none-any.whl", hash = "sha256:a6a1274e4a21b3bfc1a0af8028f282447a36d15e023256ae2525bd30452ee496", size = 17969420, upload-time = "2026-10-31T18:18:36.683Z" },
-    { url = "https://files.pythonhosted.org/packages/3b/5a/ab80dafe73c658f5596dfe6ee08dfedeb8037127c050a4f3fafdf32dbf8a/agentic_kanban-1.9.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:2be258e6f2114ecbf8b6bb9fbfba1ac38c2485a234f6c980397bc9f9fa7f4fa5", size = 17495702, upload-time = "2026-10-31T18:18:39.501Z" },
-    { url = "https://files.pythonhosted.org/packages/6e/72/8a42b660803023ab84bb9242796ce240c30500ac6a7062f3af955bfe0b1c/agentic_kanban-1.9.0-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:cff2020ab8dd3bd7debbcce78181271df36528c4d58ee59b64ddcfe60998ad4d", size = 18037669, upload-time = "2026-10-31T18:18:41.826Z" },
-    { url = "https://files.pythonhosted.org/packages/4e/ce/b2edd5cf95a85fa05b609d7509b6334827f65a017188840639e12dc82e6a/agentic_kanban-1.9.0-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:9a6388cbf550f0994109226ff693e69ca8a4c0c2ff3f0db1459d07846e169dfd", size = 16926637, upload-time = "2026-10-31T18:18:44.816Z" },
-    { url = "https://files.pythonhosted.org/packages/59/7e/0d790bdee3ad5de7eb4c6b749fbb1b8234e40a41d89cbceeadb5de78b304/agentic_kanban-1.9.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:01dcdc64550cf290bd38802d292150de66cfedee66586b546585f3d585a156f1", size = 17969438, upload-time = "2026-10-31T18:18:47.219Z" },
-    { url = "https://files.pythonhosted.org/packages/e4/26/58ec189008dad4451dc85381c405467411e00fe09ec6e35174d22176fa5a/agentic_kanban-1.9.0-py3-none-win_amd64.whl", hash = "sha256:1f2f553867e8c4174358f3990faa38f2876ded787d0e4951bf0d7881e33c0651", size = 18107081, upload-time = "2026-10-31T18:18:49.628Z" },
-    { url = "https://files.pythonhosted.org/packages/b4/2f/98fe3f4253bba0867bb39ede2d4bd39165468a7bbe132bcfe497488238d9/agentic_kanban-1.9.0-py3-none-win_arm64.whl", hash = "sha256:0958fa9e5e2bd7a92f2a4f2edb7f664c3438f24a64133dc77ef2559821bd5070", size = 16949759, upload-time = "2026-10-31T18:18:51.898Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/4f/ccca8d7398dedf161b93e255c1dd2c3e246cdb91edfa89c5fd1c5969b0d9/agentic_kanban-1.10.1-py3-none-any.whl", hash = "sha256:4aa250cf8f10a3dae0b79c529d86c337993adc965529e459600c5a4865c5be2c", size = 18077813, upload-time = "2026-11-02T12:11:59.159Z" },
+    { url = "https://files.pythonhosted.org/packages/42/d8/ee3a5859c31888c9c802051ee8f9e31819bff92032d26ddc31a7cf95c9ce/agentic_kanban-1.10.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:9024efe3ac1ab20c556c485962a62d3fb8c6b345404a8610c4c76ca88544f1eb", size = 17598400, upload-time = "2026-11-02T12:12:01.575Z" },
+    { url = "https://files.pythonhosted.org/packages/29/59/37836722500d7a77feeb4ef74d6fce01fcdfddf7a8d747aea923013f4475/agentic_kanban-1.10.1-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:bd0f00e7cec6b5992affbff59802e8cd8a2a0c0552997b73944e78e770344515", size = 18146510, upload-time = "2026-11-02T12:12:03.808Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/e4/174a6713f6670282548dd28426f153741c05ad4dd492d5cb3f6c333842c9/agentic_kanban-1.10.1-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:2a1a424a0cc1bf07ac2ba8d1662d072377f18bd5cb132e835033bd135717dc76", size = 17027191, upload-time = "2026-11-02T12:12:05.936Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/c9/ec441c887faf0d21c200ee4d642334a3e7e5e3aa4fab82e1a3bcc36c9268/agentic_kanban-1.10.1-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:f1d1319734b1cdb87836b4a75cd09a16f740cd614ccd24786ef1c295715b3527", size = 18077829, upload-time = "2026-11-02T12:12:08.446Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/06/06a35925e3739af2281ed9e00df2448fbfea8a5258204228b0b481548a6d/agentic_kanban-1.10.1-py3-none-win_amd64.whl", hash = "sha256:4945f34f72803b4c47ef96efbedb67a8becbd01d9b70b56e14d588088aa8fb5f", size = 18222137, upload-time = "2026-11-02T12:12:10.779Z" },
+    { url = "https://files.pythonhosted.org/packages/af/77/3549aa281e381e254937dc775c979e3c44945427775fe2fadf893cbd6702/agentic_kanban-1.10.1-py3-none-win_arm64.whl", hash = "sha256:c9c7186ec1bfc67c2e90e86680b654fbdb13d89a97f13fc28fd5e0cfbbab37b6", size = 17055140, upload-time = "2026-11-02T12:12:13.113Z" },
 ]
 
 [[package]]
@@ -319,12 +319,12 @@ wheels = [
 
 [[package]]
 name = "undot"
-version = "0.3.0"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/66/16/78ecb742de7399cc33540f81c4b2416751cf51d2af1768e78f54962664e7/undot-0.3.0.tar.gz", hash = "sha256:da90864282ef713cec47289a6f014fb15fe2c09d92eadf73fbb25c185add369a", size = 48487, upload-time = "2026-08-24T02:01:33.803Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/49/49/68d6a86dfed4ec20d97a02c0f6f6c1d7af5353c47d5db296e6c2211694ae/undot-0.4.1.tar.gz", hash = "sha256:6bd13113710e6aaf05506455524f2fe0cdb403359423852e20fcd4335a624060", size = 82607, upload-time = "2026-11-02T13:56:23.849Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/31/024f1cf80c2b8d3ab25fbea7627352be27a9c15810722fdec52ef5180548/undot-0.3.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:a960fd58bf305568263780f8a3f51a2338b8bf1e3c00823dbfe8d3d5daddc8da", size = 57790, upload-time = "2026-08-24T02:01:29.258Z" },
-    { url = "https://files.pythonhosted.org/packages/39/dd/02580262a38051b987bf2ad691451be75f0f74402ad5dae1f4398844e432/undot-0.3.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:019d4bac57c1b5a07c7aec7b0a6cbd76fed6329f0f98843fc33b3ca03eb48151", size = 57922, upload-time = "2026-08-24T02:01:30.495Z" },
-    { url = "https://files.pythonhosted.org/packages/24/f2/5d1c6d841c992df0ecc60e8bdccad249a4b850c389fa050631eb844eea8c/undot-0.3.0-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:90a7f1c6b59ab11166b1ae0cdfac1be70bac9973bb817e186bea779b15eeaf7b", size = 132202, upload-time = "2026-08-24T02:01:31.61Z" },
-    { url = "https://files.pythonhosted.org/packages/21/eb/b9406545cee70045be12925b9bb26944bb95b084b015d16137f7fcfc59ea/undot-0.3.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:4972f247461666a48f52cd61c546bc73a1031f24eaa5dca83ab43a235bbe0061", size = 127083, upload-time = "2026-08-24T02:01:32.654Z" },
+    { url = "https://files.pythonhosted.org/packages/90/7e/6fad2880757a4baf24fa7daf9da5b3ea2f37a5952d3984e00e7032e910c6/undot-0.4.1-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:4b963b3644a544c67206d1a551df04406717d8630e8fd24386550a229a44e831", size = 190713, upload-time = "2026-11-02T13:56:18.954Z" },
+    { url = "https://files.pythonhosted.org/packages/93/3b/f30a96377f458fc7098e3668279b19be124b1b40d4207d4cda2aaad75cad/undot-0.4.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:45903f446802a6a5d66ba4b0de679e4cc6d8968d3bd4cf23f63eedb40e6057af", size = 182198, upload-time = "2026-11-02T13:56:20.227Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/30/5b6fb7455b0d2f47bc109b102c153bc0504005ca7e12856b962469ded6ff/undot-0.4.1-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:f6d5a00bf1c876afc1fe778c4f99405caeaea3700018b7da729b2313d6a5ad9b", size = 236065, upload-time = "2026-11-02T13:56:21.288Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/69/8694fb2c9d50caf51cbd52b10488009af330fd7dc64d33a71473dec11895/undot-0.4.1-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.musllinux_1_1_x86_64.whl", hash = "sha256:5066ba7c1f177100d7c8397b09c94500cc949c8448ed654e4c29b5482eb059dc", size = 243666, upload-time = "2026-11-02T13:56:22.699Z" },
 ]
