@@ -169,3 +169,12 @@ func test_roads_are_market_as_far_as_they_are_forked() -> void:
 					Districts.Kind.MARKET
 				)
 				away += 5.0
+
+
+func test_a_longer_course_goes_through_at_least_as_many_places() -> void:
+	var plan := CityPlan.new(1)
+	var inner := plan.course("inner").places()
+	var full := plan.course("full").places()
+	assert_bool(inner.is_empty()).is_false()
+	assert_int(full.size()).is_greater_equal(inner.size())
+	assert_bool(Districts.Kind.MARKET in full).is_false()

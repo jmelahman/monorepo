@@ -7,6 +7,8 @@ extends RefCounted
 ## The road runs roughly along +X and never doubles back, which is what lets
 ## [method nearest] be a table lookup and the terrain ask it for every vertex.
 
+## Metres a reading of the gradient is taken over.
+const GRADIENT_OVER := 10.0
 const LENGTH := 1000.0
 const MARGIN := 300.0
 const STEP := 2.0
@@ -169,6 +171,13 @@ static func _grade_at(s: float) -> float:
 	return (
 		grade + ROLL * sin((s - LENGTH) / ROLL_LONG) * smoothstep(LENGTH, LENGTH + GRADE_BLEND, s)
 	)
+
+
+## How steep the road is around [param s], as a percentage.
+func gradient(s: float) -> float:
+	var ahead := at(s + GRADIENT_OVER * 0.5)
+	var behind := at(s - GRADIENT_OVER * 0.5)
+	return (ahead.y - behind.y) / GRADIENT_OVER * 100.0
 
 
 ## The road's centre, [param s] metres from the start of the ride.

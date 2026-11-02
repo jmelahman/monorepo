@@ -78,11 +78,21 @@ func _plan_not_taken(fork: Fork, leg: Course.Leg) -> void:
 
 ## Builds everything in view of [param s], to have it before the first frame.
 func begin(s: float) -> void:
+	start_at(s)
+	while wanted(s):
+		_arrive(_made(_section()))
+
+
+## Skips to the sections around [param s], for [method update] to build from there.
+func start_at(s: float) -> void:
 	_next = -_sections_of_course.size()
 	while _reached(_next) + _course_from(_next) + SECTION <= s - BEHIND:
 		_next += 1
-	while _wanted(s):
-		_arrive(_made(_section()))
+
+
+## How much of what's in view of [param s] has been started on, from 0 to 1.
+func progress(s: float) -> float:
+	return inverse_lerp(s - BEHIND, s + AHEAD, _reached(_next) + _course_from(_next))
 
 
 func update(s: float) -> void:
@@ -94,7 +104,7 @@ func update(s: float) -> void:
 		_task = -1
 		_arrive(_building)
 		_building = null
-	if not _wanted(s):
+	if not wanted(s):
 		return
 	if threaded:
 		_building = _section()
@@ -103,8 +113,9 @@ func update(s: float) -> void:
 		_arrive(_made(_section()))
 
 
-func _wanted(s: float) -> bool:
-	return _reached(_next) + _course_from(_next) < s + AHEAD
+## Whether there's anything left to build, or still building, for a rider at [param s].
+func wanted(s: float) -> bool:
+	return _task >= 0 or _reached(_next) + _course_from(_next) < s + AHEAD
 
 
 ## How far the laps before section [param index] come to. Past the finish is the next lap's start.

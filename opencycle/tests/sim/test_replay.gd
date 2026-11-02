@@ -54,3 +54,13 @@ func test_a_lap_ends_how_it_began_and_the_ride_carries_on() -> void:
 	var starting := replay.camera_at(route, once + 0.01).origin
 	# Round the finish without a jump, even though the script's two ends start out apart.
 	assert_float(ending.distance_to(starting)).is_less(0.5)
+
+
+func test_speed_reads_what_the_script_says() -> void:
+	assert_float(Replay.from_dict(DATA).kmh_at(5.0)).is_equal_approx(36.0, 0.01)
+
+
+func test_laps_count_up_from_nothing() -> void:
+	var replay := Replay.from_dict(DATA, 50.0)
+	assert_int(replay.lap_at(0.0)).is_equal(0)
+	assert_int(replay.lap_at(replay.duration() * 2.5)).is_equal(2)

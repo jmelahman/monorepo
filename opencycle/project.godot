@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="OpenCycle"
-run/main_scene="res://game/ride.tscn"
+run/main_scene="res://game/ui/menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 

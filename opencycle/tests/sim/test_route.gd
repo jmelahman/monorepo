@@ -31,3 +31,10 @@ func test_ride_climbs_then_descends() -> void:
 	var route := Route.generate(3)
 	assert_float(route.at(200.0).y).is_greater(route.at(0.0).y + 8.0)
 	assert_float(route.at(1000.0).y).is_less(route.at(500.0).y - 15.0)
+
+
+func test_gradient_is_rise_over_run() -> void:
+	var route := Route.generate(2)
+	var s := 200.0
+	var rise := route.at(s + 5.0).y - route.at(s - 5.0).y
+	assert_float(route.gradient(s)).is_equal_approx(rise * 10.0, 0.001)

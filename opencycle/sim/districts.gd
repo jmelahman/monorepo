@@ -8,6 +8,18 @@ extends RefCounted
 
 enum Kind { MARKET, UNDERPASS, WORKS, PLAZA, CISTERN, LANTERNS, YARD, RETAIL, RESIDENTIAL }
 
+## What a rider sees each one called.
+const NAMES: Dictionary[Kind, String] = {
+	Kind.MARKET: "The Market",
+	Kind.UNDERPASS: "The Underpass",
+	Kind.WORKS: "The Works",
+	Kind.PLAZA: "The Plaza",
+	Kind.CISTERN: "The Cistern",
+	Kind.LANTERNS: "Lantern Row",
+	Kind.YARD: "The Breakers' Yard",
+	Kind.RETAIL: "The Arcade",
+	Kind.RESIDENTIAL: "The Terraces",
+}
 ## How far past the ride's ends things stay as they are.
 const FOREVER := 10000.0
 ## In riding order, as a kind and how long it lasts. The market takes up whatever's left. A road

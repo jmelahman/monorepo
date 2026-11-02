@@ -10,6 +10,8 @@ const LOOK_AHEAD := 22.0
 const TABLE_STEP := 0.5
 ## How long before the end of a lap the script starts going back to how it began.
 const LAP_BLEND := 100.0
+## Seconds a reading of the speed is taken over.
+const SPEED_OVER := 1.0
 
 ## Metres the ride covers, up to the last [code]speed[/code] entry.
 var length := 0.0
@@ -73,6 +75,17 @@ func ridden(t: float) -> float:
 		return distance_at(t)
 	var done := floorf(t / duration())
 	return done * length + distance_at(t - done * duration())
+
+
+## Which lap [param t] seconds is on, counting from 0.
+func lap_at(t: float) -> int:
+	return int(floorf(t / duration())) if laps else 0
+
+
+## How fast the ride is going at [param t] seconds, in km/h.
+func kmh_at(t: float) -> float:
+	var before := maxf(t - SPEED_OVER * 0.5, 0.0)
+	return (ridden(before + SPEED_OVER) - ridden(before)) / SPEED_OVER * 3.6
 
 
 ## Metres along the route at [param t] seconds. Past the end, it stays at the end.

@@ -59,3 +59,13 @@ func kind_at(s: float) -> Districts.Kind:
 	var wrapped := fposmod(s, length)
 	var leg := leg_at(wrapped)
 	return leg.segment.districts.kind_at(wrapped - leg.offset)
+
+
+## The districts a lap goes through, in order and each named once, leaving out the market between.
+func places() -> Array[Districts.Kind]:
+	var found: Array[Districts.Kind] = []
+	for leg: Leg in legs:
+		for stretch: Districts.Stretch in leg.segment.districts.stretches:
+			if stretch.kind != Districts.Kind.MARKET and stretch.kind not in found:
+				found.append(stretch.kind)
+	return found

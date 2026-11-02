@@ -1,10 +1,13 @@
+class_name Ride
 extends Node3D
-## Builds the world from a seed and flies the camera along a replay. Arguments go
-## after [code]--[/code]:
+## Builds the world from a seed and flies the camera along a replay. Someone riding gets a loading
+## screen, a HUD, pausing and the video options they saved. Stills, clips and benches get none of
+## that, at the High preset. Arguments go after [code]--[/code]:
 ##
-## [code]--biome=forest|neon[/code], [code]--seed=N[/code], [code]--course=inner|medium|full[/code],
+## [code]--biome=neon|forest[/code], [code]--seed=N[/code], [code]--course=inner|medium|full[/code],
 ## [code]--replay=res://replays/x.json[/code] and [code]--quality=ship|max[/code] choose
-## what to show. [code]--scale=0.5[/code] overrides the quality's render scale.
+## what to show. On the city, [code]--video=Low|Medium|High[/code] starts from a preset,
+## [code]--scale=0.5[/code] overrides its render scale and
 ## [code]--off=shadows,aa,fog,ssao,glow,probes,rain[/code] leaves those features out.
 ## [code]--reach=SHADOWS,LIT[/code] says how far off the street's lamps throw shadows and light.
 ## [code]--still=out.png[/code] with [code]--at=SECONDS[/code] renders one frame and quits,
@@ -18,6 +21,9 @@ extends Node3D
 const WARMUP_FRAMES := 60
 const BENCH_STRETCH := 100
 const TARGET_FPS := 30
+const MENU := "res://game/ui/menu.tscn"
+## Frames the street draws behind the loading screen, to compile its shaders and fill its probes.
+const SETTLE_FRAMES := 20
 const RAIN := 0.65
 const BIOME_REPLAYS: Dictionary[String, String] = {
 	"forest": "res://replays/benchmark.json",
@@ -45,29 +51,46 @@ var _rain: MeshInstance3D
 var _lamp_reach: LampReach
 var _course: Course
 var _stream: CityStream
-var _off := PackedStringArray()
+var _video: VideoOptions
+var _playing := false
+var _hud: Hud
+var _pause: PauseMenu
 
 @onready var _camera: Camera3D = %Camera
 
 
 func _ready() -> void:
+	set_process(false)
 	var started := Time.get_ticks_msec()
-	var args := _arguments()
+	var args := arguments()
 	var seed_text: String = args.get("seed", "1")
 	var run_seed := seed_text.to_int()
 	var quality: String = args.get("quality", "ship")
 	_still_path = args.get("still", "")
 	_bench_path = args.get("bench", "")
+	_playing = _still_path.is_empty() and _bench_path.is_empty() and not _is_movie()
 	var at_text: String = args.get("at", "0")
 	at_seconds = at_text.to_float()
 	var rate_text: String = args.get("rate", "1")
 	_rate = rate_text.to_float()
-	var biome: String = args.get("biome", "forest")
+	var biome: String = args.get("biome", "neon")
+	var which: String = args.get("course", Session.course)
+	_video = _video_options(args)
+	var loading: LoadingScreen
+	if _playing:
+		_video.apply_to_window()
+		loading = LoadingScreen.new(Menu.title_of(which))
+		add_child(loading)
+		# Long enough for it to reach the screen before anything holds up the main thread.
+		await get_tree().process_frame
+		await get_tree().process_frame
+	else:
+		# An even 30 beats a ride that swings between 30 and 60. A bench needs to see the limit.
+		Engine.max_fps = TARGET_FPS if _bench_path.is_empty() else 0
 	var replay_path: String = args.get("replay", BIOME_REPLAYS.get(biome, ""))
 	var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(replay_path))
 	match biome:
 		"neon":
-			var which: String = args.get("course", "inner")
 			_course = CityPlan.new(run_seed).course(which)
 			route = _course
 			replay = Replay.from_dict(parsed, _course.length)
@@ -78,73 +101,122 @@ func _ready() -> void:
 			_lamp_reach = LampReach.new()
 			add_child(_lamp_reach)
 			_camera.fov = NeonBiome.FOV
+			_apply_video()
 		_:
 			route = Route.generate(run_seed)
 			replay = Replay.from_dict(parsed)
 			ForestBiome.build(self, run_seed, route, quality)
-	# An even 30 beats a ride that swings between 30 and 60. A bench needs to see the limit.
-	if _bench_path.is_empty():
-		Engine.max_fps = TARGET_FPS
-	if args.has("scale"):
-		var scale_text: String = args["scale"]
-		get_viewport().scaling_3d_scale = scale_text.to_float()
-	if args.has("off"):
-		var off_text: String = args["off"]
-		_off = off_text.split(",")
-		_switch_off(self)
+			if args.has("scale"):
+				get_viewport().scaling_3d_scale = _video.render_scale()
 	if args.has("reach"):
 		var reach_text: String = args["reach"]
 		var reach := reach_text.split_floats(",")
 		_lamp_reach.shadows_within = reach[0]
 		_lamp_reach.lit_within = reach[1]
-	if _stream:
-		_stream.threaded = _still_path.is_empty() and not _is_movie()
-		_stream.arrived.connect(_on_section_arrived)
-		_stream.left.connect(_lamp_reach.remove)
-		_stream.begin(replay.ridden(at_seconds))
-	_startup_ms = Time.get_ticks_msec() - started
-	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_time = at_seconds
 	_camera.transform = replay.camera_at(route, _time)
+	if _stream:
+		_stream.threaded = _playing
+		_stream.arrived.connect(_on_section_arrived)
+		_stream.left.connect(_lamp_reach.remove)
+		var from := replay.ridden(at_seconds)
+		if _playing:
+			await _load_street(from, loading)
+		else:
+			_stream.begin(from)
+	_startup_ms = Time.get_ticks_msec() - started
+	print("ride: built %s in %d ms" % [biome, _startup_ms])
 	_send_time()
 	if _still_path and args.has("look"):
 		_look(args["look"])
 	if _bench_path:
-		Engine.max_fps = 0
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	if _still_path:
 		_take_still.call_deferred()
+	if _playing:
+		_start_riding(loading)
+	set_process(true)
+
+
+## What to render with: what the player saved, or for anything else a fixed starting point.
+func _video_options(args: Dictionary[String, String]) -> VideoOptions:
+	var options := VideoOptions.saved() if _playing else VideoOptions.new()
+	if args.has("video"):
+		options.use_preset(args["video"])
+	if args.has("off"):
+		var off_text: String = args["off"]
+		options.switch_off(off_text.split(","))
+	if args.has("scale"):
+		var scale_text: String = args["scale"]
+		options.exact_scale = scale_text.to_float()
+	return options
+
+
+## Puts the options into effect, on the street as it stands and on what arrives after this.
+func _apply_video() -> void:
+	_video.apply_to_viewport(get_viewport())
+	_video.apply_to_world(self)
+	_lamp_reach.shadows_within = _video.lamp_shadows_within()
+	_rain.visible = _video.is_on("rain")
+	if _playing:
+		_video.apply_to_window()
+	if _hud:
+		_hud.show_frame_rate(get_viewport().get_viewport_rid(), _video.is_on("show_fps"))
+
+
+## Builds what's in view a section at a time, with the screen still moving.
+func _load_street(from: float, loading: LoadingScreen) -> void:
+	_stream.start_at(from)
+	while _stream.wanted(from):
+		_stream.update(from)
+		loading.show_progress(_stream.progress(from))
+		await get_tree().process_frame
+	_lamp_reach.update(_camera.global_position)
+	for _i: int in SETTLE_FRAMES:
+		await get_tree().process_frame
+
+
+func _start_riding(loading: LoadingScreen) -> void:
+	if loading:
+		loading.finish()
+	_hud = Hud.new(replay, route, _course)
+	add_child(_hud)
+	_hud.show_frame_rate(get_viewport().get_viewport_rid(), _video.is_on("show_fps"))
+	_pause = PauseMenu.new(_video)
+	_pause.restarted.connect(_restart)
+	_pause.ended.connect(_end_ride)
+	if _lamp_reach:
+		_pause.video_changed.connect(_apply_video)
+	add_child(_pause)
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _pause or get_tree().paused:
+		return
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_pause.open()
+	elif event is InputEventKey:
+		var key := event as InputEventKey
+		if key.pressed and not key.echo and key.physical_keycode == KEY_H:
+			_hud.visible = not _hud.visible
+
+
+func _restart() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+
+func _end_ride() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file(MENU)
 
 
 func _on_section_arrived(section: Node3D) -> void:
-	_switch_off(section)
-	# After the switches, so a lamp switched out of shadows stays out of them.
+	_video.apply_to_section(section)
 	_lamp_reach.add(section)
-
-
-## Leaves costly features out, to run faster or see what one of them costs.
-func _switch_off(root: Node) -> void:
-	var names := _off
-	if names.is_empty():
-		return
-	for node: Node in root.find_children("*", "", true, false):
-		if node is WorldEnvironment:
-			var environment: Environment = (node as WorldEnvironment).environment
-			environment.volumetric_fog_enabled = (
-				environment.volumetric_fog_enabled and "fog" not in names
-			)
-			environment.ssao_enabled = environment.ssao_enabled and "ssao" not in names
-			environment.glow_enabled = environment.glow_enabled and "glow" not in names
-		elif node is Light3D and "shadows" in names:
-			(node as Light3D).shadow_enabled = false
-		elif node is ReflectionProbe and "probes" in names:
-			(node as ReflectionProbe).visible = false
-	if "rain" in names and _rain:
-		_rain.visible = false
-	if "aa" in names:
-		get_viewport().use_taa = false
-		get_viewport().msaa_3d = Viewport.MSAA_DISABLED
 
 
 func _process(delta: float) -> void:
@@ -158,6 +230,8 @@ func _process(delta: float) -> void:
 	_time += delta * _rate
 	_camera.transform = replay.camera_at(route, _time)
 	_send_time()
+	if _hud:
+		_hud.show_at(_time, delta)
 	if _bench_path:
 		_frame_times.append(delta)
 		var gpu := RenderingServer.viewport_get_measured_render_time_gpu(
@@ -272,7 +346,7 @@ static func _is_movie() -> bool:
 	return "--write-movie" in OS.get_cmdline_args()
 
 
-static func _arguments() -> Dictionary[String, String]:
+static func arguments() -> Dictionary[String, String]:
 	var args: Dictionary[String, String] = {}
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--") and "=" in arg:
