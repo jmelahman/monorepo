@@ -19,6 +19,8 @@ const EVENT_LABELS: Record<PushEvent, string> = {
 };
 
 const UNAVAILABLE: Record<Exclude<ReturnType<typeof pushSupport>, "ok">, string> = {
+  desktop:
+    "The desktop app shows its own notifications while it's open. Turn them on or off under View → Show Notifications.",
   insecure:
     "Notifications need a secure connection. Open kanban over HTTPS (or on localhost) to turn them on.",
   "ios-needs-install":

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-Of3Ris6KRz+4/Sif7kpnt9OdIGD2w3eorH14WW0APcU='" />
+    <title>Agentic Kanban</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        display: grid;
+        place-content: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 16px;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      code {
+        font-family: ui-monospace, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Waiting for kanban</h1>
+    <p>Can't reach the server at <code id="server"></code>. Retrying every few seconds.</p>
+    <p>To start it from the repo, run <code>docker compose up -d</code>.</p>
+    <script>document.getElementById("server").textContent = new URLSearchParams(location.search).get("server");</script>
+  </body>
+</html>

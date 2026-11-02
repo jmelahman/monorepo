@@ -46,6 +46,7 @@ export default defineConfig({
             { text: 'Previews', link: '/guide/previews' },
             { text: 'Releases', link: '/guide/releases' },
             { text: 'Mobile', link: '/guide/mobile' },
+            { text: 'Desktop app', link: '/guide/desktop' },
             { text: 'Observability', link: '/guide/observability' },
           ],
         },

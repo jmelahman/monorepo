@@ -39,6 +39,7 @@ web/dist/
 web/node_modules/
 web/playwright-report/
 web/playwright/.cache/
+desktop/node_modules/
 .tmp/
 
 # Local planning artifacts
@@ -52,6 +53,7 @@ plans/
 !web/public/**/*.png
 !web/src/**/*.png
 !docs/public/**/*.png
+!desktop/assets/*.png
 .claude-tmp/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock

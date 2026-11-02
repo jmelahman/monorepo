@@ -9,4 +9,5 @@ README.md
 !internal/skills/*/SKILL.md
 web/node_modules
 web/dist
+desktop
 **/.DS_Store

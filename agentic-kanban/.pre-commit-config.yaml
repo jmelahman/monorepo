@@ -121,3 +121,23 @@ repos:
         language: bun
         files: ^web/(package\.json|bun\.lock)$
         pass_filenames: false
+      # The desktop hooks skip `bun install`: tests and formatting don't import
+      # Electron, and installing it downloads a whole browser.
+      - id: desktop-fmt
+        name: desktop bun fmt
+        entry: bun fmt --cwd=desktop --check
+        language: bun
+        files: ^desktop/.*\.(js|json)$
+        pass_filenames: false
+      - id: desktop-test
+        name: desktop bun test
+        entry: bun test --cwd=desktop
+        language: bun
+        files: ^desktop/.*\.js$
+        pass_filenames: false
+      - id: desktop-audit
+        name: desktop bun audit
+        entry: bun audit --cwd=desktop --audit-level=high
+        language: bun
+        files: ^desktop/(package\.json|bun\.lock)$
+        pass_filenames: false

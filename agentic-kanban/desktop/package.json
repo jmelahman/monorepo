@@ -1,0 +1,42 @@
+{
+  "name": "agentic-kanban-desktop",
+  "productName": "Agentic Kanban",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop client for a running kanban server.",
+  "license": "GPL-3.0-only",
+  "author": "Jamison Lahman <lahmanja@gmail.com>",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "bun test",
+    "format": "bun fmt",
+    "format:check": "bun fmt --check",
+    "package": "electron-builder --linux"
+  },
+  "trustedDependencies": [
+    "electron"
+  ],
+  "build": {
+    "appId": "dev.lahman.agentic-kanban",
+    "files": [
+      "src/**",
+      "assets/**",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "executableName": "agentic-kanban",
+      "icon": "assets/icon.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "26.18.0"
+  }
+}

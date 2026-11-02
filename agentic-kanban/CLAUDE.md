@@ -38,6 +38,7 @@ starts from zero and shutdown discards everything.
 - Frontend types: `cd web && bun run typecheck`
 - Frontend format: `cd web && bun run format:check` (`format` to apply). The
   `prek` `bun-fmt` hook runs the same check. Lint: `bun run lint` (`lint:fix` to apply), also the `oxlint` hook.
+- Desktop client: `cd desktop && bun test` and `bun run format:check`.
 - Playwright E2E: `cd web && bun run test:e2e` (first run `test:e2e:install`
   for Chromium). Read
   `web/tests/e2e/README.md` before adding or modifying a spec.
@@ -75,6 +76,7 @@ ad-hoc.
 
 - `main.go`, `cmd/`, `internal/` — Go server, MCP, CLI subcommands.
 - `web/` — Vite + React 19 + Tailwind 4 frontend.
+- `desktop/` — Linux Electron client for a running server; holds no server code.
 - `docs/` — VitePress site (`guide/`, `reference/{api,cli,mcp}.md`).
 - `.kanban.toml` — session image (`ghcr.io/jmelahman/devcontainer`, built from
   the monorepo's `templates/fullstack-template/.devcontainer/`) and task

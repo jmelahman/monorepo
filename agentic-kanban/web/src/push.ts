@@ -4,7 +4,7 @@ import { openTicketRequestStore } from "@/store";
 // Why this device can or can't receive notifications. Service workers and
 // push only exist on HTTPS (or localhost), and iOS only offers push to a
 // site that has been added to the home screen.
-export type PushSupport = "ok" | "insecure" | "ios-needs-install" | "unsupported";
+export type PushSupport = "ok" | "desktop" | "insecure" | "ios-needs-install" | "unsupported";
 
 const EVENTS_KEY = "kanban.push.events";
 
@@ -23,7 +23,14 @@ function isStandalone(): boolean {
   );
 }
 
+// The desktop app (desktop/src/main.js) marks its user agent. Web Push doesn't
+// work in Electron, so the app shows its own notifications.
+function isDesktopApp(): boolean {
+  return navigator.userAgent.includes("KanbanDesktop/");
+}
+
 export function pushSupport(): PushSupport {
+  if (isDesktopApp()) return "desktop";
   if (!window.isSecureContext) return "insecure";
   if (isIOS() && !isStandalone()) return "ios-needs-install";
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window))
@@ -189,7 +196,7 @@ function consumeDeepLink(): void {
 // Called once at startup; a no-op for the worker where it can't exist.
 export function installPush(): void {
   consumeDeepLink();
-  if (!window.isSecureContext || !("serviceWorker" in navigator)) return;
+  if (isDesktopApp() || !window.isSecureContext || !("serviceWorker" in navigator)) return;
   navigator.serviceWorker.addEventListener("message", (e) => {
     if (isOpenTicketMessage(e.data)) {
       openTicketRequestStore.set({ boardId: e.data.boardId, ticketId: e.data.ticketId });
