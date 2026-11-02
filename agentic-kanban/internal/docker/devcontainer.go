@@ -513,6 +513,10 @@ func (c *Client) Spawn(ctx context.Context, cfg *DevcontainerConfig, opts SpawnO
 
 	if cfg.PostStartCommand != "" {
 		if _, err := c.ExecRun(ctx, created.ID, []string{"sh", "-lc", cfg.PostStartCommand}); err != nil {
+			// Nothing records this container yet, so archiving the ticket
+			// wouldn't remove it, and a failed setup step such as a firewall
+			// mustn't leave it running.
+			_ = c.RemoveContainer(context.WithoutCancel(ctx), created.ID)
 			return nil, fmt.Errorf("postStartCommand: %w", err)
 		}
 	}

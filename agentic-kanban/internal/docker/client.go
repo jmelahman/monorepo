@@ -12,8 +12,9 @@ import (
 type Client struct {
 	cli *client.Client
 
-	rootlessOnce sync.Once
-	rootless     bool
+	rootlessMu    sync.Mutex
+	rootlessKnown bool
+	rootless      bool
 }
 
 func NewClient() (*Client, error) {
@@ -72,21 +73,27 @@ func (c *Client) ExecState(ctx context.Context, execID string) (running bool, ex
 }
 
 // Rootless reports whether the daemon runs in rootless mode (cached after
-// the first call). Under rootless docker, root inside a container maps to
-// the daemon's host user while other uids map to subordinate ids — callers
-// that care about bind-mount file ownership need to know.
+// the first successful call, so a daemon that was down when first asked
+// doesn't read as rootful until the server restarts). Under rootless docker,
+// root inside a container maps to the daemon's host user while other uids map
+// to subordinate ids — callers that care about bind-mount file ownership need
+// to know.
 func (c *Client) Rootless(ctx context.Context) bool {
-	c.rootlessOnce.Do(func() {
-		res, err := c.cli.Info(ctx, client.InfoOptions{})
-		if err != nil {
-			return
+	c.rootlessMu.Lock()
+	defer c.rootlessMu.Unlock()
+	if c.rootlessKnown {
+		return c.rootless
+	}
+	res, err := c.cli.Info(ctx, client.InfoOptions{})
+	if err != nil {
+		return false
+	}
+	c.rootlessKnown = true
+	for _, opt := range res.Info.SecurityOptions {
+		if strings.Contains(opt, "rootless") {
+			c.rootless = true
+			break
 		}
-		for _, opt := range res.Info.SecurityOptions {
-			if strings.Contains(opt, "rootless") {
-				c.rootless = true
-				return
-			}
-		}
-	})
+	}
 	return c.rootless
 }

@@ -48,8 +48,11 @@ RUN ARCH="$(dpkg --print-architecture)" \
       | tar -xz --strip-components=1 -C /usr/local/bin "prek-${TARGET}/prek" \
  && ln -s /usr/local/bin/prek /usr/local/bin/pre-commit
 
+# Kanban runs as dev when UID 1000 owns the host's ~/.claude. Ubuntu's own
+# ubuntu user would otherwise take that UID.
 RUN usermod -s /bin/zsh root \
- && useradd -m -s /bin/zsh dev \
+ && userdel -r ubuntu \
+ && useradd -m -s /bin/zsh -u 1000 dev \
  && chown -R dev:dev /home/dev \
  && echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev \
  && chmod 0440 /etc/sudoers.d/dev

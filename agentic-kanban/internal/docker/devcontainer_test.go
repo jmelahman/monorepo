@@ -752,8 +752,21 @@ func TestClaudeConfigMounts(t *testing.T) {
 			"type=bind,source=" + filepath.Join(home, ".claude") + ",target=/home/dev/.claude",
 			"type=bind,source=" + filepath.Join(home, ".claude.json") + ",target=/home/dev/.claude.json",
 		}
-		got := ClaudeConfigMounts()
+		got := ClaudeConfigMounts("dev")
 		if !reflect.DeepEqual(got, want) {
+			t.Errorf("ClaudeConfigMounts() = %v; want %v", got, want)
+		}
+	})
+
+	t.Run("targets the home of the user it's given", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+		t.Setenv("DEVCONTAINER_REMOTE_HOME", "")
+		if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"type=bind,source=" + filepath.Join(home, ".claude") + ",target=/root/.claude"}
+		if got := ClaudeConfigMounts("root"); !reflect.DeepEqual(got, want) {
 			t.Errorf("ClaudeConfigMounts() = %v; want %v", got, want)
 		}
 	})
@@ -765,7 +778,7 @@ func TestClaudeConfigMounts(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		got := ClaudeConfigMounts()
+		got := ClaudeConfigMounts("dev")
 		if len(got) != 1 || !strings.Contains(got[0], ".claude.json") {
 			t.Errorf("ClaudeConfigMounts() = %v; want only .claude.json mount", got)
 		}
@@ -773,7 +786,7 @@ func TestClaudeConfigMounts(t *testing.T) {
 
 	t.Run("returns nil when nothing exists", func(t *testing.T) {
 		t.Setenv("HOME", t.TempDir())
-		if got := ClaudeConfigMounts(); got != nil {
+		if got := ClaudeConfigMounts("dev"); got != nil {
 			t.Errorf("ClaudeConfigMounts() = %v; want nil", got)
 		}
 	})
@@ -793,7 +806,7 @@ func TestClaudeConfigMounts(t *testing.T) {
 			"type=bind,source=" + filepath.Join(home, ".claude") + ",target=/root/.claude",
 			"type=bind,source=" + filepath.Join(home, ".claude.json") + ",target=/root/.claude.json",
 		}
-		got := ClaudeConfigMounts()
+		got := ClaudeConfigMounts("dev")
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("ClaudeConfigMounts() = %v; want %v", got, want)
 		}
@@ -817,6 +830,30 @@ func TestBuiltinDevcontainer_RemoteUser(t *testing.T) {
 			t.Errorf("RemoteUser = %q; want %q", cfg.RemoteUser, "root")
 		}
 	})
+}
+
+func TestUseRootlessUser(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		builtIn  bool
+		rootless bool
+		env      string
+		want     string
+	}{
+		{name: "rootless runs the built-in config as root", builtIn: true, rootless: true, want: "root"},
+		{name: "rootful keeps the detected user", builtIn: true, want: "dev"},
+		{name: "explicit user wins on rootless", builtIn: true, rootless: true, env: "dev", want: "dev"},
+		{name: "hand-written config keeps its user", rootless: true, want: "dev"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("DEVCONTAINER_REMOTE_USER", tc.env)
+			cfg := &DevcontainerConfig{BuiltIn: tc.builtIn, RemoteUser: "dev"}
+			UseRootlessUser(cfg, tc.rootless)
+			if cfg.RemoteUser != tc.want {
+				t.Errorf("RemoteUser = %q; want %q", cfg.RemoteUser, tc.want)
+			}
+		})
+	}
 }
 
 func TestBuiltinIdentity(t *testing.T) {

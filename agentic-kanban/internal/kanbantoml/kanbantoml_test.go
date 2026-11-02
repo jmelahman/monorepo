@@ -427,6 +427,24 @@ docker_socket = true
 	}
 }
 
+func TestLoad_DevcontainerPostStartCommandUserOverridesProject(t *testing.T) {
+	repo := writeProject(t, `[devcontainer]
+post_start_command = "project"
+`)
+	withUserConfig(t, "")
+	if d := Load(repo).Devcontainer; d == nil || d.PostStartCommand == nil || *d.PostStartCommand != "project" {
+		t.Errorf("devcontainer = %+v; want the project's command", d)
+	}
+
+	// An empty command is how the user file turns a project's off.
+	withUserConfig(t, `[devcontainer]
+post_start_command = ""
+`)
+	if d := Load(repo).Devcontainer; d == nil || d.PostStartCommand == nil || *d.PostStartCommand != "" {
+		t.Errorf("devcontainer = %+v; want the user's empty command", d)
+	}
+}
+
 func TestProjectPath_Lookup(t *testing.T) {
 	dotConfig := filepath.Join(".config", "kanban", "config.toml")
 	cases := []struct {

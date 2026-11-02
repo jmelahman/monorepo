@@ -148,6 +148,10 @@ is internal and kept out of the published `docs/` site.
 - Keep surfacing the push service's own status (`push.ErrGone` → 410)
   rather than a generic 502.
 
+### Rootless Docker only maps container root to the host user
+
+Under rootless Docker, UID 1000 in a container is a subordinate ID on the host, not host UID 1000, so `dev` can't read a bind-mounted 0600 `~/.claude/.credentials.json` that UID 1000 owns. Choosing the session user from the file's owner alone can't see this: the same owner means `dev` on a rootful daemon and `root` on a rootless one. The session still starts, `id` looks right, and the agent asks for a login. Check by reading the file from inside the container, not by checking the user. `docker.UseRootlessUser` applies this at session start, because the daemon isn't known when the config is loaded.
+
 ### Config writes must follow symlinks
 
 - Project and user config files are often symlinks (undot, dotfiles). Any

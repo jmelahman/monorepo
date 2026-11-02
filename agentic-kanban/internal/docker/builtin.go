@@ -28,6 +28,7 @@ var BuiltinImage = "lahmanja/kanban-devcontainer:latest"
 // host's ~/.claude so the bind-mounted credentials are readable and
 // writable inside the session — without that, every new session gets a
 // permission-denied on the credentials file and re-prompts /login.
+// UseRootlessUser then corrects that pick once the daemon is known.
 // $DEVCONTAINER_REMOTE_USER / $DEVCONTAINER_REMOTE_HOME override the
 // auto-pick when set; the two are derived together so a session can't
 // end up as `root` with `/home/dev` (or vice versa).
@@ -52,6 +53,20 @@ func BuiltinDevcontainer() *DevcontainerConfig {
 	return cfg
 }
 
+// UseRootlessUser runs a built-in session as root on a rootless daemon, the
+// only container user that maps to the host user and so can reach bind-mounted
+// files owned by them. A file's owner can't tell the two daemons apart: host
+// UID 1000 means dev on a rootful daemon and root on a rootless one. An
+// explicit $DEVCONTAINER_REMOTE_USER still wins, and a hand-written
+// devcontainer.json picks its own user.
+//
+// See REGRESSIONS.md: "Rootless Docker only maps container root to the host user".
+func UseRootlessUser(cfg *DevcontainerConfig, rootless bool) {
+	if cfg.BuiltIn && rootless && os.Getenv("DEVCONTAINER_REMOTE_USER") == "" {
+		cfg.RemoteUser = "root"
+	}
+}
+
 // ClaudeConfigMounts returns bind-mount strings that forward the host's
 // Claude Code config (~/.claude and ~/.claude.json) into the built-in
 // container's home directory so credentials and session history persist
@@ -60,16 +75,15 @@ func BuiltinDevcontainer() *DevcontainerConfig {
 // applies these to built-in configs unless the .kanban.toml
 // [devcontainer].claude_config flag is set to false.
 //
-// The in-container target follows the home dir picked by builtinIdentity
-// (auto-derived from the host file owner, overridable via
-// $DEVCONTAINER_REMOTE_HOME) so the bound files land where the chosen
-// remote user expects them.
-func ClaudeConfigMounts() []string {
+// The in-container target follows the home dir of the session's user
+// (overridable via $DEVCONTAINER_REMOTE_HOME) so the bound files land where
+// that user expects them.
+func ClaudeConfigMounts(user string) []string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil
 	}
-	_, target := builtinIdentity()
+	target := builtinHome(user)
 	var mounts []string
 	for _, name := range []string{".claude", ".claude.json"} {
 		src := filepath.Join(home, name)
@@ -93,19 +107,25 @@ func ClaudeConfigMounts() []string {
 //     and each new session re-prompts /login.
 //  3. Fall back to dev.
 //
+// This can't see the daemon, so UseRootlessUser may still replace the user.
+//
 // The two halves are resolved together: an explicit user without a home
 // derives the home from a known-user table, and vice versa, so callers
 // can never observe a (root, /home/dev) or (dev, /root) pair.
 func builtinIdentity() (user, home string) {
 	user = os.Getenv("DEVCONTAINER_REMOTE_USER")
-	home = os.Getenv("DEVCONTAINER_REMOTE_HOME")
 	if user == "" {
 		user = detectBuiltinUserFromClaude()
 	}
-	if home == "" {
-		home = builtinHomeForUser(user)
+	return user, builtinHome(user)
+}
+
+// builtinHome is $DEVCONTAINER_REMOTE_HOME, or else the user's home in the image.
+func builtinHome(user string) string {
+	if home := os.Getenv("DEVCONTAINER_REMOTE_HOME"); home != "" {
+		return home
 	}
-	return user, home
+	return builtinHomeForUser(user)
 }
 
 // builtinHomeForUser maps a built-in account name to its in-container

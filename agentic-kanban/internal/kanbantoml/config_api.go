@@ -75,6 +75,7 @@ var schema = []KeySpec{
 	{Key: "devcontainer.container_env", Kind: KindStringMap},
 	{Key: "devcontainer.docker_socket", Kind: KindBool},
 	{Key: "devcontainer.claude_config", Kind: KindBool},
+	{Key: "devcontainer.post_start_command", Kind: KindString},
 
 	{Key: "errors.enabled", Kind: KindBool},
 	{Key: "errors.board_name", Kind: KindString},
@@ -399,6 +400,10 @@ func getDevcontainerValue(f File, key string) (any, bool) {
 	case "devcontainer.claude_config":
 		if f.Devcontainer != nil && f.Devcontainer.ClaudeConfig != nil {
 			return *f.Devcontainer.ClaudeConfig, true
+		}
+	case "devcontainer.post_start_command":
+		if f.Devcontainer != nil && f.Devcontainer.PostStartCommand != nil {
+			return *f.Devcontainer.PostStartCommand, true
 		}
 	}
 	return nil, false

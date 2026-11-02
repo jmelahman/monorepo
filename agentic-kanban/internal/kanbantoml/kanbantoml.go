@@ -144,14 +144,16 @@ type MergeSection struct {
 //
 // Image likewise only applies to the built-in devcontainer: it replaces the
 // bundled image reference, while a hand-written devcontainer.json keeps
-// whatever image or build it declares.
+// whatever image or build it declares. PostStartCommand also applies only
+// there, since a devcontainer.json has its own postStartCommand.
 type DevcontainerSection struct {
-	Image        *string           `toml:"image"`
-	RunArgs      []string          `toml:"run_args"`
-	Mounts       []string          `toml:"mounts"`
-	ContainerEnv map[string]string `toml:"container_env"`
-	DockerSocket *bool             `toml:"docker_socket"`
-	ClaudeConfig *bool             `toml:"claude_config"`
+	Image            *string           `toml:"image"`
+	RunArgs          []string          `toml:"run_args"`
+	Mounts           []string          `toml:"mounts"`
+	ContainerEnv     map[string]string `toml:"container_env"`
+	DockerSocket     *bool             `toml:"docker_socket"`
+	ClaudeConfig     *bool             `toml:"claude_config"`
+	PostStartCommand *string           `toml:"post_start_command"`
 }
 
 type GitHubSection struct {
@@ -600,6 +602,7 @@ func mergeDevcontainer(p, u *DevcontainerSection) *DevcontainerSection {
 		out.Image = p.Image
 		out.DockerSocket = p.DockerSocket
 		out.ClaudeConfig = p.ClaudeConfig
+		out.PostStartCommand = p.PostStartCommand
 	}
 	if u != nil {
 		out.RunArgs = append(out.RunArgs, u.RunArgs...)
@@ -618,6 +621,9 @@ func mergeDevcontainer(p, u *DevcontainerSection) *DevcontainerSection {
 		}
 		if u.ClaudeConfig != nil {
 			out.ClaudeConfig = u.ClaudeConfig
+		}
+		if u.PostStartCommand != nil {
+			out.PostStartCommand = u.PostStartCommand
 		}
 	}
 	return &out

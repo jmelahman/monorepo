@@ -245,6 +245,7 @@ func (m *Manager) Start(ctx context.Context, sessionID int64, onPullProgress doc
 		m.failed(ctx, sess.ID)
 		return nil, err
 	}
+	docker.UseRootlessUser(cfg, m.docker.Rootless(ctx))
 	applyKanbanDevcontainerOverrides(cfg, kanbantoml.LoadFrom(sess.WorktreePath, projectRoot).Devcontainer, m.claudeConfigOverride)
 
 	_ = m.store.UpdateSessionStatus(ctx, sess.ID, db.SessionStatusStarting)
@@ -362,7 +363,8 @@ func resolveBranchPrefix(board *db.Board, repoPath string) string {
 // socket and Claude Code config get bind-mounted. Hand-written
 // devcontainer.json files manage their own mounts and ignore the flags.
 // The image key likewise swaps only the built-in config's image; a
-// hand-written devcontainer.json keeps the image or build it declares.
+// hand-written devcontainer.json keeps the image or build it declares,
+// and post_start_command is the built-in config's postStartCommand.
 // claudeConfigOverride, when non-nil, wins over .kanban.toml — it's set
 // by the --claude-config flag / $KANBAN_CLAUDE_CONFIG env so a single
 // server invocation can disable forwarding without editing config files.
@@ -390,6 +392,9 @@ func applyKanbanDevcontainerOverrides(cfg *docker.DevcontainerConfig, dev *kanba
 		if dev != nil && dev.Image != nil && *dev.Image != "" {
 			cfg.Image = *dev.Image
 		}
+		if dev != nil && dev.PostStartCommand != nil {
+			cfg.PostStartCommand = *dev.PostStartCommand
+		}
 		mountSocket := false
 		if dev != nil && dev.DockerSocket != nil {
 			mountSocket = *dev.DockerSocket
@@ -407,7 +412,7 @@ func applyKanbanDevcontainerOverrides(cfg *docker.DevcontainerConfig, dev *kanba
 			mountClaude = *claudeConfigOverride
 		}
 		if mountClaude {
-			cfg.Mounts = append(cfg.Mounts, docker.ClaudeConfigMounts()...)
+			cfg.Mounts = append(cfg.Mounts, docker.ClaudeConfigMounts(cfg.RemoteUser)...)
 		}
 	}
 	if dev == nil {

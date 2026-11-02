@@ -158,6 +158,27 @@ func TestApplyKanbanDevcontainerOverrides_InitializesEnvMap(t *testing.T) {
 	}
 }
 
+func TestApplyKanbanDevcontainerOverrides_PostStartCommand(t *testing.T) {
+	cmd := "sudo /usr/local/bin/init-firewall"
+	dev := &kanbantoml.DevcontainerSection{PostStartCommand: &cmd}
+
+	t.Run("runs on the built-in config", func(t *testing.T) {
+		cfg := &docker.DevcontainerConfig{BuiltIn: true}
+		applyKanbanDevcontainerOverrides(cfg, dev, nil)
+		if cfg.PostStartCommand != cmd {
+			t.Errorf("PostStartCommand = %q; want %q", cfg.PostStartCommand, cmd)
+		}
+	})
+
+	t.Run("leaves a devcontainer.json's own alone", func(t *testing.T) {
+		cfg := &docker.DevcontainerConfig{PostStartCommand: "own"}
+		applyKanbanDevcontainerOverrides(cfg, dev, nil)
+		if cfg.PostStartCommand != "own" {
+			t.Errorf("PostStartCommand = %q; want the devcontainer.json's", cfg.PostStartCommand)
+		}
+	})
+}
+
 func TestApplyKanbanDevcontainerOverrides_BuiltInDockerSocket(t *testing.T) {
 	// Seed an XDG_RUNTIME_DIR socket so DockerSocketMount resolves a
 	// non-empty mount on hosts without /var/run/docker.sock.

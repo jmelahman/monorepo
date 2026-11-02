@@ -95,18 +95,18 @@ Kanban looks in the project directory, then the repo root, then
   image = "ghcr.io/example/devbox:latest"
   ```
 
-- **If there is one**, kanban ignores `[devcontainer].image`, `docker_socket`, and
-  `claude_config`. Change `image` in the `devcontainer.json` instead, or ask the
+- **If there is one**, kanban ignores `[devcontainer].image`, `docker_socket`,
+  `claude_config`, and `post_start_command`. Change `image` in the `devcontainer.json` instead, or ask the
   user if it uses a `build` section. To use `[devcontainer].image`, the file has to
   go: see below.
 
 The image needs the CLI of the user's agent, such as `claude`, and a `dev` or `root`
 user. A session still starts without either the CLI or a login that works, so step
-6 checks both. Kanban runs as `root` if that owns `~/.claude`, and otherwise as
-`dev`, which can only read the credentials if its UID owns them. Under rootless
-Docker, only `root` in the container maps to the host user, so the server needs
-`DEVCONTAINER_REMOTE_USER=root`. That's the user's to set, since it applies to
-every board on the server.
+6 checks both. Under rootless Docker, kanban runs as `root`, which maps to the host
+user. Otherwise it runs as `root` if that owns `~/.claude`, and as `dev` if not,
+which only works if the image's `dev` has the UID that owns the credentials. If it
+doesn't, the user can set `DEVCONTAINER_REMOTE_USER=root` on the server, which
+applies to every board.
 
 `mounts`, `run_args`, and `[devcontainer.container_env]` work in both cases. Leave
 `docker_socket` off unless the user asks for it: it gives the agent root-level
@@ -116,13 +116,14 @@ access to their machine.
 
 Removing the file changes more than the image, and nothing warns about what stops
 working. Before removing it, compare it with this table and tell the user what
-they'd lose. Treat a lost security control, such as a firewall started by
-`postStartCommand`, as a decision for them, not a detail.
+they'd lose. Treat a lost security control, such as a firewall whose
+`postStartCommand` relies on the old image or user, as a decision for them, not a
+detail.
 
 | In `devcontainer.json`                       | Without it |
 | -------------------------------------------- | ---------- |
 | `runArgs`, `mounts`, `containerEnv`          | Move to `run_args`, `mounts`, and `[devcontainer.container_env]`. |
-| `postStartCommand`                           | **Stops running.** There's no equivalent, so build the step into the image or find another home for it. |
+| `postStartCommand`                           | Move to `post_start_command`, which runs the same way, in the same place. It needs the same `run_args`, and `sudo` if the session's user won't be root. |
 | `build`                                      | Lost. Build and publish the image yourself. |
 | `remoteUser`, `containerUser`                | Lost. See the user rules above. |
 | `workspaceMount`, `workspaceFolder`          | Lost. Kanban picks the mount. |

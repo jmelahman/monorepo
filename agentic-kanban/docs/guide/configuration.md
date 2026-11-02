@@ -62,6 +62,7 @@ closed_column = ""            # empty: closed PRs don't move the ticket
 image         = "ghcr.io/me/devbox:latest"  # bundled image only
 docker_socket = false                       # bundled image only
 claude_config = true                        # bundled image only
+post_start_command = "sudo init-firewall"   # bundled image only
 mounts        = ["type=bind,source=/tmp/ssh-agent.sock,target=/tmp/ssh-agent.sock"]
 run_args      = ["--cap-add=SYS_PTRACE"]
 
@@ -181,11 +182,14 @@ Kanban uses the first `devcontainer.json` it finds in the repo's `.devcontainer/
 - `mounts` and `run_args` add bind mounts and `docker run` arguments.
 - `container_env` adds environment variables. Kanban's own variables win on conflict.
 
-Three keys only affect the bundled image, since a `devcontainer.json` you write manages these itself:
+Four keys only affect the bundled image, since a `devcontainer.json` you write manages these itself:
 
-- `image` replaces the bundled image. It should include the same `dev` (UID 1000) or `root` user; see [Session container user](#session-container-user).
+- `image` replaces the bundled image. It should include a `dev` or `root` user; see [Session container user](#session-container-user).
 - `docker_socket` mounts the host's Docker socket into the session. It's off by default because it gives the agent root-level access to your machine.
 - `claude_config` mounts your `~/.claude` so Claude Code is already logged in. It's on by default. `kanban serve --claude-config=false` or `$KANBAN_CLAUDE_CONFIG` overrides it.
+- `post_start_command` runs each time a session container starts, before the agent does. It's the equivalent of a `devcontainer.json`'s `postStartCommand`.
+
+`post_start_command` runs with `sh -lc` in the workspace, as the session's user, so a command that needs root, such as a firewall, may need `sudo` and capabilities from `run_args`. If it exits non-zero, the session fails to start and its container is removed. Kanban waits for the command to exit, so start anything long-running in the background: `my-daemon &`.
 
 ## Task ports
 
@@ -306,9 +310,14 @@ On a normal install none of these are needed.
 
 ### Session container user
 
-The bundled image has two users, `root` (UID 0) and `dev` (UID 1000). Kanban runs the session as whichever one owns your `~/.claude`, so Claude Code can read and write its credentials. If neither matches, as with UID 501 on macOS, kanban uses `dev`. Claude Code then asks you to log in on every new session.
+The bundled image has two users, `root` (UID 0) and `dev` (UID 1000). Kanban picks the one that can read and write your Claude Code credentials:
 
-To fix that, `chown` your `~/.claude` to UID 1000, or set the user yourself:
+- On rootless Docker, it uses `root`, the only container user that maps to you on the host. This doesn't give the session root on your machine.
+- Otherwise, it uses whichever one owns your `~/.claude`. If neither does, as with UID 501 on macOS, it uses `dev`, and Claude Code asks you to log in on every new session.
+
+Kanban assumes these UIDs and doesn't look inside the image, so an image set with `image` needs `dev` to be UID 1000 for this to work. Check with `docker run --rm <image> id dev`.
+
+To fix a mismatch, `chown` your `~/.claude` to the UID of `dev`, or set the user yourself:
 
 | Variable                   | Effect                                                         |
 | -------------------------- | -------------------------------------------------------------- |
