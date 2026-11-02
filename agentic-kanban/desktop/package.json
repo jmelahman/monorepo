@@ -15,9 +15,6 @@
     "format:check": "bun fmt --check",
     "package": "electron-builder --linux"
   },
-  "trustedDependencies": [
-    "electron"
-  ],
   "build": {
     "appId": "dev.lahman.agentic-kanban",
     "files": [
