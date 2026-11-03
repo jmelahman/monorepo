@@ -5,7 +5,9 @@ extends RefCounted
 ##
 ## Trees come in two forms from tools/bake_foliage.gd: a fan of slices up close and
 ## two crossed views far away. Both are a handful of quads, so the cost of a tree is
-## the pixels it covers, not its triangles.
+## the pixels it covers, not its triangles. A tree in [constant MODELLED] is instead
+## modelled up close, a real trunk and branches with cards of needles, from
+## scripts/blender/pine.py.
 
 const CHUNK := 64.0
 const SMALL_CHUNK := 36.0
@@ -13,9 +15,14 @@ const FAR_CHUNK := 128.0
 const BAKED := "res://assets/baked/%s"
 const FOLIAGE: Shader = preload("res://game/foliage.gdshader")
 const TREES: Dictionary[Planting.Kind, String] = {
-	Planting.Kind.FIR: "fir_tree_01",
+	Planting.Kind.FIR: "pine_tree_01",
 	Planting.Kind.PINE: "pine_tree_01",
 }
+const MODELLED: Dictionary[Planting.Kind, String] = {
+	Planting.Kind.FIR: "res://assets/modelled/pine.glb",
+	Planting.Kind.PINE: "res://assets/modelled/pine.glb",
+}
+const NEEDLES: Shader = preload("res://game/needles.gdshader")
 const NEAR_TREE_RANGE := 90.0
 const FAR_TREE_RANGE := 2400.0
 const SCENES: Dictionary[Planting.Kind, String] = {
@@ -51,7 +58,11 @@ static func _add_trees(root: Node3D, kind: Planting.Kind, transforms: Array, rou
 	var slices: int = meta["slices"]
 	var half_width: float = meta["width"]
 	half_width *= 0.5
-	var near := _fan(meta, slices, slices, 2, _card(BAKED % (tree + "_slices.webp"), half_width))
+	var nears: Array[Mesh] = []
+	if kind in MODELLED:
+		nears = _modelled(MODELLED[kind])
+	else:
+		nears = [_fan(meta, slices, slices, 2, _card(BAKED % (tree + "_slices.webp"), half_width))]
 	var far := _fan(meta, 2, 4, 1, _card(BAKED % (tree + "_impostor.webp"), half_width))
 	# The rider stays on the road, so a tree far from it only ever needs its far form.
 	var close_by: Array = []
@@ -60,10 +71,15 @@ static func _add_trees(root: Node3D, kind: Planting.Kind, transforms: Array, rou
 		var placed: Transform3D = entry
 		var off_road := absf(route.nearest(placed.origin.x, placed.origin.z).y)
 		(close_by if off_road < NEAR_TREE_RANGE else distant_only).append(placed)
+	for m: int in nears.size():
+		var variant: Array = []
+		for i: int in range(m, close_by.size(), nears.size()):
+			variant.append(close_by[i])
+		for chunk: Array in _chunks(variant, CHUNK):
+			var close := _instance(nears[m], chunk)
+			close.visibility_range_end = NEAR_TREE_RANGE
+			root.add_child(close)
 	for chunk: Array in _chunks(close_by, CHUNK):
-		var close := _instance(near, chunk)
-		close.visibility_range_end = NEAR_TREE_RANGE
-		root.add_child(close)
 		var distant := _instance(far, chunk)
 		distant.visibility_range_begin = NEAR_TREE_RANGE
 		distant.visibility_range_end = FAR_TREE_RANGE
@@ -168,6 +184,27 @@ static func _card(path: String, half_width: float) -> ShaderMaterial:
 	material.set_shader_parameter("albedo", load(path))
 	material.set_shader_parameter("half_width", half_width)
 	return material
+
+
+## The trees in a glTF from scripts/blender/pine.py, with their needles drawn by
+## game/needles.gdshader.
+static func _modelled(path: String) -> Array[Mesh]:
+	var scene: PackedScene = load(path)
+	var node := scene.instantiate()
+	var found: Array[Mesh] = []
+	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (child as MeshInstance3D).mesh
+		for s: int in mesh.get_surface_count():
+			# Loading the glTF again gives back the same meshes, with their needles done.
+			var material := mesh.surface_get_material(s) as BaseMaterial3D
+			if material and material.resource_name.ends_with("needles"):
+				var needles := ShaderMaterial.new()
+				needles.shader = NEEDLES
+				needles.set_shader_parameter("albedo", material.albedo_texture)
+				mesh.surface_set_material(s, needles)
+		found.append(mesh)
+	node.free()
+	return found
 
 
 ## The meshes in a glTF scene, each at the origin, with [param soft] ones made
