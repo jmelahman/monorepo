@@ -13,6 +13,8 @@ cd desktop
 
 This builds the app and installs it for your user, with no root needed. It puts the app in `~/.local/opt/agentic-kanban`, adds an `agentic-kanban` command in `~/.local/bin`, and adds a launcher entry.
 
+Without root, the app relies on unprivileged user namespaces for its sandbox. If it won't start and reports that "the SUID sandbox helper binary was found, but is not configured correctly", your system restricts them (Ubuntu 24.04 does by default). Install the `.deb` from `bun run package` instead, which sets the helper up.
+
 To upgrade, quit the app, pull the commits you want, and run `./install.sh` again. To remove it, run `./install.sh --uninstall`. Both keep your settings.
 
 To work on the app or build packages for other machines:
