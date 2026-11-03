@@ -1119,9 +1119,10 @@ func isHex(s string) bool {
 
 func checkMalformedChecksums(ctx *Context) []Finding {
 	var out []Finding
+	arches := ctx.archesWithSums()
 	for algo, want := range sumHexLengths {
 		names := []string{algo + "sums"}
-		for _, a := range ctx.archesWithSums() {
+		for _, a := range arches {
 			if a != "" {
 				names = append(names, algo+"sums_"+a)
 			}

@@ -569,12 +569,13 @@ func checkPackageFunctionVars(ctx *Context) []Finding {
 	// Non-override schema variables plus their _$arch variants; makepkg
 	// rejects both forms inside a package function.
 	disallowed := map[string]bool{}
+	arches := concreteArches(ctx)
 	for _, name := range append(append([]string(nil), schemaArrayVars...), schemaStringVars...) {
 		if packageOverrideVars[name] {
 			continue
 		}
 		disallowed[name] = true
-		for _, a := range concreteArches(ctx) {
+		for _, a := range arches {
 			disallowed[name+"_"+a] = true
 		}
 	}
