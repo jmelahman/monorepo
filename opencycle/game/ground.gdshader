@@ -10,7 +10,7 @@ uniform sampler2D roughness_map : hint_roughness_g, filter_linear_mipmap_anisotr
 uniform sampler2D ao_map : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float tile = 2.0;
 uniform vec3 litter = vec3(0.2, 0.17, 0.12);
-uniform vec3 moss = vec3(0.12, 0.18, 0.055);
+uniform vec3 moss = vec3(0.1, 0.13, 0.05);
 
 varying vec2 plan;
 

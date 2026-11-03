@@ -36,7 +36,7 @@ static func _sun(best: bool) -> DirectionalLight3D:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-42.0, -35.0, 0.0)
 	sun.light_color = Color(1.0, 0.95, 0.86)
-	sun.light_energy = 1.6
+	sun.light_energy = 2.0
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 260.0 if best else 90.0
 	sun.directional_shadow_mode = (
@@ -56,7 +56,7 @@ static func _environment(best: bool) -> Environment:
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.7
+	environment.ambient_light_energy = 0.55
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.tonemap_mode = Environment.TONE_MAPPER_AGX
 	environment.fog_enabled = true
@@ -70,5 +70,5 @@ static func _environment(best: bool) -> Environment:
 	environment.ssil_enabled = best
 	environment.sdfgi_enabled = best
 	environment.volumetric_fog_enabled = best
-	environment.volumetric_fog_density = 0.0012
+	environment.volumetric_fog_density = 0.0005
 	return environment

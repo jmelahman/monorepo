@@ -25,12 +25,16 @@ const MODELLED: Dictionary[Planting.Kind, String] = {
 const NEEDLES: Shader = preload("res://game/needles.gdshader")
 const NEAR_TREE_RANGE := 90.0
 const FAR_TREE_RANGE := 2400.0
-const SCENES: Dictionary[Planting.Kind, String] = {
-	Planting.Kind.FERN: "res://assets/polyhaven/fern_02/fern_02_1k.gltf",
-	Planting.Kind.GRASS: "res://assets/polyhaven/grass_medium_01/grass_medium_01_1k.gltf",
-	Planting.Kind.ROCK: "res://assets/polyhaven/rock_moss_set_01/rock_moss_set_01_1k.gltf",
-	Planting.Kind.BOULDER: "res://assets/polyhaven/boulder_01/boulder_01_1k.gltf",
-	Planting.Kind.STUMP: "res://assets/polyhaven/tree_stump_01/tree_stump_01_1k.gltf",
+const SCENES: Dictionary[Planting.Kind, Array] = {
+	Planting.Kind.FERN: ["res://assets/polyhaven/fern_02/fern_02_1k.gltf"],
+	Planting.Kind.GRASS:
+	[
+		"res://assets/polyhaven/grass_medium_01/grass_medium_01_1k.gltf",
+		"res://assets/polyhaven/grass_medium_02/grass_medium_02_1k.gltf",
+	],
+	Planting.Kind.ROCK: ["res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf"],
+	Planting.Kind.BOULDER: ["res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf"],
+	Planting.Kind.STUMP: ["res://assets/polyhaven/tree_stump_01/tree_stump_01_1k.gltf"],
 }
 const RANGES: Dictionary[Planting.Kind, float] = {
 	Planting.Kind.FERN: 38.0,
@@ -93,7 +97,11 @@ static func _add_trees(root: Node3D, kind: Planting.Kind, transforms: Array, rou
 
 
 static func _add_small(root: Node3D, kind: Planting.Kind, transforms: Array) -> void:
-	var meshes := _meshes(SCENES[kind], kind == Planting.Kind.GRASS or kind == Planting.Kind.FERN)
+	var meshes: Array[Mesh] = []
+	for path: String in SCENES[kind]:
+		meshes.append_array(
+			_meshes(path, kind == Planting.Kind.GRASS or kind == Planting.Kind.FERN)
+		)
 	var buckets: Array[Array] = []
 	for i: int in meshes.size():
 		buckets.append([])

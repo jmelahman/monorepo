@@ -111,6 +111,8 @@ static func _shoulder(verge: float) -> ShaderMaterial:
 static func _textured(path: String) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_texture = load(path % "diffuse")
+	# Poly Haven's asphalt is shot sun-bleached; a country road in a forest reads darker.
+	material.albedo_color = Color(0.55, 0.55, 0.56)
 	material.normal_enabled = true
 	material.normal_texture = load(path % "nor_gl")
 	material.roughness_texture = load(path % "rough")
@@ -120,6 +122,6 @@ static func _textured(path: String) -> StandardMaterial3D:
 
 static func _paint() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.72, 0.71, 0.66)
+	material.albedo_color = Color(0.6, 0.59, 0.55)
 	material.roughness = 0.75
 	return material

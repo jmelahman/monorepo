@@ -21,7 +21,7 @@ const FAR_TREE_SIZE := 1.35
 const TREE_REACH := 620.0
 const FERN_CELL := 1.6
 const FERN_REACH := 34.0
-const GRASS_CELL := 0.8
+const GRASS_CELL := 0.45
 const GRASS_REACH := 11.0
 const ROCK_CELL := 7.0
 const ROCK_REACH := 70.0
@@ -138,7 +138,7 @@ static func _grow_grass(
 	var clump := clumps.value(x * CLUMP_SCALE * 2.0, z * CLUMP_SCALE * 2.0)
 	if Rng.unit(cell, 0) > 0.6 + clump * 0.5:
 		return
-	plants[Kind.GRASS].append(_placed(cell, terrain, x, z, lerpf(1.0, 2.0, Rng.unit(cell, 2))))
+	plants[Kind.GRASS].append(_placed(cell, terrain, x, z, lerpf(1.3, 2.6, Rng.unit(cell, 2))))
 
 
 static func _grow_rock(
