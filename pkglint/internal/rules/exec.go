@@ -319,17 +319,15 @@ func checkAnonymizedFetch(ctx *Context) []Finding {
 		if u.File == nil {
 			continue
 		}
-		syntax.Walk(u.File, func(n syntax.Node) bool {
-			as, ok := n.(*syntax.Assign)
-			if !ok || as.Name == nil || as.Value == nil || !proxyEnvVars[strings.ToLower(as.Name.Value)] {
-				return true
+		for _, as := range u.Nodes().Assigns {
+			if as.Name == nil || as.Value == nil || !proxyEnvVars[strings.ToLower(as.Name.Value)] {
+				continue
 			}
 			if v, _ := pkgbuild.RenderWord(as.Value, ctx.vars); anonymizes(v) {
 				out = append(out, findingAt("PB310", sevFor(u.Scriptlet), u.Path, as.Pos(),
 					"%s sends this environment's traffic through SOCKS or Tor, hiding where downloads come from", as.Name.Value))
 			}
-			return true
-		})
+		}
 	}
 	for _, e := range slices.Concat(ctx.Pkg.Sources(), ctx.Pkg.ConditionalSources()) {
 		if !e.Local && hasOnionHost(e.URL) {
@@ -1007,13 +1005,13 @@ func (ctx *Context) funcPurity() map[fnKey]bool {
 	if len(ctx.funcDecls) == 0 {
 		return ctx.pureFn
 	}
-	byFn := make(map[fnKey][]Command, len(ctx.funcDecls))
-	for _, c := range ctx.cmds {
+	byFn := make(map[fnKey][]int, len(ctx.funcDecls))
+	for i, c := range ctx.cmds {
 		if c.Fn == "" {
 			continue
 		}
 		key := fnKey{c.Unit.Path, c.Fn}
-		byFn[key] = append(byFn[key], c)
+		byFn[key] = append(byFn[key], i)
 	}
 	pure := ctx.pureFn
 	for key := range ctx.funcDecls {
@@ -1032,9 +1030,9 @@ func (ctx *Context) funcPurity() map[fnKey]bool {
 	return pure
 }
 
-func (ctx *Context) bodyInert(cmds []Command, fd *syntax.FuncDecl, pure map[fnKey]bool) bool {
-	for _, c := range cmds {
-		if !ctx.inert(c, pure) {
+func (ctx *Context) bodyInert(cmds []int, fd *syntax.FuncDecl, pure map[fnKey]bool) bool {
+	for _, i := range cmds {
+		if !ctx.inert(ctx.cmds[i], pure) {
 			return false
 		}
 	}
@@ -1686,7 +1684,7 @@ func (ctx *Context) checkPipeInto(source func(Command) bool, id, format string) 
 	units := ctx.Pkg.Units()
 	for i := range units {
 		u := &units[i]
-		for _, segs := range pipelines(u.File) {
+		for _, segs := range pipelines(u) {
 			sink := stdinExecutor(ctx.pipeSinks(segs[len(segs)-1], nil))
 			if sink == "" {
 				continue
@@ -1711,21 +1709,16 @@ func checkDevTCP(ctx *Context) []Finding {
 	units := ctx.Pkg.Units()
 	for i := range units {
 		u := &units[i]
-		syntax.Walk(u.File, func(node syntax.Node) bool {
-			r, ok := node.(*syntax.Redirect)
-			if !ok {
-				return true
-			}
+		for _, r := range u.Nodes().Redirects {
 			if r.Word == nil {
-				return true
+				continue
 			}
 			s, _ := renderPlain(r.Word)
 			if strings.Contains(s, "/dev/tcp/") || strings.Contains(s, "/dev/udp/") {
 				out = append(out, findingAt("PB305", Critical, u.Path, r.Pos(),
 					"raw %s socket redirection", s))
 			}
-			return true
-		})
+		}
 	}
 	return out
 }

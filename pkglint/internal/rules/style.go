@@ -1301,10 +1301,10 @@ func archSuffixed(name string) bool {
 
 // --- PB902: custom variables without an underscore prefix -------------------
 
-// knownPKGBUILDVars is every variable name makepkg itself reads, i.e. the ones
-// a PKGBUILD may set without an underscore prefix.
-// The package-independent part is built once; only arches the PKGBUILD
-// declares beyond hostArchNames are checked per call.
+// knownPKGBUILDVars reports whether makepkg itself reads a variable name, i.e.
+// whether a PKGBUILD may set it without an underscore prefix. Names that hold
+// for every PKGBUILD are in staticPKGBUILDVars; the returned func adds the
+// arch-suffixed schema arrays for whatever arches this PKGBUILD declares.
 func knownPKGBUILDVars(ctx *Context) func(name string) bool {
 	arches := concreteArches(ctx)
 	return func(name string) bool {
@@ -1320,6 +1320,9 @@ func knownPKGBUILDVars(ctx *Context) func(name string) bool {
 	}
 }
 
+// staticPKGBUILDVars is the package-independent part of knownPKGBUILDVars:
+// pkgname, pkgbase, the schema fields, and the schema arrays suffixed with
+// each of hostArchNames.
 var staticPKGBUILDVars = func() map[string]bool {
 	known := map[string]bool{"pkgname": true, "pkgbase": true}
 	for _, n := range schemaArrayVars {
@@ -1374,10 +1377,9 @@ func checkUnprefixedCustomVars(ctx *Context) []Finding {
 func checkStartdirReference(ctx *Context) []Finding {
 	u := ctx.Pkg.PKGBUILD
 	var out []Finding
-	syntax.Walk(u.File, func(node syntax.Node) bool {
-		pe, ok := node.(*syntax.ParamExp)
-		if !ok || pe.Param == nil || pe.Param.Value != "startdir" {
-			return true
+	for _, pe := range u.Nodes().Params {
+		if pe.Param == nil || pe.Param.Value != "startdir" {
+			continue
 		}
 		// Peek at what follows in the raw text: "$startdir/pkg" and
 		// "$startdir/src" have exact replacements, anything else is a generic
@@ -1395,8 +1397,7 @@ func checkStartdirReference(ctx *Context) []Finding {
 			msg = "use $srcdir instead of $startdir/src"
 		}
 		out = append(out, findingAt("PB903", Warn, u.Path, pe.Pos(), "%s", msg))
-		return true
-	})
+	}
 	return out
 }
 

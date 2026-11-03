@@ -72,7 +72,7 @@ func rescueParse(path string, raw []byte) *syntax.File {
 	var f *syntax.File
 	for range 40 {
 		var err error
-		f, err = newParser().Parse(bytes.NewReader(work), path)
+		f, err = parseBash(work, path)
 		if err == nil {
 			break
 		}
@@ -524,7 +524,7 @@ func rescueHeredocText(work []byte, off int, restore map[int]byte) bool {
 		}
 		for p := 0; p+1 < len(ticks); p += 2 {
 			a, b := ticks[p], ticks[p+1]
-			if _, err := newParser().Parse(bytes.NewReader(unescapeBackquoted(work[a+1:b])), ""); err == nil {
+			if _, err := parseBash(unescapeBackquoted(work[a+1:b]), ""); err == nil {
 				continue // bash runs this one: it stays live for the rules
 			}
 			blank(a)

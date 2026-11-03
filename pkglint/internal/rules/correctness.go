@@ -564,20 +564,33 @@ func sameInArray(raw []byte, w *syntax.Word) bool {
 
 // --- PB709: schema variables set inside package functions -------------------
 
+// packageFunctionDisallowed is the schema variables without a package-function
+// override; checkPackageFunctionVars adds their _$arch forms per package.
+var packageFunctionDisallowed = func() map[string]bool {
+	out := map[string]bool{}
+	for _, name := range append(append([]string(nil), schemaArrayVars...), schemaStringVars...) {
+		if !packageOverrideVars[name] {
+			out[name] = true
+		}
+	}
+	return out
+}()
+
 func checkPackageFunctionVars(ctx *Context) []Finding {
 	u := ctx.Pkg.PKGBUILD
 	// Non-override schema variables plus their _$arch variants; makepkg
 	// rejects both forms inside a package function.
-	disallowed := map[string]bool{}
 	arches := concreteArches(ctx)
-	for _, name := range append(append([]string(nil), schemaArrayVars...), schemaStringVars...) {
-		if packageOverrideVars[name] {
-			continue
+	disallowed := func(name string) bool {
+		if packageFunctionDisallowed[name] {
+			return true
 		}
-		disallowed[name] = true
 		for _, a := range arches {
-			disallowed[name+"_"+a] = true
+			if base, ok := strings.CutSuffix(name, "_"+a); ok && packageFunctionDisallowed[base] {
+				return true
+			}
 		}
+		return false
 	}
 	var out []Finding
 	for name, fd := range u.Functions {
@@ -599,7 +612,7 @@ func checkPackageFunctionVars(ctx *Context) []Finding {
 				if as.Name == nil {
 					continue
 				}
-				if disallowed[as.Name.Value] {
+				if disallowed(as.Name.Value) {
 					out = append(out, findingAt("PB709", Error, u.Path, as.Pos(),
 						"%s cannot be set inside a package function", as.Name.Value))
 				}

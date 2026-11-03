@@ -115,19 +115,15 @@ func ignoreDirectives(u *pkgbuild.Unit) []ignoreDirective {
 		return nil
 	}
 	var out []ignoreDirective
-	syntax.Walk(u.File, func(node syntax.Node) bool {
-		c, ok := node.(*syntax.Comment)
-		if !ok {
-			return true
-		}
+	for _, c := range u.Nodes().Comments {
 		cs, ce := off(c.Pos()), off(c.End())
 		if cs < 0 || ce > len(u.Raw) || cs >= ce {
-			return true
+			continue
 		}
 		raw := string(u.Raw[cs:ce])
 		d, found := pkgbuild.ParseDirective(raw)
 		if !found {
-			return true
+			continue
 		}
 		ls := lineStart(u.Raw, cs)
 		out = append(out, ignoreDirective{
@@ -141,8 +137,7 @@ func ignoreDirectives(u *pkgbuild.Unit) []ignoreDirective {
 			sole:         d.Start == 0 && strings.Trim(raw[d.IDsEnd:], " \t,") == "",
 			ownLine:      strings.Trim(string(u.Raw[ls:cs]), " \t") == "",
 		})
-		return true
-	})
+	}
 	return out
 }
 

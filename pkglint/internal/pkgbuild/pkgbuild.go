@@ -101,6 +101,53 @@ type Unit struct {
 	TopLevel  []*syntax.Stmt // top-level statements that are not function declarations
 
 	assigns map[string][]AssignSite // built by parseUnit; see AssignsTo
+	nodes   *NodeTable              // built by parseUnit; see Nodes
+}
+
+// NodeTable holds the nodes of a unit's File that rules look for by type, each
+// kind in syntax.Walk's pre-order. Rules that only filter the tree by one of
+// these types read these slices instead of each walking the whole file again;
+// a rule that also needs other node types, or their nesting, still walks.
+type NodeTable struct {
+	Stmts     []*syntax.Stmt
+	Calls     []*syntax.CallExpr
+	Assigns   []*syntax.Assign
+	Redirects []*syntax.Redirect
+	Params    []*syntax.ParamExp
+	Comments  []*syntax.Comment
+}
+
+// Nodes returns the unit's node table.
+func (u *Unit) Nodes() *NodeTable {
+	if u.nodes == nil {
+		return indexNodes(u.File) // a Unit not built by parseUnit
+	}
+	return u.nodes
+}
+
+func indexNodes(f *syntax.File) *NodeTable {
+	t := &NodeTable{}
+	if f == nil {
+		return t
+	}
+	syntax.Walk(f, func(node syntax.Node) bool {
+		switch x := node.(type) {
+		case *syntax.Stmt:
+			t.Stmts = append(t.Stmts, x)
+		case *syntax.CallExpr:
+			t.Calls = append(t.Calls, x)
+		case *syntax.Assign:
+			t.Assigns = append(t.Assigns, x)
+		case *syntax.Redirect:
+			t.Redirects = append(t.Redirects, x)
+		case *syntax.ParamExp:
+			t.Params = append(t.Params, x)
+		case *syntax.Comment:
+			t.Comments = append(t.Comments, x)
+		}
+		return true
+	})
+	return t
 }
 
 // AssignSite is one assignment in a unit and where it sits.
@@ -225,10 +272,14 @@ func newParser() *syntax.Parser {
 	return syntax.NewParser(syntax.KeepComments(true), syntax.Variant(syntax.LangBash))
 }
 
+func parseBash(src []byte, name string) (*syntax.File, error) {
+	return newParser().Parse(bytes.NewReader(src), name)
+}
+
 // ParsesStrictly reports whether raw is bash the parser accepts as written,
 // with no rescue: what bash itself would accept, as far as pkglint can say.
 func ParsesStrictly(raw []byte) bool {
-	_, err := newParser().Parse(bytes.NewReader(raw), "")
+	_, err := parseBash(raw, "")
 	return err == nil
 }
 
@@ -485,7 +536,7 @@ func ParseScriptlet(path string, raw []byte) (Unit, error) {
 }
 
 func parseUnit(path string, raw []byte, scriptlet bool) (Unit, error) {
-	f, err := newParser().Parse(bytes.NewReader(raw), path)
+	f, err := parseBash(raw, path)
 	if err != nil {
 		// Bash accepts several constructs that mvdan.cc/sh does not yet
 		// parse; rescueParse recovers a position-accurate AST for the known
@@ -513,6 +564,7 @@ func parseUnit(path string, raw []byte, scriptlet bool) (Unit, error) {
 		u.TopLevel = append(u.TopLevel, stmt)
 	}
 	u.assigns = indexAssigns(&u)
+	u.nodes = indexNodes(f)
 	return u, nil
 }
 

@@ -741,23 +741,21 @@ func checkSensitiveWrites(ctx *Context) []Finding {
 	units := ctx.Pkg.Units()
 	for i := range units {
 		u := &units[i]
-		syntax.Walk(u.File, func(node syntax.Node) bool {
-			r, ok := node.(*syntax.Redirect)
-			if !ok || r.Word == nil {
-				return true
+		for _, r := range u.Nodes().Redirects {
+			if r.Word == nil {
+				continue
 			}
 			switch r.Op {
 			case syntax.RdrOut, syntax.AppOut, syntax.RdrAll, syntax.AppAll:
 			default:
-				return true
+				continue
 			}
 			target, _ := pkgbuild.RenderWord(r.Word, ctx.vars)
 			if why := sensitiveWritePath(target); why != "" {
 				out = append(out, findingAt("PB405", Critical, u.Path, r.Pos(),
 					"redirection to %q: %s", target, why))
 			}
-			return true
-		})
+		}
 	}
 	for _, c := range ctx.Commands() {
 		if c.Name == "pacman-key" || basename(c.RawName) == "pacman-key" {

@@ -136,13 +136,12 @@ func flattenPipe(stmt *syntax.Stmt) []*syntax.Stmt {
 }
 
 // pipelines yields every pipeline in a unit.
-func pipelines(u *syntax.File) [][]*syntax.Stmt {
+func pipelines(u *pkgbuild.Unit) [][]*syntax.Stmt {
 	var out [][]*syntax.Stmt
 	seen := map[*syntax.Stmt]bool{}
-	syntax.Walk(u, func(node syntax.Node) bool {
-		stmt, ok := node.(*syntax.Stmt)
-		if !ok || seen[stmt] {
-			return true
+	for _, stmt := range u.Nodes().Stmts {
+		if seen[stmt] {
+			continue
 		}
 		if segs := flattenPipe(stmt); segs != nil {
 			out = append(out, segs)
@@ -150,8 +149,7 @@ func pipelines(u *syntax.File) [][]*syntax.Stmt {
 				seen[s] = true // don't re-report inner segments of the same pipe
 			}
 		}
-		return true
-	})
+	}
 	return out
 }
 

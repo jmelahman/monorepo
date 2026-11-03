@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
-	"mvdan.cc/sh/v3/syntax"
 )
 
 // PB210: a package named on a package manager's command line.
@@ -944,10 +943,12 @@ func manifestInstallIn(u *pkgbuild.Unit) bool {
 		return false
 	}
 	found := false
-	syntax.Walk(u.File, func(n syntax.Node) bool {
-		call, ok := n.(*syntax.CallExpr)
-		if !ok || found || len(call.Args) == 0 {
-			return !found
+	for _, call := range u.Nodes().Calls {
+		if found {
+			break
+		}
+		if len(call.Args) == 0 {
+			continue
 		}
 		name, _ := pkgbuild.RenderWord(call.Args[0], nil)
 		name = basename(name)
@@ -980,8 +981,7 @@ func manifestInstallIn(u *pkgbuild.Unit) bool {
 		case "pnpm", "bun":
 			found = (sub == "install" || sub == "i") && pkgs == 0
 		}
-		return !found
-	})
+	}
 	return found
 }
 

@@ -431,14 +431,13 @@ func checkScriptletPersistence(ctx *Context) []Finding {
 
 	// Redirection targets (echo ... >> /var/spool/cron/root) count too.
 	for _, u := range ctx.Pkg.Scriptlets {
-		syntax.Walk(u.File, func(node syntax.Node) bool {
-			r, ok := node.(*syntax.Redirect)
-			if !ok || r.Word == nil {
-				return true
+		for _, r := range u.Nodes().Redirects {
+			if r.Word == nil {
+				continue
 			}
 			switch r.Op {
 			case syntax.RdrIn, syntax.DplIn, syntax.Hdoc, syntax.DashHdoc, syntax.WordHdoc:
-				return true // `grep -q PermitRootLogin < /etc/ssh/sshd_config` only reads it
+				continue // `grep -q PermitRootLogin < /etc/ssh/sshd_config` only reads it
 			}
 			target, _ := pkgbuild.RenderWord(r.Word, ctx.vars)
 			for _, hint := range persistencePathHints {
@@ -448,8 +447,7 @@ func checkScriptletPersistence(ctx *Context) []Finding {
 					break
 				}
 			}
-			return true
-		})
+		}
 	}
 	return out
 }
