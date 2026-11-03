@@ -2,6 +2,7 @@ package rules
 
 import (
 	"maps"
+	"slices"
 	"sort"
 	"strings"
 
@@ -60,6 +61,7 @@ type Context struct {
 	suppUsed map[suppKey]bool
 
 	byStmt map[*syntax.Stmt]int // lazily built index of cmds by statement
+	byName map[string][]int     // index of cmds by resolved name, in cmds order
 
 	pkgFacts *packageFacts // lazily computed facts shared by package rules
 }
@@ -665,17 +667,37 @@ func (ctx *Context) commandAt(stmt *syntax.Stmt) (Command, bool) {
 	return ctx.cmds[i], true
 }
 
-// CommandsNamed returns commands with a resolved name in names.
+// CommandsNamed returns commands with a resolved name in names, in collection
+// order. Rules ask for a handful of names each, so the index built on first
+// use replaces a scan of every command per call.
 func (ctx *Context) CommandsNamed(names ...string) []Command {
-	set := map[string]bool{}
-	for _, n := range names {
-		set[n] = true
-	}
-	var out []Command
-	for _, c := range ctx.cmds {
-		if set[c.Name] {
-			out = append(out, c)
+	if ctx.byName == nil {
+		ctx.byName = map[string][]int{}
+		for i, c := range ctx.cmds {
+			ctx.byName[c.Name] = append(ctx.byName[c.Name], i)
 		}
+	}
+	n := 0
+	for i, name := range names {
+		if !slices.Contains(names[:i], name) {
+			n += len(ctx.byName[name])
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	idx := make([]int, 0, n)
+	for i, name := range names {
+		if !slices.Contains(names[:i], name) {
+			idx = append(idx, ctx.byName[name]...)
+		}
+	}
+	if len(names) > 1 {
+		slices.Sort(idx)
+	}
+	out := make([]Command, len(idx))
+	for i, j := range idx {
+		out[i] = ctx.cmds[j]
 	}
 	return out
 }

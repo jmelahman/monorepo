@@ -142,15 +142,15 @@ func exportedInScope(u *pkgbuild.Unit, name, fn string, at int, own *syntax.Call
 	if u == nil || u.File == nil {
 		return false
 	}
+	// scanAssignments only visits the unit's index entries for name, so the
+	// exports among those are all it can find; the index already knows which
+	// declaration holds each, which spares a walk of the file per command.
 	exports := map[*syntax.Assign]bool{}
-	syntax.Walk(u.File, func(n syntax.Node) bool {
-		if dc, ok := n.(*syntax.DeclClause); ok && declExports(dc) {
-			for _, as := range dc.Args {
-				exports[as] = true
-			}
+	for _, site := range u.AssignsTo(name) {
+		if site.Decl != nil && declExports(site.Decl) {
+			exports[site.Assign] = true
 		}
-		return true
-	})
+	}
 	found := false
 	scanAssignments(u, name, fn, at, own, false, func(as *syntax.Assign) {
 		found = found || exports[as]

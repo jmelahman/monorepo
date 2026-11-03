@@ -2,6 +2,7 @@ package rules
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/jmelahman/pkglint/internal/pkgbuild"
@@ -1302,7 +1303,24 @@ func archSuffixed(name string) bool {
 
 // knownPKGBUILDVars is every variable name makepkg itself reads, i.e. the ones
 // a PKGBUILD may set without an underscore prefix.
-func knownPKGBUILDVars(ctx *Context) map[string]bool {
+// The package-independent part is built once; only arches the PKGBUILD
+// declares beyond hostArchNames are checked per call.
+func knownPKGBUILDVars(ctx *Context) func(name string) bool {
+	arches := concreteArches(ctx)
+	return func(name string) bool {
+		if staticPKGBUILDVars[name] {
+			return true
+		}
+		for _, a := range arches {
+			if base, ok := strings.CutSuffix(name, "_"+a); ok && slices.Contains(schemaArchArrayVars, base) {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+var staticPKGBUILDVars = func() map[string]bool {
 	known := map[string]bool{"pkgname": true, "pkgbase": true}
 	for _, n := range schemaArrayVars {
 		known[n] = true
@@ -1313,15 +1331,13 @@ func knownPKGBUILDVars(ctx *Context) map[string]bool {
 	// Every host architecture, not only the ones arch= lists: makepkg reads
 	// depends_i686 whenever CARCH is i686, so renaming it would silently drop
 	// the array.
-	for _, arches := range [][]string{hostArchNames, concreteArches(ctx)} {
-		for _, a := range arches {
-			for _, n := range schemaArchArrayVars {
-				known[n+"_"+a] = true
-			}
+	for _, a := range hostArchNames {
+		for _, n := range schemaArchArrayVars {
+			known[n+"_"+a] = true
 		}
 	}
 	return known
-}
+}()
 
 // unprefixedCustomVars returns the variables PB902 flags, keyed by name. The
 // fixer shares it so what gets renamed is exactly what got reported.
@@ -1329,7 +1345,7 @@ func unprefixedCustomVars(ctx *Context) map[string]*pkgbuild.Var {
 	known := knownPKGBUILDVars(ctx)
 	out := map[string]*pkgbuild.Var{}
 	for name, v := range ctx.Pkg.Vars {
-		if known[name] || strings.HasPrefix(name, "_") {
+		if known(name) || strings.HasPrefix(name, "_") {
 			continue
 		}
 		// All-uppercase and mixed-case names are either makepkg.conf overrides

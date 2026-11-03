@@ -106,8 +106,9 @@ type Unit struct {
 // AssignSite is one assignment in a unit and where it sits.
 type AssignSite struct {
 	Assign *syntax.Assign
-	Fn     string           // the Functions entry whose body holds it; "" for TopLevel
-	Call   *syntax.CallExpr // the command whose Assigns list holds it; nil under declare/local/export
+	Fn     string             // the Functions entry whose body holds it; "" for TopLevel
+	Call   *syntax.CallExpr   // the command whose Assigns list holds it; nil under declare/local/export
+	Decl   *syntax.DeclClause // the declare/local/export whose Args holds it; nil otherwise
 }
 
 // AssignsTo returns every assignment to name in the unit: TopLevel statements
@@ -128,15 +129,20 @@ func indexAssigns(u *Unit) map[string][]AssignSite {
 			return
 		}
 		owner := map[*syntax.Assign]*syntax.CallExpr{}
+		decl := map[*syntax.Assign]*syntax.DeclClause{}
 		syntax.Walk(n, func(node syntax.Node) bool {
 			switch x := node.(type) {
 			case *syntax.CallExpr:
 				for _, as := range x.Assigns {
 					owner[as] = x
 				}
+			case *syntax.DeclClause:
+				for _, as := range x.Args {
+					decl[as] = x
+				}
 			case *syntax.Assign:
 				if x.Name != nil {
-					idx[x.Name.Value] = append(idx[x.Name.Value], AssignSite{x, fn, owner[x]})
+					idx[x.Name.Value] = append(idx[x.Name.Value], AssignSite{x, fn, owner[x], decl[x]})
 				}
 			}
 			return true
