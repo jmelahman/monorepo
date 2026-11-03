@@ -16,7 +16,8 @@ extends Node3D
 ## reports its frame times, and [code]--rate=4[/code] rides it faster for a quick
 ## read. With Godot's [code]--write-movie[/code] and
 ## [code]--fixed-fps[/code], the ride advances one fixed step per frame however long a
-## frame takes, and quits at the end so the movie is finalised.
+## frame takes, and quits at the end so the movie is finalised. [code]--pass=depth|seg[/code]
+## draws it as a control video for a model to restyle, in step with the colour render.
 
 const WARMUP_FRAMES := 60
 const BENCH_STRETCH := 100
@@ -113,6 +114,8 @@ func _ready() -> void:
 		var reach := reach_text.split_floats(",")
 		_lamp_reach.shadows_within = reach[0]
 		_lamp_reach.lit_within = reach[1]
+	if args.has("pass"):
+		add_child(ControlPass.new(args["pass"], _camera))
 	_time = at_seconds
 	_camera.transform = replay.camera_at(route, _time)
 	if _stream:
