@@ -3,6 +3,10 @@
     "comfy-cloud": {
       "type": "http",
       "url": "https://cloud.comfy.org/mcp"
+    },
+    "runpod": {
+      "type": "http",
+      "url": "https://mcp.runpod.io/"
     }
   }
 }
