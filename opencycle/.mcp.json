@@ -6,7 +6,8 @@
     },
     "runpod": {
       "type": "http",
-      "url": "https://mcp.runpod.io/"
+      "url": "https://mcp.runpod.io/",
+      "headersHelper": "scripts/runpod-headers.sh"
     }
   }
 }
