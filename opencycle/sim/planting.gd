@@ -162,7 +162,22 @@ static func _grow_rock(
 	elif roll < 0.02:
 		kind = Kind.STUMP
 		size = 1.0
-	plants[kind].append(_placed(cell, terrain, x, z, size))
+	var placed := _placed(cell, terrain, x, z, size)
+	if kind != Kind.STUMP:
+		placed = _bedded(cell, placed, size)
+	plants[kind].append(placed)
+
+
+## A stone half buried and leaning, as the ground leaves one, not set down on top of it.
+static func _bedded(cell: int, placed: Transform3D, size: float) -> Transform3D:
+	var lean := Basis(
+		Vector3(cos(Rng.unit(cell, 6) * TAU), 0.0, sin(Rng.unit(cell, 6) * TAU)),
+		Rng.unit(cell, 7) * 0.45
+	)
+	var squat := Basis.from_scale(Vector3(1.0, lerpf(0.55, 1.0, Rng.unit(cell, 8)), 1.0))
+	placed.basis = lean * placed.basis * squat
+	placed.origin.y -= size * lerpf(0.12, 0.3, Rng.unit(cell, 9))
+	return placed
 
 
 ## Calls [param grow] for one jittered point in every cell of a grid between

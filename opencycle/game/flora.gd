@@ -23,6 +23,7 @@ const MODELLED: Dictionary[Planting.Kind, String] = {
 	Planting.Kind.PINE: "res://assets/modelled/pine.glb",
 }
 const NEEDLES: Shader = preload("res://game/needles.gdshader")
+const PLANT: Shader = preload("res://game/plant.gdshader")
 const NEAR_TREE_RANGE := 90.0
 const FAR_TREE_RANGE := 2400.0
 const SCENES: Dictionary[Planting.Kind, Array] = {
@@ -32,9 +33,22 @@ const SCENES: Dictionary[Planting.Kind, Array] = {
 		"res://assets/polyhaven/grass_medium_01/grass_medium_01_1k.gltf",
 		"res://assets/polyhaven/grass_medium_02/grass_medium_02_1k.gltf",
 	],
-	Planting.Kind.ROCK: ["res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf"],
-	Planting.Kind.BOULDER: ["res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf"],
-	Planting.Kind.STUMP: ["res://assets/polyhaven/tree_stump_01/tree_stump_01_1k.gltf"],
+	Planting.Kind.ROCK:
+	[
+		"res://assets/polyhaven/rock_moss_set_01/rock_moss_set_01_1k.gltf",
+		"res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf",
+	],
+	# boulder_01 is a warm sandstone, out of place among the grey stones of a pine wood.
+	Planting.Kind.BOULDER:
+	[
+		"res://assets/polyhaven/rock_moss_set_01/rock_moss_set_01_1k.gltf",
+		"res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf",
+	],
+	Planting.Kind.STUMP:
+	[
+		"res://assets/polyhaven/tree_stump_01/tree_stump_01_1k.gltf",
+		"res://assets/polyhaven/dry_branches_medium_01/dry_branches_medium_01_1k.gltf",
+	],
 }
 const RANGES: Dictionary[Planting.Kind, float] = {
 	Planting.Kind.FERN: 38.0,
@@ -56,44 +70,63 @@ static func build(plants: Dictionary[Planting.Kind, Array], route: Route) -> Nod
 
 
 static func _add_trees(root: Node3D, kind: Planting.Kind, transforms: Array, route: Route) -> void:
-	var tree := TREES[kind]
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BAKED % (tree + ".json")))
-	var meta: Dictionary = parsed
-	var slices: int = meta["slices"]
-	var half_width: float = meta["width"]
-	half_width *= 0.5
 	var nears: Array[Mesh] = []
+	var fars: Array[Mesh] = []
 	if kind in MODELLED:
 		nears = _modelled(MODELLED[kind])
+		for m: int in nears.size():
+			fars.append(_impostor("pine_%d" % m))
 	else:
-		nears = [_fan(meta, slices, slices, 2, _card(BAKED % (tree + "_slices.webp"), half_width))]
-	var far := _fan(meta, 2, 4, 1, _card(BAKED % (tree + "_impostor.webp"), half_width))
-	# The rider stays on the road, so a tree far from it only ever needs its far form.
-	var close_by: Array = []
-	var distant_only: Array = []
-	for entry: Variant in transforms:
-		var placed: Transform3D = entry
-		var off_road := absf(route.nearest(placed.origin.x, placed.origin.z).y)
-		(close_by if off_road < NEAR_TREE_RANGE else distant_only).append(placed)
+		var meta := _meta(TREES[kind])
+		var slices: int = meta["slices"]
+		var half_width: float = meta["width"]
+		var sheet := BAKED % (TREES[kind] + "_slices.webp")
+		nears = [_fan(meta, slices, slices, 2, _card(sheet, half_width * 0.5))]
+		fars = [_impostor(TREES[kind])]
+	# The rider stays on the road, so a tree far from it only ever needs its far form. Each
+	# tree is the same variant near and far, so it keeps its shape as it passes the range.
+	var close_by: Array[Array] = []
+	var distant_only: Array[Array] = []
 	for m: int in nears.size():
-		var variant: Array = []
-		for i: int in range(m, close_by.size(), nears.size()):
-			variant.append(close_by[i])
-		for chunk: Array in _chunks(variant, CHUNK):
+		close_by.append([])
+		distant_only.append([])
+	for i: int in transforms.size():
+		var placed: Transform3D = transforms[i]
+		var off_road := absf(route.nearest(placed.origin.x, placed.origin.z).y)
+		var variant := i % nears.size()
+		(close_by if off_road < NEAR_TREE_RANGE else distant_only)[variant].append(placed)
+	for m: int in nears.size():
+		for chunk: Array in _chunks(close_by[m], CHUNK):
 			var close := _instance(nears[m], chunk)
 			close.visibility_range_end = NEAR_TREE_RANGE
 			root.add_child(close)
-	for chunk: Array in _chunks(close_by, CHUNK):
-		var distant := _instance(far, chunk)
-		distant.visibility_range_begin = NEAR_TREE_RANGE
-		distant.visibility_range_end = FAR_TREE_RANGE
-		distant.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		root.add_child(distant)
-	for chunk: Array in _chunks(distant_only, FAR_CHUNK):
-		var distant := _instance(far, chunk)
-		distant.visibility_range_end = FAR_TREE_RANGE
-		distant.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		root.add_child(distant)
+			var distant := _instance(fars[m % fars.size()], chunk)
+			distant.visibility_range_begin = NEAR_TREE_RANGE
+			distant.visibility_range_end = FAR_TREE_RANGE
+			distant.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			root.add_child(distant)
+		for chunk: Array in _chunks(distant_only[m], FAR_CHUNK):
+			var distant := _instance(fars[m % fars.size()], chunk)
+			distant.visibility_range_end = FAR_TREE_RANGE
+			distant.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			root.add_child(distant)
+
+
+static func _meta(tree: String) -> Dictionary:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BAKED % (tree + ".json")))
+	return parsed
+
+
+## The crossed cards a tree is drawn with in the distance, from its baked impostor.
+static func _impostor(tree: String) -> ArrayMesh:
+	var meta := _meta(tree)
+	var half_width: float = meta["width"]
+	var card := _card(BAKED % (tree + "_impostor.webp"), half_width * 0.5)
+	if meta.get("unlit", false):
+		# Its needles' own colour, depth and all, as game/needles.gdshader draws them close up.
+		card.set_shader_parameter("tint", Vector3.ONE)
+		card.set_shader_parameter("core_shade", 1.0)
+	return _fan(meta, 2, 4, 1, card)
 
 
 static func _add_small(root: Node3D, kind: Planting.Kind, transforms: Array) -> void:
@@ -215,8 +248,9 @@ static func _modelled(path: String) -> Array[Mesh]:
 	return found
 
 
-## The meshes in a glTF scene, each at the origin, with [param soft] ones made
-## scissored and two-sided, since sorted blending is too costly over this much grass.
+## The meshes in a glTF scene, each at the origin, with [param soft] ones drawn by
+## game/plant.gdshader, scissored and two-sided, since sorted blending is too costly over this
+## much grass.
 static func _meshes(path: String, soft: bool) -> Array[Mesh]:
 	var scene: PackedScene = load(path)
 	var node := scene.instantiate()
@@ -226,12 +260,22 @@ static func _meshes(path: String, soft: bool) -> Array[Mesh]:
 		var mesh: Mesh = instance.mesh
 		if soft:
 			for s: int in mesh.get_surface_count():
-				var material := mesh.surface_get_material(s).duplicate() as BaseMaterial3D
-				material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-				material.alpha_scissor_threshold = 0.4
-				material.cull_mode = BaseMaterial3D.CULL_DISABLED
-				material.vertex_color_use_as_albedo = true
-				mesh.surface_set_material(s, material)
+				var material := mesh.surface_get_material(s) as BaseMaterial3D
+				mesh.surface_set_material(s, _plant(path, material))
 		found.append(mesh)
 	node.free()
 	return found
+
+
+## [param material], the glTF's own, with its blades cut out by the alpha map beside it.
+static func _plant(path: String, material: BaseMaterial3D) -> ShaderMaterial:
+	var name := path.get_base_dir().get_file()
+	var plant := ShaderMaterial.new()
+	plant.shader = PLANT
+	plant.set_shader_parameter("albedo", material.albedo_texture)
+	plant.set_shader_parameter(
+		"cutout", load(path.get_base_dir() + "/textures/%s_alpha_1k.jpg" % name)
+	)
+	plant.set_shader_parameter("normals", material.normal_texture)
+	plant.set_shader_parameter("arm", material.roughness_texture)
+	return plant

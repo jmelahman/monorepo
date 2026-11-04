@@ -117,10 +117,16 @@ def relock() -> None:
         files[path] = {"url": entry["url"], "md5": entry["md5"]}
 
     for name in MODELS + BAKE_MODELS:
-        gltf = json.loads(get(API + name))["gltf"]["1k"]["gltf"]
+        info = json.loads(get(API + name))
+        gltf = info["gltf"]["1k"]["gltf"]
         add(f"{name}/{name}_1k.gltf", gltf)
         for path, entry in gltf["include"].items():
             add(f"{name}/{path}", entry)
+        # A glTF's diffuse is a JPEG, so a leaf's cut-out comes only in its own map, which
+        # game/plant.gdshader reads.
+        for kind in info:
+            if kind.lower().endswith("alpha"):
+                add(f"{name}/textures/{name}_{kind.lower()}_1k.jpg", info[kind]["1k"]["jpg"])
     for name in TEXTURES:
         info = json.loads(get(API + name))
         for kind in TEXTURE_MAPS:

@@ -9,11 +9,18 @@ extends SceneTree
 ## tree from four sides, for the distant ones. [code]<tree>.json[/code] is what the
 ## game needs to size them.
 ##
+## The modelled pines of scripts/blender/pine.py are close enough to draw as they are, so
+## each of them gets only an impostor, [code]pine_<n>_impostor.webp[/code], drawn with the
+## same needles the game gives it and unlit, so the game lights it as it lights the near tree,
+## and a tree doesn't change as it passes into the distance.
+##
 ## Needs a real GPU and assets/bake-sources/. Run it through scripts/bake.sh.
 
 const SOURCE := "res://assets/bake-sources/%s/%s_1k.gltf"
 const OUT := "res://assets/baked/%s"
 const TREES: PackedStringArray = ["fir_tree_01", "pine_tree_01"]
+const MODELLED := "res://assets/modelled/pine.glb"
+const NEEDLES: Shader = preload("res://game/needles.gdshader")
 const SLICES := 6
 const SLICE_HEIGHT := 2048
 const IMPOSTOR_HEIGHT := 1024
@@ -35,28 +42,62 @@ func _initialize() -> void:
 
 func _bake_all() -> void:
 	for tree: String in TREES:
-		await _bake(tree)
+		var scene := _source(tree)
+		if not scene:
+			return
+		await _bake(tree, scene, true)
+	var modelled: Node = (load(MODELLED) as PackedScene).instantiate()
+	var trees := modelled.find_children("*", "MeshInstance3D", true, false)
+	for i: int in trees.size():
+		var tree := trees[i] as MeshInstance3D
+		tree.get_parent().remove_child(tree)
+		tree.owner = null
+		tree.transform = Transform3D.IDENTITY
+		_needles(tree.mesh)
+		var scene := Node3D.new()
+		scene.add_child(tree)
+		await _bake("pine_%d" % i, scene, false)
+	modelled.free()
 	quit()
 
 
-func _bake(tree: String) -> void:
+## Poly Haven's glTF of [param tree], with only its fullest tree left in it.
+func _source(tree: String) -> Node3D:
 	var doc := GLTFDocument.new()
 	var state := GLTFState.new()
 	var err := doc.append_from_file(SOURCE % [tree, tree], state)
 	if err != OK:
 		push_error("bake: cannot read %s: %s" % [tree, error_string(err)])
 		quit(1)
-		return
+		return null
 	var scene: Node3D = doc.generate_scene(state)
 	# Each file holds three trees side by side; the first is the fullest.
 	for child: Node in scene.get_children():
 		if not child.name.contains("_a_"):
 			scene.remove_child(child)
 			child.free()
+	return scene
+
+
+## Draws the needle cards of a modelled tree the way game/flora.gd does.
+static func _needles(mesh: Mesh) -> void:
+	for s: int in mesh.get_surface_count():
+		var material := mesh.surface_get_material(s) as BaseMaterial3D
+		if material and material.resource_name.ends_with("needles"):
+			var needles := ShaderMaterial.new()
+			needles.shader = NEEDLES
+			needles.set_shader_parameter("albedo", material.albedo_texture)
+			mesh.surface_set_material(s, needles)
+
+
+## Bakes [param scene], [param tree], into its cards: slices too if [param sliced].
+func _bake(tree: String, scene: Node3D, sliced: bool) -> void:
 	var viewport := SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.transparent_bg = true
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	if not sliced:
+		viewport.debug_draw = Viewport.DEBUG_DRAW_UNSHADED
 	root.add_child(viewport)
 	viewport.add_child(scene)
 	var camera := Camera3D.new()
@@ -70,17 +111,21 @@ func _bake(tree: String) -> void:
 
 	var bounds := _two_sided(scene, AABB())
 	var center := bounds.get_center()
+	if not sliced:
+		# The game stands the card on the trunk, wherever the crown leans.
+		center = Vector3(0.0, center.y, 0.0)
 	var height := bounds.size.y
 	var width := maxf(bounds.size.x, bounds.size.z) * WIDEN
 	camera.size = height
 	camera.near = DISTANCE - SLAB * 0.5
 	camera.far = DISTANCE + SLAB * 0.5
-	var slice_width := int(SLICE_HEIGHT * width / height)
-	# A half-turn sees the same slice from behind, so the fan spans only that.
-	_save(
-		await _sheet(viewport, camera, center, Vector2i(slice_width, SLICE_HEIGHT), SLICES, PI),
-		OUT % (tree + "_slices.webp")
-	)
+	if sliced:
+		var slice_width := int(SLICE_HEIGHT * width / height)
+		# A half-turn sees the same slice from behind, so the fan spans only that.
+		_save(
+			await _sheet(viewport, camera, center, Vector2i(slice_width, SLICE_HEIGHT), SLICES, PI),
+			OUT % (tree + "_slices.webp")
+		)
 	camera.near = 0.1
 	camera.far = DISTANCE * 2.0
 	var view_width := int(IMPOSTOR_HEIGHT * width / height)
@@ -88,7 +133,13 @@ func _bake(tree: String) -> void:
 		await _sheet(viewport, camera, center, Vector2i(view_width, IMPOSTOR_HEIGHT), 4, TAU),
 		OUT % (tree + "_impostor.webp")
 	)
-	var meta := {"height": height, "width": width, "y_min": bounds.position.y, "slices": SLICES}
+	var meta := {
+		"height": height,
+		"width": width,
+		"y_min": bounds.position.y,
+		"slices": SLICES,
+		"unlit": not sliced,
+	}
 	var file := FileAccess.open(OUT % (tree + ".json"), FileAccess.WRITE)
 	file.store_string(JSON.stringify(meta, "  ") + "\n")
 	file.close()

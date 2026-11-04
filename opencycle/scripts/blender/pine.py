@@ -324,6 +324,10 @@ def _join(name, wood, cards, needles):
         "color", np.stack([shade, shade, shade, np.ones_like(shade)], 1).reshape(-1)
     )
     me.normals_split_custom_set(np.repeat(np.array(cards["normals"]), 4, axis=0).tolist())
+    # The join gives the wood the cards' colours, black unless it has its own, and the game
+    # multiplies the bark by them.
+    bark = wood.data.color_attributes.new("Col", "FLOAT_COLOR", "CORNER")
+    bark.data.foreach_set("color", np.ones(len(bark.data) * 4, np.float32))
     ob = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(ob)
     bpy.ops.object.select_all(action="DESELECT")
