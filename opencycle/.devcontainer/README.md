@@ -1,7 +1,9 @@
 # Unreal Engine spike container
 
-This repository's devcontainer builds Epic's Linux Unreal image, adds the Mesa
-Vulkan ICD and `vulkan-tools`, and runs as `ue4` with the host GPU exposed.
+This repository's devcontainer builds Epic's Linux Unreal image, adds a Mesa
+25 Vulkan ICD and `vulkan-tools`, and runs as `ue4` with the host GPU exposed.
+It uses Kisak's stable Mesa backport because Epic's Ubuntu 22.04 base image's
+older Mesa release does not support the local AMD Strix GPU.
 
 The Dockerfile uses `USER root` only while building the image, because installing
 system packages requires root. It switches back to `ue4` for normal container

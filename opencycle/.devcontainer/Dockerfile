@@ -6,9 +6,20 @@ USER root
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg \
+    && install -d -m 0755 /etc/apt/keyrings \
+    && curl -fsSL 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xEB8B81E14DA65431D7504EA8F63F0F2B90935439&options=mr' \
+        | gpg --dearmor -o /etc/apt/keyrings/kisak-turtle.gpg \
+    && echo 'deb [signed-by=/etc/apt/keyrings/kisak-turtle.gpg] https://ppa.launchpadcontent.net/kisak/turtle/ubuntu jammy main' \
+        > /etc/apt/sources.list.d/kisak-turtle.list \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         mesa-vulkan-drivers \
         vulkan-tools \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* /etc/apt/keyrings/kisak-turtle.gpg \
+        /etc/apt/sources.list.d/kisak-turtle.list
 
 # Bun replaces Node. The fallback dir sits last on PATH so `#!/usr/bin/env
 # node` scripts (pi, playwright) run on bun unless a real node is installed.
