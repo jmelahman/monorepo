@@ -1,0 +1,92 @@
+diff --git a/packages/tui/src/component/dialog-model.tsx b/packages/tui/src/component/dialog-model.tsx
+index ea8f970..86d7954 100644
+--- a/packages/tui/src/component/dialog-model.tsx
++++ b/packages/tui/src/component/dialog-model.tsx
+@@ -12,7 +12,14 @@ import { modelPreferenceKey } from "../model-preference"
+ import { useLocation } from "../context/location"
+ import { useNewDesigns } from "../config"
+ import { DialogFreeModels } from "./dialog-model-free"
+-import { FavoriteMarker, ModelDetail, isFreeModel, prioritizeFavorites, sortModelOptions } from "./model-options"
++import {
++  FavoriteMarker,
++  ModelDetail,
++  formatModelPrice,
++  isFreeModel,
++  prioritizeFavorites,
++  sortModelOptions,
++} from "./model-options"
+ import { DialogUsage, useUsageLimits } from "./usage"
+ import { formatDollars, usageLevel } from "../util/usage-limits"
+ 
+@@ -85,7 +92,7 @@ function DialogConnectedModels(props: {
+   // Under new designs the detail row shows the price, so the trailing slot only marks favorites.
+   const trailing = (model: ModelInfo, favorite: boolean) => {
+     if (newDesigns()) return favorite ? <FavoriteMarker /> : undefined
+-    return isFreeModel(model) ? "Free" : undefined
++    return formatModelPrice(model)
+   }
+   // OpenCode's own free models get their own group at the end of the list instead of joining "OpenCode".
+   const freeGroup = (model: ModelInfo) =>
+diff --git a/packages/tui/src/component/model-options.tsx b/packages/tui/src/component/model-options.tsx
+index 561526b..9a74948 100644
+--- a/packages/tui/src/component/model-options.tsx
++++ b/packages/tui/src/component/model-options.tsx
+@@ -39,6 +39,14 @@ export function isFreeModel(model: { cost: ReadonlyArray<{ input: number }> }) {
+   return model.cost.length > 0 && model.cost.every((cost) => cost.input === 0)
+ }
+ 
++/** The compact price shown in a picker row's trailing slot, or undefined when the catalog has none. */
++export function formatModelPrice(model: { cost: ReadonlyArray<{ input: number; output: number }> }) {
++  if (isFreeModel(model)) return "Free"
++  const cost = model.cost[0]
++  if (!cost) return undefined
++  return `$${dollars(cost.input)}/$${dollars(cost.output)}`
++}
++
+ /** The favorite marker. A styled span keeps its color on the highlighted row, where plain trailing text turns secondary. */
+ export function FavoriteMarker() {
+   const theme = useTheme().surface("dialog")
+@@ -55,12 +63,7 @@ export function ModelDetail(props: {
+   usage?: { readonly text: string; readonly danger?: boolean }
+ }) {
+   const theme = useTheme().surface("dialog")
+-  const price = () => {
+-    if (isFreeModel(props.model)) return "Free"
+-    const cost = props.model.cost[0]
+-    if (!cost) return ""
+-    return `$${dollars(cost.input)}/$${dollars(cost.output)}`
+-  }
++  const price = () => formatModelPrice(props.model) ?? ""
+   const facts = () =>
+     [
+       props.model.capabilities.input.map(modality).join(", "),
+diff --git a/packages/tui/test/cli/cmd/tui/model-options.test.ts b/packages/tui/test/cli/cmd/tui/model-options.test.ts
+index 4499680..4dc0583 100644
+--- a/packages/tui/test/cli/cmd/tui/model-options.test.ts
++++ b/packages/tui/test/cli/cmd/tui/model-options.test.ts
+@@ -1,6 +1,24 @@
+ import { describe, expect, test } from "bun:test"
+ import { go } from "fuzzysort"
+-import { prioritizeFavorites, sortModelOptions } from "../../../../src/component/model-options"
++import { formatModelPrice, prioritizeFavorites, sortModelOptions } from "../../../../src/component/model-options"
++
++describe("formatModelPrice", () => {
++  test("formats a paid model's input and output price per million tokens", () => {
++    expect(formatModelPrice({ cost: [{ input: 3, output: 15 }] })).toBe("$3/$15")
++  })
++
++  test("keeps fractional prices readable", () => {
++    expect(formatModelPrice({ cost: [{ input: 0.125, output: 0.625 }] })).toBe("$0.13/$0.63")
++  })
++
++  test("labels a model with no input cost as Free", () => {
++    expect(formatModelPrice({ cost: [{ input: 0, output: 4 }] })).toBe("Free")
++  })
++
++  test("returns nothing when the catalog has no cost", () => {
++    expect(formatModelPrice({ cost: [] })).toBeUndefined()
++  })
++})
+ 
+ describe("prioritizeFavorites", () => {
+   test("uses the favorite order captured when the dialog opened", () => {

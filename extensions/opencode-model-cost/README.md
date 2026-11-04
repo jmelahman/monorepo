@@ -74,6 +74,35 @@ Pass options through the object form of the plugin entry:
   in `cli.json`. This plugin is for showing prices on every row without
   changing the rest of the UI.
 
+## Upstream picker patch
+
+Appending the price to the name is the only thing a plugin can do, so the price
+inherits the row title's styling instead of sitting flush right in the row's
+gray trailing slot like the built-in `Free` label. Getting that treatment means
+changing the picker itself, which a plugin cannot reach (see
+[opencode#60856](https://github.com/anomalyco/opencode/issues/60856)).
+
+`patches/0001-tui-show-model-prices-in-picker-footer.patch` is that change
+against the OpenCode `dev` branch. It extracts `formatModelPrice` in
+`packages/tui/src/component/model-options.tsx` and has
+`dialog-model.tsx`'s `trailing()` return it, so paid models get the same
+right-aligned secondary text as `Free`, and adds tests for the formatter.
+
+Apply it to an OpenCode checkout and build from source:
+
+```sh
+git clone https://github.com/anomalyco/opencode.git
+cd opencode
+git checkout dev
+git apply /path/to/extensions/opencode-model-cost/patches/0001-tui-show-model-prices-in-picker-footer.patch
+bun install
+cd packages/tui && bun test test/cli/cmd/tui/model-options.test.ts
+```
+
+The patch does not apply to a released binary, so it needs a source build or an
+upstream PR. Once it is in, remove this plugin from `plugins` so the price is
+not shown twice.
+
 ## Development
 
 ```sh
