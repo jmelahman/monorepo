@@ -98,7 +98,7 @@ RUN BUN_INSTALL_BIN=/usr/local/bin \
     bun add -g \
     @anthropic-ai/claude-code@latest \
     @mariozechner/pi-coding-agent@$latest \
-    opencode-ai@latest \
+    @opencode/cli@latest \
     hunkdiff@latest \
   && rm -rf /tmp/bun-cache
 

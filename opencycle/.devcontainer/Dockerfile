@@ -1,6 +1,6 @@
 FROM oven/bun:1.4.4-debian@sha256:93d5032fe06d163427822dc1598f420363759bb18155c9cc90eb1be05a64a19e AS bun
 
-from ghcr.io/epicgames/unreal-engine@sha256:b3165cf745a8a30dfeea7074c2f223c213f4cbdf45ad921fb3a0c32c9336e897
+FROM ghcr.io/epicgames/unreal-engine@sha256:b3165cf745a8a30dfeea7074c2f223c213f4cbdf45ad921fb3a0c32c9336e897
 
 USER root
 
@@ -25,7 +25,12 @@ RUN BUN_INSTALL_BIN=/usr/local/bin \
     BUN_INSTALL_CACHE_DIR=/tmp/bun-cache \
     bun add -g \
     @anthropic-ai/claude-code@latest \
-    opencode-ai@latest \
+    @opencode/cli@latest \
+  && cd /usr/local/share/bun-global/node_modules/@opencode/cli \
+  && bun run postinstall \
   && rm -rf /tmp/bun-cache
+
+RUN mkdir -p /home/ue4/.config/opencode /home/ue4/.local/share/opencode \
+  && chown -R ue4:ue4 /home/ue4/.config/opencode /home/ue4/.local/share/opencode
 
 USER ue4

@@ -8,12 +8,16 @@
   "workspaceFolder": "/workspace/ue",
   "mounts": [
     "source=${localWorkspaceFolder},target=/workspace/opencycle,type=bind,readonly",
-    "source=opencycle-ue-ddc,target=/workspace/ddc,type=volume"
+    "source=opencycle-ue-ddc,target=/workspace/ddc,type=volume",
+    "source=${localEnv:HOME}/.config/opencode/opencode.jsonc,target=/home/ue4/.config/opencode/opencode.jsonc,type=bind,readonly",
+    "source=${localEnv:HOME}/.config/opencode/cli.json,target=/home/ue4/.config/opencode/cli.json,type=bind,readonly",
+    "source=opencycle-opencode-data,target=/home/ue4/.local/share/opencode,type=volume"
   ],
   "runArgs": [
+    "--name=opencycle-ue",
     "--device=/dev/dri",
-    "--group-add=${localEnv:OPENCYCLE_UE_RENDER_GID}",
-    "--group-add=${localEnv:OPENCYCLE_UE_VIDEO_GID}",
+    "--group-add=${localEnv:OPENCYCLE_UE_RENDER_GID:ue4}",
+    "--group-add=${localEnv:OPENCYCLE_UE_VIDEO_GID:ue4}",
     "--shm-size=8g"
   ],
   "containerUser": "ue4",

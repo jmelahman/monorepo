@@ -16,7 +16,10 @@ The Unreal spike checkout remains outside git at:
 
 The profile mounts it at `/workspace/ue`, mounts the repository read-only at
 `/workspace/opencycle`, and persists shader data in the named
-`opencycle-ue-ddc` volume.
+`opencycle-ue-ddc` volume. OpenCode's global configuration is bind-mounted
+read-only, and its credentials/data persist in the named
+`opencycle-opencode-data` volume. This avoids sharing host-specific OpenCode
+service state and remains compatible with rootless Docker.
 
 ## Start it
 
@@ -27,7 +30,9 @@ docker login ghcr.io
 ```
 
 Then set the host DRM group IDs and start the container from the repository
-root. Because this is the repository's root devcontainer configuration, no
+root. The group IDs default to the image's `ue4` group so an unset variable
+does not produce an invalid `--group-add=` argument; set them for host GPU
+access. Because this is the repository's root devcontainer configuration, no
 extra `--config` argument is needed:
 
 ```bash
