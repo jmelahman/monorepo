@@ -1,0 +1,4 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": ["../extensions/opencode-model-cost"]
+}
