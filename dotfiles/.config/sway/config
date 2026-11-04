@@ -21,7 +21,11 @@ set $menu env PATH="$HOME/.local/bin:$PATH" wmenu-run
 ### Output configuration
 #
 # Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
-exec mpvpaper -o "no-audio --loop --no-border --fullscreen" '*' ~/.backgrounds/divoom.mp4
+# -p: pause the video while a fullscreen/maximized window covers it
+# -a full: only trigger the pause for fullscreen windows
+# hwdec=vaapi: decode on the GPU (video must be yuv420p, not yuv444p)
+# profile=fast: cheap bilinear scaling instead of lanczos, fine for a wallpaper
+exec mpvpaper -f -p -a full -o "no-audio loop hwdec=vaapi profile=fast really-quiet" '*' ~/.backgrounds/divoom_optimized.mp4
 #
 # Example configuration:
 #
