@@ -1,4 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": ["../extensions/opencode-model-cost"]
+  "plugins": [
+    {
+      "package": "../extensions/opencode-model-cost",
+      "options": { "padTo": 52 }
+    }
+  ]
 }
