@@ -9,8 +9,8 @@ uniform sampler2D normals : hint_normal, filter_linear_mipmap_anisotropic, repea
 uniform sampler2D roughness_map : hint_roughness_g, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D ao_map : hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float tile = 2.0;
-uniform vec3 litter = vec3(0.2, 0.17, 0.12);
-uniform vec3 moss = vec3(0.1, 0.13, 0.05);
+uniform vec3 litter = vec3(0.15, 0.12, 0.085);
+uniform vec3 moss = vec3(0.075, 0.095, 0.04);
 
 varying vec2 plan;
 
@@ -26,7 +26,7 @@ void fragment() {
 	vec3 broad = texture(albedo, uv * 0.27 + 0.31).rgb;
 	float grain = dot(fine, vec3(0.33));
 	float detail = grain * 2.2 * (0.55 + dot(broad, vec3(0.33)) * 1.3);
-	float mossy = smoothstep(0.32, 0.6, COLOR.a + (grain - 0.3) * 0.7);
+	float mossy = smoothstep(0.32, 0.6, COLOR.a + (grain - 0.3) * 1.4);
 	ALBEDO = mix(litter, moss, mossy) * detail * COLOR.rgb;
 	NORMAL_MAP = texture(normals, uv).rgb;
 	ROUGHNESS = texture(roughness_map, uv).g;

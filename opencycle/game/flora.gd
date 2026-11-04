@@ -33,23 +33,18 @@ const SCENES: Dictionary[Planting.Kind, Array] = {
 		"res://assets/polyhaven/grass_medium_01/grass_medium_01_1k.gltf",
 		"res://assets/polyhaven/grass_medium_02/grass_medium_02_1k.gltf",
 	],
-	Planting.Kind.ROCK:
-	[
-		"res://assets/polyhaven/rock_moss_set_01/rock_moss_set_01_1k.gltf",
-		"res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf",
-	],
-	# boulder_01 is a warm sandstone, out of place among the grey stones of a pine wood.
-	Planting.Kind.BOULDER:
-	[
-		"res://assets/polyhaven/rock_moss_set_01/rock_moss_set_01_1k.gltf",
-		"res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf",
-	],
+	# boulder_01 and rock_moss_set_01 are warm sandstones, out of place among the grey stones
+	# of a pine wood.
+	Planting.Kind.ROCK: ["res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf"],
+	Planting.Kind.BOULDER: ["res://assets/polyhaven/rock_moss_set_02/rock_moss_set_02_1k.gltf"],
 	Planting.Kind.STUMP:
 	[
 		"res://assets/polyhaven/tree_stump_01/tree_stump_01_1k.gltf",
 		"res://assets/polyhaven/dry_branches_medium_01/dry_branches_medium_01_1k.gltf",
 	],
 }
+## The warm sun turns the stones' olive grey to peach; this takes them back to granite.
+const STONE := Color(0.72, 0.8, 0.88)
 const RANGES: Dictionary[Planting.Kind, float] = {
 	Planting.Kind.FERN: 38.0,
 	Planting.Kind.GRASS: 22.0,
@@ -135,6 +130,10 @@ static func _add_small(root: Node3D, kind: Planting.Kind, transforms: Array) -> 
 		meshes.append_array(
 			_meshes(path, kind == Planting.Kind.GRASS or kind == Planting.Kind.FERN)
 		)
+	if kind == Planting.Kind.ROCK or kind == Planting.Kind.BOULDER:
+		for mesh: Mesh in meshes:
+			for s: int in mesh.get_surface_count():
+				(mesh.surface_get_material(s) as BaseMaterial3D).albedo_color = STONE
 	var buckets: Array[Array] = []
 	for i: int in meshes.size():
 		buckets.append([])
