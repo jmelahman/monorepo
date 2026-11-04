@@ -9,6 +9,11 @@ export interface CostFormatOptions {
   readonly separator?: string
   /** Show a price for models that cost nothing. Defaults to `false`. */
   readonly includeFree?: boolean
+  /**
+   * Pad the name so the price ends in this many characters, right-aligning it
+   * inside the model picker's title column. Undefined leaves the name unpadded.
+   */
+  readonly padTo?: number
 }
 
 const DEFAULT_SEPARATOR = " · "
@@ -38,7 +43,21 @@ export function withModelCost(name: string, cost: readonly ModelCost[], options:
   const price = formatModelCost(cost, options)
   if (!price) return name
   const suffix = `${options.separator ?? DEFAULT_SEPARATOR}${price}`
-  return name.endsWith(suffix) ? name : `${name}${suffix}`
+  if (name.endsWith(suffix)) return name
+  if (options.padTo === undefined) return `${name}${suffix}`
+  return padName(name, suffix, options.padTo)
+}
+
+/**
+ * Pads the name so `name + suffix` is exactly `width` characters. The picker
+ * left-aligns titles, so this is what pushes the price to the right edge. Long
+ * names are truncated so the price always stays visible.
+ */
+function padName(name: string, suffix: string, width: number): string {
+  const room = width - suffix.length
+  if (room <= 0) return `${name}${suffix}`
+  const label = name.length > room ? `${name.slice(0, room - 1)}…` : name
+  return `${label.padEnd(room)}${suffix}`
 }
 
 function usd(value: number): string {

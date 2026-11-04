@@ -62,4 +62,24 @@ describe("withModelCost", () => {
   test("honours a custom separator", () => {
     expect(withModelCost("Claude Sonnet", paid, { separator: "  " })).toBe("Claude Sonnet  $3/$15")
   })
+
+  test("pads the name so the price ends at the given width", () => {
+    const aligned = withModelCost("Claude Sonnet", paid, { padTo: 24 })
+    expect(aligned).toBe("Claude Sonnet   · $3/$15")
+    expect(aligned).toHaveLength(24)
+  })
+
+  test("truncates a long name instead of pushing the price out", () => {
+    const aligned = withModelCost("A very long model name indeed", paid, { padTo: 24 })
+    expect(aligned).toBe("A very long mo… · $3/$15")
+    expect(aligned).toHaveLength(24)
+  })
+
+  test("does not pad when the width is already used by the price", () => {
+    expect(withModelCost("Model", paid, { padTo: 5 })).toBe("Model · $3/$15")
+  })
+
+  test("does not pad a name that already carries the price", () => {
+    expect(withModelCost("Claude Sonnet   · $3/$15", paid, { padTo: 24 })).toBe("Claude Sonnet   · $3/$15")
+  })
 })

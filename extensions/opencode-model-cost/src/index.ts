@@ -6,6 +6,11 @@ export interface Options {
   readonly separator?: string
   /** Show `"Free"` for models that cost nothing. Defaults to `false`. */
   readonly includeFree?: boolean
+  /**
+   * Pad the name so the price ends in this many characters, right-aligning it
+   * in the picker's title column. Undefined appends the price directly.
+   */
+  readonly padTo?: number
 }
 
 export default Plugin.define({
@@ -31,5 +36,6 @@ function readOptions(options: Readonly<Record<string, any>>): Options {
   return {
     separator: typeof options.separator === "string" ? options.separator : undefined,
     includeFree: options.includeFree === true,
+    padTo: typeof options.padTo === "number" ? options.padTo : undefined,
   }
 }

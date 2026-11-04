@@ -52,17 +52,38 @@ Pass options through the object form of the plugin entry:
       "package": "../extensions/opencode-model-cost",
       "options": {
         "separator": " · ",
-        "includeFree": false
+        "includeFree": false,
+        "padTo": 52
       }
     }
   ]
 }
 ```
 
-| Option        | Default | Description                                              |
-| ------------- | ------- | -------------------------------------------------------- |
-| `separator`   | `" · "` | Text between the model name and the price.               |
-| `includeFree` | `false` | Append `Free` to models whose input price is zero.        |
+| Option        | Default     | Description                                                     |
+| ------------- | ----------- | --------------------------------------------------------------- |
+| `separator`   | `" · "`     | Text between the model name and the price.                      |
+| `includeFree` | `false`     | Append `Free` to models whose input price is zero.              |
+| `padTo`       | `undefined` | Pad the name so the price ends in this many characters.         |
+
+### `padTo`
+
+The picker left-aligns titles, so `padTo` is the only way a plugin can push the
+price toward the right edge: it pads the name with spaces until `name + price`
+is exactly `padTo` characters. The model dialog is 60 cells wide, which leaves
+52 cells for a title with no trailing label, so `52` lines prices up with the
+built-in `Free` text. Long names are truncated to keep the price visible.
+
+It is a name-level workaround, not real alignment. Measured against v2.2.5:
+
+- In the default list, prices end at the same column as `Free`.
+- Search results put the provider name in the row's trailing slot, which takes
+  that space back and clips the price off the row.
+- The prompt footer shows the name too, so the padding becomes a visible gap
+  there.
+
+Use the [upstream patch](#upstream-picker-patch) if you want the real
+flush-right, muted price.
 
 ## Notes
 
