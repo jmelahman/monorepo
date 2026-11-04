@@ -1,30 +1,21 @@
 {
-  "name": "Godot Dev Sandbox",
-  "image": "ghcr.io/jmelahman/godot-devcontainer:latest",
-  "runArgs": [
-    "--cap-add=NET_ADMIN",
-    "--cap-add=NET_RAW",
-    "--network=kanban-net"
-  ],
-  "mounts": [
-    "source=${localEnv:HOME}/.claude,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.claude,type=bind",
-    "source=${localEnv:HOME}/.claude.json,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.claude.json,type=bind",
-    "source=${localEnv:HOME}/.zshrc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.zshrc.host,type=bind,readonly",
-    "source=devcontainer-bun,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.bun/install/cache,type=volume"
-  ],
-  "containerEnv": {
-    "COLORTERM": "truecolor",
-    "DEVCONTAINER_FIREWALL": "${localEnv:DEVCONTAINER_FIREWALL}",
-    "GH_TOKEN": "${localEnv:GH_TOKEN}",
-    "SSH_AUTH_SOCK": "/tmp/ssh-agent.sock",
-    "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
-    "KANBAN_HOST_WORKSPACE": "${localWorkspaceFolder}",
-    "KANBAN_HOST_HOME": "${localEnv:HOME}"
+  "name": "OpenCycle UE Spike",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "../.."
   },
-  "remoteUser": "${localEnv:DEVCONTAINER_REMOTE_USER:dev}",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
-  "workspaceFolder": "/workspace",
-  "postCreateCommand": "scripts/setup.sh",
-  "postStartCommand": "mkdir -p ${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.ssh && { ssh-add -L > ${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.ssh/id_rsa.pub 2>/dev/null || true; } && sudo --preserve-env=DEVCONTAINER_FIREWALL bash -c 'if [ -f /workspace/.devcontainer/init-firewall.sh ]; then bash /workspace/.devcontainer/init-firewall.sh; else /usr/local/bin/init-firewall.sh; fi'",
-  "waitFor": "postStartCommand"
+  "workspaceMount": "source=${localEnv:HOME}/.cache/opencycle-neural/ue,target=/workspace/ue,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace/ue",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace/opencycle,type=bind,readonly",
+    "source=opencycle-ue-ddc,target=/workspace/ddc,type=volume"
+  ],
+  "runArgs": [
+    "--device=/dev/dri",
+    "--group-add=${localEnv:OPENCYCLE_UE_RENDER_GID}",
+    "--group-add=${localEnv:OPENCYCLE_UE_VIDEO_GID}",
+    "--shm-size=8g"
+  ],
+  "containerUser": "ue4",
+  "remoteUser": "ue4"
 }

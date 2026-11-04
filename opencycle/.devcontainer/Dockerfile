@@ -1,34 +1,31 @@
-# The monorepo's devcontainer (templates/fullstack-template/.devcontainer in
-# https://github.com/jmelahman/monorepo) plus Godot and what it needs to run
-# without a screen. docker-bake.hcl builds the base and this in one pass, so
-# this always sits on the base from the same commit.
-#
-# The context is the template root, cut down by .dockerignore to the three
-# provisioning scripts and two lists, so editing the game never rebuilds this.
-FROM ghcr.io/jmelahman/devcontainer:latest
+FROM oven/bun:1.4.4-debian@sha256:93d5032fe06d163427822dc1598f420363759bb18155c9cc90eb1be05a64a19e AS bun
+
+from ghcr.io/epicgames/unreal-engine@sha256:b3165cf745a8a30dfeea7074c2f223c213f4cbdf45ad921fb3a0c32c9336e897
 
 USER root
 
-COPY scripts/env.sh scripts/versions.env scripts/setup.sh /opt/godot-setup/scripts/
-COPY .devcontainer/packages.txt /opt/godot-setup/.devcontainer/
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        mesa-vulkan-drivers \
+        vulkan-tools \
+    && rm -rf /var/lib/apt/lists/*
 
-# Godot goes into /usr/local. The addon archives are fetched too, into a cache
-# outside ~/.cache (a volume, which would hide it), so the postCreate
-# `scripts/setup.sh` unpacks them without touching the network. The addons
-# unpacked here are thrown away: they belong in the project, not the image.
-# gdtoolkit goes in whole, for scripts/lint.sh.
-ENV GODOT_DOWNLOADS=/opt/godot-downloads
-RUN /opt/godot-setup/scripts/setup.sh system \
-  && GODOT_PREFIX=/usr/local /opt/godot-setup/scripts/setup.sh godot addons \
-  && rm -rf /opt/godot-setup/addons /opt/godot-setup/.godot-home \
-    /opt/godot-downloads/Godot_*.zip /var/lib/apt/lists/* \
-  && chown -R dev:dev /opt/godot-downloads \
-  && . /opt/godot-setup/scripts/versions.env \
-  && UV_TOOL_DIR=/opt/uv-tools UV_TOOL_BIN_DIR=/usr/local/bin \
-    uv tool install "gdtoolkit==$GDTOOLKIT_VERSION"
+# Bun replaces Node. The fallback dir sits last on PATH so `#!/usr/bin/env
+# node` scripts (pi, playwright) run on bun unless a real node is installed.
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx \
+  && mkdir -p /usr/local/bun-node-fallback-bin \
+  && ln -s /usr/local/bin/bun /usr/local/bun-node-fallback-bin/node
+ENV PATH="${PATH}:/usr/local/bun-node-fallback-bin"
 
-# What a pin bump downloads at runtime, read by the base image's
-# init-firewall.sh.
-COPY .devcontainer/allowed-domains.txt /usr/local/share/devcontainer/allowed-domains.d/godot.txt
+# Install agent CLIs (Claude Code, pi, opencode) and hunk, the git pager.
+# Installed into /usr/local (not root's ~/.bun) so both root and dev get them.
+RUN BUN_INSTALL_BIN=/usr/local/bin \
+    BUN_INSTALL_GLOBAL_DIR=/usr/local/share/bun-global \
+    BUN_INSTALL_CACHE_DIR=/tmp/bun-cache \
+    bun add -g \
+    @anthropic-ai/claude-code@latest \
+    opencode-ai@latest \
+  && rm -rf /tmp/bun-cache
 
-USER dev
+USER ue4
