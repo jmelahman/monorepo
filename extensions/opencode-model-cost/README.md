@@ -70,8 +70,9 @@ Pass options through the object form of the plugin entry:
   else OpenCode shows that name (for example the prompt metadata). That is the
   trade-off for not replacing the built-in picker.
 - OpenCode's own redesigned picker can show prices for the highlighted model
-  with `"experimental": { "new-designs": true }` in `cli.json`. This plugin is
-  for showing prices on every row without changing the rest of the UI.
+  with [`"experimental": { "new-designs": true }`](https://opencode.ai/v2/docs/cli/config#debug-and-experimental)
+  in `cli.json`. This plugin is for showing prices on every row without
+  changing the rest of the UI.
 
 ## Development
 
