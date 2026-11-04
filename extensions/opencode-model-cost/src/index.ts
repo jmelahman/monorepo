@@ -4,11 +4,9 @@ import { withModelCost } from "./cost.js"
 export interface Options {
   /** Inserted between the model name and its price. Defaults to `" · "`. */
   readonly separator?: string
-  /** Show `"Free"` for models that cost nothing. Defaults to `false`. */
-  readonly includeFree?: boolean
   /**
-   * Pad the name so the price ends in this many characters, right-aligning it
-   * in the picker's title column. Undefined appends the price directly.
+   * Pad the name so the price ends in this many terminal cells, right-aligning
+   * it in the picker's title column. Undefined appends the price directly.
    */
   readonly padTo?: number
 }
@@ -35,7 +33,12 @@ export default Plugin.define({
 function readOptions(options: Readonly<Record<string, any>>): Options {
   return {
     separator: typeof options.separator === "string" ? options.separator : undefined,
-    includeFree: options.includeFree === true,
-    padTo: typeof options.padTo === "number" ? options.padTo : undefined,
+    padTo:
+      typeof options.padTo === "number" &&
+      Number.isSafeInteger(options.padTo) &&
+      options.padTo >= 0 &&
+      options.padTo <= 10_000
+        ? options.padTo
+        : undefined,
   }
 }

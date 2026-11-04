@@ -52,7 +52,6 @@ Pass options through the object form of the plugin entry:
       "package": "../extensions/opencode-model-cost",
       "options": {
         "separator": " · ",
-        "includeFree": false,
         "padTo": 52
       }
     }
@@ -60,17 +59,16 @@ Pass options through the object form of the plugin entry:
 }
 ```
 
-| Option        | Default     | Description                                                     |
-| ------------- | ----------- | --------------------------------------------------------------- |
-| `separator`   | `" · "`     | Text between the model name and the price.                      |
-| `includeFree` | `false`     | Append `Free` to models whose input price is zero.              |
-| `padTo`       | `undefined` | Pad the name so the price ends in this many characters.         |
+| Option      | Default     | Description                                             |
+| ----------- | ----------- | ------------------------------------------------------- |
+| `separator` | `" · "`     | Text between the model name and the price.              |
+| `padTo`     | `undefined` | Pad the name so the price ends at this terminal column. |
 
 ### `padTo`
 
 The picker left-aligns titles, so `padTo` is the only way a plugin can push the
 price toward the right edge: it pads the name with spaces until `name + price`
-is exactly `padTo` characters. The model dialog is 60 cells wide, which leaves
+is exactly `padTo` terminal cells. The model dialog is 60 cells wide, which leaves
 52 cells for a title with no trailing label, so `52` lines prices up with the
 built-in `Free` text. Long names are truncated to keep the price visible.
 

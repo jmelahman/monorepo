@@ -28,25 +28,27 @@ index ea8f970..86d7954 100644
    // OpenCode's own free models get their own group at the end of the list instead of joining "OpenCode".
    const freeGroup = (model: ModelInfo) =>
 diff --git a/packages/tui/src/component/model-options.tsx b/packages/tui/src/component/model-options.tsx
-index 561526b..9a74948 100644
+index 561526b..5854aae 100644
 --- a/packages/tui/src/component/model-options.tsx
 +++ b/packages/tui/src/component/model-options.tsx
-@@ -39,6 +39,14 @@ export function isFreeModel(model: { cost: ReadonlyArray<{ input: number }> }) {
+@@ -39,6 +39,16 @@ export function isFreeModel(model: { cost: ReadonlyArray<{ input: number }> }) {
    return model.cost.length > 0 && model.cost.every((cost) => cost.input === 0)
  }
  
 +/** The compact price shown in a picker row's trailing slot, or undefined when the catalog has none. */
-+export function formatModelPrice(model: { cost: ReadonlyArray<{ input: number; output: number }> }) {
++export function formatModelPrice(model: {
++  cost: ReadonlyArray<{ tier?: { readonly type: "context"; readonly size: number }; input: number; output: number }>
++}) {
 +  if (isFreeModel(model)) return "Free"
-+  const cost = model.cost[0]
++  const cost = model.cost.find((cost) => cost.tier === undefined) ?? model.cost[0]
 +  if (!cost) return undefined
-+  return `$${dollars(cost.input)}/$${dollars(cost.output)}`
++  return `${usd(cost.input)}/${usd(cost.output)}`
 +}
 +
  /** The favorite marker. A styled span keeps its color on the highlighted row, where plain trailing text turns secondary. */
  export function FavoriteMarker() {
    const theme = useTheme().surface("dialog")
-@@ -55,12 +63,7 @@ export function ModelDetail(props: {
+@@ -55,12 +65,7 @@ export function ModelDetail(props: {
    usage?: { readonly text: string; readonly danger?: boolean }
  }) {
    const theme = useTheme().surface("dialog")
@@ -60,11 +62,26 @@ index 561526b..9a74948 100644
    const facts = () =>
      [
        props.model.capabilities.input.map(modality).join(", "),
+@@ -105,8 +110,11 @@
+ 
+-function dollars(value: number) {
+-  return String(Number(value.toFixed(2)))
++function usd(value: number) {
++  if (!Number.isFinite(value) || value < 0) return "$?"
++  if (value === 0) return "$0"
++  if (value < 0.001) return "<$0.001"
++  return `$${Number(value.toFixed(4))}`
+ }
+ 
+ function modality(value: string) {
+   if (value === "pdf") return "PDF"
+   return value.charAt(0).toUpperCase() + value.slice(1)
+ }
 diff --git a/packages/tui/test/cli/cmd/tui/model-options.test.ts b/packages/tui/test/cli/cmd/tui/model-options.test.ts
-index 4499680..4dc0583 100644
+index 4499680..d66d758 100644
 --- a/packages/tui/test/cli/cmd/tui/model-options.test.ts
 +++ b/packages/tui/test/cli/cmd/tui/model-options.test.ts
-@@ -1,6 +1,24 @@
+@@ -1,6 +1,36 @@
  import { describe, expect, test } from "bun:test"
  import { go } from "fuzzysort"
 -import { prioritizeFavorites, sortModelOptions } from "../../../../src/component/model-options"
@@ -76,7 +93,19 @@ index 4499680..4dc0583 100644
 +  })
 +
 +  test("keeps fractional prices readable", () => {
-+    expect(formatModelPrice({ cost: [{ input: 0.125, output: 0.625 }] })).toBe("$0.13/$0.63")
++    expect(formatModelPrice({ cost: [{ input: 0.125, output: 0.625 }] })).toBe("$0.125/$0.625")
++  })
++
++  test("uses the untiered entry when context tiers are present", () => {
++    expect(
++      formatModelPrice({
++        cost: [{ tier: { type: "context", size: 200_000 }, input: 6, output: 22.5 }, { input: 3, output: 15 }],
++      }),
++    ).toBe("$3/$15")
++  })
++
++  test("shows sub-cent prices without rounding them to zero", () => {
++    expect(formatModelPrice({ cost: [{ input: 0.0001, output: 0.0002 }] })).toBe("<$0.001/<$0.001")
 +  })
 +
 +  test("labels a model with no input cost as Free", () => {

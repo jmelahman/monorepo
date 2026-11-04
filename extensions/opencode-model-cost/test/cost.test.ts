@@ -31,12 +31,6 @@ describe("formatModelCost", () => {
   test("leaves free models to the picker's built-in Free label", () => {
     expect(formatModelCost([{ input: 0, output: 0 }])).toBeUndefined()
   })
-
-  test("can label free models when asked", () => {
-    expect(
-      formatModelCost([{ input: 0, output: 0 }], { includeFree: true }),
-    ).toBe("Free")
-  })
 })
 
 describe("isFree", () => {
@@ -66,13 +60,26 @@ describe("withModelCost", () => {
   test("pads the name so the price ends at the given width", () => {
     const aligned = withModelCost("Claude Sonnet", paid, { padTo: 24 })
     expect(aligned).toBe("Claude Sonnet   · $3/$15")
-    expect(aligned).toHaveLength(24)
+    expect(Bun.stringWidth(aligned)).toBe(24)
   })
 
   test("truncates a long name instead of pushing the price out", () => {
     const aligned = withModelCost("A very long model name indeed", paid, { padTo: 24 })
     expect(aligned).toBe("A very long mo… · $3/$15")
-    expect(aligned).toHaveLength(24)
+    expect(Bun.stringWidth(aligned)).toBe(24)
+  })
+
+  test("aligns wide and emoji names by terminal cells", () => {
+    const aligned = withModelCost("模型😀", paid, { padTo: 24 })
+    expect(Bun.stringWidth(aligned)).toBe(24)
+    expect(aligned).toContain("模型😀")
+  })
+
+  test("truncates wide names without splitting a grapheme", () => {
+    const aligned = withModelCost("😀😀😀😀😀😀😀😀", paid, { padTo: 24 })
+    expect(Bun.stringWidth(aligned)).toBe(24)
+    expect(aligned).toContain("…")
+    expect(aligned).not.toContain("�")
   })
 
   test("does not pad when the width is already used by the price", () => {
@@ -81,5 +88,11 @@ describe("withModelCost", () => {
 
   test("does not pad a name that already carries the price", () => {
     expect(withModelCost("Claude Sonnet   · $3/$15", paid, { padTo: 24 })).toBe("Claude Sonnet   · $3/$15")
+  })
+
+  test("ignores invalid padding widths", () => {
+    for (const padTo of [Number.NaN, Number.POSITIVE_INFINITY, -1, 24.5, 1_000_001]) {
+      expect(withModelCost("Claude Sonnet", paid, { padTo })).toBe("Claude Sonnet · $3/$15")
+    }
   })
 })

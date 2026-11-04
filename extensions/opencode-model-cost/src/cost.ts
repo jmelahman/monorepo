@@ -7,16 +7,16 @@ export interface ModelCost {
 export interface CostFormatOptions {
   /** Inserted between the model name and its price. Defaults to `" · "`. */
   readonly separator?: string
-  /** Show a price for models that cost nothing. Defaults to `false`. */
-  readonly includeFree?: boolean
   /**
-   * Pad the name so the price ends in this many characters, right-aligning it
-   * inside the model picker's title column. Undefined leaves the name unpadded.
+   * Pad the name so the price ends in this many terminal cells, right-aligning
+   * it inside the model picker's title column. Undefined leaves the name
+   * unpadded.
    */
   readonly padTo?: number
 }
 
 const DEFAULT_SEPARATOR = " · "
+const MAX_PAD_TO = 10_000
 
 /**
  * Whether every input price is zero. Mirrors the model picker's own "Free"
@@ -27,12 +27,12 @@ export function isFree(cost: readonly ModelCost[]): boolean {
 }
 
 /**
- * A compact `$input/$output` price per million tokens, or `"Free"` when asked
- * to include free models. Undefined when there is no price to show.
+ * A compact `$input/$output` price per million tokens. Undefined when there is
+ * no price to show or the model is free.
  */
-export function formatModelCost(cost: readonly ModelCost[], options: CostFormatOptions = {}): string | undefined {
+export function formatModelCost(cost: readonly ModelCost[]): string | undefined {
   if (cost.length === 0) return undefined
-  if (isFree(cost)) return options.includeFree ? "Free" : undefined
+  if (isFree(cost)) return undefined
   const base = cost.find((tier) => tier.tier === undefined) ?? cost[0]
   if (!base) return undefined
   return `${usd(base.input)}/${usd(base.output)}`
@@ -40,24 +40,41 @@ export function formatModelCost(cost: readonly ModelCost[], options: CostFormatO
 
 /** Appends the price to a model's display name, idempotently. */
 export function withModelCost(name: string, cost: readonly ModelCost[], options: CostFormatOptions = {}): string {
-  const price = formatModelCost(cost, options)
+  const price = formatModelCost(cost)
   if (!price) return name
   const suffix = `${options.separator ?? DEFAULT_SEPARATOR}${price}`
   if (name.endsWith(suffix)) return name
-  if (options.padTo === undefined) return `${name}${suffix}`
+  if (!isValidPadTo(options.padTo)) return `${name}${suffix}`
   return padName(name, suffix, options.padTo)
 }
 
 /**
- * Pads the name so `name + suffix` is exactly `width` characters. The picker
- * left-aligns titles, so this is what pushes the price to the right edge. Long
- * names are truncated so the price always stays visible.
+ * Pads the name so `name + suffix` is exactly `width` terminal cells. The
+ * picker left-aligns titles, so this is what pushes the price to the right
+ * edge. Long names are truncated so the price always stays visible.
  */
 function padName(name: string, suffix: string, width: number): string {
-  const room = width - suffix.length
+  const room = width - Bun.stringWidth(suffix)
   if (room <= 0) return `${name}${suffix}`
-  const label = name.length > room ? `${name.slice(0, room - 1)}…` : name
-  return `${label.padEnd(room)}${suffix}`
+  const label = truncateToWidth(name, room)
+  return `${label}${" ".repeat(room - Bun.stringWidth(label))}${suffix}`
+}
+
+function truncateToWidth(value: string, width: number): string {
+  if (Bun.stringWidth(value) <= width) return value
+  if (width <= Bun.stringWidth("…")) return "…"
+
+  let result = ""
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" })
+  for (const { segment } of segmenter.segment(value)) {
+    if (Bun.stringWidth(`${result}${segment}…`) > width) break
+    result += segment
+  }
+  return `${result}…`
+}
+
+function isValidPadTo(value: number | undefined): value is number {
+  return value !== undefined && Number.isSafeInteger(value) && value >= 0 && value <= MAX_PAD_TO
 }
 
 function usd(value: number): string {
