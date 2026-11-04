@@ -3,7 +3,7 @@
   "plugins": [
     {
       "package": "../extensions/opencode-model-cost",
-      "options": { "padTo": 52 }
+      "options": { "separator": "", "padTo": 52 }
     }
   ]
 }
