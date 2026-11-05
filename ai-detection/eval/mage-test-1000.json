@@ -1,0 +1,482 @@
+{
+  "name": "MAGE test (1000-text sample)",
+  "n": 1000,
+  "humans": 512,
+  "machines": 488,
+  "words": 210746,
+  "tokens": 260817,
+  "auc": 0.5951508068647541,
+  "auc_95": [
+    0.5591320600665983,
+    0.6329016513511783
+  ],
+  "fixed_threshold": {
+    "threshold": 0.9015,
+    "accuracy": 0.647,
+    "precision": 0.7647058823529411,
+    "recall": 0.39959016393442626,
+    "specificity": 0.8828125,
+    "fpr": 0.1171875,
+    "f1": 0.5248990578734858,
+    "tp": 195,
+    "fp": 60,
+    "tn": 452,
+    "fn": 293,
+    "recall_95": [
+      0.3570793676351202,
+      0.44366943415361454
+    ],
+    "fpr_95": [
+      0.09213577125424062,
+      0.1479408195335915
+    ]
+  },
+  "cross_fit": {
+    "threshold": 0.8416934338883418,
+    "accuracy": 0.602,
+    "precision": 0.8125,
+    "recall": 0.23975409836065573,
+    "specificity": 0.947265625,
+    "fpr": 0.052734375,
+    "f1": 0.370253164556962,
+    "tp": 117,
+    "fp": 27,
+    "tn": 485,
+    "fn": 371,
+    "recall_95": [
+      0.20400123916153856,
+      0.279572185882733
+    ],
+    "fpr_95": [
+      0.03649230578873099,
+      0.07563799671337895
+    ],
+    "folds": 5,
+    "target_fpr": 0.05,
+    "fold_thresholds": [
+      0.8396101883821712,
+      0.8390589789437939,
+      0.8369648720377898,
+      0.8460575672643299,
+      0.846775562813625
+    ]
+  },
+  "domains": [
+    {
+      "name": "cmv",
+      "human": 38,
+      "machine": 45,
+      "tp": 13,
+      "fp": 0,
+      "tpr": 0.28888888888888886,
+      "fpr": 0
+    },
+    {
+      "name": "eli5",
+      "human": 53,
+      "machine": 55,
+      "tp": 14,
+      "fp": 0,
+      "tpr": 0.2545454545454545,
+      "fpr": 0
+    },
+    {
+      "name": "hswag",
+      "human": 61,
+      "machine": 66,
+      "tp": 18,
+      "fp": 9,
+      "tpr": 0.2727272727272727,
+      "fpr": 0.14754098360655737
+    },
+    {
+      "name": "roct",
+      "human": 56,
+      "machine": 54,
+      "tp": 10,
+      "fp": 11,
+      "tpr": 0.18518518518518517,
+      "fpr": 0.19642857142857142
+    },
+    {
+      "name": "sci_gen",
+      "human": 38,
+      "machine": 34,
+      "tp": 6,
+      "fp": 0,
+      "tpr": 0.17647058823529413,
+      "fpr": 0
+    },
+    {
+      "name": "squad",
+      "human": 47,
+      "machine": 52,
+      "tp": 7,
+      "fp": 1,
+      "tpr": 0.1346153846153846,
+      "fpr": 0.02127659574468085
+    },
+    {
+      "name": "tldr",
+      "human": 44,
+      "machine": 43,
+      "tp": 12,
+      "fp": 6,
+      "tpr": 0.27906976744186046,
+      "fpr": 0.13636363636363635
+    },
+    {
+      "name": "wp",
+      "human": 50,
+      "machine": 43,
+      "tp": 13,
+      "fp": 0,
+      "tpr": 0.3023255813953488,
+      "fpr": 0
+    },
+    {
+      "name": "xsum",
+      "human": 66,
+      "machine": 61,
+      "tp": 13,
+      "fp": 0,
+      "tpr": 0.21311475409836064,
+      "fpr": 0
+    },
+    {
+      "name": "yelp",
+      "human": 59,
+      "machine": 35,
+      "tp": 11,
+      "fp": 0,
+      "tpr": 0.3142857142857143,
+      "fpr": 0
+    }
+  ],
+  "machine_models": [
+    {
+      "name": "13B",
+      "human": 0,
+      "machine": 10,
+      "tp": 6,
+      "fp": 0,
+      "tpr": 0.6
+    },
+    {
+      "name": "30B",
+      "human": 0,
+      "machine": 17,
+      "tp": 13,
+      "fp": 0,
+      "tpr": 0.7647058823529411
+    },
+    {
+      "name": "65B",
+      "human": 0,
+      "machine": 15,
+      "tp": 11,
+      "fp": 0,
+      "tpr": 0.7333333333333333
+    },
+    {
+      "name": "7B",
+      "human": 0,
+      "machine": 17,
+      "tp": 12,
+      "fp": 0,
+      "tpr": 0.7058823529411765
+    },
+    {
+      "name": "GLM130B",
+      "human": 0,
+      "machine": 10,
+      "tp": 9,
+      "fp": 0,
+      "tpr": 0.9
+    },
+    {
+      "name": "bloom_7b",
+      "human": 0,
+      "machine": 16,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "flan_t5_base",
+      "human": 0,
+      "machine": 12,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "flan_t5_large",
+      "human": 0,
+      "machine": 21,
+      "tp": 1,
+      "fp": 0,
+      "tpr": 0.047619047619047616
+    },
+    {
+      "name": "flan_t5_small",
+      "human": 0,
+      "machine": 12,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "flan_t5_xl",
+      "human": 0,
+      "machine": 21,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "flan_t5_xxl",
+      "human": 0,
+      "machine": 25,
+      "tp": 5,
+      "fp": 0,
+      "tpr": 0.2
+    },
+    {
+      "name": "gpt-3.5-trubo",
+      "human": 0,
+      "machine": 46,
+      "tp": 9,
+      "fp": 0,
+      "tpr": 0.1956521739130435
+    },
+    {
+      "name": "gpt_j",
+      "human": 0,
+      "machine": 11,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "gpt_neox",
+      "human": 0,
+      "machine": 13,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "opt_1.3b",
+      "human": 0,
+      "machine": 14,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "opt_125m",
+      "human": 0,
+      "machine": 18,
+      "tp": 1,
+      "fp": 0,
+      "tpr": 0.05555555555555555
+    },
+    {
+      "name": "opt_13b",
+      "human": 0,
+      "machine": 14,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "opt_2.7b",
+      "human": 0,
+      "machine": 17,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "opt_30b",
+      "human": 0,
+      "machine": 17,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "opt_350m",
+      "human": 0,
+      "machine": 15,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "opt_6.7b",
+      "human": 0,
+      "machine": 12,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "opt_iml_30b",
+      "human": 0,
+      "machine": 13,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "opt_iml_max_1.3b",
+      "human": 0,
+      "machine": 8,
+      "tp": 0,
+      "fp": 0,
+      "tpr": 0
+    },
+    {
+      "name": "t0_11b",
+      "human": 0,
+      "machine": 13,
+      "tp": 2,
+      "fp": 0,
+      "tpr": 0.15384615384615385
+    },
+    {
+      "name": "t0_3b",
+      "human": 0,
+      "machine": 15,
+      "tp": 4,
+      "fp": 0,
+      "tpr": 0.26666666666666666
+    },
+    {
+      "name": "text-davinci-002",
+      "human": 0,
+      "machine": 37,
+      "tp": 20,
+      "fp": 0,
+      "tpr": 0.5405405405405406
+    },
+    {
+      "name": "text-davinci-003",
+      "human": 0,
+      "machine": 49,
+      "tp": 24,
+      "fp": 0,
+      "tpr": 0.4897959183673469
+    }
+  ],
+  "machine_strategies": [
+    {
+      "name": "continuation",
+      "human": 0,
+      "machine": 404,
+      "tp": 81,
+      "fp": 0,
+      "tpr": 0.2004950495049505
+    },
+    {
+      "name": "specified",
+      "human": 0,
+      "machine": 54,
+      "tp": 23,
+      "fp": 0,
+      "tpr": 0.42592592592592593
+    },
+    {
+      "name": "topical",
+      "human": 0,
+      "machine": 30,
+      "tp": 13,
+      "fp": 0,
+      "tpr": 0.43333333333333335
+    }
+  ],
+  "human_sources": [
+    {
+      "name": "cmv",
+      "human": 38,
+      "machine": 0,
+      "tp": 0,
+      "fp": 0,
+      "fpr": 0
+    },
+    {
+      "name": "eli5",
+      "human": 53,
+      "machine": 0,
+      "tp": 0,
+      "fp": 0,
+      "fpr": 0
+    },
+    {
+      "name": "hswag",
+      "human": 61,
+      "machine": 0,
+      "tp": 0,
+      "fp": 9,
+      "fpr": 0.14754098360655737
+    },
+    {
+      "name": "roct",
+      "human": 56,
+      "machine": 0,
+      "tp": 0,
+      "fp": 11,
+      "fpr": 0.19642857142857142
+    },
+    {
+      "name": "sci_gen",
+      "human": 38,
+      "machine": 0,
+      "tp": 0,
+      "fp": 0,
+      "fpr": 0
+    },
+    {
+      "name": "squad",
+      "human": 47,
+      "machine": 0,
+      "tp": 0,
+      "fp": 1,
+      "fpr": 0.02127659574468085
+    },
+    {
+      "name": "tldr",
+      "human": 44,
+      "machine": 0,
+      "tp": 0,
+      "fp": 6,
+      "fpr": 0.13636363636363635
+    },
+    {
+      "name": "wp",
+      "human": 50,
+      "machine": 0,
+      "tp": 0,
+      "fp": 0,
+      "fpr": 0
+    },
+    {
+      "name": "xsum",
+      "human": 66,
+      "machine": 0,
+      "tp": 0,
+      "fp": 0,
+      "fpr": 0
+    },
+    {
+      "name": "yelp",
+      "human": 59,
+      "machine": 0,
+      "tp": 0,
+      "fp": 0,
+      "fpr": 0
+    }
+  ]
+}

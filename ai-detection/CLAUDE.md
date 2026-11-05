@@ -1,10 +1,10 @@
 # local-ai-detection — Claude Notes
 
 A local detector for machine-generated text: llama.cpp embedded through yzma
-(`llm/`), the zero-shot Binoculars detector on top of it (`binoculars/`), and
-a CLI at the module root. The plan is to add an eval harness on public
-datasets (RAID, MAGE, M4GT-Bench), a trained classifier of our own that uses
-Binoculars' per-token scores among its features, and a TUI that highlights
+(`llm/`), the zero-shot Binoculars detector on top of it (`binoculars/`), a CLI
+at the module root, and an eval harness on public datasets (`eval/`, `cmd/eval`).
+The plan is to calibrate the threshold, train a classifier of our own that uses
+Binoculars' per-token scores among its features, and add a TUI that highlights
 tokens.
 
 ## Commands
@@ -13,6 +13,8 @@ tokens.
   skips unless they are already cached; `go run . <<< "some text"` fetches
   them (about 1.4 GB, into `~/.cache/local-ai-detection`).
 - Run the CLI: `go run . [--tokens] [--processor cpu] [file]`.
+- Benchmark: `go run ./cmd/eval score --data mage_test.csv --limit 1000 --out scores.csv`
+  then `go run ./cmd/eval report --scores scores.csv`. See `eval/README.md`.
 - Lint: `prek run --all-files`. It is the same set CI runs; prefer it over
   invoking golangci-lint or govulncheck directly, since the hooks pin
   versions and provision the tools.
@@ -29,6 +31,10 @@ tokens.
   unit-tested with hand-computed logits; `Detector` drives the observer and
   performer contexts in lockstep, batch by batch, since both models' full
   logits at a position are needed together.
+- `eval/` — the benchmark data model and metrics: CSV loading and seeded
+  sampling, ROC-AUC, threshold calibration at a target false-positive rate,
+  cross-fitting, and bootstrap/Wilson intervals. It does not load models.
+  `cmd/eval/` is its CLI and owns scoring, progress and the report.
 - `main.go` — the CLI, on Cobra. `main` does process plumbing only;
   everything testable lives in `run(ctx, args, stdin, stdout, stderr)`.
 - `internal/version/` — ldflags-stamped version with a `runtime/debug`
