@@ -209,3 +209,7 @@
 	shared = pypi
 	shared = manygo
 	shared = pybuild
+[subtree "document-viewer"]
+	remote = git@github.com:jmelahman/view.git
+	branch = master
+	shared = design

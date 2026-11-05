@@ -1,0 +1,19 @@
+{
+  "deps": {
+    "pdfjs-dist": {
+      "package": "pdfjs-dist",
+      "version": "6.5.438",
+      "files": [
+        "LICENSE",
+        "pdf.mjs",
+        "pdf.worker.min.mjs"
+      ],
+      "includes": [
+        {
+          "name": "pdfjs-dist",
+          "version": "6.5.438"
+        }
+      ]
+    }
+  }
+}

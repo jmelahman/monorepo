@@ -17,6 +17,7 @@ exclude: |
     .*\.min\.(css|js)|
     .*\.patch|
     notebook/web/vendor/.*|
+    document-viewer/vendor/.*|
     5-wild/src/ui/tracks/.*\.ogg
   )$
 

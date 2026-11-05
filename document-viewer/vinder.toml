@@ -1,0 +1,12 @@
+[deps.pdfjs-dist]
+package = "pdfjs-dist"
+
+# Vendored with vinder (../vinder): package.json pins the version, this file
+# says what goes into vendor/. Regenerate with `vinder sync`.
+
+[deps.pdfjs-dist.bundle]
+"pdf.mjs" = "pdfjs-dist"
+
+[deps.pdfjs-dist.copy]
+"pdf.worker.min.mjs" = "pdfjs-dist/build/pdf.worker.min.mjs"
+LICENSE = "pdfjs-dist/LICENSE"

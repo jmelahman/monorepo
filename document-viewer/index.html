@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>PDF Viewer</title>
+  <link rel="stylesheet" href="design/design.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="toolbar">
+    <div class="group">
+      <button type="button" id="file-button" popovertarget="file-menu" aria-haspopup="menu">File</button>
+      <div id="file-menu" class="menu" role="menu" aria-labelledby="file-button" popover>
+        <button type="button" role="menuitem" id="open">Open… <kbd>Ctrl+O</kbd></button>
+        <button type="button" role="menuitem" id="open-url">Open from URL…</button>
+      </div>
+      <input type="file" id="file" accept=".pdf,application/pdf" hidden>
+    </div>
+
+    <div class="group" id="page-controls" aria-label="Page navigation">
+      <button type="button" id="previous" class="icon" title="Previous page (Page Up)" aria-label="Previous page" disabled>
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <label class="page-number">
+        <span class="sr-only">Page number</span>
+        <input type="number" id="page" value="1" min="1" step="1" disabled>
+        <span id="page-count">/ 0</span>
+      </label>
+      <button type="button" id="next" class="icon" title="Next page (Page Down)" aria-label="Next page" disabled>
+        <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <div class="group end">
+      <button type="button" id="fullscreen" class="icon" title="Full screen (F)" aria-label="Full screen" aria-pressed="false" disabled>
+        <svg viewBox="0 0 24 24"><path d="M8 4H4v4M16 4h4v4M20 16v4h-4M4 16v4h4"/></svg>
+      </button>
+      <button type="button" id="invert" aria-pressed="false" title="Invert colors (I)" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 000 16z" fill="currentColor" stroke="none"/></svg>
+        Invert
+      </button>
+      <div class="zoom-controls">
+        <button type="button" id="zoom-out" class="icon" title="Zoom out (-)" aria-label="Zoom out" disabled>
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+        </button>
+        <label>
+          <span class="sr-only">Zoom</span>
+          <select id="zoom" disabled>
+            <option value="fit-page">Fit page</option>
+            <option value="fit-width">Fit width</option>
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1">100%</option>
+            <option value="1.25">125%</option>
+            <option value="1.5">150%</option>
+            <option value="2">200%</option>
+            <option value="3">300%</option>
+            <option value="4">400%</option>
+          </select>
+        </label>
+        <button type="button" id="zoom-in" class="icon" title="Zoom in (+)" aria-label="Zoom in" disabled>
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="workspace">
+    <section id="welcome" aria-labelledby="welcome-title">
+      <svg class="welcome-icon" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M15 5h24l12 12v42H15zM39 5v13h12M23 31h20M23 39h20M23 47h13"/>
+      </svg>
+      <h1 id="welcome-title">Open a PDF</h1>
+      <p>Drop a file here, paste one, or choose one from your device.</p>
+      <button type="button" id="welcome-open" class="primary">Choose PDF</button>
+      <small>Your document stays on your device.</small>
+    </section>
+
+    <div id="document" hidden>
+      <div id="pages" aria-label="PDF pages"></div>
+    </div>
+  </main>
+
+  <button type="button" id="exit-fullscreen" class="icon" title="Exit full screen (Esc)" aria-label="Exit full screen" hidden>
+    <svg viewBox="0 0 24 24"><path d="M4 8h4V4M20 8h-4V4M16 20v-4h4M8 20v-4H4"/></svg>
+  </button>
+
+  <footer class="status">
+    <span id="name">No document</span>
+    <span id="dimensions"></span>
+    <span id="message" role="status"></span>
+  </footer>
+
+  <dialog id="url-dialog">
+    <form method="dialog">
+      <h2>Open from URL</h2>
+      <label class="stacked">Address <input type="url" id="url-input" placeholder="https://" required></label>
+      <p>The site hosting the PDF must allow browser access (CORS).</p>
+      <div class="actions">
+        <button type="button" id="url-cancel">Cancel</button>
+        <button value="open" class="primary">Open</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="password-dialog">
+    <form method="dialog">
+      <h2>Protected PDF</h2>
+      <p id="password-help">This document needs a password.</p>
+      <label class="stacked">Password <input type="password" id="password-input" autocomplete="current-password" required></label>
+      <div class="actions">
+        <button type="button" id="password-cancel">Cancel</button>
+        <button value="open" class="primary">Unlock</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -145,10 +145,16 @@ locals {
       has_issues   = false
     }
     draw = {
+      description  = "A simple, client-side image editor "
       homepage_url = "http://jamison.lahman.dev/draw/"
     }
     write = {
+      description  = "A simple, client-side markdown editor"
       homepage_url = "http://jamison.lahman.dev/write/"
+    }
+    view = {
+      description  = "A simple, client-side document viewer"
+      homepage_url = "http://jamison.lahman.dev/view/"
     }
     vinder = {
       description = "Package manager for vendored dependencies"
