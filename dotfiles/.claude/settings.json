@@ -8,17 +8,17 @@
   },
   "permissions": {
     "allow": [
-      "Bash(*)",
-      "Edit(*)",
-      "Write(*)",
-      "Read(*)",
-      "Glob(*)",
-      "Grep(*)",
-      "WebFetch(*)",
-      "WebSearch(*)",
-      "NotebookEdit(*)",
-      "Agent(*)",
-      "LSP(*)",
+      "Bash",
+      "Edit",
+      "Write",
+      "Read",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "NotebookEdit",
+      "Agent",
+      "LSP",
       "mcp__kanban__*",
       "mcp__playwright__*"
     ]
