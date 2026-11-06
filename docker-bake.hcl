@@ -61,3 +61,24 @@ target "android-builder" {
     BUILDKIT_INLINE_CACHE = 1
   }
 }
+
+# The session image for opencycle's Unreal spike, built on Epic's image. Epic
+# publishes it for amd64 only and behind a GHCR login, so it stays out of the
+# default group: `docker login ghcr.io && docker buildx bake unreal-devcontainer`.
+target "unreal-devcontainer" {
+  context = "tools/containers/unreal"
+  dockerfile = "Dockerfile"
+  platforms = ["linux/amd64"]
+  cache_from = [
+    "ghcr.io/jmelahman/unreal-devcontainer:latest",
+  ]
+  tags = [
+    "ghcr.io/jmelahman/unreal-devcontainer:latest",
+  ]
+  labels = {
+    "org.opencontainers.image.source" = "https://github.com/jmelahman/monorepo"
+  }
+  args = {
+    BUILDKIT_INLINE_CACHE = 1
+  }
+}

@@ -1,12 +1,22 @@
 [devcontainer]
-# The host's display, GPU and audio, so Play can open a real window.
+# Built from tools/containers/unreal by `docker buildx bake unreal-devcontainer`.
+image = "ghcr.io/jmelahman/unreal-devcontainer:latest"
+# The host's display, GPU and audio, so Play can open a real window; the Unreal
+# checkout, which lives outside git; and the shader cache and OpenCode's data.
 mounts = [
   "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/wayland-1,target=${localEnv:XDG_RUNTIME_DIR}/wayland-1",
   "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/pulse/native,target=${localEnv:XDG_RUNTIME_DIR}/pulse/native",
   "type=bind,source=/dev/dri,target=/dev/dri",
+  "type=bind,source=${localEnv:HOME}/.cache/opencycle-neural/ue,target=/workspace/ue",
+  "type=volume,source=opencycle-ue-ddc,target=/workspace/ddc",
+  "type=bind,source=${localEnv:HOME}/.config/opencode/opencode.jsonc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/opencode/opencode.jsonc,readonly",
+  "type=bind,source=${localEnv:HOME}/.config/opencode/cli.json,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/opencode/cli.json,readonly",
+  "type=volume,source=opencycle-opencode-data,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local/share/opencode",
 ]
 
 [devcontainer.container_env]
+COLORTERM = "truecolor"
+VK_ICD_FILENAMES = "/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
 WAYLAND_DISPLAY = "wayland-1"
 XDG_RUNTIME_DIR = "${localEnv:XDG_RUNTIME_DIR}"
 
