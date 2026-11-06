@@ -44,11 +44,20 @@ func parseMTree(data []byte) map[string]time.Time {
 		if len(fields) == 0 {
 			continue
 		}
-		if fields[0] == "/set" || fields[0] == "/unset" {
-			haveDefault = false
+		// /set and /unset change only the keywords they name, so a
+		// `/set uid=0` keeps the default time an earlier /set gave.
+		switch fields[0] {
+		case "/set":
 			for _, f := range fields[1:] {
-				if t, ok := mtreeTime(f); ok && fields[0] == "/set" {
+				if t, ok := mtreeTime(f); ok {
 					defaultTime, haveDefault = t, true
+				}
+			}
+			continue
+		case "/unset":
+			for _, f := range fields[1:] {
+				if f == "time" || f == "all" {
+					haveDefault = false
 				}
 			}
 			continue

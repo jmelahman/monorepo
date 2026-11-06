@@ -310,6 +310,20 @@ func TestMTreeParsing(t *testing.T) {
 	}
 }
 
+func TestMTreeSetUnsetKeywords(t *testing.T) {
+	got := parseMTree([]byte("#mtree\n/set type=file time=1700000000.0\n./a\n/set uid=0\n./b\n/unset uid\n./c\n/unset time\n./d\n/set time=1700000001.0\n./e\n/unset all\n./f\n"))
+	for name, want := range map[string]int64{"a": 1700000000, "b": 1700000000, "c": 1700000000, "e": 1700000001} {
+		if got[name].Unix() != want {
+			t.Errorf("%s time = %v, want %d", name, got[name], want)
+		}
+	}
+	for _, name := range []string{"d", "f"} {
+		if _, ok := got[name]; ok {
+			t.Errorf("%s has a time after /unset", name)
+		}
+	}
+}
+
 // gzipMTree compresses text as a .MTREE member payload.
 func gzipMTree(t *testing.T, text string) []byte {
 	t.Helper()
