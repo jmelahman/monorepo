@@ -2,16 +2,19 @@
   "name": "OpenCycle UE Spike",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": "../.."
+    "context": "."
   },
   "workspaceMount": "source=${localEnv:HOME}/.cache/opencycle-neural/ue,target=/workspace/ue,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace/ue",
   "containerEnv": {
+    "COLORTERM": "truecolor",
     "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
   },
   "mounts": [
     "source=${localWorkspaceFolder},target=/workspace/opencycle,type=bind,readonly",
     "source=opencycle-ue-ddc,target=/workspace/ddc,type=volume",
+    "source=${localEnv:HOME}/.claude,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.claude,type=bind",
+    "source=${localEnv:HOME}/.claude.json,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.claude.json,type=bind",
     "source=${localEnv:HOME}/.config/opencode/opencode.jsonc,target=/home/ue4/.config/opencode/opencode.jsonc,type=bind,readonly",
     "source=${localEnv:HOME}/.config/opencode/cli.json,target=/home/ue4/.config/opencode/cli.json,type=bind,readonly",
     "source=opencycle-opencode-data,target=/home/ue4/.local/share/opencode,type=volume"
