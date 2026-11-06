@@ -5,6 +5,7 @@ import (
 	"debug/elf"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -480,6 +481,26 @@ func TestPkgconfigDeps(t *testing.T) {
 	pcSelf := pkgtest.Member{Name: "usr/lib/pkgconfig/demo.pc", Data: []byte("Requires: demo-core\n")}
 	if got := ruleIDs(pkgLint(t, db, pkgtest.Info("demo", "x86_64"), self, pcSelf))["PB816"]; got != 0 {
 		t.Errorf("self-shipped module: want no PB816, got %d", got)
+	}
+	// An operator glued to the name still ends it, as pkg-config reads it.
+	glued := pkgtest.Member{Name: "usr/lib/pkgconfig/demo.pc", Data: []byte("Requires: libpng>=1.6\n")}
+	if got := ruleIDs(pkgLint(t, db, pkgtest.Info("demo", "x86_64"), glued))["PB816"]; got != 1 {
+		t.Errorf("glued constraint: want 1 PB816, got %d", got)
+	}
+}
+
+func TestPcModules(t *testing.T) {
+	for in, want := range map[string][]string{
+		"foo >= 1.2, bar": {"foo", "bar"},
+		"foo>=1.2, bar":   {"foo", "bar"},
+		"foo>= 1.2 bar":   {"foo", "bar"},
+		"foo >=1.2 bar":   {"foo", "bar"},
+		"foo != 2 bar":    {"foo", "bar"},
+		"foo bar":         {"foo", "bar"},
+	} {
+		if got := pcModules(in); !slices.Equal(got, want) {
+			t.Errorf("pcModules(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 

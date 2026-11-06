@@ -603,26 +603,28 @@ func checkHookCoveredDeps(ctx *Context) []Finding {
 var pcRequiresRe = regexp.MustCompile(`(?m)^Requires(?:\.private)?:\s*(.+)$`)
 
 // pcModules extracts module names from a Requires value: names separated by
-// commas/whitespace, each optionally followed by a version constraint.
+// commas/whitespace, each optionally followed by a version constraint. As in
+// pkg-config, an operator ends a name even with no space before it, so
+// "foo>=1.2" and "foo>= 1.2" both name foo, and the version after it is not
+// read as another module.
 func pcModules(val string) []string {
 	var out []string
 	expectVersion := false
 	for _, tok := range strings.FieldsFunc(val, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' }) {
-		if tok == "" {
-			continue
-		}
-		if strings.ContainsAny(tok[:1], "<>=!") {
-			expectVersion = true
-			if len(tok) > 2 { // operator glued to version: ">=1.2"
-				expectVersion = false
-			}
-			continue
-		}
 		if expectVersion {
 			expectVersion = false
 			continue // the version operand
 		}
-		out = append(out, tok)
+		op := strings.IndexAny(tok, "<>=!")
+		if op < 0 {
+			out = append(out, tok)
+			continue
+		}
+		if op > 0 {
+			out = append(out, tok[:op])
+		}
+		// An operator with nothing glued after it takes the next word.
+		expectVersion = strings.TrimLeft(tok[op:], "<>=!") == ""
 	}
 	return out
 }
