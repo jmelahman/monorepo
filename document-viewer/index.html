@@ -18,12 +18,6 @@
         <button type="button" role="menuitem" id="open-url">Open from URL…</button>
       </div>
       <input type="file" id="file" accept=".pdf,application/pdf" hidden>
-      <button type="button" id="view-button" popovertarget="view-menu" aria-haspopup="menu">View</button>
-      <div id="view-menu" class="menu" role="menu" aria-labelledby="view-button" popover>
-        <button type="button" role="menuitemcheckbox" id="invert" aria-checked="false" disabled><span>Invert colors</span> <kbd>I</kbd></button>
-        <button type="button" role="menuitemcheckbox" id="theater" aria-checked="false" disabled><span>Theater mode</span> <kbd>T</kbd></button>
-        <button type="button" role="menuitemcheckbox" id="fullscreen" aria-checked="false" disabled><span>Full screen</span> <kbd>F</kbd></button>
-      </div>
     </div>
 
     <div class="group" id="page-controls" aria-label="Page navigation">
@@ -37,6 +31,19 @@
       </label>
       <button type="button" id="next" class="icon" title="Next page (Right or Page Down)" aria-label="Next page" disabled>
         <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <div class="group end">
+      <button type="button" id="invert" aria-pressed="false" title="Invert colors (I)" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 000 16z" fill="currentColor" stroke="none"/></svg>
+        Invert
+      </button>
+      <button type="button" id="theater" class="icon" title="Theater mode (T)" aria-label="Theater mode" aria-pressed="false" disabled>
+        <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="1"/></svg>
+      </button>
+      <button type="button" id="fullscreen" class="icon" title="Full screen (F)" aria-label="Full screen" aria-pressed="false" disabled>
+        <svg viewBox="0 0 24 24"><path d="M8 4H4v4M16 4h4v4M20 16v4h-4M4 16v4h4"/></svg>
       </button>
     </div>
   </header>

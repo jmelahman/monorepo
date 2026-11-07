@@ -234,27 +234,6 @@ button.primary:hover:not(:disabled) {
   transform: none;
 }
 
-.menu button span {
-  flex: 1;
-  text-align: left;
-}
-
-/* A small indicator ahead of the label shows whether a View option is on. */
-.menu button[role="menuitemcheckbox"]::before {
-  content: "";
-  flex: none;
-  width: 0.4375rem;
-  height: 0.4375rem;
-  margin-right: -0.75rem;
-  border: 1px solid var(--dim);
-  border-radius: 50%;
-}
-
-.menu button[aria-checked="true"]::before {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-
 .menu kbd {
   color: var(--dim);
   font: 400 0.6875rem/1 var(--mono);

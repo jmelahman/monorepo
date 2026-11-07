@@ -232,7 +232,7 @@ function goToPage(value) {
 
 function makePageViews(firstPage) {
   const firstViewport = firstPage.getViewport({ scale: 1 });
-  const inverted = $('invert').getAttribute('aria-checked') === 'true';
+  const inverted = $('invert').getAttribute('aria-pressed') === 'true';
   pageViews = Array.from({ length: pdf.numPages }, (_, index) => {
     const number = index + 1;
     const frame = document.createElement('div');
@@ -387,7 +387,7 @@ async function openUrl(address) {
 
 function applyInverted(inverted) {
   for (const view of pageViews) view.canvas.classList.toggle('inverted', inverted);
-  $('invert').setAttribute('aria-checked', String(inverted));
+  $('invert').setAttribute('aria-pressed', String(inverted));
   try {
     localStorage.setItem('viewer:invert', String(inverted));
   } catch {
@@ -398,7 +398,7 @@ function applyInverted(inverted) {
 // Theater mode hides the toolbar and status so only the document remains.
 function setTheater(enabled) {
   document.body.classList.toggle('chrome-hidden', enabled);
-  $('theater').setAttribute('aria-checked', String(enabled));
+  $('theater').setAttribute('aria-pressed', String(enabled));
   $('exit-theater').hidden = !enabled;
   if (enabled) $('exit-theater').focus();
 }
@@ -461,12 +461,12 @@ zoomInput.addEventListener('change', () => {
 });
 $('zoom-out').addEventListener('click', () => stepZoom(-1));
 $('zoom-in').addEventListener('click', () => stepZoom(1));
-$('invert').addEventListener('click', () => applyInverted($('invert').getAttribute('aria-checked') !== 'true'));
+$('invert').addEventListener('click', () => applyInverted($('invert').getAttribute('aria-pressed') !== 'true'));
 $('theater').addEventListener('click', () => setTheater(true));
 $('fullscreen').addEventListener('click', toggleFullscreen);
 $('exit-theater').addEventListener('click', () => setTheater(false));
 document.addEventListener('fullscreenchange', () => {
-  $('fullscreen').setAttribute('aria-checked', String(Boolean(document.fullscreenElement)));
+  $('fullscreen').setAttribute('aria-pressed', String(Boolean(document.fullscreenElement)));
 });
 
 const urlDialog = $('url-dialog');
@@ -535,7 +535,7 @@ document.addEventListener('keydown', (event) => {
   if (!pdf) return;
 
   if (key === 'i') {
-    applyInverted($('invert').getAttribute('aria-checked') !== 'true');
+    applyInverted($('invert').getAttribute('aria-pressed') !== 'true');
   } else if (key === 't') {
     setTheater(!document.body.classList.contains('chrome-hidden'));
   } else if (key === 'f') {
