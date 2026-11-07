@@ -74,58 +74,67 @@
       <label data-tools="text"><input type="checkbox" id="bold"> Bold</label>
     </div>
 
-    <div class="group end">
-      <label>
-        Zoom
-        <select id="zoom">
-          <option value="fit">Fit</option>
-          <option value="0.25">25%</option>
-          <option value="0.5">50%</option>
-          <option value="1">100%</option>
-          <option value="2">200%</option>
-          <option value="4">400%</option>
-        </select>
-      </label>
-    </div>
   </header>
 
   <div class="main">
-    <div id="tools" role="radiogroup" aria-label="Tools" aria-orientation="vertical">
-      <button type="button" class="icon" data-tool="brush" title="Brush (B)" aria-label="Brush">
-        <svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19zM14 7l3 3"/></svg>
-      </button>
-      <button type="button" class="icon" data-tool="eraser" title="Eraser (E)" aria-label="Eraser">
-        <svg viewBox="0 0 24 24"><path d="M8 20l-4-4L14 6l6 6-8 8H8zM9 11l6 6M12 20h8"/></svg>
-      </button>
-      <button type="button" class="icon" data-tool="line" title="Line (L): hold Shift to snap" aria-label="Line">
-        <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg>
-      </button>
-      <button type="button" class="icon" data-tool="arrow" title="Arrow (A): hold Shift to snap" aria-label="Arrow">
-        <svg viewBox="0 0 24 24"><path d="M5 19L19 5M11 5h8v8"/></svg>
-      </button>
-      <button type="button" class="icon" data-tool="rect" title="Rectangle (R): hold Shift for a square" aria-label="Rectangle">
-        <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
-      </button>
-      <button type="button" class="icon" data-tool="ellipse" title="Ellipse (O): hold Shift for a circle" aria-label="Ellipse">
-        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
-      </button>
-      <button type="button" class="icon" data-tool="text" title="Text (T)" aria-label="Text">
-        <svg viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></svg>
-      </button>
-      <button type="button" class="icon" data-tool="fill" title="Fill (G)" aria-label="Fill">
-        <svg viewBox="0 0 24 24"><path d="M11 3l8 8-7 7a2 2 0 01-3 0l-5-5a2 2 0 010-3zM4 12h14M20 15s2 2.5 2 4a2 2 0 01-4 0c0-1.5 2-4 2-4z"/></svg>
-      </button>
-      <button type="button" class="icon" data-tool="eyedropper" title="Pick color (I)" aria-label="Pick color">
-        <svg viewBox="0 0 24 24"><path d="M17 3.5a2.5 2.5 0 013.5 3.5L17 10.5 13.5 7zM14.5 8L5 17.5V20h2.5L17 10.5"/></svg>
-      </button>
-    </div>
-
-    <main id="workspace">
-      <div id="stage">
-        <div id="layers"></div>
-        <canvas id="overlay"></canvas>
+    <div class="canvas-area">
+      <div id="tools" role="radiogroup" aria-label="Tools" aria-orientation="vertical">
+        <button type="button" class="icon" data-tool="brush" title="Brush (B)" aria-label="Brush">
+          <svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19zM14 7l3 3"/></svg>
+        </button>
+        <button type="button" class="icon" data-tool="eraser" title="Eraser (E)" aria-label="Eraser">
+          <svg viewBox="0 0 24 24"><path d="M8 20l-4-4L14 6l6 6-8 8H8zM9 11l6 6M12 20h8"/></svg>
+        </button>
+        <button type="button" class="icon" data-tool="line" title="Line (L): hold Shift to snap" aria-label="Line">
+          <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg>
+        </button>
+        <button type="button" class="icon" data-tool="arrow" title="Arrow (A): hold Shift to snap" aria-label="Arrow">
+          <svg viewBox="0 0 24 24"><path d="M5 19L19 5M11 5h8v8"/></svg>
+        </button>
+        <button type="button" class="icon" data-tool="rect" title="Rectangle (R): hold Shift for a square" aria-label="Rectangle">
+          <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
+        </button>
+        <button type="button" class="icon" data-tool="ellipse" title="Ellipse (O): hold Shift for a circle" aria-label="Ellipse">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
+        </button>
+        <button type="button" class="icon" data-tool="text" title="Text (T)" aria-label="Text">
+          <svg viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></svg>
+        </button>
+        <button type="button" class="icon" data-tool="fill" title="Fill (G)" aria-label="Fill">
+          <svg viewBox="0 0 24 24"><path d="M11 3l8 8-7 7a2 2 0 01-3 0l-5-5a2 2 0 010-3zM4 12h14M20 15s2 2.5 2 4a2 2 0 01-4 0c0-1.5 2-4 2-4z"/></svg>
+        </button>
+        <button type="button" class="icon" data-tool="eyedropper" title="Pick color (I)" aria-label="Pick color">
+          <svg viewBox="0 0 24 24"><path d="M17 3.5a2.5 2.5 0 013.5 3.5L17 10.5 13.5 7zM14.5 8L5 17.5V20h2.5L17 10.5"/></svg>
+        </button>
       </div>
-    </main>
+
+      <main id="workspace">
+        <div id="stage">
+          <div id="layers"></div>
+          <canvas id="overlay"></canvas>
+        </div>
+      </main>
+
+      <div class="status">
+        <span id="dims"></span>
+        <span id="pos"></span>
+        <span id="message"></span>
+      </div>
+
+      <div class="zoom">
+        <label>
+          Zoom
+          <select id="zoom">
+            <option value="fit">Fit</option>
+            <option value="0.25">25%</option>
+            <option value="0.5">50%</option>
+            <option value="1">100%</option>
+            <option value="2">200%</option>
+            <option value="4">400%</option>
+          </select>
+        </label>
+      </div>
+    </div>
 
     <aside class="panel" aria-label="Layers">
       <div class="panel-head">
@@ -154,12 +163,6 @@
       </div>
     </aside>
   </div>
-
-  <footer class="status">
-    <span id="dims"></span>
-    <span id="pos"></span>
-    <span id="message"></span>
-  </footer>
 
   <dialog id="new-dialog">
     <form method="dialog">

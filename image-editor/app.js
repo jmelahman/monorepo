@@ -89,10 +89,13 @@ function setCanvasSize(w, h) {
 
 function applyZoom() {
   if (zoomInput.value === 'fit') {
+    const pad = getComputedStyle(workspace);
+    const padX = parseFloat(pad.paddingLeft) + parseFloat(pad.paddingRight);
+    const padY = parseFloat(pad.paddingTop) + parseFloat(pad.paddingBottom);
     zoom = Math.min(
       1,
-      (workspace.clientWidth - 32) / overlay.width,
-      (workspace.clientHeight - 32) / overlay.height,
+      (workspace.clientWidth - padX) / overlay.width,
+      (workspace.clientHeight - padY) / overlay.height,
     );
   } else {
     zoom = Number(zoomInput.value);
@@ -1083,6 +1086,8 @@ for (const menu of document.querySelectorAll('.menu')) {
     const { left, bottom } = button.getBoundingClientRect();
     menu.style.left = `${left}px`;
     menu.style.top = `${bottom + 4}px`;
+    // A short window scrolls the menu instead of letting it run off the bottom.
+    menu.style.maxHeight = `${window.innerHeight - bottom - 12}px`;
   });
   menu.addEventListener('toggle', (e) => {
     if (e.newState === 'open') menu.querySelector('button').focus();
@@ -1205,6 +1210,8 @@ zoomInput.addEventListener('change', () => {
   applyZoom();
 });
 window.addEventListener('resize', applyZoom);
+// Also tracks the workspace while the layers panel animates open or closed.
+new ResizeObserver(applyZoom).observe(workspace);
 
 // Ctrl+wheel (and trackpad pinch, which browsers report the same way) zooms
 // the canvas instead of the page; Shift+wheel always pans sideways.
@@ -1229,7 +1236,6 @@ $('panel-toggle').addEventListener('click', (e) => {
   e.currentTarget.title = label;
   e.currentTarget.setAttribute('aria-label', label);
   e.currentTarget.setAttribute('aria-expanded', String(!collapsed));
-  applyZoom();
 });
 
 const TOOL_KEYS = { b: 'brush', e: 'eraser', l: 'line', a: 'arrow', r: 'rect', o: 'ellipse', t: 'text', g: 'fill', i: 'eyedropper' };
