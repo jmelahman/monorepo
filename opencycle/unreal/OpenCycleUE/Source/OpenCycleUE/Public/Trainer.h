@@ -23,7 +23,7 @@ public:
 };
 
 // Power from the keyboard: hold Up or W to push harder and Down or S to ease off. Cadence follows
-// power, roughly, so the rider's sway has a rhythm to follow.
+// power, roughly.
 class FKeyboardTrainer : public ITrainer
 {
 public:

@@ -16,6 +16,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Paths.h"
+#include "RidePlayerController.h"
 #include "RideTrack.h"
 #include "UnrealClient.h"
 
@@ -27,6 +28,17 @@ constexpr float SensorWidth = 23.76f;
 constexpr float FocalLength = 16.f; // mm, as the stills
 constexpr float PhysicsStep = 1.f / 120.f;
 } // namespace
+
+const TArray<FString> ARidePawn::TrainerSources = {TEXT("keyboard"), TEXT("sim")};
+
+bool ARidePawn::Automated()
+{
+	const TCHAR* Line = FCommandLine::Get();
+	float Unused;
+	FString Text;
+	return FParse::Value(Line, TEXT("RideStart="), Unused) || FParse::Value(Line, TEXT("RideWatts="), Unused) ||
+	       FParse::Value(Line, TEXT("RideShots="), Text) || FParse::Param(Line, TEXT("RideNoMenu"));
+}
 
 ARidePawn::ARidePawn()
 {
@@ -69,6 +81,7 @@ void ARidePawn::BeginPlay()
 		Rain->SetStaticMesh(Track->RainShell);
 	}
 	ReadCommandLine();
+	bStarted = bStarted || Automated();
 	Distance = StartMetres * 100.f;
 	FindWeather();
 	ApplyWeather();
@@ -105,24 +118,9 @@ void ARidePawn::ReadCommandLine()
 {
 	const TCHAR* Line = FCommandLine::Get();
 	FParse::Value(Line, TEXT("RideStart="), StartMetres);
-	FString Source = TEXT("keyboard");
+	FString Source = TrainerSources[0];
 	FParse::Value(Line, TEXT("RideTrainer="), Source);
-	if (Source == TEXT("sim"))
-	{
-		Trainer = MakeUnique<FBleTrainer>(MakeUnique<FSimulatedLink>(&Legs));
-	}
-	else
-	{
-		// The keyboard trainer reads the legs; this proxy keeps one owner for both cases.
-		struct FLegs : ITrainer
-		{
-			const FKeyboardTrainer* Legs;
-			explicit FLegs(const FKeyboardTrainer* In) : Legs(In) {}
-			virtual FString Name() const override { return Legs->Name(); }
-			virtual FTrainerReading Read() const override { return Legs->Read(); }
-		};
-		Trainer = MakeUnique<FLegs>(&Legs);
-	}
+	UseTrainer(TrainerSources.Contains(Source) ? Source : TrainerSources[0]);
 	float Watts = 0.f;
 	if (FParse::Value(Line, TEXT("RideWatts="), Watts))
 	{
@@ -143,6 +141,25 @@ void ARidePawn::ReadCommandLine()
 	{
 		ShotDir = FPaths::ProjectSavedDir() / TEXT("Ride");
 	}
+}
+
+void ARidePawn::UseTrainer(const FString& Source)
+{
+	TrainerSource = Source;
+	if (Source == TEXT("sim"))
+	{
+		Trainer = MakeUnique<FBleTrainer>(MakeUnique<FSimulatedLink>(&Legs));
+		return;
+	}
+	// The keyboard trainer reads the legs; this proxy keeps one owner for both cases.
+	struct FLegs : ITrainer
+	{
+		const FKeyboardTrainer* Legs;
+		explicit FLegs(const FKeyboardTrainer* In) : Legs(In) {}
+		virtual FString Name() const override { return Legs->Name(); }
+		virtual FTrainerReading Read() const override { return Legs->Read(); }
+	};
+	Trainer = MakeUnique<FLegs>(&Legs);
 }
 
 void ARidePawn::Automate(float Dt)
@@ -181,11 +198,15 @@ void ARidePawn::ReadKeys()
 	const bool Up = Player->IsInputKeyDown(EKeys::Up) || Player->IsInputKeyDown(EKeys::W);
 	const bool Down = Player->IsInputKeyDown(EKeys::Down) || Player->IsInputKeyDown(EKeys::S);
 	Legs.Direction = (Up ? 1 : 0) - (Down ? 1 : 0);
-	if (Player->WasInputKeyJustPressed(EKeys::P) || Player->WasInputKeyJustPressed(EKeys::SpaceBar))
+	const bool bMenuKey = Player->WasInputKeyJustPressed(EKeys::Escape) || Player->WasInputKeyJustPressed(EKeys::P) ||
+	                      Player->WasInputKeyJustPressed(EKeys::SpaceBar) ||
+	                      Player->WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
+	ARidePlayerController* Rides = Cast<ARidePlayerController>(Player);
+	if (bMenuKey && Rides && !Automated())
 	{
-		bPaused = !bPaused;
+		Rides->ShowPause();
 	}
-	if (Player->WasInputKeyJustPressed(EKeys::Escape))
+	else if (Player->WasInputKeyJustPressed(EKeys::Escape))
 	{
 		UKismetSystemLibrary::QuitGame(this, Player, EQuitPreference::Quit, false);
 	}
@@ -211,6 +232,11 @@ void ARidePawn::Ride(float Dt)
 		Distance = Track->Length();
 		Speed = 0.f;
 		bFinished = true;
+		ARidePlayerController* Rides = GetController<ARidePlayerController>();
+		if (Rides && !Automated())
+		{
+			Rides->ShowPause();
+		}
 	}
 }
 

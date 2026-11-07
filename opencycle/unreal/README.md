@@ -20,8 +20,16 @@ the desktop and resets on full-density frames. A GPU pod has no copy and renders
 
 `ARidePawn` carries the rider along the path at the speed their power gives (`RidePhysics.h`), with
 the camera the stills use, the weather following where they are and the rain carried round them.
-For now power comes from the keyboard: W or Up adds watts, S or Down takes them away, Space pauses,
-Esc quits. The track comes from `/Game/Coast/Ride/DA_RideTrack`, which `ride_track.py` writes.
+For now power comes from the keyboard: W or Up adds watts, S or Down takes them away. The track comes
+from `/Game/Coast/Ride/DA_RideTrack`, which `ride_track.py` writes.
+
+A ride opens on a start screen that picks where power comes from. Esc, P or Space pauses, and the
+pause menu resumes, goes back to the start, or quits. Both reach the video settings: an overall
+quality, the scalability groups one by one, render scale, a frame-rate cap, VSync and the window,
+applied at once and kept in the engine's `GameUserSettings.ini`. `URideMenu` builds all three pages
+in C++, with no Blueprint asset, and `ARidePlayerController` opens it. A ride started with
+`-RideStart`, `-RideWatts`, `-RideShots` or `-RideNoMenu` skips the menus and renders at Epic,
+whatever the player chose, so stills and tests don't change with someone's settings.
 `ARideHUD` shows speed, power, cadence, heart rate, grade, distance and time, a map of the course
 and its height profile.
 
@@ -44,6 +52,7 @@ bash scripts/ue_run.sh ride_track.py ride_track.log    # after make_coast.py, or
 bash scripts/play.sh                                   # ride it in the editor's -game mode
 bash scripts/package.sh                                # a standalone Linux build in out/package
 bash scripts/ride_test.sh 250 15,45 0 -RideTrainer=sim  # offscreen: watts, shot times, start metres
+OC_TOUR=1 bash scripts/ride_test.sh                     # offscreen: screenshot each menu page
 tests/run.sh                                           # physics and Bluetooth, without the engine
 ```
 

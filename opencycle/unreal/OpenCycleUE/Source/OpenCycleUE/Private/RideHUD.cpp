@@ -10,7 +10,7 @@ void ARideHUD::DrawHUD()
 {
 	Super::DrawHUD();
 	const ARidePawn* Rider = Cast<ARidePawn>(GetOwningPawn());
-	if (!Rider || !Canvas)
+	if (!Rider || !Canvas || !Rider->bStarted)
 	{
 		return;
 	}
@@ -25,10 +25,6 @@ void ARideHUD::DrawHUD()
 	if (Rider->Reading.HeartRateBpm > 0.0)
 	{
 		Rows.Insert(FString::Printf(TEXT("%.0f bpm"), Rider->Reading.HeartRateBpm), 2);
-	}
-	if (Rider->bFinished || Rider->bPaused)
-	{
-		Rows.Add(Rider->bFinished ? TEXT("Finished") : TEXT("Paused"));
 	}
 	UFont* Font = GEngine->GetLargeFont();
 	const float Scale = Canvas->ClipY / 720.f;
@@ -50,7 +46,7 @@ void ARideHUD::DrawHUD()
 		DrawText(Row, FLinearColor::White, 40.f * Scale, Y, Font, Scale * 1.2f);
 		Y += Line;
 	}
-	const FString Help = FString::Printf(TEXT("%s   W/S power   Space pause   Esc quit"), *Rider->TrainerName());
+	const FString Help = FString::Printf(TEXT("%s   W/S power   Esc menu"), *Rider->TrainerName());
 	DrawText(Help, FLinearColor(1.f, 1.f, 1.f, 0.6f), 24.f * Scale, Canvas->ClipY - Line, GEngine->GetSmallFont(), Scale);
 }
 

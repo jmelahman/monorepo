@@ -1,6 +1,6 @@
 // The rider: carried along the track at the speed their power gives, with the camera where the
-// stills put it (keeping left, eye height, looking a few metres up the road, swaying with the
-// pedals), the weather following where they are, and the rain shells carried round them.
+// stills put it (keeping left, eye height, looking a few metres up the road), the weather following
+// where they are, and the rain shells carried round them.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -43,9 +43,19 @@ public:
 	float Elapsed = 0.f;  // seconds riding
 	bool bPaused = false;
 	bool bFinished = false;
+	bool bStarted = false; // off the start screen
 	FTrainerReading Reading;
 	FString TrainerName() const;
 	float TrackLength() const;
+
+	// Where power comes from: "keyboard", or "sim", a Bluetooth trainer played from the keys.
+	static const TArray<FString> TrainerSources;
+	FString TrainerSource;
+	void UseTrainer(const FString& Source);
+
+	// An unattended ride, for tests and stills: any of -RideStart, -RideWatts, -RideShots or
+	// -RideNoMenu skips the start screen and the menus.
+	static bool Automated();
 
 private:
 	TUniquePtr<ITrainer> Trainer;
@@ -56,7 +66,8 @@ private:
 
 	// Unattended rides for tests and stills, from the command line: -RideStart=METRES,
 	// -RideWatts=W (held), -RideShots=SECONDS,SECONDS,... (screenshots with the HUD, into
-	// -RideShotDir=), then quit. -RideTrainer=keyboard|sim picks where power comes from. A status line is logged every few seconds either way.
+	// -RideShotDir=), then quit. -RideTrainer=keyboard|sim picks where power comes from, and is
+	// only the first choice on the start screen. A status line is logged every few seconds.
 	TArray<float> ShotTimes;
 	int32 NextShot = 0;
 	FString ShotDir;
