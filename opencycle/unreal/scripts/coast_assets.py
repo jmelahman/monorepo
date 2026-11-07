@@ -267,7 +267,7 @@ def terrain_material():
         g.lerp(
             green(g, forest["diff"], (0.13, 0.09, 0.05), 2.0),
             green(g, forest["diff"], (0.07, 0.09, 0.03), 2.0),
-            g.saturate(g.world_noise(0.0012, 0.2, 0.9, 3)),
+            g.saturate(g.world_noise(0.0012, 0.35, 1.05, 3)),
         ),
         0.7,
     )
@@ -307,6 +307,12 @@ def terrain_material():
     wooded_far = g.mul(forest_w, g.saturate(g.mul(g.add(distance, -30000.0), 1.0 / 40000.0)))
     bare_rock = g.add(g.mul(wooded_far, -0.9), 1.0)
     ground = g.blend_sets(ground, rock, g.mul(rock_w, bare_rock))
+    # And from afar it is the canopy's green, not the floor's brown, that a wooded hill shows.
+    ground["diff"] = g.lerp(
+        ground["diff"],
+        green(g, ground["diff"], (0.05, 0.075, 0.03), 2.0),
+        g.mul(wooded_far, 0.75),
+    )
     # Steep faces: a top-down mapping smears any texture into vertical stripes there, so cliffs take
     # rock projected from the side (biplanar, X and Y), with a flat normal since the set's normals
     # are for the top projection.
