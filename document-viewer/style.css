@@ -29,9 +29,13 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.375rem 0.875rem;
-  min-height: 3rem;
-  padding: 0.375rem 0.5rem;
-  border-bottom: 1px solid var(--rule);
+  position: relative;
+  z-index: 2;
+  min-height: 3.25rem;
+  padding: 0.375rem 0.625rem;
+  background: var(--ink);
+  border-bottom: 1px solid var(--edge);
+  box-shadow: var(--shadow-bar);
 }
 
 .group,
@@ -44,7 +48,7 @@ body {
 
 .toolbar > .group + .group {
   padding-left: 0.875rem;
-  border-left: 1px solid var(--rule);
+  border-left: 1px solid var(--edge);
 }
 
 .group.end {
@@ -58,8 +62,8 @@ input[type="url"],
 input[type="password"] {
   height: var(--control);
   padding: 0 0.7rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
   background: transparent;
   color: var(--chalk);
   transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
@@ -87,7 +91,7 @@ select,
 input[type="number"],
 input[type="url"],
 input[type="password"] {
-  background: var(--ink);
+  background: transparent;
   font: 400 0.8125rem/1 var(--mono);
   font-variant-numeric: tabular-nums;
 }
@@ -134,20 +138,20 @@ button.icon svg {
 }
 
 button[aria-pressed="true"] {
-  border-color: var(--accent);
+  border-color: var(--accent-ring);
   background: var(--accent-soft);
   color: var(--chalk);
 }
 
 button.primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 button.primary:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--on-accent);
+  border-color: var(--primary);
+  color: var(--on-primary);
   filter: brightness(1.08);
 }
 
@@ -183,14 +187,30 @@ button.primary:hover:not(:disabled) {
   min-width: 13rem;
   margin: 0;
   padding: 0.25rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 0;
+  border-radius: var(--radius-lg);
   background: var(--ink);
   color: var(--chalk);
-  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.3);
+  box-shadow: var(--float);
+}
+
+/* Opens with a quick fade and a small slide down; closing is instant. */
+.menu:popover-open {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity 110ms var(--ease-out),
+    translate 110ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 -4px;
+  }
 }
 
 .menu button {
+  /* Concentric with the menu: its radius less the menu's padding. */
+  border-radius: max(0px, calc(var(--radius-lg) - 0.25rem));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -230,7 +250,7 @@ button[aria-haspopup="menu"][aria-expanded="true"] {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
-  background: var(--ink-2);
+  background: var(--surface);
 }
 
 #workspace.dragover {
@@ -282,7 +302,7 @@ button[aria-haspopup="menu"][aria-expanded="true"] {
   min-width: 100%;
   min-height: 100%;
   width: max-content;
-  padding: 1.5rem;
+  padding: 1.5rem 1.5rem 4rem;
 }
 
 #pages {
@@ -306,9 +326,9 @@ button[aria-haspopup="menu"][aria-expanded="true"] {
   top: 0.75rem;
   left: 50%;
   padding: 0.35rem 0.6rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: var(--ink);
+  box-shadow: var(--float);
   color: var(--chalk);
   font: 400 0.75rem/1 var(--sans);
   transform: translateX(-50%);
@@ -334,18 +354,26 @@ body.chrome-hidden .status {
   top: 0.75rem;
   right: 0.75rem;
   background: var(--ink);
-  box-shadow: 0 0.25rem 1rem rgb(0 0 0 / 0.25);
+  box-shadow: var(--float);
 }
 
+/* Floats over the foot of the document, which keeps room below its last page. */
 .status {
+  position: fixed;
+  z-index: 1;
+  bottom: 1rem;
+  left: 1rem;
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  min-height: 2rem;
-  padding: 0.4rem 0.5rem;
-  border-top: 1px solid var(--rule);
+  gap: 1rem;
+  max-width: calc(100vw - 2rem);
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--ink);
+  box-shadow: var(--float);
   color: var(--dim);
-  font: 400 0.75rem/1.4 var(--mono);
+  font: 400 0.75rem/1 var(--mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -356,21 +384,24 @@ body.chrome-hidden .status {
   white-space: nowrap;
 }
 
+.status span:empty {
+  display: none;
+}
+
 #message {
-  margin-left: auto;
   overflow: hidden;
   font-family: var(--sans);
-  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 dialog {
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 0;
+  border-radius: var(--radius-lg);
   background: var(--ink);
   color: var(--chalk);
   padding: 1.25rem;
+  box-shadow: var(--float);
 }
 
 dialog::backdrop {
@@ -385,7 +416,7 @@ dialog form {
 dialog h2 {
   margin: 0;
   padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--edge);
   font: 600 1.0625rem/1 var(--cond);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -437,7 +468,7 @@ dialog .actions {
   }
 
   #document {
-    padding: 0.75rem;
+    padding: 0.75rem 0.75rem 4rem;
   }
 
   #pages {
