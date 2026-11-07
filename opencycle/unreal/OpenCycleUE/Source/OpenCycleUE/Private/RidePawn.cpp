@@ -206,7 +206,6 @@ void ARidePawn::Ride(float Dt)
 		Distance += Speed * 100.f * H;
 	}
 	Elapsed += Dt;
-	CrankPhase += 2.f * PI * Reading.CadenceRpm / 60.f * Dt;
 	if (!Track->bClosed && Distance >= Track->Length())
 	{
 		Distance = Track->Length();
@@ -225,13 +224,7 @@ void ARidePawn::Place()
 	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
 	const float Rise = Track->Height(Track->Wrap(S + GradeSpan)) - Track->Height(S);
 	const float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
-	// The rider's sway follows the pedals and fades when they stop pushing.
-	const float Amount = SwayAmount * FMath::Clamp(Speed / 3.f, 0.f, 1.f);
-	const float C = CrankPhase;
-	const float Lift = Amount * (0.9f * FMath::Sin(2.f * C) + 0.4f * FMath::Sin(0.37f * C + 1.f));
-	const float Tilt = Amount * (0.7f * FMath::Sin(C) + 0.25f * FMath::Sin(0.23f * C + 2.f));
-	const float Turn = Amount * (0.35f * FMath::Sin(0.5f * C + 0.5f) + 0.2f * FMath::Sin(0.17f * C));
-	SetActorLocationAndRotation(Eye + FVector(0, 0, Lift), FRotator(Pitch, Yaw + Turn, Tilt));
+	SetActorLocationAndRotation(Eye, FRotator(Pitch, Yaw, 0.f));
 }
 
 void ARidePawn::FindWeather()

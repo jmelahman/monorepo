@@ -34,7 +34,6 @@ public:
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
 
 	UPROPERTY(EditAnywhere) float EyeHeight = 150.f; // cm above the road
-	UPROPERTY(EditAnywhere) float SwayAmount = 1.6f; // as make_coast_ride.py's OC_SWAY
 	UPROPERTY(EditAnywhere) float StartMetres = 0.f;
 
 	// What the HUD shows.
@@ -53,7 +52,6 @@ private:
 	// The keys always drive these legs: as the rider's power, or as a simulated trainer's rider.
 	FKeyboardTrainer Legs;
 	OpenCycle::FRider Rider;
-	float CrankPhase = 0.f;
 	float WeatherClock = 0.f;
 
 	// Unattended rides for tests and stills, from the command line: -RideStart=METRES,
