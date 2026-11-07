@@ -25,10 +25,13 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.375rem 0.875rem;
-  min-height: 3rem;
-  padding: 0.375rem 0.5rem;
+  position: relative;
+  z-index: 2;
+  min-height: 3.25rem;
+  padding: 0.375rem 0.625rem;
   background: var(--ink);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--edge);
+  box-shadow: var(--shadow-bar);
 }
 
 .group label,
@@ -48,7 +51,7 @@ dialog h2 {
 
 .toolbar > .group + .group {
   padding-left: 0.875rem;
-  border-left: 1px solid var(--rule);
+  border-left: 1px solid var(--edge);
 }
 
 .group.end {
@@ -70,8 +73,8 @@ button,
 select {
   height: var(--control);
   padding: 0 0.7rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
   background: transparent;
   color: var(--chalk);
   transition:
@@ -89,7 +92,7 @@ button {
 }
 
 select {
-  background: var(--ink);
+  background: transparent;
   font: 400 0.8125rem/1 var(--mono);
   letter-spacing: 0;
   text-transform: none;
@@ -145,11 +148,26 @@ button.icon svg {
   min-width: 13rem;
   margin: 0;
   padding: 0.25rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 0;
+  border-radius: var(--radius-lg);
   background: var(--ink);
   color: var(--chalk);
-  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.3);
+  box-shadow: var(--float);
+}
+
+/* Opens with a quick fade and a small slide down from its button; closing is
+   instant. */
+.menu:popover-open {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity 110ms var(--ease-out),
+    translate 110ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 -4px;
+  }
 }
 
 /* The formatting bar, shown over the selected text. */
@@ -161,20 +179,20 @@ button.icon svg {
   gap: 0.25rem 0.5rem;
   max-width: calc(100vw - 1rem);
   padding: 0.25rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border-radius: var(--radius-lg);
   background: var(--ink);
-  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.3);
+  box-shadow: var(--float);
 }
 
 .bubble > .group + .group {
   padding-left: 0.5rem;
-  border-left: 1px solid var(--rule);
+  border-left: 1px solid var(--edge);
 }
 
 .bubble button,
 .bubble select {
   border-color: transparent;
+  border-radius: var(--radius-sm);
 }
 
 @media (max-width: 640px) {
@@ -194,6 +212,8 @@ button.icon svg {
 }
 
 .menu button {
+  /* Concentric with the menu: its radius less the menu's padding. */
+  border-radius: max(0px, calc(var(--radius-lg) - 0.25rem));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -244,31 +264,31 @@ button.icon svg {
 .menu hr {
   margin: 0.25rem 0;
   border: 0;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--edge);
 }
 
 button[aria-expanded="true"],
 button[aria-checked="true"],
 button[aria-pressed="true"] {
-  border-color: var(--accent);
+  border-color: var(--accent-ring);
   background: var(--accent-soft);
   color: var(--chalk);
 }
 
 button[aria-checked="true"]:hover:not(:disabled),
 button[aria-pressed="true"]:hover:not(:disabled) {
-  border-color: var(--accent);
+  border-color: var(--accent-ring);
 }
 
 button.primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 button.primary:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--on-accent);
+  border-color: var(--primary);
+  color: var(--on-primary);
   filter: brightness(1.08);
 }
 
@@ -306,26 +326,21 @@ button.primary:hover:not(:disabled) {
 }
 
 #editor :is(.toastui-editor-main, .toastui-editor-md-container, .toastui-editor-ww-container, .toastui-editor-md-preview) {
-  background: var(--ink);
-}
-
-#editor .toastui-editor-ww-container,
-#editor .toastui-editor-md-preview {
-  background: var(--ink-2);
+  background: var(--surface);
 }
 
 #editor .toastui-editor-md-splitter {
-  background: var(--rule);
+  background: var(--edge);
 }
 
 /* Side padding grows with the pane so lines keep a readable measure. */
 #editor .toastui-editor-ww-container .ProseMirror {
-  padding: 1.5rem max(1.25rem, calc((100% - 46rem) / 2));
+  padding: 1.5rem max(1.25rem, calc((100% - 46rem) / 2)) 4rem;
 }
 
 #editor .toastui-editor-md-container .ProseMirror,
 #editor .toastui-editor-md-preview {
-  padding: 1.5rem 1.25rem;
+  padding: 1.5rem 1.25rem 4rem;
 }
 
 #editor .toastui-editor-md-container .ProseMirror {
@@ -409,7 +424,7 @@ button.primary:hover:not(:disabled) {
 
 #editor .toastui-editor-contents .task-list-item::before {
   border: 1px solid var(--dim);
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: transparent;
 }
 
@@ -436,7 +451,7 @@ button.primary:hover:not(:disabled) {
 #editor .toastui-editor-contents code {
   padding: 0.1em 0.3em;
   border: 1px solid var(--rule);
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: var(--ink);
   color: var(--chalk);
   font: 400 0.875em var(--mono);
@@ -446,7 +461,7 @@ button.primary:hover:not(:disabled) {
 #editor .toastui-editor-contents pre {
   padding: 0.875rem 1rem;
   border: 1px solid var(--rule);
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: var(--ink);
 }
 
@@ -530,15 +545,15 @@ button.primary:hover:not(:disabled) {
 }
 
 #editor .toastui-editor-md-container .toastui-editor-md-code-block-line-background {
-  background: var(--ink-2);
+  background: var(--surface-hi);
 }
 
 /* Popups: the cell menu and the code block language box. */
 #editor :is(.toastui-editor-context-menu, .toastui-editor-ww-code-block-language) {
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 0;
+  border-radius: var(--radius-lg);
   background: var(--ink);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
+  box-shadow: var(--float);
   color: var(--chalk);
   font-family: var(--sans);
 }
@@ -572,16 +587,29 @@ button.primary:hover:not(:disabled) {
   }
 }
 
+/* Floats over the foot of the editor; the panes keep room below their text. */
 .status {
+  position: fixed;
+  z-index: 1;
+  bottom: 1rem;
+  left: 1rem;
   display: flex;
-  gap: 1.25rem;
-  padding: 0.4rem 0.5rem;
+  align-items: center;
+  gap: 1rem;
+  max-width: calc(100vw - 2rem);
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-lg);
   background: var(--ink);
-  border-top: 1px solid var(--rule);
+  box-shadow: var(--float);
   color: var(--dim);
-  font: 400 0.75rem/1.4 var(--mono);
+  font: 400 0.75rem/1 var(--mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.status span:empty {
+  display: none;
 }
 
 #name {
@@ -591,7 +619,6 @@ button.primary:hover:not(:disabled) {
 }
 
 #message {
-  margin-left: auto;
   overflow: hidden;
   font-family: var(--sans);
   text-overflow: ellipsis;
@@ -604,11 +631,12 @@ button.primary:hover:not(:disabled) {
 }
 
 dialog {
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 0;
+  border-radius: var(--radius-lg);
   background: var(--ink);
   color: var(--chalk);
   padding: 1.25rem;
+  box-shadow: var(--float);
 }
 
 dialog::backdrop {
@@ -624,7 +652,7 @@ dialog form {
 dialog h2 {
   margin: 0;
   padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--edge);
   color: var(--chalk);
   font-size: 1.0625rem;
   letter-spacing: 0.1em;
@@ -648,9 +676,9 @@ dialog label {
 dialog input {
   height: var(--control);
   padding: 0 0.6rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  background: var(--ink-2);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: transparent;
   color: var(--chalk);
   font: 400 0.8125rem/1 var(--mono);
 }
@@ -668,8 +696,8 @@ dialog input {
   margin-top: 0.5rem;
   padding: 0.25rem;
   overflow-y: auto;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
 }
 
 .files button {
@@ -729,7 +757,7 @@ dialog .actions {
 /* A block of raw HTML, which rich mode shows but does not edit. */
 #editor .toastui-editor-contents .html-block {
   margin: 1em 0;
-  border-radius: 3px;
+  border-radius: var(--radius);
   outline: 1px dashed var(--rule);
   outline-offset: 0.25rem;
   cursor: default;
