@@ -37,3 +37,8 @@ allowed-unresolved-imports = ["tomli", "bpy", "bmesh", "mathutils", "mathutils.*
 # which is what its mirror runs from, while the root still type-checks against
 # the local copy.
 manygo = { path = "manygo", editable = true }
+
+[tool.ty.src]
+# opencycle's unreal/scripts run inside the Unreal editor, against its generated `unreal` module,
+# which isn't on PyPI and which tools/containers/unreal shadows here as a namespace package.
+exclude = ["opencycle/unreal/scripts"]
