@@ -50,7 +50,8 @@ function updateNavigation() {
 }
 
 function setDocumentControls(enabled) {
-  for (const id of ['page', 'zoom', 'zoom-out', 'zoom-in', 'invert', 'fullscreen']) $(id).disabled = !enabled;
+  for (const id of ['page', 'zoom', 'zoom-out', 'zoom-in', 'invert', 'theater', 'fullscreen']) $(id).disabled = !enabled;
+  $('zoom-chip').hidden = !enabled;
   if (!enabled) {
     $('previous').disabled = true;
     $('next').disabled = true;
@@ -228,9 +229,16 @@ function goToPage(value) {
   renderPageView(view);
 }
 
+// Up and Down turn pages only when the page fits the window; otherwise they
+// keep scrolling it.
+function pageFitsHeight() {
+  const view = pageViews[pageNumber - 1];
+  return Boolean(view) && view.frame.offsetHeight <= workspace.clientHeight;
+}
+
 function makePageViews(firstPage) {
   const firstViewport = firstPage.getViewport({ scale: 1 });
-  const inverted = $('invert').getAttribute('aria-pressed') === 'true';
+  const inverted = $('invert').getAttribute('aria-checked') === 'true';
   pageViews = Array.from({ length: pdf.numPages }, (_, index) => {
     const number = index + 1;
     const frame = document.createElement('div');
@@ -385,7 +393,7 @@ async function openUrl(address) {
 
 function applyInverted(inverted) {
   for (const view of pageViews) view.canvas.classList.toggle('inverted', inverted);
-  $('invert').setAttribute('aria-pressed', String(inverted));
+  $('invert').setAttribute('aria-checked', String(inverted));
   try {
     localStorage.setItem('viewer:invert', String(inverted));
   } catch {
@@ -393,12 +401,18 @@ function applyInverted(inverted) {
   }
 }
 
-function setFullscreen(enabled) {
+// Theater mode hides the toolbar and status so only the document remains.
+function setTheater(enabled) {
   document.body.classList.toggle('chrome-hidden', enabled);
-  $('fullscreen').setAttribute('aria-pressed', String(enabled));
-  $('exit-fullscreen').hidden = !enabled;
-  if (enabled) $('exit-fullscreen').focus();
-  else $('fullscreen').focus();
+  $('theater').setAttribute('aria-checked', String(enabled));
+  $('exit-theater').hidden = !enabled;
+  if (enabled) $('exit-theater').focus();
+}
+
+// Full screen is the browser's own, so it also hides the browser chrome.
+function toggleFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else document.documentElement.requestFullscreen?.().catch(() => setMessage('Full screen is not available.'));
 }
 
 const renderObserver = new IntersectionObserver((entries) => {
@@ -453,9 +467,13 @@ zoomInput.addEventListener('change', () => {
 });
 $('zoom-out').addEventListener('click', () => stepZoom(-1));
 $('zoom-in').addEventListener('click', () => stepZoom(1));
-$('invert').addEventListener('click', () => applyInverted($('invert').getAttribute('aria-pressed') !== 'true'));
-$('fullscreen').addEventListener('click', () => setFullscreen(true));
-$('exit-fullscreen').addEventListener('click', () => setFullscreen(false));
+$('invert').addEventListener('click', () => applyInverted($('invert').getAttribute('aria-checked') !== 'true'));
+$('theater').addEventListener('click', () => setTheater(true));
+$('fullscreen').addEventListener('click', toggleFullscreen);
+$('exit-theater').addEventListener('click', () => setTheater(false));
+document.addEventListener('fullscreenchange', () => {
+  $('fullscreen').setAttribute('aria-checked', String(Boolean(document.fullscreenElement)));
+});
 
 const urlDialog = $('url-dialog');
 $('open-url').addEventListener('click', () => {
@@ -517,19 +535,21 @@ document.addEventListener('keydown', (event) => {
   if (event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('.menu')) return;
   if (event.target.matches?.('input, select, textarea')) return;
   if (key === 'escape' && document.body.classList.contains('chrome-hidden')) {
-    setFullscreen(false);
+    setTheater(false);
     return;
   }
   if (!pdf) return;
 
   if (key === 'i') {
-    applyInverted($('invert').getAttribute('aria-pressed') !== 'true');
+    applyInverted($('invert').getAttribute('aria-checked') !== 'true');
+  } else if (key === 't') {
+    setTheater(!document.body.classList.contains('chrome-hidden'));
   } else if (key === 'f') {
-    setFullscreen(!document.body.classList.contains('chrome-hidden'));
-  } else if (key === 'pageup') {
+    toggleFullscreen();
+  } else if (key === 'pageup' || key === 'arrowleft' || (key === 'arrowup' && pageFitsHeight())) {
     event.preventDefault();
     goToPage(pageNumber - 1);
-  } else if (key === 'pagedown' || key === ' ') {
+  } else if (key === 'pagedown' || key === ' ' || key === 'arrowright' || (key === 'arrowdown' && pageFitsHeight())) {
     event.preventDefault();
     goToPage(pageNumber + 1);
   } else if (key === 'home') {

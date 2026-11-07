@@ -20,8 +20,17 @@
       <input type="file" id="file" accept=".pdf,application/pdf" hidden>
     </div>
 
-    <div class="group" id="page-controls" aria-label="Page navigation">
-      <button type="button" id="previous" class="icon" title="Previous page (Page Up)" aria-label="Previous page" disabled>
+    <div class="group">
+      <button type="button" id="view-button" popovertarget="view-menu" aria-haspopup="menu">View</button>
+      <div id="view-menu" class="menu" role="menu" aria-labelledby="view-button" popover>
+        <button type="button" role="menuitemcheckbox" id="invert" aria-checked="false" disabled><span>Invert colors</span> <kbd>I</kbd></button>
+        <button type="button" role="menuitemcheckbox" id="theater" aria-checked="false" disabled><span>Theater mode</span> <kbd>T</kbd></button>
+        <button type="button" role="menuitemcheckbox" id="fullscreen" aria-checked="false" disabled><span>Full screen</span> <kbd>F</kbd></button>
+      </div>
+    </div>
+
+    <div class="group end" id="page-controls" aria-label="Page navigation">
+      <button type="button" id="previous" class="icon" title="Previous page (Left or Page Up)" aria-label="Previous page" disabled>
         <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
       <label class="page-number">
@@ -29,42 +38,9 @@
         <input type="number" id="page" value="1" min="1" step="1" disabled>
         <span id="page-count">/ 0</span>
       </label>
-      <button type="button" id="next" class="icon" title="Next page (Page Down)" aria-label="Next page" disabled>
+      <button type="button" id="next" class="icon" title="Next page (Right or Page Down)" aria-label="Next page" disabled>
         <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
       </button>
-    </div>
-
-    <div class="group end">
-      <button type="button" id="fullscreen" class="icon" title="Full screen (F)" aria-label="Full screen" aria-pressed="false" disabled>
-        <svg viewBox="0 0 24 24"><path d="M8 4H4v4M16 4h4v4M20 16v4h-4M4 16v4h4"/></svg>
-      </button>
-      <button type="button" id="invert" aria-pressed="false" title="Invert colors (I)" disabled>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 000 16z" fill="currentColor" stroke="none"/></svg>
-        Invert
-      </button>
-      <div class="zoom-controls">
-        <button type="button" id="zoom-out" class="icon" title="Zoom out (-)" aria-label="Zoom out" disabled>
-          <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
-        </button>
-        <label>
-          <span class="sr-only">Zoom</span>
-          <select id="zoom" disabled>
-            <option value="fit-page">Fit page</option>
-            <option value="fit-width">Fit width</option>
-            <option value="0.5">50%</option>
-            <option value="0.75">75%</option>
-            <option value="1">100%</option>
-            <option value="1.25">125%</option>
-            <option value="1.5">150%</option>
-            <option value="2">200%</option>
-            <option value="3">300%</option>
-            <option value="4">400%</option>
-          </select>
-        </label>
-        <button type="button" id="zoom-in" class="icon" title="Zoom in (+)" aria-label="Zoom in" disabled>
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
-      </div>
     </div>
   </header>
 
@@ -84,7 +60,31 @@
     </div>
   </main>
 
-  <button type="button" id="exit-fullscreen" class="icon" title="Exit full screen (Esc)" aria-label="Exit full screen" hidden>
+  <div id="zoom-chip" class="zoom-controls" hidden>
+    <button type="button" id="zoom-out" class="icon" title="Zoom out (-)" aria-label="Zoom out" disabled>
+      <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+    </button>
+    <label>
+      <span class="sr-only">Zoom</span>
+      <select id="zoom" disabled>
+        <option value="fit-page">Fit page</option>
+        <option value="fit-width">Fit width</option>
+        <option value="0.5">50%</option>
+        <option value="0.75">75%</option>
+        <option value="1">100%</option>
+        <option value="1.25">125%</option>
+        <option value="1.5">150%</option>
+        <option value="2">200%</option>
+        <option value="3">300%</option>
+        <option value="4">400%</option>
+      </select>
+    </label>
+    <button type="button" id="zoom-in" class="icon" title="Zoom in (+)" aria-label="Zoom in" disabled>
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
+
+  <button type="button" id="exit-theater" class="icon" title="Exit theater mode (Esc)" aria-label="Exit theater mode" hidden>
     <svg viewBox="0 0 24 24"><path d="M4 8h4V4M20 8h-4V4M16 20v-4h4M8 20v-4H4"/></svg>
   </button>
 
