@@ -1007,9 +1007,10 @@ def town(kit, rng, span=None):
                 if front < 0.15:
                     continue  # an open frontage
                 if front < 0.3 and shrubs:
-                    garden.add(
-                        wob.choice(shrubs), (wx, wy, wz), wob.uniform(0, 360), wob.uniform(1.4, 1.9)
-                    )
+                    hedge, k = wob.choice(shrubs), wob.uniform(1.4, 1.9)
+                    # A hedge is trimmed back from the lane: nothing reaches over it.
+                    if clear_of_path(wx, wy, 20 + spread(hedge) * k):
+                        garden.add(hedge, (wx, wy, wz), wob.uniform(0, 360), k)
                     continue
                 walls.add(
                     kit["K_blockwall"],
@@ -1025,16 +1026,13 @@ def town(kit, rng, span=None):
                 pick = rng.random()
                 if pick < 0.3 and trees:
                     tree = rng.choice(trees)
-                    garden.add(
-                        tree,
-                        (gx, gy, gz),
-                        rng.uniform(0, 360),
-                        rng.uniform(0.85, 1.2) if tree in pines else rng.uniform(0.55, 0.8),
-                    )
+                    k = rng.uniform(0.85, 1.2) if tree in pines else rng.uniform(0.55, 0.8)
+                    if clear_of_path(gx, gy, 20 + spread(tree) * k):
+                        garden.add(tree, (gx, gy, gz), rng.uniform(0, 360), k)
                 elif pick < 0.7 and shrubs:
-                    garden.add(
-                        rng.choice(shrubs), (gx, gy, gz), rng.uniform(0, 360), rng.uniform(1.0, 1.8)
-                    )
+                    shrub, k = rng.choice(shrubs), rng.uniform(1.0, 1.8)
+                    if clear_of_path(gx, gy, 20 + spread(shrub) * k):
+                        garden.add(shrub, (gx, gy, gz), rng.uniform(0, 360), k)
                 elif pots:
                     garden.add(rng.choice(pots), (gx, gy, gz), rng.uniform(0, 360), 1.0)
             if clutter and rng.random() < 0.6:
