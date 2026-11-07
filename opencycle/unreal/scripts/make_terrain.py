@@ -88,7 +88,12 @@ def masks(x, y, h, slope, where):
     shore = 1 - coast_layout.smoothstep(
         coast_layout.SEA_LEVEL + 60, coast_layout.SEA_LEVEL + 180 + 80 * noise, h
     )
-    sand = shore * (1 - coast_layout.smoothstep(0.5, 0.9, slope))
+    # And only on the sea side (lateral > 0): the cut above the coast road is as low, but earth.
+    sand = (
+        shore
+        * (1 - coast_layout.smoothstep(0.5, 0.9, slope))
+        * coast_layout.smoothstep(-300, 100, lateral)
+    )
     width = PATH.width(s) / 2 + coast_layout.SHELF
     across = abs(lateral) - width
     mud = (
