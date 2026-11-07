@@ -5,6 +5,7 @@ GlobalWorkerOptions.workerSrc = new URL('./vendor/pdfjs-dist/pdf.worker.min.mjs'
 const MAX_CANVAS_PIXELS = 24 * 1024 * 1024;
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 4;
+const ARROW_SCROLL = 80;
 const ZOOM_LEVELS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
 const $ = (id) => document.getElementById(id);
 
@@ -227,13 +228,6 @@ function goToPage(value) {
   const rect = view.frame.getBoundingClientRect();
   workspace.scrollTo({ top: workspace.scrollTop + rect.top - bounds.top - pagePadding() });
   renderPageView(view);
-}
-
-// Up and Down turn pages only when the page fits the window; otherwise they
-// keep scrolling it.
-function pageFitsHeight() {
-  const view = pageViews[pageNumber - 1];
-  return Boolean(view) && view.frame.offsetHeight <= workspace.clientHeight;
 }
 
 function makePageViews(firstPage) {
@@ -546,12 +540,15 @@ document.addEventListener('keydown', (event) => {
     setTheater(!document.body.classList.contains('chrome-hidden'));
   } else if (key === 'f') {
     toggleFullscreen();
-  } else if (key === 'pageup' || key === 'arrowleft' || (key === 'arrowup' && pageFitsHeight())) {
+  } else if (key === 'pageup' || key === 'arrowleft') {
     event.preventDefault();
     goToPage(pageNumber - 1);
-  } else if (key === 'pagedown' || key === ' ' || key === 'arrowright' || (key === 'arrowdown' && pageFitsHeight())) {
+  } else if (key === 'pagedown' || key === ' ' || key === 'arrowright') {
     event.preventDefault();
     goToPage(pageNumber + 1);
+  } else if (key === 'arrowup' || key === 'arrowdown') {
+    event.preventDefault();
+    workspace.scrollBy({ top: key === 'arrowup' ? -ARROW_SCROLL : ARROW_SCROLL });
   } else if (key === 'home') {
     event.preventDefault();
     goToPage(1);
