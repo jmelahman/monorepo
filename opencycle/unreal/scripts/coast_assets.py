@@ -261,10 +261,12 @@ def terrain_material():
     meadow["diff"] = green(g, meadow["diff"], (0.23, 0.24, 0.10), 1.9)
     # Hill and jungle floors: half litter, half moss, so the wooded hills read green, not as dunes.
     # Foliage cards aren't in Lumen's scene, so nothing shades the floor from the sky: keep it dark.
+    # The set's own colour is a cold grey that the sky's blue fill turns to ash, so both halves take
+    # only its brightness: warm brown earth and olive moss.
     forest["diff"] = g.mul(
         g.lerp(
-            forest["diff"],
-            green(g, forest["diff"], (0.06, 0.09, 0.035), 2.0),
+            green(g, forest["diff"], (0.13, 0.09, 0.05), 2.0),
+            green(g, forest["diff"], (0.07, 0.09, 0.03), 2.0),
             g.saturate(g.world_noise(0.0012, 0.2, 0.9, 3)),
         ),
         0.7,
@@ -278,7 +280,7 @@ def terrain_material():
     forest = g.blend_sets(
         forest,
         litter,
-        g.mul(g.saturate(g.mul(g.add(g.world_noise(0.0019, 0.0, 1.0, 4), -0.5), 3.0)), 0.8),
+        g.mul(g.saturate(g.mul(g.add(g.world_noise(0.0019, 0.0, 1.0, 4), -0.4), 3.0)), 0.85),
     )
     # Rock face is red-brown, which reads as desert: keep its detail, make it grey-green.
     rock["diff"] = g.lerp(
@@ -299,7 +301,12 @@ def terrain_material():
     ground = g.blend_sets(ground, forest, forest_w)
     ground = g.blend_sets(ground, mud, mud_w)
     ground = g.blend_sets(ground, sand, sand_w)
-    ground = g.blend_sets(ground, rock, rock_w)
+    # Japanese hills are wooded to the top. Far off, a forested face stays forest however steep: on
+    # the far tiles' 20 m triangles, rock there shows as pale sawtooth wedges up the mountain.
+    distance = g.node(unreal.MaterialExpressionPixelDepth)
+    wooded_far = g.mul(forest_w, g.saturate(g.mul(g.add(distance, -30000.0), 1.0 / 40000.0)))
+    bare_rock = g.add(g.mul(wooded_far, -0.9), 1.0)
+    ground = g.blend_sets(ground, rock, g.mul(rock_w, bare_rock))
     # Steep faces: a top-down mapping smears any texture into vertical stripes there, so cliffs take
     # rock projected from the side (biplanar, X and Y), with a flat normal since the set's normals
     # are for the top projection.
@@ -317,7 +324,7 @@ def terrain_material():
     )
     cliff["nor"] = g.const((0.0, 0.0, 1.0))
     steep = g.saturate(g.mul(g.add(g.mask(normal_ws, "b"), -0.8), -4.0))
-    ground = g.blend_sets(ground, cliff, steep)
+    ground = g.blend_sets(ground, cliff, g.mul(steep, bare_rock))
     variation = g.world_noise(0.00025, 0.82, 1.12, 4)
     colour = g.mul(ground["diff"], variation)
     # Wet mud in the paddies shines.
@@ -381,9 +388,9 @@ def sea_material():
     normal = g.add(g.add(a, b), c)
     # Flatten toward the horizon so distant water doesn't fizz.
     distance = g.node(unreal.MaterialExpressionPixelDepth)
-    far = g.saturate(g.mul(distance, 1.0 / 400000.0))
+    far = g.saturate(g.mul(distance, 1.0 / 250000.0))
     flat = g.const((0.0, 0.0, 1.0))
-    normal = g.lerp(normal, flat, g.mul(far, 0.7))
+    normal = g.lerp(normal, flat, g.mul(far, 0.85))
     normal = g.link(normal, g.node(unreal.MaterialExpressionNormalize))
     colour = g.const((0.015, 0.05, 0.065))
     g.output(colour, normal, 0.06, specular=0.5)

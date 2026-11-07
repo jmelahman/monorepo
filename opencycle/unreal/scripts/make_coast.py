@@ -659,6 +659,57 @@ def spread(mesh):
     return _SPREAD[key]
 
 
+def bedded_rocks(instances, rocks, skirt, rng, s0, s1, count, lateral_range, scale):
+    """Rocks bedded into the ground rather than set on it: each sits on the lowest ground under its
+    footprint, sunk a third of its height, barely tilted, with moss, weeds and ferns grown up
+    round its foot so no hard edge or gap shows where it meets the floor."""
+    placed = 0
+    for _ in range(int(count * DENSITY)):
+        s = rng.uniform(s0, s1)
+        side = rng.choice((-1, 1))
+        near, far = lateral_range
+        lateral = side * (near + (far - near) * rng.random() ** 1.6)
+        x, y, _ = ground_at(s, lateral)
+        k = rng.uniform(*scale)
+        mesh = rng.choice(rocks)
+        reach = spread(mesh) * k
+        if not clear_of_path(x, y, 80 + reach):
+            continue
+        box = mesh.get_bounding_box()
+        lowest = min(
+            PATH.ground(x + math.cos(a) * reach * 0.7, y + math.sin(a) * reach * 0.7)
+            for a in (0.0, 1.57, 3.14, 4.71)
+        )
+        lowest = min(lowest, PATH.ground(x, y))
+        instances.add(
+            mesh,
+            (x, y, lowest - (box.max.z - box.min.z) * k * 0.33 - box.min.z * k),
+            rng.uniform(0, 360),
+            k,
+            pitch=rng.uniform(-6, 6),
+            roll=rng.uniform(-6, 6),
+        )
+        placed += 1
+        if not skirt:
+            continue
+        for _ in range(rng.randint(3, 6)):
+            a = rng.uniform(0, 2 * math.pi)
+            r = reach * rng.uniform(0.75, 1.15)
+            px, py = x + math.cos(a) * r, y + math.sin(a) * r
+            if not clear_of_path(px, py, 40):
+                continue
+            plant = rng.choice(skirt)
+            instances.add(
+                plant,
+                (px, py, PATH.ground(px, py) - 3),
+                rng.uniform(0, 360),
+                rng.uniform(0.8, 1.5),
+                pitch=rng.uniform(-8, 8),
+                roll=rng.uniform(-8, 8),
+            )
+    return placed
+
+
 def scatter(
     instances,
     meshes,
@@ -758,22 +809,28 @@ def sward(kit, rng):
                             * math.sin(lat * 0.0057 - s * 0.0043),
                         ),
                     )
-                    if rng.random() < 1.1 * patch**1.6 * min(1.0, DENSITY):
-                        ls = s + rng.uniform(-cell * 0.5, cell * 1.5)
-                        ll = side * (half + lat + rng.uniform(-cell * 0.4, cell * 1.4))
-                        px, py, pz = ground_at(ls, ll)
-                        pick = patch + rng.uniform(-0.35, 0.35)
-                        kind = kinds[0 if pick < 0.45 else 1 if pick < 0.85 else 2]
-                        size = (0.55 + 0.7 * patch) * rng.uniform(0.75, 1.25)
-                        sward_.add(
-                            rng.choice(kind),
-                            (px, py, pz - 2),
-                            rng.uniform(0, 360),
-                            size,
-                            pitch=rng.uniform(-8, 8),
-                            roll=rng.uniform(-8, 8),
-                        )
-                        placed += 1
+                    # Tussocks, not one clump to a cell: an even one per cell reads as a planted
+                    # grid. A cell grows a cluster of one to four (2.5 on average) as often as it
+                    # used to grow one clump, so the cover stays the same.
+                    if rng.random() < 1.1 * patch**1.6 * min(1.0, DENSITY) / 2.5:
+                        cs = s + rng.uniform(-cell, cell * 2)
+                        cl = half + lat + rng.uniform(-cell * 0.5, cell * 1.5)
+                        for _ in range(rng.randint(1, 4)):
+                            ls = cs + rng.gauss(0, cell * 0.45)
+                            ll = side * max(half - 10, cl + rng.gauss(0, cell * 0.45))
+                            px, py, pz = ground_at(ls, ll)
+                            pick = patch + rng.uniform(-0.35, 0.35)
+                            kind = kinds[0 if pick < 0.45 else 1 if pick < 0.85 else 2]
+                            size = (0.55 + 0.7 * patch) * rng.uniform(0.6, 1.3)
+                            sward_.add(
+                                rng.choice(kind),
+                                (px, py, pz - 2),
+                                rng.uniform(0, 360),
+                                size,
+                                pitch=rng.uniform(-8, 8),
+                                roll=rng.uniform(-8, 8),
+                            )
+                            placed += 1
                     lat += cell
         s += cell
     sward_.commit(cull=5000)
@@ -1234,8 +1291,16 @@ def jungle(kit, rng, span=None):
         sink=1,
         tilt=2,
     )
-    n += scatter(
-        floor, rocks, rng, start, end, length / 100 * 1.2, (250, 2500), (0.6, 1.6), sink=20, tilt=20
+    n += bedded_rocks(
+        floor,
+        rocks,
+        moss + weeds + ferns,
+        rng,
+        start,
+        end,
+        length / 100 * 1.2,
+        (250, 2500),
+        (0.6, 1.6),
     )
     n += scatter(
         floor, logs, rng, start, end, length / 100 * 0.6, (300, 2500), (0.9, 1.5), sink=5, tilt=6
@@ -1471,6 +1536,29 @@ def coast(kit, rng, span=None):
         sides=(1,),
         margin=70,
         keep=lambda x, y, z, s, lat: z > layout.SEA_LEVEL + 200,
+    )
+    # The cut above the road: Japanese road cuts are grown over with weeds, grass and fern, never
+    # bare earth, so the first ten metres up it are thick with low cover.
+    cover = (
+        ph("grass_medium_01") * 2
+        + ph("grass_medium_02") * 2
+        + ph("fern_02") * 2
+        + ph("weed_plant_02")
+        + ph("nettle_plant")
+        + ph("shrub_03")
+    )
+    n += scatter(
+        land,
+        cover,
+        rng,
+        start,
+        end,
+        (end - start) / 100 * 22,
+        (150, 1300),
+        (1.2, 2.4),
+        sides=(-1,),
+        margin=50,
+        tilt=12,
     )
     shore.commit(cull=0)
     land.commit(cull=0)
