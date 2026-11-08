@@ -1774,16 +1774,18 @@ def village(kit, rng, span=None):
         sink=3,
         tilt=15,
     )
-    # The bank between the kerb and the stream: shrubs and ferns, so it isn't a bare dark slope.
+    # The bank between the kerb and the stream: shrubs and ferns, so it isn't a bare dark slope. The
+    # band is under 3 m wide and scatter drops whatever would spread over the lane, so the plants
+    # are kept small and many: at 1.3-2.2 nearly every shrub was dropped and the bank stayed bare.
     n += scatter(
         small,
         ph("shrub_01") + ph("shrub_03") + ph("fern_02") + ph("grass_medium_01") + hydrangeas,
         rng,
         start,
         end,
-        (end - start) / 100 * 8,
-        (PATH.width(start) / 2 + 60, lo - 60),
-        (1.3, 2.2),
+        (end - start) / 100 * 16,
+        (PATH.width(start) / 2 + 60, lo + 40),
+        (0.9, 1.5),
         sides=(1,),
         margin=60,
         sink=4,
