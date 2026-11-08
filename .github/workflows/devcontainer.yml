@@ -45,7 +45,7 @@ jobs:
           - name: android
             targets: android-builder
           # Epic's base image is private to accounts linked to Epic Games, which
-          # GITHUB_TOKEN isn't, and it is large enough to need the runner's disk.
+          # GITHUB_TOKEN isn't.
           - name: unreal
             targets: unreal-devcontainer
             epic: true
@@ -58,9 +58,6 @@ jobs:
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
-      - name: Free disk space
-        if: matrix.epic
-        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
       - name: Log in to GHCR
         if: ${{ !matrix.epic }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6
