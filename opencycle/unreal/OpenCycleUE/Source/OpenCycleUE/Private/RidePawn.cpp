@@ -32,6 +32,36 @@ constexpr float FocalLength = 16.f; // mm, as the stills
 constexpr float PhysicsStep = 1.f / 120.f;
 } // namespace
 
+// A camera's look rather than a renderer's: a little over-exposed, highlights that roll off and
+// lose colour as film and sensors do, shadows lifted a touch and cooled, light warmed, a soft
+// vignette and a trace of lens fringing. All of it is in the tonemapper's one pass, so it costs
+// nothing a frame. scripts/make_coast_ride.py gives the stills' camera the same.
+void ARidePawn::CameraLook(FPostProcessSettings& Look)
+{
+	Look.bOverride_AutoExposureBias = true;
+	Look.AutoExposureBias = 0.55f; // the level's volume has 0.3
+	Look.bOverride_BloomIntensity = true;
+	Look.BloomIntensity = 0.4f;
+	Look.bOverride_FilmSlope = true;
+	Look.FilmSlope = 0.84f;
+	Look.bOverride_FilmToe = true;
+	Look.FilmToe = 0.6f;
+	Look.bOverride_FilmShoulder = true;
+	Look.FilmShoulder = 0.34f;
+	Look.bOverride_ColorSaturationHighlights = true;
+	Look.ColorSaturationHighlights = FVector4(0.85f, 0.85f, 0.85f, 1.f);
+	Look.bOverride_ColorGainHighlights = true;
+	Look.ColorGainHighlights = FVector4(1.03f, 1.01f, 0.96f, 1.f);
+	Look.bOverride_ColorOffsetShadows = true;
+	Look.ColorOffsetShadows = FVector4(0.002f, 0.004f, 0.008f, 0.f);
+	Look.bOverride_ColorSaturation = true;
+	Look.ColorSaturation = FVector4(1.04f, 1.04f, 1.04f, 1.f);
+	Look.bOverride_VignetteIntensity = true;
+	Look.VignetteIntensity = 0.3f;
+	Look.bOverride_SceneFringeIntensity = true;
+	Look.SceneFringeIntensity = 0.25f;
+}
+
 const TArray<FString> ARidePawn::TrainerSources = {TEXT("keyboard"), TEXT("sim")};
 
 bool ARidePawn::Automated()
@@ -59,6 +89,7 @@ ARidePawn::ARidePawn()
 	Look.BloomIntensity = 0.25f;
 	Look.bOverride_MotionBlurAmount = true;
 	Look.MotionBlurAmount = 0.f;
+	CameraLook(Look);
 
 	Rain = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Rain"));
 	Rain->SetupAttachment(Camera);
@@ -274,8 +305,35 @@ void ARidePawn::Place()
 	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
 	const float Rise = Track->Height(Track->Wrap(S + GradeSpan)) - Track->Height(S);
 	const float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
-	const FRotator Road(Pitch, Yaw, 0.f);
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
+	FVector Lift = FVector::ZeroVector;
+	float Roll = 0.f;
+	float Turn = 0.f;
+	if (Dt > 0.f)
+	{
+		// Pedalling: the head rises and falls twice a turn of the crank, rocks once, and turns a
+		// little. Stills get it too, but stopped (paused, or at the start) it settles to nothing.
+		const bool bMoving = !bPaused && !bFinished && Speed > 0.3f;
+		const float Rpm = Reading.CadenceRpm > 20.0 ? static_cast<float>(Reading.CadenceRpm) : 85.f;
+		if (bMoving)
+		{
+			Crank = FMath::Fmod(Crank + 2.f * PI * Rpm / 60.f * Dt, 2.f * PI * 100.f);
+		}
+		const float Effort = bMoving ? FMath::Clamp(static_cast<float>(Reading.Watts) / 250.f, 0.4f, 1.4f) : 0.f;
+		Sway = FMath::Lerp(Sway, Effort, 1.f - FMath::Exp(-Dt / 0.8f));
+		Lift.Z = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
+		Roll = Sway * (0.45f * FMath::Sin(Crank) + 0.15f * FMath::Sin(0.23f * Crank + 2.f));
+		Turn = Sway * (0.2f * FMath::Sin(0.5f * Crank + 0.5f) + 0.1f * FMath::Sin(0.17f * Crank));
+		// Into a bend: the bike leans to atan(v^2 k / g), the head about a third of that.
+		FVector Unused2;
+		float Before, After;
+		Track->At(Track->Wrap(S - 300.f), Unused2, Before);
+		Track->At(Track->Wrap(S + 300.f), Unused2, After);
+		const float Curve = FMath::DegreesToRadians(FMath::UnwindDegrees(After - Before)) / 6.f; // per metre
+		const float Want = FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f;
+		Lean = FMath::Lerp(Lean, FMath::Clamp(Want, -4.f, 4.f), 1.f - FMath::Exp(-Dt / 0.35f));
+	}
+	const FRotator Road(Pitch, Yaw, 0.f);
 	if (!bHeadSet || Dt <= 0.f)
 	{
 		Head = Road;
@@ -289,7 +347,7 @@ void ARidePawn::Place()
 		Head = FMath::Lerp(Head, Head + (Road - Head).GetNormalized(), Ease);
 		Head.Normalize();
 	}
-	SetActorLocationAndRotation(Eye, Head);
+	SetActorLocationAndRotation(Eye + Lift, Head + FRotator(0.f, Turn, Roll + Lean));
 }
 
 void ARidePawn::FindWeather()

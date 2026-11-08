@@ -88,8 +88,22 @@ look.override_auto_exposure_method = True
 look.auto_exposure_method = unreal.AutoExposureMethod.AEM_HISTOGRAM
 look.override_auto_exposure_apply_physical_camera_exposure = True
 look.auto_exposure_apply_physical_camera_exposure = False
-look.override_bloom_intensity = True
-look.bloom_intensity = 0.25
+# The same camera look as ARidePawn::CameraLook, so stills match the ride.
+for prop, value in (
+    ("bloom_intensity", 0.4),
+    ("auto_exposure_bias", 0.55),
+    ("film_slope", 0.84),
+    ("film_toe", 0.6),
+    ("film_shoulder", 0.34),
+    ("color_saturation_highlights", unreal.Vector4(0.85, 0.85, 0.85, 1.0)),
+    ("color_gain_highlights", unreal.Vector4(1.03, 1.01, 0.96, 1.0)),
+    ("color_offset_shadows", unreal.Vector4(0.002, 0.004, 0.008, 0.0)),
+    ("color_saturation", unreal.Vector4(1.04, 1.04, 1.04, 1.0)),
+    ("vignette_intensity", 0.3),
+    ("scene_fringe_intensity", 0.25),
+):
+    setattr(look, f"override_{prop}", True)
+    setattr(look, prop, value)
 if MODE == "stills":
     # A still holds for HOLD frames, about a second: at the default speed (about a stop a second)
     # the

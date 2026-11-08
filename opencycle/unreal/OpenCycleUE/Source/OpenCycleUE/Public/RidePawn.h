@@ -12,6 +12,7 @@
 class UCameraComponent;
 class UStaticMeshComponent;
 class URideTrack;
+struct FPostProcessSettings;
 class UDirectionalLightComponent;
 class USkyLightComponent;
 class UExponentialHeightFogComponent;
@@ -83,6 +84,11 @@ private:
 	// apart, so following it rigidly turns the view in small kinks several times a second.
 	FRotator Head;
 	bool bHeadSet = false;
+	// The body on the bike: the crank's angle (radians), which drives a pedalling sway, and the
+	// roll into a bend, eased, both in degrees. The sway's size follows the effort.
+	float Crank = 0.f;
+	float Sway = 0.f;
+	float Lean = 0.f;
 	float QuitAt = -1.f;
 	float ProfileAt = -1.f;
 	void ReadCommandLine();
@@ -93,6 +99,7 @@ private:
 	TWeakObjectPtr<UExponentialHeightFogComponent> Fog;
 	TWeakObjectPtr<APostProcessVolume> Post;
 
+	static void CameraLook(FPostProcessSettings& Look);
 	void ReadKeys();
 	void Ride(float Dt);
 	void Place();
