@@ -160,7 +160,7 @@ BANK_SLOPE = 0.7  # rise per metre of the cut and fill banks either side
 CORRIDOR = 140.0  # metres from a road beyond which the ground is left alone
 MAX_GRADE = 0.08
 Z_SCALE = 512.0  # the landscape's Z scale: +-1310 m
-SNOW_LINE = 700.0  # metres: the summit climb tops out just above it
+SNOW_LINE = 640.0  # metres: the summit climb's last hairpins and viewpoint are in snow
 # Paint layers and their colours in layers.png.
 LAYERS = {
     "Grass": (110, 150, 70),
@@ -425,7 +425,8 @@ def grade_fit(z, fixed, closed):
     eased. Each bound keeps the grade and a mean or a moving average of them can't exceed it.
     `fixed` maps indices to heights they must meet; each is eased in over enough road to add no
     more than 0.5% to the grade."""
-    g = MAX_GRADE * 0.97
+    # Leave room for the 0.5% the fixed heights may add.
+    g = MAX_GRADE - 0.007
     n = len(z)
     laps = 2 if closed else 1
 
@@ -750,7 +751,8 @@ def paint(x, y, h, land, inland, weights, cliff, road_dist):
         rock, weights["mountain"] * smoothstep(260, 420, h) * smoothstep(0.2, 0.45, slope)
     )
     line = SNOW_LINE + 60 * (fbm(x, y, 300, 3, SEED + 95) - 0.5)
-    snow = smoothstep(line - 60, line + 60, h) * (1 - rock * 0.8)
+    # Snow lies on all but cliffs: the peak is steep enough to be rock nearly everywhere.
+    snow = smoothstep(line - 60, line + 60, h) * smoothstep(1.4, 0.9, slope)
     rock = rock * (1 - snow)
     soft = 1 - rock - snow
     sand = smoothstep(4.5, 2.5, h) * (1 - cliff) + (~land)
