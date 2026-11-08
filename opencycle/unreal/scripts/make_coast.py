@@ -820,6 +820,9 @@ def sward(kit, rng):
                     # Tussocks, not one clump to a cell: an even one per cell reads as a planted
                     # grid. A cell grows a cluster of one to four (2.5 on average) as often as it
                     # used to grow one clump, so the cover stays the same.
+                    # The coast's first few metres are never bare: dry ground there read as dirt.
+                    if zone == "coast" and lat < 600:
+                        patch = max(patch, 0.45 - lat / 1500)
                     if rng.random() < 1.1 * patch**1.6 * min(1.0, DENSITY) / 2.5:
                         cs = s + rng.uniform(-cell, cell * 2)
                         cl = half + lat + rng.uniform(-cell * 0.5, cell * 1.5)
@@ -876,6 +879,10 @@ def verges(rng):
                 near, far = reach[zone]
                 lateral = side * (PATH.width(s) / 2 + near + (far - near) * rng.random() ** 2.2)
                 kind = rng.choice(meshes)  # a clump is mostly one plant, with strays
+                # Not on the coast: its sea side is a grass sward, and a weed there stands above it
+                # as a lone stalk against the sky.
+                if zone == "coast" and kind.get_name() in tall:
+                    kind = rng.choice(low)
                 # Weeds grow in thickets: three of them spread over two metres read as stalks.
                 thicket = kind.get_name() in tall
                 spacing = 45 if thicket else 90
@@ -1540,9 +1547,12 @@ def coast(kit, rng, span=None):
         sides=(-1,),
         margin=60,
     )
+    # The sea side is open ground under the sky, where shrub_04's few narrow leaves on long red
+    # stems and grass_medium_01 at twice its size stand up as lone stalks: bushes and ferns only.
+    open_scrub = ph("shrub_01") + ph("shrub_02") * 2 + ph("shrub_03") + ph("fern_02")
     n += scatter(
         land,
-        scrub,
+        open_scrub or scrub,
         rng,
         start,
         end,
