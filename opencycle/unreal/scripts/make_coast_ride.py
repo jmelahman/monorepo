@@ -258,7 +258,10 @@ if os.environ.get("OC_DRY") != "1":
         f"weather: {len(weather_keys)} keys, "
         f"rain {max(w['rain'] for *_, w in weather_keys):.2f} at most"
     )
-    # Rain: shells round the camera, carried along with it; the material shows streaks only where
+    # The rain falling and the wet on the ground (MPC_Ride): Movie Render Queue ignores an MPC
+    # track, so a RideWeatherSync spawned with the sequence sets them from where its camera is.
+    sequence.add_spawnable_from_class(unreal.RideWeatherSync)
+    # Rain: shells round the camera, carried along with it; the material shows streaks only while
     # it rains.
     rain_mesh = (
         unreal.load_asset("/Game/Coast/Gen/Kit/V_rain/V_rain")

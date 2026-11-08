@@ -2,8 +2,7 @@
 
 Interchange finishes an import asynchronously and rewrites a mesh's slots with the materials it
 made, so slots set straight after import don't stick. This pass runs on its own:
-    Gen meshes   slot X -> /Game/Coast/Materials/M_X (BambooLeaves -> MI_BambooLeaves, RailPost ->
-    M_Rail)
+    Gen meshes   slot X -> /Game/Coast/Materials/M_X, or what SPECIAL names (the leaves' instances)
     PH meshes    slot X -> <model>/Foliage/MI_X where one exists
 and then gives any parent material still used the Nanite and instanced-mesh usage flags, since in
 -game a material without them falls back to the default checker.
@@ -18,7 +17,6 @@ SPECIAL = {
     "MomijiGreen": f"{ROOT}/Gen/MomijiGreen/MI_MomijiGreenLeaves",
     "MomijiRed": f"{ROOT}/Gen/MomijiRed/MI_MomijiRedLeaves",
     "SugiLeaves": f"{ROOT}/Gen/Sugi/MI_SugiLeaves",
-    "RailPost": f"{ROOT}/Materials/M_Rail",
 }
 
 

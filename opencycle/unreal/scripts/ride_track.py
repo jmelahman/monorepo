@@ -63,6 +63,7 @@ while m <= metres + WEATHER_STEP:
     row.set_editor_property("metres", m)
     for key in ("lux", "elevation", "sky", "fog", "rain"):
         row.set_editor_property(key, w[key])
+    row.set_editor_property("wet", layout.wetness(min(m, metres)))
     rows.append(row)
     m += WEATHER_STEP
 track.set_editor_property("weather", rows)
@@ -73,6 +74,9 @@ for asset in unreal.EditorAssetLibrary.list_assets("/Game/Coast/Gen/Kit/V_rain",
     if isinstance(loaded, unreal.StaticMesh):
         rain = loaded
 track.set_editor_property("rain_shell", rain)
+mpc = "/Game/Coast/Materials/MPC_Ride"
+if unreal.EditorAssetLibrary.does_asset_exist(mpc):
+    track.set_editor_property("collection", unreal.load_asset(mpc))
 
 unreal.EditorAssetLibrary.save_loaded_asset(track, only_if_is_dirty=False)
 log(

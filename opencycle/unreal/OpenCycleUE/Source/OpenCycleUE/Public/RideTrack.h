@@ -18,6 +18,7 @@ struct FRideWeather
 	UPROPERTY(EditAnywhere) float Sky = 1.f;         // the sky light's intensity
 	UPROPERTY(EditAnywhere) float Fog = 0.006f;      // fog density
 	UPROPERTY(EditAnywhere) float Rain = 0.f;        // 0 dry .. 1 full rain
+	UPROPERTY(EditAnywhere) float Wet = 0.f;         // the ground: the rain, drying after it stops
 };
 
 UCLASS(BlueprintType)
@@ -39,6 +40,8 @@ public:
 	UPROPERTY(EditAnywhere) TArray<FRideWeather> Weather;
 	// The rain shells carried round the camera; their material shows streaks only where it rains.
 	UPROPERTY(EditAnywhere) TObjectPtr<class UStaticMesh> RainShell;
+	// MPC_Ride, whose Rain and Wet the materials read: the shells' streaks and the wet ground.
+	UPROPERTY(EditAnywhere) TObjectPtr<class UMaterialParameterCollection> Collection;
 
 	float Length() const;
 	float Wrap(float S) const;
@@ -50,6 +53,8 @@ public:
 	// Rise over run across Span cm centred on S.
 	float Grade(float S, float Span = 800.f) const;
 	FRideWeather WeatherAt(float Metres) const;
+	// The distance along the road (cm) of the centreline point nearest Where, across the ground.
+	float Nearest(const FVector& Where) const;
 
 private:
 	int32 Index(int32 I) const;

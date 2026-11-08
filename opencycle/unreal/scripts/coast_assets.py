@@ -332,6 +332,14 @@ def terrain_material():
     steep = g.saturate(g.mul(g.add(g.mask(normal_ws, "b"), -0.8), -4.0))
     ground = g.blend_sets(ground, cliff, g.mul(steep, bare_rock))
     variation = g.world_noise(0.00025, 0.82, 1.12, 4)
+    # And a few metres across, the mottling a bike's eye actually sees on a verge: lighter and
+    # yellower where it is dry, darker where it holds water. The broad noise alone leaves the ground
+    # by the road one even sheet.
+    mottle = g.world_noise(0.0016, 0.0, 1.0, 3)
+    variation = g.mul(variation, g.add(g.mul(mottle, 0.3), 0.82))
+    ground["diff"] = g.lerp(
+        ground["diff"], green(g, ground["diff"], (0.30, 0.27, 0.12), 2.0), g.mul(mottle, 0.25)
+    )
     colour = g.mul(ground["diff"], variation)
     # Wet mud in the paddies shines.
     rough = g.lerp(ground["rough"], g.const(0.18), g.mul(mud_w, 0.8))

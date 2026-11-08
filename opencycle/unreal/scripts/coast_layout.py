@@ -530,12 +530,18 @@ def weather(metres):
     return dict(zip(WEATHER_KEYS, row, strict=False))
 
 
-def rain_span():
-    """(first, last) metres of full rain, and where it starts and stops fading."""
-    wet = [r[0] for r in WEATHER if r[5] >= 1.0]
-    before = max(r[0] for r in WEATHER if r[0] < wet[0])
-    after = min(r[0] for r in WEATHER if r[0] > wet[-1])
-    return before, wet[0], wet[-1], after
+def raining():
+    """Whether it rains anywhere on the ride."""
+    return any(r[5] > 0 for r in WEATHER)
+
+
+def wetness(metres):
+    """How wet the road is at `metres`, 0 to 1: as wet as the rain falling, and drying over
+    DRY_AFTER metres once it stops. ride_track.py writes it into the track for the game."""
+    return max(
+        weather(metres - d)["rain"] * (1.0 - d / DRY_AFTER)
+        for d in (DRY_AFTER * k / 8 for k in range(8))
+    )
 
 
 # --- the long ride ---------------------------------------------------------------------------
@@ -692,9 +698,22 @@ def extend_plan(km=LONG_KM, seed=2026):
     for n, s0, s1 in stretches[1:]:
         if n == "village":
             marks += [s0 - 180, s0 + 40, s1 - 40, s1 + 180]
+    # And a second, longer shower a little past halfway, so the hour isn't dry after its first
+    # kilometre: cloud gathers over 400 m, it rains for 700 m, and it clears in 250. (cloud, rain)
+    wet0 = round(total * 0.6)
+    shower = {
+        wet0 - 400: (0.0, 0.0),
+        wet0 - 150: (0.6, 0.0),
+        wet0: (1.0, 1.0),
+        wet0 + 700: (1.0, 1.0),
+        wet0 + 950: (0.0, 0.0),
+    }
+    marks = [m for m in marks if not wet0 - 400 < m < wet0 + 950] + list(shower)
     for m in sorted(set(round(v) for v in marks if 1110 < v <= total)):
         lux, elevation = _base_sun(m, total)
         fog, sky = 0.007, 1.0
+        cloud, rain = shower.get(m, (0.0, 0.0))
+        lux, fog, sky = lerp(lux, 4000.0, cloud), lerp(fog, 0.08, cloud), lerp(sky, 0.55, cloud)
         for n, s0, s1 in stretches[1:]:
             if n == "village":
                 mist = smoothstep(s0 - 180, s0 + 40, m) * (1 - smoothstep(s1 - 40, s1 + 180, m))
@@ -703,7 +722,7 @@ def extend_plan(km=LONG_KM, seed=2026):
                     lerp(sky, 0.65, mist),
                     lerp(lux, lux * 0.3, mist),
                 )
-        rows.append((m, lux, elevation, fog, sky, 0.0))
+        rows.append((m, lux, elevation, fog, sky, rain))
     WEATHER[:] = rows
     # The mountains stand inside the loop, clear of the path: one big peak where the island is
     # widest and smaller ones round it.

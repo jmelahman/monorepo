@@ -14,6 +14,8 @@
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Materials/MaterialParameterCollection.h"
+#include "Materials/MaterialParameterCollectionInstance.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Paths.h"
 #include "RidePlayerController.h"
@@ -280,6 +282,16 @@ void ARidePawn::ApplyWeather()
 		return;
 	}
 	const FRideWeather W = Track->WeatherAt(Track->Wrap(Distance) / 100.f);
+	if (Track->Collection)
+	{
+		if (UMaterialParameterCollectionInstance* Values = GetWorld()->GetParameterCollectionInstance(Track->Collection))
+		{
+			Values->SetScalarParameterValue(TEXT("Rain"), W.Rain);
+			Values->SetScalarParameterValue(TEXT("Wet"), W.Wet);
+		}
+	}
+	// The shells cost a translucent pass over the whole screen: draw them only while it rains.
+	Rain->SetVisibility(W.Rain > 0.001f);
 	if (Sun.IsValid())
 	{
 		Sun->SetIntensity(W.Lux);

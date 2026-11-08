@@ -76,6 +76,22 @@ float URideTrack::Grade(float S, float Span) const
 	return Run > 1.f ? (Height(Ahead) - Height(Back)) / Run : 0.f;
 }
 
+float URideTrack::Nearest(const FVector& Where) const
+{
+	int32 Best = 0;
+	double BestDistance = TNumericLimits<double>::Max();
+	for (int32 I = 0; I < Centre.Num(); ++I)
+	{
+		const double D = FVector::DistSquared2D(Centre[I], Where);
+		if (D < BestDistance)
+		{
+			BestDistance = D;
+			Best = I;
+		}
+	}
+	return Best * Step;
+}
+
 FRideWeather URideTrack::WeatherAt(float Metres) const
 {
 	if (Weather.Num() == 0)
@@ -102,5 +118,6 @@ FRideWeather URideTrack::WeatherAt(float Metres) const
 	W.Sky = FMath::Lerp(A.Sky, B.Sky, T);
 	W.Fog = FMath::Lerp(A.Fog, B.Fog, T);
 	W.Rain = FMath::Lerp(A.Rain, B.Rain, T);
+	W.Wet = FMath::Lerp(A.Wet, B.Wet, T);
 	return W;
 }

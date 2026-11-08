@@ -43,7 +43,7 @@ LEVEL = "/Game/Coast/L_Coast"
 MATS = f"{lib.FOLDER}/Materials"
 GEN = "/workspace/ue/assets_gen"
 DENSITY = float(os.environ.get("OC_DENSITY") or "1")
-RAIN = None if os.environ.get("OC_DRY") == "1" else layout.rain_span()
+RAIN = os.environ.get("OC_DRY") != "1" and layout.raining()
 REIMPORT = os.environ.get("OC_REIMPORT") == "1"
 
 
@@ -73,29 +73,42 @@ def ramp(g, value, a, b):
     return g.saturate(g.mul(g.add(value, -a), 1.0 / (b - a)))
 
 
-def near_rain(g, wet):
-    """On a loop the rain's stretch of world X comes round again on the far side of the island:
-    keep the wet to within 200 m north of the stretch it fell on."""
-    if not PATH.closed:
-        return wet
-    y = g.mask(g.node(unreal.MaterialExpressionWorldPosition), "g")
-    north = min(
-        PATH.at(s)[1]
-        for s in range(int(RAIN[0] * 100), int((RAIN[3] + layout.DRY_AFTER) * 100), 500)
+def ride_collection():
+    """MPC_Ride: the rain falling and the wet on the ground where the rider is, 0 to 1. RidePawn
+    sets them as it rides and the stills' sequence keys them, from the same weather rows, so any
+    number of showers can fall anywhere on the loop. Both are 0 in the editor."""
+    path = f"{MATS}/MPC_Ride"
+    if assets.does_asset_exist(path):
+        return unreal.load_asset(path)
+    mpc = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+        "MPC_Ride",
+        MATS,
+        unreal.MaterialParameterCollection,
+        unreal.MaterialParameterCollectionFactoryNew(),
     )
-    return g.mul(wet, ramp(g, y, north - 40000, north - 20000))
+    params = []
+    for name in ("Rain", "Wet"):
+        param = unreal.CollectionScalarParameter()
+        param.set_editor_property("parameter_name", name)
+        param.set_editor_property("default_value", 0.0)
+        params.append(param)
+    mpc.set_editor_property("scalar_parameters", params)
+    assets.save_loaded_asset(mpc, only_if_is_dirty=False)
+    return mpc
+
+
+def ride_value(g, name):
+    """MPC_Ride's `name` in graph `g`."""
+    return g.node(
+        unreal.MaterialExpressionCollectionParameter,
+        collection=ride_collection(),
+        parameter_name=name,
+    )
 
 
 def wet_band(g):
-    """How wet the world is here, 0 to 1: it rains through the gorge village and the road dries
-    after."""
-    if not RAIN:
-        return None
-    x = g.mask(g.node(unreal.MaterialExpressionWorldPosition), "r")
-    start, full, stop, _dry = (PATH.at(m * 100)[0] for m in RAIN)
-    rising = ramp(g, x, start, full)
-    drying = ramp(g, x, stop, PATH.at((RAIN[3] + layout.DRY_AFTER) * 100)[0])
-    return near_rain(g, g.mul(rising, g.link(drying, g.node(unreal.MaterialExpressionOneMinus))))
+    """How wet the world is, 0 to 1, from where the rider is on the ride."""
+    return ride_value(g, "Wet") if RAIN else None
 
 
 def wetten(g, colour, rough, puddles=False, upward=False, wet_rough=0.14):
@@ -359,10 +372,12 @@ def build_materials():
         chunked=True,
     )
     m["Grate"] = flat("M_Grate", (0.02, 0.02, 0.02), 0.8, vertex=True)
-    m["Rail"] = flat(
-        "M_Rail", (0.48, 0.49, 0.48), 0.55, 0.3, grime=0.7, streaks=0.6, rust=0.5, chunked=True
+    # Galvanised steel: pale, half metallic, dulled by road dirt. Rain streaks stay off the beam,
+    # where noise squashed tall runs across it as long smears; the posts get them.
+    m["Rail"] = flat("M_Rail", (0.56, 0.57, 0.56), 0.5, 0.6, grime=0.6, rust=0.25, chunked=True)
+    m["RailPost"] = flat(
+        "M_RailPost", (0.42, 0.44, 0.45), 0.6, 0.5, grime=0.7, streaks=0.4, rust=0.3, chunked=True
     )
-    m["RailPost"] = m["Rail"]
     m["Pole"] = textured(
         "M_Pole",
         "brushed_concrete",
@@ -526,15 +541,8 @@ def rain_material():
     sway = g.node(unreal.MaterialExpressionConstant2Vector, r=0.03, g=0.0)
     uv = g.add(g.add(coords, g.mul(fall, time)), g.mul(sway, time))
     streak = g.mask(g.sample(streaks, uv, "mask"), "r")
-    # Rain is wetness without the drying tail: the shells carry it only between the rain's ends.
-    x = g.mask(g.node(unreal.MaterialExpressionWorldPosition), "r")
-    start, full, stop, dry = (PATH.at(m * 100)[0] for m in RAIN or (0, 1, 2, 3))
-    raining = g.mul(
-        ramp(g, x, start, full),
-        g.link(ramp(g, x, stop, dry), g.node(unreal.MaterialExpressionOneMinus)),
-    )
-    if RAIN:
-        raining = near_rain(g, raining)
+    # Rain is wetness without the drying tail.
+    raining = ride_value(g, "Rain")
     fade = g.node(unreal.MaterialExpressionDepthFade, fade_distance_default=150.0)
     g.link(g.mul(g.mul(streak, raining), 0.2), fade, "Opacity")
     g.output(None, None, None, None, None, g.const((0.42, 0.46, 0.5)), opacity=fade)
@@ -852,6 +860,9 @@ def verges(rng):
     )
     if not meshes:
         return 0
+    # Strays are low plants: a lone tall weed in an open verge reads as a stalk stuck in the ground.
+    low = ph("grass_bermuda_01") + ph("celandine_01") + ph("dandelion_01") or meshes
+    tall = {m.get_name() for m in ph("weed_plant_02") + ph("nettle_plant")}
     clumps = lib.Instances("Verge")
     reach = {"town": (20, 380), "paddies": (20, 300), "coast": (30, 700)}
     placed = 0
@@ -865,12 +876,17 @@ def verges(rng):
                 near, far = reach[zone]
                 lateral = side * (PATH.width(s) / 2 + near + (far - near) * rng.random() ** 2.2)
                 kind = rng.choice(meshes)  # a clump is mostly one plant, with strays
-                for _ in range(rng.randint(3, 11)):
-                    cs = s + rng.gauss(0, 90)
-                    cl = lateral + side * abs(rng.gauss(0, 60))
+                # Weeds grow in thickets: three of them spread over two metres read as stalks.
+                thicket = kind.get_name() in tall
+                spacing = 45 if thicket else 90
+                for _ in range(rng.randint(7, 12) if thicket else rng.randint(3, 11)):
+                    cs = s + rng.gauss(0, spacing)
+                    cl = lateral + side * abs(rng.gauss(0, spacing * 0.66))
                     x, y, z = ground_at(cs, cl)
-                    mesh = kind if rng.random() < 0.75 else rng.choice(meshes)
+                    mesh = kind if rng.random() < 0.75 else rng.choice(low)
                     k = rng.uniform(0.7, 1.6)
+                    if mesh.get_name() in tall:
+                        k = min(k, 1.05)
                     if not clear_of_path(x, y, 25 + spread(mesh) * k):
                         continue
                     clumps.add(
@@ -1761,11 +1777,11 @@ def village(kit, rng, span=None):
     # The bank between the kerb and the stream: shrubs and ferns, so it isn't a bare dark slope.
     n += scatter(
         small,
-        ph("shrub_01") + ph("shrub_03") + ph("fern_02") + ph("grass_medium_01"),
+        ph("shrub_01") + ph("shrub_03") + ph("fern_02") + ph("grass_medium_01") + hydrangeas,
         rng,
         start,
         end,
-        (end - start) / 100 * 5,
+        (end - start) / 100 * 8,
         (PATH.width(start) / 2 + 60, lo - 60),
         (1.3, 2.2),
         sides=(1,),
