@@ -11,7 +11,8 @@ quick preview at 8 m; 8129 is the landscape, a metre a sample. Writes to
   step (Unreal's landscape import);
 - <Layer>.r8: a paint layer's weight per sample, the layers summing to 255;
 - layers.png: the strongest layer at each sample, to check them by eye;
-- roads.json: each road's centreline every metre, and info.json: the grid.
+- roads.json: each road's centreline every metre, and info.json: the grid;
+- road_<name>_<k>.gltf: each road's surface in 200 m pieces, laid on the carved ground.
 
 Coordinates are Unreal's: X east, Y south, metres here, the origin in the middle of the map.
 """
@@ -25,6 +26,9 @@ sys.path.append(os.environ.get("OC_PYLIB", "/opt/oc-pylib"))
 import numpy as np
 from PIL import Image
 from scipy import ndimage
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import road_mesh
 
 RES = int(os.environ.get("OC_RES", "1025"))
 EXTENT = 8128.0  # metres across the map
@@ -558,6 +562,16 @@ def main():
     profile(roads, ground)
     write_maps(h, land, paint(x, y, h, land, inland, weights, cliff, road_dist))
     print(f"{OUT}: {RES}x{RES} at {SPACING:.2f} m, heights {h.min():.0f}..{h.max():.0f} m")
+    pieces = 0
+    for name, r in roads.items():
+        # The tarmac 2 cm under the centreline: at the road's height, 10 cm over its bed.
+        centre = [
+            (a * 100, b * 100, c * 100 + 2) for (a, b), c in zip(r["xy"], r["z"], strict=True)
+        ]
+        for k, piece in enumerate(road_mesh.road_pieces(centre, ROAD_HALF * 100, r["closed"])):
+            piece.write(f"{OUT}/road_{name}_{k}.gltf")
+            pieces += 1
+    print(f"{pieces} road pieces")
     with open(f"{OUT}/roads.json", "w") as f:
         json.dump(
             {
