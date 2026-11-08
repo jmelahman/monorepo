@@ -133,7 +133,15 @@ struct FPainter
 		FSlateDrawElement::MakeBox(Out, ++Layer, At(X, Y, W, H), &Brush, ESlateDrawEffect::None, Colour);
 	}
 
-	void Panel(float X, float Y, float W, float H, float Radius) const { Round(X, Y, W, H, Radius, Fill, Edge, 1.f); }
+	// The fill, then the edge over it as CSS draws a border. A brush's outline sits outside its fill,
+	// so an outline on the fill's own brush shows as a light ring on the scene.
+	void Panel(float X, float Y, float W, float H, float Radius) const
+	{
+		Round(X, Y, W, H, Radius, Fill);
+		// The tint fills the box and the brush's outline colour draws the edge, so a clear tint is edge only.
+		const FSlateRoundedBoxBrush Brush(FLinearColor::White, Radius * S, Edge, 1.f * S);
+		FSlateDrawElement::MakeBox(Out, ++Layer, At(X, Y, W, H), &Brush, ESlateDrawEffect::None, FLinearColor::Transparent);
+	}
 
 	float Width(const FString& Text, const FSlateFontInfo& F) const
 	{
