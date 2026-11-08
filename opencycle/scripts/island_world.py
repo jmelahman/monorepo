@@ -89,10 +89,7 @@ GRASS = {
         ("desert", "desert_american_plant_branch_cactus_large_03", 0.005, 15000, 20000),
     ),
     "Sand": (("coast", "marram_grass", 1.5, 4000, 6000),),
-    "Rock": (
-        ("mountain", "alpine_bearberry", 0.4, 3000, 4500),
-        ("mountain", "dwarf_birch", 0.08, 5000, 7000),
-    ),
+    "Rock": (("mountain", "alpine_bearberry", 0.4, 3000, 4500),),
 }
 SEA_LEVEL = 0.0
 
