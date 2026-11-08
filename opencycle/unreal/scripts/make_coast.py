@@ -1791,6 +1791,21 @@ def village(kit, rng, span=None):
         sink=4,
         tilt=20,
     )
+    # The far side of the gorge, which is what the rider sees past the kerb: undergrowth under its
+    # trees, or it is a bare dark wall behind the trunks.
+    n += scatter(
+        small,
+        ph("shrub_01") + ph("shrub_03") + ph("fern_02") + ph("moss_01") + hydrangeas,
+        rng,
+        start,
+        end,
+        (end - start) / 100 * 12,
+        (hi + 20, 2200),
+        (1.2, 2.2),
+        sides=(1,),
+        sink=4,
+        tilt=20,
+    )
     sugi = [kit[k] for k in sorted(kit) if k.startswith("K_sugi")]
     broadleaf = ph("island_tree_01") + ph("island_tree_02") + ph("tree_small_02")
     n += scatter(
