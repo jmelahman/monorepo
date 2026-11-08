@@ -30,8 +30,10 @@ applied at once and kept in the engine's `GameUserSettings.ini`. `URideMenu` bui
 in C++, with no Blueprint asset, and `ARidePlayerController` opens it. A ride started with
 `-RideStart`, `-RideWatts`, `-RideShots` or `-RideNoMenu` skips the menus and renders at Epic,
 whatever the player chose, so stills and tests don't change with someone's settings.
-`ARideHUD` shows speed, power, cadence, heart rate, grade, distance and time, a map of the course
-and its height profile.
+`ARideHUD` puts up `URideOverlay`, painted in code to the HUD design: power, its zone (of
+`-RideFtp=`, 250 W by default) and the zone bar top left; top right the road ahead or the climb
+you're on, its profile coloured by grade, with the stretch and the loop at its foot, and the weather
+under it; speed, cadence, heart rate, time and metres climbed along the bottom.
 
 Smart trainers come in three layers, the first two plain C++ that `tests/run.sh` checks without the
 engine. `BleProtocol.h` reads and writes the Bluetooth packets: heart rate, cycling power, speed and
@@ -51,6 +53,7 @@ sudo -u ue4 env HOME=/home/ue4 ~ue4/UnrealEngine/Engine/Build/BatchFiles/Linux/B
 bash scripts/ue_run.sh ride_track.py ride_track.log    # after make_coast.py, or the path changes
 bash scripts/play.sh                                   # ride it in the editor's -game mode
 bash scripts/package.sh                                # a standalone Linux build in out/package
+unreal/scripts/game.sh                                 # on the host, from the repo: play that build
 bash scripts/ride_test.sh 250 15,45 0 -RideTrainer=sim  # offscreen: watts, shot times, start metres
 OC_TOUR=1 bash scripts/ride_test.sh                     # offscreen: screenshot each menu page
 tests/run.sh                                           # physics and Bluetooth, without the engine
