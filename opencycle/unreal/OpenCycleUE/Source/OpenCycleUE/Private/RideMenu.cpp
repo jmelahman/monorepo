@@ -404,7 +404,7 @@ void URideMenu::Refresh()
 		                "one will use. It takes the grade and sends back power, cadence and heart rate.")
 				 : TEXT("Hold W or Up to push harder, S or Down to ease off. Bluetooth trainers are next.")));
 		PauseTitle->SetText(FText::FromString(Pawn->bFinished ? TEXT("Finished") : TEXT("Paused")));
-		const float Km = Pawn->Distance / 100000.f;
+		const float Km = static_cast<float>(Pawn->Distance / 100000.0);
 		const float Average = Pawn->Elapsed > 0.f ? Km / (Pawn->Elapsed / 3600.f) : 0.f;
 		PauseStats->SetText(FText::FromString(FString::Printf(TEXT("%.2f of %.1f km in %s, averaging %.1f km/h"), Km,
 		                                                      CourseKm, *Clock(Pawn->Elapsed), Average)));

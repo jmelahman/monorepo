@@ -19,7 +19,7 @@ void ARideHUD::DrawHUD()
 		FString::Printf(TEXT("%.1f km/h"), Rider->Speed * 3.6f),
 		FString::Printf(TEXT("%.0f W   %.0f rpm"), Rider->Reading.Watts, Rider->Reading.CadenceRpm),
 		FString::Printf(TEXT("%+.1f %%"), Rider->Grade * 100.f),
-		FString::Printf(TEXT("%.2f / %.1f km"), Rider->Distance / 100000.f, Rider->TrackLength() / 100000.f),
+		FString::Printf(TEXT("%.2f / %.1f km"), Rider->Distance / 100000.0, Rider->TrackLength() / 100000.f),
 		FString::Printf(TEXT("%d:%02d:%02d"), Seconds / 3600, Seconds / 60 % 60, Seconds % 60),
 	};
 	if (Rider->Reading.HeartRateBpm > 0.0)
@@ -106,7 +106,7 @@ void ARideHUD::DrawMap(const ARidePawn& Rider, float Scale)
 	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.35f), Origin.X - 10.f * Scale, Origin.Y - 10.f * Scale, Side + 20.f * Scale,
 	         Side + 20.f * Scale);
 	Polyline(Plan, Origin, FVector2D(Side, Side), FLinearColor(1.f, 1.f, 1.f, 0.7f), 2.f * Scale);
-	const float Along = Rider.TrackLength() > 0.f ? FMath::Fmod(Rider.Distance, Rider.TrackLength()) / Rider.TrackLength() : 0.f;
+	const float Along = Rider.TrackLength() > 0.f ? static_cast<float>(FMath::Fmod(Rider.Distance, static_cast<double>(Rider.TrackLength()))) / Rider.TrackLength() : 0.f;
 	const FVector2D Dot = Origin + Plan[FMath::Clamp(FMath::RoundToInt32(Along * (Plan.Num() - 1)), 0, Plan.Num() - 1)] * Side;
 	const float R = 5.f * Scale;
 	DrawRect(FLinearColor(1.f, 0.35f, 0.2f), Dot.X - R, Dot.Y - R, 2.f * R, 2.f * R);
@@ -118,7 +118,7 @@ void ARideHUD::DrawProfile(const ARidePawn& Rider, float Scale)
 	const FVector2D Origin(Canvas->ClipX - Size.X - 24.f * Scale, Canvas->ClipY - Size.Y - 40.f * Scale);
 	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.35f), Origin.X - 10.f * Scale, Origin.Y - 22.f * Scale, Size.X + 20.f * Scale,
 	         Size.Y + 32.f * Scale);
-	const float Along = Rider.TrackLength() > 0.f ? FMath::Fmod(Rider.Distance, Rider.TrackLength()) / Rider.TrackLength() : 0.f;
+	const float Along = Rider.TrackLength() > 0.f ? static_cast<float>(FMath::Fmod(Rider.Distance, static_cast<double>(Rider.TrackLength()))) / Rider.TrackLength() : 0.f;
 	// The road behind is solid, the road ahead faint.
 	const int32 Here = FMath::Clamp(FMath::RoundToInt32(Along * (Profile.Num() - 1)), 0, Profile.Num() - 1);
 	TArray<FVector2D> Behind(Profile.GetData(), Here + 1);

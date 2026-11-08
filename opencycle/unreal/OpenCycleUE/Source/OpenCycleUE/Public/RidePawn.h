@@ -37,7 +37,9 @@ public:
 	UPROPERTY(EditAnywhere) float StartMetres = 0.f;
 
 	// What the HUD shows.
-	float Distance = 0.f; // cm along the track, not wrapped: laps add up
+	// cm along the track, not wrapped: laps add up. Double: 25 km is 2.5 million cm, where a float
+	// resolves only a quarter of a centimetre against a physics substep's few.
+	double Distance = 0.0;
 	float Speed = 0.f;    // m/s
 	float Grade = 0.f;    // rise over run
 	float Elapsed = 0.f;  // seconds riding
@@ -72,7 +74,17 @@ private:
 	int32 NextShot = 0;
 	FString ShotDir;
 	float LogClock = 0.f;
+	// Frames since the last status line: the slowest, and how many took over 50 ms (a hitch the eye
+	// sees as the ride stepping, whatever the average).
+	float SlowestFrame = 0.f;
+	int32 Hitches = 0;
+	int32 Frames = 0;
+	// The head's rotation, eased toward the road's: the track is straight between samples a metre
+	// apart, so following it rigidly turns the view in small kinks several times a second.
+	FRotator Head;
+	bool bHeadSet = false;
 	float QuitAt = -1.f;
+	float ProfileAt = -1.f;
 	void ReadCommandLine();
 	void Automate(float Dt);
 

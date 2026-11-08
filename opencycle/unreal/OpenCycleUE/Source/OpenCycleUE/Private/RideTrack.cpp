@@ -41,8 +41,11 @@ void URideTrack::At(float S, FVector& OutPosition, float& OutYaw) const
 	                        : FMath::Min(FMath::FloorToInt32(F), Centre.Num() - 2);
 	const float T = F - I;
 	OutPosition = FMath::Lerp(Centre[I], Centre[Index(I + 1)], T);
-	// Yaw from points a few metres either side, as coast_layout.CoastPath.at does.
-	const FVector Along = Centre[Index(I + 3)] - Centre[Index(I - 2)];
+	// Yaw from points a few metres either side, as coast_layout.CoastPath.at does, eased between
+	// one sample's and the next's: taken whole from sample I it turned in steps a metre apart, and
+	// with it the eye's keep-left offset.
+	const FVector Along = FMath::Lerp(Centre[Index(I + 3)] - Centre[Index(I - 2)],
+	                                  Centre[Index(I + 4)] - Centre[Index(I - 1)], T);
 	OutYaw = FMath::RadiansToDegrees(FMath::Atan2(Along.Y, Along.X));
 }
 

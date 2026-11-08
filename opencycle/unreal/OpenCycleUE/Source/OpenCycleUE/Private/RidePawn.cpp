@@ -19,6 +19,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Paths.h"
 #include "RidePlayerController.h"
+#include "RHI.h"
 #include "RideTrack.h"
 #include "UnrealClient.h"
 
@@ -84,7 +85,7 @@ void ARidePawn::BeginPlay()
 	}
 	ReadCommandLine();
 	bStarted = bStarted || Automated();
-	Distance = StartMetres * 100.f;
+	Distance = StartMetres * 100.0;
 	FindWeather();
 	ApplyWeather();
 	Place();
@@ -120,6 +121,7 @@ void ARidePawn::ReadCommandLine()
 {
 	const TCHAR* Line = FCommandLine::Get();
 	FParse::Value(Line, TEXT("RideStart="), StartMetres);
+	FParse::Value(Line, TEXT("RideProfileAt="), ProfileAt);
 	FString Source = TrainerSources[0];
 	FParse::Value(Line, TEXT("RideTrainer="), Source);
 	UseTrainer(TrainerSources.Contains(Source) ? Source : TrainerSources[0]);
@@ -167,17 +169,37 @@ void ARidePawn::UseTrainer(const FString& Source)
 void ARidePawn::Automate(float Dt)
 {
 	LogClock += Dt;
+	SlowestFrame = FMath::Max(SlowestFrame, Dt);
+	Hitches += Dt > 0.05f ? 1 : 0;
+	++Frames;
 	if (LogClock >= 5.f)
 	{
+		UE_LOG(LogTemp, Display,
+		       TEXT("RIDE t=%.1f km=%.3f speed=%.1f km/h watts=%.0f grade=%+.1f%% fps=%.1f slowest=%.0fms "
+		            "hitches=%d game=%.1fms draw=%.1fms gpu=%.1fms"),
+		       Elapsed, Distance / 100000.0, Speed * 3.6f, Reading.Watts, Grade * 100.f, Frames / LogClock,
+		       SlowestFrame * 1000.f, Hitches, FPlatformTime::ToMilliseconds(GGameThreadTime),
+		       FPlatformTime::ToMilliseconds(GRenderThreadTime),
+		       FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles()));
 		LogClock = 0.f;
-		UE_LOG(LogTemp, Display, TEXT("RIDE t=%.1f km=%.3f speed=%.1f km/h watts=%.0f grade=%+.1f%% fps=%.1f"),
-		       Elapsed, Distance / 100000.f, Speed * 3.6f, Reading.Watts, Grade * 100.f, 1.f / FMath::Max(Dt, 1e-3f));
+		SlowestFrame = 0.f;
+		Hitches = 0;
+		Frames = 0;
+	}
+	// -RideProfileAt=SECONDS logs one frame's GPU passes (ProfileGPU) there, to see what costs.
+	if (ProfileAt >= 0.f && Elapsed >= ProfileAt)
+	{
+		ProfileAt = -1.f;
+		if (APlayerController* Player = GetController<APlayerController>())
+		{
+			Player->ConsoleCommand(TEXT("ProfileGPU"));
+		}
 	}
 	if (NextShot < ShotTimes.Num() && Elapsed >= ShotTimes[NextShot])
 	{
 		const FString File = ShotDir / FString::Printf(TEXT("ride_%02d.png"), NextShot);
 		FScreenshotRequest::RequestScreenshot(File, true, false);
-		UE_LOG(LogTemp, Display, TEXT("RIDE shot %s at t=%.1f km=%.3f"), *File, Elapsed, Distance / 100000.f);
+		UE_LOG(LogTemp, Display, TEXT("RIDE shot %s at t=%.1f km=%.3f"), *File, Elapsed, Distance / 100000.0);
 		if (++NextShot == ShotTimes.Num())
 		{
 			QuitAt = Elapsed + 2.f;
@@ -219,19 +241,19 @@ void ARidePawn::Ride(float Dt)
 	Legs.Tick(Dt);
 	Trainer->Tick(Dt);
 	Reading = Trainer->Read();
-	Grade = Track->Grade(Distance);
+	Grade = Track->Grade(Track->Wrap(static_cast<float>(Distance)));
 	Trainer->SetGrade(Grade);
 	// Fixed substeps, so the speed doesn't depend on the frame rate.
 	for (float Left = Dt; Left > 0.f; Left -= PhysicsStep)
 	{
 		const float H = FMath::Min(Left, PhysicsStep);
 		Speed = OpenCycle::Step(Rider, Speed, Reading.Watts, Grade, H);
-		Distance += Speed * 100.f * H;
+		Distance += static_cast<double>(Speed) * 100.0 * H;
 	}
 	Elapsed += Dt;
 	if (!Track->bClosed && Distance >= Track->Length())
 	{
-		Distance = Track->Length();
+		Distance = static_cast<double>(Track->Length());
 		Speed = 0.f;
 		bFinished = true;
 		ARidePlayerController* Rides = GetController<ARidePlayerController>();
@@ -244,7 +266,7 @@ void ARidePawn::Ride(float Dt)
 
 void ARidePawn::Place()
 {
-	const float S = Track->Wrap(Distance);
+	const float S = Track->Wrap(static_cast<float>(Distance));
 	const FVector Eye = Track->Point(S, -Track->KeepLeft, EyeHeight);
 	FVector Ahead;
 	float Unused;
@@ -252,7 +274,22 @@ void ARidePawn::Place()
 	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
 	const float Rise = Track->Height(Track->Wrap(S + GradeSpan)) - Track->Height(S);
 	const float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
-	SetActorLocationAndRotation(Eye, FRotator(Pitch, Yaw, 0.f));
+	const FRotator Road(Pitch, Yaw, 0.f);
+	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
+	if (!bHeadSet || Dt <= 0.f)
+	{
+		Head = Road;
+		bHeadSet = true;
+	}
+	else
+	{
+		// A tenth of a second's lag: enough to round the kinks off, too little to swing wide on a
+		// bend. Frame-rate independent, so a slow frame doesn't jerk the view.
+		const float Ease = 1.f - FMath::Exp(-Dt / 0.1f);
+		Head = FMath::Lerp(Head, Head + (Road - Head).GetNormalized(), Ease);
+		Head.Normalize();
+	}
+	SetActorLocationAndRotation(Eye, Head);
 }
 
 void ARidePawn::FindWeather()
@@ -281,7 +318,7 @@ void ARidePawn::ApplyWeather()
 	{
 		return;
 	}
-	const FRideWeather W = Track->WeatherAt(Track->Wrap(Distance) / 100.f);
+	const FRideWeather W = Track->WeatherAt(Track->Wrap(static_cast<float>(Distance)) / 100.f);
 	if (Track->Collection)
 	{
 		if (UMaterialParameterCollectionInstance* Values = GetWorld()->GetParameterCollectionInstance(Track->Collection))
