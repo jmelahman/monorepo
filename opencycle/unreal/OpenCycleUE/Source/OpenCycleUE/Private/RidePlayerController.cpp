@@ -20,9 +20,12 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 	}
 	if (ARidePawn::Automated())
 	{
-		// Tests and stills look the same whatever a player chose: Epic, without saving it.
+		// Tests and stills look the same whatever a player chose: Epic, without saving it, unless
+		// -RideQuality=0..3 asks for another preset (scripts/pod_bench.sh rides each).
+		int32 Quality = 3;
+		FParse::Value(FCommandLine::Get(), TEXT("RideQuality="), Quality);
 		Scalability::FQualityLevels Levels;
-		Levels.SetFromSingleQualityLevel(3);
+		Levels.SetFromSingleQualityLevel(FMath::Clamp(Quality, 0, 3));
 		Scalability::SetQualityLevels(Levels);
 		return;
 	}
