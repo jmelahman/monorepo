@@ -91,7 +91,9 @@ private:
 	FRotator Head;
 	bool bHeadSet = false;
 	// The body on the bike: the crank's angle (radians), which drives a pedalling sway, and the
-	// roll into a bend, eased, both in degrees. The sway's size follows the effort.
+	// roll into a bend, eased, both in degrees. The sway's size follows the effort. Off unless the
+	// ride starts with -RideSway: a steady view is easier to watch for an hour.
+	bool bSway = false;
 	float Crank = 0.f;
 	float Sway = 0.f;
 	float Lean = 0.f;

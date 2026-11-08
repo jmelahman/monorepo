@@ -9,9 +9,10 @@ namespace OpenCycle
 {
 struct FRider
 {
-	double MassKg = 85.0;     // rider and bike
-	double Crr = 0.005;       // rolling resistance on smooth tarmac
-	double CdA = 0.32;        // drag area on the hoods, m^2
+	// A touring rider: sat up on a steel bike with wider tyres, about 28 km/h for 220 W on the flat.
+	double MassKg = 90.0;     // rider and bike
+	double Crr = 0.008;       // rolling resistance, wider tyres on a country lane
+	double CdA = 0.55;        // drag area sat up, m^2
 	double AirDensity = 1.225;
 	double Drivetrain = 0.97; // share of pedal power that reaches the wheel
 	double WheelMassKg = 1.0; // the wheels' spin, added to the mass to be accelerated

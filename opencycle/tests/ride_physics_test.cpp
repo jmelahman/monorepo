@@ -30,10 +30,10 @@ static double Ride(double Watts, double Grade, double Seconds, double Start = 0.
 int main()
 {
 	const FRider Rider;
-	// 200 W on the flat holds a club rider's pace, about 32 km/h on the hoods.
-	const double Flat = SteadySpeed(Rider, 200.0, 0.0) * 3.6;
-	Check(Flat > 29.0 && Flat < 35.0, "200 W on the flat is 29..35 km/h", Flat);
-	// A 6% climb at 250 W with 85 kg is about 15 km/h.
+	// 220 W on the flat holds a touring pace, about 28 km/h sat up.
+	const double Flat = SteadySpeed(Rider, 220.0, 0.0) * 3.6;
+	Check(Flat > 26.0 && Flat < 29.0, "220 W on the flat is 26..29 km/h", Flat);
+	// A 6% climb at 250 W with 90 kg is about 13.5 km/h.
 	const double Climb = SteadySpeed(Rider, 250.0, 0.06) * 3.6;
 	Check(Climb > 13.0 && Climb < 17.0, "250 W up 6% is 13..17 km/h", Climb);
 	// Riding long enough settles on the steady speed.
@@ -44,7 +44,7 @@ int main()
 	      SteadySpeed(Rider, 300.0, 0.02));
 	// Freewheeling down 5% runs on to a terminal speed well above walking pace.
 	const double Coast = Ride(0.0, -0.05, 120.0) * 3.6;
-	Check(Coast > 40.0 && Coast < 70.0, "coasting down 5% is 40..70 km/h", Coast);
+	Check(Coast > 30.0 && Coast < 70.0, "coasting down 5% is 30..70 km/h", Coast);
 	// Stopping pedalling on a steep climb stops the rider; they never roll back.
 	const double Stalled = Ride(0.0, 0.12, 30.0, 4.0);
 	Check(Stalled == 0.0, "no power up 12% comes to a stop, not backwards", Stalled);

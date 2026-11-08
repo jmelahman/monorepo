@@ -24,8 +24,10 @@ the desktop and resets on full-density frames. A GPU pod has no copy and renders
 
 ## Playing the ride
 
-`ARidePawn` carries the rider along the path at the speed their power gives (`RidePhysics.h`), with
-the camera the stills use, the weather following where they are and the rain carried round them.
+`ARidePawn` carries the rider along the path at the speed their power gives (`RidePhysics.h`, a
+touring rider sat up: about 28 km/h for 220 W on the flat), through a 20 mm lens (61°), with the
+weather following where they are and the rain carried round them. The view stays level; `-RideSway`
+adds a pedalling sway and a lean into bends.
 For now power comes from the keyboard: W or Up adds watts, S or Down takes them away. The track comes
 from `/Game/Coast/Ride/DA_RideTrack`, which `ride_track.py` writes.
 

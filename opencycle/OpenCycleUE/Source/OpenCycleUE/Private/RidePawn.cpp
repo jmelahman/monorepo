@@ -28,7 +28,7 @@ namespace
 constexpr float LookAhead = 600.f; // cm: the camera looks this far up the road
 constexpr float GradeSpan = 800.f; // cm over which the camera's pitch follows the grade
 constexpr float SensorWidth = 23.76f;
-constexpr float FocalLength = 16.f; // mm, as the stills
+constexpr float FocalLength = 20.f; // mm: a 61° view; the stills' 16 mm (73°) made the ride look fast
 constexpr float PhysicsStep = 1.f / 120.f;
 } // namespace
 
@@ -165,6 +165,7 @@ void ARidePawn::ReadCommandLine()
 	FParse::Value(Line, TEXT("RideStart="), StartMetres);
 	FParse::Value(Line, TEXT("RideProfileAt="), ProfileAt);
 	FParse::Value(Line, TEXT("RideFtp="), Ftp);
+	bSway = FParse::Param(Line, TEXT("RideSway"));
 	Ftp = FMath::Max(Ftp, 50.f);
 	FString Source = TrainerSources[0];
 	FParse::Value(Line, TEXT("RideTrainer="), Source);
@@ -328,9 +329,9 @@ void ARidePawn::Place()
 	float Turn = 0.f;
 	if (Dt > 0.f)
 	{
-		// Pedalling: the head rises and falls twice a turn of the crank, rocks once, and turns a
-		// little. Stills get it too, but stopped (paused, or at the start) it settles to nothing.
-		const bool bMoving = !bPaused && !bFinished && Speed > 0.3f;
+		// Pedalling, with -RideSway: the head rises and falls twice a turn of the crank, rocks once,
+		// and turns a little. Stopped (paused, or at the start) it settles to nothing.
+		const bool bMoving = bSway && !bPaused && !bFinished && Speed > 0.3f;
 		const float Rpm = Reading.CadenceRpm > 20.0 ? static_cast<float>(Reading.CadenceRpm) : 85.f;
 		if (bMoving)
 		{
@@ -347,7 +348,7 @@ void ARidePawn::Place()
 		Track->At(Track->Wrap(S - 300.f), Unused2, Before);
 		Track->At(Track->Wrap(S + 300.f), Unused2, After);
 		const float Curve = FMath::DegreesToRadians(FMath::UnwindDegrees(After - Before)) / 6.f; // per metre
-		const float Want = FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f;
+		const float Want = bSway ? FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f : 0.f;
 		Lean = FMath::Lerp(Lean, FMath::Clamp(Want, -4.f, 4.f), 1.f - FMath::Exp(-Dt / 0.35f));
 	}
 	const FRotator Road(Pitch, Yaw, 0.f);
