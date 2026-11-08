@@ -17,7 +17,7 @@ on:
       - templates/godot-template/scripts/env.sh
       - templates/godot-template/scripts/setup.sh
       - templates/godot-template/scripts/versions.env
-      - tools/containers/android/**
+      - tools/containers/**
       - docker-bake.hcl
       - .github/workflows/devcontainer.yml
 
