@@ -172,6 +172,7 @@ class Graph:
             "normal": unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
             "mask": unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE,
             "linear": unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR,
+            "masks": unreal.MaterialSamplerType.SAMPLERTYPE_MASKS,
         }[kind]
         node = self.node(unreal.MaterialExpressionTextureSample, x=-900)
         node.set_editor_property("texture", tex)
