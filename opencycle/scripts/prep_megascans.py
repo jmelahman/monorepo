@@ -75,6 +75,8 @@ def prep(job):
     meta = json.loads(meta_path.read_text())
     cats = meta.get("categories") or []
     kind = "plant" if "3dplant" in cats else "surface" if "surface" in cats else "prop"
+    if not any(folder.glob("*.fbx")):
+        kind = "surface"  # some texture sets lack the category
     (out / "mesh").mkdir(parents=True, exist_ok=True)
     for fbx in folder.glob("*.fbx"):
         link = out / "mesh" / fbx.name
@@ -82,7 +84,7 @@ def prep(job):
             os.link(fbx, link)
     done = out / "asset.json"
     if done.exists() and not FORCE:
-        return json.loads(done.read_text())
+        return {**json.loads(done.read_text()), "kind": kind}
 
     colour = load(find(folder, "BaseColor"), "RGB")
     opacity = find(folder, "Opacity")
