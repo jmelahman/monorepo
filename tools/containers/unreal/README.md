@@ -22,7 +22,7 @@ docker buildx bake unreal-devcontainer --push     # to publish it for kanban
 ```
 
 `.github/workflows/devcontainer.yml` builds and pushes it on changes to this directory.
-GITHUB_TOKEN can't pull Epic's image, so that job logs in with the `EPIC_GHCR_TOKEN`
+GITHUB_TOKEN can't pull Epic's image, so that job logs in with the `GHCR_TOKEN`
 repository secret: a personal access token with `read:packages` and `write:packages`
 from an account in the EpicGames organization.
 

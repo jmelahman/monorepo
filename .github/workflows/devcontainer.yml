@@ -77,7 +77,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.EPIC_GHCR_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN }}
       - name: Build and push
         id: bake
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e

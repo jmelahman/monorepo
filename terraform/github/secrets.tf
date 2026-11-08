@@ -48,3 +48,37 @@ resource "github_actions_secret" "claude_code_oauth_token" {
     ignore_changes = [key_id, value_encrypted]
   }
 }
+
+variable "ghcr_token" {
+  description = "GHCR_TOKEN for monorepo, encrypted by `gh secret set --no-store`."
+  type        = string
+  sensitive   = true
+  # Same placeholder scheme as claude_code_oauth_token.
+  default = "AA=="
+}
+
+# The devcontainer workflow's unreal job logs in to ghcr.io with this to pull
+# Epic's base image, which GITHUB_TOKEN can't, and to push ours. It is a
+# personal access token with read:packages and write:packages from an account
+# in the EpicGames organization. Encrypt it as above:
+#
+#   read -rs TOKEN
+#   export TF_VAR_ghcr_token=$(printf %s "$TOKEN" \
+#     | gh secret set GHCR_TOKEN --no-store -R jmelahman/monorepo)
+resource "github_actions_secret" "ghcr_token" {
+  repository      = github_repository.repo["monorepo"].name
+  secret_name     = "GHCR_TOKEN"
+  key_id          = data.github_actions_public_key.monorepo.key_id
+  value_encrypted = var.ghcr_token
+
+  lifecycle {
+    precondition {
+      condition = (
+        var.ghcr_token != "AA==" ||
+        contains(data.github_actions_secrets.monorepo.secrets[*].name, "GHCR_TOKEN")
+      )
+      error_message = "Set TF_VAR_ghcr_token to create the secret; see secrets.tf."
+    }
+    ignore_changes = [key_id, value_encrypted]
+  }
+}
