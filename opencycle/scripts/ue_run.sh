@@ -14,6 +14,10 @@ if [ -n "${OC_EDITOR:-}" ]; then
 else
 	run=("$UE/UnrealEditor-Cmd" "$PROJECT" -run=pythonscript -script="/workspace/ue/scripts/$1")
 fi
+# OC_UE_ARGS adds Unreal options, split on spaces, e.g. a cap on shader compilers where memory is
+# short: -ini:Engine:[DevOptions.Shaders]:PercentageUnusedShaderCompilingThreads=83
+read -r -a extra <<<"${OC_UE_ARGS:-}"
+run+=("${extra[@]}")
 # shellcheck disable=SC2024 # the log redirect is meant to run as the calling user
 sudo -u ue4 env UE-LocalDataCachePath=/workspace/ddc HOME=/home/ue4 "${vars[@]}" \
 	"${run[@]}" -unattended -nosplash -stdout -FullStdOutLogOutput >"$2" 2>&1 </dev/null
