@@ -6,8 +6,8 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-# gdformat and shfmt both indent with tabs; Godot writes scenes with none.
-[*.{gd,sh,env}]
+# shfmt indents with tabs, and so does the Unreal C++.
+[*.{sh,env,h,cpp,cs}]
 indent_style = tab
 indent_size = 4
 

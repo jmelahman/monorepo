@@ -19,7 +19,3 @@ COLORTERM = "truecolor"
 VK_ICD_FILENAMES = "/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
 WAYLAND_DISPLAY = "wayland-1"
 XDG_RUNTIME_DIR = "${localEnv:XDG_RUNTIME_DIR}"
-
-[[task]]
-label = "Storybook"
-container_port = 8000

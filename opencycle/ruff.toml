@@ -1,4 +1,4 @@
-# scripts/bridge.py is the only Python, and it is standard library only, so
+# The Python is unreal/scripts, which runs inside Unreal's own interpreter, so
 # this is ruff alone rather than the monorepo's python profile (ty, pytest, a
 # uv lockfile).
 line-length = 100
