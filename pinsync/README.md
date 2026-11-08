@@ -34,7 +34,7 @@ A dependency bot bumps one of them and the rest drift. Tell pinsync which
 copy is the source of truth:
 
 ```toml
-# .config/pinsync/config.toml
+# .pinsync.toml
 [pins.uv]
 source = "pre-commit"
 repo = "https://github.com/astral-sh/uv-pre-commit"
@@ -65,8 +65,8 @@ Binaries for each platform are also attached to every
 
 ## Configuration
 
-`.config/pinsync/config.toml`, at the root of the git repository. A fuller
-example:
+`.pinsync.toml` or `.config/pinsync/config.toml`, at the root of the git
+repository (having both is an error). A fuller example:
 
 ```toml
 # The version is the uv-pre-commit rev in the root .pre-commit-config.yaml,

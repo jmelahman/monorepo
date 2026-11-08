@@ -1,4 +1,5 @@
-// Package config loads a repository's .config/pinsync/config.toml: the pins
+// Package config loads a repository's .pinsync.toml or
+// .config/pinsync/config.toml: the pins
 // pinsync keeps in step, where each one's version comes from, and where its
 // copies are written.
 package config
@@ -14,8 +15,14 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// File is the path of the config, relative to the repository root.
-const File = ".config/pinsync/config.toml"
+// The paths a config can live at, relative to the repository root. A
+// repository has at most one.
+const (
+	// TopLevelFile is the config kept at the repository root.
+	TopLevelFile = ".pinsync.toml"
+	// File is the config kept with other tools' configs under .config.
+	File = ".config/pinsync/config.toml"
+)
 
 // The places a pin's version can come from.
 const (
@@ -30,10 +37,13 @@ const (
 
 var (
 	// ErrNoConfig is returned by Load for a repository without a config.
-	ErrNoConfig = errors.New("no " + File)
+	ErrNoConfig = errors.New("no " + TopLevelFile + " or " + File)
+	// ErrMultipleConfigs is returned by Load for a repository with a config
+	// at more than one path, so it is never unclear which one applies.
+	ErrMultipleConfigs = errors.New("both " + TopLevelFile + " and " + File + " exist")
 	// ErrBadConfig is returned by Load for a config that does not describe
 	// valid pins.
-	ErrBadConfig = errors.New("invalid " + File)
+	ErrBadConfig = errors.New("invalid config")
 )
 
 // Pin is one version kept in step across the repository.
@@ -65,10 +75,7 @@ type file struct {
 // Load reads and validates the config of the repository at root, and
 // returns its pins sorted by name, with Package and Input defaulted.
 func Load(root string) ([]Pin, error) {
-	data, err := os.ReadFile(filepath.Join(root, File))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, ErrNoConfig
-	}
+	data, err := read(root)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +105,30 @@ func Load(root string) ([]Pin, error) {
 	}
 	slices.SortFunc(pins, func(a, b Pin) int { return strings.Compare(a.Name, b.Name) })
 	return pins, nil
+}
+
+// read returns the contents of the repository's one config file.
+func read(root string) ([]byte, error) {
+	var data []byte
+	found := 0
+	for _, name := range []string{TopLevelFile, File} {
+		b, err := os.ReadFile(filepath.Join(root, name))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		data = b
+		found++
+	}
+	switch found {
+	case 0:
+		return nil, ErrNoConfig
+	case 1:
+		return data, nil
+	}
+	return nil, ErrMultipleConfigs
 }
 
 func (p Pin) validate() error {

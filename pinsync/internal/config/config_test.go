@@ -75,3 +75,42 @@ package = "My_Pkg"
 		})
 	}
 }
+
+func TestLoadPaths(t *testing.T) {
+	t.Parallel()
+
+	const pin = "[pins.uv]\nversion = \"1\"\n"
+	tests := []struct {
+		wantErr error
+		name    string
+		files   []string
+	}{
+		{name: "top level", files: []string{config.TopLevelFile}},
+		{name: "under .config", files: []string{config.File}},
+		{name: "both", files: []string{config.TopLevelFile, config.File}, wantErr: config.ErrMultipleConfigs},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			for _, name := range tt.files {
+				p := filepath.Join(root, name)
+				if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(pin), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			got, err := config.Load(root)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("Load() error = %v, want %v", err, tt.wantErr)
+			}
+			if tt.wantErr == nil && len(got) != 1 {
+				t.Fatalf("Load() = %+v, want one pin", got)
+			}
+		})
+	}
+}
