@@ -95,11 +95,11 @@ for prop, value in (
     ("film_slope", 0.84),
     ("film_toe", 0.6),
     ("film_shoulder", 0.34),
-    ("color_saturation_highlights", unreal.Vector4(0.85, 0.85, 0.85, 1.0)),
+    ("color_saturation_highlights", unreal.Vector4(0.9, 0.9, 0.9, 1.0)),
     ("color_gain_highlights", unreal.Vector4(1.03, 1.01, 0.96, 1.0)),
     ("color_offset_shadows", unreal.Vector4(0.002, 0.004, 0.008, 0.0)),
     ("color_saturation", unreal.Vector4(1.04, 1.04, 1.04, 1.0)),
-    ("vignette_intensity", 0.3),
+    ("vignette_intensity", 0.36),
     ("scene_fringe_intensity", 0.25),
 ):
     setattr(look, f"override_{prop}", True)

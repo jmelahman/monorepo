@@ -49,7 +49,7 @@ void ARidePawn::CameraLook(FPostProcessSettings& Look)
 	Look.bOverride_FilmShoulder = true;
 	Look.FilmShoulder = 0.34f;
 	Look.bOverride_ColorSaturationHighlights = true;
-	Look.ColorSaturationHighlights = FVector4(0.85f, 0.85f, 0.85f, 1.f);
+	Look.ColorSaturationHighlights = FVector4(0.9f, 0.9f, 0.9f, 1.f);
 	Look.bOverride_ColorGainHighlights = true;
 	Look.ColorGainHighlights = FVector4(1.03f, 1.01f, 0.96f, 1.f);
 	Look.bOverride_ColorOffsetShadows = true;
@@ -57,7 +57,7 @@ void ARidePawn::CameraLook(FPostProcessSettings& Look)
 	Look.bOverride_ColorSaturation = true;
 	Look.ColorSaturation = FVector4(1.04f, 1.04f, 1.04f, 1.f);
 	Look.bOverride_VignetteIntensity = true;
-	Look.VignetteIntensity = 0.3f;
+	Look.VignetteIntensity = 0.36f;
 	Look.bOverride_SceneFringeIntensity = true;
 	Look.SceneFringeIntensity = 0.25f;
 }
