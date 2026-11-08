@@ -21,6 +21,11 @@ docker buildx bake unreal-devcontainer            # from the repository root
 docker buildx bake unreal-devcontainer --push     # to publish it for kanban
 ```
 
+`.github/workflows/devcontainer.yml` builds and pushes it on changes to this directory.
+GITHUB_TOKEN can't pull Epic's image, so that job logs in with the `EPIC_GHCR_TOKEN`
+repository secret: a personal access token with `read:packages` and `write:packages`
+from an account in the EpicGames organization.
+
 Kanban applies only `--cap-add`, `--cap-drop`, `--privileged`, `--network` and `--init`
 from `run_args`, so `--group-add`, `--shm-size` and `--device` can't be set from the
 config. The GPU comes through the `/dev/dri` bind mount.
