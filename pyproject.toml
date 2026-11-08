@@ -28,9 +28,8 @@ pythonpath = [
 ]
 
 [tool.ty.analysis]
-# validate_configs.py falls back to tomli only on Pythons without tomllib. opencycle's
-# scripts/blender run inside Blender, whose modules aren't on PyPI's terms.
-allowed-unresolved-imports = ["tomli", "bpy", "bmesh", "mathutils", "mathutils.**"]
+# validate_configs.py falls back to tomli only on Pythons without tomllib.
+allowed-unresolved-imports = ["tomli"]
 
 [tool.uv.sources]
 # A path source rather than a workspace member: manygo/ keeps its own uv.lock,
@@ -39,6 +38,6 @@ allowed-unresolved-imports = ["tomli", "bpy", "bmesh", "mathutils", "mathutils.*
 manygo = { path = "manygo", editable = true }
 
 [tool.ty.src]
-# opencycle's unreal/scripts run inside the Unreal editor, against its generated `unreal` module,
+# opencycle's scripts run inside the Unreal editor, against its generated `unreal` module,
 # which isn't on PyPI and which tools/containers/unreal shadows here as a namespace package.
-exclude = ["opencycle/unreal/scripts"]
+exclude = ["opencycle/scripts"]

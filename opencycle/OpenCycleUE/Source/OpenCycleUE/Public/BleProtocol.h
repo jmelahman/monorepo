@@ -1,6 +1,6 @@
 // The Bluetooth GATT messages a smart trainer, power meter, speed/cadence sensor and heart-rate strap
 // send, and the FTMS commands that set a trainer's resistance. Plain C++ with no engine types, so it
-// is tested on its own (unreal/tests/ble_protocol_test.cpp); the BLE transport sits on top.
+// is tested on its own (tests/ble_protocol_test.cpp); the BLE transport sits on top.
 //
 // Little-endian throughout, as the Bluetooth specs have it:
 //   Heart Rate Measurement   0x2A37 (service 0x180D)

@@ -1,5 +1,5 @@
 // How fast a rider goes for the power they put down. Plain C++ with no engine types, so it can be
-// tested on its own (unreal/tests/ride_physics_test.cpp) like the Godot sim/.
+// tested on its own (tests/ride_physics_test.cpp).
 #pragma once
 
 #include <algorithm>

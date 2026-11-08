@@ -1,7 +1,7 @@
 // Turns the notifications of a rider's Bluetooth devices into one reading, and keeps a smart
 // trainer's resistance in step with the road. It knows nothing of the radio: the transport hands it
 // each notification and control point reply, and writes whatever Tick returns to the control point.
-// Plain C++, tested against FSimulatedTrainer in unreal/tests/ble_session_test.cpp.
+// Plain C++, tested against FSimulatedTrainer in tests/ble_session_test.cpp.
 #pragma once
 
 #include "BleProtocol.h"
