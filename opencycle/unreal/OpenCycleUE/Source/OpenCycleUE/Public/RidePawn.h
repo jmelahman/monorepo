@@ -48,6 +48,12 @@ public:
 	bool bFinished = false;
 	bool bStarted = false; // off the start screen
 	FTrainerReading Reading;
+	float ClimbedMetres = 0.f;
+	double Joules = 0.0;
+	// Power zones as shares of FTP (-RideFtp=, 250 W by default), Coggan's seven: Zone gives 0..6.
+	float Ftp = 250.f;
+	int32 Zone(float Watts) const;
+	float ZoneSeconds[7] = {};
 	FString TrainerName() const;
 	float TrackLength() const;
 

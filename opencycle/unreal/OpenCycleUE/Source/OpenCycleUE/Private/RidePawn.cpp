@@ -124,6 +124,17 @@ void ARidePawn::BeginPlay()
 
 FString ARidePawn::TrainerName() const { return Trainer ? Trainer->Name() : TEXT("None"); }
 
+int32 ARidePawn::Zone(float Watts) const
+{
+	static constexpr float Tops[] = {0.55f, 0.75f, 0.90f, 1.05f, 1.20f, 1.50f};
+	int32 Z = 0;
+	while (Z < 6 && Watts >= Tops[Z] * Ftp)
+	{
+		++Z;
+	}
+	return Z;
+}
+
 float ARidePawn::TrackLength() const { return Track ? Track->Length() : 0.f; }
 
 void ARidePawn::Tick(float Dt)
@@ -153,6 +164,8 @@ void ARidePawn::ReadCommandLine()
 	const TCHAR* Line = FCommandLine::Get();
 	FParse::Value(Line, TEXT("RideStart="), StartMetres);
 	FParse::Value(Line, TEXT("RideProfileAt="), ProfileAt);
+	FParse::Value(Line, TEXT("RideFtp="), Ftp);
+	Ftp = FMath::Max(Ftp, 50.f);
 	FString Source = TrainerSources[0];
 	FParse::Value(Line, TEXT("RideTrainer="), Source);
 	UseTrainer(TrainerSources.Contains(Source) ? Source : TrainerSources[0]);
@@ -274,6 +287,7 @@ void ARidePawn::Ride(float Dt)
 	Reading = Trainer->Read();
 	Grade = Track->Grade(Track->Wrap(static_cast<float>(Distance)));
 	Trainer->SetGrade(Grade);
+	const float Before = Track->Height(Track->Wrap(static_cast<float>(Distance)));
 	// Fixed substeps, so the speed doesn't depend on the frame rate.
 	for (float Left = Dt; Left > 0.f; Left -= PhysicsStep)
 	{
@@ -282,6 +296,9 @@ void ARidePawn::Ride(float Dt)
 		Distance += static_cast<double>(Speed) * 100.0 * H;
 	}
 	Elapsed += Dt;
+	ClimbedMetres += FMath::Max(0.f, Track->Height(Track->Wrap(static_cast<float>(Distance))) - Before) / 100.f;
+	Joules += Reading.Watts * Dt;
+	ZoneSeconds[Zone(Reading.Watts)] += Dt;
 	if (!Track->bClosed && Distance >= Track->Length())
 	{
 		Distance = static_cast<double>(Track->Length());

@@ -68,6 +68,18 @@ while m <= metres + WEATHER_STEP:
     m += WEATHER_STEP
 track.set_editor_property("weather", rows)
 
+# The stretches, for the HUD: consecutive zones of one name are one stretch.
+stretches = []
+for name, start in layout.ZONES:
+    if start < metres and not (
+        stretches and stretches[-1].get_editor_property("name") == name.title()
+    ):
+        row = unreal.RideStretch()
+        row.set_editor_property("name", name.title())
+        row.set_editor_property("metres", float(start))
+        stretches.append(row)
+track.set_editor_property("stretches", stretches)
+
 rain = None
 for asset in unreal.EditorAssetLibrary.list_assets("/Game/Coast/Gen/Kit/V_rain", recursive=True):
     loaded = unreal.load_asset(asset)
@@ -81,5 +93,5 @@ if unreal.EditorAssetLibrary.does_asset_exist(mpc):
 unreal.EditorAssetLibrary.save_loaded_asset(track, only_if_is_dirty=False)
 log(
     f"{len(centre)} samples, {metres / 1000:.2f} km, closed={path.closed}, "
-    f"{len(rows)} weather rows, rain shell {'yes' if rain else 'none'}"
+    f"{len(rows)} weather rows, {len(stretches)} stretches, rain shell {'yes' if rain else 'none'}"
 )

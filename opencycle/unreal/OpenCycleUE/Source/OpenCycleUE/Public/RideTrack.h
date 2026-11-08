@@ -21,6 +21,16 @@ struct FRideWeather
 	UPROPERTY(EditAnywhere) float Wet = 0.f;         // the ground: the rain, drying after it stops
 };
 
+// Where a stretch of the ride starts (town, paddies, jungle, ...): it runs to the next one's start.
+USTRUCT(BlueprintType)
+struct FRideStretch
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere) FString Name;
+	UPROPERTY(EditAnywhere) float Metres = 0.f;
+};
+
 UCLASS(BlueprintType)
 class OPENCYCLEUE_API URideTrack : public UDataAsset
 {
@@ -38,6 +48,8 @@ public:
 	UPROPERTY(EditAnywhere) float SunAzimuth = -62.f;
 	// Weather rows in order of Metres.
 	UPROPERTY(EditAnywhere) TArray<FRideWeather> Weather;
+	// Stretches in order of Metres; empty in a track written before they were.
+	UPROPERTY(EditAnywhere) TArray<FRideStretch> Stretches;
 	// The rain shells carried round the camera; their material shows streaks only where it rains.
 	UPROPERTY(EditAnywhere) TObjectPtr<class UStaticMesh> RainShell;
 	// MPC_Ride, whose Rain and Wet the materials read: the shells' streaks and the wet ground.
