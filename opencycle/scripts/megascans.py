@@ -5,8 +5,9 @@ Two stages, because Interchange finishes an import after the call returns and th
 meshes' material slots (see the README's pitfalls):
     OC_STAGE=import bash scripts/ue_run.sh megascans.py megascans_import.log
     OC_STAGE=assign bash scripts/ue_run.sh megascans.py megascans_assign.log
-OC_ONLY narrows either stage to a comma list of biomes or biome/slug pairs. Assets already
-imported are skipped unless OC_FORCE=1.
+OC_ONLY narrows either stage to a comma list of biomes or biome/slug pairs, and OC_SKIP leaves out
+such a list (for a raw scan that crashes the commandlet). Assets already imported are skipped unless
+OC_FORCE=1.
 """
 
 import importlib.util
@@ -32,6 +33,7 @@ PREP = "/workspace/ue/fab_prep"
 ROOT = "/Game/Megascans"
 STAGE = os.environ.get("OC_STAGE", "import")
 ONLY = set(filter(None, (os.environ.get("OC_ONLY") or "").split(",")))
+SKIP = set(filter(None, (os.environ.get("OC_SKIP") or "").split(",")))
 FORCE = os.environ.get("OC_FORCE") == "1"
 TEXTURES = {
     # file: (suffix, sRGB, compression)
@@ -47,7 +49,8 @@ def log(message):
 
 
 def wanted(record):
-    return not ONLY or record["biome"] in ONLY or f"{record['biome']}/{record['slug']}" in ONLY
+    keys = {record["biome"], f"{record['biome']}/{record['slug']}"}
+    return (not ONLY or bool(keys & ONLY)) and not keys & SKIP
 
 
 def folder_of(record):
