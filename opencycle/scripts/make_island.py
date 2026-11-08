@@ -6,8 +6,12 @@ looks for in $OC_PYLIB (default /opt/oc-pylib). OC_RES sets the grid: 1025 (the 
 quick preview at 8 m; 8129 is the landscape, a metre a sample. Writes to
 /workspace/ue/world_gen/island[_<res>]:
 - preview.png: the map, shaded, coloured by region, with the roads;
-- profile.png: each road's height along its length (full run only: also height.r16, the
-  region and layer maps and roads.json for the importer).
+- profile.png: each road's height along its length;
+- height.r16: 16-bit heights, RES x RES, rows along Y, 32768 at sea level, Z_SCALE / 128 cm a
+  step (Unreal's landscape import);
+- <Layer>.r8: a paint layer's weight per sample, the layers summing to 255;
+- layers.png: the strongest layer at each sample, to check them by eye;
+- roads.json: each road's centreline every metre, and info.json: the grid.
 
 Coordinates are Unreal's: X east, Y south, metres here, the origin in the middle of the map.
 """
@@ -54,9 +58,11 @@ ROADS = {
     # forest, over the mountain's shoulder, down across the desert and back to town.
     "ring": [
         (1.55, 2.5),
-        (0.9, 3.15),
-        (0.1, 3.3),
-        (-0.8, 3.2),
+        (0.9, 3.3),
+        (0.5, 3.31),
+        (0.1, 3.47),
+        (-0.3, 3.49),
+        (-0.8, 3.25),
         (-1.35, 2.68),
         (-1.95, 2.45),
         (-2.55, 2.2),
@@ -97,6 +103,17 @@ SHOULDER = 3.0
 BANK_SLOPE = 0.7  # rise per metre of the cut and fill banks either side
 CORRIDOR = 140.0  # metres from a road beyond which the ground is left alone
 MAX_GRADE = 0.08
+Z_SCALE = 512.0  # the landscape's Z scale: +-1310 m
+# Paint layers and their colours in layers.png.
+LAYERS = {
+    "Grass": (110, 150, 70),
+    "Forest": (50, 75, 40),
+    "Rock": (120, 115, 110),
+    "Snow": (240, 240, 245),
+    "Desert": (200, 150, 95),
+    "Sand": (228, 214, 170),
+    "Dirt": (130, 105, 80),
+}
 
 
 # --- noise ---------------------------------------------------------------------------------
@@ -478,15 +495,68 @@ def profile(roads, ground):
     Image.fromarray(sheet).save(f"{OUT}/profile.png")
 
 
+def paint(x, y, h, land, inland, weights, cliff, road_dist):
+    """Each paint layer's weight, 0..1, summing to 1 on land."""
+    gy, gx = np.gradient(h, SPACING)
+    slope = np.hypot(gx, gy)
+    del gx, gy
+    rock = smoothstep(0.55, 0.85, slope)
+    rock = np.maximum(
+        rock, weights["mountain"] * smoothstep(260, 420, h) * smoothstep(0.2, 0.45, slope)
+    )
+    line = 820 + 60 * (fbm(x, y, 300, 3, SEED + 95) - 0.5)
+    snow = smoothstep(line - 60, line + 60, h) * (1 - rock * 0.8)
+    rock = rock * (1 - snow)
+    soft = 1 - rock - snow
+    sand = smoothstep(4.5, 2.5, h) * (1 - cliff) + (~land)
+    width = 75 + 60 * fbm(x, y, 700, 3, SEED + 96)
+    sand = np.clip(sand + smoothstep(width, width - 25, inland) * (1 - cliff) * (h < 12), 0, 1)
+    soft_rest = soft * (1 - sand)
+    dirt = smoothstep(ROAD_HALF + SHOULDER + 2.5, ROAD_HALF + 0.5, road_dist)
+    out = {
+        "Grass": weights["meadow"] + weights["town"] + weights["mountain"],
+        "Forest": weights["forest"],
+        "Desert": weights["desert"],
+    }
+    total = sum(out.values()) + 1e-6
+    out = {k: v / total * soft_rest for k, v in out.items()}
+    out["Sand"] = soft * sand
+    out["Rock"] = rock
+    out["Snow"] = snow
+    out = {k: v * (1 - dirt) for k, v in out.items()}
+    out["Dirt"] = dirt
+    return {k: out[k] for k in LAYERS}
+
+
+def write_maps(h, land, layers):
+    q = np.clip(np.round(32768 + h * 100 * 128 / Z_SCALE), 0, 65535).astype("<u2")
+    q.tofile(f"{OUT}/height.r16")
+    total = sum(layers.values()) + 1e-6
+    q8 = {k: np.round(v / total * 255).astype(np.uint8) for k, v in layers.items()}
+    for name, v in q8.items():
+        v.tofile(f"{OUT}/{name}.r8")
+    names = list(q8)
+    top = np.argmax(np.stack([q8[n] for n in names]), axis=0)
+    colours = np.array([LAYERS[n] for n in names], dtype=np.uint8)
+    sea = np.uint8([40, 80, 120])
+    img = Image.fromarray(np.where(land[..., None], colours[top], sea))
+    if RES > 2049:
+        img = img.resize((2048, 2048), Image.Resampling.NEAREST)
+    img.save(f"{OUT}/layers.png")
+    with open(f"{OUT}/info.json", "w") as f:
+        json.dump({"size": RES, "spacing": SPACING * 100, "z_scale": Z_SCALE, "layers": names}, f)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     x, y = grid()
-    h, land, _inland, weights, cliff = terrain(x, y)
+    h, land, inland, weights, cliff = terrain(x, y)
     roads = lay_roads(h)
     ground = {name: sample(h, road["xy"]) for name, road in roads.items()}
     h, road_dist = carve(h, roads)
     preview(h, land, weights, roads, road_dist, cliff)
     profile(roads, ground)
+    write_maps(h, land, paint(x, y, h, land, inland, weights, cliff, road_dist))
     print(f"{OUT}: {RES}x{RES} at {SPACING:.2f} m, heights {h.min():.0f}..{h.max():.0f} m")
     with open(f"{OUT}/roads.json", "w") as f:
         json.dump(
