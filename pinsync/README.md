@@ -5,11 +5,46 @@
 Keep every copy of a pinned version in step with the one place that defines
 it.
 
-A tool's version tends to be written in several places: a pre-commit hook's
-`rev`, `uv==` in another hook's `additional_dependencies`, the `version`
-input of a setup action in CI. Dependency bots bump one of them and the rest
-drift. pinsync gives each pin one source — a lockfile or a hook rev your
-bumper already updates — and rewrites every copy to match.
+## What it does
+
+A tool's version tends to be written in several places. Say you use uv:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.9.2                # `prek update` bumped this one...
+    hooks:
+      - id: uv-lock
+  - repo: https://github.com/example/tool
+    rev: v1.0.0
+    hooks:
+      - id: tool
+        additional_dependencies: ["uv==0.9.1"]   # ...but not this
+```
+
+```yaml
+# .github/workflows/ci.yml
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.1"    # ...or this
+```
+
+A dependency bot bumps one of them and the rest drift. Tell pinsync which
+copy is the source of truth:
+
+```toml
+# .config/pinsync/config.toml
+[pins.uv]
+source = "pre-commit"
+repo = "https://github.com/astral-sh/uv-pre-commit"
+action = "astral-sh/setup-uv"
+```
+
+Now `pinsync check` reports the two stale copies and exits 1, and
+`pinsync sync` rewrites both to `0.9.2`, leaving comments and formatting
+alone. Run `sync` as a pre-commit hook (see [Usage](#usage)) and the drift
+fixes itself.
 
 ## Install
 
@@ -30,7 +65,8 @@ Binaries for each platform are also attached to every
 
 ## Configuration
 
-`.config/pinsync/config.toml`, at the root of the git repository:
+`.config/pinsync/config.toml`, at the root of the git repository. A fuller
+example:
 
 ```toml
 # The version is the uv-pre-commit rev in the root .pre-commit-config.yaml,
