@@ -1795,13 +1795,14 @@ def village(kit, rng, span=None):
     # trees, or it is a bare dark wall behind the trunks.
     n += scatter(
         small,
-        ph("shrub_01") + ph("shrub_03") + ph("fern_02") + ph("moss_01") + hydrangeas,
+        # Mostly green, a hydrangea here and there: every one of them read as an even purple dot.
+        (ph("shrub_01") + ph("shrub_03") + ph("fern_02")) * 2 + ph("moss_01") + hydrangeas[:1],
         rng,
         start,
         end,
         (end - start) / 100 * 12,
         (hi + 20, 2200),
-        (1.2, 2.2),
+        (0.9, 3.0),
         sides=(1,),
         sink=4,
         tilt=20,
