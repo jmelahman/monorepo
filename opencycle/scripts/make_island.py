@@ -198,17 +198,88 @@ def region_weights(x, y):
     return {k: v / total for k, v in w.items()}
 
 
+# The desert's landmarks, placed clear of the roads. Mesas: centre (km), radius and height (m).
+MESAS = [
+    ((1.35, -0.75), 190, 70),
+    ((2.05, -1.62), 260, 95),
+    ((2.4, 0.88), 170, 60),
+    ((1.75, 1.0), 120, 45),
+    ((2.8, -1.65), 140, 55),
+]
+# One canyon, winding between the ring and the cross road, seen from both.
+CANYON = [
+    (1.1, 0.0),
+    (1.35, -0.18),
+    (1.6, -0.08),
+    (1.85, -0.3),
+    (2.1, -0.2),
+    (2.3, -0.45),
+    (2.5, -0.62),
+]
+DUNES = ((2.25, 0.55), 620)  # centre (km), reach (m)
+
+
+def mesas(x, y):
+    h = np.zeros_like(x)
+    for i, ((cx, cy), r, top) in enumerate(MESAS):
+        near = np.abs(x - cx * 1000) < r * 2.5
+        near &= np.abs(y - cy * 1000) < r * 2.5
+        if not near.any():
+            continue
+        xs, ys = x[near], y[near]
+        # Each one long on its own bearing, its edge broken into spurs and bays.
+        a = 0.9 * i + 0.4
+        u = (xs - cx * 1000) * np.cos(a) + (ys - cy * 1000) * np.sin(a)
+        v = -(xs - cx * 1000) * np.sin(a) + (ys - cy * 1000) * np.cos(a)
+        d = np.hypot(u / 1.5, v / 0.75) / r
+        d = d * (1 + 0.9 * (fbm(xs, ys, r * 0.9, 4, SEED + 70 + i) - 0.5))
+        cap = smoothstep(1.0, 0.93, d)  # the cliff under the caprock
+        ledge = smoothstep(1.3, 1.18, d)  # a lower step
+        talus = smoothstep(1.9, 1.15, d)
+        h[near] = top * (0.55 * cap + 0.25 * ledge + 0.2 * talus**1.5)
+    return h
+
+
+def canyon(x, y):
+    """Depth (positive) of the canyon: a floor and a terrace below the rim, deepest mid-way."""
+    path = catmull(CANYON, False, step=SPACING * 0.5)
+    along = np.linspace(0, 1, len(path), dtype=np.float32)
+    col = np.round(path[:, 0] / SPACING + (RES - 1) / 2).astype(int)
+    row = np.round(path[:, 1] / SPACING + (RES - 1) / 2).astype(int)
+    mark = np.full(x.shape, np.nan, dtype=np.float32)
+    mark[row, col] = along
+    dist, (ri, ci) = ndimage.distance_transform_edt(np.isnan(mark), return_indices=True)
+    dist = dist * SPACING
+    s = mark[ri, ci]
+    reach = np.clip(np.sin(np.pi * s), 0, 1) ** 0.6
+    width = 25 + 45 * reach
+    dist = dist + 30 * (fbm(x, y, 160, 4, SEED + 80) - 0.5)
+    floor = 1 - smoothstep(width * 0.45, width, dist)
+    terrace = 1 - smoothstep(width * 1.35, width * 1.75, dist)
+    return 70 * reach * (0.6 * floor + 0.4 * terrace)
+
+
+def dunes(x, y):
+    (cx, cy), reach = DUNES
+    fade = 1 - smoothstep(reach * 0.5, reach, np.hypot(x - cx * 1000, y - cy * 1000))
+    # Ridges across a westerly wind, gentle to windward and steep to lee.
+    wx = x + 140 * (fbm(x, y, 500, 3, SEED + 90) - 0.5)
+    phase = (wx * 0.94 + y * 0.34) / 150
+    f = phase - np.floor(phase)
+    ridge = np.where(f < 0.78, f / 0.78, (1 - f) / 0.22) ** 1.6
+    return fade * (9 * ridge * (0.5 + fbm(x, y, 700, 2, SEED + 91)))
+
+
 def region_heights(x, y):
     (mx, my), _ = REGIONS["mountain"]
     peak = np.exp(-(((x - mx * 1000) ** 2 + ((y - my * 1000) * 1.3) ** 2) / 1150**2))
-    mesa = smoothstep(0.56, 0.6, fbm(x, y, 650, 3, SEED + 21))
-    canyon = 1 - smoothstep(0.0, 0.035, np.abs(fbm(x, y, 1800, 3, SEED + 22) - 0.5))
     return {
         "mountain": 110 + 1000 * peak * ridged(x, y, 1100, 6, SEED + 11) + 120 * peak,
-        "desert": 140
-        + 50 * fbm(x, y, 900, 4, SEED + 23)
-        + 85 * mesa * (0.8 + 0.4 * fbm(x, y, 300, 2, SEED + 24))
-        - 55 * canyon,
+        "desert": 120
+        + 40 * fbm(x, y, 900, 4, SEED + 23)
+        + mesas(x, y)
+        + dunes(x, y)
+        - canyon(x, y),
         "forest": 45 + 110 * fbm(x, y, 800, 5, SEED + 31),
         "meadow": 25 + 45 * fbm(x, y, 1300, 4, SEED + 41),
         "town": 6 + 30 * fbm(x, y, 1200, 3, SEED + 51),
