@@ -12,6 +12,8 @@ quick preview at 8 m; 8129 is the landscape, a metre a sample. Writes to
 - <Layer>.r8: a paint layer's weight per sample, the layers summing to 255;
 - layers.png: the strongest layer at each sample, to check them by eye;
 - roads.json: each road's centreline every metre, and info.json: the grid;
+- routes.json: each ride's centreline every metre, stitched from the roads, with its length and
+  climb;
 - road_<name>_<k>.gltf: each road's surface in 200 m pieces, laid on the carved ground.
 
 Coordinates are Unreal's: X east, Y south, metres here, the origin in the middle of the map.
@@ -100,6 +102,56 @@ ROADS = {
     ],
     # Up from the farmland to the town.
     "valley": [(-0.1, 0.65), (0.4, 1.5), (0.95, 2.1), (1.55, 2.5)],
+    # Behind the beaches: from the ring at the south-west cove, along the back of the coast to
+    # the valley road above the town.
+    "coast_back": [(-1.35, 2.68), (-0.9, 2.25), (-0.3, 2.3), (0.4, 2.35), (0.95, 2.1)],
+    # Through the farmland, from the cross road down to the coast road.
+    "lane": [(-0.6, 0.52), (-0.55, 1.1), (-0.35, 1.7), (-0.3, 2.3)],
+    # Through the forest, from the cross road down to the ring by the west cliffs.
+    "forest": [(-1.1, 0.35), (-1.55, 0.95), (-2.05, 1.5), (-2.55, 2.2)],
+    # From the ring below the mountain down past the first mesa to the cross road.
+    "mesa": [(0.95, -1.5), (0.85, -1.0), (0.95, -0.45), (0.9, 0.45)],
+    # From the cross road through the dunes, between two mesas, down to the ring.
+    "dunes": [(1.8, 0.05), (2.0, 0.5), (2.08, 0.95), (2.25, 1.3), (2.5, 1.55)],
+}
+# Roads found rather than drawn: from a point on the ring, up the mountain's south face to its
+# summit at no more than CLIMB_GRADE, switching back where the face is steep.
+CLIMBS = {"summit": (0.3, -1.7)}
+CLIMB_GRADE = 0.065
+CLIMB_CELL = 16.0  # metres: the planning grid, about the width of the road and its shoulders
+CLIMB_SMOOTH = 120.0  # metres: the climb follows the mountain's broad shape, not its crags
+# Rides: each a loop of legs (road, from, to), points in km taken as the nearest on the road.
+# An open road runs either way; a closed one runs forward, the way its points go. A ride whose
+# last leg doesn't come back to its first is ridden there and back.
+ROUTES = {
+    "island": [("ring", (1.55, 2.5), (1.55, 2.5))],
+    "coast": [
+        ("ring", (1.55, 2.5), (-1.35, 2.68)),
+        ("coast_back", (-1.35, 2.68), (0.95, 2.1)),
+        ("valley", (0.95, 2.1), (1.55, 2.5)),
+    ],
+    "forest": [
+        ("cross", (-2.7, -1.25), (-1.1, 0.35)),
+        ("forest", (-1.1, 0.35), (-2.55, 2.2)),
+        ("ring", (-2.55, 2.2), (-2.7, -1.25)),
+    ],
+    "meadow": [
+        ("cross", (-0.6, 0.52), (-0.1, 0.65)),
+        ("valley", (-0.1, 0.65), (0.95, 2.1)),
+        ("coast_back", (0.95, 2.1), (-0.3, 2.3)),
+        ("lane", (-0.3, 2.3), (-0.6, 0.52)),
+    ],
+    "desert": [
+        ("ring", (0.95, -1.5), (2.95, -0.5)),
+        ("cross", (2.95, -0.5), (0.9, 0.45)),
+        ("mesa", (0.9, 0.45), (0.95, -1.5)),
+    ],
+    "dunes": [
+        ("cross", (1.8, 0.05), (2.95, -0.5)),
+        ("ring", (2.95, -0.5), (2.5, 1.55)),
+        ("dunes", (2.5, 1.55), (1.8, 0.05)),
+    ],
+    "summit": [("summit", (0.3, -1.7), "end")],
 }
 CLOSED = {"ring"}
 ROAD_HALF = 3.2  # metres: two narrow lanes
@@ -108,6 +160,7 @@ BANK_SLOPE = 0.7  # rise per metre of the cut and fill banks either side
 CORRIDOR = 140.0  # metres from a road beyond which the ground is left alone
 MAX_GRADE = 0.08
 Z_SCALE = 512.0  # the landscape's Z scale: +-1310 m
+SNOW_LINE = 700.0  # metres: the summit climb tops out just above it
 # Paint layers and their colours in layers.png.
 LAYERS = {
     "Grass": (110, 150, 70),
@@ -367,23 +420,37 @@ def sample(h, xy):
 
 
 def grade_fit(z, fixed, closed):
-    """Heights with no stretch steeper than MAX_GRADE, by smoothing only where it is too steep:
-    tops come down and hollows come up alike, so cuts and fills stay balanced. `fixed` maps
-    indices to heights they must keep."""
-    z = z.copy()
-    for _ in range(3000):
-        for i, v in fixed.items():
-            z[i] = v
-        g = np.diff(np.concatenate([z, z[:1]]) if closed else z)
-        bad = np.abs(g) > MAX_GRADE * 0.98
-        if not bad.any():
-            break
-        near = ndimage.binary_dilation(bad, iterations=60, border_value=0)
-        near = near[: len(z)] if closed else np.concatenate([near, near[-1:]])
-        z = np.where(near, smooth(z, 6, closed), z)
+    """Heights with no metre steeper than MAX_GRADE: the mean of the highest such profile on or
+    under `z` (all cut) and the lowest on or over it (all fill), so cuts and fills balance, then
+    eased. Each bound keeps the grade and a mean or a moving average of them can't exceed it.
+    `fixed` maps indices to heights they must meet; each is eased in over enough road to add no
+    more than 0.5% to the grade."""
+    g = MAX_GRADE * 0.97
+    n = len(z)
+    laps = 2 if closed else 1
+
+    def envelope(sign):
+        e = z.astype(np.float64).copy()
+        for _ in range(laps):
+            for i in range(1, n):
+                e[i] = sign * min(sign * e[i], sign * e[i - 1] + g)
+            if closed:
+                e[0] = sign * min(sign * e[0], sign * e[-1] + g)
+            for i in range(n - 2, -1, -1):
+                e[i] = sign * min(sign * e[i], sign * e[i + 1] + g)
+            if closed:
+                e[-1] = sign * min(sign * e[-1], sign * e[0] + g)
+        return e
+
+    out = smooth((envelope(1) + envelope(-1)) / 2, 25, closed)
+    at = np.arange(n)
     for i, v in fixed.items():
-        z[i] = v
-    return z
+        reach = min(max(abs(v - out[i]) / 0.005, 1.0), n / 2)
+        d = np.abs(at - i)
+        if closed:
+            d = np.minimum(d, n - d)
+        out = out + (v - out[i]) * np.clip(1 - d / reach, 0, 1)
+    return out
 
 
 def smooth(z, span, closed):
@@ -394,13 +461,155 @@ def smooth(z, span, closed):
     return np.convolve(padded, k, "valid")
 
 
+def climb(h, start, roads):
+    """Control points (km) for a road from `start` to the highest ground near it: a least-cost
+    path over a CLIMB_CELL grid of the smoothed heights, where a step steeper than CLIMB_GRADE
+    costs many times its length, so the path winds and switches back rather than going straight
+    up. Going down on the way up, steep ground across the road and turning cost extra too: each
+    state is a cell and the way the road is heading, and a bend sharper than 90 degrees in one
+    step isn't allowed, so hairpins are drawn out over a few cells rather than folding back."""
+    import heapq
+
+    x0, x1, y0, y1 = start[0] - 1.6, start[0] + 1.6, start[1] - 1.7, start[1] + 0.15
+    cx = np.arange(x0 * 1000, x1 * 1000, CLIMB_CELL)
+    cy = np.arange(y0 * 1000, y1 * 1000, CLIMB_CELL)
+    gx, gy = np.meshgrid(cx, cy)
+    soft = ndimage.gaussian_filter(h, CLIMB_SMOOTH / SPACING)
+    g = sample(soft, np.stack([gx.ravel(), gy.ravel()], axis=1)).reshape(gx.shape)
+    side = np.hypot(*np.gradient(g, CLIMB_CELL))
+    rows, cols = g.shape
+    # The summit: the highest cell well inside the coast.
+    # Other roads, to keep clear of once the climb has left the one it starts from.
+    near = np.zeros(g.shape, dtype=bool)
+    for road in roads.values():
+        col = np.round((road["xy"][:, 0] - cx[0]) / CLIMB_CELL).astype(int)
+        row = np.round((road["xy"][:, 1] - cy[0]) / CLIMB_CELL).astype(int)
+        ok = (col >= 0) & (col < len(cx)) & (row >= 0) & (row < len(cy))
+        near[row[ok], col[ok]] = True
+    near = ndimage.distance_transform_edt(~near) * CLIMB_CELL < 150
+    near &= np.hypot(gx - start[0] * 1000, gy - start[1] * 1000) > 200
+    usable = g > 40
+    usable = ndimage.binary_erosion(usable, iterations=4)
+    goal = np.unravel_index(np.argmax(np.where(usable, g, -1e9)), g.shape)
+    begin = (
+        round((start[1] * 1000 - cy[0]) / CLIMB_CELL),
+        round((start[0] * 1000 - cx[0]) / CLIMB_CELL),
+    )
+    steps = [
+        (dr, dc)
+        for dr in range(-2, 3)
+        for dc in range(-2, 3)
+        if (dr, dc) != (0, 0) and math.gcd(abs(dr), abs(dc)) == 1
+    ]
+    angle = [math.atan2(dr, dc) for dr, dc in steps]
+    turns = [
+        [abs((angle[j] - angle[i] + math.pi) % (2 * math.pi) - math.pi) for j in range(len(steps))]
+        for i in range(len(steps))
+    ]
+    best = np.full((*g.shape, len(steps)), np.inf)
+    came = {}
+    todo = []
+    for d in range(len(steps)):
+        best[(*begin, d)] = 0.0
+        todo.append((0.0, (*begin, d)))
+    end = None
+    while todo:
+        cost, state = heapq.heappop(todo)
+        r, c, d = state
+        if (r, c) == goal:
+            end = state
+            break
+        if cost > best[state]:
+            continue
+        for e, (dr, dc) in enumerate(steps):
+            turn = turns[d][e]
+            if turn > math.pi / 2 + 1e-6:
+                continue
+            nr, nc = r + dr, c + dc
+            if not (0 <= nr < rows and 0 <= nc < cols) or g[nr, nc] < 15:
+                continue
+            length = CLIMB_CELL * math.hypot(dr, dc)
+            rise = (g[nr, nc] - g[r, c]) / length
+            steep = max(0.0, abs(rise) - CLIMB_GRADE) / CLIMB_GRADE
+            down = max(0.0, -rise) / CLIMB_GRADE
+            across = max(0.0, side[nr, nc] - 0.45)
+            crowd = 20.0 if near[nr, nc] else 0.0
+            step = length * (1 + 30 * steep + 80 * steep * steep + 1.5 * down + 4 * across + crowd)
+            step += 12 * (turn / (math.pi / 2)) ** 2
+            nxt = (nr, nc, e)
+            if cost + step < best[nxt]:
+                best[nxt] = cost + step
+                came[nxt] = state
+                heapq.heappush(todo, (cost + step, nxt))
+    path = [end]
+    while path[-1][:2] != begin:
+        path.append(came[path[-1]])
+    path = [p[:2] for p in reversed(path)]
+    # Stop below the summit, where the path would otherwise wind round and round its cone.
+    top = np.array(goal) * CLIMB_CELL
+    short = [np.hypot(*(np.array(p) * CLIMB_CELL - top)) < 220 for p in path]
+    path = path[: short.index(True) + 1]
+    pts = np.array([(cx[c], cy[r]) for r, c in path]) / 1000
+    pts[0] = start
+    return [tuple(p) for p in simplify(pts, 6 / 1000)]
+
+
+def simplify(pts, tolerance):
+    """Ramer-Douglas-Peucker: the fewest of `pts` within `tolerance` of the line through all."""
+    keep = np.zeros(len(pts), dtype=bool)
+    keep[[0, -1]] = True
+    stack = [(0, len(pts) - 1)]
+    while stack:
+        a, b = stack.pop()
+        if b - a < 2:
+            continue
+        d = pts[b] - pts[a]
+        n = np.hypot(*d) or 1.0
+        off = np.abs(
+            d[0] * (pts[a + 1 : b, 1] - pts[a, 1]) - d[1] * (pts[a + 1 : b, 0] - pts[a, 0])
+        )
+        k = int(np.argmax(off))
+        if off[k] / n > tolerance:
+            keep[a + 1 + k] = True
+            stack += [(a, a + 1 + k), (a + 1 + k, b)]
+    return pts[keep]
+
+
+def soften(h, xy):
+    """The ground near a climbed road eased toward its broad shape: crags scaled to a quarter
+    within 60 m of the road, coming back in full by 300 m, so the road runs on a flank it can
+    follow rather than cutting through every crest."""
+    on = np.zeros(h.shape, dtype=bool)
+    col = np.round(xy[:, 0] / SPACING + (RES - 1) / 2).astype(int)
+    row = np.round(xy[:, 1] / SPACING + (RES - 1) / 2).astype(int)
+    ok = (col >= 0) & (col < RES) & (row >= 0) & (row < RES)
+    on[row[ok], col[ok]] = True
+    dist = ndimage.distance_transform_edt(~on) * SPACING
+    soft = ndimage.gaussian_filter(h, CLIMB_SMOOTH / SPACING)
+    keep = 0.25 + 0.75 * smoothstep(60, 300, dist)
+    return np.where(h > 15, soft + (h - soft) * keep, h).astype(np.float32)
+
+
 def lay_roads(h):
     """Each road's centreline every metre with its height: the ground smoothed along it, kept off
-    the sea and graded; later roads meet earlier ones at their height."""
+    the sea and graded; later roads meet earlier ones at their height. Returns the roads and the
+    ground, eased around any climbed road."""
     roads = {}
-    for name, points in ROADS.items():
+    plans = {**ROADS, **{name: None for name in CLIMBS}}
+    for name, points in plans.items():
         closed = name in CLOSED
+        points = climb(h, CLIMBS[name], roads) if points is None else list(points)
+        # An open road's ends on the nearest point of an earlier road, so the two meet.
+        for end in (0, -1) if not closed else ():
+            for other in roads.values():
+                d = np.linalg.norm(other["xy"] - np.array(points[end]) * 1000, axis=1)
+                k = int(np.argmin(d))
+                if d[k] < 300:
+                    points[end] = tuple(other["xy"][k] / 1000)
+                    break
         xy = catmull(points, closed)
+        if name in CLIMBS:
+            h = soften(h, xy)
         z = np.maximum(smooth(sample(h, xy), 90, closed), 3.0)
         fixed = {}
         for end in (0, len(xy) - 1) if not closed else ():
@@ -411,7 +620,39 @@ def lay_roads(h):
                     fixed[end] = other["z"][k]
         z = grade_fit(z, fixed, closed)
         roads[name] = {"xy": xy, "z": z, "closed": closed}
-    return roads
+    return roads, h
+
+
+def stitch(roads):
+    """Each ride's centreline (metres, with heights), from its legs."""
+    rides = {}
+    for name, legs in ROUTES.items():
+        parts = []
+        for road_name, a, b in legs:
+            road = roads[road_name]
+            xy, z = road["xy"], road["z"]
+            ia = int(np.argmin(np.linalg.norm(xy - np.array(a) * 1000, axis=1)))
+            ib = (
+                len(xy) - 1
+                if b == "end"
+                else int(np.argmin(np.linalg.norm(xy - np.array(b) * 1000, axis=1)))
+            )
+            if road["closed"]:
+                idx = (ia + np.arange((ib - ia) % len(xy) or len(xy))) % len(xy)
+            else:
+                idx = np.arange(ia, ib + 1) if ia <= ib else np.arange(ia, ib - 1, -1)
+            parts.append(np.column_stack([xy[idx], z[idx]]))
+        line = np.concatenate(parts)
+        if np.linalg.norm(line[0, :2] - line[-1, :2]) > 50:
+            line = np.concatenate([line, line[::-1][1:]])  # there and back
+        rides[name] = line
+        gaps = np.linalg.norm(np.diff(line[:, :2], axis=0), axis=1)
+        climbed = np.clip(np.diff(line[:, 2]), 0, None).sum()
+        print(
+            f"route {name}: {gaps.sum() / 1000:.1f} km, climbs {climbed:.0f} m,"
+            f" top {line[:, 2].max():.0f} m, widest gap {gaps.max():.0f} m"
+        )
+    return rides
 
 
 def carve(h, roads):
@@ -452,7 +693,7 @@ def preview(h, land, weights, roads, road_dist, cliff):
     rgb = np.zeros((*h.shape, 3), dtype=np.float32)
     for name, w in weights.items():
         rgb += w[..., None] * np.array(COLOURS[name], dtype=np.float32)
-    snow = smoothstep(650, 750, h)[..., None]
+    snow = smoothstep(SNOW_LINE - 70, SNOW_LINE + 30, h)[..., None]
     rgb = rgb * (1 - snow) + 245 * snow
     beach = (land & (h < 5.5) & (cliff < 0.5))[..., None]
     rgb = np.where(beach, np.array(COLOURS["beach"], dtype=np.float32), rgb)
@@ -508,7 +749,7 @@ def paint(x, y, h, land, inland, weights, cliff, road_dist):
     rock = np.maximum(
         rock, weights["mountain"] * smoothstep(260, 420, h) * smoothstep(0.2, 0.45, slope)
     )
-    line = 820 + 60 * (fbm(x, y, 300, 3, SEED + 95) - 0.5)
+    line = SNOW_LINE + 60 * (fbm(x, y, 300, 3, SEED + 95) - 0.5)
     snow = smoothstep(line - 60, line + 60, h) * (1 - rock * 0.8)
     rock = rock * (1 - snow)
     soft = 1 - rock - snow
@@ -555,7 +796,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     x, y = grid()
     h, land, inland, weights, cliff = terrain(x, y)
-    roads = lay_roads(h)
+    roads, h = lay_roads(h)
     ground = {name: sample(h, road["xy"]) for name, road in roads.items()}
     h, road_dist = carve(h, roads)
     preview(h, land, weights, roads, road_dist, cliff)
@@ -572,6 +813,9 @@ def main():
             piece.write(f"{OUT}/road_{name}_{k}.gltf")
             pieces += 1
     print(f"{pieces} road pieces")
+    rides = stitch(roads)
+    with open(f"{OUT}/routes.json", "w") as f:
+        json.dump({name: line.round(2).tolist() for name, line in rides.items()}, f)
     with open(f"{OUT}/roads.json", "w") as f:
         json.dump(
             {
