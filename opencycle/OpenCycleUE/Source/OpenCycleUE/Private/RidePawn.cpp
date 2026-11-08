@@ -17,6 +17,7 @@
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "Misc/CommandLine.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "RidePlayerController.h"
 #include "RHI.h"
@@ -99,12 +100,14 @@ ARidePawn::ARidePawn()
 	Rain->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Rain->SetMobility(EComponentMobility::Movable);
 
-	TrackAsset = TSoftObjectPtr<URideTrack>(FSoftObjectPath(TEXT("/Game/Coast/Ride/DA_RideTrack.DA_RideTrack")));
 }
 
 void ARidePawn::BeginPlay()
 {
 	Super::BeginPlay();
+	// Each level keeps its track beside it: /Game/Coast/L_Coast rides /Game/Coast/Ride/DA_RideTrack.
+	const FString Folder = FPackageName::GetLongPackagePath(UWorld::RemovePIEPrefix(GetWorld()->GetOutermost()->GetName()));
+	TrackAsset = TSoftObjectPtr<URideTrack>(FSoftObjectPath(Folder + TEXT("/Ride/DA_RideTrack.DA_RideTrack")));
 	Track = TrackAsset.LoadSynchronous();
 	if (!Track || Track->Length() <= 0.f)
 	{

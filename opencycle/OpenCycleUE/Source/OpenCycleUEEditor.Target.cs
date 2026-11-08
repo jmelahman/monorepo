@@ -7,6 +7,6 @@ public class OpenCycleUEEditorTarget : TargetRules
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.Latest;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
-		ExtraModuleNames.Add("OpenCycleUE");
+		ExtraModuleNames.AddRange(new[] { "OpenCycleUE", "OpenCycleEditor" });
 	}
 }
