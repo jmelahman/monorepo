@@ -25,7 +25,22 @@ def fresh(name, folder, cls, factory):
     path = f"{folder}/{name}"
     if assets.does_asset_exist(path):
         assets.delete_asset(path)
-    return tools.create_asset(name, folder, cls, factory)
+    made = tools.create_asset(name, folder, cls, factory)
+    if made is None:
+        # The delete can leave the old object in memory while something loaded still refers to
+        # it, and the create then refuses the name. Reuse the old asset: the callers set every
+        # property they need, and a material starts again from an empty graph.
+        made = unreal.load_asset(path)
+        # cls is a Python class, or for a C++ data asset the UClass from unreal.load_class.
+        kind = cls if isinstance(cls, type) else None
+        if made is None or (
+            made.get_class() != cls if kind is None else not isinstance(made, kind)
+        ):
+            raise RuntimeError(f"could not replace {path}")
+        if isinstance(made, unreal.Material):
+            unreal.MaterialEditingLibrary.delete_all_material_expressions(made)
+        unreal.log_warning(f"reusing {path}: it could not be deleted")
+    return made
 
 
 def import_file(path, folder):
