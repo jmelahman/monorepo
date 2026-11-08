@@ -1,6 +1,6 @@
 """Builds /Game/Island/L_Island from make_island.py's full output: a World Partition level with
 the island's landscape (8 km at a metre a sample), painted from Megascans surfaces, growing its
-grass per region, with the roads, the sea, and the ring as the ride's track.
+grass per region, with the roads, the sea, and a ride track for each of make_island.py's routes.
 
 Run after megascans.py (both stages) and OC_RES=8129 python3 -I scripts/make_island.py:
     OC_EDITOR=1 bash scripts/ue_run.sh island_world.py island_world.log
@@ -10,6 +10,7 @@ It needs the whole editor, as trial_world.py does. OC_SRC picks another make_isl
 
 import importlib.util
 import json
+import math
 import os
 import re
 
@@ -40,21 +41,22 @@ GRID = 4  # components a side per streaming proxy: about 500 m
 
 # Each paint layer's surfaces: (biome, slug, tint). A second surface is mixed in by `MIXES`.
 SURFACES = {
-    "Grass": ("shared", "lawn_grass", (0.8, 0.88, 0.62)),
+    "Grass": ("shared", "uncut_grass", (0.85, 0.9, 0.7)),
     "Forest": ("forest", "forest_floor", (1.0, 1.0, 1.0)),
     "Rock": ("shared", "stony_soil", (0.72, 0.72, 0.74)),
     "Snow": ("coast", "rippled_sand", (1.75, 1.8, 1.9)),
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
     "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
-    "Dirt": ("shared", "dirt_road", (1.0, 1.0, 1.0)),
+    "Dirt": ("shared", "gravel_on_soil", (1.0, 1.0, 1.0)),
 }
 # A second surface per layer and what mixes it in: "patches" (noise, metres across) or "wet"
 # (below the given height in cm, the tideline).
 MIXES = {
     "Forest": ("forest", "mossy_forest_floor", "patches", 18.0),
-    "Desert": ("desert", "dry_cracked_mud", "patches", 60.0),
+    "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
     "Sand": ("coast", "thai_wet_sand", "wet", 120.0),
-    "Dirt": ("shared", "gravel", "patches", 8.0),
+    "Grass": ("shared", "lawn_grass", "patches", 30.0),
+    "Dirt": ("shared", "dirt_road", "patches", 8.0),
 }
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
 ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
@@ -66,7 +68,11 @@ GRASS = {
         ("shared", "grass_clumps", 6.0, 3500, 5000),
         ("shared", "wheat_grass", 2.5, 3500, 5000),
         ("shared", "tundra_grass", 1.5, 3500, 5000),
+        ("shared", "kikuyu_grass", 2.0, 3500, 5000),
+        ("shared", "tall_grass", 0.6, 4000, 6000),
+        ("shared", "ribbon_grass", 0.4, 3000, 4500),
         ("shared", "clovers", 3.0, 2000, 3000),
+        ("shared", "clover_varieties", 1.5, 2000, 3000),
         ("shared", "leafy_dandelions", 1.0, 2000, 3000),
     ),
     "Forest": (
@@ -309,16 +315,48 @@ def sea(extent_cm):
     log("sea")
 
 
-def track(ring):
-    """The ring as the ride's track, from the harbour clockwise."""
+# The start screen's routes from make_island.py's routes.json, in its order: title and a line.
+ROUTES = {
+    "island": ("Island loop", "The whole coast road round the island, through every region."),
+    "coast": ("Coast", "Along the south shore and back over the low road behind the harbour."),
+    "forest": (
+        "Forest",
+        "Under the trees on the west side and home by the coast road.",
+    ),
+    "meadow": ("Meadows", "The green valley in the middle of the island and the lanes round it."),
+    "desert": ("Desert", "Past the mesas in the dry north-east and back across the island."),
+    "dunes": ("Dunes", "The sand country in the south-east, between the dunes and the sea."),
+    "summit": ("Summit", "Up the hairpins to the snow line and the viewpoint, and back down."),
+}
+
+
+def retraced(centre):
+    """Whether a route rides out and back: its second half lies on its first."""
+    n = len(centre)
+    return all(
+        math.dist(centre[k][:2], centre[n - 1 - k][:2]) < 5.0 for k in (n // 8, n // 4, 3 * n // 8)
+    )
+
+
+def track(name, centre, others=()):
+    """A route as a ride track in {FOLDER}/Ride: the island loop as DA_RideTrack, which the level
+    rides by default and which lists the others, each as DA_Route_<name>."""
+    title, blurb = ROUTES.get(name, (name.title(), ""))
     cls = unreal.load_class(None, "/Script/OpenCycleUE.RideTrack")
     factory = unreal.DataAssetFactory()
     factory.set_editor_property("data_asset_class", cls)
-    t = lib.fresh("DA_RideTrack", f"{FOLDER}/Ride", cls, factory)
+    asset = "DA_RideTrack" if name == "island" else f"DA_Route_{name}"
+    t = lib.fresh(asset, f"{FOLDER}/Ride", cls, factory)
     # The rider's line 6 cm under the tarmac, as in the trial world.
     t.set_editor_property(
-        "centre", [unreal.Vector(x * 100, y * 100, z * 100 - 6) for x, y, z in ring]
+        "centre", [unreal.Vector(x * 100, y * 100, z * 100 - 6) for x, y, z in centre]
     )
+    # A loop joins up (its ends within a few metres); out and back finishes where it started.
+    closed = math.dist(centre[0][:2], centre[-1][:2]) < 5.0 and not retraced(centre)
+    t.set_editor_property("closed", closed)
+    t.set_editor_property("title", title)
+    t.set_editor_property("blurb", blurb)
+    t.set_editor_property("routes", list(others))
     t.set_editor_property("step", 100.0)
     t.set_editor_property("keep_left", 160.0)
     t.set_editor_property("sun_azimuth", -62.0)
@@ -329,17 +367,24 @@ def track(ring):
     row.set_editor_property("metres", 0.0)
     t.set_editor_property("weather", [row])
     stretch = unreal.RideStretch()
-    stretch.set_editor_property("name", "Island loop")
+    stretch.set_editor_property("name", title)
     t.set_editor_property("stretches", [stretch])
     assets.save_loaded_asset(t, False)
-    log(f"track: {len(ring)} m")
+    log(f"route {name}: {len(centre)} m, {'loop' if closed else 'out and back'}")
+    return t
+
+
+def tracks():
+    """Every route in routes.json, the island loop last so its list can name the others."""
+    with open(f"{SRC}/routes.json") as f:
+        routes = json.load(f)
+    others = [track(name, centre) for name, centre in routes.items() if name != "island"]
+    track("island", routes["island"], others)
 
 
 def main():
     with open(f"{SRC}/info.json") as f:
         info = json.load(f)
-    with open(f"{SRC}/roads.json") as f:
-        ring = json.load(f)["ring"]["centre"]
     size, spacing, z_scale = info["size"], info["spacing"], info["z_scale"]
     quads = QUADS if (size - 1) % QUADS == 0 else 63
     comps = (size - 1) // quads
@@ -378,7 +423,7 @@ def main():
     log(f"landscape: {comps}x{comps} components of {quads} quads at {spacing:.0f} cm")
     roads()
     sea(half * 2)
-    track(ring)
+    tracks()
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL)
     log(f"saved {LEVEL}")

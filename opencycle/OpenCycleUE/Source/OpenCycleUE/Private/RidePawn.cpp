@@ -113,9 +113,33 @@ void ARidePawn::BeginPlay()
 	{
 		UE_LOG(LogTemp, Error, TEXT("RIDE no track at %s: run scripts/ride_track.py"), *TrackAsset.ToString());
 	}
-	else if (Track->RainShell)
+	else
 	{
-		Rain->SetStaticMesh(Track->RainShell);
+		Routes.Add(Track);
+		for (const TSoftObjectPtr<URideTrack>& Other : Track->Routes)
+		{
+			if (URideTrack* Loaded = Other.LoadSynchronous(); Loaded && Loaded->Length() > 0.f)
+			{
+				Routes.Add(Loaded);
+			}
+		}
+		// The route chosen last, kept through "Back to the start", which reloads the level; else
+		// -RideRoute=TITLE.
+		FString Wanted = ChosenRoute;
+		FParse::Value(FCommandLine::Get(), TEXT("RideRoute="), Wanted);
+		for (URideTrack* Route : Routes)
+		{
+			if (!Wanted.IsEmpty() && Route->Title.Equals(Wanted, ESearchCase::IgnoreCase))
+			{
+				Track = Route;
+			}
+		}
+		UE_LOG(LogTemp, Display, TEXT("RIDE route %s of %d: %.1f km"), *Track->Title, Routes.Num(),
+		       Track->Length() / 100000.f);
+		if (Track->RainShell)
+		{
+			Rain->SetStaticMesh(Track->RainShell);
+		}
 	}
 	ReadCommandLine();
 	bStarted = bStarted || Automated();
@@ -136,6 +160,26 @@ int32 ARidePawn::Zone(float Watts) const
 		++Z;
 	}
 	return Z;
+}
+
+FString ARidePawn::ChosenRoute;
+
+void ARidePawn::UseRoute(int32 Index)
+{
+	if (bStarted || !Routes.IsValidIndex(Index) || Routes[Index] == Track)
+	{
+		return;
+	}
+	Track = Routes[Index];
+	ChosenRoute = Track->Title;
+	Distance = StartMetres * 100.0;
+	if (Track->RainShell)
+	{
+		Rain->SetStaticMesh(Track->RainShell);
+	}
+	bHeadSet = false;
+	ApplyWeather();
+	Place();
 }
 
 float ARidePawn::TrackLength() const { return Track ? Track->Length() : 0.f; }

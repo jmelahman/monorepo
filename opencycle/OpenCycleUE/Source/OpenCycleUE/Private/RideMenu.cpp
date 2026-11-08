@@ -11,6 +11,7 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Components/WidgetSwitcher.h"
 #include "GameFramework/GameUserSettings.h"
+#include "Misc/PackageName.h"
 #include "RidePawn.h"
 #include "RidePlayerController.h"
 #include "RideTrack.h"
@@ -235,9 +236,27 @@ void URideMenu::BuildStart()
 {
 	UVerticalBox* P = Page(TEXT(""));
 	Add(P, Text(TEXT("OpenCycle"), 44, FLinearColor::White, true), 0.f);
-	Add(P, Text(TEXT("Coast"), 22, Accent), 0.f);
+	CourseTitle = Text(TEXT(""), 22, Accent);
+	Add(P, CourseTitle, 0.f);
 	CourseText = Text(TEXT(""), 15, Faint);
 	Add(P, CourseText, 14.f);
+	RouteCycler = Cyclers.Num();
+	RouteRow = Cycler(
+		TEXT("Route"), {},
+		[this]
+		{
+			const ARidePawn* Pawn = Rider();
+			return Pawn ? Pawn->RouteIndex() : -1;
+		},
+		[this](int32 I)
+		{
+			if (ARidePawn* Pawn = Rider())
+			{
+				Pawn->UseRoute(I);
+			}
+		});
+	RouteRow->SetVisibility(ESlateVisibility::Collapsed);
+	Add(P, RouteRow, 20.f);
 	Add(P,
 	    Cycler(
 		    TEXT("Power from"), {TEXT("Keyboard"), TEXT("Simulated trainer")},
@@ -253,7 +272,7 @@ void URideMenu::BuildStart()
 				    Pawn->UseTrainer(ARidePawn::TrainerSources[I]);
 			    }
 		    }),
-	    28.f);
+	    12.f);
 	TrainerNote = Text(TEXT(""), 13, Faint);
 	Add(P, TrainerNote, 6.f);
 	URideButton* Go = Button(TEXT("Ride"), [this] { Controller()->Ride(); }, true);
@@ -371,13 +390,15 @@ void URideMenu::BuildVideo()
 void URideMenu::Survey()
 {
 	const ARidePawn* Pawn = Rider();
-	if (!Pawn || !Pawn->Track || CourseKm > 0.f)
+	if (!Pawn || !Pawn->Track || Surveyed.Get() == Pawn->Track)
 	{
 		return;
 	}
 	const URideTrack& Track = *Pawn->Track;
+	Surveyed = &Track;
 	const float Length = Track.Length();
 	CourseKm = Length / 100000.f;
+	ClimbMetres = 0.f;
 	for (float S = 1000.f; S < Length; S += 1000.f)
 	{
 		ClimbMetres += FMath::Max(0.f, Track.Height(S) - Track.Height(S - 1000.f)) / 100.f;
@@ -388,13 +409,29 @@ void URideMenu::Refresh()
 {
 	Survey();
 	const ARidePawn* Pawn = Rider();
-	if (CourseKm > 0.f)
+	if (CourseKm > 0.f && Pawn && Pawn->Track)
 	{
+		const URideTrack& Track = *Pawn->Track;
+		const FString Level = FPackageName::GetShortName(
+			FPackageName::GetLongPackagePath(Track.GetOutermost()->GetName()).LeftChop(FString(TEXT("/Ride")).Len()));
+		CourseTitle->SetText(FText::FromString(Track.Title.IsEmpty() ? Level : Track.Title));
+		const FString Kind = Track.bClosed ? TEXT("a loop") : TEXT("there and back");
 		CourseText->SetText(FText::FromString(FString::Printf(
-			TEXT("%.1f km and %.0f m of climbing, keeping left: a lane through a small town and its rice "
-		         "paddies, a jungle with a shrine, and a sea wall under the mountain. The weather changes "
-		         "as you go."),
-			CourseKm, ClimbMetres)));
+			TEXT("%.1f km, %s, with %.0f m of climbing. %s%sThe weather changes as you go."), CourseKm, *Kind,
+			ClimbMetres, *Track.Blurb, Track.Blurb.IsEmpty() ? TEXT("") : TEXT(" "))));
+	}
+	if (Pawn && Cyclers.IsValidIndex(RouteCycler))
+	{
+		FCycler& Route = Cyclers[RouteCycler];
+		if (Route.Choices.Num() != Pawn->Routes.Num())
+		{
+			Route.Choices.Reset();
+			for (const URideTrack* Each : Pawn->Routes)
+			{
+				Route.Choices.Add(Each->Title.IsEmpty() ? TEXT("Default") : Each->Title);
+			}
+			RouteRow->SetVisibility(Route.Choices.Num() > 1 ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		}
 	}
 	if (Pawn)
 	{
@@ -422,6 +459,10 @@ void URideMenu::Cycle(int32 Index, int32 Step)
 {
 	FCycler& Item = Cyclers[Index];
 	const int32 Count = Item.Choices.Num();
+	if (Count == 0)
+	{
+		return;
+	}
 	const int32 I = Item.Get();
 	Item.Set(Item.Choices.IsValidIndex(I) ? (I + Step + Count) % Count : 0);
 	Refresh();

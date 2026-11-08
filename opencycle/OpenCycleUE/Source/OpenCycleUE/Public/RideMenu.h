@@ -12,6 +12,7 @@ class ARidePlayerController;
 class UTextBlock;
 class UVerticalBox;
 class UWidgetSwitcher;
+class URideTrack;
 
 // A button that runs a native function when clicked, so the menu needs no UFUNCTION per button.
 UCLASS()
@@ -63,7 +64,9 @@ private:
 	TArray<FCycler> Cyclers;
 
 	UPROPERTY(Transient) TObjectPtr<UWidgetSwitcher> Pages;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> CourseTitle;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> CourseText;
+	UPROPERTY(Transient) TObjectPtr<UWidget> RouteRow;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> TrainerNote;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PauseTitle;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PauseStats;
@@ -73,6 +76,8 @@ private:
 	ERideMenuPage Current = ERideMenuPage::Start;
 	ERideMenuPage Back = ERideMenuPage::Start; // where the video page returns to
 	float CourseKm = 0.f, ClimbMetres = 0.f;
+	TWeakObjectPtr<const URideTrack> Surveyed;
+	int32 RouteCycler = -1; // its choices are the rider's routes, filled in once they're read
 	float RefreshClock = 0.f;
 
 	ARidePlayerController* Controller() const;

@@ -37,6 +37,12 @@ class OPENCYCLEUE_API URideTrack : public UDataAsset
 	GENERATED_BODY()
 
 public:
+	// What the start screen calls the route, and a line about it. Empty in older tracks.
+	UPROPERTY(EditAnywhere) FString Title;
+	UPROPERTY(EditAnywhere) FString Blurb;
+	// The level's other routes, on its default track (DA_RideTrack) only: the start screen offers
+	// this track and then these, and -RideRoute=TITLE picks one by its title.
+	UPROPERTY(EditAnywhere) TArray<TSoftObjectPtr<URideTrack>> Routes;
 	// Centreline points in world cm, Step apart along the road, heights included.
 	UPROPERTY(EditAnywhere) TArray<FVector> Centre;
 	UPROPERTY(EditAnywhere) float Step = 100.f;

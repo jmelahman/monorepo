@@ -33,6 +33,11 @@ public:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Rain;
 	UPROPERTY(EditAnywhere) TSoftObjectPtr<URideTrack> TrackAsset;
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
+	// The level's routes, its default track first; Track is one of them.
+	UPROPERTY(Transient) TArray<TObjectPtr<URideTrack>> Routes;
+	// Rides Routes[Index] from its start. Only before the ride starts.
+	void UseRoute(int32 Index);
+	int32 RouteIndex() const { return Routes.IndexOfByKey(Track); }
 
 	UPROPERTY(EditAnywhere) float EyeHeight = 150.f; // cm above the road
 	UPROPERTY(EditAnywhere) float StartMetres = 0.f;
@@ -67,6 +72,8 @@ public:
 	static bool Automated();
 
 private:
+	// The route picked on the start screen, for the reloaded level after "Back to the start".
+	static FString ChosenRoute;
 	TUniquePtr<ITrainer> Trainer;
 	// The keys always drive these legs: as the rider's power, or as a simulated trainer's rider.
 	FKeyboardTrainer Legs;
