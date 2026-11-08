@@ -379,15 +379,41 @@ def tracks():
     track("island", routes["island"], others)
 
 
+def fit(size, names):
+    """The heights and paint layers at a size the landscape takes: whole components of QUADS
+    quads, or of 63 for a preview whose size isn't. A preview's 1025 samples take 16 of 63 quads,
+    1009: the rest is open sea at the edges, cropped evenly off each side into {SRC}/fit."""
+    quads = QUADS if (size - 1) % QUADS == 0 else 63
+    comps = (size - 1) // quads
+    fitted = comps * quads + 1
+    files = {n: f"{SRC}/{n}.r8" for n in names} | {"height": f"{SRC}/height.r16"}
+    if fitted == size:
+        return quads, comps, size, files
+    os.makedirs(f"{SRC}/fit", exist_ok=True)
+    cut = (size - fitted) // 2
+    for key, path in list(files.items()):
+        width = 2 if path.endswith(".r16") else 1
+        with open(path, "rb") as f:
+            data = f.read()
+        rows = (
+            data[(r * size + cut) * width : (r * size + cut + fitted) * width]
+            for r in range(cut, cut + fitted)
+        )
+        files[key] = f"{SRC}/fit/{os.path.basename(path)}"
+        with open(files[key], "wb") as f:
+            f.write(b"".join(rows))
+    log(f"cropped {size} samples a side to {fitted} for {comps} components of {quads} quads")
+    return quads, comps, fitted, files
+
+
 def main():
     with open(f"{SRC}/info.json") as f:
         info = json.load(f)
     size, spacing, z_scale = info["size"], info["spacing"], info["z_scale"]
-    quads = QUADS if (size - 1) % QUADS == 0 else 63
-    comps = (size - 1) // quads
+    names = info["layers"]
+    quads, comps, size, files = fit(size, names)
     grass = {layer: grass_type(layer) for layer in GRASS}
     ground = Ground().build(grass)
-    names = info["layers"]
     layers = [
         unreal.WorldBuilderLibrary.make_layer_info(f"{FOLDER}/Layers/LI_{n}", n) for n in names
     ]
@@ -404,7 +430,7 @@ def main():
     half = (size - 1) * spacing / 2
     land = unreal.WorldBuilderLibrary.make_landscape(
         world,
-        f"{SRC}/height.r16",
+        files["height"],
         comps,
         comps,
         quads,
@@ -412,7 +438,7 @@ def main():
         unreal.Vector(spacing, spacing, z_scale),
         ground,
         layers,
-        [f"{SRC}/{n}.r8" for n in names],
+        [files[n] for n in names],
         GRID,
     )
     if not land:
