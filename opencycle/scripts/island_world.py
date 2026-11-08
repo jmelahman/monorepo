@@ -44,7 +44,7 @@ SURFACES = {
     "Grass": ("shared", "uncut_grass", (0.85, 0.9, 0.7)),
     "Forest": ("forest", "forest_floor", (1.0, 1.0, 1.0)),
     "Rock": ("shared", "stony_soil", (0.72, 0.72, 0.74)),
-    "Snow": ("coast", "rippled_sand", (1.75, 1.8, 1.9)),
+    "Snow": ("coast", "rippled_sand", (1.0, 1.0, 1.0)),
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
     "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
     "Dirt": ("shared", "gravel_on_soil", (1.0, 1.0, 1.0)),
@@ -60,6 +60,9 @@ MIXES = {
 }
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
 ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
+# Layers that keep a surface's relief but not its colour: shaded from the first colour in its
+# hollows to the second on its crests. There's no snow scan, so snow is sand's ripples in white.
+FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
 
 # Grass per layer: (biome, slug, instances per 10 m^2 per variation, cull start, cull end in cm).
 GRASS = {
@@ -170,6 +173,9 @@ class Ground:
             # The mix follows the surfaces' own heights at its edge, not a soft fade.
             alpha = g.saturate(g.add(alpha, g.add(other["height"], g.mul(base["height"], -1.0))))
             base = {k: g.lerp(base[k], other[k], alpha) for k in base}
+        if name in FLAT:
+            low, high = FLAT[name]
+            base["colour"] = g.lerp(g.const(low), g.const(high), base["height"])
         if name in ROUGHNESS:
             base["rough"] = g.const(ROUGHNESS[name])
         return base
