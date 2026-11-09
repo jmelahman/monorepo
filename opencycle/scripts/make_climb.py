@@ -94,6 +94,25 @@ def lay_road(h):
     return {"hero": {"xy": xy, "z": z, "closed": False}}
 
 
+def open_valley_side(h, x, y, road):
+    """Where the path crosses a spur, the valley side falls away from its edge instead of rising
+    into a second bank, so the path never runs in a trench. Within 12 m on the downhill (+Y)
+    side, the ground is at most 0.3 m above the path plus 15 cm a metre, fading out by 25 m."""
+    xy, z = road["xy"], road["z"]
+    mark = np.zeros(h.shape, dtype=bool)
+    row, col = at(xy)
+    mark[row, col] = True
+    index = np.full(h.shape, -1, dtype=np.int64)
+    index[row, col] = np.arange(len(xy))
+    dist, (ri, ci) = mi.ndimage.distance_transform_edt(~mark, return_indices=True)
+    dist = dist * SPACING
+    nearest = index[ri, ci]
+    below = (y - xy[nearest, 1]) > 0
+    cap = z[nearest] + 0.3 + 0.15 * np.maximum(dist - mi.ROAD_HALF - mi.SHOULDER, 0)
+    weight = mi.smoothstep(25.0, 12.0, dist) * below * (dist > mi.ROAD_HALF + mi.SHOULDER)
+    return (h - weight * np.maximum(h - cap, 0)).astype(np.float32)
+
+
 def paint(x, y, h, road_dist):
     gy, gx = np.gradient(h, SPACING)
     slope = np.hypot(gx, gy)
@@ -302,6 +321,7 @@ def main():
     roads = lay_road(h)
     road = roads["hero"]
     h, road_dist = mi.carve(h, roads)
+    h = open_valley_side(h, x, y, road)
     layers, slope, grass = paint(x, y, h, road_dist)
     tree_list = trees(h, road_dist, slope, grass)
     rail_runs = rails(h, road)
