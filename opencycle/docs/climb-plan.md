@@ -46,14 +46,13 @@ All of these come from the same offscreen ride test (`scripts/ride_test.sh`) on 
 | --- | --- | --- | --- |
 | Scanned island (`/Game/Island`) | Epic, 720p | 3–4 | Megascans grass and props; no trees |
 | Japanese town (`/Game/Coast`, 7 Nov) | Epic, 720p | 2.5–5.5 | Free Poly Haven assets |
-| Stylized valley (`/Game/Stylized`) | Epic, 720p | _pending_ | 15,000 low-poly trees, vertex colour only |
-| Stylized valley | Low | _pending_ | |
 
-The first stylized rides (9 Nov, 02:27–02:35) ran two Unreals at once and shared one
-`ride_test.log`, so their numbers are void. Clean re-runs are under way.
+Neither reaches 30 fps yet.
 
-None of these reaches 30 fps at Low yet. The stylized valley shows that the cost is in what we draw
-(grass cards, scanned meshes, Lumen), not in the game code.
+**A stylized look is out (the user's decision, 9 Nov).** The low-poly valley in `/Game/Stylized`
+was only a probe. At Low on this laptop it rode at 70–95 fps (GPU 8–11 ms, `out/stylized_low.log`),
+so the engine and game code leave plenty of room. The cost is in what we draw: grass cards,
+scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Assets we have
 
@@ -85,9 +84,7 @@ None of these reaches 30 fps at Low yet. The stylized valley shows that the cost
    track, weather and start-screen entry.
 4. **Packaged build.** A shipping build with cooked textures (the "Preparing Textures" stall goes
    away). Measure both tiers.
-5. **Only then:** other places, reusing the recipe (coast road, valley farmland). The stylized valley
-   (`scripts/make_stylized.py`, `scripts/stylized_world.py`) stays as a fallback look and a
-   performance baseline.
+5. **Only then:** other places, reusing the recipe (coast road, valley farmland).
 
 ## Blockers and risks
 
@@ -100,7 +97,8 @@ None of these reaches 30 fps at Low yet. The stylized valley shows that the cost
 
 ## Where things stand
 
-- 2026-11-09: Plan written. The stylized valley is built and ridden as a comparison. Fab trees are
+- 2026-11-09: Plan written. The user ruled out a stylized look; the stylized valley was only a
+  frame-rate probe (see Measurements). Fab trees are
   being fetched by a separate session from `fab/CLIMB_BRIEF.md`, with results in
   `fab/climb/SUMMARY.md`. Next: milestone 1 with the PVE trees.
 - **Only one Unreal at a time, across all sessions.** Two sessions rode at once on 9 Nov, and both
