@@ -112,12 +112,16 @@ def paint(x, y, h, road_dist):
     return out, slope, grass
 
 
+# The share of trees kept beyond the full-density reach: static Nanite trees cover the whole map.
+FAR = float(os.environ.get("OC_FAR_TREES", "0.45"))
+
+
 def trees(h, road_dist, slope, grass):
     """Stems on a jittered grid about 5.5 m apart in the woods, thinning to nothing in clearings
     and on crags, kept off the verge. Beech below, spruce above, mixed across a band with noise."""
     rng = np.random.default_rng(SEED + 100)
     step = 5.5
-    reach = 320.0  # metres from the road
+    reach = 320.0  # metres from the road at full density; beyond it the woods thin to FAR
     c = np.arange(-(RES - 1) / 2 + step / 2, (RES - 1) / 2, step)
     gx, gy = np.meshgrid(c, c)
     px = (gx + rng.uniform(-0.45, 0.45, gx.shape) * step).ravel()
@@ -129,9 +133,8 @@ def trees(h, road_dist, slope, grass):
     wood = 1 - grass[row, col]
     keep = (
         (d > mi.ROAD_HALF + 3.0 + rng.uniform(0, 3, d.shape))
-        & (d < reach)
         & (slope[row, col] < 1.0)
-        & (rng.random(d.shape) < wood * 0.92)
+        & (rng.random(d.shape) < wood * 0.92 * np.where(d < reach, 1.0, FAR))
     )
     px, py, row, col = px[keep], py[keep], row[keep], col[keep]
     z = h[row, col]

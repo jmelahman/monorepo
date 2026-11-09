@@ -21,7 +21,8 @@ The ground is island_world.py's material, built afresh here as M_ClimbGround wit
 this stretch grows: the island's grass types load every biome's scans, and building their meshes
 (1.5-3 GB each, the rocks, trunks and cacti) together gets the editor killed for memory.
 
-Trees: OC_SPRUCE and OC_BEECH name the meshes (defaults: the vegetation plugin's sample trees). A
+Trees: OC_SPRUCE and OC_BEECH name the meshes. By default they are the static copies in
+/Game/Climb/Trees if `oc.py static-trees` made them, else the vegetation plugin's sample trees. A
 static mesh goes into one instanced component for every tree of its kind. A skeletal one (the
 plugin's Nanite-assembly trees) can't be instanced, so it is placed as an actor per tree, only
 within OC_NEAR metres of the road (default 60); beyond that there are none.
@@ -60,12 +61,25 @@ LEVEL = f"{FOLDER}/L_Hero"
 QUADS = 127
 GRID = 4  # components a side per streaming proxy
 PVE = "/ProceduralVegetationEditor/SampleAssets/StarterContent"
-TREES = {
-    "spruce": os.environ.get("OC_SPRUCE") or f"{PVE}/ConiferTree_01/PVE_Conifer_01",
-    "beech": os.environ.get("OC_BEECH") or f"{PVE}/DeciduousTree_01/PVE_Deciduous_Tree_01",
+# The plugin's skeletal trees, and their static Nanite copies (made by `oc.py static-trees`).
+PVE_TREES = {
+    "spruce": f"{PVE}/ConiferTree_01/PVE_Conifer_01",
+    "beech": f"{PVE}/DeciduousTree_01/PVE_Deciduous_Tree_01",
 }
+STATIC_TREES = {kind: f"/Game/Climb/Trees/SM_{kind}" for kind in PVE_TREES}
+
+
+def tree_mesh(kind):
+    """OC_SPRUCE / OC_BEECH if set, else the static copy if it exists, else the skeletal tree."""
+    chosen = os.environ.get(f"OC_{kind.upper()}")
+    if chosen:
+        return chosen
+    static = STATIC_TREES[kind]
+    return static if unreal.EditorAssetLibrary.does_asset_exist(static) else PVE_TREES[kind]
+
+
 NEAR = float(os.environ.get("OC_NEAR") or "60") * 100.0
-TREE_CULL = 60000.0  # cm: instanced trees past this aren't drawn
+TREE_CULL = 200000.0  # cm: instanced trees past this aren't drawn (the map is 2 km across)
 RAIL_HEIGHT = 85.0  # cm, the fence rail's middle above the path
 # Grass per layer, as island_world.GRASS: grasses and flowers in the verges and clearings, ferns
 # under the trees. No rocks, trunks or logs yet: their scans are the ones too big to build.
@@ -241,11 +255,12 @@ def road_points():
 def trees():
     with open(f"{SRC}/trees.json") as f:
         stems = json.load(f)
-    meshes = {kind: unreal.load_asset(path) for kind, path in TREES.items()}
+    paths = {kind: tree_mesh(kind) for kind in PVE_TREES}
+    meshes = {kind: unreal.load_asset(path) for kind, path in paths.items()}
     for kind, mesh in meshes.items():
         if mesh is None:
-            raise RuntimeError(f"no {kind} mesh at {TREES[kind]}")
-        log(f"{kind}: {TREES[kind]} ({type(mesh).__name__})")
+            raise RuntimeError(f"no {kind} mesh at {paths[kind]}")
+        log(f"{kind}: {paths[kind]} ({type(mesh).__name__})")
     if any(isinstance(m, unreal.SkeletalMesh) for m in meshes.values()):
         # The plugin's materials read wind and tree data from this actor; without it the trees
         # fall back to proxy cards.

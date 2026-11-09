@@ -373,11 +373,11 @@ def op_static_trees():
     """Static copies of the PVE trees (SM_spruce, SM_beech in /Game/Climb/Trees), Nanite with
     area preservation, so the climb can instance tens of thousands of them: the skeletal ones
     overflow the GPU's skinning buffer. Run on a fresh editor (oc.py static-trees restarts)."""
-    import climb_world as cw
+    cw = _old_build()
 
     au, na = unreal.GeometryScript_AssetUtils, unreal.GeometryScript_NewAssetUtils
     notes = []
-    for kind, path in cw.TREES.items():
+    for kind, path in cw.PVE_TREES.items():
         sk = unreal.load_asset(path)
         if not isinstance(sk, unreal.SkeletalMesh):
             raise RuntimeError(f"{kind}: {path} is not a skeletal mesh")
