@@ -97,6 +97,19 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, later: L_Hero is built (landscape, road, rails, 3,600 PVE trees). The loop is one
+  warm editor (`scripts/ue_serve.py`) that runs command files dropped into `out/cmd`: a look
+  change plus six stills takes about 2.5 minutes. Stills now come from the editor viewport, so
+  grass and tree LODs load. The rock is now granite and the shoulders gravel.
+  - **Crash rule:** never rebuild the ground material while the landscape is loaded. The editor
+    recompiles every landscape piece in one frame, and the Radeon driver resets the GPU
+    (DEVICE_LOST, twice). Build the material first, then open the level (`out/cmd/0005_look.py`).
+  - Never reload L_Hero while it's open (segfault). `NO_SKELETAL` / `OC_NO_SKELETAL` leaves
+    the skeletal trees unloaded.
+  - The skeletal trees overflow the GPU skinning buffer (`r.Skinning.Buffers.*`). The PVE
+    plugin can export static meshes (`EPVExportMeshType::StaticMesh`), but only from its
+    editor UI, not from Python.
+
 - 2026-11-09: Plan written. The user ruled out a stylized look; the stylized valley was only a
   frame-rate probe (see Measurements). Fab trees are
   being fetched by a separate session from `fab/CLIMB_BRIEF.md`, with results in
