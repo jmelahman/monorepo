@@ -391,7 +391,14 @@ def open_level():
         world = unreal.EditorLoadingAndSavingUtils.load_map(LEVEL)
     wp = getattr(unreal, "WorldPartitionBlueprintLibrary", None)
     if wp is not None:
-        wp.load_actors([d.guid for d in wp.get_actor_descs()])
+        descs = wp.get_actor_descs()
+        if os.environ.get("OC_NO_SKELETAL") or globals().get("NO_SKELETAL"):
+            # The skeletal PVE trees overflow the GPU's skinning buffer, and the Radeon driver
+            # has crashed three times with them loaded.
+            keep = [d for d in descs if "SkeletalMeshActor" not in str(d.native_class)]
+            log(f"open_level: leaving {len(descs) - len(keep)} skeletal trees unloaded")
+            descs = keep
+        wp.load_actors([d.guid for d in descs])
     return world
 
 
