@@ -5,6 +5,9 @@ Two stages, because Interchange finishes an import after the call returns and th
 meshes' material slots (see the README's pitfalls):
     OC_STAGE=import bash scripts/ue_run.sh megascans.py megascans_import.log
     OC_STAGE=assign bash scripts/ue_run.sh megascans.py megascans_assign.log
+OC_STAGE=warm then compiles every textured asset's textures into the derived data cache, one asset
+at a time: a level that first meets them compiles them as it plays, the props drawing black till
+they are done.
 OC_ONLY narrows either stage to a comma list of biomes or biome/slug pairs, and OC_SKIP leaves out
 such a list (for a raw scan that crashes the commandlet). Assets already imported are skipped unless
 OC_FORCE=1.
@@ -233,6 +236,15 @@ def assign_asset(record, masters):
     log(f"assigned {folder} ({kind}, {len(stray)} stray materials removed)")
 
 
+def warm(record):
+    folder, slug = folder_of(record), record["slug"]
+    paths = [f"{folder}/T_{slug}_{key}" for key in ("D", "N", "M", "T")]
+    found = [unreal.load_asset(p) for p in paths if assets.does_asset_exist(p)]
+    # One asset's at a time, as a dozen 8K maps compiling at once is more than memory holds.
+    unreal.SystemLibrary.execute_console_command(None, "Editor.AsyncTextureCompilationFinishAll")
+    log(f"warmed {folder} ({len(found)} textures)")
+
+
 def main():
     with open(f"{PREP}/index.json") as f:
         records = [r for r in json.load(f) if wanted(r)]
@@ -245,6 +257,10 @@ def main():
         for record in records:
             if record["kind"] != "surface":
                 assign_asset(record, masters)
+    elif STAGE == "warm":
+        for record in records:
+            if record["kind"] != "surface":
+                warm(record)
     else:
         raise RuntimeError(f"unknown OC_STAGE {STAGE}")
 
