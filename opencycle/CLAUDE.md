@@ -73,8 +73,8 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 - **Runpod spending:**
   - Quote prices before creating anything, ask before spending over $10, and read back every
     write.
-  - Mutate only pods `pm3g9d205dh4th` and `aii7cfmzr6x5qy`. Their terminate was denied, so the
-    user terminates them in the console.
+  - No pods are running (the user terminated the last two on 9 Nov). Create new ones only
+    after quoting the price.
 - **Files:**
   - No stray .py files in /workspace/ue. Temp scripts go in `out/qa` or the scratchpad.
   - Don't delete `/workspace/ue/out` without the user's OK.
