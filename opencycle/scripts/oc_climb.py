@@ -539,10 +539,29 @@ def op_static_trees():
     return {"notes": notes}
 
 
+def _warm_grass_meshes():
+    """Loads and builds GRASS's meshes one at a time, with frames between. Six million-triangle
+    prop scans building their Nanite data and textures at once, inside one frame, crashed the
+    editor in Vulkan (9 Nov). Once built they come from the DDC and this is quick."""
+    seen = set()
+    for table in GRASS.values():
+        for biome, slug, *_ in table:
+            if slug in seen:
+                continue
+            seen.add(slug)
+            for path in assets.list_assets(f"{MS}/{biome}/{slug}", False):
+                mesh = unreal.load_asset(path)
+                if isinstance(mesh, unreal.StaticMesh):
+                    unreal.EditorStaticMeshLibrary.get_number_verts(mesh, 0)  # waits for it
+                    yield 20
+            yield 20
+
+
 def op_rebuild_ground(rebuild_grass=False):
     """M_ClimbGround and MI_ClimbGround, rebuilt. Only on the empty map (see _guard_rebuild).
     Saved grass types are reused: building them takes over ten minutes, on one core."""
     _guard_rebuild()
+    yield from _warm_grass_meshes()
     grass = {}
     for layer in GRASS:
         saved = unreal.load_asset(f"{FOLDER}/Grass/GT_{layer}")
