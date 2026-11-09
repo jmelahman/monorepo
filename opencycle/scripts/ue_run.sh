@@ -23,15 +23,16 @@ sudo -u ue4 env UE-LocalDataCachePath=/workspace/ddc HOME=/home/ue4 "${vars[@]}"
 	"${run[@]}" -unattended -nosplash -stdout -FullStdOutLogOutput >"$2" 2>&1 </dev/null &
 editor=$!
 # The editor can crash tearing down ("double free or corruption") and then hang for good, holding
-# its memory, whether or not it logged its exit first (a script that raised quits without "LogExit"):
-# a minute after any of those lines, stop it. A TERM to sudo
+# its memory: a minute after its exit or teardown line, stop it. A hung editor catches TERM and
+# never finishes, so a minute after that it is killed outright. A TERM to sudo
 # reaches the editor, as does one to this script, e.g. from timeout.
 trap 'kill "$editor" 2>/dev/null' TERM INT
 exited=0
 while kill -0 "$editor" 2>/dev/null; do
 	if grep -a -q -E "LogExit: Exiting.|Tearing down SDL|double free or corruption" "$2" 2>/dev/null; then
 		exited=$((exited + 1))
-		[ "$exited" -gt 12 ] && echo "ue_run: editor hung after exiting; stopping it" && kill "$editor"
+		[ "$exited" -eq 13 ] && echo "ue_run: editor hung after exiting; stopping it" && kill "$editor"
+		[ "$exited" -eq 25 ] && echo "ue_run: editor ignored TERM; killing it" && pkill -KILL -P "$editor"
 	fi
 	sleep 5 &
 	wait $!
