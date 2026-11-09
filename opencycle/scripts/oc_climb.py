@@ -170,6 +170,10 @@ class Ground:
         masks = g.sample(m, near_uv, "masks")
         top = g.lerp(near_d, far_d, g.mul(self.far, 0.7))
         colour = g.mul(g.lerp(top, side_d, self.steep), g.param(f"{label} tint", tint))
+        # "<label> grey", 0 to 1, takes the scan's own hue out: a tint can darken warm gravel but
+        # not make it grey.
+        luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
+        colour = g.lerp(colour, luma, g.param(f"{label} grey", 0.0))
         normal = g.lerp(g.lerp(near_n, far_n, self.far), g.const((0.0, 0.0, 1.0)), self.steep)
         return {
             "colour": colour,
@@ -380,9 +384,10 @@ def op_rebuild_ground(rebuild_grass=False):
     return {"notes": [f"rebuilt {MATERIAL}; {INSTANCE} points at it (existing tints are kept)"]}
 
 
-def _tune(tints):
+def _tune(tints, greys=None):
+    greys = greys or {}
     names = tint_names()
-    bad = [k for k in tints if k not in names]
+    bad = [k for k in [*tints, *greys] if k not in names]
     if bad:
         raise RuntimeError(f"unknown tint {bad}; use one of {names}")
     mi = unreal.load_asset(f"{FOLDER}/{INSTANCE}")
@@ -392,9 +397,11 @@ def _tune(tints):
         lib.edit.set_material_instance_vector_parameter_value(
             mi, f"{name} tint", unreal.LinearColor(*rgb, 1.0)
         )
+    for name, amount in greys.items():
+        lib.edit.set_material_instance_scalar_parameter_value(mi, f"{name} grey", float(amount))
     lib.edit.update_material_instance(mi)
     assets.save_loaded_asset(mi, False)
-    log(f"tuned {tints}")
+    log(f"tuned {tints} grey {greys}")
 
 
 def cameras(only=None):
@@ -456,12 +463,13 @@ def op_stills(shots=None, out=None):
     return {"files": files}
 
 
-def op_look(tint=None, stills=True, shots=None, out=None):
-    """Recolour through MI_ClimbGround's parameters (tint: {"Dirt": [r, g, b]}), then stills."""
-    if tint:
-        _tune({k: tuple(v) for k, v in tint.items()})
+def op_look(tint=None, grey=None, stills=True, shots=None, out=None):
+    """Recolour through MI_ClimbGround's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
+    0.8}), then stills."""
+    if tint or grey:
+        _tune({k: tuple(v) for k, v in (tint or {}).items()}, grey)
     yield
-    result = {"notes": [f"tuned {tint}"] if tint else []}
+    result = {"notes": [f"tuned {tint} grey {grey}"] if tint or grey else []}
     if stills:
         yield from _ensure_level()
         result["files"] = yield from _stills(shots, out or STILLS)

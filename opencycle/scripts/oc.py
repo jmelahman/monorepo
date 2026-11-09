@@ -3,7 +3,7 @@
 is done, failed, crashed, or a hard timeout passed, and says which, in the last line.
 
     python3 scripts/oc.py status
-    python3 scripts/oc.py look --tint Dirt=0.58,0.6,0.63 [--tint "Rock mix"=1,1,1] [--shots road_50]
+    python3 scripts/oc.py look --tint Dirt=0.58,0.6,0.63 [--grey Dirt=0.8] [--shots road_50]
     python3 scripts/oc.py stills [--shots road_08,hairpin_above]
     python3 scripts/oc.py rebuild-ground [--no-stills] [--rebuild-grass]
     python3 scripts/oc.py wait JOB | log [N] | restart | stop
@@ -59,6 +59,18 @@ def parse_tint(text):
     if not sep or not name.strip() or len(values) != 3:
         raise ValueError(f"tint {text!r}: expected NAME=R,G,B, e.g. Dirt=0.58,0.6,0.63")
     return name.strip(), values
+
+
+def parse_grey(text):
+    """'Dirt=0.8' -> ('Dirt', 0.8): how far that surface's colour goes to grey, 0 to 1."""
+    name, sep, amount = text.rpartition("=")
+    try:
+        value = float(amount)
+    except ValueError:
+        value = -1.0
+    if not sep or not name.strip() or not 0.0 <= value <= 1.0:
+        raise ValueError(f"grey {text!r}: expected NAME=F with F from 0 to 1, e.g. Dirt=0.8")
+    return name.strip(), value
 
 
 def clean_log(raw):
@@ -338,7 +350,8 @@ def cmd_status(ns):
 
 def cmd_look(ns):
     tints = dict(parse_tint(t) for t in ns.tint or [])
-    args = {"tint": tints, "stills": not ns.no_stills, "shots": shots(ns)}
+    greys = dict(parse_grey(t) for t in ns.grey or [])
+    args = {"tint": tints, "grey": greys, "stills": not ns.no_stills, "shots": shots(ns)}
     return run("look", args, ns)
 
 
@@ -398,6 +411,7 @@ def main(argv=None):
     add("status", cmd_status, help="what is running; starts nothing")
     s = add("look", cmd_look, help="set ground tints (parameters only), then stills")
     s.add_argument("--tint", action="append", metavar="NAME=R,G,B")
+    s.add_argument("--grey", action="append", metavar="NAME=F", help="0 keeps the hue, 1 is grey")
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")
     s = add("stills", cmd_stills, help="stills from the editor viewport")
