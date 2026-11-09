@@ -12,6 +12,10 @@ from the saved materials. Run them in that order, as two editors, for the full i
 material leaves every texture it samples resident on the GPU, about 8 GB for the ground's, which
 with the landscape's import is more than an integrated GPU's share of memory. A material that is
 only loaded keeps its textures out until something draws them.
+
+OC_STAGE=landmarks then stands make_island.py's landmarks in the saved level, in a third editor:
+with the landscape's import still in memory, the level's editor has no room left for them. Run it
+once after each level build; the sea's tag marks a level that has them.
 """
 
 import importlib.util
@@ -19,6 +23,7 @@ import json
 import math
 import os
 import re
+import traceback
 
 import unreal
 
@@ -38,7 +43,7 @@ Graph = lib.Graph
 assets, tools, actors = lib.assets, lib.tools, lib.actors
 
 SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/island")
-STAGE = os.environ.get("OC_STAGE", "all")  # "materials", "level", or "all" for both
+STAGE = os.environ.get("OC_STAGE", "all")  # "materials", "level", "landmarks", or "all"
 PREP = "/workspace/ue/fab_prep"
 FOLDER = "/Game/Island"
 LEVEL = f"{FOLDER}/L_Island"
@@ -499,8 +504,11 @@ def saved_material(path):
 
 
 def main():
-    if STAGE not in ("materials", "level", "all"):
-        raise RuntimeError(f"OC_STAGE={STAGE}: expected materials, level or all")
+    if STAGE not in ("materials", "level", "landmarks", "all"):
+        raise RuntimeError(f"OC_STAGE={STAGE}: expected materials, level, landmarks or all")
+    if STAGE == "landmarks":
+        stand_landmarks(unreal.EditorLoadingAndSavingUtils.load_map(LEVEL))
+        return
     if STAGE == "level":
         ground = saved_material(f"{FOLDER}/M_IslandGround")
         road = saved_material(f"{FOLDER}/Road/M_IslandRoad")
@@ -544,15 +552,38 @@ def main():
         raise RuntimeError("no landscape")
     log(f"landscape: {comps}x{comps} components of {quads} quads at {spacing:.0f} cm")
     roads(road)
-    landmarks()
     sea(half * 2)
     tracks()
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL)
     log(f"saved {LEVEL}")
+    if STAGE == "all":
+        stand_landmarks(world)
+
+
+def stand_landmarks(world):
+    """The landmarks in the saved level, once: the always-loaded sea carries a tag once it has
+    them, as its other actors may not be loaded to look for."""
+    sea_actor = next(
+        (a for a in actors.get_all_level_actors() if a.get_actor_label() == "Sea"), None
+    )
+    if sea_actor is None:
+        raise RuntimeError(f"no Sea in {LEVEL}: run OC_STAGE=level first")
+    tags = list(sea_actor.tags)
+    if "landmarks" in tags:
+        raise RuntimeError(f"{LEVEL} has its landmarks: run OC_STAGE=level to build it afresh")
+    landmarks()
+    sea_actor.set_editor_property("tags", [*tags, "landmarks"])
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL)
+    log(f"saved {LEVEL} with its landmarks")
 
 
 try:
     main()
+except Exception:
+    # Logged here: quitting first leaves the editor no time to log the error itself.
+    unreal.log_error(f"ISLAND failed: {traceback.format_exc()}")
+    raise
 finally:
     unreal.SystemLibrary.quit_editor()
