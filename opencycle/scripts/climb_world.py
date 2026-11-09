@@ -6,6 +6,13 @@ the ride up and back down as the level's ride track.
 Run after make_climb.py and megascans.py:
     OC_EDITOR=1 bash scripts/ue_run.sh climb_world.py climb_world.log
 
+OC_STAGE picks what to build, so a change rebuilds only its part:
+- all (default): everything, the level made afresh;
+- ground: the ground and road materials and the landscape in a fresh level, nothing on it;
+- dress: the saved level's road, rails, trees and ride track, cleared and placed again from
+  make_climb.py's output. The ground and its materials are kept, so it runs in minutes:
+    OC_STAGE=dress OC_EDITOR=1 bash scripts/ue_run.sh climb_world.py climb_dress.log
+
 The ground is island_world.py's material, built afresh here as M_ClimbGround with only the grass
 this stretch grows: the island's grass types load every biome's scans, and building their meshes
 (1.5-3 GB each, the rocks, trunks and cacti) together gets the editor killed for memory.
@@ -41,6 +48,7 @@ island = sibling("island_world", library=True)
 assets, actors = lib.assets, lib.actors
 
 SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/climb")
+STAGE = os.environ.get("OC_STAGE") or "all"
 FOLDER = "/Game/Climb"
 LEVEL = f"{FOLDER}/L_Hero"
 QUADS = 127
@@ -231,8 +239,10 @@ def track():
     log(f"track: {len(centre)} m, out and back")
 
 
-def main():
-    ground, road = materials()
+DRESSING = ("Road", "Rail", "Trees")  # outliner folders the dress stage owns
+
+
+def fresh_level(ground):
     if assets.does_asset_exist(LEVEL):
         assets.delete_asset(LEVEL)
     world = unreal.EditorLoadingAndSavingUtils.new_map_from_template(
@@ -244,10 +254,47 @@ def main():
     if not unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL):
         raise RuntimeError(f"could not save {LEVEL}")
     landscape(world, ground)
-    roads(road)
-    rails(rail_material())
-    trees()
-    track()
+    return world
+
+
+def undress():
+    """Open the saved level with every actor loaded, and remove the dressing."""
+    if not assets.does_asset_exist(LEVEL):
+        raise RuntimeError(f"no {LEVEL} to dress: build it with OC_STAGE=all or ground first")
+    world = unreal.EditorLoadingAndSavingUtils.load_map(LEVEL)
+    # World partition loads only what an editor region asks for; the dressing is spread over
+    # all of it, so load every actor first or most of it would survive.
+    wp = getattr(unreal, "WorldPartitionBlueprintLibrary", None)
+    if wp is not None:
+        wp.load_actors([d.guid for d in wp.get_actor_descs()])
+    else:
+        unreal.log_warning("CLIMB no WorldPartitionBlueprintLibrary: unloaded dressing stays")
+    gone = 0
+    for actor in actors.get_all_level_actors():
+        folder = str(actor.get_folder_path())
+        if folder.split("/")[0] in DRESSING or actor.get_actor_label() == "Global Foliage":
+            actors.destroy_actor(actor)
+            gone += 1
+    log(f"undressed: {gone} actors")
+    return world
+
+
+def main():
+    log(f"stage {STAGE}")
+    if STAGE not in ("all", "ground", "dress"):
+        raise RuntimeError(f"OC_STAGE {STAGE!r}: use all, ground or dress")
+    if STAGE == "dress":
+        world = undress()
+        island.FOLDER = FOLDER
+        road = unreal.load_asset(f"{FOLDER}/Road/M_IslandRoad") or island.road_material()
+    else:
+        ground, road = materials()
+        world = fresh_level(ground)
+    if STAGE != "ground":
+        roads(road)
+        rails(rail_material())
+        trees()
+        track()
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL)
     log(f"saved {LEVEL}")
