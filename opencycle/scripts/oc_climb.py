@@ -13,6 +13,7 @@ The crash rules, enforced here rather than remembered:
 
 import importlib.util
 import json
+import math
 import os
 import re
 import time
@@ -787,6 +788,15 @@ def cameras(only=None):
     x, y, z = up[len(up) // 2]
     ax, ay, az = up[len(up) // 5]
     out.append(("hairpin_above", (x + 30, y + 40, z + 45), (ax, ay, az)))
+    # The bench from the path, 7 m in front of it and a little to one side.
+    if os.path.exists(f"{SRC}/props.json"):
+        with open(f"{SRC}/props.json") as f:
+            bench = [p for p in json.load(f) if p[0] == "bench"]
+        if bench:
+            _, bx, by, bz, yaw = bench[0]
+            r = math.radians(yaw + 20)
+            eye = (bx / 100 + 7 * math.cos(r), by / 100 + 7 * math.sin(r), bz / 100 + 1.6)
+            out.append(("bench", eye, (bx / 100, by / 100, bz / 100 + 0.5)))
     if only:
         known = [n for n, _, _ in out]
         unknown = [n for n in only if n not in known]

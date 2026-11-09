@@ -113,6 +113,17 @@ def open_valley_side(h, x, y, road):
     return (h - weight * np.maximum(h - cap, 0)).astype(np.float32)
 
 
+def roughen_banks(h, x, y, road_dist):
+    """Carved banks are smooth ramps. Give them the lumps, steps and hollows of a bank that has
+    slumped and grown over: half a metre of relief at a few metres, kept off the path's edge."""
+    gy, gx = np.gradient(h, SPACING)
+    steep = mi.smoothstep(0.3, 0.6, np.hypot(gx, gy))
+    near = mi.smoothstep(mi.ROAD_HALF + 1.0, mi.ROAD_HALF + 2.5, road_dist)
+    near *= mi.smoothstep(25.0, 15.0, road_dist)
+    lumps = (mi.fbm(x, y, 3.5, 3, SEED + 54) - 0.5) * 1.1
+    return (h + steep * near * lumps).astype(np.float32)
+
+
 def paint(x, y, h, road_dist):
     gy, gx = np.gradient(h, SPACING)
     slope = np.hypot(gx, gy)
@@ -125,7 +136,13 @@ def paint(x, y, h, road_dist):
     # than lawn humps; the edge wanders so it doesn't read as a painted band.
     bank = mi.smoothstep(0.4, 0.6, slope + 0.15 * (mi.fbm(x, y, 6, 2, SEED + 50) - 0.5))
     bank *= mi.smoothstep(16.0, 9.0, road_dist + 4 * mi.fbm(x, y, 11, 2, SEED + 51))
-    shoulder = np.maximum(shoulder, bank * (1 - rock))
+    # Real cut banks are only bare in places: about half grows over with the woods' floor (ferns,
+    # tufts, roots, stones), and stones and small outcrops break through here and there.
+    overgrown = mi.smoothstep(0.42, 0.58, mi.fbm(x, y, 7, 3, SEED + 52))
+    overgrown *= mi.smoothstep(mi.ROAD_HALF + 1.5, mi.ROAD_HALF + 3.5, road_dist)
+    outcrop = bank * mi.smoothstep(0.68, 0.8, mi.fbm(x, y, 9, 2, SEED + 53)) * (slope > 0.55)
+    rock = np.maximum(rock, outcrop)
+    shoulder = np.maximum(shoulder, bank * (1 - rock) * (1 - overgrown))
     # Grass: the valley floor and clearings up the flank. In the woods the path's edge is leaf and
     # needle litter, not a lawn verge.
     floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
@@ -322,6 +339,7 @@ def main():
     road = roads["hero"]
     h, road_dist = mi.carve(h, roads)
     h = open_valley_side(h, x, y, road)
+    h = roughen_banks(h, x, y, road_dist)
     layers, slope, grass = paint(x, y, h, road_dist)
     tree_list = trees(h, road_dist, slope, grass)
     rail_runs = rails(h, road)
