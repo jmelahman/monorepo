@@ -433,7 +433,13 @@ def main(argv=None):
     s.add_argument(
         "--grass", nargs=2, type=float, metavar=("DENSITY", "CULL"), help="factors on the table"
     )
-    s.add_argument("--fog", type=float, metavar="DENSITY", help="height fog; the default is 0.02")
+    s.add_argument(
+        "--fog",
+        type=float,
+        nargs="+",
+        metavar="F",
+        help="height fog: DENSITY [FALLOFF]; the defaults are 0.02 and 0.2",
+    )
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")
     s = add("stills", cmd_stills, help="stills from the editor viewport")

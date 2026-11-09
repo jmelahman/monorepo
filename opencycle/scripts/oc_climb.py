@@ -446,9 +446,12 @@ def _grass(density, cull):
     log(f"grass x{density} density, x{cull} cull: {changed} varieties")
 
 
-def _fog(density):
-    """The haze: ExponentialHeightFog density in the open level (the template's default is 0.02).
-    Thicker hides the 2 km map's edge."""
+def _fog(fog):
+    """The haze: [density] or [density, falloff] for the open level's ExponentialHeightFog (the
+    template's are 0.02 and 0.2). Falloff 0.2 thins the fog e^2 per 100 m of height, so on a climb
+    66-576 m up it barely shows: a low falloff spreads the haze up the mountain and over the map's
+    edge."""
+    density, *rest = fog if isinstance(fog, (list, tuple)) else [fog]
     fogs = [
         a
         for a in unreal.EditorActorSubsystem().get_all_level_actors()
@@ -459,8 +462,10 @@ def _fog(density):
     for fog in fogs:
         comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
         comp.set_editor_property("fog_density", float(density))
+        if rest:
+            comp.set_editor_property("fog_height_falloff", float(rest[0]))
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
-    log(f"fog density {density}")
+    log(f"fog {fog}")
 
 
 def _tune(tints, greys=None):
