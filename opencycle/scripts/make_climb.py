@@ -71,7 +71,11 @@ def terrain(x, y):
     swell = (mi.fbm(x, y, 420, 3, SEED + 7) - 0.5) * 40
     crag = (mi.ridged(x, y, 90, 4, SEED + 13) - 0.35) * 9 * mi.smoothstep(100, 400, up)
     bumps = (mi.fbm(x, y, 14, 3, SEED + 21) - 0.5) * 1.6
-    return (base + gully + swell + crag + bumps).astype(np.float32)
+    # A rim of ridges round the map's edge, so the horizon is mountains, not the 2 km square's
+    # edge and the sea past it. The road stays inside 560 m of the middle, clear of it.
+    edge = np.maximum(np.abs(x), np.abs(y)) + (mi.fbm(x, y, 260, 3, SEED + 31) - 0.5) * 160
+    rim = 350 * mi.smoothstep(650, 1000, edge) ** 1.5
+    return (base + gully + swell + crag + bumps + rim).astype(np.float32)
 
 
 def at(xy):
