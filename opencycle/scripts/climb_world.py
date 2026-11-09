@@ -385,7 +385,10 @@ def stills(world):
 
 
 def open_level():
-    world = unreal.EditorLoadingAndSavingUtils.load_map(LEVEL)
+    """L_Hero with every actor loaded. Reloading it while it's open crashed the editor."""
+    world = unreal.UnrealEditorSubsystem().get_editor_world()
+    if not world or world.get_path_name().split(".")[0] != LEVEL:
+        world = unreal.EditorLoadingAndSavingUtils.load_map(LEVEL)
     wp = getattr(unreal, "WorldPartitionBlueprintLibrary", None)
     if wp is not None:
         wp.load_actors([d.guid for d in wp.get_actor_descs()])
