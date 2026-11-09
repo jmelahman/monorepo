@@ -41,12 +41,16 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
   scripts/make_climb.py`. It takes 20 s and writes `world_gen/climb`. Run it only while the editor
   is not importing, and never run a generator as a "check".
 - **Current look:**
-  - Dirt is tinted 0.62,0.63,0.65 with grey 0.85.
-  - Rock has grey 0.75, and Rock mix has grey 0.6.
-  - Grass is `--grass 2.0 1.5`.
-  - Fog is `--fog 0.008 0.02`. The template's falloff of 0.2 hides the fog above about 100 m. Use falloff 0.02.
-    Density 0.03 washes everything out, and 0.012 doesn't hide the map's edge. The map has a rim
-    of ridges at its edge (`make_climb.terrain`) so the fog can stay light.
+  - Tints and greys live in `oc_climb.LOOK_TINTS` / `LOOK_GREYS` and are applied by every
+    ground build; `look --tint/--grey` is only for trying values.
+  - Grass is `--grass 2.0 1.5`. Fog is `--fog 0.008 0.02` (the template's falloff of 0.2 hides the
+    fog above about 100 m; 0.03 washes everything out). The map has a rim of ridges at its edge.
+  - `look --post KEY=F` (repeatable) sets the grade on an "OC Post" volume: exposure, contrast,
+    saturation, vignette, fog_start (m), volumetric (0/1), shafts, sky, sun. build-level loses
+    fog and post settings, so re-run look after it. Last used: exposure=0.3 contrast=1.1
+    saturation=0.95 vignette=0.3 fog_start=150 volumetric=1.
+- **Rebuilds:** a change to the GRASS table needs `rebuild-ground --rebuild-grass`. It builds the
+  1M-tri prop meshes one at a time first (all at once crashed Vulkan); give it `--timeout 2400`.
 
 ## Crash rules (enforced in code; don't work around them)
 
