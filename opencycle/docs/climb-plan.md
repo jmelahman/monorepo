@@ -101,5 +101,15 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   frame-rate probe (see Measurements). Fab trees are
   being fetched by a separate session from `fab/CLIMB_BRIEF.md`, with results in
   `fab/climb/SUMMARY.md`. Next: milestone 1 with the PVE trees.
+- 2026-11-09, later: milestone 1 started.
+  - `make_climb.py` generates the hero stretch into `world_gen/climb`. It is 2 km of ground at 1 m
+    and 1.2 km of road at 6% average with one hairpin, with about 20k beech and spruce stems and
+    guard-rail runs.
+  - `climb_world.py` builds `/Game/Climb/L_Hero` from that output. It isn't built yet.
+  - Nine reference photos are in `/workspace/ue/ref/climb/`, with sources and licences in
+    `SOURCES.tsv`.
+  - The first Fab trees have landed in `fab/climb/`. They are single-LOD FBX files, with no spruce
+    or beech yet.
+  - Fixed an editor crash when a level has no ride track (it broke the `L_Forest` spike).
 - **Only one Unreal at a time, across all sessions.** Two sessions rode at once on 9 Nov, and both
   wrote `/workspace/ue/ride_test.log`. Check `pgrep -a UnrealEditor` before starting one.
