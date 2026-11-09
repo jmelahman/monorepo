@@ -372,7 +372,7 @@ def save(world):
 # frame, and the Radeon Vulkan driver crashed (vkAllocateCommandBuffers) saving the landscape at
 # the end of one. Between steps the editor ticks and its renderer catches up.
 GAP = 10  # frames between steps
-steps, wait, handle = main(), 0, None
+steps, wait, handle = None, 0, None
 
 
 busy = False
@@ -406,4 +406,7 @@ def finish():
     unreal.SystemLibrary.quit_editor()
 
 
-handle = unreal.register_slate_post_tick_callback(tick)
+# Loaded by a ue_serve.py command (OC_LIBRARY set), it only defines main() for the command to run.
+if not globals().get("OC_LIBRARY"):
+    steps = main()
+    handle = unreal.register_slate_post_tick_callback(tick)

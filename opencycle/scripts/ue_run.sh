@@ -18,6 +18,11 @@ fi
 # short: -ini:Engine:[DevOptions.Shaders]:PercentageUnusedShaderCompilingThreads=83
 read -r -a extra <<<"${OC_UE_ARGS:-}"
 run+=("${extra[@]}")
+# OC_START_MAP opens that level instead of the project's startup map (the coast town, which
+# builds its meshes and textures for minutes on every start).
+if [ -n "${OC_START_MAP:-}" ]; then
+	run+=("-ini:Engine:[/Script/EngineSettings.GameMapsSettings]:EditorStartupMap=$OC_START_MAP")
+fi
 # shellcheck disable=SC2024 # the log redirect is meant to run as the calling user
 sudo -u ue4 env UE-LocalDataCachePath=/workspace/ddc HOME=/home/ue4 "${vars[@]}" \
 	"${run[@]}" -unattended -nosplash -stdout -FullStdOutLogOutput >"$2" 2>&1 </dev/null &
