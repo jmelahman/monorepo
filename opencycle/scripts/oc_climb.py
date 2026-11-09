@@ -569,8 +569,12 @@ def op_rebuild_ground(rebuild_grass=False):
         yield 10
     # The instance goes first: while it refers to the material, the material can't be deleted,
     # and a reused material keeps its old Landscape Grass node, which fails the compile.
-    if assets.does_asset_exist(f"{FOLDER}/{INSTANCE}"):
-        assets.delete_asset(f"{FOLDER}/{INSTANCE}")
+    # The material goes too: a reused one can keep a stale Landscape Grass node that
+    # delete_all_material_expressions misses (after the crash of 9 Nov), and the compile fails.
+    for name in (INSTANCE, MATERIAL):
+        if assets.does_asset_exist(f"{FOLDER}/{name}"):
+            assets.delete_asset(f"{FOLDER}/{name}")
+    yield 5
     material = Ground().build(grass)
     yield 30
     mi = lib.fresh(
