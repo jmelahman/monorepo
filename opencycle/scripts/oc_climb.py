@@ -115,11 +115,13 @@ GRASS = {
     # The soil of the cut banks and the path's edge: roots, stones and a few ferns and tufts, so a
     # bank is never bare plaster.
     "Dirt": (
-        ("forest", "nordic_forest_ground_patch_root", 0.3, 6000, 8000),
-        ("forest", "nordic_forest_rock_small", 0.6, 5000, 7000),
-        ("forest", "mossy_rocks", 0.08, 8000, 11000),
-        ("shared", "fern", 1.2, 4000, 6000),
-        ("shared", "grass_clumps", 2.0, 3000, 4500),
+        ("forest", "nordic_forest_ground_patch_root", 1.5, 6000, 8000),
+        ("forest", "nordic_forest_rock_small", 2.0, 5000, 7000),
+        ("forest", "mossy_rocks", 0.3, 8000, 11000),
+        ("shared", "fern", 6.0, 4000, 6000),
+        ("shared", "lady_fern", 4.0, 4000, 6000),
+        ("shared", "grass_clumps", 8.0, 3000, 4500),
+        ("shared", "wild_grass", 6.0, 3000, 4500),
     ),
     # Talus under the crags.
     "Rock": (

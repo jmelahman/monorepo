@@ -130,7 +130,9 @@ def paint(x, y, h, road_dist):
     # Bare rock only on the natural crags: a cut bank by the path is soil and litter with roots,
     # as in the reference photos, not a wall of pale granite.
     rock = mi.smoothstep(0.85, 1.1, slope) * mi.smoothstep(10.0, 25.0, road_dist)
-    rock = np.maximum(rock, mi.smoothstep(1.2, 1.5, slope))
+    # Only past 25 m from the path: the short steep cuts by it are soil, and a scanned granite floor
+    # on them read as a cobbled wall.
+    rock = np.maximum(rock, mi.smoothstep(1.2, 1.5, slope) * mi.smoothstep(15.0, 25.0, road_dist))
     shoulder = mi.smoothstep(mi.ROAD_HALF + 1.0, mi.ROAD_HALF + 0.2, road_dist)
     # The cut and fill banks by the path are bare dark soil, as in the reference photos, rather
     # than lawn humps; the edge wanders so it doesn't read as a painted band.
@@ -140,7 +142,7 @@ def paint(x, y, h, road_dist):
     # tufts, roots, stones), and stones and small outcrops break through here and there.
     overgrown = mi.smoothstep(0.42, 0.58, mi.fbm(x, y, 7, 3, SEED + 52))
     overgrown *= mi.smoothstep(mi.ROAD_HALF + 1.5, mi.ROAD_HALF + 3.5, road_dist)
-    outcrop = bank * mi.smoothstep(0.68, 0.8, mi.fbm(x, y, 9, 2, SEED + 53)) * (slope > 0.55)
+    outcrop = bank * mi.smoothstep(0.76, 0.84, mi.fbm(x, y, 9, 2, SEED + 53)) * (slope > 0.55)
     rock = np.maximum(rock, outcrop)
     shoulder = np.maximum(shoulder, bank * (1 - rock) * (1 - overgrown))
     # Grass: the valley floor and clearings up the flank. In the woods the path's edge is leaf and
@@ -187,7 +189,8 @@ def trees(h, road_dist, slope, grass):
         # it: in the reference photos the woods come right up to the path.
         (d > mi.ROAD_HALF + 1.8)
         & (rng.random(d.shape) < mi.smoothstep(mi.ROAD_HALF + 1.8, mi.ROAD_HALF + 8, d))
-        & (slope[row, col] < 1.0)
+        # Spruce and beech grow on the cut banks too, short of a cliff.
+        & (slope[row, col] < 1.45)
         & (rng.random(d.shape) < wood * 0.92 * np.where(d < reach, 1.0, FAR))
     )
     px, py, row, col = px[keep], py[keep], row[keep], col[keep]

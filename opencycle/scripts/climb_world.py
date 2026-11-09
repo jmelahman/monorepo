@@ -387,7 +387,9 @@ def road_material():
     ctile = island.tile_cm("shared", "cracked_asphalt")
     cd, cn = (island.ms_texture("shared", "cracked_asphalt", k) for k in ("D", "N"))
     cuv = g.world_uv(ctile, (0.21, 0.47))
-    cracked = g.saturate(g.mul(g.add(g.world_noise(0.0012, -1.0, 2.0, 3), -0.55), 5.0))
+    # Partly cracked, in patches a few metres across with soft edges: a hard mask at 8 m drew big
+    # dark ellipses on the path.
+    cracked = g.mul(g.saturate(g.mul(g.add(g.world_noise(0.004, -1.0, 2.0, 3), -0.4), 1.5)), 0.55)
     colour = g.lerp(colour, g.mul(g.mask(g.sample(cd, cuv), "rgb"), 0.9), cracked)
     normal = g.lerp(normal, g.mask(g.sample(cn, cuv, "normal"), "rgb"), cracked)
     # Repairs are hard-edged blocks a metre or two across, not soft blots: noise sampled on a
@@ -405,7 +407,7 @@ def road_material():
     g.link(cell, noise, "World Position")
     patch = g.saturate(g.mul(g.add(noise, -0.8), 40.0))
     colour = g.lerp(colour, g.mul(colour, 0.72), patch)
-    colour = g.mul(colour, g.world_noise(0.001, 0.85, 1.08, 3))
+    colour = g.mul(colour, g.world_noise(0.001, 0.94, 1.04, 3))
     colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
     across = g.link(
         g.mask(g.node(unreal.MaterialExpressionTextureCoordinate), "r"),
