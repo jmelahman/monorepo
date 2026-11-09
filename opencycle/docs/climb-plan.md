@@ -97,6 +97,17 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, late night (batch v12, building): **colour and surface, in one rebuild.**
+  - `_plant_master` rebuilds M_MS_Plant in place in every `rebuild-ground`: "Grey" 0.25, a
+    per-instance brightness "Variation" 0.5, and one plant in five ("Dry share") turned to a
+    "Dry tint" of yellow-brown. Rerunning megascans.py's assign stage puts back the plain master.
+  - Ground: roughness at least 0.75 (`ROUGH_FLOOR`) and specular 0.3, against the glitter; steep
+    Forest/Sand/Dirt shaded toward (0.7, 0.6, 0.5) (`STEEP`); the Forest mix is now
+    `mossy_forest_floor` in 10 m patches (grey 0.3).
+  - Forest cover adds alpine_bearberry 3.0, dry_grass 1.5 and dead_shrubs 0.3.
+  - Road: darken 0.5 with a warm (1.08, 1.0, 0.86); the soil edge frays 20–60 cm in.
+  - Fog 0.004.
+
 - 2026-11-09, night (storybook v11): **ground cover renders.** The batch below built cleanly,
   then a look pass set plants to 0.62,0.62,0.5 and grass to ×1.2.
   - Sonnet QA: road_08 6, road_30 6, road_50 6, road_72 5, road_95 5, hairpin_above 5, bench 6
