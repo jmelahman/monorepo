@@ -124,12 +124,16 @@ def open_valley_side(h, x, y, road):
 
 def roughen_banks(h, x, y, road_dist):
     """Carved banks are smooth ramps. Give them the lumps, steps and hollows of a bank that has
-    slumped and grown over: half a metre of relief at a few metres, kept off the path's edge."""
+    slumped and grown over: half a metre of relief at a few metres, broad slumps of a metre or so
+    at ten, and rills washed down the face, kept off the path's edge."""
     gy, gx = np.gradient(h, SPACING)
     steep = mi.smoothstep(0.3, 0.6, np.hypot(gx, gy))
     near = mi.smoothstep(mi.ROAD_HALF + 1.0, mi.ROAD_HALF + 2.5, road_dist)
     near *= mi.smoothstep(25.0, 15.0, road_dist)
     lumps = (mi.fbm(x, y, 3.5, 3, SEED + 54) - 0.5) * 1.1
+    lumps += (mi.fbm(x, y, 10, 2, SEED + 56) - 0.5) * 1.8
+    # Rills: narrow grooves a few metres apart, drawn out downhill (the flank falls toward +Y).
+    lumps -= mi.smoothstep(0.6, 0.85, mi.ridged(x, y * 0.3, 5, 2, SEED + 57)) * 0.5
     return (h + steep * near * lumps).astype(np.float32)
 
 

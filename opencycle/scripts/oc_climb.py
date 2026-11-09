@@ -29,6 +29,8 @@ MATERIAL = "M_ClimbGround"
 INSTANCE = "MI_ClimbGround"
 STILLS = "/workspace/ue/out/climb_stills"
 SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
+STILL_SIZE = (1920, 1080)
+STILL_CVARS = ("r.Streaming.PoolSize 3000", "r.Streaming.FullyLoadUsedTextures 1")
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
 
 
@@ -69,10 +71,11 @@ SURFACES = {
 MIXES = {
     "Forest": ("forest", "forest_floor", "patches", 14.0),
     "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
-    "Sand": ("forest", "forest_floor", "patches", 3.0),
+    # The soil's litter is brown needles: olive forest_floor here made green splotches on brown.
+    "Sand": ("mountain", "alpine_needles", "patches", 4.0),
     "Grass": ("shared", "lawn_grass", "patches", 30.0),
     "Rock": ("forest", "rocky_forest_path", "patches", 12.0),
-    "Dirt": ("forest", "forest_floor", "patches", 3.0),
+    "Dirt": ("mountain", "alpine_needles", "patches", 4.0),
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
 LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest mix": (0.8, 0.7, 0.75)}
@@ -80,7 +83,7 @@ LOOK_GREYS = {
     "Grass": 0.15,
     "Rock": 0.3,
     "Rock mix": 0.3,
-    "Forest mix": 0.35,
+    "Forest mix": 0.55,
     "Dirt mix": 0.3,
     "Sand mix": 0.3,
 }
@@ -105,10 +108,10 @@ GRASS = {
         ("shared", "leafy_dandelions", 4.0, 2000, 3000),
     ),
     "Forest": (
-        ("shared", "fern", 3.6, 4000, 6000),
-        ("shared", "lady_fern", 4.0, 4000, 6000),
-        ("shared", "common_fern", 2.4, 4000, 6000),
-        ("shared", "leather_fern", 1.2, 4000, 6000),
+        ("shared", "fern", 6.0, 4000, 6000),
+        ("shared", "lady_fern", 6.0, 4000, 6000),
+        ("shared", "common_fern", 4.0, 4000, 6000),
+        ("shared", "leather_fern", 2.0, 4000, 6000),
         # Tufts between the ferns, sparse: dense clumps made the woods' floor a lawn.
         ("shared", "grass_clumps", 3.0, 3000, 4500),
         ("shared", "wild_grass", 2.0, 3000, 4500),
@@ -126,8 +129,8 @@ GRASS = {
         ("forest", "nordic_forest_ground_patch_root", 1.5, 6000, 8000),
         ("forest", "nordic_forest_rock_small", 2.0, 5000, 7000),
         ("forest", "mossy_rocks", 0.3, 8000, 11000),
-        ("shared", "fern", 6.0, 4000, 6000),
-        ("shared", "lady_fern", 4.0, 4000, 6000),
+        ("shared", "fern", 8.0, 4000, 6000),
+        ("shared", "lady_fern", 6.0, 4000, 6000),
         ("shared", "grass_clumps", 8.0, 3000, 4500),
         ("shared", "wild_grass", 6.0, 3000, 4500),
     ),
@@ -209,7 +212,9 @@ class Ground:
         far_d = g.mask(g.sample(d, far_uv), "rgb")
         near_n = g.mask(g.sample(n, near_uv, "normal"), "rgb")
         far_n = g.mask(g.sample(n, far_uv, "normal"), "rgb")
-        side_d = g.mask(g.sample(d, g.mul(self.side, 1.0 / tile)), "rgb")
+        side_uv = g.mul(self.side, 1.0 / tile)
+        side_d = g.mask(g.sample(d, side_uv), "rgb")
+        side_n = g.mask(g.sample(n, side_uv, "normal"), "rgb")
         masks = g.sample(m, near_uv, "masks")
         top = g.lerp(near_d, far_d, g.mul(self.far, 0.7))
         colour = g.mul(g.lerp(top, side_d, self.steep), g.param(f"{label} tint", tint))
@@ -217,10 +222,9 @@ class Ground:
         # not make it grey.
         luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
         colour = g.lerp(colour, luma, g.param(f"{label} grey", 0.0))
-        # Half the relief kept on steep ground: flat, the banks read as smooth plaster.
-        normal = g.lerp(
-            g.lerp(near_n, far_n, self.far), g.const((0.0, 0.0, 1.0)), g.mul(self.steep, 0.5)
-        )
+        # Steep ground takes its relief from the side projection, as its colour does: the top
+        # projection's normal, stretched there, made the banks read as smooth putty.
+        normal = g.lerp(g.lerp(near_n, far_n, self.far), side_n, self.steep)
         return {
             "colour": colour,
             "normal": normal,
@@ -289,6 +293,21 @@ class Ground:
         return g.finish()
 
 
+def _keep_alpha_coverage(biome, slug):
+    """Keeps a plant's cut-out (D's alpha) as full in its small mips as at full size. Averaged,
+    the alpha falls under the material's 0.33 clip a few metres off, and ferns thin to slivers."""
+    path = f"{MS}/{biome}/{slug}/T_{slug}_D"
+    if not assets.does_asset_exist(path):
+        return
+    texture = unreal.load_asset(path)
+    if texture.get_editor_property("do_scale_mips_for_alpha_coverage"):
+        return
+    texture.set_editor_property("alpha_coverage_thresholds", unreal.Vector4(0.0, 0.0, 0.0, 0.33))
+    texture.set_editor_property("do_scale_mips_for_alpha_coverage", True)
+    assets.save_loaded_asset(texture, False)
+    log(f"alpha coverage kept in {slug}'s mips")
+
+
 def _grass_type(layer):
     gt = lib.fresh(
         f"GT_{layer}",
@@ -305,6 +324,7 @@ def _grass_type(layer):
         ]
         if not meshes:
             raise RuntimeError(f"no meshes for {biome}/{slug}: run megascans.py first")
+        _keep_alpha_coverage(biome, slug)
         for mesh in meshes:
             v = unreal.GrassVariety()
             v.set_editor_property("grass_mesh", mesh)
@@ -834,6 +854,11 @@ def _stills(shots, out):
     plan = cameras(shots)
     os.makedirs(out, exist_ok=True)
     editor = unreal.UnrealEditorSubsystem()
+    # The default 1000 MB pool can't hold the scanned ground and plant textures at full mips: the
+    # ground smeared, and the plants' opacity masks, averaged at low mips, cut the fern fronds down
+    # to sprigs. Stills get a bigger pool and every visible texture fully loaded.
+    for command in STILL_CVARS:
+        unreal.SystemLibrary.execute_console_command(None, command)
     yield 60  # let the level's streaming, Nanite and lighting settle
     files = []
     for name, where, target in plan:
@@ -845,7 +870,7 @@ def _stills(shots, out):
             eye, unreal.MathLibrary.find_look_at_rotation(eye, unreal.Vector(*target))
         )
         yield 120  # grass, textures and shadows stream in around the new view
-        unreal.AutomationLibrary.take_high_res_screenshot(1280, 720, path)
+        unreal.AutomationLibrary.take_high_res_screenshot(*STILL_SIZE, path)
         for _ in range(30):
             yield 30  # the shot is written a few frames later
             if os.path.exists(path) and os.path.getsize(path) > 0:
