@@ -159,8 +159,8 @@ class Ground:
     """The landscape material: each layer's surfaces height-blended, sampled twice, near and far,
     and varied in brightness over tens of metres, so 8 km of ground doesn't show its tiles."""
 
-    def __init__(self):
-        self.g = Graph("M_IslandGround", FOLDER)
+    def __init__(self, name="M_IslandGround"):
+        self.g = Graph(name, FOLDER)
         g = self.g
         world = g.node(unreal.MaterialExpressionWorldPosition)
         camera = g.node(unreal.MaterialExpressionCameraPositionWS)
@@ -581,11 +581,14 @@ def stand_landmarks(world):
     log(f"saved {LEVEL} with its landmarks")
 
 
-try:
-    main()
-except Exception:
-    # Logged here: quitting first leaves the editor no time to log the error itself.
-    unreal.log_error(f"ISLAND failed: {traceback.format_exc()}")
-    raise
-finally:
-    unreal.SystemLibrary.quit_editor()
+# climb_world.py loads this file for its ground material and sets OC_LIBRARY first: then only
+# the definitions above run.
+if not globals().get("OC_LIBRARY"):
+    try:
+        main()
+    except Exception:
+        # Logged here: quitting first leaves the editor no time to log the error itself.
+        unreal.log_error(f"ISLAND failed: {traceback.format_exc()}")
+        raise
+    finally:
+        unreal.SystemLibrary.quit_editor()

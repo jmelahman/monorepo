@@ -1,10 +1,14 @@
 """Builds /Game/Climb/L_Hero from make_climb.py's output: the climb's hero stretch, a kilometre of
 mountain road on a wooded flank. 2 km of landscape at a metre a sample, painted and grassed with
-the island's saved ground material, the road, guard rail on the drop side, beech and spruce, and
+the island's ground material, the road, guard rail on the drop side, beech and spruce, and
 the ride up and back down as the level's ride track.
 
-Run after make_climb.py, and after island_world.py's OC_STAGE=materials (whose materials it reuses):
+Run after make_climb.py and megascans.py:
     OC_EDITOR=1 bash scripts/ue_run.sh climb_world.py climb_world.log
+
+The ground is island_world.py's material, built afresh here as M_ClimbGround with only the grass
+this stretch grows: the island's grass types load every biome's scans, and building their meshes
+(1.5-3 GB each, the rocks, trunks and cacti) together gets the editor killed for memory.
 
 Trees: OC_SPRUCE and OC_BEECH name the meshes (defaults: the vegetation plugin's sample trees). A
 static mesh goes into one instanced component for every tree of its kind. A skeletal one (the
@@ -21,17 +25,19 @@ import traceback
 import unreal
 
 
-def sibling(name):
+def sibling(name, library=False):
     here = os.path.dirname(
         os.path.abspath(globals().get("__file__") or "/workspace/ue/scripts/climb_world.py")
     )
     spec = importlib.util.spec_from_file_location(name, os.path.join(here, f"{name}.py"))
     module = importlib.util.module_from_spec(spec)
+    module.OC_LIBRARY = library  # island_world.py then skips its main()
     spec.loader.exec_module(module)
     return module
 
 
 lib = sibling("ue_lib")
+island = sibling("island_world", library=True)
 assets, actors = lib.assets, lib.actors
 
 SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/climb")
@@ -47,17 +53,24 @@ TREES = {
 NEAR = float(os.environ.get("OC_NEAR") or "60") * 100.0
 TREE_CULL = 60000.0  # cm: instanced trees past this aren't drawn
 RAIL_HEIGHT = 60.0  # cm, the beam's middle above the road
+# Grass per layer, as island_world.GRASS: grasses and flowers in the verges and clearings, ferns
+# under the trees. No rocks, trunks or logs yet: their scans are the ones too big to build.
+GRASS = {
+    "Grass": island.GRASS["Grass"],
+    "Forest": tuple(row for row in island.GRASS["Forest"] if "fern" in row[1] or "grass" in row[1]),
+}
 
 
 def log(message):
     unreal.log(f"CLIMB {message}")
 
 
-def saved(path):
-    asset = unreal.load_asset(path)
-    if asset is None:
-        raise RuntimeError(f"no {path}: run island_world.py with OC_STAGE=materials first")
-    return asset
+def materials():
+    """The ground, its grass and the road, island_world.py's made in this folder."""
+    island.FOLDER = FOLDER
+    island.GRASS = GRASS
+    grass = {layer: island.grass_type(layer) for layer in GRASS}
+    return island.Ground("M_ClimbGround").build(grass), island.road_material()
 
 
 def landscape(world, ground):
@@ -219,8 +232,7 @@ def track():
 
 
 def main():
-    ground = saved("/Game/Island/M_IslandGround")
-    road = saved("/Game/Island/Road/M_IslandRoad")
+    ground, road = materials()
     if assets.does_asset_exist(LEVEL):
         assets.delete_asset(LEVEL)
     world = unreal.EditorLoadingAndSavingUtils.new_map_from_template(
