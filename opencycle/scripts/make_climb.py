@@ -55,7 +55,7 @@ PLAN = [
 mi.RES, mi.SPACING = RES, SPACING
 mi.ROAD_HALF = 1.5  # a bike-only path, 3 m of tarmac
 mi.SHOULDER = 0.4
-mi.BANK_SLOPE = 0.8  # cut and fill banks, steeper than the island's: this is a mountain road
+mi.BANK_SLOPE = 1.3  # cut and fill banks: short and steep, as a real cut is, not a long soil ramp
 mi.CORRIDOR = 45.0
 mi.MAX_GRADE = 0.085
 
@@ -183,9 +183,10 @@ def trees(h, road_dist, slope, grass):
     clump *= 0.55 + 0.45 * mi.smoothstep(0.25, 0.55, mi.fbm(px, py, 14, 2, SEED + 71))
     wood = wood * np.clip(0.15 + 1.1 * clump, 0, 1)
     keep = (
-        # Off the verge, and thinning in over ten metres rather than standing in a line along it.
-        (d > mi.ROAD_HALF + 2.5)
-        & (rng.random(d.shape) < mi.smoothstep(mi.ROAD_HALF + 2.5, mi.ROAD_HALF + 14, d))
+        # Off the verge, and thinning in over a few metres rather than standing in a line along
+        # it: in the reference photos the woods come right up to the path.
+        (d > mi.ROAD_HALF + 1.8)
+        & (rng.random(d.shape) < mi.smoothstep(mi.ROAD_HALF + 1.8, mi.ROAD_HALF + 8, d))
         & (slope[row, col] < 1.0)
         & (rng.random(d.shape) < wood * 0.92 * np.where(d < reach, 1.0, FAR))
     )

@@ -390,8 +390,21 @@ def road_material():
     cracked = g.saturate(g.mul(g.add(g.world_noise(0.0012, -1.0, 2.0, 3), -0.55), 5.0))
     colour = g.lerp(colour, g.mul(g.mask(g.sample(cd, cuv), "rgb"), 0.9), cracked)
     normal = g.lerp(normal, g.mask(g.sample(cn, cuv, "normal"), "rgb"), cracked)
-    patch = g.saturate(g.mul(g.add(g.world_noise(0.0009, 0.0, 1.0, 2), -0.7), 40.0))
-    colour = g.lerp(colour, g.mul(colour, 0.62), patch)
+    # Repairs are hard-edged blocks a metre or two across, not soft blots: noise sampled on a
+    # 1.6 m grid of world cells, so each cell is either patched or not.
+    world = g.node(unreal.MaterialExpressionWorldPosition)
+    cell = g.mul(g.link(g.mul(world, 1 / 160), g.node(unreal.MaterialExpressionFloor)), 160.0)
+    noise = g.node(
+        unreal.MaterialExpressionNoise,
+        scale=0.004,
+        quality=2,
+        levels=1,
+        output_min=0.0,
+        output_max=1.0,
+    )
+    g.link(cell, noise, "World Position")
+    patch = g.saturate(g.mul(g.add(noise, -0.8), 40.0))
+    colour = g.lerp(colour, g.mul(colour, 0.72), patch)
     colour = g.mul(colour, g.world_noise(0.001, 0.85, 1.08, 3))
     colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
     across = g.link(

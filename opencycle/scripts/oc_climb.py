@@ -52,7 +52,7 @@ assets = lib.assets
 # Each paint layer's surface: (biome, slug, default tint). Rock and Dirt are the climb's own: grey
 # granite and gravel rather than the island's red-brown stony soil and yellow sand.
 SURFACES = {
-    "Grass": ("shared", "uncut_grass", (0.72, 0.76, 0.6)),
+    "Grass": ("shared", "uncut_grass", (0.55, 0.58, 0.42)),
     # Brown needle and leaf litter: the scanned forest floor alone is olive green and read as lawn.
     "Forest": ("mountain", "alpine_needles", (0.5, 0.46, 0.44)),
     "Rock": ("mountain", "granite_rocky_ground", (0.85, 0.85, 0.85)),
@@ -60,7 +60,7 @@ SURFACES = {
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
     "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
     # The path's edge: dark soil with leaf litter over it, as in the reference photos.
-    "Dirt": ("forest", "soil_mud", (0.8, 0.75, 0.7)),
+    "Dirt": ("forest", "soil_mud", (0.62, 0.53, 0.46)),
 }
 # A second surface per layer and how it mixes in: "patches" (noise, metres across) or "wet"
 # (below that height in cm).
@@ -74,7 +74,7 @@ MIXES = {
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
 LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest mix": (0.8, 0.7, 0.75)}
-LOOK_GREYS = {"Grass": 0.25, "Rock": 0.3, "Rock mix": 0.3, "Forest mix": 0.35, "Dirt mix": 0.3}
+LOOK_GREYS = {"Grass": 0.15, "Rock": 0.3, "Rock mix": 0.3, "Forest mix": 0.35, "Dirt mix": 0.3}
 ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
@@ -111,6 +111,15 @@ GRASS = {
         ("forest", "mossy_wood_stump", 0.05, 9000, 12000),
         ("forest", "fallen_log", 0.03, 12000, 15000),
         ("forest", "fallen_pine_tree", 0.015, 12000, 15000),
+    ),
+    # The soil of the cut banks and the path's edge: roots, stones and a few ferns and tufts, so a
+    # bank is never bare plaster.
+    "Dirt": (
+        ("forest", "nordic_forest_ground_patch_root", 0.3, 6000, 8000),
+        ("forest", "nordic_forest_rock_small", 0.6, 5000, 7000),
+        ("forest", "mossy_rocks", 0.08, 8000, 11000),
+        ("shared", "fern", 1.2, 4000, 6000),
+        ("shared", "grass_clumps", 2.0, 3000, 4500),
     ),
     # Talus under the crags.
     "Rock": (
@@ -169,9 +178,9 @@ class Ground:
         self.height = g.mask(world, "b")
         self.macro = g.world_noise(0.0004, 0.82, 1.12, 4)
         # Steep ground is sampled from the side as well, on whichever of the XZ and YZ planes it
-        # faces more, or a top-down sample streaks down a cliff. 0 up to 37 degrees, 1 past 53.
+        # faces more, or a top-down sample streaks down a cut bank. 0 up to 32 degrees, 1 past 50.
         up = g.node(unreal.MaterialExpressionVertexNormalWS)
-        self.steep = g.saturate(g.mul(g.add(g.mask(up, "b"), -0.8), -5.0))
+        self.steep = g.saturate(g.mul(g.add(g.mask(up, "b"), -0.85), -4.5))
         across = g.add(
             g.link(g.mask(up, "r"), g.node(unreal.MaterialExpressionAbs)),
             g.mul(g.link(g.mask(up, "g"), g.node(unreal.MaterialExpressionAbs)), -1.0),
@@ -198,7 +207,10 @@ class Ground:
         # not make it grey.
         luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
         colour = g.lerp(colour, luma, g.param(f"{label} grey", 0.0))
-        normal = g.lerp(g.lerp(near_n, far_n, self.far), g.const((0.0, 0.0, 1.0)), self.steep)
+        # Half the relief kept on steep ground: flat, the banks read as smooth plaster.
+        normal = g.lerp(
+            g.lerp(near_n, far_n, self.far), g.const((0.0, 0.0, 1.0)), g.mul(self.steep, 0.5)
+        )
         return {
             "colour": colour,
             "normal": normal,
