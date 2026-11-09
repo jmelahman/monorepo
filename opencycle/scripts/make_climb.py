@@ -97,7 +97,11 @@ def lay_road(h):
 def open_valley_side(h, x, y, road):
     """Where the path crosses a spur, the valley side falls away from its edge instead of rising
     into a second bank, so the path never runs in a trench. Within 12 m on the downhill (+Y)
-    side, the ground is at most 0.3 m above the path plus 15 cm a metre, fading out by 25 m."""
+    side, the ground is at most 0.3 m above the path plus 15 cm a metre, fading out by 25 m.
+
+    The uphill side is capped too: a cut of a metre or two, then a gentle wooded slope that rejoins
+    the mountainside by 35 m, as a path benched into a hillside looks. Uncapped, the cuts across
+    the steep flank stood 5-8 m high, bare walls no reference photo shows."""
     xy, z = road["xy"], road["z"]
     mark = np.zeros(h.shape, dtype=bool)
     row, col = at(xy)
@@ -110,7 +114,12 @@ def open_valley_side(h, x, y, road):
     below = (y - xy[nearest, 1]) > 0
     cap = z[nearest] + 0.3 + 0.15 * np.maximum(dist - mi.ROAD_HALF - mi.SHOULDER, 0)
     weight = mi.smoothstep(25.0, 12.0, dist) * below * (dist > mi.ROAD_HALF + mi.SHOULDER)
-    return (h - weight * np.maximum(h - cap, 0)).astype(np.float32)
+    h = h - weight * np.maximum(h - cap, 0)
+    edge = np.maximum(dist - mi.ROAD_HALF - mi.SHOULDER, 0)
+    bump = (mi.fbm(x, y, 9, 2, SEED + 55) - 0.5) * 1.2
+    cap_up = z[nearest] + np.minimum(1.3 * edge, 1.4 + bump + 0.28 * edge)
+    weight_up = mi.smoothstep(35.0, 18.0, dist) * ~below * (dist > mi.ROAD_HALF + mi.SHOULDER)
+    return (h - weight_up * np.maximum(h - cap_up, 0)).astype(np.float32)
 
 
 def roughen_banks(h, x, y, road_dist):
@@ -144,17 +153,20 @@ def paint(x, y, h, road_dist):
     overgrown *= mi.smoothstep(mi.ROAD_HALF + 1.5, mi.ROAD_HALF + 3.5, road_dist)
     outcrop = bank * mi.smoothstep(0.76, 0.84, mi.fbm(x, y, 9, 2, SEED + 53)) * (slope > 0.55)
     rock = np.maximum(rock, outcrop)
-    shoulder = np.maximum(shoulder, bank * (1 - rock) * (1 - overgrown))
+    # The banks' soil is its own layer ("Sand"), so their stones and ferns stay off the path.
+    soil = bank * (1 - rock) * (1 - overgrown) * (1 - shoulder)
     # Grass: the valley floor and clearings up the flank. In the woods the path's edge is leaf and
     # needle litter, not a lawn verge.
     floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
     clearing = mi.smoothstep(0.66, 0.74, mi.fbm(x, y, 120, 3, SEED + 40))
     grass = np.clip(np.maximum(floor, clearing), 0, 1)
-    soft = (1 - rock) * (1 - shoulder)
+    rest = 1 - shoulder - soil
+    soft = (1 - rock) * rest
     out = {k: np.zeros_like(h) for k in mi.LAYERS}
     out["Grass"] = soft * grass
     out["Forest"] = soft * (1 - grass)
-    out["Rock"] = rock * (1 - shoulder)
+    out["Rock"] = rock * rest
+    out["Sand"] = soil
     out["Dirt"] = shoulder
     return out, slope, grass
 

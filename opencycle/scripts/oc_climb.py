@@ -58,7 +58,9 @@ SURFACES = {
     "Rock": ("mountain", "granite_rocky_ground", (0.85, 0.85, 0.85)),
     "Snow": ("coast", "thai_wet_sand", (1.0, 1.0, 1.0)),
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
-    "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
+    # The climb has no beach: its "Sand" layer is the cut banks' soil, apart from the path's edge
+    # so that the banks' stones and ferns (GRASS) don't grow through the tarmac.
+    "Sand": ("forest", "soil_mud", (0.62, 0.53, 0.46)),
     # The path's edge: dark soil with leaf litter over it, as in the reference photos.
     "Dirt": ("forest", "soil_mud", (0.62, 0.53, 0.46)),
 }
@@ -67,15 +69,22 @@ SURFACES = {
 MIXES = {
     "Forest": ("forest", "forest_floor", "patches", 14.0),
     "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
-    "Sand": ("coast", "thai_wet_sand", "wet", 120.0),
+    "Sand": ("forest", "forest_floor", "patches", 3.0),
     "Grass": ("shared", "lawn_grass", "patches", 30.0),
     "Rock": ("forest", "rocky_forest_path", "patches", 12.0),
     "Dirt": ("forest", "forest_floor", "patches", 3.0),
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
 LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest mix": (0.8, 0.7, 0.75)}
-LOOK_GREYS = {"Grass": 0.15, "Rock": 0.3, "Rock mix": 0.3, "Forest mix": 0.35, "Dirt mix": 0.3}
-ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
+LOOK_GREYS = {
+    "Grass": 0.15,
+    "Rock": 0.3,
+    "Rock mix": 0.3,
+    "Forest mix": 0.35,
+    "Dirt mix": 0.3,
+    "Sand mix": 0.3,
+}
+ROUGHNESS = {"Snow": 0.55}
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
@@ -112,9 +121,8 @@ GRASS = {
         ("forest", "fallen_log", 0.03, 12000, 15000),
         ("forest", "fallen_pine_tree", 0.015, 12000, 15000),
     ),
-    # The soil of the cut banks and the path's edge: roots, stones and a few ferns and tufts, so a
-    # bank is never bare plaster.
-    "Dirt": (
+    # The soil of the cut banks: roots, stones, ferns and tufts, so a bank is never bare plaster.
+    "Sand": (
         ("forest", "nordic_forest_ground_patch_root", 1.5, 6000, 8000),
         ("forest", "nordic_forest_rock_small", 2.0, 5000, 7000),
         ("forest", "mossy_rocks", 0.3, 8000, 11000),
