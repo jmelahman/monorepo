@@ -429,6 +429,16 @@ def grade_fit(z, fixed, closed):
     g = MAX_GRADE - 0.007
     n = len(z)
     laps = 2 if closed else 1
+    at = np.arange(n)
+
+    def gap(i):
+        d = np.abs(at - i)
+        return np.minimum(d, n - d) if closed else d
+
+    # Keep the ground within reach of each fixed height at the grade, so easing them in after
+    # has little left to make up.
+    for i, v in fixed.items():
+        z = np.clip(z, v - g * gap(i), v + g * gap(i))
 
     def envelope(sign):
         e = z.astype(np.float64).copy()
@@ -444,13 +454,9 @@ def grade_fit(z, fixed, closed):
         return e
 
     out = smooth((envelope(1) + envelope(-1)) / 2, 25, closed)
-    at = np.arange(n)
     for i, v in fixed.items():
         reach = min(max(abs(v - out[i]) / 0.005, 1.0), n / 2)
-        d = np.abs(at - i)
-        if closed:
-            d = np.minimum(d, n - d)
-        out = out + (v - out[i]) * np.clip(1 - d / reach, 0, 1)
+        out = out + (v - out[i]) * np.clip(1 - gap(i) / reach, 0, 1)
     return out
 
 
@@ -612,14 +618,27 @@ def lay_roads(h):
         if name in CLIMBS:
             h = soften(h, xy)
         z = np.maximum(smooth(sample(h, xy), 90, closed), 3.0)
-        fixed = {}
-        for end in (0, len(xy) - 1) if not closed else ():
+        # Where a road leaves another it shares that road's tarmac for a while; it keeps the
+        # other's height until their verges part, or the two surfaces cross at different heights.
+        fixed, shared = {}, {}
+        for end, step in ((0, 1), (len(xy) - 1, -1)) if not closed else ():
             for other in roads.values():
-                d = np.linalg.norm(other["xy"] - xy[end], axis=1)
-                k = int(np.argmin(d))
-                if d[k] < 30:
-                    fixed[end] = other["z"][k]
+                i, run = end, {}
+                while 0 <= i < len(xy):
+                    d = np.linalg.norm(other["xy"] - xy[i], axis=1)
+                    k = int(np.argmin(d))
+                    if d[k] >= (30 if i == end else 2 * (ROAD_HALF + SHOULDER)):
+                        break
+                    run[i] = other["z"][k]
+                    i += step
+                if run:
+                    last = i - step
+                    fixed[last] = run[last]
+                    shared.update(run)
+                    break
         z = grade_fit(z, fixed, closed)
+        for i, v in shared.items():
+            z[i] = v
         roads[name] = {"xy": xy, "z": z, "closed": closed}
     return roads, h
 
@@ -659,16 +678,46 @@ def stitch(roads):
 def carve(h, roads):
     """The ground cut and filled to the roads: level across the road and its shoulders, then
     banks at BANK_SLOPE back up or down to the hills."""
-    target = np.full(h.shape, np.nan, dtype=np.float32)
+    # Every road's centreline points in one list, with each point's neighbours along its road.
+    xy = np.concatenate([r["xy"] for r in roads.values()])
+    z = np.concatenate([r["z"] for r in roads.values()])
+    before, after = [], []
+    start = 0
     for road in roads.values():
-        col = np.round(road["xy"][:, 0] / SPACING + (RES - 1) / 2).astype(int)
-        row = np.round(road["xy"][:, 1] / SPACING + (RES - 1) / 2).astype(int)
-        ok = (col >= 0) & (col < RES) & (row >= 0) & (row < RES)
-        target[row[ok], col[ok]] = road["z"][ok]
-    on = ~np.isnan(target)
-    dist, (ri, ci) = ndimage.distance_transform_edt(~on, return_indices=True)
+        k = np.arange(start, start + len(road["xy"]))
+        if road["closed"]:
+            before.append(np.roll(k, 1))
+            after.append(np.roll(k, -1))
+        else:
+            before.append(np.concatenate([k[:1], k[:-1]]))
+            after.append(np.concatenate([k[1:], k[-1:]]))
+        start += len(k)
+    before, after = np.concatenate(before), np.concatenate(after)
+    # Each sample under a centreline marks one of its points.
+    target = np.full(h.shape, -1, dtype=np.int64)
+    col = np.round(xy[:, 0] / SPACING + (RES - 1) / 2).astype(int)
+    row = np.round(xy[:, 1] / SPACING + (RES - 1) / 2).astype(int)
+    ok = (col >= 0) & (col < RES) & (row >= 0) & (row < RES)
+    target[row[ok], col[ok]] = np.flatnonzero(ok)
+    dist, (ri, ci) = ndimage.distance_transform_edt(target < 0, return_indices=True)
     dist = (dist * SPACING).astype(np.float32)
-    bed = target[ri, ci] - 0.1
+    # The bed takes the road's height where the sample meets the centreline square on, between
+    # the nearest point and a neighbour. The nearest point's height alone steps a climb's bed up
+    # a sample at a time, a rise that pokes through the tarmac 10 cm above it.
+    nearest = target[ri, ci]
+    px = (np.arange(RES) - (RES - 1) / 2) * SPACING
+    p = np.stack(np.broadcast_arrays(px[None, :], px[:, None]), axis=-1)
+
+    def along(p, a, b):
+        d = xy[b] - xy[a]
+        length2 = np.maximum((d * d).sum(-1), 1e-9)
+        t = np.clip(((p - xy[a]) * d).sum(-1) / length2, 0, 1)
+        off = p - (xy[a] + d * t[..., None])
+        return (off * off).sum(-1), z[a] + (z[b] - z[a]) * t
+
+    gap_back, z_back = along(p, before[nearest], nearest)
+    gap_on, z_on = along(p, nearest, after[nearest])
+    bed = (np.where(gap_back < gap_on, z_back, z_on) - 0.1).astype(np.float32)
     out = np.maximum(dist - ROAD_HALF - SHOULDER, 0) * BANK_SLOPE
     upper = bed + out
     lower = bed - out
@@ -759,7 +808,8 @@ def paint(x, y, h, land, inland, weights, cliff, road_dist):
     width = 75 + 60 * fbm(x, y, 700, 3, SEED + 96)
     sand = np.clip(sand + smoothstep(width, width - 25, inland) * (1 - cliff) * (h < 12), 0, 1)
     soft_rest = soft * (1 - sand)
-    dirt = smoothstep(ROAD_HALF + SHOULDER + 2.5, ROAD_HALF + 0.5, road_dist)
+    # A gravel shoulder a metre or two wide: wider, it reads as a sand verge along every road.
+    dirt = smoothstep(ROAD_HALF + 3.0, ROAD_HALF + 0.5, road_dist)
     out = {
         "Grass": weights["meadow"] + weights["town"] + weights["mountain"],
         "Forest": weights["forest"],
