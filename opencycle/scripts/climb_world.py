@@ -66,7 +66,7 @@ TREES = {
 }
 NEAR = float(os.environ.get("OC_NEAR") or "60") * 100.0
 TREE_CULL = 60000.0  # cm: instanced trees past this aren't drawn
-RAIL_HEIGHT = 60.0  # cm, the beam's middle above the road
+RAIL_HEIGHT = 85.0  # cm, the fence rail's middle above the path
 # Grass per layer, as island_world.GRASS: grasses and flowers in the verges and clearings, ferns
 # under the trees. No rocks, trunks or logs yet: their scans are the ones too big to build.
 GRASS = {
@@ -273,9 +273,9 @@ def trees():
 
 
 def rail_material():
-    """Galvanised steel: grey, metallic, a little rough."""
+    """Weathered timber, for the bike path's fence on the drop side."""
     g = lib.Graph("M_GuardRail", f"{FOLDER}/Rail")
-    g.output((0.48, 0.5, 0.52), rough=0.45, metallic=0.9)
+    g.output((0.16, 0.12, 0.085), rough=0.85, metallic=0.0)
     return g.finish()
 
 
@@ -294,9 +294,9 @@ def rails(material):
             yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
             pitch = math.degrees(math.atan2(z1 - z0, span))
             mid = ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2 + RAIL_HEIGHT)
-            parts.add(cube, mid, yaw, ((span + 4) / 100, 0.04, 0.32), pitch=pitch)
+            parts.add(cube, mid, yaw, ((span + 4) / 100, 0.1, 0.12), pitch=pitch)
             if k % 2 == 0:
-                parts.add(cube, (x0, y0, z0 + 30), yaw, (0.1, 0.06, 0.9))
+                parts.add(cube, (x0, y0, z0 + 45), yaw, (0.12, 0.12, 0.95))
     parts.commit(materials={cube.get_path_name(): {0: material}})
     log(f"rails: {len(runs)} runs")
 

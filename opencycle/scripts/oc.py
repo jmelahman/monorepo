@@ -351,7 +351,14 @@ def cmd_status(ns):
 def cmd_look(ns):
     tints = dict(parse_tint(t) for t in ns.tint or [])
     greys = dict(parse_grey(t) for t in ns.grey or [])
-    args = {"tint": tints, "grey": greys, "stills": not ns.no_stills, "shots": shots(ns)}
+    args = {
+        "tint": tints,
+        "grey": greys,
+        "grass": ns.grass,
+        "fog": ns.fog,
+        "stills": not ns.no_stills,
+        "shots": shots(ns),
+    }
     return run("look", args, ns)
 
 
@@ -365,6 +372,17 @@ def cmd_rebuild_ground(ns):
     if code != OK or ns.no_stills:
         return code
     return wait(submit("stills", {"shots": shots(ns)}), ns.timeout)
+
+
+def cmd_build_level(ns):
+    """The whole level from world_gen/climb (run make_climb.py first): each stage on a freshly
+    restarted editor, since the ground stage deletes L_Hero and the dress stage loads it."""
+    for stage in ("ground", "dress"):
+        restart_clean(ns)
+        code = wait(submit("build-level", {"stage": stage}), ns.timeout)
+        if code != OK:
+            return code
+    return OK
 
 
 def cmd_wait(ns):
@@ -412,6 +430,10 @@ def main(argv=None):
     s = add("look", cmd_look, help="set ground tints (parameters only), then stills")
     s.add_argument("--tint", action="append", metavar="NAME=R,G,B")
     s.add_argument("--grey", action="append", metavar="NAME=F", help="0 keeps the hue, 1 is grey")
+    s.add_argument(
+        "--grass", nargs=2, type=float, metavar=("DENSITY", "CULL"), help="factors on the table"
+    )
+    s.add_argument("--fog", type=float, metavar="DENSITY", help="height fog; the default is 0.02")
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")
     s = add("stills", cmd_stills, help="stills from the editor viewport")
@@ -420,6 +442,8 @@ def main(argv=None):
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--rebuild-grass", action="store_true")
     s.add_argument("--shots")
+    s = add("build-level", cmd_build_level, help="rebuild L_Hero from world_gen/climb")
+    s.set_defaults(timeout=1800.0)  # the ground stage imports the landscape: minutes
     s = add("wait", cmd_wait, help="resume waiting for a job after a timeout")
     s.add_argument("job")
     s = add("log", cmd_log, help="the editor log tail")

@@ -1,4 +1,4 @@
-"""The climb's hero stretch: a kilometre of mountain road on a wooded flank, 2 km of ground at a
+"""The climb's hero stretch: a kilometre of bike path on a wooded flank, 2 km of ground at a
 metre a sample. The road traverses up the slope at about 6.5%, turns on one hairpin and comes back
 above itself, with cut banks above it and fill below. Beech woods give way to spruce as it climbs.
 
@@ -10,7 +10,8 @@ road grading and carving, and writes the same files island_world.py reads, to
 - trees.json: [kind, x, y, z, yaw, scale] in cm, kind "beech" or "spruce";
 - rails.json: guard-rail runs on the drop side, each a list of [x, y, z] in cm.
 
-Coordinates are Unreal's: X east, Y south, metres, the origin in the middle. The slope rises to the
+Coordinates are Unreal's: X east, Y south, metres, the origin in the middle.
+The road is a bike-only path, 3 m wide. The slope rises to the
 north (-Y); the valley floor is to the south.
 """
 
@@ -51,8 +52,8 @@ PLAN = [
 ]
 # Make make_island's helpers work on this grid and this road.
 mi.RES, mi.SPACING = RES, SPACING
-mi.ROAD_HALF = 3.0
-mi.SHOULDER = 0.8
+mi.ROAD_HALF = 1.5  # a bike-only path, 3 m of tarmac
+mi.SHOULDER = 0.4
 mi.BANK_SLOPE = 0.95  # cut and fill banks, steeper than the island's: this is a mountain road
 mi.CORRIDOR = 45.0
 mi.MAX_GRADE = 0.085
@@ -92,10 +93,10 @@ def paint(x, y, h, road_dist):
     gy, gx = np.gradient(h, SPACING)
     slope = np.hypot(gx, gy)
     rock = mi.smoothstep(0.78, 1.05, slope)
-    shoulder = mi.smoothstep(mi.ROAD_HALF + 2.2, mi.ROAD_HALF + 0.6, road_dist)
+    shoulder = mi.smoothstep(mi.ROAD_HALF + 1.0, mi.ROAD_HALF + 0.2, road_dist)
     # Grass: the valley floor, a verge a few metres wide, and clearings up the flank.
     floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
-    verge = mi.smoothstep(mi.ROAD_HALF + 9, mi.ROAD_HALF + 4, road_dist + 4 * mi.fbm(x, y, 9, 2))
+    verge = mi.smoothstep(mi.ROAD_HALF + 6, mi.ROAD_HALF + 1, road_dist + 3 * mi.fbm(x, y, 9, 2))
     clearing = mi.smoothstep(0.66, 0.74, mi.fbm(x, y, 120, 3, SEED + 40))
     grass = np.clip(np.maximum.reduce([floor, verge, clearing]), 0, 1)
     soft = (1 - rock) * (1 - shoulder)
@@ -123,7 +124,7 @@ def trees(h, road_dist, slope, grass):
     d = road_dist[row, col]
     wood = 1 - grass[row, col]
     keep = (
-        (d > mi.ROAD_HALF + 5.5 + rng.uniform(0, 4, d.shape))
+        (d > mi.ROAD_HALF + 3.0 + rng.uniform(0, 3, d.shape))
         & (d < reach)
         & (slope[row, col] < 1.0)
         & (rng.random(d.shape) < wood * 0.92)

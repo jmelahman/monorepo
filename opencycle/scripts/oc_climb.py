@@ -384,6 +384,85 @@ def op_rebuild_ground(rebuild_grass=False):
     return {"notes": [f"rebuilt {MATERIAL}; {INSTANCE} points at it (existing tints are kept)"]}
 
 
+def _old_build():
+    """climb_world.py, the level build that has run without crashing (as separate ground and dress
+    runs), loaded as a library."""
+    spec = importlib.util.spec_from_file_location(
+        "climb_world", os.path.join(os.path.dirname(os.path.abspath(__file__)), "climb_world.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    module.OC_LIBRARY = True
+    spec.loader.exec_module(module)
+    return module
+
+
+def op_build_level(stage):
+    """One stage of the level build from world_gen/climb: "ground" (a fresh L_Hero with the
+    landscape, deleting the old one) or "dress" (the path, fence, ride track and trees, then
+    stills). Each only on a fresh editor: oc.py build-level restarts before each, because the
+    ground stage deletes L_Hero and the dress stage loads it, and neither may happen with it
+    open."""
+    if stage not in ("ground", "dress"):
+        raise RuntimeError(f"stage {stage!r}: ground or dress")
+    if getattr(unreal, "_oc_opened_hero", False) or _current_map() == LEVEL:
+        raise RuntimeError("build-level needs a fresh editor; run it through `oc.py build-level`")
+    unreal._oc_opened_hero = True
+    cw = _old_build()
+    cw.STAGE = stage
+    yield from cw.main()
+    files = [f"{STILLS}/{name}.png" for name, _, _ in cw.cameras()] if stage == "dress" else []
+    return {"notes": [f"built stage {stage}"], "files": files}
+
+
+def _grass(density, cull):
+    """Sets the saved grass types' densities and cull distances to GRASS's times these factors.
+    Grass is regenerated, nothing compiles."""
+    rows = {}
+    for layer, table in GRASS.items():
+        for _biome, slug, base, start, end in table:
+            rows.setdefault(layer, []).append((f"/{slug}/", base, start, end))
+    changed = 0
+    for layer, table in rows.items():
+        gt = unreal.load_asset(f"{FOLDER}/Grass/GT_{layer}")
+        if gt is None:
+            raise RuntimeError(f"no GT_{layer}: run `oc.py rebuild-ground --rebuild-grass`")
+        varieties = list(gt.get_editor_property("grass_varieties"))
+        for v in varieties:
+            path = v.get_editor_property("grass_mesh").get_path_name()
+            row = next((r for r in table if r[0] in path), None)
+            if row is None:
+                continue
+            _, base, start, end = row
+            v.set_editor_property("grass_density", unreal.PerPlatformFloat(default=base * density))
+            v.set_editor_property(
+                "start_cull_distance", unreal.PerPlatformInt(default=int(start * cull))
+            )
+            v.set_editor_property(
+                "end_cull_distance", unreal.PerPlatformInt(default=int(end * cull))
+            )
+            changed += 1
+        gt.set_editor_property("grass_varieties", varieties)
+        assets.save_loaded_asset(gt, False)
+    log(f"grass x{density} density, x{cull} cull: {changed} varieties")
+
+
+def _fog(density):
+    """The haze: ExponentialHeightFog density in the open level (the template's default is 0.02).
+    Thicker hides the 2 km map's edge."""
+    fogs = [
+        a
+        for a in unreal.EditorActorSubsystem().get_all_level_actors()
+        if isinstance(a, unreal.ExponentialHeightFog)
+    ]
+    if not fogs:
+        raise RuntimeError("no ExponentialHeightFog in the level")
+    for fog in fogs:
+        comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
+        comp.set_editor_property("fog_density", float(density))
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    log(f"fog density {density}")
+
+
 def _tune(tints, greys=None):
     greys = greys or {}
     names = tint_names()
@@ -463,13 +542,23 @@ def op_stills(shots=None, out=None):
     return {"files": files}
 
 
-def op_look(tint=None, grey=None, stills=True, shots=None, out=None):
+def op_look(tint=None, grey=None, grass=None, fog=None, stills=True, shots=None, out=None):
     """Recolour through MI_ClimbGround's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
-    0.8}), then stills."""
+    0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
+    compiles."""
     if tint or grey:
         _tune({k: tuple(v) for k, v in (tint or {}).items()}, grey)
+    if grass:
+        _grass(*grass)
     yield
-    result = {"notes": [f"tuned {tint} grey {grey}"] if tint or grey else []}
+    notes = [f"tuned {tint} grey {grey}"] if tint or grey else []
+    notes += [f"grass {grass}"] if grass else []
+    if fog is not None:
+        yield from _ensure_level()
+        _fog(fog)
+        notes.append(f"fog {fog}")
+        yield 30
+    result = {"notes": notes}
     if stills:
         yield from _ensure_level()
         result["files"] = yield from _stills(shots, out or STILLS)
