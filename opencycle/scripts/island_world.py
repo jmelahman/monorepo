@@ -51,10 +51,10 @@ SURFACES = {
     "Grass": ("shared", "uncut_grass", (0.85, 0.9, 0.7)),
     "Forest": ("forest", "forest_floor", (1.0, 1.0, 1.0)),
     "Rock": ("shared", "stony_soil", (0.72, 0.72, 0.74)),
-    "Snow": ("coast", "rippled_sand", (1.0, 1.0, 1.0)),
+    "Snow": ("coast", "thai_wet_sand", (1.0, 1.0, 1.0)),
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
     "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
-    "Dirt": ("shared", "gravel_on_soil", (1.0, 1.0, 1.0)),
+    "Dirt": ("shared", "gravel_on_soil", (0.78, 0.76, 0.72)),
 }
 # A second surface per layer and what mixes it in: "patches" (noise, metres across) or "wet"
 # (below the given height in cm, the tideline).
@@ -68,29 +68,31 @@ MIXES = {
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
 ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
 # Layers that keep a surface's relief but not its colour: shaded from the first colour in its
-# hollows to the second on its crests. There's no snow scan, so snow is sand's ripples in white.
+# hollows to the second on its crests. There's no snow scan, so snow is wet sand's smooth relief
+# in white: rippled sand's read as dunes.
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
 
-# Grass per layer: (biome, slug, instances per 10 m^2 per variation, cull start, cull end in cm).
+# Grass per layer: (biome, slug, instances per 100 m^2 (Unreal's 10 m square) of each of the scan's
+# meshes, cull start, cull end in cm). A meadow wants several clumps a square metre.
 GRASS = {
     "Grass": (
-        ("shared", "wild_grass", 10.0, 3500, 5000),
-        ("shared", "grass_clumps", 6.0, 3500, 5000),
-        ("shared", "wheat_grass", 2.5, 3500, 5000),
-        ("shared", "tundra_grass", 1.5, 3500, 5000),
-        ("shared", "kikuyu_grass", 2.0, 3500, 5000),
-        ("shared", "tall_grass", 0.6, 4000, 6000),
-        ("shared", "ribbon_grass", 0.4, 3000, 4500),
-        ("shared", "clovers", 3.0, 2000, 3000),
-        ("shared", "clover_varieties", 1.5, 2000, 3000),
-        ("shared", "leafy_dandelions", 1.0, 2000, 3000),
+        ("shared", "wild_grass", 40.0, 3500, 5000),
+        ("shared", "grass_clumps", 24.0, 3500, 5000),
+        ("shared", "wheat_grass", 10.0, 3500, 5000),
+        ("shared", "tundra_grass", 6.0, 3500, 5000),
+        ("shared", "kikuyu_grass", 8.0, 3500, 5000),
+        ("shared", "tall_grass", 2.4, 4000, 6000),
+        ("shared", "ribbon_grass", 1.6, 3000, 4500),
+        ("shared", "clovers", 12.0, 2000, 3000),
+        ("shared", "clover_varieties", 6.0, 2000, 3000),
+        ("shared", "leafy_dandelions", 4.0, 2000, 3000),
     ),
     "Forest": (
-        ("shared", "fern", 1.2, 4000, 6000),
-        ("shared", "lady_fern", 0.8, 4000, 6000),
-        ("shared", "common_fern", 0.8, 4000, 6000),
-        ("shared", "leather_fern", 0.4, 4000, 6000),
-        ("shared", "grass_clumps", 2.0, 3000, 4500),
+        ("shared", "fern", 3.6, 4000, 6000),
+        ("shared", "lady_fern", 2.4, 4000, 6000),
+        ("shared", "common_fern", 2.4, 4000, 6000),
+        ("shared", "leather_fern", 1.2, 4000, 6000),
+        ("shared", "grass_clumps", 6.0, 3000, 4500),
     ),
     "Desert": (
         ("desert", "dry_grass", 1.2, 4000, 6000),
@@ -98,8 +100,8 @@ GRASS = {
         ("desert", "desert_american_plant_cactus_medium_11", 0.01, 12000, 16000),
         ("desert", "desert_american_plant_branch_cactus_large_03", 0.005, 15000, 20000),
     ),
-    "Sand": (("coast", "marram_grass", 1.5, 4000, 6000),),
-    "Rock": (("mountain", "alpine_bearberry", 0.4, 3000, 4500),),
+    "Sand": (("coast", "marram_grass", 4.5, 4000, 6000),),
+    "Rock": (("mountain", "alpine_bearberry", 0.8, 3000, 4500),),
 }
 SEA_LEVEL = 0.0
 
@@ -145,6 +147,19 @@ class Ground:
         self.far = g.saturate(g.mul(g.add(distance, -1500.0), 1 / 4500))
         self.height = g.mask(world, "b")
         self.macro = g.world_noise(0.0004, 0.82, 1.12, 4)
+        # Steep ground is sampled from the side as well, projected on whichever of the XZ and YZ
+        # planes it faces more, or a top-down sample streaks down a cliff. 0 up to 37 degrees, 1
+        # past 53.
+        up = g.node(unreal.MaterialExpressionVertexNormalWS)
+        self.steep = g.saturate(g.mul(g.add(g.mask(up, "b"), -0.8), -5.0))
+        across = g.add(
+            g.link(g.mask(up, "r"), g.node(unreal.MaterialExpressionAbs)),
+            g.mul(g.link(g.mask(up, "g"), g.node(unreal.MaterialExpressionAbs)), -1.0),
+        )
+        faces_x = g.saturate(g.mul(across, 1000.0))
+        xz = g.op(unreal.MaterialExpressionAppendVector, g.mask(world, "r"), self.height)
+        yz = g.op(unreal.MaterialExpressionAppendVector, g.mask(world, "g"), self.height)
+        self.side = g.lerp(xz, yz, faces_x)
 
     def surface(self, biome, slug, tint):
         """A surface's colour, normal, roughness and height, near blended into far."""
@@ -156,9 +171,12 @@ class Ground:
         far_d = g.mask(g.sample(d, far_uv), "rgb")
         near_n = g.mask(g.sample(n, near_uv, "normal"), "rgb")
         far_n = g.mask(g.sample(n, far_uv, "normal"), "rgb")
+        side_d = g.mask(g.sample(d, g.mul(self.side, 1.0 / tile)), "rgb")
         masks = g.sample(m, near_uv, "masks")
-        colour = g.mul(g.lerp(near_d, far_d, g.mul(self.far, 0.7)), g.const(tint))
-        normal = g.lerp(near_n, far_n, self.far)
+        top = g.lerp(near_d, far_d, g.mul(self.far, 0.7))
+        colour = g.mul(g.lerp(top, side_d, self.steep), g.const(tint))
+        # The top-down normal map streaks on a cliff too; there it fades to the ground's own.
+        normal = g.lerp(g.lerp(near_n, far_n, self.far), g.const((0.0, 0.0, 1.0)), self.steep)
         return {
             "colour": colour,
             "normal": normal,
