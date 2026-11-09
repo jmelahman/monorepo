@@ -153,7 +153,9 @@ class Graph:
         node = self.node(
             unreal.MaterialExpressionComponentMask, **{c: c in channels for c in "rgba"}
         )
-        return self.link(a, node)
+        # A texture's default output is RGB, so its alpha needs the RGBA one.
+        rgba = "a" in channels and isinstance(a, unreal.MaterialExpressionTextureSample)
+        return self.link(a, node, pin_a="RGBA" if rgba else "")
 
     def saturate(self, a):
         return self.link(a, self.node(unreal.MaterialExpressionSaturate))
