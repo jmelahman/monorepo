@@ -13,6 +13,9 @@ OC_STAGE picks what to build, so a change rebuilds only its part:
 - dress: the saved level's road, rails, trees and ride track, cleared and placed again from
   make_climb.py's output. The ground and its materials are kept, so it runs in minutes:
     OC_STAGE=dress OC_EDITOR=1 bash scripts/ue_run.sh climb_world.py climb_dress.log
+- stills: only the stills, from the saved level.
+Every stage but ground ends by rendering stills from fixed cameras along the road to OC_STILLS
+(default /workspace/ue/out/climb_stills), so each run ends in pictures.
 
 The ground is island_world.py's material, built afresh here as M_ClimbGround with only the grass
 this stretch grows: the island's grass types load every biome's scans, and building their meshes
@@ -50,6 +53,8 @@ assets, actors = lib.assets, lib.actors
 
 SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/climb")
 STAGE = os.environ.get("OC_STAGE") or "all"
+STILLS = os.environ.get("OC_STILLS") or "/workspace/ue/out/climb_stills"
+SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
 FOLDER = "/Game/Climb"
 LEVEL = f"{FOLDER}/L_Hero"
 QUADS = 127
@@ -281,26 +286,80 @@ def undress():
 
 
 def main():
+    """The build as steps. Each yield hands the editor frames (GAP, or the number yielded) before
+    the next step."""
     log(f"stage {STAGE}")
-    if STAGE not in ("all", "ground", "dress"):
-        raise RuntimeError(f"OC_STAGE {STAGE!r}: use all, ground or dress")
+    if STAGE not in ("all", "ground", "dress", "stills"):
+        raise RuntimeError(f"OC_STAGE {STAGE!r}: use all, ground, dress or stills")
+    if STAGE == "stills":
+        yield from stills(open_level())
+        return
     if STAGE == "dress":
         world = undress()
         island.FOLDER = FOLDER
         road = unreal.load_asset(f"{FOLDER}/Road/M_IslandRoad") or island.road_material()
     else:
         ground, road = materials()
+        yield
         world = fresh_level(ground)
+    yield
     save(world)
-    if STAGE != "ground":
-        roads(road)
-        rails(rail_material())
-        track()
-        save(world)
-        # The trees last, saved on their own: thousands of actors on top of a fresh landscape
-        # got the editor killed for memory as it saved them all together.
-        trees()
-        save(world)
+    if STAGE == "ground":
+        return
+    yield
+    roads(road)
+    rails(rail_material())
+    track()
+    yield
+    save(world)
+    yield
+    # The trees last, saved on their own: thousands of actors on top of a fresh landscape
+    # got the editor killed for memory as it saved them all together.
+    trees()
+    yield
+    save(world)
+    yield from stills(world)
+
+
+def cameras():
+    """(name, position, look-at) in cm: a rider's eye along the road, looking 30 m up it, and
+    one from above the hairpin back down the lower traverse."""
+    with open(f"{SRC}/routes.json") as f:
+        ride = json.load(f)["island"]
+    up = ride[: len(ride) // 2 + 1]
+    out = []
+    for frac in SHOTS:
+        k = int(frac * (len(up) - 31))
+        (x, y, z), (ax, ay, az) = up[k], up[k + 30]
+        out.append((f"road_{round(frac * 100):02d}", (x, y, z + 1.6), (ax, ay, az + 1.2)))
+    x, y, z = up[len(up) // 2]
+    ax, ay, az = up[len(up) // 5]
+    out.append(("hairpin_above", (x + 30, y + 40, z + 45), (ax, ay, az)))
+    return [(n, tuple(v * 100 for v in p), tuple(v * 100 for v in a)) for n, p, a in out]
+
+
+def stills(world):
+    os.makedirs(STILLS, exist_ok=True)
+    camera = lib.spawn(unreal.CameraActor, label="Stills camera")
+    camera.camera_component.set_editor_property("field_of_view", 75.0)
+    yield 60  # let the level's streaming, Nanite and lighting settle
+    for name, where, target in cameras():
+        eye = unreal.Vector(*where)
+        rot = unreal.MathLibrary.find_look_at_rotation(eye, unreal.Vector(*target))
+        camera.set_actor_location_and_rotation(eye, rot, False, False)
+        yield 90  # textures and shadows stream in around the new view
+        unreal.AutomationLibrary.take_high_res_screenshot(1280, 720, f"{STILLS}/{name}.png", camera)
+        yield 30  # the shot is written a few frames later
+        log(f"still {STILLS}/{name}.png")
+    actors.destroy_actor(camera)
+
+
+def open_level():
+    world = unreal.EditorLoadingAndSavingUtils.load_map(LEVEL)
+    wp = getattr(unreal, "WorldPartitionBlueprintLibrary", None)
+    if wp is not None:
+        wp.load_actors([d.guid for d in wp.get_actor_descs()])
+    return world
 
 
 def save(world):
@@ -309,11 +368,32 @@ def save(world):
     log(f"saved {LEVEL}")
 
 
-try:
-    main()
-except Exception:
-    # Logged here: quitting first leaves the editor no time to log the error itself.
-    unreal.log_error(f"CLIMB failed: {traceback.format_exc()}")
-    raise
-finally:
+# Run from a tick callback, not in one go: a whole build inside one Python call is one editor
+# frame, and the Radeon Vulkan driver crashed (vkAllocateCommandBuffers) saving the landscape at
+# the end of one. Between steps the editor ticks and its renderer catches up.
+GAP = 10  # frames between steps
+steps, wait, handle = main(), 0, None
+
+
+def tick(_delta):
+    global wait
+    if wait > 0:
+        wait -= 1
+        return
+    try:
+        frames = next(steps)
+        wait = GAP if frames is None else frames
+    except StopIteration:
+        finish()
+    except Exception:
+        # Logged here: quitting first leaves the editor no time to log the error itself.
+        unreal.log_error(f"CLIMB failed: {traceback.format_exc()}")
+        finish()
+
+
+def finish():
+    unreal.unregister_slate_post_tick_callback(handle)
     unreal.SystemLibrary.quit_editor()
+
+
+handle = unreal.register_slate_post_tick_callback(tick)
