@@ -67,6 +67,9 @@ MIXES = {
     "Grass": ("shared", "lawn_grass", "patches", 30.0),
     "Rock": ("forest", "rocky_forest_path", "patches", 12.0),
 }
+# The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
+LOOK_TINTS = {"Dirt": (0.62, 0.63, 0.65)}
+LOOK_GREYS = {"Dirt": 0.85, "Rock": 0.75, "Rock mix": 0.6}
 ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
@@ -428,20 +431,25 @@ def op_rebuild_ground(rebuild_grass=False):
         saved = unreal.load_asset(f"{FOLDER}/Grass/GT_{layer}")
         grass[layer] = saved if saved and not rebuild_grass else _grass_type(layer)
         yield 10
+    # The instance goes first: while it refers to the material, the material can't be deleted,
+    # and a reused material keeps its old Landscape Grass node, which fails the compile.
+    if assets.does_asset_exist(f"{FOLDER}/{INSTANCE}"):
+        assets.delete_asset(f"{FOLDER}/{INSTANCE}")
     material = Ground().build(grass)
     yield 30
-    mi = unreal.load_asset(f"{FOLDER}/{INSTANCE}")
-    if mi is None:
-        mi = lib.tools.create_asset(
-            INSTANCE,
-            FOLDER,
-            unreal.MaterialInstanceConstant,
-            unreal.MaterialInstanceConstantFactoryNew(),
-        )
+    mi = lib.fresh(
+        INSTANCE,
+        FOLDER,
+        unreal.MaterialInstanceConstant,
+        unreal.MaterialInstanceConstantFactoryNew(),
+    )
     lib.edit.set_material_instance_parent(mi, material)
     lib.edit.update_material_instance(mi)
     assets.save_loaded_asset(mi, False)
-    return {"notes": [f"rebuilt {MATERIAL}; {INSTANCE} points at it (existing tints are kept)"]}
+    _tune(LOOK_TINTS, LOOK_GREYS)
+    return {
+        "notes": [f"rebuilt {MATERIAL} and {INSTANCE}, with the look {LOOK_TINTS} {LOOK_GREYS}"]
+    }
 
 
 def _old_build():
