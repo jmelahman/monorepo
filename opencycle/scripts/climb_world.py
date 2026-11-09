@@ -167,11 +167,11 @@ def materials():
     reused unless OC_REBUILD is set."""
     island.FOLDER = FOLDER
     ground = unreal.load_asset(f"{FOLDER}/M_ClimbGround")
-    road = unreal.load_asset(f"{FOLDER}/Road/M_IslandRoad")
+    road = unreal.load_asset(f"{FOLDER}/Road/M_ClimbRoad")
     if ground and road and not os.environ.get("OC_REBUILD"):
         log("materials: reusing the saved ones")
         return ground_instance(ground), road
-    return ground_instance(ground_material()), island.road_material()
+    return ground_instance(ground_material()), road_material()
 
 
 def landscape(world, ground):
@@ -273,9 +273,34 @@ def trees():
 
 
 def rail_material():
-    """Weathered timber, for the bike path's fence on the drop side."""
+    """Weathered timber, for the bike path's fence on the drop side: grey-brown, darker than it
+    looks here, since a flat 0.16 read as pale tan in the sun."""
     g = lib.Graph("M_GuardRail", f"{FOLDER}/Rail")
-    g.output((0.16, 0.12, 0.085), rough=0.85, metallic=0.0)
+    colour = g.mul(g.param("timber", (0.075, 0.062, 0.05)), g.world_noise(0.02, 0.7, 1.2, 3))
+    g.output(colour, rough=0.9, metallic=0.0)
+    return g.finish()
+
+
+ROAD_DARKEN = 0.55  # the island's asphalt read washed-out grey on the climb
+
+
+def road_material():
+    """The island's Megascans asphalt, world-mapped, darkened for the bike path."""
+    g = lib.Graph("M_ClimbRoad", f"{FOLDER}/Road")
+    tile = island.tile_cm("urban", "asphalt_road")
+    d, n, m = (island.ms_texture("urban", "asphalt_road", k) for k in ("D", "N", "M"))
+    uv = g.world_uv(tile)
+    masks = g.sample(m, uv, "masks")
+    colour = g.mul(g.mask(g.sample(d, uv), "rgb"), g.world_noise(0.001, 0.85, 1.08, 3))
+    colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
+    g.output(
+        colour,
+        g.mask(g.sample(n, uv, "normal"), "rgb"),
+        g.mask(masks, "g"),
+        specular=0.4,
+        ao=g.mask(masks, "r"),
+    )
+    g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
 
 
@@ -382,9 +407,10 @@ def main():
         yield from stills(open_level())
         return
     if STAGE == "dress":
-        world = undress()
         island.FOLDER = FOLDER
-        road = unreal.load_asset(f"{FOLDER}/Road/M_IslandRoad") or island.road_material()
+        road = road_material()  # before the level loads: no compile with its meshes in view
+        yield
+        world = undress()
     else:
         ground, road = materials()
         yield

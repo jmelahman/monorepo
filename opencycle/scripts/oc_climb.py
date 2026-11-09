@@ -92,7 +92,11 @@ GRASS = {
         ("shared", "lady_fern", 2.4, 4000, 6000),
         ("shared", "common_fern", 2.4, 4000, 6000),
         ("shared", "leather_fern", 1.2, 4000, 6000),
-        ("shared", "grass_clumps", 6.0, 3000, 4500),
+        # The woods' floor reads as bare lawn texture without grass: beech woods by a path have
+        # tufts and clumps between the ferns, thinner than the open verges.
+        ("shared", "grass_clumps", 16.0, 3000, 4500),
+        ("shared", "wild_grass", 16.0, 3000, 4500),
+        ("shared", "tall_grass", 1.6, 4000, 6000),
     ),
 }
 
@@ -443,6 +447,7 @@ def _grass(density, cull):
             changed += 1
         gt.set_editor_property("grass_varieties", varieties)
         assets.save_loaded_asset(gt, False)
+    unreal.SystemLibrary.execute_console_command(None, "grass.FlushCache")
     log(f"grass x{density} density, x{cull} cull: {changed} varieties")
 
 

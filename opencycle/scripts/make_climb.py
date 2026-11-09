@@ -74,7 +74,7 @@ def terrain(x, y):
     # A rim of ridges round the map's edge, so the horizon is mountains, not the 2 km square's
     # edge and the sea past it. The road stays inside 560 m of the middle, clear of it.
     edge = np.maximum(np.abs(x), np.abs(y)) + (mi.fbm(x, y, 260, 3, SEED + 31) - 0.5) * 160
-    rim = 350 * mi.smoothstep(650, 1000, edge) ** 1.5
+    rim = 250 * mi.smoothstep(520, 1080, edge)  # gentle: 350 m over 350 m read as a cliff
     return (base + gully + swell + crag + bumps + rim).astype(np.float32)
 
 
