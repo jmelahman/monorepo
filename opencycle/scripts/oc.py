@@ -374,6 +374,10 @@ def cmd_rebuild_ground(ns):
     return wait(submit("stills", {"shots": shots(ns)}), ns.timeout)
 
 
+def cmd_probe(ns):
+    return run("probe", {"path": os.path.abspath(ns.path)}, ns)
+
+
 def cmd_fps(ns):
     return run("fps", {"quality": ns.quality, "frames": ns.frames, "shots": shots(ns)}, ns)
 
@@ -460,6 +464,8 @@ def main(argv=None):
     s = add("build-level", cmd_build_level, help="rebuild L_Hero from world_gen/climb")
     s.set_defaults(timeout=1800.0)  # the ground stage imports the landscape: minutes
     add("static-trees", cmd_static_trees, help="static Nanite copies of the PVE trees")
+    s = add("probe", cmd_probe, help="run a read-only inspection script from out/qa")
+    s.add_argument("path")
     s = add("fps", cmd_fps, help="frame times at each still's view (quality 0 Low .. 3 Epic)")
     s.add_argument("--quality", type=int, default=0)
     s.add_argument("--frames", type=int, default=240)

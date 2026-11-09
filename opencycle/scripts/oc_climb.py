@@ -370,6 +370,104 @@ def op_ping():
 STATIC_TREES = f"{FOLDER}/Trees"
 
 
+def op_probe(path):
+    """Runs a read-only inspection script (in out/qa) with `unreal`, `log`, `lib` and a `notes`
+    list; returns the notes. For looking at assets, never for changing them."""
+    scope = {"unreal": unreal, "log": log, "lib": lib, "notes": []}
+    with open(path) as f:
+        exec(compile(f.read(), path, "exec"), scope)
+    yield
+    return {"notes": scope["notes"]}
+
+
+PART_TRIANGLES = 2500  # cap per assembly part (twig or branch) when baking static trees
+_NUM = r"(-?[0-9.]+(?:e-?[0-9]+)?)"
+
+
+def _xyz(text, key, default, keys="XYZ"):
+    """A struct field of an export_text, as floats; fields at their default are left out."""
+    m = re.search(key + r"=\(([^()]*)\)", text)
+    found = dict(re.findall(r"([XYZW])=" + _NUM, m.group(1))) if m else {}
+    return [float(found.get(k, d)) for k, d in zip(keys, default, strict=True)]
+
+
+def _assembly(sk):
+    """A Nanite-assembly skeletal mesh's parts [(mesh path, material remap)] and nodes [(part,
+    transform)]. The nodes aren't exposed to Python, so they are read from the export text."""
+    data = sk.get_editor_property("nanite_settings").get_editor_property("nanite_assembly_data")
+    text = data.export_text()
+    head, _, body = text.partition("Nodes=(")
+    parts = [
+        (path, [int(i) for i in remap.split(",") if i])
+        for path, remap in re.findall(
+            r'MeshObjectPath="([^"]+)"(?:,MaterialRemap=\(([0-9,]*)\))?', head
+        )
+    ]
+    nodes = []
+    for chunk in body.split("(PartIndex=")[1:]:
+        if "TransformSpace=BoneRelative" in chunk:
+            raise RuntimeError("bone-relative assembly nodes aren't handled")
+        part = int(re.match(r"[0-9]+", chunk).group(0))
+        t = chunk.split("BoneInfluences=")[0]
+        x, y, z, w = _xyz(t, "Rotation", (0, 0, 0, 1), "XYZW")
+        transform = unreal.Transform()
+        transform.set_editor_property("rotation", unreal.Quat(x, y, z, w))
+        transform.set_editor_property(
+            "translation", unreal.Vector(*_xyz(t, "Translation", (0, 0, 0)))
+        )
+        transform.set_editor_property("scale3d", unreal.Vector(*_xyz(t, "Scale3D", (1, 1, 1))))
+        nodes.append((part, transform))
+    return parts, nodes
+
+
+def _bake_assembly(sk, dm):
+    """Appends every assembly node's part mesh (the twigs and their leaves) to dm, in mesh space,
+    with its material slots remapped onto the tree's. Returns the node count."""
+    au = unreal.GeometryScript_AssetUtils
+    edit = unreal.GeometryScript_MeshEdits
+    mat = unreal.GeometryScript_Materials
+    parts, nodes = _assembly(sk)
+    meshes = []
+    for path, remap in parts:
+        part_sk = unreal.load_asset(path)
+        if part_sk is None:
+            raise RuntimeError(f"no assembly part {path}")
+        pm = unreal.DynamicMesh()
+        if isinstance(part_sk, unreal.SkeletalMesh):
+            pm, outcome = au.copy_mesh_from_skeletal_mesh(
+                part_sk,
+                pm,
+                unreal.GeometryScriptCopyMeshFromAssetOptions(),
+                unreal.GeometryScriptMeshReadLOD(),
+            )
+        else:
+            pm, outcome = au.copy_mesh_from_static_mesh(
+                part_sk,
+                pm,
+                unreal.GeometryScriptCopyMeshFromAssetOptions(),
+                unreal.GeometryScriptMeshReadLOD(),
+            )
+        if outcome != unreal.GeometryScriptOutcomePins.SUCCESS:
+            raise RuntimeError(f"copying assembly part {path} failed")
+        # Each part is placed hundreds of times: uncapped, the spruce's dead branch alone (219k
+        # triangles, 208 times) makes 45M and the Nanite build gets the editor killed for memory.
+        if pm.get_triangle_count() > PART_TRIANGLES:
+            unreal.GeometryScript_MeshSimplification.apply_simplify_to_triangle_count(
+                pm, PART_TRIANGLES, unreal.GeometryScriptSimplifyMeshOptions()
+            )
+        # Through a high offset, so a slot isn't remapped twice.
+        for slot in range(len(remap)):
+            mat.remap_material_i_ds(pm, slot, 1000 + slot)
+        for slot, target in enumerate(remap):
+            mat.remap_material_i_ds(pm, 1000 + slot, target)
+        meshes.append(pm)
+    for index, pm in enumerate(meshes):
+        placed = [t for part, t in nodes if part == index]
+        if placed:
+            edit.append_mesh_transformed(dm, pm, placed, unreal.Transform())
+    return len(nodes)
+
+
 def op_static_trees():
     """Static copies of the PVE trees (SM_spruce, SM_beech in /Game/Climb/Trees), Nanite with
     area preservation, so the climb can instance tens of thousands of them: the skeletal ones
@@ -390,6 +488,9 @@ def op_static_trees():
         )
         if outcome != unreal.GeometryScriptOutcomePins.SUCCESS:
             raise RuntimeError(f"{kind}: copying {path} failed")
+        yield
+        twigs = _bake_assembly(sk, dm)
+        log(f"{kind}: {twigs} twigs and branches baked in")
         mats, _index, slots, outcome = au.get_lod_material_list_from_skeletal_mesh(sk, lod)
         yield
         target = f"{STATIC_TREES}/SM_{kind}"
@@ -417,7 +518,7 @@ def op_static_trees():
         )
         assets.save_loaded_asset(sm, False)
         tris = dm.get_triangle_count() if hasattr(dm, "get_triangle_count") else "?"
-        notes.append(f"{kind}: {target}, {len(mats)} materials, {tris} triangles")
+        notes.append(f"{kind}: {target}, {len(mats)} materials, {twigs} twigs, {tris} triangles")
         log(notes[-1])
         yield
     return {"notes": notes}
@@ -613,10 +714,8 @@ def _stills(shots, out):
 
 def op_fps(quality=0, frames=240, shots=None):
     """Frame times at each still's view, at a scalability level (0 Low .. 3 Epic): the editor's
-    whole frame, so a pessimistic stand-in for the game's. Background throttling and vsync off."""
+    whole frame, so a pessimistic stand-in for the game's. Vsync and the frame cap off."""
     yield from _ensure_level()
-    perf = unreal.get_default_object(unreal.EditorPerformanceSettings)
-    perf.set_editor_property("throttle_cpu_when_not_foreground", False)
     for command in (f"scalability {int(quality)}", "r.VSync 0", "t.MaxFPS 0"):
         unreal.SystemLibrary.execute_console_command(None, command)
     editor = unreal.UnrealEditorSubsystem()
