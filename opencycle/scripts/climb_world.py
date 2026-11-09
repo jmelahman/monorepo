@@ -80,8 +80,15 @@ def log(message):
 
 
 def materials():
-    """The ground, its grass and the road, island_world.py's made in this folder."""
+    """The ground, its grass and the road, island_world.py's made in this folder. Saved ones are
+    reused (building the grass types alone takes over ten minutes, on one core) unless
+    OC_REBUILD is set."""
     island.FOLDER = FOLDER
+    ground = unreal.load_asset(f"{FOLDER}/M_ClimbGround")
+    road = unreal.load_asset(f"{FOLDER}/Road/M_IslandRoad")
+    if ground and road and not os.environ.get("OC_REBUILD"):
+        log("materials: reusing the saved ones")
+        return ground, road
     island.GRASS = GRASS
     grass = {layer: island.grass_type(layer) for layer in GRASS}
     return island.Ground("M_ClimbGround").build(grass), island.road_material()
@@ -408,5 +415,7 @@ def finish():
 
 # Loaded by a ue_serve.py command (OC_LIBRARY set), it only defines main() for the command to run.
 if not globals().get("OC_LIBRARY"):
+    # -ExecutePythonScript closes the editor once the script returns unless told not to.
+    unreal.EditorPythonScriptingLibrary.set_keep_python_script_alive(True)
     steps = main()
     handle = unreal.register_slate_post_tick_callback(tick)
