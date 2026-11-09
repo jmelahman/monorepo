@@ -51,13 +51,14 @@ assets = lib.assets
 # Each paint layer's surface: (biome, slug, default tint). Rock and Dirt are the climb's own: grey
 # granite and gravel rather than the island's red-brown stony soil and yellow sand.
 SURFACES = {
-    "Grass": ("shared", "uncut_grass", (0.85, 0.9, 0.7)),
+    "Grass": ("shared", "uncut_grass", (0.72, 0.76, 0.6)),
     "Forest": ("forest", "forest_floor", (1.0, 1.0, 1.0)),
     "Rock": ("mountain", "granite_rocky_ground", (0.85, 0.85, 0.85)),
     "Snow": ("coast", "thai_wet_sand", (1.0, 1.0, 1.0)),
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
     "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
-    "Dirt": ("shared", "gravel", (0.8, 0.8, 0.8)),
+    # The path's edge: dark soil with leaf litter over it, as in the reference photos.
+    "Dirt": ("forest", "soil_mud", (0.8, 0.75, 0.7)),
 }
 # A second surface per layer and how it mixes in: "patches" (noise, metres across) or "wet"
 # (below that height in cm).
@@ -67,17 +68,18 @@ MIXES = {
     "Sand": ("coast", "thai_wet_sand", "wet", 120.0),
     "Grass": ("shared", "lawn_grass", "patches", 30.0),
     "Rock": ("forest", "rocky_forest_path", "patches", 12.0),
+    "Dirt": ("forest", "forest_floor", "patches", 3.0),
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
-LOOK_TINTS = {"Dirt": (0.62, 0.63, 0.65)}
-LOOK_GREYS = {"Dirt": 0.85, "Rock": 0.75, "Rock mix": 0.6}
+LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest": (0.85, 0.8, 0.75)}
+LOOK_GREYS = {"Grass": 0.25, "Rock": 0.3, "Rock mix": 0.3}
 ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
 # Grass per layer: (biome, slug, instances per 100 m^2, cull start, cull end in cm). Scans whose
 # meshes take 5 GB or more to build are left out: with the rest of the editor they run the machine
-# out of memory.
+# out of memory. The rows under 0.5 are props (logs, stumps, rocks), drawn farther.
 GRASS = {
     "Grass": (
         ("shared", "wild_grass", 40.0, 3500, 5000),
@@ -101,6 +103,19 @@ GRASS = {
         ("shared", "grass_clumps", 16.0, 3000, 4500),
         ("shared", "wild_grass", 16.0, 3000, 4500),
         ("shared", "tall_grass", 1.6, 4000, 6000),
+        # The floor's debris: the woods in the reference photos are never bare between trunks.
+        ("forest", "nordic_forest_ground_patch_root", 0.12, 9000, 12000),
+        ("forest", "mossy_rocks", 0.1, 9000, 12000),
+        ("forest", "nordic_forest_rock_small", 0.3, 6000, 8000),
+        ("forest", "mossy_wood_stump", 0.05, 9000, 12000),
+        ("forest", "fallen_log", 0.03, 12000, 15000),
+        ("forest", "fallen_pine_tree", 0.015, 12000, 15000),
+    ),
+    # Talus under the crags.
+    "Rock": (
+        ("forest", "nordic_forest_rock_small", 0.6, 8000, 11000),
+        ("forest", "nordic_forest_cluster_rock_medium", 0.15, 12000, 15000),
+        ("forest", "mossy_rocks", 0.15, 9000, 12000),
     ),
 }
 
@@ -276,7 +291,7 @@ def _grass_type(layer):
             v.set_editor_property("scaling", unreal.GrassScaling.UNIFORM)
             v.set_editor_property("scale_x", unreal.FloatInterval(0.85, 1.3))
             v.set_editor_property("random_rotation", True)
-            v.set_editor_property("align_to_surface", density > 0.5)
+            v.set_editor_property("align_to_surface", True)
             v.set_editor_property("cast_dynamic_shadow", True)
             varieties.append(v)
     gt.set_editor_property("grass_varieties", varieties)

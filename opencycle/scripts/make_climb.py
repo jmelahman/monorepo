@@ -54,7 +54,7 @@ PLAN = [
 mi.RES, mi.SPACING = RES, SPACING
 mi.ROAD_HALF = 1.5  # a bike-only path, 3 m of tarmac
 mi.SHOULDER = 0.4
-mi.BANK_SLOPE = 0.95  # cut and fill banks, steeper than the island's: this is a mountain road
+mi.BANK_SLOPE = 0.8  # cut and fill banks, steeper than the island's: this is a mountain road
 mi.CORRIDOR = 45.0
 mi.MAX_GRADE = 0.085
 
@@ -96,13 +96,16 @@ def lay_road(h):
 def paint(x, y, h, road_dist):
     gy, gx = np.gradient(h, SPACING)
     slope = np.hypot(gx, gy)
-    rock = mi.smoothstep(0.78, 1.05, slope)
+    # Bare rock only on the natural crags: a cut bank by the path is soil and litter with roots,
+    # as in the reference photos, not a wall of pale granite.
+    rock = mi.smoothstep(0.85, 1.1, slope) * mi.smoothstep(10.0, 25.0, road_dist)
+    rock = np.maximum(rock, mi.smoothstep(1.2, 1.5, slope))
     shoulder = mi.smoothstep(mi.ROAD_HALF + 1.0, mi.ROAD_HALF + 0.2, road_dist)
-    # Grass: the valley floor, a verge a few metres wide, and clearings up the flank.
+    # Grass: the valley floor and clearings up the flank. In the woods the path's edge is leaf and
+    # needle litter, not a lawn verge.
     floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
-    verge = mi.smoothstep(mi.ROAD_HALF + 6, mi.ROAD_HALF + 1, road_dist + 3 * mi.fbm(x, y, 9, 2))
     clearing = mi.smoothstep(0.66, 0.74, mi.fbm(x, y, 120, 3, SEED + 40))
-    grass = np.clip(np.maximum.reduce([floor, verge, clearing]), 0, 1)
+    grass = np.clip(np.maximum(floor, clearing), 0, 1)
     soft = (1 - rock) * (1 - shoulder)
     out = {k: np.zeros_like(h) for k in mi.LAYERS}
     out["Grass"] = soft * grass
@@ -117,20 +120,26 @@ FAR = float(os.environ.get("OC_FAR_TREES", "0.45"))
 
 
 def trees(h, road_dist, slope, grass):
-    """Stems on a jittered grid about 5.5 m apart in the woods, thinning to nothing in clearings
-    and on crags, kept off the verge. Beech below, spruce above, mixed across a band with noise."""
+    """Stems scattered about 4.5 m apart in the woods, in clumps and gaps (not rows), thinning to
+    nothing in clearings and on crags, kept off the verge. Beech below, spruce above, mixed across
+    a band with noise."""
     rng = np.random.default_rng(SEED + 100)
-    step = 5.5
+    step = 4.5
     reach = 320.0  # metres from the road at full density; beyond it the woods thin to FAR
     c = np.arange(-(RES - 1) / 2 + step / 2, (RES - 1) / 2, step)
     gx, gy = np.meshgrid(c, c)
-    px = (gx + rng.uniform(-0.45, 0.45, gx.shape) * step).ravel()
-    py = (gy + rng.uniform(-0.45, 0.45, gy.shape) * step).ravel()
+    # A jitter wider than the cell, so no rows show down a line of sight.
+    px = (gx + rng.normal(0, 0.6, gx.shape) * step).ravel()
+    py = (gy + rng.normal(0, 0.6, gy.shape) * step).ravel()
     row, col = at(np.stack([px, py], 1))
     ok = (row >= 0) & (row < RES) & (col >= 0) & (col < RES)
     px, py, row, col = px[ok], py[ok], row[ok], col[ok]
     d = road_dist[row, col]
     wood = 1 - grass[row, col]
+    # Clumps and gaps tens of metres across, and finer ones a few trees wide.
+    clump = mi.smoothstep(0.3, 0.62, mi.fbm(px, py, 60, 3, SEED + 70))
+    clump *= 0.55 + 0.45 * mi.smoothstep(0.25, 0.55, mi.fbm(px, py, 14, 2, SEED + 71))
+    wood = wood * np.clip(0.15 + 1.1 * clump, 0, 1)
     keep = (
         (d > mi.ROAD_HALF + 3.0 + rng.uniform(0, 3, d.shape))
         & (slope[row, col] < 1.0)
