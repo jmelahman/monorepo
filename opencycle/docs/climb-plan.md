@@ -97,6 +97,18 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, night (batch, building): **one rebuild for ground, ferns and banks.**
+  - Diagnosed first. A 1080p still with a 3 GB streaming pool made the trunks crisp but not the
+    ground, so the blur comes from the material. The textures are 2K in the World group.
+  - The green/brown blotches came from the olive `forest_floor` mixed into the bank soil and the
+    path edge in 3 m patches. Both now mix brown `alpine_needles`, and the Forest mix grey is 0.55.
+  - Steep ground takes its normal from the side projection, as its colour already did. It used
+    to take half a flattened, stretched top normal.
+  - Fern slivers came from the cut-out in D's alpha averaging away in the mips, under the 0.33
+    clip. `_keep_alpha_coverage` turns on scale-mips-for-alpha-coverage for every grass scan.
+  - Ferns are about 1.6× denser (Forest 6/6/4/2, Sand 8/6). The banks have slumps and rills
+    (`roughen_banks`).
+
 - 2026-11-09, late (storybook v10): **lower cuts, cleaner path.**
   - `open_valley_side` now caps the uphill side too: a cut of 1–2 m (BANK_SLOPE 1.3), then a
     gentle 0.28 slope that rejoins the hillside by 35 m. Uncapped, cuts across the steep flank
