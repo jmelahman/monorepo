@@ -212,10 +212,15 @@ def assign_asset(record, masters):
     for path in assets.list_assets(folder, recursive=True):
         asset = unreal.load_asset(path)
         if isinstance(asset, unreal.StaticMesh):
-            slots = asset.get_editor_property("static_materials")
-            for slot in slots:
-                slot.set_editor_property("material_interface", mi)
+            # Each slot anew: the array's items are copies, so setting one in place changes nothing.
+            slots = [
+                unreal.StaticMaterial(mi, slot.material_slot_name, slot.uv_channel_data)
+                for slot in asset.get_editor_property("static_materials")
+            ]
             asset.set_editor_property("static_materials", slots)
+            kept = asset.get_editor_property("static_materials")
+            if any(s.material_interface != mi for s in kept):
+                raise RuntimeError(f"{asset.get_name()} kept its old materials")
             set_nanite(asset, kind == "plant")
             assets.save_loaded_asset(asset, False)
             box = asset.get_bounding_box()
