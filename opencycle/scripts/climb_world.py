@@ -1,0 +1,251 @@
+"""Builds /Game/Climb/L_Hero from make_climb.py's output: the climb's hero stretch, a kilometre of
+mountain road on a wooded flank. 2 km of landscape at a metre a sample, painted and grassed with
+the island's saved ground material, the road, guard rail on the drop side, beech and spruce, and
+the ride up and back down as the level's ride track.
+
+Run after make_climb.py, and after island_world.py's OC_STAGE=materials (whose materials it reuses):
+    OC_EDITOR=1 bash scripts/ue_run.sh climb_world.py climb_world.log
+
+Trees: OC_SPRUCE and OC_BEECH name the meshes (defaults: the vegetation plugin's sample trees). A
+static mesh goes into one instanced component for every tree of its kind. A skeletal one (the
+plugin's Nanite-assembly trees) can't be instanced, so it is placed as an actor per tree, only
+within OC_NEAR metres of the road (default 60); beyond that there are none.
+"""
+
+import importlib.util
+import json
+import math
+import os
+import traceback
+
+import unreal
+
+
+def sibling(name):
+    here = os.path.dirname(
+        os.path.abspath(globals().get("__file__") or "/workspace/ue/scripts/climb_world.py")
+    )
+    spec = importlib.util.spec_from_file_location(name, os.path.join(here, f"{name}.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+lib = sibling("ue_lib")
+assets, actors = lib.assets, lib.actors
+
+SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/climb")
+FOLDER = "/Game/Climb"
+LEVEL = f"{FOLDER}/L_Hero"
+QUADS = 127
+GRID = 4  # components a side per streaming proxy
+PVE = "/ProceduralVegetationEditor/SampleAssets/StarterContent"
+TREES = {
+    "spruce": os.environ.get("OC_SPRUCE") or "/Game/Spike/Trees/PVE_Sample_Conifer_Tree_01",
+    "beech": os.environ.get("OC_BEECH") or f"{PVE}/DeciduousTree_01/PVE_Deciduous_Tree_01",
+}
+NEAR = float(os.environ.get("OC_NEAR") or "60") * 100.0
+TREE_CULL = 60000.0  # cm: instanced trees past this aren't drawn
+RAIL_HEIGHT = 60.0  # cm, the beam's middle above the road
+
+
+def log(message):
+    unreal.log(f"CLIMB {message}")
+
+
+def saved(path):
+    asset = unreal.load_asset(path)
+    if asset is None:
+        raise RuntimeError(f"no {path}: run island_world.py with OC_STAGE=materials first")
+    return asset
+
+
+def landscape(world, ground):
+    with open(f"{SRC}/info.json") as f:
+        info = json.load(f)
+    size, spacing, z_scale, names = info["size"], info["spacing"], info["z_scale"], info["layers"]
+    if (size - 1) % QUADS:
+        raise RuntimeError(f"{size} samples a side isn't whole components of {QUADS} quads")
+    comps = (size - 1) // QUADS
+    layers = [
+        unreal.WorldBuilderLibrary.make_layer_info(f"{FOLDER}/Layers/LI_{n}", n) for n in names
+    ]
+    half = (size - 1) * spacing / 2
+    land = unreal.WorldBuilderLibrary.make_landscape(
+        world,
+        f"{SRC}/height.r16",
+        comps,
+        comps,
+        QUADS,
+        unreal.Vector(-half, -half, 0),
+        unreal.Vector(spacing, spacing, z_scale),
+        ground,
+        layers,
+        [f"{SRC}/{n}.r8" for n in names],
+        GRID,
+    )
+    if not land:
+        raise RuntimeError("no landscape")
+    log(f"landscape: {comps}x{comps} components of {QUADS} quads at {spacing:.0f} cm")
+
+
+def roads(material):
+    count = 0
+    for name in sorted(os.listdir(SRC)):
+        if not (name.startswith("road_") and name.endswith(".gltf")):
+            continue
+        task = unreal.AssetImportTask()
+        task.filename = f"{SRC}/{name}"
+        task.destination_path = f"{FOLDER}/Road"
+        task.destination_name = f"SM_{name[:-5]}"
+        task.replace_existing = True
+        task.automated = True
+        task.save = False
+        lib.tools.import_asset_tasks([task])
+        mesh = next(
+            a
+            for a in map(unreal.load_asset, task.get_editor_property("imported_object_paths"))
+            if isinstance(a, unreal.StaticMesh)
+        )
+        nanite = mesh.get_editor_property("nanite_settings")
+        nanite.set_editor_property("enabled", True)
+        mesh.set_editor_property("nanite_settings", nanite)
+        assets.save_loaded_asset(mesh, False)
+        lib.mesh_actor(mesh, label=name[:-5], folder="Road", materials={0: material})
+        count += 1
+    log(f"roads: {count} pieces")
+
+
+def road_points():
+    """The road's centreline every 5 m, in cm, for distances to it."""
+    with open(f"{SRC}/routes.json") as f:
+        ride = json.load(f)["island"]
+    half = ride[: len(ride) // 2 + 1]
+    return [(x * 100, y * 100) for x, y, _z in half[::5]]
+
+
+def trees():
+    with open(f"{SRC}/trees.json") as f:
+        stems = json.load(f)
+    meshes = {kind: unreal.load_asset(path) for kind, path in TREES.items()}
+    for kind, mesh in meshes.items():
+        if mesh is None:
+            raise RuntimeError(f"no {kind} mesh at {TREES[kind]}")
+        log(f"{kind}: {TREES[kind]} ({type(mesh).__name__})")
+    if any(isinstance(m, unreal.SkeletalMesh) for m in meshes.values()):
+        # The plugin's materials read wind and tree data from this actor; without it the trees
+        # fall back to proxy cards.
+        bp = unreal.load_asset(
+            "/ProceduralVegetationEditor/SampleAssets/Materials/GlobalFoliageActor/"
+            "BP_GlobalFoliageActor_UE5"
+        )
+        lib.spawn(bp.generated_class(), label="Global Foliage")
+    centre = road_points()
+    instances = lib.Instances("Trees")
+    placed = {kind: 0 for kind in meshes}
+    for kind, x, y, z, yaw, scale in stems:
+        mesh = meshes[kind]
+        if isinstance(mesh, unreal.SkeletalMesh):
+            if min(math.hypot(x - cx, y - cy) for cx, cy in centre) > NEAR:
+                continue
+            actor = lib.spawn(unreal.SkeletalMeshActor, (x, y, z), (0, yaw, 0), folder="Trees")
+            actor.skeletal_mesh_component.set_skeletal_mesh_asset(mesh)
+            actor.set_actor_scale3d(unreal.Vector(scale, scale, scale))
+        else:
+            instances.add(mesh, (x, y, z), yaw, scale)
+        placed[kind] += 1
+    instances.commit(cull=TREE_CULL)
+    log(f"trees: {placed}")
+
+
+def rail_material():
+    """Galvanised steel: grey, metallic, a little rough."""
+    g = lib.Graph("M_GuardRail", f"{FOLDER}/Rail")
+    g.output((0.48, 0.5, 0.52), rough=0.45, metallic=0.9)
+    return g.finish()
+
+
+def rails(material):
+    """Each run of rails.json as a beam of short straight pieces, on posts every 2 m."""
+    with open(f"{SRC}/rails.json") as f:
+        runs = json.load(f)
+    cube = unreal.load_asset("/Engine/BasicShapes/Cube")  # 100 cm, centred
+    parts = lib.Instances("Rail")
+    for run in runs:
+        for k in range(len(run) - 1):
+            (x0, y0, z0), (x1, y1, z1) = run[k], run[k + 1]
+            span = math.hypot(x1 - x0, y1 - y0)
+            if span < 1.0:
+                continue
+            yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
+            pitch = math.degrees(math.atan2(z1 - z0, span))
+            mid = ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2 + RAIL_HEIGHT)
+            parts.add(cube, mid, yaw, ((span + 4) / 100, 0.04, 0.32), pitch=pitch)
+            if k % 2 == 0:
+                parts.add(cube, (x0, y0, z0 + 30), yaw, (0.1, 0.06, 0.9))
+    parts.commit(materials={cube.get_path_name(): {0: material}})
+    log(f"rails: {len(runs)} runs")
+
+
+def track():
+    """The ride as the level's DA_RideTrack: up the stretch and back down."""
+    with open(f"{SRC}/routes.json") as f:
+        centre = json.load(f)["island"]
+    cls = unreal.load_class(None, "/Script/OpenCycleUE.RideTrack")
+    factory = unreal.DataAssetFactory()
+    factory.set_editor_property("data_asset_class", cls)
+    t = lib.fresh("DA_RideTrack", f"{FOLDER}/Ride", cls, factory)
+    # The rider's line 6 cm under the tarmac, as on the island.
+    t.set_editor_property(
+        "centre", [unreal.Vector(x * 100, y * 100, z * 100 - 6) for x, y, z in centre]
+    )
+    t.set_editor_property("closed", False)
+    t.set_editor_property("title", "Hero stretch")
+    t.set_editor_property("blurb", "A kilometre up through the beech and spruce, and back down.")
+    t.set_editor_property("step", 100.0)
+    t.set_editor_property("keep_left", 160.0)
+    t.set_editor_property("sun_azimuth", -62.0)
+    coast = unreal.load_asset("/Game/Coast/Ride/DA_RideTrack")
+    for prop in ("rain_shell", "collection"):
+        t.set_editor_property(prop, coast.get_editor_property(prop))
+    row = unreal.RideWeather()
+    row.set_editor_property("metres", 0.0)
+    t.set_editor_property("weather", [row])
+    stretch = unreal.RideStretch()
+    stretch.set_editor_property("name", "Hero stretch")
+    t.set_editor_property("stretches", [stretch])
+    assets.save_loaded_asset(t, False)
+    log(f"track: {len(centre)} m, out and back")
+
+
+def main():
+    ground = saved("/Game/Island/M_IslandGround")
+    road = saved("/Game/Island/Road/M_IslandRoad")
+    if assets.does_asset_exist(LEVEL):
+        assets.delete_asset(LEVEL)
+    world = unreal.EditorLoadingAndSavingUtils.new_map_from_template(
+        "/Engine/Maps/Templates/OpenWorld", False
+    )
+    for actor in actors.get_all_level_actors():
+        if isinstance(actor, unreal.LandscapeProxy):
+            actors.destroy_actor(actor)
+    if not unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL):
+        raise RuntimeError(f"could not save {LEVEL}")
+    landscape(world, ground)
+    roads(road)
+    rails(rail_material())
+    trees()
+    track()
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL)
+    log(f"saved {LEVEL}")
+
+
+try:
+    main()
+except Exception:
+    # Logged here: quitting first leaves the editor no time to log the error itself.
+    unreal.log_error(f"CLIMB failed: {traceback.format_exc()}")
+    raise
+finally:
+    unreal.SystemLibrary.quit_editor()
