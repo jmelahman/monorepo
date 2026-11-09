@@ -97,6 +97,16 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, small hours: **47k static Nanite trees with leaves across the whole map**
+  (`make_climb.py` FAR 0.45 beyond the road band, `climb_world.TREE_CULL` 2 km). `oc.py
+  static-trees` bakes `SM_spruce` / `SM_beech` from the PVE assemblies; each twig and leaf part is
+  simplified to 2500 tris so the Nanite build fits in RAM. New: `oc.py fps` and `oc.py probe`.
+  Perf at Low is about 17 fps with all trees (29 with none); shadows off, a 300 m cull or no wind
+  each gain little. The user said **visuals first, perf later**. Storybook version 8.
+  Sonnet QA scores: road_08 5, road_30 6, road_50 6, road_72 4, road_95 5, hairpin_above 7.
+  Its top defects: pale plaster-like rock cuts, neon/yellow verge smear, empty forest floor,
+  tree rows, flat washed-out light, a too-clean road edge.
+
 - 2026-11-09, late night: the road is now a **3 m bike-only path** (no markings) with a timber
   fence. `oc.py build-level` rebuilds L_Hero in 5 minutes with no crash. `look` gained `--grass
   DENSITY CULL` (2.0 1.5 now) and `--fog DENSITY FALLOFF` (0.008 0.02 now; the template's falloff

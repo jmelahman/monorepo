@@ -722,7 +722,7 @@ def _tree_components():
     return found
 
 
-def op_fps(quality=0, frames=240, shots=None, tree_cull=None, tree_shadows=None):
+def op_fps(quality=0, frames=240, shots=None, tree_cull=None, tree_shadows=None, tree_wpo=None):
     """Frame times at each still's view, at a scalability level (0 Low .. 3 Epic): the editor's
     whole frame, so a pessimistic stand-in for the game's. Vsync and the frame cap off."""
     yield from _ensure_level()
@@ -734,13 +734,15 @@ def op_fps(quality=0, frames=240, shots=None, tree_cull=None, tree_shadows=None)
     saved = [(c.instance_end_cull_distance, c.cast_shadow) for c in trees]
     for c in trees:
         if tree_cull is not None:
-            c.set_editor_property("instance_end_cull_distance", max(1, int(tree_cull * 100)))
+            c.set_visibility(tree_cull > 0)
+            c.set_cull_distances(0, max(1, int(tree_cull * 100)))
         if tree_shadows is not None:
             c.set_cast_shadow(bool(tree_shadows))
-        c.mark_render_state_dirty()
+        if tree_wpo is not None:
+            c.set_evaluate_world_position_offset(bool(tree_wpo))
     editor = unreal.UnrealEditorSubsystem()
     yield 60
-    notes = [f"trees: {len(trees)} components, cull {tree_cull} m, shadows {tree_shadows}"]
+    notes = [f"trees: {len(trees)}, cull {tree_cull} m, shadows {tree_shadows}, wpo {tree_wpo}"]
     for name, where, target in cameras(shots):
         eye = unreal.Vector(*where)
         editor.set_level_viewport_camera_info(
@@ -761,9 +763,11 @@ def op_fps(quality=0, frames=240, shots=None, tree_cull=None, tree_shadows=None)
         log(notes[-1])
     unreal.SystemLibrary.execute_console_command(None, "scalability 3")
     for c, (cull, shadow) in zip(trees, saved, strict=True):
-        c.set_editor_property("instance_end_cull_distance", cull)
+        c.set_visibility(True)
+        c.set_cull_distances(0, cull)
         c.set_cast_shadow(shadow)
-        c.mark_render_state_dirty()
+        if tree_wpo is not None:
+            c.set_evaluate_world_position_offset(True)
     return {"notes": [f"scalability {quality}", *notes]}
 
 

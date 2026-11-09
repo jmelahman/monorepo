@@ -9,7 +9,10 @@ says what was done last. Update both files before a session ends or when a rule 
   "No stylized."
 - **The first target:** one realistic mountain climb. Build a 1 km hero stretch first, then the
   full climb, then other biomes.
-- **Performance:** this laptop (Radeon 890M) must hold 30 fps at Low.
+- **Performance:** this laptop (Radeon 890M) must hold 30 fps at Low *eventually*. For now the
+  user says **visuals first, perf later**: keep trees at full quality (2 km cull, shadows, wind).
+  Measured on 9 Nov at Low: about 16–19 fps with all trees and about 29 with none. Shadows
+  off or a 300 m cull each give about 20–24 (`oc.py fps`).
 - **Bike path:** the climb's road is a **bike-only path**, about 3 m of tarmac with no markings,
   and a dark timber fence on the drop side.
 - **Trees:** the user wants trees across the whole slope, not just beside the road.
@@ -24,10 +27,13 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 
 | Command | What it does | Time |
 | --- | --- | --- |
-| `oc.py look --tint Dirt=r,g,b --grey Rock=0.75 --grass DENSITY CULL --fog DENSITY [FALLOFF] --shots NAME` | Parameters only, then stills. `--shots` takes one name. | 16 s for one still, ~95 s for six |
+| `oc.py look --tint Dirt=r,g,b --grey Rock=0.75 --grass DENSITY CULL --fog DENSITY [FALLOFF] --shots a,b` | Parameters only, then stills. `--shots` takes a comma list. | 16 s for one still, ~95 s for six |
 | `oc.py stills` | Stills from the editor viewport into `out/climb_stills/` | about 1 min |
 | `oc.py build-level` | Rebuilds L_Hero from `world_gen/climb`: the ground stage, then the dress stage, each on a fresh editor | about 5 min |
 | `oc.py rebuild-ground` | Rebuilds the ground material on the empty map | about 1 min |
+| `oc.py static-trees` | Bakes static Nanite copies of the PVE trees, with their leaf assembly parts (capped at 2500 tris each), into `/Game/Climb/Trees/SM_*` | about 10 min |
+| `oc.py fps --quality 0..3 --frames N --shots a,b [--tree-cull M] [--tree-shadows 0/1] [--tree-wpo 0/1]` | Measures frame times at each still's view; tree options apply for that run only | about 30 s |
+| `oc.py probe PATH` | Runs a read-only script with `unreal`, `log`, `lib` and `notes` in scope (API discovery; keep scripts in `out/qa`) | seconds |
 | `oc.py restart` / `stop` / `status` / `log` / `wait JOB` | | |
 
 - **Reload:** `oc_server.py` does not reload `oc_climb.py`. Run `oc.py restart` after you edit it.
