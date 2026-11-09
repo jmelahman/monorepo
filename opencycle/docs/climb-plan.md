@@ -97,6 +97,17 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, evening: the crash rules are enforced in code, not kept in memory.
+  - Start the server with `nohup bash scripts/ue_serve.sh >out/serve_supervisor.log 2>&1 &`
+    from /workspace/ue. When the editor dies, the supervisor marks the running command
+    `.crashed` (log tail in `.crashed.txt`) and restarts on the empty map. It gives up after
+    three exits in ten minutes. Each run's log is kept in `out/serve_logs/`.
+  - The landscape uses `MI_ClimbGround`. Recolour it with `climb_world.tune({"Dirt": (r, g,
+    b)})`: parameters only, no compile, safe with the level open.
+  - `ground_material()` raises if a landscape is loaded. To rebuild, send `quit.py` (which also
+    stops the supervisor), start `ue_serve.sh` again, then queue the rebuild.
+  - The server holds commands while under 6 GB of memory is free.
+
 - 2026-11-09, later: L_Hero is built (landscape, road, rails, 3,600 PVE trees). The loop is one
   warm editor (`scripts/ue_serve.py`) that runs command files dropped into `out/cmd`: a look
   change plus six stills takes about 2.5 minutes. Stills now come from the editor viewport, so
