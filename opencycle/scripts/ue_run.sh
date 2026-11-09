@@ -20,5 +20,20 @@ read -r -a extra <<<"${OC_UE_ARGS:-}"
 run+=("${extra[@]}")
 # shellcheck disable=SC2024 # the log redirect is meant to run as the calling user
 sudo -u ue4 env UE-LocalDataCachePath=/workspace/ddc HOME=/home/ue4 "${vars[@]}" \
-	"${run[@]}" -unattended -nosplash -stdout -FullStdOutLogOutput >"$2" 2>&1 </dev/null
+	"${run[@]}" -unattended -nosplash -stdout -FullStdOutLogOutput >"$2" 2>&1 </dev/null &
+editor=$!
+# The editor can crash tearing down once it has logged its exit ("double free or corruption") and
+# then hang for good, holding its memory: a minute after that line, stop it. A TERM to sudo
+# reaches the editor, as does one to this script, e.g. from timeout.
+trap 'kill "$editor" 2>/dev/null' TERM INT
+exited=0
+while kill -0 "$editor" 2>/dev/null; do
+	if grep -q "LogExit: Exiting." "$2" 2>/dev/null; then
+		exited=$((exited + 1))
+		[ "$exited" -gt 12 ] && echo "ue_run: editor hung after exiting; stopping it" && kill "$editor"
+	fi
+	sleep 5 &
+	wait $!
+done
+wait "$editor"
 grep -E "LogPython|Error" "$2" | grep -v -E "Deprecation|LogPython: (Warning|Display)" | cut -c30- | tail -"${OC_TAIL:-40}"
