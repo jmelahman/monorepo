@@ -97,6 +97,13 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, late night: the road is now a **3 m bike-only path** (no markings) with a timber
+  fence. `oc.py build-level` rebuilds L_Hero in 5 minutes with no crash. `look` gained `--grass
+  DENSITY CULL` (2.0 1.5 now) and `--fog DENSITY FALLOFF` (0.008 0.02 now; the template's falloff
+  of 0.2 hid all fog above 100 m). A rim of ridges round the map hides its edge and the sea.
+  Storybook version 7 has the stills. Open defects: smeared grass banks, pale tarmac and fence,
+  the near rim reads as a bare cliff, trees only within 320 m of the path (static trees next).
+
 - 2026-11-09, night: **the loop is `scripts/oc.py`** (run from /workspace/ue). It's one command
   that blocks until the job is done, failed or crashed, and says which on its last line.
   - Commands: `oc.py look --tint Dirt=r,g,b --grey Rock=0.75 [--shots road_72]`, then `stills`,

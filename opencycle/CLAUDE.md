@@ -38,7 +38,7 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
   - Dirt is tinted 0.62,0.63,0.65 with grey 0.85.
   - Rock has grey 0.75, and Rock mix has grey 0.6.
   - Grass is `--grass 2.0 1.5`.
-  - Fog: the template's falloff of 0.2 hides the fog above about 100 m. Use falloff 0.02.
+  - Fog is `--fog 0.008 0.02`. The template's falloff of 0.2 hides the fog above about 100 m. Use falloff 0.02.
     Density 0.03 washes everything out, and 0.012 doesn't hide the map's edge. The map has a rim
     of ridges at its edge (`make_climb.terrain`) so the fog can stay light.
 
