@@ -89,10 +89,19 @@ MIXES = {"Rock": ("forest", "rocky_forest_path", "patches", 12.0)}
 
 
 def landscape_loaded():
-    return any(
-        isinstance(a, unreal.LandscapeProxy)
-        for a in unreal.EditorActorSubsystem().get_all_level_actors()
-    )
+    """Whether a loaded landscape draws with M_ClimbGround, directly or through an instance. (The
+    empty startup map has a landscape of its own, which a rebuild doesn't touch.)"""
+    for actor in unreal.EditorActorSubsystem().get_all_level_actors():
+        if not isinstance(actor, unreal.LandscapeProxy):
+            continue
+        material = actor.get_editor_property("landscape_material")
+        while material is not None:
+            if material.get_name() == "M_ClimbGround":
+                return True
+            if not isinstance(material, unreal.MaterialInstance):
+                break
+            material = material.get_editor_property("parent")
+    return False
 
 
 def ground_material():
@@ -104,7 +113,7 @@ def ground_material():
     tune(), which compiles nothing."""
     if landscape_loaded():
         raise RuntimeError(
-            "ground_material: a landscape is loaded, and rebuilding under it crashes the GPU. "
+            "ground_material: a landscape using it is loaded; rebuilding under it crashes the GPU. "
             "Restart the server (quit.py; ue_serve.sh brings it back on the empty map) first."
         )
     island.FOLDER = FOLDER
