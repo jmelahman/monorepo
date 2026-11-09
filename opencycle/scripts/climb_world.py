@@ -402,9 +402,9 @@ def road_material():
     stile = island.tile_cm("forest", "soil_mud")
     soil = g.mask(g.sample(island.ms_texture("forest", "soil_mud", "D"), g.world_uv(stile)), "rgb")
     colour = g.lerp(colour, g.mul(soil, 0.8), g.mul(edge, 0.85))
-    leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.66), 7.0))
+    leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.72), 7.0))
     leaves = g.mul(leaves, g.lerp(g.const(0.12), g.const(1.0), edge))
-    leaf_colour = g.mul(g.const((0.16, 0.085, 0.035)), g.world_noise(0.03, 0.6, 1.4, 2))
+    leaf_colour = g.mul(g.const((0.11, 0.07, 0.04)), g.world_noise(0.03, 0.6, 1.4, 2))
     colour = g.lerp(colour, leaf_colour, leaves)
     rough = g.lerp(rough, g.const(0.92), g.saturate(g.add(edge, leaves)))
     g.output(colour, normal, rough, specular=0.4, ao=g.mask(masks, "r"))
@@ -433,9 +433,9 @@ def rails(material, posts_material=None):
             height = rng.uniform(-5, 4)
             parts.add(
                 cylinder,
-                (x, y, z + 42 + height / 2),
+                (x, y, z + 35 + height / 2),
                 rng.uniform(0, 360),
-                (0.14 + rng.uniform(-0.015, 0.02), 0.14, (115 + height) / 100),
+                (0.14 + rng.uniform(-0.015, 0.02), 0.14, (130 + height) / 100),
                 pitch=lean,
                 roll=rng.gauss(0, 1.6),
             )

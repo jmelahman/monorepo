@@ -53,7 +53,7 @@ assets = lib.assets
 SURFACES = {
     "Grass": ("shared", "uncut_grass", (0.72, 0.76, 0.6)),
     # Brown needle and leaf litter: the scanned forest floor alone is olive green and read as lawn.
-    "Forest": ("mountain", "alpine_needles", (0.62, 0.55, 0.48)),
+    "Forest": ("mountain", "alpine_needles", (0.5, 0.46, 0.44)),
     "Rock": ("mountain", "granite_rocky_ground", (0.85, 0.85, 0.85)),
     "Snow": ("coast", "thai_wet_sand", (1.0, 1.0, 1.0)),
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
@@ -688,6 +688,7 @@ POST_KEYS = {
     "shafts": "sun: volumetric scattering intensity, 1 neutral",
     "sky": "sky light: intensity, 1 neutral",
     "sun": "sun: intensity in lux",
+    "contact": "sun: contact shadow length, screen fraction (0.05 grounds posts)",
 }
 POST_LABEL = "OC Post"
 
@@ -735,17 +736,19 @@ def _post(post):
             if "fog_start" in post:
                 comp.set_editor_property("start_distance", float(post["fog_start"]) * 100)
             if "volumetric" in post:
-                comp.set_editor_property("volumetric_fog", bool(post["volumetric"]))
+                comp.set_editor_property("enable_volumetric_fog", bool(post["volumetric"]))
     if "sky" in post:
         for sky in _level_actors(unreal.SkyLight):
             sky.light_component.set_editor_property("intensity", float(post["sky"]))
-    if "sun" in post or "shafts" in post:
+    if {"sun", "shafts", "contact"} & set(post):
         for sun in _level_actors(unreal.DirectionalLight):
             comp = sun.light_component
             if "sun" in post:
                 comp.set_editor_property("intensity", float(post["sun"]))
             if "shafts" in post:
                 comp.set_editor_property("volumetric_scattering_intensity", float(post["shafts"]))
+            if "contact" in post:
+                comp.set_editor_property("contact_shadow_length", float(post["contact"]))
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     log(f"post {post}")
 

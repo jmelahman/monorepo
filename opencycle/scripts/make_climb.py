@@ -68,7 +68,7 @@ def terrain(x, y):
     base = FLANK * (np.sqrt(up * up + 60.0**2) + up) / 2
     base += 0.28 * np.clip(-up - 120, 0, None)
     # Spurs and gullies run down the slope: stretched along Y, varying across X.
-    gully = (mi.fbm(x * 1.0, y * 0.35, 160, 4, SEED) - 0.5) * 34
+    gully = (mi.fbm(x * 1.0, y * 0.35, 160, 4, SEED) - 0.5) * 18
     swell = (mi.fbm(x, y, 420, 3, SEED + 7) - 0.5) * 40
     crag = (mi.ridged(x, y, 90, 4, SEED + 13) - 0.35) * 9 * mi.smoothstep(100, 400, up)
     bumps = (mi.fbm(x, y, 14, 3, SEED + 21) - 0.5) * 1.6
@@ -89,7 +89,7 @@ def at(xy):
 
 def lay_road(h):
     xy = mi.catmull(PLAN, False)
-    z = np.maximum(mi.smooth(mi.sample(h, xy), 40, False), 1.0)
+    z = np.maximum(mi.smooth(mi.sample(h, xy), 20, False), 1.0)
     z = mi.grade_fit(z, {}, False)
     return {"hero": {"xy": xy, "z": z, "closed": False}}
 
@@ -154,7 +154,15 @@ def trees(h, road_dist, slope, grass):
         & (rng.random(d.shape) < wood * 0.92 * np.where(d < reach, 1.0, FAR))
     )
     px, py, row, col = px[keep], py[keep], row[keep], col[keep]
-    z = h[row, col]
+    # The lowest ground under the trunk, so it stands in the slope rather than on its high side.
+    z = np.min(
+        [
+            h[np.clip(row + i, 0, RES - 1), np.clip(col + j, 0, RES - 1)]
+            for i in (-1, 0, 1)
+            for j in (-1, 0, 1)
+        ],
+        axis=0,
+    )
     # The change from beech to spruce, in metres of height, wandering with noise.
     line = 95 + 30 * (mi.fbm(px, py, 150, 3, SEED + 60) - 0.5)
     spruce = rng.random(z.shape) < mi.smoothstep(line - 25, line + 25, z)
@@ -173,7 +181,7 @@ def trees(h, road_dist, slope, grass):
                 "spruce" if s else "beech",
                 round(float(xm) * 100, 1),
                 round(float(ym) * 100, 1),
-                round(float(zm) * 100 - 15, 1),
+                round(float(zm) * 100 - 30, 1),
                 round(float(rng.uniform(0, 360)), 1),
                 round(float(size), 3),
             ]
