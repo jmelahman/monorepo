@@ -384,6 +384,11 @@ def cmd_rebuild_ground(ns):
     return wait(submit("stills", {"shots": shots(ns)}), ns.timeout)
 
 
+def cmd_reimport_plants(ns):
+    restart_clean(ns)  # no level loaded: no grass is drawing with the textures being replaced
+    return wait(submit("reimport-plants", {}), ns.timeout)
+
+
 def cmd_probe(ns):
     return run("probe", {"path": os.path.abspath(ns.path)}, ns)
 
@@ -474,6 +479,11 @@ def main(argv=None):
     )
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")
+    add(
+        "reimport-plants",
+        cmd_reimport_plants,
+        help="re-import the plants' D textures from fab_prep",
+    )
     s = add("stills", cmd_stills, help="stills from the editor viewport")
     s.add_argument("--shots")
     s = add("rebuild-ground", cmd_rebuild_ground, help="restart on the empty map, rebuild, stills")

@@ -308,6 +308,35 @@ def _keep_alpha_coverage(biome, slug):
     log(f"alpha coverage kept in {slug}'s mips")
 
 
+def op_reimport_plants():
+    """Re-imports every plant's D texture (colour, cut-out in alpha) from fab_prep in place,
+    after `OC_FORCE=1 OC_ONLY=... prep_megascans.py` has redone it. Meshes and materials keep
+    their references, so nothing else needs rebuilding."""
+    with open(f"{PREP}/index.json") as f:
+        plants = [r for r in json.load(f) if r["kind"] == "plant" and r["opacity"]]
+    for record in plants:
+        biome, slug = record["biome"], record["slug"]
+        task = unreal.AssetImportTask()
+        task.filename = f"{PREP}/{biome}/{slug}/D.png"
+        task.destination_path = f"{MS}/{biome}/{slug}"
+        task.destination_name = f"T_{slug}_D"
+        task.replace_existing = True
+        task.automated = True
+        task.save = False
+        unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+        texture = unreal.load_asset(f"{MS}/{biome}/{slug}/T_{slug}_D")
+        texture.set_editor_property("srgb", True)
+        texture.set_editor_property(
+            "compression_settings", unreal.TextureCompressionSettings.TC_DEFAULT
+        )
+        texture.set_editor_property("do_scale_mips_for_alpha_coverage", False)
+        assets.save_loaded_asset(texture, False)
+        _keep_alpha_coverage(biome, slug)
+        log(f"reimported {slug}'s colour and cut-out")
+        yield 5
+    return {"notes": [f"{len(plants)} plants reimported"]}
+
+
 def _grass_type(layer):
     gt = lib.fresh(
         f"GT_{layer}",

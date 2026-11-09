@@ -3,7 +3,7 @@
 
 Run: python3 -I scripts/prep_megascans.py. It needs Pillow, which it looks for in $OC_PYLIB
 (default /opt/oc-pylib; pip install --target there). Assets already prepared are skipped;
-OC_FORCE=1 redoes them.
+OC_FORCE=1 redoes them, or with OC_ONLY (a comma list of slugs) only those.
 
 Per asset, in /workspace/ue/fab_prep/<biome>/<slug>/:
 - D.png: base colour, with the opacity in alpha for plants.
@@ -29,6 +29,7 @@ SRC = Path("/workspace/ue/fab")
 OUT = Path("/workspace/ue/fab_prep")
 SIZE = 2048
 FORCE = os.environ.get("OC_FORCE") == "1"
+ONLY = set(filter(None, (os.environ.get("OC_ONLY") or "").split(",")))
 # Quixel ships one normal style for everything; OC_NORMALS=probe prints each asset's score instead.
 OPENGL = os.environ.get("OC_NORMALS", "gl") == "gl"
 
@@ -50,6 +51,17 @@ def load(path, mode):
     if img.size != (SIZE, SIZE):
         img = img.resize((SIZE, SIZE), Image.Resampling.LANCZOS)
     return img
+
+
+def cutout(path):
+    """A plant's opacity mask, from its strongest channel and stretched to full range. Most packs
+    keep it in one colour channel: read as grey, pure red is 76 of 255, under the plant material's
+    0.33 clip, and every frond and blade was cut away."""
+    mask, *rest = load(path, "RGB").split()
+    for channel in rest:
+        mask = ImageChops.lighter(mask, channel)
+    top = max(mask.getextrema()[1], 1)
+    return mask.point(lambda v: min(255, v * 255 // top))
 
 
 def opengl_score(normal, height):
@@ -83,13 +95,13 @@ def prep(job):
         if not link.exists():
             os.link(fbx, link)
     done = out / "asset.json"
-    if done.exists() and not FORCE:
+    if done.exists() and not (FORCE and (not ONLY or folder.name in ONLY)):
         return {**json.loads(done.read_text()), "kind": kind}
 
     colour = load(find(folder, "BaseColor"), "RGB")
     opacity = find(folder, "Opacity")
     if opacity:
-        colour.putalpha(load(opacity, "L"))
+        colour.putalpha(cutout(opacity))
     colour.save(out / "D.png")
 
     height_src = find(folder, "Displacement") or find(folder, "Bump")
