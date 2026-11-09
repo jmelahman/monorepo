@@ -573,6 +573,8 @@ def stand_landmarks(world):
     if "landmarks" in tags:
         raise RuntimeError(f"{LEVEL} has its landmarks: run OC_STAGE=level to build it afresh")
     landmarks()
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    # Tagged only once they are saved, so a run stopped part way leaves the level to run again.
     sea_actor.set_editor_property("tags", [*tags, "landmarks"])
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL)
