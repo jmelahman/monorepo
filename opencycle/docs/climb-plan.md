@@ -97,6 +97,17 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, night: **the loop is `scripts/oc.py`** (run from /workspace/ue). It's one command
+  that blocks until the job is done, failed or crashed, and says which on its last line.
+  - Commands: `oc.py look --tint Dirt=r,g,b --grey Rock=0.75 [--shots road_72]`, then `stills`,
+    `rebuild-ground`, `status`, `wait JOB`.
+  - A look change with one still takes 16 s.
+  - It starts its own supervised editor (`oc_supervisor.sh` runs `oc_server.py`).
+  - `oc_climb.py` holds the climb's material and ops, with no island_world monkeypatching.
+  - The `ue_serve` and `out/cmd` entry below is superseded.
+  - Look set so far: the Dirt shoulders are tinted 0.62,0.63,0.65 with grey 0.85, Rock has
+    grey 0.75, and Rock mix has grey 0.6.
+
 - 2026-11-09, evening: the crash rules are enforced in code, not kept in memory.
   - Start the server with `nohup bash scripts/ue_serve.sh >out/serve_supervisor.log 2>&1 &`
     from /workspace/ue. When the editor dies, the supervisor marks the running command
