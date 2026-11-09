@@ -35,8 +35,6 @@ These projects are still in active development but may be considered "stable".
 ## Unfinished Projects
 
 - [AgileCBT](https://github.com/jmelahman/AgileCBT)
-- [cycle-cli](https://github.com/jmelahman/cycle-cli)
-- [docker-status](https://github.com/jmelahman/docker-status)
 - [local-ai-detection](https://github.com/jmelahman/local-ai-detection)
 - [notebook](https://github.com/jmelahman/notebook)
 - [smart-lights](https://github.com/jmelahman/smart-lights)

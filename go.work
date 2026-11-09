@@ -6,8 +6,6 @@ use (
 	./ai-detection
 	./check-symlinks
 	./connections
-	./cycle-cli
-	./cycle-lights
 	./docker-status
 	./git-orchard
 	./kev-go

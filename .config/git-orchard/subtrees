@@ -40,14 +40,6 @@
 	shared = pypi
 	shared = manygo
 	shared = pybuild
-[subtree "cycle-cli"]
-	remote = git@github.com:jmelahman/cycle-cli.git
-	branch = master
-	shared = base
-	shared = go
-	shared = goreleaser
-	shared = manygo
-	shared = pybuild
 [subtree "docker-status"]
 	remote = git@github.com:jmelahman/docker-status.git
 	branch = master
