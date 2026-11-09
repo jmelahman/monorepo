@@ -416,6 +416,6 @@ def finish():
 # Loaded by a ue_serve.py command (OC_LIBRARY set), it only defines main() for the command to run.
 if not globals().get("OC_LIBRARY"):
     # -ExecutePythonScript closes the editor once the script returns unless told not to.
-    unreal.EditorPythonScriptingLibrary.set_keep_python_script_alive(True)
+    unreal.EditorPythonScripting.set_keep_python_script_alive(True)
     steps = main()
     handle = unreal.register_slate_post_tick_callback(tick)

@@ -92,6 +92,6 @@ def tick(_delta):
 os.makedirs(CMD, exist_ok=True)
 # -ExecutePythonScript closes the editor on the first tick after the script returns unless told not
 # to.
-unreal.EditorPythonScriptingLibrary.set_keep_python_script_alive(True)
+unreal.EditorPythonScripting.set_keep_python_script_alive(True)
 handle = unreal.register_slate_post_tick_callback(tick)
 log(f"ready, watching {CMD}")
