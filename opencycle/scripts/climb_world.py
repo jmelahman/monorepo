@@ -79,19 +79,42 @@ def log(message):
     unreal.log(f"CLIMB {message}")
 
 
+# The island's rock (stony soil) renders red-brown on the cut banks and its dirt (gravel on soil
+# with dirt road) as yellow sand on the shoulders: a mountain road's are grey granite and gravel.
+SURFACES = {
+    "Rock": ("mountain", "granite_rocky_ground", (0.85, 0.85, 0.85)),
+    "Dirt": ("shared", "gravel", (0.8, 0.8, 0.8)),
+}
+MIXES = {"Rock": ("forest", "rocky_forest_path", "patches", 12.0)}
+
+
+def ground_material():
+    """M_ClimbGround, rebuilt with this climb's surfaces; the saved grass types are reused
+    (building them takes over ten minutes, on one core) unless OC_REBUILD is set."""
+    island.FOLDER = FOLDER
+    island.GRASS = GRASS
+    island.SURFACES.update(SURFACES)
+    island.MIXES.pop("Dirt", None)
+    island.MIXES.update(MIXES)
+    grass = {}
+    for layer in GRASS:
+        saved = unreal.load_asset(f"{FOLDER}/Grass/GT_{layer}")
+        grass[layer] = (
+            saved if saved and not os.environ.get("OC_REBUILD") else island.grass_type(layer)
+        )
+    return island.Ground("M_ClimbGround").build(grass)
+
+
 def materials():
     """The ground, its grass and the road, island_world.py's made in this folder. Saved ones are
-    reused (building the grass types alone takes over ten minutes, on one core) unless
-    OC_REBUILD is set."""
+    reused unless OC_REBUILD is set."""
     island.FOLDER = FOLDER
     ground = unreal.load_asset(f"{FOLDER}/M_ClimbGround")
     road = unreal.load_asset(f"{FOLDER}/Road/M_IslandRoad")
     if ground and road and not os.environ.get("OC_REBUILD"):
         log("materials: reusing the saved ones")
         return ground, road
-    island.GRASS = GRASS
-    grass = {layer: island.grass_type(layer) for layer in GRASS}
-    return island.Ground("M_ClimbGround").build(grass), island.road_material()
+    return ground_material(), island.road_material()
 
 
 def landscape(world, ground):
@@ -346,19 +369,19 @@ def cameras():
 
 
 def stills(world):
+    """Shot from the editor's own viewport, moved to each view: a stand-alone camera doesn't
+    drive grass, texture streaming or tree LODs, so its shots had no grass and blocky trees."""
     os.makedirs(STILLS, exist_ok=True)
-    camera = lib.spawn(unreal.CameraActor, label="Stills camera")
-    camera.camera_component.set_editor_property("field_of_view", 75.0)
+    editor = unreal.UnrealEditorSubsystem()
     yield 60  # let the level's streaming, Nanite and lighting settle
     for name, where, target in cameras():
         eye = unreal.Vector(*where)
         rot = unreal.MathLibrary.find_look_at_rotation(eye, unreal.Vector(*target))
-        camera.set_actor_location_and_rotation(eye, rot, False, False)
-        yield 90  # textures and shadows stream in around the new view
-        unreal.AutomationLibrary.take_high_res_screenshot(1280, 720, f"{STILLS}/{name}.png", camera)
+        editor.set_level_viewport_camera_info(eye, rot)
+        yield 120  # grass, textures and shadows stream in around the new view
+        unreal.AutomationLibrary.take_high_res_screenshot(1280, 720, f"{STILLS}/{name}.png")
         yield 30  # the shot is written a few frames later
         log(f"still {STILLS}/{name}.png")
-    actors.destroy_actor(camera)
 
 
 def open_level():
