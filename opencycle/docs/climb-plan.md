@@ -97,7 +97,22 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
-- 2026-11-09, night (batch, building): **one rebuild for ground, ferns and banks.**
+- 2026-11-09, night (storybook v11): **ground cover renders.** The batch below built cleanly,
+  then a look pass set plants to 0.62,0.62,0.5 and grass to ×1.2.
+  - Sonnet QA: road_08 6, road_30 6, road_50 6, road_72 5, road_95 5, hairpin_above 5, bench 6
+    (up from 5, 5, 5, 4, 5, 6, 5).
+  - Open, in order (the next batch):
+    1. Ferns too saturated and uniform: darker olive, per-instance colour variation, some dead
+       or brown fronds, varied scale.
+    2. Bank soil pale beige with a glittery specular: roughness about 0.9, browner, a finer
+       detail normal, stones and roots. The visible banks are the Forest layer.
+    3. Tarmac blue-grey with hard clean edges: warmer and darker, worn gravelly edges, litter.
+    4. Cover between ferns too sparse: moss, grass and litter under them.
+    5. hairpin_above: the far slope is smeared and the haze milky. Cover the far slope, thin
+       the fog.
+    6. `fern`'s UVs only partly match its atlas; trunks are clean grey cylinders.
+
+- 2026-11-09, night (batch): **one rebuild for ground, ferns and banks.**
   - Diagnosed first. A 1080p still with a 3 GB streaming pool made the trunks crisp but not the
     ground, so the blur comes from the material. The textures are 2K in the World group.
   - The green/brown blotches came from the olive `forest_floor` mixed into the bank soil and the

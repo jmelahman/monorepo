@@ -44,12 +44,15 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 - **Current look:**
   - Tints and greys live in `oc_climb.LOOK_TINTS` / `LOOK_GREYS` and are applied by every
     ground build; `look --tint/--grey` is only for trying values.
-  - Grass is `--grass 2.0 1.5`. Fog is `--fog 0.008 0.02` (the template's falloff of 0.2 hides the
-    fog above about 100 m; 0.03 washes everything out). The map has a rim of ridges at its edge.
+  - Grass is `--grass 1.2 1.5` and plants `--plants 0.62,0.62,0.5` (a Tint on every MI_<plant>).
+    Fog is `--fog 0.006 0.02` (the template's falloff of 0.2 hides the fog above about 100 m; 0.03
+    washes everything out). The map has a rim of ridges at its edge.
+  - Stills wait `STILL_SETTLE` (480) frames per view so grass finishes building; 120 left bare
+    stretches. `look` takes only `bench` unless you pass `--shots`.
   - `look --post KEY=F` (repeatable) sets the grade on an "OC Post" volume: exposure, contrast,
     saturation, vignette, fog_start (m), volumetric (0/1), shafts, sky, sun. build-level loses
-    fog and post settings, so re-run look after it. Last used: exposure=0.3 contrast=1.1
-    saturation=0.95 vignette=0.3 fog_start=150 volumetric=1.
+    fog and post settings, so re-run look after it. Last used: exposure=0.2 contrast=1.1
+    saturation=0.95 vignette=0.3 fog_start=150 volumetric=0 contact=0.05.
 - **Rebuilds:** a change to the GRASS table needs `rebuild-ground --rebuild-grass`. It builds the
   1M-tri prop meshes one at a time first (all at once crashed Vulkan); give it `--timeout 2400`.
 
