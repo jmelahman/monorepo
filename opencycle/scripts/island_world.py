@@ -74,7 +74,8 @@ FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
 
 # Grass per layer: (biome, slug, instances per 100 m^2 (Unreal's 10 m square) of each of the scan's
 # meshes, cull start, cull end in cm, and for rocks and logs the scale range). A meadow wants
-# several clumps a square metre.
+# several clumps a square metre. Scans whose meshes take 5 GB or more to build are left out:
+# with the rest of the editor they run the machine out of memory.
 GRASS = {
     "Grass": (
         ("shared", "wild_grass", 40.0, 3500, 5000),
@@ -97,18 +98,15 @@ GRASS = {
         ("forest", "mossy_rocks", 0.25, 8000, 11000, (0.8, 2.2)),
         ("forest", "nordic_forest_rock_small", 0.3, 6000, 9000, (0.8, 2.0)),
         ("forest", "nordic_forest_cluster_rock_medium", 0.08, 9000, 12000, (0.8, 1.8)),
-        ("forest", "fallen_log", 0.15, 7000, 10000, (1.0, 2.0)),
-        ("forest", "mossy_wood_stump", 0.06, 7000, 10000, (0.7, 1.2)),
         ("forest", "nordic_forest_tree_trunk_spruce_large", 0.08, 7000, 10000, (0.8, 1.3)),
-        ("forest", "birch_tree_trunk", 0.05, 7000, 10000, (0.8, 1.2)),
+        ("forest", "oak_tree_trunk", 0.05, 7000, 10000, (0.8, 1.2)),
     ),
     "Desert": (
         ("desert", "dry_grass", 1.2, 4000, 6000),
         ("desert", "dead_shrubs", 0.15, 6000, 9000),
         ("desert", "desert_american_plant_cactus_medium_11", 0.01, 12000, 16000),
         ("desert", "desert_american_plant_branch_cactus_large_03", 0.005, 15000, 20000),
-        ("desert", "rock_sandstone", 0.6, 5000, 8000, (0.8, 2.5)),
-        ("desert", "canyon_sandstone_boulder", 0.25, 7000, 10000, (1.0, 3.0)),
+        ("desert", "canyon_sandstone_boulder", 0.5, 7000, 10000, (0.8, 3.0)),
         ("desert", "desert_western_cluster_rock_medium_05", 0.04, 10000, 14000, (0.8, 1.6)),
         ("desert", "desert_western_ground_patch_rocky_02", 0.05, 6000, 9000, (0.8, 1.4)),
     ),

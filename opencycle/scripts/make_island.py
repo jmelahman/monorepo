@@ -831,7 +831,6 @@ LANDMARKS = (
     ("desert/desert_western_spire_layered_xl_04", 4, "desert", (60, 320), (1.0, 1.6), 14),
     ("desert/canyon_sandstone_hoodoo", 6, "desert", (45, 260), (0.9, 1.6), 10),
     ("desert/desert_western_ledge_rock_layered_xl_01", 4, "desert", (40, 240), (0.8, 1.3), 11),
-    ("desert/huge_canyon_sandstone_mesa", 3, "desert", (50, 300), (1.0, 1.5), 8),
     ("desert/sandstone_rock_formation", 14, "desert", (12, 140), (1.2, 3.0), 2),
     ("mountain/massive_tundra_rock_formation", 5, "mountain", (50, 320), (0.8, 1.4), 13),
     ("mountain/sharp_cliff", 3, "mountain", (60, 320), (0.8, 1.2), 10),
