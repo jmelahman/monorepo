@@ -374,6 +374,10 @@ def cmd_rebuild_ground(ns):
     return wait(submit("stills", {"shots": shots(ns)}), ns.timeout)
 
 
+def cmd_fps(ns):
+    return run("fps", {"quality": ns.quality, "frames": ns.frames, "shots": shots(ns)}, ns)
+
+
 def cmd_static_trees(ns):
     restart_clean(ns)  # no level loaded: the skeletal trees aren't in use
     return wait(submit("static-trees", {}), ns.timeout)
@@ -456,6 +460,10 @@ def main(argv=None):
     s = add("build-level", cmd_build_level, help="rebuild L_Hero from world_gen/climb")
     s.set_defaults(timeout=1800.0)  # the ground stage imports the landscape: minutes
     add("static-trees", cmd_static_trees, help="static Nanite copies of the PVE trees")
+    s = add("fps", cmd_fps, help="frame times at each still's view (quality 0 Low .. 3 Epic)")
+    s.add_argument("--quality", type=int, default=0)
+    s.add_argument("--frames", type=int, default=240)
+    s.add_argument("--shots")
     s = add("wait", cmd_wait, help="resume waiting for a job after a timeout")
     s.add_argument("job")
     s = add("log", cmd_log, help="the editor log tail")

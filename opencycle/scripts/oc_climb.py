@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import re
+import time
 
 import unreal
 
@@ -608,6 +609,39 @@ def _stills(shots, out):
         files.append(path)
         log(f"still {path}")
     return files
+
+
+def op_fps(quality=0, frames=240, shots=None):
+    """Frame times at each still's view, at a scalability level (0 Low .. 3 Epic): the editor's
+    whole frame, so a pessimistic stand-in for the game's. Background throttling and vsync off."""
+    yield from _ensure_level()
+    perf = unreal.get_default_object(unreal.EditorPerformanceSettings)
+    perf.set_editor_property("throttle_cpu_when_not_foreground", False)
+    for command in (f"scalability {int(quality)}", "r.VSync 0", "t.MaxFPS 0"):
+        unreal.SystemLibrary.execute_console_command(None, command)
+    editor = unreal.UnrealEditorSubsystem()
+    yield 60
+    notes = []
+    for name, where, target in cameras(shots):
+        eye = unreal.Vector(*where)
+        editor.set_level_viewport_camera_info(
+            eye, unreal.MathLibrary.find_look_at_rotation(eye, unreal.Vector(*target))
+        )
+        yield 150  # streaming settles
+        times = []
+        last = time.perf_counter()
+        for _ in range(int(frames)):
+            yield 1
+            now = time.perf_counter()
+            times.append((now - last) * 1000.0)
+            last = now
+        times.sort()
+        mean = sum(times) / len(times)
+        p95 = times[int(len(times) * 0.95)]
+        notes.append(f"{name}: {1000.0 / mean:.1f} fps (mean {mean:.1f} ms, p95 {p95:.1f} ms)")
+        log(notes[-1])
+    unreal.SystemLibrary.execute_console_command(None, "scalability 3")
+    return {"notes": [f"scalability {quality}", *notes]}
 
 
 def op_stills(shots=None, out=None):
