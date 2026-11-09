@@ -7,7 +7,8 @@ Run after make_climb.py and megascans.py:
     OC_EDITOR=1 bash scripts/ue_run.sh climb_world.py climb_world.log
 
 OC_STAGE picks what to build, so a change rebuilds only its part:
-- all (default): everything, the level made afresh;
+- all (default): everything, the level made afresh (saved after each part; tight on memory, so
+  ground then dress, as two runs, is the safer way to a whole build);
 - ground: the ground and road materials and the landscape in a fresh level, nothing on it;
 - dress: the saved level's road, rails, trees and ride track, cleared and placed again from
   make_climb.py's output. The ground and its materials are kept, so it runs in minutes:
@@ -290,11 +291,19 @@ def main():
     else:
         ground, road = materials()
         world = fresh_level(ground)
+    save(world)
     if STAGE != "ground":
         roads(road)
         rails(rail_material())
-        trees()
         track()
+        save(world)
+        # The trees last, saved on their own: thousands of actors on top of a fresh landscape
+        # got the editor killed for memory as it saved them all together.
+        trees()
+        save(world)
+
+
+def save(world):
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL)
     log(f"saved {LEVEL}")
