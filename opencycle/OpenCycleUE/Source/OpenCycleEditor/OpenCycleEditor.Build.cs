@@ -8,6 +8,6 @@ public class OpenCycleEditor : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		PublicDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine", "Landscape" });
-		PrivateDependencyModuleNames.AddRange(new[] { "UnrealEd", "AssetTools", "RHI" });
+		PrivateDependencyModuleNames.AddRange(new[] { "UnrealEd", "AssetTools", "RHI", "RenderCore" });
 	}
 }

@@ -12,6 +12,7 @@
 #include "Materials/MaterialInstanceConstant.h"
 #include "MaterialShared.h"
 #include "Misc/FileHelper.h"
+#include "RenderingThread.h"
 #include "ShaderCompiler.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
@@ -104,20 +105,32 @@ ALandscape* UWorldBuilderLibrary::MakeLandscape(UWorld* World, const FString& He
 			}
 		}
 	}
+	// A large landscape can lose the GPU partway through these steps. Finish each step's GPU work
+	// before the next is queued, and log each one with the free memory so a failure names its step.
+	auto Step = [](const TCHAR* Name) {
+		FlushRenderingCommands();
+		const uint64 FreeMB = FPlatformMemory::GetStats().AvailablePhysical / (1024 * 1024);
+		UE_LOG(LogWorldBuilder, Display, TEXT("MakeLandscape: %s done, %llu MB free"), Name, FreeMB);
+	};
+	Step(TEXT("import"));
 	ULandscapeSubsystem* Subsystem = World->GetSubsystem<ULandscapeSubsystem>();
 	if (Subsystem && GridSize > 0)
 	{
 		Subsystem->ChangeGridSize(Info, GridSize);
+		Step(TEXT("grid"));
 	}
 	// The editor does these on its tick, which a script never gives it: render the edit layers into
 	// the components' height and weight maps, give each component its material instance for the
 	// layers it holds, and bake the grass maps, then mark every proxy for saving.
 	Landscape->ForceUpdateLayersContent();
+	Step(TEXT("edit layers"));
 	Info->UpdateAllComponentMaterialInstances(true);
+	Step(TEXT("material instances"));
 	if (Subsystem)
 	{
 		using UE::Landscape::EBuildFlags;
 		Subsystem->BuildGrassMaps(EBuildFlags::ForceRebuild | EBuildFlags::WriteFinalLog);
+		Step(TEXT("grass maps"));
 		Subsystem->MarkModifiedLandscapesAsDirty(EBuildFlags::None);
 	}
 	Info->ForEachLandscapeProxy([](ALandscapeProxy* Proxy) {
