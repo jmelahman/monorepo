@@ -73,7 +73,8 @@ ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
 
 # Grass per layer: (biome, slug, instances per 100 m^2 (Unreal's 10 m square) of each of the scan's
-# meshes, cull start, cull end in cm). A meadow wants several clumps a square metre.
+# meshes, cull start, cull end in cm, and for rocks and logs the scale range). A meadow wants
+# several clumps a square metre.
 GRASS = {
     "Grass": (
         ("shared", "wild_grass", 40.0, 3500, 5000),
@@ -93,15 +94,35 @@ GRASS = {
         ("shared", "common_fern", 2.4, 4000, 6000),
         ("shared", "leather_fern", 1.2, 4000, 6000),
         ("shared", "grass_clumps", 6.0, 3000, 4500),
+        ("forest", "mossy_rocks", 0.25, 8000, 11000, (0.8, 2.2)),
+        ("forest", "nordic_forest_rock_small", 0.3, 6000, 9000, (0.8, 2.0)),
+        ("forest", "nordic_forest_cluster_rock_medium", 0.08, 9000, 12000, (0.8, 1.8)),
+        ("forest", "fallen_log", 0.15, 7000, 10000, (1.0, 2.0)),
+        ("forest", "mossy_wood_stump", 0.06, 7000, 10000, (0.7, 1.2)),
+        ("forest", "nordic_forest_tree_trunk_spruce_large", 0.08, 7000, 10000, (0.8, 1.3)),
+        ("forest", "birch_tree_trunk", 0.05, 7000, 10000, (0.8, 1.2)),
     ),
     "Desert": (
         ("desert", "dry_grass", 1.2, 4000, 6000),
         ("desert", "dead_shrubs", 0.15, 6000, 9000),
         ("desert", "desert_american_plant_cactus_medium_11", 0.01, 12000, 16000),
         ("desert", "desert_american_plant_branch_cactus_large_03", 0.005, 15000, 20000),
+        ("desert", "rock_sandstone", 0.6, 5000, 8000, (0.8, 2.5)),
+        ("desert", "canyon_sandstone_boulder", 0.25, 7000, 10000, (1.0, 3.0)),
+        ("desert", "desert_western_cluster_rock_medium_05", 0.04, 10000, 14000, (0.8, 1.6)),
+        ("desert", "desert_western_ground_patch_rocky_02", 0.05, 6000, 9000, (0.8, 1.4)),
     ),
-    "Sand": (("coast", "marram_grass", 4.5, 4000, 6000),),
-    "Rock": (("mountain", "alpine_bearberry", 0.8, 3000, 4500),),
+    "Sand": (
+        ("coast", "marram_grass", 4.5, 4000, 6000),
+        ("coast", "thai_beach_log", 0.03, 6000, 9000, (1.0, 1.6)),
+        ("coast", "nordic_beach_rocks", 0.03, 8000, 12000, (0.8, 1.6)),
+    ),
+    "Rock": (
+        ("mountain", "alpine_bearberry", 0.8, 3000, 4500),
+        ("mountain", "limestone_rocks", 0.15, 7000, 10000, (0.8, 1.8)),
+        ("mountain", "tundra_boulder", 0.05, 9000, 13000, (0.6, 1.6)),
+        ("mountain", "icelandic_rock_plates", 0.03, 8000, 12000, (0.7, 1.3)),
+    ),
 }
 SEA_LEVEL = 0.0
 
@@ -252,7 +273,7 @@ def grass_type(layer):
         unreal.LandscapeGrassTypeFactory(),
     )
     varieties = []
-    for biome, slug, density, cull_start, cull_end in GRASS[layer]:
+    for biome, slug, density, cull_start, cull_end, *scale in GRASS[layer]:
         meshes = [
             a
             for a in map(unreal.load_asset, assets.list_assets(f"{MS}/{biome}/{slug}", False))
@@ -267,9 +288,10 @@ def grass_type(layer):
             v.set_editor_property("start_cull_distance", unreal.PerPlatformInt(default=cull_start))
             v.set_editor_property("end_cull_distance", unreal.PerPlatformInt(default=cull_end))
             v.set_editor_property("scaling", unreal.GrassScaling.UNIFORM)
-            v.set_editor_property("scale_x", unreal.FloatInterval(0.85, 1.3))
+            v.set_editor_property("scale_x", unreal.FloatInterval(*(scale or [(0.85, 1.3)])[0]))
             v.set_editor_property("random_rotation", True)
-            v.set_editor_property("align_to_surface", density > 0.5)  # small plants only
+            # Lying things follow the slope; cacti and shrubs stand up straight.
+            v.set_editor_property("align_to_surface", density > 0.5 or bool(scale))
             v.set_editor_property("cast_dynamic_shadow", True)
             varieties.append(v)
     gt.set_editor_property("grass_varieties", varieties)
@@ -326,6 +348,34 @@ def roads(material):
         lib.mesh_actor(mesh, label=stem, folder="Road", materials={0: material})
         count += 1
     log(f"roads: {count} pieces")
+
+
+def landmarks():
+    """The rocks and the summit viewpoint make_island placed, from {SRC}/landmarks.json."""
+    path = f"{SRC}/landmarks.json"
+    if not os.path.exists(path):
+        log("no landmarks.json: none placed")
+        return
+    with open(path) as f:
+        placed = json.load(f)
+    meshes = {}
+    for k, item in enumerate(placed):
+        slug = item["mesh"]
+        if slug not in meshes:
+            meshes[slug] = next(
+                a
+                for a in map(unreal.load_asset, assets.list_assets(f"{MS}/{slug}", False))
+                if isinstance(a, unreal.StaticMesh)
+            )
+        lib.mesh_actor(
+            meshes[slug],
+            (item["x"] * 100, item["y"] * 100, item["z"] * 100),
+            yaw=item["yaw"],
+            scale=item["scale"],
+            label=f"{slug.split('/')[-1]}_{k}",
+            folder="Landmarks",
+        )
+    log(f"landmarks: {len(placed)}")
 
 
 def sea(extent_cm):
@@ -495,6 +545,7 @@ def main():
         raise RuntimeError("no landscape")
     log(f"landscape: {comps}x{comps} components of {quads} quads at {spacing:.0f} cm")
     roads(road)
+    landmarks()
     sea(half * 2)
     tracks()
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)

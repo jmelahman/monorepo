@@ -825,6 +825,78 @@ def paint(x, y, h, land, inland, weights, cliff, road_dist):
     return {k: out[k] for k in LAYERS}
 
 
+# Rock landmarks scattered where the riders see them: (Megascans biome/slug, how many, region,
+# nearest and farthest from a road (m), scale range, the mesh's half-width (m) at scale 1).
+LANDMARKS = (
+    ("desert/desert_western_spire_layered_xl_04", 4, "desert", (60, 320), (1.0, 1.6), 14),
+    ("desert/canyon_sandstone_hoodoo", 6, "desert", (45, 260), (0.9, 1.6), 10),
+    ("desert/desert_western_ledge_rock_layered_xl_01", 4, "desert", (40, 240), (0.8, 1.3), 11),
+    ("desert/huge_canyon_sandstone_mesa", 3, "desert", (50, 300), (1.0, 1.5), 8),
+    ("desert/sandstone_rock_formation", 14, "desert", (12, 140), (1.2, 3.0), 2),
+    ("mountain/massive_tundra_rock_formation", 5, "mountain", (50, 320), (0.8, 1.4), 13),
+    ("mountain/sharp_cliff", 3, "mountain", (60, 320), (0.8, 1.2), 10),
+    ("mountain/tundra_boulder", 16, "mountain", (10, 140), (1.0, 2.6), 1.5),
+    ("forest/nordic_forest_cliff_large", 4, "forest", (30, 200), (0.9, 1.4), 7),
+)
+
+
+def landmarks(h, weights, road_dist, roads):
+    """Where each landmark stands: in its region on gentle ground, clear of the roads by more
+    than its own half-width and apart from the others, sunk to the lowest ground under it so it
+    doesn't float on a slope. Plus the summit's viewpoint: a rail of barriers across the end of
+    the climb with snow banked either side."""
+    rng = np.random.default_rng(SEED + 200)
+    gy, gx = np.gradient(h, SPACING)
+    gentle = np.hypot(gx, gy) < 0.35
+    del gx, gy
+    placed, out = [], []
+
+    def put(slug, xm, ym, zm, yaw, scale):
+        out.append({"mesh": slug, "x": xm, "y": ym, "z": zm, "yaw": yaw, "scale": scale})
+
+    def at(xm, ym):
+        return round(ym / SPACING + (RES - 1) / 2), round(xm / SPACING + (RES - 1) / 2)
+
+    for slug, count, region, (near, far), (lo, hi), half in LANDMARKS:
+        clear = max(near, half * hi + ROAD_HALF + 4)
+        rows, cols = np.nonzero(
+            (weights[region] > 0.7) & gentle & (road_dist > clear) & (road_dist < far) & (h > 2)
+        )
+        found = 0
+        for k in rng.permutation(len(rows))[:5000]:
+            r, c = rows[k], cols[k]
+            xm, ym = (c - (RES - 1) / 2) * SPACING, (r - (RES - 1) / 2) * SPACING
+            gap = max(60.0, half * hi * 4)
+            if any(math.hypot(xm - px, ym - py) < max(gap, pg) for px, py, pg in placed):
+                continue
+            scale = float(rng.uniform(lo, hi))
+            reach = max(1, int(half * scale * 0.6 / SPACING))
+            zm = float(h[r - reach : r + reach + 1, c - reach : c + reach + 1].min()) - 0.3 * scale
+            put(slug, xm, ym, zm, float(rng.uniform(0, 360)), scale)
+            placed.append((xm, ym, gap))
+            found += 1
+            if found == count:
+                break
+        print(f"landmark {slug}: {found} of {count}")
+
+    # The viewpoint: past the top of the summit road, square across the way it arrives.
+    xy, z = roads["summit"]["xy"], roads["summit"]["z"]
+    top = int(np.argmax(z))
+    back = xy[max(top - 15, 0)]
+    ahead = xy[top] - back
+    ahead = ahead / (np.linalg.norm(ahead) + 1e-6)
+    side = np.array([-ahead[1], ahead[0]])
+    facing = math.degrees(math.atan2(side[1], side[0]))
+    for k in (-1.5, -0.5, 0.5, 1.5):  # four 3.2 m barriers in a row across the road's end
+        p = xy[top] + ahead * (ROAD_HALF + 4) + side * k * 3.3
+        put("urban/old_concrete_barrier", *map(float, p), float(h[at(*p)]) - 0.05, facing, 1.0)
+    for k, slug in ((-1, "mountain/snow_pile_xgxhcjxqx"), (1, "mountain/snow_pile_xeslbfbqx")):
+        p = xy[top] + side * k * (ROAD_HALF + 7)
+        put(slug, *map(float, p), float(h[at(*p)]) - 0.4, facing, 1.3)
+    print(f"viewpoint at {xy[top].round(0).tolist()}, {z[top]:.0f} m")
+    return out
+
+
 def write_maps(h, land, layers):
     q = np.clip(np.round(32768 + h * 100 * 128 / Z_SCALE), 0, 65535).astype("<u2")
     q.tofile(f"{OUT}/height.r16")
@@ -854,6 +926,8 @@ def main():
     preview(h, land, weights, roads, road_dist, cliff)
     profile(roads, ground)
     write_maps(h, land, paint(x, y, h, land, inland, weights, cliff, road_dist))
+    with open(f"{OUT}/landmarks.json", "w") as f:
+        json.dump(landmarks(h, weights, road_dist, roads), f)
     print(f"{OUT}: {RES}x{RES} at {SPACING:.2f} m, heights {h.min():.0f}..{h.max():.0f} m")
     pieces = 0
     for name, r in roads.items():
