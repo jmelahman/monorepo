@@ -366,6 +366,7 @@ def cmd_look(ns):
         "grass": ns.grass,
         "fog": ns.fog,
         "post": dict(parse_post(t) for t in ns.post or []),
+        "plants": [float(v) for v in ns.plants.split(",")] if ns.plants else None,
         "stills": not ns.no_stills,
         "shots": shots(ns),
     }
@@ -477,6 +478,7 @@ def main(argv=None):
         help="light and grade: exposure, contrast, saturation, vignette, fog_start (m),"
         " volumetric (0/1), shafts, sky, sun (see oc_climb.POST_KEYS)",
     )
+    s.add_argument("--plants", metavar="R,G,B", help="every plant's colour multiplier, 1 neutral")
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")
     add(

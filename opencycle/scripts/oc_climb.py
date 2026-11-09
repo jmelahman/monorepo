@@ -30,6 +30,9 @@ INSTANCE = "MI_ClimbGround"
 STILLS = "/workspace/ue/out/climb_stills"
 SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
 STILL_SIZE = (1920, 1080)
+# Frames to wait at each view: grass builds around the camera within a time budget, and at 120
+# frames whole wooded stretches were still bare.
+STILL_SETTLE = 480
 STILL_CVARS = ("r.Streaming.PoolSize 3000", "r.Streaming.FullyLoadUsedTextures 1")
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
 
@@ -898,7 +901,7 @@ def _stills(shots, out):
         editor.set_level_viewport_camera_info(
             eye, unreal.MathLibrary.find_look_at_rotation(eye, unreal.Vector(*target))
         )
-        yield 120  # grass, textures and shadows stream in around the new view
+        yield STILL_SETTLE  # grass, textures and shadows stream in around the new view
         unreal.AutomationLibrary.take_high_res_screenshot(*STILL_SIZE, path)
         for _ in range(30):
             yield 30  # the shot is written a few frames later
@@ -977,8 +980,33 @@ def op_stills(shots=None, out=None):
     return {"files": files}
 
 
+def _plant_tint(rgb):
+    """Sets every plant's MI "Tint" (their colour's multiplier, 1 neutral) and saves them: the
+    scanned ferns read lime green beside the reference woods."""
+    with open(f"{PREP}/index.json") as f:
+        plants = [r for r in json.load(f) if r["kind"] == "plant" and r["opacity"]]
+    edit = unreal.MaterialEditingLibrary
+    for r in plants:
+        path = f"{MS}/{r['biome']}/{r['slug']}/MI_{r['slug']}"
+        mi = unreal.load_asset(path) if assets.does_asset_exist(path) else None
+        if mi:
+            edit.set_material_instance_vector_parameter_value(
+                mi, "Tint", unreal.LinearColor(*rgb, 1.0)
+            )
+            assets.save_loaded_asset(mi, False)
+    return len(plants)
+
+
 def op_look(
-    tint=None, grey=None, grass=None, fog=None, post=None, stills=True, shots=None, out=None
+    tint=None,
+    grey=None,
+    grass=None,
+    fog=None,
+    post=None,
+    plants=None,
+    stills=True,
+    shots=None,
+    out=None,
 ):
     """Recolour through MI_ClimbGround's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
     0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
@@ -987,8 +1015,11 @@ def op_look(
         _tune({k: tuple(v) for k, v in (tint or {}).items()}, grey)
     if grass:
         _grass(*grass)
+    if plants:
+        _plant_tint(plants)
     yield
     notes = [f"tuned {tint} grey {grey}"] if tint or grey else []
+    notes += [f"plants tinted {plants}"] if plants else []
     notes += [f"grass {grass}"] if grass else []
     if fog is not None:
         yield from _ensure_level()
