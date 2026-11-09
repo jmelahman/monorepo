@@ -72,7 +72,8 @@ SURFACES = {
 # A second surface per layer and how it mixes in: "patches" (noise, metres across) or "wet"
 # (below that height in cm).
 MIXES = {
-    "Forest": ("forest", "forest_floor", "patches", 14.0),
+    # Moss in patches through the litter: QA found the floor between the ferns bare soil.
+    "Forest": ("forest", "mossy_forest_floor", "patches", 10.0),
     "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
     # The soil's litter is brown needles: olive forest_floor here made green splotches on brown.
     "Sand": ("mountain", "alpine_needles", "patches", 4.0),
@@ -81,16 +82,25 @@ MIXES = {
     "Dirt": ("mountain", "alpine_needles", "patches", 4.0),
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
-LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest mix": (0.8, 0.7, 0.75)}
+LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest mix": (0.75, 0.75, 0.62)}
 LOOK_GREYS = {
     "Grass": 0.15,
     "Rock": 0.3,
     "Rock mix": 0.3,
-    "Forest mix": 0.55,
+    "Forest mix": 0.3,
     "Dirt mix": 0.3,
     "Sand mix": 0.3,
 }
 ROUGHNESS = {"Snow": 0.55}
+# Every other layer is at least this rough: the scans' low roughness made the soil glitter.
+ROUGH_FLOOR = 0.75
+# Steep ground on these layers is shaded toward darker, browner soil ("<layer> steep" parameter):
+# the cut banks read pale beige against the reference photos' dark earth.
+STEEP = {
+    "Forest": (0.7, 0.6, 0.5),
+    "Sand": (0.7, 0.6, 0.5),
+    "Dirt": (0.7, 0.6, 0.5),
+}
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
@@ -115,6 +125,10 @@ GRASS = {
         ("shared", "lady_fern", 6.0, 4000, 6000),
         ("shared", "common_fern", 4.0, 4000, 6000),
         ("shared", "leather_fern", 2.0, 4000, 6000),
+        # Low cover, and dead stems among the ferns.
+        ("mountain", "alpine_bearberry", 3.0, 3000, 4500),
+        ("desert", "dry_grass", 1.5, 3000, 4500),
+        ("desert", "dead_shrubs", 0.3, 4000, 6000),
         # Tufts between the ferns, sparse: dense clumps made the woods' floor a lawn.
         ("shared", "grass_clumps", 3.0, 3000, 4500),
         ("shared", "wild_grass", 2.0, 3000, 4500),
@@ -255,6 +269,13 @@ class Ground:
             base["colour"] = g.mul(shade, g.param(f"{name} tint", tint))
         if name in ROUGHNESS:
             base["rough"] = g.const(ROUGHNESS[name])
+        else:
+            base["rough"] = g.op(unreal.MaterialExpressionMax, base["rough"], g.const(ROUGH_FLOOR))
+        if name in STEEP:
+            shade = g.lerp(
+                g.const((1.0, 1.0, 1.0)), g.param(f"{name} steep", STEEP[name]), self.steep
+            )
+            base["colour"] = g.mul(base["colour"], shade)
         return base
 
     def build(self, grass_types):
@@ -277,7 +298,7 @@ class Ground:
                 g.link(parts["height"], blend, f"Height {name}")
             outputs[prop] = blend
         g.output(
-            g.mul(outputs["colour"], self.macro), outputs["normal"], outputs["rough"], specular=0.35
+            g.mul(outputs["colour"], self.macro), outputs["normal"], outputs["rough"], specular=0.3
         )
         out = g.node(unreal.MaterialExpressionLandscapeGrassOutput)
         inputs = []
@@ -294,6 +315,66 @@ class Ground:
                 name,
             )
         return g.finish()
+
+
+PLANT_MASTER = f"{MS}/Materials/M_MS_Plant"
+
+
+def _plant_master():
+    """M_MS_Plant rebuilt in place (its instances keep their parent), as megascans.py builds it
+    but varied per instance: brightness by "Variation", and about one plant in "Dry share" turned
+    to "Dry tint". QA found the ferns one uniform saturated green. Rerunning megascans.py's assign
+    stage puts back the plain master; run rebuild-ground after it."""
+    folder, name = PLANT_MASTER.rsplit("/", 1)
+    g = _graph(name, folder)
+
+    def texture(param, kind, default):
+        node = g.node(unreal.MaterialExpressionTextureSampleParameter2D, x=-900)
+        node.set_editor_property("parameter_name", param)
+        node.set_editor_property(
+            "sampler_type",
+            {
+                "colour": unreal.MaterialSamplerType.SAMPLERTYPE_COLOR,
+                "normal": unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
+                "masks": unreal.MaterialSamplerType.SAMPLERTYPE_MASKS,
+            }[kind],
+        )
+        node.set_editor_property("texture", unreal.load_asset(default))
+        return node
+
+    d = texture("D", "colour", "/Engine/EngineResources/DefaultTexture")
+    n = texture("N", "normal", "/Engine/EngineMaterials/DefaultNormal")
+    m = texture("M", "masks", "/Engine/EngineResources/WhiteSquareTexture")
+    t = texture("T", "colour", "/Engine/EngineResources/DefaultTexture")
+    colour = g.mul(g.mask(d, "rgb"), g.mask(g.param("Tint", (1.0, 1.0, 1.0)), "rgb"))
+    luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
+    colour = g.lerp(colour, luma, g.param("Grey", 0.25))
+    rnd = g.node(unreal.MaterialExpressionPerInstanceRandom)
+    bright = g.add(g.const(1.0), g.mul(g.add(rnd, -0.5), g.param("Variation", 0.5)))
+    colour = g.mul(colour, bright)
+    second = g.link(g.mul(rnd, 7.13), g.node(unreal.MaterialExpressionFrac))
+    dry = g.saturate(g.mul(g.add(second, g.add(g.param("Dry share", 0.2), -1.0)), 20.0))
+    colour = g.lerp(colour, g.mul(colour, g.param("Dry tint", (1.5, 1.1, 0.55))), dry)
+    rough = g.saturate(g.mul(g.mask(m, "g"), g.param("Roughness", 1.0)))
+    sss = g.mul(g.mask(t, "rgb"), g.mask(g.param("TranslucencyTint", (0.5, 0.6, 0.4)), "rgb"))
+    g.output(
+        colour,
+        g.mask(n, "rgb"),
+        rough,
+        specular=0.4,
+        opacity_mask=g.mask(d, "a"),
+        subsurface=sss,
+        ao=g.mask(m, "r"),
+    )
+    material = g.material
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
+    material.set_editor_property("two_sided", True)
+    material.set_editor_property("opacity_mask_clip_value", 0.33)
+    material.set_editor_property("used_with_instanced_static_meshes", True)
+    material.set_editor_property("used_with_nanite", True)
+    g.finish()
+    log("rebuilt M_MS_Plant with per-instance variation")
 
 
 def _keep_alpha_coverage(biome, slug):
@@ -636,6 +717,8 @@ def op_rebuild_ground(rebuild_grass=False):
     """M_ClimbGround and MI_ClimbGround, rebuilt. Only on the empty map (see _guard_rebuild).
     Saved grass types are reused: building them takes over ten minutes, on one core."""
     _guard_rebuild()
+    _plant_master()
+    yield 20
     yield from _warm_grass_meshes()
     grass = {}
     for layer in GRASS:

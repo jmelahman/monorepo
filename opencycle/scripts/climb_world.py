@@ -369,7 +369,9 @@ def log_material():
     return g.finish()
 
 
-ROAD_DARKEN = 0.55  # the island's asphalt read washed-out grey on the climb
+ROAD_DARKEN = 0.5  # the island's asphalt read washed-out grey on the climb
+# Old country tarmac is warm grey-brown, not the scan's blue-grey (QA, v11).
+ROAD_WARM = (1.08, 1.0, 0.86)
 
 
 def road_material():
@@ -409,11 +411,14 @@ def road_material():
     colour = g.lerp(colour, g.mul(colour, 0.72), patch)
     colour = g.mul(colour, g.world_noise(0.001, 0.94, 1.04, 3))
     colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
+    colour = g.mul(colour, g.param("warm", ROAD_WARM))
     across = g.link(
         g.mask(g.node(unreal.MaterialExpressionTextureCoordinate), "r"),
         g.node(unreal.MaterialExpressionAbs),
     )
-    edge = g.saturate(g.mul(g.add(g.add(across, g.world_noise(0.02, -0.3, 0.3, 2)), -1.05), 2.5))
+    # The edge frays: soil and gravel reach 20-60 cm in, raggedly, so the tarmac has no clean line.
+    ragged = g.add(g.world_noise(0.02, -0.3, 0.3, 2), g.world_noise(0.15, -0.15, 0.15, 2))
+    edge = g.saturate(g.mul(g.add(g.add(across, ragged), -0.95), 2.2))
     stile = island.tile_cm("forest", "soil_mud")
     soil = g.mask(g.sample(island.ms_texture("forest", "soil_mud", "D"), g.world_uv(stile)), "rgb")
     colour = g.lerp(colour, g.mul(soil, 0.8), g.mul(edge, 0.85))
