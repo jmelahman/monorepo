@@ -360,10 +360,11 @@ def landmarks():
     for k, item in enumerate(placed):
         slug = item["mesh"]
         if slug not in meshes:
+            # Only the mesh: loading the folder's every asset brings in its textures, gigabytes.
             meshes[slug] = next(
-                a
-                for a in map(unreal.load_asset, assets.list_assets(f"{MS}/{slug}", False))
-                if isinstance(a, unreal.StaticMesh)
+                unreal.load_asset(path)
+                for path in assets.list_assets(f"{MS}/{slug}", False)
+                if str(assets.find_asset_data(path).asset_class_path.asset_name) == "StaticMesh"
             )
         lib.mesh_actor(
             meshes[slug],
