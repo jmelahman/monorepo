@@ -363,6 +363,62 @@ def op_ping():
     return {"notes": [f"map {_current_map()}"]}
 
 
+STATIC_TREES = f"{FOLDER}/Trees"
+
+
+def op_static_trees():
+    """Static copies of the PVE trees (SM_spruce, SM_beech in /Game/Climb/Trees), Nanite with
+    area preservation, so the climb can instance tens of thousands of them: the skeletal ones
+    overflow the GPU's skinning buffer. Run on a fresh editor (oc.py static-trees restarts)."""
+    import climb_world as cw
+
+    au, na = unreal.GeometryScript_AssetUtils, unreal.GeometryScript_NewAssetUtils
+    notes = []
+    for kind, path in cw.TREES.items():
+        sk = unreal.load_asset(path)
+        if not isinstance(sk, unreal.SkeletalMesh):
+            raise RuntimeError(f"{kind}: {path} is not a skeletal mesh")
+        yield
+        lod = unreal.GeometryScriptMeshReadLOD()
+        dm = unreal.DynamicMesh()
+        dm, outcome = au.copy_mesh_from_skeletal_mesh(
+            sk, dm, unreal.GeometryScriptCopyMeshFromAssetOptions(), lod
+        )
+        if outcome != unreal.GeometryScriptOutcomePins.SUCCESS:
+            raise RuntimeError(f"{kind}: copying {path} failed")
+        mats, _index, slots, outcome = au.get_lod_material_list_from_skeletal_mesh(sk, lod)
+        yield
+        target = f"{STATIC_TREES}/SM_{kind}"
+        if assets.does_asset_exist(target):
+            assets.delete_asset(target)
+        opts = unreal.GeometryScriptCreateNewStaticMeshAssetOptions()
+        opts.set_editor_property("enable_nanite", True)
+        opts.set_editor_property("enable_collision", False)
+        nanite = opts.get_editor_property("nanite_settings")
+        nanite.set_editor_property("enabled", True)
+        try:
+            nanite.set_editor_property(
+                "shape_preservation", unreal.NaniteShapePreservation.PRESERVE_AREA
+            )
+        except Exception as e:  # older engines: no area preservation
+            log(f"no shape_preservation: {e}")
+        opts.set_editor_property("nanite_settings", nanite)
+        sm, outcome = na.create_new_static_mesh_asset_from_mesh(dm, target, opts)
+        if outcome != unreal.GeometryScriptOutcomePins.SUCCESS or sm is None:
+            raise RuntimeError(f"{kind}: creating {target} failed")
+        yield
+        sm.set_editor_property(
+            "static_materials",
+            [unreal.StaticMaterial(m, slot) for m, slot in zip(mats, slots, strict=True)],
+        )
+        assets.save_loaded_asset(sm, False)
+        tris = dm.get_triangle_count() if hasattr(dm, "get_triangle_count") else "?"
+        notes.append(f"{kind}: {target}, {len(mats)} materials, {tris} triangles")
+        log(notes[-1])
+        yield
+    return {"notes": notes}
+
+
 def op_rebuild_ground(rebuild_grass=False):
     """M_ClimbGround and MI_ClimbGround, rebuilt. Only on the empty map (see _guard_rebuild).
     Saved grass types are reused: building them takes over ten minutes, on one core."""

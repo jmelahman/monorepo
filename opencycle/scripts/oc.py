@@ -374,6 +374,11 @@ def cmd_rebuild_ground(ns):
     return wait(submit("stills", {"shots": shots(ns)}), ns.timeout)
 
 
+def cmd_static_trees(ns):
+    restart_clean(ns)  # no level loaded: the skeletal trees aren't in use
+    return wait(submit("static-trees", {}), ns.timeout)
+
+
 def cmd_build_level(ns):
     """The whole level from world_gen/climb (run make_climb.py first): each stage on a freshly
     restarted editor, since the ground stage deletes L_Hero and the dress stage loads it."""
@@ -450,6 +455,7 @@ def main(argv=None):
     s.add_argument("--shots")
     s = add("build-level", cmd_build_level, help="rebuild L_Hero from world_gen/climb")
     s.set_defaults(timeout=1800.0)  # the ground stage imports the landscape: minutes
+    add("static-trees", cmd_static_trees, help="static Nanite copies of the PVE trees")
     s = add("wait", cmd_wait, help="resume waiting for a job after a timeout")
     s.add_argument("job")
     s = add("log", cmd_log, help="the editor log tail")
