@@ -348,6 +348,15 @@ def cmd_status(ns):
     return OK
 
 
+def parse_post(text):
+    """`exposure=-0.5` as ("exposure", -0.5): see oc_climb.POST_KEYS."""
+    key, _, value = text.partition("=")
+    try:
+        return key.strip(), float(value)
+    except ValueError:
+        raise SystemExit(f"--post {text!r}: use KEY=NUMBER") from None
+
+
 def cmd_look(ns):
     tints = dict(parse_tint(t) for t in ns.tint or [])
     greys = dict(parse_grey(t) for t in ns.grey or [])
@@ -356,6 +365,7 @@ def cmd_look(ns):
         "grey": greys,
         "grass": ns.grass,
         "fog": ns.fog,
+        "post": dict(parse_post(t) for t in ns.post or []),
         "stills": not ns.no_stills,
         "shots": shots(ns),
     }
@@ -454,6 +464,13 @@ def main(argv=None):
         nargs="+",
         metavar="F",
         help="height fog: DENSITY [FALLOFF]; the defaults are 0.02 and 0.2",
+    )
+    s.add_argument(
+        "--post",
+        action="append",
+        metavar="KEY=F",
+        help="light and grade: exposure, contrast, saturation, vignette, fog_start (m),"
+        " volumetric (0/1), shafts, sky, sun (see oc_climb.POST_KEYS)",
     )
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")

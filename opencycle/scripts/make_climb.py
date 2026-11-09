@@ -8,7 +8,8 @@ road grading and carving, and writes the same files island_world.py reads, to
 - height.r16, <Layer>.r8, info.json, layers.png, preview.png: the ground and its paint;
 - road_hero_<k>.gltf: the tarmac; routes.json: the ride, up and back down;
 - trees.json: [kind, x, y, z, yaw, scale] in cm, kind "beech" or "spruce";
-- rails.json: guard-rail runs on the drop side, each a list of [x, y, z] in cm.
+- rails.json: guard-rail runs on the drop side, each a list of [x, y, z] in cm;
+- props.json: [kind, x, y, z, yaw], a bench at the hairpin and woodpiles by the path.
 
 Coordinates are Unreal's: X east, Y south, metres, the origin in the middle.
 The road is a bike-only path, 3 m wide. The slope rises to the
@@ -101,6 +102,11 @@ def paint(x, y, h, road_dist):
     rock = mi.smoothstep(0.85, 1.1, slope) * mi.smoothstep(10.0, 25.0, road_dist)
     rock = np.maximum(rock, mi.smoothstep(1.2, 1.5, slope))
     shoulder = mi.smoothstep(mi.ROAD_HALF + 1.0, mi.ROAD_HALF + 0.2, road_dist)
+    # The cut and fill banks by the path are bare dark soil, as in the reference photos, rather
+    # than lawn humps; the edge wanders so it doesn't read as a painted band.
+    bank = mi.smoothstep(0.4, 0.6, slope + 0.15 * (mi.fbm(x, y, 6, 2, SEED + 50) - 0.5))
+    bank *= mi.smoothstep(16.0, 9.0, road_dist + 4 * mi.fbm(x, y, 11, 2, SEED + 51))
+    shoulder = np.maximum(shoulder, bank * (1 - rock))
     # Grass: the valley floor and clearings up the flank. In the woods the path's edge is leaf and
     # needle litter, not a lawn verge.
     floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
@@ -141,7 +147,9 @@ def trees(h, road_dist, slope, grass):
     clump *= 0.55 + 0.45 * mi.smoothstep(0.25, 0.55, mi.fbm(px, py, 14, 2, SEED + 71))
     wood = wood * np.clip(0.15 + 1.1 * clump, 0, 1)
     keep = (
-        (d > mi.ROAD_HALF + 3.0 + rng.uniform(0, 3, d.shape))
+        # Off the verge, and thinning in over ten metres rather than standing in a line along it.
+        (d > mi.ROAD_HALF + 2.5)
+        & (rng.random(d.shape) < mi.smoothstep(mi.ROAD_HALF + 2.5, mi.ROAD_HALF + 14, d))
         & (slope[row, col] < 1.0)
         & (rng.random(d.shape) < wood * 0.92 * np.where(d < reach, 1.0, FAR))
     )
@@ -170,6 +178,59 @@ def trees(h, road_dist, slope, grass):
                 round(float(size), 3),
             ]
         )
+    return out
+
+
+def props(h, road, road_dist):
+    """Things people left: a bench on the hairpin's outside looking down the valley, and stacks
+    of cut logs on flat spots beside the path. [kind, x, y, z, yaw] in cm and degrees."""
+    xy, z = road["xy"], road["z"]
+    d = np.gradient(xy, axis=0)
+    d /= np.linalg.norm(d, axis=1, keepdims=True)
+    out = []
+    apex = int(np.argmax(xy[:, 0]))  # the hairpin turns at the road's east end
+    for side in (-1, 1):
+        normal = np.array([-d[apex, 1], d[apex, 0]]) * side
+        p = xy[apex] + normal * (mi.ROAD_HALF + 2.2)
+        ground = mi.sample(h, p[None])[0]
+        if ground < z[apex] - 0.3:  # the drop side, behind the fence
+            continue
+        # On the uphill side, facing across the path and out over the valley (the bench's
+        # sitter looks along its +X).
+        yaw = np.degrees(np.arctan2(-normal[1], -normal[0]))
+        out.append(
+            [
+                "bench",
+                *(p * 100).round(1).tolist(),
+                round(float(ground) * 100, 1),
+                round(float(yaw), 1),
+            ]
+        )
+        break
+    rng = np.random.default_rng(SEED + 200)
+    placed = []
+    for k in rng.permutation(np.arange(80, len(xy) - 80)):
+        if len(placed) == 3:
+            break
+        if any(abs(k - j) < 200 for j in placed) or abs(k - apex) < 60:
+            continue
+        for side in (-1, 1):
+            normal = np.array([-d[k, 1], d[k, 0]]) * side
+            spot = xy[k] + normal * (mi.ROAD_HALF + 3.2)
+            ends = [spot + d[k] * 1.8, spot - d[k] * 1.8, spot + normal * 0.8]
+            hs = mi.sample(h, np.array(ends))
+            if np.ptp(hs) < 0.35 and abs(hs.mean() - z[k]) < 0.6:
+                yaw = np.degrees(np.arctan2(d[k, 1], d[k, 0]))
+                out.append(
+                    [
+                        "woodpile",
+                        *(spot * 100).round(1).tolist(),
+                        round(float(hs.min()) * 100, 1),
+                        round(float(yaw), 1),
+                    ]
+                )
+                placed.append(k)
+                break
     return out
 
 
@@ -236,6 +297,7 @@ def main():
     layers, slope, grass = paint(x, y, h, road_dist)
     tree_list = trees(h, road_dist, slope, grass)
     rail_runs = rails(h, road)
+    prop_list = props(h, road, road_dist)
     mi.OUT = OUT
     mi.write_maps(h, np.ones_like(h, dtype=bool), layers)
     preview(h, layers, road, tree_list)
@@ -252,6 +314,8 @@ def main():
         json.dump(tree_list, f)
     with open(f"{OUT}/rails.json", "w") as f:
         json.dump(rail_runs, f)
+    with open(f"{OUT}/props.json", "w") as f:
+        json.dump(prop_list, f)
     length = float(np.linalg.norm(np.diff(xy, axis=0), axis=1).sum())
     grade = np.diff(z) / np.linalg.norm(np.diff(xy, axis=0), axis=1)
     spruce = sum(t[0] == "spruce" for t in tree_list)
@@ -259,7 +323,8 @@ def main():
         f"{OUT}: ground {h.min():.0f}..{h.max():.0f} m; road {length:.0f} m from {z[0]:.0f} to"
         f" {z[-1]:.0f} m, mean {(z[-1] - z[0]) / length:.1%}, steepest {grade.max():.1%};"
         f" {len(pieces)} road pieces; trees {len(tree_list)} ({spruce} spruce);"
-        f" rails {len(rail_runs)} runs, {sum(map(len, rail_runs))} m"
+        f" rails {len(rail_runs)} runs, {sum(map(len, rail_runs))} m;"
+        f" props {[p[0] for p in prop_list]}"
     )
 
 

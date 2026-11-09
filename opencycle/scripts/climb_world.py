@@ -32,6 +32,7 @@ import importlib.util
 import json
 import math
 import os
+import random
 import traceback
 
 import unreal
@@ -287,12 +288,84 @@ def trees():
     log(f"trees: {placed}")
 
 
+def _noise_at(g, position, scale, low, high, levels=3):
+    noise = g.node(
+        unreal.MaterialExpressionNoise,
+        scale=scale,
+        quality=2,
+        levels=levels,
+        output_min=low,
+        output_max=high,
+    )
+    g.link(position, noise, "World Position")
+    return noise
+
+
+def _weathered(g, colour, grain_space):
+    """Old outdoor wood over `colour`: silvered in patches, lichen spots, moss on what faces up."""
+    colour = g.mul(colour, _noise_at(g, grain_space, 0.1, 0.7, 1.15))
+    silver = g.saturate(g.world_noise(0.004, -0.6, 1.4, 3))
+    colour = g.lerp(colour, g.const((0.15, 0.14, 0.13)), g.mul(silver, 0.7))
+    lichen = g.saturate(g.mul(g.add(g.world_noise(0.15, 0.0, 1.0, 2), -0.74), 8.0))
+    colour = g.lerp(colour, g.const((0.26, 0.27, 0.21)), g.mul(lichen, 0.7))
+    up = g.mask(g.node(unreal.MaterialExpressionVertexNormalWS), "b")
+    moss = g.mul(
+        g.saturate(g.mul(g.add(up, -0.55), 4.0)),
+        g.saturate(g.world_noise(0.012, -1.0, 2.0, 3)),
+    )
+    return g.lerp(colour, g.const((0.04, 0.065, 0.02)), moss), moss
+
+
+def timber_material(name, stretch):
+    """Weathered timber for the fence and the bench: grey-brown with grain along the local axis
+    that `stretch` shortens, damp and darker near the ground."""
+    g = lib.Graph(name, f"{FOLDER}/Rail")
+    local = g.node(unreal.MaterialExpressionLocalPosition)
+    grain_space = g.mul(local, g.const(stretch))
+    colour, moss = _weathered(g, g.param("timber", (0.075, 0.062, 0.05)), grain_space)
+    # The foot of a post: the instance's origin is 40 cm above the ground.
+    world_z = g.mask(g.node(unreal.MaterialExpressionWorldPosition), "b")
+    origin_z = g.mask(g.node(unreal.MaterialExpressionObjectPositionWS), "b")
+    rel = g.add(world_z, g.mul(origin_z, -1.0))
+    damp = g.saturate(g.mul(g.add(rel, 20.0), -1 / 20))
+    colour = g.lerp(colour, g.mul(colour, g.const((0.5, 0.52, 0.45))), damp)
+    g.output(colour, rough=g.lerp(g.const(0.86), g.const(0.95), moss), metallic=0.0)
+    return g.finish()
+
+
 def rail_material():
-    """Weathered timber, for the bike path's fence on the drop side: grey-brown, darker than it
-    looks here, since a flat 0.16 read as pale tan in the sun."""
-    g = lib.Graph("M_GuardRail", f"{FOLDER}/Rail")
-    colour = g.mul(g.param("timber", (0.075, 0.062, 0.05)), g.world_noise(0.02, 0.7, 1.2, 3))
-    g.output(colour, rough=0.9, metallic=0.0)
+    """The fence's rails: grain along their length (local X)."""
+    return timber_material("M_FenceRail", (0.5, 1.0, 1.0))
+
+
+def post_material():
+    """The fence's round posts: grain up their length (the cylinder's local Z)."""
+    return timber_material("M_FencePost", (1.0, 1.0, 0.5))
+
+
+def log_material():
+    """Cut logs in a stack: dark bark down the length (the cylinder's local Z), pale greyed cut
+    ends with rings."""
+    g = lib.Graph("M_StackedLog", f"{FOLDER}/Props")
+    local = g.node(unreal.MaterialExpressionLocalPosition)
+    bark = g.mul(
+        g.const((0.055, 0.042, 0.032)),
+        _noise_at(g, g.mul(local, g.const((1.0, 1.0, 0.15))), 0.25, 0.55, 1.3),
+    )
+    bark, _moss = _weathered(g, bark, g.mul(local, g.const((1.0, 1.0, 0.3))))
+    to_local = g.node(
+        unreal.MaterialExpressionTransform,
+        transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD,
+        transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL,
+    )
+    g.link(g.node(unreal.MaterialExpressionVertexNormalWS), to_local)
+    along = g.link(g.mask(to_local, "b"), g.node(unreal.MaterialExpressionAbs))
+    cap = g.saturate(g.mul(g.add(along, -0.8), 10.0))
+    radius = g.link(g.mask(local, "rg"), g.node(unreal.MaterialExpressionLength))
+    rings = g.link(g.mul(radius, 0.9), g.node(unreal.MaterialExpressionSine))
+    end = g.mul(g.const((0.34, 0.27, 0.19)), g.add(g.mul(rings, 0.08), 0.92))
+    end = g.mul(end, g.world_noise(0.05, 0.75, 1.1, 2))
+    g.output(g.lerp(bark, end, cap), rough=0.9, metallic=0.0)
     return g.finish()
 
 
@@ -306,39 +379,177 @@ def road_material():
     d, n, m = (island.ms_texture("urban", "asphalt_road", k) for k in ("D", "N", "M"))
     uv = g.world_uv(tile)
     masks = g.sample(m, uv, "masks")
-    colour = g.mul(g.mask(g.sample(d, uv), "rgb"), g.world_noise(0.001, 0.85, 1.08, 3))
+    colour = g.mask(g.sample(d, uv), "rgb")
+    normal = g.mask(g.sample(n, uv, "normal"), "rgb")
+    rough = g.mask(masks, "g")
+    # Wear: stretches of cracked old tarmac, darker patched repairs, soil and litter washed onto
+    # the edges, and fallen leaves, most of them near the edges.
+    ctile = island.tile_cm("shared", "cracked_asphalt")
+    cd, cn = (island.ms_texture("shared", "cracked_asphalt", k) for k in ("D", "N"))
+    cuv = g.world_uv(ctile, (0.21, 0.47))
+    cracked = g.saturate(g.mul(g.add(g.world_noise(0.0012, -1.0, 2.0, 3), -0.55), 5.0))
+    colour = g.lerp(colour, g.mul(g.mask(g.sample(cd, cuv), "rgb"), 0.9), cracked)
+    normal = g.lerp(normal, g.mask(g.sample(cn, cuv, "normal"), "rgb"), cracked)
+    patch = g.saturate(g.mul(g.add(g.world_noise(0.0009, 0.0, 1.0, 2), -0.7), 40.0))
+    colour = g.lerp(colour, g.mul(colour, 0.62), patch)
+    colour = g.mul(colour, g.world_noise(0.001, 0.85, 1.08, 3))
     colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
-    g.output(
-        colour,
-        g.mask(g.sample(n, uv, "normal"), "rgb"),
-        g.mask(masks, "g"),
-        specular=0.4,
-        ao=g.mask(masks, "r"),
+    across = g.link(
+        g.mask(g.node(unreal.MaterialExpressionTextureCoordinate), "r"),
+        g.node(unreal.MaterialExpressionAbs),
     )
+    edge = g.saturate(g.mul(g.add(g.add(across, g.world_noise(0.02, -0.3, 0.3, 2)), -1.05), 2.5))
+    stile = island.tile_cm("forest", "soil_mud")
+    soil = g.mask(g.sample(island.ms_texture("forest", "soil_mud", "D"), g.world_uv(stile)), "rgb")
+    colour = g.lerp(colour, g.mul(soil, 0.8), g.mul(edge, 0.85))
+    leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.66), 7.0))
+    leaves = g.mul(leaves, g.lerp(g.const(0.12), g.const(1.0), edge))
+    leaf_colour = g.mul(g.const((0.16, 0.085, 0.035)), g.world_noise(0.03, 0.6, 1.4, 2))
+    colour = g.lerp(colour, leaf_colour, leaves)
+    rough = g.lerp(rough, g.const(0.92), g.saturate(g.add(edge, leaves)))
+    g.output(colour, normal, rough, specular=0.4, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
 
 
-def rails(material):
-    """Each run of rails.json as a beam of short straight pieces, on posts every 2 m."""
+CUBE = "/Engine/BasicShapes/Cube"  # 100 cm, centred
+CYLINDER = "/Engine/BasicShapes/Cylinder"  # 100 cm across and tall, centred, along Z
+
+
+def rails(material, posts_material=None):
+    """Each run of rails.json as an old timber fence: round posts every 2 m, a top and a lower
+    rail between them. Years of wear: posts lean and sit at uneven heights, rails sag a little,
+    a few lower rails are gone and the odd top rail has broken and hangs from one end."""
     with open(f"{SRC}/rails.json") as f:
         runs = json.load(f)
-    cube = unreal.load_asset("/Engine/BasicShapes/Cube")  # 100 cm, centred
+    rng = random.Random(7)
+    cube, cylinder = unreal.load_asset(CUBE), unreal.load_asset(CYLINDER)
     parts = lib.Instances("Rail")
     for run in runs:
-        for k in range(len(run) - 1):
-            (x0, y0, z0), (x1, y1, z1) = run[k], run[k + 1]
+        posts = run[::2]
+        tops = []
+        for x, y, z in posts:
+            lean = rng.gauss(0, 1.6) if rng.random() > 0.05 else rng.choice((-1, 1)) * 7.0
+            height = rng.uniform(-5, 4)
+            parts.add(
+                cylinder,
+                (x, y, z + 42 + height / 2),
+                rng.uniform(0, 360),
+                (0.14 + rng.uniform(-0.015, 0.02), 0.14, (115 + height) / 100),
+                pitch=lean,
+                roll=rng.gauss(0, 1.6),
+            )
+            tops.append(z + height)
+        for k in range(len(posts) - 1):
+            (x0, y0, z0), (x1, y1, z1) = posts[k], posts[k + 1]
             span = math.hypot(x1 - x0, y1 - y0)
-            if span < 1.0:
+            if span < 50:
                 continue
             yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
-            pitch = math.degrees(math.atan2(z1 - z0, span))
-            mid = ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2 + RAIL_HEIGHT)
-            parts.add(cube, mid, yaw, ((span + 4) / 100, 0.1, 0.12), pitch=pitch)
-            if k % 2 == 0:
-                parts.add(cube, (x0, y0, z0 + 45), yaw, (0.12, 0.12, 0.95))
-    parts.commit(materials={cube.get_path_name(): {0: material}})
+            for height, missing in ((RAIL_HEIGHT, 0.0), (45.0, 0.06)):
+                if rng.random() < missing:
+                    continue
+                a = tops[k] - z0 + height + rng.uniform(-2, 2)
+                b = tops[k + 1] - z1 + height + rng.uniform(-2, 2)
+                pitch = math.degrees(math.atan2((z1 + b) - (z0 + a), span))
+                mid = ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + a + z1 + b) / 2 - rng.uniform(0, 2))
+                length = span + 10
+                if height == RAIL_HEIGHT and rng.random() < 0.03:
+                    # Broken: what is left hangs from the first post.
+                    length = span * rng.uniform(0.4, 0.65)
+                    drop = rng.uniform(20, 40)
+                    pitch = -drop
+                    reach = length / 2 * math.cos(math.radians(drop))
+                    dx, dy = (x1 - x0) / span, (y1 - y0) / span
+                    mid = (
+                        x0 + dx * reach,
+                        y0 + dy * reach,
+                        z0 + a - length / 2 * math.sin(math.radians(drop)),
+                    )
+                parts.add(
+                    cube,
+                    mid,
+                    yaw + rng.uniform(-1.2, 1.2),
+                    (length / 100, 0.1, 0.12),
+                    pitch=pitch,
+                    roll=rng.uniform(-4, 4),
+                )
+    parts.commit(
+        materials={
+            cube.get_path_name(): {0: material},
+            cylinder.get_path_name(): {0: posts_material or material},
+        }
+    )
     log(f"rails: {len(runs)} runs")
+
+
+def _turn(x, y, yaw):
+    r = math.radians(yaw)
+    return x * math.cos(r) - y * math.sin(r), x * math.sin(r) + y * math.cos(r)
+
+
+def props(timber, logs):
+    """props.json: a bench at the hairpin and stacks of cut logs by the path."""
+    path = f"{SRC}/props.json"
+    if not os.path.exists(path):
+        log("props: none")
+        return
+    with open(path) as f:
+        items = json.load(f)
+    rng = random.Random(11)
+    cube, cylinder = unreal.load_asset(CUBE), unreal.load_asset(CYLINDER)
+    parts = lib.Instances("Props")
+    stacks = lib.Instances("Props/Logs")
+
+    def piece(group, mesh, x, y, z, yaw, local, scale, pitch=0.0, roll=0.0):
+        dx, dy = _turn(local[0], local[1], yaw)
+        group.add(mesh, (x + dx, y + dy, z + local[2]), yaw, scale, pitch=pitch, roll=roll)
+
+    for kind, x, y, z, yaw in items:
+        if kind == "bench":
+            # Seat 45 cm up, 180 cm long along local Y; the sitter looks along +X.
+            for lx in (-18, 18):
+                for ly in (-75, 75):
+                    piece(parts, cube, x, y, z, yaw, (lx, ly, 20), (0.08, 0.08, 0.5))
+            for lx in (-13, 0, 13):
+                piece(parts, cube, x, y, z, yaw, (lx, 0, 46), (0.115, 1.9, 0.04))
+            for ly in (-75, 75):
+                piece(parts, cube, x, y, z, yaw, (-24, ly, 70), (0.07, 0.07, 0.5), pitch=-12)
+            for lz in (70, 86):
+                piece(
+                    parts,
+                    cube,
+                    x,
+                    y,
+                    z,
+                    yaw,
+                    (-27 - (lz - 70) * 0.2, 0, lz),
+                    (0.035, 1.9, 0.12),
+                    pitch=-12,
+                )
+        elif kind == "woodpile":
+            # Logs along local X, in rows of 5, 4, 3 and 2, each resting in the dip below.
+            for row, count in enumerate((5, 4, 3, 2)):
+                for i in range(count):
+                    d = rng.uniform(24, 32)
+                    ly = (i - (count - 1) / 2) * 29 + rng.uniform(-2, 2)
+                    lz = 14 + row * 25
+                    length = rng.uniform(280, 320)
+                    piece(
+                        stacks,
+                        cylinder,
+                        x,
+                        y,
+                        z,
+                        yaw,
+                        (rng.uniform(-12, 12), ly, lz),
+                        (d / 100, d / 100, length / 100),
+                        pitch=90 + rng.uniform(-1.5, 1.5),
+                        roll=rng.uniform(0, 360),
+                    )
+    parts.commit(materials={cube.get_path_name(): {0: timber}})
+    stacks.commit(materials={cylinder.get_path_name(): {0: logs}})
+    log(f"props: {[i[0] for i in items]}")
 
 
 def track():
@@ -372,7 +583,7 @@ def track():
     log(f"track: {len(centre)} m, out and back")
 
 
-DRESSING = ("Road", "Rail", "Trees")  # outliner folders the dress stage owns
+DRESSING = ("Road", "Rail", "Trees", "Props")  # outliner folders the dress stage owns
 
 
 def fresh_level(ground):
@@ -436,7 +647,9 @@ def main():
         return
     yield
     roads(road)
-    rails(rail_material())
+    timber = rail_material()
+    rails(timber, post_material())
+    props(timber, log_material())
     track()
     yield
     save(world)

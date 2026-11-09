@@ -52,7 +52,8 @@ assets = lib.assets
 # granite and gravel rather than the island's red-brown stony soil and yellow sand.
 SURFACES = {
     "Grass": ("shared", "uncut_grass", (0.72, 0.76, 0.6)),
-    "Forest": ("forest", "forest_floor", (1.0, 1.0, 1.0)),
+    # Brown needle and leaf litter: the scanned forest floor alone is olive green and read as lawn.
+    "Forest": ("mountain", "alpine_needles", (0.62, 0.55, 0.48)),
     "Rock": ("mountain", "granite_rocky_ground", (0.85, 0.85, 0.85)),
     "Snow": ("coast", "thai_wet_sand", (1.0, 1.0, 1.0)),
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
@@ -63,7 +64,7 @@ SURFACES = {
 # A second surface per layer and how it mixes in: "patches" (noise, metres across) or "wet"
 # (below that height in cm).
 MIXES = {
-    "Forest": ("forest", "mossy_forest_floor", "patches", 18.0),
+    "Forest": ("forest", "forest_floor", "patches", 14.0),
     "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
     "Sand": ("coast", "thai_wet_sand", "wet", 120.0),
     "Grass": ("shared", "lawn_grass", "patches", 30.0),
@@ -71,8 +72,8 @@ MIXES = {
     "Dirt": ("forest", "forest_floor", "patches", 3.0),
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
-LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest": (0.85, 0.8, 0.75)}
-LOOK_GREYS = {"Grass": 0.25, "Rock": 0.3, "Rock mix": 0.3}
+LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest mix": (0.8, 0.7, 0.75)}
+LOOK_GREYS = {"Grass": 0.25, "Rock": 0.3, "Rock mix": 0.3, "Forest mix": 0.35, "Dirt mix": 0.3}
 ROUGHNESS = {"Snow": 0.55, "Sand": 0.9}
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
@@ -95,13 +96,12 @@ GRASS = {
     ),
     "Forest": (
         ("shared", "fern", 3.6, 4000, 6000),
-        ("shared", "lady_fern", 2.4, 4000, 6000),
+        ("shared", "lady_fern", 4.0, 4000, 6000),
         ("shared", "common_fern", 2.4, 4000, 6000),
         ("shared", "leather_fern", 1.2, 4000, 6000),
-        # The woods' floor reads as bare lawn texture without grass: beech woods by a path have
-        # tufts and clumps between the ferns, thinner than the open verges.
-        ("shared", "grass_clumps", 16.0, 3000, 4500),
-        ("shared", "wild_grass", 16.0, 3000, 4500),
+        # Tufts between the ferns, sparse: dense clumps made the woods' floor a lawn.
+        ("shared", "grass_clumps", 3.0, 3000, 4500),
+        ("shared", "wild_grass", 2.0, 3000, 4500),
         ("shared", "tall_grass", 1.6, 4000, 6000),
         # The floor's debris: the woods in the reference photos are never bare between trunks.
         ("forest", "nordic_forest_ground_patch_root", 0.12, 9000, 12000),
@@ -677,6 +677,79 @@ def _fog(fog):
     log(f"fog {fog}")
 
 
+# The keys `look --post` takes, and what each sets on the open level.
+POST_KEYS = {
+    "exposure": "post volume: auto-exposure bias in EV",
+    "contrast": "post volume: colour contrast, 1 neutral",
+    "saturation": "post volume: colour saturation, 1 neutral",
+    "vignette": "post volume: vignette intensity",
+    "fog_start": "height fog: metres from the camera before it starts",
+    "volumetric": "height fog: volumetric fog (light shafts through the canopy), 0 or 1",
+    "shafts": "sun: volumetric scattering intensity, 1 neutral",
+    "sky": "sky light: intensity, 1 neutral",
+    "sun": "sun: intensity in lux",
+}
+POST_LABEL = "OC Post"
+
+
+def _level_actors(cls):
+    return [a for a in unreal.EditorActorSubsystem().get_all_level_actors() if isinstance(a, cls)]
+
+
+def _post(post):
+    """The light and grade of the open level: an unbound post-process volume (made once, labelled
+    POST_LABEL), the height fog's start and volumetric fog, and the sky light's and sun's
+    intensity. Nothing compiles."""
+    bad = [k for k in post if k not in POST_KEYS]
+    if bad:
+        raise RuntimeError(f"unknown --post {bad}; use {sorted(POST_KEYS)}")
+    grade = {k: post[k] for k in ("exposure", "contrast", "saturation", "vignette") if k in post}
+    if grade:
+        found = [
+            a for a in _level_actors(unreal.PostProcessVolume) if a.get_actor_label() == POST_LABEL
+        ]
+        if found:
+            ppv = found[0]
+        else:
+            ppv = unreal.EditorActorSubsystem().spawn_actor_from_class(
+                unreal.PostProcessVolume, unreal.Vector(0, 0, 0)
+            )
+            ppv.set_actor_label(POST_LABEL)
+        ppv.set_editor_property("unbound", True)
+        st = ppv.get_editor_property("settings")
+        if "exposure" in grade:
+            st.set_editor_property("override_auto_exposure_bias", True)
+            st.set_editor_property("auto_exposure_bias", float(grade["exposure"]))
+        for key, prop in (("contrast", "color_contrast"), ("saturation", "color_saturation")):
+            if key in grade:
+                v = float(grade[key])
+                st.set_editor_property(f"override_{prop}", True)
+                st.set_editor_property(prop, unreal.Vector4(v, v, v, 1.0))
+        if "vignette" in grade:
+            st.set_editor_property("override_vignette_intensity", True)
+            st.set_editor_property("vignette_intensity", float(grade["vignette"]))
+        ppv.set_editor_property("settings", st)
+    if "fog_start" in post or "volumetric" in post:
+        for fog in _level_actors(unreal.ExponentialHeightFog):
+            comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
+            if "fog_start" in post:
+                comp.set_editor_property("start_distance", float(post["fog_start"]) * 100)
+            if "volumetric" in post:
+                comp.set_editor_property("volumetric_fog", bool(post["volumetric"]))
+    if "sky" in post:
+        for sky in _level_actors(unreal.SkyLight):
+            sky.light_component.set_editor_property("intensity", float(post["sky"]))
+    if "sun" in post or "shafts" in post:
+        for sun in _level_actors(unreal.DirectionalLight):
+            comp = sun.light_component
+            if "sun" in post:
+                comp.set_editor_property("intensity", float(post["sun"]))
+            if "shafts" in post:
+                comp.set_editor_property("volumetric_scattering_intensity", float(post["shafts"]))
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    log(f"post {post}")
+
+
 def _tune(tints, greys=None):
     greys = greys or {}
     names = tint_names()
@@ -815,7 +888,9 @@ def op_stills(shots=None, out=None):
     return {"files": files}
 
 
-def op_look(tint=None, grey=None, grass=None, fog=None, stills=True, shots=None, out=None):
+def op_look(
+    tint=None, grey=None, grass=None, fog=None, post=None, stills=True, shots=None, out=None
+):
     """Recolour through MI_ClimbGround's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
     0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
     compiles."""
@@ -830,6 +905,11 @@ def op_look(tint=None, grey=None, grass=None, fog=None, stills=True, shots=None,
         yield from _ensure_level()
         _fog(fog)
         notes.append(f"fog {fog}")
+        yield 30
+    if post:
+        yield from _ensure_level()
+        _post(post)
+        notes.append(f"post {post}")
         yield 30
     result = {"notes": notes}
     if stills:
