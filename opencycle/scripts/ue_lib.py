@@ -118,6 +118,16 @@ class Graph:
             return node
         return self.node(unreal.MaterialExpressionConstant, r=float(value))
 
+    def param(self, name, value):
+        """Like const, but a parameter: a material instance can change it without compiling."""
+        if isinstance(value, (tuple, list)):
+            node = self.node(unreal.MaterialExpressionVectorParameter, parameter_name=name)
+            node.set_editor_property("default_value", unreal.LinearColor(*value, 1.0))
+            return node
+        return self.node(
+            unreal.MaterialExpressionScalarParameter, parameter_name=name, default_value=value
+        )
+
     def op(self, cls, a, b=None, **props):
         node = self.node(cls, **props)
         self.link(a, node, "A")

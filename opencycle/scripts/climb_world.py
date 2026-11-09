@@ -88,9 +88,25 @@ SURFACES = {
 MIXES = {"Rock": ("forest", "rocky_forest_path", "patches", 12.0)}
 
 
+def landscape_loaded():
+    return any(
+        isinstance(a, unreal.LandscapeProxy)
+        for a in unreal.EditorActorSubsystem().get_all_level_actors()
+    )
+
+
 def ground_material():
     """M_ClimbGround, rebuilt with this climb's surfaces; the saved grass types are reused
-    (building them takes over ten minutes, on one core) unless OC_REBUILD is set."""
+    (building them takes over ten minutes, on one core) unless OC_REBUILD is set.
+
+    Only with no landscape loaded: under one, the editor recompiled every section's material in
+    one frame for six minutes and the Radeon driver lost the device (twice). To recolour, use
+    tune(), which compiles nothing."""
+    if landscape_loaded():
+        raise RuntimeError(
+            "ground_material: a landscape is loaded, and rebuilding under it crashes the GPU. "
+            "Restart the server (quit.py; ue_serve.sh brings it back on the empty map) first."
+        )
     island.FOLDER = FOLDER
     island.GRASS = GRASS
     island.SURFACES.update(SURFACES)
@@ -105,6 +121,38 @@ def ground_material():
     return island.Ground("M_ClimbGround").build(grass)
 
 
+def ground_instance(parent):
+    """MI_ClimbGround, the landscape's material: M_ClimbGround with its tints set by tune()."""
+    path = f"{FOLDER}/MI_ClimbGround"
+    mi = unreal.load_asset(path)
+    if mi is None:
+        mi = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+            "MI_ClimbGround",
+            FOLDER,
+            unreal.MaterialInstanceConstant,
+            unreal.MaterialInstanceConstantFactoryNew(),
+        )
+    if mi.get_editor_property("parent") != parent:
+        unreal.MaterialEditingLibrary.set_material_instance_parent(mi, parent)
+    unreal.EditorAssetLibrary.save_loaded_asset(mi, False)
+    return mi
+
+
+def tune(tints):
+    """Recolours the ground's surfaces on MI_ClimbGround, e.g. tune({"Dirt": (0.6, 0.62, 0.65)}),
+    keys being SURFACES' layers (or "<layer> mix" for a MIXES surface). Parameters only: nothing
+    compiles, so it's safe, and quick, with the level open."""
+    mi = unreal.load_asset(f"{FOLDER}/MI_ClimbGround")
+    for name, rgb in tints.items():
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
+            mi, f"{name} tint", unreal.LinearColor(*rgb, 1.0)
+        )
+    unreal.MaterialEditingLibrary.update_material_instance(mi)
+    unreal.EditorAssetLibrary.save_loaded_asset(mi, False)
+    log(f"tuned {tints}")
+    return mi
+
+
 def materials():
     """The ground, its grass and the road, island_world.py's made in this folder. Saved ones are
     reused unless OC_REBUILD is set."""
@@ -113,8 +161,8 @@ def materials():
     road = unreal.load_asset(f"{FOLDER}/Road/M_IslandRoad")
     if ground and road and not os.environ.get("OC_REBUILD"):
         log("materials: reusing the saved ones")
-        return ground, road
-    return ground_material(), island.road_material()
+        return ground_instance(ground), road
+    return ground_instance(ground_material()), island.road_material()
 
 
 def landscape(world, ground):

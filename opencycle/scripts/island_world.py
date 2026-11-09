@@ -185,8 +185,9 @@ class Ground:
         yz = g.op(unreal.MaterialExpressionAppendVector, g.mask(world, "g"), self.height)
         self.side = g.lerp(xz, yz, faces_x)
 
-    def surface(self, biome, slug, tint):
-        """A surface's colour, normal, roughness and height, near blended into far."""
+    def surface(self, biome, slug, tint, label):
+        """A surface's colour, normal, roughness and height, near blended into far. Its tint is the
+        parameter "<label> tint", so a material instance can recolour it without compiling."""
         g = self.g
         tile = tile_cm(biome, slug)
         d, n, m = (ms_texture(biome, slug, k) for k in ("D", "N", "M"))
@@ -198,7 +199,7 @@ class Ground:
         side_d = g.mask(g.sample(d, g.mul(self.side, 1.0 / tile)), "rgb")
         masks = g.sample(m, near_uv, "masks")
         top = g.lerp(near_d, far_d, g.mul(self.far, 0.7))
-        colour = g.mul(g.lerp(top, side_d, self.steep), g.const(tint))
+        colour = g.mul(g.lerp(top, side_d, self.steep), g.param(f"{label} tint", tint))
         # The top-down normal map streaks on a cliff too; there it fades to the ground's own.
         normal = g.lerp(g.lerp(near_n, far_n, self.far), g.const((0.0, 0.0, 1.0)), self.steep)
         return {
@@ -211,10 +212,10 @@ class Ground:
     def layer(self, name):
         g = self.g
         biome, slug, tint = SURFACES[name]
-        base = self.surface(biome, slug, tint)
+        base = self.surface(biome, slug, tint, name)
         if name in MIXES:
             biome2, slug2, how, size = MIXES[name]
-            other = self.surface(biome2, slug2, (1.0, 1.0, 1.0))
+            other = self.surface(biome2, slug2, (1.0, 1.0, 1.0), f"{name} mix")
             if how == "patches":
                 alpha = g.world_noise(1.0 / (size * 100), -1.5, 2.0, 3)
             else:  # wet below a height

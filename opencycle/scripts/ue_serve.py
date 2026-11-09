@@ -11,7 +11,8 @@ to .done (or .failed, with the traceback in .failed.txt). A command may define s
 generator: each yield gives the editor frames (10, or the number yielded) before the next part, as
 climb_world.py's build does. A command named quit.py stops the server and the editor.
 
-OC_CMD (default /workspace/ue/out/cmd) is the folder.
+OC_CMD (default /workspace/ue/out/cmd) is the folder. Run it through ue_serve.sh, which restarts the
+editor if it dies.
 """
 
 import os
@@ -22,6 +23,7 @@ import unreal
 
 CMD = os.environ.get("OC_CMD") or "/workspace/ue/out/cmd"
 GAP = 10
+LOW_MEMORY_GB = 6.0
 state = {"steps": None, "wait": 0, "busy": False, "name": None, "last": 0.0}
 
 
@@ -30,10 +32,10 @@ def log(message):
 
 
 def done(name, ok, detail=""):
-    path = f"{CMD}/{name}"
-    os.replace(path, f"{path[:-3]}.{'done' if ok else 'failed'}")
+    base = f"{CMD}/{name[:-3]}"
+    os.replace(f"{base}.running", f"{base}.{'done' if ok else 'failed'}")
     if detail:
-        with open(f"{path[:-3]}.failed.txt", "w") as f:
+        with open(f"{base}.failed.txt", "w") as f:
             f.write(detail)
     log(f"{'done' if ok else 'FAILED'} {name}")
     state["steps"], state["name"] = None, None
@@ -46,13 +48,25 @@ def start(name):
         unreal.unregister_slate_post_tick_callback(handle)
         unreal.SystemLibrary.quit_editor()
         return
-    scope = {"__file__": f"{CMD}/{name}", "__name__": "__oc_command__"}
-    with open(f"{CMD}/{name}") as f:
-        exec(compile(f.read(), f"{CMD}/{name}", "exec"), scope)
+    # A command is .running while it runs. If the editor dies, ue_serve.sh finds it so and marks it
+    # .crashed, rather than running it again into the same crash.
+    running = f"{CMD}/{name[:-3]}.running"
+    os.replace(f"{CMD}/{name}", running)
+    scope = {"__file__": running, "__name__": "__oc_command__"}
+    with open(running) as f:
+        exec(compile(f.read(), running, "exec"), scope)
     if "steps" in scope:
         state["steps"], state["name"] = scope["steps"](), name
     else:
         done(name, True)
+
+
+def memory_gb():
+    with open("/proc/meminfo") as f:
+        for line in f:
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1]) / 1e6
+    return 99.0
 
 
 def tick(_delta):
@@ -73,7 +87,12 @@ def tick(_delta):
         elif time.time() - state["last"] > 1.0:
             state["last"] = time.time()
             waiting = sorted(n for n in os.listdir(CMD) if n.endswith(".py"))
-            if waiting:
+            # The machine's RAM killer acts near 3 GB free: don't start work that close to it.
+            if waiting and memory_gb() < LOW_MEMORY_GB:
+                if time.time() - state.get("warned", 0) > 60:
+                    state["warned"] = time.time()
+                    log(f"waiting: {memory_gb():.1f} GB free, under {LOW_MEMORY_GB}")
+            elif waiting:
                 name = waiting[0]
                 try:
                     start(name)
