@@ -52,6 +52,26 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 - **Rebuilds:** a change to the GRASS table needs `rebuild-ground --rebuild-grass`. It builds the
   1M-tri prop meshes one at a time first (all at once crashed Vulkan); give it `--timeout 2400`.
 
+## Iterate fast (the user's standing ask)
+
+Make each rebuild teach as much as possible, and spend as little waiting time as possible.
+
+- **Batch.** Gather every queued fix (ground, grass, ferns, terrain, road) into one rebuild
+  rather than one rebuild per fix. Lint and commit once, then launch one chain.
+- **Use the cheapest command that tests the change.** `look` takes seconds, `rebuild-ground`
+  about 1 min (4 min with `--rebuild-grass`), and `build-level` about 5 min. Try values with
+  `look` before baking them into code. Rebuild grass only when GRASS changes.
+- **One background chain.** Run `restart → make_climb → rebuild-ground → build-level → look` as
+  one `&&` command so it finishes with one notification. Don't poll it.
+- **Work while it runs.** Plan the next batch, review the last stills, and update the docs and
+  the storybook. Don't edit `oc_climb.py` or `climb_world.py` mid-build.
+- **Review cheaply.** Use the contact sheet and crops rather than reading six full stills. Use
+  `--shots` to take only the views that a change affects.
+- **Fix the tooling.** When a step fails, or you repeat the same manual step, fix or automate it
+  in `oc.py`/`oc_climb.py` then and there, and note the fix here.
+- **Diagnose before you rebuild.** Use a `probe` or a `look` to confirm a cause first (for
+  example, streaming versus the material), so a rebuild isn't spent on a guess.
+
 ## Crash rules (enforced in code; don't work around them)
 
 - **Ground material:** never rebuild it while a landscape that uses M_ClimbGround is loaded
