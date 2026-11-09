@@ -375,11 +375,19 @@ GAP = 10  # frames between steps
 steps, wait, handle = main(), 0, None
 
 
+busy = False
+
+
 def tick(_delta):
-    global wait
+    global wait, busy
+    # A step can pump the editor's frames itself (material builds, progress dialogs), which
+    # calls this again inside it: skip those.
+    if busy:
+        return
     if wait > 0:
         wait -= 1
         return
+    busy = True
     try:
         frames = next(steps)
         wait = GAP if frames is None else frames
@@ -389,6 +397,8 @@ def tick(_delta):
         # Logged here: quitting first leaves the editor no time to log the error itself.
         unreal.log_error(f"CLIMB failed: {traceback.format_exc()}")
         finish()
+    finally:
+        busy = False
 
 
 def finish():
