@@ -106,6 +106,13 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     to take half a flattened, stretched top normal.
   - Fern slivers came from the cut-out in D's alpha averaging away in the mips, under the 0.33
     clip. `_keep_alpha_coverage` turns on scale-mips-for-alpha-coverage for every grass scan.
+  - **The big find:** no grass or fern had ever rendered except `fern`. The source opacity JPEGs
+    keep the mask in one colour channel, so the greyscale conversion in prep peaked at 76 of 255,
+    under the 0.33 clip. Prep now takes the strongest channel and stretches it to full range.
+    `oc.py reimport-plants` swaps in the fixed D textures. `fern`'s own UVs match its atlas only
+    in part (19% opaque coverage), so it may still look thin.
+  - The tints barely changed the banks: the cuts are about 1 m wide, so the "Sand" layer covers
+    0.09% of the map, and the visible banks are the Forest layer.
   - Ferns are about 1.6× denser (Forest 6/6/4/2, Sand 8/6). The banks have slumps and rills
     (`roughen_banks`).
 

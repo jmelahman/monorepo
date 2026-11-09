@@ -32,6 +32,7 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 | `oc.py build-level` | Rebuilds L_Hero from `world_gen/climb`: the ground stage, then the dress stage, each on a fresh editor | about 5 min |
 | `oc.py rebuild-ground` | Rebuilds the ground material on the empty map | about 1 min |
 | `oc.py static-trees` | Bakes static Nanite copies of the PVE trees, with their leaf assembly parts (capped at 2500 tris each), into `/Game/Climb/Trees/SM_*` | about 10 min |
+| `oc.py reimport-plants` | Re-imports the plants' D textures from `fab_prep` in place, after `OC_FORCE=1 OC_ONLY=<slugs> prep_megascans.py` | about 2 min |
 | `oc.py fps --quality 0..3 --frames N --shots a,b [--tree-cull M] [--tree-shadows 0/1] [--tree-wpo 0/1]` | Measures frame times at each still's view; tree options apply for that run only | about 30 s |
 | `oc.py probe PATH` | Runs a read-only script with `unreal`, `log`, `lib` and `notes` in scope (API discovery; keep scripts in `out/qa`) | seconds |
 | `oc.py restart` / `stop` / `status` / `log` / `wait JOB` | | |
@@ -69,6 +70,9 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
   `--shots` to take only the views that a change affects.
 - **Fix the tooling.** When a step fails, or you repeat the same manual step, fix or automate it
   in `oc.py`/`oc_climb.py` then and there, and note the fix here.
+- **Check the inputs as well as the look.** Ground cover was invisible for weeks because the
+  opacity maps peaked at 76 of 255, under the 0.33 clip. A crop at full resolution, plus a probe
+  of the asset, found it in minutes.
 - **Diagnose before you rebuild.** Use a `probe` or a `look` to confirm a cause first (for
   example, streaming versus the material), so a rebuild isn't spent on a guess.
 
