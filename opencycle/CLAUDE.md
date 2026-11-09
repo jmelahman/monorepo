@@ -98,3 +98,6 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
   - Update it whenever the look changes.
   - Read it with the Artifact tool first, then republish to the same URL.
   - Its images live in `img*/` folders, which are published files.
+  - Keep it condensed (about 8 KB): the current stills and changes at the top, then one line per
+    version in History, with each old image set opened from a link (`SETS` in its script). Add a
+    new `imgN/` for each version's stills and use `edits` for small changes.

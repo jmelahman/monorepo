@@ -97,6 +97,20 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, night (storybook v9): **wear and life.**
+  - A weathered fence: leaning round posts, missing and broken rails, moss and damp.
+  - A worn path: cracked and patched tarmac, with soil and leaves at the edges.
+  - A bench at the hairpin and log stacks by the path. A needle-litter forest floor and soil cut
+    banks.
+  - Trees fade in from the path. Trunks stand at the lowest ground under them and posts go
+    deeper. The sun has contact shadows (`look --post contact=0.05`).
+  - `make_climb.open_valley_side` stops the path running in a trench across spurs.
+  - Open:
+    - Bare, smooth cut banks: they need grass, roots, ferns, stones and finer shape.
+    - The hairpin view from above is hazy.
+    - QA re-score not yet done.
+    - Then the full climb.
+
 - 2026-11-09, small hours: **47k static Nanite trees with leaves across the whole map**
   (`make_climb.py` FAR 0.45 beyond the road band, `climb_world.TREE_CULL` 2 km). `oc.py
   static-trees` bakes `SM_spruce` / `SM_beech` from the PVE assemblies; each twig and leaf part is
