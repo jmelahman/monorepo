@@ -362,6 +362,10 @@ void ARidePawn::Ride(float Dt)
 
 void ARidePawn::Place()
 {
+	if (!Track || Track->Length() <= 0.f)
+	{
+		return; // a level without a ride track (the spikes): BeginPlay has logged it
+	}
 	const float S = Track->Wrap(static_cast<float>(Distance));
 	const FVector Eye = Track->Point(S, -Track->KeepLeft, EyeHeight);
 	FVector Ahead;
