@@ -46,8 +46,11 @@ All of these come from the same offscreen ride test (`scripts/ride_test.sh`) on 
 | --- | --- | --- | --- |
 | Scanned island (`/Game/Island`) | Epic, 720p | 3–4 | Megascans grass and props; no trees |
 | Japanese town (`/Game/Coast`, 7 Nov) | Epic, 720p | 2.5–5.5 | Free Poly Haven assets |
-| Stylized valley (`/Game/Stylized`) | Epic, 720p | 18–21, dipping to 10–11 in the densest woods | 15,000 low-poly trees, vertex colour only; GPU 40–54 ms |
-| Stylized valley | Low | _pending_ | Two rides overlapped on 9 Nov; their shared `ride_test.log` is void |
+| Stylized valley (`/Game/Stylized`) | Epic, 720p | _pending_ | 15,000 low-poly trees, vertex colour only |
+| Stylized valley | Low | _pending_ | |
+
+The first stylized rides (9 Nov, 02:27–02:35) ran two Unreals at once and shared one
+`ride_test.log`, so their numbers are void. Clean re-runs are under way.
 
 None of these reaches 30 fps at Low yet. The stylized valley shows that the cost is in what we draw
 (grass cards, scanned meshes, Lumen), not in the game code.
