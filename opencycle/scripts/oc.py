@@ -379,7 +379,9 @@ def cmd_probe(ns):
 
 
 def cmd_fps(ns):
-    return run("fps", {"quality": ns.quality, "frames": ns.frames, "shots": shots(ns)}, ns)
+    args = {"quality": ns.quality, "frames": ns.frames, "shots": shots(ns)}
+    args.update(tree_cull=ns.tree_cull, tree_shadows=ns.tree_shadows)
+    return run("fps", args, ns)
 
 
 def cmd_static_trees(ns):
@@ -469,6 +471,8 @@ def main(argv=None):
     s = add("fps", cmd_fps, help="frame times at each still's view (quality 0 Low .. 3 Epic)")
     s.add_argument("--quality", type=int, default=0)
     s.add_argument("--frames", type=int, default=240)
+    s.add_argument("--tree-cull", type=float, help="tree draw distance in m for this run")
+    s.add_argument("--tree-shadows", type=int, choices=(0, 1))
     s.add_argument("--shots")
     s = add("wait", cmd_wait, help="resume waiting for a job after a timeout")
     s.add_argument("job")

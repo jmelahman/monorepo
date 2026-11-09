@@ -712,15 +712,35 @@ def _stills(shots, out):
     return files
 
 
-def op_fps(quality=0, frames=240, shots=None):
+def _tree_components():
+    found = []
+    for actor in unreal.get_editor_subsystem(unreal.EditorActorSubsystem).get_all_level_actors():
+        for c in actor.get_components_by_class(unreal.HierarchicalInstancedStaticMeshComponent):
+            mesh = c.get_editor_property("static_mesh")
+            if mesh and mesh.get_path_name().startswith(STATIC_TREES):
+                found.append(c)
+    return found
+
+
+def op_fps(quality=0, frames=240, shots=None, tree_cull=None, tree_shadows=None):
     """Frame times at each still's view, at a scalability level (0 Low .. 3 Epic): the editor's
     whole frame, so a pessimistic stand-in for the game's. Vsync and the frame cap off."""
     yield from _ensure_level()
     for command in (f"scalability {int(quality)}", "r.VSync 0", "t.MaxFPS 0"):
         unreal.SystemLibrary.execute_console_command(None, command)
+    # Trees for this measurement only (restored after): a draw distance in m (0 hides them),
+    # and whether they cast shadows.
+    trees = _tree_components()
+    saved = [(c.instance_end_cull_distance, c.cast_shadow) for c in trees]
+    for c in trees:
+        if tree_cull is not None:
+            c.set_editor_property("instance_end_cull_distance", max(1, int(tree_cull * 100)))
+        if tree_shadows is not None:
+            c.set_cast_shadow(bool(tree_shadows))
+        c.mark_render_state_dirty()
     editor = unreal.UnrealEditorSubsystem()
     yield 60
-    notes = []
+    notes = [f"trees: {len(trees)} components, cull {tree_cull} m, shadows {tree_shadows}"]
     for name, where, target in cameras(shots):
         eye = unreal.Vector(*where)
         editor.set_level_viewport_camera_info(
@@ -740,6 +760,10 @@ def op_fps(quality=0, frames=240, shots=None):
         notes.append(f"{name}: {1000.0 / mean:.1f} fps (mean {mean:.1f} ms, p95 {p95:.1f} ms)")
         log(notes[-1])
     unreal.SystemLibrary.execute_console_command(None, "scalability 3")
+    for c, (cull, shadow) in zip(trees, saved, strict=True):
+        c.set_editor_property("instance_end_cull_distance", cull)
+        c.set_cast_shadow(shadow)
+        c.mark_render_state_dirty()
     return {"notes": [f"scalability {quality}", *notes]}
 
 
