@@ -6,6 +6,12 @@ Run after megascans.py (both stages) and OC_RES=8129 python3 -I scripts/make_isl
     OC_EDITOR=1 bash scripts/ue_run.sh island_world.py island_world.log
 It needs the whole editor, as trial_world.py does. OC_SRC picks another make_island.py output, e.g.
 /workspace/ue/world_gen/island_1025 for a quick, coarse build.
+
+OC_STAGE=materials builds only the materials and grass types, and OC_STAGE=level only the level,
+from the saved materials. Run them in that order, as two editors, for the full island: building a
+material leaves every texture it samples resident on the GPU, about 8 GB for the ground's, which
+with the landscape's import is more than an integrated GPU's share of memory. A material that is
+only loaded keeps its textures out until something draws them.
 """
 
 import importlib.util
@@ -32,6 +38,7 @@ Graph = lib.Graph
 assets, tools, actors = lib.assets, lib.tools, lib.actors
 
 SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/island")
+STAGE = os.environ.get("OC_STAGE", "all")  # "materials", "level", or "all" for both
 PREP = "/workspace/ue/fab_prep"
 FOLDER = "/Game/Island"
 LEVEL = f"{FOLDER}/L_Island"
@@ -275,8 +282,7 @@ def road_material():
     return g.finish()
 
 
-def roads():
-    material = road_material()
+def roads(material):
     count = 0
     for name in sorted(os.listdir(SRC)):
         if not (name.startswith("road_") and name.endswith(".gltf")):
@@ -412,14 +418,34 @@ def fit(size, names):
     return quads, comps, fitted, files
 
 
+def materials():
+    """The ground and road materials, the ground's grass types with them."""
+    grass = {layer: grass_type(layer) for layer in GRASS}
+    return Ground().build(grass), road_material()
+
+
+def saved_material(path):
+    material = unreal.load_asset(path)
+    if material is None:
+        raise RuntimeError(f"no {path}: run OC_STAGE=materials first")
+    return material
+
+
 def main():
+    if STAGE not in ("materials", "level", "all"):
+        raise RuntimeError(f"OC_STAGE={STAGE}: expected materials, level or all")
+    if STAGE == "level":
+        ground = saved_material(f"{FOLDER}/M_IslandGround")
+        road = saved_material(f"{FOLDER}/Road/M_IslandRoad")
+    else:
+        ground, road = materials()
+        if STAGE == "materials":
+            return
     with open(f"{SRC}/info.json") as f:
         info = json.load(f)
     size, spacing, z_scale = info["size"], info["spacing"], info["z_scale"]
     names = info["layers"]
     quads, comps, size, files = fit(size, names)
-    grass = {layer: grass_type(layer) for layer in GRASS}
-    ground = Ground().build(grass)
     layers = [
         unreal.WorldBuilderLibrary.make_layer_info(f"{FOLDER}/Layers/LI_{n}", n) for n in names
     ]
@@ -450,7 +476,7 @@ def main():
     if not land:
         raise RuntimeError("no landscape")
     log(f"landscape: {comps}x{comps} components of {quads} quads at {spacing:.0f} cm")
-    roads()
+    roads(road)
     sea(half * 2)
     tracks()
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
