@@ -97,6 +97,27 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-09, late (storybook v10): **lower cuts, cleaner path.**
+  - `open_valley_side` now caps the uphill side too: a cut of 1–2 m (BANK_SLOPE 1.3), then a
+    gentle 0.28 slope that rejoins the hillside by 35 m. Uncapped, cuts across the steep flank
+    stood 5–8 m high.
+  - The bank soil is its own landscape layer, which reuses the unused "Sand" slot
+    (`oc_climb.SURFACES/MIXES/GRASS["Sand"]`). Its roots, stones and ferns stay off the tarmac,
+    while the path edge stays "Dirt" with no grass. There is no granite within 25 m of the path.
+  - Trees grow on slopes up to 1.45 and come in from 3.3 m off the path.
+  - The road's dark ellipses were the cracked-tarmac mask (8 m, hard). That mask is now 2.5 m,
+    soft and at most 55%. Repairs are 1.6 m world-grid blocks.
+  - One `build-level` dress stage hit a GPU reset (radv GPUVM fault, DEVICE_LOST) right after the
+    new bank grass was added. A retry passed. If it recurs, lower the `GRASS["Sand"]` densities.
+  - Sonnet QA: road_08 5, road_30 5, road_50 5, road_72 4, road_95 5, hairpin_above 6, bench 5.
+  - Open, in order:
+    1. Ground texture smeared and low-detail on slopes: add a fine detail albedo/normal, and
+       make the colour blotches smaller.
+    2. Ferns and tufts render as tiny dark specks: check their scale, lighting and density.
+    3. Banks are still smooth: add 0.5–3 m relief and gullies.
+    4. Trunks are clean grey cylinders.
+    5. Then the full climb.
+
 - 2026-11-09, night (storybook v9): **wear and life.**
   - A weathered fence: leaning round posts, missing and broken rails, moss and damp.
   - A worn path: cracked and patched tarmac, with soil and leaves at the edges.
