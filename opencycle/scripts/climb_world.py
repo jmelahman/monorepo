@@ -47,7 +47,7 @@ QUADS = 127
 GRID = 4  # components a side per streaming proxy
 PVE = "/ProceduralVegetationEditor/SampleAssets/StarterContent"
 TREES = {
-    "spruce": os.environ.get("OC_SPRUCE") or "/Game/Spike/Trees/PVE_Sample_Conifer_Tree_01",
+    "spruce": os.environ.get("OC_SPRUCE") or f"{PVE}/ConiferTree_01/PVE_Conifer_01",
     "beech": os.environ.get("OC_BEECH") or f"{PVE}/DeciduousTree_01/PVE_Deciduous_Tree_01",
 }
 NEAR = float(os.environ.get("OC_NEAR") or "60") * 100.0
