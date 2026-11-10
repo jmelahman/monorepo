@@ -97,7 +97,16 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
-- 2026-11-10, morning (batch v13, building): one rebuild with grass for QA's v12 list.
+- 2026-11-10, morning (batch v13): one rebuild with grass for QA's v12 list.
+  - First try: ferns raised to 9/8/6 per 100 m^2 (about 40 plants on Forest in all). The first look
+    after a restart hit the radv GPUVM fault (DEVICE_LOST). The user also found too much fern and
+    too little grass, and the spruce photos agree: grassy verges, dry tussocks, few ferns.
+  - Rebalanced (building): Forest ferns 3/2/1.5, no leather_fern, grass_clumps 8, wild_grass 6,
+    dry_grass 4 (about 30 in all, as v12); banks' ferns 2/1 with grass 12/8 and dry grass 4. A broken
+    grass verge in `make_climb.paint`: 1-2 m wide, starting 0.6 m past the tarmac.
+  - The peak (user question): above the treeline the climb is alpine meadow, then dwarf pine, then
+    rock, scree and snow patches at the top, with only tufts and cushion plants there.
+  - Kept from the first try:
   - Ferns matte: M_MS_Plant gets "Specular" (0.15, was a fixed 0.4) and "Rough floor" (0.6), both
     in `PLANT_LOOK`; leather_fern, the glossiest, cut to 1 per 100 m^2.
   - Soil: `LOOK_TINTS` Sand (0.42, 0.34, 0.28) and Dirt (0.4, 0.32, 0.26) on the soil_mud bases.

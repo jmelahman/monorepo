@@ -84,6 +84,8 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
   `LOOK_TINTS` or `LOOK_GREYS`.
 - **Restart between looks.** A second `look` on the same editor hit a radv GPUVM fault
   (DEVICE_LOST) on 9 Nov; put `oc.py restart` before each look in a chain.
+- **Keep grass density in budget.** About 30 plants per 100 m^2 on the Forest layer is safe. At
+  40 (v13's first try) even the first look after a restart hit the GPUVM fault.
 - **Diagnose before you rebuild.** Use a `probe` or a `look` to confirm a cause first (for
   example, streaming versus the material), so a rebuild isn't spent on a guess.
 
