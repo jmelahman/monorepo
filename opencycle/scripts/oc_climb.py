@@ -65,7 +65,8 @@ SURFACES = {
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
     # The climb has no beach: its "Sand" layer is the cut banks' soil, apart from the path's edge
     # so that the banks' stones and ferns (GRASS) don't grow through the tarmac.
-    "Sand": ("forest", "soil_mud", (0.62, 0.53, 0.46)),
+    # v19: stony_soil, not soil_mud: the smooth mud scan made the banks read as smeared putty.
+    "Sand": ("shared", "stony_soil", (0.62, 0.53, 0.46)),
     # The path's edge: dark soil with leaf litter over it, as in the reference photos.
     "Dirt": ("forest", "soil_mud", (0.62, 0.53, 0.46)),
 }
@@ -73,7 +74,9 @@ SURFACES = {
 # (below that height in cm).
 MIXES = {
     # Moss in patches through the litter: QA found the floor between the ferns bare soil.
-    "Forest": ("forest", "mossy_forest_floor", "patches", 10.0),
+    # v19: grass patches, not moss: mossy_forest_floor is a dull olive (0.19 sRGB) that read as
+    # grey-teal felt under the sky, never as the style shots' green carpet.
+    "Forest": ("shared", "uncut_grass", "patches", 10.0),
     "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
     # The soil's litter is brown needles: olive forest_floor here made green splotches on brown.
     "Sand": ("mountain", "alpine_needles", "patches", 4.0),
@@ -94,7 +97,7 @@ LOOK_TINTS = {
     # Moss and grass: a deep green, not v13's pale lime. Grass mix (lawn_grass patches) had no
     # tint at all: it made the pale beech bank and the far hillside's leopard spots (v15).
     # v18: a little yellower, as the moss and lawn read teal felt under the sky (v17 crops).
-    "Forest mix": (0.15, 0.22, 0.03),
+    "Forest mix": (0.55, 0.75, 0.3),
     "Grass": (0.14, 0.23, 0.04),
     "Grass mix": (0.14, 0.22, 0.04),
     "Sand mix": LITTER,
@@ -126,13 +129,15 @@ STEEP = {
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
-# Grass per layer: (biome, slug, instances per 100 m^2, cull start, cull end in cm). Scans whose
+# Grass per layer: (biome, slug, instances per 100 m^2, cull start, cull end in cm[, (min, max)
+# scale, 0.6 to 1.4 if left out]). The density is per mesh: a scan with six variants draws six
+# times it (fern at 2.0 was 12 per 100 m^2), and `look --grass` multiplies it again. Scans whose
 # meshes take 5 GB or more to build are left out: with the rest of the editor they run the machine
 # out of memory. The rows under 0.5 are props (logs, stumps, rocks), drawn farther.
 GRASS = {
     "Grass": (
-        ("shared", "wild_grass", 40.0, 3500, 5000),
-        ("shared", "grass_clumps", 24.0, 3500, 5000),
+        ("shared", "wild_grass", 40.0, 3500, 5000, (1.2, 2.0)),
+        ("shared", "grass_clumps", 24.0, 3500, 5000, (1.2, 2.0)),
         ("shared", "wheat_grass", 10.0, 3500, 5000),
         ("shared", "tundra_grass", 6.0, 3500, 5000),
         ("shared", "kikuyu_grass", 8.0, 3500, 5000),
@@ -151,16 +156,19 @@ GRASS = {
         # (the style shots' flowering carpet). v18: the floor read as moss felt with sparse tufts;
         # twice the grass and more flowers near the road, culled sooner. Instances go as density
         # times cull squared, so the layer draws a little fewer than v17's (about 670 vs 700).
-        ("shared", "fern", 2.0, 4000, 6000),
-        ("shared", "lady_fern", 1.5, 4000, 6000),
-        ("shared", "common_fern", 1.0, 4000, 6000),
+        # v19: the ferns (1.5 to 2 m across, six to nine variants each) covered twice the floor
+        # all the grass did, whose clumps are 20 to 60 cm: fewer ferns, and grass drawn 1.4 to
+        # 2.4 times its size, so it reads as a carpet with the same instance count.
+        ("shared", "fern", 1.2, 4000, 6000),
+        ("shared", "lady_fern", 0.8, 4000, 6000),
+        ("shared", "common_fern", 0.8, 4000, 6000),
         ("mountain", "alpine_bearberry", 2.0, 3000, 4500),
         ("desert", "dry_grass", 1.5, 3000, 4500),
         ("desert", "dead_shrubs", 0.3, 4000, 6000),
-        ("shared", "grass_clumps", 20.0, 2000, 3000),
-        ("shared", "wild_grass", 14.0, 2000, 3000),
+        ("shared", "grass_clumps", 20.0, 2000, 3000, (1.4, 2.4)),
+        ("shared", "wild_grass", 14.0, 2000, 3000, (1.4, 2.4)),
         ("shared", "tall_grass", 2.0, 4000, 6000),
-        ("shared", "clovers", 5.0, 1500, 2500),
+        ("shared", "clovers", 5.0, 1500, 2500, (1.0, 1.6)),
         ("shared", "leafy_dandelions", 2.5, 1500, 2500),
         # Big rounded boulders, as in the style shots.
         ("mountain", "tundra_boulder", 0.02, 12000, 15000),
@@ -380,6 +388,12 @@ PLANT_LOOK = {
 }
 # Props' MIs (M_MS_Prop). The tundra boulder as scanned is pale tundra stone and read near white
 # in the woods (v16), and still pale at 0.42 (v17): darker, with a moss cap (see _prop_master).
+# Per plant, after PLANT_LOOK: the grass scans are near black as scanned (grass_clumps averages
+# 0.14 sRGB, wild_grass 0.2) and read as dark tufts on a paler floor (v18). Brighter, yellow-green.
+PLANT_SLUG_LOOK = {
+    "grass_clumps": {"Tint": (3.2, 4.0, 1.6)},
+    "wild_grass": {"Tint": (2.0, 2.5, 1.2)},
+}
 PROP_LOOK = {
     "tundra_boulder": {"Tint": (0.3, 0.29, 0.26), "Moss amount": 1.0},
 }
@@ -420,7 +434,7 @@ def _prop_master():
     # dark (luma about 0.1 to 0.2 linear on these scans).
     edge = g.add(g.add(up, g.mul(luma, 2.0)), g.mul(g.param("Moss start", 0.75), -1.0))
     moss = g.mul(g.saturate(g.mul(edge, 5.0)), g.param("Moss amount", 0.0))
-    moss_colour = g.mul(g.mask(g.param("Moss", (0.2, 0.3, 0.06)), "rgb"), g.mul(luma, 4.0))
+    moss_colour = g.mul(g.mask(g.param("Moss", (0.12, 0.2, 0.04)), "rgb"), g.mul(luma, 4.0))
     colour = g.lerp(colour, moss_colour, moss)
     rough = g.saturate(g.mul(g.mask(m, "g"), g.param("Roughness", 1.0)))
     rough = g.lerp(rough, g.const(1.0), moss)
@@ -529,7 +543,7 @@ def _grass_type(layer):
         unreal.LandscapeGrassTypeFactory(),
     )
     varieties = []
-    for biome, slug, density, cull_start, cull_end in GRASS[layer]:
+    for biome, slug, density, cull_start, cull_end, *scale in GRASS[layer]:
         meshes = [
             a
             for a in map(unreal.load_asset, assets.list_assets(f"{MS}/{biome}/{slug}", False))
@@ -545,7 +559,7 @@ def _grass_type(layer):
             v.set_editor_property("start_cull_distance", unreal.PerPlatformInt(default=cull_start))
             v.set_editor_property("end_cull_distance", unreal.PerPlatformInt(default=cull_end))
             v.set_editor_property("scaling", unreal.GrassScaling.UNIFORM)
-            v.set_editor_property("scale_x", unreal.FloatInterval(0.6, 1.4))
+            v.set_editor_property("scale_x", unreal.FloatInterval(*(scale or [(0.6, 1.4)])[0]))
             v.set_editor_property("random_rotation", True)
             v.set_editor_property("align_to_surface", True)
             v.set_editor_property("cast_dynamic_shadow", True)
@@ -820,6 +834,7 @@ def op_rebuild_ground(rebuild_grass=False):
     _plant_master()
     _prop_master()
     _plant_params(PLANT_LOOK)
+    _plant_params(PLANT_SLUG_LOOK)
     _prop_params(PROP_LOOK)
     _tree_look()
     yield 20
@@ -889,7 +904,7 @@ def _grass(density, cull):
     Grass is regenerated, nothing compiles."""
     rows = {}
     for layer, table in GRASS.items():
-        for _biome, slug, base, start, end in table:
+        for _biome, slug, base, start, end, *_ in table:
             rows.setdefault(layer, []).append((f"/{slug}/", base, start, end))
     changed = 0
     for layer, table in rows.items():
@@ -1252,13 +1267,16 @@ def _tree_look(look=None):
 
 
 def _plant_params(params):
-    """Sets the same parameters on every plant's MI (see _plant_master for the names)."""
+    """Sets the same parameters on every plant's MI (see _plant_master for the names), or, given
+    {slug: params} (PLANT_SLUG_LOOK), each named plant's own."""
     with open(f"{PREP}/index.json") as f:
         plants = [r for r in json.load(f) if r["kind"] == "plant" and r["opacity"]]
+    by_slug = all(isinstance(v, dict) for v in params.values())
     for r in plants:
+        own = params.get(r["slug"]) if by_slug else params
         path = f"{MS}/{r['biome']}/{r['slug']}/MI_{r['slug']}"
-        if assets.does_asset_exist(path):
-            _set_params(unreal.load_asset(path), params)
+        if own and assets.does_asset_exist(path):
+            _set_params(unreal.load_asset(path), own)
 
 
 def _prop_params(look):

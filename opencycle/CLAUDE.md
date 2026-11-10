@@ -90,8 +90,11 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
   `LOOK_TINTS` or `LOOK_GREYS`.
 - **Restart between looks.** A second `look` on the same editor hit a radv GPUVM fault
   (DEVICE_LOST) on 9 Nov; put `oc.py restart` before each look in a chain.
-- **Keep grass density in budget.** About 30 plants per 100 m^2 on the Forest layer is safe. At
-  40 (v13's first try) even the first look after a restart hit the GPUVM fault.
+- **Keep grass density in budget.** GRASS densities are per mesh variant (fern's six variants at
+  2.0 draw 12 per 100 m^2), and `look --grass` multiplies them again. Instances go as density
+  times cull squared: v18's Forest table (about 250 drawn per 100 m^2) is safe, while v13's
+  extra ferns hit the GPUVM fault on the first look. For more cover, draw grass bigger (a
+  row's optional (min, max) scale) rather than denser.
 - **Diagnose before you rebuild.** Use a `probe` or a `look` to confirm a cause first (for
   example, streaming versus the material), so a rebuild isn't spent on a guess.
 
