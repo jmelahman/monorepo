@@ -93,9 +93,10 @@ LOOK_TINTS = {
     "Forest": (0.26, 0.17, 0.09),
     # Moss and grass: a deep green, not v13's pale lime. Grass mix (lawn_grass patches) had no
     # tint at all: it made the pale beech bank and the far hillside's leopard spots (v15).
-    "Forest mix": (0.13, 0.22, 0.03),
-    "Grass": (0.12, 0.22, 0.05),
-    "Grass mix": (0.12, 0.21, 0.05),
+    # v18: a little yellower, as the moss and lawn read teal felt under the sky (v17 crops).
+    "Forest mix": (0.15, 0.22, 0.03),
+    "Grass": (0.14, 0.23, 0.04),
+    "Grass mix": (0.14, 0.22, 0.04),
     "Sand mix": LITTER,
     "Dirt mix": LITTER,
     # soil_mud as scanned read pale and dusty on the banks and the path's edge (QA, v12): dark,
@@ -147,18 +148,20 @@ GRASS = {
         # floors, and the user found v12's ferns too many (v13's 40 per 100 m^2 also crashed the GPU
         # on its first look; this stays near 31). leather_fern, the glossiest, is out. v16: fewer
         # yellow dry tussocks, more green clumps, and clover and dandelions for small yellow flowers
-        # (the style shots' flowering carpet).
+        # (the style shots' flowering carpet). v18: the floor read as moss felt with sparse tufts;
+        # twice the grass and more flowers near the road, culled sooner. Instances go as density
+        # times cull squared, so the layer draws a little fewer than v17's (about 670 vs 700).
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.5, 4000, 6000),
         ("shared", "common_fern", 1.0, 4000, 6000),
         ("mountain", "alpine_bearberry", 2.0, 3000, 4500),
         ("desert", "dry_grass", 1.5, 3000, 4500),
         ("desert", "dead_shrubs", 0.3, 4000, 6000),
-        ("shared", "grass_clumps", 10.0, 3000, 4500),
-        ("shared", "wild_grass", 7.0, 3000, 4500),
+        ("shared", "grass_clumps", 20.0, 2000, 3000),
+        ("shared", "wild_grass", 14.0, 2000, 3000),
         ("shared", "tall_grass", 2.0, 4000, 6000),
-        ("shared", "clovers", 3.0, 2000, 3000),
-        ("shared", "leafy_dandelions", 1.5, 2000, 3000),
+        ("shared", "clovers", 5.0, 1500, 2500),
+        ("shared", "leafy_dandelions", 2.5, 1500, 2500),
         # Big rounded boulders, as in the style shots.
         ("mountain", "tundra_boulder", 0.02, 12000, 15000),
         # The floor's debris: the woods in the reference photos are never bare between trunks.
@@ -363,6 +366,7 @@ class Ground:
 
 
 PLANT_MASTER = f"{MS}/Materials/M_MS_Plant"
+PROP_MASTER = f"{MS}/Materials/M_MS_Prop"
 # Set on every plant MI by each ground build (try values with `look --plant-param`). The scans'
 # own translucency tints made the ferns glow lime where the sun came through them.
 # Specular 0.4 and the scans' low roughness made fern fronds read blue-white and metallic against
@@ -375,10 +379,57 @@ PLANT_LOOK = {
     "Rough floor": 0.6,
 }
 # Props' MIs (M_MS_Prop). The tundra boulder as scanned is pale tundra stone and read near white
-# in the woods (v16): a darker, warmer grey, as the style shots' boulders.
+# in the woods (v16), and still pale at 0.42 (v17): darker, with a moss cap (see _prop_master).
 PROP_LOOK = {
-    "tundra_boulder": {"Tint": (0.42, 0.4, 0.36)},
+    "tundra_boulder": {"Tint": (0.3, 0.29, 0.26), "Moss amount": 1.0},
 }
+
+
+def _master_texture(g, param, kind, default):
+    """A texture parameter node for a Megascans master (the MIs set D, N, M and T by name)."""
+    node = g.node(unreal.MaterialExpressionTextureSampleParameter2D, x=-900)
+    node.set_editor_property("parameter_name", param)
+    node.set_editor_property(
+        "sampler_type",
+        {
+            "colour": unreal.MaterialSamplerType.SAMPLERTYPE_COLOR,
+            "normal": unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
+            "masks": unreal.MaterialSamplerType.SAMPLERTYPE_MASKS,
+        }[kind],
+    )
+    node.set_editor_property("texture", unreal.load_asset(default))
+    return node
+
+
+def _prop_master():
+    """M_MS_Prop rebuilt in place, as megascans.py builds it plus a moss cap: faces turned up
+    are blended toward "Moss" (times the scan's own brightness, so it keeps the stone's grain),
+    by "Moss amount" (0 by default, so only the props PROP_LOOK names grow it). The tundra
+    boulder read pale and bare among the woods (v16, v17); the style shots' boulders are capped
+    with moss."""
+    folder, name = PROP_MASTER.rsplit("/", 1)
+    g = _graph(name, folder)
+    d = _master_texture(g, "D", "colour", "/Engine/EngineResources/DefaultTexture")
+    n = _master_texture(g, "N", "normal", "/Engine/EngineMaterials/DefaultNormal")
+    m = _master_texture(g, "M", "masks", f"{MS}/shared/fern/T_fern_M")
+    raw = g.mask(d, "rgb")
+    colour = g.mul(raw, g.mask(g.param("Tint", (1.0, 1.0, 1.0)), "rgb"))
+    luma = g.op(unreal.MaterialExpressionDotProduct, raw, g.const((0.3, 0.59, 0.11)))
+    up = g.mask(g.node(unreal.MaterialExpressionVertexNormalWS), "b")
+    # Up from about 40 degrees off vertical, its edge broken up by the stone's own light and
+    # dark (luma about 0.1 to 0.2 linear on these scans).
+    edge = g.add(g.add(up, g.mul(luma, 2.0)), g.mul(g.param("Moss start", 0.75), -1.0))
+    moss = g.mul(g.saturate(g.mul(edge, 5.0)), g.param("Moss amount", 0.0))
+    moss_colour = g.mul(g.mask(g.param("Moss", (0.2, 0.3, 0.06)), "rgb"), g.mul(luma, 4.0))
+    colour = g.lerp(colour, moss_colour, moss)
+    rough = g.saturate(g.mul(g.mask(m, "g"), g.param("Roughness", 1.0)))
+    rough = g.lerp(rough, g.const(1.0), moss)
+    g.output(colour, g.mask(n, "rgb"), rough, ao=g.mask(m, "r"))
+    material = g.material
+    material.set_editor_property("used_with_instanced_static_meshes", True)
+    material.set_editor_property("used_with_nanite", True)
+    g.finish()
+    log("rebuilt M_MS_Prop with a moss cap")
 
 
 def _plant_master():
@@ -388,27 +439,12 @@ def _plant_master():
     stage puts back the plain master; run rebuild-ground after it."""
     folder, name = PLANT_MASTER.rsplit("/", 1)
     g = _graph(name, folder)
-
-    def texture(param, kind, default):
-        node = g.node(unreal.MaterialExpressionTextureSampleParameter2D, x=-900)
-        node.set_editor_property("parameter_name", param)
-        node.set_editor_property(
-            "sampler_type",
-            {
-                "colour": unreal.MaterialSamplerType.SAMPLERTYPE_COLOR,
-                "normal": unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
-                "masks": unreal.MaterialSamplerType.SAMPLERTYPE_MASKS,
-            }[kind],
-        )
-        node.set_editor_property("texture", unreal.load_asset(default))
-        return node
-
-    d = texture("D", "colour", "/Engine/EngineResources/DefaultTexture")
-    n = texture("N", "normal", "/Engine/EngineMaterials/DefaultNormal")
+    d = _master_texture(g, "D", "colour", "/Engine/EngineResources/DefaultTexture")
+    n = _master_texture(g, "N", "normal", "/Engine/EngineMaterials/DefaultNormal")
     # A real masks texture as the default: the engine's white square is sRGB, which a Masks
     # sampler refuses at compile.
-    m = texture("M", "masks", f"{MS}/shared/fern/T_fern_M")
-    t = texture("T", "colour", "/Engine/EngineResources/DefaultTexture")
+    m = _master_texture(g, "M", "masks", f"{MS}/shared/fern/T_fern_M")
+    t = _master_texture(g, "T", "colour", "/Engine/EngineResources/DefaultTexture")
     colour = g.mul(g.mask(d, "rgb"), g.mask(g.param("Tint", (1.0, 1.0, 1.0)), "rgb"))
     luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
     colour = g.lerp(colour, luma, g.param("Grey", 0.12))
@@ -782,6 +818,7 @@ def op_rebuild_ground(rebuild_grass=False):
     Saved grass types are reused: building them takes over ten minutes, on one core."""
     _guard_rebuild()
     _plant_master()
+    _prop_master()
     _plant_params(PLANT_LOOK)
     _prop_params(PROP_LOOK)
     _tree_look()
