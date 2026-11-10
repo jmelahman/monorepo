@@ -1051,6 +1051,7 @@ POST_KEYS = {
     "flare": "post volume: lens flare intensity (1 default)",
     "aerial": "sky atmosphere: aerial perspective distance scale, 1 neutral; lower is less haze",
     "cloud_bottom": "volumetric clouds: layer bottom altitude in km",
+    "cloud_wind": "volumetric clouds: wind scale, 1 the template's; 0 freezes them",
     "fog_inscatter": "height fog: directional inscattering (sun glow) intensity scale, 0 off",
 }
 CLOUDS = f"{FOLDER}/MI_ClimbClouds"
@@ -1165,7 +1166,7 @@ def _post(post):
             comp.set_editor_property(
                 "directional_inscattering_luminance", unreal.LinearColor(v, v, v, 1.0)
             )
-    if "clouds" in post or "cloud_density" in post:
+    if "clouds" in post or "cloud_density" in post or "cloud_wind" in post:
         for cloud in _level_actors(unreal.VolumetricCloud):
             comp = cloud.get_component_by_class(unreal.VolumetricCloudComponent)
             mi = unreal.load_asset(CLOUDS) if assets.does_asset_exist(CLOUDS) else None
@@ -1186,6 +1187,13 @@ def _post(post):
                     lib.edit.set_material_instance_scalar_parameter_value(
                         mi, name, float(post[key])
                     )
+            if "cloud_wind" in post:
+                # The clouds drift with the editor's clock and the sky light captures them in real
+                # time, so an unfrozen still depends on how long after start it was taken.
+                w = float(post["cloud_wind"])
+                lib.edit.set_material_instance_vector_parameter_value(
+                    mi, "Layout_WindControls", unreal.LinearColor(w, w, 0.5 * w, w / 3)
+                )
             assets.save_loaded_asset(mi, False)
             comp.set_editor_property("material", mi)
     if "sky_lum" in post:
