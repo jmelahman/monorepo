@@ -111,7 +111,8 @@ LOOK_TINTS = {
     # v20: (0.55, 0.75, 0.3) read lime on the hairpin's slopes; this, greyed a little, didn't.
     # v24: the bench's and 72%'s mint carpet was this mix (false colour): deeper, yellower, and
     # no longer greyed, as grey turned it mint under the sky.
-    "Forest mix": (0.2, 0.3, 0.06),
+    # v30: a little greener, with the blades' "Flat colour" (PLANT_LOOK): move the two together.
+    "Forest mix": (0.2, 0.34, 0.05),
     "Grass": (0.14, 0.23, 0.04),
     "Grass mix": (0.14, 0.22, 0.04),
     "Sand mix": (0.22, 0.2, 0.08),
@@ -177,13 +178,15 @@ GRASS = {
     # so this draws fewer instances than v29 did. Scans near their own size (clumps are 60 cm
     # across and 25 cm tall; v19-v29 drew them up to 2.8 times that, as sparse reeds).
     "Forest": (
-        ("shared", "grass_clumps", 30.0, 2000, 3000, (1.0, 1.8)),
-        ("shared", "wild_grass", 20.0, 2000, 3000, (1.2, 2.0)),
-        ("shared", "kikuyu_grass", 40.0, 1500, 2000, (0.9, 1.6)),
-        ("shared", "tall_grass", 2.0, 4000, 6000),
-        ("shared", "clovers", 8.0, 1500, 2500, (1.0, 1.6)),
-        ("shared", "clover_varieties", 4.0, 1500, 2500, (1.0, 1.6)),
-        ("shared", "leafy_dandelions", 6.0, 1500, 2500),
+        # The first render at 30, 20 and 40 was thin; 1.7 times that (tried with `--grass 2.0`)
+        # reads as a carpet.
+        ("shared", "grass_clumps", 50.0, 2000, 3000, (1.0, 1.8)),
+        ("shared", "wild_grass", 33.0, 2000, 3000, (1.2, 2.0)),
+        ("shared", "kikuyu_grass", 66.0, 1500, 2000, (0.9, 1.6)),
+        ("shared", "tall_grass", 3.0, 4000, 6000),
+        ("shared", "clovers", 13.0, 1500, 2500, (1.0, 1.6)),
+        ("shared", "clover_varieties", 7.0, 1500, 2500, (1.0, 1.6)),
+        ("shared", "leafy_dandelions", 10.0, 1500, 2500),
         ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
     "Forest floor": (
@@ -200,7 +203,7 @@ GRASS = {
         ("forest", "nordic_forest_ground_patch_root", 0.2, 9000, 12000),
         ("forest", "mossy_rocks", 0.15, 9000, 12000),
         ("forest", "nordic_forest_rock_small", 0.5, 6000, 8000),
-        ("forest", "mossy_wood_stump", 0.08, 9000, 12000),
+        ("forest", "mossy_wood_stump", 0.05, 9000, 12000),
         ("forest", "fallen_log", 0.05, 12000, 15000),
         ("forest", "fallen_pine_tree", 0.025, 12000, 15000),
     ),
@@ -434,6 +437,10 @@ PLANT_LOOK = {
     "TranslucencyTint": (0.06, 0.08, 0.05),
     "Grey": 0.12,
     # v30: less per-plant brightness and fewer dry plants (0.7 and 0.3 made the carpet blotchy).
+    # v30: the first render's blades were grey and dark against the ground (gain 4, shade 0.35).
+    "Flat gain": 12.0,
+    "Flat colour": (0.1, 0.2, 0.03),
+    "Root shade": 0.5,
     "Variation": 0.3,
     "Dry share": 0.1,
     "Specular": 0.15,
