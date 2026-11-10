@@ -58,8 +58,11 @@ assets = lib.assets
 # granite and gravel rather than the island's red-brown stony soil and yellow sand.
 SURFACES = {
     "Grass": ("shared", "uncut_grass", (0.55, 0.58, 0.42)),
-    # Brown needle and leaf litter: the scanned forest floor alone is olive green and read as lawn.
-    "Forest": ("mountain", "alpine_needles", (0.5, 0.46, 0.44)),
+    # v20: forest_floor (litter with small plants), greyed toward brown by LOOK_GREYS. The
+    # alpine_needles scan used here before is an opacity scan: 8% needles, the rest dilated
+    # padding, which drew every bank, verge and the woods' floor as blurred streaks (v19 false
+    # colour; its D's alpha averages 0.08).
+    "Forest": ("forest", "forest_floor", (0.5, 0.46, 0.44)),
     "Rock": ("mountain", "granite_rocky_ground", (0.85, 0.85, 0.85)),
     "Snow": ("coast", "thai_wet_sand", (1.0, 1.0, 1.0)),
     "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
@@ -78,26 +81,27 @@ MIXES = {
     # grey-teal felt under the sky, never as the style shots' green carpet.
     "Forest": ("shared", "uncut_grass", "patches", 10.0),
     "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
-    # The soil's litter is brown needles: olive forest_floor here made green splotches on brown.
-    "Sand": ("mountain", "alpine_needles", "patches", 4.0),
+    # Litter and small plants over the banks' soil (alpine_needles was padding: see "Forest").
+    "Sand": ("forest", "forest_floor", "patches", 4.0),
     "Grass": ("shared", "lawn_grass", "patches", 30.0),
     "Rock": ("forest", "rocky_forest_path", "patches", 12.0),
-    "Dirt": ("mountain", "alpine_needles", "patches", 4.0),
+    "Dirt": ("forest", "forest_floor", "patches", 4.0),
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
-# alpine_needles (the Forest base, and the Sand and Dirt mixes) is pale beige as scanned: untinted
-# it made every bank and the woods' floor read as sand (found by false colour, v12).
+# forest_floor (the Forest base, and the Sand and Dirt mixes) is olive as scanned: greyed and
+# warmed toward brown litter, keeping a little of its green.
 # Halved from v13 once exposure was locked (`--post ev=-4.5`): under auto exposure darker albedo
 # came out just as bright.
-LITTER = (0.22, 0.17, 0.12)
+LITTER = (0.34, 0.27, 0.4)
 LOOK_TINTS = {
     "Rock": (0.45, 0.42, 0.37),
     # Warmer than neutral litter: under the blue sky the floor read blue-grey (v15 false colour).
-    "Forest": (0.26, 0.17, 0.09),
+    "Forest": LITTER,
     # Moss and grass: a deep green, not v13's pale lime. Grass mix (lawn_grass patches) had no
     # tint at all: it made the pale beech bank and the far hillside's leopard spots (v15).
     # v18: a little yellower, as the moss and lawn read teal felt under the sky (v17 crops).
-    "Forest mix": (0.55, 0.75, 0.3),
+    # v20: (0.55, 0.75, 0.3) read lime on the hairpin's slopes; this, greyed a little, didn't.
+    "Forest mix": (0.36, 0.48, 0.18),
     "Grass": (0.14, 0.23, 0.04),
     "Grass mix": (0.14, 0.22, 0.04),
     "Sand mix": LITTER,
@@ -112,9 +116,10 @@ LOOK_GREYS = {
     "Grass mix": 0.0,
     "Rock": 0.5,
     "Rock mix": 0.3,
-    "Forest mix": 0.0,
-    "Dirt mix": 0.3,
-    "Sand mix": 0.3,
+    "Forest mix": 0.15,
+    "Forest": 0.4,
+    "Dirt mix": 0.4,
+    "Sand mix": 0.4,
 }
 ROUGHNESS = {"Snow": 0.55}
 # Every other layer is at least this rough: the scans' low roughness made the soil glitter.
