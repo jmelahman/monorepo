@@ -33,6 +33,12 @@ STILL_SIZE = (1920, 1080)
 # Frames to wait at each view: grass builds around the camera within a time budget, and at 120
 # frames whole wooded stretches were still bare.
 STILL_SETTLE = 480
+# Stills wait this many frames at least, then until the landscape's grass instance count holds
+# still for GRASS_STEADY checks 30 frames apart (at most STILL_SETTLE_MAX frames): a fixed 480
+# often shot the banks, or a whole view, before their grass was built (v21-v23's "bare banks").
+STILL_SETTLE_MIN = 240
+STILL_SETTLE_MAX = 2400
+GRASS_STEADY = 4
 STILL_CVARS = ("r.Streaming.PoolSize 3000", "r.Streaming.FullyLoadUsedTextures 1")
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
 
@@ -1188,6 +1194,34 @@ def cameras(only=None):
     return [(n, tuple(v * 100 for v in p), tuple(v * 100 for v in a)) for n, p, a in out]
 
 
+def _grass_instances():
+    """Landscape grass instances built so far (the grass components live on the proxies)."""
+    n = 0
+    for actor in unreal.get_editor_subsystem(unreal.EditorActorSubsystem).get_all_level_actors():
+        if isinstance(actor, unreal.LandscapeProxy):
+            for c in actor.get_components_by_class(unreal.HierarchicalInstancedStaticMeshComponent):
+                n += c.get_instance_count()
+    return n
+
+
+def _settle(name):
+    """Waits for a new view's grass: STILL_SETTLE_MIN frames, then until the instance count is
+    steady. Falls back to STILL_SETTLE if no grass components are found."""
+    yield STILL_SETTLE_MIN
+    frames, last, steady = STILL_SETTLE_MIN, -1, 0
+    while frames < STILL_SETTLE_MAX:
+        n = _grass_instances()
+        if n == 0 and frames >= STILL_SETTLE:
+            break
+        steady = steady + 1 if n == last else 0
+        if steady >= GRASS_STEADY:
+            break
+        last = n
+        yield 30
+        frames += 30
+    log(f"settled {name}: {frames} frames, {last} grass instances")
+
+
 def _stills(shots, out):
     """Shot from the editor's own viewport, moved to each view: a stand-alone camera doesn't drive
     grass, texture streaming or tree LODs. A still counts only once its file is written."""
@@ -1209,7 +1243,7 @@ def _stills(shots, out):
         editor.set_level_viewport_camera_info(
             eye, unreal.MathLibrary.find_look_at_rotation(eye, unreal.Vector(*target))
         )
-        yield STILL_SETTLE  # grass, textures and shadows stream in around the new view
+        yield from _settle(name)  # grass, textures and shadows stream in around the new view
         unreal.AutomationLibrary.take_high_res_screenshot(*STILL_SIZE, path)
         for _ in range(30):
             yield 30  # the shot is written a few frames later
@@ -1435,12 +1469,18 @@ def op_look(
 ):
     """Recolour through MI_ClimbGround's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
     0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
-    compiles. PROP_LOOK is applied too, so trying a prop's tint needs only a restart."""
+    compiles. PLANT_LOOK and PROP_LOOK are applied too, so a false-colour look is undone by the
+    next look, and trying a prop's tint needs only a restart."""
+    _plant_params(PLANT_LOOK)
+    _plant_params(PLANT_SLUG_LOOK)
     _prop_params(PROP_LOOK)
     if prop_params:
         _prop_params(prop_params)
-    if tint or grey:
-        _tune({k: tuple(v) for k, v in (tint or {}).items()}, grey)
+    # The baked tints first, so a false-colour look's tints don't outlive it.
+    _tune(
+        {**LOOK_TINTS, **{k: tuple(v) for k, v in (tint or {}).items()}},
+        {**LOOK_GREYS, **(grey or {})},
+    )
     if grass:
         _grass(*grass)
     if plants:
