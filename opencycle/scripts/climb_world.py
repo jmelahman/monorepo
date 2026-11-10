@@ -305,9 +305,11 @@ def _weathered(g, colour, grain_space):
     """Old outdoor wood over `colour`: silvered in patches, lichen spots, moss on what faces up."""
     colour = g.mul(colour, _noise_at(g, grain_space, 0.1, 0.7, 1.15))
     silver = g.saturate(g.world_noise(0.004, -0.6, 1.4, 3))
-    colour = g.lerp(colour, g.const((0.15, 0.14, 0.13)), g.mul(silver, 0.7))
-    lichen = g.saturate(g.mul(g.add(g.world_noise(0.15, 0.0, 1.0, 2), -0.74), 8.0))
-    colour = g.lerp(colour, g.const((0.26, 0.27, 0.21)), g.mul(lichen, 0.7))
+    # Silvering and lichen only a shade off the timber: at 0.15 and 0.26 grey they speckled the
+    # fence and the bench pale (QA, v13).
+    colour = g.lerp(colour, g.const((0.1, 0.095, 0.09)), g.mul(silver, 0.5))
+    lichen = g.saturate(g.mul(g.add(g.world_noise(0.15, 0.0, 1.0, 2), -0.8), 8.0))
+    colour = g.lerp(colour, g.const((0.13, 0.14, 0.1)), g.mul(lichen, 0.4))
     up = g.mask(g.node(unreal.MaterialExpressionVertexNormalWS), "b")
     moss = g.mul(
         g.saturate(g.mul(g.add(up, -0.55), 4.0)),
@@ -329,7 +331,8 @@ def timber_material(name, stretch):
     rel = g.add(world_z, g.mul(origin_z, -1.0))
     damp = g.saturate(g.mul(g.add(rel, 20.0), -1 / 20))
     colour = g.lerp(colour, g.mul(colour, g.const((0.5, 0.52, 0.45))), damp)
-    g.output(colour, rough=g.lerp(g.const(0.86), g.const(0.95), moss), metallic=0.0)
+    rough = g.lerp(g.const(0.88), g.const(0.95), moss)
+    g.output(colour, rough=rough, specular=0.3, metallic=0.0)
     return g.finish()
 
 
@@ -369,11 +372,13 @@ def log_material():
     return g.finish()
 
 
-ROAD_DARKEN = 0.4  # the island's asphalt read washed-out grey on the climb (0.5 still pale, v12)
+ROAD_DARKEN = 0.3  # the island's asphalt read washed-out grey on the climb (0.4 still pale, v13)
 # The scan's bright aggregate read as a regular white speckle (QA, v12): clamped before darkening.
 ROAD_SPECK_CLAMP = 0.3
+# The edge's soil_mud, darkened and browned to the ground's damp litter.
+ROAD_EDGE_SOIL = (0.45, 0.38, 0.32)
 # Old country tarmac is warm grey-brown, not the scan's blue-grey (QA, v11).
-ROAD_WARM = (1.08, 1.0, 0.86)
+ROAD_WARM = (1.1, 1.0, 0.8)
 
 
 def road_material():
@@ -421,10 +426,13 @@ def road_material():
     )
     # The edge frays: soil and gravel reach 20-60 cm in, raggedly, so the tarmac has no clean line.
     ragged = g.add(g.world_noise(0.02, -0.3, 0.3, 2), g.world_noise(0.15, -0.15, 0.15, 2))
-    edge = g.saturate(g.mul(g.add(g.add(across, ragged), -0.95), 2.2))
+    # Narrower than v13's (offset 0.95, x2.2): its pale soil pebbles spread halfway in and read as
+    # a bright speckle of ovals on the tarmac.
+    edge = g.saturate(g.mul(g.add(g.add(across, g.mul(ragged, 0.6)), -1.0), 3.0))
     stile = island.tile_cm("forest", "soil_mud")
     soil = g.mask(g.sample(island.ms_texture("forest", "soil_mud", "D"), g.world_uv(stile)), "rgb")
-    colour = g.lerp(colour, g.mul(soil, 0.8), g.mul(edge, 0.85))
+    soil = g.mul(soil, g.const(ROAD_EDGE_SOIL))
+    colour = g.lerp(colour, soil, g.mul(edge, 0.85))
     leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.72), 7.0))
     leaves = g.mul(leaves, g.lerp(g.const(0.12), g.const(1.0), edge))
     leaf_colour = g.mul(g.const((0.11, 0.07, 0.04)), g.world_noise(0.03, 0.6, 1.4, 2))
