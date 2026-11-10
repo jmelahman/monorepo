@@ -190,7 +190,8 @@ GRASS = {
         ("shared", "leafy_dandelions", 4.0, 1500, 2500),
         # v25: QA read the floor as tufts on bare soil: a low, dense kikuyu carpet near the road,
         # culled at 15-20 m so it costs about a third of grass_clumps' instances.
-        ("shared", "kikuyu_grass", 16.0, 1500, 2000, (1.2, 1.8)),
+        # v26: still clumps on soil (QA): denser and bigger.
+        ("shared", "kikuyu_grass", 28.0, 1500, 2000, (1.4, 2.2)),
         # Big rounded boulders, as in the style shots (v25: twice as many, QA wanted more).
         ("mountain", "tundra_boulder", 0.04, 12000, 15000),
         # The floor's debris: the woods in the reference photos are never bare between trunks.
@@ -218,6 +219,8 @@ GRASS = {
         ("shared", "wild_grass", 40.0, 3000, 4500, (1.4, 2.4)),
         ("desert", "dry_grass", 1.5, 3000, 4500),
         ("shared", "clovers", 5.0, 1500, 2500, (1.0, 1.6)),
+        # v26: the spruce banks read as flat brown mud (QA, v25): the floor's low carpet here too.
+        ("shared", "kikuyu_grass", 24.0, 1500, 2000, (1.4, 2.2)),
     ),
     # Talus under the crags.
     "Rock": (
@@ -422,6 +425,8 @@ PLANT_SLUG_LOOK = {
     # v21: less red and blue: at R/G 0.8 the tufts read yellow-olive against the style shots' green.
     "grass_clumps": {"Tint": (2.4, 4.0, 1.2)},
     "wild_grass": {"Tint": (1.5, 2.5, 0.8)},
+    # v26: untinted it read as a pale grey-green wash on the shaded floor (QA, v25).
+    "kikuyu_grass": {"Tint": (1.5, 2.5, 0.8)},
 }
 PROP_LOOK = {
     "tundra_boulder": {"Tint": (0.3, 0.29, 0.26), "Moss amount": 1.0},
@@ -1027,6 +1032,8 @@ POST_KEYS = {
     "sky_warm": "sky light: warmth 0..1; 0 is white, 1 is a warm (1, 0.8, 0.6) fill",
     "temp": "post volume: white balance in kelvin, 6500 neutral; higher reads warmer",
     "sun": "sun: intensity in lux",
+    "sun_pitch": "sun: elevation in degrees, negative (the level's is -16)",
+    "sun_yaw": "sun: compass yaw in degrees (the level's is 44)",
     "contact": "sun: contact shadow length, screen fraction (0.05 grounds posts)",
     "clouds": "volumetric clouds: Cloud_GlobalCoverage on MI_ClimbClouds",
     "cloud_density": "volumetric clouds: Cloud_GlobalDensity on MI_ClimbClouds",
@@ -1114,6 +1121,18 @@ def _post(post):
                     r=255, g=int(255 * (1 - 0.2 * w)), b=int(255 * (1 - 0.4 * w)), a=255
                 )
                 sky.light_component.set_editor_property("light_color", colour)
+    if {"sun_pitch", "sun_yaw"} & set(post):
+        for sun in _level_actors(unreal.DirectionalLight):
+            rot = sun.get_actor_rotation()
+            log(f"sun was pitch {rot.pitch:.1f} yaw {rot.yaw:.1f}")
+            sun.set_actor_rotation(
+                unreal.Rotator(
+                    roll=rot.roll,
+                    pitch=float(post.get("sun_pitch", rot.pitch)),
+                    yaw=float(post.get("sun_yaw", rot.yaw)),
+                ),
+                False,
+            )
     if {"sun", "shafts", "contact"} & set(post):
         for sun in _level_actors(unreal.DirectionalLight):
             comp = sun.light_component
