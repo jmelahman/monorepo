@@ -76,6 +76,14 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 - **Check the inputs as well as the look.** Ground cover was invisible for weeks because the
   opacity maps peaked at 76 of 255, under the 0.33 clip. A crop at full resolution, plus a probe
   of the asset, found it in minutes.
+- **False-colour to find a layer.** `look --tint Forest=1,0,0 --tint Sand=0,0,1 ...` on one
+  shot shows which landscape layer a surface is (the pale banks were Rock outcrops, not soil).
+  It saves the tints, so the next `rebuild-ground` (or a `look` with LOOK_TINTS) restores them.
+- **Material values without a rebuild:** `look --plant-param NAME=F|R,G,B` (every plant MI) and
+  `--ground-param NAME=...` (MI_ClimbGround). Bake the winners into `PLANT_LOOK`, `STEEP`,
+  `LOOK_TINTS` or `LOOK_GREYS`.
+- **Restart between looks.** A second `look` on the same editor hit a radv GPUVM fault
+  (DEVICE_LOST) on 9 Nov; put `oc.py restart` before each look in a chain.
 - **Diagnose before you rebuild.** Use a `probe` or a `look` to confirm a cause first (for
   example, streaming versus the material), so a rebuild isn't spent on a guess.
 

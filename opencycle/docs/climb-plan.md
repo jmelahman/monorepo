@@ -107,6 +107,10 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - Forest cover adds alpine_bearberry 3.0, dry_grass 1.5 and dead_shrubs 0.3.
   - Road: darken 0.5 with a warm (1.08, 1.0, 0.86); the soil edge frays 20–60 cm in.
   - Fog 0.004.
+  - Result: the stills barely moved. A `look --plant-param` pass found the ferns' glow was the
+    scans' translucency tint (now 0.2, 0.24, 0.12 in `PLANT_LOOK`). A false-colour pass found
+    the pale banks were Rock: the outcrop noise on lumpy banks took whole cuts. Outcrops are now
+    rare (fbm 0.86–0.9, slope > 0.7) and 3–6 m off the path, and Rock is darker.
 
 - 2026-11-09, night (storybook v11): **ground cover renders.** The batch below built cleanly,
   then a look pass set plants to 0.62,0.62,0.5 and grass to ×1.2.
