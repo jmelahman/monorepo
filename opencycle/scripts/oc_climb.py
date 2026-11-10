@@ -84,21 +84,25 @@ MIXES = {
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
 # alpine_needles (the Forest base, and the Sand and Dirt mixes) is pale beige as scanned: untinted
 # it made every bank and the woods' floor read as sand (found by false colour, v12).
-LITTER = (0.38, 0.3, 0.23)
+# Halved from v13 once exposure was locked (`--post ev=-4.5`): under auto exposure darker albedo
+# came out just as bright.
+LITTER = (0.22, 0.17, 0.12)
 LOOK_TINTS = {
     "Rock": (0.45, 0.42, 0.37),
-    "Forest": (0.36, 0.31, 0.26),
-    "Forest mix": (0.75, 0.75, 0.62),
+    "Forest": (0.22, 0.18, 0.14),
+    # Moss and grass: a deep green, not v13's pale lime.
+    "Forest mix": (0.3, 0.4, 0.18),
+    "Grass": (0.25, 0.38, 0.12),
     "Sand mix": LITTER,
     "Dirt mix": LITTER,
     # soil_mud as scanned read pale and dusty on the banks and the path's edge (QA, v12): dark,
     # damp earth as in the reference photos.
-    "Sand": (0.42, 0.34, 0.28),
-    "Dirt": (0.4, 0.32, 0.26),
+    "Sand": (0.24, 0.18, 0.14),
+    "Dirt": (0.22, 0.17, 0.13),
 }
 LOOK_GREYS = {
     "Grass": 0.15,
-    "Rock": 0.3,
+    "Rock": 0.5,
     "Rock mix": 0.3,
     "Forest mix": 0.3,
     "Dirt mix": 0.3,
@@ -747,6 +751,7 @@ def op_rebuild_ground(rebuild_grass=False):
     _guard_rebuild()
     _plant_master()
     _plant_params(PLANT_LOOK)
+    _tree_look()
     yield 20
     yield from _warm_grass_meshes()
     grass = {}
@@ -1115,6 +1120,51 @@ def _set_params(mi, params):
             edit.set_material_instance_scalar_parameter_value(mi, name, float(value))
     edit.update_material_instance(mi)
     assets.save_loaded_asset(mi, False)
+
+
+# Bark per static tree: {kind: {material slot: params}}, set on child instances of the PVE sample
+# materials (/Game/Climb/Trees/MI_<kind>_<slot>) that the tree's slots then use, so the plugin's
+# own assets stay untouched. The spruce bark read pale grey; the look reference has red-brown pines.
+TREE_LOOK = {
+    "spruce": {
+        0: {"BaseColor Tint": (0.95, 0.6, 0.42)},
+        1: {"BaseColor Tint": (0.95, 0.6, 0.42)},
+    },
+}
+
+
+def _tree_look(look=None):
+    """Applies TREE_LOOK (or `look`) to the static trees. Run with L_Hero closed."""
+    look = TREE_LOOK if look is None else look
+    for kind, slots in look.items():
+        sm = unreal.load_asset(f"{STATIC_TREES}/SM_{kind}")
+        if sm is None:
+            log(f"no SM_{kind}: run `oc.py static-trees` first")
+            continue
+        mats = sm.get_editor_property("static_materials")
+        changed = False
+        for slot, params in slots.items():
+            current = mats[slot].get_editor_property("material_interface")
+            name = f"MI_{kind}_{slot}"
+            path = f"{STATIC_TREES}/{name}"
+            if assets.does_asset_exist(path):
+                mi = unreal.load_asset(path)
+            else:
+                mi = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+                    name,
+                    STATIC_TREES,
+                    unreal.MaterialInstanceConstant,
+                    unreal.MaterialInstanceConstantFactoryNew(),
+                )
+                lib.edit.set_material_instance_parent(mi, current)
+            _set_params(mi, params)
+            if current.get_path_name() != mi.get_path_name():
+                mats[slot].set_editor_property("material_interface", mi)
+                changed = True
+        if changed:
+            sm.set_editor_property("static_materials", mats)
+            assets.save_loaded_asset(sm, False)
+        log(f"tree look {kind}: {slots}")
 
 
 def _plant_params(params):
