@@ -108,9 +108,18 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - v16: warm floor, clover and dandelions on Forest (still about 31 per 100 m^2), tundra
     boulders, subtler road repair patches. Boulders came out near white: `PROP_LOOK` now tints
     props' MIs on each ground build.
-  - v17 (running): an alpine backdrop in make_climb.py. TREELINE 330 m thins the woods into
-    meadow, SNOWLINE 560 m paints Snow, and PEAKS puts two peaks on the east and west rims, where
-    the path's views end.
+  - v17: an alpine backdrop in make_climb.py (TREELINE 420 m, SNOWLINE 600 m, two Gaussian PEAKS
+    at x = ±990 m) and triplanar ground on slopes. The first try's wide peak tails lifted the
+    path by 100 m and dropped its props; the chain now greps the generator's line for 'bench'.
+    QA 7, 7, 8, 6, 6, 6, 6: the peak ends the views but reads as a flat pale cone, and the banks
+    still look smeared (soil_mud is a smooth mud scan; the heightfield is 1 m).
+  - The boulder's tint was set (probe) and its albedo is dark (D mean 0.34 sRGB, roughness 0.9),
+    yet it reads pale grey in sun: it needs moss, not only tint.
+  - v18 (running, `--rebuild-grass`): M_MS_Prop rebuilt with a moss cap (`_prop_master`, "Moss
+    amount" set by PROP_LOOK); Forest grass doubled near the path at a 20-30 m cull (fewer
+    instances overall than v17); yellower moss and lawn tints.
+  - Queued for v19: steep peak faces shed snow (in make_climb.py); try gravel_on_soil for the
+    banks' Sand; probe the sky (out/qa/probe_sky.py) for a moodier sky and clouds.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in

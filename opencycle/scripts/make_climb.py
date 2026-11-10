@@ -192,7 +192,9 @@ def paint(x, y, h, road_dist):
     snow = mi.smoothstep(
         SNOWLINE - 40, SNOWLINE + 40, h + 90 * (mi.fbm(x, y, 70, 3, SEED + 42) - 0.5)
     )
-    snow *= 1 - 0.6 * mi.smoothstep(0.9, 1.6, slope)
+    # Steep faces shed their snow: dark rock ribs between snowfields, not a flat white cone (QA,
+    # v17). slope is rise over run, so 0.7 is 35 degrees.
+    snow *= 1 - mi.smoothstep(0.7, 1.1, slope)
     rest = (1 - shoulder - soil) * (1 - snow)
     soft = (1 - rock) * rest
     out = {k: np.zeros_like(h) for k in mi.LAYERS}
