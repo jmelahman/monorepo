@@ -109,8 +109,9 @@ LOOK_TINTS = {
     # soil_mud as scanned read pale and dusty on the banks and the path's edge (QA, v12): dark,
     # damp earth as in the reference photos.
     # v20: warmer, as the style shots' brown dirt; the cooler soil read mauve under the sky.
-    "Sand": (0.34, 0.2, 0.08),
-    "Dirt": (0.3, 0.19, 0.09),
+    # v21: browner, with some blue: at R 1.7x G and no blue the banks read maroon under the sky.
+    "Sand": (0.3, 0.22, 0.12),
+    "Dirt": (0.28, 0.21, 0.12),
 }
 LOOK_GREYS = {
     "Grass": 0.0,
@@ -127,10 +128,11 @@ ROUGHNESS = {"Snow": 0.55}
 ROUGH_FLOOR = 0.75
 # Steep ground on these layers is shaded toward darker, browner soil ("<layer> steep" parameter):
 # the cut banks read pale beige against the reference photos' dark earth.
+# v21: (0.7, 0.6, 0.48), a darker, more neutral shade: (0.8, 0.6, 0.38) turned every bank maroon.
 STEEP = {
-    "Forest": (0.8, 0.6, 0.38),
-    "Sand": (0.8, 0.6, 0.38),
-    "Dirt": (0.8, 0.6, 0.38),
+    "Forest": (0.7, 0.6, 0.48),
+    "Sand": (0.7, 0.6, 0.48),
+    "Dirt": (0.7, 0.6, 0.48),
 }
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
@@ -189,16 +191,17 @@ GRASS = {
     # The soil of the cut banks: roots, stones, ferns and tufts, so a bank is never bare plaster.
     "Sand": (
         # v20: more roots and stones, and bigger tufts: the banks read bare once their smeared
-        # litter was fixed.
-        ("forest", "nordic_forest_ground_patch_root", 3.0, 6000, 8000),
+        # litter was fixed. v21: still bare (about 16 tufts on a 30 m^2 bank, QA): grass near the
+        # forest floor's density, fewer yellow dry tussocks.
+        ("forest", "nordic_forest_ground_patch_root", 4.0, 6000, 8000),
         ("forest", "nordic_forest_rock_small", 3.0, 5000, 7000),
         ("forest", "mossy_rocks", 0.3, 8000, 11000),
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
-        ("shared", "grass_clumps", 18.0, 3000, 4500, (1.2, 2.0)),
-        ("shared", "wild_grass", 12.0, 3000, 4500, (1.2, 2.0)),
-        ("desert", "dry_grass", 4.0, 3000, 4500),
-        ("shared", "clovers", 3.0, 1500, 2500, (1.0, 1.6)),
+        ("shared", "grass_clumps", 28.0, 3000, 4500, (1.2, 2.0)),
+        ("shared", "wild_grass", 18.0, 3000, 4500, (1.2, 2.0)),
+        ("desert", "dry_grass", 1.5, 3000, 4500),
+        ("shared", "clovers", 5.0, 1500, 2500, (1.0, 1.6)),
     ),
     # Talus under the crags.
     "Rock": (
@@ -400,8 +403,9 @@ PLANT_LOOK = {
 # Per plant, after PLANT_LOOK: the grass scans are near black as scanned (grass_clumps averages
 # 0.14 sRGB, wild_grass 0.2) and read as dark tufts on a paler floor (v18). Brighter, yellow-green.
 PLANT_SLUG_LOOK = {
-    "grass_clumps": {"Tint": (3.2, 4.0, 1.6)},
-    "wild_grass": {"Tint": (2.0, 2.5, 1.2)},
+    # v21: less red and blue: at R/G 0.8 the tufts read yellow-olive against the style shots' green.
+    "grass_clumps": {"Tint": (2.4, 4.0, 1.2)},
+    "wild_grass": {"Tint": (1.5, 2.5, 0.8)},
 }
 PROP_LOOK = {
     "tundra_boulder": {"Tint": (0.3, 0.29, 0.26), "Moss amount": 1.0},
@@ -550,6 +554,24 @@ def op_reimport_plants():
     return {"notes": [f"{len(plants)} plants reimported"]}
 
 
+def _fill_empty_slots(biome, slug, meshes):
+    """Gives a scan's meshes its own MI where a slot is empty. The root patch, fallen log and
+    stump imported with none, so they drew in the engine's default grey: v16's "mystery boulder"
+    that ignored every prop tint (v21 probe, out/qa/probe_nomat.py)."""
+    path = f"{MS}/{biome}/{slug}/MI_{slug}"
+    if not assets.does_asset_exist(path):
+        return
+    mi = unreal.load_asset(path)
+    for mesh in meshes:
+        slots = mesh.get_editor_property("static_materials")
+        empty = [i for i, s in enumerate(slots) if not s.get_editor_property("material_interface")]
+        for i in empty:
+            mesh.set_material(i, mi)
+        if empty:
+            assets.save_loaded_asset(mesh)
+            log(f"{mesh.get_name()}: MI_{slug} in {len(empty)} empty slot(s)")
+
+
 def _grass_type(layer):
     gt = lib.fresh(
         f"GT_{layer}",
@@ -567,6 +589,7 @@ def _grass_type(layer):
         if not meshes:
             raise RuntimeError(f"no meshes for {biome}/{slug}: run megascans.py first")
         _keep_alpha_coverage(biome, slug)
+        _fill_empty_slots(biome, slug, meshes)
         for mesh in meshes:
             v = unreal.GrassVariety()
             v.set_editor_property("grass_mesh", mesh)

@@ -418,7 +418,9 @@ def road_material():
     # On v15's darker tarmac a 0.72 repair read as a black block (QA): rarer, and only a shade off.
     patch = g.saturate(g.mul(g.add(noise, -0.86), 40.0))
     colour = g.lerp(colour, g.mul(colour, 0.85), patch)
-    colour = g.mul(colour, g.world_noise(0.001, 0.94, 1.04, 3))
+    # v21: wider, as QA read the tarmac as uniform grey: lighter worn and darker damp stretches.
+    colour = g.mul(colour, g.world_noise(0.001, 0.85, 1.12, 3))
+    colour = g.mul(colour, g.world_noise(0.0003, 0.9, 1.08, 2))
     colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
     colour = g.mul(colour, g.param("warm", ROAD_WARM))
     across = g.link(
