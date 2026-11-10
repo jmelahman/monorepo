@@ -1,7 +1,6 @@
-# A copy of git-orchard's shared python ruff.toml in the monorepo
-# (https://github.com/jmelahman/monorepo), which lints this file with that
-# config. Not synced: the python profile's ty and pytest hooks need a uv
-# project, which this single script isn't. Keep the two in step by hand.
+# Shared by Python subtrees: .config/git-orchard/shared/python in the monorepo
+# (https://github.com/jmelahman/monorepo). Edit it there; `git orchard sync`
+# copies it here.
 line-length = 100
 
 [lint]
@@ -33,3 +32,6 @@ force-sort-within-sections = true
 order-by-type = false
 single-line-exclusions = ["typing", "collections.abc"]
 required-imports = ["from __future__ import annotations"]
+
+[lint.per-file-ignores]
+"tests/**" = ["PLR2004"]  # Magic value used in comparison

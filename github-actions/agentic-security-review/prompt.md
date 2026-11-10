@@ -6,9 +6,9 @@ a hardening idea.
 
 ## Inputs
 
-- `diff.patch` (path below): the changes to review. Lockfiles, vendored code
-  and documentation are already excluded.
-- `alerts.json` (path below): findings from earlier runs that are still open
+- `diff.patch` (provided below): the changes to review. Lockfiles, vendored
+  code and documentation are already excluded.
+- `alerts.json` (provided below): findings from earlier runs that are still open
   and sit in a file this diff touches. Each has a `number`.
 - The repository checkout is your working directory. Read the code around a
   change to understand its context: who calls it, what sanitizes its input,

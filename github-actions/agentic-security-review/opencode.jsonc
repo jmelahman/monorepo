@@ -1,0 +1,30 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // A security review reads the checkout and reports findings; it must not run
+  // code, change files, reach the network, spawn subagents, load skills, or
+  // leave the checkout. The permissions below hide everything but
+  // read/grep/glob from the agent.
+  "permissions": [
+    { "action": "shell", "resource": "*", "effect": "deny" },
+    { "action": "edit", "resource": "*", "effect": "deny" },
+    { "action": "webfetch", "resource": "*", "effect": "deny" },
+    { "action": "websearch", "resource": "*", "effect": "deny" },
+    { "action": "subagent", "resource": "*", "effect": "deny" },
+    { "action": "skill", "resource": "*", "effect": "deny" },
+    { "action": "question", "resource": "*", "effect": "deny" },
+    { "action": "execute", "resource": "*", "effect": "deny" },
+    { "action": "experimental_image_generate", "resource": "*", "effect": "deny" },
+    { "action": "external_directory", "resource": "*", "effect": "deny" }
+  ],
+  // Policies hard-deny the same set and, unlike permissions, global policies
+  // outrank any project config. That keeps a malicious checkout from re-enabling
+  // tools even if its own opencode.jsonc or .opencode is ever discovered. Only
+  // read, glob and grep are lifted back to the agent's rules.
+  "policies": [
+    { "action": "tool.use", "resource": "*", "effect": "deny" },
+    { "action": "tool.use", "resource": "read:*", "effect": "allow" },
+    { "action": "tool.use", "resource": "glob:*", "effect": "allow" },
+    { "action": "tool.use", "resource": "grep:*", "effect": "allow" },
+    { "action": "mcp.use", "resource": "*", "effect": "deny" }
+  ]
+}

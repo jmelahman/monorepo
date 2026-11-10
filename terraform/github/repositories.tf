@@ -46,16 +46,16 @@ locals {
       description  = "Kanban board for managing AI agent sessions"
       homepage_url = "http://jamison.lahman.dev/agentic-kanban/"
     }
+    agentic-security-review = {
+      description = "An agent reviews each push for vulnerabilities and files code scanning alerts"
+      topics      = ["claude", "claude-code", "opencode", "github-actions", "code-scanning", "sarif", "security"]
+    }
     AgileCBT = {
       description  = "Use Agile software development techniques for personal development"
       homepage_url = "http://jamison.lahman.dev/AgileCBT/"
     }
     check-symlinks = {
       description = "Check for broken symlinks"
-    }
-    claude-security-review = {
-      description = "Claude Code reviews each push for vulnerabilities and files code scanning alerts, on a Claude subscription"
-      topics      = ["claude", "claude-code", "github-actions", "code-scanning", "sarif", "security"]
     }
     connections = {
       description = "A command-line client for the NYT Connections game"

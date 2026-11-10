@@ -1,22 +1,36 @@
-name: Claude security review
+name: Agentic security review
 description: >
-  Reviews what a push changed for exploitable vulnerabilities with Claude Code,
-  on a Claude subscription, and uploads the findings to GitHub code scanning.
+  Reviews what a push changed for exploitable vulnerabilities with Claude Code
+  or OpenCode, and uploads the findings to GitHub code scanning.
 author: jmelahman
 branding:
   icon: shield
   color: orange
 
 inputs:
+  provider:
+    description: >
+      The agent to review with: `claude` (Claude Code, on a Claude subscription;
+      default) or `opencode` (OpenCode V2, on an OpenCode Console API key).
+    default: claude
   claude-code-oauth-token:
-    description: OAuth token from `claude setup-token`.
-    required: true
+    description: OAuth token from `claude setup-token`. Required when `provider` is `claude`.
+    required: false
+  opencode-api-key:
+    description: >
+      OpenCode Console API key (`oc_sk_…`). Required when `provider` is
+      `opencode`.
+    required: false
   github-token:
     description: "Token with `security-events: write`, to read and upload code scanning results."
     default: ${{ github.token }}
   model:
-    description: Claude model to review with.
-    default: opus
+    description: >
+      Model to review with. For `claude`, a Claude model such as `opus` (the
+      default); for `opencode`, a `provider/model` such as
+      `opencode/deepseek-v4.1-flash` (the default; pay-as-you-go Console) or
+      `opencode-go/<model-id>` (a personal Go subscription).
+    default: ""
   base:
     description: Commit or ref to review from. Defaults to the commit of the last analysis uploaded.
     default: ""
@@ -47,6 +61,36 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Validate the provider and its credential
+      id: validate
+      shell: bash
+      env:
+        PROVIDER: ${{ inputs.provider }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+        OPENCODE_API_KEY: ${{ inputs.opencode-api-key }}
+      run: |
+        case "$PROVIDER" in
+          claude)
+            [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || {
+              echo "::error::claude-code-oauth-token is required when provider is claude"
+              exit 1
+            }
+            ;;
+          opencode)
+            [ -n "$OPENCODE_API_KEY" ] || {
+              echo "::error::opencode-api-key is required when provider is opencode"
+              exit 1
+            }
+            ;;
+          *)
+            echo "::error::provider must be claude or opencode, got $PROVIDER"
+            exit 1
+            ;;
+        esac
+        # Each provider uploads under its own code scanning tool, so one
+        # provider's run can never close or carry the other's alerts.
+        echo "tool=agentic-security-review-$PROVIDER" >> "$GITHUB_OUTPUT"
+
     - name: Collect the diff and open alerts
       id: context
       shell: bash
@@ -56,9 +100,10 @@ runs:
         BASE: ${{ inputs.base }}
         MAX_DIFF_BYTES: ${{ inputs.max-diff-bytes }}
         EXCLUDE: ${{ inputs.exclude }}
+        TOOL: ${{ steps.validate.outputs.tool }}
       run: |
-        tool=claude-security-review
-        ctx="$RUNNER_TEMP/claude-security-review"
+        tool="$TOOL"
+        ctx="$RUNNER_TEMP/agentic-security-review"
         mkdir -p "$ctx"
         echo "dir=$ctx" >> "$GITHUB_OUTPUT"
 
@@ -128,44 +173,89 @@ runs:
         bun-version: "1.4.4"
         no-cache: true
 
-    # Pinned by bun.lock.
-    - name: Set up Claude Code
+    # Pinned by bun.lock; installs both agents, but only the selected one runs.
+    - name: Set up the agent
       if: steps.context.outputs.review == 'true'
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
       run: bun install --cwd "$ACTION_PATH" --frozen-lockfile
 
-    # --restricted takes away every tool that runs code and confines Read,
-    # Grep and Glob to the checkout and the context directory; --safe-mode
-    # skips the checkout's CLAUDE.md, skills and hooks. The output is
-    # public (code scanning, the step summary), so nothing it can reach may be
+    # Claude Code: --restricted takes away every tool that runs code and
+    # confines Read, Grep and Glob to the checkout and the context directory;
+    # --safe-mode skips the checkout's CLAUDE.md, skills and hooks. OpenCode:
+    # the permission allowlist in opencode.jsonc denies everything but
+    # read/grep/glob, and OPENCODE_DISABLE_PROJECT_CONFIG skips the checkout's
+    # opencode.jsonc, AGENTS.md and .opencode. The output is public (code
+    # scanning, the step summary), so nothing either agent can reach may be
     # secret; the sarif step also refuses anything token-shaped.
     - name: Review
       if: steps.context.outputs.review == 'true'
       shell: bash
       env:
         CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+        OPENCODE_API_KEY: ${{ inputs.opencode-api-key }}
         ACTION_PATH: ${{ github.action_path }}
         MODEL: ${{ inputs.model }}
+        PROVIDER: ${{ inputs.provider }}
         CTX: ${{ steps.context.outputs.dir }}
       run: |
-        prompt="$(cat "$ACTION_PATH/prompt.md")
+        if [ "$PROVIDER" = claude ]; then
+          MODEL="${MODEL:-opus}"
+          prompt="$(cat "$ACTION_PATH/prompt.md")
 
         diff.patch: $CTX/diff.patch
         alerts.json: $CTX/alerts.json"
-        "$ACTION_PATH/node_modules/.bin/claude" -p "$prompt" \
-          --model "$MODEL" \
-          --restricted \
-          --safe-mode \
-          --strict-mcp-config \
-          --tools Read,Grep,Glob \
-          --add-dir "$CTX" \
-          --no-session-persistence \
-          --output-format json \
-          --json-schema "$(cat "$ACTION_PATH/schema.json")" \
-          > "$CTX/result.json"
-        jq -e '.is_error | not' "$CTX/result.json" > /dev/null
+          "$ACTION_PATH/node_modules/.bin/claude" -p "$prompt" \
+            --model "$MODEL" \
+            --restricted \
+            --safe-mode \
+            --strict-mcp-config \
+            --tools Read,Grep,Glob \
+            --add-dir "$CTX" \
+            --no-session-persistence \
+            --output-format json \
+            --json-schema "$(cat "$ACTION_PATH/schema.json")" \
+            > "$CTX/result.json"
+          jq -e '.is_error | not' "$CTX/result.json" > /dev/null
+        else
+          MODEL="${MODEL:-opencode/deepseek-v4.1-flash}"
+          prompt="$(cat "$ACTION_PATH/prompt.md")
+
+        Return only a JSON object matching this schema:
+        $(cat "$ACTION_PATH/schema.json")
+
+        diff.patch and alerts.json are the attached files."
+          # Keep config, data and state under the job's temp dir so a
+          # self-hosted runner's ~/.config/opencode and logged-in credentials are
+          # never read or overwritten. OPENCODE_API_KEY is the only credential.
+          export XDG_CONFIG_HOME="$CTX/opencode/config"
+          export XDG_DATA_HOME="$CTX/opencode/data"
+          export XDG_STATE_HOME="$CTX/opencode/state"
+          mkdir -p "$XDG_CONFIG_HOME/opencode"
+          cp "$ACTION_PATH/opencode.jsonc" "$XDG_CONFIG_HOME/opencode/opencode.jsonc"
+          set +e
+          OPENCODE_DISABLE_PROJECT_CONFIG=1 \
+            "$ACTION_PATH/node_modules/.bin/opencode" run \
+            --standalone \
+            --model "$MODEL" \
+            --format json \
+            --auto \
+            --archived \
+            --file "$CTX/diff.patch" \
+            --file "$CTX/alerts.json" \
+            "$prompt" \
+            > "$CTX/opencode.jsonl"
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            jq -r 'select(.type == "error") | (.error.message // .error.name // "unknown error")' \
+              "$CTX/opencode.jsonl" 2>/dev/null >&2 || true
+            exit "$status"
+          fi
+          python3 "$ACTION_PATH/security_review.py" normalize \
+            --events "$CTX/opencode.jsonl" --model "$MODEL" --out "$CTX/result.json"
+        fi
 
     - name: Record token usage
       if: always() && steps.context.outputs.review == 'true'
@@ -179,13 +269,13 @@ runs:
         python3 "$ACTION_PATH/security_review.py" usage \
           --result "$CTX/result.json" --sha "$GITHUB_SHA" --base "$BASE" --out "$CTX/usage.json"
 
-    # Just the counts: the transcript would show the code Claude read, and a
+    # Just the counts: the transcript would show the code the agent read, and a
     # public repository's artifacts are public.
     - name: Upload token usage
       if: always() && steps.context.outputs.review == 'true'
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
-        name: claude-security-review-usage
+        name: agentic-security-review-usage
         path: ${{ steps.context.outputs.dir }}/usage.json
         if-no-files-found: ignore
         retention-days: 90
@@ -195,14 +285,15 @@ runs:
       env:
         ACTION_PATH: ${{ github.action_path }}
         CTX: ${{ steps.context.outputs.dir }}
+        TOOL: ${{ steps.validate.outputs.tool }}
       run: |
         python3 "$ACTION_PATH/security_review.py" sarif \
           --result "$CTX/result.json" --alerts "$CTX/all-alerts.json" --shown "$CTX/alerts.json" \
-          --deleted "$CTX/deleted.txt" --out "$CTX/results.sarif"
+          --deleted "$CTX/deleted.txt" --tool "$TOOL" --out "$CTX/results.sarif"
 
     - name: Upload SARIF
       uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
       with:
         sarif_file: ${{ steps.context.outputs.dir }}/results.sarif
-        category: claude-security-review
+        category: ${{ steps.validate.outputs.tool }}
         token: ${{ inputs.github-token }}

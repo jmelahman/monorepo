@@ -49,7 +49,7 @@ These projects are still in active development but may be considered "stable".
 
 ## GitHub Actions
 
-- [github-actions/claude-security-review](https://github.com/jmelahman/claude-security-review)
+- [github-actions/agentic-security-review](https://github.com/jmelahman/agentic-security-review)
 
 ## Templates
 
