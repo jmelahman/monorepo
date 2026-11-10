@@ -1329,9 +1329,10 @@ def _plant_params(params):
 
 
 def _prop_params(look):
-    """Sets parameters on named props' MIs (M_MS_Prop: Tint, Roughness), e.g. PROP_LOOK."""
+    """Sets parameters on named scans' MIs, e.g. PROP_LOOK (M_MS_Prop: Tint, Roughness). Plants
+    work too (`look --prop-param grass_clumps:Tint=...`), to try one plant's PLANT_SLUG_LOOK."""
     with open(f"{PREP}/index.json") as f:
-        props = {r["slug"]: r for r in json.load(f) if r["kind"] == "prop"}
+        props = {r["slug"]: r for r in json.load(f) if r["kind"] in ("prop", "plant")}
     for slug, params in look.items():
         r = props[slug]
         path = f"{MS}/{r['biome']}/{slug}/MI_{slug}"
