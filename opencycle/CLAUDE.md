@@ -57,7 +57,8 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
   - Stills wait at least 240 frames per view, then until the landscape's grass instance count
     holds steady (`_settle`; the log prints `OC settled <shot>: N frames`). A fixed 480 shot whole
     banks and views before their grass was built: v21-v23's "bare banks" were never a placement
-    problem. Suspect timing before density when grass looks missing.
+    problem. Steady only counts once the count has moved from the last view's (a
+    short look once shot road_72 on road_50's leftover count). Suspect timing before density when grass looks missing.
   - Every look re-applies LOOK_TINTS/GREYS, PLANT_LOOK and PROP_LOOK first, so false colour
     (`--tint`, `--prop-param`) lasts only for that look. `look` takes only `bench` unless you pass `--shots`.
   - More post keys: aerial (SkyAtmosphere aerial scale), cloud_bottom (km), fog_inscatter, bloom,
