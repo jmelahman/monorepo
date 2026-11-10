@@ -365,6 +365,18 @@ def parse_param(text):
     return name, [float(v) for v in value.split(",")]
 
 
+def parse_prop_params(texts):
+    """SLUG:NAME=F|R,G,B, repeatable: {slug: {name: value}} for M_MS_Prop MIs."""
+    out = {}
+    for text in texts:
+        slug, sep, rest = text.partition(":")
+        if not sep:
+            raise SystemExit(f"want SLUG:NAME=F|R,G,B, not {text!r}")
+        name, value = parse_param(rest)
+        out.setdefault(slug, {})[name] = value
+    return out
+
+
 def cmd_look(ns):
     tints = dict(parse_tint(t) for t in ns.tint or [])
     greys = dict(parse_grey(t) for t in ns.grey or [])
@@ -377,6 +389,7 @@ def cmd_look(ns):
         "plants": [float(v) for v in ns.plants.split(",")] if ns.plants else None,
         "plant_params": dict(parse_param(t) for t in ns.plant_param or []),
         "ground_params": dict(parse_param(t) for t in ns.ground_param or []),
+        "prop_params": parse_prop_params(ns.prop_param or []),
         "stills": not ns.no_stills,
         "shots": shots(ns),
     }
@@ -500,6 +513,12 @@ def main(argv=None):
         action="append",
         metavar="NAME=F|R,G,B",
         help="a parameter on MI_ClimbGround, e.g. 'Forest steep=0.5,0.42,0.35'",
+    )
+    s.add_argument(
+        "--prop-param",
+        action="append",
+        metavar="SLUG:NAME=F|R,G,B",
+        help="a parameter on one prop's MI (M_MS_Prop), e.g. tundra_boulder:Tint=1,0,0",
     )
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")

@@ -1353,6 +1353,7 @@ def op_look(
     plants=None,
     plant_params=None,
     ground_params=None,
+    prop_params=None,
     stills=True,
     shots=None,
     out=None,
@@ -1361,6 +1362,8 @@ def op_look(
     0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
     compiles. PROP_LOOK is applied too, so trying a prop's tint needs only a restart."""
     _prop_params(PROP_LOOK)
+    if prop_params:
+        _prop_params(prop_params)
     if tint or grey:
         _tune({k: tuple(v) for k, v in (tint or {}).items()}, grey)
     if grass:
@@ -1376,6 +1379,7 @@ def op_look(
     notes += [f"plants tinted {plants}"] if plants else []
     notes += [f"plant params {plant_params}"] if plant_params else []
     notes += [f"ground params {ground_params}"] if ground_params else []
+    notes += [f"prop params {prop_params}"] if prop_params else []
     notes += [f"grass {grass}"] if grass else []
     if fog is not None:
         yield from _ensure_level()
