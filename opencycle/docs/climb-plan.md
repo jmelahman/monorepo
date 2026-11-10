@@ -219,8 +219,12 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - v28: darker Sand/Dirt tints so the gaps read as shadow (tried by look), back-light lower
     again, and a Dirt GRASS row on the bare verge. The Dirt row grew through the whole tarmac:
     the landscape under the road mesh is painted Dirt too. Never give Dirt grass. Reverted.
-  - v29 (running): the shoulder narrowed in make_climb (0.15-0.6 m past the tarmac, was 0.2-1.0)
-    so the bank and floor grass come up to the path; full chain with build-level.
+  - v29: the shoulder narrowed in make_climb (0.15-0.6 m past the tarmac, was 0.2-1.0), so
+    the bank and floor grass reach the path. QA 7.5, 7.5, 7, 7, 7, 5.5, 7.5 (it wobbles about
+    0.5 on unchanged frames; trust the stills). The band is gone. Storybook v29 (img22).
+  - Perf in `-game`: PythonScriptPlugin is "UncookedOnly", so it should load in `UnrealEditor
+    -game` (uncooked). A game-mode fps script could find the PlayerController with
+    `unreal.ObjectIterator`, BugItGo to each view, and time a slate post-tick callback. Not built.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
