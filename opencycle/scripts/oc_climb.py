@@ -1063,6 +1063,30 @@ def op_stills(shots=None, out=None):
     return {"files": files}
 
 
+def _set_params(mi, params):
+    """Sets {name: value} on a material instance: a number is a scalar, a list a colour."""
+    edit = unreal.MaterialEditingLibrary
+    for name, value in params.items():
+        if isinstance(value, (list, tuple)) and len(value) > 1:
+            colour = unreal.LinearColor(*value, *([1.0] * (4 - len(value))))
+            edit.set_material_instance_vector_parameter_value(mi, name, colour)
+        else:
+            value = value[0] if isinstance(value, (list, tuple)) else value
+            edit.set_material_instance_scalar_parameter_value(mi, name, float(value))
+    edit.update_material_instance(mi)
+    assets.save_loaded_asset(mi, False)
+
+
+def _plant_params(params):
+    """Sets the same parameters on every plant's MI (see _plant_master for the names)."""
+    with open(f"{PREP}/index.json") as f:
+        plants = [r for r in json.load(f) if r["kind"] == "plant" and r["opacity"]]
+    for r in plants:
+        path = f"{MS}/{r['biome']}/{r['slug']}/MI_{r['slug']}"
+        if assets.does_asset_exist(path):
+            _set_params(unreal.load_asset(path), params)
+
+
 def _plant_tint(rgb):
     """Sets every plant's MI "Tint" (their colour's multiplier, 1 neutral) and saves them: the
     scanned ferns read lime green beside the reference woods."""
@@ -1087,6 +1111,8 @@ def op_look(
     fog=None,
     post=None,
     plants=None,
+    plant_params=None,
+    ground_params=None,
     stills=True,
     shots=None,
     out=None,
@@ -1100,9 +1126,15 @@ def op_look(
         _grass(*grass)
     if plants:
         _plant_tint(plants)
+    if plant_params:
+        _plant_params(plant_params)
+    if ground_params:
+        _set_params(unreal.load_asset(f"{FOLDER}/{INSTANCE}"), ground_params)
     yield
     notes = [f"tuned {tint} grey {grey}"] if tint or grey else []
     notes += [f"plants tinted {plants}"] if plants else []
+    notes += [f"plant params {plant_params}"] if plant_params else []
+    notes += [f"ground params {ground_params}"] if ground_params else []
     notes += [f"grass {grass}"] if grass else []
     if fog is not None:
         yield from _ensure_level()

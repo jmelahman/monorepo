@@ -357,6 +357,14 @@ def parse_post(text):
         raise SystemExit(f"--post {text!r}: use KEY=NUMBER") from None
 
 
+def parse_param(text):
+    """NAME=F or NAME=R,G,B: a material parameter (names may have spaces: quote them)."""
+    name, _, value = text.partition("=")
+    if not name or not value:
+        raise SystemExit(f"want NAME=F or NAME=R,G,B, not {text!r}")
+    return name, [float(v) for v in value.split(",")]
+
+
 def cmd_look(ns):
     tints = dict(parse_tint(t) for t in ns.tint or [])
     greys = dict(parse_grey(t) for t in ns.grey or [])
@@ -367,6 +375,8 @@ def cmd_look(ns):
         "fog": ns.fog,
         "post": dict(parse_post(t) for t in ns.post or []),
         "plants": [float(v) for v in ns.plants.split(",")] if ns.plants else None,
+        "plant_params": dict(parse_param(t) for t in ns.plant_param or []),
+        "ground_params": dict(parse_param(t) for t in ns.ground_param or []),
         "stills": not ns.no_stills,
         "shots": shots(ns),
     }
@@ -479,6 +489,18 @@ def main(argv=None):
         " volumetric (0/1), shafts, sky, sun (see oc_climb.POST_KEYS)",
     )
     s.add_argument("--plants", metavar="R,G,B", help="every plant's colour multiplier, 1 neutral")
+    s.add_argument(
+        "--plant-param",
+        action="append",
+        metavar="NAME=F|R,G,B",
+        help="a parameter on every plant MI, e.g. TranslucencyTint=0.3,0.35,0.2 or Grey=0.4",
+    )
+    s.add_argument(
+        "--ground-param",
+        action="append",
+        metavar="NAME=F|R,G,B",
+        help="a parameter on MI_ClimbGround, e.g. 'Forest steep=0.5,0.42,0.35'",
+    )
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")
     add(
