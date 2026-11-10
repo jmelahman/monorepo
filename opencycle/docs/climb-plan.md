@@ -207,7 +207,12 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     the spruce flat and bright (moody look lost). Kept -16.3 (yaw 43.7); a user decision.
     New keys: `sun_pitch`, `sun_yaw`, `bloom`, `flare`. Post keys persist in the level, so put
     a changed one back explicitly (sun_pitch=-16.3 sun_yaw=43.7, bloom=0.675, aerial=1).
-  - v26 (running): kikuyu tinted like wild_grass, 28 at 1.4-2.2x on Forest, 24 on Sand banks.
+  - v26: kikuyu tinted like wild_grass, 28 at 1.4-2.2x on Forest, 24 on Sand banks. QA 7.5,
+    7.5, 8, 7, 7, 5.5, 7.5: a green carpet at last, but lime and self-lit under the spruce, with
+    bare soil between clumps and one grass height. Storybook v26 (img20). The grass rebuild held
+    (no GPUVM fault) at these densities.
+  - Next look: darker, bluer grass tints (`--prop-param SLUG:Tint=`) and half the plants'
+    TranslucencyTint (the back-lit glow) on road_50, road_72, bench.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
