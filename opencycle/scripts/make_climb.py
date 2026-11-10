@@ -32,6 +32,12 @@ OUT = "/workspace/ue/world_gen/climb"
 SEED = 31
 VALLEY_Y = 640.0  # metres south of the origin: the valley floor's line
 FLANK = 0.34  # the mountainside's rise per metre north of it
+# The backdrop is alpine, as in the style shots: the woods thin out at the treeline into meadow,
+# and snow lies on the peaks. Metres of height, wandering with noise.
+TREELINE = 330.0
+SNOWLINE = 560.0
+# Peaks where the path's views end, east and west: (x, y, height, radius) in metres.
+PEAKS = [(930.0, 330.0, 470.0, 240.0), (-930.0, 230.0, 500.0, 260.0)]
 # The road's plan in km: a traverse east, a hairpin turning north, and back west above it.
 PLAN = [
     (-0.540, 0.452),
@@ -76,7 +82,13 @@ def terrain(x, y):
     # edge and the sea past it. The road stays inside 560 m of the middle, clear of it.
     edge = np.maximum(np.abs(x), np.abs(y)) + (mi.fbm(x, y, 260, 3, SEED + 31) - 0.5) * 160
     rim = 250 * mi.smoothstep(520, 1080, edge)  # gentle: 350 m over 350 m read as a cliff
-    return (base + gully + swell + crag + bumps + rim).astype(np.float32)
+    peaks = sum(
+        top
+        * np.exp(-((((x - px) ** 2 + (y - py) ** 2) / (r * r)) ** 0.8))
+        * (0.8 + 0.4 * mi.ridged(x, y, 140, 4, SEED + 33))
+        for px, py, top, r in PEAKS
+    )
+    return (base + gully + swell + crag + bumps + rim + peaks).astype(np.float32)
 
 
 def at(xy):
@@ -170,15 +182,25 @@ def paint(x, y, h, road_dist):
     verge = mi.smoothstep(mi.ROAD_HALF + 0.6, mi.ROAD_HALF + 1.0, road_dist)
     verge *= mi.smoothstep(reach + 0.8, reach, road_dist)
     verge *= mi.smoothstep(0.38, 0.5, mi.fbm(x, y, 12, 2, SEED + 59))
-    grass = np.clip(np.maximum(np.maximum(floor, clearing), verge), 0, 1)
-    rest = 1 - shoulder - soil
+    # Above the treeline, alpine meadow.
+    alpine = mi.smoothstep(
+        TREELINE - 40, TREELINE + 20, h + 50 * (mi.fbm(x, y, 90, 3, SEED + 41) - 0.5)
+    )
+    grass = np.clip(np.maximum(np.maximum(np.maximum(floor, clearing), verge), alpine), 0, 1)
+    # Snow on the heights, thinner on crags, in drifts rather than a level line.
+    snow = mi.smoothstep(
+        SNOWLINE - 40, SNOWLINE + 40, h + 90 * (mi.fbm(x, y, 70, 3, SEED + 42) - 0.5)
+    )
+    snow *= 1 - 0.6 * mi.smoothstep(0.9, 1.6, slope)
+    rest = (1 - shoulder - soil) * (1 - snow)
     soft = (1 - rock) * rest
     out = {k: np.zeros_like(h) for k in mi.LAYERS}
     out["Grass"] = soft * grass
     out["Forest"] = soft * (1 - grass)
     out["Rock"] = rock * rest
-    out["Sand"] = soil
+    out["Sand"] = soil * (1 - snow)
     out["Dirt"] = shoulder
+    out["Snow"] = snow * (1 - shoulder)
     return out, slope, grass
 
 
@@ -215,6 +237,8 @@ def trees(h, road_dist, slope, grass):
         # Spruce and beech grow on the cut banks too, short of a cliff.
         & (slope[row, col] < 1.45)
         & (rng.random(d.shape) < wood * 0.92 * np.where(d < reach, 1.0, FAR))
+        # The treeline: stems thin out over 80 m of height, the last of them spruce.
+        & (rng.random(d.shape) < mi.smoothstep(TREELINE + 30, TREELINE - 50, h[row, col]))
     )
     px, py, row, col = px[keep], py[keep], row[keep], col[keep]
     # The lowest ground under the trunk, so it stands in the slope rather than on its high side.

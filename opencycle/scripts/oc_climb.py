@@ -359,6 +359,11 @@ PLANT_LOOK = {
     "Specular": 0.15,
     "Rough floor": 0.6,
 }
+# Props' MIs (M_MS_Prop). The tundra boulder as scanned is pale tundra stone and read near white
+# in the woods (v16): a darker, warmer grey, as the style shots' boulders.
+PROP_LOOK = {
+    "tundra_boulder": {"Tint": (0.42, 0.4, 0.36)},
+}
 
 
 def _plant_master():
@@ -763,6 +768,7 @@ def op_rebuild_ground(rebuild_grass=False):
     _guard_rebuild()
     _plant_master()
     _plant_params(PLANT_LOOK)
+    _prop_params(PROP_LOOK)
     _tree_look()
     yield 20
     yield from _warm_grass_meshes()
@@ -1199,6 +1205,17 @@ def _plant_params(params):
         plants = [r for r in json.load(f) if r["kind"] == "plant" and r["opacity"]]
     for r in plants:
         path = f"{MS}/{r['biome']}/{r['slug']}/MI_{r['slug']}"
+        if assets.does_asset_exist(path):
+            _set_params(unreal.load_asset(path), params)
+
+
+def _prop_params(look):
+    """Sets parameters on named props' MIs (M_MS_Prop: Tint, Roughness), e.g. PROP_LOOK."""
+    with open(f"{PREP}/index.json") as f:
+        props = {r["slug"]: r for r in json.load(f) if r["kind"] == "prop"}
+    for slug, params in look.items():
+        r = props[slug]
+        path = f"{MS}/{r['biome']}/{slug}/MI_{slug}"
         if assets.does_asset_exist(path):
             _set_params(unreal.load_asset(path), params)
 
