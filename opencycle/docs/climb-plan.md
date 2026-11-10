@@ -97,6 +97,14 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-10, morning (batch v13, building): one rebuild with grass for QA's v12 list.
+  - Ferns matte: M_MS_Plant gets "Specular" (0.15, was a fixed 0.4) and "Rough floor" (0.6), both
+    in `PLANT_LOOK`; leather_fern, the glossiest, cut to 1 per 100 m^2.
+  - Soil: `LOOK_TINTS` Sand (0.42, 0.34, 0.28) and Dirt (0.4, 0.32, 0.26) on the soil_mud bases.
+  - Cover: Forest ferns 9/8/6, bearberry 6, dry grass 3; grass scale 0.6–1.4 (was 0.85–1.3).
+  - Road: darken 0.4, the scan's colour clamped at 0.3 (the speckle), roughness at least 0.7,
+    specular 0.3.
+
 - 2026-11-10, early (storybook v12): **colour fixes; QA level.**
   - Litter tinted `LITTER` (0.38, 0.3, 0.23) on the Forest base and the Sand/Dirt mixes; plants
     `PLANT_LOOK` (Tint 0.6, 0.62, 0.42, TranslucencyTint 0.2, 0.24, 0.12, Grey 0.12).
