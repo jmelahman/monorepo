@@ -347,7 +347,9 @@ def _plant_master():
 
     d = texture("D", "colour", "/Engine/EngineResources/DefaultTexture")
     n = texture("N", "normal", "/Engine/EngineMaterials/DefaultNormal")
-    m = texture("M", "masks", "/Engine/EngineResources/WhiteSquareTexture")
+    # A real masks texture as the default: the engine's white square is sRGB, which a Masks
+    # sampler refuses at compile.
+    m = texture("M", "masks", f"{MS}/shared/fern/T_fern_M")
     t = texture("T", "colour", "/Engine/EngineResources/DefaultTexture")
     colour = g.mul(g.mask(d, "rgb"), g.mask(g.param("Tint", (1.0, 1.0, 1.0)), "rgb"))
     luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
