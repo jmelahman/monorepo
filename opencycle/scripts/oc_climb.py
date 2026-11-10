@@ -1031,6 +1031,8 @@ POST_KEYS = {
     "clouds": "volumetric clouds: Cloud_GlobalCoverage on MI_ClimbClouds",
     "cloud_density": "volumetric clouds: Cloud_GlobalDensity on MI_ClimbClouds",
     "sky_lum": "sky atmosphere: sky luminance factor, 1 neutral; lower is a deeper, moodier sky",
+    "bloom": "post volume: bloom intensity (0.675 default)",
+    "flare": "post volume: lens flare intensity (1 default)",
     "aerial": "sky atmosphere: aerial perspective distance scale, 1 neutral; lower is less haze",
     "cloud_bottom": "volumetric clouds: layer bottom altitude in km",
     "fog_inscatter": "height fog: directional inscattering (sun glow) intensity scale, 0 off",
@@ -1050,7 +1052,7 @@ def _post(post):
     bad = [k for k in post if k not in POST_KEYS]
     if bad:
         raise RuntimeError(f"unknown --post {bad}; use {sorted(POST_KEYS)}")
-    keys = ("exposure", "ev", "contrast", "saturation", "vignette", "temp")
+    keys = ("exposure", "ev", "contrast", "saturation", "vignette", "temp", "bloom", "flare")
     grade = {k: post[k] for k in keys if k in post}
     if grade:
         found = [
@@ -1086,6 +1088,10 @@ def _post(post):
             st.set_editor_property("override_vignette_intensity", True)
             st.set_editor_property("vignette_intensity", float(grade["vignette"]))
         # The shaded floor read cold blue-grey under the sky (v15): a warmer balance.
+        for key, prop in (("bloom", "bloom_intensity"), ("flare", "lens_flare_intensity")):
+            if key in post:
+                st.set_editor_property(f"override_{prop}", True)
+                st.set_editor_property(prop, float(post[key]))
         if "temp" in grade:
             st.set_editor_property("override_white_temp", True)
             st.set_editor_property("white_temp", float(grade["temp"]))
@@ -1162,11 +1168,9 @@ def _post(post):
     if "aerial" in post:
         for atmo in _level_actors(unreal.SkyAtmosphere):
             comp = atmo.get_component_by_class(unreal.SkyAtmosphereComponent)
-            was = comp.get_editor_property("aerial_perspective_view_distance_scale")
-            log(f"aerial perspective scale was {was}")
-            comp.set_editor_property(
-                "aerial_perspective_view_distance_scale", float(post["aerial"])
-            )
+            prop = "aerial_pespective_view_distance_scale"  # sic: the engine's spelling
+            log(f"aerial perspective scale was {comp.get_editor_property(prop)}")
+            comp.set_editor_property(prop, float(post["aerial"]))
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     log(f"post {post}")
 
