@@ -146,6 +146,10 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - Still open: a pale grey low-detail boulder by the bench and at 95% ignores every prop's
     tint (tundra, mossy_rocks, the nordic rocks). It appeared with v16's tundra boulders; maybe
     an HLOD proxy. New `look --prop-param SLUG:NAME=...` for such tests.
+  - v20 done: QA 7, 7, 7.5, 6, 6, 7, 6.5; storybook v20. Defects: banks maroon and smooth, the
+    upper forest a stop dark, sparse low cover, yellow tufts, uniform grey tarmac.
+  - fps at Low (v20, all trees, 300 frames): road_08 22.1, road_50 20.5, road_72 20.8, bench
+    23.3 (p95 50-59 ms). Up from 16-19 on 9 Nov despite more grass.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in

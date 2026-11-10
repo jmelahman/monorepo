@@ -15,7 +15,8 @@ says what was done last. Update both files before a session ends or when a rule 
   full climb, then other biomes.
 - **Performance:** this laptop (Radeon 890M) must hold 30 fps at Low *eventually*. For now the
   user says **visuals first, perf later**: keep trees at full quality (2 km cull, shadows, wind).
-  Measured on 9 Nov at Low: about 16–19 fps with all trees and about 29 with none. Shadows
+  Measured on 9 Nov at Low: about 16–19 fps with all trees and about 29 with none (v20 on
+  10 Nov: 20–23 with all trees). Shadows
   off or a 300 m cull each give about 20–24 (`oc.py fps`).
 - **Bike path:** the climb's road is a **bike-only path**, about 3 m of tarmac with no markings,
   and a dark timber fence on the drop side.
