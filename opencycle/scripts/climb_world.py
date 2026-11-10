@@ -378,7 +378,7 @@ ROAD_SPECK_CLAMP = 0.3
 # The edge's soil_mud, darkened and browned to the ground's damp litter.
 ROAD_EDGE_SOIL = (0.45, 0.38, 0.32)
 # Old country tarmac is warm grey-brown, not the scan's blue-grey (QA, v11).
-ROAD_WARM = (1.1, 1.0, 0.8)
+ROAD_WARM = (1.15, 1.0, 0.72)  # v23: QA read the tarmac lilac-grey under the sky
 
 
 def road_material():

@@ -110,8 +110,9 @@ LOOK_TINTS = {
     # damp earth as in the reference photos.
     # v20: warmer, as the style shots' brown dirt; the cooler soil read mauve under the sky.
     # v21: browner, with some blue: at R 1.7x G and no blue the banks read maroon under the sky.
-    "Sand": (0.3, 0.22, 0.12),
-    "Dirt": (0.28, 0.21, 0.12),
+    # v23: warmer again, less blue: v22's banks still read purple-brown in the shade (QA).
+    "Sand": (0.32, 0.22, 0.1),
+    "Dirt": (0.3, 0.21, 0.1),
 }
 LOOK_GREYS = {
     "Grass": 0.0,
@@ -192,14 +193,17 @@ GRASS = {
     "Sand": (
         # v20: more roots and stones, and bigger tufts: the banks read bare once their smeared
         # litter was fixed. v21: still bare (about 16 tufts on a 30 m^2 bank, QA): grass near the
-        # forest floor's density, fewer yellow dry tussocks.
-        ("forest", "nordic_forest_ground_patch_root", 4.0, 6000, 8000),
+        # forest floor's density, fewer yellow dry tussocks. v23: landscape grass is placed per
+        # metre of map, not of slope, so a 50 degree cut 3 m tall gets the grass of 2 m of flat
+        # ground: twice the grass again, drawn bigger, now that it grows upright (v22). Fewer root
+        # patches: with their material filled (v21) they read as flat pink slabs on the banks.
+        ("forest", "nordic_forest_ground_patch_root", 1.5, 6000, 8000),
         ("forest", "nordic_forest_rock_small", 3.0, 5000, 7000),
         ("forest", "mossy_rocks", 0.3, 8000, 11000),
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
-        ("shared", "grass_clumps", 28.0, 3000, 4500, (1.2, 2.0)),
-        ("shared", "wild_grass", 18.0, 3000, 4500, (1.2, 2.0)),
+        ("shared", "grass_clumps", 60.0, 3000, 4500, (1.4, 2.4)),
+        ("shared", "wild_grass", 40.0, 3000, 4500, (1.4, 2.4)),
         ("desert", "dry_grass", 1.5, 3000, 4500),
         ("shared", "clovers", 5.0, 1500, 2500, (1.0, 1.6)),
     ),
