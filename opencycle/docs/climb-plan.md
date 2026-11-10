@@ -192,6 +192,14 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     0.76), darker edge soil, more litter mid-road; a kikuyu carpet on Forest (16, 15-20 m cull),
     more dandelions, twice the boulders, more mossy rocks on banks. New look keys for the
     hairpin haze: `aerial`, `cloud_bottom`, `fog_inscatter`.
+  - v25 first stills: road less pink, but the worn centre at roughness 0.55 drew a wet,
+    sky-bright stripe (now 0.82, a "worn rough" param). The kikuyu carpet barely shows.
+  - Hairpin haze, still open. Each tested on hairpin_above and changing nothing visible: fog
+    0.0008-0.004 and falloff 0.02-0.08; aerial perspective 0.3 (the property is spelled
+    `aerial_pespective_view_distance_scale` in the engine); directional fog inscatter 0; cloud
+    layer bottom 8 km; bloom 0; the 64 World Partition HLOD actors hidden. It needs the sun
+    (sun 0 is black under the locked EV). Suspects left: back-lit foliage translucency and the
+    pale Rock layer on the cliff toward the sun; next, a camera turned away from the sun.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
