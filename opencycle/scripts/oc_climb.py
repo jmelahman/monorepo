@@ -969,7 +969,11 @@ POST_KEYS = {
     "temp": "post volume: white balance in kelvin, 6500 neutral; higher reads warmer",
     "sun": "sun: intensity in lux",
     "contact": "sun: contact shadow length, screen fraction (0.05 grounds posts)",
+    "clouds": "volumetric clouds: Cloud_GlobalCoverage on MI_ClimbClouds",
+    "cloud_density": "volumetric clouds: Cloud_GlobalDensity on MI_ClimbClouds",
+    "sky_lum": "sky atmosphere: sky luminance factor, 1 neutral; lower is a deeper, moodier sky",
 }
+CLOUDS = f"{FOLDER}/MI_ClimbClouds"
 POST_LABEL = "OC Post"
 
 
@@ -1051,6 +1055,36 @@ def _post(post):
                 comp.set_editor_property("volumetric_scattering_intensity", float(post["shafts"]))
             if "contact" in post:
                 comp.set_editor_property("contact_shadow_length", float(post["contact"]))
+    # The template's sky was clear and pale white (QA, v17): clouds and a deeper sky. The clouds'
+    # material is the engine's; ours is an instance of it, made once.
+    if "clouds" in post or "cloud_density" in post:
+        for cloud in _level_actors(unreal.VolumetricCloud):
+            comp = cloud.get_component_by_class(unreal.VolumetricCloudComponent)
+            mi = unreal.load_asset(CLOUDS) if assets.does_asset_exist(CLOUDS) else None
+            if mi is None:
+                folder, name = CLOUDS.rsplit("/", 1)
+                mi = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+                    name,
+                    folder,
+                    unreal.MaterialInstanceConstant,
+                    unreal.MaterialInstanceConstantFactoryNew(),
+                )
+                lib.edit.set_material_instance_parent(mi, comp.get_editor_property("material"))
+            for key, name in (
+                ("clouds", "Cloud_GlobalCoverage"),
+                ("cloud_density", "Cloud_GlobalDensity"),
+            ):
+                if key in post:
+                    lib.edit.set_material_instance_scalar_parameter_value(
+                        mi, name, float(post[key])
+                    )
+            assets.save_loaded_asset(mi, False)
+            comp.set_editor_property("material", mi)
+    if "sky_lum" in post:
+        for atmo in _level_actors(unreal.SkyAtmosphere):
+            comp = atmo.get_component_by_class(unreal.SkyAtmosphereComponent)
+            v = float(post["sky_lum"])
+            comp.set_editor_property("sky_luminance_factor", unreal.LinearColor(v, v, v, 1.0))
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     log(f"post {post}")
 
