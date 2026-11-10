@@ -97,13 +97,25 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
+  rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
+  scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
+  the spruce. Storybook v14.
+  - Bugs found: `_tree_look` set the bark MIs on a struct copy, so the trunks stayed grey (now
+    `sm.set_material`). The road's leaf blobs read as pale ovals on the dark tarmac (now darker
+    and fewer).
+  - v15 chain running: those two fixes plus `--post exposure=0.5`.
+  - QA's other defects: no grass carpet or flowers; a blue-grey cast at the bench; lime verge
+    patches; a leopard-spot blotch on the far hillside; a blurry, stretched cut bank; milky fog.
+  - Next batch (`--rebuild-grass`): bigger, denser grass clumps with flowers within the budget,
+    greener ground, big boulders; then sky and the snowy peak.
 - 2026-11-10, late morning: **a new look reference and the exposure finding.**
   - The user added two modded Skyrim screenshots as the target look, "vibrant yet realistic".
     They are copied to `ref/climb/style_*.jpg` and listed in SOURCES.tsv. Against them our stills
     are washed out: pale beige floors, pale grey trunks, no carpet of grass, flat light.
   - Auto exposure undid albedo changes: soil tinted to half its albedo looked almost unchanged.
     The sun is 6 lux and auto exposure ranged from -10 to 20 EV. New `look --post ev=N` locks it
-    (try 1.5 to 2.5).
+    (-4.5 is right).
   - Next: lock exposure darker with more contrast and saturation; a green ground under denser,
     larger grass clumps with flowers; a green, mossy forest floor in place of beige litter;
     red-brown upper trunks on the pines; scattered big boulders; and a moodier sky.
