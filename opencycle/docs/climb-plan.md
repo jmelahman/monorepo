@@ -150,6 +150,15 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     upper forest a stop dark, sparse low cover, yellow tufts, uniform grey tarmac.
   - fps at Low (v20, all trees, 300 frames): road_08 22.1, road_50 20.5, road_72 20.8, bench
     23.3 (p95 50-59 ms). Up from 16-19 on 9 Nov despite more grass.
+  - **The mystery boulder solved (v21).** `SM_nordic_forest_ground_patch_root`, `SM_fallen_log`
+    and `SM_mossy_wood_stump` had an empty material slot (out/qa/probe_nomat.py), so they drew in
+    the engine's default grey and ignored every MI tint. `_grass_type` now fills empty slots with
+    the scan's own MI on each ground build. v20's denser bank roots had spread them everywhere.
+  - v21 look tests: exposure 0.8 barely lifted the spruce; `--post sky=1.8` (skylight) did, and
+    is now in the look args. The banks' maroon came from STEEP (0.8, 0.6, 0.38) on top of the
+    red soil tint: STEEP is (0.7, 0.6, 0.48), Sand (0.3, 0.22, 0.12). Grass tufts less yellow
+    (grass_clumps tint 2.4, 4.0, 1.2). Bank grass 28/18, fewer dry tussocks, wider tarmac
+    variation. `look --prop-param` now reaches plants too.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
