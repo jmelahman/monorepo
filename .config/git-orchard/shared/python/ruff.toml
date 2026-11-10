@@ -32,3 +32,6 @@ force-sort-within-sections = true
 order-by-type = false
 single-line-exclusions = ["typing", "collections.abc"]
 required-imports = ["from __future__ import annotations"]
+
+[lint.per-file-ignores]
+"tests/**" = ["PLR2004"]  # Magic value used in comparison
