@@ -6,7 +6,6 @@ use (
 	./ai-detection
 	./check-symlinks
 	./connections
-	./docker-status
 	./git-orchard
 	./kev-go
 	./local-preview
@@ -20,5 +19,4 @@ use (
 	./templates/golang-template
 	./typesafe-sdk-go
 	./vinder
-	./work
 )

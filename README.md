@@ -38,7 +38,6 @@ These projects are still in active development but may be considered "stable".
 - [local-ai-detection](https://github.com/jmelahman/local-ai-detection)
 - [notebook](https://github.com/jmelahman/notebook)
 - [smart-lights](https://github.com/jmelahman/smart-lights)
-- [work](https://github.com/jmelahman/work)
 
 ## Browser Extensions
 

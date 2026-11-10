@@ -40,11 +40,6 @@
 	shared = pypi
 	shared = manygo
 	shared = pybuild
-[subtree "docker-status"]
-	remote = git@github.com:jmelahman/docker-status.git
-	branch = master
-	shared = base
-	shared = go
 [subtree "extensions/github-token-diff-extension"]
 	remote = git@github.com:jmelahman/github-token-diff-extension.git
 	branch = master
@@ -160,15 +155,6 @@
 	shared = shell
 	shared = rust
 	pre-release = scripts/set-version.sh
-[subtree "work"]
-	remote = git@github.com:jmelahman/work.git
-	branch = master
-	shared = base
-	shared = go
-	shared = goreleaser
-	shared = pypi
-	shared = manygo
-	shared = pybuild
 [subtree "dotfiles"]
 	remote = git@github.com:jmelahman/dotfiles.git
 	branch = master

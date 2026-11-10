@@ -134,9 +134,6 @@ locals {
       homepage_url = "http://jamison.lahman.dev/undot/"
       topics       = ["clutter", "config", "configuration-files", "hygiene", "pre-commit-hooks", "repository-management"]
     }
-    work = {
-      description = "A stupid simple time tracker"
-    }
     dotfiles = {
       has_issues = false
     }
@@ -275,16 +272,6 @@ removed {
   lifecycle {
     destroy = false
   }
-}
-
-# Released versions are permanent: the Go checksum database and release assets
-# pin what a tag pointed to, so a bad release gets a new version instead.
-# Creation stays open for the mirror workflow, which pushes tags without force.
-# Only full versions are covered: a floating major tag, e.g. the v1 that `uses:
-# jmelahman/git-orchard@v1` resolves, moves with each release.
-import {
-  to = github_repository_ruleset.tags["work"]
-  id = "work:2806590"
 }
 
 resource "github_repository_ruleset" "tags" {
