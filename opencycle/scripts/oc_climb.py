@@ -112,7 +112,7 @@ LOOK_TINTS = {
     "Forest mix": (0.2, 0.3, 0.06),
     "Grass": (0.14, 0.23, 0.04),
     "Grass mix": (0.14, 0.22, 0.04),
-    "Sand mix": LITTER,
+    "Sand mix": (0.22, 0.2, 0.08),
     "Dirt mix": LITTER,
     # soil_mud as scanned read pale and dusty on the banks and the path's edge (QA, v12): dark,
     # damp earth as in the reference photos.
@@ -120,8 +120,10 @@ LOOK_TINTS = {
     # v21: browner, with some blue: at R 1.7x G and no blue the banks read maroon under the sky.
     # v23: warmer again, less blue: v22's banks still read purple-brown in the shade (QA).
     # v24: more green in the brown, as red-brown soil reads plum under the blue sky light.
-    "Sand": (0.3, 0.24, 0.1),
-    "Dirt": (0.28, 0.22, 0.1),
+    # v28: darker again, so the gaps between the bank's tufts read as shadow, not bare mud (QA,
+    # v27; tried with look first). Its litter mix too.
+    "Sand": (0.17, 0.15, 0.06),
+    "Dirt": (0.2, 0.16, 0.07),
 }
 LOOK_GREYS = {
     "Grass": 0.0,
@@ -223,6 +225,12 @@ GRASS = {
         ("shared", "clovers", 10.0, 1500, 2500, (1.2, 2.0)),
         # v26: the spruce banks read as flat brown mud (QA, v25): the floor's low carpet here too.
         ("shared", "kikuyu_grass", 24.0, 1500, 2000, (1.4, 2.2)),
+    ),
+    # The path's verge: v27 read it as a bare dark band beside the tarmac (QA). Low cover only, so
+    # a blade or two over the tarmac's edge reads as the verge growing in, not grass through it.
+    "Dirt": (
+        ("shared", "kikuyu_grass", 10.0, 1500, 2000, (0.8, 1.4)),
+        ("shared", "clovers", 6.0, 1500, 2000, (0.8, 1.4)),
     ),
     # Talus under the crags.
     "Rock": (
@@ -414,8 +422,9 @@ PROP_MASTER = f"{MS}/Materials/M_MS_Prop"
 # the sky (QA, v12).
 PLANT_LOOK = {
     "Tint": (0.6, 0.62, 0.42),
-    # v27: halved: the grass glowed lime, back-lit, under the dark spruce (QA, v26).
-    "TranslucencyTint": (0.1, 0.13, 0.07),
+    # v27: halved: the grass glowed lime, back-lit, under the dark spruce (QA, v26). v28: less
+    # again, as the blade tips still glowed in the shade.
+    "TranslucencyTint": (0.06, 0.08, 0.05),
     "Grey": 0.12,
     "Specular": 0.15,
     "Rough floor": 0.6,
