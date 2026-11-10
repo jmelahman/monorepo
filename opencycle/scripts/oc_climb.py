@@ -37,7 +37,7 @@ STILL_SETTLE = 480
 # still for GRASS_STEADY checks 30 frames apart (at most STILL_SETTLE_MAX frames): a fixed 480
 # often shot the banks, or a whole view, before their grass was built (v21-v23's "bare banks").
 STILL_SETTLE_MIN = 240
-STILL_SETTLE_MAX = 2400
+STILL_SETTLE_MAX = 1500
 GRASS_STEADY = 4
 STILL_CVARS = ("r.Streaming.PoolSize 3000", "r.Streaming.FullyLoadUsedTextures 1")
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
@@ -1195,12 +1195,14 @@ def cameras(only=None):
 
 
 def _grass_instances():
-    """Landscape grass instances built so far (the grass components live on the proxies)."""
+    """Landscape grass built so far: GrassInstancedStaticMeshComponents on the streaming proxies
+    (not found as HierarchicalInstancedStaticMeshComponent), plus their CPU-side instances. A
+    component appears as each piece of grass finishes building."""
     n = 0
     for actor in unreal.get_editor_subsystem(unreal.EditorActorSubsystem).get_all_level_actors():
         if isinstance(actor, unreal.LandscapeProxy):
-            for c in actor.get_components_by_class(unreal.HierarchicalInstancedStaticMeshComponent):
-                n += c.get_instance_count()
+            for c in actor.get_components_by_class(unreal.GrassInstancedStaticMeshComponent):
+                n += 1 + c.get_instance_count()
     return n
 
 
@@ -1213,7 +1215,7 @@ def _settle(name):
         n = _grass_instances()
         if n == 0 and frames >= STILL_SETTLE:
             break
-        steady = steady + 1 if n == last else 0
+        steady = steady + 1 if n == last and n > 0 else 0
         if steady >= GRASS_STEADY:
             break
         last = n
