@@ -89,10 +89,13 @@ MIXES = {
 LITTER = (0.22, 0.17, 0.12)
 LOOK_TINTS = {
     "Rock": (0.45, 0.42, 0.37),
-    "Forest": (0.22, 0.18, 0.14),
-    # Moss and grass: a deep green, not v13's pale lime.
-    "Forest mix": (0.3, 0.4, 0.18),
-    "Grass": (0.25, 0.38, 0.12),
+    # Warmer than neutral litter: under the blue sky the floor read blue-grey (v15 false colour).
+    "Forest": (0.26, 0.17, 0.09),
+    # Moss and grass: a deep green, not v13's pale lime. Grass mix (lawn_grass patches) had no
+    # tint at all: it made the pale beech bank and the far hillside's leopard spots (v15).
+    "Forest mix": (0.13, 0.22, 0.03),
+    "Grass": (0.12, 0.22, 0.05),
+    "Grass mix": (0.12, 0.21, 0.05),
     "Sand mix": LITTER,
     "Dirt mix": LITTER,
     # soil_mud as scanned read pale and dusty on the banks and the path's edge (QA, v12): dark,
@@ -101,10 +104,11 @@ LOOK_TINTS = {
     "Dirt": (0.22, 0.17, 0.13),
 }
 LOOK_GREYS = {
-    "Grass": 0.15,
+    "Grass": 0.0,
+    "Grass mix": 0.0,
     "Rock": 0.5,
     "Rock mix": 0.3,
-    "Forest mix": 0.3,
+    "Forest mix": 0.0,
     "Dirt mix": 0.3,
     "Sand mix": 0.3,
 }
@@ -136,20 +140,27 @@ GRASS = {
         ("shared", "clovers", 12.0, 2000, 3000),
         ("shared", "clover_varieties", 6.0, 2000, 3000),
         ("shared", "leafy_dandelions", 4.0, 2000, 3000),
+        ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
     "Forest": (
         # Grass and dry tussocks first, ferns only here and there: the spruce photos show grassy
         # floors, and the user found v12's ferns too many (v13's 40 per 100 m^2 also crashed the GPU
-        # on its first look; this stays near v12's 29). leather_fern, the glossiest, is out.
-        ("shared", "fern", 3.0, 4000, 6000),
-        ("shared", "lady_fern", 2.0, 4000, 6000),
-        ("shared", "common_fern", 1.5, 4000, 6000),
-        ("mountain", "alpine_bearberry", 3.0, 3000, 4500),
-        ("desert", "dry_grass", 4.0, 3000, 4500),
+        # on its first look; this stays near 31). leather_fern, the glossiest, is out. v16: fewer
+        # yellow dry tussocks, more green clumps, and clover and dandelions for small yellow flowers
+        # (the style shots' flowering carpet).
+        ("shared", "fern", 2.0, 4000, 6000),
+        ("shared", "lady_fern", 1.5, 4000, 6000),
+        ("shared", "common_fern", 1.0, 4000, 6000),
+        ("mountain", "alpine_bearberry", 2.0, 3000, 4500),
+        ("desert", "dry_grass", 1.5, 3000, 4500),
         ("desert", "dead_shrubs", 0.3, 4000, 6000),
-        ("shared", "grass_clumps", 8.0, 3000, 4500),
-        ("shared", "wild_grass", 6.0, 3000, 4500),
+        ("shared", "grass_clumps", 10.0, 3000, 4500),
+        ("shared", "wild_grass", 7.0, 3000, 4500),
         ("shared", "tall_grass", 2.0, 4000, 6000),
+        ("shared", "clovers", 3.0, 2000, 3000),
+        ("shared", "leafy_dandelions", 1.5, 2000, 3000),
+        # Big rounded boulders, as in the style shots.
+        ("mountain", "tundra_boulder", 0.02, 12000, 15000),
         # The floor's debris: the woods in the reference photos are never bare between trunks.
         ("forest", "nordic_forest_ground_patch_root", 0.12, 9000, 12000),
         ("forest", "mossy_rocks", 0.1, 9000, 12000),
@@ -173,6 +184,7 @@ GRASS = {
     "Rock": (
         ("forest", "nordic_forest_rock_small", 0.6, 8000, 11000),
         ("forest", "nordic_forest_cluster_rock_medium", 0.15, 12000, 15000),
+        ("mountain", "tundra_boulder", 0.08, 12000, 15000),
         ("forest", "mossy_rocks", 0.15, 9000, 12000),
     ),
 }
@@ -952,7 +964,10 @@ def _post(post):
                 sky.light_component.set_editor_property("intensity", float(post["sky"]))
             if "sky_warm" in post:
                 w = min(max(float(post["sky_warm"]), 0.0), 1.0)
-                colour = unreal.Color(255, int(255 * (1 - 0.2 * w)), int(255 * (1 - 0.4 * w)), 255)
+                # Keywords: positional unreal.Color is BGRA, which turned this fill blue.
+                colour = unreal.Color(
+                    r=255, g=int(255 * (1 - 0.2 * w)), b=int(255 * (1 - 0.4 * w)), a=255
+                )
                 sky.light_component.set_editor_property("light_color", colour)
     if {"sun", "shafts", "contact"} & set(post):
         for sun in _level_actors(unreal.DirectionalLight):
