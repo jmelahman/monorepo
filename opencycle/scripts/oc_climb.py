@@ -396,6 +396,9 @@ PLANT_SLUG_LOOK = {
 }
 PROP_LOOK = {
     "tundra_boulder": {"Tint": (0.3, 0.29, 0.26), "Moss amount": 1.0},
+    # v19: the pointed grey rocks by the bench and at 95% are these scans (0.34 sRGB, untinted).
+    "nordic_forest_rock_small": {"Tint": (0.4, 0.38, 0.34), "Moss amount": 1.0},
+    "nordic_forest_cluster_rock_medium": {"Tint": (0.4, 0.38, 0.34), "Moss amount": 1.0},
 }
 
 
@@ -1356,7 +1359,8 @@ def op_look(
 ):
     """Recolour through MI_ClimbGround's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
     0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
-    compiles."""
+    compiles. PROP_LOOK is applied too, so trying a prop's tint needs only a restart."""
+    _prop_params(PROP_LOOK)
     if tint or grey:
         _tune({k: tuple(v) for k, v in (tint or {}).items()}, grey)
     if grass:
