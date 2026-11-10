@@ -216,8 +216,11 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - v27: grass tints (1.5, 2.8, 1.1) / (1.0, 1.8, 0.75), TranslucencyTint halved, wider sizes,
     twice the bank clover. QA 7.5, 7.5, 7.5, 7, 7, 5.5, 7.5: deeper green, less glow, not
     olive. Open: bare soil between bank tufts; the hazy view from above. Storybook v27 (img21).
-  - v28 (running): darker Sand/Dirt tints so the gaps read as shadow (tried by look), back-light
-    lower again, and a new Dirt GRASS row (low kikuyu and clover) on the bare path verge.
+  - v28: darker Sand/Dirt tints so the gaps read as shadow (tried by look), back-light lower
+    again, and a Dirt GRASS row on the bare verge. The Dirt row grew through the whole tarmac:
+    the landscape under the road mesh is painted Dirt too. Never give Dirt grass. Reverted.
+  - v29 (running): the shoulder narrowed in make_climb (0.15-0.6 m past the tarmac, was 0.2-1.0)
+    so the bank and floor grass come up to the path; full chain with build-level.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
