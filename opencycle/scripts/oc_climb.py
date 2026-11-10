@@ -226,12 +226,8 @@ GRASS = {
         # v26: the spruce banks read as flat brown mud (QA, v25): the floor's low carpet here too.
         ("shared", "kikuyu_grass", 24.0, 1500, 2000, (1.4, 2.2)),
     ),
-    # The path's verge: v27 read it as a bare dark band beside the tarmac (QA). Low cover only, so
-    # a blade or two over the tarmac's edge reads as the verge growing in, not grass through it.
-    "Dirt": (
-        ("shared", "kikuyu_grass", 10.0, 1500, 2000, (0.8, 1.4)),
-        ("shared", "clovers", 6.0, 1500, 2000, (0.8, 1.4)),
-    ),
+    # No "Dirt" row: the landscape under the road mesh is painted Dirt too, so v28's low verge
+    # cover grew straight through the whole tarmac.
     # Talus under the crags.
     "Rock": (
         ("forest", "nordic_forest_rock_small", 0.6, 8000, 11000),
