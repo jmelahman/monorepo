@@ -82,7 +82,16 @@ MIXES = {
     "Dirt": ("mountain", "alpine_needles", "patches", 4.0),
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
-LOOK_TINTS = {"Rock": (0.45, 0.42, 0.37), "Forest mix": (0.75, 0.75, 0.62)}
+# alpine_needles (the Forest base, and the Sand and Dirt mixes) is pale beige as scanned: untinted
+# it made every bank and the woods' floor read as sand (found by false colour, v12).
+LITTER = (0.38, 0.3, 0.23)
+LOOK_TINTS = {
+    "Rock": (0.45, 0.42, 0.37),
+    "Forest": (0.36, 0.31, 0.26),
+    "Forest mix": (0.75, 0.75, 0.62),
+    "Sand mix": LITTER,
+    "Dirt mix": LITTER,
+}
 LOOK_GREYS = {
     "Grass": 0.15,
     "Rock": 0.3,
@@ -320,7 +329,7 @@ class Ground:
 PLANT_MASTER = f"{MS}/Materials/M_MS_Plant"
 # Set on every plant MI by each ground build (try values with `look --plant-param`). The scans'
 # own translucency tints made the ferns glow lime where the sun came through them.
-PLANT_LOOK = {"Tint": (0.62, 0.62, 0.5), "TranslucencyTint": (0.2, 0.24, 0.12)}
+PLANT_LOOK = {"Tint": (0.6, 0.62, 0.42), "TranslucencyTint": (0.2, 0.24, 0.12), "Grey": 0.12}
 
 
 def _plant_master():
@@ -353,7 +362,7 @@ def _plant_master():
     t = texture("T", "colour", "/Engine/EngineResources/DefaultTexture")
     colour = g.mul(g.mask(d, "rgb"), g.mask(g.param("Tint", (1.0, 1.0, 1.0)), "rgb"))
     luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
-    colour = g.lerp(colour, luma, g.param("Grey", 0.4))
+    colour = g.lerp(colour, luma, g.param("Grey", 0.12))
     rnd = g.node(unreal.MaterialExpressionPerInstanceRandom)
     bright = g.add(g.const(1.0), g.mul(g.add(rnd, -0.5), g.param("Variation", 0.7)))
     colour = g.mul(colour, bright)
