@@ -59,6 +59,12 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
     banks and views before their grass was built: v21-v23's "bare banks" were never a placement
     problem. Steady only counts once the count has moved from the last view's (a
     short look once shot road_72 on road_50's leftover count). Suspect timing before density when grass looks missing.
+  - **Stills don't repeat across shot lists.** The first view of a session comes out brighter and
+    hazier over the whole frame (sky too) than the same view taken later, even after 840 frames
+    and a throwaway screenshot (10 Nov). For an A/B test, shoot the baseline and the trial with
+    the same `--shots` in the same order, never against an older set from a longer list. The
+    clouds drift with the editor clock and the sky light captures them live: the standard look
+    passes `--post cloud_wind=0` to freeze them.
   - Every look re-applies LOOK_TINTS/GREYS, PLANT_LOOK and PROP_LOOK first, so false colour
     (`--tint`, `--prop-param`) lasts only for that look. `look` takes only `bench` unless you pass `--shots`.
   - More post keys: aerial (SkyAtmosphere aerial scale), cloud_bottom (km), fog_inscatter, bloom,
@@ -68,7 +74,7 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
     saturation, vignette, fog_start (m), volumetric (0/1), shafts, sky, sun, and ev (locks
     exposure at that EV100; 99 frees it). build-level loses fog and post settings, so re-run look
     after it. Last used: ev=-4.5 exposure=0.5 sky=1.8 temp=6700 sky_warm=0.35 contrast=1.1 saturation=1.05 vignette=0.3
-    fog_start=150 volumetric=0 contact=0.05 clouds=-0.2 (the default coverage). sky=1.8 (v21) lifts the dark spruce more evenly than exposure did. Keep exposure locked: auto exposure undoes every
+    fog_start=150 volumetric=0 contact=0.05 clouds=-0.2 (the default coverage) cloud_wind=0. sky=1.8 (v21) lifts the dark spruce more evenly than exposure did. Keep exposure locked: auto exposure undoes every
     albedo change (the sun is 6 lux, which is about EV -5).
 - **Rebuilds:** a change to the GRASS table needs `rebuild-ground --rebuild-grass`. It builds the
   1M-tri prop meshes one at a time first (all at once crashed Vulkan); give it `--timeout 2400`.
