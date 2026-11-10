@@ -26,6 +26,62 @@ says what was done last. Update both files before a session ends or when a rule 
 - **What the user values most:** fast iteration, real frames, and **no crashes**. Batch changes
   into one rebuild when you can.
 
+## Vegetation: the approach (reset on 10 Nov, v30)
+
+The user's verdict on v29: "disappointed with the grass and ferns", worse than Skyrim's. v12–v29
+tuned tints, densities and scales, and none of that could fix it, because the faults were in how
+the grass is built. Work on the structure below, in this order, before touching a tint.
+
+**The four rules**
+
+1. **The ground does the work; blades only break up its surface.** Grass grows only where the
+   ground's own texture is grass, and the two are the same colour. A scan clump is mostly gaps,
+   so whatever lies under it shows through at any density.
+   - `GRASS["Forest"]` grows on the Forest layer's grass patches (its `MIXES` surface), and
+     `GRASS["Forest floor"]` on the litter between them (`Ground.build` multiplies the layer
+     weight by `Ground.patch`). Any layer with a "patches" mix can have a "<layer> floor" table.
+   - The patch noise's (low, high) is the fifth item of a `MIXES` row: it sets how much of the
+     floor is grass and how wide the fade is.
+   - Ferns, shrubs, logs and stones belong on the litter side; grass, clover and flowers on the
+     grass side. Bare litter under the trees is right: the style shots have it.
+2. **Light the carpet as one surface.** `M_MS_Plant` outputs a world-space normal bent toward up
+   ("Up normal", 0.85), darkens each plant toward its root ("Root shade", "Root height" in cm),
+   and fades the same amount out of its AO and translucency. Per-card normals gave lime
+   sparkle and black ferns.
+3. **One green, shared with the ground.** A grass MI's "Flat" (0 to 1) takes that share of its
+   colour from "Flat colour", shaded by the scan's own light and dark ("Flat gain"). Match
+   "Flat colour" to the lit colour of the "Forest mix" ground, then move both together. Don't
+   push a scan with a big "Tint": (1.5, 2.8, 1.1) is where the neon came from.
+4. **Scans near their own size.** The clumps are about 60 cm across and 25 cm tall. Scales
+   above about 2 turn them into sparse reeds. For more cover, fix the ground under them (rule
+   1) or add a short close-culled row (15–20 m); the ground texture carries the distance.
+
+**How to judge it**
+
+- Judge grass from **full-resolution crops of the foreground**, beside a crop of
+  `ref/climb/style_forest_path.jpg` or `style_meadow_peak.jpg`, and beside the same crop from
+  the last version. A 1280 px downscale of a wide shot hides every one of v29's faults.
+- The Sonnet QA score is a regression check, not the judge: it gave v29's road shots 7 to 7.5.
+  When you use it, give it the crops and ask what differs from the reference, not for a score.
+- Ask of each crop: can I see ground through the grass, and is it a different colour? Do single
+  blades sparkle or go black? Is the cover even everywhere, or does it come in patches with
+  bare ground between? Is anything neon?
+- A/B on `--shots road_50,bench` in that order (see "Stills don't repeat" below).
+
+**What to do next, in order**
+
+1. Match blade and ground colour with `look --prop-param grass_clumps:"Flat colour"=r,g,b`
+   (and wild_grass, kikuyu_grass) against `--tint "Forest mix"=r,g,b`; bake into
+   `PLANT_SLUG_LOOK` and `LOOK_TINTS`.
+2. Tune patch share and size (`MIXES["Forest"]`), then the two tables' densities.
+3. Ferns: check they are no longer black; group them rather than scatter (a second, smaller
+   noise on "Forest floor" if they still read as evenly sprinkled).
+4. The same split for the cut banks ("Sand") and the meadow ("Grass").
+5. Flowers: only clovers, clover_varieties and leafy_dandelions are in `fab_prep`. White, pink
+   and blue flowers need new plant scans (the user must fetch them; never buy on Fab) or small
+   emissive-free colour cards made here. Ask before spending time on either.
+6. Wind on the grass (it is static now), then the road surface, then perf.
+
 ## The loop: `scripts/oc.py` (run from /workspace/ue)
 
 Run every command as a background Bash. Each one blocks until the job ends, so you get one
@@ -51,7 +107,8 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 - **Current look:**
   - Tints and greys live in `oc_climb.LOOK_TINTS` / `LOOK_GREYS` and are applied by every
     ground build; `look --tint/--grey` is only for trying values.
-  - Grass is `--grass 1.2 1.5`. The plants' look is `oc_climb.PLANT_LOOK`, applied by every ground
+  - Grass is `--grass 1.2 1.5`. The plants' look is `oc_climb.PLANT_LOOK` and, per scan,
+    `PLANT_SLUG_LOOK`, applied by every ground
     build (`--plants`/`--plant-param` only try values). Fog is `--fog 0.004 0.02` (the template's falloff of 0.2 hides the fog above about 100 m; 0.03
     washes everything out). The map has a rim of ridges at its edge.
   - Stills wait at least 240 frames per view, then until the landscape's grass instance count
@@ -114,8 +171,8 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 - **Keep grass density in budget.** GRASS densities are per mesh variant (fern's six variants at
   2.0 draw 12 per 100 m^2), and `look --grass` multiplies them again. Instances go as density
   times cull squared: v18's Forest table (about 250 drawn per 100 m^2) is safe, while v13's
-  extra ferns hit the GPUVM fault on the first look. For more cover, draw grass bigger (a
-  row's optional (min, max) scale) rather than denser.
+  extra ferns hit the GPUVM fault on the first look. For more cover, see the vegetation rules
+  above: neither denser nor bigger fixed it (v19–v29).
 - **Diagnose before you rebuild.** Use a `probe` or a `look` to confirm a cause first (for
   example, streaming versus the material), so a rebuild isn't spent on a guess.
 
@@ -159,8 +216,9 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 - **Never** buy anything on Fab, and never render or verify the design canvas unless asked.
 - **Shell:** foreground `sleep` is blocked; use `sleep N & wait $!`. Never use `pkill -f` with a
   pattern that matches your own command line.
-- **QA:** a Sonnet subagent scores stills against the reference photos in `/workspace/ue/ref/climb/`.
-  Tell it that sky banding seen through Read is a downscale artifact.
+- **QA:** a Sonnet subagent compares stills with the reference photos in `/workspace/ue/ref/climb/`.
+  Tell it that sky banding seen through Read is a downscale artifact. Its score is a regression
+  check only; see "How to judge it" above.
 - **Storybook:** https://claude.ai/artifact/UuLeEWcskoabDCuZceuLqb
   - Update it whenever the look changes.
   - Read it with the Artifact tool first, then republish to the same URL.
