@@ -107,7 +107,9 @@ LOOK_TINTS = {
     # tint at all: it made the pale beech bank and the far hillside's leopard spots (v15).
     # v18: a little yellower, as the moss and lawn read teal felt under the sky (v17 crops).
     # v20: (0.55, 0.75, 0.3) read lime on the hairpin's slopes; this, greyed a little, didn't.
-    "Forest mix": (0.36, 0.48, 0.18),
+    # v24: the bench's and 72%'s mint carpet was this mix (false colour): deeper, yellower, and
+    # no longer greyed, as grey turned it mint under the sky.
+    "Forest mix": (0.2, 0.3, 0.06),
     "Grass": (0.14, 0.23, 0.04),
     "Grass mix": (0.14, 0.22, 0.04),
     "Sand mix": LITTER,
@@ -117,15 +119,16 @@ LOOK_TINTS = {
     # v20: warmer, as the style shots' brown dirt; the cooler soil read mauve under the sky.
     # v21: browner, with some blue: at R 1.7x G and no blue the banks read maroon under the sky.
     # v23: warmer again, less blue: v22's banks still read purple-brown in the shade (QA).
-    "Sand": (0.32, 0.22, 0.1),
-    "Dirt": (0.3, 0.21, 0.1),
+    # v24: more green in the brown, as red-brown soil reads plum under the blue sky light.
+    "Sand": (0.3, 0.24, 0.1),
+    "Dirt": (0.28, 0.22, 0.1),
 }
 LOOK_GREYS = {
     "Grass": 0.0,
     "Grass mix": 0.0,
     "Rock": 0.5,
     "Rock mix": 0.3,
-    "Forest mix": 0.15,
+    "Forest mix": 0.0,
     "Forest": 0.25,
     "Dirt mix": 0.25,
     "Sand mix": 0.25,
