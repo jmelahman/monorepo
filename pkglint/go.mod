@@ -4,11 +4,14 @@ go 1.27.3
 
 require (
 	github.com/jmelahman/typesafe-sdk-go v0.2.0
-	github.com/klauspost/compress v1.20.0
+	github.com/klauspost/compress v1.20.4
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/ulikunitz/xz v0.5.17
 	mvdan.cc/sh/v3 v3.14.1
 )
 
-require github.com/inconshreveable/mousetrap v1.1.0 // indirect
+require (
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/rogpeppe/go-internal v1.16.0 // indirect
+)
