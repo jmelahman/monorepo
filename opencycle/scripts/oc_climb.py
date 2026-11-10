@@ -880,6 +880,8 @@ POST_KEYS = {
     "volumetric": "height fog: volumetric fog (light shafts through the canopy), 0 or 1",
     "shafts": "sun: volumetric scattering intensity, 1 neutral",
     "sky": "sky light: intensity, 1 neutral",
+    "sky_warm": "sky light: warmth 0..1; 0 is white, 1 is a warm (1, 0.8, 0.6) fill",
+    "temp": "post volume: white balance in kelvin, 6500 neutral; higher reads warmer",
     "sun": "sun: intensity in lux",
     "contact": "sun: contact shadow length, screen fraction (0.05 grounds posts)",
 }
@@ -897,7 +899,7 @@ def _post(post):
     bad = [k for k in post if k not in POST_KEYS]
     if bad:
         raise RuntimeError(f"unknown --post {bad}; use {sorted(POST_KEYS)}")
-    keys = ("exposure", "ev", "contrast", "saturation", "vignette")
+    keys = ("exposure", "ev", "contrast", "saturation", "vignette", "temp")
     grade = {k: post[k] for k in keys if k in post}
     if grade:
         found = [
@@ -932,6 +934,10 @@ def _post(post):
         if "vignette" in grade:
             st.set_editor_property("override_vignette_intensity", True)
             st.set_editor_property("vignette_intensity", float(grade["vignette"]))
+        # The shaded floor read cold blue-grey under the sky (v15): a warmer balance.
+        if "temp" in grade:
+            st.set_editor_property("override_white_temp", True)
+            st.set_editor_property("white_temp", float(grade["temp"]))
         ppv.set_editor_property("settings", st)
     if "fog_start" in post or "volumetric" in post:
         for fog in _level_actors(unreal.ExponentialHeightFog):
@@ -940,9 +946,14 @@ def _post(post):
                 comp.set_editor_property("start_distance", float(post["fog_start"]) * 100)
             if "volumetric" in post:
                 comp.set_editor_property("enable_volumetric_fog", bool(post["volumetric"]))
-    if "sky" in post:
+    if "sky" in post or "sky_warm" in post:
         for sky in _level_actors(unreal.SkyLight):
-            sky.light_component.set_editor_property("intensity", float(post["sky"]))
+            if "sky" in post:
+                sky.light_component.set_editor_property("intensity", float(post["sky"]))
+            if "sky_warm" in post:
+                w = min(max(float(post["sky_warm"]), 0.0), 1.0)
+                colour = unreal.Color(255, int(255 * (1 - 0.2 * w)), int(255 * (1 - 0.4 * w)), 255)
+                sky.light_component.set_editor_property("light_color", colour)
     if {"sun", "shafts", "contact"} & set(post):
         for sun in _level_actors(unreal.DirectionalLight):
             comp = sun.light_component
