@@ -200,6 +200,14 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     layer bottom 8 km; bloom 0; the 64 World Partition HLOD actors hidden. It needs the sun
     (sun 0 is black under the locked EV). Suspects left: back-lit foliage translucency and the
     pale Rock layer on the cliff toward the sun; next, a camera turned away from the sun.
+  - v25 (worn rough 0.82): QA 7.5, 7.5, 8, 7, 7, 5.5, 7 (+1 in all); boulders helped the spruce.
+    The kikuyu read as a pale grey-green wash. Storybook v25 (img19).
+  - The haze is partly the low sun: it sits 16 degrees up and about 52 degrees right of the
+    hairpin camera. `--post sun_pitch=-35` thinned the haze and showed the snowy peak, but lit
+    the spruce flat and bright (moody look lost). Kept -16.3 (yaw 43.7); a user decision.
+    New keys: `sun_pitch`, `sun_yaw`, `bloom`, `flare`. Post keys persist in the level, so put
+    a changed one back explicitly (sun_pitch=-16.3 sun_yaw=43.7, bloom=0.675, aerial=1).
+  - v26 (running): kikuyu tinted like wild_grass, 28 at 1.4-2.2x on Forest, 24 on Sand banks.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
