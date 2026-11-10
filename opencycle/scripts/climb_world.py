@@ -433,9 +433,11 @@ def road_material():
     soil = g.mask(g.sample(island.ms_texture("forest", "soil_mud", "D"), g.world_uv(stile)), "rgb")
     soil = g.mul(soil, g.const(ROAD_EDGE_SOIL))
     colour = g.lerp(colour, soil, g.mul(edge, 0.85))
-    leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.72), 7.0))
+    leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.8), 7.0))
     leaves = g.mul(leaves, g.lerp(g.const(0.12), g.const(1.0), edge))
-    leaf_colour = g.mul(g.const((0.11, 0.07, 0.04)), g.world_noise(0.03, 0.6, 1.4, 2))
+    # Once the road went dark, leaves at 0.11 read as pale ovals (v14): a shade off the tarmac, and
+    # fewer of them (threshold 0.8, was 0.72).
+    leaf_colour = g.mul(g.const((0.06, 0.04, 0.025)), g.world_noise(0.03, 0.6, 1.4, 2))
     colour = g.lerp(colour, leaf_colour, leaves)
     rough = g.lerp(rough, g.const(0.92), g.saturate(g.add(edge, leaves)))
     g.output(colour, normal, rough, specular=0.3, ao=g.mask(masks, "r"))

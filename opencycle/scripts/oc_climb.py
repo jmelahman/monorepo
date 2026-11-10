@@ -872,7 +872,7 @@ def _fog(fog):
 # The keys `look --post` takes, and what each sets on the open level.
 POST_KEYS = {
     "exposure": "post volume: auto-exposure bias in EV",
-    "ev": "post volume: exposure locked at this EV100 (about 1.5 for the 6 lux sun); 99 frees it",
+    "ev": "post volume: exposure locked at this EV100 (about -4.5 for the 6 lux sun); 99 frees it",
     "contrast": "post volume: colour contrast, 1 neutral",
     "saturation": "post volume: colour saturation, 1 neutral",
     "vignette": "post volume: vignette intensity",
@@ -1127,8 +1127,8 @@ def _set_params(mi, params):
 # own assets stay untouched. The spruce bark read pale grey; the look reference has red-brown pines.
 TREE_LOOK = {
     "spruce": {
-        0: {"BaseColor Tint": (0.95, 0.6, 0.42)},
-        1: {"BaseColor Tint": (0.95, 0.6, 0.42)},
+        0: {"BaseColor Tint": (0.6, 0.4, 0.28)},
+        1: {"BaseColor Tint": (0.6, 0.4, 0.28)},
     },
 }
 
@@ -1159,10 +1159,10 @@ def _tree_look(look=None):
                 lib.edit.set_material_instance_parent(mi, current)
             _set_params(mi, params)
             if current.get_path_name() != mi.get_path_name():
-                mats[slot].set_editor_property("material_interface", mi)
+                # Setting the static_materials array did not stick (v14); set_material does.
+                sm.set_material(slot, mi)
                 changed = True
         if changed:
-            sm.set_editor_property("static_materials", mats)
             assets.save_loaded_asset(sm, False)
         log(f"tree look {kind}: {slots}")
 
