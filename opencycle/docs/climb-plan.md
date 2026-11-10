@@ -136,6 +136,16 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     VolumetricCloud). clouds=0.6 with sky_lum=0.7 turned the sky overcast white and washed the
     scene out: not used.
   - `look` now applies PROP_LOOK, so a prop's tint needs only a restart and a look.
+  - The cloud material's default coverage is -0.2 (density 0.008), so clouds=0.6 was a full
+    overcast. Pass `--post clouds=-0.2` to restore the default.
+  - **v20: the smeared banks' cause.** A second false colour showed the streaks were "Sand mix",
+    and the Forest base and "Dirt mix" used the same scan: alpine_needles, an opacity scan whose
+    D is 8% needles and 92% dilated padding. All three are forest_floor now, and the streaks are
+    gone. The banks then read smooth and mauve, so the soil and steep shade are warmer, and the
+    banks get more roots, stones, bigger tufts and clover (v20 chain).
+  - Still open: a pale grey low-detail boulder by the bench and at 95% ignores every prop's
+    tint (tundra, mossy_rocks, the nordic rocks). It appeared with v16's tundra boulders; maybe
+    an HLOD proxy. New `look --prop-param SLUG:NAME=...` for such tests.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in

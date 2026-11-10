@@ -57,7 +57,7 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
     saturation, vignette, fog_start (m), volumetric (0/1), shafts, sky, sun, and ev (locks
     exposure at that EV100; 99 frees it). build-level loses fog and post settings, so re-run look
     after it. Last used: ev=-4.5 exposure=0.5 temp=6700 sky_warm=0.35 contrast=1.1 saturation=1.05 vignette=0.3
-    fog_start=150 volumetric=0 contact=0.05. Keep exposure locked: auto exposure undoes every
+    fog_start=150 volumetric=0 contact=0.05 clouds=-0.2 (the default coverage). Keep exposure locked: auto exposure undoes every
     albedo change (the sun is 6 lux, which is about EV -5).
 - **Rebuilds:** a change to the GRASS table needs `rebuild-ground --rebuild-grass`. It builds the
   1M-tri prop meshes one at a time first (all at once crashed Vulkan); give it `--timeout 2400`.
