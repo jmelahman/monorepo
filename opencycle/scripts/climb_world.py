@@ -431,7 +431,8 @@ def road_material():
     worn = g.saturate(g.mul(g.add(g.add(centre, wander), -0.45), -3.0))
     worn = g.mul(worn, g.world_noise(0.002, 0.5, 1.0, 2))
     colour = g.lerp(colour, g.mul(colour, 0.82), worn)
-    rough = g.lerp(rough, g.const(0.55), worn)
+    # 0.55 drew a wet, sky-bright stripe down the middle (v25): worn smooth, not polished.
+    rough = g.lerp(rough, g.param("worn rough", 0.82), worn)
     colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
     colour = g.mul(colour, g.param("warm", ROAD_WARM))
     across = g.link(
