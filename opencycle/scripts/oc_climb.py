@@ -867,6 +867,7 @@ def _fog(fog):
 # The keys `look --post` takes, and what each sets on the open level.
 POST_KEYS = {
     "exposure": "post volume: auto-exposure bias in EV",
+    "ev": "post volume: exposure locked at this EV100 (about 1.5 for the 6 lux sun); 99 frees it",
     "contrast": "post volume: colour contrast, 1 neutral",
     "saturation": "post volume: colour saturation, 1 neutral",
     "vignette": "post volume: vignette intensity",
@@ -891,7 +892,8 @@ def _post(post):
     bad = [k for k in post if k not in POST_KEYS]
     if bad:
         raise RuntimeError(f"unknown --post {bad}; use {sorted(POST_KEYS)}")
-    grade = {k: post[k] for k in ("exposure", "contrast", "saturation", "vignette") if k in post}
+    keys = ("exposure", "ev", "contrast", "saturation", "vignette")
+    grade = {k: post[k] for k in keys if k in post}
     if grade:
         found = [
             a for a in _level_actors(unreal.PostProcessVolume) if a.get_actor_label() == POST_LABEL
@@ -908,6 +910,15 @@ def _post(post):
         if "exposure" in grade:
             st.set_editor_property("override_auto_exposure_bias", True)
             st.set_editor_property("auto_exposure_bias", float(grade["exposure"]))
+        # Auto exposure undid every albedo change: darker soil came out as bright (v13).
+        if "ev" in grade:
+            locked = float(grade["ev"]) != 99
+            for prop, free in (
+                ("auto_exposure_min_brightness", -10.0),
+                ("auto_exposure_max_brightness", 20.0),
+            ):
+                st.set_editor_property(f"override_{prop}", locked)
+                st.set_editor_property(prop, float(grade["ev"]) if locked else free)
         for key, prop in (("contrast", "color_contrast"), ("saturation", "color_saturation")):
             if key in grade:
                 v = float(grade[key])
