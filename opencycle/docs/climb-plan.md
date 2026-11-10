@@ -164,6 +164,13 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     weight 2-4 m from the centre line, Forest above), GT_Sand holds its 37 varieties, and 3x
     density added nothing on the bank while it filled the flat floor. Suspect: align_to_surface
     tilted tufts sideways out of the 50 degree cuts. v22 grows plants upright (props still align).
+  - v22: upright plants helped a little (more standing tufts at 72% and 95%), not a carpet.
+    Landscape grass is placed per metre of map, not of slope: a 3 m cut at 50 degrees gets the
+    grass of about 2 m of flat ground. The root patches, now with their material, read as flat
+    pink slabs on the banks. Fog 0.003 vs 0.004 made no visible difference to the hairpin haze.
+    One road_30 still came out bare once (grass still streaming in); a retake was fine.
+  - v23 (running): bank grass 60/40 at 1.4-2.4x, root patches 1.5 (was 4), warmer Sand and Dirt
+    tints, warmer tarmac (ROAD_WARM 1.15, 1.0, 0.72).
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
