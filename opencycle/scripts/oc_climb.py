@@ -191,7 +191,8 @@ GRASS = {
         # v25: QA read the floor as tufts on bare soil: a low, dense kikuyu carpet near the road,
         # culled at 15-20 m so it costs about a third of grass_clumps' instances.
         # v26: still clumps on soil (QA): denser and bigger.
-        ("shared", "kikuyu_grass", 28.0, 1500, 2000, (1.4, 2.2)),
+        # v27: one height read as mown (QA): a wider range of sizes.
+        ("shared", "kikuyu_grass", 28.0, 1500, 2000, (1.1, 2.6)),
         # Big rounded boulders, as in the style shots (v25: twice as many, QA wanted more).
         ("mountain", "tundra_boulder", 0.04, 12000, 15000),
         # The floor's debris: the woods in the reference photos are never bare between trunks.
@@ -215,10 +216,11 @@ GRASS = {
         ("forest", "mossy_rocks", 0.6, 8000, 11000),
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
-        ("shared", "grass_clumps", 60.0, 3000, 4500, (1.4, 2.4)),
+        ("shared", "grass_clumps", 60.0, 3000, 4500, (1.0, 2.8)),
         ("shared", "wild_grass", 40.0, 3000, 4500, (1.4, 2.4)),
         ("desert", "dry_grass", 1.5, 3000, 4500),
-        ("shared", "clovers", 5.0, 1500, 2500, (1.0, 1.6)),
+        # v27: twice the clover, bigger, over the bare soil between the tufts (QA, v26).
+        ("shared", "clovers", 10.0, 1500, 2500, (1.2, 2.0)),
         # v26: the spruce banks read as flat brown mud (QA, v25): the floor's low carpet here too.
         ("shared", "kikuyu_grass", 24.0, 1500, 2000, (1.4, 2.2)),
     ),
@@ -412,7 +414,8 @@ PROP_MASTER = f"{MS}/Materials/M_MS_Prop"
 # the sky (QA, v12).
 PLANT_LOOK = {
     "Tint": (0.6, 0.62, 0.42),
-    "TranslucencyTint": (0.2, 0.24, 0.12),
+    # v27: halved: the grass glowed lime, back-lit, under the dark spruce (QA, v26).
+    "TranslucencyTint": (0.1, 0.13, 0.07),
     "Grey": 0.12,
     "Specular": 0.15,
     "Rough floor": 0.6,
@@ -423,10 +426,11 @@ PLANT_LOOK = {
 # 0.14 sRGB, wild_grass 0.2) and read as dark tufts on a paler floor (v18). Brighter, yellow-green.
 PLANT_SLUG_LOOK = {
     # v21: less red and blue: at R/G 0.8 the tufts read yellow-olive against the style shots' green.
-    "grass_clumps": {"Tint": (2.4, 4.0, 1.2)},
-    "wild_grass": {"Tint": (1.5, 2.5, 0.8)},
+    # v27: darker and bluer: v26's carpet read lime and self-lit in the shade (QA).
+    "grass_clumps": {"Tint": (1.5, 2.8, 1.1)},
+    "wild_grass": {"Tint": (1.0, 1.8, 0.75)},
     # v26: untinted it read as a pale grey-green wash on the shaded floor (QA, v25).
-    "kikuyu_grass": {"Tint": (1.5, 2.5, 0.8)},
+    "kikuyu_grass": {"Tint": (1.0, 1.8, 0.75)},
 }
 PROP_LOOK = {
     "tundra_boulder": {"Tint": (0.3, 0.29, 0.26), "Moss amount": 1.0},
@@ -1258,16 +1262,21 @@ def _grass_instances():
     return n
 
 
-def _settle(name):
+def _settle(name, before=None):
     """Waits for a new view's grass: STILL_SETTLE_MIN frames, then until the instance count is
-    steady. Falls back to STILL_SETTLE if no grass components are found."""
+    steady. Falls back to STILL_SETTLE if no grass components are found.
+
+    before: the count at the last view. A count still equal to it is the last view's grass, not
+    yet rebuilt (a look shot road_72 bare at "settled 360 frames, 1199" after road_50's 1227), so
+    steady only counts once the count has moved, or after half of STILL_SETTLE_MAX."""
     yield STILL_SETTLE_MIN
-    frames, last, steady = STILL_SETTLE_MIN, -1, 0
+    frames, last, steady, moved = STILL_SETTLE_MIN, -1, 0, before is None
     while frames < STILL_SETTLE_MAX:
         n = _grass_instances()
         if n == 0 and frames >= STILL_SETTLE:
             break
-        steady = steady + 1 if n == last and n > 0 else 0
+        moved = moved or n != before or frames >= STILL_SETTLE_MAX // 2
+        steady = steady + 1 if n == last and n > 0 and moved else 0
         if steady >= GRASS_STEADY:
             break
         last = n
@@ -1289,6 +1298,7 @@ def _stills(shots, out):
         unreal.SystemLibrary.execute_console_command(None, command)
     yield 60  # let the level's streaming, Nanite and lighting settle
     files = []
+    before = None
     for name, where, target in plan:
         path = f"{out}/{name}.png"
         if os.path.exists(path):
@@ -1297,7 +1307,8 @@ def _stills(shots, out):
         editor.set_level_viewport_camera_info(
             eye, unreal.MathLibrary.find_look_at_rotation(eye, unreal.Vector(*target))
         )
-        yield from _settle(name)  # grass, textures and shadows stream in around the new view
+        yield from _settle(name, before)  # grass, textures and shadows stream in around the view
+        before = _grass_instances()
         unreal.AutomationLibrary.take_high_res_screenshot(*STILL_SIZE, path)
         for _ in range(30):
             yield 30  # the shot is written a few frames later
