@@ -97,7 +97,22 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
-- 2026-11-09, late night (batch v12, building): **colour and surface, in one rebuild.**
+- 2026-11-10, early (storybook v12): **colour fixes; QA level.**
+  - Litter tinted `LITTER` (0.38, 0.3, 0.23) on the Forest base and the Sand/Dirt mixes; plants
+    `PLANT_LOOK` (Tint 0.6, 0.62, 0.42, TranslucencyTint 0.2, 0.24, 0.12, Grey 0.12).
+  - Sonnet QA: road_08 5, road_30 6, road_50 6, road_72 5, road_95 6, hairpin_above 5, bench 5
+    (v11: 6, 6, 6, 5, 5, 5, 6). The fixes worked, but QA now ranks other defects first.
+  - Open, in order:
+    1. Blue-white, metallic fern planes in every ground still: the plant specular (0.4 in
+       M_MS_Plant) against the sky, or one variety. Try a "Specular" param near 0.1 by look.
+    2. Road too pale: lilac-grey with a bright, regular speckle. Darker (about 0.15 albedo), warmer,
+       with low-frequency patches and leaf fall; the exposure may also be lifting it.
+    3. Soil still uniform and blurry up close: detail normal, triple the tiling.
+    4. Ferns in rows on bare soil: denser cover, scale 0.6–1.4, sticks and leaves.
+    5. hairpin_above: a smeared pastel hillside and milky fog.
+    6. The fence reads speckled and plasticky.
+
+- 2026-11-09, late night (batch v12): **colour and surface, in one rebuild.**
   - `_plant_master` rebuilds M_MS_Plant in place in every `rebuild-ground`: "Grey" 0.25, a
     per-instance brightness "Variation" 0.5, and one plant in five ("Dry share") turned to a
     "Dry tint" of yellow-brown. Rerunning megascans.py's assign stage puts back the plain master.

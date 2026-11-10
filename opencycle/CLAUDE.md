@@ -44,8 +44,8 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 - **Current look:**
   - Tints and greys live in `oc_climb.LOOK_TINTS` / `LOOK_GREYS` and are applied by every
     ground build; `look --tint/--grey` is only for trying values.
-  - Grass is `--grass 1.2 1.5` and plants `--plants 0.62,0.62,0.5` (a Tint on every MI_<plant>).
-    Fog is `--fog 0.006 0.02` (the template's falloff of 0.2 hides the fog above about 100 m; 0.03
+  - Grass is `--grass 1.2 1.5`. The plants' look is `oc_climb.PLANT_LOOK`, applied by every ground
+    build (`--plants`/`--plant-param` only try values). Fog is `--fog 0.004 0.02` (the template's falloff of 0.2 hides the fog above about 100 m; 0.03
     washes everything out). The map has a rim of ridges at its edge.
   - Stills wait `STILL_SETTLE` (480) frames per view so grass finishes building; 120 left bare
     stretches. `look` takes only `bench` unless you pass `--shots`.
