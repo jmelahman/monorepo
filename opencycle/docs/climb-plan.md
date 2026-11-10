@@ -118,8 +118,16 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - v18 (running, `--rebuild-grass`): M_MS_Prop rebuilt with a moss cap (`_prop_master`, "Moss
     amount" set by PROP_LOOK); Forest grass doubled near the path at a 20-30 m cull (fewer
     instances overall than v17); yellower moss and lawn tints.
-  - Queued for v19: steep peak faces shed snow (in make_climb.py); try gravel_on_soil for the
-    banks' Sand; probe the sky (out/qa/probe_sky.py) for a moodier sky and clouds.
+  - v18 looked almost unchanged; one boulder grew a (too lime) moss cap. Probes found why the
+    floor never became a carpet:
+    - GRASS densities are per mesh variant. Ferns (1.5-2 m, 6-9 variants) covered about twice
+      the floor that all the grass (20-60 cm clumps) did. Forest draws about 250 per 100 m^2,
+      not 31.
+    - The grass scans are near black as scanned (grass_clumps 0.14 sRGB), and the moss scan is
+      dull olive, so dark tufts sat on a paler grey-teal felt: the style shots' inverse.
+  - v19 (running): grass drawn 1.4-2.4x with a per-plant tint (PLANT_SLUG_LOOK), fewer ferns,
+    uncut_grass patches on the forest floor, stony_soil banks, darker moss, peaks shedding snow
+    on steep faces. The chain also probes the sky into out/qa/sky_probe.txt.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
