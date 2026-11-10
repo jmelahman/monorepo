@@ -34,10 +34,11 @@ VALLEY_Y = 640.0  # metres south of the origin: the valley floor's line
 FLANK = 0.34  # the mountainside's rise per metre north of it
 # The backdrop is alpine, as in the style shots: the woods thin out at the treeline into meadow,
 # and snow lies on the peaks. Metres of height, wandering with noise.
-TREELINE = 330.0
-SNOWLINE = 560.0
+TREELINE = 420.0
+SNOWLINE = 600.0
 # Peaks where the path's views end, east and west: (x, y, height, radius) in metres.
-PEAKS = [(930.0, 330.0, 470.0, 240.0), (-930.0, 230.0, 500.0, 260.0)]
+# Gaussian, at the map's edge: a softer, nearer tail lifted the path 40 m and moved the bench.
+PEAKS = [(990.0, 330.0, 480.0, 200.0), (-990.0, 230.0, 520.0, 200.0)]
 # The road's plan in km: a traverse east, a hairpin turning north, and back west above it.
 PLAN = [
     (-0.540, 0.452),
@@ -84,7 +85,7 @@ def terrain(x, y):
     rim = 250 * mi.smoothstep(520, 1080, edge)  # gentle: 350 m over 350 m read as a cliff
     peaks = sum(
         top
-        * np.exp(-((((x - px) ** 2 + (y - py) ** 2) / (r * r)) ** 0.8))
+        * np.exp(-((x - px) ** 2 + (y - py) ** 2) / (r * r))
         * (0.8 + 0.4 * mi.ridged(x, y, 140, 4, SEED + 33))
         for px, py, top, r in PEAKS
     )

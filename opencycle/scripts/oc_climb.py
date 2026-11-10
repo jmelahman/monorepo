@@ -241,14 +241,22 @@ class Ground:
         # faces more, or a top-down sample streaks down a cut bank. 0 up to 32 degrees, 1 past 50.
         up = g.node(unreal.MaterialExpressionVertexNormalWS)
         self.steep = g.saturate(g.mul(g.add(g.mask(up, "b"), -0.85), -4.5))
-        across = g.add(
-            g.link(g.mask(up, "r"), g.node(unreal.MaterialExpressionAbs)),
-            g.mul(g.link(g.mask(up, "g"), g.node(unreal.MaterialExpressionAbs)), -1.0),
-        )
-        faces_x = g.saturate(g.mul(across, 1000.0))
-        xz = g.op(unreal.MaterialExpressionAppendVector, g.mask(world, "r"), self.height)
-        yz = g.op(unreal.MaterialExpressionAppendVector, g.mask(world, "g"), self.height)
-        self.side = g.lerp(xz, yz, faces_x)
+
+        # Triplanar: each surface is sampled on the XZ and YZ planes too, weighted by the normal's
+        # components to the fourth. One side plane picked by a hard switch, faded in from 32
+        # degrees, stretched the soil into smears on diagonal and middling slopes (v16, QA).
+        def w(channel):
+            a = g.link(g.mask(up, channel), g.node(unreal.MaterialExpressionAbs))
+            a = g.mul(a, a)
+            return g.mul(a, a)
+
+        wx, wy, wz = w("r"), w("g"), w("b")
+        total = g.add(g.add(wx, wy), wz)
+        self.w_yz = g.op(unreal.MaterialExpressionDivide, wx, total)
+        self.w_xz = g.op(unreal.MaterialExpressionDivide, wy, total)
+        self.w_top = g.op(unreal.MaterialExpressionDivide, wz, total)
+        self.xz = g.op(unreal.MaterialExpressionAppendVector, g.mask(world, "r"), self.height)
+        self.yz = g.op(unreal.MaterialExpressionAppendVector, g.mask(world, "g"), self.height)
 
     def surface(self, biome, slug, tint, label):
         g = self.g
@@ -259,19 +267,26 @@ class Ground:
         far_d = g.mask(g.sample(d, far_uv), "rgb")
         near_n = g.mask(g.sample(n, near_uv, "normal"), "rgb")
         far_n = g.mask(g.sample(n, far_uv, "normal"), "rgb")
-        side_uv = g.mul(self.side, 1.0 / tile)
-        side_d = g.mask(g.sample(d, side_uv), "rgb")
-        side_n = g.mask(g.sample(n, side_uv, "normal"), "rgb")
+        xz_uv, yz_uv = g.mul(self.xz, 1.0 / tile), g.mul(self.yz, 1.0 / tile)
+
+        def blend(top, xz, yz):
+            return g.add(g.add(g.mul(top, self.w_top), g.mul(xz, self.w_xz)), g.mul(yz, self.w_yz))
+
         masks = g.sample(m, near_uv, "masks")
         top = g.lerp(near_d, far_d, g.mul(self.far, 0.7))
-        colour = g.mul(g.lerp(top, side_d, self.steep), g.param(f"{label} tint", tint))
+        side_d = blend(top, g.mask(g.sample(d, xz_uv), "rgb"), g.mask(g.sample(d, yz_uv), "rgb"))
+        colour = g.mul(side_d, g.param(f"{label} tint", tint))
         # "<label> grey", 0 to 1, takes the scan's own hue out: a tint can darken warm gravel but
         # not make it grey.
         luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
         colour = g.lerp(colour, luma, g.param(f"{label} grey", 0.0))
         # Steep ground takes its relief from the side projection, as its colour does: the top
         # projection's normal, stretched there, made the banks read as smooth putty.
-        normal = g.lerp(g.lerp(near_n, far_n, self.far), side_n, self.steep)
+        normal = blend(
+            g.lerp(near_n, far_n, self.far),
+            g.mask(g.sample(n, xz_uv, "normal"), "rgb"),
+            g.mask(g.sample(n, yz_uv, "normal"), "rgb"),
+        )
         return {
             "colour": colour,
             "normal": normal,
