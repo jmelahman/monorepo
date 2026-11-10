@@ -92,7 +92,7 @@ MIXES = {
 # warmed toward brown litter, keeping a little of its green.
 # Halved from v13 once exposure was locked (`--post ev=-4.5`): under auto exposure darker albedo
 # came out just as bright.
-LITTER = (0.34, 0.27, 0.4)
+LITTER = (0.38, 0.27, 0.13)
 LOOK_TINTS = {
     "Rock": (0.45, 0.42, 0.37),
     # Warmer than neutral litter: under the blue sky the floor read blue-grey (v15 false colour).
@@ -108,8 +108,9 @@ LOOK_TINTS = {
     "Dirt mix": LITTER,
     # soil_mud as scanned read pale and dusty on the banks and the path's edge (QA, v12): dark,
     # damp earth as in the reference photos.
-    "Sand": (0.24, 0.18, 0.14),
-    "Dirt": (0.22, 0.17, 0.13),
+    # v20: warmer, as the style shots' brown dirt; the cooler soil read mauve under the sky.
+    "Sand": (0.34, 0.2, 0.08),
+    "Dirt": (0.3, 0.19, 0.09),
 }
 LOOK_GREYS = {
     "Grass": 0.0,
@@ -117,9 +118,9 @@ LOOK_GREYS = {
     "Rock": 0.5,
     "Rock mix": 0.3,
     "Forest mix": 0.15,
-    "Forest": 0.4,
-    "Dirt mix": 0.4,
-    "Sand mix": 0.4,
+    "Forest": 0.25,
+    "Dirt mix": 0.25,
+    "Sand mix": 0.25,
 }
 ROUGHNESS = {"Snow": 0.55}
 # Every other layer is at least this rough: the scans' low roughness made the soil glitter.
@@ -127,9 +128,9 @@ ROUGH_FLOOR = 0.75
 # Steep ground on these layers is shaded toward darker, browner soil ("<layer> steep" parameter):
 # the cut banks read pale beige against the reference photos' dark earth.
 STEEP = {
-    "Forest": (0.6, 0.5, 0.42),
-    "Sand": (0.6, 0.5, 0.42),
-    "Dirt": (0.6, 0.5, 0.42),
+    "Forest": (0.8, 0.6, 0.38),
+    "Sand": (0.8, 0.6, 0.38),
+    "Dirt": (0.8, 0.6, 0.38),
 }
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
@@ -187,14 +188,17 @@ GRASS = {
     ),
     # The soil of the cut banks: roots, stones, ferns and tufts, so a bank is never bare plaster.
     "Sand": (
-        ("forest", "nordic_forest_ground_patch_root", 1.5, 6000, 8000),
-        ("forest", "nordic_forest_rock_small", 2.0, 5000, 7000),
+        # v20: more roots and stones, and bigger tufts: the banks read bare once their smeared
+        # litter was fixed.
+        ("forest", "nordic_forest_ground_patch_root", 3.0, 6000, 8000),
+        ("forest", "nordic_forest_rock_small", 3.0, 5000, 7000),
         ("forest", "mossy_rocks", 0.3, 8000, 11000),
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
-        ("shared", "grass_clumps", 12.0, 3000, 4500),
-        ("shared", "wild_grass", 8.0, 3000, 4500),
+        ("shared", "grass_clumps", 18.0, 3000, 4500, (1.2, 2.0)),
+        ("shared", "wild_grass", 12.0, 3000, 4500, (1.2, 2.0)),
         ("desert", "dry_grass", 4.0, 3000, 4500),
+        ("shared", "clovers", 3.0, 1500, 2500, (1.0, 1.6)),
     ),
     # Talus under the crags.
     "Rock": (
