@@ -97,6 +97,20 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-10, night (user asleep, "continue as much as possible"):
+  - v15: the bark fix worked (red-brown trunks); QA 7, 6, 7, 6, 5, 6, 5.
+  - False colour found the cold blue-grey floor was the Forest layer's neutral litter under the
+    blue sky, and the pale banks and the far hillside's leopard spots were "Grass mix"
+    (lawn_grass), which had no tint at all. Both now tinted (LOOK_TINTS).
+  - New `look --post temp=K` (white balance; higher is warmer) and `sky_warm=0..1` (sky light
+    colour). Positional `unreal.Color` is BGRA: use keywords. 6700 and 0.35 are baked into the
+    look args.
+  - v16: warm floor, clover and dandelions on Forest (still about 31 per 100 m^2), tundra
+    boulders, subtler road repair patches. Boulders came out near white: `PROP_LOOK` now tints
+    props' MIs on each ground build.
+  - v17 (running): an alpine backdrop in make_climb.py. TREELINE 330 m thins the woods into
+    meadow, SNOWLINE 560 m paints Snow, and PEAKS puts two peaks on the east and west rims, where
+    the path's views end.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
