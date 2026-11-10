@@ -27,17 +27,14 @@ pythonpath = [
   "manygo",
 ]
 
-[tool.ty.analysis]
-# validate_configs.py falls back to tomli only on Pythons without tomllib.
-allowed-unresolved-imports = ["tomli"]
+[tool.ty.src]
+# opencycle's scripts run inside the Unreal editor, against its generated `unreal` module,
+# which isn't on PyPI and which tools/containers/unreal shadows here as a namespace package.
+exclude = ["opencycle/scripts"]
 
 [tool.uv.sources]
 # A path source rather than a workspace member: manygo/ keeps its own uv.lock,
 # which is what its mirror runs from, while the root still type-checks against
 # the local copy.
 manygo = { path = "manygo", editable = true }
-
-[tool.ty.src]
-# opencycle's scripts run inside the Unreal editor, against its generated `unreal` module,
-# which isn't on PyPI and which tools/containers/unreal shadows here as a namespace package.
-exclude = ["opencycle/scripts"]
+agentic-security-review = { path = "github-actions/agentic-security-review", editable = true }

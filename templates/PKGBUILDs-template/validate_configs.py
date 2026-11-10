@@ -5,11 +5,7 @@ from __future__ import annotations
 
 import os
 import sys
-
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib  # type: ignore[no-redef]
+import tomllib
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 

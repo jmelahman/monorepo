@@ -47,7 +47,7 @@ locals {
       homepage_url = "http://jamison.lahman.dev/agentic-kanban/"
     }
     agentic-security-review = {
-      description = "An agent reviews each push for vulnerabilities and files code scanning alerts"
+      description = "Agentic code review for vulnerabilities"
       topics      = ["claude", "claude-code", "opencode", "github-actions", "code-scanning", "sarif", "security"]
     }
     AgileCBT = {

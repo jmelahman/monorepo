@@ -1,0 +1,13 @@
+[project]
+name = "agentic-security-review"
+version = "0.0.0"
+description = "Agentic code review for vulnerabilities"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [{ name = "Jamison Lahman", email = "jamison@lahman.dev" }]
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pytest>=9.2.0",
+]
