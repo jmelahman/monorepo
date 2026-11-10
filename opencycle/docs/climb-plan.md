@@ -128,6 +128,14 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - v19 (running): grass drawn 1.4-2.4x with a per-plant tint (PLANT_SLUG_LOOK), fewer ferns,
     uncut_grass patches on the forest floor, stony_soil banks, darker moss, peaks shedding snow
     on steep faces. The chain also probes the sky into out/qa/sky_probe.txt.
+  - v19 done: QA 7, 7, 7, 6, 6, 6, 6.5. The floor is a green carpet at last. Storybook v19
+    (v18 folded in: a look test overwrote its stills). Defects: banks still streaked, the new
+    grass patches lime with hard edges, pointed grey rocks (the nordic scans, untinted) at the
+    bench and 95%, a smooth pink peak, flat dark spruce.
+  - New `look --post clouds=F cloud_density=F sky_lum=F` (MI_ClimbClouds on the
+    VolumetricCloud). clouds=0.6 with sky_lum=0.7 turned the sky overcast white and washed the
+    scene out: not used.
+  - `look` now applies PROP_LOOK, so a prop's tint needs only a restart and a look.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
