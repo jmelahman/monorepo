@@ -38,7 +38,7 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 | `oc.py rebuild-ground` | Rebuilds the ground material on the empty map | about 1 min |
 | `oc.py static-trees` | Bakes static Nanite copies of the PVE trees, with their leaf assembly parts (capped at 2500 tris each), into `/Game/Climb/Trees/SM_*` | about 10 min |
 | `oc.py reimport-plants` | Re-imports the plants' D textures from `fab_prep` in place, after `OC_FORCE=1 OC_ONLY=<slugs> prep_megascans.py` | about 2 min |
-| `oc.py fps --quality 0..3 --frames N --shots a,b [--tree-cull M] [--tree-shadows 0/1] [--tree-wpo 0/1]` | Measures frame times at each still's view; tree options apply for that run only | about 30 s |
+| `oc.py fps --quality 0..3 --frames N --shots a,b [--tree-cull M] [--tree-shadows 0/1] [--tree-wpo 0/1] [--try LABEL=CVAR V;CVAR V]...` | Measures frame times at each still's view; tree options apply for that run only. Each `--try` is also measured alone at every view (cvar ablation in one session) | about 30 s, plus ~10 s per try per view |
 | `oc.py probe PATH` | Runs a read-only script with `unreal`, `log`, `lib` and `notes` in scope (API discovery; keep scripts in `out/qa`) | seconds |
 | `oc.py restart` / `stop` / `status` / `log` / `wait JOB` | | |
 
@@ -52,8 +52,12 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
   - Grass is `--grass 1.2 1.5`. The plants' look is `oc_climb.PLANT_LOOK`, applied by every ground
     build (`--plants`/`--plant-param` only try values). Fog is `--fog 0.004 0.02` (the template's falloff of 0.2 hides the fog above about 100 m; 0.03
     washes everything out). The map has a rim of ridges at its edge.
-  - Stills wait `STILL_SETTLE` (480) frames per view so grass finishes building; 120 left bare
-    stretches. `look` takes only `bench` unless you pass `--shots`.
+  - Stills wait at least 240 frames per view, then until the landscape's grass instance count
+    holds steady (`_settle`; the log prints `OC settled <shot>: N frames`). A fixed 480 shot whole
+    banks and views before their grass was built: v21-v23's "bare banks" were never a placement
+    problem. Suspect timing before density when grass looks missing.
+  - Every look re-applies LOOK_TINTS/GREYS, PLANT_LOOK and PROP_LOOK first, so false colour
+    (`--tint`, `--prop-param`) lasts only for that look. `look` takes only `bench` unless you pass `--shots`.
   - `look --post KEY=F` (repeatable) sets the grade on an "OC Post" volume: exposure, contrast,
     saturation, vignette, fog_start (m), volumetric (0/1), shafts, sky, sun, and ev (locks
     exposure at that EV100; 99 frees it). build-level loses fog and post settings, so re-run look
@@ -88,7 +92,7 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
   `fab_prep/index.json` before picking a surface.
 - **False-colour to find a layer.** `look --tint Forest=1,0,0 --tint Sand=0,0,1 ...` on one
   shot shows which landscape layer a surface is (the pale banks were Rock outcrops, not soil).
-  It saves the tints, so the next `rebuild-ground` (or a `look` with LOOK_TINTS) restores them.
+  The next look restores the baked tints.
 - **Material values without a rebuild:** `look --plant-param NAME=F|R,G,B` (every plant MI) and
   `--ground-param NAME=...` (MI_ClimbGround), `--prop-param SLUG:NAME=...` (one prop's MI;
   false-colour props this way too). Bake the winners into `PLANT_LOOK`, `STEEP`,
