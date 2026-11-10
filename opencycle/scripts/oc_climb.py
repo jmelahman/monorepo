@@ -82,7 +82,7 @@ MIXES = {
     "Dirt": ("mountain", "alpine_needles", "patches", 4.0),
 }
 # The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
-LOOK_TINTS = {"Rock": (0.6, 0.57, 0.53), "Forest mix": (0.75, 0.75, 0.62)}
+LOOK_TINTS = {"Rock": (0.45, 0.42, 0.37), "Forest mix": (0.75, 0.75, 0.62)}
 LOOK_GREYS = {
     "Grass": 0.15,
     "Rock": 0.3,
@@ -97,9 +97,9 @@ ROUGH_FLOOR = 0.75
 # Steep ground on these layers is shaded toward darker, browner soil ("<layer> steep" parameter):
 # the cut banks read pale beige against the reference photos' dark earth.
 STEEP = {
-    "Forest": (0.7, 0.6, 0.5),
-    "Sand": (0.7, 0.6, 0.5),
-    "Dirt": (0.7, 0.6, 0.5),
+    "Forest": (0.6, 0.5, 0.42),
+    "Sand": (0.6, 0.5, 0.42),
+    "Dirt": (0.6, 0.5, 0.42),
 }
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
@@ -318,6 +318,9 @@ class Ground:
 
 
 PLANT_MASTER = f"{MS}/Materials/M_MS_Plant"
+# Set on every plant MI by each ground build (try values with `look --plant-param`). The scans'
+# own translucency tints made the ferns glow lime where the sun came through them.
+PLANT_LOOK = {"Tint": (0.62, 0.62, 0.5), "TranslucencyTint": (0.2, 0.24, 0.12)}
 
 
 def _plant_master():
@@ -348,12 +351,12 @@ def _plant_master():
     t = texture("T", "colour", "/Engine/EngineResources/DefaultTexture")
     colour = g.mul(g.mask(d, "rgb"), g.mask(g.param("Tint", (1.0, 1.0, 1.0)), "rgb"))
     luma = g.op(unreal.MaterialExpressionDotProduct, colour, g.const((0.3, 0.59, 0.11)))
-    colour = g.lerp(colour, luma, g.param("Grey", 0.25))
+    colour = g.lerp(colour, luma, g.param("Grey", 0.4))
     rnd = g.node(unreal.MaterialExpressionPerInstanceRandom)
-    bright = g.add(g.const(1.0), g.mul(g.add(rnd, -0.5), g.param("Variation", 0.5)))
+    bright = g.add(g.const(1.0), g.mul(g.add(rnd, -0.5), g.param("Variation", 0.7)))
     colour = g.mul(colour, bright)
     second = g.link(g.mul(rnd, 7.13), g.node(unreal.MaterialExpressionFrac))
-    dry = g.saturate(g.mul(g.add(second, g.add(g.param("Dry share", 0.2), -1.0)), 20.0))
+    dry = g.saturate(g.mul(g.add(second, g.add(g.param("Dry share", 0.3), -1.0)), 20.0))
     colour = g.lerp(colour, g.mul(colour, g.param("Dry tint", (1.5, 1.1, 0.55))), dry)
     rough = g.saturate(g.mul(g.mask(m, "g"), g.param("Roughness", 1.0)))
     sss = g.mul(g.mask(t, "rgb"), g.mask(g.param("TranslucencyTint", (0.5, 0.6, 0.4)), "rgb"))
@@ -718,6 +721,7 @@ def op_rebuild_ground(rebuild_grass=False):
     Saved grass types are reused: building them takes over ten minutes, on one core."""
     _guard_rebuild()
     _plant_master()
+    _plant_params(PLANT_LOOK)
     yield 20
     yield from _warm_grass_meshes()
     grass = {}

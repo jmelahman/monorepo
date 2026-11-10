@@ -155,7 +155,10 @@ def paint(x, y, h, road_dist):
     # tufts, roots, stones), and stones and small outcrops break through here and there.
     overgrown = mi.smoothstep(0.42, 0.58, mi.fbm(x, y, 7, 3, SEED + 52))
     overgrown *= mi.smoothstep(mi.ROAD_HALF + 1.5, mi.ROAD_HALF + 3.5, road_dist)
-    outcrop = bank * mi.smoothstep(0.76, 0.84, mi.fbm(x, y, 9, 2, SEED + 53)) * (slope > 0.55)
+    # Rare, and not right by the path: at 0.76-0.84 with the slumped banks' relief, outcrops took
+    # whole cuts and read as pale granite walls (v12, found by false-colouring the layers).
+    outcrop = bank * mi.smoothstep(0.86, 0.9, mi.fbm(x, y, 9, 2, SEED + 53)) * (slope > 0.7)
+    outcrop *= mi.smoothstep(mi.ROAD_HALF + 3.0, mi.ROAD_HALF + 6.0, road_dist)
     rock = np.maximum(rock, outcrop)
     # The banks' soil is its own layer ("Sand"), so their stones and ferns stay off the path.
     soil = bank * (1 - rock) * (1 - overgrown) * (1 - shoulder)
