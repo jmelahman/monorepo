@@ -162,11 +162,15 @@ def paint(x, y, h, road_dist):
     rock = np.maximum(rock, outcrop)
     # The banks' soil is its own layer ("Sand"), so their stones and ferns stay off the path.
     soil = bank * (1 - rock) * (1 - overgrown) * (1 - shoulder)
-    # Grass: the valley floor and clearings up the flank. In the woods the path's edge is leaf and
-    # needle litter, not a lawn verge.
+    # Grass: the valley floor and clearings up the flank, and a broken verge beside the path, as in
+    # the spruce photos: 1-2 m wide with a wandering edge, gone for a few metres here and there.
     floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
     clearing = mi.smoothstep(0.66, 0.74, mi.fbm(x, y, 120, 3, SEED + 40))
-    grass = np.clip(np.maximum(floor, clearing), 0, 1)
+    reach = mi.ROAD_HALF + 1.6 + 1.2 * (mi.fbm(x, y, 5, 2, SEED + 58) - 0.5)
+    verge = mi.smoothstep(mi.ROAD_HALF + 0.6, mi.ROAD_HALF + 1.0, road_dist)
+    verge *= mi.smoothstep(reach + 0.8, reach, road_dist)
+    verge *= mi.smoothstep(0.38, 0.5, mi.fbm(x, y, 12, 2, SEED + 59))
+    grass = np.clip(np.maximum(np.maximum(floor, clearing), verge), 0, 1)
     rest = 1 - shoulder - soil
     soft = (1 - rock) * rest
     out = {k: np.zeros_like(h) for k in mi.LAYERS}

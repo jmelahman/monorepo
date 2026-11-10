@@ -134,19 +134,18 @@ GRASS = {
         ("shared", "leafy_dandelions", 4.0, 2000, 3000),
     ),
     "Forest": (
-        # Denser than v12's 6/6/4/2, which QA found sparse and in rows on bare soil.
-        ("shared", "fern", 9.0, 4000, 6000),
-        ("shared", "lady_fern", 8.0, 4000, 6000),
-        ("shared", "common_fern", 6.0, 4000, 6000),
-        ("shared", "leather_fern", 1.0, 4000, 6000),
-        # Low cover, and dead stems among the ferns.
-        ("mountain", "alpine_bearberry", 6.0, 3000, 4500),
-        ("desert", "dry_grass", 3.0, 3000, 4500),
+        # Grass and dry tussocks first, ferns only here and there: the spruce photos show grassy
+        # floors, and the user found v12's ferns too many (v13's 40 per 100 m^2 also crashed the GPU
+        # on its first look; this stays near v12's 29). leather_fern, the glossiest, is out.
+        ("shared", "fern", 3.0, 4000, 6000),
+        ("shared", "lady_fern", 2.0, 4000, 6000),
+        ("shared", "common_fern", 1.5, 4000, 6000),
+        ("mountain", "alpine_bearberry", 3.0, 3000, 4500),
+        ("desert", "dry_grass", 4.0, 3000, 4500),
         ("desert", "dead_shrubs", 0.3, 4000, 6000),
-        # Tufts between the ferns, sparse: dense clumps made the woods' floor a lawn.
-        ("shared", "grass_clumps", 3.0, 3000, 4500),
-        ("shared", "wild_grass", 2.0, 3000, 4500),
-        ("shared", "tall_grass", 1.6, 4000, 6000),
+        ("shared", "grass_clumps", 8.0, 3000, 4500),
+        ("shared", "wild_grass", 6.0, 3000, 4500),
+        ("shared", "tall_grass", 2.0, 4000, 6000),
         # The floor's debris: the woods in the reference photos are never bare between trunks.
         ("forest", "nordic_forest_ground_patch_root", 0.12, 9000, 12000),
         ("forest", "mossy_rocks", 0.1, 9000, 12000),
@@ -160,10 +159,11 @@ GRASS = {
         ("forest", "nordic_forest_ground_patch_root", 1.5, 6000, 8000),
         ("forest", "nordic_forest_rock_small", 2.0, 5000, 7000),
         ("forest", "mossy_rocks", 0.3, 8000, 11000),
-        ("shared", "fern", 8.0, 4000, 6000),
-        ("shared", "lady_fern", 6.0, 4000, 6000),
-        ("shared", "grass_clumps", 8.0, 3000, 4500),
-        ("shared", "wild_grass", 6.0, 3000, 4500),
+        ("shared", "fern", 2.0, 4000, 6000),
+        ("shared", "lady_fern", 1.0, 4000, 6000),
+        ("shared", "grass_clumps", 12.0, 3000, 4500),
+        ("shared", "wild_grass", 8.0, 3000, 4500),
+        ("desert", "dry_grass", 4.0, 3000, 4500),
     ),
     # Talus under the crags.
     "Rock": (
