@@ -97,6 +97,19 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
 
 ## Where things stand
 
+- 2026-11-10, late morning: **a new look reference and the exposure finding.**
+  - The user added two modded Skyrim screenshots as the target look, "vibrant yet realistic".
+    They are copied to `ref/climb/style_*.jpg` and listed in SOURCES.tsv. Against them our stills
+    are washed out: pale beige floors, pale grey trunks, no carpet of grass, flat light.
+  - Auto exposure undid albedo changes: soil tinted to half its albedo looked almost unchanged.
+    The sun is 6 lux and auto exposure ranged from -10 to 20 EV. New `look --post ev=N` locks it
+    (try 1.5 to 2.5).
+  - Next: lock exposure darker with more contrast and saturation; a green ground under denser,
+    larger grass clumps with flowers; a green, mossy forest floor in place of beige litter;
+    red-brown upper trunks on the pines; scattered big boulders; and a moodier sky.
+  - Queued in code (not built): road darken 0.3 and warmer; the edge soil narrowed and browned
+    (the road flecks); timber without pale lichen or silver speckle, specular 0.3.
+
 - 2026-11-10, morning (batch v13): one rebuild with grass for QA's v12 list.
   - First try: ferns raised to 9/8/6 per 100 m^2 (about 40 plants on Forest in all). The first look
     after a restart hit the radv GPUVM fault (DEVICE_LOST). The user also found too much fern and

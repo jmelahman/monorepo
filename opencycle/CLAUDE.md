@@ -7,6 +7,10 @@ says what was done last. Update both files before a session ends or when a rule 
 
 - **The goal:** an original cycling world (Zwift-like, not a copy) that looks **realistic**.
   "No stylized."
+- **The look (10 Nov):** "vibrant yet realistic", like the modded Skyrim screenshots in
+  `ref/climb/style_*.jpg`. That means rich green grass carpets with small flowers, warm brown dirt,
+  big rounded boulders, red-brown pine trunks, deep shadows and moody skies with a snowy peak. Use
+  them for mood and colour only; build nothing from that game.
 - **The first target:** one realistic mountain climb. Build a 1 km hero stretch first, then the
   full climb, then other biomes.
 - **Performance:** this laptop (Radeon 890M) must hold 30 fps at Low *eventually*. For now the
