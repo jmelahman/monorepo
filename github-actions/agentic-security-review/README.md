@@ -39,7 +39,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
-      - uses: jmelahman/agentic-security-review@<sha>
+      - uses: jmelahman/agentic-security-review@06987bc39f6dbd241ac83bf59fb5e871b3a7bb50
         with:
           claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 ```
@@ -51,7 +51,7 @@ Run `claude setup-token` and store the token as the `CLAUDE_CODE_OAUTH_TOKEN` se
 Use the workflow above, but replace the review step with:
 
 ```yaml
-- uses: jmelahman/agentic-security-review@<sha>
+- uses: jmelahman/agentic-security-review@06987bc39f6dbd241ac83bf59fb5e871b3a7bb50
   with:
     provider: opencode
     opencode-api-key: ${{ secrets.OPENCODE_API_KEY }}
@@ -77,7 +77,7 @@ You can set a separate [budget](https://opencode.ai/docs/console/budgets#service
 Use the same OpenCode setup and choose an `opencode-go` model:
 
 ```yaml
-- uses: jmelahman/agentic-security-review@<sha>
+- uses: jmelahman/agentic-security-review@06987bc39f6dbd241ac83bf59fb5e871b3a7bb50
   with:
     provider: opencode
     opencode-api-key: ${{ secrets.OPENCODE_API_KEY }}
