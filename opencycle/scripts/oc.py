@@ -420,6 +420,7 @@ def cmd_probe(ns):
 def cmd_fps(ns):
     args = {"quality": ns.quality, "frames": ns.frames, "shots": shots(ns)}
     args.update(tree_cull=ns.tree_cull, tree_shadows=ns.tree_shadows, tree_wpo=ns.tree_wpo)
+    args["tries"] = ns.tries or []
     return run("fps", args, ns)
 
 
@@ -544,6 +545,13 @@ def main(argv=None):
     s.add_argument("--tree-cull", type=float, help="tree draw distance in m for this run")
     s.add_argument("--tree-shadows", type=int, choices=(0, 1))
     s.add_argument("--tree-wpo", type=int, choices=(0, 1), help="tree wind (world position offset)")
+    s.add_argument(
+        "--try",
+        dest="tries",
+        action="append",
+        metavar="LABEL=CVAR VALUE[;CVAR VALUE]",
+        help="also measure each view with these cvars, one --try at a time (repeatable)",
+    )
     s.add_argument("--shots")
     s = add("wait", cmd_wait, help="resume waiting for a job after a timeout")
     s.add_argument("job")

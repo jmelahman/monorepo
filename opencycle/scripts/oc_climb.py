@@ -1233,9 +1233,20 @@ def _tree_components():
     return found
 
 
-def op_fps(quality=0, frames=240, shots=None, tree_cull=None, tree_shadows=None, tree_wpo=None):
+def op_fps(
+    quality=0,
+    frames=240,
+    shots=None,
+    tree_cull=None,
+    tree_shadows=None,
+    tree_wpo=None,
+    tries=None,
+):
     """Frame times at each still's view, at a scalability level (0 Low .. 3 Epic): the editor's
-    whole frame, so a pessimistic stand-in for the game's. Vsync and the frame cap off."""
+    whole frame, so a pessimistic stand-in for the game's. Vsync and the frame cap off.
+
+    tries: ["label=cvar value;cvar value", ...]. Each is measured at every view after the base
+    run, alone, and its cvars are put back after it: one editor session ablates several costs."""
     yield from _ensure_level()
     for command in (f"scalability {int(quality)}", "r.VSync 0", "t.MaxFPS 0"):
         unreal.SystemLibrary.execute_console_command(None, command)
@@ -1254,24 +1265,34 @@ def op_fps(quality=0, frames=240, shots=None, tree_cull=None, tree_shadows=None,
     editor = unreal.UnrealEditorSubsystem()
     yield 60
     notes = [f"trees: {len(trees)}, cull {tree_cull} m, shadows {tree_shadows}, wpo {tree_wpo}"]
+    system = unreal.SystemLibrary
     for name, where, target in cameras(shots):
         eye = unreal.Vector(*where)
         editor.set_level_viewport_camera_info(
             eye, unreal.MathLibrary.find_look_at_rotation(eye, unreal.Vector(*target))
         )
         yield 150  # streaming settles
-        times = []
-        last = time.perf_counter()
-        for _ in range(int(frames)):
-            yield 1
-            now = time.perf_counter()
-            times.append((now - last) * 1000.0)
-            last = now
-        times.sort()
-        mean = sum(times) / len(times)
-        p95 = times[int(len(times) * 0.95)]
-        notes.append(f"{name}: {1000.0 / mean:.1f} fps (mean {mean:.1f} ms, p95 {p95:.1f} ms)")
-        log(notes[-1])
+        for label, commands in [("base", [])] + [_parse_try(s) for s in tries or []]:
+            saved_cvars = []
+            for cvar, value in commands:
+                saved_cvars.append((cvar, system.get_console_variable_float_value(cvar)))
+                system.execute_console_command(None, f"{cvar} {value}")
+            yield 60 if commands else 0
+            times = []
+            last = time.perf_counter()
+            for _ in range(int(frames)):
+                yield 1
+                now = time.perf_counter()
+                times.append((now - last) * 1000.0)
+                last = now
+            for cvar, value in reversed(saved_cvars):
+                system.execute_console_command(None, f"{cvar} {value:g}")
+            times.sort()
+            mean = sum(times) / len(times)
+            p95 = times[int(len(times) * 0.95)]
+            tag = name if label == "base" else f"{name} [{label}]"
+            notes.append(f"{tag}: {1000.0 / mean:.1f} fps (mean {mean:.1f} ms, p95 {p95:.1f} ms)")
+            log(notes[-1])
     unreal.SystemLibrary.execute_console_command(None, "scalability 3")
     for c, (cull, shadow) in zip(trees, saved, strict=True):
         c.set_visibility(True)
@@ -1280,6 +1301,15 @@ def op_fps(quality=0, frames=240, shots=None, tree_cull=None, tree_shadows=None,
         if tree_wpo is not None:
             c.set_evaluate_world_position_offset(True)
     return {"notes": [f"scalability {quality}", *notes]}
+
+
+def _parse_try(spec):
+    """ "label=cvar value;cvar value" -> (label, [(cvar, value), ...])."""
+    label, _, body = spec.partition("=")
+    commands = [c.split(None, 1) for c in body.split(";") if c.strip()]
+    if not commands or any(len(c) != 2 for c in commands):
+        raise ValueError(f"--try wants LABEL=CVAR VALUE[;CVAR VALUE]: {spec!r}")
+    return label, [(c, v.strip()) for c, v in commands]
 
 
 def op_stills(shots=None, out=None):
