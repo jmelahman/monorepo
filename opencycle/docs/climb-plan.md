@@ -182,6 +182,16 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     longer mint. Storybook v24 (img18). Top open defects: hairpin_above smeared and hazy; flat
     grey tarmac (no wear, edges, litter); grass reads as tufts not a carpet, no flowers; dark,
     flat spruce interior; banks smooth with few boulders or roots.
+  - Perf ablation (`fps --quality 0 --try`, v24, all trees): base 21.5, 20.0, 20.7, 23.3
+    (road_08, road_50, road_72, bench). Grass off +1-2.3; Lumen GI off +0.5-1.6; reflections off
+    +0.6-1.9; screen percentage 67 only +0.3-2.2, so the frame is not pixel-bound. VSM off
+    (shadow maps) halves it (10.9-14.2): keep VSM. With trees culled it was ~29, so the cost is
+    the trees' draw/CPU side, not shading. Next: measure in `-game` (no editor overhead), then
+    tree instance count, HLOD/imposters for far trees, and Nanite on the static trees.
+  - v25 batch (running): road centre worn darker and smoother, less pink (ROAD_WARM 1.05, 1,
+    0.76), darker edge soil, more litter mid-road; a kikuyu carpet on Forest (16, 15-20 m cull),
+    more dandelions, twice the boulders, more mossy rocks on banks. New look keys for the
+    hairpin haze: `aerial`, `cloud_bottom`, `fog_inscatter`.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
