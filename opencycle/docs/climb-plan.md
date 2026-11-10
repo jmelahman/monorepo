@@ -159,6 +159,11 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     red soil tint: STEEP is (0.7, 0.6, 0.48), Sand (0.3, 0.22, 0.12). Grass tufts less yellow
     (grass_clumps tint 2.4, 4.0, 1.2). Bank grass 28/18, fewer dry tussocks, wider tarmac
     variation. `look --prop-param` now reaches plants too.
+  - v21 done: QA 7.5, 7.5, 8, 6.5, 6.5, 5.5, 7; storybook v21. hairpin_above regressed (haze
+    brighter with sky 1.8). The banks stayed bare: false colour showed the bank is Sand (0.94
+    weight 2-4 m from the centre line, Forest above), GT_Sand holds its 37 varieties, and 3x
+    density added nothing on the bank while it filled the flat floor. Suspect: align_to_surface
+    tilted tufts sideways out of the 50 degree cuts. v22 grows plants upright (props still align).
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
