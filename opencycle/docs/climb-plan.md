@@ -169,8 +169,19 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     grass of about 2 m of flat ground. The root patches, now with their material, read as flat
     pink slabs on the banks. Fog 0.003 vs 0.004 made no visible difference to the hairpin haze.
     One road_30 still came out bare once (grass still streaming in); a retake was fine.
-  - v23 (running): bank grass 60/40 at 1.4-2.4x, root patches 1.5 (was 4), warmer Sand and Dirt
-    tints, warmer tarmac (ROAD_WARM 1.15, 1.0, 0.72).
+  - v23: bank grass 60/40 at 1.4-2.4x, root patches 1.5 (was 4), warmer Sand and Dirt tints,
+    warmer tarmac (ROAD_WARM 1.15, 1.0, 0.72). QA unchanged (7.5, 7.5, 8, 6.5, 6.5, 5.5, 7).
+  - **The bare banks were a timing bug.** A fixed 480-frame wait shot views before their grass
+    was built. Stills now `_settle`: at least 240 frames, then until the count of
+    GrassInstancedStaticMeshComponent instances on the landscape proxies holds for 4 checks
+    (views needed 360-780 frames). Not found via the HISM class. Looks also re-apply the baked
+    tints and plant/prop params first, so false colour no longer leaks into later looks.
+  - New `oc.py fps --try LABEL=CVAR V;CVAR V` measures each try alone at every view.
+  - v24: "Forest mix" (the mint floor patches) tint (0.2, 0.3, 0.06), grey 0; Sand (0.3, 0.24,
+    0.1). QA 7.5, 7.5, 8, 6.5, 6.5, 5.5, 7: banks clearly better (brown, grassed), floor no
+    longer mint. Storybook v24 (img18). Top open defects: hairpin_above smeared and hazy; flat
+    grey tarmac (no wear, edges, litter); grass reads as tufts not a carpet, no flowers; dark,
+    flat spruce interior; banks smooth with few boulders or roots.
 - 2026-11-10, midday: **v14, exposure locked at EV -4.5.** The scene sits near EV -5 (1.5 to 2.5
   rendered black). With darker soil (LOOK_TINTS), green grass and moss, a dark fence and road, QA
   scored 7, 6, 6, 5, 4, 6, 4 (v13: 6, 5, 6, 6, 6, 6, 5): better in the beech, a stop too dark in
