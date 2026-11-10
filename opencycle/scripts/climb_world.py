@@ -369,7 +369,9 @@ def log_material():
     return g.finish()
 
 
-ROAD_DARKEN = 0.5  # the island's asphalt read washed-out grey on the climb
+ROAD_DARKEN = 0.4  # the island's asphalt read washed-out grey on the climb (0.5 still pale, v12)
+# The scan's bright aggregate read as a regular white speckle (QA, v12): clamped before darkening.
+ROAD_SPECK_CLAMP = 0.3
 # Old country tarmac is warm grey-brown, not the scan's blue-grey (QA, v11).
 ROAD_WARM = (1.08, 1.0, 0.86)
 
@@ -382,8 +384,9 @@ def road_material():
     uv = g.world_uv(tile)
     masks = g.sample(m, uv, "masks")
     colour = g.mask(g.sample(d, uv), "rgb")
+    colour = g.op(unreal.MaterialExpressionMin, colour, g.param("speck clamp", ROAD_SPECK_CLAMP))
     normal = g.mask(g.sample(n, uv, "normal"), "rgb")
-    rough = g.mask(masks, "g")
+    rough = g.op(unreal.MaterialExpressionMax, g.mask(masks, "g"), g.const(0.7))
     # Wear: stretches of cracked old tarmac, darker patched repairs, soil and litter washed onto
     # the edges, and fallen leaves, most of them near the edges.
     ctile = island.tile_cm("shared", "cracked_asphalt")
@@ -427,7 +430,7 @@ def road_material():
     leaf_colour = g.mul(g.const((0.11, 0.07, 0.04)), g.world_noise(0.03, 0.6, 1.4, 2))
     colour = g.lerp(colour, leaf_colour, leaves)
     rough = g.lerp(rough, g.const(0.92), g.saturate(g.add(edge, leaves)))
-    g.output(colour, normal, rough, specular=0.4, ao=g.mask(masks, "r"))
+    g.output(colour, normal, rough, specular=0.3, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
 

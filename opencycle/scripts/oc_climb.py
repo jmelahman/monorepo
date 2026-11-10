@@ -91,6 +91,10 @@ LOOK_TINTS = {
     "Forest mix": (0.75, 0.75, 0.62),
     "Sand mix": LITTER,
     "Dirt mix": LITTER,
+    # soil_mud as scanned read pale and dusty on the banks and the path's edge (QA, v12): dark,
+    # damp earth as in the reference photos.
+    "Sand": (0.42, 0.34, 0.28),
+    "Dirt": (0.4, 0.32, 0.26),
 }
 LOOK_GREYS = {
     "Grass": 0.15,
@@ -130,13 +134,14 @@ GRASS = {
         ("shared", "leafy_dandelions", 4.0, 2000, 3000),
     ),
     "Forest": (
-        ("shared", "fern", 6.0, 4000, 6000),
-        ("shared", "lady_fern", 6.0, 4000, 6000),
-        ("shared", "common_fern", 4.0, 4000, 6000),
-        ("shared", "leather_fern", 2.0, 4000, 6000),
+        # Denser than v12's 6/6/4/2, which QA found sparse and in rows on bare soil.
+        ("shared", "fern", 9.0, 4000, 6000),
+        ("shared", "lady_fern", 8.0, 4000, 6000),
+        ("shared", "common_fern", 6.0, 4000, 6000),
+        ("shared", "leather_fern", 1.0, 4000, 6000),
         # Low cover, and dead stems among the ferns.
-        ("mountain", "alpine_bearberry", 3.0, 3000, 4500),
-        ("desert", "dry_grass", 1.5, 3000, 4500),
+        ("mountain", "alpine_bearberry", 6.0, 3000, 4500),
+        ("desert", "dry_grass", 3.0, 3000, 4500),
         ("desert", "dead_shrubs", 0.3, 4000, 6000),
         # Tufts between the ferns, sparse: dense clumps made the woods' floor a lawn.
         ("shared", "grass_clumps", 3.0, 3000, 4500),
@@ -329,7 +334,15 @@ class Ground:
 PLANT_MASTER = f"{MS}/Materials/M_MS_Plant"
 # Set on every plant MI by each ground build (try values with `look --plant-param`). The scans'
 # own translucency tints made the ferns glow lime where the sun came through them.
-PLANT_LOOK = {"Tint": (0.6, 0.62, 0.42), "TranslucencyTint": (0.2, 0.24, 0.12), "Grey": 0.12}
+# Specular 0.4 and the scans' low roughness made fern fronds read blue-white and metallic against
+# the sky (QA, v12).
+PLANT_LOOK = {
+    "Tint": (0.6, 0.62, 0.42),
+    "TranslucencyTint": (0.2, 0.24, 0.12),
+    "Grey": 0.12,
+    "Specular": 0.15,
+    "Rough floor": 0.6,
+}
 
 
 def _plant_master():
@@ -370,12 +383,13 @@ def _plant_master():
     dry = g.saturate(g.mul(g.add(second, g.add(g.param("Dry share", 0.3), -1.0)), 20.0))
     colour = g.lerp(colour, g.mul(colour, g.param("Dry tint", (1.5, 1.1, 0.55))), dry)
     rough = g.saturate(g.mul(g.mask(m, "g"), g.param("Roughness", 1.0)))
+    rough = g.op(unreal.MaterialExpressionMax, rough, g.param("Rough floor", 0.6))
     sss = g.mul(g.mask(t, "rgb"), g.mask(g.param("TranslucencyTint", (0.5, 0.6, 0.4)), "rgb"))
     g.output(
         colour,
         g.mask(n, "rgb"),
         rough,
-        specular=0.4,
+        specular=g.param("Specular", 0.15),
         opacity_mask=g.mask(d, "a"),
         subsurface=sss,
         ao=g.mask(m, "r"),
@@ -459,7 +473,7 @@ def _grass_type(layer):
             v.set_editor_property("start_cull_distance", unreal.PerPlatformInt(default=cull_start))
             v.set_editor_property("end_cull_distance", unreal.PerPlatformInt(default=cull_end))
             v.set_editor_property("scaling", unreal.GrassScaling.UNIFORM)
-            v.set_editor_property("scale_x", unreal.FloatInterval(0.85, 1.3))
+            v.set_editor_property("scale_x", unreal.FloatInterval(0.6, 1.4))
             v.set_editor_property("random_rotation", True)
             v.set_editor_property("align_to_surface", True)
             v.set_editor_property("cast_dynamic_shadow", True)
