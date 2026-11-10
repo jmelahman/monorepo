@@ -579,6 +579,8 @@ def _grass_type(layer):
         unreal.LandscapeGrassType,
         unreal.LandscapeGrassTypeFactory(),
     )
+    with open(f"{PREP}/index.json") as f:
+        plants = {r["slug"] for r in json.load(f) if r["kind"] == "plant"}
     varieties = []
     for biome, slug, density, cull_start, cull_end, *scale in GRASS[layer]:
         meshes = [
@@ -599,7 +601,10 @@ def _grass_type(layer):
             v.set_editor_property("scaling", unreal.GrassScaling.UNIFORM)
             v.set_editor_property("scale_x", unreal.FloatInterval(*(scale or [(0.6, 1.4)])[0]))
             v.set_editor_property("random_rotation", True)
-            v.set_editor_property("align_to_surface", True)
+            # Plants grow upright: aligned to a 50 degree cut bank, tufts jutted sideways out of it
+            # and read as almost nothing, whatever the density (v21: 3x density, no change).
+            # Rocks, roots and logs still lie along the ground.
+            v.set_editor_property("align_to_surface", slug not in plants)
             v.set_editor_property("cast_dynamic_shadow", True)
             varieties.append(v)
     gt.set_editor_property("grass_varieties", varieties)
