@@ -404,6 +404,9 @@ PROP_LOOK = {
     # v19: the pointed grey rocks by the bench and at 95% are these scans (0.34 sRGB, untinted).
     "nordic_forest_rock_small": {"Tint": (0.4, 0.38, 0.34), "Moss amount": 1.0},
     "nordic_forest_cluster_rock_medium": {"Tint": (0.4, 0.38, 0.34), "Moss amount": 1.0},
+    # Named so a false-colour look (`--prop-param`) is undone by the next look or build.
+    "mossy_rocks": {"Tint": (1.0, 1.0, 1.0)},
+    "nordic_forest_ground_patch_root": {"Tint": (1.0, 1.0, 1.0)},
 }
 
 
