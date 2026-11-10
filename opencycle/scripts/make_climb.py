@@ -159,7 +159,9 @@ def paint(x, y, h, road_dist):
     # Only past 25 m from the path: the short steep cuts by it are soil, and a scanned granite floor
     # on them read as a cobbled wall.
     rock = np.maximum(rock, mi.smoothstep(1.2, 1.5, slope) * mi.smoothstep(15.0, 25.0, road_dist))
-    shoulder = mi.smoothstep(mi.ROAD_HALF + 1.0, mi.ROAD_HALF + 0.2, road_dist)
+    # v29: narrower (was 0.2 to 1.0 m past the tarmac): its bare 0.8 m band read as a dark strip
+    # beside the path (QA, v27), and grass can't grow on it (Dirt lies under the road too).
+    shoulder = mi.smoothstep(mi.ROAD_HALF + 0.6, mi.ROAD_HALF + 0.15, road_dist)
     # The cut and fill banks by the path are bare dark soil, as in the reference photos, rather
     # than lawn humps; the edge wanders so it doesn't read as a painted band.
     bank = mi.smoothstep(0.4, 0.6, slope + 0.15 * (mi.fbm(x, y, 6, 2, SEED + 50) - 0.5))
